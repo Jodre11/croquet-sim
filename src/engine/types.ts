@@ -49,3 +49,56 @@ export interface PushMotion {
     readonly angularAcceleration: Vec3;
     readonly direction: Vec3;
 }
+
+/** Turf properties at a point. Both are dimensionless coefficients (multiply by g for deceleration). */
+export interface SurfaceProps {
+    readonly slidingFriction: number;
+    readonly rollingResistance: number;
+}
+
+/** The court surface. Extent x ∈ [0, width], y ∈ [0, length] (m). */
+export interface Lawn {
+    readonly width: number;
+    readonly length: number;
+    /** Surface properties at a position. v1 lawns are uniform; the engine samples this at each segment start. */
+    surfaceAt(position: Vec3): SurfaceProps;
+}
+
+/** A fixed vertical cylinder: a hoop upright or the peg. */
+export interface Cylinder {
+    readonly id: string;
+    readonly centre: Vec3;
+    readonly radius: number;
+    readonly material: ContactMaterial;
+}
+
+/** A hoop: two uprights either side of `centre` along the hoop plane; `normal` is perpendicular to that plane. */
+export interface Hoop {
+    readonly id: string;
+    readonly centre: Vec3;
+    readonly normal: Vec3;
+    readonly innerWidth: number;
+    readonly uprightRadius: number;
+}
+
+/** A signed-offset threshold ballRadii × R + uprightRadii × r (see reference/README.md). */
+export interface OffsetRule {
+    readonly ballRadii: number;
+    readonly uprightRadii: number;
+}
+
+/** Everything the free-motion engine needs to know about the environment. */
+export interface World {
+    readonly gravity: number;
+    readonly ball: BallParams;
+    readonly lawn: Lawn;
+    readonly hoops: readonly Hoop[];
+    readonly peg: Cylinder;
+    readonly ballBall: ContactMaterial;
+    readonly ballUpright: ContactMaterial;
+    readonly outOfCourt: OffsetRule;
+    readonly hoopRunStart: OffsetRule;
+    readonly hoopRunComplete: OffsetRule;
+    /** Distance (m) beyond the boundary at which a ball is halted; the surround is not modelled. */
+    readonly haltMargin: number;
+}
