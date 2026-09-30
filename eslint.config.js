@@ -57,9 +57,16 @@ export default defineConfig(
             "no-restricted-properties": [
                 "error",
                 ...NON_EXACT_MATH.map((property) => ({ object: "Math", property, message: DETERMINISM_MESSAGE })),
+                { object: "Math", property: "random", message: DETERMINISM_MESSAGE },
+            ],
+            "no-restricted-globals": [
+                "error",
+                { name: "Date", message: DETERMINISM_MESSAGE },
+                { name: "performance", message: DETERMINISM_MESSAGE },
             ],
             "no-restricted-syntax": [
                 "error",
+                { selector: "VariableDeclarator[init.name='Math'] > ObjectPattern", message: DETERMINISM_MESSAGE },
                 { selector: "BinaryExpression[operator='**']", message: DETERMINISM_MESSAGE },
                 { selector: "AssignmentExpression[operator='**=']", message: DETERMINISM_MESSAGE },
             ],

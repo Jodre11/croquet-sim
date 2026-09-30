@@ -1,10 +1,13 @@
 /**
  * Hoop-run verdict per the Laws (reference/laws.json): a ball runs its target hoop in a stroke if it starts
  * eligible, passes through in the running direction, and ends the stroke having completed the running.
+ *
+ * P1 caveat: only position thresholds are judged. Laws 20.2.2 (completing the run in a later stroke) and 20.4.1
+ * (entering from the wrong side) need per-ball history and are not modelled.
  */
 import { dot, horizontal, sub, type Vec3 } from "./math/vec3";
 import type { BallId, ShotResult, World } from "./types";
-import { hoopHalfSpan, hoopLateral, ruleThreshold } from "./world";
+import { ruleThreshold } from "./world";
 
 /** The hoop the striker's ball is attempting, and the direction (+1 along the hoop normal, −1 against). */
 export interface HoopTarget {
@@ -37,12 +40,7 @@ export function judgeHoopRun(result: ShotResult, ball: BallId, target: HoopTarge
     }
     const own = result.events.filter((e) => e.kind === "hoop-passage" && e.ball === ball && e.hoopId === hoop.id);
     const last = own[own.length - 1];
-    // A ball that starts with its centre already past the plane (between the uprights) needs no new passage.
-    const startsInside =
-        signed(start) >= 0 &&
-        Math.abs(dot(horizontal(sub(start, hoop.centre)), hoopLateral(hoop))) < hoopHalfSpan(hoop);
-    const passedForward = last ? last.kind === "hoop-passage" && last.direction === target.direction : startsInside;
-    if (!passedForward) {
+    if (!last || last.kind !== "hoop-passage" || last.direction !== target.direction) {
         return "no-passage";
     }
     if (signed(rest) < ruleThreshold(world.hoopRunComplete, R, r)) {

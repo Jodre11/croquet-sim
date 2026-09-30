@@ -163,6 +163,7 @@ export interface ShotResult {
     readonly duration: number;
     readonly segments: Partial<Record<BallId, readonly Segment[]>>;
     readonly events: readonly ShotEvent[];
+    /** Final positions. When `aborted` is true these are positions where the budget ran out, not rest positions. */
     readonly rest: Partial<Record<BallId, Vec3>>;
     /** True if the event limit was reached before every ball stopped. */
     readonly aborted: boolean;

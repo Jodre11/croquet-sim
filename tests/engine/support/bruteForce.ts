@@ -1,6 +1,9 @@
 /**
  * Reference integrator for cross-checking the event-driven solver. Integrates the turf forces with
  * semi-implicit Euler at a fixed step and detects contacts by overlap. Test-only and deliberately slow.
+ *
+ * It shares `resolveBallBall`/`resolveBallCylinder` with the engine, so it independently checks event timing and
+ * pushing but not the impulse model, which resolve.test.ts covers directly.
  */
 import {
     ZERO,

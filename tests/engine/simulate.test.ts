@@ -1,41 +1,17 @@
 import { describe, expect, it } from "vitest";
-import { horizontal, length, sub, vec3, type Vec3 } from "../../src/engine/math/vec3";
+import { horizontal, length, sub, vec3 } from "../../src/engine/math/vec3";
 import { stateAtTime } from "../../src/engine/sample";
+import { CONTACT_TOLERANCE } from "../../src/engine/detect";
 import { simulateFreeMotion } from "../../src/engine/simulate";
-import {
-    BALL_IDS,
-    type BallId,
-    type BallState,
-    type BallStates,
-    type ShotResult,
-    type World,
-} from "../../src/engine/types";
-import { STANDARD_GRAVITY, obstaclesOf } from "../../src/engine/world";
+import { BALL_IDS, type BallId, type BallState, type BallStates, type ShotResult } from "../../src/engine/types";
+import { STANDARD_GRAVITY } from "../../src/engine/world";
 import { kineticEnergy } from "./support/energy";
+import { worstPenetration } from "./support/penetration";
 import { TEST_BALL, ballAt, rollingBallAt, testHoop, testWorld } from "./support/fixtures";
 
 const R = TEST_BALL.radius;
 const SLIDE = 0.3 * STANDARD_GRAVITY;
 const ROLL = 0.05 * STANDARD_GRAVITY;
-
-/** Samples every millisecond and returns the worst interpenetration (m) between balls or with obstacles. */
-function worstPenetration(result: ShotResult, world: World): number {
-    const ids = BALL_IDS.filter((id) => result.segments[id]);
-    const obstacles = obstaclesOf(world);
-    let worst = 0;
-    for (let t = 0; t <= result.duration; t += 0.001) {
-        const centres: Vec3[] = ids.map((id) => stateAtTime(result, id, t).position);
-        centres.forEach((a, i) => {
-            centres.slice(i + 1).forEach((b) => {
-                worst = Math.max(worst, 2 * R - length(horizontal(sub(a, b))));
-            });
-            for (const o of obstacles) {
-                worst = Math.max(worst, R + o.radius - length(horizontal(sub(a, o.centre))));
-            }
-        });
-    }
-    return worst;
-}
 
 function totalEnergy(result: ShotResult, t: number): number {
     return BALL_IDS.filter((id) => result.segments[id]).reduce(
@@ -112,7 +88,7 @@ describe("collisions", () => {
             world,
         );
         expect(result.aborted).toBe(false);
-        expect(worstPenetration(result, world)).toBeLessThan(1e-6);
+        expect(worstPenetration(result, world)).toBeLessThan(CONTACT_TOLERANCE);
         expect((result.rest.yellow?.x ?? 0) > 6 + 4 * R).toBe(true);
         // Blue's topspin drives it back into red: that ends in resting contact and a push, not a Zeno storm (B3).
         expect(result.events.some((e) => e.kind === "ball-ball" && e.resting)).toBe(true);
@@ -124,14 +100,14 @@ describe("collisions", () => {
         const world = testWorld();
         const result = simulateFreeMotion({ blue: ballAt(5, 5, vec3(3, 0, 0)), red: ballAt(5 + 2 * R, 5) }, world);
         expect(result.events.some((e) => e.kind === "ball-ball" && e.t === 0)).toBe(true);
-        expect(worstPenetration(result, world)).toBeLessThan(1e-6);
+        expect(worstPenetration(result, world)).toBeLessThan(CONTACT_TOLERANCE);
     });
 
     it("does not collide balls that graze exactly tangentially (Review Focus 2)", () => {
         const world = testWorld();
         const result = simulateFreeMotion({ blue: rollingBallAt(5, 5, 2, 0), red: ballAt(6, 5 + 2 * R) }, world);
         expect(result.events.some((e) => e.kind === "ball-ball")).toBe(false);
-        expect(worstPenetration(result, world)).toBeLessThan(1e-6);
+        expect(worstPenetration(result, world)).toBeLessThan(CONTACT_TOLERANCE);
     });
 
     it("resolves two balls striking a third at the same instant (Review Focus 4)", () => {
@@ -141,7 +117,7 @@ describe("collisions", () => {
             world,
         );
         expect(result.aborted).toBe(false);
-        expect(worstPenetration(result, world)).toBeLessThan(1e-6);
+        expect(worstPenetration(result, world)).toBeLessThan(CONTACT_TOLERANCE);
     });
 });
 
@@ -207,7 +183,7 @@ describe("resting contact and pushing", () => {
         // Every resting-contact solve was exact: the nearest-hold fallback was never needed.
         expect(result.events.some((e) => e.kind === "approximate-hold")).toBe(false);
         expect(result.segments.blue?.some((s) => s.push)).toBe(true);
-        expect(worstPenetration(result, world)).toBeLessThan(1e-6);
+        expect(worstPenetration(result, world)).toBeLessThan(CONTACT_TOLERANCE);
         // Symmetric set-up, symmetric outcome.
         expect(result.rest.red?.x).toBeCloseTo(result.rest.black?.x ?? NaN, 9);
         expect((result.rest.red?.y ?? 0) - 5).toBeCloseTo(5 - (result.rest.black?.y ?? 0), 9);
@@ -226,7 +202,7 @@ describe("resting contact and pushing", () => {
             resting: true,
         });
         expect(result.aborted).toBe(false);
-        expect(worstPenetration(result, world)).toBeLessThan(1e-6);
+        expect(worstPenetration(result, world)).toBeLessThan(CONTACT_TOLERANCE);
         expect(result.rest.blue?.x).toBeCloseTo(15 - R - 0.02, 9);
     });
 
@@ -315,7 +291,7 @@ describe("invariants", () => {
     });
 
     it("never lets balls interpenetrate each other or obstacles", () => {
-        expect(worstPenetration(simulateFreeMotion(complex, hoopWorld), hoopWorld)).toBeLessThan(1e-6);
+        expect(worstPenetration(simulateFreeMotion(complex, hoopWorld), hoopWorld)).toBeLessThan(CONTACT_TOLERANCE);
     });
 });
 
