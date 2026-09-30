@@ -1,0 +1,23 @@
+{
+    "speedDefinition": {
+        "quote": "For croquet, the speed of a lawn is defined as the time in seconds it takes for a croquet ball to travel the full length of a standard court (35 yards/32 metres) when it comes to rest on the far boundary.",
+        "source": "Croquet England (Equipment Advisory Group, 2024), 'Lawn Speed Definition', Formal/Traditional Method: Overview; https://www.croquet.org.uk/?p=games/clubs/info/LawnSpeed",
+        "provenance": "direct",
+        "note": "Corroborated by Ian Plummer, 'Lawn Speed FAQ' (Oxford Croquet, updated 28 April 2026), https://oxfordcroquet.org/tech/lawnspeedfaq/: \"The formal or traditional method: timing how long it takes a croquet ball to travel 35 yards and stop. The time in seconds gives the lawn speed.\" Croquet England also advises timing several shots of about 35 yards and interpolating to the exact distance, in both directions, averaged. This is the 'time for a struck ball to travel a stated distance and stop' form."
+    },
+    "speedDistance": {
+        "value": 32.004,
+        "unit": "m",
+        "source": "Croquet England (Equipment Advisory Group, 2024), 'Lawn Speed Definition'; https://www.croquet.org.uk/?p=games/clubs/info/LawnSpeed",
+        "provenance": "direct",
+        "note": "\"the full length of a standard court (35 yards/32 metres)\". 35 yd × 0.9144 m/yd = 32.004 m, identical to court.json length."
+    },
+    "defaultSpeed": {
+        "value": 10,
+        "unit": "s",
+        "bounds": [6, 14],
+        "source": "Value: Croquet England (Equipment Advisory Group, 2024), 'Lawn Speed Definition', Target Speeds; https://www.croquet.org.uk/?p=games/clubs/info/LawnSpeed. Bounds: Ian Plummer, 'Lawn Speed FAQ', section 1 (Oxford Croquet, updated 28 April 2026); https://oxfordcroquet.org/tech/lawnspeedfaq/",
+        "provenance": "direct",
+        "note": "Croquet England: \"A typical lawn would be around 10 seconds, with higher speeds recommended for tournament play. Elite events typically aim for 12 seconds or more.\" Oxford Croquet FAQ: \"The lawn speed is a number in the range of around 6 - 14, given in Plummers or seconds\"; its table grades < 8 very slow/unplayable, 8–9 slow, 10 normal, 11–12 fast, > 13 very fast. 'Plummers' are the same unit as seconds."
+    }
+}

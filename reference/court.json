@@ -1,0 +1,68 @@
+{
+    "length": {
+        "value": 32.004,
+        "unit": "m",
+        "bounds": [31.8516, 32.1564],
+        "source": "World Croquet Federation, The Laws of Association Croquet, 7th Edition (February 2021), Laws 4.1.1 and 4.1.2, Diagram 1 and Appendix 1; https://worldcroquet.org/wp-content/uploads/2021/02/Laws-7th-Edition-master-new.pdf",
+        "provenance": "direct",
+        "note": "Law 4.1.1: \"The standard court is a rectangle measuring 28 by 35 yards (25.6 by 32.0 metres).\" Diagram 1 shows the 35 yd sides as the west and east boundaries, so length is north–south (y). SI from the imperial figure: 35 yd × 0.9144 m/yd = 32.004 m (the Laws round to 32.0 m). Law 4.1.2 tolerance ± 6 in = ± 0.1524 m gives the bounds."
+    },
+    "width": {
+        "value": 25.6032,
+        "unit": "m",
+        "bounds": [25.4508, 25.7556],
+        "source": "World Croquet Federation, The Laws of Association Croquet, 7th Edition (February 2021), Laws 4.1.1 and 4.1.2, Diagram 1 and Appendix 1; https://worldcroquet.org/wp-content/uploads/2021/02/Laws-7th-Edition-master-new.pdf",
+        "provenance": "direct",
+        "note": "28 yd (north and south boundaries, Diagram 1) × 0.9144 m/yd = 25.6032 m (the Laws round to 25.6 m). Law 4.1.2 tolerance ± 6 in = ± 0.1524 m gives the bounds. Exact yard conversion is used so that hoop and peg positions (multiples of 7 yd) stay exactly symmetric about x = width / 2."
+    },
+    "hoopInnerWidth": {
+        "value": 0.09525,
+        "unit": "m",
+        "bounds": [0.0936625, 0.1016],
+        "source": "Value: Croquet England, 'Choosing Croquet Hoops' (https://www.croquetengland.org.uk/choosing-croquet-hoops/), with the ball diameter of Law 5.3.1. Bounds: World Croquet Federation, The Laws of Association Croquet, 7th Edition (February 2021), Law 5.2.1.3; https://worldcroquet.org/wp-content/uploads/2021/02/Laws-7th-Edition-master-new.pdf",
+        "provenance": "derived",
+        "note": "Law 5.2.1.3 sets only a range: \"The inner surfaces of the uprights must be approximately parallel and not less than 3 11/16 inches (94 mm) or more than 4 inches (102 mm) apart\" (0.0936625–0.1016 m), and lets tournament organisers specify narrower. Croquet England: \"In practice, for clubs and tournaments, the gap of the hoop is normally set to the diameter of the balls in use, with a clearance of between 1/16″ and 3/16″.\" Typical value = 3 5/8 in ball + 1/8 in (mid-point clearance) = 3 3/4 in = 0.09525 m. Cross-check: CA Championship hoop approval allows unstressed separation 3 11/16–3 3/4 in (93.7–95.25 mm), https://www.croquet.org.uk/?p=tournament/equipment/ApproHoops."
+    },
+    "uprightDiameter": {
+        "value": 0.015875,
+        "unit": "m",
+        "bounds": [0.0142875, 0.0206375],
+        "source": "Value: Croquet England, 'Choosing Croquet Hoops' (https://www.croquetengland.org.uk/choosing-croquet-hoops/). Bounds: World Croquet Federation, The Laws of Association Croquet, 7th Edition (February 2021), Law 5.2.1.2; https://worldcroquet.org/wp-content/uploads/2021/02/Laws-7th-Edition-master-new.pdf",
+        "provenance": "direct",
+        "note": "Croquet England: hoops \"should have uprights which are 5/8″ diameter\" = 0.015875 m. Law 5.2.1.2: \"a uniform diameter above the ground of between 5/8 inch (16 mm) and 3/4 inch (19 mm), with a tolerance of 1/16 inch (1.6 mm)\", so bounds 9/16–13/16 in = 0.0142875–0.0206375 m. Appendix 1 lists the tolerance as ±1/32 inch (0.8 mm), inconsistent with the Law text; the wider Law text is used."
+    },
+    "pegDiameter": {
+        "value": 0.0381,
+        "unit": "m",
+        "bounds": [0.03175, 0.04445],
+        "source": "World Croquet Federation, The Laws of Association Croquet, 7th Edition (February 2021), Law 5.1.1 and Appendix 1; https://worldcroquet.org/wp-content/uploads/2021/02/Laws-7th-Edition-master-new.pdf",
+        "provenance": "direct",
+        "note": "Law 5.1.1: \"a uniform diameter of 1½ inches (38 mm) ... The tolerance for the diameter is ± ¼ inch (6 mm).\" 1.5 in × 0.0254 = 0.0381 m; bounds 1.25–1.75 in = 0.03175–0.04445 m. The ½ in clip extension (Law 5.1.3) is not part of the peg."
+    },
+    "layout": {
+        "quote": "Subject to the variation in position permitted under Law 4.4.3, the peg is set in the centre of the court. There are six hoops which are set parallel to the north and south boundaries. Subject to the variation in positions permitted under Law 4.4.3, the centres of the two inner hoops are 7 yards (6.40 metres) to the north and south of the peg; the centres of the four outer hoops are 7 yards (6.40 metres) from the adjacent boundaries.",
+        "source": "World Croquet Federation, The Laws of Association Croquet, 7th Edition (February 2021), Laws 4.4.1 and 4.4.2, with Diagram 1 (The Standard Court); https://worldcroquet.org/wp-content/uploads/2021/02/Laws-7th-Edition-master-new.pdf",
+        "provenance": "direct",
+        "note": "Law 4.4.3 allows each hoop and the peg a tolerance of up to 12 inches (305 mm), provided hoops 1–2, 3–4 and 5–6 stay visually parallel to the east/west boundaries and the peg lies on the lines joining 1–3, 2–4 and 5–6."
+    },
+    "hoops": {
+        "source": "Derived from World Croquet Federation, The Laws of Association Croquet, 7th Edition (February 2021), Laws 4.1.1, 4.4.1, 4.4.2 and Diagram 1; https://worldcroquet.org/wp-content/uploads/2021/02/Laws-7th-Edition-master-new.pdf",
+        "provenance": "derived",
+        "note": "Working in yards from corner I (south-west), x east, y north; court 28 yd (x) by 35 yd (y); 1 yd = 0.9144 m. Peg at centre (14, 17.5). Diagram 1 places hoop 1 south-west, 2 north-west, 3 north-east, 4 south-east, 5 south of the peg, 6 north of the peg. Outer hoops are 7 yd from both adjacent boundaries: hoop 1 (7, 7) = (6.4008, 6.4008) m; hoop 2 (7, 35 − 7 = 28) = (6.4008, 25.6032) m; hoop 3 (28 − 7 = 21, 28) = (19.2024, 25.6032) m; hoop 4 (21, 7) = (19.2024, 6.4008) m. Inner hoops are 7 yd north/south of the peg: hoop 5 (14, 17.5 − 7 = 10.5) = (12.8016, 9.6012) m; hoop 6 (14, 17.5 + 7 = 24.5) = (12.8016, 22.4028) m. Checks against Diagram 1's side dimensions: 7 + 3½ + 7 + 7 + 3½ + 7 = 35 yd, and 7 + 7 + 7 + 7 = 28 yd. Law 4.4.2 sets hoops \"parallel to the north and south boundaries\", so each hoop's plane runs east–west and its normal is (0, 1). Running directions in Diagram 1 (not encoded here): hoops 1, 2, 5 and 6 are run northwards; hoops 3 and 4 southwards; the back hoops (1-back to rover = hoops 7–12 at the positions of hoops 2, 1, 4, 3, 6, 5) are run in the opposite direction.",
+        "positions": [
+            { "id": "1", "x": 6.4008, "y": 6.4008, "normalX": 0, "normalY": 1 },
+            { "id": "2", "x": 6.4008, "y": 25.6032, "normalX": 0, "normalY": 1 },
+            { "id": "3", "x": 19.2024, "y": 25.6032, "normalX": 0, "normalY": 1 },
+            { "id": "4", "x": 19.2024, "y": 6.4008, "normalX": 0, "normalY": 1 },
+            { "id": "5", "x": 12.8016, "y": 9.6012, "normalX": 0, "normalY": 1 },
+            { "id": "6", "x": 12.8016, "y": 22.4028, "normalX": 0, "normalY": 1 }
+        ]
+    },
+    "pegPosition": {
+        "x": 12.8016,
+        "y": 16.002,
+        "source": "Derived from World Croquet Federation, The Laws of Association Croquet, 7th Edition (February 2021), Laws 4.1.1 and 4.4.1; https://worldcroquet.org/wp-content/uploads/2021/02/Laws-7th-Edition-master-new.pdf",
+        "provenance": "derived",
+        "note": "Law 4.4.1: \"the peg is set in the centre of the court\". Centre of 28 × 35 yd = (14, 17.5) yd = (14 × 0.9144, 17.5 × 0.9144) = (12.8016, 16.002) m."
+    }
+}

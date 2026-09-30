@@ -1,0 +1,24 @@
+{
+    "diameter": {
+        "value": 0.092075,
+        "unit": "m",
+        "bounds": [0.09128125, 0.09286875],
+        "source": "World Croquet Federation, The Laws of Association Croquet, 7th Edition (February 2021), Law 5.3.1 and Appendix 1; https://worldcroquet.org/wp-content/uploads/2021/02/Laws-7th-Edition-master-new.pdf",
+        "provenance": "direct",
+        "note": "Law 5.3.1: \"3 5/8 inches (92 mm) in diameter with a tolerance of ± 1/32 inch (0.8 mm)\". SI from the imperial figure: 3.625 in × 0.0254 m/in = 0.092075 m; tolerance 0.03125 in = 0.00079375 m, so bounds 0.09128125–0.09286875 m. The Laws' rounded metric (92 mm ± 0.8 mm) agrees."
+    },
+    "mass": {
+        "value": 0.45359237,
+        "unit": "kg",
+        "bounds": [0.446504989, 0.460679751],
+        "source": "World Croquet Federation, The Laws of Association Croquet, 7th Edition (February 2021), Law 5.3.1 and Appendix 1; https://worldcroquet.org/wp-content/uploads/2021/02/Laws-7th-Edition-master-new.pdf",
+        "provenance": "direct",
+        "note": "Law 5.3.1: \"must weigh 16 ounces (454 g) with a tolerance of ± ¼ ounce (7 g)\". SI: 16 oz × 0.028349523125 kg/oz = 0.45359237 kg (exactly 1 lb); tolerance 0.25 oz = 0.0070873808 kg, so bounds 0.446504989–0.460679751 kg (rounded to 1e-9)."
+    },
+    "rebound": {
+        "quote": "When dropped from a height of 60 inches (1.52 metres) onto a steel plate 1 inch (25 mm) thick set rigidly in firmly-based concrete, a ball must rebound to a height of not less than 30 inches (0.76 metres) and not more than 45 inches (1.14 metres).",
+        "source": "World Croquet Federation, The Laws of Association Croquet, 7th Edition (February 2021), Appendix 2 (Ball performance specifications), A2.1, referenced from Law 5.3.1; https://worldcroquet.org/wp-content/uploads/2021/02/Laws-7th-Edition-master-new.pdf",
+        "provenance": "direct",
+        "note": "A2.2 adds: \"The rebound heights of a set of balls to be used in a game must not differ by more than 3 inches (76 mm).\" Implied ball–steel restitution e = sqrt(rebound / drop): sqrt(30/60) = 0.7071 to sqrt(45/60) = 0.8660 (see friction.json)."
+    }
+}
