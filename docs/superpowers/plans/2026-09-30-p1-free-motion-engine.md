@@ -2125,14 +2125,17 @@ event budget finishes. Contacts closing slower than `RESTING_SPEED` (1 mm/s, a n
    its spin.
 2. **Accelerations.** Each ball's turf force is frozen for the segment: sliding friction against the slip (effective
    inertia m), or rolling resistance against the travel (effective inertia 7m/5, since static friction keeps a pushed
-   rolling ball rolling). A ball at rest stays put until the push on it exceeds (7m/5)·rollingDecel. Touching balls
-   held at rest pass force to each other, so they resist as one static cluster: the cluster holds while the net push
-   on it, less what obstacles it rests against take in compression, is within the sum of its members' resistances.
-   The contact forces N ≥ 0 are frictionless and minimise Σ ½·wᵢ·|xᵢ − fᵢ|² subject to no contact converging:
-   Gauss's principle of least constraint. It is solved exactly by trying held and released resting balls, then active
-   sets, in a fixed order. A ball released from rest is accepted only if its acceleration agrees, to within
-   `DIRECTION_TOLERANCE`, with the direction its resistance was built on; otherwise the candidate is rejected. Its
-   rolling resistance therefore always opposes its motion and never does positive work. Pairs, chains, a ball held
+   rolling ball rolling). A ball at rest stays put until the push on it exceeds (7m/5)·rollingDecel. Held balls lean
+   on one another only through compression along each contact's own normal. A set of held balls holds exactly when
+   some such compressions λ ≥ 0 keep every held ball's net load within its own resistance; obstacle contacts are
+   compression-only too. `holdCertificate` finds these by projected gradient on a convex function that is zero exactly
+   at the feasible λ, to `HOLD_TOLERANCE`. The contact forces N ≥ 0 are frictionless and minimise
+   Σ ½·wᵢ·|xᵢ − fᵢ|² + Σ cᵢ·|xᵢ| (cᵢ the static resistance of a resting ball) subject to no contact converging: Gauss's
+   principle of least constraint. An approximate dual solve (`guide`) proposes which resting balls are held or
+   released, the active contacts and the released directions. That candidate is then solved exactly and verified;
+   if verification fails, every combination is tried in a fixed order. A ball released from rest is accepted only if
+   it moves and its acceleration agrees, to within `DIRECTION_TOLERANCE`, with the direction its resistance was built
+   on. Its rolling resistance therefore always opposes its motion and never does positive work. Pairs, chains, a ball held
    against an upright and a ball driven into two balls at an angle are all the same problem. Each coupled contact
    keeps its normal fixed for the segment, so relative motion is perpendicular to it and can only open the gap, never
    close it.
@@ -2452,8 +2455,10 @@ import { ZERO, dot, normalize, sub, vec3, type Vec3 } from "../../src/engine/mat
 import { classify, contactSlip, rollingSpin } from "../../src/engine/motion";
 import {
     DIRECTION_TOLERANCE,
+    HOLD_TOLERANCE,
     RESTING_SPEED,
     freeAcceleration,
+    holdCertificate,
     pushDuration,
     pushedState,
     pushedTrajectory,
@@ -2687,6 +2692,54 @@ describe("resting chains", () => {
         expect(members[2]?.push?.direction).toEqual(vec3(1, 0, 0));
     });
 
+    it("holds a bent line only when the contact between the resting balls can carry the load (30° holds)", () => {
+        // Ball 1 takes load 3 along x; leaning on ball 2 at 30° it can shed up to 2.1 along n12, leaving
+        // |(3 − 2.1·cos30°, −2.1·sin30°)| = 1.58 ≤ 2.1.
+        const { members } = solveRestingContacts(chain(1.5, Math.PI / 6), [], LINE);
+        for (const m of members) {
+            const x = m?.push?.acceleration ?? ZERO;
+            expect(Math.abs(x.x) + Math.abs(x.y)).toBeLessThan(1e-12);
+        }
+        expect(members[1]?.phase).toBe("stationary");
+    });
+
+    it("releases the middle ball of a line bent by 60°, which its neighbour cannot hold", () => {
+        // Best case for holding: ball 1's load 3·x̂ less a compression along n12 (60°) leaves 3·sin60° = 2.6 > 2.1.
+        // Ball 2 stays held; ball 1 slides along it, perpendicular to n12, i.e. along d = (cos30°, −sin30°). With
+        // ball 0's acceleration a along x: x₁ = (a, −a·tan30°), so |x₁| = a / cos30°. Along d, ball 1's equation is
+        // (7/5)·(|x₁| + ROLL₁) = N·cos30° with N = SLIDE − a on ball 0. Hence
+        // a = (SLIDE·cos30° − (7/5)·ROLL₁) / ((7/5)/cos30° + cos30°), and ball 2 takes N·cos60° ≤ 2.1.
+        const roll = 1.5;
+        const { members, coupled } = solveRestingContacts(chain(roll, Math.PI / 3), [], LINE);
+        const cos30 = Math.sqrt(3) / 2;
+        const a = (SLIDE * cos30 - (7 / 5) * roll) / (7 / 5 / cos30 + cos30);
+        expect(coupled).toEqual([true, true]);
+        expect(members[0]?.push?.acceleration.x).toBeCloseTo(a, 12);
+        expect(members[1]?.phase).toBe("rolling");
+        expect(members[1]?.push?.acceleration.x).toBeCloseTo(a, 12);
+        expect(members[1]?.push?.acceleration.y).toBeCloseTo(-a / Math.sqrt(3), 12);
+        expect(members[1]?.push?.direction.x).toBeCloseTo(cos30, 9);
+        expect(members[1]?.push?.direction.y).toBeCloseTo(-0.5, 9);
+        expect(members[2]?.phase).toBe("stationary");
+        expect((SLIDE - a) * 0.5).toBeLessThanOrEqual((7 / 5) * roll);
+    });
+
+    it("gives a hold certificate whose compressions keep every ball within its resistance", () => {
+        const n = vec3(Math.cos(Math.PI / 6), Math.sin(Math.PI / 6), 0);
+        const certificate = holdCertificate([vec3(3, 0, 0), ZERO], [2.1, 2.1], [{ a: 0, b: 1, normal: n }], []);
+        expect(certificate).not.toBeNull();
+        const lambda = (certificate as number[])[0] as number;
+        expect(lambda).toBeGreaterThanOrEqual(0);
+        expect(Math.hypot(3 - lambda * n.x, -lambda * n.y)).toBeLessThanOrEqual(2.1 + HOLD_TOLERANCE);
+        expect(lambda).toBeLessThanOrEqual(2.1 + HOLD_TOLERANCE);
+        const bent = vec3(0.5, Math.sqrt(3) / 2, 0);
+        expect(holdCertificate([vec3(3, 0, 0), ZERO], [2.1, 2.1], [{ a: 0, b: 1, normal: bent }], [])).toBeNull();
+        // An obstacle behind the pushed ball takes the whole load in compression.
+        expect(holdCertificate([vec3(3, 0, 0)], [0.1], [], [{ ball: 0, into: vec3(1, 0, 0) }])).not.toBeNull();
+        // It cannot pull: an obstacle on the other side does not help.
+        expect(holdCertificate([vec3(3, 0, 0)], [0.1], [], [{ ball: 0, into: vec3(-1, 0, 0) }])).toBeNull();
+    });
+
     it("releases balls from rest only along their own frozen direction, so resistance never does work (random)", () => {
         const random = rng(29);
         let released = 0;
@@ -2708,6 +2761,20 @@ describe("resting chains", () => {
                 contacts.push({ a: 0, b: 2, fixed: false });
             }
             const { members } = solveRestingContacts(bodies, [], contacts);
+            if (contacts.length === 2) {
+                // Brute-force cross-check of the hold decision. Held, ball 0 pushes ball 1 along n01 with the part of
+                // its drive that points that way; ball 1 can lean on ball 2 only by a compression λ ∈ [0, c] along
+                // n12. So ball 1 holds exactly when that load is within c of the segment {λ·n12 : 0 ≤ λ ≤ c}.
+                const c = (7 / 5) * p.rollingDecel;
+                const n01 = normalize(vec3(b.x, b.y, 0));
+                const n12 = normalize(sub(bodies[2]?.state.position as Vec3, b));
+                const push = Math.max(0, dot(freeAcceleration(bodies[0]?.state as BallState, p), n01));
+                const along = Math.min(Math.max(push * dot(n01, n12), 0), c);
+                const gap = Math.hypot(push * n01.x - along * n12.x, push * n01.y - along * n12.y) - c;
+                if (Math.abs(gap) > 1e-6) {
+                    expect((members[1]?.phase ?? "stationary") === "stationary", `case ${n}`).toBe(gap < 0);
+                }
+            }
             // With no ball held, contact forces are internal: Σ wᵢ·(xᵢ − fᵢ) = 0, where a released ball's resistance
             // fᵢ = −rollingDecel·dᵢ acts along its reported frozen direction. This fails if the direction reported is
             // not the one the accelerations were solved with.
@@ -3169,8 +3236,14 @@ export function solveRestingContacts(
 }
 
 /**
- * Finds the accelerations of one group: every combination of resting balls held or released (held first), and for
- * each every active set of contacts (smallest first), until one is consistent. Returns null if none is.
+ * Finds the accelerations of one group. A candidate is a choice of which resting balls are held and which are
+ * released, and of which contacts are active; it is solved exactly (tryActiveSet) and accepted only if it is
+ * consistent and every held ball can stay at rest (holds).
+ *
+ * The candidate is normally read off an approximate solution of the whole problem (guide), which settles the held
+ * and released balls, the active contacts and the released balls' directions at once. When that candidate is not
+ * consistent (for example exactly at the limit of holding), every combination is tried: resting balls held or
+ * released (held first), and for each every active set (smallest first). Returns null if nothing is consistent.
  *
  * The search is small and bounded. Four equal balls touch in at most 5 pairs, and a ball fits between hoop uprights,
  * so it touches at most one obstacle: a group has at most 9 contacts (512 active sets) and 4 resting balls (16
@@ -3186,118 +3259,243 @@ function solveGroup(
     params: (i: number) => MotionParams,
 ): Candidate | null {
     const resting = group.filter((i) => (responses.get(i) as Response).phase === "stationary");
-    for (let mask = 0; mask < 1 << resting.length; mask++) {
-        const released = new Set(resting.filter((_, j) => (mask & (1 << j)) !== 0));
+    const attempt = (
+        released: ReadonlySet<number>,
+        active: readonly number[],
+        seed: ReadonlyMap<number, Vec3>,
+    ): Candidate | null => {
         const held = new Set(resting.filter((i) => !released.has(i)));
         // Held balls do not move, so a contact between two of them carries no constraint (its row is zero and it is
-        // never active). Instead, touching held balls form a static cluster that resists as one (see holds()).
+        // never active). The forces held balls pass to one another are settled afterwards by holds().
         const system: ContactSystem = {
             bodies: group,
             contacts: groupContacts,
             jacobian: (k, i) => (held.has(i) ? ZERO : jacobian(k, i)),
             inverseWeight: (i) => (held.has(i) ? 0 : 1 / (responses.get(i) as Response).weight),
         };
-        const clusters = heldClusters(held, groupContacts, contacts, jacobian);
+        const candidate = tryActiveSet(system, active, responses, released, closingRate, params, seed);
+        const multipliers = candidate?.multipliers ?? [];
+        if (candidate && holds(held, groupContacts, contacts, active, multipliers, responses, jacobian)) {
+            return { acceleration: candidate.acceleration, active, released: candidate.released };
+        }
+        return null;
+    };
+
+    const guided = guide(group, groupContacts, contacts, resting, responses, jacobian);
+    const first = attempt(guided.released, guided.active, guided.directions);
+    if (first) {
+        return first;
+    }
+    for (let mask = 0; mask < 1 << resting.length; mask++) {
+        const released = new Set(resting.filter((_, j) => (mask & (1 << j)) !== 0));
         for (const active of subsets(groupContacts)) {
-            const candidate = tryActiveSet(system, active, responses, released, jacobian, closingRate, params);
-            if (candidate && holds(clusters, active, candidate.multipliers, responses, jacobian)) {
-                return { acceleration: candidate.acceleration, active, released: candidate.released };
+            const candidate = attempt(released, active, new Map());
+            if (candidate) {
+                return candidate;
             }
         }
     }
     return null;
 }
 
-/** A set of touching held balls, and the unit normals from its balls into the obstacles they rest against. */
-interface HeldCluster {
-    readonly balls: readonly number[];
-    readonly obstacles: readonly Vec3[];
-}
+/** Iteration cap of the approximate solve that guides the exact one; see guide. */
+const GUIDE_ITERATIONS = 5_000;
 
-/** Groups the held balls into clusters joined by their mutual contacts. */
-function heldClusters(
-    held: ReadonlySet<number>,
+/** The guiding solve stops once no contact force changes by more than this in a step. */
+const GUIDE_TOLERANCE = 1e-12;
+
+/**
+ * Approximately solves the group's whole problem, including balls at rest, to read off a candidate for the exact
+ * solve: the balls it releases (and their directions) and the contacts that carry force.
+ *
+ * With a resting ball's static resistance included, the accelerations minimise
+ * Σᵢ ½·wᵢ·|xᵢ − fᵢ|² + Σᵢ cᵢ·|xᵢ| subject to no contact converging. Its dual, over contact forces N ≥ 0, is smooth:
+ * for given N each ball's acceleration is the soft threshold xᵢ = shrink(fᵢ + gᵢ/wᵢ, cᵢ/wᵢ) of its free
+ * acceleration plus the contact push gᵢ = Σₖ Nₖ·Jₖᵢ, and the dual gradient is −J·x. Projected gradient ascent with
+ * step 1/L (L ≥ largest row sum of J·W⁻¹·Jᵀ, at most 2·contacts) converges. A ball whose soft threshold is zero is
+ * held; any other resting ball is released along its acceleration. Contacts between held balls carry force here,
+ * which is how held balls lean on one another.
+ */
+function guide(
+    group: readonly number[],
     groupContacts: readonly number[],
     contacts: readonly RestingContact[],
+    resting: readonly number[],
+    responses: ReadonlyMap<number, Response>,
     jacobian: (k: number, i: number) => Vec3,
-): HeldCluster[] {
-    const clusters: number[][] = [...held].map((i) => [i]);
-    for (const k of groupContacts) {
-        const c = contacts[k] as RestingContact;
-        if (c.fixed || !held.has(c.a) || !held.has(c.b)) {
-            continue;
-        }
-        const ca = clusters.find((cl) => cl.includes(c.a)) as number[];
-        const cb = clusters.find((cl) => cl.includes(c.b)) as number[];
-        if (ca !== cb) {
-            ca.push(...cb);
-            clusters.splice(clusters.indexOf(cb), 1);
+): { readonly released: Set<number>; readonly active: number[]; readonly directions: Map<number, Vec3> } {
+    const forces = groupContacts.map(() => 0);
+    const step = 1 / Math.max(1, 2 * groupContacts.length);
+    const accelerations = (): Map<number, Vec3> =>
+        new Map(
+            group.map((i) => {
+                const r = responses.get(i) as Response;
+                let push = ZERO;
+                groupContacts.forEach((k, j) => {
+                    push = add(push, scale(jacobian(k, i), forces[j] as number));
+                });
+                const v = add(r.force, scale(push, 1 / r.weight));
+                const size = length(v);
+                const limit = r.threshold / r.weight;
+                return [i, size > limit ? scale(v, (size - limit) / size) : ZERO];
+            }),
+        );
+    for (let iteration = 0; iteration < GUIDE_ITERATIONS; iteration++) {
+        const x = accelerations();
+        let change = 0;
+        groupContacts.forEach((k, j) => {
+            const c = contacts[k] as RestingContact;
+            // J·x for this contact: the rate at which it opens (negative while converging).
+            let opening = dot(jacobian(k, c.a), x.get(c.a) as Vec3);
+            if (!c.fixed) {
+                opening += dot(jacobian(k, c.b), x.get(c.b) as Vec3);
+            }
+            const next = Math.max(0, (forces[j] as number) - step * opening);
+            change = Math.max(change, Math.abs(next - (forces[j] as number)));
+            forces[j] = next;
+        });
+        if (change <= GUIDE_TOLERANCE) {
+            break;
         }
     }
-    // An obstacle contact's row for its ball is −n, with n pointing from the ball into the obstacle.
-    return clusters.map((balls) => ({
-        balls,
-        obstacles: groupContacts
-            .filter((k) => contacts[k]?.fixed === true && balls.includes(contacts[k]?.a ?? -1))
-            .map((k) => scale(jacobian(k, contacts[k]?.a ?? -1), -1)),
-    }));
+    const x = accelerations();
+    // Dual ascent approaches a ball held exactly at its limit from the moving side, so tiny accelerations count as held.
+    const released = new Set(resting.filter((i) => length(x.get(i) as Vec3) > ACCELERATION_EPSILON));
+    const directions = new Map([...released].map((i) => [i, normalize(x.get(i) as Vec3)]));
+    // A contact carries force in the exact solve only if at least one of its balls moves.
+    const active = groupContacts.filter((k, j) => {
+        const c = contacts[k] as RestingContact;
+        const moving = (i: number): boolean => !resting.includes(i) || released.has(i);
+        return (forces[j] as number) > 0 && (moving(c.a) || (!c.fixed && moving(c.b)));
+    });
+    return { released, active, directions };
 }
 
 /**
- * Can every held cluster stay at rest? The cluster's balls push on one another freely, so it resists as one: the net
- * push its active contacts put on it, less whatever the obstacles it rests against can take in compression, must not
- * exceed the sum of its balls' static rolling resistances.
+ * Can every held ball stay at rest? Touching held balls lean on one another, but a ball–ball or ball–obstacle contact
+ * carries only compression, and only along its own normal. So the question is whether some internal compressions
+ * λ ≥ 0 leave each held ball's net load within its own static resistance (see holdCertificate).
  */
 function holds(
-    clusters: readonly HeldCluster[],
+    held: ReadonlySet<number>,
+    groupContacts: readonly number[],
+    contacts: readonly RestingContact[],
     active: readonly number[],
     multipliers: readonly number[],
     responses: ReadonlyMap<number, Response>,
     jacobian: (k: number, i: number) => Vec3,
 ): boolean {
-    return clusters.every((cluster) => {
-        let push = ZERO;
-        let capacity = 0;
-        for (const i of cluster.balls) {
-            capacity += (responses.get(i) as Response).threshold;
-            active.forEach((k, j) => {
-                push = add(push, scale(jacobian(k, i), multipliers[j] as number));
-            });
-        }
-        return length(unresisted(push, cluster.obstacles)) <= capacity + ACCELERATION_EPSILON;
+    if (held.size === 0) {
+        return true;
+    }
+    const balls = [...held];
+    // External load on each held ball: the forces of the active contacts it takes part in.
+    const loads = balls.map((i) => {
+        let load = ZERO;
+        active.forEach((k, j) => {
+            load = add(load, scale(jacobian(k, i), multipliers[j] as number));
+        });
+        return load;
     });
+    const links: HoldLink[] = [];
+    const rays: HoldRay[] = [];
+    for (const k of groupContacts) {
+        const c = contacts[k] as RestingContact;
+        if (!held.has(c.a)) {
+            continue;
+        }
+        if (c.fixed) {
+            // The ball's row is −n with n pointing into the obstacle; the obstacle pushes back along −n.
+            rays.push({ ball: balls.indexOf(c.a), into: scale(jacobian(k, c.a), -1) });
+        } else if (held.has(c.b)) {
+            links.push({ a: balls.indexOf(c.a), b: balls.indexOf(c.b), normal: jacobian(k, c.b) });
+        }
+    }
+    const capacities = balls.map((i) => (responses.get(i) as Response).threshold);
+    return holdCertificate(loads, capacities, links, rays) !== null;
 }
 
 /**
- * The part of `push` that obstacles with inward normals `into` cannot take: `push` minus its projection onto the cone
- * of compressive obstacle reactions Σ λⱼ·intoⱼ (λⱼ ≥ 0). In the plane that projection lies on a single ray, or covers
- * `push` entirely when a pair of normals spans it with non-negative weights.
+ * Loads (weight × acceleration units) within this of a held ball's static resistance still hold. It only settles
+ * which way a contact exactly at the limit of holding goes.
  */
-function unresisted(push: Vec3, into: readonly Vec3[]): Vec3 {
-    let best = push;
-    for (const n of into) {
-        const rest = sub(push, scale(n, Math.max(0, dot(push, n))));
-        if (length(rest) < length(best)) {
-            best = rest;
+export const HOLD_TOLERANCE = 1e-9;
+
+/** Iteration cap of the held-ball feasibility search; see holdCertificate. */
+const HOLD_ITERATIONS = 20_000;
+
+/** A contact between two held balls: compression pushes ball `b` along `normal` and ball `a` against it. */
+export interface HoldLink {
+    readonly a: number;
+    readonly b: number;
+    readonly normal: Vec3;
+}
+
+/** A held ball resting against an obstacle: the obstacle pushes it back against `into`, the unit normal into it. */
+export interface HoldRay {
+    readonly ball: number;
+    readonly into: Vec3;
+}
+
+/**
+ * Decides whether held balls can stay at rest. Ball i carries external load `loads[i]` and resists up to
+ * `capacities[i]` in any direction. Returns compressions (one per link, then one per ray, all ≥ 0) under which every
+ * ball's net load lies within its capacity (to HOLD_TOLERANCE), or null when none exist.
+ *
+ * The feasible compressions are the minimisers, with value zero, of F(λ) = Σᵢ ½·max(0, |netᵢ(λ)| − capacityᵢ)² over
+ * λ ≥ 0. F is convex with a gradient that is Lipschitz with constant at most the largest row sum of JᵀJ (at most
+ * 2·(links + rays)), so projected gradient descent with that step decreases F monotonically and converges; F reaches
+ * zero exactly when a feasible λ exists. The search stops as soon as every ball is within capacity (usually a few
+ * steps) and otherwise gives up after HOLD_ITERATIONS, deciding by the remaining excess.
+ */
+export function holdCertificate(
+    loads: readonly Vec3[],
+    capacities: readonly number[],
+    links: readonly HoldLink[],
+    rays: readonly HoldRay[],
+): number[] | null {
+    const count = links.length + rays.length;
+    const lambda = new Array<number>(count).fill(0);
+    // Net load on every ball for the current compressions.
+    const net = (): Vec3[] => {
+        const result = [...loads];
+        links.forEach((link, k) => {
+            const f = scale(link.normal, lambda[k] as number);
+            result[link.b] = add(result[link.b] as Vec3, f);
+            result[link.a] = sub(result[link.a] as Vec3, f);
+        });
+        rays.forEach((ray, j) => {
+            result[ray.ball] = sub(result[ray.ball] as Vec3, scale(ray.into, lambda[links.length + j] as number));
+        });
+        return result;
+    };
+    const step = 1 / Math.max(1, 2 * count);
+    for (let iteration = 0; iteration <= HOLD_ITERATIONS; iteration++) {
+        const loadsNow = net();
+        // Gradient of F with respect to each ball's net load: the excess beyond the capacity disc, along the load.
+        let excess = 0;
+        const pull = loadsNow.map((load, i) => {
+            const size = length(load);
+            const over = size - (capacities[i] as number);
+            excess = Math.max(excess, over);
+            return over > 0 ? scale(load, over / size) : ZERO;
+        });
+        if (excess <= HOLD_TOLERANCE) {
+            return lambda;
         }
-    }
-    for (let i = 0; i < into.length; i++) {
-        for (let j = i + 1; j < into.length; j++) {
-            const a = into[i] as Vec3;
-            const b = into[j] as Vec3;
-            const det = a.x * b.y - a.y * b.x;
-            if (det === 0) {
-                continue;
-            }
-            // Solve λa·a + λb·b = push by Cramer's rule.
-            const la = (push.x * b.y - push.y * b.x) / det;
-            const lb = (a.x * push.y - a.y * push.x) / det;
-            if (la >= 0 && lb >= 0) {
-                return ZERO;
-            }
+        if (count === 0 || iteration === HOLD_ITERATIONS) {
+            return null;
         }
+        links.forEach((link, k) => {
+            const gradient = dot(sub(pull[link.b] as Vec3, pull[link.a] as Vec3), link.normal);
+            lambda[k] = Math.max(0, (lambda[k] as number) - step * gradient);
+        });
+        rays.forEach((ray, j) => {
+            const gradient = -dot(pull[ray.ball] as Vec3, ray.into);
+            lambda[links.length + j] = Math.max(0, (lambda[links.length + j] as number) - step * gradient);
+        });
     }
-    return best;
+    return null;
 }
 
 /** One solve of an active set: accelerations, contact multipliers and the directions of balls pushed off from rest. */
@@ -3316,15 +3514,16 @@ function tryActiveSet(
     active: readonly number[],
     responses: ReadonlyMap<number, Response>,
     released: ReadonlySet<number>,
-    jacobian: (k: number, i: number) => Vec3,
     closingRate: (x: ReadonlyMap<number, Vec3>, k: number) => number,
     params: (i: number) => MotionParams,
+    seed: ReadonlyMap<number, Vec3>,
 ): Trial | null {
     // A ball pushed off from rest rolls against rolling resistance along its direction of motion, which is not known
-    // until the accelerations are. The first pass omits that resistance; each later pass builds it on the direction
-    // the previous pass produced, and the trial is accepted only once the result agrees with the direction it was
-    // built on. Resistance along an agreeing direction opposes the motion, so it never does positive work.
-    const directions = new Map<number, Vec3>();
+    // until the accelerations are. The first pass builds that resistance on the `seed` direction (or omits it when
+    // there is none); each later pass builds it on the direction the previous pass produced, and the trial is accepted
+    // only once the result agrees with the direction it was built on. Resistance along an agreeing direction opposes
+    // the motion, so it never does positive work.
+    const directions = new Map([...seed].filter(([i]) => released.has(i)));
     for (let pass = 0; pass < RELEASE_PASSES; pass++) {
         const base = new Map(
             system.bodies.map((i) => {
@@ -3355,10 +3554,13 @@ function tryActiveSet(
     return null;
 }
 
-/** True when `x` points along the unit vector `d`, to within DIRECTION_TOLERANCE. */
+/**
+ * True when `x` points along the unit vector `d`, to within DIRECTION_TOLERANCE, and is more than rounding: a ball
+ * released from rest must actually move (otherwise it is held).
+ */
 function agrees(x: Vec3, d: Vec3): boolean {
     const along = dot(x, d);
-    return along > 0 && Math.abs(x.x * d.y - x.y * d.x) <= DIRECTION_TOLERANCE * along;
+    return along > ACCELERATION_EPSILON && Math.abs(x.x * d.y - x.y * d.x) <= DIRECTION_TOLERANCE * along;
 }
 
 function accept(
@@ -3479,7 +3681,7 @@ export function pushDuration(start: BallState, phase: MotionPhase, push: PushMot
 - [ ] **Step 9: Run the tests to verify they pass**
 
 Run: `npx vitest run tests/engine/push.test.ts tests/engine/resolve.test.ts`
-Expected: PASS (23 tests). The random-pairs test checks that at least 100 of its 2,000 cases push; if it fails on
+Expected: PASS (26 tests). The random-pairs test checks that at least 100 of its 2,000 cases push; if it fails on
 that count, the generator no longer exercises pushing.
 
 - [ ] **Step 10: Format, lint, commit**
@@ -5757,7 +5959,7 @@ npm test
 npm run build
 ```
 
-Expected: every command exits 0; `npm test` reports 147 tests across 14 files.
+Expected: every command exits 0; `npm test` reports 150 tests across 14 files.
 
 - [ ] **Step 7: Commit**
 
