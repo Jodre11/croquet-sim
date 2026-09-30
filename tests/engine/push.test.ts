@@ -42,14 +42,14 @@ describe("solveRestingContacts", () => {
         // statically, then rolls (effective inertia 7m/5, rolling resistance ROLL). Common acceleration:
         // A = (SLIDE − (7/5)·ROLL) / (1 + 7/5) = (5·SLIDE − 7·ROLL) / 12.
         const omega = 60;
-        const { members, coupled, arrested } = solveRestingContacts(
+        const { members, coupled, approximate } = solveRestingContacts(
             [ball(0, 0, ZERO, vec3(0, omega, 0)), ball(2 * R, 0)],
             [],
             PAIR,
         );
         const A = (5 * SLIDE - 7 * ROLL) / 12;
         expect(coupled).toEqual([true]);
-        expect(arrested).toEqual([false, false]);
+        expect(approximate).toEqual([false, false]);
         const blue = members[0];
         const red = members[1];
         expect(blue?.phase).toBe("sliding");
@@ -145,8 +145,8 @@ describe("solveRestingContacts", () => {
             { a: 0, b: 2, fixed: false },
             { a: 1, b: 2, fixed: false },
         ];
-        const { members, coupled, arrested } = solveRestingContacts(bodies, [], contacts);
-        expect(arrested).toEqual([false, false, false]);
+        const { members, coupled, approximate } = solveRestingContacts(bodies, [], contacts);
+        expect(approximate).toEqual([false, false, false]);
         expect(coupled).toEqual([true, true, false]);
         const x = members.map((m) => m?.push?.acceleration ?? ZERO);
         const normal = (i: number, j: number): Vec3 =>
@@ -219,8 +219,8 @@ describe("resting chains", () => {
     it("holds a line of two resting balls that the push could move one at a time but not together", () => {
         // Drive 3 lies between one ball's resistance (7/5)·1.5 = 2.1 and the pair's 4.2.
         for (const bend of [0, 1e-3]) {
-            const { members, arrested } = solveRestingContacts(chain(1.5, bend), [], LINE);
-            expect(arrested).toEqual([false, false, false]);
+            const { members, approximate } = solveRestingContacts(chain(1.5, bend), [], LINE);
+            expect(approximate).toEqual([false, false, false]);
             for (const m of members) {
                 expect(m?.phase ?? "stationary").not.toBe("rolling");
                 const x = m?.push?.acceleration ?? ZERO;
@@ -246,8 +246,8 @@ describe("resting chains", () => {
     it("holds a bent line only when the contact between the resting balls can carry the load (30° holds)", () => {
         // Ball 1 takes load 3 along x; leaning on ball 2 at 30° it can shed up to 2.1 along n12, leaving
         // |(3 − 2.1·cos30°, −2.1·sin30°)| = 1.58 ≤ 2.1.
-        const { members, arrested } = solveRestingContacts(chain(1.5, Math.PI / 6), [], LINE);
-        expect(arrested).toEqual([false, false, false]);
+        const { members, approximate } = solveRestingContacts(chain(1.5, Math.PI / 6), [], LINE);
+        expect(approximate).toEqual([false, false, false]);
         for (const m of members) {
             const x = m?.push?.acceleration ?? ZERO;
             expect(Math.abs(x.x) + Math.abs(x.y)).toBeLessThan(1e-12);
@@ -262,8 +262,8 @@ describe("resting chains", () => {
         // (7/5)·(|x₁| + ROLL₁) = N·cos30° with N = SLIDE − a on ball 0. Hence
         // a = (SLIDE·cos30° − (7/5)·ROLL₁) / ((7/5)/cos30° + cos30°), and ball 2 takes N·cos60° ≤ 2.1.
         const roll = 1.5;
-        const { members, coupled, arrested } = solveRestingContacts(chain(roll, Math.PI / 3), [], LINE);
-        expect(arrested).toEqual([false, false, false]);
+        const { members, coupled, approximate } = solveRestingContacts(chain(roll, Math.PI / 3), [], LINE);
+        expect(approximate).toEqual([false, false, false]);
         const cos30 = Math.sqrt(3) / 2;
         const a = (SLIDE * cos30 - (7 / 5) * roll) / (7 / 5 / cos30 + cos30);
         expect(coupled).toEqual([true, true]);
@@ -277,13 +277,13 @@ describe("resting chains", () => {
         expect((SLIDE - a) * 0.5).toBeLessThanOrEqual((7 / 5) * roll);
     });
 
-    it("never arrests the line across the limit of holding, and decides as the closed form does (44.3°–44.7°)", () => {
+    it("solves the line exactly across the limit of holding, deciding as the closed form does (44.3°–44.7°)", () => {
         // With ball 2 at its limit λ = 2.1, ball 1's excess is |(3 − 2.1·cosθ, −2.1·sinθ)| − 2.1, which is zero at
         // cosθ = 9/12.6 (θ ≈ 44.4153°). Beyond it both resting balls start to move, very slowly at first.
         for (let step = 0; step <= 400; step++) {
             const theta = ((44.3 + step * 0.001) * Math.PI) / 180;
-            const { members, arrested } = solveRestingContacts(chain(1.5, theta), [], LINE);
-            expect(arrested, `θ step ${step}`).toEqual([false, false, false]);
+            const { members, approximate } = solveRestingContacts(chain(1.5, theta), [], LINE);
+            expect(approximate, `θ step ${step}`).toEqual([false, false, false]);
             const excess = Math.hypot(3 - 2.1 * Math.cos(theta), 2.1 * Math.sin(theta)) - 2.1;
             if (Math.abs(excess) > 1e-6) {
                 expect(members[1]?.phase === "stationary", `θ step ${step}`).toBe(excess < 0);
@@ -327,8 +327,8 @@ describe("resting chains", () => {
             if (Math.hypot(c.x, c.y) < 2 * R + 1e-12) {
                 contacts.push({ a: 0, b: 2, fixed: false });
             }
-            const { members, arrested } = solveRestingContacts(bodies, [], contacts);
-            expect(arrested, `case ${n}`).toEqual([false, false, false]);
+            const { members, approximate } = solveRestingContacts(bodies, [], contacts);
+            expect(approximate, `case ${n}`).toEqual([false, false, false]);
             if (contacts.length === 2) {
                 // Brute-force cross-check of the hold decision. Held, ball 0 pushes ball 1 along n01 with the part of
                 // its drive that points that way; ball 1 can lean on ball 2 only by a compression λ ∈ [0, c] along
@@ -417,14 +417,15 @@ describe("clusters at the limit of holding", () => {
         return { bodies, axes: uprights, contacts };
     }
 
-    // Checks what every solution must satisfy: no ball's motion discarded; the driver never pushed backwards; balls
-    // released from rest move along their frozen resistance (so it does no positive work), and held balls stay put;
-    // no contact left converging and coupled contacts kept closed; and kinetic energy, spin included, never rising.
+    // Checks what every solution must satisfy: a hold excess reported exactly when the fallback ran; the driver never
+    // pushed backwards; balls released from rest move along their frozen resistance (so it does no positive work), and
+    // held balls stay put; no contact left converging and coupled contacts kept closed; and kinetic energy, spin
+    // included, never rising.
     function expectSound(c: Cluster, s: RestingSolution, label: string): void {
-        expect(
-            s.arrested.some((a) => a),
-            label,
-        ).toBe(false);
+        expect(s.holdExcess, label).toBeGreaterThanOrEqual(0);
+        if (!s.approximate.some((a) => a)) {
+            expect(s.holdExcess, label).toBe(0);
+        }
         const x = c.bodies.map((b, i) => s.members[i]?.push?.acceleration ?? freeAcceleration(b.state, b.params));
         const drive = freeAcceleration(c.bodies[0]?.state as BallState, c.bodies[0]?.params as MotionParams);
         const x0 = x[0] as Vec3;
@@ -615,9 +616,11 @@ describe("clusters at the limit of holding", () => {
         expect(approximate).toBe(0);
     });
 
-    it("keeps the nearest-hold fallback sound: resting balls stay put, the driver is never pushed back (random)", () => {
+    it("keeps the nearest-hold fallback sound and its hold excess honest (random clusters)", () => {
         const random = rng(5);
         let moved = 0;
+        let released = 0;
+        let held = 0;
         for (let made = 0; made < 300;) {
             const c = randomCluster(random, 0.2 + random() * 2.3);
             if (!c) {
@@ -635,8 +638,20 @@ describe("clusters at the limit of holding", () => {
             const f = freeAcceleration(c.bodies[0]?.state as BallState, c.bodies[0]?.params as MotionParams);
             expect(dot(x, f)).toBeGreaterThanOrEqual(0.5 * dot(x, x) - 1e-12);
             moved += dot(x, x) > 0 ? 1 : 0;
+            // The hold excess is an upper bound: it counts only the supports in the fallback's group, and the exact
+            // solve may engage more (a ball it moves can converge on a neighbour or an upright). Where the exact
+            // solve releases a ball, holding every resting ball is infeasible even with those extra supports (the
+            // solution is unique), so the excess must be positive.
+            const exact = solveRestingContacts(c.bodies, c.axes, c.contacts);
+            if (exact.members.slice(1).some((m) => m?.phase === "rolling")) {
+                released++;
+                expect(s.holdExcess, `cluster ${made}`).toBeGreaterThan(0);
+            }
+            held += s.holdExcess <= HOLD_SLACK ? 1 : 0;
         }
         expect(moved).toBeGreaterThan(100);
+        expect(released).toBeGreaterThan(30);
+        expect(held).toBeGreaterThan(30);
     });
 });
 

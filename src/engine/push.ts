@@ -28,11 +28,12 @@
  * zero along the frozen direction, or turns more than DIRECTION_TOLERANCE away from it. The simulator then solves the
  * group again from the balls' new states.
  *
- * If no exact candidate is found (only ever within a hair of the limit of holding, where released accelerations are
- * vanishingly small), the group falls back to the nearest hold: its resting balls stay at rest and the moving balls
- * are solved against them as fixed obstacles. That problem always has a solution (see solveGroup), does no work
- * through the held balls, and differs from the exact one only by the tiny accelerations the held balls would have had.
- * No ball's motion is discarded.
+ * If no exact candidate is found, the group falls back to the nearest hold: its resting balls stay at rest and the
+ * moving balls are solved against them as fixed obstacles. That problem always has a solution (see solveGroup) and
+ * does no work through the held balls, so no ball's motion is discarded. It differs from the exact solution by the
+ * motion the held balls should have had. That is not bounded in principle; the solution reports it as holdExcess and
+ * flags the balls concerned (approximate). The fallback has only been observed at limits of holding, where both are
+ * tiny.
  */
 import { approachSpeed } from "./detect";
 import { ZERO, add, dot, horizontal, length, normalize, scale, sub, vec3, type Vec3 } from "./math/vec3";
@@ -113,15 +114,19 @@ export interface RestingSolution {
     /** Per contact: true when the contact is coupled (pushing, or holding a ball against an obstacle). */
     readonly coupled: readonly boolean[];
     /**
-     * Per body: true when the body's motion was discarded because its group has no solution. The nearest-hold fallback
-     * always has one, so this is always false; it is kept so that the simulator's "arrested" event keeps its meaning.
-     */
-    readonly arrested: readonly boolean[];
-    /**
-     * Per body: true when its group was solved by the nearest-hold fallback rather than exactly. Diagnostic only: the
-     * motion is still valid, and tests use it to bound how often the fallback is needed.
+     * Per body: true when its group was solved by the nearest-hold fallback rather than exactly. The motion is still
+     * sound (no contact converges, no force pulls, the held balls do no work), but not the exact solution.
      */
     readonly approximate: readonly boolean[];
+    /**
+     * Over the groups solved by the fallback: the worst amount (weight × m/s²) by which a held ball's load exceeds its
+     * static resistance, for the best contact compressions the hold search finds; 0 when no group needed the
+     * fallback. How far the fallback strays from the exact solution grows with it. It is an upper bound: it counts
+     * only the supports in the group, and a neighbour or upright the held balls never pressed on might help. It is
+     * observed to be tiny, because the fallback is only reached at a limit of holding, but nothing bounds it in
+     * principle.
+     */
+    readonly holdExcess: number;
 }
 
 interface Response {
@@ -291,6 +296,7 @@ function groupsOf(bodyCount: number, contacts: readonly RestingContact[], kept: 
 interface HoldTrial {
     readonly active: readonly number[];
     readonly x: Map<number, Vec3>;
+    readonly multipliers: readonly number[];
     readonly worst: number;
 }
 
@@ -301,6 +307,8 @@ interface Candidate {
     readonly released: ReadonlyMap<number, Vec3>;
     /** True when found by the nearest-hold fallback rather than exactly. */
     readonly approximate: boolean;
+    /** For the fallback, the worst excess of a held ball's load over its resistance (see heldExcess); else 0. */
+    readonly holdExcess: number;
 }
 
 /**
@@ -368,8 +376,8 @@ function solveContacts(
     for (;;) {
         const states = [...initial];
         const members: (RestingMember | null)[] = bodies.map(() => null);
-        const arrested = bodies.map(() => false);
         const approximate = bodies.map(() => false);
+        let holdExcess = 0;
         const coupled = contacts.map(() => false);
         const acceleration = new Map(freeAcceleration);
 
@@ -425,6 +433,7 @@ function solveContacts(
             for (const k of solution.active) {
                 coupled[k] = true;
             }
+            holdExcess = Math.max(holdExcess, solution.holdExcess);
             for (const i of group) {
                 const s = states[i] as BallState;
                 const r = responses.get(i) as Response;
@@ -442,7 +451,7 @@ function solveContacts(
 
         const added = contacts.map((_, k) => !kept[k] && converging(states, acceleration, k));
         if (!added.includes(true)) {
-            return { members, coupled, arrested, approximate };
+            return { members, coupled, approximate, holdExcess };
         }
         added.forEach((a, k) => {
             kept[k] = kept[k] === true || a;
@@ -453,7 +462,7 @@ function solveContacts(
 /**
  * Finds the accelerations of one group. A candidate is a choice of which resting balls are held and which are
  * released, and of which contacts are active; it is solved exactly (tryActiveSet) and accepted only if it is
- * consistent and every held ball can stay at rest (holds).
+ * consistent and every held ball can stay at rest (heldExcess).
  *
  * The candidate is normally read off an approximate solution of the whole problem (guide), which settles the held
  * and released balls and the active contacts at once. When that candidate is not consistent (for example exactly at
@@ -466,9 +475,10 @@ function solveContacts(
  * it has a unique minimiser. Its constraints are linear, so KKT multipliers exist, and they can be chosen with
  * linearly independent support (a basic solution): the enumeration of active sets reaches that support and it is
  * consistent. So the fallback cannot fail. Should rounding spoil every set, the least inconsistent one is kept. The
- * held balls do no work, and the error against the exact solution is bounded by the accelerations the held balls
- * should have had, which are the vanishingly small ones that made the exact search fail. With `nearestHold` set the
- * group goes straight to the fallback.
+ * held balls do no work. Its error against the exact solution is the motion the held balls should have had; nothing
+ * bounds that in principle, so the fallback reports how far the held balls' loads exceed their resistances
+ * (holdExcess). It is only observed at a limit of holding, where that excess and the missing motion are tiny. With
+ * `nearestHold` set the group goes straight to the fallback.
  *
  * The search is small and bounded. Four equal balls touch in at most 5 pairs, and a ball fits between hoop uprights,
  * so it touches at most one obstacle: a group has at most 9 contacts (512 active sets) and 4 resting balls (16
@@ -486,7 +496,7 @@ function solveGroup(
 ): Candidate {
     const resting = group.filter((i) => (responses.get(i) as Response).phase === "stationary");
     // Held balls do not move, so a contact between two of them carries no constraint (its row is zero and it is never
-    // active). The forces held balls pass to one another are settled afterwards by holds().
+    // active). The forces held balls pass to one another are settled afterwards by heldExcess().
     const holding = (held: ReadonlySet<number>): ContactSystem => ({
         bodies: group,
         contacts: groupContacts,
@@ -496,11 +506,29 @@ function solveGroup(
     const attempt = (released: ReadonlySet<number>, active: readonly number[]): Candidate | null => {
         const held = new Set(resting.filter((i) => !released.has(i)));
         const candidate = tryActiveSet(holding(held), active, responses, released, closingRate, params);
-        const multipliers = candidate?.multipliers ?? [];
-        if (candidate && holds(held, groupContacts, contacts, active, multipliers, responses, jacobian)) {
-            return { acceleration: candidate.acceleration, active, released: candidate.released, approximate: false };
+        if (!candidate) {
+            return null;
         }
-        return null;
+        const excess = heldExcess(
+            held,
+            groupContacts,
+            contacts,
+            active,
+            candidate.multipliers,
+            responses,
+            jacobian,
+            false,
+        );
+        if (excess > HOLD_SLACK) {
+            return null;
+        }
+        return {
+            acceleration: candidate.acceleration,
+            active,
+            released: candidate.released,
+            approximate: false,
+            holdExcess: 0,
+        };
     };
 
     if (!nearestHold) {
@@ -525,7 +553,11 @@ function solveGroup(
     const base = new Map(group.map((i) => [i, (responses.get(i) as Response).force]));
     const trial = (active: readonly number[]): HoldTrial | null => {
         const solved = project(system, active, base);
-        return solved ? { active, x: solved.result, worst: violation(system, active, solved, closingRate) } : null;
+        if (!solved) {
+            return null;
+        }
+        const worst = violation(system, active, solved, closingRate);
+        return { active, x: solved.result, multipliers: solved.multipliers, worst };
     };
     // The empty set has no multipliers to solve for, so it always projects.
     let best = trial([]) as HoldTrial;
@@ -538,7 +570,12 @@ function solveGroup(
             best = next;
         }
     }
-    return { acceleration: best.x, active: best.active, released: new Map(), approximate: true };
+    // Diagnostic: how far the held balls' loads exceed their resistances, searched to the end (no early exit).
+    const holdExcess = Math.max(
+        0,
+        heldExcess(new Set(resting), groupContacts, contacts, best.active, best.multipliers, responses, jacobian, true),
+    );
+    return { acceleration: best.x, active: best.active, released: new Map(), approximate: true, holdExcess };
 }
 
 /** Iteration cap of the approximate solve that guides the exact one; see guide. */
@@ -602,7 +639,7 @@ function guide(
         }
     }
     const x = accelerations();
-    // Dual ascent approaches a ball held exactly at its limit from the moving side, so tiny accelerations count as held.
+    // Dual ascent approaches a ball held exactly at its limit from the moving side, so tiny ones count as held.
     const released = new Set(resting.filter((i) => length(x.get(i) as Vec3) > ACCELERATION_EPSILON));
     // A contact carries force in the exact solve only if at least one of its balls moves.
     const active = groupContacts.filter((k, j) => {
@@ -614,11 +651,14 @@ function guide(
 }
 
 /**
- * Can every held ball stay at rest? Touching held balls lean on one another, but a ball–ball or ball–obstacle contact
- * carries only compression, and only along its own normal. So the question is whether some internal compressions
- * λ ≥ 0 leave each held ball's net load within its own static resistance (see holdCertificate).
+ * How far are the held balls from staying at rest? Touching held balls lean on one another, but a ball–ball or
+ * ball–obstacle contact carries only compression, and only along its own normal. So the question is whether some
+ * internal compressions λ ≥ 0 leave each held ball's net load within its own static resistance (see
+ * holdCertificate). Returns the worst excess over resistance for the best λ found; the balls hold when it is at most
+ * HOLD_SLACK. Unless `exhaustive`, the search stops as soon as holding is proven impossible, and the excess returned
+ * is then merely some value above HOLD_SLACK.
  */
-function holds(
+function heldExcess(
     held: ReadonlySet<number>,
     groupContacts: readonly number[],
     contacts: readonly RestingContact[],
@@ -626,9 +666,10 @@ function holds(
     multipliers: readonly number[],
     responses: ReadonlyMap<number, Response>,
     jacobian: (k: number, i: number) => Vec3,
-): boolean {
+    exhaustive: boolean,
+): number {
     if (held.size === 0) {
-        return true;
+        return 0;
     }
     const balls = [...held];
     // External load on each held ball: the forces of the active contacts it takes part in.
@@ -654,7 +695,7 @@ function holds(
         }
     }
     const capacities = balls.map((i) => (responses.get(i) as Response).threshold);
-    return holdCertificate(loads, capacities, links, rays) !== null;
+    return searchHold(loads, capacities, links, rays, exhaustive).excess;
 }
 
 /**
@@ -701,8 +742,8 @@ export interface HoldRay {
  * Near the limit of holding, where the feasible set shrinks to a point, convergence is slow, which is why the slack is
  * needed; the search gives up after HOLD_ITERATIONS. A problem feasible with room to spare certifies, and one
  * infeasible by more than HOLD_SLACK does not; within the slack either answer can come back. The release solve (see
- * releaseDirections) is exact down to accelerations of ACCELERATION_EPSILON, and whatever neither side settles is
- * covered by the nearest-hold fallback (see solveGroup).
+ * releaseDirections) accepts only converged accelerations, and whatever neither side settles is covered by the
+ * nearest-hold fallback (see solveGroup).
  */
 export function holdCertificate(
     loads: readonly Vec3[],
@@ -710,6 +751,23 @@ export function holdCertificate(
     links: readonly HoldLink[],
     rays: readonly HoldRay[],
 ): number[] | null {
+    const found = searchHold(loads, capacities, links, rays, false);
+    return found.excess <= HOLD_SLACK ? found.lambda : null;
+}
+
+/**
+ * The search behind holdCertificate. Returns the compressions it found with the smallest worst excess of a ball's net
+ * load over its capacity, and that excess (0 when every ball is within capacity). Unless `exhaustive`, it
+ * stops on the Farkas certificate; exhaustively it runs until the excess is within HOLD_SLACK or HOLD_ITERATIONS, so
+ * the excess it reports is as small as the search can make it.
+ */
+function searchHold(
+    loads: readonly Vec3[],
+    capacities: readonly number[],
+    links: readonly HoldLink[],
+    rays: readonly HoldRay[],
+    exhaustive: boolean,
+): { readonly lambda: number[]; readonly excess: number } {
     const count = links.length + rays.length;
     const lambda = new Array<number>(count).fill(0);
     // Net load on every ball for the current compressions.
@@ -764,16 +822,21 @@ export function holdCertificate(
         });
         return margin > 0;
     };
-    // Accelerated projected gradient (FISTA) on λ ≥ 0, from λ = 0. `probe` is the extrapolated point.
+    // Accelerated projected gradient (FISTA) on λ ≥ 0, from λ = 0. `probe` is the extrapolated point; `best` the
+    // iterate with the smallest worst excess so far.
     let probe = [...lambda];
     let momentum = 1;
+    let best = { lambda: [...lambda], excess: Infinity };
     for (let iteration = 0; iteration <= HOLD_ITERATIONS; iteration++) {
         const here = evaluate(lambda);
-        if (here.excess <= HOLD_SLACK) {
-            return lambda;
+        if (here.excess < best.excess) {
+            best = { lambda: [...lambda], excess: here.excess };
         }
-        if (count === 0 || iteration === HOLD_ITERATIONS || impossible(here.pull)) {
-            return null;
+        if (here.excess <= HOLD_SLACK || count === 0 || iteration === HOLD_ITERATIONS) {
+            return best;
+        }
+        if (!exhaustive && impossible(here.pull)) {
+            return best;
         }
         const slope = gradient(evaluate(probe).pull);
         const next = probe.map((v, k) => Math.max(0, v - step * (slope[k] as number)));
@@ -782,7 +845,7 @@ export function holdCertificate(
         next.forEach((v, k) => (lambda[k] = v));
         momentum = nextMomentum;
     }
-    return null;
+    return best;
 }
 
 /** One solve of an active set: accelerations, contact multipliers and the directions of balls pushed off from rest. */
