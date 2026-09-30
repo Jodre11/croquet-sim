@@ -1,7 +1,7 @@
 # Croquet Shot Lab — Design
 
 **Date:** 2026-09-30
-**Status:** Draft for review
+**Status:** Reviewed (spec-review panel: subtraction, completeness)
 **Repo:** `croquet-sim`
 
 ## 1. Purpose
@@ -14,47 +14,58 @@ training tool, not a game: accuracy of outcome matters more than the feel of swi
 
 - Primary users are serious club players and coaches, many older and not confident with computers.
 - Access must be "click this link": no install, no account, no server-side state.
-- Tablets (notably older iPads) are first-class; touch-first with large targets, also usable with a mouse.
+- Tablets (notably older iPads) are first-class and touch-first with large targets. Desktop with a mouse is
+  fully supported. Phones are supported but secondary (usable, not optimised).
+- Browser floor (provisional, confirm in planning): Safari / iPadOS 16+, and the last two major versions
+  of Chrome, Edge and Firefox.
 - Language in the UI is croquet language ("stop shot ↔ roll", "check ↔ push through"), never physics
   jargon. Advanced parameters are tucked away.
 
 ### Success criteria
 
-1. Standard strokes (single-ball, stop, drive, half-roll, full roll, pass-roll) reproduce published
-   coaching distance ratios within tolerance under the default profile.
+All numeric thresholds are **provisional**; the implementation plan confirms or revises them once the
+reference data (§11) is sourced.
+
+1. Standard strokes (single-ball, stop, drive, half-roll, full roll, pass-roll) reproduce sourced coaching
+   distance ratios within **±15 %** under the default profile.
 2. Pull (narrowing of the split on wide rolls) emerges from the physics without being special-cased.
 3. A player can calibrate a personal stroke profile from a handful of tape-measured straight strokes.
-4. A shot simulates in well under a second on a 2020-era entry-level iPad; the app loads quickly on a
-   modest connection.
-5. A shared link reproduces the identical shot on any device.
+4. A shot simulates in **≤ 200 ms** on the reference low-end tablet (2020-era entry-level iPad); initial
+   download **≤ 250 KB** gzipped.
+5. A shared link reproduces the same shot on any supported browser: rest positions agree within **1 mm**
+   for the same engine version (see §5 Determinism).
 
 ## 2. Scope
 
 ### In v1
 
-- Single-ball strokes, roquets, and croquet strokes across the stop-shot → pass-roll range, including
-  split shots.
+- Single-ball strokes (including roquets and rushes), and croquet strokes across the stop-shot → pass-roll
+  range, including split shots.
 - Rebounds off hoop uprights and the peg; out-of-court detection; hoop-running detection.
 - Per-player stroke profiles with calibration.
 - Forward simulation only: the player chooses the stroke, the tool shows the outcome.
+- Top-down view only.
 - Shareable links for setups and profiles.
 
-### Explicitly deferred (design must not preclude)
+### Deferred — design constraints v1 must honour
 
 | Deferred item | How v1 keeps it open |
 |---|---|
 | Jump shots, half-jumps | Ball state is fully 3D; v1 detects lift-off and flags the shot rather than simulating it |
 | Hampered / glancing strokes | Contact is described generically (face orientation, contact point, head state) |
 | Cannons (three balls in contact) | Impact phase handles N bodies in contact |
-| Detailed hoop-wire contact on angled runs | Hoops are objects with geometry; contact model is replaceable |
-| Hoop stiffness (loose hoops), per-hoop width tolerance | Each hoop carries `width` and `stiffness`; v1 uses rigid, standard width |
+| Detailed hoop-wire contact on angled runs | Hoop contact model is isolated and replaceable |
+| Hoop stiffness (loose hoops), per-hoop width tolerance | Each hoop is its own object with its own `width` (v1: rigid, standard width) |
 | Lawn surface variability (sparse / discoloured patches) | Engine queries `lawn.surfaceAt(position)`; v1 returns a uniform value |
 | Slopes, grain, wet lawns | Same surface query; slope would add a gravity term to free motion |
-| Inverse solving ("put the balls here — what stroke?") | Reuses the calibration optimiser; first addition after v1 |
-| Full game (turn planning, rules, opponents) | Built on top of the single-shot engine |
+| Inverse solving ("put the balls here — what stroke?") | Reuses the calibration optimiser |
 | Motion-based stroke input | A new front end onto the same swing model |
-| Split-shot / pull calibration | Measurement work planned for next season |
-| In-app "this doesn't match my experience" feedback | Post-v1 |
+| 3D replay | Renderer consumes only `ShotResult`, which is already 3D |
+
+### Later (no v1 constraint)
+
+Full game (turn planning, rules, opponents); split-shot / pull calibration from measurements next season;
+in-app "this doesn't match my experience" feedback; offline support.
 
 ## 3. Architecture
 
@@ -71,14 +82,25 @@ Planner (UI) ──ShotSetup──▶ Swing model ──ContactState──▶ Ph
 | **Physics engine** | `ContactState + world → ShotResult` (full time-parameterised trajectories + events). Pure, deterministic, no DOM/graphics. | nothing |
 | **Swing model** | Maps body/equipment description to the mallet-head state during contact. Pure. | nothing |
 | **Calibration** | Fits a player's free parameters to measured distances by repeated simulation. Pure. | swing model, engine |
-| **Planner** | Ball placement, stroke controls, result display, compare overlay, sharing. | all of the above |
-| **Renderer** | Animates a `ShotResult`. Never participates in physics. Top-down view in Canvas 2D (always loaded); optional 3D replay via three.js, lazy-loaded. | `ShotResult` only |
+| **Planner** | Ball placement, stroke and lawn controls, result display, compare overlay, sharing. | all of the above |
+| **Renderer** | Animates a `ShotResult` top-down in Canvas 2D. Never participates in physics. | `ShotResult` only |
 
 The engine and swing model are the portability boundary: if performance proves inadequate they can be
 ported to Rust → WASM without touching the UI (decision recorded: start in TypeScript, switch only on
 measured need).
 
 UI framework: **Svelte** (small runtime, small bundles, suits low-end tablets).
+
+### ShotSetup
+
+The single input to a simulation, and the payload of a share link:
+
+- **Balls:** four identified balls (blue, red, black, yellow), each placed or absent; which ball is the
+  striker's ball; for a croquet stroke, which ball is croqueted.
+- **Stroke:** stroke-type preset plus the per-shot inputs of §4.
+- **Target hoop:** optional; the hoop and running direction the striker's ball is attempting (§5).
+- **Lawn:** lawn speed (defaults to the active profile's home-lawn speed).
+- **Profile:** the stroke profile in use (§7).
 
 ## 4. Swing model
 
@@ -88,8 +110,9 @@ player is upstream of that and is resolved here.
 ### Inputs (entered by the player, part of the profile)
 
 - **Mallet:** head mass, head length, face material (preset → face restitution + face friction table),
-  weight distribution (preset: centre / end-weighted / custom → moment of inertia), shaft length.
-- **Grip:** style (standard / Irish / Solomon), top-hand height, hand spacing.
+  weight distribution (preset: centre / end-weighted → moment of inertia), shaft length.
+- **Grip:** style (standard / Irish / Solomon) and top-hand height. Grip style only pre-fills the default
+  top-hand height and shaft lean; it has no other effect.
 - **Stance per stroke type:** ball position relative to feet (distance ahead of toes) and shaft lean at
   address. Each stroke type has defaults the player may adjust.
 
@@ -100,7 +123,7 @@ player is upstream of that and is resolved here.
 
 ### Derivation
 
-1. Grip height + shaft length → arc radius of the swing.
+1. Top-hand height + shaft length → arc radius of the swing.
 2. Stance (ball position relative to the arc's lowest point) → head **direction of travel** at impact
    (descending, level or rising).
 3. Shaft lean → **face orientation** at impact, independent of direction of travel.
@@ -118,14 +141,15 @@ impact.
 ### World
 
 - **Balls:** four identical solid spheres (uniform-density inertia, `I = 2/5·m·r²`), dimensions, mass
-  and bounce taken from the current official ball specification (see §10). State: 3D position,
-  velocity, angular velocity, motion phase.
-- **Mallet:** rigid body with full inertia tensor, driven by the `ContactState` force profile.
-- **Hoops:** two cylindrical uprights each; per-hoop `width` and `stiffness` (v1: rigid, standard width).
-  Standard lawn layout for positions.
+  and bounce taken from the current official ball specification (§11). State: 3D position, velocity,
+  angular velocity, motion phase.
+- **Mallet:** rigid body with full inertia tensor (off-centre contact on the face pitches or twists the
+  head), driven by the `ContactState` force profile.
+- **Hoops:** two cylindrical uprights each, per-hoop `width` (v1: rigid, standard width). Standard lawn
+  layout for positions.
 - **Peg:** rigid cylinder.
-- **Lawn:** flat plane with boundary. `surfaceAt(position) → { slidingFriction, rollingResistance }`.
-  Rolling resistance is derived from the standard lawn-speed measure so players enter what they know.
+- **Lawn:** flat plane with boundary. `surfaceAt(position) → { slidingFriction, rollingResistance }`,
+  uniform in v1. Rolling resistance is derived from the lawn speed in the `ShotSetup`.
 
 ### Phase 1 — Impact (milliseconds)
 
@@ -138,8 +162,8 @@ Small fixed-step integration of all bodies in contact (mallet, striker's ball, c
   stop / drive / roll behaviour and the spin that causes pull originate.
 - Ends when no contacts remain and the drive window has closed. Hands each ball's linear and angular
   velocity to phase 2.
-- If any ball would leave the ground beyond a small threshold, the shot is flagged "would jump — not
-  simulated in this version".
+- If any ball's centre rises more than **1 mm** (provisional) above its resting height, the shot is
+  flagged "would jump — not simulated in this version".
 
 ### Phase 2 — Free motion (event-driven, exact)
 
@@ -147,36 +171,54 @@ Small fixed-step integration of all bodies in contact (mallet, striker's ball, c
   path while spin converges), **rolling** (straight line, constant deceleration from rolling
   resistance), **stationary**.
 - Closed-form trajectories within a phase; the solver advances directly to the next event:
-  phase transition, ball–ball collision, ball–upright, ball–peg, boundary crossing, surface-region change
-  (post-v1).
+  phase transition, ball–ball collision, ball–upright, ball–peg, boundary crossing.
 - Collisions in free motion (e.g. a rush) are instantaneous impulses with restitution and friction.
 - Events are recorded in the `ShotResult` (collisions, hoop passages, out-of-court, rest positions).
 
 ### Hoop running
 
-The engine reports each ball's passages through each hoop. Whether a hoop has been *run* follows the
-official Laws definition (to be sourced exactly, see §10). A ball that strikes an upright and rebounds
-out has not run the hoop.
+The engine reports every passage of every ball through every hoop, with direction. If the `ShotSetup`
+names a target hoop and direction for the striker's ball, the result states whether that hoop was run,
+using the official Laws definition (§11). A ball that strikes an upright and rebounds out has not run it.
+
+### Out of court
+
+A ball is out of court when it meets the Laws criterion relative to the boundary (§11). The event is
+recorded; the ball keeps moving until it stops or reaches a fixed margin beyond the boundary, where it is
+halted (the surround is not modelled). v1 reports the out-of-court position and does not apply the Laws'
+replacement on the yard line.
 
 ### Determinism
 
-Same inputs → bit-identical results on every browser: fixed step sizes in phase 1, no time-of-day or
-frame-rate dependence, no reliance on unspecified iteration order.
+- Same inputs on the same browser engine → bit-identical results: fixed step sizes in phase 1, no
+  time-of-day or frame-rate dependence, no reliance on unspecified iteration order.
+- Across browser engines, `Math.*` transcendental functions are not guaranteed bit-identical, so the
+  guarantee is agreement of rest positions within **1 mm**. v1 has few collisions per shot, so
+  divergence is not amplified materially; the cross-engine Playwright test (§9) enforces the bound.
 
 ## 6. Planner (UI)
 
-- **Lawn view:** top-down, correct layout of hoops and peg. Balls placed by drag plus a precise nudge
-  control (finger dragging is imprecise). Optional distance / angle readouts between balls and to hoops.
+- **Lawn view:** top-down, correct layout of hoops and peg.
+- **Ball placement:**
+  - Drag plus a precise nudge control (finger dragging is imprecise).
+  - Choose the striker's ball. For a croquet stroke, choose the croqueted ball; it **snaps into contact**
+    with the striker's ball, and the player rotates the line of centres.
+  - Invalid placements are prevented: overlapping balls, a ball inside an upright or the peg, a ball
+    outside the boundary. The ball snaps back to its last valid position.
+  - Optional distance / angle readouts between balls and to hoops.
 - **Stroke setup:**
   - Stroke-type preset (single-ball, stop, drive, half-roll, full roll, pass-roll) → fills the controls
-    below from the active profile; every control stays adjustable.
+    below from the active profile; every control stays adjustable. Roquets and rushes are single-ball
+    strokes aimed at another ball.
   - Aim line on the lawn; for croquet strokes an optional split-aim guide (halfway between targets).
   - Strength; drive (check ↔ coast ↔ push through); contact point via tap on a ball diagram.
+  - Optional target hoop with a direction arrow.
+- **Lawn:** lawn-speed control, defaulting to the profile's home-lawn speed.
 - **Result:** Play animates with speed control; rest positions marked; faint path trails (pull visible as a
-  curve); optional lazy-loaded 3D replay.
+  curve); jump and out-of-court flags shown plainly.
 - **Compare:** keep the previous result as a ghost overlay while one setting changes — the core training
   loop.
-- **Share:** copy a link encoding the full setup and profile.
+- **Share:** one link format (§8).
 - **Honesty note:** short statement of what the model is validated against and that outcomes depend on
   profile and lawn.
 - v1 excludes multi-shot turn planning and undo beyond the last shot.
@@ -185,28 +227,41 @@ frame-rate dependence, no reliance on unspecified iteration order.
 
 ### Profile contents
 
-- Entered physical facts (§4 inputs) — never fitted.
-- Fitted parameters, deliberately few: **drive profile per stroke type** and a **small stance correction**
-  per stroke type.
-- A default "typical club player" profile ships so the tool works before any calibration.
+- Entered physical facts (§4 inputs) and home-lawn speed — never fitted.
+- Fitted parameters, deliberately few: **drive profile per stroke type** only. Stance is entered, not
+  fitted, so every quantity has a single source. If calibration residuals prove systematically poor, a
+  bounded stance correction is the first candidate to add.
+- A default "typical club player" profile ships so the tool works before any calibration; its values are
+  sourced (§11).
 
 ### Calibration flow
 
 1. Player enters home-lawn speed.
 2. Tool requests a standard set of straight strokes: single-ball, stop shot, drive, full roll.
-3. Player plays each a few times and enters distances travelled by each ball.
+3. Player plays each **3–5 times** and enters distances travelled by each ball. The **median** per stroke
+   is used, which tolerates one bad attempt without explicit outlier rules.
 4. Optimiser searches the fitted parameters to minimise distance error, using the engine as the forward
    model.
 5. Tool reports fit quality per stroke (e.g. "stop-shot ratio within 5 %").
-6. Fits that cannot be matched within plausible parameter bounds are rejected with an explanation
-   (likely measurement error or unusual stroke) rather than accepted.
+6. Fits needing parameters outside their plausible bounds (defined per parameter in the reference data,
+   §11) are rejected with an explanation (likely measurement error or unusual stroke).
 
-### Storage and sharing
+### Storage
 
-Profiles are stored in browser local storage (multiple per device, e.g. a coach's pupils), exportable and
-shareable as links. Storage access is wrapped so the app works when storage is unavailable.
+Profiles are stored in browser local storage (multiple per device, e.g. a coach's pupils) and shared via
+the link format in §8. Storage access is wrapped so the app works when storage is unavailable.
 
-## 8. Testing and validation
+## 8. Share links and stored data
+
+- **One link format:** a versioned, compact encoding of a `ShotSetup` in the URL fragment. The setup part
+  is optional, so the same format shares a profile alone. Target length well under common URL limits
+  (≤ 2,000 characters).
+- Every link and every stored profile carries a **schema version** and the **engine version**.
+- Opening an older link: migrate the schema if needed, re-simulate with the current engine, and if the
+  engine version differs, show a short notice that results may differ slightly from when it was shared.
+- Links from a newer schema than the app understands show a clear "please refresh" message.
+
+## 9. Testing and validation
 
 Tooling: **Vitest** (unit, property and snapshot tests), **Playwright** (browser tests incl. WebKit).
 
@@ -215,44 +270,57 @@ Tooling: **Vitest** (unit, property and snapshot tests), **Playwright** (browser
      head-on equal-mass perfectly elastic impact stops the first ball; drop-bounce matches restitution.
    - Invariants: energy never increases; momentum conserved in isolated ball–ball impacts.
    - Mirror symmetry of setups yields mirrored results.
-   - Determinism: repeated runs are bit-identical.
+   - Determinism: repeated runs on one engine are bit-identical.
    - Event solver cross-checked against brute-force small-step integration of the same shot.
 2. **Croquet behaviour**
-   - Standard stroke distance ratios within tolerance of sourced coaching figures.
+   - Standard stroke distance ratios within ±15 % of sourced coaching figures.
    - Ordering: stop shot → pass-roll gives monotonically increasing striker's-ball distance.
    - Pull emerges on wide rolls and narrows the split.
-   - Clean hoop run detected; upright rebound not counted.
+   - Clean hoop run in the target direction detected; upright rebound not counted; run in the wrong
+     direction not counted.
+   - Out-of-court event raised per the sourced criterion.
 3. **Calibration**
-   - Round trip: synthesise measurements from a known profile, fit, recover parameters within tolerance.
-   - Nonsense inputs rejected.
+   - Round trip: synthesise measurements from a known profile, fit, recover fitted parameters within
+     ±5 % and reproduce measured distances within ±2 %.
+   - Out-of-bounds fits rejected.
 4. **App**
-   - Playwright at tablet and phone viewports, including WebKit.
-   - Performance budget: shot simulation well under 1 s on the reference low-end tablet; small initial
-     bundle with 3D view lazy-loaded.
-   - Shared link round-trips to an identical `ShotResult`.
+   - Playwright at tablet, desktop and phone viewports, in Chromium, WebKit and Firefox.
+   - Invalid ball placements are prevented.
+   - Shared link round-trips to the same `ShotResult` (bit-identical in the same engine; ≤ 1 mm across
+     engines); older-version links open with the notice.
+   - Performance budget: simulation time measured in CI under Chromium CPU throttling, with the throttle
+     factor calibrated once against the reference iPad; initial bundle size checked against the budget.
 
-## 9. Delivery
+## 10. Delivery and repository
 
-Static site (GitHub Pages or equivalent). No backend. Offline-capable later (post-v1).
+- Static site deployed to GitHub Pages by a GitHub Actions workflow on merge to `main`.
+- CI workflow (on `ubuntu-24.04`): lint, format check, type check, Vitest, Playwright, performance and
+  bundle budgets.
+- Repository scaffolding: `.gitignore`, `.gitattributes`, `.editorconfig` (4-space indent, 120-column
+  limit), ESLint and Prettier.
 
-## 10. Reference data to source (before tuning, not guessed)
+## 11. Reference data to source (before tuning, not guessed)
+
+Stored as JSON under `reference/`, one file per topic; every value carries its source (citation or URL)
+and, where relevant, its plausible bounds.
 
 - Official ball specification: diameter, mass, rebound requirement.
 - Standard lawn dimensions, hoop and peg positions, hoop inner width and upright diameter, peg dimensions.
-- Laws definition of when a ball has run a hoop.
+- Laws: definition of running a hoop; out-of-court criterion.
 - Lawn-speed definition and typical range.
 - Coaching distance ratios for stop / drive / half-roll / full roll / pass-roll.
+- Typical mallet values (head mass, head length, face materials) and default stance and drive values for
+  the default profile.
 - Friction and restitution literature for ball–turf, ball–ball and mallet-face materials; billiards
   event-driven physics literature (e.g. the model behind `pooltool`).
 
-Each value is recorded with its source in the repo.
-
-## 11. Risks
+## 12. Risks
 
 | Risk | Mitigation |
 |---|---|
 | Impact-phase contact parameters hard to pin down | Calibrate against coaching ratios; keep contact model isolated and replaceable |
 | Coaching ratios vary and are imprecise | Treat as tolerance bands, not point targets; refine with measurements next season |
-| Over-parameterised calibration yields meaningless profiles | Fit only drive profile and stance correction; everything else is entered |
+| Over-parameterised calibration yields meaningless profiles | Fit only the drive profile per stroke type; everything else is entered |
 | Performance on old tablets | Event-driven free motion; short impact phase; budget tested in CI; Rust/WASM fallback |
+| Cross-engine numerical drift | Tolerance-based guarantee enforced by a cross-engine test |
 | Players trusting unplayable predictions | Honesty note; forward-only in v1 |
