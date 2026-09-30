@@ -2128,8 +2128,9 @@ event budget finishes. Contacts closing slower than `RESTING_SPEED` (1 mm/s, a n
    rolling ball rolling). A ball at rest stays put until the push on it exceeds (7m/5)·rollingDecel. Held balls lean
    on one another only through compression along each contact's own normal. A set of held balls holds exactly when
    some such compressions λ ≥ 0 keep every held ball's net load within its own resistance; obstacle contacts are
-   compression-only too. `holdCertificate` finds these by projected gradient on a convex function that is zero exactly
-   at the feasible λ, to `HOLD_TOLERANCE`. The contact forces N ≥ 0 are frictionless and minimise
+   compression-only too. `holdCertificate` finds these by accelerated projected gradient on a convex function that is
+   zero exactly at the feasible λ. It certifies within `HOLD_SLACK` (1e-6), a numerical slack that makes the hold and
+   release rules overlap at the limit of holding, so no configuration is left with neither and arrested. The contact forces N ≥ 0 are frictionless and minimise
    Σ ½·wᵢ·|xᵢ − fᵢ|² + Σ cᵢ·|xᵢ| (cᵢ the static resistance of a resting ball) subject to no contact converging: Gauss's
    principle of least constraint. An approximate dual solve (`guide`) proposes which resting balls are held or
    released, the active contacts and the released directions. That candidate is then solved exactly and verified;
@@ -2455,7 +2456,7 @@ import { ZERO, dot, normalize, sub, vec3, type Vec3 } from "../../src/engine/mat
 import { classify, contactSlip, rollingSpin } from "../../src/engine/motion";
 import {
     DIRECTION_TOLERANCE,
-    HOLD_TOLERANCE,
+    HOLD_SLACK,
     RESTING_SPEED,
     freeAcceleration,
     holdCertificate,
@@ -2695,7 +2696,8 @@ describe("resting chains", () => {
     it("holds a bent line only when the contact between the resting balls can carry the load (30° holds)", () => {
         // Ball 1 takes load 3 along x; leaning on ball 2 at 30° it can shed up to 2.1 along n12, leaving
         // |(3 − 2.1·cos30°, −2.1·sin30°)| = 1.58 ≤ 2.1.
-        const { members } = solveRestingContacts(chain(1.5, Math.PI / 6), [], LINE);
+        const { members, arrested } = solveRestingContacts(chain(1.5, Math.PI / 6), [], LINE);
+        expect(arrested).toEqual([false, false, false]);
         for (const m of members) {
             const x = m?.push?.acceleration ?? ZERO;
             expect(Math.abs(x.x) + Math.abs(x.y)).toBeLessThan(1e-12);
@@ -2710,7 +2712,8 @@ describe("resting chains", () => {
         // (7/5)·(|x₁| + ROLL₁) = N·cos30° with N = SLIDE − a on ball 0. Hence
         // a = (SLIDE·cos30° − (7/5)·ROLL₁) / ((7/5)/cos30° + cos30°), and ball 2 takes N·cos60° ≤ 2.1.
         const roll = 1.5;
-        const { members, coupled } = solveRestingContacts(chain(roll, Math.PI / 3), [], LINE);
+        const { members, coupled, arrested } = solveRestingContacts(chain(roll, Math.PI / 3), [], LINE);
+        expect(arrested).toEqual([false, false, false]);
         const cos30 = Math.sqrt(3) / 2;
         const a = (SLIDE * cos30 - (7 / 5) * roll) / (7 / 5 / cos30 + cos30);
         expect(coupled).toEqual([true, true]);
@@ -2724,14 +2727,28 @@ describe("resting chains", () => {
         expect((SLIDE - a) * 0.5).toBeLessThanOrEqual((7 / 5) * roll);
     });
 
+    it("never arrests the line across the limit of holding, and decides as the closed form does (44.3°–44.7°)", () => {
+        // With ball 2 at its limit λ = 2.1, ball 1's excess is |(3 − 2.1·cosθ, −2.1·sinθ)| − 2.1, which is zero at
+        // cosθ = 9/12.6 (θ ≈ 44.4153°). Beyond it both resting balls start to move, very slowly at first.
+        for (let step = 0; step <= 400; step++) {
+            const theta = ((44.3 + step * 0.001) * Math.PI) / 180;
+            const { members, arrested } = solveRestingContacts(chain(1.5, theta), [], LINE);
+            expect(arrested, `θ step ${step}`).toEqual([false, false, false]);
+            const excess = Math.hypot(3 - 2.1 * Math.cos(theta), 2.1 * Math.sin(theta)) - 2.1;
+            if (Math.abs(excess) > 1e-6) {
+                expect(members[1]?.phase === "stationary", `θ step ${step}`).toBe(excess < 0);
+            }
+        }
+    });
+
     it("gives a hold certificate whose compressions keep every ball within its resistance", () => {
         const n = vec3(Math.cos(Math.PI / 6), Math.sin(Math.PI / 6), 0);
         const certificate = holdCertificate([vec3(3, 0, 0), ZERO], [2.1, 2.1], [{ a: 0, b: 1, normal: n }], []);
         expect(certificate).not.toBeNull();
         const lambda = (certificate as number[])[0] as number;
         expect(lambda).toBeGreaterThanOrEqual(0);
-        expect(Math.hypot(3 - lambda * n.x, -lambda * n.y)).toBeLessThanOrEqual(2.1 + HOLD_TOLERANCE);
-        expect(lambda).toBeLessThanOrEqual(2.1 + HOLD_TOLERANCE);
+        expect(Math.hypot(3 - lambda * n.x, -lambda * n.y)).toBeLessThanOrEqual(2.1 + HOLD_SLACK);
+        expect(lambda).toBeLessThanOrEqual(2.1 + HOLD_SLACK);
         const bent = vec3(0.5, Math.sqrt(3) / 2, 0);
         expect(holdCertificate([vec3(3, 0, 0), ZERO], [2.1, 2.1], [{ a: 0, b: 1, normal: bent }], [])).toBeNull();
         // An obstacle behind the pushed ball takes the whole load in compression.
@@ -2760,7 +2777,8 @@ describe("resting chains", () => {
             if (Math.hypot(c.x, c.y) < 2 * R + 1e-12) {
                 contacts.push({ a: 0, b: 2, fixed: false });
             }
-            const { members } = solveRestingContacts(bodies, [], contacts);
+            const { members, arrested } = solveRestingContacts(bodies, [], contacts);
+            expect(arrested, `case ${n}`).toEqual([false, false, false]);
             if (contacts.length === 2) {
                 // Brute-force cross-check of the hold decision. Held, ball 0 pushes ball 1 along n01 with the part of
                 // its drive that points that way; ball 1 can lean on ball 2 only by a compression λ ∈ [0, c] along
@@ -2905,9 +2923,11 @@ const PIVOT_TOLERANCE = 1e-12;
  * Most passes spent finding the rolling direction of balls pushed off from rest. A candidate is accepted only when
  * each such ball's computed acceleration agrees with the direction its resistance was built on (to within
  * DIRECTION_TOLERANCE); a candidate that has not settled after this many passes is rejected. For straight lines of
- * contacts the second pass already agrees.
+ * contacts the second pass already agrees. In a bent line the direction error shrinks by about half per pass, and a
+ * push that barely beats the resistance needs a correspondingly small error, so 64 passes settle releases whose excess
+ * push is far below HOLD_SLACK.
  */
-const RELEASE_PASSES = 8;
+const RELEASE_PASSES = 64;
 
 /** Effective inertia of a rolling solid sphere relative to its mass: (m + I/r²)/m with I = 2/5·m·r². */
 const ROLLING_WEIGHT = 7 / 5;
@@ -3416,10 +3436,12 @@ function holds(
 }
 
 /**
- * Loads (weight × acceleration units) within this of a held ball's static resistance still hold. It only settles
- * which way a contact exactly at the limit of holding goes.
+ * Held balls are certified against their static resistances plus this slack (weight × m/s²; resistances are of order
+ * 1). A numerical tolerance, not a physical one: it only decides which way a configuration within 1e-6 of the limit of
+ * holding goes. It makes the hold and release rules overlap (see holdCertificate), so no consistent configuration is
+ * left with neither.
  */
-export const HOLD_TOLERANCE = 1e-9;
+export const HOLD_SLACK = 1e-6;
 
 /** Iteration cap of the held-ball feasibility search; see holdCertificate. */
 const HOLD_ITERATIONS = 20_000;
@@ -3440,13 +3462,15 @@ export interface HoldRay {
 /**
  * Decides whether held balls can stay at rest. Ball i carries external load `loads[i]` and resists up to
  * `capacities[i]` in any direction. Returns compressions (one per link, then one per ray, all ≥ 0) under which every
- * ball's net load lies within its capacity (to HOLD_TOLERANCE), or null when none exist.
+ * ball's net load exceeds its capacity by at most HOLD_SLACK, or null if the search finds none.
  *
- * The feasible compressions are the minimisers, with value zero, of F(λ) = Σᵢ ½·max(0, |netᵢ(λ)| − capacityᵢ)² over
- * λ ≥ 0. F is convex with a gradient that is Lipschitz with constant at most the largest row sum of JᵀJ (at most
- * 2·(links + rays)), so projected gradient descent with that step decreases F monotonically and converges; F reaches
- * zero exactly when a feasible λ exists. The search stops as soon as every ball is within capacity (usually a few
- * steps) and otherwise gives up after HOLD_ITERATIONS, deciding by the remaining excess.
+ * Exactly feasible compressions are the zeros of the convex function F(λ) = Σᵢ ½·max(0, |netᵢ(λ)| − capacityᵢ)² over
+ * λ ≥ 0, whose gradient is Lipschitz with constant at most the largest row sum of JᵀJ (at most 2·(links + rays)).
+ * Accelerated projected gradient (FISTA) with that step drives F towards its minimum from outside the feasible set;
+ * it stops as soon as every excess is within HOLD_SLACK (usually after a few steps) and gives up after
+ * HOLD_ITERATIONS. Near the limit of holding, where the feasible set shrinks to a point, convergence is slow, which is
+ * why the slack is needed: a problem that is feasible, or infeasible by less than about HOLD_SLACK, certifies; one
+ * infeasible by more cannot. The release path settles down to excesses well below HOLD_SLACK, so the two overlap.
  */
 export function holdCertificate(
     loads: readonly Vec3[],
@@ -3470,9 +3494,13 @@ export function holdCertificate(
         return result;
     };
     const step = 1 / Math.max(1, 2 * count);
-    for (let iteration = 0; iteration <= HOLD_ITERATIONS; iteration++) {
+    // Excess of each ball beyond its capacity, and the gradient of F with respect to its net load (the excess, along
+    // the load), at compressions `at`.
+    const evaluate = (at: readonly number[]): { readonly excess: number; readonly pull: Vec3[] } => {
+        const saved = [...lambda];
+        at.forEach((v, k) => (lambda[k] = v));
         const loadsNow = net();
-        // Gradient of F with respect to each ball's net load: the excess beyond the capacity disc, along the load.
+        saved.forEach((v, k) => (lambda[k] = v));
         let excess = 0;
         const pull = loadsNow.map((load, i) => {
             const size = length(load);
@@ -3480,20 +3508,38 @@ export function holdCertificate(
             excess = Math.max(excess, over);
             return over > 0 ? scale(load, over / size) : ZERO;
         });
-        if (excess <= HOLD_TOLERANCE) {
+        return { excess, pull };
+    };
+    // Accelerated projected gradient (FISTA) on λ ≥ 0, from λ = 0. `probe` is the extrapolated point.
+    let probe = [...lambda];
+    let momentum = 1;
+    for (let iteration = 0; iteration <= HOLD_ITERATIONS; iteration++) {
+        const here = evaluate(lambda);
+        if (here.excess <= HOLD_SLACK) {
             return lambda;
         }
         if (count === 0 || iteration === HOLD_ITERATIONS) {
             return null;
         }
-        links.forEach((link, k) => {
-            const gradient = dot(sub(pull[link.b] as Vec3, pull[link.a] as Vec3), link.normal);
-            lambda[k] = Math.max(0, (lambda[k] as number) - step * gradient);
+        const { pull } = evaluate(probe);
+        const next = probe.map((v, k) => {
+            const gradient =
+                k < links.length
+                    ? dot(
+                          sub(pull[(links[k] as HoldLink).b] as Vec3, pull[(links[k] as HoldLink).a] as Vec3),
+                          (links[k] as HoldLink).normal,
+                      )
+                    : 0 -
+                      dot(
+                          pull[(rays[k - links.length] as HoldRay).ball] as Vec3,
+                          (rays[k - links.length] as HoldRay).into,
+                      );
+            return Math.max(0, v - step * gradient);
         });
-        rays.forEach((ray, j) => {
-            const gradient = -dot(pull[ray.ball] as Vec3, ray.into);
-            lambda[links.length + j] = Math.max(0, (lambda[links.length + j] as number) - step * gradient);
-        });
+        const nextMomentum = (1 + Math.sqrt(1 + 4 * momentum * momentum)) / 2;
+        probe = next.map((v, k) => v + ((momentum - 1) / nextMomentum) * (v - (lambda[k] as number)));
+        next.forEach((v, k) => (lambda[k] = v));
+        momentum = nextMomentum;
     }
     return null;
 }
@@ -3543,12 +3589,18 @@ function tryActiveSet(
         if (settled) {
             return accept(system, active, solved, closingRate, directions);
         }
+        // A ball released from rest moves along the net push of its contacts: w·x = P − c·d with d = P̂ at the
+        // solution. P = w·(x − base) depends only weakly on the direction the resistance was built on, so iterating
+        // d ← P̂ settles quickly, even when x itself is tiny because the push barely exceeds the resistance.
         for (const i of released) {
-            const x = solved.result.get(i) as Vec3;
-            if (length(x) === 0) {
+            const push = scale(
+                sub(solved.result.get(i) as Vec3, base.get(i) as Vec3),
+                (responses.get(i) as Response).weight,
+            );
+            if (length(push) === 0) {
                 return null;
             }
-            directions.set(i, normalize(x));
+            directions.set(i, normalize(push));
         }
     }
     return null;
@@ -3681,7 +3733,7 @@ export function pushDuration(start: BallState, phase: MotionPhase, push: PushMot
 - [ ] **Step 9: Run the tests to verify they pass**
 
 Run: `npx vitest run tests/engine/push.test.ts tests/engine/resolve.test.ts`
-Expected: PASS (26 tests). The random-pairs test checks that at least 100 of its 2,000 cases push; if it fails on
+Expected: PASS (27 tests). The random-pairs test checks that at least 100 of its 2,000 cases push; if it fails on
 that count, the generator no longer exercises pushing.
 
 - [ ] **Step 10: Format, lint, commit**
@@ -5959,7 +6011,7 @@ npm test
 npm run build
 ```
 
-Expected: every command exits 0; `npm test` reports 150 tests across 14 files.
+Expected: every command exits 0; `npm test` reports 151 tests across 14 files.
 
 - [ ] **Step 7: Commit**
 
