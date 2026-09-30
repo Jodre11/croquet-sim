@@ -3,8 +3,10 @@ import { ZERO, dot, normalize, sub, vec3, type Vec3 } from "../../src/engine/mat
 import { classify, contactSlip, rollingSpin } from "../../src/engine/motion";
 import {
     DIRECTION_TOLERANCE,
+    HOLD_TOLERANCE,
     RESTING_SPEED,
     freeAcceleration,
+    holdCertificate,
     pushDuration,
     pushedState,
     pushedTrajectory,
@@ -238,6 +240,54 @@ describe("resting chains", () => {
         expect(members[2]?.push?.direction).toEqual(vec3(1, 0, 0));
     });
 
+    it("holds a bent line only when the contact between the resting balls can carry the load (30° holds)", () => {
+        // Ball 1 takes load 3 along x; leaning on ball 2 at 30° it can shed up to 2.1 along n12, leaving
+        // |(3 − 2.1·cos30°, −2.1·sin30°)| = 1.58 ≤ 2.1.
+        const { members } = solveRestingContacts(chain(1.5, Math.PI / 6), [], LINE);
+        for (const m of members) {
+            const x = m?.push?.acceleration ?? ZERO;
+            expect(Math.abs(x.x) + Math.abs(x.y)).toBeLessThan(1e-12);
+        }
+        expect(members[1]?.phase).toBe("stationary");
+    });
+
+    it("releases the middle ball of a line bent by 60°, which its neighbour cannot hold", () => {
+        // Best case for holding: ball 1's load 3·x̂ less a compression along n12 (60°) leaves 3·sin60° = 2.6 > 2.1.
+        // Ball 2 stays held; ball 1 slides along it, perpendicular to n12, i.e. along d = (cos30°, −sin30°). With
+        // ball 0's acceleration a along x: x₁ = (a, −a·tan30°), so |x₁| = a / cos30°. Along d, ball 1's equation is
+        // (7/5)·(|x₁| + ROLL₁) = N·cos30° with N = SLIDE − a on ball 0. Hence
+        // a = (SLIDE·cos30° − (7/5)·ROLL₁) / ((7/5)/cos30° + cos30°), and ball 2 takes N·cos60° ≤ 2.1.
+        const roll = 1.5;
+        const { members, coupled } = solveRestingContacts(chain(roll, Math.PI / 3), [], LINE);
+        const cos30 = Math.sqrt(3) / 2;
+        const a = (SLIDE * cos30 - (7 / 5) * roll) / (7 / 5 / cos30 + cos30);
+        expect(coupled).toEqual([true, true]);
+        expect(members[0]?.push?.acceleration.x).toBeCloseTo(a, 12);
+        expect(members[1]?.phase).toBe("rolling");
+        expect(members[1]?.push?.acceleration.x).toBeCloseTo(a, 12);
+        expect(members[1]?.push?.acceleration.y).toBeCloseTo(-a / Math.sqrt(3), 12);
+        expect(members[1]?.push?.direction.x).toBeCloseTo(cos30, 9);
+        expect(members[1]?.push?.direction.y).toBeCloseTo(-0.5, 9);
+        expect(members[2]?.phase).toBe("stationary");
+        expect((SLIDE - a) * 0.5).toBeLessThanOrEqual((7 / 5) * roll);
+    });
+
+    it("gives a hold certificate whose compressions keep every ball within its resistance", () => {
+        const n = vec3(Math.cos(Math.PI / 6), Math.sin(Math.PI / 6), 0);
+        const certificate = holdCertificate([vec3(3, 0, 0), ZERO], [2.1, 2.1], [{ a: 0, b: 1, normal: n }], []);
+        expect(certificate).not.toBeNull();
+        const lambda = (certificate as number[])[0] as number;
+        expect(lambda).toBeGreaterThanOrEqual(0);
+        expect(Math.hypot(3 - lambda * n.x, -lambda * n.y)).toBeLessThanOrEqual(2.1 + HOLD_TOLERANCE);
+        expect(lambda).toBeLessThanOrEqual(2.1 + HOLD_TOLERANCE);
+        const bent = vec3(0.5, Math.sqrt(3) / 2, 0);
+        expect(holdCertificate([vec3(3, 0, 0), ZERO], [2.1, 2.1], [{ a: 0, b: 1, normal: bent }], [])).toBeNull();
+        // An obstacle behind the pushed ball takes the whole load in compression.
+        expect(holdCertificate([vec3(3, 0, 0)], [0.1], [], [{ ball: 0, into: vec3(1, 0, 0) }])).not.toBeNull();
+        // It cannot pull: an obstacle on the other side does not help.
+        expect(holdCertificate([vec3(3, 0, 0)], [0.1], [], [{ ball: 0, into: vec3(-1, 0, 0) }])).toBeNull();
+    });
+
     it("releases balls from rest only along their own frozen direction, so resistance never does work (random)", () => {
         const random = rng(29);
         let released = 0;
@@ -259,6 +309,20 @@ describe("resting chains", () => {
                 contacts.push({ a: 0, b: 2, fixed: false });
             }
             const { members } = solveRestingContacts(bodies, [], contacts);
+            if (contacts.length === 2) {
+                // Brute-force cross-check of the hold decision. Held, ball 0 pushes ball 1 along n01 with the part of
+                // its drive that points that way; ball 1 can lean on ball 2 only by a compression λ ∈ [0, c] along
+                // n12. So ball 1 holds exactly when that load is within c of the segment {λ·n12 : 0 ≤ λ ≤ c}.
+                const c = (7 / 5) * p.rollingDecel;
+                const n01 = normalize(vec3(b.x, b.y, 0));
+                const n12 = normalize(sub(bodies[2]?.state.position as Vec3, b));
+                const push = Math.max(0, dot(freeAcceleration(bodies[0]?.state as BallState, p), n01));
+                const along = Math.min(Math.max(push * dot(n01, n12), 0), c);
+                const gap = Math.hypot(push * n01.x - along * n12.x, push * n01.y - along * n12.y) - c;
+                if (Math.abs(gap) > 1e-6) {
+                    expect((members[1]?.phase ?? "stationary") === "stationary", `case ${n}`).toBe(gap < 0);
+                }
+            }
             // With no ball held, contact forces are internal: Σ wᵢ·(xᵢ − fᵢ) = 0, where a released ball's resistance
             // fᵢ = −rollingDecel·dᵢ acts along its reported frozen direction. This fails if the direction reported is
             // not the one the accelerations were solved with.
