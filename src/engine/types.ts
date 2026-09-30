@@ -31,3 +31,21 @@ export interface MotionParams {
     readonly slidingDecel: number;
     readonly rollingDecel: number;
 }
+
+/** Restitution (0–1) and Coulomb friction coefficient for a pair of contacting materials. */
+export interface ContactMaterial {
+    readonly restitution: number;
+    readonly friction: number;
+}
+
+/**
+ * Motion of a ball while it pushes, or is pushed by, a body it rests against. Within one segment the centre
+ * accelerates uniformly and the spin changes uniformly. `direction` is the unit vector along which the ball's turf
+ * force is frozen for the segment: the slip direction when sliding, the direction of travel when rolling, and ZERO
+ * when the ball is held at rest.
+ */
+export interface PushMotion {
+    readonly acceleration: Vec3;
+    readonly angularAcceleration: Vec3;
+    readonly direction: Vec3;
+}
