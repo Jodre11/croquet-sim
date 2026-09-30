@@ -10,8 +10,11 @@ import {
     pushDuration,
     pushedState,
     pushedTrajectory,
+    solveNearestHold,
     solveRestingContacts,
     type ContactBody,
+    type RestingContact,
+    type RestingSolution,
 } from "../../src/engine/push";
 import type { BallState, MotionParams } from "../../src/engine/types";
 import { kineticEnergy } from "./support/energy";
@@ -375,6 +378,265 @@ describe("resting chains", () => {
             }
         }
         expect(released).toBeGreaterThan(100);
+    });
+});
+
+describe("clusters at the limit of holding", () => {
+    // Ball 0 is driven by topspin `spin` into resting balls; uprights of radius UPRIGHT stand at `axes`.
+    const UPRIGHT = 0.01;
+    interface Cluster {
+        readonly bodies: ContactBody[];
+        readonly axes: Vec3[];
+        readonly contacts: RestingContact[];
+    }
+    function cluster(
+        positions: readonly (readonly [number, number])[],
+        axes: readonly (readonly [number, number])[],
+        spin: Vec3,
+        roll: number,
+    ): Cluster {
+        const p: MotionParams = { radius: R, slidingDecel: SLIDE, rollingDecel: roll };
+        const bodies = positions.map(([x, y], i) => ({
+            state: { position: vec3(x, y, R), velocity: ZERO, angularVelocity: i === 0 ? spin : ZERO },
+            params: p,
+        }));
+        const uprights = axes.map(([x, y]) => vec3(x, y, 0));
+        const contacts: RestingContact[] = [];
+        positions.forEach(([xa, ya], a) => {
+            positions.forEach(([xb, yb], b) => {
+                if (b > a && Math.hypot(xb - xa, yb - ya) < 2 * R + 1e-9) {
+                    contacts.push({ a, b, fixed: false });
+                }
+            });
+            uprights.forEach((u, k) => {
+                if (Math.hypot(u.x - xa, u.y - ya) < R + UPRIGHT + 1e-9) {
+                    contacts.push({ a, b: k, fixed: true });
+                }
+            });
+        });
+        return { bodies, axes: uprights, contacts };
+    }
+
+    // Checks what every solution must satisfy: no ball's motion discarded; the driver never pushed backwards; balls
+    // released from rest move along their frozen resistance (so it does no positive work), and held balls stay put;
+    // no contact left converging and coupled contacts kept closed; and kinetic energy, spin included, never rising.
+    function expectSound(c: Cluster, s: RestingSolution, label: string): void {
+        expect(
+            s.arrested.some((a) => a),
+            label,
+        ).toBe(false);
+        const x = c.bodies.map((b, i) => s.members[i]?.push?.acceleration ?? freeAcceleration(b.state, b.params));
+        const drive = freeAcceleration(c.bodies[0]?.state as BallState, c.bodies[0]?.params as MotionParams);
+        const x0 = x[0] as Vec3;
+        expect(dot(x0, drive), label).toBeGreaterThanOrEqual(-1e-12);
+        c.bodies.slice(1).forEach((_, j) => {
+            const m = s.members[j + 1];
+            const xi = x[j + 1] as Vec3;
+            if (m?.phase === "rolling") {
+                const d = m.push?.direction as Vec3;
+                const along = dot(xi, d);
+                expect(along, label).toBeGreaterThan(0);
+                expect(Math.abs(xi.x * d.y - xi.y * d.x), label).toBeLessThanOrEqual(DIRECTION_TOLERANCE * along);
+            } else {
+                expect(Math.abs(xi.x) + Math.abs(xi.y), label).toBe(0);
+            }
+        });
+        c.contacts.forEach((k, n) => {
+            const a = c.bodies[k.a]?.state.position as Vec3;
+            const centre = k.fixed ? (c.axes[k.b] as Vec3) : (c.bodies[k.b]?.state.position as Vec3);
+            const normal = normalize(vec3(centre.x - a.x, centre.y - a.y, 0));
+            const closing = dot(sub(x[k.a] as Vec3, k.fixed ? ZERO : (x[k.b] as Vec3)), normal);
+            expect(closing, `${label} contact ${n}`).toBeLessThanOrEqual(1e-9);
+            if (s.coupled[n]) {
+                expect(Math.abs(closing), `${label} contact ${n}`).toBeLessThanOrEqual(1e-9);
+            }
+        });
+        const energy = (t: number): number =>
+            c.bodies.reduce((sum, b, i) => {
+                const m = s.members[i];
+                return sum + kineticEnergy(m?.push ? pushedState(m.state, m.push, t) : b.state, BALL);
+            }, 0);
+        for (const t of [1e-4, 1e-3, 1e-2]) {
+            expect(energy(t), label).toBeLessThanOrEqual(energy(0) + 1e-12);
+        }
+    }
+
+    // Driver and a triangle 1-2-3, ball 2 against an upright. Before the exact release solve, rollingDecel from
+    // 0.63112 to at least 0.6408 arrested the whole group, the spinning driver included.
+    const TRIANGLE = {
+        positions: [
+            [0, 0],
+            [0.09161267455944855, -0.008433140581335576],
+            [0.17656861236453797, -0.04373878647059491],
+            [0.16466622969910946, 0.047488036815572995],
+        ] as const,
+        axes: [[0.203653596203564, -0.0927531073415373]] as const,
+        spin: vec3(14.017717263720547, 58.33955435820873, 0),
+    };
+
+    // A bent chain 0-1-2. Arrested before for rollingDecel 1.49825176 to 1.4982529, where both resting balls move
+    // very slowly and holding both is infeasible by a little more than HOLD_SLACK.
+    const BENT = {
+        positions: [
+            [0, 0],
+            [0.08022471315813423, 0.045033269908980454],
+            [0.16880420327012668, 0.02018022318429436],
+        ] as const,
+        axes: [] as const,
+        spin: vec3(-21.362101956587257, 56.06835649451811, 0),
+    };
+
+    it("moves the driver of a triangle held against an upright, exactly, where it was arrested", () => {
+        for (const roll of [0.6312, 0.635, 0.64]) {
+            const c = cluster(TRIANGLE.positions, TRIANGLE.axes, TRIANGLE.spin, roll);
+            const s = solveRestingContacts(c.bodies, c.axes, c.contacts);
+            expectSound(c, s, `roll ${roll}`);
+            expect(
+                s.approximate.some((a) => a),
+                `roll ${roll}`,
+            ).toBe(false);
+            expect(
+                dot(s.members[0]?.push?.acceleration ?? ZERO, s.members[0]?.push?.acceleration ?? ZERO),
+            ).toBeGreaterThan(0);
+        }
+    });
+
+    it("releases both balls of a bent chain just past its limit of holding, exactly, where it was arrested", () => {
+        for (const roll of [1.4982518, 1.4982522, 1.4982528]) {
+            const c = cluster(BENT.positions, BENT.axes, BENT.spin, roll);
+            const s = solveRestingContacts(c.bodies, c.axes, c.contacts);
+            expectSound(c, s, `roll ${roll}`);
+            expect(
+                s.approximate.some((a) => a),
+                `roll ${roll}`,
+            ).toBe(false);
+            expect(s.members[1]?.phase).toBe("rolling");
+            expect(s.members[2]?.phase).toBe("rolling");
+        }
+    });
+
+    // Random 3–4-ball clusters: a driver touching ball 1, then balls touching a random resting ball or nestling
+    // against two touching ones, and an optional upright beside a resting ball.
+    function randomCluster(random: () => number, roll: number): Cluster | null {
+        const positions: [number, number][] = [[0, 0]];
+        const first = (random() - 0.5) * 1.2;
+        positions.push([2 * R * Math.cos(first), 2 * R * Math.sin(first)]);
+        const extra = 1 + Math.floor(random() * 2);
+        for (let n = 0; n < extra; n++) {
+            const i = 1 + Math.floor(random() * (positions.length - 1));
+            const [xi, yi] = positions[i] as [number, number];
+            const partners = positions
+                .map((_, j) => j)
+                .filter(
+                    (j) =>
+                        j > 0 &&
+                        j !== i &&
+                        Math.hypot((positions[j]?.[0] ?? 0) - xi, (positions[j]?.[1] ?? 0) - yi) < 2 * R + 1e-9,
+                );
+            let angle = (random() - 0.5) * 2 * Math.PI;
+            if (partners.length > 0 && random() < 0.6) {
+                const [xj, yj] = positions[partners[Math.floor(random() * partners.length)] as number] as [
+                    number,
+                    number,
+                ];
+                angle = Math.atan2(yj - yi, xj - xi) + (random() < 0.5 ? Math.PI / 3 : -Math.PI / 3);
+            }
+            const q: [number, number] = [xi + 2 * R * Math.cos(angle), yi + 2 * R * Math.sin(angle)];
+            if (positions.some(([x, y]) => Math.hypot(x - q[0], y - q[1]) < 2 * R - 1e-9)) {
+                return null;
+            }
+            positions.push(q);
+        }
+        const axes: [number, number][] = [];
+        if (random() < 0.5) {
+            const who = 1 + Math.floor(random() * (positions.length - 1));
+            const angle = (random() - 0.5) * 2 * Math.PI;
+            const [xw, yw] = positions[who] as [number, number];
+            const axis: [number, number] = [xw + (R + UPRIGHT) * Math.cos(angle), yw + (R + UPRIGHT) * Math.sin(angle)];
+            if (positions.some(([x, y], i) => i !== who && Math.hypot(x - axis[0], y - axis[1]) < R + UPRIGHT - 1e-9)) {
+                return null;
+            }
+            axes.push(axis);
+        }
+        const drive = (random() - 0.5) * 1.0;
+        return cluster(positions, axes, vec3(-Math.sin(drive) * 60, Math.cos(drive) * 60, 0), roll);
+    }
+
+    it("neither arrests nor falls back on either side of any limit of holding (random clusters)", () => {
+        const random = rng(11);
+        let solves = 0;
+        let approximate = 0;
+        let limits = 0;
+        for (let made = 0; made < 16;) {
+            const shape = randomCluster(random, 1);
+            if (!shape) {
+                continue;
+            }
+            made++;
+            const solve = (roll: number): RestingSolution => {
+                const bodies = shape.bodies.map((b) => ({ ...b, params: { ...b.params, rollingDecel: roll } }));
+                const c = { ...shape, bodies };
+                const s = solveRestingContacts(c.bodies, c.axes, c.contacts);
+                solves++;
+                approximate += s.approximate.some((a) => a) ? 1 : 0;
+                expectSound(c, s, `cluster ${made} roll ${roll}`);
+                return s;
+            };
+            const phases = (s: RestingSolution): string => s.members.map((m) => m?.phase ?? "-").join();
+            // Scan rollingDecel, bisect every change of phase down to rounding, then probe either side of it.
+            let low = 0.2;
+            let before = phases(solve(low));
+            for (let k = 1; k <= 20; k++) {
+                const high = 0.2 + (2.3 * k) / 20;
+                const after = phases(solve(high));
+                if (after !== before) {
+                    limits++;
+                    let lo = low;
+                    let hi = high;
+                    for (let n = 0; n < 50; n++) {
+                        const mid = (lo + hi) / 2;
+                        if (phases(solve(mid)) === before) {
+                            lo = mid;
+                        } else {
+                            hi = mid;
+                        }
+                    }
+                    for (let e = 3; e <= 12; e++) {
+                        solve(lo - 10 ** -e);
+                        solve(hi + 10 ** -e);
+                    }
+                }
+                before = after;
+                low = high;
+            }
+        }
+        expect(limits).toBeGreaterThan(10);
+        expect(solves).toBeGreaterThan(2000);
+        expect(approximate).toBe(0);
+    });
+
+    it("keeps the nearest-hold fallback sound: resting balls stay put, the driver is never pushed back (random)", () => {
+        const random = rng(5);
+        let moved = 0;
+        for (let made = 0; made < 300;) {
+            const c = randomCluster(random, 0.2 + random() * 2.3);
+            if (!c) {
+                continue;
+            }
+            made++;
+            const s = solveNearestHold(c.bodies, c.axes, c.contacts);
+            expectSound(c, s, `cluster ${made}`);
+            expect(s.approximate.every((a, i) => a || s.members[i] === null)).toBe(true);
+            for (const m of s.members.slice(1)) {
+                expect(m?.phase ?? "stationary").toBe("stationary");
+            }
+            // Gauss's principle with the driver the only moving ball: w·|x − f|² ≤ w·|f|², so x·f ≥ ½·|x|².
+            const x = s.members[0]?.push?.acceleration ?? ZERO;
+            const f = freeAcceleration(c.bodies[0]?.state as BallState, c.bodies[0]?.params as MotionParams);
+            expect(dot(x, f)).toBeGreaterThanOrEqual(0.5 * dot(x, x) - 1e-12);
+            moved += dot(x, x) > 0 ? 1 : 0;
+        }
+        expect(moved).toBeGreaterThan(100);
     });
 });
 
