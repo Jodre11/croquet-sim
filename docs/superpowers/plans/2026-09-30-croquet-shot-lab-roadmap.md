@@ -8,11 +8,36 @@ rather than guessed ones.
 
 | Plan | Delivers | Exit criteria |
 |---|---|---|
-| **P1 — Foundations and free-motion engine** (`2026-09-30-p1-free-motion-engine.md`) | Repo scaffold and CI; sourced reference data for ball, court, Laws, lawn speed and free-motion friction/restitution; deterministic event-driven phase-2 engine (sliding → rolling → stationary, ball–ball, uprights, peg, halt margin); out-of-court and hoop-passage events; hoop-run verdict; `ShotResult` sampling | Analytic cases pass (5/7 rule, head-on exchange, stop distances); energy/momentum invariants; mirror symmetry; determinism; event solver agrees with brute-force integration within 1 mm |
+| **P1 — Foundations and free-motion engine** (`2026-09-30-p1-free-motion-engine.md`) | Repo scaffold and CI; sourced reference data for ball, court, Laws, lawn speed and free-motion friction/restitution; deterministic event-driven phase-2 engine (sliding → rolling → stationary, ball–ball, uprights, peg, halt margin); out-of-court and hoop-passage events; hoop-run verdict; `ShotResult` sampling | Analytic cases pass (5/7 rule, head-on exchange, stop distances); energy/momentum invariants; mirror symmetry; determinism; event solver agrees with brute-force integration within 1 mm (the angled three-ball wedge push is cross-checked with ball–ball friction off, because pushing contacts are frictionless) |
 | **P2 — Impact phase and swing model** | Reference data for coaching ratios, mallets, stance/drive defaults, face and turf contact; compliant small-step N-body impact integrator (mallet rigid body, balls, turf) driven by a force profile; swing model `ShotSetup → ContactState`; `simulateShot(setup)` wiring phase 1 into P1's phase 2; jump flag | Standard stroke ratios within tolerance of sourced figures; stop → pass-roll monotonic; pull emerges on wide rolls without special-casing |
 | **P3 — Profiles and calibration** | Profile type and default "typical club player" profile; median-of-attempts input; optimiser fitting drive profile per stroke type; plausibility bounds and rejection | Round trip recovers fitted parameters within ±5 % and distances within ±2 %; out-of-bounds fits rejected |
 | **P4 — Planner, renderer and share links** | Svelte planner (placement with snap-back, nudge, croquet-stroke snap-into-contact, stroke controls, target hoop, lawn speed), Canvas 2D renderer, compare ghost overlay, honesty note, versioned fragment link format with migration and notices, wrapped local storage for profiles | Playwright suites at tablet/desktop/phone viewports in Chromium, WebKit, Firefox; link round-trips reproduce results |
 | **P5 — Delivery and budgets** | GitHub Pages deploy workflow; performance budget in CI (Chromium CPU throttle calibrated once against the reference iPad); bundle-size budget; cross-engine determinism test | All budgets enforced in CI; site live |
+
+## P1 outcomes carried forward
+
+What P1 delivered, and the constraints it leaves for P2–P5.
+
+- **New module and event fields.** `src/engine/push.ts` solves resting contact (Gauss's principle of least
+  constraint). Contact events carry a `resting` flag; a new `approximate-hold` event (with an excess figure) is
+  emitted if the exact resting-contact solve fails and the resting balls are held instead. It has been observed
+  only at the limits of holding, and its error is not bounded in principle.
+- **Frictionless pushing.** Pushing contacts carry no friction. Measured size: 23 mm on the standard-world angled
+  wedge push, up to about 110 mm for adversarial sidespin pushes; straight pushes are exact. P2 stroke-ratio and
+  pull tests are the first place this can bite. The P2+ fix is kinetic Coulomb friction on coupled contacts, with
+  stick/slip events.
+- **Hoop-run verdict is separate.** `judgeHoopRun` is its own call, not part of `ShotResult`; P4/P5 must compose it
+  with the result.
+- **Laws 20.2.2 and 20.4.1 are not modelled.** Completing a run in a later stroke, and entering from the wrong
+  side, need per-ball history; P1 judges position thresholds only.
+- **Halted balls can rest overlapping.** Any replacement or continue-from-rest flow must de-overlap positions
+  before re-simulating, otherwise `simulateFreeMotion` throws `RangeError`.
+- **P2 hand-off contract.** `simulateFreeMotion` rejects any ball with |z − R| or |vz| above 1e-9 (m, m/s). P2's
+  compliant impact phase must project its output onto the lawn plane explicitly.
+- **P4 needs.** Export `obstaclesOf`, `uprightsOf`, `hoopHalfSpan` and `validateWorld` from `index.ts` (obstacle
+  geometry for placement validation and drawing; world validation for lawn-speed input); clamp lawn speed to the
+  reference bounds [6, 14] s; treat `ShotResult.rest` as not-at-rest when `aborted` is true (documented on the
+  field).
 
 ## Provisional numbers — where each is confirmed
 

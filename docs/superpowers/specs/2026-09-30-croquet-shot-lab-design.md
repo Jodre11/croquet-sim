@@ -179,8 +179,8 @@ Small fixed-step integration of all bodies in contact (mallet, striker's ball, c
   sequence of ever-smaller bounces. The touching bodies' speeds along each line of centres are made
   equal (perfectly inelastic), and where their accelerations would drive them together the contact
   pushes: frictionless contact forces, never pulling, keep the bodies' relative acceleration along each
-  contact normal at zero. That is Gauss's principle of least constraint, solved exactly for any number
-  of balls and obstacles in contact.
+  contact normal at zero. That is Gauss's principle of least constraint, solved exactly in all observed
+  cases, with a documented fallback (see the limitations below), for any number of balls and obstacles in contact.
 - While pushing, each ball's turf force is frozen at the start of the push segment: sliding friction
   against its slip, or rolling resistance against its travel. A pushed rolling ball has effective
   inertia 7/5·m, and a resting ball resists a push up to its static rolling resistance. Each contact
@@ -211,7 +211,11 @@ replacement on the yard line.
 - Pushing contacts are frictionless. Ball–ball friction acts in impulses only, so sidespin or balls
   sliding past each other while pushing are not rubbed. Straight pushes (the common croquet case: a
   topspun striker's ball catching the croqueted ball) have no sideways slip at the contact and are
-  exact.
+  exact. In angled or sidespin pushes the omitted friction shifts rest positions by up to a few
+  centimetres (measured: 23 mm on the standard-world wedge, up to about 110 mm adversarial).
+- If the exact resting-contact solve fails, the resting balls are held and the result carries an
+  `approximate-hold` event with an excess figure. It has been observed only at the limits of holding;
+  the error is not bounded in principle. Consumers should surface it.
 - Within a push segment each turf-force direction and contact normal is frozen. The error is first
   order in the direction tolerance and the opening gap, both small numerical tolerances. It is
   negligible for straight pushes and measured in millimetres for pushes at an angle. The brute-force
