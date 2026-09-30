@@ -195,6 +195,108 @@ describe("solveRestingContacts", () => {
     });
 });
 
+describe("resting chains", () => {
+    // Ball 0 has topspin (drive +SLIDE along x) and touches ball 1, which touches ball 2; 1 and 2 are at rest.
+    // Each resting ball resists up to (7/5)·rollingDecel on its own, so the line of two resists 2·(7/5)·rollingDecel.
+    function chain(rollingDecel: number, bend = 0): ContactBody[] {
+        const p: MotionParams = { radius: R, slidingDecel: SLIDE, rollingDecel };
+        const at = (x: number, y: number, w: Vec3 = ZERO): ContactBody => ({
+            state: { position: vec3(x, y, R), velocity: ZERO, angularVelocity: w },
+            params: p,
+        });
+        return [at(0, 0, vec3(0, 60, 0)), at(2 * R, 0), at(2 * R + 2 * R * Math.cos(bend), 2 * R * Math.sin(bend))];
+    }
+    const LINE = [
+        { a: 0, b: 1, fixed: false },
+        { a: 1, b: 2, fixed: false },
+    ];
+
+    it("holds a line of two resting balls that the push could move one at a time but not together", () => {
+        // Drive 3 lies between one ball's resistance (7/5)·1.5 = 2.1 and the pair's 4.2.
+        for (const bend of [0, 1e-3]) {
+            const { members, arrested } = solveRestingContacts(chain(1.5, bend), [], LINE);
+            expect(arrested).toEqual([false, false, false]);
+            for (const m of members) {
+                expect(m?.phase ?? "stationary").not.toBe("rolling");
+                const x = m?.push?.acceleration ?? ZERO;
+                expect(Math.abs(x.x) + Math.abs(x.y)).toBeLessThan(1e-12);
+            }
+        }
+    });
+
+    it("pushes the line forward together when the drive beats both resistances", () => {
+        // All three share one acceleration X with Σ wᵢ·(X − fᵢ) = 0: the pusher has w = 1, f = +SLIDE; each resting
+        // ball starts rolling with w = 7/5, f = −ROLL. So X = (SLIDE − 2·(7/5)·ROLL) / (1 + 2·(7/5)).
+        const { members, coupled } = solveRestingContacts(chain(ROLL), [], LINE);
+        const expected = (SLIDE - 2 * (7 / 5) * ROLL) / (1 + 2 * (7 / 5));
+        expect(coupled).toEqual([true, true]);
+        for (const m of members) {
+            expect(m?.push?.acceleration.x).toBeCloseTo(expected, 12);
+            expect(m?.push?.acceleration.y).toBeCloseTo(0, 12);
+        }
+        expect(members[1]?.phase).toBe("rolling");
+        expect(members[2]?.push?.direction).toEqual(vec3(1, 0, 0));
+    });
+
+    it("releases balls from rest only along their own frozen direction, so resistance never does work (random)", () => {
+        const random = rng(29);
+        let released = 0;
+        for (let n = 0; n < 1000; n++) {
+            const drive = random() * 2 * Math.PI;
+            const toB = drive + (random() - 0.5) * 2;
+            const toC = toB + (random() - 0.5) * 2;
+            const p: MotionParams = { radius: R, slidingDecel: SLIDE, rollingDecel: 0.2 + random() * 2.3 };
+            const b = vec3(2 * R * Math.cos(toB), 2 * R * Math.sin(toB), R);
+            const c = vec3(b.x + 2 * R * Math.cos(toC), b.y + 2 * R * Math.sin(toC), R);
+            const spin = vec3(-Math.sin(drive) * 60, Math.cos(drive) * 60, 0);
+            const bodies: ContactBody[] = [
+                { state: { position: vec3(0, 0, R), velocity: ZERO, angularVelocity: spin }, params: p },
+                { state: { position: b, velocity: ZERO, angularVelocity: ZERO }, params: p },
+                { state: { position: c, velocity: ZERO, angularVelocity: ZERO }, params: p },
+            ];
+            const contacts = [...LINE];
+            if (Math.hypot(c.x, c.y) < 2 * R + 1e-12) {
+                contacts.push({ a: 0, b: 2, fixed: false });
+            }
+            const { members } = solveRestingContacts(bodies, [], contacts);
+            // With no ball held, contact forces are internal: Σ wᵢ·(xᵢ − fᵢ) = 0, where a released ball's resistance
+            // fᵢ = −rollingDecel·dᵢ acts along its reported frozen direction. This fails if the direction reported is
+            // not the one the accelerations were solved with.
+            const held = members.some((m) => m?.push && m.phase === "stationary");
+            if (!held) {
+                let net = ZERO;
+                for (const m of members) {
+                    if (!m?.push) {
+                        continue;
+                    }
+                    const fromRest = m.phase === "rolling" && dot(m.state.velocity, m.state.velocity) === 0;
+                    const f = fromRest
+                        ? vec3(-p.rollingDecel * m.push.direction.x, -p.rollingDecel * m.push.direction.y, 0)
+                        : freeAcceleration(m.state, p);
+                    const w = m.phase === "sliding" ? 1 : 7 / 5;
+                    net = vec3(net.x + w * (m.push.acceleration.x - f.x), net.y + w * (m.push.acceleration.y - f.y), 0);
+                }
+                expect(Math.abs(net.x) + Math.abs(net.y)).toBeLessThan(1e-9);
+            }
+            for (const m of members.slice(1)) {
+                if (m?.push && m.phase === "rolling") {
+                    released++;
+                    const x = m.push.acceleration;
+                    const d = m.push.direction;
+                    const along = dot(x, d);
+                    // Rolling resistance −rollingDecel·d does power −rollingDecel·(d·v) with v = x·t: never positive.
+                    expect(along).toBeGreaterThan(0);
+                    expect(Math.abs(x.x * d.y - x.y * d.x)).toBeLessThanOrEqual(DIRECTION_TOLERANCE * along + 1e-15);
+                } else {
+                    const x = m?.push?.acceleration ?? ZERO;
+                    expect(Math.abs(x.x) + Math.abs(x.y)).toBeLessThan(1e-12);
+                }
+            }
+        }
+        expect(released).toBeGreaterThan(100);
+    });
+});
+
 describe("pushed motion", () => {
     it("moves with constant acceleration and matches its trajectory", () => {
         const start: BallState = { position: vec3(1, 2, R), velocity: vec3(0.5, 0, 0), angularVelocity: vec3(0, 3, 1) };
