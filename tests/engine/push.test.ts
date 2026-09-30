@@ -3,7 +3,7 @@ import { ZERO, dot, normalize, sub, vec3, type Vec3 } from "../../src/engine/mat
 import { classify, contactSlip, rollingSpin } from "../../src/engine/motion";
 import {
     DIRECTION_TOLERANCE,
-    HOLD_TOLERANCE,
+    HOLD_SLACK,
     RESTING_SPEED,
     freeAcceleration,
     holdCertificate,
@@ -243,7 +243,8 @@ describe("resting chains", () => {
     it("holds a bent line only when the contact between the resting balls can carry the load (30° holds)", () => {
         // Ball 1 takes load 3 along x; leaning on ball 2 at 30° it can shed up to 2.1 along n12, leaving
         // |(3 − 2.1·cos30°, −2.1·sin30°)| = 1.58 ≤ 2.1.
-        const { members } = solveRestingContacts(chain(1.5, Math.PI / 6), [], LINE);
+        const { members, arrested } = solveRestingContacts(chain(1.5, Math.PI / 6), [], LINE);
+        expect(arrested).toEqual([false, false, false]);
         for (const m of members) {
             const x = m?.push?.acceleration ?? ZERO;
             expect(Math.abs(x.x) + Math.abs(x.y)).toBeLessThan(1e-12);
@@ -258,7 +259,8 @@ describe("resting chains", () => {
         // (7/5)·(|x₁| + ROLL₁) = N·cos30° with N = SLIDE − a on ball 0. Hence
         // a = (SLIDE·cos30° − (7/5)·ROLL₁) / ((7/5)/cos30° + cos30°), and ball 2 takes N·cos60° ≤ 2.1.
         const roll = 1.5;
-        const { members, coupled } = solveRestingContacts(chain(roll, Math.PI / 3), [], LINE);
+        const { members, coupled, arrested } = solveRestingContacts(chain(roll, Math.PI / 3), [], LINE);
+        expect(arrested).toEqual([false, false, false]);
         const cos30 = Math.sqrt(3) / 2;
         const a = (SLIDE * cos30 - (7 / 5) * roll) / (7 / 5 / cos30 + cos30);
         expect(coupled).toEqual([true, true]);
@@ -272,14 +274,28 @@ describe("resting chains", () => {
         expect((SLIDE - a) * 0.5).toBeLessThanOrEqual((7 / 5) * roll);
     });
 
+    it("never arrests the line across the limit of holding, and decides as the closed form does (44.3°–44.7°)", () => {
+        // With ball 2 at its limit λ = 2.1, ball 1's excess is |(3 − 2.1·cosθ, −2.1·sinθ)| − 2.1, which is zero at
+        // cosθ = 9/12.6 (θ ≈ 44.4153°). Beyond it both resting balls start to move, very slowly at first.
+        for (let step = 0; step <= 400; step++) {
+            const theta = ((44.3 + step * 0.001) * Math.PI) / 180;
+            const { members, arrested } = solveRestingContacts(chain(1.5, theta), [], LINE);
+            expect(arrested, `θ step ${step}`).toEqual([false, false, false]);
+            const excess = Math.hypot(3 - 2.1 * Math.cos(theta), 2.1 * Math.sin(theta)) - 2.1;
+            if (Math.abs(excess) > 1e-6) {
+                expect(members[1]?.phase === "stationary", `θ step ${step}`).toBe(excess < 0);
+            }
+        }
+    });
+
     it("gives a hold certificate whose compressions keep every ball within its resistance", () => {
         const n = vec3(Math.cos(Math.PI / 6), Math.sin(Math.PI / 6), 0);
         const certificate = holdCertificate([vec3(3, 0, 0), ZERO], [2.1, 2.1], [{ a: 0, b: 1, normal: n }], []);
         expect(certificate).not.toBeNull();
         const lambda = (certificate as number[])[0] as number;
         expect(lambda).toBeGreaterThanOrEqual(0);
-        expect(Math.hypot(3 - lambda * n.x, -lambda * n.y)).toBeLessThanOrEqual(2.1 + HOLD_TOLERANCE);
-        expect(lambda).toBeLessThanOrEqual(2.1 + HOLD_TOLERANCE);
+        expect(Math.hypot(3 - lambda * n.x, -lambda * n.y)).toBeLessThanOrEqual(2.1 + HOLD_SLACK);
+        expect(lambda).toBeLessThanOrEqual(2.1 + HOLD_SLACK);
         const bent = vec3(0.5, Math.sqrt(3) / 2, 0);
         expect(holdCertificate([vec3(3, 0, 0), ZERO], [2.1, 2.1], [{ a: 0, b: 1, normal: bent }], [])).toBeNull();
         // An obstacle behind the pushed ball takes the whole load in compression.
@@ -308,7 +324,8 @@ describe("resting chains", () => {
             if (Math.hypot(c.x, c.y) < 2 * R + 1e-12) {
                 contacts.push({ a: 0, b: 2, fixed: false });
             }
-            const { members } = solveRestingContacts(bodies, [], contacts);
+            const { members, arrested } = solveRestingContacts(bodies, [], contacts);
+            expect(arrested, `case ${n}`).toEqual([false, false, false]);
             if (contacts.length === 2) {
                 // Brute-force cross-check of the hold decision. Held, ball 0 pushes ball 1 along n01 with the part of
                 // its drive that points that way; ball 1 can lean on ball 2 only by a compression λ ∈ [0, c] along

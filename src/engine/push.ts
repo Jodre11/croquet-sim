@@ -57,9 +57,11 @@ const PIVOT_TOLERANCE = 1e-12;
  * Most passes spent finding the rolling direction of balls pushed off from rest. A candidate is accepted only when
  * each such ball's computed acceleration agrees with the direction its resistance was built on (to within
  * DIRECTION_TOLERANCE); a candidate that has not settled after this many passes is rejected. For straight lines of
- * contacts the second pass already agrees.
+ * contacts the second pass already agrees. In a bent line the direction error shrinks by about half per pass, and a
+ * push that barely beats the resistance needs a correspondingly small error, so 64 passes settle releases whose excess
+ * push is far below HOLD_SLACK.
  */
-const RELEASE_PASSES = 8;
+const RELEASE_PASSES = 64;
 
 /** Effective inertia of a rolling solid sphere relative to its mass: (m + I/r²)/m with I = 2/5·m·r². */
 const ROLLING_WEIGHT = 7 / 5;
@@ -568,10 +570,12 @@ function holds(
 }
 
 /**
- * Loads (weight × acceleration units) within this of a held ball's static resistance still hold. It only settles
- * which way a contact exactly at the limit of holding goes.
+ * Held balls are certified against their static resistances plus this slack (weight × m/s²; resistances are of order
+ * 1). A numerical tolerance, not a physical one: it only decides which way a configuration within 1e-6 of the limit of
+ * holding goes. It makes the hold and release rules overlap (see holdCertificate), so no consistent configuration is
+ * left with neither.
  */
-export const HOLD_TOLERANCE = 1e-9;
+export const HOLD_SLACK = 1e-6;
 
 /** Iteration cap of the held-ball feasibility search; see holdCertificate. */
 const HOLD_ITERATIONS = 20_000;
@@ -592,13 +596,15 @@ export interface HoldRay {
 /**
  * Decides whether held balls can stay at rest. Ball i carries external load `loads[i]` and resists up to
  * `capacities[i]` in any direction. Returns compressions (one per link, then one per ray, all ≥ 0) under which every
- * ball's net load lies within its capacity (to HOLD_TOLERANCE), or null when none exist.
+ * ball's net load exceeds its capacity by at most HOLD_SLACK, or null if the search finds none.
  *
- * The feasible compressions are the minimisers, with value zero, of F(λ) = Σᵢ ½·max(0, |netᵢ(λ)| − capacityᵢ)² over
- * λ ≥ 0. F is convex with a gradient that is Lipschitz with constant at most the largest row sum of JᵀJ (at most
- * 2·(links + rays)), so projected gradient descent with that step decreases F monotonically and converges; F reaches
- * zero exactly when a feasible λ exists. The search stops as soon as every ball is within capacity (usually a few
- * steps) and otherwise gives up after HOLD_ITERATIONS, deciding by the remaining excess.
+ * Exactly feasible compressions are the zeros of the convex function F(λ) = Σᵢ ½·max(0, |netᵢ(λ)| − capacityᵢ)² over
+ * λ ≥ 0, whose gradient is Lipschitz with constant at most the largest row sum of JᵀJ (at most 2·(links + rays)).
+ * Accelerated projected gradient (FISTA) with that step drives F towards its minimum from outside the feasible set;
+ * it stops as soon as every excess is within HOLD_SLACK (usually after a few steps) and gives up after
+ * HOLD_ITERATIONS. Near the limit of holding, where the feasible set shrinks to a point, convergence is slow, which is
+ * why the slack is needed: a problem that is feasible, or infeasible by less than about HOLD_SLACK, certifies; one
+ * infeasible by more cannot. The release path settles down to excesses well below HOLD_SLACK, so the two overlap.
  */
 export function holdCertificate(
     loads: readonly Vec3[],
@@ -622,9 +628,13 @@ export function holdCertificate(
         return result;
     };
     const step = 1 / Math.max(1, 2 * count);
-    for (let iteration = 0; iteration <= HOLD_ITERATIONS; iteration++) {
+    // Excess of each ball beyond its capacity, and the gradient of F with respect to its net load (the excess, along
+    // the load), at compressions `at`.
+    const evaluate = (at: readonly number[]): { readonly excess: number; readonly pull: Vec3[] } => {
+        const saved = [...lambda];
+        at.forEach((v, k) => (lambda[k] = v));
         const loadsNow = net();
-        // Gradient of F with respect to each ball's net load: the excess beyond the capacity disc, along the load.
+        saved.forEach((v, k) => (lambda[k] = v));
         let excess = 0;
         const pull = loadsNow.map((load, i) => {
             const size = length(load);
@@ -632,20 +642,38 @@ export function holdCertificate(
             excess = Math.max(excess, over);
             return over > 0 ? scale(load, over / size) : ZERO;
         });
-        if (excess <= HOLD_TOLERANCE) {
+        return { excess, pull };
+    };
+    // Accelerated projected gradient (FISTA) on λ ≥ 0, from λ = 0. `probe` is the extrapolated point.
+    let probe = [...lambda];
+    let momentum = 1;
+    for (let iteration = 0; iteration <= HOLD_ITERATIONS; iteration++) {
+        const here = evaluate(lambda);
+        if (here.excess <= HOLD_SLACK) {
             return lambda;
         }
         if (count === 0 || iteration === HOLD_ITERATIONS) {
             return null;
         }
-        links.forEach((link, k) => {
-            const gradient = dot(sub(pull[link.b] as Vec3, pull[link.a] as Vec3), link.normal);
-            lambda[k] = Math.max(0, (lambda[k] as number) - step * gradient);
+        const { pull } = evaluate(probe);
+        const next = probe.map((v, k) => {
+            const gradient =
+                k < links.length
+                    ? dot(
+                          sub(pull[(links[k] as HoldLink).b] as Vec3, pull[(links[k] as HoldLink).a] as Vec3),
+                          (links[k] as HoldLink).normal,
+                      )
+                    : 0 -
+                      dot(
+                          pull[(rays[k - links.length] as HoldRay).ball] as Vec3,
+                          (rays[k - links.length] as HoldRay).into,
+                      );
+            return Math.max(0, v - step * gradient);
         });
-        rays.forEach((ray, j) => {
-            const gradient = -dot(pull[ray.ball] as Vec3, ray.into);
-            lambda[links.length + j] = Math.max(0, (lambda[links.length + j] as number) - step * gradient);
-        });
+        const nextMomentum = (1 + Math.sqrt(1 + 4 * momentum * momentum)) / 2;
+        probe = next.map((v, k) => v + ((momentum - 1) / nextMomentum) * (v - (lambda[k] as number)));
+        next.forEach((v, k) => (lambda[k] = v));
+        momentum = nextMomentum;
     }
     return null;
 }
@@ -695,12 +723,18 @@ function tryActiveSet(
         if (settled) {
             return accept(system, active, solved, closingRate, directions);
         }
+        // A ball released from rest moves along the net push of its contacts: w·x = P − c·d with d = P̂ at the
+        // solution. P = w·(x − base) depends only weakly on the direction the resistance was built on, so iterating
+        // d ← P̂ settles quickly, even when x itself is tiny because the push barely exceeds the resistance.
         for (const i of released) {
-            const x = solved.result.get(i) as Vec3;
-            if (length(x) === 0) {
+            const push = scale(
+                sub(solved.result.get(i) as Vec3, base.get(i) as Vec3),
+                (responses.get(i) as Response).weight,
+            );
+            if (length(push) === 0) {
                 return null;
             }
-            directions.set(i, normalize(x));
+            directions.set(i, normalize(push));
         }
     }
     return null;
