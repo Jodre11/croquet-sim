@@ -9,8 +9,11 @@ driven by sourced reference data, that turns initial ball states into a time-par
 **Architecture:** A pure TypeScript engine under `src/engine/` with no DOM dependency. Each ball moves on
 closed-form quadratic trajectories within a motion phase (sliding, rolling, stationary). The solver jumps directly
 to the next event (phase transition, ball–ball contact, ball–upright/peg contact, halt margin), resolves it with an
-instantaneous impulse, and records per-ball segments. Out-of-court and hoop-passage events are observed afterwards
-from the segments. Physical constants come from `reference/*.json`, each value carrying its source.
+instantaneous impulse, and records per-ball segments. Contacts slower than a small resting speed are not bounced:
+the bodies are coupled and pushed together under constant accelerations (still closed-form quadratics) until a
+pushed ball changes phase, the contact opens or another contact intervenes (Task 7, `push.ts`). Out-of-court and
+hoop-passage events are observed afterwards from the segments. Physical constants come from `reference/*.json`,
+each value carrying its source.
 
 **Tech Stack:** Node (current Active LTS), TypeScript (strict), Vite, Svelte 5, Vitest, ESLint (flat config,
 typescript-eslint, eslint-plugin-svelte), Prettier, GitHub Actions.
@@ -30,7 +33,9 @@ typescript-eslint, eslint-plugin-svelte), Prettier, GitHub Actions.
 - Coordinates: the lawn is the plane `z = 0`, `z` up. Origin at the south-west corner of the court; `x` runs east
   along the south boundary, `y` runs north along the west boundary. A resting ball's centre is at `z = radius`.
 - No physical constant in `src/` is typed in by hand. Every value comes from `reference/*.json` with a citation.
-  Exceptions: standard gravity (a defined constant) and numerical tolerances. Test fixtures may use explicit,
+  Exceptions: standard gravity (a defined constant), numerical tolerances, modelling margins (`HALT_MARGIN`) and
+  solid-sphere geometry factors that follow from I = 2/5·m·r² (5/2, 7/2, 7/5, 2/7). Every tolerance and margin is
+  a named constant whose comment says why it is not a physical constant. Test fixtures may use explicit,
   clearly-labelled test values.
 - Public/exported functions carry a header comment; cognitively complex code carries explanatory comments.
 - Commit messages follow the repo's existing style: short imperative sentence (e.g. "Add polynomial root finder").
@@ -38,7 +43,7 @@ typescript-eslint, eslint-plugin-svelte), Prettier, GitHub Actions.
 ## Review Focus
 
 1. **Balls that start exactly touching** (every croquet stroke; chains of touching balls) — no spurious
-   zero-time collisions, no tunnelling, the simulation terminates. Pinned in Task 9.
+   zero-time collisions, no tunnelling, the simulation terminates. Pinned in Tasks 6, 7 and 9.
 2. **Grazing, near-tangent contacts** — no phantom impulse, no interpenetration. Pinned in Tasks 6 and 9.
 3. **Very slow balls and residual slip just above tolerance** — the solver terminates promptly without an event
    storm or `aborted`. Pinned in Task 9.
@@ -46,6 +51,10 @@ typescript-eslint, eslint-plugin-svelte), Prettier, GitHub Actions.
    penetration or abort. Pinned in Task 9.
 5. **Crossing a hoop plane near a segment boundary** — exactly one passage event, never zero or two. Pinned in
    Task 10.
+6. **Persistent contact** (a ball driven into another by its own spin; pushed chains; a ball driven into two
+   balls at an angle; a ball spinning against the peg) — resolved as resting contact and pushing: no Zeno event
+   storm, no abort, no penetration, contact forces never pull, energy never increases; detection and resolution
+   use the same predicates. Pinned in Tasks 6, 7, 9 and 11 (against an analytic case and brute force).
 
 ---
 
@@ -66,9 +75,10 @@ typescript-eslint, eslint-plugin-svelte), Prettier, GitHub Actions.
 | `src/engine/motion.ts` | Single-ball closed-form motion within a phase |
 | `src/engine/detect.ts` | Event-time detection (contacts, boundary thresholds) |
 | `src/engine/resolve.ts` | Collision impulses |
+| `src/engine/push.ts` | Resting contact: which touching contacts push, and the pushed balls' motion |
 | `src/engine/world.ts` | World helpers, validation, default world from reference data |
 | `src/engine/simulate.ts` | Event loop producing `ShotResult` |
-| `src/engine/sample.ts` | Sampling a `ShotResult` at any time |
+| `src/engine/sample.ts` | Evaluating a segment (free or pushed) and sampling a `ShotResult` at any time |
 | `src/engine/observe.ts` | Out-of-court and hoop-passage observation |
 | `src/engine/hoopRun.ts` | Hoop-run verdict per the Laws |
 | `src/engine/index.ts` | Public engine API |
@@ -1760,6 +1770,14 @@ git commit -m "Add closed-form single-ball motion"
 
 ### Task 6: Event-time detection
 
+Detection answers one question per pair of bodies: when do they next come into contact? Bodies that are already
+touching are **not** decided here. Whether a touching pair collides, pushes or separates at t = 0 is decided by the
+simulator (Task 9) from `approachSpeed` and the resting-contact solver (Task 7), which resolution uses too, so
+detection and resolution can never disagree (pre-flight I2). For touching bodies, `approachTime` reports only a
+genuine new contact after the gap has opened past `CONTACT_TOLERANCE`, or, as a safety net, the moment the bodies
+would overlap by more than `CONTACT_TOLERANCE`. That net catches the re-approach the original design lost (pre-flight
+B3: a pair "barely separating" with f never becoming positive).
+
 **Files:**
 - Create: `src/engine/detect.ts`
 - Test: `tests/engine/detect.test.ts`
@@ -1768,12 +1786,30 @@ git commit -m "Add closed-form single-ball motion"
 - Consumes: `realRootsInInterval` (Task 2); `Trajectory` (Task 5); `vec3.ts`.
 - Produces:
   - `CONTACT_TOLERANCE = 1e-9` (m)
+  - `isTouching(offset: Vec3, distance: number): boolean` — centre distance within `CONTACT_TOLERANCE` of `distance`
+    (overlap counts as touching).
+  - `approachSpeed(offset: Vec3, relativeVelocity: Vec3): number` — closing speed along the line of centres
+    (positive when approaching). **The** approaching predicate: detection, resolution (Task 7) and the resting-contact
+    solver all call it.
   - `approachTime(a: Vec3, b: Vec3, c: Vec3, distance: number, horizon: number): number | null` — earliest
-    `t ∈ [0, horizon]` at which the horizontal relative trajectory `a + b·t + c·t²` comes within `distance` of the
-    origin **while approaching**. Returns `0` when already touching (gap ≤ tolerance) and approaching. Throws
+    `t ∈ (0, horizon]` of a new contact of the relative trajectory `a + b·t + c·t²`; never 0 (see above). Throws
     `RangeError` for a non-finite horizon.
-  - `firstNonNegative(coeffs: readonly number[], horizon: number): number | null` — earliest `t ∈ [0, horizon]`
-    with `g(t) ≥ 0` (0 if `g(0) ≥ 0`).
+  - `firstNonNegative(coeffs: readonly number[], horizon: number): number | null` — earliest `t ∈ [0, horizon]` at
+    which g rises to ≥ 0: 0 if `g(0) ≥ 0`, otherwise the first root from `realRootsInInterval` (pre-flight M1).
+    That root is a bisection lower bracket end, or for linear g the correctly rounded quotient, which may lie
+    marginally on either side. It is used only for thresholds where that does not matter, never to keep bodies
+    apart.
+
+Root semantics (Task 2 review). Only bisection roots keep the sign the polynomial has at `lo`; a degree-1 root is a
+rounded quotient, and knots are rounded critical points, so a near-double root can be missed.
+
+- The contact quartic f(t) = |A + B·t + C·t²|² − d² is never of degree 1: f4 = 0 forces C = 0, and then f2 = |B|²
+  = 0 forces f1 = 0. Every contact root is therefore a bisection root, and a reported contact is never inside an
+  overlap.
+- A graze within rounding of tangency may be missed; its overlap is then itself at rounding level.
+- Linear roots appear only in thresholds (halt margin, out of court, a hoop plane) and in `pushDuration`. At those
+  points the next step tolerates either side: speeds are compared with `SPEED_EPSILON`, and Task 10 reconciles the
+  hoop-plane side at segment boundaries.
   - `interface Bounds { readonly width: number; readonly length: number }`
   - `boundaryCrossingTime(traj: Trajectory, bounds: Bounds, threshold: number, horizon: number): number | null` —
     earliest time the centre's outward distance beyond any boundary line reaches `threshold`.
@@ -1786,7 +1822,14 @@ git commit -m "Add closed-form single-ball motion"
 
 ```ts
 import { describe, expect, it } from "vitest";
-import { approachTime, boundaryCrossingTime, outwardDistance } from "../../src/engine/detect";
+import {
+    CONTACT_TOLERANCE,
+    approachSpeed,
+    approachTime,
+    boundaryCrossingTime,
+    isTouching,
+    outwardDistance,
+} from "../../src/engine/detect";
 import { ZERO, vec3 } from "../../src/engine/math/vec3";
 
 const R = 0.046;
@@ -1808,14 +1851,33 @@ describe("approachTime", () => {
         expect(approachTime(vec3(-1, TWO_R, 0), vec3(1, 0, 0), ZERO, TWO_R, 5)).toBeNull();
     });
 
-    it("returns 0 for touching bodies that approach, and null for touching bodies that separate", () => {
-        expect(approachTime(vec3(-TWO_R, 0, 0), vec3(1, 0, 0), ZERO, TWO_R, 5)).toBe(0);
+    it("never returns 0: touching bodies are decided by the caller", () => {
+        // Approaching at 1 m/s from touching: only the overlap safety net fires, once the overlap reaches the
+        // tolerance. Separating: nothing.
+        const t = approachTime(vec3(-TWO_R, 0, 0), vec3(1, 0, 0), ZERO, TWO_R, 5);
+        expect(t).toBeGreaterThan(0);
+        expect(t).toBeCloseTo(CONTACT_TOLERANCE, 15);
         expect(approachTime(vec3(-TWO_R, 0, 0), vec3(-1, 0, 0), ZERO, TWO_R, 5)).toBeNull();
     });
 
-    it("returns 0 for touching bodies with no relative speed that are about to converge", () => {
-        // Relative velocity zero, relative acceleration toward each other.
-        expect(approachTime(vec3(-TWO_R, 0, 0), ZERO, vec3(0.5, 0, 0), TWO_R, 5)).toBe(0);
+    it("catches touching bodies driven together at zero relative speed before they overlap (B3)", () => {
+        // Relative velocity zero, relative acceleration 1 m/s² toward each other: the gap is −t²/2.
+        const t = approachTime(vec3(-TWO_R, 0, 0), ZERO, vec3(0.5, 0, 0), TWO_R, 5);
+        expect(t).toBeCloseTo(Math.sqrt(2 * CONTACT_TOLERANCE), 9);
+    });
+
+    it("does not lose a re-approach that stays inside the tolerance band (B3 regression)", () => {
+        // The pathological case from the pre-flight scan: barely separating (f1 > 0) but driven together
+        // (f2 < 0), so f never becomes positive. The overlap net must still fire.
+        const t = approachTime(vec3(-TWO_R, 0, 0), vec3(-1.8e-8, 0, 0), vec3(1.58, 0, 0), TWO_R, 1);
+        expect(t).not.toBeNull();
+        expect(t as number).toBeLessThan(1e-4);
+    });
+
+    it("finds a new contact after touching bodies separate and come back", () => {
+        // x(t) = −2R − t + t²/2 returns to −2R at t = 2.
+        const t = approachTime(vec3(-TWO_R, 0, 0), vec3(-1, 0, 0), vec3(0.5, 0, 0), TWO_R, 5);
+        expect(t).toBeCloseTo(2, 9);
     });
 
     it("respects the horizon", () => {
@@ -1837,6 +1899,21 @@ describe("approachTime", () => {
 
     it("rejects a non-finite horizon", () => {
         expect(() => approachTime(vec3(-1, 0, 0), vec3(1, 0, 0), ZERO, TWO_R, Infinity)).toThrow(RangeError);
+    });
+});
+
+describe("approachSpeed and isTouching", () => {
+    it("is positive when closing, negative when separating and zero for sideways motion", () => {
+        expect(approachSpeed(vec3(-TWO_R, 0, 0), vec3(2, 0, 0))).toBe(2);
+        expect(approachSpeed(vec3(-TWO_R, 0, 0), vec3(-2, 0, 0))).toBe(-2);
+        expect(approachSpeed(vec3(-TWO_R, 0, 0), vec3(0, 3, 0))).toBe(0);
+        expect(approachSpeed(ZERO, vec3(1, 0, 0))).toBe(0);
+    });
+
+    it("treats gaps up to CONTACT_TOLERANCE as touching", () => {
+        expect(isTouching(vec3(TWO_R + CONTACT_TOLERANCE / 2, 0, 0), TWO_R)).toBe(true);
+        expect(isTouching(vec3(TWO_R + 2 * CONTACT_TOLERANCE, 0, 0), TWO_R)).toBe(false);
+        expect(isTouching(vec3(TWO_R - 0.01, 0, 0), TWO_R)).toBe(true);
     });
 });
 
@@ -1875,9 +1952,12 @@ Expected: FAIL — cannot resolve `../../src/engine/detect`.
 
 ```ts
 /**
- * Event-time detection. Each ball's centre follows a quadratic within a phase, so the squared distance between
- * two balls (or a ball and a vertical cylinder) is a quartic in time; its earliest approaching root is the
- * contact time. Boundary distances are quadratics.
+ * Event-time detection. Each ball's centre follows a quadratic within a segment, so the squared distance between
+ * two balls (or a ball and a vertical cylinder) is a quartic in time; its earliest approaching root is the contact
+ * time. Boundary distances are quadratics.
+ *
+ * Bodies that are already touching are not handled here: whether they collide, push or separate at t = 0 is decided
+ * by the caller from `approachSpeed` and the resting-contact solver (push.ts), which resolution uses too.
  */
 import { realRootsInInterval } from "./math/poly";
 import { dot, horizontal, length, type Vec3 } from "./math/vec3";
@@ -1886,10 +1966,29 @@ import type { Trajectory } from "./motion";
 /** Surfaces closer than this (m) are treated as touching. */
 export const CONTACT_TOLERANCE = 1e-9;
 
+/** Returns true when two bodies whose centres are `offset` apart are within CONTACT_TOLERANCE of `distance`. */
+export function isTouching(offset: Vec3, distance: number): boolean {
+    return length(horizontal(offset)) - distance <= CONTACT_TOLERANCE;
+}
+
 /**
- * Returns the earliest t in [0, horizon] at which the horizontal relative trajectory a + b·t + c·t² comes within
- * `distance` of the origin while the separation is decreasing, or null if it does not. Returns 0 when the bodies
- * already touch and are approaching (or have zero relative speed and are converging).
+ * Returns the speed (m/s) at which two bodies close along their line of centres: positive when approaching,
+ * negative when separating. `offset` is the first centre minus the second and `relativeVelocity` the first
+ * velocity minus the second. This is the single "approaching" predicate: detection and resolution both call it with
+ * the same states, so they can never disagree about whether a touching pair is approaching.
+ */
+export function approachSpeed(offset: Vec3, relativeVelocity: Vec3): number {
+    const d = horizontal(offset);
+    const l = length(d);
+    return l === 0 ? 0 : (0 - dot(d, horizontal(relativeVelocity))) / l;
+}
+
+/**
+ * Returns the earliest t in (0, horizon] at which the horizontal relative trajectory a + b·t + c·t² comes within
+ * `distance` of the origin while the separation is decreasing, or null if it does not. Bodies that start touching
+ * report either a new contact after the gap has opened beyond CONTACT_TOLERANCE, or the moment they would overlap by
+ * more than CONTACT_TOLERANCE (a safety net: the caller decides at t = 0 and normally prevents that). Throws
+ * RangeError for a non-finite horizon.
  */
 export function approachTime(a: Vec3, b: Vec3, c: Vec3, distance: number, horizon: number): number | null {
     if (!Number.isFinite(horizon)) {
@@ -1904,24 +2003,35 @@ export function approachTime(a: Vec3, b: Vec3, c: Vec3, distance: number, horizo
     const f2 = dot(B, B) + 2 * dot(A, C);
     const f3 = 2 * dot(B, C);
     const f4 = dot(C, C);
+    const slope = (t: number): number => f1 + t * (2 * f2 + t * (3 * f3 + t * 4 * f4));
+    // f is never of degree 1 (f4 = 0 forces C = 0, then f2 = |B|² = 0 forces f1 = 0), so every root used here comes
+    // from bisection and keeps the sign f has just before it: a reported contact time is never inside an overlap. A
+    // near-double root (a graze within rounding of tangency) may be missed, but that overlap is at rounding level.
 
-    const touching = length(A) - distance <= CONTACT_TOLERANCE;
-    if (touching && (f1 < 0 || (f1 === 0 && f2 < 0))) {
-        return 0;
+    const firstFalling = (offset: number, from: number): number | null =>
+        realRootsInInterval([f0 + offset, f1, f2, f3, f4], from, horizon).find((t) => t > 0 && slope(t) < 0) ?? null;
+    if (!isTouching(A, distance)) {
+        return firstFalling(0, 0);
     }
-    for (const t of realRootsInInterval([f0, f1, f2, f3, f4], 0, horizon)) {
-        if (touching && t === 0) {
-            continue;
-        }
-        const slope = f1 + t * (2 * f2 + t * (3 * f3 + t * 4 * f4));
-        if (slope < 0) {
-            return t;
-        }
+    // f = +band where the gap is +CONTACT_TOLERANCE and f = −band (to first order) where it is −CONTACT_TOLERANCE.
+    // Roots of f between the two are rounding noise of a contact that never opened, so they are ignored.
+    const band = 2 * distance * CONTACT_TOLERANCE;
+    const overlap = firstFalling(band, 0);
+    const leave = realRootsInInterval([f0 - band, f1, f2, f3, f4], 0, horizon).find((t) => slope(t) > 0);
+    const again = leave === undefined ? null : firstFalling(0, leave);
+    if (overlap === null) {
+        return again;
     }
-    return null;
+    return again === null ? overlap : Math.min(overlap, again);
 }
 
-/** Returns the earliest t in [0, horizon] with g(t) ≥ 0 for ascending coefficients g, or null. */
+/**
+ * Returns the earliest t in [0, horizon] at which g changes from negative to non-negative, for ascending
+ * coefficients g: 0 if g(0) ≥ 0, otherwise the first root found by `realRootsInInterval`. That root is the lower end
+ * of a bisection bracket (g there may still be marginally negative) or, for linear g, the correctly rounded quotient
+ * (g there may be marginally either side). Callers use it only for thresholds where that does not matter (halt
+ * margin, out of court, a coupled contact opening), never to keep bodies apart. Returns null if there is none.
+ */
 export function firstNonNegative(coeffs: readonly number[], horizon: number): number | null {
     if ((coeffs[0] ?? 0) >= 0) {
         return 0;
@@ -1973,9 +2083,13 @@ export function boundaryCrossingTime(
 - [ ] **Step 4: Run the tests to verify they pass**
 
 Run: `npx vitest run tests/engine/detect.test.ts`
-Expected: PASS.
+Expected: PASS (17 tests).
 
-- [ ] **Step 5: Lint and commit**
+- [ ] **Step 5: Format, lint, commit**
+
+```bash
+npm run format
+```
 
 ```bash
 npm run lint
@@ -1991,29 +2105,76 @@ git commit -m "Add contact and boundary event detection"
 
 ---
 
-### Task 7: Collision impulses
+### Task 7: Collision impulses and resting contact
 
 Free-motion collisions (spec §5: "instantaneous impulses with restitution and friction"). For two identical solid
 spheres, a tangential impulse `J` changes the relative contact-point velocity by `7J/m`, so the impulse that stops
 tangential slip is `m·|vt|/7`; Coulomb friction caps it at `μ·Jn`. Against a fixed cylinder the factor is `7/(2m)`.
 Tangential friction is kept in the lawn plane: vertical slip at the equator would lift the ball, which the turf
-prevents, and lift is the impact phase's concern (P2).
+prevents, and lift is the impact phase's concern (P2). Both impulse functions decide "approaching" with
+`approachSpeed` (Task 6), so they agree with detection (pre-flight I2).
+
+**Resting contact (pre-flight B3).** A ball driven into another by its own spin (a trailing ball sliding with
+topspin) cannot be simulated with impulses alone: each rebound is smaller than the last, a Zeno sequence that no
+event budget finishes. Contacts closing slower than `RESTING_SPEED` (1 mm/s, a numerical tolerance) are therefore
+**resting contacts**, handled by `solveRestingContacts`:
+
+1. **Velocities.** Along each resting contact normal, the touching balls' speeds are made equal: the smallest
+   velocity change, weighted by effective inertia, that stops each contact closing or opening (perfectly inelastic, so
+   energy never increases). A rolling or resting ball stays rolling through these small impulses; a sliding ball keeps
+   its spin.
+2. **Accelerations.** Each ball's turf force is frozen for the segment: sliding friction against the slip (effective
+   inertia m), or rolling resistance against the travel (effective inertia 7m/5, since static friction keeps a pushed
+   rolling ball rolling). A ball at rest stays put until the push on it exceeds (7m/5)·rollingDecel. The contact
+   forces N ≥ 0 are frictionless and minimise Σ ½·wᵢ·|xᵢ − fᵢ|² subject to no contact converging: Gauss's principle
+   of least constraint. It is solved exactly by trying active sets in a fixed order. Pairs, chains, a ball held against
+   an upright and a ball driven into two balls at an angle are all the same problem. Each coupled contact keeps its
+   normal fixed for the segment, so relative motion is perpendicular to it and can only open the gap, never close it.
+3. **Segment end.** A pushed segment ends when a frozen turf force stops being valid: the slip (sliding) or velocity
+   (rolling) reaches zero along the frozen direction or turns more than `DIRECTION_TOLERANCE` away from it. It also ends
+   when a coupled contact opens past `SEPARATION_TOLERANCE` or another contact intervenes (Task 9). The simulator then
+   solves the group again. A contact force can only change sign at such an event, so "N → 0" is decided there: the
+   contact is released when the new solution leaves it inactive.
+
+**P1 limitation (ruled).** Coupled contacts are frictionless; impulse collisions keep their friction. Balls that slide
+past each other while pushing (sidespin, pushes at an angle) are therefore not rubbed.
+
+- **Cost.** Against a brute-force reference with ball–ball μ = 0.05, a sidespin push was about 27 mm off. Adversarial
+  fuzz of bent chains with strong sidespin reached about 110 mm. With μ = 0 the two agree to 2.7 mm or better.
+- **Unaffected.** Straight topspin pushes, the common croquet case, have no horizontal slip at the contact.
+- **Fix, deferred to P2 or later:** kinetic Coulomb friction on coupled contacts, with slip and stick events.
+
+Within a segment every acceleration is constant, so every trajectory stays a quadratic in t and uses only IEEE-exact
+operations. An analytic case pins the model: a ball with topspin Ω at rest behind a resting ball. The pair accelerates
+at `A = (5·μs·g − 7·μr·g)/12` until the pusher's slip is gone after `t = RΩ/(A + 5μs·g/2)`. The brute-force
+integrator reproduces it (Task 11).
 
 **Files:**
-- Create: `src/engine/resolve.ts`
-- Modify: `src/engine/types.ts` (append `ContactMaterial`)
-- Test: `tests/engine/resolve.test.ts`
+- Create: `src/engine/resolve.ts`, `src/engine/push.ts`
+- Modify: `src/engine/types.ts` (append `ContactMaterial`, `PushMotion`)
+- Test: `tests/engine/resolve.test.ts`, `tests/engine/push.test.ts`
 
 **Interfaces:**
-- Consumes: `BallState`, `BallParams` (Task 5); `vec3.ts`.
+- Consumes: `BallState`, `BallParams`, `MotionParams`, `MotionPhase`, `classify`, `contactSlip`, `rollingSpin`,
+  `atRest`, `SPEED_EPSILON`, `Trajectory` (Task 5); `approachSpeed` (Task 6); `vec3.ts`.
 - Produces:
-  - `types.ts`: `interface ContactMaterial { readonly restitution: number; readonly friction: number }`
-  - `resolveBallBall(a: BallState, b: BallState, ball: BallParams, material: ContactMaterial): readonly [BallState, BallState]`
-    — returns the inputs unchanged (same objects) if the pair is not approaching.
-  - `resolveBallCylinder(s: BallState, axis: Vec3, ball: BallParams, material: ContactMaterial): BallState` —
-    `axis` is any point on the vertical cylinder axis; returns `s` unchanged if not approaching.
+  - `types.ts`: `interface ContactMaterial { readonly restitution: number; readonly friction: number }`;
+    `interface PushMotion { readonly acceleration: Vec3; readonly angularAcceleration: Vec3;`
+    `readonly direction: Vec3 }`.
+  - `resolve.ts`: `resolveBallBall(a, b, ball, material): readonly [BallState, BallState]` (same objects when
+    `approachSpeed ≤ 0`); `resolveBallCylinder(s, axis, ball, material): BallState` (same object when
+    `approachSpeed ≤ 0`).
+  - `push.ts`: `RESTING_SPEED = 1e-3`, `DIRECTION_TOLERANCE = 1e-2`, `SEPARATION_TOLERANCE = 1e-7`,
+    `ACCELERATION_EPSILON = 1e-9`; `interface ContactBody { state; params }`,
+    `interface RestingContact { a: number; b: number; fixed: boolean }`,
+    `interface RestingMember { state; phase; push: PushMotion | null }`,
+    `interface RestingSolution { members: (RestingMember | null)[]; coupled: boolean[]; arrested: boolean[] }`;
+    `solveRestingContacts(bodies, axes: readonly Vec3[], contacts): RestingSolution`;
+    `freeAcceleration(s: BallState, p: MotionParams): Vec3`;
+    `pushedState(start, push, t): BallState`; `pushedTrajectory(start, push): Trajectory`;
+    `pushDuration(start, phase, push, radius): number`.
 
-- [ ] **Step 1: Append `ContactMaterial` to `src/engine/types.ts`**
+- [ ] **Step 1: Append contact types to `src/engine/types.ts`**
 
 ```ts
 /** Restitution (0–1) and Coulomb friction coefficient for a pair of contacting materials. */
@@ -2021,14 +2182,27 @@ export interface ContactMaterial {
     readonly restitution: number;
     readonly friction: number;
 }
+
+/**
+ * Motion of a ball while it pushes, or is pushed by, a body it rests against. Within one segment the centre
+ * accelerates uniformly and the spin changes uniformly. `direction` is the unit vector along which the ball's turf
+ * force is frozen for the segment: the slip direction when sliding, the direction of travel when rolling, and ZERO
+ * when the ball is held at rest.
+ */
+export interface PushMotion {
+    readonly acceleration: Vec3;
+    readonly angularAcceleration: Vec3;
+    readonly direction: Vec3;
+}
 ```
 
-- [ ] **Step 2: Write the failing tests**
+- [ ] **Step 2: Write the failing impulse tests**
 
 `tests/engine/resolve.test.ts`:
 
 ```ts
 import { describe, expect, it } from "vitest";
+import { approachSpeed } from "../../src/engine/detect";
 import { ZERO, add, scale, sub, vec3 } from "../../src/engine/math/vec3";
 import { resolveBallBall, resolveBallCylinder } from "../../src/engine/resolve";
 import type { BallState } from "../../src/engine/types";
@@ -2067,8 +2241,18 @@ describe("resolveBallBall", () => {
         const random = rng(7);
         for (let n = 0; n < 500; n++) {
             const angle = random() * 2 - 1;
-            const sa = at(0, 0, vec3(random() * 3, random() * 2 - 1, 0), vec3(random() * 60 - 30, random() * 60 - 30, random() * 20 - 10));
-            const sb = at(2 * R * Math.cos(angle), 2 * R * Math.sin(angle), vec3(random() - 0.5, random() - 0.5, 0), vec3(random() * 20 - 10, random() * 20 - 10, 0));
+            const sa = at(
+                0,
+                0,
+                vec3(random() * 3, random() * 2 - 1, 0),
+                vec3(random() * 60 - 30, random() * 60 - 30, random() * 20 - 10),
+            );
+            const sb = at(
+                2 * R * Math.cos(angle),
+                2 * R * Math.sin(angle),
+                vec3(random() - 0.5, random() - 0.5, 0),
+                vec3(random() * 20 - 10, random() * 20 - 10, 0),
+            );
             const material = { restitution: random(), friction: random() * 0.5 };
             const [a, b] = resolveBallBall(sa, sb, BALL, material);
             const before = add(sa.velocity, sb.velocity);
@@ -2096,9 +2280,24 @@ describe("resolveBallBall", () => {
         expect(tangential).toBeGreaterThan(0);
     });
 
+    it("applies an impulse exactly when approachSpeed says the pair is approaching (I2)", () => {
+        const random = rng(3);
+        for (let n = 0; n < 500; n++) {
+            const angle = random() * 2 * Math.PI;
+            const sa = at(0, 0, vec3(random() * 2e-9 - 1e-9, random() * 2e-9 - 1e-9, 0), vec3(0, 0, random()));
+            const sb = at(2 * R * Math.cos(angle), 2 * R * Math.sin(angle));
+            const approaching = approachSpeed(sub(sa.position, sb.position), sub(sa.velocity, sb.velocity)) > 0;
+            const [a] = resolveBallBall(sa, sb, BALL, { restitution: 0.8, friction: 0.05 });
+            expect(a !== sa).toBe(approaching);
+        }
+    });
+
     it("leaves spin untouched without friction", () => {
         const w = vec3(3, -4, 5);
-        const [a] = resolveBallBall(at(0, 0, vec3(1, 0.2, 0), w), at(2 * R, 0), BALL, { restitution: 0.8, friction: 0 });
+        const [a] = resolveBallBall(at(0, 0, vec3(1, 0.2, 0), w), at(2 * R, 0), BALL, {
+            restitution: 0.8,
+            friction: 0,
+        });
         expect(a.angularVelocity).toEqual(w);
     });
 });
@@ -2122,7 +2321,12 @@ describe("resolveBallCylinder", () => {
         for (let n = 0; n < 500; n++) {
             const angle = Math.PI + (random() * 2 - 1);
             const c = sub(vec3(0, 0, 0), scale(vec3(Math.cos(angle), Math.sin(angle), 0), R + 0.008));
-            const s0 = at(0, 0, vec3(random() * 2 - 1, random() * 2 - 1, 0), vec3(random() * 60 - 30, random() * 60 - 30, random() * 20 - 10));
+            const s0 = at(
+                0,
+                0,
+                vec3(random() * 2 - 1, random() * 2 - 1, 0),
+                vec3(random() * 60 - 30, random() * 60 - 30, random() * 20 - 10),
+            );
             const s = resolveBallCylinder(s0, c, BALL, { restitution: random(), friction: random() * 0.5 });
             expect(kineticEnergy(s, BALL)).toBeLessThanOrEqual(kineticEnergy(s0, BALL) + 1e-12);
             expect(s.velocity.z).toBe(0);
@@ -2141,8 +2345,10 @@ Expected: FAIL — cannot resolve `../../src/engine/resolve`.
 ```ts
 /**
  * Instantaneous collision impulses for free motion, with restitution along the contact normal and Coulomb
- * friction in the lawn plane. Linear velocity stays horizontal (the turf prevents lift in free motion).
+ * friction in the lawn plane. Linear velocity stays horizontal (the turf prevents lift in free motion). Whether a
+ * pair is approaching is decided by `approachSpeed`, the predicate detection also uses.
  */
+import { approachSpeed } from "./detect";
 import { ZERO, add, cross, dot, horizontal, length, normalize, scale, sub, type Vec3 } from "./math/vec3";
 import type { BallParams, BallState, ContactMaterial } from "./types";
 
@@ -2151,8 +2357,8 @@ function inertia(ball: BallParams): number {
 }
 
 /**
- * Resolves a collision between two identical balls. Returns the inputs unchanged if they are not approaching
- * along the line of centres.
+ * Resolves a collision between two identical balls. Returns the inputs unchanged (the same objects) if
+ * `approachSpeed` says they are not approaching.
  */
 export function resolveBallBall(
     a: BallState,
@@ -2160,21 +2366,21 @@ export function resolveBallBall(
     ball: BallParams,
     material: ContactMaterial,
 ): readonly [BallState, BallState] {
+    const approach = approachSpeed(sub(a.position, b.position), sub(a.velocity, b.velocity));
+    if (approach <= 0) {
+        return [a, b];
+    }
     const { radius: r, mass: m } = ball;
     const n = normalize(horizontal(sub(b.position, a.position)));
     // Contact-point velocities: a touches at +r·n from its centre, b at −r·n.
     const ua = add(a.velocity, cross(a.angularVelocity, scale(n, r)));
     const ub = add(b.velocity, cross(b.angularVelocity, scale(n, -r)));
     const relative = sub(ua, ub);
-    const approach = dot(relative, n);
-    if (approach <= 0) {
-        return [a, b];
-    }
 
     // Normal impulse on b: relative normal speed changes by 2·Jn/m and must end at −e × approach.
     const jn = ((1 + material.restitution) * m * approach) / 2;
     // Tangential impulse changes relative slip by 7·Jt/m; stop the slip or slide at the Coulomb limit.
-    const slip = horizontal(sub(relative, scale(n, approach)));
+    const slip = horizontal(sub(relative, scale(n, dot(relative, n))));
     const slipSpeed = length(slip);
     const jt = Math.min((m * slipSpeed) / 7, material.friction * jn);
     const impulse = add(scale(n, jn), slipSpeed > 0 ? scale(slip, jt / slipSpeed) : ZERO);
@@ -2197,27 +2403,22 @@ export function resolveBallBall(
 
 /**
  * Resolves a collision between a ball and a fixed vertical cylinder (hoop upright or peg) whose axis passes
- * through `axis`. Returns the input unchanged if the ball is not approaching the cylinder.
+ * through `axis`. Returns the input unchanged if `approachSpeed` says the ball is not approaching the cylinder.
  */
-export function resolveBallCylinder(
-    s: BallState,
-    axis: Vec3,
-    ball: BallParams,
-    material: ContactMaterial,
-): BallState {
+export function resolveBallCylinder(s: BallState, axis: Vec3, ball: BallParams, material: ContactMaterial): BallState {
+    const approach = approachSpeed(sub(s.position, axis), s.velocity);
+    if (approach <= 0) {
+        return s;
+    }
     const { radius: r, mass: m } = ball;
     const n = normalize(horizontal(sub(s.position, axis)));
     // The ball touches the cylinder at −r·n from its centre.
     const contact = scale(n, -r);
     const relative = add(s.velocity, cross(s.angularVelocity, contact));
-    const normalSpeed = dot(relative, n);
-    if (normalSpeed >= 0) {
-        return s;
-    }
 
-    const pn = -(1 + material.restitution) * m * normalSpeed;
+    const pn = (1 + material.restitution) * m * approach;
     // Tangential impulse changes contact slip by 7·Pt/(2m).
-    const slip = horizontal(sub(relative, scale(n, normalSpeed)));
+    const slip = horizontal(sub(relative, scale(n, dot(relative, n))));
     const slipSpeed = length(slip);
     const pt = Math.min((2 * m * slipSpeed) / 7, material.friction * pn);
     const impulse = sub(scale(n, pn), slipSpeed > 0 ? scale(slip, pt / slipSpeed) : ZERO);
@@ -2233,9 +2434,832 @@ export function resolveBallCylinder(
 - [ ] **Step 5: Run the tests to verify they pass**
 
 Run: `npx vitest run tests/engine/resolve.test.ts`
-Expected: PASS.
+Expected: PASS (10 tests).
 
-- [ ] **Step 6: Format, lint, commit**
+- [ ] **Step 6: Write the failing resting-contact tests**
+
+`tests/engine/push.test.ts`. The parameters are explicit test values (slidingDecel 3, rollingDecel 0.5 m/s²):
+
+```ts
+import { describe, expect, it } from "vitest";
+import { ZERO, dot, normalize, sub, vec3, type Vec3 } from "../../src/engine/math/vec3";
+import { classify, contactSlip, rollingSpin } from "../../src/engine/motion";
+import {
+    DIRECTION_TOLERANCE,
+    RESTING_SPEED,
+    freeAcceleration,
+    pushDuration,
+    pushedState,
+    pushedTrajectory,
+    solveRestingContacts,
+    type ContactBody,
+} from "../../src/engine/push";
+import type { BallState, MotionParams } from "../../src/engine/types";
+import { kineticEnergy } from "./support/energy";
+import { rng } from "./support/rng";
+
+const R = 0.046;
+const SLIDE = 3;
+const ROLL = 0.5;
+const P: MotionParams = { radius: R, slidingDecel: SLIDE, rollingDecel: ROLL };
+const BALL = { radius: R, mass: 0.454 };
+
+function ball(x: number, y: number, velocity: Vec3 = ZERO, angularVelocity: Vec3 = ZERO): ContactBody {
+    return { state: { position: vec3(x, y, R), velocity, angularVelocity }, params: P };
+}
+
+function rolling(x: number, y: number, velocity: Vec3): ContactBody {
+    return ball(x, y, velocity, rollingSpin(velocity, 0, R));
+}
+
+const PAIR = [{ a: 0, b: 1, fixed: false }];
+
+describe("solveRestingContacts", () => {
+    it("pushes a resting ball with a ball driven by topspin (analytic case)", () => {
+        // Blue has no velocity but topspin Ω, so its slip is −RΩ and friction drives it forward at SLIDE. Red resists
+        // statically, then rolls (effective inertia 7m/5, rolling resistance ROLL). Common acceleration:
+        // A = (SLIDE − (7/5)·ROLL) / (1 + 7/5) = (5·SLIDE − 7·ROLL) / 12.
+        const omega = 60;
+        const { members, coupled, arrested } = solveRestingContacts(
+            [ball(0, 0, ZERO, vec3(0, omega, 0)), ball(2 * R, 0)],
+            [],
+            PAIR,
+        );
+        const A = (5 * SLIDE - 7 * ROLL) / 12;
+        expect(coupled).toEqual([true]);
+        expect(arrested).toEqual([false, false]);
+        const blue = members[0];
+        const red = members[1];
+        expect(blue?.phase).toBe("sliding");
+        expect(red?.phase).toBe("rolling");
+        expect(blue?.push?.acceleration.x).toBeCloseTo(A, 12);
+        expect(red?.push?.acceleration.x).toBeCloseTo(A, 12);
+        expect(blue?.push?.acceleration.y).toBeCloseTo(0, 15);
+        // Equal and opposite contact force, N = m·(SLIDE − A) on blue = (7m/5)·(A + ROLL) on red, and compressive.
+        const n = SLIDE - A;
+        expect(n).toBeGreaterThan(0);
+        expect(n).toBeCloseTo((7 / 5) * (A + ROLL), 12);
+        // Blue's slip −RΩ decays at A + (5/2)·SLIDE; the push ends when it reaches zero.
+        const end = pushDuration(blue?.state as BallState, "sliding", blue?.push as never, R);
+        expect(end).toBeCloseTo((R * omega) / (A + 2.5 * SLIDE), 12);
+        expect(pushDuration(red?.state as BallState, "rolling", red?.push as never, R)).toBe(Infinity);
+        const atEnd = pushedState(blue?.state as BallState, blue?.push as never, end);
+        expect(Math.abs(contactSlip(atEnd, R).x)).toBeLessThan(1e-12);
+    });
+
+    it("holds a resting ball that the push cannot move", () => {
+        // Drive 0.5 m/s² is below the static resistance (7/5)·0.49 of the ball in front.
+        const weak: MotionParams = { radius: R, slidingDecel: 0.5, rollingDecel: 0.49 };
+        const { members, coupled } = solveRestingContacts(
+            [
+                { state: ball(0, 0, ZERO, vec3(0, 60, 0)).state, params: weak },
+                { state: ball(2 * R, 0).state, params: weak },
+            ],
+            [],
+            PAIR,
+        );
+        expect(coupled).toEqual([true]);
+        expect(members[1]?.phase).toBe("stationary");
+        expect(members[1]?.push?.acceleration).toEqual(ZERO);
+        expect(members[0]?.push?.acceleration.x).toBeCloseTo(0, 15);
+    });
+
+    it("gives a pushed rolling ball 5/7 of the push (effective inertia 7m/5)", () => {
+        // Blue slides forward with topspin (free acceleration +SLIDE); red rolls ahead at the same speed (−ROLL).
+        const v = vec3(0.5, 0, 0);
+        const { members, coupled } = solveRestingContacts(
+            [ball(0, 0, v, vec3(0, 40, 0)), rolling(2 * R, 0, v)],
+            [],
+            PAIR,
+        );
+        const A = (SLIDE - (7 / 5) * ROLL) / (1 + 7 / 5);
+        expect(coupled).toEqual([true]);
+        expect(members[0]?.push?.acceleration.x).toBeCloseTo(A, 12);
+        expect(members[1]?.push?.acceleration.x).toBeCloseTo(A, 12);
+    });
+
+    it("releases balls whose accelerations separate them", () => {
+        // Blue brakes hard (sliding, no spin); red ahead only rolls to a stop.
+        const v = vec3(0.5, 0, 0);
+        const { members, coupled } = solveRestingContacts([ball(0, 0, v), rolling(2 * R, 0, v)], [], PAIR);
+        expect(coupled).toEqual([false]);
+        expect(members).toEqual([null, null]);
+    });
+
+    it("makes the normal speeds equal on a slow approach, keeps rolling balls rolling and loses energy", () => {
+        const a = rolling(0, 0, vec3(0.5 + RESTING_SPEED / 2, 0.1, 0));
+        const b = rolling(2 * R, 0, vec3(0.5, -0.2, 0));
+        const { members } = solveRestingContacts([a, b], [], PAIR);
+        const sa = members[0]?.state as BallState;
+        const sb = members[1]?.state as BallState;
+        expect(sa.velocity.x).toBeCloseTo(sb.velocity.x, 15);
+        expect(sa.velocity.y).toBe(0.1);
+        expect(sb.velocity.y).toBe(-0.2);
+        expect(classify(sa, R)).toBe("rolling");
+        expect(classify(sb, R)).toBe("rolling");
+        const before = kineticEnergy(a.state, BALL) + kineticEnergy(b.state, BALL);
+        expect(kineticEnergy(sa, BALL) + kineticEnergy(sb, BALL)).toBeLessThanOrEqual(before);
+    });
+
+    it("holds a ball driven against an upright", () => {
+        const axis = vec3(R + 0.008, 0, 0);
+        const { members, coupled } = solveRestingContacts(
+            [ball(0, 0, ZERO, vec3(0, 60, 0))],
+            [axis],
+            [{ a: 0, b: 0, fixed: true }],
+        );
+        expect(coupled).toEqual([true]);
+        expect(members[0]?.push?.acceleration.x).toBeCloseTo(0, 15);
+        // The slip still decays, at (5/2)·SLIDE: the ball spins down against the upright.
+        const end = pushDuration(members[0]?.state as BallState, "sliding", members[0]?.push as never, R);
+        expect(end).toBeCloseTo((R * 60) / (2.5 * SLIDE), 12);
+    });
+
+    it("solves a ball driven into two touching balls at an angle (wedge, three bodies)", () => {
+        const c = Math.sqrt(3) / 2;
+        const bodies = [ball(0, 0, ZERO, vec3(0, 60, 0)), ball(2 * R * c, -R), ball(2 * R * c, R)];
+        const contacts = [
+            { a: 0, b: 1, fixed: false },
+            { a: 0, b: 2, fixed: false },
+            { a: 1, b: 2, fixed: false },
+        ];
+        const { members, coupled, arrested } = solveRestingContacts(bodies, [], contacts);
+        expect(arrested).toEqual([false, false, false]);
+        expect(coupled).toEqual([true, true, false]);
+        const x = members.map((m) => m?.push?.acceleration ?? ZERO);
+        const normal = (i: number, j: number): Vec3 =>
+            normalize(sub(bodies[j]?.state.position as Vec3, bodies[i]?.state.position as Vec3));
+        // Coupled contacts do not converge or open; the red–black contact opens.
+        expect(dot(sub(x[0] as Vec3, x[1] as Vec3), normal(0, 1))).toBeCloseTo(0, 12);
+        expect(dot(sub(x[0] as Vec3, x[2] as Vec3), normal(0, 2))).toBeCloseTo(0, 12);
+        expect(dot(sub(x[1] as Vec3, x[2] as Vec3), normal(1, 2))).toBeLessThan(0);
+        // The set-up is symmetric about the x axis, and so is the solution.
+        expect(x[1]?.x).toBeCloseTo(x[2]?.x ?? NaN, 12);
+        expect(x[1]?.y).toBeCloseTo(-(x[2]?.y ?? NaN), 12);
+        expect(x[0]?.x).toBeGreaterThan(0);
+    });
+
+    it("never pulls, never leaves a contact converging and balances the contact force (random pairs)", () => {
+        const random = rng(17);
+        let pushes = 0;
+        for (let n = 0; n < 2000; n++) {
+            const angle = random() * 2 * Math.PI;
+            const e = vec3(Math.cos(angle), Math.sin(angle), 0);
+            const v = vec3(random() * 2 - 1, random() * 2 - 1, 0);
+            const closing = (random() * 2 - 1) * RESTING_SPEED;
+            const spin = (): Vec3 => vec3(random() * 100 - 50, random() * 100 - 50, random() * 10 - 5);
+            const a = random() < 0.5 ? ball(0, 0, v, spin()) : rolling(0, 0, v);
+            const vb = sub(v, vec3(e.x * closing, e.y * closing, 0));
+            const b =
+                random() < 0.5 ? ball(2 * R * e.x, 2 * R * e.y, vb, spin()) : rolling(2 * R * e.x, 2 * R * e.y, vb);
+            const { members, coupled } = solveRestingContacts([a, b], [], PAIR);
+            const sa = members[0]?.state ?? a.state;
+            const sb = members[1]?.state ?? b.state;
+            const weight = (s: BallState): number => (classify(s, R) === "sliding" ? 1 : 7 / 5);
+            const xa = members[0]?.push?.acceleration ?? freeAcceleration(sa, P);
+            const xb = members[1]?.push?.acceleration ?? freeAcceleration(sb, P);
+            const relative = dot(sub(xa, xb), e);
+            if (coupled[0]) {
+                pushes++;
+                // N on b along e equals −N on a (effective momentum), is compressive, and holds them together.
+                const nb = weight(sb) * dot(sub(xb, freeAcceleration(sb, P)), e);
+                const na = weight(sa) * dot(sub(xa, freeAcceleration(sa, P)), e);
+                expect(nb).toBeGreaterThanOrEqual(-1e-12);
+                expect(na + nb).toBeCloseTo(0, 12);
+                expect(relative).toBeCloseTo(0, 12);
+            } else {
+                expect(relative).toBeLessThanOrEqual(1e-9);
+            }
+            expect(kineticEnergy(sa, BALL) + kineticEnergy(sb, BALL)).toBeLessThanOrEqual(
+                kineticEnergy(a.state, BALL) + kineticEnergy(b.state, BALL) + 1e-12,
+            );
+        }
+        expect(pushes).toBeGreaterThan(100);
+    });
+});
+
+describe("pushed motion", () => {
+    it("moves with constant acceleration and matches its trajectory", () => {
+        const start: BallState = { position: vec3(1, 2, R), velocity: vec3(0.5, 0, 0), angularVelocity: vec3(0, 3, 1) };
+        const push = { acceleration: vec3(0.2, -0.1, 0), angularAcceleration: vec3(1, 2, 0), direction: vec3(1, 0, 0) };
+        const s = pushedState(start, push, 2);
+        expect(s.position.x).toBeCloseTo(1 + 0.5 * 2 + 0.1 * 4, 14);
+        expect(s.position.y).toBeCloseTo(2 - 0.05 * 4, 14);
+        expect(s.position.z).toBe(R);
+        expect(s.angularVelocity).toEqual(vec3(2, 7, 1));
+        const p = pushedTrajectory(start, push);
+        expect(p.c2).toEqual(vec3(0.1, -0.05, 0));
+        expect(pushedState(start, push, 0)).toBe(start);
+    });
+
+    it("ends a rolling push when the ball stops or turns past DIRECTION_TOLERANCE", () => {
+        const start: BallState = { position: vec3(0, 0, R), velocity: vec3(1, 0, 0), angularVelocity: ZERO };
+        const stop = { acceleration: vec3(-2, 0, 0), angularAcceleration: ZERO, direction: vec3(1, 0, 0) };
+        expect(pushDuration(start, "rolling", stop, R)).toBeCloseTo(0.5, 15);
+        const turn = { acceleration: vec3(0, 1, 0), angularAcceleration: ZERO, direction: vec3(1, 0, 0) };
+        expect(pushDuration(start, "rolling", turn, R)).toBeCloseTo(DIRECTION_TOLERANCE, 15);
+        expect(pushDuration(start, "stationary", stop, R)).toBe(Infinity);
+    });
+});
+```
+
+- [ ] **Step 7: Run the tests to verify they fail**
+
+Run: `npx vitest run tests/engine/push.test.ts`
+Expected: FAIL — cannot resolve `../../src/engine/push`.
+
+- [ ] **Step 8: Implement `src/engine/push.ts`**
+
+```ts
+/**
+ * Resting contact and pushing (spec §5 phase 2).
+ *
+ * A contact slower than RESTING_SPEED is not bounced: with a ball driven into another by its own spin, bouncing
+ * starts a Zeno sequence of ever-smaller rebounds that no event budget can finish. Instead the touching bodies' speeds
+ * along each line of centres are made equal (a perfectly inelastic normal impulse) and, where their accelerations
+ * would drive them together, the contacts are coupled: a compressive contact force N ≥ 0 keeps each coupled pair's
+ * relative acceleration along its normal at zero. Coupled contacts are frictionless, so the bodies stay free to move
+ * along the contact plane. This is a P1 limitation: balls that slide past each other while pushing (sidespin, pushes
+ * at an angle) are not rubbed, which can move rest positions by centimetres. Straight pushes have no sideways slip at
+ * the contact and are unaffected. The fix, kinetic Coulomb friction on coupled contacts with slip and stick events,
+ * is deferred to P2 or later.
+ *
+ * Within one segment everything is constant, so every trajectory stays quadratic:
+ * - Each contact normal is fixed for the segment. Relative motion is then always perpendicular to the normal, which
+ *   can only open the gap (to second order), never close it; the segment ends when the gap opens past
+ *   SEPARATION_TOLERANCE.
+ * - Each ball's turf force is frozen at the segment start: sliding friction of magnitude slidingDecel against the slip
+ *   (effective inertia m), or rolling resistance of magnitude rollingDecel against the direction of travel (effective
+ *   inertia 7m/5, because static friction keeps a pushed rolling ball rolling: m + I/r² = 7m/5). A ball at rest stays
+ *   put until the push on it exceeds (7m/5)·rollingDecel, like rolling resistance acting statically.
+ * - The accelerations minimise Σ ½·wᵢ·|xᵢ − fᵢ|² over the one-sided contact constraints (Gauss's principle of least
+ *   constraint; w is the effective inertia, f the free acceleration). The minimiser is found exactly by trying active
+ *   sets of contacts in a fixed order and accepting the first whose contact forces are compressive and which leaves
+ *   no other contact converging.
+ *
+ * A segment also ends when a frozen turf force stops being valid: the slip (sliding) or velocity (rolling) reaches
+ * zero along the frozen direction, or turns more than DIRECTION_TOLERANCE away from it. The simulator then solves the
+ * group again from the balls' new states. If no active set is consistent (degenerate geometry), the group is brought
+ * to rest and the simulator records an "arrested" event.
+ */
+import { approachSpeed } from "./detect";
+import { ZERO, add, dot, horizontal, length, normalize, scale, sub, vec3, type Vec3 } from "./math/vec3";
+import { SPEED_EPSILON, atRest, classify, contactSlip, rollingSpin, type Trajectory } from "./motion";
+import type { BallState, MotionParams, MotionPhase, PushMotion } from "./types";
+
+/**
+ * Contacts closing slower than this (m/s) are resting contacts, resolved without restitution. A numerical tolerance,
+ * not a physical constant: a rebound this slow lifts the gap by at most RESTING_SPEED²/(2a), well under a micrometre
+ * for any turf deceleration a, so treating it as inelastic changes no observable outcome.
+ */
+export const RESTING_SPEED = 1e-3;
+
+/** Largest sine of the angle a pushed ball's slip or velocity may turn from its frozen direction within a segment. */
+export const DIRECTION_TOLERANCE = 1e-2;
+
+/** Gap (m) beyond which a coupled contact is considered to have separated. */
+export const SEPARATION_TOLERANCE = 1e-7;
+
+/** Relative accelerations (m/s²) at or below this are treated as zero when deciding whether bodies converge. */
+export const ACCELERATION_EPSILON = 1e-9;
+
+/** Pivots at or below this make a contact system singular: its contacts are not independent. */
+const PIVOT_TOLERANCE = 1e-12;
+
+/** How many times the rolling direction of a ball pushed off from rest is refined from its computed acceleration. */
+const RELEASE_REFINEMENTS = 3;
+
+/** Effective inertia of a rolling solid sphere relative to its mass: (m + I/r²)/m with I = 2/5·m·r². */
+const ROLLING_WEIGHT = 7 / 5;
+
+/** A ball taking part in a resting-contact solve. */
+export interface ContactBody {
+    readonly state: BallState;
+    readonly params: MotionParams;
+}
+
+/** A touching contact: ball `a` against ball `b`, or against the fixed cylinder whose axis is `axes[b]`. */
+export interface RestingContact {
+    readonly a: number;
+    readonly b: number;
+    readonly fixed: boolean;
+}
+
+/** A ball's state and motion as decided by the solver. `push` is null when the ball moves freely. */
+export interface RestingMember {
+    readonly state: BallState;
+    readonly phase: MotionPhase;
+    readonly push: PushMotion | null;
+}
+
+/** Outcome of a resting-contact solve. */
+export interface RestingSolution {
+    /** Per body: its new state and motion, or null when the solve leaves it untouched. */
+    readonly members: readonly (RestingMember | null)[];
+    /** Per contact: true when the contact is coupled (pushing, or holding a ball against an obstacle). */
+    readonly coupled: readonly boolean[];
+    /** Per body: true when the body was brought to rest because no consistent solution exists for its group. */
+    readonly arrested: readonly boolean[];
+}
+
+interface Response {
+    readonly phase: MotionPhase;
+    /** Free acceleration from the turf (m/s²). */
+    readonly force: Vec3;
+    /** Effective inertia relative to the ball's mass. */
+    readonly weight: number;
+    /** Largest push, in the same units as weight × acceleration, that a ball at rest resists without moving. */
+    readonly threshold: number;
+}
+
+function response(s: BallState, p: MotionParams): Response {
+    const phase = classify(s, p.radius);
+    switch (phase) {
+        case "sliding":
+            return {
+                phase,
+                force: scale(normalize(contactSlip(s, p.radius)), -p.slidingDecel),
+                weight: 1,
+                threshold: 0,
+            };
+        case "rolling":
+            return {
+                phase,
+                force: scale(normalize(horizontal(s.velocity)), -p.rollingDecel),
+                weight: ROLLING_WEIGHT,
+                threshold: 0,
+            };
+        case "stationary":
+            return { phase, force: ZERO, weight: ROLLING_WEIGHT, threshold: ROLLING_WEIGHT * p.rollingDecel };
+    }
+}
+
+/**
+ * Returns the acceleration (m/s²) the turf gives a ball moving freely from state `s`, as the resting-contact solver
+ * sees it. The simulator uses the same function to decide whether touching balls are driven together, so detection
+ * and resolution agree.
+ */
+export function freeAcceleration(s: BallState, p: MotionParams): Vec3 {
+    return response(s, p).force;
+}
+
+/** Solves m·x = b by Gaussian elimination with partial pivoting; null when m is singular. */
+function solveLinear(m: readonly (readonly number[])[], b: readonly number[]): number[] | null {
+    const n = b.length;
+    const a = m.map((row, i) => [...row, b[i] as number]);
+    const at = (r: number, c: number): number => (a[r] as number[])[c] as number;
+    for (let col = 0; col < n; col++) {
+        let pivot = col;
+        for (let r = col + 1; r < n; r++) {
+            if (Math.abs(at(r, col)) > Math.abs(at(pivot, col))) {
+                pivot = r;
+            }
+        }
+        if (Math.abs(at(pivot, col)) <= PIVOT_TOLERANCE) {
+            return null;
+        }
+        [a[col], a[pivot]] = [a[pivot] as number[], a[col] as number[]];
+        for (let r = col + 1; r < n; r++) {
+            const factor = at(r, col) / at(col, col);
+            for (let c = col; c <= n; c++) {
+                (a[r] as number[])[c] = at(r, c) - factor * at(col, c);
+            }
+        }
+    }
+    const x = new Array<number>(n).fill(0);
+    for (let r = n - 1; r >= 0; r--) {
+        let sum = at(r, n);
+        for (let c = r + 1; c < n; c++) {
+            sum -= at(r, c) * (x[c] as number);
+        }
+        x[r] = sum / at(r, r);
+    }
+    return x;
+}
+
+/**
+ * The contact constraints of one group, in the form J·x = 0 (touching and not converging) for body accelerations or
+ * velocities x. Row k of J maps body i to +n on the body that n points to, −n on the other, and ZERO otherwise.
+ */
+interface ContactSystem {
+    readonly bodies: readonly number[];
+    readonly contacts: readonly number[];
+    /** J entry for contact index k (into `contacts` of the solve) and body i; ZERO for held bodies. */
+    readonly jacobian: (k: number, i: number) => Vec3;
+    /** Inverse effective inertia of body i (0 when held at rest). */
+    readonly inverseWeight: (i: number) => number;
+}
+
+/**
+ * Applies the contact impulses (or forces) that make J·x = 0 for the contacts in `active`, starting from `base`
+ * (per body): returns the resulting x per body and the multiplier per active contact, or null when the active
+ * contacts are not independent.
+ */
+function project(
+    system: ContactSystem,
+    active: readonly number[],
+    base: ReadonlyMap<number, Vec3>,
+): { readonly result: Map<number, Vec3>; readonly multipliers: number[] } | null {
+    const rowDot = (k: number, l: number): number =>
+        system.bodies.reduce(
+            (sum, i) => sum + system.inverseWeight(i) * dot(system.jacobian(k, i), system.jacobian(l, i)),
+            0,
+        );
+    const matrix = active.map((k) => active.map((l) => rowDot(k, l)));
+    const rhs = active.map((k) =>
+        system.bodies.reduce((sum, i) => sum - dot(system.jacobian(k, i), base.get(i) as Vec3), 0),
+    );
+    const multipliers = active.length === 0 ? [] : solveLinear(matrix, rhs);
+    if (multipliers === null) {
+        return null;
+    }
+    const result = new Map<number, Vec3>();
+    for (const i of system.bodies) {
+        let x = base.get(i) as Vec3;
+        active.forEach((k, j) => {
+            x = add(x, scale(system.jacobian(k, i), system.inverseWeight(i) * (multipliers[j] as number)));
+        });
+        result.set(i, x);
+    }
+    return { result, multipliers };
+}
+
+/** All subsets of `items`, smallest first, each in the items' order. Deterministic. */
+function subsets(items: readonly number[]): number[][] {
+    const all: number[][] = [];
+    for (let mask = 0; mask < 1 << items.length; mask++) {
+        all.push(items.filter((_, j) => (mask & (1 << j)) !== 0));
+    }
+    return all.sort((x, y) => x.length - y.length);
+}
+
+/** Connected groups of bodies joined by the kept contacts, in order of their lowest body index. */
+function groupsOf(bodyCount: number, contacts: readonly RestingContact[], kept: readonly boolean[]): number[][] {
+    const root = Array.from({ length: bodyCount }, (_, i) => i);
+    const find = (i: number): number => {
+        let r = i;
+        while (root[r] !== r) {
+            r = root[r] as number;
+        }
+        return r;
+    };
+    contacts.forEach((c, k) => {
+        if (kept[k] && !c.fixed) {
+            const ra = find(c.a);
+            const rb = find(c.b);
+            root[Math.max(ra, rb)] = Math.min(ra, rb);
+        }
+    });
+    const byRoot = new Map<number, number[]>();
+    contacts.forEach((c, k) => {
+        if (kept[k]) {
+            for (const body of c.fixed ? [c.a] : [c.a, c.b]) {
+                const group = byRoot.get(find(body)) ?? [];
+                byRoot.set(find(body), group);
+                if (!group.includes(body)) {
+                    group.push(body);
+                }
+            }
+        }
+    });
+    return [...byRoot.values()].map((g) => g.sort((x, y) => x - y)).sort((x, y) => (x[0] as number) - (y[0] as number));
+}
+
+/** Accelerations and contact forces for one choice of held and released resting balls, or null if inconsistent. */
+interface Candidate {
+    readonly acceleration: Map<number, Vec3>;
+    readonly active: readonly number[];
+    readonly released: ReadonlyMap<number, Vec3>;
+}
+
+/**
+ * Decides which touching contacts push and how every ball involved moves until the next event. `contacts` must all
+ * be touching and closing slower than RESTING_SPEED. A contact is kept when it is approaching or when the balls'
+ * accelerations drive it together; contacts the solution leaves converging are added until none remain.
+ */
+export function solveRestingContacts(
+    bodies: readonly ContactBody[],
+    axes: readonly Vec3[],
+    contacts: readonly RestingContact[],
+): RestingSolution {
+    const centreOf = (c: RestingContact): Vec3 =>
+        c.fixed ? (axes[c.b] as Vec3) : (bodies[c.b] as ContactBody).state.position;
+    const normals = contacts.map((c) =>
+        normalize(horizontal(sub(centreOf(c), (bodies[c.a] as ContactBody).state.position))),
+    );
+    // Row k of J for body i: +n on the body n points to, −n on the other.
+    const jacobian = (k: number, i: number): Vec3 => {
+        const c = contacts[k] as RestingContact;
+        if (!c.fixed && c.b === i) {
+            return normals[k] as Vec3;
+        }
+        return c.a === i ? scale(normals[k] as Vec3, -1) : ZERO;
+    };
+    const closingRate = (x: ReadonlyMap<number, Vec3>, k: number): number => {
+        const c = contacts[k] as RestingContact;
+        const other = c.fixed ? ZERO : (x.get(c.b) ?? ZERO);
+        return dot(sub(x.get(c.a) ?? ZERO, other), normals[k] as Vec3);
+    };
+    const converging = (states: readonly BallState[], acceleration: ReadonlyMap<number, Vec3>, k: number): boolean => {
+        const c = contacts[k] as RestingContact;
+        const a = states[c.a] as BallState;
+        const velocity = c.fixed ? ZERO : (states[c.b] as BallState).velocity;
+        const closing = approachSpeed(sub(a.position, centreOf(c)), sub(a.velocity, velocity));
+        return closing > SPEED_EPSILON || closingRate(acceleration, k) > ACCELERATION_EPSILON;
+    };
+
+    const initial = bodies.map((b) => b.state);
+    const freeAcceleration = new Map(bodies.map((b, i) => [i, response(b.state, b.params).force]));
+    const kept = contacts.map((_, k) => converging(initial, freeAcceleration, k));
+
+    for (;;) {
+        const states = [...initial];
+        const members: (RestingMember | null)[] = bodies.map(() => null);
+        const arrested = bodies.map(() => false);
+        const coupled = contacts.map(() => false);
+        const acceleration = new Map(freeAcceleration);
+
+        for (const group of groupsOf(bodies.length, contacts, kept)) {
+            const groupContacts = contacts
+                .map((_, k) => k)
+                .filter((k) => kept[k] && group.includes(contacts[k]?.a ?? -1));
+            const params = (i: number): MotionParams => (bodies[i] as ContactBody).params;
+
+            // Perfectly inelastic along every kept normal: the smallest change of velocity, weighted by effective
+            // inertia, that stops each kept contact closing or opening. Dependent contacts are implied by the rest.
+            // Static friction keeps a rolling or resting ball rolling through these small impulses, so its spin
+            // follows its new velocity; a sliding ball keeps its spin.
+            const before = new Map(group.map((i) => [i, response(initial[i] as BallState, params(i))]));
+            const glueSystem: ContactSystem = {
+                bodies: group,
+                contacts: groupContacts,
+                jacobian,
+                inverseWeight: (i) => 1 / (before.get(i) as Response).weight,
+            };
+            const independent: number[] = [];
+            for (const k of groupContacts) {
+                if (project(glueSystem, [...independent, k], new Map(group.map((i) => [i, ZERO])))) {
+                    independent.push(k);
+                }
+            }
+            const glued = project(
+                glueSystem,
+                independent,
+                new Map(group.map((i) => [i, horizontal((initial[i] as BallState).velocity)])),
+            );
+            for (const i of group) {
+                const s = initial[i] as BallState;
+                const velocity = glued?.result.get(i) ?? horizontal(s.velocity);
+                const angularVelocity =
+                    (before.get(i) as Response).phase === "sliding"
+                        ? s.angularVelocity
+                        : rollingSpin(velocity, s.angularVelocity.z, params(i).radius);
+                states[i] = { position: s.position, velocity, angularVelocity };
+            }
+
+            const responses = new Map(group.map((i) => [i, response(states[i] as BallState, params(i))]));
+            const solution = solveGroup(group, groupContacts, responses, jacobian, closingRate, params);
+            if (!solution) {
+                for (const i of group) {
+                    arrested[i] = true;
+                    states[i] = atRest((initial[i] as BallState).position);
+                    members[i] = { state: states[i] as BallState, phase: "stationary", push: null };
+                    acceleration.set(i, ZERO);
+                }
+                continue;
+            }
+            for (const k of solution.active) {
+                coupled[k] = true;
+            }
+            for (const i of group) {
+                const s = states[i] as BallState;
+                const r = responses.get(i) as Response;
+                const x = solution.acceleration.get(i) as Vec3;
+                acceleration.set(i, x);
+                const touched = solution.active.some(
+                    (k) => contacts[k]?.a === i || (!contacts[k]?.fixed && contacts[k]?.b === i),
+                );
+                members[i] = touched
+                    ? pushedMember(s, r, x, solution.released.get(i) ?? null, params(i).radius)
+                    : { state: s, phase: r.phase, push: null };
+            }
+        }
+
+        const added = contacts.map((_, k) => !kept[k] && converging(states, acceleration, k));
+        if (!added.includes(true)) {
+            return { members, coupled, arrested };
+        }
+        added.forEach((a, k) => {
+            kept[k] = kept[k] === true || a;
+        });
+    }
+}
+
+/**
+ * Finds the accelerations of one group: every combination of resting balls held or released (held first), and for
+ * each every active set of contacts (smallest first), until one is consistent. Returns null if none is.
+ */
+function solveGroup(
+    group: readonly number[],
+    groupContacts: readonly number[],
+    responses: ReadonlyMap<number, Response>,
+    jacobian: (k: number, i: number) => Vec3,
+    closingRate: (x: ReadonlyMap<number, Vec3>, k: number) => number,
+    params: (i: number) => MotionParams,
+): Candidate | null {
+    const resting = group.filter((i) => (responses.get(i) as Response).phase === "stationary");
+    for (let mask = 0; mask < 1 << resting.length; mask++) {
+        const released = new Set(resting.filter((_, j) => (mask & (1 << j)) !== 0));
+        const held = new Set(resting.filter((i) => !released.has(i)));
+        const system: ContactSystem = {
+            bodies: group,
+            contacts: groupContacts,
+            jacobian: (k, i) => (held.has(i) ? ZERO : jacobian(k, i)),
+            inverseWeight: (i) => (held.has(i) ? 0 : 1 / (responses.get(i) as Response).weight),
+        };
+        for (const active of subsets(groupContacts)) {
+            const candidate = tryActiveSet(system, active, responses, released, jacobian, closingRate, params);
+            if (candidate) {
+                return candidate;
+            }
+        }
+    }
+    return null;
+}
+
+function tryActiveSet(
+    system: ContactSystem,
+    active: readonly number[],
+    responses: ReadonlyMap<number, Response>,
+    released: ReadonlySet<number>,
+    jacobian: (k: number, i: number) => Vec3,
+    closingRate: (x: ReadonlyMap<number, Vec3>, k: number) => number,
+    params: (i: number) => MotionParams,
+): Candidate | null {
+    // A ball pushed off from rest rolls against rolling resistance along its direction of motion, which is not known
+    // until the accelerations are: start without resistance and refine the direction a fixed number of times.
+    const directions = new Map<number, Vec3>();
+    let solved: ReturnType<typeof project> = null;
+    for (let pass = 0; pass <= RELEASE_REFINEMENTS; pass++) {
+        const base = new Map(
+            system.bodies.map((i) => {
+                const d = directions.get(i);
+                const f = d ? scale(d, -params(i).rollingDecel) : (responses.get(i) as Response).force;
+                return [i, f];
+            }),
+        );
+        solved = project(system, active, base);
+        if (!solved) {
+            return null;
+        }
+        for (const i of released) {
+            const x = solved.result.get(i) as Vec3;
+            if (length(x) === 0) {
+                return null;
+            }
+            directions.set(i, normalize(x));
+        }
+        if (released.size === 0) {
+            break;
+        }
+    }
+    if (!solved) {
+        return null;
+    }
+    const { result, multipliers } = solved;
+    if (multipliers.some((n) => n < -ACCELERATION_EPSILON)) {
+        return null;
+    }
+    if (system.contacts.some((k) => !active.includes(k) && closingRate(result, k) > ACCELERATION_EPSILON)) {
+        return null;
+    }
+    for (const i of released) {
+        if (!(dot(result.get(i) as Vec3, directions.get(i) as Vec3) > 0)) {
+            return null;
+        }
+    }
+    // A held ball must be able to resist the net push of its active contacts.
+    for (const i of system.bodies) {
+        const r = responses.get(i) as Response;
+        if (r.phase !== "stationary" || released.has(i)) {
+            continue;
+        }
+        let push = ZERO;
+        active.forEach((k, j) => {
+            push = add(push, scale(jacobian(k, i), multipliers[j] as number));
+        });
+        if (length(push) > r.threshold + ACCELERATION_EPSILON) {
+            return null;
+        }
+    }
+    return { acceleration: result, active, released: directions };
+}
+
+/** Builds the constant-acceleration motion of a coupled ball with acceleration `x`. */
+function pushedMember(
+    s: BallState,
+    r: Response,
+    x: Vec3,
+    releasedDirection: Vec3 | null,
+    radius: number,
+): RestingMember {
+    const rollingSpinRate = vec3(-x.y / radius, x.x / radius, 0);
+    if (r.phase === "stationary") {
+        if (!releasedDirection) {
+            return {
+                state: s,
+                phase: "stationary",
+                push: { acceleration: ZERO, angularAcceleration: ZERO, direction: ZERO },
+            };
+        }
+        // Pushed off from rest: it starts rolling, resisted along its direction of motion.
+        return {
+            state: s,
+            phase: "rolling",
+            push: { acceleration: x, angularAcceleration: rollingSpinRate, direction: releasedDirection },
+        };
+    }
+    if (r.phase === "rolling") {
+        return {
+            state: s,
+            phase: "rolling",
+            push: {
+                acceleration: x,
+                angularAcceleration: rollingSpinRate,
+                direction: normalize(horizontal(s.velocity)),
+            },
+        };
+    }
+    // Sliding friction acts at the contact point, so it also spins the ball: dω/dt = (5/2r)·(fy, −fx, 0).
+    const k = 5 / (2 * radius);
+    return {
+        state: s,
+        phase: "sliding",
+        push: {
+            acceleration: x,
+            angularAcceleration: vec3(k * r.force.y, -k * r.force.x, 0),
+            direction: normalize(contactSlip(s, radius)),
+        },
+    };
+}
+
+/** Returns the state of a coupled ball a time t after `start`. */
+export function pushedState(start: BallState, push: PushMotion, t: number): BallState {
+    if (t === 0) {
+        return start;
+    }
+    const v = horizontal(start.velocity);
+    return {
+        position: add(add(start.position, scale(v, t)), scale(push.acceleration, 0.5 * t * t)),
+        velocity: add(v, scale(push.acceleration, t)),
+        angularVelocity: add(start.angularVelocity, scale(push.angularAcceleration, t)),
+    };
+}
+
+/** Returns the centre trajectory of a coupled ball from `start`. */
+export function pushedTrajectory(start: BallState, push: PushMotion): Trajectory {
+    return { c0: start.position, c1: horizontal(start.velocity), c2: scale(push.acceleration, 0.5) };
+}
+
+/** Earliest t > 0 at which g0 + g1·t rises through zero from below, or Infinity. */
+function risesAt(g0: number, g1: number): number {
+    return g0 < 0 && g1 > 0 ? (0 - g0) / g1 : Infinity;
+}
+
+/**
+ * Returns how long the frozen turf force of a coupled ball stays valid: until its slip (sliding) or velocity
+ * (rolling) reaches zero along the frozen direction, or turns more than DIRECTION_TOLERANCE away from it. Both are
+ * linear in time within the segment. Infinity for a ball held at rest or one that is only speeding up.
+ */
+export function pushDuration(start: BallState, phase: MotionPhase, push: PushMotion, radius: number): number {
+    if (phase === "stationary") {
+        return Infinity;
+    }
+    const a = push.acceleration;
+    const w = push.angularAcceleration;
+    // The tracked quantity x(t) = x0 + x1·t: contact slip while sliding, velocity while rolling.
+    const x0 = phase === "sliding" ? contactSlip(start, radius) : horizontal(start.velocity);
+    const x1 = phase === "sliding" ? vec3(a.x - radius * w.y, a.y + radius * w.x, 0) : horizontal(a);
+    const d = push.direction;
+    const along0 = dot(x0, d);
+    const along1 = dot(x1, d);
+    const across0 = x0.x * d.y - x0.y * d.x;
+    const across1 = x1.x * d.y - x1.y * d.x;
+    return Math.min(
+        risesAt(0 - along0, 0 - along1),
+        risesAt(across0 - DIRECTION_TOLERANCE * along0, across1 - DIRECTION_TOLERANCE * along1),
+        risesAt(0 - across0 - DIRECTION_TOLERANCE * along0, 0 - across1 - DIRECTION_TOLERANCE * along1),
+    );
+}
+```
+
+- [ ] **Step 9: Run the tests to verify they pass**
+
+Run: `npx vitest run tests/engine/push.test.ts tests/engine/resolve.test.ts`
+Expected: PASS (20 tests). The random-pairs test checks that at least 100 of its 2,000 cases push; if it fails on
+that count, the generator no longer exercises pushing.
+
+- [ ] **Step 10: Format, lint, commit**
 
 ```bash
 npm run format
@@ -2246,11 +3270,11 @@ npm run lint
 ```
 
 ```bash
-git add src/engine/types.ts src/engine/resolve.ts tests/engine/resolve.test.ts
+git add src/engine/types.ts src/engine/resolve.ts src/engine/push.ts tests/engine/resolve.test.ts tests/engine/push.test.ts
 ```
 
 ```bash
-git commit -m "Add ball-ball and ball-cylinder collision impulses"
+git commit -m "Add collision impulses and resting-contact pushing"
 ```
 
 ---
@@ -2274,14 +3298,16 @@ git commit -m "Add ball-ball and ball-cylinder collision impulses"
     `OffsetRule { ballRadii: number; uprightRadii: number }`,
     `World { gravity; ball: BallParams; lawn: Lawn; hoops: readonly Hoop[]; peg: Cylinder; ballBall: ContactMaterial; ballUpright: ContactMaterial; outOfCourt: OffsetRule; hoopRunStart: OffsetRule; hoopRunComplete: OffsetRule; haltMargin: number }`
     (all fields `readonly`).
-  - `world.ts`: `STANDARD_GRAVITY = 9.80665`, `uniformLawn(width, length, surface): Lawn`,
+  - `world.ts`: `STANDARD_GRAVITY = 9.80665`, `HALT_MARGIN = 1` (a modelling choice, pre-flight M7),
+    `uniformLawn(width, courtLength, surface): Lawn` (pre-flight M9),
     `rollingResistanceForLawnSpeed(seconds: number, distance: number, gravity: number): number`,
     `hoopHalfSpan(hoop: Hoop): number`, `hoopLateral(hoop: Hoop): Vec3`,
     `uprightsOf(hoop: Hoop, material: ContactMaterial): readonly [Cylinder, Cylinder]` (ids `"<hoopId>/a"`,
     `"<hoopId>/b"`), `obstaclesOf(world: World): readonly Cylinder[]` (uprights in hoop order, then the peg),
     `motionParamsAt(world: World, position: Vec3): MotionParams`,
     `ruleThreshold(rule: OffsetRule, ballRadius: number, uprightRadius: number): number`,
-    `validateWorld(world: World): void` (throws `RangeError`), `defaultWorld(lawnSpeedSeconds?: number): World`.
+    `validateWorld(world: World): void` (throws `RangeError`; also rejects rolling resistance above sliding friction,
+    which the resting-contact solver relies on), `defaultWorld(lawnSpeedSeconds?: number): World`.
   - Test fixtures: `TEST_BALL`, `testWorld(overrides?: Partial<World>): World`,
     `ballAt(x, y, velocity?, angularVelocity?): BallState`, `rollingBallAt(x, y, vx, vy): BallState`,
     `testHoop(id: string, x: number, y: number): Hoop`.
@@ -2349,8 +3375,9 @@ export interface World {
 
 ```ts
 /**
- * Test-only world and balls. The numbers are plausible but deliberately NOT sourced: tests must not depend on the
- * reference data, and src/ must never import this file.
+ * Test-only world and balls. The numbers are plausible but deliberately NOT sourced, so test expectations do not
+ * change when the reference data does. (Importing world.ts still loads and validates reference/*.json, so invalid
+ * reference data fails every engine test at import.) src/ must never import this file.
  */
 import { ZERO, vec3, type Vec3 } from "../../../src/engine/math/vec3";
 import { rollingSpin } from "../../../src/engine/motion";
@@ -2408,6 +3435,7 @@ import {
     motionParamsAt,
     obstaclesOf,
     rollingResistanceForLawnSpeed,
+    uniformLawn,
     uprightsOf,
     validateWorld,
 } from "../../src/engine/world";
@@ -2420,7 +3448,11 @@ describe("rollingResistanceForLawnSpeed", () => {
         const mu = rollingResistanceForLawnSpeed(T, D, STANDARD_GRAVITY);
         const params = { radius: 0.046, slidingDecel: 1, rollingDecel: mu * STANDARD_GRAVITY };
         const v = vec3((2 * D) / T, 0, 0);
-        const end = endOfPhase({ position: vec3(0, 0, 0.046), velocity: v, angularVelocity: rollingSpin(v, 0, 0.046) }, "rolling", params);
+        const end = endOfPhase(
+            { position: vec3(0, 0, 0.046), velocity: v, angularVelocity: rollingSpin(v, 0, 0.046) },
+            "rolling",
+            params,
+        );
         expect(end.position.x).toBeCloseTo(D, 9);
     });
 });
@@ -2458,6 +3490,10 @@ describe("validateWorld", () => {
         ["restitution above 1", { ballBall: { restitution: 1.2, friction: 0 } }],
         ["negative friction", { ballUpright: { restitution: 0.5, friction: -0.1 } }],
         ["negative halt margin", { haltMargin: -1 }],
+        [
+            "rolling resistance above sliding friction",
+            { lawn: uniformLawn(30, 40, { slidingFriction: 0.1, rollingResistance: 0.2 }) },
+        ],
         ["non-unit hoop normal", { hoops: [{ ...testHoop("1", 5, 5), normal: vec3(0, 2, 0) }] }],
     ])("rejects %s", (_label, overrides) => {
         expect(() => validateWorld(testWorld(overrides))).toThrow(RangeError);
@@ -2501,9 +3537,15 @@ import type { ContactMaterial, Cylinder, Hoop, Lawn, MotionParams, OffsetRule, S
 /** Standard acceleration of gravity (m/s²), as defined by the 3rd CGPM (1901). */
 export const STANDARD_GRAVITY = 9.80665;
 
+/**
+ * Distance (m) beyond the boundary at which the default world halts a ball. A modelling choice, not a physical
+ * constant: the spec halts balls at "a fixed margin beyond the boundary" because the surround is not modelled.
+ */
+export const HALT_MARGIN = 1;
+
 /** Creates a lawn with the same surface everywhere. */
-export function uniformLawn(width: number, length: number, surface: SurfaceProps): Lawn {
-    return { width, length, surfaceAt: () => surface };
+export function uniformLawn(width: number, courtLength: number, surface: SurfaceProps): Lawn {
+    return { width, length: courtLength, surfaceAt: () => surface };
 }
 
 /**
@@ -2580,6 +3622,11 @@ export function validateWorld(world: World): void {
     const surface = world.lawn.surfaceAt(centre);
     requirePositive(surface.slidingFriction, "lawn.slidingFriction");
     requirePositive(surface.rollingResistance, "lawn.rollingResistance");
+    // Resting-contact pushing (push.ts) relies on this: it bounds every pushed ball's acceleration by the sliding
+    // deceleration, which guarantees that a pushed ball's slip always decays and a pushed rolling ball never skids.
+    if (surface.rollingResistance > surface.slidingFriction) {
+        throw new RangeError("lawn.rollingResistance must not exceed lawn.slidingFriction");
+    }
     requireMaterial(world.ballBall, "ballBall");
     requireMaterial(world.ballUpright, "ballUpright");
     requireMaterial(world.peg.material, "peg.material");
@@ -2639,18 +3686,15 @@ export function defaultWorld(lawnSpeedSeconds: number = lawnReference.defaultSpe
         outOfCourt: lawsReference.outOfCourt,
         hoopRunStart: lawsReference.hoopRunStart,
         hoopRunComplete: lawsReference.hoopRunComplete,
-        haltMargin: 1,
+        haltMargin: HALT_MARGIN,
     };
 }
 ```
 
-`haltMargin: 1` is a modelling choice, not a physical constant: the spec halts balls at "a fixed margin beyond the
-boundary" because the surround is not modelled.
-
 - [ ] **Step 6: Run the tests to verify they pass**
 
 Run: `npx vitest run tests/engine/world.test.ts`
-Expected: PASS.
+Expected: PASS (13 tests).
 
 - [ ] **Step 7: Format, lint, commit**
 
@@ -2674,9 +3718,24 @@ git commit -m "Add world model and reference-backed default world"
 
 ### Task 9: Event-driven free-motion simulator
 
-The loop: find the earliest event across all balls (phase end, ball–ball contact, ball–obstacle contact, halt
-margin), advance to it, resolve it, and restart the affected balls' segments. Unaffected balls keep their segment
-and are evaluated from its start whenever needed, so no error accumulates.
+The loop finds the earliest event across all balls, advances to it, resolves it, and restarts the affected balls'
+segments. Unaffected balls keep their segment and are evaluated from its start whenever needed, so no error
+accumulates. The events are:
+
+- **transition**: the end of a free ball's phase;
+- **regroup**: the end of a pushed segment (see Task 7), or a coupled contact opening past `SEPARATION_TOLERANCE`;
+- **ball–ball** and **ball–obstacle** contact;
+- **halt margin**.
+
+A contact closing faster than `RESTING_SPEED` is an impulse; anything slower goes to the resting-contact solver.
+
+Touching bodies are decided at t = 0 with one rule that uses the solver's own quantities: a contact must be resolved
+now if `approachSpeed` > `SPEED_EPSILON`, or if it closes no faster than `RESTING_SPEED` away and the two balls'
+current accelerations drive it together. Those accelerations are the push, or `freeAcceleration`. Resolving applies
+the solver, whose solution never leaves an uncoupled resting contact driven together, so a resolved contact cannot
+trigger again at the same instant (the livelock in pre-flight I2). A coupled contact is watched only for opening.
+The component and the watch both test that opening with the same expression, `separationGap`. A halted ball is out of
+play: it no longer takes part in contacts, so a ball pushing it beyond the margin cannot keep re-driving it.
 
 **Files:**
 - Create: `src/engine/simulate.ts`, `src/engine/sample.ts`, `src/engine/observe.ts` (stub; Task 10 fills it)
@@ -2687,16 +3746,19 @@ and are evaluated from its start whenever needed, so no error accumulates.
 - Consumes: Tasks 5–8.
 - Produces:
   - `types.ts`: `BallStates = Partial<Record<BallId, BallState>>`;
-    `Segment { t0; t1: number; phase: MotionPhase; start: BallState; params: MotionParams }`;
-    `ShotEvent` union — `{ kind: "phase"; t; ball; phase }`, `{ kind: "ball-ball"; t; balls: readonly [BallId, BallId] }`,
-    `{ kind: "ball-obstacle"; t; ball; obstacleId: string }`, `{ kind: "halted"; t; ball }`,
-    `{ kind: "out-of-court"; t; ball; position: Vec3 }`, `{ kind: "hoop-passage"; t; ball; hoopId: string; direction: 1 | -1 }`;
+    `Segment { t0; t1: number; phase: MotionPhase; start: BallState; params: MotionParams; push?: PushMotion }`;
+    `ShotEvent` union: `{ kind: "phase"; t; ball; phase }`,
+    `{ kind: "ball-ball"; t; balls: readonly [BallId, BallId]; resting: boolean }`,
+    `{ kind: "ball-obstacle"; t; ball; obstacleId: string; resting: boolean }`, `{ kind: "halted"; t; ball }`,
+    `{ kind: "arrested"; t; balls: readonly BallId[] }`, `{ kind: "out-of-court"; t; ball; position: Vec3 }` and
+    `{ kind: "hoop-passage"; t; ball; hoopId: string; direction: 1 | -1 }`;
     `ShotResult { engineVersion: string; duration: number; segments: Partial<Record<BallId, readonly Segment[]>>; events: readonly ShotEvent[]; rest: Partial<Record<BallId, Vec3>>; aborted: boolean }`.
   - `simulate.ts`: `ENGINE_VERSION = "0.1.0"`, `DEFAULT_MAX_EVENTS = 10_000`,
-    `simulateFreeMotion(initial: BallStates, world: World, maxEvents?: number): ShotResult`. Throws `RangeError` for
-    a ball not resting on the lawn plane (`|z − R| > 1e-9` or `|vz| > 1e-9`), or overlapping another ball or an
-    obstacle by more than `CONTACT_TOLERANCE`.
-  - `sample.ts`: `stateAtTime(result: ShotResult, ball: BallId, t: number): BallState` (clamped to `[0, duration]`).
+    `simulateFreeMotion(initial: BallStates, world: World, maxEvents?: number): ShotResult`. It throws `RangeError`
+    for a ball not resting on the lawn plane (`|z − R| > 1e-9` or `|vz| > 1e-9`), or for a ball overlapping another
+    ball or an obstacle by more than `CONTACT_TOLERANCE`.
+  - `sample.ts`: `segmentState(segment, local): BallState`, `segmentTrajectory(segment): Trajectory`,
+    `stateAtTime(result: ShotResult, ball: BallId, t: number): BallState` (clamped to `[0, duration]`).
 
 - [ ] **Step 1: Append result types to `src/engine/types.ts`**
 
@@ -2704,21 +3766,38 @@ and are evaluated from its start whenever needed, so no error accumulates.
 /** Initial states of the balls in play; absent balls are omitted. */
 export type BallStates = Partial<Record<BallId, BallState>>;
 
-/** One closed-form piece of a ball's motion, valid for t ∈ [t0, t1]. */
+/**
+ * One closed-form piece of a ball's motion, valid for t ∈ [t0, t1]. Without `push` the ball moves freely in
+ * `phase` (motion.ts); with `push` it moves with the constant accelerations given there.
+ */
 export interface Segment {
     readonly t0: number;
     readonly t1: number;
     readonly phase: MotionPhase;
     readonly start: BallState;
     readonly params: MotionParams;
+    readonly push?: PushMotion;
 }
 
 /** Something that happened during a shot. Times are seconds from the start of free motion. */
 export type ShotEvent =
     | { readonly kind: "phase"; readonly t: number; readonly ball: BallId; readonly phase: MotionPhase }
-    | { readonly kind: "ball-ball"; readonly t: number; readonly balls: readonly [BallId, BallId] }
-    | { readonly kind: "ball-obstacle"; readonly t: number; readonly ball: BallId; readonly obstacleId: string }
+    | {
+          readonly kind: "ball-ball";
+          readonly t: number;
+          readonly balls: readonly [BallId, BallId];
+          /** True when the contact was slower than RESTING_SPEED and was resolved as resting contact. */
+          readonly resting: boolean;
+      }
+    | {
+          readonly kind: "ball-obstacle";
+          readonly t: number;
+          readonly ball: BallId;
+          readonly obstacleId: string;
+          readonly resting: boolean;
+      }
     | { readonly kind: "halted"; readonly t: number; readonly ball: BallId }
+    | { readonly kind: "arrested"; readonly t: number; readonly balls: readonly BallId[] }
     | { readonly kind: "out-of-court"; readonly t: number; readonly ball: BallId; readonly position: Vec3 }
     | {
           readonly kind: "hoop-passage";
@@ -2742,6 +3821,13 @@ export interface ShotResult {
 
 - [ ] **Step 2: Write the failing simulator tests**
 
+The "complex" invariants scenario (pre-flight B4) is designed rather than nudged. Blue sits at rest with heavy
+topspin 0.5 mm behind red, which drives red into hoop 6's east upright. That produces bounces that decay into a
+resting contact, a push, red caught between blue and the upright, and rebounds. Separately, black rolls into yellow.
+The hoops stay at x = 15, so the mirror test still mirrors the world. Its guard test pins the exact contact pairs, a
+resting contact, a push and an upright contact. The mirror tolerance of 1e-9 m was re-checked with real collisions
+and pushing: the observed difference is 4e-15 m.
+
 `tests/engine/simulate.test.ts`:
 
 ```ts
@@ -2749,7 +3835,14 @@ import { describe, expect, it } from "vitest";
 import { horizontal, length, sub, vec3, type Vec3 } from "../../src/engine/math/vec3";
 import { stateAtTime } from "../../src/engine/sample";
 import { simulateFreeMotion } from "../../src/engine/simulate";
-import { BALL_IDS, type BallId, type BallState, type BallStates, type ShotResult, type World } from "../../src/engine/types";
+import {
+    BALL_IDS,
+    type BallId,
+    type BallState,
+    type BallStates,
+    type ShotResult,
+    type World,
+} from "../../src/engine/types";
 import { STANDARD_GRAVITY, obstaclesOf } from "../../src/engine/world";
 import { kineticEnergy } from "./support/energy";
 import { TEST_BALL, ballAt, rollingBallAt, testHoop, testWorld } from "./support/fixtures";
@@ -2843,12 +3936,21 @@ describe("collisions", () => {
     it("pushes through a chain of touching balls without tunnelling (Review Focus 1)", () => {
         const world = testWorld();
         const result = simulateFreeMotion(
-            { blue: rollingBallAt(5, 5, 2, 0), red: ballAt(6, 5), black: ballAt(6 + 2 * R, 5), yellow: ballAt(6 + 4 * R, 5) },
+            {
+                blue: rollingBallAt(5, 5, 2, 0),
+                red: ballAt(6, 5),
+                black: ballAt(6 + 2 * R, 5),
+                yellow: ballAt(6 + 4 * R, 5),
+            },
             world,
         );
         expect(result.aborted).toBe(false);
         expect(worstPenetration(result, world)).toBeLessThan(1e-6);
         expect((result.rest.yellow?.x ?? 0) > 6 + 4 * R).toBe(true);
+        // Blue's topspin drives it back into red: that ends in resting contact and a push, not a Zeno storm (B3).
+        expect(result.events.some((e) => e.kind === "ball-ball" && e.resting)).toBe(true);
+        expect(result.segments.blue?.some((s) => s.push)).toBe(true);
+        expect(result.events.length).toBeLessThan(200);
     });
 
     it("handles a ball struck while already touching another (croquet-stroke start)", () => {
@@ -2876,20 +3978,128 @@ describe("collisions", () => {
     });
 });
 
+describe("resting contact and pushing", () => {
+    it("pushes a resting ball with a ball driven by topspin (analytic case)", () => {
+        // Blue has topspin Ω and no velocity. The pair accelerates at A = (5·SLIDE − 7·ROLL)/12 until blue's slip
+        // RΩ is gone, after t = RΩ/(A + 5·SLIDE/2); both then roll at V = A·t and stop together after V²/(2·ROLL).
+        const omega = 60;
+        const world = testWorld();
+        const result = simulateFreeMotion(
+            { blue: ballAt(5, 5, vec3(0, 0, 0), vec3(0, omega, 0)), red: ballAt(5 + 2 * R, 5) },
+            world,
+        );
+        const A = (5 * SLIDE - 7 * ROLL) / 12;
+        const t = (R * omega) / (A + 2.5 * SLIDE);
+        const V = A * t;
+        const travel = 0.5 * A * t * t + (V * V) / (2 * ROLL);
+        expect(result.rest.red?.x).toBeCloseTo(5 + 2 * R + travel, 9);
+        expect(result.rest.blue?.x).toBeCloseTo(5 + travel, 9);
+        expect(result.rest.red?.y).toBe(5);
+        expect(result.events.filter((e) => e.kind === "ball-ball")).toEqual([
+            { kind: "ball-ball", t: 0, balls: ["blue", "red"], resting: true },
+        ]);
+        expect(result.segments.red?.[0]?.push?.acceleration.x).toBeCloseTo(A, 12);
+        expect(result.aborted).toBe(false);
+    });
+
+    it("keeps the pushed pair touching and never gains energy while pushing", () => {
+        const world = testWorld();
+        const result = simulateFreeMotion(
+            { blue: ballAt(5, 5, vec3(0, 0, 0), vec3(0, 60, 0)), red: ballAt(5 + 2 * R, 5) },
+            world,
+        );
+        let previous = totalEnergy(result, 0);
+        for (let i = 1; i <= 400; i++) {
+            const time = (result.duration * i) / 400;
+            const gap =
+                length(
+                    horizontal(
+                        sub(stateAtTime(result, "red", time).position, stateAtTime(result, "blue", time).position),
+                    ),
+                ) -
+                2 * R;
+            expect(Math.abs(gap)).toBeLessThan(1e-9);
+            const e = totalEnergy(result, time);
+            expect(e).toBeLessThanOrEqual(previous + 1e-12);
+            previous = e;
+        }
+    });
+
+    it("pushes a ball driven into two touching balls at an angle (three-body wedge)", () => {
+        const world = testWorld();
+        const c = Math.sqrt(3) / 2;
+        const result = simulateFreeMotion(
+            {
+                blue: ballAt(5, 5, vec3(0, 0, 0), vec3(0, 80, 0)),
+                red: ballAt(5 + 2 * R * c, 5 - R),
+                black: ballAt(5 + 2 * R * c, 5 + R),
+            },
+            world,
+        );
+        expect(result.aborted).toBe(false);
+        expect(result.events.some((e) => e.kind === "arrested")).toBe(false);
+        expect(result.segments.blue?.some((s) => s.push)).toBe(true);
+        expect(worstPenetration(result, world)).toBeLessThan(1e-6);
+        // Symmetric set-up, symmetric outcome.
+        expect(result.rest.red?.x).toBeCloseTo(result.rest.black?.x ?? NaN, 9);
+        expect((result.rest.red?.y ?? 0) - 5).toBeCloseTo(5 - (result.rest.black?.y ?? 0), 9);
+        expect(result.rest.blue?.y).toBeCloseTo(5, 9);
+    });
+
+    it("holds a ball spinning against the peg until its slip is gone", () => {
+        const world = testWorld();
+        // Blue touches the peg from the west with topspin driving it east, into the peg.
+        const result = simulateFreeMotion({ blue: ballAt(15 - R - 0.02, 20, vec3(0, 0, 0), vec3(0, 60, 0)) }, world);
+        expect(result.events).toContainEqual({
+            kind: "ball-obstacle",
+            t: 0,
+            ball: "blue",
+            obstacleId: "peg",
+            resting: true,
+        });
+        expect(result.aborted).toBe(false);
+        expect(worstPenetration(result, world)).toBeLessThan(1e-6);
+        expect(result.rest.blue?.x).toBeCloseTo(15 - R - 0.02, 9);
+    });
+
+    it("lets touching balls rolling together stop together without contact events", () => {
+        const result = simulateFreeMotion(
+            { blue: rollingBallAt(5, 5, 1, 0), red: rollingBallAt(5 + 2 * R, 5, 1, 0) },
+            testWorld(),
+        );
+        expect(result.events.some((e) => e.kind === "ball-ball")).toBe(false);
+        expect((result.rest.red?.x ?? 0) - (result.rest.blue?.x ?? 0)).toBeCloseTo(2 * R, 12);
+    });
+});
+
 describe("halt margin", () => {
     it("stops a ball one halt margin beyond the boundary", () => {
         const result = simulateFreeMotion({ blue: rollingBallAt(1, 5, -4, 0) }, testWorld());
         expect(result.events.some((e) => e.kind === "halted" && e.ball === "blue")).toBe(true);
         expect(result.rest.blue?.x).toBeCloseTo(-1, 6);
     });
+
+    it("takes a halted ball out of play, so a ball pushing it cannot drive it on", () => {
+        // Blue, driven by topspin, pushes red west over the boundary; red is halted and blue carries on alone.
+        const world = testWorld({ haltMargin: 0.1 });
+        const result = simulateFreeMotion(
+            { blue: ballAt(0.3, 5, vec3(-0.5, 0, 0), vec3(0, -150, 0)), red: ballAt(0.3 - 2 * R, 5) },
+            world,
+        );
+        expect(result.aborted).toBe(false);
+        expect(result.events.some((e) => e.kind === "halted" && e.ball === "red")).toBe(true);
+        expect(result.rest.red?.x).toBeCloseTo(-0.1, 6);
+    });
 });
 
 describe("invariants", () => {
+    // Blue, at rest with heavy topspin 0.5 mm behind red, drives red into hoop 6's east upright: impacts, a push,
+    // red caught between blue and the upright, and rebounds. Separately, black rolls into yellow.
     const complex: BallStates = {
-        blue: ballAt(10, 10, vec3(3, 1.2, 0), vec3(20, -15, 8)),
-        red: ballAt(12, 11),
-        black: ballAt(13, 10.4),
-        yellow: ballAt(14.5, 19.5),
+        blue: ballAt(15.1713, 14.6246, vec3(0, 0, 0), vec3(-114.6, -35.5, 0)),
+        red: ballAt(15.144, 14.713),
+        black: rollingBallAt(12, 17, 1.5, 0.5),
+        yellow: ballAt(13.5, 17.5),
     };
     const hoopWorld = testWorld({ hoops: [testHoop("5", 15, 25), testHoop("6", 15, 15)] });
 
@@ -2900,8 +4110,12 @@ describe("invariants", () => {
     it("exercises ball-ball and obstacle contacts", () => {
         // Guards the scenario itself: if this fails, move the balls until both kinds of contact occur.
         const result = simulateFreeMotion(complex, hoopWorld);
-        expect(result.events.some((e) => e.kind === "ball-ball")).toBe(true);
-        expect(result.events.some((e) => e.kind === "ball-obstacle")).toBe(true);
+        const pairs = new Set(result.events.flatMap((e) => (e.kind === "ball-ball" ? [e.balls.join("-")] : [])));
+        expect(pairs).toEqual(new Set(["blue-red", "black-yellow"]));
+        expect(result.events.some((e) => e.kind === "ball-ball" && e.resting)).toBe(true);
+        expect(result.events.some((e) => e.kind === "ball-obstacle" && e.obstacleId === "6/b")).toBe(true);
+        expect(result.segments.red?.some((s) => s.push)).toBe(true);
+        expect(result.aborted).toBe(false);
     });
 
     it("never gains energy over the shot", () => {
@@ -2944,7 +4158,9 @@ describe("limits and validation", () => {
     });
 
     it("rejects overlapping balls", () => {
-        expect(() => simulateFreeMotion({ blue: ballAt(5, 5), red: ballAt(5 + R, 5) }, testWorld())).toThrow(RangeError);
+        expect(() => simulateFreeMotion({ blue: ballAt(5, 5), red: ballAt(5 + R, 5) }, testWorld())).toThrow(
+            RangeError,
+        );
     });
 
     it("rejects a ball overlapping the peg", () => {
@@ -2969,10 +4185,25 @@ Expected: FAIL — cannot resolve `../../src/engine/sample` / `simulate`.
 
 ```ts
 /**
- * Evaluates a ShotResult at an arbitrary time, for rendering and tests.
+ * Evaluates a ShotResult at an arbitrary time, for rendering, observation and tests.
  */
-import { advance } from "./motion";
-import type { BallId, BallState, ShotResult } from "./types";
+import { advance, trajectory, type Trajectory } from "./motion";
+import { pushedState, pushedTrajectory } from "./push";
+import type { BallId, BallState, Segment, ShotResult } from "./types";
+
+/** Returns the state a time `local` (0 ≤ local ≤ t1 − t0) after the segment's start. */
+export function segmentState(segment: Segment, local: number): BallState {
+    return segment.push
+        ? pushedState(segment.start, segment.push, local)
+        : advance(segment.start, segment.phase, segment.params, local);
+}
+
+/** Returns the segment's centre trajectory, with t measured from the segment's start. */
+export function segmentTrajectory(segment: Segment): Trajectory {
+    return segment.push
+        ? pushedTrajectory(segment.start, segment.push)
+        : trajectory(segment.start, segment.phase, segment.params);
+}
 
 /** Returns the ball's state at time t, clamped to [0, duration]. Throws if the ball was not in play. */
 export function stateAtTime(result: ShotResult, ball: BallId, t: number): BallState {
@@ -2987,8 +4218,7 @@ export function stateAtTime(result: ShotResult, ball: BallId, t: number): BallSt
             segment = s;
         }
     }
-    const local = Math.min(Math.max(t - segment.t0, 0), segment.t1 - segment.t0);
-    return advance(segment.start, segment.phase, segment.params, local);
+    return segmentState(segment, Math.min(Math.max(t - segment.t0, 0), segment.t1 - segment.t0));
 }
 ```
 
@@ -2998,15 +4228,49 @@ export function stateAtTime(result: ShotResult, ball: BallId, t: number): BallSt
 /**
  * Event-driven free-motion simulation (spec §5, phase 2).
  *
- * Each ball carries an open segment: a start state, phase and start time, from which its state at any later
- * time within the phase is exact. The loop finds the earliest event across all balls, resolves it, and reopens
- * the segments of the balls it affected. Candidates are gathered in a fixed order and ties go to the first found,
- * so results are deterministic.
+ * Each ball carries an open segment: a start state, a start time and either a free-motion phase (motion.ts) or a
+ * push (push.ts), from which its state at any later time within the segment is exact. The loop finds the earliest
+ * event across all balls, resolves it, and reopens the segments of the balls it affected. Candidates are gathered in
+ * a fixed order and ties go to the first found, so results are deterministic.
+ *
+ * Contacts closing faster than RESTING_SPEED are impulses with restitution (resolve.ts). Slower ones, and touching
+ * bodies driven together by their own accelerations, are resting contacts: the resting-contact solver (push.ts)
+ * decides which of them push, and those are coupled until one of the pushed balls changes phase, the contact opens,
+ * or another contact intervenes. For touching bodies, the decision at t = 0 uses `approachSpeed` and the same solver
+ * that resolution uses, so detection and resolution always agree.
  */
-import { CONTACT_TOLERANCE, approachTime, boundaryCrossingTime } from "./detect";
-import { ZERO, horizontal, length, sub, vec3, type Vec3 } from "./math/vec3";
-import { advance, atRest, classify, endOfPhase, phaseDuration, trajectory, type Trajectory } from "./motion";
+import {
+    CONTACT_TOLERANCE,
+    approachSpeed,
+    approachTime,
+    boundaryCrossingTime,
+    firstNonNegative,
+    isTouching,
+} from "./detect";
+import { ZERO, dot, horizontal, length, normalize, sub, vec3, type Vec3 } from "./math/vec3";
+import {
+    SPEED_EPSILON,
+    advance,
+    atRest,
+    classify,
+    endOfPhase,
+    phaseDuration,
+    trajectory,
+    type Trajectory,
+} from "./motion";
 import { observe } from "./observe";
+import {
+    ACCELERATION_EPSILON,
+    RESTING_SPEED,
+    SEPARATION_TOLERANCE,
+    freeAcceleration,
+    pushDuration,
+    pushedState,
+    pushedTrajectory,
+    solveRestingContacts,
+    type RestingContact,
+    type RestingSolution,
+} from "./push";
 import { resolveBallBall, resolveBallCylinder } from "./resolve";
 import {
     BALL_IDS,
@@ -3016,6 +4280,7 @@ import {
     type Cylinder,
     type MotionParams,
     type MotionPhase,
+    type PushMotion,
     type Segment,
     type ShotEvent,
     type ShotResult,
@@ -3037,23 +4302,52 @@ interface Track {
     start: BallState;
     phase: MotionPhase;
     t0: number;
+    /** Time the segment stays valid: to the end of its phase, or of its push. */
     duration: number;
     params: MotionParams;
+    push: PushMotion | null;
+    /** A halted ball is out of play: it no longer moves or touches anything. */
+    inert: boolean;
     readonly segments: Segment[];
+}
+
+/** A coupled contact: ball `a` resting against ball `b` or against `obstacle`. */
+interface Coupling {
+    readonly a: Track;
+    readonly b: Track | null;
+    readonly obstacle: Cylinder | null;
+}
+
+/** Mutable simulation state shared by the helpers below. */
+interface Simulation {
+    readonly world: World;
+    readonly obstacles: readonly Cylinder[];
+    readonly tracks: Track[];
+    couplings: Coupling[];
+    readonly events: ShotEvent[];
 }
 
 type Candidate =
     | { readonly time: number; readonly kind: "transition"; readonly track: Track }
+    | { readonly time: number; readonly kind: "regroup"; readonly track: Track }
     | { readonly time: number; readonly kind: "ball-ball"; readonly a: Track; readonly b: Track }
     | { readonly time: number; readonly kind: "obstacle"; readonly track: Track; readonly obstacle: Cylinder }
     | { readonly time: number; readonly kind: "halt"; readonly track: Track };
 
 function stateAt(track: Track, t: number): BallState {
-    return advance(track.start, track.phase, track.params, Math.min(t - track.t0, track.duration));
+    const local = Math.min(t - track.t0, track.duration);
+    return track.push
+        ? pushedState(track.start, track.push, local)
+        : advance(track.start, track.phase, track.params, local);
 }
 
-function remaining(track: Track, now: number): number {
-    return Math.max(0, track.t0 + track.duration - now);
+function pathAt(track: Track, t: number): Trajectory {
+    const s = stateAt(track, t);
+    return track.push ? pushedTrajectory(s, track.push) : trajectory(s, track.phase, track.params);
+}
+
+function moving(track: Track): boolean {
+    return !track.inert && track.phase !== "stationary";
 }
 
 /** Places the ball exactly on the lawn plane, rejecting states that are not (nearly) there. */
@@ -3088,26 +4382,158 @@ function assertNoOverlap(tracks: readonly Track[], obstacles: readonly Cylinder[
 }
 
 /**
- * Closes the track's current segment at `now` and opens a new one from `state`. Records a phase event when the
- * phase changes (or on the first segment).
+ * Closes the track's current segment at `now` and opens a new one from `state`, moving freely or, when `motion` is
+ * given, with that push. Records a phase event when the phase changes (or on the first segment).
  */
-function reopen(track: Track | null, id: BallId, state: BallState, now: number, world: World, events: ShotEvent[]): Track {
-    const phase = classify(state, world.ball.radius);
+function reopen(
+    sim: Simulation,
+    track: Track | null,
+    id: BallId,
+    state: BallState,
+    now: number,
+    motion: { readonly phase: MotionPhase; readonly push: PushMotion | null } | null = null,
+): Track {
+    const radius = sim.world.ball.radius;
+    const phase = motion ? motion.phase : classify(state, radius);
+    const push = motion ? motion.push : null;
     const start = phase === "stationary" ? atRest(state.position) : state;
-    const params = motionParamsAt(world, start.position);
+    const params = motionParamsAt(sim.world, start.position);
     if (track && now > track.t0) {
-        track.segments.push({ t0: track.t0, t1: now, phase: track.phase, start: track.start, params: track.params });
+        const closed = { t0: track.t0, t1: now, phase: track.phase, start: track.start, params: track.params };
+        track.segments.push(track.push ? { ...closed, push: track.push } : closed);
     }
     if (!track || track.phase !== phase) {
-        events.push({ kind: "phase", t: now, ball: id, phase });
+        sim.events.push({ kind: "phase", t: now, ball: id, phase });
     }
-    const next: Track = track ?? { id, start, phase, t0: now, duration: 0, params, segments: [] };
+    const next: Track = track ?? { id, start, phase, t0: now, duration: 0, params, push, inert: false, segments: [] };
     next.start = start;
     next.phase = phase;
     next.t0 = now;
     next.params = params;
-    next.duration = phaseDuration(start, phase, params);
+    next.push = push;
+    next.duration = push ? pushDuration(start, phase, push, radius) : phaseDuration(start, phase, params);
     return next;
+}
+
+function coupledPair(sim: Simulation, a: Track, b: Track): boolean {
+    return sim.couplings.some((c) => (c.a === a && c.b === b) || (c.a === b && c.b === a));
+}
+
+function coupledObstacle(sim: Simulation, track: Track, obstacle: Cylinder): boolean {
+    return sim.couplings.some((c) => c.a === track && c.obstacle === obstacle);
+}
+
+/** Returns the tracks joined to `seeds` by couplings, in canonical ball order. */
+function groupOf(sim: Simulation, seeds: readonly Track[]): Track[] {
+    const found = new Set<Track>(seeds);
+    let grew = true;
+    while (grew) {
+        grew = false;
+        for (const c of sim.couplings) {
+            if (c.b && found.has(c.a) !== found.has(c.b)) {
+                found.add(c.a);
+                found.add(c.b);
+                grew = true;
+            }
+        }
+    }
+    return sim.tracks.filter((t) => found.has(t));
+}
+
+/** Returns when the earliest segment of the track's coupled group ends (its own end when uncoupled). */
+function groupEnd(sim: Simulation, track: Track): number {
+    return Math.min(...groupOf(sim, [track]).map((t) => t.t0 + t.duration));
+}
+
+/** Uncouples every group containing one of `tracks`: its balls continue from their current states, moving freely. */
+function release(sim: Simulation, tracks: readonly Track[], now: number): void {
+    const group = groupOf(sim, tracks);
+    sim.couplings = sim.couplings.filter((c) => !group.includes(c.a));
+    for (const track of group) {
+        if (track.push) {
+            reopen(sim, track, track.id, stateAt(track, now), now);
+        }
+    }
+}
+
+/** The resting contacts around `seeds`: touching bodies (coupled ones within SEPARATION_TOLERANCE) closing slowly. */
+interface Component {
+    readonly tracks: Track[];
+    readonly obstacles: Cylinder[];
+    readonly contacts: RestingContact[];
+}
+
+function restingComponent(sim: Simulation, seeds: readonly Track[], now: number): Component {
+    const R = sim.world.ball.radius;
+    const tracks: Track[] = seeds.filter((t) => !t.inert);
+    const obstacles: Cylinder[] = [];
+    const contacts: RestingContact[] = [];
+    const resting = (offset: Vec3, velocity: Vec3, distance: number, coupled: boolean): boolean => {
+        const touching = coupled ? separationGap(offset, distance) < 0 : isTouching(offset, distance);
+        return touching && Math.abs(approachSpeed(offset, velocity)) <= RESTING_SPEED;
+    };
+    for (let i = 0; i < tracks.length; i++) {
+        const a = tracks[i] as Track;
+        const sa = stateAt(a, now);
+        for (const b of sim.tracks) {
+            if (b === a || b.inert || contacts.some((c) => !c.fixed && tracks[c.b] === a && tracks[c.a] === b)) {
+                continue;
+            }
+            const sb = stateAt(b, now);
+            const offset = sub(sa.position, sb.position);
+            if (resting(offset, sub(sa.velocity, sb.velocity), 2 * R, coupledPair(sim, a, b))) {
+                if (!tracks.includes(b)) {
+                    tracks.push(b);
+                }
+                contacts.push({ a: i, b: tracks.indexOf(b), fixed: false });
+            }
+        }
+        for (const o of sim.obstacles) {
+            if (resting(sub(sa.position, o.centre), sa.velocity, R + o.radius, coupledObstacle(sim, a, o))) {
+                obstacles.push(o);
+                contacts.push({ a: i, b: obstacles.length - 1, fixed: true });
+            }
+        }
+    }
+    return { tracks, obstacles, contacts };
+}
+
+function solveComponent(component: Component, now: number): RestingSolution {
+    return solveRestingContacts(
+        component.tracks.map((t) => ({ state: stateAt(t, now), params: t.params })),
+        component.obstacles.map((o) => o.centre),
+        component.contacts,
+    );
+}
+
+/**
+ * Resolves the resting contacts around `seeds`: uncouples every group involved, solves the component again and
+ * couples the contacts the solution keeps.
+ */
+function settle(sim: Simulation, seeds: readonly Track[], now: number): void {
+    const component = restingComponent(sim, seeds, now);
+    release(sim, component.tracks, now);
+    const solution = solveComponent(component, now);
+    component.tracks.forEach((track, i) => {
+        const member = solution.members[i];
+        if (member) {
+            reopen(sim, track, track.id, member.state, now, { phase: member.phase, push: member.push });
+        }
+    });
+    component.contacts.forEach((c, k) => {
+        if (solution.coupled[k]) {
+            const a = component.tracks[c.a] as Track;
+            sim.couplings.push(
+                c.fixed
+                    ? { a, b: null, obstacle: component.obstacles[c.b] as Cylinder }
+                    : { a, b: component.tracks[c.b] as Track, obstacle: null },
+            );
+        }
+    });
+    const arrested = sim.tracks.filter((t) => solution.arrested[component.tracks.indexOf(t)] === true);
+    if (arrested.length > 0) {
+        sim.events.push({ kind: "arrested", t: now, balls: arrested.map((t) => t.id) });
+    }
 }
 
 /** Returns the earlier candidate; on a tie the one found first wins, which keeps the order deterministic. */
@@ -3115,38 +4541,123 @@ function earlier(best: Candidate | null, candidate: Candidate): Candidate {
     return best === null || candidate.time < best.time ? candidate : best;
 }
 
-function findNextEvent(tracks: readonly Track[], obstacles: readonly Cylinder[], world: World, now: number): Candidate {
-    let best: Candidate | null = null;
-    const paths = new Map<Track, Trajectory>();
-    for (const track of tracks) {
-        paths.set(track, trajectory(stateAt(track, now), track.phase, track.params));
-    }
-    const moving = tracks.filter((t) => t.phase !== "stationary");
+/**
+ * |offset|² − (distance + SEPARATION_TOLERANCE)², which is negative while a coupled contact is still closed. The
+ * separation monitor and the resting-contact component both use this one expression, so they cannot disagree.
+ */
+function separationGap(offset: Vec3, distance: number): number {
+    const A = horizontal(offset);
+    const band = 2 * distance * SEPARATION_TOLERANCE + SEPARATION_TOLERANCE * SEPARATION_TOLERANCE;
+    return dot(A, A) - distance * distance - band;
+}
 
-    for (const track of moving) {
-        best = earlier(best, { time: track.t0 + track.duration, kind: "transition", track });
+/** Earliest time a coupled contact opens beyond SEPARATION_TOLERANCE, for relative trajectory a + b·t + c·t². */
+function separationTime(a: Vec3, b: Vec3, c: Vec3, distance: number, horizon: number): number | null {
+    const A = horizontal(a);
+    const B = horizontal(b);
+    const C = horizontal(c);
+    const f = [separationGap(A, distance), 2 * dot(A, B), dot(B, B) + 2 * dot(A, C), 2 * dot(B, C), dot(C, C)];
+    return firstNonNegative(f, horizon);
+}
+
+/**
+ * The acceleration of a ball as the resting-contact solver sees it: its push, or its free turf acceleration. Using
+ * the solver's own view (rather than the trajectory's) keeps detection consistent with resolution, including at the
+ * very end of a phase, where the trajectory still says "rolling" but the state is already at rest.
+ */
+function accelerationOf(track: Track, state: BallState): Vec3 {
+    return track.push ? track.push.acceleration : freeAcceleration(state, track.params);
+}
+
+/**
+ * Decides whether touching bodies must be resolved now: they are approaching, or they rest against each other and
+ * their accelerations drive them together. `other` is the second body's centre and acceleration (an obstacle's is
+ * ZERO). Resolution applies the resting-contact solver, whose outcome never leaves an uncoupled resting contact
+ * driven together, so a contact resolved at t = 0 does not trigger again.
+ */
+function contactNow(
+    position: Vec3,
+    acceleration: Vec3,
+    otherPosition: Vec3,
+    otherAcceleration: Vec3,
+    closing: number,
+): boolean {
+    if (closing > SPEED_EPSILON) {
+        return true;
     }
-    for (let i = 0; i < tracks.length; i++) {
-        const a = tracks[i] as Track;
-        for (let j = i + 1; j < tracks.length; j++) {
-            const b = tracks[j] as Track;
-            if (a.phase === "stationary" && b.phase === "stationary") {
+    const normal = normalize(horizontal(sub(otherPosition, position)));
+    return closing >= -RESTING_SPEED && dot(sub(acceleration, otherAcceleration), normal) > ACCELERATION_EPSILON;
+}
+
+function findNextEvent(sim: Simulation, now: number): Candidate | null {
+    const { world, obstacles } = sim;
+    const R = world.ball.radius;
+    const live = sim.tracks.filter((t) => !t.inert);
+    const states = new Map(live.map((t) => [t, stateAt(t, now)]));
+    const paths = new Map(live.map((t) => [t, pathAt(t, now)]));
+    const ends = new Map(live.map((t) => [t, groupEnd(sim, t)]));
+    let best: Candidate | null = null;
+
+    for (const track of live) {
+        const end = track.t0 + track.duration;
+        if (moving(track) && Number.isFinite(end)) {
+            best = earlier(best, { time: end, kind: track.push ? "regroup" : "transition", track });
+        }
+    }
+    for (let i = 0; i < live.length; i++) {
+        const a = live[i] as Track;
+        for (let j = i + 1; j < live.length; j++) {
+            const b = live[j] as Track;
+            if (!moving(a) && !moving(b)) {
                 continue;
             }
-            const horizon = Math.min(remaining(a, now), remaining(b, now));
+            const horizon = Math.min(ends.get(a) as number, ends.get(b) as number) - now;
             const pa = paths.get(a) as Trajectory;
             const pb = paths.get(b) as Trajectory;
-            const dt = approachTime(sub(pa.c0, pb.c0), sub(pa.c1, pb.c1), sub(pa.c2, pb.c2), 2 * world.ball.radius, horizon);
+            const rel = [sub(pa.c0, pb.c0), sub(pa.c1, pb.c1), sub(pa.c2, pb.c2)] as const;
+            if (coupledPair(sim, a, b)) {
+                const dt = separationTime(rel[0], rel[1], rel[2], 2 * R, horizon);
+                if (dt !== null) {
+                    best = earlier(best, { time: now + dt, kind: "regroup", track: a });
+                }
+                continue;
+            }
+            const sa = states.get(a) as BallState;
+            const sb = states.get(b) as BallState;
+            const offset = sub(sa.position, sb.position);
+            const closing = approachSpeed(offset, sub(sa.velocity, sb.velocity));
+            const driven = contactNow(sa.position, accelerationOf(a, sa), sb.position, accelerationOf(b, sb), closing);
+            if (isTouching(offset, 2 * R) && driven) {
+                best = earlier(best, { time: now, kind: "ball-ball", a, b });
+                continue;
+            }
+            const dt = approachTime(rel[0], rel[1], rel[2], 2 * R, horizon);
             if (dt !== null) {
                 best = earlier(best, { time: now + dt, kind: "ball-ball", a, b });
             }
         }
     }
-    for (const track of moving) {
+    for (const track of live.filter(moving)) {
         const p = paths.get(track) as Trajectory;
-        const horizon = remaining(track, now);
+        const s = states.get(track) as BallState;
+        const horizon = (ends.get(track) as number) - now;
         for (const obstacle of obstacles) {
-            const dt = approachTime(sub(p.c0, obstacle.centre), p.c1, p.c2, world.ball.radius + obstacle.radius, horizon);
+            const distance = R + obstacle.radius;
+            const offset = sub(p.c0, obstacle.centre);
+            if (coupledObstacle(sim, track, obstacle)) {
+                const dt = separationTime(offset, p.c1, p.c2, distance, horizon);
+                if (dt !== null) {
+                    best = earlier(best, { time: now + dt, kind: "regroup", track });
+                }
+                continue;
+            }
+            const closing = approachSpeed(offset, s.velocity);
+            const driven = contactNow(s.position, accelerationOf(track, s), obstacle.centre, ZERO, closing);
+            if (isTouching(offset, distance) && driven) {
+                best = earlier(best, { time: now, kind: "obstacle", track, obstacle });
+                continue;
+            }
+            const dt = approachTime(offset, p.c1, p.c2, distance, horizon);
             if (dt !== null) {
                 best = earlier(best, { time: now + dt, kind: "obstacle", track, obstacle });
             }
@@ -3155,9 +4666,6 @@ function findNextEvent(tracks: readonly Track[], obstacles: readonly Cylinder[],
         if (dt !== null) {
             best = earlier(best, { time: now + dt, kind: "halt", track });
         }
-    }
-    if (best === null) {
-        throw new Error("no next event although a ball is moving");
     }
     return best;
 }
@@ -3172,52 +4680,81 @@ export function simulateFreeMotion(
     maxEvents: number = DEFAULT_MAX_EVENTS,
 ): ShotResult {
     validateWorld(world);
-    const obstacles = obstaclesOf(world);
-    const events: ShotEvent[] = [];
-    const tracks: Track[] = [];
+    const sim: Simulation = { world, obstacles: obstaclesOf(world), tracks: [], couplings: [], events: [] };
     for (const id of BALL_IDS) {
         const s = initial[id];
         if (s) {
-            tracks.push(reopen(null, id, onLawn(id, s, world.ball.radius), 0, world, events));
+            sim.tracks.push(reopen(sim, null, id, onLawn(id, s, world.ball.radius), 0));
         }
     }
-    assertNoOverlap(tracks, obstacles, world.ball.radius);
+    assertNoOverlap(sim.tracks, sim.obstacles, world.ball.radius);
 
     let now = 0;
     let count = 0;
     let aborted = false;
-    while (tracks.some((t) => t.phase !== "stationary")) {
+    while (sim.tracks.some(moving)) {
         if (count >= maxEvents) {
             aborted = true;
             break;
         }
         count++;
-        const next = findNextEvent(tracks, obstacles, world, now);
+        const next = findNextEvent(sim, now);
+        if (next === null) {
+            throw new Error("no next event although a ball is moving");
+        }
         now = next.time;
         switch (next.kind) {
             case "transition": {
                 const { track } = next;
-                reopen(track, track.id, endOfPhase(track.start, track.phase, track.params), now, world, events);
+                reopen(sim, track, track.id, endOfPhase(track.start, track.phase, track.params), now);
+                break;
+            }
+            case "regroup": {
+                settle(sim, groupOf(sim, [next.track]), now);
                 break;
             }
             case "ball-ball": {
-                const [sa, sb] = resolveBallBall(stateAt(next.a, now), stateAt(next.b, now), world.ball, world.ballBall);
-                reopen(next.a, next.a.id, sa, now, world, events);
-                reopen(next.b, next.b.id, sb, now, world, events);
-                events.push({ kind: "ball-ball", t: now, balls: [next.a.id, next.b.id] });
+                const { a, b } = next;
+                const sa = stateAt(a, now);
+                const sb = stateAt(b, now);
+                const resting =
+                    approachSpeed(sub(sa.position, sb.position), sub(sa.velocity, sb.velocity)) <= RESTING_SPEED;
+                sim.events.push({ kind: "ball-ball", t: now, balls: [a.id, b.id], resting });
+                if (resting) {
+                    settle(sim, [a, b], now);
+                } else {
+                    release(sim, [a, b], now);
+                    const [na, nb] = resolveBallBall(sa, sb, world.ball, world.ballBall);
+                    reopen(sim, a, a.id, na, now);
+                    reopen(sim, b, b.id, nb, now);
+                }
                 break;
             }
             case "obstacle": {
                 const { track, obstacle } = next;
-                const s = resolveBallCylinder(stateAt(track, now), obstacle.centre, world.ball, obstacle.material);
-                reopen(track, track.id, s, now, world, events);
-                events.push({ kind: "ball-obstacle", t: now, ball: track.id, obstacleId: obstacle.id });
+                const s = stateAt(track, now);
+                const resting = approachSpeed(sub(s.position, obstacle.centre), s.velocity) <= RESTING_SPEED;
+                sim.events.push({ kind: "ball-obstacle", t: now, ball: track.id, obstacleId: obstacle.id, resting });
+                if (resting) {
+                    settle(sim, [track], now);
+                } else {
+                    release(sim, [track], now);
+                    reopen(
+                        sim,
+                        track,
+                        track.id,
+                        resolveBallCylinder(s, obstacle.centre, world.ball, obstacle.material),
+                        now,
+                    );
+                }
                 break;
             }
             case "halt": {
                 const { track } = next;
-                reopen(track, track.id, { ...stateAt(track, now), velocity: ZERO, angularVelocity: ZERO }, now, world, events);
-                events.push({ kind: "halted", t: now, ball: track.id });
+                release(sim, [track], now);
+                reopen(sim, track, track.id, { ...stateAt(track, now), velocity: ZERO, angularVelocity: ZERO }, now);
+                track.inert = true;
+                sim.events.push({ kind: "halted", t: now, ball: track.id });
                 break;
             }
         }
@@ -3225,12 +4762,13 @@ export function simulateFreeMotion(
 
     const segments: Partial<Record<BallId, readonly Segment[]>> = {};
     const rest: Partial<Record<BallId, Vec3>> = {};
-    for (const track of tracks) {
-        track.segments.push({ t0: track.t0, t1: now, phase: track.phase, start: track.start, params: track.params });
+    for (const track of sim.tracks) {
+        const closed = { t0: track.t0, t1: now, phase: track.phase, start: track.start, params: track.params };
+        track.segments.push(track.push ? { ...closed, push: track.push } : closed);
         segments[track.id] = track.segments;
         rest[track.id] = stateAt(track, now).position;
     }
-    const allEvents = [...events, ...observe(segments, world)].sort((a, b) => a.t - b.t);
+    const allEvents = [...sim.events, ...observe(segments, world)].sort((a, b) => a.t - b.t);
     return { engineVersion: ENGINE_VERSION, duration: now, segments, events: allEvents, rest, aborted };
 }
 ```
@@ -3254,7 +4792,7 @@ export function observe(_segments: Partial<Record<BallId, readonly Segment[]>>, 
 - [ ] **Step 6: Run the tests to verify they pass**
 
 Run: `npx vitest run tests/engine/simulate.test.ts`
-Expected: PASS.
+Expected: PASS (26 tests).
 
 - [ ] **Step 7: Run the whole suite, format, lint, commit**
 
@@ -3282,14 +4820,21 @@ git commit -m "Add event-driven free-motion simulator"
 
 ### Task 10: Out-of-court, hoop passages and hoop-run verdict
 
+Passages are counted per ball per hoop over the whole segment list (pre-flight I1). The side of the hoop plane at
+every segment boundary is taken from the recorded states: each segment's start state, which is also the previous
+segment's end, and the final state. Only roots strictly inside a segment count. When the parity of those roots
+disagrees with the side change between the boundaries, rounding next to a boundary gained or lost a root, and it is
+repaired at that boundary. A crossing at a boundary is therefore seen exactly once.
+
 **Files:**
 - Modify: `src/engine/observe.ts` (replace the stub)
 - Create: `src/engine/hoopRun.ts`
 - Test: `tests/engine/observe.test.ts`, `tests/engine/hoopRun.test.ts`
 
 **Interfaces:**
-- Consumes: `boundaryCrossingTime`, `outwardDistance` (Task 6); `hoopHalfSpan`, `hoopLateral`, `ruleThreshold`
-  (Task 8); `trajectory`, `advance` (Task 5); `realRootsInInterval` (Task 2); `ShotResult` (Task 9).
+- Consumes: `boundaryCrossingTime` (Task 6); `hoopHalfSpan`, `hoopLateral`, `ruleThreshold` (Task 8);
+  `Trajectory` (Task 5); `segmentState`, `segmentTrajectory` (Task 9); `realRootsInInterval` (Task 2);
+  `ShotResult` (Task 9).
 - Produces:
   - `observe(segments, world): ShotEvent[]` — per ball, at most one `out-of-court` event (the first time its centre's
     outward distance reaches `ruleThreshold(world.outOfCourt, R, 0)`), and one `hoop-passage` event for each
@@ -3300,13 +4845,18 @@ git commit -m "Add event-driven free-motion simulator"
 
 - [ ] **Step 1: Write the failing observation tests**
 
+The boundary-aligned test calls `observe` directly on hand-built segments whose boundary is the analytic crossing
+time. Against the original per-segment `[0, duration)` rule it fails, reporting two passages at speed 1.502.
+
 `tests/engine/observe.test.ts`:
 
 ```ts
 import { describe, expect, it } from "vitest";
 import { vec3 } from "../../src/engine/math/vec3";
+import { advance } from "../../src/engine/motion";
+import { observe } from "../../src/engine/observe";
 import { simulateFreeMotion } from "../../src/engine/simulate";
-import { STANDARD_GRAVITY } from "../../src/engine/world";
+import { STANDARD_GRAVITY, motionParamsAt } from "../../src/engine/world";
 import { ballAt, rollingBallAt, testHoop, testWorld } from "./support/fixtures";
 
 const ROLL = 0.05 * STANDARD_GRAVITY;
@@ -3365,7 +4915,35 @@ describe("hoop passages", () => {
         for (let i = 0; i < 50; i++) {
             const v = 1 + (2 * i) / 49;
             const result = simulateFreeMotion({ blue: ballAt(15, 9.5, vec3(0, v, 0)) }, world);
-            expect(result.events.filter((e) => e.kind === "hoop-passage"), `speed ${v}`).toHaveLength(1);
+            expect(
+                result.events.filter((e) => e.kind === "hoop-passage"),
+                `speed ${v}`,
+            ).toHaveLength(1);
+        }
+    });
+
+    it("records exactly one passage when a segment boundary falls on the hoop plane (Review Focus 5, I1)", () => {
+        // Hand-built segments whose boundary is the analytic crossing time, so the boundary state lies on the plane
+        // to within rounding, on either side of it.
+        const params = motionParamsAt(world, vec3(15, 9, 0));
+        const a = params.rollingDecel;
+        for (let i = 0; i < 2000; i++) {
+            const v = 1.5 + i / 1000;
+            const start = rollingBallAt(15, 9, 0, v);
+            const crossing = (v - Math.sqrt(v * v - 2 * a)) / a;
+            const segments = [
+                { t0: 0, t1: crossing, phase: "rolling" as const, start, params },
+                {
+                    t0: crossing,
+                    t1: crossing + 0.5,
+                    phase: "rolling" as const,
+                    start: advance(start, "rolling", params, crossing),
+                    params,
+                },
+            ];
+            const passages = observe({ blue: segments }, world).filter((e) => e.kind === "hoop-passage");
+            expect(passages, `speed ${v}`).toHaveLength(1);
+            expect(passages[0]?.t).toBeCloseTo(crossing, 9);
         }
     });
 
@@ -3377,7 +4955,7 @@ describe("hoop passages", () => {
 });
 ```
 
-`tests/engine/hoopRun.test.ts`:
+`tests/engine/hoopRun.test.ts`. The hoop is at (15, 10.5), clear of the fixture peg at (15, 20) (pre-flight B2):
 
 ```ts
 import { describe, expect, it } from "vitest";
@@ -3387,43 +4965,43 @@ import { STANDARD_GRAVITY } from "../../src/engine/world";
 import { rollingBallAt, testHoop, testWorld } from "./support/fixtures";
 
 const ROLL = 0.05 * STANDARD_GRAVITY;
-const world = testWorld({ hoops: [testHoop("1", 15, 20.5)] });
+const world = testWorld({ hoops: [testHoop("1", 15, 10.5)] });
 const NORTH = { hoopId: "1", direction: 1 } as const;
 
 describe("judgeHoopRun", () => {
     it("reports a clean run", () => {
-        const result = simulateFreeMotion({ blue: rollingBallAt(15, 19.5, 0, 1.5) }, world);
+        const result = simulateFreeMotion({ blue: rollingBallAt(15, 9.5, 0, 1.5) }, world);
         expect(judgeHoopRun(result, "blue", NORTH, world)).toBe("ran");
     });
 
     it("reports a ball starting on the wrong side as not eligible", () => {
-        const result = simulateFreeMotion({ blue: rollingBallAt(15, 21.5, 0, -1.5) }, world);
+        const result = simulateFreeMotion({ blue: rollingBallAt(15, 11.5, 0, -1.5) }, world);
         expect(judgeHoopRun(result, "blue", NORTH, world)).toBe("not-eligible");
     });
 
     it("judges the run relative to the target direction", () => {
-        const result = simulateFreeMotion({ blue: rollingBallAt(15, 21.5, 0, -1.5) }, world);
+        const result = simulateFreeMotion({ blue: rollingBallAt(15, 11.5, 0, -1.5) }, world);
         expect(judgeHoopRun(result, "blue", { hoopId: "1", direction: -1 }, world)).toBe("ran");
     });
 
     it("reports an upright rebound as no passage", () => {
-        const result = simulateFreeMotion({ blue: rollingBallAt(15 + 0.0953 / 2 + 0.008, 19.5, 0, 1.5) }, world);
+        const result = simulateFreeMotion({ blue: rollingBallAt(15 + 0.0953 / 2 + 0.008, 9.5, 0, 1.5) }, world);
         expect(judgeHoopRun(result, "blue", NORTH, world)).toBe("no-passage");
     });
 
     it("reports a ball going round the hoop as no passage", () => {
-        const result = simulateFreeMotion({ blue: rollingBallAt(15.5, 19.5, 0, 1.5) }, world);
+        const result = simulateFreeMotion({ blue: rollingBallAt(15.5, 9.5, 0, 1.5) }, world);
         expect(judgeHoopRun(result, "blue", NORTH, world)).toBe("no-passage");
     });
 
     it("reports a ball stopping part-way through as incomplete", () => {
         // Starts 0.1 m short of the plane and stops 0.02 m past it (threshold is R + r = 0.054 m).
-        const result = simulateFreeMotion({ blue: rollingBallAt(15, 20.4, 0, Math.sqrt(2 * ROLL * 0.12)) }, world);
+        const result = simulateFreeMotion({ blue: rollingBallAt(15, 10.4, 0, Math.sqrt(2 * ROLL * 0.12)) }, world);
         expect(judgeHoopRun(result, "blue", NORTH, world)).toBe("incomplete");
     });
 
     it("rejects an unknown hoop or ball", () => {
-        const result = simulateFreeMotion({ blue: rollingBallAt(15, 19.5, 0, 1.5) }, world);
+        const result = simulateFreeMotion({ blue: rollingBallAt(15, 9.5, 0, 1.5) }, world);
         expect(() => judgeHoopRun(result, "blue", { hoopId: "9", direction: 1 }, world)).toThrow(RangeError);
         expect(() => judgeHoopRun(result, "red", NORTH, world)).toThrow(RangeError);
     });
@@ -3445,7 +5023,8 @@ Expected: FAIL — the stub `observe` returns no events; `hoopRun` cannot be res
 import { boundaryCrossingTime } from "./detect";
 import { realRootsInInterval } from "./math/poly";
 import { add, dot, horizontal, scale, sub, type Vec3 } from "./math/vec3";
-import { trajectory, type Trajectory } from "./motion";
+import type { Trajectory } from "./motion";
+import { segmentState, segmentTrajectory } from "./sample";
 import { BALL_IDS, type BallId, type Hoop, type Segment, type ShotEvent, type World } from "./types";
 import { hoopHalfSpan, hoopLateral, ruleThreshold } from "./world";
 
@@ -3456,7 +5035,7 @@ function positionAt(p: Trajectory, t: number): Vec3 {
 function outOfCourt(id: BallId, segments: readonly Segment[], world: World): ShotEvent[] {
     const threshold = ruleThreshold(world.outOfCourt, world.ball.radius, 0);
     for (const segment of segments) {
-        const path = trajectory(segment.start, segment.phase, segment.params);
+        const path = segmentTrajectory(segment);
         const dt = boundaryCrossingTime(path, world.lawn, threshold, segment.t1 - segment.t0);
         if (dt !== null) {
             return [{ kind: "out-of-court", t: segment.t0 + dt, ball: id, position: positionAt(path, dt) }];
@@ -3465,30 +5044,57 @@ function outOfCourt(id: BallId, segments: readonly Segment[], world: World): Sho
     return [];
 }
 
+/** Which side of the hoop's plane a centre lies on: +1 on the side `normal` points to (or on the plane), else −1. */
+function side(hoop: Hoop, position: Vec3): 1 | -1 {
+    return dot(horizontal(sub(position, hoop.centre)), hoop.normal) >= 0 ? 1 : -1;
+}
+
 /**
- * Crossings of the hoop plane within one segment. The interval is half-open, [0, duration), so a crossing exactly
- * at a segment boundary is counted once, by the later segment.
+ * Crossings of one hoop's plane by one ball. The side of the plane at every segment boundary is taken from the
+ * recorded states (each segment's start, and the final state), which the solver computed once and shares between
+ * adjacent segments, so a crossing at a boundary is seen by exactly one segment. Within a segment only roots strictly
+ * inside (0, duration) are used, and they are reconciled with the boundary sides: an odd number of genuine crossings
+ * must change the side and an even number must not. A disagreement can only come from a root lost or found by
+ * rounding next to a boundary, and is repaired there.
  */
-function passages(id: BallId, segment: Segment, hoop: Hoop): ShotEvent[] {
-    if (segment.phase === "stationary") {
-        return [];
-    }
-    const path = trajectory(segment.start, segment.phase, segment.params);
-    const n = hoop.normal;
-    const coeffs = [dot(horizontal(sub(path.c0, hoop.centre)), n), dot(path.c1, n), dot(path.c2, n)];
-    const duration = segment.t1 - segment.t0;
+function passages(id: BallId, segments: readonly Segment[], hoop: Hoop): ShotEvent[] {
     const events: ShotEvent[] = [];
-    for (const t of realRootsInInterval(coeffs, 0, duration)) {
-        const slope = (coeffs[1] ?? 0) + 2 * (coeffs[2] ?? 0) * t;
-        if (t >= duration || slope === 0) {
-            continue;
-        }
-        const lateral = dot(horizontal(sub(positionAt(path, t), hoop.centre)), hoopLateral(hoop));
+    const record = (t: number, position: Vec3, direction: 1 | -1): void => {
+        const lateral = dot(horizontal(sub(position, hoop.centre)), hoopLateral(hoop));
         if (Math.abs(lateral) < hoopHalfSpan(hoop)) {
-            events.push({ kind: "hoop-passage", t: segment.t0 + t, ball: id, hoopId: hoop.id, direction: slope > 0 ? 1 : -1 });
+            events.push({ kind: "hoop-passage", t, ball: id, hoopId: hoop.id, direction });
         }
-    }
-    return events;
+    };
+    segments.forEach((segment, k) => {
+        const duration = segment.t1 - segment.t0;
+        const next = segments[k + 1];
+        const endState = next ? next.start : segmentState(segment, duration);
+        const before = side(hoop, segment.start.position);
+        const after = side(hoop, endState.position);
+        const path = segmentTrajectory(segment);
+        const n = hoop.normal;
+        const coeffs = [dot(horizontal(sub(path.c0, hoop.centre)), n), dot(path.c1, n), dot(path.c2, n)];
+        const slope = (t: number): number => (coeffs[1] ?? 0) + 2 * (coeffs[2] ?? 0) * t;
+        // Interior crossings only; a zero-slope root is a tangency, not a crossing.
+        const roots = realRootsInInterval(coeffs, 0, duration).filter((t) => t > 0 && t < duration && slope(t) !== 0);
+        const changed = before !== after;
+        if (roots.length % 2 === 1 && !changed) {
+            // A spurious root beside a boundary: drop the one nearest either end.
+            const edge = (t: number): number => Math.min(t, duration - t);
+            const nearest = roots.reduce((best, t) => (edge(t) < edge(best) ? t : best));
+            roots.splice(roots.indexOf(nearest), 1);
+        } else if (roots.length % 2 === 0 && changed) {
+            // A crossing lost at a boundary: place it at whichever end lies closer to the plane.
+            const atStart =
+                Math.abs(coeffs[0] ?? 0) <= Math.abs(dot(horizontal(sub(endState.position, hoop.centre)), n));
+            const t = atStart ? 0 : duration;
+            record(segment.t0 + t, atStart ? segment.start.position : endState.position, after);
+        }
+        for (const t of roots) {
+            record(segment.t0 + t, positionAt(path, t), slope(t) > 0 ? 1 : -1);
+        }
+    });
+    return events.sort((a, b) => a.t - b.t);
 }
 
 /** Returns out-of-court and hoop-passage events for the recorded segments, in ball order. */
@@ -3500,10 +5106,8 @@ export function observe(segmentsByBall: Partial<Record<BallId, readonly Segment[
             continue;
         }
         events.push(...outOfCourt(id, segments, world));
-        for (const segment of segments) {
-            for (const hoop of world.hoops) {
-                events.push(...passages(id, segment, hoop));
-            }
+        for (const hoop of world.hoops) {
+            events.push(...passages(id, segments, hoop));
         }
     }
     return events;
@@ -3554,7 +5158,8 @@ export function judgeHoopRun(result: ShotResult, ball: BallId, target: HoopTarge
     const last = own[own.length - 1];
     // A ball that starts with its centre already past the plane (between the uprights) needs no new passage.
     const startsInside =
-        signed(start) >= 0 && Math.abs(dot(horizontal(sub(start, hoop.centre)), hoopLateral(hoop))) < hoopHalfSpan(hoop);
+        signed(start) >= 0 &&
+        Math.abs(dot(horizontal(sub(start, hoop.centre)), hoopLateral(hoop))) < hoopHalfSpan(hoop);
     const passedForward = last ? last.kind === "hoop-passage" && last.direction === target.direction : startsInside;
     if (!passedForward) {
         return "no-passage";
@@ -3569,7 +5174,7 @@ export function judgeHoopRun(result: ShotResult, ball: BallId, target: HoopTarge
 - [ ] **Step 5: Run the tests to verify they pass**
 
 Run: `npx vitest run tests/engine`
-Expected: PASS (all engine tests, including Task 9's, now with observation events merged in).
+Expected: PASS: observe 9 tests, hoopRun 7, and every earlier engine test, now with observation events merged in.
 
 - [ ] **Step 6: Format, lint, commit**
 
@@ -3593,10 +5198,22 @@ git commit -m "Add out-of-court and hoop-passage observation and hoop-run verdic
 
 ### Task 11: Brute-force cross-check and public engine API
 
-Spec §9.1: "Event solver cross-checked against brute-force small-step integration of the same shot." The
-integrator below re-derives the motion from **forces** (not from `motion.ts`'s closed forms) and finds collisions
-by overlap on a fixed time grid; it shares only the impulse functions. Agreement therefore checks both the closed
-forms and the event scheduling.
+Spec §9.1: "Event solver cross-checked against brute-force small-step integration of the same shot." The integrator
+below re-derives the motion from **forces** rather than from `motion.ts`'s closed forms. It finds contacts by overlap
+on a fixed time grid and resolves every overlap with the engine's impulse functions. It also borrows `contactSlip`,
+`rollingSpin` and `motionParamsAt` (pre-flight M5). It has **no** resting-contact or pushing code. A push emerges in
+it as many tiny impulses per step: a Moreau-style time-stepping scheme that converges to the constrained motion as
+the step shrinks. It therefore checks the pushing model independently, including the 7m/5 effective inertia of a
+pushed rolling ball and the static rolling resistance of a pushed resting ball.
+
+For that to hold, a slip smaller than one step's friction must end within the step. The ball loses exactly 2/7 of
+the slip and rolls. Applying a full step of friction would reverse the slip, so the tiny slips that pushing creates
+every step would stop a pushed ball from ever moving: that defect made the original integrator useless for pushing.
+
+The engine treats a pushing contact as frictionless; the integrator applies ball–ball friction on every
+micro-impulse. The wedge scenario, whose balls slide past each other while pushing, therefore runs with ball–ball
+friction off. The straight push and the chain have no horizontal slip at the contact, so they run in the standard
+test world. Observed agreement is 0.23 mm or better in every scenario.
 
 **Files:**
 - Create: `tests/engine/support/bruteForce.ts`, `src/engine/index.ts`
@@ -3604,11 +5221,12 @@ forms and the event scheduling.
 
 **Interfaces:**
 - Consumes: everything above.
-- Produces: `src/engine/index.ts` re-exporting the public engine API: types (`BallId`, `BALL_IDS`, `BallState`,
-  `BallStates`, `MotionPhase`, `Segment`, `ShotEvent`, `ShotResult`, `World`, `Hoop`, `Cylinder`, `Lawn`,
-  `SurfaceProps`, `ContactMaterial`, `OffsetRule`, `BallParams`, `MotionParams`), `Vec3` and `vec3`,
+- Produces: `src/engine/index.ts` re-exporting the public engine API. Types: `BallId`, `BALL_IDS`, `BallState`,
+  `BallStates`, `MotionPhase`, `PushMotion`, `Segment`, `ShotEvent`, `ShotResult`, `World`, `Hoop`, `Cylinder`,
+  `Lawn`, `SurfaceProps`, `ContactMaterial`, `OffsetRule`, `BallParams`, `MotionParams`. Also `Vec3` and `vec3`,
   `simulateFreeMotion`, `ENGINE_VERSION`, `stateAtTime`, `judgeHoopRun`, `HoopTarget`, `HoopRunVerdict`,
-  `defaultWorld`, `STANDARD_GRAVITY`. Test helper `bruteForce(initial, world, dt, maxTime): Partial<Record<BallId, Vec3>>`.
+  `defaultWorld` and `STANDARD_GRAVITY`. Test helper:
+  `bruteForce(initial, world, dt, maxTime): Partial<Record<BallId, Vec3>>`.
 
 - [ ] **Step 1: Write the brute-force integrator**
 
@@ -3619,7 +5237,18 @@ forms and the event scheduling.
  * Reference integrator for cross-checking the event-driven solver. Integrates the turf forces with
  * semi-implicit Euler at a fixed step and detects contacts by overlap. Test-only and deliberately slow.
  */
-import { ZERO, add, dot, horizontal, length, normalize, scale, sub, vec3, type Vec3 } from "../../../src/engine/math/vec3";
+import {
+    ZERO,
+    add,
+    dot,
+    horizontal,
+    length,
+    normalize,
+    scale,
+    sub,
+    vec3,
+    type Vec3,
+} from "../../../src/engine/math/vec3";
 import { contactSlip, rollingSpin } from "../../../src/engine/motion";
 import { resolveBallBall, resolveBallCylinder } from "../../../src/engine/resolve";
 import { BALL_IDS, type BallId, type BallState, type BallStates, type World } from "../../../src/engine/types";
@@ -3633,17 +5262,22 @@ function step(s: BallState, world: World, dt: number): BallState {
     const slip = contactSlip(s, R);
     let velocity: Vec3;
     let angularVelocity: Vec3;
-    if (length(slip) > STOP_SPEED) {
+    if (length(slip) > STOP_SPEED && length(slip) <= 3.5 * p.slidingDecel * dt) {
+        // Friction removes slip at 7/2·a, so this slip ends within the step: the ball loses exactly 2/7 of it and
+        // rolls. (Applying a full step of friction here would reverse the slip; contact pushes create such small
+        // slips every step.)
+        // Rolling resistance acts for the step as well, stopping rather than reversing.
+        const rolled = sub(s.velocity, scale(slip, 2 / 7));
+        const d = normalize(rolled);
+        velocity = length(rolled) > p.rollingDecel * dt ? sub(rolled, scale(d, p.rollingDecel * dt)) : ZERO;
+        angularVelocity = rollingSpin(velocity, s.angularVelocity.z, R);
+    } else if (length(slip) > STOP_SPEED) {
         // Sliding: friction opposes slip; its torque spins the ball up towards rolling.
         const u = normalize(slip);
         const a = p.slidingDecel;
         velocity = sub(s.velocity, scale(u, a * dt));
         const k = (5 * a * dt) / (2 * R);
         angularVelocity = vec3(s.angularVelocity.x - k * u.y, s.angularVelocity.y + k * u.x, s.angularVelocity.z);
-        const next = { position: s.position, velocity, angularVelocity };
-        if (dot(contactSlip(next, R), slip) <= 0) {
-            angularVelocity = rollingSpin(velocity, s.angularVelocity.z, R);
-        }
     } else if (length(s.velocity) > STOP_SPEED) {
         // Rolling: uniform deceleration along the direction of travel, stopping rather than reversing.
         const d = normalize(s.velocity);
@@ -3659,7 +5293,12 @@ function step(s: BallState, world: World, dt: number): BallState {
 }
 
 /** Integrates the shot at fixed step `dt` for at most `maxTime` seconds and returns rest positions. */
-export function bruteForce(initial: BallStates, world: World, dt: number, maxTime: number): Partial<Record<BallId, Vec3>> {
+export function bruteForce(
+    initial: BallStates,
+    world: World,
+    dt: number,
+    maxTime: number,
+): Partial<Record<BallId, Vec3>> {
     const R = world.ball.radius;
     const obstacles = obstaclesOf(world);
     const ids = BALL_IDS.filter((id) => initial[id]);
@@ -3703,33 +5342,63 @@ export function bruteForce(initial: BallStates, world: World, dt: number, maxTim
 
 - [ ] **Step 2: Write the cross-check tests**
 
+"Peg glance then cannon" uses the verified positions from pre-flight I3. The last test guards every scenario against
+silently losing the contacts it is named after.
+
 `tests/engine/crossCheck.test.ts`:
 
 ```ts
 import { describe, expect, it } from "vitest";
 import { length, sub, vec3 } from "../../src/engine/math/vec3";
 import { simulateFreeMotion } from "../../src/engine/simulate";
-import type { BallId, BallStates } from "../../src/engine/types";
+import type { BallId, BallStates, World } from "../../src/engine/types";
 import { bruteForce } from "./support/bruteForce";
-import { ballAt, rollingBallAt, testWorld } from "./support/fixtures";
+import { TEST_BALL, ballAt, rollingBallAt, testWorld } from "./support/fixtures";
 
+const R = TEST_BALL.radius;
 const DT = 2e-6;
 const TOLERANCE = 1e-3;
+const C30 = Math.sqrt(3) / 2;
 
-const SCENARIOS: Record<string, BallStates> = {
-    "single ball with sidespin (curving slide)": { blue: ballAt(5, 5, vec3(2.5, 0.4, 0), vec3(25, 0, 3)) },
-    "cut rush with spin": { blue: ballAt(5, 5, vec3(2.5, 0, 0), vec3(0, 10, 5)), red: ballAt(6, 5.06) },
+/**
+ * The engine treats a pushing contact as frictionless (see push.ts), while the integrator applies ball–ball friction
+ * on every one of its many small impulses. Scenarios whose balls slide against each other while pushing therefore
+ * run with ball–ball friction switched off, so that they check the pushing mechanics rather than that
+ * simplification.
+ */
+const FRICTIONLESS: Partial<World> = { ballBall: { restitution: 0.8, friction: 0 } };
+
+const SCENARIOS: Record<string, { readonly initial: BallStates; readonly world?: Partial<World> }> = {
+    "single ball with sidespin (curving slide)": { initial: { blue: ballAt(5, 5, vec3(2.5, 0.4, 0), vec3(25, 0, 3)) } },
+    "cut rush with spin": { initial: { blue: ballAt(5, 5, vec3(2.5, 0, 0), vec3(0, 10, 5)), red: ballAt(6, 5.06) } },
     "peg glance then cannon": {
-        blue: rollingBallAt(13, 19.97, 2.2, 0),
-        red: ballAt(17, 20.3),
-        black: ballAt(17.5, 19.2),
+        initial: { blue: rollingBallAt(13, 19.94, 2.2, 0), red: ballAt(15.45, 19.69), black: ballAt(16.25, 19.59) },
+    },
+    "topspin push (resting contact)": {
+        initial: { blue: ballAt(5, 5, vec3(0, 0, 0), vec3(0, 60, 0)), red: ballAt(5 + 2 * R, 5) },
+    },
+    "rush into a chain of touching balls, then a push": {
+        initial: {
+            blue: rollingBallAt(5, 5, 2, 0),
+            red: ballAt(6, 5),
+            black: ballAt(6 + 2 * R, 5),
+            yellow: ballAt(6 + 4 * R, 5),
+        },
+    },
+    "push into two touching balls at an angle (wedge)": {
+        initial: {
+            blue: ballAt(5, 5, vec3(0, 0, 0), vec3(0, 80, 0)),
+            red: ballAt(5 + 2 * R * C30, 5 - R),
+            black: ballAt(5 + 2 * R * C30, 5 + R),
+        },
+        world: FRICTIONLESS,
     },
 };
 
 describe("event solver versus brute-force integration", () => {
-    for (const [name, initial] of Object.entries(SCENARIOS)) {
+    for (const [name, { initial, world: overrides }] of Object.entries(SCENARIOS)) {
         it(`agrees within 1 mm: ${name}`, { timeout: 120_000 }, () => {
-            const world = testWorld();
+            const world = testWorld(overrides);
             const exact = simulateFreeMotion(initial, world);
             const reference = bruteForce(initial, world, DT, exact.duration + 1);
             for (const id of Object.keys(initial) as BallId[]) {
@@ -3739,18 +5408,32 @@ describe("event solver versus brute-force integration", () => {
             }
         });
     }
+
+    it("exercises the contacts each scenario is named after", () => {
+        const kinds = (name: string): readonly string[] => {
+            const { initial, world } = SCENARIOS[name] as { initial: BallStates; world?: Partial<World> };
+            return simulateFreeMotion(initial, testWorld(world)).events.map((e) =>
+                e.kind === "ball-ball" ? `${e.balls.join("-")}${e.resting ? " resting" : ""}` : e.kind,
+            );
+        };
+        const glance = kinds("peg glance then cannon");
+        expect(glance).toContain("ball-obstacle");
+        expect(glance).toContain("blue-red");
+        expect(glance).toContain("red-black");
+        expect(kinds("topspin push (resting contact)")).toContain("blue-red resting");
+        expect(kinds("rush into a chain of touching balls, then a push")).toContain("blue-red resting");
+        const wedge = kinds("push into two touching balls at an angle (wedge)");
+        expect(wedge).toContain("blue-red resting");
+        expect(wedge).not.toContain("arrested");
+    });
 });
 ```
-
-Check the "peg glance then cannon" scenario really produces a peg contact and a ball–ball contact (inspect
-`exact.events` once); if it does not, adjust the start positions until it does, and keep the expectations
-unchanged.
 
 - [ ] **Step 3: Run the cross-check**
 
 Run: `npx vitest run tests/engine/crossCheck.test.ts`
-Expected: PASS. A failure here is a real defect in either the closed forms or event scheduling — use
-superpowers:systematic-debugging rather than loosening the tolerance.
+Expected: PASS (7 tests, about 5 s). A failure here is a real defect in the closed forms, the event scheduling or the
+resting-contact solver. Use superpowers:systematic-debugging rather than loosening the tolerance.
 
 - [ ] **Step 4: Write the failing API test**
 
@@ -3774,7 +5457,13 @@ describe("engine public API", () => {
         const world = engine.defaultWorld();
         const r = world.ball.radius;
         const result = engine.simulateFreeMotion(
-            { blue: { position: engine.vec3(5, 5, r), velocity: engine.vec3(2, 0, 0), angularVelocity: engine.vec3(0, 0, 0) } },
+            {
+                blue: {
+                    position: engine.vec3(5, 5, r),
+                    velocity: engine.vec3(2, 0, 0),
+                    angularVelocity: engine.vec3(0, 0, 0),
+                },
+            },
             world,
         );
         expect(result.aborted).toBe(false);
@@ -3809,6 +5498,7 @@ export {
     type MotionParams,
     type MotionPhase,
     type OffsetRule,
+    type PushMotion,
     type Segment,
     type ShotEvent,
     type ShotResult,
@@ -3844,7 +5534,7 @@ npm test
 npm run build
 ```
 
-Expected: every command exits 0.
+Expected: every command exits 0; `npm test` reports 144 tests across 14 files.
 
 - [ ] **Step 7: Commit**
 
@@ -3862,6 +5552,8 @@ git commit -m "Cross-check event solver against brute-force integration and expo
 
 - [ ] All CI gates pass locally (Task 11, Step 6).
 - [ ] Every value in `reference/*.json` has a source; `analogue` entries explain the analogy.
-- [ ] `grep -rn "Math\.\(sin\|cos\|exp\|pow\|log\|atan\)" src/engine` returns nothing.
-- [ ] Roadmap updated if any provisional number or interface changed during P1.
+- [ ] `npm run lint` is clean. Its determinism rule is the check that engine code uses only IEEE-exact operations; it
+      covers every non-exact `Math` function, which a grep would not (pre-flight M8).
+- [ ] Roadmap updated if any provisional number or interface changed during P1. That includes the new `push.ts`
+      module, the `resting` flag on contact events and the `arrested` event.
 - [ ] Ask the user whether to create the GitHub remote (public or private) so CI can run.

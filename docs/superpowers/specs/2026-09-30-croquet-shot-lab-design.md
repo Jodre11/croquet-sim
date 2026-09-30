@@ -53,7 +53,7 @@ reference data (§11) is sourced.
 |---|---|
 | Jump shots, half-jumps | Ball state is fully 3D; v1 detects lift-off and flags the shot rather than simulating it |
 | Hampered / glancing strokes | Contact is described generically (face orientation, contact point, head state) |
-| Cannons (three balls in contact) | Impact phase handles N bodies in contact |
+| Cannons (three balls in contact) | Impact phase handles N bodies in contact; free-motion resting contact (§5) already solves any number of balls and obstacles in contact |
 | Detailed hoop-wire contact on angled runs | Hoop contact model is isolated and replaceable |
 | Hoop stiffness (loose hoops), per-hoop width tolerance | Each hoop is its own object with its own `width` (v1: rigid, standard width) |
 | Lawn surface variability (sparse / discoloured patches) | Engine queries `lawn.surfaceAt(position)`; v1 returns a uniform value |
@@ -171,8 +171,25 @@ Small fixed-step integration of all bodies in contact (mallet, striker's ball, c
   path while spin converges), **rolling** (straight line, constant deceleration from rolling
   resistance), **stationary**.
 - Closed-form trajectories within a phase; the solver advances directly to the next event:
-  phase transition, ball–ball collision, ball–upright, ball–peg, boundary crossing.
+  phase transition, ball–ball collision, ball–upright, ball–peg, boundary crossing, and the end of a
+  push (below).
 - Collisions in free motion (e.g. a rush) are instantaneous impulses with restitution and friction.
+- Contacts closing slower than a small numerical tolerance (resting speed, 1 mm/s) are resting contacts,
+  not bounces: a ball driven into another by its own spin would otherwise rebound in an endless
+  sequence of ever-smaller bounces. The touching bodies' speeds along each line of centres are made
+  equal (perfectly inelastic), and where their accelerations would drive them together the contact
+  pushes: frictionless contact forces, never pulling, keep the bodies' relative acceleration along each
+  contact normal at zero. That is Gauss's principle of least constraint, solved exactly for any number
+  of balls and obstacles in contact.
+- While pushing, each ball's turf force is frozen at the start of the push segment: sliding friction
+  against its slip, or rolling resistance against its travel. A pushed rolling ball has effective
+  inertia 7/5·m, and a resting ball resists a push up to its static rolling resistance. Each contact
+  normal is fixed for the segment. Accelerations are therefore constant and trajectories stay
+  closed-form quadratics.
+- A push segment ends when a pushed ball's slip or velocity reaches zero along its frozen direction or
+  turns from it by more than a small angle, when a coupled contact opens by more than a small gap, or
+  when another event intervenes. The contacts are then solved again; a contact whose force would pull
+  is released.
 - Events are recorded in the `ShotResult` (collisions, hoop passages, out-of-court, rest positions).
 
 ### Hoop running
@@ -185,8 +202,20 @@ using the official Laws definition (§11). A ball that strikes an upright and re
 
 A ball is out of court when it meets the Laws criterion relative to the boundary (§11). The event is
 recorded; the ball keeps moving until it stops or reaches a fixed margin beyond the boundary, where it is
-halted (the surround is not modelled). v1 reports the out-of-court position and does not apply the Laws'
+halted (the surround is not modelled). A halted ball is out of play for the rest of the shot: other balls
+pass through its position rather than striking or pushing it. v1 reports the out-of-court position and does not apply the Laws'
 replacement on the yard line.
+
+### Free-motion limitations (v1)
+
+- Pushing contacts are frictionless. Ball–ball friction acts in impulses only, so sidespin or balls
+  sliding past each other while pushing are not rubbed. Straight pushes (the common croquet case: a
+  topspun striker's ball catching the croqueted ball) have no sideways slip at the contact and are
+  exact.
+- Within a push segment each turf-force direction and contact normal is frozen. The error is first
+  order in the direction tolerance and the opening gap, both small numerical tolerances. It is
+  negligible for straight pushes and measured in millimetres for pushes at an angle. The brute-force
+  cross-check (§9) bounds it.
 
 ### Determinism
 
@@ -267,8 +296,12 @@ Tooling: **Vitest** (unit, property and snapshot tests), **Playwright** (browser
 
 1. **Physics sanity**
    - Analytic cases: centre-struck spinless solid ball begins pure rolling at 5/7 of launch speed;
-     head-on equal-mass perfectly elastic impact stops the first ball; drop-bounce matches restitution.
-   - Invariants: energy never increases; momentum conserved in isolated ball–ball impacts.
+     head-on equal-mass perfectly elastic impact stops the first ball; drop-bounce matches restitution;
+     a ball with topspin at rest behind a resting ball pushes it with the closed-form common
+     acceleration (5·μs − 7·μr)·g/12 until its slip is gone.
+   - Invariants: energy never increases; momentum conserved in isolated ball–ball impacts; resting-
+     contact forces never pull and balance between the pair; touching balls never interpenetrate and
+     never set off an event storm.
    - Mirror symmetry of setups yields mirrored results.
    - Determinism: repeated runs on one engine are bit-identical.
    - Event solver cross-checked against brute-force small-step integration of the same shot.
