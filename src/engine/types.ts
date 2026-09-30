@@ -102,3 +102,68 @@ export interface World {
     /** Distance (m) beyond the boundary at which a ball is halted; the surround is not modelled. */
     readonly haltMargin: number;
 }
+
+/** Initial states of the balls in play; absent balls are omitted. */
+export type BallStates = Partial<Record<BallId, BallState>>;
+
+/**
+ * One closed-form piece of a ball's motion, valid for t ∈ [t0, t1]. Without `push` the ball moves freely in
+ * `phase` (motion.ts); with `push` it moves with the constant accelerations given there.
+ */
+export interface Segment {
+    readonly t0: number;
+    readonly t1: number;
+    readonly phase: MotionPhase;
+    readonly start: BallState;
+    readonly params: MotionParams;
+    readonly push?: PushMotion;
+}
+
+/** Something that happened during a shot. Times are seconds from the start of free motion. */
+export type ShotEvent =
+    | { readonly kind: "phase"; readonly t: number; readonly ball: BallId; readonly phase: MotionPhase }
+    | {
+          readonly kind: "ball-ball";
+          readonly t: number;
+          readonly balls: readonly [BallId, BallId];
+          /** True when the contact was slower than RESTING_SPEED and was resolved as resting contact. */
+          readonly resting: boolean;
+      }
+    | {
+          readonly kind: "ball-obstacle";
+          readonly t: number;
+          readonly ball: BallId;
+          readonly obstacleId: string;
+          readonly resting: boolean;
+      }
+    | { readonly kind: "halted"; readonly t: number; readonly ball: BallId }
+    | {
+          /**
+           * A resting-contact solve fell back to the nearest hold: the group's resting balls were kept at rest
+           * although no exact solution was found. `excess` bounds from above how far a held ball's load exceeded its
+           * static resistance (weight × m/s²).
+           */
+          readonly kind: "approximate-hold";
+          readonly t: number;
+          readonly balls: readonly BallId[];
+          readonly excess: number;
+      }
+    | { readonly kind: "out-of-court"; readonly t: number; readonly ball: BallId; readonly position: Vec3 }
+    | {
+          readonly kind: "hoop-passage";
+          readonly t: number;
+          readonly ball: BallId;
+          readonly hoopId: string;
+          readonly direction: 1 | -1;
+      };
+
+/** Full outcome of a shot: exact piecewise trajectories, events in time order and rest positions. */
+export interface ShotResult {
+    readonly engineVersion: string;
+    readonly duration: number;
+    readonly segments: Partial<Record<BallId, readonly Segment[]>>;
+    readonly events: readonly ShotEvent[];
+    readonly rest: Partial<Record<BallId, Vec3>>;
+    /** True if the event limit was reached before every ball stopped. */
+    readonly aborted: boolean;
+}
