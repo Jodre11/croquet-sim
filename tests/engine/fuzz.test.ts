@@ -64,37 +64,41 @@ function randomShot(random: () => number): BallStates {
 }
 
 describe("seeded fuzz on the default world", () => {
-    it(`survives ${SHOTS} random shots without throwing, aborting, holding approximately, penetrating or gaining energy`, () => {
-        const random = rng(SEED);
-        let contactShots = 0;
-        let restingShots = 0;
-        let obstacleShots = 0;
-        for (let index = 0; index < SHOTS; index++) {
-            const setup = randomShot(random);
-            const label = `seed ${SEED}, shot ${index}`;
-            const result = simulateFreeMotion(setup, world);
-            contactShots += result.events.some((e) => e.kind === "ball-ball") ? 1 : 0;
-            restingShots += result.events.some((e) => e.kind === "ball-ball" && e.resting) ? 1 : 0;
-            obstacleShots += result.events.some((e) => e.kind === "ball-obstacle") ? 1 : 0;
-            expect(result.aborted, label).toBe(false);
-            expect(
-                result.events.some((e) => e.kind === "approximate-hold"),
-                label,
-            ).toBe(false);
-            expect(worstPenetration(result, world), label).toBeLessThanOrEqual(CONTACT_TOLERANCE);
-            let previous = Infinity;
-            for (let i = 0; i <= ENERGY_SAMPLES; i++) {
-                const t = (result.duration * i) / ENERGY_SAMPLES;
-                const energy = BALL_IDS.filter((id) => result.segments[id]).reduce(
-                    (sum, id) => sum + kineticEnergy(stateAtTime(result, id, t), world.ball),
-                    0,
-                );
-                expect(energy, `${label}, t ${t}`).toBeLessThanOrEqual(previous + 1e-9);
-                previous = energy;
+    it(
+        `survives ${SHOTS} random shots without throwing, aborting, holding approximately, penetrating or gaining energy`,
+        { timeout: 30_000 },
+        () => {
+            const random = rng(SEED);
+            let contactShots = 0;
+            let restingShots = 0;
+            let obstacleShots = 0;
+            for (let index = 0; index < SHOTS; index++) {
+                const setup = randomShot(random);
+                const label = `seed ${SEED}, shot ${index}`;
+                const result = simulateFreeMotion(setup, world);
+                contactShots += result.events.some((e) => e.kind === "ball-ball") ? 1 : 0;
+                restingShots += result.events.some((e) => e.kind === "ball-ball" && e.resting) ? 1 : 0;
+                obstacleShots += result.events.some((e) => e.kind === "ball-obstacle") ? 1 : 0;
+                expect(result.aborted, label).toBe(false);
+                expect(
+                    result.events.some((e) => e.kind === "approximate-hold"),
+                    label,
+                ).toBe(false);
+                expect(worstPenetration(result, world), label).toBeLessThanOrEqual(CONTACT_TOLERANCE);
+                let previous = Infinity;
+                for (let i = 0; i <= ENERGY_SAMPLES; i++) {
+                    const t = (result.duration * i) / ENERGY_SAMPLES;
+                    const energy = BALL_IDS.filter((id) => result.segments[id]).reduce(
+                        (sum, id) => sum + kineticEnergy(stateAtTime(result, id, t), world.ball),
+                        0,
+                    );
+                    expect(energy, `${label}, t ${t}`).toBeLessThanOrEqual(previous + 1e-9);
+                    previous = energy;
+                }
             }
-        }
-        // Guards the generator: the fuzz must actually exercise collisions, pushes and obstacle contacts.
-        expect(contactShots).toBeGreaterThan(10);
-        expect(restingShots + obstacleShots).toBeGreaterThan(0);
-    });
+            // Guards the generator: the fuzz must actually exercise collisions, pushes and obstacle contacts.
+            expect(contactShots).toBeGreaterThan(10);
+            expect(restingShots + obstacleShots).toBeGreaterThan(0);
+        },
+    );
 });

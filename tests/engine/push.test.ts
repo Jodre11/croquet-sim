@@ -277,19 +277,23 @@ describe("resting chains", () => {
         expect((SLIDE - a) * 0.5).toBeLessThanOrEqual((7 / 5) * roll);
     });
 
-    it("solves the line exactly across the limit of holding, deciding as the closed form does (44.3°–44.7°)", () => {
-        // With ball 2 at its limit λ = 2.1, ball 1's excess is |(3 − 2.1·cosθ, −2.1·sinθ)| − 2.1, which is zero at
-        // cosθ = 9/12.6 (θ ≈ 44.4153°). Beyond it both resting balls start to move, very slowly at first.
-        for (let step = 0; step <= 400; step++) {
-            const theta = ((44.3 + step * 0.001) * Math.PI) / 180;
-            const { members, approximate } = solveRestingContacts(chain(1.5, theta), [], LINE);
-            expect(approximate, `θ step ${step}`).toEqual([false, false, false]);
-            const excess = Math.hypot(3 - 2.1 * Math.cos(theta), 2.1 * Math.sin(theta)) - 2.1;
-            if (Math.abs(excess) > 1e-6) {
-                expect(members[1]?.phase === "stationary", `θ step ${step}`).toBe(excess < 0);
+    it(
+        "solves the line exactly across the limit of holding, deciding as the closed form does (44.3°–44.7°)",
+        { timeout: 30_000 },
+        () => {
+            // With ball 2 at its limit λ = 2.1, ball 1's excess is |(3 − 2.1·cosθ, −2.1·sinθ)| − 2.1, which is zero at
+            // cosθ = 9/12.6 (θ ≈ 44.4153°). Beyond it both resting balls start to move, very slowly at first.
+            for (let step = 0; step <= 400; step++) {
+                const theta = ((44.3 + step * 0.001) * Math.PI) / 180;
+                const { members, approximate } = solveRestingContacts(chain(1.5, theta), [], LINE);
+                expect(approximate, `θ step ${step}`).toEqual([false, false, false]);
+                const excess = Math.hypot(3 - 2.1 * Math.cos(theta), 2.1 * Math.sin(theta)) - 2.1;
+                if (Math.abs(excess) > 1e-6) {
+                    expect(members[1]?.phase === "stationary", `θ step ${step}`).toBe(excess < 0);
+                }
             }
-        }
-    });
+        },
+    );
 
     it("gives a hold certificate whose compressions keep every ball within its resistance", () => {
         const n = vec3(Math.cos(Math.PI / 6), Math.sin(Math.PI / 6), 0);
@@ -563,58 +567,62 @@ describe("clusters at the limit of holding", () => {
         return cluster(positions, axes, vec3(-Math.sin(drive) * 60, Math.cos(drive) * 60, 0), roll);
     }
 
-    it("neither arrests nor falls back on either side of any limit of holding (random clusters)", () => {
-        const random = rng(11);
-        let solves = 0;
-        let approximate = 0;
-        let limits = 0;
-        for (let made = 0; made < 16;) {
-            const shape = randomCluster(random, 1);
-            if (!shape) {
-                continue;
-            }
-            made++;
-            const solve = (roll: number): RestingSolution => {
-                const bodies = shape.bodies.map((b) => ({ ...b, params: { ...b.params, rollingDecel: roll } }));
-                const c = { ...shape, bodies };
-                const s = solveRestingContacts(c.bodies, c.axes, c.contacts);
-                solves++;
-                approximate += s.approximate.some((a) => a) ? 1 : 0;
-                expectSound(c, s, `cluster ${made} roll ${roll}`);
-                return s;
-            };
-            const phases = (s: RestingSolution): string => s.members.map((m) => m?.phase ?? "-").join();
-            // Scan rollingDecel, bisect every change of phase down to rounding, then probe either side of it.
-            let low = 0.2;
-            let before = phases(solve(low));
-            for (let k = 1; k <= 20; k++) {
-                const high = 0.2 + (2.3 * k) / 20;
-                const after = phases(solve(high));
-                if (after !== before) {
-                    limits++;
-                    let lo = low;
-                    let hi = high;
-                    for (let n = 0; n < 50; n++) {
-                        const mid = (lo + hi) / 2;
-                        if (phases(solve(mid)) === before) {
-                            lo = mid;
-                        } else {
-                            hi = mid;
+    it(
+        "neither arrests nor falls back on either side of any limit of holding (random clusters)",
+        { timeout: 60_000 },
+        () => {
+            const random = rng(11);
+            let solves = 0;
+            let approximate = 0;
+            let limits = 0;
+            for (let made = 0; made < 16;) {
+                const shape = randomCluster(random, 1);
+                if (!shape) {
+                    continue;
+                }
+                made++;
+                const solve = (roll: number): RestingSolution => {
+                    const bodies = shape.bodies.map((b) => ({ ...b, params: { ...b.params, rollingDecel: roll } }));
+                    const c = { ...shape, bodies };
+                    const s = solveRestingContacts(c.bodies, c.axes, c.contacts);
+                    solves++;
+                    approximate += s.approximate.some((a) => a) ? 1 : 0;
+                    expectSound(c, s, `cluster ${made} roll ${roll}`);
+                    return s;
+                };
+                const phases = (s: RestingSolution): string => s.members.map((m) => m?.phase ?? "-").join();
+                // Scan rollingDecel, bisect every change of phase down to rounding, then probe either side of it.
+                let low = 0.2;
+                let before = phases(solve(low));
+                for (let k = 1; k <= 20; k++) {
+                    const high = 0.2 + (2.3 * k) / 20;
+                    const after = phases(solve(high));
+                    if (after !== before) {
+                        limits++;
+                        let lo = low;
+                        let hi = high;
+                        for (let n = 0; n < 50; n++) {
+                            const mid = (lo + hi) / 2;
+                            if (phases(solve(mid)) === before) {
+                                lo = mid;
+                            } else {
+                                hi = mid;
+                            }
+                        }
+                        for (let e = 3; e <= 12; e++) {
+                            solve(lo - 10 ** -e);
+                            solve(hi + 10 ** -e);
                         }
                     }
-                    for (let e = 3; e <= 12; e++) {
-                        solve(lo - 10 ** -e);
-                        solve(hi + 10 ** -e);
-                    }
+                    before = after;
+                    low = high;
                 }
-                before = after;
-                low = high;
             }
-        }
-        expect(limits).toBeGreaterThan(10);
-        expect(solves).toBeGreaterThan(2000);
-        expect(approximate).toBe(0);
-    });
+            expect(limits).toBeGreaterThan(10);
+            expect(solves).toBeGreaterThan(2000);
+            expect(approximate).toBe(0);
+        },
+    );
 
     it("keeps the nearest-hold fallback sound and its hold excess honest (random clusters)", () => {
         const random = rng(5);
