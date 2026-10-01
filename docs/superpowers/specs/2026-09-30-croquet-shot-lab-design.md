@@ -225,11 +225,16 @@ Small fixed-step integration of all bodies in contact (mallet, striker's ball, c
   rolling ball has effective inertia 7/5·m (static turf friction keeps it rolling, so a vertical force at
   its contact point also drives it along the contact normal), provided the static turf friction this needs
   stays within μs × load; otherwise the ball is solved as sliding. Its acceleration is
-  [Σ(P_h − P_z·e) + rolling resistance]/(7/5·m), with P_h the horizontal part of each contact force and e
-  the horizontal unit vector from the ball's centre towards that contact point: an upward force ahead of the
-  centre turns the ball back about its turf contact. A resting ball resists a push up to its static rolling
-  resistance: it stays at rest while |Σ(P_h − P_z·e)| ≤ 7/5·μr × L. Each contact normal and slip direction
-  is fixed for the segment.
+  [Σ(P_h·(1 + ê_z) − ê_h·P_z) + rolling resistance]/(7/5·m), with P_h and P_z the horizontal and upward
+  parts of each contact force and ê the unit vector from the ball's centre towards that contact point
+  (ê_h its horizontal part): the forces turn the ball about its turf contact, so an upward force ahead of
+  the centre turns it back. A resting ball resists a push up to its static rolling resistance: it stays at
+  rest while |Σ(P_h·(1 + ê_z) − ê_h·P_z)| ≤ 7/5·μr × L and the static turf friction this needs stays within
+  μs × L; otherwise it starts to roll, or to slide if rolling would need more than μs × L. Spin about the
+  vertical axis is free while a ball moves (contact friction changes it; nothing on the turf resists it) and
+  locked while a ball is at rest: the turf holds a resting ball against any torque about the vertical axis,
+  as it already drops that spin when a ball stops. Each contact normal and slip direction is fixed for the
+  segment.
   Accelerations are therefore constant and trajectories stay closed-form quadratics.
 - A push segment ends when a pushed ball's slip or velocity reaches zero along its frozen direction or
   turns from it by more than a small angle, when a slipping contact's slip does the same (a stuck contact's
@@ -286,6 +291,9 @@ replacement on the yard line.
   configuration within that slack of the limit of holding may go either way).
 - Making a resting contact's normal speeds equal (above) is a frictionless impulse: the speeds it removes
   are below the resting speed, so the friction it omits is negligible.
+- The turf's resistance to spin about the vertical axis is idealised: none while a ball moves, unlimited
+  while it is at rest. Real pivot friction on grass is finite, but far larger than the contact torques of a
+  push.
 - Within a push segment each turf-force direction and contact normal is frozen. The error is first
   order in the direction tolerance and the opening gap, both small numerical tolerances. It is
   negligible for straight pushes and measured in millimetres for pushes at an angle. The brute-force
@@ -382,9 +390,10 @@ Tooling: **Vitest** (unit, property and snapshot tests), **Playwright** (browser
      a ball in flight lands where and when the ballistic closed form says; a ball with topspin at rest
      behind a resting ball pushes it with the closed-form common acceleration
      A = (c·μs − 7/5·μr)·g / (7/5 + c), c = (1 − μ − 7/5·μ·μr) / (1 + μ·μs) (μ the ball–ball friction;
-     (5·μs − 7·μr)·g/12 when μ = 0) until its slip is gone, and then the contact sticks; a straight
-     rolling push rubs vertically and shifts each ball's turf load by the contact friction; a ball leaning
-     on another ball or an upright holds inside the friction cone and slips just outside it; a ball
+     (5·μs − 7·μr)·g/12 when μ = 0), its turf load lowered and the pushed ball's raised by μ·N, until its
+     turf slip is gone; both balls then roll together and the contact carries no force (it does not
+     stick: the contact points still slip vertically at twice the common speed); a ball leaning on
+     another ball or an upright holds inside the friction cone and slips just outside it; a ball
      struck above its equator is driven into the turf and gains the spin its impulsive turf friction
      gives it.
    - Invariants: energy never increases; momentum conserved in ball–ball impacts except for the turf's
