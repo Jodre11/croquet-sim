@@ -7,7 +7,7 @@ import { simulateFreeMotion } from "../../src/engine/simulate";
 import { BALL_IDS, type BallId, type BallState, type BallStates, type ShotResult } from "../../src/engine/types";
 import { STANDARD_GRAVITY } from "../../src/engine/world";
 import { mechanicalEnergy } from "./support/energy";
-import { TEST_BALL, airborneAt, ballAt, rollingBallAt, testWorld } from "./support/fixtures";
+import { TEST_BALL, airborneAt, ballAt, rollingBallAt, testHoop, testWorld } from "./support/fixtures";
 import { worstPenetration } from "./support/penetration";
 
 const R = TEST_BALL.radius;
@@ -238,5 +238,42 @@ describe("lift in collisions", () => {
             expect(e).toBeLessThanOrEqual(previous + 1e-9);
             previous = e;
         }
+    });
+});
+
+describe("jump flag", () => {
+    it("flags a ball passing over another", () => {
+        const lob = simulateFreeMotion(
+            { blue: airborneAt(5, 5, R, vec3(2, 0, 2.2), vec3(0, 40, 0)), red: ballAt(5.4, 5) },
+            testWorld(),
+        );
+        expect(lob.events.filter((e) => e.kind === "jump")).toEqual([
+            expect.objectContaining({ kind: "jump", ball: "blue", over: "red" }),
+        ]);
+        expect(lob.aborted).toBe(false);
+    });
+
+    it("flags a ball whose top reaches a crown's underside, when it does", () => {
+        const world = testWorld({ hoops: [testHoop("1", 10, 10)] });
+        const vz = 2.5;
+        const result = simulateFreeMotion({ blue: airborneAt(5, 5, R, vec3(1, 0, vz)) }, world);
+        const jump = result.events.find((e) => e.kind === "jump");
+        // z(t) + R = crown: R + vz·t − g·t²/2 + R = 0.29.
+        const rise = 0.29 - 2 * R;
+        const t = (vz - Math.sqrt(vz * vz - 2 * G * rise)) / G;
+        expect(jump).toEqual({ kind: "jump", t: expect.closeTo(t, 9), ball: "blue", over: "crown" });
+    });
+});
+
+describe("hoops in flight", () => {
+    const hoopWorld = testWorld({ hoops: [testHoop("1", 10, 20)] });
+
+    it("records a passage made in a low hop, but not one over the crown", () => {
+        const low = simulateFreeMotion({ blue: airborneAt(10, 19.8, R + 0.005, vec3(0, 2, 0)) }, hoopWorld);
+        expect(low.events.some((e) => e.kind === "hoop-passage" && e.hoopId === "1")).toBe(true);
+        // Crossing the plane 0.3 s later, its centre is 0.459 m above its resting height: far above the crown.
+        const over = simulateFreeMotion({ blue: airborneAt(10, 19.4, R + 0.3, vec3(0, 2, 2)) }, hoopWorld);
+        expect(over.events.some((e) => e.kind === "hoop-passage")).toBe(false);
+        expect(over.events.some((e) => e.kind === "ball-obstacle")).toBe(false);
     });
 });

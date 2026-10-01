@@ -57,6 +57,9 @@ const SCENARIOS: Record<string, { readonly initial: BallStates; readonly world?:
     "hop off the peg": {
         initial: { blue: rollingBallAt(14, 20.01, 2.5, 0) },
     },
+    "lob over a ball": {
+        initial: { blue: airborneAt(5, 5, R, vec3(2, 0, 2.2), vec3(0, 40, 0)), red: ballAt(5.4, 5) },
+    },
 };
 
 describe("event solver versus brute-force integration", () => {
@@ -99,5 +102,6 @@ describe("event solver versus brute-force integration", () => {
         const peg = kinds("hop off the peg");
         expect(peg).toContain("ball-obstacle");
         expect(peg).toContain("landing");
+        expect(kinds("lob over a ball")).toContain("jump");
     });
 });
