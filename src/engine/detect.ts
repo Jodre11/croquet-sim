@@ -3,11 +3,15 @@
  * two balls (or a ball and a vertical cylinder) is a quartic in time; its earliest approaching root is the contact
  * time. Boundary distances are quadratics.
  *
+ * The functions here measure offsets as given. Ball–ball contact is between spheres, so callers pass full 3D offsets;
+ * a ball touches a vertical cylinder at the same horizontal distance whatever its height, so callers pass the
+ * horizontal projection (`horizontal`) of every offset to a cylinder's axis.
+ *
  * Bodies that are already touching are not handled here: whether they collide, push or separate at t = 0 is decided
  * by the caller from `approachSpeed` and the resting-contact solver (push.ts), which resolution uses too.
  */
 import { realRootsInInterval } from "./math/poly";
-import { dot, horizontal, length, type Vec3 } from "./math/vec3";
+import { dot, length, type Vec3 } from "./math/vec3";
 import type { Trajectory } from "./motion";
 
 /** Surfaces closer than this (m) are treated as touching. */
@@ -15,7 +19,7 @@ export const CONTACT_TOLERANCE = 1e-9;
 
 /** Returns true when two bodies whose centres are `offset` apart are within CONTACT_TOLERANCE of `distance`. */
 export function isTouching(offset: Vec3, distance: number): boolean {
-    return length(horizontal(offset)) - distance <= CONTACT_TOLERANCE;
+    return length(offset) - distance <= CONTACT_TOLERANCE;
 }
 
 /**
@@ -25,13 +29,12 @@ export function isTouching(offset: Vec3, distance: number): boolean {
  * the same states, so they can never disagree about whether a touching pair is approaching.
  */
 export function approachSpeed(offset: Vec3, relativeVelocity: Vec3): number {
-    const d = horizontal(offset);
-    const l = length(d);
-    return l === 0 ? 0 : (0 - dot(d, horizontal(relativeVelocity))) / l;
+    const l = length(offset);
+    return l === 0 ? 0 : (0 - dot(offset, relativeVelocity)) / l;
 }
 
 /**
- * Returns the earliest t in (0, horizon] at which the horizontal relative trajectory a + b·t + c·t² comes within
+ * Returns the earliest t in (0, horizon] at which the relative trajectory a + b·t + c·t² comes within
  * `distance` of the origin while the separation is decreasing, or null if it does not. Bodies that start touching
  * report either a new contact after the gap has opened beyond CONTACT_TOLERANCE, or the moment they would overlap by
  * more than CONTACT_TOLERANCE (a safety net: the caller decides at t = 0 and normally prevents that). Throws
@@ -41,9 +44,9 @@ export function approachTime(a: Vec3, b: Vec3, c: Vec3, distance: number, horizo
     if (!Number.isFinite(horizon)) {
         throw new RangeError("approachTime needs a finite horizon");
     }
-    const A = horizontal(a);
-    const B = horizontal(b);
-    const C = horizontal(c);
+    const A = a;
+    const B = b;
+    const C = c;
     // f(t) = |A + B·t + C·t²|² − distance², expanded in ascending powers of t.
     const f0 = dot(A, A) - distance * distance;
     const f1 = 2 * dot(A, B);

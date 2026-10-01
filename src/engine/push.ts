@@ -345,11 +345,12 @@ function solveContacts(
     contacts: readonly RestingContact[],
     nearestHold: boolean,
 ): RestingSolution {
-    const centreOf = (c: RestingContact): Vec3 =>
-        c.fixed ? (axes[c.b] as Vec3) : (bodies[c.b] as ContactBody).state.position;
-    const normals = contacts.map((c) =>
-        normalize(horizontal(sub(centreOf(c), (bodies[c.a] as ContactBody).state.position))),
-    );
+    // Offset from ball a's centre to the body it touches: 3D for a ball, horizontal for an obstacle's axis.
+    const towards = (c: RestingContact): Vec3 => {
+        const a = (bodies[c.a] as ContactBody).state.position;
+        return c.fixed ? horizontal(sub(axes[c.b] as Vec3, a)) : sub((bodies[c.b] as ContactBody).state.position, a);
+    };
+    const normals = contacts.map((c) => normalize(towards(c)));
     // Row k of J for body i: +n on the body n points to, −n on the other.
     const jacobian = (k: number, i: number): Vec3 => {
         const c = contacts[k] as RestingContact;
@@ -367,7 +368,7 @@ function solveContacts(
         const c = contacts[k] as RestingContact;
         const a = states[c.a] as BallState;
         const velocity = c.fixed ? ZERO : (states[c.b] as BallState).velocity;
-        const closing = approachSpeed(sub(a.position, centreOf(c)), sub(a.velocity, velocity));
+        const closing = approachSpeed(scale(towards(c), -1), sub(a.velocity, velocity));
         return closing > SPEED_EPSILON || closingRate(acceleration, k) > ACCELERATION_EPSILON;
     };
 

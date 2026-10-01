@@ -20,7 +20,7 @@ import {
     firstNonNegative,
     isTouching,
 } from "./detect";
-import { ZERO, dot, horizontal, length, normalize, sub, vec3, type Vec3 } from "./math/vec3";
+import { ZERO, dot, horizontal, length, normalize, scale, sub, vec3, type Vec3 } from "./math/vec3";
 import {
     SPEED_EPSILON,
     advance,
@@ -262,7 +262,8 @@ function restingComponent(sim: Simulation, seeds: readonly Track[], now: number)
             }
         }
         for (const o of sim.obstacles) {
-            if (resting(sub(sa.position, o.centre), sa.velocity, R + o.radius, coupledObstacle(sim, a, o))) {
+            const offset = horizontal(sub(sa.position, o.centre));
+            if (resting(offset, sa.velocity, R + o.radius, coupledObstacle(sim, a, o))) {
                 obstacles.push(o);
                 contacts.push({ a: i, b: obstacles.length - 1, fixed: true });
             }
@@ -322,20 +323,17 @@ function earlier(best: Candidate | null, candidate: Candidate): Candidate {
 
 /**
  * |offset|² − (distance + SEPARATION_TOLERANCE)², which is negative while a coupled contact is still closed. The
- * separation monitor and the resting-contact component both use this one expression, so they cannot disagree.
+ * separation monitor and the resting-contact component both use this one expression, so they cannot disagree. Like
+ * detect.ts, it measures `offset` as given: 3D between balls, horizontal to an obstacle's axis.
  */
 function separationGap(offset: Vec3, distance: number): number {
-    const A = horizontal(offset);
     const band = 2 * distance * SEPARATION_TOLERANCE + SEPARATION_TOLERANCE * SEPARATION_TOLERANCE;
-    return dot(A, A) - distance * distance - band;
+    return dot(offset, offset) - distance * distance - band;
 }
 
 /** Earliest time a coupled contact opens beyond SEPARATION_TOLERANCE, for relative trajectory a + b·t + c·t². */
 function separationTime(a: Vec3, b: Vec3, c: Vec3, distance: number, horizon: number): number | null {
-    const A = horizontal(a);
-    const B = horizontal(b);
-    const C = horizontal(c);
-    const f = [separationGap(A, distance), 2 * dot(A, B), dot(B, B) + 2 * dot(A, C), 2 * dot(B, C), dot(C, C)];
+    const f = [separationGap(a, distance), 2 * dot(a, b), dot(b, b) + 2 * dot(a, c), 2 * dot(b, c), dot(c, c)];
     return firstNonNegative(f, horizon);
 }
 
@@ -350,21 +348,16 @@ function accelerationOf(track: Track, state: BallState): Vec3 {
 
 /**
  * Decides whether touching bodies must be resolved now: they are approaching, or they rest against each other and
- * their accelerations drive them together. `other` is the second body's centre and acceleration (an obstacle's is
- * ZERO). Resolution applies the resting-contact solver, whose outcome never leaves an uncoupled resting contact
- * driven together, so a contact resolved at t = 0 does not trigger again.
+ * their accelerations drive them together. `towards` is the offset from the first body's centre to the second's (3D
+ * for a ball, horizontal for an obstacle's axis) and `otherAcceleration` the second body's (an obstacle's is ZERO).
+ * Resolution applies the resting-contact solver, whose outcome never leaves an uncoupled resting contact driven
+ * together, so a contact resolved at t = 0 does not trigger again.
  */
-function contactNow(
-    position: Vec3,
-    acceleration: Vec3,
-    otherPosition: Vec3,
-    otherAcceleration: Vec3,
-    closing: number,
-): boolean {
+function contactNow(towards: Vec3, acceleration: Vec3, otherAcceleration: Vec3, closing: number): boolean {
     if (closing > SPEED_EPSILON) {
         return true;
     }
-    const normal = normalize(horizontal(sub(otherPosition, position)));
+    const normal = normalize(towards);
     return closing >= -RESTING_SPEED && dot(sub(acceleration, otherAcceleration), normal) > ACCELERATION_EPSILON;
 }
 
@@ -405,7 +398,7 @@ function findNextEvent(sim: Simulation, now: number): Candidate | null {
             const sb = states.get(b) as BallState;
             const offset = sub(sa.position, sb.position);
             const closing = approachSpeed(offset, sub(sa.velocity, sb.velocity));
-            const driven = contactNow(sa.position, accelerationOf(a, sa), sb.position, accelerationOf(b, sb), closing);
+            const driven = contactNow(scale(offset, -1), accelerationOf(a, sa), accelerationOf(b, sb), closing);
             if (isTouching(offset, 2 * R) && driven) {
                 best = earlier(best, { time: now, kind: "ball-ball", a, b });
                 continue;
@@ -422,21 +415,24 @@ function findNextEvent(sim: Simulation, now: number): Candidate | null {
         const horizon = (ends.get(track) as number) - now;
         for (const obstacle of obstacles) {
             const distance = R + obstacle.radius;
-            const offset = sub(p.c0, obstacle.centre);
+            // A vertical cylinder: measured on the horizontal projection, at any height.
+            const offset = horizontal(sub(p.c0, obstacle.centre));
+            const c1 = horizontal(p.c1);
+            const c2 = horizontal(p.c2);
             if (coupledObstacle(sim, track, obstacle)) {
-                const dt = separationTime(offset, p.c1, p.c2, distance, horizon);
+                const dt = separationTime(offset, c1, c2, distance, horizon);
                 if (dt !== null) {
                     best = earlier(best, { time: now + dt, kind: "regroup", track });
                 }
                 continue;
             }
             const closing = approachSpeed(offset, s.velocity);
-            const driven = contactNow(s.position, accelerationOf(track, s), obstacle.centre, ZERO, closing);
+            const driven = contactNow(scale(offset, -1), accelerationOf(track, s), ZERO, closing);
             if (isTouching(offset, distance) && driven) {
                 best = earlier(best, { time: now, kind: "obstacle", track, obstacle });
                 continue;
             }
-            const dt = approachTime(offset, p.c1, p.c2, distance, horizon);
+            const dt = approachTime(offset, c1, c2, distance, horizon);
             if (dt !== null) {
                 best = earlier(best, { time: now + dt, kind: "obstacle", track, obstacle });
             }
@@ -512,7 +508,8 @@ export function simulateFreeMotion(
             case "obstacle": {
                 const { track, obstacle } = next;
                 const s = stateAt(track, now);
-                const resting = approachSpeed(sub(s.position, obstacle.centre), s.velocity) <= RESTING_SPEED;
+                const offset = horizontal(sub(s.position, obstacle.centre));
+                const resting = approachSpeed(offset, s.velocity) <= RESTING_SPEED;
                 sim.events.push({ kind: "ball-obstacle", t: now, ball: track.id, obstacleId: obstacle.id, resting });
                 if (resting) {
                     settle(sim, [track], now);

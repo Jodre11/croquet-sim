@@ -74,6 +74,14 @@ describe("approachTime", () => {
         expect(Math.hypot(x, y)).toBeCloseTo(TWO_R, 9);
     });
 
+    it("measures in 3D: a ball falling on another meets it when the centres are 2R apart", () => {
+        // a is 0.05 m to the side of b and 0.3 m higher, falling from rest: z(t) = 0.3 − g·t²/2.
+        const g = 9.80665;
+        const t = approachTime(vec3(0.05, 0, 0.3), ZERO, vec3(0, 0, -0.5 * g), TWO_R, 1);
+        const height = Math.sqrt(TWO_R * TWO_R - 0.05 * 0.05);
+        expect(t).toBeCloseTo(Math.sqrt((2 * (0.3 - height)) / g), 9);
+    });
+
     it("rejects a non-finite horizon", () => {
         expect(() => approachTime(vec3(-1, 0, 0), vec3(1, 0, 0), ZERO, TWO_R, Infinity)).toThrow(RangeError);
     });
@@ -91,6 +99,12 @@ describe("approachSpeed and isTouching", () => {
         expect(isTouching(vec3(TWO_R + CONTACT_TOLERANCE / 2, 0, 0), TWO_R)).toBe(true);
         expect(isTouching(vec3(TWO_R + 2 * CONTACT_TOLERANCE, 0, 0), TWO_R)).toBe(false);
         expect(isTouching(vec3(TWO_R - 0.01, 0, 0), TWO_R)).toBe(true);
+    });
+
+    it("measures offsets as given, in 3D", () => {
+        // Horizontally only 0.6·2R apart, but 3D distance above 2R: not touching.
+        expect(isTouching(vec3(TWO_R * 0.6, 0, TWO_R), TWO_R)).toBe(false);
+        expect(approachSpeed(vec3(0, 0, TWO_R), vec3(0, 0, -1))).toBe(1);
     });
 });
 

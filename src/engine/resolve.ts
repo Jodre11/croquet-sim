@@ -61,7 +61,7 @@ export function resolveBallBall(
  * through `axis`. Returns the input unchanged if `approachSpeed` says the ball is not approaching the cylinder.
  */
 export function resolveBallCylinder(s: BallState, axis: Vec3, ball: BallParams, material: ContactMaterial): BallState {
-    const approach = approachSpeed(sub(s.position, axis), s.velocity);
+    const approach = approachSpeed(horizontal(sub(s.position, axis)), s.velocity);
     if (approach <= 0) {
         return s;
     }
