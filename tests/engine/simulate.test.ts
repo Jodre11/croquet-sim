@@ -5,9 +5,9 @@ import { CONTACT_TOLERANCE } from "../../src/engine/detect";
 import { simulateFreeMotion } from "../../src/engine/simulate";
 import { BALL_IDS, type BallId, type BallState, type BallStates, type ShotResult } from "../../src/engine/types";
 import { STANDARD_GRAVITY } from "../../src/engine/world";
-import { kineticEnergy } from "./support/energy";
+import { mechanicalEnergy } from "./support/energy";
 import { worstPenetration } from "./support/penetration";
-import { TEST_BALL, ballAt, rollingBallAt, testHoop, testWorld } from "./support/fixtures";
+import { TEST_BALL, airborneAt, ballAt, rollingBallAt, testHoop, testWorld } from "./support/fixtures";
 
 const R = TEST_BALL.radius;
 const SLIDE = 0.3 * STANDARD_GRAVITY;
@@ -15,7 +15,7 @@ const ROLL = 0.05 * STANDARD_GRAVITY;
 
 function totalEnergy(result: ShotResult, t: number): number {
     return BALL_IDS.filter((id) => result.segments[id]).reduce(
-        (sum, id) => sum + kineticEnergy(stateAtTime(result, id, t), TEST_BALL),
+        (sum, id) => sum + mechanicalEnergy(stateAtTime(result, id, t), TEST_BALL, STANDARD_GRAVITY),
         0,
     );
 }
@@ -58,7 +58,9 @@ describe("single ball", () => {
 
 describe("collisions", () => {
     it("transfers (1 + e)/2 of the striker's contact speed in a head-on rush", () => {
-        const world = testWorld();
+        // Without ball–ball friction: the striker's topspin would otherwise rub red down into the turf, whose
+        // impulsive friction then takes some of red's speed (see the lift tests).
+        const world = testWorld({ ballBall: { restitution: 0.8, friction: 0 } });
         const result = simulateFreeMotion({ blue: rollingBallAt(5, 5, 2, 0), red: ballAt(6, 5) }, world);
         const hit = result.events.find((e) => e.kind === "ball-ball");
         expect(hit).toBeDefined();
@@ -311,10 +313,15 @@ describe("limits and validation", () => {
         expect(() => simulateFreeMotion({ blue: ballAt(15.03, 20) }, testWorld())).toThrow(RangeError);
     });
 
-    it("rejects a ball not resting on the lawn", () => {
-        const lifted = { ...ballAt(5, 5), position: vec3(5, 5, R + 0.01) };
-        expect(() => simulateFreeMotion({ blue: lifted }, testWorld())).toThrow(RangeError);
-        const rising = ballAt(5, 5, vec3(1, 0, 0.5));
-        expect(() => simulateFreeMotion({ blue: rising }, testWorld())).toThrow(RangeError);
+    it("rejects a ball below the lawn plane", () => {
+        const sunk = { ...ballAt(5, 5), position: vec3(5, 5, R - 0.01) };
+        expect(() => simulateFreeMotion({ blue: sunk }, testWorld())).toThrow(/below the lawn plane/);
+    });
+
+    it("measures overlap in 3D: a ball in flight may start above another, but not inside it", () => {
+        const over = airborneAt(5, 5, 5 * R, vec3(3, 0, 0));
+        expect(() => simulateFreeMotion({ blue: ballAt(5, 5), red: over }, testWorld())).not.toThrow();
+        const inside = airborneAt(5 + R, 5, 2 * R);
+        expect(() => simulateFreeMotion({ blue: ballAt(5, 5), red: inside }, testWorld())).toThrow(/overlap/);
     });
 });

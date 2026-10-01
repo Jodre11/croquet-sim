@@ -11,6 +11,10 @@
  * decides which of them push, and those are coupled until one of the pushed balls changes phase, the contact opens,
  * or another contact intervenes. For touching bodies, the decision at t = 0 uses `approachSpeed` and the same solver
  * that resolution uses, so detection and resolution always agree.
+ *
+ * A ball in flight follows its ballistic path until it lands (an impulse with the turf, resolve.ts) or strikes
+ * something. Ball–ball contact is between spheres, measured in 3D; contact with an upright or the peg, the boundary and
+ * the halt margin are measured on the horizontal projection of the centre.
  */
 import {
     CONTACT_TOLERANCE,
@@ -20,7 +24,7 @@ import {
     firstNonNegative,
     isTouching,
 } from "./detect";
-import { ZERO, dot, horizontal, length, normalize, sub, vec3, type Vec3 } from "./math/vec3";
+import { ZERO, dot, horizontal, length, normalize, scale, sub, vec3, type Vec3 } from "./math/vec3";
 import {
     SPEED_EPSILON,
     advance,
@@ -44,7 +48,7 @@ import {
     type RestingContact,
     type RestingSolution,
 } from "./push";
-import { resolveBallBall, resolveBallCylinder } from "./resolve";
+import { SETTLE_SPEED, resolveBallBall, resolveBallCylinder, resolveLanding, type TurfAt } from "./resolve";
 import {
     BALL_IDS,
     type BallId,
@@ -59,15 +63,15 @@ import {
     type ShotResult,
     type World,
 } from "./types";
-import { motionParamsAt, obstaclesOf, validateWorld } from "./world";
+import { motionParamsAt, obstaclesOf, turfAt, validateWorld } from "./world";
 
 /** Version of the physics; recorded in every result and share link. */
-export const ENGINE_VERSION = "0.1.0";
+export const ENGINE_VERSION = "0.2.0";
 
 /** Event budget per shot. Reaching it marks the result aborted rather than looping forever. */
 export const DEFAULT_MAX_EVENTS = 10_000;
 
-/** Tolerance (m, m/s) for accepting an initial state as resting on the lawn plane. */
+/** Tolerance (m) for accepting an initial centre height as on the lawn plane. */
 const PLANE_TOLERANCE = 1e-9;
 
 interface Track {
@@ -98,6 +102,7 @@ interface Simulation {
     readonly tracks: Track[];
     couplings: Coupling[];
     readonly events: ShotEvent[];
+    readonly turf: TurfAt;
 }
 
 type Candidate =
@@ -105,7 +110,8 @@ type Candidate =
     | { readonly time: number; readonly kind: "regroup"; readonly track: Track }
     | { readonly time: number; readonly kind: "ball-ball"; readonly a: Track; readonly b: Track }
     | { readonly time: number; readonly kind: "obstacle"; readonly track: Track; readonly obstacle: Cylinder }
-    | { readonly time: number; readonly kind: "halt"; readonly track: Track };
+    | { readonly time: number; readonly kind: "halt"; readonly track: Track }
+    | { readonly time: number; readonly kind: "landing"; readonly track: Track };
 
 function stateAt(track: Track, t: number): BallState {
     const local = Math.min(t - track.t0, track.duration);
@@ -119,18 +125,39 @@ function pathAt(track: Track, t: number): Trajectory {
     return track.push ? pushedTrajectory(s, track.push) : trajectory(s, track.phase, track.params);
 }
 
-function moving(track: Track): boolean {
-    return !track.inert && track.phase !== "stationary";
+/** True when the ball is perched: held still in the air by its contacts (push.ts snaps such a ball to rest). */
+function perched(track: Track): boolean {
+    return (
+        track.phase === "airborne" &&
+        track.push !== null &&
+        length(track.start.velocity) === 0 &&
+        length(track.push.acceleration) === 0
+    );
 }
 
-/** Places the ball exactly on the lawn plane, rejecting states that are not (nearly) there. */
-function onLawn(id: BallId, s: BallState, radius: number): BallState {
-    if (Math.abs(s.position.z - radius) > PLANE_TOLERANCE || Math.abs(s.velocity.z) > PLANE_TOLERANCE) {
-        throw new RangeError(`ball ${id} is not resting on the lawn plane`);
+/**
+ * True when the ball's motion can produce events: not inert, not stationary and not perched. A perched ball is
+ * airborne but held exactly still, so it counts as not moving until a regroup releases it.
+ */
+function moving(track: Track): boolean {
+    return !track.inert && track.phase !== "stationary" && !perched(track);
+}
+
+/**
+ * Checks an initial state and places it exactly: a ball within PLANE_TOLERANCE of the lawn plane is put on it, and
+ * keeps an upward vertical velocity of at least SETTLE_SPEED (it starts airborne) or otherwise loses its vertical
+ * velocity; a ball higher up starts airborne as it is. A ball below the plane is rejected.
+ */
+function initialState(id: BallId, s: BallState, radius: number): BallState {
+    if (s.position.z < radius - PLANE_TOLERANCE) {
+        throw new RangeError(`ball ${id} is below the lawn plane`);
+    }
+    if (s.position.z > radius + PLANE_TOLERANCE) {
+        return s;
     }
     return {
         position: vec3(s.position.x, s.position.y, radius),
-        velocity: horizontal(s.velocity),
+        velocity: s.velocity.z >= SETTLE_SPEED ? s.velocity : horizontal(s.velocity),
         angularVelocity: s.angularVelocity,
     };
 }
@@ -140,7 +167,7 @@ function assertNoOverlap(tracks: readonly Track[], obstacles: readonly Cylinder[
         const a = tracks[i] as Track;
         for (let j = i + 1; j < tracks.length; j++) {
             const b = tracks[j] as Track;
-            const gap = length(horizontal(sub(a.start.position, b.start.position))) - 2 * radius;
+            const gap = length(sub(a.start.position, b.start.position)) - 2 * radius;
             if (gap < -CONTACT_TOLERANCE) {
                 throw new RangeError(`balls ${a.id} and ${b.id} overlap`);
             }
@@ -262,7 +289,8 @@ function restingComponent(sim: Simulation, seeds: readonly Track[], now: number)
             }
         }
         for (const o of sim.obstacles) {
-            if (resting(sub(sa.position, o.centre), sa.velocity, R + o.radius, coupledObstacle(sim, a, o))) {
+            const offset = horizontal(sub(sa.position, o.centre));
+            if (resting(offset, sa.velocity, R + o.radius, coupledObstacle(sim, a, o))) {
                 obstacles.push(o);
                 contacts.push({ a: i, b: obstacles.length - 1, fixed: true });
             }
@@ -322,22 +350,93 @@ function earlier(best: Candidate | null, candidate: Candidate): Candidate {
 
 /**
  * |offset|² − (distance + SEPARATION_TOLERANCE)², which is negative while a coupled contact is still closed. The
- * separation monitor and the resting-contact component both use this one expression, so they cannot disagree.
+ * separation monitor and the resting-contact component both use this one expression, so they cannot disagree. Like
+ * detect.ts, it measures `offset` as given: 3D between balls, horizontal to an obstacle's axis.
  */
 function separationGap(offset: Vec3, distance: number): number {
-    const A = horizontal(offset);
     const band = 2 * distance * SEPARATION_TOLERANCE + SEPARATION_TOLERANCE * SEPARATION_TOLERANCE;
-    return dot(A, A) - distance * distance - band;
+    return dot(offset, offset) - distance * distance - band;
 }
 
 /** Earliest time a coupled contact opens beyond SEPARATION_TOLERANCE, for relative trajectory a + b·t + c·t². */
 function separationTime(a: Vec3, b: Vec3, c: Vec3, distance: number, horizon: number): number | null {
-    const A = horizontal(a);
-    const B = horizontal(b);
-    const C = horizontal(c);
-    const f = [separationGap(A, distance), 2 * dot(A, B), dot(B, B) + 2 * dot(A, C), 2 * dot(B, C), dot(C, C)];
-    return firstNonNegative(f, horizon);
+    const f = [separationGap(a, distance), 2 * dot(a, b), dot(b, b) + 2 * dot(a, c), 2 * dot(b, c), dot(c, c)];
+    if (Number.isFinite(horizon)) {
+        return firstNonNegative(f, horizon);
+    }
+    // No horizon: every real root of f lies within Cauchy's bound 1 + max|fᵢ/fₙ|, with fₙ the highest non-zero
+    // coefficient, so searching up to it finds the first one.
+    let n = f.length - 1;
+    while (n > 0 && f[n] === 0) {
+        n--;
+    }
+    if (n === 0) {
+        return firstNonNegative(f, 0);
+    }
+    let bound = 0;
+    for (let i = 0; i < n; i++) {
+        bound = Math.max(bound, Math.abs((f[i] as number) / (f[n] as number)));
+    }
+    return firstNonNegative(f, 1 + bound);
 }
+
+/**
+ * Returns when the earliest segment of the track's coupled group ends, or, if none ends by itself, when the first of
+ * its couplings opens. A moving ball in flight whose push has no vertical acceleration (a ball sliding off the exact
+ * top of another has a vertical normal, so exactly zero acceleration) never lands, so its segment has no end of its
+ * own; but the coupled pair separates in finite time, which is where its group regroups anyway. Every search for
+ * the group's next event needs a finite horizon, so this is the one it is given.
+ */
+function boundedGroupEnd(sim: Simulation, track: Track, now: number): number {
+    const own = groupEnd(sim, track);
+    if (Number.isFinite(own)) {
+        return own;
+    }
+    // Assumes some coupling in the group opens: zero push acceleration with nonzero velocity on a static or
+    // decelerating support always separates, as the relative distance grows quadratically. If none ever did, this
+    // would return Infinity and approachTime would throw instead of the shot being marked aborted.
+    const group = groupOf(sim, [track]);
+    let end = own;
+    for (const c of sim.couplings) {
+        if (!group.includes(c.a)) {
+            continue;
+        }
+        const pa = pathAt(c.a, now);
+        let dt: number | null;
+        if (c.b) {
+            const pb = pathAt(c.b, now);
+            dt = separationTime(
+                sub(pa.c0, pb.c0),
+                sub(pa.c1, pb.c1),
+                sub(pa.c2, pb.c2),
+                2 * sim.world.ball.radius,
+                Infinity,
+            );
+        } else {
+            const o = c.obstacle as Cylinder;
+            dt = separationTime(
+                horizontal(sub(pa.c0, o.centre)),
+                horizontal(pa.c1),
+                horizontal(pa.c2),
+                sim.world.ball.radius + o.radius,
+                Infinity,
+            );
+        }
+        if (dt !== null) {
+            end = Math.min(end, now + dt + HORIZON_PADDING * Math.max(dt, now));
+        }
+    }
+    return end;
+}
+
+/**
+ * Relative amount by which boundedGroupEnd pads the separation time it bounds a group with. The root finder returns
+ * the lower end of its final bracket, where the gap polynomial is still marginally negative, so a search that stops
+ * exactly there would see no sign change and miss the separation. A numerical tolerance, not a physical one: it only
+ * needs to exceed the bracket (a few ulps) by enough that the polynomial is positive at the padded end; the
+ * separation is then found by the ordinary search, a negligible time before the bound.
+ */
+const HORIZON_PADDING = 1e-9;
 
 /**
  * The acceleration of a ball as the resting-contact solver sees it: its push, or its free turf acceleration. Using
@@ -350,21 +449,16 @@ function accelerationOf(track: Track, state: BallState): Vec3 {
 
 /**
  * Decides whether touching bodies must be resolved now: they are approaching, or they rest against each other and
- * their accelerations drive them together. `other` is the second body's centre and acceleration (an obstacle's is
- * ZERO). Resolution applies the resting-contact solver, whose outcome never leaves an uncoupled resting contact
- * driven together, so a contact resolved at t = 0 does not trigger again.
+ * their accelerations drive them together. `towards` is the offset from the first body's centre to the second's (3D
+ * for a ball, horizontal for an obstacle's axis) and `otherAcceleration` the second body's (an obstacle's is ZERO).
+ * Resolution applies the resting-contact solver, whose outcome never leaves an uncoupled resting contact driven
+ * together, so a contact resolved at t = 0 does not trigger again.
  */
-function contactNow(
-    position: Vec3,
-    acceleration: Vec3,
-    otherPosition: Vec3,
-    otherAcceleration: Vec3,
-    closing: number,
-): boolean {
+function contactNow(towards: Vec3, acceleration: Vec3, otherAcceleration: Vec3, closing: number): boolean {
     if (closing > SPEED_EPSILON) {
         return true;
     }
-    const normal = normalize(horizontal(sub(otherPosition, position)));
+    const normal = normalize(towards);
     return closing >= -RESTING_SPEED && dot(sub(acceleration, otherAcceleration), normal) > ACCELERATION_EPSILON;
 }
 
@@ -374,12 +468,13 @@ function findNextEvent(sim: Simulation, now: number): Candidate | null {
     const live = sim.tracks.filter((t) => !t.inert);
     const states = new Map(live.map((t) => [t, stateAt(t, now)]));
     const paths = new Map(live.map((t) => [t, pathAt(t, now)]));
-    const ends = new Map(live.map((t) => [t, groupEnd(sim, t)]));
+    const ends = new Map(live.map((t) => [t, boundedGroupEnd(sim, t, now)]));
     let best: Candidate | null = null;
 
     for (const track of live) {
         const end = track.t0 + track.duration;
-        if (moving(track) && Number.isFinite(end)) {
+        // Landings are gathered last (below): simultaneous impulses go ball–ball, then obstacles, then landings.
+        if (moving(track) && Number.isFinite(end) && track.phase !== "airborne") {
             best = earlier(best, { time: end, kind: track.push ? "regroup" : "transition", track });
         }
     }
@@ -405,7 +500,7 @@ function findNextEvent(sim: Simulation, now: number): Candidate | null {
             const sb = states.get(b) as BallState;
             const offset = sub(sa.position, sb.position);
             const closing = approachSpeed(offset, sub(sa.velocity, sb.velocity));
-            const driven = contactNow(sa.position, accelerationOf(a, sa), sb.position, accelerationOf(b, sb), closing);
+            const driven = contactNow(scale(offset, -1), accelerationOf(a, sa), accelerationOf(b, sb), closing);
             if (isTouching(offset, 2 * R) && driven) {
                 best = earlier(best, { time: now, kind: "ball-ball", a, b });
                 continue;
@@ -422,21 +517,24 @@ function findNextEvent(sim: Simulation, now: number): Candidate | null {
         const horizon = (ends.get(track) as number) - now;
         for (const obstacle of obstacles) {
             const distance = R + obstacle.radius;
-            const offset = sub(p.c0, obstacle.centre);
+            // A vertical cylinder: measured on the horizontal projection, at any height.
+            const offset = horizontal(sub(p.c0, obstacle.centre));
+            const c1 = horizontal(p.c1);
+            const c2 = horizontal(p.c2);
             if (coupledObstacle(sim, track, obstacle)) {
-                const dt = separationTime(offset, p.c1, p.c2, distance, horizon);
+                const dt = separationTime(offset, c1, c2, distance, horizon);
                 if (dt !== null) {
                     best = earlier(best, { time: now + dt, kind: "regroup", track });
                 }
                 continue;
             }
             const closing = approachSpeed(offset, s.velocity);
-            const driven = contactNow(s.position, accelerationOf(track, s), obstacle.centre, ZERO, closing);
+            const driven = contactNow(scale(offset, -1), accelerationOf(track, s), ZERO, closing);
             if (isTouching(offset, distance) && driven) {
                 best = earlier(best, { time: now, kind: "obstacle", track, obstacle });
                 continue;
             }
-            const dt = approachTime(offset, p.c1, p.c2, distance, horizon);
+            const dt = approachTime(offset, c1, c2, distance, horizon);
             if (dt !== null) {
                 best = earlier(best, { time: now + dt, kind: "obstacle", track, obstacle });
             }
@@ -446,12 +544,18 @@ function findNextEvent(sim: Simulation, now: number): Candidate | null {
             best = earlier(best, { time: now + dt, kind: "halt", track });
         }
     }
+    for (const track of live) {
+        const end = track.t0 + track.duration;
+        if (track.phase === "airborne" && Number.isFinite(end)) {
+            best = earlier(best, { time: end, kind: "landing", track });
+        }
+    }
     return best;
 }
 
 /**
  * Simulates free motion from the given initial states until every ball is at rest (or the event budget runs
- * out). Balls must rest on the lawn plane and must not overlap one another or any obstacle.
+ * out). Balls must not be below the lawn plane or overlap one another or any obstacle.
  */
 export function simulateFreeMotion(
     initial: BallStates,
@@ -459,11 +563,18 @@ export function simulateFreeMotion(
     maxEvents: number = DEFAULT_MAX_EVENTS,
 ): ShotResult {
     validateWorld(world);
-    const sim: Simulation = { world, obstacles: obstaclesOf(world), tracks: [], couplings: [], events: [] };
+    const sim: Simulation = {
+        world,
+        obstacles: obstaclesOf(world),
+        tracks: [],
+        couplings: [],
+        events: [],
+        turf: (position) => turfAt(world, position),
+    };
     for (const id of BALL_IDS) {
         const s = initial[id];
         if (s) {
-            sim.tracks.push(reopen(sim, null, id, onLawn(id, s, world.ball.radius), 0));
+            sim.tracks.push(reopen(sim, null, id, initialState(id, s, world.ball.radius), 0));
         }
     }
     assertNoOverlap(sim.tracks, sim.obstacles, world.ball.radius);
@@ -503,7 +614,7 @@ export function simulateFreeMotion(
                     settle(sim, [a, b], now);
                 } else {
                     release(sim, [a, b], now);
-                    const [na, nb] = resolveBallBall(sa, sb, world.ball, world.ballBall);
+                    const [na, nb] = resolveBallBall(sa, sb, world.ball, world.ballBall, sim.turf);
                     reopen(sim, a, a.id, na, now);
                     reopen(sim, b, b.id, nb, now);
                 }
@@ -512,28 +623,41 @@ export function simulateFreeMotion(
             case "obstacle": {
                 const { track, obstacle } = next;
                 const s = stateAt(track, now);
-                const resting = approachSpeed(sub(s.position, obstacle.centre), s.velocity) <= RESTING_SPEED;
+                const offset = horizontal(sub(s.position, obstacle.centre));
+                const resting = approachSpeed(offset, s.velocity) <= RESTING_SPEED;
                 sim.events.push({ kind: "ball-obstacle", t: now, ball: track.id, obstacleId: obstacle.id, resting });
                 if (resting) {
                     settle(sim, [track], now);
                 } else {
                     release(sim, [track], now);
-                    reopen(
-                        sim,
-                        track,
-                        track.id,
-                        resolveBallCylinder(s, obstacle.centre, world.ball, obstacle.material),
-                        now,
-                    );
+                    const bounced = resolveBallCylinder(s, obstacle.centre, world.ball, obstacle.material, sim.turf);
+                    reopen(sim, track, track.id, bounced, now);
                 }
                 break;
             }
             case "halt": {
                 const { track } = next;
                 release(sim, [track], now);
-                reopen(sim, track, track.id, { ...stateAt(track, now), velocity: ZERO, angularVelocity: ZERO }, now);
+                // A ball halted in flight is placed on the turf beneath that point.
+                const p = stateAt(track, now).position;
+                reopen(sim, track, track.id, atRest(vec3(p.x, p.y, world.ball.radius)), now);
                 track.inert = true;
                 sim.events.push({ kind: "halted", t: now, ball: track.id });
+                break;
+            }
+            case "landing": {
+                const { track } = next;
+                const group = groupOf(sim, [track]);
+                const coupled = sim.couplings.some((c) => group.includes(c.a));
+                const s = stateAt(track, now);
+                release(sim, group, now);
+                const R = world.ball.radius;
+                const touchdown = { ...s, position: vec3(s.position.x, s.position.y, R) };
+                reopen(sim, track, track.id, resolveLanding(touchdown, world.ball, sim.turf(touchdown.position)), now);
+                sim.events.push({ kind: "landing", t: now, ball: track.id });
+                if (coupled) {
+                    settle(sim, group, now);
+                }
                 break;
             }
         }

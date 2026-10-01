@@ -1,9 +1,11 @@
 /**
- * Reference integrator for cross-checking the event-driven solver. Integrates the turf forces with
- * semi-implicit Euler at a fixed step and detects contacts by overlap. Test-only and deliberately slow.
+ * Reference integrator for cross-checking the event-driven solver. Integrates the turf forces and flight with
+ * semi-implicit Euler at a fixed step and detects contacts and landings by overlap. Test-only and deliberately slow.
  *
- * It shares `resolveBallBall`/`resolveBallCylinder` with the engine, so it independently checks event timing and
- * pushing but not the impulse model, which resolve.test.ts covers directly.
+ * It shares `resolveBallBall`/`resolveBallCylinder`/`resolveLanding` with the engine, so it independently checks event
+ * timing, flight and pushing but not the impulse model, which resolve.test.ts covers directly. Pushing is integrated
+ * as many small impulses; each one's downward part is taken by the turf with its impulsive turf friction, so the turf's
+ * friction tracks the load a push puts on a ball step by step.
  */
 import {
     ZERO,
@@ -17,15 +19,30 @@ import {
     vec3,
     type Vec3,
 } from "../../../src/engine/math/vec3";
-import { contactSlip, rollingSpin } from "../../../src/engine/motion";
-import { resolveBallBall, resolveBallCylinder } from "../../../src/engine/resolve";
+import { contactSlip, onTurf, rollingSpin } from "../../../src/engine/motion";
+import { resolveBallBall, resolveBallCylinder, resolveLanding } from "../../../src/engine/resolve";
 import { BALL_IDS, type BallId, type BallState, type BallStates, type World } from "../../../src/engine/types";
-import { motionParamsAt, obstaclesOf } from "../../../src/engine/world";
+import { motionParamsAt, obstaclesOf, turfAt } from "../../../src/engine/world";
 
 const STOP_SPEED = 1e-9;
 
+function fly(s: BallState, world: World, dt: number): BallState {
+    const R = world.ball.radius;
+    const velocity = add(s.velocity, vec3(0, 0, 0 - world.gravity * dt));
+    const position = add(s.position, scale(velocity, dt));
+    if (position.z > R) {
+        return { position, velocity, angularVelocity: s.angularVelocity };
+    }
+    // Landed within the step: back on the turf, with the engine's landing impulse.
+    const touchdown = { position: vec3(position.x, position.y, R), velocity, angularVelocity: s.angularVelocity };
+    return resolveLanding(touchdown, world.ball, turfAt(world, touchdown.position));
+}
+
 function step(s: BallState, world: World, dt: number): BallState {
     const R = world.ball.radius;
+    if (!onTurf(s, R)) {
+        return fly(s, world, dt);
+    }
     const p = motionParamsAt(world, s.position);
     const slip = contactSlip(s, R);
     let velocity: Vec3;
@@ -69,6 +86,7 @@ export function bruteForce(
 ): Partial<Record<BallId, Vec3>> {
     const R = world.ball.radius;
     const obstacles = obstaclesOf(world);
+    const turf = (position: Vec3): ReturnType<typeof turfAt> => turfAt(world, position);
     const ids = BALL_IDS.filter((id) => initial[id]);
     const states = new Map<BallId, BallState>(ids.map((id) => [id, initial[id] as BallState]));
     for (let t = 0; t < maxTime; t += dt) {
@@ -76,7 +94,7 @@ export function bruteForce(
         for (const id of ids) {
             const s = states.get(id) as BallState;
             const next = step(s, world, dt);
-            if (length(next.velocity) > 0) {
+            if (length(next.velocity) > 0 || !onTurf(next, R)) {
                 moving = true;
             }
             states.set(id, next);
@@ -87,8 +105,8 @@ export function bruteForce(
                 const b = ids[j] as BallId;
                 const sa = states.get(a) as BallState;
                 const sb = states.get(b) as BallState;
-                if (length(horizontal(sub(sa.position, sb.position))) < 2 * R) {
-                    const [na, nb] = resolveBallBall(sa, sb, world.ball, world.ballBall);
+                if (length(sub(sa.position, sb.position)) < 2 * R) {
+                    const [na, nb] = resolveBallBall(sa, sb, world.ball, world.ballBall, turf);
                     states.set(a, na);
                     states.set(b, nb);
                 }
@@ -96,7 +114,7 @@ export function bruteForce(
             for (const o of obstacles) {
                 const s = states.get(a) as BallState;
                 if (length(horizontal(sub(s.position, o.centre))) < R + o.radius) {
-                    states.set(a, resolveBallCylinder(s, o.centre, world.ball, o.material));
+                    states.set(a, resolveBallCylinder(s, o.centre, world.ball, o.material, turf));
                 }
             }
         }

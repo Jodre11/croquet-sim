@@ -7,6 +7,7 @@ import {
     motionParamsAt,
     obstaclesOf,
     rollingResistanceForLawnSpeed,
+    turfAt,
     uniformLawn,
     uprightsOf,
     validateWorld,
@@ -18,7 +19,12 @@ describe("rollingResistanceForLawnSpeed", () => {
         const T = 12;
         const D = 30;
         const mu = rollingResistanceForLawnSpeed(T, D, STANDARD_GRAVITY);
-        const params = { radius: 0.046, slidingDecel: 1, rollingDecel: mu * STANDARD_GRAVITY };
+        const params = {
+            radius: 0.046,
+            slidingDecel: 1,
+            rollingDecel: mu * STANDARD_GRAVITY,
+            gravity: STANDARD_GRAVITY,
+        };
         const v = vec3((2 * D) / T, 0, 0);
         const end = endOfPhase(
             { position: vec3(0, 0, 0.046), velocity: v, angularVelocity: rollingSpin(v, 0, 0.046) },
@@ -49,6 +55,13 @@ describe("motionParamsAt", () => {
         const p = motionParamsAt(testWorld(), vec3(1, 1, 0));
         expect(p.slidingDecel).toBeCloseTo(0.3 * STANDARD_GRAVITY, 12);
         expect(p.rollingDecel).toBeCloseTo(0.05 * STANDARD_GRAVITY, 12);
+        expect(p.gravity).toBe(STANDARD_GRAVITY);
+    });
+});
+
+describe("turfAt", () => {
+    it("pairs the world's ball–turf restitution with the surface's sliding friction", () => {
+        expect(turfAt(testWorld(), vec3(1, 1, 0))).toEqual({ restitution: 0.5, friction: 0.3 });
     });
 });
 
@@ -67,6 +80,8 @@ describe("validateWorld", () => {
             { lawn: uniformLawn(30, 40, { slidingFriction: 0.1, rollingResistance: 0.2 }) },
         ],
         ["non-unit hoop normal", { hoops: [{ ...testHoop("1", 5, 5), normal: vec3(0, 2, 0) }] }],
+        ["ball–turf restitution above 1", { ballTurfRestitution: 1.5 }],
+        ["non-positive crown clearance", { hoops: [{ ...testHoop("1", 5, 5), crownClearance: 0 }] }],
     ])("rejects %s", (_label, overrides) => {
         expect(() => validateWorld(testWorld(overrides))).toThrow(RangeError);
     });
@@ -79,7 +94,9 @@ describe("defaultWorld", () => {
         expect(world.hoops).toHaveLength(6);
         for (const hoop of world.hoops) {
             expect(hoop.innerWidth).toBeGreaterThan(2 * world.ball.radius);
+            expect(hoop.crownClearance).toBeGreaterThan(2 * world.ball.radius);
         }
+        expect(world.ballTurfRestitution).toBeGreaterThan(0);
     });
 
     it("gets slower lawns (fewer seconds) to decelerate balls harder", () => {

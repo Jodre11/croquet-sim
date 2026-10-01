@@ -18,6 +18,7 @@ describe("reference data", () => {
 
     it("lets a ball pass through a hoop", () => {
         expect(courtReference.hoopInnerWidth.value).toBeGreaterThan(ballReference.diameter.value);
+        expect(courtReference.crownClearance.value).toBeGreaterThan(ballReference.diameter.value);
     });
 
     it("places every hoop and the peg inside the court with unique ids and unit normals", () => {
@@ -44,7 +45,12 @@ describe("reference data", () => {
     });
 
     it("keeps restitution within [0, 1] and friction non-negative", () => {
-        for (const key of ["ballBallRestitution", "ballUprightRestitution", "ballPegRestitution"] as const) {
+        for (const key of [
+            "ballBallRestitution",
+            "ballUprightRestitution",
+            "ballPegRestitution",
+            "ballTurfRestitution",
+        ] as const) {
             expect(frictionReference[key].value).toBeGreaterThanOrEqual(0);
             expect(frictionReference[key].value).toBeLessThanOrEqual(1);
         }

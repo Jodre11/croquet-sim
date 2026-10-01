@@ -88,6 +88,7 @@ export const courtReference = {
     width: readValue(courtJson, "width", "court"),
     hoopInnerWidth: readValue(courtJson, "hoopInnerWidth", "court"),
     uprightDiameter: readValue(courtJson, "uprightDiameter", "court"),
+    crownClearance: readValue(courtJson, "crownClearance", "court"),
     pegDiameter: readValue(courtJson, "pegDiameter", "court"),
     layout: readQuote(courtJson, "layout", "court"),
     hoops: readHoops(courtJson),
@@ -118,4 +119,5 @@ export const frictionReference = {
     ballUprightFriction: readValue(frictionJson, "ballUprightFriction", "friction"),
     ballPegRestitution: readValue(frictionJson, "ballPegRestitution", "friction"),
     ballPegFriction: readValue(frictionJson, "ballPegFriction", "friction"),
+    ballTurfRestitution: readValue(frictionJson, "ballTurfRestitution", "friction"),
 } as const;

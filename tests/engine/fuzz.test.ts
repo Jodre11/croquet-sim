@@ -5,7 +5,7 @@ import { stateAtTime } from "../../src/engine/sample";
 import { simulateFreeMotion } from "../../src/engine/simulate";
 import { BALL_IDS, type BallStates } from "../../src/engine/types";
 import { defaultWorld, obstaclesOf } from "../../src/engine/world";
-import { kineticEnergy } from "./support/energy";
+import { mechanicalEnergy } from "./support/energy";
 import { worstPenetration } from "./support/penetration";
 import { rng } from "./support/rng";
 
@@ -72,6 +72,7 @@ describe("seeded fuzz on the default world", () => {
             let contactShots = 0;
             let restingShots = 0;
             let obstacleShots = 0;
+            let hopShots = 0;
             for (let index = 0; index < SHOTS; index++) {
                 const setup = randomShot(random);
                 const label = `seed ${SEED}, shot ${index}`;
@@ -79,6 +80,7 @@ describe("seeded fuzz on the default world", () => {
                 contactShots += result.events.some((e) => e.kind === "ball-ball") ? 1 : 0;
                 restingShots += result.events.some((e) => e.kind === "ball-ball" && e.resting) ? 1 : 0;
                 obstacleShots += result.events.some((e) => e.kind === "ball-obstacle") ? 1 : 0;
+                hopShots += result.events.some((e) => e.kind === "landing") ? 1 : 0;
                 expect(result.aborted, label).toBe(false);
                 expect(
                     result.events.some((e) => e.kind === "approximate-hold"),
@@ -89,16 +91,17 @@ describe("seeded fuzz on the default world", () => {
                 for (let i = 0; i <= ENERGY_SAMPLES; i++) {
                     const t = (result.duration * i) / ENERGY_SAMPLES;
                     const energy = BALL_IDS.filter((id) => result.segments[id]).reduce(
-                        (sum, id) => sum + kineticEnergy(stateAtTime(result, id, t), world.ball),
+                        (sum, id) => sum + mechanicalEnergy(stateAtTime(result, id, t), world.ball, world.gravity),
                         0,
                     );
                     expect(energy, `${label}, t ${t}`).toBeLessThanOrEqual(previous + 1e-9);
                     previous = energy;
                 }
             }
-            // Guards the generator: the fuzz must actually exercise collisions, pushes and obstacle contacts.
+            // Guards the generator: the fuzz must actually exercise collisions, pushes, obstacle contacts and hops.
             expect(contactShots).toBeGreaterThan(10);
             expect(restingShots + obstacleShots).toBeGreaterThan(0);
+            expect(hopShots).toBeGreaterThan(0);
         },
     );
 });

@@ -31,6 +31,14 @@
         "provenance": "direct",
         "note": "Croquet England: hoops \"should have uprights which are 5/8″ diameter\" = 0.015875 m. Law 5.2.1.2: \"a uniform diameter above the ground of between 5/8 inch (16 mm) and 3/4 inch (19 mm), with a tolerance of 1/16 inch (1.6 mm)\", so bounds 9/16–13/16 in = 0.0142875–0.0206375 m. Appendix 1 lists the tolerance as ±1/32 inch (0.8 mm), inconsistent with the Law text; the wider Law text is used."
     },
+    "crownClearance": {
+        "value": 0.288925,
+        "unit": "m",
+        "bounds": [0.2587625, 0.3032125],
+        "source": "World Croquet Federation, The Laws of Association Croquet, 7th Edition (February 2021), Laws 5.2.1.1 and 5.2.1.2 and Appendix 1, https://worldcroquet.org/wp-content/uploads/2021/02/Laws-7th-Edition-master-new.pdf; crown/upright size: Croquet England, 'Choosing Croquet Hoops', https://www.croquetengland.org.uk/choosing-croquet-hoops/",
+        "provenance": "derived",
+        "note": "Height of the underside of the crown above the lawn. Law 5.2.1.1: \"The crown must be straight and at right-angles to the uprights. A hoop must be 12 inches (305 mm) in height above the ground measured to the top of the crown. The tolerance for the height is + ½ inch / - 1 inch (+ 13 mm / - 25 mm).\" Law 5.2.1.2: \"The uprights and the crown must have a uniform diameter above the ground of between 5/8 inch (16 mm) and 3/4 inch (19 mm), with a tolerance of 1/16 inch (1.6 mm) ... Alternatively, the crown of the hoop may be of square cross-section with sides of between 5/8 inch (16 mm) and 3/4 inch (19 mm)\". Croquet England: \"the crown of the hoop should be 12″ above the ground\" and hoops \"should have uprights which are 5/8″ diameter\". The crown is taken to be the same 5/8 in as the uprights (uprightDiameter). Underside = 12 − 5/8 = 11 3/8 in × 0.0254 = 0.288925 m. Bounds combine the height tolerance (top of crown 11–12½ in) with the crown-thickness tolerance used for uprightDiameter (9/16–13/16 in): lowest 11 − 13/16 = 10 3/16 in = 0.2587625 m; highest 12½ − 9/16 = 11 15/16 in = 0.3032125 m. Law 60.2 lets tournaments specify \"Hoops with larger uprights and crowns\"."
+    },
     "pegDiameter": {
         "value": 0.0381,
         "unit": "m",

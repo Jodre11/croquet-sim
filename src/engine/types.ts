@@ -9,10 +9,13 @@ export type BallId = "blue" | "red" | "black" | "yellow";
 /** Canonical ball order. The engine always iterates balls in this order, which keeps results deterministic. */
 export const BALL_IDS: readonly BallId[] = ["blue", "red", "black", "yellow"];
 
-/** Motion phase of a ball on the lawn. */
-export type MotionPhase = "sliding" | "rolling" | "stationary";
+/** Motion phase of a ball: on the turf (sliding, rolling, stationary) or in flight (airborne). */
+export type MotionPhase = "sliding" | "rolling" | "stationary" | "airborne";
 
-/** Full kinematic state of a ball. Position is the centre; a resting ball has position.z = radius. */
+/**
+ * Full kinematic state of a ball. Position is the centre. A ball on the turf has position.z = radius and velocity.z = 0
+ * exactly; any other state is airborne.
+ */
 export interface BallState {
     readonly position: Vec3;
     readonly velocity: Vec3;
@@ -30,6 +33,8 @@ export interface MotionParams {
     readonly radius: number;
     readonly slidingDecel: number;
     readonly rollingDecel: number;
+    /** Acceleration of gravity (m/s²), which governs flight. */
+    readonly gravity: number;
 }
 
 /** Restitution (0–1) and Coulomb friction coefficient for a pair of contacting materials. */
@@ -79,6 +84,8 @@ export interface Hoop {
     readonly normal: Vec3;
     readonly innerWidth: number;
     readonly uprightRadius: number;
+    /** Height (m) of the underside of the crown above the lawn. */
+    readonly crownClearance: number;
 }
 
 /** A signed-offset threshold ballRadii × R + uprightRadii × r (see reference/README.md). */
@@ -96,6 +103,8 @@ export interface World {
     readonly peg: Cylinder;
     readonly ballBall: ContactMaterial;
     readonly ballUpright: ContactMaterial;
+    /** Restitution (0–1) of a ball landing on the turf. Turf friction is the surface's sliding coefficient. */
+    readonly ballTurfRestitution: number;
     readonly outOfCourt: OffsetRule;
     readonly hoopRunStart: OffsetRule;
     readonly hoopRunComplete: OffsetRule;
@@ -137,6 +146,17 @@ export type ShotEvent =
           readonly resting: boolean;
       }
     | { readonly kind: "halted"; readonly t: number; readonly ball: BallId }
+    | { readonly kind: "landing"; readonly t: number; readonly ball: BallId }
+    | {
+          /**
+           * The shot left the validated model: `ball` passed over the ball `over` (its centre came within one radius of
+           * the other's, horizontally), or its top reached a hoop crown's underside (`over` is "crown").
+           */
+          readonly kind: "jump";
+          readonly t: number;
+          readonly ball: BallId;
+          readonly over: BallId | "crown";
+      }
     | {
           /**
            * A resting-contact solve fell back to the nearest hold: the group's resting balls were kept at rest
