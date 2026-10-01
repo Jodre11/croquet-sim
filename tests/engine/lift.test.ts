@@ -269,8 +269,12 @@ describe("hoops in flight", () => {
     const hoopWorld = testWorld({ hoops: [testHoop("1", 10, 20)] });
 
     it("records a passage made in a low hop, but not one over the crown", () => {
-        const low = simulateFreeMotion({ blue: airborneAt(10, 19.8, R + 0.005, vec3(0, 2, 0)) }, hoopWorld);
-        expect(low.events.some((e) => e.kind === "hoop-passage" && e.hoopId === "1")).toBe(true);
+        const low = simulateFreeMotion({ blue: airborneAt(10, 19.9, R + 0.02, vec3(0, 2, 0)) }, hoopWorld);
+        const passage = low.events.find((e) => e.kind === "hoop-passage" && e.hoopId === "1");
+        expect(passage).toBeDefined();
+        // The hop is still in flight when it crosses the plane: before its first landing, and above the turf.
+        expect(passage?.t).toBeLessThan(landings(low, "blue")[0] as number);
+        expect(stateAtTime(low, "blue", passage?.t as number).position.z).toBeGreaterThan(R);
         // Crossing the plane 0.3 s later, its centre is 0.459 m above its resting height: far above the crown.
         const over = simulateFreeMotion({ blue: airborneAt(10, 19.4, R + 0.3, vec3(0, 2, 2)) }, hoopWorld);
         expect(over.events.some((e) => e.kind === "hoop-passage")).toBe(false);
