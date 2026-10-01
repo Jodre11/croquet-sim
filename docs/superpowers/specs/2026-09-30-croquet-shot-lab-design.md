@@ -291,9 +291,9 @@ replacement on the yard line.
   configuration within that slack of the limit of holding may go either way).
 - Making a resting contact's normal speeds equal (above) is a frictionless impulse: the speeds it removes
   are below the resting speed, so the friction it omits is negligible.
-- The turf's resistance to spin about the vertical axis is idealised: none while a ball moves, unlimited
-  while it is at rest. Real pivot friction on grass is finite, but far larger than the contact torques of a
-  push.
+- The turf's resistance to spin about the vertical axis is idealised: none while a ball moves, as in free
+  motion; unlimited while it is at rest, since real pivot friction on grass, though finite, is far larger
+  than the contact torques of a push.
 - Within a push segment each turf-force direction and contact normal is frozen. The error is first
   order in the direction tolerance and the opening gap, both small numerical tolerances. It is
   negligible for straight pushes and measured in millimetres for pushes at an angle. The brute-force
