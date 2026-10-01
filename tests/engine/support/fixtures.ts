@@ -20,6 +20,7 @@ export function testWorld(overrides: Partial<World> = {}): World {
         peg: { id: "peg", centre: vec3(15, 20, 0), radius: 0.02, material: { restitution: 0.6, friction: 0.1 } },
         ballBall: { restitution: 0.8, friction: 0.05 },
         ballUpright: { restitution: 0.6, friction: 0.1 },
+        ballTurfRestitution: 0.5,
         outOfCourt: { ballRadii: 0, uprightRadii: 0 },
         hoopRunStart: { ballRadii: -1, uprightRadii: -1 },
         hoopRunComplete: { ballRadii: 1, uprightRadii: 1 },
@@ -39,7 +40,25 @@ export function rollingBallAt(x: number, y: number, vx: number, vy: number): Bal
     return ballAt(x, y, velocity, rollingSpin(velocity, 0, TEST_BALL.radius));
 }
 
+/** A ball in flight with its centre at (x, y, z). */
+export function airborneAt(
+    x: number,
+    y: number,
+    z: number,
+    velocity: Vec3 = ZERO,
+    angularVelocity: Vec3 = ZERO,
+): BallState {
+    return { position: vec3(x, y, z), velocity, angularVelocity };
+}
+
 /** A hoop at (x, y) with its plane east–west, run northwards for direction +1. */
 export function testHoop(id: string, x: number, y: number): Hoop {
-    return { id, centre: vec3(x, y, 0), normal: vec3(0, 1, 0), innerWidth: 0.0953, uprightRadius: 0.008 };
+    return {
+        id,
+        centre: vec3(x, y, 0),
+        normal: vec3(0, 1, 0),
+        innerWidth: 0.0953,
+        uprightRadius: 0.008,
+        crownClearance: 0.29,
+    };
 }

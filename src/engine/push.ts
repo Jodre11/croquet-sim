@@ -158,6 +158,8 @@ function response(s: BallState, p: MotionParams): Response {
             };
         case "stationary":
             return { phase, force: ZERO, weight: ROLLING_WEIGHT, threshold: ROLLING_WEIGHT * p.rollingDecel };
+        case "airborne":
+            return { phase, force: vec3(0, 0, 0 - p.gravity), weight: 1, threshold: 0 };
     }
 }
 

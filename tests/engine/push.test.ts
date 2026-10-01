@@ -23,7 +23,7 @@ import { rng } from "./support/rng";
 const R = 0.046;
 const SLIDE = 3;
 const ROLL = 0.5;
-const P: MotionParams = { radius: R, slidingDecel: SLIDE, rollingDecel: ROLL };
+const P: MotionParams = { radius: R, slidingDecel: SLIDE, rollingDecel: ROLL, gravity: 9.80665 };
 const BALL = { radius: R, mass: 0.454 };
 
 function ball(x: number, y: number, velocity: Vec3 = ZERO, angularVelocity: Vec3 = ZERO): ContactBody {
@@ -71,7 +71,7 @@ describe("solveRestingContacts", () => {
 
     it("holds a resting ball that the push cannot move", () => {
         // Drive 0.5 m/s² is below the static resistance (7/5)·0.49 of the ball in front.
-        const weak: MotionParams = { radius: R, slidingDecel: 0.5, rollingDecel: 0.49 };
+        const weak: MotionParams = { radius: R, slidingDecel: 0.5, rollingDecel: 0.49, gravity: 9.80665 };
         const { members, coupled } = solveRestingContacts(
             [
                 { state: ball(0, 0, ZERO, vec3(0, 60, 0)).state, params: weak },
@@ -204,7 +204,7 @@ describe("resting chains", () => {
     // Ball 0 has topspin (drive +SLIDE along x) and touches ball 1, which touches ball 2; 1 and 2 are at rest.
     // Each resting ball resists up to (7/5)·rollingDecel on its own, so the line of two resists 2·(7/5)·rollingDecel.
     function chain(rollingDecel: number, bend = 0): ContactBody[] {
-        const p: MotionParams = { radius: R, slidingDecel: SLIDE, rollingDecel };
+        const p: MotionParams = { radius: R, slidingDecel: SLIDE, rollingDecel, gravity: 9.80665 };
         const at = (x: number, y: number, w: Vec3 = ZERO): ContactBody => ({
             state: { position: vec3(x, y, R), velocity: ZERO, angularVelocity: w },
             params: p,
@@ -318,7 +318,12 @@ describe("resting chains", () => {
             const drive = random() * 2 * Math.PI;
             const toB = drive + (random() - 0.5) * 2;
             const toC = toB + (random() - 0.5) * 2;
-            const p: MotionParams = { radius: R, slidingDecel: SLIDE, rollingDecel: 0.2 + random() * 2.3 };
+            const p: MotionParams = {
+                radius: R,
+                slidingDecel: SLIDE,
+                rollingDecel: 0.2 + random() * 2.3,
+                gravity: 9.80665,
+            };
             const b = vec3(2 * R * Math.cos(toB), 2 * R * Math.sin(toB), R);
             const c = vec3(b.x + 2 * R * Math.cos(toC), b.y + 2 * R * Math.sin(toC), R);
             const spin = vec3(-Math.sin(drive) * 60, Math.cos(drive) * 60, 0);
@@ -399,7 +404,7 @@ describe("clusters at the limit of holding", () => {
         spin: Vec3,
         roll: number,
     ): Cluster {
-        const p: MotionParams = { radius: R, slidingDecel: SLIDE, rollingDecel: roll };
+        const p: MotionParams = { radius: R, slidingDecel: SLIDE, rollingDecel: roll, gravity: 9.80665 };
         const bodies = positions.map(([x, y], i) => ({
             state: { position: vec3(x, y, R), velocity: ZERO, angularVelocity: i === 0 ? spin : ZERO },
             params: p,

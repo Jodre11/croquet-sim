@@ -60,7 +60,13 @@ export function motionParamsAt(world: World, position: Vec3): MotionParams {
         radius: world.ball.radius,
         slidingDecel: surface.slidingFriction * world.gravity,
         rollingDecel: surface.rollingResistance * world.gravity,
+        gravity: world.gravity,
     };
+}
+
+/** Returns the turf's restitution and sliding friction at `position`, for impulses on a ball there. */
+export function turfAt(world: World, position: Vec3): ContactMaterial {
+    return { restitution: world.ballTurfRestitution, friction: world.lawn.surfaceAt(position).slidingFriction };
 }
 
 /** Evaluates a signed-offset rule for the given ball and upright radii. */
@@ -102,6 +108,7 @@ export function validateWorld(world: World): void {
     requireMaterial(world.ballBall, "ballBall");
     requireMaterial(world.ballUpright, "ballUpright");
     requireMaterial(world.peg.material, "peg.material");
+    requireMaterial({ restitution: world.ballTurfRestitution, friction: 0 }, "ballTurf");
     requirePositive(world.peg.radius, "peg.radius");
     if (!(world.haltMargin >= 0)) {
         throw new RangeError(`haltMargin must be non-negative (got ${world.haltMargin})`);
@@ -109,6 +116,7 @@ export function validateWorld(world: World): void {
     for (const hoop of world.hoops) {
         requirePositive(hoop.innerWidth, `hoop ${hoop.id} innerWidth`);
         requirePositive(hoop.uprightRadius, `hoop ${hoop.id} uprightRadius`);
+        requirePositive(hoop.crownClearance, `hoop ${hoop.id} crownClearance`);
         if (Math.abs(length(hoop.normal) - 1) > 1e-12 || hoop.normal.z !== 0) {
             throw new RangeError(`hoop ${hoop.id} normal must be a horizontal unit vector`);
         }
@@ -137,6 +145,7 @@ export function defaultWorld(lawnSpeedSeconds: number = lawnReference.defaultSpe
             normal: vec3(h.normalX, h.normalY, 0),
             innerWidth: courtReference.hoopInnerWidth.value,
             uprightRadius,
+            crownClearance: courtReference.crownClearance.value,
         })),
         peg: {
             id: "peg",
@@ -155,6 +164,7 @@ export function defaultWorld(lawnSpeedSeconds: number = lawnReference.defaultSpe
             restitution: frictionReference.ballUprightRestitution.value,
             friction: frictionReference.ballUprightFriction.value,
         },
+        ballTurfRestitution: frictionReference.ballTurfRestitution.value,
         outOfCourt: lawsReference.outOfCourt,
         hoopRunStart: lawsReference.hoopRunStart,
         hoopRunComplete: lawsReference.hoopRunComplete,
