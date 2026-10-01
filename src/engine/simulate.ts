@@ -607,7 +607,7 @@ export function simulateFreeMotion(
                     settle(sim, [a, b], now);
                 } else {
                     release(sim, [a, b], now);
-                    const [na, nb] = resolveBallBall(sa, sb, world.ball, world.ballBall);
+                    const [na, nb] = resolveBallBall(sa, sb, world.ball, world.ballBall, sim.turf);
                     reopen(sim, a, a.id, na, now);
                     reopen(sim, b, b.id, nb, now);
                 }
@@ -623,13 +623,8 @@ export function simulateFreeMotion(
                     settle(sim, [track], now);
                 } else {
                     release(sim, [track], now);
-                    reopen(
-                        sim,
-                        track,
-                        track.id,
-                        resolveBallCylinder(s, obstacle.centre, world.ball, obstacle.material),
-                        now,
-                    );
+                    const bounced = resolveBallCylinder(s, obstacle.centre, world.ball, obstacle.material, sim.turf);
+                    reopen(sim, track, track.id, bounced, now);
                 }
                 break;
             }

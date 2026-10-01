@@ -11,10 +11,10 @@ const TOLERANCE = 1e-3;
 const C30 = Math.sqrt(3) / 2;
 
 /**
- * The engine treats a pushing contact as frictionless (see push.ts), while the integrator applies ball–ball friction
- * on every one of its many small impulses. Scenarios whose balls slide against each other while pushing therefore
- * run with ball–ball friction switched off, so that they check the pushing mechanics rather than that
- * simplification.
+ * The engine treats a pushing contact as frictionless until P2a.2 (see push.ts), while the integrator applies ball–ball
+ * friction on every one of its many small impulses. In 3D every push rubs (even a straight one, vertically), so every
+ * scenario with a push runs with ball–ball friction switched off, checking the pushing mechanics rather than that
+ * simplification. Scenarios without pushes keep friction, which is what lifts a rolling striker.
  */
 const FRICTIONLESS: Partial<World> = { ballBall: { restitution: 0.8, friction: 0 } };
 
@@ -26,6 +26,7 @@ const SCENARIOS: Record<string, { readonly initial: BallStates; readonly world?:
     },
     "topspin push (resting contact)": {
         initial: { blue: ballAt(5, 5, vec3(0, 0, 0), vec3(0, 60, 0)), red: ballAt(5 + 2 * R, 5) },
+        world: FRICTIONLESS,
     },
     "rush into a chain of touching balls, then a push": {
         initial: {
@@ -34,6 +35,7 @@ const SCENARIOS: Record<string, { readonly initial: BallStates; readonly world?:
             black: ballAt(6 + 2 * R, 5),
             yellow: ballAt(6 + 4 * R, 5),
         },
+        world: FRICTIONLESS,
     },
     "push into two touching balls at an angle (wedge)": {
         initial: {
@@ -45,6 +47,15 @@ const SCENARIOS: Record<string, { readonly initial: BallStates; readonly world?:
     },
     "dropped with backspin": {
         initial: { blue: airborneAt(5, 5, 0.5, vec3(1, 0, 0), vec3(0, -60, 0)) },
+    },
+    "cut rush with topspin: the striker hops": {
+        initial: { blue: rollingBallAt(5, 5, 3, 0), red: ballAt(6, 5 + R) },
+    },
+    "ball in flight strikes a ball above its equator": {
+        initial: { blue: airborneAt(5, 5, R + 0.02, vec3(3, 0, 0), vec3(0, 20, 0)), red: ballAt(5.5, 5.01) },
+    },
+    "hop off the peg": {
+        initial: { blue: rollingBallAt(14, 20.01, 2.5, 0) },
     },
 };
 
@@ -79,5 +90,14 @@ describe("event solver versus brute-force integration", () => {
         expect(wedge).toContain("blue-red resting");
         expect(wedge).not.toContain("approximate-hold");
         expect(kinds("dropped with backspin")).toContain("landing");
+        const hop = kinds("cut rush with topspin: the striker hops");
+        expect(hop).toContain("blue-red");
+        expect(hop).toContain("landing");
+        const above = kinds("ball in flight strikes a ball above its equator");
+        expect(above).toContain("blue-red");
+        expect(above).toContain("landing");
+        const peg = kinds("hop off the peg");
+        expect(peg).toContain("ball-obstacle");
+        expect(peg).toContain("landing");
     });
 });

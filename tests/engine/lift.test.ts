@@ -4,10 +4,10 @@ import { vec3 } from "../../src/engine/math/vec3";
 import { SETTLE_SPEED } from "../../src/engine/resolve";
 import { stateAtTime } from "../../src/engine/sample";
 import { simulateFreeMotion } from "../../src/engine/simulate";
-import { BALL_IDS, type BallId, type BallStates, type ShotResult } from "../../src/engine/types";
+import { BALL_IDS, type BallId, type BallState, type BallStates, type ShotResult } from "../../src/engine/types";
 import { STANDARD_GRAVITY } from "../../src/engine/world";
 import { mechanicalEnergy } from "./support/energy";
-import { TEST_BALL, airborneAt, ballAt, testWorld } from "./support/fixtures";
+import { TEST_BALL, airborneAt, ballAt, rollingBallAt, testWorld } from "./support/fixtures";
 import { worstPenetration } from "./support/penetration";
 
 const R = TEST_BALL.radius;
@@ -16,6 +16,14 @@ const E_TURF = 0.5;
 
 function landings(result: ShotResult, ball: BallId): number[] {
     return result.events.filter((e) => e.kind === "landing" && e.ball === ball).map((e) => e.t);
+}
+
+function highest(result: ShotResult, ball: BallId): number {
+    let top = 0;
+    for (let i = 0; i <= 4000; i++) {
+        top = Math.max(top, stateAtTime(result, ball, (result.duration * i) / 4000).position.z - R);
+    }
+    return top;
 }
 
 describe("flight and landing", () => {
@@ -117,37 +125,41 @@ describe("resting contact in flight", () => {
         expectNoEnergyGain(result);
     });
 
-    it("slides a ball off the exact top of another when it has sideways speed, and lands it", () => {
-        // The contact normal is vertical, so the push acceleration is exactly zero while the ball moves: its segment
-        // has no landing time of its own and is bounded by the pair separating (see boundedGroupEnd in simulate.ts).
-        // The sweep includes 0.003 m/s along x, where the separation root is not an exact zero of the gap polynomial.
-        const speeds = [0.0005, 0.001, 0.002, 0.003, 0.004, 0.005, 0.007, 0.01, 0.015, 0.02, 0.03, 0.05];
-        const directions = [vec3(1, 0, 0), vec3(0, 1, 0), vec3(-1, 0, 0), vec3(0.6, 0.8, 0)];
-        const places = [vec3(5, 5, 0), vec3(12.3, 7.1, 0)];
-        for (const place of places) {
-            for (const direction of directions) {
-                for (const speed of speeds) {
-                    const velocity = vec3(direction.x * speed, direction.y * speed, 0);
-                    const world = testWorld();
-                    const result = simulateFreeMotion(
-                        {
-                            blue: ballAt(place.x, place.y),
-                            red: airborneAt(place.x, place.y, 3 * R, velocity),
-                        },
-                        world,
-                    );
-                    expect(result.aborted).toBe(false);
-                    expect(worstPenetration(result, world)).toBeLessThan(CONTACT_TOLERANCE);
-                    expect(result.rest.red?.z).toBe(R);
-                    expect(result.events.length).toBeLessThan(1000);
+    it(
+        "slides a ball off the exact top of another when it has sideways speed, and lands it",
+        { timeout: 30_000 },
+        () => {
+            // The contact normal is vertical, so the push acceleration is exactly zero while the ball moves: its segment
+            // has no landing time of its own and is bounded by the pair separating (see boundedGroupEnd in simulate.ts).
+            // The sweep includes 0.003 m/s along x, where the separation root is not an exact zero of the gap polynomial.
+            const speeds = [0.0005, 0.001, 0.002, 0.003, 0.004, 0.005, 0.007, 0.01, 0.015, 0.02, 0.03, 0.05];
+            const directions = [vec3(1, 0, 0), vec3(0, 1, 0), vec3(-1, 0, 0), vec3(0.6, 0.8, 0)];
+            const places = [vec3(5, 5, 0), vec3(12.3, 7.1, 0)];
+            for (const place of places) {
+                for (const direction of directions) {
+                    for (const speed of speeds) {
+                        const velocity = vec3(direction.x * speed, direction.y * speed, 0);
+                        const world = testWorld();
+                        const result = simulateFreeMotion(
+                            {
+                                blue: ballAt(place.x, place.y),
+                                red: airborneAt(place.x, place.y, 3 * R, velocity),
+                            },
+                            world,
+                        );
+                        expect(result.aborted).toBe(false);
+                        expect(worstPenetration(result, world)).toBeLessThan(CONTACT_TOLERANCE);
+                        expect(result.rest.red?.z).toBe(R);
+                        // Finite but long: with the 3D impulse the ball bounces down on the other's top (about 410 ball–ball
+                        // hits, 11 landings, about 1050 events in all) instead of chattering into sideways speed.
+                        expect(result.events.length).toBeLessThan(2000);
+                        // The ball falls back on the other at about 1.4 mm/s; the 3D impulse keeps that approach normal.
+                        expectNoEnergyGain(result);
+                    }
                 }
             }
-        }
-        // Energy is not checked here: the ball falls back on the other at about 1.4 mm/s, and until Task 6 the
-        // collision impulse is the planar one, which turns that approach into sideways speed. The gain is about 6 µJ
-        // on the first hit and grows to about 5.6 mJ per hit by t ≈ 0.2 s as that impulse chatters. Task 6 adds the
-        // no-gain check for this scenario.
-    });
+        },
+    );
 
     it("lets a ball perched on top of another rest there", () => {
         const result = simulateFreeMotion({ blue: ballAt(5, 5), red: airborneAt(5, 5, 3 * R) }, testWorld());
@@ -169,5 +181,62 @@ describe("resting contact in flight", () => {
         expect(result.aborted).toBe(false);
         expect(result.rest.red?.z).toBeCloseTo(za, 12);
         expect(result.events.length).toBeLessThan(20);
+    });
+});
+
+describe("lift in collisions", () => {
+    const hop: BallStates = { blue: rollingBallAt(5, 5, 3, 0), red: ballAt(6, 5 + R) };
+
+    it("lifts a rolling striker off the turf, which then lands and rolls on", () => {
+        const result = simulateFreeMotion(hop, testWorld());
+        expect(result.events.some((e) => e.kind === "ball-ball")).toBe(true);
+        expect(landings(result, "blue").length).toBeGreaterThan(0);
+        const lift = highest(result, "blue");
+        expect(lift).toBeGreaterThan(1e-5);
+        expect(lift).toBeLessThan(2e-3);
+        expect(result.rest.blue?.z).toBe(R);
+        expect(result.events.some((e) => e.kind === "jump")).toBe(false);
+        expect(result.aborted).toBe(false);
+    });
+
+    it("lifts a rolling ball off an upright", () => {
+        const result = simulateFreeMotion({ blue: rollingBallAt(14, 20.01, 2.5, 0) }, testWorld());
+        expect(result.events.some((e) => e.kind === "ball-obstacle" && e.obstacleId === "peg")).toBe(true);
+        expect(highest(result, "blue")).toBeGreaterThan(1e-4);
+        expect(result.rest.blue?.z).toBe(R);
+    });
+
+    it("is bit-identical across repeated runs and mirrors a mirrored set-up", () => {
+        const world = testWorld();
+        expect(simulateFreeMotion(hop, world)).toStrictEqual(simulateFreeMotion(hop, world));
+        const mirror = (s: BallState): BallState => ({
+            position: vec3(30 - s.position.x, s.position.y, s.position.z),
+            velocity: vec3(-s.velocity.x, s.velocity.y, s.velocity.z),
+            angularVelocity: vec3(s.angularVelocity.x, -s.angularVelocity.y, -s.angularVelocity.z),
+        });
+        const mirrored = Object.fromEntries(
+            Object.entries(hop).map(([id, s]) => [id, mirror(s as BallState)]),
+        ) as BallStates;
+        const a = simulateFreeMotion(hop, world);
+        const b = simulateFreeMotion(mirrored, world);
+        for (const id of Object.keys(hop) as BallId[]) {
+            expect(b.rest[id]?.x).toBeCloseTo(30 - (a.rest[id]?.x ?? 0), 9);
+            expect(b.rest[id]?.y).toBeCloseTo(a.rest[id]?.y ?? 0, 9);
+        }
+    });
+
+    it("never gains mechanical energy over a shot with hops", () => {
+        const result = simulateFreeMotion(hop, testWorld());
+        const total = (t: number): number =>
+            BALL_IDS.filter((id) => result.segments[id]).reduce(
+                (sum, id) => sum + mechanicalEnergy(stateAtTime(result, id, t), TEST_BALL, G),
+                0,
+            );
+        let previous = total(0);
+        for (let i = 1; i <= 1000; i++) {
+            const e = total((result.duration * i) / 1000);
+            expect(e).toBeLessThanOrEqual(previous + 1e-9);
+            previous = e;
+        }
     });
 });

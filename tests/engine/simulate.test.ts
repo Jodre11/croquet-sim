@@ -5,7 +5,7 @@ import { CONTACT_TOLERANCE } from "../../src/engine/detect";
 import { simulateFreeMotion } from "../../src/engine/simulate";
 import { BALL_IDS, type BallId, type BallState, type BallStates, type ShotResult } from "../../src/engine/types";
 import { STANDARD_GRAVITY } from "../../src/engine/world";
-import { kineticEnergy } from "./support/energy";
+import { mechanicalEnergy } from "./support/energy";
 import { worstPenetration } from "./support/penetration";
 import { TEST_BALL, airborneAt, ballAt, rollingBallAt, testHoop, testWorld } from "./support/fixtures";
 
@@ -15,7 +15,7 @@ const ROLL = 0.05 * STANDARD_GRAVITY;
 
 function totalEnergy(result: ShotResult, t: number): number {
     return BALL_IDS.filter((id) => result.segments[id]).reduce(
-        (sum, id) => sum + kineticEnergy(stateAtTime(result, id, t), TEST_BALL),
+        (sum, id) => sum + mechanicalEnergy(stateAtTime(result, id, t), TEST_BALL, STANDARD_GRAVITY),
         0,
     );
 }
@@ -58,7 +58,9 @@ describe("single ball", () => {
 
 describe("collisions", () => {
     it("transfers (1 + e)/2 of the striker's contact speed in a head-on rush", () => {
-        const world = testWorld();
+        // Without ball–ball friction: the striker's topspin would otherwise rub red down into the turf, whose
+        // impulsive friction then takes some of red's speed (see the lift tests).
+        const world = testWorld({ ballBall: { restitution: 0.8, friction: 0 } });
         const result = simulateFreeMotion({ blue: rollingBallAt(5, 5, 2, 0), red: ballAt(6, 5) }, world);
         const hit = result.events.find((e) => e.kind === "ball-ball");
         expect(hit).toBeDefined();

@@ -3,7 +3,9 @@
  * semi-implicit Euler at a fixed step and detects contacts and landings by overlap. Test-only and deliberately slow.
  *
  * It shares `resolveBallBall`/`resolveBallCylinder`/`resolveLanding` with the engine, so it independently checks event
- * timing, flight and pushing but not the impulse model, which resolve.test.ts covers directly.
+ * timing, flight and pushing but not the impulse model, which resolve.test.ts covers directly. Pushing is integrated
+ * as many small impulses; each one's downward part is taken by the turf with its impulsive turf friction, so the turf's
+ * friction tracks the load a push puts on a ball step by step.
  */
 import {
     ZERO,
@@ -84,6 +86,7 @@ export function bruteForce(
 ): Partial<Record<BallId, Vec3>> {
     const R = world.ball.radius;
     const obstacles = obstaclesOf(world);
+    const turf = (position: Vec3): ReturnType<typeof turfAt> => turfAt(world, position);
     const ids = BALL_IDS.filter((id) => initial[id]);
     const states = new Map<BallId, BallState>(ids.map((id) => [id, initial[id] as BallState]));
     for (let t = 0; t < maxTime; t += dt) {
@@ -103,7 +106,7 @@ export function bruteForce(
                 const sa = states.get(a) as BallState;
                 const sb = states.get(b) as BallState;
                 if (length(sub(sa.position, sb.position)) < 2 * R) {
-                    const [na, nb] = resolveBallBall(sa, sb, world.ball, world.ballBall);
+                    const [na, nb] = resolveBallBall(sa, sb, world.ball, world.ballBall, turf);
                     states.set(a, na);
                     states.set(b, nb);
                 }
@@ -111,7 +114,7 @@ export function bruteForce(
             for (const o of obstacles) {
                 const s = states.get(a) as BallState;
                 if (length(horizontal(sub(s.position, o.centre))) < R + o.radius) {
-                    states.set(a, resolveBallCylinder(s, o.centre, world.ball, o.material));
+                    states.set(a, resolveBallCylinder(s, o.centre, world.ball, o.material, turf));
                 }
             }
         }

@@ -5,7 +5,7 @@ import { stateAtTime } from "../../src/engine/sample";
 import { simulateFreeMotion } from "../../src/engine/simulate";
 import { BALL_IDS, type BallStates } from "../../src/engine/types";
 import { defaultWorld, obstaclesOf } from "../../src/engine/world";
-import { kineticEnergy } from "./support/energy";
+import { mechanicalEnergy } from "./support/energy";
 import { worstPenetration } from "./support/penetration";
 import { rng } from "./support/rng";
 
@@ -89,7 +89,7 @@ describe("seeded fuzz on the default world", () => {
                 for (let i = 0; i <= ENERGY_SAMPLES; i++) {
                     const t = (result.duration * i) / ENERGY_SAMPLES;
                     const energy = BALL_IDS.filter((id) => result.segments[id]).reduce(
-                        (sum, id) => sum + kineticEnergy(stateAtTime(result, id, t), world.ball),
+                        (sum, id) => sum + mechanicalEnergy(stateAtTime(result, id, t), world.ball, world.gravity),
                         0,
                     );
                     expect(energy, `${label}, t ${t}`).toBeLessThanOrEqual(previous + 1e-9);
