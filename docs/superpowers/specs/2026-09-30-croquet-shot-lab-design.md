@@ -230,14 +230,13 @@ Small fixed-step integration of all bodies in contact (mallet, striker's ball, c
 
 ### Jump flag
 
-The engine simulates every lift, but the model is validated only for balls skimming the lawn. In phase 2 a
-shot is flagged "jump — outside the validated model" when a ball passes over another ball (its centre
-comes within one radius, horizontally, of the other ball's centre: a strike more than 60° up the other
-ball, far beyond the fractional lift of a well-struck ball), or when a ball's top rises to the underside
-of a hoop crown (§11), above which uprights stop being infinite cylinders. The crown
-flag is court-wide: a ball whose top rises that high is outside the validated model wherever it is. The flag is an
-event; the shot is still simulated to rest, with uprights still treated as infinite. Phase 1 raises no jump flag:
-lift during the impact is expected (§9, stop-shot lift).
+The engine simulates every lift, but the model is validated only for balls skimming the lawn. In phase 2 a shot is
+flagged "jump — outside the validated model" when a ball passes over another ball (its centre comes within one radius,
+horizontally, of the other ball's centre: a strike more than 60° up the other ball, far beyond the fractional lift of a
+well-struck ball), or when a ball's top rises to the underside of a hoop crown (§11), above which uprights stop being
+infinite cylinders. The crown flag is court-wide: a ball whose top rises that high is outside the validated model
+wherever it is. The flag is an event; the shot is still simulated to rest, with uprights still treated as infinite.
+Phase 1 raises no jump flag: lift during the impact is expected (§9, stop-shot lift).
 
 ### Hoop running
 

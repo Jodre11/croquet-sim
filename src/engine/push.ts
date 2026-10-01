@@ -28,7 +28,7 @@
  *   vertical part of any contact force on it, which in a frictionless contact is never upward), so its rows of the
  *   contact constraints are the horizontal parts of the normals. Normals with obstacles are horizontal. Because each
  *   normal is frozen for the segment, a ball sliding round another in flight regroups every ~1.5 mrad of turn
- *   (√(SEPARATION_TOLERANCE/R)): hundreds of events for a ball rolling off another's top, but finitely many.
+ *   (√(SEPARATION_TOLERANCE/R)): around a thousand events for a ball rolling off another's top, but finitely many.
  *
  * A segment also ends when a frozen turf force stops being valid: the slip (sliding) or velocity (rolling) reaches
  * zero along the frozen direction, or turns more than DIRECTION_TOLERANCE away from it. The simulator then solves the

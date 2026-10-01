@@ -45,7 +45,7 @@ What P1 delivered, and the constraints it leaves for P2–P5.
 
 - **Every roquet hops the striker.** A rolling ball's contact point moves down at its speed, so ball–ball friction
   lifts it a fraction of a millimetre (head-on rush in the test world: 0.3 mm at 2 m/s, 0.8 mm at 3 m/s). It lands
-  within a few centimetres and bounces down to the settle speed (1 mm/s) in seven or eight landing events. P2b's
+  within a couple of centimetres and bounces down to the settle speed (1 mm/s) in seven or eight landing events. P2b's
   stroke ratios include this.
 - **Pushes stay frictionless until P2a.2.** In 3D every push rubs, so every brute-force scenario with a push runs with
   ball–ball friction 0 (`FRICTIONLESS` in `crossCheck.test.ts`). P2a.2 removes those overrides.

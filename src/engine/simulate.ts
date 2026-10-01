@@ -388,6 +388,9 @@ function boundedGroupEnd(sim: Simulation, track: Track, now: number): number {
     if (Number.isFinite(own)) {
         return own;
     }
+    // Assumes some coupling in the group opens: zero push acceleration with nonzero velocity on a static or
+    // decelerating support always separates, as the relative distance grows quadratically. If none ever did, this
+    // would return Infinity and approachTime would throw instead of the shot being marked aborted.
     const group = groupOf(sim, [track]);
     let end = own;
     for (const c of sim.couplings) {

@@ -129,9 +129,10 @@ describe("resting contact in flight", () => {
         "slides a ball off the exact top of another when it has sideways speed, and lands it",
         { timeout: 30_000 },
         () => {
-            // The contact normal is vertical, so the push acceleration is exactly zero while the ball moves: its segment
-            // has no landing time of its own and is bounded by the pair separating (see boundedGroupEnd in simulate.ts).
-            // The sweep includes 0.003 m/s along x, where the separation root is not an exact zero of the gap polynomial.
+            // The contact normal is vertical, so the push acceleration is exactly zero while the ball moves: its
+            // segment has no landing time of its own and is bounded by the pair separating (see boundedGroupEnd in
+            // simulate.ts). The sweep includes 0.003 m/s along x, where the separation root is not an exact zero of
+            // the gap polynomial.
             const speeds = [0.0005, 0.001, 0.002, 0.003, 0.004, 0.005, 0.007, 0.01, 0.015, 0.02, 0.03, 0.05];
             const directions = [vec3(1, 0, 0), vec3(0, 1, 0), vec3(-1, 0, 0), vec3(0.6, 0.8, 0)];
             const places = [vec3(5, 5, 0), vec3(12.3, 7.1, 0)];
@@ -150,10 +151,11 @@ describe("resting contact in flight", () => {
                         expect(result.aborted).toBe(false);
                         expect(worstPenetration(result, world)).toBeLessThan(CONTACT_TOLERANCE);
                         expect(result.rest.red?.z).toBe(R);
-                        // Finite but long: with the 3D impulse the ball bounces down on the other's top (about 410 ball–ball
-                        // hits, 11 landings, about 1050 events in all) instead of chattering into sideways speed.
+                        // Finite but long: at 0.003 m/s, about 703 ball–ball and 324 phase events (about 1039 in all).
+                        // The contact normal is frozen per push segment, so the pair regroups every ~1.5 mrad of the
+                        // normal's turn, each regroup followed by re-contacts, rather than bouncing freely.
                         expect(result.events.length).toBeLessThan(2000);
-                        // The ball falls back on the other at about 1.4 mm/s; the 3D impulse keeps that approach normal.
+                        // The ball falls back on the other at about 1.4 mm/s; the 3D impulse keeps the approach normal.
                         expectNoEnergyGain(result);
                     }
                 }
@@ -166,6 +168,22 @@ describe("resting contact in flight", () => {
         expect(result.aborted).toBe(false);
         expect(result.rest.red).toEqual(vec3(5, 5, 3 * R));
         expect(result.rest.blue).toEqual(vec3(5, 5, R));
+    });
+
+    it("keeps a ball perched on another at rest when a third ball strikes its support", () => {
+        const world = testWorld();
+        const result = simulateFreeMotion(
+            {
+                red: airborneAt(5, 5, 3 * R),
+                blue: ballAt(5, 5),
+                black: rollingBallAt(5 - 4 * R, 5, 2, 0),
+            },
+            world,
+        );
+        expect(result.aborted).toBe(false);
+        expect(worstPenetration(result, world)).toBeLessThan(CONTACT_TOLERANCE);
+        expect(result.rest.red?.z).toBe(R);
+        expectNoEnergyGain(result);
     });
 
     it("holds a ball leaning on the peg while it rests on a ball the turf holds", () => {
@@ -199,7 +217,7 @@ describe("lift in collisions", () => {
         expect(result.aborted).toBe(false);
     });
 
-    it("lifts a rolling ball off an upright", () => {
+    it("lifts a rolling ball off the peg", () => {
         const result = simulateFreeMotion({ blue: rollingBallAt(14, 20.01, 2.5, 0) }, testWorld());
         expect(result.events.some((e) => e.kind === "ball-obstacle" && e.obstacleId === "peg")).toBe(true);
         expect(highest(result, "blue")).toBeGreaterThan(1e-4);
