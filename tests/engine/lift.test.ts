@@ -120,17 +120,33 @@ describe("resting contact in flight", () => {
     it("slides a ball off the exact top of another when it has sideways speed, and lands it", () => {
         // The contact normal is vertical, so the push acceleration is exactly zero while the ball moves: its segment
         // has no landing time of its own and is bounded by the pair separating (see boundedGroupEnd in simulate.ts).
-        for (const velocity of [vec3(0.01, 0, 0), vec3(0, 0.002, 0)]) {
-            const world = testWorld();
-            const result = simulateFreeMotion({ blue: ballAt(5, 5), red: airborneAt(5, 5, 3 * R, velocity) }, world);
-            expect(result.aborted).toBe(false);
-            expect(worstPenetration(result, world)).toBeLessThan(CONTACT_TOLERANCE);
-            expect(result.rest.red?.z).toBe(R);
-            expect(result.events.length).toBeLessThan(1000);
-            // Energy is not checked here: the ball falls back on the other at about 1.4 mm/s, and until Task 6 the
-            // collision impulse is the planar one, which turns that approach into sideways speed (a gain of ~6 µJ per
-            // hit). Task 6 adds the no-gain check for this scenario.
+        // The sweep includes 0.003 m/s along x, where the separation root is not an exact zero of the gap polynomial.
+        const speeds = [0.0005, 0.001, 0.002, 0.003, 0.004, 0.005, 0.007, 0.01, 0.015, 0.02, 0.03, 0.05];
+        const directions = [vec3(1, 0, 0), vec3(0, 1, 0), vec3(-1, 0, 0), vec3(0.6, 0.8, 0)];
+        const places = [vec3(5, 5, 0), vec3(12.3, 7.1, 0)];
+        for (const place of places) {
+            for (const direction of directions) {
+                for (const speed of speeds) {
+                    const velocity = vec3(direction.x * speed, direction.y * speed, 0);
+                    const world = testWorld();
+                    const result = simulateFreeMotion(
+                        {
+                            blue: ballAt(place.x, place.y),
+                            red: airborneAt(place.x, place.y, 3 * R, velocity),
+                        },
+                        world,
+                    );
+                    expect(result.aborted).toBe(false);
+                    expect(worstPenetration(result, world)).toBeLessThan(CONTACT_TOLERANCE);
+                    expect(result.rest.red?.z).toBe(R);
+                    expect(result.events.length).toBeLessThan(1000);
+                }
+            }
         }
+        // Energy is not checked here: the ball falls back on the other at about 1.4 mm/s, and until Task 6 the
+        // collision impulse is the planar one, which turns that approach into sideways speed. The gain is about 6 µJ
+        // on the first hit and grows to about 5.6 mJ per hit by t ≈ 0.2 s as that impulse chatters. Task 6 adds the
+        // no-gain check for this scenario.
     });
 
     it("lets a ball perched on top of another rest there", () => {

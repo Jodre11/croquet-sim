@@ -416,11 +416,20 @@ function boundedGroupEnd(sim: Simulation, track: Track, now: number): number {
             );
         }
         if (dt !== null) {
-            end = Math.min(end, now + dt);
+            end = Math.min(end, now + dt + HORIZON_PADDING * Math.max(dt, now));
         }
     }
     return end;
 }
+
+/**
+ * Relative amount by which boundedGroupEnd pads the separation time it bounds a group with. The root finder returns
+ * the lower end of its final bracket, where the gap polynomial is still marginally negative, so a search that stops
+ * exactly there would see no sign change and miss the separation. A numerical tolerance, not a physical one: it only
+ * needs to exceed the bracket (a few ulps) by enough that the polynomial is positive at the padded end; the
+ * separation is then found by the ordinary search, a negligible time before the bound.
+ */
+const HORIZON_PADDING = 1e-9;
 
 /**
  * The acceleration of a ball as the resting-contact solver sees it: its push, or its free turf acceleration. Using
