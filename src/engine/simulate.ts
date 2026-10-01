@@ -66,7 +66,7 @@ import {
 import { motionParamsAt, obstaclesOf, turfAt, validateWorld } from "./world";
 
 /** Version of the physics; recorded in every result and share link. */
-export const ENGINE_VERSION = "0.1.0";
+export const ENGINE_VERSION = "0.2.0";
 
 /** Event budget per shot. Reaching it marks the result aborted rather than looping forever. */
 export const DEFAULT_MAX_EVENTS = 10_000;

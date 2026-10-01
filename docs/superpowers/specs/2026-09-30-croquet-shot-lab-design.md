@@ -234,8 +234,9 @@ The engine simulates every lift, but the model is validated only for balls skimm
 shot is flagged "jump — outside the validated model" when a ball passes over another ball (its centre
 comes within one radius, horizontally, of the other ball's centre: a strike more than 60° up the other
 ball, far beyond the fractional lift of a well-struck ball), or when a ball's top rises to the underside
-of a hoop crown (§11), above which uprights stop being infinite cylinders. The flag is an event; the
-shot is still simulated to rest, with uprights still treated as infinite. Phase 1 raises no jump flag:
+of a hoop crown (§11), above which uprights stop being infinite cylinders. The crown
+flag is court-wide: a ball whose top rises that high is outside the validated model wherever it is. The flag is an
+event; the shot is still simulated to rest, with uprights still treated as infinite. Phase 1 raises no jump flag:
 lift during the impact is expected (§9, stop-shot lift).
 
 ### Hoop running
@@ -273,6 +274,14 @@ replacement on the yard line.
   order in the direction tolerance and the opening gap, both small numerical tolerances. It is
   negligible for straight pushes and measured in millimetres for pushes at an angle. The brute-force
   cross-check (§9) bounds it. The same holds for each slipping contact's frozen slip direction.
+- With friction and an inclined normal against a ball held by the turf, the friction impulse also changes the normal
+  speed. Restitution along the normal is exactly the coefficient for the contact impulse itself (before turf friction
+  acts) only for frictionless contacts and horizontal normals (two balls on the turf, any ball against an upright or
+  the peg); the impulsive turf friction that follows on a supported ball can lower the effective restitution further.
+  A pair is never left approaching: any approach friction leaves is removed by a perfectly inelastic normal impulse.
+- A ball resting against another in flight (leaning on it, sliding round it) is pushed with its contact normal frozen
+  for each segment, so it regroups every ~1.5 mrad of the normal's turn: around a thousand events for a ball rolling
+  off another's top. This is finite and arises only in flagged jumps. A ball perched still on others stays put.
 
 ### Determinism
 

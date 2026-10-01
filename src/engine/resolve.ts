@@ -24,8 +24,9 @@
  *    slip, at most μs·Λ and at most what stops that slip (2m/7 per unit of slip).
  * An impulse P changes kinetic energy by −P·(u_before + u_after)/2, which the caps keep ≤ 0 for any symmetric
  * positive-definite K; the turf's own impulses do no work, because the turf contact point does not move vertically.
- * Restitution along n is therefore exactly e for a frictionless contact or a horizontal normal (two balls on the turf,
- * any ball against an upright), and otherwise e plus what friction adds, never letting the pair still approach.
+ * Restitution along n of the contact impulse, before turf friction, is therefore exactly e for a frictionless contact
+ * or a horizontal normal (two balls on the turf, any ball against an upright), and otherwise e plus what friction adds,
+ * never letting the pair still approach.
  * Finally, a ball on the turf left rising slower than SETTLE_SPEED stays on the turf; the small upward impulse that
  * freed it carries no turf friction, since the turf took none of it.
  */
