@@ -200,6 +200,51 @@ describe("solveRestingContacts", () => {
     });
 });
 
+describe("resting contact in flight", () => {
+    // Blue, in flight and at rest, leans on red (on the turf, at rest) at 30° from the vertical.
+    const G = 9.80665;
+    const sin = 0.5;
+    const cos = Math.sqrt(3) / 2;
+    function lean(rollingDecel: number): ContactBody[] {
+        const p: MotionParams = { radius: R, slidingDecel: SLIDE, rollingDecel, gravity: G };
+        const at = (position: Vec3): ContactBody => ({
+            state: { position, velocity: ZERO, angularVelocity: ZERO },
+            params: p,
+        });
+        return [at(vec3(2 * R * sin, 0, R + 2 * R * cos)), at(vec3(0, 0, R))];
+    }
+
+    it("slides a ball in flight down a ball the turf holds: the contact cancels gravity along the normal", () => {
+        // n = (−sin, 0, −cos) from blue to red. With red held, n·x_blue = 0 gives λ = g·cos and
+        // x_blue = −g·ẑ − λ·n = (g·sin·cos, 0, −g·sin²). Red takes λ·sin = 4.25 horizontally, within (7/5)·5.
+        const { members, coupled } = solveRestingContacts(lean(5), [], PAIR);
+        expect(coupled).toEqual([true]);
+        expect(members[0]?.phase).toBe("airborne");
+        const x = members[0]?.push?.acceleration as Vec3;
+        expect(x.x).toBeCloseTo(G * sin * cos, 12);
+        expect(x.y).toBe(0);
+        expect(x.z).toBeCloseTo(-G * sin * sin, 12);
+        expect(members[1]?.phase).toBe("stationary");
+        expect(members[1]?.push?.acceleration).toEqual(ZERO);
+    });
+
+    it("pushes the ball on the turf away along the horizontal part of the normal when it cannot hold", () => {
+        // Red rolls along −x against resistance roll·x̂ with weight 7/5: x_red = (roll − λ·sin/1.4, 0, 0). Equal rates
+        // along n give g·cos − λ = −sin·(roll − λ·sin/1.4), so λ = (g·cos + sin·roll) / (1 + sin²/1.4).
+        const roll = 0.5;
+        const { members, coupled } = solveRestingContacts(lean(roll), [], PAIR);
+        const lambda = (G * cos + sin * roll) / (1 + (sin * sin) / 1.4);
+        expect(coupled).toEqual([true]);
+        expect(members[1]?.phase).toBe("rolling");
+        expect(members[1]?.push?.acceleration.x).toBeCloseTo(roll - (lambda * sin) / 1.4, 12);
+        expect(members[1]?.push?.acceleration.z).toBe(0);
+        expect(members[1]?.push?.direction).toEqual(vec3(-1, 0, 0));
+        const x = members[0]?.push?.acceleration as Vec3;
+        expect(x.x).toBeCloseTo(lambda * sin, 12);
+        expect(x.z).toBeCloseTo(-G + lambda * cos, 12);
+    });
+});
+
 describe("resting chains", () => {
     // Ball 0 has topspin (drive +SLIDE along x) and touches ball 1, which touches ball 2; 1 and 2 are at rest.
     // Each resting ball resists up to (7/5)·rollingDecel on its own, so the line of two resists 2·(7/5)·rollingDecel.

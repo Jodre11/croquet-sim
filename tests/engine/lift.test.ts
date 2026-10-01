@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
+import { CONTACT_TOLERANCE } from "../../src/engine/detect";
 import { vec3 } from "../../src/engine/math/vec3";
 import { SETTLE_SPEED } from "../../src/engine/resolve";
 import { simulateFreeMotion } from "../../src/engine/simulate";
-import type { BallId, ShotResult } from "../../src/engine/types";
+import type { BallId, BallStates, ShotResult } from "../../src/engine/types";
 import { STANDARD_GRAVITY } from "../../src/engine/world";
 import { TEST_BALL, airborneAt, ballAt, testWorld } from "./support/fixtures";
+import { worstPenetration } from "./support/penetration";
 
 const R = TEST_BALL.radius;
 const G = STANDARD_GRAVITY;
@@ -70,5 +72,49 @@ describe("the boundary in flight", () => {
         expect(landings(result, "blue")).toEqual([]);
         expect(result.rest.blue?.x).toBeCloseTo(-0.1, 9);
         expect(result.rest.blue?.z).toBe(R);
+    });
+});
+
+describe("resting contact in flight", () => {
+    // Blue, at rest in the air, leans on red at 30° from the vertical: it slides off red, pushing it, and lands.
+    const lean: BallStates = {
+        blue: airborneAt(5 + R, 5, R + Math.sqrt(3) * R),
+        red: ballAt(5, 5),
+    };
+
+    it("pushes along the inclined normal without bouncing, then lands", () => {
+        const world = testWorld();
+        const result = simulateFreeMotion(lean, world);
+        expect(result.aborted).toBe(false);
+        expect(result.events.some((e) => e.kind === "ball-ball" && e.resting)).toBe(true);
+        expect(result.segments.blue?.some((s) => s.push && s.phase === "airborne")).toBe(true);
+        expect(result.events.some((e) => e.kind === "approximate-hold")).toBe(false);
+        expect(worstPenetration(result, world)).toBeLessThan(CONTACT_TOLERANCE);
+        expect(result.rest.blue?.z).toBe(R);
+        expect((result.rest.blue?.x ?? 0) - (result.rest.red?.x ?? 0)).toBeGreaterThan(2 * R - 1e-9);
+        // The frozen normal makes a ball sliding round another regroup often, but finitely (see push.ts).
+        expect(result.events.length).toBeLessThan(1000);
+    });
+
+    it("lets a ball perched on top of another rest there", () => {
+        const result = simulateFreeMotion({ blue: ballAt(5, 5), red: airborneAt(5, 5, 3 * R) }, testWorld());
+        expect(result.aborted).toBe(false);
+        expect(result.rest.red).toEqual(vec3(5, 5, 3 * R));
+        expect(result.rest.blue).toEqual(vec3(5, 5, R));
+    });
+
+    it("holds a ball leaning on the peg while it rests on a ball the turf holds", () => {
+        // Red sits almost on top of blue (offset sin 0.03), touching the peg: blue's horizontal load, 0.03·g, is within
+        // its static resistance (7/5)·0.05·g, so nothing moves.
+        const s = 0.03;
+        const xa = 15 - (R + 0.02);
+        const za = R + 2 * R * Math.sqrt(1 - s * s);
+        const result = simulateFreeMotion(
+            { blue: ballAt(xa - 2 * R * s, 20), red: airborneAt(xa, 20, za) },
+            testWorld(),
+        );
+        expect(result.aborted).toBe(false);
+        expect(result.rest.red?.z).toBeCloseTo(za, 12);
+        expect(result.events.length).toBeLessThan(20);
     });
 });

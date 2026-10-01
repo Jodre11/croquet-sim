@@ -6,10 +6,10 @@
  * along each line of centres are made equal (a perfectly inelastic normal impulse) and, where their accelerations
  * would drive them together, the contacts are coupled: a compressive contact force N ≥ 0 keeps each coupled pair's
  * relative acceleration along its normal at zero. Coupled contacts are frictionless, so the bodies stay free to move
- * along the contact plane. This is a P1 limitation: balls that slide past each other while pushing (sidespin, pushes
- * at an angle) are not rubbed, which can move rest positions by centimetres. Straight pushes have no sideways slip at
- * the contact and are unaffected. The fix, kinetic Coulomb friction on coupled contacts with slip and stick events,
- * is deferred to P2 or later.
+ * along the contact plane. This is a known limitation until P2a.2: balls that slide past each other while pushing are
+ * not rubbed, which can move rest positions by centimetres. In 3D even a straight push rubs (a rolling pair's contact
+ * points slip vertically at twice their common speed). The fix, Coulomb friction on coupled contacts with stick and
+ * slip events, is P2a.2.
  *
  * Within one segment everything is constant, so every trajectory stays quadratic:
  * - Each contact normal is fixed for the segment. Relative motion is then always perpendicular to the normal, which
@@ -23,6 +23,12 @@
  *   constraint; w is the effective inertia, f the free acceleration). The minimiser is found exactly by trying active
  *   sets of contacts in a fixed order and accepting the first whose contact forces are compressive and which leaves
  *   no other contact converging.
+ * - An airborne ball takes part with its full 3D motion: its free acceleration is gravity, its effective inertia m, and
+ *   its contact normals with other balls are inclined. A ball on the turf moves only horizontally (the turf takes the
+ *   vertical part of any contact force on it, which in a frictionless contact is never upward), so its rows of the
+ *   contact constraints are the horizontal parts of the normals. Normals with obstacles are horizontal. Because each
+ *   normal is frozen for the segment, a ball sliding round another in flight regroups every ~1.5 mrad of turn
+ *   (√(SEPARATION_TOLERANCE/R)): hundreds of events for a ball rolling off another's top, but finitely many.
  *
  * A segment also ends when a frozen turf force stops being valid: the slip (sliding) or velocity (rolling) reaches
  * zero along the frozen direction, or turns more than DIRECTION_TOLERANCE away from it. The simulator then solves the
@@ -37,7 +43,7 @@
  */
 import { approachSpeed } from "./detect";
 import { ZERO, add, dot, horizontal, length, normalize, scale, sub, vec3, type Vec3 } from "./math/vec3";
-import { SPEED_EPSILON, classify, contactSlip, rollingSpin, type Trajectory } from "./motion";
+import { SPEED_EPSILON, classify, contactSlip, landingTime, rollingSpin, type Trajectory } from "./motion";
 import type { BallState, MotionParams, MotionPhase, PushMotion } from "./types";
 
 /**
@@ -351,13 +357,13 @@ function solveContacts(
         return c.fixed ? horizontal(sub(axes[c.b] as Vec3, a)) : sub((bodies[c.b] as ContactBody).state.position, a);
     };
     const normals = contacts.map((c) => normalize(towards(c)));
-    // Row k of J for body i: +n on the body n points to, −n on the other.
+    const airborne = bodies.map((b) => classify(b.state, b.params.radius) === "airborne");
+    // Row k of J for body i: +n on the body n points to, −n on the other; only its horizontal part for a ball on the
+    // turf, which cannot move vertically.
     const jacobian = (k: number, i: number): Vec3 => {
         const c = contacts[k] as RestingContact;
-        if (!c.fixed && c.b === i) {
-            return normals[k] as Vec3;
-        }
-        return c.a === i ? scale(normals[k] as Vec3, -1) : ZERO;
+        const row = !c.fixed && c.b === i ? (normals[k] as Vec3) : c.a === i ? scale(normals[k] as Vec3, -1) : ZERO;
+        return airborne[i] ? row : horizontal(row);
     };
     const closingRate = (x: ReadonlyMap<number, Vec3>, k: number): number => {
         const c = contacts[k] as RestingContact;
@@ -410,13 +416,14 @@ function solveContacts(
             const glued = project(
                 glueSystem,
                 independent,
-                new Map(group.map((i) => [i, horizontal((initial[i] as BallState).velocity)])),
+                new Map(group.map((i) => [i, (initial[i] as BallState).velocity])),
             );
             for (const i of group) {
                 const s = initial[i] as BallState;
-                const velocity = glued?.result.get(i) ?? horizontal(s.velocity);
+                const velocity = glued?.result.get(i) ?? s.velocity;
+                const phase = (before.get(i) as Response).phase;
                 const angularVelocity =
-                    (before.get(i) as Response).phase === "sliding"
+                    phase === "sliding" || phase === "airborne"
                         ? s.angularVelocity
                         : rollingSpin(velocity, s.angularVelocity.z, params(i).radius);
                 states[i] = { position: s.position, velocity, angularVelocity };
@@ -926,7 +933,12 @@ function releaseDirections(
         return new Map();
     }
     const moving = system.bodies.filter((i) => system.inverseWeight(i) > 0);
-    const size = 2 * moving.length;
+    // Each moving ball has x and y unknowns (slots 2a, 2a + 1); a ball in flight also has a z unknown, after all of
+    // those. Balls on the turf therefore keep exactly the system, and the arithmetic, of the planar solve.
+    const lifted = moving.map((i) => (responses.get(i) as Response).phase === "airborne");
+    const zSlot: number[] = [];
+    lifted.forEach((up) => zSlot.push(up ? 2 * moving.length + zSlot.filter((s) => s >= 0).length : -1));
+    const size = 2 * moving.length + lifted.filter((up) => up).length;
     const target = moving.map((i) => (released.has(i) ? ZERO : (responses.get(i) as Response).force));
     const weight = moving.map((i) => 1 / system.inverseWeight(i));
     const resistance = moving.map((i) => (released.has(i) ? (responses.get(i) as Response).threshold : 0));
@@ -938,9 +950,15 @@ function releaseDirections(
     if (!start) {
         return null;
     }
-    // Accelerations of the moving balls as one vector (x, y per ball).
-    let x = moving.flatMap((i) => [(start.result.get(i) as Vec3).x, (start.result.get(i) as Vec3).y]);
-    const at = (v: readonly number[], a: number): Vec3 => vec3(v[2 * a] as number, v[2 * a + 1] as number, 0);
+    // Accelerations of the moving balls as one vector (x, y per ball, then z per ball in flight).
+    let x = [
+        ...moving.flatMap((i) => [(start.result.get(i) as Vec3).x, (start.result.get(i) as Vec3).y]),
+        ...moving.filter((_, a) => lifted[a]).map((i) => (start.result.get(i) as Vec3).z),
+    ];
+    const at = (v: readonly number[], a: number): Vec3 => {
+        const z = zSlot[a] as number;
+        return vec3(v[2 * a] as number, v[2 * a + 1] as number, z >= 0 ? (v[z] as number) : 0);
+    };
     // Φ(x + t·step) − Φ(x), written so that nothing cancels: the accelerations can be far smaller than Φ itself.
     const change = (step: readonly number[], t: number): number =>
         moving.reduce((sum, _, a) => {
@@ -978,12 +996,22 @@ function releaseDirections(
                     (kkt[2 * a + r] as number[])[2 * a + col] = (block[r] as number[])[col] as number;
                 }
             }
+            // A ball in flight has no resistance, so its z unknown has curvature w alone.
+            const z = zSlot[a] as number;
+            if (z >= 0) {
+                rhs[z] = 0 - gradient.z;
+                (kkt[z] as number[])[z] = w;
+            }
             active.forEach((k, j) => {
                 const row = system.jacobian(k, i);
                 (kkt[size + j] as number[])[2 * a] = row.x;
                 (kkt[size + j] as number[])[2 * a + 1] = row.y;
                 (kkt[2 * a] as number[])[size + j] = row.x;
                 (kkt[2 * a + 1] as number[])[size + j] = row.y;
+                if (z >= 0) {
+                    (kkt[size + j] as number[])[z] = row.z;
+                    (kkt[z] as number[])[size + j] = row.z;
+                }
             });
         });
         const solved = solveLinear(kkt, rhs);
@@ -1070,6 +1098,20 @@ function pushedMember(
     releasedDirection: Vec3 | null,
     radius: number,
 ): RestingMember {
+    if (r.phase === "airborne") {
+        // A frictionless contact acts through the centre, so a ball in flight keeps its spin. A ball held still in the
+        // air by its contacts (perched on others) is snapped to rest: its rounding-level acceleration would otherwise
+        // give it a segment that never ends, which the simulator could not schedule.
+        if (length(s.velocity) <= SPEED_EPSILON && length(x) <= ACCELERATION_EPSILON) {
+            const still = { ...s, velocity: ZERO };
+            return {
+                state: still,
+                phase: "airborne",
+                push: { acceleration: ZERO, angularAcceleration: ZERO, direction: ZERO },
+            };
+        }
+        return { state: s, phase: "airborne", push: { acceleration: x, angularAcceleration: ZERO, direction: ZERO } };
+    }
     const rollingSpinRate = vec3(-x.y / radius, x.x / radius, 0);
     if (r.phase === "stationary") {
         if (!releasedDirection) {
@@ -1115,7 +1157,7 @@ export function pushedState(start: BallState, push: PushMotion, t: number): Ball
     if (t === 0) {
         return start;
     }
-    const v = horizontal(start.velocity);
+    const v = start.velocity;
     return {
         position: add(add(start.position, scale(v, t)), scale(push.acceleration, 0.5 * t * t)),
         velocity: add(v, scale(push.acceleration, t)),
@@ -1125,7 +1167,7 @@ export function pushedState(start: BallState, push: PushMotion, t: number): Ball
 
 /** Returns the centre trajectory of a coupled ball from `start`. */
 export function pushedTrajectory(start: BallState, push: PushMotion): Trajectory {
-    return { c0: start.position, c1: horizontal(start.velocity), c2: scale(push.acceleration, 0.5) };
+    return { c0: start.position, c1: start.velocity, c2: scale(push.acceleration, 0.5) };
 }
 
 /** Earliest t > 0 at which g0 + g1·t rises through zero from below, or Infinity. */
@@ -1136,11 +1178,15 @@ function risesAt(g0: number, g1: number): number {
 /**
  * Returns how long the frozen turf force of a coupled ball stays valid: until its slip (sliding) or velocity
  * (rolling) reaches zero along the frozen direction, or turns more than DIRECTION_TOLERANCE away from it. Both are
- * linear in time within the segment. Infinity for a ball held at rest or one that is only speeding up.
+ * linear in time within the segment. Infinity for a ball held at rest or one that is only speeding up. A ball in
+ * flight has no turf force; its push lasts until it lands.
  */
 export function pushDuration(start: BallState, phase: MotionPhase, push: PushMotion, radius: number): number {
     if (phase === "stationary") {
         return Infinity;
+    }
+    if (phase === "airborne") {
+        return landingTime(start.position.z - radius, start.velocity.z, push.acceleration.z);
     }
     const a = push.acceleration;
     const w = push.angularAcceleration;

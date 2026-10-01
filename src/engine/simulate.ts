@@ -125,8 +125,18 @@ function pathAt(track: Track, t: number): Trajectory {
     return track.push ? pushedTrajectory(s, track.push) : trajectory(s, track.phase, track.params);
 }
 
+/** True when the ball is perched: held still in the air by its contacts (push.ts snaps such a ball to rest). */
+function perched(track: Track): boolean {
+    return (
+        track.phase === "airborne" &&
+        track.push !== null &&
+        length(track.start.velocity) === 0 &&
+        length(track.push.acceleration) === 0
+    );
+}
+
 function moving(track: Track): boolean {
-    return !track.inert && track.phase !== "stationary";
+    return !track.inert && track.phase !== "stationary" && !perched(track);
 }
 
 /**
