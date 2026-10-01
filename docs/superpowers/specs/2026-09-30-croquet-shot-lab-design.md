@@ -1,7 +1,8 @@
 # Croquet Shot Lab — Design
 
 **Date:** 2026-09-30
-**Status:** Reviewed (spec-review panel: subtraction, completeness)
+**Status:** Reviewed (spec-review panel: subtraction, completeness). Amended 2026-10-01 for P2a: simulated
+lift, 3D contacts and impulsive turf friction (§5), push friction with stick and slip (§5), jump flag (§5).
 **Repo:** `croquet-sim`
 
 ## 1. Purpose
@@ -51,7 +52,7 @@ reference data (§11) is sourced.
 
 | Deferred item | How v1 keeps it open |
 |---|---|
-| Jump shots, half-jumps | Ball state is fully 3D; v1 detects lift-off and flags the shot rather than simulating it |
+| Jump shots, half-jumps | Ball state is fully 3D; small lift is simulated and jumps beyond the validated range are flagged (§5 Jump flag) |
 | Hampered / glancing strokes | Contact is described generically (face orientation, contact point, head state) |
 | Cannons (three balls in contact) | Impact phase handles N bodies in contact; free-motion resting contact (§5) already solves any number of balls and obstacles in contact |
 | Detailed hoop-wire contact on angled runs | Hoop contact model is isolated and replaceable |
@@ -157,69 +158,121 @@ Small fixed-step integration of all bodies in contact (mallet, striker's ball, c
 
 - Compliant normal contact (spring–damper; damping chosen to reproduce each pair's coefficient of
   restitution).
-- Coulomb friction at every contact (mallet face–ball, ball–ball, ball–turf).
+- Every body moves in full 3D. Ball–turf contact is compliant and **unilateral**: a ball can ride up off
+  the turf during the impact, and then it meets the other ball above its equator along an inclined
+  normal, with no turf friction acting on it while it is clear.
+- Coulomb friction at every contact (mallet face–ball, ball–ball, ball–turf), each only while that
+  contact is closed.
 - Mallet driven by the applied-force profile throughout the contact window — this is where
   stop / drive / roll behaviour and the spin that causes pull originate.
-- Ends when no contacts remain and the drive window has closed. Hands each ball's linear and angular
-  velocity to phase 2.
-- If any ball's centre rises more than **1 mm** (provisional) above its resting height, the shot is
-  flagged "would jump — not simulated in this version".
+- Ends when the drive window has closed and no mallet–ball or ball–ball contact remains (contact with the
+  turf does not count). Hands each ball's full 3D state (position, linear and angular velocity) to
+  phase 2. A ball clear of the turf is handed over airborne, as it is. A ball still in turf contact is
+  placed on the lawn (z = R); it keeps an upward vertical velocity above the settle speed, and so starts
+  airborne, and otherwise its vertical velocity is zeroed.
 
 ### Phase 2 — Free motion (event-driven, exact)
 
 - Per-ball motion phase: **sliding** (contact-point velocity non-zero; friction decelerates and curves the
   path while spin converges), **rolling** (straight line, constant deceleration from rolling
-  resistance), **stationary**.
+  resistance), **stationary**, and **airborne** (ballistic flight under gravity, spin carried unchanged;
+  air drag is neglected).
 - Closed-form trajectories within a phase; the solver advances directly to the next event:
-  phase transition, ball–ball collision, ball–upright, ball–peg, boundary crossing, and the end of a
+  phase transition, landing, ball–ball collision, ball–upright, ball–peg, boundary crossing, and the end of a
   push (below).
-- Collisions in free motion (e.g. a rush) are instantaneous impulses with restitution and friction.
+- **Contacts are fully 3D.** Ball–ball contact is between spheres, so a ball that has lifted strikes the
+  other off its equator and the contact normal is inclined; ball–upright and ball–peg contact is with a
+  vertical cylinder, so its normal stays horizontal. A ball's lift above the turf is never discarded.
+- Collisions in free motion (e.g. a rush) are instantaneous impulses with restitution along the 3D
+  normal and Coulomb friction in the full tangent plane, horizontal and vertical. A ball on the turf
+  cannot be driven into it: the turf takes the downward part of any impulse on that ball, perfectly
+  inelastically, and that turf impulse carries impulsive turf friction (Coulomb, against the ball's
+  turf slip, at the turf's sliding coefficient). The upward part of an impulse lifts the ball. Whether a
+  ball is turf-supported is decided by trying supported first and keeping it if the vertical impulse on
+  that ball comes out downward (or zero), otherwise solving it as free. Simultaneous contacts are
+  resolved one at a time in canonical ball order, then obstacles in their fixed order, then landings.
+- **Landing** is an impulse with the turf: ball–turf restitution normal to the lawn and turf friction
+  against the contact slip. An upward vertical speed below the **settle speed** (a numerical tolerance
+  equal to the resting speed, 1 mm/s; it can lift a ball by at most about 0.05 µm), whether from a landing
+  rebound or from any other impulse on a ball on the turf, is zeroed: the ball stays on the turf.
 - Contacts closing slower than a small numerical tolerance (resting speed, 1 mm/s) are resting contacts,
-  not bounces: a ball driven into another by its own spin would otherwise rebound in an endless
-  sequence of ever-smaller bounces. The touching bodies' speeds along each line of centres are made
+  not bounces: a ball driven into another by its own spin, or an airborne ball settling against another
+  ball under gravity, would otherwise rebound in an endless
+  sequence of ever-smaller bounces. This covers airborne balls too: their accelerations include gravity
+  and their contact normals are inclined. The touching bodies' speeds along each line of centres are made
   equal (perfectly inelastic), and where their accelerations would drive them together the contact
-  pushes: frictionless contact forces, never pulling, keep the bodies' relative acceleration along each
-  contact normal at zero. That is Gauss's principle of least constraint, solved exactly in all observed
-  cases, with a documented fallback (see the limitations below), for any number of balls and obstacles in contact.
+  pushes: contact forces, never pulling, keep the bodies' relative acceleration along each
+  contact normal at zero. That is solved exactly in all observed cases, with a documented fallback (see
+  the limitations below), for any number of balls and obstacles in contact.
+- **Pushing contacts carry Coulomb friction** in the full tangent plane. While the contact points slip
+  relative to each other, kinetic friction μ·N acts against the slip, which is frozen in direction for the
+  segment like every other force. The vertical part of that friction changes the turf's load on each
+  ball, and turf sliding friction (μs × load) and rolling resistance scale with the load. Rolling
+  resistance is the force that gives a free rolling ball its deceleration μr·g, i.e. 7/5·μr × load. A
+  ball whose load reaches zero leaves the turf: that ends the segment and the ball goes airborne. When the slip reaches zero
+  the contact **sticks**: the tangential force is whatever keeps it stuck, provided it stays within
+  μ·N. Otherwise the contact **slips** again, in the direction in which the slip then grows (solved
+  together with the contact forces). Stick and slip are recorded as events. Balls at rest leaning on each
+  other or on an obstacle hold through static friction within the same cone.
 - While pushing, each ball's turf force is frozen at the start of the push segment: sliding friction
-  against its slip, or rolling resistance against its travel. A pushed rolling ball has effective
-  inertia 7/5·m, and a resting ball resists a push up to its static rolling resistance. Each contact
-  normal is fixed for the segment. Accelerations are therefore constant and trajectories stay
-  closed-form quadratics.
+  against its slip, or rolling resistance against its travel. A pushed
+  rolling ball has effective inertia 7/5·m (static turf friction keeps it rolling, so a vertical force at
+  its contact point also drives it along the contact normal), provided the static turf friction this needs
+  stays within μs × load; otherwise the ball is solved as sliding. A resting ball resists a push up to its
+  static rolling resistance. Each contact normal and slip direction is fixed for the segment.
+  Accelerations are therefore constant and trajectories stay closed-form quadratics.
 - A push segment ends when a pushed ball's slip or velocity reaches zero along its frozen direction or
-  turns from it by more than a small angle, when a coupled contact opens by more than a small gap, or
-  when another event intervenes. The contacts are then solved again; a contact whose force would pull
-  is released.
-- Events are recorded in the `ShotResult` (collisions, hoop passages, out-of-court, rest positions).
+  turns from it by more than a small angle, when a slipping contact's slip does the same, when a
+  coupled contact opens by more than a small gap, or when another event intervenes. The contacts are
+  then solved again; a contact whose force would pull is released.
+- Events are recorded in the `ShotResult` (collisions, landings, stick and slip, hoop passages,
+  out-of-court, jump flags, rest positions).
+
+### Jump flag
+
+The engine simulates every lift, but the model is validated only for balls skimming the lawn. In phase 2 a
+shot is flagged "jump — outside the validated model" when a ball passes over another ball (its centre
+comes within one radius, horizontally, of the other ball's centre: a strike more than 60° up the other
+ball, far beyond the fractional lift of a well-struck ball), or when a ball's top rises to the underside
+of a hoop crown (§11), above which uprights stop being infinite cylinders. The flag is an event; the
+shot is still simulated to rest, with uprights still treated as infinite. Phase 1 raises no jump flag:
+lift during the impact is expected (§9, stop-shot lift).
 
 ### Hoop running
 
 The engine reports every passage of every ball through every hoop, with direction. If the `ShotSetup`
 names a target hoop and direction for the striker's ball, the result states whether that hoop was run,
 using the official Laws definition (§11). A ball that strikes an upright and rebounds out has not run it.
+Passages are judged on the horizontal projection of the ball's centre; a passage made while the ball's
+top is at or above the crown's underside is not recorded (the ball went over the hoop).
 
 ### Out of court
 
-A ball is out of court when it meets the Laws criterion relative to the boundary (§11). The event is
+A ball is out of court when it meets the Laws criterion relative to the boundary (§11), judged on the
+horizontal projection of its centre, in flight or not. The event is
 recorded; the ball keeps moving until it stops or reaches a fixed margin beyond the boundary, where it is
-halted (the surround is not modelled). A halted ball is out of play for the rest of the shot: other balls
+halted (the surround is not modelled). A ball halted in flight is placed on the turf beneath that point. A halted ball is out of play for the rest of the shot: other balls
 pass through its position rather than striking or pushing it. v1 reports the out-of-court position and does not apply the Laws'
 replacement on the yard line.
 
 ### Free-motion limitations (v1)
 
-- Pushing contacts are frictionless. Ball–ball friction acts in impulses only, so sidespin or balls
-  sliding past each other while pushing are not rubbed. Straight pushes (the common croquet case: a
-  topspun striker's ball catching the croqueted ball) have no sideways slip at the contact and are
-  exact. In angled or sidespin pushes the omitted friction shifts rest positions by up to a few
-  centimetres (measured: 23 mm on the standard-world wedge, up to about 110 mm adversarial).
+- In free motion the turf is rigid apart from its restitution on landing: a ball driven into it in a
+  collision does not bounce off it, and an instantaneous impulse cannot reduce the turf's load (weight
+  acts over time, not in an instant).
+- Simultaneous impulses are resolved one contact at a time (the order is given above): the ball–ball
+  (or ball–obstacle) impulse first, then each ball's turf impulse.
+- With friction, the contact forces of a push need not be unique (as for any rigid bodies with Coulomb
+  friction); the solver returns the first consistent solution in a fixed order, so results stay
+  deterministic. Where the slip direction of a contact that starts to slip cannot be solved, the result
+  carries an `approximate-slip` event and the contact slips against its stuck force.
 - If the exact resting-contact solve fails, the resting balls are held and the result carries an
   `approximate-hold` event with an excess figure. It has been observed only at the limits of holding;
   the error is not bounded in principle. Consumers should surface it.
 - Within a push segment each turf-force direction and contact normal is frozen. The error is first
   order in the direction tolerance and the opening gap, both small numerical tolerances. It is
   negligible for straight pushes and measured in millimetres for pushes at an angle. The brute-force
-  cross-check (§9) bounds it.
+  cross-check (§9) bounds it. The same holds for each slipping contact's frozen slip direction.
 
 ### Determinism
 
@@ -301,11 +354,14 @@ Tooling: **Vitest** (unit, property and snapshot tests), **Playwright** (browser
 1. **Physics sanity**
    - Analytic cases: centre-struck spinless solid ball begins pure rolling at 5/7 of launch speed;
      head-on equal-mass perfectly elastic impact stops the first ball; drop-bounce matches restitution;
-     a ball with topspin at rest behind a resting ball pushes it with the closed-form common
-     acceleration (5·μs − 7·μr)·g/12 until its slip is gone.
-   - Invariants: energy never increases; momentum conserved in isolated ball–ball impacts; resting-
-     contact forces never pull and balance between the pair; touching balls never interpenetrate and
-     never set off an event storm.
+     a ball in flight lands where and when the ballistic closed form says; a ball with topspin at rest
+     behind a resting ball pushes it with the closed-form common acceleration
+     A = (c·μs − 7/5·μr)·g / (7/5 + c), c = (1 − μ − 7/5·μ·μr) / (1 + μ·μs) (μ the ball–ball friction;
+     (5·μs − 7·μr)·g/12 when μ = 0) until its slip is gone; a ball struck above its equator is driven
+     into the turf and gains the spin its impulsive turf friction gives it.
+   - Invariants: energy never increases; momentum conserved in ball–ball impacts except for the turf's
+     impulse; resting-contact forces never pull, balance between the pair and stay within the friction
+     cone; touching balls never interpenetrate and never set off an event storm; bouncing balls settle.
    - Mirror symmetry of setups yields mirrored results.
    - Determinism: repeated runs on one engine are bit-identical.
    - Event solver cross-checked against brute-force small-step integration of the same shot.
@@ -313,6 +369,9 @@ Tooling: **Vitest** (unit, property and snapshot tests), **Playwright** (browser
    - Standard stroke distance ratios within ±15 % of sourced coaching figures.
    - Ordering: stop shot → pass-roll gives monotonically increasing striker's-ball distance.
    - Pull emerges on wide rolls and narrows the split.
+   - Stop-shot lift emerges without special-casing: in the default stop shot the striker's ball is clear
+     of the turf while it transfers most of its momentum to the croqueted ball, meeting it fractionally
+     above the equator (no jump flag), so the transfer is not spoiled by turf friction.
    - Clean hoop run in the target direction detected; upright rebound not counted; run in the wrong
      direction not counted.
    - Out-of-court event raised per the sourced criterion.
@@ -342,7 +401,9 @@ Stored as JSON under `reference/`, one file per topic; every value carries its s
 and, where relevant, its plausible bounds.
 
 - Official ball specification: diameter, mass, rebound requirement.
-- Standard lawn dimensions, hoop and peg positions, hoop inner width and upright diameter, peg dimensions.
+- Standard lawn dimensions, hoop and peg positions, hoop inner width, upright diameter, crown clearance
+  (height of the crown's underside above the lawn), peg dimensions.
+- Ball–turf restitution on landing.
 - Laws: definition of running a hoop; out-of-court criterion.
 - Lawn-speed definition and typical range.
 - Coaching distance ratios for stop / drive / half-roll / full roll / pass-roll.
