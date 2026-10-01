@@ -53,37 +53,41 @@ Rejected:
 
 | Module | Responsibility |
 |---|---|
-| `push.ts` | Façade. Keeps `solveRestingContacts`, `solveNearestHold`, `pushedState`, `pushedTrajectory`, `pushDuration`, the new `contactSlipDuration` (beside `pushDuration`, sharing `risesAt`) and the tolerances; re-exports `holdCertificate`, `HoldLink`, `HoldRay` from `convexSolve.ts`. Glues velocities, builds groups and iterates the kept set as today. |
+| `push.ts` | Façade. Keeps `solveRestingContacts`, `solveNearestHold`, `pushedState`, `pushedTrajectory`, `pushDuration`, the new `contactSlipDuration` (beside `pushDuration`, sharing `risesAt`) and the tolerances. Glues velocities, builds groups and iterates the kept set as today. `holdCertificate`, `HoldLink` and `HoldRay` become internal to `convexSolve.ts`; their tests move up to `solveRestingContacts` decisions. |
 | `contactModel.ts` (new) | Per-group model: ball modes (held, released, turf-rolling, turf-sliding, airborne) and contact modes (open, stick, slip); assembles the non-symmetric system for one candidate, with held balls inside it, load-coupled turf forces, angular dynamics and consistency checks. Works in each ball's turf frame. |
 | `modeSolve.ts` (new) | Candidate order, residual-merit Newton for unknown directions (contact or turf slip onset, release from rest), friction continuation, the search, and the work budget. Replaces `guide`, `searchHold` and `releaseDirections`. |
-| `convexSolve.ts` (new) | A small second-order-cone solver (log barrier): the hold certificate (feasibility and its Farkas test) and the minimum-norm choice of undetermined forces (§4). `holdCertificate` changes signature (below). |
-| `linalg.ts` (new) | Dense elimination with full pivoting, rank detection and null space, factor reuse across right-hand sides, sparse assembly. |
+| `convexSolve.ts` (new) | One second-order-cone primitive (log barrier): feasibility, then minimum norm, over load-coupled cones. It serves both the hold-first check (§4 step 2) and the choice of undetermined forces (§4 step 5). |
+| `linalg.ts` (new) | Dense elimination with full pivoting (skipping zero entries of the pivot row), rank detection and null space, factor reuse across right-hand sides, sparse assembly of the system. |
 
 Interface changes:
 
 - `RestingContact` gains `friction`: the Coulomb coefficient of its material (`world.ballBall`,
   `ballUpright` or the peg's), filled in by `simulate.ts`. μs is `slidingDecel / gravity`. Mass is not carried, so
   forces and loads stay mass-normalised (m/s²), as today.
-- `ContactBody` gains its **turf frame**, the turf normal and the gravity vector (ẑ and −g·ẑ in v1), and its **pivot
-  capacity**, the turf's grip against spin about the turf normal (unlimited in v1). The contact model uses the
-  frame's vectors throughout (the load, the hold condition's ê terms, the pivot axis, t = normal × n), never z
-  components, so slopes and finite grip change inputs, not equations. `simulate.ts` fills both from the world.
+- `ContactBody` gains its **turf normal** (ẑ in v1) and its **pivot capacity**, the turf's grip against spin about
+  the turf normal. The gravity vector (−g·ẑ in v1) is passed once per solve. The contact model uses these vectors
+  throughout (the load, the hold condition's ê terms, the pivot axis, t = normal × n), never z components, so
+  slopes change inputs, not equations. v1 implements no finite pivot constraint: the capacity is always unlimited
+  and the solver asserts it; the constraint arrives with the surface model. `simulate.ts` fills both from the world.
 - `RestingSolution.coupled: boolean[]` becomes `modes: ContactMode[]` (`"open" | "stick" | "slip"`), with
   `slips: (Vec3 | null)[]`: each slipping contact's frozen slip direction. Both are per contact; `PushMotion` is
   unchanged in shape (its `angularAcceleration` now includes contact-friction torques).
 - `RestingSolution` gains `approximateSlip: boolean[]` (per body: a contact or turf slip of the body fell back to
   §4's first last resort), `slipExcess: number` (the worst residual of the failed direction solves; 0 when none) and
-  `budgetHold: boolean` (the group was held because the work budget was spent).
-- `holdCertificate` takes per ball its applied load and its load-coupled limits (μr, μs; capacity 7/5·μr·L and turf
-  limit μs·L with L = g − Σ P_z along the turf normal), its pivot capacity, and per link and ray its unit normal,
-  contact offsets ê and friction μ. It tests the hold condition on Σ[P_h(1+ê_z) − ê_h·P_z]. It returns the
-  certificate's forces or null; `HoldLink` and `HoldRay` gain the new per-contact fields. Below a limit of holding
-  the feasible forces form a set, not a point; only feasibility is part of the contract.
+  `budgetHold: boolean` (the group was held because the work budget was spent; its balls are not also flagged in
+  `approximate`, so it emits `budget-hold` only).
+- `solveRestingContacts` takes the work budget remaining for the shot and returns the work it spent (§5).
+- The hold check takes per ball its applied load and its load-coupled limits (μr, μs; capacity 7/5·μr·L and turf
+  limit μs·L with L = g − Σ P_z along the turf normal), and per contact its unit normal, contact offsets ê and
+  friction μ. It tests the hold condition on Σ[P_h(1+ê_z) − ê_h·P_z]. Below a limit of holding the feasible forces
+  form a set, not a point; only feasibility is decided by it.
 - `sim.couplings` entries gain `mode`, so the simulator can detect a mode change between consecutive solves.
 - `ShotEvent` gains `stick` and `slip`, each split as the existing contact events are (`ball-ball` /
-  `ball-obstacle`): `stick-ball` / `stick-obstacle` and `slip-ball` / `slip-obstacle`, the slip kinds carrying the
-  direction. It also gains `approximate-slip`, shaped like `approximate-hold` (`balls`: those flagged in
-  `approximateSlip`; `excess`: `slipExcess`), and `budget-hold` (`balls`: the group's resting balls).
+  `ball-obstacle`): `stick-ball` `{ t, balls }`, `stick-obstacle` `{ t, ball, obstacleId }`, `slip-ball`
+  `{ t, balls, direction }` and `slip-obstacle` `{ t, ball, obstacleId, direction }`. `direction` is the unit slip in
+  world coordinates of the first ball's contact point relative to the other body's. It also gains
+  `approximate-slip`, shaped like `approximate-hold` (`balls`: those flagged in `approximateSlip`; `excess`:
+  `slipExcess`), and `budget-hold` `{ t, balls }` (the group's resting balls).
 - `ENGINE_VERSION` 0.2.0 → 0.3.0.
 - Test support, `bruteForce.ts`:
   - Turf forces scale by each ball's load ratio L/g, with L = g − (net vertical push impulse on the ball in the
@@ -112,7 +116,8 @@ s_t = (v_a − v_b)·t + R·(ω_az + ω_bz), s_z = −R·(ω_a + ω_b)·t, so a 
 twice their common speed.
 
 Unknowns per candidate: each moving ball's linear acceleration (horizontal on the turf, 3D in flight) and angular
-acceleration (locked to the linear one for a rolling or released ball, with no spin about the vertical axis; all
+acceleration (locked to the linear one for a rolling or released ball, with no change in its spin about the
+vertical axis; all
 three components for a sliding or airborne ball); each held ball's static turf force F and resistance Q, with its
 centre and spin locked; and each coupled contact's normal force and, when stuck, its 2D tangential force. Contact
 friction acts at R·ê from each centre, so it torques both balls: R·ê × P / (2/5·m·R²).
@@ -138,9 +143,7 @@ Pipeline:
    passes `FOLLOW_EPSILON`. Starts, in order: four cheap starts (the proposal's seed and its quarter turns); for at
    most two direction items a forward scan (24 points, or 12 × 12); then friction continuation (μ scaled to 1e-3 of
    its value, then 0.1, 0.25, 0.5, 0.75 and 1, each seeded from the previous root). The scan must stay behind the
-   cheap starts, or it rejects genuine releases just past a limit. Release at a limit of holding is well
-   conditioned (accepted Jacobians: entries ≤ 1.5, condition ≤ 8e3), which removes P1's ill-conditioning (planar
-   entries of order 1e15).
+   cheap starts, or it rejects genuine releases just past a limit.
 5. **Undetermined forces.** A candidate's system can be singular but consistent: a ball stuck to a held ball has
    its vertical stick row implied by its normal row; a ball jammed between three or more bodies has free normal
    splits. The solver takes the minimum-norm forces subject to every convex condition of the candidate (N ≥ 0,
@@ -158,7 +161,11 @@ Pipeline:
 7. **Last resorts.** No slip-onset direction → the contact slips against its stuck force, or the ball's turf slip
    starts against its static turf friction, `approximate-slip` (excess: the residual of the failed direction
    solve). Nothing consistent, or the cap reached → nearest hold, `approximate-hold`. Work budget spent (§5) →
-   nearest hold, `budget-hold`.
+   nearest hold, `budget-hold`. The nearest hold is P1's: the resting balls are held and the moving balls are
+   solved against them as fixed obstacles by Gauss's least constraint, frictionlessly, a convex problem that always
+   has a solution. Its omitted friction is part of the approximation these events report. No test reaches
+   `approximate-slip` naturally (the prototype never raised it), so a unit test reaches it by injecting a failed
+   direction solve.
 
 Tolerances:
 
@@ -175,24 +182,31 @@ Tolerances:
   `contactSlipDuration` once per slipping contact with the solution's slip and lowers both member tracks'
   `duration` to it. `findNextEvent` then raises the end as a `regroup` from the track's own `t0 + duration`, and
   `groupEnd` picks it up unchanged. Every re-solve first runs `release()`, which reopens the tracks, so no lowered
-  duration outlives its segment.
+  duration outlives its segment. An airborne track's `t0 + duration` is its landing time (`findNextEvent` raises it
+  as a `landing`, and the landing handler puts the ball on the turf), so a slip end must not lower it: the track
+  carries the slip end separately (`slipEnd`), and `findNextEvent` raises it as a `regroup` for every phase,
+  airborne included.
 - A stuck contact has no end time of its own: its force is constant within the segment.
 - Every existing segment end (turf slip/velocity, opening gap, landing, other events) triggers a re-solve as today.
 - `stick` / `slip` events (§3) are emitted when a coupled contact's mode changes between consecutive solves, not at
-  first coupling (its resting contact event marks that). `release()` clears the couplings before the solve (and the
-  landing path releases before it settles), so `settle()` snapshots the group's couplings and their modes before
-  releasing and compares against that snapshot.
+  first coupling (its resting contact event marks that). `release()` clears the couplings before the solve, so
+  `settle()` snapshots the group's couplings and their modes before releasing and compares against that snapshot.
+  The landing handler calls `release()` itself before `settle()`, so it takes the snapshot before its own release
+  and passes it to `settle()`.
 - **Work budget.** The simulator carries one counter per shot of solver work: linear solves, Newton evaluations and
-  barrier iterations, each weighted by its size. When a group solve would exceed `SOLVE_BUDGET`, the group is held
-  (nearest hold) and a `budget-hold` event is emitted. The plan fixes `SOLVE_BUDGET` from the prototype's costs at
-  about 100 ms on the reference tablet. Counting work, not time, keeps results identical on every device.
+  barrier iterations (the hold-first check included), each weighted by its size; the plan fixes the weights and
+  `SOLVE_BUDGET` from the prototype's costs, at about 100 ms on the reference tablet. `solveRestingContacts` checks
+  the counter before each candidate; once it is spent, the search stops at that candidate boundary, the group is
+  held (nearest hold, which is not counted: it is convex and bounded) and a `budget-hold` event is emitted.
+  Counting work, not time, keeps results identical on every device.
 - Unchanged: free-motion collisions (`resolve.ts`), landing, jump flag, out of court, halt. A ball perched still on
   others now holds through static friction and is still snapped to rest.
 
 ## 6. Testing
 
-Closed forms (standard ball; test world SLIDE 3, ROLL 0.5 unless stated; ball–ball μ 0.05, upright μ 0.1) are
-derived in the prototype and are the arbiters of every limit below.
+Closed forms (the `push.test.ts` parameters SLIDE 3, ROLL 0.5 unless stated; ball–ball μ 0.05, upright μ 0.1, as in
+`testWorld()`) are derived in the prototype and are the arbiters of every limit below. "Standard world" below means
+`testWorld()` without overrides (`tests/engine/support/fixtures.ts`), not `defaultWorld()`.
 
 - **Analytic:**
   - Topspin push: A to 1e-9 relative, with the pusher's load lowered and the pushed ball's raised by μ·N. The pusher
@@ -203,7 +217,7 @@ derived in the prototype and are the arbiters of every limit below.
   - The test world's `ballBall.friction` is 0.05, so every existing push test that assumed frictionless pushes
     (in `simulate.test.ts`, `lift.test.ts` and `push.test.ts`) is re-derived with friction on, not loosened.
   - Static hold against an upright and against a ball: holds inside the cone, slips just outside it. Upright
-    (standard world, μs 0.3, μr 0.05; a topspin driver pushing ball 1 against an upright at angle β): hold limit
+    (`testWorld()`, μs 0.3, μr 0.05; a topspin driver pushing ball 1 against an upright at angle β): hold limit
     β* = 20.447782900°, release onset β_slip = atan μu + asin(K0/(N′·√(1 + μu²))) = 20.290321024°.
   - Lift-off when friction drives a load to zero.
 - **Invariants and properties:** energy never increases; normal forces never pull; friction within the cone and
@@ -222,7 +236,8 @@ derived in the prototype and are the arbiters of every limit below.
   a ball pushed along or rubbing against an upright; one that reaches a `stick` event or a slip onset; a ball with
   topspin rebounding off an upright, checking, then rolling forward through the hoop or into the peg (real play;
   the event sequence is asserted too).
-- **Brute-force limit checks** (slow, not in the default run): brute force confirms release onsets (θ_slip,
+- **Brute-force limit checks** (slow; skipped unless the environment variable `SLOW_TESTS` is set, via
+  `it.skipIf`): brute force confirms release onsets (θ_slip,
   β_slip) to about 0.001°. "Held" is a_eff = 4·(d(H) − 2·d(H/2))/H² < 1e-5 m/s² (a displacement threshold misreads
   the creep from restitution chatter, which is first order in dt); the onset comes from a linear fit of a_eff past
   the decision, with H ≥ 0.25 s and extrapolation over dt 4e-6, 2e-6 and 1e-6.
@@ -231,8 +246,9 @@ derived in the prototype and are the arbiters of every limit below.
   `approximate-hold`, `approximate-slip` or `budget-hold`, and the search never reaches `MODE_SEARCH_LIMIT`.
 - **No approximation:** `fuzz.test.ts` and the cross-check's wedge assertion forbid `approximate-slip` and
   `budget-hold` as well as `approximate-hold`. Fuzz and cross-check generators glue velocities.
-- **Performance measurement** (last task): re-run the prototype's realistic shot mix with friction on, reporting
-  groups per shot, chatter counts and solver and engine time per shot, for P5.
+- **Performance measurement** (last task): port the prototype's realistic shot-mix generator
+  (`prototype/speed/shots.ts`) to `scripts/shotMix.ts`, re-run it with friction on, and record groups per shot,
+  chatter counts and solver and engine time per shot in the roadmap's "P2a.2 outcomes carried forward", for P5.
 
 ## 7. Process and prototype record
 
@@ -242,7 +258,9 @@ four-ball clusters solved with none unsolved (cap measurement above); realistic 
 solve; every group two balls, one candidate) within the performance budget at p99.9 with about three times
 headroom. Its optimisations are kept: factor reuse, sparse assembly and elimination, value-only line searches in the
 barrier solve, and no condition-number diagnostics. An eight-start fan of extra Newton starts decided nothing in
-12,500 groups and is dropped. An Opus physics review covered the design and the prototype.
+12,500 groups and is dropped. Release at a limit of holding is well conditioned (accepted Jacobians: entries ≤ 1.5,
+condition ≤ 8e3), which removes P1's ill-conditioning (planar entries of order 1e15). An Opus physics review
+covered the design and the prototype.
 
 Remaining: plan pre-flight executed literally; subagent-driven development with per-task reviews (Opus for physics)
 and an Opus whole-branch review with probes. On completion: roadmap P2 row "P2a.2 (met)" and a "P2a.2 outcomes
