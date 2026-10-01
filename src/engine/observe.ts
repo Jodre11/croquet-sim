@@ -94,6 +94,15 @@ function pathFrom(segments: readonly Segment[], t: number): Trajectory {
 }
 
 /**
+ * True when both paths keep their centres at one constant, shared height over the stretch: in practice both balls on
+ * the turf (z = R). Such a pair can never be one over the other, because they cannot overlap, so the jump search skips
+ * it.
+ */
+function sameFixedHeight(pa: Trajectory, pb: Trajectory): boolean {
+    return pa.c2.z === 0 && pb.c2.z === 0 && pa.c1.z === 0 && pb.c1.z === 0 && pa.c0.z === pb.c0.z;
+}
+
+/**
  * The first time a's and b's centres come within one radius of each other horizontally (one passes over the other),
  * reported against the higher ball. Only stretches where one of them is airborne are searched: two balls on the turf
  * are always at least two radii apart. A halted ball still counts: it rests at least a halt margin beyond the boundary,
@@ -107,7 +116,7 @@ function overBall(a: BallId, b: BallId, sa: readonly Segment[], sb: readonly Seg
         const t1 = times[k + 1] ?? end;
         const pa = pathFrom(sa, t0);
         const pb = pathFrom(sb, t0);
-        if (pa.c2.z === 0 && pb.c2.z === 0 && pa.c1.z === 0 && pb.c1.z === 0 && pa.c0.z === pb.c0.z) {
+        if (sameFixedHeight(pa, pb)) {
             continue;
         }
         const A = horizontal(sub(pa.c0, pb.c0));

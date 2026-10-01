@@ -133,6 +133,8 @@ export function resolveBallBall(
     let supportA = aOnTurf;
     let supportB = bOnTurf;
     let impulse: Vec3;
+    // Try the turf balls as supported first. Each pass either breaks or clears one support flag, and flags are never
+    // set again, so this runs at most three times.
     for (;;) {
         const sa = supportA;
         const sb = supportB;
@@ -192,6 +194,8 @@ export function resolveBallCylinder(
     const wasOnTurf = onTurf(s, r);
     let supported = wasOnTurf;
     let impulse: Vec3;
+    // Try the ball as supported first. Each pass either breaks or clears the support flag, and it is never set again,
+    // so this runs at most twice.
     for (;;) {
         const held = supported;
         const k = (v: Vec3): Vec3 => scale(add(mobility(v, held), scale(sub(v, scale(n, dot(v, n))), 2.5)), 1 / m);

@@ -135,6 +135,10 @@ function perched(track: Track): boolean {
     );
 }
 
+/**
+ * True when the ball's motion can produce events: not inert, not stationary and not perched. A perched ball is
+ * airborne but held exactly still, so it counts as not moving until a regroup releases it.
+ */
 function moving(track: Track): boolean {
     return !track.inert && track.phase !== "stationary" && !perched(track);
 }

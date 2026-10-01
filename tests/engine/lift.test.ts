@@ -4,7 +4,14 @@ import { vec3 } from "../../src/engine/math/vec3";
 import { SETTLE_SPEED } from "../../src/engine/resolve";
 import { stateAtTime } from "../../src/engine/sample";
 import { simulateFreeMotion } from "../../src/engine/simulate";
-import { BALL_IDS, type BallId, type BallState, type BallStates, type ShotResult } from "../../src/engine/types";
+import {
+    BALL_IDS,
+    type BallId,
+    type BallState,
+    type BallStates,
+    type ShotEvent,
+    type ShotResult,
+} from "../../src/engine/types";
 import { STANDARD_GRAVITY } from "../../src/engine/world";
 import { mechanicalEnergy } from "./support/energy";
 import { TEST_BALL, airborneAt, ballAt, rollingBallAt, testHoop, testWorld } from "./support/fixtures";
@@ -170,7 +177,7 @@ describe("resting contact in flight", () => {
         expect(result.rest.blue).toEqual(vec3(5, 5, R));
     });
 
-    it("keeps a ball perched on another at rest when a third ball strikes its support", () => {
+    it("drops a ball perched on another onto the turf when a third ball strikes its support", () => {
         const world = testWorld();
         const result = simulateFreeMotion(
             {
@@ -181,6 +188,10 @@ describe("resting contact in flight", () => {
             world,
         );
         expect(result.aborted).toBe(false);
+        const strikes = (e: ShotEvent): boolean =>
+            e.kind === "ball-ball" && e.balls.includes("black") && e.balls.includes("blue");
+        expect(result.events.some(strikes)).toBe(true);
+        expect(result.events.some((e) => e.kind === "landing" && e.ball === "red")).toBe(true);
         expect(worstPenetration(result, world)).toBeLessThan(CONTACT_TOLERANCE);
         expect(result.rest.red?.z).toBe(R);
         expectNoEnergyGain(result);
