@@ -3,7 +3,7 @@ import { length, sub, vec3 } from "../../src/engine/math/vec3";
 import { simulateFreeMotion } from "../../src/engine/simulate";
 import type { BallId, BallStates, World } from "../../src/engine/types";
 import { bruteForce } from "./support/bruteForce";
-import { TEST_BALL, ballAt, rollingBallAt, testWorld } from "./support/fixtures";
+import { TEST_BALL, airborneAt, ballAt, rollingBallAt, testWorld } from "./support/fixtures";
 
 const R = TEST_BALL.radius;
 const DT = 2e-6;
@@ -43,6 +43,9 @@ const SCENARIOS: Record<string, { readonly initial: BallStates; readonly world?:
         },
         world: FRICTIONLESS,
     },
+    "dropped with backspin": {
+        initial: { blue: airborneAt(5, 5, 0.5, vec3(1, 0, 0), vec3(0, -60, 0)) },
+    },
 };
 
 describe("event solver versus brute-force integration", () => {
@@ -75,5 +78,6 @@ describe("event solver versus brute-force integration", () => {
         const wedge = kinds("push into two touching balls at an angle (wedge)");
         expect(wedge).toContain("blue-red resting");
         expect(wedge).not.toContain("approximate-hold");
+        expect(kinds("dropped with backspin")).toContain("landing");
     });
 });

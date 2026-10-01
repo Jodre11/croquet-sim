@@ -7,7 +7,7 @@ import { BALL_IDS, type BallId, type BallState, type BallStates, type ShotResult
 import { STANDARD_GRAVITY } from "../../src/engine/world";
 import { kineticEnergy } from "./support/energy";
 import { worstPenetration } from "./support/penetration";
-import { TEST_BALL, ballAt, rollingBallAt, testHoop, testWorld } from "./support/fixtures";
+import { TEST_BALL, airborneAt, ballAt, rollingBallAt, testHoop, testWorld } from "./support/fixtures";
 
 const R = TEST_BALL.radius;
 const SLIDE = 0.3 * STANDARD_GRAVITY;
@@ -311,10 +311,15 @@ describe("limits and validation", () => {
         expect(() => simulateFreeMotion({ blue: ballAt(15.03, 20) }, testWorld())).toThrow(RangeError);
     });
 
-    it("rejects a ball not resting on the lawn", () => {
-        const lifted = { ...ballAt(5, 5), position: vec3(5, 5, R + 0.01) };
-        expect(() => simulateFreeMotion({ blue: lifted }, testWorld())).toThrow(RangeError);
-        const rising = ballAt(5, 5, vec3(1, 0, 0.5));
-        expect(() => simulateFreeMotion({ blue: rising }, testWorld())).toThrow(RangeError);
+    it("rejects a ball below the lawn plane", () => {
+        const sunk = { ...ballAt(5, 5), position: vec3(5, 5, R - 0.01) };
+        expect(() => simulateFreeMotion({ blue: sunk }, testWorld())).toThrow(/below the lawn plane/);
+    });
+
+    it("measures overlap in 3D: a ball in flight may start above another, but not inside it", () => {
+        const over = airborneAt(5, 5, 5 * R, vec3(3, 0, 0));
+        expect(() => simulateFreeMotion({ blue: ballAt(5, 5), red: over }, testWorld())).not.toThrow();
+        const inside = airborneAt(5 + R, 5, 2 * R);
+        expect(() => simulateFreeMotion({ blue: ballAt(5, 5), red: inside }, testWorld())).toThrow(/overlap/);
     });
 });

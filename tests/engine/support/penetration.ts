@@ -25,7 +25,7 @@ export function worstPenetration(result: ShotResult, world: World): number {
         const centres: Vec3[] = ids.map((id) => stateAtTime(result, id, t).position);
         centres.forEach((a, i) => {
             centres.slice(i + 1).forEach((b) => {
-                worst = Math.max(worst, 2 * R - length(horizontal(sub(a, b))));
+                worst = Math.max(worst, 2 * R - length(sub(a, b)));
             });
             for (const o of obstacles) {
                 worst = Math.max(worst, R + o.radius - length(horizontal(sub(a, o.centre))));

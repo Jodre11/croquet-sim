@@ -11,6 +11,10 @@
  * decides which of them push, and those are coupled until one of the pushed balls changes phase, the contact opens,
  * or another contact intervenes. For touching bodies, the decision at t = 0 uses `approachSpeed` and the same solver
  * that resolution uses, so detection and resolution always agree.
+ *
+ * A ball in flight follows its ballistic path until it lands (an impulse with the turf, resolve.ts) or strikes
+ * something. Ball–ball contact is between spheres, measured in 3D; contact with an upright or the peg, the boundary and
+ * the halt margin are measured on the horizontal projection of the centre.
  */
 import {
     CONTACT_TOLERANCE,
@@ -44,7 +48,7 @@ import {
     type RestingContact,
     type RestingSolution,
 } from "./push";
-import { resolveBallBall, resolveBallCylinder } from "./resolve";
+import { SETTLE_SPEED, resolveBallBall, resolveBallCylinder, resolveLanding, type TurfAt } from "./resolve";
 import {
     BALL_IDS,
     type BallId,
@@ -59,7 +63,7 @@ import {
     type ShotResult,
     type World,
 } from "./types";
-import { motionParamsAt, obstaclesOf, validateWorld } from "./world";
+import { motionParamsAt, obstaclesOf, turfAt, validateWorld } from "./world";
 
 /** Version of the physics; recorded in every result and share link. */
 export const ENGINE_VERSION = "0.1.0";
@@ -67,7 +71,7 @@ export const ENGINE_VERSION = "0.1.0";
 /** Event budget per shot. Reaching it marks the result aborted rather than looping forever. */
 export const DEFAULT_MAX_EVENTS = 10_000;
 
-/** Tolerance (m, m/s) for accepting an initial state as resting on the lawn plane. */
+/** Tolerance (m) for accepting an initial centre height as on the lawn plane. */
 const PLANE_TOLERANCE = 1e-9;
 
 interface Track {
@@ -98,6 +102,7 @@ interface Simulation {
     readonly tracks: Track[];
     couplings: Coupling[];
     readonly events: ShotEvent[];
+    readonly turf: TurfAt;
 }
 
 type Candidate =
@@ -105,7 +110,8 @@ type Candidate =
     | { readonly time: number; readonly kind: "regroup"; readonly track: Track }
     | { readonly time: number; readonly kind: "ball-ball"; readonly a: Track; readonly b: Track }
     | { readonly time: number; readonly kind: "obstacle"; readonly track: Track; readonly obstacle: Cylinder }
-    | { readonly time: number; readonly kind: "halt"; readonly track: Track };
+    | { readonly time: number; readonly kind: "halt"; readonly track: Track }
+    | { readonly time: number; readonly kind: "landing"; readonly track: Track };
 
 function stateAt(track: Track, t: number): BallState {
     const local = Math.min(t - track.t0, track.duration);
@@ -123,14 +129,21 @@ function moving(track: Track): boolean {
     return !track.inert && track.phase !== "stationary";
 }
 
-/** Places the ball exactly on the lawn plane, rejecting states that are not (nearly) there. */
-function onLawn(id: BallId, s: BallState, radius: number): BallState {
-    if (Math.abs(s.position.z - radius) > PLANE_TOLERANCE || Math.abs(s.velocity.z) > PLANE_TOLERANCE) {
-        throw new RangeError(`ball ${id} is not resting on the lawn plane`);
+/**
+ * Checks an initial state and places it exactly: a ball within PLANE_TOLERANCE of the lawn plane is put on it, and
+ * keeps an upward vertical velocity of at least SETTLE_SPEED (it starts airborne) or otherwise loses its vertical
+ * velocity; a ball higher up starts airborne as it is. A ball below the plane is rejected.
+ */
+function initialState(id: BallId, s: BallState, radius: number): BallState {
+    if (s.position.z < radius - PLANE_TOLERANCE) {
+        throw new RangeError(`ball ${id} is below the lawn plane`);
+    }
+    if (s.position.z > radius + PLANE_TOLERANCE) {
+        return s;
     }
     return {
         position: vec3(s.position.x, s.position.y, radius),
-        velocity: horizontal(s.velocity),
+        velocity: s.velocity.z >= SETTLE_SPEED ? s.velocity : horizontal(s.velocity),
         angularVelocity: s.angularVelocity,
     };
 }
@@ -140,7 +153,7 @@ function assertNoOverlap(tracks: readonly Track[], obstacles: readonly Cylinder[
         const a = tracks[i] as Track;
         for (let j = i + 1; j < tracks.length; j++) {
             const b = tracks[j] as Track;
-            const gap = length(horizontal(sub(a.start.position, b.start.position))) - 2 * radius;
+            const gap = length(sub(a.start.position, b.start.position)) - 2 * radius;
             if (gap < -CONTACT_TOLERANCE) {
                 throw new RangeError(`balls ${a.id} and ${b.id} overlap`);
             }
@@ -372,7 +385,8 @@ function findNextEvent(sim: Simulation, now: number): Candidate | null {
 
     for (const track of live) {
         const end = track.t0 + track.duration;
-        if (moving(track) && Number.isFinite(end)) {
+        // Landings are gathered last (below): simultaneous impulses go ball–ball, then obstacles, then landings.
+        if (moving(track) && Number.isFinite(end) && track.phase !== "airborne") {
             best = earlier(best, { time: end, kind: track.push ? "regroup" : "transition", track });
         }
     }
@@ -442,12 +456,18 @@ function findNextEvent(sim: Simulation, now: number): Candidate | null {
             best = earlier(best, { time: now + dt, kind: "halt", track });
         }
     }
+    for (const track of live) {
+        const end = track.t0 + track.duration;
+        if (track.phase === "airborne" && Number.isFinite(end)) {
+            best = earlier(best, { time: end, kind: "landing", track });
+        }
+    }
     return best;
 }
 
 /**
  * Simulates free motion from the given initial states until every ball is at rest (or the event budget runs
- * out). Balls must rest on the lawn plane and must not overlap one another or any obstacle.
+ * out). Balls must not be below the lawn plane or overlap one another or any obstacle.
  */
 export function simulateFreeMotion(
     initial: BallStates,
@@ -455,11 +475,18 @@ export function simulateFreeMotion(
     maxEvents: number = DEFAULT_MAX_EVENTS,
 ): ShotResult {
     validateWorld(world);
-    const sim: Simulation = { world, obstacles: obstaclesOf(world), tracks: [], couplings: [], events: [] };
+    const sim: Simulation = {
+        world,
+        obstacles: obstaclesOf(world),
+        tracks: [],
+        couplings: [],
+        events: [],
+        turf: (position) => turfAt(world, position),
+    };
     for (const id of BALL_IDS) {
         const s = initial[id];
         if (s) {
-            sim.tracks.push(reopen(sim, null, id, onLawn(id, s, world.ball.radius), 0));
+            sim.tracks.push(reopen(sim, null, id, initialState(id, s, world.ball.radius), 0));
         }
     }
     assertNoOverlap(sim.tracks, sim.obstacles, world.ball.radius);
@@ -528,9 +555,26 @@ export function simulateFreeMotion(
             case "halt": {
                 const { track } = next;
                 release(sim, [track], now);
-                reopen(sim, track, track.id, { ...stateAt(track, now), velocity: ZERO, angularVelocity: ZERO }, now);
+                // A ball halted in flight is placed on the turf beneath that point.
+                const p = stateAt(track, now).position;
+                reopen(sim, track, track.id, atRest(vec3(p.x, p.y, world.ball.radius)), now);
                 track.inert = true;
                 sim.events.push({ kind: "halted", t: now, ball: track.id });
+                break;
+            }
+            case "landing": {
+                const { track } = next;
+                const group = groupOf(sim, [track]);
+                const coupled = sim.couplings.some((c) => group.includes(c.a));
+                const s = stateAt(track, now);
+                release(sim, group, now);
+                const R = world.ball.radius;
+                const touchdown = { ...s, position: vec3(s.position.x, s.position.y, R) };
+                reopen(sim, track, track.id, resolveLanding(touchdown, world.ball, sim.turf(touchdown.position)), now);
+                sim.events.push({ kind: "landing", t: now, ball: track.id });
+                if (coupled) {
+                    settle(sim, group, now);
+                }
                 break;
             }
         }

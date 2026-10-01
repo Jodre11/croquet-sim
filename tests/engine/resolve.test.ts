@@ -1,13 +1,21 @@
 import { describe, expect, it } from "vitest";
 import { approachSpeed } from "../../src/engine/detect";
-import { ZERO, add, scale, sub, vec3 } from "../../src/engine/math/vec3";
-import { resolveBallBall, resolveBallCylinder } from "../../src/engine/resolve";
-import type { BallState } from "../../src/engine/types";
+import { ZERO, add, scale, sub, vec3, type Vec3 } from "../../src/engine/math/vec3";
+import { contactSlip, onTurf } from "../../src/engine/motion";
+import { SETTLE_SPEED, resolveBallBall, resolveBallCylinder, resolveLanding } from "../../src/engine/resolve";
+import type { BallState, ContactMaterial } from "../../src/engine/types";
 import { kineticEnergy } from "./support/energy";
 import { rng } from "./support/rng";
 
 const BALL = { radius: 0.046, mass: 0.454 };
 const R = BALL.radius;
+const M = BALL.mass;
+const I = 0.4 * M * R * R;
+const TURF_MATERIAL: ContactMaterial = { restitution: 0.5, friction: 0.3 };
+
+function flying(position: Vec3, velocity = ZERO, angularVelocity = ZERO): BallState {
+    return { position, velocity, angularVelocity };
+}
 
 function at(x: number, y: number, velocity = ZERO, angularVelocity = ZERO): BallState {
     return { position: vec3(x, y, R), velocity, angularVelocity };
@@ -127,6 +135,54 @@ describe("resolveBallCylinder", () => {
             const s = resolveBallCylinder(s0, c, BALL, { restitution: random(), friction: random() * 0.5 });
             expect(kineticEnergy(s, BALL)).toBeLessThanOrEqual(kineticEnergy(s0, BALL) + 1e-12);
             expect(s.velocity.z).toBe(0);
+        }
+    });
+});
+
+describe("resolveLanding", () => {
+    it("rebounds with the turf's restitution and leaves a rolling ball's horizontal motion alone", () => {
+        const s = resolveLanding(flying(vec3(1, 2, R), vec3(1, 0, -2), vec3(0, 1 / R, 0)), BALL, TURF_MATERIAL);
+        expect(s.velocity).toEqual(vec3(1, 0, 1));
+        expect(s.angularVelocity).toEqual(vec3(0, 1 / R, 0));
+        expect(s.position).toEqual(vec3(1, 2, R));
+    });
+
+    it("applies Coulomb turf friction from the landing impulse (closed form)", () => {
+        const s0 = flying(vec3(0, 0, R), vec3(1, 0, -0.5), vec3(0, -30, 0));
+        const s = resolveLanding(s0, BALL, TURF_MATERIAL);
+        const load = (1 + TURF_MATERIAL.restitution) * M * 0.5;
+        const f = TURF_MATERIAL.friction * load;
+        // Coulomb-limited: the stick cap 2m/7 × slip is larger.
+        expect(f).toBeLessThan((2 * M * contactSlip(s0, R).x) / 7);
+        expect(s.velocity.x).toBeCloseTo(1 - f / M, 12);
+        expect(s.angularVelocity.y).toBeCloseTo(-30 + (R * f) / I, 9);
+    });
+
+    it("stops the turf slip when friction is strong enough", () => {
+        const s = resolveLanding(flying(vec3(0, 0, R), vec3(1, 0, -2), vec3(0, -30, 0)), BALL, TURF_MATERIAL);
+        expect(contactSlip(s, R).x).toBeCloseTo(0, 12);
+    });
+
+    it("keeps a ball on the turf when the rebound would be slower than the settle speed", () => {
+        const down = 1.5 * SETTLE_SPEED;
+        const s = resolveLanding(flying(vec3(0, 0, R), vec3(0.3, 0, -down)), BALL, TURF_MATERIAL);
+        expect(onTurf(s, R)).toBe(true);
+        // The turf then takes only m·|vz| (no rebound), and its friction is μs times that.
+        expect(s.velocity.x).toBeCloseTo(0.3 - TURF_MATERIAL.friction * down, 15);
+    });
+
+    it("never gains energy (random landings)", () => {
+        const random = rng(13);
+        for (let n = 0; n < 500; n++) {
+            const s0 = flying(
+                vec3(0, 0, R),
+                vec3(random() * 4 - 2, random() * 4 - 2, -random() * 5),
+                vec3(random() * 80 - 40, random() * 80 - 40, random() * 20 - 10),
+            );
+            const material = { restitution: random(), friction: random() };
+            expect(kineticEnergy(resolveLanding(s0, BALL, material), BALL)).toBeLessThanOrEqual(
+                kineticEnergy(s0, BALL) + 1e-12,
+            );
         }
     });
 });
