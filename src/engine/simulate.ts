@@ -357,7 +357,69 @@ function separationGap(offset: Vec3, distance: number): number {
 /** Earliest time a coupled contact opens beyond SEPARATION_TOLERANCE, for relative trajectory a + b·t + c·t². */
 function separationTime(a: Vec3, b: Vec3, c: Vec3, distance: number, horizon: number): number | null {
     const f = [separationGap(a, distance), 2 * dot(a, b), dot(b, b) + 2 * dot(a, c), 2 * dot(b, c), dot(c, c)];
-    return firstNonNegative(f, horizon);
+    if (Number.isFinite(horizon)) {
+        return firstNonNegative(f, horizon);
+    }
+    // No horizon: every real root of f lies within Cauchy's bound 1 + max|fᵢ/fₙ|, with fₙ the highest non-zero
+    // coefficient, so searching up to it finds the first one.
+    let n = f.length - 1;
+    while (n > 0 && f[n] === 0) {
+        n--;
+    }
+    if (n === 0) {
+        return firstNonNegative(f, 0);
+    }
+    let bound = 0;
+    for (let i = 0; i < n; i++) {
+        bound = Math.max(bound, Math.abs((f[i] as number) / (f[n] as number)));
+    }
+    return firstNonNegative(f, 1 + bound);
+}
+
+/**
+ * Returns when the earliest segment of the track's coupled group ends, or, if none ends by itself, when the first of
+ * its couplings opens. A moving ball in flight whose push has no vertical acceleration (a ball sliding off the exact
+ * top of another has a vertical normal, so exactly zero acceleration) never lands, so its segment has no end of its
+ * own; but the coupled pair separates in finite time, which is where its group regroups anyway. Every search for
+ * the group's next event needs a finite horizon, so this is the one it is given.
+ */
+function boundedGroupEnd(sim: Simulation, track: Track, now: number): number {
+    const own = groupEnd(sim, track);
+    if (Number.isFinite(own)) {
+        return own;
+    }
+    const group = groupOf(sim, [track]);
+    let end = own;
+    for (const c of sim.couplings) {
+        if (!group.includes(c.a)) {
+            continue;
+        }
+        const pa = pathAt(c.a, now);
+        let dt: number | null;
+        if (c.b) {
+            const pb = pathAt(c.b, now);
+            dt = separationTime(
+                sub(pa.c0, pb.c0),
+                sub(pa.c1, pb.c1),
+                sub(pa.c2, pb.c2),
+                2 * sim.world.ball.radius,
+                Infinity,
+            );
+        } else {
+            const o = c.obstacle as Cylinder;
+            dt = separationTime(
+                horizontal(sub(pa.c0, o.centre)),
+                horizontal(pa.c1),
+                horizontal(pa.c2),
+                sim.world.ball.radius + o.radius,
+                Infinity,
+            );
+        }
+        if (dt !== null) {
+            end = Math.min(end, now + dt);
+        }
+    }
+    return end;
 }
 
 /**
@@ -390,7 +452,7 @@ function findNextEvent(sim: Simulation, now: number): Candidate | null {
     const live = sim.tracks.filter((t) => !t.inert);
     const states = new Map(live.map((t) => [t, stateAt(t, now)]));
     const paths = new Map(live.map((t) => [t, pathAt(t, now)]));
-    const ends = new Map(live.map((t) => [t, groupEnd(sim, t)]));
+    const ends = new Map(live.map((t) => [t, boundedGroupEnd(sim, t, now)]));
     let best: Candidate | null = null;
 
     for (const track of live) {

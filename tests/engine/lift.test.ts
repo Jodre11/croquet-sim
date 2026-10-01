@@ -2,9 +2,11 @@ import { describe, expect, it } from "vitest";
 import { CONTACT_TOLERANCE } from "../../src/engine/detect";
 import { vec3 } from "../../src/engine/math/vec3";
 import { SETTLE_SPEED } from "../../src/engine/resolve";
+import { stateAtTime } from "../../src/engine/sample";
 import { simulateFreeMotion } from "../../src/engine/simulate";
-import type { BallId, BallStates, ShotResult } from "../../src/engine/types";
+import { BALL_IDS, type BallId, type BallStates, type ShotResult } from "../../src/engine/types";
 import { STANDARD_GRAVITY } from "../../src/engine/world";
+import { mechanicalEnergy } from "./support/energy";
 import { TEST_BALL, airborneAt, ballAt, testWorld } from "./support/fixtures";
 import { worstPenetration } from "./support/penetration";
 
@@ -75,6 +77,24 @@ describe("the boundary in flight", () => {
     });
 });
 
+/** Floating-point slack (J) for the energy checks: rounding in the closed forms, far below any physical gain. */
+const ENERGY_TOLERANCE = 1e-9;
+
+/** Asserts that total mechanical energy never rises, sampled at every event and midway between events. */
+function expectNoEnergyGain(result: ShotResult): void {
+    const times = [...new Set([0, ...result.events.map((e) => e.t)])].sort((a, b) => a - b);
+    const sampled = times.flatMap((t, k) => (k === 0 ? [t] : [((times[k - 1] as number) + t) / 2, t]));
+    let previous = Infinity;
+    for (const t of sampled) {
+        const energy = BALL_IDS.reduce(
+            (sum, id) => (result.segments[id] ? sum + mechanicalEnergy(stateAtTime(result, id, t), TEST_BALL, G) : sum),
+            0,
+        );
+        expect(energy).toBeLessThanOrEqual(previous + ENERGY_TOLERANCE);
+        previous = energy;
+    }
+}
+
 describe("resting contact in flight", () => {
     // Blue, at rest in the air, leans on red at 30° from the vertical: it slides off red, pushing it, and lands.
     const lean: BallStates = {
@@ -94,6 +114,23 @@ describe("resting contact in flight", () => {
         expect((result.rest.blue?.x ?? 0) - (result.rest.red?.x ?? 0)).toBeGreaterThan(2 * R - 1e-9);
         // The frozen normal makes a ball sliding round another regroup often, but finitely (see push.ts).
         expect(result.events.length).toBeLessThan(1000);
+        expectNoEnergyGain(result);
+    });
+
+    it("slides a ball off the exact top of another when it has sideways speed, and lands it", () => {
+        // The contact normal is vertical, so the push acceleration is exactly zero while the ball moves: its segment
+        // has no landing time of its own and is bounded by the pair separating (see boundedGroupEnd in simulate.ts).
+        for (const velocity of [vec3(0.01, 0, 0), vec3(0, 0.002, 0)]) {
+            const world = testWorld();
+            const result = simulateFreeMotion({ blue: ballAt(5, 5), red: airborneAt(5, 5, 3 * R, velocity) }, world);
+            expect(result.aborted).toBe(false);
+            expect(worstPenetration(result, world)).toBeLessThan(CONTACT_TOLERANCE);
+            expect(result.rest.red?.z).toBe(R);
+            expect(result.events.length).toBeLessThan(1000);
+            // Energy is not checked here: the ball falls back on the other at about 1.4 mm/s, and until Task 6 the
+            // collision impulse is the planar one, which turns that approach into sideways speed (a gain of ~6 µJ per
+            // hit). Task 6 adds the no-gain check for this scenario.
+        }
     });
 
     it("lets a ball perched on top of another rest there", () => {
