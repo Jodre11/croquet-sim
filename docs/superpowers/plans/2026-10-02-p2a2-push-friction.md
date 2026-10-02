@@ -1349,10 +1349,10 @@ is the prototype's `contactModelLock.ts` and `assembleSparse.ts` with the decide
 turf normal locked unless the patch slips; held balls inside the system with their static turf forces as unknowns),
 written in each ball's turf frame, and extended to balls in flight and to lift-off, which the prototype rejected.
 
-Ball modes by class (`classify`), in the design's order: stationary — held, released, turf-sliding, airborne;
-rolling — turf-rolling, turf-sliding, airborne; sliding — turf-sliding, airborne; airborne — airborne. A turf ball in
-the airborne mode has left the turf because its load would be zero or negative (spec §5); it is consistent only if
-its acceleration does not drive it into the turf. Contact modes: stick, slip, open; a contact that is already
+Ball modes by class (`classify`), in the design's order: stationary — held, released, turf-sliding; rolling —
+turf-rolling, turf-sliding; sliding — turf-sliding; airborne — airborne. A turf ball can also be put in the airborne
+mode, but only by the search's lift-off rule (Task 6, `lowLoad`): it has left the turf because its load would be zero
+or negative (spec §5), and it is consistent only if its acceleration does not drive it into the turf. Contact modes: stick, slip, open; a contact that is already
 slipping, or has no friction, has only slip and open (at μ = 0 stick and slip are the same).
 
 **Files:**
@@ -1379,7 +1379,8 @@ slipping, or has no friction, has only slip and open (at μ = 0 stick and slip a
   - `interface System { size; A; b; accel; spin; turf; resist; load; force; normal; relative; follow }`;
     `assemble(model, cand, items, dirs: readonly Vec3[]): System`.
   - `interface Evaluated { accel; spin; turf; resist; load; force; normal; relative }`; `evaluate(sys, x)`.
-  - `inconsistency(model, cand, ev): string | null`; `cones(model, cand, sys): Cone[]`.
+  - `inconsistency(model, cand, ev): string | null`; `cones(model, cand, sys): Cone[]`;
+    `lowLoad(model, cand, ev): number[]` (balls on the turf whose load is zero or below).
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -1398,6 +1399,7 @@ import {
     directionItems,
     evaluate,
     inconsistency,
+    lowLoad,
     settled,
     turfPlane,
     type Candidate,
@@ -1451,9 +1453,9 @@ describe("the turf frame", () => {
 
 describe("modes and items", () => {
     it("offers each class its modes in the design's order", () => {
-        expect(ballOptions("stationary")).toEqual(["held", "released", "turf-sliding", "airborne"]);
-        expect(ballOptions("rolling")).toEqual(["turf-rolling", "turf-sliding", "airborne"]);
-        expect(ballOptions("sliding")).toEqual(["turf-sliding", "airborne"]);
+        expect(ballOptions("stationary")).toEqual(["held", "released", "turf-sliding"]);
+        expect(ballOptions("rolling")).toEqual(["turf-rolling", "turf-sliding"]);
+        expect(ballOptions("sliding")).toEqual(["turf-sliding"]);
         expect(ballOptions("airborne")).toEqual(["airborne"]);
     });
 
@@ -1545,6 +1547,7 @@ describe("one candidate", () => {
         const onTurf = solve(model, turf, []);
         expect(onTurf.load[1]).toBeCloseTo(G * (1 - (4 * SLIDE) / G), 12);
         expect(inconsistency(model, turf, onTurf)).toMatch(/load/);
+        expect(lowLoad(model, turf, onTurf)).toEqual([1]);
         const lifted: Candidate = { balls: ["turf-sliding", "airborne"], contacts: ["slip"] };
         const ev = solve(model, lifted, []);
         expect(inconsistency(model, lifted, ev)).toBeNull();
@@ -1781,15 +1784,18 @@ export function buildModel(
     return { bodies, axes, contacts, gravity, classes, planes, geometry, frozen };
 }
 
-/** The modes a ball of each class may take, in the design's order (§4 step 6). */
+/**
+ * The modes the search enumerates for a ball of each class, in the design's order (§4 step 6). Lift-off (a turf ball
+ * in the airborne mode) is not enumerated: the search derives it from a candidate's low loads (see lowLoad).
+ */
 export function ballOptions(c: MotionPhase): readonly BallMode[] {
     switch (c) {
         case "stationary":
-            return ["held", "released", "turf-sliding", "airborne"];
+            return ["held", "released", "turf-sliding"];
         case "rolling":
-            return ["turf-rolling", "turf-sliding", "airborne"];
+            return ["turf-rolling", "turf-sliding"];
         case "sliding":
-            return ["turf-sliding", "airborne"];
+            return ["turf-sliding"];
         case "airborne":
             return ["airborne"];
     }
@@ -2253,6 +2259,11 @@ export function inconsistency(model: Model, cand: Candidate, ev: Evaluated): str
         }
     }
     return null;
+}
+
+/** The balls on the turf whose load a solved candidate makes zero or negative: they leave the turf (spec §5). */
+export function lowLoad(model: Model, cand: Candidate, ev: Evaluated): number[] {
+    return cand.balls.flatMap((mode, i) => (mode !== "airborne" && (ev.load[i] as number) <= 0 ? [i] : []));
 }
 
 /** The tangential part of a force form, P − n·(n·P), as three component forms. */
@@ -3029,11 +3040,13 @@ git commit -m "Solve friction candidates with Newton on their unknown directions
 Design §4 steps 2, 3, 6 and 7. The proposal is P2a.1's frictionless guide (decided 2026-10-02): projected dual
 ascent on the contact forces of the whole group with each resting ball's static resistance included, from which the
 released balls, the coupled contacts and seed directions are read. A coupled contact that is not slipping is proposed
-stuck, one that is slipping (or frictionless) slipping. The hold-first candidate is the proposal with every resting
-ball held. The search then enumerates every item (a ball with more than one mode; every contact) lazily, fewest
-departures from the proposal first and then in lexicographic order of the modes' ranks, skipping a contact between
-bodies held in that candidate (settled() fixes it); it stops at `MODE_SEARCH_LIMIT` candidates or when the budget is
-spent.
+stuck, one that is slipping (or frictionless) slipping. Hold first means every candidate with every resting ball held
+comes before any that releases one: the proposal with its resting balls held, then the same enumeration as the search
+with the resting balls kept held. Then the proposal, then the search: every item (a ball with more than one mode;
+every contact) lazily, fewest departures from the proposal first and then in lexicographic order of the modes'
+ranks, skipping a contact between bodies held in that candidate (settled() fixes it). Lift-off is derived, not
+enumerated: a solved candidate with low loads (`lowLoad`) is followed at once by the same candidate with those balls
+airborne. The search stops at `MODE_SEARCH_LIMIT` candidates or when the budget is spent.
 
 **Files:**
 - Modify: `src/engine/modeSolve.ts` (append)
@@ -3071,10 +3084,11 @@ describe("propose", () => {
 });
 
 describe("solveGroup", () => {
-    it("tries every resting ball held first, then the proposal (topspin push)", () => {
+    it("tries every candidate that holds the resting ball first, then the proposal (topspin push)", () => {
+        // Hold first: red held with the contact slipping, then open; both fail. Then the proposal releases red.
         const g = solveGroup(topspin(), work(), Infinity);
         expect(g.kind).toBe("exact");
-        expect(g.tried).toBe(2);
+        expect(g.tried).toBe(3);
         expect(g.outcome?.cand.balls).toEqual(["turf-sliding", "released"]);
         expect(g.outcome?.ev?.accel[1]?.x).toBeCloseTo(0.89895492703632, 12);
     });
@@ -3176,7 +3190,7 @@ Expected: FAIL (`propose` and `solveGroup` are not exported).
 - [ ] **Step 3: Implement**
 
 Extend `src/engine/modeSolve.ts`'s imports: add `excessAt` from `./convexSolve`; `ACCELERATION_EPSILON`,
-`ROLLING_WEIGHT`, `ballOptions`, `candidateKey`, `contactOptions`, `isStatic`, `type ContactBody` and
+`ROLLING_WEIGHT`, `ballOptions`, `candidateKey`, `contactOptions`, `isStatic`, `lowLoad`, `type ContactBody` and
 `type RestingContact` from `./contactModel`; `add` from `./math/vec3`; and `import type { MotionPhase } from "./types";`.
 Then append:
 
@@ -3326,12 +3340,18 @@ interface SearchItem {
 }
 
 /**
- * Every candidate that departs from the proposal in exactly `departures` items, in lexicographic order of the items'
+ * Every candidate that departs from `proposal` in exactly `departures` items, in lexicographic order of the items'
  * mode ranks. Items are balls with more than one mode (in index order), then every contact. A contact between bodies
  * held in the candidate keeps the proposal's rank: settled() fixes its mode, so any other rank would only repeat a
- * candidate with fewer departures.
+ * candidate with fewer departures. With `holdResting`, every ball at rest keeps the proposal's mode (the hold-first
+ * phase, whose proposal holds them all).
  */
-function* departing(model: Model, proposal: Candidate, departures: number): Generator<Candidate> {
+function* departing(
+    model: Model,
+    proposal: Candidate,
+    departures: number,
+    holdResting: boolean,
+): Generator<Candidate> {
     const items: SearchItem[] = [
         ...model.classes.flatMap((c, i) => (ballOptions(c).length > 1 ? [{ kind: "ball" as const, index: i }] : [])),
         ...model.contacts.map((_, k) => ({ kind: "contact" as const, index: k })),
@@ -3376,7 +3396,9 @@ function* departing(model: Model, proposal: Candidate, departures: number): Gene
             return;
         }
         const item = items[j] as SearchItem;
-        const fixed = item.kind === "contact" && isStatic(model, ballsNow(), item.index);
+        const fixed =
+            (item.kind === "contact" && isStatic(model, ballsNow(), item.index)) ||
+            (holdResting && item.kind === "ball" && model.classes[item.index] === "stationary");
         const count = (options[j] as readonly string[]).length;
         for (let r = 0; r < count; r++) {
             const departs = r === proposed[j] ? 0 : 1;
@@ -3392,15 +3414,19 @@ function* departing(model: Model, proposal: Candidate, departures: number): Gene
 }
 
 /**
- * Solves one group (design §4 steps 2–7): every resting ball held first, then the proposal, then every other candidate
- * fewest departures from the proposal first; the first consistent candidate wins. The budget is checked before each
- * candidate: once work.units reaches it the group is to be held (budget-hold). With nothing consistent, or the
+ * Solves one group (design §4 steps 2–7): every candidate with every resting ball held first, then the proposal, then
+ * every other candidate fewest departures from the proposal first; the first consistent candidate wins. A solved
+ * candidate whose turf balls' loads drop to zero or below is followed at once by the same candidate with those balls
+ * lifted (airborne). The budget is checked before each candidate: once work.units reaches it the group is to be held
+ * (budget-hold). With nothing consistent, or the
  * search capped at MODE_SEARCH_LIMIT, the first candidate whose only failure was its direction solve is tried with
  * approximate-slip directions; failing that, the group is to be held (approximate-hold). The nearest hold itself is
  * the caller's (push.ts).
  */
 export function solveGroup(model: Model, work: Work, budget: number, hooks: SolveHooks = {}): GroupSolution {
     const proposal = propose(model);
+    const held = settled(model, heldCandidate(model, proposal.candidate));
+    const heldKey = candidateKey(held);
     const seen = new Set<string>();
     const state: { tried: number; firstFailure: CandidateOutcome | null; held: CandidateOutcome | null } = {
         tried: 0,
@@ -3427,8 +3453,23 @@ export function solveGroup(model: Model, work: Work, budget: number, hooks: Solv
         seen.add(key);
         state.tried++;
         const out = solveCandidate(model, cand, proposal.seed, work, hooks);
+        if (key === heldKey) {
+            state.held = out;
+        }
         if (!out.ok && out.failure === "direction" && state.firstFailure === null) {
             state.firstFailure = out;
+        }
+        // Lift-off (spec §5): balls whose load would be zero or below leave the turf, so the same candidate is solved
+        // again with them airborne.
+        const low = !out.ok && out.ev ? lowLoad(model, out.cand, out.ev) : [];
+        if (low.length > 0) {
+            const lifted = attempt({
+                balls: out.cand.balls.map((m, i) => (low.includes(i) ? "airborne" : m)),
+                contacts: out.cand.contacts,
+            });
+            if (lifted !== null) {
+                return lifted;
+            }
         }
         return out;
     };
@@ -3439,37 +3480,43 @@ export function solveGroup(model: Model, work: Work, budget: number, hooks: Solv
         excess: 0,
         slipBalls: [],
     });
-
-    const first = attempt(heldCandidate(model, proposal.candidate));
-    if (first === "budget") {
-        return hold("budget-hold", 0);
-    }
-    state.held = first;
-    if (first?.ok) {
-        return exact(first);
-    }
-    const second = attempt(proposal.candidate);
-    if (second === "budget") {
-        return hold("budget-hold", 0);
-    }
-    if (second?.ok) {
-        return exact(second);
-    }
-    const itemCount =
-        model.classes.filter((c) => ballOptions(c).length > 1).length + model.contacts.length;
-    search: for (let departures = 1; departures <= itemCount; departures++) {
-        for (const cand of departing(model, proposal.candidate, departures)) {
-            if (state.tried >= MODE_SEARCH_LIMIT) {
-                break search;
-            }
-            const out = attempt(cand);
-            if (out === "budget") {
-                return hold("budget-hold", 0);
-            }
-            if (out?.ok) {
-                return exact(out);
+    const itemCount = model.classes.filter((c) => ballOptions(c).length > 1).length + model.contacts.length;
+    /** Tries `base`, then every candidate departing from it, in order; a decision, or null when none is consistent. */
+    const phase = (base: Candidate, holdResting: boolean): GroupSolution | null => {
+        const first = attempt(base);
+        if (first === "budget") {
+            return hold("budget-hold", 0);
+        }
+        if (first?.ok) {
+            return exact(first);
+        }
+        for (let departures = 1; departures <= itemCount; departures++) {
+            for (const cand of departing(model, base, departures, holdResting)) {
+                if (state.tried >= MODE_SEARCH_LIMIT) {
+                    return null;
+                }
+                const out = attempt(cand);
+                if (out === "budget") {
+                    return hold("budget-hold", 0);
+                }
+                if (out?.ok) {
+                    return exact(out);
+                }
             }
         }
+        return null;
+    };
+
+    // Hold first: every candidate with every resting ball held, before any that releases one. Its first candidate,
+    // the proposal with its resting balls held, is what the approximate-hold excess is measured on (attempt() keeps
+    // its outcome in state.held).
+    const holding = phase(held, true);
+    if (holding) {
+        return holding;
+    }
+    const searched = phase(proposal.candidate, false);
+    if (searched) {
+        return searched;
     }
 
     const failure = state.firstFailure;

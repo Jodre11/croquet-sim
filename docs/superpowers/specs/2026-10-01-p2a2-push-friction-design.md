@@ -21,8 +21,9 @@ Exit criteria (roadmap):
 ## 2. Approach
 
 Hold-first mode selection with residual-merit Newton. A candidate assigns a mode to every ball and contact of a
-group. The solver first tries every resting ball held, which a convex certificate decides exactly; then the mode
-P1's frictionless solve proposes; then every other candidate, fewest departures from that proposal first. An exact
+group. The solver first tries every candidate with every resting ball held (whatever the modes of its contacts and
+moving balls); then the modes P2a.1's frictionless guide proposes; then every other candidate, fewest departures
+from that proposal first. An exact
 solve checks each one, and the first consistent candidate wins. This keeps P1's determinism and its
 fallback-reporting contract.
 
@@ -53,10 +54,10 @@ Rejected:
 
 | Module | Responsibility |
 |---|---|
-| `push.ts` | Façade. Keeps `solveRestingContacts`, `solveNearestHold`, `pushedState`, `pushedTrajectory`, `pushDuration`, the new `contactSlipDuration` (beside `pushDuration`, sharing `risesAt`) and the tolerances. Glues velocities, builds groups and iterates the kept set as today. `holdCertificate`, `HoldLink` and `HoldRay` become internal to `convexSolve.ts`; their tests move up to `solveRestingContacts` decisions. |
+| `push.ts` | Façade. Keeps `solveRestingContacts`, `solveNearestHold`, `pushedState`, `pushedTrajectory`, `pushDuration`, the new `contactSlipDuration` (beside `pushDuration`, sharing `risesAt`) and the tolerances. Glues velocities, builds groups and iterates the kept set as today. `holdCertificate`, `HoldLink` and `HoldRay` are deleted; their tests move up to `solveRestingContacts` decisions. |
 | `contactModel.ts` (new) | Per-group model: ball modes (held, released, turf-rolling, turf-sliding, airborne) and contact modes (open, stick, slip); assembles the non-symmetric system for one candidate, with held balls inside it, load-coupled turf forces, angular dynamics and consistency checks. Works in each ball's turf frame. |
 | `modeSolve.ts` (new) | Candidate order, residual-merit Newton for unknown directions (contact or turf slip onset, release from rest), friction continuation, the search, and the work budget. Keeps P2a.1's frictionless `guide` as the proposal (§4 step 3); replaces `searchHold`, `holdCertificate` and `releaseDirections`. |
-| `math/elementary.ts` (new) | `ln`, `sinCos` and `atan2` from IEEE-exact operations only, for the direction angles and the log barrier; `Math.*` transcendentals are not bit-identical across engines and stay banned in the engine. |
+| `math/elementary.ts` (new) | `ln`, `sinCos` and `atan2` from IEEE-exact operations only, accurate to a few ulps (tested against `Math.*`), for the direction angles (§4 step 4: each unknown direction is cos φ·e1 + sin φ·e2 in its plane) and the log barrier; `Math.*` transcendentals are not bit-identical across engines and stay banned in the engine. |
 | `convexSolve.ts` (new) | One second-order-cone primitive (log barrier): feasibility, then minimum norm, over load-coupled cones. It serves both the hold-first check (§4 step 2) and the choice of undetermined forces (§4 step 5). |
 | `linalg.ts` (new) | Dense elimination with full pivoting (skipping zero entries of the pivot row), rank detection and null space, factor reuse across right-hand sides, sparse assembly of the system. |
 
@@ -66,30 +67,41 @@ Interface changes:
   `ballUpright` or the peg's), filled in by `simulate.ts`. μs is `slidingDecel / gravity`. Mass is not carried, so
   forces and loads stay mass-normalised (m/s²), as today.
 - `ContactBody` gains its **turf normal** (ẑ in v1) and its **pivot capacity**, the turf's grip against spin about
-  the turf normal. The gravity vector (−g·ẑ in v1) is passed once per solve. The contact model uses these vectors
+  the turf normal. The gravity vector (−g·ẑ in v1) is passed once per solve and gives the load's direction and size;
+  each ball's `MotionParams.gravity` stays its magnitude (μs = slidingDecel/g, μr = rollingDecel/g), and the caller
+  keeps the two equal. The contact model uses these vectors
   throughout (the load, the hold condition's ê terms, the pivot axis, t = normal × n), never z components, so
   slopes change inputs, not equations. v1 implements no finite pivot constraint: the capacity is always unlimited
   and the solver asserts it; the constraint arrives with the surface model. `simulate.ts` fills both from the world.
 - `RestingSolution.coupled: boolean[]` becomes `modes: ContactMode[]` (`"open" | "stick" | "slip"`), with
   `slips: (Vec3 | null)[]`: each slipping contact's frozen slip direction. Both are per contact; `PushMotion` is
-  unchanged in shape (its `angularAcceleration` now includes contact-friction torques).
+  unchanged in shape (its `angularAcceleration` now includes contact-friction torques). A coupling that carries no
+  friction (μ = 0, or one the nearest hold made) is reported as `"slip"` with a null slip.
 - `RestingSolution` gains `approximateSlip: boolean[]` (per body: a contact or turf slip of the body fell back to
-  §4's first last resort), `slipExcess: number` (the worst residual of the failed direction solves; 0 when none) and
+  §4's first last resort), `slipExcess: number` (the worst residual of the failed direction solves; 0 when none),
   `budgetHold: boolean[]` (per body: its group was held because the work budget was spent; its balls are not also
-  flagged in `approximate`, so it emits `budget-hold` only).
-- `solveRestingContacts` takes an options argument (the gravity vector, the work budget remaining for the shot) and
-  returns the work it spent (§5).
-- The hold check takes per ball its applied load and its load-coupled limits (μr, μs; capacity 7/5·μr·L and turf
-  limit μs·L with L = g − Σ P_z along the turf normal), and per contact its unit normal, contact offsets ê and
-  friction μ. It tests the hold condition on Σ[P_h(1+ê_z) − ê_h·P_z]. Below a limit of holding the feasible forces
-  form a set, not a point; only feasibility is decided by it.
+  flagged in `approximate`, so it emits `budget-hold` only), `work: number` (the work units it spent) and
+  `searched: number` (the most candidates any group tried; the cluster test checks it against `MODE_SEARCH_LIMIT`).
+  `holdExcess` is now how far the hold-first candidate misses its relaxed convex conditions at the best forces its
+  solve found (m/s²; Infinity when that candidate's system cannot be solved at all).
+- `solveRestingContacts` and `solveNearestHold` take an optional options argument: the gravity vector (default −g·ẑ
+  from the first body), the work budget remaining for the shot (default unlimited), and a test seam that makes every
+  direction solve fail (§4 step 7).
+- `simulateFreeMotion` takes an optional options argument: the shot's work budget (default `SOLVE_BUDGET`) and a
+  measurement probe called around every resting-contact solve (the performance script times solves with it).
+- Held balls' limits: per ball its load-coupled resistance capacity 7/5·μr·L and turf limit μs·L with
+  L = g − Σ P·normal, tested on Σ[P_h(1+ê_z) − ê_h·P_z] and F = Σ(ê_z·P_h − ê_h·P_z). They are conditions of every
+  candidate that holds the ball (§4), not a separate check. Below a limit of holding the feasible forces form a set,
+  not a point; only feasibility is decided.
 - `sim.couplings` entries gain `mode`, so the simulator can detect a mode change between consecutive solves.
 - `ShotEvent` gains `stick` and `slip`, each split as the existing contact events are (`ball-ball` /
   `ball-obstacle`): `stick-ball` `{ t, balls }`, `stick-obstacle` `{ t, ball, obstacleId }`, `slip-ball`
   `{ t, balls, direction }` and `slip-obstacle` `{ t, ball, obstacleId, direction }`. `direction` is the unit slip in
   world coordinates of the first ball's contact point relative to the other body's. It also gains
   `approximate-slip`, shaped like `approximate-hold` (`balls`: those flagged in `approximateSlip`; `excess`:
-  `slipExcess`), and `budget-hold` `{ t, balls }` (the group's resting balls).
+  `slipExcess`), and `budget-hold` `{ t, balls }` (the solve's flagged balls that are held at rest; possibly none).
+  Both are emitted once per solve that sets them; once the budget is spent every later solve of the shot emits
+  `budget-hold` again.
 - `ENGINE_VERSION` 0.2.0 → 0.3.0.
 - Test support, `bruteForce.ts`:
   - Turf forces scale by each ball's load ratio L/g, with L = g − (net vertical push impulse on the ball in the
@@ -129,19 +141,22 @@ Consistency of a candidate:
 - every coupled N ≥ 0, and no open contact converges;
 - stick: tangential force within μ·N and slip acceleration zero;
 - slip: friction μ·N against the frozen slip; a contact starting to slip slips along its slip acceleration;
-- held balls: |Q| ≤ 7/5·μr·L, |F| ≤ μs·L; released balls move along their resistance (d·w > `FOLLOW_EPSILON`,
-  |sin(d, w)| ≤ `FOLLOW_EPSILON`); rolling balls' static turf friction within μs·L; turf loads ≥ 0.
+- held balls: |Q| ≤ 7/5·μr·L, |F| ≤ μs·L, each relaxed by `HOLD_SLACK` in every candidate; released balls move
+  along their resistance (d·w > `FOLLOW_EPSILON`, |sin(d, w)| ≤ `FOLLOW_EPSILON`); rolling balls' static turf
+  friction within μs·L; turf loads > 0 (a load of zero or below leaves the turf, product spec §5);
+- a lifted ball (airborne mode for a ball on the turf) does not accelerate into the turf.
 
 Pipeline:
 
 1. **Glue.** Inelastic normal impulse as today; frictionless (product spec §5 limitations).
-2. **Hold first.** The proposal with every resting ball held, solved as a candidate: held balls are in the system
-   with their static turf forces, and its undetermined forces (the held balls' share) are settled by the convex solve
-   (§3 `convexSolve.ts`) over load-coupled cones with the ê weighting, the held limits relaxed by `HOLD_SLACK`.
-   Consistent → done.
+2. **Hold first.** Every candidate with every resting ball held, before any that releases one: first the proposal
+   with its resting balls held, then the others in the order of step 6 with the resting balls kept held (only the
+   moving balls' and the contacts' modes vary). Held balls are in the system with their static turf forces, and
+   their undetermined forces are settled by the convex solve of step 5. The first consistent one wins, so between a
+   release onset and a hold limit, where both are consistent, holding decides (product spec §5).
 3. **Proposal.** P2a.1's frictionless guide (projected dual ascent with each resting ball's static resistance; the
-   μ = 0 limit) proposes the released balls and the coupled contacts — stuck unless already slipping — and its
-   accelerations seed the directions. (The prototype used a cone guide here; decided 2026-10-02.)
+   μ = 0 limit) proposes the released balls and the coupled contacts — stuck unless already slipping (slip speed
+   above `SPEED_EPSILON`) or frictionless, which are slipping — and its accelerations seed the directions.
 4. **Exact solve per candidate.** Fixed directions (stick; slip along its frozen direction) → one linear,
    non-symmetric solve. Unknown directions (contact slip onset; turf slip onset, when a rolling or held ball's
    static turf friction would exceed μs·L because a contact lowered its load; release from rest) → residual-merit
@@ -158,19 +173,25 @@ Pipeline:
    followed rate unchanged is resolved once, at the accepted root; one that couples to a followed rate (a sliding
    ball jammed against three or more bodies) is resolved at every Newton evaluation, with a finite-difference
    Jacobian. Every acceptance check is run again after the choice.
-6. **Search.** Enumerate every item, not only marginal ones: per resting ball held, released, turf-sliding or
-   airborne; per rolling ball rolling, sliding or airborne; per sliding ball sliding or airborne (airborne: lifted
-   off the turf, consistent only if it does not accelerate into it); per contact stick, slip or open (slip or open if
-   already slipping). Contacts
-   between two held bodies are settled by the certificate and not enumerated. Order: fewest departures from the
-   proposal first, then balls held, released, turf-rolling, turf-sliding, airborne, and contacts stick, slip, open.
-   The search is capped at `MODE_SEARCH_LIMIT` = 1024 candidates (worst measured: 183, over 20,000 random four-ball
-   clusters with obstacles). First consistent candidate wins.
-7. **Last resorts.** When the search finds nothing consistent, the first candidate whose only failure was its
-   direction solve is tried with fallback directions: each contact slips against its stuck force, each ball's turf
-   slip starts against its static turf friction, `approximate-slip` (excess: the residual of the failed direction
-   solve; a release from rest has no such fallback). Nothing consistent, or the cap reached → nearest hold, `approximate-hold`. Work budget spent (§5) →
-   nearest hold, `budget-hold`. The nearest hold is P1's: the resting balls are held and the moving balls are
+6. **Search.** Enumerate every item, not only marginal ones: per resting ball held, released or turf-sliding; per
+   rolling ball rolling or sliding; per contact stick, slip or open (slip or open if already slipping or
+   frictionless). A ball in flight has only its airborne mode. Contacts between two held bodies are stuck (slipping at
+   μ = 0), their forces settled by step 5, and not enumerated. Order: fewest departures from the proposal first, then
+   balls held, released, turf-rolling, turf-sliding, and contacts stick, slip, open. Lift-off is derived, not
+   enumerated: a candidate in which some balls on the turf have a load of zero or below is followed at once by the
+   same candidate with those balls airborne (lifted off at z = R; consistent only if they do not accelerate into the
+   turf). It keeps the search measured below; in play lift-off needs μ·N ≥ g, far beyond croquet pushes. The search is
+   capped at `MODE_SEARCH_LIMIT` = 1024 candidates (worst measured: 183, over 20,000 random four-ball clusters with
+   obstacles, with the prototype's cone-guide proposal; the cluster test re-measures it). First consistent candidate
+   wins.
+7. **Last resorts.** When the search ends with nothing consistent (exhausted or capped), the first candidate in
+   search order whose only failure was its direction solve (no accepted root: none converged, or none passed
+   `FOLLOW_EPSILON`) is tried with fallback directions; later ones are not. The fallback directions come from the
+   same candidate solved with each such contact stuck and each such turf-onset ball rolling (held, if at rest): a
+   contact slips along the tangential force the stuck contact exerts on its second body (b), so friction keeps acting
+   as it did; a ball's turf slip starts against its static turf friction. A candidate that also releases a ball from
+   rest has no fallback. Consistent → `approximate-slip` (excess: the smallest residual its direction solve reached).
+   Otherwise → nearest hold, `approximate-hold`. Work budget spent (§5) → nearest hold, `budget-hold`. The nearest hold is P1's: the resting balls are held and the moving balls are
    solved against them as fixed obstacles by Gauss's least constraint, frictionlessly, a convex problem that always
    has a solution. Its omitted friction is part of the approximation these events report. No test reaches
    `approximate-slip` naturally (the prototype never raised it), so a unit test reaches it by injecting a failed
@@ -188,8 +209,8 @@ Tolerances:
 
 - A slipping contact ends the segment when its slip reaches zero along its frozen direction or turns more than
   `DIRECTION_TOLERANCE` from it. Both are linear in time. After `settle()` couples the solution's contacts, it calls
-  `contactSlipDuration` once per slipping contact with the solution's slip and lowers both member tracks' `slipEnd`
-  (absolute time, Infinity when none) to it. `findNextEvent` raises it as a `regroup` for every phase, airborne
+  `contactSlipDuration` once per slipping contact with the solution's slip and lowers its member tracks' `slipEnd`
+  (absolute time, Infinity when none; one track against an obstacle) to it. Only pushed tracks carry one. `findNextEvent` raises it as a `regroup` for every phase, airborne
   included (an airborne track's `t0 + duration` is its landing time, so the duration cannot carry it), and
   `groupEnd` includes it. Every re-solve first runs `release()`, which reopens the tracks and resets `slipEnd`, so no
   slip end outlives its segment.
@@ -199,14 +220,19 @@ Tolerances:
   first coupling (its resting contact event marks that). `release()` clears the couplings before the solve, so
   `settle()` snapshots the group's couplings and their modes before releasing and compares against that snapshot.
   The landing handler calls `release()` itself before `settle()`, so it takes the snapshot before its own release
-  and passes it to `settle()`.
+  and passes it to `settle()`. A change to a coupling without friction (§3) emits nothing.
+- **Lift-off.** A ball lifted off the turf starts its push at z = R with vz = 0 and upward acceleration;
+  `landingTime` returns 0 for a ball on the plane that is not rising, so it is changed to return Infinity when the
+  ball is at rest on the plane with upward acceleration. At its next solve the ball is above the plane and classified
+  airborne.
 - **Work budget.** The simulator carries one counter per shot of solver work: linear solves, Newton evaluations and
-  barrier iterations (the hold-first check included), each weighted by its size; the plan fixes the weights and
+  barrier iterations (the hold-first candidates included; the guide's iterations are not counted), each weighted by
+  its size; the plan fixes the weights and
   `SOLVE_BUDGET` from the prototype's costs, at about 100 ms on the reference tablet. `solveRestingContacts` checks
   the counter before each candidate; once it is spent, the search stops at that candidate boundary, the group is
   held (nearest hold, which is not counted: it is convex and bounded) and a `budget-hold` event is emitted.
   Counting work, not time, keeps results identical on every device.
-- Unchanged: free-motion collisions (`resolve.ts`), landing, jump flag, out of court, halt. A ball perched still on
+- Unchanged: free-motion collisions (`resolve.ts`), the landing impulse, jump flag, out of court, halt. A ball perched still on
   others now holds through static friction and is still snapped to rest.
 
 ## 6. Testing
@@ -226,10 +252,14 @@ Closed forms (the `push.test.ts` parameters SLIDE 3, ROLL 0.5 unless stated; bal
   - Static hold against an upright and against a ball: holds inside the cone, slips just outside it. Upright
     (`testWorld()`, μs 0.3, μr 0.05; a topspin driver pushing ball 1 against an upright at angle β): hold limit
     β* = 20.447782900°, release onset β_slip = atan μu + asin(K0/(N′·√(1 + μu²))) = 20.290321024°.
-  - Lift-off when friction drives a load to zero.
+  - Lift-off when friction drives a load to zero. Two balls on the turf need μ·μs > 1, so the test uses ball–ball
+    μ = 4: a topspin driver (60 rad/s) against a ball with stronger backspin (−80 rad/s) lifts it with
+    N = μs·g/(2 − μ·μs) and a_z = 2g(μ·μs − 1)/(2 − μ·μs) (in `testWorld()`: N = 3g/8, a = (3g/8, 0, g/2)).
+  - `math/elementary.ts` against `Math.*` to a few ulps.
 - **Invariants and properties:** energy never increases; normal forces never pull; friction within the cone and
   opposing slip (no positive work, including rolling resistance); mirror symmetry; determinism (bitwise); finite
-  event count at the stick boundary; no ball spins about the vertical axis on the spot.
+  event count at the stick boundary; no ball spins about the vertical axis on the spot; once the work budget is spent
+  every later group is held with `budget-hold` and the shot still finishes.
 - **Limit-of-holding sweeps:** P1's 44.3°–44.7° sweep stays as the μ = 0 case against its closed form
   (cos θ = 9/12.6). With friction on, the bent line `chain(1.5, θ)` holds up to θ* = 52.3717420825° (ball 1 at
   capacity, the 1–2 contact on its cone edge); its release begins at θ_slip = 52.1888955°, and between the two
@@ -259,10 +289,12 @@ Closed forms (the `push.test.ts` parameters SLIDE 3, ROLL 0.5 unless stated; bal
 
 ## 7. Process and prototype record
 
-The prototype (scratch worktree, not merged) validated this design: the closed forms above, derived independently
+The prototype (scratch worktree, not merged) validated this design, except three parts it never ran: balls in
+flight and lift-off inside the friction model, the hold-first candidates and proposal built from P2a.1's guide (it
+used a cone guide), and the exact-operation elementary functions. It validated: the closed forms above, derived independently
 and confirmed by the solver to within `HOLD_SLACK`; brute force confirming the release onsets; 20,000 random
 four-ball clusters solved with none unsolved (cap measurement above); realistic play (3,000 shots: 97% call no
-solve; every group two balls, one candidate) within the performance budget at p99.9 with about three times
+solve; every group two balls, one candidate, with the cone guide) within the performance budget at p99.9 with about three times
 headroom. Its optimisations are kept: factor reuse, sparse assembly and elimination, value-only line searches in the
 barrier solve, and no condition-number diagnostics. An eight-start fan of extra Newton starts decided nothing in
 12,500 groups and is dropped. Release at a limit of holding is well conditioned (accepted Jacobians: entries ≤ 1.5,
