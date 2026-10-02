@@ -8029,11 +8029,12 @@ any that Step 2 measured differently (times vary run to run).
   unverified; P5 calibrates it.
 - **For P5.** Stick/slip chatter is deferred here. Each regroup of a rubbing pair reports a stick/slip pair, plus a
   slip of a few nanoseconds that sticks again at once. A ball sliding over another's exact top makes 260–336 events
-  with friction against 135–193 without. Re-solves cost time the work budget does not count: the shot mix's worst
-  shot makes 404 solves, and a three-ball push (bent 10°, spin 80) 745 solves and 7.37 million units in 120.5 ms of
-  engine time. Four-ball pushes end in `budget-hold` (above). The design's deferred items: finite turf pivot grip
-  (the per-ball capacity hook), surface variation (the turf-normal and gravity hooks), and Rust/WASM only if the
-  budget proves too tight.
+  with friction against 135–193 without. The shot mix's worst shot makes 404 solves. Four-ball pushes end in
+  `budget-hold` (above). The design's deferred items: finite turf pivot grip (the per-ball capacity hook), surface
+  variation (the turf-normal and gravity hooks), and Rust/WASM only if the budget proves too tight.
+- **Re-solve volume (for P5).** Three-ball pushes now cost time mainly through re-solve volume, which the work budget
+  does not count: a push into a pair bent 10° at spin 80 spends 7.4 million units, but 120 ms of engine time over 745
+  solves on an Apple M4. The budget bounds the search, not the number of segments; P5's time budget must cover both.
 - **Frozen directions.** A segment ends once a frozen slip or push direction would turn by more than
   `DIRECTION_TOLERANCE` (sine 1e-2). That is the remaining cross-check error: wedge 0.506 mm, upright 0.780 mm and
   bent line 0.276 mm against brute force (tolerance 1 mm). A tighter tolerance means more segments (at 1e-3 all
