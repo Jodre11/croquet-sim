@@ -5,6 +5,7 @@ import {
     approachTime,
     boundaryCrossingTime,
     isTouching,
+    normalCurvature,
     outwardDistance,
 } from "../../src/engine/detect";
 import { ZERO, vec3 } from "../../src/engine/math/vec3";
@@ -105,6 +106,15 @@ describe("approachSpeed and isTouching", () => {
         // Horizontally only 0.6·2R apart, but 3D distance above 2R: not touching.
         expect(isTouching(vec3(TWO_R * 0.6, 0, TWO_R), TWO_R)).toBe(false);
         expect(approachSpeed(vec3(0, 0, TWO_R), vec3(0, 0, -1))).toBe(1);
+    });
+
+    it("gives the turning line of centres' closing rate |v_t|²/d, for either sign of the offset", () => {
+        // Speed 3 across a line of length 2R, speed 4 along it: only the 3 turns it.
+        const v = vec3(4, 3, 0);
+        expect(normalCurvature(vec3(TWO_R, 0, 0), v)).toBeCloseTo(9 / TWO_R, 12);
+        expect(normalCurvature(vec3(-TWO_R, 0, 0), v)).toBeCloseTo(9 / TWO_R, 12);
+        expect(normalCurvature(vec3(0, 0, TWO_R), vec3(0, 0, -1))).toBe(0);
+        expect(normalCurvature(ZERO, v)).toBe(0);
     });
 });
 

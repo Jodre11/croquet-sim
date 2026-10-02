@@ -21,6 +21,7 @@
  * linearly through a given unit vector; modeSolve.ts closes it with Newton's method.
  */
 import { CONVEX_SLACK, type Cone } from "./convexSolve";
+import { normalCurvature } from "./detect";
 import { accumulate, affine, denseRow, linearValue, scaled, valueOf, variable, type Affine } from "./linalg";
 import { ZERO, add, cross, dot, horizontal, length, normalize, scale, sub, vec3, type Vec3 } from "./math/vec3";
 import { SPEED_EPSILON, classify } from "./motion";
@@ -115,6 +116,12 @@ export interface ContactGeometry {
     readonly slipping: boolean;
     /** Unit slip while slipping, else ZERO. */
     readonly sHat: Vec3;
+    /**
+     * The relative acceleration (m/s²) towards each other that keeps the pair touching as the line of centres turns
+     * (detect.ts `normalCurvature`): a closed contact's closing rate equals it, and an open one must close more slowly
+     * than it.
+     */
+    readonly curvature: number;
 }
 
 /** One group, ready for candidates. */
@@ -178,7 +185,10 @@ function contactGeometry(
     const relative = add(sub(a.state.velocity, other ? other.velocity : ZERO), scale(cross(spin, n), radius));
     const slip = sub(relative, scale(n, dot(relative, n)));
     const slipping = c.friction > 0 && length(slip) > SPEED_EPSILON;
-    return { n, t1, t2, slip, slipping, sHat: slipping ? normalize(slip) : ZERO };
+    const curvature = other
+        ? normalCurvature(sub(other.position, a.state.position), sub(a.state.velocity, other.velocity))
+        : normalCurvature(horizontal(sub(axes[c.b] as Vec3, a.state.position)), horizontal(a.state.velocity));
+    return { n, t1, t2, slip, slipping, sHat: slipping ? normalize(slip) : ZERO, curvature };
 }
 
 /**
@@ -556,11 +566,13 @@ export function assemble(
             return;
         }
         const g = geometry[k] as ContactGeometry;
-        // Closing rate (a_a − a_b)·n = 0 (the centres', which equals the contact points' normal rate).
+        // Closing rate (a_a − a_b)·n = |v_t|²/d (the centres', which equals the contact points' normal rate): the pair
+        // stays touching as the line of centres turns, so the contact force includes the share that turns it.
         const closing = vdot(accel[c.a] as VectorForm, g.n);
         if (!c.fixed) {
             accumulate(closing, vdot(accel[c.b] as VectorForm, g.n), -1);
         }
+        closing.c -= g.curvature;
         rows.push(closing);
         if (cand.contacts[k] === "stick" && c.friction > 0) {
             rows.push(vdot(relative[k] as VectorForm, g.t1));
@@ -645,7 +657,7 @@ export function inconsistency(model: Model, cand: Candidate, ev: Evaluated, hold
         const g = geometry[k] as ContactGeometry;
         if (cand.contacts[k] === "open") {
             const closing = dot(sub(ev.accel[c.a] as Vec3, c.fixed ? ZERO : (ev.accel[c.b] as Vec3)), g.n);
-            if (closing > ACCELERATION_EPSILON) {
+            if (closing - g.curvature > ACCELERATION_EPSILON) {
                 return `open contact ${k} converges (${closing})`;
             }
             continue;

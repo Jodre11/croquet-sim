@@ -10,22 +10,31 @@
  * first, and the first consistent candidate wins.
  *
  * Within one segment everything is constant, so every trajectory stays quadratic:
- * - Each contact normal is fixed for the segment. Relative motion is then perpendicular to the normal, which can only
- *   open the gap (to second order); the segment ends when the gap opens past SEPARATION_TOLERANCE.
+ * - Each contact normal is fixed for the segment. The pair closes along it at |v_t|²/d (detect.ts `normalCurvature`),
+ *   the rate that keeps it touching as the line of centres turns, so the contact force carries that share with its
+ *   friction and load. The gap then drifts only at third order, either way; the segment ends when it opens past
+ *   SEPARATION_TOLERANCE or closes past CONTACT_TOLERANCE, and the simulator projects every resting contact back to
+ *   zero gap before it solves again (simulate.ts projectContacts). (Closing at zero instead opens the gap at second
+ *   order, and the regroup that follows passes the turning share as a frictionless inelastic impulse: pushes that rub
+ *   round each other then drift by millimetres.)
  * - Each ball's turf force is frozen at the segment start (sliding friction against its slip, rolling resistance
  *   against its travel), and so is each slipping contact's slip direction. The segment ends when one stops being valid:
  *   the slip or velocity reaches zero along its frozen direction or turns more than DIRECTION_TOLERANCE away from it
  *   (pushDuration, contactSlipDuration). The simulator then solves the group again.
- * - Because each normal is frozen, a ball sliding round another in flight regroups every ~1.5 mrad of turn
- *   (√(SEPARATION_TOLERANCE/R)): around a thousand events for a ball rolling off another's top, but finitely many.
+ * - Because each normal is frozen, a ball sliding round another in flight regroups as the gap's cubic drift leaves its
+ *   band: about 135–195 events for a ball rolling off another's top without friction, but finitely many.
  *
  * If no exact candidate is found, or the shot's work budget is spent, the group falls back to the nearest hold: its
  * resting balls stay at rest and the moving balls are solved against them as fixed, frictionless, compression-only
  * obstacles. That problem always has a solution (see nearestHold) and does no work through the held balls. It differs
  * from the exact solution by the motion and friction it omits; nothing bounds that in principle, so the solution
- * reports how far holding misses (holdExcess) and flags the balls concerned.
+ * reports how far holding misses (holdExcess) and flags the balls concerned. Its contacts close at zero, without the
+ * curvature share: the fallback is already approximate and frictionless (the share carries no friction to lose), its
+ * contacts then open at second order (v_t²), so they end the segment on the separation side and are solved again
+ * (with no tangential speed the drift is cubic and both bounds apply, as for exact solutions); and keeping its target
+ * zero keeps nearestHold the projection its existence argument is about.
  */
-import { approachSpeed } from "./detect";
+import { approachSpeed, normalCurvature } from "./detect";
 import {
     ACCELERATION_EPSILON,
     ROLLING_WEIGHT,
@@ -481,12 +490,15 @@ function solveContacts(
         const other = c.fixed ? ZERO : (x.get(c.b) ?? ZERO);
         return dot(sub(x.get(c.a) ?? ZERO, other), normals[k] as Vec3);
     };
+    // Converging: approaching, or driven together faster than the turning line of centres needs (normalCurvature).
     const converging = (states: readonly BallState[], acceleration: ReadonlyMap<number, Vec3>, k: number): boolean => {
         const c = contacts[k] as RestingContact;
         const a = states[c.a] as BallState;
         const velocity = c.fixed ? ZERO : (states[c.b] as BallState).velocity;
-        const closing = approachSpeed(scale(towards(c), -1), sub(a.velocity, velocity));
-        return closing > SPEED_EPSILON || closingRate(acceleration, k) > ACCELERATION_EPSILON;
+        const relative = c.fixed ? horizontal(a.velocity) : sub(a.velocity, velocity);
+        const closing = approachSpeed(scale(towards(c), -1), relative);
+        const curvature = normalCurvature(towards(c), relative);
+        return closing > SPEED_EPSILON || closingRate(acceleration, k) - curvature > ACCELERATION_EPSILON;
     };
     const touches = (i: number, k: number): boolean => {
         const c = contacts[k] as RestingContact;

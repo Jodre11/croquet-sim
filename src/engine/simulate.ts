@@ -23,14 +23,17 @@ import {
     boundaryCrossingTime,
     firstNonNegative,
     isTouching,
+    normalCurvature,
 } from "./detect";
-import { ZERO, dot, horizontal, length, normalize, scale, sub, vec3, type Vec3 } from "./math/vec3";
+import { solveSystem } from "./linalg";
+import { ZERO, add, dot, horizontal, length, normalize, scale, sub, vec3, type Vec3 } from "./math/vec3";
 import {
     SPEED_EPSILON,
     advance,
     atRest,
     classify,
     endOfPhase,
+    onTurf,
     phaseDuration,
     trajectory,
     type Trajectory,
@@ -351,6 +354,82 @@ function restingComponent(sim: Simulation, seeds: readonly Track[], now: number)
     return { tracks, obstacles, contacts };
 }
 
+/** Newton steps of projectContacts. Each solves the linearised gaps exactly; the second removes the O(gap²/R) rest. */
+const PROJECTION_STEPS = 2;
+
+/**
+ * Moves the balls of a component about to be solved so that every resting contact in it has exactly zero gap along its
+ * normal, leaving velocities alone. It exists because the closing rate includes the line of centres' curvature
+ * (normalCurvature): a coupled pair then keeps its gap only to third order, and the drift, which can go either way, is
+ * otherwise never undone, so it would accumulate over regroups (separationTime bounds it per segment, between
+ * −CONTACT_TOLERANCE and SEPARATION_TOLERANCE). After it every gap is zero, so neither bound fires at the new segment's
+ * start: the drift is cubic in time again.
+ *
+ * All contacts at once, so that it is deterministic and order-free (a symmetric set-up stays symmetric): with J the
+ * contacts' normal rows (−n on ball a, +n on ball b; an obstacle never moves) and W each ball's mobility (a ball on the
+ * turf moves only horizontally, a ball in flight in 3D; equal masses), the move δ = W·Jᵀ·μ with (J·W·Jᵀ)·μ = −gap is
+ * the smallest that closes every gap. A ball in several contacts takes the sum of their moves. Dependent contacts (a
+ * ball jammed between bodies) can make the gaps inconsistent; the least-squares μ (minimum norm, from the normal
+ * equations) then closes them as nearly as possible. Its work is not counted against the solve budget: it is a
+ * handful of contacts, once per settle.
+ */
+function projectContacts(sim: Simulation, component: Component, now: number): void {
+    const R = sim.world.ball.radius;
+    const { contacts } = component;
+    if (contacts.length === 0) {
+        return;
+    }
+    const states = component.tracks.map((t) => stateAt(t, now));
+    const positions = states.map((s) => s.position);
+    const supported = states.map((s) => onTurf(s, R));
+    const mobility = (i: number, v: Vec3): Vec3 => (supported[i] ? horizontal(v) : v);
+    for (let step = 0; step < PROJECTION_STEPS; step++) {
+        // Each contact's normal and gap at the current positions.
+        const geometry = contacts.map((c) => {
+            const pa = positions[c.a] as Vec3;
+            const o = c.fixed ? (component.obstacles[c.b] as Cylinder) : null;
+            const offset = o ? horizontal(sub(o.centre, pa)) : sub(positions[c.b] as Vec3, pa);
+            const distance = length(offset);
+            return { n: scale(offset, 1 / distance), gap: distance - (o ? R + o.radius : 2 * R) };
+        });
+        // Row k of J for ball i, dotted through W with row j: Σ over shared balls of J_k,i · W_i · J_j,i.
+        const row = (k: number, i: number): Vec3 => {
+            const c = contacts[k] as RestingContact;
+            const n = (geometry[k] as { n: Vec3 }).n;
+            return c.a === i ? scale(n, -1) : !c.fixed && c.b === i ? n : ZERO;
+        };
+        const A = contacts.map((_, k) =>
+            contacts.map((__, j) =>
+                component.tracks.reduce((sum, _t, i) => sum + dot(row(k, i), mobility(i, row(j, i))), 0),
+            ),
+        );
+        const gaps = geometry.map((g) => 0 - g.gap);
+        // Normal equations (A is symmetric): A·A·μ = A·(−gap), always consistent.
+        const AA = A.map((r) =>
+            A.map((_, j) => r.reduce((sum, v, m) => sum + v * ((A[m] as number[])[j] as number), 0)),
+        );
+        const Ab = A.map((r) => r.reduce((sum, v, m) => sum + v * (gaps[m] as number), 0));
+        const solved = solveSystem(AA, Ab, { units: 0 });
+        if (!solved) {
+            return;
+        }
+        component.tracks.forEach((_t, i) => {
+            let move = ZERO;
+            solved.x.forEach((mu, k) => {
+                move = add(move, scale(mobility(i, row(k, i)), mu));
+            });
+            positions[i] = add(positions[i] as Vec3, move);
+        });
+    }
+    component.tracks.forEach((track, i) => {
+        const s = states[i] as BallState;
+        const p = positions[i] as Vec3;
+        if (p.x !== s.position.x || p.y !== s.position.y || p.z !== s.position.z) {
+            reopen(sim, track, track.id, { ...s, position: p }, now);
+        }
+    });
+}
+
 function solveComponent(sim: Simulation, component: Component, now: number): RestingSolution {
     sim.probe?.before();
     const solution = solveRestingContacts(
@@ -396,6 +475,7 @@ function settle(
     const component = restingComponent(sim, seeds, now);
     const before = previous ?? couplingsOf(sim, component.tracks);
     release(sim, component.tracks, now);
+    projectContacts(sim, component, now);
     const solution = solveComponent(sim, component, now);
     component.tracks.forEach((track, i) => {
         const member = solution.members[i];
@@ -484,9 +564,25 @@ function separationGap(offset: Vec3, distance: number): number {
     return dot(offset, offset) - distance * distance - band;
 }
 
-/** Earliest time a coupled contact opens beyond SEPARATION_TOLERANCE, for relative trajectory a + b·t + c·t². */
+/**
+ * Earliest time a coupled contact drifts out of its band, for relative trajectory a + b·t + c·t²: opens beyond
+ * SEPARATION_TOLERANCE, or closes deeper than CONTACT_TOLERANCE. With the line of centres' curvature in the closing
+ * rate (normalCurvature) a coupled gap drifts only at third order, but either way, so both sides end the segment; the
+ * regroup that follows projects the pair back to zero gap (projectContacts).
+ */
 function separationTime(a: Vec3, b: Vec3, c: Vec3, distance: number, horizon: number): number | null {
-    const f = [separationGap(a, distance), 2 * dot(a, b), dot(b, b) + 2 * dot(a, c), 2 * dot(b, c), dot(c, c)];
+    const square = [dot(a, a), 2 * dot(a, b), dot(b, b) + 2 * dot(a, c), 2 * dot(b, c), dot(c, c)];
+    const opens = firstRootOf([separationGap(a, distance), ...square.slice(1)], horizon);
+    const inner = distance - CONTACT_TOLERANCE;
+    const sinks = firstRootOf(
+        square.map((x, i) => (i === 0 ? inner * inner - x : 0 - x)),
+        horizon,
+    );
+    return opens === null ? sinks : sinks === null ? opens : Math.min(opens, sinks);
+}
+
+/** firstNonNegative of f within `horizon`, or, for an infinite horizon, within a bound on every real root of f. */
+function firstRootOf(f: readonly number[], horizon: number): number | null {
     if (Number.isFinite(horizon)) {
         return firstNonNegative(f, horizon);
     }
@@ -575,17 +671,25 @@ function accelerationOf(track: Track, state: BallState): Vec3 {
 
 /**
  * Decides whether touching bodies must be resolved now: they are approaching, or they rest against each other and
- * their accelerations drive them together. `towards` is the offset from the first body's centre to the second's (3D
- * for a ball, horizontal for an obstacle's axis) and `otherAcceleration` the second body's (an obstacle's is ZERO).
- * Resolution applies the resting-contact solver, whose outcome never leaves an uncoupled resting contact driven
- * together, so a contact resolved at t = 0 does not trigger again.
+ * their accelerations drive them together faster than their turning line of centres needs (`normalCurvature`, as the
+ * solver judges it). `towards` is the offset from the first body's centre to the second's (3D for a ball, horizontal
+ * for an obstacle's axis), `otherAcceleration` the second body's (an obstacle's is ZERO) and `relative` the first
+ * body's velocity minus the second's. Resolution applies the resting-contact solver, whose outcome never leaves an
+ * uncoupled resting contact driven together, so a contact resolved at t = 0 does not trigger again.
  */
-function contactNow(towards: Vec3, acceleration: Vec3, otherAcceleration: Vec3, closing: number): boolean {
+function contactNow(
+    towards: Vec3,
+    acceleration: Vec3,
+    otherAcceleration: Vec3,
+    relative: Vec3,
+    closing: number,
+): boolean {
     if (closing > SPEED_EPSILON) {
         return true;
     }
     const normal = normalize(towards);
-    return closing >= -RESTING_SPEED && dot(sub(acceleration, otherAcceleration), normal) > ACCELERATION_EPSILON;
+    const driven = dot(sub(acceleration, otherAcceleration), normal) - normalCurvature(towards, relative);
+    return closing >= -RESTING_SPEED && driven > ACCELERATION_EPSILON;
 }
 
 function findNextEvent(sim: Simulation, now: number): Candidate | null {
@@ -638,8 +742,15 @@ function findNextEvent(sim: Simulation, now: number): Candidate | null {
             const sa = states.get(a) as BallState;
             const sb = states.get(b) as BallState;
             const offset = sub(sa.position, sb.position);
-            const closing = approachSpeed(offset, sub(sa.velocity, sb.velocity));
-            const driven = contactNow(scale(offset, -1), accelerationOf(a, sa), accelerationOf(b, sb), closing);
+            const relative = sub(sa.velocity, sb.velocity);
+            const closing = approachSpeed(offset, relative);
+            const driven = contactNow(
+                scale(offset, -1),
+                accelerationOf(a, sa),
+                accelerationOf(b, sb),
+                relative,
+                closing,
+            );
             if (isTouching(offset, 2 * R) && driven) {
                 best = earlier(best, { time: now, kind: "ball-ball", a, b });
                 continue;
@@ -668,7 +779,13 @@ function findNextEvent(sim: Simulation, now: number): Candidate | null {
                 continue;
             }
             const closing = approachSpeed(offset, s.velocity);
-            const driven = contactNow(scale(offset, -1), accelerationOf(track, s), ZERO, closing);
+            const driven = contactNow(
+                scale(offset, -1),
+                accelerationOf(track, s),
+                ZERO,
+                horizontal(s.velocity),
+                closing,
+            );
             if (isTouching(offset, distance) && driven) {
                 best = earlier(best, { time: now, kind: "obstacle", track, obstacle });
                 continue;

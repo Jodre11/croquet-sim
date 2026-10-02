@@ -158,14 +158,13 @@ describe("resting contact in flight", () => {
                         expect(result.aborted).toBe(false);
                         expect(worstPenetration(result, world)).toBeLessThan(CONTACT_TOLERANCE);
                         expect(result.rest.red?.z).toBe(R);
-                        // Finite but long. The contact normal is frozen per push segment, so the pair regroups every
-                        // ~1.5 mrad of the normal's turn, each regroup followed by re-contacts, rather than bouncing
-                        // freely: frictionless, about 1100 events. Friction adds, per regroup cycle, a stick/slip pair
-                        // of the contact (the lower ball rolls for a few microseconds as it slips), and a slip of a
-                        // few nanoseconds that sticks again at once: at 0.003 m/s about 2768 events. The sweep's worst
-                        // shot, 0.007 m/s along +y at (12.3, 7.1), has 3226 (2148 phase, 757 ball–ball, 183 stick,
-                        // 126 slip, 11 landing, 1 jump). Damping that chatter is deferred to P5.
-                        expect(result.events.length).toBeLessThan(4000);
+                        // Finite but long. The contact normal is frozen per push segment, so the pair regroups as its
+                        // gap drifts (at third order, the closing rate including the normal's curvature) out of its
+                        // band, rather than bouncing freely: frictionless, 135–193 events over the sweep. Friction
+                        // adds, per regroup cycle, a stick/slip pair of the contact (the lower ball rolls for a few
+                        // microseconds as it slips), and a slip of a few nanoseconds that sticks again at once: at
+                        // 0.003 m/s 336 events, 260–336 over the sweep. Damping that chatter is deferred to P5.
+                        expect(result.events.length).toBeLessThan(500);
                         // The ball falls back on the other at about 1.4 mm/s; the 3D impulse keeps the approach normal.
                         expectNoEnergyGain(result);
                     }
