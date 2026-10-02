@@ -12,31 +12,41 @@
  * Undetermined forces (a singular but consistent system) are the minimum-norm forces satisfying every convex
  * condition of the candidate (convexSolve.ts); every acceptance check is run again after that choice.
  */
-import { solveConvex } from "./convexSolve";
+import { excessAt, solveConvex } from "./convexSolve";
 import {
+    ACCELERATION_EPSILON,
     FOLLOW_EPSILON,
+    ROLLING_WEIGHT,
     assemble,
+    ballOptions,
     buildModel,
+    candidateKey,
     cones,
+    contactOptions,
     directionItems,
     evaluate,
     inconsistency,
+    isStatic,
+    lowLoad,
     settled,
     vectorLinear,
     vectorValue,
     type BallMode,
     type Candidate,
+    type ContactBody,
     type ContactGeometry,
     type ContactMode,
     type DirectionItem,
     type Evaluated,
     type Model,
+    type RestingContact,
     type System,
     type VectorForm,
 } from "./contactModel";
 import { solveFactored, solveLinear, solveSystem, type Factored, type Work } from "./linalg";
 import { atan2, sinCos } from "./math/elementary";
-import { ZERO, dot, length, normalize, scale, sub, vec3, type Vec3 } from "./math/vec3";
+import { ZERO, add, cross, dot, length, normalize, scale, sub, vec3, type Vec3 } from "./math/vec3";
+import type { MotionPhase } from "./types";
 
 /** Iteration cap of one Newton run. */
 export const NEWTON_ITERATIONS = 60;
@@ -508,4 +518,393 @@ export function fallbackSlip(model: Model, cand: Candidate, work: Work): Candida
         ev,
         residual: 0,
     };
+}
+
+/**
+ * Candidates the group search may solve before giving up (design §4 step 6). The worst measured over 20,000 random
+ * four-ball clusters with obstacles was 209; the cap leaves room above that and bounds the search where it has none.
+ */
+export const MODE_SEARCH_LIMIT = 1024;
+
+/** Iteration cap of the frictionless guide that proposes the first candidate. */
+const GUIDE_ITERATIONS = 5_000;
+
+/** The guide stops once no contact force changes by more than this (m/s²) in a step. */
+const GUIDE_TOLERANCE = 1e-12;
+
+/** The proposal: a candidate and seed directions for its unknown directions. */
+export interface Proposal {
+    readonly candidate: Candidate;
+    readonly seed: (it: DirectionItem) => Vec3;
+}
+
+/**
+ * P2a.1's frictionless solve of the whole group, as the proposal (design §4 step 3, the μ = 0 limit). With each resting
+ * ball's static resistance included, the accelerations minimise Σᵢ ½·wᵢ·|xᵢ − fᵢ|² + Σᵢ cᵢ·|xᵢ| subject to no contact
+ * converging; its dual over contact forces N ≥ 0 is smooth: for given N each ball's acceleration is the soft threshold
+ * xᵢ = shrink(fᵢ + gᵢ/wᵢ, cᵢ/wᵢ) of its free acceleration plus the contact push gᵢ = Σₖ Nₖ·Jₖᵢ, and the dual gradient
+ * is −J·x. Projected gradient ascent with step 1/L (L ≥ largest row sum of J·W⁻¹·Jᵀ, at most 2·contacts) converges. A
+ * resting ball whose soft threshold is not zero is released; a contact with force touching a moving ball is coupled.
+ */
+export function propose(model: Model): Proposal {
+    const { bodies, contacts, geometry, classes, frozen } = model;
+    const responses = bodies.map((b, i) => {
+        const p = b.params;
+        switch (classes[i] as MotionPhase) {
+            case "sliding":
+                return { force: scale(frozen[i] as Vec3, 0 - p.slidingDecel), weight: 1, threshold: 0 };
+            case "rolling":
+                return { force: scale(frozen[i] as Vec3, 0 - p.rollingDecel), weight: ROLLING_WEIGHT, threshold: 0 };
+            case "stationary":
+                return { force: ZERO, weight: ROLLING_WEIGHT, threshold: ROLLING_WEIGHT * p.rollingDecel };
+            case "airborne":
+                return { force: model.gravity, weight: 1, threshold: 0 };
+        }
+    });
+    // Contact k's row for ball i: +n on b, −n on a; on the turf only its in-plane part (the turf takes the rest).
+    const row = (k: number, i: number): Vec3 => {
+        const c = contacts[k] as RestingContact;
+        const n = (geometry[k] as ContactGeometry).n;
+        const r = !c.fixed && c.b === i ? n : c.a === i ? scale(n, -1) : ZERO;
+        if (classes[i] === "airborne") {
+            return r;
+        }
+        const up = (bodies[i] as ContactBody).turfNormal;
+        return sub(r, scale(up, dot(r, up)));
+    };
+    const forces = contacts.map(() => 0);
+    const step = 1 / Math.max(1, 2 * contacts.length);
+    const accelerations = (): Vec3[] =>
+        bodies.map((_, i) => {
+            const r = responses[i] as NonNullable<(typeof responses)[number]>;
+            let push = ZERO;
+            contacts.forEach((_c, k) => {
+                push = add(push, scale(row(k, i), forces[k] as number));
+            });
+            const v = add(r.force, scale(push, 1 / r.weight));
+            const size = length(v);
+            const limit = r.threshold / r.weight;
+            return size > limit ? scale(v, (size - limit) / size) : ZERO;
+        });
+    for (let iteration = 0; iteration < GUIDE_ITERATIONS; iteration++) {
+        const x = accelerations();
+        let change = 0;
+        contacts.forEach((c, k) => {
+            let opening = dot(row(k, c.a), x[c.a] as Vec3);
+            if (!c.fixed) {
+                opening += dot(row(k, c.b), x[c.b] as Vec3);
+            }
+            const next = Math.max(0, (forces[k] as number) - step * opening);
+            change = Math.max(change, Math.abs(next - (forces[k] as number)));
+            forces[k] = next;
+        });
+        if (change <= GUIDE_TOLERANCE) {
+            break;
+        }
+    }
+    const x = accelerations();
+    // Dual ascent approaches a ball held exactly at its limit from the moving side, so tiny ones count as held.
+    const released = classes.map((c, i) => c === "stationary" && length(x[i] as Vec3) > ACCELERATION_EPSILON);
+    const moving = (i: number): boolean => classes[i] !== "stationary" || released[i] === true;
+    const balls = classes.map((c, i): BallMode => {
+        switch (c) {
+            case "stationary":
+                return released[i] ? "released" : "held";
+            case "rolling":
+                return "turf-rolling";
+            case "sliding":
+                return "turf-sliding";
+            case "airborne":
+                return "airborne";
+        }
+    });
+    const modes = contacts.map((c, k): ContactMode => {
+        if (!((forces[k] as number) > 0 && (moving(c.a) || (!c.fixed && moving(c.b))))) {
+            return "open";
+        }
+        return c.friction === 0 || (geometry[k] as ContactGeometry).slipping ? "slip" : "stick";
+    });
+    const candidate = settled(model, { balls, contacts: modes });
+    const seed = (it: DirectionItem): Vec3 => {
+        let guess: Vec3;
+        if (it.kind === "contact-onset") {
+            // The contact points' relative acceleration (x_a − x_b) + R·(α_a + α_b) × n, with a rolling ball's spin
+            // following its acceleration (R·α = normal × x). Without the spin a line pushed straight has no tangential
+            // guess, though its contacts slip vertically.
+            const c = contacts[it.index] as RestingContact;
+            const n = (geometry[it.index] as ContactGeometry).n;
+            const spin = (i: number): Vec3 =>
+                balls[i] === "released" || balls[i] === "turf-rolling"
+                    ? cross((bodies[i] as ContactBody).turfNormal, x[i] as Vec3)
+                    : ZERO;
+            const g = add(
+                sub(x[c.a] as Vec3, c.fixed ? ZERO : (x[c.b] as Vec3)),
+                cross(add(spin(c.a), c.fixed ? ZERO : spin(c.b)), n),
+            );
+            guess = sub(g, scale(n, dot(g, n)));
+        } else {
+            guess = x[it.index] as Vec3;
+        }
+        return length(guess) > 0 ? guess : it.e1;
+    };
+    return { candidate, seed };
+}
+
+export type GroupKind = "exact" | "approximate-slip" | "approximate-hold" | "budget-hold";
+
+/** The decision for one group. */
+export interface GroupSolution {
+    readonly kind: GroupKind;
+    /** The accepted candidate's solve (exact, approximate-slip); null when the group is to be held. */
+    readonly outcome: CandidateOutcome | null;
+    /** Candidates solved. */
+    readonly tried: number;
+    /**
+     * approximate-slip: the failed direction solve's residual (m/s²); approximate-hold: how far holding every resting
+     * ball misses its limits (the worst relaxed-cone excess at the best forces the hold-first solve found, m/s²;
+     * Infinity when that configuration could not be solved at all); otherwise 0.
+     */
+    readonly excess: number;
+    /** approximate-slip: the balls whose slip fell back (both balls of a contact, the ball of a turf slip). */
+    readonly slipBalls: readonly number[];
+}
+
+interface SearchItem {
+    readonly kind: "ball" | "contact";
+    readonly index: number;
+}
+
+/**
+ * Every candidate that departs from `proposal` in exactly `departures` items, in lexicographic order of the items'
+ * mode ranks. Items are balls with more than one mode (in index order), then every contact. A contact between bodies
+ * held in the candidate keeps the proposal's rank: settled() fixes its mode, so any other rank would only repeat a
+ * candidate with fewer departures. With `holdResting`, every ball at rest keeps the proposal's mode (the hold-first
+ * phase, whose proposal holds them all).
+ */
+function* departing(model: Model, proposal: Candidate, departures: number, holdResting: boolean): Generator<Candidate> {
+    const items: SearchItem[] = [
+        ...model.classes.flatMap((c, i) => (ballOptions(c).length > 1 ? [{ kind: "ball" as const, index: i }] : [])),
+        ...model.contacts.map((_, k) => ({ kind: "contact" as const, index: k })),
+    ];
+    const options = items.map((it): readonly string[] =>
+        it.kind === "ball" ? ballOptions(model.classes[it.index] as MotionPhase) : contactOptions(model, it.index),
+    );
+    const proposed = items.map((it, j) =>
+        (options[j] as readonly string[]).indexOf(
+            it.kind === "ball" ? (proposal.balls[it.index] as string) : (proposal.contacts[it.index] as string),
+        ),
+    );
+    const ranks: number[] = [];
+    const modeAt = (j: number): string => (options[j] as readonly string[])[ranks[j] as number] as string;
+    // The ball modes chosen so far (ball items come first, so all of them are chosen once a contact is reached).
+    const ballsNow = (): BallMode[] => {
+        const balls = [...proposal.balls];
+        items.forEach((it, j) => {
+            if (it.kind === "ball" && j < ranks.length) {
+                balls[it.index] = modeAt(j) as BallMode;
+            }
+        });
+        return balls;
+    };
+    const build = (): Candidate => {
+        const contacts = [...proposal.contacts];
+        items.forEach((it, j) => {
+            if (it.kind === "contact") {
+                contacts[it.index] = modeAt(j) as ContactMode;
+            }
+        });
+        return { balls: ballsNow(), contacts };
+    };
+    function* walk(j: number, left: number): Generator<Candidate> {
+        if (j === items.length) {
+            if (left === 0) {
+                yield build();
+            }
+            return;
+        }
+        if (items.length - j < left) {
+            return;
+        }
+        const item = items[j] as SearchItem;
+        const fixed =
+            (item.kind === "contact" && isStatic(model, ballsNow(), item.index)) ||
+            (holdResting && item.kind === "ball" && model.classes[item.index] === "stationary");
+        const count = (options[j] as readonly string[]).length;
+        for (let r = 0; r < count; r++) {
+            const departs = r === proposed[j] ? 0 : 1;
+            if (departs > left || (fixed && departs === 1)) {
+                continue;
+            }
+            ranks.push(r);
+            yield* walk(j + 1, left - departs);
+            ranks.pop();
+        }
+    }
+    yield* walk(0, departures);
+}
+
+/**
+ * Solves one group (design §4 steps 2–7): every candidate with every resting ball held first, then the proposal, then
+ * every other candidate fewest departures from the proposal first; the first consistent candidate wins. A solved
+ * candidate whose turf balls' loads drop to zero or below is followed at once by the same candidate with those balls
+ * lifted (airborne). The budget is checked before each candidate: once work.units reaches it the group is to be held
+ * (budget-hold). With nothing consistent, or the
+ * search capped at MODE_SEARCH_LIMIT, the first candidate whose only failure was its direction solve is tried with
+ * approximate-slip directions; failing that, the group is to be held (approximate-hold). The nearest hold itself is
+ * the caller's (push.ts).
+ */
+export function solveGroup(model: Model, work: Work, budget: number, hooks: SolveHooks = {}): GroupSolution {
+    const proposal = propose(model);
+    const held = settled(model, heldCandidate(model, proposal.candidate));
+    const heldKey = candidateKey(held);
+    const seen = new Set<string>();
+    const state: { tried: number; firstFailure: CandidateOutcome | null; held: CandidateOutcome | null } = {
+        tried: 0,
+        firstFailure: null,
+        held: null,
+    };
+    const hold = (kind: GroupKind, excess: number): GroupSolution => ({
+        kind,
+        outcome: null,
+        tried: state.tried,
+        excess,
+        slipBalls: [],
+    });
+    /**
+     * Solves a candidate unless it was solved already; "cap" once MODE_SEARCH_LIMIT candidates have been solved,
+     * "budget" once the budget is spent.
+     */
+    const attempt = (raw: Candidate): CandidateOutcome | "cap" | "budget" | null => {
+        const cand = settled(model, raw);
+        const key = candidateKey(cand);
+        if (seen.has(key)) {
+            return null;
+        }
+        if (state.tried >= MODE_SEARCH_LIMIT) {
+            return "cap";
+        }
+        if (work.units >= budget) {
+            return "budget";
+        }
+        seen.add(key);
+        state.tried++;
+        const out = solveCandidate(model, cand, proposal.seed, work, hooks);
+        if (key === heldKey) {
+            state.held = out;
+        }
+        if (!out.ok && out.failure === "direction" && state.firstFailure === null) {
+            state.firstFailure = out;
+        }
+        // Lift-off (spec §5): balls whose load would be zero or below leave the turf, so the same candidate is solved
+        // again with them airborne.
+        const low = !out.ok && out.ev ? lowLoad(model, out.cand, out.ev) : [];
+        if (low.length > 0) {
+            const lifted = attempt({
+                balls: out.cand.balls.map((m, i) => (low.includes(i) ? "airborne" : m)),
+                contacts: out.cand.contacts,
+            });
+            if (lifted !== null) {
+                return lifted;
+            }
+        }
+        return out;
+    };
+    const exact = (out: CandidateOutcome): GroupSolution => ({
+        kind: "exact",
+        outcome: out,
+        tried: state.tried,
+        excess: 0,
+        slipBalls: [],
+    });
+    const itemCount = model.classes.filter((c) => ballOptions(c).length > 1).length + model.contacts.length;
+    /** Tries `base`, then every candidate departing from it, in order; a decision, or null when none is consistent. */
+    const phase = (base: Candidate, holdResting: boolean): GroupSolution | null => {
+        const first = attempt(base);
+        if (first === "cap") {
+            return null;
+        }
+        if (first === "budget") {
+            return hold("budget-hold", 0);
+        }
+        if (first?.ok) {
+            return exact(first);
+        }
+        for (let departures = 1; departures <= itemCount; departures++) {
+            for (const cand of departing(model, base, departures, holdResting)) {
+                const out = attempt(cand);
+                if (out === "cap") {
+                    return null;
+                }
+                if (out === "budget") {
+                    return hold("budget-hold", 0);
+                }
+                if (out?.ok) {
+                    return exact(out);
+                }
+            }
+        }
+        return null;
+    };
+
+    // Hold first: every candidate with every resting ball held, before any that releases one. Its first candidate,
+    // the proposal with its resting balls held, is what the approximate-hold excess is measured on (attempt() keeps
+    // its outcome in state.held).
+    const holding = phase(held, true);
+    if (holding) {
+        return holding;
+    }
+    const searched = phase(proposal.candidate, false);
+    if (searched) {
+        return searched;
+    }
+
+    const failure = state.firstFailure;
+    if (failure) {
+        const fallback = fallbackSlip(model, failure.cand, work);
+        if (fallback?.ok) {
+            const slipBalls = new Set<number>();
+            for (const it of fallback.items) {
+                if (it.kind === "contact-onset") {
+                    const c = model.contacts[it.index] as RestingContact;
+                    slipBalls.add(c.a);
+                    if (!c.fixed) {
+                        slipBalls.add(c.b);
+                    }
+                } else {
+                    slipBalls.add(it.index);
+                }
+            }
+            return {
+                kind: "approximate-slip",
+                outcome: fallback,
+                tried: state.tried,
+                excess: failure.residual,
+                slipBalls: [...slipBalls].sort((a, b) => a - b),
+            };
+        }
+    }
+    return hold("approximate-hold", state.held ? excessOf(model, state.held) : Infinity);
+}
+
+/** The proposal with every resting ball held: the hold-first candidate (design §4 step 2). */
+function heldCandidate(model: Model, proposal: Candidate): Candidate {
+    return {
+        balls: proposal.balls.map((m, i) => (model.classes[i] === "stationary" ? "held" : m)),
+        contacts: proposal.contacts,
+    };
+}
+
+/** How far a solved candidate misses its convex conditions; Infinity when it could not be solved at all. */
+function excessOf(model: Model, out: CandidateOutcome): number {
+    return out.sys && out.x ? Math.max(0, excessAt(cones(model, out.cand, out.sys), out.x)) : Infinity;
+}
+
+/**
+ * How far holding every resting ball of the group misses its limits (see GroupSolution.excess): 0 when the hold-first
+ * candidate is consistent. The nearest-hold fallback reports it.
+ */
+export function holdExcess(model: Model, work: Work): number {
+    const proposal = propose(model);
+    const out = solveCandidate(model, settled(model, heldCandidate(model, proposal.candidate)), proposal.seed, work);
+    return out.ok ? 0 : excessOf(model, out);
 }
