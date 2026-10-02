@@ -1,9 +1,17 @@
 import { describe, expect, it } from "vitest";
 import { horizontal, length, sub, vec3 } from "../../src/engine/math/vec3";
-import { stateAtTime } from "../../src/engine/sample";
+import { rollingSpin } from "../../src/engine/motion";
+import { segmentState, stateAtTime } from "../../src/engine/sample";
 import { CONTACT_TOLERANCE } from "../../src/engine/detect";
 import { simulateFreeMotion } from "../../src/engine/simulate";
-import { BALL_IDS, type BallId, type BallState, type BallStates, type ShotResult } from "../../src/engine/types";
+import {
+    BALL_IDS,
+    type BallId,
+    type BallState,
+    type BallStates,
+    type ShotResult,
+    type World,
+} from "../../src/engine/types";
 import { STANDARD_GRAVITY } from "../../src/engine/world";
 import { mechanicalEnergy } from "./support/energy";
 import { worstPenetration } from "./support/penetration";
@@ -312,13 +320,43 @@ describe("invariants", () => {
     });
 
     it("never spins a ball about the vertical axis on the spot", () => {
-        const result = simulateFreeMotion(complex, hoopWorld);
-        for (const id of BALL_IDS) {
-            for (const s of result.segments[id] ?? []) {
-                if (s.phase === "stationary") {
-                    expect(s.start.angularVelocity, `${id} at ${s.t0}`).toEqual(vec3(0, 0, 0));
-                }
+        // Spin about the vertical is locked while a ball's turf patch does not slip (held, released from rest, rolling)
+        // and free while it slides or flies; a rolling ball keeps it and drops it when it stops. So a ball that does
+        // not slip and starts a segment with no horizontal velocity (at rest, held, released) has none, and no push
+        // spins a ball that does not slip about the vertical. Each shot brings vertical spin to a ball that stops: the
+        // complex shot's balls all stop with some (from impacts); a ball rolling slowly into the peg with sidespin is
+        // held there; a topspin ball with sidespin releases a resting ball, then rolls with its spin and stops.
+        const slow = vec3(0.0005, 0, 0);
+        const shots: readonly (readonly [BallStates, World])[] = [
+            [complex, hoopWorld],
+            [{ blue: ballAt(15 - R - 0.02, 20, slow, rollingSpin(slow, 40, R)) }, testWorld()],
+            [{ blue: ballAt(5, 5, vec3(0, 0, 0), vec3(0, 60, 40)), red: ballAt(5 + 2 * R, 5) }, testWorld()],
+        ];
+        for (const [setup, world] of shots) {
+            const result = simulateFreeMotion(setup, world);
+            let reached = 0;
+            for (const id of BALL_IDS) {
+                const segments = result.segments[id] ?? [];
+                segments.forEach((s, i) => {
+                    if (s.phase !== "stationary" && s.phase !== "rolling") {
+                        return;
+                    }
+                    const label = `${id} at ${s.t0}`;
+                    expect(Math.abs(s.push?.angularAcceleration.z ?? 0), label).toBe(0);
+                    if (length(horizontal(s.start.velocity)) > 0) {
+                        return;
+                    }
+                    expect(Math.abs(s.start.angularVelocity.z), label).toBe(0);
+                    // The spin the ball brought into the segment (an initial state counts as brought).
+                    const previous = segments[i - 1];
+                    const before = previous
+                        ? segmentState(previous, previous.t1 - previous.t0)
+                        : (setup[id] as BallState);
+                    reached += before.angularVelocity.z === 0 ? 0 : 1;
+                });
             }
+            // Guards the shots: each brings vertical spin to a ball that comes to a stop.
+            expect(reached).toBeGreaterThan(0);
         }
     });
 });
