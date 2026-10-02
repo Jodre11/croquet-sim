@@ -48,7 +48,7 @@ export const FOLLOW_EPSILON = 1e-12;
 /**
  * Held balls' limits are relaxed by this (m/s²). It is at least 7/5·FOLLOW_EPSILON, so no single ball near a limit
  * of holding is rejected both as held and as released (two releasing together can be: modeSolve.ts NEAR_HOLD_SLACK).
- * Its effect on a limit is HOLD_SLACK divided by the margin's slope: 3.8e-9 rad on the bent line of design §6. A
+ * Its effect on a limit is HOLD_SLACK divided by the margin's slope: 5.6e-9 rad on the bent line of design §6. A
  * numerical tolerance.
  */
 export const HOLD_SLACK = 1e-8;

@@ -98,9 +98,9 @@ What P1 delivered, and the constraints it leaves for P2–P5.
   over 745 solves on an Apple M4. The budget bounds the search, not the number of segments; P5's time budget must
   cover both.
 - **Frozen directions.** A segment ends once a frozen slip or push direction would turn by more than
-  `DIRECTION_TOLERANCE` (sine 1e-2). That is the remaining cross-check error: wedge 0.506 mm, upright 0.780 mm and
+  `DIRECTION_TOLERANCE` (sine 1e-2). That is the remaining cross-check error: wedge 0.527 mm, upright 0.780 mm and
   bent line 0.276 mm against brute force (tolerance 1 mm). A tighter tolerance means more segments (at 1e-3 all
-  three fall under 0.3 mm).
+  three fall under 0.3 mm: 0.283, 0.250 and 0.049).
 - **Fuzz coverage.** The fuzz presses every fourth shot into resting contact and asserts that solves happen. It
   exercises no stick/slip mode changes. The sweeps and cross-checks cover those.
 - **Missed lift-off.** When a three-ball group's on-turf direction solve fails (ball–ball μ ≥ about 4.25), the lift-off
