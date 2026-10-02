@@ -55,7 +55,8 @@ Rejected:
 |---|---|
 | `push.ts` | Façade. Keeps `solveRestingContacts`, `solveNearestHold`, `pushedState`, `pushedTrajectory`, `pushDuration`, the new `contactSlipDuration` (beside `pushDuration`, sharing `risesAt`) and the tolerances. Glues velocities, builds groups and iterates the kept set as today. `holdCertificate`, `HoldLink` and `HoldRay` become internal to `convexSolve.ts`; their tests move up to `solveRestingContacts` decisions. |
 | `contactModel.ts` (new) | Per-group model: ball modes (held, released, turf-rolling, turf-sliding, airborne) and contact modes (open, stick, slip); assembles the non-symmetric system for one candidate, with held balls inside it, load-coupled turf forces, angular dynamics and consistency checks. Works in each ball's turf frame. |
-| `modeSolve.ts` (new) | Candidate order, residual-merit Newton for unknown directions (contact or turf slip onset, release from rest), friction continuation, the search, and the work budget. Replaces `guide`, `searchHold` and `releaseDirections`. |
+| `modeSolve.ts` (new) | Candidate order, residual-merit Newton for unknown directions (contact or turf slip onset, release from rest), friction continuation, the search, and the work budget. Keeps P2a.1's frictionless `guide` as the proposal (§4 step 3); replaces `searchHold`, `holdCertificate` and `releaseDirections`. |
+| `math/elementary.ts` (new) | `ln`, `sinCos` and `atan2` from IEEE-exact operations only, for the direction angles and the log barrier; `Math.*` transcendentals are not bit-identical across engines and stay banned in the engine. |
 | `convexSolve.ts` (new) | One second-order-cone primitive (log barrier): feasibility, then minimum norm, over load-coupled cones. It serves both the hold-first check (§4 step 2) and the choice of undetermined forces (§4 step 5). |
 | `linalg.ts` (new) | Dense elimination with full pivoting (skipping zero entries of the pivot row), rank detection and null space, factor reuse across right-hand sides, sparse assembly of the system. |
 
@@ -74,9 +75,10 @@ Interface changes:
   unchanged in shape (its `angularAcceleration` now includes contact-friction torques).
 - `RestingSolution` gains `approximateSlip: boolean[]` (per body: a contact or turf slip of the body fell back to
   §4's first last resort), `slipExcess: number` (the worst residual of the failed direction solves; 0 when none) and
-  `budgetHold: boolean` (the group was held because the work budget was spent; its balls are not also flagged in
-  `approximate`, so it emits `budget-hold` only).
-- `solveRestingContacts` takes the work budget remaining for the shot and returns the work it spent (§5).
+  `budgetHold: boolean[]` (per body: its group was held because the work budget was spent; its balls are not also
+  flagged in `approximate`, so it emits `budget-hold` only).
+- `solveRestingContacts` takes an options argument (the gravity vector, the work budget remaining for the shot) and
+  returns the work it spent (§5).
 - The hold check takes per ball its applied load and its load-coupled limits (μr, μs; capacity 7/5·μr·L and turf
   limit μs·L with L = g − Σ P_z along the turf normal), and per contact its unit normal, contact offsets ê and
   friction μ. It tests the hold condition on Σ[P_h(1+ê_z) − ê_h·P_z]. Below a limit of holding the feasible forces
@@ -133,9 +135,13 @@ Consistency of a candidate:
 Pipeline:
 
 1. **Glue.** Inelastic normal impulse as today; frictionless (product spec §5 limitations).
-2. **Hold first.** Every resting ball held: one convex problem (§3 `convexSolve.ts`) over the contact forces and
-   held balls' turf forces, with load-coupled cones and the ê weighting. Feasible within `HOLD_SLACK` → done.
-3. **Proposal.** P1's frictionless solve proposes the modes and seed directions (the μ = 0 limit).
+2. **Hold first.** The proposal with every resting ball held, solved as a candidate: held balls are in the system
+   with their static turf forces, and its undetermined forces (the held balls' share) are settled by the convex solve
+   (§3 `convexSolve.ts`) over load-coupled cones with the ê weighting, the held limits relaxed by `HOLD_SLACK`.
+   Consistent → done.
+3. **Proposal.** P2a.1's frictionless guide (projected dual ascent with each resting ball's static resistance; the
+   μ = 0 limit) proposes the released balls and the coupled contacts — stuck unless already slipping — and its
+   accelerations seed the directions. (The prototype used a cone guide here; decided 2026-10-02.)
 4. **Exact solve per candidate.** Fixed directions (stick; slip along its frozen direction) → one linear,
    non-symmetric solve. Unknown directions (contact slip onset; turf slip onset, when a rolling or held ball's
    static turf friction would exceed μs·L because a contact lowered its load; release from rest) → residual-merit
@@ -152,15 +158,18 @@ Pipeline:
    followed rate unchanged is resolved once, at the accepted root; one that couples to a followed rate (a sliding
    ball jammed against three or more bodies) is resolved at every Newton evaluation, with a finite-difference
    Jacobian. Every acceptance check is run again after the choice.
-6. **Search.** Enumerate every item, not only marginal ones: per resting ball held, released or turf-sliding; per
-   rolling ball rolling or sliding; per contact stick, slip or open (slip or open if already slipping). Contacts
+6. **Search.** Enumerate every item, not only marginal ones: per resting ball held, released, turf-sliding or
+   airborne; per rolling ball rolling, sliding or airborne; per sliding ball sliding or airborne (airborne: lifted
+   off the turf, consistent only if it does not accelerate into it); per contact stick, slip or open (slip or open if
+   already slipping). Contacts
    between two held bodies are settled by the certificate and not enumerated. Order: fewest departures from the
    proposal first, then balls held, released, turf-rolling, turf-sliding, airborne, and contacts stick, slip, open.
    The search is capped at `MODE_SEARCH_LIMIT` = 1024 candidates (worst measured: 183, over 20,000 random four-ball
    clusters with obstacles). First consistent candidate wins.
-7. **Last resorts.** No slip-onset direction → the contact slips against its stuck force, or the ball's turf slip
-   starts against its static turf friction, `approximate-slip` (excess: the residual of the failed direction
-   solve). Nothing consistent, or the cap reached → nearest hold, `approximate-hold`. Work budget spent (§5) →
+7. **Last resorts.** When the search finds nothing consistent, the first candidate whose only failure was its
+   direction solve is tried with fallback directions: each contact slips against its stuck force, each ball's turf
+   slip starts against its static turf friction, `approximate-slip` (excess: the residual of the failed direction
+   solve; a release from rest has no such fallback). Nothing consistent, or the cap reached → nearest hold, `approximate-hold`. Work budget spent (§5) →
    nearest hold, `budget-hold`. The nearest hold is P1's: the resting balls are held and the moving balls are
    solved against them as fixed obstacles by Gauss's least constraint, frictionlessly, a convex problem that always
    has a solution. Its omitted friction is part of the approximation these events report. No test reaches
@@ -179,13 +188,11 @@ Tolerances:
 
 - A slipping contact ends the segment when its slip reaches zero along its frozen direction or turns more than
   `DIRECTION_TOLERANCE` from it. Both are linear in time. After `settle()` couples the solution's contacts, it calls
-  `contactSlipDuration` once per slipping contact with the solution's slip and lowers both member tracks'
-  `duration` to it. `findNextEvent` then raises the end as a `regroup` from the track's own `t0 + duration`, and
-  `groupEnd` picks it up unchanged. Every re-solve first runs `release()`, which reopens the tracks, so no lowered
-  duration outlives its segment. An airborne track's `t0 + duration` is its landing time (`findNextEvent` raises it
-  as a `landing`, and the landing handler puts the ball on the turf), so a slip end must not lower it: the track
-  carries the slip end separately (`slipEnd`), and `findNextEvent` raises it as a `regroup` for every phase,
-  airborne included.
+  `contactSlipDuration` once per slipping contact with the solution's slip and lowers both member tracks' `slipEnd`
+  (absolute time, Infinity when none) to it. `findNextEvent` raises it as a `regroup` for every phase, airborne
+  included (an airborne track's `t0 + duration` is its landing time, so the duration cannot carry it), and
+  `groupEnd` includes it. Every re-solve first runs `release()`, which reopens the tracks and resets `slipEnd`, so no
+  slip end outlives its segment.
 - A stuck contact has no end time of its own: its force is constant within the segment.
 - Every existing segment end (turf slip/velocity, opening gap, landing, other events) triggers a re-solve as today.
 - `stick` / `slip` events (§3) are emitted when a coupled contact's mode changes between consecutive solves, not at
