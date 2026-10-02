@@ -37,15 +37,18 @@ export const ACCELERATION_EPSILON = 1e-9;
 
 /**
  * A direction solve's root is accepted only if the quantity the direction must follow has more than this (m/s²) along
- * it and is aligned with it to this sine. Without it, spurious roots with |w| ≈ 1e-15 release balls that hold. A
- * numerical tolerance.
+ * it (and is aligned with it: modeSolve.ts). Without it, spurious roots with |w| ≈ 1e-15 release balls that hold. It is
+ * far below HOLD_SLACK because a ball released together with another just past their common limit of holding moves at
+ * a rate of order the other's squared (about 1e-10 m/s² on P2a.1's bent chain), while holding it alone misses by far
+ * more than HOLD_SLACK. A numerical tolerance.
  */
-export const FOLLOW_EPSILON = 1e-9;
+export const FOLLOW_EPSILON = 1e-12;
 
 /**
- * Held balls' limits are relaxed by this (m/s²). It is at least 7/5·FOLLOW_EPSILON, so no configuration near a limit
- * of holding is rejected both as held and as released. Its effect on a limit is HOLD_SLACK divided by the margin's
- * slope: 3.8e-9 rad on the bent line of design §6. A numerical tolerance.
+ * Held balls' limits are relaxed by this (m/s²). It is at least 7/5·FOLLOW_EPSILON, so no single ball near a limit
+ * of holding is rejected both as held and as released (two releasing together can be: modeSolve.ts NEAR_HOLD_SLACK).
+ * Its effect on a limit is HOLD_SLACK divided by the margin's slope: 3.8e-9 rad on the bent line of design §6. A
+ * numerical tolerance.
  */
 export const HOLD_SLACK = 1e-8;
 
@@ -632,10 +635,10 @@ function tangentialLength(P: Vec3, n: Vec3): number {
  * Why a solved candidate is not consistent, or null when it is (design §4, "Consistency of a candidate"; the
  * direction criteria are modeSolve.ts's). Every coupled N ≥ 0 and no open contact converges; a stuck contact's
  * tangential force is within μN; a turf ball's load is positive; a held ball is within its resistance and static turf
- * friction (each relaxed by HOLD_SLACK); a rolling ball's static turf friction is within μs·L; a turf ball that left
- * the turf does not accelerate into it.
+ * friction (each relaxed by `holdSlack`, HOLD_SLACK unless given); a rolling ball's static turf friction is within
+ * μs·L; a turf ball that left the turf does not accelerate into it.
  */
-export function inconsistency(model: Model, cand: Candidate, ev: Evaluated): string | null {
+export function inconsistency(model: Model, cand: Candidate, ev: Evaluated, holdSlack = HOLD_SLACK): string | null {
     const { contacts, geometry, bodies } = model;
     for (let k = 0; k < contacts.length; k++) {
         const c = contacts[k] as RestingContact;
@@ -676,10 +679,10 @@ export function inconsistency(model: Model, cand: Candidate, ev: Evaluated): str
         const F = length(ev.turf[i] as Vec3);
         if (mode === "held") {
             const Q = length(ev.resist[i] as Vec3);
-            if (Q > rollCap(p) * L + HOLD_SLACK) {
+            if (Q > rollCap(p) * L + holdSlack) {
                 return `held ball ${i} beyond its resistance (${Q} > ${rollCap(p) * L})`;
             }
-            if (F > muS(p) * L + HOLD_SLACK) {
+            if (F > muS(p) * L + holdSlack) {
                 return `held ball ${i} beyond its static turf friction (${F} > ${muS(p) * L})`;
             }
         }

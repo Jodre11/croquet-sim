@@ -3,11 +3,14 @@
  *
  * A candidate (contactModel.ts) whose directions are all known is one linear solve. Unknown directions — a ball
  * released from rest, a turf slip or a contact slip that starts — are closed by residual-merit Newton on one angle per
- * direction: minimise ½‖r‖² with Armijo backtracking and accept only a converged root that every followed quantity
- * agrees with (FOLLOW_EPSILON). The starts, in order: four cheap starts (the seed and its quarter turns); for at most
- * two directions a forward scan, whose best four points start Newton again; then continuation in the contact friction
- * (μ scaled to 1e-3 of its value, then 0.1, 0.25, 0.5, 0.75 and 1, each seeded from the previous root). The scan must
- * stay behind the cheap starts, or it rejects genuine releases just past a limit of holding.
+ * direction: minimise ½‖r‖² with Armijo backtracking and accept only a converged root whose followed quantities
+ * have more than FOLLOW_EPSILON along their directions and are aligned with them (ALIGN_TOLERANCE above
+ * RESIDUAL_FLOOR). A run stops unconverged once a followed rate is dead (|w| ≤ FOLLOW_EPSILON), and has converged once
+ * its residual is at RESIDUAL_FLOOR. The starts, in order: four cheap starts (the seed and its quarter turns) and, with
+ * more than one direction, the seed with each direction reversed alone; for at most two directions a forward scan,
+ * whose best four points start Newton again; then continuation in the contact friction (μ scaled to 1e-3 of its value,
+ * then 0.1, 0.25, 0.5, 0.75 and 1, each seeded from the previous root). The scan must stay behind the cheap starts, or
+ * it rejects genuine releases just past a limit of holding.
  *
  * Undetermined forces (a singular but consistent system) are the minimum-norm forces satisfying every convex
  * condition of the candidate (convexSolve.ts); every acceptance check is run again after that choice.
@@ -16,6 +19,7 @@ import { excessAt, solveConvex } from "./convexSolve";
 import {
     ACCELERATION_EPSILON,
     FOLLOW_EPSILON,
+    HOLD_SLACK,
     ROLLING_WEIGHT,
     assemble,
     ballOptions,
@@ -59,6 +63,19 @@ const ARMIJO_C = 1e-4;
 
 /** Newton has converged once its step (rad) is at most this. A numerical tolerance. */
 export const NEWTON_STEP_TOLERANCE = 1e-11;
+
+/**
+ * An accepted root's direction is aligned with the quantity it follows to this sine, beyond RESIDUAL_FLOOR. A
+ * numerical tolerance.
+ */
+const ALIGN_TOLERANCE = 1e-9;
+
+/**
+ * Rounding of a direction residual (m/s²): forces of order 1 solved in double precision leave about this much. Without
+ * it, a ball released near a limit of holding (|w| below 1e-6) could never be shown aligned, nor its Newton run
+ * converged, and the configuration would be rejected both held and released. A numerical tolerance.
+ */
+const RESIDUAL_FLOOR = 1e-15;
 
 /** Friction scales of the continuation (design §4 step 4). */
 const CONTINUATION = [1e-3, 0.1, 0.25, 0.5, 0.75, 1] as const;
@@ -222,6 +239,11 @@ function newton(
             // forward() can accept: stop it here and leave the root to the remaining starts.
             return done(false);
         }
+        if (Math.max(...p.r.map(Math.abs)) <= RESIDUAL_FLOOR) {
+            // A residual at rounding is a root: the no-descent exit below reaches this same verdict, but only after
+            // ARMIJO_HALVINGS singular solves that cannot lower a merit already at rounding.
+            return done(true);
+        }
         const J = items.map(() => new Array<number>(items.length).fill(0));
         if (p.nullDim > 0) {
             // x(φ) is the minimum-norm choice here, so differentiate numerically.
@@ -299,7 +321,9 @@ function newton(
             return done(true);
         }
         if (!next) {
-            return done(m0 === 0);
+            // No step lowers the merit: a root only if the residual is already rounding. Near a limit of holding a
+            // released ball's |w| is tiny, so its angle is fixed only to rounding/|w| and the step cannot shrink.
+            return done(Math.max(...p.r.map(Math.abs)) <= RESIDUAL_FLOOR);
         }
         point = next;
         phi = nextPhi;
@@ -331,7 +355,7 @@ function findDirections(
         items.every(
             (_, j) =>
                 dot(pt.d[j] as Vec3, pt.w[j] as Vec3) > FOLLOW_EPSILON &&
-                Math.abs(pt.r[j] as number) <= FOLLOW_EPSILON * length(pt.w[j] as Vec3),
+                Math.abs(pt.r[j] as number) <= ALIGN_TOLERANCE * length(pt.w[j] as Vec3) + RESIDUAL_FLOOR,
         );
     let residual = Infinity;
     const tryStarts = (starts: readonly (readonly number[])[]): Point | null => {
@@ -347,7 +371,10 @@ function findDirections(
     // 1. Cheap starts: the seed and its quarter turns.
     const phi0 = items.map((it) => angle(seed(it), it));
     const quarters = [0, Math.PI / 2, -Math.PI / 2, Math.PI].map((off) => phi0.map((p) => p + off));
-    const cheap = tryStarts(quarters);
+    // Then the seed with one direction reversed: the quarter turns move every direction together, so a seed right for
+    // all but one direction (one reversed, as a contact onset seeded from a ball the guide holds can be) has no start.
+    const flips = items.length > 1 ? items.map((_, k) => phi0.map((p, j) => (j === k ? p + Math.PI : p))) : [];
+    const cheap = tryStarts([...quarters, ...flips]);
     if (cheap) {
         return { point: cheap, residual, reason: "" };
     }
@@ -526,6 +553,14 @@ export function fallbackSlip(model: Model, cand: Candidate, work: Work): Candida
  */
 export const MODE_SEARCH_LIMIT = 1024;
 
+/**
+ * Held limits' relaxation (m/s²) for the hold-first candidate once the whole search has failed. A numerical tolerance:
+ * at a limit where two balls release together, a sliver about 1e-15 wide (in rollingDecel, on P2a.1's bent chain) has
+ * holding miss by just over HOLD_SLACK and the second ball's release rate below rounding, so no candidate is
+ * consistent at HOLD_SLACK.
+ */
+const NEAR_HOLD_SLACK = 2 * HOLD_SLACK;
+
 /** Iteration cap of the frictionless guide that proposes the first candidate. */
 const GUIDE_ITERATIONS = 5_000;
 
@@ -574,14 +609,19 @@ export function propose(model: Model): Proposal {
     };
     const forces = contacts.map(() => 0);
     const step = 1 / Math.max(1, 2 * contacts.length);
+    // Ball i's free acceleration plus its contact push, before its static resistance is subtracted.
+    const drive = (i: number): Vec3 => {
+        const r = responses[i] as NonNullable<(typeof responses)[number]>;
+        let push = ZERO;
+        contacts.forEach((_c, k) => {
+            push = add(push, scale(row(k, i), forces[k] as number));
+        });
+        return add(r.force, scale(push, 1 / r.weight));
+    };
     const accelerations = (): Vec3[] =>
         bodies.map((_, i) => {
             const r = responses[i] as NonNullable<(typeof responses)[number]>;
-            let push = ZERO;
-            contacts.forEach((_c, k) => {
-                push = add(push, scale(row(k, i), forces[k] as number));
-            });
-            const v = add(r.force, scale(push, 1 / r.weight));
+            const v = drive(i);
             const size = length(v);
             const limit = r.threshold / r.weight;
             return size > limit ? scale(v, (size - limit) / size) : ZERO;
@@ -642,6 +682,10 @@ export function propose(model: Model): Proposal {
                 cross(add(spin(c.a), c.fixed ? ZERO : spin(c.b)), n),
             );
             guess = sub(g, scale(n, dot(g, n)));
+        } else if (it.kind === "release" && length(x[it.index] as Vec3) === 0) {
+            // A ball the guide holds but the candidate releases starts along the push the guide puts on it: without
+            // it, every start (the guide's ball held, so ZERO) points the ball along e1 or a quarter turn of it.
+            guess = drive(it.index);
         } else {
             guess = x[it.index] as Vec3;
         }
@@ -748,10 +792,10 @@ function* departing(model: Model, proposal: Candidate, departures: number, holdR
  * every other candidate fewest departures from the proposal first; the first consistent candidate wins. A solved
  * candidate whose turf balls' loads drop to zero or below is followed at once by the same candidate with those balls
  * lifted (airborne). The budget is checked before each candidate: once work.units reaches it the group is to be held
- * (budget-hold). With nothing consistent, or the
- * search capped at MODE_SEARCH_LIMIT, the first candidate whose only failure was its direction solve is tried with
- * approximate-slip directions; failing that, the group is to be held (approximate-hold). The nearest hold itself is
- * the caller's (push.ts).
+ * (budget-hold). With nothing consistent, or the search capped at MODE_SEARCH_LIMIT, the hold-first candidate is
+ * accepted if it holds within NEAR_HOLD_SLACK; otherwise the first candidate whose only failure was its direction
+ * solve is tried with approximate-slip directions; failing that, the group is to be held (approximate-hold). The
+ * nearest hold itself is the caller's (push.ts).
  */
 export function solveGroup(model: Model, work: Work, budget: number, hooks: SolveHooks = {}): GroupSolution {
     const proposal = propose(model);
@@ -856,6 +900,18 @@ export function solveGroup(model: Model, work: Work, budget: number, hooks: Solv
     const searched = phase(proposal.candidate, false);
     if (searched) {
         return searched;
+    }
+
+    // A rounding-width sliver at a simultaneous-release limit: holding misses by a hair over HOLD_SLACK while the
+    // second ball's release rate is below rounding, so nothing above was consistent. The hold-first candidate stands if
+    // it is consistent with its held limits relaxed by NEAR_HOLD_SLACK.
+    const nearHold = state.held;
+    if (
+        nearHold?.failure === "inconsistent" &&
+        nearHold.ev &&
+        inconsistency(model, nearHold.cand, nearHold.ev, NEAR_HOLD_SLACK) === null
+    ) {
+        return exact(nearHold);
     }
 
     const failure = state.firstFailure;

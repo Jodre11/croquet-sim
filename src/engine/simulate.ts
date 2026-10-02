@@ -74,6 +74,9 @@ export const DEFAULT_MAX_EVENTS = 10_000;
 /** Tolerance (m) for accepting an initial centre height as on the lawn plane. */
 const PLANE_TOLERANCE = 1e-9;
 
+/** The lawn is the plane z = 0 (v1), so every ball's turf normal is ẑ. */
+const TURF_NORMAL = vec3(0, 0, 1);
+
 interface Track {
     readonly id: BallId;
     start: BallState;
@@ -256,7 +259,10 @@ function release(sim: Simulation, tracks: readonly Track[], now: number): void {
     }
 }
 
-/** The resting contacts around `seeds`: touching bodies (coupled ones within SEPARATION_TOLERANCE) closing slowly. */
+/**
+ * The resting contacts around `seeds`: touching bodies (coupled ones within SEPARATION_TOLERANCE) closing slowly.
+ * Contact friction is 0 here until the simulator schedules slip ends.
+ */
 interface Component {
     readonly tracks: Track[];
     readonly obstacles: Cylinder[];
@@ -285,25 +291,31 @@ function restingComponent(sim: Simulation, seeds: readonly Track[], now: number)
                 if (!tracks.includes(b)) {
                     tracks.push(b);
                 }
-                contacts.push({ a: i, b: tracks.indexOf(b), fixed: false });
+                contacts.push({ a: i, b: tracks.indexOf(b), fixed: false, friction: 0 });
             }
         }
         for (const o of sim.obstacles) {
             const offset = horizontal(sub(sa.position, o.centre));
             if (resting(offset, sa.velocity, R + o.radius, coupledObstacle(sim, a, o))) {
                 obstacles.push(o);
-                contacts.push({ a: i, b: obstacles.length - 1, fixed: true });
+                contacts.push({ a: i, b: obstacles.length - 1, fixed: true, friction: 0 });
             }
         }
     }
     return { tracks, obstacles, contacts };
 }
 
-function solveComponent(component: Component, now: number): RestingSolution {
+function solveComponent(sim: Simulation, component: Component, now: number): RestingSolution {
     return solveRestingContacts(
-        component.tracks.map((t) => ({ state: stateAt(t, now), params: t.params })),
+        component.tracks.map((t) => ({
+            state: stateAt(t, now),
+            params: t.params,
+            turfNormal: TURF_NORMAL,
+            pivotCapacity: Infinity,
+        })),
         component.obstacles.map((o) => o.centre),
         component.contacts,
+        { gravity: vec3(0, 0, 0 - sim.world.gravity) },
     );
 }
 
@@ -314,7 +326,7 @@ function solveComponent(component: Component, now: number): RestingSolution {
 function settle(sim: Simulation, seeds: readonly Track[], now: number): void {
     const component = restingComponent(sim, seeds, now);
     release(sim, component.tracks, now);
-    const solution = solveComponent(component, now);
+    const solution = solveComponent(sim, component, now);
     component.tracks.forEach((track, i) => {
         const member = solution.members[i];
         if (member) {
@@ -322,7 +334,7 @@ function settle(sim: Simulation, seeds: readonly Track[], now: number): void {
         }
     });
     component.contacts.forEach((c, k) => {
-        if (solution.coupled[k]) {
+        if (solution.modes[k] !== "open") {
             const a = component.tracks[c.a] as Track;
             sim.couplings.push(
                 c.fixed
