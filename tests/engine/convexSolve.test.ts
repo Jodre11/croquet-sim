@@ -94,6 +94,27 @@ describe("solveConvex", () => {
         expect(excessAt([load, disc], r.x)).toBeLessThanOrEqual(0);
     });
 
+    it("finds a feasible set whose cones differ in scale when a null-space direction is free of every cone", () => {
+        // x = (5, 0) + z; x₂ ≥ 1 and 1000·(1 + d − x₂) ≥ 0, and no cone depends on x₁. Phase 1 once stalled on its
+        // singular Hessian and reported these feasible sets infeasible. The smallest x is (0, 1).
+        for (const d of [0, 1e-3]) {
+            const above: Cone = { u: [], v: form(-1, [0, 1]), slack: CONVEX_SLACK };
+            const below: Cone = { u: [], v: form(1000 * (1 + d), [0, -1000]), slack: CONVEX_SLACK };
+            const r = solveConvex(
+                [above, below],
+                [5, 0],
+                [
+                    [1, 0],
+                    [0, 1],
+                ],
+                { units: 0 },
+            );
+            expect(r.excess).toBeLessThanOrEqual(0);
+            expect(r.x[0]).toBeCloseTo(0, 6);
+            expect(r.x[1]).toBeCloseTo(1, 6);
+        }
+    });
+
     it("is deterministic and counts its work", () => {
         const a: Work = { units: 0 };
         const b: Work = { units: 0 };

@@ -7,7 +7,9 @@
  * none; phase 2 then minimises ‖x‖² from it. Both run Newton's method on a barrier with fixed iteration schedules, so
  * the result is deterministic. The line searches need values only, which is most of the evaluations.
  *
- * Work units: each Newton iteration costs d³ + C·d² (d variables, C cones), each value-only evaluation C·d.
+ * Work units (d variables, C cones): each Newton iteration costs 2·d³ + (C + 1)·d², its evaluation d³ + C·d² and its
+ * linear solve d³ + d², plus d³ + d² for the damped retry when the Hessian is singular to the solver; each value-only
+ * evaluation costs C·d, and the initial check of xp C·(m + 1) over the m null-space coordinates.
  */
 import { ln } from "./math/elementary";
 import { linearValue, solveLinear, valueOf, type Affine, type Work } from "./linalg";
@@ -269,61 +271,81 @@ export function solveConvex(
         return { f, grad, hess };
     };
     // Damped Newton on the barrier function for parameter t: at most 100 steps, each halved up to 60 times until the
-    // value falls by a quarter of the Newton decrement, stopping once half the decrement is at most 1e-12.
+    // value falls by a quarter of the Newton decrement, stopping once half the decrement is at most 1e-12. `centred`
+    // says y is on the central path as closely as the arithmetic allows: the decrement test stopped it, or the Newton
+    // step can no longer lower the value beyond its rounding (the line search failed, or its last step passed only
+    // because the value came out unchanged; on a large value this persists to the iteration cap). Never after a failed
+    // evaluation or linear solve, after which y may be anywhere.
     const centre = (
         start: number[],
         t: number,
         phase1: boolean,
         stop?: (y: readonly number[]) => boolean,
-    ): number[] => {
+    ): { readonly y: number[]; readonly centred: boolean } => {
         let y = start;
+        let centred = false;
         for (let iteration = 0; iteration < 100; iteration++) {
             const e = evaluate(y, t, phase1);
             if (!e) {
-                return y;
+                return { y, centred: false };
             }
-            const step = solveLinear(
-                e.hess,
-                e.grad.map((g) => 0 - g),
-                work,
-            );
+            const minusGrad = e.grad.map((g) => 0 - g);
+            let step = solveLinear(e.hess, minusGrad, work);
             if (!step) {
-                return y;
+                // The Hessian is positive semidefinite, so it is singular to the solver only along directions whose
+                // curvature is below the pivot tolerance times its largest entry (its largest diagonal entry): a
+                // direction no cone depends on has only phase 1's 2t·1e-12 (phase 2's 2t·BᵀB), while the barrier's
+                // curvature grows without bound as z nears the cones. Adding 1e-10 times that entry to the diagonal, a
+                // thousand times the tolerance, makes every pivot clear it; the step is still a descent direction,
+                // shortened only along directions of comparably negligible curvature.
+                let top = 0;
+                e.hess.forEach((row, a) => {
+                    top = Math.max(top, row[a] as number);
+                });
+                const damped = e.hess.map((row, a) => row.map((h, b) => (a === b ? h + 1e-10 * top : h)));
+                step = solveLinear(damped, minusGrad, work);
             }
-            const decrement = 0 - e.grad.reduce((acc, g, i) => acc + g * (step[i] as number), 0);
+            if (!step) {
+                return { y, centred: false };
+            }
+            const direction = step;
+            const decrement = 0 - e.grad.reduce((acc, g, i) => acc + g * (direction[i] as number), 0);
             if (decrement / 2 <= 1e-12) {
-                return y;
+                return { y, centred: true };
             }
             let tau = 1;
             let moved = false;
             for (let halving = 0; halving < 60; halving++, tau /= 2) {
-                const trial = y.map((v, i) => v + tau * (step[i] as number));
+                const trial = y.map((v, i) => v + tau * (direction[i] as number));
                 const ft = value(trial, t, phase1);
                 if (ft !== null && ft <= e.f - 0.25 * tau * decrement) {
                     y = trial;
                     moved = true;
+                    centred = ft === e.f;
                     break;
                 }
             }
             if (!moved) {
-                return y;
+                return { y, centred: true };
             }
             if (stop?.(y)) {
-                return y;
+                return { y, centred };
             }
         }
-        return y;
+        return { y, centred };
     };
     // Phase 1: minimise s subject to ‖u‖ ≤ v + slack + s, from a start strictly inside, until s < −CONVEX_SLACK/2 (a
-    // strictly feasible z) or the central-path bound s − 2C/t > 0 proves there is none.
+    // strictly feasible z) or the central-path bound s − 2C/t > 0 proves there is none. The bound holds only at a
+    // centred point, so it is not tested after any other exit from centre.
     let y = [...z, Math.max(0, worst) + 1];
     let t = 1;
     for (let outer = 0; outer < 40; outer++) {
-        y = centre(y, t, true, (yy) => (yy[m] as number) < (0 - CONVEX_SLACK) / 2);
+        const centred = centre(y, t, true, (yy) => (yy[m] as number) < (0 - CONVEX_SLACK) / 2);
+        y = centred.y;
         if ((y[m] as number) < (0 - CONVEX_SLACK) / 2) {
             break;
         }
-        if ((y[m] as number) - (2 * count) / t > 0) {
+        if (centred.centred && (y[m] as number) - (2 * count) / t > 0) {
             break;
         }
         t *= 10;
@@ -340,7 +362,7 @@ export function solveConvex(
     relax = worst < 0 ? 0 : worst + CONVEX_SLACK / 2;
     t = 1;
     for (let outer = 0; outer < 8; outer++) {
-        z = centre(z, t, false);
+        z = centre(z, t, false).y;
         t *= 100;
     }
     return { x: xOf(z), excess: excess(z) };
