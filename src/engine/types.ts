@@ -168,6 +168,50 @@ export type ShotEvent =
           readonly balls: readonly BallId[];
           readonly excess: number;
       }
+    | {
+          /** A coupled ball–ball contact stuck (its slip reached zero and static friction now holds it). */
+          readonly kind: "stick-ball";
+          readonly t: number;
+          readonly balls: readonly [BallId, BallId];
+      }
+    | { readonly kind: "stick-obstacle"; readonly t: number; readonly ball: BallId; readonly obstacleId: string }
+    | {
+          /**
+           * A coupled ball–ball contact started to slip. `direction` is the unit slip of the first ball's contact point
+           * relative to the second's, in world coordinates (balls in BALL_IDS order).
+           */
+          readonly kind: "slip-ball";
+          readonly t: number;
+          readonly balls: readonly [BallId, BallId];
+          readonly direction: Vec3;
+      }
+    | {
+          /** As slip-ball, against an obstacle: the ball's contact point relative to the obstacle. */
+          readonly kind: "slip-obstacle";
+          readonly t: number;
+          readonly ball: BallId;
+          readonly obstacleId: string;
+          readonly direction: Vec3;
+      }
+    | {
+          /**
+           * The slip direction of a contact or turf slip that starts could not be solved; it slips against the static
+           * force it carried instead (spec §5 limitations). `excess` is the residual (m/s²) of the failed solve.
+           */
+          readonly kind: "approximate-slip";
+          readonly t: number;
+          readonly balls: readonly BallId[];
+          readonly excess: number;
+      }
+    | {
+          /**
+           * The shot's resting-contact work budget was spent, so the group was held as by approximate-hold (its resting
+           * balls kept at rest) without being solved. `balls` are the group's resting balls.
+           */
+          readonly kind: "budget-hold";
+          readonly t: number;
+          readonly balls: readonly BallId[];
+      }
     | { readonly kind: "out-of-court"; readonly t: number; readonly ball: BallId; readonly position: Vec3 }
     | {
           readonly kind: "hoop-passage";

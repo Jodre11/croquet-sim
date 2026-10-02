@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { CONTACT_TOLERANCE } from "../../src/engine/detect";
-import { horizontal, length, sub, vec3 } from "../../src/engine/math/vec3";
+import { add, horizontal, length, scale, sub, vec3 } from "../../src/engine/math/vec3";
 import { stateAtTime } from "../../src/engine/sample";
 import { simulateFreeMotion } from "../../src/engine/simulate";
-import { BALL_IDS, type BallStates } from "../../src/engine/types";
+import { BALL_IDS, type BallId, type BallState, type BallStates } from "../../src/engine/types";
 import { defaultWorld, obstaclesOf } from "../../src/engine/world";
 import { mechanicalEnergy } from "./support/energy";
 import { worstPenetration } from "./support/penetration";
@@ -63,9 +63,38 @@ function randomShot(random: () => number): BallStates {
     return states as BallStates;
 }
 
+/**
+ * Turns a shot into one that pushes, without drawing from the generator (so the other shots stay as they were): the
+ * first spinning ball loses its velocity, keeping its spin, and the ball nearest it is moved to touch it, so the spin
+ * may drive the pair together. Returns the shot unchanged when the moved ball would overlap anything.
+ */
+function pressed(setup: BallStates): BallStates {
+    const ids = BALL_IDS.filter((id) => setup[id]);
+    const mover = ids.find((id) => length(setup[id]?.angularVelocity ?? vec3(0, 0, 0)) > 0);
+    if (!mover) {
+        return setup;
+    }
+    const m = (setup[mover] as BallState).position;
+    const others = ids.filter((id) => id !== mover);
+    const distance = (id: BallId): number => length(sub((setup[id] as BallState).position, m));
+    const nearest = others.reduce((a, b) => (distance(b) < distance(a) ? b : a));
+    const towards = sub((setup[nearest] as BallState).position, m);
+    const p = add(m, scale(towards, (2 * R) / length(towards)));
+    const separated = others.every((id) => id === nearest || length(sub((setup[id] as BallState).position, p)) > 2 * R);
+    const clear = obstacles.every((o) => length(horizontal(sub(p, o.centre))) > R + o.radius + 1e-3);
+    if (!separated || !clear) {
+        return setup;
+    }
+    return {
+        ...setup,
+        [mover]: { ...(setup[mover] as BallState), velocity: vec3(0, 0, 0) },
+        [nearest]: { ...(setup[nearest] as BallState), position: p },
+    };
+}
+
 describe("seeded fuzz on the default world", () => {
     it(
-        `survives ${SHOTS} random shots without throwing, aborting, holding approximately, penetrating or gaining energy`,
+        `survives ${SHOTS} random shots without throwing, aborting, falling back, penetrating or gaining energy`,
         { timeout: 30_000 },
         () => {
             const random = rng(SEED);
@@ -73,19 +102,26 @@ describe("seeded fuzz on the default world", () => {
             let restingShots = 0;
             let obstacleShots = 0;
             let hopShots = 0;
+            let solves = 0;
+            const probe = { before: (): void => undefined, after: (): void => void solves++ };
             for (let index = 0; index < SHOTS; index++) {
-                const setup = randomShot(random);
+                const drawn = randomShot(random);
+                // Every fourth shot is pressed into a push: random shots alone almost never come to rest in contact.
+                const setup = index % 4 === 0 ? pressed(drawn) : drawn;
                 const label = `seed ${SEED}, shot ${index}`;
-                const result = simulateFreeMotion(setup, world);
+                const result = simulateFreeMotion(setup, world, undefined, { probe });
                 contactShots += result.events.some((e) => e.kind === "ball-ball") ? 1 : 0;
                 restingShots += result.events.some((e) => e.kind === "ball-ball" && e.resting) ? 1 : 0;
                 obstacleShots += result.events.some((e) => e.kind === "ball-obstacle") ? 1 : 0;
                 hopShots += result.events.some((e) => e.kind === "landing") ? 1 : 0;
                 expect(result.aborted, label).toBe(false);
                 expect(
-                    result.events.some((e) => e.kind === "approximate-hold"),
+                    result.events.filter(
+                        (e) =>
+                            e.kind === "approximate-hold" || e.kind === "approximate-slip" || e.kind === "budget-hold",
+                    ),
                     label,
-                ).toBe(false);
+                ).toEqual([]);
                 expect(worstPenetration(result, world), label).toBeLessThanOrEqual(CONTACT_TOLERANCE);
                 let previous = Infinity;
                 for (let i = 0; i <= ENERGY_SAMPLES; i++) {
@@ -102,6 +138,8 @@ describe("seeded fuzz on the default world", () => {
             expect(contactShots).toBeGreaterThan(10);
             expect(restingShots + obstacleShots).toBeGreaterThan(0);
             expect(hopShots).toBeGreaterThan(0);
+            // The fall-back assertion above checks nothing unless the resting-contact solver actually runs.
+            expect(solves).toBeGreaterThan(0);
         },
     );
 });
