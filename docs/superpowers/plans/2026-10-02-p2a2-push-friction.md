@@ -4694,12 +4694,55 @@ describe("limits of holding with friction (design §6)", () => {
             expect(held(s), `offset ${offset}`).toBe(offset < 0);
         }
     });
+
+    it("lets the hold-first candidate stand within NEAR_HOLD_SLACK once the search fails, and not beyond", () => {
+        // Past θ* holding misses by HOLD_SLACK per 3.8e-9 rad, so by about 1.5·HOLD_SLACK 5.7e-9 rad past and by about
+        // 2.6e-6 m/s² 1e-6 rad past. With every direction solve failing no release is consistent, so the search ends
+        // with nothing and only the first is held exactly (design §4 step 7).
+        const limit = (52.3717420825 * Math.PI) / 180;
+        const p: MotionParams = { radius: R, slidingDecel: SLIDE, rollingDecel: 1.5, gravity: G };
+        const solve = (theta: number): RestingSolution =>
+            solveRestingContacts(
+                [
+                    ball(0, 0, ZERO, vec3(0, 60, 0), p),
+                    ball(2 * R, 0, ZERO, ZERO, p),
+                    ball(2 * R + 2 * R * Math.cos(theta), 2 * R * Math.sin(theta), ZERO, ZERO, p),
+                ],
+                [],
+                line(MU),
+                { hooks: { failDirections: true } },
+            );
+        const sliver = solve(limit + 5.7e-9);
+        expect(exact(sliver)).toBe(true);
+        expect(held(sliver)).toBe(true);
+        expect(exact(solve(limit + 1e-6))).toBe(false);
+    });
+
+    it("takes the upright its held ball touches before a fallback stands", () => {
+        // Red cannot hold the pusher alone, and with every direction solve failing it cannot be released either, so
+        // the pair falls back holding red. The upright straight behind red never converges while red is held; only
+        // widening the group to every contact of its held balls finds the exact hold against it.
+        const p: MotionParams = { radius: R, slidingDecel: 0.3 * G, rollingDecel: 0.05 * G, gravity: G };
+        const s = solveRestingContacts(
+            [ball(0, 0, ZERO, vec3(0, 60, 0), p), ball(2 * R, 0, ZERO, ZERO, p)],
+            [vec3(3 * R + 0.008, 0, 0)],
+            [
+                { a: 0, b: 1, fixed: false, friction: MU },
+                { a: 1, b: 0, fixed: true, friction: 0.1 },
+            ],
+            { hooks: { failDirections: true } },
+        );
+        expect(exact(s)).toBe(true);
+        expect(held(s)).toBe(true);
+        expect(s.modes[1]).not.toBe("open");
+    });
 });
 
 describe("random clusters with friction", () => {
     const CLUSTERS = SLOW ? 20_000 : 200;
 
     it(
+        // Unbudgeted: it checks the search, not the work budget, which 144 of 20,000 clusters exceed (design §5).
         `solves ${CLUSTERS} random four-ball clusters with obstacles exactly, well within the search cap`,
         { timeout: SLOW ? 3_600_000 : 120_000 },
         () => {
@@ -6051,11 +6094,26 @@ const NEAR_HOLD_SLACK = 2 * HOLD_SLACK;
 
 ```
 
+8. In the module's header comment, replace from `minimise ½‖r‖² with Armijo backtracking` to `stay behind the cheap
+   starts, or it rejects genuine releases just past a limit of holding.` with
+
+```ts
+ * minimise ½‖r‖² with Armijo backtracking and accept only a converged root whose followed quantities have more than
+ * FOLLOW_EPSILON along their directions and are aligned with them (ALIGN_TOLERANCE above RESIDUAL_FLOOR). A run stops
+ * unconverged once a followed rate is dead (|w| ≤ FOLLOW_EPSILON), and has converged once its residual is at
+ * RESIDUAL_FLOOR. The starts, in order: four cheap starts (the seed and its quarter turns) and, with more than one
+ * direction, the seed with each direction reversed alone; for at most two directions a forward scan, whose best four
+ * points start Newton again; then continuation in the contact friction (μ scaled to 1e-3 of its value, then 0.1, 0.25,
+ * 0.5, 0.75 and 1, each seeded from the previous root). The scan must stay behind the cheap starts, or it rejects
+ * genuine releases just past a limit of holding.
+```
+
 - [ ] **Step 7: Run the tests to verify they pass**
 
 Run: `npx vitest run tests/engine/push.test.ts tests/engine/modeSolve.test.ts` then `npm test`, `npm run lint`,
 `npm run check`
-Expected: all pass (pre-flight: 271 in the whole suite; 39 in `push.test.ts`), the simulation suites unchanged (μ = 0
+Expected: all pass (273 in the whole suite and 41 in `push.test.ts`: the pre-flight's 271 and 39 plus the two tests
+pinning the near hold and the widening, added after it), the simulation suites unchanged (μ = 0
 there); "neither arrests nor falls back" exact on all 2,856 of its solves; the topspin push `searched` 3 at μ = 0 and
 μ = 0.05. If a simulation test fails, compare the failing group's P2a.1 and new solutions at μ = 0 before changing
 anything: they must agree except for a ball on the turf loaded through an inclined normal. The slow cap measurement
@@ -6795,7 +6853,8 @@ Replace the module comment's second paragraph with (Prettier does not re-wrap co
 - [ ] **Step 6: Run the tests to verify they pass**
 
 Run: `npm test`, then `npm run lint`, `npm run check`, `npm run format:check`
-Expected: all pass (pre-flight: 278 tests). `crossCheck.test.ts` still passes: its pushing scenarios run frictionless
+Expected: all pass (280 tests: the pre-flight's 278 plus Task 7's two added tests). `crossCheck.test.ts` still
+passes: its pushing scenarios run frictionless
 (`FRICTIONLESS`), and Task 9 removes that. Pre-flight measured: the topspin travel 0.13276112270857 m and `A`
 0.8818736156283; stick at 0.089346563423 s and slip at 0.377846616715 s, rest at 5.001323 and 5.093323; lift-off
 `a.z` = 4.903325 (g/2; the threshold lies between μ = 3.30 and 3.34, i.e. μ·μs = 1, so μ = 4 is 20% above it); the
@@ -7310,6 +7369,20 @@ export function normalCurvature(offset: Vec3, relativeVelocity: Vec3): number {
 }
 ```
 
+   In `tests/engine/detect.test.ts`, add `normalCurvature` to the `../../src/engine/detect` import (after
+   `isTouching`), and add to the `approachSpeed and isTouching` describe, after "measures offsets as given, in 3D":
+
+```ts
+    it("gives the turning line of centres' closing rate |v_t|²/d, for either sign of the offset", () => {
+        // Speed 3 across a line of length 2R, speed 4 along it: only the 3 turns it.
+        const v = vec3(4, 3, 0);
+        expect(normalCurvature(vec3(TWO_R, 0, 0), v)).toBeCloseTo(9 / TWO_R, 12);
+        expect(normalCurvature(vec3(-TWO_R, 0, 0), v)).toBeCloseTo(9 / TWO_R, 12);
+        expect(normalCurvature(vec3(0, 0, TWO_R), vec3(0, 0, -1))).toBe(0);
+        expect(normalCurvature(ZERO, v)).toBe(0);
+    });
+```
+
 2. `src/engine/contactModel.ts`:
    - add `import { normalCurvature } from "./detect";` after the `./convexSolve` import;
    - in `ContactGeometry`, after `readonly sHat: Vec3;`, add
@@ -7594,7 +7667,8 @@ function contactNow(
 - [ ] **Step 5: Run the cross-check to verify it passes**
 
 Run: `npx vitest run tests/engine/crossCheck.test.ts`, then `npm test`, `npm run lint`, `npm run check`
-Expected: all pass within 1 mm (pre-flight: 282 passed, 2 skipped; wedge 0.506 mm, upright 35° 0.780 mm, bent 60°
+Expected: all pass within 1 mm (285 passed, 2 skipped: the pre-flight's 282 plus the three tests added after it,
+Task 7's two and the `normalCurvature` test; wedge 0.506 mm, upright 35° 0.780 mm, bent 60°
 0.276 mm; topspin push and stick-then-slip 1.3 µm, rebound off the peg 1.0 µm, the rest at most 148 µm). The remaining
 error is the frozen-direction approximation (`DIRECTION_TOLERANCE` 1e-2; at 1e-3 all three fall under 0.3 mm, at more
 work). Fuzz shot 12 penetrates 9.85e-10 m (limit 1e-9); the exact-top sweep 336 events at most. Regroups fall
@@ -7610,16 +7684,19 @@ background with its output written to a file, and report the two onsets it found
 Expected: PASS, both onsets within 0.002° (52.18938° and 20.29040°; the prototype's 52.1883° and 20.2899° do not
 reproduce). Below the onset brute force creeps at an a_eff of order dt², so "held below" is checked once, 0.1° below
 at dt 1e-6; the zeros converge geometrically but more slowly than linearly in dt, so they are extrapolated by Aitken's
-Δ² (a linear fit stops about 0.003° short). The whole slow suite (`SLOW_TESTS=1 npm test`) passes 283 tests; the
+Δ² (a linear fit stops about 0.003° short). The whole slow suite (`SLOW_TESTS=1 npm test`) passes 286 tests
+(pre-flight 283, before the three added tests); the
 20,000 random clusters stay exact, worst `searched` 209.
 
 - [ ] **Step 7: Commit**
 
 ```bash
 npx prettier --write tests/engine/support/bruteForce.ts tests/engine/crossCheck.test.ts tests/engine/lift.test.ts \
-    src/engine/detect.ts src/engine/contactModel.ts src/engine/push.ts src/engine/simulate.ts
+    tests/engine/detect.test.ts src/engine/detect.ts src/engine/contactModel.ts src/engine/push.ts \
+    src/engine/simulate.ts
 git add tests/engine/support/bruteForce.ts tests/engine/crossCheck.test.ts tests/engine/lift.test.ts \
-    src/engine/detect.ts src/engine/contactModel.ts src/engine/push.ts src/engine/simulate.ts
+    tests/engine/detect.test.ts src/engine/detect.ts src/engine/contactModel.ts src/engine/push.ts \
+    src/engine/simulate.ts
 git commit -m "Cross-check friction pushes against load-coupled brute force in the standard world"
 ```
 
@@ -8000,7 +8077,7 @@ any that Step 2 measured differently (times vary run to run).
 2. In the P5 row, replace "(P2a.2's prototype measured a cannon with 864 resting-contact re-solves near the budget;
    P2a.2 re-measures it with friction on)" with "(with friction on, P2a.2's realistic shot mix makes at most 404
    resting-contact re-solves in a shot, and three-ball pushes up to 745 and 120 ms of engine time on an Apple M4,
-   which the work budget does not see; see the P2a.2 outcomes)".
+   which the work budget does not see; four-ball pushes end in `budget-hold`; see the P2a.2 outcomes)".
 3. After the "P2a.1 outcomes carried forward" section (or at the end, before any later sections), add:
 
 ```markdown
@@ -8016,8 +8093,9 @@ any that Step 2 measured differently (times vary run to run).
   reaches it: its worst shot spends 408,030 units (1.9%). Nor do three-ball pushes: a push into a touching pair bent
   0°–90° off the line needs at most 8.5 million units (bent 10°), 5.9 million in one solve, so the budget has 2.6×
   headroom; the cross-check's 60° line spends 1.5 million (7%). Four-ball pushes end in `budget-hold`: every zigzag
-  tried but 50° (12 of the 152 pushes swept) needs 81–289 million units unbudgeted. That is accepted for P2a.2 and
-  carried to P5. The budget is checked between candidates, so the solve that crosses it overshoots, by up to 1.2×.
+  tried but 50° (12 of the 152 pushes swept) needs 81–289 million units unbudgeted. Random four-ball clusters, solved
+  unbudgeted in the cluster test, need up to 1.06 billion (144 of 20,000 over the budget). That is accepted for P2a.2
+  and carried to P5. The budget is checked between candidates, so the solve that crosses it overshoots, by up to 1.2×.
   The engine's large solves cost 1.7–3.1e-6 ms per unit; the shot mix's small ones cost 2.4e-5 (937 units and 22 µs
   per solve, mostly overhead). The prototype's realistic worst of 3.5 million came from two-ball groups only.
 - **Measured realistic play (friction on).** 3,000 shots, seed 7, Apple M4, Node v26.10.0: 97.7% of shots have no

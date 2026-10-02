@@ -5,27 +5,15 @@ pushing paragraphs after it, and the free-motion limitations) and §9. That spec
 fixes how the engine delivers it. **Roadmap:** P2 row, P2a.2.
 
 **Amended 2026-10-02 (pre-flight).** The plan was executed literally in a scratch worktree before implementation;
-these changes came out of it and are folded in below:
+these changes came out of it and are folded in below (measurements in §7):
 
-- Closing rate: a coupled contact closes at the curvature rate |v_t|²/d of its turning line of centres, not 0; an
-  open contact is consistent while it closes no faster than that (§4). A coupled gap then drifts at third order either
-  way: a segment also ends when it closes past `CONTACT_TOLERANCE` (the penetration bound), and every re-solve first
-  projects the component's resting contacts to zero gap (§5). The nearest hold keeps a zero closing target (§4 step 7).
-- Tolerances (§4): `FOLLOW_EPSILON` 1e-12 (was 1e-9); alignment to `ALIGN_TOLERANCE` (sine 1e-9) above a
-  `RESIDUAL_FLOOR` of 1e-15 m/s²; held balls' cones relaxed by `HELD_CONE_SLACK` = `HOLD_SLACK` − 2·`CONVEX_SLACK`
-  inside the `HOLD_SLACK` acceptance; `NEAR_HOLD_SLACK` = 2·`HOLD_SLACK` for the hold-first candidate once the whole
-  search fails. The claim that `HOLD_SLACK` ≥ 7/5·`FOLLOW_EPSILON` leaves no configuration rejected both ways is
-  withdrawn: it holds for one ball, not for two releasing together.
-- Search (§4 steps 3, 4, 6): contact-onset seeds include the rolling balls' spin; a ball the guide holds but a
-  candidate releases is seeded along the guide's push on it; the cheap starts add the seed with each direction
-  reversed alone; Newton stops at once on a dead followed rate (|w| ≤ `FOLLOW_EPSILON`) and converges at a residual at
-  `RESIDUAL_FLOOR`; the search cap is checked before every candidate. Worst measured `searched`: 209, not 183.
-- Convex solve (§4 step 5): phase 2 runs for thin feasible sets too; an infeasible solve's excess is an upper bound of
-  which only the sign is decided.
-- Kept-contact loop (§3): a group that falls back first takes every contact its held balls touch.
-- `SOLVE_BUDGET` stays 22,000,000 (decided 2026-10-02): three-ball pushes need at most 8.5 million, and slow four-ball
-  pushes (81–289 million) end in `budget-hold`, accepted and carried to P5 (§5, §7).
-- Brute-force limit checks (§6): "held below" once at the finest step; Aitken extrapolation to dt = 0.
+- Closing rate |v_t|²/d for coupled contacts, the penetration bound, and the projection to zero gap (§4, §5).
+- Tolerances `FOLLOW_EPSILON` 1e-12, `ALIGN_TOLERANCE`, `RESIDUAL_FLOOR`, `HELD_CONE_SLACK`, `NEAR_HOLD_SLACK` (§4).
+- Search seeds, reversed starts, Newton's dead-rate exit and residual floor, and the cap checked per candidate (§4).
+- Convex solve: phase 2 for thin feasible sets; the infeasible excess as an upper bound (§4 step 5).
+- A group that falls back first takes every contact its held balls touch (§3).
+- `SOLVE_BUDGET` kept at 22,000,000, with four-ball `budget-hold` carried to P5 (decided 2026-10-02; §5).
+- Brute-force limit checks: "held below" once at the finest step; Aitken extrapolation (§6).
 
 ## 1. Goal and exit criteria
 
@@ -106,9 +94,8 @@ Interface changes:
   flagged in `approximate`, so it emits `budget-hold` only), `work: number` (the work units it spent) and
   `searched: number` (the most candidates any group tried; the cluster test checks it against `MODE_SEARCH_LIMIT`).
   `holdExcess` is now how far the hold-first candidate misses its relaxed convex conditions at the best forces its
-  solve found (m/s²; Infinity when that candidate's system cannot be solved at all). When the conditions have no
-  common point, those forces are the convex solve's phase-1 point, so the excess is an upper bound on the smallest
-  violation, of which only the sign is decided.
+  solve found (m/s²; Infinity when that candidate's system cannot be solved at all; an upper bound when the conditions
+  have no common point, §4 step 5).
 - `solveRestingContacts` and `solveNearestHold` take an optional options argument: the gravity vector (default −g·ẑ
   from the first body), the work budget remaining for the shot (default unlimited), and a test seam that makes every
   direction solve fail (§4 step 7).
@@ -202,8 +189,8 @@ Pipeline:
    Newton: minimise ½‖F(x)‖² with Armijo backtracking (at most 30 halvings); accept only a converged root that
    passes `FOLLOW_EPSILON` and the alignment test. A run stops, not converged, as soon as some followed rate has
    |w_j| ≤ `FOLLOW_EPSILON` (the residual r_j = p_j·w_j vanishes with w_j, so the run has fallen into the merit's
-   spurious root at w_j = 0, which the acceptance test rejects; without this exit the line searches spent most of the
-   search's work there, 19.4 million units instead of 1.17 million on the bent-60° push). A run whose largest
+   spurious root at w_j = 0, which the acceptance test rejects; without this exit the line searches spend most of the
+   search's work there). A run whose largest
    residual is at most `RESIDUAL_FLOOR` has converged, and one whose step cannot lower the merit has converged only if
    its residual is at that floor (near a limit of holding a released ball's |w| is tiny, so its angle is fixed only to
    rounding/|w|). Starts, in order: four cheap starts (the proposal's seed and its quarter turns), then, with more than
@@ -232,11 +219,12 @@ Pipeline:
    balls held, released, turf-rolling, turf-sliding, and contacts stick, slip, open. Lift-off is derived, not
    enumerated: a candidate in which some balls on the turf have a load of zero or below is followed at once by the
    same candidate with those balls airborne (lifted off at z = R; consistent only if they do not accelerate into the
-   turf). It keeps the search measured below; in play lift-off needs μ·N ≥ g, far beyond croquet pushes. The search is
-   capped at `MODE_SEARCH_LIMIT` = 1024 candidates, checked before every candidate (lifted retries included), so the
-   cap is a hard bound (worst measured: 209, over 20,000 random four-ball clusters with obstacles, all solved exactly,
-   in the plan's pre-flight; the prototype's cone-guide proposal measured 183; the cluster test re-measures it).
-   First consistent candidate wins.
+   turf). It keeps the search measured below; in play lift-off needs μ·N ≥ g, far beyond croquet pushes. Known
+   limitation: a lifted retry is derived only from a solved candidate, so when a group's on-turf direction solve fails
+   (measured for three balls at ball–ball μ ≥ about 4.25) lift-off is missed and the group falls back to
+   `approximate-hold`; carried to P5. The search is capped at `MODE_SEARCH_LIMIT` = 1024 candidates, checked before
+   every candidate (lifted retries included), so the cap is a hard bound (worst measured in §7; the cluster test
+   re-measures it). First consistent candidate wins.
 7. **Last resorts.** When the search ends with nothing consistent (exhausted or capped), the hold-first candidate
    stands if its solved forces are consistent with its held limits relaxed by `NEAR_HOLD_SLACK` = 2·`HOLD_SLACK`
    (`exact`): at a limit where two balls release together there is a rounding-width sliver (about 1e-15 in
@@ -251,11 +239,10 @@ Pipeline:
    Otherwise → nearest hold, `approximate-hold`. Work budget spent (§5) → nearest hold, `budget-hold`. The nearest
    hold is P1's: the resting balls are held and the moving balls are solved against them as fixed obstacles by
    Gauss's least constraint, frictionlessly, a convex problem that always has a solution. Its omitted friction is part
-   of the approximation these events report. Its contacts keep a zero closing target, without the curvature share:
-   the fallback is already frictionless, so the share carries no friction to lose; its contacts then open at second
-   order and are solved again; and a zero target keeps the nearest hold the projection its existence argument covers.
-   No test reaches `approximate-slip` naturally (the prototype never raised it), so a unit test reaches it by
-   injecting a failed direction solve.
+   of the approximation these events report. Its contacts keep a zero closing target, without the curvature share,
+   so the nearest hold stays the projection its existence argument covers.
+   No test reaches `approximate-slip`, the `NEAR_HOLD_SLACK` acceptance or the fallback widening (§3) naturally on the
+   final engine, so unit tests reach each by injecting failed direction solves (§6).
 
 Tolerances:
 
@@ -268,8 +255,8 @@ Tolerances:
   without it a ball released near a limit (|w| below 1e-6) could never be shown aligned, nor its Newton run converged.
 - `HOLD_SLACK` = 1e-8 m/s² (P2a.1: 1e-6). It is at least 7/5·`FOLLOW_EPSILON`, so no single ball near a limit is
   rejected by both holding and releasing; two balls releasing together can be, in a rounding-width sliver, which
-  `NEAR_HOLD_SLACK` (step 7) covers. Its effect on a limit is HOLD_SLACK divided by the margin's slope: 3.8e-9 rad at
-  1e-8 on the bent line.
+  `NEAR_HOLD_SLACK` (step 7) covers (the earlier claim that no configuration is rejected both ways is withdrawn). Its
+  effect on a limit is HOLD_SLACK divided by the margin's slope: 3.8e-9 rad at 1e-8 on the bent line.
 - `HELD_CONE_SLACK` = `HOLD_SLACK` − 2·`CONVEX_SLACK`: the held cones' relaxation (step 5). The minimum-norm forces
   lie on an active held cone to rounding, and the acceptance test uses different arithmetic (3D lengths against the
   cone's planar components), so cones relaxed by `HOLD_SLACK` itself had about one in ten boundary holds rejected by
@@ -312,10 +299,10 @@ Tolerances:
   held (nearest hold, which is not counted: it is convex and bounded) and a `budget-hold` event is emitted.
   Counting work, not time, keeps results identical on every device. `SOLVE_BUDGET` = 22,000,000 work units (33 ms on
   the development machine at the prototype's 1.50e-6 ms per unit), kept at that value after the pre-flight (decided
-  2026-10-02): three-ball pushes are worst at 8.5 million (2.6× headroom), and slow four-ball pushes (81–289 million
-  unbudgeted) end in `budget-hold`, which is accepted and carried to P5. The prototype's realistic worst of 3.5
-  million came from two-ball groups only. Because the counter is checked between candidates, the solve that crosses
-  the budget overshoots it (measured: up to 1.2×).
+  2026-10-02): three-ball pushes fit within it, while slow four-ball pushes and some random four-ball clusters exceed
+  it and end in `budget-hold`, which is accepted and carried to P5 (figures in §7). Because the counter is checked
+  between candidates, the solve that crosses the budget overshoots it. The budget bounds the search, not the number of
+  segments: a shot's re-solve volume is uncounted, and P5's time budget must cover both.
 - Unchanged: free-motion collisions (`resolve.ts`), the landing impulse, jump flag, out of court, halt. A ball
   perched still on others now holds through static friction and is still snapped to rest.
 
@@ -364,18 +351,21 @@ Closed forms (the `push.test.ts` parameters SLIDE 3, ROLL 0.5 unless stated; bal
   step (below the onset brute force creeps at an a_eff of order dt², about 5e-5 m/s² 0.05° below at dt 4e-6); the
   onset comes from a linear fit of a_eff past the decision, with H ≥ 0.25 s, extrapolated to dt = 0 over dt 4e-6,
   2e-6 and 1e-6 by Aitken's Δ² (the zeros converge geometrically but more slowly than linearly in dt, so a linear fit
-  stops about 0.003° short). Pre-flight: 52.18938° and 20.29040° (the prototype's 52.1883° and 20.2899° do not
-  reproduce).
+  stops about 0.003° short).
 - **Clusters:** a seeded property test over random clusters of up to four balls with court-realistic obstacles (the
-  peg, or one hoop; no ball touches both uprights), velocities glued as the engine glues them: no
-  `approximate-hold`, `approximate-slip` or `budget-hold`, and the search never reaches `MODE_SEARCH_LIMIT`.
+  peg, or one hoop; no ball touches both uprights), velocities glued as the engine glues them, solved without a work
+  budget: no `approximate-hold` or `approximate-slip`, and the search never reaches `MODE_SEARCH_LIMIT`.
+- **Amended mechanisms:** `normalCurvature` against |v_t|²/d; the `simulate.test.ts` wedge stays symmetric; no
+  penetration beyond `CONTACT_TOLERANCE` and no loop at t = 0 (fuzz); the exact-top slide stays under 500 events;
+  with injected failed direction solves, the hold-first candidate stands within `NEAR_HOLD_SLACK` just past θ* and not
+  further, and a pair falling back takes the upright behind its held ball and holds exactly.
 - **No approximation:** `fuzz.test.ts` and the cross-check's wedge assertion forbid `approximate-slip` and
   `budget-hold` as well as `approximate-hold`. Fuzz and cross-check generators glue velocities. Random fuzz shots
   almost never come to rest in contact, so the fuzz presses every fourth shot into a push (the first spinning ball
   stopped, the nearest ball moved to touch it) and asserts that resting-contact solves happen; it still exercises no
   stick/slip mode change.
 - **Performance measurement** (last task): port the prototype's realistic shot-mix generator
-  (`prototype/speed/shots.ts`) to `scripts/shotMix.ts`, re-run it with friction on, and record groups per shot,
+  (`prototype/speed/shots.ts`) to `scripts/shotMix.ts`, re-run it with friction on, and record the largest group,
   chatter counts and solver and engine time per shot in the roadmap's "P2a.2 outcomes carried forward", for P5. The
   shot mix forms no group of three or four balls, so the budget is also measured on the cross-check's push family
   (bent lines 0–90°, wedges, four-ball zigzags, uprights; 152 pushes).
@@ -387,7 +377,7 @@ flight and lift-off inside the friction model, the hold-first candidates and pro
 used a cone guide), and the exact-operation elementary functions. It validated: the closed forms above, derived
 independently and confirmed by the solver to within `HOLD_SLACK`; brute force confirming the release onsets; 20,000
 random four-ball clusters solved with none unsolved (worst `searched` 183 with its cone guide; the pre-flight below
-re-measured 209 with P2a.1's guide, again with 0 unsolved); realistic play (3,000 shots: 97% call no solve; every
+see the pre-flight below); realistic play (3,000 shots: 97% call no solve; every
 group two balls, one candidate, with the cone guide) within the performance budget at p99.9 with about three times
 headroom. Its optimisations are kept: factor reuse, sparse assembly and elimination, value-only line searches in the
 barrier solve, and no condition-number diagnostics. An eight-start fan of extra Newton starts decided nothing in
@@ -400,8 +390,14 @@ the plan and this design (the amendments listed at the top). It measured: 20,000
 solved exactly (0 unsolved), worst `searched` 209 (the prototype's 183 was with its cone guide); the cross-check
 within 1 mm of brute force in the standard world (wedge 0.506 mm, upright 0.780 mm, bent line 0.276 mm, the
 remaining error from frozen directions); the shot mix (3,000 shots) with no group larger than two and a worst shot of
-408,030 units (1.9% of `SOLVE_BUDGET`); the cross-check's push family with three-ball pushes at most 8.5 million units
-and 12 of 152 four-ball pushes ending in `budget-hold` (§5).
+408,030 units (1.9% of `SOLVE_BUDGET`); over the cross-check's push family (152 pushes), three-ball pushes at most
+8.5 million units (2.6× headroom), and 12 pushes, every four-ball zigzag but 50°, ending in `budget-hold` with 81–289
+million unbudgeted; the worst overshoot past the budget 1.2×; random four-ball clusters, unbudgeted, up to 1.06
+billion units, 144 of 20,000 over the budget; re-solve volume uncounted by the budget, up to 745 solves and 120 ms of
+engine time (Apple M4) for a three-ball push bent 10° at spin 80; the brute-force onsets 52.18938° and 20.29040°
+(the prototype's 52.1883° and 20.2899° do not reproduce); Newton's dead-rate exit cutting the bent-60° push from 19.4
+million units to 1.17 million. Carried to P5 with the budget-holds: re-solve volume and the missed lift-off (§4 step
+6).
 
 Remaining: subagent-driven development with per-task reviews (Opus for physics) and an Opus whole-branch review with
 probes. On completion: roadmap P2 row "P2a.2 (met)" and a "P2a.2 outcomes carried forward" section.
