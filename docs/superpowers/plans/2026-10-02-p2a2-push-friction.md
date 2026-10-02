@@ -15,7 +15,10 @@ forces satisfying every convex condition, found by a log-barrier second-order-co
 search (`modeSolve.ts`) tries every resting ball held first, then P2a.1's frictionless proposal, then every other
 candidate, fewest departures from the proposal first; the first consistent candidate wins. `push.ts` stays the
 façade (glue, groups, nearest-hold fallback, push durations), and `simulate.ts` gains slip ends, stick/slip events,
-the budget and the new fallback events.
+the budget and the new fallback events. A coupled contact closes at the curvature rate |v_t|²/d of its turning line of
+centres (`detect.ts` `normalCurvature`), so its force carries the turning share with friction and load; a coupled gap
+then drifts only at third order, either way, and every re-solve first projects the component's resting contacts back
+to zero gap (`simulate.ts` `projectContacts`, Task 9).
 
 **Tech Stack:** TypeScript (strict), Vitest, ESLint, Prettier. No new dependencies (`npx --yes tsx` runs the one
 script).
@@ -35,7 +38,8 @@ frictionless guide (decided 2026-10-02), and elementary functions from exact ope
 
 - Formatting: 4-space indentation, 120-column limit (check with `grep -nE '^.{121,}$' <file>`; existing markdown
   table rows exceed it, leave them), LF line endings, UTF-8. Run `npx prettier --write` on every file you touch;
-  `npm run format:check` must pass.
+  `npm run format:check` must pass. `.prettierignore` lists `docs/`, so wrap markdown there by hand. Prettier does
+  not re-wrap comments or string literals: keep those within 120 columns as written.
 - Engine code (`src/engine/**`) is pure and deterministic: no DOM, no time-of-day, no randomness, no reliance on
   unspecified iteration order. Iterate balls in `BALL_IDS` order and contacts in their given order.
 - Engine code uses only IEEE-exact operations: `+ − * /`, comparisons, `Math.sqrt`, `Math.abs`, `Math.min`,
@@ -44,17 +48,20 @@ frictionless guide (decided 2026-10-02), and elementary functions from exact ope
 - No non-null assertions (`!`); the repo style is `x as number` / `x as Vec3` after indexing.
 - Units are SI and forces are mass-normalised (m/s²). A ball on the turf has `z = R` and `vz = 0` exactly; any other
   state is airborne (`classify`).
-- Tolerances, exactly: `FOLLOW_EPSILON = 1e-9` (m/s²), `HOLD_SLACK = 1e-8` (m/s²), `FORCE_EPSILON = 1e-9`,
-  `ACCELERATION_EPSILON = 1e-9`, `CONVEX_SLACK = 1e-10`, `MODE_SEARCH_LIMIT = 1024`, Armijo halvings 30,
-  `NEWTON_ITERATIONS = 60`, `NEWTON_STEP_TOLERANCE = 1e-11` (rad), continuation scales `[1e-3, 0.1, 0.25, 0.5, 0.75,
-  1]`, forward scan 24 points (one direction) or 12 × 12 (two). Each named constant's comment says why it is not
-  physical.
+- Tolerances, exactly: `FOLLOW_EPSILON = 1e-12` (m/s²; 1e-9 in Tasks 4–6, lowered in Task 7), `ALIGN_TOLERANCE =
+  1e-9` (sine) above `RESIDUAL_FLOOR = 1e-15` (m/s²) (Task 7), `HOLD_SLACK = 1e-8` (m/s²), `HELD_CONE_SLACK =
+  HOLD_SLACK − 2·CONVEX_SLACK` (held balls' cones, Task 4), `NEAR_HOLD_SLACK = 2·HOLD_SLACK` (the hold-first
+  candidate once the whole search has failed, Task 7), `FORCE_EPSILON = 1e-9`, `ACCELERATION_EPSILON = 1e-9`,
+  `CONVEX_SLACK = 1e-10`, `MODE_SEARCH_LIMIT = 1024`, Armijo halvings 30, `NEWTON_ITERATIONS = 60`,
+  `NEWTON_STEP_TOLERANCE = 1e-11` (rad), continuation scales `[1e-3, 0.1, 0.25, 0.5, 0.75, 1]`, forward scan 24
+  points (one direction) or 12 × 12 (two). Each named constant's comment says why it is not physical.
 - `ENGINE_VERSION` becomes `"0.3.0"` (Task 8). `SOLVE_BUDGET = 22_000_000` work units per shot (Task 8; work units
   as defined in Task 2 and Task 3).
 - Croquet has exactly four balls: never test or reason about five-ball clusters.
 - Tests assert decisions and feasibility, never certificate forces of a held configuration (they are not unique).
 - Slow tests (brute-force limit checks, the 20,000-cluster cap measurement) run only when the environment variable
-  `SLOW_TESTS` is set, via `it.skipIf(!process.env.SLOW_TESTS)`.
+  `SLOW_TESTS` is set, via `it.skipIf(!import.meta.env.SLOW_TESTS)` (the tsconfig has `vite/client` types only, so
+  `process` does not type-check).
 - Public/exported functions carry a header comment; cognitively complex code carries explanatory comments.
 - Commit messages: short imperative sentence (repo style). Commits are signed; if signing refuses, leave the change
   staged and report it instead of committing unsigned.
@@ -64,7 +71,8 @@ frictionless guide (decided 2026-10-02), and elementary functions from exact ope
 
 1. **Every straight push rubs vertically.** A rolling pair's contact points slip vertically at twice their speed, so
    every push now has a slipping contact with a frozen direction and a slip end. A push to rest must take a handful of
-   segments, not a storm of regroups. Pinned in Task 8 (straight topspin push: at most 12 resting-contact solves).
+   segments, not a storm of regroups. Pinned in Task 8 (straight topspin push: at least one and at most 4
+   resting-contact solves; measured 2, the push at t = 0 and the regroup at the driver's turf-slip end).
 2. **Spin about the vertical axis.** It is locked while a ball's patch does not slip (held, rolling, released) and
    free while it slides or flies; a rolling ball keeps the spin it carries and drops it when it stops. Pinned in
    Task 7 (a rolling ball with sidespin pushed: angular acceleration about z exactly 0; a sliding one: not 0) and
@@ -77,6 +85,15 @@ frictionless guide (decided 2026-10-02), and elementary functions from exact ope
    budget).
 5. **Stick/slip at the stick boundary.** A contact whose slip reaches zero sticks; it must not alternate stick and
    slip every segment. Pinned in Task 8 (topspin into backspin: exactly one stick and one slip event, then rest).
+6. **Curvature in the closing rate, and projection.** A coupled contact closes at |v_t|²/d, not 0, so a pair rubbing
+   round each other stays touching and the contact force carries the turning share with its friction and load. The
+   gap then drifts at third order either way: a segment must end when it opens past `SEPARATION_TOLERANCE` or closes
+   past `CONTACT_TOLERANCE`, every `settle()` must project the component's resting contacts back to exactly zero gap
+   (one simultaneous minimum-norm move; velocities untouched; turf balls horizontal only; obstacles fixed) before it
+   solves, and neither bound may fire again at the new segment's start. A Gauss–Seidel projection breaks symmetric
+   set-ups; no projection loops at t = 0. The nearest-hold fallback keeps a zero closing target. Pinned in Task 9
+   (the wedge, upright and bent-line cross-checks within 1 mm of brute force; the `simulate.test.ts` wedge symmetric
+   to 5e-10; the exact-top sweep under 500 events; fuzz penetration under `CONTACT_TOLERANCE`).
 
 ---
 
@@ -91,11 +108,14 @@ frictionless guide (decided 2026-10-02), and elementary functions from exact ope
 | `src/engine/modeSolve.ts` | New: candidate solve (Newton, scan, continuation), proposal (P2a.1 guide), group search, last resorts |
 | `src/engine/push.ts` | Façade rewritten around the new solver; keeps glue, groups, nearest hold, push durations |
 | `src/engine/motion.ts` | `landingTime` lets a ball at rest on the plane with upward acceleration rise |
+| `src/engine/detect.ts` | `normalCurvature`, the closing rate of a turning line of centres (Task 9) |
 | `src/engine/simulate.ts` | Friction and turf inputs, coupling modes, stick/slip events, slip ends, work budget, new events |
+| `src/engine/simulate.ts` (Task 9) | Curvature in contact detection, two-sided gap bound, `projectContacts` |
 | `src/engine/types.ts` | `ShotEvent`: stick/slip, `approximate-slip`, `budget-hold` |
 | `tests/engine/math/elementary.test.ts`, `tests/engine/linalg.test.ts`, `tests/engine/convexSolve.test.ts`, `tests/engine/contactModel.test.ts`, `tests/engine/modeSolve.test.ts` | New unit tests |
 | `tests/engine/support/clusters.ts` | New: seeded four-ball cluster generator with court-realistic obstacles |
 | `tests/engine/support/bruteForce.ts` | Load-scaled turf forces from push impulses, twist lock |
+| `tests/engine/support/penetration.ts` | `worstPenetration` linear in segments (one cursor per ball) |
 | `tests/engine/{push,simulate,lift,crossCheck,fuzz,motion}.test.ts` | Re-derived with friction on; new scenarios |
 | `scripts/shotMix.ts` | New: realistic shot-mix measurement |
 | `docs/superpowers/plans/2026-09-30-croquet-shot-lab-roadmap.md` | P2a.2 met; outcomes carried forward |
@@ -103,7 +123,9 @@ frictionless guide (decided 2026-10-02), and elementary functions from exact ope
 Task order keeps every commit green. Tasks 1–6 add new modules beside the P2a.1 solver; Task 7 switches the façade
 with contact friction still 0 in the simulator (so every simulation test must pass unchanged: the new solver at
 μ = 0 must reproduce P2a.1); Task 8 switches friction on in the simulator; Task 9 brings brute force up to the same
-physics and removes the cross-check's frictionless overrides.
+physics, removes the cross-check's frictionless overrides and adds the curvature closing rate with contact projection.
+The engine fix lands in Task 9, not earlier, because the old brute force cannot check it: with curvature in Task 7 or
+Task 8 the wedge cross-check fails (1.32 mm against the 1 mm tolerance, pre-flight).
 
 ---
 
@@ -227,7 +249,7 @@ const TWO_64 = 18446744073709551616;
 const TWO_MINUS_64 = 1 / TWO_64;
 
 /** π/2 split so that k·PIO2_HI is exact for |k| < 2^20 (its 33 leading bits); PIO2_LO is the remainder. */
-const PIO2_HI = 1.5707963267341256142e0;
+const PIO2_HI = 1.5707963267341256142;
 const PIO2_LO = 6.0771005065061922493e-11;
 const TWO_OVER_PI = 0.6366197723675814;
 
@@ -473,7 +495,15 @@ describe("solveSystem", () => {
         );
         expect(s?.basis).toEqual([]);
         expect(s?.lu).not.toBeNull();
-        expect(multiply([[4, 1], [1, 3]], s?.x as number[])[1]).toBeCloseTo(2, 14);
+        expect(
+            multiply(
+                [
+                    [4, 1],
+                    [1, 3],
+                ],
+                s?.x as number[],
+            )[1],
+        ).toBeCloseTo(2, 14);
     });
 
     it("returns the minimum-norm solution and a null-space basis of a consistent singular system", () => {
@@ -544,8 +574,9 @@ Create `src/engine/linalg.ts`:
  * solve returns the minimum-norm solution together with a basis of the null space.
  *
  * Every routine adds its cost to a Work counter, in work units: n³ for a factorisation (a dense solve is one), n² for
- * a solve with a kept factorisation, and 2·n³ more for the rank-revealing path. The solver's budget per shot is counted
- * in these units rather than in time, so that its results are identical on every device.
+ * a solve with a kept factorisation, and 2·n³ more for the rank-revealing path, plus k³ + k² for its Gram solve over
+ * a k-dimensional null space. The solver's budget per shot is counted in these units rather than in time, so that its
+ * results are identical on every device.
  */
 
 /** Running count of solver work units (see the module comment). */
@@ -899,7 +930,11 @@ git commit -m "Add sparse affine forms and rank-revealing linear solves"
 One convex primitive serves the hold-first check and the choice of undetermined forces (design §3, §4 steps 2 and 5).
 It is the prototype's `convexSub.ts` made generic over cones: the caller passes affine cone forms, a particular
 solution and a null-space basis. Each cone carries its own relaxation: `CONVEX_SLACK` for contact and load conditions,
-`HOLD_SLACK` for held balls' limits (Task 4), so that the solver's hold decisions are those of design §4.
+`HELD_CONE_SLACK` (2·`CONVEX_SLACK` inside `HOLD_SLACK`) for held balls' limits (Task 4), so that the solver's hold
+decisions are those of design §4. Phase 2 (minimum norm) runs whenever phase 1 finds the relaxed cones feasible to
+within `CONVEX_SLACK`, so a thin feasible set (an equality, or a friction disc collapsed by zero load) still gets its
+minimum-norm point; when the cones have no common point, the reported excess is the worst violation at phase 1's final
+point, an upper bound on the smallest worst violation, of which only the sign is decided.
 
 **Files:**
 - Create: `src/engine/convexSolve.ts`
@@ -908,7 +943,8 @@ solution and a null-space basis. Each cone carries its own relaxation: `CONVEX_S
 **Interfaces:**
 - Consumes: Task 1 `ln`; Task 2 `Affine`, `valueOf`, `linearValue`, `solveLinear`, `Work`.
 - Produces: `CONVEX_SLACK = 1e-10`; `interface Cone { u: readonly Affine[]; v: Affine; slack: number }` (meaning
-  ‖u(x)‖ ≤ v(x) + slack; with no u, v(x) + slack ≥ 0); `interface ConvexResult { x: number[]; excess: number }`;
+  ‖u(x)‖ ≤ v(x) + slack; with no u, v(x) + slack ≥ 0); `interface ConvexResult { x: number[]; excess: number }`
+  (in the near-meeting band, phase-1 worst in [0, `CONVEX_SLACK`], x may miss its cones by up to 1.5·`CONVEX_SLACK`);
   `excessAt(cones, x): number` (worst ‖u‖ − v − slack; ≤ 0 means every relaxed cone holds);
   `solveConvex(cones, xp, basis, work): ConvexResult`.
 
@@ -964,13 +1000,53 @@ describe("solveConvex", () => {
         expect(excessAt([disc], r.x)).toBeLessThanOrEqual(1e-9);
     });
 
-    it("reports the smallest worst violation when the cones do not meet", () => {
-        // x₂ ≥ 1 and x₂ ≤ −1: the best is x₂ = 0, violating both by 1.
+    it("reports a positive worst violation when the cones do not meet", () => {
+        // x₂ ≥ 1 and x₂ ≤ −1: the best is x₂ = 0, violating both by 1. Phase 1's final point is an upper bound in
+        // general; by symmetry it is the best here.
         const below: Cone = { u: [], v: form(-1, [0, -1]), slack: CONVEX_SLACK };
         const r = solveConvex([at(1), below], [2, 0], [[0, 1]], { units: 0 });
         expect(r.excess).toBeGreaterThan(0);
         expect(r.excess).toBeCloseTo(1, 6);
         expect(r.x[1]).toBeCloseTo(0, 6);
+    });
+
+    it("finds the minimum-norm point of a feasible set as thin as the slack", () => {
+        // x = (5, 0) + z; x₂ ≥ 1 and x₂ ≤ 1 leave x₂ free only within the slack: the smallest x is (0, 1).
+        const above: Cone = { u: [], v: form(-1, [0, 1]), slack: CONVEX_SLACK };
+        const below: Cone = { u: [], v: form(1, [0, -1]), slack: CONVEX_SLACK };
+        const r = solveConvex(
+            [above, below],
+            [5, 0],
+            [
+                [1, 0],
+                [0, 1],
+            ],
+            { units: 0 },
+        );
+        expect(r.x[0]).toBeCloseTo(0, 6);
+        expect(r.x[1]).toBeCloseTo(1, 6);
+        expect(excessAt([above, below], r.x)).toBeLessThanOrEqual(0);
+    });
+
+    it("finds the minimum-norm point when zero normal load collapses a friction disc", () => {
+        // x = (N, T₁, T₂, F, G) with N = 0 and T₁ + F + 2G = 2; N ≥ 0 and ‖(T₁, T₂)‖ ≤ 0.5·N force T = 0, leaving
+        // F + 2G = 2, whose smallest point is (F, G) = (0.4, 0.8). xp is the unconstrained minimum-norm solution; the
+        // basis (T₁ against F, T₂, G against 2F) is not orthonormal.
+        const load: Cone = { u: [], v: form(0, [1]), slack: CONVEX_SLACK };
+        const disc: Cone = { u: [form(0, [0, 1]), form(0, [0, 0, 1])], v: form(0, [0.5]), slack: CONVEX_SLACK };
+        const r = solveConvex(
+            [load, disc],
+            [0, 1 / 3, 0, 1 / 3, 2 / 3],
+            [
+                [0, 1, 0, -1, 0],
+                [0, 0, 1, 0, 0],
+                [0, 0, 0, -2, 1],
+            ],
+            { units: 0 },
+        );
+        const expected = [0, 0, 0, 0.4, 0.8];
+        expected.forEach((e, i) => expect(r.x[i]).toBeCloseTo(e, 6));
+        expect(excessAt([load, disc], r.x)).toBeLessThanOrEqual(0);
     });
 
     it("is deterministic and counts its work", () => {
@@ -1000,10 +1076,9 @@ Create `src/engine/convexSolve.ts`:
  *
  * The unknowns are x = xp + B·z: a particular solution of a candidate's linear system plus any combination of a basis
  * B of its null space, so every x considered solves the system. Each condition is a cone ‖u(x)‖ ≤ v(x) + slack (with
- * no u: v(x) + slack ≥ 0), u and v affine. Phase 1 finds a z strictly inside every relaxed cone, or the z that
- * minimises the worst violation when there is none; phase 2 then minimises ‖x‖² from it. Both run Newton's method on
- * a barrier with fixed iteration schedules, so the result is deterministic. The line searches need values only,
- * which is most of the evaluations.
+ * no u: v(x) + slack ≥ 0), u and v affine. Phase 1 finds a z strictly inside every relaxed cone, or proves there is
+ * none; phase 2 then minimises ‖x‖² from it. Both run Newton's method on a barrier with fixed iteration schedules, so
+ * the result is deterministic. The line searches need values only, which is most of the evaluations.
  *
  * Work units: each Newton iteration costs d³ + C·d² (d variables, C cones), each value-only evaluation C·d.
  */
@@ -1026,7 +1101,11 @@ export interface Cone {
 /** Outcome of solveConvex. */
 export interface ConvexResult {
     readonly x: number[];
-    /** Worst ‖u(x)‖ − v(x) − slack over the cones: at most 0 when x satisfies every relaxed cone. */
+    /**
+     * Worst ‖u(x)‖ − v(x) − slack over the cones: at most 0 when x satisfies every relaxed cone. When the cones have
+     * no common point it is the worst violation at phase 1's final point: an upper bound on the smallest worst
+     * violation, of which only the sign is decided.
+     */
     readonly excess: number;
 }
 
@@ -1070,7 +1149,7 @@ function zValue(f: ZForm, z: readonly number[]): number {
 
 /**
  * Returns the minimum-norm x = xp + B·z subject to the cones (B's rows are `basis`), or, when the relaxed cones have no
- * common point, the z that minimises the worst violation found by phase 1 (excess > 0).
+ * common point, phase 1's final point (excess > 0), whose worst violation bounds the smallest from above.
  */
 export function solveConvex(
     cones: readonly Cone[],
@@ -1119,11 +1198,13 @@ export function solveConvex(
     const scratch = new Array<number>(8).fill(0);
     const dphi = new Array<number>(m + 1).fill(0);
     const xBuffer = new Array<number>(nx).fill(0);
+    // Phase 2's further relaxation of every cone (see there); phase 1's s enters every v in its place.
+    let relax = 0;
     // The value at y = (z, s) (phase 1) or y = z (phase 2) of t·objective − Σ log(barrier); null outside the domain.
     // Identical arithmetic to evaluate()'s value.
     const value = (y: readonly number[], t: number, phase1: boolean): number | null => {
         work.units += count * y.length;
-        const s = phase1 ? (y[m] as number) : 0;
+        const s = phase1 ? (y[m] as number) : relax;
         let f = 0;
         if (phase1) {
             f += t * s;
@@ -1174,7 +1255,7 @@ export function solveConvex(
     ): { readonly f: number; readonly grad: number[]; readonly hess: number[][] } | null => {
         const dim = y.length;
         work.units += dim * dim * dim + count * dim * dim;
-        const s = phase1 ? (y[m] as number) : 0;
+        const s = phase1 ? (y[m] as number) : relax;
         const grad = new Array<number>(dim).fill(0);
         const hess = Array.from({ length: dim }, () => new Array<number>(dim).fill(0));
         let f = 0;
@@ -1249,7 +1330,10 @@ export function solveConvex(
                 for (let b = 0; b < dim; b++) {
                     let d2 = 2 * ga * (gw[b] as number);
                     for (let q = 0; q < nu; q++) {
-                        d2 -= 2 * ((gu[q] as readonly number[])[a] as number) * ((gu[q] as readonly number[])[b] as number);
+                        d2 -=
+                            2 *
+                            ((gu[q] as readonly number[])[a] as number) *
+                            ((gu[q] as readonly number[])[b] as number);
                     }
                     ha[b] = (ha[b] as number) - d2 / phi + (da * (dphi[b] as number)) / phi2;
                 }
@@ -1259,7 +1343,12 @@ export function solveConvex(
     };
     // Damped Newton on the barrier function for parameter t: at most 100 steps, each halved up to 60 times until the
     // value falls by a quarter of the Newton decrement, stopping once half the decrement is at most 1e-12.
-    const centre = (start: number[], t: number, phase1: boolean, stop?: (y: readonly number[]) => boolean): number[] => {
+    const centre = (
+        start: number[],
+        t: number,
+        phase1: boolean,
+        stop?: (y: readonly number[]) => boolean,
+    ): number[] => {
         let y = start;
         for (let iteration = 0; iteration < 100; iteration++) {
             const e = evaluate(y, t, phase1);
@@ -1314,10 +1403,14 @@ export function solveConvex(
     }
     z = y.slice(0, m);
     worst = excess(z);
-    if (worst > -1.5 * CONVEX_SLACK) {
+    if (worst > CONVEX_SLACK) {
         return { x: xOf(z), excess: worst };
     }
-    // Phase 2: minimum norm, from the strictly feasible z.
+    // Phase 2: minimum norm, from z, whenever phase 1 found it feasible to within CONVEX_SLACK, thin feasible sets
+    // included. The barrier needs a start strictly inside, so when z is not (the relaxed cones only nearly meet) every
+    // cone is relaxed further, until z has a margin of CONVEX_SLACK/2; x may then miss its cones by up to that further
+    // relaxation, at most 1.5·CONVEX_SLACK.
+    relax = worst < 0 ? 0 : worst + CONVEX_SLACK / 2;
     t = 1;
     for (let outer = 0; outer < 8; outer++) {
         z = centre(z, t, false);
@@ -1352,8 +1445,9 @@ written in each ball's turf frame, and extended to balls in flight and to lift-o
 Ball modes by class (`classify`), in the design's order: stationary — held, released, turf-sliding; rolling —
 turf-rolling, turf-sliding; sliding — turf-sliding; airborne — airborne. A turf ball can also be put in the airborne
 mode, but only by the search's lift-off rule (Task 6, `lowLoad`): it has left the turf because its load would be zero
-or negative (spec §5), and it is consistent only if its acceleration does not drive it into the turf. Contact modes: stick, slip, open; a contact that is already
-slipping, or has no friction, has only slip and open (at μ = 0 stick and slip are the same).
+or negative (spec §5), and it is consistent only if its acceleration does not drive it into the turf. Contact modes:
+stick, slip, open; a contact that is already slipping, or has no friction, has only slip and open (at μ = 0 stick and
+slip are the same).
 
 **Files:**
 - Create: `src/engine/contactModel.ts`
@@ -1362,8 +1456,10 @@ slipping, or has no friction, has only slip and open (at μ = 0 stick and slip a
 **Interfaces:**
 - Consumes: Task 2 `Affine` helpers; Task 3 `Cone`, `CONVEX_SLACK`.
 - Produces (all exported from `contactModel.ts`):
-  - Tolerances `FORCE_EPSILON`, `ACCELERATION_EPSILON`, `FOLLOW_EPSILON` (all `1e-9`), `HOLD_SLACK = 1e-8`;
-    `ROLLING_WEIGHT = 7 / 5`.
+  - Tolerances `FORCE_EPSILON`, `ACCELERATION_EPSILON`, `FOLLOW_EPSILON` (all `1e-9`; Task 7 lowers
+    `FOLLOW_EPSILON` to 1e-12), `HOLD_SLACK = 1e-8`; `ROLLING_WEIGHT = 7 / 5`. Module-private `HELD_CONE_SLACK =
+    HOLD_SLACK − 2·CONVEX_SLACK` relaxes held balls' cones, so that forces the convex solve settles on a held limit
+    (on the cone to rounding, or missing it by up to 1.5·`CONVEX_SLACK`) pass `inconsistency()`'s `HOLD_SLACK` test.
   - `interface ContactBody { state: BallState; params: MotionParams; turfNormal: Vec3; pivotCapacity: number }`.
   - `interface RestingContact { a: number; b: number; fixed: boolean; friction: number }`.
   - `type BallMode = "held" | "released" | "turf-rolling" | "turf-sliding" | "airborne"`;
@@ -1385,7 +1481,9 @@ slipping, or has no friction, has only slip and open (at μ = 0 stick and slip a
 - [ ] **Step 1: Write the failing tests**
 
 Create `tests/engine/contactModel.test.ts`. The numbers are the design §6 closed forms, derived and checked against
-the prototype (push.test parameters: R 0.046, SLIDE 3, ROLL 0.5, ball–ball μ 0.05, upright μ 0.1).
+the prototype (push.test parameters: R 0.046, SLIDE 3, ROLL 0.5, ball–ball μ 0.05, upright μ 0.1). The held-limit
+test sweeps rollingDecel in 1e-12 steps across a hold limit; its positions must be written as `2 * R + 2 * R * 0.8`
+and `2 * R * 0.6`, not `1.6 * R`, because the band is rounding-sensitive.
 
 ```ts
 import { describe, expect, it } from "vitest";
@@ -1408,7 +1506,7 @@ import {
     type Model,
     type RestingContact,
 } from "../../src/engine/contactModel";
-import { excessAt } from "../../src/engine/convexSolve";
+import { excessAt, solveConvex } from "../../src/engine/convexSolve";
 import { solveSystem } from "../../src/engine/linalg";
 import { ZERO, vec3, type Vec3 } from "../../src/engine/math/vec3";
 import type { MotionParams } from "../../src/engine/types";
@@ -1513,9 +1611,12 @@ describe("one candidate", () => {
     it("holds a ball driven against an upright, which friction lifts", () => {
         // Upright friction μu·N lifts the ball (L = g − μu·N), so N = SLIDE/(1 + μu·μs); the spin decays at
         // (5/2R)·N·(1 + μu).
-        const model = buildModel([ball(0, 0, vec3(0, 60, 0))], [vec3(R + 0.008, 0, 0)], [
-            { a: 0, b: 0, fixed: true, friction: 0.1 },
-        ], GRAVITY);
+        const model = buildModel(
+            [ball(0, 0, vec3(0, 60, 0))],
+            [vec3(R + 0.008, 0, 0)],
+            [{ a: 0, b: 0, fixed: true, friction: 0.1 }],
+            GRAVITY,
+        );
         const cand: Candidate = { balls: ["turf-sliding"], contacts: ["slip"] };
         const ev = solve(model, cand, []);
         expect(inconsistency(model, cand, ev)).toBeNull();
@@ -1565,6 +1666,31 @@ describe("one candidate", () => {
         const x = solveSystem(sys.A, sys.b, { units: 0 })?.x as number[];
         expect(inconsistency(model, cand, evaluate(sys, x))).toMatch(/held/);
         expect(excessAt(cones(model, cand, sys), x)).toBeGreaterThan(0);
+    });
+
+    it("accepts the forces the convex solve settles on a held ball's limit", () => {
+        // Blue pushes red, which leans on yellow; both are held at the edge of their resistance, so the static forces
+        // are not unique and the minimum-norm forces lie on a held ball's cone to rounding. Its cone must aim inside
+        // HOLD_SLACK, or inconsistency() rejects some of these holds by an ulp.
+        const contacts: RestingContact[] = [...PAIR, { a: 1, b: 2, fixed: false, friction: 0.05 }];
+        for (let k = 0; k <= 60; k++) {
+            const edge: MotionParams = { ...P, rollingDecel: 1.189268112012 + k * 1e-12 };
+            const bodies = [
+                ball(0, 0, vec3(0, 60, 0)),
+                ball(2 * R, 0, ZERO, edge),
+                ball(2 * R + 2 * R * 0.8, 2 * R * 0.6, ZERO, edge),
+            ];
+            const model = buildModel(bodies, [], contacts, GRAVITY);
+            const cand = settled(model, { balls: ["turf-sliding", "held", "held"], contacts: ["slip", "open"] });
+            const sys = assemble(model, cand, directionItems(model, cand), []);
+            const solution = solveSystem(sys.A, sys.b, { units: 0 });
+            expect(solution?.basis.length).toBeGreaterThan(0);
+            const r = solveConvex(cones(model, cand, sys), solution?.x as number[], solution?.basis ?? [], {
+                units: 0,
+            });
+            expect(r.excess, `step ${k}`).toBeLessThanOrEqual(0);
+            expect(inconsistency(model, cand, evaluate(sys, r.x)), `step ${k}`).toBeNull();
+        }
     });
 });
 ```
@@ -1629,6 +1755,12 @@ export const FOLLOW_EPSILON = 1e-9;
  * slope: 3.8e-9 rad on the bent line of design §6. A numerical tolerance.
  */
 export const HOLD_SLACK = 1e-8;
+
+/**
+ * The relaxation of held balls' cones: 2·CONVEX_SLACK inside HOLD_SLACK, so that forces the convex solve returns (which
+ * may miss their cones by up to 1.5·CONVEX_SLACK, or sit on them to rounding) pass inconsistency()'s HOLD_SLACK test.
+ */
+const HELD_CONE_SLACK = HOLD_SLACK - 2 * CONVEX_SLACK;
 
 /** Below this length the cross product of the turf normal and a contact normal has no direction. */
 const DIRECTION_GUARD = 1e-12;
@@ -1825,7 +1957,11 @@ export function settled(model: Model, cand: Candidate): Candidate {
     return {
         balls: cand.balls,
         contacts: cand.contacts.map((m, k) =>
-            isStatic(model, cand.balls, k) ? ((model.contacts[k] as RestingContact).friction > 0 ? "stick" : "slip") : m,
+            isStatic(model, cand.balls, k)
+                ? (model.contacts[k] as RestingContact).friction > 0
+                    ? "stick"
+                    : "slip"
+                : m,
         ),
     };
 }
@@ -2282,8 +2418,8 @@ function tangential(P: VectorForm, n: Vec3): Affine[] {
  * The candidate's convex conditions as cones over the unknowns (the same conditions inconsistency() checks, apart
  * from open contacts, which do not depend on the free forces): N ≥ 0, stuck forces within μN, turf loads ≥ 0, rolling
  * balls' static turf friction within μs·L, held balls' resistance and static turf friction within their limits
- * (relaxed by HOLD_SLACK), and a lifted ball not accelerating into the turf. Used by the minimum-norm choice of free
- * forces (modeSolve.ts).
+ * (relaxed by HELD_CONE_SLACK, inside inconsistency()'s HOLD_SLACK), and a lifted ball not accelerating into the
+ * turf. Used by the minimum-norm choice of free forces (modeSolve.ts).
  */
 export function cones(model: Model, cand: Candidate, sys: System): Cone[] {
     const out: Cone[] = [];
@@ -2311,8 +2447,12 @@ export function cones(model: Model, cand: Candidate, sys: System): Cone[] {
         const planar = (f: VectorForm): Affine[] => [vdot(f, e1), vdot(f, e2)];
         out.push({ u: [], v: L, slack: CONVEX_SLACK });
         if (mode === "held") {
-            out.push({ u: planar(sys.turf[i] as VectorForm), v: scaled(L, muS(body.params)), slack: HOLD_SLACK });
-            out.push({ u: planar(sys.resist[i] as VectorForm), v: scaled(L, rollCap(body.params)), slack: HOLD_SLACK });
+            out.push({ u: planar(sys.turf[i] as VectorForm), v: scaled(L, muS(body.params)), slack: HELD_CONE_SLACK });
+            out.push({
+                u: planar(sys.resist[i] as VectorForm),
+                v: scaled(L, rollCap(body.params)),
+                slack: HELD_CONE_SLACK,
+            });
         } else if (mode === "turf-rolling" || mode === "released") {
             out.push({ u: planar(sys.turf[i] as VectorForm), v: scaled(L, muS(body.params)), slack: CONVEX_SLACK });
         }
@@ -2324,8 +2464,10 @@ export function cones(model: Model, cand: Candidate, sys: System): Cone[] {
 - [ ] **Step 4: Run the tests to verify they pass**
 
 Run: `npx vitest run tests/engine/contactModel.test.ts` then `npm run lint` and `npm run check`
-Expected: all pass. The closed-form numbers are exact to the digits given; if one disagrees, re-check the assembly
-against the module comment's equations before touching a number, and report.
+Expected: all 12 pass (pre-flight: 237 in the whole suite). The closed-form numbers are exact to the digits given; if
+one disagrees, re-check the assembly against the module comment's equations before touching a number, and report.
+The held-limit sweep fails without `HELD_CONE_SLACK` (step 21: `held ball 1 beyond its resistance`, by one rounding
+error past `HOLD_SLACK`).
 
 - [ ] **Step 5: Commit**
 
@@ -2348,7 +2490,11 @@ Newton's unknowns are one angle φ_j per direction item, d_j = cos φ_j·e1 + si
 is one linear solve A(φ)·x = b(φ), linear in each d_j. The residual r_j = (d_j turned by +90°)·w_j(x) is zero when the
 followed quantity w_j (a released ball's acceleration, a turf slip rate, a contact slip rate) is parallel to d_j; the
 exact Jacobian is dx/dφ_k = A⁻¹·(∂b_k − ∂A_k·x), dr_j/dφ_k = −δ_jk·(d_j·w_j) + p_j·W_j·dx/dφ_k. A root is accepted only
-if every d_j·w_j > FOLLOW_EPSILON and |sin(d_j, w_j)| ≤ FOLLOW_EPSILON.
+if every d_j·w_j > FOLLOW_EPSILON and |sin(d_j, w_j)| ≤ FOLLOW_EPSILON (Task 7 replaces the sine test with
+`ALIGN_TOLERANCE` above `RESIDUAL_FLOOR`). A Newton run stops, not converged, as soon as some |w_j| ≤ FOLLOW_EPSILON:
+the residual vanishes with w_j, so the run has fallen into the merit's spurious root at w_j = 0, which the acceptance
+test rejects anyway. Without this exit the search's line searches spend most of their work there (pre-flight: a
+bent-60° push cost 19.4 million work units instead of 1.17 million).
 
 **Files:**
 - Create: `src/engine/modeSolve.ts`
@@ -2460,7 +2606,7 @@ describe("solveCandidate", () => {
         expect(out.ev?.spin[0]?.y).toBeCloseTo(23.078282679409, 9);
     });
 
-    it("releases the middle ball of a line bent by 60° and slips its contact with the held end (two directions)", () => {
+    it("releases the middle ball of a line bent by 60° and slips its contact with the held end (2 directions)", () => {
         // Ball 1 rolls along (cos 30°, −sin 30°); its contact with ball 2 starts to slip the same way. With
         // B = [(1 − μ)(cos 30° − μ/2) − kμ]/(1 + μ·μs): a = (B·SLIDE − k·g)/(7/(5·cos 30°) + B), x₁ = (a, −a·tan 30°).
         const model = chain(1.5, Math.PI / 3);
@@ -2701,7 +2847,13 @@ interface Run {
 }
 
 /** One residual-merit Newton run from the given angles. */
-function newton(model: Model, cand: Candidate, items: readonly DirectionItem[], start: readonly number[], work: Work): Run {
+function newton(
+    model: Model,
+    cand: Candidate,
+    items: readonly DirectionItem[],
+    start: readonly number[],
+    work: Work,
+): Run {
     let phi = [...start];
     let point = pointAt(model, cand, items, phi, work);
     const done = (converged: boolean): Run => ({
@@ -2719,6 +2871,12 @@ function newton(model: Model, cand: Candidate, items: readonly DirectionItem[], 
     let base: System | null = null;
     for (let iteration = 0; iteration < NEWTON_ITERATIONS; iteration++) {
         const p: Point = point;
+        if (p.w.some((w) => length(w) <= FOLLOW_EPSILON)) {
+            // forward() rejects a point whose followed rate is this small (d·w ≤ |w| ≤ FOLLOW_EPSILON). The residual
+            // r_j = p_j·w_j vanishes with w_j, so the run has fallen into the merit's spurious root at w_j = 0, not one
+            // forward() can accept: stop it here and leave the root to the remaining starts.
+            return done(false);
+        }
         const J = items.map(() => new Array<number>(items.length).fill(0));
         if (p.nullDim > 0) {
             // x(φ) is the minimum-norm choice here, so differentiate numerically.
@@ -2761,8 +2919,7 @@ function newton(model: Model, cand: Candidate, items: readonly DirectionItem[], 
                 for (let j = 0; j < items.length; j++) {
                     const pj = direction((phi[j] as number) + Math.PI / 2, items[j] as DirectionItem);
                     const dw = vectorLinear(p.sys.follow[j] as VectorForm, dx);
-                    (J[j] as number[])[k] =
-                        dot(pj, dw) - (j === k ? dot(p.d[j] as Vec3, p.w[j] as Vec3) : 0);
+                    (J[j] as number[])[k] = dot(pj, dw) - (j === k ? dot(p.d[j] as Vec3, p.w[j] as Vec3) : 0);
                 }
             }
         }
@@ -2945,7 +3102,8 @@ export function solveCandidate(
     const back = items.findIndex(
         (_, j) => dot(directions[j] as Vec3, vectorValue(sys.follow[j] as VectorForm, solved.x)) <= FOLLOW_EPSILON,
     );
-    const bad = back >= 0 ? `direction ${back} not followed after the forces were settled` : inconsistency(model, cand, ev);
+    const bad =
+        back >= 0 ? `direction ${back} not followed after the forces were settled` : inconsistency(model, cand, ev);
     return {
         ok: bad === null,
         failure: bad === null ? "none" : "inconsistent",
@@ -2974,9 +3132,8 @@ export function fallbackSlip(model: Model, cand: Candidate, work: Work): Candida
     const onset = (kind: DirectionItem["kind"], index: number): boolean =>
         items.some((it) => it.kind === kind && it.index === index);
     const stuck = settled(model, {
-        balls: cand.balls.map(
-            (m, i): BallMode =>
-                onset("turf-onset", i) ? (model.classes[i] === "rolling" ? "turf-rolling" : "held") : m,
+        balls: cand.balls.map((m, i): BallMode =>
+            onset("turf-onset", i) ? (model.classes[i] === "rolling" ? "turf-rolling" : "held") : m,
         ),
         contacts: cand.contacts.map((m, k): ContactMode => (onset("contact-onset", k) ? "stick" : m)),
     });
@@ -3022,8 +3179,9 @@ export function fallbackSlip(model: Model, cand: Candidate, work: Work): Candida
 - [ ] **Step 4: Run the tests to verify they pass**
 
 Run: `npx vitest run tests/engine/modeSolve.test.ts` then `npm run lint` and `npm run check`
-Expected: all pass. A direction test failing with `no converged forward root` means a start or the scan is wrong, not
-the numbers: compare with the prototype's `newton` and `solveCandidate` (described above) before changing anything.
+Expected: all 6 pass (pre-flight: 243 in the whole suite). A direction test failing with `no converged forward root`
+means a start or the scan is wrong, not the numbers: compare with the prototype's `newton` and `solveCandidate`
+(described above) before changing anything.
 
 - [ ] **Step 5: Commit**
 
@@ -3039,14 +3197,18 @@ git commit -m "Solve friction candidates with Newton on their unknown directions
 
 Design §4 steps 2, 3, 6 and 7. The proposal is P2a.1's frictionless guide (decided 2026-10-02): projected dual
 ascent on the contact forces of the whole group with each resting ball's static resistance included, from which the
-released balls, the coupled contacts and seed directions are read. A coupled contact that is not slipping is proposed
+released balls, the coupled contacts and seed directions are read. A contact onset is seeded with the contact points'
+relative acceleration (x_a − x_b) + R·(α_a + α_b) × n, a rolling or released ball's spin following its guide
+acceleration (R·α = normal × x): without the spin a line pushed straight has no tangential guess, though its contacts
+slip vertically. A coupled contact that is not slipping is proposed
 stuck, one that is slipping (or frictionless) slipping. Hold first means every candidate with every resting ball held
 comes before any that releases one: the proposal with its resting balls held, then the same enumeration as the search
 with the resting balls kept held. Then the proposal, then the search: every item (a ball with more than one mode;
 every contact) lazily, fewest departures from the proposal first and then in lexicographic order of the modes'
 ranks, skipping a contact between bodies held in that candidate (settled() fixes it). Lift-off is derived, not
 enumerated: a solved candidate with low loads (`lowLoad`) is followed at once by the same candidate with those balls
-airborne. The search stops at `MODE_SEARCH_LIMIT` candidates or when the budget is spent.
+airborne. The search stops at `MODE_SEARCH_LIMIT` candidates (checked in `attempt()` before every solve, the
+proposal and lifted retries included, so the cap is a hard bound) or when the budget is spent.
 
 **Files:**
 - Modify: `src/engine/modeSolve.ts` (append)
@@ -3067,7 +3229,8 @@ airborne. The search stops at `MODE_SEARCH_LIMIT` candidates or when the budget 
 - [ ] **Step 1: Write the failing tests**
 
 Append to `tests/engine/modeSolve.test.ts` (and add `holdExcess`, `propose`, `solveGroup` to the import from
-`modeSolve`, and `directionItems` to the import from `contactModel`):
+`modeSolve`, and `directionItems` to the import from `contactModel`). The cost-regression test pins Task 5's
+dead-rate Newton exit: the bent-60° push measures about 1.17 million work units with it and 19.4 million without.
 
 ```ts
 describe("propose", () => {
@@ -3133,6 +3296,32 @@ describe("solveGroup", () => {
         expect(bent.outcome?.ev?.accel[1]?.x).toBeCloseTo(0.095769964237268, 12);
     });
 
+    it("releases a bent line without running Newton on at a zero followed rate (cost regression)", () => {
+        // The cross-check's bent-60° push on the standard turf (μs 0.3, μr 0.05). Its search meets candidates whose
+        // only roots have a followed rate of zero, which forward() rejects. Measured: about 1.17 million units; 19.4
+        // million when Newton ran on at those roots, halving its step ARMIJO_HALVINGS times per iteration.
+        const p: MotionParams = { radius: R, slidingDecel: 0.3 * G, rollingDecel: 0.05 * G, gravity: G };
+        const bend = Math.PI / 3;
+        const model = buildModel(
+            [
+                body(vec3(0, 0, R), vec3(0, 60, 0), p),
+                body(vec3(2 * R, 0, R), ZERO, p),
+                body(vec3(2 * R + 2 * R * Math.cos(bend), 2 * R * Math.sin(bend), R), ZERO, p),
+            ],
+            [],
+            LINE,
+            GRAVITY,
+        );
+        const w = work();
+        const g = solveGroup(model, w, Infinity);
+        expect(g.kind).toBe("exact");
+        expect(g.outcome?.cand).toEqual({
+            balls: ["turf-sliding", "released", "released"],
+            contacts: ["slip", "slip"],
+        });
+        expect(w.units).toBeLessThan(3_000_000);
+    });
+
     it("lifts a ball off the turf when friction takes its load", () => {
         const contacts: RestingContact[] = [{ a: 0, b: 1, fixed: false, friction: 4 }];
         const model = buildModel(
@@ -3185,19 +3374,20 @@ describe("solveGroup", () => {
 - [ ] **Step 2: Run the tests to verify they fail**
 
 Run: `npx vitest run tests/engine/modeSolve.test.ts`
-Expected: FAIL (`propose` and `solveGroup` are not exported).
+Expected: FAIL (`propose` and `solveGroup` are not exported: 12 failures, `propose is not a function` /
+`solveGroup is not a function` / `holdExcess is not a function`; the 6 Task 5 tests still pass).
 
 - [ ] **Step 3: Implement**
 
 Extend `src/engine/modeSolve.ts`'s imports: add `excessAt` from `./convexSolve`; `ACCELERATION_EPSILON`,
 `ROLLING_WEIGHT`, `ballOptions`, `candidateKey`, `contactOptions`, `isStatic`, `lowLoad`, `type ContactBody` and
-`type RestingContact` from `./contactModel`; `add` from `./math/vec3`; and `import type { MotionPhase } from "./types";`.
-Then append:
+`type RestingContact` from `./contactModel`; `add` and `cross` from `./math/vec3`; and
+`import type { MotionPhase } from "./types";`. Then append:
 
 ```ts
 /**
  * Candidates the group search may solve before giving up (design §4 step 6). The worst measured over 20,000 random
- * four-ball clusters with obstacles was 183; the cap leaves room above that and bounds the search where it has none.
+ * four-ball clusters with obstacles was 209; the cap leaves room above that and bounds the search where it has none.
  */
 export const MODE_SEARCH_LIMIT = 1024;
 
@@ -3217,8 +3407,8 @@ export interface Proposal {
  * P2a.1's frictionless solve of the whole group, as the proposal (design §4 step 3, the μ = 0 limit). With each resting
  * ball's static resistance included, the accelerations minimise Σᵢ ½·wᵢ·|xᵢ − fᵢ|² + Σᵢ cᵢ·|xᵢ| subject to no contact
  * converging; its dual over contact forces N ≥ 0 is smooth: for given N each ball's acceleration is the soft threshold
- * xᵢ = shrink(fᵢ + gᵢ/wᵢ, cᵢ/wᵢ) of its free acceleration plus the contact push gᵢ = Σₖ Nₖ·Jₖᵢ, and the dual gradient is
- * −J·x. Projected gradient ascent with step 1/L (L ≥ largest row sum of J·W⁻¹·Jᵀ, at most 2·contacts) converges. A
+ * xᵢ = shrink(fᵢ + gᵢ/wᵢ, cᵢ/wᵢ) of its free acceleration plus the contact push gᵢ = Σₖ Nₖ·Jₖᵢ, and the dual gradient
+ * is −J·x. Projected gradient ascent with step 1/L (L ≥ largest row sum of J·W⁻¹·Jᵀ, at most 2·contacts) converges. A
  * resting ball whose soft threshold is not zero is released; a contact with force touching a moving ball is coupled.
  */
 export function propose(model: Model): Proposal {
@@ -3303,9 +3493,19 @@ export function propose(model: Model): Proposal {
     const seed = (it: DirectionItem): Vec3 => {
         let guess: Vec3;
         if (it.kind === "contact-onset") {
+            // The contact points' relative acceleration (x_a − x_b) + R·(α_a + α_b) × n, with a rolling ball's spin
+            // following its acceleration (R·α = normal × x). Without the spin a line pushed straight has no tangential
+            // guess, though its contacts slip vertically.
             const c = contacts[it.index] as RestingContact;
             const n = (geometry[it.index] as ContactGeometry).n;
-            const g = sub(x[c.a] as Vec3, c.fixed ? ZERO : (x[c.b] as Vec3));
+            const spin = (i: number): Vec3 =>
+                balls[i] === "released" || balls[i] === "turf-rolling"
+                    ? cross((bodies[i] as ContactBody).turfNormal, x[i] as Vec3)
+                    : ZERO;
+            const g = add(
+                sub(x[c.a] as Vec3, c.fixed ? ZERO : (x[c.b] as Vec3)),
+                cross(add(spin(c.a), c.fixed ? ZERO : spin(c.b)), n),
+            );
             guess = sub(g, scale(n, dot(g, n)));
         } else {
             guess = x[it.index] as Vec3;
@@ -3346,12 +3546,7 @@ interface SearchItem {
  * candidate with fewer departures. With `holdResting`, every ball at rest keeps the proposal's mode (the hold-first
  * phase, whose proposal holds them all).
  */
-function* departing(
-    model: Model,
-    proposal: Candidate,
-    departures: number,
-    holdResting: boolean,
-): Generator<Candidate> {
+function* departing(model: Model, proposal: Candidate, departures: number, holdResting: boolean): Generator<Candidate> {
     const items: SearchItem[] = [
         ...model.classes.flatMap((c, i) => (ballOptions(c).length > 1 ? [{ kind: "ball" as const, index: i }] : [])),
         ...model.contacts.map((_, k) => ({ kind: "contact" as const, index: k })),
@@ -3440,12 +3635,18 @@ export function solveGroup(model: Model, work: Work, budget: number, hooks: Solv
         excess,
         slipBalls: [],
     });
-    /** Solves a candidate unless it was solved already; "budget" once the budget is spent. */
-    const attempt = (raw: Candidate): CandidateOutcome | "budget" | null => {
+    /**
+     * Solves a candidate unless it was solved already; "cap" once MODE_SEARCH_LIMIT candidates have been solved,
+     * "budget" once the budget is spent.
+     */
+    const attempt = (raw: Candidate): CandidateOutcome | "cap" | "budget" | null => {
         const cand = settled(model, raw);
         const key = candidateKey(cand);
         if (seen.has(key)) {
             return null;
+        }
+        if (state.tried >= MODE_SEARCH_LIMIT) {
+            return "cap";
         }
         if (work.units >= budget) {
             return "budget";
@@ -3484,6 +3685,9 @@ export function solveGroup(model: Model, work: Work, budget: number, hooks: Solv
     /** Tries `base`, then every candidate departing from it, in order; a decision, or null when none is consistent. */
     const phase = (base: Candidate, holdResting: boolean): GroupSolution | null => {
         const first = attempt(base);
+        if (first === "cap") {
+            return null;
+        }
         if (first === "budget") {
             return hold("budget-hold", 0);
         }
@@ -3492,10 +3696,10 @@ export function solveGroup(model: Model, work: Work, budget: number, hooks: Solv
         }
         for (let departures = 1; departures <= itemCount; departures++) {
             for (const cand of departing(model, base, departures, holdResting)) {
-                if (state.tried >= MODE_SEARCH_LIMIT) {
+                const out = attempt(cand);
+                if (out === "cap") {
                     return null;
                 }
-                const out = attempt(cand);
                 if (out === "budget") {
                     return hold("budget-hold", 0);
                 }
@@ -3574,8 +3778,11 @@ export function holdExcess(model: Model, work: Work): number {
 - [ ] **Step 4: Run the tests to verify they pass**
 
 Run: `npx vitest run tests/engine/modeSolve.test.ts` then `npm run lint` and `npm run check`
-Expected: all pass. `tried` counts are part of the contract (hold first, then the proposal); if the line-push test
-finds a different candidate first, report which before changing the order.
+Expected: all 18 pass (pre-flight: 255 in the whole suite). `tried` counts are part of the contract (hold first,
+then the proposal): topspin 3, weak push 1, bent 30° 1; the line push is found after 6 (the proposal fails its
+direction solve, then the one-departure candidates in rank order reach both contacts slipping). If the line-push test
+finds a different candidate first, report which before changing the order. The cost-regression test measures about
+1,170,910 work units.
 
 - [ ] **Step 5: Commit**
 
@@ -3599,14 +3806,30 @@ every simulation test must pass unchanged: the new solver at μ = 0 must reprodu
 visible even at μ = 0, and only in `push.test.ts`: a ball on the turf pushed by an inclined normal (a ball in flight
 leaning on it) now feels the load and the ê weighting of spec §5, so P2a.1's lean closed form is re-derived.
 
+The new solver must also decide every limit of holding P2a.1 decided, and the random four-ball clusters must all solve
+exactly. Pre-flight found five things the Task 4–6 code misses there (Step 6): `FOLLOW_EPSILON` must fall to 1e-12,
+because a ball released together with another just past their common limit moves at a rate of order the other's
+squared (about 1e-10 m/s² on P2a.1's bent chain); alignment is tested to `ALIGN_TOLERANCE` (sine 1e-9) above a
+`RESIDUAL_FLOOR` of 1e-15 m/s², and a Newton run whose residual is at that floor has converged; once the whole search
+fails, the hold-first candidate stands if it holds within `NEAR_HOLD_SLACK` (2·`HOLD_SLACK`: a rounding-width sliver
+at a simultaneous-release limit); a ball the guide holds but a candidate releases is seeded along the guide's push on
+it; and the cheap starts add the seed with each direction reversed alone. In `push.ts`, a group that falls back
+first takes every contact its held balls touch (an upright behind a ball that cannot hold alone never converges
+while the fallback holds the ball).
+
 **Files:**
 - Replace: `src/engine/push.ts`
 - Modify: `src/engine/simulate.ts` (`restingComponent`, `solveComponent`, `settle`)
+- Modify: `src/engine/contactModel.ts` (`FOLLOW_EPSILON`, `inconsistency`'s held-limit relaxation)
+- Modify: `src/engine/modeSolve.ts` (alignment, Newton's floor, near hold, seeds, starts)
 - Create: `tests/engine/support/clusters.ts`
 - Replace: `tests/engine/push.test.ts`
 
 **Interfaces:**
 - Consumes: Tasks 4–6.
+- Changes (Task 4–6 modules): `FOLLOW_EPSILON = 1e-12`; `inconsistency(model, cand, ev, holdSlack = HOLD_SLACK)`;
+  `modeSolve.ts` gains private `ALIGN_TOLERANCE = 1e-9`, `RESIDUAL_FLOOR = 1e-15`, `NEAR_HOLD_SLACK = 2·HOLD_SLACK`,
+  and `solveGroup` may return `exact` with the hold-first candidate when it holds within `NEAR_HOLD_SLACK`.
 - Produces (from `push.ts`):
   - Re-exports `ACCELERATION_EPSILON`, `FOLLOW_EPSILON`, `HOLD_SLACK` and the types `ContactBody`, `ContactMode`,
     `RestingContact`; keeps `RESTING_SPEED`, `DIRECTION_TOLERANCE`, `SEPARATION_TOLERANCE`, `RestingMember`,
@@ -3781,7 +4004,8 @@ export function randomCluster(random: () => number): Cluster | null {
         bodies.forEach((_, i) => {
             let w = rollingSpin(v, 0, R);
             if (i === 0) {
-                const axis = Math.hypot(v.x, v.y) > 1e-6 ? cross(vec3(0, 0, 1), v) : vec3(-Math.sin(angle), Math.cos(angle), 0);
+                const axis =
+                    Math.hypot(v.x, v.y) > 1e-6 ? cross(vec3(0, 0, 1), v) : vec3(-Math.sin(angle), Math.cos(angle), 0);
                 w = add(w, scale(normalize(axis), uni(10, 60)));
             }
             set(i, v, w);
@@ -3865,7 +4089,7 @@ const UP = vec3(0, 0, 1);
 const GRAVITY = vec3(0, 0, -G);
 const MU = 0.05;
 const C30 = Math.sqrt(3) / 2;
-const SLOW = Boolean(process.env.SLOW_TESTS);
+const SLOW = Boolean(import.meta.env.SLOW_TESTS);
 
 function body(state: BallState, params: MotionParams = P): ContactBody {
     return { state, params, turfNormal: UP, pivotCapacity: Infinity };
@@ -4138,7 +4362,8 @@ describe("resting chains", () => {
             const held = solveRestingContacts(chain(1.5, Math.PI / 6), [], line(0));
             expect(exact(held)).toBe(true);
             expect(held.members[1]?.phase).toBe("stationary");
-            // Ball 1 slides along ball 2 perpendicular to n12: a = (SLIDE·cos30° − (7/5)·ROLL₁)/((7/5)/cos30° + cos30°).
+            // Ball 1 slides along ball 2 perpendicular to n12:
+            // a = (SLIDE·cos30° − (7/5)·ROLL₁)/((7/5)/cos30° + cos30°).
             const roll = 1.5;
             const s = solveRestingContacts(chain(roll, Math.PI / 3), [], line(0));
             expect(exact(s)).toBe(true);
@@ -4174,7 +4399,12 @@ describe("resting chains", () => {
                 const drive = random() * 2 * Math.PI;
                 const toB = drive + (random() - 0.5) * 2;
                 const toC = toB + (random() - 0.5) * 2;
-                const p: MotionParams = { radius: R, slidingDecel: SLIDE, rollingDecel: 0.2 + random() * 2.3, gravity: G };
+                const p: MotionParams = {
+                    radius: R,
+                    slidingDecel: SLIDE,
+                    rollingDecel: 0.2 + random() * 2.3,
+                    gravity: G,
+                };
                 const b = vec3(2 * R * Math.cos(toB), 2 * R * Math.sin(toB), R);
                 const cc = vec3(b.x + 2 * R * Math.cos(toC), b.y + 2 * R * Math.sin(toC), R);
                 const spin = vec3(-Math.sin(drive) * 60, Math.cos(drive) * 60, 0);
@@ -4210,7 +4440,9 @@ describe("resting chains", () => {
                         const d = m.push.direction;
                         const along = dot(x, d);
                         expect(along).toBeGreaterThan(0);
-                        expect(Math.abs(x.x * d.y - x.y * d.x)).toBeLessThanOrEqual(DIRECTION_TOLERANCE * along + 1e-15);
+                        expect(Math.abs(x.x * d.y - x.y * d.x)).toBeLessThanOrEqual(
+                            DIRECTION_TOLERANCE * along + 1e-15,
+                        );
                     } else {
                         const x = m?.push?.acceleration ?? ZERO;
                         expect(Math.abs(x.x) + Math.abs(x.y)).toBeLessThan(1e-12);
@@ -4419,8 +4651,17 @@ describe("limits of holding with friction (design §6)", () => {
         // N = μs·g/(2(cos 30° + μ·μs)), μs = 0.3.
         const limit = 1.1234083693595;
         for (const offset of OFFSETS) {
-            const p: MotionParams = { radius: R, slidingDecel: 0.3 * G, rollingDecel: limit * (1 + offset), gravity: G };
-            const bodies = [ball(0, 0, ZERO, vec3(0, 60, 0), p), ball(2 * R * C30, -R, ZERO, ZERO, p), ball(2 * R * C30, R, ZERO, ZERO, p)];
+            const p: MotionParams = {
+                radius: R,
+                slidingDecel: 0.3 * G,
+                rollingDecel: limit * (1 + offset),
+                gravity: G,
+            };
+            const bodies = [
+                ball(0, 0, ZERO, vec3(0, 60, 0), p),
+                ball(2 * R * C30, -R, ZERO, ZERO, p),
+                ball(2 * R * C30, R, ZERO, ZERO, p),
+            ];
             const contacts: RestingContact[] = [
                 { a: 0, b: 1, fixed: false, friction: MU },
                 { a: 0, b: 2, fixed: false, friction: MU },
@@ -4464,7 +4705,7 @@ describe("random clusters with friction", () => {
         () => {
             const random = rng(43);
             let worst = 0;
-            for (let made = 0; made < CLUSTERS; ) {
+            for (let made = 0; made < CLUSTERS;) {
                 const c = randomCluster(random);
                 if (!c) {
                     continue;
@@ -4478,43 +4719,47 @@ describe("random clusters with friction", () => {
         },
     );
 
-    it("never pulls, keeps friction in its cone and against the slip, and never adds energy", { timeout: 60_000 }, () => {
-        const random = rng(47);
-        for (let made = 0; made < 150; ) {
-            const c = randomCluster(random);
-            if (!c) {
-                continue;
-            }
-            made++;
-            const model = buildModel(c.bodies, c.axes, c.contacts, GRAVITY);
-            const g = solveGroup(model, { units: 0 }, Infinity);
-            expect(g.kind, c.label).toBe("exact");
-            const out = g.outcome as CandidateOutcome;
-            const ev = out.ev as Evaluated;
-            c.contacts.forEach((k, q) => {
-                if (out.cand.contacts[q] === "open") {
-                    return;
+    it(
+        "never pulls, keeps friction in its cone and against the slip, and never adds energy",
+        { timeout: 60_000 },
+        () => {
+            const random = rng(47);
+            for (let made = 0; made < 150;) {
+                const c = randomCluster(random);
+                if (!c) {
+                    continue;
                 }
-                const geometry = model.geometry[q] as ContactGeometry;
-                const P = ev.force[q] as Vec3;
-                const N = dot(P, geometry.n);
-                const T = sub(P, scale(geometry.n, N));
-                expect(N, c.label).toBeGreaterThanOrEqual(-1e-9);
-                expect(length(T), c.label).toBeLessThanOrEqual(k.friction * N + 1e-9);
-                // T acts on b; a's contact point slips (or starts to slip) along `slip` relative to b's, so T·slip ≥ 0
-                // means friction opposes the slip and does no positive work.
-                const slip = geometry.slipping ? geometry.slip : (ev.relative[q] as Vec3);
-                expect(dot(T, slip), c.label).toBeGreaterThanOrEqual(-1e-9);
-            });
-            let power = 0;
-            c.bodies.forEach((b, i) => {
-                power +=
-                    dot(b.state.velocity, ev.accel[i] as Vec3) +
-                    0.4 * R * R * dot(b.state.angularVelocity, ev.spin[i] as Vec3);
-            });
-            expect(power, c.label).toBeLessThanOrEqual(1e-9);
-        }
-    });
+                made++;
+                const model = buildModel(c.bodies, c.axes, c.contacts, GRAVITY);
+                const g = solveGroup(model, { units: 0 }, Infinity);
+                expect(g.kind, c.label).toBe("exact");
+                const out = g.outcome as CandidateOutcome;
+                const ev = out.ev as Evaluated;
+                c.contacts.forEach((k, q) => {
+                    if (out.cand.contacts[q] === "open") {
+                        return;
+                    }
+                    const geometry = model.geometry[q] as ContactGeometry;
+                    const P = ev.force[q] as Vec3;
+                    const N = dot(P, geometry.n);
+                    const T = sub(P, scale(geometry.n, N));
+                    expect(N, c.label).toBeGreaterThanOrEqual(-1e-9);
+                    expect(length(T), c.label).toBeLessThanOrEqual(k.friction * N + 1e-9);
+                    // T acts on b; a's contact point slips (or starts to slip) along `slip` relative to b's, so
+                    // T·slip ≥ 0 means friction opposes the slip and does no positive work.
+                    const slip = geometry.slipping ? geometry.slip : (ev.relative[q] as Vec3);
+                    expect(dot(T, slip), c.label).toBeGreaterThanOrEqual(-1e-9);
+                });
+                let power = 0;
+                c.bodies.forEach((b, i) => {
+                    power +=
+                        dot(b.state.velocity, ev.accel[i] as Vec3) +
+                        0.4 * R * R * dot(b.state.angularVelocity, ev.spin[i] as Vec3);
+                });
+                expect(power, c.label).toBeLessThanOrEqual(1e-9);
+            }
+        },
+    );
 
     it("mirrors a mirrored cluster and is bit-identical across runs", () => {
         const random = rng(53);
@@ -4526,12 +4771,16 @@ describe("random clusters with friction", () => {
                     position: vec3(b.state.position.x, -b.state.position.y, b.state.position.z),
                     velocity: vec3(b.state.velocity.x, -b.state.velocity.y, b.state.velocity.z),
                     // Reflecting y flips the pseudovector's x and z components.
-                    angularVelocity: vec3(-b.state.angularVelocity.x, b.state.angularVelocity.y, -b.state.angularVelocity.z),
+                    angularVelocity: vec3(
+                        -b.state.angularVelocity.x,
+                        b.state.angularVelocity.y,
+                        -b.state.angularVelocity.z,
+                    ),
                 },
             })),
             axes: c.axes.map((a) => vec3(a.x, -a.y, a.z)),
         });
-        for (let made = 0; made < 40; ) {
+        for (let made = 0; made < 40;) {
             const c = randomCluster(random);
             if (!c) {
                 continue;
@@ -4714,7 +4963,7 @@ describe("clusters at the limit of holding (μ = 0, P2a.1's fixtures)", () => {
         const random = rng(11);
         let solves = 0;
         let limits = 0;
-        for (let made = 0; made < 16; ) {
+        for (let made = 0; made < 16;) {
             const shape = randomFixture(random, 1);
             if (!shape) {
                 continue;
@@ -4766,7 +5015,7 @@ describe("clusters at the limit of holding (μ = 0, P2a.1's fixtures)", () => {
         let moved = 0;
         let released = 0;
         let held = 0;
-        for (let made = 0; made < 300; ) {
+        for (let made = 0; made < 300;) {
             const c = randomFixture(random, 0.2 + random() * 2.3);
             if (!c) {
                 continue;
@@ -5228,9 +5477,17 @@ function frictionMember(model: Model, out: CandidateOutcome, j: number): Resting
         case "held":
             return { state: s, phase: "stationary", push: still };
         case "released":
-            return { state: s, phase: "rolling", push: { acceleration, angularAcceleration, direction: itemDirection("release") } };
+            return {
+                state: s,
+                phase: "rolling",
+                push: { acceleration, angularAcceleration, direction: itemDirection("release") },
+            };
         case "turf-rolling":
-            return { state: s, phase: "rolling", push: { acceleration, angularAcceleration, direction: model.frozen[j] as Vec3 } };
+            return {
+                state: s,
+                phase: "rolling",
+                push: { acceleration, angularAcceleration, direction: model.frozen[j] as Vec3 },
+            };
         case "turf-sliding": {
             const direction = model.classes[j] === "sliding" ? (model.frozen[j] as Vec3) : itemDirection("turf-onset");
             return { state: s, phase: "sliding", push: { acceleration, angularAcceleration, direction } };
@@ -5450,7 +5707,14 @@ function solveContacts(
             }
         }
 
-        const added = contacts.map((_, k) => !kept[k] && converging(states, acceleration, k));
+        // A group with no exact solution may need a contact its held balls only touch (an upright behind a ball that
+        // cannot hold alone), which never converges while the fallback holds them: it takes every such contact before
+        // its fallback stands.
+        const widened = (k: number): boolean => {
+            const c = contacts[k] as RestingContact;
+            return !toNearestHold && (approximate[c.a] === true || (!c.fixed && approximate[c.b] === true));
+        };
+        const added = contacts.map((_, k) => !kept[k] && (converging(states, acceleration, k) || widened(k)));
         if (!added.includes(true)) {
             return {
                 members,
@@ -5606,19 +5870,207 @@ function solveComponent(sim: Simulation, component: Component, now: number): Res
 4. In `settle`, call `solveComponent(sim, component, now)` and replace `if (solution.coupled[k]) {` with
    `if (solution.modes[k] !== "open") {`.
 
-- [ ] **Step 6: Run the tests to verify they pass**
+- [ ] **Step 6: Decide limits of holding as P2a.1 did (`contactModel.ts`, `modeSolve.ts`)**
 
-Run: `npx vitest run tests/engine/push.test.ts` then `npm test`, `npm run lint`, `npm run check`
-Expected: all pass, the simulation suites unchanged (μ = 0 there). If a simulation test fails, compare the failing
-group's P2a.1 and new solutions at μ = 0 before changing anything: they must agree except for a ball on the turf
-loaded through an inclined normal. The slow cap measurement is `SLOW_TESTS=1 npx vitest run tests/engine/push.test.ts
--t "random four-ball"`; run it once and record the worst `searched` in the commit message.
+Without these, the bent fixture fails `exact` at all three rolls, "neither arrests nor falls back" falls back on 642
+of its 2,856 solves, and the random four-ball clusters leave 11 of 20,000 inexact (all search misses: each has a
+consistent candidate the search tried and failed).
 
-- [ ] **Step 7: Commit**
+In `src/engine/contactModel.ts`:
+
+1. Replace `FOLLOW_EPSILON` and its comment:
+
+```ts
+/**
+ * A direction solve's root is accepted only if the quantity the direction must follow has more than this (m/s²) along
+ * it (and is aligned with it: modeSolve.ts). Without it, spurious roots with |w| ≈ 1e-15 release balls that hold. It is
+ * far below HOLD_SLACK because a ball released together with another just past their common limit of holding moves at
+ * a rate of order the other's squared (about 1e-10 m/s² on P2a.1's bent chain), while holding it alone misses by far
+ * more than HOLD_SLACK. A numerical tolerance.
+ */
+export const FOLLOW_EPSILON = 1e-12;
+```
+
+2. Replace `HOLD_SLACK` and its comment (its claim that no configuration near a limit is rejected both ways holds for
+   one ball only, not for two releasing together):
+
+```ts
+/**
+ * Held balls' limits are relaxed by this (m/s²). It is at least 7/5·FOLLOW_EPSILON, so no single ball near a limit
+ * of holding is rejected both as held and as released (two releasing together can be: modeSolve.ts NEAR_HOLD_SLACK).
+ * Its effect on a limit is HOLD_SLACK divided by the margin's slope: 3.8e-9 rad on the bent line of design §6. A
+ * numerical tolerance.
+ */
+export const HOLD_SLACK = 1e-8;
+```
+
+3. Make `inconsistency()`'s held-limit relaxation a parameter. Replace its comment and signature with
+
+```ts
+/**
+ * Why a solved candidate is not consistent, or null when it is (design §4, "Consistency of a candidate"; the
+ * direction criteria are modeSolve.ts's). Every coupled N ≥ 0 and no open contact converges; a stuck contact's
+ * tangential force is within μN; a turf ball's load is positive; a held ball is within its resistance and static turf
+ * friction (each relaxed by `holdSlack`, HOLD_SLACK unless given); a rolling ball's static turf friction is within
+ * μs·L; a turf ball that left the turf does not accelerate into it.
+ */
+export function inconsistency(model: Model, cand: Candidate, ev: Evaluated, holdSlack = HOLD_SLACK): string | null {
+```
+
+   and in its two held-ball tests `rollCap(p) * L + HOLD_SLACK` becomes `rollCap(p) * L + holdSlack` and
+   `muS(p) * L + HOLD_SLACK` becomes `muS(p) * L + holdSlack`.
+
+In `src/engine/modeSolve.ts`:
+
+1. Import `HOLD_SLACK` from `./contactModel` (after `FOLLOW_EPSILON`).
+2. Add, after `NEWTON_STEP_TOLERANCE`:
+
+```ts
+/**
+ * An accepted root's direction is aligned with the quantity it follows to this sine, beyond RESIDUAL_FLOOR. A
+ * numerical tolerance.
+ */
+const ALIGN_TOLERANCE = 1e-9;
+
+/**
+ * Rounding of a direction residual (m/s²): forces of order 1 solved in double precision leave about this much. Without
+ * it, a ball released near a limit of holding (|w| below 1e-6) could never be shown aligned, nor its Newton run
+ * converged, and the configuration would be rejected both held and released. A numerical tolerance.
+ */
+const RESIDUAL_FLOOR = 1e-15;
+```
+
+3. In `newton`, after the dead-rate exit at the top of the iteration loop, add:
+
+```ts
+        if (Math.max(...p.r.map(Math.abs)) <= RESIDUAL_FLOOR) {
+            // A residual at rounding is a root: the no-descent exit below reaches this same verdict, but only after
+            // ARMIJO_HALVINGS singular solves that cannot lower a merit already at rounding.
+            return done(true);
+        }
+```
+
+   and in its `if (!next)` branch replace `return done(m0 === 0);` with
+
+```ts
+            // No step lowers the merit: a root only if the residual is already rounding. Near a limit of holding a
+            // released ball's |w| is tiny, so its angle is fixed only to rounding/|w| and the step cannot shrink.
+            return done(Math.max(...p.r.map(Math.abs)) <= RESIDUAL_FLOOR);
+```
+
+4. In `findDirections`'s `forward`, replace `Math.abs(pt.r[j] as number) <= FOLLOW_EPSILON * length(pt.w[j] as Vec3),`
+   with `Math.abs(pt.r[j] as number) <= ALIGN_TOLERANCE * length(pt.w[j] as Vec3) + RESIDUAL_FLOOR,`; and replace
+   `const cheap = tryStarts(quarters);` with
+
+```ts
+    // Then the seed with one direction reversed: the quarter turns move every direction together, so a seed right for
+    // all but one direction (one reversed, as a contact onset seeded from a ball the guide holds can be) has no start.
+    const flips = items.length > 1 ? items.map((_, k) => phi0.map((p, j) => (j === k ? p + Math.PI : p))) : [];
+    const cheap = tryStarts([...quarters, ...flips]);
+```
+
+5. After `MODE_SEARCH_LIMIT`, add:
+
+```ts
+/**
+ * Held limits' relaxation (m/s²) for the hold-first candidate once the whole search has failed. A numerical tolerance:
+ * at a limit where two balls release together, a sliver about 1e-15 wide (in rollingDecel, on P2a.1's bent chain) has
+ * holding miss by just over HOLD_SLACK and the second ball's release rate below rounding, so no candidate is
+ * consistent at HOLD_SLACK.
+ */
+const NEAR_HOLD_SLACK = 2 * HOLD_SLACK;
+```
+
+6. In `propose`, replace `accelerations` with a `drive` helper and the `accelerations` that uses it:
+
+```ts
+    // Ball i's free acceleration plus its contact push, before its static resistance is subtracted.
+    const drive = (i: number): Vec3 => {
+        const r = responses[i] as NonNullable<(typeof responses)[number]>;
+        let push = ZERO;
+        contacts.forEach((_c, k) => {
+            push = add(push, scale(row(k, i), forces[k] as number));
+        });
+        return add(r.force, scale(push, 1 / r.weight));
+    };
+    const accelerations = (): Vec3[] =>
+        bodies.map((_, i) => {
+            const r = responses[i] as NonNullable<(typeof responses)[number]>;
+            const v = drive(i);
+            const size = length(v);
+            const limit = r.threshold / r.weight;
+            return size > limit ? scale(v, (size - limit) / size) : ZERO;
+        });
+```
+
+   and in `seed` replace
+
+```ts
+        } else {
+            guess = x[it.index] as Vec3;
+        }
+```
+
+   with
+
+```ts
+        } else if (it.kind === "release" && length(x[it.index] as Vec3) === 0) {
+            // A ball the guide holds but the candidate releases starts along the push the guide puts on it: without
+            // it, every start (the guide's ball held, so ZERO) points the ball along e1 or a quarter turn of it.
+            guess = drive(it.index);
+        } else {
+            guess = x[it.index] as Vec3;
+        }
+```
+
+7. In `solveGroup`'s doc comment, replace from `(budget-hold). With nothing consistent, or the` to the end of the
+   comment with
+
+```ts
+ * (budget-hold). With nothing consistent, or the search capped at MODE_SEARCH_LIMIT, the hold-first candidate is
+ * accepted if it holds within NEAR_HOLD_SLACK; otherwise the first candidate whose only failure was its direction
+ * solve is tried with approximate-slip directions; failing that, the group is to be held (approximate-hold). The
+ * nearest hold itself is the caller's (push.ts).
+ */
+```
+
+   and in its body, between `if (searched) { return searched; }` and `const failure = state.firstFailure;`, add:
+
+```ts
+    // A rounding-width sliver at a simultaneous-release limit: holding misses by a hair over HOLD_SLACK while the
+    // second ball's release rate is below rounding, so nothing above was consistent. The hold-first candidate stands if
+    // it is consistent with its held limits relaxed by NEAR_HOLD_SLACK.
+    const nearHold = state.held;
+    if (
+        nearHold?.failure === "inconsistent" &&
+        nearHold.ev &&
+        inconsistency(model, nearHold.cand, nearHold.ev, NEAR_HOLD_SLACK) === null
+    ) {
+        return exact(nearHold);
+    }
+
+```
+
+- [ ] **Step 7: Run the tests to verify they pass**
+
+Run: `npx vitest run tests/engine/push.test.ts tests/engine/modeSolve.test.ts` then `npm test`, `npm run lint`,
+`npm run check`
+Expected: all pass (pre-flight: 271 in the whole suite; 39 in `push.test.ts`), the simulation suites unchanged (μ = 0
+there); "neither arrests nor falls back" exact on all 2,856 of its solves; the topspin push `searched` 3 at μ = 0 and
+μ = 0.05. If a simulation test fails, compare the failing group's P2a.1 and new solutions at μ = 0 before changing
+anything: they must agree except for a ball on the turf loaded through an inclined normal. The slow cap measurement
+is `SLOW_TESTS=1 npx vitest run tests/engine/push.test.ts -t "random four-ball"`; run it once and record the worst
+`searched` in the commit message (pre-flight: all 20,000 clusters exact; `searched` p50 1, p99 14, p99.9 41, max 209;
+on the final engine, work per cluster p50 1,100, p99 13.2 million, max 1.06 billion, 144 clusters over
+`SOLVE_BUDGET`).
+
+- [ ] **Step 8: Commit**
 
 ```bash
-npx prettier --write src/engine/push.ts src/engine/simulate.ts tests/engine/push.test.ts tests/engine/support/clusters.ts
-git add src/engine/push.ts src/engine/simulate.ts tests/engine/push.test.ts tests/engine/support/clusters.ts
+npx prettier --write src/engine/push.ts src/engine/simulate.ts src/engine/contactModel.ts src/engine/modeSolve.ts \
+    tests/engine/push.test.ts tests/engine/support/clusters.ts
+git add src/engine/push.ts src/engine/simulate.ts src/engine/contactModel.ts src/engine/modeSolve.ts \
+    tests/engine/push.test.ts tests/engine/support/clusters.ts
 git commit -m "Solve resting contacts with load-coupled Coulomb friction"
 ```
 
@@ -5642,6 +6094,7 @@ whose duration is their landing time; the design text is amended to match.)
 - Modify: `src/engine/simulate.ts`
 - Test: `tests/engine/motion.test.ts`, `tests/engine/simulate.test.ts`, `tests/engine/lift.test.ts`,
   `tests/engine/fuzz.test.ts`
+- Modify: `tests/engine/support/penetration.ts` (linear in segments)
 
 **Interfaces:**
 - Consumes: Task 7 (`RestingSolution`, `contactSlipDuration`).
@@ -5675,8 +6128,8 @@ with:
     it("pushes a resting ball with a ball driven by topspin (analytic case)", () => {
         // Blue's contact point slips down on red, so friction μN lifts blue and loads red (L = g ∓ μN). With
         // c = (1 − μ − kμ)/(1 + μ·μs), k = 7/5·μr: A = (c·μs − k)·g/(7/5 + c) = 0.88187361562830 until blue's turf slip
-        // ends at T = R·Ω/(A + 5/2·[μs·g + μN(1 − μs)]) = 0.32800687459199 (the contact slip would end later). Both then
-        // roll at V = A·T uncoupled — N(1 − 7/5·μ·μr) = 0 — and stop together after V²/(2·ROLL):
+        // ends at T = R·Ω/(A + 5/2·[μs·g + μN(1 − μs)]) = 0.32800687459199 (the contact slip would end later). Both
+        // then roll at V = A·T uncoupled — N(1 − 7/5·μ·μr) = 0 — and stop together after V²/(2·ROLL):
         // travel A·T²/2 + V²/(2·ROLL) = 0.13276112270857 m.
         const world = testWorld();
         const result = simulateFreeMotion(
@@ -5706,6 +6159,7 @@ with:
             undefined,
             { probe },
         );
+        expect(solves).toBeGreaterThan(0);
         expect(solves).toBeLessThanOrEqual(4);
     });
 ```
@@ -5772,7 +6226,10 @@ describe("lift-off and stick in pushes", () => {
         // airborne at z = R with upward acceleration. It must rise, not land at the instant it lifts.
         const world = testWorld({ ballBall: { restitution: 0.8, friction: 4 } });
         const result = simulateFreeMotion(
-            { blue: ballAt(5, 5, vec3(0, 0, 0), vec3(0, 60, 0)), red: ballAt(5 + 2 * R, 5, vec3(0, 0, 0), vec3(0, -80, 0)) },
+            {
+                blue: ballAt(5, 5, vec3(0, 0, 0), vec3(0, 60, 0)),
+                red: ballAt(5 + 2 * R, 5, vec3(0, 0, 0), vec3(0, -80, 0)),
+            },
             world,
         );
         expect(result.aborted).toBe(false);
@@ -5791,7 +6248,10 @@ describe("lift-off and stick in pushes", () => {
         // contact slip R·ΔΩ decays at 5μN(1 − μs), so the contact sticks at R·ΔΩ/(5μ·μs·g(1 − μs)) = 0.0893466 s, and
         // slips again when blue starts to roll (0.3778 s). They come to rest touching, at 5.001323 and 5.093323.
         const result = simulateFreeMotion(
-            { blue: ballAt(5, 5, vec3(0, 0, 0), vec3(0, 60, 0)), red: ballAt(5 + 2 * R, 5, vec3(0, 0, 0), vec3(0, -61, 0)) },
+            {
+                blue: ballAt(5, 5, vec3(0, 0, 0), vec3(0, 60, 0)),
+                red: ballAt(5 + 2 * R, 5, vec3(0, 0, 0), vec3(0, -61, 0)),
+            },
             testWorld(),
         );
         expect(result.aborted).toBe(false);
@@ -5805,17 +6265,171 @@ describe("lift-off and stick in pushes", () => {
 });
 ```
 
-(The lift-off acceleration is the planning ledger's testWorld value: red in flight with N = 3g/8 and a = (3g/8, 0, g/2).)
+(The lift-off acceleration is the planning ledger's testWorld value: red in flight with N = 3g/8 and
+a = (3g/8, 0, g/2).)
 
-In `tests/engine/fuzz.test.ts`, replace the `approximate-hold` assertion with:
+In `tests/engine/lift.test.ts`, "slides a ball off the exact top of another …": friction adds events (chatter, deferred
+to P5) and time. Replace `{ timeout: 30_000 },` with `{ timeout: 40_000 },` and replace
+
+```ts
+                        // Finite but long: at 0.003 m/s, about 703 ball–ball and 324 phase events (about 1039 in all).
+                        // The contact normal is frozen per push segment, so the pair regroups every ~1.5 mrad of the
+                        // normal's turn, each regroup followed by re-contacts, rather than bouncing freely.
+                        expect(result.events.length).toBeLessThan(2000);
+```
+
+with
+
+```ts
+                        // Finite but long. The contact normal is frozen per push segment, so the pair regroups every
+                        // ~1.5 mrad of the normal's turn, each regroup followed by re-contacts, rather than bouncing
+                        // freely: frictionless, about 1100 events. Friction adds, per regroup cycle, a stick/slip pair
+                        // of the contact (the lower ball rolls for a few microseconds as it slips), and a slip of a
+                        // few nanoseconds that sticks again at once: at 0.003 m/s about 2508 events, at most 3189 over
+                        // the sweep. Damping that chatter is deferred to P5.
+                        expect(result.events.length).toBeLessThan(4000);
+```
+
+The sweep's penetration check samples every segment boundary, and `worstPenetration` scanned every segment of a ball
+per sample: quadratic in segments, 20 s of the sweep. Replace `tests/engine/support/penetration.ts` with a version
+that walks the sorted sample times with one cursor per ball (bit-identical results, 40–90× faster):
+
+```ts
+import { horizontal, length, sub, type Vec3 } from "../../../src/engine/math/vec3";
+import { segmentState } from "../../../src/engine/sample";
+import { BALL_IDS, type Segment, type ShotResult, type World } from "../../../src/engine/types";
+import { obstaclesOf } from "../../../src/engine/world";
+
+/**
+ * Worst interpenetration (m) between balls or with obstacles, sampled every millisecond and at every segment's
+ * t0 and t1 boundaries.
+ *
+ * The sample times are visited in ascending order with one cursor per ball, so each ball's segment is found by
+ * advancing its cursor rather than by scanning all its segments (stateAtTime's rule: the last segment with t0 ≤ t).
+ * That keeps the cost linear in samples plus segments; shots with thousands of segments made the scan quadratic.
+ */
+export function worstPenetration(result: ShotResult, world: World): number {
+    const R = world.ball.radius;
+    const ids = BALL_IDS.filter((id) => result.segments[id]);
+    const obstacles = obstaclesOf(world);
+    const times: number[] = [];
+    for (let t = 0; t <= result.duration; t += 0.001) {
+        times.push(t);
+    }
+    for (const id of ids) {
+        for (const s of result.segments[id] ?? []) {
+            times.push(s.t0, s.t1);
+        }
+    }
+    times.sort((a, b) => a - b);
+    const tracks = ids.map((id) => result.segments[id] as readonly Segment[]);
+    const cursors = ids.map(() => 0);
+    let worst = 0;
+    for (const t of times) {
+        const centres: Vec3[] = tracks.map((segments, k) => {
+            let i = cursors[k] as number;
+            while (i + 1 < segments.length && (segments[i + 1] as Segment).t0 <= t) {
+                i++;
+            }
+            cursors[k] = i;
+            const s = segments[i] as Segment;
+            return segmentState(s, Math.min(Math.max(t - s.t0, 0), s.t1 - s.t0)).position;
+        });
+        centres.forEach((a, i) => {
+            centres.slice(i + 1).forEach((b) => {
+                worst = Math.max(worst, 2 * R - length(sub(a, b)));
+            });
+            for (const o of obstacles) {
+                worst = Math.max(worst, R + o.radius - length(horizontal(sub(a, o.centre))));
+            }
+        });
+    }
+    return worst;
+}
+```
+
+In `tests/engine/fuzz.test.ts`, none of the 200 random shots makes a resting-contact solve, so a fall-back assertion
+alone would check nothing. Every fourth shot is pressed into a push by a pure function (the random stream is
+untouched, so the other 150 shots stay as they were), and the test requires at least one solve. In the imports, replace
+`import { horizontal, length, sub, vec3 } from "../../src/engine/math/vec3";` with
+`import { add, horizontal, length, scale, sub, vec3 } from "../../src/engine/math/vec3";` and
+`import { BALL_IDS, type BallStates } from "../../src/engine/types";` with
+`import { BALL_IDS, type BallId, type BallState, type BallStates } from "../../src/engine/types";`. Add after
+`randomShot`:
+
+```ts
+/**
+ * Turns a shot into one that pushes, without drawing from the generator (so the other shots stay as they were): the
+ * first spinning ball loses its velocity, keeping its spin, and the ball nearest it is moved to touch it, so the spin
+ * may drive the pair together. Returns the shot unchanged when the moved ball would overlap anything.
+ */
+function pressed(setup: BallStates): BallStates {
+    const ids = BALL_IDS.filter((id) => setup[id]);
+    const mover = ids.find((id) => length(setup[id]?.angularVelocity ?? vec3(0, 0, 0)) > 0);
+    if (!mover) {
+        return setup;
+    }
+    const m = (setup[mover] as BallState).position;
+    const others = ids.filter((id) => id !== mover);
+    const distance = (id: BallId): number => length(sub((setup[id] as BallState).position, m));
+    const nearest = others.reduce((a, b) => (distance(b) < distance(a) ? b : a));
+    const towards = sub((setup[nearest] as BallState).position, m);
+    const p = add(m, scale(towards, (2 * R) / length(towards)));
+    const separated = others.every((id) => id === nearest || length(sub((setup[id] as BallState).position, p)) > 2 * R);
+    const clear = obstacles.every((o) => length(horizontal(sub(p, o.centre))) > R + o.radius + 1e-3);
+    if (!separated || !clear) {
+        return setup;
+    }
+    return {
+        ...setup,
+        [mover]: { ...(setup[mover] as BallState), velocity: vec3(0, 0, 0) },
+        [nearest]: { ...(setup[nearest] as BallState), position: p },
+    };
+}
+```
+
+In the test body, replace
+
+```ts
+            let hopShots = 0;
+            for (let index = 0; index < SHOTS; index++) {
+                const setup = randomShot(random);
+                const label = `seed ${SEED}, shot ${index}`;
+                const result = simulateFreeMotion(setup, world);
+```
+
+with
+
+```ts
+            let hopShots = 0;
+            let solves = 0;
+            const probe = { before: (): void => undefined, after: (): void => void solves++ };
+            for (let index = 0; index < SHOTS; index++) {
+                const drawn = randomShot(random);
+                // Every fourth shot is pressed into a push: random shots alone almost never come to rest in contact.
+                const setup = index % 4 === 0 ? pressed(drawn) : drawn;
+                const label = `seed ${SEED}, shot ${index}`;
+                const result = simulateFreeMotion(setup, world, undefined, { probe });
+```
+
+replace the `approximate-hold` assertion with:
 
 ```ts
                 expect(
                     result.events.filter(
-                        (e) => e.kind === "approximate-hold" || e.kind === "approximate-slip" || e.kind === "budget-hold",
+                        (e) =>
+                            e.kind === "approximate-hold" || e.kind === "approximate-slip" || e.kind === "budget-hold",
                     ),
                     label,
                 ).toEqual([]);
+```
+
+replace `expect(hopShots).toBeGreaterThan(0);` with
+
+```ts
+            expect(hopShots).toBeGreaterThan(0);
+            // The fall-back assertion above checks nothing unless the resting-contact solver actually runs.
+            expect(solves).toBeGreaterThan(0);
 ```
 
 and the test title's "holding approximately" with "falling back".
@@ -5823,8 +6437,10 @@ and the test title's "holding approximately" with "falling back".
 - [ ] **Step 2: Run the tests to verify they fail**
 
 Run: `npx vitest run tests/engine/motion.test.ts tests/engine/simulate.test.ts tests/engine/lift.test.ts`
-Expected: FAIL — `landingTime(0, 0, 4.9)` is 0; the topspin push still travels the frictionless 0.1517 m; the probe and
-`solveBudget` options do not exist (type errors in `npm run check`).
+Expected: FAIL — `landingTime(0, 0, 4.9)` is 0; the topspin push still travels the frictionless 0.1517 m (red rests
+at 5.24374, not 5.22476); the straight-push probe sees no solves (the `probe` option is ignored until Step 5); red is
+not lifted (it slides); the stick/slip test sees no events; the tiny-budget shot raises no `budget-hold`. The probe
+and `solveBudget` options do not exist (type errors in `npm run check`).
 
 - [ ] **Step 3: Let a ball on the plane rise (`motion.ts`)**
 
@@ -5909,9 +6525,11 @@ export const ENGINE_VERSION = "0.3.0";
  * Work units (see linalg.ts) the resting-contact solver may spend in one shot (design §5). Fixed from the prototype's
  * costs at about 100 ms on the reference tablet (2020 entry iPad, taken as 3× slower than the development machine):
  * the prototype spent 1.50e-6 ms per unit over 3,000 adversarial four-ball clusters on an Apple M4, so 33 ms is
- * 22 million units. Realistic play's worst shot (a cannon with 864 re-solves) spent 3.5 million, a sixth of it.
- * Realistic solves are tiny and cost more time per unit (overhead), so this bounds the pathological search, not
- * chatter, whose cost P5 measures. Counting work, not time, keeps results identical on every device.
+ * 22 million units. Three-ball pushes spend at most 8.5 million (a bent line, 2.6× headroom); slow four-ball pushes
+ * need 81–289 million and end in budget-hold (carried to P5). The budget is checked between candidates, so the solve
+ * that crosses it can overshoot (measured: up to 1.2×). Realistic solves are tiny and cost more time per unit
+ * (overhead), so this bounds the pathological search, not chatter, whose cost P5 measures. Counting work, not time,
+ * keeps results identical on every device.
  */
 export const SOLVE_BUDGET = 22_000_000;
 
@@ -6006,7 +6624,12 @@ function canonical(tracks: readonly Track[]): BallId[] {
  * event; its first coupling does not (its resting contact event marks it). Each slipping contact bounds its members'
  * segments by its slip end.
  */
-function settle(sim: Simulation, seeds: readonly Track[], now: number, previous: readonly Coupling[] | null = null): void {
+function settle(
+    sim: Simulation,
+    seeds: readonly Track[],
+    now: number,
+    previous: readonly Coupling[] | null = null,
+): void {
     const component = restingComponent(sim, seeds, now);
     const before = previous ?? couplingsOf(sim, component.tracks);
     release(sim, component.tracks, now);
@@ -6036,8 +6659,7 @@ function settle(sim: Simulation, seeds: readonly Track[], now: number, previous:
                 ? normalize(horizontal(sub(obstacle.centre, ma.state.position)))
                 : normalize(sub((mb as RestingMember).state.position, ma.state.position));
             const end =
-                now +
-                contactSlipDuration(ma.state, ma.push, mb?.state ?? null, mb?.push ?? null, normal, slip, R);
+                now + contactSlipDuration(ma.state, ma.push, mb?.state ?? null, mb?.push ?? null, normal, slip, R);
             a.slipEnd = Math.min(a.slipEnd, end);
             if (b) {
                 b.slipEnd = Math.min(b.slipEnd, end);
@@ -6160,24 +6782,39 @@ export function simulateFreeMotion(
     };
 ```
 
-Update the module comment's second paragraph: resting contacts are solved "with Coulomb friction (push.ts)"; a
-coupled contact is held "until one of the pushed balls changes phase, a slipping contact's slip ends, the contact
-opens, or another contact intervenes".
+Replace the module comment's second paragraph with (Prettier does not re-wrap comments):
+
+```ts
+ * Contacts closing faster than RESTING_SPEED are impulses with restitution (resolve.ts). Slower ones, and touching
+ * bodies driven together by their own accelerations, are resting contacts: the resting-contact solver, with Coulomb
+ * friction (push.ts), decides which of them push, and those are coupled until one of the pushed balls changes phase,
+ * a slipping contact's slip ends, the contact opens, or another contact intervenes. For touching bodies, the decision
+ * at t = 0 uses `approachSpeed` and the same solver that resolution uses, so detection and resolution always agree.
+```
 
 - [ ] **Step 6: Run the tests to verify they pass**
 
 Run: `npm test`, then `npm run lint`, `npm run check`, `npm run format:check`
-Expected: all pass. `crossCheck.test.ts` still passes: its pushing scenarios run frictionless (`FRICTIONLESS`), and
-Task 9 removes that. If an existing qualitative limit (an event count in `lift.test.ts` or `simulate.test.ts`) is now
-exceeded, report the new count and the scenario; do not raise the limit without approval.
+Expected: all pass (pre-flight: 278 tests). `crossCheck.test.ts` still passes: its pushing scenarios run frictionless
+(`FRICTIONLESS`), and Task 9 removes that. Pre-flight measured: the topspin travel 0.13276112270857 m and `A`
+0.8818736156283; stick at 0.089346563423 s and slip at 0.377846616715 s, rest at 5.001323 and 5.093323; lift-off
+`a.z` = 4.903325 (g/2; the threshold lies between μ = 3.30 and 3.34, i.e. μ·μs = 1, so μ = 4 is 20% above it); the
+straight topspin push takes 2 resting-contact solves; the exact-top sweep's worst shot 3189 events (2126 phase, 745
+ball–ball, 179 stick, 127 slip, 11 landing) and 1.26e7 work units (57% of `SOLVE_BUDGET`), the sweep 17–19 s; the
+fuzz presses 50 shots, 23 of which make resting-contact solves (9,687 in all, the worst shot 1.23 million units), with
+no fallback and no stick/slip event. No scenario reaches `budget-hold` at the default budget. If another qualitative
+limit (an event count in `lift.test.ts` or `simulate.test.ts`) is now exceeded, report the new count and the scenario;
+do not raise the limit without approval.
 
 - [ ] **Step 7: Commit**
 
 ```bash
 npx prettier --write src/engine/types.ts src/engine/motion.ts src/engine/simulate.ts tests/engine/motion.test.ts \
-    tests/engine/simulate.test.ts tests/engine/lift.test.ts tests/engine/fuzz.test.ts
+    tests/engine/simulate.test.ts tests/engine/lift.test.ts tests/engine/fuzz.test.ts \
+    tests/engine/support/penetration.ts
 git add src/engine/types.ts src/engine/motion.ts src/engine/simulate.ts tests/engine/motion.test.ts \
-    tests/engine/simulate.test.ts tests/engine/lift.test.ts tests/engine/fuzz.test.ts
+    tests/engine/simulate.test.ts tests/engine/lift.test.ts tests/engine/fuzz.test.ts \
+    tests/engine/support/penetration.ts
 git commit -m "Simulate pushes with friction, slip ends, stick/slip events and a work budget"
 ```
 
@@ -6189,14 +6826,19 @@ Brute force gets the physics of design §3 (prototyped and checked: the P2a.1 cr
 0.000 µm): turf forces scale with each ball's load from the previous step's push impulses (collisions never scale
 them), and a push leaves a non-slipping ball's spin about the vertical unchanged. Then the cross-check drops its
 frictionless overrides (exit criterion 2), gains the design's new scenarios, and the slow brute-force checks confirm
-the release onsets.
+the release onsets. The new brute force exposes an engine defect that the frictionless cross-check hid: a coupled
+contact must close at the curvature rate |v_t|²/d of its turning line of centres, with a two-sided gap bound and a
+projection of resting contacts to zero gap at every re-solve (decided 2026-10-02; Step 4).
 
 **Files:**
 - Replace: `tests/engine/support/bruteForce.ts`
-- Modify: `tests/engine/crossCheck.test.ts`
+- Modify: `tests/engine/crossCheck.test.ts`, `tests/engine/lift.test.ts`
+- Modify: `src/engine/detect.ts`, `src/engine/contactModel.ts`, `src/engine/push.ts`, `src/engine/simulate.ts`
 
 **Interfaces:**
-- Produces: `bruteForce(initial, world, dt, maxTime)` unchanged in signature.
+- Produces: `bruteForce(initial, world, dt, maxTime)` unchanged in signature; `detect.ts` exports
+  `normalCurvature(offset, relativeVelocity)`; `ContactGeometry.curvature: number`; `simulate.ts`'s private
+  `contactNow` gains `relative: Vec3` before `closing`.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -6270,8 +6912,10 @@ and add:
         expect(rub).toContain("ball-obstacle");
         expect(kinds("push into a line bent by 60° (a contact starts to slip)")).toContain("blue-red resting");
         // The rebound's sequence: hit, check (slide), roll forward, hit again, and finally rest.
-        const rebound = simulateFreeMotion(SCENARIOS["topspin rebound off the peg, checking, then rolling back into it"]
-            ?.initial as BallStates, testWorld()).events;
+        const rebound = simulateFreeMotion(
+            SCENARIOS["topspin rebound off the peg, checking, then rolling back into it"]?.initial as BallStates,
+            testWorld(),
+        ).events;
         const hits = rebound.filter((e) => e.kind === "ball-obstacle").map((e) => e.t);
         expect(hits.length).toBeGreaterThanOrEqual(2);
         const between = rebound
@@ -6294,11 +6938,15 @@ and add:
  * momentary slip, so it never realises the static-optimal direction and lands at the bottom of the static/kinetic
  * band). "Held" is a_eff = 4·(d(H) − 2·d(H/2))/H² < 1e-5 m/s² for red's displacement d: a displacement threshold would
  * misread the steady creep that restitution chatter causes (first order in dt). The onset is the zero of a line
- * fitted to a_eff past it, extrapolated linearly to dt = 0 over dt 4e-6, 2e-6 and 1e-6.
+ * fitted to a_eff past it, extrapolated to dt = 0 over dt 4e-6, 2e-6 and 1e-6.
  */
-describe.skipIf(!process.env.SLOW_TESTS)("brute-force release onsets (slow)", () => {
+describe.skipIf(!import.meta.env.SLOW_TESTS)("brute-force release onsets (slow)", () => {
     const H = 0.25;
-    function aEff(setup: (angle: number) => { initial: BallStates; world: World }, degrees: number, dt: number): number {
+    function aEff(
+        setup: (angle: number) => { initial: BallStates; world: World },
+        degrees: number,
+        dt: number,
+    ): number {
         const { initial, world } = setup((degrees * Math.PI) / 180);
         const start = (initial.red as BallState).position;
         const moved = (h: number): number => length(sub(bruteForce(initial, world, dt, h).red as Vec3, start));
@@ -6321,30 +6969,28 @@ describe.skipIf(!process.env.SLOW_TESTS)("brute-force release onsets (slow)", ()
     function onset(setup: (angle: number) => { initial: BallStates; world: World }, expected: number): number {
         const steps = [4e-6, 2e-6, 1e-6];
         const angles = [0.05, 0.1, 0.15, 0.2, 0.25].map((d) => expected + d);
+        // Held below, at the finest step: below the onset brute force creeps at a rate of order dt² (about 5e-5 m/s²
+        // 0.05° below at dt 4e-6, falling fourfold per halving), which smears the onset but not its fitted zero.
+        expect(aEff(setup, expected - 0.1, 1e-6), "held below").toBeLessThan(1e-5);
         const zeros = steps.map((dt) => {
-            expect(aEff(setup, expected - 0.05, dt), `held below, dt ${dt}`).toBeLessThan(1e-5);
             return zeroOf(
                 angles.map((a) => aEff(setup, a, dt)),
                 angles,
             );
         });
-        // Linear in dt: the intercept at dt = 0 of the least-squares line through (dt, onset).
-        const n = steps.length;
-        const mx = steps.reduce((s, x) => s + x, 0) / n;
-        const my = zeros.reduce((s, y) => s + y, 0) / n;
-        let sxy = 0;
-        let sxx = 0;
-        steps.forEach((x, i) => {
-            sxy += (x - mx) * ((zeros[i] as number) - my);
-            sxx += (x - mx) * (x - mx);
-        });
-        return my - (sxy / sxx) * mx;
+        // To dt = 0 by Aitken's Δ²: the zeros converge geometrically as dt halves, but more slowly than linearly in dt
+        // (each step closes about 1/1.6–1/1.75 of the gap, not 1/2), so a linear fit stops about 0.003° short.
+        const [z1, z2, z3] = zeros as [number, number, number];
+        return z3 - ((z3 - z2) * (z3 - z2)) / (z3 - z2 - (z2 - z1));
     }
 
     it("releases the bent line at θ_slip = 52.1888955°", { timeout: 3_600_000 }, () => {
         const line = (theta: number): { initial: BallStates; world: World } => ({
             world: testWorld({
-                lawn: uniformLawn(30, 40, { slidingFriction: 3 / STANDARD_GRAVITY, rollingResistance: 1.5 / STANDARD_GRAVITY }),
+                lawn: uniformLawn(30, 40, {
+                    slidingFriction: 3 / STANDARD_GRAVITY,
+                    rollingResistance: 1.5 / STANDARD_GRAVITY,
+                }),
             }),
             initial: {
                 blue: ballAt(5, 5, vec3(0, 0, 0), vec3(0, 60, 0)),
@@ -6352,7 +6998,8 @@ describe.skipIf(!process.env.SLOW_TESTS)("brute-force release onsets (slow)", ()
                 black: ballAt(5 + 2 * R + 2 * R * Math.cos(theta), 5 + 2 * R * Math.sin(theta)),
             },
         });
-        expect(Math.abs(onset(line, 52.1888955) - 52.1888955)).toBeLessThan(0.002);
+        const found = onset(line, 52.1888955);
+        expect(Math.abs(found - 52.1888955), `onset ${found}°`).toBeLessThan(0.002);
     });
 
     it("releases red from the upright at β_slip = 20.290321024°", { timeout: 3_600_000 }, () => {
@@ -6360,7 +7007,8 @@ describe.skipIf(!process.env.SLOW_TESTS)("brute-force release onsets (slow)", ()
             world: testWorld({ peg: upright((beta * 180) / Math.PI) }),
             initial: { blue: ballAt(5, 5, vec3(0, 0, 0), vec3(0, 60, 0)), red: ballAt(5 + 2 * R, 5) },
         });
-        expect(Math.abs(onset(pushed, 20.290321024) - 20.290321024)).toBeLessThan(0.002);
+        const found = onset(pushed, 20.290321024);
+        expect(Math.abs(found - 20.290321024), `onset ${found}°`).toBeLessThan(0.002);
     });
 });
 ```
@@ -6371,8 +7019,8 @@ Add the imports this needs: `type BallState`, `type World` (already) from types,
 - [ ] **Step 2: Run the cross-check to verify it fails**
 
 Run: `npx vitest run tests/engine/crossCheck.test.ts`
-Expected: FAIL — the pushing scenarios now disagree with the old brute force by more than 1 mm (it neither scales turf
-forces with load nor locks the twist).
+Expected: FAIL — the wedge disagrees with the old brute force by more than 1 mm (blue 1.18 mm: it neither scales turf
+forces with load nor locks the twist); the other pushes happen to stay within it.
 
 - [ ] **Step 3: Replace `tests/engine/support/bruteForce.ts`**
 
@@ -6389,9 +7037,9 @@ forces with load nor locks the twist).
  * min(max(L, 0), g)/g, since a downward impulse already carried its own impulsive turf friction.
  *
  * Only pushes load the turf this way, not collisions: a collision's impulse is not a force sustained over the step,
- * and the engine resolves it whole in resolve.ts (an impulse cannot reduce the turf's load). A contact is a push when it
- * persists — the pair overlapped, or was within RESTING_SPEED·dt of touching, at the previous step's contact check —
- * and closes slower than RESTING_SPEED before this step's impulse.
+ * and the engine resolves it whole in resolve.ts (an impulse cannot reduce the turf's load). A contact is a push
+ * when it persists — the pair overlapped, or was within RESTING_SPEED·dt of touching, at the previous step's contact
+ * check — and closes slower than RESTING_SPEED before this step's impulse.
  *
  * Twist lock (spin about the vertical axis): while a ball's turf contact patch does not slip, at rest or rolling, the
  * grass holds its spin about the vertical (unlimited torque); only a sliding or airborne ball's is free. The patch is
@@ -6630,23 +7278,348 @@ export function bruteForce(
 }
 ```
 
-- [ ] **Step 4: Run the cross-check to verify it passes**
+- [ ] **Step 4: Close coupled contacts at the curvature rate, and project resting contacts (engine)**
+
+Against the new brute force, three pushes fail by more than 1 mm (pre-flight: wedge 3.45 mm, upright 3.12 mm, bent
+60° 1.09 mm; at μ = 0.1, up to 14.8 mm), though frictionless they agree within 0.25 mm. The closing row
+(a_a − a_b)·n = 0 omits the normal curvature |v_t|²/d: a pair rubbing round another opens at second order and
+regroups (196 times in the wedge), and each regroup ends in a frictionless inelastic re-contact, so the turning share
+of the contact force carries no friction and no load coupling. The fix closes coupled contacts at |v_t|²/d. A coupled
+gap then drifts at third order, either way, so a segment also ends when the gap closes past `CONTACT_TOLERANCE`, and
+every `settle()` first projects the component's resting contacts back to exactly zero gap. The projection is required
+(with the sink bound but no projection, fuzz shot 12 loops at t = 0; with neither, it penetrates 2.7e-7 m) and must be
+simultaneous (a Gauss–Seidel pass in contact order broke the `simulate.test.ts` wedge's symmetry by 5.8 µm). The fix
+lands here, not in Tasks 4/7/8, because the old brute force cannot check it: there the wedge fails by 1.32 mm.
+
+1. `src/engine/detect.ts`: add, after `approachSpeed`:
+
+```ts
+/**
+ * Returns the rate (m/s²) at which two bodies' line of centres would open from its rotation alone, |v_t|²/d for the
+ * part v_t of the relative velocity across it at centre distance d (the distance's second derivative is n·Δa plus
+ * this). A pair that stays touching while sliding round each other needs this much relative acceleration towards each
+ * other: the share of the contact force that turns the line of centres. Either sign of `offset` gives the same value.
+ */
+export function normalCurvature(offset: Vec3, relativeVelocity: Vec3): number {
+    const l = length(offset);
+    if (l === 0) {
+        return 0;
+    }
+    const along = dot(offset, relativeVelocity) / l;
+    return Math.max(dot(relativeVelocity, relativeVelocity) - along * along, 0) / l;
+}
+```
+
+2. `src/engine/contactModel.ts`:
+   - add `import { normalCurvature } from "./detect";` after the `./convexSolve` import;
+   - in `ContactGeometry`, after `readonly sHat: Vec3;`, add
+
+```ts
+    /**
+     * The relative acceleration (m/s²) towards each other that keeps the pair touching as the line of centres turns
+     * (detect.ts `normalCurvature`): a closed contact's closing rate equals it, and an open one must close more slowly
+     * than it.
+     */
+    readonly curvature: number;
+```
+
+   - in `contactGeometry`, replace `return { n, t1, t2, slip, slipping, sHat: slipping ? normalize(slip) : ZERO };`
+     with
+
+```ts
+    const curvature = other
+        ? normalCurvature(sub(other.position, a.state.position), sub(a.state.velocity, other.velocity))
+        : normalCurvature(horizontal(sub(axes[c.b] as Vec3, a.state.position)), horizontal(a.state.velocity));
+    return { n, t1, t2, slip, slipping, sHat: slipping ? normalize(slip) : ZERO, curvature };
+```
+
+   - in `assemble`, replace the comment `// Closing rate (a_a − a_b)·n = 0 (the centres', which equals the contact
+     points' normal rate).` with
+
+```ts
+        // Closing rate (a_a − a_b)·n = |v_t|²/d (the centres', which equals the contact points' normal rate): the pair
+        // stays touching as the line of centres turns, so the contact force includes the share that turns it.
+```
+
+     and insert `closing.c -= g.curvature;` immediately before `rows.push(closing);`;
+   - in `inconsistency`'s open-contact test, replace `if (closing > ACCELERATION_EPSILON) {` with
+     `if (closing - g.curvature > ACCELERATION_EPSILON) {`.
+
+3. `src/engine/push.ts`:
+   - in the module comment, replace the first bullet (`- Each contact normal is fixed for the segment. Relative motion
+     is then perpendicular …`) with
+
+```ts
+ * - Each contact normal is fixed for the segment. The pair closes along it at |v_t|²/d (detect.ts `normalCurvature`),
+ *   the rate that keeps it touching as the line of centres turns, so the contact force carries that share with its
+ *   friction and load. The gap then drifts only at third order, either way; the segment ends when it opens past
+ *   SEPARATION_TOLERANCE or closes past CONTACT_TOLERANCE, and the simulator projects every resting contact back to
+ *   zero gap before it solves again (simulate.ts projectContacts). (Closing at zero instead opens the gap at second
+ *   order, and the regroup that follows passes the turning share as a frictionless inelastic impulse: pushes that rub
+ *   round each other then drift by millimetres.)
+```
+
+     the third bullet (`- Because each normal is frozen, a ball sliding round another in flight regroups every ~1.5
+     mrad …`) with
+
+```ts
+ * - Because each normal is frozen, a ball sliding round another in flight regroups as the gap's cubic drift leaves its
+ *   band: about 135–195 events for a ball rolling off another's top without friction, but finitely many.
+```
+
+     and the nearest-hold paragraph's last sentence with
+
+```ts
+ * reports how far holding misses (holdExcess) and flags the balls concerned. Its contacts close at zero, without the
+ * curvature share: the fallback is already approximate and frictionless (the share carries no friction to lose), its
+ * contacts then open at second order (v_t²), so they end the segment on the separation side and are solved again
+ * (with no tangential speed the drift is cubic and both bounds apply, as for exact solutions); and keeping its target
+ * zero keeps nearestHold the projection its existence argument is about.
+```
+
+   - import `normalCurvature` beside `approachSpeed` from `./detect`;
+   - in `solveContacts`, replace `converging` with
+
+```ts
+    // Converging: approaching, or driven together faster than the turning line of centres needs (normalCurvature).
+    const converging = (states: readonly BallState[], acceleration: ReadonlyMap<number, Vec3>, k: number): boolean => {
+        const c = contacts[k] as RestingContact;
+        const a = states[c.a] as BallState;
+        const velocity = c.fixed ? ZERO : (states[c.b] as BallState).velocity;
+        const relative = c.fixed ? horizontal(a.velocity) : sub(a.velocity, velocity);
+        const closing = approachSpeed(scale(towards(c), -1), relative);
+        const curvature = normalCurvature(towards(c), relative);
+        return closing > SPEED_EPSILON || closingRate(acceleration, k) - curvature > ACCELERATION_EPSILON;
+    };
+```
+
+   The nearest hold keeps a zero closing target (the header above says why); `converging`, with curvature, still
+   decides which contacts its loop adds, consistent with `contactNow`.
+
+4. `src/engine/simulate.ts`:
+   - imports: add `normalCurvature` to the `./detect` import, `import { solveSystem } from "./linalg";`, `add` to the
+     `./math/vec3` import and `onTurf` to the `./motion` import;
+   - after `restingComponent`, add:
+
+```ts
+/** Newton steps of projectContacts. Each solves the linearised gaps exactly; the second removes the O(gap²/R) rest. */
+const PROJECTION_STEPS = 2;
+
+/**
+ * Moves the balls of a component about to be solved so that every resting contact in it has exactly zero gap along its
+ * normal, leaving velocities alone. It exists because the closing rate includes the line of centres' curvature
+ * (normalCurvature): a coupled pair then keeps its gap only to third order, and the drift, which can go either way, is
+ * otherwise never undone, so it would accumulate over regroups (separationTime bounds it per segment, between
+ * −CONTACT_TOLERANCE and SEPARATION_TOLERANCE). After it every gap is zero, so neither bound fires at the new segment's
+ * start: the drift is cubic in time again.
+ *
+ * All contacts at once, so that it is deterministic and order-free (a symmetric set-up stays symmetric): with J the
+ * contacts' normal rows (−n on ball a, +n on ball b; an obstacle never moves) and W each ball's mobility (a ball on the
+ * turf moves only horizontally, a ball in flight in 3D; equal masses), the move δ = W·Jᵀ·μ with (J·W·Jᵀ)·μ = −gap is
+ * the smallest that closes every gap. A ball in several contacts takes the sum of their moves. Dependent contacts (a
+ * ball jammed between bodies) can make the gaps inconsistent; the least-squares μ (minimum norm, from the normal
+ * equations) then closes them as nearly as possible. Its work is not counted against the solve budget: it is a
+ * handful of contacts, once per settle.
+ */
+function projectContacts(sim: Simulation, component: Component, now: number): void {
+    const R = sim.world.ball.radius;
+    const { contacts } = component;
+    if (contacts.length === 0) {
+        return;
+    }
+    const states = component.tracks.map((t) => stateAt(t, now));
+    const positions = states.map((s) => s.position);
+    const supported = states.map((s) => onTurf(s, R));
+    const mobility = (i: number, v: Vec3): Vec3 => (supported[i] ? horizontal(v) : v);
+    for (let step = 0; step < PROJECTION_STEPS; step++) {
+        // Each contact's normal and gap at the current positions.
+        const geometry = contacts.map((c) => {
+            const pa = positions[c.a] as Vec3;
+            const o = c.fixed ? (component.obstacles[c.b] as Cylinder) : null;
+            const offset = o ? horizontal(sub(o.centre, pa)) : sub(positions[c.b] as Vec3, pa);
+            const distance = length(offset);
+            return { n: scale(offset, 1 / distance), gap: distance - (o ? R + o.radius : 2 * R) };
+        });
+        // Row k of J for ball i, dotted through W with row j: Σ over shared balls of J_k,i · W_i · J_j,i.
+        const row = (k: number, i: number): Vec3 => {
+            const c = contacts[k] as RestingContact;
+            const n = (geometry[k] as { n: Vec3 }).n;
+            return c.a === i ? scale(n, -1) : !c.fixed && c.b === i ? n : ZERO;
+        };
+        const A = contacts.map((_, k) =>
+            contacts.map((__, j) =>
+                component.tracks.reduce((sum, _t, i) => sum + dot(row(k, i), mobility(i, row(j, i))), 0),
+            ),
+        );
+        const gaps = geometry.map((g) => 0 - g.gap);
+        // Normal equations (A is symmetric): A·A·μ = A·(−gap), always consistent.
+        const AA = A.map((r) =>
+            A.map((_, j) => r.reduce((sum, v, m) => sum + v * ((A[m] as number[])[j] as number), 0)),
+        );
+        const Ab = A.map((r) => r.reduce((sum, v, m) => sum + v * (gaps[m] as number), 0));
+        const solved = solveSystem(AA, Ab, { units: 0 });
+        if (!solved) {
+            return;
+        }
+        component.tracks.forEach((_t, i) => {
+            let move = ZERO;
+            solved.x.forEach((mu, k) => {
+                move = add(move, scale(mobility(i, row(k, i)), mu));
+            });
+            positions[i] = add(positions[i] as Vec3, move);
+        });
+    }
+    component.tracks.forEach((track, i) => {
+        const s = states[i] as BallState;
+        const p = positions[i] as Vec3;
+        if (p.x !== s.position.x || p.y !== s.position.y || p.z !== s.position.z) {
+            reopen(sim, track, track.id, { ...s, position: p }, now);
+        }
+    });
+}
+```
+
+   - in `settle`, between `release(sim, component.tracks, now);` and `const solution = solveComponent(sim, component,
+     now);`, add `projectContacts(sim, component, now);`;
+   - replace `separationTime` (its comment and body) with the two-sided bound, the root search factored out:
+
+```ts
+/**
+ * Earliest time a coupled contact drifts out of its band, for relative trajectory a + b·t + c·t²: opens beyond
+ * SEPARATION_TOLERANCE, or closes deeper than CONTACT_TOLERANCE. With the line of centres' curvature in the closing
+ * rate (normalCurvature) a coupled gap drifts only at third order, but either way, so both sides end the segment; the
+ * regroup that follows projects the pair back to zero gap (projectContacts).
+ */
+function separationTime(a: Vec3, b: Vec3, c: Vec3, distance: number, horizon: number): number | null {
+    const square = [dot(a, a), 2 * dot(a, b), dot(b, b) + 2 * dot(a, c), 2 * dot(b, c), dot(c, c)];
+    const opens = firstRootOf([separationGap(a, distance), ...square.slice(1)], horizon);
+    const inner = distance - CONTACT_TOLERANCE;
+    const sinks = firstRootOf(
+        square.map((x, i) => (i === 0 ? inner * inner - x : 0 - x)),
+        horizon,
+    );
+    return opens === null ? sinks : sinks === null ? opens : Math.min(opens, sinks);
+}
+
+/** firstNonNegative of f within `horizon`, or, for an infinite horizon, within a bound on every real root of f. */
+function firstRootOf(f: readonly number[], horizon: number): number | null {
+    if (Number.isFinite(horizon)) {
+        return firstNonNegative(f, horizon);
+    }
+    // No horizon: every real root of f lies within Cauchy's bound 1 + max|fᵢ/fₙ|, with fₙ the highest non-zero
+    // coefficient, so searching up to it finds the first one.
+    let n = f.length - 1;
+    while (n > 0 && f[n] === 0) {
+        n--;
+    }
+    if (n === 0) {
+        return firstNonNegative(f, 0);
+    }
+    let bound = 0;
+    for (let i = 0; i < n; i++) {
+        bound = Math.max(bound, Math.abs((f[i] as number) / (f[n] as number)));
+    }
+    return firstNonNegative(f, 1 + bound);
+}
+```
+
+   - replace `contactNow` (its comment and body) with
+
+```ts
+/**
+ * Decides whether touching bodies must be resolved now: they are approaching, or they rest against each other and
+ * their accelerations drive them together faster than their turning line of centres needs (`normalCurvature`, as the
+ * solver judges it). `towards` is the offset from the first body's centre to the second's (3D for a ball, horizontal
+ * for an obstacle's axis), `otherAcceleration` the second body's (an obstacle's is ZERO) and `relative` the first
+ * body's velocity minus the second's. Resolution applies the resting-contact solver, whose outcome never leaves an
+ * uncoupled resting contact driven together, so a contact resolved at t = 0 does not trigger again.
+ */
+function contactNow(
+    towards: Vec3,
+    acceleration: Vec3,
+    otherAcceleration: Vec3,
+    relative: Vec3,
+    closing: number,
+): boolean {
+    if (closing > SPEED_EPSILON) {
+        return true;
+    }
+    const normal = normalize(towards);
+    const driven = dot(sub(acceleration, otherAcceleration), normal) - normalCurvature(towards, relative);
+    return closing >= -RESTING_SPEED && driven > ACCELERATION_EPSILON;
+}
+```
+
+   - in `findNextEvent`, the ball pair's call: replace
+     `const closing = approachSpeed(offset, sub(sa.velocity, sb.velocity));` and the `contactNow` line after it with
+
+```ts
+            const relative = sub(sa.velocity, sb.velocity);
+            const closing = approachSpeed(offset, relative);
+            const driven = contactNow(
+                scale(offset, -1),
+                accelerationOf(a, sa),
+                accelerationOf(b, sb),
+                relative,
+                closing,
+            );
+```
+
+     and the obstacle's: replace `const driven = contactNow(scale(offset, -1), accelerationOf(track, s), ZERO,
+     closing);` with
+
+```ts
+            const driven = contactNow(
+                scale(offset, -1),
+                accelerationOf(track, s),
+                ZERO,
+                horizontal(s.velocity),
+                closing,
+            );
+```
+
+5. `tests/engine/lift.test.ts`, "slides a ball off the exact top of another …": the regroups fall (frictionless
+   135–193 events over the sweep, 260–336 with friction). Replace the event-count comment and limit with
+
+```ts
+                        // Finite but long. The contact normal is frozen per push segment, so the pair regroups as its
+                        // gap drifts (at third order, the closing rate including the normal's curvature) out of its
+                        // band, rather than bouncing freely: frictionless, 135–193 events over the sweep. Friction
+                        // adds, per regroup cycle, a stick/slip pair of the contact (the lower ball rolls for a few
+                        // microseconds as it slips), and a slip of a few nanoseconds that sticks again at once: at
+                        // 0.003 m/s 336 events, 260–336 over the sweep. Damping that chatter is deferred to P5.
+                        expect(result.events.length).toBeLessThan(500);
+```
+
+- [ ] **Step 5: Run the cross-check to verify it passes**
 
 Run: `npx vitest run tests/engine/crossCheck.test.ts`, then `npm test`, `npm run lint`, `npm run check`
-Expected: all pass within 1 mm. A scenario that disagrees by more than 1 mm is a finding, not a tolerance problem:
-report the ball, the distance and the event list; do not loosen `TOLERANCE` or move the scenario without approval.
+Expected: all pass within 1 mm (pre-flight: 282 passed, 2 skipped; wedge 0.506 mm, upright 35° 0.780 mm, bent 60°
+0.276 mm; topspin push and stick-then-slip 1.3 µm, rebound off the peg 1.0 µm, the rest at most 148 µm). The remaining
+error is the frozen-direction approximation (`DIRECTION_TOLERANCE` 1e-2; at 1e-3 all three fall under 0.3 mm, at more
+work). Fuzz shot 12 penetrates 9.85e-10 m (limit 1e-9); the exact-top sweep 336 events at most. Regroups fall
+throughout: wedge 205 events / 592 solves → 28 / 82; bent 60° 179 / 717 → 159 / 125 (1.53 million work units, 7% of
+`SOLVE_BUDGET`); the exact-top sweep 372,144 solves → 23,881. A scenario that disagrees by more than 1 mm is a
+finding, not a tolerance problem: report the ball, the distance and the event list; do not loosen `TOLERANCE` or move
+the scenario without approval.
 
-- [ ] **Step 5: Run the slow checks once**
+- [ ] **Step 6: Run the slow checks once**
 
 Run: `SLOW_TESTS=1 npx vitest run tests/engine/crossCheck.test.ts -t "release onsets"` (long-running: run it in the
 background with its output written to a file, and report the two onsets it found).
-Expected: PASS, both onsets within 0.002° (the prototype found 52.1883° and 20.2899°).
+Expected: PASS, both onsets within 0.002° (52.18938° and 20.29040°; the prototype's 52.1883° and 20.2899° do not
+reproduce). Below the onset brute force creeps at an a_eff of order dt², so "held below" is checked once, 0.1° below
+at dt 1e-6; the zeros converge geometrically but more slowly than linearly in dt, so they are extrapolated by Aitken's
+Δ² (a linear fit stops about 0.003° short). The whole slow suite (`SLOW_TESTS=1 npm test`) passes 283 tests; the
+20,000 random clusters stay exact, worst `searched` 209.
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 7: Commit**
 
 ```bash
-npx prettier --write tests/engine/support/bruteForce.ts tests/engine/crossCheck.test.ts
-git add tests/engine/support/bruteForce.ts tests/engine/crossCheck.test.ts
+npx prettier --write tests/engine/support/bruteForce.ts tests/engine/crossCheck.test.ts tests/engine/lift.test.ts \
+    src/engine/detect.ts src/engine/contactModel.ts src/engine/push.ts src/engine/simulate.ts
+git add tests/engine/support/bruteForce.ts tests/engine/crossCheck.test.ts tests/engine/lift.test.ts \
+    src/engine/detect.ts src/engine/contactModel.ts src/engine/push.ts src/engine/simulate.ts
 git commit -m "Cross-check friction pushes against load-coupled brute force in the standard world"
 ```
 
@@ -6656,7 +7629,9 @@ git commit -m "Cross-check friction pushes against load-coupled brute force in t
 
 The last task re-measures realistic play with friction on (design §6, last bullet) and records what P5 needs. It
 ports the prototype's shot-mix generator (`prototype/speed/shots.ts`) as a script that times the engine and, through
-the `SolveProbe` seam, its resting-contact solves.
+the `SolveProbe` seam, its resting-contact solves. The shot mix never forms a group of three or four balls (its
+pushes start the striker at 0.005–1 m/s, and anything closing faster than `RESTING_SPEED` is an impulse), so the
+budget is also checked against the cross-check's own push family, measured outside the suite.
 
 **Files:**
 - Create: `scripts/shotMix.ts`
@@ -6814,12 +7789,18 @@ const generators: { readonly name: string; readonly weight: number; readonly mak
             const l = vec3(-hoop.normal.y, hoop.normal.x, 0);
             const start = vec3(hoop.centre.x - d * n.x + lat * l.x, hoop.centre.y - d * n.y + lat * l.y, R);
             const heading = Math.atan2(n.y, n.x);
-            const balls = [struck(start, heading + uni(-25, 25) * (Math.PI / 180), uni(0.15, 2.5), strokeSpin(), sideSpin())];
+            const balls = [
+                struck(start, heading + uni(-25, 25) * (Math.PI / 180), uni(0.15, 2.5), strokeSpin(), sideSpin()),
+            ];
             if (random() < 0.35) {
                 const u = random() < 0.5 ? up[0] : up[1];
                 const toward = Math.atan2(hoop.centre.y - u.y, hoop.centre.x - u.x) + uni(-0.6, 0.6);
                 balls.push(
-                    rest(random() < 0.5 ? at(u, toward, R + 0.008) : at(hoop.centre, heading + uni(-0.5, 0.5), uni(0.1, 0.5))),
+                    rest(
+                        random() < 0.5
+                            ? at(u, toward, R + 0.008)
+                            : at(hoop.centre, heading + uni(-0.5, 0.5), uni(0.1, 0.5)),
+                    ),
                 );
             }
             return withOthers(balls);
@@ -6851,7 +7832,9 @@ const generators: { readonly name: string; readonly weight: number; readonly mak
             const a = uni(0, 2 * Math.PI);
             if (random() < 0.5) {
                 const p = at(peg, a, uni(0.1, 3));
-                return withOthers([struck(p, a + Math.PI + uni(-0.03, 0.03), uni(0.1, 2), random() < 0.7 ? 1 : strokeSpin())]);
+                return withOthers([
+                    struck(p, a + Math.PI + uni(-0.03, 0.03), uni(0.1, 2), random() < 0.7 ? 1 : strokeSpin()),
+                ]);
             }
             const p = at(peg, a, R + 0.02);
             const s = at(p, a + uni(-1, 1), 2 * R + uni(0, 0.8));
@@ -6950,20 +7933,27 @@ const quantile = (xs: readonly number[], q: number): number => {
     const sorted = [...xs].sort((a, b) => a - b);
     return sorted[Math.min(sorted.length - 1, Math.floor(q * sorted.length))] as number;
 };
-const row = (label: string, xs: readonly number[]): string =>
-    `${label}: p50 ${quantile(xs, 0.5).toFixed(3)}, p99 ${quantile(xs, 0.99).toFixed(3)}, ` +
-    `p99.9 ${quantile(xs, 0.999).toFixed(3)}, max ${Math.max(...xs).toFixed(3)}`;
+/** Percentiles over the shots of one per-shot measure. */
+const row = (label: string, key: "solves" | "work" | "solverMs" | "engineMs"): string => {
+    const xs = shots.map((s) => s[key]);
+    return (
+        `${label}: p50 ${quantile(xs, 0.5).toFixed(3)}, p99 ${quantile(xs, 0.99).toFixed(3)}, ` +
+        `p99.9 ${quantile(xs, 0.999).toFixed(3)}, max ${Math.max(...xs).toFixed(3)}`
+    );
+};
 const worst = shots.reduce((a, b) => (b.engineMs > a.engineMs ? b : a));
 console.log(`${shots.length} shots, seed ${SEED}, budget ${SOLVE_BUDGET} units`);
 console.log(`shots with no solve: ${((100 * shots.filter((s) => s.solves === 0).length) / shots.length).toFixed(1)}%`);
 console.log(`largest group: ${Math.max(...shots.map((s) => s.largest))} balls`);
-console.log(row("solves per shot", shots.map((s) => s.solves)));
-console.log(row("work units per shot", shots.map((s) => s.work)));
-console.log(row("solver ms per shot", shots.map((s) => s.solverMs)));
-console.log(row("engine ms per shot", shots.map((s) => s.engineMs)));
+console.log(row("solves per shot", "solves"));
+console.log(row("work units per shot", "work"));
+console.log(row("solver ms per shot", "solverMs"));
+console.log(row("engine ms per shot", "engineMs"));
 console.log(`fallback events: ${shots.reduce((s, x) => s + x.fallbacks, 0)}`);
-console.log(`worst shot: ${worst.name}, ${worst.solves} solves, ${worst.work} units, ` +
-    `solver ${worst.solverMs.toFixed(1)} ms, engine ${worst.engineMs.toFixed(1)} ms`);
+console.log(
+    `worst shot: ${worst.name}, ${worst.solves} solves, ${worst.work} units, ` +
+        `solver ${worst.solverMs.toFixed(1)} ms, engine ${worst.engineMs.toFixed(1)} ms`,
+);
 ```
 
 (`scripts/` is outside `tsconfig.json`'s `include`, so `npm run check` does not type-check it; `npm run lint` lints
@@ -6974,33 +7964,93 @@ it with Node globals.)
 Run (long-running: in the background, output to a file): `npx --yes tsx scripts/shotMix.ts`
 Expected: it completes. Record every printed line, `node --version` and the machine
 (`sysctl -n machdep.cpu.brand_string`). Fallback events must be 0; if not, report the shots (name, index) and stop.
+Pre-flight (Apple M4, Node v26.10.0) printed:
+
+```
+3000 shots, seed 7, budget 22000000 units
+shots with no solve: 97.7%
+largest group: 2 balls
+solves per shot: p50 0.000, p99 148.000, p99.9 339.000, max 404.000
+work units per shot: p50 0.000, p99 143084.000, p99.9 362050.000, max 408030.000
+solver ms per shot: p50 0.000, p99 3.368, p99.9 7.355, max 7.663
+engine ms per shot: p50 0.229, p99 9.700, p99.9 22.031, max 23.871
+fallback events: 0
+worst shot: push, 381 solves, 362050 units, solver 7.4 ms, engine 23.9 ms
+```
+
+Work units and solves are identical on every run; times vary by about 10%, and the worst shot (chosen by engine
+time) can change between runs.
+
+Re-measuring three- and four-ball pushes needs scenarios outside the shot mix. Run, unbudgeted (`solveBudget` 1e15)
+and at `SOLVE_BUDGET`, a throwaway sweep of the cross-check's push family on the standard world, blue at rest with
+topspin 20–100 rad/s: a line bent 0–90° in steps of 5° (the 60° cross-check generalised), an off-centre wedge, a
+four-ball zigzag at 0–60° and an upright at 0–80° (152 pushes). Record the worst whole-shot and single-solve units of
+the bent lines, the 60° line's share, the pushes ending in `budget-hold`, their unbudgeted units, and the worst
+overshoot past the budget. Pre-flight: bent lines need at most 8,483,886 units (10°), 5,926,066 in one solve; the
+60° line 1,529,908 (7.0%); 12 of 152 pushes end in `budget-hold`, every four-ball zigzag except 50°, needing
+81.1–288.6 million unbudgeted; the worst overshoot is 26,689,785 (1.21×); none falls back unbudgeted.
 
 - [ ] **Step 3: Update the roadmap**
 
-In `docs/superpowers/plans/2026-09-30-croquet-shot-lab-roadmap.md`:
+In `docs/superpowers/plans/2026-09-30-croquet-shot-lab-roadmap.md` (`.prettierignore` lists `docs/`: wrap at 120
+columns by hand; only table rows and the existing line 29 may exceed it). The numbers below are pre-flight's; replace
+any that Step 2 measured differently (times vary run to run).
 
 1. In the P2 row's exit-criteria cell, change "P2a.2:" to "P2a.2 (met):".
-2. After the "P2a.1 outcomes carried forward" section (or at the end, before any later sections), add a
-   "## P2a.2 outcomes carried forward" section with these bullets, numbers filled in from Step 2:
-   - **Push friction.** Coupled contacts carry 3D, load-coupled Coulomb friction with `stick`/`slip` events; held
-     clusters hold through static friction; a turf ball whose load friction takes away is solved airborne. Fallbacks
-     are `approximate-hold`, `approximate-slip` and `budget-hold`; none occurs in the sweeps, the clusters or the fuzz.
-     `ENGINE_VERSION` 0.3.0.
-   - **Work budget.** `SOLVE_BUDGET` work units per shot (value, and the units/ms it was fixed from). The shot mix
-     never reaches it (worst shot's units against the budget).
-   - **Measured realistic play (friction on).** The printed rows: shots with no solve, largest group, solves per
-     shot, work units, solver and engine time per shot, the worst shot; machine and Node version. The iPad factor of
-     3× is unverified; P5 calibrates it.
-   - **For P5.** Chatter re-solve cost (the worst shot's solves), and the design's deferred items: finite turf pivot
-     grip (the per-ball capacity hook), surface variation (the turf-normal and gravity hooks), Rust/WASM only if the
-     budget proves too tight.
+2. In the P5 row, replace "(P2a.2's prototype measured a cannon with 864 resting-contact re-solves near the budget;
+   P2a.2 re-measures it with friction on)" with "(with friction on, P2a.2's realistic shot mix makes at most 404
+   resting-contact re-solves in a shot, and three-ball pushes up to 745 and 120 ms of engine time on an Apple M4,
+   which the work budget does not see; see the P2a.2 outcomes)".
+3. After the "P2a.1 outcomes carried forward" section (or at the end, before any later sections), add:
+
+```markdown
+## P2a.2 outcomes carried forward
+
+- **Push friction.** Coupled contacts carry 3D, load-coupled Coulomb friction with `stick`/`slip` events; held
+  clusters hold through static friction; a turf ball whose load friction takes away is solved airborne. A coupled
+  contact closes at the curvature rate |v_t|²/d of its turning line of centres, and every re-solve projects the
+  group's resting contacts back to zero gap. Fallbacks are `approximate-hold`, `approximate-slip` and `budget-hold`;
+  none occurs in the sweeps, the clusters or the fuzz. `ENGINE_VERSION` 0.3.0.
+- **Work budget.** `SOLVE_BUDGET` is 22,000,000 work units per shot, fixed from the prototype's 1.50e-6 ms per unit
+  (Apple M4) for 33 ms on the development machine, and kept at that value (decided 2026-10-02). The shot mix never
+  reaches it: its worst shot spends 408,030 units (1.9%). Nor do three-ball pushes: a push into a touching pair bent
+  0°–90° off the line needs at most 8.5 million units (bent 10°), 5.9 million in one solve, so the budget has 2.6×
+  headroom; the cross-check's 60° line spends 1.5 million (7%). Four-ball pushes end in `budget-hold`: every zigzag
+  tried but 50° (12 of the 152 pushes swept) needs 81–289 million units unbudgeted. That is accepted for P2a.2 and
+  carried to P5. The budget is checked between candidates, so the solve that crosses it overshoots, by up to 1.2×.
+  The engine's large solves cost 1.7–3.1e-6 ms per unit; the shot mix's small ones cost 2.4e-5 (937 units and 22 µs
+  per solve, mostly overhead). The prototype's realistic worst of 3.5 million came from two-ball groups only.
+- **Measured realistic play (friction on).** 3,000 shots, seed 7, Apple M4, Node v26.10.0: 97.7% of shots have no
+  resting-contact solve; the largest group is 2 balls. Solves per shot: p50 0, p99 148, p99.9 339, max 404. Work
+  units per shot: p50 0, p99 143,084, p99.9 362,050, max 408,030. Solver time per shot: p50 0, p99 3.4 ms, p99.9
+  7.4 ms, max 7.7 ms. Engine time per shot: p50 0.23 ms, p99 9.7 ms, p99.9 22.0 ms, max 23.9 ms. The worst shot is a
+  push with 381 solves, 362,050 units, solver 7.4 ms and engine 23.9 ms. Times vary by about 10% between runs. The
+  shot mix forms no three- or four-ball groups, so it does not measure the pushes above. The iPad factor of 3× is
+  unverified; P5 calibrates it.
+- **For P5.** Stick/slip chatter is deferred here. Each regroup of a rubbing pair reports a stick/slip pair, plus a
+  slip of a few nanoseconds that sticks again at once. A ball sliding over another's exact top makes 260–336 events
+  with friction against 135–193 without. Re-solves cost time the work budget does not count: the shot mix's worst
+  shot makes 404 solves, and a three-ball push (bent 10°, spin 80) 745 solves and 7.37 million units in 120.5 ms of
+  engine time. Four-ball pushes end in `budget-hold` (above). The design's deferred items: finite turf pivot grip
+  (the per-ball capacity hook), surface variation (the turf-normal and gravity hooks), and Rust/WASM only if the
+  budget proves too tight.
+- **Frozen directions.** A segment ends once a frozen slip or push direction would turn by more than
+  `DIRECTION_TOLERANCE` (sine 1e-2). That is the remaining cross-check error: wedge 0.506 mm, upright 0.780 mm and
+  bent line 0.276 mm against brute force (tolerance 1 mm). A tighter tolerance means more segments (at 1e-3 all
+  three fall under 0.3 mm).
+- **Fuzz coverage.** The fuzz presses every fourth shot into resting contact and asserts that solves happen. It
+  exercises no stick/slip mode changes. The sweeps and cross-checks cover those.
+- **Missed lift-off.** When a three-ball group's on-turf direction solve fails (ball–ball μ ≥ about 4.25), the lift-off
+  candidate derived from it is never generated, and the group falls back to `approximate-hold`. Real μ is far lower.
+```
 
 - [ ] **Step 4: Verify and commit**
 
 Run: `npm test`, `npm run lint`, `npm run check`, `npm run format:check`
 
 ```bash
-npx prettier --write scripts/shotMix.ts docs/superpowers/plans/2026-09-30-croquet-shot-lab-roadmap.md
+npx prettier --write scripts/shotMix.ts
+grep -nE '^.{121,}$' docs/superpowers/plans/2026-09-30-croquet-shot-lab-roadmap.md   # only table rows and line 29
 git add scripts/shotMix.ts docs/superpowers/plans/2026-09-30-croquet-shot-lab-roadmap.md
 git commit -m "Measure realistic play with push friction and record P2a.2's outcomes"
 ```
