@@ -13,6 +13,9 @@ import { obstaclesOf, uprightsOf } from "../src/engine/world";
 import { testHoop, testWorld } from "../tests/engine/support/fixtures";
 import { rng } from "../tests/engine/support/rng";
 
+// The project has no Node types; this script runs under tsx and reads only its environment.
+declare const process: { readonly env: Readonly<Record<string, string | undefined>> };
+
 const COUNT = Number(process.env.COUNT ?? "3000");
 const SEED = Number(process.env.SEED ?? "7");
 const R = 0.046;

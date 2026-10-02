@@ -798,6 +798,11 @@ function* departing(model: Model, proposal: Candidate, departures: number, holdR
  * nearest hold itself is the caller's (push.ts).
  */
 export function solveGroup(model: Model, work: Work, budget: number, hooks: SolveHooks = {}): GroupSolution {
+    // A spent budget holds the group before the guide runs: its first candidate would be refused anyway, and the
+    // guide's iterations are not counted in work units, so nothing else stops them once the budget is spent.
+    if (work.units >= budget) {
+        return { kind: "budget-hold", outcome: null, tried: 0, excess: 0, slipBalls: [] };
+    }
     const proposal = propose(model);
     const held = settled(model, heldCandidate(model, proposal.candidate));
     const heldKey = candidateKey(held);

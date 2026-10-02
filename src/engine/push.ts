@@ -47,6 +47,7 @@ import {
     type RestingContact,
 } from "./contactModel";
 import { ZERO, add, cross, dot, horizontal, length, normalize, scale, sub, vec3, type Vec3 } from "./math/vec3";
+import { solveLinear } from "./linalg";
 import { holdExcess, solveGroup, type CandidateOutcome, type SolveHooks } from "./modeSolve";
 import { SPEED_EPSILON, classify, contactSlip, landingTime, rollingSpin, type Trajectory } from "./motion";
 import type { BallState, MotionParams, MotionPhase, PushMotion } from "./types";
@@ -66,9 +67,6 @@ export const DIRECTION_TOLERANCE = 1e-2;
 
 /** Gap (m) beyond which a coupled contact is considered to have separated. */
 export const SEPARATION_TOLERANCE = 1e-7;
-
-/** Pivots at or below this make the glue's and the nearest hold's systems singular: their contacts are dependent. */
-const PIVOT_TOLERANCE = 1e-12;
 
 /** A ball's state and motion as decided by the solver. `push` is null when the ball moves freely. */
 export interface RestingMember {
@@ -152,40 +150,6 @@ export function freeAcceleration(s: BallState, p: MotionParams): Vec3 {
     return response(s, p).force;
 }
 
-/** Solves m·x = b by Gaussian elimination with partial pivoting; null when m is singular. */
-function solveLinear(m: readonly (readonly number[])[], b: readonly number[]): number[] | null {
-    const n = b.length;
-    const a = m.map((row, i) => [...row, b[i] as number]);
-    const at = (r: number, c: number): number => (a[r] as number[])[c] as number;
-    for (let col = 0; col < n; col++) {
-        let pivot = col;
-        for (let r = col + 1; r < n; r++) {
-            if (Math.abs(at(r, col)) > Math.abs(at(pivot, col))) {
-                pivot = r;
-            }
-        }
-        if (Math.abs(at(pivot, col)) <= PIVOT_TOLERANCE) {
-            return null;
-        }
-        [a[col], a[pivot]] = [a[pivot] as number[], a[col] as number[]];
-        for (let r = col + 1; r < n; r++) {
-            const factor = at(r, col) / at(col, col);
-            for (let c = col; c <= n; c++) {
-                (a[r] as number[])[c] = at(r, c) - factor * at(col, c);
-            }
-        }
-    }
-    const x = new Array<number>(n).fill(0);
-    for (let r = n - 1; r >= 0; r--) {
-        let sum = at(r, n);
-        for (let c = r + 1; c < n; c++) {
-            sum -= at(r, c) * (x[c] as number);
-        }
-        x[r] = sum / at(r, r);
-    }
-    return x;
-}
-
 /**
  * The frictionless contact constraints of one group, in the form J·x = 0 (touching and not converging) for body
  * accelerations or velocities x. Row k of J maps body i to +n on the body that n points to, −n on the other, and ZERO
@@ -218,7 +182,8 @@ function project(
     const rhs = active.map((k) =>
         system.bodies.reduce((sum, i) => sum - dot(system.jacobian(k, i), base.get(i) as Vec3), 0),
     );
-    const multipliers = active.length === 0 ? [] : solveLinear(matrix, rhs);
+    // The glue and the nearest hold are outside the solver's work budget, as in P2a.1: a throwaway counter.
+    const multipliers = active.length === 0 ? [] : solveLinear(matrix, rhs, { units: 0 });
     if (multipliers === null) {
         return null;
     }
@@ -233,13 +198,23 @@ function project(
     return { result, multipliers };
 }
 
-/** All subsets of `items`, smallest first, each in the items' order. Deterministic. */
-function subsets(items: readonly number[]): number[][] {
-    const all: number[][] = [];
-    for (let mask = 0; mask < 1 << items.length; mask++) {
-        all.push(items.filter((_, j) => (mask & (1 << j)) !== 0));
+/**
+ * The non-empty subsets of `items`, smallest first, each in the items' order; within one size in increasing bitmask
+ * order. Deterministic, and lazy, so a caller that stops at the first acceptable subset never builds the rest.
+ */
+function* subsets(items: readonly number[]): Generator<number[]> {
+    const n = items.length;
+    for (let size = 1; size <= n; size++) {
+        for (let mask = 0; mask < 1 << n; mask++) {
+            let bits = 0;
+            for (let m = mask; m !== 0; m &= m - 1) {
+                bits++;
+            }
+            if (bits === size) {
+                yield items.filter((_, j) => (mask & (1 << j)) !== 0);
+            }
+        }
     }
-    return all.sort((x, y) => x.length - y.length);
 }
 
 /** Connected groups of bodies joined by the kept contacts, in order of their lowest body index. */
@@ -327,7 +302,7 @@ function nearestHold(
     };
     // The empty set has no multipliers to solve for, so it always projects.
     let best = trial([]) as NonNullable<ReturnType<typeof trial>>;
-    for (const active of subsets(groupContacts).slice(1)) {
+    for (const active of subsets(groupContacts)) {
         if (best.worst <= ACCELERATION_EPSILON) {
             break;
         }
