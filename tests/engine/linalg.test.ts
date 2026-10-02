@@ -49,18 +49,34 @@ describe("solveLinear", () => {
 
     it("reuses a factorisation bit for bit", () => {
         const random = rng(13);
+        let factored = 0;
         for (let n = 0; n < 50; n++) {
             const size = 1 + Math.floor(random() * 8);
             const m = Array.from({ length: size }, () =>
                 Array.from({ length: size }, () => (random() < 0.4 ? 0 : random() - 0.5)),
             );
-            const b = Array.from({ length: size }, () => random() - 0.5);
+            const b1 = Array.from({ length: size }, () => random() - 0.5);
+            const b2 = Array.from({ length: size }, () => random() - 0.5);
             const lu = factor(m, work());
             if (!lu) {
                 continue;
             }
-            expect(solveFactored(lu, b, work())).toEqual(solveLinear(m, b, work()));
+            factored++;
+            // Two solves on one factorisation: the second matches a fresh solve, so the first did not alter lu.
+            const x1 = solveFactored(lu, b1, work());
+            const x2 = solveFactored(lu, b2, work());
+            expect(x2).toEqual(solveLinear(m, b2, work()));
+            expect(x1).toEqual(solveLinear(m, b1, work()));
+            for (const [x, b] of [
+                [x1, b1],
+                [x2, b2],
+            ] as const) {
+                multiply(m, x).forEach((v, r) => {
+                    expect(Math.abs(v - (b[r] as number))).toBeLessThan(1e-9);
+                });
+            }
         }
+        expect(factored).toBeGreaterThan(10);
     });
 
     it("counts n³ work units per factorisation and n² per kept-factor solve", () => {
