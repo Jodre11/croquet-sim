@@ -6,7 +6,7 @@
  */
 import { CONTACT_TOLERANCE } from "../detect";
 import { horizontal, length, sub, vec3, type Vec3 } from "../math/vec3";
-import { BALL_IDS, type BallState, type BallStates, type World } from "../types";
+import { BALL_IDS, type BallParams, type BallState, type BallStates, type SurfaceProps, type World } from "../types";
 import { obstaclesOf, validateWorld } from "../world";
 import { lawFromContactTime, lawFromStiffness } from "./contactLaw";
 import { headLowestPoint } from "./contacts";
@@ -44,6 +44,14 @@ function finite(v: Vec3, name: string): void {
     if (!Number.isFinite(v.x) || !Number.isFinite(v.y) || !Number.isFinite(v.z)) {
         fail(`${name} must be finite`);
     }
+}
+
+/**
+ * Depth (m) at which a ball at rest sinks into the turf, m·g/k_turf: where its turf spring carries its weight. The one
+ * definition both validateImpact and prepareImpact use, so the validated position is where the impact starts the ball.
+ */
+function staticSink(ball: BallParams, gravity: number, surface: SurfaceProps): number {
+    return (ball.mass * gravity) / surface.turfStiffness;
 }
 
 /**
@@ -128,7 +136,7 @@ export function validateImpact(contact: ContactState, balls: BallStates, world: 
         // The whole cylinder, with CONTACT_TOLERANCE: a face exactly touching the ball is valid at any orientation.
         // Checked where the impact starts the ball, at its static sink (prepareImpact): a face tilted upwards that
         // touches the ball at z = R would otherwise start pressed sink·n_z into it.
-        const sunk = vec3(p.x, p.y, R - (world.ball.mass * world.gravity) / surface.turfStiffness);
+        const sunk = vec3(p.x, p.y, R - staticSink(world.ball, world.gravity, surface));
         if (cylinderDistance(contact, sunk) < R - CONTACT_TOLERANCE) {
             fail(`head penetrates ball ${id}`);
         }
@@ -149,7 +157,7 @@ export function prepareImpact(contact: ContactState, balls: BallStates, world: W
             continue;
         }
         const surface = world.lawn.surfaceAt(s.position);
-        const sink = (ball.mass * gravity) / surface.turfStiffness;
+        const sink = staticSink(ball, gravity, surface);
         entries.push({
             id,
             state: { ...s, position: vec3(s.position.x, s.position.y, s.position.z - sink) },

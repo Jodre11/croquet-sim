@@ -1,7 +1,8 @@
 /**
  * Impact digest: every number the impact produces, at full precision, for a refactor's before/after diff. Covers the
- * shared scenarios step by step (every probe snapshot) and the fuzz's strokes (final results), all on the test world. Two runs on the same engine version must print identical output; a refactor
- * meant to be bit-identical must too.
+ * shared scenarios step by step (every probe snapshot) and the fuzz's strokes (final results), all on the test
+ * world. Two runs on the same engine version must print identical output; a refactor meant to be bit-identical must
+ * too.
  * Run with `npx --yes tsx scripts/impactDigest.ts > before.txt`; environment: STROKES (fuzz strokes, default 200).
  * Not part of the test suite.
  */

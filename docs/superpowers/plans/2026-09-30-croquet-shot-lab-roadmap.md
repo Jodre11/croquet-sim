@@ -167,7 +167,7 @@ What P1 delivered, and the constraints it leaves for P2–P5.
     δ 1.1e-6 m, the ball launched at 2 mm/s, no flag). Now validated against the sunk positions, so it is rejected.
   - The `simulateImpact` rejection tests asserted only the RangeError type; each now names the check that must fire.
   - Running out of `HANDOVER_PASSES` was silent; `handover` now throws an Error naming the pair.
-  - `integrate()`'s step is split into helpers (`pairForces`, `advance`, `turfStatus`, `finish`), bit-identical by the
+  - `integrate()`'s step is split into helpers (`applyPair`, `advance`, `trackTurf`, `finish`), bit-identical by the
     digest. `driveAt`'s linear rescan is left for P2b.2, if the swing model's drive tables are long.
 - **Not used yet.** `simulateImpact` is not exported from `src/engine/index.ts`; P2b.2's `simulateShot` wires and
   exports it.

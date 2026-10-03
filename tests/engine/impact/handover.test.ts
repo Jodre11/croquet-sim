@@ -82,6 +82,11 @@ describe("handover", () => {
         expect(() => handover(chain, R, 1)).toThrow(/balls blue and red still overlap by [0-9.e-]+ m after 1 pass/);
     });
 
+    it.each([0, -1, 1.5, Number.NaN])("rejects %s passes", (passes) => {
+        expect(() => handover({ blue: airborneAt(5, 5, R) }, R, passes)).toThrow(RangeError);
+        expect(() => handover({ blue: airborneAt(5, 5, R) }, R, passes)).toThrow(/positive integer/);
+    });
+
     it("reports no correction when nothing overlaps", () => {
         expect(handover({ blue: airborneAt(5, 5, R), red: airborneAt(6, 5, R) }, R).overlapCorrection).toBe(0);
     });

@@ -164,17 +164,18 @@ interface StepLoads {
 
 /**
  * The normal and tangential force of one closed pair, from the current state: advances the pair's tangential spring,
- * adds the force to body B and its reaction to body A (the head, the other ball, or the immovable turf), and returns
- * the pair as the probe sees it.
+ * adds the force to body B and its reaction to body A (the head, the other ball, or the immovable turf), and appends
+ * the pair as the probe sees it to `samples` (null without a probe).
  */
-function pairForces(
+function applyPair(
     p: PairState,
     contact: Penetration,
     head: HeadState,
     balls: readonly BallState[],
     dt: number,
     loads: StepLoads,
-): ContactSample {
+    samples: ContactSample[] | null,
+): void {
     const { pair } = p;
     const sb = balls[pair.b] as BallState;
     const sa = pair.kind === "ball-ball" ? (balls[pair.a] as BallState) : null;
@@ -203,7 +204,7 @@ function pairForces(
         loads.forces[pair.a] = sub(loads.forces[pair.a] as Vec3, force);
         loads.torques[pair.a] = sub(loads.torques[pair.a] as Vec3, cross(sub(contact.point, sa.position), force));
     }
-    return {
+    samples?.push({
         key: pair.key,
         normal: contact.normal,
         depth: contact.depth,
@@ -211,7 +212,7 @@ function pairForces(
         tangentialForce: tangential.force,
         spring: tangential.spring,
         law: p.law,
-    };
+    });
 }
 
 /**
@@ -256,7 +257,7 @@ interface TurfTrack {
  * Updates `track` after a step at time `now`, raising `turf-lift` for a ball that first leaves the turf, and returns
  * whether any ball in turf contact is still bouncing in it (see the file header).
  */
-function turfStatus(
+function trackTurf(
     balls: readonly BallState[],
     setup: ImpactSetup,
     track: TurfTrack,
@@ -376,16 +377,13 @@ export function integrate(setup: ImpactSetup, options: ImpactOptions = {}): Impa
                 struck = true;
             }
             p.peak = Math.max(p.peak, contact.depth);
-            const sample = pairForces(p, contact, state, balls, dt, loads);
-            if (options.probe) {
-                samples.push(sample);
-            }
+            applyPair(p, contact, state, balls, dt, loads, options.probe ? samples : null);
         }
 
         state = advance(state, balls, loads, setup, ballInertia, dt);
         steps++;
         const now = steps * dt;
-        const turfMoving = turfStatus(balls, setup, track, now, events);
+        const turfMoving = trackTurf(balls, setup, track, now, events);
         if (!grounded && headLowestPoint(state, head) < 0) {
             grounded = true;
             events.push({ kind: "impact-mallet-grounded", t: now });

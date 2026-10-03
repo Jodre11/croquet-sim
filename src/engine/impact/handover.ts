@@ -97,6 +97,9 @@ function worstOverlap(states: readonly BallState[], radius: number): { overlap: 
  * otherwise reject the overlap with a RangeError far from its cause.
  */
 export function handover(balls: BallStates, radius: number, passes = HANDOVER_PASSES): Handover {
+    if (!(passes >= 1) || !Number.isInteger(passes)) {
+        throw new RangeError(`handover passes must be a positive integer (got ${passes})`);
+    }
     const ids = BALL_IDS.filter((id) => balls[id]);
     const states = ids.map((id) => placed(balls[id] as BallState, radius));
     let overlapCorrection = 0;
