@@ -77,24 +77,34 @@ function separated(a: Vec3, b: Vec3, radius: number): readonly [Vec3, Vec3] {
     return [pa, pb];
 }
 
-/** Largest overlap (m) of any pair of the balls' centres, or 0 when none overlaps. */
-function worstOverlap(states: readonly BallState[], radius: number): number {
-    let worst = 0;
+/** Largest overlap (m) of any pair of the balls' centres (0 when none overlaps), and that pair's indices. */
+function worstOverlap(states: readonly BallState[], radius: number): { overlap: number; i: number; j: number } {
+    let worst = { overlap: 0, i: 0, j: 0 };
     for (let i = 0; i < states.length; i++) {
         for (let j = i + 1; j < states.length; j++) {
             const distance = length(sub((states[j] as BallState).position, (states[i] as BallState).position));
-            worst = Math.max(worst, 2 * radius - distance);
+            if (2 * radius - distance > worst.overlap) {
+                worst = { overlap: 2 * radius - distance, i, j };
+            }
         }
     }
     return worst;
 }
 
-/** Places the balls for phase 2 and separates overlapping pairs (see the file header). */
-export function handover(balls: BallStates, radius: number): Handover {
+/**
+ * Places the balls for phase 2 and separates overlapping pairs (see the file header). Throws an Error, naming the worst
+ * pair, if `passes` (HANDOVER_PASSES; tests may lower it) leave an overlap above HANDOVER_RESIDUAL: phase 2 would
+ * otherwise reject the overlap with a RangeError far from its cause.
+ */
+export function handover(balls: BallStates, radius: number, passes = HANDOVER_PASSES): Handover {
+    if (!(passes >= 1) || !Number.isInteger(passes)) {
+        throw new RangeError(`handover passes must be a positive integer (got ${passes})`);
+    }
     const ids = BALL_IDS.filter((id) => balls[id]);
     const states = ids.map((id) => placed(balls[id] as BallState, radius));
     let overlapCorrection = 0;
-    for (let pass = 0; pass < HANDOVER_PASSES; pass++) {
+    let separatedAll = false;
+    for (let pass = 0; pass < passes; pass++) {
         for (let i = 0; i < states.length; i++) {
             for (let j = i + 1; j < states.length; j++) {
                 const a = states[i] as BallState;
@@ -110,9 +120,17 @@ export function handover(balls: BallStates, radius: number): Handover {
                 }
             }
         }
-        if (!(worstOverlap(states, radius) > HANDOVER_RESIDUAL)) {
+        if (!(worstOverlap(states, radius).overlap > HANDOVER_RESIDUAL)) {
+            separatedAll = true;
             break;
         }
+    }
+    if (!separatedAll) {
+        const worst = worstOverlap(states, radius);
+        throw new Error(
+            `handover: balls ${ids[worst.i]} and ${ids[worst.j]} still overlap by ${worst.overlap} m after ` +
+                `${passes} pass${passes === 1 ? "" : "es"}`,
+        );
     }
     const result: BallStates = {};
     ids.forEach((id, i) => {

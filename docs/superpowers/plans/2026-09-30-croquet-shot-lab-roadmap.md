@@ -153,16 +153,22 @@ What P1 delivered, and the constraints it leaves for P2–P5.
   estimate (0.5). One round wooden head only; other faces, weightings and square heads are P2b.2's.
 - **Energy invariant (for P2b.2/P5).** Task 8's energy check mixes time levels and is biased by about 0.6% of an
   undamped contact's energy, masked by dissipation. An invariant on the integrator's shadow energy ½k·δₙ₋₁·δₙ, with
-  contact onset and release handled, would make a rounding-level tolerance meaningful.
+  contact onset and release handled, would make a rounding-level tolerance meaningful. **Done before P2b.2**
+  (`shadowEnergy.test.ts`): on undamped, frictionless, central contacts the shadow energy less the exact onset and
+  release jumps holds to 2.5e-13 of the kinetic energy. Rotation, damping and friction have no exact shadow energy, so
+  the time-level-mixed check stays for the general case.
 - **Obstacles in the impact (for P2b.2).** Ball–upright and ball–peg contact is not modelled in the impact, and a ball
   can end the impact overlapping an upright or the peg (or be moved into one by the handover's separation), which
   phase 2 rejects; validation rejects only a ball touching an obstacle at t = 0.
-- **Housekeeping (for P2b.2).**
+- **Housekeeping (for P2b.2). Done before P2b.2**, with no accepted result changed (`scripts/impactDigest.ts`
+  byte-identical):
   - A face touching a ball with an upward-tilted normal starts compressed by sink·n_z after the static sink, because
     validation checks balls at z = R and `prepareImpact` then lowers them (measured: head at rest, pitch −0.05 gives
-    δ 1.1e-6 m, the ball launched at 2 mm/s, no flag). Validate against the sunk positions, or flag it.
-  - The `simulateImpact` rejection tests assert only the RangeError type, not which check fired.
-  - Running out of `HANDOVER_PASSES` is silent; phase 2 would throw far from the cause.
+    δ 1.1e-6 m, the ball launched at 2 mm/s, no flag). Now validated against the sunk positions, so it is rejected.
+  - The `simulateImpact` rejection tests asserted only the RangeError type; each now names the check that must fire.
+  - Running out of `HANDOVER_PASSES` was silent; `handover` now throws an Error naming the pair.
+  - `integrate()`'s step is split into helpers (`applyPair`, `advance`, `trackTurf`, `finish`), bit-identical by the
+    digest. `driveAt`'s linear rescan is left for P2b.2, if the swing model's drive tables are long.
 - **Not used yet.** `simulateImpact` is not exported from `src/engine/index.ts`; P2b.2's `simulateShot` wires and
   exports it.
 

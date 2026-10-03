@@ -6,7 +6,7 @@
  */
 import { CONTACT_TOLERANCE } from "../detect";
 import { horizontal, length, sub, vec3, type Vec3 } from "../math/vec3";
-import { BALL_IDS, type BallState, type BallStates, type World } from "../types";
+import { BALL_IDS, type BallParams, type BallState, type BallStates, type SurfaceProps, type World } from "../types";
 import { obstaclesOf, validateWorld } from "../world";
 import { lawFromContactTime, lawFromStiffness } from "./contactLaw";
 import { headLowestPoint } from "./contacts";
@@ -47,6 +47,14 @@ function finite(v: Vec3, name: string): void {
 }
 
 /**
+ * Depth (m) at which a ball at rest sinks into the turf, m·g/k_turf: where its turf spring carries its weight. The one
+ * definition both validateImpact and prepareImpact use, so the validated position is where the impact starts the ball.
+ */
+function staticSink(ball: BallParams, gravity: number, surface: SurfaceProps): number {
+    return (ball.mass * gravity) / surface.turfStiffness;
+}
+
+/**
  * Distance (m) from `centre` to the solid head cylinder (axis = body x, half-length L/2, radius r), or 0 inside it.
  * Covers the faces, the rims and the barrel, which `faceContact` does not (it misses the barrel and accepts a rim
  * overlap as OFF_FACE).
@@ -63,7 +71,7 @@ function cylinderDistance(contact: ContactState, centre: Vec3): number {
  * - a ball not at rest on the turf;
  * - two balls overlapping, or a ball touching an obstacle within CONTACT_TOLERANCE (ball–obstacle contact is not
  *   modelled in the impact);
- * - the head (faces, rims or barrel) in a ball, or in the turf, at t = 0;
+ * - the head (faces, rims or barrel) in a ball at its static sink, or in the turf, at t = 0;
  * - a drive that is empty, does not start at 0 or does not increase strictly;
  * - a non-positive mass, inertia, length, radius or contact time;
  * - a restitution outside (0, 1] or a negative friction;
@@ -126,7 +134,10 @@ export function validateImpact(contact: ContactState, balls: BallStates, world: 
             }
         }
         // The whole cylinder, with CONTACT_TOLERANCE: a face exactly touching the ball is valid at any orientation.
-        if (cylinderDistance(contact, p) < R - CONTACT_TOLERANCE) {
+        // Checked where the impact starts the ball, at its static sink (prepareImpact): a face tilted upwards that
+        // touches the ball at z = R would otherwise start pressed sink·n_z into it.
+        const sunk = vec3(p.x, p.y, R - staticSink(world.ball, world.gravity, surface));
+        if (cylinderDistance(contact, sunk) < R - CONTACT_TOLERANCE) {
             fail(`head penetrates ball ${id}`);
         }
     });
@@ -146,7 +157,7 @@ export function prepareImpact(contact: ContactState, balls: BallStates, world: W
             continue;
         }
         const surface = world.lawn.surfaceAt(s.position);
-        const sink = (ball.mass * gravity) / surface.turfStiffness;
+        const sink = staticSink(ball, gravity, surface);
         entries.push({
             id,
             state: { ...s, position: vec3(s.position.x, s.position.y, s.position.z - sink) },
