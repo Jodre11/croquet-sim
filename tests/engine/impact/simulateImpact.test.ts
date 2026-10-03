@@ -87,6 +87,10 @@ describe("validation", () => {
         ["overlapping balls", ok, { blue: BLUE, red: ballAt(5 + 2 * R - 1e-6, 0) }, WORLD],
         ["a ball touching the peg", strike(vec3(15 - 0.02 - R, 20, R)), { blue: ballAt(15 - 0.02 - R, 20) }, WORLD],
         ["the head in a ball", strike(BLUE.position, { gap: -1e-4 }), { blue: BLUE }, WORLD],
+        // The head's barrel is 0.032 m from its axis (y = 0, z = R); the ball's surface reaches 1 cm into it.
+        ["the head's barrel in a ball", ok, { blue: BLUE, red: ballAt(5 - R - 1e-3 - 0.115, 0.032 + R - 0.01) }, WORLD],
+        // 0.5·R beyond the rear face plane and 1 cm outside its rim, so the face check sees only the rim (OFF_FACE).
+        ["the head's rim in a ball", ok, { blue: BLUE, red: ballAt(5 - 1.5 * R - 1e-3 - 0.23, 0.042) }, WORLD],
         ["the head in the turf", { ...ok, position: vec3(ok.position.x, ok.position.y, 0.01) }, { blue: BLUE }, WORLD],
         ["an empty drive", { ...ok, drive: [] }, { blue: BLUE }, WORLD],
         ["a drive not starting at 0", { ...ok, drive: [{ t: 1e-4, force: vec3(0, 0, 0) }] }, { blue: BLUE }, WORLD],

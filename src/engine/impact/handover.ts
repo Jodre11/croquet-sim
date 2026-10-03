@@ -9,10 +9,23 @@
  * Contacts release while δ > 0, so a pair can end the impact still overlapping. Each such pair, in BALL_IDS order, is
  * pushed apart along its normal to zero gap, each ball half the overlap, velocities unchanged. A ball is never moved
  * below the turf: a downward half-move leaves it at z = R, and the other ball takes the rest (`separated`).
+ *
+ * One pass cannot separate a chain of three balls: separating the second pair pushes the middle ball back into the
+ * first. The same fixed-order pass therefore repeats until no pair overlaps by more than HANDOVER_RESIDUAL, at most
+ * HANDOVER_PASSES times. A pair alone is separated by the first pass.
  */
 import { add, horizontal, length, scale, sub, vec3, type Vec3 } from "../math/vec3";
 import { SETTLE_SPEED } from "../resolve";
 import { BALL_IDS, type BallState, type BallStates } from "../types";
+
+/**
+ * Overlap (m) a handover may leave. Numerical, not physical: far below phase 2's CONTACT_TOLERANCE (1e-9), so phase 2
+ * accepts the pair, and above the ulp-level rounding of a separated pair.
+ */
+const HANDOVER_RESIDUAL = 1e-12;
+
+/** Bound on the separation passes. Numerical, not physical: a chain's overlap shrinks geometrically per pass. */
+const HANDOVER_PASSES = 64;
 
 /** The balls as phase 2 receives them, and the largest overlap (m) removed from a pair. */
 export interface Handover {
@@ -64,24 +77,41 @@ function separated(a: Vec3, b: Vec3, radius: number): readonly [Vec3, Vec3] {
     return [pa, pb];
 }
 
+/** Largest overlap (m) of any pair of the balls' centres, or 0 when none overlaps. */
+function worstOverlap(states: readonly BallState[], radius: number): number {
+    let worst = 0;
+    for (let i = 0; i < states.length; i++) {
+        for (let j = i + 1; j < states.length; j++) {
+            const distance = length(sub((states[j] as BallState).position, (states[i] as BallState).position));
+            worst = Math.max(worst, 2 * radius - distance);
+        }
+    }
+    return worst;
+}
+
 /** Places the balls for phase 2 and separates overlapping pairs (see the file header). */
 export function handover(balls: BallStates, radius: number): Handover {
     const ids = BALL_IDS.filter((id) => balls[id]);
     const states = ids.map((id) => placed(balls[id] as BallState, radius));
     let overlapCorrection = 0;
-    for (let i = 0; i < states.length; i++) {
-        for (let j = i + 1; j < states.length; j++) {
-            const a = states[i] as BallState;
-            const b = states[j] as BallState;
-            const offset = sub(b.position, a.position);
-            const distance = length(offset);
-            const overlap = 2 * radius - distance;
-            if (overlap > 0) {
-                const [pa, pb] = separated(a.position, b.position, radius);
-                states[i] = { ...a, position: pa };
-                states[j] = { ...b, position: pb };
-                overlapCorrection = Math.max(overlapCorrection, overlap);
+    for (let pass = 0; pass < HANDOVER_PASSES; pass++) {
+        for (let i = 0; i < states.length; i++) {
+            for (let j = i + 1; j < states.length; j++) {
+                const a = states[i] as BallState;
+                const b = states[j] as BallState;
+                const offset = sub(b.position, a.position);
+                const distance = length(offset);
+                const overlap = 2 * radius - distance;
+                if (overlap > 0) {
+                    const [pa, pb] = separated(a.position, b.position, radius);
+                    states[i] = { ...a, position: pa };
+                    states[j] = { ...b, position: pb };
+                    overlapCorrection = Math.max(overlapCorrection, overlap);
+                }
             }
+        }
+        if (!(worstOverlap(states, radius) > HANDOVER_RESIDUAL)) {
+            break;
         }
     }
     const result: BallStates = {};

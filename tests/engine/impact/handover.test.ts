@@ -52,6 +52,26 @@ describe("handover", () => {
         expect(() => simulateFreeMotion(out.balls, testWorld())).not.toThrow();
     });
 
+    it("separates a chain of three overlapping balls", () => {
+        const out = handover(
+            {
+                blue: airborneAt(5, 5, R),
+                red: airborneAt(5 + 2 * R - 1e-6, 5, R),
+                yellow: airborneAt(5 + 4 * R - 2e-6, 5, R),
+            },
+            R,
+        );
+        const at = (id: "blue" | "red" | "yellow") => out.balls[id]?.position ?? vec3(0, 0, 0);
+        for (const [a, b] of [
+            ["blue", "red"],
+            ["red", "yellow"],
+            ["blue", "yellow"],
+        ] as const) {
+            expect(length(sub(at(b), at(a))) - 2 * R).toBeGreaterThanOrEqual(-1e-12);
+        }
+        expect(() => simulateFreeMotion(out.balls, testWorld())).not.toThrow();
+    });
+
     it("reports no correction when nothing overlaps", () => {
         expect(handover({ blue: airborneAt(5, 5, R), red: airborneAt(6, 5, R) }, R).overlapCorrection).toBe(0);
     });

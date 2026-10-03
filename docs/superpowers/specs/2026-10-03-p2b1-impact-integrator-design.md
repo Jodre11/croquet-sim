@@ -41,6 +41,13 @@ changes below.
 
 The plan's "Decisions made in pre-flight" gives the figures.
 
+**Amended 2026-10-03 (real run).** Review of the entry point changed two points:
+
+- **Handover (§6).** The separation pass repeats until no pair overlaps by more than 1e-12 m (at most 64 passes); one
+  pass cannot separate a chain of three balls.
+- **Validation (§3).** The head-penetration check covers the whole head cylinder (faces, rims and barrel), not only
+  the faces.
+
 ## 1. Goal and exit criteria
 
 Add phase 1 to the engine: a compliant, small-step, N-body integrator that takes a `ContactState` (the mallet head
@@ -159,7 +166,8 @@ Wiring into `simulateShot` is P2b.2's. P2b.1 adds a test helper that chains `sim
 - two balls overlap, or a ball overlaps or touches an obstacle (upright or peg) within `CONTACT_TOLERANCE`
   (`detect.ts`): ball–obstacle contact is not modelled in the impact (§11), and phase 2 would reject the overlap at
   handover;
-- the head penetrates a ball or the turf at t = 0;
+- the head penetrates a ball or the turf at t = 0 (the ball check covers the whole head cylinder: faces, rims and
+  barrel);
 - the drive is empty, does not start at t = 0, or is not strictly increasing in t;
 - any mass, inertia, length, radius or contact time is not positive and finite, or any restitution is outside
   (0, 1] or friction negative.
@@ -278,7 +286,9 @@ Per product spec §5, with turf contact as defined in §4:
   unchanged, pairs in the fixed order of §4. No ball is moved below the turf. When the lower ball's half-move is
   clamped at `z = R`, the other ball takes the rest along the new line of centres. Clamping alone leaves about
   `½·overlap·n_z²`, first order in the overlap (pre-flight: 4e-8 m, beyond phase 2's `CONTACT_TOLERANCE` of 1e-9). The
-  largest such correction is reported in `ImpactResult`.
+  fixed-order pass repeats until no pair overlaps by more than 1e-12 m (at most 64 passes), because one pass cannot
+  separate a chain of three balls: separating the second pair pushes the middle ball back into the first. The largest
+  single-pair overlap removed is reported in `ImpactResult`.
 
 Positions are as at the end of the impact after these corrections; phase 2's time starts at zero there.
 

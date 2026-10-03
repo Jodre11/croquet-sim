@@ -11,6 +11,7 @@ import { obstaclesOf, validateWorld } from "../world";
 import { lawFromContactTime, lawFromStiffness } from "./contactLaw";
 import { OFF_FACE, faceContact, headLowestPoint } from "./contacts";
 import { handover } from "./handover";
+import { rotateInverse } from "./rigidBody";
 import { integrate, type ImpactBall, type ImpactOptions, type ImpactSetup } from "./integrate";
 import type { ContactState, DriveSample, ImpactResult } from "./types";
 
@@ -46,11 +47,23 @@ function finite(v: Vec3, name: string): void {
 }
 
 /**
+ * Distance (m) from `centre` to the solid head cylinder (axis = body x, half-length L/2, radius r), or 0 inside it.
+ * Covers the faces, the rims and the barrel, which `faceContact` alone does not (it misses the barrel and accepts a
+ * rim overlap as OFF_FACE).
+ */
+function cylinderDistance(contact: ContactState, centre: Vec3): number {
+    const p = rotateInverse(contact.orientation, sub(centre, contact.position));
+    const axial = Math.max(Math.abs(p.x) - contact.head.length / 2, 0);
+    const radial = Math.max(Math.sqrt(p.y * p.y + p.z * p.z) - contact.head.radius, 0);
+    return Math.sqrt(axial * axial + radial * radial);
+}
+
+/**
  * Throws a RangeError if the impact's input is invalid (design §3):
  * - a ball not at rest on the turf;
  * - two balls overlapping, or a ball touching an obstacle within CONTACT_TOLERANCE (ball–obstacle contact is not
  *   modelled in the impact);
- * - the head in a ball or in the turf at t = 0;
+ * - the head (faces, rims or barrel) in a ball, or in the turf, at t = 0;
  * - a drive that is empty, does not start at 0 or does not increase strictly;
  * - a non-positive mass, inertia, length, radius or contact time;
  * - a restitution outside (0, 1] or a negative friction;
@@ -113,7 +126,7 @@ export function validateImpact(contact: ContactState, balls: BallStates, world: 
             }
         }
         const touch = faceContact(contact, head, p, R);
-        if (touch !== null && touch !== OFF_FACE) {
+        if ((touch !== null && touch !== OFF_FACE) || cylinderDistance(contact, p) < R - CONTACT_TOLERANCE) {
             fail(`head penetrates ball ${id}`);
         }
     });
