@@ -3,10 +3,12 @@
  * ReferenceDataError if any entry is malformed or unsourced.
  */
 import ballJson from "../../reference/ball.json";
+import contactJson from "../../reference/contact.json";
 import courtJson from "../../reference/court.json";
 import frictionJson from "../../reference/friction.json";
 import lawnJson from "../../reference/lawn.json";
 import lawsJson from "../../reference/laws.json";
+import malletJson from "../../reference/mallet.json";
 import {
     ReferenceDataError,
     readArray,
@@ -120,4 +122,21 @@ export const frictionReference = {
     ballPegRestitution: readValue(frictionJson, "ballPegRestitution", "friction"),
     ballPegFriction: readValue(frictionJson, "ballPegFriction", "friction"),
     ballTurfRestitution: readValue(frictionJson, "ballTurfRestitution", "friction"),
+} as const;
+
+/** Impact-phase contact data: turf stiffness, contact durations and the tangential stiffness ratio. */
+export const contactReference = {
+    ballTurfStiffness: readValue(contactJson, "ballTurfStiffness", "contact"),
+    ballBallContactTime: readValue(contactJson, "ballBallContactTime", "contact"),
+    faceBallContactTime: readValue(contactJson, "faceBallContactTime", "contact"),
+    tangentialStiffnessRatio: readValue(contactJson, "tangentialStiffnessRatio", "contact"),
+} as const;
+
+/** One mallet face and one typical round head (P2b.1; other faces and weightings are P2b.2's). */
+export const malletReference = {
+    faceRestitution: readValue(malletJson, "faceRestitution", "mallet"),
+    faceFriction: readValue(malletJson, "faceFriction", "mallet"),
+    headMass: readValue(malletJson, "headMass", "mallet"),
+    headLength: readValue(malletJson, "headLength", "mallet"),
+    headDiameter: readValue(malletJson, "headDiameter", "mallet"),
 } as const;

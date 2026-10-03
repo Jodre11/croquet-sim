@@ -1,0 +1,42 @@
+{
+    "faceRestitution": {
+        "value": 0.817,
+        "unit": "1",
+        "bounds": [0.795, 0.857],
+        "source": "Don Gugan, 'Experiments on the Game of Croquet; Bouncing and Rolling Balls', Table I (2002; Oxford Croquet, updated 20 April 2026), https://oxfordcroquet.org/tech/gugan1/",
+        "provenance": "direct",
+        "note": "Ball on a wooden face, \"using a round head typical of older style mallets, but with faces in very good condition\". Table I, Jaques 'Eclipse' ball on wood, e × 100 at 0.50, 1.00, 1.64, 2.04, 2.00, 2.83, 3.51, 4.43, 5.47, 6.01 m/s: 85.7, 84.2, 82.9, 82.4, 82.7, 81.7, 81.1, 80.6, 79.9, 79.5. Value at 2.83 m/s; bounds are the speed range. Gugan: \"altering the clamping pressure on the wood and plastic mallet heads over a wide range of tightness made no difference to the values of e(U).\" Speed dependence is not modelled. Other face materials are P2b.2's."
+    },
+    "faceFriction": {
+        "value": 0.5,
+        "unit": "1",
+        "bounds": [0.2, 0.6],
+        "source": "Don Gugan, 'The Physics of Croquet Strokes: Analysis of the CA high-speed DVD', appendix B (2009; Oxford Croquet), https://oxfordcroquet.org/tech/gugan4/; bounds: Engineering ToolBox, 'Friction - Coefficients for Common Materials and Surfaces' (2025), https://www.engineeringtoolbox.com/friction-coefficients-d_778.html",
+        "provenance": "analogue",
+        "note": "No measured mallet-face friction was found. Gugan: \"although λ is unknown for the mallet face, typical values of sliding friction are ≈ 0.5, and the inequality is surely satisfied.\" and \"the video images show that the contact is far from point-like, and give no evidence for sliding along the mallet face.\" Bounds reuse ballPegFriction's wood-clean metal range 0.2-0.6 (friction.json). Weakly supported."
+    },
+    "headMass": {
+        "value": 1.0,
+        "unit": "kg",
+        "bounds": [0.85, 1.1],
+        "source": "Ian Plummer, 'Mallet Making Notes' (Oxford Croquet), https://oxfordcroquet.org/equip/makingmallets/; bounds: Croquet Association, 'Choosing a Croquet Mallet', https://www.croquet.org.uk/?p=games%2Ftech%2FChoosingMallet, and Oxford Croquet, 'Equipment - Croquet Mallets', https://oxfordcroquet.org/equip/mallets/",
+        "provenance": "direct",
+        "note": "Plummer: \"Typical isolated heads weigh around 1 kg.\" His table gives a 229 mm wooden head (George Wood Mallets) at 987 g. Bounds derived: whole mallets \"in the range 2lb 12oz to 3lb 4oz\" (CA, 1.25-1.47 kg) less \"A typical isolated shaft weights around 14 oz. (398 g)\" (Oxford Croquet), 0.85-1.08 kg, rounded up to 1.1."
+    },
+    "headLength": {
+        "value": 0.2286,
+        "unit": "m",
+        "bounds": [0.2286, 0.3048],
+        "source": "Croquet Association, 'Choosing a Croquet Mallet', https://www.croquet.org.uk/?p=games%2Ftech%2FChoosingMallet; Oxford Croquet, 'Equipment - Croquet Mallets', https://oxfordcroquet.org/equip/mallets/",
+        "provenance": "direct",
+        "note": "CA: \"A standard mallet has a head length of 9 to 9.5\", and this is recommended for beginners. Expert players may use longer head lengths up to 12\". Oxford Croquet: \"Older mallet heads could be as short as 9\" (230 mm) but the trend now is for 10 - 11\" (250 - 280 mm) heads.\" SI: 9 in × 0.0254 = 0.2286 m; 12 in = 0.3048 m."
+    },
+    "headDiameter": {
+        "value": 0.0762,
+        "unit": "m",
+        "bounds": [0.0635, 0.0762],
+        "source": "Jaques London, 'Croquet Mallet - Richmond', https://www.jaqueslondon.co.uk/products/croquet-mallet-richmond; lower bound: Oxford Croquet, 'Equipment - Croquet Mallets', https://oxfordcroquet.org/equip/mallets/",
+        "provenance": "direct",
+        "note": "Jaques (round head): \"Head 9\" Wide x 3\" Diameter or 23cm Wide x 76mm Diameter.\" (3 in = 0.0762 m). The only round-head diameter found. Lower bound from square heads, \"Typical mallet faces are 2.25\" - 2.5\" (57 - 64 mm) square.\" (2.5 in = 0.0635 m). The shaft joins the head at its mid-point at right angles (Laws 5.5.1, \"a head with a shaft firmly connected to its mid-point and at right-angles to it\", quoted at https://oxfordcroquet.org/tech/towlson/). Inertia is derived in the engine for a uniform solid cylinder (rigidBody.ts solidCylinderInertia). That is Towlson's \"IRnd = Mw ( L2 + 3a2 ) / 12\" about the shaft axis: 4.7e-3 kg m² for this head. Russ ('Mallets: End-weighting and the Moment of Inertia', https://oxfordcroquet.org/tech/russ/) measured 33.4 kg cm² (3.3e-3 kg m²) for a 'Traditional' round wooden 9\" head. Weakly supported."
+    }
+}

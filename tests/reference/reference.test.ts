@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
     ballReference,
+    contactReference,
     courtReference,
     frictionReference,
     lawnReference,
     lawsReference,
+    malletReference,
 } from "../../src/reference/index";
 
 describe("reference data", () => {
@@ -56,6 +58,29 @@ describe("reference data", () => {
         }
         for (const key of ["ballTurfSliding", "ballBallFriction", "ballUprightFriction", "ballPegFriction"] as const) {
             expect(frictionReference[key].value).toBeGreaterThanOrEqual(0);
+        }
+    });
+});
+
+describe("impact reference data", () => {
+    it("loads contact durations, turf stiffness and the tangential ratio", () => {
+        expect(contactReference.ballTurfStiffness.value).toBeGreaterThan(0);
+        expect(contactReference.ballBallContactTime.value).toBeGreaterThan(0);
+        expect(contactReference.faceBallContactTime.value).toBeGreaterThan(0);
+        expect(contactReference.tangentialStiffnessRatio.value).toBeCloseTo(2 / 7, 15);
+    });
+
+    it("loads one face and one typical head", () => {
+        expect(malletReference.faceRestitution.value).toBeGreaterThan(0);
+        expect(malletReference.faceRestitution.value).toBeLessThanOrEqual(1);
+        expect(malletReference.faceFriction.value).toBeGreaterThanOrEqual(0);
+        expect(malletReference.headMass.value).toBeGreaterThan(0);
+        expect(malletReference.headLength.value).toBeGreaterThan(malletReference.headDiameter.value);
+    });
+
+    it("gives every impact value bounds, so the probe can sweep them", () => {
+        for (const v of [...Object.values(contactReference), ...Object.values(malletReference)]) {
+            expect(v.bounds, v.source).toBeDefined();
         }
     });
 });
