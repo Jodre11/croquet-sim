@@ -12,6 +12,21 @@ geometrically; residual overlap at handover, input validation, termination befor
 re-approach specified; the restitution relation extended to the overdamped branch; owning type of each contact
 parameter named; frames, tolerances and test overrides stated.
 
+**Amended 2026-10-03 (plan).** Planning and sourcing changed the following:
+
+- **Ball–ball contact time.** Gugan measured it directly at 0.75 ms (0.50–0.87 ms), so `dt` is set from 0.5 ms
+  rather than from the billiard analogue.
+- **Turf stiffness.** It is derived from Gugan's measured peak penetration (7.2 mm) using the model's own damping:
+  1.1×10⁵ N/m, bounds up to the undamped 2.7×10⁵.
+- **Inclined-face case.** A ball can roll, so the threshold is `tan θ = 7μ/2`, not `μ`.
+- **Head re-approach.** Only a ball within one radius of a face counts.
+- **`ImpactResult`.** It carries the handed-over balls.
+- **`simulateImpact`.** Validation and preparation sit in their own unit.
+- **Orientation.** A non-unit orientation is rejected.
+- **The overdamped branch.** It needs no `exp`.
+
+The plan (`plans/2026-10-03-p2b1-impact-integrator.md`) gives the detail.
+
 ## 1. Goal and exit criteria
 
 Add phase 1 to the engine: a compliant, small-step, N-body integrator that takes a `ContactState` (the mallet head
@@ -264,7 +279,7 @@ invented.
 | File · value | Likely source | Note |
 |---|---|---|
 | `contact.json` · ball–turf deformation or contact time | Derived from Gugan's transient hollow (about 50 mm across at about 5 m/s → `δ` ≈ 7.4 mm → `k` ≈ 2×10⁵ N/m, about 4.6 ms), cross-checked against his video timings ("The Physics of Croquet Strokes", oxfordcroquet.org/tech/gugan4/) | Feeds the default lawn's `turfStiffness`; expected to dominate lift |
-| `contact.json` · ball–ball contact time | Gugan's DVD analysis if it resolves it; otherwise billiard balls (about 0.2 ms) as analogue | `World.ballBallContactTime`; sets `dt` |
+| `contact.json` · ball–ball contact time | Gugan's DVD analysis, Table 1: 0.75 ms (0.50–0.87 ms), direct | `World.ballBallContactTime`; sets `dt` |
 | `contact.json` · face–ball contact time | Hall, "When a Mallet Strikes a Ball"; Gugan | |
 | `contact.json` · `k_t/k` | Silbert et al. 2001 (DEM) | 2/7 |
 | `mallet.json` · one face: restitution and friction | Gugan Table I (ball on wood 0.817); Gugan's face friction ≈ 0.5 | Other face materials are P2b.2's |
@@ -281,7 +296,7 @@ ball pressed into the turf); P2b.2's calibration may move within the bounds.
    - two balls head-on with no turf and no gravity exchange velocities per `e`;
    - a ball dropped on the turf (gravity on) rebounds at `turfRestitution`;
    - a ball on a fixed, inclined face (head mass overridden very large, undriven; gravity on; no turf) sticks below
-     `tan θ = μ` and slips above it;
+     `tan θ = 7μ/2` (it rolls; `μ` is the threshold only for a body that cannot roll) and slips above it;
    - a centre strike, chained into phase 2, rolls at 5/7 of launch speed (product spec §9, now fed by a real impact);
    - a socket force on a free head (no balls, no gravity) rotates it with the sign and size torque predicts over a
      short window.
