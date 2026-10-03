@@ -75,6 +75,27 @@ describe("integrateOrientation", () => {
         }
         expect(Math.abs(q.w * q.w + q.x * q.x + q.y * q.y + q.z * q.z - 1)).toBeLessThan(1e-15);
     });
+
+    it("respects world-frame ω convention when not starting from identity", () => {
+        // Non-identity initial orientation
+        const q0 = axisAngle(vec3(0, 1, 0), 0.5);
+        const omega = vec3(0, 0, 1);
+        const dt = 1e-3;
+        const v = vec3(1, 0, 0);
+
+        let q = q0;
+        for (let n = 0; n < 100; n++) {
+            q = integrateOrientation(q, omega, dt);
+        }
+
+        // Expected: world-frame rotation composed with initial orientation.
+        // Each step turns by 2·atan(ω·dt/2); 100 steps accumulate the angle.
+        const theta = 100 * 2 * Math.atan(0.5e-3);
+        const expected = rotate(multiply(axisAngle(vec3(0, 0, 1), theta), q0), v);
+        const actual = rotate(q, v);
+
+        expect(near(actual, expected, 1e-12)).toBe(true);
+    });
 });
 
 describe("angularAcceleration", () => {
