@@ -12,7 +12,7 @@ import {
     uprightsOf,
     validateWorld,
 } from "../../src/engine/world";
-import { testHoop, testWorld } from "./support/fixtures";
+import { TEST_TURF, testHoop, testWorld } from "./support/fixtures";
 
 describe("rollingResistanceForLawnSpeed", () => {
     it("makes a ball launched at 2D/T roll exactly D in T seconds", () => {
@@ -60,7 +60,7 @@ describe("motionParamsAt", () => {
 });
 
 describe("turfAt", () => {
-    it("pairs the world's ball–turf restitution with the surface's sliding friction", () => {
+    it("pairs the surface's turf restitution with its sliding friction", () => {
         expect(turfAt(testWorld(), vec3(1, 1, 0))).toEqual({ restitution: 0.5, friction: 0.3 });
     });
 });
@@ -77,10 +77,32 @@ describe("validateWorld", () => {
         ["negative halt margin", { haltMargin: -1 }],
         [
             "rolling resistance above sliding friction",
-            { lawn: uniformLawn(30, 40, { slidingFriction: 0.1, rollingResistance: 0.2 }) },
+            { lawn: uniformLawn(30, 40, { slidingFriction: 0.1, rollingResistance: 0.2, ...TEST_TURF }) },
         ],
         ["non-unit hoop normal", { hoops: [{ ...testHoop("1", 5, 5), normal: vec3(0, 2, 0) }] }],
-        ["ball–turf restitution above 1", { ballTurfRestitution: 1.5 }],
+        [
+            "turf restitution above 1",
+            {
+                lawn: uniformLawn(30, 40, {
+                    slidingFriction: 0.3,
+                    rollingResistance: 0.05,
+                    ...TEST_TURF,
+                    turfRestitution: 1.5,
+                }),
+            },
+        ],
+        [
+            "non-positive turf stiffness",
+            {
+                lawn: uniformLawn(30, 40, {
+                    slidingFriction: 0.3,
+                    rollingResistance: 0.05,
+                    ...TEST_TURF,
+                    turfStiffness: 0,
+                }),
+            },
+        ],
+        ["non-positive ball–ball contact time", { ballBallContactTime: 0 }],
         ["non-positive crown clearance", { hoops: [{ ...testHoop("1", 5, 5), crownClearance: 0 }] }],
     ])("rejects %s", (_label, overrides) => {
         expect(() => validateWorld(testWorld(overrides))).toThrow(RangeError);
@@ -96,7 +118,10 @@ describe("defaultWorld", () => {
             expect(hoop.innerWidth).toBeGreaterThan(2 * world.ball.radius);
             expect(hoop.crownClearance).toBeGreaterThan(2 * world.ball.radius);
         }
-        expect(world.ballTurfRestitution).toBeGreaterThan(0);
+        const surface = world.lawn.surfaceAt(vec3(1, 1, 0));
+        expect(surface.turfRestitution).toBeGreaterThan(0);
+        expect(surface.turfStiffness).toBeGreaterThan(0);
+        expect(world.ballBallContactTime).toBeGreaterThan(0);
     });
 
     it("gets slower lawns (fewer seconds) to decelerate balls harder", () => {

@@ -10,17 +10,20 @@ import { STANDARD_GRAVITY, uniformLawn } from "../../../src/engine/world";
 
 export const TEST_BALL = { radius: 0.046, mass: 0.454 } as const;
 
+/** Ball–turf contact of the test lawn (impact phase). Plausible, not sourced. */
+export const TEST_TURF = { turfStiffness: 2e5, turfRestitution: 0.5 } as const;
+
 /** A 30 × 40 m lawn, peg at (15, 20), no hoops unless overridden. Symmetric about x = 15. */
 export function testWorld(overrides: Partial<World> = {}): World {
     return {
         gravity: STANDARD_GRAVITY,
         ball: TEST_BALL,
-        lawn: uniformLawn(30, 40, { slidingFriction: 0.3, rollingResistance: 0.05 }),
+        lawn: uniformLawn(30, 40, { slidingFriction: 0.3, rollingResistance: 0.05, ...TEST_TURF }),
         hoops: [],
         peg: { id: "peg", centre: vec3(15, 20, 0), radius: 0.02, material: { restitution: 0.6, friction: 0.1 } },
         ballBall: { restitution: 0.8, friction: 0.05 },
         ballUpright: { restitution: 0.6, friction: 0.1 },
-        ballTurfRestitution: 0.5,
+        ballBallContactTime: 7e-4,
         outOfCourt: { ballRadii: 0, uprightRadii: 0 },
         hoopRunStart: { ballRadii: -1, uprightRadii: -1 },
         hoopRunComplete: { ballRadii: 1, uprightRadii: 1 },

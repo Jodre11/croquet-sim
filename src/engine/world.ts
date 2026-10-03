@@ -2,7 +2,14 @@
  * World construction, validation and derived geometry. `defaultWorld` is the only place the engine reads the
  * sourced reference data.
  */
-import { ballReference, courtReference, frictionReference, lawnReference, lawsReference } from "../reference/index";
+import {
+    ballReference,
+    contactReference,
+    courtReference,
+    frictionReference,
+    lawnReference,
+    lawsReference,
+} from "../reference/index";
 import { add, length, scale, vec3, type Vec3 } from "./math/vec3";
 import type { ContactMaterial, Cylinder, Hoop, Lawn, MotionParams, OffsetRule, SurfaceProps, World } from "./types";
 
@@ -66,7 +73,8 @@ export function motionParamsAt(world: World, position: Vec3): MotionParams {
 
 /** Returns the turf's restitution and sliding friction at `position`, for impulses on a ball there. */
 export function turfAt(world: World, position: Vec3): ContactMaterial {
-    return { restitution: world.ballTurfRestitution, friction: world.lawn.surfaceAt(position).slidingFriction };
+    const surface = world.lawn.surfaceAt(position);
+    return { restitution: surface.turfRestitution, friction: surface.slidingFriction };
 }
 
 /** Evaluates a signed-offset rule for the given ball and upright radii. */
@@ -108,7 +116,9 @@ export function validateWorld(world: World): void {
     requireMaterial(world.ballBall, "ballBall");
     requireMaterial(world.ballUpright, "ballUpright");
     requireMaterial(world.peg.material, "peg.material");
-    requireMaterial({ restitution: world.ballTurfRestitution, friction: 0 }, "ballTurf");
+    requirePositive(surface.turfStiffness, "lawn.turfStiffness");
+    requireMaterial({ restitution: surface.turfRestitution, friction: 0 }, "lawn.turf");
+    requirePositive(world.ballBallContactTime, "ballBallContactTime");
     requirePositive(world.peg.radius, "peg.radius");
     if (!(world.haltMargin >= 0)) {
         throw new RangeError(`haltMargin must be non-negative (got ${world.haltMargin})`);
@@ -134,6 +144,8 @@ export function defaultWorld(lawnSpeedSeconds: number = lawnReference.defaultSpe
             lawnReference.speedDistance.value,
             STANDARD_GRAVITY,
         ),
+        turfStiffness: contactReference.ballTurfStiffness.value,
+        turfRestitution: frictionReference.ballTurfRestitution.value,
     };
     return {
         gravity: STANDARD_GRAVITY,
@@ -164,7 +176,7 @@ export function defaultWorld(lawnSpeedSeconds: number = lawnReference.defaultSpe
             restitution: frictionReference.ballUprightRestitution.value,
             friction: frictionReference.ballUprightFriction.value,
         },
-        ballTurfRestitution: frictionReference.ballTurfRestitution.value,
+        ballBallContactTime: contactReference.ballBallContactTime.value,
         outOfCourt: lawsReference.outOfCourt,
         hoopRunStart: lawsReference.hoopRunStart,
         hoopRunComplete: lawsReference.hoopRunComplete,

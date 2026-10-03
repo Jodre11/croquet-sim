@@ -4,7 +4,7 @@ import { simulateFreeMotion } from "../../src/engine/simulate";
 import type { BallId, BallState, BallStates, Cylinder, World } from "../../src/engine/types";
 import { STANDARD_GRAVITY, uniformLawn } from "../../src/engine/world";
 import { bruteForce } from "./support/bruteForce";
-import { TEST_BALL, airborneAt, ballAt, rollingBallAt, testWorld } from "./support/fixtures";
+import { TEST_BALL, TEST_TURF, airborneAt, ballAt, rollingBallAt, testWorld } from "./support/fixtures";
 
 const R = TEST_BALL.radius;
 const DT = 2e-6;
@@ -213,6 +213,7 @@ describe.skipIf(!import.meta.env.SLOW_TESTS)("brute-force release onsets (slow)"
                 lawn: uniformLawn(30, 40, {
                     slidingFriction: 3 / STANDARD_GRAVITY,
                     rollingResistance: 1.5 / STANDARD_GRAVITY,
+                    ...TEST_TURF,
                 }),
             }),
             initial: {
