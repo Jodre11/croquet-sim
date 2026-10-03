@@ -6,6 +6,12 @@
 `ContactState`s; **P2b.2** adds the swing model, the coaching and profile reference data, `simulateShot(setup)` and
 the stroke-level exit criteria.
 
+**Amended 2026-10-03 (spec review: subtraction, completeness).** Per-pair open/close events dropped; one mallet head
+and one face sourced; the sensitivity sweep, stop-shot probe and timing moved to a script; turf contact defined
+geometrically; residual overlap at handover, input validation, termination before first contact and head
+re-approach specified; the restitution relation extended to the overdamped branch; owning type of each contact
+parameter named; frames, tolerances and test overrides stated.
+
 ## 1. Goal and exit criteria
 
 Add phase 1 to the engine: a compliant, small-step, N-body integrator that takes a `ContactState` (the mallet head
@@ -20,15 +26,17 @@ Exit criteria:
 4. Handed-over states are accepted by `simulateFreeMotion`, airborne or on the turf (§6).
 5. Moving the turf restitution into `SurfaceProps` (§7) leaves phase 2 bit-identical: the shot mix's work-unit
    figures (p99 143,084, p99.9 362,050, max 408,030) and `SLOW_TESTS` reproduce exactly.
-6. The fuzz (§9.8) never hangs, never reaches `IMPACT_CAP` on realistic inputs, and keeps penetration bounded.
+6. The fuzz (§9.6) never hangs, never raises `impact-cap` inside its input ranges, and keeps every peak penetration
+   under `PENETRATION_BOUND`; the ranges and the bound are fixed by pre-flight (§10).
 
-Recorded, not gated (roadmap "P2b.1 outcomes carried forward", for P2b.2):
+Recorded, not gated, by `scripts/impactProbe.ts` (roadmap "P2b.1 outcomes carried forward", for P2b.2 and P5):
 
-- The stiffness sensitivity sweep (§9.5).
-- The stop-shot probe (§9.6): whether the striker's ball clears the turf during the transfer and meets the
-  croqueted ball above its equator. The formal stop-shot-lift criterion belongs to P2b.2, which owns the drive
-  profile.
-- Impact engine time per stroke, for P5's budget.
+- **Stiffness sensitivity:** each stiffness swept across its bounds, and the handover changes. Expected: the hard
+  pairs barely matter (with `e` exact), the turf dominates lift.
+- **Stop-shot probe:** one plausible hand-built stop-shot `ContactState` (head level or slightly descending, checked
+  drive): whether the striker's ball clears the turf during the transfer and meets the croqueted ball above its
+  equator. The formal stop-shot-lift criterion belongs to P2b.2, which owns the drive profile.
+- **Impact engine time per stroke**, for P5's budget.
 
 ## 2. Approach
 
@@ -56,7 +64,7 @@ Rejected:
 ## 3. Interface
 
 New directory `src/engine/impact/`, under the engine's determinism lint (`+ − × ÷ √` only; `ln`, `sinCos` and
-`atan2` from `math/elementary.ts`).
+`atan2` from `math/elementary.ts`, plus an `exp` added there if the overdamped branch of §4 needs it).
 
 | Unit | Purpose |
 |---|---|
@@ -87,29 +95,43 @@ interface DriveSample { t: number; force: Vec3 }
 interface ContactState {
     head: MalletHead;
     face: FaceMaterial;
-    /** Head centre of mass, orientation (unit quaternion body → world), velocities, at t = 0. */
+    /** At t = 0: head centre of mass, orientation (unit quaternion body → world), and velocities, all world frame. */
     position: Vec3;
     orientation: Quaternion;
     velocity: Vec3;
     angularVelocity: Vec3;
-    /** Samples in increasing t, from 0 to the end of the drive window; zero force after the last. */
+    /** Samples in strictly increasing t, the first at t = 0, the last ending the drive window; zero force after it. */
     drive: readonly DriveSample[];
 }
 
 function simulateImpact(contact: ContactState, balls: BallStates, world: World): ImpactResult;
 ```
 
+`angularVelocity` is in the world frame, like `BallState`'s; the integrator converts to the body frame for Euler's
+equations and back.
+
 The drive is the total force the hands apply to the head, excluding gravity; gravity acts on the head separately.
 Supporting the head's weight is therefore part of the drive (the swing model's job in P2b.2; hand-built profiles in
 P2b.1 tests include it explicitly).
 
 `ImpactResult` holds each ball's final `BallState`, the head's final state, the impact `duration`, the impact's
-events (`contact-open` and `contact-close` for each pair, `turf-lift` for a ball leaving the turf, and the
-diagnostics `impact-cap`, `impact-mallet-grounded` and `impact-off-face`), the peak penetration per pair, and the step
-count. Impact events stay in `ImpactResult`; how they join `ShotResult` is P2b.2's decision with `simulateShot`.
+events (`turf-lift` for a ball leaving the turf, and the diagnostics of §5), the peak penetration per pair, and the
+step count. Impact events stay in `ImpactResult`; whether and how per-contact events join `ShotResult` is P2b.2's
+decision with `simulateShot`.
 
 Wiring into `simulateShot` is P2b.2's. P2b.1 adds a test helper that chains `simulateImpact` → handover →
 `simulateFreeMotion`.
+
+**Input validation.** `simulateImpact` throws `RangeError`, as `simulateFreeMotion` does, when:
+
+- a ball is not at rest on the turf (non-zero velocity or spin, or `z ≠ R`);
+- two balls overlap, or a ball overlaps or touches an obstacle (upright or peg) within `CONTACT_TOLERANCE`
+  (`detect.ts`): ball–obstacle contact is not modelled in the impact (§11), and phase 2 would reject the overlap at
+  handover;
+- the head penetrates a ball or the turf at t = 0;
+- the drive is empty, does not start at t = 0, or is not strictly increasing in t;
+- any mass, inertia, length, radius or contact time is not positive and finite, or any restitution is outside
+  (0, 1] or friction negative.
 
 ## 4. Contact model
 
@@ -121,27 +143,43 @@ need no restructuring. Ball–obstacle (upright, peg) is a further pair type, de
 contact never pulls; it releases when the force reaches zero, before `δ` returns to zero. For a linear system the
 release condition is scale-invariant, so the restitution of the clamped law is still independent of speed. The
 damping ratio `ζ` that gives the sourced `e` solves the clamped relation (Schwager & Pöschel, "Coefficient of
-restitution and linear–dashpot model revisited", Granular Matter 9, 2007):
+restitution and linear–dashpot model revisited", Granular Matter 9, 2007), which for the underdamped branch is
 
 ```
-ln e = −(ζ / √(1 − ζ²)) · (π − atan2(2ζ√(1 − ζ²), 1 − 2ζ²))      (ζ < 1/√2)
+ln e = −(ζ / √(1 − ζ²)) · (π − atan2(2ζ√(1 − ζ²), 1 − 2ζ²))      (ζ < 1/√2, e > e^(−π/2) ≈ 0.208)
 ```
 
-solved by bisection once per pair, at world or contact-state construction. The pre-flight confirms the relation
-numerically before the plan depends on it; the analytic test (§9.1) pins it.
+The same paper gives the branch for `ζ ≥ 1/√2`, which covers the low end of the sourced turf restitution (bounds
+0.15–0.51). Every `e` in (0, 1) is supported; `ζ` is found by bisection on `ζ ∈ [0, ζ_max]` over both branches,
+with `ζ_max` the value at which `e` falls below the smallest representable target, fixed by pre-flight. The
+pre-flight confirms both branches numerically before the plan depends on them; the analytic test (§9.1) pins them.
 
 **Stiffness from a contact duration.** The sourced quantity is a contact duration `T` (or, for turf, a deformation
-that gives one; §8). For the clamped law `T = (π − atan2(2ζ√(1 − ζ²), 1 − 2ζ²)) / ω_d` with `ω_d = ω₀√(1 − ζ²)`, so
-`k = m_eff·ω₀²` and `c = 2ζ·m_eff·ω₀`. `m_eff` is the pair's reduced mass from translational masses (ball–turf: the
-ball's mass; face–ball: head and ball). The sourced `e` is therefore exact for central collisions, which is how
-restitution is defined and measured; off-centre face contacts, where the head's rotation changes the effective mass,
-are approximate.
+that gives one; §8). For the clamped law on the underdamped branch `T = (π − atan2(2ζ√(1 − ζ²), 1 − 2ζ²)) / ω_d`
+with `ω_d = ω₀√(1 − ζ²)` (the overdamped branch has its own closed form in the same paper), so `k = m_eff·ω₀²` and
+`c = 2ζ·m_eff·ω₀`. `m_eff` is the pair's reduced mass from translational masses (ball–turf: the ball's mass;
+face–ball: head and ball). The sourced `e` is therefore exact for central collisions, which is how restitution is
+defined and measured; off-centre face contacts, where the head's rotation changes the effective mass, are
+approximate.
+
+**Where each parameter lives, and when `ζ` is solved.**
+
+| Pair | Restitution, friction | Contact time or stiffness | Owner |
+|---|---|---|---|
+| Face–ball | `FaceMaterial` | `FaceMaterial.contactTime` | `ContactState` |
+| Ball–ball | `World.ballBall` | `World.ballBallContactTime` (new) | `World` |
+| Ball–turf | `SurfaceProps.turfRestitution`, `slidingFriction` | `SurfaceProps.turfStiffness` | `Lawn`, per position |
+
+`TANGENTIAL_STIFFNESS_RATIO` (`k_t/k` = 2/7) is a module constant in `contactLaw.ts`. All `ζ`, `k` and `c` are
+computed at the start of `simulateImpact`: face–ball and ball–ball once, ball–turf once per ball from its
+`surfaceAt` sample. Tests and the probe script override them through `ContactState` and `World` (`defaultWorld`
+overrides, as phase 2's tests do).
 
 **Tangential force (Cundall–Strack).** Each closed contact stores a tangential elastic displacement `ξ`. Per step
 `ξ += v_t·dt`, re-projected onto the current tangent plane; the trial force `F_t = −k_t·ξ − c_t·v_t`, with
-`k_t = (2/7)·k` (Silbert et al. 2001) and `c_t` from the same `ζ`. If `|F_t| > μ·N` the contact slides:
-`F_t` is scaled to `μ·N` and `ξ` is reset to the value consistent with it. `ξ` is cleared when the contact opens.
-Sticking is true sticking, with no creep.
+`k_t = TANGENTIAL_STIFFNESS_RATIO·k` (Silbert et al. 2001) and `c_t = 2ζ·√(k_t·m_eff)`. If `|F_t| > μ·N` the
+contact slides: `F_t` is scaled to `μ·N` and `ξ` is reset to the value consistent with it. `ξ` is cleared when the
+contact opens. Sticking is true sticking, with no creep.
 
 **Geometry.**
 
@@ -150,6 +188,10 @@ Sticking is true sticking, with no creep.
   the model, as a jump flag is in phase 2 (hampered and edge strokes are deferred).
 - Ball–ball: centre distance against `2R`.
 - Ball–turf: `δ = R − z`, unilateral; the turf is immovable. Turf properties come from `lawn.surfaceAt` (§7).
+
+**Turf contact is geometric.** A ball is *in turf contact* while `z < R`, whatever its normal force; the clamped law
+can release (`N = 0`) while the ball is still rising out of its hollow. `turf-lift` is raised when `z` first reaches
+`R` from below; the handover (§6) uses the same definition.
 
 Rolling resistance is omitted during the impact (0.065·g over 5 ms is about 3 mm/s).
 
@@ -165,34 +207,51 @@ velocity follows Euler's equations in the body frame.
 - **Order.** Bodies in fixed order (head, then balls in `BALL_IDS` order); contacts in the order of §4. Forces are
   summed in that order.
 - **Initial state.** Balls at rest start at their static turf sink `mg/k_turf`, with zero velocity, so the impact does
-  not open with a spurious bounce. Touching balls start at zero overlap.
-- **Termination.** When the drive window has closed and no face–ball or ball–ball contact has been closed for
-  `RELEASE_STEPS` consecutive steps. Turf contact does not count.
+  not open with a spurious bounce. Touching balls start at zero overlap. The head may start with a gap to the ball.
+- **Termination.** Once at least one face–ball contact has closed, the impact ends when the drive window has closed
+  and no face–ball or ball–ball contact has been closed for `RELEASE_STEPS` consecutive steps. Turf contact does not
+  count. Before the first face–ball contact, only the cap ends it.
+- **Head re-approach.** If at termination the head is closing on any ball (relative normal velocity towards it), the
+  impact ends anyway and raises `impact-head-approaching`: a second strike is a double tap, a fault, and is not
+  modelled.
 - **Cap.** `IMPACT_CAP` (initially 50 ms, set by pre-flight) ends the impact with an `impact-cap` event rather than
-  hanging.
+  hanging; it also covers a head that never reaches the ball.
 - **Grounded head.** If any point of the head goes below the turf plane, `impact-mallet-grounded` is raised once.
   Mallet–turf contact is not modelled.
 
+The diagnostics are `impact-cap`, `impact-head-approaching`, `impact-mallet-grounded` and `impact-off-face`. Each
+marks a result outside the validated model, as the jump flag does in phase 2.
+
 ## 6. Handover
 
-Per product spec §5: a ball clear of the turf is handed over airborne as it is. A ball still in turf contact is
-placed on the lawn (`z = R`); it keeps an upward vertical velocity above the settle speed, and so starts airborne;
-otherwise its vertical velocity is zeroed. The stored elastic energy of the residual sink is discarded (negligible:
-`mg·δ₀/2`). Positions are as at the end of the impact; phase 2's time starts at zero there.
+Per product spec §5, with turf contact as defined in §4:
+
+- A ball with `z ≥ R` is handed over airborne, as it is.
+- A ball with `z < R` is placed on the lawn (`z = R`); it keeps an upward vertical velocity above the settle speed,
+  and so starts airborne; otherwise its vertical velocity is zeroed. The stored elastic energy of the residual sink
+  is discarded (negligible: `mg·δ₀/2`).
+- Ball–ball contacts release while `δ > 0` (§4), so a pair can end the impact still overlapping. Each overlapping
+  pair is separated along its normal to zero gap, each ball moved half the overlap (equal masses), velocities
+  unchanged, pairs in the fixed order of §4. The largest such correction is reported in `ImpactResult`.
+
+Positions are as at the end of the impact after these corrections; phase 2's time starts at zero there.
 
 ## 7. Turf and lawn conditions
 
-Turf properties vary over the lawn and, later, through a match as the lawn dries. None is a module constant:
+Product spec §2 carries turf parameters per ball and routes lawn variation (sparse patches, wet lawns, slopes)
+through `lawn.surfaceAt`. The author also wants the turf to be able to change slowly through a match as the lawn
+dries (decided 2026-10-03; not modelled now). So no turf property is a module constant:
 
 - `SurfaceProps` gains `turfStiffness` (N/m) and `turfRestitution`, beside `slidingFriction` and
   `rollingResistance`. The impact samples `lawn.surfaceAt` once per ball at its start (a ball moves millimetres in
   the impact); crossing a surface boundary within an impact is deferred (§11).
 - `World.ballTurfRestitution` is removed; `turfAt` (world.ts) and phase 2's landing read
   `surfaceAt(position).turfRestitution`. On a uniform lawn the value is unchanged, so phase 2 is bit-identical
-  (exit criterion 5).
-- A shot uses one `Lawn` snapshot, built by the caller from the lawn conditions (`ShotSetup.lawn`). Drying through a
-  match changes how that snapshot is built, not the engine. Mapping lawn speed or moisture to turf stiffness and
-  restitution is not sourced and is not modelled in P2b.1; the fields make it possible.
+  (exit criterion 5). `validateWorld` checks both new fields where it already samples the surface; the world tests'
+  restitution case moves from `ballTurfRestitution` to the surface.
+- A shot uses one `Lawn` snapshot, built by the caller (`ShotSetup.lawn`). A changing lawn changes how that snapshot
+  is built, not the engine. Mapping lawn speed or moisture to turf stiffness and restitution is not sourced and is
+  not modelled in P2b.1; the fields make it possible.
 
 `ENGINE_VERSION` moves to 0.4.0.
 
@@ -205,11 +264,11 @@ invented.
 | File · value | Likely source | Note |
 |---|---|---|
 | `contact.json` · ball–turf deformation or contact time | Derived from Gugan's transient hollow (about 50 mm across at about 5 m/s → `δ` ≈ 7.4 mm → `k` ≈ 2×10⁵ N/m, about 4.6 ms), cross-checked against his video timings ("The Physics of Croquet Strokes", oxfordcroquet.org/tech/gugan4/) | Feeds the default lawn's `turfStiffness`; expected to dominate lift |
-| `contact.json` · ball–ball contact time | Gugan's DVD analysis if it resolves it; otherwise billiard balls (about 0.2 ms) as analogue | Sets `dt` |
+| `contact.json` · ball–ball contact time | Gugan's DVD analysis if it resolves it; otherwise billiard balls (about 0.2 ms) as analogue | `World.ballBallContactTime`; sets `dt` |
 | `contact.json` · face–ball contact time | Hall, "When a Mallet Strikes a Ball"; Gugan | |
 | `contact.json` · `k_t/k` | Silbert et al. 2001 (DEM) | 2/7 |
-| `mallet.json` · face restitution and friction per face material | Gugan Table I (ball on wood 0.817); Gugan's face friction ≈ 0.5; manufacturers for plastic and composite faces | Product spec §11 |
-| `mallet.json` · a typical head: mass, length, radius, socket position, centred and end-weighted inertia | Manufacturers' specifications; Hall | For P2b.1's hand-built tests; profile defaults are P2b.2's |
+| `mallet.json` · one face: restitution and friction | Gugan Table I (ball on wood 0.817); Gugan's face friction ≈ 0.5 | Other face materials are P2b.2's |
+| `mallet.json` · one typical head: mass, length, radius, socket position, inertia | Manufacturers' specifications; Hall | For P2b.1's hand-built tests; weighting variants and profile defaults are P2b.2's |
 
 Turf friction stays the sourced `ballTurfSliding` (0.48, bounds to 1.0, which already covers Gugan's estimate for a
 ball pressed into the turf); P2b.2's calibration may move within the bounds.
@@ -217,43 +276,49 @@ ball pressed into the turf); P2b.2's calibration may move within the bounds.
 ## 9. Testing
 
 1. **Analytic cases**, each isolating one mechanism with overrides:
-   - one contact of each pair: contact time and restitution match the clamped closed form;
-   - two balls head-on with no turf exchange velocities per `e`;
-   - a ball dropped on the turf rebounds at `turfRestitution`;
-   - a ball held on an inclined face sticks below `tan θ = μ` and slips above it;
+   - one contact of each pair (gravity off; for face–ball, the head free and undriven): contact time and restitution
+     match the clamped closed form, on both branches;
+   - two balls head-on with no turf and no gravity exchange velocities per `e`;
+   - a ball dropped on the turf (gravity on) rebounds at `turfRestitution`;
+   - a ball on a fixed, inclined face (head mass overridden very large, undriven; gravity on; no turf) sticks below
+     `tan θ = μ` and slips above it;
    - a centre strike, chained into phase 2, rolls at 5/7 of launch speed (product spec §9, now fed by a real impact);
-   - a socket force rotates the head with the sign and size torque predicts over a short window.
-2. **Invariants:** energy never increases (the drive's work counted as input); momentum conserved apart from the
-   turf's and the drive's impulses; normal forces ≥ 0; friction inside its cone; mirror symmetry; bit-identical
-   repeat runs.
+   - a socket force on a free head (no balls, no gravity) rotates it with the sign and size torque predicts over a
+     short window.
+2. **Invariants:**
+   - total mechanical energy, with the drive's work and gravity's work counted, never rises by more than
+     `ENERGY_TOLERANCE` over the impact (symplectic Euler is not monotone step by step; the tolerance is fixed by
+     pre-flight);
+   - momentum conserved apart from the turf's, the drive's and gravity's impulses;
+   - normal forces ≥ 0; friction inside its cone;
+   - mirror symmetry bit-exact for setups mirrored across the strike line (sign flips are exact in IEEE arithmetic);
+   - bit-identical repeat runs.
 3. **Convergence:** halving `dt` moves every handover velocity by less than `CONVERGENCE_TOLERANCE` (about 0.5 %,
    fixed by pre-flight measurement).
-4. **Handover:** airborne and on-turf cases are accepted by `simulateFreeMotion`; one airborne case lands and
-   settles.
-5. **Stiffness sensitivity:** each stiffness swept across its bounds; handover changes recorded. Expected: the hard
-   pairs barely matter (with `e` exact), the turf dominates lift.
-6. **Stop-shot probe:** one plausible hand-built stop-shot `ContactState` (head level or slightly descending,
-   checked drive); turf clearance and contact height recorded.
+4. **Handover:** airborne, on-turf and residual-overlap cases are accepted by `simulateFreeMotion`.
+5. **Validation:** each rejection of §3 throws `RangeError`.
+6. **Fuzz:** random strike positions, speeds, angles and drive profiles within pre-flight's ranges; no hang; no
+   `impact-cap`; peak penetrations under `PENETRATION_BOUND`.
 7. **Phase 2 unchanged:** shot mix and `SLOW_TESTS` reproduce exactly after §7.
-8. **Fuzz:** random strike positions, speeds, angles and drive profiles; no hang; `impact-cap` never on realistic
-   inputs; penetration bounded.
-
-Impact engine time per stroke is measured and recorded for P5.
 
 ## 10. Pre-flight
 
 As for P2a.2: the plan is executed literally in a scratch worktree before implementation, to fix `dt`,
-`CONVERGENCE_TOLERANCE`, `RELEASE_STEPS` and `IMPACT_CAP`, confirm the clamped restitution relation, and run the
-stop-shot probe and sensitivity sweep once. Findings are folded into this document and the plan before the real run.
+`CONVERGENCE_TOLERANCE`, `ENERGY_TOLERANCE`, `RELEASE_STEPS`, `IMPACT_CAP`, `PENETRATION_BOUND`, `ζ_max` and the
+fuzz input ranges; confirm both branches of the clamped restitution relation; and run `scripts/impactProbe.ts` once.
+Findings are folded into this document and the plan before the real run.
 
 ## 11. Deferred
 
 | Item | How P2b.1 keeps it open |
 |---|---|
 | Three- and four-ball cannons, including near a hoop or the peg | N-body pair list (§4); required in the final implementation |
-| Ball–upright and ball–peg contact in the impact | A further pair type in the same list |
+| Ball–upright and ball–peg contact in the impact | A further pair type in the same list; until then a ball touching an obstacle is rejected (§3) |
 | Mallet–turf contact (a grounded head) | Detected and flagged (`impact-mallet-grounded`) |
 | Hampered and edge strokes (contact off the face disc) | Flagged (`impact-off-face`) |
+| A second strike (double tap) | Flagged (`impact-head-approaching`) |
+| Per-contact open/close events | P2b.2 decides with `ShotResult` |
+| Other face materials; end-weighted heads | P2b.2, with profile defaults |
 | Hertzian contact for hard pairs | Contact law isolated per pair |
 | Turf properties changing within one impact (surface boundary) | Sampled once per ball; piecewise regions per product spec §2 |
 | Lawn drying through a match; lawn speed → turf stiffness/restitution | `SurfaceProps` fields and per-shot `Lawn` snapshot (§7) |
