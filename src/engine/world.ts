@@ -104,6 +104,9 @@ export function validateWorld(world: World): void {
     requirePositive(world.ball.mass, "ball.mass");
     requirePositive(world.lawn.width, "lawn.width");
     requirePositive(world.lawn.length, "lawn.length");
+    // The surface is sampled at the court centre only, which covers the uniform v1 lawns. A position-varying lawn
+    // could carry an out-of-range value elsewhere: phase 2's turfAt does not re-check it, though validateImpact
+    // re-checks each ball's turf sample at impact start.
     const centre = vec3(world.lawn.width / 2, world.lawn.length / 2, 0);
     const surface = world.lawn.surfaceAt(centre);
     requirePositive(surface.slidingFriction, "lawn.slidingFriction");

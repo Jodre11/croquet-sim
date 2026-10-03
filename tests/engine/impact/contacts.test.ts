@@ -6,6 +6,7 @@ import {
     faceContact,
     headClosing,
     headLowestPoint,
+    pairContact,
     pairList,
     pointVelocity,
     turfContact,
@@ -86,11 +87,39 @@ describe("ball and turf contacts", () => {
         expect(ballBallContact(vec3(0, 0, R), vec3(2 * R, 0, R), R)).toBeNull();
     });
 
+    it("rejects coincident ball centres, which have no normal", () => {
+        expect(() => ballBallContact(vec3(1, 2, R), vec3(1, 2, R), R)).toThrow(RangeError);
+    });
+
     it("closes the turf while z < R, whatever the velocity", () => {
         const c = turfContact(vec3(1, 2, R - 2e-5), R) as Penetration;
         expect(c.normal).toEqual(vec3(0, 0, 1));
         expect(c.depth).toBeCloseTo(2e-5, 15);
         expect(turfContact(vec3(1, 2, R), R)).toBeNull();
+    });
+});
+
+describe("pairContact", () => {
+    it("routes each pair kind to its leaf contact with the right bodies", () => {
+        // Blue touches the face, red and the turf; red is clear of the face.
+        const state: HeadState = { ...headAt(0), position: vec3(-0.1, 0, R - 2e-5) };
+        const balls: BallState[] = [
+            { position: vec3(R - 1e-4, 0, R - 2e-5), velocity: ZERO, angularVelocity: ZERO },
+            { position: vec3(3 * R - 2e-4, 0, R - 1e-5), velocity: ZERO, angularVelocity: ZERO },
+        ];
+        const [p0, p1] = [balls[0] as BallState, balls[1] as BallState];
+        const pairs = pairList(["blue", "red"], [true, true]);
+        const byKey = Object.fromEntries(pairs.map((p) => [p.key, pairContact(p, state, HEAD, balls, R)]));
+        expect(byKey).toEqual({
+            "face/blue": faceContact(state, HEAD, p0.position, R),
+            "face/red": faceContact(state, HEAD, p1.position, R),
+            "blue/red": ballBallContact(p0.position, p1.position, R),
+            "turf/blue": turfContact(p0.position, R),
+            "turf/red": turfContact(p1.position, R),
+        });
+        expect(byKey["face/blue"]).not.toBeNull();
+        expect(byKey["blue/red"]).not.toBeNull();
+        expect(byKey["turf/red"]).not.toBeNull();
     });
 });
 

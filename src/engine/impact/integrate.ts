@@ -135,6 +135,16 @@ function lawOf(setup: ImpactSetup, pair: Pair): PairLaw {
     }
 }
 
+/**
+ * True while a ball at turf penetration δ (`depth`) still bounces (see the file header): its vertical oscillation
+ * energy about the static sink δ₀ = m·g/k, ½·m·v_z² + ½·k·(δ − δ₀)², exceeds the static spring's ½·k·δ₀².
+ */
+function isBouncing(mass: number, vz: number, stiffness: number, depth: number, gravity: number): boolean {
+    const sink = (mass * gravity) / stiffness;
+    const offset = depth - sink;
+    return 0.5 * mass * vz * vz + 0.5 * stiffness * offset * offset > 0.5 * stiffness * sink * sink;
+}
+
 /** Integrates the impact from `setup` until it ends (see the file header). */
 export function integrate(setup: ImpactSetup, options: ImpactOptions = {}): ImpactRun {
     const dt = options.dt ?? IMPACT_DT;
@@ -265,15 +275,8 @@ export function integrate(setup: ImpactSetup, options: ImpactOptions = {}): Impa
                 events.push({ kind: "turf-lift", t: now, ball: ids[i] as BallId });
             }
             inTurf[i] = below;
-            // Vertical oscillation energy about the static sink δ₀ = m·g/k, against the static spring's ½·k·δ₀²: at or
-            // above it the ball will still reach δ = 0 and bounce; below it, it only settles in its hollow.
             const k = ((setup.balls[i] as ImpactBall).turf as PairLaw).stiffness;
-            const offset = R - s.position.z - (ball.mass * setup.gravity) / k;
-            if (
-                below &&
-                ball.mass * s.velocity.z * s.velocity.z + k * offset * offset >
-                    (ball.mass * ball.mass * setup.gravity * setup.gravity) / k
-            ) {
+            if (below && isBouncing(ball.mass, s.velocity.z, k, R - s.position.z, setup.gravity)) {
                 turfMoving = true;
             }
         }

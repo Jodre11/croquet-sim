@@ -90,13 +90,19 @@ export function faceContact(
     return null;
 }
 
-/** The contact of ball a with ball b (centres `a`, `b`), or null while they are at least 2R apart. */
+/**
+ * The contact of ball a with ball b (centres `a`, `b`), or null while they are at least 2R apart. Coincident centres
+ * have no normal and throw a RangeError; simulateImpact's validation rejects such set-ups before integrating.
+ */
 export function ballBallContact(a: Vec3, b: Vec3, radius: number): Penetration | null {
     const offset = sub(b, a);
     const distance = length(offset);
     const depth = 2 * radius - distance;
     if (!(depth > 0)) {
         return null;
+    }
+    if (distance === 0) {
+        throw new RangeError("ball–ball contact between coincident centres has no normal");
     }
     const normal = scale(offset, 1 / distance);
     return { normal, depth, point: sub(b, scale(normal, radius - depth / 2)) };
