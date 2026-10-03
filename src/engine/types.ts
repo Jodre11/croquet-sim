@@ -55,17 +55,27 @@ export interface PushMotion {
     readonly direction: Vec3;
 }
 
-/** Turf properties at a point. Both are dimensionless coefficients (multiply by g for deceleration). */
+/**
+ * Turf properties at a point. `slidingFriction` and `rollingResistance` are dimensionless (multiply by g for a
+ * deceleration). `turfStiffness` (N/m) and `turfRestitution` are the ball–turf contact's spring and restitution:
+ * phase 2 uses the restitution for landings, the impact (phase 1) both. Every turf property lives here so that a lawn
+ * can vary them by position, and a match can change them between shots through the Lawn it passes in.
+ */
 export interface SurfaceProps {
     readonly slidingFriction: number;
     readonly rollingResistance: number;
+    readonly turfStiffness: number;
+    readonly turfRestitution: number;
 }
 
 /** The court surface. Extent x ∈ [0, width], y ∈ [0, length] (m). */
 export interface Lawn {
     readonly width: number;
     readonly length: number;
-    /** Surface properties at a position. v1 lawns are uniform; the engine samples this at each segment start. */
+    /**
+     * Surface properties at a position. v1 lawns are uniform; the engine samples this at each segment start, and once
+     * per ball at the start of an impact.
+     */
     surfaceAt(position: Vec3): SurfaceProps;
 }
 
@@ -103,8 +113,11 @@ export interface World {
     readonly peg: Cylinder;
     readonly ballBall: ContactMaterial;
     readonly ballUpright: ContactMaterial;
-    /** Restitution (0–1) of a ball landing on the turf. Turf friction is the surface's sliding coefficient. */
-    readonly ballTurfRestitution: number;
+    /**
+     * Duration (s) of a central ball–ball collision in the impact phase; with ballBall.restitution it sets that
+     * contact's stiffness.
+     */
+    readonly ballBallContactTime: number;
     readonly outOfCourt: OffsetRule;
     readonly hoopRunStart: OffsetRule;
     readonly hoopRunComplete: OffsetRule;
