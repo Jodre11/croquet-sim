@@ -12,6 +12,8 @@ import { drive, strike } from "../support/impact";
 const R = TEST_BALL.radius;
 const WORLD = testWorld();
 const BLUE = ballAt(5, 0);
+/** Blue's centre where the impact starts it: lowered by its static turf sink m·g/k_turf. */
+const SUNK = vec3(5, 0, R - (TEST_BALL.mass * WORLD.gravity) / WORLD.lawn.surfaceAt(BLUE.position).turfStiffness);
 
 describe("simulateImpact", () => {
     it("is version 0.4.0", () => {
@@ -77,43 +79,123 @@ describe("simulateImpact", () => {
         ]);
     });
 
-    it("accepts a face touching the ball", () => {
-        const contact = strike(BLUE.position, { speed: 0, gap: 0, pitch: -0.02, yaw: 0.1, vertical: -0.025 });
+    it("accepts a face touching the ball where it starts, at its static sink", () => {
+        const contact = strike(SUNK, { speed: 0, gap: 0, pitch: -0.02, yaw: 0.1, vertical: -0.025 });
         expect(() => simulateImpact(contact, { blue: BLUE }, WORLD)).not.toThrow();
+    });
+
+    it("rejects a face touching the ball at z = R that its sink would press into the face", () => {
+        // The face tilts up (pitch −0.05), so lowering the ball by its sink moves it sink·n_z into the face.
+        const contact = strike(BLUE.position, { speed: 0, gap: 0, pitch: -0.05 });
+        expect(() => simulateImpact(contact, { blue: BLUE }, WORLD)).toThrow(/head penetrates ball blue/);
     });
 });
 
 describe("validation", () => {
     const ok = strike(BLUE.position);
-    const cases: [string, ContactState, BallStates, World][] = [
-        ["a moving ball", ok, { blue: { ...BLUE, velocity: vec3(0.1, 0, 0) } }, WORLD],
-        ["a spinning ball", ok, { blue: { ...BLUE, angularVelocity: vec3(0, 1, 0) } }, WORLD],
-        ["a ball off the lawn plane", ok, { blue: { ...BLUE, position: vec3(5, 0, R + 1e-3) } }, WORLD],
-        ["overlapping balls", ok, { blue: BLUE, red: ballAt(5 + 2 * R - 1e-6, 0) }, WORLD],
-        ["a ball touching the peg", strike(vec3(15 - 0.02 - R, 20, R)), { blue: ballAt(15 - 0.02 - R, 20) }, WORLD],
-        ["the head in a ball", strike(BLUE.position, { gap: -1e-4 }), { blue: BLUE }, WORLD],
+    // Each case names the check that must fire, so a case cannot pass on another check's error.
+    const cases: [string, ContactState, BallStates, World, RegExp][] = [
+        ["a moving ball", ok, { blue: { ...BLUE, velocity: vec3(0.1, 0, 0) } }, WORLD, /ball blue is not at rest/],
+        ["a spinning ball", ok, { blue: { ...BLUE, angularVelocity: vec3(0, 1, 0) } }, WORLD, /ball blue is not at rest/],
+        [
+            "a ball off the lawn plane",
+            ok,
+            { blue: { ...BLUE, position: vec3(5, 0, R + 1e-3) } },
+            WORLD,
+            /ball blue is not at rest/,
+        ],
+        ["overlapping balls", ok, { blue: BLUE, red: ballAt(5 + 2 * R - 1e-6, 0) }, WORLD, /balls blue and red overlap/],
+        [
+            "a ball touching the peg",
+            strike(vec3(15 - 0.02 - R, 20, R)),
+            { blue: ballAt(15 - 0.02 - R, 20) },
+            WORLD,
+            /ball blue touches peg/,
+        ],
+        ["the head in a ball", strike(BLUE.position, { gap: -1e-4 }), { blue: BLUE }, WORLD, /head penetrates ball blue/],
         // The head's barrel is 0.032 m from its axis (y = 0, z = R); the ball's surface reaches 1 cm into it.
-        ["the head's barrel in a ball", ok, { blue: BLUE, red: ballAt(5 - R - 1e-3 - 0.115, 0.032 + R - 0.01) }, WORLD],
+        [
+            "the head's barrel in a ball",
+            ok,
+            { blue: BLUE, red: ballAt(5 - R - 1e-3 - 0.115, 0.032 + R - 0.01) },
+            WORLD,
+            /head penetrates ball red/,
+        ],
         // 0.5·R beyond the rear face plane and 1 cm outside its rim, so the face check sees only the rim (OFF_FACE).
-        ["the head's rim in a ball", ok, { blue: BLUE, red: ballAt(5 - 1.5 * R - 1e-3 - 0.23, 0.042) }, WORLD],
-        ["the head in the turf", { ...ok, position: vec3(ok.position.x, ok.position.y, 0.01) }, { blue: BLUE }, WORLD],
-        ["an empty drive", { ...ok, drive: [] }, { blue: BLUE }, WORLD],
-        ["a drive not starting at 0", { ...ok, drive: [{ t: 1e-4, force: vec3(0, 0, 0) }] }, { blue: BLUE }, WORLD],
+        [
+            "the head's rim in a ball",
+            ok,
+            { blue: BLUE, red: ballAt(5 - 1.5 * R - 1e-3 - 0.23, 0.042) },
+            WORLD,
+            /head penetrates ball red/,
+        ],
+        [
+            "the head in the turf",
+            { ...ok, position: vec3(ok.position.x, ok.position.y, 0.01) },
+            { blue: BLUE },
+            WORLD,
+            /head penetrates the turf/,
+        ],
+        ["an empty drive", { ...ok, drive: [] }, { blue: BLUE }, WORLD, /drive must start at t = 0/],
+        [
+            "a drive not starting at 0",
+            { ...ok, drive: [{ t: 1e-4, force: vec3(0, 0, 0) }] },
+            { blue: BLUE },
+            WORLD,
+            /drive must start at t = 0/,
+        ],
         [
             "a drive not increasing",
             { ...ok, drive: [...drive(vec3(0, 0, 0), 1e-3), { t: 1e-3, force: vec3(0, 0, 0) }] },
             { blue: BLUE },
             WORLD,
+            /drive times must increase strictly/,
         ],
-        ["a non-positive head mass", { ...ok, head: { ...ok.head, mass: 0 } }, { blue: BLUE }, WORLD],
-        ["a non-positive inertia", { ...ok, head: { ...ok.head, inertia: vec3(1, 0, 1) } }, { blue: BLUE }, WORLD],
-        ["a non-positive head length", { ...ok, head: { ...ok.head, length: -1 } }, { blue: BLUE }, WORLD],
-        ["a non-positive head radius", { ...ok, head: { ...ok.head, radius: 0 } }, { blue: BLUE }, WORLD],
-        ["a non-positive contact time", { ...ok, face: { ...ok.face, contactTime: 0 } }, { blue: BLUE }, WORLD],
-        ["zero face restitution", { ...ok, face: { ...ok.face, restitution: 0 } }, { blue: BLUE }, WORLD],
-        ["face restitution above 1", { ...ok, face: { ...ok.face, restitution: 1.1 } }, { blue: BLUE }, WORLD],
-        ["negative face friction", { ...ok, face: { ...ok.face, friction: -0.1 } }, { blue: BLUE }, WORLD],
-        ["zero ball–ball restitution", ok, { blue: BLUE }, testWorld({ ballBall: { restitution: 0, friction: 0.05 } })],
+        ["a non-positive head mass", { ...ok, head: { ...ok.head, mass: 0 } }, { blue: BLUE }, WORLD, /head\.mass/],
+        [
+            "a non-positive inertia",
+            { ...ok, head: { ...ok.head, inertia: vec3(1, 0, 1) } },
+            { blue: BLUE },
+            WORLD,
+            /head\.inertia\.y/,
+        ],
+        ["a non-positive head length", { ...ok, head: { ...ok.head, length: -1 } }, { blue: BLUE }, WORLD, /head\.length/],
+        ["a non-positive head radius", { ...ok, head: { ...ok.head, radius: 0 } }, { blue: BLUE }, WORLD, /head\.radius/],
+        [
+            "a non-positive contact time",
+            { ...ok, face: { ...ok.face, contactTime: 0 } },
+            { blue: BLUE },
+            WORLD,
+            /face\.contactTime/,
+        ],
+        [
+            "zero face restitution",
+            { ...ok, face: { ...ok.face, restitution: 0 } },
+            { blue: BLUE },
+            WORLD,
+            /face\.restitution/,
+        ],
+        [
+            "face restitution above 1",
+            { ...ok, face: { ...ok.face, restitution: 1.1 } },
+            { blue: BLUE },
+            WORLD,
+            /face\.restitution/,
+        ],
+        [
+            "negative face friction",
+            { ...ok, face: { ...ok.face, friction: -0.1 } },
+            { blue: BLUE },
+            WORLD,
+            /face\.friction/,
+        ],
+        [
+            "zero ball–ball restitution",
+            ok,
+            { blue: BLUE },
+            testWorld({ ballBall: { restitution: 0, friction: 0.05 } }),
+            /ballBall\.restitution/,
+        ],
         [
             "zero turf restitution",
             ok,
@@ -126,12 +208,20 @@ describe("validation", () => {
                     turfRestitution: 0,
                 }),
             }),
+            /turfRestitution/,
         ],
-        ["a non-unit orientation", { ...ok, orientation: { w: 2, x: 0, y: 0, z: 0 } }, { blue: BLUE }, WORLD],
+        [
+            "a non-unit orientation",
+            { ...ok, orientation: { w: 2, x: 0, y: 0, z: 0 } },
+            { blue: BLUE },
+            WORLD,
+            /orientation must be a unit quaternion/,
+        ],
     ];
 
-    it.each(cases)("rejects %s", (_label, contact, balls, world) => {
+    it.each(cases)("rejects %s", (_label, contact, balls, world, message) => {
         expect(() => simulateImpact(contact, balls, world)).toThrow(RangeError);
+        expect(() => simulateImpact(contact, balls, world)).toThrow(message);
     });
 
     it("accepts touching balls", () => {
