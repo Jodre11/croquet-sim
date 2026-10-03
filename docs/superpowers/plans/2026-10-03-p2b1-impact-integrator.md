@@ -39,6 +39,36 @@ each ball to its static turf depth and runs the rest. Before any of that, turf r
 - **Orientation check.** `simulateImpact` also rejects a non-unit orientation quaternion (|q|² − 1 beyond 1e-12),
   because a non-unit quaternion scales every rotated vector.
 
+**Decisions made in pre-flight** (2026-10-03; the plan was executed literally in a scratch worktree, and its code
+blocks now hold the files as pre-flight finished them; folded into the spec as its "Amended 2026-10-03 (pre-flight)"
+note):
+
+- **Termination waits for a ball still bouncing in the turf.** With turf contact ignored, a descending strike ended at
+  3 ms with blue 1.9 mm deep and rising, and the handover discarded the turf's rebound. Blue then lifted at 0.26 m/s
+  instead of 0.91 m/s. A ball in turf contact now holds the impact open while its vertical oscillation energy about
+  the static sink exceeds the static spring's, ½·m·v_z² + ½·k·(δ − δ₀)² > ½·k·δ₀². In that state it will still reach
+  δ = 0 and leave the turf. Below it the handover discards at most m·g·δ₀/2. A first attempt held on |v_z| ≥
+  SETTLE_SPEED; |v_z| passes through zero at the bottom of each bounce, so halving `dt` moved some handovers by 33 %.
+- **A sliding contact's spring carries the cone force alone.** The planned reset, ξ = −(F + c_t·slip)/k_t, left a
+  sliding contact's spring holding a displacement that only cancels its dashpot: about 3 mm, and 0.35 J, for a ball
+  sliding on the turf, which the energy invariant counted as stored. The centre strike ended with 6 % more energy than
+  it was given. The classic Cundall–Strack reset, −k_t·ξ = F, stores at most (μ·N)²/(2·k_t); the energy never rises.
+- **The handover's turf clamp needs a second move.** Clamping the lower ball's half-move at z = R leaves the pair short
+  by about ½·overlap·n_z², first order in the overlap: 4e-8 m in the inclined test, 40× phase 2's CONTACT_TOLERANCE.
+  The other ball now takes the rest along the new line of centres.
+- **The overdamped contact time is computed with `log1p`.** `ln(ζ + s)/s` lost half its digits just above ζ = 1, and
+  the damping solve's round trip failed at e = exp(−2).
+- **Fuzz draws exclude whiffs.** A checking drive whose impulse reaches half the head's momentum can stop a slow head
+  short of the ball; only the cap ends that impact (design §5), so such a draw is drawn again.
+- **Convergence is gated on the scenarios.** At `IMPACT_DT` they move by at most 1.5e-3 when `dt` halves. Random fuzz
+  strokes converge first-order but more slowly: 17 of 200 exceed 3e-3, worst 1.06e-2 (halving to 4.6e-3, 2.2e-3,
+  1.1e-3 as `dt` halves). The user chose to keep 5e-6 and record this for P2b.2 and P5 rather than halve `dt`.
+- **Croquet strokes depend on the hard pairs.** The probe (Task 9) shows the croquet split moving 0.92–2.29 m/s for
+  blue across the sourced face and ball–ball contact-time bounds. The design expected the hard pairs to barely matter;
+  that holds for single-ball strokes only.
+- **Test defects corrected:** the rim geometry (Task 5), the socket couple on the inclined-face head (Task 6), two
+  over-precise assertions (Tasks 3, 7) and the `RELEASE_STEPS` criterion (Task 8, below).
+
 ## Global Constraints
 
 - **Formatting.**
@@ -63,8 +93,8 @@ each ball to its static turf depth and runs the rest. Before any of that, turf r
     numerical constant says why it is not physical.
 - **Units.** SI. A ball on the turf in phase 2 has `z = R` and `vz = 0` exactly. Inside the impact a ball at rest sits
   at its static sink `z = R − m·g/k_turf`.
-- **Pre-flight values.** Named constants marked PROVISIONAL are fixed by pre-flight (below). Implement them with the
-  provisional values given.
+- **Pre-flight values.** Every numerical constant and tolerance is the one pre-flight measured (below); each comment
+  records its measurement. Implement them as given.
 - **Engine version.** `ENGINE_VERSION` becomes `"0.4.0"` (Task 7).
 - **Phase 2 stays bit-identical** (exit criterion 5). After Task 2 and again after Task 7:
   - `npx --yes tsx scripts/shotMix.ts` prints work units p99 143,084, p99.9 362,050, max 408,030 exactly;
@@ -103,30 +133,35 @@ line names its pinning test.
 5. **Restitution near the critical damping band.** `e` between `e^(−2) ≈ 0.135` and `e^(−π/2) ≈ 0.208` includes the
    sourced turf lower bound of 0.15. The damping solve must be continuous across `ζ = 1/√2` and `ζ = 1`, and the
    bisection must land on the right branch. Pinned in Task 4 (continuity, branch and round-trip tests).
+6. **A ball still bouncing in its hollow when the hard contacts end.** The impact must not end while the turf is still
+   throwing a ball out, and must end once the ball only settles (an untouched ball at its sink must never hold it
+   open). Pinned in Task 6 ("stays open while a struck ball is still bouncing out of its hollow") and Task 7 ("hands a
+   ball driven into the turf over airborne").
+7. **Energy in a sliding contact's spring.** A sliding contact must store no more than its cone force implies, or the
+   energy account gains what the dashpot cancels. Pinned in Task 4 ("resets its spring to carry it alone") and Task 8
+   (energy invariant).
 
 ---
 
 ## Pre-flight
 
-As for P2a.2 (spec §10), this plan is executed literally in a scratch worktree before the real run. The values below
-are the provisional ones the code is written with. Pre-flight measures each one and replaces it in this plan and in
-the spec. Every step that quotes a figure from these constants is updated with it.
+As for P2a.2 (spec §10), this plan was executed literally in a scratch worktree before the real run (2026-10-03,
+Apple M4, Node 26.10.0). The values below are the measured ones the code blocks now carry.
 
-| Constant | Where | Provisional | Fixed by |
+| Constant | Where | Value | Measured |
 |---|---|---|---|
-| `IMPACT_DT` | `impact/integrate.ts` | 5e-6 s (1/100 of 0.5 ms) | Task 8 convergence: largest `dt` that keeps every scenario under `CONVERGENCE_TOLERANCE` at `dt` vs `dt/2`, rounded down to 1, 2 or 5 × 10ⁿ |
-| `RELEASE_STEPS` | `impact/integrate.ts` | 50 | Task 8: smallest count for which ×4 changes no handover velocity by more than 0.1·`CONVERGENCE_TOLERANCE` |
-| `IMPACT_CAP` | `impact/integrate.ts` | 0.05 s | Task 8 fuzz: at least 5× the longest fuzz impact |
-| `ZETA_MAX` | `impact/contactLaw.ts` | 1e6 | Task 4: `e(ZETA_MAX) < 1e-12`, and the bisection converges for every `e` in [1e-12, 1] |
-| `CONVERGENCE_TOLERANCE` | `tests/engine/impact/convergence.test.ts` | 5e-3 | Task 8: 2× the worst measured relative change, at most 5e-3 |
-| `ENERGY_TOLERANCE` | `tests/engine/impact/invariants.test.ts` | 1e-3 | Task 8: 2× the worst measured relative rise |
-| `PENETRATION_BOUND` | `tests/engine/impact/fuzz.test.ts` | 0.3·R | Task 8: 1.5× the worst fuzz peak, at most 0.3·R |
-| Fuzz ranges | `tests/engine/impact/fuzz.test.ts` | as written there | Task 8: widest ranges that raise no `impact-cap` |
-| Analytic tolerances | Task 6 | as written there | Task 6: 2× the measured error |
+| `IMPACT_DT` | `impact/integrate.ts` | 5e-6 s | Scenarios, `dt` vs `dt/2`: worst 1.51e-3 (cut) at 5e-6; 3.12e-3 at 1e-5; 7.46e-3 at 2.5e-5; 6.24e-3 at 5e-5. Kept at about 1/100 of 0.5 ms with 2× margin. Fuzz strokes converge first-order, worst 1.06e-2 (see the pre-flight decisions) |
+| `RELEASE_STEPS` | `impact/integrate.ts` | 50 | ×4 moves no ball's state 50 ms after the strike (chained through phase 2) by more than 2.8e-4 of the head speed (25 → 100: 1.3e-4; 10 → 40: 4.5e-5). Comparing raw handovers instead measures the extra time integrated, not error: an airborne ball gains g·Δt |
+| `IMPACT_CAP` | `impact/integrate.ts` | 0.06 s | Longest of 2000 fuzz impacts 11.6 ms; ×5 |
+| `ZETA_MAX` | `impact/contactLaw.ts` | 1e6 | e(`ZETA_MAX`) = 2.50e-13; the bisection converges for every `e` in [1e-12, 1] |
+| `CONVERGENCE_TOLERANCE` | `tests/engine/impact/convergence.test.ts` | 3e-3 | 2× the scenarios' worst, 1.51e-3 |
+| `ENERGY_TOLERANCE` | `tests/engine/impact/invariants.test.ts` | 1e-9 | No rise measured (0); rounding only |
+| `PENETRATION_BOUND` | `tests/engine/impact/fuzz.test.ts` | 0.2·R | Worst of 2000 strokes: turf 6.0 mm, ball–ball 1.8 mm, face 1.4 mm; ×1.5 = 9.0 mm |
+| Fuzz ranges | `tests/engine/impact/fuzz.test.ts` | as written there | No `impact-cap` in 2000 strokes once whiffs are drawn again |
+| Analytic tolerances | Task 6 | as written there | About 2× each measured error, recorded beside it |
 
-Pre-flight also confirms both branches of the clamped restitution relation (Task 4's ODE cross-check) and runs
-`scripts/impactProbe.ts` once (Task 9). Record each measured figure next to the step it came from, as
-"(pre-flight: …)".
+Pre-flight confirmed both branches of the clamped restitution relation (Task 4) and ran `scripts/impactProbe.ts`
+(Task 9; its figures are the roadmap's "P2b.1 outcomes carried forward" as pre-flight recorded them).
 
 ---
 
@@ -244,7 +279,7 @@ Expected: FAIL, `contactReference` is not exported.
         "bounds": [0.0006, 0.0012],
         "source": "Stan Hall, 'When a Mallet Strikes a Ball', Table 1 (Oxford Croquet), https://oxfordcroquet.org/tech/hall/; Don Gugan, 'The Physics of Croquet Strokes: Analysis of the CA high-speed DVD', Tables 2, 3 and 4(a) (2009; Oxford Croquet), https://oxfordcroquet.org/tech/gugan4/",
         "provenance": "direct",
-        "note": "Hall, electrical timing: \"For single ball strokes the contact time is almost constant at 1 ms except for very short distances in which case the time is longer.\" (averages 0.84-1.18 ms from 7.3 to 2.4 m/s; 2.9 ms for a 0.6 m stroke). Gugan, high-speed video, 'Duration of contact, Th, ms (± 0.1 ms)': drives 1.00, 0.75, 0.60, 0.60; stop shots 0.75, 0.63, 0.63; rolls 1.13, 1.25, 1.00, 0.88. Value 0.8 ms is the centre of the drive and stop-shot figures; bounds run from Gugan's shortest to Hall's 2.4 m/s average. Gugan notes Hertzian theory predicts shorter contacts for stronger strokes but \"the effect is weak\"; the linear law here makes it speed-independent."
+        "note": "Hall, electrical timing: \"For single ball strokes the contact time is almost constant at 1 ms except for very short distances in which case the time is longer.\" (Table 1 averages from 7.3 to 2.4 m/s: Dawson 0.89, 1.0, 1.18 ms; Jaques <0.84, 0.94, 1.03 ms; 2.9 ms (Dawson) and 1.32 ms (Jaques) for a 0.6 m stroke). Gugan, high-speed video, 'Duration of contact, Th, ms (± 0.1 ms)': drives 1.00, 0.75, 0.60, 0.60; stop shots 0.75, 0.63, 0.63; rolls 1.13, 1.25, 1.00, 0.88. Value 0.8 ms is the centre of the drive and stop-shot figures; bounds run from Gugan's shortest to Hall's 2.4 m/s average. Gugan notes Hertzian theory predicts shorter contacts for stronger strokes but \"the effect is weak\"; the linear law here makes it speed-independent."
     },
     "tangentialStiffnessRatio": {
         "value": 0.2857142857142857,
@@ -412,9 +447,9 @@ In `src/engine/types.ts`, replace `SurfaceProps`:
 ```ts
 /**
  * Turf properties at a point. `slidingFriction` and `rollingResistance` are dimensionless (multiply by g for a
- * deceleration). `turfStiffness` (N/m) and `turfRestitution` are the ball–turf contact's spring and restitution: phase 2
- * uses the restitution for landings, the impact (phase 1) both. Every turf property lives here so that a lawn can vary
- * them by position, and a match can change them between shots through the Lawn it passes in.
+ * deceleration). `turfStiffness` (N/m) and `turfRestitution` are the ball–turf contact's spring and restitution:
+ * phase 2 uses the restitution for landings, the impact (phase 1) both. Every turf property lives here so that a lawn
+ * can vary them by position, and a match can change them between shots through the Lawn it passes in.
  */
 export interface SurfaceProps {
     readonly slidingFriction: number;
@@ -584,7 +619,11 @@ describe("integrateOrientation", () => {
         for (let n = 0; n < 1000; n++) {
             q = integrateOrientation(q, vec3(0, 0, 1), 1e-3);
         }
-        expect(near(rotate(q, vec3(1, 0, 0)), vec3(Math.cos(1), Math.sin(1), 0), 1e-9)).toBe(true);
+        // Each step turns by exactly 2·atan(ω·dt/2), which falls short of ω·dt by (ω·dt)³/12: 8.3e-8 rad over 1000
+        // steps.
+        const turned = 1000 * 2 * Math.atan(0.5e-3);
+        expect(near(rotate(q, vec3(1, 0, 0)), vec3(Math.cos(turned), Math.sin(turned), 0), 1e-12)).toBe(true);
+        expect(near(rotate(q, vec3(1, 0, 0)), vec3(Math.cos(1), Math.sin(1), 0), 1e-7)).toBe(true);
     });
 
     it("stays a unit quaternion", () => {
@@ -896,13 +935,20 @@ describe("forces", () => {
         expect(t.force).toEqual(scale(spring, -law.tangentialStiffness));
     });
 
-    it("scales a sliding contact's force onto the cone and resets its spring to match", () => {
+    it("scales a sliding contact's force onto the cone and resets its spring to carry it alone", () => {
         const slip = vec3(0.3, -0.1, 0);
         const t = tangentialForce(law, vec3(1e-3, 2e-4, 0), slip, 2);
         expect(t.sliding).toBe(true);
         expect(length(t.force)).toBeCloseTo(0.3 * 2, 12);
-        const reproduced = sub(scale(t.spring, -law.tangentialStiffness), scale(slip, law.tangentialDamping));
-        expect(length(sub(reproduced, t.force))).toBeLessThan(1e-12);
+        // −k_t·ξ = force, so the stored energy is (μ·N)²/(2·k_t): no displacement held against the dashpot.
+        expect(length(sub(scale(t.spring, -law.tangentialStiffness), t.force))).toBeLessThan(1e-12);
+    });
+
+    it("holds its force, without a jump, when a sliding contact stops slipping", () => {
+        // The spring alone sits on the cone, so the next trial force lies on it too (to an ulp either side).
+        const slid = tangentialForce(law, vec3(1e-3, 2e-4, 0), vec3(0.3, -0.1, 0), 2);
+        const next = tangentialForce(law, slid.spring, vec3(0, 0, 0), 2);
+        expect(length(sub(next.force, slid.force))).toBeLessThan(1e-12);
     });
 
     it("carries no friction without load", () => {
@@ -939,14 +985,14 @@ Expected: FAIL, module not found.
  * ζ giving a restitution is found by bisection on ln e, which needs no exp.
  */
 import { atan2, ln } from "../math/elementary";
-import { add, length, scale, sub, type Vec3 } from "../math/vec3";
+import { length, scale, sub, type Vec3 } from "../math/vec3";
 
 /** k_t/k, a contact's tangential stiffness relative to its normal stiffness (Silbert et al. 2001; contact.json). */
 export const TANGENTIAL_STIFFNESS_RATIO = 2 / 7;
 
 /**
  * Upper end of the damping-ratio bisection. A numerical bound, not physical: e(ζ) ≈ 1/(4ζ²) for large ζ, so
- * e(ZETA_MAX) ≈ 2.5e-13, below any restitution a contact is given. PROVISIONAL (pre-flight).
+ * e(ZETA_MAX) ≈ 2.5e-13, below any restitution a contact is given (pre-flight: 2.50e-13).
  */
 export const ZETA_MAX = 1e6;
 
@@ -959,8 +1005,22 @@ export function contactTimeFactor(zeta: number): number {
     if (zeta === 1) {
         return 2;
     }
-    const s = Math.sqrt(zeta * zeta - 1);
-    return (2 * ln(zeta + s)) / s;
+    // ζ² − 1 as (ζ − 1)(ζ + 1), and ln(ζ + s) as ln(1 + x) with x = (ζ − 1) + s: just above ζ = 1, ζ + s rounds
+    // away most of s and ln(ζ + s)/s loses up to half its digits, which breaks dampingRatio's round trip at ζ ≈ 1.
+    const s = Math.sqrt((zeta - 1) * (zeta + 1));
+    return (2 * log1p(zeta - 1 + s)) / s;
+}
+
+/**
+ * ln(1 + x) to a few ulps for small x ≥ 0 (Goldberg, "What every computer scientist should know about floating-point
+ * arithmetic", 1991, Theorem 4): with u = 1 ⊕ x, ln(u)·x/(u − 1) cancels the rounding of u.
+ */
+function log1p(x: number): number {
+    const u = 1 + x;
+    if (u === 1) {
+        return x;
+    }
+    return (ln(u) * x) / (u - 1);
 }
 
 /** ln e of the clamped law at damping ratio ζ: −ζ·τ(ζ). */
@@ -1051,8 +1111,10 @@ export interface Tangential {
  * Cundall–Strack friction. `spring` is the elastic tangential displacement ξ carried into this step, already projected
  * onto the current tangent plane and advanced by slip·dt; `slip` is the tangential velocity of B's contact point
  * relative to A's. The trial force −k_t·ξ − c_t·slip is kept while it lies within the Coulomb cone μ·N: the contact
- * sticks, truly, with no creep. Otherwise it slides: the force is scaled onto the cone and ξ is reset to the
- * displacement that gives exactly that force, so a sliding contact stores no excess.
+ * sticks, truly, with no creep. Otherwise it slides: the force is scaled onto the cone and ξ is reset so that the
+ * spring alone carries it, −k_t·ξ = force (Cundall and Strack 1979). A sliding contact then stores at most
+ * (μ·N)²/(2·k_t). Resetting to −(force + c_t·slip)/k_t instead would leave the spring holding a displacement that only
+ * cancels the dashpot (millimetres for a ball sliding on the turf), energy no motion could ever return.
  */
 export function tangentialForce(law: PairLaw, spring: Vec3, slip: Vec3, normal: number): Tangential {
     const trial = sub(scale(spring, 0 - law.tangentialStiffness), scale(slip, law.tangentialDamping));
@@ -1062,9 +1124,7 @@ export function tangentialForce(law: PairLaw, spring: Vec3, slip: Vec3, normal: 
         return { force: trial, spring, sliding: false };
     }
     const force = scale(trial, limit / size);
-    // −k_t·ξ − c_t·slip = force  ⇒  ξ = −(force + c_t·slip)/k_t.
-    const reset = scale(add(force, scale(slip, law.tangentialDamping)), -1 / law.tangentialStiffness);
-    return { force, spring: reset, sliding: true };
+    return { force, spring: scale(force, -1 / law.tangentialStiffness), sliding: true };
 }
 ```
 
@@ -1074,7 +1134,10 @@ Run: `npx vitest run tests/engine/impact/contactLaw.test.ts`
 Expected: PASS (17 tests).
 
 If the ODE cross-check fails on one branch, the closed form for that branch is wrong: fix the formula, never the
-tolerance. Pre-flight records the largest ODE difference per branch here.
+tolerance. (pre-flight: worst |Δτ| 3.1e-9 and |Δe| 4.3e-10 over ζ = 0 … 2.5, both branches confirmed;
+e(ZETA_MAX) = 2.50e-13; the round trip's worst relative error over 2764 restitutions in [1e-12, 1] is 6.3e-16, after
+the overdamped branch was rewritten with `log1p` and (ζ − 1)(ζ + 1): `ln(ζ + s)/s` lost half its digits just above
+ζ = 1 and failed the round trip at e = exp(−2) by 4e-11.)
 
 - [ ] **Step 5: Format, lint, check, commit**
 
@@ -1259,13 +1322,20 @@ describe("faceContact", () => {
     });
 
     it("turns a ball beyond the disc but touching the rim into OFF_FACE", () => {
-        expect(faceContact(headAt(0), HEAD, vec3(R - 1e-3, 0.03 + 0.01, 0.1), R)).toBe(OFF_FACE);
+        // 1 mm into the face plane the ball's cross-section has radius √(R² − (R − 1e-3)²) ≈ 9.5 mm.
+        expect(faceContact(headAt(0), HEAD, vec3(R - 1e-3, 0.03 + 0.005, 0.1), R)).toBe(OFF_FACE);
+        expect(faceContact(headAt(0), HEAD, vec3(R - 1e-3, 0.03 + 0.01, 0.1), R)).toBeNull();
         expect(faceContact(headAt(0), HEAD, vec3(R - 1e-3, 0.03 + R, 0.1), R)).toBeNull();
     });
 
     it("follows the head's orientation", () => {
         const q = axisAngle(vec3(0, 0, 1), Math.PI / 2);
-        const state: HeadState = { position: vec3(0, -0.1, 0.1), orientation: q, velocity: ZERO, angularVelocity: ZERO };
+        const state: HeadState = {
+            position: vec3(0, -0.1, 0.1),
+            orientation: q,
+            velocity: ZERO,
+            angularVelocity: ZERO,
+        };
         const c = faceContact(state, HEAD, vec3(0, R - 1e-4, 0.1), R) as Penetration;
         expect(length(sub(c.normal, vec3(0, 1, 0)))).toBeLessThan(1e-15);
         expect(c.depth).toBeCloseTo(1e-4, 12);
@@ -1466,7 +1536,10 @@ export function pairContact(
     }
 }
 
-/** Velocity of the material point at `point` of a body moving with `velocity`, spinning with `angularVelocity` about `centre`. */
+/**
+ * Velocity of the material point at `point` of a body moving with `velocity`, spinning with `angularVelocity` about
+ * `centre`.
+ */
 export function pointVelocity(centre: Vec3, velocity: Vec3, angularVelocity: Vec3, point: Vec3): Vec3 {
     return add(velocity, cross(angularVelocity, sub(point, centre)));
 }
@@ -1504,12 +1577,10 @@ export function headClosing(state: HeadState, head: MalletHead, ball: BallState,
 }
 ```
 
-Wrap the `pointVelocity` header comment to 120 columns.
-
 - [ ] **Step 5: Run the tests to verify they pass**
 
 Run: `npx vitest run tests/engine/impact/contacts.test.ts`
-Expected: PASS (15 tests).
+Expected: PASS (14 tests).
 
 - [ ] **Step 6: Format, lint, check, commit**
 
@@ -1560,12 +1631,7 @@ Create `tests/engine/support/impact.ts`:
  */
 import { ZERO, add, lengthSq, scale, sub, vec3, type Vec3 } from "../../../src/engine/math/vec3";
 import { lawFromContactTime, type PairLaw } from "../../../src/engine/impact/contactLaw";
-import type {
-    ImpactBall,
-    ImpactProbe,
-    ImpactSetup,
-    ImpactSnapshot,
-} from "../../../src/engine/impact/integrate";
+import type { ImpactBall, ImpactProbe, ImpactSetup, ImpactSnapshot } from "../../../src/engine/impact/integrate";
 import {
     IDENTITY,
     axisAngle,
@@ -1575,13 +1641,7 @@ import {
     solidCylinderInertia,
     type Quaternion,
 } from "../../../src/engine/impact/rigidBody";
-import type {
-    ContactState,
-    DriveSample,
-    FaceMaterial,
-    HeadState,
-    MalletHead,
-} from "../../../src/engine/impact/types";
+import type { ContactState, DriveSample, FaceMaterial, HeadState, MalletHead } from "../../../src/engine/impact/types";
 import type { BallParams, BallState, BallStates } from "../../../src/engine/types";
 import { STANDARD_GRAVITY } from "../../../src/engine/world";
 import { TEST_BALL, ballAt } from "./fixtures";
@@ -1664,7 +1724,12 @@ export function faceLaw(face: FaceMaterial = TEST_FACE, headMass = TEST_HEAD.mas
 }
 
 /** A ball free in space at `position`, without turf under it. */
-export function freeBall(id: ImpactBall["id"], position: Vec3, velocity: Vec3 = ZERO, turf: PairLaw | null = null): ImpactBall {
+export function freeBall(
+    id: ImpactBall["id"],
+    position: Vec3,
+    velocity: Vec3 = ZERO,
+    turf: PairLaw | null = null,
+): ImpactBall {
     return { id, state: { position, velocity, angularVelocity: ZERO }, turf };
 }
 
@@ -1673,7 +1738,12 @@ export function freeBall(id: ImpactBall["id"], position: Vec3, velocity: Vec3 = 
  * gravity off, the test face and test ball–ball laws, no balls. Override what a case needs.
  */
 export function isolated(overrides: Partial<ImpactSetup> = {}): ImpactSetup {
-    const start: HeadState = { position: vec3(-100, 0, 10), orientation: IDENTITY, velocity: ZERO, angularVelocity: ZERO };
+    const start: HeadState = {
+        position: vec3(-100, 0, 10),
+        orientation: IDENTITY,
+        velocity: ZERO,
+        angularVelocity: ZERO,
+    };
     return {
         head: TEST_HEAD,
         start,
@@ -1875,7 +1945,12 @@ describe("events and termination", () => {
     });
 
     it("ends RELEASE_STEPS after the last hard contact once the drive window has closed", () => {
-        const start = { position: vec3(-R - 1e-4 - TEST_HEAD.length / 2, 0, 1), orientation: IDENTITY, velocity: vec3(2, 0, 0), angularVelocity: ZERO };
+        const start = {
+            position: vec3(-R - 1e-4 - TEST_HEAD.length / 2, 0, 1),
+            orientation: IDENTITY,
+            velocity: vec3(2, 0, 0),
+            angularVelocity: ZERO,
+        };
         const run = integrate(isolated({ start, balls: [freeBall("blue", vec3(0, 0, 1))] }));
         expect(run.events.filter((e) => e.kind === "impact-cap")).toEqual([]);
         expect(run.duration).toBeLessThan(5e-3);
@@ -1883,7 +1958,12 @@ describe("events and termination", () => {
     });
 
     it("waits for the drive window to close", () => {
-        const start = { position: vec3(-R - 1e-4 - TEST_HEAD.length / 2, 0, 1), orientation: IDENTITY, velocity: vec3(2, 0, 0), angularVelocity: ZERO };
+        const start = {
+            position: vec3(-R - 1e-4 - TEST_HEAD.length / 2, 0, 1),
+            orientation: IDENTITY,
+            velocity: vec3(2, 0, 0),
+            angularVelocity: ZERO,
+        };
         const drive = [
             { t: 0, force: ZERO },
             { t: 20e-3, force: ZERO },
@@ -1901,10 +1981,33 @@ describe("events and termination", () => {
         expect(run.events.filter((e) => e.kind === "turf-lift")).toHaveLength(1);
     });
 
+    it("stays open while a struck ball is still bouncing out of its hollow", () => {
+        // The face strike lasts about 0.6 ms; the ball, driven 1 m/s into the turf, needs about 4 ms to leave it.
+        const start = {
+            position: vec3(-R - 1e-4 - TEST_HEAD.length / 2, 0, R),
+            orientation: IDENTITY,
+            velocity: vec3(2, 0, 0),
+            angularVelocity: ZERO,
+        };
+        const turf = lawFromStiffness(TEST_BALL.mass, 0.5, 2e5, 0.3);
+        const run = integrate(
+            isolated({ start, gravity: 9.80665, balls: [freeBall("blue", vec3(0, 0, R), vec3(0, 0, -1), turf)] }),
+            { cap: 20e-3 },
+        );
+        expect(run.events.filter((e) => e.kind === "impact-cap")).toEqual([]);
+        expect(run.events.filter((e) => e.kind === "turf-lift")).toHaveLength(1);
+        expect(run.balls.blue?.position.z as number).toBeGreaterThanOrEqual(R);
+    });
+
     it("flags a ball at the rim once and forms no face contact", () => {
         // The face plane R/2 short of the ball's centre, the face axis R/2 beyond the disc's edge: the ball's
         // cross-section in the face plane (radius √3·R/2) overlaps the disc while its centre projects outside it.
-        const start = { position: vec3(-R / 2 - TEST_HEAD.length / 2, -(TEST_HEAD.radius + R / 2), 1), orientation: IDENTITY, velocity: vec3(1, 0, 0), angularVelocity: ZERO };
+        const start = {
+            position: vec3(-R / 2 - TEST_HEAD.length / 2, -(TEST_HEAD.radius + R / 2), 1),
+            orientation: IDENTITY,
+            velocity: vec3(1, 0, 0),
+            angularVelocity: ZERO,
+        };
         const run = integrate(isolated({ start, balls: [freeBall("blue", vec3(0, 0, 1))] }), { cap: 5e-3 });
         expect(run.events.filter((e) => e.kind === "impact-off-face")).toHaveLength(1);
         expect(run.peakPenetration["face/blue"]).toBeUndefined();
@@ -1912,7 +2015,12 @@ describe("events and termination", () => {
     });
 
     it("flags a head that goes below the turf plane once", () => {
-        const start = { position: vec3(0, 0, TEST_HEAD.radius + 1e-4), orientation: IDENTITY, velocity: vec3(0, 0, -1), angularVelocity: ZERO };
+        const start = {
+            position: vec3(0, 0, TEST_HEAD.radius + 1e-4),
+            orientation: IDENTITY,
+            velocity: vec3(0, 0, -1),
+            angularVelocity: ZERO,
+        };
         const run = integrate(isolated({ start }), { cap: 2e-3 });
         const grounded = run.events.filter((e) => e.kind === "impact-mallet-grounded");
         expect(grounded).toHaveLength(1);
@@ -1921,20 +2029,23 @@ describe("events and termination", () => {
     });
 
     it("is bit-identical when repeated", () => {
-        const start = { position: vec3(-R - 1e-4 - TEST_HEAD.length / 2, 0.003, 1), orientation: IDENTITY, velocity: vec3(2, 0.1, -0.2), angularVelocity: vec3(0, 3, 1) };
+        const start = {
+            position: vec3(-R - 1e-4 - TEST_HEAD.length / 2, 0.003, 1),
+            orientation: IDENTITY,
+            velocity: vec3(2, 0.1, -0.2),
+            angularVelocity: vec3(0, 3, 1),
+        };
         const setup = isolated({ start, gravity: 9.80665, balls: [freeBall("blue", vec3(0, 0, 1))] });
         expect(integrate(setup)).toStrictEqual(integrate(setup));
     });
 });
 ```
 
-The long `start` literals are kept on one line here so that each start state reads whole; Prettier wraps them.
-
 - [ ] **Step 3: Write the failing analytic tests**
 
 Create `tests/engine/impact/analytic.test.ts`. Each case isolates one mechanism (spec §9.1). The ball–turf and
 dropped-ball cases run at their own small `dt`, so that the comparison tests the law, not the step. Tolerances
-marked PROVISIONAL are set by pre-flight to twice the measured error.
+are about twice the error pre-flight measured, which each comment records.
 
 ```ts
 import { describe, expect, it } from "vitest";
@@ -1954,8 +2065,11 @@ import { TEST_FACE, TEST_HEAD, counter, faceLaw, freeBall, isolated } from "../s
 
 const R = TEST_BALL.radius;
 const M = TEST_BALL.mass;
-/** PROVISIONAL (pre-flight): relative tolerance on contact times and restitutions at dt = 1e-7 s. */
-const LAW_TOLERANCE = 2e-3;
+/**
+ * Relative tolerance on contact times and restitutions at dt = 1e-7 s: twice the worst measured error (pre-flight:
+ * 1.43e-4, the ball–ball contact time, one step of 1e-7 s in 7e-4 s).
+ */
+const LAW_TOLERANCE = 3e-4;
 const FINE = 1e-7;
 
 function closedForm(massEff: number, restitution: number, stiffness: number): number {
@@ -1965,10 +2079,20 @@ function closedForm(massEff: number, restitution: number, stiffness: number): nu
 describe("one contact of each pair", () => {
     it("face–ball: the free, undriven head strikes a free ball with the face's contact time and restitution", () => {
         const law = faceLaw({ ...TEST_FACE, friction: 0 });
-        const start = { position: vec3(-R - 1e-4 - TEST_HEAD.length / 2, 0, 1), orientation: IDENTITY, velocity: vec3(2, 0, 0), angularVelocity: ZERO };
+        const start = {
+            position: vec3(-R - 1e-4 - TEST_HEAD.length / 2, 0, 1),
+            orientation: IDENTITY,
+            velocity: vec3(2, 0, 0),
+            angularVelocity: ZERO,
+        };
         const probe = counter("face/blue");
-        const run = integrate(isolated({ start, face: law, balls: [freeBall("blue", vec3(0, 0, 1))] }), { dt: FINE, probe });
-        expect(Math.abs(probe.closed * FINE - TEST_FACE.contactTime) / TEST_FACE.contactTime).toBeLessThan(LAW_TOLERANCE);
+        const run = integrate(isolated({ start, face: law, balls: [freeBall("blue", vec3(0, 0, 1))] }), {
+            dt: FINE,
+            probe,
+        });
+        expect(Math.abs(probe.closed * FINE - TEST_FACE.contactTime) / TEST_FACE.contactTime).toBeLessThan(
+            LAW_TOLERANCE,
+        );
         const e = ((run.balls.blue?.velocity.x as number) - run.head.velocity.x) / 2;
         expect(Math.abs(e - TEST_FACE.restitution) / TEST_FACE.restitution).toBeLessThan(LAW_TOLERANCE);
     });
@@ -2019,20 +2143,25 @@ describe("a ball dropped on the turf", () => {
             },
         };
         const run = integrate(
-            isolated({ gravity: STANDARD_GRAVITY, balls: [freeBall("blue", vec3(0, 0, R), vec3(0, 0, -v), lawFromStiffness(M, e, 2e5, 0.3))] }),
+            isolated({
+                gravity: STANDARD_GRAVITY,
+                balls: [freeBall("blue", vec3(0, 0, R), vec3(0, 0, -v), lawFromStiffness(M, e, 2e5, 0.3))],
+            }),
             { dt: FINE, cap: 10e-3, probe },
         );
         expect(run.events.filter((x) => x.kind === "turf-lift")).toHaveLength(1);
-        // Gravity acts through the 5 ms contact: g·T/v ≈ 1 % of the rebound.
-        expect(Math.abs(rebound / v - e)).toBeLessThan(0.02);
+        // Gravity acts through the contact, and the rebound is read where the ball regains z = R (pre-flight: 2.3e-3).
+        expect(Math.abs(rebound / v - e)).toBeLessThan(5e-3);
     });
 });
 
 describe("a ball on a fixed inclined face", () => {
     // A ball can roll, so its contact sticks (rolls without slip, a = 5/7·g·sinθ) while tanθ ≤ 7μ/2 and slips
-    // (a = g·(sinθ − μ·cosθ)) above it. The face belongs to a head of enormous mass whose weight the drive carries.
+    // (a = g·(sinθ − μ·cosθ)) above it. The face belongs to a head of enormous mass whose weight the drive carries,
+    // applied at its centre of mass: at the usual socket the drive and gravity form a couple that, on the tilted head,
+    // spins it at about 60 rad/s² whatever its mass, and the face would no longer be fixed.
     const mu = 0.2;
-    const huge: MalletHead = { ...TEST_HEAD, mass: 1e9, inertia: solidCylinderInertia(1e9, 0.23, 0.032) };
+    const huge: MalletHead = { ...TEST_HEAD, mass: 1e9, inertia: solidCylinderInertia(1e9, 0.23, 0.032), socket: ZERO };
 
     function slide(theta: number): { acceleration: number; slip: number } {
         const law = lawFromContactTime((1e9 * M) / (1e9 + M), 0.8, 6e-4, mu);
@@ -2070,17 +2199,18 @@ describe("a ball on a fixed inclined face", () => {
         const theta = Math.atan(0.5);
         const { acceleration, slip } = slide(theta);
         const expected = (5 / 7) * STANDARD_GRAVITY * Math.sin(theta);
-        expect(Math.abs(acceleration - expected) / expected).toBeLessThan(0.02);
-        // A stuck contact only carries the tangential spring's decaying ringing (below 1e-3 m/s); the slipping case
-        // below reaches about 0.03 m/s.
-        expect(slip).toBeLessThan(1e-3);
+        // Pre-flight: 2.2e-6 relative, and slip 2.4e-7 m/s (the tangential spring's decaying ringing); the slipping
+        // case below reaches 0.03 m/s.
+        expect(Math.abs(acceleration - expected) / expected).toBeLessThan(1e-5);
+        expect(slip).toBeLessThan(1e-6);
     });
 
     it("slips above tanθ = 7μ/2", () => {
         const theta = Math.atan(0.9);
         const { acceleration, slip } = slide(theta);
         const expected = STANDARD_GRAVITY * (Math.sin(theta) - mu * Math.cos(theta));
-        expect(Math.abs(acceleration - expected) / expected).toBeLessThan(0.02);
+        // Pre-flight: 1.9e-3, the start-up transient while the contact first sticks.
+        expect(Math.abs(acceleration - expected) / expected).toBeLessThan(4e-3);
         expect(slip).toBeGreaterThan(0.01);
     });
 });
@@ -2101,7 +2231,8 @@ describe("a socket force on a free head", () => {
         );
         // Socket (0, 0, r) × (F, 0, 0) = (0, r·F, 0): about +y, which turns the +x face down.
         const expected = (TEST_HEAD.socket.z * F * window) / TEST_HEAD.inertia.y;
-        expect(Math.abs(run.head.angularVelocity.y - expected) / expected).toBeLessThan(1e-3);
+        // Pre-flight: 1.2e-10, the gyroscopic and orientation terms over 200 steps.
+        expect(Math.abs(run.head.angularVelocity.y - expected) / expected).toBeLessThan(3e-10);
         expect(Math.abs(run.head.velocity.x - (F * window) / TEST_HEAD.mass)).toBeLessThan(1e-12);
     });
 });
@@ -2128,9 +2259,13 @@ Expected: FAIL, `integrate.ts` not found.
  * Bodies and pairs are visited in a fixed order and forces summed in it, so repeated runs are bit-identical, and
  * set-ups mirrored across a vertical plane give exactly mirrored results.
  *
- * The impact ends once a face–ball contact has closed, the drive window has closed, and no face–ball or ball–ball
- * contact has been closed for RELEASE_STEPS steps (turf contact does not count); or at the cap. Isolated set-ups (tests)
- * may give balls any state and leave the turf out; simulateImpact.ts prepares and validates real ones.
+ * The impact ends once a face–ball contact has closed, the drive window has closed, no face–ball or ball–ball contact
+ * has been closed for RELEASE_STEPS steps, and no ball in turf contact is still bouncing in it; or at the cap. A ball
+ * bounces while its vertical oscillation energy about the static sink δ₀ = m·g/k, ½·m·v_z² + ½·k·(δ − δ₀)², exceeds
+ * the static spring's ½·k·δ₀²: it will reach δ = 0 and leave the turf, so the turf's rebound, which dominates lift, is
+ * integrated rather than discarded at handover. Below that the ball only settles in its hollow, and the handover
+ * discards at most m·g·δ₀/2 (design §6). Isolated set-ups (tests) may give balls any state and leave the turf out;
+ * simulateImpact.ts prepares and validates real ones.
  */
 import { ZERO, add, cross, dot, scale, sub, vec3, type Vec3 } from "../math/vec3";
 import type { BallId, BallParams, BallState, BallStates } from "../types";
@@ -2142,19 +2277,23 @@ import type { DriveSample, HeadState, ImpactEvent, ImpactRun, MalletHead } from 
 /**
  * Integration step (s): about 1/100 of the shortest sourced contact duration, 0.5 ms (the lower bound of the ball–ball
  * contact time, contact.json), confirmed by the convergence test. A constant of the engine version, never adapted to
- * the input, so the step count and results are identical across runs. PROVISIONAL (pre-flight).
+ * the input, so the step count and results are identical across runs. Pre-flight: halving it moves the scenarios'
+ * handovers by at most 1.5e-3 of the head speed (3.1e-3 at 1e-5 s); errors fall first-order with dt.
  */
 export const IMPACT_DT = 5e-6;
 
 /**
  * Consecutive steps without a closed face–ball or ball–ball contact after which the impact may end. A numerical
- * allowance for a contact to re-close (a croquet stroke's balls part and meet again), not physical. PROVISIONAL
- * (pre-flight).
+ * allowance for a contact to re-close (a croquet stroke's balls part and meet again), not physical. Pre-flight: ×4
+ * moves no ball's state 50 ms after the strike by more than 2.8e-4 of the head speed.
  */
 export const RELEASE_STEPS = 50;
 
-/** Longest impact (s); reaching it ends the impact with an `impact-cap` event rather than hanging. PROVISIONAL (pre-flight). */
-export const IMPACT_CAP = 0.05;
+/**
+ * Longest impact (s); reaching it ends the impact with an `impact-cap` event rather than hanging. Pre-flight: 5× the
+ * longest fuzz impact (11.6 ms); a head that never reaches the ball (a whiff) runs to it.
+ */
+export const IMPACT_CAP = 0.06;
 
 /** A ball entering the integrator: its state and its turf law (null: no turf under it, for isolated test cases). */
 export interface ImpactBall {
@@ -2364,16 +2503,29 @@ export function integrate(setup: ImpactSetup, options: ImpactOptions = {}): Impa
         steps++;
         const now = steps * dt;
 
+        let turfMoving = false;
         for (let i = 0; i < balls.length; i++) {
             if (!hasTurf[i]) {
                 continue;
             }
-            const below = (balls[i] as BallState).position.z < R;
+            const s = balls[i] as BallState;
+            const below = s.position.z < R;
             if (inTurf[i] && !below && !lifted[i]) {
                 lifted[i] = true;
                 events.push({ kind: "turf-lift", t: now, ball: ids[i] as BallId });
             }
             inTurf[i] = below;
+            // Vertical oscillation energy about the static sink δ₀ = m·g/k, against the static spring's ½·k·δ₀²: at or
+            // above it the ball will still reach δ = 0 and bounce; below it, it only settles in its hollow.
+            const k = ((setup.balls[i] as ImpactBall).turf as PairLaw).stiffness;
+            const offset = R - s.position.z - (ball.mass * setup.gravity) / k;
+            if (
+                below &&
+                ball.mass * s.velocity.z * s.velocity.z + k * offset * offset >
+                    (ball.mass * ball.mass * setup.gravity * setup.gravity) / k
+            ) {
+                turfMoving = true;
+            }
         }
         if (!grounded && headLowestPoint(state, head) < 0) {
             grounded = true;
@@ -2382,7 +2534,7 @@ export function integrate(setup: ImpactSetup, options: ImpactOptions = {}): Impa
         options.probe?.step({ t: now, drive, head: state, balls: [...balls], contacts: samples });
 
         quiet = hardClosed ? 0 : quiet + 1;
-        if (struck && now >= driveEnd && quiet >= RELEASE_STEPS) {
+        if (struck && now >= driveEnd && quiet >= RELEASE_STEPS && !turfMoving) {
             break;
         }
         if (now >= cap) {
@@ -2410,8 +2562,6 @@ export function integrate(setup: ImpactSetup, options: ImpactOptions = {}): Impa
     return { balls: final, head: state, duration, events, peakPenetration, steps };
 }
 ```
-
-Wrap the `IMPACT_CAP` comment to 120 columns.
 
 - [ ] **Step 6: Run the tests to verify they pass**
 
@@ -2485,19 +2635,28 @@ describe("handover", () => {
 
     it("separates an overlapping pair on the turf to zero gap and reports the correction", () => {
         const out = handover({ blue: airborneAt(5, 5, R), red: airborneAt(5 + 2 * R - 1e-6, 5, R) }, R);
-        const gap = length(sub(out.balls.red?.position ?? vec3(0, 0, 0), out.balls.blue?.position ?? vec3(0, 0, 0))) - 2 * R;
+        const gap =
+            length(sub(out.balls.red?.position ?? vec3(0, 0, 0), out.balls.blue?.position ?? vec3(0, 0, 0))) - 2 * R;
         expect(Math.abs(gap)).toBeLessThan(1e-15);
-        expect(out.overlapCorrection).toBeCloseTo(1e-6, 15);
+        // 5 + 2R − 1e-6 is exact only to an ulp of 5 (8.9e-16).
+        expect(out.overlapCorrection).toBeCloseTo(1e-6, 14);
         expect(() => simulateFreeMotion(out.balls, testWorld())).not.toThrow();
     });
 
     it("never moves a ball below the turf when the normal is inclined", () => {
         const out = handover(
-            { blue: airborneAt(5, 5, R), red: airborneAt(5 + 1.8 * R, 5, R + Math.sqrt(4 * R * R - 3.24 * R * R) - 1e-6) },
+            {
+                blue: airborneAt(5, 5, R),
+                red: airborneAt(5 + 1.8 * R, 5, R + Math.sqrt(4 * R * R - 3.24 * R * R) - 1e-6),
+            },
             R,
         );
         expect(out.balls.blue?.position.z).toBeGreaterThanOrEqual(R);
         expect(out.overlapCorrection).toBeGreaterThan(0);
+        // Clamping blue's half-move would leave ½·overlap·n_z² ≈ 4e-8 m; red takes it, so the pair ends touching.
+        const gap =
+            length(sub(out.balls.red?.position ?? vec3(0, 0, 0), out.balls.blue?.position ?? vec3(0, 0, 0))) - 2 * R;
+        expect(Math.abs(gap)).toBeLessThan(1e-15);
         expect(() => simulateFreeMotion(out.balls, testWorld())).not.toThrow();
     });
 
@@ -2547,7 +2706,11 @@ describe("simulateImpact", () => {
     });
 
     it("hands a ball driven into the turf over airborne, and phase 2 lands it", () => {
-        const result = simulateImpact(strike(BLUE.position, { speed: 3, descent: 0.5, pitch: 0.5 }), { blue: BLUE }, WORLD);
+        const result = simulateImpact(
+            strike(BLUE.position, { speed: 3, descent: 0.5, pitch: 0.5 }),
+            { blue: BLUE },
+            WORLD,
+        );
         expect(result.events.some((e) => e.kind === "turf-lift")).toBe(true);
         expect(result.handover.blue?.velocity.z).toBeGreaterThan(0);
         const free = simulateFreeMotion(result.handover, WORLD);
@@ -2563,7 +2726,11 @@ describe("simulateImpact", () => {
     });
 
     it("sends both balls of a croquet stroke forward, the croqueted one faster", () => {
-        const result = simulateImpact(strike(BLUE.position, { speed: 3 }), { blue: BLUE, red: ballAt(5 + 2 * R, 0) }, WORLD);
+        const result = simulateImpact(
+            strike(BLUE.position, { speed: 3 }),
+            { blue: BLUE, red: ballAt(5 + 2 * R, 0) },
+            WORLD,
+        );
         const blue = result.handover.blue?.velocity.x as number;
         const red = result.handover.red?.velocity.x as number;
         expect(red).toBeGreaterThan(blue);
@@ -2596,7 +2763,12 @@ describe("validation", () => {
         ["the head in the turf", { ...ok, position: vec3(ok.position.x, ok.position.y, 0.01) }, { blue: BLUE }, WORLD],
         ["an empty drive", { ...ok, drive: [] }, { blue: BLUE }, WORLD],
         ["a drive not starting at 0", { ...ok, drive: [{ t: 1e-4, force: vec3(0, 0, 0) }] }, { blue: BLUE }, WORLD],
-        ["a drive not increasing", { ...ok, drive: [...drive(vec3(0, 0, 0), 1e-3), { t: 1e-3, force: vec3(0, 0, 0) }] }, { blue: BLUE }, WORLD],
+        [
+            "a drive not increasing",
+            { ...ok, drive: [...drive(vec3(0, 0, 0), 1e-3), { t: 1e-3, force: vec3(0, 0, 0) }] },
+            { blue: BLUE },
+            WORLD,
+        ],
         ["a non-positive head mass", { ...ok, head: { ...ok.head, mass: 0 } }, { blue: BLUE }, WORLD],
         ["a non-positive inertia", { ...ok, head: { ...ok.head, inertia: vec3(1, 0, 1) } }, { blue: BLUE }, WORLD],
         ["a non-positive head length", { ...ok, head: { ...ok.head, length: -1 } }, { blue: BLUE }, WORLD],
@@ -2610,7 +2782,14 @@ describe("validation", () => {
             "zero turf restitution",
             ok,
             { blue: BLUE },
-            testWorld({ lawn: uniformLawn(30, 40, { slidingFriction: 0.3, rollingResistance: 0.05, ...TEST_TURF, turfRestitution: 0 }) }),
+            testWorld({
+                lawn: uniformLawn(30, 40, {
+                    slidingFriction: 0.3,
+                    rollingResistance: 0.05,
+                    ...TEST_TURF,
+                    turfRestitution: 0,
+                }),
+            }),
         ],
         ["a non-unit orientation", { ...ok, orientation: { w: 2, x: 0, y: 0, z: 0 } }, { blue: BLUE }, WORLD],
     ];
@@ -2646,8 +2825,7 @@ Expected: FAIL, modules not found.
  *
  * Contacts release while δ > 0, so a pair can end the impact still overlapping. Each such pair, in BALL_IDS order, is
  * pushed apart along its normal to zero gap, each ball half the overlap, velocities unchanged. A ball is never moved
- * below the turf: a downward half-move leaves it at z = R. That leaves an overlap of order (overlap·n_z)²/R, far inside
- * phase 2's CONTACT_TOLERANCE for the micrometre overlaps an impact leaves.
+ * below the turf: a downward half-move leaves it at z = R, and the other ball takes the rest (`separated`).
  */
 import { add, horizontal, length, scale, sub, vec3, type Vec3 } from "../math/vec3";
 import { SETTLE_SPEED } from "../resolve";
@@ -2674,6 +2852,35 @@ function aboveTurf(p: Vec3, radius: number): Vec3 {
     return p.z >= radius ? p : vec3(p.x, p.y, radius);
 }
 
+/**
+ * Centres `a` and `b` moved apart along their line of centres to 2R, half each, neither below the turf. A half-move
+ * clamped at the turf leaves the pair short by about ½·overlap·n_z², first order in the overlap; the other ball, which
+ * moves away from the turf, then takes the rest along the new line of centres.
+ */
+function separated(a: Vec3, b: Vec3, radius: number): readonly [Vec3, Vec3] {
+    const offset = sub(b, a);
+    const distance = length(offset);
+    const move = scale(offset, (2 * radius - distance) / (2 * distance));
+    const towardsA = sub(a, move);
+    const towardsB = add(b, move);
+    const pa = aboveTurf(towardsA, radius);
+    const pb = aboveTurf(towardsB, radius);
+    const rest = sub(pb, pa);
+    const apart = length(rest);
+    const short = 2 * radius - apart;
+    if (!(short > 0)) {
+        return [pa, pb];
+    }
+    const push = scale(rest, short / apart);
+    if (pa !== towardsA) {
+        return [pa, add(pb, push)];
+    }
+    if (pb !== towardsB) {
+        return [sub(pa, push), pb];
+    }
+    return [pa, pb];
+}
+
 /** Places the balls for phase 2 and separates overlapping pairs (see the file header). */
 export function handover(balls: BallStates, radius: number): Handover {
     const ids = BALL_IDS.filter((id) => balls[id]);
@@ -2687,9 +2894,9 @@ export function handover(balls: BallStates, radius: number): Handover {
             const distance = length(offset);
             const overlap = 2 * radius - distance;
             if (overlap > 0) {
-                const move = scale(offset, overlap / (2 * distance));
-                states[i] = { ...a, position: aboveTurf(sub(a.position, move), radius) };
-                states[j] = { ...b, position: aboveTurf(add(b.position, move), radius) };
+                const [pa, pb] = separated(a.position, b.position, radius);
+                states[i] = { ...a, position: pa };
+                states[j] = { ...b, position: pb };
                 overlapCorrection = Math.max(overlapCorrection, overlap);
             }
         }
@@ -2916,9 +3123,8 @@ git commit -F "$CLAUDE_TEMP_DIR/msg.txt"   # "Add simulateImpact with validation
 
 ### Task 8: Invariants, convergence and fuzz
 
-Whole-system tests on the shared scenarios (spec §9.2, §9.3, §9.6). Pre-flight runs this task first with the
-provisional constants, measures, and fixes the constants of the Pre-flight table. In the real run, the constants are
-already the measured ones.
+Whole-system tests on the shared scenarios (spec §9.2, §9.3, §9.6). The constants are the ones pre-flight measured
+(Pre-flight table).
 
 **Files:**
 - Test: `tests/engine/impact/invariants.test.ts`, `tests/engine/impact/convergence.test.ts`,
@@ -2953,8 +3159,11 @@ import {
     socketAt,
 } from "../support/impact";
 
-/** PROVISIONAL (pre-flight): largest rise of energy, net of the drive's work, relative to the energy put in. */
-const ENERGY_TOLERANCE = 1e-3;
+/**
+ * Largest rise of energy, net of the drive's work, relative to the energy put in. Pre-flight measured none (0): the
+ * dashpots and sliding friction only take energy out. The tolerance only absorbs rounding.
+ */
+const ENERGY_TOLERANCE = 1e-9;
 const WORLD = testWorld();
 
 describe.each(SCENARIOS)("$name", ({ contact, balls }) => {
@@ -3006,7 +3215,9 @@ describe.each(SCENARIOS)("$name", ({ contact, balls }) => {
         for (const s of probe.snapshots) {
             for (const c of s.contacts) {
                 expect(c.normalForce).toBeGreaterThanOrEqual(0);
-                expect(length(c.tangentialForce)).toBeLessThanOrEqual(c.law.friction * c.normalForce * (1 + 1e-12) + 1e-15);
+                expect(length(c.tangentialForce)).toBeLessThanOrEqual(
+                    c.law.friction * c.normalForce * (1 + 1e-12) + 1e-15,
+                );
             }
         }
     });
@@ -3054,8 +3265,11 @@ import { simulateImpact } from "../../../src/engine/impact/simulateImpact";
 import { TEST_BALL, testWorld } from "../support/fixtures";
 import { SCENARIOS } from "../support/impact";
 
-/** PROVISIONAL (pre-flight): largest change of a handover velocity when dt halves, relative to the head's speed. */
-const CONVERGENCE_TOLERANCE = 5e-3;
+/**
+ * Largest change of a handover velocity or spin (×R) when dt halves, relative to the head's speed: twice the worst
+ * scenario (pre-flight: 1.51e-3, the cut).
+ */
+const CONVERGENCE_TOLERANCE = 3e-3;
 const WORLD = testWorld();
 
 describe.each(SCENARIOS)("$name", ({ contact, balls }) => {
@@ -3091,13 +3305,16 @@ import { TEST_HEAD, drive, strike } from "../support/impact";
 import { rng } from "../support/rng";
 
 const R = TEST_BALL.radius;
-/** PROVISIONAL (pre-flight): deepest penetration any pair may reach inside the fuzz ranges. */
-const PENETRATION_BOUND = 0.3 * R;
+/**
+ * Deepest penetration any pair may reach inside the fuzz ranges: 1.5× the worst of 2000 strokes (pre-flight: turf
+ * 6.0 mm, ball–ball 1.8 mm, face 1.4 mm).
+ */
+const PENETRATION_BOUND = 0.2 * R;
 const WORLD = testWorld();
 
 /**
- * One random stroke inside the PROVISIONAL (pre-flight) ranges. A draw that validateImpact rejects (the head below the
- * turf at a steep pitch) is drawn again; the sequence stays deterministic.
+ * One random stroke inside the ranges, the widest that raise no impact-cap (pre-flight). A draw that validateImpact
+ * rejects (the head below the turf at a steep pitch) is drawn again; the sequence stays deterministic.
  */
 function randomStroke(random: () => number): { contact: ContactState; balls: BallStates } {
     const uni = (a: number, b: number): number => a + (b - a) * random();
@@ -3105,8 +3322,14 @@ function randomStroke(random: () => number): { contact: ContactState; balls: Bal
     for (;;) {
         const force = random() < 1 / 3 ? 0 : uni(-300, 300);
         const window = uni(0.5e-3, 5e-3);
+        const speed = uni(0.5, 8);
+        // A checking drive whose impulse takes half the head's momentum may stop it short of the ball: a whiff, which
+        // only the cap ends (design §5). Draw again.
+        if (force < 0 && -force * window >= 0.5 * TEST_HEAD.mass * speed) {
+            continue;
+        }
         const contact = strike(blue.position, {
-            speed: uni(0.5, 8),
+            speed,
             yaw: uni(-0.3, 0.3),
             descent: uni(0, 0.5),
             pitch: uni(-0.2, 0.6),
@@ -3136,7 +3359,10 @@ describe("impact fuzz", () => {
         for (let n = 0; n < count; n++) {
             const { contact, balls } = randomStroke(random);
             const result = simulateImpact(contact, balls, WORLD);
-            expect(result.events.some((e) => e.kind === "impact-cap"), `stroke ${n}`).toBe(false);
+            expect(
+                result.events.some((e) => e.kind === "impact-cap"),
+                `stroke ${n}`,
+            ).toBe(false);
             for (const [key, depth] of Object.entries(result.peakPenetration)) {
                 expect(depth, `stroke ${n} ${key}`).toBeLessThan(PENETRATION_BOUND);
             }
@@ -3153,22 +3379,12 @@ describe("impact fuzz", () => {
 The stroke completes the ball set-up before validating, so a draw whose croqueted ball the head would already touch
 is drawn again too.
 
-- [ ] **Step 4: Run them; pre-flight measures here**
+- [ ] **Step 4: Run them**
 
 Run: `npx vitest run tests/engine/impact/invariants.test.ts tests/engine/impact/convergence.test.ts
 tests/engine/impact/fuzz.test.ts`, then `SLOW_TESTS=1 npx vitest run tests/engine/impact/fuzz.test.ts`.
 
 Expected: PASS.
-
-In pre-flight, add temporary `console.log`s and measure:
-
-- the worst energy rise ratio;
-- the worst convergence ratio at `IMPACT_DT` and at 2× and 5× it;
-- the longest fuzz impact;
-- the worst fuzz peak per pair kind;
-- the change in handover velocities with `RELEASE_STEPS` ×4 (edit the constant temporarily).
-
-Set the Pre-flight table's constants from them. Remove the logs before committing.
 
 A failing invariant is a bug, not a tolerance to raise. In particular, a mirror mismatch means some operation is not
 sign-symmetric: find it.
@@ -3243,7 +3459,11 @@ const FACE: FaceMaterial = {
     friction: malletReference.faceFriction.value,
     contactTime: contactReference.faceBallContactTime.value,
 };
-const at = (x: number, y: number): BallState => ({ position: vec3(x, y, R), velocity: vec3(0, 0, 0), angularVelocity: vec3(0, 0, 0) });
+const at = (x: number, y: number): BallState => ({
+    position: vec3(x, y, R),
+    velocity: vec3(0, 0, 0),
+    angularVelocity: vec3(0, 0, 0),
+});
 const BLUE = at(10, 10);
 const RED = at(10 + 2 * R, 10);
 
@@ -3257,8 +3477,16 @@ interface Stroke {
 const checked = (t: Vec3): ReturnType<typeof drive> => drive(vec3(-100 * t.x, -100 * t.y, -100 * t.z), 3e-3, HEAD);
 
 const STROKES: readonly Stroke[] = [
-    { name: "centre 3 m/s", balls: { blue: BLUE }, contact: (face) => strike(BLUE.position, { head: HEAD, face, speed: 3 }) },
-    { name: "croquet 3 m/s", balls: { blue: BLUE, red: RED }, contact: (face) => strike(BLUE.position, { head: HEAD, face, speed: 3 }) },
+    {
+        name: "centre 3 m/s",
+        balls: { blue: BLUE },
+        contact: (face) => strike(BLUE.position, { head: HEAD, face, speed: 3 }),
+    },
+    {
+        name: "croquet 3 m/s",
+        balls: { blue: BLUE, red: RED },
+        contact: (face) => strike(BLUE.position, { head: HEAD, face, speed: 3 }),
+    },
     {
         name: "descending 10°",
         balls: { blue: BLUE },
@@ -3361,7 +3589,10 @@ function timing(): void {
         }
         times.sort((a, b) => a - b);
         const q = (p: number): number => times[Math.min(times.length - 1, Math.floor(p * times.length))] as number;
-        console.log(`${stroke.name.padEnd(16)} ${steps} steps: median ${fmt(q(0.5), 3)} ms, p99 ${fmt(q(0.99), 3)} ms, max ${fmt(q(1), 3)} ms`);
+        console.log(
+            `${stroke.name.padEnd(16)} ${steps} steps: median ${fmt(q(0.5), 3)} ms, ` +
+                `p99 ${fmt(q(0.99), 3)} ms, max ${fmt(q(1), 3)} ms`,
+        );
     }
 }
 
@@ -3389,8 +3620,9 @@ In the P2 row's exit-criteria cell, change `P2b.1: …` to begin `P2b.1 (met): �
   sourced restitution, Cundall–Strack friction, semi-implicit Euler at `IMPACT_DT` = <value> s, mallet head driven by a
   socket force. `ENGINE_VERSION` 0.4.0. Turf stiffness and restitution live in `SurfaceProps`; phase 2 bit-identical
   (shot mix p99 143,084, p99.9 362,050, max 408,030 work units).
-- **Stiffness sensitivity (for P2b.2).** <for each stroke: how much each sweep moved the handover; whether the hard
-  pairs barely matter and the turf dominates lift, as the design expected>.
+- **Stiffness sensitivity (for P2b.2).** <for each stroke: how much each sweep moved the handover. Pre-flight found
+  the hard pairs barely matter for single-ball strokes (the turf moves lift most), but dominate the croquet split:
+  blue 0.92–2.29 m/s across the face and ball–ball contact-time bounds; confirm or correct those figures>.
 - **Stop-shot probe (for P2b.2).** <blue's lift range during the transfer, the impulse share with blue clear of the
   turf, the contact height above red's equator, and any flags (a double tap?)>. The formal stop-shot-lift criterion is
   P2b.2's, with its drive profile.

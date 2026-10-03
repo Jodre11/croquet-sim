@@ -27,6 +27,20 @@ parameter named; frames, tolerances and test overrides stated.
 
 The plan (`plans/2026-10-03-p2b1-impact-integrator.md`) gives the detail.
 
+**Amended 2026-10-03 (pre-flight).** The plan was executed literally in a scratch worktree (§10). The user accepted the
+changes below.
+
+- **Termination (§5).** A ball still bouncing in the turf holds the impact open. Ignoring turf contact cut a
+  descending strike's lift from 0.91 to 0.26 m/s.
+- **Tangential reset (§4).** A sliding contact's spring carries the cone force alone (classic Cundall–Strack). The
+  planned reset stored energy against the dashpot that the energy invariant saw as a 6–9 % gain.
+- **Handover (§6).** The handover separates a pair fully when the turf clamps one ball's move.
+- **Constants (§5, §9, §10)** are measured; `IMPACT_CAP` is 60 ms.
+- **Convergence (§9.3)** is gated on the scenarios; fuzz strokes converge first-order, worst 1 % at `dt`.
+- **Sensitivity (§1).** The hard pairs dominate croquet strokes, not only the turf.
+
+The plan's "Decisions made in pre-flight" gives the figures.
+
 ## 1. Goal and exit criteria
 
 Add phase 1 to the engine: a compliant, small-step, N-body integrator that takes a `ContactState` (the mallet head
@@ -47,7 +61,9 @@ Exit criteria:
 Recorded, not gated, by `scripts/impactProbe.ts` (roadmap "P2b.1 outcomes carried forward", for P2b.2 and P5):
 
 - **Stiffness sensitivity:** each stiffness swept across its bounds, and the handover changes. Expected: the hard
-  pairs barely matter (with `e` exact), the turf dominates lift.
+  pairs barely matter (with `e` exact), the turf dominates lift. (pre-flight: true for single-ball strokes; in a
+  croquet stroke the face–ball and ball–ball springs in series set the momentum split, and blue moves 0.92–2.29 m/s
+  across their sourced contact-time bounds.)
 - **Stop-shot probe:** one plausible hand-built stop-shot `ContactState` (head level or slightly descending, checked
   drive): whether the striker's ball clears the turf during the transfer and meets the croqueted ball above its
   equator. The formal stop-shot-lift criterion belongs to P2b.2, which owns the drive profile.
@@ -193,8 +209,10 @@ overrides, as phase 2's tests do).
 **Tangential force (Cundall–Strack).** Each closed contact stores a tangential elastic displacement `ξ`. Per step
 `ξ += v_t·dt`, re-projected onto the current tangent plane; the trial force `F_t = −k_t·ξ − c_t·v_t`, with
 `k_t = TANGENTIAL_STIFFNESS_RATIO·k` (Silbert et al. 2001) and `c_t = 2ζ·√(k_t·m_eff)`. If `|F_t| > μ·N` the
-contact slides: `F_t` is scaled to `μ·N` and `ξ` is reset to the value consistent with it. `ξ` is cleared when the
-contact opens. Sticking is true sticking, with no creep.
+contact slides: `F_t` is scaled to `μ·N` and `ξ` is reset so that the spring alone carries it, `−k_t·ξ = F_t`
+(Cundall and Strack 1979), storing at most `(μ·N)²/(2·k_t)`. Resetting to `−(F_t + c_t·v_t)/k_t` instead leaves the
+spring holding a displacement that only cancels the dashpot (pre-flight: about 3 mm, 0.35 J, for a ball sliding on
+the turf), energy no motion returns. `ξ` is cleared when the contact opens. Sticking is true sticking, with no creep.
 
 **Geometry.**
 
@@ -217,20 +235,30 @@ orientation is a unit quaternion advanced by its angular velocity and renormalis
 velocity follows Euler's equations in the body frame.
 
 - **Step.** `dt` is a constant of the engine version, set at about 1/100 of the shortest sourced contact duration and
-  confirmed by the convergence test. It does not adapt to inputs, which keeps the step count, and so results,
-  identical across runs.
+  confirmed by the convergence test (pre-flight: 5e-6 s). It does not adapt to inputs, which keeps the step count,
+  and so results, identical across runs.
 - **Order.** Bodies in fixed order (head, then balls in `BALL_IDS` order); contacts in the order of §4. Forces are
   summed in that order.
 - **Initial state.** Balls at rest start at their static turf sink `mg/k_turf`, with zero velocity, so the impact does
   not open with a spurious bounce. Touching balls start at zero overlap. The head may start with a gap to the ball.
-- **Termination.** Once at least one face–ball contact has closed, the impact ends when the drive window has closed
-  and no face–ball or ball–ball contact has been closed for `RELEASE_STEPS` consecutive steps. Turf contact does not
-  count. Before the first face–ball contact, only the cap ends it.
+- **Termination.** Once at least one face–ball contact has closed, the impact ends when three conditions hold:
+  - the drive window has closed;
+  - no face–ball or ball–ball contact has been closed for `RELEASE_STEPS` consecutive steps;
+  - no ball in turf contact is still bouncing in it.
+
+  A ball bounces while its vertical oscillation energy about the static sink `δ₀ = m·g/k` exceeds the static
+  spring's, `½·m·v_z² + ½·k·(δ − δ₀)² > ½·k·δ₀²`: it will still reach `δ = 0` and leave the turf. So the turf's
+  rebound, which dominates lift, is integrated rather than discarded. Below that the ball only settles in its hollow,
+  and the handover discards at most `m·g·δ₀/2` (§6). A ball rolling at its sink does not hold the impact open.
+  (pre-flight: without this, a 3 m/s strike descending at 0.5 rad ended at 3 ms with the ball still 1.9 mm deep, and
+  lift came out at 0.26 m/s instead of 0.91 m/s; a test on `|v_z|` alone ended at the bottom of a bounce, where
+  `v_z = 0`, and halving `dt` moved some handovers by a third.) Before the first face–ball contact, only the cap ends
+  it.
 - **Head re-approach.** If at termination the head is closing on any ball (relative normal velocity towards it), the
   impact ends anyway and raises `impact-head-approaching`: a second strike is a double tap, a fault, and is not
   modelled.
-- **Cap.** `IMPACT_CAP` (initially 50 ms, set by pre-flight) ends the impact with an `impact-cap` event rather than
-  hanging; it also covers a head that never reaches the ball.
+- **Cap.** `IMPACT_CAP` (60 ms: 5× the longest of 2000 fuzz impacts, 11.6 ms) ends the impact with an `impact-cap`
+  event rather than hanging; it also covers a head that never reaches the ball (a whiff).
 - **Grounded head.** If any point of the head goes below the turf plane, `impact-mallet-grounded` is raised once.
   Mallet–turf contact is not modelled.
 
@@ -247,7 +275,10 @@ Per product spec §5, with turf contact as defined in §4:
   is discarded (negligible: `mg·δ₀/2`).
 - Ball–ball contacts release while `δ > 0` (§4), so a pair can end the impact still overlapping. Each overlapping
   pair is separated along its normal to zero gap, each ball moved half the overlap (equal masses), velocities
-  unchanged, pairs in the fixed order of §4. The largest such correction is reported in `ImpactResult`.
+  unchanged, pairs in the fixed order of §4. No ball is moved below the turf. When the lower ball's half-move is
+  clamped at `z = R`, the other ball takes the rest along the new line of centres. Clamping alone leaves about
+  `½·overlap·n_z²`, first order in the overlap (pre-flight: 4e-8 m, beyond phase 2's `CONTACT_TOLERANCE` of 1e-9). The
+  largest such correction is reported in `ImpactResult`.
 
 Positions are as at the end of the impact after these corrections; phase 2's time starts at zero there.
 
@@ -302,18 +333,20 @@ ball pressed into the turf); P2b.2's calibration may move within the bounds.
      short window.
 2. **Invariants:**
    - total mechanical energy, with the drive's work and gravity's work counted, never rises by more than
-     `ENERGY_TOLERANCE` over the impact (symplectic Euler is not monotone step by step; the tolerance is fixed by
-     pre-flight);
+     `ENERGY_TOLERANCE` over the impact (pre-flight measured no rise at all, so 1e-9 covers rounding only);
    - momentum conserved apart from the turf's, the drive's and gravity's impulses;
    - normal forces ≥ 0; friction inside its cone;
    - mirror symmetry bit-exact for setups mirrored across the strike line (sign flips are exact in IEEE arithmetic);
    - bit-identical repeat runs.
-3. **Convergence:** halving `dt` moves every handover velocity by less than `CONVERGENCE_TOLERANCE` (about 0.5 %,
-   fixed by pre-flight measurement).
+3. **Convergence:** halving `dt` moves every scenario's handover velocity and spin by less than
+   `CONVERGENCE_TOLERANCE` (3e-3 of the head speed: twice the worst scenario, 1.5e-3). Random strokes converge
+   first-order but more slowly (pre-flight: 17 of 200 fuzz strokes above 3e-3, worst 1.06e-2, halving with each
+   halving of `dt`). They are recorded for P2b.2 and P5, not gated: halving `dt` would double the impact's cost.
 4. **Handover:** airborne, on-turf and residual-overlap cases are accepted by `simulateFreeMotion`.
 5. **Validation:** each rejection of §3 throws `RangeError`.
 6. **Fuzz:** random strike positions, speeds, angles and drive profiles within pre-flight's ranges; no hang; no
-   `impact-cap`; peak penetrations under `PENETRATION_BOUND`.
+   `impact-cap`; peak penetrations under `PENETRATION_BOUND` (0.2·R; pre-flight worst 6.0 mm, the turf). A draw
+   whose checking drive could stop the head short of the ball (a whiff, which only the cap ends) is drawn again.
 7. **Phase 2 unchanged:** shot mix and `SLOW_TESTS` reproduce exactly after §7.
 
 ## 10. Pre-flight
@@ -321,7 +354,8 @@ ball pressed into the turf); P2b.2's calibration may move within the bounds.
 As for P2a.2: the plan is executed literally in a scratch worktree before implementation, to fix `dt`,
 `CONVERGENCE_TOLERANCE`, `ENERGY_TOLERANCE`, `RELEASE_STEPS`, `IMPACT_CAP`, `PENETRATION_BOUND`, `ζ_max` and the
 fuzz input ranges; confirm both branches of the clamped restitution relation; and run `scripts/impactProbe.ts` once.
-Findings are folded into this document and the plan before the real run.
+Findings are folded into this document and the plan before the real run. (Done 2026-10-03: see the "Amended
+2026-10-03 (pre-flight)" note and the plan's Pre-flight table.)
 
 ## 11. Deferred
 
