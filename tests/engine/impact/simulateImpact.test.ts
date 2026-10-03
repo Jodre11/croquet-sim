@@ -96,7 +96,13 @@ describe("validation", () => {
     // Each case names the check that must fire, so a case cannot pass on another check's error.
     const cases: [string, ContactState, BallStates, World, RegExp][] = [
         ["a moving ball", ok, { blue: { ...BLUE, velocity: vec3(0.1, 0, 0) } }, WORLD, /ball blue is not at rest/],
-        ["a spinning ball", ok, { blue: { ...BLUE, angularVelocity: vec3(0, 1, 0) } }, WORLD, /ball blue is not at rest/],
+        [
+            "a spinning ball",
+            ok,
+            { blue: { ...BLUE, angularVelocity: vec3(0, 1, 0) } },
+            WORLD,
+            /ball blue is not at rest/,
+        ],
         [
             "a ball off the lawn plane",
             ok,
@@ -104,7 +110,13 @@ describe("validation", () => {
             WORLD,
             /ball blue is not at rest/,
         ],
-        ["overlapping balls", ok, { blue: BLUE, red: ballAt(5 + 2 * R - 1e-6, 0) }, WORLD, /balls blue and red overlap/],
+        [
+            "overlapping balls",
+            ok,
+            { blue: BLUE, red: ballAt(5 + 2 * R - 1e-6, 0) },
+            WORLD,
+            /balls blue and red overlap/,
+        ],
         [
             "a ball touching the peg",
             strike(vec3(15 - 0.02 - R, 20, R)),
@@ -112,7 +124,13 @@ describe("validation", () => {
             WORLD,
             /ball blue touches peg/,
         ],
-        ["the head in a ball", strike(BLUE.position, { gap: -1e-4 }), { blue: BLUE }, WORLD, /head penetrates ball blue/],
+        [
+            "the head in a ball",
+            strike(BLUE.position, { gap: -1e-4 }),
+            { blue: BLUE },
+            WORLD,
+            /head penetrates ball blue/,
+        ],
         // The head's barrel is 0.032 m from its axis (y = 0, z = R); the ball's surface reaches 1 cm into it.
         [
             "the head's barrel in a ball",
@@ -159,8 +177,20 @@ describe("validation", () => {
             WORLD,
             /head\.inertia\.y/,
         ],
-        ["a non-positive head length", { ...ok, head: { ...ok.head, length: -1 } }, { blue: BLUE }, WORLD, /head\.length/],
-        ["a non-positive head radius", { ...ok, head: { ...ok.head, radius: 0 } }, { blue: BLUE }, WORLD, /head\.radius/],
+        [
+            "a non-positive head length",
+            { ...ok, head: { ...ok.head, length: -1 } },
+            { blue: BLUE },
+            WORLD,
+            /head\.length/,
+        ],
+        [
+            "a non-positive head radius",
+            { ...ok, head: { ...ok.head, radius: 0 } },
+            { blue: BLUE },
+            WORLD,
+            /head\.radius/,
+        ],
         [
             "a non-positive contact time",
             { ...ok, face: { ...ok.face, contactTime: 0 } },

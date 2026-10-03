@@ -23,8 +23,8 @@ import {
  * against an account that mixes time levels (pre-step contact depth, post-step states). That account is biased by
  * O(ω·dt/2) of the contact energy, about 0.6% for an undamped contact, and the dissipation of every sourced law masks
  * the bias. So this catches gains larger than the dissipation margin (it caught the 6-9% sliding-spring gain in
- * pre-flight); it is not a rounding-level bound. A rounding-level check needs the integrator's shadow energy (see the
- * P2b.1 outcomes carried forward).
+ * pre-flight); it is not a rounding-level bound. shadowEnergy.test.ts checks the integrator's shadow energy to rounding
+ * on undamped, frictionless, central cases.
  */
 const ENERGY_TOLERANCE = 1e-9;
 const WORLD = testWorld();
