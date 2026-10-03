@@ -105,6 +105,20 @@ What P1 delivered, and the constraints it leaves for P2–P5.
   exercises no stick/slip mode changes. The sweeps and cross-checks cover those.
 - **Missed lift-off.** When a three-ball group's on-turf direction solve fails (ball–ball μ ≥ about 4.25), the lift-off
   candidate derived from it is never generated, and the group falls back to `approximate-hold`. Real μ is far lower.
+- **Uncounted guide iterations (for P5).** The frictionless guide that proposes each group's first candidate
+  (`modeSolve.ts`, up to `GUIDE_ITERATIONS` = 5,000 per solve) is not counted in work units. A spent budget holds the
+  group before the guide runs, so the guide cannot run unbounded, but its cost is invisible to `SOLVE_BUDGET`.
+  Counting it would change every work-unit figure above and force `SOLVE_BUDGET` to be calibrated again; P5's time
+  budget measures it in the meantime.
+- **Empty `budget-hold` event (for P5).** `simulate.ts` builds a `budget-hold` event's `balls` from the group's resting
+  members, so a held group whose members are all moving raises the event with `balls: []`.
+- **Untested helpers (for P5).** `muS`, `rollCap`, `vectorValue` and `vectorLinear` have no direct tests; they are
+  covered only through the solvers that call them.
+- **Latent edge cases (for P5).** Deferred from P2a.2's final review because no measured shot reaches them and a late
+  engine change would need the figures validated again: `projectContacts` skips the whole move when the second
+  `solveSystem` returns null; phase 1 of `convexSolve` runs its full t schedule in the near-meeting band (correct,
+  but up to 36× the units); a stick event can follow a fallback in `simulate.ts`; a same-instant regroup loop is
+  bounded only by `DEFAULT_MAX_EVENTS`, so the worst case is a shot cut off at the event limit.
 
 ## Provisional numbers — where each is confirmed
 
