@@ -47,6 +47,9 @@ The plan's "Decisions made in pre-flight" gives the figures.
   pass cannot separate a chain of three balls.
 - **Validation (§3).** The head-penetration check covers the whole head cylinder (faces, rims and barrel), not only
   the faces.
+- **Energy invariant (§9.2).** The energy account mixes time levels (pre-step contact depth, post-step states), so it
+  is biased by about 0.6% of an undamped contact's energy; `ENERGY_TOLERANCE` is not a rounding-level bound. Carried
+  forward: an invariant on the integrator's shadow energy ½k·δₙ₋₁·δₙ.
 
 ## 1. Goal and exit criteria
 
@@ -343,7 +346,10 @@ ball pressed into the turf); P2b.2's calibration may move within the bounds.
      short window.
 2. **Invariants:**
    - total mechanical energy, with the drive's work and gravity's work counted, never rises by more than
-     `ENERGY_TOLERANCE` over the impact (pre-flight measured no rise at all, so 1e-9 covers rounding only);
+     `ENERGY_TOLERANCE` over the impact. The account mixes time levels (pre-step contact depth, post-step states), so
+     it is biased by O(ω·dt/2) of the contact energy, about 0.6% for an undamped contact; the dissipation of every
+     sourced law masks the bias. The check catches gains larger than the dissipation margin (pre-flight: the 6–9%
+     sliding-spring gain); it is not a rounding-level bound;
    - momentum conserved apart from the turf's, the drive's and gravity's impulses;
    - normal forces ≥ 0; friction inside its cone;
    - mirror symmetry bit-exact for setups mirrored across the strike line (sign flips are exact in IEEE arithmetic);

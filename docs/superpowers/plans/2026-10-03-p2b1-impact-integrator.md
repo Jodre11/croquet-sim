@@ -138,8 +138,8 @@ line names its pinning test.
    open). Pinned in Task 6 ("stays open while a struck ball is still bouncing out of its hollow") and Task 7 ("hands a
    ball driven into the turf over airborne").
 7. **Energy in a sliding contact's spring.** A sliding contact must store no more than its cone force implies, or the
-   energy account gains what the dashpot cancels. Pinned in Task 4 ("resets its spring to carry it alone") and Task 8
-   (energy invariant).
+   energy account gains what the dashpot cancels. Pinned by Task 4's unit test ("resets its spring to carry it
+   alone"). Task 8's energy invariant guards only gains above the dissipation margin, not rounding-level ones.
 
 ---
 
@@ -155,7 +155,7 @@ Apple M4, Node 26.10.0). The values below are the measured ones the code blocks 
 | `IMPACT_CAP` | `impact/integrate.ts` | 0.06 s | Longest of 2000 fuzz impacts 11.6 ms; ×5 |
 | `ZETA_MAX` | `impact/contactLaw.ts` | 1e6 | e(`ZETA_MAX`) = 2.50e-13; the bisection converges for every `e` in [1e-12, 1] |
 | `CONVERGENCE_TOLERANCE` | `tests/engine/impact/convergence.test.ts` | 3e-3 | 2× the scenarios' worst, 1.51e-3 |
-| `ENERGY_TOLERANCE` | `tests/engine/impact/invariants.test.ts` | 1e-9 | No rise measured (0); rounding only |
+| `ENERGY_TOLERANCE` | `tests/engine/impact/invariants.test.ts` | 1e-9 | No rise measured (0), against an account that mixes time levels (biased ~0.6% for an undamped contact); not rounding-level |
 | `PENETRATION_BOUND` | `tests/engine/impact/fuzz.test.ts` | 0.2·R | Worst of 2000 strokes: turf 6.0 mm, ball–ball 1.8 mm, face 1.4 mm; ×1.5 = 9.0 mm |
 | Fuzz ranges | `tests/engine/impact/fuzz.test.ts` | as written there | No `impact-cap` in 2000 strokes once whiffs are drawn again |
 | Analytic tolerances | Task 6 | as written there | About 2× each measured error, recorded beside it |
@@ -3630,6 +3630,9 @@ In the P2 row's exit-criteria cell, change `P2b.1: …` to begin `P2b.1 (met): �
 - **Sourcing notes.** Turf stiffness is derived from one court's video (Gugan), from the peak penetration with the
   model's damping (1.1e5 N/m); the undamped energy balance and Gugan's timing favour up to 2.7e5. Face friction is an
   estimate (0.5). One round wooden head only; other faces, weightings and square heads are P2b.2's.
+- **Energy invariant (for P2b.2/P5).** Task 8's energy check mixes time levels and is biased by about 0.6% of an
+  undamped contact's energy, masked by dissipation. An invariant on the integrator's shadow energy ½k·δₙ₋₁·δₙ, with
+  contact onset and release handled, would make a rounding-level tolerance meaningful.
 - **Not used yet.** `simulateImpact` is not exported from `src/engine/index.ts`; P2b.2's `simulateShot` wires and
   exports it.
 ```

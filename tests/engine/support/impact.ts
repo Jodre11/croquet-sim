@@ -162,7 +162,10 @@ function headKinetic(state: HeadState, head: MalletHead): number {
     return 0.5 * head.mass * lengthSq(state.velocity) + 0.5 * rot;
 }
 
-/** Kinetic, gravitational and stored spring energy (J) of a snapshot. */
+/**
+ * Kinetic, gravitational and stored spring energy (J) of a snapshot. The contact depth is the pre-step value, against
+ * post-step states: a time-level mix, biased by about 0.6% of an undamped contact's energy (see invariants.test.ts).
+ */
 export function impactEnergy(s: ImpactSnapshot, head: MalletHead, ball: BallParams, gravity: number): number {
     const inertia = 0.4 * ball.mass * ball.radius * ball.radius;
     let e = headKinetic(s.head, head) + head.mass * gravity * s.head.position.z;

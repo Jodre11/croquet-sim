@@ -19,8 +19,12 @@ import {
 } from "../support/impact";
 
 /**
- * Largest rise of energy, net of the drive's work, relative to the energy put in. Pre-flight measured none (0): the
- * dashpots and sliding friction only take energy out. The tolerance only absorbs rounding.
+ * Largest rise of energy, net of the drive's work, relative to the energy put in. Pre-flight measured none (0), but
+ * against an account that mixes time levels (pre-step contact depth, post-step states). That account is biased by
+ * O(ω·dt/2) of the contact energy, about 0.6% for an undamped contact, and the dissipation of every sourced law masks
+ * the bias. So this catches gains larger than the dissipation margin (it caught the 6-9% sliding-spring gain in
+ * pre-flight); it is not a rounding-level bound. A rounding-level check needs the integrator's shadow energy (see the
+ * P2b.1 outcomes carried forward).
  */
 const ENERGY_TOLERANCE = 1e-9;
 const WORLD = testWorld();
