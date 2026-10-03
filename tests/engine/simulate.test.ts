@@ -1,9 +1,17 @@
 import { describe, expect, it } from "vitest";
 import { horizontal, length, sub, vec3 } from "../../src/engine/math/vec3";
-import { stateAtTime } from "../../src/engine/sample";
+import { rollingSpin } from "../../src/engine/motion";
+import { segmentState, stateAtTime } from "../../src/engine/sample";
 import { CONTACT_TOLERANCE } from "../../src/engine/detect";
 import { simulateFreeMotion } from "../../src/engine/simulate";
-import { BALL_IDS, type BallId, type BallState, type BallStates, type ShotResult } from "../../src/engine/types";
+import {
+    BALL_IDS,
+    type BallId,
+    type BallState,
+    type BallStates,
+    type ShotResult,
+    type World,
+} from "../../src/engine/types";
 import { STANDARD_GRAVITY } from "../../src/engine/world";
 import { mechanicalEnergy } from "./support/energy";
 import { worstPenetration } from "./support/penetration";
@@ -125,26 +133,41 @@ describe("collisions", () => {
 
 describe("resting contact and pushing", () => {
     it("pushes a resting ball with a ball driven by topspin (analytic case)", () => {
-        // Blue has topspin Ω and no velocity. The pair accelerates at A = (5·SLIDE − 7·ROLL)/12 until blue's slip
-        // RΩ is gone, after t = RΩ/(A + 5·SLIDE/2); both then roll at V = A·t and stop together after V²/(2·ROLL).
-        const omega = 60;
+        // Blue's contact point slips down on red, so friction μN lifts blue and loads red (L = g ∓ μN). With
+        // c = (1 − μ − kμ)/(1 + μ·μs), k = 7/5·μr: A = (c·μs − k)·g/(7/5 + c) = 0.88187361562830 until blue's turf slip
+        // ends at T = R·Ω/(A + 5/2·[μs·g + μN(1 − μs)]) = 0.32800687459199 (the contact slip would end later). Both
+        // then roll at V = A·T uncoupled — N(1 − 7/5·μ·μr) = 0 — and stop together after V²/(2·ROLL):
+        // travel A·T²/2 + V²/(2·ROLL) = 0.13276112270857 m.
         const world = testWorld();
         const result = simulateFreeMotion(
-            { blue: ballAt(5, 5, vec3(0, 0, 0), vec3(0, omega, 0)), red: ballAt(5 + 2 * R, 5) },
+            { blue: ballAt(5, 5, vec3(0, 0, 0), vec3(0, 60, 0)), red: ballAt(5 + 2 * R, 5) },
             world,
         );
-        const A = (5 * SLIDE - 7 * ROLL) / 12;
-        const t = (R * omega) / (A + 2.5 * SLIDE);
-        const V = A * t;
-        const travel = 0.5 * A * t * t + (V * V) / (2 * ROLL);
+        const travel = 0.13276112270857;
         expect(result.rest.red?.x).toBeCloseTo(5 + 2 * R + travel, 9);
         expect(result.rest.blue?.x).toBeCloseTo(5 + travel, 9);
         expect(result.rest.red?.y).toBe(5);
         expect(result.events.filter((e) => e.kind === "ball-ball")).toEqual([
             { kind: "ball-ball", t: 0, balls: ["blue", "red"], resting: true },
         ]);
-        expect(result.segments.red?.[0]?.push?.acceleration.x).toBeCloseTo(A, 12);
+        expect(result.events.some((e) => e.kind.startsWith("stick") || e.kind.startsWith("slip"))).toBe(false);
+        expect(result.segments.red?.[0]?.push?.acceleration.x).toBeCloseTo(0.8818736156283, 12);
         expect(result.aborted).toBe(false);
+    });
+
+    it("solves a straight push to rest in a handful of resting-contact solves (Review Focus 1)", () => {
+        // Every straight push rubs vertically; the slip's end is a segment end like any other, not a regroup storm.
+        // Here: the push at t = 0, and the regroup when blue's turf slip ends.
+        let solves = 0;
+        const probe = { before: (): void => undefined, after: (): void => void solves++ };
+        simulateFreeMotion(
+            { blue: ballAt(5, 5, vec3(0, 0, 0), vec3(0, 60, 0)), red: ballAt(5 + 2 * R, 5) },
+            testWorld(),
+            undefined,
+            { probe },
+        );
+        expect(solves).toBeGreaterThan(0);
+        expect(solves).toBeLessThanOrEqual(4);
     });
 
     it("keeps the pushed pair touching and never gains energy while pushing", () => {
@@ -295,6 +318,47 @@ describe("invariants", () => {
     it("never lets balls interpenetrate each other or obstacles", () => {
         expect(worstPenetration(simulateFreeMotion(complex, hoopWorld), hoopWorld)).toBeLessThan(CONTACT_TOLERANCE);
     });
+
+    it("never spins a ball about the vertical axis on the spot", () => {
+        // Spin about the vertical is locked while a ball's turf patch does not slip (held, released from rest, rolling)
+        // and free while it slides or flies; a rolling ball keeps it and drops it when it stops. So a ball that does
+        // not slip and starts a segment with no horizontal velocity (at rest, held, released) has none, and no push
+        // spins a ball that does not slip about the vertical. Each shot brings vertical spin to a ball that stops: the
+        // complex shot's balls all stop with some (from impacts); a ball rolling slowly into the peg with sidespin is
+        // held there; a topspin ball with sidespin releases a resting ball, then rolls with its spin and stops.
+        const slow = vec3(0.0005, 0, 0);
+        const shots: readonly (readonly [BallStates, World])[] = [
+            [complex, hoopWorld],
+            [{ blue: ballAt(15 - R - 0.02, 20, slow, rollingSpin(slow, 40, R)) }, testWorld()],
+            [{ blue: ballAt(5, 5, vec3(0, 0, 0), vec3(0, 60, 40)), red: ballAt(5 + 2 * R, 5) }, testWorld()],
+        ];
+        for (const [setup, world] of shots) {
+            const result = simulateFreeMotion(setup, world);
+            let reached = 0;
+            for (const id of BALL_IDS) {
+                const segments = result.segments[id] ?? [];
+                segments.forEach((s, i) => {
+                    if (s.phase !== "stationary" && s.phase !== "rolling") {
+                        return;
+                    }
+                    const label = `${id} at ${s.t0}`;
+                    expect(Math.abs(s.push?.angularAcceleration.z ?? 0), label).toBe(0);
+                    if (length(horizontal(s.start.velocity)) > 0) {
+                        return;
+                    }
+                    expect(Math.abs(s.start.angularVelocity.z), label).toBe(0);
+                    // The spin the ball brought into the segment (an initial state counts as brought).
+                    const previous = segments[i - 1];
+                    const before = previous
+                        ? segmentState(previous, previous.t1 - previous.t0)
+                        : (setup[id] as BallState);
+                    reached += before.angularVelocity.z === 0 ? 0 : 1;
+                });
+            }
+            // Guards the shots: each brings vertical spin to a ball that comes to a stop.
+            expect(reached).toBeGreaterThan(0);
+        }
+    });
 });
 
 describe("limits and validation", () => {
@@ -323,5 +387,39 @@ describe("limits and validation", () => {
         expect(() => simulateFreeMotion({ blue: ballAt(5, 5), red: over }, testWorld())).not.toThrow();
         const inside = airborneAt(5 + R, 5, 2 * R);
         expect(() => simulateFreeMotion({ blue: ballAt(5, 5), red: inside }, testWorld())).toThrow(/overlap/);
+    });
+});
+
+describe("the solver's work budget (Review Focus 4)", () => {
+    it("holds every group after the budget is spent, with budget-hold events, and still finishes", () => {
+        const spent: number[] = [];
+        const probe = { before: (): void => undefined, after: (work: number): void => void spent.push(work) };
+        const complex: BallStates = {
+            blue: ballAt(15.1713, 14.6246, vec3(0, 0, 0), vec3(-114.6, -35.5, 0)),
+            red: ballAt(15.144, 14.713),
+        };
+        const world = testWorld({ hoops: [testHoop("6", 15, 15)] });
+        const result = simulateFreeMotion(complex, world, undefined, { solveBudget: 1, probe });
+        expect(result.aborted).toBe(false);
+        const holds = result.events.filter((e) => e.kind === "budget-hold");
+        expect(holds.length).toBeGreaterThan(0);
+        expect(result.events.some((e) => e.kind === "approximate-hold")).toBe(false);
+        // The first solve spends past the budget of 1 unit; every later one spends nothing.
+        expect(spent[0]).toBeGreaterThan(1);
+        expect(spent.slice(1).every((w) => w === 0)).toBe(true);
+    });
+
+    it("is never reached by the scenarios of this suite at the default budget", () => {
+        const world = testWorld({ hoops: [testHoop("5", 15, 25), testHoop("6", 15, 15)] });
+        const result = simulateFreeMotion(
+            {
+                blue: ballAt(15.1713, 14.6246, vec3(0, 0, 0), vec3(-114.6, -35.5, 0)),
+                red: ballAt(15.144, 14.713),
+                black: rollingBallAt(12, 17, 1.5, 0.5),
+                yellow: ballAt(13.5, 17.5),
+            },
+            world,
+        );
+        expect(result.events.some((e) => e.kind === "budget-hold")).toBe(false);
     });
 });

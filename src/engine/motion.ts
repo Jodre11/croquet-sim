@@ -58,7 +58,9 @@ export function classify(s: BallState, radius: number): MotionPhase {
 export function landingTime(height: number, rise: number, fall: number): number {
     // advance() can round a centre a hair below z = R; a negative height would make the discriminant negative.
     const h = Math.max(height, 0);
-    if (h === 0 && rise <= 0) {
+    // A ball on the plane comes down at once unless it rises, or is at rest with an upward acceleration (a turf ball a
+    // push lifts off, spec §5), which never comes down within the segment.
+    if (h === 0 && (rise < 0 || (rise === 0 && fall <= 0))) {
         return 0;
     }
     if (fall === 0) {

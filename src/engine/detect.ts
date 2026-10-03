@@ -34,6 +34,21 @@ export function approachSpeed(offset: Vec3, relativeVelocity: Vec3): number {
 }
 
 /**
+ * Returns the rate (m/s²) at which two bodies' line of centres would open from its rotation alone, |v_t|²/d for the
+ * part v_t of the relative velocity across it at centre distance d (the distance's second derivative is n·Δa plus
+ * this). A pair that stays touching while sliding round each other needs this much relative acceleration towards each
+ * other: the share of the contact force that turns the line of centres. Either sign of `offset` gives the same value.
+ */
+export function normalCurvature(offset: Vec3, relativeVelocity: Vec3): number {
+    const l = length(offset);
+    if (l === 0) {
+        return 0;
+    }
+    const along = dot(offset, relativeVelocity) / l;
+    return Math.max(dot(relativeVelocity, relativeVelocity) - along * along, 0) / l;
+}
+
+/**
  * Returns the earliest t in (0, horizon] at which the relative trajectory a + b·t + c·t² comes within
  * `distance` of the origin while the separation is decreasing, or null if it does not. Bodies that start touching
  * report either a new contact after the gap has opened beyond CONTACT_TOLERANCE, or the moment they would overlap by

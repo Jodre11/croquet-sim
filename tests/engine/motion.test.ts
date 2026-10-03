@@ -65,6 +65,12 @@ describe("landingTime", () => {
         // 0.1 − 2t + t²: the first root is 1 − √0.9.
         expect(landingTime(0.1, -2, 2)).toBeCloseTo(1 - Math.sqrt(0.9), 15);
     });
+
+    it("lets a ball on the plane at rest rise when its acceleration is upward (lift-off), and land otherwise", () => {
+        expect(landingTime(0, 0, 4.9)).toBe(Infinity);
+        expect(landingTime(0, 0, -g)).toBe(0);
+        expect(landingTime(0, 0, 0)).toBe(0);
+    });
 });
 
 describe("airborne", () => {

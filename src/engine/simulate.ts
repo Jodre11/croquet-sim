@@ -7,10 +7,10 @@
  * a fixed order and ties go to the first found, so results are deterministic.
  *
  * Contacts closing faster than RESTING_SPEED are impulses with restitution (resolve.ts). Slower ones, and touching
- * bodies driven together by their own accelerations, are resting contacts: the resting-contact solver (push.ts)
- * decides which of them push, and those are coupled until one of the pushed balls changes phase, the contact opens,
- * or another contact intervenes. For touching bodies, the decision at t = 0 uses `approachSpeed` and the same solver
- * that resolution uses, so detection and resolution always agree.
+ * bodies driven together by their own accelerations, are resting contacts: the resting-contact solver, with Coulomb
+ * friction (push.ts), decides which of them push, and those are coupled until one of the pushed balls changes phase,
+ * a slipping contact's slip ends, the contact opens, or another contact intervenes. For touching bodies, the decision
+ * at t = 0 uses `approachSpeed` and the same solver that resolution uses, so detection and resolution always agree.
  *
  * A ball in flight follows its ballistic path until it lands (an impulse with the turf, resolve.ts) or strikes
  * something. Ball–ball contact is between spheres, measured in 3D; contact with an upright or the peg, the boundary and
@@ -23,14 +23,17 @@ import {
     boundaryCrossingTime,
     firstNonNegative,
     isTouching,
+    normalCurvature,
 } from "./detect";
-import { ZERO, dot, horizontal, length, normalize, scale, sub, vec3, type Vec3 } from "./math/vec3";
+import { solveSystem } from "./linalg";
+import { ZERO, add, dot, horizontal, length, normalize, scale, sub, vec3, type Vec3 } from "./math/vec3";
 import {
     SPEED_EPSILON,
     advance,
     atRest,
     classify,
     endOfPhase,
+    onTurf,
     phaseDuration,
     trajectory,
     type Trajectory,
@@ -40,12 +43,15 @@ import {
     ACCELERATION_EPSILON,
     RESTING_SPEED,
     SEPARATION_TOLERANCE,
+    contactSlipDuration,
     freeAcceleration,
     pushDuration,
     pushedState,
     pushedTrajectory,
     solveRestingContacts,
+    type ContactMode,
     type RestingContact,
+    type RestingMember,
     type RestingSolution,
 } from "./push";
 import { SETTLE_SPEED, resolveBallBall, resolveBallCylinder, resolveLanding, type TurfAt } from "./resolve";
@@ -66,13 +72,41 @@ import {
 import { motionParamsAt, obstaclesOf, turfAt, validateWorld } from "./world";
 
 /** Version of the physics; recorded in every result and share link. */
-export const ENGINE_VERSION = "0.2.0";
+export const ENGINE_VERSION = "0.3.0";
+
+/**
+ * Work units (see linalg.ts) the resting-contact solver may spend in one shot (design §5). Fixed from the prototype's
+ * costs at about 100 ms on the reference tablet (2020 entry iPad, taken as 3× slower than the development machine):
+ * the prototype spent 1.50e-6 ms per unit over 3,000 adversarial four-ball clusters on an Apple M4, so 33 ms is
+ * 22 million units. Three-ball pushes spend at most 8.5 million (a bent line, 2.6× headroom); slow four-ball pushes
+ * need 81–289 million and end in budget-hold (carried to P5). The budget is checked between candidates, so the solve
+ * that crosses it can overshoot (measured: up to 1.2×). Realistic solves are tiny and cost more time per unit
+ * (overhead), so this bounds the pathological search, not chatter, whose cost P5 measures. Counting work, not time,
+ * keeps results identical on every device.
+ */
+export const SOLVE_BUDGET = 22_000_000;
+
+/** Measurement seam: called around every resting-contact solve (scripts/shotMix.ts times solves with it). */
+export interface SolveProbe {
+    before(): void;
+    after(work: number, bodies: number): void;
+}
+
+/** Options of a simulation. */
+export interface SimulationOptions {
+    /** Work units the resting-contact solver may spend in the shot; SOLVE_BUDGET when omitted. */
+    readonly solveBudget?: number;
+    readonly probe?: SolveProbe;
+}
 
 /** Event budget per shot. Reaching it marks the result aborted rather than looping forever. */
 export const DEFAULT_MAX_EVENTS = 10_000;
 
 /** Tolerance (m) for accepting an initial centre height as on the lawn plane. */
 const PLANE_TOLERANCE = 1e-9;
+
+/** The lawn is the plane z = 0 (v1), so every ball's turf normal is ẑ. */
+const TURF_NORMAL = vec3(0, 0, 1);
 
 interface Track {
     readonly id: BallId;
@@ -81,6 +115,11 @@ interface Track {
     t0: number;
     /** Time the segment stays valid: to the end of its phase, or of its push. */
     duration: number;
+    /**
+     * Absolute time at which a slipping contact of the track's push stops being valid (its slip reaches zero along
+     * the frozen direction or turns from it), or Infinity. Reset by every reopen.
+     */
+    slipEnd: number;
     params: MotionParams;
     push: PushMotion | null;
     /** A halted ball is out of play: it no longer moves or touches anything. */
@@ -93,6 +132,7 @@ interface Coupling {
     readonly a: Track;
     readonly b: Track | null;
     readonly obstacle: Cylinder | null;
+    readonly mode: "stick" | "slip";
 }
 
 /** Mutable simulation state shared by the helpers below. */
@@ -103,6 +143,9 @@ interface Simulation {
     couplings: Coupling[];
     readonly events: ShotEvent[];
     readonly turf: TurfAt;
+    readonly budget: number;
+    work: number;
+    readonly probe: SolveProbe | null;
 }
 
 type Candidate =
@@ -205,12 +248,24 @@ function reopen(
     if (!track || track.phase !== phase) {
         sim.events.push({ kind: "phase", t: now, ball: id, phase });
     }
-    const next: Track = track ?? { id, start, phase, t0: now, duration: 0, params, push, inert: false, segments: [] };
+    const next: Track = track ?? {
+        id,
+        start,
+        phase,
+        t0: now,
+        duration: 0,
+        slipEnd: Infinity,
+        params,
+        push,
+        inert: false,
+        segments: [],
+    };
     next.start = start;
     next.phase = phase;
     next.t0 = now;
     next.params = params;
     next.push = push;
+    next.slipEnd = Infinity;
     next.duration = push ? pushDuration(start, phase, push, radius) : phaseDuration(start, phase, params);
     return next;
 }
@@ -240,9 +295,9 @@ function groupOf(sim: Simulation, seeds: readonly Track[]): Track[] {
     return sim.tracks.filter((t) => found.has(t));
 }
 
-/** Returns when the earliest segment of the track's coupled group ends (its own end when uncoupled). */
+/** Returns when the earliest segment of the track's coupled group ends, a slip end included. */
 function groupEnd(sim: Simulation, track: Track): number {
-    return Math.min(...groupOf(sim, [track]).map((t) => t.t0 + t.duration));
+    return Math.min(...groupOf(sim, [track]).map((t) => Math.min(t.t0 + t.duration, t.slipEnd)));
 }
 
 /** Uncouples every group containing one of `tracks`: its balls continue from their current states, moving freely. */
@@ -285,61 +340,212 @@ function restingComponent(sim: Simulation, seeds: readonly Track[], now: number)
                 if (!tracks.includes(b)) {
                     tracks.push(b);
                 }
-                contacts.push({ a: i, b: tracks.indexOf(b), fixed: false });
+                contacts.push({ a: i, b: tracks.indexOf(b), fixed: false, friction: sim.world.ballBall.friction });
             }
         }
         for (const o of sim.obstacles) {
             const offset = horizontal(sub(sa.position, o.centre));
             if (resting(offset, sa.velocity, R + o.radius, coupledObstacle(sim, a, o))) {
                 obstacles.push(o);
-                contacts.push({ a: i, b: obstacles.length - 1, fixed: true });
+                contacts.push({ a: i, b: obstacles.length - 1, fixed: true, friction: o.material.friction });
             }
         }
     }
     return { tracks, obstacles, contacts };
 }
 
-function solveComponent(component: Component, now: number): RestingSolution {
-    return solveRestingContacts(
-        component.tracks.map((t) => ({ state: stateAt(t, now), params: t.params })),
+/** Newton steps of projectContacts. Each solves the linearised gaps exactly; the second removes the O(gap²/R) rest. */
+const PROJECTION_STEPS = 2;
+
+/**
+ * Moves the balls of a component about to be solved so that every resting contact in it has exactly zero gap along its
+ * normal, leaving velocities alone. It exists because the closing rate includes the line of centres' curvature
+ * (normalCurvature): a coupled pair then keeps its gap only to third order, and the drift, which can go either way, is
+ * otherwise never undone, so it would accumulate over regroups (separationTime bounds it per segment, between
+ * −CONTACT_TOLERANCE and SEPARATION_TOLERANCE). After it every gap is zero, so neither bound fires at the new segment's
+ * start: the drift is cubic in time again.
+ *
+ * All contacts at once, so that it is deterministic and order-free (a symmetric set-up stays symmetric): with J the
+ * contacts' normal rows (−n on ball a, +n on ball b; an obstacle never moves) and W each ball's mobility (a ball on the
+ * turf moves only horizontally, a ball in flight in 3D; equal masses), the move δ = W·Jᵀ·μ with (J·W·Jᵀ)·μ = −gap is
+ * the smallest that closes every gap. A ball in several contacts takes the sum of their moves. Dependent contacts (a
+ * ball jammed between bodies) can make the gaps inconsistent; the least-squares μ (minimum norm, from the normal
+ * equations) then closes them as nearly as possible. Its work is not counted against the solve budget: it is a
+ * handful of contacts, once per settle.
+ */
+function projectContacts(sim: Simulation, component: Component, now: number): void {
+    const R = sim.world.ball.radius;
+    const { contacts } = component;
+    if (contacts.length === 0) {
+        return;
+    }
+    const states = component.tracks.map((t) => stateAt(t, now));
+    const positions = states.map((s) => s.position);
+    const supported = states.map((s) => onTurf(s, R));
+    const mobility = (i: number, v: Vec3): Vec3 => (supported[i] ? horizontal(v) : v);
+    for (let step = 0; step < PROJECTION_STEPS; step++) {
+        // Each contact's normal and gap at the current positions.
+        const geometry = contacts.map((c) => {
+            const pa = positions[c.a] as Vec3;
+            const o = c.fixed ? (component.obstacles[c.b] as Cylinder) : null;
+            const offset = o ? horizontal(sub(o.centre, pa)) : sub(positions[c.b] as Vec3, pa);
+            const distance = length(offset);
+            return { n: scale(offset, 1 / distance), gap: distance - (o ? R + o.radius : 2 * R) };
+        });
+        // Row k of J for ball i, dotted through W with row j: Σ over shared balls of J_k,i · W_i · J_j,i.
+        const row = (k: number, i: number): Vec3 => {
+            const c = contacts[k] as RestingContact;
+            const n = (geometry[k] as { n: Vec3 }).n;
+            return c.a === i ? scale(n, -1) : !c.fixed && c.b === i ? n : ZERO;
+        };
+        const A = contacts.map((_, k) =>
+            contacts.map((__, j) =>
+                component.tracks.reduce((sum, _t, i) => sum + dot(row(k, i), mobility(i, row(j, i))), 0),
+            ),
+        );
+        const gaps = geometry.map((g) => 0 - g.gap);
+        // Normal equations (A is symmetric): A·A·μ = A·(−gap), always consistent.
+        const AA = A.map((r) =>
+            A.map((_, j) => r.reduce((sum, v, m) => sum + v * ((A[m] as number[])[j] as number), 0)),
+        );
+        const Ab = A.map((r) => r.reduce((sum, v, m) => sum + v * (gaps[m] as number), 0));
+        const solved = solveSystem(AA, Ab, { units: 0 });
+        if (!solved) {
+            return;
+        }
+        component.tracks.forEach((_t, i) => {
+            let move = ZERO;
+            solved.x.forEach((mu, k) => {
+                move = add(move, scale(mobility(i, row(k, i)), mu));
+            });
+            positions[i] = add(positions[i] as Vec3, move);
+        });
+    }
+    component.tracks.forEach((track, i) => {
+        const s = states[i] as BallState;
+        const p = positions[i] as Vec3;
+        if (p.x !== s.position.x || p.y !== s.position.y || p.z !== s.position.z) {
+            reopen(sim, track, track.id, { ...s, position: p }, now);
+        }
+    });
+}
+
+function solveComponent(sim: Simulation, component: Component, now: number): RestingSolution {
+    sim.probe?.before();
+    const solution = solveRestingContacts(
+        component.tracks.map((t) => ({
+            state: stateAt(t, now),
+            params: t.params,
+            turfNormal: TURF_NORMAL,
+            pivotCapacity: Infinity,
+        })),
         component.obstacles.map((o) => o.centre),
         component.contacts,
+        { gravity: vec3(0, 0, 0 - sim.world.gravity), budget: sim.budget - sim.work },
     );
+    sim.work += solution.work;
+    sim.probe?.after(solution.work, component.tracks.length);
+    return solution;
+}
+
+/** The couplings of every group containing one of `tracks`: what release() would drop. */
+function couplingsOf(sim: Simulation, tracks: readonly Track[]): Coupling[] {
+    const group = groupOf(sim, tracks);
+    return sim.couplings.filter((c) => group.includes(c.a));
+}
+
+/** Track ids in BALL_IDS order. */
+function canonical(tracks: readonly Track[]): BallId[] {
+    return BALL_IDS.filter((id) => tracks.some((t) => t.id === id));
 }
 
 /**
  * Resolves the resting contacts around `seeds`: uncouples every group involved, solves the component again and
- * couples the contacts the solution keeps.
+ * couples the contacts the solution keeps, with their modes. A contact whose mode changed since the previous solve
+ * (`previous`, the couplings before release; taken here unless the caller released already) raises a stick or slip
+ * event; its first coupling does not (its resting contact event marks it). Each slipping contact bounds its members'
+ * segments by its slip end.
  */
-function settle(sim: Simulation, seeds: readonly Track[], now: number): void {
+function settle(
+    sim: Simulation,
+    seeds: readonly Track[],
+    now: number,
+    previous: readonly Coupling[] | null = null,
+): void {
     const component = restingComponent(sim, seeds, now);
+    const before = previous ?? couplingsOf(sim, component.tracks);
     release(sim, component.tracks, now);
-    const solution = solveComponent(component, now);
+    projectContacts(sim, component, now);
+    const solution = solveComponent(sim, component, now);
     component.tracks.forEach((track, i) => {
         const member = solution.members[i];
         if (member) {
             reopen(sim, track, track.id, member.state, now, { phase: member.phase, push: member.push });
         }
     });
+    const R = sim.world.ball.radius;
     component.contacts.forEach((c, k) => {
-        if (solution.coupled[k]) {
-            const a = component.tracks[c.a] as Track;
-            sim.couplings.push(
-                c.fixed
-                    ? { a, b: null, obstacle: component.obstacles[c.b] as Cylinder }
-                    : { a, b: component.tracks[c.b] as Track, obstacle: null },
+        const mode = solution.modes[k] as ContactMode;
+        if (mode === "open") {
+            return;
+        }
+        const a = component.tracks[c.a] as Track;
+        const b = c.fixed ? null : (component.tracks[c.b] as Track);
+        const obstacle = c.fixed ? (component.obstacles[c.b] as Cylinder) : null;
+        sim.couplings.push({ a, b, obstacle, mode });
+        const slip = solution.slips[k] ?? null;
+        // The slip end: the members' pushes are the solution's, from their states now.
+        const ma = solution.members[c.a];
+        const mb = c.fixed ? null : solution.members[c.b];
+        if (slip && ma?.push && (c.fixed || mb?.push)) {
+            const normal = obstacle
+                ? normalize(horizontal(sub(obstacle.centre, ma.state.position)))
+                : normalize(sub((mb as RestingMember).state.position, ma.state.position));
+            const end =
+                now + contactSlipDuration(ma.state, ma.push, mb?.state ?? null, mb?.push ?? null, normal, slip, R);
+            a.slipEnd = Math.min(a.slipEnd, end);
+            if (b) {
+                b.slipEnd = Math.min(b.slipEnd, end);
+            }
+        }
+        const was = before.find(
+            (p) => (p.a === a && p.b === b && p.obstacle === obstacle) || (b !== null && p.a === b && p.b === a),
+        );
+        // Only a change with friction is reported: a frictionless coupling (or one the nearest hold made) has no slip.
+        if (!was || was.mode === mode || (mode === "slip" && !slip)) {
+            return;
+        }
+        if (b) {
+            const first = BALL_IDS.indexOf(a.id) < BALL_IDS.indexOf(b.id);
+            const balls: readonly [BallId, BallId] = first ? [a.id, b.id] : [b.id, a.id];
+            sim.events.push(
+                mode === "stick"
+                    ? { kind: "stick-ball", t: now, balls }
+                    : { kind: "slip-ball", t: now, balls, direction: first ? (slip as Vec3) : scale(slip as Vec3, -1) },
+            );
+        } else {
+            const obstacleId = (obstacle as Cylinder).id;
+            sim.events.push(
+                mode === "stick"
+                    ? { kind: "stick-obstacle", t: now, ball: a.id, obstacleId }
+                    : { kind: "slip-obstacle", t: now, ball: a.id, obstacleId, direction: slip as Vec3 },
             );
         }
     });
     // Reported here rather than on a contact event: regroups re-solve too, and they have no contact event.
-    const held = sim.tracks.filter((t) => solution.approximate[component.tracks.indexOf(t)] === true);
+    const flagged = (flags: readonly boolean[]): Track[] => component.tracks.filter((_, i) => flags[i] === true);
+    const held = flagged(solution.approximate);
     if (held.length > 0) {
-        sim.events.push({
-            kind: "approximate-hold",
-            t: now,
-            balls: held.map((t) => t.id),
-            excess: solution.holdExcess,
-        });
+        sim.events.push({ kind: "approximate-hold", t: now, balls: canonical(held), excess: solution.holdExcess });
+    }
+    const slipped = flagged(solution.approximateSlip);
+    if (slipped.length > 0) {
+        sim.events.push({ kind: "approximate-slip", t: now, balls: canonical(slipped), excess: solution.slipExcess });
+    }
+    const budgeted = flagged(solution.budgetHold);
+    if (budgeted.length > 0) {
+        const resting = budgeted.filter((t) => t.phase === "stationary");
+        sim.events.push({ kind: "budget-hold", t: now, balls: canonical(resting) });
     }
 }
 
@@ -358,9 +564,25 @@ function separationGap(offset: Vec3, distance: number): number {
     return dot(offset, offset) - distance * distance - band;
 }
 
-/** Earliest time a coupled contact opens beyond SEPARATION_TOLERANCE, for relative trajectory a + b·t + c·t². */
+/**
+ * Earliest time a coupled contact drifts out of its band, for relative trajectory a + b·t + c·t²: opens beyond
+ * SEPARATION_TOLERANCE, or closes deeper than CONTACT_TOLERANCE. With the line of centres' curvature in the closing
+ * rate (normalCurvature) a coupled gap drifts only at third order, but either way, so both sides end the segment; the
+ * regroup that follows projects the pair back to zero gap (projectContacts).
+ */
 function separationTime(a: Vec3, b: Vec3, c: Vec3, distance: number, horizon: number): number | null {
-    const f = [separationGap(a, distance), 2 * dot(a, b), dot(b, b) + 2 * dot(a, c), 2 * dot(b, c), dot(c, c)];
+    const square = [dot(a, a), 2 * dot(a, b), dot(b, b) + 2 * dot(a, c), 2 * dot(b, c), dot(c, c)];
+    const opens = firstRootOf([separationGap(a, distance), ...square.slice(1)], horizon);
+    const inner = distance - CONTACT_TOLERANCE;
+    const sinks = firstRootOf(
+        square.map((x, i) => (i === 0 ? inner * inner - x : 0 - x)),
+        horizon,
+    );
+    return opens === null ? sinks : sinks === null ? opens : Math.min(opens, sinks);
+}
+
+/** firstNonNegative of f within `horizon`, or, for an infinite horizon, within a bound on every real root of f. */
+function firstRootOf(f: readonly number[], horizon: number): number | null {
     if (Number.isFinite(horizon)) {
         return firstNonNegative(f, horizon);
     }
@@ -449,17 +671,25 @@ function accelerationOf(track: Track, state: BallState): Vec3 {
 
 /**
  * Decides whether touching bodies must be resolved now: they are approaching, or they rest against each other and
- * their accelerations drive them together. `towards` is the offset from the first body's centre to the second's (3D
- * for a ball, horizontal for an obstacle's axis) and `otherAcceleration` the second body's (an obstacle's is ZERO).
- * Resolution applies the resting-contact solver, whose outcome never leaves an uncoupled resting contact driven
- * together, so a contact resolved at t = 0 does not trigger again.
+ * their accelerations drive them together faster than their turning line of centres needs (`normalCurvature`, as the
+ * solver judges it). `towards` is the offset from the first body's centre to the second's (3D for a ball, horizontal
+ * for an obstacle's axis), `otherAcceleration` the second body's (an obstacle's is ZERO) and `relative` the first
+ * body's velocity minus the second's. Resolution applies the resting-contact solver, whose outcome never leaves an
+ * uncoupled resting contact driven together, so a contact resolved at t = 0 does not trigger again.
  */
-function contactNow(towards: Vec3, acceleration: Vec3, otherAcceleration: Vec3, closing: number): boolean {
+function contactNow(
+    towards: Vec3,
+    acceleration: Vec3,
+    otherAcceleration: Vec3,
+    relative: Vec3,
+    closing: number,
+): boolean {
     if (closing > SPEED_EPSILON) {
         return true;
     }
     const normal = normalize(towards);
-    return closing >= -RESTING_SPEED && dot(sub(acceleration, otherAcceleration), normal) > ACCELERATION_EPSILON;
+    const driven = dot(sub(acceleration, otherAcceleration), normal) - normalCurvature(towards, relative);
+    return closing >= -RESTING_SPEED && driven > ACCELERATION_EPSILON;
 }
 
 function findNextEvent(sim: Simulation, now: number): Candidate | null {
@@ -468,7 +698,16 @@ function findNextEvent(sim: Simulation, now: number): Candidate | null {
     const live = sim.tracks.filter((t) => !t.inert);
     const states = new Map(live.map((t) => [t, stateAt(t, now)]));
     const paths = new Map(live.map((t) => [t, pathAt(t, now)]));
-    const ends = new Map(live.map((t) => [t, boundedGroupEnd(sim, t, now)]));
+    // One bound per coupled group (every member shares it), not one per track.
+    const ends = new Map<Track, number>();
+    for (const t of live) {
+        if (!ends.has(t)) {
+            const end = boundedGroupEnd(sim, t, now);
+            for (const member of groupOf(sim, [t])) {
+                ends.set(member, end);
+            }
+        }
+    }
     let best: Candidate | null = null;
 
     for (const track of live) {
@@ -476,6 +715,10 @@ function findNextEvent(sim: Simulation, now: number): Candidate | null {
         // Landings are gathered last (below): simultaneous impulses go ball–ball, then obstacles, then landings.
         if (moving(track) && Number.isFinite(end) && track.phase !== "airborne") {
             best = earlier(best, { time: end, kind: track.push ? "regroup" : "transition", track });
+        }
+        // A slipping contact's end regroups in every phase, in flight included (its duration is its landing).
+        if (Number.isFinite(track.slipEnd)) {
+            best = earlier(best, { time: track.slipEnd, kind: "regroup", track });
         }
     }
     for (let i = 0; i < live.length; i++) {
@@ -499,8 +742,15 @@ function findNextEvent(sim: Simulation, now: number): Candidate | null {
             const sa = states.get(a) as BallState;
             const sb = states.get(b) as BallState;
             const offset = sub(sa.position, sb.position);
-            const closing = approachSpeed(offset, sub(sa.velocity, sb.velocity));
-            const driven = contactNow(scale(offset, -1), accelerationOf(a, sa), accelerationOf(b, sb), closing);
+            const relative = sub(sa.velocity, sb.velocity);
+            const closing = approachSpeed(offset, relative);
+            const driven = contactNow(
+                scale(offset, -1),
+                accelerationOf(a, sa),
+                accelerationOf(b, sb),
+                relative,
+                closing,
+            );
             if (isTouching(offset, 2 * R) && driven) {
                 best = earlier(best, { time: now, kind: "ball-ball", a, b });
                 continue;
@@ -529,7 +779,13 @@ function findNextEvent(sim: Simulation, now: number): Candidate | null {
                 continue;
             }
             const closing = approachSpeed(offset, s.velocity);
-            const driven = contactNow(scale(offset, -1), accelerationOf(track, s), ZERO, closing);
+            const driven = contactNow(
+                scale(offset, -1),
+                accelerationOf(track, s),
+                ZERO,
+                horizontal(s.velocity),
+                closing,
+            );
             if (isTouching(offset, distance) && driven) {
                 best = earlier(best, { time: now, kind: "obstacle", track, obstacle });
                 continue;
@@ -561,6 +817,7 @@ export function simulateFreeMotion(
     initial: BallStates,
     world: World,
     maxEvents: number = DEFAULT_MAX_EVENTS,
+    options: SimulationOptions = {},
 ): ShotResult {
     validateWorld(world);
     const sim: Simulation = {
@@ -570,6 +827,9 @@ export function simulateFreeMotion(
         couplings: [],
         events: [],
         turf: (position) => turfAt(world, position),
+        budget: options.solveBudget ?? SOLVE_BUDGET,
+        work: 0,
+        probe: options.probe ?? null,
     };
     for (const id of BALL_IDS) {
         const s = initial[id];
@@ -648,15 +908,15 @@ export function simulateFreeMotion(
             case "landing": {
                 const { track } = next;
                 const group = groupOf(sim, [track]);
-                const coupled = sim.couplings.some((c) => group.includes(c.a));
+                const previous = couplingsOf(sim, group);
                 const s = stateAt(track, now);
                 release(sim, group, now);
                 const R = world.ball.radius;
                 const touchdown = { ...s, position: vec3(s.position.x, s.position.y, R) };
                 reopen(sim, track, track.id, resolveLanding(touchdown, world.ball, sim.turf(touchdown.position)), now);
                 sim.events.push({ kind: "landing", t: now, ball: track.id });
-                if (coupled) {
-                    settle(sim, group, now);
+                if (previous.length > 0) {
+                    settle(sim, group, now, previous);
                 }
                 break;
             }

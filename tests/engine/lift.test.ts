@@ -134,7 +134,7 @@ describe("resting contact in flight", () => {
 
     it(
         "slides a ball off the exact top of another when it has sideways speed, and lands it",
-        { timeout: 30_000 },
+        { timeout: 40_000 },
         () => {
             // The contact normal is vertical, so the push acceleration is exactly zero while the ball moves: its
             // segment has no landing time of its own and is bounded by the pair separating (see boundedGroupEnd in
@@ -158,10 +158,13 @@ describe("resting contact in flight", () => {
                         expect(result.aborted).toBe(false);
                         expect(worstPenetration(result, world)).toBeLessThan(CONTACT_TOLERANCE);
                         expect(result.rest.red?.z).toBe(R);
-                        // Finite but long: at 0.003 m/s, about 703 ball–ball and 324 phase events (about 1039 in all).
-                        // The contact normal is frozen per push segment, so the pair regroups every ~1.5 mrad of the
-                        // normal's turn, each regroup followed by re-contacts, rather than bouncing freely.
-                        expect(result.events.length).toBeLessThan(2000);
+                        // Finite but long. The contact normal is frozen per push segment, so the pair regroups as its
+                        // gap drifts (at third order, the closing rate including the normal's curvature) out of its
+                        // band, rather than bouncing freely: frictionless, 135–193 events over the sweep. Friction
+                        // adds, per regroup cycle, a stick/slip pair of the contact (the lower ball rolls for a few
+                        // microseconds as it slips), and a slip of a few nanoseconds that sticks again at once: at
+                        // 0.003 m/s 336 events, 260–336 over the sweep. Damping that chatter is deferred to P5.
+                        expect(result.events.length).toBeLessThan(500);
                         // The ball falls back on the other at about 1.4 mm/s; the 3D impulse keeps the approach normal.
                         expectNoEnergyGain(result);
                     }
@@ -210,6 +213,50 @@ describe("resting contact in flight", () => {
         expect(result.aborted).toBe(false);
         expect(result.rest.red?.z).toBeCloseTo(za, 12);
         expect(result.events.length).toBeLessThan(20);
+    });
+});
+
+describe("lift-off and stick in pushes", () => {
+    it("lifts a ball off the turf when push friction takes its load, and lands it later (Review Focus 3)", () => {
+        // μ = 4 between the balls (μ·μs > 1): red, backspun into blue's topspin, cannot stay on the turf and is solved
+        // airborne at z = R with upward acceleration. It must rise, not land at the instant it lifts.
+        const world = testWorld({ ballBall: { restitution: 0.8, friction: 4 } });
+        const result = simulateFreeMotion(
+            {
+                blue: ballAt(5, 5, vec3(0, 0, 0), vec3(0, 60, 0)),
+                red: ballAt(5 + 2 * R, 5, vec3(0, 0, 0), vec3(0, -80, 0)),
+            },
+            world,
+        );
+        expect(result.aborted).toBe(false);
+        const lifted = result.segments.red?.[0];
+        expect(lifted?.phase).toBe("airborne");
+        expect(lifted?.push?.acceleration.z).toBeCloseTo(4.903325, 9);
+        expect(highest(result, "red")).toBeGreaterThan(1e-6);
+        const landed = landings(result, "red");
+        expect(landed.length).toBeGreaterThan(0);
+        expect(landed[0]).toBeGreaterThan(0);
+        expect(result.rest.red?.z).toBe(R);
+    });
+
+    it("sticks a contact whose slip reaches zero, slips it again once, and comes to rest (Review Focus 5)", () => {
+        // Blue's topspin and red's slightly stronger backspin drive the pair into each other (N = μs·g); the vertical
+        // contact slip R·ΔΩ decays at 5μN(1 − μs), so the contact sticks at R·ΔΩ/(5μ·μs·g(1 − μs)) = 0.0893466 s, and
+        // slips again when blue starts to roll (0.3778 s). They come to rest touching, at 5.001323 and 5.093323.
+        const result = simulateFreeMotion(
+            {
+                blue: ballAt(5, 5, vec3(0, 0, 0), vec3(0, 60, 0)),
+                red: ballAt(5 + 2 * R, 5, vec3(0, 0, 0), vec3(0, -61, 0)),
+            },
+            testWorld(),
+        );
+        expect(result.aborted).toBe(false);
+        const changes = result.events.filter((e) => e.kind.startsWith("stick") || e.kind.startsWith("slip"));
+        expect(changes.map((e) => e.kind)).toEqual(["stick-ball", "slip-ball"]);
+        expect(changes[0]?.t).toBeCloseTo(0.089346563423, 9);
+        expect(changes[1]?.t).toBeCloseTo(0.377846616715, 9);
+        expect(result.rest.blue?.x).toBeCloseTo(5.001323, 6);
+        expect(result.rest.red?.x).toBeCloseTo(5.093323, 6);
     });
 });
 

@@ -57,8 +57,8 @@ reference data (§11) is sourced.
 | Cannons (three balls in contact) | Impact phase handles N bodies in contact; free-motion resting contact (§5) already solves any number of balls and obstacles in contact |
 | Detailed hoop-wire contact on angled runs | Hoop contact model is isolated and replaceable |
 | Hoop stiffness (loose hoops), per-hoop width tolerance | Each hoop is its own object with its own `width` (v1: rigid, standard width) |
-| Lawn surface variability (sparse / discoloured patches) | Engine queries `lawn.surfaceAt(position)`; v1 returns a uniform value |
-| Slopes, grain, wet lawns | Same surface query; slope would add a gravity term to free motion |
+| Lawn surface variability (sparse / discoloured patches) | Engine queries `lawn.surfaceAt(position)`; v1 returns a uniform value. Turf parameters, including the turf's grip against spin about the vertical axis, are carried per ball. Variation must be piecewise (regions with a boundary-crossing event), since each segment's motion is closed-form; a smooth field would be discretised |
+| Slopes, grain, wet lawns | Same surface query; slope would add a gravity term to free motion. The resting-contact solver works in each ball's turf frame (turf normal and gravity vector), so a slope changes inputs, not equations. Undulation is piecewise planar facets with boundary-crossing events |
 | Inverse solving ("put the balls here — what stroke?") | Reuses the calibration optimiser |
 | Motion-based stroke input | A new front end onto the same swing model |
 | 3D replay | Renderer consumes only `ShotResult`, which is already 3D |
@@ -204,29 +204,49 @@ Small fixed-step integration of all bodies in contact (mallet, striker's ball, c
   pushes: contact forces, never pulling, keep the bodies' relative acceleration along each
   contact normal at zero. That is solved exactly in all observed cases, with a documented fallback (see
   the limitations below), for any number of balls and obstacles in contact.
-- **Pushing contacts carry Coulomb friction** in the full tangent plane. While the contact points slip
-  relative to each other, kinetic friction μ·N acts against the slip, which is frozen in direction for the
-  segment like every other force. The vertical part of that friction changes the turf's load on each
-  ball, and turf sliding friction (μs × load) and rolling resistance scale with the load. Rolling
-  resistance is the force that gives a free rolling ball its deceleration μr·g, i.e. 7/5·μr × load. A
-  ball whose load reaches zero leaves the turf: that ends the segment and the ball goes airborne. When the slip reaches zero
-  the contact **sticks**: the tangential force is whatever keeps it stuck, provided it stays within
-  μ·N. Otherwise the contact **slips** again, in the direction in which the slip then grows (solved
-  together with the contact forces). Stick and slip are recorded as events. Balls at rest leaning on each
-  other or on an obstacle hold through static friction within the same cone.
+- **Pushing contacts carry Coulomb friction** in the full tangent plane, between balls and against
+  uprights and the peg, on the turf or in flight. A contact's slip is the relative velocity of the two
+  contact points in the tangent plane: Pₜ[(v_a − v_b) + R·(ω_a + ω_b) × n] for balls a and b with n from a
+  to b (the b terms vanish against an obstacle). While the contact slips, kinetic friction μ·N acts
+  against the slip, which is frozen in direction for the segment like every other force. The vertical
+  part of the contact forces changes the turf's load on each ball, L = m·g − Σ P_z (P the total contact
+  force on the ball, normal plus friction, P_z its upward part), and turf sliding friction (μs × L) and
+  rolling resistance scale with the load. Rolling resistance is the force that gives a free rolling ball
+  its deceleration μr·g, i.e. 7/5·μr × L. A ball whose load would be zero or negative leaves the turf: it
+  is solved as airborne. Loads are constant within a segment, so this happens only when the contacts are
+  solved again. When the slip reaches zero the contact **sticks**: the tangential force is whatever keeps
+  it stuck, provided it stays within μ·N. Otherwise the contact **slips** again, in the direction in which
+  the slip then grows (solved together with the contact forces). Stick and slip are recorded as events
+  when a coupled contact changes between them; the first coupling is already marked by its resting
+  contact event. Balls at rest leaning on each other or on an obstacle hold through static friction
+  within the same cone.
 - While pushing, each ball's turf force is frozen at the start of the push segment: sliding friction
   against its slip, or rolling resistance against its travel. A pushed
   rolling ball has effective inertia 7/5·m (static turf friction keeps it rolling, so a vertical force at
   its contact point also drives it along the contact normal), provided the static turf friction this needs
-  stays within μs × load; otherwise the ball is solved as sliding. A resting ball resists a push up to its
-  static rolling resistance. Each contact normal and slip direction is fixed for the segment.
+  stays within μs × load; otherwise the ball is solved as sliding. Its acceleration is
+  [Σ(P_h·(1 + ê_z) − ê_h·P_z) + rolling resistance]/(7/5·m), with P_h and P_z the horizontal and upward
+  parts of each contact force and ê the unit vector from the ball's centre towards that contact point
+  (ê_h its horizontal part): the forces turn the ball about its turf contact, so an upward force ahead of
+  the centre turns it back. A resting ball resists a push up to its static rolling resistance: it stays at
+  rest while |Σ(P_h·(1 + ê_z) − ê_h·P_z)| ≤ 7/5·μr × L and the static turf friction this needs stays within
+  μs × L; otherwise it starts to roll, or to slide if rolling would need more than μs × L. Rolling
+  resistance acts through the centre, with no moment about it, so the static turf friction on a held ball
+  is F = Σ(ê_z·P_h − ê_h·P_z). Spin about the vertical axis is held by the grass gripping the ball's
+  contact patch, which it does while the patch does not slip: the spin is locked (the turf takes any
+  torque about the vertical axis) while a ball is at rest or rolling, and free while it slides or is in
+  flight, when contact friction changes it. A ball that has carried spin about the vertical axis into a
+  roll keeps it; the turf drops it when the ball stops. A ball with no velocity whose patch slips (topspin
+  at rest, or a ball checking after a rebound) is sliding, not at rest. Each contact normal and slip
+  direction is fixed for the segment.
   Accelerations are therefore constant and trajectories stay closed-form quadratics.
 - A push segment ends when a pushed ball's slip or velocity reaches zero along its frozen direction or
-  turns from it by more than a small angle, when a slipping contact's slip does the same, when a
+  turns from it by more than a small angle, when a slipping contact's slip does the same (a stuck contact's
+  force is constant within the segment, so it changes only when the contacts are solved again), when a
   coupled contact opens by more than a small gap, or when another event intervenes. The contacts are
   then solved again; a contact whose force would pull is released.
 - Events are recorded in the `ShotResult` (collisions, landings, stick and slip, hoop passages,
-  out-of-court, jump flags, rest positions).
+  out-of-court, jump flags, approximate holds and slips, exhausted solver budgets, rest positions).
 
 ### Jump flag
 
@@ -263,12 +283,34 @@ replacement on the yard line.
 - Simultaneous impulses are resolved one contact at a time (the order is given above): the ball–ball
   (or ball–obstacle) impulse first, then each ball's turf impulse.
 - With friction, the contact forces of a push need not be unique (as for any rigid bodies with Coulomb
-  friction); the solver returns the first consistent solution in a fixed order, so results stay
-  deterministic. Where the slip direction of a contact that starts to slip cannot be solved, the result
-  carries an `approximate-slip` event and the contact slips against its stuck force.
+  friction); the solver returns the first consistent solution in a fixed order, trying every resting ball
+  held first, so results stay deterministic. Near a limit of holding both holding and releasing can be
+  consistent over a narrow range (static against kinetic friction, e.g. 52.19°–52.37° on the bent line
+  of §9); holding first decides it as real grass would. Where the forces themselves are left undetermined
+  (a ball jammed between three or more bodies), the solver takes the smallest forces that meet every
+  condition. Real balls settle the split through their slight compliance, which the model omits; where
+  the split changes the motion (a sliding ball jammed against three or more bodies), the result is this
+  rule's, not a measured one. Where the slip direction of a contact that starts to slip cannot be solved, the result
+  carries an `approximate-slip` event, with the residual of the failed direction solve as its excess
+  figure, and the contact slips against its stuck force.
 - If the exact resting-contact solve fails, the resting balls are held and the result carries an
-  `approximate-hold` event with an excess figure. It has been observed only at the limits of holding;
-  the error is not bounded in principle. Consumers should surface it.
+  `approximate-hold` event with an excess figure. Neither fallback is expected in play: the limit-of-holding
+  sweeps (§9) assert that neither occurs. Where one does, the error is not bounded in principle. Consumers
+  should surface both.
+- The resting-contact solver's work per shot is bounded, counted in solver operations rather than time so
+  that results stay the same on every device. A group solved after the budget is spent is held as in the
+  fallback above and the result carries a `budget-hold` event. Measured play never reaches the budget; it
+  exists for pathological clusters (four balls jammed with spin), whose search would otherwise exceed the
+  performance budget on the reference tablet.
+- Whether balls at rest hold is decided to within a small numerical slack on their resistance (a
+  configuration within that slack of the limit of holding may go either way).
+- Making a resting contact's normal speeds equal (above) is a frictionless impulse: the speeds it removes
+  are below the resting speed, so the friction it omits is negligible.
+- The turf's grip against spin about the vertical axis is idealised: unlimited while the contact patch does
+  not slip, none while it slips. The real grip is friction over the patch, at most about ⅔·μs·L·a for a
+  patch of radius a. The pushes checked need far less: the bent line of §9 needs a ≈ 2 mm, which a ball
+  reaches by sinking about 0.04 mm into the turf. The capacity is carried per ball (unlimited in v1), so
+  a finite grip from the surface model can replace the idealisation later.
 - Within a push segment each turf-force direction and contact normal is frozen. The error is first
   order in the direction tolerance and the opening gap, both small numerical tolerances. It is
   negligible for straight pushes and measured in millimetres for pushes at an angle. The brute-force
@@ -365,14 +407,24 @@ Tooling: **Vitest** (unit, property and snapshot tests), **Playwright** (browser
      a ball in flight lands where and when the ballistic closed form says; a ball with topspin at rest
      behind a resting ball pushes it with the closed-form common acceleration
      A = (c·μs − 7/5·μr)·g / (7/5 + c), c = (1 − μ − 7/5·μ·μr) / (1 + μ·μs) (μ the ball–ball friction;
-     (5·μs − 7·μr)·g/12 when μ = 0) until its slip is gone; a ball struck above its equator is driven
-     into the turf and gains the spin its impulsive turf friction gives it.
+     (5·μs − 7·μr)·g/12 when μ = 0), its turf load lowered and the pushed ball's raised by μ·N, until its
+     turf slip is gone; both balls then roll together and the contact carries no force (it does not
+     stick: the contact points still slip vertically at twice the common speed); a ball leaning on
+     another ball or an upright holds inside the friction cone and slips just outside it; a ball
+     struck above its equator is driven into the turf and gains the spin its impulsive turf friction
+     gives it.
    - Invariants: energy never increases; momentum conserved in ball–ball impacts except for the turf's
      impulse; resting-contact forces never pull, balance between the pair and stay within the friction
      cone; touching balls never interpenetrate and never set off an event storm; bouncing balls settle.
    - Mirror symmetry of setups yields mirrored results.
    - Determinism: repeated runs on one engine are bit-identical.
-   - Event solver cross-checked against brute-force small-step integration of the same shot.
+   - Event solver cross-checked against brute-force small-step integration of the same shot, with the
+     same physics (ball–ball friction on in every scenario, turf forces scaled by the load of persisting
+     pushes, spin about the vertical axis locked while a ball's patch does not slip). Brute force confirms
+     where a release begins, not a limit of holding: its friction follows the momentary slip, so it never
+     reaches the best static direction. Limits of holding are confirmed by closed forms.
+   - Limits of holding swept with friction on raise no `approximate-hold`, `approximate-slip` or
+     `budget-hold`.
 2. **Croquet behaviour**
    - Standard stroke distance ratios within ±15 % of sourced coaching figures.
    - Ordering: stop shot → pass-roll gives monotonically increasing striker's-ball distance.
@@ -382,6 +434,8 @@ Tooling: **Vitest** (unit, property and snapshot tests), **Playwright** (browser
      above the equator (no jump flag), so the transfer is not spoiled by turf friction.
    - Clean hoop run in the target direction detected; upright rebound not counted; run in the wrong
      direction not counted.
+   - A ball with topspin that rebounds off an upright checks, spins in place, then runs forward again
+     through the hoop or into the peg.
    - Out-of-court event raised per the sourced criterion.
 3. **Calibration**
    - Round trip: synthesise measurements from a known profile, fit, recover fitted parameters within
