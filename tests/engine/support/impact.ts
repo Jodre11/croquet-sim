@@ -14,8 +14,9 @@ import {
     solidCylinderInertia,
     type Quaternion,
 } from "../../../src/engine/impact/rigidBody";
+import { validateImpact } from "../../../src/engine/impact/simulateImpact";
 import type { ContactState, DriveSample, FaceMaterial, HeadState, MalletHead } from "../../../src/engine/impact/types";
-import type { BallParams, BallState, BallStates } from "../../../src/engine/types";
+import type { BallParams, BallState, BallStates, World } from "../../../src/engine/types";
 import { STANDARD_GRAVITY } from "../../../src/engine/world";
 import { TEST_BALL, ballAt } from "./fixtures";
 
@@ -231,6 +232,48 @@ export const SCENARIOS: readonly Scenario[] = [
         balls: { blue: BLUE },
     },
 ];
+
+/** Seed of the impact fuzz's stroke sequence (fuzz.test.ts, scripts/impactDigest.ts). */
+export const FUZZ_SEED = 23;
+
+/**
+ * One random stroke inside the fuzz ranges, the widest that raise no impact-cap (pre-flight). A draw that
+ * validateImpact rejects (the head below the turf at a steep pitch) is drawn again; the sequence stays deterministic.
+ */
+export function randomStroke(random: () => number, world: World): { contact: ContactState; balls: BallStates } {
+    const uni = (a: number, b: number): number => a + (b - a) * random();
+    const blue = ballAt(10, 10);
+    for (;;) {
+        const force = random() < 1 / 3 ? 0 : uni(-300, 300);
+        const window = uni(0.5e-3, 5e-3);
+        const speed = uni(0.5, 8);
+        // A checking drive whose impulse takes half the head's momentum may stop it short of the ball: a whiff, which
+        // only the cap ends (design §5). Draw again.
+        if (force < 0 && -force * window >= 0.5 * TEST_HEAD.mass * speed) {
+            continue;
+        }
+        const contact = strike(blue.position, {
+            speed,
+            yaw: uni(-0.3, 0.3),
+            descent: uni(0, 0.5),
+            pitch: uni(-0.2, 0.6),
+            lateral: uni(-0.8, 0.8) * TEST_HEAD.radius,
+            vertical: uni(-0.6, 0.6) * TEST_HEAD.radius,
+            drive: (t) => drive(scale(t, force), window),
+        });
+        const balls: BallStates = { blue };
+        if (random() < 0.5) {
+            const a = uni(-1, 1);
+            balls.red = ballAt(10 + 2 * R * Math.cos(a), 10 + 2 * R * Math.sin(a));
+        }
+        try {
+            validateImpact(contact, balls, world);
+        } catch {
+            continue;
+        }
+        return { contact, balls };
+    }
+}
 
 /** Reflection across the plane y = 0: positions, velocities and forces flip y. */
 export function mirrorVec(v: Vec3): Vec3 {
