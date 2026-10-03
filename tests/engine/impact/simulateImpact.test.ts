@@ -76,6 +76,11 @@ describe("simulateImpact", () => {
             { kind: "impact-head-approaching", t: result.duration, ball: "red" },
         ]);
     });
+
+    it("accepts a face touching the ball", () => {
+        const contact = strike(BLUE.position, { speed: 0, gap: 0, pitch: -0.02, yaw: 0.1, vertical: -0.025 });
+        expect(() => simulateImpact(contact, { blue: BLUE }, WORLD)).not.toThrow();
+    });
 });
 
 describe("validation", () => {

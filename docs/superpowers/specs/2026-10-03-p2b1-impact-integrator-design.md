@@ -41,12 +41,13 @@ changes below.
 
 The plan's "Decisions made in pre-flight" gives the figures.
 
-**Amended 2026-10-03 (real run).** Review of the entry point changed two points:
+**Amended 2026-10-03 (real run).** Review of the entry point changed three points:
 
 - **Handover (§6).** The separation pass repeats until no pair overlaps by more than 1e-12 m (at most 64 passes); one
   pass cannot separate a chain of three balls.
 - **Validation (§3).** The head-penetration check covers the whole head cylinder (faces, rims and barrel), not only
-  the faces.
+  the faces. Validation checks the whole head cylinder with `CONTACT_TOLERANCE`, so a face touching a ball at any
+  orientation is accepted.
 - **Energy invariant (§9.2).** The energy account mixes time levels (pre-step contact depth, post-step states), so it
   is biased by about 0.6% of an undamped contact's energy; `ENERGY_TOLERANCE` is not a rounding-level bound. Carried
   forward: an invariant on the integrator's shadow energy ½k·δₙ₋₁·δₙ.

@@ -9,7 +9,7 @@ import { horizontal, length, sub, vec3, type Vec3 } from "../math/vec3";
 import { BALL_IDS, type BallState, type BallStates, type World } from "../types";
 import { obstaclesOf, validateWorld } from "../world";
 import { lawFromContactTime, lawFromStiffness } from "./contactLaw";
-import { OFF_FACE, faceContact, headLowestPoint } from "./contacts";
+import { headLowestPoint } from "./contacts";
 import { handover } from "./handover";
 import { rotateInverse } from "./rigidBody";
 import { integrate, type ImpactBall, type ImpactOptions, type ImpactSetup } from "./integrate";
@@ -48,8 +48,8 @@ function finite(v: Vec3, name: string): void {
 
 /**
  * Distance (m) from `centre` to the solid head cylinder (axis = body x, half-length L/2, radius r), or 0 inside it.
- * Covers the faces, the rims and the barrel, which `faceContact` alone does not (it misses the barrel and accepts a
- * rim overlap as OFF_FACE).
+ * Covers the faces, the rims and the barrel, which `faceContact` does not (it misses the barrel and accepts a rim
+ * overlap as OFF_FACE).
  */
 function cylinderDistance(contact: ContactState, centre: Vec3): number {
     const p = rotateInverse(contact.orientation, sub(centre, contact.position));
@@ -125,8 +125,8 @@ export function validateImpact(contact: ContactState, balls: BallStates, world: 
                 fail(`balls ${id} and ${other} overlap`);
             }
         }
-        const touch = faceContact(contact, head, p, R);
-        if ((touch !== null && touch !== OFF_FACE) || cylinderDistance(contact, p) < R - CONTACT_TOLERANCE) {
+        // The whole cylinder, with CONTACT_TOLERANCE: a face exactly touching the ball is valid at any orientation.
+        if (cylinderDistance(contact, p) < R - CONTACT_TOLERANCE) {
             fail(`head penetrates ball ${id}`);
         }
     });

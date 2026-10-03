@@ -130,14 +130,17 @@ What P1 delivered, and the constraints it leaves for P2–P5.
   penetration anywhere on the head cylinder (spec, "Amended 2026-10-03 (real run)").
 - **Stiffness sensitivity (for P2b.2).** Each stiffness swept across its reference bounds on the default world
   (`scripts/impactProbe.ts`). For single-ball strokes the hard pairs barely matter and the turf moves lift most. Centre
-  3 m/s: blue 3.7401–3.7411 m/s across every sweep, backspin ωy 0.57–0.64 rad/s. Descending 10°: the turf bounds move
+  3 m/s: blue 3.7401–3.7411 m/s across every sweep, topspin ωy 0.57–0.64 rad/s. Descending 10°: the turf bounds move
   the handover most (blue vx 3.1954–3.2088, vz 0.3241–0.3342 m/s; impact 7.7 ms at 1.0e5 N/m, 5.0 ms at 2.7e5); the
   face bounds move vz 0.3225–0.3299 (reference 0.3251). The hard pairs dominate the croquet split, which is where
   P2b.2 must pin them: blue 0.92–2.29 m/s across the face contact-time bounds (0.60 and 1.20 ms) and 1.12–2.29 m/s
   across the ball–ball bounds (0.87 and 0.50 ms), red 3.37–3.63 m/s, against 1.41 and 3.63 at the reference. The
   stop shot behaves alike (blue 0.86–2.19, red 3.26–3.53 m/s; reference 1.34 and 3.53), and turf stiffness leaves
   both split strokes unmoved (blue within 0.006 m/s). At the 0.60 ms face bound the croquet stroke raises
-  `impact-head-approaching` (the head re-approaches a ball); the cause is not investigated.
+  `impact-head-approaching`. It is a genuine imminent re-contact, correctly flagged per spec §5: after the transfer
+  the head moves at 0.958 m/s and blue at 0.921 m/s, with 0.029 mm between face and blue. At the 0.8 ms reference the
+  head is at 0.702 m/s and blue at 1.409, so there is no flag. Whether a croquet stroke's re-contact should be
+  integrated rather than flagged is P2b.2's decision.
 - **Stop-shot probe (for P2b.2).** With 3° of descent and a 3 ms, 100 N checking drive, blue is not clear of the turf
   while it transfers: its z − R runs −0.065 to −0.040 mm (in its hollow), so 0.0 % of the impulse is delivered clear.
   The contact height on red averages −0.008 mm, at its equator, not above. No flags were raised and the stroke ran its
@@ -154,6 +157,12 @@ What P1 delivered, and the constraints it leaves for P2–P5.
 - **Obstacles in the impact (for P2b.2).** Ball–upright and ball–peg contact is not modelled in the impact, and a ball
   can end the impact overlapping an upright or the peg (or be moved into one by the handover's separation), which
   phase 2 rejects; validation rejects only a ball touching an obstacle at t = 0.
+- **Housekeeping (for P2b.2).**
+  - A face touching a ball with an upward-tilted normal starts compressed by sink·n_z after the static sink, because
+    validation checks balls at z = R and `prepareImpact` then lowers them (measured: head at rest, pitch −0.05 gives
+    δ 1.1e-6 m, the ball launched at 2 mm/s, no flag). Validate against the sunk positions, or flag it.
+  - The `simulateImpact` rejection tests assert only the RangeError type, not which check fired.
+  - Running out of `HANDOVER_PASSES` is silent; phase 2 would throw far from the cause.
 - **Not used yet.** `simulateImpact` is not exported from `src/engine/index.ts`; P2b.2's `simulateShot` wires and
   exports it.
 
