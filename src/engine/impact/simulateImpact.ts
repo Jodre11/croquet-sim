@@ -19,6 +19,12 @@ import type { ContactState, DriveSample, ImpactResult } from "./types";
 /** Tolerance on |q|² − 1 for a ContactState's orientation. Numerical, not physical: a few ulps of a normalised q. */
 const UNIT_TOLERANCE = 1e-12;
 
+/**
+ * Bound on prepareImpact's placement passes over the obstacles. Numerical, not physical: the overlaps left are within
+ * CONTACT_TOLERANCE, so the passes settle in a few; it matches the handover's HANDOVER_PASSES.
+ */
+const PLACEMENT_PASSES = 64;
+
 function fail(message: string): never {
     throw new RangeError(message);
 }
@@ -151,7 +157,10 @@ export function validateImpact(contact: ContactState, balls: BallStates, world: 
  * exactly its weight. Touching balls stay touching, as equal balls on equal turf sink equally. Input must have passed
  * validateImpact. A ball touching an obstacle, which validateImpact accepts within CONTACT_TOLERANCE, is moved
  * horizontally outward until its penetration is at most zero (at most CONTACT_TOLERANCE): a closed pair from t = 0
- * would hold the impact open against turf friction and fake a crush on a legal stroke (P2b.2a design §4).
+ * would hold the impact open against turf friction and fake a crush on a legal stroke (P2b.2a design §4). Correcting
+ * for one obstacle can push the ball back into another, so the ordered pass over the obstacles repeats until a pass
+ * moves nothing, at most PLACEMENT_PASSES times; a ball clear after the first pass is not moved again. Throws an Error
+ * if the passes run out with the ball still penetrating an obstacle.
  */
 export function prepareImpact(contact: ContactState, balls: BallStates, world: World): ImpactSetup {
     const { ball, gravity } = world;
@@ -165,8 +174,19 @@ export function prepareImpact(contact: ContactState, balls: BallStates, world: W
         const surface = world.lawn.surfaceAt(s.position);
         const sink = staticSink(ball, gravity, surface);
         let position = vec3(s.position.x, s.position.y, s.position.z - sink);
-        for (const o of obstacles) {
-            position = outsideObstacle(position, ball.radius, o);
+        let settled = false;
+        for (let pass = 0; pass < PLACEMENT_PASSES && !settled; pass++) {
+            settled = true;
+            for (const o of obstacles) {
+                const next = outsideObstacle(position, ball.radius, o);
+                if (next !== position) {
+                    position = next;
+                    settled = false;
+                }
+            }
+        }
+        if (!settled) {
+            throw new Error(`could not place ball ${id} clear of every obstacle`);
         }
         entries.push({
             id,

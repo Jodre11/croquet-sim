@@ -4,12 +4,12 @@ import { length, sub, vec3 } from "../../../src/engine/math/vec3";
 import { stateAtTime } from "../../../src/engine/sample";
 import { ENGINE_VERSION, simulateFreeMotion } from "../../../src/engine/simulate";
 import type { BallStates, World } from "../../../src/engine/types";
-import { uniformLawn } from "../../../src/engine/world";
+import { obstaclesOf, uniformLawn } from "../../../src/engine/world";
 import { obstacleContact } from "../../../src/engine/impact/contacts";
 import type { ImpactBall } from "../../../src/engine/impact/integrate";
 import { prepareImpact, simulateImpact } from "../../../src/engine/impact/simulateImpact";
 import type { ContactState } from "../../../src/engine/impact/types";
-import { TEST_BALL, TEST_TURF, ballAt, testWorld } from "../support/fixtures";
+import { TEST_BALL, TEST_TURF, ballAt, hoopWithUprightAt, testWorld } from "../support/fixtures";
 import { drive, strike } from "../support/impact";
 
 const R = TEST_BALL.radius;
@@ -307,6 +307,26 @@ describe("a ball touching an obstacle", () => {
         expect(Math.abs(p.x - blue.position.x)).toBeLessThanOrEqual(CONTACT_TOLERANCE);
         expect(p.y).toBe(blue.position.y);
         expect(() => simulateImpact(contact, { blue }, WORLD)).not.toThrow();
+    });
+
+    it("ends clear of every obstacle when it touches the peg and an upright at once", () => {
+        const overlap = 5e-10;
+        const bx = 15 - reach + overlap;
+        // The upright stands 120° round from the peg's direction and overlaps the ball by `overlap` too: the normals
+        // are not parallel, so correcting for one can push the ball back into the other.
+        const gap = R + 0.008 - overlap;
+        const angle = (Math.PI * 2) / 3;
+        const hoop = hoopWithUprightAt("h", bx + gap * Math.cos(angle), 20 + gap * Math.sin(angle));
+        const blue = ballAt(bx, 20);
+        const world = { ...WORLD, hoops: [hoop] };
+        const contact = strike(blue.position, { yaw: Math.PI });
+        const prepared = prepareImpact(contact, { blue }, world);
+        const p = (prepared.balls[0] as ImpactBall).state.position;
+        for (const o of obstaclesOf(world)) {
+            expect(obstacleContact(p, R, o)).toBeNull();
+        }
+        const result = simulateImpact(contact, { blue }, world);
+        expect(() => simulateFreeMotion(result.handover, world)).not.toThrow();
     });
 
     it("accepts a ball touching the peg and another ball", () => {
