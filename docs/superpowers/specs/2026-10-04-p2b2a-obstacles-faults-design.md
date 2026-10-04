@@ -20,6 +20,17 @@ caller and validates its context; 29.1.6.3 is deferred for want of a sourced nor
 only; head re-approach yields a possible 29.1.6.2; the roquet ordering at a shared instant is defined; the digest
 keeps the P2b.1 lines byte-comparable; `peakDepth`, `faceGaps` and a separate obstacle-overlap field are dropped.
 
+**Amended 2026-10-04 (plan).** 29.1.13 tests the croqueted pair's `peakPenetration` against `CONTACT_TOLERANCE`, not
+its force against k·`CONTACT_TOLERANCE`: the impact result carries no laws, and the criterion is the same for the
+spring term. Exemption ties favour the striker (an object hit starting with the roquet is not after it, one starting
+with a mallet contact is not before it); "another object" excludes the roqueted ball (C29.20.4, "something else"); the
+exemption covers every 29.1.6 and 29.1.7 row. `Finding.ball` is the touched ball for 29.1.11 and the croqueted ball for
+29.1.13 (whose `t` is the impact's duration); 29.1.8 and 29.1.9 report one finding per obstacle. `clearanceAfter` is
+the largest d − R from the nearer face plane over the gap's steps, set when the next interval opens. One helper places
+a ball at zero gap for `prepareImpact` and the handover, which gains an `obstacles` parameter. `validateImpact` also
+requires upright and peg restitution in (0, 1]. `laws.json` keys are Law numbers, with 29.1.6 split into its
+sub-clauses. `ballObstacleContactTime`'s bounds are [0.435, 1.5] ms until pre-flight.
+
 ## 1. Goal and exit criteria
 
 Model ball–upright and ball–peg contact in the impact; record when every pair is closed; judge the mallet faults of
