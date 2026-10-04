@@ -128,6 +128,13 @@ describe("validation", () => {
             /ball blue overlaps peg/,
         ],
         [
+            "a ball overlapping the peg just past the contact tolerance",
+            strike(vec3(15 - 0.02 - R + 1.5e-9, 20, R)),
+            { blue: ballAt(15 - 0.02 - R + 1.5e-9, 20) },
+            WORLD,
+            /ball blue overlaps peg/,
+        ],
+        [
             "zero ball–upright restitution",
             ok,
             { blue: BLUE },
