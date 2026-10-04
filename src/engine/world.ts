@@ -50,8 +50,20 @@ export function hoopLateral(hoop: Hoop): Vec3 {
 export function uprightsOf(hoop: Hoop, material: ContactMaterial): readonly [Cylinder, Cylinder] {
     const offset = scale(hoopLateral(hoop), hoopHalfSpan(hoop));
     return [
-        { id: `${hoop.id}/a`, centre: add(hoop.centre, offset), radius: hoop.uprightRadius, material },
-        { id: `${hoop.id}/b`, centre: add(hoop.centre, scale(offset, -1)), radius: hoop.uprightRadius, material },
+        {
+            id: `${hoop.id}/a`,
+            centre: add(hoop.centre, offset),
+            radius: hoop.uprightRadius,
+            material,
+            contactTime: hoop.contactTime,
+        },
+        {
+            id: `${hoop.id}/b`,
+            centre: add(hoop.centre, scale(offset, -1)),
+            radius: hoop.uprightRadius,
+            material,
+            contactTime: hoop.contactTime,
+        },
     ];
 }
 
@@ -123,6 +135,7 @@ export function validateWorld(world: World): void {
     requireMaterial({ restitution: surface.turfRestitution, friction: 0 }, "lawn.turf");
     requirePositive(world.ballBallContactTime, "ballBallContactTime");
     requirePositive(world.peg.radius, "peg.radius");
+    requirePositive(world.peg.contactTime, "peg.contactTime");
     if (!(world.haltMargin >= 0)) {
         throw new RangeError(`haltMargin must be non-negative (got ${world.haltMargin})`);
     }
@@ -130,6 +143,7 @@ export function validateWorld(world: World): void {
         requirePositive(hoop.innerWidth, `hoop ${hoop.id} innerWidth`);
         requirePositive(hoop.uprightRadius, `hoop ${hoop.id} uprightRadius`);
         requirePositive(hoop.crownClearance, `hoop ${hoop.id} crownClearance`);
+        requirePositive(hoop.contactTime, `hoop ${hoop.id} contactTime`);
         if (Math.abs(length(hoop.normal) - 1) > 1e-12 || hoop.normal.z !== 0) {
             throw new RangeError(`hoop ${hoop.id} normal must be a horizontal unit vector`);
         }
@@ -161,6 +175,7 @@ export function defaultWorld(lawnSpeedSeconds: number = lawnReference.defaultSpe
             innerWidth: courtReference.hoopInnerWidth.value,
             uprightRadius,
             crownClearance: courtReference.crownClearance.value,
+            contactTime: contactReference.ballObstacleContactTime.value,
         })),
         peg: {
             id: "peg",
@@ -170,6 +185,7 @@ export function defaultWorld(lawnSpeedSeconds: number = lawnReference.defaultSpe
                 restitution: frictionReference.ballPegRestitution.value,
                 friction: frictionReference.ballPegFriction.value,
             },
+            contactTime: contactReference.ballObstacleContactTime.value,
         },
         ballBall: {
             restitution: frictionReference.ballBallRestitution.value,

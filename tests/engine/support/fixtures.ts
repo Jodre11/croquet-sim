@@ -3,10 +3,10 @@
  * change when the reference data does. (Importing world.ts still loads and validates reference/*.json, so invalid
  * reference data fails every engine test at import.) src/ must never import this file.
  */
-import { ZERO, vec3, type Vec3 } from "../../../src/engine/math/vec3";
+import { ZERO, add, scale, vec3, type Vec3 } from "../../../src/engine/math/vec3";
 import { rollingSpin } from "../../../src/engine/motion";
 import type { BallState, Hoop, World } from "../../../src/engine/types";
-import { STANDARD_GRAVITY, uniformLawn } from "../../../src/engine/world";
+import { STANDARD_GRAVITY, hoopHalfSpan, hoopLateral, uniformLawn } from "../../../src/engine/world";
 
 export const TEST_BALL = { radius: 0.046, mass: 0.454 } as const;
 
@@ -20,7 +20,13 @@ export function testWorld(overrides: Partial<World> = {}): World {
         ball: TEST_BALL,
         lawn: uniformLawn(30, 40, { slidingFriction: 0.3, rollingResistance: 0.05, ...TEST_TURF }),
         hoops: [],
-        peg: { id: "peg", centre: vec3(15, 20, 0), radius: 0.02, material: { restitution: 0.6, friction: 0.1 } },
+        peg: {
+            id: "peg",
+            centre: vec3(15, 20, 0),
+            radius: 0.02,
+            material: { restitution: 0.6, friction: 0.1 },
+            contactTime: 7e-4,
+        },
         ballBall: { restitution: 0.8, friction: 0.05 },
         ballUpright: { restitution: 0.6, friction: 0.1 },
         ballBallContactTime: 7e-4,
@@ -63,5 +69,13 @@ export function testHoop(id: string, x: number, y: number): Hoop {
         innerWidth: 0.0953,
         uprightRadius: 0.008,
         crownClearance: 0.29,
+        contactTime: 7e-4,
     };
+}
+
+/** A test hoop placed so that its upright `<id>/a` stands at (x, y). */
+export function hoopWithUprightAt(id: string, x: number, y: number): Hoop {
+    const hoop = testHoop(id, 0, 0);
+    const centre = add(vec3(x, y, 0), scale(hoopLateral(hoop), -hoopHalfSpan(hoop)));
+    return { ...hoop, centre };
 }

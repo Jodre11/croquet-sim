@@ -12,7 +12,8 @@ import {
     uprightsOf,
     validateWorld,
 } from "../../src/engine/world";
-import { TEST_TURF, testHoop, testWorld } from "./support/fixtures";
+import { contactReference } from "../../src/reference/index";
+import { TEST_TURF, hoopWithUprightAt, testHoop, testWorld } from "./support/fixtures";
 
 describe("rollingResistanceForLawnSpeed", () => {
     it("makes a ball launched at 2D/T roll exactly D in T seconds", () => {
@@ -42,6 +43,18 @@ describe("hoops and obstacles", () => {
         expect(length(sub(a.centre, b.centre)) - 2 * hoop.uprightRadius).toBeCloseTo(hoop.innerWidth, 12);
         expect(a.id).toBe("1/a");
         expect(b.id).toBe("1/b");
+    });
+
+    it("gives both uprights their hoop's impact contact time", () => {
+        const hoop = { ...testHoop("1", 10, 10), contactTime: 1.2e-3 };
+        const [a, b] = uprightsOf(hoop, { restitution: 0.5, friction: 0.1 });
+        expect(a.contactTime).toBe(1.2e-3);
+        expect(b.contactTime).toBe(1.2e-3);
+    });
+
+    it("places a hoop by its first upright", () => {
+        const [a] = uprightsOf(hoopWithUprightAt("1", 7, 8), { restitution: 0.5, friction: 0.1 });
+        expect(length(sub(a.centre, vec3(7, 8, 0)))).toBeLessThan(1e-14);
     });
 
     it("lists uprights in hoop order, then the peg", () => {
@@ -104,6 +117,8 @@ describe("validateWorld", () => {
         ],
         ["non-positive ball–ball contact time", { ballBallContactTime: 0 }],
         ["non-positive crown clearance", { hoops: [{ ...testHoop("1", 5, 5), crownClearance: 0 }] }],
+        ["non-positive hoop contact time", { hoops: [{ ...testHoop("1", 5, 5), contactTime: 0 }] }],
+        ["non-positive peg contact time", { peg: { ...testWorld().peg, contactTime: -1 } }],
     ])("rejects %s", (_label, overrides) => {
         expect(() => validateWorld(testWorld(overrides))).toThrow(RangeError);
     });
@@ -122,6 +137,9 @@ describe("defaultWorld", () => {
         expect(surface.turfRestitution).toBeGreaterThan(0);
         expect(surface.turfStiffness).toBeGreaterThan(0);
         expect(world.ballBallContactTime).toBeGreaterThan(0);
+        const T = contactReference.ballObstacleContactTime.value;
+        expect(world.hoops.every((h) => h.contactTime === T)).toBe(true);
+        expect(world.peg.contactTime).toBe(T);
     });
 
     it("gets slower lawns (fewer seconds) to decelerate balls harder", () => {

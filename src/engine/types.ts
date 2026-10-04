@@ -79,12 +79,16 @@ export interface Lawn {
     surfaceAt(position: Vec3): SurfaceProps;
 }
 
-/** A fixed vertical cylinder: a hoop upright or the peg. */
+/**
+ * A fixed vertical cylinder: a hoop upright or the peg. `contactTime` (s) is the duration of a central strike in the
+ * impact, which with `material.restitution` sets that contact's stiffness; phase 2 ignores it.
+ */
 export interface Cylinder {
     readonly id: string;
     readonly centre: Vec3;
     readonly radius: number;
     readonly material: ContactMaterial;
+    readonly contactTime: number;
 }
 
 /** A hoop: two uprights either side of `centre` along the hoop plane; `normal` is perpendicular to that plane. */
@@ -96,6 +100,11 @@ export interface Hoop {
     readonly uprightRadius: number;
     /** Height (m) of the underside of the crown above the lawn. */
     readonly crownClearance: number;
+    /**
+     * Duration (s) of a central ball–upright strike in the impact, copied to both uprights. Per hoop, so that hoop
+     * setting stiffness can vary hoop by hoop or by lawn.
+     */
+    readonly contactTime: number;
 }
 
 /** A signed-offset threshold ballRadii × R + uprightRadii × r (see reference/README.md). */

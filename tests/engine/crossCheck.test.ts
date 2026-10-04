@@ -20,6 +20,7 @@ function upright(degrees: number): Cylinder {
         centre: vec3(5 + 2 * R + d * Math.cos(angle), 5 + d * Math.sin(angle), 0),
         radius: 0.008,
         material: { restitution: 0.6, friction: 0.1 },
+        contactTime: 7e-4,
     };
 }
 
