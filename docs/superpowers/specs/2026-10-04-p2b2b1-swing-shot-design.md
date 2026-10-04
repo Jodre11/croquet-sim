@@ -317,7 +317,7 @@ measured and never tuned to one.
 | single-ball | 0 | 0 | 1 | 20 | 0 | 0 | 10 |
 | drive | 0 | 0 | 1 | 20 | 0 | 0 | 5 |
 | stop-ac | 0.14 | −4 | 0.1 | 20 | 0 | 0 | 5 |
-| stop-gc | 0.14 | −4 | 1 | 60 | 0 | 0 | 10 |
+| stop-gc | 0 | 0 | 1 | 60 | 0 | 0 | 10 |
 | half-roll | −0.05 | 25 | 1 | 10 | 0.2 | 5 | 20 |
 | full-roll | −0.07 | 35 | 1 | 5 | 0.3 | 8 | 30 |
 | pass-roll | −0.08 | 40 | 1 | 60 | 0.4 | 10 | 15 |
@@ -326,17 +326,19 @@ The two stops follow the user's account of play (2026-10-04). **AC stop:** the f
 ball is met slightly on the up (positive `ballAhead`, about 10° of rise at r ≈ 0.8 m), amplified by tilting the face up
 (negative `shaftLean`, which also lowers the head's rear rim); the hands relax on contact, so the head sags and its
 base rubs the turf, braking it and cancelling the follow-through. **GC stop:** the lower hand grips lower and actively
-stops the swing just after contact (a check, `drive` −1 at the planner's default). **Power rolls:** the body's weight
+stops the swing just after contact (a check, `drive` −1 at the planner's default); it is not deliberately played on
+the up, but is a hard, level shot with no follow-through, so the striker's ball reaches the croqueted ball without
+spin, like a stun in snooker. **Power rolls:** the body's weight
 moves from back to front, keeping the face tilted while pushing forward (the rolls' `bodySpeed` and `bodyAccel`).
 **Pass roll:** the balls are slightly offset (a split shot: the planner's `aim` off the line of centres) and the bottom
 hand punches in contact, imparting additional force to the striker's ball (the pass roll's large `aMax` over a short
 `window`, on top of the body's push). The punch reaches the head at once through the feed-forward m·a_p (§3.3), so the
 coupling's long period does not blunt it, and §3.4's criterion, which excludes the feed-forward, does not limit it.
 
-**Open for P2b.2b.2.** Both stops are rising strikes, so stop-shot lift can be expected of both, as the feasibility
-spike found for rising strikes; whether the GC stop is also played on the up is unconfirmed (its `ballAhead` is the
-spike's). Which stop is the calibration target is P2b.2b.2's decision; this phase shows each stop's braking
-mechanism (§8.1).
+**Open for P2b.2b.2.** The AC stop is a rising strike, so stop-shot lift can be expected of it, as the feasibility
+spike found for rising strikes. The GC stop is level, and the spike found level strikes never lift the striker's ball,
+so its ratio must come from the check alone; the roadmap's stop-shot-lift criterion applies to the AC stop. Which stop
+is the calibration target is P2b.2b.2's decision; this phase shows each stop's braking mechanism (§8.1).
 
 ## 6. `simulateShot` and the fault judge
 
