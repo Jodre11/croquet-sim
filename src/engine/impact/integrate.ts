@@ -21,8 +21,13 @@
  * Every step also records whether each pair is in contact (closed, or a face at the rim), building the contact
  * timeline (timeline.ts; P2b.2a design §5); the pairs touching at t = 0 are listed in `touchingAtStart`. Recording
  * only reads the state.
+ *
+ * A ball–obstacle pair is skipped while the ball cannot yet have reached the obstacle: each ball's horizontal path
+ * length is summed, and a pair found open is not evaluated again until the ball has travelled its gap (less
+ * WAKE_MARGIN). The filter is exact: a skipped pair is open, so evaluating it would add no force and change no state,
+ * and the pairs evaluated are visited, and their forces summed, in the same order.
  */
-import { ZERO, add, cross, dot, scale, sub, vec3, type Vec3 } from "../math/vec3";
+import { ZERO, add, cross, dot, horizontal, length, scale, sub, vec3, type Vec3 } from "../math/vec3";
 import type { BallId, BallParams, BallState, BallStates } from "../types";
 import { normalForce, tangentialForce, type PairLaw } from "./contactLaw";
 import {
@@ -30,6 +35,7 @@ import {
     faceClearance,
     headClosing,
     headLowestPoint,
+    obstacleGap,
     pairContact,
     pairList,
     pairTouching,
@@ -63,6 +69,15 @@ export const RELEASE_STEPS = 50;
  */
 export const IMPACT_CAP = 0.06;
 
+/**
+ * Slack (m) subtracted from a ball–obstacle pair's gap before it is skipped (see the file header). Numerical, not
+ * physical: it covers the drift between a ball's summed path length and its rounded position updates. A step rounds
+ * each horizontal coordinate by at most half an ulp (about 2e-15 m on a full-size lawn), so the ball's distance from
+ * an obstacle by at most √2 times that. At the default IMPACT_DT and IMPACT_CAP (12,000 steps) the drift stays under
+ * 1e-10 m; a test's finer step, on coordinates under 1 m, drifts less.
+ */
+const WAKE_MARGIN = 1e-9;
+
 /** A ball entering the integrator: its state and its turf law (null: no turf under it, for isolated test cases). */
 export interface ImpactBall {
     readonly id: BallId;
@@ -86,7 +101,10 @@ export interface ImpactSetup {
     readonly gravity: number;
     /** In BALL_IDS order. */
     readonly balls: readonly ImpactBall[];
-    /** Hoop uprights, then the peg (obstaclesOf order); every ball is paired with each. */
+    /**
+     * Hoop uprights, then the peg (obstaclesOf order); every ball is paired with each; pairs a ball cannot yet reach
+     * are skipped.
+     */
     readonly obstacles: readonly ImpactObstacle[];
 }
 
@@ -149,6 +167,8 @@ interface PairState {
     peak: number;
     /** The pair's contact timeline. */
     readonly line: PairTimeline;
+    /** A ball–obstacle pair is skipped while ball B's path length is below this (m); 0 for every other pair. */
+    wakeAt: number;
 }
 
 function lawOf(setup: ImpactSetup, pair: Pair): PairLaw {
@@ -238,11 +258,13 @@ function applyPair(
 
 /**
  * One semi-implicit Euler step of every body under `loads`: velocities from the forces, then positions (and the head's
- * orientation) from the new velocities. Returns the head's new state and replaces each ball's in `balls`.
+ * orientation) from the new velocities. Returns the head's new state, replaces each ball's in `balls` and adds each
+ * ball's horizontal path length this step to `travel`.
  */
 function advance(
     state: HeadState,
     balls: BallState[],
+    travel: number[],
     loads: StepLoads,
     setup: ImpactSetup,
     ballInertia: number,
@@ -259,6 +281,9 @@ function advance(
         const v = add(s.velocity, scale(loads.forces[i] as Vec3, dt / ball.mass));
         const w = add(s.angularVelocity, scale(loads.torques[i] as Vec3, dt / ballInertia));
         balls[i] = { position: add(s.position, scale(v, dt)), velocity: v, angularVelocity: w };
+        // Horizontal speed suffices, and wakes no pair early for a ball bouncing in the turf: an obstacle is a vertical
+        // cylinder, its gap horizontal.
+        travel[i] = (travel[i] as number) + length(horizontal(v)) * dt;
     }
     return {
         position: add(state.position, scale(velocity, dt)),
@@ -368,8 +393,10 @@ export function integrate(setup: ImpactSetup, options: ImpactOptions = {}): Impa
         spring: ZERO,
         peak: 0,
         line: emptyTimeline(),
+        wakeAt: 0,
     }));
     const balls: BallState[] = setup.balls.map((b) => b.state);
+    const travel = balls.map(() => 0);
     const touchingAtStart = pairs.filter((p) => pairTouching(p.pair, balls, R, setup.obstacles)).map((p) => p.pair.key);
     const events: ImpactEvent[] = [];
     const track: TurfTrack = {
@@ -397,9 +424,22 @@ export function integrate(setup: ImpactSetup, options: ImpactOptions = {}): Impa
 
         for (const p of pairs) {
             const { pair } = p;
+            // A skipped pair was open when last evaluated: its spring is already ZERO and it has no open interval, so
+            // evaluating it would change nothing.
+            if (pair.kind === "ball-obstacle" && (travel[pair.b] as number) < p.wakeAt) {
+                continue;
+            }
             const contact = pairContact(pair, state, head, balls, R, setup.obstacles);
             if (contact === OFF_FACE || contact === null) {
                 p.spring = ZERO;
+                if (pair.kind === "ball-obstacle") {
+                    const gap = obstacleGap(
+                        (balls[pair.b] as BallState).position,
+                        R,
+                        setup.obstacles[pair.a] as ImpactObstacle,
+                    );
+                    p.wakeAt = (travel[pair.b] as number) + gap - WAKE_MARGIN;
+                }
                 if (contact === OFF_FACE && !offFace[pair.b]) {
                     offFace[pair.b] = true;
                     events.push({ kind: "impact-off-face", t, ball: ids[pair.b] as BallId });
@@ -421,7 +461,7 @@ export function integrate(setup: ImpactSetup, options: ImpactOptions = {}): Impa
             recordStep(p.line, true, force, t);
         }
 
-        state = advance(state, balls, loads, setup, ballInertia, dt);
+        state = advance(state, balls, travel, loads, setup, ballInertia, dt);
         steps++;
         const now = steps * dt;
         const turfMoving = trackTurf(balls, setup, track, now, events);

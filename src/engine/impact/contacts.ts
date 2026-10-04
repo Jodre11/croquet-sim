@@ -182,6 +182,14 @@ export function obstacleContact(centre: Vec3, radius: number, obstacle: Obstacle
 }
 
 /**
+ * Horizontal surface gap (m) between `obstacle` and a ball centred at `centre`, d − R − r: the negated penetration
+ * obstacleContact computes, rounded identically, so the pair is closed exactly where the gap is negative.
+ */
+export function obstacleGap(centre: Vec3, radius: number, obstacle: ObstacleGeometry): number {
+    return 0 - (radius + obstacle.radius - length(horizontal(sub(centre, obstacle.centre))));
+}
+
+/**
  * Bound on outsideObstacle's corrections. Numerical, not physical. Each correction lengthens the target distance by
  * step = ε·(max(|x|, |y|) of the obstacle's centre + R + r), at least an ulp of every rebuilt coordinate. The
  * rounding of the rebuilt centre is under one step, apart from a few ulps of R + r (from f, offset·f, the squared sum

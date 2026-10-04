@@ -11,6 +11,7 @@ import {
     headClosing,
     headLowestPoint,
     obstacleContact,
+    obstacleGap,
     obstacleKey,
     outsideObstacle,
     pairContact,
@@ -71,6 +72,27 @@ describe("obstacleContact", () => {
 
     it("rejects a centre on the axis, which has no normal", () => {
         expect(() => obstacleContact(vec3(1, 2, R), R, POST)).toThrow(RangeError);
+    });
+});
+
+describe("obstacleGap", () => {
+    it("is the horizontal surface gap: positive apart, zero at R + r, negative overlapping", () => {
+        expect(obstacleGap(vec3(1 - R - 0.008 - 0.3, 2, 0.4), R, POST)).toBeCloseTo(0.3, 14);
+        expect(Math.abs(obstacleGap(vec3(1, 2 + R + 0.008, R), R, POST))).toBeLessThan(1e-15);
+        expect(obstacleGap(vec3(1 - R - 0.008 + 1e-4, 2, R), R, POST)).toBeCloseTo(-1e-4, 15);
+    });
+
+    it("is negative exactly where obstacleContact closes", () => {
+        const points = [
+            vec3(1 - R - 0.008 + 1e-4, 2, 0.3),
+            vec3(1, 2 + R + 0.008 + 1e-12, R),
+            vec3(1, 2 + R + 0.008 - 1e-12, R),
+            vec3(1.03, 2.04, R),
+            vec3(1.5, 1.5, R),
+        ];
+        for (const p of points) {
+            expect(obstacleGap(p, R, POST) < 0, `${p.x}, ${p.y}`).toBe(obstacleContact(p, R, POST) !== null);
+        }
     });
 });
 

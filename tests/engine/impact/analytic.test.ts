@@ -211,6 +211,23 @@ describe("a ball against a fixed obstacle", () => {
         expect(Math.abs((run.balls.blue?.velocity.x as number) + e) / e).toBeLessThan(LAW_TOLERANCE);
     });
 
+    it("from 10 mm away, past the reach filter: the same contact time, restitution and a single interval", () => {
+        const e = 0.6;
+        const T = 7e-4;
+        const probe = counter("blue@post");
+        // 100,000 steps of approach, nearly all of them with the pair skipped as out of reach.
+        const run = integrate(
+            isolated({
+                obstacles: [post(lawFromContactTime(M, e, T, 0))],
+                balls: [freeBall("blue", vec3(-(R + 0.008 + 0.01), 0, 1), vec3(1, 0, 0))],
+            }),
+            { dt: FINE, cap: 0.012, probe },
+        );
+        expect(Math.abs(probe.closed * FINE - T) / T).toBeLessThan(LAW_TOLERANCE);
+        expect(Math.abs((run.balls.blue?.velocity.x as number) + e) / e).toBeLessThan(LAW_TOLERANCE);
+        expect(run.timeline["blue@post"]).toHaveLength(1);
+    });
+
     /**
      * A ball meeting a 10 m cylinder (its normal turns by about 1.4e-4 rad during the contact) at 1 m/s along the
      * normal and `vt` across it. Returns the velocity changes along (negative) and across the normal, and the spin.
