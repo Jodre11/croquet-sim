@@ -209,7 +209,7 @@ threshold is invented (decided 2026-10-04; judging as a real-world referee perce
 | 29.1.8 (crush) | `face/<striker>` and a `<striker>@<obstacle>` interval overlap in time | fault |
 | 29.1.9 | The striker's ball touches an obstacle at t = 0, and that pair's interval carries force (`peakForce` > 0) while overlapping a `face/<striker>` interval: the obstacle contributed to the ball's direction (C29.14.1). A touching ball starts at zero gap (§4), so a stroke away from the obstacle never closes the pair | fault |
 | 29.1.11 | A `face/<ball>` interval on any ball but the striker's | fault |
-| 29.1.13 | Croquet stroke: the striker–croqueted pair's `peakForce` never exceeds the force of a `CONTACT_TOLERANCE` penetration (k·`CONTACT_TOLERANCE`, numerical, not perceptual), so a touching start that rounding leaves overlapping does not count as moving the croqueted ball | fault |
+| 29.1.13 | Croquet stroke: the striker–croqueted pair's `peakPenetration` never exceeds `CONTACT_TOLERANCE` (numerical, not perceptual), so a touching start that rounding leaves overlapping does not count as moving the croqueted ball | fault |
 | 29.1.6.2 | Single-ball stroke: two or more non-exempt `face/<striker>` intervals | fault |
 | 29.1.6.2 | Single-ball stroke: `impact-head-approaching` on the striker's ball, the head still closing when the impact ended (a second contact the impact did not integrate) | possible-fault |
 | 29.1.7 | The striker's ball first closes on a ball it was not touching at t = 0 while a `face/<striker>` interval is open, and that ball is not live; contact on a live ball is a roquet, exempt (C29.12.1). A croquet stroke's croqueted ball never counts (C29.12.3) | possible-fault (29.2.7) |
