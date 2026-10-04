@@ -160,7 +160,7 @@ export function validateImpact(contact: ContactState, balls: BallStates, world: 
  * would hold the impact open against turf friction and fake a crush on a legal stroke (P2b.2a design §4). Correcting
  * for one obstacle can push the ball back into another, so the ordered pass over the obstacles repeats until a pass
  * moves nothing, at most PLACEMENT_PASSES times; a ball clear after the first pass is not moved again. Throws an Error
- * if the passes run out with the ball still penetrating an obstacle.
+ * if the last pass still moved a ball, i.e. the placement did not settle.
  */
 export function prepareImpact(contact: ContactState, balls: BallStates, world: World): ImpactSetup {
     const { ball, gravity } = world;
@@ -186,7 +186,7 @@ export function prepareImpact(contact: ContactState, balls: BallStates, world: W
             }
         }
         if (!settled) {
-            throw new Error(`could not place ball ${id} clear of every obstacle`);
+            throw new Error(`placing ball ${id} clear of the obstacles did not settle in ${PLACEMENT_PASSES} passes`);
         }
         entries.push({
             id,
