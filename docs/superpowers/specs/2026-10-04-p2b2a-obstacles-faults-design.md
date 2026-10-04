@@ -31,6 +31,15 @@ a ball at zero gap for `prepareImpact` and the handover, which gains an `obstacl
 requires upright and peg restitution in (0, 1]. `laws.json` keys are Law numbers, with 29.1.6 split into its
 sub-clauses. `ballObstacleContactTime`'s bounds are [0.435, 1.5] ms until pre-flight.
 
+**Amended 2026-10-04 (pre-flight).** Pairing every ball with every obstacle cost 1.61–1.88× P2b.1's time per step on
+the default world, so a reach filter skips a ball–obstacle pair while the ball cannot yet reach the obstacle: a
+per-pair travel budget, exact by construction and confirmed bit for bit (user decision; §4). `ballObstacleContactTime`'s
+upper bound is 1.0 ms, the largest for which the obstacle fuzz keeps penetrations under its bound with a margin (§4,
+§8). A dead ball's hit is exempt from 29.1.7 only when the mallet contact, the roquet and the hit start together (§7).
+The crush distance is recorded at about 1.1 mm per m/s of head speed, beyond the commentary's 1–2 mm above about
+1 m/s (§1, §9.7). No face–ball gap is one step (§5). The fuzz reaches, the penetration bound and the analytic
+tolerances are measured; `outsideObstacle`'s correction step now grows with the coordinates' rounding (§10).
+
 ## 1. Goal and exit criteria
 
 Model ball–upright and ball–peg contact in the impact; record when every pair is closed; judge the mallet faults of
@@ -50,7 +59,8 @@ Exit criteria:
    (ORLAC C29.20.4.1–5) pass as table tests; a croquet-stroke re-contact is never a `fault`.
 5. Crush geometry (§9.7): a ball 1 mm from an upright, struck straight at it, raises 29.1.8; one well beyond the
    contact distance does not. The distance at which it stops is recorded (not gated) against the commentary's
-   1–2 mm (C29.13.1).
+   1–2 mm (C29.13.1). Pre-flight recorded 1.088, 2.188, 3.261, 4.365 and 6.549 mm at 1, 2, 3, 4 and 6 m/s: about
+   1.1 mm per m/s, so it falls within the commentary's 1–2 mm only up to about 1 m/s (§9.7).
 
 ## 2. Approach
 
@@ -132,8 +142,17 @@ stroke's two touching balls alone are not a group.
 **Pair.** A new kind `ball-obstacle`, after `ball-turf` in the fixed order, balls in `BALL_IDS` order and obstacles
 in `obstaclesOf` order (uprights in hoop order, then the peg). Every ball is paired with every obstacle: a pair that
 never closes adds no force (below), and present balls × (2·hoops + 1) pairs is a small list, which validation already
-walks per ball. Pre-flight measures the per-step cost (§10); a reach filter is added only if that cost proves real.
-Key: `"<ball>@<obstacle id>"`.
+walks per ball. Key: `"<ball>@<obstacle id>"`.
+
+**Reach filter.** Pre-flight measured the cost of evaluating every pair every step at 1.61–1.88× P2b.1's time per
+step on the default world (12 uprights and the peg): the per-pair loop for pairs that never close. So a ball–obstacle
+pair is skipped while the ball cannot yet have reached the obstacle (decided 2026-10-04). Each ball's horizontal path
+length in the impact is summed (Σ|v_h|·dt); a pair found open is not evaluated again until the ball has travelled the
+gap it had then, less a numerical margin of 1e-9 m that covers rounding drift. The horizontal distance cannot shrink
+by more than the path travelled, so a skipped pair is open: evaluating it would add no force and change no state, and
+the pairs evaluated are visited, and their forces summed, in the same order. The filter is therefore exact by
+construction, with no assumed speed bound; pre-flight confirmed it bit for bit (the whole digest, timeline included,
+and every obstacle-fuzz result). It brings the cost to 1.04–1.33× P2b.1's.
 
 **A touching ball starts at zero gap.** Validation accepts a ball within `CONTACT_TOLERANCE` of an obstacle (§6), and
 rounding can leave such a ball overlapping it by up to that tolerance. `prepareImpact` therefore moves a ball whose gap
@@ -158,9 +177,12 @@ its own T, so a later version can vary a hoop's setting stiffness hoop by hoop, 
 
 **Default contact time.** `World.ballBallContactTime` (0.75 ms). For the linear law a ball on an immovable body has
 the same natural frequency as two balls meeting: the ball–ball pair has half the stiffness (two balls in series) and
-half the effective mass. Provenance: derived, analogue. Bounds (§8) widen below to the Hertzian rigid-flat case
-(T × 2^(−1/5) ≈ 0.87·T: half the reduced mass and radius in the ball–ball case) and above for an upright's give in the
-turf, which the rigid model omits.
+half the effective mass. Provenance: derived, analogue. Bounds (§8) are [0.435, 1.0] ms. Below, the Hertzian
+rigid-flat case (T × 2^(−1/5) ≈ 0.87·T: half the reduced mass and radius in the ball–ball case) applied to the ball–ball
+lower bound, 0.5 ms. Above, an allowance for an upright's give in the turf, which the rigid model omits and no source
+quantifies: the largest contact time for which the obstacle fuzz keeps every obstacle penetration under its bound
+(0.06·R), with a margin. Pre-flight: penetration grows about 2.5 mm per ms of contact time; 1.0 ms gives 0.055·R,
+1.1 ms 0.0597·R and 1.5 ms 0.081·R.
 
 **Bit-identity.** A pair that never closes touches no force or torque sum, and the obstacle pairs follow every
 existing pair in the summation order, so a setup whose balls never meet an obstacle integrates exactly as in P2b.1
@@ -177,10 +199,10 @@ or, for a face–ball pair, `OFF_FACE` (the ball at the face's rim): the Laws co
 interval keeps its largest normal force (0 for a pair in contact geometrically but released, P2b.1 §4, or at the
 rim). For face–ball pairs, each gap keeps its largest separation along the face normal (`clearanceAfter`), which the
 face geometry computes anyway. No minimum gap applies: any step out of contact separates two intervals, as the Laws
-count any second contact. Pre-flight records the shortest face–ball gap in single clean strikes; a one-step gap there
-would be numerical chatter, and the spec is revisited if it occurs. Cost: an array push per transition and a
-comparison per pair in contact per step. Turf pairs are recorded like the rest; P2b.2b's stop-shot-lift criterion
-reads them.
+count any second contact. A one-step gap in single clean strikes would be numerical chatter; pre-flight found none:
+in 978 single strikes of the P2b.1 fuzz, 3 had more than one face interval, and the shortest gap was 2,990 µs. Cost:
+an array push per transition and a comparison per pair in contact per step. Turf pairs are recorded like the rest;
+P2b.2b's stop-shot-lift criterion reads them.
 
 ## 6. Validation and handover
 
@@ -224,6 +246,13 @@ from the impact's timeline) is exempt from 29.1.6 and 29.1.7, unless the striker
 that roquet and before the contact (the last sentence of 29.2.4). The objects are hoops, the peg or another ball
 (C29.20.4); C29.20.4.1–5 are the tests. Contact with a dead ball is not a roquet (C29.11.7).
 
+For 29.1.7, the dead ball's hit is exempt only if the mallet contact it falls in is exempt at that contact's own start,
+and the hit does not start after the roquet: the mallet contact, the roquet and the dead-ball hit all start together.
+A mallet contact already open when the roquet starts is before the roquet (below), so a dead ball hit during it is a
+possible fault; and a hit after the roquet is contact after the ball has hit another object, which the last sentence
+of 29.2.4 excludes (decided in pre-flight). If this is wrong, a few legal scatter shots beside a live ball are flagged,
+at the possible-fault tier.
+
 Ordering at a shared instant: a `face/<striker>` interval is a contact *before* the roquet if it starts before the
 roquet's interval starts, and *after* it if it starts at or after. An interval already open when the roquet starts is
 one contact, before the roquet, and is not re-counted; C29.20.4.1–5 order whole contacts the same way. The exemption
@@ -247,7 +276,7 @@ Each value in the existing `reference/*.json` form (value, unit, bounds, source,
 
 | File · value | Source | Note |
 |---|---|---|
-| `contact.json` · `ballObstacleContactTime` | Derived from `ballBallContactTime` (§4) | Analogue; no measurement exists. Oxford Croquet's "Measuring Hoop Rigidity" (oxfordcroquet.org/tech/rigidity/) proposes methods and reports no data; Rod Cross's high-speed experiments (tech/cross1/) cover ball–ball and mallet–ball only. Bounds: 0.87× the ball–ball lower bound to a wider upper bound for hoop give, set by pre-flight |
+| `contact.json` · `ballObstacleContactTime` | Derived from `ballBallContactTime` (§4) | Analogue; no measurement exists. Oxford Croquet's "Measuring Hoop Rigidity" (oxfordcroquet.org/tech/rigidity/) proposes methods and reports no data; Rod Cross's high-speed experiments (tech/cross1/) cover ball–ball and mallet–ball only. Bounds [0.435, 1.0] ms: 0.87× the ball–ball lower bound to an allowance for hoop give, the largest the obstacle fuzz passes with a margin (pre-flight; §4) |
 | `laws.json` · 29.1.5–29.1.9, 29.1.11, 29.1.13, 29.2.3–29.2.7, Glossary "Group of balls" | WCF AC Laws 7th edition with ORLAC | Verbatim text; C29.10–C29.14 and C29.20 cited where the judge relies on them |
 
 `defaultWorld` gives every hoop and the peg `ballObstacleContactTime`.
@@ -269,7 +298,11 @@ Each value in the existing `reference/*.json` form (value, unit, bounds, source,
    of centres raises 29.1.6.2 or 29.1.7 (C29.12.2); a legal stroke directly away from an upright the ball touches
    raises neither 29.1.8 nor 29.1.9; a ball at rest against an upright, never struck, does not hold the impact to
    `IMPACT_CAP`; each context error of §3 throws.
-7. **Crush geometry:** exit criterion 5.
+7. **Crush geometry:** exit criterion 5. A ball 20 mm from the upright never reaches it within the impact; one 5 mm
+   away reaches it after the mallet contact and raises no 29.1.8. The crush distance stays recorded, not gated; it
+   falls within the commentary's 1–2 mm only up to about 1 m/s (pre-flight: 1.088 mm at 1 m/s up to 6.549 mm at
+   6 m/s, about 1.1 mm per m/s). The impact's rigid, linear face contact (0.8 ms) is shorter
+   than a real one, which the commentary says travels up to about 1 cm in contact.
 8. **Obstacle fuzz:** random strokes as P2b.1's fuzz, with uprights and the peg within reach of the balls: no hang, no
    `impact-cap`, peak penetrations under the bound, handover accepted by phase 2.
 
@@ -279,6 +312,16 @@ As for P2b.1: the plan is executed literally in a scratch worktree first, to fix
 obstacle penetration bound and the obstacle fuzz ranges; to measure the per-step cost of pairing every ball with every
 obstacle (§4); to record the shortest face–ball gap in single clean strikes (§5); and to record the crush distance.
 Findings are folded into this document and the plan before the real run.
+
+Pre-flight ran on 2026-10-04, from the plan's base, and every task passed review. Its results: the contact-time bounds
+are [0.435, 1.0] ms (§4); the obstacle penetration bound is 0.06·R, 1.5× the worst measured (1.745 mm = 0.038·R); the
+fuzz reaches stay 0.06 m (upright) and 0.1 m (peg), since every reach tried passes and wider ones only dilute the
+17.45 % of strokes that meet an obstacle; the cost of every obstacle pair led to the reach filter (§4); no face–ball
+gap is one step (§5); the crush distance is about 1.1 mm per m/s (§9.7). It also found a defect in the plan's
+zero-gap helper: its correction grew by an ulp of the reach, which cannot outgrow the rounding of 10 m coordinates,
+and it threw on a fuzz stroke at the lower contact-time bound. The correction now grows by an ulp of the coordinates.
+The rest were plan defects (test expectations, a non-exhaustive switch, a misquoted commentary sentence), and the
+29.1.7 exemption rule (§7).
 
 `ENGINE_VERSION` moves to 0.5.0: inputs rejected before now simulate, and `ImpactResult` gains the timeline.
 
