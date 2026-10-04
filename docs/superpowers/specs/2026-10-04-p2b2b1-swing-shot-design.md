@@ -66,9 +66,13 @@ type Drive =
     | { readonly kind: "force"; readonly samples: readonly DriveSample[] }
     | { readonly kind: "track"; readonly arc: SwingArc; readonly coupling: Coupling };
 
-/** The path the hands drive the socket along: a pendulum arc about a fixed pivot in a vertical plane. */
+/**
+ * The path the hands drive the socket along: a pendulum arc in a vertical plane about a pivot that may itself move in
+ * that plane (the body's weight moving from back to front).
+ */
 interface SwingArc {
-    readonly pivot: Vec3;            // the top hand, world frame
+    readonly pivot: Vec3;            // the top hand at t = 0, world frame
+    readonly pivotVelocity: Vec3;    // at t = 0, in the swing plane (no component along n)
     readonly aim: Vec3;              // unit, horizontal: the swing plane's forward direction
     readonly radius: number;         // pivot to socket, m
     readonly theta0: number;         // arc angle at t = 0, rad, from the lowest point, positive forward
@@ -77,27 +81,40 @@ interface SwingArc {
     readonly shaftToHead: Quaternion; // the head's orientation relative to the shaft frame
 }
 
-/** Constant arc acceleration (rad/s²) until `until` (s); the last phase runs on past its `until`. */
-interface ArcPhase { readonly until: number; readonly alpha: number }
+/**
+ * Constant arc acceleration (rad/s²) and pivot acceleration (m/s², in the swing plane) until `until` (s); the last
+ * phase runs on past its `until`.
+ */
+interface ArcPhase { readonly until: number; readonly alpha: number; readonly pivotAcceleration: Vec3 }
 
-/** The hands' grip on the head: natural periods (s) and damping ratios, linear and angular. */
+/**
+ * The hands' grip on the head: natural periods (s) and damping ratios, linear and angular, of a firm grip, and the
+ * grip's tension in (0, 1] (1 firm; lower is relaxed, §3.3).
+ */
 interface Coupling {
     readonly period: number;
     readonly dampingRatio: number;
     readonly angularPeriod: number;
     readonly angularDampingRatio: number;
+    readonly tension: number;
 }
 ```
+
+The arc and the pivot's motion are what the body does to the hands' path (shoulders, arms, weight transfer, to first
+order); the coupling is how loosely the hands hold the head on it. Together they deform the head's actual path away
+from a plain circle: a power roll moves the pivot forward with the arc angle nearly constant, so the face's tilt is
+held while the head is pushed; an AC stop relaxes the grip, so the head sags onto the turf and its rear rim drags.
 
 ### 3.2 The path
 
 θ(t) is piecewise quadratic: θ = θₖ + ωₖ·(t − tₖ) + ½·αₖ·(t − tₖ)² in phase k, which starts at tₖ (t₀ = 0, then
-each preceding `until`). θₖ and ωₖ are computed once, in `prepareImpact`, so θ and ω are continuous by construction.
+each preceding `until`). The pivot P(t) is piecewise quadratic alike, with velocity V(t) and acceleration Aₖ. θₖ, ωₖ,
+Pₖ and Vₖ are computed once, in `prepareImpact`, so θ, ω, P and V are continuous by construction.
 
 With n = aim × ẑ (the pitch axis) and the shaft frame's forward axis along aim at θ = 0:
 
-- socket target p = pivot + r·(sin θ·aim − cos θ·ẑ), velocity v_p = r·ω·(cos θ·aim + sin θ·ẑ), acceleration
-  a_p = r·α·(cos θ·aim + sin θ·ẑ) + r·ω²·(cos θ·ẑ − sin θ·aim);
+- socket target p = P + r·(sin θ·aim − cos θ·ẑ), velocity v_p = V + r·ω·(cos θ·aim + sin θ·ẑ), acceleration
+  a_p = Aₖ + r·α·(cos θ·aim + sin θ·ẑ) + r·ω²·(cos θ·ẑ − sin θ·aim);
 - orientation target q_path = rot(n, θ) ⊗ q_aim ⊗ `shaftToHead`, where q_aim turns the body x axis to aim; angular
   velocity ω_path = ω·n; angular acceleration α_path = α·n.
 
@@ -108,15 +125,17 @@ Each step evaluates `sinCos(θ)` and `sinCos(θ/2)`.
 Each step, in place of `driveAt`, the hands apply a force F at the socket and a couple τ_h:
 
 - F = F_ff + k·(p − s) + c·(v_p − v_s), where s and v_s are the socket's world position and velocity;
-  k = m·(2π/T)², c = 2ζ·√(k·m);
+  k = γ·m·(2π/T)², c = 2ζ·√(k·m), γ the grip's `tension`;
 - τ_h = τ_ff + K_θ·θ_err + C_θ·(ω_path − ω), applied per principal axis in the body frame with
-  K_θ,i = I_i·(2π/T_θ)², C_θ,i = 2ζ_θ·√(K_θ,i·I_i); θ_err = 2·sign(w)·vec(q_path ⊗ q̄), w the product's scalar part;
-- feed-forward: F_ff = m·g·ẑ + m·a_p, τ_ff = I·α_path (body frame).
+  K_θ,i = γ·I_i·(2π/T_θ)², C_θ,i = 2ζ_θ·√(K_θ,i·I_i); θ_err = 2·sign(w)·vec(q_path ⊗ q̄), w the product's scalar part;
+- feed-forward: F_ff = γ·m·g·ẑ + m·a_p, τ_ff = I·α_path (body frame), g gravity.
 
-The head's torque is r_s × F + τ_h, as the force-table drive's socket force contributes r_s × F today. The
-feed-forward makes the hands carry the head's weight and drive the nominal swing, so a head started on the path
-follows it with no sag or lag beyond the residual of the socket–centre-of-mass offset (bounded by §8.1); the spring
-and damper act only on what the balls and the turf do to the head.
+The head's torque is r_s × F + τ_h, as the force-table drive's socket force contributes r_s × F today. With a firm
+grip (γ = 1) the feed-forward makes the hands carry the head's weight and drive the nominal swing, so a head started
+on the path follows it with no sag or lag beyond the residual of the socket–centre-of-mass offset (bounded by §8.1);
+the spring and damper act only on what the balls and the turf do to the head. A relaxed grip (γ < 1) holds the head
+more softly and carries only γ of its weight, while still driving its swing: the head sags towards the turf by about
+(1 − γ)·m·g/k and the turf and balls deflect it further, which is the deformed path of §3.1.
 
 ### 3.4 The provisional coupling
 
@@ -125,10 +144,10 @@ not the hands') yet transmit the hands' force over a 30–58 ms roll push. A 5 m
 1.0 kg head, critically damped, c ≈ 2,500 N·s/m, so a 1.7 m/s slowdown in the strike draws about 4 kN of hand force,
 comparable to the 3.7 kN peak face force.
 
-**Criterion.** On a 3 m/s centre strike on a single ball, ∫|F − F_ff| dt over the face–ball interval is at most 5 % of
-the ball's momentum change over it. Pre-flight sets T and ζ (starting at T = 40 ms, ζ = 0.7) to the stiffest values
-meeting it; T_θ = T, ζ_θ = ζ. `contact.json` records them with provenance "provisional (P2b.2b.2 sources or fits)" and
-the criterion in the note. Exit criterion 3 tests it.
+**Criterion.** On a 3 m/s centre strike on a single ball with a firm grip (γ = 1), ∫|F − F_ff| dt over the face–ball
+interval is at most 5 % of the ball's momentum change over it. Pre-flight sets T and ζ (starting at T = 40 ms,
+ζ = 0.7) to the stiffest values meeting it; T_θ = T, ζ_θ = ζ. `contact.json` records them with provenance
+"provisional (P2b.2b.2 sources or fits)" and the criterion in the note. Exit criterion 3 tests it.
 
 ### 3.5 End rule
 
@@ -143,8 +162,8 @@ A head still catching a ball keeps the impact running, so a re-contact (a double
 attributes most of a drive's striker distance to) is integrated, not flagged. The arc rises past its lowest point, so
 a head behind a ball rolling on the turf separates from it; a ball faster than the head ends it at once. Otherwise
 the impact ends at `TRACK_IMPACT_CAP` = 0.12 s (about twice the 58 ms longest roll contact the Croquet Association
-measured) with `impact-cap`, and `impact-head-approaching` for any ball the head is still closing on. `ImpactOptions.cap`
-overrides either cap.
+measured) with `impact-cap`, and `impact-head-approaching` for any ball the head is still closing on.
+`ImpactOptions.cap` overrides either cap.
 
 A `force` drive keeps P2b.1's rule and `IMPACT_CAP` = 0.06 s unchanged. At 0.12 s (24,000 steps) the WAKE_MARGIN
 reach filter keeps about 50× headroom.
@@ -152,9 +171,10 @@ reach filter keeps about 50× headroom.
 ### 3.6 Validation
 
 `validateImpact` adds, for a `track` drive: every number finite; `radius` > 0; `aim` unit and horizontal (within
-1e-12); `shaftToHead` unit (within 1e-12); `period`, `angularPeriod` > 0; damping ratios ≥ 0; `phases` non-empty
-with `until` strictly increasing from > 0. Each failure is a `RangeError` naming the check. The head's state at t = 0
-need not lie on the path (tests start it off); `buildContact` always starts it on.
+1e-12); `shaftToHead` unit (within 1e-12); `period`, `angularPeriod` > 0; damping ratios ≥ 0; `tension` in (0, 1];
+`pivotVelocity` and every `pivotAcceleration` in the swing plane (component along n within 1e-12 of their size);
+`phases` non-empty with `until` strictly increasing from > 0. Each failure is a `RangeError` naming the check. The
+head's state at t = 0 need not lie on the path (tests start it off); `buildContact` always starts it on.
 
 ## 4. Mallet–turf contact
 
@@ -205,10 +225,20 @@ interface SwingProfile {
         readonly face: "wood"; readonly weighting: "centre" | "end"; readonly shaftLength: number;
     };
     readonly grip: { readonly style: "standard" | "irish" | "solomon"; readonly topHandHeight: number };
-    /** Ball ahead of the arc's lowest point (m), shaft lean at contact (rad, positive pitches the face down). */
-    readonly stance: Readonly<Record<StrokeType, { readonly ballAhead: number; readonly shaftLean: number }>>;
-    /** Peak tangential acceleration of the hands (m/s²) and how long it lasts (s). */
-    readonly drive: Readonly<Record<StrokeType, { readonly aMax: number; readonly window: number }>>;
+    /**
+     * Ball ahead of the arc's lowest point (m), shaft lean at contact (rad, positive pitches the face down), and the
+     * grip's tension from contact on (1 firm, lower relaxed).
+     */
+    readonly stance: Readonly<Record<StrokeType, {
+        readonly ballAhead: number; readonly shaftLean: number; readonly gripTension: number;
+    }>>;
+    /**
+     * Peak tangential acceleration of the hands about the pivot (m/s²), the body's forward speed at contact (m/s) and
+     * peak forward acceleration (m/s²), and how long the accelerations last (s).
+     */
+    readonly drive: Readonly<Record<StrokeType, {
+        readonly aMax: number; readonly bodySpeed: number; readonly bodyAccel: number; readonly window: number;
+    }>>;
 }
 
 interface ShotSetup {
@@ -243,8 +273,8 @@ Grip style only pre-fills `topHandHeight` in the planner (product spec §4); the
 2. **Contact angle.** θ_c = atan2(`ballAhead`, √(r² − `ballAhead`²)): positive is a rising strike, negative a
    descending one.
 3. **Face angle.** The head's pitch about n at contact equals `shaftLean`, whatever θ_c: `shaftToHead` = rotation by
-   `shaftLean` − θ_c about the shaft frame's pitch axis (n in the shaft frame). The face is the head's leading end disc; its outward normal f is the body
-   +x axis.
+   `shaftLean` − θ_c about the shaft frame's pitch axis (n in the shaft frame). The face is the head's leading end
+   disc; its outward normal f is the body +x axis.
 4. **Head placement.** The point on the face at (`up`, `side`) in the face plane from its centre (`up` along the face's
    upward in-plane axis, `side` along n's horizontal complement, positive to the left of aim) lies on the line through
    the ball's centre along −f, at distance R + `START_GAP` from it; `START_GAP` = 1e-6 m, so rounding never starts the
@@ -252,10 +282,13 @@ Grip style only pre-fills `topHandHeight` in the planner (product spec §4); the
    geometry.
 5. **Pivot.** pivot = socket − r·(sin θ_c·aim − cos θ_c·ẑ). Its height follows from where the ball is, as a player
    bends to meet it; whether the head reaches the turf near the arc's bottom then follows from the stance.
-6. **Speed.** ω₀ = `speed` / |ω-lever of the head's centre about the pivot| (the centre's distance from the pivot
-   projected normal to n), so the centre of mass moves at `speed`. The head's velocity and angular velocity at t = 0
-   are the path's: ω₀·n and the rigid rotation about the pivot.
-7. **Drive.** Phase 1: α = `drive`·`aMax`/r until `window`; phase 2: α = 0, running on.
+6. **Speed.** The pivot moves at V₀ = `bodySpeed`·aim. ω₀ is the larger root of |V₀ + ω₀·n × (c − pivot)| =
+   `speed`, c the head's centre, so the centre of mass moves at `speed`; no non-negative root (the body alone moves
+   the head faster than `speed`) is rejected (§5.3). The head's velocity and angular velocity at t = 0 are the path's:
+   V₀ + ω₀·n × (c − pivot) and ω₀·n.
+7. **Drive.** Phase 1: α = `drive`·`aMax`/r and pivot acceleration `drive`·`bodyAccel`·aim until `window`; phase 2:
+   both zero, running on. The per-shot `drive` scales both, so a push in a power roll comes mainly from the body.
+   The coupling's `tension` is the preset's `gripTension`.
 8. **Mallet.** Mass, length and diameter; inertia from `solidCylinderInertia` for "centre"; "end" multiplies the
    transverse moments by `END_WEIGHTING_FACTOR` = 1.3 (provisional, P2b.2b.2 sources); the socket is the centre of the
    head's upper surface; the face material is `mallet.json`'s wood. The coupling is the world's provisional one (§3.4).
@@ -264,7 +297,8 @@ Grip style only pre-fills `topHandHeight` in the planner (product spec §4); the
 
 `buildContact` throws a `RangeError` naming the check for: |`ballAhead`| ≥ r; r ≤ 0; `topHandHeight` > `shaftLength`
 + h₀ (the hand is off the shaft); `speed` ≤ 0; |`drive`| > 1; √(`up`² + `side`²) ≥ the head's radius (contact off the
-face); a stroke type missing from `stance` or `drive`; `window` ≤ 0; a non-finite number. `simulateImpact`'s own
+face); a stroke type missing from `stance` or `drive`; `window` ≤ 0; `gripTension` outside (0, 1]; `bodySpeed` < 0;
+no non-negative ω₀ (§5.2 step 6); a non-finite number. `simulateImpact`'s own
 validation then runs as today (the head in the turf at t = 0 is rejected there).
 
 ### 5.4 The default profile
@@ -278,20 +312,27 @@ measured and never tuned to one.
 | Mallet | 1.0 kg, 0.2286 m, 0.0762 m, wood, centre, shaft 0.91 m |
 | Grip | standard, top hand 0.85 m |
 
-| Preset | ballAhead (m) | shaftLean (°) | aMax (m/s²) | window (ms) |
-|---|---|---|---|---|
-| single-ball | 0 | 0 | 20 | 10 |
-| drive | 0 | 0 | 20 | 5 |
-| stop-ac | −0.02 | −4 | 20 | 5 |
-| stop-gc | 0.14 | −4 | 60 | 10 |
-| half-roll | −0.05 | 25 | 15 | 20 |
-| full-roll | −0.07 | 35 | 15 | 30 |
-| pass-roll | −0.08 | 40 | 15 | 40 |
+| Preset | ballAhead (m) | shaftLean (°) | gripTension | aMax (m/s²) | bodySpeed (m/s) | bodyAccel (m/s²) | window (ms) |
+|---|---|---|---|---|---|---|---|
+| single-ball | 0 | 0 | 1 | 20 | 0 | 0 | 10 |
+| drive | 0 | 0 | 1 | 20 | 0 | 0 | 5 |
+| stop-ac | 0.14 | −4 | 0.1 | 20 | 0 | 0 | 5 |
+| stop-gc | 0.14 | −4 | 1 | 60 | 0 | 0 | 10 |
+| half-roll | −0.05 | 25 | 1 | 10 | 0.2 | 5 | 20 |
+| full-roll | −0.07 | 35 | 1 | 5 | 0.3 | 8 | 30 |
+| pass-roll | −0.08 | 40 | 1 | 5 | 0.4 | 10 | 40 |
 
-**Open for P2b.2b.2.** The feasibility spike reached the stop-shot ratio only with a rising strike, which lifts the
-striker's ball; the AC stop's braking needs the head low at contact, so its strike is level or slightly descending,
-which the spike found never lifts the ball. Which preset is the calibration target, and whether stop-shot lift is
-required of both, is P2b.2b.2's decision; this phase only shows each preset's braking mechanism (§8.1).
+The two stops follow the user's account of play (2026-10-04). **AC stop:** the feet are set further back, so the
+ball is met slightly on the up (positive `ballAhead`, about 10° of rise at r ≈ 0.8 m), amplified by tilting the face up
+(negative `shaftLean`, which also lowers the head's rear rim); the hands relax on contact, so the head sags and its
+base rubs the turf, braking it and cancelling the follow-through. **GC stop:** the lower hand grips lower and actively
+stops the swing just after contact (a check, `drive` −1 at the planner's default). **Power rolls:** the body's weight
+moves from back to front, keeping the face tilted while pushing forward (the rolls' `bodySpeed` and `bodyAccel`).
+
+**Open for P2b.2b.2.** Both stops are rising strikes, so stop-shot lift can be expected of both, as the feasibility
+spike found for rising strikes; whether the GC stop is also played on the up is unconfirmed (its `ballAhead` is the
+spike's). Which stop is the calibration target is P2b.2b.2's decision; this phase shows each stop's braking
+mechanism (§8.1).
 
 ## 6. `simulateShot` and the fault judge
 
@@ -366,7 +407,11 @@ the types `ShotSetup`, `SwingProfile`, `StrokeType`, `ShotOutcome`, `ContactStat
 
 ### 8.1 Analytic and hand-checked cases
 
-- **Path.** θ, ω across coast, push and check phases match the closed forms; continuity at phase boundaries.
+- **Path.** θ, ω, P and V across coast, push and check phases match the closed forms; continuity at phase
+  boundaries. A pivot accelerating forward with α = 0 and ω = 0 moves the socket target in a straight line with the
+  orientation target constant (the power roll's held face tilt).
+- **Relaxed grip.** A head with γ < 1, no ball and the turf out sags towards (1 − γ)·m·g/k below the path and settles
+  as the damped oscillator predicts; with the turf in, it comes to rest on it.
 - **Tracking, no ball.** A head started on the path follows it over 0.12 s within a bound pre-flight measures and
   the plan fixes (target 1e-6 m and 1e-6 rad; the residual is the socket–centre-of-mass offset's, §3.3). A head started
   1 mm off the path returns as the damped oscillator of period T and ratio ζ predicts (within 1 % of amplitude).
@@ -384,8 +429,11 @@ the types `ShotSetup`, `SwingProfile`, `StrokeType`, `ShotOutcome`, `ContactStat
 - **`simulateShot`.** Each `kind`; `group` for 3- and 4-ball groups and the croquet pair alone; 29.1.13 at 89.9°,
   90° and 90.1°; 29.1.14 only under 29.2.3; phase 2 receives exactly `impact.handover`; every setup check names its
   failure.
-- **Braking mechanisms.** In the default profile, stop-ac's head loses more momentum to the turf than to the hands
-  after contact, stop-gc's more to the hands than to the turf. Ratios are not asserted.
+- **Braking mechanisms.** In the default profile, stop-ac (`drive` 0) has its head lose more momentum to the turf
+  than to the hands after contact, and stop-gc (`drive` −1) more to the hands than to the turf. Ratios are not
+  asserted.
+- **Body speed.** With `bodySpeed` > 0 the head's centre still moves at `speed` at t = 0, and a `bodySpeed` above it
+  is rejected.
 
 ### 8.2 Bit-identity
 
@@ -409,7 +457,8 @@ decision (roadmap, "Open decision: crush calibration"); 29.1.6.3 with a sourced 
 stiffness and friction sourcing; `END_WEIGHTING_FACTOR`; face presets beyond wood.
 
 **Beyond P2b, required in the final implementation** (roadmap P2 row): 29.1.10, with mallet–obstacle contact;
-divots and lasting turf damage; a moving pivot (shoulder and wrist), so the hands follow more than a fixed arc. Three-
+divots and lasting turf damage; a fully articulated body (shoulder, elbow and wrist) beyond this phase's translating
+pivot. Three-
 and four-ball cannons remain deferred as before.
 
 ## 11. Roadmap changes (in this PR)
