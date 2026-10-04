@@ -37,7 +37,7 @@ per-pair travel budget, exact by construction and confirmed bit for bit (user de
 upper bound is 1.0 ms, the largest for which the obstacle fuzz keeps penetrations under its bound with a margin (§4,
 §8). A dead ball's hit is exempt from 29.1.7 only when the mallet contact, the roquet and the hit start together (§7).
 The crush distance is recorded at about 1.1 mm per m/s of head speed, beyond the commentary's 1–2 mm above about
-1 m/s (§1, §9.7). No face–ball gap is one step (§5). The fuzz reaches, the penetration bound and the analytic
+1.8 m/s (§1, §9.7). No face–ball gap is one step (§5). The fuzz reaches, the penetration bound and the analytic
 tolerances are measured; `outsideObstacle`'s correction step now grows with the coordinates' rounding (§10).
 
 ## 1. Goal and exit criteria
@@ -60,7 +60,7 @@ Exit criteria:
 5. Crush geometry (§9.7): a ball 1 mm from an upright, struck straight at it, raises 29.1.8; one well beyond the
    contact distance does not. The distance at which it stops is recorded (not gated) against the commentary's
    1–2 mm (C29.13.1). Pre-flight recorded 1.088, 2.188, 3.261, 4.365 and 6.549 mm at 1, 2, 3, 4 and 6 m/s: about
-   1.1 mm per m/s, so it falls within the commentary's 1–2 mm only up to about 1 m/s (§9.7).
+   1.1 mm per m/s, so it falls within the commentary's 1–2 mm from about 0.9 to 1.8 m/s and beyond it above (§9.7).
 
 ## 2. Approach
 
@@ -300,9 +300,9 @@ Each value in the existing `reference/*.json` form (value, unit, bounds, source,
    `IMPACT_CAP`; each context error of §3 throws.
 7. **Crush geometry:** exit criterion 5. A ball 20 mm from the upright never reaches it within the impact; one 5 mm
    away reaches it after the mallet contact and raises no 29.1.8. The crush distance stays recorded, not gated; it
-   falls within the commentary's 1–2 mm only up to about 1 m/s (pre-flight: 1.088 mm at 1 m/s up to 6.549 mm at
-   6 m/s, about 1.1 mm per m/s). The impact's rigid, linear face contact (0.8 ms) is shorter
-   than a real one, which the commentary says travels up to about 1 cm in contact.
+   falls within the commentary's 1–2 mm from about 0.9 to 1.8 m/s and beyond it above (pre-flight: 1.088 mm at
+   1 m/s up to 6.549 mm at 6 m/s, about 1.1 mm per m/s). The impact's rigid, linear face contact (0.8 ms) is
+   shorter than a real one, which the commentary says travels up to about 1 cm in contact.
 8. **Obstacle fuzz:** random strokes as P2b.1's fuzz, with uprights and the peg within reach of the balls: no hang, no
    `impact-cap`, peak penetrations under the bound, handover accepted by phase 2.
 

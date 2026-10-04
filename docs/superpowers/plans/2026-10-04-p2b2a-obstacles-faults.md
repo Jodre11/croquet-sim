@@ -3452,8 +3452,8 @@ Add a section before "## Provisional numbers — where each is confirmed":
 
 - **Crush distance.** The largest gap to an upright straight ahead that still raises 29.1.8, on the default world
   with the sourced head and face (`scripts/impactProbe.ts`), per head speed: <copy the probe's five lines>. That is
-  about 1.1 mm per m/s, so above about 1 m/s it exceeds the commentary's (C29.13.1) 1–2 mm for a real chance of a
-  crush. The impact's face contact (0.8 ms, a rigid linear face) is shorter than a real one, which the commentary
+  about 1.1 mm per m/s: within the commentary's (C29.13.1) 1–2 mm for a real chance of a crush from about 0.9 to
+  1.8 m/s, and beyond it above about 1.8 m/s. The impact's face contact (0.8 ms, a rigid linear face) is shorter than a real one, which the commentary
   says travels up to about 1 cm in contact.
 - **Face–ball gaps.** In the P2b.1 fuzz's single clean strikes: <copy the probe's line>. No gap is one step, so no
   minimum gap is applied (spec §5).
