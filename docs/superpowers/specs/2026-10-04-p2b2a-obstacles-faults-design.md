@@ -13,17 +13,26 @@ engine error. The Laws also make a ball touching an upright the scene of the cru
 which the engine cannot represent without the contact. P2b.2a is independent of the swing model and is tested, like
 P2b.1, with hand-built `ContactState`s.
 
+**Amended 2026-10-04 (spec review: subtraction, completeness).** Every ball is paired with every obstacle (no reach
+filter); a ball touching an obstacle starts at zero gap; obstacle pairs hold the impact open like the other hard
+pairs; rim contact counts as mallet contact in the timeline; the judge reads the impact only, takes `group` from the
+caller and validates its context; 29.1.6.3 is deferred for want of a sourced norm; 29.1.5 judges the first contact
+only; head re-approach yields a possible 29.1.6.2; the roquet ordering at a shared instant is defined; the digest
+keeps the P2b.1 lines byte-comparable; `peakDepth`, `faceGaps` and a separate obstacle-overlap field are dropped.
+
 ## 1. Goal and exit criteria
 
 Model ball–upright and ball–peg contact in the impact; record when every pair is closed; judge the mallet faults of
-the Laws from that record, phase 2's events and the stroke's context.
+the Laws from that record and the stroke's context.
 
 Exit criteria:
 
 1. The obstacle analytic cases of §9.1 hold.
-2. Setups with no obstacle in reach are bit-identical to P2b.1: `scripts/impactDigest.ts` prints byte-identical output
-   (shared scenarios step by step, 200 fuzz strokes), and phase 2's shot-mix work-unit figures (p99 143,084,
-   p99.9 362,050, max 408,030) and `SLOW_TESTS` reproduce exactly.
+2. Setups whose balls never meet an obstacle are bit-identical to P2b.1. `scripts/impactDigest.ts` prints the P2b.1
+   fields of each result (an explicit field list, not the whole object) on the lines it prints today, and the new
+   fields (`timeline`, `touchingAtStart`) on separate lines with their own prefix. The P2b.1 lines are byte-identical
+   to `main`'s output (shared scenarios step by step, 200 fuzz strokes). Phase 2's shot-mix work-unit figures (p99
+   143,084, p99.9 362,050, max 408,030) and `SLOW_TESTS` reproduce exactly.
 3. No impact hands phase 2 a ball overlapping an obstacle (§6); the obstacle fuzz (§9.8) never hangs, never raises
    `impact-cap` and keeps every peak penetration under its bound.
 4. Every row of the fault table (§7) has a passing positive and negative case; the commentary's worked sequences
@@ -36,15 +45,15 @@ Exit criteria:
 
 The obstacle becomes a further pair kind in the impact's single pair list (P2b.1 §4 anticipated it), with the same
 clamped spring–dashpot and Cundall–Strack friction as every other pair; the obstacle is immovable. The integrator
-records a compact **contact timeline**: the closed intervals of every pair. A pure **fault judge**, beside
-`judgeHoopRun`, reads the timeline, phase 2's events and a stroke context, and applies the Laws. Mechanics stay
-Law-agnostic; a Law change edits the judge only.
+records a compact **contact timeline**: the contact intervals of every pair. A pure **fault judge**, beside
+`judgeHoopRun`, reads the timeline and a stroke context, and applies the Laws. Mechanics stay Law-agnostic; a Law
+change edits the judge only.
 
 Rejected:
 
 - **Fault-shaped events from the integrator** (`impact-crush`, `impact-recontact`). Smaller, but the integrator would
-  encode Law concepts, and the 29.2.4 exemptions depend on the order of events across both phases (a roquet, then a
-  mallet contact), so judging would leak into it anyway.
+  encode Law concepts, and the 29.2.4 exemptions depend on the order of whole contacts (a roquet, an object, a mallet
+  contact), so judging would leak into it anyway.
 - **The judge re-running the impact with a probe.** No new result fields, but twice the cost and a dependence on the
   integrator's internals.
 - **Rejecting setups near obstacles.** Blocks close hoop strokes and cannot show a crush.
@@ -60,50 +69,71 @@ interface Cylinder { id: string; centre: Vec3; radius: number; material: Contact
 /** A hoop gains its own impact contact time, copied to both uprights by `uprightsOf`. */
 interface Hoop { /* existing fields */ contactTime: number }
 
-/** One closed interval of a pair (s from the impact's start), its deepest penetration (m) and largest normal force. */
-interface ContactInterval { start: number; end: number; peakDepth: number; peakForce: number }
+/**
+ * One interval of a pair (s from the impact's start) and its largest normal force (N). For a face–ball pair,
+ * `clearanceAfter` is the largest separation along the face normal in the gap before the next interval.
+ */
+interface ContactInterval { start: number; end: number; peakForce: number; clearanceAfter?: number }
 
 interface ImpactRun {
     /* existing fields */
-    /** Closed intervals of every pair that closed, keyed as `peakPenetration` is, plus "<ball>@<obstacle id>". */
+    /** Intervals of every pair that closed, keyed as `peakPenetration` is, plus "<ball>@<obstacle id>". */
     readonly timeline: Readonly<Record<string, readonly ContactInterval[]>>;
-    /** For each face–ball gap between two intervals: its duration and largest separation along the face normal. */
-    readonly faceGaps: Readonly<Record<string, readonly { start: number; end: number; clearance: number }[]>>;
+    /** Keys of the ball–ball and ball–obstacle pairs touching (within CONTACT_TOLERANCE) at t = 0. */
+    readonly touchingAtStart: readonly string[];
 }
+/** `ImpactResult.overlapCorrection` widens to the largest overlap removed from any pair, ball–ball or ball–obstacle. */
 
 interface StrokeContext {
     striker: BallId;
     kind: "single-ball" | "croquet" | "continuation-touching";
+    /** Required for, and only for, a croquet stroke. */
     croqueted?: BallId;
-    /** Balls the striker may roquet in this stroke (decides the Law 29.2.4.1 exemption). */
+    /** Balls the striker may roquet in this stroke (decides the Law 29.2.4.1 exemption); never the striker. */
     live: readonly BallId[];
     hampered: boolean;
     jumpAttempt: boolean;
-    /** Longest face–striker contact normal for this stroke type (s); omitted, 29.1.6.3 is not judged. */
-    contactNorm?: number;
+    /** The striker's ball is part of a group of balls (29.2.3.3). */
+    group: boolean;
 }
 
 type FaultTier = "fault" | "possible-fault";
 interface Finding { law: string; tier: FaultTier; ball: BallId; t: number; evidence: Readonly<Record<string, number>> }
 interface FaultReport { findings: readonly Finding[] }
 
-function judgeFaults(context: StrokeContext, impact: ImpactResult, shot: ShotResult): FaultReport;
+function judgeFaults(context: StrokeContext, impact: ImpactResult): FaultReport;
 ```
 
 `judgeFaults` lives in `src/engine/faults.ts`, under the determinism lint. It and the impact stay internal until
-P2b.2b's `simulateShot` exports them. Phase 2's time starts at the end of the impact, so the judge orders impact
-intervals before phase-2 events. Whether the striker's ball is part of a group of balls (29.2.3.3) is derived from
-the start positions with the Laws' definition (Glossary, Law 18.4): a 3-ball group is one ball in contact with two
-others, and a 4-ball group adds a fourth ball in contact with a 3-ball group; contact is within `CONTACT_TOLERANCE`.
-A croquet stroke's two touching balls alone are not a group.
+P2b.2b's `simulateShot` exports them. It reads the impact only: every mallet contact lies inside the impact, and so
+does every event the exemption orders against it (§7), so phase 2's events cannot precede a mallet contact. It throws
+a `RangeError` for a context that does not fit the impact: a striker absent from it; a croquet stroke without a
+`croqueted` ball, or with `croqueted` equal to the striker or absent from the impact; `croqueted` given for another
+kind; the striker listed in `live`.
+
+`group`, like `hampered` and `jumpAttempt`, is supplied by the caller. P2b.2b's `simulateShot` derives it from the
+setup with the Laws' definition (Glossary, Law 18.4): a 3-ball group is one ball in contact with two others, and a
+4-ball group adds a fourth ball in contact with a 3-ball group; contact is within `CONTACT_TOLERANCE`. A croquet
+stroke's two touching balls alone are not a group.
 
 ## 4. Obstacle contact
 
 **Pair.** A new kind `ball-obstacle`, after `ball-turf` in the fixed order, balls in `BALL_IDS` order and obstacles
-in `obstaclesOf` order (uprights in hoop order, then the peg). A ball gets a pair for each obstacle whose surface lies
-within `OBSTACLE_REACH` of the ball's surface at t = 0 (horizontal distance between axes, less R and the obstacle
-radius). `OBSTACLE_REACH` is fixed by pre-flight from the fuzz's largest ball travel within an impact, with a margin
-(§10). Key: `"<ball>@<obstacle id>"`.
+in `obstaclesOf` order (uprights in hoop order, then the peg). Every ball is paired with every obstacle: a pair that
+never closes adds no force (below), and present balls × (2·hoops + 1) pairs is a small list, which validation already
+walks per ball. Pre-flight measures the per-step cost (§10); a reach filter is added only if that cost proves real.
+Key: `"<ball>@<obstacle id>"`.
+
+**A touching ball starts at zero gap.** Validation accepts a ball within `CONTACT_TOLERANCE` of an obstacle (§6), and
+rounding can leave such a ball overlapping it by up to that tolerance. `prepareImpact` therefore moves a ball whose gap
+to an obstacle is below zero horizontally outward, along the obstacle's normal, until δ ≤ 0 exactly (at most
+`CONTACT_TOLERANCE`, 1e-9 m). Otherwise the pair would be closed from t = 0 with a spring force that turf friction
+holds indefinitely, which would hold the impact open (below) and fake 29.1.8 and 29.1.9 on a legal stroke away from
+the upright (§7). Touching balls keep P2b.1's treatment, so its scenarios stay bit-identical.
+
+**End of the impact.** Ball–obstacle pairs count as hard contacts for `RELEASE_STEPS`, as face–ball and ball–ball
+pairs do. A ball rebounding off an upright towards a following head (C29.13.2) then keeps the impact open for the
+second hit. A ball at rest against an upright does not, because it starts at zero gap.
 
 **Geometry.** The obstacle is an infinite vertical cylinder, as in phase 2 (a ball's top below the crown is the
 validated range; a ball above it is phase 2's jump flag). Penetration δ = R + r − d, with d the horizontal distance
@@ -121,28 +151,38 @@ half the effective mass. Provenance: derived, analogue. Bounds (§8) widen below
 (T × 2^(−1/5) ≈ 0.87·T: half the reduced mass and radius in the ball–ball case) and above for an upright's give in the
 turf, which the rigid model omits.
 
-**Bit-identity.** A pair that never closes adds no force, and the obstacle pairs follow every existing pair in the
-summation order, so a setup with no obstacle in reach integrates exactly as in P2b.1 (exit criterion 2).
+**Bit-identity.** A pair that never closes touches no force or torque sum, and the obstacle pairs follow every
+existing pair in the summation order, so a setup whose balls never meet an obstacle integrates exactly as in P2b.1
+(exit criterion 2).
 
 ## 5. Contact timeline
 
-The integrator already knows, each step, whether each pair is closed. It records a transition list per pair: an
-interval opens at the start of the first step in which the pair is closed (δ > 0) and ends at the start of the first
-step in which it is open; an interval still open when the impact ends ends at `duration`. Each interval keeps its
-deepest δ and largest normal force (0 for a pair that is closed geometrically but released, P2b.1 §4). For face–ball
-pairs, each gap between two intervals also keeps its largest separation along the face normal, which the face
-geometry computes anyway. Cost: an array push per transition and a comparison per closed pair per step.
+The integrator already knows, each step, whether each pair is in contact. It records a transition list per pair: an
+interval opens at the start of the first step in which the pair is in contact and ends at the start of the first step
+in which it is not; an interval still open when the impact ends ends at `duration`. In contact means closed (δ > 0)
+or, for a face–ball pair, `OFF_FACE` (the ball at the face's rim): the Laws count contact with any part of the mallet
+(C29.11.9, C29.20.2), so a contact that crosses the rim stays one interval and a rim contact on another ball is a
+29.1.11 contact. An `OFF_FACE` step adds no force, as in P2b.1, and is flagged `impact-off-face` as before. Each
+interval keeps its largest normal force (0 for a pair in contact geometrically but released, P2b.1 §4, or at the
+rim). For face–ball pairs, each gap keeps its largest separation along the face normal (`clearanceAfter`), which the
+face geometry computes anyway. No minimum gap applies: any step out of contact separates two intervals, as the Laws
+count any second contact. Pre-flight records the shortest face–ball gap in single clean strikes; a one-step gap there
+would be numerical chatter, and the spec is revisited if it occurs. Cost: an array push per transition and a
+comparison per pair in contact per step. Turf pairs are recorded like the rest; P2b.2b's stop-shot-lift criterion
+reads them.
 
 ## 6. Validation and handover
 
-**Validation** (`validateImpact`). A ball touching an obstacle (within `CONTACT_TOLERANCE`) is now accepted; a ball
-overlapping one by more than `CONTACT_TOLERANCE` is still rejected. Every obstacle's `contactTime` must be positive
-and finite.
+**Validation** (`validateImpact`). A ball touching an obstacle (within `CONTACT_TOLERANCE`) is now accepted and starts
+at zero gap (§4); a ball overlapping one by more than `CONTACT_TOLERANCE` is still rejected. `validateWorld` checks
+that every hoop's and the peg's `contactTime` is positive and finite, as it checks `ballBallContactTime`; the
+hand-built worlds in the tests gain the field.
 
 **Handover.** The separation pass (P2b.1 §6) also clears each ball from every obstacle it overlaps, moving it
 horizontally along the obstacle's normal to zero gap, velocities unchanged, inside the same repeated fixed-order pass
-(ball–ball pairs, then ball–obstacle pairs). The pass bound and residual are unchanged; running out still throws. The
-largest obstacle overlap removed is reported in `ImpactResult` beside `overlapCorrection`.
+(ball–ball pairs, then ball–obstacle pairs). Every obstacle is paired (§4), so the pass covers all of them. The pass
+bound and residual are unchanged; running out still throws. `overlapCorrection` reports the largest overlap removed
+from any pair.
 
 ## 7. Fault judge
 
@@ -156,29 +196,39 @@ threshold is invented (decided 2026-10-04; judging as a real-world referee perce
 | Law | Mechanical test | Tier |
 |---|---|---|
 | 29.1.8 (crush) | `face/<striker>` and a `<striker>@<obstacle>` interval overlap in time | fault |
-| 29.1.9 | The striker's ball touches an obstacle at t = 0, and that pair carries force (`peakForce` > 0) while the face is on the ball: the obstacle contributed to the ball's direction (C29.14.1) | fault |
+| 29.1.9 | The striker's ball touches an obstacle at t = 0, and that pair's interval carries force (`peakForce` > 0) while overlapping a `face/<striker>` interval: the obstacle contributed to the ball's direction (C29.14.1). A touching ball starts at zero gap (§4), so a stroke away from the obstacle never closes the pair | fault |
 | 29.1.11 | A `face/<ball>` interval on any ball but the striker's | fault |
-| 29.1.13 | Croquet stroke: the striker–croqueted pair never carries force | fault |
-| 29.1.6.2 | Single-ball stroke: two or more `face/<striker>` intervals, unless exempt (below) | fault |
-| 29.1.7 | The face is on the striker's ball when the striker's ball first closes on a ball it was not touching at t = 0, unless exempt (so a croquet stroke's croqueted ball never counts; C29.12.3) | possible-fault (29.2.7) |
-| 29.1.6.1 | Croquet stroke, or continuation while touching: two or more `face/<striker>` intervals; evidence: each gap's duration and clearance | possible-fault (29.2.5) |
-| 29.1.6.3 | `face/<striker>` contact longer than `context.contactNorm` | possible-fault (29.2.6) |
-| 29.1.5 | `impact-off-face` on the striker's ball in a 29.2.3 stroke (hampered, jump attempt, or striker's ball in a group) | fault; elsewhere not a fault (C29.10) |
+| 29.1.13 | Croquet stroke: the striker–croqueted pair's `peakForce` never exceeds the force of a `CONTACT_TOLERANCE` penetration (k·`CONTACT_TOLERANCE`, numerical, not perceptual), so a touching start that rounding leaves overlapping does not count as moving the croqueted ball | fault |
+| 29.1.6.2 | Single-ball stroke: two or more non-exempt `face/<striker>` intervals | fault |
+| 29.1.6.2 | Single-ball stroke: `impact-head-approaching` on the striker's ball, the head still closing when the impact ended (a second contact the impact did not integrate) | possible-fault |
+| 29.1.7 | The striker's ball first closes on a ball it was not touching at t = 0 while a `face/<striker>` interval is open, and that ball is not live; contact on a live ball is a roquet, exempt (C29.12.1). A croquet stroke's croqueted ball never counts (C29.12.3) | possible-fault (29.2.7) |
+| 29.1.6.1 | Croquet stroke, or continuation while touching: two or more `face/<striker>` intervals; evidence: each gap's duration and `clearanceAfter` | possible-fault (29.2.5) |
+| 29.1.5 | Strokes under 29.2.3 (`hampered`, `jumpAttempt` or `group`): the striker's first mallet contact is at the rim, i.e. `impact-off-face` on the striker's ball at or before the start of its first `face/<striker>` interval. Later contact is judged under 29.1.6 (C29.10.8) | fault; elsewhere not a fault (C29.10) |
 
 A stroke into an obstacle the striker's ball was touching raises both 29.1.9 and 29.1.8; the judge reports every
 finding and does not rank them.
 
-**Exemption 29.2.4.1.** A mallet contact after the striker's ball has made a roquet (first contact with a live ball,
-in the impact's timeline or in phase 2's `ball-ball` events) is exempt from 29.1.6 and 29.1.7, unless the striker's
-ball has hit another object after that roquet and before the contact (the last sentence of 29.2.4). The objects are
-hoops, the peg or another ball (C29.20.4); C29.20.4.1–5 are the tests. Contact with a dead ball is not a roquet
-(C29.11.7). The exemption covers contact with any part of the mallet (C29.20.2), but only face contacts are modelled.
-A roquet deemed under Law 21.1 when the striker's ball runs a hoop towards a ball beyond it (C29.20.5) and the
-peg-point and pegged-out exemptions (29.2.4.2, 29.2.4.3) are deferred (§11).
+**Exemption 29.2.4.1.** A mallet contact after the striker's ball has made a roquet (its first closing on a live ball,
+from the impact's timeline) is exempt from 29.1.6 and 29.1.7, unless the striker's ball has hit another object after
+that roquet and before the contact (the last sentence of 29.2.4). The objects are hoops, the peg or another ball
+(C29.20.4); C29.20.4.1–5 are the tests. Contact with a dead ball is not a roquet (C29.11.7).
 
-**Not judged.** 29.1.10 needs mallet–obstacle contact and 29.1.14 needs mallet–turf contact, neither modelled
-(`impact-mallet-grounded` stays a flag); 29.1.1–29.1.4 and 29.1.12 concern the body and the method of play and have
-no mechanical test.
+Ordering at a shared instant: a `face/<striker>` interval is a contact *before* the roquet if it starts before the
+roquet's interval starts, and *after* it if it starts at or after. An interval already open when the roquet starts is
+one contact, before the roquet, and is not re-counted; C29.20.4.1–5 order whole contacts the same way. The exemption
+covers contact with any part of the mallet (C29.20.2), but only the face and its rim are modelled.
+
+**Not judged.**
+
+- 29.1.10 needs mallet–obstacle contact, and 29.1.14 needs mallet–turf contact; neither is modelled, and
+  `impact-mallet-grounded` stays a flag.
+- 29.1.1–29.1.4 and 29.1.12 concern the body and the method of play and have no mechanical test.
+- 29.1.6.3 (prolonged contact) needs a sourced norm of contact time per stroke type, which no input supplies yet. The
+  face–striker intervals are in the timeline for when one does (§11).
+- 29.1.13's "plays away from" the croqueted ball (C29.18.1) needs the swing's direction, which P2b.2b's swing model
+  supplies; only "fails to move or shake" is judged here.
+- The peg exceptions to 29.1.8 and 29.1.9 (a striker's ball pegged out in the stroke) need the rover status, which
+  peg points would bring: until then a pegging-out crush on the peg is reported as a `fault` (§11).
 
 ## 8. Reference data
 
@@ -197,21 +247,26 @@ Each value in the existing `reference/*.json` form (value, unit, bounds, source,
    and restitution; an oblique hit sticks and slips at the friction cone; the peg uses its own material.
 2. **Bit-identity:** exit criterion 2.
 3. **Handover:** a ball ending the impact overlapping an upright is separated; phase 2 accepts it.
-4. **Validation:** a ball touching an obstacle is accepted; an overlapping one is rejected with its message asserted;
-   a non-positive obstacle `contactTime` is rejected.
-5. **Timeline:** a hand-built double tap yields the expected intervals, gaps and clearances; an interval open at the
-   end ends at `duration`.
-6. **Judge:** a positive and a negative case per table row; C29.20.4.1–5 as table tests; a croquet-stroke re-contact
-   is `possible-fault`, never `fault`; a close scatter shot along the line of centres raises 29.1.6.2 or 29.1.7
-   (C29.12.2).
+4. **Validation:** a ball touching an obstacle is accepted and starts at zero gap (δ ≤ 0 exactly, moved at most
+   `CONTACT_TOLERANCE`), including a placement that rounding leaves overlapping; an overlapping one is rejected with
+   its message asserted; `validateWorld` rejects a non-positive obstacle `contactTime`.
+5. **Timeline:** a hand-built double tap yields the expected intervals and `clearanceAfter`; a contact crossing the
+   rim stays one interval; an interval open at the end ends at `duration`; `touchingAtStart` lists exactly the
+   touching pairs.
+6. **Judge:** a positive and a negative case per table row; C29.20.4.1–5 as table tests, with the shared-instant
+   ordering of §7; a croquet-stroke re-contact is `possible-fault`, never `fault`; a close scatter shot along the line
+   of centres raises 29.1.6.2 or 29.1.7 (C29.12.2); a legal stroke directly away from an upright the ball touches
+   raises neither 29.1.8 nor 29.1.9; a ball at rest against an upright, never struck, does not hold the impact to
+   `IMPACT_CAP`; each context error of §3 throws.
 7. **Crush geometry:** exit criterion 5.
 8. **Obstacle fuzz:** random strokes as P2b.1's fuzz, with uprights and the peg within reach of the balls: no hang, no
    `impact-cap`, peak penetrations under the bound, handover accepted by phase 2.
 
 ## 10. Pre-flight
 
-As for P2b.1: the plan is executed literally in a scratch worktree first, to fix `OBSTACLE_REACH`, the obstacle
-contact-time bounds, the obstacle penetration bound and the obstacle fuzz ranges, and to record the crush distance.
+As for P2b.1: the plan is executed literally in a scratch worktree first, to fix the obstacle contact-time bounds, the
+obstacle penetration bound and the obstacle fuzz ranges; to measure the per-step cost of pairing every ball with every
+obstacle (§4); to record the shortest face–ball gap in single clean strikes (§5); and to record the crush distance.
 Findings are folded into this document and the plan before the real run.
 
 `ENGINE_VERSION` moves to 0.5.0: inputs rejected before now simulate, and `ImpactResult` gains the timeline.
@@ -225,5 +280,7 @@ Findings are folded into this document and the plan before the real run.
 | 29.1.10 (mallet hits a hoop or peg) and 29.1.14 (court damage) | Need mallet–obstacle and mallet–turf contact; grounding stays flagged |
 | 29.2.4.2, 29.2.4.3 (peg point, pegged-out ball) | With peg points |
 | A roquet deemed by Law 21.1 (hoop and roquet, C29.20.5) | Needs the hoop-run verdict (`judgeHoopRun`) inside the judge; a later context field |
-| Obstacles beyond `OBSTACLE_REACH` at the start | Fixed by pre-flight from measured ball travel |
+| 29.1.6.3 (prolonged contact) | Needs a sourced contact-time norm per stroke type (the Croquet Association's measured contact times are a candidate for P2b.2b); the timeline holds the durations |
+| 29.1.13 "plays away from" (C29.18.1) | Needs the swing direction from P2b.2b's swing model |
+| Peg exceptions to 29.1.8 and 29.1.9 (striker's ball pegged out) | With peg points and rover status; until then reported as a fault |
 | Hoop crown contact in the impact | As phase 2: uprights are infinite cylinders; a ball reaching the crown is the jump flag |

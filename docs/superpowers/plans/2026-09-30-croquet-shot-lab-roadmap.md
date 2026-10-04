@@ -216,6 +216,10 @@ shot 7.15 ± 0.6 (up to 11.6), pass roll about 0.83 in theory.
   and its sourced default; `ShotSetup` carries it. P3 wraps it into the stored profile (home-lawn speed, fitted
   parameter bounds, versioning) and adds the optimiser. The P3 row is amended when P2b.2b's spec lands.
 - **`IMPACT_CAP`** is raised from 60 ms, justified by the measured 30–58 ms roll contacts.
+- **Fault judge inputs:** `simulateShot` builds P2b.2a's `StrokeContext` from the setup, deriving `group` with the
+  Laws' group-of-balls definition. Two Laws deferred by P2b.2a become judgeable here: 29.1.13's "plays away from"
+  (the swing direction) and, if a per-stroke-type contact-time norm is sourced (the Croquet Association's measured
+  contact times are the candidate), 29.1.6.3.
 
 ## Provisional numbers — where each is confirmed
 
