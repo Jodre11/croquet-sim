@@ -101,6 +101,6 @@ export interface ImpactRun {
 /** The impact's outcome, with the balls as handed over to phase 2 (design §6). */
 export interface ImpactResult extends ImpactRun {
     readonly handover: BallStates;
-    /** Largest overlap (m) the handover removed from a pair of balls. */
+    /** Largest overlap (m) the handover removed from a pair of balls or a ball and an obstacle. */
     readonly overlapCorrection: number;
 }

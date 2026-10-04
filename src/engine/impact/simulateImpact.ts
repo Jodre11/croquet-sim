@@ -10,7 +10,7 @@ import { horizontal, length, sub, vec3, type Vec3 } from "../math/vec3";
 import { BALL_IDS, type BallParams, type BallState, type BallStates, type SurfaceProps, type World } from "../types";
 import { obstaclesOf, validateWorld } from "../world";
 import { lawFromContactTime, lawFromStiffness } from "./contactLaw";
-import { headLowestPoint } from "./contacts";
+import { headLowestPoint, outsideObstacle } from "./contacts";
 import { handover } from "./handover";
 import { rotateInverse } from "./rigidBody";
 import { integrate, type ImpactBall, type ImpactOptions, type ImpactSetup } from "./integrate";
@@ -70,12 +70,12 @@ function cylinderDistance(contact: ContactState, centre: Vec3): number {
 /**
  * Throws a RangeError if the impact's input is invalid (design §3):
  * - a ball not at rest on the turf;
- * - two balls overlapping, or a ball touching an obstacle within CONTACT_TOLERANCE (ball–obstacle contact is not
- *   modelled in the impact);
+ * - two balls overlapping, or a ball overlapping an obstacle, by more than CONTACT_TOLERANCE (a ball touching one is
+ *   accepted, and prepareImpact starts it at zero gap);
  * - the head (faces, rims or barrel) in a ball at its static sink, or in the turf, at t = 0;
  * - a drive that is empty, does not start at 0 or does not increase strictly;
  * - a non-positive mass, inertia, length, radius or contact time;
- * - a restitution outside (0, 1] or a negative friction;
+ * - a restitution outside (0, 1] (face, ball–ball, ball–upright, peg) or a negative friction;
  * - a non-unit orientation.
  */
 export function validateImpact(contact: ContactState, balls: BallStates, world: World): void {
@@ -93,6 +93,8 @@ export function validateImpact(contact: ContactState, balls: BallStates, world: 
     friction(face.friction, "face.friction");
     positive(world.ballBallContactTime, "ballBallContactTime");
     restitution(world.ballBall.restitution, "ballBall.restitution");
+    restitution(world.ballUpright.restitution, "ballUpright.restitution");
+    restitution(world.peg.material.restitution, "peg.material.restitution");
     finite(contact.position, "position");
     finite(contact.velocity, "velocity");
     finite(contact.angularVelocity, "angularVelocity");
@@ -125,8 +127,8 @@ export function validateImpact(contact: ContactState, balls: BallStates, world: 
         restitution(surface.turfRestitution, `turfRestitution at ball ${id}`);
         friction(surface.slidingFriction, `slidingFriction at ball ${id}`);
         for (const o of obstacles) {
-            if (length(horizontal(sub(p, o.centre))) - R - o.radius <= CONTACT_TOLERANCE) {
-                fail(`ball ${id} touches ${o.id}`);
+            if (length(horizontal(sub(p, o.centre))) - R - o.radius < 0 - CONTACT_TOLERANCE) {
+                fail(`ball ${id} overlaps ${o.id}`);
             }
         }
         for (const other of present.slice(i + 1)) {
@@ -147,10 +149,13 @@ export function validateImpact(contact: ContactState, balls: BallStates, world: 
 /**
  * Solves every law and places each ball at its static turf sink: z = R − m·g/k_turf, where its turf spring carries
  * exactly its weight. Touching balls stay touching, as equal balls on equal turf sink equally. Input must have passed
- * validateImpact.
+ * validateImpact. A ball touching an obstacle, which validateImpact accepts within CONTACT_TOLERANCE, is moved
+ * horizontally outward until its penetration is at most zero (at most CONTACT_TOLERANCE): a closed pair from t = 0
+ * would hold the impact open against turf friction and fake a crush on a legal stroke (P2b.2a design §4).
  */
 export function prepareImpact(contact: ContactState, balls: BallStates, world: World): ImpactSetup {
     const { ball, gravity } = world;
+    const obstacles = obstaclesOf(world);
     const entries: ImpactBall[] = [];
     for (const id of BALL_IDS) {
         const s = balls[id];
@@ -159,14 +164,17 @@ export function prepareImpact(contact: ContactState, balls: BallStates, world: W
         }
         const surface = world.lawn.surfaceAt(s.position);
         const sink = staticSink(ball, gravity, surface);
+        let position = vec3(s.position.x, s.position.y, s.position.z - sink);
+        for (const o of obstacles) {
+            position = outsideObstacle(position, ball.radius, o);
+        }
         entries.push({
             id,
-            state: { ...s, position: vec3(s.position.x, s.position.y, s.position.z - sink) },
+            state: { ...s, position },
             turf: lawFromStiffness(ball.mass, surface.turfRestitution, surface.turfStiffness, surface.slidingFriction),
         });
     }
     const faceMass = (contact.head.mass * ball.mass) / (contact.head.mass + ball.mass);
-    const obstacles = obstaclesOf(world);
     return {
         head: contact.head,
         start: {
@@ -208,6 +216,6 @@ export function simulateImpact(
     validateWorld(world);
     validateImpact(contact, balls, world);
     const run = integrate(prepareImpact(contact, balls, world), options);
-    const handed = handover(run.balls, world.ball.radius);
+    const handed = handover(run.balls, world.ball.radius, obstaclesOf(world));
     return { ...run, handover: handed.balls, overlapCorrection: handed.overlapCorrection };
 }
