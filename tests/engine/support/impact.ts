@@ -2,7 +2,7 @@
  * Test-only mallet, face and impact helpers. Plausible but deliberately NOT sourced (as fixtures.ts), so expectations
  * do not move when reference data does. src/ must never import this file.
  */
-import { ZERO, add, lengthSq, scale, sub, vec3, type Vec3 } from "../../../src/engine/math/vec3";
+import { ZERO, add, length, lengthSq, scale, sub, vec3, type Vec3 } from "../../../src/engine/math/vec3";
 import { lawFromContactTime, type PairLaw } from "../../../src/engine/impact/contactLaw";
 import type { ImpactBall, ImpactProbe, ImpactSetup, ImpactSnapshot } from "../../../src/engine/impact/integrate";
 import {
@@ -17,8 +17,8 @@ import {
 import { validateImpact } from "../../../src/engine/impact/simulateImpact";
 import type { ContactState, DriveSample, FaceMaterial, HeadState, MalletHead } from "../../../src/engine/impact/types";
 import type { BallParams, BallState, BallStates, World } from "../../../src/engine/types";
-import { STANDARD_GRAVITY } from "../../../src/engine/world";
-import { TEST_BALL, ballAt } from "./fixtures";
+import { STANDARD_GRAVITY, uprightsOf } from "../../../src/engine/world";
+import { TEST_BALL, ballAt, hoopWithUprightAt, testHoop } from "./fixtures";
 
 const R = TEST_BALL.radius;
 
@@ -109,7 +109,7 @@ export function freeBall(
 
 /**
  * An isolated set-up for `integrate`: by default the head parked far away (it never touches anything) and undriven,
- * gravity off, the test face and test ball–ball laws, no balls. Override what a case needs.
+ * gravity off, the test face and test ball–ball laws, no balls and no obstacles. Override what a case needs.
  */
 export function isolated(overrides: Partial<ImpactSetup> = {}): ImpactSetup {
     const start: HeadState = {
@@ -127,6 +127,7 @@ export function isolated(overrides: Partial<ImpactSetup> = {}): ImpactSetup {
         ball: TEST_BALL,
         gravity: 0,
         balls: [],
+        obstacles: [],
         ...overrides,
     };
 }
@@ -307,4 +308,55 @@ export function mirrorContact(c: ContactState): ContactState {
         angularVelocity: mirrorSpin(c.angularVelocity),
         drive: c.drive.map((s) => ({ t: s.t, force: mirrorVec(s.force) })),
     };
+}
+
+/** Seed of the obstacle fuzz's stroke sequence (fuzz.test.ts). */
+export const OBSTACLE_FUZZ_SEED = 29;
+
+/**
+ * Largest surface gap (m) from blue to upright 1/a. Pre-flight: no reach tried, up to 0.2 m (peg 0.3 m), raises an
+ * impact-cap; wider reaches only dilute the share of strokes meeting an obstacle (17.45 % here, 6.35 % at 0.2 m).
+ */
+const UPRIGHT_REACH = 0.06;
+/** Largest surface gap (m) from blue to the peg (with UPRIGHT_REACH, pre-flight). */
+const PEG_REACH = 0.1;
+/** Draws allowed before randomObstacleStroke gives up: a bound against a livelock, not a physical value. */
+const OBSTACLE_DRAW_CAP = 1000;
+
+/**
+ * One random stroke of the impact fuzz (randomStroke) with hoop "1" and the peg moved within reach of blue: upright
+ * "1/a" up to UPRIGHT_REACH from blue's surface and the peg up to PEG_REACH, each at a random bearing. A draw that
+ * puts two obstacles within a ball's width of each other, or that validateImpact rejects, is drawn again.
+ */
+export function randomObstacleStroke(
+    random: () => number,
+    base: World,
+): { contact: ContactState; balls: BallStates; world: World } {
+    const uni = (a: number, b: number): number => a + (b - a) * random();
+    const r = testHoop("1", 0, 0).uprightRadius;
+    for (let attempt = 0; attempt < OBSTACLE_DRAW_CAP; attempt++) {
+        const { contact, balls } = randomStroke(random, base);
+        const ua = uni(-Math.PI, Math.PI);
+        const ud = R + r + uni(0, UPRIGHT_REACH);
+        const hoop = hoopWithUprightAt("1", 10 + ud * Math.cos(ua), 10 + ud * Math.sin(ua));
+        const pa = uni(-Math.PI, Math.PI);
+        const pd = R + base.peg.radius + uni(0, PEG_REACH);
+        const peg = { ...base.peg, centre: vec3(10 + pd * Math.cos(pa), 10 + pd * Math.sin(pa), 0) };
+        const world: World = { ...base, hoops: [hoop], peg };
+        const [a, b] = uprightsOf(hoop, base.ballUpright);
+        const crowded = [a, b].some((u) => length(sub(u.centre, peg.centre)) < u.radius + peg.radius + 2 * R + 1e-3);
+        if (crowded) {
+            continue;
+        }
+        try {
+            validateImpact(contact, balls, world);
+        } catch (error) {
+            if (error instanceof RangeError) {
+                continue;
+            }
+            throw error;
+        }
+        return { contact, balls, world };
+    }
+    throw new Error(`randomObstacleStroke: no valid stroke in ${OBSTACLE_DRAW_CAP} draws`);
 }

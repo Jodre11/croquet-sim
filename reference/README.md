@@ -9,6 +9,8 @@ Every physical constant the app uses lives here, one JSON file per topic, and ev
 "provenance": "direct" | "analogue" | "derived", "note": "<original units, conversion, caveats>"? }`
 - **Quote:** `{ "quote": "<verbatim text>", "source": …, "provenance": …, "note": …? }`
 - **Offset rule** (laws.json): a quote plus `"ballRadii"` and `"uprightRadii"` coefficients (see below).
+- **Fault law** (laws.json): a quote keyed by its Law number (`"29.1.8"`) or Glossary entry (`"groupOfBalls"`), the
+  text the fault judge (`src/engine/faults.ts`) applies.
 
 `bounds` are the plausible range: the Laws' tolerance for specified equipment, or the spread in the literature
 for measured quantities. `provenance: "analogue"` means the figure comes from a comparable domain and is

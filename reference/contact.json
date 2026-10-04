@@ -15,6 +15,14 @@
         "provenance": "direct",
         "note": "Table 1 'Ball /ball contact time, Tb, ms' for seven clean scatter shots at ball speeds 1.90-7.64 m/s: 0.75, 0.75, 0.50, 0.75, 0.75, 0.87, 0.75. Gugan: \"The ball on ball contact times, Tb, (row 5) show no significant variation with ball speed, and cluster around 0.75 ms (i.e. 6 video frames), close to those for mallet on ball contact times\". Resolution is one frame (0.125 ms). Bounds are the table's range. Stan Hall's 1.8 ms (https://oxfordcroquet.org/tech/hall/) is for balls starting in contact and driven by the mallet, not a free collision."
     },
+    "ballObstacleContactTime": {
+        "value": 0.00075,
+        "unit": "s",
+        "bounds": [0.000435, 0.001],
+        "source": "Derived from ballBallContactTime (this file): Don Gugan, 'The Physics of Croquet Strokes: Analysis of the CA high-speed DVD', section 4, Table 1 row 5 (2009; Oxford Croquet), https://oxfordcroquet.org/tech/gugan4/",
+        "provenance": "derived",
+        "note": "No measurement of a ball striking a hoop upright or the peg was found. Oxford Croquet's 'Measuring Hoop Rigidity' (https://oxfordcroquet.org/tech/rigidity/) proposes methods and reports no data; Rod Cross's high-speed experiments (https://oxfordcroquet.org/tech/cross1/) cover ball-ball and mallet-ball contacts only. Derivation (P2b.2a design §4): for the impact's linear law a ball meeting an immovable body has the same natural frequency as two balls meeting, since the ball-ball pair has half the stiffness (two balls in series) and half the effective mass; the analogue value is therefore ballBallContactTime, 0.75 ms. Lower bound: Hertzian contact time scales as (m*^2/(E*^2 R*))^(1/5), and a ball on a rigid body has twice the reduced mass, radius and effective modulus of two equal balls, so T x 2^(-1/5) = 0.87 T; 0.87 x 0.5 ms (the ball-ball lower bound) = 0.435 ms. Upper bound: an upright gives in the turf, which the rigid model omits and no source quantifies; the allowance is 1.0 ms, the largest bound for which the obstacle fuzz keeps every obstacle penetration under its bound (0.06 R), with a margin: 1.0 ms gave 0.055 R, and 1.5 ms (2 x 0.75 ms) gave 0.081 R (P2b.2a pre-flight, 2000 strokes). Every hoop and the peg carries its own contact time (World), so a later version can vary hoop setting stiffness hoop by hoop or by lawn."
+    },
     "faceBallContactTime": {
         "value": 0.0008,
         "unit": "s",

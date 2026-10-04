@@ -22,5 +22,95 @@
         "ballRadii": 1,
         "uprightRadii": -1,
         "note": "Using the jaws geometry in hoopRunStart's note (playing-side face at d = −r), the ball protrudes out of the jaws on the playing side while its trailing point is behind that face: d − R < −r. It ceases to protrude when d − R ≥ −r, i.e. d ≥ R − r. ballRadii = +1, uprightRadii = −1. Law 20.6.1 treats the borderline as completed, matching the inclusive 'at least'. With R = 0.0460375 m and r = 0.0079375 m the threshold is +0.0381 m. Law 20.2.1's reversal clauses (a ball that moves back and rests protruding on the playing side, or exits on the playing side, has not completed) and Law 20.3 (scoring requires completing and then coming to rest not protruding on the playing side, leaving the court, or entering the next hoop's jaws) are expressed against the same threshold."
+    },
+    "29.1.5": {
+        "quote": "Subject to the exemptions and limitations specified in Law 29.2 a fault is committed during the striking period if the striker: [...] strikes the striker’s ball with any part of the mallet other than an end-face of the head in any of the strokes specified in Law 29.2.3;",
+        "source": "World Croquet Federation, The Laws of Association Croquet, 7th Edition (February 2021), with Official Rulings and Commentary (current as at April 2021), Law 29.1.5 and commentary C29.10; https://worldcroquet.org/wp-content/uploads/2021/04/Laws-Rulings-Commentary-combined-published-master-.pdf",
+        "provenance": "direct",
+        "note": "Judged on the first mallet contact only, C29.10.8: \"The fault of striking the ball with part of the mallet other than an end-face, covered by this law, applies only to the first contact. Any subsequent contact, however it occurs, is covered by Law 29.1.6.2 (multiple contacts between mallet and striker’s ball) and the exemptions specified in Law 29.2.4\". The impact models the end-face and its rim: a first contact at the rim (impact-off-face) is a contact other than an end-face. Applies only to the strokes of Law 29.2.3 (StrokeContext.hampered, jumpAttempt, group)."
+    },
+    "29.1.6.1": {
+        "quote": "a fault is committed during the striking period if the striker: [...] allows the mallet: to contact the striker’s ball more than once in a croquet stroke, or continuation stroke when the striker's ball is touching another ball (for exemptions see Law 29.2.4 and for limitations see Law 29.2.5);",
+        "source": "World Croquet Federation, The Laws of Association Croquet, 7th Edition (February 2021), with Official Rulings and Commentary (current as at April 2021), Law 29.1.6.1 and commentary C29.11; https://worldcroquet.org/wp-content/uploads/2021/04/Laws-Rulings-Commentary-combined-published-master-.pdf",
+        "provenance": "direct",
+        "note": "A possible fault only (Law 29.2.5), C29.11.2: \"A fault may be declared under Law 29.1.6.1 only if an adjudicator or the striker sees a separation between the mallet and the striker’s ball followed by the mallet hitting the striker’s ball a second time (see Law 29.2.5).\" Any part of the mallet counts, C29.11.9: \"subsequent contact with any part of the mallet, not just the end-face, is a fault under Laws 29.1.6.1 or 29.1.6.2\"."
+    },
+    "29.1.6.2": {
+        "quote": "a fault is committed during the striking period if the striker: [...] allows the mallet: [...] to contact the striker’s ball more than once in any other stroke (for exemptions see Law 29.2.4);",
+        "source": "World Croquet Federation, The Laws of Association Croquet, 7th Edition (February 2021), with Official Rulings and Commentary (current as at April 2021), Law 29.1.6.2 and commentary C29.11; https://worldcroquet.org/wp-content/uploads/2021/04/Laws-Rulings-Commentary-combined-published-master-.pdf",
+        "provenance": "direct",
+        "note": "Decidable from the mechanics, C29.11.5: \"(Law 29.2 imposes no limitation on how a fault under Law 29.1.6.2 may be judged.)\" A dead ball gives no exemption, C29.11.7: \"A scatter shot when the striker’s ball lies very close to but not in contact with a dead ball does not benefit from the Law 29.2.4 exemption.\""
+    },
+    "29.1.6.3": {
+        "quote": "a fault is committed during the striking period if the striker: [...] allows the mallet: [...] to remain in contact with the striker's ball for an observable period in any stroke (for exemptions see Law 29.2.4 and for limitations see Law 29.2.6);",
+        "source": "World Croquet Federation, The Laws of Association Croquet, 7th Edition (February 2021), with Official Rulings and Commentary (current as at April 2021), Law 29.1.6.3 and commentary C29.11; https://worldcroquet.org/wp-content/uploads/2021/04/Laws-Rulings-Commentary-combined-published-master-.pdf",
+        "provenance": "direct",
+        "note": "Not judged (P2b.2a design §7): it needs a sourced norm of contact time per stroke type, C29.11.8: \"considers to be audibly prolonged compared to the sound of a normal stroke of the same type (Law 29.2.6)\". The timeline keeps the face-striker intervals for when one is sourced."
+    },
+    "29.1.7": {
+        "quote": "a fault is committed during the striking period if the striker: [...] allows the mallet to be in contact with the striker's ball after the striker's ball has hit another ball (for exemptions see Law 29.2.4 and for limitations see Law 29.2.7);",
+        "source": "World Croquet Federation, The Laws of Association Croquet, 7th Edition (February 2021), with Official Rulings and Commentary (current as at April 2021), Law 29.1.7 and commentary C29.12; https://worldcroquet.org/wp-content/uploads/2021/04/Laws-Rulings-Commentary-combined-published-master-.pdf",
+        "provenance": "direct",
+        "note": "A possible fault (Law 29.2.7). C29.12.1: \"This plugs the gap by making it a fault if the mallet is still in contact with the striker’s ball when the latter hits another ball.\" C29.12.3: \"Law 29.1.7 does not normally apply to croquet strokes, since the striker’s ball is not hitting another ball\": the croqueted ball never counts."
+    },
+    "29.1.8": {
+        "quote": "a fault is committed during the striking period if the striker: [...] strikes the striker's ball so as to cause it to touch a hoop upright or, unless the striker's ball is pegged out in the stroke, the peg when in contact with the mallet;",
+        "source": "World Croquet Federation, The Laws of Association Croquet, 7th Edition (February 2021), with Official Rulings and Commentary (current as at April 2021), Law 29.1.8 and commentary C29.13; https://worldcroquet.org/wp-content/uploads/2021/04/Laws-Rulings-Commentary-combined-published-master-.pdf",
+        "provenance": "direct",
+        "note": "C29.13.1: \"this means that the nearest point of the ball must be within 1-2 mm of the upright before there is any real chance of a crush on that upright.\" The crush distance the impact produces is recorded against it (P2b.2a exit criterion 5). The pegged-out exception needs peg points and is not modelled: a crush on the peg is reported as a fault."
+    },
+    "29.1.9": {
+        "quote": "a fault is committed during the striking period if the striker: [...] strikes the striker's ball when it lies in contact with a hoop upright or, unless the striker's ball is pegged out in the stroke, the peg otherwise than in a direction away therefrom;",
+        "source": "World Croquet Federation, The Laws of Association Croquet, 7th Edition (February 2021), with Official Rulings and Commentary (current as at April 2021), Law 29.1.9 and commentary C29.14; https://worldcroquet.org/wp-content/uploads/2021/04/Laws-Rulings-Commentary-combined-published-master-.pdf",
+        "provenance": "direct",
+        "note": "C29.14.1: \"If its initial movement is in a different direction, even slightly, the hoop or the peg has contributed to the direction of travel of the ball and the stroke was a fault.\" Judged as the touching obstacle carrying force while the mallet is in contact. The pegged-out exception is not modelled."
+    },
+    "29.1.11": {
+        "quote": "a fault is committed during the striking period if the striker: [...] touches any ball, other than the striker's ball, with the mallet;",
+        "source": "World Croquet Federation, The Laws of Association Croquet, 7th Edition (February 2021), with Official Rulings and Commentary (current as at April 2021), Law 29.1.11 and commentary C29.16; https://worldcroquet.org/wp-content/uploads/2021/04/Laws-Rulings-Commentary-combined-published-master-.pdf",
+        "provenance": "direct",
+        "note": "Judged as any face or rim contact on a ball other than the striker's. C29.20.3: \"There is no exemption, for example, for any contact between the mallet and the croqueted ball\"."
+    },
+    "29.1.13": {
+        "quote": "a fault is committed during the striking period if the striker: [...] in a croquet stroke, plays away from or fails to move or shake the croqueted ball;",
+        "source": "World Croquet Federation, The Laws of Association Croquet, 7th Edition (February 2021), with Official Rulings and Commentary (current as at April 2021), Law 29.1.13 and commentary C29.18; https://worldcroquet.org/wp-content/uploads/2021/04/Laws-Rulings-Commentary-combined-published-master-.pdf",
+        "provenance": "direct",
+        "note": "Only \"fails to move or shake\" is judged: the croqueted pair never penetrates beyond CONTACT_TOLERANCE. \"Plays away from\" needs the swing direction (P2b.2b), C29.18.1: \"A fault is committed if the striker plays away from the croqueted ball even though it moves or shakes\"."
+    },
+    "29.2.3": {
+        "quote": "The actions specified in Laws 29.1.5 and 29.1.14 are faults only if they occur in: a hampered stroke; or a single-ball stroke in which the striker is attempting to make the striker’s ball jump; or a stroke in which the striker’s ball is part of a group of balls.",
+        "source": "World Croquet Federation, The Laws of Association Croquet, 7th Edition (February 2021), with Official Rulings and Commentary (current as at April 2021), Law 29.2.3; https://worldcroquet.org/wp-content/uploads/2021/04/Laws-Rulings-Commentary-combined-published-master-.pdf",
+        "provenance": "direct",
+        "note": "StrokeContext.hampered, .jumpAttempt and .group, supplied by the caller."
+    },
+    "29.2.4": {
+        "quote": "Contact between the mallet and the striker's ball is not a fault under Laws 29.1.6 or 29.1.7 if it occurs after the striker's ball: makes a roquet; or scores the peg point; or hits a ball pegged out in the stroke. The exemption of Law 29.2.4.1 does not apply, however, if the striker's ball has hit another object after making the roquet.",
+        "source": "World Croquet Federation, The Laws of Association Croquet, 7th Edition (February 2021), with Official Rulings and Commentary (current as at April 2021), Law 29.2.4 and commentary C29.20; https://worldcroquet.org/wp-content/uploads/2021/04/Laws-Rulings-Commentary-combined-published-master-.pdf",
+        "provenance": "direct",
+        "note": "C29.20.4: \"It is a fault if, after making a roquet, the striker's ball hits something else and then touches the mallet again. The objects referred to are hoops, the peg or another ball.\" Its worked examples C29.20.4.1-5 are the judge's table tests. Only 29.2.4.1 is judged; 29.2.4.2 and 29.2.4.3 need peg points."
+    },
+    "29.2.5": {
+        "quote": "A multiple contact between the mallet and the striker’s ball is a fault under Law 29.1.6.1 only if the striker or a referee or other person asked to adjudicate the stroke, aided by nothing more than spectacles or contact lenses, sees a separation between mallet and ball followed by a second contact between them.",
+        "source": "World Croquet Federation, The Laws of Association Croquet, 7th Edition (February 2021), with Official Rulings and Commentary (current as at April 2021), Law 29.2.5; https://worldcroquet.org/wp-content/uploads/2021/04/Laws-Rulings-Commentary-combined-published-master-.pdf",
+        "provenance": "direct",
+        "note": "Makes 29.1.6.1 a possible fault; the finding carries each gap's duration and clearance."
+    },
+    "29.2.6": {
+        "quote": "The mallet remaining in contact with the striker’s ball for an observable period is a fault under Law 29.1.6.3 if the prolonged contact is visible or audible to the striker or a referee or other person asked to adjudicate the stroke, aided by nothing more than spectacles, contact lenses or hearing aids.",
+        "source": "World Croquet Federation, The Laws of Association Croquet, 7th Edition (February 2021), with Official Rulings and Commentary (current as at April 2021), Law 29.2.6; https://worldcroquet.org/wp-content/uploads/2021/04/Laws-Rulings-Commentary-combined-published-master-.pdf",
+        "provenance": "direct",
+        "note": "Limits 29.1.6.3, which is not judged yet."
+    },
+    "29.2.7": {
+        "quote": "The mallet being in contact with the striker’s ball after the striker’s ball has hit another ball is a fault under Law 29.1.7 if the continuation of contact is visible or audible to the striker or a referee or other person asked to adjudicate the stroke, aided by nothing more than spectacles, contact lenses or hearing aids, or if it can be deduced from observation of the trajectories and speeds of the balls involved compared to what would occur in a lawful stroke of the same type.",
+        "source": "World Croquet Federation, The Laws of Association Croquet, 7th Edition (February 2021), with Official Rulings and Commentary (current as at April 2021), Law 29.2.7; https://worldcroquet.org/wp-content/uploads/2021/04/Laws-Rulings-Commentary-combined-published-master-.pdf",
+        "provenance": "direct",
+        "note": "Makes 29.1.7 a possible fault; the finding carries how long the mallet contact lasted before and after the hit."
+    },
+    "groupOfBalls": {
+        "quote": "Either a 3-ball group or a 4-ball group. A 3-ball group is formed by one ball being in contact with two other balls. A 4-ball group is formed by the fourth ball being in contact with a 3-ball group.",
+        "source": "World Croquet Federation, The Laws of Association Croquet, 7th Edition (February 2021), with Official Rulings and Commentary (current as at April 2021), Glossary, 'Group of balls' (with Law 18.4); https://worldcroquet.org/wp-content/uploads/2021/04/Laws-Rulings-Commentary-combined-published-master-.pdf",
+        "provenance": "direct",
+        "note": "Decides StrokeContext.group (29.2.3.3). The caller supplies it; P2b.2b's simulateShot derives it from the setup, contact being within CONTACT_TOLERANCE. A croquet stroke's two touching balls alone are not a group."
     }
 }

@@ -40,6 +40,11 @@ The crush distance is recorded at about 1.1 mm per m/s of head speed, beyond the
 1.8 m/s (§1, §9.7). No face–ball gap is one step (§5). The fuzz reaches, the penetration bound and the analytic
 tolerances are measured; `outsideObstacle`'s correction step now grows with the coordinates' rounding (§10).
 
+**Amended 2026-10-04 (real run).** The final review found that 29.1.7 excluded every live ball, so a second live ball
+hit after the roquet, while the mallet was still in contact, raised nothing. The last sentence of Law 29.2.4 voids the
+exemption once the striker's ball hits another object after the roquet, and a later live ball is such an object. The
+row now excludes only the roqueted ball.
+
 ## 1. Goal and exit criteria
 
 Model ball–upright and ball–peg contact in the impact; record when every pair is closed; judge the mallet faults of
@@ -234,7 +239,7 @@ threshold is invented (decided 2026-10-04; judging as a real-world referee perce
 | 29.1.13 | Croquet stroke: the striker–croqueted pair's `peakPenetration` never exceeds `CONTACT_TOLERANCE` (numerical, not perceptual), so a touching start that rounding leaves overlapping does not count as moving the croqueted ball | fault |
 | 29.1.6.2 | Single-ball stroke: two or more non-exempt `face/<striker>` intervals | fault |
 | 29.1.6.2 | Single-ball stroke: `impact-head-approaching` on the striker's ball, the head still closing when the impact ended (a second contact the impact did not integrate) | possible-fault |
-| 29.1.7 | The striker's ball first closes on a ball it was not touching at t = 0 while a `face/<striker>` interval is open, and that ball is not live; contact on a live ball is a roquet, exempt (C29.12.1). A croquet stroke's croqueted ball never counts (C29.12.3) | possible-fault (29.2.7) |
+| 29.1.7 | The striker's ball first closes on a ball it was not touching at t = 0 while a `face/<striker>` interval is open, and that ball is not the roqueted ball; contact on the roqueted ball is a roquet, exempt (C29.12.1). A croquet stroke's croqueted ball never counts (C29.12.3) | possible-fault (29.2.7) |
 | 29.1.6.1 | Croquet stroke, or continuation while touching: two or more `face/<striker>` intervals; evidence: each gap's duration and `clearanceAfter` | possible-fault (29.2.5) |
 | 29.1.5 | Strokes under 29.2.3 (`hampered`, `jumpAttempt` or `group`): the striker's first mallet contact is at the rim, i.e. `impact-off-face` on the striker's ball at or before the start of its first `face/<striker>` interval. Later contact is judged under 29.1.6 (C29.10.8) | fault; elsewhere not a fault (C29.10) |
 
@@ -246,8 +251,9 @@ from the impact's timeline) is exempt from 29.1.6 and 29.1.7, unless the striker
 that roquet and before the contact (the last sentence of 29.2.4). The objects are hoops, the peg or another ball
 (C29.20.4); C29.20.4.1–5 are the tests. Contact with a dead ball is not a roquet (C29.11.7).
 
-For 29.1.7, the dead ball's hit is exempt only if the mallet contact it falls in is exempt at that contact's own start,
-and the hit does not start after the roquet: the mallet contact, the roquet and the dead-ball hit all start together.
+For 29.1.7, a hit on a ball other than the roqueted one (live or dead) is exempt only if the mallet contact it falls in
+is exempt at that contact's own start, and the hit does not start after the roquet: the mallet contact, the roquet and
+the hit all start together.
 A mallet contact already open when the roquet starts is before the roquet (below), so a dead ball hit during it is a
 possible fault; and a hit after the roquet is contact after the ball has hit another object, which the last sentence
 of 29.2.4 excludes (decided in pre-flight). If this is wrong, a few legal scatter shots beside a live ball are flagged,

@@ -3,7 +3,7 @@ import { simulateFreeMotion } from "../../../src/engine/simulate";
 import type { BallState } from "../../../src/engine/types";
 import { simulateImpact } from "../../../src/engine/impact/simulateImpact";
 import { TEST_BALL, testWorld } from "../support/fixtures";
-import { FUZZ_SEED, randomStroke } from "../support/impact";
+import { FUZZ_SEED, OBSTACLE_FUZZ_SEED, randomObstacleStroke, randomStroke } from "../support/impact";
 import { rng } from "../support/rng";
 
 const R = TEST_BALL.radius;
@@ -36,4 +36,48 @@ describe("impact fuzz", () => {
             expect(() => simulateFreeMotion(result.handover, WORLD), `stroke ${n}`).not.toThrow();
         }
     });
+});
+
+/**
+ * 1.5× the worst obstacle-pair penetration over 2000 obstacle-fuzz strokes (pre-flight: 1.745 mm = 0.038 R). The
+ * contact-time upper bound, 1.0e-3 s, keeps it at 0.055 R.
+ */
+const OBSTACLE_PENETRATION_BOUND = 0.06 * R;
+/** Half the share of strokes in which an obstacle pair closes (pre-flight: 17.45 % of 2000). */
+const OBSTACLE_SHARE = 0.087;
+
+describe("obstacle fuzz", () => {
+    const count = import.meta.env.SLOW_TESTS ? 2000 : 200;
+
+    it(
+        `ends, never hits the cap, keeps penetrations bounded and hands over cleanly over ${count} strokes`,
+        {
+            timeout: 600_000,
+        },
+        () => {
+            const random = rng(OBSTACLE_FUZZ_SEED);
+            let touched = 0;
+            for (let n = 0; n < count; n++) {
+                const { contact, balls, world } = randomObstacleStroke(random, WORLD);
+                const result = simulateImpact(contact, balls, world);
+                expect(
+                    result.events.some((e) => e.kind === "impact-cap"),
+                    `stroke ${n}`,
+                ).toBe(false);
+                for (const [key, depth] of Object.entries(result.peakPenetration)) {
+                    const bound = key.includes("@") ? OBSTACLE_PENETRATION_BOUND : PENETRATION_BOUND;
+                    expect(depth, `stroke ${n} ${key}`).toBeLessThan(bound);
+                }
+                if (Object.keys(result.timeline).some((key) => key.includes("@"))) {
+                    touched++;
+                }
+                for (const s of Object.values(result.handover) as BallState[]) {
+                    const values = [s.position, s.velocity, s.angularVelocity].flatMap((v) => [v.x, v.y, v.z]);
+                    expect(values.every(Number.isFinite), `stroke ${n}`).toBe(true);
+                }
+                expect(() => simulateFreeMotion(result.handover, world), `stroke ${n}`).not.toThrow();
+            }
+            expect(touched).toBeGreaterThan(OBSTACLE_SHARE * count);
+        },
+    );
 });

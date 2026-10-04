@@ -1,12 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { length, vec3 } from "../../../src/engine/math/vec3";
+import { CONTACT_TOLERANCE } from "../../../src/engine/detect";
+import { length, sub, vec3 } from "../../../src/engine/math/vec3";
 import { stateAtTime } from "../../../src/engine/sample";
 import { ENGINE_VERSION, simulateFreeMotion } from "../../../src/engine/simulate";
 import type { BallStates, World } from "../../../src/engine/types";
-import { uniformLawn } from "../../../src/engine/world";
-import { simulateImpact } from "../../../src/engine/impact/simulateImpact";
+import { obstaclesOf, uniformLawn } from "../../../src/engine/world";
+import { obstacleContact } from "../../../src/engine/impact/contacts";
+import type { ImpactBall } from "../../../src/engine/impact/integrate";
+import { prepareImpact, simulateImpact } from "../../../src/engine/impact/simulateImpact";
 import type { ContactState } from "../../../src/engine/impact/types";
-import { TEST_BALL, TEST_TURF, ballAt, testWorld } from "../support/fixtures";
+import { TEST_BALL, TEST_TURF, ballAt, hoopWithUprightAt, testWorld } from "../support/fixtures";
 import { drive, strike } from "../support/impact";
 
 const R = TEST_BALL.radius;
@@ -16,8 +19,8 @@ const BLUE = ballAt(5, 0);
 const SUNK = vec3(5, 0, R - (TEST_BALL.mass * WORLD.gravity) / WORLD.lawn.surfaceAt(BLUE.position).turfStiffness);
 
 describe("simulateImpact", () => {
-    it("is version 0.4.0", () => {
-        expect(ENGINE_VERSION).toBe("0.4.0");
+    it("is version 0.5.0", () => {
+        expect(ENGINE_VERSION).toBe("0.5.0");
     });
 
     it("starts a centre-struck ball rolling at 5/7 of its launch speed in phase 2", () => {
@@ -118,11 +121,39 @@ describe("validation", () => {
             /balls blue and red overlap/,
         ],
         [
-            "a ball touching the peg",
-            strike(vec3(15 - 0.02 - R, 20, R)),
-            { blue: ballAt(15 - 0.02 - R, 20) },
+            "a ball overlapping the peg",
+            strike(vec3(15 - 0.02 - R + 1e-6, 20, R)),
+            { blue: ballAt(15 - 0.02 - R + 1e-6, 20) },
             WORLD,
-            /ball blue touches peg/,
+            /ball blue overlaps peg/,
+        ],
+        [
+            "a ball overlapping the peg just past the contact tolerance",
+            strike(vec3(15 - 0.02 - R + 1.5e-9, 20, R)),
+            { blue: ballAt(15 - 0.02 - R + 1.5e-9, 20) },
+            WORLD,
+            /ball blue overlaps peg/,
+        ],
+        [
+            "zero ball–upright restitution",
+            ok,
+            { blue: BLUE },
+            testWorld({ ballUpright: { restitution: 0, friction: 0.1 } }),
+            /ballUpright\.restitution/,
+        ],
+        [
+            "zero peg restitution",
+            ok,
+            { blue: BLUE },
+            testWorld({ peg: { ...WORLD.peg, material: { restitution: 0, friction: 0.1 } } }),
+            /peg\.material\.restitution/,
+        ],
+        [
+            "a non-positive peg contact time",
+            ok,
+            { blue: BLUE },
+            testWorld({ peg: { ...WORLD.peg, contactTime: 0 } }),
+            /peg\.contactTime/,
         ],
         [
             "the head in a ball",
@@ -256,5 +287,54 @@ describe("validation", () => {
 
     it("accepts touching balls", () => {
         expect(() => simulateImpact(ok, { blue: BLUE, red: ballAt(5 + 2 * R, 0) }, WORLD)).not.toThrow();
+    });
+});
+
+describe("a ball touching an obstacle", () => {
+    const PEG = WORLD.peg;
+    const reach = R + PEG.radius;
+
+    it.each([
+        ["exactly", 0],
+        ["overlapping by rounding", 5e-10],
+    ])("is accepted when touching %s, and starts at zero gap", (_label, overlap) => {
+        const blue = ballAt(15 - reach + overlap, 20);
+        // Struck away from the peg (yaw π: the head on the peg's side, travelling −x).
+        const contact = strike(blue.position, { yaw: Math.PI });
+        const p = (prepareImpact(contact, { blue }, WORLD).balls[0] as ImpactBall).state.position;
+        expect(obstacleContact(p, R, PEG)).toBeNull();
+        expect(R + PEG.radius - length(sub(vec3(p.x, p.y, 0), PEG.centre))).toBeLessThanOrEqual(0);
+        expect(Math.abs(p.x - blue.position.x)).toBeLessThanOrEqual(CONTACT_TOLERANCE);
+        expect(p.y).toBe(blue.position.y);
+        expect(() => simulateImpact(contact, { blue }, WORLD)).not.toThrow();
+    });
+
+    it("ends clear of every obstacle when it touches the peg and an upright at once", () => {
+        const overlap = 5e-10;
+        const bx = 15 - reach + overlap;
+        // The upright stands 120° round from the peg's direction and overlaps the ball by `overlap` too: the normals
+        // are not parallel, so correcting for one can push the ball back into the other.
+        const gap = R + 0.008 - overlap;
+        const angle = (Math.PI * 2) / 3;
+        const hoop = hoopWithUprightAt("h", bx + gap * Math.cos(angle), 20 + gap * Math.sin(angle));
+        const blue = ballAt(bx, 20);
+        const world = { ...WORLD, hoops: [hoop] };
+        const contact = strike(blue.position, { yaw: Math.PI });
+        const prepared = prepareImpact(contact, { blue }, world);
+        const p = (prepared.balls[0] as ImpactBall).state.position;
+        for (const o of obstaclesOf(world)) {
+            expect(obstacleContact(p, R, o)).toBeNull();
+        }
+        const result = simulateImpact(contact, { blue }, world);
+        expect(() => simulateFreeMotion(result.handover, world)).not.toThrow();
+    });
+
+    it("accepts a ball touching the peg and another ball", () => {
+        const blue = ballAt(15 - reach, 20);
+        const red = ballAt(15 - reach - 2 * R, 20);
+        const result = simulateImpact(strike(red.position, { yaw: 1.2 }), { blue, red }, WORLD);
+        expect(result.touchingAtStart).toEqual(["blue/red", "blue@peg"]);
+        expect(result.events.some((e) => e.kind === "impact-cap")).toBe(false);
+        expect(() => simulateFreeMotion(result.handover, WORLD)).not.toThrow();
     });
 });

@@ -2,23 +2,35 @@
  * Contacts of the impact phase (P2b.1 design §4): the pair list and each pair's geometry. A pair is body A acting on
  * body B along the unit normal n from A to B: the mallet face on a ball, the earlier ball in BALL_IDS order on the
  * later one, or the turf on a ball. Penetration δ > 0 means the pair is closed. The contact point lies on the
- * normal's line, δ/2 inside ball B's undeformed surface: x = c_B − (R − δ/2)·n. Ball–upright and ball–peg pairs are a
- * further kind, deferred (design §11).
+ * normal's line, δ/2 inside ball B's undeformed surface: x = c_B − (R − δ/2)·n. The ball–obstacle pair (P2b.2a design
+ * §4) acts from a hoop upright or the peg, an immovable vertical cylinder, along the horizontal normal from its axis to
+ * the ball's centre.
  */
-import { add, cross, dot, length, scale, sub, vec3, type Vec3 } from "../math/vec3";
-import type { BallId, BallState } from "../types";
+import { CONTACT_TOLERANCE } from "../detect";
+import { add, cross, dot, horizontal, length, scale, sub, vec3, type Vec3 } from "../math/vec3";
+import { BALL_IDS, type BallId, type BallState } from "../types";
 import { rotate } from "./rigidBody";
 import type { HeadState, MalletHead } from "./types";
 
 /** The kinds of pair, in the order the pair list holds them. */
-export type PairKind = "face-ball" | "ball-ball" | "ball-turf";
+export type PairKind = "face-ball" | "ball-ball" | "ball-turf" | "ball-obstacle";
 
-/** One pair. `b` indexes the impact's balls; `a` does too for a ball–ball pair and is −1 for the face or the turf. */
+/**
+ * One pair. `b` indexes the impact's balls. `a` indexes them too for a ball–ball pair, indexes the obstacles for a
+ * ball–obstacle pair, and is −1 for the face or the turf.
+ */
 export interface Pair {
     readonly kind: PairKind;
     readonly key: string;
     readonly a: number;
     readonly b: number;
+}
+
+/** A fixed vertical cylinder as the impact's geometry sees it (a Cylinder satisfies it). */
+export interface ObstacleGeometry {
+    readonly id: string;
+    readonly centre: Vec3;
+    readonly radius: number;
 }
 
 /** A closed pair: unit normal from A to B, penetration (m) and contact point. */
@@ -34,21 +46,42 @@ export const OFF_FACE = "off-face";
 const UP = vec3(0, 0, 1);
 const FACES = [1, -1] as const;
 
+/** Key of the face–ball pair of `ball`. */
+export function faceKey(ball: BallId): string {
+    return `face/${ball}`;
+}
+
+/** Key of the pair of balls `a` and `b`: the earlier in BALL_IDS order first. */
+export function ballPairKey(a: BallId, b: BallId): string {
+    return BALL_IDS.indexOf(a) < BALL_IDS.indexOf(b) ? `${a}/${b}` : `${b}/${a}`;
+}
+
+/** Key of the pair of `ball` and obstacle `obstacleId`. */
+export function obstacleKey(ball: BallId, obstacleId: string): string {
+    return `${ball}@${obstacleId}`;
+}
+
 /**
  * The pair list in its fixed order: face–ball, then ball–ball, then ball–turf, each in ball order (`ids` are in
- * BALL_IDS order). A ball has a turf pair only where `turf` says so (isolated test cases leave the turf out).
+ * BALL_IDS order), then ball–obstacle, ball by ball, `obstacles` (ids, in obstaclesOf order) within each ball. A ball
+ * has a turf pair only where `turf` says so (isolated test cases leave the turf out).
  */
-export function pairList(ids: readonly BallId[], turf: readonly boolean[]): Pair[] {
-    const pairs: Pair[] = ids.map((id, b): Pair => ({ kind: "face-ball", key: `face/${id}`, a: -1, b }));
+export function pairList(ids: readonly BallId[], turf: readonly boolean[], obstacles: readonly string[] = []): Pair[] {
+    const pairs: Pair[] = ids.map((id, b): Pair => ({ kind: "face-ball", key: faceKey(id), a: -1, b }));
     ids.forEach((first, a) => {
         for (let b = a + 1; b < ids.length; b++) {
-            pairs.push({ kind: "ball-ball", key: `${first}/${ids[b] as BallId}`, a, b });
+            pairs.push({ kind: "ball-ball", key: ballPairKey(first, ids[b] as BallId), a, b });
         }
     });
     ids.forEach((id, b) => {
         if (turf[b]) {
             pairs.push({ kind: "ball-turf", key: `turf/${id}`, a: -1, b });
         }
+    });
+    ids.forEach((id, b) => {
+        obstacles.forEach((obstacle, a) => {
+            pairs.push({ kind: "ball-obstacle", key: obstacleKey(id, obstacle), a, b });
+        });
     });
     return pairs;
 }
@@ -91,6 +124,18 @@ export function faceContact(
 }
 
 /**
+ * Separation (m) of a ball centred at `centre` from the head's faces: d − R for the nearer face plane, d being the
+ * centre's signed distance from a face plane along its outward normal, the larger of the two faces' (P2b.2a design §5,
+ * `clearanceAfter`). Negative while the ball reaches into that plane.
+ */
+export function faceClearance(state: HeadState, head: MalletHead, centre: Vec3, radius: number): number {
+    const front = faceOf(state, head, 1);
+    const back = faceOf(state, head, -1);
+    const d = Math.max(dot(sub(centre, front.centre), front.normal), dot(sub(centre, back.centre), back.normal));
+    return d - radius;
+}
+
+/**
  * The contact of ball a with ball b (centres `a`, `b`), or null while they are at least 2R apart. Coincident centres
  * have no normal and throw a RangeError; simulateImpact's validation rejects such set-ups before integrating.
  */
@@ -117,6 +162,72 @@ export function turfContact(centre: Vec3, radius: number): Penetration | null {
     return { normal: UP, depth, point: vec3(centre.x, centre.y, centre.z - (radius - depth / 2)) };
 }
 
+/**
+ * The contact of `obstacle` with a ball centred at `centre`, or null while they are at least R + r apart
+ * horizontally. The obstacle is an infinite vertical cylinder (a ball above a crown is phase 2's jump flag), so the
+ * normal is horizontal whatever the ball's height. A centre on the axis has no normal and throws a RangeError.
+ */
+export function obstacleContact(centre: Vec3, radius: number, obstacle: ObstacleGeometry): Penetration | null {
+    const offset = horizontal(sub(centre, obstacle.centre));
+    const distance = length(offset);
+    const depth = radius + obstacle.radius - distance;
+    if (!(depth > 0)) {
+        return null;
+    }
+    if (distance === 0) {
+        throw new RangeError(`ball–obstacle contact with a centre on the axis of ${obstacle.id} has no normal`);
+    }
+    const normal = scale(offset, 1 / distance);
+    return { normal, depth, point: sub(centre, scale(normal, radius - depth / 2)) };
+}
+
+/**
+ * Horizontal surface gap (m) between `obstacle` and a ball centred at `centre`, d − R − r: the negated penetration
+ * obstacleContact computes, rounded identically, so the pair is closed exactly where the gap is negative.
+ */
+export function obstacleGap(centre: Vec3, radius: number, obstacle: ObstacleGeometry): number {
+    return 0 - (radius + obstacle.radius - length(horizontal(sub(centre, obstacle.centre))));
+}
+
+/**
+ * Bound on outsideObstacle's corrections. Numerical, not physical. Each correction lengthens the target distance by
+ * step = ε·(max(|x|, |y|) of the obstacle's centre + R + r), at least an ulp of every rebuilt coordinate. The
+ * rounding of the rebuilt centre is under one step, apart from a few ulps of R + r (from f, offset·f, the squared sum
+ * and the square root), which matter only for an obstacle near the origin. A correction or two clears it, and the rest
+ * are spare.
+ */
+const OUTSIDE_STEPS = 4;
+
+/**
+ * `centre` moved horizontally outward from `obstacle` until its penetration R + r − d is at most zero, as
+ * obstacleContact computes it; or `centre` itself when it already is (P2b.2a design §4, §6). The target distance grows
+ * by about an ulp of the coordinates per correction, until rounding them no longer leaves the ball inside, so the ball
+ * ends at most a few such ulps beyond zero gap. Throws a RangeError for a centre on the axis (no outward direction),
+ * and an Error if the corrections run out.
+ */
+export function outsideObstacle(centre: Vec3, radius: number, obstacle: ObstacleGeometry): Vec3 {
+    const offset = horizontal(sub(centre, obstacle.centre));
+    const distance = length(offset);
+    const reach = radius + obstacle.radius;
+    if (!(reach - distance > 0)) {
+        return centre;
+    }
+    if (distance === 0) {
+        throw new RangeError(`a ball centred on the axis of ${obstacle.id} has no outward direction`);
+    }
+    const step = Number.EPSILON * (Math.max(Math.abs(obstacle.centre.x), Math.abs(obstacle.centre.y)) + reach);
+    let target = reach;
+    for (let i = 0; i < OUTSIDE_STEPS; i++) {
+        const f = target / distance;
+        const moved = vec3(obstacle.centre.x + offset.x * f, obstacle.centre.y + offset.y * f, centre.z);
+        if (!(reach - length(horizontal(sub(moved, obstacle.centre))) > 0)) {
+            return moved;
+        }
+        target += step;
+    }
+    throw new Error(`could not place a ball outside ${obstacle.id}`);
+}
+
 /** The contact of `pair` in the current state, OFF_FACE, or null while it is open. */
 export function pairContact(
     pair: Pair,
@@ -124,6 +235,7 @@ export function pairContact(
     head: MalletHead,
     balls: readonly BallState[],
     radius: number,
+    obstacles: readonly ObstacleGeometry[] = [],
 ): Penetration | typeof OFF_FACE | null {
     const centre = (balls[pair.b] as BallState).position;
     switch (pair.kind) {
@@ -133,7 +245,30 @@ export function pairContact(
             return ballBallContact((balls[pair.a] as BallState).position, centre, radius);
         case "ball-turf":
             return turfContact(centre, radius);
+        case "ball-obstacle":
+            return obstacleContact(centre, radius, obstacles[pair.a] as ObstacleGeometry);
     }
+}
+
+/**
+ * True when ball–ball or ball–obstacle `pair` is touching, its gap at most CONTACT_TOLERANCE (overlap included), in
+ * `balls` (P2b.2a design §3, `touchingAtStart`); always false for face–ball and ball–turf pairs.
+ */
+export function pairTouching(
+    pair: Pair,
+    balls: readonly BallState[],
+    radius: number,
+    obstacles: readonly ObstacleGeometry[],
+): boolean {
+    const centre = (balls[pair.b] as BallState).position;
+    if (pair.kind === "ball-ball") {
+        return length(sub(centre, (balls[pair.a] as BallState).position)) - 2 * radius <= CONTACT_TOLERANCE;
+    }
+    if (pair.kind === "ball-obstacle") {
+        const o = obstacles[pair.a] as ObstacleGeometry;
+        return length(horizontal(sub(centre, o.centre))) - radius - o.radius <= CONTACT_TOLERANCE;
+    }
+    return false;
 }
 
 /**

@@ -65,20 +65,42 @@ export type ImpactEvent =
     | { readonly kind: "impact-mallet-grounded"; readonly t: number }
     | { readonly kind: "impact-off-face"; readonly t: number; readonly ball: BallId };
 
+/**
+ * One contact interval of a pair (P2b.2a design §5): [start, end) in s from the impact's start, whole steps, and the
+ * largest normal force (N) in it (0 at a face's rim, or for a pair overlapping but released). For a face–ball pair,
+ * `clearanceAfter` (m) is the largest separation from the face in the gap before the next interval.
+ */
+export interface ContactInterval {
+    readonly start: number;
+    readonly end: number;
+    readonly peakForce: number;
+    readonly clearanceAfter?: number;
+}
+
 /** What the integrator returns: the bodies at the end of the impact and what happened on the way. */
 export interface ImpactRun {
     readonly balls: BallStates;
     readonly head: HeadState;
     readonly duration: number;
     readonly events: readonly ImpactEvent[];
-    /** Deepest penetration (m) of every pair that closed, keyed "face/<ball>", "<ball>/<ball>" or "turf/<ball>". */
+    /**
+     * Deepest penetration (m) of every pair that closed, keyed "face/<ball>", "<ball>/<ball>", "turf/<ball>" or
+     * "<ball>@<obstacle id>".
+     */
     readonly peakPenetration: Readonly<Record<string, number>>;
     readonly steps: number;
+    /**
+     * Contact intervals of every pair that was in contact, keyed as `peakPenetration` is, plus "<ball>@<obstacle id>".
+     * In contact means closed, or a face–ball pair at the rim (the Laws count any part of the mallet).
+     */
+    readonly timeline: Readonly<Record<string, readonly ContactInterval[]>>;
+    /** Keys of the ball–ball and ball–obstacle pairs touching (within CONTACT_TOLERANCE) at t = 0, in pair order. */
+    readonly touchingAtStart: readonly string[];
 }
 
 /** The impact's outcome, with the balls as handed over to phase 2 (design §6). */
 export interface ImpactResult extends ImpactRun {
     readonly handover: BallStates;
-    /** Largest overlap (m) the handover removed from a pair of balls. */
+    /** Largest overlap (m) the handover removed from a pair of balls or a ball and an obstacle. */
     readonly overlapCorrection: number;
 }
