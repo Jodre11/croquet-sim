@@ -143,6 +143,17 @@ function viewOf(context: StrokeContext, impact: ImpactResult): StrikerView {
     return { faces: impact.timeline[faceKey(striker)] ?? NONE, roquet, roqueted, objects, obstacleKeys };
 }
 
+/**
+ * True when `hit`, a first hit on a ball other than the roqueted one, is exempt from 29.1.7: the mallet contact `face`
+ * it falls in, the roquet and the hit all start together (spec §7; the last sentence of Law 29.2.4). The hit may not
+ * start after the roquet, and the contact must itself be exempt at its own start, which already requires the roquet to
+ * have started at or before it.
+ */
+function hitIsExempt(view: StrikerView, hit: ContactInterval, face: ContactInterval): boolean {
+    const { roquet } = view;
+    return roquet !== null && hit.start <= roquet.start && exempt(view, face.start);
+}
+
 /** True when a mallet contact at time t is exempt under Law 29.2.4.1 (see the file header). */
 function exempt(view: StrikerView, t: number): boolean {
     const { roquet } = view;
@@ -268,9 +279,7 @@ export function judgeFaults(context: StrokeContext, impact: ImpactResult): Fault
             continue;
         }
         const face = faces.find((f) => f.start <= first.start && first.start < f.end);
-        const roquetStart = view.roquet?.start;
-        const exemptHit = face !== undefined && roquetStart !== undefined && first.start <= roquetStart;
-        if (face && !(exemptHit && exempt(view, face.start))) {
+        if (face && !hitIsExempt(view, first, face)) {
             add("29.1.7", "possible-fault", striker, first.start, {
                 contactBefore: first.start - face.start,
                 contactAfter: face.end - first.start,
