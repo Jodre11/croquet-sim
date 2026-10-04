@@ -235,9 +235,7 @@ shot 7.15 ± 0.6 (up to 11.6), pass roll about 0.83 in theory.
   impact's cost per step to 1.61–1.88× P2b.1's, so a reach filter skips a ball–obstacle pair while the ball cannot
   yet reach the obstacle (a per-pair travel budget, exact by construction; spec §4). With it, pre-flight measured
   µs/step against `main` side by side: centre 0.433 against 0.355 (1.22×), croquet 0.756 against 0.730 (1.04×),
-  descending 0.405 against 0.304 (1.33×), stop shot 0.750 against 0.585 (1.28×). The final probe run (median
-  µs/step, filtered, `main` not re-measured, so not comparable to the ratios): centre 0.500, croquet 0.833,
-  descending 0.434, stop shot 0.791; the machine and load differed from pre-flight's.
+  descending 0.405 against 0.304 (1.33×), stop shot 0.750 against 0.585 (1.28×).
 - **Obstacle contact time.** `ballObstacleContactTime` is the ball–ball analogue (0.75 ms), bounded [0.435, 1.0] ms:
   the lower bound is the Hertzian rigid-flat case, and the upper bound the largest for which the obstacle fuzz keeps
   every obstacle penetration under 0.06·R with a margin (1.5 ms gave 0.081·R). Hoop setting stiffness varying hoop
