@@ -7,15 +7,16 @@
  * 3. updates every position, and the head's orientation, from the new velocities.
  *
  * Bodies and pairs are visited in a fixed order and forces summed in it, so repeated runs are bit-identical, and
- * set-ups mirrored across a vertical plane give exactly mirrored results.
+ * set-ups mirrored across a vertical plane give exactly mirrored results. Obstacles (hoop uprights and the peg) are
+ * immovable: a ball–obstacle pair's force acts on the ball alone.
  *
- * The impact ends once a face–ball contact has closed, the drive window has closed, no face–ball or ball–ball contact
- * has been closed for RELEASE_STEPS steps, and no ball in turf contact is still bouncing in it; or at the cap. A ball
- * bounces while its vertical oscillation energy about the static sink δ₀ = m·g/k, ½·m·v_z² + ½·k·(δ − δ₀)², exceeds
- * the static spring's ½·k·δ₀²: it will reach δ = 0 and leave the turf, so the turf's rebound, which dominates lift, is
- * integrated rather than discarded at handover. Below that the ball only settles in its hollow, and the handover
- * discards at most m·g·δ₀/2 (design §6). Isolated set-ups (tests) may give balls any state and leave the turf out;
- * simulateImpact.ts prepares and validates real ones.
+ * The impact ends once a face–ball contact has closed, the drive window has closed, no face–ball, ball–ball or
+ * ball–obstacle contact has been closed for RELEASE_STEPS steps, and no ball in turf contact is still bouncing in it;
+ * or at the cap. A ball bounces while its vertical oscillation energy about the static sink δ₀ = m·g/k,
+ * ½·m·v_z² + ½·k·(δ − δ₀)², exceeds the static spring's ½·k·δ₀²: it will reach δ = 0 and leave the turf, so the
+ * turf's rebound, which dominates lift, is integrated rather than discarded at handover. Below that the ball only
+ * settles in its hollow, and the handover discards at most m·g·δ₀/2 (design §6). Isolated set-ups (tests) may give
+ * balls any state and leave the turf out; simulateImpact.ts prepares and validates real ones.
  */
 import { ZERO, add, cross, dot, scale, sub, vec3, type Vec3 } from "../math/vec3";
 import type { BallId, BallParams, BallState, BallStates } from "../types";
@@ -27,6 +28,7 @@ import {
     pairContact,
     pairList,
     pointVelocity,
+    type ObstacleGeometry,
     type Pair,
     type Penetration,
 } from "./contacts";
@@ -42,9 +44,9 @@ import type { DriveSample, HeadState, ImpactEvent, ImpactRun, MalletHead } from 
 export const IMPACT_DT = 5e-6;
 
 /**
- * Consecutive steps without a closed face–ball or ball–ball contact after which the impact may end. A numerical
- * allowance for a contact to re-close (a croquet stroke's balls part and meet again), not physical. Pre-flight: ×4
- * moves no ball's state 50 ms after the strike by more than 2.8e-4 of the head speed.
+ * Consecutive steps without a closed face–ball, ball–ball or ball–obstacle contact after which the impact may
+ * end. A numerical allowance for a contact to re-close (a croquet stroke's balls part and meet again), not physical.
+ * Pre-flight: ×4 moves no ball's state 50 ms after the strike by more than 2.8e-4 of the head speed.
  */
 export const RELEASE_STEPS = 50;
 
@@ -61,6 +63,11 @@ export interface ImpactBall {
     readonly turf: PairLaw | null;
 }
 
+/** A fixed obstacle in the impact: its geometry and its ball–obstacle law (P2b.2a design §4). */
+export interface ImpactObstacle extends ObstacleGeometry {
+    readonly law: PairLaw;
+}
+
 /** Everything the integrator needs, every law already solved. */
 export interface ImpactSetup {
     readonly head: MalletHead;
@@ -72,6 +79,8 @@ export interface ImpactSetup {
     readonly gravity: number;
     /** In BALL_IDS order. */
     readonly balls: readonly ImpactBall[];
+    /** Hoop uprights, then the peg (obstaclesOf order); every ball is paired with each. */
+    readonly obstacles: readonly ImpactObstacle[];
 }
 
 /** One closed pair in one step, as the probe sees it: forces applied during the step, on body B. */
@@ -142,7 +151,7 @@ function lawOf(setup: ImpactSetup, pair: Pair): PairLaw {
         case "ball-turf":
             return (setup.balls[pair.b] as ImpactBall).turf as PairLaw;
         case "ball-obstacle":
-            throw new Error("ball–obstacle pairs have no contact law yet");
+            return (setup.obstacles[pair.a] as ImpactObstacle).law;
     }
 }
 
@@ -181,7 +190,7 @@ function applyPair(
     const { pair } = p;
     const sb = balls[pair.b] as BallState;
     const sa = pair.kind === "ball-ball" ? (balls[pair.a] as BallState) : null;
-    // u: velocity of B's material point at the contact relative to A's (the turf's is zero).
+    // u: velocity of B's material point at the contact relative to A's (the turf's and an obstacle's are zero).
     const va =
         pair.kind === "face-ball"
             ? pointVelocity(head.position, head.velocity, head.angularVelocity, contact.point)
@@ -330,7 +339,11 @@ export function integrate(setup: ImpactSetup, options: ImpactOptions = {}): Impa
     const ballWeight = vec3(0, 0, 0 - ball.mass * setup.gravity);
     const ids = setup.balls.map((b) => b.id);
     const hasTurf = setup.balls.map((b) => b.turf !== null);
-    const pairs: PairState[] = pairList(ids, hasTurf).map((pair) => ({
+    const pairs: PairState[] = pairList(
+        ids,
+        hasTurf,
+        setup.obstacles.map((o) => o.id),
+    ).map((pair) => ({
         pair,
         law: lawOf(setup, pair),
         spring: ZERO,
@@ -363,7 +376,7 @@ export function integrate(setup: ImpactSetup, options: ImpactOptions = {}): Impa
 
         for (const p of pairs) {
             const { pair } = p;
-            const contact = pairContact(pair, state, head, balls, R);
+            const contact = pairContact(pair, state, head, balls, R, setup.obstacles);
             if (contact === OFF_FACE || contact === null) {
                 p.spring = ZERO;
                 if (contact === OFF_FACE && !offFace[pair.b]) {

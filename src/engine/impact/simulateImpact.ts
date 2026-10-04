@@ -1,8 +1,9 @@
 /**
  * Phase 1 of a shot (P2b.1 design §3). Checks the ContactState and the balls. Solves every contact law once: face–ball
  * and ball–ball once, ball–turf once per ball from the surface where it lies. Starts each ball at its static turf sink
- * m·g/k_turf, so that the impact does not open with a spurious bounce. Integrates the impact and hands the balls over
- * to phase 2.
+ * m·g/k_turf, so that the impact does not open with a spurious bounce. Each obstacle's law is solved once: the ball's
+ * mass (the obstacle is immovable), the obstacle's material and its own contact time. Integrates the impact and hands
+ * the balls over to phase 2.
  */
 import { CONTACT_TOLERANCE } from "../detect";
 import { horizontal, length, sub, vec3, type Vec3 } from "../math/vec3";
@@ -165,6 +166,7 @@ export function prepareImpact(contact: ContactState, balls: BallStates, world: W
         });
     }
     const faceMass = (contact.head.mass * ball.mass) / (contact.head.mass + ball.mass);
+    const obstacles = obstaclesOf(world);
     return {
         head: contact.head,
         start: {
@@ -184,6 +186,12 @@ export function prepareImpact(contact: ContactState, balls: BallStates, world: W
         ball,
         gravity,
         balls: entries,
+        obstacles: obstacles.map((o) => ({
+            id: o.id,
+            centre: o.centre,
+            radius: o.radius,
+            law: lawFromContactTime(ball.mass, o.material.restitution, o.contactTime, o.material.friction),
+        })),
     };
 }
 
