@@ -17,23 +17,30 @@
  * turf's rebound, which dominates lift, is integrated rather than discarded at handover. Below that the ball only
  * settles in its hollow, and the handover discards at most m·g·δ₀/2 (design §6). Isolated set-ups (tests) may give
  * balls any state and leave the turf out; simulateImpact.ts prepares and validates real ones.
+ *
+ * Every step also records whether each pair is in contact (closed, or a face at the rim), building the contact
+ * timeline (timeline.ts; P2b.2a design §5); the pairs touching at t = 0 are listed in `touchingAtStart`. Recording
+ * only reads the state.
  */
 import { ZERO, add, cross, dot, scale, sub, vec3, type Vec3 } from "../math/vec3";
 import type { BallId, BallParams, BallState, BallStates } from "../types";
 import { normalForce, tangentialForce, type PairLaw } from "./contactLaw";
 import {
     OFF_FACE,
+    faceClearance,
     headClosing,
     headLowestPoint,
     pairContact,
     pairList,
+    pairTouching,
     pointVelocity,
     type ObstacleGeometry,
     type Pair,
     type Penetration,
 } from "./contacts";
 import { angularAcceleration, integrateOrientation, rotate, rotateInverse } from "./rigidBody";
-import type { DriveSample, HeadState, ImpactEvent, ImpactRun, MalletHead } from "./types";
+import { closeTimeline, emptyTimeline, inGap, noteClearance, recordStep, type PairTimeline } from "./timeline";
+import type { ContactInterval, DriveSample, HeadState, ImpactEvent, ImpactRun, MalletHead } from "./types";
 
 /**
  * Integration step (s): about 1/100 of the shortest sourced contact duration, 0.5 ms (the lower bound of the ball–ball
@@ -140,6 +147,8 @@ interface PairState {
     /** Elastic tangential displacement ξ; cleared whenever the pair is open. */
     spring: Vec3;
     peak: number;
+    /** The pair's contact timeline. */
+    readonly line: PairTimeline;
 }
 
 function lawOf(setup: ImpactSetup, pair: Pair): PairLaw {
@@ -174,9 +183,9 @@ interface StepLoads {
 }
 
 /**
- * The normal and tangential force of one closed pair, from the current state: advances the pair's tangential spring,
- * adds the force to body B and its reaction to body A (the head, the other ball, or the immovable turf), and appends
- * the pair as the probe sees it to `samples` (null without a probe).
+ * The normal and tangential force of one closed pair, from the current state; returns the normal force (N). Advances
+ * the pair's tangential spring, adds the force to body B and its reaction to body A (the head, the other ball, or the
+ * immovable turf), and appends the pair as the probe sees it to `samples` (null without a probe).
  */
 function applyPair(
     p: PairState,
@@ -186,7 +195,7 @@ function applyPair(
     dt: number,
     loads: StepLoads,
     samples: ContactSample[] | null,
-): void {
+): number {
     const { pair } = p;
     const sb = balls[pair.b] as BallState;
     const sa = pair.kind === "ball-ball" ? (balls[pair.a] as BallState) : null;
@@ -224,6 +233,7 @@ function applyPair(
         spring: tangential.spring,
         law: p.law,
     });
+    return normal;
 }
 
 /**
@@ -298,7 +308,8 @@ function trackTurf(
 
 /**
  * The run's result once the loop has ended at `duration`: each ball's final state, an `impact-head-approaching` event
- * for every ball the head is still closing on, and every pair's peak penetration.
+ * for every ball the head is still closing on, every pair's peak penetration, the contact timeline and the pairs
+ * touching at the start.
  */
 function finish(
     setup: ImpactSetup,
@@ -308,6 +319,7 @@ function finish(
     events: ImpactEvent[],
     steps: number,
     duration: number,
+    touchingAtStart: readonly string[],
 ): ImpactRun {
     const final: BallStates = {};
     for (let i = 0; i < balls.length; i++) {
@@ -324,7 +336,14 @@ function finish(
             peakPenetration[p.pair.key] = p.peak;
         }
     }
-    return { balls: final, head: state, duration, events, peakPenetration, steps };
+    const timeline: Record<string, readonly ContactInterval[]> = {};
+    for (const p of pairs) {
+        const intervals = closeTimeline(p.line, duration);
+        if (intervals.length > 0) {
+            timeline[p.pair.key] = intervals;
+        }
+    }
+    return { balls: final, head: state, duration, events, peakPenetration, steps, timeline, touchingAtStart };
 }
 
 /** Integrates the impact from `setup` until it ends (see the file header). */
@@ -348,8 +367,10 @@ export function integrate(setup: ImpactSetup, options: ImpactOptions = {}): Impa
         law: lawOf(setup, pair),
         spring: ZERO,
         peak: 0,
+        line: emptyTimeline(),
     }));
     const balls: BallState[] = setup.balls.map((b) => b.state);
+    const touchingAtStart = pairs.filter((p) => pairTouching(p.pair, balls, R, setup.obstacles)).map((p) => p.pair.key);
     const events: ImpactEvent[] = [];
     const track: TurfTrack = {
         inTurf: balls.map((s, i) => hasTurf[i] === true && s.position.z < R),
@@ -383,6 +404,10 @@ export function integrate(setup: ImpactSetup, options: ImpactOptions = {}): Impa
                     offFace[pair.b] = true;
                     events.push({ kind: "impact-off-face", t, ball: ids[pair.b] as BallId });
                 }
+                recordStep(p.line, contact === OFF_FACE, 0, t);
+                if (pair.kind === "face-ball" && contact === null && inGap(p.line)) {
+                    noteClearance(p.line, faceClearance(state, head, (balls[pair.b] as BallState).position, R));
+                }
                 continue;
             }
             if (pair.kind !== "ball-turf") {
@@ -392,7 +417,8 @@ export function integrate(setup: ImpactSetup, options: ImpactOptions = {}): Impa
                 struck = true;
             }
             p.peak = Math.max(p.peak, contact.depth);
-            applyPair(p, contact, state, balls, dt, loads, options.probe ? samples : null);
+            const force = applyPair(p, contact, state, balls, dt, loads, options.probe ? samples : null);
+            recordStep(p.line, true, force, t);
         }
 
         state = advance(state, balls, loads, setup, ballInertia, dt);
@@ -415,5 +441,5 @@ export function integrate(setup: ImpactSetup, options: ImpactOptions = {}): Impa
         }
     }
 
-    return finish(setup, state, balls, pairs, events, steps, steps * dt);
+    return finish(setup, state, balls, pairs, events, steps, steps * dt, touchingAtStart);
 }

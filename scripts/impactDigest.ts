@@ -38,12 +38,18 @@ function p2b1(result: ImpactResult): unknown {
     return { balls, head, duration, events, peakPenetration, steps, handover, overlapCorrection };
 }
 
+/** The fields added after P2b.1, printed on their own `timeline` lines. */
+function later(result: ImpactResult): unknown {
+    return { timeline: result.timeline, touchingAtStart: result.touchingAtStart };
+}
+
 const TEST_WORLD = testWorld();
 
 for (const s of SCENARIOS) {
     const probe = recorder();
     const result = simulateImpact(s.contact, s.balls, TEST_WORLD, { probe });
     console.log(`scenario ${s.name} test-world ${exact(p2b1(result))}`);
+    console.log(`timeline scenario ${s.name} ${exact(later(result))}`);
     probe.snapshots.forEach((snapshot, i) => {
         console.log(`scenario ${s.name} step ${i} ${exact(snapshot)}`);
     });
@@ -52,5 +58,7 @@ for (const s of SCENARIOS) {
 const random = rng(FUZZ_SEED);
 for (let n = 0; n < STROKES; n++) {
     const { contact, balls } = randomStroke(random, TEST_WORLD);
-    console.log(`fuzz ${n} ${exact(p2b1(simulateImpact(contact, balls, TEST_WORLD)))}`);
+    const result = simulateImpact(contact, balls, TEST_WORLD);
+    console.log(`fuzz ${n} ${exact(p2b1(result))}`);
+    console.log(`timeline fuzz ${n} ${exact(later(result))}`);
 }
