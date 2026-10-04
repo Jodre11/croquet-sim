@@ -3,6 +3,7 @@ import {
     ballReference,
     contactReference,
     courtReference,
+    FAULT_LAW_KEYS,
     frictionReference,
     lawnReference,
     lawsReference,
@@ -82,5 +83,21 @@ describe("impact reference data", () => {
         for (const v of [...Object.values(contactReference), ...Object.values(malletReference)]) {
             expect(v.bounds, v.source).toBeDefined();
         }
+    });
+});
+
+describe("obstacle and fault reference data", () => {
+    it("derives the obstacle contact time from the ball–ball one, within the Hertzian lower bound", () => {
+        const T = contactReference.ballObstacleContactTime;
+        expect(T.value).toBe(contactReference.ballBallContactTime.value);
+        const [lo] = T.bounds as [number, number];
+        expect(lo).toBeCloseTo((contactReference.ballBallContactTime.bounds as [number, number])[0] * 0.87, 12);
+    });
+
+    it("quotes every Law the fault judge relies on", () => {
+        for (const key of FAULT_LAW_KEYS) {
+            expect(lawsReference.faults[key].quote.length, key).toBeGreaterThan(0);
+        }
+        expect(Object.keys(lawsReference.faults)).toEqual([...FAULT_LAW_KEYS]);
     });
 });

@@ -98,11 +98,41 @@ export const courtReference = {
     peg: readPeg(courtJson),
 } as const;
 
-/** Laws expressed as signed-offset thresholds. */
+/** Law 29 (faults) and the Glossary entries the fault judge relies on, keyed by Law number (reference/laws.json). */
+export const FAULT_LAW_KEYS = [
+    "29.1.5",
+    "29.1.6.1",
+    "29.1.6.2",
+    "29.1.6.3",
+    "29.1.7",
+    "29.1.8",
+    "29.1.9",
+    "29.1.11",
+    "29.1.13",
+    "29.2.3",
+    "29.2.4",
+    "29.2.5",
+    "29.2.6",
+    "29.2.7",
+    "groupOfBalls",
+] as const;
+
+/** A key of `lawsReference.faults`. */
+export type FaultLawKey = (typeof FAULT_LAW_KEYS)[number];
+
+function readFaultLaws(section: unknown): Readonly<Record<FaultLawKey, ReferenceQuote>> {
+    return Object.fromEntries(FAULT_LAW_KEYS.map((key) => [key, readQuote(section, key, "laws")])) as Record<
+        FaultLawKey,
+        ReferenceQuote
+    >;
+}
+
+/** Laws expressed as signed-offset thresholds, and the quoted Laws of the fault judge. */
 export const lawsReference = {
     outOfCourt: readOffsetRule(lawsJson, "outOfCourt", "laws"),
     hoopRunStart: readOffsetRule(lawsJson, "hoopRunStart", "laws"),
     hoopRunComplete: readOffsetRule(lawsJson, "hoopRunComplete", "laws"),
+    faults: readFaultLaws(lawsJson),
 } as const;
 
 /** Lawn-speed definition and typical value. */
@@ -128,6 +158,7 @@ export const frictionReference = {
 export const contactReference = {
     ballTurfStiffness: readValue(contactJson, "ballTurfStiffness", "contact"),
     ballBallContactTime: readValue(contactJson, "ballBallContactTime", "contact"),
+    ballObstacleContactTime: readValue(contactJson, "ballObstacleContactTime", "contact"),
     faceBallContactTime: readValue(contactJson, "faceBallContactTime", "contact"),
     tangentialStiffnessRatio: readValue(contactJson, "tangentialStiffnessRatio", "contact"),
 } as const;
