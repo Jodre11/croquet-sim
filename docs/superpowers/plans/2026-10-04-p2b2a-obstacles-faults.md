@@ -159,7 +159,10 @@ Defects pre-flight found, all fixed in this plan:
 - `outsideObstacle` (Task 4) grew its target by ε·target (about 7e-18 m), which cannot outgrow the rounding of 10 m
   coordinates (about 1.8e-15 m): a synthetic stress test threw on 26 % of random overlaps, and obstacle-fuzz stroke 1084
   threw at a contact time of 4.35e-4 s. The step is now ε·(max(|x|, |y|) of the obstacle's centre + R + r); the first
-  attempt is unchanged, so the digest is bit-identical. A regression test reproduces stroke 1084.
+  attempt is unchanged, so the digest is bit-identical. A regression test reproduces stroke 1084. Stress replicas
+  (2e6 random overlaps, coordinates to ±100 m) cleared at attempt index 0 or 1; near the origin (obstacle spans of
+  ±1e-3 and ±0.05 m, 1e6 inputs each), where the step is about ε·(R + r), a few needed index 2, never more, so
+  `OUTSIDE_STEPS` stays 4 and its comment claims no more than that.
 - Task 4's `PairKind` addition left `lawOf` non-exhaustive (`npm run check` failed): Task 4 now adds a throwing
   placeholder case, which Task 5 replaces.
 - Task 4's tests: the pair-key slices (4 and 5, not 5 and 6), the sign of the contact point's offset (+5e-5), and the
@@ -907,9 +910,10 @@ export function obstacleContact(centre: Vec3, radius: number, obstacle: Obstacle
 
 /**
  * Bound on outsideObstacle's corrections. Numerical, not physical. Each correction lengthens the target distance by
- * step = ε·(max(|x|, |y|) of the obstacle's centre + R + r), at least an ulp of every rebuilt coordinate. Rounding
- * the rebuilt centre moves its distance by at most √2/2 of that ulp (plus a few ulps of R + r from the subtraction and
- * the square root), less than one step, so the first correction already clears; two more are spare.
+ * step = ε·(max(|x|, |y|) of the obstacle's centre + R + r), at least an ulp of every rebuilt coordinate. The
+ * rounding of the rebuilt centre is under one step, apart from a few ulps of R + r (from f, offset·f, the squared sum
+ * and the square root), which matter only for an obstacle near the origin. A correction or two clears it, and the rest
+ * are spare.
  */
 const OUTSIDE_STEPS = 4;
 
