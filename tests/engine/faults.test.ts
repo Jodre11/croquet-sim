@@ -328,6 +328,17 @@ describe("judgeFaults: 29.1.7 and the roquet exemption", () => {
         expect(laws(judgeFaults(context, hit))).toEqual(["29.1.7 possible-fault"]);
     });
 
+    it("is not exempt when a second live ball is hit after the roquet, though the contact opened with it", () => {
+        const hit = impact({
+            timeline: {
+                "face/blue": [iv(2 * T, 6 * T)],
+                "blue/red": [iv(2 * T, 3 * T)],
+                "blue/black": [iv(4 * T, 5 * T)],
+            },
+        });
+        expect(laws(judgeFaults({ ...context, live: ["red", "black"] }, hit))).toEqual(["29.1.7 possible-fault"]);
+    });
+
     it("judges a dead-ball hit when the striker is not the first ball", () => {
         const hit = impact({
             timeline: { "face/red": [iv(0, 6 * T)], "blue/red": [iv(2 * T, 3 * T)], "red/black": [iv(4 * T, 5 * T)] },

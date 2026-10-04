@@ -18,10 +18,10 @@
  * hit starting with the roquet or with the contact does not intervene. A face interval already open when the roquet
  * starts is one contact, before it.
  *
- * Exemption for 29.1.7. The dead ball's hit is exempt only if the mallet contact it falls in is exempt at the
- * contact's own start (a contact already open before the roquet is not), and the hit does not start after the roquet:
- * the mallet contact, the roquet and the dead-ball hit all start together (Law 29.2.4: contact after the ball has hit
- * another object after the roquet is not exempt).
+ * Exemption for 29.1.7. Only the roqueted ball is excluded. The hit on any other ball, live or dead, is exempt only if
+ * the mallet contact it falls in is exempt at the contact's own start (a contact already open before the roquet is
+ * not), and the hit does not start after the roquet: the mallet contact, the roquet and the hit all start together
+ * (Law 29.2.4: contact after the ball has hit another object after the roquet is not exempt).
  *
  * 29.1.9 ("carries force while overlapping the mallet contact") is judged at interval granularity: an obstacle
  * interval that overlaps a mallet contact counts if its `peakForce` is positive, not the force during the overlap.
@@ -112,6 +112,8 @@ function validate(context: StrokeContext, impact: ImpactResult): void {
 interface StrikerView {
     readonly faces: readonly ContactInterval[];
     readonly roquet: ContactInterval | null;
+    /** The ball the roquet was on, or null with no roquet. */
+    readonly roqueted: BallId | null;
     /** Every interval of the striker's ball with an obstacle, or with a ball other than the roqueted one. */
     readonly objects: readonly ContactInterval[];
     /** Keys of the striker's ball–obstacle pairs that were in contact, in pair order. */
@@ -138,7 +140,7 @@ function viewOf(context: StrokeContext, impact: ImpactResult): StrikerView {
         ...others.filter((id) => id !== roqueted).flatMap((id) => impact.timeline[ballPairKey(striker, id)] ?? NONE),
         ...obstacleKeys.flatMap((key) => impact.timeline[key] ?? NONE),
     ];
-    return { faces: impact.timeline[faceKey(striker)] ?? NONE, roquet, objects, obstacleKeys };
+    return { faces: impact.timeline[faceKey(striker)] ?? NONE, roquet, roqueted, objects, obstacleKeys };
 }
 
 /** True when a mallet contact at time t is exempt under Law 29.2.4.1 (see the file header). */
@@ -255,11 +257,11 @@ export function judgeFaults(context: StrokeContext, impact: ImpactResult): Fault
             }
         }
     }
-    // 29.1.7: the striker's ball first hits a ball it was not touching while a mallet contact is open; a live ball is a
-    // roquet (exempt), and a croquet stroke's croqueted ball never counts (C29.12.3).
+    // 29.1.7: the striker's ball first hits a ball it was not touching while a mallet contact is open; the roqueted
+    // ball is the roquet (exempt), any other ball, live or dead, is not (Law 29.2.4), and a croquet stroke's
+    // croqueted ball never counts (C29.12.3).
     for (const id of BALL_IDS) {
-        const excluded =
-            id === striker || context.live.includes(id) || (kind === "croquet" && id === context.croqueted);
+        const excluded = id === striker || id === view.roqueted || (kind === "croquet" && id === context.croqueted);
         const key = ballPairKey(striker, id);
         const first = excluded ? undefined : impact.timeline[key]?.[0];
         if (!first || impact.touchingAtStart.includes(key)) {
