@@ -9,7 +9,7 @@ rather than guessed ones.
 | Plan | Delivers | Exit criteria |
 |---|---|---|
 | **P1 — Foundations and free-motion engine** (`2026-09-30-p1-free-motion-engine.md`) | Repo scaffold and CI; sourced reference data for ball, court, Laws, lawn speed and free-motion friction/restitution; deterministic event-driven phase-2 engine (sliding → rolling → stationary, ball–ball, uprights, peg, halt margin); out-of-court and hoop-passage events; hoop-run verdict; `ShotResult` sampling | Analytic cases pass (5/7 rule, head-on exchange, stop distances); energy/momentum invariants; mirror symmetry; determinism; event solver agrees with brute-force integration within 1 mm (the angled three-ball wedge push is cross-checked with ball–ball friction off, because pushing contacts are frictionless) |
-| **P2 — Impact phase and swing model** | **P2a.1 (lands first):** lift in free motion — airborne phase, landing event, 3D ball–ball contact normals, 3D impulse friction with impulsive turf friction, resting contact extended to airborne balls (3D normals, gravity; still frictionless), lift-aware hoop passage, out-of-court and halt, jump flag; sourced ball–turf restitution and crown clearance. **P2a.2:** Coulomb friction (3D, load-coupled) on coupled (pushing) contacts in `push.ts`, with stick/slip events and static friction in held clusters. **P2b.1** (`specs/2026-10-03-p2b1-impact-integrator-design.md`): reference data for face and turf contact and a typical mallet head; compliant small-step N-body impact integrator (mallet rigid body, balls, turf) driven by a force profile, tested with hand-built `ContactState`s; turf restitution and stiffness moved into `SurfaceProps`. **P2b.2:** reference data for coaching ratios and stance/drive defaults; swing model `ShotSetup → ContactState`; `simulateShot(setup)` wiring phase 1 into P1's phase 2. Three- and four-ball cannons, including near a hoop or the peg, are deferred beyond P2b but required in the final implementation | P2a.1 (met): landing and above-equator strike analytic cases; bouncing balls settle; brute-force cross-check (now 3D) agrees within 1 mm including hopping scenarios. P2a.2 (met): generalised topspin-push closed form; angled wedge cross-check runs in the standard world (friction-off override removed) and agrees with brute force within 1 mm; no fallbacks (`approximate-hold`, `approximate-slip` or `budget-hold`) in limit-of-holding sweeps with friction on. P2b.1 (met): analytic contact, restitution, sticking and 5/7-roll cases through a real impact; invariants; `dt` convergence; handover accepted by phase 2; phase 2 bit-identical after the `SurfaceProps` move; stop-shot probe and stiffness sensitivity recorded. P2b.2: standard stroke ratios within tolerance of sourced figures; stop → pass-roll monotonic; pull emerges on wide rolls without special-casing; stop-shot lift emerges (striker's ball clear of the turf during the transfer, meeting the croqueted ball just above its equator, no jump flag) |
+| **P2 — Impact phase and swing model** | **P2a.1 (lands first):** lift in free motion — airborne phase, landing event, 3D ball–ball contact normals, 3D impulse friction with impulsive turf friction, resting contact extended to airborne balls (3D normals, gravity; still frictionless), lift-aware hoop passage, out-of-court and halt, jump flag; sourced ball–turf restitution and crown clearance. **P2a.2:** Coulomb friction (3D, load-coupled) on coupled (pushing) contacts in `push.ts`, with stick/slip events and static friction in held clusters. **P2b.1** (`specs/2026-10-03-p2b1-impact-integrator-design.md`): reference data for face and turf contact and a typical mallet head; compliant small-step N-body impact integrator (mallet rigid body, balls, turf) driven by a force profile, tested with hand-built `ContactState`s; turf restitution and stiffness moved into `SurfaceProps`. **P2b.2** is split (decided 2026-10-04; see "P2b.2 decisions"). **P2b.2a** (`specs/2026-10-04-p2b2a-obstacles-faults-design.md`): ball–upright and ball–peg contact in the impact, a contact timeline, and a fault judge for the Laws' mallet faults (crushes, multiple contacts). **P2b.2b:** reference data for coaching ratios and the swing inputs' defaults; swing model `ShotSetup → ContactState`; `simulateShot(setup)` wiring phase 1 into P1's phase 2, exporting it with the fault judge. Three- and four-ball cannons, including near a hoop or the peg, are deferred beyond P2b but required in the final implementation | P2a.1 (met): landing and above-equator strike analytic cases; bouncing balls settle; brute-force cross-check (now 3D) agrees within 1 mm including hopping scenarios. P2a.2 (met): generalised topspin-push closed form; angled wedge cross-check runs in the standard world (friction-off override removed) and agrees with brute force within 1 mm; no fallbacks (`approximate-hold`, `approximate-slip` or `budget-hold`) in limit-of-holding sweeps with friction on. P2b.1 (met): analytic contact, restitution, sticking and 5/7-roll cases through a real impact; invariants; `dt` convergence; handover accepted by phase 2; phase 2 bit-identical after the `SurfaceProps` move; stop-shot probe and stiffness sensitivity recorded. P2b.2a: see its spec §1 (obstacle analytic cases; bit-identical without obstacles in reach; no obstacle overlap handed to phase 2; fault table and ORLAC C29.20.4 sequences; crush geometry). P2b.2b: standard stroke ratios within tolerance of sourced figures (stop shot and drive are calibration targets, the rolls held-out validation; see "P2b.2 decisions"); stop → pass-roll monotonic; pull emerges on wide rolls without special-casing; stop-shot lift emerges (striker's ball clear of the turf during the transfer, meeting the croqueted ball just above its equator, no jump flag) |
 | **P3 — Profiles and calibration** | Profile type and default "typical club player" profile; median-of-attempts input; optimiser fitting drive profile per stroke type; plausibility bounds and rejection | Round trip recovers fitted parameters within ±5 % and distances within ±2 %; out-of-bounds fits rejected |
 | **P4 — Planner, renderer and share links** | Svelte planner (placement with snap-back, nudge, croquet-stroke snap-into-contact, stroke controls, target hoop, lawn speed), Canvas 2D renderer, compare ghost overlay, honesty note, versioned fragment link format with migration and notices, wrapped local storage for profiles | Playwright suites at tablet/desktop/phone viewports in Chromium, WebKit, Firefox; link round-trips reproduce results |
 | **P5 — Delivery and budgets** | GitHub Pages deploy workflow; performance budget in CI (Chromium CPU throttle calibrated once against the reference iPad), including the cost of contact chatter (with friction on, P2a.2's realistic shot mix makes at most 404 resting-contact re-solves in a shot, and three-ball pushes up to 745 and about 75 ms of engine time on an Apple M4, which the work budget does not see; four-ball pushes end in `budget-hold`; see the P2a.2 outcomes); bundle-size budget; cross-engine determinism test | All budgets enforced in CI; site live |
@@ -171,6 +171,55 @@ What P1 delivered, and the constraints it leaves for P2–P5.
     digest. `driveAt`'s linear rescan is left for P2b.2, if the swing model's drive tables are long.
 - **Not used yet.** `simulateImpact` is not exported from `src/engine/index.ts`; P2b.2's `simulateShot` wires and
   exports it.
+
+## P2b.2 decisions (2026-10-04)
+
+**Feasibility spike** (throwaway sweep of whole shots on the default surface, open lawn, sourced head and face; not
+kept). With every parameter inside its reference bounds and no impact flag raised, each stroke reaches its coaching
+band. Targets: Croquet Association, "Project Croquet Dynamics" (2006, 8,000 frame/s video; croqueted ÷ striker's
+distance): drive 3.0–4.0, half roll 1.4–2.5, full roll 1.0–1.2, pass roll 0.9–1.2, stop shot 4.1–6.2; Don Gugan,
+"Croquet Drives, Pass-Rolls, Stop-Shots and Scatter-Shots" (oxfordcroquet.org/tech/gugan5/): drive 4.23 ± 0.2, stop
+shot 7.15 ± 0.6 (up to 11.6), pass roll about 0.83 in theory.
+
+- **Stop shot:** a rising strike (head rising 5–15°, face tilted up 3–5°, contact 20 mm below the face axis) gives
+  7.8–9.5 at the reference contact times and 5.5–6.5 at the stiff bounds. Stop-shot lift emerges: 60–91% of the
+  transfer impulse is delivered with the striker's ball clear of the turf, meeting the croqueted ball 0.02–0.08 mm
+  above its equator. Level and descending strikes never lift it (0%): the turf's rebound takes about 5 ms, the
+  transfer about 1 ms.
+- **Drive:** a level coast gives 6.6 at the reference contact times, 4.6 at the stiff bounds (face 0.6 ms, ball–ball
+  0.5 ms) and 3.2 at the soft (1.2, 0.87 ms). The hard-pair contact times decide it.
+- **Rolls:** forward face pitch 20–45° with a sustained push of 10–40 ms gives 1.0–2.5. The Croquet Association
+  measured mallet–ball contact of 30–58 ms on rolls (2.1–2.6 ms on drives and stop shots), which `IMPACT_CAP` (60 ms)
+  barely covers.
+- **Pass roll:** only as a split shot (straight, the striker's ball cannot pass the croqueted ball, so the ratio floors
+  at 1.00); 0.26–0.82 at splits of 15° and more with a long push.
+- **Pull** emerges: the croqueted ball turns 0.6–3.2° from the line of centres towards the swing, less with more
+  forward pitch. Whether that trend matches play needs a sourced pull figure.
+- **Geometry:** the head's radius (38 mm) is less than the ball's (46 mm), so any upward face tilt with the face centred
+  on the ball puts the head in the turf (468 of 2,808 swept setups were rejected for it).
+- **Double taps:** `impact-head-approaching` was raised on 451 of the 2,340 shots that ran. Gugan attributes about 90%
+  of a drive's striker distance to a later impulse from a mallet held at near-constant speed.
+
+**Decisions for P2b.2b.**
+
+- **Drive model:** the hands track a swing path. The drive is a stiff spring–damper pulling the head towards the path
+  the swing would follow; check, coast and push shape that path's speed through contact, so follow-through and
+  re-contact emerge rather than being flagged.
+- **Contact times:** P2b.2b fits the face–ball and ball–ball contact times once, inside their sourced bounds, so the
+  default profile's stop shot and drive reach their ratios; they are recorded in `contact.json` as derived, world
+  constants (product spec §7 keeps per-player fitting to the drive profile only).
+- **No circular validation:** the stop shot and drive are calibration targets, and the spec says so. The half roll, full
+  roll and pass roll ratios, the stop → pass-roll ordering, pull and stop-shot lift are held-out validation. Their swing
+  defaults (stance, face pitch, drive window and force) are sourced independently, from coaching descriptions and the
+  Croquet Association's mallet speeds and contact times, and are never tuned to the ratios.
+- **Swing inputs:** P2b.2b defines the physical part of the profile (mallet, grip, stance and drive per stroke type)
+  and its sourced default; `ShotSetup` carries it. P3 wraps it into the stored profile (home-lawn speed, fitted
+  parameter bounds, versioning) and adds the optimiser. The P3 row is amended when P2b.2b's spec lands.
+- **`IMPACT_CAP`** is raised from 60 ms, justified by the measured 30–58 ms roll contacts.
+- **Fault judge inputs:** `simulateShot` builds P2b.2a's `StrokeContext` from the setup, deriving `group` with the
+  Laws' group-of-balls definition. Two Laws deferred by P2b.2a become judgeable here: 29.1.13's "plays away from"
+  (the swing direction) and, if a per-stroke-type contact-time norm is sourced (the Croquet Association's measured
+  contact times are the candidate), 29.1.6.3.
 
 ## Provisional numbers — where each is confirmed
 
