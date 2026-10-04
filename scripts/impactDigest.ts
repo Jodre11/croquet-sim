@@ -3,10 +3,13 @@
  * shared scenarios step by step (every probe snapshot) and the fuzz's strokes (final results), all on the test
  * world. Two runs on the same engine version must print identical output; a refactor meant to be bit-identical must
  * too.
+ * Lines starting `timeline ` carry fields added after P2b.1; every other line keeps P2b.1's format, so
+ * `grep -v '^timeline '` of a later run is byte-comparable with P2b.1's digest.
  * Run with `npx --yes tsx scripts/impactDigest.ts > before.txt`; environment: STROKES (fuzz strokes, default 200).
  * Not part of the test suite.
  */
 import { simulateImpact } from "../src/engine/impact/simulateImpact";
+import type { ImpactResult } from "../src/engine/impact/types";
 import { testWorld } from "../tests/engine/support/fixtures";
 import { FUZZ_SEED, SCENARIOS, randomStroke, recorder } from "../tests/engine/support/impact";
 import { rng } from "../tests/engine/support/rng";
@@ -29,12 +32,18 @@ function exact(value: unknown): string {
     });
 }
 
+/** The fields P2b.1's results had, in its order. Later fields print on their own `timeline` lines. */
+function p2b1(result: ImpactResult): unknown {
+    const { balls, head, duration, events, peakPenetration, steps, handover, overlapCorrection } = result;
+    return { balls, head, duration, events, peakPenetration, steps, handover, overlapCorrection };
+}
+
 const TEST_WORLD = testWorld();
 
 for (const s of SCENARIOS) {
     const probe = recorder();
     const result = simulateImpact(s.contact, s.balls, TEST_WORLD, { probe });
-    console.log(`scenario ${s.name} test-world ${exact(result)}`);
+    console.log(`scenario ${s.name} test-world ${exact(p2b1(result))}`);
     probe.snapshots.forEach((snapshot, i) => {
         console.log(`scenario ${s.name} step ${i} ${exact(snapshot)}`);
     });
@@ -43,5 +52,5 @@ for (const s of SCENARIOS) {
 const random = rng(FUZZ_SEED);
 for (let n = 0; n < STROKES; n++) {
     const { contact, balls } = randomStroke(random, TEST_WORLD);
-    console.log(`fuzz ${n} ${exact(simulateImpact(contact, balls, TEST_WORLD))}`);
+    console.log(`fuzz ${n} ${exact(p2b1(simulateImpact(contact, balls, TEST_WORLD)))}`);
 }
