@@ -71,10 +71,11 @@ export const IMPACT_CAP = 0.06;
 
 /**
  * Slack (m) subtracted from a ball–obstacle pair's gap before it is skipped (see the file header). Numerical, not
- * physical: it covers the drift between a ball's summed path length and its rounded position updates. A step rounds
- * each horizontal coordinate by at most half an ulp (about 2e-15 m on a full-size lawn), so the ball's distance from
- * an obstacle by at most √2 times that. At the default IMPACT_DT and IMPACT_CAP (12,000 steps) the drift stays under
- * 1e-10 m; a test's finer step, on coordinates under 1 m, drifts less.
+ * physical: it covers the drift between a ball's summed path length (the travel sum's own rounding included) and its
+ * rounded position updates. A step rounds each horizontal coordinate by at most half an ulp (about 2e-15 m on a
+ * full-size lawn), so the ball's distance from an obstacle by at most √2 times that per step. The drift accumulates
+ * over the run's steps: at the default IMPACT_DT and IMPACT_CAP (12,000 steps) it stays near 1e-11 m, so the margin
+ * keeps about 100× headroom; a test's finer step, on coordinates under 1 m, drifts less.
  */
 const WAKE_MARGIN = 1e-9;
 

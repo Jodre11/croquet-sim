@@ -251,7 +251,7 @@ export function pairContact(
 }
 
 /**
- * True when ball–ball or ball–obstacle `pair` is touching, its gap within CONTACT_TOLERANCE, in `balls` (P2b.2a design
+ * True when ball–ball or ball–obstacle `pair` is touching, its gap at most CONTACT_TOLERANCE (overlap included), in `balls` (P2b.2a design
  * §3, `touchingAtStart`); always false for face–ball and ball–turf pairs.
  */
 export function pairTouching(
