@@ -4,18 +4,25 @@
  * - stiffness sensitivity: each stiffness swept across its reference bounds, and the handover;
  * - the stop-shot probe: whether the striker's ball clears the turf while it transfers its momentum, and where it
  *   meets the croqueted ball;
- * - impact engine time per stroke.
+ * - the crush distance: the largest gap to an upright straight ahead that still raises 29.1.8, per head speed
+ *   (C29.13.1 says 1–2 mm);
+ * - face–ball gaps in single clean strikes (the P2b.1 fuzz strokes with blue alone);
+ * - impact engine time per stroke and per step.
  * Run with `npx --yes tsx scripts/impactProbe.ts`; environment: REPEAT (timed runs per stroke, default 200). Not
- * part of the test suite; its output goes into the roadmap's "P2b.1 outcomes carried forward".
+ * part of the test suite; its output goes into the roadmap's outcomes sections.
  */
-import { vec3, type Vec3 } from "../src/engine/math/vec3";
+import { judgeFaults, type StrokeContext } from "../src/engine/faults";
+import { IMPACT_DT } from "../src/engine/impact/integrate";
+import { add, scale, vec3, type Vec3 } from "../src/engine/math/vec3";
 import { simulateImpact } from "../src/engine/impact/simulateImpact";
 import { solidCylinderInertia } from "../src/engine/impact/rigidBody";
 import type { ContactState, FaceMaterial, MalletHead } from "../src/engine/impact/types";
-import type { BallState, BallStates, World } from "../src/engine/types";
-import { defaultWorld, uniformLawn } from "../src/engine/world";
+import type { BallState, BallStates, Hoop, World } from "../src/engine/types";
+import { defaultWorld, hoopHalfSpan, hoopLateral, uniformLawn } from "../src/engine/world";
 import { contactReference, malletReference } from "../src/reference/index";
-import { drive, recorder, strike } from "../tests/engine/support/impact";
+import { testWorld } from "../tests/engine/support/fixtures";
+import { drive, FUZZ_SEED, randomStroke, recorder, strike } from "../tests/engine/support/impact";
+import { rng } from "../tests/engine/support/rng";
 
 // The project has no Node types; this script runs under tsx and reads only its environment.
 declare const process: { readonly env: Readonly<Record<string, string | undefined>> };
@@ -167,12 +174,94 @@ function timing(): void {
         times.sort((a, b) => a - b);
         const q = (p: number): number => times[Math.min(times.length - 1, Math.floor(p * times.length))] as number;
         console.log(
-            `${stroke.name.padEnd(16)} ${steps} steps: median ${fmt(q(0.5), 3)} ms, ` +
-                `p99 ${fmt(q(0.99), 3)} ms, max ${fmt(q(1), 3)} ms`,
+            `${stroke.name.padEnd(16)} ${steps} steps: median ${fmt(q(0.5), 3)} ms ` +
+                `(${fmt((q(0.5) * 1e3) / steps, 3)} µs/step), p99 ${fmt(q(0.99), 3)} ms, max ${fmt(q(1), 3)} ms`,
         );
     }
 }
 
+const HAMPERED: StrokeContext = {
+    striker: "blue",
+    kind: "single-ball",
+    live: [],
+    hampered: true,
+    jumpAttempt: false,
+    group: false,
+};
+
+/** The default world with hoop 1 moved so that its upright "1/a" stands at (x, y). */
+function withUprightAt(x: number, y: number): World {
+    const hoop = BASE.hoops[0] as Hoop;
+    const centre = add(vec3(x, y, 0), scale(hoopLateral(hoop), -hoopHalfSpan(hoop)));
+    return { ...BASE, hoops: [{ ...hoop, centre }] };
+}
+
+function crushes(gap: number, speed: number): boolean {
+    const upright = (BASE.hoops[0] as Hoop).uprightRadius;
+    const world = withUprightAt(BLUE.position.x + R + upright + gap, BLUE.position.y);
+    const r = simulateImpact(strike(BLUE.position, { head: HEAD, face: FACE, speed }), { blue: BLUE }, world);
+    return judgeFaults(HAMPERED, r).findings.some((f) => f.law === "29.1.8");
+}
+
+function crushDistance(): void {
+    console.log("== Crush distance (largest gap to an upright straight ahead raising 29.1.8; C29.13.1: 1–2 mm) ==");
+    for (const speed of [1, 2, 3, 4, 6]) {
+        if (!crushes(0, speed)) {
+            console.log(`${speed} m/s: no crush even touching`);
+            continue;
+        }
+        if (crushes(0.02, speed)) {
+            console.log(`${speed} m/s: a crush at 20 mm`);
+            continue;
+        }
+        let lo = 0;
+        let hi = 0.02;
+        for (let i = 0; i < 30; i++) {
+            const mid = (lo + hi) / 2;
+            if (crushes(mid, speed)) {
+                lo = mid;
+            } else {
+                hi = mid;
+            }
+        }
+        console.log(`${speed} m/s: ${fmt(lo * 1e3, 3)} mm`);
+    }
+}
+
+function faceGaps(): void {
+    console.log("== Face–ball gaps in single clean strikes (2000 P2b.1 fuzz strokes, blue alone) ==");
+    const world = testWorld();
+    const random = rng(FUZZ_SEED);
+    let strokes = 0;
+    let doubles = 0;
+    let oneStep = 0;
+    let shortest = Infinity;
+    for (let n = 0; n < 2000; n++) {
+        const { contact, balls } = randomStroke(random, world);
+        if (balls.red) {
+            continue;
+        }
+        strokes++;
+        const faces = simulateImpact(contact, balls, world).timeline["face/blue"] ?? [];
+        if (faces.length > 1) {
+            doubles++;
+        }
+        for (let i = 1; i < faces.length; i++) {
+            const gap = (faces[i]?.start as number) - (faces[i - 1]?.end as number);
+            shortest = Math.min(shortest, gap);
+            if (gap < 1.5 * IMPACT_DT) {
+                oneStep++;
+            }
+        }
+    }
+    console.log(
+        `${strokes} strokes, ${doubles} with more than one face interval; shortest gap ` +
+            `${Number.isFinite(shortest) ? `${fmt(shortest * 1e6, 1)} µs` : "none"}; one-step gaps: ${oneStep}`,
+    );
+}
+
 sweep();
 stopShot();
+crushDistance();
+faceGaps();
 timing();
