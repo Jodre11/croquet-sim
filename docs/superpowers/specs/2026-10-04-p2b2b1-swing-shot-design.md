@@ -320,7 +320,7 @@ measured and never tuned to one.
 | stop-gc | 0.14 | −4 | 1 | 60 | 0 | 0 | 10 |
 | half-roll | −0.05 | 25 | 1 | 10 | 0.2 | 5 | 20 |
 | full-roll | −0.07 | 35 | 1 | 5 | 0.3 | 8 | 30 |
-| pass-roll | −0.08 | 40 | 1 | 5 | 0.4 | 10 | 40 |
+| pass-roll | −0.08 | 40 | 1 | 60 | 0.4 | 10 | 15 |
 
 The two stops follow the user's account of play (2026-10-04). **AC stop:** the feet are set further back, so the
 ball is met slightly on the up (positive `ballAhead`, about 10° of rise at r ≈ 0.8 m), amplified by tilting the face up
@@ -328,6 +328,10 @@ ball is met slightly on the up (positive `ballAhead`, about 10° of rise at r �
 base rubs the turf, braking it and cancelling the follow-through. **GC stop:** the lower hand grips lower and actively
 stops the swing just after contact (a check, `drive` −1 at the planner's default). **Power rolls:** the body's weight
 moves from back to front, keeping the face tilted while pushing forward (the rolls' `bodySpeed` and `bodyAccel`).
+**Pass roll:** the balls are slightly offset (a split shot: the planner's `aim` off the line of centres) and the bottom
+hand punches in contact, imparting additional force to the striker's ball (the pass roll's large `aMax` over a short
+`window`, on top of the body's push). The punch reaches the head at once through the feed-forward m·a_p (§3.3), so the
+coupling's long period does not blunt it, and §3.4's criterion, which excludes the feed-forward, does not limit it.
 
 **Open for P2b.2b.2.** Both stops are rising strikes, so stop-shot lift can be expected of both, as the feasibility
 spike found for rising strikes; whether the GC stop is also played on the up is unconfirmed (its `ballAhead` is the
@@ -432,6 +436,8 @@ the types `ShotSetup`, `SwingProfile`, `StrokeType`, `ShotOutcome`, `ContactStat
 - **Braking mechanisms.** In the default profile, stop-ac (`drive` 0) has its head lose more momentum to the turf
   than to the hands after contact, and stop-gc (`drive` −1) more to the hands than to the turf. Ratios are not
   asserted.
+- **Pass-roll punch.** In a pass roll split 20° off the line of centres, `drive` +1 leaves the striker's ball faster
+  at the end of the impact than `drive` 0. Ratios are not asserted.
 - **Body speed.** With `bodySpeed` > 0 the head's centre still moves at `speed` at t = 0, and a `bodySpeed` above it
   is rejected.
 
