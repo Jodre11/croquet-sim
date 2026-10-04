@@ -229,6 +229,12 @@ shot 7.15 ± 0.6 (up to 11.6), pass roll about 0.83 in theory.
   for a real chance of a crush from about 0.9 to 1.8 m/s, and beyond it above about 1.8 m/s. The impact's face
   contact (0.8 ms, a rigid linear face) is shorter than a real one, which the commentary says travels up to about
   1 cm in contact.
+- **Open decision: crush calibration.** The judge flags 29.1.8 from about 1.1 mm per m/s of head speed, against the
+  commentary's 1–2 mm (C29.13.1), so from about 1.8 m/s it will flag crushes a referee would likely allow. The
+  commentary also says a real mallet stays on the ball for up to about 1 cm of travel, longer than the impact's
+  0.8 ms rigid face contact, so the true figure may itself grow with speed. P2b.2b's design decides between
+  calibrating the face contact, gating the crush distance in the spec, or making 29.1.8 a possible fault beyond some
+  distance.
 - **Face–ball gaps.** In the P2b.1 fuzz's single clean strikes: 978 strokes, 3 with more than one face interval;
   shortest gap 2990.0 µs; one-step gaps: 0. No gap is one step, so no minimum gap is applied (spec §5).
 - **Cost of pairing every ball with every obstacle.** On the default world (12 uprights and the peg) it raised the
