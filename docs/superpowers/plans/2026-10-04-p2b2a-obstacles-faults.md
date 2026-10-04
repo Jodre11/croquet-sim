@@ -50,7 +50,26 @@ and C29.10–C29.20; extract with `curl -sSL -o <file>.pdf <url>` then `pdftotex
   `validateWorld` allows 0.
 - **`laws.json` keys are Law numbers** (`"29.1.8"`) plus `"groupOfBalls"`. 29.1.6 is split into its three sub-clauses,
   and the sub-item numbers inside a quote are dropped.
-- **`ballObstacleContactTime` bounds** are [0.435, 1.5] ms until pre-flight runs the obstacle fuzz at both.
+- **`ballObstacleContactTime` bounds** were [0.435, 1.5] ms until pre-flight ran the obstacle fuzz at both (now
+  [0.435, 1.0] ms; below).
+
+**Decisions made in pre-flight** (folded into the spec as its "Amended 2026-10-04 (pre-flight)" note):
+
+- **A reach filter** (user decision, 2026-10-04). Pairing every ball with every obstacle cost 1.61–1.88× P2b.1's
+  µs/step on the default world, so a ball–obstacle pair is skipped while the ball cannot yet reach the obstacle: a
+  per-pair travel budget (the ball's summed horizontal path length against the gap when the pair was last found open).
+  It is exact by construction, and pre-flight confirmed it bit for bit (full digest and obstacle fuzz). Cost with it:
+  1.04–1.33×. Task 10.
+- **The 29.1.7 exemption.** A dead ball's hit is exempt only if the mallet contact it falls in is exempt at its own
+  start and the hit does not start after the roquet: the mallet contact, the roquet and the hit start together (spec
+  §7's ordering; the last sentence of Law 29.2.4). Task 8.
+- **The contact-time upper bound is 1.0e-3 s:** the largest for which the obstacle fuzz keeps penetrations under
+  0.06·R with a margin (0.055·R); 1.1e-3 s passes by 0.5 % and 1.5e-3 s gives 0.081·R. Task 2.
+- **The fuzz reaches stay 0.06 m and 0.1 m.** Every reach tried, up to 0.2 m and 0.3 m, passes; widening only dilutes
+  the share of strokes that meet an obstacle (17.45 % down to 6.35 %). Task 9.
+- **`outsideObstacle` steps by an ulp of the coordinates,** not of the reach: ε·(max(|x|, |y|) of the obstacle's
+  centre + R + r). The plan's ε·target steps could not outgrow the rounding of 10 m coordinates and threw on 26 % of
+  random overlaps. Task 4.
 
 ## Global Constraints
 
@@ -74,13 +93,18 @@ and C29.10–C29.20; extract with `curl -sSL -o <file>.pdf <url>` then `pdftotex
   its static sink `z = R − m·g/k_turf`.
 - **Engine version.** `ENGINE_VERSION` becomes `"0.5.0"` (Task 7).
 - **P2b.1 stays bit-identical where no ball meets an obstacle** (spec exit criterion 2):
-  - Before Task 1, save the baseline digest (Task 1, Step 1). After Tasks 1, 5, 6 and 7, the digest's P2b.1 lines
-    (every line not starting `timeline `) are byte-identical to it.
-  - After Tasks 3 and 7, `npx --yes tsx scripts/shotMix.ts` prints work units p99 143,084, p99.9 362,050, max 408,030
-    exactly, and `SLOW_TESTS=1 npm test` passes.
+  - Before Task 1, save the baseline digest (Task 1, Step 1: 4,755 lines). After Tasks 1, 5, 6 and 7, the digest's
+    P2b.1 lines (every line not starting `timeline `) are byte-identical to it.
+  - After Tasks 3, 7 and 10, `npx --yes tsx scripts/shotMix.ts` prints work units p99 143,084, p99.9 362,050, max
+    408,030 exactly, and `SLOW_TESTS=1 npm test` passes.
+- **The reach filter is exact** (Task 10): the whole digest, `timeline ` lines included (4,961 lines), and the full
+  results of the 2000 obstacle-fuzz strokes are byte-identical before and after it.
 - **Slow tests** run only when `SLOW_TESTS` is set (`import.meta.env.SLOW_TESTS`).
-- **Pre-flight values.** Constants marked "Provisional (pre-flight)" are fixed by pre-flight (below) before the real
-  run; the real run implements the values the plan then carries.
+- **Pre-flight is done** (2026-10-04; see "Pre-flight" below). Every constant and tolerance here is the measured or
+  ruled value, with the figure it derives from in its comment. Do not repeat pre-flight.
+- **RED steps.** Vitest does not type-check: where a test uses a missing export or field, the RED run shows runtime
+  failures (`… is not a function`, `Cannot read properties of undefined`, an assertion on `undefined`), and `npm run
+  check` shows the type errors.
 - **Bash.** One command per call: no `&&`, `||`, `;`, `$(…)` or subshells.
 - **Commits.**
   - Short imperative sentence (repo style), signed.
@@ -114,21 +138,44 @@ task that owns the code.
 
 ## Pre-flight
 
-Spec §10: before the real run, execute this plan literally in a scratch worktree (branched from this plan's branch;
-`npm ci` first) and measure the values below. Fold each measured value into this plan's code blocks and comments, and
-any finding into the spec (a further "Amended" note), commit those edits on the plan branch, and delete the scratch
-worktree. Then run the plan for real.
+Spec §10. Pre-flight ran on 2026-10-04: this plan was executed literally from `b218ff1` in a scratch worktree, every
+task passed a spec and quality review, and the values below were measured. They are folded into the code blocks and
+comments here and into the spec's "Amended 2026-10-04 (pre-flight)" note. This section is a record; the real run does
+not repeat it.
 
-| Value | Where | Provisional | How pre-flight fixes it |
+| Value | Where | Planned | Measured |
 |---|---|---|---|
-| `ballObstacleContactTime` bounds | `reference/contact.json` | [4.35e-4, 1.5e-3] s | Run Task 9's obstacle fuzz (2000 strokes) with the fuzz world's hoop and peg `contactTime` set to each bound. Keep the upper bound if neither raises `impact-cap` or exceeds the penetration bound; otherwise lower it to the largest that passes and record why |
-| `OBSTACLE_PENETRATION_BOUND` | `tests/engine/impact/fuzz.test.ts` | 0.2·R | 1.5× the worst obstacle-pair peak penetration over 2000 obstacle-fuzz strokes |
-| Obstacle fuzz ranges | `tests/engine/support/impact.ts` (`UPRIGHT_REACH`, `PEG_REACH`) | 0.06 m, 0.1 m | The widest that raise no `impact-cap` in 2000 strokes; record the share of strokes in which an obstacle pair closes, and set `OBSTACLE_SHARE` to half of it |
-| Per-step cost of every obstacle pair | `scripts/impactProbe.ts` timing | — | Compare the probe's µs/step on the default world (13 obstacles) with `main`'s (P2b.1). If it rises by more than 50 %, stop and ask the user whether to add a reach filter (spec §4) |
-| Shortest face–ball gap in single clean strikes | `scripts/impactProbe.ts` | — | Record it. If any gap is one step (5 µs), stop: that is numerical chatter and the spec is revisited (§5) |
-| Crush distance | `scripts/impactProbe.ts` | — | Record it per speed against C29.13.1's 1–2 mm (exit criterion 5: recorded, not gated) |
-| Analytic tolerances | Tasks 5, 6 | As written there | About 2× each measured error, recorded beside it |
-| Double-tap geometry | Task 6 | Wall 2 mm ahead | Confirm the first face contact releases before the wall closes, and that a second face interval follows |
+| `ballObstacleContactTime` bounds | `reference/contact.json` | [4.35e-4, 1.5e-3] s | Obstacle fuzz, 2000 strokes, hoop and peg `contactTime` swept. Worst obstacle penetration grows about 2.5 mm per ms: 4.35e-4 s 0.0235·R; 7e-4 s 0.038·R; 1.0e-3 s 0.055·R; 1.1e-3 s 0.0597·R; 1.12e-3 s 0.061·R (fails); 1.5e-3 s 0.081·R (fails). No `impact-cap` anywhere. Ruling: upper bound 1.0e-3 s (the largest with a margin); lower bound stays 4.35e-4 s, its one failure being the `outsideObstacle` defect below |
+| `OBSTACLE_PENETRATION_BOUND` | `tests/engine/impact/fuzz.test.ts` | 0.2·R | Worst obstacle-pair peak penetration 1.745 mm = 0.038·R (stroke 1826, `blue@1/a`); 1.5× → 0.06·R. Worst ball–ball 1.83 mm |
+| Obstacle fuzz ranges | `tests/engine/support/impact.ts` (`UPRIGHT_REACH`, `PEG_REACH`) | 0.06 m, 0.1 m | Share of strokes in which an obstacle pair closes: (0.06, 0.1) 17.45 %; (0.1, 0.15) 12.8 %; (0.15, 0.2) 9.0 %; (0.2, 0.3) 6.35 %; none caps, worst penetration flat at about 1.77 mm. Ruling: keep 0.06 m and 0.1 m; `OBSTACLE_SHARE` 0.087. 2000 strokes take about 4.4 s |
+| Per-step cost of every obstacle pair | `scripts/impactProbe.ts` timing | — | µs/step on the default world against `main`, side by side. Without a filter: centre 0.587 / 0.365 (1.61×), croquet 1.058 / 0.598 (1.77×), descending 0.566 / 0.301 (1.88×), stop shot 1.043 / 0.593 (1.76×); removing the hoops restores `main`'s cost, and an early squared-distance reject gave only 1.55 → 1.52×. The user chose a reach filter (Task 10). With it: centre 0.433 / 0.355 (1.22×), croquet 0.756 / 0.730 (1.04×), descending 0.405 / 0.304 (1.33×), stop shot 0.750 / 0.585 (1.28×) |
+| Shortest face–ball gap in single clean strikes | `scripts/impactProbe.ts` | — | 978 strokes, 3 with more than one face interval; shortest gap 2,990 µs; no one-step gaps. No minimum gap needed (spec §5) |
+| Crush distance | `scripts/impactProbe.ts` | — | 1 / 2 / 3 / 4 / 6 m/s: 1.088 / 2.188 / 3.261 / 4.365 / 6.549 mm, about 1.09 mm per m/s; C29.13.1 says 1–2 mm (exit criterion 5: recorded, not gated) |
+| Analytic tolerances | Tasks 5, 6 | As written there | dt 1e-7 s. Head-on contact time exact (7,000 steps), restitution 8.98e-5; peg restitution (e = 0.4) 1.81e-4 → own bound 4e-4; slip \|Δv_t/Δv_n − μ\| 6.0e-5 (bound 2e-4 kept); slip spin 1.005e-3 (2e-3 kept); stick Δv_t/Δv_n = 0.654·μ (0.9·μ kept); stick spin 1.48e-3 → 3e-3. Double tap \|length − (T + c/k)\| 4.73 µs against 2·dt = 10 µs (kept) |
+| Double-tap geometry | Task 6 | Wall 2 mm ahead | 2 mm holds: face [55, 680) µs (peak 2,832 N, clearance after 0.950 mm) and [1,945, 2,575) µs (3,332 N); wall [1,140, 1,930) µs and [2,535, 3,325) µs; first start exactly 11·dt |
+
+Defects pre-flight found, all fixed in this plan:
+
+- `outsideObstacle` (Task 4) grew its target by ε·target (about 7e-18 m), which cannot outgrow the rounding of 10 m
+  coordinates (about 1.8e-15 m): a synthetic stress test threw on 26 % of random overlaps, and obstacle-fuzz stroke 1084
+  threw at a contact time of 4.35e-4 s. The step is now ε·(max(|x|, |y|) of the obstacle's centre + R + r); the first
+  attempt is unchanged, so the digest is bit-identical. A regression test reproduces stroke 1084. Stress replicas
+  (2e6 random overlaps, coordinates to ±100 m) cleared at attempt index 0 or 1; near the origin (obstacle spans of
+  ±1e-3 and ±0.05 m, 1e6 inputs each), where the step is about ε·(R + r), a few needed index 2, never more, so
+  `OUTSIDE_STEPS` stays 4 and its comment claims no more than that.
+- Task 4's `PairKind` addition left `lawOf` non-exhaustive (`npm run check` failed): Task 4 now adds a throwing
+  placeholder case, which Task 5 replaces.
+- Task 4's tests: the pair-key slices (4 and 5, not 5 and 6), the sign of the contact point's offset (+5e-5), and the
+  "at R + r" case, which rounds to a depth of 1.7e-16 and needs +1e-12.
+- Task 8's 29.1.7 branch exempted a dead-ball hit inside a mallet contact that opened before the roquet; the ruling
+  above fixes it, with new sequence tests.
+- Task 9's touching-away case struck the ball towards upright 1/b; it is mirrored (1/a east, yaw π). The 20 mm
+  near-miss never reaches the upright (nor does 10 mm, at 3 m/s on the test world), so a 5 mm case that reaches it was
+  added. `randomObstacleStroke` gained a draw cap and retries only `RangeError`.
+- Task 2's 29.1.5 note misquoted C29.10.8 ("the end-face"; it reads "an end-face"). The digest is 4,755 lines, not
+  about 3,000. Several comments the plan dictated ran over 120 columns (Tasks 5, 7).
+
+The stop-shot probe's "impulse share with blue clear of the turf 0.0 %" is the same on `main`: not a regression.
 
 ---
 
@@ -143,10 +190,10 @@ worktree. Then run the plan for real.
 | `src/reference/index.ts` | `contactReference.ballObstacleContactTime`; `lawsReference.faults`; `FAULT_LAW_KEYS` |
 | `src/engine/types.ts` | `Cylinder.contactTime`, `Hoop.contactTime` |
 | `src/engine/world.ts` | `uprightsOf` copies it; `validateWorld` checks it; `defaultWorld` fills it |
-| `src/engine/impact/contacts.ts` | `ball-obstacle` pairs and keys, `obstacleContact`, `outsideObstacle`, `pairTouching`, `faceClearance` |
+| `src/engine/impact/contacts.ts` | `ball-obstacle` pairs and keys, `obstacleContact`, `obstacleGap`, `outsideObstacle`, `pairTouching`, `faceClearance` |
 | `src/engine/impact/timeline.ts` | New: the per-pair interval recorder |
 | `src/engine/impact/types.ts` | `ContactInterval`; `ImpactRun.timeline`, `.touchingAtStart` |
-| `src/engine/impact/integrate.ts` | `ImpactObstacle`, `ImpactSetup.obstacles`, obstacle laws, the timeline |
+| `src/engine/impact/integrate.ts` | `ImpactObstacle`, `ImpactSetup.obstacles`, obstacle laws, the timeline, the reach filter |
 | `src/engine/impact/simulateImpact.ts` | Touching accepted, overlap rejected; obstacle laws; zero-gap placement |
 | `src/engine/impact/handover.ts` | Clears balls from obstacles |
 | `src/engine/faults.ts` | New: `StrokeContext`, `Finding`, `FaultReport`, `judgeFaults`, `JUDGED_LAWS` |
@@ -171,7 +218,10 @@ Task order keeps every commit green and bit-identical:
 - Task 7 changes validation, placement, handover and the version.
 - Task 8 adds the judge.
 - Task 9 adds the whole-system tests and the obstacle fuzz.
-- Task 10 extends the probe and records outcomes.
+- Task 10 adds the reach filter. It edits Task 6's pair loop, and its exactness check needs the full digest (Task 6's
+  `timeline ` lines) and the obstacle fuzz (Task 9) as they stand before it; Tasks 7–9 do not touch `integrate.ts` or
+  `contacts.ts`' geometry, so it applies cleanly here, and Task 11's probe then measures the filtered cost.
+- Task 11 extends the probe and records outcomes.
 
 ---
 
@@ -192,7 +242,7 @@ compares against.
 From the worktree root, with no engine change yet (`npm ci` first in a fresh worktree):
 
 Run: `npx --yes tsx scripts/impactDigest.ts > "$CLAUDE_TEMP_DIR/digest-base.txt"`
-Expected: about 3,000 lines, starting `scenario centre test-world {`.
+Expected: 4,755 lines, starting `scenario centre test-world {`.
 
 Also record phase 2's figures: `npx --yes tsx scripts/shotMix.ts` prints p99 143,084, p99.9 362,050, max 408,030.
 
@@ -214,9 +264,13 @@ function p2b1(result: ImpactResult): unknown {
 ```
 
 Replace `exact(result)` with `exact(p2b1(result))` in the scenario loop, and the fuzz line with
-`console.log(\`fuzz ${n} ${exact(p2b1(simulateImpact(contact, balls, TEST_WORLD)))}\`);`. Extend the header comment:
-"Lines starting `timeline ` carry fields added after P2b.1; every other line keeps P2b.1's format, so `grep -v
-'^timeline '` of a later run is byte-comparable with P2b.1's digest."
+`console.log(\`fuzz ${n} ${exact(p2b1(simulateImpact(contact, balls, TEST_WORLD)))}\`);`. Extend the header comment,
+after "…must too.", with these two lines (the inline code spans stay whole on one line):
+
+```ts
+ * Lines starting `timeline ` carry fields added after P2b.1; every other line keeps P2b.1's format, so
+ * `grep -v '^timeline '` of a later run is byte-comparable with P2b.1's digest.
+```
 
 - [ ] **Step 3: Verify byte-identity**
 
@@ -239,7 +293,10 @@ git commit -F "$CLAUDE_TEMP_DIR/msg.txt"   # "Print the digest's P2b.1 fields as
 
 The obstacle contact time is derived (spec §4, §8); the Law 29 text is quoted verbatim (§7, §8). Before committing,
 open each URL and confirm each quoted sentence is still there. If one is not, keep the entry, add "(quotation not
-re-found on <date>)" to its note and report it.
+re-found on <date>)" to its note and report it. (Pre-flight re-found every quotation on 2026-10-04, by script, modulo
+whitespace and apostrophe style.) The Law 29 entries cite the April 2021 combined PDF, which alone carries the
+commentary; the existing entries cite the February 2021 Laws PDF. A quote that ends one of a Law's sub-clauses ends
+at its own punctuation, and the joining "or" is dropped (29.1.6.1 reads "…29.2.5); or").
 
 **Files:**
 - Modify: `reference/contact.json`, `reference/laws.json`, `reference/README.md`, `src/reference/index.ts`
@@ -276,7 +333,8 @@ describe("obstacle and fault reference data", () => {
 - [ ] **Step 2: Run it to verify it fails**
 
 Run: `npx vitest run tests/reference/reference.test.ts`
-Expected: FAIL, `FAULT_LAW_KEYS` is not exported.
+Expected: FAIL, 2 tests: `TypeError: Cannot read properties of undefined (reading 'value')` and
+`TypeError: FAULT_LAW_KEYS is not iterable` (`FAULT_LAW_KEYS` is not exported yet).
 
 - [ ] **Step 3: Add the obstacle contact time to `reference/contact.json`**
 
@@ -286,10 +344,10 @@ Add after `ballBallContactTime`:
 "ballObstacleContactTime": {
     "value": 0.00075,
     "unit": "s",
-    "bounds": [0.000435, 0.0015],
+    "bounds": [0.000435, 0.001],
     "source": "Derived from ballBallContactTime (this file): Don Gugan, 'The Physics of Croquet Strokes: Analysis of the CA high-speed DVD', section 4, Table 1 row 5 (2009; Oxford Croquet), https://oxfordcroquet.org/tech/gugan4/",
     "provenance": "derived",
-    "note": "No measurement of a ball striking a hoop upright or the peg was found. Oxford Croquet's 'Measuring Hoop Rigidity' (https://oxfordcroquet.org/tech/rigidity/) proposes methods and reports no data; Rod Cross's high-speed experiments (https://oxfordcroquet.org/tech/cross1/) cover ball-ball and mallet-ball contacts only. Derivation (P2b.2a design §4): for the impact's linear law a ball meeting an immovable body has the same natural frequency as two balls meeting, since the ball-ball pair has half the stiffness (two balls in series) and half the effective mass; the analogue value is therefore ballBallContactTime, 0.75 ms. Lower bound: Hertzian contact time scales as (m*^2/(E*^2 R*))^(1/5), and a ball on a rigid body has twice the reduced mass, radius and effective modulus of two equal balls, so T x 2^(-1/5) = 0.87 T; 0.87 x 0.5 ms (the ball-ball lower bound) = 0.435 ms. Upper bound: an upright gives in the turf, which the rigid model omits and no source quantifies; 2 x 0.75 ms is a modelling allowance, exercised by the obstacle fuzz at both bounds (P2b.2a pre-flight). Every hoop and the peg carries its own contact time (World), so a later version can vary hoop setting stiffness hoop by hoop or by lawn."
+    "note": "No measurement of a ball striking a hoop upright or the peg was found. Oxford Croquet's 'Measuring Hoop Rigidity' (https://oxfordcroquet.org/tech/rigidity/) proposes methods and reports no data; Rod Cross's high-speed experiments (https://oxfordcroquet.org/tech/cross1/) cover ball-ball and mallet-ball contacts only. Derivation (P2b.2a design §4): for the impact's linear law a ball meeting an immovable body has the same natural frequency as two balls meeting, since the ball-ball pair has half the stiffness (two balls in series) and half the effective mass; the analogue value is therefore ballBallContactTime, 0.75 ms. Lower bound: Hertzian contact time scales as (m*^2/(E*^2 R*))^(1/5), and a ball on a rigid body has twice the reduced mass, radius and effective modulus of two equal balls, so T x 2^(-1/5) = 0.87 T; 0.87 x 0.5 ms (the ball-ball lower bound) = 0.435 ms. Upper bound: an upright gives in the turf, which the rigid model omits and no source quantifies; the allowance is 1.0 ms, the largest bound for which the obstacle fuzz keeps every obstacle penetration under its bound (0.06 R), with a margin: 1.0 ms gave 0.055 R, and 1.5 ms (2 x 0.75 ms) gave 0.081 R (P2b.2a pre-flight, 2000 strokes). Every hoop and the peg carries its own contact time (World), so a later version can vary hoop setting stiffness hoop by hoop or by lawn."
 },
 ```
 
@@ -303,7 +361,7 @@ an omission, as in the existing entries):
     "quote": "Subject to the exemptions and limitations specified in Law 29.2 a fault is committed during the striking period if the striker: [...] strikes the striker’s ball with any part of the mallet other than an end-face of the head in any of the strokes specified in Law 29.2.3;",
     "source": "World Croquet Federation, The Laws of Association Croquet, 7th Edition (February 2021), with Official Rulings and Commentary (current as at April 2021), Law 29.1.5 and commentary C29.10; https://worldcroquet.org/wp-content/uploads/2021/04/Laws-Rulings-Commentary-combined-published-master-.pdf",
     "provenance": "direct",
-    "note": "Judged on the first mallet contact only, C29.10.8: \"The fault of striking the ball with part of the mallet other than the end-face, covered by this law, applies only to the first contact. Any subsequent contact, however it occurs, is covered by Law 29.1.6.2 (multiple contacts between mallet and striker’s ball) and the exemptions specified in Law 29.2.4\". The impact models the end-face and its rim: a first contact at the rim (impact-off-face) is a contact other than an end-face. Applies only to the strokes of Law 29.2.3 (StrokeContext.hampered, jumpAttempt, group)."
+    "note": "Judged on the first mallet contact only, C29.10.8: \"The fault of striking the ball with part of the mallet other than an end-face, covered by this law, applies only to the first contact. Any subsequent contact, however it occurs, is covered by Law 29.1.6.2 (multiple contacts between mallet and striker’s ball) and the exemptions specified in Law 29.2.4\". The impact models the end-face and its rim: a first contact at the rim (impact-off-face) is a contact other than an end-face. Applies only to the strokes of Law 29.2.3 (StrokeContext.hampered, jumpAttempt, group)."
 },
 "29.1.6.1": {
     "quote": "a fault is committed during the striking period if the striker: [...] allows the mallet: to contact the striker’s ball more than once in a croquet stroke, or continuation stroke when the striker's ball is touching another ball (for exemptions see Law 29.2.4 and for limitations see Law 29.2.5);",
@@ -511,7 +569,8 @@ In "defaultWorld" › "builds a valid world from the reference data", add:
 - [ ] **Step 2: Run them to verify they fail**
 
 Run: `npx vitest run tests/engine/world.test.ts`
-Expected: FAIL (type errors on `contactTime`; `hoopWithUprightAt` is not exported).
+Expected: FAIL, 5 tests (runtime: `contactTime` undefined on the uprights and the default world, `hoopWithUprightAt
+is not a function`, the two new rejections do not throw). `npm run check` shows the type errors.
 
 - [ ] **Step 3: Add the field to the types**
 
@@ -543,7 +602,8 @@ export interface Cylinder {
 
 - [ ] **Step 4: Copy, check and fill it in `src/engine/world.ts`**
 
-In `uprightsOf`, give both cylinders `contactTime: hoop.contactTime` (after `material`). In `validateWorld`, after the
+In `uprightsOf`, give both cylinders `contactTime: hoop.contactTime` (after `material`; Prettier then puts each
+literal on its own lines). In `validateWorld`, after the
 `peg.radius` check add `requirePositive(world.peg.contactTime, "peg.contactTime");` and inside the hoop loop add
 `requirePositive(hoop.contactTime, \`hoop ${hoop.id} contactTime\`);`. In `defaultWorld`, add
 `contactTime: contactReference.ballObstacleContactTime.value,` to each hoop (after `crownClearance`) and to the peg
@@ -591,10 +651,12 @@ git commit -F "$CLAUDE_TEMP_DIR/msg.txt"   # "Give every hoop and the peg an imp
 ### Task 4: Obstacle geometry and pair keys
 
 The obstacle is an infinite vertical cylinder (spec §4). This task adds the pair kind, its keys and geometry, the
-zero-gap placement, the touching test and the face clearance the timeline needs. Nothing calls them yet.
+zero-gap placement, the touching test and the face clearance the timeline needs. Nothing calls them yet, but the new
+pair kind makes `lawOf`'s switch in `integrate.ts` non-exhaustive, so this task adds a placeholder case there that
+throws; nothing produces a ball–obstacle pair until Task 5, which replaces it with the obstacle's law.
 
 **Files:**
-- Modify: `src/engine/impact/contacts.ts`
+- Modify: `src/engine/impact/contacts.ts`, `src/engine/impact/integrate.ts` (`lawOf` placeholder)
 - Test: `tests/engine/impact/contacts.test.ts`
 
 **Interfaces:**
@@ -634,8 +696,8 @@ describe("pair keys", () => {
 
     it("appends ball–obstacle pairs after the turf, ball by ball, obstacles in order", () => {
         const pairs = pairList(["blue", "red"], [true, true], ["1/a", "peg"]);
-        expect(pairs.map((p) => p.key).slice(5)).toEqual(["turf/red", "blue@1/a", "blue@peg", "red@1/a", "red@peg"]);
-        expect(pairs.slice(6).map((p) => [p.kind, p.a, p.b])).toEqual([
+        expect(pairs.map((p) => p.key).slice(4)).toEqual(["turf/red", "blue@1/a", "blue@peg", "red@1/a", "red@peg"]);
+        expect(pairs.slice(5).map((p) => [p.kind, p.a, p.b])).toEqual([
             ["ball-obstacle", 0, 0],
             ["ball-obstacle", 1, 0],
             ["ball-obstacle", 0, 1],
@@ -649,12 +711,12 @@ describe("obstacleContact", () => {
         const c = obstacleContact(vec3(1 - R - 0.008 + 1e-4, 2, 0.3), R, POST) as Penetration;
         expect(length(sub(c.normal, vec3(-1, 0, 0)))).toBeLessThan(1e-15);
         expect(c.depth).toBeCloseTo(1e-4, 12);
-        expect(c.point.x).toBeCloseTo(1 - 0.008 - 5e-5, 12);
+        expect(c.point.x).toBeCloseTo(1 - 0.008 + 5e-5, 12);
         expect(c.point.z).toBe(0.3);
     });
 
     it("is open at or beyond R + r", () => {
-        expect(obstacleContact(vec3(1, 2 + R + 0.008, R), R, POST)).toBeNull();
+        expect(obstacleContact(vec3(1, 2 + R + 0.008 + 1e-12, R), R, POST)).toBeNull();
         expect(obstacleContact(vec3(1, 2 + R + 0.009, R), R, POST)).toBeNull();
     });
 
@@ -682,12 +744,33 @@ describe("outsideObstacle", () => {
     it("rejects a centre on the axis", () => {
         expect(() => outsideObstacle(vec3(1, 2, R), R, POST)).toThrow(RangeError);
     });
+
+    it("clears an obstacle near 10 m, where rounding the coordinates leaves the zero-gap point inside", () => {
+        // The obstacle fuzz's stroke 1084 at a contact time of 4.35e-4 s: rebuilding the zero-gap centre rounds each
+        // coordinate to an ulp of about 1.8e-15 m, which an ulp of the 0.054 m reach cannot outgrow.
+        const upright: ObstacleGeometry = {
+            id: "1/a",
+            centre: vec3(9.994171732064325, 9.893448694383892, 0),
+            radius: 0.008,
+        };
+        const centre = vec3(10.045430749591583, 9.910421543349976, 0.04602418280255443);
+        const out = outsideObstacle(centre, R, upright);
+        const distance = length(horizontal(sub(out, upright.centre)));
+        expect(obstacleContact(out, R, upright)).toBeNull();
+        expect(R + 0.008 - distance).toBeLessThanOrEqual(0);
+        expect(distance - (R + 0.008)).toBeLessThan(8 * Number.EPSILON * 10);
+        expect(out.z).toBe(centre.z);
+    });
 });
 
 describe("pairTouching", () => {
     const pairs = pairList(["blue", "red"], [true, true], ["1/a"]);
     const byKey = (key: string) => pairs.find((p) => p.key === key) as (typeof pairs)[number];
-    const at = (x: number, y: number): BallState => ({ position: vec3(x, y, R), velocity: ZERO, angularVelocity: ZERO });
+    const at = (x: number, y: number): BallState => ({
+        position: vec3(x, y, R),
+        velocity: ZERO,
+        angularVelocity: ZERO,
+    });
 
     it("counts a ball–ball or ball–obstacle gap within CONTACT_TOLERANCE as touching", () => {
         const balls = [at(1 - R - 0.008 - 5e-10, 2), at(1 - R - 0.008 - 5e-10 - 2 * R, 2)];
@@ -722,7 +805,7 @@ overlaps it by 1e-5), and add to the expected object `"blue@1/a": obstacleContac
 - [ ] **Step 2: Run them to verify they fail**
 
 Run: `npx vitest run tests/engine/impact/contacts.test.ts`
-Expected: FAIL (the new exports do not exist).
+Expected: FAIL, every new test (runtime: the new exports are undefined, `… is not a function`).
 
 - [ ] **Step 3: Implement**
 
@@ -825,14 +908,21 @@ export function obstacleContact(centre: Vec3, radius: number, obstacle: Obstacle
     return { normal, depth, point: sub(centre, scale(normal, radius - depth / 2)) };
 }
 
-/** Bound on outsideObstacle's corrections. Numerical, not physical: each removes the last ulps of an overlap. */
-const OUTSIDE_STEPS = 16;
+/**
+ * Bound on outsideObstacle's corrections. Numerical, not physical. Each correction lengthens the target distance by
+ * step = ε·(max(|x|, |y|) of the obstacle's centre + R + r), at least an ulp of every rebuilt coordinate. The
+ * rounding of the rebuilt centre is under one step, apart from a few ulps of R + r (from f, offset·f, the squared sum
+ * and the square root), which matter only for an obstacle near the origin. A correction or two clears it, and the rest
+ * are spare.
+ */
+const OUTSIDE_STEPS = 4;
 
 /**
  * `centre` moved horizontally outward from `obstacle` until its penetration R + r − d is at most zero, as
  * obstacleContact computes it; or `centre` itself when it already is (P2b.2a design §4, §6). The target distance grows
- * by an ulp per correction until rounding no longer leaves the ball inside. Throws a RangeError for a centre on the
- * axis (no outward direction), and an Error if the corrections run out.
+ * by about an ulp of the coordinates per correction, until rounding them no longer leaves the ball inside, so the ball
+ * ends at most a few such ulps beyond zero gap. Throws a RangeError for a centre on the axis (no outward direction),
+ * and an Error if the corrections run out.
  */
 export function outsideObstacle(centre: Vec3, radius: number, obstacle: ObstacleGeometry): Vec3 {
     const offset = horizontal(sub(centre, obstacle.centre));
@@ -844,6 +934,7 @@ export function outsideObstacle(centre: Vec3, radius: number, obstacle: Obstacle
     if (distance === 0) {
         throw new RangeError(`a ball centred on the axis of ${obstacle.id} has no outward direction`);
     }
+    const step = Number.EPSILON * (Math.max(Math.abs(obstacle.centre.x), Math.abs(obstacle.centre.y)) + reach);
     let target = reach;
     for (let i = 0; i < OUTSIDE_STEPS; i++) {
         const f = target / distance;
@@ -851,7 +942,7 @@ export function outsideObstacle(centre: Vec3, radius: number, obstacle: Obstacle
         if (!(reach - length(horizontal(sub(moved, obstacle.centre))) > 0)) {
             return moved;
         }
-        target += target * Number.EPSILON;
+        target += step;
     }
     throw new Error(`could not place a ball outside ${obstacle.id}`);
 }
@@ -920,6 +1011,14 @@ export function faceClearance(state: HeadState, head: MalletHead, centre: Vec3, 
 }
 ```
 
+In `src/engine/impact/integrate.ts`, `lawOf`'s switch gains a placeholder case, after `ball-turf`, so that it stays
+exhaustive (`npm run check` fails without it). Task 5 replaces it:
+
+```ts
+        case "ball-obstacle":
+            throw new Error("ball–obstacle pairs have no contact law yet");
+```
+
 - [ ] **Step 4: Run the tests to verify they pass**
 
 Run: `npx vitest run tests/engine/impact/contacts.test.ts`
@@ -928,7 +1027,7 @@ Expected: PASS. Then `npm test`: PASS (`pairList`'s existing keys are unchanged)
 - [ ] **Step 5: Format, check, commit**
 
 ```bash
-git add src/engine/impact/contacts.ts tests/engine/impact/contacts.test.ts
+git add src/engine/impact/contacts.ts src/engine/impact/integrate.ts tests/engine/impact/contacts.test.ts
 git commit -F "$CLAUDE_TEMP_DIR/msg.txt"   # "Add ball–obstacle pair geometry and pair keys"
 ```
 
@@ -976,7 +1075,8 @@ describe("a ball against a fixed obstacle", () => {
             }),
             { dt: FINE, cap: 1e-3, probe },
         );
-        // Provisional (pre-flight): the same one-step resolution as the ball–ball case.
+        // Pre-flight: the contact time is exact here (7,000 closed steps; T/dt is an integer, so by chance), and the
+        // restitution is off by 8.98e-5.
         expect(Math.abs(probe.closed * FINE - T) / T).toBeLessThan(LAW_TOLERANCE);
         expect(Math.abs((run.balls.blue?.velocity.x as number) + e) / e).toBeLessThan(LAW_TOLERANCE);
     });
@@ -1006,7 +1106,8 @@ describe("a ball against a fixed obstacle", () => {
     it("slips throughout above the cone: the tangential impulse is μ times the normal one", () => {
         const mu = 0.1;
         const { dvn, dvt, spin } = oblique(2, mu);
-        // Provisional (pre-flight): the normal's turn shifts the ratio by about 7e-5.
+        // Pre-flight: the normal's turn shifts the ratio by 6.0e-5, and the spin's lever arm (R − δ/2, not R) is off by
+        // 1.005e-3.
         expect(Math.abs(dvt / dvn - mu)).toBeLessThan(2e-4);
         expect(Math.abs(spin - spinOf(dvt)) / Math.abs(spinOf(dvt))).toBeLessThan(2e-3);
     });
@@ -1014,10 +1115,34 @@ describe("a ball against a fixed obstacle", () => {
     it("sticks inside the cone: the tangential impulse stays below μ times the normal one", () => {
         const mu = 0.1;
         const { dvn, dvt, spin } = oblique(0.2, mu);
-        // A sticking contact returns at most 2·(2/7)·v_t = 0.114 m/s; the cone allows μ·1.6 = 0.16.
+        // A sticking contact returns at most 2·(2/7)·v_t = 0.114 m/s; the cone allows μ·1.6 = 0.16. Pre-flight:
+        // Δv_t/Δv_n = 0.654·μ, and the spin is off by 1.48e-3 (bound about 2× it).
         expect(dvt).toBeLessThan(0);
         expect(dvt / dvn).toBeLessThan(0.9 * mu);
-        expect(Math.abs(spin - spinOf(dvt)) / Math.abs(spinOf(dvt))).toBeLessThan(2e-3);
+        expect(Math.abs(spin - spinOf(dvt)) / Math.abs(spinOf(dvt))).toBeLessThan(3e-3);
+    });
+
+    it("looks each pair's law up by its own obstacle: two balls against two obstacles of different restitution", () => {
+        const wall = (id: string, y: number, e: number): ImpactObstacle => ({
+            id,
+            centre: vec3(0, y, 0),
+            radius: 0.008,
+            law: lawFromContactTime(M, e, 7e-4, 0),
+        });
+        const gap = R + 0.008 + 1e-5;
+        const run = integrate(
+            isolated({
+                obstacles: [wall("p0", 0, 0.6), wall("p1", 1, 0.3)],
+                balls: [
+                    // Ball 0 meets obstacle 1 and ball 1 meets obstacle 0, so neither index can stand in for the other.
+                    freeBall("blue", vec3(-gap, 1, 1), vec3(1, 0, 0)),
+                    freeBall("red", vec3(-gap, 0, 1), vec3(1, 0, 0)),
+                ],
+            }),
+            { dt: FINE, cap: 1e-3 },
+        );
+        expect(Math.abs((run.balls.blue?.velocity.x as number) + 0.3) / 0.3).toBeLessThan(LAW_TOLERANCE);
+        expect(Math.abs((run.balls.red?.velocity.x as number) + 0.6) / 0.6).toBeLessThan(LAW_TOLERANCE);
     });
 
     it("gives each upright its hoop's law and the peg its own (prepareImpact)", () => {
@@ -1041,23 +1166,55 @@ describe("a ball against a fixed obstacle", () => {
             }),
             { dt: FINE, cap: 1e-3 },
         );
-        expect(Math.abs((run.balls.blue?.velocity.x as number) + 0.4) / 0.4).toBeLessThan(LAW_TOLERANCE);
+        // Pre-flight: off by 1.81e-4 at e = 0.4 (the error grows as e falls); bound about 2× it.
+        expect(Math.abs((run.balls.blue?.velocity.x as number) + 0.4) / 0.4).toBeLessThan(4e-4);
     });
 });
+```
+
+Also replace the `LAW_TOLERANCE` comment (the value stays 3e-4):
+
+```ts
+/**
+ * Relative tolerance on contact times and restitutions at dt = 1e-7 s. Pre-flight: the worst measured errors are the
+ * ball–ball contact time (1.43e-4, one step of 1e-7 s in 7e-4 s) and the obstacle head-on restitution (8.98e-5); the
+ * peg case, at e = 0.4, has its own bound.
+ */
 ```
 
 - [ ] **Step 2: Run them to verify they fail**
 
 Run: `npx vitest run tests/engine/impact/analytic.test.ts`
-Expected: FAIL (`ImpactObstacle` is not exported; `obstacles` is not a setup field).
+Expected: FAIL, 5 tests (runtime: `setup.obstacles` is undefined, and `isolated` ignores `obstacles`, so no ball
+rebounds). `npm run check` shows the type errors.
 
 - [ ] **Step 3: Implement in `integrate.ts`**
 
-In the header, change "no face–ball or ball–ball contact has been closed for RELEASE_STEPS steps" to "no face–ball,
-ball–ball or ball–obstacle contact has been closed for RELEASE_STEPS steps", and add after "…exactly mirrored
-results.": "Obstacles (hoop uprights and the peg) are immovable: a ball–obstacle pair's force acts on the ball alone."
-Change the `RELEASE_STEPS` comment's first sentence to "Consecutive steps without a closed face–ball, ball–ball or
-ball–obstacle contact after which the impact may end."
+In the header, the paragraph ending "…exactly mirrored results." and the termination paragraph become:
+
+```ts
+ * Bodies and pairs are visited in a fixed order and forces summed in it, so repeated runs are bit-identical, and
+ * set-ups mirrored across a vertical plane give exactly mirrored results. Obstacles (hoop uprights and the peg) are
+ * immovable: a ball–obstacle pair's force acts on the ball alone.
+ *
+ * The impact ends once a face–ball contact has closed, the drive window has closed, no face–ball, ball–ball or
+ * ball–obstacle contact has been closed for RELEASE_STEPS steps, and no ball in turf contact is still bouncing in it;
+ * or at the cap. A ball bounces while its vertical oscillation energy about the static sink δ₀ = m·g/k,
+ * ½·m·v_z² + ½·k·(δ − δ₀)², exceeds the static spring's ½·k·δ₀²: it will reach δ = 0 and leave the turf, so the
+ * turf's rebound, which dominates lift, is integrated rather than discarded at handover. Below that the ball only
+ * settles in its hollow, and the handover discards at most m·g·δ₀/2 (design §6). Isolated set-ups (tests) may give
+ * balls any state and leave the turf out; simulateImpact.ts prepares and validates real ones.
+```
+
+The `RELEASE_STEPS` comment becomes:
+
+```ts
+/**
+ * Consecutive steps without a closed face–ball, ball–ball or ball–obstacle contact after which the impact may
+ * end. A numerical allowance for a contact to re-close (a croquet stroke's balls part and meet again), not physical.
+ * Pre-flight: ×4 moves no ball's state 50 ms after the strike by more than 2.8e-4 of the head speed.
+ */
+```
 
 Import `type ObstacleGeometry` from `./contacts`. After `ImpactBall`, add:
 
@@ -1075,7 +1232,7 @@ In `ImpactSetup`, after `balls`, add:
     readonly obstacles: readonly ImpactObstacle[];
 ```
 
-In `lawOf`, add the case:
+In `lawOf`, replace Task 4's placeholder case with:
 
 ```ts
         case "ball-obstacle":
@@ -1117,8 +1274,17 @@ In `simulateImpact.ts`, before `return`, add `const obstacles = obstaclesOf(worl
         })),
 ```
 
-Add to its header comment: "Each obstacle's law is solved once: the ball's mass (the obstacle is immovable), the
-obstacle's material and its own contact time."
+Its file header becomes:
+
+```ts
+/**
+ * Phase 1 of a shot (P2b.1 design §3). Checks the ContactState and the balls. Solves every contact law once: face–ball
+ * and ball–ball once, ball–turf once per ball from the surface where it lies. Starts each ball at its static turf sink
+ * m·g/k_turf, so that the impact does not open with a spurious bounce. Each obstacle's law is solved once: the ball's
+ * mass (the obstacle is immovable), the obstacle's material and its own contact time. Integrates the impact and hands
+ * the balls over to phase 2.
+ */
+```
 
 - [ ] **Step 5: `isolated` gains no obstacles**
 
@@ -1176,20 +1342,9 @@ import { describe, expect, it } from "vitest";
 import { ZERO, vec3 } from "../../../src/engine/math/vec3";
 import { lawFromContactTime, lawFromStiffness } from "../../../src/engine/impact/contactLaw";
 import { faceClearance } from "../../../src/engine/impact/contacts";
-import {
-    IMPACT_DT,
-    integrate,
-    type ImpactObstacle,
-    type ImpactSnapshot,
-} from "../../../src/engine/impact/integrate";
+import { IMPACT_DT, integrate, type ImpactObstacle, type ImpactSnapshot } from "../../../src/engine/impact/integrate";
 import { IDENTITY } from "../../../src/engine/impact/rigidBody";
-import {
-    closeTimeline,
-    emptyTimeline,
-    inGap,
-    noteClearance,
-    recordStep,
-} from "../../../src/engine/impact/timeline";
+import { closeTimeline, emptyTimeline, inGap, noteClearance, recordStep } from "../../../src/engine/impact/timeline";
 import type { ContactInterval, HeadState } from "../../../src/engine/impact/types";
 import type { BallState } from "../../../src/engine/types";
 import { STANDARD_GRAVITY } from "../../../src/engine/world";
@@ -1251,7 +1406,8 @@ describe("the integrator's timeline", () => {
             velocity: vec3(2, 0, 0),
             angularVelocity: ZERO,
         };
-        // Provisional (pre-flight): 2 mm leaves the first face contact released before the wall closes.
+        // 2 mm leaves the first face contact released before the wall closes. Pre-flight: face [55, 680) µs and
+        // [1945, 2575) µs, wall [1140, 1930) µs between them, clearance after the first 0.950 mm.
         const wall: ImpactObstacle = {
             id: "wall",
             centre: vec3(R + 2e-3 + 10, 0, 0),
@@ -1273,11 +1429,12 @@ describe("the integrator's timeline", () => {
             { probe },
         );
         const faces = run.timeline["face/blue"] ?? [];
-        expect(faces.length).toBeGreaterThanOrEqual(2);
+        expect(faces).toHaveLength(2);
         const [first, second] = faces as [ContactInterval, ContactInterval];
         // The face plane reaches the ball during step 10 (gap / speed = 10.1 steps): the pair is closed from step 11.
         expect(first.start).toBe(11 * IMPACT_DT);
         // Clamped law: the force releases with δ = c·e·v/k still positive, which then closes at e·v: c/k later.
+        // Pre-flight: 4.73 µs off.
         expect(
             Math.abs(first.end - first.start - (TEST_FACE.contactTime + law.damping / law.stiffness)),
         ).toBeLessThanOrEqual(2 * IMPACT_DT);
@@ -1327,7 +1484,10 @@ describe("the integrator's timeline", () => {
             }),
             { cap: 1e-4 },
         );
-        expect(run.timeline["turf/blue"]).toEqual([{ start: 0, end: run.duration, peakForce: expect.any(Number) }]);
+        const turf = run.timeline["turf/blue"] ?? [];
+        expect(turf).toEqual([{ start: 0, end: run.duration, peakForce: expect.any(Number) }]);
+        // The ball rests at its static sink, so its turf spring carries its weight throughout.
+        expect(turf[0]?.peakForce).toBeGreaterThan(0);
     });
 
     it("lists exactly the ball–ball and ball–obstacle pairs touching at t = 0", () => {
@@ -1358,7 +1518,7 @@ describe("the integrator's timeline", () => {
 - [ ] **Step 2: Run them to verify they fail**
 
 Run: `npx vitest run tests/engine/impact/timeline.test.ts`
-Expected: FAIL (`timeline.ts` does not exist).
+Expected: FAIL (`timeline.ts` does not exist: the file fails to load).
 
 - [ ] **Step 3: Add the types**
 
@@ -1475,8 +1635,15 @@ import type { ContactInterval, DriveSample, HeadState, ImpactEvent, ImpactRun, M
 ```
 
 `PairState` gains `readonly line: PairTimeline;` (comment: "The pair's contact timeline."). `applyPair` returns the
-normal force: change its return type to `number`, its comment's first sentence to "The normal and tangential force of
-one closed pair, from the current state; returns the normal force (N).", and add `return normal;` at its end.
+normal force: change its return type to `number`, add `return normal;` at its end, and make its comment:
+
+```ts
+/**
+ * The normal and tangential force of one closed pair, from the current state; returns the normal force (N). Advances
+ * the pair's tangential spring, adds the force to body B and its reaction to body A (the head, the other ball, or the
+ * immovable turf), and appends the pair as the probe sees it to `samples` (null without a probe).
+ */
+```
 
 `finish` takes `touchingAtStart: readonly string[]` after `duration`, and builds the timeline:
 
@@ -1563,8 +1730,8 @@ Expected: PASS. Then `npm test`: PASS. (`toStrictEqual` determinism checks in `i
 Run: `npx --yes tsx scripts/impactDigest.ts > "$CLAUDE_TEMP_DIR/digest-6.txt"`
 Run: `grep -v "^timeline " "$CLAUDE_TEMP_DIR/digest-6.txt" > "$CLAUDE_TEMP_DIR/digest-6-p2b1.txt"`
 Run: `cmp "$CLAUDE_TEMP_DIR/digest-base.txt" "$CLAUDE_TEMP_DIR/digest-6-p2b1.txt"`
-Expected: no output. Spot-check one `timeline scenario centre` line: `face/blue` has one interval, `turf/blue` one
-from 0.
+Expected: no output. `digest-6.txt` has 4,961 lines (the 4,755 plus 206 `timeline ` lines). Spot-check one
+`timeline scenario centre` line: `face/blue` has one interval, `turf/blue` one from 0.
 
 - [ ] **Step 9: Format, check, commit**
 
@@ -1724,7 +1891,8 @@ describe("handover with obstacles", () => {
 - [ ] **Step 2: Run them to verify they fail**
 
 Run: `npx vitest run tests/engine/impact/simulateImpact.test.ts tests/engine/impact/handover.test.ts`
-Expected: FAIL (version, the overlap message, zero gap, the `obstacles` parameter).
+Expected: FAIL (runtime: the version, the overlap message, zero gap, and `handover` reading `[]` as its pass count).
+`npm run check` shows the type errors.
 
 - [ ] **Step 3: Validation and zero gap in `simulateImpact.ts`**
 
@@ -1782,8 +1950,14 @@ In `src/engine/impact/handover.ts`, extend the header with a paragraph before th
 every obstacle they overlap (hoop uprights and the peg; P2b.2a design §6): moved horizontally outward along the
 obstacle's normal to zero gap (outsideObstacle), velocities unchanged. Each pass separates the ball pairs, then the
 ball–obstacle pairs, ball by ball and obstacle by obstacle." Import `outsideObstacle` and `type ObstacleGeometry` from
-`./contacts`. Change the `Handover.overlapCorrection` comment to "the largest overlap (m) removed from a pair of balls
-or a ball and an obstacle".
+`./contacts`. The `Handover` interface's comment becomes:
+
+```ts
+/**
+ * The balls as phase 2 receives them, and the largest overlap (m) removed from a pair of balls or a ball and an
+ * obstacle.
+ */
+```
 
 Replace `worstOverlap`:
 
@@ -1815,10 +1989,23 @@ function worstOverlap(
 }
 ```
 
-(Import `type BallId` from `../types`.) Change `handover`'s signature and comment ("…separates overlapping pairs and
-clears balls from `obstacles` (see the file header). Throws an Error, naming the worst pair…") to
-`export function handover(balls: BallStates, radius: number, obstacles: readonly ObstacleGeometry[] = [], passes =
-HANDOVER_PASSES): Handover`. Inside the pass loop, after the ball–ball loops, add:
+(Import `type BallId` from `../types`.) Replace `handover`'s comment and signature:
+
+```ts
+/**
+ * Places the balls for phase 2, separates overlapping pairs and clears balls from `obstacles` (see the file header).
+ * Throws an Error, naming the worst overlap, if `passes` (HANDOVER_PASSES; tests may lower it) leave one above
+ * HANDOVER_RESIDUAL: phase 2 would otherwise reject the overlap with a RangeError far from its cause.
+ */
+export function handover(
+    balls: BallStates,
+    radius: number,
+    obstacles: readonly ObstacleGeometry[] = [],
+    passes = HANDOVER_PASSES,
+): Handover {
+```
+
+Inside the pass loop, after the ball–ball loops, add:
 
 ```ts
         for (let i = 0; i < states.length; i++) {
@@ -1876,7 +2063,8 @@ git commit -F "$CLAUDE_TEMP_DIR/msg.txt"   # "Accept balls touching obstacles an
 ### Task 8: The fault judge
 
 A pure function of a `StrokeContext` and an `ImpactResult` (spec §3, §7), under the determinism lint, internal until
-P2b.2b exports it. Read the spec's §7 table and the "Decisions made while planning" above before starting.
+P2b.2b exports it. Read the spec's §7 table and exemption paragraphs, and both decision lists above (the 29.1.7
+exemption is a pre-flight decision), before starting.
 
 **Files:**
 - Create: `src/engine/faults.ts`
@@ -1973,7 +2161,11 @@ describe("judgeFaults: one positive and one negative case per row", () => {
     it("29.1.11: the mallet touches a ball other than the striker's", () => {
         const touched = impact({ timeline: { "face/blue": [iv(0, 2 * T)], "face/red": [iv(T, 3 * T, 30)] } });
         expect(laws(judgeFaults(SINGLE, touched))).toEqual(["29.1.11 fault"]);
-        expect(judgeFaults(SINGLE, touched).findings[0]).toMatchObject({ ball: "red", t: T, evidence: { peakForce: 30 } });
+        expect(judgeFaults(SINGLE, touched).findings[0]).toMatchObject({
+            ball: "red",
+            t: T,
+            evidence: { peakForce: 30 },
+        });
         expect(laws(judgeFaults(SINGLE, impact({ timeline: { "face/blue": [iv(0, 2 * T)] } })))).toEqual([]);
     });
 
@@ -2070,7 +2262,12 @@ describe("judgeFaults: one positive and one negative case per row", () => {
 });
 
 describe("judgeFaults: the commentary's roquet sequences (C29.20.4), R = blue, K = red (live), object = 1/a", () => {
-    const cases: [string, Record<string, readonly ContactInterval[]>, string[]][] = [
+    const cases: [
+        string,
+        Record<string, readonly ContactInterval[]>,
+        string[],
+        { live?: StrokeContext["live"]; touchingAtStart?: readonly string[] }?,
+    ][] = [
         [
             "C29.20.4.1: mallet, mallet, roquet — fault",
             { "face/blue": [iv(0, T), iv(2 * T, 3 * T)], "blue/red": [iv(4 * T, 5 * T)] },
@@ -2083,17 +2280,29 @@ describe("judgeFaults: the commentary's roquet sequences (C29.20.4), R = blue, K
         ],
         [
             "C29.20.4.3: mallet, roquet, object, mallet — fault",
-            { "face/blue": [iv(0, T), iv(6 * T, 7 * T)], "blue/red": [iv(2 * T, 3 * T)], "blue@1/a": [iv(4 * T, 5 * T)] },
+            {
+                "face/blue": [iv(0, T), iv(6 * T, 7 * T)],
+                "blue/red": [iv(2 * T, 3 * T)],
+                "blue@1/a": [iv(4 * T, 5 * T)],
+            },
             ["29.1.6.2 fault"],
         ],
         [
             "C29.20.4.4: mallet, roquet, mallet, object — no fault",
-            { "face/blue": [iv(0, T), iv(4 * T, 5 * T)], "blue/red": [iv(2 * T, 3 * T)], "blue@1/a": [iv(6 * T, 7 * T)] },
+            {
+                "face/blue": [iv(0, T), iv(4 * T, 5 * T)],
+                "blue/red": [iv(2 * T, 3 * T)],
+                "blue@1/a": [iv(6 * T, 7 * T)],
+            },
             [],
         ],
         [
             "C29.20.4.5: mallet, object, roquet, mallet — no fault",
-            { "face/blue": [iv(0, T), iv(6 * T, 7 * T)], "blue@1/a": [iv(2 * T, 3 * T)], "blue/red": [iv(4 * T, 5 * T)] },
+            {
+                "face/blue": [iv(0, T), iv(6 * T, 7 * T)],
+                "blue@1/a": [iv(2 * T, 3 * T)],
+                "blue/red": [iv(4 * T, 5 * T)],
+            },
             [],
         ],
         [
@@ -2102,9 +2311,43 @@ describe("judgeFaults: the commentary's roquet sequences (C29.20.4), R = blue, K
             [],
         ],
         [
-            "a mallet contact open when the roquet starts is one contact, before it — no fault",
-            { "face/blue": [iv(0, 3 * T)], "blue/red": [iv(2 * T, 4 * T)] },
+            "a mallet contact open when the roquet starts is one contact, before it; a later one is exempt — no fault",
+            { "face/blue": [iv(0, 3 * T), iv(5 * T, 6 * T)], "blue/red": [iv(2 * T, 4 * T)] },
             [],
+        ],
+        [
+            "an object starting with the roquet does not intervene — no fault",
+            {
+                "face/blue": [iv(0, T), iv(6 * T, 7 * T)],
+                "blue/red": [iv(2 * T, 3 * T)],
+                "blue@1/a": [iv(2 * T, 3 * T)],
+            },
+            [],
+        ],
+        [
+            "an object starting with the second mallet contact does not intervene — 29.1.8 only, no 29.1.6.2",
+            {
+                "face/blue": [iv(0, T), iv(6 * T, 7 * T)],
+                "blue/red": [iv(2 * T, 3 * T)],
+                "blue@1/a": [iv(6 * T, 7 * T)],
+            },
+            ["29.1.8 fault"],
+        ],
+        [
+            "the roquet is the earliest live ball; the other live ball is then an object — fault",
+            {
+                "face/blue": [iv(0, T), iv(6 * T, 7 * T)],
+                "blue/black": [iv(2 * T, 3 * T)],
+                "blue/red": [iv(4 * T, 5 * T)],
+            },
+            ["29.1.6.2 fault"],
+            { live: ["red", "black"] },
+        ],
+        [
+            "a live ball touching at t = 0 is not a roquet — fault",
+            { "face/blue": [iv(0, T), iv(5 * T, 6 * T)], "blue/red": [iv(0, 3 * T)] },
+            ["29.1.6.2 fault"],
+            { touchingAtStart: ["blue/red"] },
         ],
         [
             "a second hit on the roqueted ball is not another object — no fault",
@@ -2122,9 +2365,54 @@ describe("judgeFaults: the commentary's roquet sequences (C29.20.4), R = blue, K
         ],
     ];
 
-    it.each(cases)("%s", (_label, timeline, expected) => {
-        const context: StrokeContext = { ...SINGLE, live: ["red"] };
-        expect(laws(judgeFaults(context, impact({ timeline })))).toEqual(expected);
+    it.each(cases)("%s", (_label, timeline, expected, extra) => {
+        const context: StrokeContext = { ...SINGLE, live: extra?.live ?? ["red"] };
+        const hit = impact({ timeline, touchingAtStart: extra?.touchingAtStart });
+        expect(laws(judgeFaults(context, hit))).toEqual(expected);
+    });
+});
+
+describe("judgeFaults: 29.1.7 and the roquet exemption", () => {
+    const context: StrokeContext = { ...SINGLE, live: ["red"] };
+
+    it("is not exempt when the mallet contact was already open before the roquet", () => {
+        const hit = impact({
+            timeline: { "face/blue": [iv(0, 6 * T)], "blue/red": [iv(2 * T, 3 * T)], "blue/black": [iv(4 * T, 5 * T)] },
+        });
+        expect(laws(judgeFaults(context, hit))).toEqual(["29.1.7 possible-fault"]);
+    });
+
+    it("is not exempt when the dead ball is hit with the roquet but the contact opened before it", () => {
+        const hit = impact({
+            timeline: { "face/blue": [iv(0, 6 * T)], "blue/red": [iv(2 * T, 3 * T)], "blue/black": [iv(2 * T, 3 * T)] },
+        });
+        expect(laws(judgeFaults(context, hit))).toEqual(["29.1.7 possible-fault"]);
+    });
+
+    it("is exempt when the mallet contact, the roquet and the dead-ball hit all start together", () => {
+        const hit = impact({
+            timeline: {
+                "face/blue": [iv(2 * T, 6 * T)],
+                "blue/red": [iv(2 * T, 3 * T)],
+                "blue/black": [iv(2 * T, 3 * T)],
+            },
+        });
+        expect(laws(judgeFaults(context, hit))).toEqual([]);
+    });
+
+    it("judges a dead-ball hit when the striker is not the first ball", () => {
+        const hit = impact({
+            timeline: { "face/red": [iv(0, 6 * T)], "blue/red": [iv(2 * T, 3 * T)], "red/black": [iv(4 * T, 5 * T)] },
+        });
+        expect(laws(judgeFaults({ ...context, striker: "red", live: ["blue"] }, hit))).toEqual([
+            "29.1.7 possible-fault",
+        ]);
+    });
+
+    it("finds the roquet by the canonical pair key when the striker is not the first ball", () => {
+        // A missed roquet would leave the second mallet contact unexempt: 29.1.6.2.
+        const hit = impact({ timeline: { "face/red": [iv(0, T), iv(4 * T, 5 * T)], "blue/red": [iv(2 * T, 3 * T)] } });
+        expect(laws(judgeFaults({ ...context, striker: "red", live: ["blue"] }, hit))).toEqual([]);
     });
 });
 
@@ -2177,7 +2465,12 @@ describe("judgeFaults: a context that does not fit the impact", () => {
     const two = impact({ balls: { blue: ALL.blue, red: ALL.red } });
     const cases: [string, StrokeContext, ImpactResult, RegExp][] = [
         ["a striker absent from it", { ...SINGLE, striker: "yellow", live: [] }, two, /striker yellow is not in/],
-        ["a croquet stroke without a croqueted ball", { ...SINGLE, kind: "croquet", live: [] }, two, /needs a croqueted/],
+        [
+            "a croquet stroke without a croqueted ball",
+            { ...SINGLE, kind: "croquet", live: [] },
+            two,
+            /needs a croqueted/,
+        ],
         ["the striker as the croqueted ball", { ...CROQUET, croqueted: "blue" }, two, /cannot be the striker blue/],
         ["a croqueted ball absent from it", { ...CROQUET, croqueted: "yellow" }, two, /croqueted ball yellow is not/],
         ["a croqueted ball in another kind", { ...SINGLE, croqueted: "red" }, two, /only for a croquet stroke/],
@@ -2218,6 +2511,14 @@ Expected: FAIL (`faults.ts` does not exist).
  * started and before t. Ties favour the exemption: a face interval starting with the roquet is after it, and an object
  * hit starting with the roquet or with the contact does not intervene. A face interval already open when the roquet
  * starts is one contact, before it.
+ *
+ * Exemption for 29.1.7. The dead ball's hit is exempt only if the mallet contact it falls in is exempt at the
+ * contact's own start (a contact already open before the roquet is not), and the hit does not start after the roquet:
+ * the mallet contact, the roquet and the dead-ball hit all start together (Law 29.2.4: contact after the ball has hit
+ * another object after the roquet is not exempt).
+ *
+ * 29.1.9 ("carries force while overlapping the mallet contact") is judged at interval granularity: an obstacle
+ * interval that overlaps a mallet contact counts if its `peakForce` is positive, not the force during the overlap.
  */
 import { CONTACT_TOLERANCE } from "./detect";
 import { ballPairKey, faceKey, obstacleKey } from "./impact/contacts";
@@ -2433,7 +2734,13 @@ export function judgeFaults(context: StrokeContext, impact: ImpactResult): Fault
     const contacts = faces.filter((f) => !exempt(view, f.start));
     // 29.1.6.2: a single-ball stroke with two or more non-exempt mallet contacts, or the head still closing at the end.
     if (kind === "single-ball" && contacts.length >= 2) {
-        add("29.1.6.2", "fault", striker, (contacts[1] as ContactInterval).start, contactEvidence(contacts.length, faces));
+        add(
+            "29.1.6.2",
+            "fault",
+            striker,
+            (contacts[1] as ContactInterval).start,
+            contactEvidence(contacts.length, faces),
+        );
     }
     if (kind === "single-ball") {
         for (const e of impact.events) {
@@ -2453,7 +2760,9 @@ export function judgeFaults(context: StrokeContext, impact: ImpactResult): Fault
             continue;
         }
         const face = faces.find((f) => f.start <= first.start && first.start < f.end);
-        if (face && !exempt(view, first.start)) {
+        const roquetStart = view.roquet?.start;
+        const exemptHit = face !== undefined && roquetStart !== undefined && first.start <= roquetStart;
+        if (face && !(exemptHit && exempt(view, face.start))) {
             add("29.1.7", "possible-fault", striker, first.start, {
                 contactBefore: first.start - face.start,
                 contactAfter: face.end - first.start,
@@ -2480,7 +2789,7 @@ export function judgeFaults(context: StrokeContext, impact: ImpactResult): Fault
 - [ ] **Step 4: Run the tests to verify they pass**
 
 Run: `npx vitest run tests/engine/faults.test.ts`
-Expected: PASS. Then `npm test` and `npm run lint` (the determinism lint covers the new file): PASS.
+Expected: PASS, 39 tests. Then `npm test` and `npm run lint` (the determinism lint covers the new file): PASS.
 
 - [ ] **Step 5: Format, check, commit**
 
@@ -2548,9 +2857,18 @@ describe("crush geometry (C29.13.1)", () => {
         expect(() => simulateFreeMotion(result.handover, world)).not.toThrow();
     });
 
-    it("does not for a ball 20 mm from it", () => {
+    it("does not for a ball 20 mm from it, which it never reaches", () => {
         const world = uprightAt(10 + R + r + 0.02, 10);
-        expect(laws(HAMPERED, strike(BLUE.position, { speed: 3 }), { blue: BLUE }, world)).not.toContain("29.1.8");
+        const result = simulateImpact(strike(BLUE.position, { speed: 3 }), { blue: BLUE }, world);
+        expect(result.timeline["blue@1/a"]).toBeUndefined();
+        expect(judgeFaults(HAMPERED, result).findings.map((f) => f.law)).not.toContain("29.1.8");
+    });
+
+    it("does not for a ball 5 mm from it, which it reaches", () => {
+        const world = uprightAt(10 + R + r + 0.005, 10);
+        const result = simulateImpact(strike(BLUE.position, { speed: 3 }), { blue: BLUE }, world);
+        expect(result.timeline["blue@1/a"]).toBeDefined();
+        expect(judgeFaults(HAMPERED, result).findings.map((f) => f.law)).not.toContain("29.1.8");
     });
 });
 
@@ -2559,10 +2877,13 @@ describe("a ball touching an upright", () => {
         ["exactly", 0],
         ["overlapping by rounding", 5e-10],
     ])("struck directly away from it (touching %s) raises neither 29.1.8 nor 29.1.9", (_label, overlap) => {
-        const world = uprightAt(10 - R - r + overlap, 10);
-        const result = simulateImpact(strike(BLUE.position, { speed: 2 }), { blue: BLUE }, world);
+        // 1/a on the east side (1/b stands further east, out of the way); the head strikes from the east, towards -x.
+        const world = uprightAt(10 + R + r - overlap, 10);
+        const result = simulateImpact(strike(BLUE.position, { speed: 2, yaw: Math.PI }), { blue: BLUE }, world);
         expect(result.touchingAtStart).toEqual(["blue@1/a"]);
         expect(result.timeline["blue@1/a"]).toBeUndefined();
+        expect(result.timeline["blue@1/b"]).toBeUndefined();
+        expect(result.handover.blue?.velocity.x).toBeLessThan(0);
         const found = judgeFaults(HAMPERED, result).findings.map((f) => f.law);
         expect(found).not.toContain("29.1.8");
         expect(found).not.toContain("29.1.9");
@@ -2604,10 +2925,15 @@ Add `testHoop`, `hoopWithUprightAt` to the fixtures import and `vec3` is already
 /** Seed of the obstacle fuzz's stroke sequence (fuzz.test.ts). */
 export const OBSTACLE_FUZZ_SEED = 29;
 
-/** Provisional (pre-flight): the widest reach that raises no impact-cap. Surface gap (m) from blue to upright 1/a. */
+/**
+ * Largest surface gap (m) from blue to upright 1/a. Pre-flight: no reach tried, up to 0.2 m (peg 0.3 m), raises an
+ * impact-cap; wider reaches only dilute the share of strokes meeting an obstacle (17.45 % here, 6.35 % at 0.2 m).
+ */
 const UPRIGHT_REACH = 0.06;
-/** Provisional (pre-flight): surface gap (m) from blue to the peg. */
+/** Largest surface gap (m) from blue to the peg (with UPRIGHT_REACH, pre-flight). */
 const PEG_REACH = 0.1;
+/** Draws allowed before randomObstacleStroke gives up: a bound against a livelock, not a physical value. */
+const OBSTACLE_DRAW_CAP = 1000;
 
 /**
  * One random stroke of the impact fuzz (randomStroke) with hoop "1" and the peg moved within reach of blue: upright
@@ -2620,7 +2946,7 @@ export function randomObstacleStroke(
 ): { contact: ContactState; balls: BallStates; world: World } {
     const uni = (a: number, b: number): number => a + (b - a) * random();
     const r = testHoop("1", 0, 0).uprightRadius;
-    for (;;) {
+    for (let attempt = 0; attempt < OBSTACLE_DRAW_CAP; attempt++) {
         const { contact, balls } = randomStroke(random, base);
         const ua = uni(-Math.PI, Math.PI);
         const ud = R + r + uni(0, UPRIGHT_REACH);
@@ -2636,60 +2962,75 @@ export function randomObstacleStroke(
         }
         try {
             validateImpact(contact, balls, world);
-        } catch {
-            continue;
+        } catch (error) {
+            if (error instanceof RangeError) {
+                continue;
+            }
+            throw error;
         }
         return { contact, balls, world };
     }
+    throw new Error(`randomObstacleStroke: no valid stroke in ${OBSTACLE_DRAW_CAP} draws`);
 }
 ```
 
-(Import `length` from vec3 and `uprightsOf` from `world.ts`.)
+(Import `length` from vec3 and `uprightsOf` from `world.ts`.) Only a `RangeError`, what `validateImpact` throws, is
+drawn again; anything else is a defect and propagates.
 
 - [ ] **Step 3: Add the obstacle fuzz to `tests/engine/impact/fuzz.test.ts`**
 
 Add `OBSTACLE_FUZZ_SEED`, `randomObstacleStroke` to the support import. Append:
 
 ```ts
-/** Provisional (pre-flight): 1.5× the worst obstacle-pair penetration over 2000 obstacle-fuzz strokes. */
-const OBSTACLE_PENETRATION_BOUND = 0.2 * R;
-/** Provisional (pre-flight): half the measured share of strokes in which an obstacle pair closes. */
-const OBSTACLE_SHARE = 0.1;
+/**
+ * 1.5× the worst obstacle-pair penetration over 2000 obstacle-fuzz strokes (pre-flight: 1.745 mm = 0.038 R). The
+ * contact-time upper bound, 1.0e-3 s, keeps it at 0.055 R.
+ */
+const OBSTACLE_PENETRATION_BOUND = 0.06 * R;
+/** Half the share of strokes in which an obstacle pair closes (pre-flight: 17.45 % of 2000). */
+const OBSTACLE_SHARE = 0.087;
 
 describe("obstacle fuzz", () => {
     const count = import.meta.env.SLOW_TESTS ? 2000 : 200;
 
-    it(`ends, never hits the cap, keeps penetrations bounded and hands over cleanly over ${count} strokes`, {
-        timeout: 600_000,
-    }, () => {
-        const random = rng(OBSTACLE_FUZZ_SEED);
-        let touched = 0;
-        for (let n = 0; n < count; n++) {
-            const { contact, balls, world } = randomObstacleStroke(random, WORLD);
-            const result = simulateImpact(contact, balls, world);
-            expect(result.events.some((e) => e.kind === "impact-cap"), `stroke ${n}`).toBe(false);
-            for (const [key, depth] of Object.entries(result.peakPenetration)) {
-                const bound = key.includes("@") ? OBSTACLE_PENETRATION_BOUND : PENETRATION_BOUND;
-                expect(depth, `stroke ${n} ${key}`).toBeLessThan(bound);
+    it(
+        `ends, never hits the cap, keeps penetrations bounded and hands over cleanly over ${count} strokes`,
+        {
+            timeout: 600_000,
+        },
+        () => {
+            const random = rng(OBSTACLE_FUZZ_SEED);
+            let touched = 0;
+            for (let n = 0; n < count; n++) {
+                const { contact, balls, world } = randomObstacleStroke(random, WORLD);
+                const result = simulateImpact(contact, balls, world);
+                expect(
+                    result.events.some((e) => e.kind === "impact-cap"),
+                    `stroke ${n}`,
+                ).toBe(false);
+                for (const [key, depth] of Object.entries(result.peakPenetration)) {
+                    const bound = key.includes("@") ? OBSTACLE_PENETRATION_BOUND : PENETRATION_BOUND;
+                    expect(depth, `stroke ${n} ${key}`).toBeLessThan(bound);
+                }
+                if (Object.keys(result.timeline).some((key) => key.includes("@"))) {
+                    touched++;
+                }
+                for (const s of Object.values(result.handover) as BallState[]) {
+                    const values = [s.position, s.velocity, s.angularVelocity].flatMap((v) => [v.x, v.y, v.z]);
+                    expect(values.every(Number.isFinite), `stroke ${n}`).toBe(true);
+                }
+                expect(() => simulateFreeMotion(result.handover, world), `stroke ${n}`).not.toThrow();
             }
-            if (Object.keys(result.timeline).some((key) => key.includes("@"))) {
-                touched++;
-            }
-            for (const s of Object.values(result.handover) as BallState[]) {
-                const values = [s.position, s.velocity, s.angularVelocity].flatMap((v) => [v.x, v.y, v.z]);
-                expect(values.every(Number.isFinite), `stroke ${n}`).toBe(true);
-            }
-            expect(() => simulateFreeMotion(result.handover, world), `stroke ${n}`).not.toThrow();
-        }
-        expect(touched).toBeGreaterThan(OBSTACLE_SHARE * count);
-    });
+            expect(touched).toBeGreaterThan(OBSTACLE_SHARE * count);
+        },
+    );
 });
 ```
 
 - [ ] **Step 4: Run the tests**
 
 Run: `npx vitest run tests/engine/impact/obstacles.test.ts tests/engine/impact/fuzz.test.ts`
-Expected: PASS. Then `SLOW_TESTS=1 npx vitest run tests/engine/impact/fuzz.test.ts`: PASS.
+Expected: PASS. Then `SLOW_TESTS=1 npx vitest run tests/engine/impact/fuzz.test.ts`: PASS (about 9 s for both fuzzes).
 
 - [ ] **Step 5: Format, check, commit**
 
@@ -2700,10 +3041,250 @@ git commit -F "$CLAUDE_TEMP_DIR/msg.txt"   # "Test crushes, touching starts and 
 
 ---
 
-### Task 10: Probe figures and roadmap outcomes
+### Task 10: The reach filter
+
+Pre-flight measured the cost of pairing every ball with every obstacle at 1.61–1.88× P2b.1's µs/step on the default
+world (12 uprights and the peg), and the user chose a reach filter (spec §4; "Decisions made in pre-flight"). A
+ball–obstacle pair is skipped while the ball cannot yet have reached the obstacle: each ball's horizontal path length
+is summed, and a pair found open is not evaluated again until the ball has travelled its gap, less `WAKE_MARGIN`. The
+filter must be exact: a skipped pair is open, so evaluating it would add no force and change no state, and the pairs
+evaluated are visited, and their forces summed, in the same order. This task proves it bit for bit (Steps 1 and 6).
+
+**Files:**
+- Modify: `src/engine/impact/contacts.ts` (`obstacleGap`), `src/engine/impact/integrate.ts`
+- Test: `tests/engine/impact/contacts.test.ts`, `tests/engine/impact/analytic.test.ts`
+- Throwaway (never committed): `scripts/obstacleFuzzExact.ts`
+
+**Interfaces:**
+- Consumes: Task 6's pair loop and timeline; Task 9's `OBSTACLE_FUZZ_SEED`, `randomObstacleStroke`.
+- Produces: `obstacleGap(centre: Vec3, radius: number, obstacle: ObstacleGeometry): number` (contacts.ts). Results
+  are unchanged.
+
+- [ ] **Step 1: Save the unfiltered outputs**
+
+Before any change, create `scripts/obstacleFuzzExact.ts` (throwaway; Step 6 deletes it):
+
+```ts
+/** Throwaway (P2b.2a Task 10): the obstacle fuzz's 2000 strokes, every field at full precision. Never committed. */
+import { simulateImpact } from "../src/engine/impact/simulateImpact";
+import { testWorld } from "../tests/engine/support/fixtures";
+import { OBSTACLE_FUZZ_SEED, randomObstacleStroke } from "../tests/engine/support/impact";
+import { rng } from "../tests/engine/support/rng";
+
+function exact(value: unknown): string {
+    return JSON.stringify(value, (_key, v: unknown) => {
+        if (typeof v !== "number") {
+            return v;
+        }
+        if (Object.is(v, -0)) {
+            return "-0";
+        }
+        return Number.isFinite(v) ? v : String(v);
+    });
+}
+
+const random = rng(OBSTACLE_FUZZ_SEED);
+const base = testWorld();
+for (let n = 0; n < 2000; n++) {
+    const { contact, balls, world } = randomObstacleStroke(random, base);
+    console.log(`obstacle ${n} ${exact(simulateImpact(contact, balls, world))}`);
+}
+```
+
+Run: `npx --yes tsx scripts/impactDigest.ts > "$CLAUDE_TEMP_DIR/digest-10-before.txt"`
+Expected: 4,961 lines.
+Run: `npx --yes tsx scripts/obstacleFuzzExact.ts > "$CLAUDE_TEMP_DIR/obstacle-10-before.txt"`
+Expected: 2,000 lines.
+
+- [ ] **Step 2: Write the failing tests**
+
+In `tests/engine/impact/contacts.test.ts`, add `obstacleGap` to the contacts import, and after the "obstacleContact"
+describe:
+
+```ts
+describe("obstacleGap", () => {
+    it("is the horizontal surface gap: positive apart, zero at R + r, negative overlapping", () => {
+        expect(obstacleGap(vec3(1 - R - 0.008 - 0.3, 2, 0.4), R, POST)).toBeCloseTo(0.3, 14);
+        expect(Math.abs(obstacleGap(vec3(1, 2 + R + 0.008, R), R, POST))).toBeLessThan(1e-15);
+        expect(obstacleGap(vec3(1 - R - 0.008 + 1e-4, 2, R), R, POST)).toBeCloseTo(-1e-4, 15);
+    });
+
+    it("is negative exactly where obstacleContact closes", () => {
+        const points = [
+            vec3(1 - R - 0.008 + 1e-4, 2, 0.3),
+            vec3(1, 2 + R + 0.008 + 1e-12, R),
+            vec3(1, 2 + R + 0.008 - 1e-12, R),
+            vec3(1.03, 2.04, R),
+            vec3(1.5, 1.5, R),
+        ];
+        for (const p of points) {
+            expect(obstacleGap(p, R, POST) < 0, `${p.x}, ${p.y}`).toBe(obstacleContact(p, R, POST) !== null);
+        }
+    });
+});
+```
+
+In `tests/engine/impact/analytic.test.ts`, in "a ball against a fixed obstacle", after the head-on case (it reuses that
+case's law, step and tolerance):
+
+```ts
+    it("from 10 mm away, past the reach filter: the same contact time, restitution and a single interval", () => {
+        const e = 0.6;
+        const T = 7e-4;
+        const probe = counter("blue@post");
+        // 100,000 steps of approach, nearly all of them with the pair skipped as out of reach.
+        const run = integrate(
+            isolated({
+                obstacles: [post(lawFromContactTime(M, e, T, 0))],
+                balls: [freeBall("blue", vec3(-(R + 0.008 + 0.01), 0, 1), vec3(1, 0, 0))],
+            }),
+            { dt: FINE, cap: 0.012, probe },
+        );
+        expect(Math.abs(probe.closed * FINE - T) / T).toBeLessThan(LAW_TOLERANCE);
+        expect(Math.abs((run.balls.blue?.velocity.x as number) + e) / e).toBeLessThan(LAW_TOLERANCE);
+        expect(run.timeline["blue@post"]).toHaveLength(1);
+    });
+```
+
+It passes with or without the filter: it is a behaviour test (pre-flight: the filter skipped the pair in 112,088 of
+the 120,000 steps).
+
+- [ ] **Step 3: Run them to verify they fail**
+
+Run: `npx vitest run tests/engine/impact/contacts.test.ts tests/engine/impact/analytic.test.ts`
+Expected: FAIL, the 2 `obstacleGap` tests (`TypeError: obstacleGap is not a function`); the analytic case passes.
+
+- [ ] **Step 4: Add `obstacleGap` to `contacts.ts`**
+
+After `obstacleContact`:
+
+```ts
+/**
+ * Horizontal surface gap (m) between `obstacle` and a ball centred at `centre`, d − R − r: the negated penetration
+ * obstacleContact computes, rounded identically, so the pair is closed exactly where the gap is negative.
+ */
+export function obstacleGap(centre: Vec3, radius: number, obstacle: ObstacleGeometry): number {
+    return 0 - (radius + obstacle.radius - length(horizontal(sub(centre, obstacle.centre))));
+}
+```
+
+- [ ] **Step 5: The filter in `integrate.ts`**
+
+Header: add a paragraph after the timeline paragraph:
+
+```ts
+ *
+ * A ball–obstacle pair is skipped while the ball cannot yet have reached the obstacle: each ball's horizontal path
+ * length is summed, and a pair found open is not evaluated again until the ball has travelled its gap (less
+ * WAKE_MARGIN). The filter is exact: a skipped pair is open, so evaluating it would add no force and change no state,
+ * and the pairs evaluated are visited, and their forces summed, in the same order.
+```
+
+Imports: the vec3 import becomes
+`import { ZERO, add, cross, dot, horizontal, length, scale, sub, vec3, type Vec3 } from "../math/vec3";`, and
+`obstacleGap` joins the `./contacts` import (after `headLowestPoint`).
+
+After `IMPACT_CAP`, add:
+
+```ts
+/**
+ * Slack (m) subtracted from a ball–obstacle pair's gap before it is skipped (see the file header). Numerical, not
+ * physical: it covers the drift between a ball's summed path length and its rounded position updates. A step rounds
+ * each horizontal coordinate by at most half an ulp (about 2e-15 m on a full-size lawn), so the ball's distance from
+ * an obstacle by at most √2 times that. At the default IMPACT_DT and IMPACT_CAP (12,000 steps) the drift stays under
+ * 1e-10 m; a test's finer step, on coordinates under 1 m, drifts less.
+ */
+const WAKE_MARGIN = 1e-9;
+```
+
+The `ImpactSetup.obstacles` comment becomes:
+
+```ts
+    /**
+     * Hoop uprights, then the peg (obstaclesOf order); every ball is paired with each; pairs a ball cannot yet reach
+     * are skipped.
+     */
+```
+
+`PairState` gains, after `line`:
+
+```ts
+    /** A ball–obstacle pair is skipped while ball B's path length is below this (m); 0 for every other pair. */
+    wakeAt: number;
+```
+
+`advance` takes `travel: number[]` after `balls`; its comment's last sentence becomes "Returns the head's new state,
+replaces each ball's in `balls` and adds each ball's horizontal path length this step to `travel`." In its ball loop,
+after `balls[i] = …`, add:
+
+```ts
+        // Horizontal speed suffices, and wakes no pair early for a ball bouncing in the turf: an obstacle is a vertical
+        // cylinder, its gap horizontal.
+        travel[i] = (travel[i] as number) + length(horizontal(v)) * dt;
+```
+
+In `integrate`, each `PairState` gains `wakeAt: 0,` (after `line`), and after `const balls …` add
+`const travel = balls.map(() => 0);`. In the pair loop, before `pairContact`, add:
+
+```ts
+            // A skipped pair was open when last evaluated: its spring is already ZERO and it has no open interval, so
+            // evaluating it would change nothing.
+            if (pair.kind === "ball-obstacle" && (travel[pair.b] as number) < p.wakeAt) {
+                continue;
+            }
+```
+
+and in the open branch, after `p.spring = ZERO;`:
+
+```ts
+                if (pair.kind === "ball-obstacle") {
+                    const gap = obstacleGap(
+                        (balls[pair.b] as BallState).position,
+                        R,
+                        setup.obstacles[pair.a] as ImpactObstacle,
+                    );
+                    p.wakeAt = (travel[pair.b] as number) + gap - WAKE_MARGIN;
+                }
+```
+
+A pair evaluated as closed keeps its `wakeAt`, at or below the ball's `travel`, so it is evaluated again next step. The
+call to `advance` becomes `state = advance(state, balls, travel, loads, setup, ballInertia, dt);`.
+
+- [ ] **Step 6: Run the tests and verify exactness**
+
+Run: `npx vitest run tests/engine/impact/`
+Expected: PASS.
+Run: `npx --yes tsx scripts/impactDigest.ts > "$CLAUDE_TEMP_DIR/digest-10-after.txt"`
+Run: `cmp "$CLAUDE_TEMP_DIR/digest-10-before.txt" "$CLAUDE_TEMP_DIR/digest-10-after.txt"`
+Expected: no output: the whole digest, `timeline ` lines included, is unchanged.
+Run: `npx --yes tsx scripts/obstacleFuzzExact.ts > "$CLAUDE_TEMP_DIR/obstacle-10-after.txt"`
+Run: `cmp "$CLAUDE_TEMP_DIR/obstacle-10-before.txt" "$CLAUDE_TEMP_DIR/obstacle-10-after.txt"`
+Expected: no output: every obstacle-fuzz result, timeline and `touchingAtStart` included, is unchanged. If either
+`cmp` prints anything, the filter skipped a pair that would have closed: stop and report.
+Run: `rm scripts/obstacleFuzzExact.ts`
+Run: `npx --yes tsx scripts/shotMix.ts`
+Expected: p99 143,084, p99.9 362,050, max 408,030.
+Run: `npm test`, then `SLOW_TESTS=1 npm test`
+Expected: PASS.
+
+- [ ] **Step 7: Format, check, commit**
+
+Run `npx prettier --write src/engine/impact/contacts.ts src/engine/impact/integrate.ts
+tests/engine/impact/contacts.test.ts tests/engine/impact/analytic.test.ts`, then the four checks. `git status` shows
+no `scripts/obstacleFuzzExact.ts`.
+
+```bash
+git add src/engine/impact/contacts.ts src/engine/impact/integrate.ts tests/engine/impact/contacts.test.ts tests/engine/impact/analytic.test.ts
+git commit -F "$CLAUDE_TEMP_DIR/msg.txt"   # "Skip ball–obstacle pairs a ball cannot yet reach"
+```
+
+---
+
+### Task 11: Probe figures and roadmap outcomes
 
 Records what spec §10 and exit criterion 5 ask to be recorded, not gated: the crush distance, the shortest face–ball
-gap in single clean strikes, and the per-step cost.
+gap in single clean strikes, and the per-step cost. Pre-flight already printed every figure (see "Pre-flight"); the
+probe is deterministic apart from its timings, so the real run's crush and face-gap lines must match those.
 
 **Files:**
 - Modify: `scripts/impactProbe.ts`, `docs/superpowers/plans/2026-09-30-croquet-shot-lab-roadmap.md`
@@ -2713,23 +3294,35 @@ gap in single clean strikes, and the per-step cost.
 
 - [ ] **Step 1: Extend the probe**
 
-In `scripts/impactProbe.ts`, update the header list with "- the crush distance: the largest gap to an upright straight
-ahead that still raises 29.1.8, per head speed (C29.13.1 says 1–2 mm); - face–ball gaps in single clean strikes (the
-P2b.1 fuzz strokes with blue alone); - impact engine time per stroke and per step." and its last sentence with "its
-output goes into the roadmap's outcomes sections." Add imports:
+In `scripts/impactProbe.ts`, the header's list ends, and its run line reads:
+
+```ts
+ * - the crush distance: the largest gap to an upright straight ahead that still raises 29.1.8, per head speed
+ *   (C29.13.1 says 1–2 mm);
+ * - face–ball gaps in single clean strikes (the P2b.1 fuzz strokes with blue alone);
+ * - impact engine time per stroke and per step.
+ * Run with `npx --yes tsx scripts/impactProbe.ts`; environment: REPEAT (timed runs per stroke, default 200). Not
+ * part of the test suite; its output goes into the roadmap's outcomes sections.
+```
+
+The imports become:
 
 ```ts
 import { judgeFaults, type StrokeContext } from "../src/engine/faults";
 import { IMPACT_DT } from "../src/engine/impact/integrate";
-import type { Hoop } from "../src/engine/types";
-import { hoopHalfSpan, hoopLateral } from "../src/engine/world";
-import { add, scale } from "../src/engine/math/vec3";
+import { add, scale, vec3, type Vec3 } from "../src/engine/math/vec3";
+import { simulateImpact } from "../src/engine/impact/simulateImpact";
+import { solidCylinderInertia } from "../src/engine/impact/rigidBody";
+import type { ContactState, FaceMaterial, MalletHead } from "../src/engine/impact/types";
+import type { BallState, BallStates, Hoop, World } from "../src/engine/types";
+import { defaultWorld, hoopHalfSpan, hoopLateral, uniformLawn } from "../src/engine/world";
+import { contactReference, malletReference } from "../src/reference/index";
 import { testWorld } from "../tests/engine/support/fixtures";
-import { FUZZ_SEED, randomStroke } from "../tests/engine/support/impact";
+import { drive, FUZZ_SEED, randomStroke, recorder, strike } from "../tests/engine/support/impact";
 import { rng } from "../tests/engine/support/rng";
 ```
 
-(merge with the existing imports of the same modules). Before `sweep()`'s call, add:
+After `timing()`, before the calls at the end, add:
 
 ```ts
 const HAMPERED: StrokeContext = {
@@ -2827,8 +3420,22 @@ and add `crushDistance();` and `faceGaps();` before `timing();` at the end.
 - [ ] **Step 2: Run the probe**
 
 Run: `npx --yes tsx scripts/impactProbe.ts`
-Expected: every section prints. No one-step face gaps (pre-flight has confirmed it; if one appears now, stop and report
-it). Keep the output for Step 3.
+Expected: every section prints, and the deterministic lines match pre-flight's:
+
+```text
+== Crush distance (largest gap to an upright straight ahead raising 29.1.8; C29.13.1: 1–2 mm) ==
+1 m/s: 1.088 mm
+2 m/s: 2.188 mm
+3 m/s: 3.261 mm
+4 m/s: 4.365 mm
+6 m/s: 6.549 mm
+== Face–ball gaps in single clean strikes (2000 P2b.1 fuzz strokes, blue alone) ==
+978 strokes, 3 with more than one face interval; shortest gap 2990.0 µs; one-step gaps: 0
+```
+
+If a line differs, or a one-step gap appears, stop and report it. The timings vary from run to run; pre-flight's
+side-by-side figures are the record (Step 3), and the real run does not re-measure `main`. The stop-shot probe's
+"impulse share with blue clear of the turf 0.0 %" is as on `main`. Keep the output for Step 3.
 
 - [ ] **Step 3: Record the outcomes in the roadmap**
 
@@ -2844,16 +3451,21 @@ Add a section before "## Provisional numbers — where each is confirmed":
 ## P2b.2a outcomes carried forward (for P2b.2b)
 
 - **Crush distance.** The largest gap to an upright straight ahead that still raises 29.1.8, on the default world
-  with the sourced head and face (`scripts/impactProbe.ts`), per head speed: <copy the probe's five lines>. The
-  commentary (C29.13.1) puts a real chance of a crush within 1–2 mm. The impact's face contact (0.8 ms, a rigid
-  linear face) is shorter than a real one, which the commentary says travels up to about 1 cm in contact.
+  with the sourced head and face (`scripts/impactProbe.ts`), per head speed: <copy the probe's five lines>. That is
+  about 1.1 mm per m/s: within the commentary's (C29.13.1) 1–2 mm for a real chance of a crush from about 0.9 to
+  1.8 m/s, and beyond it above about 1.8 m/s. The impact's face contact (0.8 ms, a rigid linear face) is shorter than a real one, which the commentary
+  says travels up to about 1 cm in contact.
 - **Face–ball gaps.** In the P2b.1 fuzz's single clean strikes: <copy the probe's line>. No gap is one step, so no
   minimum gap is applied (spec §5).
-- **Cost of pairing every ball with every obstacle.** <the probe's µs/step on the default world> against P2b.1's
-  <the pre-flight figure from `main`>; no reach filter (spec §4).
-- **Obstacle contact time.** `ballObstacleContactTime` is the ball–ball analogue (0.75 ms); the obstacle fuzz passes
-  across its bounds (<the bounds pre-flight settled>). Hoop setting stiffness varying hoop by hoop is open through
-  each hoop's `contactTime`.
+- **Cost of pairing every ball with every obstacle.** On the default world (12 uprights and the peg) it raised the
+  impact's cost per step to 1.61–1.88× P2b.1's, so a reach filter skips a ball–obstacle pair while the ball cannot yet
+  reach the obstacle (a per-pair travel budget, exact by construction; spec §4). With it, pre-flight measured µs/step
+  against `main` side by side: centre 0.433 against 0.355 (1.22×), croquet 0.756 against 0.730 (1.04×), descending
+  0.405 against 0.304 (1.33×), stop shot 0.750 against 0.585 (1.28×).
+- **Obstacle contact time.** `ballObstacleContactTime` is the ball–ball analogue (0.75 ms), bounded [0.435, 1.0] ms:
+  the lower bound is the Hertzian rigid-flat case, and the upper bound the largest for which the obstacle fuzz keeps
+  every obstacle penetration under 0.06·R with a margin (1.5 ms gave 0.081·R). Hoop setting stiffness varying hoop by
+  hoop is open through each hoop's `contactTime`; hoop-rigidity data would revisit the upper bound.
 - **For P2b.2b's `simulateShot`.** It builds `StrokeContext` (deriving `group` with the Glossary's definition) and
   exports `judgeFaults` with the impact. Judgeable once its swing model exists: 29.1.13's "plays away from" (the swing
   direction) and, with a sourced per-stroke contact-time norm, 29.1.6.3. `impact-head-approaching` becomes a possible
@@ -2861,8 +3473,9 @@ Add a section before "## Provisional numbers — where each is confirmed":
 - **Not used yet.** `judgeFaults` and `simulateImpact` stay internal until P2b.2b exports them.
 ```
 
-Replace each `<…>` with the figure the probe printed (and, for the cost and bounds, the figures pre-flight recorded);
-leave no angle brackets in the committed file.
+Replace the two `<…>` placeholders with the lines the probe printed in Step 2 (they equal the pre-flight figures in
+the "Pre-flight" section); leave no angle brackets in the committed file. The cost and contact-time bullets are
+pre-filled from pre-flight.
 
 - [ ] **Step 4: Format, check, commit**
 
@@ -2880,16 +3493,16 @@ git commit -F "$CLAUDE_TEMP_DIR/msg.txt"   # "Record the crush distance and the 
 | Spec | Where |
 |---|---|
 | §1.1 obstacle analytic cases | Task 5 (head-on, oblique stick and slip, peg's own material) |
-| §1.2 bit-identity; digest field list and prefixed new lines | Tasks 1, 5, 6, 7 (digest `cmp`); Tasks 3, 7 (shot mix, slow tests) |
+| §1.2 bit-identity; digest field list and prefixed new lines | Tasks 1, 5, 6, 7 (digest `cmp`); Task 10 (whole digest and obstacle fuzz unchanged by the filter); Tasks 3, 7, 10 (shot mix, slow tests) |
 | §1.3 no obstacle overlap handed over; fuzz never hangs, no cap, bounded penetration | Task 7 (handover), Task 9 (fuzz) |
 | §1.4 every table row ±; C29.20.4.1–5; croquet re-contact never a fault | Task 8 |
-| §1.5 crush geometry, distance recorded | Task 9, Task 10 |
+| §1.5 crush geometry, distance recorded | Task 9, Task 11 |
 | §3 interface: `Cylinder`/`Hoop.contactTime`, `ContactInterval`, `timeline`, `touchingAtStart`, `overlapCorrection`, `StrokeContext`, `Finding`, `FaultReport`, `judgeFaults`, context errors | Tasks 3, 6, 7, 8 |
-| §4 pair kind and order, every ball × every obstacle, zero-gap start, hard pair, geometry, law, default contact time | Tasks 2, 4, 5, 7 |
-| §5 timeline (rim counts, peak force, clearance, no minimum gap; turf recorded) | Task 6; shortest gap in Task 10 |
+| §4 pair kind and order, every ball × every obstacle, reach filter, zero-gap start, hard pair, geometry, law, default contact time and bounds | Tasks 2, 4, 5, 7, 10; cost in Task 11 |
+| §5 timeline (rim counts, peak force, clearance, no minimum gap; turf recorded) | Task 6; shortest gap in Task 11 |
 | §6 validation (touching accepted, overlap rejected, `validateWorld` contact time); handover clears obstacles | Tasks 3, 7 |
 | §7 fault table, exemption and ordering, not-judged list | Task 8 (not-judged Laws have no rule; 29.1.6.3 quoted, unjudged) |
 | §8 reference data | Task 2 |
-| §9.1–§9.8 tests | Tasks 5, 1/6/7, 7, 7, 6, 8 and 9, 9, 9 |
-| §10 pre-flight; `ENGINE_VERSION` 0.5.0 | Pre-flight section; Task 7 |
+| §9.1–§9.8 tests | Tasks 5 and 10, 1/6/7, 7, 7, 6, 8 and 9, 9, 9 |
+| §10 pre-flight (done 2026-10-04); `ENGINE_VERSION` 0.5.0 | Pre-flight section (a record); Task 7 |
 | §11 deferred | Nothing to build; per-hoop `contactTime` (Task 3) keeps hoop stiffness open |
