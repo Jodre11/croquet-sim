@@ -141,6 +141,8 @@ function lawOf(setup: ImpactSetup, pair: Pair): PairLaw {
             return setup.ballBall;
         case "ball-turf":
             return (setup.balls[pair.b] as ImpactBall).turf as PairLaw;
+        case "ball-obstacle":
+            throw new Error("ball–obstacle pairs have no contact law yet");
     }
 }
 
