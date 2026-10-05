@@ -163,6 +163,12 @@ two hands in §8.1); and braking tests on hand-built setups only. The prototype 
 de6b67d, 06ab6f3, aeadd4c, ed0d1b5) is a reference and is never merged; the pre-flight's mechanical defects fold into
 the re-planned tasks, and a fresh pre-flight follows the re-plan.
 
+**Amended 2026-10-05 (re-plan).** Exit criterion 3's strike measure sums every ball's momentum change (§8.1): on the
+drive's canonical setup the striker's ball alone gives 0.286 kg, the croqueted ball taking its momentum through it,
+while both balls give 1.00655 kg against the closed form's 1.0066 kg. §3.3's exact-tracking claim excepts a dip after
+contact in carry mode, whose moment about the swung body's centre τ_ff omits. Details:
+`plans/2026-10-04-p2b2b1-swing-shot.md`.
+
 ## 1. Goal and exit criteria
 
 Turn a `ShotSetup` into a whole shot: a swing model builds the mallet head's state, the path the hands follow and how
@@ -405,9 +411,12 @@ the dip's, and after the reach it is at rest, so both hands bring the mallet to 
 The hand load F is the sum of the two hands' forces and F_ff the sum of their feed-forward parts; each acts at its grip,
 so the head's torque is the moments of the hand forces at their grips plus the bottom hand's couple. With firm grips
 the hands reproduce F_ff and τ_ff exactly before contact, in carry mode and inside a check, so a head started on the
-path follows it there apart from the integrator's own error (bounded by §8.1). In swing mode after contact outside a
-check the top hand applies the whole F_s at the pivot with no couple: that is exact only on the free pendulum, which
-the path is once the pendulum's window has closed, and elsewhere the rate guide takes up any lag. A relaxed top hand
+path follows it there apart from the integrator's own error (bounded by §8.1). The one exception is a dip after
+contact on a tilted shaft in carry mode: F_d acts whole at the top grip, and its moment about the swung body's centre
+is not in τ_ff (in swing mode the free pendulum includes the dip in A). No preset dips in carry mode. In swing mode
+after contact outside a check the top hand applies the whole F_s at the pivot with no couple: that is exact only on
+the free pendulum, which the path is once the pendulum's window has closed, and elsewhere the rate guide takes up any
+lag. A relaxed top hand
 (γ_T < 1) carries only γ_T of its share, the head's weight included, so the head sinks below the path until the turf or
 its damper takes the rest; the dip is still the player's in full.
 
@@ -927,9 +936,10 @@ keys; `topHandHeight` is not added.
 - **Re-entry guard.** A ball placed inside the head between steps starts a `face/<ball>` interval that counts one
   entry jump with its key and region; a ball the head closes on at speed counts none.
 - **Effective mass** (exit criterion 3). On the drive's canonical setup the closed form of §3.4 is within 10 % of the
-  head's mass, and the strike measures it: the striker's ball's momentum change along aim over the first
+  head's mass, and the strike measures it: the balls' summed momentum change along aim over the first
   `face/<striker>` interval, divided by the face centre's loss of speed along aim over it, agrees with the closed form
-  within a tolerance pre-flight measures and the plan fixes.
+  within a tolerance pre-flight measures and the plan fixes. Every ball is summed: in the drive, a croquet stroke, the
+  croqueted ball takes its momentum through the striker's ball within that interval.
 - **Re-contact.** A croquet split whose striker's ball leaves slower than the head is struck again within the impact,
   with no `impact-head-approaching`; a clean centre single-ball strike ends within `RELEASE_STEPS` of the later of the
   window's end and the face no longer reaching the ball within `LOOK_AHEAD`.
