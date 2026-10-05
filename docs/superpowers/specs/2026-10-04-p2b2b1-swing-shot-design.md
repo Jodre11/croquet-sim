@@ -25,6 +25,17 @@ starts clear of the turf; the probe exposes the hand and head–turf forces and 
 coupling and head–turf constants are module constants, not World fields; the two 29.1.13 clauses are ordered and told
 apart; `FAULT_LAW_KEYS` gains 29.1.14.
 
+**Amended 2026-10-05 (plan).** C29.18 has one paragraph, C29.18.1, and sets no angular test, so "more than 90°" is the
+engine's reading; the user kept it, with no graded or stricter threshold. `StrokeContext` also gains `lineOfCentres?`,
+since the impact carries no starting positions. `ImpactSetup.headTurf` is the pair's law or null rather than a boolean;
+the head–turf pair acts at the lowest point itself. `contact.json` uses flat keys `handCouplingPeriod` and
+`handCouplingDampingRatio`; `HAND_COUPLING` is planned at T = 0.08 s until the pre-flight search sets it. The default
+shaft (0.9144 m, 36 in) and top hand (0.889 m, 35 in) are sourced, so r ≈ 0.805 m. The canonical striker stands at
+(9.6012, 4), since the peg occupies the court's centre. Canonical clearances: 7.90 mm (single-ball, drive, GC stop),
+0.80 mm (AC stop), 30.9, 41.2 and 46.4 mm (half, full and pass rolls). The tracking bound holds on coasting and roll
+paths; on a full check the residual is semi-implicit Euler's O(dt·a) lag, tested by convergence. Details:
+`plans/2026-10-04-p2b2b1-swing-shot.md`.
+
 ## 1. Goal and exit criteria
 
 Turn a `ShotSetup` into a whole shot: a swing model builds the mallet head's state and the path the hands follow; the
