@@ -145,19 +145,23 @@ to be firm, with the mallet head following through the ball and onto the ground.
 - **Coupling** (§3.4): T 0.08 s and ζ 0.7 kept; exit criterion 3 becomes an effective-mass test.
 - **Profile** (§5): the stance is `lean`, `top`, `bottom`, `gripTension` and `bottomGrip`, with θ_c = −lean and
   r = `top`; `ballAhead`, `topHandHeight` and `shaftToHead` leave; each preset gains a mode, `handReach` (also a
-  per-shot input) and `groundDepth`; the body gains `armMass`, `reachSlack` and an optional rate-guide cap. The
-  presets follow Riches and the prototype's calibration; the AC stop rises 4°.
+  per-shot input) and `groundDepth`; the body gains `armMass` and `reachSlack`. The presets follow Riches and the
+  prototype's calibration; the AC stop rises 4°, and its dip becomes about 11 mm (user decision, 2026-10-05: the
+  prototype's 14 mm drove the head 2.86 mm into the turf, past `HEAD_DEEP_LIMIT`; the next pre-flight confirms the
+  value).
 - **Testing** (§8): mechanism tests for the new model; the braking tests restated on the canonical setups.
 - **Deferred** (§10): the low-speed face–ball law, the turf under load and the steep rolls' calibration go to P2b.2b.2.
   The full and pass rolls (lean 45° and 48°) are known misses in this phase: both carry the striker's ball on a steep
   face, which needs those two laws (user decision, 2026-10-05).
 
-This note supersedes the earlier notes where they differ: the AC stop's `ballAhead` of 0.08 m, 5.7° rise and 2.2 mm
-approach; the roll clearances of 30.9, 41.2 and 46.4 mm; `shaftLean` (now `lean`) and the radius from
-`topHandHeight`; the 5 % criterion and the pre-flight search that was to set T; and braking tests on hand-built setups
-only. The prototype branch
-`proto-two-hands` (5f0f22b, de6b67d, 06ab6f3, aeadd4c, ed0d1b5) is a reference and is never merged; the pre-flight's
-mechanical defects fold into the re-planned tasks, and a fresh pre-flight follows the re-plan.
+This note supersedes the earlier notes where they differ: the AC stop's `ballAhead` of 0.08 m, 5.7° rise, 2.2 mm
+approach and 14 mm dip; the roll clearances of 30.9, 41.2 and 46.4 mm; `shaftLean` (now `lean`) and the radius from
+`topHandHeight`; the 5 % criterion and the pre-flight search that was to set T; the free sag of 3.6 mm at 40 ms and
+about 14 mm at 80 ms (the one-hand position-spring model; with velocity-only hands after contact a relaxed head sinks
+at a terminal rate instead, §3.3); the full check's residual as semi-implicit Euler's O(dt·a) lag (restated for the
+two hands in §8.1); and braking tests on hand-built setups only. The prototype branch `proto-two-hands` (5f0f22b,
+de6b67d, 06ab6f3, aeadd4c, ed0d1b5) is a reference and is never merged; the pre-flight's mechanical defects fold into
+the re-planned tasks, and a fresh pre-flight follows the re-plan.
 
 ## 1. Goal and exit criteria
 
@@ -172,11 +176,12 @@ Exit criteria:
    after the mechanical `{ kind: "force", samples }` migration; phase 2's shot-mix work units (p99 143,084, p99.9
    362,050, max 408,030), `SLOW_TESTS=1`, the obstacle fuzz and the reach filter reproduce exactly.
 3. On the drive's canonical setup (§5.5, a 3 m/s centre strike), the swung body's effective mass at the face centre
-   along aim (§3.4) is within 10 % of the head's mass.
+   along aim (§3.4) is within 10 % of the head's mass, and the strike measures it (§8.1).
 4. `simulateShot` runs every preset's canonical setup (§5.5) end to end without a `RangeError`, with no re-entry
-   guard hit (`ImpactRun.entryJumps.count` 0, §4.5) and no ball's centre more than 5 mm above R, in the impact or in
-   phase 2's flight. The coaching ratios and the other measurements of §9 are recorded in the roadmap against their
-   coaching ranges, not asserted.
+   guard hit (`ImpactRun.entryJumps.count` 0, §4.5) and no ball's centre more than 5 mm above R: the highest ball
+   centre over the impact's steps and, in phase 2, the analytic apex of each flight segment (its start height plus
+   v_z²/(2g) when v_z > 0). The coaching ratios and the other measurements of §9 are recorded in the roadmap against
+   their coaching ranges, not asserted.
 5. `simulateShot`, `simulateImpact`, `judgeFaults` and their types are exported from `src/engine/index.ts`;
    `ENGINE_VERSION` is "0.6.0".
 
@@ -259,28 +264,28 @@ interface Dip {
 }
 
 /**
- * The hands' grip: the natural period (s) and damping ratio of a firm grip, and the top hand's tension γ_T in (0, 1]
- * from `relaxAt` (s from t = 0) on; before it both hands are firm (§3.3).
+ * The hands' coupling: the natural period (s) and damping ratio of a firm grip; the grips relax at `relaxAt` (s from
+ * t = 0) and are firm before it (§3.3).
  */
 interface Coupling {
     readonly period: number;
     readonly dampingRatio: number;
-    readonly tension: number;
     readonly relaxAt: number;
 }
 
 /**
  * Two hands on the rigid, massless shaft, which is the head's up axis through the socket: the top hand at the arc
- * radius, the bottom hand `bottom` from the socket (m, in (0, radius)), gripping with g_B = `bottomGrip` in (0, 1] from
- * `relaxAt` on. The player's arm mass `armMass` (kg) rides rigidly at the top grip. The bottom hand opens once the
- * shaft has turned through `reachSlack` (m of hand travel); `bottomMax` (N) caps its rate guide, none when absent.
+ * radius, the bottom hand `bottom` from the socket (m, in (0, radius)). From `relaxAt` on the top hand grips with
+ * γ_T = `gripTension` and the bottom hand with g_B = `bottomGrip`, both in (0, 1]. The player's arm mass `armMass` (kg)
+ * rides rigidly at the top grip. The bottom hand opens once the shaft has turned through `reachSlack` (m of hand
+ * travel).
  */
 interface Hands {
     readonly bottom: number;
+    readonly gripTension: number;
     readonly bottomGrip: number;
     readonly armMass: number;
     readonly reachSlack: number;
-    readonly bottomMax?: number;
 }
 ```
 
@@ -302,7 +307,8 @@ The pendulum, with t_a = `arcStart` and w = `window`: before its window (t ≤ t
   centre; I_P = I'_n + M·d², I'_n the swung body's inertia about the pitch axis; A the pivot's acceleration (the hands'
   path with its reach, and the dip); t̂ = cos θ·aim + sin θ·ẑ. `prepareImpact` tabulates θ and ω from (θ_e, ω_e) by
   semi-implicit Euler every `FREE_STEP` = 5 µs over `FREE_SPAN` = 0.25 s; the path interpolates them linearly and
-  evaluates θ̈ from the equation at the interpolated θ.
+  evaluates θ̈ from the equation at the interpolated θ. Beyond the table θ and ω clamp to its last sample (the cap
+  ends every impact well inside it).
 - **carry:** the slope is held. Over one more window the rate falls linearly to zero, with u = min(t − t_a − w, w),
   θ = θ_e + ω_e·u − ½·(ω_e/w)·u², and θ holds after it: no whip.
 
@@ -311,12 +317,15 @@ P_e + V_e·(t − t_h − w_h). θ_a, θ_e, ω_e, P_h, P_e and V_e are computed 
 are continuous by construction.
 
 **The reach.** The hands' path ends after `handReach` along aim from where it is at `contactAt`: it follows the plan
-until it has travelled 0.8·`handReach` along aim (at t₁, with speed v₁ along aim), then decelerates at
-v₁²/(0.4·`handReach`) to rest at t_s = t₁ + 0.4·`handReach`/v₁ and stays there. With `handReach` 0 the pivot rests
-from `contactAt`; if the planned path does not travel 0.8·`handReach` within 0.5 s of `contactAt`, the reach does not
-bind. In **carry**, over [t₁, t_s] the pivot also descends by D, rest to rest as the dip does, D = max(0,
+until it has travelled 0.8·`handReach` along aim (at t₁, with speed v₁ along aim), then its along-aim component
+decelerates at v₁²/(0.4·`handReach`) to rest at t_s = t₁ + 0.4·`handReach`/v₁ and stays there. The ease acts on the
+along-aim component only: any off-aim component of the pivot's velocity in the swing plane runs on unchanged, so V
+stays continuous (`buildContact`'s paths have none). With `handReach` 0 the along-aim motion rests from `contactAt`;
+if the planned path does not travel 0.8·`handReach` within 0.5 s of `contactAt`, the reach does not bind. In
+**carry**, over [t₁, t_s] the pivot also descends by D, rest to rest as the dip does, D = max(0,
 z_s + `groundDepth`), z_s the head's lowest point on the path at t_s without the descent: Riches' follow-through onto
-the ground, low along it. Swing mode has no descent.
+the ground, low along it. The descent is part of the hands' path, so its acceleration enters F_s and is fed forward
+with the hands' grips (§3.3), not at full strength as the dip is. Swing mode has no descent.
 
 The dip adds −z_d(t)·ẑ to P: with δ = t − `dip.start`, D = `dip.depth`, d = `dip.duration` and a = 4·D/d², z_d is 0
 for δ ≤ 0, ½·a·δ² for δ ≤ d/2, D − ½·a·(d − δ)² for δ ≤ d, and D after. Its velocity and acceleration are added to V
@@ -346,10 +355,10 @@ head's geometry, and the head's weight m·g at the head's centre (the arm's weig
 the head's state follows from the swung body's. A `force` drive steps the head alone, as before.
 
 **Gains.** For a grip g: k(g) = g·M·(2π/T)² and c(g) = 2ζ·√(k(g)·M); about the shaft K_s(g) = g·I_z·(2π/T)² and
-C_s(g) = 2ζ·√(K_s(g)·I_z). Before `relaxAt` both hands grip with g = 1; from it the top hand with γ_T = `tension` and
-the bottom hand with g_B = `bottomGrip`. The grips sit at (ρ + r)·s (top) and (ρ + `bottom`)·s (bottom) from the
-head's centre; x_T, v_T, x_B, v_B are their world positions and velocities, and x*_T, v*_T, x*_B, v*_B their targets on
-the path.
+C_s(g) = 2ζ·√(K_s(g)·I_z). Before `relaxAt` both hands grip with g = 1; from it the top hand with
+γ_T = `gripTension` and the bottom hand with g_B = `bottomGrip`. The grips sit at (ρ + r)·s (top) and
+(ρ + `bottom`)·s (bottom) from the head's centre; x_T, v_T, x_B, v_B are their world positions and velocities, and
+x*_T, v*_T, x*_B, v*_B their targets on the path.
 
 **Feed-forward.** The wrench that makes the path's rigid motion exact for the swung body: F_ff = M·a_c + m·g·ẑ, a_c
 the path's acceleration of the swung body's centre; τ_ff = I'·α_path + ω_path × (I'·ω_path) + r_h × m·g·ẑ about that
@@ -360,9 +369,12 @@ With F_s = F_ff − F_d, F_∥ = (F_s·s)·s, F_⊥ = F_s − F_∥, G = τ_ff �
 - the top hand's share F_∥ + F_T⊥, with F_T⊥ = (G − b·F_⊥)/(a − b);
 - the bottom hand's share F_B = (a·F_⊥ − G)/(a − b), with a twist couple τ_ff·s about the shaft.
 
-At their grips these give exactly F_s and τ_ff: F_T⊥ + F_B = F_⊥ and a·F_T⊥ + b·F_B = G.
+At their grips these two shares and the couple give exactly F_s and τ_ff: F_T⊥ + F_B = F_⊥ and a·F_T⊥ + b·F_B = G.
+The hands apply them in full before contact, and scaled by their grips in carry mode and inside a check; in swing mode
+after contact outside a check they do not (below).
 
-**Before contact** (t < `relaxAt`) everything is firm, so a head on the path tracks it exactly:
+**Before contact** (t < `relaxAt`) everything is firm, so a head on the path tracks it exactly, apart from the
+integrator's own error:
 
 - top hand: F_∥ + F_T⊥ + k(1)·(x*_T − x_T) + c(1)·(v*_T − v_T);
 - bottom hand: F_B plus the part of k(1)·(x*_B − x_B) + c(1)·(v*_B − v_B) perpendicular to s, and the couple
@@ -374,14 +386,14 @@ make up lost distance (position springs injected energy in the prototype's first
 the dip's, and after the reach it is at rest, so both hands bring the mallet to rest.
 
 - **Top hand** (the pivot): γ_T times its feed-forward share, plus F_d in full, plus c(γ_T)·(v*_T − v_T); no couple.
-  Its share is F_∥ + F_T⊥ while the bottom hand shares the load (carry, or a check), and the whole F_s otherwise. The
-  dip is the player's action, so it is fed forward at full strength whatever γ_T.
+  In carry mode and inside a check (the pendulum's window with α < 0) its share is F_∥ + F_T⊥, before and after the
+  bottom hand's release alike: on release F_B is dropped, not handed to the top hand. In swing mode outside a check
+  the top hand takes the whole F_s. The dip is the player's action, so it is fed forward at full strength whatever γ_T.
 - **Bottom hand, swing mode, before release:** a rate guide along e, the unit vector perpendicular to s in the swing
-  plane, forward (aim less its component along s, normalised): the force min(F_max, c(g_B)·((ω_path − ω)·n)·(r −
-  `bottom`)), floored at 0, so it never pulls and never accelerates the head beyond the arc; F_max = `bottomMax`,
-  unbounded when absent. Its couple is C_s(g_B)·((ω_path − ω)·s) about s. **The check:** while the pendulum's window
-  runs with α < 0, the bottom hand is two-sided (floored at −F_max) and adds g_B·F_B and the couple g_B·τ_ff·s, so the
-  check acts through its lever; a pivot cannot check.
+  plane, forward (aim less its component along s, normalised): the force c(g_B)·((ω_path − ω)·n)·(r − `bottom`),
+  floored at 0, so it never pulls and never accelerates the head beyond the arc. Its couple is
+  C_s(g_B)·((ω_path − ω)·s) about s. **The check:** inside a check the guide is two-sided (not floored) and the bottom
+  hand adds g_B·F_B and the couple g_B·τ_ff·s, so the check acts through its lever; a pivot cannot check.
 - **Bottom hand, carry mode, before release:** two-sided: g_B·F_B plus the part of c(g_B)·(v*_B − v_B) perpendicular
   to s, and the couple g_B·τ_ff·s + C_s(g_B)·((ω_path − ω)·s) about s.
 - **Release by reach.** From `relaxAt` each step measures the shaft's turn since then, Δθ = π(s) − π(s at `relaxAt`),
@@ -391,8 +403,11 @@ the dip's, and after the reach it is at rest, so both hands bring the mallet to 
   (`ImpactRun.release`).
 
 The hand load F is the sum of the two hands' forces and F_ff the sum of their feed-forward parts; each acts at its grip,
-so the head's torque is the moments of the hand forces at their grips plus the bottom hand's couple. With firm grips a
-head started on the path follows it, apart from the integrator's own error (bounded by §8.1). A relaxed top hand
+so the head's torque is the moments of the hand forces at their grips plus the bottom hand's couple. With firm grips
+the hands reproduce F_ff and τ_ff exactly before contact, in carry mode and inside a check, so a head started on the
+path follows it there apart from the integrator's own error (bounded by §8.1). In swing mode after contact outside a
+check the top hand applies the whole F_s at the pivot with no couple: that is exact only on the free pendulum, which
+the path is once the pendulum's window has closed, and elsewhere the rate guide takes up any lag. A relaxed top hand
 (γ_T < 1) carries only γ_T of its share, the head's weight included, so the head sinks below the path until the turf or
 its damper takes the rest; the dip is still the player's in full.
 
@@ -444,11 +459,11 @@ plus the cap; 42,000 steps) pre-flight confirms the WAKE_MARGIN reach filter's h
 ### 3.6 Validation
 
 `validateImpact` adds, for a `track` drive: every number finite; `radius` > 0; `aim` unit and horizontal (within
-1e-12); `period` > 0; `dampingRatio` ≥ 0; `tension` in (0, 1]; `relaxAt` ≥ 0; `arcStart`, `handStart` and
-`contactAt` ≥ 0; `window` and `handWindow` > 0; `dip.start` ≥ 0, `dip.duration` > 0, `dip.depth` ≥ 0; `mode` "swing"
-or "carry"; `handReach` ≥ 0; `groundDepth` ≥ 0; `bottom` in (0, `radius`); `bottomGrip` in (0, 1]; `armMass` ≥ 0;
-`reachSlack` ≥ 0; `bottomMax` > 0 when present; `pivotVelocity` and `pivotAcceleration` in the swing plane (component
-along n within 1e-12 of their size). Each failure is a `RangeError` naming the check. The head's state at t = 0 need
+1e-12); `period` > 0; `dampingRatio` ≥ 0; `relaxAt` ≥ 0; `arcStart`, `handStart` and `contactAt` ≥ 0; `window`
+and `handWindow` > 0; `dip.start` ≥ 0, `dip.duration` > 0, `dip.depth` ≥ 0; `mode` "swing" or "carry"; `handReach`
+≥ 0; `groundDepth` ≥ 0; `bottom` in (0, `radius`); `gripTension` and `bottomGrip` in (0, 1]; `armMass` ≥ 0;
+`reachSlack` ≥ 0; `pivotVelocity` and `pivotAcceleration` in the swing plane (component along n within 1e-12 of their
+size). Each failure is a `RangeError` naming the check. The head's state at t = 0 need
 not lie on the path (tests start it off); `buildContact` always starts it on.
 
 ### 3.7 Probe
@@ -521,10 +536,10 @@ friction and contact time) on every region. `ImpactRun.headRegions` records the 
 judgement is made in this phase. A `force` drive keeps the existing face-only contact, so force tables stay
 bit-identical.
 
-**Re-entry guard.** A head–ball or head–turf contact that opens deeper than one step's closing could make, δ >
-|v_rel·normal|·dt + 1e-6 m (v_rel the relative velocity at the contact point), is counted in `ImpactRun.entryJumps`
-with the worst excess and the pair's key, region and time. It is the catapult's signature; exit criterion 4 asserts
-none.
+**Re-entry guard.** A `face/<ball>` or `head/turf` interval that begins with δ > |v_n|·dt + 1e-6 m, deeper than one
+step's closing could make (v_n the relative velocity at the contact point along the normal), is counted in
+`ImpactRun.entryJumps` with the worst excess and the pair's key, region and time. It is the catapult's signature;
+exit criterion 4 asserts none.
 
 ## 5. The swing model
 
@@ -574,11 +589,21 @@ interface SwingProfile {
         readonly headMass: number; readonly headLength: number; readonly headDiameter: number;
         readonly shaftLength: number;
     };
-    /** The player's body: the arm mass at the top grip (kg), the reach slack (m), the rate guide's cap (N). */
-    readonly body: { readonly armMass: number; readonly reachSlack: number; readonly bottomMax?: number };
+    /** The player's body: the arm mass at the top grip (kg) and the reach slack (m). */
+    readonly body: { readonly armMass: number; readonly reachSlack: number };
     readonly stance: Readonly<Record<StrokeType, SwingStance>>;
     readonly drive: Readonly<Record<StrokeType, SwingDrive>>;
 }
+
+/** When each action begins, s from contact: negative early, positive late, 0 on time (§5.2 step 8). */
+interface StrokeTiming {
+    readonly arc: number;
+    readonly hands: number;
+    readonly dip: number;
+}
+
+/** Every action on time. */
+const ON_TIME: StrokeTiming = { arc: 0, hands: 0, dip: 0 };
 
 interface ShotSetup {
     readonly balls: BallStates;
@@ -590,8 +615,7 @@ interface ShotSetup {
         readonly speed: number;        // head centre-of-mass speed at contact, m/s
         readonly drive: number;        // −1 check … 0 coast … +1 push
         readonly contact: { readonly up: number; readonly side: number }; // ball centre from face centre, m
-        /** When each action begins, s from contact: negative early, positive late, 0 on time. */
-        readonly timing: { readonly arc: number; readonly hands: number; readonly dip: number };
+        readonly timing: StrokeTiming;
         /** The hands' travel along aim after contact, m; absent: the preset's `handReach`. */
         readonly handReach?: number;
     };
@@ -605,6 +629,14 @@ interface ShotSetup {
 }
 
 function buildContact(setup: ShotSetup, world: World): ContactState;
+
+/** The coasting path's closest approach to the turf before contact (§5.2 step 9). */
+interface SwingApproach {
+    readonly clearance: number;        // m above the turf; negative where the head would have dug in
+    readonly before: number;           // s before the planned contact
+}
+
+function swingApproach(contact: ContactState): SwingApproach;
 ```
 
 The product spec's grip style (it would only pre-fill the stance's hand positions, §4), weighting and face material
@@ -638,8 +670,8 @@ head and other faces arrive with their sourced values (§10). The engine's head 
    to rest at its window's end, at any strength. The hands:
    A = `drive`·`handGain`·`speed`·aim/`handWindow`.
    The dip: depth `handDrop` over `dropTime`, whatever `drive`. The mode, `groundDepth` and `handReach` (the shot's,
-   else the preset's) are copied to the arc. The coupling is `HAND_COUPLING`, with `tension` = the stance's
-   `gripTension`; the hands are the stance's `bottom` and `bottomGrip` with the profile's `body`.
+   else the preset's) are copied to the arc. The coupling is `HAND_COUPLING`; the hands are the stance's `bottom`,
+   `gripTension` and `bottomGrip` with the profile's `body`.
 8. **Timing and lead-in.** Each action begins at `stroke.timing` from contact: the pendulum's window at
    contact + `timing.arc`, the hands' at contact + `timing.hands`, the dip at contact + `timing.dip`. The impact
    starts a lead L before contact, the earliest action's: L = max(0, −`timing.arc`, −`timing.hands`, −`timing.dip`),
@@ -662,7 +694,7 @@ shaft); `bottom` outside (0, `top`); |`lean`| ≥ 90°; `speed` ≤ 0; |`drive`|
 radius (contact off the face); a stroke type missing from `stance` or `drive`; a `mode` other than "swing" or
 "carry"; `window`, `handWindow` or `dropTime` ≤ 0; `speedGain` < 0; `gripTension` or `bottomGrip` outside (0, 1];
 `handShare` outside [0, 1]; `handDrop` < 0; the shot's or the preset's `handReach` < 0; `groundDepth` < 0; `armMass` <
-0; `reachSlack` < 0; `bottomMax` ≤ 0 when present; a lead beyond `MAX_LEAD` (an action timed more than 60 ms early);
+0; `reachSlack` < 0; a lead beyond `MAX_LEAD` (an action timed more than 60 ms early);
 the head's lowest point below the turf at contact, as placed, or at t = 0 (where an early action begins: the stance too
 low for that timing); a non-finite number. A swing that meets the turf between its start and the ball is never
 rejected. `simulateImpact`'s own validation then runs as today.
@@ -680,7 +712,6 @@ Riches on the 0.9144 m shaft, measured from the socket; the grips, gains and rea
 | Mallet | 1.0 kg, 0.2286 m, 0.0762 m, shaft 0.9144 m (36 in) |
 | `armMass` | 0.8 kg |
 | `reachSlack` | 0.03 m |
-| `bottomMax` | absent (no cap) |
 
 | Preset | lean (°) | top (m) | bottom (m) | gripTension | bottomGrip |
 |---|---|---|---|---|---|
@@ -696,7 +727,7 @@ Riches on the 0.9144 m shaft, measured from the socket; the grips, gains and rea
 |---|---|---|---|---|---|---|---|---|---|---|---|
 | single-ball | swing | 0.2 | 10 | 0 | 0 | 10 | 0 | 10 | 0 | 0 | 0 |
 | drive | swing | 0.2 | 5 | 0 | 0 | 5 | 0 | 10 | 0 | 0 | 0 |
-| stop-ac | swing | 1 | 10 | 0 | 0 | 10 | 14 | 20 | 0.02 | 0 | −1 |
+| stop-ac | swing | 1 | 10 | 0 | 0 | 10 | about 11 | 20 | 0 | 0 | −1 |
 | stop-gc | swing | 1 | 10 | 0 | 0 | 10 | 0 | 10 | 0 | 0 | −1 |
 | half-roll | carry | 0.1 | 20 | 0.6 | 0 | 20 | 0 | 10 | 0.15 | 5 | +1 |
 | full-roll | carry | 0.1 | 30 | 0.9 | 0.1 | 30 | 0 | 10 | 0.30 | 2 | +1 |
@@ -721,9 +752,13 @@ or lower hand turns the double hit into a triple and the ratio towards a roll's 
 below the face centre (§5.5). Rise and tilt are one angle on a rigid shaft: a 5° lean leaves the head only 4.03 mm
 clear at contact (prototype), so 4° is just under the feasibility spike's 5–15° rise and within its 3–5° tilt. The
 hands relax on contact (both grips 0.1) and the pendulum is checked (the bottom hand checking through its lever, §3.3).
-The dip, 14 mm over 20 ms timed with the strike and fed forward in full, takes the head from 8.78 mm clear at contact
-onto the turf, whose friction on its underside arrests it (user account, 2026-10-05: the player lets the mallet drop
-onto the lawn, some pushing it down to hasten the stop). The stance keeps the coasting path at least 7.23 mm clear over
+The dip, timed with the strike and fed forward in full, takes the head from 8.78 mm clear at contact onto the turf
+after the ball has left, whose friction on its underside arrests it (user account, 2026-10-05: the player lets the
+mallet drop onto the lawn, some pushing it down to hasten the stop). Its depth is about 11 mm over 20 ms (user
+decision, 2026-10-05): the prototype's 14 mm drove the head 2.86 mm into the turf and raised `impact-head-deep`, so the
+default is set to keep the canonical stop under `HEAD_DEEP_LIMIT` while the head still reaches the turf after the
+ball; the next pre-flight confirms the exact value. The AC stop's hands do not travel (`handShare` 0), so its
+`handReach` is 0. The stance keeps the coasting path at least 7.23 mm clear over
 the 60 ms before contact: a dip or a check mistimed early is what drives the head into the lawn first.
 
 **GC stop.** The lower hand grips lower and firmly (0.45 m, `bottomGrip` 1) and actively stops the swing just after
@@ -752,7 +787,8 @@ is the calibration target is P2b.2b.2's decision.
 Exit criteria 3 and 4 and pre-flight run each preset at one canonical setup: the striker at (9.6012, 4), a lane clear
 of the hoops and of the peg, which stands at the court's centre; aim +y, `speed` 3 m/s, the preset's default `drive`,
 every timing 0, `side` 0, the preset's `handReach`; for a croquet stroke the croqueted ball touching the striker ahead
-along aim, except the pass roll, whose line of centres is 20° off aim; `live` empty for a croquet stroke and every
+along aim, except the pass roll, whose line of centres is 20° to the left of aim (the positive side, as `side`'s
+convention has it); `live` empty for a croquet stroke and every
 other ball for a single-ball one; no other balls; `continuation`, `hampered` and `jumpAttempt` false. `up` is 0 except
 for stop-ac, whose `up` is −0.020 m (the ball met 20 mm below the face centre).
 
@@ -771,8 +807,8 @@ function simulateShot(setup: ShotSetup, world?: World): ShotOutcome;  // world d
 
 interface ShotOutcome {
     readonly contact: ContactState;
-    /** The coasting path's lowest clearance over the turf (m) in the 60 ms before contact, and when (s before). */
-    readonly approach: { readonly clearance: number; readonly before: number };
+    /** The coasting path's lowest clearance over the turf in the 60 ms before contact, and when (§5.2 step 9). */
+    readonly approach: SwingApproach;
     readonly context: StrokeContext;
     readonly impact: ImpactResult;
     readonly faults: FaultReport;
@@ -798,16 +834,18 @@ a croquet stroke (`CROQUET_STROKES`) has a present `croqueted` ball, not the str
   start: a 3-ball group is one ball in contact with two others, a 4-ball group adds a fourth in contact with a 3-ball
   group; `group` is true when the striker belongs to one. A croquet stroke's two touching balls alone are not a group.
 - `aim`: the swing direction (unit, horizontal).
+- `lineOfCentres`, for a croquet stroke: the unit horizontal vector from the striker's centre to the croqueted ball's,
+  from the setup's starting positions (the impact carries none).
 - `striker`, `croqueted`, `live`, `hampered`, `jumpAttempt` are copied.
 
 ### 6.4 New judgements
 
-- **29.1.13 "plays away from" (C29.18.1).** `StrokeContext` gains `aim?: Vec3` (absent when the judge is called
-  directly without a swing). In a croquet stroke with `aim` present, a fault is found when the angle between `aim`
-  and the horizontal line from the striker's centre to the croqueted ball's exceeds 90°, i.e. their dot product is
-  negative; evidence `angle` (rad), `ball` the croqueted ball, `t` the impact's duration. Both 29.1.13 clauses may
-  fire on one stroke: "fails to move or shake" (evidence `peakPenetration`, as today) is reported first, "plays away
-  from" (evidence `angle`) second, and the evidence key tells them apart. The criterion is checked against C29.18
+- **29.1.13 "plays away from" (C29.18.1).** `StrokeContext` gains `aim?: Vec3` and `lineOfCentres?: Vec3` (both
+  absent when the judge is called directly without a swing). In a croquet stroke with `aim` present, a fault is found
+  when the angle between `aim` and `lineOfCentres` exceeds 90°, i.e. their dot product is negative; evidence `angle`
+  (rad), `ball` the croqueted ball, `t` the impact's duration. Both 29.1.13 clauses may fire on one stroke: "fails to
+  move or shake" (evidence `peakPenetration`, as today) is reported first, "plays away from" (evidence `angle`)
+  second, and the evidence key tells them apart. The criterion is checked against C29.18
   when it is quoted into `laws.json`; if the commentary gives a different test, the user decides before the plan
   proceeds.
 - **29.1.14 (court damage).** Quoted verbatim with its commentary into `laws.json`. A damaged lawn is something an
@@ -817,14 +855,16 @@ a croquet stroke (`CROQUET_STROKES`) has a present `croqueted` ball, not the str
   invented. It is reported after 29.1.13, in table order.
 
 `JUDGED_LAWS` and `FAULT_LAW_KEYS` (`src/reference/index.ts`) gain "29.1.14". `judgeFaults`'s signature is unchanged;
-it validates `aim` (unit, horizontal) when present.
+it validates `aim` and `lineOfCentres` (unit, horizontal) when present, and rejects a croquet stroke's `aim` without
+its `lineOfCentres`.
 
 ### 6.5 Exports
 
 `src/engine/index.ts` adds `simulateShot`, `simulateImpact`, `judgeFaults`, `defaultProfile`, `ON_TIME`,
 `CROQUET_STROKES` and the types `ShotSetup`, `StrokeTiming`, `SwingProfile`, `SwingStance`, `SwingDrive`, `StrokeType`,
 `StrokeMode`, `ShotOutcome`, `SwingApproach`, `ContactState`, `Drive`, `SwingArc`, `Coupling`, `Hands`, `ImpactResult`,
-`ImpactEvent`, `StrokeContext`, `FaultReport`, `Finding`.
+`ImpactEvent`, `StrokeContext`, `FaultReport`, `Finding`. `ON_TIME`, `StrokeTiming` and `SwingApproach` are as §5.1
+defines them.
 
 ## 7. Reference data
 
@@ -853,24 +893,29 @@ keys; `topHandHeight` is not added.
   ends; the dip lowers the pivot by its depth, rest to rest, and holds it. A pivot accelerating forward with α = 0
   and ω = 0 moves the socket target in a straight line with the orientation target constant (the roll's held face
   tilt). A check with `speedGain` 1 brings ω to 0 at the window's end. In swing mode the free pendulum from rest at
-  θ = 0 with a still pivot stays there, and from a small angle it swings with the period 2π·√(I_P/(m·g·ℓ_h)); in carry
-  mode θ is constant after the second window. The reach stops the pivot `handReach` along aim from where it was at
-  `contactAt`, rest at t_s, and in carry mode the head's lowest point on the path at t_s is `groundDepth` below the
-  turf.
+  θ = 0 with a still pivot stays there, and released from a small angle θ(t) matches the small-angle solution,
+  angular frequency √(m·g·ℓ_h/I_P), over `FREE_SPAN`; beyond the table θ and ω hold the last sample. In carry mode θ
+  is constant after the second window. The reach stops the pivot's along-aim motion `handReach` from where it was at
+  `contactAt`, at rest from t_s, with V continuous; in carry mode the head's lowest point on the path at t_s is
+  `groundDepth` below the turf.
 - **Swung body.** δ and I' match the parallel-axis closed forms; with `armMass` 0 the swung body is the head.
 - **Tracking, no ball.** A head started on the path with firm grips follows it over 0.15 s within a bound pre-flight
-  measures and the plan fixes (the feed-forward is exact, so the residual is the integrator's), in both modes. Before
+  measures and the plan fixes, where the hands reproduce the feed-forward exactly (§3.3): before contact (a coasting
+  path, and a roll path with its windows and dip), and from contact in carry mode up to the reach. There the residual
+  is the integrator's. Inside a check it is semi-implicit Euler's O(dt·a) lag, tested by convergence: halving dt
+  halves it. Swing mode after contact outside a check is not bounded by this test; pre-flight measures it (§9). Before
   contact, a head displaced 1 mm along the shaft returns as the damped oscillator of period T and ratio ζ predicts
   (within 1 % of amplitude): along the shaft only the top hand's spring acts, on the mass M.
 - **Relaxed top hand.** With γ_T < 1, a level, still path, no ball and `headTurf` null, the head sinks below the path
   at the terminal rate (1 − γ_T)·m·g/c(γ_T) along the vertical shaft; with the head–turf pair it comes to rest on the
   turf.
 - **Feed-forward split.** On a path with firm grips the two hands' shares and the bottom hand's couple sum to F_ff and
-  τ_ff; from contact the top hand's feed-forward is γ_T times its share plus M·a_d, at γ_T 0.1 and 1 alike (the dip at
-  full strength).
-- **Rate guide.** In swing mode after contact the bottom hand's force along e is never negative outside a check, never
-  exceeds `bottomMax`, and is zero while the shaft turns at least as fast as the path; inside a check window it acts
-  both ways and carries g_B·F_B.
+  τ_ff before contact; from contact the top hand's feed-forward is γ_T times its share plus M·a_d, at γ_T 0.1 and 1
+  alike (the dip at full strength), its share F_∥ + F_T⊥ in carry mode and inside a check (also after the bottom
+  hand's release) and the whole F_s in swing mode outside a check.
+- **Rate guide.** In swing mode after contact the bottom hand's force along e is never negative outside a check and is
+  zero while the shaft turns at least as fast as the path; inside a check window it acts both ways and carries
+  g_B·F_B.
 - **Release by reach** (synthetic). A shaft turned through (`reachSlack` + 1 mm)/(r − `bottom`) after contact records
   the release time and Δθ; after it the bottom hand's force has no component against e, no feed-forward and no
   couple. Under the slack it does not open.
@@ -879,9 +924,12 @@ keys; `topHandHeight` is not added.
 - **Head–ball cylinder.** A ball placed against each region (face, rim, barrel, back rim, back) reports that region,
   its normal and its depth; the distance is continuous across every region boundary. A `force` drive's face pair is
   unchanged.
-- **Re-entry guard.** A ball placed inside the head between steps counts one entry jump with its key and region; a
-  ball the head closes on at speed counts none.
-- **Free in the strike.** Exit criterion 3 against the closed form.
+- **Re-entry guard.** A ball placed inside the head between steps starts a `face/<ball>` interval that counts one
+  entry jump with its key and region; a ball the head closes on at speed counts none.
+- **Effective mass** (exit criterion 3). On the drive's canonical setup the closed form of §3.4 is within 10 % of the
+  head's mass, and the strike measures it: the striker's ball's momentum change along aim over the first
+  `face/<striker>` interval, divided by the face centre's loss of speed along aim over it, agrees with the closed form
+  within a tolerance pre-flight measures and the plan fixes.
 - **Re-contact.** A croquet split whose striker's ball leaves slower than the head is struck again within the impact,
   with no `impact-head-approaching`; a clean centre single-ball strike ends within `RELEASE_STEPS` of the later of the
   window's end and the face no longer reaching the ball within `LOOK_AHEAD`.
@@ -900,21 +948,23 @@ keys; `topHandHeight` is not added.
   90.1° (aim vectors built directly, not through `sinCos`), with both clauses firing together in their order; 29.1.14
   only under 29.2.3; phase 2 receives exactly `impact.handover`; every setup check names its failure; every canonical
   setup (§5.5) runs.
-- **Mechanisms** (impulses per §3.7; ratios are not asserted, only compared):
-  - **The drive's follow-through.** The canonical drive has a second face–ball interval after the first, within the
-    impact.
+- **Mechanisms** (impulses per §3.7; ratios are not asserted, only compared). A hit is an interval of
+  `timeline["face/<striker>"]`, which since §4.5 covers every region of the head:
+  - **The drive's follow-through.** The canonical drive has at least two hits, the second starting after the first
+    ends, within the impact.
   - **An accelerating bottom hand.** The drive with its bottom hand at 0.30 m and `bottomGrip` 1 has at least three
-    face–ball intervals and a lower croqueted-to-striker distance ratio than the canonical drive.
-  - **Stops distinct from the drive.** The canonical AC and GC stops each have one face–ball interval and leave the
-    striker's ball slower than the canonical drive does.
+    hits and a lower croqueted-to-striker distance ratio than the canonical drive.
+  - **Stops distinct from the drive.** The canonical AC and GC stops each have exactly one hit and leave the striker's
+    ball slower than the canonical drive does.
   - **The GC check.** On the canonical GC stop the hands' braking impulse is positive at `drive` −1 and negative at
     `drive` 0: the check acts through the bottom hand's lever.
-  - **The AC stop.** On the canonical AC stop, with its relaxed hands, the head–turf pair opens after the face–ball
-    pair has closed and the turf's braking impulse is positive.
+  - **The AC stop.** On the canonical AC stop, with its relaxed hands, the first `head/turf` interval starts after the
+    first `face/<striker>` interval ends, the turf's braking impulse is positive, and `impact-head-deep` is not raised.
   - **Pass-roll punch.** In the canonical pass roll, `drive` +1 leaves the striker's ball faster at the end of the
     impact than `drive` 0.
-  - **Mistimed dip.** The canonical AC stop with its dip 30 ms early meets the lawn before the ball (the head–turf pair
-    opens before the face–ball pair) and sends the striker's ball off slower than on time.
+  - **Mistimed dip.** The canonical AC stop with its dip 30 ms early meets the lawn before the ball (the first
+    `head/turf` interval starts before the first `face/<striker>` interval starts) and sends the striker's ball off
+    slower than on time.
 
 ### 8.2 Bit-identity
 
@@ -922,7 +972,6 @@ Exit criterion 2. The `force` migration is mechanical and reviewed by the digest
 
 ## 9. Pre-flight measurements (recorded in the roadmap)
 
-- Exit criterion 3's effective mass for every preset's canonical setup.
 - The coaching ratios (croqueted ball's distance over the striker's) on the canonical setups and over 2–4 m/s,
   recorded against the coaching ranges: drive 3–4, stops 6–10, half roll about 2, full roll about 1, pass roll below
   1. The prototype (pass 4, T 0.08 s) gave drive 3.33, AC stop 6.55, GC stop 6.60, half roll 2.83 (2.75–2.88 over
@@ -931,10 +980,13 @@ Exit criterion 2. The `force` migration is mechanical and reviewed by the digest
 - Per canonical setup: `entryJumps`, the highest ball centre, the head regions touched, the bottom hand's release
   time, the hands' and turf's braking impulses, the longest tracked impact after `contactAt` (confirming or revising
   `TRACK_IMPACT_CAP`), and how often `impact-head-deep`, `impact-cap`, `impact-head-approaching` and
-  `impact-off-face` fire (the prototype's canonical AC stop reaches 2.86 mm and raises `impact-head-deep`).
-- The ratios' sensitivity to T (10–200 ms), ζ (0.2–1), `armMass`, `reachSlack` and each preset's grips, as
-  observations for P2b.2b.2.
-- The tracking bound of §8.1 at the chosen coupling, in both modes.
+  `impact-off-face` fire.
+- The AC stop's dip depth: the value near 11 mm that keeps the canonical stop's head–turf penetration under
+  `HEAD_DEEP_LIMIT` while the first `head/turf` interval still starts after the first `face/<striker>` interval ends
+  (the prototype's 14 mm reached 2.86 mm).
+- One coupling comparison: the canonical set at T = 0.04 s against 0.08 s (ζ 0.7). The fitting sweeps belong to
+  P2b.2b.2 (§10).
+- The tracking bound of §8.1 at the chosen coupling, and the residual in swing mode after contact outside a check.
 - Tracked impact steps and µs/step against force drives on the P2b.2a scenarios (for P5), and the WAKE_MARGIN reach
   filter's headroom at 0.21 s.
 - Timing: for the AC stop and a roll, each action timed from 50 ms early to 20 ms late, and the dip's depth from 0 to
