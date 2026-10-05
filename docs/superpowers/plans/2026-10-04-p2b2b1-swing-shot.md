@@ -103,6 +103,14 @@ goes up):
   - `START_GAP` in `swing/buildContact.ts`.
 
   `swing/profile.ts` exports `DEFAULT_DRIVE`, the planner's default `drive` per preset (spec §5.4).
+- **The AC stop drops the head onto the lawn** (user decision, 2026-10-05, from the user's account: the player times
+  letting the mallet drop onto the lawn with the strike, so that its underside's friction arrests it; some push it
+  down). Without this, the rising head would reach the turf only by sagging under its weight: late, and by an amount
+  set by the coupling's period (3.6 mm of free sag at 40 ms, about 14 mm at 80 ms). `SwingDrive` therefore gains
+  `handDrop` (m): whatever `drive`, the hands lower by it from rest over the window, a vertical pivot acceleration
+  −2·handDrop/window². The path then holds the pivot's height after the window (the spec's run-on rule now keeps only
+  the horizontal velocity). The AC stop's provisional value is 5 mm: the 0.8 mm clearance, plus the 2.5 mm the checked
+  arc still rises, plus a press. Every other preset is 0, and the ball is still met on the up. This is Tasks 3, 7 and 9.
 - **An AC stop resting on the turf runs to the cap.** The spec's end rule counts a closed head–turf pair as a hard
   contact, so a head that stays on the turf ends with `impact-cap`. That is expected; pre-flight counts how often
   (§9).
@@ -672,8 +680,8 @@ In `src/engine/impact/types.ts`, after `DriveSample`, add:
 ```ts
 /**
  * The path the hands drive the socket along (P2b.2b.1 design §3.1): a pendulum arc in a vertical plane about a pivot
- * that may itself move in that plane (the body's weight moving from back to front). Arc and pivot accelerate
- * constantly for `window`, then run on at constant rates.
+ * that may itself move in that plane (the body's weight moving from back to front, the hands dropping). Arc and pivot
+ * accelerate constantly for `window`, then run on at constant rates, the pivot's height held.
  */
 export interface SwingArc {
     /** The top hand at t = 0, world frame. */
@@ -781,7 +789,7 @@ function closedForm(arc: SwingArc, t: number) {
     const V = add(arc.pivotVelocity, scale(arc.pivotAcceleration, s));
     const P = add(
         add(add(arc.pivot, scale(arc.pivotVelocity, s)), scale(arc.pivotAcceleration, 0.5 * s * s)),
-        scale(V, u),
+        scale(vec3(V.x, V.y, 0), u),
     );
     const radial = sub(scale(arc.aim, Math.sin(theta)), vec3(0, 0, Math.cos(theta)));
     const tangent = add(scale(arc.aim, Math.cos(theta)), vec3(0, 0, Math.sin(theta)));
@@ -789,7 +797,7 @@ function closedForm(arc: SwingArc, t: number) {
         theta,
         omega,
         socket: add(P, scale(radial, arc.radius)),
-        socketVelocity: add(V, scale(tangent, arc.radius * omega)),
+        socketVelocity: add(t <= arc.window ? V : vec3(V.x, V.y, 0), scale(tangent, arc.radius * omega)),
     };
 }
 
@@ -840,6 +848,19 @@ describe("the swing path", () => {
             const moved = sub(p.socket, start.socket);
             expect(length(cross(moved, AIM))).toBeLessThan(1e-12);
             expect(dot(moved, AIM)).toBeGreaterThan(0);
+        }
+    });
+
+    it("lowers a dropping pivot over the window, then holds its height", () => {
+        // The AC stop's hands-down drop (design §5.2 step 7): 5 mm from rest over the window.
+        const drop = 0.005;
+        const down = vec3(0, 0, (-2 * drop) / (ROLL.window * ROLL.window));
+        const lowered = prepare({ ...ROLL, pivotAcceleration: add(ROLL.pivotAcceleration, down) });
+        const z = (t: number): number => pathAt(lowered, t).socket.z - pathAt(track, t).socket.z;
+        expect(z(ROLL.window)).toBeCloseTo(-drop, 12);
+        for (const t of [0.05, 0.12]) {
+            expect(z(t), `at ${t}`).toBeCloseTo(-drop, 12);
+            expect(pathAt(lowered, t).socketVelocity.z).toBeCloseTo(pathAt(track, t).socketVelocity.z, 12);
         }
     });
 
@@ -914,7 +935,8 @@ module").
 /**
  * The tracked drive's path (P2b.2b.1 design §3.1, §3.2). The hands pull the mallet head's socket along a pendulum arc
  * in a vertical plane about a pivot (the top hand) that may itself move in that plane, and hold the head's orientation
- * to the arc's. Arc and pivot accelerate constantly for the drive window, then run on at the rates they reached.
+ * to the arc's. Arc and pivot accelerate constantly for the drive window, then run on at the rates they reached, except
+ * that the pivot's height is held: hands lowered during the window (a hands-down drop) stop there.
  *
  * Frames. n = aim × ẑ is the pitch axis: a positive rotation about it tilts aim upward. The shaft frame's forward axis
  * lies along aim at θ = 0, the arc's lowest point, and turns with θ. The socket's target is
@@ -922,7 +944,7 @@ module").
  * to aim. Exact operations only (sinCos and atan2 from elementary.ts), like the rest of the engine.
  */
 import { atan2, sinCos } from "../math/elementary";
-import { add, cross, scale, sub, vec3, type Vec3 } from "../math/vec3";
+import { add, cross, horizontal, scale, sub, vec3, type Vec3 } from "../math/vec3";
 import { multiply, rotate, type Quaternion } from "./rigidBody";
 import type { HeadState, MalletHead, SwingArc, TrackDrive } from "./types";
 
@@ -967,6 +989,7 @@ export interface PreparedTrack {
     readonly thetaEnd: number;
     readonly omegaEnd: number;
     readonly pivotEnd: Vec3;
+    /** The pivot's velocity at the window's end, horizontal part only: after the window its height is held. */
     readonly pivotVelocityEnd: Vec3;
     /** k = γ·m·(2π/T)² and c = 2ζ·√(k·m) of the socket's spring–damper (N/m, N·s/m). */
     readonly stiffness: number;
@@ -996,7 +1019,7 @@ export function prepareTrack(drive: TrackDrive, head: MalletHead, gravity: numbe
         thetaEnd: arc.theta0 + arc.omega0 * w + 0.5 * arc.alpha * w * w,
         omegaEnd: arc.omega0 + arc.alpha * w,
         pivotEnd: add(add(arc.pivot, scale(arc.pivotVelocity, w)), scale(arc.pivotAcceleration, 0.5 * w * w)),
-        pivotVelocityEnd: add(arc.pivotVelocity, scale(arc.pivotAcceleration, w)),
+        pivotVelocityEnd: horizontal(add(arc.pivotVelocity, scale(arc.pivotAcceleration, w))),
         stiffness,
         damping: twice * Math.sqrt(stiffness * head.mass),
         angularStiffness,
@@ -1021,7 +1044,7 @@ export interface PathPoint {
 
 /**
  * The path at time t (design §3.2). During the window θ = θ₀ + ω₀·t + ½·α·t² and P = P₀ + V₀·t + ½·A·t²; after it, θ
- * and P run on from the window's end at the rates they reached. Evaluates sinCos(θ) and sinCos(θ/2).
+ * and P run on from the window's end at the rates they reached, P's height held. Evaluates sinCos(θ) and sinCos(θ/2).
  */
 export function pathAt(track: PreparedTrack, t: number): PathPoint {
     const { arc } = track;
@@ -1080,7 +1103,7 @@ export function headOnPath(track: PreparedTrack, head: MalletHead, t: number): H
 - [ ] **Step 5: Run the tests**
 
 Run: `npx vitest run tests/engine/impact/track.test.ts`
-Expected: PASS, 10 tests. If a tolerance fails by a small factor, print the figure and report it; do not loosen it
+Expected: PASS, 11 tests. If a tolerance fails by a small factor, print the figure and report it; do not loosen it
 silently.
 
 - [ ] **Step 6: Format, check, commit**
@@ -1243,7 +1266,7 @@ describe("a tracked head with no ball", () => {
         expect(angle).toBeLessThan(3e-6);
     });
 
-    it("converges on a full check as the step shrinks: the residual is the integrator's, not the feed-forward's", () => {
+    it("converges on a full check as the step shrinks: the residual is the integrator's", () => {
         const check: SwingArc = { ...COAST, alpha: -COAST.omega0 / COAST.window };
         const coarse = tracking(check, 1e-5, 0.06);
         const fine = tracking(check, 5e-6, 0.06);
@@ -1346,7 +1369,7 @@ describe("the tracked end rule", () => {
         return { arc, run: integrate(isolated({ start: headOnPath(track, TEST_HEAD, 0), drive: track, balls }), { cap }) };
     }
 
-    it("ends a clean single-ball strike within RELEASE_STEPS of the window's end or the ball outrunning the head", () => {
+    it("ends a clean single-ball strike within RELEASE_STEPS of the window's end or the ball's escape", () => {
         const { arc, run } = strikeRun([freeBall("blue", BALL)]);
         const faces = run.timeline["face/blue"] ?? [];
         expect(faces).toHaveLength(1);
@@ -2444,13 +2467,15 @@ export interface SwingStance {
 /**
  * How the hands drive a stroke type: over `window` (s) at full `drive`, the hands' arc speed changes by `speedGain`
  * times its speed at contact; the body moves forward at `bodySpeed` (m/s) at contact and accelerates at `bodyAccel`
- * (m/s²).
+ * (m/s²). Whatever `drive`, the hands lower by `handDrop` (m) from rest over the window, then hold their height: the
+ * AC stop's drop of the head onto the lawn, timed with the strike (design §5.4).
  */
 export interface SwingDrive {
     readonly speedGain: number;
     readonly bodySpeed: number;
     readonly bodyAccel: number;
     readonly window: number;
+    readonly handDrop: number;
 }
 
 /** The physical part of a player's profile (design §5.1); P3 wraps it into the stored profile. */
@@ -2479,7 +2504,7 @@ export interface ShotSetup {
         readonly speed: number;
         /** −1 check … 0 coast … +1 push. */
         readonly drive: number;
-        /** The ball's centre from the face's centre (m): `up` along the face's upward axis, `side` to the left of aim. */
+        /** The ball's centre from the face's centre (m): `up` along its upward axis, `side` to the left of aim. */
         readonly contact: { readonly up: number; readonly side: number };
     };
     readonly live: readonly BallId[];
@@ -2531,13 +2556,14 @@ export const defaultProfile: SwingProfile = {
         "pass-roll": { ballAhead: -0.08, shaftLean: 40 * DEG, gripTension: 1 },
     },
     drive: {
-        "single-ball": { speedGain: 0.2, bodySpeed: 0, bodyAccel: 0, window: 0.01 },
-        drive: { speedGain: 0.2, bodySpeed: 0, bodyAccel: 0, window: 0.005 },
-        "stop-ac": { speedGain: 1, bodySpeed: 0, bodyAccel: 0, window: 0.01 },
-        "stop-gc": { speedGain: 1, bodySpeed: 0, bodyAccel: 0, window: 0.01 },
-        "half-roll": { speedGain: 0.2, bodySpeed: 0.2, bodyAccel: 5, window: 0.02 },
-        "full-roll": { speedGain: 0.2, bodySpeed: 0.3, bodyAccel: 8, window: 0.03 },
-        "pass-roll": { speedGain: 0.5, bodySpeed: 0.4, bodyAccel: 10, window: 0.015 },
+        "single-ball": { speedGain: 0.2, bodySpeed: 0, bodyAccel: 0, window: 0.01, handDrop: 0 },
+        drive: { speedGain: 0.2, bodySpeed: 0, bodyAccel: 0, window: 0.005, handDrop: 0 },
+        // The drop covers the head's 0.8 mm clearance and the checked arc's 2.5 mm rise, and presses it onto the lawn.
+        "stop-ac": { speedGain: 1, bodySpeed: 0, bodyAccel: 0, window: 0.01, handDrop: 0.005 },
+        "stop-gc": { speedGain: 1, bodySpeed: 0, bodyAccel: 0, window: 0.01, handDrop: 0 },
+        "half-roll": { speedGain: 0.2, bodySpeed: 0.2, bodyAccel: 5, window: 0.02, handDrop: 0 },
+        "full-roll": { speedGain: 0.2, bodySpeed: 0.3, bodyAccel: 8, window: 0.03, handDrop: 0 },
+        "pass-roll": { speedGain: 0.5, bodySpeed: 0.4, bodyAccel: 10, window: 0.015, handDrop: 0 },
     },
 };
 
@@ -2592,7 +2618,7 @@ export interface TestProfileOptions {
 /** A profile with the test head (1 kg, 0.23 m, 0.064 m across) and the same stance and drive for every stroke type. */
 export function testProfile(o: TestProfileOptions = {}): SwingProfile {
     const stance: SwingStance = { ballAhead: 0, shaftLean: 0, gripTension: 1, ...o.stance };
-    const drive: SwingDrive = { speedGain: 0.2, bodySpeed: 0, bodyAccel: 0, window: 0.01, ...o.drive };
+    const drive: SwingDrive = { speedGain: 0.2, bodySpeed: 0, bodyAccel: 0, window: 0.01, handDrop: 0, ...o.drive };
     const every = <T>(entry: T): Record<StrokeType, T> =>
         Object.fromEntries(STROKE_TYPES.map((type) => [type, entry])) as Record<StrokeType, T>;
     return {
@@ -2780,6 +2806,17 @@ describe("buildContact, step by step", () => {
         });
     });
 
+    it("lowers the hands by handDrop from rest over the window whatever the drive, meeting the ball on the up", () => {
+        for (const drive of [-1, 0, 1]) {
+            const profile = testProfile({ stance: { ballAhead: 0.1 }, drive: { window: 0.01, handDrop: 0.005 } });
+            const c = buildContact(shot({ drive }, profile), WORLD);
+            const arc = arcOf(c);
+            expect(arc.pivotVelocity.z, `drive ${drive}`).toBe(0);
+            expect(arc.pivotAcceleration.z).toBeCloseTo((-2 * 0.005) / (0.01 * 0.01), 9);
+            expect(c.velocity.z).toBeGreaterThan(0);
+        }
+    });
+
     it("builds the profile's mallet with a wooden face", () => {
         const c = buildContact(shot(), WORLD);
         expect(c.head).toEqual({
@@ -2886,6 +2923,7 @@ describe("buildContact rejections", () => {
         ["a negative speedGain", shot({}, testProfile({ drive: { speedGain: -0.1 } })), /speedGain must be non-negative/],
         ["a grip tension of 0", shot({}, testProfile({ stance: { gripTension: 0 } })), /gripTension must lie in/],
         ["a negative bodySpeed", shot({}, testProfile({ drive: { bodySpeed: -0.1 } })), /bodySpeed must be non-negative/],
+        ["a negative handDrop", shot({}, testProfile({ drive: { handDrop: -0.001 } })), /handDrop must be non-negative/],
         ["a bodySpeed above the speed", shot({}, testProfile({ drive: { bodySpeed: 4 } })), /no non-negative arc rate/],
         ["a head starting in the turf", shot({}, testProfile({ stance: { shaftLean: -0.3 } })), /the head starts in the turf/],
     ];
@@ -2918,7 +2956,8 @@ Expected: FAIL. The suite cannot import `../../../src/engine/swing/buildContact`
  *    it; the head's centre L/2 behind the face's, the socket on top of the head;
  * 5. the pivot, r from the socket back along the arc;
  * 6. ω₀, the larger root of |V₀ + ω₀·n × (c − pivot)| = speed, V₀ = bodySpeed·aim;
- * 7. over the window, α = drive·speedGain·ω₀/window and A = drive·bodyAccel·aim;
+ * 7. over the window, α = drive·speedGain·ω₀/window and A = drive·bodyAccel·aim − (2·handDrop/window²)·ẑ, the
+ *    hands lowering by handDrop from rest whatever the drive;
  * 8. the head a solid cylinder of the profile's mallet, gripped with HAND_COUPLING at the stance's tension.
  * The head starts on its own path (headOnPath at t = 0), so the hands' spring and damper start slack.
  */
@@ -2967,7 +3006,7 @@ function positive(value: number, name: string): void {
  * - a non-finite number, or a non-positive mallet dimension or mass;
  * - an arc radius r ≤ 0, or r > shaftLength (the top hand off the shaft);
  * - |ballAhead| ≥ r; speed ≤ 0; |drive| > 1; the contact off the face (√(up² + side²) ≥ the head's radius);
- * - window ≤ 0; speedGain < 0; gripTension outside (0, 1]; bodySpeed < 0;
+ * - window ≤ 0; speedGain < 0; gripTension outside (0, 1]; bodySpeed < 0; handDrop < 0;
  * - no non-negative ω₀ (the body alone moves the head faster than `speed`);
  * - the head's lowest point below the turf at t = 0.
  */
@@ -3012,7 +3051,7 @@ export function buildContact(setup: ShotSetup, world: World): ContactState {
     // Step 1: at address, the head level with its centre at the sunk centre, the socket is at h₀ + ρ.
     const radius = profile.grip.topHandHeight - sunk - rho;
     if (!(radius > 0)) {
-        fail(`the arc radius must be positive (topHandHeight ${profile.grip.topHandHeight} m is at or below the socket)`);
+        fail(`the arc radius must be positive (got ${radius} m: topHandHeight is at or below the socket)`);
     }
     if (radius > mallet.shaftLength) {
         fail(`the top hand is off the shaft: the arc radius ${radius} m exceeds shaftLength ${mallet.shaftLength} m`);
@@ -3042,6 +3081,9 @@ export function buildContact(setup: ShotSetup, world: World): ContactState {
     }
     if (!(push.bodySpeed >= 0)) {
         fail(`profile.drive.${type}.bodySpeed must be non-negative (got ${push.bodySpeed})`);
+    }
+    if (!(push.handDrop >= 0)) {
+        fail(`profile.drive.${type}.handDrop must be non-negative (got ${push.handDrop})`);
     }
 
     // Step 2.
@@ -3080,7 +3122,11 @@ export function buildContact(setup: ShotSetup, world: World): ContactState {
     const arc: SwingArc = {
         pivot,
         pivotVelocity,
-        pivotAcceleration: scale(aim, stroke.drive * push.bodyAccel),
+        // The hands' drop, from rest, whatever the drive; the path holds the pivot's height after the window.
+        pivotAcceleration: sub(
+            scale(aim, stroke.drive * push.bodyAccel),
+            vec3(0, 0, (2 * push.handDrop) / (push.window * push.window)),
+        ),
         aim,
         radius,
         theta0: thetaC,
@@ -3561,10 +3607,10 @@ describe("the tracked drive in whole strokes", () => {
         expect(hands / (WORLD.ball.mass * length(sub(after, before)))).toBeLessThanOrEqual(0.05);
     });
 
-    it("brakes a rising strike, face tilted up, relaxed grip and check, through the turf after contact", () => {
+    it("brakes a rising, face-up, relaxed, checked and dropped strike through the turf after contact", () => {
         const profile = testProfile({
             stance: { ballAhead: 0.13, shaftLean: -0.07, gripTension: 0.1 },
-            drive: { speedGain: 1, window: 0.01 },
+            drive: { speedGain: 1, window: 0.01, handDrop: 0.005 },
         });
         const { impact, turf } = braking(profile, "stop-ac", -1, -0.012);
         const dug = impact.timeline["head/turf"]?.[0] as ContactInterval;

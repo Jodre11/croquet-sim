@@ -33,7 +33,10 @@ the head–turf pair acts at the lowest point itself. `contact.json` uses flat k
 shaft (0.9144 m, 36 in) and top hand (0.889 m, 35 in) are sourced, so r ≈ 0.805 m. The canonical striker stands at
 (9.6012, 4), since the peg occupies the court's centre. Canonical clearances: 7.90 mm (single-ball, drive, GC stop),
 0.80 mm (AC stop), 30.9, 41.2 and 46.4 mm (half, full and pass rolls). The tracking bound holds on coasting and roll
-paths; on a full check the residual is semi-implicit Euler's O(dt·a) lag, tested by convergence. Details:
+paths; on a full check the residual is semi-implicit Euler's O(dt·a) lag, tested by convergence. The AC stop gains a
+hands-down drop (user decision, from the user's account of the stroke): `handDrop`, the hands lowering from rest over
+the window and then holding their height, so the head reaches the turf in time whatever the coupling's period, which
+would otherwise set the passive sag (3.6 mm at 40 ms, about 14 mm at 80 ms). Details:
 `plans/2026-10-04-p2b2b1-swing-shot.md`.
 
 ## 1. Goal and exit criteria
@@ -93,8 +96,8 @@ type Drive =
 
 /**
  * The path the hands drive the socket along: a pendulum arc in a vertical plane about a pivot that may itself move in
- * that plane (the body's weight moving from back to front). Arc and pivot accelerate constantly for `window`, then
- * run on at constant rates.
+ * that plane (the body's weight moving from back to front, the hands dropping). Arc and pivot accelerate constantly
+ * for `window`, then run on at constant rates, the pivot's height held.
  */
 interface SwingArc {
     readonly pivot: Vec3;              // the top hand at t = 0, world frame
@@ -129,8 +132,10 @@ its rear rim drags.
 ### 3.2 The path
 
 During the window (0 ≤ t ≤ w): θ = θ₀ + ω₀·t + ½·α·t², P = P₀ + V₀·t + ½·A·t². After it, θ and P run on at the
-rates they reached, θ_w + ω_w·(t − w) and P_w + V_w·(t − w); θ_w, ω_w, P_w and V_w are computed once, in
-`prepareImpact`, so θ, ω, P and V are continuous by construction.
+rates they reached, θ_w + ω_w·(t − w) and P_w + V_h·(t − w), V_h being V_w's horizontal part: the hands' height is
+then held, so a pivot lowered during the window (the AC stop's hands-down drop, §5.2 step 7) stops there.
+θ_w, ω_w, P_w and V_h are computed once, in `prepareImpact`; θ, ω and P are continuous by construction, and V is too
+apart from any vertical speed the window gave the pivot, which drops to zero at its end.
 
 With n = aim × ẑ (the pitch axis) and the shaft frame's forward axis along aim at θ = 0 (a positive rotation about n
 tilts the forward axis up):
@@ -275,10 +280,12 @@ interface SwingProfile {
     }>>;
     /**
      * Over `window` (s) at full `drive`: the hands' arc speed changes by `speedGain` times its speed at contact; the
-     * body moves forward at `bodySpeed` (m/s) at contact and accelerates at `bodyAccel` (m/s²).
+     * body moves forward at `bodySpeed` (m/s) at contact and accelerates at `bodyAccel` (m/s²). Whatever `drive`, the
+     * hands lower by `handDrop` (m) from rest over the window, then hold their height.
      */
     readonly drive: Readonly<Record<StrokeType, {
         readonly speedGain: number; readonly bodySpeed: number; readonly bodyAccel: number; readonly window: number;
+        readonly handDrop: number;
     }>>;
 }
 
@@ -331,7 +338,9 @@ other faces arrive with their sourced values (§10). The engine's head is centre
    V₀ + ω₀·n × (c − pivot) and ω₀·n.
 7. **Drive.** α = `drive`·`speedGain`·ω₀/`window` and A = `drive`·`bodyAccel`·aim during `window`, then zero. A
    check with `speedGain` 1 at `drive` −1 brings the hands' arc to rest at the window's end, and it stays at rest, at
-   any strength. The coupling is `HAND_COUPLING` with `tension` = the preset's `gripTension`.
+   any strength. The hands' drop adds −(2·`handDrop`/`window`²)·ẑ to A, whatever `drive`: from rest at contact the
+   pivot lowers by `handDrop` over the window and its height is then held (§3.2), so the ball is still met on the up.
+   The coupling is `HAND_COUPLING` with `tension` = the preset's `gripTension`.
 8. **Mallet.** Mass, length and diameter; inertia from `solidCylinderInertia`; the face material is `mallet.json`'s
    wood.
 
@@ -340,7 +349,7 @@ other faces arrive with their sourced values (§10). The engine's head is centre
 `buildContact` throws a `RangeError` naming the check for: r ≤ 0; r > `shaftLength` (the top hand is off the shaft);
 |`ballAhead`| ≥ r; `speed` ≤ 0; |`drive`| > 1; √(`up`² + `side`²) ≥ the head's radius (contact off the face); a stroke
 type missing from `stance` or `drive`; `window` ≤ 0; `speedGain` < 0; `gripTension` outside (0, 1]; `bodySpeed` < 0;
-no non-negative ω₀ (§5.2 step 6); the head's lowest point below the turf at t = 0; a non-finite number.
+`handDrop` < 0; no non-negative ω₀ (§5.2 step 6); the head's lowest point below the turf at t = 0; a non-finite number.
 `simulateImpact`'s own validation then runs as today.
 
 ### 5.4 The default profile
@@ -354,21 +363,26 @@ measured and never tuned to one. The planner's default `drive` per preset is lis
 | Mallet | 1.0 kg, 0.2286 m, 0.0762 m, shaft 0.91 m |
 | Grip | top hand 0.85 m (r ≈ 0.77 m) |
 
-| Preset | ballAhead (m) | shaftLean (°) | gripTension | speedGain | bodySpeed (m/s) | bodyAccel (m/s²) | window (ms) | default drive |
-|---|---|---|---|---|---|---|---|---|
-| single-ball | 0 | 0 | 1 | 0.2 | 0 | 0 | 10 | 0 |
-| drive | 0 | 0 | 1 | 0.2 | 0 | 0 | 5 | 0 |
-| stop-ac | 0.13 | −4 | 0.1 | 1 | 0 | 0 | 10 | −1 |
-| stop-gc | 0 | 0 | 1 | 1 | 0 | 0 | 10 | −1 |
-| half-roll | −0.05 | 25 | 1 | 0.2 | 0.2 | 5 | 20 | +1 |
-| full-roll | −0.07 | 35 | 1 | 0.2 | 0.3 | 8 | 30 | +1 |
-| pass-roll | −0.08 | 40 | 1 | 0.5 | 0.4 | 10 | 15 | +1 |
+| Preset | ballAhead (m) | shaftLean (°) | gripTension | speedGain | bodySpeed (m/s) | bodyAccel (m/s²) | window (ms) | handDrop (mm) | default drive |
+|---|---|---|---|---|---|---|---|---|---|
+| single-ball | 0 | 0 | 1 | 0.2 | 0 | 0 | 10 | 0 | 0 |
+| drive | 0 | 0 | 1 | 0.2 | 0 | 0 | 5 | 0 | 0 |
+| stop-ac | 0.13 | −4 | 0.1 | 1 | 0 | 0 | 10 | 5 | −1 |
+| stop-gc | 0 | 0 | 1 | 1 | 0 | 0 | 10 | 0 | −1 |
+| half-roll | −0.05 | 25 | 1 | 0.2 | 0.2 | 5 | 20 | 0 | +1 |
+| full-roll | −0.07 | 35 | 1 | 0.2 | 0.3 | 8 | 30 | 0 | +1 |
+| pass-roll | −0.08 | 40 | 1 | 0.5 | 0.4 | 10 | 15 | 0 | +1 |
 
 The presets follow the user's account of play (2026-10-04). **AC stop:** the feet are set further back, so the ball
 is met slightly on the up (positive `ballAhead`, about 10° of rise), amplified by tilting the face up (negative
 `shaftLean`, which also lowers the head's rear rim); the hands relax on contact, so the head sags and its base rubs
 the turf, slowing it and cancelling the follow-through. The model gives it a check as well (the hands stop driving
-through) and a relaxed grip, so the head sags onto the turf and the turf adds drag. **GC stop:** the lower hand grips
+through), a relaxed grip, and a hands-down drop timed with the strike (user account, 2026-10-05: the player lets
+the mallet drop onto the lawn so that its underside's friction arrests it, some pushing it down to hasten the stop).
+The drop, 5 mm over the 10 ms window, covers the 0.8 mm the head starts above the turf and the 2.5 mm the checked arc
+still rises, and leaves the hands' path below the turf, so the relaxed grip presses the head onto it. Without it the
+head would reach the turf only by sagging under its weight, late, and by an amount that hung on the coupling's period.
+**GC stop:** the lower hand grips
 lower and actively stops the swing just after contact (a check); it is not deliberately played on the up, but is a
 hard, level shot with no follow-through, so the striker's ball reaches the croqueted ball without spin, like a stun in
 snooker. **Power rolls:** the body's weight moves from back to front, keeping the face tilted while pushing forward
@@ -472,8 +486,8 @@ and `validateWorld` are unchanged. A `ContactState` carries its own coupling, so
 
 ### 8.1 Analytic and hand-checked cases
 
-- **Path.** θ, ω, P and V during and after the window match the closed forms, continuous at the window's end. A pivot
-  accelerating forward with α = 0 and ω = 0 moves the socket target in a straight line with the orientation target
+- **Path.** θ, ω, P and V during and after the window match the closed forms, continuous at the window's end; a
+  pivot lowered during the window holds its height after it. A pivot accelerating forward with α = 0 and ω = 0 moves the socket target in a straight line with the orientation target
   constant (the power roll's held face tilt). A check with `speedGain` 1 brings ω to 0 at the window's end and holds
   it there.
 - **Tracking, no ball.** A head started on the path with a firm grip follows it over 0.12 s within a bound pre-flight
