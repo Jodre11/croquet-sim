@@ -141,7 +141,7 @@ to be firm, with the mallet head following through the ball and onto the ground.
 - **Release by reach** (§3.3): the bottom hand opens once the shaft has turned through its reach slack.
 - **The whole head meets the balls** (§4.5): a solid-cylinder contact with continuous normal, its regions recorded, and
   a re-entry guard.
-- **End rule** (§3.5): a 30 ms look-ahead; `TRACK_IMPACT_CAP` 0.15 s.
+- **End rule** (§3.5): a 30 ms look-ahead; `TRACK_IMPACT_CAP` 0.15 s (0.45 s since the re-plan note).
 - **Coupling** (§3.4): T 0.08 s and ζ 0.7 kept; exit criterion 3 becomes an effective-mass test.
 - **Profile** (§5): the stance is `lean`, `top`, `bottom`, `gripTension` and `bottomGrip`, with θ_c = −lean and
   r = `top`; `ballAhead`, `topHandHeight` and `shaftToHead` leave; each preset gains a mode, `handReach` (also a
@@ -166,7 +166,16 @@ the re-planned tasks, and a fresh pre-flight follows the re-plan.
 **Amended 2026-10-05 (re-plan).** Exit criterion 3's strike measure sums every ball's momentum change (§8.1): on the
 drive's canonical setup the striker's ball alone gives 0.286 kg, the croqueted ball taking its momentum through it,
 while both balls give 1.00655 kg against the closed form's 1.0066 kg. §3.3's exact-tracking claim excepts a dip after
-contact in carry mode, whose moment about the swung body's centre τ_ff omits. Details:
+contact in carry mode, whose moment about the swung body's centre τ_ff omits.
+
+The canonical drive ran to the 0.15 s cap. In swing mode after contact the path is the unstruck free pendulum, so the
+look-ahead's v_path stays at 2.5–3 m/s and predicts a catch on every step, while the bottom hand's rate guide, steering
+towards that planned arc, restores some of the speed the strike took: between the two hits it pushes +4.05 N·s along
+aim (the top hand −3.06 N·s), and that is what makes the follow-through re-hit. User decision: the guide maintains the
+planned arc (decision 4 reads so), and `TRACK_IMPACT_CAP` becomes 0.45 s so that every re-hit is integrated and a drive
+ends by itself (§3.5). With the cap lifted the drive ends at 138 ms at 4 m/s (two hits), 181 ms at 3 m/s (two) and
+269 ms at 2 m/s (four, the last on the rim); over the preset sweep its longest is 325 ms after contact, every other
+preset's at most 309 ms. `FREE_SPAN` becomes 0.55 s to cover the lead-in and the cap (§3.2). Details:
 `plans/2026-10-04-p2b2b1-swing-shot.md`.
 
 ## 1. Goal and exit criteria
@@ -312,7 +321,7 @@ The pendulum, with t_a = `arcStart` and w = `window`: before its window (t ≤ t
   swung body's (§3.3); ℓ_h = ρ + `radius`, the pivot to the head's centre; d = ℓ_h − δ, the pivot to the swung body's
   centre; I_P = I'_n + M·d², I'_n the swung body's inertia about the pitch axis; A the pivot's acceleration (the hands'
   path with its reach, and the dip); t̂ = cos θ·aim + sin θ·ẑ. `prepareImpact` tabulates θ and ω from (θ_e, ω_e) by
-  semi-implicit Euler every `FREE_STEP` = 5 µs over `FREE_SPAN` = 0.25 s; the path interpolates them linearly and
+  semi-implicit Euler every `FREE_STEP` = 5 µs over `FREE_SPAN` = 0.55 s; the path interpolates them linearly and
   evaluates θ̈ from the equation at the interpolated θ. Beyond the table θ and ω clamp to its last sample (the cap
   ends every impact well inside it).
 - **carry:** the slope is held. Over one more window the rate falls linearly to zero, with u = min(t − t_a − w, w),
@@ -397,7 +406,8 @@ the dip's, and after the reach it is at rest, so both hands bring the mallet to 
   the top hand takes the whole F_s. The dip is the player's action, so it is fed forward at full strength whatever γ_T.
 - **Bottom hand, swing mode, before release:** a rate guide along e, the unit vector perpendicular to s in the swing
   plane, forward (aim less its component along s, normalised): the force c(g_B)·((ω_path − ω)·n)·(r − `bottom`),
-  floored at 0, so it never pulls and never accelerates the head beyond the arc. Its couple is
+  floored at 0, so it never pulls and never accelerates the head beyond the planned arc; a head the strike has slowed
+  below it, it pushes back towards it, which is what makes the drive's follow-through re-hit. Its couple is
   C_s(g_B)·((ω_path − ω)·s) about s. **The check:** inside a check the guide is two-sided (not floored) and the bottom
   hand adds g_B·F_B and the couple g_B·τ_ff·s, so the check acts through its lever; a pivot cannot check.
 - **Bottom hand, carry mode, before release:** two-sided: g_B·F_B plus the part of c(g_B)·(v*_B − v_B) perpendicular
@@ -421,10 +431,10 @@ lag. A relaxed top hand
 its damper takes the rest; the dip is still the player's in full.
 
 Why the modes differ (user's account and Riches): in a drive the power is the arc's momentum and the lower hand only
-guides, never accelerating the head (a stronger, accelerating bottom hand turns the double hit into a triple and a
-roll-like ratio, §8.1); in a roll both hands move forward at the same rate with a firm grip, holding the slope, until
-reach runs out. In the prototype the release opened only in the drive's follow-through, 110 ms after contact; it is
-kept as the user's mechanism.
+guides, maintaining the planned arc and never driving the head beyond it (a stronger, accelerating bottom hand turns
+the double hit into a triple and a roll-like ratio, §8.1); in a roll both hands move forward at the same rate with a
+firm grip, holding the slope, until reach runs out. In the prototype the release opened only in the drive's
+follow-through, 110 ms after contact; it is kept as the user's mechanism.
 
 ### 3.4 The coupling
 
@@ -458,12 +468,15 @@ For a `track` drive the impact ends when every condition holds:
   head's velocity and v_path the head's velocity on the path: the hands still drive towards the path's.
 
 A head still catching a ball keeps the impact running, so a re-contact (a double tap, or the drive's follow-through
-second hit, about 92 ms after contact in the prototype) is integrated, not flagged. Otherwise the impact ends
-`TRACK_IMPACT_CAP` = 0.15 s after `contactAt` with `impact-cap`, and `impact-head-approaching` for any ball the head is
-still closing on. `ImpactOptions.cap`, an absolute time, overrides either cap.
+second hit, about 92 ms after contact in the prototype) is integrated, not flagged. In swing mode v_path is the
+unstruck pendulum's, so the look-ahead holds a drive open while any ball stays ahead of the face and within ρ + R of
+its axis: the drive ends once the rising head clears the ball (181 ms after contact on its canonical setup, at most
+325 ms over the preset sweep). Otherwise the impact ends `TRACK_IMPACT_CAP` = 0.45 s after `contactAt` with
+`impact-cap`, and `impact-head-approaching` for any ball the head is still closing on; the cap sits about 40 % above
+the sweep's longest drive. `ImpactOptions.cap`, an absolute time, overrides either cap.
 
-A `force` drive keeps P2b.1's rule and `IMPACT_CAP` = 0.06 s unchanged. At 0.21 s (the 60 ms longest lead-in, §5.2,
-plus the cap; 42,000 steps) pre-flight confirms the WAKE_MARGIN reach filter's headroom (§9).
+A `force` drive keeps P2b.1's rule and `IMPACT_CAP` = 0.06 s unchanged. At 0.51 s (the 60 ms longest lead-in, §5.2,
+plus the cap; 102,000 steps) pre-flight confirms the WAKE_MARGIN reach filter's headroom (§9).
 
 ### 3.6 Validation
 
@@ -961,7 +974,8 @@ keys; `topHandHeight` is not added.
 - **Mechanisms** (impulses per §3.7; ratios are not asserted, only compared). A hit is an interval of
   `timeline["face/<striker>"]`, which since §4.5 covers every region of the head:
   - **The drive's follow-through.** The canonical drive has at least two hits, the second starting after the first
-    ends, within the impact.
+    ends, within the impact, and ends by itself, before the cap and with no `impact-cap` or
+    `impact-head-approaching`.
   - **An accelerating bottom hand.** The drive with its bottom hand at 0.30 m and `bottomGrip` 1 has at least three
     hits and a lower croqueted-to-striker distance ratio than the canonical drive.
   - **Stops distinct from the drive.** The canonical AC and GC stops each have exactly one hit and leave the striker's
@@ -998,7 +1012,7 @@ Exit criterion 2. The `force` migration is mechanical and reviewed by the digest
   P2b.2b.2 (§10).
 - The tracking bound of §8.1 at the chosen coupling, and the residual in swing mode after contact outside a check.
 - Tracked impact steps and µs/step against force drives on the P2b.2a scenarios (for P5), and the WAKE_MARGIN reach
-  filter's headroom at 0.21 s.
+  filter's headroom at 0.51 s.
 - Timing: for the AC stop and a roll, each action timed from 50 ms early to 20 ms late, and the dip's depth from 0 to
   twice its default: whether the head meets the lawn before the ball, the head–turf penetration and slide, and the
   striker's ball's speed and launch angle (for P2b.2b.2, and for the user's review of the timing model).

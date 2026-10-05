@@ -70,9 +70,9 @@ code run on a scratch copy while planning; pre-flight re-measures them all.
   contact (the face interval ends at 1.17 ms), 1.73 mm deep; 12 mm reaches 2.11 mm and raises `impact-head-deep`, 10 mm
   reaches 1.32 mm. Every depth from 8.0 to 11.5 mm meets both conditions. Pre-flight confirms.
 - **Constants live by their reader:**
-  - `HAND_COUPLING`, `FREE_STEP` and `FREE_SPAN` in `impact/track.ts`;
+  - `HAND_COUPLING`, `FREE_STEP` and `FREE_SPAN` (0.55 s) in `impact/track.ts`;
   - `HEAD_TURF_FRICTION` in `impact/simulateImpact.ts`;
-  - `HEAD_DEEP_LIMIT`, `TRACK_IMPACT_CAP` (0.15 s), `LOOK_AHEAD` (0.03 s) and `ENTRY_SLACK` (1e-6 m) in
+  - `HEAD_DEEP_LIMIT`, `TRACK_IMPACT_CAP` (0.45 s), `LOOK_AHEAD` (0.03 s) and `ENTRY_SLACK` (1e-6 m) in
     `impact/integrate.ts`;
   - `START_GAP` and `MAX_LEAD` in `swing/buildContact.ts`;
   - `swing/profile.ts` exports `defaultProfile`, `DEFAULT_DRIVE` (the planner's default `drive` per preset) and
@@ -82,8 +82,19 @@ code run on a scratch copy while planning; pre-flight re-measures them all.
   table); `advance` delegates to `stepHead` (force, bit-identical) or `stepSwung` (track); `release` is spread onto
   `finish`'s result at the end of `integrate`, and `finish` itself adds `headTurfSlide` (Task 6), `headRegions` and
   `entryJumps` (Task 7).
+- **`TRACK_IMPACT_CAP` is 0.45 s** (user decision, 2026-10-05, after the dry run). At 0.15 s the canonical
+  drive ran to the cap: in swing mode after contact the look-ahead's v_path is the unstruck free pendulum (2.5–3 m/s),
+  so it predicted a catch on every step. Between the drive's two hits the bottom hand's rate guide pushes +4.05 N·s
+  along aim and the top hand −3.06 N·s: the guide steers towards the planned (unstruck) arc, so after the strike it
+  restores lost speed, which is what makes the follow-through re-hit. The user kept that model and raised the cap so
+  every re-hit is integrated. With it the drive ends by itself: at 4 m/s after 2 hits, 138 ms after contact; at 3 m/s
+  after 2 hits, 181 ms; at 2 m/s after 4 hits (0, 82, 127 and 159 ms, the last on the rim), 269 ms. In the preset
+  sweep the drive's longest natural end is 324.8 ms after contactAt and every other preset's at most 309 ms; 0.45 s
+  is about 40 % over 324.8 ms. `FREE_SPAN` covers `MAX_LEAD` plus the cap: 0.55 s. (A first sweep at a 0.5 s cap gave
+  395 ms, but with the table still 0.25 s long, so its path clamped beyond it; 324.8 ms is the corrected figure.)
 - **Known behaviours pre-flight watches** (no test asserts against them):
-  - the canonical drive runs to the 0.15 s cap with `impact-head-approaching`;
+  - the canonical drive ends by itself 181.4 ms after contact, after 2 hits; AC-stop runs whose head rests on the turf
+    still reach the cap (the resting head is a closed contact);
   - the AC stop's highest ball centre is 4.17 mm above R, 0.83 mm inside exit criterion 4's 5 mm;
   - the full roll at 4 m/s gives a ratio of about 52: its 0.30 m reach runs out with the striker's ball still on the
     face (a known miss, deferred with the steep rolls).
@@ -187,12 +198,12 @@ stop's dip 11 mm, the pass roll's reach 0.30 m); figures marked "first pre-fligh
 | Swing-mode residual after contact outside a check | roadmap outcomes (Task 12) | none (spec §8.1 leaves it unbounded) | Task 12 `tracking`, the "swing" phase |
 | Effective mass (exit criterion 3) | the exit-criterion-3 test (Task 10) | closed form within 10 % of the head's mass; strike within Task 10's tolerance of the closed form | Task 12 `mass`. Prototype: drive closed form 1.007 kg, strike 1.0066 kg over every ball. The strike's momentum change must sum every ball: the drive's striker's ball alone gives 0.286 kg, as it passes momentum to the croqueted ball within the interval |
 | The AC stop's dip depth (`handDrop`) | `src/engine/swing/profile.ts` (Task 8); spec §5.4 (table and the AC stop paragraph) | about 11 mm (0.011 m) over 20 ms | Task 12 `dip`: the canonical stop's head–turf penetration under `HEAD_DEEP_LIMIT` and its first `head/turf` interval starting after its first `face/blue` interval ends. Prototype: 8.0–11.5 mm meet both; at 11 mm 1.73 mm, the turf from 12.70 ms after a face interval ending at 1.17 ms; 12 mm raises `impact-head-deep`. Keep 11 mm if it meets both; otherwise report the meeting range to the user, who sets the value |
-| `TRACK_IMPACT_CAP` | `src/engine/impact/integrate.ts` (Task 4) | 0.15 s | Task 12 `canonical` and `presets`: the longest impact after `contactAt`, and how many runs reach the cap. Confirm, or revise with the user. Prototype: the canonical drive reaches the cap (its second hit at 91.8 ms, the head still closing); every other canonical setup ends by 83.4 ms |
+| `TRACK_IMPACT_CAP` | `src/engine/impact/integrate.ts` (Task 4) | 0.45 s (user decision, 2026-10-05; see "Decisions made while planning") | Task 12 `canonical` and `presets`: the longest impact after `contactAt`, and how many runs reach the cap. Confirm, or revise with the user. Planning dry run: the canonical drive ends by itself 181.4 ms after contact after 2 hits; every other canonical setup by 83.4 ms; in the sweep the longest natural end is the drive's 324.8 ms, and only 18 AC-stop runs reach the cap, each with its head resting on the turf |
 | Canonical setups (exit criterion 4) | the canonical-runs test (Task 10); roadmap outcomes | no entry jump; no ball centre more than 5 mm above R | Task 12 `canonical`. Prototype: no entry jump; highest 4.17 mm (AC stop) and 2.91 mm (pass roll), the rest under 1 mm |
 | Flag counts | roadmap outcomes | none | Task 12 `presets`: runs raising `impact-head-deep`, `impact-cap`, `impact-head-approaching` and `impact-off-face` |
-| Coaching ratios | roadmap outcomes | none (observations) | Task 12 `ratios`, canonical setups and 2–4 m/s. Prototype: drive 3.33, AC stop 6.47, GC stop 6.60, half roll 2.83, full roll 2.14, pass roll 1.59 |
+| Coaching ratios | roadmap outcomes | none (observations) | Task 12 `ratios`, canonical setups and 2–4 m/s. Prototype (0.15 s cap): drive 3.33 (3.32 at the 0.45 s cap), AC stop 6.47, GC stop 6.60, half roll 2.83, full roll 2.14, pass roll 1.59 |
 | Coupling comparison | roadmap outcomes | none | Task 12 `coupling`: T = 0.04 s against 0.08 s. Prototype ratios at 0.04 s: drive 2.35, half roll 2.03, full roll 1.78, pass roll 1.33; the stops within 0.1 |
-| µs/step and the reach filter | roadmap outcomes (for P5); `WAKE_MARGIN`'s comment in `integrate.ts` (Task 4) if its stated headroom no longer holds | none | Task 12 `cost`: tracked canonical impacts against P2b.2a's force-table strokes; the displacement beyond the summed path over the 0.21 s impact against `WAKE_MARGIN`. Prototype: 42,000 steps, 2.1e-14 m |
+| µs/step and the reach filter | roadmap outcomes (for P5); `WAKE_MARGIN`'s comment in `integrate.ts` (Task 4) if its stated headroom no longer holds | none | Task 12 `cost`: tracked canonical impacts against P2b.2a's force-table strokes; the displacement beyond the summed path over the 0.51 s impact (`MAX_LEAD` plus the cap) against `WAKE_MARGIN`. Planning dry run: 102,000 steps, 1.49e-11 m (67× headroom); the sweep's capped runs at most 2.3e-11 m |
 | Timing | roadmap outcomes; the user's review | none | Task 12 `timings`: the AC stop and the full roll, each action −50 to +20 ms, and the AC stop's dip ×0–2: lawn or ball first (or missed), dig, slide, launch |
 | Presets | `src/engine/swing/profile.ts` (Task 8) | spec §5.4 | Whether every canonical setup runs clean and the stops and rolls keep their character. Report to the user, who refines them from outcomes |
 | Behaviour tests | Tasks 4, 6, 7 and 10 | as written | The oscillator, relaxed top hand, feed-forward split, rate guide, release by reach, carry slope, head–ball regions, re-entry guard, re-contact, end rule, head–turf, effective mass, canonical runs, mechanisms (follow-through, accelerating bottom hand, stops, GC check, AC stop, punch, mistimed dip), gentle tap and crush tests rest on model behaviour. See the rule below |
@@ -206,7 +217,8 @@ If pre-flight changes a value, it changes:
 
 - the AC stop's dip: `profile.ts` in Task 8's code block, spec §5.4's table and AC stop paragraph, Task 12 Step 2's
   reference and this table;
-- `TRACK_IMPACT_CAP`: Task 4's constant and its comment, spec §3.5 (with its 0.21 s figure), and the roadmap
+- `TRACK_IMPACT_CAP`: Task 4's constant and its comment, `WAKE_MARGIN`'s comment (its step count), Task 3's
+  `FREE_SPAN` (`MAX_LEAD` plus the cap) and its comment, spec §3.5 (with its 0.51 s figure), and the roadmap
   amendment bullet in Task 12 Step 3;
 - a tracking bound or the effective-mass tolerance: the test in its task, with the measured figure in its comment.
 
@@ -775,7 +787,7 @@ mass. Nothing in the engine reads them yet; the test support uses `swingOrientat
   - `interface Hands { bottom; gripTension; bottomGrip; armMass; reachSlack: number }`;
   - `interface TrackDrive { kind: "track"; arc: SwingArc; coupling: Coupling; hands: Hands }`.
 - Produces (track.ts):
-  - `FREE_STEP = 5e-6`, `FREE_SPAN = 0.25`;
+  - `FREE_STEP = 5e-6`, `FREE_SPAN = 0.55`;
   - `pitchAxis(aim: Vec3): Vec3` (aim × ẑ); `aimRotation(aim: Vec3): Quaternion`;
     `swingOrientation(aim: Vec3, theta: number): Quaternion` (rot(n, θ) ⊗ q_aim);
   - `interface SwungBody { mass: number; inertia: Vec3; offset: number }`;
@@ -1496,10 +1508,11 @@ const UP = vec3(0, 0, 1);
 export const FREE_STEP = 5e-6;
 
 /**
- * Span (s) of the free pendulum's table from the pendulum's window's end (design §3.2). Numerical: longer than the
- * longest tracked impact, a 60 ms lead-in plus TRACK_IMPACT_CAP, so the cap ends every impact inside it.
+ * Span (s) of the free pendulum's table from the pendulum's window's end (design §3.2). Numerical: a tracked impact
+ * runs at most MAX_LEAD (0.06 s, the longest lead-in) plus TRACK_IMPACT_CAP (0.45 s) from t = 0, and the table starts
+ * at the window's end, so 0.55 s covers every impact with room to spare.
  */
-export const FREE_SPAN = 0.25;
+export const FREE_SPAN = 0.55;
 
 /**
  * How long after contactAt (s) the hands' path may take to travel 0.8·handReach before the reach is taken not to bind
@@ -2041,7 +2054,7 @@ head is neither closing on a ball nor would reach one within `LOOK_AHEAD`; its c
   - `handLoad(track: PreparedTrack, state: HeadState, head: MalletHead, t: number, grip: GripState): HandLoad`.
 - Produces (types.ts): `ImpactRun.release?: { readonly t: number; readonly deltaTheta: number }`.
 - Produces (integrate.ts):
-  - `TRACK_IMPACT_CAP = 0.15`, counted from `arc.contactAt`; `LOOK_AHEAD = 0.03`;
+  - `TRACK_IMPACT_CAP = 0.45`, counted from `arc.contactAt`; `LOOK_AHEAD = 0.03`;
   - `ImpactSetup.drive: ForceDrive | PreparedTrack`;
   - `ImpactSnapshot.hand?: { force; feedForward; top; bottom: Vec3 }`, after `contacts`, so a force table's snapshot
     keeps its keys and their order;
@@ -2877,11 +2890,13 @@ rewraps the WAKE_MARGIN comment within 120 columns (pre-flight D4.4) and adds `U
 export const IMPACT_CAP = 0.06;
 
 /**
- * Longest impact (s) of a tracked drive after its planned contact (P2b.2b.1 design §3.5): room for a roll's push and
- * for a drive's follow-through second hit, about 92 ms after contact in the design's prototype. A force table keeps
- * IMPACT_CAP. Pre-flight confirms or revises it from the longest tracked impact.
+ * Longest impact (s) of a tracked drive after its planned contact (P2b.2b.1 design §3.5), a user decision
+ * (2026-10-05). After the strike the bottom hand's rate guide steers the head back towards the planned arc, so a
+ * drive's follow-through catches the striker's ball again (four hits in all at 2 m/s); the cap lets every re-hit be
+ * integrated. In the preset sweep the longest impact that ends by itself is a drive's, 324.8 ms after contact
+ * (planning); this is about 40 % over it. A force table keeps IMPACT_CAP. Pre-flight confirms or revises it.
  */
-export const TRACK_IMPACT_CAP = 0.15;
+export const TRACK_IMPACT_CAP = 0.45;
 
 /**
  * Horizon (s) of the tracked end rule's look-ahead (design §3.5): the impact runs on while the front face would reach
@@ -2896,9 +2911,10 @@ export const LOOK_AHEAD = 0.03;
  * rounded position updates. A step rounds each horizontal coordinate by at most half an ulp (about 2e-15 m on a
  * full-size lawn), so the ball's distance from an obstacle by at most √2 times that per step. The drift accumulates
  * over the run's steps: at the default IMPACT_DT and IMPACT_CAP (12,000 steps) it stays near 1e-11 m, so the margin
- * keeps about 100× headroom. A tracked drive's longest run, a 60 ms lead-in and TRACK_IMPACT_CAP (42,000 steps),
- * stays near 3.5e-11 m at the same rate, about 30× headroom (pre-flight confirms it, P2b.2b.1 design §3.5); a test's
- * finer step, on coordinates under 1 m, drifts less.
+ * keeps about 100× headroom. A tracked drive's longest run, a 60 ms lead-in and TRACK_IMPACT_CAP (102,000 steps),
+ * would reach about 8.5e-11 m at the same rate, about 12× headroom; planning measured at most 2.3e-11 m over the
+ * preset sweep's capped runs, 1.5e-11 m over a 102,000-step one (pre-flight confirms it, P2b.2b.1 design §3.5). A
+ * test's finer step, on coordinates under 1 m, drifts less.
  */
 const WAKE_MARGIN = 1e-9;
 
@@ -3299,7 +3315,7 @@ by reach (ImpactRun.release). integrate steps the swung body, head and
 arm mass, for a tracked drive and the head alone for a force table,
 whose digest is unchanged. The tracked end rule (design §3.5) waits
 for both windows and the dip, a closing head and a 30 ms look-ahead;
-TRACK_IMPACT_CAP is 0.15 s after contactAt. The probe reports both
+TRACK_IMPACT_CAP is 0.45 s after contactAt. The probe reports both
 hands' forces.
 ```
 
@@ -6862,8 +6878,8 @@ figure; pre-flight re-measures them all. The suite took 2.7 s on the prototype.
 | (over the impact and the flight apexes) | half roll 0.72 mm, full roll 0.82, pass roll 2.92 |
 | Exit criterion 3, closed form | 1.0066 kg (head 1.0 kg) |
 | Exit criterion 3, the strike's measure | 1.00655 kg (both balls' Δp over the face's speed loss), 3.3e-5 off |
-| Drive's follow-through | hits 0.01–1.20 ms and 91.76–92.61 ms; runs to the cap (150 ms) |
-| Accelerating bottom hand (0.30 m, grip 1) | 5 hits, ratio 1.24 against 3.33 |
+| Drive's follow-through | hits 0.01–1.20 ms and 91.76–92.61 ms; ends by itself at 181.4 ms (0.45 s cap) |
+| Accelerating bottom hand (0.30 m, grip 1) | 5 hits, ratio 1.24 against 3.32 |
 | Stops | one hit each; striker's ball 1.380 (AC), 1.291 (GC) against the drive's 1.513 m/s |
 | GC check, hands' braking impulse | +1.697 N·s at −1, −2.465 N·s at 0 |
 | AC stop | face interval ends 1.17 ms; head on turf 12.70–21.48 ms, 1.73 mm deep |
@@ -6910,7 +6926,7 @@ Create `tests/engine/shot.test.ts`:
 ```ts
 import { describe, expect, it } from "vitest";
 import { judgeFaults } from "../../src/engine/faults";
-import { IMPACT_DT, type ImpactProbe, type ImpactSnapshot } from "../../src/engine/impact/integrate";
+import { IMPACT_DT, TRACK_IMPACT_CAP, type ImpactProbe, type ImpactSnapshot } from "../../src/engine/impact/integrate";
 import { IDENTITY, rotate } from "../../src/engine/impact/rigidBody";
 import { simulateImpact } from "../../src/engine/impact/simulateImpact";
 import { effectiveMass, swungBody } from "../../src/engine/impact/track";
@@ -7192,17 +7208,22 @@ describe("the effective mass (exit criterion 3)", () => {
 
 describe("the mechanisms (design §8.1), on the canonical setups", () => {
     // Every figure below is the prototype's (pass 4 at aeadd4c, with design §5.4's values); pre-flight re-measures.
-    it("the drive's follow-through strikes the striker's ball again within the impact", () => {
-        // Prototype: hits at 0.01–1.20 ms and 91.76–92.61 ms; the impact runs to the cap at 150 ms.
-        const { impact } = simulateShot(canonicalSetup("drive"));
+    it("the drive's follow-through strikes the striker's ball again, and the impact then ends by itself", () => {
+        // Prototype: hits at 0.01–1.20 ms and 91.76–92.61 ms. Planning, at the 0.45 s cap: the impact ends by itself
+        // 181.4 ms after contactAt, with no impact-cap and no impact-head-approaching.
+        const { contact, impact } = simulateShot(canonicalSetup("drive"));
         const [first, second] = hits(impact);
         expect(hits(impact).length).toBeGreaterThanOrEqual(2);
         expect((second as ContactInterval).start).toBeGreaterThan((first as ContactInterval).end);
         expect((second as ContactInterval).end).toBeLessThanOrEqual(impact.duration);
+        const kinds = impact.events.map((e) => e.kind);
+        expect(kinds).not.toContain("impact-cap");
+        expect(kinds).not.toContain("impact-head-approaching");
+        expect(impact.duration).toBeLessThan((contact.drive as TrackDrive).arc.contactAt + TRACK_IMPACT_CAP);
     });
 
     it("an accelerating bottom hand turns the drive's double hit into a triple and lowers its ratio", () => {
-        // Prototype: bottom hand at 0.30 m, grip 1: five hits and ratio 1.24, against two hits and 3.33.
+        // Prototype: bottom hand at 0.30 m, grip 1: five hits and ratio 1.24, against two hits and 3.32.
         const canonical = canonicalSetup("drive");
         const strong = canonicalSetup("drive", { stance: { bottom: 0.3, bottomGrip: 1 } });
         const guided = simulateShot(canonical);
@@ -7741,7 +7762,7 @@ Create `scripts/swingProbe.ts`:
  * - tracking: the head's largest distance from the path with no ball and no turf, per phase: firm before contact,
  *   carry up to the reach's end, inside a check, and swing mode after contact outside a check (the residual);
  * - cost: µs/step of the tracked canonical impacts against P2b.2a's force-table strokes, and the WAKE_MARGIN reach
- *   filter's headroom over a 0.21 s impact;
+ *   filter's headroom over a 0.51 s impact;
  * - timings: for the AC stop and the full roll, each action from 50 ms early to 20 ms late, and the AC stop's dip from
  *   none to twice its depth: lawn or ball first, the dig, the slide and the striker's ball's launch.
  * Run with `npx --yes tsx scripts/swingProbe.ts`; environment: SECTION (one of the names above; default all), REPEAT
@@ -8258,8 +8279,9 @@ function cost(): void {
     for (const stroke of FORCE_STROKES) {
         time(`force ${stroke.name}`, stroke.contact, stroke.balls);
     }
-    // The longest lead-in (MAX_LEAD) plus the cap: the drive's hands, which carry no share, timed 60 ms early.
-    const r = run(canonical("drive", { timing: { ...ON_TIME, hands: -MAX_LEAD } }));
+    // The longest lead-in (MAX_LEAD) plus the cap: a gentle AC stop (1 m/s, drive 0.5) whose head comes to rest on
+    // the turf, a closed contact that holds the impact to the cap, its hands (which carry no share) timed 60 ms early.
+    const r = run(canonical("stop-ac", { speed: 1, drive: 0.5, timing: { ...ON_TIME, hands: -MAX_LEAD } }));
     const ids = idsOf(r.setup.balls);
     const travel = ids.map(() => 0);
     let excess = -Infinity;
@@ -8362,8 +8384,9 @@ Notes on the code:
 - `mass` prints the strike's measure over every ball and over the striker's ball alone. In a croquet stroke the
   striker's ball passes momentum to the croqueted ball within the first face interval, so the striker alone
   understates the head's effective mass (prototype drive: 0.286 kg); the sum over every ball is the measure.
-- The 0.21 s run in `cost` is the canonical drive with its hands timed `MAX_LEAD` early: the drive's hands carry no
-  share and no gain, so the path is the canonical one, started 60 ms before contact, and it runs to the cap.
+- The 0.51 s run in `cost` is the AC stop at 1 m/s and drive 0.5 with its hands timed `MAX_LEAD` early: its hands
+  carry no share and no gain, so the path is that stroke's, started 60 ms before contact, and its head comes to rest
+  on the turf, a closed contact, so it runs to the cap. The canonical drive no longer reaches the cap.
 
 - [ ] **Step 2: Run the probe**
 
@@ -8384,20 +8407,22 @@ Run each section separately, keeping each output for Step 3:
 Expected: every section prints, with no exception. Every line except the µs/step and median figures in `cost` matches
 pre-flight's record. If a deterministic line differs, stop and report it.
 
-Pre-flight's record replaces the reference below. Until then, these are the prototype's figures, measured while
-planning on `aeadd4c` (pass 4) with the spec's two preset changes applied (the AC stop's dip 11 mm; the pass roll's
-reach 0.30 m), at T = 0.08 s:
+Pre-flight's record replaces the reference below. Until then, these are the figures measured while planning, at
+T = 0.08 s: the prototype's (`aeadd4c`, pass 4, with the spec's two preset changes applied: the AC stop's dip 11 mm,
+the pass roll's reach 0.30 m), which this plan's code reproduced in its dry run, re-measured on this plan's code where
+the 0.45 s cap changed them (the drive's ratio and length, the cap's flags, `cost`) or the prototype had none:
 
-| Section | Prototype reference |
+| Section | Reference |
 |---|---|
-| `ratios` (3 m/s; 2, 2.5, 3, 3.5, 4 m/s) | drive 3.33 (2.86, 2.96, 3.33, 3.02, 3.47); AC stop 6.47 (6.66, 6.55, 6.47, 6.41, 6.37); GC stop 6.60 (6.62, 6.61, 6.60, 6.59, 6.59); half roll 2.83 (2.75, 2.79, 2.83, 2.86, 2.88); full roll 2.14 (1.73, 1.99, 2.14, 2.20, 52.47); pass roll 1.59 (1.26, 1.44, 1.59, 1.89, 2.11) |
-| `canonical` | entry jumps 0 on every setup; highest ball centre above R: single-ball 0.85, drive 0.93, AC stop 4.17, GC stop 0.81, half roll 0.72, full roll 0.82, pass roll 2.91 mm; regions face only, except face and rim for the full and pass rolls; release only in the drive, 110.0 ms after contactAt; braking hands / turf (N·s): single-ball −0.055 / 0, drive −1.236 / 0, AC stop 0.230 / 0.376, GC stop 1.697 / 0, half roll −0.706 / 0, full roll −2.108 / 0, pass roll −4.051 / 0; after contactAt 10.0, 150.0, 21.7, 10.0, 40.2, 83.4, 70.0 ms; the drive alone reaches the cap, with `impact-head-approaching`; `impact-off-face` once each on the full and pass rolls; no `impact-head-deep` |
+| `ratios` (3 m/s; 2, 2.5, 3, 3.5, 4 m/s) | drive 3.32 (2.49, 2.90, 3.32, 3.02, 3.47; prototype at the 0.15 s cap 3.33 (2.86, 2.96, 3.33, …)); AC stop 6.47 (6.66, 6.55, 6.47, 6.41, 6.37); GC stop 6.60 (6.62, 6.61, 6.60, 6.59, 6.59); half roll 2.83 (2.75, 2.79, 2.83, 2.86, 2.88); full roll 2.14 (1.73, 1.99, 2.14, 2.20, 52.47); pass roll 1.59 (1.26, 1.44, 1.59, 1.89, 2.11) |
+| `canonical` | entry jumps 0 on every setup; highest ball centre above R: single-ball 0.85, drive 0.93, AC stop 4.17, GC stop 0.81, half roll 0.72, full roll 0.82, pass roll 2.91 mm; regions face only, except face and rim for the full and pass rolls; release only in the drive, 110.0 ms after contactAt; braking hands / turf (N·s): single-ball −0.055 / 0, drive −1.253 / 0, AC stop 0.230 / 0.376, GC stop 1.697 / 0, half roll −0.706 / 0, full roll −2.108 / 0, pass roll −4.051 / 0; after contactAt 10.0, 181.4, 21.7, 10.0, 40.2, 83.4, 70.0 ms; none reaches the cap; `impact-off-face` once each on the full and pass rolls; no `impact-head-deep` |
 | `dip` | 8.0–11.5 mm meet both conditions; 11 mm: penetration 1.73 mm, the face interval ends at 1.17 ms and the turf interval starts at 12.70 ms, turf braking 0.376 N·s, ratio 6.47; 12 mm reaches 2.11 mm and raises `impact-head-deep`; 14 mm reaches 2.86 mm |
-| `coupling` (ratio at 0.04 s / 0.08 s) | drive 2.35 / 3.33; AC stop 6.45 / 6.47; GC stop 6.51 / 6.60; half roll 2.03 / 2.83; full roll 1.78 / 2.14; pass roll 1.33 / 1.59. Pass 4's single-ball hands' share: 0.754 % at 0.04 s, 0.395 % at 0.08 s |
+| `coupling` (ratio at 0.04 s / 0.08 s) | drive 2.35 / 3.32; AC stop 6.45 / 6.47; GC stop 6.51 / 6.60; half roll 2.03 / 2.83; full roll 1.78 / 2.14; pass roll 1.33 / 1.59. Pass 4's single-ball hands' share: 0.754 % at 0.04 s, 0.395 % at 0.08 s |
 | `mass` | drive closed form 1.007 kg (spec §3.4); strike over every ball 1.0066 kg; single-ball 1.0018 kg; the drive's striker's ball alone 0.2861 kg |
-| `tracking` | not measured on the prototype |
-| `cost` | the 0.21 s run: 42,000 steps, 210.0 ms, displacement beyond the summed path 2.08e-14 m (about 48,000× headroom) |
-| `timings` | not measured on the prototype with these presets |
+| `presets` | 225 runs per preset, none rejected; `impact-cap` only on 18 AC-stop runs (the head resting on the turf); `impact-head-approaching` on none; `impact-head-deep` on 72 AC-stop runs; `impact-off-face` drive 80, AC stop 65, GC stop 55, full roll 225, pass roll 180; longest before the cap after contactAt: single-ball 11.3, drive 324.8, AC stop 308.8, GC stop 226.0, half roll 213.7, full roll 298.3, pass roll 303.8 ms (this plan's code) |
+| `tracking` | firm before contact under 2.9e-7 m and 4.8e-7 rad on every preset; GC stop's check 7.1e-6 m; carry to the reach's end under 8.7e-6 m and 1.9e-5 rad; swing mode after contact outside a check (the residual): single-ball 4.2e-4 m, drive 4.9e-5 m, the relaxed AC stop (γ_T 0.1) 0.70 m (this plan's code) |
+| `cost` | the 0.51 s run: 102,000 steps, 510.0 ms, displacement beyond the summed path 1.49e-11 m (67× headroom; this plan's code at the 0.45 s cap) |
+| `timings` | AC stop: the arc 10–50 ms early misses the ball and runs to the cap; the hands' timing changes nothing (no share); the dip 20–50 ms early puts the lawn first (1.21–1.22 m/s against 1.380), 10 ms late or ×1.5 raises `impact-head-deep`. Full roll: ball first throughout, `impact-off-face` on every line (this plan's code) |
 
 - [ ] **Step 3: Record the outcomes in the roadmap**
 
@@ -8460,7 +8485,7 @@ describes a one-hand spring–damper and the 5 % criterion. Make these edits in
        bottom hand grips two-sided, and the hands' path ends after `handReach`, descending so the head finishes
        `groundDepth` below the turf.
      - The whole head meets the balls as a solid cylinder, with a re-entry guard. The end rule looks 30 ms ahead;
-       `TRACK_IMPACT_CAP` is 0.15 s.
+       `TRACK_IMPACT_CAP` is 0.45 s, so that a drive's follow-through re-hits are integrated.
      - The coupling is held at T = 0.08 s and ζ = 0.7 (user decision). From contact the hands draw little in the
        strike at any period, so the 5 % criterion no longer selects T. Exit criterion 3 is instead the swung body's
        effective mass at the face centre along aim, within 10 % of the head's mass (prototype: 1.007 kg for the
@@ -8531,7 +8556,7 @@ describes a one-hand spring–damper and the 5 % criterion. Make these edits in
      presets' closed forms>.
    - **Tracking** at `HAND_COUPLING` with no ball and no turf (`tracking`): <per preset and phase, the socket and
      angle errors; the swing mode's residual after contact outside a check>.
-   - **Cost** (for P5; `cost`): <tracked and force-table steps and µs/step>. The reach filter over the 0.21 s impact:
+   - **Cost** (for P5; `cost`): <tracked and force-table steps and µs/step>. The reach filter over the 0.51 s impact:
      <the reach-filter line>.
    - **Timing** (`timings`; the user's account: every action is timed, and mistimed, by the player): <from how early
      each action puts the lawn before the ball or misses it, the dig and slide, the striker's ball's speed and launch
@@ -8636,9 +8661,11 @@ Task 12's, in the roadmap's "P2b.2b.1 outcomes carried forward (for P2b.2b.2)"; 
 - **The turf's response under load.** The non-linear yield and rebound of the lawn under a pressing face, so that the
   ball rolls out forward with topspin.
 - **Observations to confirm or revise.**
-  - The canonical drive's follow-through catches the striker's ball again about 92 ms after contact and the impact
-    then reaches `TRACK_IMPACT_CAP` with the head still closing (prototype). Whether the cap or the end rule should
-    change is decided with the probe's `presets` counts.
+  - The canonical drive's follow-through catches the striker's ball again about 92 ms after contact: after the
+    strike the bottom hand's rate guide steers the head back towards the planned (unstruck) arc and restores the
+    speed it lost (+4.05 N·s along aim between the hits, the top hand −3.06 N·s). The user kept that model and set
+    `TRACK_IMPACT_CAP` to 0.45 s so every re-hit is integrated: the drive ends by itself 181.4 ms after contact
+    (planning). Whether the guide should track the planned arc after a strike is P2b.2b.2's question.
   - The bottom hand's release by reach opened only in the drive's follow-through (110 ms after contact, prototype);
     it is the user's mechanism and stays, but nearly never acts within an impact.
   - The AC stop's highest ball centre is 4.17 mm above R against exit criterion 4's 5 mm (prototype), the closest of
@@ -8684,8 +8711,11 @@ that produces them.
 (eb5c332), its RED step compared and its checks run: green at every task, 763 passed and 2 skipped at the end
 (`SLOW_TESTS=1`: 765), the digest `cmp`-identical after Tasks 1, 4, 5, 6, 7 and 11, shotMix exact. Task 12's probe ran
 all nine sections and reproduced its prototype reference except the reach filter's drift, 1.74e-12 m (575× inside
-`WAKE_MARGIN`) against the prototype's 2.1e-14 m; Task 4's `WAKE_MARGIN` comment still holds. This is not the
-pre-flight: pre-flight still runs the plan from the PR's head and measures spec §9.
+`WAKE_MARGIN`) against the prototype's 2.1e-14 m. The run found the canonical drive held to the 0.15 s cap by the
+look-ahead (the free pendulum's unstruck v_path predicted a catch on every step); the user raised `TRACK_IMPACT_CAP`
+to 0.45 s and `FREE_SPAN` to 0.55 s, and the suite, the digest `cmp` and the probe were re-run on that code: the
+same counts pass, the digest is unchanged, and Task 12 Step 2's reference carries the changed figures. This is not
+the pre-flight: pre-flight still runs the plan from the PR's head and measures spec §9.
 
 The re-contact test is a straight croquet drive (Task 4), not the spec's split: a straight drive is the clearest case
 of a striker's ball leaving slower than the head, as in the first plan.
