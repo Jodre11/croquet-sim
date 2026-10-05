@@ -137,7 +137,7 @@ to be firm, with the mallet head following through the ball and onto the ground.
   bottom hand is a one-sided rate guide, two-sided through a check. Carry (rolls, after Riches): the slope is held, the
   bottom hand grips two-sided, and the hands' path ends after `handReach`, descending so the head finishes
   `groundDepth` below the turf. A firm off-aim grip with a gated reach end (prototype pass 5) was tried and not
-  adopted: it broke the half roll and did not fix the full roll.
+  adopted: it broke the half roll and fixed neither steep roll.
 - **Release by reach** (§3.3): the bottom hand opens once the shaft has turned through its reach slack.
 - **The whole head meets the balls** (§4.5): a solid-cylinder contact with continuous normal, its regions recorded, and
   a re-entry guard.
@@ -148,7 +148,9 @@ to be firm, with the mallet head following through the ball and onto the ground.
   per-shot input) and `groundDepth`; the body gains `armMass`, `reachSlack` and an optional rate-guide cap. The
   presets follow Riches and the prototype's calibration; the AC stop rises 4°.
 - **Testing** (§8): mechanism tests for the new model; the braking tests restated on the canonical setups.
-- **Deferred** (§10): the low-speed face–ball law, the turf under load and the full roll's calibration go to P2b.2b.2.
+- **Deferred** (§10): the low-speed face–ball law, the turf under load and the steep rolls' calibration go to P2b.2b.2.
+  The full and pass rolls (lean 45° and 48°) are known misses in this phase: both carry the striker's ball on a steep
+  face, which needs those two laws (user decision, 2026-10-05).
 
 This note supersedes the earlier notes where they differ: the AC stop's `ballAhead` of 0.08 m, 5.7° rise and 2.2 mm
 approach; the roll clearances of 30.9, 41.2 and 46.4 mm; `shaftLean` (now `lean`) and the radius from
@@ -924,8 +926,8 @@ Exit criterion 2. The `force` migration is mechanical and reviewed by the digest
 - The coaching ratios (croqueted ball's distance over the striker's) on the canonical setups and over 2–4 m/s,
   recorded against the coaching ranges: drive 3–4, stops 6–10, half roll about 2, full roll about 1, pass roll below
   1. The prototype (pass 4, T 0.08 s) gave drive 3.33, AC stop 6.55, GC stop 6.60, half roll 2.83 (2.75–2.88 over
-  2–4 m/s), full roll 2.14 (a known miss, deferred, §10) and pass roll 1.59 at 3 m/s, 1.26 at 2 m/s. The pass roll's
-  0.33 at 3 m/s and 0.81 at 2 m/s came from pass 5's firm off-aim grip, which was not adopted.
+  2–4 m/s), and the two known misses (deferred, §10): full roll 2.14, pass roll 1.59 at 3 m/s and 1.26 at 2 m/s. The
+  pass roll's 0.33 at 3 m/s and 0.81 at 2 m/s came from pass 5's firm off-aim grip, which was not adopted.
 - Per canonical setup: `entryJumps`, the highest ball centre, the head regions touched, the bottom hand's release
   time, the hands' and turf's braking impulses, the longest tracked impact after `contactAt` (confirming or revising
   `TRACK_IMPACT_CAP`), and how often `impact-head-deep`, `impact-cap`, `impact-head-approaching` and
@@ -943,8 +945,9 @@ Exit criterion 2. The `force` migration is mechanical and reviewed by the digest
 
 **To P2b.2b.2 (calibration):** sourced swing defaults per preset; the face–ball and ball–ball contact-time fit; the
 hand coupling's T and ζ, `armMass`, `reachSlack` and the grips, fitted to the ratios; the stop-shot and drive ratio
-calibration and held-out validation (rolls, pass roll, stop → pass-roll ordering, pull, stop-shot lift); the full
-roll's calibration (its ratio, about 2.1 against about 1, is a known miss); which stop preset is the calibration
+calibration and held-out validation (rolls, pass roll, stop → pass-roll ordering, pull, stop-shot lift); the steep
+rolls' calibration (known misses: the full roll about 2.1 against about 1, the pass roll about 1.6 against below 1);
+which stop preset is the calibration
 target (§5.4); the low-speed face–ball law (restitution falling towards inelastic at low closing speed: a roll is a
 30–60 ms carry, not a collision, and the modelled striker's ball chatters on the face 4–16 times); the turf's response
 under load (the non-linear yield and rebound of the lawn under a pressing face, so that the ball rolls out forward with
@@ -968,7 +971,7 @@ the player sets up and rehearses a shot), not here.
   place of the 5 % criterion; the presets as §5.4 gives them.
 - "P2b.2b.1 pre-flight outcomes (2026-10-05)": the roll catapult and the relaxed AC check, the prototype passes and
   which were adopted, and the prototype's ratios (§9).
-- P2b.2b.2 row: the low-speed face–ball law, the turf under load and the full roll's calibration; T, `armMass`,
+- P2b.2b.2 row: the low-speed face–ball law, the turf under load and the steep rolls' calibration; T, `armMass`,
   `reachSlack` and the grips fitted to the ratios.
 - P3 row: `SwingProfile` is the physical profile P3 wraps (with grip style, weighting and face). Which of the drive
   entry's fields P3 fits is P3's decision; the stance (hands, grips and lean) and the body are entered (product spec
