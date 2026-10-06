@@ -15,11 +15,12 @@ import {
     type Quaternion,
 } from "../../../src/engine/impact/rigidBody";
 import { validateImpact } from "../../../src/engine/impact/simulateImpact";
-import { swingOrientation } from "../../../src/engine/impact/track";
+import { headOnPath, prepareTrack, swingOrientation } from "../../../src/engine/impact/track";
 import type {
     ContactState,
     Coupling,
     Dip,
+    Drive,
     DriveSample,
     FaceMaterial,
     Hands,
@@ -98,6 +99,11 @@ export function levelArc(centre: Vec3, o: Partial<SwingArc> = {}): SwingArc {
         groundDepth: 0,
         ...o,
     };
+}
+
+/** A tracked contact state: `head` on `drive`'s path at time `t` (s), with the test face. */
+export function onArc(drive: TrackDrive, head: MalletHead = TEST_HEAD, t = 0): ContactState {
+    return { head, face: TEST_FACE, ...headOnPath(prepareTrack(drive, head, STANDARD_GRAVITY), head, t), drive };
 }
 
 /** A drive that carries the head's weight plus `force` (world frame) for `window` seconds. */
@@ -366,6 +372,28 @@ export function mirrorBall(s: BallState): BallState {
     };
 }
 
+/**
+ * A drive reflected across y = 0. A tracked drive reflects its arc's vectors; its angles, coupling and hands are
+ * unchanged: the pitch axis aim × ẑ is a pseudovector and reflects as a spin does, so a turn θ about it reflects to the
+ * same θ about the reflected axis, and the path's orientation rot(n, θ) ⊗ q_aim reflects factor by factor.
+ */
+function mirrorDrive(d: Drive): Drive {
+    if (d.kind === "force") {
+        return { kind: "force", samples: d.samples.map((s) => ({ t: s.t, force: mirrorVec(s.force) })) };
+    }
+    const { arc } = d;
+    return {
+        ...d,
+        arc: {
+            ...arc,
+            pivot: mirrorVec(arc.pivot),
+            pivotVelocity: mirrorVec(arc.pivotVelocity),
+            pivotAcceleration: mirrorVec(arc.pivotAcceleration),
+            aim: mirrorVec(arc.aim),
+        },
+    };
+}
+
 export function mirrorContact(c: ContactState): ContactState {
     return {
         ...c,
@@ -373,7 +401,7 @@ export function mirrorContact(c: ContactState): ContactState {
         orientation: mirrorQuat(c.orientation),
         velocity: mirrorVec(c.velocity),
         angularVelocity: mirrorSpin(c.angularVelocity),
-        drive: { kind: "force", samples: c.drive.samples.map((s) => ({ t: s.t, force: mirrorVec(s.force) })) },
+        drive: mirrorDrive(c.drive),
     };
 }
 

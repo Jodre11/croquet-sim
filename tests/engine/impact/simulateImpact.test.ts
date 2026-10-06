@@ -1,16 +1,16 @@
 import { describe, expect, it } from "vitest";
 import { CONTACT_TOLERANCE } from "../../../src/engine/detect";
-import { length, sub, vec3 } from "../../../src/engine/math/vec3";
+import { add, length, sub, vec3 } from "../../../src/engine/math/vec3";
 import { stateAtTime } from "../../../src/engine/sample";
 import { ENGINE_VERSION, simulateFreeMotion } from "../../../src/engine/simulate";
 import type { BallStates, World } from "../../../src/engine/types";
 import { obstaclesOf, uniformLawn } from "../../../src/engine/world";
 import { obstacleContact } from "../../../src/engine/impact/contacts";
 import type { ImpactBall } from "../../../src/engine/impact/integrate";
-import { prepareImpact, simulateImpact } from "../../../src/engine/impact/simulateImpact";
-import type { ContactState } from "../../../src/engine/impact/types";
+import { prepareImpact, simulateImpact, validateImpact } from "../../../src/engine/impact/simulateImpact";
+import type { ContactState, Coupling, Hands, StrokeMode, SwingArc } from "../../../src/engine/impact/types";
 import { TEST_BALL, TEST_TURF, ballAt, hoopWithUprightAt, testWorld } from "../support/fixtures";
-import { drive, strike } from "../support/impact";
+import { TEST_HEAD, drive, levelArc, onArc, strike, trackDrive } from "../support/impact";
 
 const R = TEST_BALL.radius;
 const WORLD = testWorld();
@@ -345,5 +345,124 @@ describe("a ball touching an obstacle", () => {
         expect(result.touchingAtStart).toEqual(["blue/red", "blue@peg"]);
         expect(result.events.some((e) => e.kind === "impact-cap")).toBe(false);
         expect(() => simulateFreeMotion(result.handover, WORLD)).not.toThrow();
+    });
+});
+
+describe("simulateImpact with a tracked drive", () => {
+    // A still, level arc with the head's face 1 µm short of blue's sunk centre, swinging through it at 3 m/s: the
+    // head's centre is the arc radius plus the socket's height above it from the pivot.
+    const STILL = levelArc(sub(SUNK, vec3(R + 1e-6 + TEST_HEAD.length / 2, 0, 0)));
+    const ARC: SwingArc = { ...STILL, omega0: 3 / (STILL.radius + TEST_HEAD.socket.z) };
+    const DRIVE = trackDrive(ARC);
+    const tracked = onArc(DRIVE);
+    const withArc = (over: Partial<SwingArc>): ContactState => ({
+        ...tracked,
+        drive: { ...DRIVE, arc: { ...ARC, ...over } },
+    });
+    const withCoupling = (over: Partial<Coupling>): ContactState => ({
+        ...tracked,
+        drive: { ...DRIVE, coupling: { ...DRIVE.coupling, ...over } },
+    });
+    const withHands = (over: Partial<Hands>): ContactState => ({
+        ...tracked,
+        drive: { ...DRIVE, hands: { ...DRIVE.hands, ...over } },
+    });
+
+    it("runs a tracked strike and hands the ball over moving", () => {
+        const result = simulateImpact(tracked, { blue: BLUE }, WORLD);
+        // Prototype (aeadd4c, two hands, no arm mass): ends at the window's end, 10 ms, blue at 3.73 m/s, with no event
+        // but turf-lift. Pre-flight re-measures.
+        expect(result.handover.blue?.velocity.x).toBeGreaterThan(0);
+        expect(result.events.some((e) => e.kind === "impact-cap")).toBe(false);
+        expect(result.duration).toBeGreaterThanOrEqual(ARC.window);
+    });
+
+    it("accepts a head that does not start on its path", () => {
+        const off = { ...tracked, position: add(tracked.position, vec3(-1e-3, 0, 1e-3)) };
+        expect(() => simulateImpact(off, { blue: BLUE }, WORLD)).not.toThrow();
+    });
+
+    it("prepares the path once, and passes a force table through unchanged", () => {
+        const setup = prepareImpact(tracked, { blue: BLUE }, WORLD);
+        expect(setup.drive.kind).toBe("track");
+        // θ_a + ω₀·w + ½·α·w² with θ_a = 0 and α = 0 is exactly ω₀·w (prototype: equal to the last bit).
+        expect(setup.drive.kind === "track" && setup.drive.thetaEnd).toBe(ARC.omega0 * ARC.window);
+        const forced = strike(BLUE.position);
+        expect(prepareImpact(forced, { blue: BLUE }, WORLD).drive).toBe(forced.drive);
+    });
+
+    it("accepts pivot motion out of the swing plane by rounding only (1e-12 of its size)", () => {
+        const rounded = withArc({ pivotVelocity: vec3(1, 1e-13, 0) });
+        expect(() => validateImpact(rounded, { blue: BLUE }, WORLD)).not.toThrow();
+        const beyond = withArc({ pivotVelocity: vec3(1, 1e-11, 0) });
+        expect(() => validateImpact(beyond, { blue: BLUE }, WORLD)).toThrow(/arc\.pivotVelocity must lie in/);
+    });
+
+    const rejections: readonly [string, ContactState, RegExp][] = [
+        ["a non-finite pivot", withArc({ pivot: vec3(NaN, 0, 1) }), /arc\.pivot must be finite/],
+        [
+            "a non-finite pivot velocity",
+            withArc({ pivotVelocity: vec3(0, 0, Infinity) }),
+            /arc\.pivotVelocity must be finite/,
+        ],
+        [
+            "a non-finite pivot acceleration",
+            withArc({ pivotAcceleration: vec3(NaN, 0, 0) }),
+            /arc\.pivotAcceleration must be finite/,
+        ],
+        ["a non-finite aim", withArc({ aim: vec3(NaN, 0, 0) }), /arc\.aim must be finite/],
+        ["a non-finite start angle", withArc({ theta0: Infinity }), /arc\.theta0 must be finite/],
+        ["a non-finite arc rate", withArc({ omega0: NaN }), /arc\.omega0 must be finite/],
+        ["a non-finite arc acceleration", withArc({ alpha: NaN }), /arc\.alpha must be finite/],
+        ["a non-positive radius", withArc({ radius: 0 }), /arc\.radius must be a positive finite number/],
+        ["a non-positive window", withArc({ window: 0 }), /arc\.window must be a positive finite number/],
+        ["a non-positive hands' window", withArc({ handWindow: 0 }), /arc\.handWindow must be a positive/],
+        ["a negative arc start", withArc({ arcStart: -0.01 }), /arc\.arcStart must be a non-negative finite time/],
+        ["a negative hands' start", withArc({ handStart: -0.01 }), /arc\.handStart must be a non-negative/],
+        ["a negative contact time", withArc({ contactAt: -0.01 }), /arc\.contactAt must be a non-negative/],
+        ["a dip starting before t = 0", withArc({ dip: { ...ARC.dip, start: -0.01 } }), /arc\.dip\.start must be/],
+        ["a dip of no duration", withArc({ dip: { ...ARC.dip, duration: 0 } }), /arc\.dip\.duration must be/],
+        ["a negative dip depth", withArc({ dip: { ...ARC.dip, depth: -0.001 } }), /arc\.dip\.depth must be/],
+        [
+            "an unknown mode",
+            withArc({ mode: "glide" as unknown as StrokeMode }),
+            /arc\.mode must be "swing" or "carry"/,
+        ],
+        ["a negative reach", withArc({ handReach: -0.01 }), /arc\.handReach must be non-negative/],
+        ["a negative ground depth", withArc({ groundDepth: -0.001 }), /arc\.groundDepth must be non-negative/],
+        ["an aim that is not unit", withArc({ aim: vec3(1.1, 0, 0) }), /arc\.aim must be a horizontal unit vector/],
+        ["an aim that is not horizontal", withArc({ aim: vec3(0.8, 0, 0.6) }), /arc\.aim must be a horizontal/],
+        ["a non-positive period", withCoupling({ period: 0 }), /coupling\.period must be a positive/],
+        ["a negative damping ratio", withCoupling({ dampingRatio: -0.1 }), /coupling\.dampingRatio must be/],
+        ["a negative relaxation time", withCoupling({ relaxAt: -0.01 }), /coupling\.relaxAt must be a non-negative/],
+        ["a bottom hand at the socket", withHands({ bottom: 0 }), /hands\.bottom must lie in \(0, arc\.radius\)/],
+        [
+            "a bottom hand at the top hand",
+            withHands({ bottom: ARC.radius }),
+            /hands\.bottom must lie in \(0, arc\.radius\)/,
+        ],
+        ["a zero grip tension", withHands({ gripTension: 0 }), /hands\.gripTension must lie in \(0, 1\]/],
+        ["a grip tension above 1", withHands({ gripTension: 1.5 }), /hands\.gripTension must lie in \(0, 1\]/],
+        ["a zero bottom grip", withHands({ bottomGrip: 0 }), /hands\.bottomGrip must lie in \(0, 1\]/],
+        ["a bottom grip above 1", withHands({ bottomGrip: 1.5 }), /hands\.bottomGrip must lie in \(0, 1\]/],
+        ["a negative arm mass", withHands({ armMass: -0.1 }), /hands\.armMass must be non-negative/],
+        ["a negative reach slack", withHands({ reachSlack: -0.01 }), /hands\.reachSlack must be non-negative/],
+        ["a negative guide effort", withHands({ guideEffort: -0.1 }), /hands\.guideEffort must lie in \[0, 1\]/],
+        ["a guide effort above 1", withHands({ guideEffort: 1.5 }), /hands\.guideEffort must lie in \[0, 1\]/],
+        [
+            "a pivot velocity out of the swing plane",
+            withArc({ pivotVelocity: vec3(0, 0.1, 0) }),
+            /arc\.pivotVelocity must lie in the swing plane/,
+        ],
+        [
+            "a pivot acceleration out of the swing plane",
+            withArc({ pivotAcceleration: vec3(0, 1, 0) }),
+            /arc\.pivotAcceleration must lie in the swing plane/,
+        ],
+    ];
+
+    it.each(rejections)("rejects %s", (_name, contact, pattern) => {
+        expect(() => simulateImpact(contact, { blue: BLUE }, WORLD)).toThrow(RangeError);
+        expect(() => simulateImpact(contact, { blue: BLUE }, WORLD)).toThrow(pattern);
     });
 });

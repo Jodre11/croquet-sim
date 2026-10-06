@@ -136,8 +136,8 @@ export interface ForceDrive {
     readonly samples: readonly DriveSample[];
 }
 
-/** What the hands do to the head during the impact (P2b.2b.1 design §3.1). */
-export type Drive = ForceDrive;
+/** What the hands do to the head during the impact (P2b.2b.1 design §3.1): a force table, or a tracked drive. */
+export type Drive = ForceDrive | TrackDrive;
 
 /** What the swing delivers to the impact: the head and its face, its state at t = 0, and the drive. */
 export interface ContactState extends HeadState {
