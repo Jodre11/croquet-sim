@@ -101,3 +101,33 @@ describe("obstacle and fault reference data", () => {
         expect(Object.keys(lawsReference.faults)).toEqual([...FAULT_LAW_KEYS]);
     });
 });
+
+describe("swing, coupling and head–turf reference data", () => {
+    it("loads the provisional hand coupling", () => {
+        expect(contactReference.handCouplingPeriod.value).toBe(0.08);
+        expect(contactReference.handCouplingDampingRatio.value).toBe(0.7);
+    });
+
+    it("loads the default body's arm mass and reach slack", () => {
+        expect(contactReference.armMass.value).toBe(0.8);
+        expect(contactReference.armMass.unit).toBe("kg");
+        expect(contactReference.reachSlack.value).toBe(0.03);
+        expect(contactReference.reachSlack.unit).toBe("m");
+    });
+
+    it("loads the head–turf friction and the deep-head limit", () => {
+        expect(contactReference.headTurfFriction.value).toBe(0.5);
+        expect(contactReference.headTurfFriction.bounds).toEqual([0.3, 0.7]);
+        expect(contactReference.headDeepLimit.value).toBe(0.002);
+    });
+
+    it("loads the default shaft, 36 in", () => {
+        expect(malletReference.shaftLength.value).toBeCloseTo(36 * 0.0254, 12);
+    });
+
+    it("quotes 29.1.14 after 29.1.13", () => {
+        const keys: readonly string[] = FAULT_LAW_KEYS;
+        expect(keys.indexOf("29.1.14")).toBe(keys.indexOf("29.1.13") + 1);
+        expect(lawsReference.faults["29.1.14"].quote).toContain("damages the court with the mallet");
+    });
+});

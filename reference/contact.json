@@ -38,5 +38,53 @@
         "source": "L. E. Silbert, D. Ertaş, G. S. Grest, T. C. Halsey, D. Levine, S. J. Plimpton, 'Granular flow down an inclined plane: Bagnold scaling and rheology', Phys. Rev. E 64, 051302 (2001), DOI 10.1103/PhysRevE.64.051302, https://arxiv.org/abs/cond-mat/0105071",
         "provenance": "analogue",
         "note": "A discrete-element modelling convention, not a croquet measurement. Silbert et al.: \"For Hertzian contacts [37], the ratio kt /kn depends on the Poisson ratio of the material, and is about 2/3 for most materials. For ease in our simulations, we use a value kt /kn =2/7, which makes the period of normal and shear contact oscillations equal to each other for Model L [38]. However, the contact dynamics are not very sensitive to the precise value of this ratio.\" Bounds are 2/7 and the Hertzian 2/3. The engine's TANGENTIAL_STIFFNESS_RATIO (impact/contactLaw.ts) must equal this value."
+    },
+    "handCouplingPeriod": {
+        "value": 0.08,
+        "unit": "s",
+        "bounds": [0.01, 0.2],
+        "source": "P2b.2b.1 design §3.4 (docs/superpowers/specs/2026-10-04-p2b2b1-swing-shot-design.md): user decision, 2026-10-05",
+        "provenance": "derived",
+        "note": "Provisional; P2b.2b.2 fits it, with armMass, reachSlack and the grips, to the coaching ratios. The natural period of a firm grip: each hand's gain is k = g·M·(2π/T)² and c = 2ζ·sqrt(k·M), its twist gains alike with the head's inertia about the shaft (design §3.3). It was first to be the shortest period, at damping ratio 0.7, for which the hands' impulse beyond the feed-forward in a 3 m/s centre strike on a single ball stays within 5 % of the ball's momentum change; the one-hand pre-flight search gave 0.077 s (4.98 %), and the user kept 0.08 s (4.80 %). Under the two-hand model that criterion no longer constrains it: from contact the hands track velocity only and the top hand is a pivot on the shaft's line, so the impulse is 0.40 % at 0.08 s and 2.3 % at 0.01 s (two-hand prototype). What keeps the strike the head's is the effective mass the face presents (design §3.4, exit criterion 3). Bounds: the one-hand pre-flight sweep's range (10-200 ms)."
+    },
+    "handCouplingDampingRatio": {
+        "value": 0.7,
+        "unit": "1",
+        "bounds": [0.2, 1],
+        "source": "P2b.2b.1 design §3.4 (docs/superpowers/specs/2026-10-04-p2b2b1-swing-shot-design.md): user decision, 2026-10-05",
+        "provenance": "derived",
+        "note": "Provisional; P2b.2b.2 fits it. The damping ratio of a firm grip, for each hand's translation and twist alike (design §3.3). Bounds: the one-hand pre-flight sweep's range (0.2-1)."
+    },
+    "armMass": {
+        "value": 0.8,
+        "unit": "kg",
+        "bounds": [0, 1.5],
+        "source": "P2b.2b.1 design §3.3 and §7 (docs/superpowers/specs/2026-10-04-p2b2b1-swing-shot-design.md): the two-hand prototype's calibration (branch proto-two-hands, commit aeadd4c)",
+        "provenance": "derived",
+        "note": "Provisional; P2b.2b.2 fits it to the coaching ratios. The effective mass of the player's arms and hands, carried rigidly at the top grip, so that it and the head swing as one body (design §3.3); it adds inertia, not weight, since the arm's weight is the player's. No measurement of an effective arm mass in a croquet stroke was found. With it the swung body presents 1.007 kg at the drive's face centre along aim (design §3.4). Bounds: the range the prototype tried, from 0 (the head alone) to 1.5 kg."
+    },
+    "reachSlack": {
+        "value": 0.03,
+        "unit": "m",
+        "bounds": [0.01, 0.03],
+        "source": "P2b.2b.1 design §3.3 and §7 (docs/superpowers/specs/2026-10-04-p2b2b1-swing-shot-design.md): the two-hand prototype's calibration (branch proto-two-hands, commit aeadd4c)",
+        "provenance": "derived",
+        "note": "Provisional; P2b.2b.2 fits it. The user's release by reach: the bottom hand, on an arm, opens once the shaft's turn since contact carries its grip further than this, (top - bottom)·Δθ > reachSlack (design §3.3). No measurement was found. In the prototype the release opened only in the drive's follow-through, about 110 ms after contact. Bounds: the range the prototype tried (0.01-0.03 m)."
+    },
+    "headTurfFriction": {
+        "value": 0.5,
+        "unit": "1",
+        "bounds": [0.3, 0.7],
+        "source": "Stan Hall, 'When a Mallet Strikes a Ball', section 'Coefficients of Friction' (1994; Oxford Croquet, updated 28 April 2026), https://oxfordcroquet.org/tech/hall/",
+        "provenance": "analogue",
+        "note": "No measured friction of a mallet head on turf was found. Analogue: Hall slid croquet balls embedded in polystyrene along a croquet court: \"For a fairly fast court (normal, cut to 6mm) the coefficient was 0.48. For a fairly heavy court, the coefficient was 0.53.\" (friction.json ballTurfSliding). A wooden head's base or rim sliding on the same turf is taken alike: 0.5, between the two. Bounds: an allowance for wood against plastic and for a rim against a flat (P2b.2b.1 design §7). P2b.2b.2 sources it, and decides whether a heel ploughing into the turf needs a drag term."
+    },
+    "headDeepLimit": {
+        "value": 0.002,
+        "unit": "m",
+        "bounds": [0.002, 0.0072],
+        "source": "P2b.2b.1 design §4.2 (docs/superpowers/specs/2026-10-04-p2b2b1-swing-shot-design.md); upper bound: Don Gugan, 'The Physics of Croquet Strokes: Analysis of the CA high-speed DVD', Table 4(b) (2009; Oxford Croquet), https://oxfordcroquet.org/tech/gugan4/",
+        "provenance": "derived",
+        "note": "A model limit, not a property of turf. The impact's turf is a plane with a linear spring, fitted to a ball pressed into it (ballTurfStiffness); a mallet head's edge or rim presses a footprint that law was not fitted to, so a head driven more than this below the turf plane raises impact-head-deep. Provisional. Upper bound: the deepest ball penetration Gugan measured, 7.2 mm (Table 4(b), roll A4R)."
     }
 }

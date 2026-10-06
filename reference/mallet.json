@@ -38,5 +38,13 @@
         "source": "Jaques London, 'Croquet Mallet - Richmond', https://www.jaqueslondon.co.uk/products/croquet-mallet-richmond; lower bound: Oxford Croquet, 'Equipment - Croquet Mallets', https://oxfordcroquet.org/equip/mallets/",
         "provenance": "direct",
         "note": "Jaques (round head): \"Head 9\" Wide x 3\" Diameter or 23cm Wide x 76mm Diameter.\" (3 in = 0.0762 m). The only round-head diameter found. Lower bound from square heads, \"Typical mallet faces are 2.25\" - 2.5\" (57 - 64 mm) square.\" (2.5 in = 0.0635 m). The shaft joins the head at its mid-point at right angles (Laws 5.5.1, \"a head with a shaft firmly connected to its mid-point and at right-angles to it\", quoted at https://oxfordcroquet.org/tech/towlson/). Inertia is derived in the engine for a uniform solid cylinder (rigidBody.ts solidCylinderInertia). That is Towlson's \"IRnd = Mw ( L2 + 3a2 ) / 12\" about the shaft axis: 4.7e-3 kg m² for this head. Russ ('Mallets: End-weighting and the Moment of Inertia', https://oxfordcroquet.org/tech/russ/) measured 33.4 kg cm² (3.3e-3 kg m²) for a 'Traditional' round wooden 9\" head. Weakly supported."
+    },
+    "shaftLength": {
+        "value": 0.9144,
+        "unit": "m",
+        "bounds": [0.8128, 0.9144],
+        "source": "USCA 9-wicket, 'Updated Advice & Information on Choosing a Mallet' (2014), http://www.9wicketcroquet.com/howtoplay/153/updated-advice-information-on-choosing-a-mallet; Croquet Network, 'Buying Your First Croquet Mallet' (2023), https://www.croquetnetwork.com/croquet-network-home/2023/5/28/buying-your-first-croquet-mallet",
+        "provenance": "direct",
+        "note": "USCA: \"A “standard mallet” traditionally would weigh 3 pounds total (1.362Kg), have a 36” wood shaft and a 9-11” head length.\" and \"In general , people under 5 feet 4 inches use 32 inch shafts; up to 5 feet 10’ a 34 inch shaft and above 5’ 11” a 36 inch shaft.\" Croquet Network: \"as a general rule for a first mallet, I think an 11-inch head and a 36-inch shaft is a good starting point.\" SI: 36 in x 0.0254 = 0.9144 m. Bounds 32-36 in, USCA: \"Lengths below 32 inches and above 36 inches are rare.\" The default profile's shaft (P2b.2b.1 design §5.4): a stance's top hand, measured from the socket along it, may not lie beyond it (design §5.3)."
     }
 }
