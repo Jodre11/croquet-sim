@@ -11,13 +11,24 @@
  * target is P + r·(sin θ·aim − cos θ·ẑ). The head and the arm mass at the top grip move as one swung body (design
  * §3.3). Exact operations only (sinCos and atan2 from elementary.ts), like the rest of the engine.
  */
+import { contactReference } from "../../reference/index";
 import { atan2, sinCos } from "../math/elementary";
-import { add, cross, dot, scale, sub, vec3, type Vec3 } from "../math/vec3";
+import { ZERO, add, cross, dot, scale, sub, vec3, type Vec3 } from "../math/vec3";
 import { headLowestPoint } from "./contacts";
 import { multiply, rotate, rotateInverse, type Quaternion } from "./rigidBody";
 import type { Coupling, Hands, HeadState, MalletHead, SwingArc, TrackDrive } from "./types";
 
 const UP = vec3(0, 0, 1);
+const FORWARD = vec3(1, 0, 0);
+
+/**
+ * The hands' coupling, period (s) and damping ratio of a firm grip (design §3.4). Provisional, a user decision
+ * (reference/contact.json); P2b.2b.2 fits it.
+ */
+export const HAND_COUPLING = {
+    period: contactReference.handCouplingPeriod.value,
+    dampingRatio: contactReference.handCouplingDampingRatio.value,
+} as const;
 
 /**
  * Step (s) of the free pendulum's table (design §3.2): the impact's own step, so the table resolves the swing as
@@ -497,4 +508,198 @@ export function headOnPath(track: PreparedTrack, head: MalletHead, t: number): H
 export function inCheck(track: PreparedTrack, t: number): boolean {
     const { arc } = track;
     return arc.alpha < 0 && t >= arc.arcStart && t <= arc.arcStart + arc.window;
+}
+
+/**
+ * The share of a check's planned deceleration the hands apply to a head pitching at `rate` (rad/s) about n, the path
+ * at `planned` (design §3.3): all of it at or above the path's rate, none at or below rest, and rate/planned between
+ * them. A head the strike has slowed then keeps its fraction of the path's rate, so it comes to rest when the path
+ * does (a full check's window's end) and never passes rest.
+ */
+function checkShare(rate: number, planned: number): number {
+    if (rate <= 0) {
+        return 0;
+    }
+    if (rate >= planned) {
+        return 1;
+    }
+    return rate / planned;
+}
+
+/**
+ * One integrate run's grip state (design §3.3): the shaft's arc angle at relaxAt, and when the bottom hand opened and
+ * the shaft's turn since relaxAt then. Mutable; handLoad updates it.
+ */
+export interface GripState {
+    contactPitch: number | null;
+    releasedAt: number | null;
+    releaseDelta: number;
+}
+
+/** A grip state for a new run: no contact yet, the bottom hand closed. */
+export function newGripState(): GripState {
+    return { contactPitch: null, releasedAt: null, releaseDelta: 0 };
+}
+
+/** The hands' load in one step (design §3.3, §3.7), world frame. */
+export interface HandLoad {
+    /** F: both hands' forces. */
+    readonly force: Vec3;
+    /** F's feed-forward parts. */
+    readonly feedForward: Vec3;
+    /** About the head's centre: each hand's force's moment at its grip, and the bottom hand's couple. */
+    readonly torque: Vec3;
+    /** Each hand's force. */
+    readonly top: Vec3;
+    readonly bottom: Vec3;
+}
+
+/** θ_err = 2·sign(w)·vec(target ⊗ q̄), w the product's scalar part: the rotation taking q to `target` (world frame). */
+function rotationError(target: Quaternion, q: Quaternion): Vec3 {
+    const e = multiply(target, { w: q.w, x: 0 - q.x, y: 0 - q.y, z: 0 - q.z });
+    const k = e.w < 0 ? -2 : 2;
+    return vec3(k * e.x, k * e.y, k * e.z);
+}
+
+/** π(s) = atan2(−s·aim, s·ẑ): the arc angle of a shaft along `s`. */
+function shaftPitch(s: Vec3, aim: Vec3): number {
+    return atan2(0 - dot(s, aim), s.z);
+}
+
+/** The part of `v` perpendicular to the unit `s`. */
+function across(v: Vec3, s: Vec3): Vec3 {
+    return sub(v, scale(s, dot(v, s)));
+}
+
+/**
+ * The hands' load on the head in `state` at time t (design §3.3), updating `grip`. The feed-forward is the wrench
+ * that makes the path's rigid motion exact for the swung body: F_ff = M·a_c + m·g·ẑ and, about its centre,
+ * τ_ff = I'·α_path + ω_path × (I'·ω_path) + r_h × m·g·ẑ. From relaxAt the dip's part F_d = M·a_d is set aside and
+ * the rest, F_s, split over the hands so that their moments give τ_ff: the top hand F_∥ + F_T⊥, the bottom hand F_B
+ * and the couple τ_ff·s. Before relaxAt both hands grip firmly with springs and dampers. From it they track the
+ * path's velocity only: the top hand γ_T times its share (the whole F_s in swing mode outside a check) plus F_d, and
+ * its damper; the bottom hand a one-sided rate guide (swing mode; with g_B·F_B inside a check) or a two-sided grip
+ * (carry mode), until it opens once the shaft has turned through the reach slack. In swing mode the guide outside a
+ * check and the push after the release are scaled by `guideEffort`; a check acts in full. A check in swing mode
+ * brakes the head to rest, not past it: the hands apply the head's share of the planned deceleration (checkShare), and
+ * the guide steers its pitch rate into [0, ω_path].
+ */
+export function handLoad(
+    track: PreparedTrack,
+    state: HeadState,
+    head: MalletHead,
+    t: number,
+    grip: GripState,
+): HandLoad {
+    const { arc, body, hands } = track;
+    const path = pathAt(track, t);
+    const w = path.angularVelocity;
+    const q = state.orientation;
+    const s = rotate(q, UP);
+    const rho = head.socket.z;
+    const contact = t >= track.coupling.relaxAt;
+    const carry = arc.mode === "carry";
+    // A check in swing mode after contact brakes the head to rest, not past it: the pitch rates about n.
+    const checking = contact && !carry && inCheck(track, t);
+    const rate = dot(state.angularVelocity, track.axis);
+    const planned = dot(w, track.axis);
+    const share = checking ? checkShare(rate, planned) : 1;
+    let socketAcceleration = path.socketAcceleration;
+    let angularAcceleration = path.angularAcceleration;
+    if (share < 1) {
+        // The planned deceleration's parts, r·α along the path's tangent at the socket and α_path, scaled.
+        const shed = (1 - share) * arc.radius * path.pendulumAcceleration;
+        socketAcceleration = sub(socketAcceleration, scale(rotate(path.orientation, FORWARD), shed));
+        angularAcceleration = scale(angularAcceleration, share);
+    }
+    // The swung body's centre on the path, from the socket: body point δ·ẑ − socket.
+    const d = rotate(path.orientation, sub(vec3(0, 0, body.offset), head.socket));
+    const centre = add(add(socketAcceleration, cross(angularAcceleration, d)), cross(w, cross(w, d)));
+    const weight = vec3(0, 0, track.headWeight);
+    const feedForward = add(scale(centre, body.mass), weight);
+    const I = body.inertia;
+    const wb = rotateInverse(q, w);
+    const ab = rotateInverse(q, angularAcceleration);
+    const spin = add(vec3(I.x * ab.x, I.y * ab.y, I.z * ab.z), cross(wb, vec3(I.x * wb.x, I.y * wb.y, I.z * wb.z)));
+    // The hands hold the head's weight, which acts at the head's centre, r_h = −δ·s from the swung body's.
+    const tau = add(rotate(q, spin), cross(scale(s, 0 - body.offset), weight));
+    const dip = contact ? scale(path.dipAcceleration, body.mass) : ZERO;
+    const shared = sub(feedForward, dip);
+    const along = scale(s, dot(shared, s));
+    const perpendicular = sub(shared, along);
+    const G = cross(tau, s);
+    const a = rho + arc.radius - body.offset;
+    const b = rho + hands.bottom - body.offset;
+    const topShare = add(along, scale(sub(G, scale(perpendicular, b)), 1 / (a - b)));
+    const bottomShare = scale(sub(scale(perpendicular, a), G), 1 / (a - b));
+    const twistShare = dot(tau, s);
+    // The grips and their targets on the path.
+    const topArm = scale(s, rho + arc.radius);
+    const bottomArm = scale(s, rho + hands.bottom);
+    const shaft = rotate(path.orientation, UP);
+    const topLever = scale(shaft, arc.radius);
+    const bottomLever = scale(shaft, hands.bottom);
+    const topLag = sub(
+        add(path.socketVelocity, cross(w, topLever)),
+        add(state.velocity, cross(state.angularVelocity, topArm)),
+    );
+    const bottomLag = sub(
+        add(path.socketVelocity, cross(w, bottomLever)),
+        add(state.velocity, cross(state.angularVelocity, bottomArm)),
+    );
+    const spinLag = sub(w, state.angularVelocity);
+    const load = (top: Vec3, bottom: Vec3, twist: number, fed: Vec3): HandLoad => ({
+        force: add(top, bottom),
+        feedForward: fed,
+        torque: add(add(cross(topArm, top), cross(bottomArm, bottom)), scale(s, twist)),
+        top,
+        bottom,
+    });
+
+    if (!contact) {
+        const g = track.firm;
+        const topGap = sub(add(path.socket, topLever), add(state.position, topArm));
+        const bottomGap = sub(add(path.socket, bottomLever), add(state.position, bottomArm));
+        const top = add(add(topShare, scale(topGap, g.stiffness)), scale(topLag, g.damping));
+        const pull = add(scale(bottomGap, g.stiffness), scale(bottomLag, g.damping));
+        const twist =
+            twistShare +
+            g.twistStiffness * dot(rotationError(path.orientation, q), s) +
+            g.twistDamping * dot(spinLag, s);
+        return load(top, add(bottomShare, across(pull, s)), twist, add(topShare, bottomShare));
+    }
+
+    // Release by reach: the bottom hand opens for good once the shaft has turned through the slack since relaxAt.
+    const pitchNow = shaftPitch(s, arc.aim);
+    const contactPitch = grip.contactPitch ?? pitchNow;
+    grip.contactPitch = contactPitch;
+    const lever = arc.radius - hands.bottom;
+    if (grip.releasedAt === null && lever * (pitchNow - contactPitch) > hands.reachSlack) {
+        grip.releasedAt = t;
+        grip.releaseDelta = pitchNow - contactPitch;
+    }
+    // The player's effort on swing mode's push after contact (design §3.3): 1 restores the planned arc's speed.
+    const effort = carry ? 1 : hands.guideEffort;
+    const firmShare = carry || checking;
+    const topFed = add(scale(firmShare ? topShare : shared, hands.gripTension), dip);
+    const top = add(topFed, scale(topLag, track.top.damping));
+    const g = track.bottom;
+    // e: perpendicular to the shaft in the swing plane, forward.
+    const raw = across(arc.aim, s);
+    const e = scale(raw, 1 / Math.sqrt(dot(raw, raw)));
+    if (grip.releasedAt !== null) {
+        return load(top, scale(e, effort * Math.max(0, g.damping * dot(bottomLag, e))), 0, topFed);
+    }
+    const bottomFed = firmShare ? scale(bottomShare, hands.bottomGrip) : ZERO;
+    const twist = (firmShare ? hands.bottomGrip * twistShare : 0) + g.twistDamping * dot(spinLag, s);
+    if (carry) {
+        return load(top, add(bottomFed, across(scale(bottomLag, g.damping), s)), twist, add(topFed, bottomFed));
+    }
+    // Swing mode: a rate guide along e on the pitch rate's lag, never pulling outside a check. Inside one its target is
+    // the head's own rate held within [0, ω_path]: it brakes a head ahead of the path, returns one past rest towards
+    // rest, and leaves one between them to its share of the planned deceleration.
+    const held = Math.min(Math.max(rate, 0), Math.max(planned, 0));
+    const guide = g.damping * (checking ? held - rate : dot(spinLag, track.axis)) * lever;
+    const bottom = add(bottomFed, scale(e, firmShare ? guide : effort * Math.max(0, guide)));
+    return load(top, bottom, twist, add(topFed, bottomFed));
 }

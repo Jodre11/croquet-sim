@@ -193,6 +193,11 @@ export interface ImpactRun {
     readonly timeline: Readonly<Record<string, readonly ContactInterval[]>>;
     /** Keys of the ball–ball and ball–obstacle pairs touching (within CONTACT_TOLERANCE) at t = 0, in pair order. */
     readonly touchingAtStart: readonly string[];
+    /**
+     * A tracked drive's bottom hand opening by reach (P2b.2b.1 design §3.3): when (s), and the shaft's turn since
+     * relaxAt (contact) then (rad). Absent if it never opened, and for a force table.
+     */
+    readonly release?: { readonly t: number; readonly deltaTheta: number };
 }
 
 /** The impact's outcome, with the balls as handed over to phase 2 (design §6). */
