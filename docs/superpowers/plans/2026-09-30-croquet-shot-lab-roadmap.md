@@ -398,7 +398,10 @@ Measured by `scripts/swingProbe.ts` (node v26.10.0). Observations, not gates.
   after contactAt (Δθ 8.39°). Braking hands / turf (N·s): single-ball −0.055 / 0, drive −1.253 / 0, AC stop
   0.225 / 0.401, GC stop 1.187 / 0, half roll −0.706 / 0, full roll −2.108 / 0, pass roll −4.051 / 0. After
   contactAt (single-ball, drive, AC stop, GC stop, half, full and pass roll): 10.0, 181.4, 21.6, 10.0, 40.2, 83.4 and
-  70.0 ms; none reaches the cap. `impact-off-face` once each on the full and pass rolls; no other flag.
+  70.0 ms; none reaches the cap. `impact-off-face` once each on the full and pass rolls; no other impact flag.
+  `simulateShot`'s fault judge still finds a 29.1.6.1 possible fault on four of them: the drive (2 face intervals,
+  its designed follow-through re-hit) and the half, full and pass rolls (5, 6 and 6, the striker's ball chattering
+  on the face).
 - **Cap and flags** (`presets`): 225 runs per preset, none rejected. `impact-head-deep` on 72 AC-stop runs and
   `impact-cap` on 12, both on no other preset; `impact-head-approaching` on none; `impact-off-face` single-ball 0,
   drive 81, AC stop 65, GC stop 10, half roll 0, full roll 225, pass roll 180. The longest impact after contactAt
