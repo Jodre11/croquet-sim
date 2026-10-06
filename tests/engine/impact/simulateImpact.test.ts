@@ -19,8 +19,8 @@ const BLUE = ballAt(5, 0);
 const SUNK = vec3(5, 0, R - (TEST_BALL.mass * WORLD.gravity) / WORLD.lawn.surfaceAt(BLUE.position).turfStiffness);
 
 describe("simulateImpact", () => {
-    it("is version 0.5.0", () => {
-        expect(ENGINE_VERSION).toBe("0.5.0");
+    it("is version 0.6.0", () => {
+        expect(ENGINE_VERSION).toBe("0.6.0");
     });
 
     it("starts a centre-struck ball rolling at 5/7 of its launch speed in phase 2", () => {
