@@ -258,9 +258,9 @@ shot 7.15 ± 0.6 (up to 11.6), pass roll about 0.83 in theory.
     0.70 m from the socket, grips 1 and 0.1, swing. Drive: 0°, 0.805 and 0.60 m, grips 1 and 0.25, swing. AC stop:
     −4°, 0.805 and 0.45 m, grips 0.1 and 0.1, swing with a check and a dip of 11.00 mm over 20 ms. GC stop (a
     single-ball stroke, its target 0.3 m ahead): 0°, 0.805 and 0.45 m, grips 1 and 1, swing with a check. Half
-    roll: 15°, 0.805 and 0.42 m, carry, hands' share 0.6, reach 0.15 m, 5 mm into the ground. Full roll: 45°, 0.61 and 0.30 m, carry, share 0.9, reach 0.30 m, 2 mm. Pass
-    roll: 48°, 0.45 and 0.09 m, carry, share 0.85, a pendulum punch (`speedGain` 0.5 over 15 ms), reach 0.30 m,
-    2 mm.
+    roll: 15°, 0.805 and 0.42 m, carry, hands' share 0.6, reach 0.15 m, 5 mm into the ground. Full roll: 45°, 0.61
+    and 0.30 m, carry, share 0.9, reach 0.30 m, 2 mm. Pass roll: 48°, 0.45 and 0.09 m, carry, share 0.85, a pendulum
+    punch (`speedGain` 0.5 over 15 ms), reach 0.30 m, 2 mm.
   - The full and pass rolls (lean 45° and 48°) are known misses in P2b.2b.1: both carry the striker's ball on a
     steep face, which needs the low-speed face–ball law and the turf's response under load (P2b.2b.2).
 - **P2b.2b.1 pre-flight decisions (2026-10-06).** From the user's account of play.
