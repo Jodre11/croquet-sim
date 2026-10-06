@@ -1,6 +1,7 @@
 /**
- * World construction, validation and derived geometry. `defaultWorld` is the only place the engine reads the
- * sourced reference data.
+ * World construction, validation and derived geometry. `defaultWorld` reads the sourced reference data for the world;
+ * the impact's and the swing model's own constants are read by the modules that use them (impact/track.ts,
+ * impact/integrate.ts, impact/simulateImpact.ts, swing/; P2b.2b.1 design §7).
  */
 import {
     ballReference,
