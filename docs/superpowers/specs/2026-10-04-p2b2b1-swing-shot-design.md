@@ -175,7 +175,17 @@ aim (the top hand −3.06 N·s), and that is what makes the follow-through re-hi
 planned arc (decision 4 reads so), and `TRACK_IMPACT_CAP` becomes 0.45 s so that every re-hit is integrated and a drive
 ends by itself (§3.5). With the cap lifted the drive ends at 138 ms at 4 m/s (two hits), 181 ms at 3 m/s (two) and
 269 ms at 2 m/s (four, the last on the rim); over the preset sweep its longest is 325 ms after contact, every other
-preset's at most 309 ms. `FREE_SPAN` becomes 0.55 s to cover the lead-in and the cap (§3.2). Details:
+preset's at most 309 ms. `FREE_SPAN` becomes 0.55 s to cover the lead-in and the cap (§3.2).
+
+How hard the drive's bottom hand pushes after the hit is the player's choice (user's account, 2026-10-06): the usual
+aim is to restore the angular momentum the hit took, so the head carries on at the same speed through the arc; a
+softer shot, with a shorter backswing, uses less of that effort, and a very soft one none. So `guideEffort` (in
+[0, 1]) scales the swing mode's push (§3.3); each preset carries a default for its stroke type and a shot may set its
+own (§5.1), the P4 planner choosing it from the desired outcome. Every preset's default is 1 in this phase, so the
+measurements above stand; P2b.2b.2 sets the defaults. The restoration is not immediate in practice: psychological,
+physical and mechanical delays lie between the player's intent and what is observed (user's account, 2026-10-06).
+The light guide, restoring the speed over about 90 ms, stands in for them; P2b.2b.2 calibrates how quickly it acts
+against observed strokes (maintained contact, a double tap or a late re-hit). Details:
 `plans/2026-10-04-p2b2b1-swing-shot.md`.
 
 ## 1. Goal and exit criteria
@@ -293,7 +303,8 @@ interface Coupling {
  * radius, the bottom hand `bottom` from the socket (m, in (0, radius)). From `relaxAt` on the top hand grips with
  * γ_T = `gripTension` and the bottom hand with g_B = `bottomGrip`, both in (0, 1]. The player's arm mass `armMass` (kg)
  * rides rigidly at the top grip. The bottom hand opens once the shaft has turned through `reachSlack` (m of hand
- * travel).
+ * travel). In swing mode `guideEffort` (in [0, 1]) scales the bottom hand's push after contact outside a check: 1
+ * restores the planned arc's speed, 0 is no extra push (§3.3).
  */
 interface Hands {
     readonly bottom: number;
@@ -301,6 +312,7 @@ interface Hands {
     readonly bottomGrip: number;
     readonly armMass: number;
     readonly reachSlack: number;
+    readonly guideEffort: number;
 }
 ```
 
@@ -405,17 +417,21 @@ the dip's, and after the reach it is at rest, so both hands bring the mallet to 
   bottom hand's release alike: on release F_B is dropped, not handed to the top hand. In swing mode outside a check
   the top hand takes the whole F_s. The dip is the player's action, so it is fed forward at full strength whatever γ_T.
 - **Bottom hand, swing mode, before release:** a rate guide along e, the unit vector perpendicular to s in the swing
-  plane, forward (aim less its component along s, normalised): the force c(g_B)·((ω_path − ω)·n)·(r − `bottom`),
-  floored at 0, so it never pulls and never accelerates the head beyond the planned arc; a head the strike has slowed
-  below it, it pushes back towards it, which is what makes the drive's follow-through re-hit. Its couple is
-  C_s(g_B)·((ω_path − ω)·s) about s. **The check:** inside a check the guide is two-sided (not floored) and the bottom
-  hand adds g_B·F_B and the couple g_B·τ_ff·s, so the check acts through its lever; a pivot cannot check.
+  plane, forward (aim less its component along s, normalised): the force
+  `guideEffort`·c(g_B)·((ω_path − ω)·n)·(r − `bottom`), floored at 0, so it never pulls and never accelerates the head
+  beyond the planned arc; a head the strike has slowed below it, it pushes back towards it, which is what makes the
+  drive's follow-through re-hit. The effort is the player's: a full drive restores the arc's speed after the hit (1),
+  a softer one less, a very soft one not at all (0; user's account, 2026-10-06). Its couple is
+  C_s(g_B)·((ω_path − ω)·s) about s. **The check:** inside a check the guide is two-sided (not floored), at full
+  strength whatever `guideEffort`, and the bottom hand adds g_B·F_B and the couple g_B·τ_ff·s, so the check acts
+  through its lever; a pivot cannot check.
 - **Bottom hand, carry mode, before release:** two-sided: g_B·F_B plus the part of c(g_B)·(v*_B − v_B) perpendicular
   to s, and the couple g_B·τ_ff·s + C_s(g_B)·((ω_path − ω)·s) about s.
 - **Release by reach.** From `relaxAt` each step measures the shaft's turn since then, Δθ = π(s) − π(s at `relaxAt`),
   π(s) = atan2(−s·aim, s·ẑ) the arc angle of a shaft along s. Once (r − `bottom`)·Δθ > `reachSlack` the bottom hand
   opens for good, whatever the mode: from then on it pushes one-sided along e on its velocity lag,
-  max(0, c(g_B)·(v*_B − v_B)·e)·e, with no feed-forward and no couple. The release time and Δθ are recorded
+  max(0, c(g_B)·(v*_B − v_B)·e)·e, scaled by `guideEffort` in swing mode, with no feed-forward and no couple. The
+  release time and Δθ are recorded
   (`ImpactRun.release`).
 
 The hand load F is the sum of the two hands' forces and F_ff the sum of their feed-forward parts; each acts at its grip,
@@ -484,8 +500,8 @@ plus the cap; 102,000 steps) pre-flight confirms the WAKE_MARGIN reach filter's 
 1e-12); `period` > 0; `dampingRatio` ≥ 0; `relaxAt` ≥ 0; `arcStart`, `handStart` and `contactAt` ≥ 0; `window`
 and `handWindow` > 0; `dip.start` ≥ 0, `dip.duration` > 0, `dip.depth` ≥ 0; `mode` "swing" or "carry"; `handReach`
 ≥ 0; `groundDepth` ≥ 0; `bottom` in (0, `radius`); `gripTension` and `bottomGrip` in (0, 1]; `armMass` ≥ 0;
-`reachSlack` ≥ 0; `pivotVelocity` and `pivotAcceleration` in the swing plane (component along n within 1e-12 of their
-size). Each failure is a `RangeError` naming the check. The head's state at t = 0 need
+`reachSlack` ≥ 0; `guideEffort` in [0, 1]; `pivotVelocity` and `pivotAcceleration` in the swing plane (component
+along n within 1e-12 of their size). Each failure is a `RangeError` naming the check. The head's state at t = 0 need
 not lie on the path (tests start it off); `buildContact` always starts it on.
 
 ### 3.7 Probe
@@ -591,7 +607,9 @@ interface SwingStance {
  * `handShare` of that speed (in [0, 1]; the pendulum supplies the rest), changing by `handGain` times it over
  * `handWindow` (s) at full `drive`. The dip: whatever `drive`, the hands lower by `handDrop` (m) over `dropTime` (s),
  * rest to rest. The reach: the hands' path travels `handReach` (m) along aim after contact, the default for the shot's
- * own. In carry mode the head's lowest point ends `groundDepth` (m) below the turf.
+ * own. In carry mode the head's lowest point ends `groundDepth` (m) below the turf. In swing mode the bottom hand's
+ * push after contact is `guideEffort` (in [0, 1]) of a full restoration of the arc's speed, the default for the
+ * shot's own.
  */
 interface SwingDrive {
     readonly mode: StrokeMode;
@@ -604,6 +622,7 @@ interface SwingDrive {
     readonly dropTime: number;
     readonly handReach: number;
     readonly groundDepth: number;
+    readonly guideEffort: number;
 }
 
 interface SwingProfile {
@@ -640,6 +659,8 @@ interface ShotSetup {
         readonly timing: StrokeTiming;
         /** The hands' travel along aim after contact, m; absent: the preset's `handReach`. */
         readonly handReach?: number;
+        /** The bottom hand's push after contact, in [0, 1]; absent: the preset's `guideEffort`. */
+        readonly guideEffort?: number;
     };
     readonly live: readonly BallId[];
     readonly continuation: boolean;
@@ -693,7 +714,7 @@ head and other faces arrive with their sourced values (§10). The engine's head 
    A = `drive`·`handGain`·`speed`·aim/`handWindow`.
    The dip: depth `handDrop` over `dropTime`, whatever `drive`. The mode, `groundDepth` and `handReach` (the shot's,
    else the preset's) are copied to the arc. The coupling is `HAND_COUPLING`; the hands are the stance's `bottom`,
-   `gripTension` and `bottomGrip` with the profile's `body`.
+   `gripTension` and `bottomGrip` with the profile's `body`, and `guideEffort` (the shot's, else the preset's).
 8. **Timing and lead-in.** Each action begins at `stroke.timing` from contact: the pendulum's window at
    contact + `timing.arc`, the hands' at contact + `timing.hands`, the dip at contact + `timing.dip`. The impact
    starts a lead L before contact, the earliest action's: L = max(0, −`timing.arc`, −`timing.hands`, −`timing.dip`),
@@ -715,11 +736,11 @@ head and other faces arrive with their sourced values (§10). The engine's head 
 shaft); `bottom` outside (0, `top`); |`lean`| ≥ 90°; `speed` ≤ 0; |`drive`| > 1; √(`up`² + `side`²) ≥ the head's
 radius (contact off the face); a stroke type missing from `stance` or `drive`; a `mode` other than "swing" or
 "carry"; `window`, `handWindow` or `dropTime` ≤ 0; `speedGain` < 0; `gripTension` or `bottomGrip` outside (0, 1];
-`handShare` outside [0, 1]; `handDrop` < 0; the shot's or the preset's `handReach` < 0; `groundDepth` < 0; `armMass` <
-0; `reachSlack` < 0; a lead beyond `MAX_LEAD` (an action timed more than 60 ms early);
-the head's lowest point below the turf at contact, as placed, or at t = 0 (where an early action begins: the stance too
-low for that timing); a non-finite number. A swing that meets the turf between its start and the ball is never
-rejected. `simulateImpact`'s own validation then runs as today.
+`handShare` outside [0, 1]; `handDrop` < 0; the shot's or the preset's `handReach` < 0; `groundDepth` < 0; the shot's
+or the preset's `guideEffort` outside [0, 1]; `armMass` < 0; `reachSlack` < 0; a lead beyond `MAX_LEAD` (an action
+timed more than 60 ms early); the head's lowest point below the turf at contact, as placed, or at t = 0 (where an early
+action begins: the stance too low for that timing); a non-finite number. A swing that meets the turf between its
+start and the ball is never rejected. `simulateImpact`'s own validation then runs as today.
 
 ### 5.4 The default profile
 
@@ -767,7 +788,9 @@ mallet shaft for this shot", the slope at least the full roll's (lean 48°, top 
 which after its short window swings freely: the follow-through rises and dies by itself, and the head, slowed below
 the striker's ball by the strike, catches it again (about 92 ms after contact in the prototype, ratio 3.33). The
 bottom hand only guides, lightly (`bottomGrip` 0.25 at 0.60 m for the drive, 0.1 at 0.70 m single-ball); a stronger
-or lower hand turns the double hit into a triple and the ratio towards a roll's (§8.1).
+or lower hand turns the double hit into a triple and the ratio towards a roll's (§8.1). Every preset's `guideEffort` is
+1, the full restoration a full drive aims at; how much of it a softer shot uses is the P4 planner's choice, per shot,
+and its values P2b.2b.2's (at a full effort the 2 m/s drive hits four times, ratio 2.49).
 
 **AC stop.** The feet are set further back, so the ball is met on the up. The shaft leans back 4°, so the strike rises
 4° and, the head being rigid on the shaft, the face tilts up 4°, lowering the head's rear rim; the ball is met 20 mm
@@ -962,7 +985,8 @@ keys; `topHandHeight` is not added.
 - **Swing model.** Each derivation step separately: r = `top`; θ_c = −`lean`; the face's pitch θ_c (face down for a
   positive lean) for leans of −10°, 0°, +10°; face 1 µm short of the sunk ball at the requested (`up`, `side`);
   centre-of-mass speed equal to `speed`, with and without a hand share; the windows' α and A; the dip; the mode,
-  `groundDepth` and `handReach` (the shot's over the preset's); the hands and body copied; each timing and the lead-in
+  `groundDepth`, `handReach` and `guideEffort` (the shot's over the preset's); the hands and body copied; each timing
+  and the lead-in
   (an early action starts the impact before contact, the head on its coasting path there, and at the contact pose by
   the lead's end if the actions are depthless; on time, it starts at contact); the approach clearance against a
   hand-computed case. Every rejection names its check, including an action more than 60 ms early and a head in the
@@ -984,6 +1008,8 @@ keys; `topHandHeight` is not added.
     `drive` 0: the check acts through the bottom hand's lever.
   - **The AC stop.** On the canonical AC stop, with its relaxed hands, the first `head/turf` interval starts after the
     first `face/<striker>` interval ends, the turf's braking impulse is positive, and `impact-head-deep` is not raised.
+  - **No extra push.** A 2 m/s canonical drive with `guideEffort` 0 strikes the striker's ball once and ends by
+    itself; at 1 it strikes more than once.
   - **Pass-roll punch.** In the canonical pass roll, `drive` +1 leaves the striker's ball faster at the end of the
     impact than `drive` 0.
   - **Mistimed dip.** The canonical AC stop with its dip 30 ms early meets the lawn before the ball (the first

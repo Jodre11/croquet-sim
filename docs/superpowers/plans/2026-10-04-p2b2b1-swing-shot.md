@@ -92,6 +92,17 @@ code run on a scratch copy while planning; pre-flight re-measures them all.
   sweep the drive's longest natural end is 324.8 ms after contactAt and every other preset's at most 309 ms; 0.45 s
   is about 40 % over 324.8 ms. `FREE_SPAN` covers `MAX_LEAD` plus the cap: 0.55 s. (A first sweep at a 0.5 s cap gave
   395 ms, but with the table still 0.25 s long, so its path clamped beyond it; 324.8 ms is the corrected figure.)
+- **`guideEffort`** (user decision, 2026-10-06; spec §3.1, §3.3, §5.1). How hard the drive's bottom hand pushes
+  after the hit is the player's choice: the usual aim is to restore the arc's speed the hit took, a softer shot uses
+  less of that effort and a very soft one none. `Hands.guideEffort` (in [0, 1]) scales, in swing mode after contact,
+  the rate guide outside a check and the one-sided push after the release; inside a check the guide is at full
+  strength whatever the effort, and carry mode is unaffected. `SwingDrive.guideEffort` is the preset's default and
+  `stroke.guideEffort?` the shot's own (shot over preset, as `handReach`); every preset's default is 1, which
+  multiplies exactly, so every figure measured at the cap above stands (digest, probe, suite re-run). At 0 the 2 m/s
+  canonical drive strikes once and ends by itself at 110.6 ms; at 1 it strikes four times (268.9 ms). The light
+  guide's restoration over about 90 ms stands in for the delays between the player's intent and what is observed;
+  P2b.2b.2 calibrates how quickly the guide acts against observed strokes (maintained contact, a double tap or a late
+  re-hit).
 - **Known behaviours pre-flight watches** (no test asserts against them):
   - the canonical drive ends by itself 181.4 ms after contact, after 2 hits; AC-stop runs whose head rests on the turf
     still reach the cap (the resting head is a closed contact);
@@ -784,7 +795,7 @@ mass. Nothing in the engine reads them yet; the test support uses `swingOrientat
     `radius`, `theta0`, `omega0`, `alpha`, `arcStart`, `window`, `dip`, `contactAt`, `mode`, `handReach`,
     `groundDepth`;
   - `interface Coupling { period; dampingRatio; relaxAt: number }`;
-  - `interface Hands { bottom; gripTension; bottomGrip; armMass; reachSlack: number }`;
+  - `interface Hands { bottom; gripTension; bottomGrip; armMass; reachSlack; guideEffort: number }`;
   - `interface TrackDrive { kind: "track"; arc: SwingArc; coupling: Coupling; hands: Hands }`.
 - Produces (track.ts):
   - `FREE_STEP = 5e-6`, `FREE_SPAN = 0.55`;
@@ -896,7 +907,9 @@ export interface Coupling {
  * the arc radius, the bottom hand `bottom` from the socket (m, in (0, radius)). From `relaxAt` on the top hand grips
  * with γ_T = `gripTension` and the bottom hand with g_B = `bottomGrip`, both in (0, 1]. The player's arm mass
  * `armMass` (kg) rides rigidly at the top grip. The bottom hand opens once the shaft has turned through `reachSlack`
- * (m of hand travel).
+ * (m of hand travel). In swing mode `guideEffort` (in [0, 1]) scales the bottom hand's push after contact outside a
+ * check: 1 restores the planned arc's speed, 0 is no extra push (design §3.3; the player's choice, user's account,
+ * 2026-10-06).
  */
 export interface Hands {
     readonly bottom: number;
@@ -904,6 +917,7 @@ export interface Hands {
     readonly bottomGrip: number;
     readonly armMass: number;
     readonly reachSlack: number;
+    readonly guideEffort: number;
 }
 
 /** A tracked drive (design §3): two hands drive the mallet along `arc`, holding it through `coupling`. */
@@ -950,8 +964,15 @@ and add below `TEST_FACE`:
 /** A coupling for tracked test heads: plausible, not sourced (design §3.4 sets the engine's); contact at t = 0. */
 export const TEST_COUPLING: Coupling = { period: 0.04, dampingRatio: 0.7, relaxAt: 0 };
 
-/** Two firm hands with no arm mass, so the swung body is the head and head-only closed forms hold. */
-export const TEST_HANDS: Hands = { bottom: 0.4, gripTension: 1, bottomGrip: 1, armMass: 0, reachSlack: 0.03 };
+/** Two firm hands with no arm mass, so the swung body is the head and head-only closed forms hold; a full guide. */
+export const TEST_HANDS: Hands = {
+    bottom: 0.4,
+    gripTension: 1,
+    bottomGrip: 1,
+    armMass: 0,
+    reachSlack: 0.03,
+    guideEffort: 1,
+};
 
 /** A dip of no depth. */
 export const NO_DIP: Dip = { start: 0, duration: 0.01, depth: 0 };
@@ -2071,6 +2092,8 @@ Model notes (spec §3.3 read exactly):
   in carry mode or inside a check; the carry tracking test below has no dip after contact. Before contact F_d is part
   of the split wrench, so tracking there is exact.
 - The release is measured from the first step at or after `relaxAt`, whose shaft angle `grip.contactPitch` records.
+- `hands.guideEffort` scales, in swing mode only, the rate guide outside a check and the push after the release; a
+  check's guide and carry mode are unscaled. The effort multiplies, so at 1 every figure is the same bit for bit.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -2504,6 +2527,35 @@ describe("the bottom hand's rate guide", () => {
         const e = forwardOf(leading, arc.aim);
         expect(dot(sub(fast.bottom, on.bottom), e)).toBeCloseTo(-track.bottom.damping * 0.5 * lever, 6);
     });
+
+    it("scales the push by guideEffort outside a check and after the release, and leaves a check in full", () => {
+        const withEffort = (guideEffort: number): Hands => ({ ...TEST_HANDS, guideEffort });
+        const t = 0.02;
+        const guided = (guideEffort: number): Vec3 => {
+            const track = prepare(still(), TEST_COUPLING, withEffort(guideEffort));
+            return handLoad(track, spun(track, t, -0.5), TEST_HEAD, t, newGripState()).bottom;
+        };
+        expect(length(guided(1))).toBeGreaterThan(0);
+        expect(length(guided(0))).toBe(0);
+        expect(dist(guided(0.5), scale(guided(1), 0.5))).toBeLessThan(1e-12);
+        const released = (guideEffort: number): Vec3 => {
+            const track = prepare(still(), TEST_COUPLING, withEffort(guideEffort));
+            const head = headOnPath(track, TEST_HEAD, t);
+            const slow = { ...head, velocity: sub(head.velocity, vec3(0.5, 0, 0)) };
+            const open: GripState = { contactPitch: 0, releasedAt: 1e-3, releaseDelta: 0.08 };
+            return handLoad(track, slow, TEST_HEAD, t, open).bottom;
+        };
+        expect(length(released(1))).toBeGreaterThan(0);
+        expect(length(released(0))).toBe(0);
+        expect(dist(released(0.5), scale(released(1), 0.5))).toBeLessThan(1e-12);
+        const check = still({ omega0: 3, alpha: -300 });
+        const checked = (guideEffort: number): Vec3 => {
+            const track = prepare(check, TEST_COUPLING, withEffort(guideEffort));
+            return handLoad(track, spun(track, 0.005, 0.5), TEST_HEAD, 0.005, newGripState()).bottom;
+        };
+        expect(length(checked(1))).toBeGreaterThan(1);
+        expect(checked(0)).toEqual(checked(1));
+    });
 });
 
 describe("release by reach", () => {
@@ -2623,7 +2675,7 @@ describe("the tracked end rule", () => {
 - [ ] **Step 2: Run them to verify they fail**
 
 Run: `npx vitest run tests/engine/impact/hands.test.ts`
-Expected: FAIL, 23 tests. `HAND_COUPLING` is undefined (`AssertionError: expected undefined to deeply equal
+Expected: FAIL, 24 tests. `HAND_COUPLING` is undefined (`AssertionError: expected undefined to deeply equal
 { period: 0.08, dampingRatio: 0.7 }`); `handLoad` and `newGripState` are not exported (`TypeError: handLoad is not a
 function`, `TypeError: newGripState is not a function`); every `integrate` run with a prepared track throws inside
 `integrate`, which still reads the samples (`TypeError: Cannot read properties of undefined (reading 'length')`).
@@ -2715,7 +2767,8 @@ function across(v: Vec3, s: Vec3): Vec3 {
  * and the couple τ_ff·s. Before relaxAt both hands grip firmly with springs and dampers. From it they track the
  * path's velocity only: the top hand γ_T times its share (the whole F_s in swing mode outside a check) plus F_d, and
  * its damper; the bottom hand a one-sided rate guide (swing mode; two-sided with g_B·F_B inside a check) or a
- * two-sided grip (carry mode), until it opens once the shaft has turned through the reach slack.
+ * two-sided grip (carry mode), until it opens once the shaft has turned through the reach slack. In swing mode the
+ * guide outside a check and the push after the release are scaled by `guideEffort`; a check acts in full.
  */
 export function handLoad(
     track: PreparedTrack,
@@ -2798,6 +2851,8 @@ export function handLoad(
         grip.releaseDelta = pitchNow - contactPitch;
     }
     const carry = arc.mode === "carry";
+    // The player's effort on swing mode's push after contact (design §3.3): 1 restores the planned arc's speed.
+    const effort = carry ? 1 : hands.guideEffort;
     const firmShare = carry || inCheck(track, t);
     const topFed = add(scale(firmShare ? topShare : shared, hands.gripTension), dip);
     const top = add(topFed, scale(topLag, track.top.damping));
@@ -2806,7 +2861,7 @@ export function handLoad(
     const raw = across(arc.aim, s);
     const e = scale(raw, 1 / Math.sqrt(dot(raw, raw)));
     if (grip.releasedAt !== null) {
-        return load(top, scale(e, Math.max(0, g.damping * dot(bottomLag, e))), 0, topFed);
+        return load(top, scale(e, effort * Math.max(0, g.damping * dot(bottomLag, e))), 0, topFed);
     }
     const bottomFed = firmShare ? scale(bottomShare, hands.bottomGrip) : ZERO;
     const twist = (firmShare ? hands.bottomGrip * twistShare : 0) + g.twistDamping * dot(spinLag, s);
@@ -2815,7 +2870,7 @@ export function handLoad(
     }
     // Swing mode: a rate guide along e on the pitch rate's lag, never pulling outside a check.
     const guide = g.damping * dot(spinLag, track.axis) * lever;
-    const bottom = add(bottomFed, scale(e, firmShare ? guide : Math.max(0, guide)));
+    const bottom = add(bottomFed, scale(e, firmShare ? guide : effort * Math.max(0, guide)));
     return load(top, bottom, twist, add(topFed, bottomFed));
 }
 ```
@@ -3254,11 +3309,11 @@ with:
 - [ ] **Step 6: Run the tests**
 
 Run: `npx vitest run tests/engine/impact/hands.test.ts tests/engine/impact/track.test.ts`
-Expected: PASS, 50 tests (23 here, 27 from Task 3). The bounds rest on figures drafting measured on this code
+Expected: PASS, 51 tests (24 here, 27 from Task 3). The bounds rest on figures drafting measured on this code
 (below); if one fails, print the figure and report it before changing anything.
 
 Run: `npm test`, `npm run check`, `npm run lint`
-Expected: all pass, 23 more tests than after Task 3.
+Expected: all pass, 24 more tests than after Task 3.
 
 Figures measured while drafting (this task's code on a replica of `main` with the first Tasks 1–2; pre-flight
 re-measures every one and keeps a 1.5–3× margin):
@@ -3514,6 +3569,8 @@ describe("simulateImpact with a tracked drive", () => {
         ["a bottom grip above 1", withHands({ bottomGrip: 1.5 }), /hands\.bottomGrip must lie in \(0, 1\]/],
         ["a negative arm mass", withHands({ armMass: -0.1 }), /hands\.armMass must be non-negative/],
         ["a negative reach slack", withHands({ reachSlack: -0.01 }), /hands\.reachSlack must be non-negative/],
+        ["a negative guide effort", withHands({ guideEffort: -0.1 }), /hands\.guideEffort must lie in \[0, 1\]/],
+        ["a guide effort above 1", withHands({ guideEffort: 1.5 }), /hands\.guideEffort must lie in \[0, 1\]/],
         [
             "a pivot velocity out of the swing plane",
             withArc({ pivotVelocity: vec3(0, 0.1, 0) }),
@@ -3622,8 +3679,8 @@ function validateForce(drive: ForceDrive): void {
  * windows and dip duration; non-negative start times, contact time, dip depth, reach and ground depth; a mode of
  * "swing" or "carry"; aim a horizontal unit vector within UNIT_TOLERANCE; a positive period, a non-negative damping
  * ratio and relaxation time; the bottom hand between the socket and the top hand, both grips in (0, 1], a non-negative
- * arm mass and reach slack; the pivot's velocity and acceleration in the swing plane, their component along the pitch
- * axis within UNIT_TOLERANCE of their size. The head need not start on the path.
+ * arm mass and reach slack, a guide effort in [0, 1]; the pivot's velocity and acceleration in the swing plane, their
+ * component along the pitch axis within UNIT_TOLERANCE of their size. The head need not start on the path.
  */
 function validateTrack(drive: TrackDrive): void {
     const { arc, coupling, hands } = drive;
@@ -3662,6 +3719,9 @@ function validateTrack(drive: TrackDrive): void {
     restitution(hands.bottomGrip, "hands.bottomGrip");
     friction(hands.armMass, "hands.armMass");
     friction(hands.reachSlack, "hands.reachSlack");
+    if (!(hands.guideEffort >= 0 && hands.guideEffort <= 1)) {
+        fail(`hands.guideEffort must lie in [0, 1] (got ${hands.guideEffort})`);
+    }
     const n = pitchAxis(aim);
     if (!(Math.abs(dot(arc.pivotVelocity, n)) <= UNIT_TOLERANCE * length(arc.pivotVelocity))) {
         fail("arc.pivotVelocity must lie in the swing plane");
@@ -5260,10 +5320,11 @@ at 36.70 ms) and the head in the turf 0.04 s before contact (3.58 mm below it).
   - `CROQUET_STROKES` and `STROKE_TYPES: readonly StrokeType[]` (`["single-ball", ...CROQUET_STROKES]`);
   - `interface SwingStance { lean; top; bottom; gripTension; bottomGrip }`;
   - `interface SwingDrive { mode; speedGain; window; handShare; handGain; handWindow; handDrop; dropTime; handReach;
-    groundDepth }`;
+    groundDepth; guideEffort }`;
   - `interface SwingProfile { mallet; body: { armMass; reachSlack }; stance; drive }`;
   - `interface StrokeTiming { arc; hands; dip }`;
-  - `interface ShotSetup`, whose `stroke` has `timing: StrokeTiming` and `handReach?: number`.
+  - `interface ShotSetup`, whose `stroke` has `timing: StrokeTiming`, `handReach?: number` and
+    `guideEffort?: number`.
 - Produces (swing/profile.ts): `defaultProfile: SwingProfile`, `DEFAULT_DRIVE: Readonly<Record<StrokeType, number>>`
   and `ON_TIME: StrokeTiming` (every timing 0).
 - Produces (swing/buildContact.ts):
@@ -5331,7 +5392,9 @@ export interface SwingStance {
  * `handShare` of that speed (in [0, 1]; the pendulum supplies the rest), changing by `handGain` times it over
  * `handWindow` (s) at full `drive`. The dip: whatever `drive`, the hands lower by `handDrop` (m) over `dropTime` (s),
  * rest to rest. The reach: the hands' path travels `handReach` (m) along aim after contact, the default for the shot's
- * own. In carry mode the head's lowest point ends `groundDepth` (m) below the turf.
+ * own. In carry mode the head's lowest point ends `groundDepth` (m) below the turf. In swing mode the bottom hand's
+ * push after contact is `guideEffort` (in [0, 1]) of a full restoration of the arc's speed, the default for the shot's
+ * own.
  */
 export interface SwingDrive {
     readonly mode: StrokeMode;
@@ -5344,6 +5407,7 @@ export interface SwingDrive {
     readonly dropTime: number;
     readonly handReach: number;
     readonly groundDepth: number;
+    readonly guideEffort: number;
 }
 
 /** The physical part of a player's profile (design §5.1); P3 wraps it into the stored profile. */
@@ -5385,6 +5449,8 @@ export interface ShotSetup {
         readonly timing: StrokeTiming;
         /** The hands' travel along aim after contact, m; absent: the preset's `handReach`. */
         readonly handReach?: number;
+        /** The bottom hand's push after contact, in [0, 1]; absent: the preset's `guideEffort`. */
+        readonly guideEffort?: number;
     };
     readonly live: readonly BallId[];
     readonly continuation: boolean;
@@ -5409,7 +5475,9 @@ Create `src/engine/swing/profile.ts`:
  *   from the socket (the sourced 35 in grip less the socket's height at address). The bottom hands and the grips are
  *   the prototype's calibration (proto-two-hands, aeadd4c).
  * - Drive: the prototype's calibration (aeadd4c), compared with the coaching ratios only as observations (design §9);
- *   the AC stop's dip depth is a user decision (2026-10-05).
+ *   the AC stop's dip depth is a user decision (2026-10-05). Every preset's guideEffort is 1, the full restoration of
+ *   the arc's speed a full shot aims at; a softer shot uses less, a very soft one none (user's account, 2026-10-06).
+ *   P2b.2b.2 sets the per-type defaults; the P4 planner chooses it per shot.
  */
 import { contactReference, malletReference } from "../../reference/index";
 import type { StrokeTiming, StrokeType, SwingProfile } from "./types";
@@ -5464,6 +5532,7 @@ export const defaultProfile: SwingProfile = {
             dropTime: 0.01,
             handReach: 0,
             groundDepth: 0,
+            guideEffort: 1,
         },
         // As single-ball over a 5 ms window: the follow-through rises and dies by itself, and the head catches the
         // striker's ball again (prototype).
@@ -5478,6 +5547,7 @@ export const defaultProfile: SwingProfile = {
             dropTime: 0.01,
             handReach: 0,
             groundDepth: 0,
+            guideEffort: 1,
         },
         // Swing, checked: speedGain 1 at drive −1 brings the pendulum to rest at its window's end. The check does not
         // lift the head: it still rises through the window, pitching further face-up, so its rear rim drops (8.78 mm
@@ -5497,6 +5567,7 @@ export const defaultProfile: SwingProfile = {
             dropTime: 0.02,
             handReach: 0,
             groundDepth: 0,
+            guideEffort: 1,
         },
         // Swing, checked through the firm, low bottom hand's lever: a hard, level shot with no follow-through; no dip
         // (prototype).
@@ -5511,6 +5582,7 @@ export const defaultProfile: SwingProfile = {
             dropTime: 0.01,
             handReach: 0,
             groundDepth: 0,
+            guideEffort: 1,
         },
         // Carry (Riches: the slope "MAINTAINED throughout the swing", both hands moving "FORWARD at the SAME RATE",
         // "the mallet head following through the ball and onto the ground"): the hands 60 % of the head's speed, a
@@ -5526,6 +5598,7 @@ export const defaultProfile: SwingProfile = {
             dropTime: 0.01,
             handReach: 0.15,
             groundDepth: 0.005,
+            guideEffort: 1,
         },
         // Carry: the hands 90 % of the head's speed and still accelerating, a 0.30 m reach, the head ending 2 mm below
         // the turf (prototype). A known miss in this phase (design §10).
@@ -5540,6 +5613,7 @@ export const defaultProfile: SwingProfile = {
             dropTime: 0.01,
             handReach: 0.3,
             groundDepth: 0.002,
+            guideEffort: 1,
         },
         // Carry, the bottom hand punching in contact: the pendulum's speedGain 0.5 over 15 ms from contact on top of
         // the hands' 85 % and handGain 0.1. A 0.30 m reach; 0.2 m traps the striker's ball against the face, the head
@@ -5555,6 +5629,7 @@ export const defaultProfile: SwingProfile = {
             dropTime: 0.01,
             handReach: 0.3,
             groundDepth: 0.002,
+            guideEffort: 1,
         },
     },
 };
@@ -5621,7 +5696,7 @@ export interface TestProfileOptions {
 /**
  * A profile with the test head (1 kg, 0.23 m long, 0.064 m across, on a 0.9 m shaft), no arm mass (so the swung body
  * is the head, as TEST_HANDS has it) and the same stance and drive for every stroke type: level, the hands 0.8 m and
- * 0.4 m from the socket with firm grips, a swing-mode coast with no hand share, dip or reach.
+ * 0.4 m from the socket with firm grips, a swing-mode coast with no hand share, dip or reach, and a full guide.
  */
 export function testProfile(o: TestProfileOptions = {}): SwingProfile {
     const stance: SwingStance = { lean: 0, top: 0.8, bottom: 0.4, gripTension: 1, bottomGrip: 1, ...o.stance };
@@ -5636,6 +5711,7 @@ export function testProfile(o: TestProfileOptions = {}): SwingProfile {
         dropTime: 0.01,
         handReach: 0,
         groundDepth: 0,
+        guideEffort: 1,
         ...o.drive,
     };
     const every = <T>(entry: T): Record<StrokeType, T> =>
@@ -5861,7 +5937,7 @@ describe("buildContact, step by step", () => {
     it("copies the mode, the reach and the ground depth, the hands and the body, and grips with HAND_COUPLING", () => {
         const profile = testProfile({
             stance: { top: 0.7, bottom: 0.3, gripTension: 0.6, bottomGrip: 0.25 },
-            drive: { mode: "carry", handReach: 0.2, groundDepth: 0.004 },
+            drive: { mode: "carry", handReach: 0.2, groundDepth: 0.004, guideEffort: 0.4 },
             body: { armMass: 0.8, reachSlack: 0.02 },
         });
         const drive = buildContact(shot({}, profile), WORLD).drive as TrackDrive;
@@ -5872,6 +5948,7 @@ describe("buildContact, step by step", () => {
             bottomGrip: 0.25,
             armMass: 0.8,
             reachSlack: 0.02,
+            guideEffort: 0.4,
         });
         expect(drive.coupling).toEqual({
             period: HAND_COUPLING.period,
@@ -5882,6 +5959,11 @@ describe("buildContact, step by step", () => {
         const reaching = testProfile({ drive: { handReach: 0.2 } });
         expect(arcOf(buildContact(shot({ handReach: 0.05 }, reaching), WORLD)).handReach).toBe(0.05);
         expect(arcOf(buildContact(shot({ handReach: 0 }, reaching), WORLD)).handReach).toBe(0);
+        // The shot's guide effort, when it gives one, over the preset's: 0 included.
+        const effortOf = (s: ShotSetup): number => (buildContact(s, WORLD).drive as TrackDrive).hands.guideEffort;
+        const guided = testProfile({ drive: { guideEffort: 0.4 } });
+        expect(effortOf(shot({}, guided))).toBe(0.4);
+        expect(effortOf(shot({ guideEffort: 0 }, guided))).toBe(0);
     });
 
     it("dips the hands as the profile says, whatever the drive, still meeting the ball on the up", () => {
@@ -6079,6 +6161,7 @@ describe("defaultProfile", () => {
         const reaches = STROKE_TYPES.map((type) => defaultProfile.drive[type].handReach);
         expect(reaches).toEqual([0, 0, 0, 0, 0.15, 0.3, 0.3]);
         expect(defaultProfile.drive["stop-ac"].handDrop).toBe(0.011);
+        expect(STROKE_TYPES.map((type) => defaultProfile.drive[type].guideEffort)).toEqual([1, 1, 1, 1, 1, 1, 1]);
     });
 });
 
@@ -6100,6 +6183,7 @@ describe("buildContact rejections", () => {
         ["a non-finite number", shot({ aim: NaN }), /stroke\.aim must be finite/],
         ["a non-finite timing", shot({ timing: { arc: NaN, hands: 0, dip: 0 } }), /stroke\.timing\.arc must be finite/],
         ["a non-finite shot's reach", shot({ handReach: NaN }), /stroke\.handReach must be finite/],
+        ["a non-finite shot's guide effort", shot({ guideEffort: NaN }), /stroke\.guideEffort must be finite/],
         [
             "a non-finite arm mass",
             shot({}, testProfile({ body: { armMass: Infinity } })),
@@ -6135,6 +6219,12 @@ describe("buildContact rejections", () => {
             /drive\.single-ball\.handReach must be non-negative/,
         ],
         ["a negative shot's reach", shot({ handReach: -0.1 }), /stroke\.handReach must be non-negative/],
+        [
+            "a negative preset guide effort",
+            shot({}, testProfile({ drive: { guideEffort: -0.1 } })),
+            /drive\.single-ball\.guideEffort must lie in \[0, 1\]/,
+        ],
+        ["a shot's guide effort above 1", shot({ guideEffort: 1.5 }), /stroke\.guideEffort must lie in \[0, 1\]/],
         [
             "a negative ground depth",
             shot({}, testProfile({ drive: { groundDepth: -0.001 } })),
@@ -6245,6 +6335,7 @@ const DRIVE_NUMBERS: readonly Exclude<keyof SwingDrive, "mode">[] = [
     "dropTime",
     "handReach",
     "groundDepth",
+    "guideEffort",
 ];
 
 function fail(message: string): never {
@@ -6275,6 +6366,12 @@ function grip(value: number, name: string): void {
     }
 }
 
+function effort(value: number, name: string): void {
+    if (!(value >= 0 && value <= 1)) {
+        fail(`${name} must lie in [0, 1] (got ${value})`);
+    }
+}
+
 /**
  * The contact state of `setup` on `world` (design §5.2). Throws a RangeError naming the check (design §5.3) for:
  * - a striker absent from the setup, or a stroke type missing from the profile's stance or drive;
@@ -6283,7 +6380,8 @@ function grip(value: number, name: string): void {
  * - top ≤ 0, or top > shaftLength (the top hand off the shaft); bottom outside (0, top); |lean| ≥ 90°;
  * - speed ≤ 0; |drive| > 1; the contact off the face (√(up² + side²) ≥ the head's radius);
  * - window, handWindow or dropTime ≤ 0; speedGain < 0; gripTension or bottomGrip outside (0, 1]; handShare outside
- *   [0, 1]; handDrop < 0; the preset's or the shot's handReach < 0; groundDepth < 0; armMass < 0; reachSlack < 0;
+ *   [0, 1]; handDrop < 0; the preset's or the shot's handReach < 0; groundDepth < 0; the preset's or the shot's
+ *   guideEffort outside [0, 1]; armMass < 0; reachSlack < 0;
  * - an action timed more than MAX_LEAD early;
  * - the head's lowest point below the turf at contact, or where an early action begins.
  * A swing that meets the turf between its start and the ball is not rejected: the impact simulates it.
@@ -6316,6 +6414,9 @@ export function buildContact(setup: ShotSetup, world: World): ContactState {
     finiteNumber(timing.dip, "stroke.timing.dip");
     if (stroke.handReach !== undefined) {
         finiteNumber(stroke.handReach, "stroke.handReach");
+    }
+    if (stroke.guideEffort !== undefined) {
+        finiteNumber(stroke.guideEffort, "stroke.guideEffort");
     }
     for (const key of STANCE_NUMBERS) {
         finiteNumber(stance[key], `profile.stance.${type}.${key}`);
@@ -6371,6 +6472,10 @@ export function buildContact(setup: ShotSetup, world: World): ContactState {
         nonNegative(stroke.handReach, "stroke.handReach");
     }
     nonNegative(push.groundDepth, `profile.drive.${type}.groundDepth`);
+    effort(push.guideEffort, `profile.drive.${type}.guideEffort`);
+    if (stroke.guideEffort !== undefined) {
+        effort(stroke.guideEffort, "stroke.guideEffort");
+    }
     nonNegative(body.armMass, "profile.body.armMass");
     nonNegative(body.reachSlack, "profile.body.reachSlack");
     // Step 8's lead: the earliest action's, none on time.
@@ -6433,6 +6538,7 @@ export function buildContact(setup: ShotSetup, world: World): ContactState {
         bottomGrip,
         armMass: body.armMass,
         reachSlack: body.reachSlack,
+        guideEffort: stroke.guideEffort ?? push.guideEffort,
     };
     const drive: TrackDrive = {
         kind: "track",
@@ -6879,6 +6985,7 @@ figure; pre-flight re-measures them all. The suite took 2.7 s on the prototype.
 | Exit criterion 3, closed form | 1.0066 kg (head 1.0 kg) |
 | Exit criterion 3, the strike's measure | 1.00655 kg (both balls' Δp over the face's speed loss), 3.3e-5 off |
 | Drive's follow-through | hits 0.01–1.20 ms and 91.76–92.61 ms; ends by itself at 181.4 ms (0.45 s cap) |
+| No extra push (2 m/s drive, guideEffort 0 / 1) | 1 hit, ends by itself at 110.6 ms / 4 hits, 268.9 ms |
 | Accelerating bottom hand (0.30 m, grip 1) | 5 hits, ratio 1.24 against 3.32 |
 | Stops | one hit each; striker's ball 1.380 (AC), 1.291 (GC) against the drive's 1.513 m/s |
 | GC check, hands' braking impulse | +1.697 N·s at −1, −2.465 N·s at 0 |
@@ -7222,6 +7329,20 @@ describe("the mechanisms (design §8.1), on the canonical setups", () => {
         expect(impact.duration).toBeLessThan((contact.drive as TrackDrive).arc.contactAt + TRACK_IMPACT_CAP);
     });
 
+    it("no extra push: at guideEffort 0 the 2 m/s drive strikes once and ends by itself; at 1, more than once", () => {
+        // Planning: at 0 one hit (0.01–1.20 ms), the impact ending by itself 110.6 ms after contactAt with no
+        // impact-cap and no impact-head-approaching; at 1 four hits (from 0.01, 81.94, 126.77 and 159.11 ms), 268.9 ms.
+        const at = (guideEffort: number) =>
+            simulateShot(canonicalSetup("drive", { stroke: { speed: 2, guideEffort } }));
+        const none = at(0);
+        expect(hits(none.impact)).toHaveLength(1);
+        const kinds = none.impact.events.map((e) => e.kind);
+        expect(kinds).not.toContain("impact-cap");
+        expect(kinds).not.toContain("impact-head-approaching");
+        expect(none.impact.duration).toBeLessThan((none.contact.drive as TrackDrive).arc.contactAt + TRACK_IMPACT_CAP);
+        expect(hits(at(1).impact).length).toBeGreaterThan(1);
+    });
+
     it("an accelerating bottom hand turns the drive's double hit into a triple and lowers its ratio", () => {
         // Prototype: bottom hand at 0.30 m, grip 1: five hits and ratio 1.24, against two hits and 3.32.
         const canonical = canonicalSetup("drive");
@@ -7441,7 +7562,7 @@ export function simulateShot(setup: ShotSetup, world?: World): ShotOutcome {
 - [ ] **Step 4: Run the tests**
 
 Run: `npx vitest run tests/engine/shot.test.ts`
-Expected: PASS, 35 tests (7 canonical runs, 11 rejections, 17 others), in a few seconds.
+Expected: PASS, 36 tests (7 canonical runs, 11 rejections, 18 others), in a few seconds.
 
 The canonical-run, effective-mass and mechanism tests rest on the model's behaviour. If one fails, print the figure its
 comment names (hits, impulses, speeds, heights, penetration) and compare it with the prototype's before changing
@@ -7749,6 +7870,7 @@ Create `scripts/swingProbe.ts`:
  * Swing probe (P2b.2b.1 design §9: pre-flight measurements, recorded in the roadmap, not gated). On the default world
  * with the default profile's canonical setups (design §5.5, tests/engine/support/shot.ts), reports:
  * - ratios: the croqueted ÷ striker distance on each canonical setup against its coaching range, and over 2–4 m/s;
+ *   and the drive at guideEffort 0 and 1 over 2–4 m/s: its ratio, hits and length;
  * - canonical: per canonical setup, the entry jumps, the highest ball centre above R, the head regions touched, the
  *   bottom hand's release, the hands' and the turf's braking impulses (design §3.7), the impact's length after
  *   contactAt and how often each impact flag fired;
@@ -7955,6 +8077,15 @@ function ratios(): void {
             `${type.padEnd(11)} 3 m/s ${speeds[2]} (coaching ${COACHING[type]}); ` +
                 `2, 2.5, 3, 3.5, 4 m/s: ${speeds.join(", ")}`,
         );
+    }
+    // The player's push after contact (design §3.3): none against a full restoration of the arc's speed.
+    for (const guideEffort of [0, 1]) {
+        const cells = [2, 3, 4].map((speed) => {
+            const r = run(canonical("drive", { speed, guideEffort }));
+            const hits = r.impact.timeline[`face/${r.setup.striker}`]?.length ?? 0;
+            return `${speed} m/s ${fmt(ratio(r), 2)}, ${hits} hits, ${ms(r.impact.duration)} ms`;
+        });
+        console.log(`drive, guideEffort ${guideEffort}: ${cells.join("; ")}`);
     }
 }
 
@@ -8414,7 +8545,7 @@ the 0.45 s cap changed them (the drive's ratio and length, the cap's flags, `cos
 
 | Section | Reference |
 |---|---|
-| `ratios` (3 m/s; 2, 2.5, 3, 3.5, 4 m/s) | drive 3.32 (2.49, 2.90, 3.32, 3.02, 3.47; prototype at the 0.15 s cap 3.33 (2.86, 2.96, 3.33, …)); AC stop 6.47 (6.66, 6.55, 6.47, 6.41, 6.37); GC stop 6.60 (6.62, 6.61, 6.60, 6.59, 6.59); half roll 2.83 (2.75, 2.79, 2.83, 2.86, 2.88); full roll 2.14 (1.73, 1.99, 2.14, 2.20, 52.47); pass roll 1.59 (1.26, 1.44, 1.59, 1.89, 2.11) |
+| `ratios` (3 m/s; 2, 2.5, 3, 3.5, 4 m/s) | drive 3.32 (2.49, 2.90, 3.32, 3.02, 3.47; prototype at the 0.15 s cap 3.33 (2.86, 2.96, 3.33, …)); AC stop 6.47 (6.66, 6.55, 6.47, 6.41, 6.37); GC stop 6.60 (6.62, 6.61, 6.60, 6.59, 6.59); half roll 2.83 (2.75, 2.79, 2.83, 2.86, 2.88); full roll 2.14 (1.73, 1.99, 2.14, 2.20, 52.47); pass roll 1.59 (1.26, 1.44, 1.59, 1.89, 2.11); the drive at 2, 3 and 4 m/s with `guideEffort` 0: 5.63, 6.04, 6.05, one hit each, ending at 110.6, 95.3 and 76.8 ms; at 1: 2.49, 3.32, 3.47 with 4, 2 and 2 hits, at 268.9, 181.4 and 138.0 ms (this plan's code) |
 | `canonical` | entry jumps 0 on every setup; highest ball centre above R: single-ball 0.85, drive 0.93, AC stop 4.17, GC stop 0.81, half roll 0.72, full roll 0.82, pass roll 2.91 mm; regions face only, except face and rim for the full and pass rolls; release only in the drive, 110.0 ms after contactAt; braking hands / turf (N·s): single-ball −0.055 / 0, drive −1.253 / 0, AC stop 0.230 / 0.376, GC stop 1.697 / 0, half roll −0.706 / 0, full roll −2.108 / 0, pass roll −4.051 / 0; after contactAt 10.0, 181.4, 21.7, 10.0, 40.2, 83.4, 70.0 ms; none reaches the cap; `impact-off-face` once each on the full and pass rolls; no `impact-head-deep` |
 | `dip` | 8.0–11.5 mm meet both conditions; 11 mm: penetration 1.73 mm, the face interval ends at 1.17 ms and the turf interval starts at 12.70 ms, turf braking 0.376 N·s, ratio 6.47; 12 mm reaches 2.11 mm and raises `impact-head-deep`; 14 mm reaches 2.86 mm |
 | `coupling` (ratio at 0.04 s / 0.08 s) | drive 2.35 / 3.32; AC stop 6.45 / 6.47; GC stop 6.51 / 6.60; half roll 2.03 / 2.83; full roll 1.78 / 2.14; pass roll 1.33 / 1.59. Pass 4's single-ball hands' share: 0.754 % at 0.04 s, 0.395 % at 0.08 s |
@@ -8666,6 +8797,13 @@ Task 12's, in the roadmap's "P2b.2b.1 outcomes carried forward (for P2b.2b.2)"; 
     speed it lost (+4.05 N·s along aim between the hits, the top hand −3.06 N·s). The user kept that model and set
     `TRACK_IMPACT_CAP` to 0.45 s so every re-hit is integrated: the drive ends by itself 181.4 ms after contact
     (planning). Whether the guide should track the planned arc after a strike is P2b.2b.2's question.
+  - How hard the bottom hand pushes after the hit, `guideEffort`, is the player's choice (user's account,
+    2026-10-06); every preset's default is 1. The player's restoration is not immediate in practice: psychological,
+    physical and mechanical delays lie between intent and what is observed, and the light guide's restoration over
+    about 90 ms stands in for them (user, 2026-10-06). P2b.2b.2 sets the per-type defaults and calibrates how quickly
+    the guide acts against observed strokes (maintained contact, a double tap or a late re-hit). At 0 the 2–4 m/s
+    canonical drive strikes once and its ratio is 5.63–6.05, a stop's (6–10); at 1 it is 2.49–3.47 (planning). So
+    the effort is what separates a drive from a stop-like shot, which P2b.2b.2 weighs when it sets the defaults.
   - The bottom hand's release by reach opened only in the drive's follow-through (110 ms after contact, prototype);
     it is the user's mechanism and stays, but nearly never acts within an impact.
   - The AC stop's highest ball centre is 4.17 mm above R against exit criterion 4's 5 mm (prototype), the closest of
@@ -8686,19 +8824,19 @@ Task 12's, in the roadmap's "P2b.2b.1 outcomes carried forward (for P2b.2b.2)"; 
 | §1 exit criterion 5 (exports, 0.6.0) | Task 11 |
 | §3.1 types | Task 3 (`SwingArc`, `Dip`, `Coupling`, `Hands`, `TrackDrive`, `StrokeMode`); Task 5 (the union) |
 | §3.2 path: windows, modes, free pendulum, carry hold, reach, carry descent, dip | Task 3 |
-| §3.3 swung body, gains, feed-forward split, before and from contact, rate guide, check, carry, release | Tasks 3 (swung body, gains) and 4 (`handLoad`, `stepSwung`, release) |
+| §3.3 swung body, gains, feed-forward split, before and from contact, rate guide and `guideEffort`, check, carry, release | Tasks 3 (swung body, gains, `Hands.guideEffort`) and 4 (`handLoad`, `stepSwung`, release, the effort's test) |
 | §3.4 coupling and the effective-mass criterion | Task 2 (`HAND_COUPLING` data), Task 3 (`effectiveMass`), Task 10 (the test) |
 | §3.5 end rule, `LOOK_AHEAD`, `TRACK_IMPACT_CAP` | Task 4 |
-| §3.6 validation | Task 5 (every check one rejection case); Task 6 (the turf under the head) |
+| §3.6 validation | Task 5 (every check one rejection case, `guideEffort` included); Task 6 (the turf under the head) |
 | §3.7 probe: hand forces, `headTurf`, `release`, `headRegions`, `entryJumps`, the braking impulses | Tasks 4, 6, 7; impulses in Task 10's helpers and Task 12 |
 | §4.1–4.4 head–turf pair, flags, records | Task 6 |
 | §4.5 whole-head contact, regions, `impact-off-face`, re-entry guard | Task 7 |
-| §5.1–5.3 swing types, derivation, approach, rejections | Task 8 |
+| §5.1–5.3 swing types, derivation, approach, rejections | Task 8 (`guideEffort`: the preset's and the shot's, copied and rejected outside [0, 1]) |
 | §5.4 default profile | Task 8 (`profile.ts`, every value's source comment) |
 | §5.5 canonical setups and clearances | Task 8 (`canonicalSetup`, `CANONICAL_CLEARANCE`, approaches) |
 | §6 `simulateShot`, setup checks, `strokeContext`, 29.1.13, 29.1.14, exports | Tasks 9, 10, 11 |
 | §7 reference data | Task 2 |
-| §8.1 every bullet, including all seven mechanisms | Tasks 3–10 |
+| §8.1 every bullet, including all eight mechanisms ("No extra push" among them) | Tasks 3–10 |
 | §9 pre-flight measurements | Task 12 (`swingProbe.ts`, one section each); the Pre-flight table |
 | §11 roadmap changes | Task 12 Step 3 |
 
