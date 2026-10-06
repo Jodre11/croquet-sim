@@ -8,8 +8,9 @@
  * adjudicator sees or hears (29.2.5–29.2.7): the finding carries the measured quantity, and no perception threshold is
  * invented.
  *
- * A mallet contact is a `face/<ball>` interval: the face or its rim (C29.11.9, C29.20.2); the rest of the mallet is not
- * modelled. Intervals are [start, end) in whole steps.
+ * A mallet contact is a `face/<ball>` interval: the face or its rim (C29.11.9, C29.20.2) for a force-table drive, and
+ * any part of the head for a tracked drive (P2b.2b.1 design §4.5); the shaft is not modelled. Intervals are
+ * [start, end) in whole steps.
  *
  * Exemption 29.2.4.1. The roquet is the striker's ball's earliest first closing on a live ball it was not touching at
  * t = 0. A mallet contact at time t is exempt from 29.1.6 and 29.1.7 if the roquet started at or before t and the
@@ -25,10 +26,21 @@
  *
  * 29.1.9 ("carries force while overlapping the mallet contact") is judged at interval granularity: an obstacle
  * interval that overlaps a mallet contact counts if its `peakForce` is positive, not the force during the overlap.
+ *
+ * 29.1.13 has two clauses, reported in this order and told apart by their evidence: "fails to move or shake" (the
+ * croqueted pair never penetrates beyond CONTACT_TOLERANCE; evidence peakPenetration), and "plays away from" (the
+ * swing direction more than 90° from the line of centres: the engine's reading of C29.18.1, which sets no angular
+ * test; evidence angle), judged only when the context carries the swing (P2b.2b.1 design §6.4).
+ *
+ * 29.1.14 (court damage) is a possible fault: a damaged lawn is something an adjudicator sees, and the Law judges its
+ * effect on later strokes (C29.19.5), which the impact's plane turf does not keep. It is found when the head–turf
+ * pair has an interval in a stroke of Law 29.2.3; no damage threshold is invented.
  */
 import { CONTACT_TOLERANCE } from "./detect";
-import { ballPairKey, faceKey, obstacleKey } from "./impact/contacts";
+import { ballPairKey, faceKey, HEAD_TURF_KEY, obstacleKey } from "./impact/contacts";
 import type { ContactInterval, ImpactResult } from "./impact/types";
+import { atan2 } from "./math/elementary";
+import { cross, dot, length, type Vec3 } from "./math/vec3";
 import { BALL_IDS, type BallId } from "./types";
 
 /** What the judge needs to know about the stroke beyond the impact (P2b.2a design §3). */
@@ -43,6 +55,16 @@ export interface StrokeContext {
     readonly jumpAttempt: boolean;
     /** The striker's ball is part of a group of balls (29.2.3.3). */
     readonly group: boolean;
+    /**
+     * The swing direction, unit and horizontal (P2b.2b.1 design §6.4); absent when the judge is called without a
+     * swing. In a croquet stroke it decides 29.1.13's "plays away from", with `lineOfCentres`.
+     */
+    readonly aim?: Vec3;
+    /**
+     * Unit horizontal vector from the striker's centre to the croqueted ball's at the start; required with `aim` in a
+     * croquet stroke, since the impact carries no starting positions.
+     */
+    readonly lineOfCentres?: Vec3;
 }
 
 /** Decidable from the mechanics, or conditional on what an adjudicator perceives. */
@@ -51,7 +73,7 @@ export type FaultTier = "fault" | "possible-fault";
 /**
  * One finding. `ball` is the ball it concerns: the striker's, except for 29.1.11 (the ball the mallet touched) and
  * 29.1.13 (the croqueted ball). `t` (s from the impact's start) is when it happened; 29.1.13 judges the whole impact
- * and gives its duration. `evidence` holds measured quantities in s, m or N (`contacts` is a count).
+ * and gives its duration. `evidence` holds measured quantities in s, m, N or rad (`contacts` is a count).
  */
 export interface Finding {
     readonly law: string;
@@ -76,9 +98,19 @@ export const JUDGED_LAWS = [
     "29.1.9",
     "29.1.11",
     "29.1.13",
+    "29.1.14",
 ] as const;
 
 const NONE: readonly ContactInterval[] = [];
+
+/** Tolerance on a unit vector's |v|² − 1 and vertical component. Numerical, not physical: a few ulps. */
+const UNIT_TOLERANCE = 1e-12;
+
+function horizontalUnit(v: Vec3 | undefined, name: string): void {
+    if (v !== undefined && !(Math.abs(v.z) <= UNIT_TOLERANCE && Math.abs(dot(v, v) - 1) <= UNIT_TOLERANCE)) {
+        fail(`${name} must be a horizontal unit vector`);
+    }
+}
 
 function fail(message: string): never {
     throw new RangeError(message);
@@ -105,6 +137,11 @@ function validate(context: StrokeContext, impact: ImpactResult): void {
     }
     if (context.live.includes(striker)) {
         fail(`the striker ${striker} cannot be live`);
+    }
+    horizontalUnit(context.aim, "aim");
+    horizontalUnit(context.lineOfCentres, "lineOfCentres");
+    if (context.kind === "croquet" && context.aim !== undefined && context.lineOfCentres === undefined) {
+        fail("a croquet stroke with an aim needs its lineOfCentres");
     }
 }
 
@@ -203,7 +240,8 @@ function contactEvidence(count: number, faces: readonly ContactInterval[]): Reco
 /**
  * Judges the mallet faults of a stroke from its impact (P2b.2a design §7). Throws a RangeError for a context that does
  * not fit the impact: a striker absent from it; a croquet stroke without a croqueted ball, or with the striker or an
- * absent ball as the croqueted one; a croqueted ball given for another kind of stroke; the striker listed as live.
+ * absent ball as the croqueted one; a croqueted ball given for another kind of stroke; the striker listed as live; an
+ * aim or line of centres that is not a horizontal unit vector, or a croquet stroke's aim without its line of centres.
  */
 export function judgeFaults(context: StrokeContext, impact: ImpactResult): FaultReport {
     validate(context, impact);
@@ -242,13 +280,31 @@ export function judgeFaults(context: StrokeContext, impact: ImpactResult): Fault
             add("29.1.11", "fault", id, (touched[0] as ContactInterval).start, { peakForce });
         }
     }
-    // 29.1.13: a croquet stroke that never presses the croqueted ball beyond CONTACT_TOLERANCE.
+    // 29.1.13: a croquet stroke that never presses the croqueted ball beyond CONTACT_TOLERANCE ("fails to move or
+    // shake"), then one played at more than 90° from the line of centres ("plays away from", C29.18.1).
     if (kind === "croquet") {
         const croqueted = context.croqueted as BallId;
         const depth = impact.peakPenetration[ballPairKey(striker, croqueted)] ?? 0;
         if (depth <= CONTACT_TOLERANCE) {
             add("29.1.13", "fault", croqueted, impact.duration, { peakPenetration: depth });
         }
+        const { aim, lineOfCentres } = context;
+        if (aim !== undefined && lineOfCentres !== undefined) {
+            const along = dot(aim, lineOfCentres);
+            if (along < 0) {
+                const angle = atan2(length(cross(aim, lineOfCentres)), along);
+                add("29.1.13", "fault", croqueted, impact.duration, { angle });
+            }
+        }
+    }
+    // 29.1.14: in a stroke of Law 29.2.3, the head pressed into the turf (a possible fault; see the file header).
+    const turf = impact.timeline[HEAD_TURF_KEY];
+    if ((context.hampered || context.jumpAttempt || context.group) && turf && turf.length > 0) {
+        add("29.1.14", "possible-fault", striker, (turf[0] as ContactInterval).start, {
+            penetration: impact.peakPenetration[HEAD_TURF_KEY] ?? 0,
+            peakForce: turf.reduce((m, i) => Math.max(m, i.peakForce), 0),
+            slide: impact.headTurfSlide ?? 0,
+        });
     }
     const contacts = faces.filter((f) => !exempt(view, f.start));
     // 29.1.6.2: a single-ball stroke with two or more non-exempt mallet contacts, or the head still closing at the end.
