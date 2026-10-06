@@ -25,6 +25,11 @@
  * ahead of its face within LOOK_AHEAD: a re-contact is integrated, not flagged. Its cap is TRACK_IMPACT_CAP after the
  * planned contact.
  *
+ * A tracked drive's face–ball pairs meet the whole head, a solid cylinder (contacts.ts headBallContact; P2b.2b.1
+ * design §4.5): each also records its intervals per region of the head, and a contact off the face raises
+ * `impact-off-face` once per ball. A face–ball or head–turf interval that opens deeper than one step's closing could
+ * make counts an entry jump (ImpactRun.entryJumps). A force table keeps the face-only contact and neither record.
+ *
  * Every step also records whether each pair is in contact (closed, or a face at the rim), building the contact
  * timeline (timeline.ts; P2b.2a design §5); the pairs touching at t = 0 are listed in `touchingAtStart`. Recording
  * only reads the state.
@@ -39,9 +44,11 @@ import { ZERO, add, cross, dot, horizontal, length, scale, sub, vec3, type Vec3 
 import type { BallId, BallParams, BallState, BallStates } from "../types";
 import { normalForce, tangentialForce, type PairLaw } from "./contactLaw";
 import {
+    HEAD_REGIONS,
     HEAD_TURF_KEY,
     OFF_FACE,
     faceClearance,
+    headBallContact,
     headClosing,
     headLowestPoint,
     headTurfContact,
@@ -50,6 +57,7 @@ import {
     pairList,
     pairTouching,
     pointVelocity,
+    type HeadRegion,
     type ObstacleGeometry,
     type Pair,
     type Penetration,
@@ -94,6 +102,14 @@ export const TRACK_IMPACT_CAP = 0.45;
  * §4.2; reference/contact.json): a model limit, past which a plane turf with a linear spring is not credible for it.
  */
 export const HEAD_DEEP_LIMIT = contactReference.headDeepLimit.value;
+
+/**
+ * Slack (m) of the re-entry guard (P2b.2b.1 design §4.5): a contact may open up to one step's closing |v_n|·dt deep,
+ * plus this. Numerical, not physical: it covers the first step's second-order closing (a curved surface's or the
+ * head's turn, about (v·dt)²/R, under 1e-7 m at 10 m/s) and rounding, and is 1/15,000 of the 15 mm at which the
+ * catapult's contact opened.
+ */
+export const ENTRY_SLACK = 1e-6;
 
 /**
  * Horizon (s) of the tracked end rule's look-ahead (design §3.5): the impact runs on while the front face would reach
@@ -220,6 +236,11 @@ interface PairState {
     readonly line: PairTimeline;
     /** A ball–obstacle pair is skipped while ball B's path length is below this (m); 0 for every other pair. */
     wakeAt: number;
+    /**
+     * A tracked drive's face–ball pair: its timeline per head region, in HEAD_REGIONS order (design §4.5); null for
+     * every other pair and for a force table.
+     */
+    readonly regions: readonly PairTimeline[] | null;
 }
 
 function lawOf(setup: ImpactSetup, pair: Pair): PairLaw {
@@ -318,11 +339,50 @@ interface HeadTurfState {
     slide: number;
 }
 
+/** A tracked impact's entry jumps (design §4.5), as ImpactRun.entryJumps reports them. */
+interface EntryJumps {
+    count: number;
+    worst: number;
+    readonly keys: string[];
+}
+
+/**
+ * Counts an entry jump (design §4.5) when a contact opens `depth` deep, deeper than one step's closing at normal speed
+ * `closing` could make, plus ENTRY_SLACK; `key` names the pair (and region), t is the step's start.
+ */
+function noteEntry(jumps: EntryJumps, depth: number, closing: number, dt: number, key: string, t: number): void {
+    const excess = depth - (Math.abs(closing) * dt + ENTRY_SLACK);
+    if (excess > 0) {
+        jumps.count += 1;
+        jumps.worst = Math.max(jumps.worst, excess);
+        jumps.keys.push(`${key}@${t}`);
+    }
+}
+
+/**
+ * Records one step of a face–ball pair per head region (design §4.5): in contact on `region` with normal force
+ * `force`, and out of contact on every other; nothing for a pair without regions.
+ */
+function recordRegions(
+    lines: readonly PairTimeline[] | null,
+    region: HeadRegion | null,
+    force: number,
+    t: number,
+): void {
+    if (lines === null) {
+        return;
+    }
+    for (let i = 0; i < HEAD_REGIONS.length; i++) {
+        const on = HEAD_REGIONS[i] === region;
+        recordStep(lines[i] as PairTimeline, on, on ? force : 0, t);
+    }
+}
+
 /**
  * The head–turf pair in one step (design §4.1), from the current state: the turf's clamped spring–dashpot and
  * Cundall–Strack friction act on the head at its lowest point. Adds the force and its moment about the head's centre
- * to the head's loads, records the step and the slide, and returns the force on the head, or null while the pair is
- * open.
+ * to the head's loads, records the step and the slide, counts an entry jump if the pair opens too deep (`jumps`, a
+ * tracked drive's), and returns the force on the head, or null while the pair is open.
  */
 function applyHeadTurf(
     p: HeadTurfState,
@@ -331,6 +391,7 @@ function applyHeadTurf(
     dt: number,
     loads: StepLoads,
     t: number,
+    jumps: EntryJumps | null,
 ): Vec3 | null {
     const contact = headTurfContact(state, head);
     if (contact === null) {
@@ -340,6 +401,9 @@ function applyHeadTurf(
     }
     p.peak = Math.max(p.peak, contact.depth);
     const u = pointVelocity(state.position, state.velocity, state.angularVelocity, contact.point);
+    if (jumps !== null && p.line.start === null) {
+        noteEntry(jumps, contact.depth, u.z, dt, HEAD_TURF_KEY, t);
+    }
     const normal = normalForce(p.law, contact.depth, 0 - u.z);
     const slip = horizontal(u);
     const tangential = tangentialForce(p.law, add(horizontal(p.spring), scale(slip, dt)), slip, normal);
@@ -461,7 +525,8 @@ function trackTurf(
 /**
  * The run's result once the loop has ended at `duration`: each ball's final state, an `impact-head-approaching` event
  * for every ball the head is still closing on, every pair's peak penetration, the contact timeline, the pairs touching
- * at the start and, if the head–turf pair closed, its peak penetration, intervals and slide.
+ * at the start and, if the head–turf pair closed, its peak penetration, intervals and slide, and for a tracked drive
+ * the head–ball intervals per region and the entry jumps.
  */
 function finish(
     setup: ImpactSetup,
@@ -469,6 +534,7 @@ function finish(
     balls: readonly BallState[],
     pairs: readonly PairState[],
     turf: HeadTurfState | null,
+    jumps: EntryJumps | null,
     events: ImpactEvent[],
     steps: number,
     duration: number,
@@ -496,14 +562,40 @@ function finish(
             timeline[p.pair.key] = intervals;
         }
     }
-    const run = { balls: final, head: state, duration, events, peakPenetration, steps, timeline, touchingAtStart };
     const turfIntervals = turf === null ? [] : closeTimeline(turf.line, duration);
-    if (turf === null || turfIntervals.length === 0) {
+    const turfClosed = turf !== null && turfIntervals.length > 0;
+    if (turfClosed) {
+        peakPenetration[HEAD_TURF_KEY] = turf.peak;
+        timeline[HEAD_TURF_KEY] = turfIntervals;
+    }
+    const run: ImpactRun = {
+        balls: final,
+        head: state,
+        duration,
+        events,
+        peakPenetration,
+        steps,
+        timeline,
+        touchingAtStart,
+        ...(turfClosed ? { headTurfSlide: turf.slide } : {}),
+    };
+    if (jumps === null) {
         return run;
     }
-    peakPenetration[HEAD_TURF_KEY] = turf.peak;
-    timeline[HEAD_TURF_KEY] = turfIntervals;
-    return { ...run, headTurfSlide: turf.slide };
+    const headRegions: Record<string, readonly ContactInterval[]> = {};
+    for (const p of pairs) {
+        const lines = p.regions;
+        if (lines === null) {
+            continue;
+        }
+        for (let i = 0; i < HEAD_REGIONS.length; i++) {
+            const intervals = closeTimeline(lines[i] as PairTimeline, duration);
+            if (intervals.length > 0) {
+                headRegions[`${p.pair.key}#${HEAD_REGIONS[i] as HeadRegion}`] = intervals;
+            }
+        }
+    }
+    return { ...run, headRegions, entryJumps: { count: jumps.count, worst: jumps.worst, keys: [...jumps.keys] } };
 }
 
 /** When a tracked drive's actions are over: both arcs' windows and, if it has depth, the dip (design §3.5). */
@@ -566,6 +658,7 @@ export function integrate(setup: ImpactSetup, options: ImpactOptions = {}): Impa
     const ballWeight = vec3(0, 0, 0 - ball.mass * setup.gravity);
     const ids = setup.balls.map((b) => b.id);
     const hasTurf = setup.balls.map((b) => b.turf !== null);
+    const tracked = plan.kind === "track";
     const pairs: PairState[] = pairList(
         ids,
         hasTurf,
@@ -577,6 +670,7 @@ export function integrate(setup: ImpactSetup, options: ImpactOptions = {}): Impa
         peak: 0,
         line: emptyTimeline(),
         wakeAt: 0,
+        regions: tracked && pair.kind === "face-ball" ? HEAD_REGIONS.map(() => emptyTimeline()) : null,
     }));
     const balls: BallState[] = setup.balls.map((b) => b.state);
     const travel = balls.map(() => 0);
@@ -592,6 +686,7 @@ export function integrate(setup: ImpactSetup, options: ImpactOptions = {}): Impa
             ? null
             : { law: setup.headTurf, spring: ZERO, peak: 0, line: emptyTimeline(), slide: 0 };
     let deep = false;
+    const jumps: EntryJumps | null = tracked ? { count: 0, worst: 0, keys: [] } : null;
     let state: HeadState = setup.start;
     let grounded = false;
     let struck = false;
@@ -627,7 +722,10 @@ export function integrate(setup: ImpactSetup, options: ImpactOptions = {}): Impa
             if (pair.kind === "ball-obstacle" && (travel[pair.b] as number) < p.wakeAt) {
                 continue;
             }
-            const contact = pairContact(pair, state, head, balls, R, setup.obstacles);
+            // A tracked drive's face–ball pair meets the whole head (design §4.5); a force table keeps the face alone.
+            const hit =
+                p.regions === null ? null : headBallContact(state, head, (balls[pair.b] as BallState).position, R);
+            const contact = p.regions === null ? pairContact(pair, state, head, balls, R, setup.obstacles) : hit;
             if (contact === OFF_FACE || contact === null) {
                 p.spring = ZERO;
                 if (pair.kind === "ball-obstacle") {
@@ -643,6 +741,7 @@ export function integrate(setup: ImpactSetup, options: ImpactOptions = {}): Impa
                     events.push({ kind: "impact-off-face", t, ball: ids[pair.b] as BallId });
                 }
                 recordStep(p.line, contact === OFF_FACE, 0, t);
+                recordRegions(p.regions, null, 0, t);
                 if (pair.kind === "face-ball" && contact === null && inGap(p.line)) {
                     noteClearance(p.line, faceClearance(state, head, (balls[pair.b] as BallState).position, R));
                 }
@@ -654,13 +753,27 @@ export function integrate(setup: ImpactSetup, options: ImpactOptions = {}): Impa
             if (pair.kind === "face-ball") {
                 struck = true;
             }
+            // The re-entry guard reads the interval's first step, before the step is recorded.
+            if (hit !== null && jumps !== null && p.line.start === null) {
+                const sb = balls[pair.b] as BallState;
+                const u = sub(
+                    pointVelocity(sb.position, sb.velocity, sb.angularVelocity, hit.point),
+                    pointVelocity(state.position, state.velocity, state.angularVelocity, hit.point),
+                );
+                noteEntry(jumps, hit.depth, dot(u, hit.normal), dt, `${pair.key}#${hit.region}`, t);
+            }
+            if (hit !== null && hit.region !== "face" && !offFace[pair.b]) {
+                offFace[pair.b] = true;
+                events.push({ kind: "impact-off-face", t, ball: ids[pair.b] as BallId });
+            }
             p.peak = Math.max(p.peak, contact.depth);
             const force = applyPair(p, contact, state, balls, dt, loads, options.probe ? samples : null);
             recordStep(p.line, true, force, t);
+            recordRegions(p.regions, hit === null ? null : hit.region, force, t);
         }
 
         // The head–turf pair comes after every other pair (design §4.1).
-        const turfForce = turf === null ? null : applyHeadTurf(turf, state, head, dt, loads, t);
+        const turfForce = turf === null ? null : applyHeadTurf(turf, state, head, dt, loads, t, jumps);
         if (turfForce !== null) {
             hardClosed = true;
         }
@@ -711,7 +824,7 @@ export function integrate(setup: ImpactSetup, options: ImpactOptions = {}): Impa
         }
     }
 
-    const run = finish(setup, state, balls, pairs, turf, events, steps, steps * dt, touchingAtStart);
+    const run = finish(setup, state, balls, pairs, turf, jumps, events, steps, steps * dt, touchingAtStart);
     if (grip.releasedAt === null) {
         return run;
     }

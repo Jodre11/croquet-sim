@@ -157,7 +157,9 @@ export interface ContactState extends HeadState {
  *   mallet–turf contact is not modelled);
  * - `impact-head-deep`: the head went more than HEAD_DEEP_LIMIT below the turf plane, where the head–turf pair is not
  *   credible (P2b.2b.1 design §4.2);
- * - `impact-off-face`: a ball reached the rim of a face rather than the face (edge strokes are not modelled).
+ * - `impact-off-face`: a ball touched the head off its face: a force table's face rim (edge strokes are not
+ *   modelled), or any region but the face for a tracked drive (P2b.2b.1 design §4.5; no Law judgement is made of it
+ *   in this phase).
  */
 export type ImpactEvent =
     | { readonly kind: "turf-lift"; readonly t: number; readonly ball: BallId }
@@ -169,8 +171,8 @@ export type ImpactEvent =
 
 /**
  * One contact interval of a pair (P2b.2a design §5): [start, end) in s from the impact's start, whole steps, and the
- * largest normal force (N) in it (0 at a face's rim, or for a pair overlapping but released). For a face–ball pair,
- * `clearanceAfter` (m) is the largest separation from the face in the gap before the next interval.
+ * largest normal force (N) in it (0 at a force table's face rim, or for a pair overlapping but released). For a
+ * face–ball pair, `clearanceAfter` (m) is the largest separation from the face in the gap before the next interval.
  */
 export interface ContactInterval {
     readonly start: number;
@@ -193,7 +195,8 @@ export interface ImpactRun {
     readonly steps: number;
     /**
      * Contact intervals of every pair that was in contact, keyed as `peakPenetration` is, plus "<ball>@<obstacle id>".
-     * In contact means closed, or a face–ball pair at the rim (the Laws count any part of the mallet).
+     * In contact means closed, or a force table's face–ball pair at the rim (the Laws count any part of the mallet); a
+     * tracked drive's face–ball pair covers the whole head (P2b.2b.1 design §4.5).
      */
     readonly timeline: Readonly<Record<string, readonly ContactInterval[]>>;
     /** Keys of the ball–ball and ball–obstacle pairs touching (within CONTACT_TOLERANCE) at t = 0, in pair order. */
@@ -208,6 +211,19 @@ export interface ImpactRun {
      * head's material at its lowest point|·dt, summed per step while δ > 0; absent when the pair never closed.
      */
     readonly headTurfSlide?: number;
+    /**
+     * A tracked drive's head–ball intervals per region of the head (P2b.2b.1 design §4.5), keyed
+     * "face/<ball>#<region>", each with the pair's normal force; empty when no ball was touched. Absent for a force
+     * table.
+     */
+    readonly headRegions?: Readonly<Record<string, readonly ContactInterval[]>>;
+    /**
+     * A tracked drive's re-entry guard (P2b.2b.1 design §4.5): how many face–ball and head–turf intervals began deeper
+     * than one step's closing could make (|v_n|·dt + ENTRY_SLACK), the worst excess (m) and their keys,
+     * "face/<ball>#<region>@<t>" or "head/turf@<t>" (t the step's start, s); count 0 when none did. Absent for a force
+     * table.
+     */
+    readonly entryJumps?: { readonly count: number; readonly worst: number; readonly keys: readonly string[] };
 }
 
 /** The impact's outcome, with the balls as handed over to phase 2 (design §6). */
