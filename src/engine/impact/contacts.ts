@@ -4,7 +4,8 @@
  * later one, or the turf on a ball. Penetration δ > 0 means the pair is closed. The contact point lies on the
  * normal's line, δ/2 inside ball B's undeformed surface: x = c_B − (R − δ/2)·n. The ball–obstacle pair (P2b.2a design
  * §4) acts from a hoop upright or the peg, an immovable vertical cylinder, along the horizontal normal from its axis to
- * the ball's centre.
+ * the ball's centre. The head–turf pair (P2b.2b.1 design §4.1) acts from the turf on the head's lowest point, along ẑ.
+ * For a tracked drive the face–ball pair meets the whole head, a solid cylinder (design §4.5, headBallContact).
  */
 import { CONTACT_TOLERANCE } from "../detect";
 import { add, cross, dot, horizontal, length, scale, sub, vec3, type Vec3 } from "../math/vec3";
@@ -121,6 +122,67 @@ export function faceContact(
         }
     }
     return null;
+}
+
+/** A region of the solid head a ball can touch (P2b.2b.1 design §4.5). */
+export type HeadRegion = "face" | "rim" | "barrel" | "back-rim" | "back";
+
+/** Every head region, in the order the integrator records them. */
+export const HEAD_REGIONS: readonly HeadRegion[] = ["face", "rim", "barrel", "back-rim", "back"];
+
+/** A head–ball contact on the solid cylinder, with the region touched. */
+export interface HeadPenetration extends Penetration {
+    readonly region: HeadRegion;
+}
+
+/**
+ * The contact of a ball centred at `centre` with the whole head as a solid cylinder (P2b.2b.1 design §4.5). With a the
+ * head's axis, x the centre's offset along it, ρ_b its distance from the axis and u the unit radial direction,
+ * e_x = |x| − L/2 and e_r = ρ_b − r: off both (e_x > 0, e_r > 0) a rim (`rim` for x ≥ 0, else `back-rim`), at
+ * √(e_x² + e_r²) along (e_x·sign(x)·a + e_r·u)/distance; otherwise, where e_x > e_r, an end disc (`face` for x ≥ 0,
+ * else `back`), at e_x along sign(x)·a; otherwise the barrel, at e_r along u. The distance is the centre's signed
+ * distance from the cylinder, continuous across the regions, so a contact never opens deep by changing region.
+ * δ = R − distance closes the pair when positive, at c_b − (R − δ/2)·n. A centre on the axis in the barrel region has
+ * no normal and throws a RangeError (it lies at least r inside both faces).
+ */
+export function headBallContact(
+    state: HeadState,
+    head: MalletHead,
+    centre: Vec3,
+    radius: number,
+): HeadPenetration | null {
+    const axis = rotate(state.orientation, vec3(1, 0, 0));
+    const offset = sub(centre, state.position);
+    const x = dot(offset, axis);
+    const across = sub(offset, scale(axis, x));
+    const radial = length(across);
+    const ex = Math.abs(x) - head.length / 2;
+    const er = radial - head.radius;
+    const end = x >= 0 ? axis : scale(axis, -1);
+    let distance: number;
+    let normal: Vec3;
+    let region: HeadRegion;
+    if (ex > 0 && er > 0) {
+        distance = Math.sqrt(ex * ex + er * er);
+        normal = scale(add(scale(end, ex), scale(across, er / radial)), 1 / distance);
+        region = x >= 0 ? "rim" : "back-rim";
+    } else if (ex > er) {
+        distance = ex;
+        normal = end;
+        region = x >= 0 ? "face" : "back";
+    } else {
+        if (radial === 0) {
+            throw new RangeError("head–ball contact with a centre on the head's axis has no normal");
+        }
+        distance = er;
+        normal = scale(across, 1 / radial);
+        region = "barrel";
+    }
+    const depth = radius - distance;
+    if (!(depth > 0)) {
+        return null;
+    }
+    return { normal, depth, point: sub(centre, scale(normal, radius - depth / 2)), region };
 }
 
 /**
@@ -309,4 +371,32 @@ export function headClosing(state: HeadState, head: MalletHead, ball: BallState,
         }
     }
     return false;
+}
+
+/** Key of the head–turf pair (P2b.2b.1 design §4.3). */
+export const HEAD_TURF_KEY = "head/turf";
+
+/**
+ * The head's lowest point (P2b.2b.1 design §4.1). With a the unit axis and |a_z| < 1, it is
+ * c − (L/2)·sign(a_z)·a − r·u, u the unit vector of ẑ − a_z·a: the lower end disc's rim, straight below the axis. For
+ * a_z = 0 it lies under the centre, on the barrel; for |a_z| = 1, the face disc is level and it is the disc's centre.
+ * Its height is headLowestPoint's, up to rounding.
+ */
+export function headBottom(state: HeadState, head: MalletHead): Vec3 {
+    const a = rotate(state.orientation, vec3(1, 0, 0));
+    const half = head.length / 2;
+    const end = a.z > 0 ? scale(a, half) : a.z < 0 ? scale(a, 0 - half) : vec3(0, 0, 0);
+    const rise = vec3(0 - a.z * a.x, 0 - a.z * a.y, 1 - a.z * a.z);
+    const size = length(rise);
+    const across = size > 0 ? scale(rise, head.radius / size) : vec3(0, 0, 0);
+    return sub(sub(state.position, end), across);
+}
+
+/** The turf's contact with the head: closed while its lowest point is below the turf plane, along ẑ, acting there. */
+export function headTurfContact(state: HeadState, head: MalletHead): Penetration | null {
+    const point = headBottom(state, head);
+    if (!(point.z < 0)) {
+        return null;
+    }
+    return { normal: UP, depth: 0 - point.z, point };
 }

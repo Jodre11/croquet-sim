@@ -1,10 +1,34 @@
 /**
  * Public API of the croquet physics engine. The planner and renderer import from here only.
  */
+export { judgeFaults, type FaultReport, type Finding, type StrokeContext } from "./faults";
 export { judgeHoopRun, type HoopRunVerdict, type HoopTarget } from "./hoopRun";
+export { simulateImpact } from "./impact/simulateImpact";
+export type {
+    ContactState,
+    Coupling,
+    Drive,
+    Hands,
+    ImpactEvent,
+    ImpactResult,
+    StrokeMode,
+    SwingArc,
+} from "./impact/types";
 export { vec3, type Vec3 } from "./math/vec3";
 export { stateAtTime } from "./sample";
+export { simulateShot, type ShotOutcome } from "./shot";
 export { ENGINE_VERSION, simulateFreeMotion } from "./simulate";
+export type { SwingApproach } from "./swing/buildContact";
+export { ON_TIME, defaultProfile } from "./swing/profile";
+export {
+    CROQUET_STROKES,
+    type ShotSetup,
+    type StrokeTiming,
+    type StrokeType,
+    type SwingDrive,
+    type SwingProfile,
+    type SwingStance,
+} from "./swing/types";
 export {
     BALL_IDS,
     type BallId,

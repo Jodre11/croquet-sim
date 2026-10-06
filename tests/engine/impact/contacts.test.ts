@@ -1,15 +1,20 @@
 import { describe, expect, it } from "vitest";
 import { CONTACT_TOLERANCE } from "../../../src/engine/detect";
-import { ZERO, horizontal, length, sub, vec3 } from "../../../src/engine/math/vec3";
+import { ZERO, add, dot, horizontal, length, scale, sub, vec3, type Vec3 } from "../../../src/engine/math/vec3";
 import {
+    HEAD_REGIONS,
+    HEAD_TURF_KEY,
     OFF_FACE,
     ballBallContact,
     ballPairKey,
     faceClearance,
     faceContact,
     faceKey,
+    headBallContact,
+    headBottom,
     headClosing,
     headLowestPoint,
+    headTurfContact,
     obstacleContact,
     obstacleGap,
     obstacleKey,
@@ -19,12 +24,15 @@ import {
     pairTouching,
     pointVelocity,
     turfContact,
+    type HeadPenetration,
+    type HeadRegion,
     type ObstacleGeometry,
     type Penetration,
 } from "../../../src/engine/impact/contacts";
-import { IDENTITY, axisAngle } from "../../../src/engine/impact/rigidBody";
+import { IDENTITY, axisAngle, multiply, rotate, type Quaternion } from "../../../src/engine/impact/rigidBody";
 import type { HeadState, MalletHead } from "../../../src/engine/impact/types";
 import type { BallState } from "../../../src/engine/types";
+import { TEST_HEAD } from "../support/impact";
 
 const R = 0.046;
 const HEAD: MalletHead = { mass: 1, inertia: vec3(1, 1, 1), length: 0.2, radius: 0.03, socket: vec3(0, 0, 0.03) };
@@ -303,5 +311,125 @@ describe("headClosing", () => {
 
     it("ignores a ball behind the back face", () => {
         expect(headClosing(headAt(0, vec3(2, 0, 0)), HEAD, ball(-0.2 - R - 1e-3, 0), R)).toBe(false);
+    });
+});
+
+describe("the head's lowest point and its turf contact", () => {
+    const centre = vec3(1, 2, 0.05);
+    const at = (orientation: Quaternion): HeadState => ({
+        position: centre,
+        orientation,
+        velocity: vec3(0, 0, 0),
+        angularVelocity: vec3(0, 0, 0),
+    });
+
+    it("lies under the centre for a level head", () => {
+        expect(headBottom(at(IDENTITY), TEST_HEAD)).toEqual(vec3(1, 2, 0.05 - TEST_HEAD.radius));
+    });
+
+    it("is the lower end's rim for a tilted head, as low as headLowestPoint says", () => {
+        // Front face tilted up 0.3 rad: the rear (−x) end is lower.
+        const q = axisAngle(vec3(0, 1, 0), -0.3);
+        const p = headBottom(at(q), TEST_HEAD);
+        const axis = rotate(q, vec3(1, 0, 0));
+        expect(p.z).toBeCloseTo(headLowestPoint(at(q), TEST_HEAD), 15);
+        expect(dot(sub(p, centre), axis)).toBeCloseTo(-TEST_HEAD.length / 2, 15);
+    });
+
+    it("closes only below the turf, acting upward at the lowest point", () => {
+        expect(headTurfContact(at(IDENTITY), TEST_HEAD)).toBeNull();
+        const low = { ...at(IDENTITY), position: vec3(1, 2, TEST_HEAD.radius - 1e-4) };
+        const contact = headTurfContact(low, TEST_HEAD);
+        expect(contact?.normal).toEqual(vec3(0, 0, 1));
+        expect(contact?.depth).toBeCloseTo(1e-4, 15);
+        expect(contact?.point).toEqual(headBottom(low, TEST_HEAD));
+        expect(HEAD_TURF_KEY).toBe("head/turf");
+    });
+});
+
+describe("the whole head against a ball (headBallContact)", () => {
+    const POSE: HeadState = {
+        position: vec3(1, 2, 0.3),
+        orientation: multiply(axisAngle(vec3(0, 0, 1), 0.4), axisAngle(vec3(0, 1, 0), -0.3)),
+        velocity: ZERO,
+        angularVelocity: ZERO,
+    };
+    /** A point given in POSE's head frame, in the world frame. */
+    const at = (b: Vec3): Vec3 => add(POSE.position, rotate(POSE.orientation, b));
+    const s = Math.SQRT1_2;
+    const D = 0.01;
+    // Each region's surface point and outward normal, head frame (HEAD: L/2 = 0.1, r = 0.03). The rim point lies on
+    // the face's edge, radially along (0, 0.6, 0.8).
+    const REGIONS: readonly [HeadRegion, Vec3, Vec3][] = [
+        ["face", vec3(0.1, 0.01, -0.005), vec3(1, 0, 0)],
+        ["rim", vec3(0.1, 0.018, 0.024), vec3(s, 0.6 * s, 0.8 * s)],
+        ["barrel", vec3(0.02, 0, -0.03), vec3(0, 0, -1)],
+        ["back-rim", vec3(-0.1, 0, -0.03), vec3(-s, 0, -s)],
+        ["back", vec3(-0.1, 0, 0.01), vec3(-1, 0, 0)],
+    ];
+
+    it("lists the regions in their order", () => {
+        expect(HEAD_REGIONS).toEqual(["face", "rim", "barrel", "back-rim", "back"]);
+        expect(REGIONS.map(([region]) => region)).toEqual(HEAD_REGIONS);
+    });
+
+    it.each(REGIONS)("reports a ball against the %s with its region, normal, depth and point", (region, surface, n) => {
+        const centre = at(add(surface, scale(n, R - D)));
+        const contact = headBallContact(POSE, HEAD, centre, R) as HeadPenetration;
+        const normal = rotate(POSE.orientation, n);
+        // A turned pose at metre scale rounds at about 1e-16 m; 1e-12 leaves a wide margin and no room for an error.
+        expect(contact.region).toBe(region);
+        expect(contact.depth).toBeCloseTo(D, 12);
+        expect(length(sub(contact.normal, normal))).toBeLessThan(1e-12);
+        expect(length(sub(contact.point, sub(centre, scale(normal, R - D / 2))))).toBeLessThan(1e-12);
+    });
+
+    it.each(REGIONS)("is open for a ball just clear of the %s", (_region, surface, n) => {
+        expect(headBallContact(POSE, HEAD, at(add(surface, scale(n, R + 1e-9))), R)).toBeNull();
+    });
+
+    it("breaks ties as the spec does: a rim only off both, else a disc only where e_x > e_r", () => {
+        // Binary-exact dimensions at the origin, so the ties are exact: L/2 = 0.125, r = 0.0625, offsets of 1/32.
+        const exact: MalletHead = { ...HEAD, length: 0.25, radius: 0.0625 };
+        const origin: HeadState = { position: ZERO, orientation: IDENTITY, velocity: ZERO, angularVelocity: ZERO };
+        const cases: readonly [Vec3, HeadRegion, Vec3, number][] = [
+            // Inside, e_x = e_r = −1/32: the barrel.
+            [vec3(0.09375, 0.03125, 0), "barrel", vec3(0, 1, 0), -0.03125],
+            // Ahead of the face, level with its edge, e_x = 1/32 and e_r = 0: the face.
+            [vec3(0.15625, 0.0625, 0), "face", vec3(1, 0, 0), 0.03125],
+            // Beside the barrel in the face's plane, e_x = 0 and e_r = 1/32: the barrel.
+            [vec3(0.125, 0.09375, 0), "barrel", vec3(0, 1, 0), 0.03125],
+        ];
+        for (const [centre, region, normal, distance] of cases) {
+            const contact = headBallContact(origin, exact, centre, R) as HeadPenetration;
+            expect(contact.region).toBe(region);
+            expect(contact.normal).toEqual(normal);
+            expect(contact.depth).toBe(R - distance);
+        }
+    });
+
+    it("keeps the distance continuous across every region boundary", () => {
+        // Points 2·EPS apart either side of each boundary (head frame): the signed distance moves by at most 2·EPS
+        // between them, plus rounding (about 1e-16 m at this pose).
+        const EPS = 1e-9;
+        const boundaries: readonly [HeadRegion, Vec3, HeadRegion, Vec3][] = [
+            ["face", vec3(0.11, 0.03 - EPS, 0), "rim", vec3(0.11, 0.03 + EPS, 0)],
+            ["rim", vec3(0.1 + EPS, 0, 0.04), "barrel", vec3(0.1 - EPS, 0, 0.04)],
+            ["face", vec3(0.095, 0, 0.025 - EPS), "barrel", vec3(0.095, 0, 0.025 + EPS)],
+            ["back", vec3(-0.11, 0.03 - EPS, 0), "back-rim", vec3(-0.11, 0.03 + EPS, 0)],
+            ["back-rim", vec3(-0.1 - EPS, 0, 0.04), "barrel", vec3(-0.1 + EPS, 0, 0.04)],
+            ["back", vec3(-0.095, 0, 0.025 - EPS), "barrel", vec3(-0.095, 0, 0.025 + EPS)],
+        ];
+        for (const [first, a, second, b] of boundaries) {
+            const p = headBallContact(POSE, HEAD, at(a), R) as HeadPenetration;
+            const q = headBallContact(POSE, HEAD, at(b), R) as HeadPenetration;
+            expect([p.region, q.region]).toEqual([first, second]);
+            expect(Math.abs(p.depth - q.depth)).toBeLessThan(2 * EPS + 1e-12);
+        }
+    });
+
+    it("has no normal for a centre on the axis deep inside the barrel, and throws", () => {
+        expect(() => headBallContact(POSE, HEAD, POSE.position, R)).toThrow(RangeError);
+        expect(() => headBallContact(POSE, HEAD, POSE.position, R)).toThrow(/centre on the head's axis/);
     });
 });

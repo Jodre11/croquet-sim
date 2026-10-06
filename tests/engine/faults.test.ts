@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { JUDGED_LAWS, judgeFaults, type FaultReport, type StrokeContext } from "../../src/engine/faults";
-import { ZERO } from "../../src/engine/math/vec3";
+import { vec3, ZERO } from "../../src/engine/math/vec3";
 import { IDENTITY } from "../../src/engine/impact/rigidBody";
 import type { ContactInterval, ImpactEvent, ImpactResult } from "../../src/engine/impact/types";
 import type { BallStates } from "../../src/engine/types";
@@ -22,6 +22,7 @@ function impact(over: {
     events?: readonly ImpactEvent[];
     peakPenetration?: Record<string, number>;
     balls?: BallStates;
+    headTurfSlide?: number;
 }): ImpactResult {
     const balls = over.balls ?? ALL;
     return {
@@ -35,6 +36,7 @@ function impact(over: {
         touchingAtStart: over.touchingAtStart ?? [],
         handover: balls,
         overlapCorrection: 0,
+        ...(over.headTurfSlide === undefined ? {} : { headTurfSlide: over.headTurfSlide }),
     };
 }
 
@@ -419,5 +421,77 @@ describe("judgeFaults: a context that does not fit the impact", () => {
     it.each(cases)("throws for %s", (_label, context, result, message) => {
         expect(() => judgeFaults(context, result)).toThrow(RangeError);
         expect(() => judgeFaults(context, result)).toThrow(message);
+    });
+});
+
+describe("judgeFaults: 29.1.13 'plays away from' and 29.1.14 (P2b.2b.1)", () => {
+    const LINE = vec3(1, 0, 0);
+    /** A swing direction `degrees` from the line of centres, built directly rather than through the engine's sinCos. */
+    const towards = (degrees: number) =>
+        vec3(Math.cos((degrees * Math.PI) / 180), Math.sin((degrees * Math.PI) / 180), 0);
+    const pressed = impact({ peakPenetration: { "blue/red": 1e-4 } });
+
+    it("finds a croquet stroke played at more than 90° to the line of centres, and not at less", () => {
+        expect(laws(judgeFaults({ ...CROQUET, aim: towards(89.9), lineOfCentres: LINE }, pressed))).toEqual([]);
+        const away = judgeFaults({ ...CROQUET, aim: towards(90.1), lineOfCentres: LINE }, pressed);
+        expect(laws(away)).toEqual(["29.1.13 fault"]);
+        expect(away.findings[0]).toMatchObject({ ball: "red", t: pressed.duration });
+        expect(away.findings[0]?.evidence.angle).toBeCloseTo((90.1 * Math.PI) / 180, 12);
+    });
+
+    it("reports both 29.1.13 clauses, 'fails to move or shake' first", () => {
+        const both = judgeFaults({ ...CROQUET, aim: towards(150), lineOfCentres: LINE }, impact({}));
+        expect(both.findings.map((f) => [f.law, Object.keys(f.evidence)])).toEqual([
+            ["29.1.13", ["peakPenetration"]],
+            ["29.1.13", ["angle"]],
+        ]);
+    });
+
+    it("leaves 'plays away from' unjudged without a swing", () => {
+        expect(laws(judgeFaults(CROQUET, pressed))).toEqual([]);
+    });
+
+    it("ignores aim outside a croquet stroke", () => {
+        expect(laws(judgeFaults({ ...SINGLE, aim: towards(120) }, impact({})))).toEqual([]);
+    });
+
+    it("29.1.14: the head in the turf in a stroke of Law 29.2.3 is a possible fault, with its evidence", () => {
+        const dug = impact({
+            timeline: { "face/blue": [iv(0, 2 * T)], "head/turf": [iv(3 * T, 9 * T, 40), iv(12 * T, 13 * T, 55)] },
+            peakPenetration: { "head/turf": 4e-4 },
+            headTurfSlide: 0.012,
+        });
+        for (const context of [
+            { ...SINGLE, hampered: true },
+            { ...SINGLE, jumpAttempt: true },
+            { ...SINGLE, group: true },
+        ]) {
+            const report = judgeFaults(context, dug);
+            expect(laws(report)).toEqual(["29.1.14 possible-fault"]);
+            expect(report.findings[0]).toMatchObject({
+                ball: "blue",
+                t: 3 * T,
+                evidence: { penetration: 4e-4, peakForce: 55, slide: 0.012 },
+            });
+        }
+        expect(laws(judgeFaults(SINGLE, dug))).toEqual([]);
+    });
+
+    it("reports 29.1.14 after 29.1.13", () => {
+        const dug = impact({ timeline: { "head/turf": [iv(0, T)] } });
+        expect(laws(judgeFaults({ ...CROQUET, group: true }, dug))).toEqual([
+            "29.1.13 fault",
+            "29.1.14 possible-fault",
+        ]);
+    });
+
+    it("rejects an aim or a line of centres that is not a horizontal unit vector, and an aim without its line", () => {
+        expect(() => judgeFaults({ ...CROQUET, aim: vec3(1, 0, 0.1), lineOfCentres: LINE }, pressed)).toThrow(
+            /aim must be a horizontal unit vector/,
+        );
+        expect(() => judgeFaults({ ...CROQUET, aim: LINE, lineOfCentres: vec3(2, 0, 0) }, pressed)).toThrow(
+            /lineOfCentres must be a horizontal unit vector/,
+        );
+        expect(() => judgeFaults({ ...CROQUET, aim: LINE }, pressed)).toThrow(/needs its lineOfCentres/);
     });
 });

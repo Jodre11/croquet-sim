@@ -109,6 +109,7 @@ export const FAULT_LAW_KEYS = [
     "29.1.9",
     "29.1.11",
     "29.1.13",
+    "29.1.14",
     "29.2.3",
     "29.2.4",
     "29.2.5",
@@ -154,20 +155,30 @@ export const frictionReference = {
     ballTurfRestitution: readValue(frictionJson, "ballTurfRestitution", "friction"),
 } as const;
 
-/** Impact-phase contact data: turf stiffness, contact durations and the tangential stiffness ratio. */
+/**
+ * Impact-phase contact data: turf stiffness, contact durations, the tangential ratio, the hand coupling, the default
+ * body's arm mass and reach slack, and the head–turf pair.
+ */
 export const contactReference = {
     ballTurfStiffness: readValue(contactJson, "ballTurfStiffness", "contact"),
     ballBallContactTime: readValue(contactJson, "ballBallContactTime", "contact"),
     ballObstacleContactTime: readValue(contactJson, "ballObstacleContactTime", "contact"),
     faceBallContactTime: readValue(contactJson, "faceBallContactTime", "contact"),
     tangentialStiffnessRatio: readValue(contactJson, "tangentialStiffnessRatio", "contact"),
+    handCouplingPeriod: readValue(contactJson, "handCouplingPeriod", "contact"),
+    handCouplingDampingRatio: readValue(contactJson, "handCouplingDampingRatio", "contact"),
+    armMass: readValue(contactJson, "armMass", "contact"),
+    reachSlack: readValue(contactJson, "reachSlack", "contact"),
+    headTurfFriction: readValue(contactJson, "headTurfFriction", "contact"),
+    headDeepLimit: readValue(contactJson, "headDeepLimit", "contact"),
 } as const;
 
-/** One mallet face and one typical round head (P2b.1; other faces and weightings are P2b.2's). */
+/** One mallet face, one typical round head and the default shaft (P2b.1, P2b.2b.1). */
 export const malletReference = {
     faceRestitution: readValue(malletJson, "faceRestitution", "mallet"),
     faceFriction: readValue(malletJson, "faceFriction", "mallet"),
     headMass: readValue(malletJson, "headMass", "mallet"),
     headLength: readValue(malletJson, "headLength", "mallet"),
     headDiameter: readValue(malletJson, "headDiameter", "mallet"),
+    shaftLength: readValue(malletJson, "shaftLength", "mallet"),
 } as const;

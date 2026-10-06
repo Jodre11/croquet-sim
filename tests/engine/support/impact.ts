@@ -15,7 +15,21 @@ import {
     type Quaternion,
 } from "../../../src/engine/impact/rigidBody";
 import { validateImpact } from "../../../src/engine/impact/simulateImpact";
-import type { ContactState, DriveSample, FaceMaterial, HeadState, MalletHead } from "../../../src/engine/impact/types";
+import { headOnPath, prepareTrack, swingOrientation } from "../../../src/engine/impact/track";
+import type {
+    ContactState,
+    Coupling,
+    Dip,
+    Drive,
+    DriveSample,
+    FaceMaterial,
+    Hands,
+    HeadState,
+    MalletHead,
+    SwingArc,
+    TrackDrive,
+} from "../../../src/engine/impact/types";
+import { sinCos } from "../../../src/engine/math/elementary";
 import type { BallParams, BallState, BallStates, World } from "../../../src/engine/types";
 import { STANDARD_GRAVITY, uprightsOf } from "../../../src/engine/world";
 import { TEST_BALL, ballAt, hoopWithUprightAt, testHoop } from "./fixtures";
@@ -32,6 +46,65 @@ export const TEST_HEAD: MalletHead = {
 };
 
 export const TEST_FACE: FaceMaterial = { restitution: 0.8, friction: 0.4, contactTime: 6e-4 };
+
+/** A coupling for tracked test heads: plausible, not sourced (design §3.4 sets the engine's); contact at t = 0. */
+export const TEST_COUPLING: Coupling = { period: 0.04, dampingRatio: 0.7, relaxAt: 0 };
+
+/** Two firm hands with no arm mass, so the swung body is the head and head-only closed forms hold; a full guide. */
+export const TEST_HANDS: Hands = {
+    bottom: 0.4,
+    gripTension: 1,
+    bottomGrip: 1,
+    armMass: 0,
+    reachSlack: 0.03,
+    guideEffort: 1,
+};
+
+/** A dip of no depth. */
+export const NO_DIP: Dip = { start: 0, duration: 0.01, depth: 0 };
+
+/** A tracked drive along `arc`, by default with TEST_COUPLING and TEST_HANDS. */
+export function trackDrive(arc: SwingArc, coupling: Coupling = TEST_COUPLING, hands: Hands = TEST_HANDS): TrackDrive {
+    return { kind: "track", arc, coupling, hands };
+}
+
+/**
+ * A still, level swing-mode arc whose test head on the path at t = 0 has its centre at `centre`: aim +x, radius 0.8,
+ * θ₀, ω₀ and α 0, both windows 0.01 s from t = 0, no dip, contact at t = 0, a reach of 10 m (it never binds) and no
+ * ground depth. `o` overrides any field; the pivot follows an overridden aim, radius or θ₀ unless `o` sets it.
+ */
+export function levelArc(centre: Vec3, o: Partial<SwingArc> = {}): SwingArc {
+    const aim = o.aim ?? vec3(1, 0, 0);
+    const radius = o.radius ?? 0.8;
+    const theta0 = o.theta0 ?? 0;
+    const socket = add(centre, rotate(swingOrientation(aim, theta0), TEST_HEAD.socket));
+    const [s, c] = sinCos(theta0);
+    return {
+        pivot: sub(socket, scale(sub(scale(aim, s), vec3(0, 0, c)), radius)),
+        pivotVelocity: ZERO,
+        pivotAcceleration: ZERO,
+        handStart: 0,
+        handWindow: 0.01,
+        aim,
+        radius,
+        theta0,
+        omega0: 0,
+        alpha: 0,
+        arcStart: 0,
+        window: 0.01,
+        dip: NO_DIP,
+        contactAt: 0,
+        mode: "swing",
+        handReach: 10,
+        groundDepth: 0,
+        ...o,
+    };
+}
+
+/** A tracked contact state: `head` on `drive`'s path at time `t` (s), with the test face. */
+export function onArc(drive: TrackDrive, head: MalletHead = TEST_HEAD, t = 0): ContactState {
+    return { head, face: TEST_FACE, ...headOnPath(prepareTrack(drive, head, STANDARD_GRAVITY), head, t), drive };
+}
 
 /** A drive that carries the head's weight plus `force` (world frame) for `window` seconds. */
 export function drive(force: Vec3, window: number, head: MalletHead = TEST_HEAD): DriveSample[] {
@@ -87,7 +160,7 @@ export function strike(centre: Vec3, o: StrikeOptions = {}): ContactState {
         orientation,
         velocity: scale(travel, o.speed ?? 2),
         angularVelocity: ZERO,
-        drive: o.drive ? o.drive(travel) : coast(3e-3, head),
+        drive: { kind: "force", samples: o.drive ? o.drive(travel) : coast(3e-3, head) },
     };
 }
 
@@ -109,7 +182,8 @@ export function freeBall(
 
 /**
  * An isolated set-up for `integrate`: by default the head parked far away (it never touches anything) and undriven,
- * gravity off, the test face and test ball–ball laws, no balls and no obstacles. Override what a case needs.
+ * gravity off, the test face and test ball–ball laws, no balls, no obstacles and no head–turf pair. Override what a
+ * case needs.
  */
 export function isolated(overrides: Partial<ImpactSetup> = {}): ImpactSetup {
     const start: HeadState = {
@@ -121,13 +195,14 @@ export function isolated(overrides: Partial<ImpactSetup> = {}): ImpactSetup {
     return {
         head: TEST_HEAD,
         start,
-        drive: [{ t: 0, force: ZERO }],
+        drive: { kind: "force", samples: [{ t: 0, force: ZERO }] },
         face: faceLaw(),
         ballBall: lawFromContactTime(TEST_BALL.mass / 2, 0.8, 7e-4, 0.05),
         ball: TEST_BALL,
         gravity: 0,
         balls: [],
         obstacles: [],
+        headTurf: null,
         ...overrides,
     };
 }
@@ -299,6 +374,28 @@ export function mirrorBall(s: BallState): BallState {
     };
 }
 
+/**
+ * A drive reflected across y = 0. A tracked drive reflects its arc's vectors; its angles, coupling and hands are
+ * unchanged: the pitch axis aim × ẑ is a pseudovector and reflects as a spin does, so a turn θ about it reflects to the
+ * same θ about the reflected axis, and the path's orientation rot(n, θ) ⊗ q_aim reflects factor by factor.
+ */
+function mirrorDrive(d: Drive): Drive {
+    if (d.kind === "force") {
+        return { kind: "force", samples: d.samples.map((s) => ({ t: s.t, force: mirrorVec(s.force) })) };
+    }
+    const { arc } = d;
+    return {
+        ...d,
+        arc: {
+            ...arc,
+            pivot: mirrorVec(arc.pivot),
+            pivotVelocity: mirrorVec(arc.pivotVelocity),
+            pivotAcceleration: mirrorVec(arc.pivotAcceleration),
+            aim: mirrorVec(arc.aim),
+        },
+    };
+}
+
 export function mirrorContact(c: ContactState): ContactState {
     return {
         ...c,
@@ -306,7 +403,7 @@ export function mirrorContact(c: ContactState): ContactState {
         orientation: mirrorQuat(c.orientation),
         velocity: mirrorVec(c.velocity),
         angularVelocity: mirrorSpin(c.angularVelocity),
-        drive: c.drive.map((s) => ({ t: s.t, force: mirrorVec(s.force) })),
+        drive: mirrorDrive(c.drive),
     };
 }
 
