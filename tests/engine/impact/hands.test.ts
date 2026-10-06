@@ -506,6 +506,20 @@ describe("the bottom hand's rate guide", () => {
     });
 });
 
+describe("a shaft along the aim", () => {
+    it("has no defined forward, so the bottom hand's load stays finite", () => {
+        const path = prepare(still(), TEST_COUPLING, TEST_HANDS);
+        const t = 0.02;
+        // An upright head under a vertical aim: the shaft is exactly along it, so the swing plane's forward is 0 / 0.
+        const track: PreparedTrack = { ...path, arc: { ...path.arc, aim: UP } };
+        const head: HeadState = { ...headOnPath(path, TEST_HEAD, t), orientation: { w: 1, x: 0, y: 0, z: 0 } };
+        const load = handLoad(track, head, TEST_HEAD, t, newGripState());
+        for (const v of [load.force, load.torque, load.top, load.bottom]) {
+            expect(Number.isFinite(v.x + v.y + v.z)).toBe(true);
+        }
+    });
+});
+
 describe("release by reach", () => {
     const track = prepare(still(), TEST_COUPLING, TEST_HANDS);
     const lever = 0.8 - TEST_HANDS.bottom;

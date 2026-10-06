@@ -52,6 +52,12 @@ const REACH_SEARCH = 0.5;
 /** Bisections of REACH_SEARCH for the reach's start: numerical, enough to reach a double's resolution. */
 const REACH_BISECTIONS = 80;
 
+/**
+ * The squared size of aim − (aim·s)s (that is sin² of the angle between aim and the shaft axis s) at or below which the
+ * bottom hand's forward e has no defined direction. Not physical: a shaft within ~1e-9 rad of the aim, numerical.
+ */
+const FORWARD_UNDEFINED = 1e-18;
+
 /** The pitch axis n = aim × ẑ of a horizontal unit `aim`: a positive rotation about it tilts aim upward. */
 export function pitchAxis(aim: Vec3): Vec3 {
     return vec3(aim.y, 0 - aim.x, 0);
@@ -684,9 +690,10 @@ export function handLoad(
     const topFed = add(scale(firmShare ? topShare : shared, hands.gripTension), dip);
     const top = add(topFed, scale(topLag, track.top.damping));
     const g = track.bottom;
-    // e: perpendicular to the shaft in the swing plane, forward.
+    // e: perpendicular to the shaft in the swing plane, forward; 0 where the shaft is along the aim and none is defined.
     const raw = across(arc.aim, s);
-    const e = scale(raw, 1 / Math.sqrt(dot(raw, raw)));
+    const rawSquared = dot(raw, raw);
+    const e = rawSquared > FORWARD_UNDEFINED ? scale(raw, 1 / Math.sqrt(rawSquared)) : ZERO;
     if (grip.releasedAt !== null) {
         return load(top, scale(e, effort * Math.max(0, g.damping * dot(bottomLag, e))), 0, topFed);
     }
