@@ -15,7 +15,20 @@ import {
     type Quaternion,
 } from "../../../src/engine/impact/rigidBody";
 import { validateImpact } from "../../../src/engine/impact/simulateImpact";
-import type { ContactState, DriveSample, FaceMaterial, HeadState, MalletHead } from "../../../src/engine/impact/types";
+import { swingOrientation } from "../../../src/engine/impact/track";
+import type {
+    ContactState,
+    Coupling,
+    Dip,
+    DriveSample,
+    FaceMaterial,
+    Hands,
+    HeadState,
+    MalletHead,
+    SwingArc,
+    TrackDrive,
+} from "../../../src/engine/impact/types";
+import { sinCos } from "../../../src/engine/math/elementary";
 import type { BallParams, BallState, BallStates, World } from "../../../src/engine/types";
 import { STANDARD_GRAVITY, uprightsOf } from "../../../src/engine/world";
 import { TEST_BALL, ballAt, hoopWithUprightAt, testHoop } from "./fixtures";
@@ -32,6 +45,60 @@ export const TEST_HEAD: MalletHead = {
 };
 
 export const TEST_FACE: FaceMaterial = { restitution: 0.8, friction: 0.4, contactTime: 6e-4 };
+
+/** A coupling for tracked test heads: plausible, not sourced (design §3.4 sets the engine's); contact at t = 0. */
+export const TEST_COUPLING: Coupling = { period: 0.04, dampingRatio: 0.7, relaxAt: 0 };
+
+/** Two firm hands with no arm mass, so the swung body is the head and head-only closed forms hold; a full guide. */
+export const TEST_HANDS: Hands = {
+    bottom: 0.4,
+    gripTension: 1,
+    bottomGrip: 1,
+    armMass: 0,
+    reachSlack: 0.03,
+    guideEffort: 1,
+};
+
+/** A dip of no depth. */
+export const NO_DIP: Dip = { start: 0, duration: 0.01, depth: 0 };
+
+/** A tracked drive along `arc`, by default with TEST_COUPLING and TEST_HANDS. */
+export function trackDrive(arc: SwingArc, coupling: Coupling = TEST_COUPLING, hands: Hands = TEST_HANDS): TrackDrive {
+    return { kind: "track", arc, coupling, hands };
+}
+
+/**
+ * A still, level swing-mode arc whose test head on the path at t = 0 has its centre at `centre`: aim +x, radius 0.8,
+ * θ₀, ω₀ and α 0, both windows 0.01 s from t = 0, no dip, contact at t = 0, a reach of 10 m (it never binds) and no
+ * ground depth. `o` overrides any field; the pivot follows an overridden aim, radius or θ₀ unless `o` sets it.
+ */
+export function levelArc(centre: Vec3, o: Partial<SwingArc> = {}): SwingArc {
+    const aim = o.aim ?? vec3(1, 0, 0);
+    const radius = o.radius ?? 0.8;
+    const theta0 = o.theta0 ?? 0;
+    const socket = add(centre, rotate(swingOrientation(aim, theta0), TEST_HEAD.socket));
+    const [s, c] = sinCos(theta0);
+    return {
+        pivot: sub(socket, scale(sub(scale(aim, s), vec3(0, 0, c)), radius)),
+        pivotVelocity: ZERO,
+        pivotAcceleration: ZERO,
+        handStart: 0,
+        handWindow: 0.01,
+        aim,
+        radius,
+        theta0,
+        omega0: 0,
+        alpha: 0,
+        arcStart: 0,
+        window: 0.01,
+        dip: NO_DIP,
+        contactAt: 0,
+        mode: "swing",
+        handReach: 10,
+        groundDepth: 0,
+        ...o,
+    };
+}
 
 /** A drive that carries the head's weight plus `force` (world frame) for `window` seconds. */
 export function drive(force: Vec3, window: number, head: MalletHead = TEST_HEAD): DriveSample[] {

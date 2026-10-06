@@ -30,6 +30,94 @@ export interface DriveSample {
     readonly force: Vec3;
 }
 
+/**
+ * How the hands carry the mallet after contact (P2b.2b.1 design §3.3): a swing (single-ball, drive, stops) or a carry
+ * (rolls).
+ */
+export type StrokeMode = "swing" | "carry";
+
+/** The hands' dip (design §3.2): the pivot lowers by `depth` (m) over `duration` (s) from `start`, rest to rest. */
+export interface Dip {
+    /** When it begins, s from t = 0. */
+    readonly start: number;
+    readonly duration: number;
+    readonly depth: number;
+}
+
+/**
+ * The path the hands drive the mallet along (design §3.1), as two arcs: the pendulum, the mallet swinging about the
+ * top hand (the pivot) in a vertical plane; and the hands' path through space, the pivot moving in that plane (leaning,
+ * pushing forward, the body's weight) and dipping. Each runs at its initial rate until its window and changes rate
+ * constantly through it; what follows depends on the mode (design §3.2). The dip lowers the pivot on top.
+ */
+export interface SwingArc {
+    /** The top hand at t = 0, world frame. */
+    readonly pivot: Vec3;
+    /** Until the hands' window, in the swing plane (no component along the pitch axis aim × ẑ). */
+    readonly pivotVelocity: Vec3;
+    /** During the hands' window, in the swing plane. */
+    readonly pivotAcceleration: Vec3;
+    /** When the hands' window begins (s from t = 0), and its length (s). */
+    readonly handStart: number;
+    readonly handWindow: number;
+    /** Unit, horizontal: the swing plane's forward direction. */
+    readonly aim: Vec3;
+    /** The top grip from the socket along the shaft (m): the stance's `top`. */
+    readonly radius: number;
+    /** Arc angle at t = 0 (rad), from the lowest point, positive forward. */
+    readonly theta0: number;
+    /** The pendulum's rate until its window (rad/s), and its acceleration during it (rad/s²). */
+    readonly omega0: number;
+    readonly alpha: number;
+    /** When the pendulum's window begins (s from t = 0), and its length (s). */
+    readonly arcStart: number;
+    readonly window: number;
+    readonly dip: Dip;
+    /** The planned contact (s from t = 0), from which the cap and the reach count. */
+    readonly contactAt: number;
+    readonly mode: StrokeMode;
+    /** How far the hands' path travels along aim after contactAt (m). */
+    readonly handReach: number;
+    /** Carry only: the head's lowest point ends this far below the turf (m). */
+    readonly groundDepth: number;
+}
+
+/**
+ * The hands' coupling (design §3.3): the natural period (s) and damping ratio of a firm grip; the grips relax at
+ * `relaxAt` (s from t = 0) and are firm before it.
+ */
+export interface Coupling {
+    readonly period: number;
+    readonly dampingRatio: number;
+    readonly relaxAt: number;
+}
+
+/**
+ * Two hands on the rigid, massless shaft, which is the head's up axis through the socket (design §3.1): the top hand at
+ * the arc radius, the bottom hand `bottom` from the socket (m, in (0, radius)). From `relaxAt` on the top hand grips
+ * with γ_T = `gripTension` and the bottom hand with g_B = `bottomGrip`, both in (0, 1]. The player's arm mass
+ * `armMass` (kg) rides rigidly at the top grip. The bottom hand opens once the shaft has turned through `reachSlack`
+ * (m of hand travel). `guideEffort` (in [0, 1]) scales the bottom hand's push after contact in swing mode (the rate
+ * guide outside a check, and the push after the release): 1 restores the planned arc's speed, 0 is no extra push; a
+ * check's guide acts in full (design §3.3; the player's choice, user's account, 2026-10-06).
+ */
+export interface Hands {
+    readonly bottom: number;
+    readonly gripTension: number;
+    readonly bottomGrip: number;
+    readonly armMass: number;
+    readonly reachSlack: number;
+    readonly guideEffort: number;
+}
+
+/** A tracked drive (design §3): two hands drive the mallet along `arc`, holding it through `coupling`. */
+export interface TrackDrive {
+    readonly kind: "track";
+    readonly arc: SwingArc;
+    readonly coupling: Coupling;
+    readonly hands: Hands;
+}
+
 /** The head's centre of mass, orientation (unit quaternion body → world) and velocities, all world frame. */
 export interface HeadState {
     readonly position: Vec3;
