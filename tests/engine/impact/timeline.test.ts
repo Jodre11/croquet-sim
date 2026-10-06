@@ -79,10 +79,13 @@ describe("the integrator's timeline", () => {
             isolated({
                 start,
                 face: law,
-                drive: [
-                    { t: 0, force: ZERO },
-                    { t: 3e-3, force: ZERO },
-                ],
+                drive: {
+                    kind: "force",
+                    samples: [
+                        { t: 0, force: ZERO },
+                        { t: 3e-3, force: ZERO },
+                    ],
+                },
                 obstacles: [wall],
                 balls: [freeBall("blue", vec3(0, 0, 1))],
             }),

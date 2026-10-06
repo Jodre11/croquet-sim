@@ -39,14 +39,23 @@ export interface HeadState {
 }
 
 /**
- * What the swing delivers to the impact: the head and its face, its state at t = 0, and the drive. The drive is the
- * total force the hands apply to the head, excluding gravity, so it carries the head's weight. Samples are in strictly
- * increasing t, the first at t = 0, the last ending the drive window; the force is zero after it.
+ * A force-table drive: the total force the hands apply to the head at the socket, excluding gravity, so it carries the
+ * head's weight. Samples are in strictly increasing t, the first at t = 0, the last ending the drive window; the force
+ * is zero after it.
  */
+export interface ForceDrive {
+    readonly kind: "force";
+    readonly samples: readonly DriveSample[];
+}
+
+/** What the hands do to the head during the impact (P2b.2b.1 design §3.1). */
+export type Drive = ForceDrive;
+
+/** What the swing delivers to the impact: the head and its face, its state at t = 0, and the drive. */
 export interface ContactState extends HeadState {
     readonly head: MalletHead;
     readonly face: FaceMaterial;
-    readonly drive: readonly DriveSample[];
+    readonly drive: Drive;
 }
 
 /**

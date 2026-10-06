@@ -66,10 +66,13 @@ describe("events and termination", () => {
             velocity: vec3(2, 0, 0),
             angularVelocity: ZERO,
         };
-        const drive = [
-            { t: 0, force: ZERO },
-            { t: 20e-3, force: ZERO },
-        ];
+        const drive = {
+            kind: "force" as const,
+            samples: [
+                { t: 0, force: ZERO },
+                { t: 20e-3, force: ZERO },
+            ],
+        };
         const run = integrate(isolated({ start, drive, balls: [freeBall("blue", vec3(0, 0, 1))] }));
         expect(run.duration).toBeGreaterThanOrEqual(20e-3);
     });

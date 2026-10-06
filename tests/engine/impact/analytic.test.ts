@@ -132,10 +132,13 @@ describe("a ball on a fixed inclined face", () => {
             isolated({
                 head: huge,
                 start: { position, orientation, velocity: ZERO, angularVelocity: ZERO },
-                drive: [
-                    { t: 0, force: weight },
-                    { t: 1, force: weight },
-                ],
+                drive: {
+                    kind: "force",
+                    samples: [
+                        { t: 0, force: weight },
+                        { t: 1, force: weight },
+                    ],
+                },
                 face: law,
                 gravity: STANDARD_GRAVITY,
                 balls: [freeBall("blue", centre)],
@@ -176,10 +179,13 @@ describe("a socket force on a free head", () => {
         const run = integrate(
             isolated({
                 start: { position: vec3(0, 0, 1), orientation: IDENTITY, velocity: ZERO, angularVelocity: ZERO },
-                drive: [
-                    { t: 0, force: vec3(F, 0, 0) },
-                    { t: 1, force: vec3(F, 0, 0) },
-                ],
+                drive: {
+                    kind: "force",
+                    samples: [
+                        { t: 0, force: vec3(F, 0, 0) },
+                        { t: 1, force: vec3(F, 0, 0) },
+                    ],
+                },
             }),
             { cap: window },
         );

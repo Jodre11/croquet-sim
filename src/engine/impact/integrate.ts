@@ -46,7 +46,7 @@ import {
 } from "./contacts";
 import { angularAcceleration, integrateOrientation, rotate, rotateInverse } from "./rigidBody";
 import { closeTimeline, emptyTimeline, inGap, noteClearance, recordStep, type PairTimeline } from "./timeline";
-import type { ContactInterval, DriveSample, HeadState, ImpactEvent, ImpactRun, MalletHead } from "./types";
+import type { ContactInterval, DriveSample, ForceDrive, HeadState, ImpactEvent, ImpactRun, MalletHead } from "./types";
 
 /**
  * Integration step (s): about 1/100 of the shortest sourced contact duration, 0.5 ms (the lower bound of the ball–ball
@@ -95,7 +95,7 @@ export interface ImpactObstacle extends ObstacleGeometry {
 export interface ImpactSetup {
     readonly head: MalletHead;
     readonly start: HeadState;
-    readonly drive: readonly DriveSample[];
+    readonly drive: ForceDrive;
     readonly face: PairLaw;
     readonly ballBall: PairLaw;
     readonly ball: BallParams;
@@ -379,7 +379,7 @@ export function integrate(setup: ImpactSetup, options: ImpactOptions = {}): Impa
     const { head, ball } = setup;
     const R = ball.radius;
     const ballInertia = 0.4 * ball.mass * R * R;
-    const driveEnd = (setup.drive[setup.drive.length - 1] as DriveSample).t;
+    const driveEnd = (setup.drive.samples[setup.drive.samples.length - 1] as DriveSample).t;
     const headWeight = vec3(0, 0, 0 - head.mass * setup.gravity);
     const ballWeight = vec3(0, 0, 0 - ball.mass * setup.gravity);
     const ids = setup.balls.map((b) => b.id);
@@ -413,7 +413,7 @@ export function integrate(setup: ImpactSetup, options: ImpactOptions = {}): Impa
 
     for (;;) {
         const t = steps * dt;
-        const drive = driveAt(setup.drive, t);
+        const drive = driveAt(setup.drive.samples, t);
         const loads: StepLoads = {
             headForce: add(drive, headWeight),
             headTorque: cross(rotate(state.orientation, head.socket), drive),

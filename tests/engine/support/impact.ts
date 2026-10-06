@@ -87,7 +87,7 @@ export function strike(centre: Vec3, o: StrikeOptions = {}): ContactState {
         orientation,
         velocity: scale(travel, o.speed ?? 2),
         angularVelocity: ZERO,
-        drive: o.drive ? o.drive(travel) : coast(3e-3, head),
+        drive: { kind: "force", samples: o.drive ? o.drive(travel) : coast(3e-3, head) },
     };
 }
 
@@ -121,7 +121,7 @@ export function isolated(overrides: Partial<ImpactSetup> = {}): ImpactSetup {
     return {
         head: TEST_HEAD,
         start,
-        drive: [{ t: 0, force: ZERO }],
+        drive: { kind: "force", samples: [{ t: 0, force: ZERO }] },
         face: faceLaw(),
         ballBall: lawFromContactTime(TEST_BALL.mass / 2, 0.8, 7e-4, 0.05),
         ball: TEST_BALL,
@@ -306,7 +306,7 @@ export function mirrorContact(c: ContactState): ContactState {
         orientation: mirrorQuat(c.orientation),
         velocity: mirrorVec(c.velocity),
         angularVelocity: mirrorSpin(c.angularVelocity),
-        drive: c.drive.map((s) => ({ t: s.t, force: mirrorVec(s.force) })),
+        drive: { kind: "force", samples: c.drive.samples.map((s) => ({ t: s.t, force: mirrorVec(s.force) })) },
     };
 }
 

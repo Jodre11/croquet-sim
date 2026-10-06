@@ -5,19 +5,28 @@
  * too.
  * Lines starting `timeline ` carry fields added after P2b.1; every other line keeps P2b.1's format, so
  * `grep -v '^timeline '` of a later run is byte-comparable with P2b.1's digest.
- * Run with `npx --yes tsx scripts/impactDigest.ts > before.txt`; environment: STROKES (fuzz strokes, default 200).
+ * Run with `npx --yes tsx scripts/impactDigest.ts > before.txt`; environment: STROKES (fuzz strokes, default 200),
+ * OBSTACLE_STROKES (obstacle-fuzz strokes, as fuzz.test.ts draws them; default 0).
  * Not part of the test suite.
  */
 import { simulateImpact } from "../src/engine/impact/simulateImpact";
 import type { ImpactResult } from "../src/engine/impact/types";
 import { testWorld } from "../tests/engine/support/fixtures";
-import { FUZZ_SEED, SCENARIOS, randomStroke, recorder } from "../tests/engine/support/impact";
+import {
+    FUZZ_SEED,
+    OBSTACLE_FUZZ_SEED,
+    SCENARIOS,
+    randomObstacleStroke,
+    randomStroke,
+    recorder,
+} from "../tests/engine/support/impact";
 import { rng } from "../tests/engine/support/rng";
 
 // The project has no Node types; this script runs under tsx and reads only its environment.
 declare const process: { readonly env: Readonly<Record<string, string | undefined>> };
 
 const STROKES = Number(process.env.STROKES ?? "200");
+const OBSTACLE_STROKES = Number(process.env.OBSTACLE_STROKES ?? "0");
 
 /** JSON with every number in its shortest round-trip form, and −0, NaN and ±Infinity kept distinct. */
 function exact(value: unknown): string {
@@ -61,4 +70,12 @@ for (let n = 0; n < STROKES; n++) {
     const result = simulateImpact(contact, balls, TEST_WORLD);
     console.log(`fuzz ${n} ${exact(p2b1(result))}`);
     console.log(`timeline fuzz ${n} ${exact(later(result))}`);
+}
+
+const obstacleRandom = rng(OBSTACLE_FUZZ_SEED);
+for (let n = 0; n < OBSTACLE_STROKES; n++) {
+    const { contact, balls, world } = randomObstacleStroke(obstacleRandom, TEST_WORLD);
+    const result = simulateImpact(contact, balls, world);
+    console.log(`obstacle ${n} ${exact(p2b1(result))}`);
+    console.log(`timeline obstacle ${n} ${exact(later(result))}`);
 }

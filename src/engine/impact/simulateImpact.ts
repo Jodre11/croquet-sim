@@ -108,12 +108,13 @@ export function validateImpact(contact: ContactState, balls: BallStates, world: 
     if (!(Math.abs(q.w * q.w + q.x * q.x + q.y * q.y + q.z * q.z - 1) <= UNIT_TOLERANCE)) {
         fail("orientation must be a unit quaternion");
     }
-    if (contact.drive.length === 0 || (contact.drive[0] as DriveSample).t !== 0) {
+    const { samples } = contact.drive;
+    if (samples.length === 0 || (samples[0] as DriveSample).t !== 0) {
         fail("drive must start at t = 0");
     }
-    contact.drive.forEach((s, i) => {
+    samples.forEach((s, i) => {
         finite(s.force, `drive[${i}].force`);
-        if (!Number.isFinite(s.t) || (i > 0 && !(s.t > (contact.drive[i - 1] as DriveSample).t))) {
+        if (!Number.isFinite(s.t) || (i > 0 && !(s.t > (samples[i - 1] as DriveSample).t))) {
             fail("drive times must increase strictly");
         }
     });
