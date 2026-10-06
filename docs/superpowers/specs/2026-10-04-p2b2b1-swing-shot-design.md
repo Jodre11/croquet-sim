@@ -188,6 +188,83 @@ The light guide, restoring the speed over about 90 ms, stands in for them; P2b.2
 against observed strokes (maintained contact, a double tap or a late re-hit). Details:
 `plans/2026-10-04-p2b2b1-swing-shot.md`.
 
+**Amended 2026-10-06 (pre-flight; user decisions).** Seven decisions, from the user's account of play.
+
+- **The GC stop is a single-ball stroke.** It is never a croquet stroke: there is a gap between the striker's ball and
+  the target ball, as §5.4 already presupposed (the striker's ball "reaches the croqueted ball without spin, like a
+  stun in snooker"). The spec had put `stop-gc` among the croquet strokes, with the croqueted ball touching, and
+  scored it by the croquet ratio; that was wrong. The user's account: about 0.3 m between the balls is optimal.
+  Longer ranges can work when the grass is short and the power high. Closer raises the risk of a double hit as the
+  striker's ball meets the target; longer, the skid runs out and some roll is imparted, so the striker's ball follows
+  through. A standard single-ball shot can also stop if the hit on the target is full, directly in line with the
+  travel, so that nearly all the energy passes from striker to target. In the engine's terms, on its turf (sliding
+  µ 0.48) a ball struck at 3 m/s skids about 12v²/(49µg) ≈ 0.47 m before it rolls, and phase 2 already models
+  sliding, rolling, spin and ball–ball collisions: a sliding ball that meets a still one full keeps about (1 − e)/2
+  of its speed, plus whatever topspin it has picked up. So `stop-gc` leaves `CROQUET_STROKES` (§5.1). Its canonical
+  setup puts the target's centre on the aim line ahead of the striker's, a 0.3 m gap surface to surface (centre
+  distance 0.3 m + 2R), with `live` holding it (§5.5). Its outcome is the distances after the first touch, not the
+  croquet ratio: how far the striker's ball travels after first touching the target, how far the target travels, and
+  their ratio (target over striker), observations that P2b.2b.2 calibrates; the probe also sweeps the gap from 0.05 to
+  1 m for the `stop-gc` and `single-ball` presets alike (§9). Its preset is unchanged (§5.4). A GC stroke is judged as
+  an AC single-ball stroke in this phase; the Golf Croquet Rules' faults and remedies are deferred to a GC-rules
+  phase (§10).
+- **The late re-hit, in every shot.** The impact ends when the look-ahead (§3.5), using each ball's current velocity,
+  sees nothing the head would reach within `LOOK_AHEAD`; phase 2 then moves the balls with no mallet in it. A ball
+  that later comes back into the follow-through's arc (stopped by a target, rebounding off a hoop or the peg, or
+  pulling up short) is never checked, yet under Laws 29.1.6.1 and 29.1.6.2 that is a fault within the striking
+  period. Law 29.3.2 makes the re-hit's physics matter, not only a flag: "The striker must ask the opponent whether
+  the fault is to be rectified. If the opponent chooses rectification, the balls are replaced in accordance with Law
+  25.3.1. Otherwise the balls remain or are replaced in the positions they occupied after the first stroke in error."
+  User decision: this phase records it as a known limit for every shot, and measures it without changing the engine
+  or finding a fault. After phase 2 the probe sweeps the real head from the impact's end, moved on by its remaining
+  planned path (`pathAt`, out to `FREE_SPAN`; measured from the real head by user decision, 2026-10-06, §3.5),
+  against every ball's phase-2 trajectory and counts the crossings per preset and per gap of the GC sweep (§9). A
+  dedicated phase, **P2b.2b.3**, follows P2b.2b.2's calibration: it sweeps the swing and re-opens the impact
+  integrator on a crossing, so the second hit is integrated and the fault judge rules on it (§10, §11; the phase
+  order below).
+- **A check brakes the head to rest, not past it.** On the canonical GC stop the check's feed-forward was sized to
+  stop the unstruck head from 3 m/s, about −300 N over its 10 ms window; the strike had already slowed the head to
+  1.145 m/s by 0.83 ms, so the head crossed rest at about 5.6 ms and ended the impact moving back at −1.0928 m/s along
+  aim. A player stops the mallet; they do not pull it back (user's account). Inside a check in swing mode after
+  contact the hands now apply the head's share of the planned deceleration, measured on the pitch rates about n: all
+  of it at or above the path's rate, none at or below rest, and the head's rate over the path's between, so a slowed
+  head keeps its fraction of the path's rate and comes to rest with the path; the bottom hand's rate guide steers the
+  head's rate into [0, ω_path] (§3.3). The GC stop's head now ends the impact at −3.2e-4 m/s along aim (§8.1); an
+  unstruck check is unchanged. A clamp that applied the planned deceleration until rest and then held the head there
+  was measured and not adopted: switching at rest left the top grip moving, and the head ended the window at
+  +0.233 m/s.
+- **The AC stop is told from the drive by its coaching ratio.** §8.1 compared the striker's ball's speed at the
+  impact's end, AC stop 1.3800 against the drive's 1.3919 m/s: a 0.86 % margin between speeds taken 21.6 and 181 ms
+  after contact. It now compares the ratios after phase 2, AC stop 6.464 against the drive's 3.316 (§8.1).
+- **The timings show what makes a better stop shot in play.** The probe's timing sweep (§9) prints, for every variant,
+  both balls' distances after phase 2 and the coaching ratio, beside lawn or ball first, the dig, the slide and the
+  launch.
+- **P2b.2b.3 is the whole swing.** In a real game hoops, the peg and other balls may lie in the swing's path, and
+  they can limit the playable stroke in a given situation; the mallet head's and shaft's path is known. So P2b.2b.3
+  carries the mallet through the whole swing along the path P2b.2b.2 models (this phase's lead-in starts at most
+  60 ms before contact): the backswing from its top, the lead-in and the follow-through after the impact ends. The
+  head and the shaft (rigid on the head, from the socket to the top hand) are swept against every ball, the hoops'
+  uprights and crowns, and the peg. The crown matters to the shaft: when the head reaches through an open hoop the
+  shaft is often impeded by the crown, which limits the follow-through's arc, and a head swung back through the jaws
+  from a ball in or near a hoop meets it in the backswing. Head–obstacle and shaft contact are new physics; any
+  crossing re-opens the impact, and the judge rules on it under 29.1.6.1 ("to contact the striker’s ball more than
+  once in a croquet stroke, or continuation stroke when the striker's ball is touching another ball"), 29.1.6.2 ("to
+  contact the striker’s ball more than once in any other stroke"), 29.1.11 ("touches any ball, other than the
+  striker's ball, with the mallet") and 29.1.10 ("moves or shakes a ball at rest by hitting a hoop or the peg with
+  the mallet or with any part of the body"), whose commentary C29.15.1 reads: "The main instances are hitting a hoop
+  or the peg in the backswing when a ball is in contact with it and hitting a hoop or the peg on the forward swing
+  when aiming to hit a ball resting on it." Within this phase's impact 29.1.11 is already judged, but the head never
+  meets a hoop or the peg, so 29.1.10 is never judged: a known limit (§10). The probe measures the follow-through's
+  crossings with obstacles as well as balls (§9). Variability of swing and aim (accuracy), and conditions such as
+  wind, under which a hoop could block a shot or a glancing blow redirect it or limit its power, are deferred beyond
+  P2b with no phase named (§10).
+- **Calibrate the stroke shape first; sweep it after.** The sweep phase was first placed before P2b.2b.2's
+  calibration, as P2b.2b.1b; the user moved it after it, as P2b.2b.3: "first we must model the stroke shape and
+  amplitude and calibrate to the different shot types, but we will need the model to be complete enough for the rest
+  later". So P2b.2b.2 models the whole stroke shape, the backswing from its top, the lead-in and the follow-through,
+  with its amplitude, and calibrates it per shot type alongside its other calibration; its path model must give the
+  head's and the shaft's poses along the whole swing, complete enough for P2b.2b.3 (§10).
+
 ## 1. Goal and exit criteria
 
 Turn a `ShotSetup` into a whole shot: a swing model builds the mallet head's state, the path the hands follow and how
@@ -303,8 +380,9 @@ interface Coupling {
  * radius, the bottom hand `bottom` from the socket (m, in (0, radius)). From `relaxAt` on the top hand grips with
  * γ_T = `gripTension` and the bottom hand with g_B = `bottomGrip`, both in (0, 1]. The player's arm mass `armMass` (kg)
  * rides rigidly at the top grip. The bottom hand opens once the shaft has turned through `reachSlack` (m of hand
- * travel). In swing mode `guideEffort` (in [0, 1]) scales the bottom hand's push after contact outside a check: 1
- * restores the planned arc's speed, 0 is no extra push (§3.3).
+ * travel). `guideEffort` (in [0, 1]) scales the bottom hand's push after contact in swing mode (the rate guide
+ * outside a check, and the push after the release): 1 restores the planned arc's speed, 0 is no extra push; a check's
+ * guide acts in full (§3.3).
  */
 interface Hands {
     readonly bottom: number;
@@ -335,7 +413,7 @@ The pendulum, with t_a = `arcStart` and w = `window`: before its window (t ≤ t
   path with its reach, and the dip); t̂ = cos θ·aim + sin θ·ẑ. `prepareImpact` tabulates θ and ω from (θ_e, ω_e) by
   semi-implicit Euler every `FREE_STEP` = 5 µs over `FREE_SPAN` = 0.55 s; the path interpolates them linearly and
   evaluates θ̈ from the equation at the interpolated θ. Beyond the table θ and ω clamp to its last sample (the cap
-  ends every impact well inside it).
+  ends every impact well inside it), and the α still evaluated there is not meaningful.
 - **carry:** the slope is held. Over one more window the rate falls linearly to zero, with u = min(t − t_a − w, w),
   θ = θ_e + ω_e·u − ½·(ω_e/w)·u², and θ holds after it: no whip.
 
@@ -422,17 +500,36 @@ the dip's, and after the reach it is at rest, so both hands bring the mallet to 
   beyond the planned arc; a head the strike has slowed below it, it pushes back towards it, which is what makes the
   drive's follow-through re-hit. The effort is the player's: a full drive restores the arc's speed after the hit (1),
   a softer one less, a very soft one not at all (0; user's account, 2026-10-06). Its couple is
-  C_s(g_B)·((ω_path − ω)·s) about s. **The check:** inside a check the guide is two-sided (not floored), at full
-  strength whatever `guideEffort`, and the bottom hand adds g_B·F_B and the couple g_B·τ_ff·s, so the check acts
-  through its lever; a pivot cannot check.
+  C_s(g_B)·((ω_path − ω)·s) about s. **The check:** inside a check the guide is not floored and acts at full strength
+  whatever `guideEffort`, and the bottom hand adds g_B·F_B and the couple g_B·τ_ff·s, so the check acts through its
+  lever; a pivot cannot check. The check brakes the head to rest, not past it (below).
 - **Bottom hand, carry mode, before release:** two-sided: g_B·F_B plus the part of c(g_B)·(v*_B − v_B) perpendicular
   to s, and the couple g_B·τ_ff·s + C_s(g_B)·((ω_path − ω)·s) about s.
 - **Release by reach.** From `relaxAt` each step measures the shaft's turn since then, Δθ = π(s) − π(s at `relaxAt`),
   π(s) = atan2(−s·aim, s·ẑ) the arc angle of a shaft along s. Once (r − `bottom`)·Δθ > `reachSlack` the bottom hand
   opens for good, whatever the mode: from then on it pushes one-sided along e on its velocity lag,
   max(0, c(g_B)·(v*_B − v_B)·e)·e, scaled by `guideEffort` in swing mode, with no feed-forward and no couple. The
-  release time and Δθ are recorded
-  (`ImpactRun.release`).
+  release time and Δθ are recorded (`ImpactRun.release`).
+
+**A check brakes the head to rest, not past it** (user decision, 2026-10-06). The planned deceleration α is sized for
+the unstruck head; a strike slows the head first, and a player stops the mallet, never pulls it back. So in swing mode
+from contact, inside a check, with ω_h = ω·n the head's pitch rate (the swung body's spin about the pitch axis; the
+hands' path moves the pivot without turning it, so this is the pendulum's rate relative to the hands) and
+ω_p = ω_path·n the path's:
+
+- the hands apply the share k of the check's planned deceleration: k = 1 for ω_h ≥ ω_p, k = 0 for ω_h ≤ 0, and
+  k = ω_h/ω_p between. It scales the path's α_path and its tangential part at the socket, r·α·(cos θ·aim + sin θ·ẑ),
+  in F_ff and τ_ff before the split, so the shares still give one rigid wrench. A head the strike has slowed then
+  keeps its fraction of the path's rate (d(ω_h/ω_p)/dt = 0) and comes to rest when the path does, at a full check's
+  window's end, and never passes rest;
+- the rate guide's target is ω_h held within [0, max(0, ω_p)]: it brakes a head ahead of the path as before, returns
+  a head past rest towards rest, and neither pushes nor pulls a head between them, which takes its share alone.
+
+At k = 1 the path's accelerations are used as they are, so a head on its path, every stroke without a check, carry
+mode (whose check is the planned slope, held firmly) and force tables are unchanged bit for bit. Once a check's head
+is at rest nothing pulls it on: from contact the hands have no position springs towards the path, whose θ is ahead of
+a struck head, and after the window swing mode's guide pushes only a head slower than the free pendulum, which starts
+from rest at a full check's end and, the canonical stops having just passed the lowest point, swings back.
 
 The hand load F is the sum of the two hands' forces and F_ff the sum of their feed-forward parts; each acts at its grip,
 so the head's torque is the moments of the hand forces at their grips plus the bottom hand's couple. With firm grips
@@ -487,9 +584,22 @@ A head still catching a ball keeps the impact running, so a re-contact (a double
 second hit, about 92 ms after contact in the prototype) is integrated, not flagged. In swing mode v_path is the
 unstruck pendulum's, so the look-ahead holds a drive open while any ball stays ahead of the face and within ρ + R of
 its axis: the drive ends once the rising head clears the ball (181 ms after contact on its canonical setup, at most
-325 ms over the preset sweep). Otherwise the impact ends `TRACK_IMPACT_CAP` = 0.45 s after `contactAt` with
-`impact-cap`, and `impact-head-approaching` for any ball the head is still closing on; the cap sits about 40 % above
+315 ms over the preset sweep). Otherwise the impact ends `TRACK_IMPACT_CAP` = 0.45 s after `contactAt` with
+`impact-cap`, and `impact-head-approaching` for any ball the head is still closing on; the cap sits about 43 % above
 the sweep's longest drive. `ImpactOptions.cap`, an absolute time, overrides either cap.
+
+**The late re-hit** (a known limit, 2026-10-06). Once the impact has ended, phase 2 moves the balls with no mallet in
+it, so a ball that later comes back into the follow-through's arc is never checked. This phase only counts such
+crossings (§9), measured from the real head: its pose at the impact's end, moved on by the planned path's
+displacement and rotation since then, as the end rule gives the real head the path's velocity. The planned head
+itself runs far ahead of a struck head (up to 654 mm on an AC stop at the impact's end), so it would overlap a ball
+at once. The same sweep, head and shaft, counts crossings with the hoops' uprights and crowns and the peg. Within the
+impact the head meets balls and the turf only, never a hoop or the peg, so 29.1.10 is never judged in this phase (a
+known limit). P2b.2b.3 carries the mallet through the whole swing, backswing, lead-in and follow-through, against
+every ball, the uprights, the crowns and the peg, and integrates every crossing (§10). The look-ahead watches the
+front face only, so on 6 pass-roll runs of the preset sweep the head meets the striker's ball 0.1 ms after the
+impact ends, on its rim in 3 and its barrel in 3 (pre-flight; a known limit, which P2b.2b.3's re-opened impact
+covers).
 
 A `force` drive keeps P2b.1's rule and `IMPACT_CAP` = 0.06 s unchanged. At 0.51 s (the 60 ms longest lead-in, §5.2,
 plus the cap; 102,000 steps) pre-flight confirms the WAKE_MARGIN reach filter's headroom (§9).
@@ -548,8 +658,9 @@ head driven deeper, as a ball's validated penetrations are tenths of a millimetr
 
 - `timeline["head/turf"]`: its contact intervals with peak normal force;
 - `peakPenetration["head/turf"]`;
-- `ImpactRun.headTurfSlide` (new, m): the path length of the contact point along the turf while δ > 0, summed per
-  step from its horizontal velocity. Absent when the pair never closed.
+- `ImpactRun.headTurfSlide` (new, m): the slip distance at the contact point, |horizontal velocity of the head's
+  material at its lowest point|·dt, summed per step while δ > 0 (not the lowest point's travel). Absent when the pair
+  never closed.
 
 ### 4.4 Limits
 
@@ -579,14 +690,17 @@ step's closing could make (v_n the relative velocity at the contact point along 
 `ImpactRun.entryJumps` with the worst excess and the pair's key, region and time. It is the catapult's signature;
 exit criterion 4 asserts none.
 
+**Known limit.** `clearanceAfter` stays the face-plane separation (P2b.2a §5) for a tracked drive; it can be negative
+beside the barrel while the ball is clear.
+
 ## 5. The swing model
 
 ### 5.1 Types
 
 ```ts
 type StrokeType = "single-ball" | "drive" | "stop-ac" | "stop-gc" | "half-roll" | "full-roll" | "pass-roll";
-/** The croquet strokes; the rest are single-ball. */
-const CROQUET_STROKES: readonly StrokeType[] = ["drive", "stop-ac", "stop-gc", "half-roll", "full-roll", "pass-roll"];
+/** The croquet strokes; the rest, the GC stop among them, are single-ball (§5.4). */
+const CROQUET_STROKES: readonly StrokeType[] = ["drive", "stop-ac", "half-roll", "full-roll", "pass-roll"];
 
 /**
  * How the player stands to a stroke type and holds the mallet: the shaft's lean at contact (rad, positive pitches the
@@ -802,13 +916,23 @@ after the ball has left, whose friction on its underside arrests it (user accoun
 mallet drop onto the lawn, some pushing it down to hasten the stop). Its depth is about 11 mm over 20 ms (user
 decision, 2026-10-05): the prototype's 14 mm drove the head 2.86 mm into the turf and raised `impact-head-deep`, so the
 default is set to keep the canonical stop under `HEAD_DEEP_LIMIT` while the head still reaches the turf after the
-ball; the next pre-flight confirms the exact value. The AC stop's hands do not travel (`handShare` 0), so its
-`handReach` is 0. The stance keeps the coasting path at least 7.23 mm clear over
-the 60 ms before contact: a dip or a check mistimed early is what drives the head into the lawn first.
+ball; the next pre-flight confirms the exact value. It did, with the check braking to rest (§3.3): 8–11.5 mm meet both
+conditions, and at 11 mm the head meets the turf 12.52 ms after contact, 1.80 mm deep (the face interval ending at
+1.17 ms). The AC stop's hands do not travel (`handShare` 0), so its `handReach` is 0. The stance keeps the coasting
+path at least 7.23 mm clear over the 60 ms before contact: a dip or a check mistimed early is what drives the head
+into the lawn first.
 
-**GC stop.** The lower hand grips lower and firmly (0.45 m, `bottomGrip` 1) and actively stops the swing just after
-contact through its lever (a check); it is not deliberately played on the up, but is a hard, level shot with no
-follow-through, so the striker's ball reaches the croqueted ball without spin, like a stun in snooker.
+**GC stop.** A single-ball stroke, never a croquet stroke (user decision, 2026-10-06): the striker's ball crosses a
+gap to the target ball, about 0.3 m at best. The lower hand grips lower and firmly (0.45 m, `bottomGrip` 1) and
+actively stops the swing just after contact through its lever (a check), bringing the head to rest, never back
+(§3.3: on the canonical setup it ends the impact at −3.2e-4 m/s along aim); it is not deliberately played on the up,
+but is a hard, level shot with no follow-through, so the striker's ball reaches the target without spin, like a stun
+in snooker. On the engine's turf a ball struck at 3 m/s skids about 0.47 m before it rolls, so over a 0.3 m gap it
+still slides when it meets the target, and a full hit leaves it about (1 − e)/2 of its speed plus any topspin it has
+picked up. Closer, the striker's ball risks a double hit on the target; longer, the skid runs out and the striker's
+ball follows through; short grass and more power stretch the range. A standard single-ball shot hit full can stop
+as well, so the check's part is to keep the mallet out of the ball's way: the probe compares the two presets over
+the gap (§9).
 
 **Rolls.** Carry mode: the slope is held while both hands carry the head forward at the same rate with a firm grip
 (Riches), the body's weight moving from back to front (`handShare` 0.6, 0.9 and 0.85), until reach runs out
@@ -823,9 +947,9 @@ blunt it. A pass roll's reach of 0.2 m traps the striker's ball against the face
 is met above the face's radius: that is geometry, not a tunable.
 
 **Open for P2b.2b.2.** The AC stop is a rising strike, so stop-shot lift can be expected of it, as the feasibility
-spike found for rising strikes. The GC stop is level, and the spike found level strikes never lift the striker's ball,
-so its ratio must come from the check alone; the roadmap's stop-shot-lift criterion applies to the AC stop. Which stop
-is the calibration target is P2b.2b.2's decision.
+spike found for rising strikes; the roadmap's stop-shot-lift criterion applies to it. It is now the one croquet stop,
+so the croquet stop-shot ratios can only calibrate it. The GC stop is a single-ball stroke with no croquet ratio: its
+outcome is the distances after the touch (§9), which P2b.2b.2 calibrates on their own.
 
 ### 5.5 Canonical setups
 
@@ -833,15 +957,18 @@ Exit criteria 3 and 4 and pre-flight run each preset at one canonical setup: the
 of the hoops and of the peg, which stands at the court's centre; aim +y, `speed` 3 m/s, the preset's default `drive`,
 every timing 0, `side` 0, the preset's `handReach`; for a croquet stroke the croqueted ball touching the striker ahead
 along aim, except the pass roll, whose line of centres is 20° to the left of aim (the positive side, as `side`'s
-convention has it); `live` empty for a croquet stroke and every
-other ball for a single-ball one; no other balls; `continuation`, `hampered` and `jumpAttempt` false. `up` is 0 except
-for stop-ac, whose `up` is −0.020 m (the ball met 20 mm below the face centre).
+convention has it); for the GC stop a target ball on the aim line ahead, a 0.3 m gap surface to surface (centre
+distance 0.3 m + 2R; `GC_STOP_GAP`, user decision 2026-10-06); `live` empty for a croquet stroke and every other ball
+for a single-ball one (the GC stop's target included); no other balls; `continuation`, `hampered` and `jumpAttempt`
+false. `up` is 0 except for stop-ac, whose `up` is −0.020 m (the ball met 20 mm below the face centre). The probe's GC
+sweep (§9) places the same target at other gaps, for the GC stop and the single-ball stroke alike.
 
 Every canonical setup starts at contact (no lead), its head clear of the turf at contact and its approach clearance
 positive over the 60 ms before. The prototype gives, at contact and at the approach's lowest: 7.90 mm and 0.52 mm
 36.5 ms out for the single-ball, drive and GC stop (the head's front rim as it pitches back); 8.78 mm and 7.23 mm 56 ms
-out for the AC stop; 21.1, 51.6 and 54.7 mm for the half, full and pass rolls, lowest at contact. A canonical setup
-whose path meets the turf before contact is a defect in the table, not in the model.
+out for the AC stop; 21.1, 51.6 and 54.7 mm for the half, full and pass rolls, lowest at contact. These depend on the
+striker's ball alone, so the GC stop's target leaves them unchanged. A canonical setup whose path meets the turf
+before contact is a defect in the table, not in the model.
 
 ## 6. `simulateShot` and the fault judge
 
@@ -869,12 +996,14 @@ information, as phase 2's jump flag is. Invalid input throws the named `RangeErr
 
 Before `buildContact`: the striker is present; `live` holds only present balls, never the striker, no duplicates;
 a croquet stroke (`CROQUET_STROKES`) has a present `croqueted` ball, not the striker, touching the striker (within
-`CONTACT_TOLERANCE`); a single-ball stroke has no `croqueted`; `lawnSpeed` is accepted by `defaultWorld`.
+`CONTACT_TOLERANCE`); a single-ball stroke, the GC stop included, has no `croqueted`; `lawnSpeed` is accepted by
+`defaultWorld`.
 
 ### 6.3 Building `StrokeContext`
 
 - `kind`: `croquet` for a croquet stroke; otherwise `continuation-touching` if `continuation` and the striker
-  touches a ball at the start (`impact.touchingAtStart`); otherwise `single-ball`.
+  touches a ball at the start (`impact.touchingAtStart`); otherwise `single-ball`. The GC stop is judged as an AC
+  single-ball stroke; the Golf Croquet Rules wait for a GC-rules phase (§10).
 - `group`: the Glossary and Law 18.4 definition as P2b.2a §3 states it, over the ball–ball pairs touching at the
   start: a 3-ball group is one ball in contact with two others, a 4-ball group adds a fourth in contact with a 3-ball
   group; `group` is true when the striker belongs to one. A croquet stroke's two touching balls alone are not a group.
@@ -897,7 +1026,7 @@ a croquet stroke (`CROQUET_STROKES`) has a present `croqueted` ball, not the str
   adjudicator sees, so it is a `possible-fault` (as 29.2.5–29.2.7 frame perception): found when `head/turf` has an
   interval and the stroke is under Law 29.2.3 (`hampered`, `jumpAttempt` or `group`); evidence `penetration` (m),
   `peakForce` (N), `slide` (m); `ball` the striker's; `t` the first interval's start. No damage threshold is
-  invented. It is reported after 29.1.13, in table order.
+  invented. It is reported immediately after 29.1.13 (before 29.1.6.2).
 
 `JUDGED_LAWS` and `FAULT_LAW_KEYS` (`src/reference/index.ts`) gain "29.1.14". `judgeFaults`'s signature is unchanged;
 it validates `aim` and `lineOfCentres` (unit, horizontal) when present, and rejects a croquet stroke's `aim` without
@@ -939,7 +1068,7 @@ keys; `topHandHeight` is not added.
   and ω = 0 moves the socket target in a straight line with the orientation target constant (the roll's held face
   tilt). A check with `speedGain` 1 brings ω to 0 at the window's end. In swing mode the free pendulum from rest at
   θ = 0 with a still pivot stays there, and released from a small angle θ(t) matches the small-angle solution,
-  angular frequency √(m·g·ℓ_h/I_P), over `FREE_SPAN`; beyond the table θ and ω hold the last sample. In carry mode θ
+  angular frequency √(m·g·ℓ_h/I_P), over 0.25 s; beyond the table θ and ω hold the last sample. In carry mode θ
   is constant after the second window. The reach stops the pivot's along-aim motion `handReach` from where it was at
   `contactAt`, at rest from t_s, with V continuous; in carry mode the head's lowest point on the path at t_s is
   `groundDepth` below the turf.
@@ -961,6 +1090,12 @@ keys; `topHandHeight` is not added.
 - **Rate guide.** In swing mode after contact the bottom hand's force along e is never negative outside a check and is
   zero while the shaft turns at least as fast as the path; inside a check window it acts both ways and carries
   g_B·F_B.
+- **Check to rest** (user decision, 2026-10-06). Inside a check after contact, the hands' feed-forward for a head
+  pitching at half the path's rate lies midway between a resting head's and a head's on the path, the difference
+  non-zero, and the bottom hand's force likewise (no guide between rest and the path's rate); past rest it is the
+  resting head's, the guide returning the head with c(g_B)·|ω_h|·(r − `bottom`). Over a full check with no ball, a
+  head started at half the path's rate keeps half of it (within 5e-4 while the path's rate exceeds a tenth of its
+  start) and ends the window at rest, never below it.
 - **Release by reach** (synthetic). A shaft turned through (`reachSlack` + 1 mm)/(r − `bottom`) after contact records
   the release time and Δθ; after it the bottom hand's force has no component against e, no feed-forward and no
   couple. Under the slack it does not open.
@@ -991,7 +1126,8 @@ keys; `topHandHeight` is not added.
   the lead's end if the actions are depthless; on time, it starts at contact); the approach clearance against a
   hand-computed case. Every rejection names its check, including an action more than 60 ms early and a head in the
   turf where an early action begins. Setups mirrored across a vertical plane give mirrored `ContactState`s.
-- **`simulateShot`.** Each `kind`; `group` for 3- and 4-ball groups and the croquet pair alone; 29.1.13 at 89.9° and
+- **`simulateShot`.** Each `kind`, the GC stop's canonical setup a single-ball stroke with its target live; `group`
+  for 3- and 4-ball groups and the croquet pair alone; 29.1.13 at 89.9° and
   90.1° (aim vectors built directly, not through `sinCos`), with both clauses firing together in their order; 29.1.14
   only under 29.2.3; phase 2 receives exactly `impact.handover`; every setup check names its failure; every canonical
   setup (§5.5) runs.
@@ -1002,8 +1138,13 @@ keys; `topHandHeight` is not added.
     `impact-head-approaching`.
   - **An accelerating bottom hand.** The drive with its bottom hand at 0.30 m and `bottomGrip` 1 has at least three
     hits and a lower croqueted-to-striker distance ratio than the canonical drive.
-  - **Stops distinct from the drive.** The canonical AC and GC stops each have exactly one hit and leave the striker's
-    ball slower than the canonical drive does.
+  - **Stops distinct from the drive.** The canonical AC and GC stops each have exactly one hit. The AC stop's
+    coaching ratio (croqueted ball's distance over the striker's, after phase 2) exceeds the canonical drive's
+    (pre-flight: 6.464 against 3.316; user decision, 2026-10-06, in place of the striker's ball's speed at the
+    impact's end, 1.3800 against 1.3919 m/s). The GC stop, a single-ball stroke, brings its head to rest: along aim
+    within 0.01 m/s of rest at the impact's end and never below −0.01 m/s after the strike (pre-flight −3.2e-4 m/s
+    both), where the canonical single-ball stroke with the same target at the same gap follows through above 1 m/s
+    (1.3151). Neither stop's distances after the touch are asserted (§9).
   - **The GC check.** On the canonical GC stop the hands' braking impulse is positive at `drive` −1 and negative at
     `drive` 0: the check acts through the bottom hand's lever.
   - **The AC stop.** On the canonical AC stop, with its relaxed hands, the first `head/turf` interval starts after the
@@ -1022,11 +1163,29 @@ Exit criterion 2. The `force` migration is mechanical and reviewed by the digest
 
 ## 9. Pre-flight measurements (recorded in the roadmap)
 
-- The coaching ratios (croqueted ball's distance over the striker's) on the canonical setups and over 2–4 m/s,
-  recorded against the coaching ranges: drive 3–4, stops 6–10, half roll about 2, full roll about 1, pass roll below
-  1. The prototype (pass 4, T 0.08 s) gave drive 3.33, AC stop 6.55, GC stop 6.60, half roll 2.83 (2.75–2.88 over
+- The coaching ratios (croqueted ball's distance over the striker's) on the croquet strokes' canonical setups and over
+  2–4 m/s, recorded against the coaching ranges: drive 3–4, AC stop 6–10, half roll about 2, full roll about 1, pass
+  roll below 1. The prototype (pass 4, T 0.08 s) gave drive 3.33, AC stop 6.55, half roll 2.83 (2.75–2.88 over
   2–4 m/s), and the two known misses (deferred, §10): full roll 2.14, pass roll 1.59 at 3 m/s and 1.26 at 2 m/s. The
-  pass roll's 0.33 at 3 m/s and 0.81 at 2 m/s came from pass 5's firm off-aim grip, which was not adopted.
+  pass roll's 0.33 at 3 m/s and 0.81 at 2 m/s came from pass 5's firm off-aim grip, which was not adopted. The GC
+  stop's 6.60 was a croquet ratio on its retired touching setup.
+- The GC stop's outcome (§5.4), observations only, which P2b.2b.2 calibrates: on its canonical setup and over 2–4 m/s,
+  how far the striker's ball travels after first touching the target, how far the target travels, and their ratio
+  (target over striker). The same over the gap, from 0.05 to 1 m, for the `stop-gc` and `single-ball` presets at each
+  gap, so the two can be compared: a full hit should stop either over a short gap, and they should part as the gap
+  grows or the mallet follows through.
+- The late re-hit (§3.5), a measurement only, with no engine change and no fault: after phase 2, the real head at the
+  impact's end, moved on by the planned path's displacement and rotation (the rigid motion taking the path's head at
+  the impact's end to its head at t, out to `FREE_SPAN`), swept against every ball's phase-2 trajectory, and how
+  often the head's cylinder would cross a ball, per preset (its canonical setup and the preset sweep) and per gap of
+  the GC sweep. A ball the real head already overlaps at the impact's end is reported apart; a crossing is a ball
+  the head enters after it. The same sweep reports the first crossing with an obstacle: the head's cylinder against
+  each hoop upright (from the lawn to the crown's axis), each crown (a horizontal rod of the uprights' diameter
+  between the uprights' tops, at `crownClearance` plus its radius) and the peg, and the shaft's axis (from the socket
+  to the top hand; the reference data gives the shaft no diameter) against the same rods; its time and depth. The
+  canonical setups are clear of the hoops and the peg; one more line plays a single-ball stroke through a hoop,
+  centred (the head passes the jaws, the shaft meets the crown) and with the face 10 mm off the ball's centre (the
+  head's rim meets an upright). The backswing is not swept here: the plan has no backswing path.
 - Per canonical setup: `entryJumps`, the highest ball centre, the head regions touched, the bottom hand's release
   time, the hands' and turf's braking impulses, the longest tracked impact after `contactAt` (confirming or revising
   `TRACK_IMPACT_CAP`), and how often `impact-head-deep`, `impact-cap`, `impact-head-approaching` and
@@ -1040,24 +1199,48 @@ Exit criterion 2. The `force` migration is mechanical and reviewed by the digest
 - Tracked impact steps and µs/step against force drives on the P2b.2a scenarios (for P5), and the WAKE_MARGIN reach
   filter's headroom at 0.51 s.
 - Timing: for the AC stop and a roll, each action timed from 50 ms early to 20 ms late, and the dip's depth from 0 to
-  twice its default: whether the head meets the lawn before the ball, the head–turf penetration and slide, and the
-  striker's ball's speed and launch angle (for P2b.2b.2, and for the user's review of the timing model).
+  twice its default: whether the head meets the lawn before the ball, the head–turf penetration and slide, the
+  striker's ball's speed and launch angle, and for every variant both balls' distances after phase 2 and the
+  coaching ratio, so the sweep shows what makes a better stop shot in play (user decision, 2026-10-06; for P2b.2b.2,
+  and for the user's review of the timing model).
 
 ## 10. Deferred
 
-**To P2b.2b.2 (calibration):** sourced swing defaults per preset; the face–ball and ball–ball contact-time fit; the
-hand coupling's T and ζ, `armMass`, `reachSlack` and the grips, fitted to the ratios; the stop-shot and drive ratio
-calibration and held-out validation (rolls, pass roll, stop → pass-roll ordering, pull, stop-shot lift); the steep
-rolls' calibration (known misses: the full roll about 2.1 against about 1, the pass roll about 1.6 against below 1);
-which stop preset is the calibration
-target (§5.4); the low-speed face–ball law (restitution falling towards inelastic at low closing speed: a roll is a
-30–60 ms carry, not a collision, and the modelled striker's ball chatters on the face 4–16 times); the turf's response
-under load (the non-linear yield and rebound of the lawn under a pressing face, so that the ball rolls out forward with
-topspin); the crush-calibration decision (roadmap, "Open decision: crush calibration"); 29.1.6.3 with a sourced
-contact-time norm; head–turf stiffness and friction sourcing, and whether turf drag needs a ploughing term; the
-end-weighted head with a sourced inertia factor; face presets beyond wood.
+**To P2b.2b.2 (the stroke shape and calibration):** the whole stroke shape, the backswing from its top, the lead-in and
+the follow-through, with its amplitude, modelled and calibrated per shot type, its path model complete enough to give
+the head's and the shaft's poses along the whole swing for P2b.2b.3; sourced swing defaults per preset; the face–ball
+and ball–ball contact-time fit; the hand coupling's T and ζ, `armMass`, `reachSlack` and the grips, fitted to the
+ratios; the stop-shot and drive ratio calibration and held-out validation (rolls, pass roll, stop → pass-roll
+ordering, pull, stop-shot lift); the steep rolls' calibration (known misses: the full roll about 2.1 against about 1,
+the pass roll about 1.6 against below 1); the GC stop's distances after the touch (§5.4); the low-speed face–ball law
+(restitution falling towards inelastic at low closing speed: a roll is a 30–60 ms carry, not a collision, and the
+modelled striker's ball chatters on the face 4–16 times); the turf's response under load (the non-linear yield and
+rebound of the lawn under a pressing face, so that the ball rolls out forward with topspin); the crush-calibration
+decision (roadmap, "Open decision: crush calibration"); 29.1.6.3 with a sourced contact-time norm; head–turf stiffness
+and friction sourcing, and whether turf drag needs a ploughing term; the end-weighted head with a sourced inertia
+factor; face presets beyond wood.
 
-**Beyond P2b, required in the final implementation** (roadmap P2 row): 29.1.10, with mallet–obstacle contact;
+**To P2b.2b.3 (the whole swing; after P2b.2b.2's calibration):** carry the mallet through its whole swing path as
+P2b.2b.2 models and calibrates it (this phase's lead-in starts at most 60 ms before contact), the backswing from its
+top, the lead-in and the follow-through after the impact ends, and sweep the head and the shaft (rigid on the
+head, from the socket to the top hand) against every ball, the hoops' uprights and crowns, and the peg. Hoops, the
+peg and other balls may lie in the swing's path and limit the playable stroke; the crown in particular stops the
+shaft when the head reaches through an open hoop, which limits the follow-through's arc, and in the backswing when a
+head is swung back through the jaws from a ball in or near a hoop. Head–obstacle and shaft contact are new physics.
+On any crossing the impact integrator re-opens, so the further contact is integrated and the fault judge rules on
+it: Laws 29.1.6.1 and 29.1.6.2 (a re-hit of the striker's ball, with 29.3.2's choice to leave the balls where they
+lie), 29.1.11 (another ball touched with the mallet) and 29.1.10 (a ball at rest moved or shaken by hitting a hoop or
+the peg with the mallet; C29.15.1 names the backswing and the forward swing). This phase only counts the
+follow-through's crossings (§9), and within its impact the head never meets a hoop or the peg, so 29.1.10 is never
+judged here (a known limit). Two reference gaps to source there: `mallet.json` has no shaft diameter, and the world's
+peg has no height (Law 5.1 is not in `court.json`).
+
+**To a GC-rules phase:** the Golf Croquet Rules' faults and remedies. Until then a GC stroke is judged as an AC
+single-ball stroke (§6.3).
+
+**Beyond P2b, required in the final implementation** (roadmap P2 row): 29.1.10 by a part of the body (the body is
+not modelled; the mallet's part is P2b.2b.3's); variability of swing and aim (accuracy), and conditions such as
+wind, under which a hoop could block a shot or a glancing blow redirect it or limit its power (no phase named yet);
 divots and lasting turf damage; a fully articulated body (shoulder, elbow and wrist) beyond this phase's translating
 pivot and arm mass, with the bottom hand's position as the input from which the shaft's lean and the push–swing balance
 follow (each preset sets them directly until then). Three- and four-ball cannons remain deferred as before. Casting
@@ -1082,3 +1265,17 @@ the player sets up and rehearses a shot), not here.
   rehearsed swing, its reach and its timing); casting versus planted ways of setting up and rehearsing a shot, and how
   much of the set-up a weaker shot uses, are decided there.
 - The P2 row's deferred list: the articulated body takes the bottom hand's position as its input.
+- P2 row (2026-10-06): P2b.2b.3, the late re-hit, after P2b.2b.2, with its exit criteria; the
+  Golf Croquet Rules' faults and remedies, a GC-rules phase, in the deferred list. "P2b.2 decisions": the GC stop is a
+  single-ball stroke over a gap, and the late re-hit is measured here and integrated in P2b.2b.3. The outcomes
+  carried forward gain the GC stop's distances, the gap sweep and the crossing counts (§9).
+- P2 row (2026-10-06, later): P2b.2b.3 becomes the whole swing (§10): the backswing from its top, the lead-in and
+  the follow-through, the head and the shaft swept against every ball, the hoops' uprights and crowns and the peg,
+  with head–obstacle and shaft contact, any crossing re-opening the impact, and 29.1.6.1, 29.1.6.2, 29.1.11 and
+  29.1.10 judged; its exit criteria to match. The deferred list: 29.1.10 by the body only, and the variability of
+  swing and aim and conditions such as wind. The outcomes carried forward gain the obstacle crossings and the model
+  limits that 29.1.10 is never judged in P2b.2b.1 and that the end rule's look-ahead watches the face only.
+- P2 row (2026-10-06, the phase order): P2b.2b.2 first models the whole stroke shape (the backswing from its top, the
+  lead-in and the follow-through, with amplitude) and calibrates it per shot type, complete enough for P2b.2b.3; its
+  exit criteria gain the shape's calibration. The sweep phase, first P2b.2b.1b before P2b.2b.2, becomes P2b.2b.3
+  after it; "P2b.2 decisions" records the move and the user's reason.

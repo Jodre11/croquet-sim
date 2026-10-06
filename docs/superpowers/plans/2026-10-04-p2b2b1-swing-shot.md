@@ -21,9 +21,10 @@ a `SwingProfile`. `src/engine/shot.ts` wires `buildContact` → `swingApproach` 
 **Tech Stack:** TypeScript (strict, `noUncheckedIndexedAccess`), Vitest, ESLint, Prettier. No new dependencies;
 `npx --yes tsx` runs the scripts.
 
-**Spec:** `docs/superpowers/specs/2026-10-04-p2b2b1-swing-shot-design.md`. Read all of it, including its three
-"Amended 2026-10-05" notes; the last ("pre-flight and prototype") supersedes the earlier notes where they differ. Also
-read:
+**Spec:** `docs/superpowers/specs/2026-10-04-p2b2b1-swing-shot-design.md`. Read all of it, including its "Amended"
+notes: "pre-flight and prototype" (2026-10-05) supersedes the earlier notes where they differ, and the re-plan note
+(2026-10-05) and the pre-flight note (2026-10-06: the GC stop a single-ball stroke, the late re-hit, a check braking
+to rest, the AC stop told from the drive by its ratio, the timings' distances) amend it. Also read:
 
 - Impact spec: `docs/superpowers/specs/2026-10-03-p2b1-impact-integrator-design.md` (§3 `ContactState`, §5
   integrator).
@@ -89,9 +90,10 @@ code run on a scratch copy while planning; pre-flight re-measures them all.
   restores lost speed, which is what makes the follow-through re-hit. The user kept that model and raised the cap so
   every re-hit is integrated. With it the drive ends by itself: at 4 m/s after 2 hits, 138 ms after contact; at 3 m/s
   after 2 hits, 181 ms; at 2 m/s after 4 hits (0, 82, 127 and 159 ms, the last on the rim), 269 ms. In the preset
-  sweep the drive's longest natural end is 324.8 ms after contactAt and every other preset's at most 309 ms; 0.45 s
-  is about 40 % over 324.8 ms. `FREE_SPAN` covers `MAX_LEAD` plus the cap: 0.55 s. (A first sweep at a 0.5 s cap gave
-  395 ms, but with the table still 0.25 s long, so its path clamped beyond it; 324.8 ms is the corrected figure.)
+  sweep the drive's longest natural end is 314.6 ms after contactAt (324.8 before the check to rest) and every other
+  preset's at most 309 ms; 0.45 s is about 43 % over 314.6 ms. `FREE_SPAN` covers `MAX_LEAD` plus the cap: 0.55 s.
+  (A first sweep at a 0.5 s cap gave 395 ms, but with the table still 0.25 s long, so its path clamped beyond it;
+  324.8 ms was the corrected figure before the check to rest.)
 - **`guideEffort`** (user decision, 2026-10-06; spec §3.1, §3.3, §5.1). How hard the drive's bottom hand pushes
   after the hit is the player's choice: the usual aim is to restore the arc's speed the hit took, a softer shot uses
   less of that effort and a very soft one none. `Hands.guideEffort` (in [0, 1]) scales, in swing mode after contact,
@@ -103,12 +105,68 @@ code run on a scratch copy while planning; pre-flight re-measures them all.
   guide's restoration over about 90 ms stands in for the delays between the player's intent and what is observed;
   P2b.2b.2 calibrates how quickly the guide acts against observed strokes (maintained contact, a double tap or a late
   re-hit).
+- **The GC stop is a single-ball stroke** (user decision, 2026-10-06; spec "Amended 2026-10-06", §5.1, §5.4, §5.5,
+  §9). There is a gap between the striker's ball and the target, about 0.3 m at best; the first plan's touching,
+  croquet GC stop was wrong. `CROQUET_STROKES` drops `"stop-gc"`, and `STROKE_TYPES` is listed in full, in the
+  presets' order, so every per-type array keeps its order. `canonicalSetup("stop-gc")` puts red on the aim line with
+  a gap of `GC_STOP_GAP` = 0.3 m surface to surface and `live: ["red"]`; `CanonicalOptions.targetGap` places the same
+  target at any gap, for the GC stop or the single-ball stroke (the probe's gap sweep). The preset is unchanged. Its
+  outcome is the distances after the first touch (`gc` in Task 12), not the croquet ratio; P2b.2b.2 calibrates them.
+  The GC stop is judged as an AC single-ball stroke; the Golf Croquet Rules wait for a GC-rules phase. Every GC-stop
+  figure below that came from the touching setup is marked "re-measured by pre-flight".
+- **The late re-hit** (user decision, 2026-10-06; spec §3.5, §9, §10). The impact ends when the look-ahead sees
+  nothing the head would reach, and phase 2 moves the balls with no mallet in it, so a ball that comes back into the
+  follow-through's arc is never checked. This phase records it as a known limit for every shot and only measures it:
+  Task 12's `rehit` section (and the `gc` sweep) sweeps the real head from the impact's end, moved on by its planned
+  path's displacement and rotation (`headOnPath`, out to `FREE_SPAN`; user decision, 2026-10-06: measure from the
+  real head), against every ball's phase-2 trajectory (`stateAtTime`) and counts crossings; the same sweep, head and
+  shaft, counts crossings with the hoops' uprights and crowns and the peg. No engine change and no fault. P2b.2b.3,
+  after P2b.2b.2, is the whole swing (user decisions, 2026-10-06; spec "Amended 2026-10-06", §10): the backswing from
+  its top, the lead-in and the follow-through, along the path P2b.2b.2 models and calibrates per shot type, its head
+  and shaft swept against every ball, the uprights, the crowns and the peg, with head–obstacle and shaft contact, any
+  crossing re-opening the impact, and 29.1.6.1, 29.1.6.2, 29.1.11 and 29.1.10 judged. The phase was first placed
+  before P2b.2b.2 as P2b.2b.1b; the user moved it after: "first we must model the stroke shape and amplitude and
+  calibrate to the different shot types, but we will need the model to be complete enough for the rest later".
+  Within this phase's impact 29.1.11 is judged but the head never meets a hoop or the peg, so 29.1.10 is never
+  judged: a known limit.
+- **A check brakes the head to rest, not past it** (user decision, 2026-10-06; spec §3.3, §8.1). Pre-flight found the
+  canonical GC stop's check, its feed-forward sized to stop the unstruck head from 3 m/s (about −300 N over its 10 ms
+  window), braking a head the strike had already slowed to 1.145 m/s by 0.83 ms: the head crossed rest at about
+  5.6 ms and ended the impact moving back at −1.0928 m/s along aim. A player stops the mallet; they do not pull it
+  back. In swing mode from contact, inside a check, the hands now apply the head's share of the planned deceleration,
+  `checkShare(rate, planned)` on the pitch rates about n (Task 4): all of it at or above the path's rate, none at or
+  below rest, rate/planned between, scaling α_path and the socket's tangential r·α so the wrench stays rigid and its
+  split exact. A slowed head then keeps its fraction of the path's rate and comes to rest with the path at the
+  window's end; the rate guide's target is the head's rate held within [0, ω_path], so it brakes a head ahead of the
+  path, returns one past rest, and neither pushes nor pulls one between. The GC stop's head ends at −3.2e-4 m/s.
+  After contact the hands have no position springs, and after the window swing mode's guide pushes only a head
+  slower than the free pendulum, which starts from rest at a full check's end and, the canonical stops having just
+  passed the lowest point, swings back: nothing pulls a rested head forward into a re-hit. An unstruck check, every
+  stroke without a check, carry mode and force tables are unchanged bit for bit. A clamp-and-hold alternative (the
+  planned deceleration until rest, then a hold towards rest) was measured and rejected: its switch left the pivot
+  moving, and the GC stop's head ended the window at +0.233 m/s.
+- **The AC stop is told from the drive by its coaching ratio** (user decision, 2026-10-06; spec §8.1). The striker's
+  ball's speed at the impact's end (AC stop 1.3800, drive 1.3919 m/s) differed by 0.86 % between speeds taken 21.6 and
+  181 ms after contact. The stops' test compares the ratios after phase 2 instead: AC stop 6.464, drive 3.316.
+- **The timings show what makes a better stop shot in play** (user decision, 2026-10-06; spec §9). Task 12's
+  `timings` prints, for every variant, both balls' distances after phase 2 and the coaching ratio, beside lawn or
+  ball first, the dig, the slide and the launch.
 - **Known behaviours pre-flight watches** (no test asserts against them):
   - the canonical drive ends by itself 181.4 ms after contact, after 2 hits; AC-stop runs whose head rests on the turf
     still reach the cap (the resting head is a closed contact);
-  - the AC stop's highest ball centre is 4.17 mm above R, 0.83 mm inside exit criterion 4's 5 mm;
+  - the AC stop's highest ball centre is 4.19 mm above R (pre-flight, with the check to rest; 4.17 before), 0.81 mm
+    inside exit criterion 4's 5 mm;
+  - the AC stop's head, outside its check once the turf has arrested it, ends the impact pitching slightly back
+    (−0.037 m/s along aim, −0.21 rad/s; −0.026 m/s before the check to rest). It happens after the check's window,
+    while the head is on the turf and the top hand pulls back (−13.6 N along aim at 20 ms); not yet diagnosed;
   - the full roll at 4 m/s gives a ratio of about 52: its 0.30 m reach runs out with the striker's ball still on the
-    face (a known miss, deferred with the steep rolls).
+    face (a known miss, deferred with the steep rolls);
+  - the late re-hit: no shot checks a ball coming back into the follow-through after the impact has ended; Task 12's
+    `rehit` and `gc` sections count how often the follow-through (the real head moved on by the planned path) would
+    cross one, and how often its head or shaft would meet an upright, a crown or the peg;
+  - the end rule's look-ahead watches the front face only, so on 6 pass-roll runs of the preset sweep the head meets
+    the striker's ball 0.1 ms after the impact ends, on its rim in 3 and its barrel in 3. P2b.2b.3's re-opening of
+    the impact covers it.
 
 ## Global Constraints
 
@@ -153,6 +211,8 @@ code run on a scratch copy while planning; pre-flight re-measures them all.
   figure measured while planning and its margin. Where one fails, find out why before changing an expectation; a
   changed expectation goes to the user if it touches the spec.
 - **Bash.** One command per call: no `&&`, `||`, `;`, `$(…)` or subshells.
+- **The temp directory.** `<temp>` in a Run line is the literal path of `$CLAUDE_TEMP_DIR`, written out in full:
+  worktree sessions refuse the variable (pre-flight D1.1, D11.1).
 - **Commits.**
   - Short imperative sentence (repo style), signed.
   - Write the message to `$CLAUDE_TEMP_DIR/msg.txt` and commit with `git commit -F <path>`, where `<path>` is the
@@ -205,19 +265,22 @@ stop's dip 11 mm, the pass roll's reach 0.30 m); figures marked "first pre-fligh
 | Value | Where it lands | Planned | How pre-flight measures it |
 |---|---|---|---|
 | Tracking bounds: coasting and roll paths before contact, carry from contact to the reach | `tests/engine/impact/hands.test.ts` (Task 4) | Task 4's bounds | Run Task 4's tracking tests and print the figures; keep a 1.5× to 3× margin. First pre-flight, at the 40 ms test coupling: coast 2.8e-7 m and 1.1e-7 rad; roll with its dip 1.9e-6 m and 5.3e-6 rad (D4.2). Task 12's `tracking` adds the canonical paths at `HAND_COUPLING` |
-| Check residual (convergence) | `tests/engine/impact/hands.test.ts` (Task 4) | halving dt halves it | The test's ratio. First pre-flight: 0.4999 |
+| Check residual (convergence) | `tests/engine/impact/hands.test.ts` (Task 4) | halving dt halves it | The test's ratio. First pre-flight: 0.4999. This pre-flight: 0.5042 / 0.5038 before contact, 0.4997 / 0.4997 from contact, unchanged by the check to rest (an unstruck head is on its path) |
+| Check to rest (user decision, 2026-10-06) | `src/engine/impact/track.ts`, `tests/engine/impact/hands.test.ts` (Task 4); the GC stop's test (Task 10) | a slowed head ends the check at rest, never past it | Task 4's slowed-check test (share drift 2.5e-4, last rate 1.13e-8 rad/s) and Task 10's GC stop test (head −3.2e-4 m/s along aim at the impact's end; −1.0928 before the decision) |
 | Swing-mode residual after contact outside a check | roadmap outcomes (Task 12) | none (spec §8.1 leaves it unbounded) | Task 12 `tracking`, the "swing" phase |
 | Effective mass (exit criterion 3) | the exit-criterion-3 test (Task 10) | closed form within 10 % of the head's mass; strike within Task 10's tolerance of the closed form | Task 12 `mass`. Prototype: drive closed form 1.007 kg, strike 1.0066 kg over every ball. The strike's momentum change must sum every ball: the drive's striker's ball alone gives 0.286 kg, as it passes momentum to the croqueted ball within the interval |
-| The AC stop's dip depth (`handDrop`) | `src/engine/swing/profile.ts` (Task 8); spec §5.4 (table and the AC stop paragraph) | about 11 mm (0.011 m) over 20 ms | Task 12 `dip`: the canonical stop's head–turf penetration under `HEAD_DEEP_LIMIT` and its first `head/turf` interval starting after its first `face/blue` interval ends. Prototype: 8.0–11.5 mm meet both; at 11 mm 1.73 mm, the turf from 12.70 ms after a face interval ending at 1.17 ms; 12 mm raises `impact-head-deep`. Keep 11 mm if it meets both; otherwise report the meeting range to the user, who sets the value |
-| `TRACK_IMPACT_CAP` | `src/engine/impact/integrate.ts` (Task 4) | 0.45 s (user decision, 2026-10-05; see "Decisions made while planning") | Task 12 `canonical` and `presets`: the longest impact after `contactAt`, and how many runs reach the cap. Confirm, or revise with the user. Planning dry run: the canonical drive ends by itself 181.4 ms after contact after 2 hits; every other canonical setup by 83.4 ms; in the sweep the longest natural end is the drive's 324.8 ms, and only 18 AC-stop runs reach the cap, each with its head resting on the turf |
-| Canonical setups (exit criterion 4) | the canonical-runs test (Task 10); roadmap outcomes | no entry jump; no ball centre more than 5 mm above R | Task 12 `canonical`. Prototype: no entry jump; highest 4.17 mm (AC stop) and 2.91 mm (pass roll), the rest under 1 mm |
+| The AC stop's dip depth (`handDrop`) | `src/engine/swing/profile.ts` (Task 8); spec §5.4 (table and the AC stop paragraph) | about 11 mm (0.011 m) over 20 ms | Task 12 `dip`: the canonical stop's head–turf penetration under `HEAD_DEEP_LIMIT` and its first `head/turf` interval starting after its first `face/blue` interval ends. Prototype: 8.0–11.5 mm meet both; at 11 mm 1.73 mm, the turf from 12.70 ms after a face interval ending at 1.17 ms; 12 mm raises `impact-head-deep`. Keep 11 mm if it meets both; otherwise report the meeting range to the user, who sets the value. This pre-flight, with the check to rest: 8.0–11.5 mm still meet both; 11 mm 1.80 mm, the turf from 12.52 ms; 11.5 mm 1.996 mm; 12 mm 2.19 mm and `impact-head-deep`: 11 mm kept |
+| `TRACK_IMPACT_CAP` | `src/engine/impact/integrate.ts` (Task 4) | 0.45 s (user decision, 2026-10-05; see "Decisions made while planning") | Task 12 `canonical` and `presets`: the longest impact after `contactAt`, and how many runs reach the cap. Confirm, or revise with the user. Planning dry run: the canonical drive ends by itself 181.4 ms after contact after 2 hits; every other canonical setup by 83.4 ms; in the sweep the longest natural end is the drive's 324.8 ms, and only 18 AC-stop runs reach the cap, each with its head resting on the turf. Pre-flight, with the check to rest: the drive's longest 314.6 ms (324.8 before the check to rest), and only 12 AC-stop runs reach the cap (speed 1, drive 0 and 0.5, up −23 and −20 mm), each with its head resting on the turf; 0.45 s is 43 % over 314.6 ms. The GC stop's figures (10.0 ms canonical, 226.0 ms in the sweep) came from its touching setup; pre-flight, on its target setup: 10.0 ms and 217.7 ms |
+| Canonical setups (exit criterion 4) | the canonical-runs test (Task 10); roadmap outcomes | no entry jump; no ball centre more than 5 mm above R | Task 12 `canonical`. Prototype: no entry jump; highest 4.17 mm (AC stop) and 2.91 mm (pass roll), the rest under 1 mm (the GC stop's 0.81 mm on its touching setup: re-measured by pre-flight). This pre-flight, with the check to rest: AC stop 4.19 mm, GC stop 1.46 mm on its target setup, the rest unchanged |
 | Flag counts | roadmap outcomes | none | Task 12 `presets`: runs raising `impact-head-deep`, `impact-cap`, `impact-head-approaching` and `impact-off-face` |
-| Coaching ratios | roadmap outcomes | none (observations) | Task 12 `ratios`, canonical setups and 2–4 m/s. Prototype (0.15 s cap): drive 3.33 (3.32 at the 0.45 s cap), AC stop 6.47, GC stop 6.60, half roll 2.83, full roll 2.14, pass roll 1.59 |
-| Coupling comparison | roadmap outcomes | none | Task 12 `coupling`: T = 0.04 s against 0.08 s. Prototype ratios at 0.04 s: drive 2.35, half roll 2.03, full roll 1.78, pass roll 1.33; the stops within 0.1 |
+| Coaching ratios | roadmap outcomes | none (observations) | Task 12 `ratios`, the croquet strokes' canonical setups and 2–4 m/s. Prototype (0.15 s cap): drive 3.33 (3.32 at the 0.45 s cap), AC stop 6.47, half roll 2.83, full roll 2.14, pass roll 1.59. This pre-flight, with the check to rest: drive 3.316, AC stop 6.464, half roll 2.825, full roll 2.143, pass roll 1.592 (only the AC stop's moved). The AC stop's ratio exceeding the drive's is asserted (Task 10, user decision 2026-10-06), its value not. The GC stop's 6.60 was a croquet ratio on its touching setup, retired (user decision, 2026-10-06): the GC stop is a single-ball stroke and has no croquet ratio; see the next row |
+| The GC stop's distances after the touch | roadmap outcomes; spec §5.4 and §9 | none (observations; P2b.2b.2 calibrates) | Task 12 `gc`: on the canonical GC stop (0.3 m gap) over 2–4 m/s, how far the striker's ball travels after first touching the target, how far the target travels, and their ratio (target over striker); then the gap from 0.05 to 1 m, `stop-gc` and `single-ball` at each gap. Pre-flight measures; nothing was measured on the target setup while planning |
+| The late re-hit's crossings | roadmap outcomes; the P2b.2b.3 design | none (a measurement: no engine change, no fault) | Task 12 `rehit`: per preset, whether the canonical setup's follow-through (the real head at the impact's end, moved on by the planned path's displacement and rotation out to `FREE_SPAN`) would cross a ball's phase-2 trajectory or, head and shaft, a hoop upright, a crown or the peg, and how many runs of the preset sweep would; runs whose real head already overlaps a ball at the impact's end apart; `gc` gives the same per gap. Pre-flight: no run overlaps a ball at the impact's end; the half, full and pass rolls' canonical setups cross, the others do not; sweeps cross in 18 (single-ball), 3 (drive), 13 (AC stop), 38 (GC stop), 53 (half roll), 125 (full roll) and 223 (pass roll) of 225 runs; per gap only `single-ball` crosses, at 0.05–0.2 m. Against the uprights, the crowns and the peg (head and shaft): no run meets one or overlaps one at the impact's end; through hoop 1, centred, the shaft meets the crown 143.2 ms after contactAt, and with the face 10 mm off the ball's centre the head's rim meets an upright at 100.3 ms. (A first record swept `headOnPath` itself, which after a strike runs up to 654 mm ahead of the real head, so most of its counts were overlaps at the first sample) |
+| Coupling comparison | roadmap outcomes | none | Task 12 `coupling`: T = 0.04 s against 0.08 s. Prototype ratios at 0.04 s: drive 2.35, half roll 2.03, full roll 1.78, pass roll 1.33; the AC stop within 0.1 (the GC stop's 6.51 / 6.60 on its touching setup: re-measured by pre-flight, as distances after the touch) |
 | µs/step and the reach filter | roadmap outcomes (for P5); `WAKE_MARGIN`'s comment in `integrate.ts` (Task 4) if its stated headroom no longer holds | none | Task 12 `cost`: tracked canonical impacts against P2b.2a's force-table strokes; the displacement beyond the summed path over the 0.51 s impact (`MAX_LEAD` plus the cap) against `WAKE_MARGIN`. Planning dry run: 102,000 steps, 1.49e-11 m (67× headroom); the sweep's capped runs at most 2.3e-11 m |
-| Timing | roadmap outcomes; the user's review | none | Task 12 `timings`: the AC stop and the full roll, each action −50 to +20 ms, and the AC stop's dip ×0–2: lawn or ball first (or missed), dig, slide, launch |
+| Timing | roadmap outcomes; the user's review | none | Task 12 `timings`: the AC stop and the full roll, each action −50 to +20 ms, and the AC stop's dip ×0–2: lawn or ball first (or missed), dig, slide, launch, and after phase 2 both balls' distances and the coaching ratio (user decision, 2026-10-06: what makes a better stop shot in play) |
 | Presets | `src/engine/swing/profile.ts` (Task 8) | spec §5.4 | Whether every canonical setup runs clean and the stops and rolls keep their character. Report to the user, who refines them from outcomes |
-| Behaviour tests | Tasks 4, 6, 7 and 10 | as written | The oscillator, relaxed top hand, feed-forward split, rate guide, release by reach, carry slope, head–ball regions, re-entry guard, re-contact, end rule, head–turf, effective mass, canonical runs, mechanisms (follow-through, accelerating bottom hand, stops, GC check, AC stop, punch, mistimed dip), gentle tap and crush tests rest on model behaviour. See the rule below |
+| Behaviour tests | Tasks 4, 6, 7 and 10 | as written | The oscillator, relaxed top hand, feed-forward split, rate guide, release by reach, carry slope, head–ball regions, re-entry guard, re-contact, end rule, head–turf, effective mass, canonical runs, mechanisms (follow-through, accelerating bottom hand, stops, GC check, AC stop, punch, mistimed dip), gentle tap and crush tests rest on model behaviour; so do the check-to-rest tests (Task 4's slowed check and check share, Task 10's GC stop head). The GC stop's tests (its canonical run, the stops, the GC check) now run on its target setup; their pre-flight figures are in Task 10's table. See the rule below |
 
 **Rule for a failing behaviour test.** Where one fails, find out why before changing any expectation: trace the
 mechanism (the probe's sections and the snapshots), and fix the code if it departs from the spec. A changed
@@ -236,6 +299,10 @@ If pre-flight changes a value, it changes:
 Pre-flight also keeps the probe's full output with its evidence and replaces Task 12 Step 2's prototype reference
 with its own record: the real run's deterministic lines must equal it. If a behaviour test fails before Task 12
 exists, write Task 12's script uncommitted and run the section that measures it.
+
+Measuring scripts stay in the session's temp directory. Evidence kept under the worktree (never committed) is text:
+never a `.ts`, `.mts` or `.js` file, which the repo's checks could pick up; a script kept as evidence is saved with a
+`.txt` suffix (D5.2).
 ## File Structure
 
 | Path | Change |
@@ -260,7 +327,7 @@ exists, write Task 12's script uncommitted and run the section that measures it.
 | `src/engine/index.ts` | Exports (spec §6.5) |
 | `src/engine/simulate.ts` | `ENGINE_VERSION` 0.6.0 |
 | `tests/engine/support/impact.ts` | Force-drive wrapping; `TEST_COUPLING`, `TEST_HANDS`, `NO_DIP`, `trackDrive`, `levelArc` (Task 3); `onArc`, `mirrorContact` mirrors arcs (Task 5); `isolated` gains `headTurf` (Task 6) |
-| `tests/engine/support/shot.ts` | New: `testProfile`, `CANONICAL_STRIKER`, `canonicalSetup`, `CANONICAL_CLEARANCE` |
+| `tests/engine/support/shot.ts` | New: `testProfile`, `CANONICAL_STRIKER`, `canonicalSetup`, `CANONICAL_CLEARANCE`, `GC_STOP_GAP` |
 | `tests/engine/impact/{analytic,timeline,integrate,simulateImpact}.test.ts` | Force-drive wrapping; track validation cases |
 | `tests/engine/impact/track.test.ts` | New: the path, the swung body, effective mass |
 | `tests/engine/impact/hands.test.ts` | New: the two hands, tracking, release, end rule, re-contact |
@@ -352,10 +419,13 @@ header comment, replace the run line with:
  * OBSTACLE_STROKES (obstacle-fuzz strokes, as fuzz.test.ts draws them; default 0).
 ```
 
-The default output is unchanged, so this baseline is `main`'s. From the worktree root (`npm ci` first in a fresh
-worktree):
+The default output is unchanged, so this baseline is `main`'s. To confirm it (optional): copy `main`'s script with
+`git show HEAD:scripts/impactDigest.ts > scripts/impactDigest.main.ts` (beside the original, so that its imports
+resolve; not `git show --output=`), run each script with no environment, `npx --yes tsx scripts/impactDigest.main.ts >
+"<temp>/digest-main-default.txt"` and `npx --yes tsx scripts/impactDigest.ts > "<temp>/digest-new-default.txt"`,
+`cmp` the two (no output), and delete the copy. From the worktree root (`npm ci` first in a fresh worktree):
 
-Run: `env OBSTACLE_STROKES=2000 npx --yes tsx scripts/impactDigest.ts > "$CLAUDE_TEMP_DIR/digest-base.txt"`
+Run: `env OBSTACLE_STROKES=2000 npx --yes tsx scripts/impactDigest.ts > "<temp>/digest-base.txt"`
 Expected: the file's first line starts `scenario centre test-world {"balls":`. Record its line count (`wc -l`) for the
 commit message.
 
@@ -495,8 +565,8 @@ Expected: all pass (534 passed, 2 skipped, as on `main`).
 Run: `npm run check`
 Expected: no errors.
 
-Run: `env OBSTACLE_STROKES=2000 npx --yes tsx scripts/impactDigest.ts > "$CLAUDE_TEMP_DIR/digest-1.txt"`
-Run: `cmp "$CLAUDE_TEMP_DIR/digest-base.txt" "$CLAUDE_TEMP_DIR/digest-1.txt"`
+Run: `env OBSTACLE_STROKES=2000 npx --yes tsx scripts/impactDigest.ts > "<temp>/digest-1.txt"`
+Run: `cmp "<temp>/digest-base.txt" "<temp>/digest-1.txt"`
 Expected: no output (identical).
 
 - [ ] **Step 6: Format, check, commit**
@@ -532,13 +602,15 @@ git log -1 "--format=%G? %h"
 
 Run the commit with the sandbox disabled (signing needs the SSH agent) and with the temp directory's literal path:
 worktree sessions refuse the variable in `git commit -F`. Expected: `G` and the new commit's hash.
+
 ### Task 2: Reference data for the swing body, the coupling, the head–turf pair and 29.1.14
 
 Spec §7 and §6.4. Before committing, open each URL and confirm each quoted sentence is still there. The Laws PDF is in
-the spec header; for the mallet pages, use WebFetch (the pages' plain HTML can lack text that WebFetch renders). If a
-quotation cannot be re-found, keep the entry, add "(quotation not re-found on <date>)" to its note and report it. The
-first pre-flight (2026-10-05) re-found the Laws, USCA, Croquet Network and Hall quotations verbatim. Apostrophes and
-quotation marks follow the source (the Laws PDF uses ’ and ‘ ’).
+the spec header; for the mallet pages, use WebFetch (the pages' plain HTML can lack text that WebFetch renders). The
+USCA page's TLS certificate is self-signed: fetch it with `curl -sSLk -o <file> <url>`. If a quotation cannot be
+re-found, keep the entry, add "(quotation not re-found on <date>)" to its note and report it. The first pre-flight
+(2026-10-05) re-found the Laws, USCA, Croquet Network and Hall quotations verbatim. Apostrophes and quotation marks
+follow the source (the Laws PDF uses ’ and ‘ ’).
 
 The coupling's period is a user decision (spec §3.4), not a search result: 0.08 s at damping ratio 0.7. `armMass` and
 `reachSlack` are the prototype's calibration (`proto-two-hands` aeadd4c), with bounds the prototype tried. No
@@ -602,7 +674,8 @@ Expected: FAIL, 5 tests. The first four with `Cannot read properties of undefine
 
 - [ ] **Step 3: Add the values to `reference/contact.json`**
 
-Add after `tangentialStiffnessRatio` (mind the comma after its closing brace):
+Add after `tangentialStiffnessRatio` (mind the comma after its closing brace). The JSON blocks in this step and Steps
+4 and 5 are shown unindented; Prettier indents them in Step 8 (D2.4).
 
 ```json
 "handCouplingPeriod": {
@@ -663,10 +736,10 @@ Add after `headDiameter` (mind the comma after its closing brace):
 "shaftLength": {
     "value": 0.9144,
     "unit": "m",
-    "bounds": [0.8128, 0.9652],
-    "source": "USCA 9-wicket, 'Updated Advice & Information on Choosing a Mallet' (2014), http://www.9wicketcroquet.com/howtoplay/153/updated-advice-information-on-choosing-a-mallet; Croquet Network, 'Buying Your First Croquet Mallet' (2023), https://www.croquetnetwork.com/croquet-network-home/2023/5/28/buying-your-first-croquet-mallet; upper bound: TheSportsReviewer, 'What is the Standard Size of a Croquet Mallet?' (2023), https://thesportsreviewer.com/what-is-the-standard-size-of-a-croquet-mallet/",
+    "bounds": [0.8128, 0.9144],
+    "source": "USCA 9-wicket, 'Updated Advice & Information on Choosing a Mallet' (2014), http://www.9wicketcroquet.com/howtoplay/153/updated-advice-information-on-choosing-a-mallet; Croquet Network, 'Buying Your First Croquet Mallet' (2023), https://www.croquetnetwork.com/croquet-network-home/2023/5/28/buying-your-first-croquet-mallet",
     "provenance": "direct",
-    "note": "USCA: \"A “standard mallet” traditionally would weigh 3 pounds total (1.362Kg), have a 36” wood shaft and a 9-11” head length.\" and \"In general , people under 5 feet 4 inches use 32 inch shafts; up to 5 feet 10’ a 34 inch shaft and above 5’ 11” a 36 inch shaft.\" Croquet Network: \"as a general rule for a first mallet, I think an 11-inch head and a 36-inch shaft is a good starting point.\" SI: 36 in x 0.0254 = 0.9144 m. Bounds 32-38 in: USCA's shortest, and TheSportsReviewer: \"this measurement typically ranges between 32 inches (81 cm) and 38 inches (97 cm)\". The default profile's shaft (P2b.2b.1 design §5.4): a stance's top hand, measured from the socket along it, may not lie beyond it (design §5.3)."
+    "note": "USCA: \"A “standard mallet” traditionally would weigh 3 pounds total (1.362Kg), have a 36” wood shaft and a 9-11” head length.\" and \"In general , people under 5 feet 4 inches use 32 inch shafts; up to 5 feet 10’ a 34 inch shaft and above 5’ 11” a 36 inch shaft.\" Croquet Network: \"as a general rule for a first mallet, I think an 11-inch head and a 36-inch shaft is a good starting point.\" SI: 36 in x 0.0254 = 0.9144 m. Bounds 32-36 in, USCA: \"Lengths below 32 inches and above 36 inches are rare.\" The default profile's shaft (P2b.2b.1 design §5.4): a stance's top hand, measured from the socket along it, may not lie beyond it (design §5.3)."
 }
 ```
 
@@ -679,7 +752,7 @@ Add after `29.1.13`:
     "quote": "a fault is committed during the striking period if the striker: [...] in any of the strokes specified in Law 29.2.3, damages the court with the mallet to the extent that a subsequent stroke played over the damaged area could be significantly affected.",
     "source": "World Croquet Federation, The Laws of Association Croquet, 7th Edition (February 2021), with Official Rulings and Commentary (current as at April 2021), Law 29.1.14 and commentary C29.19; https://worldcroquet.org/wp-content/uploads/2021/04/Laws-Rulings-Commentary-combined-published-master-.pdf",
     "provenance": "direct",
-    "note": "Judged as a possible fault (P2b.2b.1 design §6.4): the Law sets no objective test, C29.19.5: \"The law does not specify an objective test as to whether a subsequent stroke played over the damaged area could be ‘significantly affected’, but it is explicit that it is the potential effect on subsequent strokes, rather than cosmetic appearance, that must be considered. The effect on gentle, as well as hard strokes, must be taken into account. The potential effect must be significant: the guidance offered is that damage significantly affects a stroke if a ball passing over the (unrepaired) damage, at a speed such that it will stop about a mallet’s (shaft) length away, would come to rest more than a ball’s width from where it would have done if the damage was not there.\" C29.19.4: \"The damage must be caused by the mallet, not just the ball.\" The impact's turf is a plane that keeps no damage (divots are deferred), so the finding carries the head's deepest penetration, its peak turf force and its slide along the turf, and no damage threshold is invented. Applies only to the strokes of Law 29.2.3 (StrokeContext.hampered, jumpAttempt, group)."
+    "note": "Judged as a possible fault (P2b.2b.1 design §6.4): the Law sets no objective test, C29.19.5: \"The law does not specify an objective test as to whether a subsequent stroke played over the damaged area could be ‘significantly affected’, but it is explicit that it is the potential effect on subsequent strokes, rather than cosmetic appearance, that must be considered. The effect on gentle, as well as hard strokes, must be taken into account. The potential effect must be significant: the guidance offered is that damage significantly affects a stroke if a ball passing over the (unrepaired) damage, at a speed such that it will stop about a mallet’s (shaft) length away, would come to rest more than a ball’s width from where it would have done if the damage was not there. This deviation could be in distance as well as direction. This test may have to be relaxed on an uneven court.\" C29.19.4: \"The damage must be caused by the mallet, not just the ball.\" The impact's turf is a plane that keeps no damage (divots are deferred), so the finding carries the head's deepest penetration, its peak turf force and its slide along the turf, and no damage threshold is invented. Applies only to the strokes of Law 29.2.3 (StrokeContext.hampered, jumpAttempt, group)."
 },
 ```
 
@@ -829,7 +902,8 @@ Decisions made while drafting (spec silent or the contract's reading):
   monotonically along aim, as the swing model's paths do.
 - **The free pendulum's table** steps from the window's end (θ_e, ω_e) with the pivot's acceleration including the
   reach and the dip; the path interpolates θ and ω and evaluates θ̈ at the interpolated θ; beyond the table θ and ω
-  clamp to its last sample.
+  clamp to its last sample, and the α still evaluated there (at the held θ, with the pivot's acceleration) is not
+  meaningful.
 - **ρ** in ℓ_h, δ and the grips is the socket's height above the head's centre (`head.socket.z`), which is the head's
   radius for every head in this repo.
 - **`inCheck`** is α < 0 and arcStart ≤ t ≤ arcStart + window (the contract's reading; spec §3.3 "the pendulum's window
@@ -907,9 +981,9 @@ export interface Coupling {
  * the arc radius, the bottom hand `bottom` from the socket (m, in (0, radius)). From `relaxAt` on the top hand grips
  * with γ_T = `gripTension` and the bottom hand with g_B = `bottomGrip`, both in (0, 1]. The player's arm mass
  * `armMass` (kg) rides rigidly at the top grip. The bottom hand opens once the shaft has turned through `reachSlack`
- * (m of hand travel). In swing mode `guideEffort` (in [0, 1]) scales the bottom hand's push after contact outside a
- * check: 1 restores the planned arc's speed, 0 is no extra push (design §3.3; the player's choice, user's account,
- * 2026-10-06).
+ * (m of hand travel). `guideEffort` (in [0, 1]) scales the bottom hand's push after contact in swing mode (the rate
+ * guide outside a check, and the push after the release): 1 restores the planned arc's speed, 0 is no extra push; a
+ * check's guide acts in full (design §3.3; the player's choice, user's account, 2026-10-06).
  */
 export interface Hands {
     readonly bottom: number;
@@ -1323,7 +1397,7 @@ describe("the free pendulum", () => {
         }
     });
 
-    it("swings released from a small angle at √(m·g·ℓ_h/I_P) over FREE_SPAN", () => {
+    it("swings released from a small angle at √(m·g·ℓ_h/I_P) over 0.25 s", () => {
         const theta0 = 0.01;
         const arc = levelArc(CENTRE, { theta0 });
         const track = prepare(arc, ARMED);
@@ -1341,8 +1415,8 @@ describe("the free pendulum", () => {
             worst = Math.max(worst, Math.abs(theta - theta0 * Math.cos(rate * (t - tw))));
         }
         // Two known errors bound it: semi-implicit Euler's half-step phase lead, Ω·FREE_STEP/2 ≈ 8.6e-6 of θ₀, and the
-        // small-angle solution's frequency shift, θ₀²/16 of Ω, ≈ 5.3e-6 of θ₀ over FREE_SPAN. They partly cancel:
-        // drafting measured 2.2e-6 of θ₀ (6.4e-6 at θ₀ = 0.001, 1.3e-5 at 0.02).
+        // small-angle solution's frequency shift, θ₀²/16 of Ω, ≈ 5.3e-6 of θ₀ over the 0.25 s sampled. They partly
+        // cancel: drafting measured 2.2e-6 of θ₀ (6.4e-6 at θ₀ = 0.001, 1.3e-5 at 0.02).
         expect(worst).toBeLessThan(1.5e-5 * theta0);
     });
 
@@ -1954,7 +2028,8 @@ function pendulumAt(track: PreparedTrack, t: number): { theta: number; omega: nu
 
 /**
  * The path at time t (design §3.2): the pendulum's θ, ω and α, and the pivot with the reach and the dip, carried to
- * the socket and the head's orientation. Evaluates sinCos(θ) and sinCos(θ/2).
+ * the socket and the head's orientation. Evaluates sinCos(θ) and sinCos(θ/2) (in swing mode after the window,
+ * freeAlpha evaluates sinCos(θ) and the pivot once more).
  */
 export function pathAt(track: PreparedTrack, t: number): PathPoint {
     const { arc } = track;
@@ -1986,7 +2061,7 @@ export function pathAt(track: PreparedTrack, t: number): PathPoint {
  */
 export function headOnPath(track: PreparedTrack, head: MalletHead, t: number): HeadState {
     const p = pathAt(track, t);
-    const d = rotate(p.orientation, scale(head.socket, -1));
+    const d = rotate(p.orientation, sub(vec3(0, 0, 0), head.socket));
     return {
         position: add(p.socket, d),
         orientation: p.orientation,
@@ -2065,14 +2140,15 @@ head is neither closing on a ball nor would reach one within `LOOK_AHEAD`; its c
 - Consumes: Task 3's `PreparedTrack`, `SwungBody`, `pathAt`, `headOnPath`, `inCheck`, `prepareTrack`,
   `swingOrientation`, the support's `TEST_COUPLING`, `TEST_HANDS`, `NO_DIP`, `trackDrive`, `levelArc`;
   `contactReference.handCouplingPeriod` and `.handCouplingDampingRatio` (Task 2); Task 1's `ForceDrive` and the digest
-  baseline `"$CLAUDE_TEMP_DIR/digest-base.txt"`.
+  baseline `"<temp>/digest-base.txt"`.
 - Produces (track.ts):
   - `HAND_COUPLING: { period: number; dampingRatio: number }` (`as const`);
   - `interface GripState { contactPitch: number | null; releasedAt: number | null; releaseDelta: number }` (mutable,
     one per run) and `newGripState(): GripState`;
   - `interface HandLoad { force; feedForward; torque; top; bottom: Vec3 }`, `torque` about the head's centre: each
     hand's force's moment at its grip plus the bottom hand's couple;
-  - `handLoad(track: PreparedTrack, state: HeadState, head: MalletHead, t: number, grip: GripState): HandLoad`.
+  - `handLoad(track: PreparedTrack, state: HeadState, head: MalletHead, t: number, grip: GripState): HandLoad`;
+  - (module-private) `FORWARD` and `checkShare(rate, planned)`, the share of a check's planned deceleration.
 - Produces (types.ts): `ImpactRun.release?: { readonly t: number; readonly deltaTheta: number }`.
 - Produces (integrate.ts):
   - `TRACK_IMPACT_CAP = 0.45`, counted from `arc.contactAt`; `LOOK_AHEAD = 0.03`;
@@ -2094,6 +2170,14 @@ Model notes (spec §3.3 read exactly):
 - The release is measured from the first step at or after `relaxAt`, whose shaft angle `grip.contactPitch` records.
 - `hands.guideEffort` scales, in swing mode only, the rate guide outside a check and the push after the release; a
   check's guide and carry mode are unscaled. The effort multiplies, so at 1 every figure is the same bit for bit.
+- A check brakes the head to rest, not past it (user decision, 2026-10-06; spec §3.3). In swing mode from contact,
+  inside a check, the hands apply `checkShare(rate, planned)` of the planned deceleration, rate and planned being the
+  head's and the path's pitch rates about n: 1 at or above the path's, 0 at or below rest, rate/planned between. The
+  share scales α_path and the socket's tangential r·α, so the feed-forward and its split stay one rigid wrench, and a
+  head the strike has slowed keeps its fraction of the path's rate and comes to rest with it. The rate guide's target
+  is the head's rate held within [0, ω_path]. A share of 1 takes the path's accelerations as they are and the guide
+  outside a check keeps `dot(spinLag, n)`, so every stroke without a check, and a check on a head on its path, is
+  unchanged bit for bit.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -2282,6 +2366,35 @@ describe("a tracked head with no ball", () => {
         }
     });
 
+    it("checks a head the strike has slowed to rest with the path, at the window's end and never past it", () => {
+        // User decision (2026-10-06): a check brakes the head to rest, not past it. A head pitching at half the path's
+        // rate from contact gets half the planned deceleration, so it keeps half the path's rate and rests with it.
+        const check: SwingArc = { ...COAST, alpha: -COAST.omega0 / COAST.window };
+        const track = prepare(check, TEST_COUPLING, ARMED);
+        const slowed = prepare({ ...check, omega0: check.omega0 / 2, alpha: 0 }, TEST_COUPLING, ARMED);
+        let drift = 0;
+        let lowest = Infinity;
+        let last = Infinity;
+        const probe: ImpactProbe = {
+            step(s) {
+                const rate = dot(s.head.angularVelocity, track.axis);
+                const planned = dot(pathAt(track, s.t).angularVelocity, track.axis);
+                if (planned > 0.1 * check.omega0) {
+                    drift = Math.max(drift, Math.abs(rate / planned - 0.5));
+                }
+                lowest = Math.min(lowest, rate);
+                last = rate;
+            },
+        };
+        const start = headOnPath(slowed, TEST_HEAD, 0);
+        integrate(isolated({ start, drive: track, gravity: STANDARD_GRAVITY }), { probe, cap: check.window });
+        // Pre-flight measured a drift of 2.5e-4 in the share and a last (and lowest) rate of 1.13e-8 rad/s, from
+        // 1.875 rad/s; the planned deceleration alone left it at −0.832 rad/s, past rest.
+        expect(drift).toBeLessThan(5e-4);
+        expect(lowest).toBeGreaterThanOrEqual(0);
+        expect(Math.abs(last)).toBeLessThan(3e-8);
+    });
+
     it("runs a whiff to TRACK_IMPACT_CAP after the planned contact", () => {
         for (const contactAt of [0, 0.02]) {
             const { run } = tracking({ ...COAST, contactAt }, { coupling: TEST_COUPLING });
@@ -2386,7 +2499,7 @@ describe("the hands along the shaft", () => {
         const start = headOnPath(track, TEST_HEAD, 0);
         const run = integrate(isolated({ start, drive: track, gravity: STANDARD_GRAVITY }), { probe });
         // Semi-implicit Euler's error on v' = −(c/M)·v − (1 − γ_T)·m·g/M peaks near (c·dt/M)/2·e⁻¹ of the terminal
-        // rate, 6.4e-5 here; drafting measured 6.4e-5.
+        // rate, 6.4e-5 here; drafting measured 6.4e-5. The bound is about 3× that analytic estimate.
         expect(worst).toBeLessThan(2e-4 * terminal);
         expect(run.head.velocity.z).toBeCloseTo(-terminal, 5);
         expect(spin).toBe(0);
@@ -2526,6 +2639,27 @@ describe("the bottom hand's rate guide", () => {
         const fast = handLoad(track, leading, TEST_HEAD, t, newGripState());
         const e = forwardOf(leading, arc.aim);
         expect(dot(sub(fast.bottom, on.bottom), e)).toBeCloseTo(-track.bottom.damping * 0.5 * lever, 6);
+    });
+
+    it("inside a check gives a slowed head its share of the planned deceleration, and returns one past rest", () => {
+        // User decision (2026-10-06): a check brakes the head to rest, not past it (design §3.3).
+        const arc = still({ omega0: 3, alpha: -300 });
+        const t = 0.005;
+        const track = prepare(arc, TEST_COUPLING, TEST_HANDS);
+        const planned = dot(pathAt(track, t).angularVelocity, track.axis);
+        const at = (share: number): HandLoad =>
+            handLoad(track, spun(track, t, (share - 1) * planned), TEST_HEAD, t, newGripState());
+        const [rest, half, full] = [at(0), at(0.5), at(1)];
+        // Between rest and the path's rate the deceleration is in proportion and the guide neither pushes nor pulls.
+        expect(length(sub(full.feedForward, rest.feedForward))).toBeGreaterThan(1);
+        expect(dist(half.feedForward, scale(add(rest.feedForward, full.feedForward), 0.5))).toBeLessThan(1e-9);
+        expect(dist(half.bottom, scale(add(rest.bottom, full.bottom), 0.5))).toBeLessThan(1e-9);
+        // Past rest none of it, and the guide returns the head towards rest.
+        const behind = spun(track, t, -1.2 * planned);
+        const back = handLoad(track, behind, TEST_HEAD, t, newGripState());
+        expect(dist(back.feedForward, rest.feedForward)).toBeLessThan(1e-9);
+        const push = dot(sub(back.bottom, rest.bottom), forwardOf(behind, arc.aim));
+        expect(push).toBeCloseTo(track.bottom.damping * 0.2 * planned * lever, 6);
     });
 
     it("scales the push by guideEffort outside a check and after the release, and leaves a check in full", () => {
@@ -2675,11 +2809,12 @@ describe("the tracked end rule", () => {
 - [ ] **Step 2: Run them to verify they fail**
 
 Run: `npx vitest run tests/engine/impact/hands.test.ts`
-Expected: FAIL, 24 tests. `HAND_COUPLING` is undefined (`AssertionError: expected undefined to deeply equal
+Expected: FAIL, 26 tests. `HAND_COUPLING` is undefined (`AssertionError: expected undefined to deeply equal
 { period: 0.08, dampingRatio: 0.7 }`); `handLoad` and `newGripState` are not exported (`TypeError: handLoad is not a
 function`, `TypeError: newGripState is not a function`); every `integrate` run with a prepared track throws inside
 `integrate`, which still reads the samples (`TypeError: Cannot read properties of undefined (reading 'length')`).
-`npm run check` reports the missing exports and the `ImpactSetup.drive` type.
+`npm run check` reports the missing exports, the `ImpactSetup.drive` type, `hand` not on `ImpactSnapshot` and
+`release` not on `ImpactRun`.
 
 - [ ] **Step 3: Add the coupling and the hand load to `track.ts`**
 
@@ -2698,9 +2833,12 @@ import { atan2, sinCos } from "../math/elementary";
 import { ZERO, add, cross, dot, scale, sub, vec3, type Vec3 } from "../math/vec3";
 ```
 
-Add after `const UP = vec3(0, 0, 1);`, with a blank line either side:
+Replace `const UP = vec3(0, 0, 1);` with:
 
 ```ts
+const UP = vec3(0, 0, 1);
+const FORWARD = vec3(1, 0, 0);
+
 /**
  * The hands' coupling, period (s) and damping ratio of a firm grip (design §3.4). Provisional, a user decision
  * (reference/contact.json); P2b.2b.2 fits it.
@@ -2714,6 +2852,22 @@ export const HAND_COUPLING = {
 Append at the end of the file, after `inCheck`:
 
 ```ts
+/**
+ * The share of a check's planned deceleration the hands apply to a head pitching at `rate` (rad/s) about n, the path
+ * at `planned` (design §3.3): all of it at or above the path's rate, none at or below rest, and rate/planned between
+ * them. A head the strike has slowed then keeps its fraction of the path's rate, so it comes to rest when the path
+ * does (a full check's window's end) and never passes rest.
+ */
+function checkShare(rate: number, planned: number): number {
+    if (rate <= 0) {
+        return 0;
+    }
+    if (rate >= planned) {
+        return 1;
+    }
+    return rate / planned;
+}
+
 /**
  * One integrate run's grip state (design §3.3): the shaft's arc angle at relaxAt, and when the bottom hand opened and
  * the shaft's turn since relaxAt then. Mutable; handLoad updates it.
@@ -2766,9 +2920,11 @@ function across(v: Vec3, s: Vec3): Vec3 {
  * the rest, F_s, split over the hands so that their moments give τ_ff: the top hand F_∥ + F_T⊥, the bottom hand F_B
  * and the couple τ_ff·s. Before relaxAt both hands grip firmly with springs and dampers. From it they track the
  * path's velocity only: the top hand γ_T times its share (the whole F_s in swing mode outside a check) plus F_d, and
- * its damper; the bottom hand a one-sided rate guide (swing mode; two-sided with g_B·F_B inside a check) or a
- * two-sided grip (carry mode), until it opens once the shaft has turned through the reach slack. In swing mode the
- * guide outside a check and the push after the release are scaled by `guideEffort`; a check acts in full.
+ * its damper; the bottom hand a one-sided rate guide (swing mode; with g_B·F_B inside a check) or a two-sided grip
+ * (carry mode), until it opens once the shaft has turned through the reach slack. In swing mode the guide outside a
+ * check and the push after the release are scaled by `guideEffort`; a check acts in full. A check in swing mode
+ * brakes the head to rest, not past it: the hands apply the head's share of the planned deceleration (checkShare), and
+ * the guide steers its pitch rate into [0, ω_path].
  */
 export function handLoad(
     track: PreparedTrack,
@@ -2783,18 +2939,32 @@ export function handLoad(
     const q = state.orientation;
     const s = rotate(q, UP);
     const rho = head.socket.z;
+    const contact = t >= track.coupling.relaxAt;
+    const carry = arc.mode === "carry";
+    // A check in swing mode after contact brakes the head to rest, not past it: the pitch rates about n.
+    const checking = contact && !carry && inCheck(track, t);
+    const rate = dot(state.angularVelocity, track.axis);
+    const planned = dot(w, track.axis);
+    const share = checking ? checkShare(rate, planned) : 1;
+    let socketAcceleration = path.socketAcceleration;
+    let angularAcceleration = path.angularAcceleration;
+    if (share < 1) {
+        // The planned deceleration's parts, r·α along the path's tangent at the socket and α_path, scaled.
+        const shed = (1 - share) * arc.radius * path.pendulumAcceleration;
+        socketAcceleration = sub(socketAcceleration, scale(rotate(path.orientation, FORWARD), shed));
+        angularAcceleration = scale(angularAcceleration, share);
+    }
     // The swung body's centre on the path, from the socket: body point δ·ẑ − socket.
     const d = rotate(path.orientation, sub(vec3(0, 0, body.offset), head.socket));
-    const centre = add(add(path.socketAcceleration, cross(path.angularAcceleration, d)), cross(w, cross(w, d)));
+    const centre = add(add(socketAcceleration, cross(angularAcceleration, d)), cross(w, cross(w, d)));
     const weight = vec3(0, 0, track.headWeight);
     const feedForward = add(scale(centre, body.mass), weight);
     const I = body.inertia;
     const wb = rotateInverse(q, w);
-    const ab = rotateInverse(q, path.angularAcceleration);
+    const ab = rotateInverse(q, angularAcceleration);
     const spin = add(vec3(I.x * ab.x, I.y * ab.y, I.z * ab.z), cross(wb, vec3(I.x * wb.x, I.y * wb.y, I.z * wb.z)));
     // The hands hold the head's weight, which acts at the head's centre, r_h = −δ·s from the swung body's.
     const tau = add(rotate(q, spin), cross(scale(s, 0 - body.offset), weight));
-    const contact = t >= track.coupling.relaxAt;
     const dip = contact ? scale(path.dipAcceleration, body.mass) : ZERO;
     const shared = sub(feedForward, dip);
     const along = scale(s, dot(shared, s));
@@ -2850,10 +3020,9 @@ export function handLoad(
         grip.releasedAt = t;
         grip.releaseDelta = pitchNow - contactPitch;
     }
-    const carry = arc.mode === "carry";
     // The player's effort on swing mode's push after contact (design §3.3): 1 restores the planned arc's speed.
     const effort = carry ? 1 : hands.guideEffort;
-    const firmShare = carry || inCheck(track, t);
+    const firmShare = carry || checking;
     const topFed = add(scale(firmShare ? topShare : shared, hands.gripTension), dip);
     const top = add(topFed, scale(topLag, track.top.damping));
     const g = track.bottom;
@@ -2868,8 +3037,11 @@ export function handLoad(
     if (carry) {
         return load(top, add(bottomFed, across(scale(bottomLag, g.damping), s)), twist, add(topFed, bottomFed));
     }
-    // Swing mode: a rate guide along e on the pitch rate's lag, never pulling outside a check.
-    const guide = g.damping * dot(spinLag, track.axis) * lever;
+    // Swing mode: a rate guide along e on the pitch rate's lag, never pulling outside a check. Inside one its target is
+    // the head's own rate held within [0, ω_path]: it brakes a head ahead of the path, returns one past rest towards
+    // rest, and leaves one between them to its share of the planned deceleration.
+    const held = Math.min(Math.max(rate, 0), Math.max(planned, 0));
+    const guide = g.damping * (checking ? held - rate : dot(spinLag, track.axis)) * lever;
     const bottom = add(bottomFed, scale(e, firmShare ? guide : effort * Math.max(0, guide)));
     return load(top, bottom, twist, add(topFed, bottomFed));
 }
@@ -2892,7 +3064,7 @@ with:
     readonly touchingAtStart: readonly string[];
     /**
      * A tracked drive's bottom hand opening by reach (P2b.2b.1 design §3.3): when (s), and the shaft's turn since
-     * contact then (rad). Absent if it never opened, and for a force table.
+     * relaxAt (contact) then (rad). Absent if it never opened, and for a force table.
      */
     readonly release?: { readonly t: number; readonly deltaTheta: number };
 }
@@ -2948,8 +3120,8 @@ export const IMPACT_CAP = 0.06;
  * Longest impact (s) of a tracked drive after its planned contact (P2b.2b.1 design §3.5), a user decision
  * (2026-10-05). After the strike the bottom hand's rate guide steers the head back towards the planned arc, so a
  * drive's follow-through catches the striker's ball again (four hits in all at 2 m/s); the cap lets every re-hit be
- * integrated. In the preset sweep the longest impact that ends by itself is a drive's, 324.8 ms after contact
- * (planning); this is about 40 % over it. A force table keeps IMPACT_CAP. Pre-flight confirms or revises it.
+ * integrated. In the preset sweep the longest impact that ends by itself is a drive's, 314.6 ms after contact
+ * (pre-flight; 324.8 ms before the check to rest); 0.45 s is about 43 % over it. A force table keeps IMPACT_CAP.
  */
 export const TRACK_IMPACT_CAP = 0.45;
 
@@ -3309,11 +3481,11 @@ with:
 - [ ] **Step 6: Run the tests**
 
 Run: `npx vitest run tests/engine/impact/hands.test.ts tests/engine/impact/track.test.ts`
-Expected: PASS, 51 tests (24 here, 27 from Task 3). The bounds rest on figures drafting measured on this code
+Expected: PASS, 53 tests (26 here, 27 from Task 3). The bounds rest on figures drafting measured on this code
 (below); if one fails, print the figure and report it before changing anything.
 
 Run: `npm test`, `npm run check`, `npm run lint`
-Expected: all pass, 24 more tests than after Task 3.
+Expected: all pass, 26 more tests than after Task 3.
 
 Figures measured while drafting (this task's code on a replica of `main` with the first Tasks 1–2; pre-flight
 re-measures every one and keeps a 1.5–3× margin):
@@ -3324,7 +3496,9 @@ re-measures every one and keeps a 1.5–3× margin):
 | Power roll with a timed dip before contact | 2.53e-6 m, 2.33e-6 rad (1.27e-6, 1.16e-6 at dt/2) | 5e-6 m, 5e-6 rad |
 | Carry from contact to the reach's end (descent 19 mm) | 2.76e-6 m, 5.58e-6 rad | 6e-6 m, 1.2e-5 rad |
 | Carry slope, second window's end to the reach's end | 5.58e-6 rad | 1.2e-5 rad |
-| Full check, error ratio dt/2 : dt (before contact; from contact) | 0.504; 0.500 | < 0.6 |
+| Full check, error ratio dt/2 : dt (before contact; from contact) | 0.504; 0.500 (pre-flight, with the check to rest: 0.5042 and 0.5038; 0.4997 and 0.4997, unchanged) | < 0.6 |
+| Full check on a head at half the path's rate from contact (pre-flight) | share drift 2.5e-4; last and lowest rate 1.13e-8 rad/s (the planned deceleration alone: −0.832) | 5e-4; ≥ 0 and 3e-8 rad/s |
+| Check share at t = 5 ms, ω_path 1.5 rad/s (pre-flight) | feed-forward affine in the share to 1e-9; past rest the guide's push c·0.3·lever | 1e-9; 6 places |
 | 1 mm along the shaft (oscillator) | 2.9e-4 of the amplitude | 1 % (spec §8.1) |
 | Relaxed top hand (γ_T 0.1) sink rate | 6.4e-5 of the terminal rate | 2e-4 (Euler's (c·dt/M)/2·e⁻¹) |
 | Release by reach in a run | 3.3e-6 m over the slack, t = 20.82 ms | under one step's turn |
@@ -3334,8 +3508,8 @@ re-measures every one and keeps a 1.5–3× margin):
 
 - [ ] **Step 7: Verify force tables are bit-identical**
 
-Run: `env OBSTACLE_STROKES=2000 npx --yes tsx scripts/impactDigest.ts > "$CLAUDE_TEMP_DIR/digest-4.txt"`
-Run: `cmp "$CLAUDE_TEMP_DIR/digest-base.txt" "$CLAUDE_TEMP_DIR/digest-4.txt"`
+Run: `env OBSTACLE_STROKES=2000 npx --yes tsx scripts/impactDigest.ts > "<temp>/digest-4.txt"`
+Run: `cmp "<temp>/digest-base.txt" "<temp>/digest-4.txt"`
 Expected: no output (drafting confirmed it on the replica: 8,961 lines identical).
 
 - [ ] **Step 8: Format, check, commit**
@@ -3604,8 +3778,10 @@ Expected: FAIL in the new suite only:
 - "prepares the path once": `prepareImpact` passes the `TrackDrive` through unprepared, so `thetaEnd` is `undefined`
   (`expected undefined to be 0.036057…`).
 
-`npm run check` reports a `TrackDrive` not assignable to `ForceDrive` (in `onArc` and in the suite's contact
-states) and `arc` read on `never` in `mirrorDrive`.
+`npm run check` reports, in `onArc`, `Property 'samples' is missing in type 'TrackDrive' but required in type
+'ForceDrive'`; in `mirrorDrive`, `Property 'arc' does not exist on type 'ForceDrive'` (a one-member `Drive` does not
+narrow to `never`) and an excess-property error for `arc` in its return; and in the suite's `withArc`,
+`withCoupling` and `withHands`, excess-property errors for `arc`, `coupling` and `hands` on `ForceDrive`.
 
 - [ ] **Step 4: Widen the union**
 
@@ -3774,8 +3950,8 @@ re-measures).
 Run: `npm test`
 Expected: all pass.
 
-Run: `env OBSTACLE_STROKES=2000 npx --yes tsx scripts/impactDigest.ts > "$CLAUDE_TEMP_DIR/digest-5.txt"`
-Run: `cmp "$CLAUDE_TEMP_DIR/digest-base.txt" "$CLAUDE_TEMP_DIR/digest-5.txt"`
+Run: `env OBSTACLE_STROKES=2000 npx --yes tsx scripts/impactDigest.ts > "<temp>/digest-5.txt"`
+Run: `cmp "<temp>/digest-base.txt" "<temp>/digest-5.txt"`
 Expected: no output (identical): `validateForce` runs exactly Task 1's checks, and a force table reaches the
 integrator as the same object.
 
@@ -4066,10 +4242,10 @@ describe("the head–turf pair", () => {
         // γ_T = 0.1 on a still, level path: the top hand carries γ_T·m·g and damps the fall, so the head sinks at under
         // the terminal rate (1 − γ_T)·m·g/c(γ_T), c(γ) = 2ζ·M·(2π/T)·√γ, and cannot reach the turf before
         // 1 mm/terminal. At rest the damper is idle and the turf carries (1 − γ_T)·m·g: the arm's weight is the
-        // player's. Prototype (aeadd4c), pre-flight re-measures: armMass 0, the turf from 18.2 ms (bound 7.9 ms),
-        // |v| 1.8e-10 m/s and the load 8e-9 off at the cap; armMass 0.8 kg, from 26.2 ms (bound 14.2 ms), |v| 6.4e-8
-        // m/s and 1.9e-5 off, the heavier body settling more slowly. The load bounds sit 100× and 50× above those
-        // figures, and far below the 89 % more the turf would carry were the 0.8 kg arm's weight applied.
+        // player's. Pre-flight, at TRACK_IMPACT_CAP: armMass 0, the turf from 18.2 ms (bound 7.9 ms), |v| 2.2e-13 m/s
+        // and the load 1.7e-12 off; armMass 0.8 kg, from 26.2 ms (bound 14.2 ms), |v| 6.4e-14 m/s and 9.1e-13 off
+        // (the prototype's figures, aeadd4c, were at the 0.15 s cap). The load bounds sit far above those figures, and
+        // far below the 89 % more the turf would carry were the 0.8 kg arm's weight applied.
         const gamma = 0.1;
         for (const [armMass, loadTolerance] of [
             [0, 1e-6],
@@ -4131,8 +4307,8 @@ describe("the head–turf pair", () => {
 
 Run: `npx vitest run tests/engine/impact/contacts.test.ts tests/engine/impact/headTurf.test.ts`
 Expected: FAIL.
-- contacts: `TypeError: headBottom is not a function` and `headTurfContact is not a function`; `HEAD_TURF_KEY` is
-  `undefined`.
+- contacts: `TypeError: headBottom is not a function` and `headTurfContact is not a function` (the `HEAD_TURF_KEY`
+  assertion is not reached).
 - headTurf: `integrate` ignores the unknown `headTurf` field, so every undriven head falls through the turf (the
   settle and slide assertions fail, `run.timeline["head/turf"]` is `undefined`, `impact-mallet-grounded` is raised).
   `HEAD_DEEP_LIMIT` is `undefined`, so the depth case starts at a NaN height and raises no `impact-head-deep`. The
@@ -4141,8 +4317,9 @@ Expected: FAIL.
 
 Run: `npm run check`
 Expected: type errors: the missing exports (`headBottom`, `headTurfContact`, `HEAD_TURF_KEY`, `HEAD_DEEP_LIMIT`,
-`HEAD_TURF_FRICTION`), `headTurf` unknown in `Partial<ImpactSetup>`, and `headTurf` missing from `ImpactSnapshot` and
-`ImpactSetup`.
+`HEAD_TURF_FRICTION`), `headTurf` unknown in `Partial<ImpactSetup>`, `headTurf` missing from `ImpactSnapshot` and
+`ImpactSetup`, `headTurfSlide` missing from `ImpactRun`, and `"impact-head-deep"` not among `ImpactEvent`'s kinds
+(TS2367, and `t` read on `never`).
 
 - [ ] **Step 3: Add the geometry to `contacts.ts`**
 
@@ -4222,8 +4399,8 @@ and add after `touchingAtStart`:
 
 ```ts
     /**
-     * Path length (m) of the head's lowest point along the turf while the head–turf pair was closed (P2b.2b.1 design
-     * §4.3), summed per step from its horizontal velocity; absent when the pair never closed.
+     * Slip distance (m) at the head's contact point with the turf (P2b.2b.1 design §4.3): |horizontal velocity of the
+     * head's material at its lowest point|·dt, summed per step while δ > 0; absent when the pair never closed.
      */
     readonly headTurfSlide?: number;
 ```
@@ -4233,7 +4410,7 @@ In `src/engine/types.ts`, `Lawn.surfaceAt`'s comment becomes:
 ```ts
     /**
      * Surface properties at a position. v1 lawns are uniform; the engine samples this at each segment start, and at
-     * the start of an impact once per ball and once under a tracked drive's head.
+     * the start of an impact at each ball and under a tracked drive's head.
      */
 ```
 
@@ -4263,6 +4440,16 @@ The end-rule paragraph that begins "The impact ends once" becomes (D6.2, rewrapp
  * turf's rebound, which dominates lift, is integrated rather than discarded at handover. Below that the ball only
  * settles in its hollow, and the handover discards at most m·g·δ₀/2 (design §6). Isolated set-ups (tests) may give
  * balls any state and leave the turf out; simulateImpact.ts prepares and validates real ones.
+```
+
+`RELEASE_STEPS`'s comment becomes (pre-flight D6.4):
+
+```ts
+/**
+ * Consecutive steps without a closed face–ball, ball–ball, ball–obstacle or head–turf contact after which the impact
+ * may end. A numerical allowance for a contact to re-close (a croquet stroke's balls part and meet again), not
+ * physical. Pre-flight: ×4 moves no ball's state 50 ms after the strike by more than 2.8e-4 of the head speed.
+ */
 ```
 
 After `TRACK_IMPACT_CAP` add:
@@ -4302,7 +4489,7 @@ interface HeadTurfState {
     spring: Vec3;
     peak: number;
     readonly line: PairTimeline;
-    /** Path length (m) of the contact point along the turf while the pair is closed. */
+    /** Slip distance (m) at the contact point: |horizontal velocity of the head's material|·dt, summed while closed. */
     slide: number;
 }
 
@@ -4463,12 +4650,35 @@ body's centre for a tracked drive.
 
 - [ ] **Step 6: Give isolated set-ups no head–turf pair by default**
 
-In `tests/engine/support/impact.ts`, `isolated`'s defaults gain `headTurf: null,` after `obstacles: [],`.
+In `tests/engine/support/impact.ts`, `isolated`'s defaults gain `headTurf: null,` after `obstacles: [],`, and its
+comment becomes (D6.5):
+
+```ts
+/**
+ * An isolated set-up for `integrate`: by default the head parked far away (it never touches anything) and undriven,
+ * gravity off, the test face and test ball–ball laws, no balls, no obstacles and no head–turf pair. Override what a
+ * case needs.
+ */
+```
 
 - [ ] **Step 7: Solve the pair's law in `prepareImpact`, and check the turf under the head**
 
 In `src/engine/impact/simulateImpact.ts`, add `import { contactReference } from "../../reference/index";`, add
-`headBottom` to the `./contacts` import, and `type PairLaw` to the `./contactLaw` import. After `PLACEMENT_PASSES` add:
+`headBottom` to the `./contacts` import, and `type PairLaw` to the `./contactLaw` import. The file header becomes
+(D6.5):
+
+```ts
+/**
+ * Phase 1 of a shot (P2b.1 design §3). Checks the ContactState and the balls. Solves every contact law once: face–ball
+ * and ball–ball once, ball–turf once per ball from the surface where it lies, and the head–turf law once for a tracked
+ * drive, from the surface under the head's lowest point. Prepares a tracked drive once (track.ts). Starts each ball at
+ * its static turf sink m·g/k_turf, so that the impact does not open with a spurious bounce. Each obstacle's law is
+ * solved once: the ball's mass (the obstacle is immovable), the obstacle's material and its own contact time.
+ * Integrates the impact and hands the balls over to phase 2.
+ */
+```
+
+After `PLACEMENT_PASSES` add:
 
 ```ts
 /**
@@ -4532,8 +4742,8 @@ Expected: no output (prettier does not rewrap comments).
 Run: `npm test`, `npm run lint`, `npm run check`, `npm run format:check`
 Expected: all pass.
 
-Run: `env OBSTACLE_STROKES=2000 npx --yes tsx scripts/impactDigest.ts > "$CLAUDE_TEMP_DIR/digest-6.txt"`
-Run: `cmp "$CLAUDE_TEMP_DIR/digest-base.txt" "$CLAUDE_TEMP_DIR/digest-6.txt"`
+Run: `env OBSTACLE_STROKES=2000 npx --yes tsx scripts/impactDigest.ts > "<temp>/digest-6.txt"`
+Run: `cmp "<temp>/digest-base.txt" "<temp>/digest-6.txt"`
 Expected: no output. A force table gets no pair (`headTurf` null), so its loop computes exactly what it did.
 
 - [ ] **Step 10: Commit**
@@ -4579,7 +4789,7 @@ Design choices, within the spec:
   ball touches one region only.
 - **`headRegions` is present for every tracked run** (an empty record when no ball was touched), as `entryJumps` is.
 - **A centre on the head's axis in the barrel region throws a `RangeError`**, as `ballBallContact` and
-  `obstacleContact` do for their degenerate centres. It needs the ball's centre more than r inside both faces, which
+  `obstacleContact` do for their degenerate centres. It needs the ball's centre at least r inside both faces, which
   the guard would have flagged long before.
 - **`ENTRY_SLACK` = 1e-6 m is a named, exported constant** in integrate.ts (the spec's 1e-6 m), so the tests state the
   worst excess exactly.
@@ -4614,7 +4824,7 @@ In `tests/engine/impact/contacts.test.ts`, extend the imports (Task 6's lines):
 - the vec3 import becomes `import { ZERO, add, dot, horizontal, length, scale, sub, vec3, type Vec3 } from
   "../../../src/engine/math/vec3";`;
 - the contacts import gains `HEAD_REGIONS`, `headBallContact`, `type HeadPenetration` and `type HeadRegion`, in
-  alphabetical place (`HEAD_REGIONS` before `HEAD_TURF_KEY`, `headBallContact` before `headBottom`, the types after
+  alphabetical place (`HEAD_REGIONS` before `HEAD_TURF_KEY`, `headBallContact` before `headBottom`, the types before
   `type ObstacleGeometry`);
 - the rigidBody import becomes `import { IDENTITY, axisAngle, multiply, rotate, type Quaternion } from
   "../../../src/engine/impact/rigidBody";`.
@@ -4881,7 +5091,7 @@ export interface HeadPenetration extends Penetration {
  * else `back`), at e_x along sign(x)·a; otherwise the barrel, at e_r along u. The distance is the centre's signed
  * distance from the cylinder, continuous across the regions, so a contact never opens deep by changing region.
  * δ = R − distance closes the pair when positive, at c_b − (R − δ/2)·n. A centre on the axis in the barrel region has
- * no normal and throws a RangeError (it lies more than r inside both faces).
+ * no normal and throws a RangeError (it lies at least r inside both faces).
  */
 export function headBallContact(
     state: HeadState,
@@ -4934,6 +5144,16 @@ In `src/engine/impact/types.ts`, the `impact-off-face` item of `ImpactEvent`'s c
  *   in this phase).
 ```
 
+`ContactInterval`'s comment becomes (D7.3):
+
+```ts
+/**
+ * One contact interval of a pair (P2b.2a design §5): [start, end) in s from the impact's start, whole steps, and the
+ * largest normal force (N) in it (0 at a force table's face rim, or for a pair overlapping but released). For a
+ * face–ball pair, `clearanceAfter` (m) is the largest separation from the face in the gap before the next interval.
+ */
+```
+
 `ImpactRun.timeline`'s comment becomes:
 
 ```ts
@@ -4966,8 +5186,8 @@ and add after `headTurfSlide`:
 
 In `src/engine/impact/integrate.ts`:
 
-Imports: add `HEAD_REGIONS`, `headBallContact` and `type HeadRegion` to the `./contacts` import (`dot`, `sub` and
-`pointVelocity` are already imported).
+Imports: add `HEAD_REGIONS`, `headBallContact` and `type HeadRegion` to the `./contacts` import, in alphabetical
+place (`type HeadRegion` before `type ObstacleGeometry`; `dot`, `sub` and `pointVelocity` are already imported).
 
 In the file header, before the paragraph that begins "Every step also records whether each pair is in contact", add:
 
@@ -5216,8 +5436,8 @@ Expected: no output.
 Run: `npm test`, `npm run lint`, `npm run check`, `npm run format:check`
 Expected: all pass.
 
-Run: `env OBSTACLE_STROKES=2000 npx --yes tsx scripts/impactDigest.ts > "$CLAUDE_TEMP_DIR/digest-7.txt"`
-Run: `cmp "$CLAUDE_TEMP_DIR/digest-base.txt" "$CLAUDE_TEMP_DIR/digest-7.txt"`
+Run: `env OBSTACLE_STROKES=2000 npx --yes tsx scripts/impactDigest.ts > "<temp>/digest-7.txt"`
+Run: `cmp "<temp>/digest-base.txt" "<temp>/digest-7.txt"`
 Expected: no output.
 
 - [ ] **Step 8: Commit**
@@ -5274,10 +5494,16 @@ Folded here:
   pendulum.
 
 Decisions made while drafting:
-- **`canonicalSetup(type, over?)`.** `over` is `{ world?, stroke?, stance?, drive? }`: the world (default
-  `defaultWorld()`), fields of the stroke, and fields of the preset's own stance and drive entries in
-  `defaultProfile`. Task 10's mechanism tests vary the canonical setups this way (the drive's bottom hand at 0.30 m,
-  the dip timed early, `drive` 0). The balls do not follow a changed `aim`.
+- **`canonicalSetup(type, over?)`.** `over` is `{ world?, stroke?, stance?, drive?, targetGap? }`: the world
+  (default `defaultWorld()`), fields of the stroke, fields of the preset's own stance and drive entries in
+  `defaultProfile`, and, for a single-ball stroke, the gap (m, surface to surface) to a target ball (red) on the aim
+  line ahead. The GC stop's default gap is `GC_STOP_GAP` = 0.3 m (spec §5.5, user decision 2026-10-06); the other
+  single-ball stroke has no target unless `targetGap` is given; a croquet stroke rejects it. A target is live. Task
+  10's mechanism tests vary the canonical setups this way (the drive's bottom hand at 0.30 m, the dip timed early,
+  `drive` 0, the single-ball stroke at the GC stop's gap). The balls do not follow a changed `aim`.
+- **`STROKE_TYPES` is listed in full** in the presets' order (single-ball, drive, AC stop, GC stop, half, full and
+  pass roll), not built from `CROQUET_STROKES`, which no longer holds the GC stop: every per-type array in the tests
+  keeps its order.
 - **Rejection order.** Each check runs in the order spec §5.3 lists them, after the striker, the entries and every
   number's finiteness, so each rejection test trips its own check only.
 - **The face-pitch test** uses a 0.1 m head met 20 mm below its face centre. On the 0.23 m test head no `up` on the
@@ -5288,7 +5514,7 @@ Decisions made while drafting:
 
 | Preset | At contact | Approach's lowest | When |
 |---|---|---|---|
-| single-ball, drive, stop-gc | 7.8971 mm | 0.51544 mm | 36.25 ms; the 36.0 and 36.5 ms samples 1.7e-9 m apart |
+| single-ball, drive, stop-gc | 7.8971 mm | 0.51544 mm | the 36.5 ms sample (36.0 ms is 1.7e-9 m higher, so either may be reported); the continuous minimum is 0.51508 mm at 36.25 ms |
 | stop-ac | 8.7833 mm | 7.2281 mm | 56.0 ms |
 | half-roll | 21.1109 mm | at contact | 0 |
 | full-roll | 51.6104 mm | at contact | 0 |
@@ -5315,9 +5541,11 @@ at 36.70 ms) and the head in the turf 0.04 s before contact (3.58 mm below it).
   - `malletReference.shaftLength`, `contactReference.armMass` and `contactReference.reachSlack` (Task 2);
   - `simulateImpact` on a tracked contact state (Task 5 on) and `mirrorContact` mirroring arcs (Task 5), for the
     mirrored test.
-- Produces (swing/types.ts), spec §5.1 exactly:
+- Produces (swing/types.ts): spec §5.1's types and `CROQUET_STROKES`, plus `STROKE_TYPES` (the plan's, for per-type
+  ordering in tests and the probe); spec §5.1's `ON_TIME` is produced by swing/profile.ts:
   - `type StrokeType`;
-  - `CROQUET_STROKES` and `STROKE_TYPES: readonly StrokeType[]` (`["single-ball", ...CROQUET_STROKES]`);
+  - `CROQUET_STROKES` (without `"stop-gc"`) and `STROKE_TYPES: readonly StrokeType[]` (every type, in the presets'
+    order);
   - `interface SwingStance { lean; top; bottom; gripTension; bottomGrip }`;
   - `interface SwingDrive { mode; speedGain; window; handShare; handGain; handWindow; handDrop; dropTime; handReach;
     groundDepth; guideEffort }`;
@@ -5334,8 +5562,8 @@ at 36.70 ms) and the head in the turf 0.04 s before contact (3.58 mm below it).
   - `swingApproach(contact: ContactState): SwingApproach`.
 - Produces (support/shot.ts):
   - `TestProfileOptions` and `testProfile(o?)`;
-  - `CANONICAL_STRIKER = { x: 9.6012, y: 4 }`;
-  - `CanonicalOptions` and `canonicalSetup(type, over?): ShotSetup`;
+  - `CANONICAL_STRIKER = { x: 9.6012, y: 4 }` and `GC_STOP_GAP = 0.3`;
+  - `CanonicalOptions` (with `targetGap?`) and `canonicalSetup(type, over?): ShotSetup`;
   - `CANONICAL_CLEARANCE: Readonly<Record<StrokeType, number>>`.
 
 - [ ] **Step 1: Write the types and the default profile**
@@ -5360,8 +5588,15 @@ import type { BallId, BallStates } from "../types";
 /** The strokes the swing model plays. */
 export type StrokeType = "single-ball" | "drive" | "stop-ac" | "stop-gc" | "half-roll" | "full-roll" | "pass-roll";
 
-/** The croquet strokes; the rest are single-ball. */
-export const CROQUET_STROKES: readonly StrokeType[] = [
+/**
+ * The croquet strokes; the rest, the GC stop among them, are single-ball. The GC stop's striker's ball crosses a gap
+ * to the target ball (user decision, 2026-10-06; design §5.4).
+ */
+export const CROQUET_STROKES: readonly StrokeType[] = ["drive", "stop-ac", "half-roll", "full-roll", "pass-roll"];
+
+/** Every stroke type, in the presets' order. */
+export const STROKE_TYPES: readonly StrokeType[] = [
+    "single-ball",
     "drive",
     "stop-ac",
     "stop-gc",
@@ -5369,9 +5604,6 @@ export const CROQUET_STROKES: readonly StrokeType[] = [
     "full-roll",
     "pass-roll",
 ];
-
-/** Every stroke type: the single-ball stroke, then the croquet strokes. */
-export const STROKE_TYPES: readonly StrokeType[] = ["single-ball", ...CROQUET_STROKES];
 
 /**
  * How the player stands to a stroke type and holds the mallet: the shaft's lean at contact (rad, positive pitches the
@@ -5570,7 +5802,7 @@ export const defaultProfile: SwingProfile = {
             guideEffort: 1,
         },
         // Swing, checked through the firm, low bottom hand's lever: a hard, level shot with no follow-through; no dip
-        // (prototype).
+        // (prototype). A single-ball stroke, the striker's ball crossing a gap to the target (design §5.4).
         "stop-gc": {
             mode: "swing",
             speedGain: 1,
@@ -5681,7 +5913,7 @@ import {
     type SwingProfile,
     type SwingStance,
 } from "../../../src/engine/swing/types";
-import type { BallStates, World } from "../../../src/engine/types";
+import type { BallId, BallStates, World } from "../../../src/engine/types";
 import { defaultWorld } from "../../../src/engine/world";
 import { lawnReference } from "../../../src/reference/index";
 
@@ -5730,22 +5962,29 @@ export function testProfile(o: TestProfileOptions = {}): SwingProfile {
  */
 export const CANONICAL_STRIKER = { x: 9.6012, y: 4 } as const;
 
+/** The GC stop's gap to its target, surface to surface (m): the user's optimum (design §5.5, 2026-10-06). */
+export const GC_STOP_GAP = 0.3;
+
 /**
- * What `canonicalSetup` changes: the world (default `defaultWorld()`), fields of the stroke, and fields of the preset's
- * own stance and drive entries in `defaultProfile`. The balls do not follow a changed aim.
+ * What `canonicalSetup` changes: the world (default `defaultWorld()`), fields of the stroke, fields of the preset's
+ * own stance and drive entries in `defaultProfile`, and, for a single-ball stroke, the gap (m, surface to surface) to
+ * a target ball on the aim line ahead (default GC_STOP_GAP for the GC stop, no target otherwise). The balls do not
+ * follow a changed aim.
  */
 export interface CanonicalOptions {
     readonly world?: World;
     readonly stroke?: Partial<ShotSetup["stroke"]>;
     readonly stance?: Partial<SwingStance>;
     readonly drive?: Partial<SwingDrive>;
+    readonly targetGap?: number;
 }
 
 /**
  * A preset's canonical setup (design §5.5): the striker at CANONICAL_STRIKER, aim +y, 3 m/s, the preset's default
  * drive, every action on time, the preset's reach, `side` 0, `up` 0 except the AC stop's −0.020 m. A croquet stroke's
- * croqueted ball touches the striker ahead along aim, 20° to the left of it for the pass roll; no other balls; `live`
- * empty, and every other ball (none) for the single-ball stroke.
+ * croqueted ball touches the striker ahead along aim, 20° to the left of it for the pass roll, and `live` is empty. A
+ * single-ball stroke's target, red, sits on the aim line `targetGap` ahead (the GC stop's GC_STOP_GAP by default),
+ * and `live` holds every other ball: the target, if any. No other balls. Throws for a croquet stroke given a gap.
  */
 export function canonicalSetup(type: StrokeType, over: CanonicalOptions = {}): ShotSetup {
     const world = over.world ?? defaultWorld();
@@ -5759,10 +5998,17 @@ export function canonicalSetup(type: StrokeType, over: CanonicalOptions = {}): S
     const { x, y } = CANONICAL_STRIKER;
     const balls: BallStates = { blue: at(x, y) };
     const croquet = CROQUET_STROKES.includes(type);
+    const gap = over.targetGap ?? (type === "stop-gc" ? GC_STOP_GAP : undefined);
     if (croquet) {
+        if (over.targetGap !== undefined) {
+            throw new Error(`canonicalSetup: a ${type} stroke's croqueted ball touches the striker; no targetGap`);
+        }
         const line = aim + (type === "pass-roll" ? (20 * Math.PI) / 180 : 0);
         balls.red = at(x + 2 * R * Math.cos(line), y + 2 * R * Math.sin(line));
+    } else if (gap !== undefined) {
+        balls.red = at(x + (2 * R + gap) * Math.cos(aim), y + (2 * R + gap) * Math.sin(aim));
     }
+    const live: BallId[] = !croquet && balls.red !== undefined ? ["red"] : [];
     const profile: SwingProfile = {
         ...defaultProfile,
         stance: { ...defaultProfile.stance, [type]: { ...defaultProfile.stance[type], ...over.stance } },
@@ -5781,7 +6027,7 @@ export function canonicalSetup(type: StrokeType, over: CanonicalOptions = {}): S
             timing: ON_TIME,
             ...over.stroke,
         },
-        live: [],
+        live,
         continuation: false,
         hampered: false,
         jumpAttempt: false,
@@ -5826,7 +6072,7 @@ import { defaultWorld } from "../../../src/engine/world";
 import { contactReference, malletReference } from "../../../src/reference/index";
 import { TEST_BALL, TEST_TURF, ballAt, testWorld } from "../support/fixtures";
 import { mirrorBall, mirrorContact, mirrorQuat, mirrorSpin, mirrorVec } from "../support/impact";
-import { CANONICAL_CLEARANCE, canonicalSetup, testProfile } from "../support/shot";
+import { CANONICAL_CLEARANCE, GC_STOP_GAP, canonicalSetup, testProfile } from "../support/shot";
 
 const WORLD = testWorld();
 const R = TEST_BALL.radius;
@@ -6139,6 +6385,19 @@ describe("the default profile's canonical setups", () => {
         expect(rotate(c.orientation, vec3(1, 0, 0)).z).toBeCloseTo(Math.sin(4 * DEG), 12);
         expect(c.velocity.z).toBeGreaterThan(0);
     });
+
+    it("places the GC stop's target GC_STOP_GAP ahead and live, and refuses a gap on a croquet stroke", () => {
+        const world = defaultWorld();
+        const setup = canonicalSetup("stop-gc", { world });
+        const blue = setup.balls.blue as BallState;
+        const red = setup.balls.red as BallState;
+        expect(length(sub(red.position, blue.position))).toBeCloseTo(2 * world.ball.radius + GC_STOP_GAP, 12);
+        expect(red.position.x).toBeCloseTo(blue.position.x, 12);
+        expect(red.position.y).toBeGreaterThan(blue.position.y);
+        expect(setup.live).toEqual(["red"]);
+        expect(setup).not.toHaveProperty("croqueted");
+        expect(() => canonicalSetup("stop-ac", { world, targetGap: 0.1 })).toThrow(/no targetGap/);
+    });
 });
 
 describe("defaultProfile", () => {
@@ -6263,7 +6522,8 @@ Notes on the cases:
 Run: `npx vitest run tests/engine/swing/buildContact.test.ts`
 Expected: FAIL. The suite does not load (`Tests  no tests`): `Error: Cannot find module
 '../../../src/engine/swing/buildContact' imported from …/tests/engine/swing/buildContact.test.ts` (Vitest 5's text,
-checked while planning). `npm run check` reports the same module as not found (TS2307).
+checked while planning). `npm run check` reports 1 error: Cannot find module '../../../src/engine/swing/buildContact'
+or its corresponding type declarations.
 
 - [ ] **Step 5: Write `src/engine/swing/buildContact.ts`**
 
@@ -6798,7 +7058,8 @@ Expected: FAIL, 5 tests, all assertion failures (the context's extra fields are 
 stroke played at more than 90°" (`[]` where `["29.1.13 fault"]` is expected), "reports both 29.1.13 clauses" (one
 finding where two are expected), the two 29.1.14 tests (29.1.14 never found) and "rejects an aim…" (nothing thrown).
 "leaves 'plays away from' unjudged without a swing" and "ignores aim outside a croquet stroke" already pass, as do the
-existing tests. `npm run check` reports the unknown properties `aim` and `lineOfCentres` on `StrokeContext`.
+existing tests. `npm run check` reports 7 errors, each "'aim' does not exist in type 'StrokeContext'" (tsc reports
+the first excess property of each literal, so `lineOfCentres` is not named).
 
 - [ ] **Step 3: Judge them**
 
@@ -6836,8 +7097,8 @@ and add after the 29.1.9 paragraph (the header's last paragraph, before ` */`):
  *
  * 29.1.13 has two clauses, reported in this order and told apart by their evidence: "fails to move or shake" (the
  * croqueted pair never penetrates beyond CONTACT_TOLERANCE; evidence peakPenetration), and "plays away from" (the
- * swing direction more than 90° from the line of centres, C29.18.1; evidence angle), judged only when the context
- * carries the swing (P2b.2b.1 design §6.4).
+ * swing direction more than 90° from the line of centres: the engine's reading of C29.18.1, which sets no angular
+ * test; evidence angle), judged only when the context carries the swing (P2b.2b.1 design §6.4).
  *
  * 29.1.14 (court damage) is a possible fault: a damaged lawn is something an adjudicator sees, and the Law judges its
  * effect on later strokes (C29.19.5), which the impact's plane turf does not keep. It is found when the head–turf
@@ -6972,33 +7233,54 @@ resolved by the two-hand model and the effective-mass criterion, and both tests 
 GC check is restated as spec §8.1 states it (the total hands' braking impulse positive at `drive` −1 and negative at
 `drive` 0); D9.4's two long rejection rows are written as prettier wraps them.
 
+**The GC stop is a single-ball stroke** (user decision, 2026-10-06). Its canonical setup has the target 0.3 m ahead
+and live, so `strokeContext` gives it `kind` "single-ball" and no croqueted ball, and the judge rules on it as an AC
+single-ball stroke. Its tests keep their mechanisms: one hit; the check's braking signs; and, in place of "slower than
+the drive" (a single-ball strike sends the striker's ball off at much the same speed whatever the check), its head
+comes to rest along aim and never moves back, where the single-ball stroke's at the same gap follows through. Its
+distances after the touch are observations (Task 12 `gc`), never asserted.
+
+**A check brakes the head to rest, not past it** (user decision, 2026-10-06; spec §3.3). Pre-flight found the GC
+stop's check, its feed-forward sized for the unstruck head from 3 m/s (about −300 N over the 10 ms window), braking a
+head the strike had already slowed to 1.145 m/s: the head crossed rest at about 5.6 ms and ended the impact moving back
+at −1.0928 m/s. With the check's share (Task 4) it ends at −3.2e-4 m/s along aim, its pitch rate −5.5e-7 rad/s. The
+test asserts the head within 0.01 m/s of rest at the impact's end and never below −0.01 m/s after the strike, and the
+single-ball stroke's head above 1 m/s (1.3151).
+
+**The AC stop is told from the drive by its coaching ratio** (user decision, 2026-10-06; spec §8.1). The first test
+compared the striker's ball's speed at the impact's end, AC stop 1.3800 against the drive's 1.3919 m/s, a 0.86 %
+margin between speeds taken 21.6 and 181 ms after contact (the plan's 1.513 was at the old 0.15 s cap). The stops'
+test now compares the coaching ratios after phase 2: AC stop 6.464 against the drive's 3.316.
+
 **Measured figures.** Every behavioural figure below was measured on the prototype (`proto-two-hands` aeadd4c, pass 4)
 with its canonical setups built through its own `buildContact` and pass-4 profile, overridden to spec §5.4 where they
-differ (AC stop `handReach` 0 and `handDrop` 0.011 m; pass roll `handReach` 0.30 m). Each test's comment gives its
-figure; pre-flight re-measures them all. The suite took 2.7 s on the prototype.
+differ (AC stop `handReach` 0 and `handDrop` 0.011 m; pass roll `handReach` 0.30 m), except where marked pre-flight
+(this plan's code, with the check to rest) and exit criterion 3's strike measure (pre-flight's). Each test's comment
+gives its figure. The suite took 2.7 s on the prototype.
 
-| Test | Prototype figure |
+| Test | Figure |
 |---|---|
 | Exit criterion 4, `entryJumps.count` | 0 on all seven canonical setups |
-| Exit criterion 4, highest centre above R | single-ball 0.85 mm, drive 0.93, stop-ac 4.17, stop-gc 0.81 |
+| Exit criterion 4, highest centre above R | single-ball 0.85 mm, drive 0.93, stop-ac 4.17 (pre-flight 4.19, 0.81 mm inside 5 mm); stop-gc pre-flight 1.46 (0.81 touching) |
 | (over the impact and the flight apexes) | half roll 0.72 mm, full roll 0.82, pass roll 2.92 |
 | Exit criterion 3, closed form | 1.0066 kg (head 1.0 kg) |
-| Exit criterion 3, the strike's measure | 1.00655 kg (both balls' Δp over the face's speed loss), 3.3e-5 off |
+| Exit criterion 3, the strike's measure | 1.006555 kg, 2.8e-5 off (closed form 1.006582) |
 | Drive's follow-through | hits 0.01–1.20 ms and 91.76–92.61 ms; ends by itself at 181.4 ms (0.45 s cap) |
 | No extra push (2 m/s drive, guideEffort 0 / 1) | 1 hit, ends by itself at 110.6 ms / 4 hits, 268.9 ms |
 | Accelerating bottom hand (0.30 m, grip 1) | 5 hits, ratio 1.24 against 3.32 |
-| Stops | one hit each; striker's ball 1.380 (AC), 1.291 (GC) against the drive's 1.513 m/s |
-| GC check, hands' braking impulse | +1.697 N·s at −1, −2.465 N·s at 0 |
-| AC stop | face interval ends 1.17 ms; head on turf 12.70–21.48 ms, 1.73 mm deep |
-| AC stop, braking | turf +0.376 N·s; no `impact-head-deep` |
-| AC dip depth | 10 mm: 1.32 mm deep; 11 mm: 1.73; 12 mm: 2.11 and `impact-head-deep` |
+| Stops | pre-flight: one hit each; coaching ratio 6.464 (AC stop) against the drive's 3.316 |
+| GC stop's check against the single-ball stroke (0.3 m gap) | pre-flight: head along aim at the impact's end −3.2e-4 m/s (lowest after the strike the same), single-ball 1.3151 m/s; both end at 10.0 ms; striker's ball 3.6241 against 3.7540 m/s |
+| GC check, hands' braking impulse | pre-flight: +1.187 N·s at −1, −0.789 N·s at 0 (touching: +1.697, −2.465) |
+| AC stop | pre-flight: face interval ends 1.17 ms; head on turf 12.52–21.38 ms, 1.80 mm deep; the impact ends at 21.63 ms |
+| AC stop, braking | pre-flight: turf +0.401 N·s, hands +0.225 N·s; no `impact-head-deep` |
+| AC dip depth | pre-flight: 8 mm 0.51 mm deep; 10 mm 1.40; 11 mm 1.80; 11.5 mm 2.00; 12 mm 2.19 and `impact-head-deep`; the turf after the face interval at each |
 | Pass-roll punch | striker's ball 1.226 m/s at +1, 1.099 at 0 |
-| Dip 30 ms early | head on turf from 20.72 ms, ball struck from 31.05 ms; 1.214 against 1.380 m/s |
+| Dip 30 ms early | head on turf from 20.72 ms, ball struck from 31.05 ms; 1.214 against 1.380 m/s (pre-flight 1.215) |
 | Gentle tap (0.1 m/s) | ends at 10 ms, no `impact-cap`, no `impact-head-approaching` |
 | Crush | 29.1.8 and 29.1.9; 57.8 ms; phase 2 not aborted |
 | 29.1.13 on a whole stroke | 89.9°: no finding (0.11 µm pressed); 90.1°: both clauses in order, angle 1.5725 rad |
-| 29.1.14 on a whole stroke | canonical AC stop, hampered: one finding at 12.70 ms; not hampered: none |
-| (its evidence) | penetration 1.73 mm, peak force 219.5 N, slide 1.71 mm |
+| 29.1.14 on a whole stroke | canonical AC stop, hampered: one finding at 12.70 ms (pre-flight 12.52 ms); not hampered: none |
+| (its evidence) | penetration 1.73 mm, peak force 219.5 N, slide 1.71 mm (pre-flight 1.80 mm, 228.7 N, 1.83 mm) |
 
 **Exit criterion 3's measure counts both balls** (a correction to spec §8.1, which names the striker's ball alone). On
 the drive's canonical setup the croqueted ball touches the striker's, and takes its share of the momentum through it
@@ -7013,8 +7295,8 @@ own impulse gives 1.0084 kg, the same within 0.2 %). The spec's wording is to be
 - Consumes:
   - `buildContact`, `swingApproach`, `SwingApproach` (Task 8, `swing/buildContact.ts`); `STROKE_TYPES`,
     `CROQUET_STROKES`, `ShotSetup`, `StrokeType`, `SwingStance` (Task 8, `swing/types.ts`);
-  - `canonicalSetup(type, over?)` with `CanonicalOptions` `{ world?, stroke?, stance?, drive? }`, and
-    `CANONICAL_STRIKER` (Task 8, `tests/engine/support/shot.ts`);
+  - `canonicalSetup(type, over?)` with `CanonicalOptions` `{ world?, stroke?, stance?, drive?, targetGap? }`,
+    `CANONICAL_STRIKER` and `GC_STOP_GAP` (Task 8, `tests/engine/support/shot.ts`);
   - `judgeFaults`, `StrokeContext.aim`/`.lineOfCentres` (Task 9);
   - `swungBody(head, hands, radius)`, `effectiveMass(body, head, orientation, direction)` (Task 3);
     `TrackDrive` (Task 3; in `ContactState.drive` from Task 5);
@@ -7046,7 +7328,7 @@ import { STROKE_TYPES, type ShotSetup } from "../../src/engine/swing/types";
 import type { BallId, BallState, Hoop, World } from "../../src/engine/types";
 import { defaultWorld, hoopHalfSpan, hoopLateral } from "../../src/engine/world";
 import { recorder } from "./support/impact";
-import { CANONICAL_STRIKER, canonicalSetup } from "./support/shot";
+import { CANONICAL_STRIKER, GC_STOP_GAP, canonicalSetup } from "./support/shot";
 
 const WORLD = defaultWorld();
 const R = WORLD.ball.radius;
@@ -7090,6 +7372,9 @@ const hits = (impact: ImpactResult): readonly ContactInterval[] => impact.timeli
 
 /** The striker's ball's speed at the end of the impact (m/s). */
 const strikerSpeed = (impact: ImpactResult): number => length((impact.handover.blue as BallState).velocity);
+
+/** The head's velocity along aim (+y) at the end of the impact (m/s). */
+const headSpeed = (impact: ImpactResult): number => dot(impact.head.velocity, vec3(0, 1, 0));
 
 /** The croqueted ball's distance to rest over the striker's (the coaching ratio, design §9). */
 function ratio(setup: ShotSetup, outcome: ShotOutcome): number {
@@ -7136,6 +7421,18 @@ describe("strokeContext", () => {
         expect(length(sub(context.lineOfCentres as Vec3, vec3(0, 1, 0)))).toBeLessThan(1e-12);
     });
 
+    it("judges the GC stop as a single-ball stroke, its target live and GC_STOP_GAP ahead", () => {
+        // User decision (2026-10-06): the GC stop is never a croquet stroke.
+        const setup = canonicalSetup("stop-gc");
+        const red = (setup.balls.red as BallState).position;
+        expect(length(sub(red, vec3(X, Y + 2 * R + GC_STOP_GAP, R)))).toBeLessThan(1e-12);
+        expect(setup.croqueted).toBeUndefined();
+        const context = strokeContext(setup, started([]));
+        expect(context).toMatchObject({ striker: "blue", kind: "single-ball", live: ["red"], group: false });
+        expect(context.croqueted).toBeUndefined();
+        expect(context.lineOfCentres).toBeUndefined();
+    });
+
     it("tells a continuation while touching from a single-ball stroke", () => {
         expect(strokeContext(withOthers({ continuation: true }), started(["blue/red"])).kind).toBe(
             "continuation-touching",
@@ -7168,8 +7465,9 @@ describe("strokeContext", () => {
 describe("simulateShot", () => {
     it.each(STROKE_TYPES)("runs the %s canonical setup with no entry jump and no ball above R + 5 mm", (type) => {
         // Exit criterion 4. Prototype (pass 4, design §5.4 values), highest centre above R over the impact and the
-        // flights: 0.85 mm single-ball, 0.93 drive, 4.17 stop-ac (the rising strike), 0.81 stop-gc, 0.72 half roll,
-        // 0.82 full roll, 2.92 pass roll; no entry jump anywhere. Pre-flight re-measures them.
+        // flights: 0.85 mm single-ball, 0.93 drive, 4.17 stop-ac (the rising strike), 0.72 half roll, 0.82 full roll,
+        // 2.92 pass roll; no entry jump anywhere. Pre-flight re-measures them, and measures stop-gc on its target
+        // setup (its 0.81 mm was on the retired touching setup).
         const setup = canonicalSetup(type);
         const outcome = simulateShot(setup);
         expect(outcome.impact.entryJumps?.count).toBe(0);
@@ -7217,7 +7515,8 @@ describe("simulateShot", () => {
     });
 
     it("finds 29.1.14 only in a stroke of Law 29.2.3: the canonical AC stop's head meets the turf", () => {
-        // Prototype: the head on the turf from 12.70 ms, 1.73 mm deep, 1.71 mm of slide.
+        // Prototype: the head on the turf from 12.70 ms, 1.73 mm deep, 1.71 mm of slide (pre-flight, with the check to
+        // rest: 12.52 ms, 1.80 mm, 1.83 mm).
         const setup = canonicalSetup("stop-ac");
         const dug = simulateShot({ ...setup, hampered: true }).faults.findings.filter((f) => f.law === "29.1.14");
         expect(dug).toHaveLength(1);
@@ -7353,18 +7652,41 @@ describe("the mechanisms (design §8.1), on the canonical setups", () => {
         expect(ratio(strong, pushed)).toBeLessThan(ratio(canonical, guided));
     });
 
-    it("the stops strike once and leave the striker's ball slower than the drive does", () => {
-        // Prototype: one hit each; the striker's ball at 1.380 (AC) and 1.291 m/s (GC) against the drive's 1.513.
-        const drive = simulateShot(canonicalSetup("drive")).impact;
+    it("the stops strike once, and the AC stop's coaching ratio exceeds the drive's", () => {
+        // User decision (2026-10-06): the AC stop is told from the drive by its ratio, not by the striker's ball's
+        // speed at the impact's end (1.3800 against 1.3919 m/s, taken 21.6 and 181 ms after contact). Pre-flight: one
+        // hit each; ratios 6.464 (AC stop) and 3.316 (drive).
+        const drive = canonicalSetup("drive");
+        const acStop = canonicalSetup("stop-ac");
         for (const type of ["stop-ac", "stop-gc"] as const) {
-            const { impact } = simulateShot(canonicalSetup(type));
-            expect(hits(impact), type).toHaveLength(1);
-            expect(strikerSpeed(impact), type).toBeLessThan(strikerSpeed(drive));
+            expect(hits(simulateShot(canonicalSetup(type)).impact), type).toHaveLength(1);
         }
+        expect(ratio(acStop, simulateShot(acStop))).toBeGreaterThan(ratio(drive, simulateShot(drive)));
+    });
+
+    it("the GC stop's check brings its head to rest, never back, where a single-ball stroke's follows through", () => {
+        // User decision (2026-10-06): a check brakes the head to rest, not past it. The GC stop is a single-ball
+        // stroke, its ball leaving at much the same speed as the single-ball stroke's, so the check shows in the head.
+        // Pre-flight: the GC stop's head ends the impact at −3.2e-4 m/s along aim, its lowest after the strike (its
+        // pitch rate −5.5e-7 rad/s); the single-ball stroke's at 1.3151 m/s. The planned deceleration alone, sized for
+        // the unstruck head, left it at −1.0928 m/s, moving back.
+        const probe = recorder();
+        const setup = canonicalSetup("stop-gc");
+        const gcStop = simulateImpact(buildContact(setup, WORLD), setup.balls, WORLD, { probe });
+        const strikeEnd = (hits(gcStop)[0] as ContactInterval).end;
+        const lowest = Math.min(
+            ...probe.snapshots.filter((s) => s.t > strikeEnd).map((s) => dot(s.head.velocity, vec3(0, 1, 0))),
+        );
+        const plain = simulateShot(canonicalSetup("single-ball", { targetGap: GC_STOP_GAP })).impact;
+        expect(Math.abs(headSpeed(gcStop))).toBeLessThan(0.01);
+        expect(lowest).toBeGreaterThan(-0.01);
+        expect(headSpeed(plain)).toBeGreaterThan(1);
     });
 
     it("the GC stop's check brakes the head through the hands: positive at drive −1, negative at 0", () => {
-        // D9.2, restated as the design's total hand impulse. Prototype: +1.697 N·s checked, −2.465 N·s coasting.
+        // D9.2, restated as the design's total hand impulse. On the touching setup the prototype gave +1.697 N·s
+        // checked and −2.465 N·s coasting; pre-flight, on the target setup with the check to rest, +1.187 N·s and
+        // −0.789 N·s.
         expect(braking(canonicalSetup("stop-gc")).hands).toBeGreaterThan(0);
         expect(braking(canonicalSetup("stop-gc", { stroke: { drive: 0 } })).hands).toBeLessThan(0);
     });
@@ -7372,6 +7694,7 @@ describe("the mechanisms (design §8.1), on the canonical setups", () => {
     it("the AC stop's relaxed head meets the turf after the ball and the turf brakes it, not too deep", () => {
         // D9.1, on the canonical stop. Prototype (11 mm dip): the first face interval ends at 1.17 ms, the head on
         // the turf 12.70–21.48 ms, 1.73 mm deep (10 mm: 1.32; 12 mm: 2.11 and impact-head-deep), turf +0.376 N·s.
+        // Pre-flight, with the check to rest: 12.52–21.38 ms, 1.80 mm (10 mm: 1.40; 12 mm: 2.19 and deep), +0.401 N·s.
         const { impact, turf } = braking(canonicalSetup("stop-ac"));
         const dug = impact.timeline["head/turf"]?.[0] as ContactInterval;
         expect(dug).toBeDefined();
@@ -7562,12 +7885,13 @@ export function simulateShot(setup: ShotSetup, world?: World): ShotOutcome {
 - [ ] **Step 4: Run the tests**
 
 Run: `npx vitest run tests/engine/shot.test.ts`
-Expected: PASS, 36 tests (7 canonical runs, 11 rejections, 18 others), in a few seconds.
+Expected: PASS, 38 tests (7 canonical runs, 11 rejections, 20 others), in a few seconds.
 
 The canonical-run, effective-mass and mechanism tests rest on the model's behaviour. If one fails, print the figure its
 comment names (hits, impulses, speeds, heights, penetration) and compare it with the prototype's before changing
 anything; a changed expectation is the user's decision, and goes back to the spec if it touches §8.1. The AC stop's two
-tests rest on the 11 mm dip: the prototype keeps the head under `HEAD_DEEP_LIMIT` only up to about 11.7 mm.
+tests rest on the 11 mm dip: the prototype keeps the head under `HEAD_DEEP_LIMIT` only up to about 11.7 mm, and
+pre-flight, with the check to rest, up to about 11.5 mm (1.996 mm there).
 
 Run: `npm test`
 Expected: all pass.
@@ -7674,7 +7998,7 @@ and append to the `describe`:
         expect(typeof engine.simulateShot).toBe("function");
         expect(typeof engine.simulateImpact).toBe("function");
         expect(typeof engine.judgeFaults).toBe("function");
-        expect(engine.CROQUET_STROKES).toEqual(["drive", "stop-ac", "stop-gc", "half-roll", "full-roll", "pass-roll"]);
+        expect(engine.CROQUET_STROKES).toEqual(["drive", "stop-ac", "half-roll", "full-roll", "pass-roll"]);
         expect(engine.ON_TIME).toEqual({ arc: 0, hands: 0, dip: 0 });
         expect(engine.defaultProfile.mallet.headMass).toBeGreaterThan(0);
         expect(engine.ENGINE_VERSION).toBe("0.6.0");
@@ -7790,13 +8114,13 @@ Run: `npx prettier --write tests/engine/impact/simulateImpact.test.ts`
 Run: `npm test`, `npm run lint`, `npm run check`, `npm run format:check`
 Expected: all pass.
 
-Run: `env OBSTACLE_STROKES=2000 npx --yes tsx scripts/impactDigest.ts > "$CLAUDE_TEMP_DIR/digest-11.txt"`
-Run: `cmp "$CLAUDE_TEMP_DIR/digest-base.txt" "$CLAUDE_TEMP_DIR/digest-11.txt"`
+Run: `env OBSTACLE_STROKES=2000 npx --yes tsx scripts/impactDigest.ts > "<temp>/digest-11.txt"`
+Run: `cmp "<temp>/digest-base.txt" "<temp>/digest-11.txt"`
 Expected: no output (identical).
 
 Run: `npx --yes tsx scripts/shotMix.ts`
-Expected: the `work units per shot` row reads p99 143084, p99.9 362050, max 408030 exactly, as Task 1 Step 1
-recorded.
+Expected: the `work units per shot` row reads `p99 143084.000, p99.9 362050.000, max 408030.000` exactly, as Task 1
+Step 1 recorded.
 
 Run: `env SLOW_TESTS=1 npm test`
 Expected: all pass, the 2,000-stroke obstacle fuzz and the WAKE_MARGIN reach filter's tests included.
@@ -7850,14 +8174,17 @@ The probe folds the first pre-flight's Task 11 defects:
 **Interfaces:**
 - Consumes:
   - `buildContact`, `swingApproach`, `MAX_LEAD` (Task 8, `swing/buildContact.ts`); `defaultProfile`, `ON_TIME`
-    (Task 8, `swing/profile.ts`); `STROKE_TYPES`, `ShotSetup`, `StrokeType` (Task 8, `swing/types.ts`);
-  - `canonicalSetup` (Task 8, `tests/engine/support/shot.ts`), called with the stroke type alone;
-  - `HAND_COUPLING`, `prepareTrack`, `pathAt`, `inCheck`, `swungBody`, `effectiveMass`, `PreparedTrack` (Tasks 3
-    and 4, `impact/track.ts`);
+    (Task 8, `swing/profile.ts`); `CROQUET_STROKES`, `STROKE_TYPES`, `ShotSetup`, `StrokeType` (Task 8,
+    `swing/types.ts`);
+  - `canonicalSetup` and `GC_STOP_GAP` (Task 8, `tests/engine/support/shot.ts`), called with the stroke type alone
+    or with `{ targetGap }` (the GC sweep);
+  - `HAND_COUPLING`, `FREE_SPAN`, `prepareTrack`, `pathAt`, `headOnPath`, `inCheck`, `swungBody`, `effectiveMass`,
+    `PreparedTrack` (Tasks 3 and 4, `impact/track.ts`);
+  - `ballPairKey` (on `main`) and `headBallContact` (Task 7) (`impact/contacts.ts`);
   - `IMPACT_DT`, `TRACK_IMPACT_CAP`, `HEAD_DEEP_LIMIT`, `integrate`, `ImpactSnapshot` with `hand?` (Task 4) and
     `headTurf` (Task 6, spec §3.7) (`impact/integrate.ts`);
   - `ImpactRun.entryJumps`, `headRegions` (Task 7), `release` (Task 4), `headTurfSlide` (Task 6);
-  - `prepareImpact`, `simulateImpact`, `simulateFreeMotion`;
+  - `prepareImpact`, `simulateImpact`, `simulateFreeMotion`, `stateAtTime` (`sample.ts`, on `main`);
   - `recorder`, `socketAt`, `strike`, `drive` (`tests/engine/support/impact.ts`).
 - Produces: `scripts/swingProbe.ts` (a script, no exports); the roadmap's P2b.2b.1 sections.
 
@@ -7869,8 +8196,11 @@ Create `scripts/swingProbe.ts`:
 /**
  * Swing probe (P2b.2b.1 design §9: pre-flight measurements, recorded in the roadmap, not gated). On the default world
  * with the default profile's canonical setups (design §5.5, tests/engine/support/shot.ts), reports:
- * - ratios: the croqueted ÷ striker distance on each canonical setup against its coaching range, and over 2–4 m/s;
- *   and the drive at guideEffort 0 and 1 over 2–4 m/s: its ratio, hits and length;
+ * - ratios: the croqueted ÷ striker distance on each croquet stroke's canonical setup against its coaching range, and
+ *   over 2–4 m/s; and the drive at guideEffort 0 and 1 over 2–4 m/s: its ratio, hits and length;
+ * - gc: the GC stop, a single-ball stroke (design §5.4): after the striker's first touch on the target, how far the
+ *   striker's ball and the target travel and their ratio, on its canonical setup over 2–4 m/s; then the gap from 0.05
+ *   to 1 m for the stop-gc and single-ball presets alike, with the late re-hit's crossing at each;
  * - canonical: per canonical setup, the entry jumps, the highest ball centre above R, the head regions touched, the
  *   bottom hand's release, the hands' and the turf's braking impulses (design §3.7), the impact's length after
  *   contactAt and how often each impact flag fired;
@@ -7886,7 +8216,13 @@ Create `scripts/swingProbe.ts`:
  * - cost: µs/step of the tracked canonical impacts against P2b.2a's force-table strokes, and the WAKE_MARGIN reach
  *   filter's headroom over a 0.51 s impact;
  * - timings: for the AC stop and the full roll, each action from 50 ms early to 20 ms late, and the AC stop's dip from
- *   none to twice its depth: lawn or ball first, the dig, the slide and the striker's ball's launch.
+ *   none to twice its depth: lawn or ball first, the dig, the slide, the striker's ball's launch, and after phase 2
+ *   both balls' distances and the coaching ratio;
+ * - rehit: the late re-hit (design §3.5, §9), a measurement only: the real head at the impact's end, moved on by the
+ *   planned path's displacement and rotation out to FREE_SPAN, against every ball's phase-2 trajectory and, head and
+ *   shaft, against the hoops' uprights and crowns and the peg; per preset, the canonical setup's first crossings, how
+ *   many runs of the preset sweep cross a ball or an obstacle and how many overlap one at the impact's end, and each
+ *   such run; then a single-ball stroke through a hoop, centred and with the face 10 mm off the ball's centre.
  * Run with `npx --yes tsx scripts/swingProbe.ts`; environment: SECTION (one of the names above; default all), REPEAT
  * (timed runs per stroke, default 50). Not part of the test suite; its output goes into the roadmap's outcomes.
  */
@@ -7897,11 +8233,14 @@ import {
     integrate,
     type ImpactSnapshot,
 } from "../src/engine/impact/integrate";
+import { ballPairKey, headBallContact } from "../src/engine/impact/contacts";
 import { multiply, rotate, solidCylinderInertia, type Quaternion } from "../src/engine/impact/rigidBody";
 import { prepareImpact, simulateImpact } from "../src/engine/impact/simulateImpact";
 import {
+    FREE_SPAN,
     HAND_COUPLING,
     effectiveMass,
+    headOnPath,
     inCheck,
     pathAt,
     prepareTrack,
@@ -7917,16 +8256,17 @@ import type {
     MalletHead,
     TrackDrive,
 } from "../src/engine/impact/types";
-import { ZERO, add, cross, dot, horizontal, length, sub, vec3, type Vec3 } from "../src/engine/math/vec3";
+import { ZERO, add, cross, dot, horizontal, length, scale, sub, vec3, type Vec3 } from "../src/engine/math/vec3";
+import { stateAtTime } from "../src/engine/sample";
 import { simulateFreeMotion } from "../src/engine/simulate";
 import { MAX_LEAD, buildContact, swingApproach } from "../src/engine/swing/buildContact";
 import { ON_TIME, defaultProfile } from "../src/engine/swing/profile";
-import { STROKE_TYPES, type ShotSetup, type StrokeType } from "../src/engine/swing/types";
+import { CROQUET_STROKES, STROKE_TYPES, type ShotSetup, type StrokeType } from "../src/engine/swing/types";
 import { BALL_IDS, type BallId, type BallState, type BallStates, type ShotResult } from "../src/engine/types";
-import { defaultWorld } from "../src/engine/world";
+import { defaultWorld, uprightsOf } from "../src/engine/world";
 import { contactReference, malletReference } from "../src/reference/index";
 import { drive, recorder, socketAt, strike } from "../tests/engine/support/impact";
-import { canonicalSetup } from "../tests/engine/support/shot";
+import { GC_STOP_GAP, canonicalSetup } from "../tests/engine/support/shot";
 
 // The project has no Node types; this script runs under tsx and reads only its environment.
 declare const process: { readonly env: Readonly<Record<string, string | undefined>> };
@@ -7942,12 +8282,12 @@ const mm = (x: number): string => fmt(x * 1e3, 2);
 /** integrate.ts's WAKE_MARGIN (not exported): the slack (m) the reach filter takes off a ball–obstacle gap. */
 const WAKE_MARGIN = 1e-9;
 
-/** The coaching ranges of design §9 (croqueted ÷ striker distance). */
+/** The coaching ranges of design §9 (croqueted ÷ striker distance); none for the single-ball strokes. */
 const COACHING: Readonly<Record<StrokeType, string>> = {
     "single-ball": "none",
     drive: "3–4",
     "stop-ac": "6–10",
-    "stop-gc": "6–10",
+    "stop-gc": "none",
     "half-roll": "about 2",
     "full-roll": "about 1",
     "pass-roll": "below 1",
@@ -7978,6 +8318,13 @@ function run(setup: ShotSetup, coupling: Partial<Coupling> = {}): Run {
     return { setup, contact, impact, steps: probe.snapshots, motion: simulateFreeMotion(impact.handover, WORLD) };
 }
 
+/** `setup` simulated without recording the impact's snapshots (`steps` empty), for the sweeps. */
+function quick(setup: ShotSetup): Run {
+    const contact = buildContact(setup, WORLD);
+    const impact = simulateImpact(contact, setup.balls, WORLD);
+    return { setup, contact, impact, steps: [], motion: simulateFreeMotion(impact.handover, WORLD) };
+}
+
 /** `type`'s canonical setup with `stroke` fields replaced. */
 function canonical(type: StrokeType, stroke: Partial<ShotSetup["stroke"]> = {}): ShotSetup {
     const base = canonicalSetup(type);
@@ -7987,15 +8334,308 @@ function canonical(type: StrokeType, stroke: Partial<ShotSetup["stroke"]> = {}):
 /** The ids of `balls` in BALL_IDS order: the order of the impact's snapshots. */
 const idsOf = (balls: BallStates): BallId[] => BALL_IDS.filter((id) => balls[id] !== undefined);
 
+/** How far ball `id` travels from its start to rest after phase 2 (m). */
+const travelled = (r: Run, id: BallId): number =>
+    length(sub(r.motion.rest[id] as Vec3, (r.setup.balls[id] as BallState).position));
+
 /** Croqueted ÷ striker distance from the start to rest after phase 2; NaN for a single-ball stroke. */
 function ratio(r: Run): number {
     const croqueted = r.setup.croqueted;
     if (croqueted === undefined) {
         return NaN;
     }
-    const travel = (id: BallId): number =>
-        length(sub(r.motion.rest[id] as Vec3, (r.setup.balls[id] as BallState).position));
-    return travel(croqueted) / travel(r.setup.striker);
+    return travelled(r, croqueted) / travelled(r, r.setup.striker);
+}
+
+/**
+ * A single-ball stroke's outcome against its target (design §5.4, §9): from the striker's first touch on `target` to
+ * rest, how far the striker's ball travels, how far the target travels from its start, and their ratio (target over
+ * striker). The touch is the first striker–target interval of the impact (the state at its start, from the recorded
+ * steps), else phase 2's first ball–ball event between them. Null if the striker never touches the target.
+ */
+function afterTouch(
+    r: Run,
+    target: BallId = "red",
+): { readonly inImpact: boolean; readonly t: number; readonly striker: number; readonly target: number } | null {
+    const { striker } = r.setup;
+    if (r.setup.balls[target] === undefined) {
+        return null;
+    }
+    const rest = (id: BallId): Vec3 => r.motion.rest[id] as Vec3;
+    const start = (id: BallId): Vec3 => (r.setup.balls[id] as BallState).position;
+    const along = (from: Vec3, to: Vec3): number => length(horizontal(sub(to, from)));
+    const interval = r.impact.timeline[ballPairKey(striker, target)]?.[0];
+    let at: Vec3;
+    let t: number;
+    if (interval !== undefined) {
+        // Snapshot i holds the state at the end of step i, t = (i + 1)·IMPACT_DT; a touch from t = 0 is the start's.
+        const index = Math.round(interval.start / IMPACT_DT) - 1;
+        const s = r.steps[index];
+        at = s === undefined ? start(striker) : (s.balls[idsOf(r.setup.balls).indexOf(striker)] as BallState).position;
+        t = interval.start;
+    } else {
+        const touch = r.motion.events.find(
+            (e) => e.kind === "ball-ball" && e.balls.includes(striker) && e.balls.includes(target),
+        );
+        if (touch === undefined) {
+            return null;
+        }
+        at = stateAtTime(r.motion, striker, touch.t).position;
+        t = r.impact.duration + touch.t;
+    }
+    return {
+        inImpact: interval !== undefined,
+        t: t - trackOf(r.contact).arc.contactAt,
+        striker: along(at, rest(striker)),
+        target: along(start(target), rest(target)),
+    };
+}
+
+/** `afterTouch` on red as text: where and when the touch came, both distances and their ratio. */
+function touchText(r: Run): string {
+    if (r.setup.balls.red === undefined) {
+        return "no target";
+    }
+    const a = afterTouch(r);
+    if (a === null) {
+        return "no touch";
+    }
+    return (
+        `touch ${a.inImpact ? "in the impact" : "in phase 2"} ${ms(a.t)} ms after contactAt; after it the striker ` +
+        `${fmt(a.striker, 3)} m, the target ${fmt(a.target, 3)} m, ratio ${fmt(a.target / a.striker, 2)}`
+    );
+}
+
+/** The follow-through sweep's sample interval (s): a ball at 4 m/s moves 0.4 mm between samples. */
+const SWEEP_STEP = 1e-4;
+
+/** The conjugate of unit quaternion `q`: its inverse rotation. */
+const conjugate = (q: Quaternion): Quaternion => ({ w: q.w, x: -q.x, y: -q.y, z: -q.z });
+
+/** How deep the head at `state` overlaps a sphere of `radius` centred at `centre` (m); 0 if apart. */
+function overlap(state: HeadState, head: MalletHead, centre: Vec3, radius = R): number {
+    try {
+        return headBallContact(state, head, centre, radius)?.depth ?? 0;
+    } catch (error) {
+        // A centre on the head's axis, inside the barrel: deep in the head.
+        if (!(error instanceof RangeError)) {
+            throw error;
+        }
+        return radius;
+    }
+}
+
+/** A fixed obstacle the mallet can meet: a rod of `radius` along its axis from `a` to `b`. */
+interface Rod {
+    readonly id: string;
+    readonly a: Vec3;
+    readonly b: Vec3;
+    readonly radius: number;
+}
+
+/**
+ * The height (m) up to which the peg is swept: the world's peg is a vertical cylinder with no top, and the mallet's
+ * swing stays well below 1 m.
+ */
+const PEG_TOP = 1;
+
+/**
+ * The world's hoops and peg as rods: each upright from the lawn to the crown's axis, the crown (taken to have the
+ * uprights' diameter, as reference/court.json does) between the uprights' axes at crownClearance plus its radius, and
+ * the peg up to PEG_TOP.
+ */
+const RODS: readonly Rod[] = [
+    ...WORLD.hoops.flatMap((hoop) => {
+        const top = hoop.crownClearance + hoop.uprightRadius;
+        const [a, b] = uprightsOf(hoop, WORLD.ballUpright).map((u) => vec3(u.centre.x, u.centre.y, 0)) as [Vec3, Vec3];
+        const up = vec3(0, 0, top);
+        return [
+            { id: `${hoop.id}/a`, a, b: add(a, up), radius: hoop.uprightRadius },
+            { id: `${hoop.id}/b`, a: b, b: add(b, up), radius: hoop.uprightRadius },
+            { id: `${hoop.id}/crown`, a: add(a, up), b: add(b, up), radius: hoop.uprightRadius },
+        ];
+    }),
+    {
+        id: "peg",
+        a: vec3(WORLD.peg.centre.x, WORLD.peg.centre.y, 0),
+        b: vec3(WORLD.peg.centre.x, WORLD.peg.centre.y, PEG_TOP),
+        radius: WORLD.peg.radius,
+    },
+];
+
+/** The spacing (m) of the spheres that stand in for a rod against the head's cylinder. */
+const ROD_STEP = 0.002;
+
+/** The closest point to `p` on the segment from `a` to `b`. */
+function closestOnSegment(p: Vec3, a: Vec3, b: Vec3): Vec3 {
+    const ab = sub(b, a);
+    const s = Math.min(1, Math.max(0, dot(sub(p, a), ab) / dot(ab, ab)));
+    return add(a, scale(ab, s));
+}
+
+/** The closest distance between the segments p1–q1 and p2–q2 (Ericson, Real-Time Collision Detection, §5.1.9). */
+function segmentDistance(p1: Vec3, q1: Vec3, p2: Vec3, q2: Vec3): number {
+    const d1 = sub(q1, p1);
+    const d2 = sub(q2, p2);
+    const r = sub(p1, p2);
+    const a = dot(d1, d1);
+    const e = dot(d2, d2);
+    const f = dot(d2, r);
+    const c = dot(d1, r);
+    const b = dot(d1, d2);
+    const denom = a * e - b * b;
+    let s = denom > 0 ? Math.min(1, Math.max(0, (b * f - c * e) / denom)) : 0;
+    let t = (b * s + f) / e;
+    if (t < 0) {
+        t = 0;
+        s = Math.min(1, Math.max(0, -c / a));
+    } else if (t > 1) {
+        t = 1;
+        s = Math.min(1, Math.max(0, (b - c) / a));
+    }
+    return length(sub(add(p1, scale(d1, s)), add(p2, scale(d2, t))));
+}
+
+/**
+ * How deep the head at `state` overlaps `rod` (m); 0 if apart: the deepest of spheres of the rod's radius every
+ * ROD_STEP along its axis, each against the head's cylinder (`headBallContact`).
+ */
+function rodOverlap(state: HeadState, head: MalletHead, rod: Rod): number {
+    const reach = Math.hypot(head.length / 2, head.radius) + rod.radius;
+    if (length(sub(closestOnSegment(state.position, rod.a, rod.b), state.position)) >= reach) {
+        return 0;
+    }
+    const n = Math.ceil(length(sub(rod.b, rod.a)) / ROD_STEP);
+    let deepest = 0;
+    for (let k = 0; k <= n; k++) {
+        const centre = add(rod.a, scale(sub(rod.b, rod.a), k / n));
+        deepest = Math.max(deepest, overlap(state, head, centre, rod.radius));
+    }
+    return deepest;
+}
+
+/**
+ * How far the shaft's axis, from the socket to the top hand (`radius` along the head's up axis), lies inside `rod`
+ * (m); 0 if apart. The reference data gives the shaft no diameter, so its axis is taken against the rod's radius.
+ */
+function shaftOverlap(state: HeadState, head: MalletHead, radius: number, rod: Rod): number {
+    const socket = add(state.position, rotate(state.orientation, head.socket));
+    const top = add(socket, scale(rotate(state.orientation, vec3(0, 0, 1)), radius));
+    return Math.max(0, rod.radius - segmentDistance(socket, top, rod.a, rod.b));
+}
+
+/** One crossing: when (after contactAt), what met what, and how deep at the first overlapping sample. */
+interface Meeting {
+    readonly t: number;
+    readonly what: string;
+    readonly depth: number;
+}
+
+/**
+ * The late re-hit's measure of one run: the balls and obstacles the mallet overlaps at the impact's end; the first
+ * ball crossing, with the head's and the ball's speeds; and the first obstacle crossing.
+ */
+interface Crossing {
+    readonly atEnd: readonly string[];
+    readonly first: (Meeting & { readonly headSpeed: number; readonly ballSpeed: number }) | null;
+    readonly obstacle: Meeting | null;
+}
+
+/**
+ * The late re-hit (design §3.5, §9), a measurement only: the real head at the impact's end, moved from there by the
+ * planned path's displacement and rotation since then (the rigid motion taking `headOnPath` at the end to
+ * `headOnPath` at t), swept out to FREE_SPAN against every ball's phase-2 trajectory and, with the shaft rigid on it,
+ * against the hoops' uprights and crowns and the peg (RODS). The planned path is the unstruck one, whose velocity the
+ * end rule's look-ahead gives the real head. Reports what the head or the shaft already overlaps at the impact's end,
+ * the first ball crossing (the first sample at which the head overlaps a ball it did not overlap at the sample
+ * before: its time after contactAt, the ball, the depth, and the head's and the ball's speeds) and the first obstacle
+ * crossing likewise (the head or the shaft entering a rod).
+ */
+function crossing(r: Run): Crossing {
+    const tracked = trackOf(r.contact);
+    const track = prepareTrack(tracked, r.contact.head, WORLD.gravity);
+    const mallet = r.contact.head;
+    const ids = idsOf(r.setup.balls);
+    const end = r.impact.duration;
+    const real = r.impact.head;
+    const planned = headOnPath(track, mallet, end);
+    const offset = sub(real.position, planned.position);
+    const unplanned = conjugate(planned.orientation);
+    // Each sample's overlaps, keyed "ball", "head rod" or "shaft rod", and their depths.
+    const touching = (head: HeadState, t: number): Map<string, number> => {
+        const found = new Map<string, number>();
+        for (const id of ids) {
+            const depth = overlap(head, mallet, stateAtTime(r.motion, id, t - end).position);
+            if (depth > 0) {
+                found.set(id, depth);
+            }
+        }
+        for (const rod of RODS) {
+            const inHead = rodOverlap(head, mallet, rod);
+            if (inHead > 0) {
+                found.set(`head ${rod.id}`, inHead);
+            }
+            const inShaft = shaftOverlap(head, mallet, tracked.arc.radius, rod);
+            if (inShaft > 0) {
+                found.set(`shaft ${rod.id}`, inShaft);
+            }
+        }
+        return found;
+    };
+    let inside = touching(real, end);
+    const atEnd = [...inside.keys()];
+    let first: Crossing["first"] = null;
+    let obstacle: Meeting | null = null;
+    const samples = Math.floor((FREE_SPAN - end) / SWEEP_STEP);
+    for (let i = 1; i <= samples && (first === null || obstacle === null); i++) {
+        const t = end + i * SWEEP_STEP;
+        const path = headOnPath(track, mallet, t);
+        const turn = multiply(path.orientation, unplanned);
+        const arm = rotate(turn, offset);
+        const head: HeadState = {
+            position: add(path.position, arm),
+            orientation: multiply(turn, real.orientation),
+            velocity: add(path.velocity, cross(path.angularVelocity, arm)),
+            angularVelocity: path.angularVelocity,
+        };
+        const now = touching(head, t);
+        for (const [what, depth] of now) {
+            if (inside.has(what)) {
+                continue;
+            }
+            const after = t - tracked.arc.contactAt;
+            if (what.includes(" ")) {
+                obstacle ??= { t: after, what, depth };
+            } else if (first === null) {
+                const ball = stateAtTime(r.motion, what as BallId, t - end);
+                first = {
+                    t: after,
+                    what,
+                    depth,
+                    headSpeed: length(head.velocity),
+                    ballSpeed: length(ball.velocity),
+                };
+            }
+        }
+        inside = now;
+    }
+    return { atEnd, first, obstacle };
+}
+
+/** `crossing` as text. */
+function crossingText(r: Run, c: Crossing = crossing(r)): string {
+    const { atEnd, first, obstacle } = c;
+    const end = atEnd.length > 0 ? `overlaps ${atEnd.join(", ")} at the impact's end; ` : "";
+    const balls =
+        first === null
+            ? "no crossing"
+            : `crosses ${first.what} ${ms(first.t)} ms after contactAt, ${fmt(first.depth * 1e3, 3)} mm deep, ` +
+              `head ${fmt(first.headSpeed, 3)} m/s, ball ${fmt(first.ballSpeed, 3)} m/s`;
+    const rods =
+        obstacle === null
+            ? "no obstacle"
+            : `${obstacle.what} ${ms(obstacle.t)} ms after contactAt, ${fmt(obstacle.depth * 1e3, 3)} mm deep`;
+    return `${end}${balls}; ${rods}`;
 }
 
 /** The impact's events of each kind in FLAGS, counted. */
@@ -8067,11 +8707,11 @@ function braking(r: Run): { readonly hands: number; readonly turf: number } {
 }
 
 function ratios(): void {
-    console.log("== Coaching ratios (design §9): croqueted ÷ striker distance, canonical setups and 2–4 m/s ==");
-    for (const type of STROKE_TYPES) {
-        if (type === "single-ball") {
-            continue;
-        }
+    console.log(
+        "== Coaching ratios (design §9): croqueted ÷ striker distance, the croquet strokes' canonical setups and " +
+            "2–4 m/s ==",
+    );
+    for (const type of CROQUET_STROKES) {
         const speeds = [2, 2.5, 3, 3.5, 4].map((speed) => fmt(ratio(run(canonical(type, { speed }))), 2));
         console.log(
             `${type.padEnd(11)} 3 m/s ${speeds[2]} (coaching ${COACHING[type]}); ` +
@@ -8083,7 +8723,8 @@ function ratios(): void {
         const cells = [2, 3, 4].map((speed) => {
             const r = run(canonical("drive", { speed, guideEffort }));
             const hits = r.impact.timeline[`face/${r.setup.striker}`]?.length ?? 0;
-            return `${speed} m/s ${fmt(ratio(r), 2)}, ${hits} hits, ${ms(r.impact.duration)} ms`;
+            const after = r.impact.duration - trackOf(r.contact).arc.contactAt;
+            return `${speed} m/s ${fmt(ratio(r), 2)}, ${hits} hits, ${ms(after)} ms after contactAt`;
         });
         console.log(`drive, guideEffort ${guideEffort}: ${cells.join("; ")}`);
     }
@@ -8096,7 +8737,7 @@ function canonicalRuns(): void {
         const { impact } = r;
         const arc = trackOf(r.contact).arc;
         const jumps = impact.entryJumps ?? { count: NaN, worst: 0, keys: [] };
-        const regions = Object.keys(impact.headRegions ?? {}).map((key) => key.replace("face/", ""));
+        const regions = Object.keys(impact.headRegions ?? {}).map((key) => key.split("#")[1]);
         const release = impact.release;
         const { hands, turf } = braking(r);
         console.log(
@@ -8231,8 +8872,10 @@ function coupling(): void {
             const end = r.steps.find((s) => s.t >= tracked.arc.handStart + tracked.arc.handWindow);
             const lag = end ? length(sub(socketAt(end.head, r.contact.head), pathAt(track, end.t).socket)) : NaN;
             const hits = r.impact.timeline[`face/${r.setup.striker}`]?.length ?? 0;
+            // A croquet stroke's ratio; a single-ball stroke's distances after the touch on its target (the GC stop).
+            const outcome = r.setup.croqueted !== undefined ? `ratio ${fmt(ratio(r), 2)}` : touchText(r);
             console.log(
-                `${type.padEnd(11)} T ${fmt(period, 2)} s: ratio ${fmt(ratio(r), 2)}, ${hits} hits; ` +
+                `${type.padEnd(11)} T ${fmt(period, 2)} s: ${outcome}, ${hits} hits; ` +
                     `hands beyond feed-forward ${fmt(hands * 1e3, 2)} mN·s of the balls' ${fmt(transfer, 4)} N·s ` +
                     `(${fmt((100 * hands) / transfer, 2)} %); lag at the hands' window's end ${fmt(lag * 1e3, 3)} mm`,
             );
@@ -8441,23 +9084,29 @@ function order(impact: ImpactResult, striker: BallId): string {
     return dug !== undefined && dug.start < struck.start ? "lawn first" : "ball first";
 }
 
-/** One timed stroke's outcome (design §9): lawn or ball first, the dig and slide, and the striker's ball's launch. */
+/**
+ * One timed stroke's outcome (design §9): lawn or ball first, the dig and slide, the striker's ball's launch, and after
+ * phase 2 both balls' distances and the coaching ratio, so the timings show what makes a better stroke in play.
+ */
 function timedLine(label: string, setup: ShotSetup): string {
-    let impact: ImpactResult;
+    let r: Run;
     try {
-        impact = simulateImpact(buildContact(setup, WORLD), setup.balls, WORLD);
+        r = quick(setup);
     } catch (error) {
         if (error instanceof RangeError) {
             return `${label}: rejected (${error.message})`;
         }
         throw error;
     }
+    const { impact } = r;
     const v = (impact.handover[setup.striker] as BallState).velocity;
     const flat = Math.hypot(v.x, v.y);
+    const croqueted = setup.croqueted as BallId;
     return (
         `${label}: ${order(impact, setup.striker)}, dig ${mm(impact.peakPenetration["head/turf"] ?? 0)} mm, ` +
         `slide ${fmt((impact.headTurfSlide ?? 0) * 1e3, 1)} mm; ball ${fmt(Math.hypot(flat, v.z), 3)} m/s at ` +
-        `${fmt((Math.atan2(v.z, flat) * 180) / Math.PI, 2)}°; ${flagCounts(impact)}`
+        `${fmt((Math.atan2(v.z, flat) * 180) / Math.PI, 2)}°; striker ${fmt(travelled(r, setup.striker), 3)} m, ` +
+        `croqueted ${fmt(travelled(r, croqueted), 3)} m, ratio ${fmt(ratio(r), 2)}; ${flagCounts(impact)}`
     );
 }
 
@@ -8481,8 +9130,105 @@ function timings(): void {
     }
 }
 
+/** The GC sweep's gaps (m, surface to surface), from 0.05 to 1 m. */
+const GAPS = [0.05, 0.1, 0.2, 0.3, 0.5, 0.75, 1];
+
+function gc(): void {
+    console.log(
+        "== The GC stop (design §5.4, §9): after the striker's first touch on the target, both distances and " +
+            "their ratio (target over striker); then stop-gc against single-ball over the gap ==",
+    );
+    for (const speed of [2, 2.5, 3, 3.5, 4]) {
+        const r = run(canonical("stop-gc", { speed }));
+        console.log(`stop-gc ${fmt(speed, 1)} m/s, gap ${GC_STOP_GAP} m: ${touchText(r)}; ${crossingText(r)}`);
+    }
+    for (const gap of GAPS) {
+        for (const type of ["stop-gc", "single-ball"] as const) {
+            const r = run(canonicalSetup(type, { targetGap: gap }));
+            const hits = r.impact.timeline[`face/${r.setup.striker}`]?.length ?? 0;
+            console.log(
+                `gap ${fmt(gap, 2)} m ${type.padEnd(11)} ${hits} hits, ${ms(r.impact.duration)} ms; ` +
+                    `${touchText(r)}; ${crossingText(r)}`,
+            );
+        }
+    }
+}
+
+/**
+ * A single-ball stroke through the world's first hoop, its plane crossing the aim: the canonical single-ball stroke
+ * with the striker's ball 0.15 m short of the hoop's centre, on its centre line, and the face `side` off the ball's
+ * centre. At side 0 the head passes through the jaws with about 9.5 mm to spare each side (the shaft meets the crown);
+ * at 10 mm the head, 10 mm off the ball's line, has 0.5 mm too little and its rim meets an upright.
+ */
+function throughHoop(side: number): ShotSetup {
+    const hoop = WORLD.hoops[0] as (typeof WORLD.hoops)[number];
+    const base = canonical("single-ball", { contact: { up: 0, side } });
+    const blue: BallState = {
+        position: vec3(hoop.centre.x, hoop.centre.y - 0.15, R),
+        velocity: vec3(0, 0, 0),
+        angularVelocity: vec3(0, 0, 0),
+    };
+    return { ...base, balls: { blue } };
+}
+
+function rehit(): void {
+    console.log(
+        "== The late re-hit (design §3.5, §9): the real head at the impact's end, moved on by the planned " +
+            "follow-through out to FREE_SPAN, against every ball's phase-2 trajectory and, with the shaft, the hoops " +
+            "and the peg; measured, not integrated ==",
+    );
+    for (const type of STROKE_TYPES) {
+        const base = canonicalSetup(type);
+        const up0 = base.stroke.contact.up;
+        let runs = 0;
+        let overlapped = 0;
+        let balls = 0;
+        let obstacles = 0;
+        const crossed: string[] = [];
+        for (const speed of [1, 2, 3, 4, 6]) {
+            for (const strokeDrive of [-1, -0.5, 0, 0.5, 1]) {
+                for (const up of [up0 - 0.003, up0, up0 + 0.003]) {
+                    for (const side of [-0.01, 0, 0.01]) {
+                        let r: Run;
+                        try {
+                            r = quick(canonical(type, { speed, drive: strokeDrive, contact: { up, side } }));
+                        } catch (error) {
+                            if (error instanceof RangeError) {
+                                continue;
+                            }
+                            throw error;
+                        }
+                        runs++;
+                        const c = crossing(r);
+                        overlapped += c.atEnd.length > 0 ? 1 : 0;
+                        balls += c.first === null ? 0 : 1;
+                        obstacles += c.obstacle === null ? 0 : 1;
+                        if (c.first !== null || c.obstacle !== null || c.atEnd.length > 0) {
+                            crossed.push(
+                                `speed ${speed}, drive ${strokeDrive}, up ${mm(up)} mm, side ${mm(side)} mm: ` +
+                                    crossingText(r, c),
+                            );
+                        }
+                    }
+                }
+            }
+        }
+        console.log(
+            `${type.padEnd(11)} canonical: ${crossingText(quick(base))}; preset sweep: ${balls} of ${runs} runs ` +
+                `cross a ball, ${obstacles} an obstacle, ${overlapped} overlap one at the impact's end`,
+        );
+        for (const line of crossed) {
+            console.log(`${"".padEnd(11)} ${line}`);
+        }
+    }
+    for (const side of [0, 0.01]) {
+        console.log(`through hoop 1, side ${mm(side)} mm: ${crossingText(quick(throughHoop(side)))}`);
+    }
+}
+
 const SECTIONS: Readonly<Record<string, () => void>> = {
     ratios,
+    gc,
     canonical: canonicalRuns,
     presets,
     dip,
@@ -8491,6 +9237,7 @@ const SECTIONS: Readonly<Record<string, () => void>> = {
     tracking,
     cost,
     timings,
+    rehit,
 };
 if (SECTION !== "all" && SECTIONS[SECTION] === undefined) {
     throw new Error(`SECTION must be "all" or one of ${Object.keys(SECTIONS).join(", ")}`);
@@ -8508,7 +9255,9 @@ Notes on the code:
   pair; `s.hand?.force` likewise.
 - The timing section uses the full roll as its roll: it has both a pendulum gain and a hand gain over 30 ms windows,
   and pre-flight's first record used it. No roll has a dip, so its dip-timing lines show the dip inert; the AC stop is
-  the only preset with a dip-depth sweep.
+  the only preset with a dip-depth sweep. Each line also runs phase 2 (`quick`) and prints both balls' distances to
+  rest and the coaching ratio (user decision, 2026-10-06: the probe shows what makes a better stop shot in play, not
+  only how the strike went); a stroke that misses the ball moves neither, so its ratio prints `NaN`.
 - `tracking` prepares the impact itself and drops the head–turf pair, so the AC stop's dip and a carry's descent below
   the turf do not mix turf forces into the tracking error. A relaxed top hand (the AC stop's γ_T 0.1) sinks below the
   path by design (spec §3.3); its line is printed with γ_T so it is not read as a tracking failure.
@@ -8518,6 +9267,31 @@ Notes on the code:
 - The 0.51 s run in `cost` is the AC stop at 1 m/s and drive 0.5 with its hands timed `MAX_LEAD` early: its hands
   carry no share and no gain, so the path is that stroke's, started 60 ms before contact, and its head comes to rest
   on the turf, a closed contact, so it runs to the cap. The canonical drive no longer reaches the cap.
+- `ratios` runs over `CROQUET_STROKES`: the GC stop is a single-ball stroke (user decision, 2026-10-06) and has no
+  croquet ratio. `gc` reports its outcome instead: from the striker's first touch on the target (in the impact for a
+  short gap, else in phase 2), how far each ball travels and their ratio. These are observations; P2b.2b.2
+  calibrates them. `coupling` prints the same for the GC stop in place of a ratio.
+- `gc` and `rehit` measure the late re-hit with `crossing`: the real head at the impact's end, moved on by the
+  planned path's displacement and rotation since then (the rigid motion taking `headOnPath` at the end to
+  `headOnPath` at t; the unstruck path, whose velocity the end rule's look-ahead gives the real head), every 0.1 ms out
+  to `FREE_SPAN`, against each ball's phase-2 state at the same moment (`stateAtTime`, clamped at rest), with Task 7's
+  whole-head cylinder. A ball the real head already overlaps at the impact's end is reported apart; a crossing is a
+  ball the head enters after that, printed with its depth at the first overlapping sample and the head's and the
+  ball's speeds. No engine change and no fault: P2b.2b.3 integrates the second hit. The swept head moves at the
+  path's speed from the impact's end, not at its struck speed, so a crossing says the follow-through would reach the
+  ball, not that the struck head would. (Pre-flight's first record swept `headOnPath` itself; after a strike the
+  planned head runs up to 654 mm ahead of the real one, so it overlapped a ball at the first sample in most runs.)
+- The same sweep reports the first obstacle crossing (user decisions, 2026-10-06): `RODS` holds each hoop upright
+  (from the lawn to the crown's axis), each crown (taken to have the uprights' diameter, as reference/court.json does,
+  between the uprights' axes at `crownClearance` plus its radius) and the peg (up to 1 m: the world's peg has no
+  top). The head's cylinder meets a rod where any of the spheres of the rod's radius every 2 mm along its axis
+  overlaps it (`headBallContact`); the shaft, from the socket to the top hand (the arc radius along the head's up
+  axis), meets a rod where its axis comes within the rod's radius, as the reference data gives the shaft no
+  diameter. Only rods near the head are sampled. The canonical lane is clear of the hoops and the peg, so `rehit`
+  ends with a single-ball stroke through hoop 1 (`throughHoop`), centred and with the face 10 mm off the ball's
+  centre. The backswing is not swept: the plan has no backswing path (P2b.2b.2 models one).
+- `rehit` runs phase 2 and the sweep over each preset's 225-run grid (`quick` records no snapshots) and lists every
+  run that crosses a ball or an obstacle or overlaps one at the impact's end: a few minutes.
 
 - [ ] **Step 2: Run the probe**
 
@@ -8526,6 +9300,7 @@ Record the machine first: `node --version`.
 Run each section separately, keeping each output for Step 3:
 
 - `SECTION=ratios npx --yes tsx scripts/swingProbe.ts`
+- `SECTION=gc npx --yes tsx scripts/swingProbe.ts`
 - `SECTION=canonical npx --yes tsx scripts/swingProbe.ts`
 - `SECTION=presets npx --yes tsx scripts/swingProbe.ts` (1,575 impacts: a few minutes)
 - `SECTION=dip npx --yes tsx scripts/swingProbe.ts`
@@ -8534,6 +9309,7 @@ Run each section separately, keeping each output for Step 3:
 - `SECTION=tracking npx --yes tsx scripts/swingProbe.ts`
 - `SECTION=cost npx --yes tsx scripts/swingProbe.ts`
 - `SECTION=timings npx --yes tsx scripts/swingProbe.ts`
+- `SECTION=rehit npx --yes tsx scripts/swingProbe.ts` (1,575 shots with phase 2: a few minutes)
 
 Expected: every section prints, with no exception. Every line except the µs/step and median figures in `cost` matches
 pre-flight's record. If a deterministic line differs, stop and report it.
@@ -8545,15 +9321,17 @@ the 0.45 s cap changed them (the drive's ratio and length, the cap's flags, `cos
 
 | Section | Reference |
 |---|---|
-| `ratios` (3 m/s; 2, 2.5, 3, 3.5, 4 m/s) | drive 3.32 (2.49, 2.90, 3.32, 3.02, 3.47; prototype at the 0.15 s cap 3.33 (2.86, 2.96, 3.33, …)); AC stop 6.47 (6.66, 6.55, 6.47, 6.41, 6.37); GC stop 6.60 (6.62, 6.61, 6.60, 6.59, 6.59); half roll 2.83 (2.75, 2.79, 2.83, 2.86, 2.88); full roll 2.14 (1.73, 1.99, 2.14, 2.20, 52.47); pass roll 1.59 (1.26, 1.44, 1.59, 1.89, 2.11); the drive at 2, 3 and 4 m/s with `guideEffort` 0: 5.63, 6.04, 6.05, one hit each, ending at 110.6, 95.3 and 76.8 ms; at 1: 2.49, 3.32, 3.47 with 4, 2 and 2 hits, at 268.9, 181.4 and 138.0 ms (this plan's code) |
-| `canonical` | entry jumps 0 on every setup; highest ball centre above R: single-ball 0.85, drive 0.93, AC stop 4.17, GC stop 0.81, half roll 0.72, full roll 0.82, pass roll 2.91 mm; regions face only, except face and rim for the full and pass rolls; release only in the drive, 110.0 ms after contactAt; braking hands / turf (N·s): single-ball −0.055 / 0, drive −1.253 / 0, AC stop 0.230 / 0.376, GC stop 1.697 / 0, half roll −0.706 / 0, full roll −2.108 / 0, pass roll −4.051 / 0; after contactAt 10.0, 181.4, 21.7, 10.0, 40.2, 83.4, 70.0 ms; none reaches the cap; `impact-off-face` once each on the full and pass rolls; no `impact-head-deep` |
-| `dip` | 8.0–11.5 mm meet both conditions; 11 mm: penetration 1.73 mm, the face interval ends at 1.17 ms and the turf interval starts at 12.70 ms, turf braking 0.376 N·s, ratio 6.47; 12 mm reaches 2.11 mm and raises `impact-head-deep`; 14 mm reaches 2.86 mm |
-| `coupling` (ratio at 0.04 s / 0.08 s) | drive 2.35 / 3.32; AC stop 6.45 / 6.47; GC stop 6.51 / 6.60; half roll 2.03 / 2.83; full roll 1.78 / 2.14; pass roll 1.33 / 1.59. Pass 4's single-ball hands' share: 0.754 % at 0.04 s, 0.395 % at 0.08 s |
+| `ratios` (3 m/s; 2, 2.5, 3, 3.5, 4 m/s) | drive 3.32 (2.49, 2.90, 3.32, 3.02, 3.47; prototype at the 0.15 s cap 3.33 (2.86, 2.96, 3.33, …)); AC stop 6.47 (6.66, 6.55, 6.47, 6.41, 6.37; pre-flight, with the check to rest, 6.46 (6.65, 6.54, 6.46, 6.41, 6.37)); no GC stop line (a single-ball stroke; its 6.60 was on the retired touching setup); half roll 2.83 (2.75, 2.79, 2.83, 2.86, 2.88); full roll 2.14 (1.73, 1.99, 2.14, 2.20, 52.47); pass roll 1.59 (1.26, 1.44, 1.59, 1.89, 2.11); the drive at 2, 3 and 4 m/s with `guideEffort` 0: 5.63, 6.04, 6.05, one hit each, ending 110.6, 95.3 and 76.8 ms after contactAt; at 1: 2.49, 3.32, 3.47 with 4, 2 and 2 hits, 268.9, 181.4 and 138.0 ms after contactAt (this plan's code; pre-flight the same) |
+| `gc` | pre-flight (nothing was measured on the target setup while planning): the canonical GC stop at 2, 2.5, 3, 3.5 and 4 m/s touches the target in phase 2 (141.7, 106.8, 86.5, 73.0 and 63.3 ms after contactAt); after it the striker's ball travels 0.336, 0.267, 0.264, 0.293 and 0.343 m, the target 0.959, 1.975, 3.217, 4.764 and 6.617 m (ratios 2.86, 7.38, 12.17, 16.28, 19.32); no crossing. Over the gap (3 m/s) every run is one hit and a 10.0 ms impact with the touch in phase 2; striker and target after the touch, `stop-gc` then `single-ball`: 0.05 m 0.157 and 4.238 m (26.97), 0.171 and 4.550 m (26.64); 0.1 m 0.182 and 3.967 m (21.76), 0.199 and 4.265 m (21.45); 0.2 m 0.206 and 3.585 m (17.40), 0.215 and 3.910 m (18.22); 0.3 m 0.264 and 3.217 m (12.17), 0.266 and 3.513 m (13.19); 0.5 m 0.471 and 2.654 m (5.63), 0.458 and 2.950 m (6.45); 0.75 m 0.755 and 2.118 m (2.81), 0.817 and 2.294 m (2.81); 1 m 0.721 and 2.023 m (2.81), 0.783 and 2.198 m (2.81). `stop-gc` never crosses; `single-ball` crosses blue at 0.05, 0.1 and 0.2 m (23.8, 40.7 and 76.4 ms after contactAt; head 2.90–2.99 m/s, ball 0.51–0.53 m/s), none from 0.3 m |
+| `canonical` | entry jumps 0 on every setup; highest ball centre above R: single-ball 0.85, drive 0.93, AC stop 4.17, half roll 0.72, full roll 0.82, pass roll 2.91 mm; regions face only, except face and rim for the full and pass rolls; release only in the drive, 110.0 ms after contactAt; braking hands / turf (N·s): single-ball −0.055 / 0, drive −1.253 / 0, AC stop 0.230 / 0.376, half roll −0.706 / 0, full roll −2.108 / 0, pass roll −4.051 / 0; after contactAt (single-ball, drive, AC stop, half, full and pass roll) 10.0, 181.4, 21.7, 40.2, 83.4, 70.0 ms; none reaches the cap; pre-flight, with the check to rest: AC stop 4.19 mm, braking 0.225 / 0.401, 21.6 ms; GC stop 1.46 mm, braking 1.187 / 0, 10.0 ms (touching: 0.81 mm, 1.697 / 0); `impact-off-face` once each on the full and pass rolls; no `impact-head-deep` |
+| `dip` | 8.0–11.5 mm meet both conditions; 11 mm: penetration 1.73 mm, the face interval ends at 1.17 ms and the turf interval starts at 12.70 ms, turf braking 0.376 N·s, ratio 6.47; 12 mm reaches 2.11 mm and raises `impact-head-deep`; 14 mm reaches 2.86 mm. Pre-flight, with the check to rest: 8.0–11.5 mm still meet both; 11 mm: 1.80 mm, the turf from 12.52 ms, 0.401 N·s, ratio 6.46; 11.5 mm 2.00 mm (1.996); 12 mm 2.19 mm and `impact-head-deep`; 14 mm 2.93 mm |
+| `coupling` (ratio at 0.04 s / 0.08 s) | drive 2.35 / 3.32; AC stop 6.45 / 6.47 (pre-flight, with the check to rest, 6.46 / 6.46); GC stop re-measured by pre-flight, as distances after the touch (touching: 6.51 / 6.60); half roll 2.03 / 2.83; full roll 1.78 / 2.14; pass roll 1.33 / 1.59. Pass 4's single-ball hands' share: 0.754 % at 0.04 s, 0.395 % at 0.08 s |
 | `mass` | drive closed form 1.007 kg (spec §3.4); strike over every ball 1.0066 kg; single-ball 1.0018 kg; the drive's striker's ball alone 0.2861 kg |
-| `presets` | 225 runs per preset, none rejected; `impact-cap` only on 18 AC-stop runs (the head resting on the turf); `impact-head-approaching` on none; `impact-head-deep` on 72 AC-stop runs; `impact-off-face` drive 80, AC stop 65, GC stop 55, full roll 225, pass roll 180; longest before the cap after contactAt: single-ball 11.3, drive 324.8, AC stop 308.8, GC stop 226.0, half roll 213.7, full roll 298.3, pass roll 303.8 ms (this plan's code) |
+| `presets` | 225 runs per preset, none rejected; `impact-cap` only on 12 AC-stop runs (speed 1, drive 0 and 0.5, up −23 and −20 mm; the head resting on the turf); `impact-head-approaching` on none; `impact-head-deep` on 72 AC-stop runs; `impact-off-face` drive 81, AC stop 65, GC stop 10, full roll 225, pass roll 180; longest before the cap after contactAt: single-ball 11.3, drive 314.6, AC stop 308.8, GC stop 217.7, half roll 213.7, full roll 298.3, pass roll 303.8 ms (pre-flight, with the check to rest; planning: 18 AC-stop runs at the cap, `impact-off-face` drive 80, the drive's longest 324.8 ms, the touching GC stop's `impact-off-face` 55 and longest 226.0 ms) |
 | `tracking` | firm before contact under 2.9e-7 m and 4.8e-7 rad on every preset; GC stop's check 7.1e-6 m; carry to the reach's end under 8.7e-6 m and 1.9e-5 rad; swing mode after contact outside a check (the residual): single-ball 4.2e-4 m, drive 4.9e-5 m, the relaxed AC stop (γ_T 0.1) 0.70 m (this plan's code) |
 | `cost` | the 0.51 s run: 102,000 steps, 510.0 ms, displacement beyond the summed path 1.49e-11 m (67× headroom; this plan's code at the 0.45 s cap) |
-| `timings` | AC stop: the arc 10–50 ms early misses the ball and runs to the cap; the hands' timing changes nothing (no share); the dip 20–50 ms early puts the lawn first (1.21–1.22 m/s against 1.380), 10 ms late or ×1.5 raises `impact-head-deep`. Full roll: ball first throughout, `impact-off-face` on every line (this plan's code) |
+| `timings` | AC stop: the arc 10–50 ms early misses the ball and runs to the cap; the hands' timing changes the ratio by at most 0.01 (at 20 ms late the launch falls to −0.20°); the dip 20–50 ms early puts the lawn first (1.21–1.22 m/s against 1.380), 5–20 ms late (2.01–2.56 mm) or ×1.5 raises `impact-head-deep`. Full roll: ball first throughout, `impact-off-face` on every line (this plan's code). Both balls' distances after phase 2 and the coaching ratio on every line: pre-flight measures |
+| `rehit` | pre-flight (a new section): no run's real head overlaps a ball at the impact's end. Canonical setups: no crossing for single-ball, drive, AC stop and GC stop; the half roll crosses blue 73.3 ms after contactAt (head 1.530 m/s, ball 1.478 m/s), the full roll blue at 107.4 ms (1.687, 1.101 m/s), the pass roll blue at 138.9 ms (the head held at its reach's end, the ball 1.164 m/s). Preset sweeps, runs crossing of 225: single-ball 18, drive 3, AC stop 13, GC stop 38, half roll 53, full roll 125, pass roll 223. No run, canonical or swept, meets an upright, a crown or the peg (head or shaft) or overlaps one at the impact's end. Through hoop 1: centred, no ball crossing, the shaft meets 1/crown 143.2 ms after contactAt (0.110 mm); with the face 10 mm off, the head crosses blue at 59.9 ms (head 2.940 m/s, ball 0.772 m/s) and meets 1/b at 100.3 ms |
 
 - [ ] **Step 3: Record the outcomes in the roadmap**
 
@@ -8565,21 +9343,51 @@ describes a one-hand spring–damper and the 5 % criterion. Make these edits in
    `the hands pulling the head through a spring–damper whose grip relaxes at contact; mallet–turf contact,` with
    `two hands on a rigid shaft, in swing mode (single-ball, drive, stops) or carry mode (rolls), tracking the path's
    velocity from contact, the bottom hand releasing by reach; the whole head meeting the balls as a solid cylinder,
-   with a re-entry guard; mallet–turf contact,` (one line in the file, as the row is).
-2. P2 row, the P2b.2b.2 description. Replace
+   with a re-entry guard; the GC stop a single-ball stroke over a gap to its target; mallet–turf contact,` (one line
+   in the file, as the row is).
+2. P2 row, the P2b.2b.2 description, with the new phase after it (user decisions, 2026-10-06). Replace
    `**P2b.2b.2:** reference data for coaching ratios and the swing inputs' defaults; contact-time and hand-coupling
    fit; ratio calibration and held-out validation; crush calibration; 29.1.6.3.` with
-   `**P2b.2b.2:** reference data for coaching ratios and the swing inputs' defaults; contact-time fit; the hand
-   coupling's T and ζ, the arm mass, the reach slack and the grips fitted to the ratios; the low-speed face–ball law;
-   the turf's response under load; the steep rolls' calibration (the full and pass rolls are P2b.2b.1's known misses);
-   ratio calibration and held-out validation; crush calibration; 29.1.6.3.`
+   `**P2b.2b.2:** the whole stroke shape, the backswing from its top, the lead-in and the follow-through, with its
+   amplitude, modelled and calibrated per shot type and complete enough for P2b.2b.3 (the head's and the shaft's
+   poses along the whole swing); reference data for coaching ratios and the swing inputs' defaults; contact-time fit;
+   the hand coupling's T and ζ, the arm mass, the reach slack and the grips fitted to the ratios; the low-speed
+   face–ball law; the turf's response under load; the steep rolls' calibration (the full and pass rolls are
+   P2b.2b.1's known misses); the GC stop's distances after the touch; ratio calibration and held-out validation;
+   crush calibration; 29.1.6.3. **P2b.2b.3** (decided 2026-10-06; first placed before P2b.2b.2 as P2b.2b.1b, then
+   moved after it by the user: "first we must model the stroke shape and amplitude and calibrate to the different
+   shot types, but we will need the model to be complete enough for the rest later"): the whole swing. The mallet is
+   carried along the swing path P2b.2b.2 calibrates, the backswing from its top, the lead-in and the follow-through
+   after the impact ends, and its head and its shaft (rigid on the head, from the socket to the top hand) are swept
+   against every ball, the hoops' uprights and crowns, and the peg: in a real game they may lie in the swing's path
+   and limit the playable stroke, and the crown stops the shaft when the head reaches through an open hoop (limiting
+   the follow-through's arc) or is swung back through the jaws. Head–obstacle and shaft contact are new physics. On
+   any crossing the impact integrator re-opens, so a ball that comes back into the follow-through's arc (stopped by a
+   target, rebounding off a hoop or the peg, or pulling up short), another ball, a hoop or the peg is met within an
+   integrated impact and the fault judge rules on it (29.1.6.1, 29.1.6.2, 29.1.11, 29.1.10; Law 29.3.2 lets the
+   opponent leave the balls where they lie after the first stroke in error, so the re-hit's physics matters).
+   P2b.2b.1 only counts the follow-through's crossings.`
 3. P2 row, the exit criteria. Replace
    `P2b.2b.1: tracked-drive, head–turf and swing-model analytic cases; force-table drives bit-identical to P2b.2a; the
    hands' impulse in a 3 m/s centre strike at most 5 % of the transfer; every default preset runs end to end.` with
    `P2b.2b.1 (met): tracked-drive, head–turf, head–ball and swing-model analytic cases; force-table drives
    bit-identical to P2b.2a; the swung body's effective mass at the face centre within 10 % of the head's mass on the
    drive's canonical setup, and measured by the strike; every default preset's canonical setup runs end to end with
-   no re-entry guard hit and no ball centre more than 5 mm above R, its ratios recorded against the coaching ranges.`
+   no re-entry guard hit and no ball centre more than 5 mm above R, its ratios recorded against the coaching ranges,
+   the GC stop's distances after the touch over the gap, and the late re-hit's crossings.`; replace
+   `P2b.2b.2: standard stroke ratios` with `P2b.2b.2: the stroke shape (backswing, lead-in, follow-through and
+   amplitude) calibrated per shot type; standard stroke ratios`; and replace `meeting the croqueted ball just above
+   its equator, no jump flag) |` with `meeting the croqueted ball just above its equator, no jump flag). P2b.2b.3: the
+   head and the shaft are swept along the whole swing (backswing, lead-in and follow-through) against every ball, the
+   uprights, the crowns and the peg; every crossing, including those the P2b.2b.1 probe counts, is integrated as a
+   further contact within the impact and judged (29.1.6.1, 29.1.6.2, 29.1.11, 29.1.10); head–obstacle and shaft
+   contact analytic cases; the crossing counts re-measured. |`. Then, in the row's deferred list (user decisions,
+   2026-10-06), replace `29.1.10, with mallet–obstacle contact;` with `29.1.10 by a part of the body (the mallet's
+   part is P2b.2b.3's); variability of swing and aim (accuracy), and conditions such as wind, under which a hoop
+   could block a shot or a glancing blow redirect it or limit its power;`, and replace `with the bottom hand's
+   position as the input from which the shaft's lean and the push–swing balance follow |` with `with the bottom
+   hand's position as the input from which the shaft's lean and the push–swing balance follow; the Golf Croquet
+   Rules' faults and remedies, in a GC-rules phase (until then a GC stroke is judged as an AC single-ball stroke) |`.
 4. P3 row. Replace `stance including grip tension being entered` with
    `the stance (hands, grips and lean) and the body being entered`.
 5. P4 row. Replace `then the rehearsed swing and its timing — target hoop, lawn speed; casting versus planted ways of
@@ -8601,7 +9409,8 @@ describes a one-hand spring–damper and the 5 % criterion. Make these edits in
    ```
 
 7. "P2b.2 decisions": after the "P2b.2b.1 design (2026-10-04)" bullet's last sub-bullet (it ends "damage)
-   judgeable as a possible fault."), add this bullet, filling the one placeholder from the `dip` section's last line:
+   judgeable as a possible fault."), add these two bullets, filling the one placeholder from the `dip` section's last
+   line:
 
    ```markdown
    - **P2b.2b.1 amendment (2026-10-05).** After the pre-flight (below), the model was rebuilt on the user's account of
@@ -8624,12 +9433,44 @@ describes a one-hand spring–damper and the 5 % criterion. Make these edits in
      - Presets (spec §5.4, provisional; arm mass 0.8 kg, reach slack 0.03 m). Single-ball: lean 0°, hands 0.805 and
        0.70 m from the socket, grips 1 and 0.1, swing. Drive: 0°, 0.805 and 0.60 m, grips 1 and 0.25, swing. AC stop:
        −4°, 0.805 and 0.45 m, grips 0.1 and 0.1, swing with a check and a dip of <the profile's handDrop, as the `dip`
-       section prints it> mm over 20 ms. GC stop: 0°, 0.805 and 0.45 m, grips 1 and 1, swing with a check. Half
-       roll: 15°, 0.805 and 0.42 m, carry, hands' share 0.6, reach 0.15 m, 5 mm into the ground. Full roll: 45°, 0.61
-       and 0.30 m, carry, share 0.9, reach 0.30 m, 2 mm. Pass roll: 48°, 0.45 and 0.09 m, carry, share 0.85, a
-       pendulum punch (`speedGain` 0.5 over 15 ms), reach 0.30 m, 2 mm.
+       section prints it> mm over 20 ms. GC stop (a single-ball stroke, its target 0.3 m ahead): 0°, 0.805 and
+       0.45 m, grips 1 and 1, swing with a check. Half roll: 15°, 0.805 and 0.42 m, carry, hands' share 0.6, reach
+       0.15 m, 5 mm into the ground. Full roll: 45°, 0.61 and 0.30 m, carry, share 0.9, reach 0.30 m, 2 mm. Pass
+       roll: 48°, 0.45 and 0.09 m, carry, share 0.85, a pendulum punch (`speedGain` 0.5 over 15 ms), reach 0.30 m,
+       2 mm.
      - The full and pass rolls (lean 45° and 48°) are known misses in P2b.2b.1: both carry the striker's ball on a
        steep face, which needs the low-speed face–ball law and the turf's response under load (P2b.2b.2).
+   - **P2b.2b.1 pre-flight decisions (2026-10-06).** From the user's account of play.
+     - The GC stop is a single-ball stroke, never a croquet stroke: the striker's ball crosses a gap to the target,
+       about 0.3 m at best. Closer risks a double hit on the target; longer, the skid runs out and the striker's ball
+       follows through; short grass and more power stretch the range. A standard single-ball shot hit full can stop as
+       well. On the engine's turf a ball struck at 3 m/s skids about 0.47 m before it rolls, and phase 2 already
+       models the sliding collision. Its canonical setup puts the target 0.3 m ahead, live; its outcome is the
+       distances after the first touch and their ratio (target over striker), observations that P2b.2b.2
+       calibrates, swept over gaps of 0.05–1 m against the single-ball preset. A GC stroke is judged as an AC
+       single-ball stroke; the Golf Croquet Rules' faults and remedies go to a GC-rules phase.
+     - The late re-hit, in every shot. Once the impact has ended, phase 2 moves the balls with no mallet in it, so a
+       ball that comes back into the follow-through's arc is never checked, though Laws 29.1.6.1 and 29.1.6.2 make
+       that a fault within the striking period, and Law 29.3.2 lets the opponent leave the balls where they lie after
+       the first stroke in error. P2b.2b.1 records it as a known limit and counts the crossings; P2b.2b.3 integrates
+       the second hit and judges it.
+     - P2b.2b.3 is the whole swing (later the same day). In a real game hoops, the peg and other balls may lie in the
+       swing's path and limit the playable stroke, and the head's and the shaft's path is known. So P2b.2b.3 sweeps
+       the head and the shaft (rigid on the head, from the socket to the top hand) along the backswing from its top,
+       the lead-in and the follow-through, against every ball, the hoops' uprights and crowns, and the peg. When the
+       head reaches through an open hoop the shaft is often impeded by the crown, which
+       limits the follow-through's arc; a head swung back through the jaws meets it in the backswing. Head–obstacle
+       and shaft contact are new physics; any crossing re-opens the impact, and the judge rules on it under 29.1.6.1,
+       29.1.6.2, 29.1.11 and 29.1.10, whose commentary C29.15.1 reads: "The main instances are hitting a hoop or the
+       peg in the backswing when a ball is in contact with it and hitting a hoop or the peg on the forward swing when
+       aiming to hit a ball resting on it." Variability of swing and aim, and conditions such as wind, are deferred
+       beyond P2b (P2 row).
+     - The phase order (later the same day). The sweep phase was first placed before P2b.2b.2's calibration as
+       P2b.2b.1b; the user moved it after, as P2b.2b.3: "first we must model the stroke shape and amplitude and
+       calibrate to the different shot types, but we will need the model to be complete enough for the rest later".
+       So P2b.2b.2 models the whole stroke shape, the backswing from its top, the lead-in and the follow-through, with
+       its amplitude, and calibrates it per shot type alongside its other calibration; its path model gives the
+       head's and the shaft's poses along the whole swing, complete enough for P2b.2b.3 to sweep them.
    ```
 
 8. Add these two sections after "P2b.2a outcomes carried forward (for P2b.2b)" (after its "**Not used yet.**"
@@ -8660,11 +9501,16 @@ describes a one-hand spring–damper and the 5 % criterion. Make these edits in
      Pass 3: the free pendulum, the hands' reach and the bottom hand's rate guide. Pass 4: Riches' carry mode for the
      rolls; adopted. Pass 5: a firm off-aim roll grip with a gated reach end; not adopted, as it broke the half roll
      and fixed neither steep roll.
-   - **Prototype ratios** (pass 4, T = 0.08 s, 3 m/s): drive 3.33, AC stop 6.55 (with a 14 mm dip), GC stop 6.60,
-     half roll 2.83 (2.75–2.88 over 2–4 m/s; 2.03 at T = 0.04 s), full roll 2.14, pass roll 1.59 (1.26 at 2 m/s) at
-     a reach of 0.30 m.
+   - **Prototype ratios** (pass 4, T = 0.08 s, 3 m/s): drive 3.33, AC stop 6.55 (with a 14 mm dip), GC stop 6.60
+     (as a croquet stroke, a setup since retired), half roll 2.83 (2.75–2.88 over 2–4 m/s; 2.03 at T = 0.04 s), full
+     roll 2.14, pass roll 1.59 (1.26 at 2 m/s) at a reach of 0.30 m.
    - **The AC stop's dip.** Pass 4's 14 mm drove the head 2.86 mm into the turf, past `HEAD_DEEP_LIMIT`; the user set
      it to about 11 mm, confirmed by the second pre-flight.
+   - **The second pre-flight (2026-10-06)** led to seven user decisions (the spec's 2026-10-06 amendment; four are
+     recorded under "P2b.2 decisions" above): the GC stop is a single-ball stroke over a gap; the late re-hit is
+     counted here and integrated in P2b.2b.3; a check brakes the head to rest, not past it; the AC stop is told from
+     the drive by its coaching ratio; the timing sweep prints both balls' distances; P2b.2b.3 is the whole swing; and
+     P2b.2b.2 calibrates the stroke shape before P2b.2b.3 sweeps it.
 
    ## P2b.2b.1 outcomes carried forward (for P2b.2b.2)
 
@@ -8672,6 +9518,16 @@ describes a one-hand spring–damper and the 5 % criterion. Make these edits in
 
    - **Ratios** (`ratios`; croqueted ÷ striker distance against the coaching ranges): <for each croquet preset, the
      3 m/s ratio and its range, then the 2–4 m/s figures>.
+   - **The GC stop** (`gc`; a single-ball stroke, its target 0.3 m ahead): <on the canonical setup over 2–4 m/s, where
+     the touch came and the striker's and the target's distances after it with their ratio (target over striker);
+     then, per gap from 0.05 to 1 m, the same for `stop-gc` and `single-ball`>. Observations; P2b.2b.2 calibrates.
+   - **The late re-hit** (`rehit`, and `gc` per gap; the real head at the impact's end, moved on by the planned
+     path's displacement and rotation): <the runs whose real head overlaps a ball at the impact's end; per preset,
+     the canonical setup's first crossing or none and the preset sweep's runs that cross; per gap, the crossings of
+     `stop-gc` and `single-ball`; the head's and the shaft's crossings with the uprights, the crowns and the peg, per
+     preset and in the two strokes through hoop 1>. A known limit of every shot here: phase 2 moves the balls with no
+     mallet in it, and within the impact the head never meets a hoop or the peg. P2b.2b.3 integrates the whole
+     swing.
    - **Canonical setups** (`canonical`; exit criterion 4): <the entry jumps (all 0), the highest ball centre above R
      per preset, the head regions touched, the release, the hands' and turf's braking impulses, the length after
      contactAt and the flags>.
@@ -8691,18 +9547,33 @@ describes a one-hand spring–damper and the 5 % criterion. Make these edits in
      <the reach-filter line>.
    - **Timing** (`timings`; the user's account: every action is timed, and mistimed, by the player): <from how early
      each action puts the lawn before the ball or misses it, the dig and slide, the striker's ball's speed and launch
-     angle against on time, and the AC stop's dip ×0–2>. For the user's review of the timing model and P2b.2b.2.
+     angle against on time, both balls' distances and the coaching ratio (which timings make a better stop shot),
+     and the AC stop's dip ×0–2>. For the user's review of the timing model and P2b.2b.2.
    - **Known misses.** The full roll (about 1 in coaching) and the pass roll (below 1) carry the striker's ball on a
      steep face; their ratios above need the low-speed face–ball law and the turf's response under load.
-   - **Deferred to P2b.2b.2.** Sourced swing defaults per preset; the face–ball and ball–ball contact-time fit; the
-     hand coupling's T and ζ, `armMass`, `reachSlack` and the grips fitted to the ratios; the stop-shot and drive
-     ratio calibration and held-out validation (rolls, pass roll, stop → pass-roll ordering, pull, stop-shot lift);
-     the steep rolls' calibration; which stop preset is the calibration target; the low-speed face–ball law (a roll
-     is a 30–60 ms carry, not a collision, and the modelled striker's ball chatters on the face); the turf's response
-     under load; the crush-calibration decision; 29.1.6.3 with a sourced contact-time norm; head–turf stiffness and
-     friction sourcing, and whether turf drag needs a ploughing term; the end-weighted head; face presets beyond
-     wood.
+   - **Deferred to P2b.2b.2.** The whole stroke shape, the backswing from its top, the lead-in and the
+     follow-through, with its amplitude, calibrated per shot type, its path giving the head's and the shaft's poses
+     along the whole swing for P2b.2b.3; sourced swing defaults per preset; the face–ball and ball–ball contact-time
+     fit; the hand coupling's T and ζ, `armMass`, `reachSlack` and the grips fitted to the ratios; the stop-shot and
+     drive ratio calibration and held-out validation (rolls, pass roll, stop → pass-roll ordering, pull, stop-shot
+     lift); the steep rolls' calibration; the GC stop's distances after the touch; the low-speed face–ball law (a
+     roll is a 30–60 ms carry, not a collision, and the modelled striker's ball chatters on the face); the turf's
+     response under load; the crush-calibration decision; 29.1.6.3 with a sourced contact-time norm; head–turf
+     stiffness and friction sourcing, and whether turf drag needs a ploughing term; the end-weighted head; face
+     presets beyond wood.
+   - **Deferred to P2b.2b.3** (after P2b.2b.2): the whole swing, backswing from its top, lead-in and
+     follow-through, its head and shaft against every ball, the uprights, the crowns and the peg, integrated and
+     judged (29.1.6.1, 29.1.6.2, 29.1.11, 29.1.10); it sources two reference gaps, the shaft's diameter (not in
+     `mallet.json`) and the peg's height (Law 5.1 is not in `court.json`). **Deferred to a GC-rules phase:** the Golf
+     Croquet Rules' faults and remedies; a GC stroke is judged as an AC single-ball stroke until then.
    - **Model limits.**
+     - The late re-hit: a ball that comes back into the follow-through after the impact has ended is not struck
+       again (counted above).
+     - Within the impact the head meets the balls and the turf only, never a hoop or the peg, and the shaft meets
+       nothing: 29.1.11 is judged there, 29.1.10 never.
+     - The end rule's look-ahead watches the front face only, so on 6 pass-roll runs of the preset sweep the head
+       meets the striker's ball 0.1 ms after the impact ends, on its rim in 3 and its barrel in 3. P2b.2b.3's
+       re-opening of the impact covers it.
      - A level head on the turf rests on a point that jumps between its end rims, which gives a bounded chatter.
      - The turf is a plane under the head: no divot, no lasting dent, no change to the lawn for phase 2.
      - A swing is simulated only from its earliest action; an on-time low swing's dig is reported as the approach
@@ -8721,7 +9592,10 @@ Check the roadmap's new prose, each as its own command:
 - `env LC_ALL=en_GB.UTF-8 grep -nE "^.{121,}$" docs/superpowers/plans/2026-09-30-croquet-shot-lab-roadmap.md` lists
   only the table rows, which are single lines by markdown table syntax (the P1–P5 rows already are);
 - `grep -n "<" docs/superpowers/plans/2026-09-30-croquet-shot-lab-roadmap.md` shows only the Riches link's angle
-  brackets.
+  brackets;
+- `grep -n "P2b.2b.3" docs/superpowers/plans/2026-09-30-croquet-shot-lab-roadmap.md` shows the new phase in the P2
+  row and in the sections added above;
+- `grep -n "GC-rules" docs/superpowers/plans/2026-09-30-croquet-shot-lab-roadmap.md` shows the deferred GC rules.
 
 - [ ] **Step 4: Format and check**
 
@@ -8742,14 +9616,17 @@ Write the message with the Write tool to `<CLAUDE_TEMP_DIR>/msg.txt` (the litera
 Add the swing probe and record the P2b.2b.1 outcomes
 
 scripts/swingProbe.ts measures spec §9 on the canonical setups: the
-ratios at 2–4 m/s, entry jumps, ball heights, head regions, release,
-braking impulses, impact lengths after contact and flags, the AC stop's
-dip depth, T = 0.04 s against 0.08 s, the effective mass, tracking per
-phase, cost and the reach filter's headroom, and the timing sweep.
+ratios at 2–4 m/s, the GC stop's distances after the touch over the
+gap, entry jumps, ball heights, head regions, release, braking
+impulses, impact lengths after contact and flags, the AC stop's dip
+depth, T = 0.04 s against 0.08 s, the effective mass, tracking per
+phase, cost and the reach filter's headroom, the timing sweep, and the
+late re-hit's crossings.
 
-The roadmap gains the two-hand amendment, the P2b.2b.1 pre-flight
-outcomes and the outcomes carried forward to P2b.2b.2, and marks
-P2b.2b.1's exit criteria met.
+The roadmap gains the two-hand amendment, the GC stop and late re-hit
+decisions, P2b.2b.3 and the deferred GC rules, the P2b.2b.1
+pre-flight outcomes and the outcomes carried forward to P2b.2b.2, and
+marks P2b.2b.1's exit criteria met.
 ```
 
 Then, each as its own command, with the sandbox disabled for the commit (SSH signing):
@@ -8775,12 +9652,27 @@ Task 12's, in the roadmap's "P2b.2b.1 outcomes carried forward (for P2b.2b.2)"; 
   - Pass roll: 1.59 at 3 m/s and 1.26 at 2 m/s against below 1, at the adopted 0.30 m reach. A 0.2 m reach traps the
     striker's ball against the face (16.9).
 - **Calibration targets.** The stop shot and the drive are calibration targets; the rolls, the pass roll, the stop →
-  pass-roll ordering, pull and stop-shot lift are held-out validation (roadmap, "P2b.2 decisions"). Which stop preset
-  is the target is P2b.2b.2's decision: the AC stop rises 4°, so stop-shot lift can be expected of it; the GC stop is
-  level, and its ratio comes from the check alone.
+  pass-roll ordering, pull and stop-shot lift are held-out validation (roadmap, "P2b.2 decisions"). The AC stop is
+  now the one croquet stop, so the croquet stop-shot ratios can only calibrate it; it rises 4°, so stop-shot lift
+  can be expected of it. The GC stop is a single-ball stroke over a gap (user decision, 2026-10-06): its distances
+  after the touch (Task 12 `gc`) are calibrated on their own, against observed play.
 - **Fits.** The face–ball and ball–ball contact times, once, inside their sourced bounds. The hand coupling's T and ζ,
   `armMass`, `reachSlack` and the grips, fitted to the ratios. T moves them: the half roll is 2.83 at 0.08 s and 2.03
-  at 0.04 s, the drive 3.33 and 2.35 (prototype, the spec's presets); the stops barely move.
+  at 0.04 s, the drive 3.33 and 2.35 (prototype, the spec's presets); the AC stop barely moves.
+- **The stroke shape** (user decision, 2026-10-06). P2b.2b.2 first models the whole stroke shape, the backswing from
+  its top, the lead-in and the follow-through, with its amplitude, and calibrates it per shot type. Its path model
+  must give the head's and the shaft's poses along the whole swing, complete enough for P2b.2b.3. This phase's path
+  starts at most 60 ms before contact (`MAX_LEAD`) and has no backswing.
+- **After P2b.2b.2: P2b.2b.3, the whole swing** (user decisions, 2026-10-06; first placed before P2b.2b.2 as
+  P2b.2b.1b). A ball that comes back into the follow-through's arc after the impact has ended is not struck again
+  here, and the head never meets a hoop or the peg; Task 12 `rehit` and `gc` count how often the follow-through, the
+  real head moved on by the planned path, would cross a ball, and its head or shaft an upright, a crown or the peg.
+  P2b.2b.3 sweeps the head and the shaft along the whole swing P2b.2b.2 calibrates (the backswing from its top, the
+  lead-in and the follow-through) against every ball, the uprights, the crowns and the peg, and re-opens the impact
+  integrator on any crossing so the contact is integrated and judged (29.1.6.1, 29.1.6.2, 29.1.11, 29.1.10).
+  Variability of swing and aim, and conditions such as wind, are deferred beyond P2b.
+- **A GC-rules phase.** The Golf Croquet Rules' faults and remedies; until then a GC stroke is judged as an AC
+  single-ball stroke.
 - **Sourcing.** The swing defaults per preset (stance, gains, windows, reaches; the hand positions and leans are
   Riches'); head–turf stiffness, restitution and friction, which are the ball's, and whether turf drag needs a
   ploughing term; the end-weighted head with a sourced inertia factor; face presets beyond wood.
@@ -8833,17 +9725,18 @@ Task 12's, in the roadmap's "P2b.2b.1 outcomes carried forward (for P2b.2b.2)"; 
 | §4.5 whole-head contact, regions, `impact-off-face`, re-entry guard | Task 7 |
 | §5.1–5.3 swing types, derivation, approach, rejections | Task 8 (`guideEffort`: the preset's and the shot's, copied and rejected outside [0, 1]) |
 | §5.4 default profile | Task 8 (`profile.ts`, every value's source comment) |
-| §5.5 canonical setups and clearances | Task 8 (`canonicalSetup`, `CANONICAL_CLEARANCE`, approaches) |
+| §5.5 canonical setups and clearances | Task 8 (`canonicalSetup` with the GC stop's target and `targetGap`, `CANONICAL_CLEARANCE`, approaches); Task 10 (the GC stop's context) |
 | §6 `simulateShot`, setup checks, `strokeContext`, 29.1.13, 29.1.14, exports | Tasks 9, 10, 11 |
 | §7 reference data | Task 2 |
 | §8.1 every bullet, including all eight mechanisms ("No extra push" among them) | Tasks 3–10 |
-| §9 pre-flight measurements | Task 12 (`swingProbe.ts`, one section each); the Pre-flight table |
+| §9 pre-flight measurements | Task 12 (`swingProbe.ts`, one section each; the GC stop's distances and gap sweep in `gc`, the late re-hit in `rehit`); the Pre-flight table |
+| §10 deferred: P2b.2b.3 and the GC-rules phase | Task 12 Step 3 (the roadmap's P2 row and outcomes) |
 | §11 roadmap changes | Task 12 Step 3 |
 
 Placeholder scan: no "TBD", "TODO" or "similar to Task N"; every code step carries its code. Type consistency: the
 contract's names (`PreparedTrack`, `GripState`, `handLoad`, `HandLoad.torque` about the head's centre, `trackDrive`,
-`levelArc`, `onArc`, `canonicalSetup(type, { world?, stroke?, stance?, drive? })`) are used as defined in the task
-that produces them.
+`levelArc`, `onArc`, `canonicalSetup(type, { world?, stroke?, stance?, drive?, targetGap? })`) are used as defined in
+the task that produces them.
 
 **Sequential dry run (while planning).** Every task was applied literally, in order, to a scratch copy of `main`
 (eb5c332), its RED step compared and its checks run: green at every task, 763 passed and 2 skipped at the end
@@ -8853,7 +9746,8 @@ all nine sections and reproduced its prototype reference except the reach filter
 look-ahead (the free pendulum's unstruck v_path predicted a catch on every step); the user raised `TRACK_IMPACT_CAP`
 to 0.45 s and `FREE_SPAN` to 0.55 s, and the suite, the digest `cmp` and the probe were re-run on that code: the
 same counts pass, the digest is unchanged, and Task 12 Step 2's reference carries the changed figures. This is not
-the pre-flight: pre-flight still runs the plan from the PR's head and measures spec §9.
+the pre-flight: pre-flight still runs the plan from the PR's head and measures spec §9. With its findings folded in,
+the suite ends at 775 passed and 2 skipped (`SLOW_TESTS=1`: 777).
 
 The re-contact test is a straight croquet drive (Task 4), not the spec's split: a straight drive is the clearest case
 of a striker's ball leaving slower than the head, as in the first plan.
