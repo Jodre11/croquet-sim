@@ -1,15 +1,18 @@
 import { describe, expect, it } from "vitest";
 import { CONTACT_TOLERANCE } from "../../../src/engine/detect";
-import { ZERO, horizontal, length, sub, vec3 } from "../../../src/engine/math/vec3";
+import { ZERO, dot, horizontal, length, sub, vec3 } from "../../../src/engine/math/vec3";
 import {
+    HEAD_TURF_KEY,
     OFF_FACE,
     ballBallContact,
     ballPairKey,
     faceClearance,
     faceContact,
     faceKey,
+    headBottom,
     headClosing,
     headLowestPoint,
+    headTurfContact,
     obstacleContact,
     obstacleGap,
     obstacleKey,
@@ -22,9 +25,10 @@ import {
     type ObstacleGeometry,
     type Penetration,
 } from "../../../src/engine/impact/contacts";
-import { IDENTITY, axisAngle } from "../../../src/engine/impact/rigidBody";
+import { IDENTITY, axisAngle, rotate, type Quaternion } from "../../../src/engine/impact/rigidBody";
 import type { HeadState, MalletHead } from "../../../src/engine/impact/types";
 import type { BallState } from "../../../src/engine/types";
+import { TEST_HEAD } from "../support/impact";
 
 const R = 0.046;
 const HEAD: MalletHead = { mass: 1, inertia: vec3(1, 1, 1), length: 0.2, radius: 0.03, socket: vec3(0, 0, 0.03) };
@@ -303,5 +307,38 @@ describe("headClosing", () => {
 
     it("ignores a ball behind the back face", () => {
         expect(headClosing(headAt(0, vec3(2, 0, 0)), HEAD, ball(-0.2 - R - 1e-3, 0), R)).toBe(false);
+    });
+});
+
+describe("the head's lowest point and its turf contact", () => {
+    const centre = vec3(1, 2, 0.05);
+    const at = (orientation: Quaternion): HeadState => ({
+        position: centre,
+        orientation,
+        velocity: vec3(0, 0, 0),
+        angularVelocity: vec3(0, 0, 0),
+    });
+
+    it("lies under the centre for a level head", () => {
+        expect(headBottom(at(IDENTITY), TEST_HEAD)).toEqual(vec3(1, 2, 0.05 - TEST_HEAD.radius));
+    });
+
+    it("is the lower end's rim for a tilted head, as low as headLowestPoint says", () => {
+        // Front face tilted up 0.3 rad: the rear (−x) end is lower.
+        const q = axisAngle(vec3(0, 1, 0), -0.3);
+        const p = headBottom(at(q), TEST_HEAD);
+        const axis = rotate(q, vec3(1, 0, 0));
+        expect(p.z).toBeCloseTo(headLowestPoint(at(q), TEST_HEAD), 15);
+        expect(dot(sub(p, centre), axis)).toBeCloseTo(-TEST_HEAD.length / 2, 15);
+    });
+
+    it("closes only below the turf, acting upward at the lowest point", () => {
+        expect(headTurfContact(at(IDENTITY), TEST_HEAD)).toBeNull();
+        const low = { ...at(IDENTITY), position: vec3(1, 2, TEST_HEAD.radius - 1e-4) };
+        const contact = headTurfContact(low, TEST_HEAD);
+        expect(contact?.normal).toEqual(vec3(0, 0, 1));
+        expect(contact?.depth).toBeCloseTo(1e-4, 15);
+        expect(contact?.point).toEqual(headBottom(low, TEST_HEAD));
+        expect(HEAD_TURF_KEY).toBe("head/turf");
     });
 });

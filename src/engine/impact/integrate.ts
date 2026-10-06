@@ -2,7 +2,8 @@
  * The impact integrator (P2b.1 design §5): semi-implicit (symplectic) Euler at a fixed step over the mallet head, the
  * balls and the turf. Each step:
  * 1. computes every force from the current state: the hands' load (a force table at the socket, or a tracked drive's
- *    two hands, track.ts) and gravity, then each closed pair in pair-list order;
+ *    two hands, track.ts) and gravity, then each closed pair in pair-list order, then the head–turf pair if the set-up
+ *    has it (P2b.2b.1 design §4);
  * 2. updates every velocity from those forces, the head's spin through Euler's equations in its body frame (for a
  *    tracked drive, the swung body's: the head and the arm mass, P2b.2b.1 design §3.3);
  * 3. updates every position, and the head's orientation, from the new velocities.
@@ -11,9 +12,9 @@
  * set-ups mirrored across a vertical plane give exactly mirrored results. Obstacles (hoop uprights and the peg) are
  * immovable: a ball–obstacle pair's force acts on the ball alone.
  *
- * The impact ends once a face–ball contact has closed, the drive window has closed, no face–ball, ball–ball or
- * ball–obstacle contact has been closed for RELEASE_STEPS steps, and no ball in turf contact is still bouncing in it;
- * or at the cap. A ball bounces while its vertical oscillation energy about the static sink δ₀ = m·g/k,
+ * The impact ends once a face–ball contact has closed, the drive window has closed, no face–ball, ball–ball,
+ * ball–obstacle or head–turf contact has been closed for RELEASE_STEPS steps, and no ball in turf contact is still
+ * bouncing in it; or at the cap. A ball bounces while its vertical oscillation energy about the static sink δ₀ = m·g/k,
  * ½·m·v_z² + ½·k·(δ − δ₀)², exceeds the static spring's ½·k·δ₀²: it will reach δ = 0 and leave the turf, so the
  * turf's rebound, which dominates lift, is integrated rather than discarded at handover. Below that the ball only
  * settles in its hollow, and the handover discards at most m·g·δ₀/2 (design §6). Isolated set-ups (tests) may give
@@ -33,14 +34,17 @@
  * WAKE_MARGIN). The filter is exact: a skipped pair is open, so evaluating it would add no force and change no state,
  * and the pairs evaluated are visited, and their forces summed, in the same order.
  */
+import { contactReference } from "../../reference/index";
 import { ZERO, add, cross, dot, horizontal, length, scale, sub, vec3, type Vec3 } from "../math/vec3";
 import type { BallId, BallParams, BallState, BallStates } from "../types";
 import { normalForce, tangentialForce, type PairLaw } from "./contactLaw";
 import {
+    HEAD_TURF_KEY,
     OFF_FACE,
     faceClearance,
     headClosing,
     headLowestPoint,
+    headTurfContact,
     obstacleGap,
     pairContact,
     pairList,
@@ -64,9 +68,9 @@ import type { ContactInterval, DriveSample, ForceDrive, HeadState, ImpactEvent, 
 export const IMPACT_DT = 5e-6;
 
 /**
- * Consecutive steps without a closed face–ball, ball–ball or ball–obstacle contact after which the impact may
- * end. A numerical allowance for a contact to re-close (a croquet stroke's balls part and meet again), not physical.
- * Pre-flight: ×4 moves no ball's state 50 ms after the strike by more than 2.8e-4 of the head speed.
+ * Consecutive steps without a closed face–ball, ball–ball, ball–obstacle or head–turf contact after which the impact
+ * may end. A numerical allowance for a contact to re-close (a croquet stroke's balls part and meet again), not
+ * physical. Pre-flight: ×4 moves no ball's state 50 ms after the strike by more than 2.8e-4 of the head speed.
  */
 export const RELEASE_STEPS = 50;
 
@@ -84,6 +88,12 @@ export const IMPACT_CAP = 0.06;
  * (pre-flight; 324.8 ms before the check to rest); 0.45 s is about 43 % over it. A force table keeps IMPACT_CAP.
  */
 export const TRACK_IMPACT_CAP = 0.45;
+
+/**
+ * Depth (m) below the turf plane past which a head with the head–turf pair raises `impact-head-deep` (P2b.2b.1 design
+ * §4.2; reference/contact.json): a model limit, past which a plane turf with a linear spring is not credible for it.
+ */
+export const HEAD_DEEP_LIMIT = contactReference.headDeepLimit.value;
 
 /**
  * Horizon (s) of the tracked end rule's look-ahead (design §3.5): the impact runs on while the front face would reach
@@ -136,6 +146,11 @@ export interface ImpactSetup {
      * are skipped.
      */
     readonly obstacles: readonly ImpactObstacle[];
+    /**
+     * The head–turf pair's law (P2b.2b.1 design §4.1), or null to leave the pair out: prepareImpact solves it for a
+     * tracked drive and gives a force table none. Isolated set-ups (tests) may give any head the pair.
+     */
+    readonly headTurf: PairLaw | null;
 }
 
 /** One closed pair in one step, as the probe sees it: forces applied during the step, on body B. */
@@ -160,6 +175,8 @@ export interface ImpactSnapshot {
     readonly contacts: readonly ContactSample[];
     /** A tracked drive's F, its feed-forward parts and each hand's force (P2b.2b.1 design §3.7); absent otherwise. */
     readonly hand?: { readonly force: Vec3; readonly feedForward: Vec3; readonly top: Vec3; readonly bottom: Vec3 };
+    /** The turf's total force on the head (zero while the pair is open); absent without the head–turf pair. */
+    readonly headTurf?: Vec3;
 }
 
 /** Measurement seam: called after every step (tests and scripts/impactProbe.ts). */
@@ -290,6 +307,51 @@ function applyPair(
     return normal;
 }
 
+/** The head–turf pair while the impact runs (design §4). */
+interface HeadTurfState {
+    readonly law: PairLaw;
+    /** Elastic tangential displacement ξ; cleared whenever the pair is open. */
+    spring: Vec3;
+    peak: number;
+    readonly line: PairTimeline;
+    /** Slip distance (m) at the contact point: |horizontal velocity of the head's material|·dt, summed while closed. */
+    slide: number;
+}
+
+/**
+ * The head–turf pair in one step (design §4.1), from the current state: the turf's clamped spring–dashpot and
+ * Cundall–Strack friction act on the head at its lowest point. Adds the force and its moment about the head's centre
+ * to the head's loads, records the step and the slide, and returns the force on the head, or null while the pair is
+ * open.
+ */
+function applyHeadTurf(
+    p: HeadTurfState,
+    state: HeadState,
+    head: MalletHead,
+    dt: number,
+    loads: StepLoads,
+    t: number,
+): Vec3 | null {
+    const contact = headTurfContact(state, head);
+    if (contact === null) {
+        p.spring = ZERO;
+        recordStep(p.line, false, 0, t);
+        return null;
+    }
+    p.peak = Math.max(p.peak, contact.depth);
+    const u = pointVelocity(state.position, state.velocity, state.angularVelocity, contact.point);
+    const normal = normalForce(p.law, contact.depth, 0 - u.z);
+    const slip = horizontal(u);
+    const tangential = tangentialForce(p.law, add(horizontal(p.spring), scale(slip, dt)), slip, normal);
+    p.spring = tangential.spring;
+    const force = add(vec3(0, 0, normal), tangential.force);
+    loads.headForce = add(loads.headForce, force);
+    loads.headTorque = add(loads.headTorque, cross(sub(contact.point, state.position), force));
+    p.slide += length(slip) * dt;
+    recordStep(p.line, true, normal, t);
+    return force;
+}
+
 /** One semi-implicit Euler step of the head alone (a force table) under `loads`. */
 function stepHead(state: HeadState, loads: StepLoads, head: MalletHead, dt: number): HeadState {
     const velocity = add(state.velocity, scale(loads.headForce, dt / head.mass));
@@ -398,14 +460,15 @@ function trackTurf(
 
 /**
  * The run's result once the loop has ended at `duration`: each ball's final state, an `impact-head-approaching` event
- * for every ball the head is still closing on, every pair's peak penetration, the contact timeline and the pairs
- * touching at the start.
+ * for every ball the head is still closing on, every pair's peak penetration, the contact timeline, the pairs touching
+ * at the start and, if the head–turf pair closed, its peak penetration, intervals and slide.
  */
 function finish(
     setup: ImpactSetup,
     state: HeadState,
     balls: readonly BallState[],
     pairs: readonly PairState[],
+    turf: HeadTurfState | null,
     events: ImpactEvent[],
     steps: number,
     duration: number,
@@ -433,7 +496,14 @@ function finish(
             timeline[p.pair.key] = intervals;
         }
     }
-    return { balls: final, head: state, duration, events, peakPenetration, steps, timeline, touchingAtStart };
+    const run = { balls: final, head: state, duration, events, peakPenetration, steps, timeline, touchingAtStart };
+    const turfIntervals = turf === null ? [] : closeTimeline(turf.line, duration);
+    if (turf === null || turfIntervals.length === 0) {
+        return run;
+    }
+    peakPenetration[HEAD_TURF_KEY] = turf.peak;
+    timeline[HEAD_TURF_KEY] = turfIntervals;
+    return { ...run, headTurfSlide: turf.slide };
 }
 
 /** When a tracked drive's actions are over: both arcs' windows and, if it has depth, the dip (design §3.5). */
@@ -517,6 +587,11 @@ export function integrate(setup: ImpactSetup, options: ImpactOptions = {}): Impa
         lifted: balls.map(() => false),
     };
     const offFace = balls.map(() => false);
+    const turf: HeadTurfState | null =
+        setup.headTurf === null
+            ? null
+            : { law: setup.headTurf, spring: ZERO, peak: 0, line: emptyTimeline(), slide: 0 };
+    let deep = false;
     let state: HeadState = setup.start;
     let grounded = false;
     let struck = false;
@@ -584,27 +659,43 @@ export function integrate(setup: ImpactSetup, options: ImpactOptions = {}): Impa
             recordStep(p.line, true, force, t);
         }
 
+        // The head–turf pair comes after every other pair (design §4.1).
+        const turfForce = turf === null ? null : applyHeadTurf(turf, state, head, dt, loads, t);
+        if (turfForce !== null) {
+            hardClosed = true;
+        }
+
         state = advance(state, balls, travel, loads, setup, ballInertia, dt);
         steps++;
         const now = steps * dt;
         const turfMoving = trackTurf(balls, setup, track, now, events);
-        if (!grounded && headLowestPoint(state, head) < 0) {
-            grounded = true;
-            events.push({ kind: "impact-mallet-grounded", t: now });
+        if (turf === null) {
+            if (!grounded && headLowestPoint(state, head) < 0) {
+                grounded = true;
+                events.push({ kind: "impact-mallet-grounded", t: now });
+            }
+        } else if (!deep && headLowestPoint(state, head) < 0 - HEAD_DEEP_LIMIT) {
+            deep = true;
+            events.push({ kind: "impact-head-deep", t: now });
         }
         if (options.probe) {
             const snapshot: ImpactSnapshot = { t: now, drive, head: state, balls: [...balls], contacts: samples };
             options.probe.step(
-                hand === null
+                hand === null && turf === null
                     ? snapshot
                     : {
                           ...snapshot,
-                          hand: {
-                              force: hand.force,
-                              feedForward: hand.feedForward,
-                              top: hand.top,
-                              bottom: hand.bottom,
-                          },
+                          ...(hand === null
+                              ? {}
+                              : {
+                                    hand: {
+                                        force: hand.force,
+                                        feedForward: hand.feedForward,
+                                        top: hand.top,
+                                        bottom: hand.bottom,
+                                    },
+                                }),
+                          ...(turf === null ? {} : { headTurf: turfForce ?? ZERO }),
                       },
             );
         }
@@ -620,7 +711,7 @@ export function integrate(setup: ImpactSetup, options: ImpactOptions = {}): Impa
         }
     }
 
-    const run = finish(setup, state, balls, pairs, events, steps, steps * dt, touchingAtStart);
+    const run = finish(setup, state, balls, pairs, turf, events, steps, steps * dt, touchingAtStart);
     if (grip.releasedAt === null) {
         return run;
     }

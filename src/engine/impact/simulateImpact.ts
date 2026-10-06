@@ -1,16 +1,18 @@
 /**
  * Phase 1 of a shot (P2b.1 design §3). Checks the ContactState and the balls. Solves every contact law once: face–ball
- * and ball–ball once, ball–turf once per ball from the surface where it lies. Prepares a tracked drive once (track.ts).
- * Starts each ball at its static turf sink m·g/k_turf, so that the impact does not open with a spurious bounce. Each
- * obstacle's law is solved once: the ball's mass (the obstacle is immovable), the obstacle's material and its own
- * contact time. Integrates the impact and hands the balls over to phase 2.
+ * and ball–ball once, ball–turf once per ball from the surface where it lies, and the head–turf law once for a tracked
+ * drive, from the surface under the head's lowest point. Prepares a tracked drive once (track.ts). Starts each ball at
+ * its static turf sink m·g/k_turf, so that the impact does not open with a spurious bounce. Each obstacle's law is
+ * solved once: the ball's mass (the obstacle is immovable), the obstacle's material and its own contact time.
+ * Integrates the impact and hands the balls over to phase 2.
  */
 import { CONTACT_TOLERANCE } from "../detect";
+import { contactReference } from "../../reference/index";
 import { dot, horizontal, length, sub, vec3, type Vec3 } from "../math/vec3";
 import { BALL_IDS, type BallParams, type BallState, type BallStates, type SurfaceProps, type World } from "../types";
 import { obstaclesOf, validateWorld } from "../world";
-import { lawFromContactTime, lawFromStiffness } from "./contactLaw";
-import { headLowestPoint, outsideObstacle } from "./contacts";
+import { lawFromContactTime, lawFromStiffness, type PairLaw } from "./contactLaw";
+import { headBottom, headLowestPoint, outsideObstacle } from "./contacts";
 import { handover } from "./handover";
 import { rotateInverse } from "./rigidBody";
 import { integrate, type ImpactBall, type ImpactOptions, type ImpactSetup } from "./integrate";
@@ -28,6 +30,24 @@ const UNIT_TOLERANCE = 1e-12;
  * CONTACT_TOLERANCE, so the passes settle in a few; it matches the handover's HANDOVER_PASSES.
  */
 const PLACEMENT_PASSES = 64;
+
+/**
+ * Friction of the mallet head on the turf (P2b.2b.1 design §4.1; reference/contact.json): the analogue of a ball
+ * sliding on the turf. Provisional; P2b.2b.2 sources it.
+ */
+export const HEAD_TURF_FRICTION = contactReference.headTurfFriction.value;
+
+/**
+ * The head–turf law of a tracked drive, or null for a force table (design §4.1): the turf's stiffness, and damping
+ * solved from its restitution with the head's mass, sampled once at the head's lowest point at t = 0.
+ */
+function headTurfLaw(contact: ContactState, world: World): PairLaw | null {
+    if (contact.drive.kind === "force") {
+        return null;
+    }
+    const surface = world.lawn.surfaceAt(headBottom(contact, contact.head));
+    return lawFromStiffness(contact.head.mass, surface.turfRestitution, surface.turfStiffness, HEAD_TURF_FRICTION);
+}
 
 function fail(message: string): never {
     throw new RangeError(message);
@@ -171,6 +191,8 @@ function cylinderDistance(contact: ContactState, centre: Vec3): number {
  * - a force table that is empty, does not start at 0 or does not increase strictly;
  * - a tracked drive whose arc, coupling or hands are out of range (P2b.2b.1 design §3.6; the head need not start on
  *   its path);
+ * - for a tracked drive, turf under the head's lowest point with a non-positive stiffness or a restitution outside
+ *   (0, 1] (the head–turf law, P2b.2b.1 design §4.1);
  * - a non-positive mass, inertia, length, radius or contact time;
  * - a restitution outside (0, 1] (face, ball–ball, ball–upright, peg) or a negative friction;
  * - a non-unit orientation.
@@ -203,6 +225,9 @@ export function validateImpact(contact: ContactState, balls: BallStates, world: 
         validateForce(contact.drive);
     } else {
         validateTrack(contact.drive);
+        const surface = world.lawn.surfaceAt(headBottom(contact, head));
+        positive(surface.turfStiffness, "turfStiffness under the head");
+        restitution(surface.turfRestitution, "turfRestitution under the head");
     }
     if (headLowestPoint(contact, head) < 0) {
         fail("head penetrates the turf");
@@ -308,6 +333,7 @@ export function prepareImpact(contact: ContactState, balls: BallStates, world: W
             radius: o.radius,
             law: lawFromContactTime(ball.mass, o.material.restitution, o.contactTime, o.material.friction),
         })),
+        headTurf: headTurfLaw(contact, world),
     };
 }
 

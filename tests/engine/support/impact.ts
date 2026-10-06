@@ -182,7 +182,8 @@ export function freeBall(
 
 /**
  * An isolated set-up for `integrate`: by default the head parked far away (it never touches anything) and undriven,
- * gravity off, the test face and test ball–ball laws, no balls and no obstacles. Override what a case needs.
+ * gravity off, the test face and test ball–ball laws, no balls, no obstacles and no head–turf pair. Override what a
+ * case needs.
  */
 export function isolated(overrides: Partial<ImpactSetup> = {}): ImpactSetup {
     const start: HeadState = {
@@ -201,6 +202,7 @@ export function isolated(overrides: Partial<ImpactSetup> = {}): ImpactSetup {
         gravity: 0,
         balls: [],
         obstacles: [],
+        headTurf: null,
         ...overrides,
     };
 }

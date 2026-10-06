@@ -4,7 +4,7 @@
  * later one, or the turf on a ball. Penetration δ > 0 means the pair is closed. The contact point lies on the
  * normal's line, δ/2 inside ball B's undeformed surface: x = c_B − (R − δ/2)·n. The ball–obstacle pair (P2b.2a design
  * §4) acts from a hoop upright or the peg, an immovable vertical cylinder, along the horizontal normal from its axis to
- * the ball's centre.
+ * the ball's centre. The head–turf pair (P2b.2b.1 design §4.1) acts from the turf on the head's lowest point, along ẑ.
  */
 import { CONTACT_TOLERANCE } from "../detect";
 import { add, cross, dot, horizontal, length, scale, sub, vec3, type Vec3 } from "../math/vec3";
@@ -309,4 +309,32 @@ export function headClosing(state: HeadState, head: MalletHead, ball: BallState,
         }
     }
     return false;
+}
+
+/** Key of the head–turf pair (P2b.2b.1 design §4.3). */
+export const HEAD_TURF_KEY = "head/turf";
+
+/**
+ * The head's lowest point (P2b.2b.1 design §4.1). With a the unit axis and |a_z| < 1, it is
+ * c − (L/2)·sign(a_z)·a − r·u, u the unit vector of ẑ − a_z·a: the lower end disc's rim, straight below the axis. For
+ * a_z = 0 it lies under the centre, on the barrel; for |a_z| = 1, the face disc is level and it is the disc's centre.
+ * Its height is headLowestPoint's, up to rounding.
+ */
+export function headBottom(state: HeadState, head: MalletHead): Vec3 {
+    const a = rotate(state.orientation, vec3(1, 0, 0));
+    const half = head.length / 2;
+    const end = a.z > 0 ? scale(a, half) : a.z < 0 ? scale(a, 0 - half) : vec3(0, 0, 0);
+    const rise = vec3(0 - a.z * a.x, 0 - a.z * a.y, 1 - a.z * a.z);
+    const size = length(rise);
+    const across = size > 0 ? scale(rise, head.radius / size) : vec3(0, 0, 0);
+    return sub(sub(state.position, end), across);
+}
+
+/** The turf's contact with the head: closed while its lowest point is below the turf plane, along ẑ, acting there. */
+export function headTurfContact(state: HeadState, head: MalletHead): Penetration | null {
+    const point = headBottom(state, head);
+    if (!(point.z < 0)) {
+        return null;
+    }
+    return { normal: UP, depth: 0 - point.z, point };
 }

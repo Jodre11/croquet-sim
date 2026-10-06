@@ -73,8 +73,8 @@ export interface Lawn {
     readonly width: number;
     readonly length: number;
     /**
-     * Surface properties at a position. v1 lawns are uniform; the engine samples this at each segment start, and once
-     * per ball at the start of an impact.
+     * Surface properties at a position. v1 lawns are uniform; the engine samples this at each segment start, and at
+     * the start of an impact at each ball and under a tracked drive's head.
      */
     surfaceAt(position: Vec3): SurfaceProps;
 }

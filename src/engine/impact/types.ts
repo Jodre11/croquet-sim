@@ -149,10 +149,14 @@ export interface ContactState extends HeadState {
 /**
  * Something that happened during the impact; t is seconds from its start. `turf-lift`: a ball's centre first rose to
  * z = R from below. The others mark a result outside the validated model, as phase 2's jump flag does:
- * - `impact-cap`: the impact reached IMPACT_CAP;
- * - `impact-head-approaching`: when it ended the head was still closing on a ball within reach (a second strike, a
- *   double tap, is a fault and is not modelled);
- * - `impact-mallet-grounded`: part of the head went below the turf plane (mallet–turf contact is not modelled);
+ * - `impact-cap`: the impact reached its cap (IMPACT_CAP, or TRACK_IMPACT_CAP for a tracked drive);
+ * - `impact-head-approaching`: when it ended the head was still closing on a ball within reach (a force table's
+ *   second strike, a double tap, is a fault and is not modelled; a tracked drive integrates it and so raises this only
+ *   at the cap);
+ * - `impact-mallet-grounded`: part of the head went below the turf plane with no head–turf pair (a force table:
+ *   mallet–turf contact is not modelled);
+ * - `impact-head-deep`: the head went more than HEAD_DEEP_LIMIT below the turf plane, where the head–turf pair is not
+ *   credible (P2b.2b.1 design §4.2);
  * - `impact-off-face`: a ball reached the rim of a face rather than the face (edge strokes are not modelled).
  */
 export type ImpactEvent =
@@ -160,6 +164,7 @@ export type ImpactEvent =
     | { readonly kind: "impact-cap"; readonly t: number }
     | { readonly kind: "impact-head-approaching"; readonly t: number; readonly ball: BallId }
     | { readonly kind: "impact-mallet-grounded"; readonly t: number }
+    | { readonly kind: "impact-head-deep"; readonly t: number }
     | { readonly kind: "impact-off-face"; readonly t: number; readonly ball: BallId };
 
 /**
@@ -181,8 +186,8 @@ export interface ImpactRun {
     readonly duration: number;
     readonly events: readonly ImpactEvent[];
     /**
-     * Deepest penetration (m) of every pair that closed, keyed "face/<ball>", "<ball>/<ball>", "turf/<ball>" or
-     * "<ball>@<obstacle id>".
+     * Deepest penetration (m) of every pair that closed, keyed "face/<ball>", "<ball>/<ball>", "turf/<ball>",
+     * "<ball>@<obstacle id>" or "head/turf".
      */
     readonly peakPenetration: Readonly<Record<string, number>>;
     readonly steps: number;
@@ -198,6 +203,11 @@ export interface ImpactRun {
      * relaxAt (contact) then (rad). Absent if it never opened, and for a force table.
      */
     readonly release?: { readonly t: number; readonly deltaTheta: number };
+    /**
+     * Slip distance (m) at the head's contact point with the turf (P2b.2b.1 design §4.3): |horizontal velocity of the
+     * head's material at its lowest point|·dt, summed per step while δ > 0; absent when the pair never closed.
+     */
+    readonly headTurfSlide?: number;
 }
 
 /** The impact's outcome, with the balls as handed over to phase 2 (design §6). */
