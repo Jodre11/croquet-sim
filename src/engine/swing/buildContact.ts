@@ -9,8 +9,9 @@
  *    the head's centre, and A = drive·handGain·speed·aim/handWindow; the dip, handDrop over dropTime; the mode, the
  *    ground depth and the reach (the shot's, else the preset's); the coupling HAND_COUPLING; the hands the stance's,
  *    with the profile's body;
- * 4. the lead L, the earliest action's: the impact starts L before contact, on the downswing, and the grips relax at
- *    contact;
+ * 4. the lead L, the earliest action's, or TURF_MARGIN before the downswing first meets the turf if that is earlier
+ *    (P2b.2b.2a design §3.5): the impact starts L before contact, on the downswing, so a fat stroke's turf strike is
+ *    integrated; the grips relax at contact;
  * 5. the approach: the downswing's lowest clearance over the turf, from one scan (planStroke, swingApproach).
  * The head starts on its own path (headOnPath at t = 0), so the hands start with no error to take up.
  */
@@ -40,10 +41,17 @@ import type { ShotSetup, SwingDrive, SwingShape, SwingStance } from "./types";
 export const START_GAP = 1e-6;
 
 /**
- * The longest lead-in (s): how early an action may be timed (design §5.2 step 8). A modelling bound, not physical: a
- * head so far from the ball when the impact starts is a gross mis-hit.
+ * The longest lead-in (s): how early the impact may start, for an early action or a downswing meeting the turf
+ * (P2b.2b.2a design §3.5). A modelling bound, not physical: a head on the lawn that long before the ball is a gross
+ * mis-hit the impact cannot afford. Provisional, to be confirmed against the sourced downswing times.
  */
-export const MAX_LEAD = 0.06;
+export const MAX_LEAD = 0.15;
+
+/**
+ * How long (s) before the downswing first meets the turf the impact starts (P2b.2b.2a design §3.5). Numerical, not
+ * physical: 5 ms of open steps before the head–turf pair closes.
+ */
+export const TURF_MARGIN = 0.005;
 
 /** The engine's face: wood (reference/mallet.json), with the sourced face–ball contact time. */
 const WOOD: FaceMaterial = {
@@ -386,9 +394,11 @@ export interface StrokePlan {
  *   torqueMax < 0; in carry mode a hands' tempo ≤ 0 or fast > slow;
  * - the downswing's (downswing.ts): a backswing beyond MAX_BACK_ANGLE, a non-positive effective inertia, a stall or a
  *   fall beyond MAX_FALL;
- * - an action timed more than MAX_LEAD early;
- * - the head's lowest point below the turf at contact, or where the impact starts.
- * A swing that meets the turf between the impact's start and the ball is not rejected: the impact simulates it.
+ * - an action timed more than MAX_LEAD early, or a downswing meeting the turf more than MAX_LEAD − TURF_MARGIN before
+ *   contact;
+ * - the head's lowest point below the turf at contact.
+ * A downswing that meets the turf before the ball is not rejected: the impact starts before it and simulates it
+ * (design §3.5).
  */
 export function planStroke(setup: ShotSetup, world: World): StrokePlan {
     validate(setup);
@@ -396,9 +406,9 @@ export function planStroke(setup: ShotSetup, world: World): StrokePlan {
     const { type, timing } = stroke;
     const push = profile.drive[type];
     // Step 4's lead: the earliest action's, none on time.
-    const lead = Math.max(0, 0 - timing.arc, 0 - timing.hands, 0 - timing.dip);
-    if (lead > MAX_LEAD) {
-        fail(`an action is timed more than ${MAX_LEAD} s early (${lead} s before contact)`);
+    const actions = Math.max(0, 0 - timing.arc, 0 - timing.hands, 0 - timing.dip);
+    if (actions > MAX_LEAD) {
+        fail(`an action is timed more than ${MAX_LEAD} s early (${actions} s before contact)`);
     }
     const pose = contactPose(setup, world);
     const { head, aim, radius, pivot, orientation, headCentre } = pose;
@@ -414,6 +424,15 @@ export function planStroke(setup: ShotSetup, world: World): StrokePlan {
     const planned = downswingOf(setup, pose, hands, world.gravity);
     const contactSpeed = poseSpeed(pose, planned);
     const scan = scanDownswing(planned.downswing, head, aim, radius);
+    // Step 4's lead: the earliest action's, or TURF_MARGIN before the downswing first meets the turf if earlier.
+    const turf = scan.grounded === null ? 0 : TURF_MARGIN - scan.grounded;
+    if (turf > MAX_LEAD) {
+        fail(
+            `the downswing meets the turf ${0 - (scan.grounded as number)} s before contact, so the impact would ` +
+                `start more than ${MAX_LEAD} s early: a gross mis-hit`,
+        );
+    }
+    const lead = Math.max(actions, turf);
     const { omega: omega0, handsVelocity } = planned;
     const lever = length(cross(pitchAxis(aim), sub(headCentre, pivot)));
     // Steps 3 and 4, the arc expressed from the start, L before contact.
@@ -444,13 +463,6 @@ export function planStroke(setup: ShotSetup, world: World): StrokePlan {
         hands,
     };
     const start = headOnPath(prepareTrack(drive, head, world.gravity), head, 0);
-    const clearance = headLowestPoint(start, head);
-    if (clearance < 0) {
-        fail(
-            `the head is in the turf ${lead} s before contact, where the earliest action begins: its lowest point is ` +
-                `${0 - clearance} m below it (the stance is too low for that timing)`,
-        );
-    }
     return {
         contact: { head, face: WOOD, ...start, drive },
         approach: { clearance: scan.clearance, before: scan.before },

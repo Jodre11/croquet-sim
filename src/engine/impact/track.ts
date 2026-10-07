@@ -807,8 +807,17 @@ export function handLoad(
         const g = track.firm;
         const topGap = sub(add(path.socket, topLever), add(state.position, topArm));
         const bottomGap = sub(add(path.socket, bottomLever), add(state.position, bottomArm));
-        const top = add(add(topShare, scale(topGap, g.stiffness)), scale(topLag, g.damping));
-        const pull = add(scale(bottomGap, g.stiffness), scale(bottomLag, g.damping));
+        // On a downswing the firm grip keeps the hands' planned pace (feed-forward and damper) but has no position
+        // spring (P2b.2b.2a user decision 2026-10-07): a head the turf holds back stays where it is put, so a graze
+        // costs the head speed instead of the grip refunding it.
+        const top =
+            arc.downswing === undefined
+                ? add(add(topShare, scale(topGap, g.stiffness)), scale(topLag, g.damping))
+                : add(topShare, scale(topLag, g.damping));
+        const pull =
+            arc.downswing === undefined
+                ? add(scale(bottomGap, g.stiffness), scale(bottomLag, g.damping))
+                : scale(bottomLag, g.damping);
         const twist =
             twistShare +
             g.twistStiffness * dot(rotationError(path.orientation, q), s) +

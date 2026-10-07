@@ -16,6 +16,7 @@ import { add, cross, dot, horizontal, length, scale, sub, vec3, type Vec3 } from
 import {
     MAX_LEAD,
     START_GAP,
+    TURF_MARGIN,
     buildContact,
     contactPose,
     downswingInput,
@@ -24,7 +25,7 @@ import {
     poseSpeed,
     swingApproach,
 } from "../../../src/engine/swing/buildContact";
-import { planDownswing } from "../../../src/engine/swing/downswing";
+import { planDownswing, scanDownswing } from "../../../src/engine/swing/downswing";
 import { ON_TIME, defaultProfile } from "../../../src/engine/swing/profile";
 import {
     STROKE_TYPES,
@@ -37,7 +38,7 @@ import type { BallState } from "../../../src/engine/types";
 import { defaultWorld } from "../../../src/engine/world";
 import { contactReference, malletReference, swingReference } from "../../../src/reference/index";
 import { TEST_BALL, TEST_TURF, ballAt, testWorld } from "../support/fixtures";
-import { TEST_HANDS, mirrorBall, mirrorContact, mirrorQuat, mirrorSpin, mirrorVec } from "../support/impact";
+import { TEST_HANDS, mirrorBall, mirrorContact, mirrorQuat, mirrorSpin, mirrorVec, recorder } from "../support/impact";
 import { CANONICAL_CLEARANCE, GC_STOP_GAP, backswingFor, canonicalSetup, testProfile } from "../support/shot";
 
 const WORLD = testWorld();
@@ -115,11 +116,12 @@ describe("buildContact, step by step", () => {
     });
 
     it("puts the face 1 µm short of the sunk ball, meeting it at the requested point", () => {
-        const c = buildContact(shot({ contact: { up: 0.01, side: -0.005 } }), WORLD);
+        // The pose at contact: this met-high contact is a fat stroke, whose impact now starts earlier on the downswing.
+        const c = contactPose(shot({ contact: { up: 0.01, side: -0.005 } }), WORLD);
         const face = rotate(c.orientation, vec3(1, 0, 0));
         const upward = rotate(c.orientation, vec3(0, 0, 1));
         const left = rotate(c.orientation, vec3(0, 1, 0));
-        const offset = sub(vec3(5, 3, SUNK_Z), add(c.position, scale(face, c.head.length / 2)));
+        const offset = sub(vec3(5, 3, SUNK_Z), add(c.headCentre, scale(face, c.head.length / 2)));
         expect(dot(offset, face)).toBeCloseTo(R + START_GAP, 12);
         expect(dot(offset, upward)).toBeCloseTo(0.01, 12);
         expect(dot(offset, left)).toBeCloseTo(-0.005, 12);
@@ -272,7 +274,11 @@ describe("swingApproach", () => {
         // The top hand is still, so swung back by φ the head's front rim dips to P_z − (r + 2ρ)·cos φ − (L/2)·sin φ,
         // least at tan φ* = (L/2)/(r + 2ρ): about 3.64 mm in the turf (P2b.2b.1's coasting figure: the same circle).
         const c = buildContact(shot({ contact: { up: 0.01, side: 0 } }), WORLD);
-        expect(headLowestPoint(c, c.head)).toBeCloseTo(SUNK_Z - 0.01 - RHO, 12);
+        const pose = contactPose(shot({ contact: { up: 0.01, side: 0 } }), WORLD);
+        const still = vec3(0, 0, 0);
+        const atContact = { position: pose.headCentre, orientation: pose.orientation };
+        const lowest = headLowestPoint({ ...atContact, velocity: still, angularVelocity: still }, pose.head);
+        expect(lowest).toBeCloseTo(SUNK_Z - 0.01 - RHO, 12);
         const pivotZ = SUNK_Z - 0.01 + RHO + TOP;
         const approach = swingApproach(c);
         expect(approach.clearance).toBeCloseTo(pivotZ - Math.hypot(TOP + 2 * RHO, LENGTH / 2), 9);
@@ -443,10 +449,6 @@ describe("buildContact rejections", () => {
         const kept = Object.fromEntries(Object.entries(p[record]).filter(([type]) => type !== "drive"));
         return { ...p, [record]: kept } as unknown as SwingProfile;
     };
-    // The low swing's downswing is deepest about 36 ms before contact (the swingApproach test): a dip timed then
-    // starts the impact with the head in the turf.
-    const low = shot({ contact: { up: 0.01, side: 0 } });
-    const deepest = swingApproach(buildContact(low, WORLD)).before;
     const cases: readonly [string, ShotSetup, RegExp][] = [
         ["the striker absent", { ...shot(), striker: "red" }, /striker red is not in the setup/],
         ["a stroke type missing from the stance", shot({ type: "drive" }, missing("stance")), /stance has no entry/],
@@ -511,7 +513,7 @@ describe("buildContact rejections", () => {
             shot({}, testProfile({ body: { reachSlack: -0.01 } })),
             /reachSlack must be non-negative/,
         ],
-        ["an action over 60 ms early", shot({ timing: { arc: -0.07, hands: 0, dip: 0 } }), /more than 0\.06 s early/],
+        ["an action over 150 ms early", shot({ timing: { arc: -0.16, hands: 0, dip: 0 } }), /more than 0\.15 s early/],
         ["a head in the turf at contact", shot({}, testProfile({ stance: { lean: -0.3 } })), /in the turf at contact/],
         ["a non-finite backswing", shot({ backswing: NaN }), /stroke\.backswing must be finite/],
         ["a backswing of 0", shot({ backswing: 0 }), /stroke\.backswing must be positive/],
@@ -557,11 +559,6 @@ describe("buildContact rejections", () => {
             /defaultIntensity must lie in \[0, 1\]/,
         ],
         ["a backswing beyond the shaft horizontal", shot({ backswing: 2 }), /beyond/],
-        [
-            "a head in the turf where an early action begins",
-            shot({ contact: { up: 0.01, side: 0 }, timing: { arc: 0, hands: 0, dip: -deepest } }),
-            /in the turf .* s before contact/,
-        ],
     ];
 
     it.each(cases)("rejects %s", (_name, setup, pattern) => {
@@ -606,5 +603,95 @@ describe("contactPose (design §5.2 steps 1–5, 10)", () => {
         const planned = planDownswing(input);
         // The hands still: the head swings at ω₀·ℓ_h.
         expect(poseSpeed(pose, planned)).toBeCloseTo(planned.omega * (RHO + TOP), 12);
+    });
+});
+
+describe("the lead (design §3.5)", () => {
+    /** The low swing of the swingApproach test: its downswing dips 3.6 mm into the turf. */
+    const low = (stroke: Partial<Stroke> = {}) => shot({ contact: { up: 0.01, side: 0 }, ...stroke });
+    const grounded = (c: ContactState): number => {
+        const arc = arcOf(c);
+        return scanDownswing(arc.downswing as Downswing, c.head, arc.aim, arc.radius).grounded as number;
+    };
+
+    it("starts a fat stroke TURF_MARGIN before its downswing first meets the turf", () => {
+        const c = buildContact(low(), WORLD);
+        const g = grounded(c);
+        expect(g).toBeLessThan(0);
+        expect(arcOf(c).contactAt).toBeCloseTo(TURF_MARGIN - g, 15);
+        expect(headLowestPoint(c, c.head)).toBeGreaterThan(0);
+        // A clean swing's lead stays the actions'.
+        expect(arcOf(buildContact(shot(), WORLD)).contactAt).toBe(0);
+    });
+
+    it("takes the larger of the action's lead and the turf's", () => {
+        // Review focus 4.
+        const turf = TURF_MARGIN - grounded(buildContact(low(), WORLD));
+        const earlier = buildContact(low({ timing: { arc: 0, hands: 0, dip: -(turf + 0.01) } }), WORLD);
+        expect(arcOf(earlier).contactAt).toBeCloseTo(turf + 0.01, 15);
+        const later = buildContact(low({ timing: { arc: -(turf - 0.002), hands: 0, dip: 0 } }), WORLD);
+        expect(arcOf(later).contactAt).toBeCloseTo(turf, 15);
+        expect(arcOf(later).arcStart).toBeCloseTo(0.002, 12);
+    });
+
+    it("rejects a downswing that meets the turf more than MAX_LEAD early, naming the turf", () => {
+        // Review focus 4. A slow low swing: 5 cm back, the ball met 12 mm above the face centre. Its head enters the
+        // turf about 0.245 rad back, where the gravity swing from 0.35 rad has barely begun: about 0.2 s before
+        // contact.
+        const slow = shot({ backswing: 0.05, contact: { up: 0.012, side: 0 } });
+        expect(() => buildContact(slow, WORLD)).toThrow(/meets the turf .* before contact/);
+    });
+
+    it("simulates a fat stroke: the turf slows the head before the ball, against the same swing raised clear", () => {
+        // Spec §7.1. Raised clear: the ball met at the face centre, the head 10 mm higher on the same pendulum, so both
+        // plan the same speed.
+        const fatPlan = planStroke(low(), WORLD);
+        const cleanPlan = planStroke(shot(), WORLD);
+        expect(fatPlan.contactSpeed).toBeCloseTo(cleanPlan.contactSpeed, 12);
+        const firstStrike = (plan: typeof fatPlan) => {
+            const probe = recorder();
+            const impact = simulateImpact(plan.contact, { blue: BLUE }, WORLD, { probe });
+            const strike = (impact.timeline["face/blue"] ?? [])[0];
+            expect(strike).toBeDefined();
+            const start = (strike as { start: number }).start;
+            const at = probe.snapshots.find((s) => s.t >= start - 1e-12);
+            return { impact, start, speed: length((at as { head: { velocity: Vec3 } }).head.velocity) };
+        };
+        const fat = firstStrike(fatPlan);
+        const clean = firstStrike(cleanPlan);
+        const dug = fat.impact.timeline["head/turf"]?.[0];
+        expect(dug).toBeDefined();
+        expect((dug as { start: number }).start).toBeLessThan(fat.start);
+        expect(fat.speed).toBeLessThan(clean.speed);
+        // The loss is fractional (user decision 2026-10-07: a light graze costs "only fractionally"): measured about
+        // 3.03 against 3.12 m/s.
+        expect(fat.speed).toBeGreaterThan(0.9 * clean.speed);
+        // The firm grip has no position spring on a downswing, so the head stays where the turf put it: about 0.48 mm
+        // in, under the 2 mm limit.
+        expect(fat.impact.events.map((e) => e.kind)).not.toContain("impact-head-deep");
+    });
+
+    it("plays a 2 mm backswing as a gentle tap", () => {
+        // Review focus 1: about 0.19 m/s by gravity alone on the test pendulum.
+        const setup = shot({ backswing: 0.002 });
+        const { contact, contactSpeed } = planStroke(setup, WORLD);
+        expect(contactSpeed).toBeGreaterThan(0.1);
+        expect(contactSpeed).toBeLessThan(0.3);
+        const kinds = simulateImpact(contact, setup.balls, WORLD).events.map((e) => e.kind);
+        expect(kinds).not.toContain("impact-cap");
+    });
+
+    it("starts the downswing behind the ball along any aim", () => {
+        // Review focus 3.
+        for (const aim of [Math.PI, -Math.PI / 2, 7]) {
+            const c = buildContact(shot({ aim }), WORLD);
+            const arc = arcOf(c);
+            const track = prepareTrack(c.drive as TrackDrive, c.head, WORLD.gravity);
+            const top = headOnPath(track, c.head, arc.contactAt + (arc.downswing as Downswing).release);
+            const back = horizontal(sub(top.position, c.position));
+            const along = vec3(Math.cos(aim), Math.sin(aim), 0);
+            expect(dot(back, along), `aim ${aim}`).toBeLessThan(-0.1);
+            expect(length(cross(back, along)), `aim ${aim}`).toBeLessThan(1e-9);
+        }
     });
 });
