@@ -219,6 +219,18 @@ export interface StrokeShapeReference {
     /** The rolls' sourced tempo, or null. */
     readonly tempo: ReferenceQuote | null;
     readonly kinematics: readonly KinematicPair[];
+    /** The fit's default backswing (m) and intensity, and the planned speed (m/s) they give (design §5.3). */
+    readonly defaultBackswing: ReferenceValue;
+    readonly defaultIntensity: ReferenceValue;
+    readonly defaultSpeed: ReferenceValue;
+    /** Swing mode's effort (the swing presets), or null. */
+    readonly effort: {
+        readonly torqueMax: ReferenceValue;
+        readonly tempoSlow: ReferenceValue;
+        readonly tempoFast: ReferenceValue;
+    } | null;
+    /** Carry mode's hands' tempo (the rolls), or null. */
+    readonly handTempo: { readonly slow: ReferenceValue; readonly fast: ReferenceValue } | null;
 }
 
 function has(section: unknown, key: string): boolean {
@@ -268,10 +280,26 @@ function readShape(section: unknown, type: SwingReferenceType): StrokeShapeRefer
         finish: readQuote(entry, "finish", path),
         tempo: has(entry, "tempo") ? readQuote(entry, "tempo", path) : null,
         kinematics: readPairs(entry, path),
+        defaultBackswing: readValue(entry, "defaultBackswing", path),
+        defaultIntensity: readValue(entry, "defaultIntensity", path),
+        defaultSpeed: readValue(entry, "defaultSpeed", path),
+        effort: has(entry, "tempoSlow")
+            ? {
+                  torqueMax: readValue(entry, "torqueMax", path),
+                  tempoSlow: readValue(entry, "tempoSlow", path),
+                  tempoFast: readValue(entry, "tempoFast", path),
+              }
+            : null,
+        handTempo: has(entry, "handTempoSlow")
+            ? { slow: readValue(entry, "handTempoSlow", path), fast: readValue(entry, "handTempoFast", path) }
+            : null,
     };
 }
 
-/** The stroke shape per stroke type (P2b.2b.2a design §6): sourced figures and labelled placeholders. */
+/**
+ * The stroke shape per stroke type (P2b.2b.2a design §6): sourced figures, labelled placeholders and the fit's derived
+ * defaults (scripts/fitStrokeShape.ts).
+ */
 export const swingReference: Readonly<Record<SwingReferenceType, StrokeShapeReference>> = Object.fromEntries(
     SWING_REFERENCE_TYPES.map((type) => [type, readShape(swingJson, type)]),
 ) as Record<SwingReferenceType, StrokeShapeReference>;

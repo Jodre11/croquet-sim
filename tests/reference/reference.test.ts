@@ -181,4 +181,51 @@ describe("swing reference (P2b.2b.2a design §6.1)", () => {
             }
         }
     });
+
+    it("holds the fit's defaults: a backswing, an intensity in [0, 1] and its planned speed", () => {
+        for (const type of SWING_REFERENCE_TYPES) {
+            const shape = swingReference[type];
+            expect(shape.defaultBackswing.value, type).toBeGreaterThan(0);
+            expect(shape.defaultIntensity.value, type).toBeGreaterThanOrEqual(0);
+            expect(shape.defaultIntensity.value, type).toBeLessThanOrEqual(1);
+            // Exit criterion 5: 3 m/s within 2 %, or a default at a sourced bound.
+            const range = shape.backswingRange;
+            const atBound =
+                range !== null &&
+                (shape.defaultBackswing.value === range.low.value || shape.defaultBackswing.value === range.high.value);
+            if (!atBound) {
+                expect(Math.abs(shape.defaultSpeed.value / 3 - 1), type).toBeLessThanOrEqual(0.02);
+            }
+        }
+    });
+
+    it("gives the swing presets an effort and the rolls a hands' tempo, fast no slower than slow", () => {
+        for (const type of SWING_REFERENCE_TYPES) {
+            const { effort, handTempo } = swingReference[type];
+            const swing = ["single-ball", "drive", "stop-ac", "stop-gc"].includes(type);
+            expect(effort === null, type).toBe(!swing);
+            expect(handTempo === null, type).toBe(swing);
+            if (effort !== null) {
+                expect(effort.torqueMax.value, type).toBeGreaterThanOrEqual(0);
+                expect(effort.tempoFast.value, type).toBeLessThanOrEqual(effort.tempoSlow.value);
+                expect(effort.tempoFast.value, type).toBeGreaterThan(0);
+            }
+            if (handTempo !== null) {
+                expect(handTempo.fast.value, type).toBeLessThanOrEqual(handTempo.slow.value);
+                expect(handTempo.fast.value, type).toBeGreaterThan(0);
+            }
+        }
+    });
+
+    it("halves the placeholder tempos (design §6.2)", () => {
+        for (const type of SWING_REFERENCE_TYPES) {
+            const { effort, handTempo } = swingReference[type];
+            if (effort?.tempoSlow.provisional === "placeholder") {
+                expect(effort.tempoFast.value, type).toBeCloseTo(effort.tempoSlow.value / 2, 12);
+            }
+            if (handTempo?.slow.provisional === "placeholder") {
+                expect(handTempo.fast.value, type).toBeCloseTo(handTempo.slow.value / 2, 12);
+            }
+        }
+    });
 });

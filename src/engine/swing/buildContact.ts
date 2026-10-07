@@ -21,13 +21,22 @@
  */
 import { contactReference, malletReference } from "../../reference/index";
 import { headLowestPoint } from "../impact/contacts";
-import { rotate, solidCylinderInertia } from "../impact/rigidBody";
-import { HAND_COUPLING, headOnPath, pitchAxis, prepareTrack, swingOrientation } from "../impact/track";
-import type { ContactState, FaceMaterial, Hands, MalletHead, SwingArc, TrackDrive } from "../impact/types";
+import { rotate, solidCylinderInertia, type Quaternion } from "../impact/rigidBody";
+import {
+    HAND_COUPLING,
+    headOnPath,
+    pendulumOf,
+    pitchAxis,
+    prepareTrack,
+    swingOrientation,
+    swungBody,
+} from "../impact/track";
+import type { ContactState, FaceMaterial, Hands, MalletHead, StrokeMode, SwingArc, TrackDrive } from "../impact/types";
 import { sinCos } from "../math/elementary";
-import { add, cross, dot, length, scale, sub, vec3 } from "../math/vec3";
-import type { World } from "../types";
-import type { ShotSetup, SwingDrive, SwingStance } from "./types";
+import { add, cross, dot, length, scale, sub, vec3, type Vec3 } from "../math/vec3";
+import type { BallState, World } from "../types";
+import type { DownswingInput, PlannedDownswing } from "./downswing";
+import type { ShotSetup, SwingDrive, SwingShape, SwingStance } from "./types";
 
 /**
  * Gap (m) between the face and the striker's sunk surface at contact (design §5.2 step 4). Numerical, not physical:
@@ -214,26 +223,11 @@ export function buildContact(setup: ShotSetup, world: World): ContactState {
         fail(`an action is timed more than ${MAX_LEAD} s early (${lead} s before contact)`);
     }
 
-    const R = world.ball.radius;
-    const surface = world.lawn.surfaceAt(striker.position);
-    const sunk = R - (world.ball.mass * world.gravity) / surface.turfStiffness;
-    const centre = vec3(striker.position.x, striker.position.y, sunk);
-    // Steps 1 to 3: the pivot is the top hand, and the head, rigid on the shaft, pitches with it.
-    const radius = top;
-    const thetaC = 0 - lean;
-    const [sa, ca] = sinCos(stroke.aim);
-    const aim = vec3(ca, sa, 0);
-    const orientation = swingOrientation(aim, thetaC);
-    // Step 4: f the face's outward normal (body x), its upward axis body z, `side` along body y (left of aim).
-    const face = rotate(orientation, vec3(1, 0, 0));
-    const upward = rotate(orientation, vec3(0, 0, 1));
-    const left = rotate(orientation, vec3(0, 1, 0));
-    const faceCentre = sub(sub(sub(centre, scale(face, R + START_GAP)), scale(upward, up)), scale(left, side));
-    const headCentre = sub(faceCentre, scale(face, mallet.headLength / 2));
-    const socket = add(headCentre, scale(upward, rho));
-    // Step 5.
-    const [st, ct] = sinCos(thetaC);
-    const pivot = sub(socket, scale(sub(scale(aim, st), vec3(0, 0, ct)), radius));
+    // Steps 1 to 5 and 10.
+    const pose = contactPose(setup, world);
+    const { aim, orientation, radius, pivot, head } = pose;
+    const thetaC = pose.thetaContact;
+    const headCentre = pose.headCentre;
     // Step 6: |w|²·ω² + 2·(V₀·w)·ω + |V₀|² − speed² = 0 with w = n × (c − pivot); |V₀| ≤ speed, so the larger root is
     // never negative.
     const pivotVelocity = scale(aim, push.handShare * stroke.speed);
@@ -276,14 +270,6 @@ export function buildContact(setup: ShotSetup, world: World): ContactState {
         coupling: { period: HAND_COUPLING.period, dampingRatio: HAND_COUPLING.dampingRatio, relaxAt: lead },
         hands,
     };
-    // Step 10.
-    const head: MalletHead = {
-        mass: mallet.headMass,
-        inertia: solidCylinderInertia(mallet.headMass, mallet.headLength, rho),
-        length: mallet.headLength,
-        radius: rho,
-        socket: vec3(0, 0, rho),
-    };
     const still = vec3(0, 0, 0);
     const atContact = headLowestPoint(
         { position: headCentre, orientation, velocity: still, angularVelocity: still },
@@ -301,6 +287,94 @@ export function buildContact(setup: ShotSetup, world: World): ContactState {
         );
     }
     return { head, face: WOOD, ...start, drive };
+}
+
+/** A stroke's pose at contact (design §5.2 steps 1–5, 10). */
+export interface ContactPose {
+    readonly head: MalletHead;
+    /** Unit, horizontal. */
+    readonly aim: Vec3;
+    /** θ_c = −lean (rad). */
+    readonly thetaContact: number;
+    readonly orientation: Quaternion;
+    readonly headCentre: Vec3;
+    /** The top hand at contact, P_c, and its distance from the socket along the shaft, r (m). */
+    readonly pivot: Vec3;
+    readonly radius: number;
+}
+
+/**
+ * The contact pose of `setup` on `world` (design §5.2): the arc radius r = top (step 1), θ_c = −lean (step 2), the
+ * head pitched rigidly with the shaft (step 3), its face START_GAP short of the sunk striker at (up, side) (step 4),
+ * the pivot r up the shaft from the socket (step 5), and the head a solid cylinder of the profile's mallet (step 10).
+ * Takes the setup as checked (buildContact).
+ */
+export function contactPose(setup: ShotSetup, world: World): ContactPose {
+    const { stroke, profile } = setup;
+    const striker = setup.balls[setup.striker] as BallState;
+    const { lean, top } = profile.stance[stroke.type];
+    const { mallet } = profile;
+    const rho = mallet.headDiameter / 2;
+    const { up, side } = stroke.contact;
+    const R = world.ball.radius;
+    const surface = world.lawn.surfaceAt(striker.position);
+    const sunk = R - (world.ball.mass * world.gravity) / surface.turfStiffness;
+    const centre = vec3(striker.position.x, striker.position.y, sunk);
+    const radius = top;
+    const thetaC = 0 - lean;
+    const [sa, ca] = sinCos(stroke.aim);
+    const aim = vec3(ca, sa, 0);
+    const orientation = swingOrientation(aim, thetaC);
+    // f the face's outward normal (body x), its upward axis body z, `side` along body y (left of aim).
+    const face = rotate(orientation, vec3(1, 0, 0));
+    const upward = rotate(orientation, vec3(0, 0, 1));
+    const left = rotate(orientation, vec3(0, 1, 0));
+    const faceCentre = sub(sub(sub(centre, scale(face, R + START_GAP)), scale(upward, up)), scale(left, side));
+    const headCentre = sub(faceCentre, scale(face, mallet.headLength / 2));
+    const socket = add(headCentre, scale(upward, rho));
+    const [st, ct] = sinCos(thetaC);
+    const pivot = sub(socket, scale(sub(scale(aim, st), vec3(0, 0, ct)), radius));
+    const head: MalletHead = {
+        mass: mallet.headMass,
+        inertia: solidCylinderInertia(mallet.headMass, mallet.headLength, rho),
+        length: mallet.headLength,
+        radius: rho,
+        socket: vec3(0, 0, rho),
+    };
+    return { head, aim, thetaContact: thetaC, orientation, headCentre, pivot, radius };
+}
+
+/** The stroke's choices the downswing needs (design §3): its mode and shape, the backswing (m) and the intensity. */
+export interface StrokeChoice {
+    readonly mode: StrokeMode;
+    readonly shape: SwingShape;
+    readonly backswing: number;
+    readonly intensity: number;
+}
+
+/**
+ * The downswing's input for `pose` and `choice` (design §3.1): the pendulum of the swung body (the head and `hands`'
+ * arm mass at the top grip) under `gravity`, ℓ_h = ρ + r.
+ */
+export function downswingInput(pose: ContactPose, hands: Hands, choice: StrokeChoice, gravity: number): DownswingInput {
+    const body = swungBody(pose.head, hands, pose.radius);
+    return {
+        mode: choice.mode,
+        aim: pose.aim,
+        thetaContact: pose.thetaContact,
+        pivot: pose.pivot,
+        lever: pose.head.socket.z + pose.radius,
+        pendulum: pendulumOf(pose.head, body, pose.radius, gravity),
+        shape: choice.shape,
+        backswing: choice.backswing,
+        intensity: choice.intensity,
+    };
+}
+
+/** The head's planned speed at contact (design §3.4): |V_c + ω₀·n × (c − P_c)|. */
+export function poseSpeed(pose: ContactPose, planned: PlannedDownswing): number {
+    const lever = cross(pitchAxis(pose.aim), sub(pose.headCentre, pose.pivot));
+    return length(add(planned.handsVelocity, scale(lever, planned.omega)));
 }
 
 /** The coasting path's closest approach to the turf before contact (design §5.2 step 9). */

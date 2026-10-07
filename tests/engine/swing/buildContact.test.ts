@@ -2,17 +2,39 @@ import { describe, expect, it } from "vitest";
 import { headLowestPoint } from "../../../src/engine/impact/contacts";
 import { rotate, solidCylinderInertia } from "../../../src/engine/impact/rigidBody";
 import { simulateImpact } from "../../../src/engine/impact/simulateImpact";
-import { HAND_COUPLING, headOnPath, pitchAxis, prepareTrack } from "../../../src/engine/impact/track";
+import {
+    HAND_COUPLING,
+    headOnPath,
+    pendulumOf,
+    pitchAxis,
+    prepareTrack,
+    swungBody,
+} from "../../../src/engine/impact/track";
 import type { ContactState, StrokeMode, TrackDrive } from "../../../src/engine/impact/types";
 import { add, cross, dot, horizontal, length, scale, sub, vec3, type Vec3 } from "../../../src/engine/math/vec3";
-import { MAX_LEAD, START_GAP, buildContact, swingApproach } from "../../../src/engine/swing/buildContact";
+import {
+    MAX_LEAD,
+    START_GAP,
+    buildContact,
+    contactPose,
+    downswingInput,
+    poseSpeed,
+    swingApproach,
+} from "../../../src/engine/swing/buildContact";
+import { planDownswing } from "../../../src/engine/swing/downswing";
 import { ON_TIME, defaultProfile } from "../../../src/engine/swing/profile";
-import { STROKE_TYPES, type ShotSetup, type StrokeType, type SwingProfile } from "../../../src/engine/swing/types";
+import {
+    STROKE_TYPES,
+    type ShotSetup,
+    type StrokeType,
+    type SwingProfile,
+    type SwingShape,
+} from "../../../src/engine/swing/types";
 import type { BallState } from "../../../src/engine/types";
 import { defaultWorld } from "../../../src/engine/world";
 import { contactReference, malletReference } from "../../../src/reference/index";
 import { TEST_BALL, TEST_TURF, ballAt, testWorld } from "../support/fixtures";
-import { mirrorBall, mirrorContact, mirrorQuat, mirrorSpin, mirrorVec } from "../support/impact";
+import { TEST_HANDS, mirrorBall, mirrorContact, mirrorQuat, mirrorSpin, mirrorVec } from "../support/impact";
 import { CANONICAL_CLEARANCE, GC_STOP_GAP, canonicalSetup, testProfile } from "../support/shot";
 
 const WORLD = testWorld();
@@ -447,5 +469,40 @@ describe("buildContact rejections", () => {
 
     it.each(cases)("rejects %s", (_name, setup, pattern) => {
         expect(() => buildContact(setup, WORLD)).toThrow(pattern);
+    });
+});
+
+describe("contactPose (design §5.2 steps 1–5, 10)", () => {
+    it("is the on-time contact's pose: the head, its centre and orientation, the aim and the top hand", () => {
+        // Met on the up, low on the face: clear of the turf on the way in (the dip test's stance).
+        const setup = shot({ contact: { up: -0.01, side: 0.002 } }, testProfile({ stance: { lean: -0.05 } }));
+        const pose = contactPose(setup, WORLD);
+        const c = buildContact(setup, WORLD);
+        expect(pose.head).toEqual(c.head);
+        // headOnPath rebuilds the centre from the path, which differs from the placed one by rounding (~6e-17 m).
+        expect(dist(pose.headCentre, c.position)).toBeLessThan(1e-12);
+        expect(pose.orientation).toEqual(c.orientation);
+        expect(pose.thetaContact).toBe(0.05);
+        expect(pose.radius).toBe(TOP);
+        expect(pose.aim).toEqual(arcOf(c).aim);
+        expect(pose.pivot).toEqual(arcOf(c).pivot);
+    });
+
+    it("gives the downswing the swung body's pendulum, and the planned speed |V_c + ω₀·n × (c − P_c)|", () => {
+        const pose = contactPose(shot(), WORLD);
+        const hands = { ...TEST_HANDS, armMass: 0.8 };
+        const shape: SwingShape = {
+            pendulumShare: 1,
+            handAngle: 0.5,
+            effort: { torqueMax: 0, tempoSlow: 0.4, tempoFast: 0.2 },
+            handTempo: { slow: 0.4, fast: 0.2 },
+            defaultIntensity: 0,
+        };
+        const input = downswingInput(pose, hands, { mode: "swing", shape, backswing: 0.3, intensity: 0 }, 9.8);
+        expect(input.lever).toBe(RHO + TOP);
+        expect(input.pendulum).toEqual(pendulumOf(pose.head, swungBody(pose.head, hands, TOP), TOP, 9.8));
+        const planned = planDownswing(input);
+        // The hands still: the head swings at ω₀·ℓ_h.
+        expect(poseSpeed(pose, planned)).toBeCloseTo(planned.omega * (RHO + TOP), 12);
     });
 });
