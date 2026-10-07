@@ -155,8 +155,7 @@ describe("buildContact, step by step", () => {
         expect([arc.window, arc.handWindow, arc.arcStart, arc.handStart, arc.contactAt]).toEqual([0.02, 0.03, 0, 0, 0]);
     });
 
-    // Each bisection plans dozens of downswings: past vitest's 5 s default on CI's runners.
-    it("plans the speed the test support's solver asks for", { timeout: 30_000 }, () => {
+    it("plans the speed the test support's solver asks for", () => {
         for (const pendulumShare of [1, 0.6]) {
             const setup = shot({}, testProfile({ shape: { pendulumShare } }));
             const backswing = backswingFor(setup, 2.5, WORLD);

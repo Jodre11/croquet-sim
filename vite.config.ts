@@ -10,5 +10,7 @@ export default defineConfig({
     test: {
         include: ["tests/**/*.test.ts"],
         environment: "node",
+        // Whole-stroke simulations take several seconds on CI's runners, past vitest's 5 s default.
+        testTimeout: 30_000,
     },
 });
