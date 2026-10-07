@@ -738,7 +738,8 @@ function across(v: Vec3, s: Vec3): Vec3 {
  * that makes the path's rigid motion exact for the swung body: F_ff = M·a_c + m·g·ẑ and, about its centre,
  * τ_ff = I'·α_path + ω_path × (I'·ω_path) + r_h × m·g·ẑ. From relaxAt the dip's part F_d = M·a_d is set aside and
  * the rest, F_s, split over the hands so that their moments give τ_ff: the top hand F_∥ + F_T⊥, the bottom hand F_B
- * and the couple τ_ff·s. Before relaxAt both hands grip firmly with springs and dampers. From it they track the
+ * and the couple τ_ff·s. Before relaxAt both hands grip firmly with springs and dampers; on a downswing, dampers and
+ * feed-forward only, with no position spring (P2b.2b.2a user decision 2026-10-07). From it they track the
  * path's velocity only: the top hand γ_T times its share (the whole F_s in swing mode outside a check) plus F_d, and
  * its damper; the bottom hand a one-sided rate guide (swing mode; with g_B·F_B inside a check) or a two-sided grip
  * (carry mode), until it opens once the shaft has turned through the reach slack. In swing mode the guide outside a

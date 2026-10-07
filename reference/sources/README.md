@@ -74,8 +74,8 @@ These are contact speeds against ball travel, not backswing pairs, so `swing.jso
 
 - Single-ball, `riches-index.html.txt`, The Roquet: "The follow-through should be directly along the line of aim, and
   also as low as possible along the ground."
-- Drive: "The grip should be firm enough to ensure a smooth follow-through, in spite of the opposing weight of two balls,
-  rather than one."
+- Drive: "The grip should be firm enough to ensure a smooth follow-through, in spite of the opposing weight of two
+  balls, rather than one."
 - Stop-shot (AC and GC alike): "The most important and distinctive feature of the stop-shot is that there should be NO
   FOLLOW-THROUGH at all, or as little as possible."
 - Half roll: "The grip needs to be firm, with the mallet head following through the ball and onto the ground."
@@ -86,9 +86,9 @@ These are contact speeds against ball travel, not backswing pairs, so `swing.jso
 ## Roll tempo
 
 - Half roll: nothing.
-- Full roll, `riches-index.html.txt`: "It is also usually necessary, depending on the length of the roll and the speed of
-  the court, to incorporate some degree of push and acceleration which, of course, must be smooth and combined with a
-  firm grip in order to avoid suspicions of illegality."
+- Full roll, `riches-index.html.txt`: "It is also usually necessary, depending on the length of the roll and the
+  speed of the court, to incorporate some degree of push and acceleration which, of course, must be smooth and
+  combined with a firm grip in order to avoid suspicions of illegality."
 - Pass roll: "The grip must be very firm, and the mallet head must be moved forward with a pronounced BUT SMOOTH
   acceleration."
 - Three-quarter roll (not a stroke type here): "A SMOOTH acceleration throughout the swing, combined with a firm grip

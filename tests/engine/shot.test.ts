@@ -8,7 +8,7 @@ import type { ContactInterval, HeadState, ImpactResult, TrackDrive } from "../..
 import { ZERO, add, cross, dot, horizontal, length, scale, sub, vec3, type Vec3 } from "../../src/engine/math/vec3";
 import { simulateShot, strokeContext, type ShotOutcome } from "../../src/engine/shot";
 import { simulateFreeMotion } from "../../src/engine/simulate";
-import { buildContact, planStroke, swingApproach } from "../../src/engine/swing/buildContact";
+import { MAX_LEAD, buildContact, planStroke, swingApproach } from "../../src/engine/swing/buildContact";
 import type { SwingTrajectory } from "../../src/engine/swing/trajectory";
 import { STROKE_TYPES, type ShotSetup } from "../../src/engine/swing/types";
 import type { BallId, BallState, Hoop, World } from "../../src/engine/types";
@@ -217,6 +217,10 @@ describe("simulateShot", () => {
     it.each(STROKE_TYPES)("runs the %s canonical setup from the top to its finish (exit criterion 3)", (type) => {
         const outcome = simulateShot(canonicalSetup(type), WORLD, { trajectory: true });
         const trajectory = outcome.trajectory as SwingTrajectory;
+        // Exit criterion 4's identity, on every canonical setup.
+        const plain = simulateShot(canonicalSetup(type), WORLD);
+        expect(outcome.impact).toEqual(plain.impact);
+        expect(outcome.motion).toEqual(plain.motion);
         expect(trajectory.flags).not.toContain("follow-cap");
         expect(outcome.impact.entryJumps?.count).toBe(0);
         expect(trajectory.finish).toBeGreaterThanOrEqual(trajectory.impactEnd);
@@ -454,4 +458,29 @@ describe("the mechanisms (design §8.1), on the canonical setups", () => {
         expect(dug.start).toBeLessThan((hits(early)[0] as ContactInterval).start);
         expect(strikerSpeed(early)).toBeLessThan(strikerSpeed(onTime));
     });
+
+    it.each(["single-ball", "half-roll"] as const)(
+        "a depthless dip MAX_LEAD early on the %s leaves the head on its planned path at contact",
+        (type) => {
+            // Without the position spring on a downswing the impact starts MAX_LEAD early (the dip, handDrop 0, leaves
+            // the path unchanged) and the head must still arrive at the contact pose at the planned speed. The
+            // reviewer measured 2.0-3.24 µm of path error and 3.00000-3.00001 m/s, hence the bounds below.
+            const setup = canonicalSetup(type, { stroke: { timing: { arc: 0, hands: 0, dip: -MAX_LEAD } } });
+            const planned = simulateShot(canonicalSetup(type), WORLD);
+            const contact = simulateShot(setup, WORLD).contact;
+            let atContact: HeadState | undefined;
+            const probe: ImpactProbe = {
+                step: (s) => {
+                    if (atContact === undefined && s.t >= MAX_LEAD - IMPACT_DT / 2) {
+                        atContact = s.head;
+                    }
+                },
+            };
+            simulateImpact(contact, setup.balls, WORLD, { probe });
+            const head = atContact as HeadState;
+            expect(head).toBeDefined();
+            expect(length(sub(head.position, planned.contact.position))).toBeLessThan(5e-6);
+            expect(Math.abs(length(head.velocity) - planned.contactSpeed)).toBeLessThan(1e-4);
+        },
+    );
 });

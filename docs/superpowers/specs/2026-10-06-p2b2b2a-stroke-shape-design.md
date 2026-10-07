@@ -77,6 +77,10 @@ figure and no kinematic pair was sourced: Riches gives only comparisons.
 - Exit criterion 3's continuity tolerance: the 1e-6 m trapezoid check at 1 ms spacing fails on smooth motion with
   |jerk| above about 12,000 m/s³; a pass roll with a long lead misses by 1.35e-6 m. The canonical setups' worst seam
   pair is 5.7e-7 m, so the criterion holds on them. A jerk-scaled bound is the honest general form.
+- Exit criterion 3's velocity bound, as tested (`tests/engine/support/trajectory.ts`): |Δv| at a seam is within 1.5 ×
+  (the largest interior |Δv|/Δt on the side with no impulsive force) × Δt + 1e-4 m/s. With 1 ms samples a literal
+  1e-4 m/s cannot be met, because the mallet's own acceleration moves its velocity by more than that in one sample.
+  The 1e-6 m position check is the trapezoid form above and holds on the canonical setups (worst pair 5.7e-7 m).
 - The fit's sourced `handTempo.slow` branch is dead on this data: Task 1 wrote only a quoted tempo, never a figure.
 - §7.1's work–energy case is tested with a test effort (3 N·m, 0.6 and 0.3 s), not the default placeholder effort.
 - `handAngle` is read and checked only when `pendulumShare` < 1, as §3.2 says.

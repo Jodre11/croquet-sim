@@ -107,7 +107,10 @@ export interface SwingArc {
     readonly groundDepth: number;
     /**
      * The downswing before contactAt (P2b.2b.2a design §3.5): before each window begins, and before contactAt, the
-     * pendulum and the hands follow it. Absent, the path coasts at ω₀ and V₀ (P2b.2b.1).
+     * pendulum and the hands follow it. Absent, the path coasts at ω₀ and V₀ (P2b.2b.1). The table's end state must
+     * equal the arc's contact state: θ at t = 0 equals theta0 + omega0·contactAt and ω equals omega0, and the hands
+     * at contact equal pivot + pivotVelocity·contactAt with velocity pivotVelocity (`planStroke` builds it so); a
+     * hand-built arc that breaks this has a velocity jump at contact.
      */
     readonly downswing?: Downswing;
 }

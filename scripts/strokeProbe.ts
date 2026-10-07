@@ -173,7 +173,8 @@ function cost(): void {
         const swing = down.tempo === null;
         console.log(
             `${type.padEnd(11)} planStroke ${fmt(planMs, 2)} ms (` +
-                `${swing ? `downswing ${downSteps} steps, and the free table` : "closed-form downswing, no free table"}` +
+                `${swing ? `downswing ${downSteps} steps, and the free table` : ""}` +
+                `${swing ? "" : "closed-form downswing, no free table"}` +
                 `); prepareTrack alone ${fmt(prepareMs, 2)} ms (${swing ? "with" : "without"} the free table); ` +
                 `impact ${impactSteps} steps at ${fmt(impactUs / impactSteps, 3)} µs/step; follow-through ` +
                 `${followSteps} steps at ${fmt((strokeUs - impactUs) / Math.max(followSteps, 1), 3)} µs/step`,
