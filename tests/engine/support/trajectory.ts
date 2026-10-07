@@ -29,7 +29,7 @@ export interface BoundaryJump {
     readonly dt: number;
     /** |Δp − ½(v₀ + v₁)·Δt| (m). */
     readonly position: number;
-    /** |Δv| (m/s), and its bound: ACCEL_MARGIN times the interior pairs' largest |Δv|/Δt, times Δt, plus slack. */
+    /** |Δv| (m/s), and its bound: ACCEL_MARGIN times one side's largest interior |Δv|/Δt, times Δt, plus slack. */
     readonly velocity: number;
     readonly bound: number;
 }
@@ -43,18 +43,21 @@ function rate(samples: readonly StrokeSample[], i: number): number {
     return length(sub(b.velocity, a.velocity)) / (b.t - a.t);
 }
 
-/** The jump across the pair (i, i + 1), bounded by the INTERIOR_PAIRS pairs before i and after i + 1. */
-function jumpAt(samples: readonly StrokeSample[], name: string, i: number): BoundaryJump {
+/** Which side of a boundary sets its acceleration bound: the one whose motion carries no impulsive force. */
+type Side = "before" | "after";
+
+/** The jump across the pair (i, i + 1), bounded by the INTERIOR_PAIRS pairs before i or after i + 1 (`side`). */
+function jumpAt(samples: readonly StrokeSample[], name: string, i: number, side: Side): BoundaryJump {
     const a = at(samples, i);
     const b = at(samples, i + 1);
     const dt = b.t - a.t;
     const trapezoid = scale(add(a.velocity, b.velocity), 0.5 * dt);
     let accel = 0;
     for (let k = 1; k <= INTERIOR_PAIRS; k++) {
-        if (i - k >= 0) {
+        if (side === "before" && i - k >= 0) {
             accel = Math.max(accel, rate(samples, i - k));
         }
-        if (i + k + 1 < samples.length) {
+        if (side === "after" && i + k + 1 < samples.length) {
             accel = Math.max(accel, rate(samples, i + k));
         }
     }
@@ -83,25 +86,28 @@ function lastAtOrBefore(samples: readonly StrokeSample[], t: number): number {
  * where the impact starts before it, the pair spanning it); the impact's
  * start (the downswing's last sample against the integrator's first; none when the impact starts before the
  * release); the impact's end (the impact loop's last state against the follow-through's first sample); and, for a
- * stop, the hold's start, max(the check's window's end, the impact's end), the pair spanning the first held step. A
- * boundary at the last sample (a follow-through finished where the impact ended) has no pair and no jump.
+ * stop, the hold's start, max(the check's window's end, the impact's end), the pair spanning the first held step. The
+ * acceleration bound comes from the downswing's side at the impact's start, and elsewhere from the side away from
+ * the impact: the downswing after the release, the follow-through after the impact's end and the hold. A boundary at
+ * the last sample (a follow-through finished where the impact ended) has no pair and no jump.
  */
 export function boundaryJumps(trajectory: SwingTrajectory, drive: TrackDrive): BoundaryJump[] {
     const { samples } = trajectory;
     const { arc } = drive;
-    const jumps: BoundaryJump[] = [jumpAt(samples, "release", lastAtOrBefore(samples, trajectory.top))];
+    const jumps: BoundaryJump[] = [jumpAt(samples, "release", lastAtOrBefore(samples, trajectory.top), "after")];
     const start = lastAtOrBefore(samples, trajectory.impactStart);
     if (start > 0) {
-        jumps.push(jumpAt(samples, "impact start", start - 1));
+        jumps.push(jumpAt(samples, "impact start", start - 1, "before"));
     }
     const end = lastAtOrBefore(samples, trajectory.impactEnd);
     if (end + 1 < samples.length) {
-        jumps.push(jumpAt(samples, "impact end", end));
+        jumps.push(jumpAt(samples, "impact end", end, "after"));
     }
+    // integrate.ts's continueStroke: a check (swing mode, α < 0) holds from max(the window's end, the impact's end).
     if (arc.mode === "swing" && arc.alpha < 0) {
         const hold = lastAtOrBefore(samples, Math.max(arc.arcStart + arc.window - arc.contactAt, trajectory.impactEnd));
         if (hold + 1 < samples.length) {
-            jumps.push(jumpAt(samples, "hold", hold));
+            jumps.push(jumpAt(samples, "hold", hold, "after"));
         }
     }
     return jumps;

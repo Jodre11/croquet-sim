@@ -12,6 +12,12 @@ import { add, scale, vec3, type Vec3 } from "../math/vec3";
 
 const UP = vec3(0, 0, 1);
 
+/**
+ * A downswing sample this close (s) before the impact's start is left out: the integrator's first sample stands for
+ * it. Numerical, not physical: far below IMPACT_DT, so no pair of samples is ever closer than it.
+ */
+const SAME_INSTANT = 1e-9;
+
 /** One sample of the whole stroke (design §4.3): the head's pose and velocity, and the hands on its shaft. */
 export interface StrokeSample {
     /** s from contact. */
@@ -27,8 +33,10 @@ export interface StrokeSample {
 
 /**
  * The whole stroke from the backswing's top to the finish, every FOLLOW_SAMPLE and at each boundary (design §4.3).
- * An impact that starts before the release (a lead longer than the downswing) holds the head at the top until it, so
- * the samples then start at the impact's start, the head at rest there.
+ * An impact that starts before the release (a lead longer than the downswing) starts with the head at rest at the top,
+ * the hands held there until the release (a window timed before it may already swing the pendulum), so the samples
+ * then start at the impact's start, and the release's sample is the integrator's first step at or after it (within
+ * IMPACT_DT).
  */
 export interface SwingTrajectory {
     readonly samples: readonly StrokeSample[];
@@ -69,7 +77,7 @@ export function strokeTrajectory(contact: ContactState, follow: FollowThrough, g
     const samples: StrokeSample[] = [];
     const track = prepareTrack(drive, head, gravity);
     const impactStart = 0 - arc.contactAt;
-    for (let k = 0; release + k * FOLLOW_SAMPLE < impactStart; k++) {
+    for (let k = 0; release + k * FOLLOW_SAMPLE < impactStart - SAME_INSTANT; k++) {
         const t = release + k * FOLLOW_SAMPLE;
         samples.push(sample(t, headOnPath(track, head, t + arc.contactAt)));
     }

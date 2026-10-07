@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { FOLLOW_SAMPLE } from "../../../src/engine/impact/integrate";
+import { FOLLOW_SAMPLE, IMPACT_DT } from "../../../src/engine/impact/integrate";
 import { rotate } from "../../../src/engine/impact/rigidBody";
 import {
     downswingAt,
@@ -17,7 +17,7 @@ import { strokeTrajectory, type StrokeSample, type SwingTrajectory } from "../..
 import type { BallState } from "../../../src/engine/types";
 import { defaultWorld } from "../../../src/engine/world";
 import { canonicalSetup } from "../support/shot";
-import { POSITION_SLACK, boundaryJumps, type BoundaryJump } from "../support/trajectory";
+import { POSITION_SLACK, boundaryJumps } from "../support/trajectory";
 
 const WORLD = defaultWorld();
 const setup = canonicalSetup("drive", { world: WORLD });
@@ -39,7 +39,7 @@ describe("strokeTrajectory (design §4.3)", () => {
         expect((samples[samples.length - 1] as StrokeSample).t).toBeCloseTo(trajectory.finish, 12);
         for (let i = 1; i < samples.length; i++) {
             const gap = (samples[i] as StrokeSample).t - (samples[i - 1] as StrokeSample).t;
-            expect(gap).toBeGreaterThan(0);
+            expect(gap).toBeGreaterThanOrEqual(1e-9);
             expect(gap).toBeLessThanOrEqual(FOLLOW_SAMPLE + 1e-12);
         }
     });
@@ -103,16 +103,16 @@ describe("strokeTrajectory (design §4.3)", () => {
         }
     });
 
-    it("starts at the impact's start, the head held at the top, when the lead outlasts the downswing", () => {
-        // A full roll with a 0.13 s hands' tempo (release 0.13 s before contact) and its arc 0.145 s early: the impact
-        // starts 15 ms before the release, while the path still holds the head at the top, so no downswing samples
-        // come first. The release then falls between two of the integrator's samples, where carry mode's constant
-        // acceleration starts: velocity stays continuous, but the trapezoid rule misses by ~a·Δt²/8 (0.68 µm here,
-        // near the 1 µm tolerance), so only the velocity is checked there.
+    it("starts at the impact's start, the head at rest at the top, when the lead outlasts the downswing", () => {
+        // A full roll with a 0.13 s hands' tempo (release 0.13 s before contact) and its arc 0.1455 s early: the
+        // impact starts 15.5 ms before the release, the hands still at the top, so no downswing samples come first.
+        // The release falls midway between two 1 ms samples, and carry mode's hands start accelerating there (the
+        // head's acceleration steps from ~38 to ~205 m/s²): without a sample at it the trapezoid rule across it
+        // misses by ~Δa·Δt²/8, about 20 µm. The integrator samples its first step at or after the release instead.
         const shot = canonicalSetup("full-roll", {
             world: WORLD,
             shape: { handTempo: { slow: 0.13, fast: 0.065 } },
-            stroke: { timing: { arc: -0.145, hands: 0, dip: 0 } },
+            stroke: { timing: { arc: -0.1455, hands: 0, dip: 0 } },
         });
         const traced = simulateShot(shot, WORLD, { trajectory: true });
         const late = traced.trajectory as SwingTrajectory;
@@ -123,12 +123,14 @@ describe("strokeTrajectory (design §4.3)", () => {
         expect(first.t).toBe(late.impactStart);
         expect(length(first.velocity)).toBe(0);
         expect(length(sub(first.top, (roll.arc.downswing as Downswing).handsTop))).toBeLessThan(1e-9);
+        const release = late.samples.find((s) => s.t >= late.top) as StrokeSample;
+        expect(release.t - late.top).toBeLessThanOrEqual(IMPACT_DT + 1e-12);
         const jumps = boundaryJumps(late, roll);
         expect(jumps.map((j) => j.name)).toEqual(["release", "impact end"]);
         for (const jump of jumps) {
+            expect(jump.position, jump.name).toBeLessThanOrEqual(POSITION_SLACK);
             expect(jump.velocity, jump.name).toBeLessThanOrEqual(jump.bound);
         }
-        expect((jumps[1] as BoundaryJump).position).toBeLessThanOrEqual(POSITION_SLACK);
     });
 
     it("throws a RangeError for a contact state with no downswing", () => {

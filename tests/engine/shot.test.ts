@@ -222,6 +222,8 @@ describe("simulateShot", () => {
         expect(trajectory.finish).toBeGreaterThanOrEqual(trajectory.impactEnd);
         const jumps = boundaryJumps(trajectory, outcome.contact.drive as TrackDrive);
         // The release, the impact's start (every canonical downswing outlasts its lead) and end, and a stop's hold.
+        // The hold is never a seam of its own: the impact cannot end before the drive's windows have (integrate's
+        // `driveEnd`), so holdFrom = max(window end, impactEnd) is the impact's end unless the impact caps.
         expect(jumps).toHaveLength(type === "stop-ac" || type === "stop-gc" ? 4 : 3);
         for (const jump of jumps) {
             expect(jump.position, jump.name).toBeLessThanOrEqual(POSITION_SLACK);
