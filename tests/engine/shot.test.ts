@@ -8,12 +8,14 @@ import type { ContactInterval, HeadState, ImpactResult, TrackDrive } from "../..
 import { ZERO, add, cross, dot, horizontal, length, scale, sub, vec3, type Vec3 } from "../../src/engine/math/vec3";
 import { simulateShot, strokeContext, type ShotOutcome } from "../../src/engine/shot";
 import { simulateFreeMotion } from "../../src/engine/simulate";
-import { buildContact, swingApproach } from "../../src/engine/swing/buildContact";
+import { buildContact, planStroke, swingApproach } from "../../src/engine/swing/buildContact";
+import type { SwingTrajectory } from "../../src/engine/swing/trajectory";
 import { STROKE_TYPES, type ShotSetup } from "../../src/engine/swing/types";
 import type { BallId, BallState, Hoop, World } from "../../src/engine/types";
 import { defaultWorld, hoopHalfSpan, hoopLateral } from "../../src/engine/world";
 import { recorder } from "./support/impact";
 import { CANONICAL_STRIKER, GC_STOP_GAP, backswingFor, canonicalSetup } from "./support/shot";
+import { POSITION_SLACK, boundaryJumps } from "./support/trajectory";
 
 const WORLD = defaultWorld();
 const R = WORLD.ball.radius;
@@ -151,8 +153,8 @@ describe("simulateShot", () => {
     it.each(STROKE_TYPES)("runs the %s canonical setup with no entry jump and no ball above R + 5 mm", (type) => {
         // Exit criterion 4. Prototype (pass 4, design §5.4 values), highest centre above R over the impact and the
         // flights: 0.85 mm single-ball, 0.93 drive, 4.17 stop-ac (the rising strike), 0.72 half roll, 0.82 full roll,
-        // 2.92 pass roll; no entry jump anywhere. Pre-flight re-measures them, and measures stop-gc on its target
-        // setup (its 0.81 mm was on the retired touching setup).
+        // 2.92 pass roll; no entry jump anywhere (P2b.2b.1; Task 10 re-measures them). Pre-flight re-measures them,
+        // and measures stop-gc on its target setup (its 0.81 mm was on the retired touching setup).
         const setup = canonicalSetup(type);
         const outcome = simulateShot(setup);
         expect(outcome.impact.entryJumps?.count).toBe(0);
@@ -185,6 +187,46 @@ describe("simulateShot", () => {
         expect(outcome.context).toEqual(strokeContext(setup, outcome.impact));
         expect(outcome.faults).toEqual(judgeFaults(outcome.context, outcome.impact));
         expect(outcome.motion).toEqual(simulateFreeMotion(outcome.impact.handover, WORLD));
+    });
+
+    it("returns the plan's contact speed and approach", () => {
+        const setup = canonicalSetup("half-roll");
+        const outcome = simulateShot(setup);
+        const plan = planStroke(setup, WORLD);
+        expect(outcome.contactSpeed).toBe(plan.contactSpeed);
+        expect(outcome.approach).toEqual(plan.approach);
+    });
+
+    it("returns the same impact with or without the trajectory (exit criterion 4)", () => {
+        const setup = canonicalSetup("half-roll");
+        const plain = simulateShot(setup);
+        const traced = simulateShot(setup, undefined, { trajectory: true });
+        expect(plain).not.toHaveProperty("trajectory");
+        expect(traced.impact).toEqual(plain.impact);
+        expect(traced.motion).toEqual(plain.motion);
+        expect(traced.trajectory).toBeDefined();
+    });
+
+    it("lets a passed world win: lawnSpeed is then neither read nor checked", () => {
+        // Spec §9 (user decision, 2026-10-06).
+        const setup = { ...canonicalSetup("single-ball"), lawnSpeed: 0 };
+        expect(() => simulateShot(setup)).toThrow(/lawnSpeed/);
+        expect(simulateShot(setup, WORLD).motion.aborted).toBe(false);
+    });
+
+    it.each(STROKE_TYPES)("runs the %s canonical setup from the top to its finish (exit criterion 3)", (type) => {
+        const outcome = simulateShot(canonicalSetup(type), WORLD, { trajectory: true });
+        const trajectory = outcome.trajectory as SwingTrajectory;
+        expect(trajectory.flags).not.toContain("follow-cap");
+        expect(outcome.impact.entryJumps?.count).toBe(0);
+        expect(trajectory.finish).toBeGreaterThanOrEqual(trajectory.impactEnd);
+        const jumps = boundaryJumps(trajectory, outcome.contact.drive as TrackDrive);
+        // The release, the impact's start (every canonical downswing outlasts its lead) and end, and a stop's hold.
+        expect(jumps).toHaveLength(type === "stop-ac" || type === "stop-gc" ? 4 : 3);
+        for (const jump of jumps) {
+            expect(jump.position, jump.name).toBeLessThanOrEqual(POSITION_SLACK);
+            expect(jump.velocity, jump.name).toBeLessThanOrEqual(jump.bound);
+        }
     });
 
     it("judges 'plays away from' on a whole croquet stroke at 90.1° from the line of centres, not at 89.9°", () => {
