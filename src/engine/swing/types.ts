@@ -69,6 +69,22 @@ export interface SwingDrive {
     readonly guideEffort: number;
 }
 
+/**
+ * How a stroke type's whole stroke is shaped (P2b.2b.2a design §3, §5.1). `pendulumShare` (in [0, 1]) of the
+ * backswing's height comes from the pendulum and the rest from the hands, which start back and up along `handAngle`
+ * (rad above horizontal; read only when the share is below 1). Swing mode reads `effort`: the player's torque pulse
+ * peaks at intensity·torqueMax (N·m) over a duration from `tempoSlow` (s, intensity 0) to `tempoFast` (s, intensity
+ * 1). Carry mode reads `handTempo`: the hands' downswing lasts from `slow` (s, intensity 0) to `fast` (s, intensity 1).
+ * `defaultIntensity` (in [0, 1]) stands for a shot that gives none.
+ */
+export interface SwingShape {
+    readonly pendulumShare: number;
+    readonly handAngle: number;
+    readonly effort: { readonly torqueMax: number; readonly tempoSlow: number; readonly tempoFast: number };
+    readonly handTempo: { readonly slow: number; readonly fast: number };
+    readonly defaultIntensity: number;
+}
+
 /** The physical part of a player's profile (design §5.1); P3 wraps it into the stored profile. */
 export interface SwingProfile {
     readonly mallet: {
