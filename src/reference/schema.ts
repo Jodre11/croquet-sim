@@ -11,6 +11,8 @@ export interface Sourced {
     readonly source: string;
     readonly provenance: Provenance;
     readonly note?: string;
+    /** "placeholder": a labelled stand-in until data or a fit replaces it (P2b.2b.2a design §6.2). */
+    readonly provisional?: "placeholder";
 }
 
 /** A sourced numeric value in SI units, optionally with plausible bounds. */
@@ -83,9 +85,15 @@ export function readSourced(section: unknown, path: string): Sourced {
     if (!PROVENANCES.includes(provenance)) {
         throw new ReferenceDataError(`${path}.provenance`, `must be one of ${PROVENANCES.join(", ")}`);
     }
-    const sourced: Sourced = { source, provenance: provenance as Provenance };
+    let sourced: Sourced = { source, provenance: provenance as Provenance };
     if ("note" in section) {
-        return { ...sourced, note: readString(section, "note", path) };
+        sourced = { ...sourced, note: readString(section, "note", path) };
+    }
+    if ("provisional" in section) {
+        if (readString(section, "provisional", path) !== "placeholder") {
+            throw new ReferenceDataError(`${path}.provisional`, 'must be "placeholder"');
+        }
+        sourced = { ...sourced, provisional: "placeholder" };
     }
     return sourced;
 }

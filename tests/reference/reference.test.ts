@@ -8,7 +8,10 @@ import {
     lawnReference,
     lawsReference,
     malletReference,
+    SWING_REFERENCE_TYPES,
+    swingReference,
 } from "../../src/reference/index";
+import { STROKE_TYPES } from "../../src/engine/swing/types";
 
 describe("reference data", () => {
     it("loads every topic", () => {
@@ -129,5 +132,53 @@ describe("swing, coupling and head–turf reference data", () => {
         const keys: readonly string[] = FAULT_LAW_KEYS;
         expect(keys.indexOf("29.1.14")).toBe(keys.indexOf("29.1.13") + 1);
         expect(lawsReference.faults["29.1.14"].quote).toContain("damages the court with the mallet");
+    });
+});
+
+describe("swing reference (P2b.2b.2a design §6.1)", () => {
+    it("has an entry for every stroke type, in the presets' order", () => {
+        expect(SWING_REFERENCE_TYPES).toEqual(STROKE_TYPES);
+        expect(Object.keys(swingReference)).toEqual([...STROKE_TYPES]);
+    });
+
+    it("keeps the top hand still in every swing preset", () => {
+        for (const type of ["single-ball", "drive", "stop-ac", "stop-gc"] as const) {
+            expect(swingReference[type].pendulumShare.value, type).toBe(1);
+        }
+    });
+
+    it("gives every stroke type a share in [0, 1], a hands' angle in (0, 90°) and a finish", () => {
+        for (const type of SWING_REFERENCE_TYPES) {
+            const shape = swingReference[type];
+            expect(shape.pendulumShare.value, type).toBeGreaterThanOrEqual(0);
+            expect(shape.pendulumShare.value, type).toBeLessThanOrEqual(1);
+            expect(shape.handAngle.value, type).toBeGreaterThan(0);
+            expect(shape.handAngle.value, type).toBeLessThan(Math.PI / 2);
+            expect(shape.finish.quote.length, type).toBeGreaterThan(0);
+        }
+    });
+
+    it("gives every sourced range low ≤ high, and every kinematic pair one measure", () => {
+        for (const type of SWING_REFERENCE_TYPES) {
+            const { backswingRange, kinematics } = swingReference[type];
+            if (backswingRange !== null) {
+                expect(backswingRange.low.value, type).toBeLessThanOrEqual(backswingRange.high.value);
+                expect(backswingRange.low.value, type).toBeGreaterThan(0);
+            }
+            for (const pair of kinematics) {
+                expect(pair.backswing, type).toBeGreaterThan(0);
+                expect((pair.contactSpeed === null) !== (pair.downswingTime === null), type).toBe(true);
+            }
+        }
+    });
+
+    it("marks every placeholder as derived", () => {
+        for (const type of SWING_REFERENCE_TYPES) {
+            for (const entry of [swingReference[type].pendulumShare, swingReference[type].handAngle]) {
+                if (entry.provisional === "placeholder") {
+                    expect(entry.provenance, type).toBe("derived");
+                }
+            }
+        }
     });
 });

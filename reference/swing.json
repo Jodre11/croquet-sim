@@ -1,0 +1,183 @@
+{
+    "single-ball": {
+        "pendulumShare": {
+            "value": 1,
+            "unit": "1",
+            "bounds": [0, 1],
+            "source": "P2b.2b.2a design §3.3 (docs/superpowers/specs/2026-10-06-p2b2b2a-stroke-shape-design.md): every default swing preset has pendulumShare 1, the top hand staying put",
+            "provenance": "derived",
+            "note": "Riches' roquet chapter has no still top hand: \"The arms should swing freely from the shoulders so that the hands move FORWARDS throughout the swing\". The default's top hand staying put is the design's choice, not a sourced figure."
+        },
+        "handAngle": {
+            "value": 0.5235987755982988,
+            "unit": "rad",
+            "bounds": [0, 1.5707963267948966],
+            "source": "P2b.2b.2a plan, placeholder rule: 30° for every hands' angle (docs/superpowers/plans/2026-10-07-p2b2b2a-stroke-shape.md)",
+            "provenance": "derived",
+            "provisional": "placeholder",
+            "note": "Unread while pendulumShare is 1."
+        },
+        "finish": {
+            "quote": "The follow-through should be directly along the line of aim, and also as low as possible along the ground.",
+            "source": "John Riches, Croquet Technique, 'The Roquet' (Oxford Croquet), http://www.oxfordcroquet.com/coach/riches/croqtech/index.asp",
+            "provenance": "direct"
+        }
+    },
+    "drive": {
+        "pendulumShare": {
+            "value": 1,
+            "unit": "1",
+            "bounds": [0, 1],
+            "source": "P2b.2b.2a design §3.3 (docs/superpowers/specs/2026-10-06-p2b2b2a-stroke-shape-design.md): every default swing preset has pendulumShare 1, the top hand staying put",
+            "provenance": "derived",
+            "note": "Riches' roquet chapter has no still top hand: \"The arms should swing freely from the shoulders so that the hands move FORWARDS throughout the swing\". The default's top hand staying put is the design's choice, not a sourced figure."
+        },
+        "handAngle": {
+            "value": 0.5235987755982988,
+            "unit": "rad",
+            "bounds": [0, 1.5707963267948966],
+            "source": "P2b.2b.2a plan, placeholder rule: 30° for every hands' angle (docs/superpowers/plans/2026-10-07-p2b2b2a-stroke-shape.md)",
+            "provenance": "derived",
+            "provisional": "placeholder",
+            "note": "Unread while pendulumShare is 1."
+        },
+        "finish": {
+            "quote": "The grip should be firm enough to ensure a smooth follow-through, in spite of the opposing weight of two balls, rather than one.",
+            "source": "John Riches, Croquet Technique, 'The Drive' (Oxford Croquet), http://www.oxfordcroquet.com/coach/riches/croqtech/index.asp",
+            "provenance": "direct"
+        }
+    },
+    "stop-ac": {
+        "pendulumShare": {
+            "value": 1,
+            "unit": "1",
+            "bounds": [0, 1],
+            "source": "P2b.2b.2a design §3.3 (docs/superpowers/specs/2026-10-06-p2b2b2a-stroke-shape-design.md): every default swing preset has pendulumShare 1, the top hand staying put",
+            "provenance": "derived",
+            "note": "Riches' roquet chapter has no still top hand: \"The arms should swing freely from the shoulders so that the hands move FORWARDS throughout the swing\". The default's top hand staying put is the design's choice, not a sourced figure."
+        },
+        "handAngle": {
+            "value": 0.5235987755982988,
+            "unit": "rad",
+            "bounds": [0, 1.5707963267948966],
+            "source": "P2b.2b.2a plan, placeholder rule: 30° for every hands' angle (docs/superpowers/plans/2026-10-07-p2b2b2a-stroke-shape.md)",
+            "provenance": "derived",
+            "provisional": "placeholder",
+            "note": "Unread while pendulumShare is 1."
+        },
+        "finish": {
+            "quote": "The most important and distinctive feature of the stop-shot is that there should be NO FOLLOW-THROUGH at all, or as little as possible.",
+            "source": "John Riches, Croquet Technique, 'The Stop-Shot' (Oxford Croquet), http://www.oxfordcroquet.com/coach/riches/croqtech/index.asp",
+            "provenance": "direct"
+        }
+    },
+    "stop-gc": {
+        "pendulumShare": {
+            "value": 1,
+            "unit": "1",
+            "bounds": [0, 1],
+            "source": "P2b.2b.2a design §3.3 (docs/superpowers/specs/2026-10-06-p2b2b2a-stroke-shape-design.md): every default swing preset has pendulumShare 1, the top hand staying put",
+            "provenance": "derived",
+            "note": "Riches' roquet chapter has no still top hand: \"The arms should swing freely from the shoulders so that the hands move FORWARDS throughout the swing\". The default's top hand staying put is the design's choice, not a sourced figure."
+        },
+        "handAngle": {
+            "value": 0.5235987755982988,
+            "unit": "rad",
+            "bounds": [0, 1.5707963267948966],
+            "source": "P2b.2b.2a plan, placeholder rule: 30° for every hands' angle (docs/superpowers/plans/2026-10-07-p2b2b2a-stroke-shape.md)",
+            "provenance": "derived",
+            "provisional": "placeholder",
+            "note": "Unread while pendulumShare is 1."
+        },
+        "finish": {
+            "quote": "The most important and distinctive feature of the stop-shot is that there should be NO FOLLOW-THROUGH at all, or as little as possible.",
+            "source": "John Riches, Croquet Technique, 'The Stop-Shot' (Oxford Croquet), http://www.oxfordcroquet.com/coach/riches/croqtech/index.asp",
+            "provenance": "direct"
+        }
+    },
+    "half-roll": {
+        "pendulumShare": {
+            "value": 0.4,
+            "unit": "1",
+            "bounds": [0, 1],
+            "source": "P2b.2b.2a plan, placeholder rule: 1 − the P2b.2b.1 handShare (docs/superpowers/plans/2026-10-07-p2b2b2a-stroke-shape.md)",
+            "provenance": "derived",
+            "provisional": "placeholder",
+            "note": "No split between the pendulum and the hands was found (reference/sources/README.md). P2b.2b.1's preset gave the hands 60 % of the head's speed (swing spec §5.4)."
+        },
+        "handAngle": {
+            "value": 0.5235987755982988,
+            "unit": "rad",
+            "bounds": [0, 1.5707963267948966],
+            "source": "P2b.2b.2a plan, placeholder rule: 30° for every hands' angle (docs/superpowers/plans/2026-10-07-p2b2b2a-stroke-shape.md)",
+            "provenance": "derived",
+            "provisional": "placeholder",
+            "note": "No hands' backswing angle was found (reference/sources/README.md). Riches gives handle slopes (75° half roll, 45° full roll), which are the mallet's slope, not the hands' backswing line."
+        },
+        "finish": {
+            "quote": "The grip needs to be firm, with the mallet head following through the ball and onto the ground.",
+            "source": "John Riches, Croquet Technique, 'The Half-Roll' (Oxford Croquet), http://www.oxfordcroquet.com/coach/riches/croqtech/index.asp",
+            "provenance": "direct"
+        }
+    },
+    "full-roll": {
+        "pendulumShare": {
+            "value": 0.1,
+            "unit": "1",
+            "bounds": [0, 1],
+            "source": "P2b.2b.2a plan, placeholder rule: 1 − the P2b.2b.1 handShare (docs/superpowers/plans/2026-10-07-p2b2b2a-stroke-shape.md)",
+            "provenance": "derived",
+            "provisional": "placeholder",
+            "note": "No split between the pendulum and the hands was found (reference/sources/README.md). P2b.2b.1's preset gave the hands 90 % of the head's speed (swing spec §5.4)."
+        },
+        "handAngle": {
+            "value": 0.5235987755982988,
+            "unit": "rad",
+            "bounds": [0, 1.5707963267948966],
+            "source": "P2b.2b.2a plan, placeholder rule: 30° for every hands' angle (docs/superpowers/plans/2026-10-07-p2b2b2a-stroke-shape.md)",
+            "provenance": "derived",
+            "provisional": "placeholder",
+            "note": "No hands' backswing angle was found (reference/sources/README.md). Riches gives handle slopes (75° half roll, 45° full roll), which are the mallet's slope, not the hands' backswing line."
+        },
+        "finish": {
+            "quote": "The follow-through should be as long as possible, with the mallet head moving low along the ground.",
+            "source": "John Riches, Croquet Technique, 'The Roll' (Oxford Croquet), http://www.oxfordcroquet.com/coach/riches/croqtech/index.asp",
+            "provenance": "direct"
+        },
+        "tempo": {
+            "quote": "It is also usually necessary, depending on the length of the roll and the speed of the court, to incorporate some degree of push and acceleration which, of course, must be smooth and combined with a firm grip in order to avoid suspicions of illegality.",
+            "source": "John Riches, Croquet Technique, 'The Roll' (Oxford Croquet), http://www.oxfordcroquet.com/coach/riches/croqtech/index.asp",
+            "provenance": "direct"
+        }
+    },
+    "pass-roll": {
+        "pendulumShare": {
+            "value": 0.15,
+            "unit": "1",
+            "bounds": [0, 1],
+            "source": "P2b.2b.2a plan, placeholder rule: 1 − the P2b.2b.1 handShare (docs/superpowers/plans/2026-10-07-p2b2b2a-stroke-shape.md)",
+            "provenance": "derived",
+            "provisional": "placeholder",
+            "note": "No split between the pendulum and the hands was found (reference/sources/README.md). P2b.2b.1's preset gave the hands 85 % of the head's speed (swing spec §5.4)."
+        },
+        "handAngle": {
+            "value": 0.5235987755982988,
+            "unit": "rad",
+            "bounds": [0, 1.5707963267948966],
+            "source": "P2b.2b.2a plan, placeholder rule: 30° for every hands' angle (docs/superpowers/plans/2026-10-07-p2b2b2a-stroke-shape.md)",
+            "provenance": "derived",
+            "provisional": "placeholder",
+            "note": "No hands' backswing angle was found (reference/sources/README.md). Riches gives handle slopes (75° half roll, 45° full roll), which are the mallet's slope, not the hands' backswing line."
+        },
+        "finish": {
+            "quote": "Many players obtain best results by hitting through the TOP HALF of the two balls, with very little backswing but an exaggerated (low) follow-through.",
+            "source": "John Riches, Croquet Technique, 'The Pass Roll' (Oxford Croquet), http://www.oxfordcroquet.com/coach/riches/croqtech/index.asp",
+            "provenance": "direct"
+        },
+        "tempo": {
+            "quote": "The grip must be very firm, and the mallet head must be moved forward with a pronounced BUT SMOOTH acceleration.",
+            "source": "John Riches, Croquet Technique, 'The Pass Roll' (Oxford Croquet), http://www.oxfordcroquet.com/coach/riches/croqtech/index.asp",
+            "provenance": "direct"
+        }
+    }
+}

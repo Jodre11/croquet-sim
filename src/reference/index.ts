@@ -9,6 +9,7 @@ import frictionJson from "../../reference/friction.json";
 import lawnJson from "../../reference/lawn.json";
 import lawsJson from "../../reference/laws.json";
 import malletJson from "../../reference/mallet.json";
+import swingJson from "../../reference/swing.json";
 import {
     ReferenceDataError,
     readArray,
@@ -18,6 +19,7 @@ import {
     readString,
     readValue,
     type ReferenceQuote,
+    type ReferenceValue,
     type Sourced,
 } from "./schema";
 
@@ -182,3 +184,94 @@ export const malletReference = {
     headDiameter: readValue(malletJson, "headDiameter", "mallet"),
     shaftLength: readValue(malletJson, "shaftLength", "mallet"),
 } as const;
+
+/** The stroke types reference/swing.json keys, in the presets' order (the engine's STROKE_TYPES). */
+export const SWING_REFERENCE_TYPES = [
+    "single-ball",
+    "drive",
+    "stop-ac",
+    "stop-gc",
+    "half-roll",
+    "full-roll",
+    "pass-roll",
+] as const;
+
+/** A key of `swingReference`. */
+export type SwingReferenceType = (typeof SWING_REFERENCE_TYPES)[number];
+
+/**
+ * A sourced kinematic pair (P2b.2b.2a design §6.1): a backswing (m, the head centre's rise) against the contact speed
+ * (m/s) or the downswing time (s) measured with it; exactly one of the two.
+ */
+export interface KinematicPair extends Sourced {
+    readonly backswing: number;
+    readonly contactSpeed: number | null;
+    readonly downswingTime: number | null;
+}
+
+/** One stroke type's stroke-shape figures (reference/swing.json; P2b.2b.2a design §6). */
+export interface StrokeShapeReference {
+    readonly pendulumShare: ReferenceValue;
+    readonly handAngle: ReferenceValue;
+    /** The sourced backswing range (m), or null where none was found. */
+    readonly backswingRange: { readonly low: ReferenceValue; readonly high: ReferenceValue } | null;
+    readonly finish: ReferenceQuote;
+    /** The rolls' sourced tempo, or null. */
+    readonly tempo: ReferenceQuote | null;
+    readonly kinematics: readonly KinematicPair[];
+}
+
+function has(section: unknown, key: string): boolean {
+    return typeof section === "object" && section !== null && key in section;
+}
+
+function readPairs(entry: unknown, path: string): readonly KinematicPair[] {
+    if (!has(entry, "kinematics")) {
+        return [];
+    }
+    return readArray(entry, "kinematics", path).map((item, i) => {
+        const at = `${path}.kinematics[${i}]`;
+        const contactSpeed = has(item, "contactSpeed") ? readNumber(item, "contactSpeed", at) : null;
+        const downswingTime = has(item, "downswingTime") ? readNumber(item, "downswingTime", at) : null;
+        if ((contactSpeed === null) === (downswingTime === null)) {
+            throw new ReferenceDataError(at, "must give exactly one of contactSpeed and downswingTime");
+        }
+        return {
+            backswing: readNumber(item, "backswing", at),
+            contactSpeed,
+            downswingTime,
+            ...readSourced(item, at),
+        };
+    });
+}
+
+function readShape(section: unknown, type: SwingReferenceType): StrokeShapeReference {
+    const path = `swing.${type}`;
+    if (!has(section, type)) {
+        throw new ReferenceDataError(path, "missing");
+    }
+    const entry = (section as Record<string, unknown>)[type];
+    const low = has(entry, "backswingLow");
+    if (low !== has(entry, "backswingHigh")) {
+        throw new ReferenceDataError(path, "backswingLow and backswingHigh must be given together");
+    }
+    const backswingRange = low
+        ? { low: readValue(entry, "backswingLow", path), high: readValue(entry, "backswingHigh", path) }
+        : null;
+    if (backswingRange !== null && !(backswingRange.low.value <= backswingRange.high.value)) {
+        throw new ReferenceDataError(path, "backswingLow must not exceed backswingHigh");
+    }
+    return {
+        pendulumShare: readValue(entry, "pendulumShare", path),
+        handAngle: readValue(entry, "handAngle", path),
+        backswingRange,
+        finish: readQuote(entry, "finish", path),
+        tempo: has(entry, "tempo") ? readQuote(entry, "tempo", path) : null,
+        kinematics: readPairs(entry, path),
+    };
+}
+
+/** The stroke shape per stroke type (P2b.2b.2a design §6): sourced figures and labelled placeholders. */
+export const swingReference: Readonly<Record<SwingReferenceType, StrokeShapeReference>> = Object.fromEntries(
+    SWING_REFERENCE_TYPES.map((type) => [type, readShape(swingJson, type)]),
+) as Record<SwingReferenceType, StrokeShapeReference>;
