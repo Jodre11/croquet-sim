@@ -10,7 +10,8 @@
  *   bottom hand's release, the hands' and the turf's braking impulses (design §3.7), the impact's length after
  *   contactAt and how often each impact flag fired;
  * - presets: each preset over speed × drive × contact: how often impact-head-deep, impact-cap,
- *   impact-head-approaching and impact-off-face fire, and the longest impact after contactAt that ended before the cap;
+ *   impact-head-approaching and impact-off-face fire, the longest impact after contactAt that ended before the cap,
+ *   and the rejected runs tallied by speed, contact height and message;
  * - dip: the AC stop's dip depth from 8 to 14 mm: the head–turf penetration against HEAD_DEEP_LIMIT, and whether the
  *   first head–turf interval starts after the first face–striker interval ends;
  * - coupling: the canonical set at T = 0.04 s against HAND_COUPLING's period (0.08 s), both at its ζ, with the hands'
@@ -594,6 +595,8 @@ function presets(): void {
         let rejected = 0;
         let longest = 0;
         const counts = new Map<string, number>(FLAGS.map((kind) => [kind, 0]));
+        // The rejections by speed, contact height (from the canonical) and message.
+        const reasons = new Map<string, number>();
         for (const speed of [1, 2, 3, 4, 6]) {
             for (const strokeDrive of [-1, -0.5, 0, 0.5, 1]) {
                 for (const up of [up0 - 0.003, up0, up0 + 0.003]) {
@@ -607,6 +610,8 @@ function presets(): void {
                         } catch (error) {
                             if (error instanceof RangeError) {
                                 rejected++;
+                                const reason = `${speed} m/s, up ${mm(up - up0)} mm: ${error.message}`;
+                                reasons.set(reason, (reasons.get(reason) ?? 0) + 1);
                                 continue;
                             }
                             throw error;
@@ -634,6 +639,9 @@ function presets(): void {
                 `(TRACK_IMPACT_CAP ${ms(TRACK_IMPACT_CAP)} ms); canonical approach ${mm(approach.clearance)} mm, ` +
                 `${ms(approach.before)} ms before contact`,
         );
+        for (const [reason, count] of reasons) {
+            console.log(`${"".padEnd(11)} rejected ${count}× at ${reason}`);
+        }
     }
 }
 

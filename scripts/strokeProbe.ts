@@ -9,8 +9,11 @@
  *   P2b.2b.1's;
  * - fat: the canonical single-ball stroke met higher on the face (the head lower), 2 to 7 mm: the lead, the dig, and
  *   the planned against the real speed at the first face–ball contact;
- * - cost: per preset, planStroke (the downswing and the 1.2 s free table), prepareTrack alone (the free table in swing
- *   mode), the impact's and the follow-through's steps and µs/step.
+ * - cost: per preset, planStroke (in swing mode the downswing and the 1.2 s free table; in carry mode neither),
+ *   prepareTrack alone (with the free table in swing mode only), the impact's and the follow-through's steps and
+ *   µs/step;
+ * - faults: per canonical setup, the striker's face intervals and the fault judge's findings (law, tier, ball and the
+ *   contacts count).
  * Run with `npx --yes tsx scripts/strokeProbe.ts`; environment: SECTION (one of the names above; default all), REPEAT
  * (timed runs per stroke, default 20). Not part of the test suite; its output goes into the roadmap's outcomes.
  */
@@ -167,17 +170,34 @@ function cost(): void {
             followSteps = Math.round((follow.finish - follow.impactEnd) / IMPACT_DT);
         }
         const strokeUs = ((performance.now() - start) * 1e3) / REPEAT;
+        const swing = down.tempo === null;
         console.log(
-            `${type.padEnd(11)} planStroke ${fmt(planMs, 2)} ms (downswing ${downSteps} steps, and the free table); ` +
-                `prepareTrack alone ${fmt(prepareMs, 2)} ms (${down.tempo === null ? "with" : "without"} the free ` +
-                `table); ` +
+            `${type.padEnd(11)} planStroke ${fmt(planMs, 2)} ms (` +
+                `${swing ? `downswing ${downSteps} steps, and the free table` : "closed-form downswing, no free table"}` +
+                `); prepareTrack alone ${fmt(prepareMs, 2)} ms (${swing ? "with" : "without"} the free table); ` +
                 `impact ${impactSteps} steps at ${fmt(impactUs / impactSteps, 3)} µs/step; follow-through ` +
                 `${followSteps} steps at ${fmt((strokeUs - impactUs) / Math.max(followSteps, 1), 3)} µs/step`,
         );
     }
 }
 
-const SECTIONS: Readonly<Record<string, () => void>> = { speeds, canonical, fat, cost };
+function faults(): void {
+    console.log("== Fault judge on the canonical setups: face intervals on the striker's ball, and each finding ==");
+    for (const type of STROKE_TYPES) {
+        const setup = canonicalSetup(type, { world: WORLD });
+        const outcome = simulateShot(setup, WORLD);
+        const intervals = outcome.impact.timeline[`face/${setup.striker}`]?.length ?? 0;
+        const findings = outcome.faults.findings.map(
+            (f) => `${f.law} ${f.tier} on ${f.ball}, contacts ${f.evidence.contacts ?? "n/a"}`,
+        );
+        console.log(
+            `${type.padEnd(11)} ${intervals} face intervals; ` +
+                `${findings.length === 0 ? "no finding" : findings.join("; ")}`,
+        );
+    }
+}
+
+const SECTIONS: Readonly<Record<string, () => void>> = { speeds, canonical, fat, cost, faults };
 for (const [name, section] of Object.entries(SECTIONS)) {
     if (SECTION === "all" || SECTION === name) {
         section();

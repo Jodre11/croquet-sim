@@ -551,14 +551,16 @@ default profile's canonical setups; raw output in `docs/superpowers/probes/2026-
   - Gravity alone needs a head rise of about 46 cm for a 3 m/s roquet or drive; the rolls' slow tempo needs 39, 45
     and 47 cm (half, full, pass). At intensity 0 the swing presets' speed is within 0.5 % of √(2gh): 0.62 m/s from
     2 cm, 1.40 from 10 cm, 1.97 from 20 cm, 3.12 from 50 cm, 3.69 from 70 cm. The most a free fall can give is
-    4.05 m/s (the shaft horizontal at the top, `MAX_BACK_ANGLE`), so faster swing-mode shots need effort.
+    4.05 m/s (the shaft horizontal at the top, `MAX_BACK_ANGLE`; `swingProbe.ts`'s `presets` rejections), so faster
+    swing-mode shots need effort.
   - Effort matters most on a short backswing: from 2 cm, intensity 1 gives 3.38 m/s (5.4× the free fall); from
     46 cm it doubles the speed by construction; the step from 0.75 to 1 adds only 0.08 m/s at h₀.
   - At a given tempo the full and pass rolls' speed is nearly linear in the backswing (the hands' travel over a fixed
     time): about 6.6 and 6.4 m/s per metre at intensity 0. The half roll's, 40 % of it from the pendulum, falls
     from 9.9 to 7.1 m/s per metre between 2 and 70 cm. Intensity 0.5 and 1 multiply a roll's speed by 4/3 and 2.
-  - Downswing times: swing presets 464–526 ms at intensity 0, 215–370 ms at 0.5 and 156–306 ms at 1 (2 to 70 cm;
-    the AC stop's lean adds up to 90 ms to its free fall from 2 cm); the rolls 500, 375 and 250 ms at any backswing.
+  - Downswing times, 2 to 70 cm: single-ball, drive and GC stop 463.5–526.0 ms at intensity 0, 215.3–369.6 ms at 0.5
+    and 155.8–306.2 ms at 1; the AC stop 506.7–554.9, 246.2–384.1 and 178.6–319.4 ms (its lean adds about 91 ms to
+    the free fall from 2 cm, 554.9 against 463.5); the rolls 499.8, 374.8 and 249.9 ms at any backswing.
     `MAX_LEAD` (150 ms, provisional) lies inside every one: the closest is the 2 cm swing at intensity 1, 156 ms.
 - **Speeds** (`speeds`; planned m/s at intensity 0 / 0.5 / 1, backswings 2, 5, 10, 20, 30, 50 and 70 cm). Single-ball,
   drive and GC stop alike: 0.62 / 2.40 / 3.38, 0.99 / 3.08 / 4.18, 1.40 / 3.68 / 4.76, 1.97 / 4.36 / 5.30, 2.42 /
@@ -588,8 +590,9 @@ default profile's canonical setups; raw output in `docs/superpowers/probes/2026-
   lower). The lowest point 1.48, 3.48, 5.48 and 6.48 mm below the turf; the lead 57.8, 66.6, 73.1 and 75.9 ms; the
   head grazes from 52.8, 61.6, 68.1 and 70.9 ms before contact, 0.50, 0.83, 1.07 and 1.17 mm deep; it meets the ball
   at 2.748, 2.514, 2.335 and 2.223 m/s against 3.000 planned (8.4, 16.2, 22.2 and 25.9 % lost). Only `turf-lift`
-  fires; none reaches the 2 mm `impact-head-deep` marker of lawn damage. At 1 m/s a head 3 mm lower meets the turf
-  183 ms before contact and is rejected as a gross mis-hit (beyond `MAX_LEAD`).
+  fires; none reaches the 2 mm `impact-head-deep` marker of lawn damage. A slow swing digs earlier: in
+  `swingProbe.ts`'s `presets`, a single-ball, drive or GC stop at 1 m/s met 3 mm higher on the face meets the turf
+  183.4 ms before contact and is rejected as a gross mis-hit (beyond `MAX_LEAD`).
 - **Re-measured P2b.2b.1 figures** (`swingProbe.ts`, migrated to the backswing at intensity 0). Two changes reach
   them: the rolls' hands now come from the downswing (their speed at contact emerges; `handShare` is gone), and the
   swing presets' path before contact is the downswing, not a coast. `FREE_SPAN` grew from 0.55 to 1.2 s; that window
@@ -604,8 +607,10 @@ default profile's canonical setups; raw output in `docs/superpowers/probes/2026-
     2.16 mm above R (was 0.72, 0.82, 2.91); braking hands −0.682, −2.049 and −4.018 N·s (was −0.706, −2.108,
     −4.051); impacts 37.6, 80.5 and 65.6 ms (was 40.2, 83.4, 70.0). Entry jumps 0 and `impact-off-face` once on the
     full and pass rolls, as before.
-  - Cap and flags (`presets`): the sweep now rejects 60 runs of each swing preset (45 for the AC stop): 6 m/s is
-    beyond intensity 0's 4.05 m/s, and at 1 m/s the head 3 mm lower meets the turf beyond `MAX_LEAD`. The AC stop:
+  - Cap and flags (`presets`, with the rejections tallied by reason): the sweep now rejects 60 runs of the
+    single-ball, drive and GC stop and 45 of the AC stop. All 45 runs at 6 m/s are beyond intensity 0's reach
+    (4.053 m/s at a 843 mm backswing; the AC stop 4.048 m/s at 841 mm). The other 15 (not the AC stop) are the 1 m/s
+    runs met 3 mm higher, whose downswing meets the turf 183.4 ms before contact, beyond `MAX_LEAD`. The AC stop:
     `impact-head-deep` on 60 of 180 runs (was 72 of 225), `impact-cap` on the same 12. `impact-off-face`: drive 91,
     AC stop 59, GC stop 9, full roll 225, pass roll 180 (was 81, 65, 10, 225, 180). The longest impact before the
     cap: single-ball 20.5, drive 302.7, AC stop 308.8, GC stop 255.0, half roll 140.3, full roll 283.8, pass roll
@@ -627,13 +632,14 @@ default profile's canonical setups; raw output in `docs/superpowers/probes/2026-
     (was 107.4) and the pass roll at 127.6 ms (was 138.9). Sweeps, runs crossing a ball: single-ball 30 of 165 (was
     18 of 225), drive 0 of 165 (3), AC stop 13 of 180 (13), GC stop 33 of 165 (38), half roll 94 of 225 (53), full
     roll 135 (125), pass roll 220 (223). The GC gap sweep and the hoop-1 runs are unchanged.
-  - 29.1.6.1 possible faults on the canonical setups (`simulateShot`): the drive (2 face intervals) and the half,
-    full and pass rolls (5, 6 and 5; was 5, 6 and 6).
-- **Cost** (for P5; machine-dependent). `planStroke`: 57–59 ms in swing mode (the downswing's 100,000–104,000 steps,
-  its scan, and `prepareTrack`), 17 ms for the rolls (mostly the closed-form scan at every `FREE_STEP`). `prepareTrack`
-  alone, with the 1.2 s free table: 17–18 ms in swing mode, 0.01 ms in carry mode; a shot prepares it twice, three
-  times with a trajectory. So the tracked impact's µs/step doubled on the short impacts (single-ball 10.65 against
-  4.865, GC stop 10.60 against 5.111): the free table, not the stepping. The follow-through costs 0.94–1.13 µs/step,
+  - 29.1.6.1 possible faults on the canonical setups (`strokeProbe.ts`'s `faults`; no other finding): the drive
+    (2 contacts) and the half, full and pass rolls (5, 6 and 5; P2b.2b.1 5, 6 and 6).
+- **Cost** (for P5; machine-dependent; `strokeProbe.ts`'s `cost` unless named). `planStroke`: 54–56 ms in swing
+  mode (the downswing's 99,960–103,919 steps, its scan, and `prepareTrack`), 16 ms for the rolls (a closed-form
+  downswing, no free table). `prepareTrack` alone, with the 1.2 s free table: 16.7–17.3 ms in swing mode, 0.01 ms or
+  less in carry mode; a shot prepares it twice, three times with a trajectory. So the tracked impact's µs/step
+  doubled on the short impacts (`swingProbe.ts`'s `cost`: single-ball 10.644 against 4.865, GC stop 10.402 against
+  5.111): the free table, not the stepping. The follow-through costs 0.93–1.12 µs/step,
   up to 100,000 steps (single-ball 0.5 s). The reach filter over the longest impact (150 ms lead plus the cap,
   120,000 steps, 600 ms): 6.55e-12 m beyond the summed path against `WAKE_MARGIN` 1e-9 m, 153× headroom (was 67×
   over 102,000 steps).

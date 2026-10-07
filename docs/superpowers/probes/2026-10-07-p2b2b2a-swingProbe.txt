@@ -44,12 +44,27 @@ pass-roll   entry jumps 0 (worst 0.00 mm); highest ball centre 2.16 mm above R; 
 == Preset sweep: speed × drive × contact for each preset ==
 single-ball 165 runs (60 rejected); runs raising impact-head-deep 0, impact-cap 0, impact-head-approaching 0, impact-off-face 0
             longest before the cap 20.5 ms after contactAt (TRACK_IMPACT_CAP 450.0 ms); canonical approach 0.52 mm, 36.3 ms before contact
+            rejected 15× at 1 m/s, up 3.00 mm: the downswing meets the turf 0.18344987283465192 s before contact, so the impact would start more than 0.15 s early: a gross mis-hit
+            rejected 15× at 6 m/s, up -3.00 mm: backswingFor: 6 m/s is beyond the single-ball stroke's reach (4.053016991566469 m/s at 0.8430999991569 m)
+            rejected 15× at 6 m/s, up 0.00 mm: backswingFor: 6 m/s is beyond the single-ball stroke's reach (4.05301699156647 m/s at 0.8430999991569 m)
+            rejected 15× at 6 m/s, up 3.00 mm: backswingFor: 6 m/s is beyond the single-ball stroke's reach (4.053016991566469 m/s at 0.8430999991569 m)
 drive       165 runs (60 rejected); runs raising impact-head-deep 0, impact-cap 0, impact-head-approaching 0, impact-off-face 91
             longest before the cap 302.7 ms after contactAt (TRACK_IMPACT_CAP 450.0 ms); canonical approach 0.52 mm, 36.3 ms before contact
+            rejected 15× at 1 m/s, up 3.00 mm: the downswing meets the turf 0.18344987283465192 s before contact, so the impact would start more than 0.15 s early: a gross mis-hit
+            rejected 15× at 6 m/s, up -3.00 mm: backswingFor: 6 m/s is beyond the drive stroke's reach (4.053016991566469 m/s at 0.8430999991569 m)
+            rejected 15× at 6 m/s, up 0.00 mm: backswingFor: 6 m/s is beyond the drive stroke's reach (4.05301699156647 m/s at 0.8430999991569 m)
+            rejected 15× at 6 m/s, up 3.00 mm: backswingFor: 6 m/s is beyond the drive stroke's reach (4.053016991566469 m/s at 0.8430999991569 m)
 stop-ac     180 runs (45 rejected); runs raising impact-head-deep 60, impact-cap 12, impact-head-approaching 0, impact-off-face 59
             longest before the cap 308.8 ms after contactAt (TRACK_IMPACT_CAP 450.0 ms); canonical approach 7.23 mm, 55.9 ms before contact
+            rejected 15× at 6 m/s, up -3.00 mm: backswingFor: 6 m/s is beyond the stop-ac stroke's reach (4.048079207803777 m/s at 0.8410462499330116 m)
+            rejected 15× at 6 m/s, up 0.00 mm: backswingFor: 6 m/s is beyond the stop-ac stroke's reach (4.048079207803777 m/s at 0.8410462499330116 m)
+            rejected 15× at 6 m/s, up 3.00 mm: backswingFor: 6 m/s is beyond the stop-ac stroke's reach (4.048079207803777 m/s at 0.8410462499330116 m)
 stop-gc     165 runs (60 rejected); runs raising impact-head-deep 0, impact-cap 0, impact-head-approaching 0, impact-off-face 9
             longest before the cap 255.0 ms after contactAt (TRACK_IMPACT_CAP 450.0 ms); canonical approach 0.52 mm, 36.3 ms before contact
+            rejected 15× at 1 m/s, up 3.00 mm: the downswing meets the turf 0.18344987283465192 s before contact, so the impact would start more than 0.15 s early: a gross mis-hit
+            rejected 15× at 6 m/s, up -3.00 mm: backswingFor: 6 m/s is beyond the stop-gc stroke's reach (4.053016991566469 m/s at 0.8430999991569 m)
+            rejected 15× at 6 m/s, up 0.00 mm: backswingFor: 6 m/s is beyond the stop-gc stroke's reach (4.05301699156647 m/s at 0.8430999991569 m)
+            rejected 15× at 6 m/s, up 3.00 mm: backswingFor: 6 m/s is beyond the stop-gc stroke's reach (4.053016991566469 m/s at 0.8430999991569 m)
 half-roll   225 runs (0 rejected); runs raising impact-head-deep 0, impact-cap 0, impact-head-approaching 0, impact-off-face 0
             longest before the cap 140.3 ms after contactAt (TRACK_IMPACT_CAP 450.0 ms); canonical approach 21.11 mm, 0.0 ms before contact
 full-roll   225 runs (0 rejected); runs raising impact-head-deep 0, impact-cap 0, impact-head-approaching 0, impact-off-face 225
@@ -103,17 +118,17 @@ half-roll   (γ_T 1) firm 1.40e-6, 1.58e-6; carry 3.20e-6, 2.55e-6; after the re
 full-roll   (γ_T 1) firm 5.42e-7, 9.00e-7; carry 2.95e-6, 2.69e-6; after the reach 3.80e-6, 2.72e-6
 pass-roll   (γ_T 1) firm 3.03e-7, 5.84e-7; carry 4.24e-6, 7.47e-6; after the reach 4.85e-6, 9.70e-7
 == Impact time per step (50 runs after 5 warm-up; for P5) ==
-tracked single-ball  2000 steps: median 21.291 ms (10.646 µs/step)
-tracked drive        36270 steps: median 80.214 ms (2.212 µs/step)
-tracked stop-ac      4326 steps: median 26.051 ms (6.022 µs/step)
-tracked stop-gc      2000 steps: median 21.201 ms (10.601 µs/step)
-tracked half-roll    7516 steps: median 11.343 ms (1.509 µs/step)
-tracked full-roll    16090 steps: median 24.252 ms (1.507 µs/step)
-tracked pass-roll    13129 steps: median 22.305 ms (1.699 µs/step)
-force centre 3 m/s   600 steps: median 0.470 ms (0.784 µs/step)
-force croquet 3 m/s  600 steps: median 0.576 ms (0.960 µs/step)
-force descending 10° 1480 steps: median 0.743 ms (0.502 µs/step)
-force stop shot      600 steps: median 0.543 ms (0.904 µs/step)
+tracked single-ball  2000 steps: median 21.288 ms (10.644 µs/step)
+tracked drive        36270 steps: median 81.203 ms (2.239 µs/step)
+tracked stop-ac      4326 steps: median 25.584 ms (5.914 µs/step)
+tracked stop-gc      2000 steps: median 20.804 ms (10.402 µs/step)
+tracked half-roll    7516 steps: median 11.215 ms (1.492 µs/step)
+tracked full-roll    16090 steps: median 24.073 ms (1.496 µs/step)
+tracked pass-roll    13129 steps: median 19.762 ms (1.505 µs/step)
+force centre 3 m/s   600 steps: median 0.385 ms (0.642 µs/step)
+force croquet 3 m/s  600 steps: median 0.547 ms (0.911 µs/step)
+force descending 10° 1480 steps: median 0.658 ms (0.445 µs/step)
+force stop shot      600 steps: median 0.485 ms (0.808 µs/step)
 reach filter over 120000 steps (600.0 ms): displacement beyond the summed path at most 6.55e-12 m against WAKE_MARGIN 1e-9 m (153× headroom)
 == Timing (design §9): each action early or late, and the dip's depth ==
 stop-ac arc -50 ms: missed, dig 1.93 mm, slide 1.8 mm; ball 0.000 m/s at 0.00°; striker 0.000 m, croqueted 0.000 m, ratio NaN; impact-head-deep 0, impact-cap 1, impact-head-approaching 0, impact-off-face 0

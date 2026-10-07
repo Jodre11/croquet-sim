@@ -496,14 +496,14 @@ integrator's own error:
   (τ_ff·s + K_s(1)·φ + C_s(1)·(ω_path − ω)·s)·s, φ = θ_err·s the twist part of the rotation error
   θ_err = 2·sign(w)·vec(q_path ⊗ q̄), w the product's scalar part.
 
-**On a downswing** (P2b.2b.2a; user decision, 2026-10-07): when the path carries a downswing table, the firm grip
-before contact keeps the feed-forward, the dampers and the twist spring but drops the two position springs k(1)·(x* −
-x). A head the turf holds back then stays where it is put, so a light graze costs a fraction of the head's speed
-instead of the spring refunding it: in the fat-stroke test the springs had done +1.70 J against the turf's −1.46 J
-and delivered the head at 3.197 m/s against the clean stroke's 3.121, 2.4 % fast; without them it arrives at 3.03
-against 3.12 m/s. The user's view of play: a light
-graze is a successful stroke with only a fractional loss of speed; more resistance spoils the stroke, a hard stroke
-breaks the grip and a weak one is stopped dead (neither is modelled yet). A coasting path keeps the springs.
+**On a downswing** (P2b.2b.2a; user decision, 2026-10-07): when the path carries a downswing (either mode), the firm
+grip before contact keeps the feed-forward, the dampers and the twist spring but drops the two position springs
+k(1)·(x* − x). A head the turf holds back then stays where it is put, so a light graze costs a fraction of the head's
+speed instead of the springs refunding it: in the fat-stroke test the hands had done +1.70 J against the turf's
+−1.46 J and delivered the head at 3.197 m/s against the clean stroke's 3.121, 2.4 % fast; without the springs it
+arrives at 3.03 against 3.12 m/s. The user's view of play: a light graze is a successful stroke with only a
+fractional loss of speed; more resistance spoils the stroke, a hard stroke breaks the grip and a weak one is stopped
+dead (neither is modelled yet). A coasting path keeps the springs.
 
 **From contact** the hands track the path's velocity only, with dampers and no position springs: they push, but do not
 make up lost distance (position springs injected energy in the prototype's first pass). The path's velocity includes
@@ -564,12 +564,11 @@ the hands reproduce F_ff and τ_ff exactly before contact, in carry mode and ins
 path follows it there apart from the integrator's own error (bounded by §8.1). The one exception is a dip after
 contact on a tilted shaft in carry mode: F_d acts whole at the top grip, and its moment about the swung body's centre
 is not in τ_ff (in swing mode the free pendulum includes the dip in A). No preset dips in carry mode. Inside a
-swing-mode check the dip is likewise untracked (P2b.2b.2a). In swing mode
-after contact outside a check the top hand applies the whole F_s at the pivot with no couple: that is exact only on
-the free pendulum, which the path is once the pendulum's window has closed, and elsewhere the rate guide takes up any
-lag. A relaxed top hand
-(γ_T < 1) carries only γ_T of its share, the head's weight included, so the head sinks below the path until the turf or
-its damper takes the rest; the dip is still the player's in full.
+swing-mode check the dip is likewise untracked (P2b.2b.2a). In swing mode after contact outside a check the top hand
+applies the whole F_s at the pivot with no couple: that is exact only on the free pendulum, which the path is once
+the pendulum's window has closed, and elsewhere the rate guide takes up any lag. A relaxed top hand (γ_T < 1) carries
+only γ_T of its share, the head's weight included, so the head sinks below the path until the turf or its damper
+takes the rest; the dip is still the player's in full.
 
 Why the modes differ (user's account and Riches): in a drive the power is the arc's momentum and the lower hand only
 guides, maintaining the planned arc and never driving the head beyond it (a stronger, accelerating bottom hand turns
@@ -1102,13 +1101,13 @@ keys; `topHandHeight` is not added.
   `groundDepth` below the turf.
 - **Swung body.** δ and I' match the parallel-axis closed forms; with `armMass` 0 the swung body is the head.
 - **Tracking, no ball.** A head started on the path with firm grips follows it over the impact, up to the 0.45 s
-  cap, within a bound pre-flight
-  measures and the plan fixes, where the hands reproduce the feed-forward exactly (§3.3): before contact (a coasting
-  path, and a roll path with its windows and dip), and from contact in carry mode up to the reach. There the residual
-  is the integrator's. Inside a check it is semi-implicit Euler's O(dt·a) lag, tested by convergence: halving dt
-  halves it. Swing mode after contact outside a check is not bounded by this test; pre-flight measures it (§9). Before
-  contact, a head displaced 1 mm along the shaft returns as the damped oscillator of period T and ratio ζ predicts
-  (within 1 % of amplitude): along the shaft only the top hand's spring acts, on the mass M.
+  cap, within a bound pre-flight measures and the plan fixes, where the hands reproduce the feed-forward exactly
+  (§3.3): before contact (a coasting path, and a roll path with its windows and dip), and from contact in carry mode
+  up to the reach. There the residual is the integrator's. Inside a check it is semi-implicit Euler's O(dt·a) lag,
+  tested by convergence: halving dt halves it. Swing mode after contact outside a check is not bounded by this test;
+  pre-flight measures it (§9). Before contact, a head displaced 1 mm along the shaft returns as the damped oscillator
+  of period T and ratio ζ predicts (within 1 % of amplitude): along the shaft only the top hand's spring acts, on the
+  mass M.
 - **Relaxed top hand.** With γ_T < 1, a level, still path, no ball and `headTurf` null, the head sinks below the path
   at the terminal rate (1 − γ_T)·m·g/c(γ_T) along the vertical shaft; with the head–turf pair it comes to rest on the
   turf.
