@@ -32,6 +32,63 @@ dynamics, as it replaced the coasting. `defaultBackswing` moves to the reference
 seam is replaced by a work–energy check; the turf scan and `swingApproach` share one pass; sourcing is bounded to the
 data the fit consumes.
 
+**Amended 2026-10-07 (plan).** Carry mode is evaluated in closed form, not tabulated (§3.4); its scan visits it at
+every `FREE_STEP`. Before contact the hands' path is a function of time (σ from the table in swing mode), so an early
+pendulum window replaces only the pendulum's dynamics and an early hands window only the hands' (§3.5). The dip is
+not felt by the pendulum before contact (the table is dipless; `pathAt`'s derivatives stay exact). `StrokeSample`
+carries the head's velocity (§4.3), which exit criterion 3 bounds. `buildContact` is `planStroke(…).contact`, and
+`plannedSpeed` gives the speed alone (§2). The follow-through is a second loop, the run fixed before it (§4.1). A
+finish's kind follows the prepared drive: carry mode, a check (α < 0), or a swing (§4.2). A carry whose reach never
+binds finishes only at the cap. Where a sourced range puts the default backswing above h₀ (h₀ below the range's low
+bound), the nearest-speed intensity is 0 (§5.3 step 2). The unsourced shape figures took the plan's placeholder
+rules: at the sourcing gate the user confirmed every placeholder in `swing.json` (the hands' angle of 30° for every
+type, the roll shares 0.4, 0.1 and 0.15, and the swing presets' `pendulumShare` 1 as a design choice). No numeric
+figure and no kinematic pair was sourced: Riches gives only comparisons.
+
+**Amended 2026-10-07 (implementation; user decisions).**
+
+- **The default intensity at a bound** (§5.3 step 2; user decision, 2026-10-07): the nearest-speed rule. At the
+  range's bound the intensity is 0 when even intensity 0 reaches 3 m/s or more, and 1 when even intensity 1 stays at
+  or below it. This departs from §5.3's "1 when unreachable". No range was sourced, so the branch does not run today.
+- **The fat stroke** (§3.5; user decision, 2026-10-07): before contact on a downswing the firm grip keeps its
+  feed-forward and dampers but drops its position springs. With them, the springs refunded the turf's loss: in the
+  fat-stroke test the hands did +1.70 J against the turf's −1.46 J, and the head arrived 2.4 % fast (3.197 against the
+  clean stroke's 3.121 m/s). Without them a light graze costs a fraction of the head's speed (3.03 against 3.12 m/s).
+  The user's view of play: a light graze is a successful stroke with only a fractional loss of speed; more resistance
+  spoils the stroke; a hard stroke breaks the grip, and a weak stroke is stopped dead. Swing spec §3.3 is amended.
+- **The stop's finish** (§4.2; user decision, 2026-10-07): after a stop's check the mallet is held still relative to
+  the hands for the rest of the follow-through. Riches: the stop has "NO FOLLOW-THROUGH at all, or as little as
+  possible". In the follow-through only, the pendulum is held (ω = α = 0) from max(the window's end, the impact's
+  end), and the firm grip (springs and dampers) holds the head towards the held pose. The GC stop finishes at
+  0.0984 s and the AC stop at 0.0539 s; without the hold they took 0.918 s, and the AC stop reached `follow-cap`. On
+  the AC stop the hold starts after the pendulum has begun to swing freely, so the grip pulls the head back towards
+  the path's θ at the hold's start, at up to 69 m/s². Swing spec §3.3 is amended.
+- **Turf strike beyond a graze** (user decision, 2026-10-07; a roadmap item, its phase to be decided): a ploughing
+  drag, so that a weak stroke is stopped dead, and a grip that breaks under a hard stroke. The model has no ploughing
+  term: turf drag is μ·N with N a linear spring, so the drag grows by only about 100 N per mm of depth and nothing
+  stops the head; the head touches the turf at a single point, its lowest.
+- **Lawn damage** (Law 29.1.14). Under Law 29.2.3 it is a fault only in a hampered, jump or group stroke, and
+  C29.19.5 sets no depth test; `faults.ts` already judges it. For ordinary strokes the 2 mm `impact-head-deep` event
+  serves as the marker that a stroke has gone beyond a graze and has probably damaged the lawn. It is not a fault, and
+  nothing is renamed.
+
+**Findings (2026-10-07, implementation and probe).**
+
+- Exit criterion 3's continuity tolerance: the 1e-6 m trapezoid check at 1 ms spacing fails on smooth motion with
+  |jerk| above about 12,000 m/s³; a pass roll with a long lead misses by 1.35e-6 m. The canonical setups' worst seam
+  pair is 5.7e-7 m, so the criterion holds on them. A jerk-scaled bound is the honest general form.
+- The fit's sourced `handTempo.slow` branch is dead on this data: Task 1 wrote only a quoted tempo, never a figure.
+- §7.1's work–energy case is tested with a test effort (3 N·m, 0.6 and 0.3 s), not the default placeholder effort.
+- `handAngle` is read and checked only when `pendulumShare` < 1, as §3.2 says.
+- §7.1's too-low-backswing rejection is vacuous at `pendulumShare` 1: the energy integral guarantees θ_c is reached.
+- The 1.2 s free table costs about 17 ms per swing-mode `prepareTrack` (the probe now reports it separately), and a
+  shot prepares the track twice (`planStroke`, `prepareImpact`), three times with a trajectory.
+- Open robustness defect, predating this phase: with a very stiff grip (ζ ≥ 2, or a period of 0.01 s) the fat stroke
+  goes deep within 0.5 ms, reaches the cap with no strike, and leaves NaN in the result (the post-cap run in
+  `integrate.ts`).
+- `WAKE_MARGIN`: over the longest impact, 120,000 steps, the probe measured 6.55e-12 m, 153× headroom; unchanged
+  (§4.4).
+
 ## 1. Goal and exit criteria
 
 A player controls a stroke by how far the mallet is taken back and how hard and how quickly it is swung through, not
@@ -158,9 +215,10 @@ as `prepareImpact`'s free table, until θ first reaches θ_c; the step that cros
 That fall time T_fall gives t_r = −T_fall. No root-find is needed: with the hands slaved to θ, nothing in the
 integration depends on t_r. It is rejected if ω falls to zero or below before θ_c (the swing stalls: the backswing too
 low for the stance, or the effort too weak to rise to a contact angle above the hands' level) or if T_fall exceeds 2 s.
-In carry mode the downswing is closed-form (§3.3) and is tabulated at the same step.
+In carry mode the downswing is closed-form (§3.3) and is evaluated so, not tabulated (amended 2026-10-07); the turf
+scan visits it at the same step.
 
-Either way it yields a downswing table of θ, ω and θ̈ from t_r to 0. ω₀ = ω(0); the head's planned velocity at
+In swing mode it yields a downswing table of θ, ω and θ̈ from t_r to 0. ω₀ = ω(0); the head's planned velocity at
 contact is the path's, V_c + ω₀·n × (c − pivot), and its magnitude is `contactSpeed`: the planned speed, from the
 contact-free downswing, so it is stable for the planner. A fat stroke's head arrives slower than it; the impact
 records the real speed (§3.5) and the probe reports both.
@@ -183,7 +241,10 @@ P2b.2b.1 starts the impact a lead L before contact, coasting until the first act
   beyond it is rejected: a head meeting the lawn that long before the ball is a gross mis-hit the impact cannot
   afford;
 - a downswing that meets the turf is simulated, not rejected (user decision, 2026-10-06): within the lead the impact
-  integrates the head–turf pair, so a fat stroke emerges as turf drag slowing the head before the ball.
+  integrates the head–turf pair, so a fat stroke emerges as turf drag slowing the head before the ball;
+- on a downswing the firm grip before contact keeps its feed-forward and dampers but has no position springs (user
+  decision, 2026-10-07; swing spec §3.3), so the turf's loss is not refunded and a light graze costs a fraction of the
+  head's speed.
 
 ## 4. The follow-through
 
@@ -204,7 +265,9 @@ The follow-through ends at the stroke type's finish:
 
 - **swing** (single-ball, drive): the pendulum's apex, the first time after the impact that the head's pitch rate
   about n falls to zero;
-- **check** (the stops): the head at rest relative to the hands, its speed relative to the pivot below 1e-3 m/s;
+- **check** (the stops): the head at rest relative to the hands, its speed relative to the pivot below 1e-3 m/s.
+  After the check the pendulum is held (ω = α = 0) and the hands grip firmly, so the mallet stays still relative to
+  the hands (user decision, 2026-10-07: Riches' "NO FOLLOW-THROUGH at all, or as little as possible");
 - **carry** (the rolls): the reach's end reached and the head's speed below 1e-3 m/s.
 
 A finish not reached within `FOLLOW_CAP` = 1 s after contact ends it with `follow-cap`.
@@ -242,7 +305,8 @@ samples before the impact come from the downswing, those inside it and after fro
   samples are unchanged, so exit criterion 4 holds; the table's cost is recorded in §8.
 - `WAKE_MARGIN`'s rationale (integrate.ts) assumes a 60 ms lead and 102,000 steps. Re-measured over the longest run
   (a 150 ms lead plus `TRACK_IMPACT_CAP`, and the follow-through to `FOLLOW_CAP`, though the follow-through has no
-  balls to wake) and its comment updated; the margin changes only if the headroom falls below 10×.
+  balls to wake) and its comment updated; the margin changes only if the headroom falls below 10×. Measured
+  2026-10-07: 6.55e-12 m over 120,000 steps, 153×; the margin stays at 1e-9 m.
 
 ## 5. The swing model
 
@@ -377,6 +441,8 @@ P2b.2b.1's; the cost of the downswing and of the follow-through in steps and µs
 - Swing spec §8.1's "over 0.15 s" is stale: the cap is 0.45 s.
 - `FREE_SPAN` assumed `buildContact`'s `MAX_LEAD`, though `simulateImpact` is public and accepts any `contactAt` or
   cap; §4.4 re-derives it.
+- Swing spec §3.3 (user decisions, 2026-10-07): on a downswing the firm grip before contact has no position springs;
+  a stop's follow-through holds the mallet still relative to the hands after its check.
 
 ## 10. Deferred
 

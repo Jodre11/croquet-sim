@@ -175,7 +175,8 @@ aim (the top hand −3.06 N·s), and that is what makes the follow-through re-hi
 planned arc (decision 4 reads so), and `TRACK_IMPACT_CAP` becomes 0.45 s so that every re-hit is integrated and a drive
 ends by itself (§3.5). With the cap lifted the drive ends at 138 ms at 4 m/s (two hits), 181 ms at 3 m/s (two) and
 269 ms at 2 m/s (four, the last on the rim); over the preset sweep its longest is 325 ms after contact, every other
-preset's at most 309 ms. `FREE_SPAN` becomes 0.55 s to cover the lead-in and the cap (§3.2).
+preset's at most 309 ms. `FREE_SPAN` becomes 0.55 s (1.2 s since P2b.2b.2a) to cover the lead-in and the cap
+(§3.2).
 
 How hard the drive's bottom hand pushes after the hit is the player's choice (user's account, 2026-10-06): the usual
 aim is to restore the angular momentum the hit took, so the head carries on at the same speed through the arc; a
@@ -264,6 +265,14 @@ against observed strokes (maintained contact, a double tap or a late re-hit). De
   later". So P2b.2b.2 models the whole stroke shape, the backswing from its top, the lead-in and the follow-through,
   with its amplitude, and calibrates it per shot type alongside its other calibration; its path model must give the
   head's and the shaft's poses along the whole swing, complete enough for P2b.2b.3 (§10).
+
+**Amended 2026-10-07 (P2b.2b.2a).** `simulateShot`'s `world` wins: when one is passed, `setup.lawnSpeed` is neither
+read nor checked (§6.1, §6.2). The dip after contact is untracked in carry mode and also inside a swing-mode check
+(§3.3). §8.1's re-contact test is a straight drive, not a split, and its tracking runs to the cap, 0.45 s, not
+"over 0.15 s". `FREE_SPAN` assumed `buildContact`'s lead, though `simulateImpact` is public; P2b.2b.2a re-derives
+it as 1.2 s (its design §4.4). Two user decisions of the same day amend §3.3: on a downswing the firm grip before
+contact has no position springs, so a graze costs the head speed; and a stop's follow-through holds the mallet still
+relative to the hands after its check.
 
 ## 1. Goal and exit criteria
 
@@ -411,9 +420,10 @@ The pendulum, with t_a = `arcStart` and w = `window`: before its window (t ≤ t
   swung body's (§3.3); ℓ_h = ρ + `radius`, the pivot to the head's centre; d = ℓ_h − δ, the pivot to the swung body's
   centre; I_P = I'_n + M·d², I'_n the swung body's inertia about the pitch axis; A the pivot's acceleration (the hands'
   path with its reach, and the dip); t̂ = cos θ·aim + sin θ·ẑ. `prepareImpact` tabulates θ and ω from (θ_e, ω_e) by
-  semi-implicit Euler every `FREE_STEP` = 5 µs over `FREE_SPAN` = 0.55 s; the path interpolates them linearly and
-  evaluates θ̈ from the equation at the interpolated θ. Beyond the table θ and ω clamp to its last sample (the cap
-  ends every impact well inside it), and the α still evaluated there is not meaningful.
+  semi-implicit Euler every `FREE_STEP` = 5 µs over `FREE_SPAN` = 0.55 s (1.2 s since P2b.2b.2a); the path
+  interpolates them linearly and evaluates θ̈ from the equation at the interpolated θ. Beyond the table θ and ω
+  clamp to its last sample (the cap ends every impact well inside it), and the α still evaluated there is not
+  meaningful.
 - **carry:** the slope is held. Over one more window the rate falls linearly to zero, with u = min(t − t_a − w, w),
   θ = θ_e + ω_e·u − ½·(ω_e/w)·u², and θ holds after it: no whip.
 
@@ -486,6 +496,15 @@ integrator's own error:
   (τ_ff·s + K_s(1)·φ + C_s(1)·(ω_path − ω)·s)·s, φ = θ_err·s the twist part of the rotation error
   θ_err = 2·sign(w)·vec(q_path ⊗ q̄), w the product's scalar part.
 
+**On a downswing** (P2b.2b.2a; user decision, 2026-10-07): when the path carries a downswing table, the firm grip
+before contact keeps the feed-forward, the dampers and the twist spring but drops the two position springs k(1)·(x* −
+x). A head the turf holds back then stays where it is put, so a light graze costs a fraction of the head's speed
+instead of the spring refunding it: in the fat-stroke test the springs had done +1.70 J against the turf's −1.46 J
+and delivered the head at 3.197 m/s against the clean stroke's 3.121, 2.4 % fast; without them it arrives at 3.03
+against 3.12 m/s. The user's view of play: a light
+graze is a successful stroke with only a fractional loss of speed; more resistance spoils the stroke, a hard stroke
+breaks the grip and a weak one is stopped dead (neither is modelled yet). A coasting path keeps the springs.
+
 **From contact** the hands track the path's velocity only, with dampers and no position springs: they push, but do not
 make up lost distance (position springs injected energy in the prototype's first pass). The path's velocity includes
 the dip's, and after the reach it is at rest, so both hands bring the mallet to rest.
@@ -531,12 +550,21 @@ is at rest nothing pulls it on: from contact the hands have no position springs 
 a struck head, and after the window swing mode's guide pushes only a head slower than the free pendulum, which starts
 from rest at a full check's end and, the canonical stops having just passed the lowest point, swings back.
 
+**A stop's follow-through holds the mallet** (P2b.2b.2a; user decision, 2026-10-07). Riches: the stop has "NO
+FOLLOW-THROUGH at all, or as little as possible". In the follow-through only, after a check the pendulum is held
+(ω = α = 0) from max(the window's end, the impact's end), and the hands grip firmly again, springs and dampers, holding
+the head at the held pose relative to the hands. The canonical GC stop finishes 98.4 ms and the AC stop 53.9 ms after
+contact; without the hold they took 0.918 s, and the AC stop reached `follow-cap`. On the AC stop the hold starts after
+the pendulum has begun to swing freely, so the grip pulls the head back towards the path's θ at the hold, at up to
+69 m/s². The impact itself is unchanged.
+
 The hand load F is the sum of the two hands' forces and F_ff the sum of their feed-forward parts; each acts at its grip,
 so the head's torque is the moments of the hand forces at their grips plus the bottom hand's couple. With firm grips
 the hands reproduce F_ff and τ_ff exactly before contact, in carry mode and inside a check, so a head started on the
 path follows it there apart from the integrator's own error (bounded by §8.1). The one exception is a dip after
 contact on a tilted shaft in carry mode: F_d acts whole at the top grip, and its moment about the swung body's centre
-is not in τ_ff (in swing mode the free pendulum includes the dip in A). No preset dips in carry mode. In swing mode
+is not in τ_ff (in swing mode the free pendulum includes the dip in A). No preset dips in carry mode. Inside a
+swing-mode check the dip is likewise untracked (P2b.2b.2a). In swing mode
 after contact outside a check the top hand applies the whole F_s at the pivot with no couple: that is exact only on
 the free pendulum, which the path is once the pendulum's window has closed, and elsewhere the rate guide takes up any
 lag. A relaxed top hand
@@ -975,7 +1003,7 @@ before contact is a defect in the table, not in the model.
 ### 6.1 The call
 
 ```ts
-function simulateShot(setup: ShotSetup, world?: World): ShotOutcome;  // world defaults to defaultWorld(setup.lawnSpeed)
+function simulateShot(setup: ShotSetup, world?: World): ShotOutcome;  // world wins; else defaultWorld(setup.lawnSpeed)
 
 interface ShotOutcome {
     readonly contact: ContactState;
@@ -996,8 +1024,8 @@ information, as phase 2's jump flag is. Invalid input throws the named `RangeErr
 
 Before `buildContact`: the striker is present; `live` holds only present balls, never the striker, no duplicates;
 a croquet stroke (`CROQUET_STROKES`) has a present `croqueted` ball, not the striker, touching the striker (within
-`CONTACT_TOLERANCE`); a single-ball stroke, the GC stop included, has no `croqueted`; `lawnSpeed` is accepted by
-`defaultWorld`.
+`CONTACT_TOLERANCE`); a single-ball stroke, the GC stop included, has no `croqueted`; without a `world`, `lawnSpeed`
+is accepted by `defaultWorld` (a passed `world` wins, P2b.2b.2a).
 
 ### 6.3 Building `StrokeContext`
 
@@ -1073,7 +1101,8 @@ keys; `topHandHeight` is not added.
   `contactAt`, at rest from t_s, with V continuous; in carry mode the head's lowest point on the path at t_s is
   `groundDepth` below the turf.
 - **Swung body.** δ and I' match the parallel-axis closed forms; with `armMass` 0 the swung body is the head.
-- **Tracking, no ball.** A head started on the path with firm grips follows it over 0.15 s within a bound pre-flight
+- **Tracking, no ball.** A head started on the path with firm grips follows it over the impact, up to the 0.45 s
+  cap, within a bound pre-flight
   measures and the plan fixes, where the hands reproduce the feed-forward exactly (§3.3): before contact (a coasting
   path, and a roll path with its windows and dip), and from contact in carry mode up to the reach. There the residual
   is the integrator's. Inside a check it is semi-implicit Euler's O(dt·a) lag, tested by convergence: halving dt
@@ -1111,7 +1140,7 @@ keys; `topHandHeight` is not added.
   `face/<striker>` interval, divided by the face centre's loss of speed along aim over it, agrees with the closed form
   within a tolerance pre-flight measures and the plan fixes. Every ball is summed: in the drive, a croquet stroke, the
   croqueted ball takes its momentum through the striker's ball within that interval.
-- **Re-contact.** A croquet split whose striker's ball leaves slower than the head is struck again within the impact,
+- **Re-contact.** A straight drive whose striker's ball leaves slower than the head is struck again within the impact,
   with no `impact-head-approaching`; a clean centre single-ball strike ends within `RELEASE_STEPS` of the later of the
   window's end and the face no longer reaching the ball within `LOOK_AHEAD`.
 - **Head–turf.** A head lowered onto the turf at rest settles at m·g/k; a head sliding level along the turf at

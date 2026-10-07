@@ -150,10 +150,10 @@ export const FINISH_SPEED = 1e-3;
  * rounded position updates. A step rounds each horizontal coordinate by at most half an ulp (about 2e-15 m on a
  * full-size lawn), so the ball's distance from an obstacle by at most √2 times that per step. The drift accumulates
  * over the run's steps: at the default IMPACT_DT and IMPACT_CAP (12,000 steps) it stays near 1e-11 m, so the margin
- * keeps about 100× headroom. A tracked drive's longest run, a 60 ms lead-in and TRACK_IMPACT_CAP (102,000 steps),
- * would reach about 8.5e-11 m at the same rate, about 12× headroom; planning measured at most 2.3e-11 m over the
- * preset sweep's capped runs, 1.5e-11 m over a 102,000-step one (pre-flight confirms it, P2b.2b.1 design §3.5). A
- * test's finer step, on coordinates under 1 m, drifts less.
+ * keeps about 100× headroom. A tracked drive's longest impact, a 150 ms lead-in and TRACK_IMPACT_CAP (120,000 steps),
+ * would reach about 1e-10 m at the same rate, 10× headroom; the probe measured 6.55e-12 m over a 120,000-step one
+ * (P2b.2b.2a design §4.4). The follow-through has no balls to wake. A test's finer step, on coordinates under 1 m,
+ * drifts less.
  */
 const WAKE_MARGIN = 1e-9;
 

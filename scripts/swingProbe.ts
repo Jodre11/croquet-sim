@@ -19,7 +19,7 @@
  * - tracking: the head's largest distance from the path with no ball and no turf, per phase: firm before contact,
  *   carry up to the reach's end, inside a check, and swing mode after contact outside a check (the residual);
  * - cost: µs/step of the tracked canonical impacts against P2b.2a's force-table strokes, and the WAKE_MARGIN reach
- *   filter's headroom over a 0.51 s impact;
+ *   filter's headroom over the longest impact (MAX_LEAD plus TRACK_IMPACT_CAP);
  * - timings: for the AC stop and the full roll, each action from 50 ms early to 20 ms late, and the AC stop's dip from
  *   none to twice its depth: lawn or ball first, the dig, the slide, the striker's ball's launch, and after phase 2
  *   both balls' distances and the coaching ratio;
@@ -142,6 +142,18 @@ function canonical(
         return setup;
     }
     return { ...setup, stroke: { ...setup.stroke, backswing: backswingFor(setup, speed, WORLD) } };
+}
+
+/** `f()`, or the RangeError it throws (a speed beyond the preset's reach), so that a sweep records it and goes on. */
+function attempt<T>(f: () => T): T | RangeError {
+    try {
+        return f();
+    } catch (error) {
+        if (error instanceof RangeError) {
+            return error;
+        }
+        throw error;
+    }
 }
 
 /** The ids of `balls` in BALL_IDS order: the order of the impact's snapshots. */
@@ -525,7 +537,10 @@ function ratios(): void {
             "2–4 m/s ==",
     );
     for (const type of CROQUET_STROKES) {
-        const speeds = [2, 2.5, 3, 3.5, 4].map((speed) => fmt(ratio(run(canonical(type, { speed }))), 2));
+        const speeds = [2, 2.5, 3, 3.5, 4].map((speed) => {
+            const r = attempt(() => run(canonical(type, { speed })));
+            return r instanceof RangeError ? "unreachable" : fmt(ratio(r), 2);
+        });
         console.log(
             `${type.padEnd(11)} 3 m/s ${speeds[2]} (coaching ${COACHING[type]}); ` +
                 `2, 2.5, 3, 3.5, 4 m/s: ${speeds.join(", ")}`,
@@ -534,7 +549,10 @@ function ratios(): void {
     // The player's push after contact (design §3.3): none against a full restoration of the arc's speed.
     for (const guideEffort of [0, 1]) {
         const cells = [2, 3, 4].map((speed) => {
-            const r = run(canonical("drive", { speed, guideEffort }));
+            const r = attempt(() => run(canonical("drive", { speed, guideEffort })));
+            if (r instanceof RangeError) {
+                return `${speed} m/s unreachable`;
+            }
             const hits = r.impact.timeline[`face/${r.setup.striker}`]?.length ?? 0;
             const after = r.impact.duration - trackOf(r.contact).arc.contactAt;
             return `${speed} m/s ${fmt(ratio(r), 2)}, ${hits} hits, ${ms(after)} ms after contactAt`;
@@ -750,7 +768,7 @@ function tracking(): void {
             "no turf: socket (m) and angle (rad) from the path ==",
     );
     for (const type of STROKE_TYPES) {
-        // The hands timed MAX_LEAD early give 60 ms of firm grip before contact; the rolls' hand window runs then.
+        // The hands timed MAX_LEAD early give MAX_LEAD of firm grip before contact; the rolls' hand window runs then.
         const contact = buildContact(canonical(type, { timing: { ...ON_TIME, hands: -MAX_LEAD } }), WORLD);
         const setup = { ...prepareImpact(contact, {}, WORLD), headTurf: null };
         const track = setup.drive as PreparedTrack;
@@ -869,7 +887,8 @@ function cost(): void {
         time(`force ${stroke.name}`, stroke.contact, stroke.balls);
     }
     // The longest lead-in (MAX_LEAD) plus the cap: a gentle AC stop (1 m/s, drive 0.5) whose head comes to rest on
-    // the turf, a closed contact that holds the impact to the cap, its hands (which carry no share) timed 60 ms early.
+    // the turf, a closed contact that holds the impact to the cap, its hands (which carry no share) timed MAX_LEAD
+    // early.
     const r = run(canonical("stop-ac", { speed: 1, drive: 0.5, timing: { ...ON_TIME, hands: -MAX_LEAD } }));
     const ids = idsOf(r.setup.balls);
     const travel = ids.map(() => 0);
@@ -954,7 +973,11 @@ function gc(): void {
             "their ratio (target over striker); then stop-gc against single-ball over the gap ==",
     );
     for (const speed of [2, 2.5, 3, 3.5, 4]) {
-        const r = run(canonical("stop-gc", { speed }));
+        const r = attempt(() => run(canonical("stop-gc", { speed })));
+        if (r instanceof RangeError) {
+            console.log(`stop-gc ${fmt(speed, 1)} m/s, gap ${GC_STOP_GAP} m: rejected (${r.message})`);
+            continue;
+        }
         console.log(`stop-gc ${fmt(speed, 1)} m/s, gap ${GC_STOP_GAP} m: ${touchText(r)}; ${crossingText(r)}`);
     }
     for (const gap of GAPS) {
