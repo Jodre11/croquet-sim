@@ -677,14 +677,48 @@ describe("the downswing (P2b.2b.2a design §3.5)", () => {
         });
     });
 
-    it("tabulates the free pendulum past the longest stroke: a 0.15 s lead plus the 0.45 s follow-through cap", () => {
-        // A stroke starting 0.15 s before contact (the longest lead-in) runs at most 0.45 s of follow-through past it, so
-        // the table, which starts at the pendulum's window's end, must reach 0.6 s past contact.
+    it("tabulates the free pendulum for the longest stroke: past contact at 0.15 s by 0.6 s, and to 1.15 s", () => {
+        // The longest lead-in puts contact 0.15 s after t = 0. The table, which starts at the pendulum's window's end,
+        // must then reach at least 0.6 s past contact (t = 0.75 s) and, as FREE_SPAN's design bound has it, the
+        // longest lead plus the 1 s follow-through cap from t = 0 (1.15 s).
         const lead = 0.15;
         const track = prepare(levelArc(vec3(1, 2, 0.05), { contactAt: lead }));
         const free = track.free as FreePendulum;
         const reaches = free.tw + (free.theta.length - 1) * FREE_STEP;
         expect(reaches).toBeGreaterThanOrEqual(lead + 0.6);
+        expect(reaches).toBeGreaterThanOrEqual(lead + 1);
+    });
+
+    it.each(["swing", "carry"] as const)("starts an early hands window from the downswing's hands, %s mode", (mode) => {
+        // An early window replaces the hands' path from where the downswing has them, as an early pendulum window
+        // replaces the pendulum's dynamics: pivotHand and pivotVelocityHand are the downswing's there, not P₀ + V₀·t
+        // and V₀, and the window's end carries on from them.
+        const across = vec3(0.05, 0, 0);
+        const drop = vec3(0, 0, -0.02);
+        const early = 0.01;
+        const base = downswingArc({ mode, handStart: early, pivotAcceleration: vec3(5, 0, 0) }, across, drop);
+        const swingDown = base.downswing as Downswing;
+        const downswing: Downswing =
+            mode === "swing"
+                ? swingDown
+                : { ...swingDown, release: -FALL, span: CONTACT - TOP, tempo: FALL, theta: [], omega: [], alpha: [] };
+        const arc: SwingArc = { ...base, downswing };
+        const track = prepare(arc);
+        const u = early - LEAD;
+        const expected = downswingHands(downswing, u, downswingAt(downswing, u));
+        expect(dist(track.pivotHand, expected.P)).toBeLessThan(1e-12);
+        expect(dist(track.pivotVelocityHand, expected.V)).toBeLessThan(1e-12);
+        // The test discriminates: the downswing's hand velocity there is not the contact velocity V₀.
+        expect(dist(track.pivotVelocityHand, arc.pivotVelocity)).toBeGreaterThan(1e-3);
+        const wh = arc.handWindow;
+        const accel = arc.pivotAcceleration;
+        expect(dist(track.pivotVelocityEnd, add(expected.V, scale(accel, wh)))).toBeLessThan(1e-12);
+        const travelled = add(add(expected.P, scale(expected.V, wh)), scale(accel, 0.5 * wh * wh));
+        expect(dist(track.pivotEnd, travelled)).toBeLessThan(1e-12);
+        const before = handsAt(track, early - 1e-12);
+        const after = handsAt(track, early + 1e-12);
+        expect(dist(before.position, after.position), "position").toBeLessThan(1e-9);
+        expect(dist(before.velocity, after.velocity), "velocity").toBeLessThan(1e-6);
     });
 
     it("rejects a malformed downswing", () => {
@@ -708,7 +742,8 @@ describe("the downswing (P2b.2b.2a design §3.5)", () => {
     });
 
     it("bounds the table's last full step to within FREE_STEP before contact, with a rounding margin", () => {
-        // Three samples, so last = release + FREE_STEP is controlled to ~1e-21 s. The turf error means validation passed.
+        // Three samples, so last = release + FREE_STEP is controlled to ~1e-21 s. The turf error means validation
+        // passed.
         const good = downswingArc();
         const down = good.downswing as Downswing;
         const placed = onArc(trackDrive(good));
@@ -727,8 +762,9 @@ describe("the downswing (P2b.2b.2a design §3.5)", () => {
     });
 
     it("accepts a table whose last sample time rounds a hair past contact", () => {
-        // release + (count − 2)·FREE_STEP is mathematically 0 but rounds to +3.5e-18 s for T = 0.03 s and 6002 samples. A
-        // plain `last < 0` test would reject a table that does end at contact, so the check allows a relative margin.
+        // release + (count − 2)·FREE_STEP is mathematically 0 but rounds to +3.5e-18 s for T = 0.03 s and 6002
+        // samples. A plain `last < 0` test would reject a table that does end at contact, so the check allows a
+        // relative margin.
         const good = downswingArc();
         const down = good.downswing as Downswing;
         const count = 6002;
@@ -739,8 +775,8 @@ describe("the downswing (P2b.2b.2a design §3.5)", () => {
         expect(last).toBeLessThan(1e-15);
         const placed = onArc(trackDrive(good));
         const contact = { ...placed, drive: trackDrive({ ...good, downswing: hair }) };
-        // These contacts are not placed to start a real impact, so validateImpact ends on its later turf check: reaching
-        // it, as the good arc does, means the downswing passed.
+        // These contacts are not placed to start a real impact, so validateImpact ends on its later turf check:
+        // reaching it, as the good arc does, means the downswing passed.
         expect(() => validateImpact(contact, {}, testWorld())).toThrow(/head penetrates the turf/);
     });
 });

@@ -3,9 +3,9 @@
  * hand (the pivot) in a vertical plane, the shaft at arc angle θ. The hands' path through space: the pivot moves in
  * that plane, ends after its reach, and dips. Before contact the path follows the downswing when the arc has one
  * (P2b.2b.2a design §3.5); otherwise each arc runs at its initial rate until its window. Each changes rate
- * constantly through its window. After its window the pendulum swings freely (swing mode) or slows to a held slope (carry
- * mode). The dip, and in carry mode the descent at the reach's end, lower the pivot from rest to rest. Everything is
- * continuous in position and velocity.
+ * constantly through its window. After its window the pendulum swings freely (swing mode) or slows to a held slope
+ * (carry mode). The dip, and in carry mode the descent at the reach's end, lower the pivot from rest to rest.
+ * Everything is continuous in position and velocity.
  *
  * Frames. n = aim × ẑ is the pitch axis: a positive rotation about it tilts aim upward. The head is rigid on the shaft,
  * its up axis s: at arc angle θ its orientation is rot(n, θ) ⊗ q_aim, q_aim turning body x to aim, and the socket's
