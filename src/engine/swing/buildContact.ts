@@ -462,7 +462,8 @@ export function planStroke(setup: ShotSetup, world: World): StrokePlan {
         coupling: { period: HAND_COUPLING.period, dampingRatio: HAND_COUPLING.dampingRatio, relaxAt: lead },
         hands,
     };
-    const start = headOnPath(prepareTrack(drive, head, world.gravity), head, 0);
+    // t = 0 is at or before the pendulum's window (arcStart = L + the arc's timing ≥ 0), so no free table is read.
+    const start = headOnPath(prepareTrack(drive, head, world.gravity, false), head, 0);
     return {
         contact: { head, face: WOOD, ...start, drive },
         approach: { clearance: scan.clearance, before: scan.before },

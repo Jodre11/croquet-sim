@@ -20,13 +20,13 @@ up 4.00 mm: lead 66.6 ms, lowest -3.48 mm; planned 3.0000 m/s, real 2.5139 m/s a
 up 6.00 mm: lead 73.1 ms, lowest -5.48 mm; planned 3.0000 m/s, real 2.3352 m/s at the first strike; turf from -68.1 ms, 1.07 mm deep; flags [turf-lift]
 up 7.00 mm: lead 75.9 ms, lowest -6.48 mm; planned 3.0000 m/s, real 2.2226 m/s at the first strike; turf from -70.9 ms, 1.17 mm deep; flags [turf-lift]
 == Cost (machine-dependent) ==
-single-ball planStroke 53.92 ms (downswing 99960 steps, and the free table); prepareTrack alone 16.73 ms (with the free table); impact 2000 steps at 10.477 µs/step; follow-through 99993 steps at 1.021 µs/step
-drive       planStroke 54.14 ms (downswing 99960 steps, and the free table); prepareTrack alone 17.11 ms (with the free table); impact 36270 steps at 2.269 µs/step; follow-through 73571 steps at 1.005 µs/step
-stop-ac     planStroke 56.06 ms (downswing 103919 steps, and the free table); prepareTrack alone 17.34 ms (with the free table); impact 4326 steps at 5.934 µs/step; follow-through 6456 steps at 1.120 µs/step
-stop-gc     planStroke 54.15 ms (downswing 99960 steps, and the free table); prepareTrack alone 17.07 ms (with the free table); impact 2000 steps at 10.582 µs/step; follow-through 17682 steps at 1.075 µs/step
-half-roll   planStroke 16.06 ms (closed-form downswing, no free table); prepareTrack alone 0.01 ms (without the free table); impact 7516 steps at 1.554 µs/step; follow-through 45004 steps at 0.963 µs/step
-full-roll   planStroke 15.62 ms (closed-form downswing, no free table); prepareTrack alone 0.00 ms (without the free table); impact 16090 steps at 1.602 µs/step; follow-through 36516 steps at 1.007 µs/step
-pass-roll   planStroke 16.17 ms (closed-form downswing, no free table); prepareTrack alone 0.00 ms (without the free table); impact 13129 steps at 1.572 µs/step; follow-through 10597 steps at 0.932 µs/step
+single-ball planStroke 37.62 ms (downswing 99960 steps, no free table); prepareTrack alone 19.61 ms (with the free table); simulateImpact 23.49 ms in all: preparation 19.61 ms, then 2000 steps at 1.937 µs/step; follow-through 99993 steps at 1.048 µs/step
+drive       planStroke 36.86 ms (downswing 99960 steps, no free table); prepareTrack alone 19.94 ms (with the free table); simulateImpact 84.72 ms in all: preparation 19.94 ms, then 36270 steps at 1.786 µs/step; follow-through 73571 steps at 1.051 µs/step
+stop-ac     planStroke 38.87 ms (downswing 103919 steps, no free table); prepareTrack alone 20.17 ms (with the free table); simulateImpact 29.06 ms in all: preparation 20.17 ms, then 4326 steps at 2.055 µs/step; follow-through 6456 steps at 1.028 µs/step
+stop-gc     planStroke 38.26 ms (downswing 99960 steps, no free table); prepareTrack alone 19.99 ms (with the free table); simulateImpact 24.18 ms in all: preparation 19.99 ms, then 2000 steps at 2.092 µs/step; follow-through 17682 steps at 1.109 µs/step
+half-roll   planStroke 16.81 ms (closed-form downswing, no free table); prepareTrack alone 0.01 ms (without the free table); simulateImpact 11.49 ms in all: preparation 0.01 ms, then 7516 steps at 1.528 µs/step; follow-through 45004 steps at 0.989 µs/step
+full-roll   planStroke 16.74 ms (closed-form downswing, no free table); prepareTrack alone 0.01 ms (without the free table); simulateImpact 25.60 ms in all: preparation 0.01 ms, then 16090 steps at 1.591 µs/step; follow-through 36516 steps at 1.615 µs/step
+pass-roll   planStroke 26.94 ms (closed-form downswing, no free table); prepareTrack alone 0.00 ms (without the free table); simulateImpact 21.43 ms in all: preparation 0.00 ms, then 13129 steps at 1.632 µs/step; follow-through 10597 steps at 0.886 µs/step
 == Fault judge on the canonical setups: face intervals on the striker's ball, and each finding ==
 single-ball 1 face intervals; no finding
 drive       2 face intervals; 29.1.6.1 possible-fault on blue, contacts 2

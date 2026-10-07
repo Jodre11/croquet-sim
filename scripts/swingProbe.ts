@@ -19,7 +19,8 @@
  * - mass: the swung body's effective mass at the face centre along aim (design §3.4) against the strike's measure;
  * - tracking: the head's largest distance from the path with no ball and no turf, per phase: firm before contact,
  *   carry up to the reach's end, inside a check, and swing mode after contact outside a check (the residual);
- * - cost: µs/step of the tracked canonical impacts against P2b.2a's force-table strokes, and the WAKE_MARGIN reach
+ * - cost: the tracked canonical impacts against P2b.2a's force-table strokes: simulateImpact's whole time, its fixed
+ *   preparation (prepareTrack) and its integration's µs/step (the rest over its steps); and the WAKE_MARGIN reach
  *   filter's headroom over the longest impact (MAX_LEAD plus TRACK_IMPACT_CAP);
  * - timings: for the AC stop and the full roll, each action from 50 ms early to 20 ms late, and the AC stop's dip from
  *   none to twice its depth: lawn or ball first, the dig, the slide, the striker's ball's launch, and after phase 2
@@ -868,23 +869,32 @@ const FORCE_STROKES: readonly ForceStroke[] = [
 ];
 
 function cost(): void {
-    console.log(`== Impact time per step (${REPEAT} runs after 5 warm-up; for P5) ==`);
-    const time = (name: string, contact: ContactState, balls: BallStates): void => {
+    console.log(
+        `== Impact time: in all, its fixed preparation (prepareTrack) and its integration per step ` +
+            `(medians of ${REPEAT} runs after 5 warm-up; for P5) ==`,
+    );
+    const medianOf = (run: () => void): number => {
         for (let i = 0; i < 5; i++) {
-            simulateImpact(contact, balls, WORLD);
+            run();
         }
         const times: number[] = [];
-        let steps = 0;
         for (let i = 0; i < REPEAT; i++) {
             const start = performance.now();
-            steps = simulateImpact(contact, balls, WORLD).steps;
+            run();
             times.push(performance.now() - start);
         }
         times.sort((a, b) => a - b);
-        const median = times[Math.floor(times.length / 2)] as number;
+        return times[Math.floor(times.length / 2)] as number;
+    };
+    const time = (name: string, contact: ContactState, balls: BallStates): void => {
+        const { drive } = contact;
+        const steps = simulateImpact(contact, balls, WORLD).steps;
+        const all = medianOf(() => simulateImpact(contact, balls, WORLD));
+        // simulateImpact prepares a tracked drive once, then integrates: the preparation is not a per-step cost.
+        const prepare = drive.kind === "track" ? medianOf(() => prepareTrack(drive, contact.head, WORLD.gravity)) : 0;
         console.log(
-            `${name.padEnd(20)} ${steps} steps: median ${fmt(median, 3)} ms ` +
-                `(${fmt((median * 1e3) / steps, 3)} µs/step)`,
+            `${name.padEnd(20)} ${fmt(all, 3)} ms in all: preparation ${fmt(prepare, 3)} ms, then ${steps} steps ` +
+                `at ${fmt(((all - prepare) * 1e3) / steps, 3)} µs/step`,
         );
     };
     for (const type of STROKE_TYPES) {

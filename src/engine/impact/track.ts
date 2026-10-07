@@ -204,7 +204,7 @@ export interface PreparedTrack {
     readonly dipAccel: number;
     /** Null where the reach does not bind. */
     readonly reach: Reach | null;
-    /** Swing mode's free pendulum; null in carry mode. */
+    /** Swing mode's free pendulum; null in carry mode, or in swing mode where prepareTrack skipped it. */
     readonly free: FreePendulum | null;
     readonly body: SwungBody;
     /** The head's weight m·g (N). */
@@ -499,9 +499,10 @@ function computeFree(track: PreparedTrack, head: MalletHead, gravity: number): F
 /**
  * Prepares `drive` for `head` under `gravity` (design §3.2, §3.3): the windows' end states, the reach, in carry mode
  * the descent D = max(0, z_s + groundDepth) (z_s the head's lowest point on the path at the reach's end without it),
- * in swing mode the free pendulum's table, the swung body and the gains.
+ * in swing mode the free pendulum's table, the swung body and the gains. Without `withFree` the table is skipped: a
+ * caller that reads the path only up to the pendulum's window's end saves its cost, and a read past it throws.
  */
-export function prepareTrack(drive: TrackDrive, head: MalletHead, gravity: number): PreparedTrack {
+export function prepareTrack(drive: TrackDrive, head: MalletHead, gravity: number, withFree = true): PreparedTrack {
     const { arc, coupling, hands } = drive;
     const w = arc.window;
     const wh = arc.handWindow;
@@ -535,7 +536,7 @@ export function prepareTrack(drive: TrackDrive, head: MalletHead, gravity: numbe
     const reach = computeReach(plain);
     const reached: PreparedTrack = { ...plain, reach };
     if (arc.mode === "swing") {
-        return { ...reached, free: computeFree(reached, head, gravity) };
+        return withFree ? { ...reached, free: computeFree(reached, head, gravity) } : reached;
     }
     if (reach === null || !(reach.tStop > reach.t1)) {
         return reached;
@@ -557,6 +558,14 @@ export interface PathPoint {
     readonly dipAcceleration: Vec3;
     /** The pendulum's current angular acceleration α (rad/s²). */
     readonly pendulumAcceleration: number;
+}
+
+/** Swing mode's free pendulum table; throws if prepareTrack skipped it, rather than read a table that is not there. */
+function freeOf(track: PreparedTrack): FreePendulum {
+    if (track.free === null) {
+        throw new Error("the free pendulum's table was read, but prepareTrack skipped it (withFree false)");
+    }
+    return track.free;
 }
 
 /** The pendulum's θ, ω and α at time t (design §3.2). */
@@ -585,7 +594,7 @@ function pendulumAt(track: PreparedTrack, t: number): Swing {
         };
     }
     // Swing mode: the free pendulum, interpolated in its table and clamped to its last sample beyond it.
-    const free = track.free as FreePendulum;
+    const free = freeOf(track);
     const x = (t - free.tw) / FREE_STEP;
     const last = free.theta.length - 1;
     const i = Math.min(Math.floor(x), last - 1);
@@ -607,7 +616,7 @@ function pendulumAt(track: PreparedTrack, t: number): Swing {
  * little as possible", rather than the free pendulum swinging back. Only times from `from` on may be read from it.
  */
 export function holdPendulum(track: PreparedTrack, from: number): PreparedTrack {
-    const free = track.free as FreePendulum;
+    const free = freeOf(track);
     const { theta } = pendulumAt(track, from);
     return {
         ...track,

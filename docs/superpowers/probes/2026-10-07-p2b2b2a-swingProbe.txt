@@ -117,18 +117,18 @@ stop-gc     (γ_T 1) firm 2.00e-6, 1.98e-7; check 6.80e-6, 8.68e-6; swing 3.63e-
 half-roll   (γ_T 1) firm 1.40e-6, 1.58e-6; carry 3.20e-6, 2.55e-6; after the reach 4.40e-6, 2.06e-6
 full-roll   (γ_T 1) firm 5.42e-7, 9.00e-7; carry 2.95e-6, 2.69e-6; after the reach 3.80e-6, 2.72e-6
 pass-roll   (γ_T 1) firm 3.03e-7, 5.84e-7; carry 4.24e-6, 7.47e-6; after the reach 4.85e-6, 9.70e-7
-== Impact time per step (50 runs after 5 warm-up; for P5) ==
-tracked single-ball  2000 steps: median 21.288 ms (10.644 µs/step)
-tracked drive        36270 steps: median 81.203 ms (2.239 µs/step)
-tracked stop-ac      4326 steps: median 25.584 ms (5.914 µs/step)
-tracked stop-gc      2000 steps: median 20.804 ms (10.402 µs/step)
-tracked half-roll    7516 steps: median 11.215 ms (1.492 µs/step)
-tracked full-roll    16090 steps: median 24.073 ms (1.496 µs/step)
-tracked pass-roll    13129 steps: median 19.762 ms (1.505 µs/step)
-force centre 3 m/s   600 steps: median 0.385 ms (0.642 µs/step)
-force croquet 3 m/s  600 steps: median 0.547 ms (0.911 µs/step)
-force descending 10° 1480 steps: median 0.658 ms (0.445 µs/step)
-force stop shot      600 steps: median 0.485 ms (0.808 µs/step)
+== Impact time: in all, its fixed preparation (prepareTrack) and its integration per step (medians of 50 runs after 5 warm-up; for P5) ==
+tracked single-ball  32.270 ms in all: preparation 28.587 ms, then 2000 steps at 1.842 µs/step
+tracked drive        95.473 ms in all: preparation 28.638 ms, then 36270 steps at 1.843 µs/step
+tracked stop-ac      37.339 ms in all: preparation 29.042 ms, then 4326 steps at 1.918 µs/step
+tracked stop-gc      32.736 ms in all: preparation 28.533 ms, then 2000 steps at 2.101 µs/step
+tracked half-roll    11.134 ms in all: preparation 0.003 ms, then 7516 steps at 1.481 µs/step
+tracked full-roll    23.947 ms in all: preparation 0.003 ms, then 16090 steps at 1.488 µs/step
+tracked pass-roll    19.793 ms in all: preparation 0.002 ms, then 13129 steps at 1.507 µs/step
+force centre 3 m/s   0.381 ms in all: preparation 0.000 ms, then 600 steps at 0.636 µs/step
+force croquet 3 m/s  0.549 ms in all: preparation 0.000 ms, then 600 steps at 0.916 µs/step
+force descending 10° 0.655 ms in all: preparation 0.000 ms, then 1480 steps at 0.442 µs/step
+force stop shot      0.483 ms in all: preparation 0.000 ms, then 600 steps at 0.805 µs/step
 reach filter over 120000 steps (600.0 ms): displacement beyond the summed path at most 6.55e-12 m against WAKE_MARGIN 1e-9 m (153× headroom)
 == Timing (design §9): each action early or late, and the dip's depth ==
 stop-ac arc -50 ms: missed, dig 1.93 mm, slide 1.8 mm; ball 0.000 m/s at 0.00°; striker 0.000 m, croqueted 0.000 m, ratio NaN; impact-head-deep 0, impact-cap 1, impact-head-approaching 0, impact-off-face 0

@@ -9,9 +9,9 @@
  *   P2b.2b.1's;
  * - fat: the canonical single-ball stroke met higher on the face (the head lower), 2 to 7 mm: the lead, the dig, and
  *   the planned against the real speed at the first face–ball contact;
- * - cost: per preset, planStroke (in swing mode the downswing and the 1.2 s free table; in carry mode neither),
- *   prepareTrack alone (with the free table in swing mode only), the impact's and the follow-through's steps and
- *   µs/step;
+ * - cost: per preset, planStroke (in swing mode the downswing's table and scan; it skips the free table),
+ *   prepareTrack alone (with the free table in swing mode only), simulateImpact's whole time and its integration's
+ *   µs/step (its time less prepareTrack's, over its steps), and the follow-through's steps and µs/step;
  * - faults: per canonical setup, the striker's face intervals and the fault judge's findings (law, tier, ball and the
  *   contacts count).
  * Run with `npx --yes tsx scripts/strokeProbe.ts`; environment: SECTION (one of the names above; default all), REPEAT
@@ -171,12 +171,14 @@ function cost(): void {
         }
         const strokeUs = ((performance.now() - start) * 1e3) / REPEAT;
         const swing = down.tempo === null;
+        // simulateImpact prepares the track once, then integrates: its fixed preparation is not a per-step cost.
+        const integrateUs = impactUs - prepareMs * 1e3;
         console.log(
             `${type.padEnd(11)} planStroke ${fmt(planMs, 2)} ms (` +
-                `${swing ? `downswing ${downSteps} steps, and the free table` : ""}` +
-                `${swing ? "" : "closed-form downswing, no free table"}` +
-                `); prepareTrack alone ${fmt(prepareMs, 2)} ms (${swing ? "with" : "without"} the free table); ` +
-                `impact ${impactSteps} steps at ${fmt(impactUs / impactSteps, 3)} µs/step; follow-through ` +
+                `${swing ? `downswing ${downSteps} steps` : "closed-form downswing"}, no free table); ` +
+                `prepareTrack alone ${fmt(prepareMs, 2)} ms (${swing ? "with" : "without"} the free table); ` +
+                `simulateImpact ${fmt(impactUs / 1e3, 2)} ms in all: preparation ${fmt(prepareMs, 2)} ms, then ` +
+                `${impactSteps} steps at ${fmt(integrateUs / impactSteps, 3)} µs/step; follow-through ` +
                 `${followSteps} steps at ${fmt((strokeUs - impactUs) / Math.max(followSteps, 1), 3)} µs/step`,
         );
     }

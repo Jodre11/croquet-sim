@@ -13,6 +13,7 @@ import {
     effectiveMass,
     handsAt,
     headOnPath,
+    holdPendulum,
     inCheck,
     pathAt,
     pendulumOf,
@@ -270,6 +271,21 @@ describe("the swing path", () => {
         const free = prepare({ ...TIMED, mode: "swing" }).free;
         expect(free?.tw).toBe(TIMED.arcStart + TIMED.window);
         expect(free?.theta).toHaveLength(Math.round(FREE_SPAN / FREE_STEP) + 1);
+    });
+
+    it("skips the free table on request: the same path to the window's end, a throw past it", () => {
+        const arc: SwingArc = { ...TIMED, mode: "swing" };
+        const drive = trackDrive(arc, TEST_COUPLING, TEST_HANDS);
+        const full = prepareTrack(drive, TEST_HEAD, STANDARD_GRAVITY);
+        const bare = prepareTrack(drive, TEST_HEAD, STANDARD_GRAVITY, false);
+        expect(bare.free).toBeNull();
+        expect({ ...bare, free: full.free }).toEqual(full);
+        const tw = arc.arcStart + arc.window;
+        for (const t of [-0.01, 0, arc.arcStart, 0.02, tw]) {
+            expect(pathAt(bare, t), `t ${t}`).toEqual(pathAt(full, t));
+        }
+        expect(() => pathAt(bare, tw + 1e-6)).toThrow(/prepareTrack skipped it/);
+        expect(() => holdPendulum(bare, tw)).toThrow(/prepareTrack skipped it/);
     });
 
     it("gives each grip its gains: firm, the top hand's γ_T and the bottom hand's g_B", () => {

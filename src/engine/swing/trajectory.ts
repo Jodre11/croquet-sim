@@ -75,7 +75,8 @@ export function strokeTrajectory(contact: ContactState, follow: FollowThrough, g
         };
     };
     const samples: StrokeSample[] = [];
-    const track = prepareTrack(drive, head, gravity);
+    // Every path sample below is before the impact's start (t < 0), so no free table is read.
+    const track = prepareTrack(drive, head, gravity, false);
     const impactStart = 0 - arc.contactAt;
     for (let k = 0; release + k * FOLLOW_SAMPLE < impactStart - SAME_INSTANT; k++) {
         const t = release + k * FOLLOW_SAMPLE;

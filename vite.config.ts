@@ -10,7 +10,8 @@ export default defineConfig({
     test: {
         include: ["tests/**/*.test.ts"],
         environment: "node",
-        // Whole-stroke simulations take several seconds on CI's runners, past vitest's 5 s default.
-        testTimeout: 30_000,
+        // 4× the slowest test on this default (3.4 s locally, buildContact's solver test), rounded up: CI's runners
+        // measured 2–3× slower. Slower tests set their own timeouts.
+        testTimeout: 15_000,
     },
 });
