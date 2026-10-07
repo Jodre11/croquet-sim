@@ -1,18 +1,21 @@
 # Stroke-shape sources (P2b.2b.2a design §6.1)
 
-Raw fetched text and the figures extracted from it, for `reference/swing.json`. All fetched 2026-10-07 with
-`curl -k -sSL` (the Oxford Croquet sites' certificate is broken). Quotations are verbatim from the file named, with the
-HTML tags stripped. Heights and angles would convert to SI as the plan's Step 2 states; none was found, so none was
-converted.
+The sources behind `reference/swing.json` and the figures extracted from them. The originals are cited, not mirrored:
+each is listed with its URL, its fetch date and the SHA-256 of the file as fetched. Short quotations follow, verbatim
+with the HTML tags stripped, each annotated with what it does and does not tell the model (user decision 2026-10-07).
+Heights and angles would convert to SI as the plan's Step 2 states; none was found, so none was converted.
 
-## Files
+## Sources
 
-| File | URL | Notes |
-|---|---|---|
-| `riches-index.html.txt` | http://www.oxfordcroquet.com/coach/riches/croqtech/index.asp | John Riches, *Croquet Technique*. The whole book is this one page, the chapters being anchors in it, so there are no per-chapter files. |
-| `gugan4.html.txt` | https://oxfordcroquet.org/tech/gugan4/ | Gugan, "The Physics of Croquet Strokes: Analysis of the CA high-speed DVD". |
-| `gugan5.html.txt` | https://oxfordcroquet.org/tech/gugan5/ | Gugan, "Croquet Drives, Pass-Rolls, Stop-Shots and Scatter-Shots". |
-| `cadynamics.html.txt` | https://croquet.org.uk/?d=1475 | Croquet Association, *Project Croquet Dynamics* (2006), version 4. A PDF despite the name; `pdftotext` reads it. |
+All fetched 2026-10-07 with `curl -k -sSL` (the Oxford Croquet sites' certificate is broken). To check a later fetch
+against the one used here, compare its SHA-256 with the digest below.
+
+| Short name | Work | URL | SHA-256 of the fetched file |
+|---|---|---|---|
+| Riches | John Riches, *Croquet Technique* (Oxford Croquet). The whole book is one page, its chapters anchors in it. | http://www.oxfordcroquet.com/coach/riches/croqtech/index.asp | `c9693c2efd4171b266ca5756e4ec513a808ea810f799925dfaf93ea6c426181f` |
+| Gugan 4 | Don Gugan, "The Physics of Croquet Strokes: Analysis of the CA high-speed DVD" (Oxford Croquet) | https://oxfordcroquet.org/tech/gugan4/ | `50356f4631de45538b54b0ec9732da6aacb3d9605ee98c518b1b0880818653f8` |
+| Gugan 5 | Don Gugan, "Croquet Drives, Pass-Rolls, Stop-Shots and Scatter-Shots" (Oxford Croquet) | https://oxfordcroquet.org/tech/gugan5/ | `b6e1c2fe9e5487c735e52511fd7dc7c6b5ad7d94db9bb52f1048ca824004d8a5` |
+| CA Dynamics | Croquet Association, *Project Croquet Dynamics* (2006), version 4 (PDF) | https://croquet.org.uk/?d=1475 | `f4df395c3a77aba0baef9f33fd5c1e7445833ad0a38d0a89d02cdd4781a873d2` |
 
 Search for a backswing-against-speed or downswing-time measurement (`croquet mallet backswing height swing speed
 measurement`): the results were a 3D motion-capture study of wrist flexion (Applied Sciences 2020, 10(12), 4192, not
@@ -23,13 +26,13 @@ guides. None gives a pair, so nothing further was fetched.
 
 Nothing in any file gives a backswing height, angle or range for any stroke type. Only comparisons:
 
-- Single-ball, `riches-index.html.txt`, The Roquet: "concentrate on making a SLOW, REASONABLY LONG backswing. The length
+- Single-ball, Riches, The Roquet: "concentrate on making a SLOW, REASONABLY LONG backswing. The length
   of the backswing will depend on the desired strength of the shot i.e. how far you want the ball to go."
-- Rush, same file: "Take a longer backswing than you would if you were hitting a single ball the same distance".
-- Stop-shot, same file: "The backswing should not be shortened for a stop-shot".
-- Three-quarter roll, same file: "if a maximum backswing is used and the arms are swung confidently from the shoulders".
-- Full roll, same file: "to overcome the 'hitting rather than sweeping' tendency, try using a shorter backswing."
-- Pass roll, same file: "Many players obtain best results by hitting through the TOP HALF of the two balls, with
+- Rush, Riches: "Take a longer backswing than you would if you were hitting a single ball the same distance".
+- Stop-shot, Riches: "The backswing should not be shortened for a stop-shot".
+- Three-quarter roll, Riches: "if a maximum backswing is used and the arms are swung confidently from the shoulders".
+- Full roll, Riches: "to overcome the 'hitting rather than sweeping' tendency, try using a shorter backswing."
+- Pass roll, Riches: "Many players obtain best results by hitting through the TOP HALF of the two balls, with
   very little backswing but an exaggerated (low) follow-through."
 - Drive, half roll: nothing on the backswing beyond the half roll's "for long shots it is harder to keep the shoulders
   still and maintain the angle of mallet slope, as a longer backswing with more force is required."
@@ -38,7 +41,7 @@ Nothing in any file gives a backswing height, angle or range for any stroke type
 
 No split and no hands' backswing angle in any file. What is said:
 
-- Single-ball, `riches-index.html.txt`: "The arms should swing freely from the shoulders so that the hands move
+- Single-ball, Riches: "The arms should swing freely from the shoulders so that the hands move
   FORWARDS throughout the swing, and until the instant of contact they should be slightly forward of the mallet head
   (hence the slight 'pulling' feel)." Also: "Use your TOP hand on the shaft, with the bottom hand completely removed.
   This will force you to take a long backswing and move the top hand FORWARD throughout the swing". This is the
@@ -53,26 +56,26 @@ No split and no hands' backswing angle in any file. What is said:
   arms are reaching straight out in front."
 - Pass roll: "The shoulders must be kept still while the arms swing forward, with elbows beginning in a bent position
   and being straightened as both arms reach forward during the swing."
-- `gugan4.html.txt`, section on drives: the drives "were made with a pendulum-like swing with a nearly horizontal
-  mallet head at impact". `gugan5.html.txt`: "the drive, especially when the mallet is swung freely from the top of
+- Gugan 4, section on drives: the drives "were made with a pendulum-like swing with a nearly horizontal
+  mallet head at impact". Gugan 5: "the drive, especially when the mallet is swung freely from the top of
   the shaft in a 'pendulum' style and falls largely under its own weight."
 
 ## Backswing against contact speed, downswing time
 
 None. The CA data give contact (mallet) speeds with no backswing recorded:
 
-- `gugan4.html.txt`, Table 2 (single-ball drives A1D to A4D): mallet speed U in m/s, with ball travel; no backswing.
-- `cadynamics.html.txt`, Single Ball Shots: "A1D 0.93 0.78 1.04 1 1.4", "A2D 9.74 3.20 4.31 2 0.9", "A3D 24.73
+- Gugan 4, Table 2 (single-ball drives A1D to A4D): mallet speed U in m/s, with ball travel; no backswing.
+- CA Dynamics, Single Ball Shots: "A1D 0.93 0.78 1.04 1 1.4", "A2D 9.74 3.20 4.31 2 0.9", "A3D 24.73
   5.23 6.86 4 0.9", "A4D 45.85 8.18 8.62 5 0.9" (ball travel, mallet speed m/s, ball speed, contact distance mm,
   contact time ms). No backswing.
-- `gugan5.html.txt`: "The drives were of modest strength, with a mallet speed of about 3 m/s sending the croqueted
+- Gugan 5: "The drives were of modest strength, with a mallet speed of about 3 m/s sending the croqueted
   ball about seven yards". No backswing.
 
 These are contact speeds against ball travel, not backswing pairs, so `swing.json` has no `kinematics`.
 
 ## Finish
 
-- Single-ball, `riches-index.html.txt`, The Roquet: "The follow-through should be directly along the line of aim, and
+- Single-ball, Riches, The Roquet: "The follow-through should be directly along the line of aim, and
   also as low as possible along the ground."
 - Drive: "The grip should be firm enough to ensure a smooth follow-through, in spite of the opposing weight of two
   balls, rather than one."
@@ -86,7 +89,7 @@ These are contact speeds against ball travel, not backswing pairs, so `swing.jso
 ## Roll tempo
 
 - Half roll: nothing.
-- Full roll, `riches-index.html.txt`: "It is also usually necessary, depending on the length of the roll and the
+- Full roll, Riches: "It is also usually necessary, depending on the length of the roll and the
   speed of the court, to incorporate some degree of push and acceleration which, of course, must be smooth and
   combined with a firm grip in order to avoid suspicions of illegality."
 - Pass roll: "The grip must be very firm, and the mallet head must be moved forward with a pronounced BUT SMOOTH

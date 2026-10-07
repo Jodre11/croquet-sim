@@ -67,6 +67,9 @@ figure and no kinematic pair was sourced: Riches gives only comparisons.
   drag, so that a weak stroke is stopped dead, and a grip that breaks under a hard stroke. The model has no ploughing
   term: turf drag is μ·N with N a linear spring, so the drag grows by only about 100 N per mm of depth and nothing
   stops the head; the head touches the turf at a single point, its lowest.
+- **Sources are cited, not mirrored** (§6.1; user decision, 2026-10-07). The repository keeps no copy of a fetched
+  source. `reference/sources/README.md` cites each original with its URL, fetch date and the SHA-256 of the file as
+  fetched, and quotes short passages, annotated, where a quotation makes a figure clearer or easier to verify.
 - **Lawn damage** (Law 29.1.14). Under Law 29.2.3 it is a fault only in a hampered, jump or group stroke, and
   C29.19.5 sets no depth test; `faults.ts` already judges it. For ordinary strokes the 2 mm `impact-head-deep` event
   serves as the marker that a stroke has gone beyond a graze and has probably damaged the lawn. It is not a fault, and
@@ -379,8 +382,9 @@ The plan's first task sources, with provenance and a quotation on every figure, 
 - croquet or pendulum-swing measurements only where they give backswing against contact speed, or downswing time.
 
 Per stroke type: the backswing range, the split between pendulum and hands and the hands' angle, kinematic pairs
-where found, and the finish. Raw fetched text and extracted figures are kept under `reference/sources/` so that
-later runs can reproduce them.
+where found, and the finish. `reference/sources/README.md` cites each source (URL, fetch date, SHA-256 of the
+fetched file) and quotes the extracted figures, annotated; the fetched text itself is not kept (amended 2026-10-07:
+cited, not mirrored).
 
 ### 6.2 Fitting
 
