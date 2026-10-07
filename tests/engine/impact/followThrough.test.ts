@@ -147,8 +147,8 @@ describe("the follow-through (design §4)", () => {
     it("flags a follow-through that drives the head deep, not the impact", () => {
         // The carry's descent at the reach's end (t1 ≈ 0.105 s, long after the ball has gone) plans the head's lowest
         // point groundDepth below the turf. The turf and the compliant hands hold the head well above that path: a
-        // 10 mm plan reaches only about 1.1 mm. A 200 mm plan drives it about 5.7 mm deep (deepest 1 ms sample), near
-        // 3× HEAD_DEEP_LIMIT.
+        // 10 mm plan reaches only about 1.1 mm, so a planned dig far outside play is needed to press it past 2 mm: a
+        // 200 mm plan drives it about 5.7 mm deep (deepest 1 ms sample), near 3× HEAD_DEEP_LIMIT.
         const deep = testProfile({
             drive: { mode: "carry", handReach: 0.15, groundDepth: 0.2 },
             shape: { pendulumShare: 0.5 },
