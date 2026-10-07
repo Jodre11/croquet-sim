@@ -20,15 +20,17 @@
 The order follows the user's "first we must model the stroke shape and amplitude": fitting anything before the shape
 and the laws land would be undone by them, since both change what is fitted.
 
-**Amended 2026-10-07 (spec review: subtraction, completeness).** The hands start with the pendulum's release and
-their progress follows its angle (user decision), so the release needs no root-find and the per-type hands' tempo and
-`DOWNSWING_MAX` go. The hands arrive at contact with no vertical velocity. The follow-through is a continuation inside
-the integrator, keeping its state. `FREE_SPAN` and `WAKE_MARGIN`'s rationale are re-derived for the longer runs. The
-coasting branch stays as the fallback when no downswing is supplied. The defaults are fixed in a stated order.
-`contactSpeed` is the planned speed. An early window replaces the downswing's dynamics, as it replaced the coasting.
-`defaultBackswing` moves to the reference data and the canonical setups; `maxBackAngle` is one constant; the fit's
-grid search is built only if pairs are sourced; the constant-effort test seam is replaced by a work–energy check;
-the turf scan and `swingApproach` share one pass; sourcing is bounded to the data the fit consumes.
+**Amended 2026-10-07 (spec review: subtraction, completeness).** The hands start with the pendulum's release (user
+decision): in swing mode the pendulum leads and the hands follow its angle; in carry mode the hands lead on their own
+tempo and the slope follows them (user decision, after a side note that a roll's pendulum barely swings), so the
+release needs no root-find and `DOWNSWING_MAX` goes. The hands arrive at contact with no vertical velocity. The
+follow-through is a continuation inside the integrator, keeping its state. `FREE_SPAN` and `WAKE_MARGIN`'s rationale
+are re-derived for the longer runs. The coasting branch stays as the fallback when no downswing is supplied. The
+defaults are fixed in a stated order. `contactSpeed` is the planned speed. An early window replaces the downswing's
+dynamics, as it replaced the coasting. `defaultBackswing` moves to the reference data and the canonical setups;
+`maxBackAngle` is one constant; the fit's grid search is built only if pairs are sourced; the constant-effort test
+seam is replaced by a work–energy check; the turf scan and `swingApproach` share one pass; sourcing is bounded to the
+data the fit consumes.
 
 ## 1. Goal and exit criteria
 
@@ -118,38 +120,50 @@ labelled placeholder (user decision, 2026-10-06, superseding "else zero"): §6.2
   `handAngle` φ, with d_h·sin φ = (1 − s)·h. With s = 1, d_h = 0: the hands do not move (the drive, the single-ball
   shot and the stops: the top hand stays put) and φ is neither read nor checked.
 
-### 3.3 The hands
+### 3.3 The hands, by mode
 
-The hands start with the pendulum's release (user decision, 2026-10-07) and their progress follows its angle: with
-σ = (θ − θ_top)/(θ_c − θ_top) and Δ = P_c − P_b,
+The hands and the pendulum start together at the top (user decision, 2026-10-07). With Δ = P_c − P_b, Δ_h and Δ_z
+its horizontal and vertical parts, and a progress variable σ from 0 at the top to 1 at contact, the hands' path is
 
-P = P_b + Δ_h·σ² + Δ_z·(3σ² − 2σ³),
+P = P_b + Δ_h·σ² + Δ_z·(3σ² − 2σ³).
 
-Δ_h and Δ_z the horizontal and vertical parts of Δ. Both start from rest (zero slope at σ = 0). At contact the
-horizontal part arrives at V_c = 2·Δ_h·σ̇(0) and the vertical part at rest, so the hands carry the head along the
-turf and do not keep descending after contact. Their velocity and acceleration follow by the chain rule:
-V = P′(σ)·σ̇, A = P″(σ)·σ̇² + P′(σ)·σ̈, with σ̇ = ω/(θ_c − θ_top). A is linear in θ̈, so §3.1 is solved for θ̈
-explicitly:
+Both parts start from rest. At contact the horizontal part arrives at V_c = 2·Δ_h·σ̇(0) and the vertical part at
+rest, so the hands carry the head along the turf and do not keep descending after contact. What drives σ depends on
+the mode (user decision, 2026-10-07):
 
-(I_P + M·d·(P′(σ)·t̂)/(θ_c − θ_top))·θ̈ = −m·g·ℓ_h·sin θ − M·d·(P″(σ)·t̂)·σ̇² + τ_p(t).
+- **Swing mode** (single-ball, drive, the stops): the pendulum leads. It falls under §3.1, and σ = (θ − θ_top)/
+  (θ_c − θ_top) slaves the hands to its angle. Every default swing preset has `pendulumShare` 1, so its hands are
+  still and the coupling below is idle; it serves a profile with a share below 1. With V = P′(σ)·σ̇,
+  A = P″(σ)·σ̇² + P′(σ)·σ̈ and σ̇ = ω/(θ_c − θ_top), A is linear in θ̈, so §3.1 is solved for θ̈ explicitly:
 
-A non-positive left-hand coefficient anywhere on the downswing rejects the shot (the hands' backswing too long for the
-pendulum to carry). The hands' speed at contact, and so P2b.2b.1's `handShare`, now emerges; `SwingDrive.handShare`
-is removed. After contact the hands' window, the reach, the dip and the carry's descent act as in swing spec §3.2,
-from the hands' state at contact.
+  (I_P + M·d·(P′(σ)·t̂)/(θ_c − θ_top))·θ̈ = −m·g·ℓ_h·sin θ − M·d·(P″(σ)·t̂)·σ̇² + τ_p(t).
+
+  A non-positive left-hand coefficient anywhere on the downswing rejects the shot. A swing-mode `pendulumShare` of 0
+  is rejected (σ would be undefined).
+- **Carry mode** (the rolls): the hands and body lead, as in Riches' roll, the slope held by the grip. σ runs in
+  time, σ = (t − t_r)/T_h(i), over the hands' tempo T_h(i) = `handTempo.slow` + i·(`handTempo.fast` −
+  `handTempo.slow`), so t_r = −T_h(i). The pendulum is slaved to the hands' progress: θ = θ_top + (θ_c − θ_top)·σ²,
+  arriving at ω₀ = 2·(θ_c − θ_top)/T_h(i), continuous with the carry's window after contact. A `pendulumShare` of 0
+  (all hands) is valid: θ holds at θ_c throughout. The roll's speed comes from the hands' travel and tempo; τ_p does
+  not act and `effort` is not read. Intensity sets the tempo only.
+
+The hands' speed at contact, and so P2b.2b.1's `handShare`, now emerges; `SwingDrive.handShare` is removed. After
+contact the hands' window, the reach, the dip and the carry's descent act as in swing spec §3.2, from the hands'
+state at contact.
 
 ### 3.4 The forward integration
 
-From rest at θ_top, the downswing is integrated forward by semi-implicit Euler at `FREE_STEP` (5 µs), as
-`prepareImpact`'s free table, until θ first reaches θ_c; the step that crosses is cut by linear interpolation in θ.
+In swing mode, from rest at θ_top, the downswing is integrated forward by semi-implicit Euler at `FREE_STEP` (5 µs),
+as `prepareImpact`'s free table, until θ first reaches θ_c; the step that crosses is cut by linear interpolation in θ.
 That fall time T_fall gives t_r = −T_fall. No root-find is needed: with the hands slaved to θ, nothing in the
 integration depends on t_r. It is rejected if ω falls to zero or below before θ_c (the swing stalls: the backswing too
 low for the stance, or the effort too weak to rise to a contact angle above the hands' level) or if T_fall exceeds 2 s.
+In carry mode the downswing is closed-form (§3.3) and is tabulated at the same step.
 
-It yields a downswing table of θ, ω and θ̈ from t_r to 0. ω₀ = ω(0); the head's planned velocity at contact is the
-path's, V_c + ω₀·n × (c − pivot), and its magnitude is `contactSpeed`: the planned speed, from the contact-free
-downswing, so it is stable for the planner. A fat stroke's head arrives slower than it; the impact records the real
-speed (§3.5) and the probe reports both.
+Either way it yields a downswing table of θ, ω and θ̈ from t_r to 0. ω₀ = ω(0); the head's planned velocity at
+contact is the path's, V_c + ω₀·n × (c − pivot), and its magnitude is `contactSpeed`: the planned speed, from the
+contact-free downswing, so it is stable for the planner. A fat stroke's head arrives slower than it; the impact
+records the real speed (§3.5) and the probe reports both.
 
 ### 3.5 The lead-in and the impact's start
 
@@ -239,11 +253,12 @@ samples before the impact come from the downswing, those inside it and after fro
 interface SwingShape {
     readonly pendulumShare: number;        // [0, 1] of the backswing height from the pendulum
     readonly handAngle: number;            // rad above horizontal of the hands' backswing line (read when share < 1)
-    readonly effort: {
+    readonly effort: {                     // swing mode only
         readonly torqueMax: number;        // N·m at intensity 1
         readonly tempoSlow: number;        // s, pulse duration at intensity 0
         readonly tempoFast: number;        // s, at intensity 1
     };
+    readonly handTempo: { readonly slow: number; readonly fast: number }; // s, carry mode only
     readonly defaultIntensity: number;     // [0, 1]
 }
 
@@ -263,15 +278,17 @@ the follow-through costs up to a second of tracked steps, which the P5 budget do
 ### 5.2 Rejections
 
 `buildContact` adds `RangeError`s for: `backswing` ≤ 0; `intensity` outside [0, 1]; `pendulumShare` outside [0, 1];
-`handAngle` outside (0, 90°) when `pendulumShare` < 1; a backswing beyond `MAX_BACK_ANGLE`; `tempoFast` >
-`tempoSlow` or either ≤ 0; `torqueMax` < 0; `defaultIntensity` outside [0, 1]; a non-positive effective inertia
-(§3.3); a stall or a fall beyond 2 s (§3.4); a lead beyond `MAX_LEAD`. The `speed` check goes.
+`handAngle` outside (0, 90°) when `pendulumShare` < 1; a backswing beyond `MAX_BACK_ANGLE`; in swing mode, a
+`pendulumShare` of 0, `tempoFast` > `tempoSlow` or either ≤ 0, or `torqueMax` < 0; in carry mode, `handTempo.fast`
+> `handTempo.slow` or either ≤ 0; `defaultIntensity` outside [0, 1]; a non-positive effective inertia (§3.3); a stall
+or a fall beyond 2 s (§3.4); a lead beyond `MAX_LEAD`. The `speed` check goes.
 
 ### 5.3 Defaults and canonical setups
 
 The defaults are fixed in this order, per stroke type:
 
-1. h₀, the backswing that gives 3 m/s at intensity 0 (gravity and the hands alone; τ_max does not enter);
+1. h₀, the backswing that gives 3 m/s at intensity 0 (swing mode: gravity alone, τ_max does not enter; carry mode:
+   the hands at `handTempo.slow`);
 2. if the sourced backswing range (§6.1) holds h₀, the default backswing is h₀ and `defaultIntensity` 0; otherwise
    the default backswing is the range's nearest bound and `defaultIntensity` is solved for 3 m/s there (after step 3),
    or, if no intensity in [0, 1] reaches it, 1 and the nearest speed recorded;
@@ -305,9 +322,11 @@ grid search is built only if some stroke type has pairs. They are never fitted t
 P2b.2b.2c's, and the rolls its held-out validation.
 
 Without pairs, a stroke type takes a placeholder, marked `"provisional": "placeholder"` with this rule as its
-provenance: `tempoSlow` is the gravity-only fall time from h₀, `tempoFast` half of it, and `torqueMax` is found by a
-one-dimensional bisection so that intensity 1 from h₀ gives twice the intensity-0 contact speed. A placeholder is never
-tuned to ratios; sourced data or P3's per-player fit replaces it.
+provenance. Swing mode: `tempoSlow` is the gravity-only fall time from h₀, `tempoFast` half of it, and `torqueMax` is
+found by a one-dimensional bisection so that intensity 1 from h₀ gives twice the intensity-0 contact speed. Carry
+mode: `handTempo.slow` from Riches' qualitative tempo for the roll, `handTempo.fast` half of it, so intensity 1 from
+the same backswing doubles the contact speed likewise. A placeholder is never tuned to ratios; sourced data or P3's
+per-player fit replaces it.
 
 ## 7. Testing
 
@@ -317,8 +336,10 @@ tuned to ratios; sourced data or P3's per-player fit replaces it.
   within 0.1 %; the fall time against the pendulum's elliptic-integral period, tabulated in the test.
 - Effort, hands still: the work–energy balance ½·I_P·ω₀² = m·g·ℓ_h·(cos θ_c − cos θ_top) + ∫τ_p dθ, the integral
   computed numerically from the downswing table, within 0.1 %.
-- Moving hands: P_b at the top, P_c at contact, no vertical velocity at contact, V_c = 2·Δ_h·σ̇(0); the effective
-  inertia's rejection.
+- Moving hands, swing mode (a test profile with a share below 1): P_b at the top, P_c at contact, no vertical
+  velocity at contact, V_c = 2·Δ_h·σ̇(0); the effective inertia's rejection; a share of 0 rejected.
+- Carry mode: t_r = −T_h(i); V_c = 2·Δ_h/T_h(i) and ω₀ = 2·(θ_c − θ_top)/T_h(i) in closed form; a share of 0 holds θ
+  at θ_c; intensity 1 halves the tempo and doubles the speed.
 - The forward integration: a stall and a too-low backswing reject; t_r = −T_fall.
 - Segment continuity at the impact's start, at a window's start before contact, at the impact's end.
 - A fat stroke: a stance and backswing whose downswing meets the turf before the ball start the impact early and
@@ -372,7 +393,7 @@ P2b.2b.1's; the cost of the downswing and of the follow-through in steps and µs
 
 - The P2 row: P2b.2b.2 split into 2a, 2b and 2c as above, with their exit criteria.
 - "P2b.2 decisions": the split; amplitude as input and the contact speed as outcome; gravity plus effort, effort and
-  tempo one bounded control; effort fitted to kinematics only, else a labelled placeholder; the hands starting with
-  the release, slaved to the pendulum's angle; a downswing meeting the turf simulated; the three-segment structure;
-  `lawnSpeed` (world wins).
+  tempo one bounded control; effort fitted to kinematics only, else a labelled placeholder; the hands and pendulum
+  starting together, the pendulum leading in swing mode and the hands in carry mode; a downswing meeting the turf
+  simulated; the three-segment structure; `lawnSpeed` (world wins).
 - The P3 row: per-player effort and tempo fitting.
