@@ -155,7 +155,7 @@ function validateDownswing(down: Downswing, mode: StrokeMode, n: Vec3): void {
         finiteNumber(down.omega[i] as number, `arc.downswing.omega[${i}]`);
         finiteNumber(down.alpha[i] as number, `arc.downswing.alpha[${i}]`);
     }
-    // The last full step lies within one FREE_STEP before contact, give or take the rounding margin.
+    // The last full step lies within one FREE_STEP before contact, give or take END_TOLERANCE of a step.
     const last = down.release + (count - 2) * FREE_STEP;
     if (!(last <= FREE_STEP * END_TOLERANCE && last + FREE_STEP * (1 + END_TOLERANCE) >= 0)) {
         fail("arc.downswing's table must end at contact: its samples every FREE_STEP from the release");
