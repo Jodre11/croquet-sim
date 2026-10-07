@@ -16,14 +16,20 @@ import { headBottom, headLowestPoint, outsideObstacle } from "./contacts";
 import { handover } from "./handover";
 import { rotateInverse } from "./rigidBody";
 import { integrate, type ImpactBall, type ImpactOptions, type ImpactSetup } from "./integrate";
-import { pitchAxis, prepareTrack } from "./track";
-import type { ContactState, DriveSample, ForceDrive, ImpactResult, TrackDrive } from "./types";
+import { FREE_STEP, pitchAxis, prepareTrack } from "./track";
+import type { ContactState, DriveSample, Downswing, ForceDrive, ImpactResult, StrokeMode, TrackDrive } from "./types";
 
 /**
  * Tolerance on |q|² − 1 for a ContactState's orientation, and on a tracked drive's aim and swing plane (P2b.2b.1
  * design §3.6). Numerical, not physical: a few ulps of a normalised vector.
  */
 const UNIT_TOLERANCE = 1e-12;
+
+/**
+ * Fraction of FREE_STEP by which a downswing table's last full-step sample may miss its bounds. Numerical, not
+ * physical: it absorbs rounding in the cut fraction (release + (count − 2)·FREE_STEP lands a few 1e-18 s off).
+ */
+const END_TOLERANCE = 1e-9;
 
 /**
  * Bound on prepareImpact's placement passes over the obstacles. Numerical, not physical: the overlaps left are within
@@ -105,13 +111,65 @@ function validateForce(drive: ForceDrive): void {
 }
 
 /**
+ * Checks a tracked drive's downswing (P2b.2b.2a design §3): a negative release; a finite top, a non-negative span;
+ * finite hands, Δ_h in the swing plane and Δ_z vertical; in carry mode a positive tempo with release = −tempo and no
+ * table; in swing mode no tempo, a positive span and a finite table of θ, ω and α of one length, at least 2, whose
+ * samples every FREE_STEP from the release end at contact.
+ */
+function validateDownswing(down: Downswing, mode: StrokeMode, n: Vec3): void {
+    finiteNumber(down.release, "arc.downswing.release");
+    if (!(down.release < 0)) {
+        fail(`arc.downswing.release must be negative (got ${down.release})`);
+    }
+    finiteNumber(down.thetaTop, "arc.downswing.thetaTop");
+    finiteNumber(down.span, "arc.downswing.span");
+    friction(down.span, "arc.downswing.span");
+    finite(down.handsTop, "arc.downswing.handsTop");
+    finite(down.across, "arc.downswing.across");
+    finite(down.drop, "arc.downswing.drop");
+    if (!(Math.abs(dot(down.across, n)) <= UNIT_TOLERANCE * length(down.across))) {
+        fail("arc.downswing.across must lie in the swing plane");
+    }
+    if (!(down.drop.x === 0 && down.drop.y === 0)) {
+        fail("arc.downswing.drop must be vertical");
+    }
+    if (mode === "carry") {
+        const { tempo } = down;
+        if (tempo === null || !(tempo > 0) || down.release !== 0 - tempo || down.theta.length > 0) {
+            fail("arc.downswing must be closed-form in carry mode: a positive tempo, release = −tempo, no table");
+        }
+        return;
+    }
+    const count = down.theta.length;
+    if (
+        down.tempo !== null ||
+        !(down.span > 0) ||
+        count < 2 ||
+        down.omega.length !== count ||
+        down.alpha.length !== count
+    ) {
+        fail("arc.downswing must be tabulated in swing mode: no tempo, a positive span, θ, ω and α of one length ≥ 2");
+    }
+    for (let i = 0; i < count; i++) {
+        finiteNumber(down.theta[i] as number, `arc.downswing.theta[${i}]`);
+        finiteNumber(down.omega[i] as number, `arc.downswing.omega[${i}]`);
+        finiteNumber(down.alpha[i] as number, `arc.downswing.alpha[${i}]`);
+    }
+    // The last full step lies within one FREE_STEP before contact, give or take the rounding margin.
+    const last = down.release + (count - 2) * FREE_STEP;
+    if (!(last <= FREE_STEP * END_TOLERANCE && last + FREE_STEP * (1 + END_TOLERANCE) >= 0)) {
+        fail("arc.downswing's table must end at contact: its samples every FREE_STEP from the release");
+    }
+}
+
+/**
  * Checks a tracked drive (P2b.2b.1 design §3.6), in this order: every vector and angle finite; a positive radius,
  * windows and dip duration; non-negative start times, contact time and dip start; a non-negative dip depth; a mode of
  * "swing" or "carry"; a non-negative reach and ground depth; aim a horizontal unit vector within UNIT_TOLERANCE; a
  * positive period, a non-negative damping ratio and relaxation time; the bottom hand between the socket and the top
  * hand, both grips in (0, 1], a non-negative arm mass and reach slack, a guide effort in [0, 1]; the pivot's velocity
- * and acceleration in the swing plane, their component along the pitch axis within UNIT_TOLERANCE of their size. The
- * head need not start on the path.
+ * and acceleration in the swing plane, their component along the pitch axis within UNIT_TOLERANCE of their size; and a
+ * downswing, if given, well formed (validateDownswing). The head need not start on the path.
  */
 function validateTrack(drive: TrackDrive): void {
     const { arc, coupling, hands } = drive;
@@ -159,6 +217,9 @@ function validateTrack(drive: TrackDrive): void {
     }
     if (!(Math.abs(dot(arc.pivotAcceleration, n)) <= UNIT_TOLERANCE * length(arc.pivotAcceleration))) {
         fail("arc.pivotAcceleration must lie in the swing plane");
+    }
+    if (arc.downswing !== undefined) {
+        validateDownswing(arc.downswing, arc.mode, n);
     }
 }
 

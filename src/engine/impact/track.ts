@@ -1,8 +1,9 @@
 /**
  * The tracked drive's path (P2b.2b.1 design §3.1, §3.2), as two arcs. The pendulum: the mallet swings about the top
  * hand (the pivot) in a vertical plane, the shaft at arc angle θ. The hands' path through space: the pivot moves in
- * that plane, ends after its reach, and dips. Each arc runs at its initial rate until its window and changes rate
- * constantly through it. After its window the pendulum swings freely (swing mode) or slows to a held slope (carry
+ * that plane, ends after its reach, and dips. Before contact the path follows the downswing when the arc has one
+ * (P2b.2b.2a design §3.5); otherwise each arc runs at its initial rate until its window. Each changes rate
+ * constantly through its window. After its window the pendulum swings freely (swing mode) or slows to a held slope (carry
  * mode). The dip, and in carry mode the descent at the reach's end, lower the pivot from rest to rest. Everything is
  * continuous in position and velocity.
  *
@@ -16,7 +17,7 @@ import { atan2, sinCos } from "../math/elementary";
 import { ZERO, add, cross, dot, scale, sub, vec3, type Vec3 } from "../math/vec3";
 import { headLowestPoint } from "./contacts";
 import { multiply, rotate, rotateInverse, type Quaternion } from "./rigidBody";
-import type { Coupling, Hands, HeadState, MalletHead, SwingArc, TrackDrive } from "./types";
+import type { Coupling, Downswing, Hands, HeadState, MalletHead, SwingArc, TrackDrive } from "./types";
 
 const UP = vec3(0, 0, 1);
 const FORWARD = vec3(1, 0, 0);
@@ -37,11 +38,12 @@ export const HAND_COUPLING = {
 export const FREE_STEP = 5e-6;
 
 /**
- * Span (s) of the free pendulum's table from the pendulum's window's end (design §3.2). Numerical: a tracked impact
- * runs at most MAX_LEAD (0.06 s, the longest lead-in) plus TRACK_IMPACT_CAP (0.45 s) from t = 0, and the table starts
- * at the window's end, so 0.55 s covers every impact with room to spare.
+ * Span (s) of the free pendulum's table from the pendulum's window's end (design §3.2). Numerical: a tracked stroke
+ * runs at most MAX_LEAD (0.15 s, the longest lead-in) plus FOLLOW_CAP (1 s, the follow-through's cap after contact)
+ * from t = 0, and the table starts at the window's end, so 1.2 s covers every stroke with a 50 ms guard (P2b.2b.2a
+ * design §4.4). simulateImpact is public and accepts any contactAt or cap: beyond the table θ and ω hold.
  */
-export const FREE_SPAN = 0.55;
+export const FREE_SPAN = 1.2;
 
 /**
  * How long after contactAt (s) the hands' path may take to travel 0.8·handReach before the reach is taken not to bind
@@ -188,12 +190,14 @@ export interface PreparedTrack {
     readonly axis: Vec3;
     /** q_aim. */
     readonly base: Quaternion;
-    /** θ where the pendulum's window begins; θ and ω where it ends. */
+    /** θ and ω where the pendulum's window begins; θ and ω where it ends. */
     readonly thetaArc: number;
+    readonly omegaArc: number;
     readonly thetaEnd: number;
     readonly omegaEnd: number;
-    /** The planned pivot where the hands' window begins; the pivot and its velocity where it ends. */
+    /** The planned pivot and its velocity where the hands' window begins; the pivot and its velocity where it ends. */
     readonly pivotHand: Vec3;
+    readonly pivotVelocityHand: Vec3;
     readonly pivotEnd: Vec3;
     readonly pivotVelocityEnd: Vec3;
     /** The dip's acceleration, 4·depth/duration² (m/s²). */
@@ -212,7 +216,7 @@ export interface PreparedTrack {
 }
 
 /** A point's position, velocity and acceleration (world frame). */
-interface Motion {
+export interface Motion {
     readonly P: Vec3;
     readonly V: Vec3;
     readonly A: Vec3;
@@ -223,6 +227,132 @@ interface Lowering {
     readonly z: number;
     readonly v: number;
     readonly a: number;
+}
+
+/** The pendulum's θ (rad), ω (rad/s) and α (rad/s²). */
+export interface Swing {
+    readonly theta: number;
+    readonly omega: number;
+    readonly alpha: number;
+}
+
+/**
+ * The pendulum about the top hand (design §3.2): I_P·θ̈ = −weight·sin θ − inertial·(A·t̂) + τ, with weight = m·g·ℓ_h
+ * (N·m), inertial = M·d (kg·m) and inertia = I_P (kg·m²).
+ */
+export interface Pendulum {
+    readonly weight: number;
+    readonly inertial: number;
+    readonly inertia: number;
+}
+
+/**
+ * The pendulum of `body` swinging `head` about a top hand `radius` from the socket under `gravity`: ℓ_h = ρ + r,
+ * d = ℓ_h − δ, I_P = I'_y + M·d² (design §3.2).
+ */
+export function pendulumOf(head: MalletHead, body: SwungBody, radius: number, gravity: number): Pendulum {
+    const lh = head.socket.z + radius;
+    const d = lh - body.offset;
+    return { weight: head.mass * gravity * lh, inertial: body.mass * d, inertia: body.inertia.y + body.mass * d * d };
+}
+
+/** How many samples the downswing's scan visits (P2b.2b.2a design §3.4): its table's, or carry mode's like it. */
+export function downswingSamples(down: Downswing): number {
+    if (down.tempo === null) {
+        return down.theta.length;
+    }
+    return Math.ceil((0 - down.release) / FREE_STEP) + 1;
+}
+
+/** The time (s from contact) of sample k: the release plus k·FREE_STEP, the last sample at contact. */
+export function downswingTime(down: Downswing, k: number): number {
+    return k === downswingSamples(down) - 1 ? 0 : down.release + k * FREE_STEP;
+}
+
+/**
+ * The downswing's pendulum at time t (s from contact, at most 0; P2b.2b.2a design §3.3, §3.4): held at the top before
+ * the release; in carry mode θ = θ_top + span·σ²; in swing mode its table, interpolated linearly.
+ */
+export function downswingAt(down: Downswing, t: number): Swing {
+    if (t < down.release) {
+        return { theta: down.thetaTop, omega: 0, alpha: 0 };
+    }
+    if (down.tempo !== null) {
+        const T = down.tempo;
+        const sigma = Math.min(t - down.release, T) / T;
+        return {
+            theta: down.thetaTop + down.span * sigma * sigma,
+            omega: (2 * down.span * sigma) / T,
+            alpha: (2 * down.span) / (T * T),
+        };
+    }
+    const n = down.theta.length;
+    if (t >= 0) {
+        // Contact exactly: σ is then exactly 1 and the hands arrive level.
+        const last = n - 1;
+        return {
+            theta: down.theta[last] as number,
+            omega: down.omega[last] as number,
+            alpha: down.alpha[last] as number,
+        };
+    }
+    const i = Math.max(0, Math.min(Math.floor((t - down.release) / FREE_STEP), n - 2));
+    const t0 = down.release + i * FREE_STEP;
+    const t1 = i + 1 === n - 1 ? 0 : down.release + (i + 1) * FREE_STEP;
+    const f = Math.min(Math.max((t - t0) / (t1 - t0), 0), 1);
+    const lerp = (values: readonly number[]): number => {
+        const a = values[i] as number;
+        return a + f * ((values[i + 1] as number) - a);
+    };
+    return { theta: lerp(down.theta), omega: lerp(down.omega), alpha: lerp(down.alpha) };
+}
+
+/**
+ * The downswing's hands at time t (s from contact; P2b.2b.2a design §3.3), the pendulum at `swing`: P(σ) and its
+ * derivatives, σ led by the pendulum in swing mode (σ = (θ − θ_top)/span) and by time in carry mode. At rest at the
+ * top before the release.
+ */
+export function downswingHands(down: Downswing, t: number, swing: Swing): Motion {
+    if (t < down.release) {
+        return { P: down.handsTop, V: vec3(0, 0, 0), A: vec3(0, 0, 0) };
+    }
+    let sigma: number;
+    let rate: number;
+    let accel: number;
+    if (down.tempo !== null) {
+        sigma = Math.min(t - down.release, down.tempo) / down.tempo;
+        rate = 1 / down.tempo;
+        accel = 0;
+    } else {
+        sigma = (swing.theta - down.thetaTop) / down.span;
+        rate = swing.omega / down.span;
+        accel = swing.alpha / down.span;
+    }
+    const slope = add(scale(down.across, 2 * sigma), scale(down.drop, 6 * sigma - 6 * sigma * sigma));
+    const bend = add(scale(down.across, 2), scale(down.drop, 6 - 12 * sigma));
+    const rise = (3 - 2 * sigma) * sigma * sigma;
+    return {
+        P: add(add(down.handsTop, scale(down.across, sigma * sigma)), scale(down.drop, rise)),
+        V: scale(slope, rate),
+        A: add(scale(bend, rate * rate), scale(slope, accel)),
+    };
+}
+
+/** The pendulum before its window: on the downswing before contactAt, if there is one, else coasting at ω₀. */
+function beforeWindow(arc: SwingArc, t: number): Swing {
+    if (arc.downswing !== undefined && t < arc.contactAt) {
+        return downswingAt(arc.downswing, t - arc.contactAt);
+    }
+    return { theta: arc.theta0 + arc.omega0 * t, omega: arc.omega0, alpha: 0 };
+}
+
+/** The planned pivot before the hands' window: on the downswing before contactAt, if there is one, else P₀ + V₀·t. */
+function beforeHands(arc: SwingArc, t: number): Motion {
+    if (arc.downswing !== undefined && t < arc.contactAt) {
+        const u = t - arc.contactAt;
+        return downswingHands(arc.downswing, u, downswingAt(arc.downswing, u));
+    }
+    return { P: add(arc.pivot, scale(arc.pivotVelocity, t)), V: arc.pivotVelocity, A: vec3(0, 0, 0) };
 }
 
 const LEVEL: Lowering = { z: 0, v: 0, a: 0 };
@@ -245,17 +375,23 @@ function lowering(depth: number, duration: number, a: number, e: number): Loweri
     return { z: depth, v: 0, a: 0 };
 }
 
-/** The planned pivot at time t: P₀ + V₀·t, then P_h + V₀·τ + ½·A·τ², then P_e + V_e·u (no reach, no dip). */
+/**
+ * The planned pivot at time t: before the hands' window (the downswing, or P₀ + V₀·t), then P_h + V_h·τ + ½·A·τ², then
+ * P_e + V_e·u (no reach, no dip).
+ */
 function planPivot(track: PreparedTrack, t: number): Motion {
     const { arc } = track;
     if (t <= arc.handStart) {
-        return { P: add(arc.pivot, scale(arc.pivotVelocity, t)), V: arc.pivotVelocity, A: vec3(0, 0, 0) };
+        return beforeHands(arc, t);
     }
     if (t <= arc.handStart + arc.handWindow) {
         const tau = t - arc.handStart;
         return {
-            P: add(add(track.pivotHand, scale(arc.pivotVelocity, tau)), scale(arc.pivotAcceleration, 0.5 * tau * tau)),
-            V: add(arc.pivotVelocity, scale(arc.pivotAcceleration, tau)),
+            P: add(
+                add(track.pivotHand, scale(track.pivotVelocityHand, tau)),
+                scale(arc.pivotAcceleration, 0.5 * tau * tau),
+            ),
+            V: add(track.pivotVelocityHand, scale(arc.pivotAcceleration, tau)),
             A: arc.pivotAcceleration,
         };
     }
@@ -340,17 +476,13 @@ function computeReach(track: PreparedTrack): Reach | null {
 /** Tabulates swing mode's free pendulum from the window's end by semi-implicit Euler every FREE_STEP (design §3.2). */
 function computeFree(track: PreparedTrack, head: MalletHead, gravity: number): FreePendulum {
     const { arc, body } = track;
-    const lh = head.socket.z + arc.radius;
-    const d = lh - body.offset;
     const theta: number[] = [];
     const omega: number[] = [];
     const free: FreePendulum = {
         tw: arc.arcStart + arc.window,
         theta,
         omega,
-        weight: head.mass * gravity * lh,
-        inertial: body.mass * d,
-        inertia: body.inertia.y + body.mass * d * d,
+        ...pendulumOf(head, body, arc.radius, gravity),
     };
     let th = track.thetaEnd;
     let om = track.omegaEnd;
@@ -373,8 +505,8 @@ export function prepareTrack(drive: TrackDrive, head: MalletHead, gravity: numbe
     const { arc, coupling, hands } = drive;
     const w = arc.window;
     const wh = arc.handWindow;
-    const thetaArc = arc.theta0 + arc.omega0 * arc.arcStart;
-    const pivotHand = add(arc.pivot, scale(arc.pivotVelocity, arc.handStart));
+    const atArc = beforeWindow(arc, arc.arcStart);
+    const atHands = beforeHands(arc, arc.handStart);
     const body = swungBody(head, hands, arc.radius);
     const plain: PreparedTrack = {
         kind: "track",
@@ -383,12 +515,14 @@ export function prepareTrack(drive: TrackDrive, head: MalletHead, gravity: numbe
         hands,
         axis: pitchAxis(arc.aim),
         base: aimRotation(arc.aim),
-        thetaArc,
-        thetaEnd: thetaArc + arc.omega0 * w + 0.5 * arc.alpha * w * w,
-        omegaEnd: arc.omega0 + arc.alpha * w,
-        pivotHand,
-        pivotEnd: add(add(pivotHand, scale(arc.pivotVelocity, wh)), scale(arc.pivotAcceleration, 0.5 * wh * wh)),
-        pivotVelocityEnd: add(arc.pivotVelocity, scale(arc.pivotAcceleration, wh)),
+        thetaArc: atArc.theta,
+        omegaArc: atArc.omega,
+        thetaEnd: atArc.theta + atArc.omega * w + 0.5 * arc.alpha * w * w,
+        omegaEnd: atArc.omega + arc.alpha * w,
+        pivotHand: atHands.P,
+        pivotVelocityHand: atHands.V,
+        pivotEnd: add(add(atHands.P, scale(atHands.V, wh)), scale(arc.pivotAcceleration, 0.5 * wh * wh)),
+        pivotVelocityEnd: add(atHands.V, scale(arc.pivotAcceleration, wh)),
         dipAccel: (4 * arc.dip.depth) / (arc.dip.duration * arc.dip.duration),
         reach: null,
         free: null,
@@ -426,17 +560,17 @@ export interface PathPoint {
 }
 
 /** The pendulum's θ, ω and α at time t (design §3.2). */
-function pendulumAt(track: PreparedTrack, t: number): { theta: number; omega: number; alpha: number } {
+function pendulumAt(track: PreparedTrack, t: number): Swing {
     const { arc } = track;
     if (t <= arc.arcStart) {
-        return { theta: arc.theta0 + arc.omega0 * t, omega: arc.omega0, alpha: 0 };
+        return beforeWindow(arc, t);
     }
     const tw = arc.arcStart + arc.window;
     if (t <= tw) {
         const tau = t - arc.arcStart;
         return {
-            theta: track.thetaArc + arc.omega0 * tau + 0.5 * arc.alpha * tau * tau,
-            omega: arc.omega0 + arc.alpha * tau,
+            theta: track.thetaArc + track.omegaArc * tau + 0.5 * arc.alpha * tau * tau,
+            omega: track.omegaArc + arc.alpha * tau,
             alpha: arc.alpha,
         };
     }
@@ -493,6 +627,13 @@ export function pathAt(track: PreparedTrack, t: number): PathPoint {
         dipAcceleration: vec3(0, 0, 0 - dip.a),
         pendulumAcceleration: alpha,
     };
+}
+
+/** The top hand's planned place and velocity at time t (design §3.2): the pivot with the reach and the dip. */
+export function handsAt(track: PreparedTrack, t: number): { readonly position: Vec3; readonly velocity: Vec3 } {
+    const pivot = pivotAt(track, t);
+    const dip = dipAt(track, t);
+    return { position: sub(pivot.P, vec3(0, 0, dip.z)), velocity: sub(pivot.V, vec3(0, 0, dip.v)) };
 }
 
 /**

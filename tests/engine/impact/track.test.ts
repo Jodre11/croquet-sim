@@ -6,10 +6,16 @@ import {
     FREE_SPAN,
     FREE_STEP,
     aimRotation,
+    downswingAt,
+    downswingHands,
+    downswingSamples,
+    downswingTime,
     effectiveMass,
+    handsAt,
     headOnPath,
     inCheck,
     pathAt,
+    pendulumOf,
     pitchAxis,
     prepareTrack,
     swingOrientation,
@@ -19,9 +25,11 @@ import {
     type PreparedTrack,
     type Reach,
 } from "../../../src/engine/impact/track";
-import type { Hands, SwingArc } from "../../../src/engine/impact/types";
+import { validateImpact } from "../../../src/engine/impact/simulateImpact";
+import type { Downswing, Hands, SwingArc } from "../../../src/engine/impact/types";
 import { STANDARD_GRAVITY } from "../../../src/engine/world";
-import { NO_DIP, TEST_COUPLING, TEST_HANDS, TEST_HEAD, levelArc, socketAt, trackDrive } from "../support/impact";
+import { testWorld } from "../support/fixtures";
+import { NO_DIP, TEST_COUPLING, TEST_HANDS, TEST_HEAD, levelArc, onArc, socketAt, trackDrive } from "../support/impact";
 
 const AIM = vec3(0.6, 0.8, 0);
 const N = pitchAxis(AIM);
@@ -464,5 +472,275 @@ describe("the effective mass at the face centre", () => {
         const body = swungBody(TEST_HEAD, ARMED, 0.8);
         expect(effectiveMass(body, TEST_HEAD, IDENTITY, vec3(1, 0, 0))).toBeCloseTo(expected, 12);
         expect(expected).toBeCloseTo(1.00668, 5);
+    });
+});
+
+/**
+ * A swing-mode downswing of constant α from rest at θ_top to θ_c over T (s): θ = θ_top + ½·α·τ², τ from the release
+ * −T, tabulated every FREE_STEP with its last sample at contact. The hands end at `pivot`, from `pivot` − across −
+ * drop.
+ */
+function uniformDownswing(
+    thetaTop: number,
+    thetaC: number,
+    T: number,
+    pivot: Vec3,
+    across: Vec3 = vec3(0, 0, 0),
+    drop: Vec3 = vec3(0, 0, 0),
+): Downswing {
+    const alpha = (2 * (thetaC - thetaTop)) / (T * T);
+    const theta: number[] = [];
+    const omega: number[] = [];
+    const accel: number[] = [];
+    for (let k = 0; k * FREE_STEP < T; k++) {
+        const tau = k * FREE_STEP;
+        theta.push(thetaTop + 0.5 * alpha * tau * tau);
+        omega.push(alpha * tau);
+        accel.push(alpha);
+    }
+    theta.push(thetaC);
+    omega.push(alpha * T);
+    accel.push(alpha);
+    return {
+        release: -T,
+        thetaTop,
+        span: thetaC - thetaTop,
+        handsTop: sub(sub(pivot, across), drop),
+        across,
+        drop,
+        tempo: null,
+        theta,
+        omega,
+        alpha: accel,
+    };
+}
+
+/** Lead (s), the downswing's length T (s) and its angles: the head swung through 0.6 rad onto a level contact. */
+const LEAD = 0.02;
+const FALL = 0.05;
+const TOP = -0.6;
+const CONTACT = 0;
+const OMEGA_C = (2 * (CONTACT - TOP)) / FALL;
+
+/**
+ * A level swing arc whose head reaches contact at LEAD on a uniform downswing, coasting on at ω₀ until windows at
+ * LEAD, its hands moved by `across` and `drop` along it (and on at V_c = 2·across·ω₀/span after it).
+ */
+function downswingArc(o: Partial<SwingArc> = {}, across = vec3(0, 0, 0), drop = vec3(0, 0, 0)): SwingArc {
+    const handsVelocity = scale(across, (2 * OMEGA_C) / (CONTACT - TOP));
+    // levelArc's still pivot is where the hands arrive at contact.
+    const base = levelArc(vec3(1, 2, 0.05), {
+        theta0: CONTACT - OMEGA_C * LEAD,
+        omega0: OMEGA_C,
+        contactAt: LEAD,
+        arcStart: LEAD,
+        handStart: LEAD,
+        ...o,
+    });
+    return {
+        ...base,
+        pivot: sub(base.pivot, scale(handsVelocity, LEAD)),
+        pivotVelocity: handsVelocity,
+        downswing: uniformDownswing(TOP, CONTACT, FALL, base.pivot, across, drop),
+    };
+}
+
+describe("the downswing (P2b.2b.2a design §3.5)", () => {
+    const radial = (theta: number) => sub(scale(vec3(1, 0, 0), Math.sin(theta)), scale(UP, Math.cos(theta)));
+    const alpha = (2 * (CONTACT - TOP)) / (FALL * FALL);
+
+    it("samples every FREE_STEP from the release, the last sample at contact", () => {
+        const down = uniformDownswing(TOP, CONTACT, FALL, vec3(0, 0, 1));
+        const n = downswingSamples(down);
+        expect(n).toBe(down.theta.length);
+        expect(downswingTime(down, 0)).toBe(-FALL);
+        expect(downswingTime(down, 3)).toBeCloseTo(-FALL + 3 * FREE_STEP, 15);
+        expect(downswingTime(down, n - 1)).toBe(0);
+        expect(downswingTime(down, n - 2)).toBeLessThan(0);
+    });
+
+    it("drives the path before contact: θ, ω and α from the table, the socket on its circle", () => {
+        const arc = downswingArc();
+        const track = prepare(arc);
+        for (const t of [0, 0.005, 0.0123, 0.019, 0.0199999]) {
+            const tau = t - LEAD + FALL;
+            const p = pathAt(track, t);
+            const theta = TOP + 0.5 * alpha * tau * tau;
+            expect(dot(p.angularVelocity, vec3(0, -1, 0)), `ω at ${t}`).toBeCloseTo(alpha * tau, 9);
+            expect(p.pendulumAcceleration, `α at ${t}`).toBeCloseTo(alpha, 9);
+            const pivot = (arc.downswing as Downswing).handsTop;
+            expect(dist(p.socket, add(pivot, scale(radial(theta), arc.radius))), `socket at ${t}`).toBeLessThan(1e-8);
+        }
+    });
+
+    it("holds the top at rest before the release", () => {
+        const late = { contactAt: 0.08, theta0: CONTACT - OMEGA_C * 0.08, arcStart: 0.08, handStart: 0.08 };
+        const arc = downswingArc(late);
+        const p = pathAt(prepare(arc), 0);
+        expect(length(p.angularVelocity)).toBe(0);
+        expect(length(p.socketVelocity)).toBe(0);
+        expect(p.pendulumAcceleration).toBe(0);
+        expect(dist(p.socket, add((arc.downswing as Downswing).handsTop, scale(radial(TOP), arc.radius)))).toBeLessThan(
+            1e-12,
+        );
+    });
+
+    it("coasts on from contact exactly as an arc with no downswing", () => {
+        const arc = downswingArc();
+        const a = prepare(arc);
+        const b = prepare({ ...arc, downswing: undefined });
+        for (const t of [LEAD, LEAD + 0.005, LEAD + 0.04, LEAD + 0.3]) {
+            expect(pathAt(a, t), `t ${t}`).toEqual(pathAt(b, t));
+        }
+    });
+
+    it("is continuous at contact and where an early window starts", () => {
+        const onTime = prepare(downswingArc());
+        const early = prepare(downswingArc({ arcStart: 0.01, alpha: -50 }));
+        for (const [track, t] of [
+            [onTime, LEAD],
+            [early, 0.01],
+            [early, LEAD],
+        ] as const) {
+            const before = pathAt(track, t - 1e-12);
+            const after = pathAt(track, t + 1e-12);
+            expect(dist(before.socket, after.socket), `socket at ${t}`).toBeLessThan(1e-9);
+            expect(dist(before.socketVelocity, after.socketVelocity), `velocity at ${t}`).toBeLessThan(1e-6);
+        }
+    });
+
+    it("starts an early window from the downswing's state there", () => {
+        const track = prepare(downswingArc({ arcStart: 0.01, alpha: -50 }));
+        const tau = 0.01 - LEAD + FALL;
+        expect(track.thetaArc).toBeCloseTo(TOP + 0.5 * alpha * tau * tau, 9);
+        expect(track.omegaArc).toBeCloseTo(alpha * tau, 9);
+        expect(track.omegaEnd).toBeCloseTo(alpha * tau - 50 * 0.01, 9);
+    });
+
+    it("moves the hands with the pendulum in swing mode, arriving level at V_c = 2·across·ω₀/span", () => {
+        const across = vec3(0.05, 0, 0);
+        const drop = vec3(0, 0, -0.02);
+        const arc = downswingArc({}, across, drop);
+        const track = prepare(arc);
+        const down = arc.downswing as Downswing;
+        expect(dist(handsAt(track, LEAD - FALL).position, down.handsTop)).toBeLessThan(1e-12);
+        const atContact = handsAt(track, LEAD - 1e-9);
+        expect(dist(atContact.position, add(add(down.handsTop, across), drop))).toBeLessThan(1e-8);
+        expect(Math.abs(atContact.velocity.z)).toBeLessThan(1e-6);
+        expect(atContact.velocity.x).toBeCloseTo((2 * 0.05 * OMEGA_C) / (CONTACT - TOP), 6);
+        // Halfway in σ the vertical part has fallen half its drop, at its fastest. The table's linear interpolation of
+        // the quadratic θ errs by up to α·FREE_STEP²/8, 1.5e-9 rad.
+        const swing = downswingAt(down, -FALL + FALL / Math.SQRT2);
+        expect((swing.theta - TOP) / (CONTACT - TOP)).toBeCloseTo(0.5, 7);
+        const half = downswingHands(down, -FALL + FALL / Math.SQRT2, swing);
+        expect(half.P.z - down.handsTop.z).toBeCloseTo(-0.01, 9);
+    });
+
+    it("evaluates carry mode in closed form: σ = (t − t_r)/T_h, θ = θ_top + span·σ²", () => {
+        const across = vec3(0.1, 0, 0);
+        const drop = vec3(0, 0, -0.03);
+        const down: Downswing = {
+            release: -0.4,
+            thetaTop: -0.5,
+            span: 0.3,
+            handsTop: vec3(1, 2, 1),
+            across,
+            drop,
+            tempo: 0.4,
+            theta: [],
+            omega: [],
+            alpha: [],
+        };
+        expect(downswingSamples(down)).toBe(Math.ceil(0.4 / FREE_STEP) + 1);
+        for (const t of [-0.4, -0.3, -0.1, 0]) {
+            const sigma = (t + 0.4) / 0.4;
+            const swing = downswingAt(down, t);
+            expect(swing.theta, `θ at ${t}`).toBeCloseTo(-0.5 + 0.3 * sigma * sigma, 14);
+            expect(swing.omega, `ω at ${t}`).toBeCloseTo((2 * 0.3 * sigma) / 0.4, 14);
+            const hands = downswingHands(down, t, swing);
+            const rise = 3 * sigma ** 2 - 2 * sigma ** 3;
+            const P = add(add(vec3(1, 2, 1), scale(across, sigma * sigma)), scale(drop, rise));
+            expect(dist(hands.P, P), `P at ${t}`).toBeLessThan(1e-14);
+        }
+        expect(dist(downswingHands(down, 0, downswingAt(down, 0)).V, scale(across, 2 / 0.4))).toBeLessThan(1e-14);
+    });
+
+    it("gives the pendulum's constants as the free pendulum uses them", () => {
+        const body = swungBody(TEST_HEAD, ARMED, 0.8);
+        const p = pendulumOf(TEST_HEAD, body, 0.8, STANDARD_GRAVITY);
+        const lh = TEST_HEAD.socket.z + 0.8;
+        const d = lh - body.offset;
+        expect(p).toEqual({
+            weight: TEST_HEAD.mass * STANDARD_GRAVITY * lh,
+            inertial: body.mass * d,
+            inertia: body.inertia.y + body.mass * d * d,
+        });
+    });
+
+    it("tabulates the free pendulum past the longest stroke: a 0.15 s lead plus the 0.45 s follow-through cap", () => {
+        // A stroke starting 0.15 s before contact (the longest lead-in) runs at most 0.45 s of follow-through past it, so
+        // the table, which starts at the pendulum's window's end, must reach 0.6 s past contact.
+        const lead = 0.15;
+        const track = prepare(levelArc(vec3(1, 2, 0.05), { contactAt: lead }));
+        const free = track.free as FreePendulum;
+        const reaches = free.tw + (free.theta.length - 1) * FREE_STEP;
+        expect(reaches).toBeGreaterThanOrEqual(lead + 0.6);
+    });
+
+    it("rejects a malformed downswing", () => {
+        const good = downswingArc();
+        const down = good.downswing as Downswing;
+        const bad: readonly [string, Downswing, RegExp][] = [
+            ["a release at or after contact", { ...down, release: 0 }, /release must be negative/],
+            ["a table of one sample", { ...down, theta: [0], omega: [0], alpha: [0] }, /tabulated in swing mode/],
+            ["a table that stops short of contact", { ...down, release: -1 }, /must end at contact/],
+            ["a tempo in swing mode", { ...down, tempo: 0.05 }, /tabulated in swing mode/],
+        ];
+        // The head is placed on the good arc: a malformed table must fail validation, not the placement.
+        const placed = onArc(trackDrive(good));
+        for (const [name, downswing, pattern] of bad) {
+            const contact = { ...placed, drive: trackDrive({ ...good, downswing }) };
+            expect(() => validateImpact(contact, {}, testWorld()), name).toThrow(pattern);
+        }
+        const carry: SwingArc = { ...good, mode: "carry", downswing: { ...down, tempo: 0.3, release: -0.2 } };
+        const carried = { ...placed, drive: trackDrive(carry) };
+        expect(() => validateImpact(carried, {}, testWorld())).toThrow(/closed-form in carry mode/);
+    });
+
+    it("bounds the table's last full step to within FREE_STEP before contact, with a rounding margin", () => {
+        // Three samples, so last = release + FREE_STEP is controlled to ~1e-21 s. The turf error means validation passed.
+        const good = downswingArc();
+        const down = good.downswing as Downswing;
+        const placed = onArc(trackDrive(good));
+        const flat = (v: number): number[] => [v, v, v];
+        const cases: readonly [string, number, RegExp][] = [
+            ["1e-18 s past contact", 1e-18 - FREE_STEP, /head penetrates the turf/],
+            ["1e-18 s past a full step before it", 0 - 2 * FREE_STEP - 1e-18, /head penetrates the turf/],
+            ["half a step past contact", 0 - FREE_STEP / 2, /must end at contact/],
+            ["half a step past a full step before it", 0 - 2.5 * FREE_STEP, /must end at contact/],
+        ];
+        for (const [name, release, pattern] of cases) {
+            const edge: Downswing = { ...down, release, theta: flat(TOP), omega: flat(0), alpha: flat(0) };
+            const contact = { ...placed, drive: trackDrive({ ...good, downswing: edge }) };
+            expect(() => validateImpact(contact, {}, testWorld()), name).toThrow(pattern);
+        }
+    });
+
+    it("accepts a table whose last sample time rounds a hair past contact", () => {
+        // release + (count − 2)·FREE_STEP is mathematically 0 but rounds to +3.5e-18 s for T = 0.03 s and 6002 samples. A
+        // plain `last < 0` test would reject a table that does end at contact, so the check allows a relative margin.
+        const good = downswingArc();
+        const down = good.downswing as Downswing;
+        const count = 6002;
+        const fill = (v: number): number[] => Array.from({ length: count }, () => v);
+        const hair: Downswing = { ...down, release: -0.03, theta: fill(TOP), omega: fill(0), alpha: fill(0) };
+        const last = hair.release + (count - 2) * FREE_STEP;
+        expect(last).toBeGreaterThan(0);
+        expect(last).toBeLessThan(1e-15);
+        const placed = onArc(trackDrive(good));
+        const contact = { ...placed, drive: trackDrive({ ...good, downswing: hair }) };
+        // These contacts are not placed to start a real impact, so validateImpact ends on its later turf check: reaching
+        // it, as the good arc does, means the downswing passed.
+        expect(() => validateImpact(contact, {}, testWorld())).toThrow(/head penetrates the turf/);
     });
 });
