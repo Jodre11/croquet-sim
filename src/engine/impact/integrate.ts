@@ -38,6 +38,10 @@
  * length is summed, and a pair found open is not evaluated again until the ball has travelled its gap (less
  * WAKE_MARGIN). The filter is exact: a skipped pair is open, so evaluating it would add no force and change no state,
  * and the pairs evaluated are visited, and their forces summed, in the same order.
+ *
+ * With a follow-through (integrateStroke, P2b.2b.2a design §4.1) a tracked drive's loop continues once the impact has
+ * ended, the balls removed: the hands and the head–turf pair act on the head until the stroke type's finish, or
+ * FOLLOW_CAP after contact. The impact's result is fixed before it starts.
  */
 import { contactReference } from "../../reference/index";
 import { ZERO, add, cross, dot, horizontal, length, scale, sub, vec3, type Vec3 } from "../math/vec3";
@@ -64,7 +68,17 @@ import {
 } from "./contacts";
 import { angularAcceleration, integrateOrientation, rotate, rotateInverse } from "./rigidBody";
 import { closeTimeline, emptyTimeline, inGap, noteClearance, recordStep, type PairTimeline } from "./timeline";
-import { handLoad, newGripState, pathAt, type HandLoad, type PreparedTrack, type SwungBody } from "./track";
+import {
+    handLoad,
+    handsAt,
+    holdPendulum,
+    newGripState,
+    pathAt,
+    type GripState,
+    type HandLoad,
+    type PreparedTrack,
+    type SwungBody,
+} from "./track";
 import type { ContactInterval, DriveSample, ForceDrive, HeadState, ImpactEvent, ImpactRun, MalletHead } from "./types";
 
 /**
@@ -117,6 +131,18 @@ export const ENTRY_SLACK = 1e-6;
  * strike, catching it again, is integrated.
  */
 export const LOOK_AHEAD = 0.03;
+
+/**
+ * How long after the planned contact (s) the follow-through may run before it ends with `follow-cap` (P2b.2b.2a
+ * design §4.2). A modelling bound, not physical: a stroke's finish comes well within a second.
+ */
+export const FOLLOW_CAP = 1;
+
+/** Spacing (s) of the stroke's samples (P2b.2b.2a design §4.3). Numerical: 1 ms moves a 3 m/s head 3 mm. */
+export const FOLLOW_SAMPLE = 1e-3;
+
+/** Speed (m/s) below which a check's or a carry's head is at rest (P2b.2b.2a design §4.2). Numerical, not physical. */
+export const FINISH_SPEED = 1e-3;
 
 /**
  * Slack (m) subtracted from a ball–obstacle pair's gap before it is skipped (see the file header). Numerical, not
@@ -206,6 +232,57 @@ export interface ImpactOptions {
     /** An absolute time (s) that overrides IMPACT_CAP or a tracked drive's contactAt + TRACK_IMPACT_CAP. */
     readonly cap?: number;
     readonly probe?: ImpactProbe;
+}
+
+/** A follow-through's flags (P2b.2b.2a design §4.1): the cap reached, or the head driven past HEAD_DEEP_LIMIT. */
+export type FollowFlag = "follow-cap" | "follow-head-deep";
+
+/** The head at time t (s from t = 0). */
+export interface StrokeState {
+    readonly t: number;
+    readonly head: HeadState;
+}
+
+/** A tracked stroke's impact and follow-through (P2b.2b.2a design §4.1); times in s from t = 0. */
+export interface FollowThrough {
+    /** The head every FOLLOW_SAMPLE from t = 0, and at the impact's end and at the finish. */
+    readonly samples: readonly StrokeState[];
+    readonly impactEnd: number;
+    readonly finish: number;
+    readonly flags: readonly FollowFlag[];
+}
+
+/** integrateStroke's result: the impact as integrate returns it, and its follow-through if asked for. */
+export interface StrokeRun {
+    readonly run: ImpactRun;
+    readonly follow: FollowThrough | null;
+}
+
+/** A stroke type's finish (P2b.2b.2a design §4.2). */
+type FinishKind = "swing" | "check" | "carry";
+
+/** The finish of `plan`: carry mode's, a check's (α < 0 in swing mode), else a swing's. */
+function finishKind(plan: PreparedTrack): FinishKind {
+    if (plan.arc.mode === "carry") {
+        return "carry";
+    }
+    return plan.arc.alpha < 0 ? "check" : "swing";
+}
+
+/**
+ * True once the head in `state` at time t has reached its finish (P2b.2b.2a design §4.2): a swing at the pendulum's
+ * apex, its pitch rate about n at or below zero; a check at rest relative to the hands; a carry at rest once the
+ * hands' reach has ended (never, where the reach does not bind).
+ */
+function finished(kind: FinishKind, plan: PreparedTrack, state: HeadState, t: number): boolean {
+    switch (kind) {
+        case "swing":
+            return dot(state.angularVelocity, plan.axis) <= 0;
+        case "check":
+            return length(sub(state.velocity, handsAt(plan, t).velocity)) < FINISH_SPEED;
+        case "carry":
+            return plan.reach !== null && t >= plan.reach.tStop && length(state.velocity) < FINISH_SPEED;
+    }
 }
 
 /** The drive at time t: linear between samples, the last sample's force at its own time, and zero after it. */
@@ -645,8 +722,12 @@ function stillReaching(
     return false;
 }
 
-/** Integrates the impact from `setup` until it ends (see the file header). */
-export function integrate(setup: ImpactSetup, options: ImpactOptions = {}): ImpactRun {
+/**
+ * Integrates the impact from `setup` until it ends (see the file header) and, with `follow` and a tracked drive, the
+ * follow-through (P2b.2b.2a design §4.1). The impact is the same either way: recording the samples only reads the
+ * state, and the run is fixed before the follow-through starts.
+ */
+export function integrateStroke(setup: ImpactSetup, options: ImpactOptions = {}, follow = false): StrokeRun {
     const dt = options.dt ?? IMPACT_DT;
     const { head, ball, drive: plan } = setup;
     const cap = options.cap ?? (plan.kind === "force" ? IMPACT_CAP : plan.arc.contactAt + TRACK_IMPACT_CAP);
@@ -692,6 +773,8 @@ export function integrate(setup: ImpactSetup, options: ImpactOptions = {}): Impa
     let struck = false;
     let quiet = 0;
     let steps = 0;
+    const trace: StrokeState[] | null = follow && tracked ? [{ t: 0, head: setup.start }] : null;
+    const every = Math.max(1, Math.round(FOLLOW_SAMPLE / dt));
 
     for (;;) {
         const t = steps * dt;
@@ -781,6 +864,9 @@ export function integrate(setup: ImpactSetup, options: ImpactOptions = {}): Impa
         state = advance(state, balls, travel, loads, setup, ballInertia, dt);
         steps++;
         const now = steps * dt;
+        if (trace !== null && steps % every === 0) {
+            trace.push({ t: now, head: state });
+        }
         const turfMoving = trackTurf(balls, setup, track, now, events);
         if (turf === null) {
             if (!grounded && headLowestPoint(state, head) < 0) {
@@ -825,8 +911,89 @@ export function integrate(setup: ImpactSetup, options: ImpactOptions = {}): Impa
     }
 
     const run = finish(setup, state, balls, pairs, turf, jumps, events, steps, steps * dt, touchingAtStart);
-    if (grip.releasedAt === null) {
-        return run;
+    const done =
+        grip.releasedAt === null ? run : { ...run, release: { t: grip.releasedAt, deltaTheta: grip.releaseDelta } };
+    if (trace === null || plan.kind !== "track") {
+        return { run: done, follow: null };
     }
-    return { ...run, release: { t: grip.releasedAt, deltaTheta: grip.releaseDelta } };
+    return { run: done, follow: continueStroke(setup, plan, state, grip, turf, steps, dt, trace) };
+}
+
+/** Integrates the impact from `setup` until it ends (see the file header). */
+export function integrate(setup: ImpactSetup, options: ImpactOptions = {}): ImpactRun {
+    return integrateStroke(setup, options).run;
+}
+
+/**
+ * The follow-through (P2b.2b.2a design §4.1): the impact's loop continued from `start` at step `first`, with the balls
+ * removed. The hands keep `grip`; the head–turf pair keeps its spring on a fresh timeline, so the run's timeline is
+ * never touched. A stop holds its pendulum from the check's window's end (or the impact's end, if later), and the
+ * hands grip the head firmly from then on (holdPendulum, handLoad's `gripped`). Appends to `trace` the head at the
+ * impact's end, every FOLLOW_SAMPLE, and at the finish: the stroke type's, or FOLLOW_CAP after contact with
+ * `follow-cap`. Flags `follow-head-deep` once, as the impact flags `impact-head-deep`.
+ */
+function continueStroke(
+    setup: ImpactSetup,
+    plan: PreparedTrack,
+    start: HeadState,
+    grip: GripState,
+    turf: HeadTurfState | null,
+    first: number,
+    dt: number,
+    trace: StrokeState[],
+): FollowThrough {
+    const { head } = setup;
+    const every = Math.max(1, Math.round(FOLLOW_SAMPLE / dt));
+    const kind = finishKind(plan);
+    // A stop holds its mallet still after the check (user decision 2026-10-07; Riches: "NO FOLLOW-THROUGH"): from the
+    // check's window's end, or the impact's end if later, the pendulum is held and the hands grip the head firmly.
+    const holdFrom = kind === "check" ? Math.max(plan.arc.arcStart + plan.arc.window, first * dt) : Infinity;
+    const path = kind === "check" ? holdPendulum(plan, holdFrom) : plan;
+    const cap = plan.arc.contactAt + FOLLOW_CAP;
+    const headWeight = vec3(0, 0, 0 - head.mass * setup.gravity);
+    const ground: HeadTurfState | null =
+        turf === null ? null : { law: turf.law, spring: turf.spring, peak: 0, line: emptyTimeline(), slide: 0 };
+    const flags: FollowFlag[] = [];
+    const none: BallState[] = [];
+    if ((trace[trace.length - 1] as StrokeState).t !== first * dt) {
+        trace.push({ t: first * dt, head: start });
+    }
+    let state = start;
+    let steps = first;
+    let deep = false;
+    for (;;) {
+        const t = steps * dt;
+        if (finished(kind, plan, state, t)) {
+            break;
+        }
+        if (t >= cap) {
+            flags.push("follow-cap");
+            break;
+        }
+        // The impact loop's hands, head–turf and advance, kept apart: sharing them would reorder the impact's sums.
+        const hand = handLoad(path, state, head, t, grip, t >= holdFrom);
+        const loads: StepLoads = {
+            headForce: add(hand.force, headWeight),
+            headTorque: hand.torque,
+            forces: [],
+            torques: [],
+        };
+        if (ground !== null) {
+            applyHeadTurf(ground, state, head, dt, loads, t, null);
+        }
+        state = advance(state, none, [], loads, setup, 0, dt);
+        steps++;
+        if (ground !== null && !deep && headLowestPoint(state, head) < 0 - HEAD_DEEP_LIMIT) {
+            deep = true;
+            flags.push("follow-head-deep");
+        }
+        if (steps % every === 0) {
+            trace.push({ t: steps * dt, head: state });
+        }
+    }
+    const end = steps * dt;
+    if ((trace[trace.length - 1] as StrokeState).t !== end) {
+        trace.push({ t: end, head: state });
+    }
+    return { samples: trace, impactEnd: first * dt, finish: end, flags };
 }

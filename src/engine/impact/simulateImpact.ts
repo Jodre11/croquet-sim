@@ -15,9 +15,25 @@ import { lawFromContactTime, lawFromStiffness, type PairLaw } from "./contactLaw
 import { headBottom, headLowestPoint, outsideObstacle } from "./contacts";
 import { handover } from "./handover";
 import { rotateInverse } from "./rigidBody";
-import { integrate, type ImpactBall, type ImpactOptions, type ImpactSetup } from "./integrate";
+import {
+    integrate,
+    integrateStroke,
+    type FollowThrough,
+    type ImpactBall,
+    type ImpactOptions,
+    type ImpactSetup,
+} from "./integrate";
 import { FREE_STEP, pitchAxis, prepareTrack } from "./track";
-import type { ContactState, DriveSample, Downswing, ForceDrive, ImpactResult, StrokeMode, TrackDrive } from "./types";
+import type {
+    ContactState,
+    DriveSample,
+    Downswing,
+    ForceDrive,
+    ImpactResult,
+    ImpactRun,
+    StrokeMode,
+    TrackDrive,
+} from "./types";
 
 /**
  * Tolerance on |q|² − 1 for a ContactState's orientation, and on a tracked drive's aim and swing plane (P2b.2b.1
@@ -398,6 +414,12 @@ export function prepareImpact(contact: ContactState, balls: BallStates, world: W
     };
 }
 
+/** The impact's result: `run` with its balls handed over to phase 2 (design §6). */
+function handedOver(run: ImpactRun, world: World): ImpactResult {
+    const handed = handover(run.balls, world.ball.radius, obstaclesOf(world));
+    return { ...run, handover: handed.balls, overlapCorrection: handed.overlapCorrection };
+}
+
 /**
  * Simulates the impact of `contact` on the balls at rest (design §3): validates, prepares, integrates and hands over.
  * Throws a RangeError on invalid input (validateImpact). Wiring into a whole shot is P2b.2's `simulateShot`.
@@ -410,7 +432,24 @@ export function simulateImpact(
 ): ImpactResult {
     validateWorld(world);
     validateImpact(contact, balls, world);
-    const run = integrate(prepareImpact(contact, balls, world), options);
-    const handed = handover(run.balls, world.ball.radius, obstaclesOf(world));
-    return { ...run, handover: handed.balls, overlapCorrection: handed.overlapCorrection };
+    return handedOver(integrate(prepareImpact(contact, balls, world), options), world);
+}
+
+/**
+ * Simulates a tracked stroke's impact, as simulateImpact, and its follow-through (P2b.2b.2a design §4.1). Throws a
+ * RangeError for a force table, or on invalid input.
+ */
+export function simulateStroke(
+    contact: ContactState,
+    balls: BallStates,
+    world: World,
+    options: ImpactOptions = {},
+): { readonly result: ImpactResult; readonly follow: FollowThrough } {
+    if (contact.drive.kind !== "track") {
+        fail("simulateStroke needs a tracked drive");
+    }
+    validateWorld(world);
+    validateImpact(contact, balls, world);
+    const { run, follow } = integrateStroke(prepareImpact(contact, balls, world), options, true);
+    return { result: handedOver(run, world), follow: follow as FollowThrough };
 }

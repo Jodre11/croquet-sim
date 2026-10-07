@@ -601,6 +601,21 @@ function pendulumAt(track: PreparedTrack, t: number): Swing {
 }
 
 /**
+ * `track` in swing mode with its pendulum held from time `from` (s, at or after the pendulum's window) on: θ fixed at
+ * its value there, ω = α = 0. A stop's follow-through (P2b.2b.2a design §4.2), a user decision (2026-10-07): after
+ * the check the mallet stays still relative to the hands, as Riches has the stop, "NO FOLLOW-THROUGH at all, or as
+ * little as possible", rather than the free pendulum swinging back. Only times from `from` on may be read from it.
+ */
+export function holdPendulum(track: PreparedTrack, from: number): PreparedTrack {
+    const free = track.free as FreePendulum;
+    const { theta } = pendulumAt(track, from);
+    return {
+        ...track,
+        free: { tw: from, theta: [theta, theta], omega: [0, 0], weight: 0, inertial: 0, inertia: free.inertia },
+    };
+}
+
+/**
  * The path at time t (design §3.2): the pendulum's θ, ω and α, and the pivot with the reach and the dip, carried to
  * the socket and the head's orientation. Evaluates sinCos(θ) and sinCos(θ/2) (in swing mode after the window,
  * freeAlpha evaluates sinCos(θ) and the pivot once more).
@@ -729,7 +744,8 @@ function across(v: Vec3, s: Vec3): Vec3 {
  * (carry mode), until it opens once the shaft has turned through the reach slack. In swing mode the guide outside a
  * check and the push after the release are scaled by `guideEffort`; a check acts in full. A check in swing mode
  * brakes the head to rest, not past it: the hands apply the head's share of the planned deceleration (checkShare), and
- * the guide steers its pitch rate into [0, ω_path].
+ * the guide steers its pitch rate into [0, ω_path]. With `gripped`, the hands grip firmly with springs and dampers at
+ * any t, as before relaxAt but with no downswing gate: a stop's follow-through (P2b.2b.2a design §4.2).
  */
 export function handLoad(
     track: PreparedTrack,
@@ -737,6 +753,7 @@ export function handLoad(
     head: MalletHead,
     t: number,
     grip: GripState,
+    gripped = false,
 ): HandLoad {
     const { arc, body, hands } = track;
     const path = pathAt(track, t);
@@ -744,7 +761,7 @@ export function handLoad(
     const q = state.orientation;
     const s = rotate(q, UP);
     const rho = head.socket.z;
-    const contact = t >= track.coupling.relaxAt;
+    const contact = !gripped && t >= track.coupling.relaxAt;
     const carry = arc.mode === "carry";
     // A check in swing mode after contact brakes the head to rest, not past it: the pitch rates about n.
     const checking = contact && !carry && inCheck(track, t);
@@ -809,15 +826,15 @@ export function handLoad(
         const bottomGap = sub(add(path.socket, bottomLever), add(state.position, bottomArm));
         // On a downswing the firm grip keeps the hands' planned pace (feed-forward and damper) but has no position
         // spring (P2b.2b.2a user decision 2026-10-07): a head the turf holds back stays where it is put, so a graze
-        // costs the head speed instead of the grip refunding it.
-        const top =
-            arc.downswing === undefined
-                ? add(add(topShare, scale(topGap, g.stiffness)), scale(topLag, g.damping))
-                : add(topShare, scale(topLag, g.damping));
-        const pull =
-            arc.downswing === undefined
-                ? add(scale(bottomGap, g.stiffness), scale(bottomLag, g.damping))
-                : scale(bottomLag, g.damping);
+        // costs the head speed instead of the grip refunding it. A gripped stop keeps the spring: it holds the mallet
+        // still.
+        const spring = gripped || arc.downswing === undefined;
+        const top = spring
+            ? add(add(topShare, scale(topGap, g.stiffness)), scale(topLag, g.damping))
+            : add(topShare, scale(topLag, g.damping));
+        const pull = spring
+            ? add(scale(bottomGap, g.stiffness), scale(bottomLag, g.damping))
+            : scale(bottomLag, g.damping);
         const twist =
             twistShare +
             g.twistStiffness * dot(rotationError(path.orientation, q), s) +
