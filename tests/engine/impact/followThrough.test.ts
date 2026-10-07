@@ -62,7 +62,8 @@ const rateOf = (contact: ContactState, s: StrokeState): number =>
 const last = (follow: FollowThrough): StrokeState => follow.samples[follow.samples.length - 1] as StrokeState;
 
 describe("the follow-through (design §4)", () => {
-    it("leaves the impact exactly as simulateImpact returns it", () => {
+    // Three whole strokes, each run twice: near vitest's 5 s default on CI's runners.
+    it("leaves the impact exactly as simulateImpact returns it", { timeout: 30_000 }, () => {
         for (const setup of [shot(), shot({ drive: -1 }), shot({ backswing: 0.25 }, CARRY)]) {
             const { contact, result } = stroke(setup);
             expect(result).toEqual(simulateImpact(contact, setup.balls, WORLD));
@@ -160,7 +161,8 @@ describe("the follow-through (design §4)", () => {
         expect(deepest).toBeLessThan(0 - 2 * HEAD_DEEP_LIMIT);
     });
 
-    it("converges in dt: the swing's finish time and pose", () => {
+    // Three whole strokes down to 2.5 µs steps: past vitest's 5 s default on CI's runners.
+    it("converges in dt: the swing's finish time and pose", { timeout: 30_000 }, () => {
         const at = (dt: number) => {
             const { follow } = stroke(shot(), WORLD, dt);
             return { finish: follow.finish, position: last(follow).head.position };
