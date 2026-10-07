@@ -76,7 +76,7 @@ describe("engine public API", () => {
             stroke: {
                 type: "single-ball",
                 aim: Math.PI / 2,
-                speed: 2,
+                backswing: 0.3,
                 drive: 0,
                 contact: { up: 0, side: 0 },
                 timing: engine.ON_TIME,

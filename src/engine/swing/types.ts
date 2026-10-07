@@ -5,7 +5,8 @@
  * - a stance for that type, and where the two hands sit on the mallet, which sets the head's angle;
  * - where and how to hit the striker's ball;
  * - the rehearsed shape of the swing: the pendulum, the hands' path through space, the dip and the reach;
- * - and, per shot, how the player times each.
+ * - and, per shot, how far back the player takes the mallet, how hard and quickly they swing it, and how they time each
+ *   action (P2b.2b.2a).
  * The product spec's grip style, weighting and face material have no engine reader yet.
  */
 import type { HoopTarget } from "../hoopRun";
@@ -46,20 +47,19 @@ export interface SwingStance {
 }
 
 /**
- * The swing's shape (design §5.2 step 7), its changes measured against the head's speed at contact. The mode (§3.3).
- * The pendulum: over `window` (s) at full `drive` its contribution changes by `speedGain` times that speed. The hands:
- * `handShare` of that speed (in [0, 1]; the pendulum supplies the rest), changing by `handGain` times it over
- * `handWindow` (s) at full `drive`. The dip: whatever `drive`, the hands lower by `handDrop` (m) over `dropTime` (s),
- * rest to rest. The reach: the hands' path travels `handReach` (m) along aim after contact, the default for the shot's
- * own. In carry mode the head's lowest point ends `groundDepth` (m) below the turf. In swing mode the bottom hand's
- * push after contact is `guideEffort` (in [0, 1]) of a full restoration of the arc's speed, the default for the shot's
- * own.
+ * The swing's shape (design §5.2 step 7), its changes measured against the planned contact speed (P2b.2b.2a design
+ * §3.4). The mode (§3.3). The pendulum: over `window` (s) at full `drive` its contribution changes by `speedGain`
+ * times that speed. The hands: from their speed at contact (P2b.2b.2a design §3.3), changing by `handGain` times the
+ * head's speed over `handWindow` (s) at full `drive`. The dip: whatever `drive`, the hands lower by `handDrop` (m)
+ * over `dropTime` (s), rest to rest. The reach: the hands' path travels `handReach` (m) along aim after contact, the
+ * default for the shot's own. In carry mode the head's lowest point ends `groundDepth` (m) below the turf. In swing
+ * mode the bottom hand's push after contact is `guideEffort` (in [0, 1]) of a full restoration of the arc's speed, the
+ * default for the shot's own.
  */
 export interface SwingDrive {
     readonly mode: StrokeMode;
     readonly speedGain: number;
     readonly window: number;
-    readonly handShare: number;
     readonly handGain: number;
     readonly handWindow: number;
     readonly handDrop: number;
@@ -97,6 +97,7 @@ export interface SwingProfile {
     readonly body: { readonly armMass: number; readonly reachSlack: number };
     readonly stance: Readonly<Record<StrokeType, SwingStance>>;
     readonly drive: Readonly<Record<StrokeType, SwingDrive>>;
+    readonly shape: Readonly<Record<StrokeType, SwingShape>>;
 }
 
 /** When each action begins, s from contact: negative early, positive late, 0 on time (design §5.2 step 8). */
@@ -115,8 +116,10 @@ export interface ShotSetup {
         readonly type: StrokeType;
         /** Swing direction, rad from +x, horizontal. */
         readonly aim: number;
-        /** The head's centre-of-mass speed at contact, m/s. */
-        readonly speed: number;
+        /** The head centre's height at the backswing's top above its height at contact, m (P2b.2b.2a design §3.2). */
+        readonly backswing: number;
+        /** Effort and tempo, one control in [0, 1]; absent: the preset's defaultIntensity (P2b.2b.2a design §3.1). */
+        readonly intensity?: number;
         /** −1 check … 0 coast … +1 push. */
         readonly drive: number;
         /** The ball's centre from the face's centre (m): `up` along its upward axis, `side` to the left of aim. */

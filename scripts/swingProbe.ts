@@ -71,7 +71,7 @@ import { BALL_IDS, type BallId, type BallState, type BallStates, type ShotResult
 import { defaultWorld, uprightsOf } from "../src/engine/world";
 import { contactReference, malletReference } from "../src/reference/index";
 import { drive, recorder, socketAt, strike } from "../tests/engine/support/impact";
-import { GC_STOP_GAP, canonicalSetup } from "../tests/engine/support/shot";
+import { GC_STOP_GAP, backswingFor, canonicalSetup } from "../tests/engine/support/shot";
 
 // The project has no Node types; this script runs under tsx and reads only its environment.
 declare const process: { readonly env: Readonly<Record<string, string | undefined>> };
@@ -130,10 +130,18 @@ function quick(setup: ShotSetup): Run {
     return { setup, contact, impact, steps: [], motion: simulateFreeMotion(impact.handover, WORLD) };
 }
 
-/** `type`'s canonical setup with `stroke` fields replaced. */
-function canonical(type: StrokeType, stroke: Partial<ShotSetup["stroke"]> = {}): ShotSetup {
+/** `type`'s canonical setup with `stroke` fields replaced; a `speed` (m/s) sets the backswing that plans it. */
+function canonical(
+    type: StrokeType,
+    stroke: Partial<ShotSetup["stroke"]> & { readonly speed?: number } = {},
+): ShotSetup {
+    const { speed, ...rest } = stroke;
     const base = canonicalSetup(type);
-    return { ...base, stroke: { ...base.stroke, ...stroke } };
+    const setup = { ...base, stroke: { ...base.stroke, ...rest } };
+    if (speed === undefined) {
+        return setup;
+    }
+    return { ...setup, stroke: { ...setup.stroke, backswing: backswingFor(setup, speed, WORLD) } };
 }
 
 /** The ids of `balls` in BALL_IDS order: the order of the impact's snapshots. */
@@ -572,9 +580,11 @@ function presets(): void {
             for (const strokeDrive of [-1, -0.5, 0, 0.5, 1]) {
                 for (const up of [up0 - 0.003, up0, up0 + 0.003]) {
                     for (const side of [-0.01, 0, 0.01]) {
-                        const setup = canonical(type, { speed, drive: strokeDrive, contact: { up, side } });
+                        let setup: ShotSetup;
                         let contact: ContactState;
                         try {
+                            // A speed beyond the preset's reach throws a RangeError, as an unreachable shot.
+                            setup = canonical(type, { speed, drive: strokeDrive, contact: { up, side } });
                             contact = buildContact(setup, WORLD);
                         } catch (error) {
                             if (error instanceof RangeError) {

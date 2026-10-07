@@ -375,15 +375,17 @@ export function mirrorBall(s: BallState): BallState {
 }
 
 /**
- * A drive reflected across y = 0. A tracked drive reflects its arc's vectors; its angles, coupling and hands are
- * unchanged: the pitch axis aim × ẑ is a pseudovector and reflects as a spin does, so a turn θ about it reflects to the
- * same θ about the reflected axis, and the path's orientation rot(n, θ) ⊗ q_aim reflects factor by factor.
+ * A drive reflected across y = 0. A tracked drive reflects its arc's vectors and its downswing's; its angles, tables,
+ * coupling and hands are unchanged: the pitch axis aim × ẑ is a pseudovector and reflects as a spin does, so a turn θ
+ * about it reflects to the same θ about the reflected axis, and the path's orientation rot(n, θ) ⊗ q_aim reflects
+ * factor by factor.
  */
 function mirrorDrive(d: Drive): Drive {
     if (d.kind === "force") {
         return { kind: "force", samples: d.samples.map((s) => ({ t: s.t, force: mirrorVec(s.force) })) };
     }
     const { arc } = d;
+    const down = arc.downswing;
     return {
         ...d,
         arc: {
@@ -392,6 +394,16 @@ function mirrorDrive(d: Drive): Drive {
             pivotVelocity: mirrorVec(arc.pivotVelocity),
             pivotAcceleration: mirrorVec(arc.pivotAcceleration),
             aim: mirrorVec(arc.aim),
+            ...(down === undefined
+                ? {}
+                : {
+                      downswing: {
+                          ...down,
+                          handsTop: mirrorVec(down.handsTop),
+                          across: mirrorVec(down.across),
+                          drop: mirrorVec(down.drop),
+                      },
+                  }),
         },
     };
 }

@@ -13,7 +13,7 @@ import { STROKE_TYPES, type ShotSetup } from "../../src/engine/swing/types";
 import type { BallId, BallState, Hoop, World } from "../../src/engine/types";
 import { defaultWorld, hoopHalfSpan, hoopLateral } from "../../src/engine/world";
 import { recorder } from "./support/impact";
-import { CANONICAL_STRIKER, GC_STOP_GAP, canonicalSetup } from "./support/shot";
+import { CANONICAL_STRIKER, GC_STOP_GAP, backswingFor, canonicalSetup } from "./support/shot";
 
 const WORLD = defaultWorld();
 const R = WORLD.ball.radius;
@@ -211,9 +211,9 @@ describe("simulateShot", () => {
 
     it("ends a gentle tap before the cap", () => {
         // Review focus 1. Prototype: a 0.1 m/s tap ends at 10 ms, the pendulum's window.
-        const kinds = simulateShot(canonicalSetup("single-ball", { stroke: { speed: 0.1 } })).impact.events.map(
-            (e) => e.kind,
-        );
+        const kinds = simulateShot(
+            canonicalSetup("single-ball", { stroke: { backswing: backswingFor(canonicalSetup("single-ball"), 0.1) } }),
+        ).impact.events.map((e) => e.kind);
         expect(kinds).not.toContain("impact-cap");
         expect(kinds).not.toContain("impact-head-approaching");
     });
@@ -317,7 +317,11 @@ describe("the mechanisms (design §8.1), on the canonical setups", () => {
         // Planning: at 0 one hit (0.01–1.20 ms), the impact ending by itself 110.6 ms after contactAt with no
         // impact-cap and no impact-head-approaching; at 1 four hits (from 0.01, 81.94, 126.77 and 159.11 ms), 268.9 ms.
         const at = (guideEffort: number) =>
-            simulateShot(canonicalSetup("drive", { stroke: { speed: 2, guideEffort } }));
+            simulateShot(
+                canonicalSetup("drive", {
+                    stroke: { backswing: backswingFor(canonicalSetup("drive"), 2), guideEffort },
+                }),
+            );
         const none = at(0);
         expect(hits(none.impact)).toHaveLength(1);
         const kinds = none.impact.events.map((e) => e.kind);

@@ -19,7 +19,7 @@ import { defaultWorld, validateWorld } from "./world";
 /** Everything a shot produced, stage by stage (design §6.1). */
 export interface ShotOutcome {
     readonly contact: ContactState;
-    /** The coasting path's lowest clearance over the turf in the 60 ms before contact, and when (design §5.2). */
+    /** The downswing's lowest clearance over the turf before contact, and when (P2b.2b.2a design §3.5). */
     readonly approach: SwingApproach;
     readonly context: StrokeContext;
     readonly impact: ImpactResult;

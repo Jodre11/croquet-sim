@@ -4,13 +4,14 @@ import { rotate, solidCylinderInertia } from "../../../src/engine/impact/rigidBo
 import { simulateImpact } from "../../../src/engine/impact/simulateImpact";
 import {
     HAND_COUPLING,
+    downswingAt,
     headOnPath,
     pendulumOf,
     pitchAxis,
     prepareTrack,
     swungBody,
 } from "../../../src/engine/impact/track";
-import type { ContactState, StrokeMode, TrackDrive } from "../../../src/engine/impact/types";
+import type { ContactState, Downswing, StrokeMode, TrackDrive } from "../../../src/engine/impact/types";
 import { add, cross, dot, horizontal, length, scale, sub, vec3, type Vec3 } from "../../../src/engine/math/vec3";
 import {
     MAX_LEAD,
@@ -18,6 +19,8 @@ import {
     buildContact,
     contactPose,
     downswingInput,
+    planStroke,
+    plannedSpeed,
     poseSpeed,
     swingApproach,
 } from "../../../src/engine/swing/buildContact";
@@ -32,10 +35,10 @@ import {
 } from "../../../src/engine/swing/types";
 import type { BallState } from "../../../src/engine/types";
 import { defaultWorld } from "../../../src/engine/world";
-import { contactReference, malletReference } from "../../../src/reference/index";
+import { contactReference, malletReference, swingReference } from "../../../src/reference/index";
 import { TEST_BALL, TEST_TURF, ballAt, testWorld } from "../support/fixtures";
 import { TEST_HANDS, mirrorBall, mirrorContact, mirrorQuat, mirrorSpin, mirrorVec } from "../support/impact";
-import { CANONICAL_CLEARANCE, GC_STOP_GAP, canonicalSetup, testProfile } from "../support/shot";
+import { CANONICAL_CLEARANCE, GC_STOP_GAP, backswingFor, canonicalSetup, testProfile } from "../support/shot";
 
 const WORLD = testWorld();
 const R = TEST_BALL.radius;
@@ -47,6 +50,11 @@ const TOP = 0.8;
 const RHO = 0.032;
 const LENGTH = 0.23;
 const DEG = Math.PI / 180;
+/**
+ * The default test backswing (m): about 3.1 m/s by gravity alone on the test profile's pendulum (r = 0.8 m, the test
+ * head, no arm mass).
+ */
+const BACKSWING = 0.5;
 
 type Stroke = ShotSetup["stroke"];
 
@@ -57,7 +65,7 @@ function shot(stroke: Partial<Stroke> = {}, profile: SwingProfile = testProfile(
         stroke: {
             type: "single-ball",
             aim: 0.4,
-            speed: 3,
+            backswing: BACKSWING,
             drive: 0,
             contact: { up: 0, side: 0 },
             timing: ON_TIME,
@@ -118,29 +126,42 @@ describe("buildContact, step by step", () => {
         expect(dist(left, vec3(-Math.sin(0.4), Math.cos(0.4), 0))).toBeLessThan(1e-12);
     });
 
-    it("splits the head's speed between the hands and the pendulum", () => {
-        for (const handShare of [0, 0.5, 1]) {
-            const c = buildContact(shot({}, testProfile({ drive: { handShare } })), WORLD);
+    it("starts an on-time head at its planned speed: the hands' V_c and the pendulum's ω₀ at contact", () => {
+        for (const pendulumShare of [1, 0.6]) {
+            const setup = shot({}, testProfile({ shape: { pendulumShare } }));
+            const { contact: c, contactSpeed } = planStroke(setup, WORLD);
             const arc = arcOf(c);
-            expect(length(c.velocity), `handShare ${handShare}`).toBeCloseTo(3, 12);
-            expect(dist(arc.pivotVelocity, scale(arc.aim, handShare * 3))).toBeLessThan(1e-15);
+            const down = arc.downswing as Downswing;
+            expect(length(c.velocity), `share ${pendulumShare}`).toBeCloseTo(contactSpeed, 12);
+            expect(dist(arc.pivotVelocity, scale(down.across, (2 * arc.omega0) / down.span))).toBeLessThan(1e-12);
             const swing = scale(cross(pitchAxis(arc.aim), sub(c.position, arc.pivot)), arc.omega0);
             expect(dist(c.velocity, add(arc.pivotVelocity, swing))).toBeLessThan(1e-12);
+            expect(plannedSpeed(setup, WORLD)).toBe(contactSpeed);
         }
     });
 
-    it("drives both arcs over their windows against the head's speed", () => {
+    it("drives both arcs over their windows against the planned speed", () => {
         const profile = testProfile({
-            drive: { speedGain: 0.4, window: 0.02, handShare: 0.5, handGain: 0.3, handWindow: 0.03 },
+            drive: { speedGain: 0.4, window: 0.02, handGain: 0.3, handWindow: 0.03 },
+            shape: { pendulumShare: 0.5 },
         });
-        const c = buildContact(shot({ drive: -0.5 }, profile), WORLD);
+        const { contact: c, contactSpeed } = planStroke(shot({ drive: -0.5 }, profile), WORLD);
         const arc = arcOf(c);
-        // The pendulum's contribution changes by drive·speedGain·speed = −0.6 m/s over its window.
-        expect(arc.alpha * pivotToCentre(c) * 0.02).toBeCloseTo(-0.5 * 0.4 * 3, 10);
-        expect(dist(arc.pivotAcceleration, scale(arc.aim, (-0.5 * 0.3 * 3) / 0.03))).toBeLessThan(1e-12);
+        // The pendulum's contribution changes by drive·speedGain·speed over its window.
+        expect(arc.alpha * pivotToCentre(c) * 0.02).toBeCloseTo(-0.5 * 0.4 * contactSpeed, 10);
+        expect(dist(arc.pivotAcceleration, scale(arc.aim, (-0.5 * 0.3 * contactSpeed) / 0.03))).toBeLessThan(1e-12);
         expect([arc.window, arc.handWindow, arc.arcStart, arc.handStart, arc.contactAt]).toEqual([0.02, 0.03, 0, 0, 0]);
-        // The pendulum carries the other half of the head's speed.
-        expect(arc.omega0 * pivotToCentre(c)).toBeGreaterThan(0);
+    });
+
+    it("plans the speed the test support's solver asks for", () => {
+        for (const pendulumShare of [1, 0.6]) {
+            const setup = shot({}, testProfile({ shape: { pendulumShare } }));
+            const backswing = backswingFor(setup, 2.5, WORLD);
+            expect(plannedSpeed(shot({ backswing }, setup.profile), WORLD), `share ${pendulumShare}`).toBeCloseTo(
+                2.5,
+                9,
+            );
+        }
     });
 
     it("copies the mode, the reach and the ground depth, the hands and the body, and grips with HAND_COUPLING", () => {
@@ -184,8 +205,8 @@ describe("buildContact, step by step", () => {
         }
     });
 
-    it("starts the impact at the earliest early action, the head on its coasting path, and at contact on time", () => {
-        const profile = testProfile({ drive: { handShare: 0.3 } });
+    it("starts the impact at the earliest early action, the head on its downswing, and at contact on time", () => {
+        const profile = testProfile({ shape: { pendulumShare: 0.7 } });
         const onTime = buildContact(shot({}, profile), WORLD);
         const early = buildContact(shot({ timing: { arc: -0.01, hands: 0.004, dip: -0.02 } }, profile), WORLD);
         const arc = arcOf(early);
@@ -195,7 +216,7 @@ describe("buildContact, step by step", () => {
         expect(arc.dip.start).toBe(0);
         expect((early.drive as TrackDrive).coupling.relaxAt).toBe(0.02);
         expect(arc.theta0).toBeCloseTo(arcOf(onTime).theta0 - arcOf(onTime).omega0 * 0.02, 12);
-        // With depthless actions, the head coasts from its start to the contact pose by the lead's end.
+        // With depthless actions, the head follows its downswing from its start to the contact pose by the lead's end.
         const depthless = buildContact(shot({ timing: { arc: 0, hands: 0, dip: -0.02 } }, profile), WORLD);
         const track = prepareTrack(depthless.drive as TrackDrive, depthless.head, WORLD.gravity);
         expect(dist(headOnPath(track, depthless.head, 0.02).position, onTime.position)).toBeLessThan(1e-12);
@@ -223,7 +244,7 @@ describe("buildContact, step by step", () => {
     });
 
     it("starts the head exactly on its own path", () => {
-        const profile = testProfile({ stance: { lean: 0.4 }, drive: { handShare: 0.6 } });
+        const profile = testProfile({ stance: { lean: 0.4 }, shape: { pendulumShare: 0.4 } });
         const c = buildContact(shot({ drive: 0.7, timing: { arc: -0.005, hands: 0, dip: 0 } }, profile), WORLD);
         const start = headOnPath(prepareTrack(c.drive as TrackDrive, c.head, WORLD.gravity), c.head, 0);
         expect({
@@ -246,39 +267,39 @@ describe("buildContact, step by step", () => {
 });
 
 describe("swingApproach", () => {
-    it("finds a low swing's coasting path in the turf before contact, as computed by hand", () => {
+    it("finds a low swing's downswing in the turf before contact, at its least clearance", () => {
         // Level, the ball met 10 mm above the face centre: the head's lowest point is h₀ − 0.01 − ρ clear at contact.
-        // Swung back by φ the head pitches with the shaft, its front rim lowest at P_z − (r + 2ρ)·cos φ − (L/2)·sin φ,
-        // P_z the pivot's height: least at tan φ* = (L/2)/(r + 2ρ), 36.70 ms back at ω₀ = speed/(r + ρ), 3.642 mm in
-        // the turf. The samples are 0.5 ms apart; the nearest, 36.5 ms back, is the lowest sampled.
+        // The top hand is still, so swung back by φ the head's front rim dips to P_z − (r + 2ρ)·cos φ − (L/2)·sin φ,
+        // least at tan φ* = (L/2)/(r + 2ρ): about 3.64 mm in the turf (P2b.2b.1's coasting figure: the same circle).
         const c = buildContact(shot({ contact: { up: 0.01, side: 0 } }), WORLD);
         expect(headLowestPoint(c, c.head)).toBeCloseTo(SUNK_Z - 0.01 - RHO, 12);
         const pivotZ = SUNK_Z - 0.01 + RHO + TOP;
-        const omega0 = 3 / (TOP + RHO);
-        const clearance = (back: number): number =>
-            pivotZ - (TOP + 2 * RHO) * Math.cos(omega0 * back) - (LENGTH / 2) * Math.sin(omega0 * back);
         const approach = swingApproach(c);
-        expect(approach.before).toBeCloseTo(0.0365, 12);
-        expect(approach.clearance).toBeCloseTo(clearance(0.0365), 12);
-        expect(approach.clearance).toBeCloseTo(-3.6418e-3, 6);
+        expect(approach.clearance).toBeCloseTo(pivotZ - Math.hypot(TOP + 2 * RHO, LENGTH / 2), 9);
+        const down = arcOf(c).downswing as Downswing;
+        expect(downswingAt(down, -approach.before).theta).toBeCloseTo(-Math.atan2(LENGTH / 2, TOP + 2 * RHO), 4);
     });
 
     it("measures back from the planned contact, whatever the lead", () => {
-        const profile = testProfile({ drive: { handShare: 0.3 } });
+        const profile = testProfile({ shape: { pendulumShare: 0.7 } });
         const onTime = swingApproach(buildContact(shot({}, profile), WORLD));
         const early = swingApproach(buildContact(shot({ timing: { arc: -0.02, hands: 0, dip: 0 } }, profile), WORLD));
-        expect(early.before).toBeCloseTo(onTime.before, 12);
-        expect(early.clearance).toBeCloseTo(onTime.clearance, 12);
+        expect(early).toEqual(onTime);
     });
 
-    it("follows the coasting path, every action removed", () => {
-        const acting = testProfile({ drive: { speedGain: 0.4, handShare: 0.3, handGain: 0.2, handDrop: 0.004 } });
-        const coasting = testProfile({ drive: { speedGain: 0.4, handShare: 0.3, handGain: 0.2 } });
+    it("ignores every action: the downswing is planned without them", () => {
+        const shape = { pendulumShare: 0.7 };
+        const acting = testProfile({ drive: { speedGain: 0.4, handGain: 0.2, handDrop: 0.004 }, shape });
+        const plain = testProfile({ drive: { speedGain: 0.4, handGain: 0.2 }, shape });
         const timing = { arc: -0.03, hands: -0.02, dip: -0.04 };
         const a = swingApproach(buildContact(shot({ drive: -1, timing }, acting), WORLD));
-        const b = swingApproach(buildContact(shot({}, coasting), WORLD));
-        expect(a.before).toBeCloseTo(b.before, 12);
-        expect(a.clearance).toBeCloseTo(b.clearance, 12);
+        const b = swingApproach(buildContact(shot({}, plain), WORLD));
+        expect(a).toEqual(b);
+    });
+
+    it("is the plan's approach, from the same scan", () => {
+        const plan = planStroke(shot({}, testProfile({ shape: { pendulumShare: 0.7 } })), WORLD);
+        expect(swingApproach(plan.contact)).toEqual(plan.approach);
     });
 });
 
@@ -286,7 +307,8 @@ describe("buildContact, mirrored", () => {
     it("gives a setup mirrored across a vertical plane an exactly mirrored contact and impact", () => {
         const profile = testProfile({
             stance: { lean: 0.1, gripTension: 0.8, bottomGrip: 0.5 },
-            drive: { handShare: 0.3, handGain: 0.2, handDrop: 0.004 },
+            drive: { handGain: 0.2, handDrop: 0.004 },
+            shape: { pendulumShare: 0.7 },
         });
         const stroke = { aim: 0.4, drive: 0.5, contact: { up: -0.003, side: 0.004 } };
         const a = buildContact(shot(stroke, profile, ballAt(5, 3)), WORLD);
@@ -302,6 +324,8 @@ describe("buildContact, mirrored", () => {
         const [ma, mb] = [arcOf(m), arcOf(b)];
         expect(same(ma.pivot, mb.pivot) && same(ma.pivotAcceleration, mb.pivotAcceleration)).toBe(true);
         expect(ma.omega0 === mb.omega0 && ma.alpha === mb.alpha && ma.theta0 === mb.theta0).toBe(true);
+        const [da, db] = [ma.downswing as Downswing, mb.downswing as Downswing];
+        expect(same(da.handsTop, db.handsTop) && same(da.across, db.across) && same(da.drop, db.drop)).toBe(true);
         const ra = simulateImpact(a, { blue: ballAt(5, 3) }, WORLD);
         const rb = simulateImpact(b, { blue: ballAt(5, -3) }, WORLD);
         const ha = ra.handover.blue as BallState;
@@ -315,18 +339,19 @@ describe("buildContact, mirrored", () => {
 });
 
 /**
- * The coasting path's lowest clearance before contact on each canonical setup (measured while planning on prototype
- * aeadd4c's geometry). The level presets' continuous minimum lies at 36.25 ms, midway between the samples at 36.0 and
- * 36.5 ms, whose clearances differ by 1.7e-9 m, so either may be reported; the others are one sample.
+ * The downswing's least clearance on each canonical setup. The swing presets swing about a still top hand, so theirs
+ * is the circle's: P2b.2b.1's coasting approach on prototype aeadd4c's geometry (the level presets' minimum lies
+ * 36.25 ms before contact at 3 m/s, the AC stop's 56 ms). The rolls' hands rise behind contact and their pendulum
+ * swings the head up, already past the rim's lowest angle, so theirs is at contact: CANONICAL_CLEARANCE.
  */
-const CANONICAL_APPROACH: Readonly<Record<StrokeType, { readonly clearance: number; readonly before: number }>> = {
-    "single-ball": { clearance: 0.51544e-3, before: 0.03625 },
-    drive: { clearance: 0.51544e-3, before: 0.03625 },
-    "stop-ac": { clearance: 7.2281e-3, before: 0.056 },
-    "stop-gc": { clearance: 0.51544e-3, before: 0.03625 },
-    "half-roll": { clearance: 21.1109e-3, before: 0 },
-    "full-roll": { clearance: 51.6104e-3, before: 0 },
-    "pass-roll": { clearance: 54.7165e-3, before: 0 },
+const CANONICAL_APPROACH: Readonly<Record<StrokeType, number>> = {
+    "single-ball": 0.51544e-3,
+    drive: 0.51544e-3,
+    "stop-ac": 7.2281e-3,
+    "stop-gc": 0.51544e-3,
+    "half-roll": 21.1109e-3,
+    "full-roll": 51.6104e-3,
+    "pass-roll": 54.7165e-3,
 };
 
 describe("the default profile's canonical setups", () => {
@@ -335,10 +360,13 @@ describe("the default profile's canonical setups", () => {
         const c = buildContact(canonicalSetup(type, { world }), world);
         expect(arcOf(c).contactAt).toBe(0);
         expect(headLowestPoint(c, c.head)).toBeCloseTo(CANONICAL_CLEARANCE[type], 6);
-        const approach = swingApproach(c);
-        expect(approach.clearance).toBeCloseTo(CANONICAL_APPROACH[type].clearance, 6);
-        // Within 3e-4 s: the planned sample, or (level presets) either sample beside the continuous minimum.
-        expect(Math.abs(approach.before - CANONICAL_APPROACH[type].before)).toBeLessThan(3e-4);
+        expect(swingApproach(c).clearance).toBeCloseTo(CANONICAL_APPROACH[type], 6);
+    });
+
+    it.each(STROKE_TYPES)("%s plans its default speed (exit criterion 5)", (type) => {
+        const world = defaultWorld();
+        const speed = plannedSpeed(canonicalSetup(type, { world }), world);
+        expect(speed).toBeCloseTo(swingReference[type].defaultSpeed.value, 9);
     });
 
     it("rises 4° into the AC stop, the face tilted up as much", () => {
@@ -385,18 +413,45 @@ describe("defaultProfile", () => {
         expect(defaultProfile.drive["stop-ac"].handDrop).toBe(0.011);
         expect(STROKE_TYPES.map((type) => defaultProfile.drive[type].guideEffort)).toEqual([1, 1, 1, 1, 1, 1, 1]);
     });
+
+    it("takes each stroke type's shape from swing.json, the swing presets' pendulum alone", () => {
+        for (const type of STROKE_TYPES) {
+            const shape = defaultProfile.shape[type];
+            const ref = swingReference[type];
+            expect(shape.pendulumShare, type).toBe(ref.pendulumShare.value);
+            expect(shape.handAngle, type).toBe(ref.handAngle.value);
+            expect(shape.defaultIntensity, type).toBe(ref.defaultIntensity.value);
+            if (ref.effort !== null) {
+                expect(shape.effort, type).toEqual({
+                    torqueMax: ref.effort.torqueMax.value,
+                    tempoSlow: ref.effort.tempoSlow.value,
+                    tempoFast: ref.effort.tempoFast.value,
+                });
+            }
+            const tempo = ref.handTempo;
+            if (tempo !== null) {
+                expect(shape.handTempo, type).toEqual({ slow: tempo.slow.value, fast: tempo.fast.value });
+            }
+        }
+        expect(STROKE_TYPES.slice(0, 4).map((type) => defaultProfile.shape[type].pendulumShare)).toEqual([1, 1, 1, 1]);
+    });
 });
 
 describe("buildContact rejections", () => {
-    const missing = (record: "stance" | "drive"): SwingProfile => {
+    const missing = (record: "stance" | "drive" | "shape"): SwingProfile => {
         const p = testProfile();
         const kept = Object.fromEntries(Object.entries(p[record]).filter(([type]) => type !== "drive"));
         return { ...p, [record]: kept } as unknown as SwingProfile;
     };
+    // The low swing's downswing is deepest about 36 ms before contact (the swingApproach test): a dip timed then
+    // starts the impact with the head in the turf.
+    const low = shot({ contact: { up: 0.01, side: 0 } });
+    const deepest = swingApproach(buildContact(low, WORLD)).before;
     const cases: readonly [string, ShotSetup, RegExp][] = [
         ["the striker absent", { ...shot(), striker: "red" }, /striker red is not in the setup/],
         ["a stroke type missing from the stance", shot({ type: "drive" }, missing("stance")), /stance has no entry/],
         ["a stroke type missing from the drive", shot({ type: "drive" }, missing("drive")), /drive has no entry/],
+        ["a stroke type missing from the shape", shot({ type: "drive" }, missing("shape")), /shape has no entry/],
         [
             "a mode other than swing or carry",
             shot({}, testProfile({ drive: { mode: "chip" as StrokeMode } })),
@@ -416,7 +471,6 @@ describe("buildContact rejections", () => {
         ["the bottom hand at the top hand", shot({}, testProfile({ stance: { bottom: 0.8 } })), /\.bottom must lie in/],
         ["the bottom hand at the socket", shot({}, testProfile({ stance: { bottom: 0 } })), /\.bottom must lie in/],
         ["a lean of 90°", shot({}, testProfile({ stance: { lean: Math.PI / 2 } })), /\.lean must lie within/],
-        ["a non-positive speed", shot({ speed: 0 }), /stroke\.speed must be positive/],
         ["a drive beyond ±1", shot({ drive: 1.5 }), /stroke\.drive must lie in/],
         ["a contact off the face", shot({ contact: { up: 0.03, side: 0.02 } }), /off the face/],
         ["a non-positive window", shot({}, testProfile({ drive: { window: 0 } })), /\.window must be positive/],
@@ -433,7 +487,6 @@ describe("buildContact rejections", () => {
             shot({}, testProfile({ stance: { bottomGrip: 1.5 } })),
             /bottomGrip must lie in \(0, 1\]/,
         ],
-        ["a hand share above 1", shot({}, testProfile({ drive: { handShare: 1.1 } })), /handShare must lie in/],
         ["a negative dip", shot({}, testProfile({ drive: { handDrop: -0.001 } })), /handDrop must be non-negative/],
         [
             "a negative preset reach",
@@ -460,15 +513,64 @@ describe("buildContact rejections", () => {
         ],
         ["an action over 60 ms early", shot({ timing: { arc: -0.07, hands: 0, dip: 0 } }), /more than 0\.06 s early/],
         ["a head in the turf at contact", shot({}, testProfile({ stance: { lean: -0.3 } })), /in the turf at contact/],
+        ["a non-finite backswing", shot({ backswing: NaN }), /stroke\.backswing must be finite/],
+        ["a backswing of 0", shot({ backswing: 0 }), /stroke\.backswing must be positive/],
+        ["an intensity above 1", shot({ intensity: 1.2 }), /stroke\.intensity must lie in \[0, 1\]/],
+        [
+            "a pendulum share above 1",
+            shot({}, testProfile({ shape: { pendulumShare: 1.1 } })),
+            /pendulumShare must lie in \[0, 1\]/,
+        ],
+        [
+            "a hands' angle of 90° with a hands' share",
+            shot({}, testProfile({ shape: { pendulumShare: 0.5, handAngle: Math.PI / 2 } })),
+            /handAngle must lie in \(0, 90°\)/,
+        ],
+        [
+            "a share of 0 in swing mode",
+            shot({}, testProfile({ shape: { pendulumShare: 0 } })),
+            /pendulumShare must be positive in swing mode/,
+        ],
+        [
+            "a non-positive slow tempo",
+            shot({}, testProfile({ shape: { effort: { torqueMax: 0, tempoSlow: 0, tempoFast: 0 } } })),
+            /effort\.tempoSlow must be positive/,
+        ],
+        [
+            "a fast tempo slower than the slow",
+            shot({}, testProfile({ shape: { effort: { torqueMax: 0, tempoSlow: 0.2, tempoFast: 0.3 } } })),
+            /effort\.tempoFast must not exceed .*effort\.tempoSlow/,
+        ],
+        [
+            "a negative peak torque",
+            shot({}, testProfile({ shape: { effort: { torqueMax: -1, tempoSlow: 0.4, tempoFast: 0.2 } } })),
+            /torqueMax must be non-negative/,
+        ],
+        [
+            "a carry's fast hands' tempo slower than the slow",
+            shot({}, testProfile({ drive: { mode: "carry" }, shape: { handTempo: { slow: 0.2, fast: 0.3 } } })),
+            /handTempo\.fast must not exceed .*handTempo\.slow/,
+        ],
+        [
+            "a default intensity above 1",
+            shot({}, testProfile({ shape: { defaultIntensity: 1.5 } })),
+            /defaultIntensity must lie in \[0, 1\]/,
+        ],
+        ["a backswing beyond the shaft horizontal", shot({ backswing: 2 }), /beyond/],
         [
             "a head in the turf where an early action begins",
-            shot({ contact: { up: 0.01, side: 0 }, timing: { arc: 0, hands: 0, dip: -0.04 } }),
-            /in the turf 0\.04 s before contact/,
+            shot({ contact: { up: 0.01, side: 0 }, timing: { arc: 0, hands: 0, dip: -deepest } }),
+            /in the turf .* s before contact/,
         ],
     ];
 
     it.each(cases)("rejects %s", (_name, setup, pattern) => {
         expect(() => buildContact(setup, WORLD)).toThrow(pattern);
+    });
+
+    it("neither reads nor checks the hands' angle of a pendulum alone (P2b.2b.2a design §3.2)", () => {
+        const setup = shot({}, testProfile({ shape: { pendulumShare: 1, handAngle: NaN } }));
+        expect(planStroke(setup, WORLD).contactSpeed).toBe(plannedSpeed(shot(), WORLD));
     });
 });
 

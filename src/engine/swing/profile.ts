@@ -11,11 +11,39 @@
  *   the AC stop's dip depth is a user decision (2026-10-05). Every preset's guideEffort is 1, the full restoration of
  *   the arc's speed a full shot aims at; a softer shot uses less, a very soft one none (user's account, 2026-10-06).
  *   P2b.2b.2 sets the per-type defaults; the P4 planner chooses it per shot.
+ * - Shape (P2b.2b.2a design §5.3): reference/swing.json, sourced or labelled placeholders, its effort and tempos fitted
+ *   by scripts/fitStrokeShape.ts. The swing presets read the effort and the rolls the hands' tempo; the unread member
+ *   repeats the read one's tempos.
  */
-import { contactReference, malletReference } from "../../reference/index";
-import type { StrokeTiming, StrokeType, SwingProfile } from "./types";
+import { contactReference, malletReference, swingReference } from "../../reference/index";
+import { STROKE_TYPES, type StrokeTiming, type StrokeType, type SwingProfile, type SwingShape } from "./types";
 
 const DEG = Math.PI / 180;
+
+/** A stroke type's shape from reference/swing.json (design §5.3). */
+function shapeOf(type: StrokeType): SwingShape {
+    const ref = swingReference[type];
+    const effort =
+        ref.effort === null
+            ? null
+            : {
+                  torqueMax: ref.effort.torqueMax.value,
+                  tempoSlow: ref.effort.tempoSlow.value,
+                  tempoFast: ref.effort.tempoFast.value,
+              };
+    const tempo = ref.handTempo;
+    const handTempo = tempo === null ? null : { slow: tempo.slow.value, fast: tempo.fast.value };
+    if (effort === null && handTempo === null) {
+        throw new Error(`reference/swing.json gives ${type} neither an effort nor a hands' tempo`);
+    }
+    return {
+        pendulumShare: ref.pendulumShare.value,
+        handAngle: ref.handAngle.value,
+        effort: effort ?? { torqueMax: 0, tempoSlow: handTempo?.slow ?? 0, tempoFast: handTempo?.fast ?? 0 },
+        handTempo: handTempo ?? { slow: effort?.tempoSlow ?? 0, fast: effort?.tempoFast ?? 0 },
+        defaultIntensity: ref.defaultIntensity.value,
+    };
+}
 
 /** The default profile (design §5.4). Provisional throughout. */
 export const defaultProfile: SwingProfile = {
@@ -58,7 +86,6 @@ export const defaultProfile: SwingProfile = {
             mode: "swing",
             speedGain: 0.2,
             window: 0.01,
-            handShare: 0,
             handGain: 0,
             handWindow: 0.01,
             handDrop: 0,
@@ -73,7 +100,6 @@ export const defaultProfile: SwingProfile = {
             mode: "swing",
             speedGain: 0.2,
             window: 0.005,
-            handShare: 0,
             handGain: 0,
             handWindow: 0.005,
             handDrop: 0,
@@ -93,7 +119,6 @@ export const defaultProfile: SwingProfile = {
             mode: "swing",
             speedGain: 1,
             window: 0.01,
-            handShare: 0,
             handGain: 0,
             handWindow: 0.01,
             handDrop: 0.011,
@@ -108,7 +133,6 @@ export const defaultProfile: SwingProfile = {
             mode: "swing",
             speedGain: 1,
             window: 0.01,
-            handShare: 0,
             handGain: 0,
             handWindow: 0.01,
             handDrop: 0,
@@ -118,13 +142,13 @@ export const defaultProfile: SwingProfile = {
             guideEffort: 1,
         },
         // Carry (Riches: the slope "MAINTAINED throughout the swing", both hands moving "FORWARD at the SAME RATE",
-        // "the mallet head following through the ball and onto the ground"): the hands 60 % of the head's speed, a
-        // light pendulum push, a 0.15 m reach, the head ending 5 mm below the turf (prototype).
+        // "the mallet head following through the ball and onto the ground"): the hands' speed from the downswing
+        // (P2b.2b.2a design §3.3), a light pendulum push, a 0.15 m reach, the head ending 5 mm below the turf
+        // (prototype).
         "half-roll": {
             mode: "carry",
             speedGain: 0.1,
             window: 0.02,
-            handShare: 0.6,
             handGain: 0,
             handWindow: 0.02,
             handDrop: 0,
@@ -133,13 +157,12 @@ export const defaultProfile: SwingProfile = {
             groundDepth: 0.005,
             guideEffort: 1,
         },
-        // Carry: the hands 90 % of the head's speed and still accelerating, a 0.30 m reach, the head ending 2 mm below
-        // the turf (prototype). A known miss in this phase (design §10).
+        // Carry: the hands' speed from the downswing (P2b.2b.2a design §3.3) and still accelerating, a 0.30 m reach,
+        // the head ending 2 mm below the turf (prototype). A known miss in this phase (design §10).
         "full-roll": {
             mode: "carry",
             speedGain: 0.1,
             window: 0.03,
-            handShare: 0.9,
             handGain: 0.1,
             handWindow: 0.03,
             handDrop: 0,
@@ -149,13 +172,13 @@ export const defaultProfile: SwingProfile = {
             guideEffort: 1,
         },
         // Carry, the bottom hand punching in contact: the pendulum's speedGain 0.5 over 15 ms from contact on top of
-        // the hands' 85 % and handGain 0.1. A 0.30 m reach; 0.2 m traps the striker's ball against the face, the head
-        // ending 2 mm below the turf (prototype). A known miss in this phase (design §10).
+        // the hands' speed from the downswing (P2b.2b.2a design §3.3) and handGain 0.1. A 0.30 m reach; 0.2 m traps
+        // the striker's ball against the face, the head ending 2 mm below the turf (prototype). A known miss in this
+        // phase (design §10).
         "pass-roll": {
             mode: "carry",
             speedGain: 0.5,
             window: 0.015,
-            handShare: 0.85,
             handGain: 0.1,
             handWindow: 0.015,
             handDrop: 0,
@@ -165,6 +188,7 @@ export const defaultProfile: SwingProfile = {
             guideEffort: 1,
         },
     },
+    shape: Object.fromEntries(STROKE_TYPES.map((type) => [type, shapeOf(type)])) as Record<StrokeType, SwingShape>,
 };
 
 /** The planner's default `drive` per stroke type (design §5.4): −1 check … 0 coast … +1 push. */
