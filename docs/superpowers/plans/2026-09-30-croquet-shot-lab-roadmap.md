@@ -656,8 +656,9 @@ default profile's canonical setups; raw output in `docs/superpowers/probes/2026-
   - The deep carry needs a planned dig of 200 mm to drive the head 5.7 mm deep: the turf and the compliant hands
     hold the head far above its planned path.
   - Open defect, predating P2b.2b.2a: with a very stiff grip (ζ ≥ 2, or a period of 0.01 s) the fat stroke goes deep
-    within 0.5 ms, reaches the cap with no strike and leaves NaN in the result (the post-cap run in `integrate.ts`). It cannot be reached through `simulateShot` today,
-    but fitting T and ζ reaches it, so a finite-state guard there is a precondition of P2b.2b.2c's fit (see its row).
+    within 0.5 ms, reaches the cap with no strike and leaves NaN in the result (the post-cap run in `integrate.ts`).
+    It cannot be reached through `simulateShot` today, but fitting T and ζ reaches it, so a finite-state guard there
+    is a precondition of P2b.2b.2c's fit (see its row).
   - Exit criterion 3's 1e-6 m continuity check, in its trapezoid form, holds on the canonical setups (worst seam pair
     5.7e-7 m) but fails on smooth motion with |jerk| above about 12,000 m/s³ (a pass roll with a long lead, 1.35e-6
     m); a jerk-scaled bound is the general form. Its velocity bound as tested: |Δv| at a seam within 1.5 × (the
