@@ -7,13 +7,14 @@ Heights and angles would convert to SI as the plan's Step 2 states; none was fou
 
 ## Sources
 
-All fetched 2026-10-07 with `curl -k -sSL` (the Oxford Croquet sites' certificate is broken). To check a later fetch
-against the one used here, compare its SHA-256 with the digest below.
+All fetched 2026-10-07 with `curl -k -sSL` (the Oxford Croquet sites' certificate is broken). Gugan 4 was re-fetched
+2026-10-08 for P2b.2b.2b.1; its digest is that fetch's. To check a later fetch against the one used here, compare its
+SHA-256 with the digest below.
 
 | Short name | Work | URL | SHA-256 of the fetched file |
 |---|---|---|---|
 | Riches | John Riches, *Croquet Technique* (Oxford Croquet). The whole book is one page, its chapters anchors in it. | http://www.oxfordcroquet.com/coach/riches/croqtech/index.asp | `c9693c2efd4171b266ca5756e4ec513a808ea810f799925dfaf93ea6c426181f` |
-| Gugan 4 | Don Gugan, "The Physics of Croquet Strokes: Analysis of the CA high-speed DVD" (Oxford Croquet) | https://oxfordcroquet.org/tech/gugan4/ | `50356f4631de45538b54b0ec9732da6aacb3d9605ee98c518b1b0880818653f8` |
+| Gugan 4 | Don Gugan, "The Physics of Croquet Strokes: Analysis of the CA high-speed DVD" (Oxford Croquet) | https://oxfordcroquet.org/tech/gugan4/ | `de69699eb6ed9c388a7d4545e4503002a1e9e6ef360d144c7bb8dd1b2a63c0dd` |
 | Gugan 5 | Don Gugan, "Croquet Drives, Pass-Rolls, Stop-Shots and Scatter-Shots" (Oxford Croquet) | https://oxfordcroquet.org/tech/gugan5/ | `b6e1c2fe9e5487c735e52511fd7dc7c6b5ad7d94db9bb52f1048ca824004d8a5` |
 | CA Dynamics | Croquet Association, *Project Croquet Dynamics* (2006), version 4 (PDF) | https://croquet.org.uk/?d=1475 | `f4df395c3a77aba0baef9f33fd5c1e7445833ad0a38d0a89d02cdd4781a873d2` |
 
@@ -98,3 +99,20 @@ These are contact speeds against ball travel, not backswing pairs, so `swing.jso
   to ensure that the mallet is not checked when it contacts the ball, should produce a perfectly legal shot."
 
 No figure for a roll's tempo (a time or a speed) was found.
+
+## The rolls' face angles (P2b.2b.2b.1 design §4; `profile.ts`, not `swing.json`)
+
+Gugan 4, Table 6, row 1, "Angle of mallet face, α, º", measured from the CA's high-speed video. Gugan defines α in the
+section on drives as "the mallet angle, α, the same as the forward angle of the mallet shaft, and which when positive
+tends to put roll on the ball". The rolls' default leans are the means at the table's 1° resolution (user decision,
+2026-10-08):
+
+| Stroke | Shots and α (°) | Mean (°) | Default lean (°) |
+|---|---|---|---|
+| Half roll | C3H 23.5, C10H 25 | 24.25 | 24 |
+| Full roll | C1F 31, C3F 29, C10F 33, C25F 30 | 30.75 | 31 |
+| Pass roll | C3P 36, C10P 34, C25P 32 | 34 | 34 |
+
+These replace Riches' "about 75 degrees with the ground" (half roll), "approximately 45 degrees" (full roll), and the
+pass roll's handle sloping "at least as much as for a full roll". `profile.ts` keeps them as coaching cues. Table 5's
+two-ball drives and stops measure α from −8° to −2°. They are P2b.2b.2c's calibration check, not used here.

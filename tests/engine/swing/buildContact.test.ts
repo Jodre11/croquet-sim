@@ -20,9 +20,11 @@ import {
     buildContact,
     contactPose,
     downswingInput,
+    handsAheadFor,
     planStroke,
     plannedSpeed,
     poseSpeed,
+    stanceLean,
     swingApproach,
 } from "../../../src/engine/swing/buildContact";
 import { planDownswing, scanDownswing } from "../../../src/engine/swing/downswing";
@@ -33,6 +35,7 @@ import {
     type StrokeType,
     type SwingProfile,
     type SwingShape,
+    type SwingStance,
 } from "../../../src/engine/swing/types";
 import type { BallState } from "../../../src/engine/types";
 import { defaultWorld } from "../../../src/engine/world";
@@ -95,18 +98,20 @@ describe("buildContact, step by step", () => {
         expect(arcOf(buildContact(shot({}, testProfile({ stance: { top: 0.6 } })), WORLD)).radius).toBe(0.6);
     });
 
-    it("turns the lean into the contact angle, a negative lean rising into the ball", () => {
-        expect(arcOf(buildContact(shot({}, testProfile({ stance: { lean: 0.2 } })), WORLD)).theta0).toBe(-0.2);
-        const profile = testProfile({ stance: { lean: -0.05 } });
+    it("turns the hands' position into the contact angle, a negative lean rising into the ball", () => {
+        // testProfile turns a lean into the hands that give it at the shot's `up`; the lean reads back to rounding.
+        const leaning = buildContact(shot({}, testProfile({ stance: { lean: 0.2 } })), WORLD);
+        expect(arcOf(leaning).theta0).toBeCloseTo(-0.2, 12);
+        const profile = testProfile({ stance: { lean: -0.05 }, up: -0.01 });
         const rising = buildContact(shot({ contact: { up: -0.01, side: 0 } }, profile), WORLD);
-        expect(arcOf(rising).theta0).toBe(0.05);
+        expect(arcOf(rising).theta0).toBeCloseTo(0.05, 12);
         expect(rising.velocity.z).toBeGreaterThan(0);
     });
 
     it("pitches the face down by the lean, the head rigid on the shaft", () => {
         // A short head met low on its face: on the 0.23 m head no point of the face keeps a 10° rise clear of the turf.
         for (const degrees of [-10, 0, 10]) {
-            const profile = testProfile({ stance: { lean: degrees * DEG }, mallet: { headLength: 0.1 } });
+            const profile = testProfile({ stance: { lean: degrees * DEG }, mallet: { headLength: 0.1 }, up: -0.02 });
             const c = buildContact(shot({ contact: { up: -0.02, side: 0 } }, profile), WORLD);
             const face = rotate(c.orientation, vec3(1, 0, 0));
             expect(Math.asin(face.z), `lean ${degrees}°`).toBeCloseTo(-degrees * DEG, 12);
@@ -167,6 +172,21 @@ describe("buildContact, step by step", () => {
         }
     });
 
+    it("solves a leaning stance's backswing per contact height", () => {
+        // Review focus 2. Under fixed hands the lean follows `up` (P2b.2b.2b.1 design §3.3), and with an effort pulse
+        // the planned speed follows the lean, so a memo keyed without `up` would hand one height another's backswing.
+        const profile = testProfile({
+            stance: { lean: 0.4 },
+            shape: { effort: { torqueMax: 3, tempoSlow: 0.4, tempoFast: 0.2 } },
+        });
+        for (const up of [-0.01, 0.01]) {
+            const setup = shot({ intensity: 1, contact: { up, side: 0 } }, profile);
+            const backswing = backswingFor(setup, 2.5, WORLD);
+            const planned = plannedSpeed({ ...setup, stroke: { ...setup.stroke, backswing } }, WORLD);
+            expect(planned, `up ${up} m`).toBeCloseTo(2.5, 9);
+        }
+    });
+
     it("copies the mode, the reach and the ground depth, the hands and the body, and grips with HAND_COUPLING", () => {
         const profile = testProfile({
             stance: { top: 0.7, bottom: 0.3, gripTension: 0.6, bottomGrip: 0.25 },
@@ -201,7 +221,11 @@ describe("buildContact, step by step", () => {
 
     it("dips the hands as the profile says, whatever the drive, still meeting the ball on the up", () => {
         for (const drive of [-1, 0, 1]) {
-            const profile = testProfile({ stance: { lean: -0.05 }, drive: { handDrop: 0.014, dropTime: 0.02 } });
+            const profile = testProfile({
+                stance: { lean: -0.05 },
+                up: -0.01,
+                drive: { handDrop: 0.014, dropTime: 0.02 },
+            });
             const c = buildContact(shot({ drive, contact: { up: -0.01, side: 0 } }, profile), WORLD);
             expect(arcOf(c).dip, `drive ${drive}`).toEqual({ start: 0, duration: 0.02, depth: 0.014 });
             expect(c.velocity.z).toBeGreaterThan(0);
@@ -314,6 +338,7 @@ describe("buildContact, mirrored", () => {
     it("gives a setup mirrored across a vertical plane an exactly mirrored contact and impact", () => {
         const profile = testProfile({
             stance: { lean: 0.1, gripTension: 0.8, bottomGrip: 0.5 },
+            up: -0.003,
             drive: { handGain: 0.2, handDrop: 0.004 },
             shape: { pendulumShare: 0.7 },
         });
@@ -356,12 +381,34 @@ const CANONICAL_APPROACH: Readonly<Record<StrokeType, number>> = {
     drive: 0.51544e-3,
     "stop-ac": 7.2281e-3,
     "stop-gc": 0.51544e-3,
-    "half-roll": 21.1109e-3,
-    "full-roll": 51.6104e-3,
-    "pass-roll": 54.7165e-3,
+    "half-roll": 29.9165e-3,
+    "full-roll": 37.0506e-3,
+    "pass-roll": 40.1551e-3,
+};
+
+/** Each preset's default lean in degrees (P2b.2b.2b.1 design §4): the swing presets' unchanged, the rolls' Gugan's. */
+const DEFAULT_LEAN: Readonly<Record<StrokeType, number>> = {
+    "single-ball": 0,
+    drive: 0,
+    "stop-ac": -4,
+    "stop-gc": 0,
+    "half-roll": 24,
+    "full-roll": 31,
+    "pass-roll": 34,
 };
 
 describe("the default profile's canonical setups", () => {
+    it.each(STROKE_TYPES)("%s's canonical pose has its default lean (exit criterion 2)", (type) => {
+        const world = defaultWorld();
+        const pose = contactPose(canonicalSetup(type, { world }), world);
+        const lean = DEFAULT_LEAN[type] * DEG;
+        if (lean === 0) {
+            expect(pose.thetaContact).toBe(0);
+        } else {
+            expect(Math.abs(pose.thetaContact + lean)).toBeLessThan(1e-12);
+        }
+    });
+
     it.each(STROKE_TYPES)("%s starts at contact, by its planned clearance, its approach as planned", (type) => {
         const world = defaultWorld();
         const c = buildContact(canonicalSetup(type, { world }), world);
@@ -374,6 +421,17 @@ describe("the default profile's canonical setups", () => {
         const world = defaultWorld();
         const speed = plannedSpeed(canonicalSetup(type, { world }), world);
         expect(speed).toBeCloseTo(swingReference[type].defaultSpeed.value, 9);
+    });
+
+    it("keeps the upright presets exactly upright at any contact height", () => {
+        // Exit criterion 3: their hands lie B behind the ball's centre, which reads back as exactly 0 at any `up`.
+        const world = defaultWorld();
+        for (const type of ["single-ball", "drive", "stop-gc"] as const) {
+            for (const up of [-0.03, -0.01, 0, 0.01, 0.03]) {
+                const pose = contactPose(canonicalSetup(type, { world, stroke: { contact: { up, side: 0 } } }), world);
+                expect(pose.thetaContact, `${type} at up ${up} m`).toBe(0);
+            }
+        }
     });
 
     it("rises 4° into the AC stop, the face tilted up as much", () => {
@@ -469,6 +527,16 @@ describe("buildContact rejections", () => {
         const kept = Object.fromEntries(Object.entries(p[record]).filter(([type]) => type !== "drive"));
         return { ...p, [record]: kept } as unknown as SwingProfile;
     };
+    /** The test stance's A and D at `up` 0 (P2b.2b.2b.1 design §3.2, §3.4), in validate's operation order. */
+    const A = RHO + TOP;
+    const B = R + START_GAP + LENGTH / 2;
+    const D = Math.sqrt(A * A + B * B);
+    /** A stance from before P2b.2b.2b.1: a lean and no handsAhead (review focus 5). */
+    const legacy = (): SwingProfile => {
+        const p = testProfile();
+        const old = { lean: 0, top: 0.8, bottom: 0.4, gripTension: 1, bottomGrip: 1 } as unknown as SwingStance;
+        return { ...p, stance: { ...p.stance, "single-ball": old } };
+    };
     const cases: readonly [string, ShotSetup, RegExp][] = [
         ["the striker absent", { ...shot(), striker: "red" }, /striker red is not in the setup/],
         ["a stroke type missing from the stance", shot({ type: "drive" }, missing("stance")), /stance has no entry/],
@@ -492,7 +560,33 @@ describe("buildContact rejections", () => {
         ["the top hand off the shaft", shot({}, testProfile({ stance: { top: 0.95 } })), /off the shaft/],
         ["the bottom hand at the top hand", shot({}, testProfile({ stance: { bottom: 0.8 } })), /\.bottom must lie in/],
         ["the bottom hand at the socket", shot({}, testProfile({ stance: { bottom: 0 } })), /\.bottom must lie in/],
-        ["a lean of 90°", shot({}, testProfile({ stance: { lean: Math.PI / 2 } })), /\.lean must lie within/],
+        [
+            "the top hand at A, the shaft flat",
+            shot({}, testProfile({ stance: { handsAhead: A } })),
+            /handsAhead must lie in/,
+        ],
+        ["the top hand beyond A", shot({}, testProfile({ stance: { handsAhead: 0.9 } })), /handsAhead must lie in/],
+        [
+            "the top hand at −D, off the stance's branch",
+            shot({}, testProfile({ stance: { handsAhead: 0 - D } })),
+            /handsAhead must lie in/,
+        ],
+        ["the top hand below −D", shot({}, testProfile({ stance: { handsAhead: -1 } })), /handsAhead must lie in/],
+        [
+            "a non-finite hands' position",
+            shot({}, testProfile({ stance: { handsAhead: NaN } })),
+            /profile\.stance\.single-ball\.handsAhead must be finite/,
+        ],
+        [
+            "a stance with a lean but no handsAhead",
+            shot({}, legacy()),
+            /profile\.stance\.single-ball\.handsAhead must be finite \(got undefined\)/,
+        ],
+        [
+            "a contact off the face, before the hands' range",
+            shot({ contact: { up: 0.03, side: 0.02 } }, testProfile({ stance: { handsAhead: 2 } })),
+            /off the face/,
+        ],
         ["a drive beyond ±1", shot({ drive: 1.5 }), /stroke\.drive must lie in/],
         ["a contact off the face", shot({ contact: { up: 0.03, side: 0.02 } }), /off the face/],
         ["a non-positive window", shot({}, testProfile({ drive: { window: 0 } })), /\.window must be positive/],
@@ -594,14 +688,17 @@ describe("buildContact rejections", () => {
 describe("contactPose (design §5.2 steps 1–5, 10)", () => {
     it("is the on-time contact's pose: the head, its centre and orientation, the aim and the top hand", () => {
         // Met on the up, low on the face: clear of the turf on the way in (the dip test's stance).
-        const setup = shot({ contact: { up: -0.01, side: 0.002 } }, testProfile({ stance: { lean: -0.05 } }));
+        const setup = shot(
+            { contact: { up: -0.01, side: 0.002 } },
+            testProfile({ stance: { lean: -0.05 }, up: -0.01 }),
+        );
         const pose = contactPose(setup, WORLD);
         const c = buildContact(setup, WORLD);
         expect(pose.head).toEqual(c.head);
         // headOnPath rebuilds the centre from the path, which differs from the placed one by rounding (~6e-17 m).
         expect(dist(pose.headCentre, c.position)).toBeLessThan(1e-12);
         expect(pose.orientation).toEqual(c.orientation);
-        expect(pose.thetaContact).toBe(0.05);
+        expect(pose.thetaContact).toBeCloseTo(0.05, 12);
         expect(pose.radius).toBe(TOP);
         expect(pose.aim).toEqual(arcOf(c).aim);
         expect(pose.pivot).toEqual(arcOf(c).pivot);
@@ -623,6 +720,50 @@ describe("contactPose (design §5.2 steps 1–5, 10)", () => {
         const planned = planDownswing(input);
         // The hands still: the head swings at ω₀·ℓ_h.
         expect(poseSpeed(pose, planned)).toBeCloseTo(planned.omega * (RHO + TOP), 12);
+    });
+
+    it("puts the top hand handsAhead ahead of the ball along aim, the face pitched by stanceLean's lean", () => {
+        // P2b.2b.2b.1 design §5.1. `side` moves nothing along aim.
+        const aim = vec3(Math.cos(0.4), Math.sin(0.4), 0);
+        const geometry = { ballRadius: R, headLength: LENGTH, headRadius: RHO };
+        for (const handsAhead of [-0.25, -0.1, 0.12]) {
+            for (const up of [-0.01, 0, 0.01]) {
+                const setup = shot({ contact: { up, side: 0.004 } }, testProfile({ stance: { handsAhead } }));
+                const pose = contactPose(setup, WORLD);
+                const ahead = dot(sub(pose.pivot, vec3(5, 3, 0)), aim);
+                expect(Math.abs(ahead - handsAhead), `${handsAhead} m at up ${up} m`).toBeLessThan(1e-12);
+                const lean = stanceLean(handsAhead, TOP, up, geometry);
+                expect(pose.thetaContact).toBe(0 - lean);
+                expect(Math.abs(rotate(pose.orientation, vec3(1, 0, 0)).z + Math.sin(lean))).toBeLessThan(1e-12);
+            }
+        }
+    });
+
+    it("keeps a stance's hands, its lean following, when the mallet or the ball changes", () => {
+        // Review focus 1 (P2b.2b.2b.1 design §4): a stance entered as hands keeps them, and the rigid geometry moves
+        // its lean.
+        const aim = vec3(Math.cos(0.4), Math.sin(0.4), 0);
+        const base = testProfile({ stance: { lean: 0.5 } });
+        const hands = base.stance["single-ball"].handsAhead;
+        const cases = [
+            {
+                profile: { ...base, mallet: { ...base.mallet, headLength: 0.3 } },
+                world: WORLD,
+                geometry: { ballRadius: R, headLength: 0.3, headRadius: RHO },
+            },
+            {
+                profile: base,
+                world: testWorld({ ball: { ...WORLD.ball, radius: 0.05 } }),
+                geometry: { ballRadius: 0.05, headLength: LENGTH, headRadius: RHO },
+            },
+        ];
+        for (const { profile, world, geometry } of cases) {
+            const pose = contactPose(shot({}, profile), world);
+            expect(Math.abs(dot(sub(pose.pivot, vec3(5, 3, 0)), aim) - hands)).toBeLessThan(1e-12);
+            const lean = stanceLean(hands, TOP, 0, geometry);
+            expect(pose.thetaContact).toBe(0 - lean);
+            expect(Math.abs(lean - 0.5)).toBeGreaterThan(1e-3);
+        }
     });
 });
 
@@ -725,6 +866,76 @@ describe("the lead (design §3.5)", () => {
             const along = vec3(Math.cos(aim), Math.sin(aim), 0);
             expect(dot(back, along), `aim ${aim}`).toBeLessThan(-0.1);
             expect(length(cross(back, along)), `aim ${aim}`).toBeLessThan(1e-9);
+        }
+    });
+});
+
+describe("the stance's geometry (P2b.2b.2b.1 design §3.2, §3.3)", () => {
+    /** The test ball and head: R, L and ρ. */
+    const GEOMETRY = { ballRadius: R, headLength: LENGTH, headRadius: RHO };
+    /** B = R + START_GAP + L/2, in the engine's operation order. */
+    const B = R + START_GAP + LENGTH / 2;
+
+    it("reads every lean back from the top hand's position, within 1e-12 rad", () => {
+        for (let degrees = -30; degrees <= 80; degrees += 5) {
+            for (const top of [0.3, 0.45, 0.6, 0.75, 0.9]) {
+                for (const up of [-0.03, -0.015, 0, 0.015, 0.03]) {
+                    const lean = degrees * DEG;
+                    const back = stanceLean(handsAheadFor(lean, top, up, GEOMETRY), top, up, GEOMETRY);
+                    expect(Math.abs(back - lean), `${degrees}° at top ${top} m, up ${up} m`).toBeLessThan(1e-12);
+                }
+            }
+        }
+    });
+
+    it("puts an upright shaft's top hand B behind the ball's centre and reads it back as exactly 0", () => {
+        // Design §3.2: S² is formed as A² + (B − X)(B + X), so at X = −B it is fl(A²), S is A, and the lean's sine is
+        // exactly 0. This keeps the upright presets bit-identical (exit criterion 3).
+        for (const top of [0.3, 0.6, 0.9]) {
+            for (const up of [-0.03, 0, 0.03]) {
+                const hands = handsAheadFor(0, top, up, GEOMETRY);
+                expect(hands, `top ${top} m, up ${up} m`).toBe(0 - B);
+                expect(stanceLean(hands, top, up, GEOMETRY), `top ${top} m, up ${up} m`).toBe(0);
+            }
+        }
+    });
+
+    it("places the top hand at X = A·sin α − B·cos α, A = ρ + top − up", () => {
+        const [top, up, lean] = [0.6, 0.01, 0.5];
+        const A = RHO + top - up;
+        expect(handsAheadFor(lean, top, up, GEOMETRY)).toBeCloseTo(A * Math.sin(lean) - B * Math.cos(lean), 14);
+    });
+
+    it("leans further under the same hands as the contact rises, by sin α/(A·cos α + B·sin α) per metre", () => {
+        // Review focus 4 (design §3.3): at fixed X, dα = −sin α·dA/(A·cos α + B·sin α), and dA = −d(up). A higher
+        // contact steepens a forward lean and leans a backward one further back; an upright shaft stays upright.
+        const top = 0.6;
+        const h = 1e-5;
+        for (const lean of [-0.1, 0.5]) {
+            const hands = handsAheadFor(lean, top, 0, GEOMETRY);
+            const slope = (stanceLean(hands, top, h, GEOMETRY) - stanceLean(hands, top, 0 - h, GEOMETRY)) / (2 * h);
+            const A = RHO + top;
+            const expected = Math.sin(lean) / (A * Math.cos(lean) + B * Math.sin(lean));
+            expect(slope / expected, `lean ${lean} rad`).toBeCloseTo(1, 6);
+        }
+        expect(stanceLean(handsAheadFor(0, top, 0, GEOMETRY), top, 0.01, GEOMETRY)).toBe(0);
+    });
+
+    it("keeps the lean inside ±90° for every top-hand position the stance accepts", () => {
+        // Pins the bound the old |lean| < 90° check enforced (P2b.2b.2b.1 design §3.4).
+        const samples = 50;
+        for (const top of [0.3, 0.6, 0.9]) {
+            for (const up of [-0.03, 0, 0.03]) {
+                const A = RHO + top - up;
+                const D = Math.sqrt(A * A + B * B);
+                for (let k = 0; k < samples; k++) {
+                    const handsAhead = 0 - D + ((k + 0.5) * (A + D)) / samples;
+                    const lean = stanceLean(handsAhead, top, up, GEOMETRY);
+                    expect(Math.abs(lean), `top ${top} m, up ${up} m, handsAhead ${handsAhead} m`).toBeLessThan(
+                        Math.PI / 2,
+                    );
+                }
+            }
         }
     });
 });

@@ -274,6 +274,19 @@ it as 1.2 s (its design §4.4). Two user decisions of the same day amend §3.3: 
 contact has no position springs, so a graze costs the head speed; and a stop's follow-through holds the mallet still
 relative to the hands after its check.
 
+**Amended 2026-10-08 (P2b.2b.2b.1; user decisions).**
+
+- **The stance's input** is the top hand's position at contact, `handsAhead`: its horizontal distance ahead of the
+  striker's ball's centre along aim. The shaft's lean follows from the rigid geometry (`stanceLean`), and the point of
+  impact on the ball follows from the lean (P2b.2b.2b.1 design §3).
+- **The rejection** of |`lean`| ≥ 90° becomes `handsAhead` outside (−D, A) (its §3.4).
+- **The rolls' default leans** are Gugan's measured face angles, 24°, 31° and 34° (Gugan 4 Table 6). Riches' 15°, 45°
+  and 48° are kept as coaching cues.
+- **The hands are derived:** each preset's `handsAhead` comes from its lean, with the reference mallet and ball (its
+  §4).
+
+§5.1–§5.4, §7 and §10 are updated where they state the stance.
+
 ## 1. Goal and exit criteria
 
 Turn a `ShotSetup` into a whole shot: a swing model builds the mallet head's state, the path the hands follow and how
@@ -730,12 +743,13 @@ type StrokeType = "single-ball" | "drive" | "stop-ac" | "stop-gc" | "half-roll" 
 const CROQUET_STROKES: readonly StrokeType[] = ["drive", "stop-ac", "half-roll", "full-roll", "pass-roll"];
 
 /**
- * How the player stands to a stroke type and holds the mallet: the shaft's lean at contact (rad, positive pitches the
- * face down; the contact angle is −lean), the top and bottom hands' distances from the socket along the shaft (m,
- * 0 < bottom < top), the top hand's grip tension γ_T and the bottom hand's grip g_B from contact on (in (0, 1]).
+ * How the player stands to a stroke type and holds the mallet: where the top hand is at contact, `handsAhead` (m), its
+ * horizontal distance ahead of the striker's ball's centre along aim (negative behind); the top and bottom hands'
+ * distances from the socket along the shaft (m, 0 < bottom < top); and the top hand's grip tension γ_T and the bottom
+ * hand's grip g_B from contact on (in (0, 1]). The shaft's lean at contact follows (stanceLean, P2b.2b.2b.1 design §3).
  */
 interface SwingStance {
-    readonly lean: number;
+    readonly handsAhead: number;
     readonly top: number;
     readonly bottom: number;
     readonly gripTension: number;
@@ -830,7 +844,8 @@ head and other faces arrive with their sourced values (§10). The engine's head 
 ### 5.2 Derivation
 
 1. **Arc radius.** r = `top`: the shaft is rigid, so the pivot is the top hand, `top` from the socket along it.
-2. **Contact angle.** θ_c = −`lean`: positive is a rising strike, negative a descending one.
+2. **Contact angle.** θ_c = −lean, the lean the top hand's position gives (`stanceLean`, P2b.2b.2b.1 design §3.2):
+   positive is a rising strike, negative a descending one.
 3. **Face angle.** The head is rigid on the shaft, so its pitch about n at contact is θ_c: a positive lean pitches the
    face down, and a rising strike tilts it up by as much. The face is the head's leading end disc; its outward normal
    f is the body +x axis.
@@ -874,22 +889,23 @@ head and other faces arrive with their sourced values (§10). The engine's head 
 ### 5.3 Rejections
 
 `buildContact` throws a `RangeError` naming the check for: `top` ≤ 0; `top` > `shaftLength` (the top hand is off the
-shaft); `bottom` outside (0, `top`); |`lean`| ≥ 90°; `speed` ≤ 0; |`drive`| > 1; √(`up`² + `side`²) ≥ the head's
-radius (contact off the face); a stroke type missing from `stance` or `drive`; a `mode` other than "swing" or
-"carry"; `window`, `handWindow` or `dropTime` ≤ 0; `speedGain` < 0; `gripTension` or `bottomGrip` outside (0, 1];
-`handShare` outside [0, 1]; `handDrop` < 0; the shot's or the preset's `handReach` < 0; `groundDepth` < 0; the shot's
-or the preset's `guideEffort` outside [0, 1]; `armMass` < 0; `reachSlack` < 0; a lead beyond `MAX_LEAD` (an action
-timed more than 60 ms early); the head's lowest point below the turf at contact, as placed, or at t = 0 (where an early
-action begins: the stance too low for that timing); a non-finite number. A swing that meets the turf between its
-start and the ball is never rejected. `simulateImpact`'s own validation then runs as today.
+shaft); `bottom` outside (0, `top`); `handsAhead` outside (−D, A) for the stroke's `top` and `up` (P2b.2b.2b.1 design
+§3.4); `speed` ≤ 0; |`drive`| > 1; √(`up`² + `side`²) ≥ the head's radius (contact off the face); a stroke type
+missing from `stance` or `drive`; a `mode` other than "swing" or "carry"; `window`, `handWindow` or `dropTime` ≤ 0;
+`speedGain` < 0; `gripTension` or `bottomGrip` outside (0, 1]; `handShare` outside [0, 1]; `handDrop` < 0; the shot's
+or the preset's `handReach` < 0; `groundDepth` < 0; the shot's or the preset's `guideEffort` outside [0, 1];
+`armMass` < 0; `reachSlack` < 0; a lead beyond `MAX_LEAD` (an action timed more than 60 ms early); the head's lowest
+point below the turf at contact, as placed, or at t = 0 (where an early action begins: the stance too low for that
+timing); a non-finite number. A swing that meets the turf between its start and the ball is never rejected.
+`simulateImpact`'s own validation then runs as today.
 
 ### 5.4 The default profile
 
 `defaultProfile` ("typical club player") ships with these values, every one marked provisional in its source comment.
-The mallet is `mallet.json`'s and the body's constants are `contact.json`'s (§7). The hand positions and leans follow
-Riches on the 0.9144 m shaft, measured from the socket; the grips, gains and reaches are the prototype's calibration
-(`proto-two-hands` aeadd4c), measured against the coaching ratios only as observations (§9). The planner's default
-`drive` per preset is listed with them.
+The mallet is `mallet.json`'s and the body's constants are `contact.json`'s (§7). The hand positions follow Riches on
+the 0.9144 m shaft, measured from the socket, and the rolls' leans Gugan's measured face angles (P2b.2b.2b.1); the
+grips, gains and reaches are the prototype's calibration (`proto-two-hands` aeadd4c), measured against the coaching
+ratios only as observations (§9). The planner's default `drive` per preset is listed with them.
 
 | Mallet and body | Value |
 |---|---|
@@ -897,15 +913,15 @@ Riches on the 0.9144 m shaft, measured from the socket; the grips, gains and rea
 | `armMass` | 0.8 kg |
 | `reachSlack` | 0.03 m |
 
-| Preset | lean (°) | top (m) | bottom (m) | gripTension | bottomGrip |
-|---|---|---|---|---|---|
-| single-ball | 0 | 0.805 | 0.70 | 1 | 0.1 |
-| drive | 0 | 0.805 | 0.60 | 1 | 0.25 |
-| stop-ac | −4 | 0.805 | 0.45 | 0.1 | 0.1 |
-| stop-gc | 0 | 0.805 | 0.45 | 1 | 1 |
-| half-roll | 15 | 0.805 | 0.42 | 1 | 1 |
-| full-roll | 45 | 0.61 | 0.30 | 1 | 1 |
-| pass-roll | 48 | 0.45 | 0.09 | 1 | 1 |
+| Preset | lean (°) | handsAhead (m) | top (m) | bottom (m) | gripTension | bottomGrip |
+|---|---|---|---|---|---|---|
+| single-ball | 0 | −0.1603 | 0.805 | 0.70 | 1 | 0.1 |
+| drive | 0 | −0.1603 | 0.805 | 0.60 | 1 | 0.25 |
+| stop-ac | −4 | −0.2202 | 0.805 | 0.45 | 0.1 | 0.1 |
+| stop-gc | 0 | −0.1603 | 0.805 | 0.45 | 1 | 1 |
+| half-roll | 24 | +0.1964 | 0.805 | 0.42 | 1 | 1 |
+| full-roll | 31 | +0.1964 | 0.61 | 0.30 | 1 | 1 |
+| pass-roll | 34 | +0.1400 | 0.45 | 0.09 | 1 | 1 |
 
 | Preset | mode | speedGain | window (ms) | handShare | handGain | handWindow (ms) | handDrop (mm) | dropTime (ms) | handReach (m) | groundDepth (mm) | default drive |
 |---|---|---|---|---|---|---|---|---|---|---|---|
@@ -919,11 +935,14 @@ Riches on the 0.9144 m shaft, measured from the socket; the grips, gains and rea
 
 **Hands.** The swing presets keep the top hand at the top of the handle (0.805 m from the socket, from the sourced
 35 in grip). Riches places the half roll's bottom hand "almost half-way down the handle for this shot, leaving the
-other hand at the top", the handle "making an angle of about 75 degrees with the ground" (lean 15°, bottom 0.42 m). For
-the full roll "Your lower hand should be placed at least two-thirds of the way down the handle, and your top hand will
-also need to be moved, to about one-third of the way down the handle", giving "an angle of approximately 45 degrees"
-(lean 45°, top 0.61 m, bottom 0.30 m). For the pass roll "The bottom hand should be placed at the very bottom of the
-mallet shaft for this shot", the slope at least the full roll's (lean 48°, top 0.45 m, bottom 0.09 m).
+other hand at the top" (bottom 0.42 m). For the full roll, "Your lower hand should be placed at least two-thirds of the
+way down the handle, and your top hand will also need to be moved, to about one-third of the way down the handle"
+(top 0.61 m, bottom 0.30 m). For the pass roll, "The bottom hand should be placed at the very bottom of the mallet
+shaft for this shot" (top 0.45 m, bottom 0.09 m). The rolls' leans are Gugan's measured face angles: 24°, 31° and 34°
+(Gugan 4 Table 6, the means at its 1° resolution; user decision, 2026-10-08). They supersede Riches' "about 75 degrees
+with the ground" (a 15° lean), "approximately 45 degrees", and the pass roll's slope "at least as much as for a full
+roll" (48° until P2b.2b.2b.1); `profile.ts` keeps these as coaching cues. Each preset's `handsAhead` is derived from
+its lean with the reference mallet and ball (P2b.2b.2b.1 design §4).
 
 **Drive and single-ball.** The top hand stays essentially fixed (`handShare` 0) and all the action is the pendulum's,
 which after its short window swings freely: the follow-through rises and dies by itself, and the head, slowed below
@@ -970,8 +989,10 @@ to the striker's ball: the pendulum's `speedGain` 0.5 over 15 ms from contact an
 push. The punch reaches the head at once through the carry's feed-forward (§3.3), so the coupling's period does not
 blunt it. A pass roll's reach of 0.2 m traps the striker's ball against the face (prototype); 0.30 m does not.
 
-**Geometry.** At a lean of 45° or more the head's lowest point at contact is about 51 mm above the turf unless the ball
-is met above the face's radius: that is geometry, not a tunable.
+**Geometry.** For a forward lean α, the head's lowest point at contact is its face's lower rim. It lies
+h₀ + (R + `START_GAP`)·sin α − (`up` + ρ)·cos α above the turf, where h₀ is R less the static sink. At `up` 0 it is
+29.9, 37.1 and 40.2 mm for the rolls' 24°, 31° and 34° (51.6 mm at P2b.2b.1's 45°). That is geometry, not a
+tunable.
 
 **Open for P2b.2b.2.** The AC stop is a rising strike, so stop-shot lift can be expected of it, as the feasibility
 spike found for rising strikes; the roadmap's stop-shot-lift criterion applies to it. It is now the one croquet stop,
@@ -1083,8 +1104,8 @@ them there.
 | `mallet.json` · `shaftLength` | (default profile) | 0.9144 m (36 in) | sourced |
 | `laws.json` · 29.1.14, C29.18 (full), 29.1.14's commentary | — | verbatim | WCF AC Laws 7th edition with ORLAC |
 
-The stance's hand positions and leans are profile values sourced to Riches in `profile.ts`'s comments, not reference
-keys; `topHandHeight` is not added.
+The stance's hand positions (Riches) and leans (the rolls' from Gugan 4 Table 6, P2b.2b.2b.1) are profile values
+sourced in `profile.ts`'s comments, not reference keys; `topHandHeight` is not added.
 
 ## 8. Testing
 
@@ -1269,11 +1290,12 @@ single-ball stroke (§6.3).
 **Beyond P2b, required in the final implementation** (roadmap P2 row): 29.1.10 by a part of the body (the body is
 not modelled; the mallet's part is P2b.2b.3's); variability of swing and aim (accuracy), and conditions such as
 wind, under which a hoop could block a shot or a glancing blow redirect it or limit its power (no phase named yet);
-divots and lasting turf damage; a fully articulated body (shoulder, elbow and wrist) beyond this phase's translating
-pivot and arm mass, with the bottom hand's position as the input from which the shaft's lean and the push–swing balance
-follow (each preset sets them directly until then). Three- and four-ball cannons remain deferred as before. Casting
-versus planted swings, and how much of the set-up a weaker shot uses, belong to the human-interaction design (P4: how
-the player sets up and rehearses a shot), not here.
+divots and lasting turf damage; a fully articulated body beyond this phase's translating pivot and arm mass: the feet,
+and the shoulder, elbow and wrist between them and the hands, from which the hands' position would follow (since
+P2b.2b.2b.1 the top hand's position at contact is the stance's input, and the bottom hand's position follows the rigid
+shaft). Three- and four-ball cannons remain deferred as before. Casting versus planted swings, and how much of the
+set-up a weaker shot uses, belong to the human-interaction design (P4: how the player sets up and rehearses a shot),
+not here.
 
 ## 11. Roadmap changes (in this PR)
 

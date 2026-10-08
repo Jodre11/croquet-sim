@@ -96,6 +96,12 @@ figure and no kinematic pair was sourced: Riches gives only comparisons.
 - `WAKE_MARGIN`: over the longest impact, 120,000 steps, the probe measured 6.55e-12 m, 153× headroom; unchanged
   (§4.4).
 
+**Amended 2026-10-08 (P2b.2b.2b.1).** The rolls' defaults (§5.3) are refitted at Gugan's measured leans, 24°, 31° and
+34°, by `scripts/fitStrokeShape.ts`, unchanged. The swing presets' entries are byte-identical (P2b.2b.2b.1 design §4),
+but for the AC stop's `torqueMax` and `defaultSpeed`, which differ in their last digit only: fit noise. The
+`WAKE_MARGIN` reach-filter residue above (6.55e-12 m, 153× headroom) is now 7.17e-12 m, 140× headroom, at the AC
+stop's canonical contact: P2b.2b.2b.1's rounding drift.
+
 ## 1. Goal and exit criteria
 
 A player controls a stroke by how far the mallet is taken back and how hard and how quickly it is swung through, not
@@ -368,7 +374,7 @@ The defaults are fixed in this order, per stroke type:
 The default backswing is recorded in `swing.json` and the canonical setups (swing spec §5.5, otherwise unchanged; in
 test support), not in `SwingShape`: `stroke.backswing` is required, so the engine never reads a default. Tests and
 probes that need a given speed use a test-support solver for the backswing (bisection on h at fixed intensity); it is
-not exported.
+not exported. Since P2b.2b.2b.1 the rolls are fitted at Gugan's leans (its §4).
 
 ## 6. Reference data
 

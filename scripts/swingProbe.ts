@@ -8,7 +8,7 @@
  *   to 1 m for the stop-gc and single-ball presets alike, with the late re-hit's crossing at each;
  * - canonical: per canonical setup, the entry jumps, the highest ball centre above R, the head regions touched, the
  *   bottom hand's release, the hands' and the turf's braking impulses (design §3.7), the impact's length after
- *   contactAt and how often each impact flag fired;
+ *   contactAt and how often each impact flag fired; then the stance in the player's terms (P2b.2b.2b.1);
  * - presets: each preset over speed × drive × contact: how often impact-head-deep, impact-cap,
  *   impact-head-approaching and impact-off-face fire, the longest impact after contactAt that ended before the cap,
  *   and the rejected runs tallied by speed, contact height and message;
@@ -66,7 +66,7 @@ import type {
 import { ZERO, add, cross, dot, horizontal, length, scale, sub, vec3, type Vec3 } from "../src/engine/math/vec3";
 import { stateAtTime } from "../src/engine/sample";
 import { simulateFreeMotion } from "../src/engine/simulate";
-import { MAX_LEAD, buildContact, swingApproach } from "../src/engine/swing/buildContact";
+import { MAX_LEAD, buildContact, contactPose, swingApproach } from "../src/engine/swing/buildContact";
 import { ON_TIME, defaultProfile } from "../src/engine/swing/profile";
 import { CROQUET_STROKES, STROKE_TYPES, type ShotSetup, type StrokeType } from "../src/engine/swing/types";
 import { BALL_IDS, type BallId, type BallState, type BallStates, type ShotResult } from "../src/engine/types";
@@ -172,6 +172,16 @@ function ratio(r: Run): number {
         return NaN;
     }
     return travelled(r, croqueted) / travelled(r, r.setup.striker);
+}
+
+/** A preset's stance in the player's terms (P2b.2b.2b.1 design §6): the top hand, the lean, the point of impact. */
+function stanceText(setup: ShotSetup): string {
+    const lean = 0 - contactPose(setup, WORLD).thetaContact;
+    const hands = setup.profile.stance[setup.stroke.type].handsAhead;
+    return (
+        `stance: the top hand ${fmt(hands)} m ahead of the ball's centre, lean ${fmt((lean * 180) / Math.PI, 2)}°, ` +
+        `impact ${mm(R * Math.sin(lean))} mm above the centre`
+    );
 }
 
 /**
@@ -584,6 +594,7 @@ function canonicalRuns(): void {
                 `braking hands ${fmt(hands, 3)} N·s, turf ${fmt(turf, 3)} N·s; ` +
                 `${ms(impact.duration - arc.contactAt)} ms after contactAt; ${flagCounts(impact)}`,
         );
+        console.log(`${"".padEnd(11)} ${stanceText(r.setup)}`);
     }
 }
 

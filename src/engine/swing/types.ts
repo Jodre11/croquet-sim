@@ -2,7 +2,8 @@
  * The swing model's inputs (P2b.2b.1 design §5.1): the stroke types, the physical swing profile and a shot's setup.
  * They follow how a player plays a stroke (user's account, 2026-10-05):
  * - the shot type, then the balls;
- * - a stance for that type, and where the two hands sit on the mallet, which sets the head's angle;
+ * - a stance for that type: where the top hand is at contact and where the two hands sit on the mallet, which set the
+ *   head's angle;
  * - where and how to hit the striker's ball;
  * - the rehearsed shape of the swing: the pendulum, the hands' path through space, the dip and the reach;
  * - and, per shot, how far back the player takes the mallet, how hard and quickly they swing it, and how they time each
@@ -34,12 +35,13 @@ export const STROKE_TYPES: readonly StrokeType[] = [
 ];
 
 /**
- * How the player stands to a stroke type and holds the mallet: the shaft's lean at contact (rad, positive pitches the
- * face down; the contact angle is −lean), the top and bottom hands' distances from the socket along the shaft (m,
- * 0 < bottom < top), the top hand's grip tension γ_T and the bottom hand's grip g_B from contact on (in (0, 1]).
+ * How the player stands to a stroke type and holds the mallet: where the top hand is at contact, `handsAhead` (m), its
+ * horizontal distance ahead of the striker's ball's centre along aim (negative behind); the top and bottom hands'
+ * distances from the socket along the shaft (m, 0 < bottom < top); and the top hand's grip tension γ_T and the bottom
+ * hand's grip g_B from contact on (in (0, 1]). The shaft's lean at contact follows (stanceLean, P2b.2b.2b.1 design §3).
  */
 export interface SwingStance {
-    readonly lean: number;
+    readonly handsAhead: number;
     readonly top: number;
     readonly bottom: number;
     readonly gripTension: number;

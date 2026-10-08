@@ -3,7 +3,7 @@
  * sourced, as fixtures.ts. src/ must never import this file.
  */
 import { vec3 } from "../../../src/engine/math/vec3";
-import { plannedSpeed } from "../../../src/engine/swing/buildContact";
+import { handsAheadFor, plannedSpeed, stanceLean } from "../../../src/engine/swing/buildContact";
 import { MAX_BACK_ANGLE } from "../../../src/engine/swing/downswing";
 import { DEFAULT_DRIVE, ON_TIME, defaultProfile } from "../../../src/engine/swing/profile";
 import {
@@ -19,28 +19,52 @@ import {
 import type { BallId, BallStates, World } from "../../../src/engine/types";
 import { defaultWorld } from "../../../src/engine/world";
 import { lawnReference, swingReference } from "../../../src/reference/index";
+import { TEST_BALL } from "./fixtures";
 
 /**
  * What `testProfile` changes: the mallet, the body, and one stance, one drive and one shape entry for every stroke
- * type.
+ * type. A stance may give a `lean` (rad) instead of `handsAhead`. It stands for the hands that give that lean with the
+ * profile's own mallet (after `mallet`), at the contact height `up` (m, default 0) on a ball of radius `ballRadius` (m,
+ * default TEST_BALL.radius). Give the shot's own `up` where it is not 0.
  */
 export interface TestProfileOptions {
     readonly mallet?: Partial<SwingProfile["mallet"]>;
     readonly body?: Partial<SwingProfile["body"]>;
-    readonly stance?: Partial<SwingStance>;
+    readonly stance?: Partial<SwingStance> & { readonly lean?: number };
+    readonly up?: number;
+    readonly ballRadius?: number;
     readonly drive?: Partial<SwingDrive>;
     readonly shape?: Partial<SwingShape>;
 }
 
 /**
- * A profile with the test head (1 kg, 0.23 m long, 0.064 m across, on a 0.9 m shaft), no arm mass (so the swung body
- * is the head, as TEST_HANDS has it) and the same stance and drive for every stroke type: level, the hands 0.8 m and
- * 0.4 m from the socket with firm grips, a swing-mode coast with no dip or reach, and a full guide; and the same shape
- * for every type, the pendulum alone (share 1) by gravity alone (no effort), a 0.4 s pulse or hands' tempo halving at
- * intensity 1, intensity 0 by default.
+ * A profile with the test head (1 kg, 0.23 m long, 0.064 m across, on a 0.9 m shaft) and no arm mass, so that the
+ * swung body is the head, as TEST_HANDS has it. Every stroke type has the same stance: level (lean 0, the top hand over
+ * the socket at contact), the hands 0.8 m and 0.4 m from the socket, firm grips. Every type has the same drive: a
+ * swing-mode coast with no dip or reach, and a full guide. Every type has the same shape: the pendulum alone (share 1),
+ * by gravity alone (no effort), a 0.4 s pulse or hands' tempo halving at intensity 1, and intensity 0 by default.
+ * Throws if the stance gives both a `lean` and `handsAhead`.
  */
 export function testProfile(o: TestProfileOptions = {}): SwingProfile {
-    const stance: SwingStance = { lean: 0, top: 0.8, bottom: 0.4, gripTension: 1, bottomGrip: 1, ...o.stance };
+    const mallet = { headMass: 1, headLength: 0.23, headDiameter: 0.064, shaftLength: 0.9, ...o.mallet };
+    const { lean, ...given }: Partial<SwingStance> & { readonly lean?: number } = o.stance ?? {};
+    if (lean !== undefined && given.handsAhead !== undefined) {
+        throw new Error("testProfile: give the stance a lean or handsAhead, not both");
+    }
+    const top = given.top ?? 0.8;
+    const geometry = {
+        ballRadius: o.ballRadius ?? TEST_BALL.radius,
+        headLength: mallet.headLength,
+        headRadius: mallet.headDiameter / 2,
+    };
+    const stance: SwingStance = {
+        handsAhead: handsAheadFor(lean ?? 0, top, o.up ?? 0, geometry),
+        top,
+        bottom: 0.4,
+        gripTension: 1,
+        bottomGrip: 1,
+        ...given,
+    };
     const drive: SwingDrive = {
         mode: "swing",
         speedGain: 0.2,
@@ -65,7 +89,7 @@ export function testProfile(o: TestProfileOptions = {}): SwingProfile {
     const every = <T>(entry: T): Record<StrokeType, T> =>
         Object.fromEntries(STROKE_TYPES.map((type) => [type, entry])) as Record<StrokeType, T>;
     return {
-        mallet: { headMass: 1, headLength: 0.23, headDiameter: 0.064, shaftLength: 0.9, ...o.mallet },
+        mallet,
         body: { armMass: 0, reachSlack: 0.03, ...o.body },
         stance: every(stance),
         drive: every(drive),
@@ -158,18 +182,20 @@ export function canonicalSetup(type: StrokeType, over: CanonicalOptions = {}): S
 }
 
 /**
- * The head's lowest point above the turf (m) at contact in each canonical setup on the default world, with the
- * default profile (measured while planning, on prototype aeadd4c's geometry: h₀ = R − sink = 45.997 mm,
- * ρ = 38.1 mm, L = 228.6 mm; the head pitched by −lean, so independent of the arc radius).
+ * The head's lowest point above the turf (m) at contact in each canonical setup on the default world, with the default
+ * profile. It is measured on prototype aeadd4c's geometry: h₀ = R − sink = 45.997 mm, ρ = 38.1 mm, L = 228.6 mm. The
+ * head is pitched by −lean, so the figure is independent of the arc radius. The rolls' figures were re-measured at
+ * Gugan's leans (P2b.2b.2b.1). For a forward lean α at `up` 0 the lowest point is the face's lower rim, at
+ * h₀ + (R + START_GAP)·sin α − ρ·cos α.
  */
 export const CANONICAL_CLEARANCE: Readonly<Record<StrokeType, number>> = {
     "single-ball": 7.8971e-3,
     drive: 7.8971e-3,
     "stop-ac": 8.7833e-3,
     "stop-gc": 7.8971e-3,
-    "half-roll": 21.1109e-3,
-    "full-roll": 51.6104e-3,
-    "pass-roll": 54.7165e-3,
+    "half-roll": 29.9165e-3,
+    "full-roll": 37.0506e-3,
+    "pass-roll": 40.1551e-3,
 };
 
 const SOLVED = new Map<string, number>();
@@ -177,9 +203,10 @@ const SOLVED = new Map<string, number>();
 /**
  * The backswing (m) at which `setup`'s planned contact speed is `speed` (P2b.2b.2a design §5.3): bisection over (0,
  * the MAX_BACK_ANGLE bound] at the setup's intensity, or its preset's default, 60 halvings. Memoised on what the
- * planned speed depends on: the type, the intensity, the profile's entries for the type, the speed and gravity (not
- * the drive, the contact point, the timing or the balls). Throws a RangeError for a speed beyond the bound's reach.
- * Test support only.
+ * planned speed depends on: the type, the intensity, the contact's height (under fixed hands the lean follows it,
+ * P2b.2b.2b.1 design §3.3), the profile's entries for the type, the speed, gravity and the ball's radius. It is not
+ * memoised on the drive, the contact's side, the timing or the balls. Throws a RangeError for a speed beyond the
+ * bound's reach. Test support only.
  */
 export function backswingFor(setup: ShotSetup, speed: number, world: World = defaultWorld()): number {
     const { stroke, profile } = setup;
@@ -189,6 +216,7 @@ export function backswingFor(setup: ShotSetup, speed: number, world: World = def
     const key = JSON.stringify([
         type,
         stroke.intensity ?? null,
+        stroke.contact.up,
         profile.mallet,
         profile.body,
         stance,
@@ -196,13 +224,19 @@ export function backswingFor(setup: ShotSetup, speed: number, world: World = def
         shape,
         speed,
         world.gravity,
+        world.ball.radius,
     ]);
     const known = SOLVED.get(key);
     if (known !== undefined) {
         return known;
     }
     const lever = profile.mallet.headDiameter / 2 + stance.top;
-    const room = lever * (Math.cos(stance.lean) - Math.cos(MAX_BACK_ANGLE));
+    const lean = stanceLean(stance.handsAhead, stance.top, stroke.contact.up, {
+        ballRadius: world.ball.radius,
+        headLength: profile.mallet.headLength,
+        headRadius: profile.mallet.headDiameter / 2,
+    });
+    const room = lever * (Math.cos(lean) - Math.cos(MAX_BACK_ANGLE));
     let hi = shape.pendulumShare > 0 ? (room / shape.pendulumShare) * (1 - 1e-9) : 2;
     const at = (backswing: number): number => plannedSpeed({ ...setup, stroke: { ...stroke, backswing } }, world);
     if (at(hi) < speed) {
