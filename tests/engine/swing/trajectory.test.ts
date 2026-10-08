@@ -107,7 +107,7 @@ describe("strokeTrajectory (design §4.3)", () => {
         // A full roll with a 0.13 s hands' tempo (release 0.13 s before contact) and its arc 0.1455 s early: the
         // impact starts 15.5 ms before the release, the hands still at the top, so no downswing samples come first.
         // The release falls midway between two 1 ms samples, and carry mode's hands start accelerating there (the
-        // head's acceleration steps from ~38 to ~205 m/s²): without a sample at it the trapezoid rule across it
+        // head's acceleration steps from ~38 to ~197 m/s²): without a sample at it the trapezoid rule across it
         // misses by ~Δa·Δt²/8, about 20 µm. The integrator samples its first step at or after the release instead.
         const shot = canonicalSetup("full-roll", {
             world: WORLD,

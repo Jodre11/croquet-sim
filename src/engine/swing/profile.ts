@@ -3,12 +3,13 @@
  * from outcomes; P2b.2b.2 sources or fits them.
  * - Mallet: reference/mallet.json (the head's mass, length and diameter; the 0.9144 m, 36 in, shaft, sourced).
  * - Body: reference/contact.json (`armMass` and `reachSlack`, the prototype's calibration).
- * - Stance: the hands measured from the socket along the shaft, and the leans, after John Riches, Croquet Technique
- *   (Oxford Croquet), quoted per preset below. Each preset is defined by its lean at its typical contact. Its top
- *   hand's position at contact, the stance's input, is derived from that lean with the reference mallet and ball
- *   (P2b.2b.2b.1 design §4). The swing presets keep the top hand at the top of the handle, 0.805 m
- *   from the socket (the sourced 35 in grip less the socket's height at address). The bottom hands and the grips are
- *   the prototype's calibration (proto-two-hands, aeadd4c).
+ * - Stance: the hands measured from the socket along the shaft, after John Riches, Croquet Technique (Oxford Croquet),
+ *   quoted per preset below. The swing presets keep their own leans. The rolls' leans are Don Gugan's measured face
+ *   angles (Gugan 4, Table 6), with Riches' angles kept as cues (user decision, 2026-10-08). Each preset is defined by
+ *   its lean at its typical contact. Its top hand's position at contact, the stance's input, is derived from that lean
+ *   with the reference mallet and ball (P2b.2b.2b.1 design §4). The swing presets keep the top hand at the top of the
+ *   handle, 0.805 m from the socket (the sourced 35 in grip less the socket's height at address). The bottom hands and
+ *   the grips are the prototype's calibration (proto-two-hands, aeadd4c).
  * - Drive: the prototype's calibration (aeadd4c), compared with the coaching ratios only as observations (design §9);
  *   the AC stop's dip depth is a user decision (2026-10-05). Every preset's guideEffort is 1, the full restoration of
  *   the arc's speed a full shot aims at; a softer shot uses less, a very soft one none (user's account, 2026-10-06).
@@ -228,7 +229,9 @@ export const defaultProfile: SwingProfile = {
         reachSlack: contactReference.reachSlack.value,
     },
     stance: {
-        // The top hand fixed at the top of the handle; the bottom hand high and light, a guide only (prototype).
+        // The top hand fixed at the top of the handle; the bottom hand high and light, a guide only (prototype). Riches
+        // has the hands "slightly forward of the mallet head" until the instant of contact; at contact the model's are
+        // over the socket (lean 0).
         "single-ball": leaning(0, 0, { top: 0.805, bottom: 0.7, gripTension: 1, bottomGrip: 0.1 }),
         // As single-ball, the bottom hand a little lower and firmer, still only a guide (prototype).
         drive: leaning(0, 0, { top: 0.805, bottom: 0.6, gripTension: 1, bottomGrip: 0.25 }),
@@ -239,16 +242,22 @@ export const defaultProfile: SwingProfile = {
         "stop-ac": leaning(-4 * DEG, -0.02, { top: 0.805, bottom: 0.45, gripTension: 0.1, bottomGrip: 0.1 }),
         // The lower hand low and firm, checking the swing through its lever just after contact (prototype).
         "stop-gc": leaning(0, 0, { top: 0.805, bottom: 0.45, gripTension: 1, bottomGrip: 1 }),
-        // Riches: "Most players place the bottom hand almost half-way down the handle for this shot, leaving the other
-        // hand at the top", the mallet "making an angle of about 75 degrees with the ground".
-        "half-roll": leaning(15 * DEG, 0, { top: 0.805, bottom: 0.42, gripTension: 1, bottomGrip: 1 }),
+        // Riches: "Stand further forward over the balls, with your front toe level with the back of your striker's
+        // ball"; "Most players place the bottom hand almost half-way down the handle for this shot, leaving the other
+        // hand at the top". His handle "making an angle of about 75 degrees with the ground" (a 15° lean) is a cue,
+        // superseded by Gugan 4 Table 6's face angles, 23.5° and 25° (C3H, C10H): 24°, their mean to the table's 1°.
+        "half-roll": leaning(24 * DEG, 0, { top: 0.805, bottom: 0.42, gripTension: 1, bottomGrip: 1 }),
         // Riches: "Your lower hand should be placed at least two-thirds of the way down the handle, and your top hand
-        // will also need to be moved, to about one-third of the way down the handle", giving "an angle of
-        // approximately 45 degrees between the mallet handle and the ground".
-        "full-roll": leaning(45 * DEG, 0, { top: 0.61, bottom: 0.3, gripTension: 1, bottomGrip: 1 }),
-        // Riches: "The bottom hand should be placed at the very bottom of the mallet shaft for this shot"; the slope at
-        // least the full roll's.
-        "pass-roll": leaning(48 * DEG, 0, { top: 0.45, bottom: 0.09, gripTension: 1, bottomGrip: 1 }),
+        // will also need to be moved, to about one-third of the way down the handle"; and, to send the striker's ball
+        // further, "move your hands down the handle and stand further forward to increase both the slope of the handle
+        // and the fractional distance travelled by the striker's ball". His "approximately 45 degrees between the
+        // mallet handle and the ground" is a cue, superseded by Gugan 4 Table 6: 31°, 29°, 33° and 30° (C1F, C3F,
+        // C10F, C25F), mean 31°.
+        "full-roll": leaning(31 * DEG, 0, { top: 0.61, bottom: 0.3, gripTension: 1, bottomGrip: 1 }),
+        // Riches: "The bottom hand should be placed at the very bottom of the mallet shaft for this shot", the handle
+        // sloping "at least as much as for a full roll" (48° until P2b.2b.2b.1), a cue superseded by Gugan 4 Table 6:
+        // 36°, 34° and 32° (C3P, C10P, C25P), mean 34°.
+        "pass-roll": leaning(34 * DEG, 0, { top: 0.45, bottom: 0.09, gripTension: 1, bottomGrip: 1 }),
     },
     drive: DRIVE,
     shape: Object.fromEntries(

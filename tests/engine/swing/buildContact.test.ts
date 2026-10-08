@@ -381,12 +381,34 @@ const CANONICAL_APPROACH: Readonly<Record<StrokeType, number>> = {
     drive: 0.51544e-3,
     "stop-ac": 7.2281e-3,
     "stop-gc": 0.51544e-3,
-    "half-roll": 21.1109e-3,
-    "full-roll": 51.6104e-3,
-    "pass-roll": 54.7165e-3,
+    "half-roll": 29.9165e-3,
+    "full-roll": 37.0506e-3,
+    "pass-roll": 40.1551e-3,
+};
+
+/** Each preset's default lean in degrees (P2b.2b.2b.1 design §4): the swing presets' unchanged, the rolls' Gugan's. */
+const DEFAULT_LEAN: Readonly<Record<StrokeType, number>> = {
+    "single-ball": 0,
+    drive: 0,
+    "stop-ac": -4,
+    "stop-gc": 0,
+    "half-roll": 24,
+    "full-roll": 31,
+    "pass-roll": 34,
 };
 
 describe("the default profile's canonical setups", () => {
+    it.each(STROKE_TYPES)("%s's canonical pose has its default lean (exit criterion 2)", (type) => {
+        const world = defaultWorld();
+        const pose = contactPose(canonicalSetup(type, { world }), world);
+        const lean = DEFAULT_LEAN[type] * DEG;
+        if (lean === 0) {
+            expect(pose.thetaContact).toBe(0);
+        } else {
+            expect(Math.abs(pose.thetaContact + lean)).toBeLessThan(1e-12);
+        }
+    });
+
     it.each(STROKE_TYPES)("%s starts at contact, by its planned clearance, its approach as planned", (type) => {
         const world = defaultWorld();
         const c = buildContact(canonicalSetup(type, { world }), world);

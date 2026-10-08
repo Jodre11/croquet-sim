@@ -163,7 +163,7 @@
             "provenance": "direct"
         },
         "torqueMax": {
-            "value": 27.65743634602026,
+            "value": 27.657436346020255,
             "unit": "N·m",
             "source": "scripts/fitStrokeShape.ts: P2b.2b.2a design §5.3 and §6.2 (docs/superpowers/specs/2026-10-06-p2b2b2a-stroke-shape-design.md)",
             "provenance": "derived",
@@ -202,7 +202,7 @@
             "note": "Design §5.3: h0 = 0.4619 m, the backswing that gives 3 m/s at intensity 0."
         },
         "defaultSpeed": {
-            "value": 3,
+            "value": 3.0000000000000004,
             "unit": "m/s",
             "source": "scripts/fitStrokeShape.ts: P2b.2b.2a design §5.3 and §6.2 (docs/superpowers/specs/2026-10-06-p2b2b2a-stroke-shape-design.md)",
             "provenance": "derived",
@@ -320,11 +320,11 @@
             "note": "Half handTempoSlow, so intensity 1 doubles the speed (design §6.2)."
         },
         "defaultBackswing": {
-            "value": 0.39161563929587023,
+            "value": 0.43800549911673337,
             "unit": "m",
             "source": "scripts/fitStrokeShape.ts: P2b.2b.2a design §5.3 and §6.2 (docs/superpowers/specs/2026-10-06-p2b2b2a-stroke-shape-design.md)",
             "provenance": "derived",
-            "note": "Design §5.3: h0 = 0.3916 m, the backswing that gives 3 m/s at intensity 0."
+            "note": "Design §5.3: h0 = 0.4380 m, the backswing that gives 3 m/s at intensity 0."
         },
         "defaultIntensity": {
             "value": 0,
@@ -332,10 +332,10 @@
             "bounds": [0, 1],
             "source": "scripts/fitStrokeShape.ts: P2b.2b.2a design §5.3 and §6.2 (docs/superpowers/specs/2026-10-06-p2b2b2a-stroke-shape-design.md)",
             "provenance": "derived",
-            "note": "Design §5.3: h0 = 0.3916 m, the backswing that gives 3 m/s at intensity 0."
+            "note": "Design §5.3: h0 = 0.4380 m, the backswing that gives 3 m/s at intensity 0."
         },
         "defaultSpeed": {
-            "value": 3.0000000000000004,
+            "value": 3,
             "unit": "m/s",
             "source": "scripts/fitStrokeShape.ts: P2b.2b.2a design §5.3 and §6.2 (docs/superpowers/specs/2026-10-06-p2b2b2a-stroke-shape-design.md)",
             "provenance": "derived",
@@ -388,11 +388,11 @@
             "note": "Half handTempoSlow, so intensity 1 doubles the speed (design §6.2)."
         },
         "defaultBackswing": {
-            "value": 0.4523780267915551,
+            "value": 0.4376548465149915,
             "unit": "m",
             "source": "scripts/fitStrokeShape.ts: P2b.2b.2a design §5.3 and §6.2 (docs/superpowers/specs/2026-10-06-p2b2b2a-stroke-shape-design.md)",
             "provenance": "derived",
-            "note": "Design §5.3: h0 = 0.4524 m, the backswing that gives 3 m/s at intensity 0."
+            "note": "Design §5.3: h0 = 0.4377 m, the backswing that gives 3 m/s at intensity 0."
         },
         "defaultIntensity": {
             "value": 0,
@@ -400,10 +400,10 @@
             "bounds": [0, 1],
             "source": "scripts/fitStrokeShape.ts: P2b.2b.2a design §5.3 and §6.2 (docs/superpowers/specs/2026-10-06-p2b2b2a-stroke-shape-design.md)",
             "provenance": "derived",
-            "note": "Design §5.3: h0 = 0.4524 m, the backswing that gives 3 m/s at intensity 0."
+            "note": "Design §5.3: h0 = 0.4377 m, the backswing that gives 3 m/s at intensity 0."
         },
         "defaultSpeed": {
-            "value": 3,
+            "value": 3.0000000000000004,
             "unit": "m/s",
             "source": "scripts/fitStrokeShape.ts: P2b.2b.2a design §5.3 and §6.2 (docs/superpowers/specs/2026-10-06-p2b2b2a-stroke-shape-design.md)",
             "provenance": "derived",
@@ -456,11 +456,11 @@
             "note": "Half handTempoSlow, so intensity 1 doubles the speed (design §6.2)."
         },
         "defaultBackswing": {
-            "value": 0.4674164192249446,
+            "value": 0.44875786735577095,
             "unit": "m",
             "source": "scripts/fitStrokeShape.ts: P2b.2b.2a design §5.3 and §6.2 (docs/superpowers/specs/2026-10-06-p2b2b2a-stroke-shape-design.md)",
             "provenance": "derived",
-            "note": "Design §5.3: h0 = 0.4674 m, the backswing that gives 3 m/s at intensity 0."
+            "note": "Design §5.3: h0 = 0.4488 m, the backswing that gives 3 m/s at intensity 0."
         },
         "defaultIntensity": {
             "value": 0,
@@ -468,10 +468,10 @@
             "bounds": [0, 1],
             "source": "scripts/fitStrokeShape.ts: P2b.2b.2a design §5.3 and §6.2 (docs/superpowers/specs/2026-10-06-p2b2b2a-stroke-shape-design.md)",
             "provenance": "derived",
-            "note": "Design §5.3: h0 = 0.4674 m, the backswing that gives 3 m/s at intensity 0."
+            "note": "Design §5.3: h0 = 0.4488 m, the backswing that gives 3 m/s at intensity 0."
         },
         "defaultSpeed": {
-            "value": 3.0000000000000004,
+            "value": 3,
             "unit": "m/s",
             "source": "scripts/fitStrokeShape.ts: P2b.2b.2a design §5.3 and §6.2 (docs/superpowers/specs/2026-10-06-p2b2b2a-stroke-shape-design.md)",
             "provenance": "derived",
