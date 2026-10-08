@@ -7,15 +7,26 @@ Heights and angles would convert to SI as the plan's Step 2 states; none was fou
 
 ## Sources
 
-All fetched 2026-10-07 with `curl -k -sSL` (the Oxford Croquet sites' certificate is broken). Gugan 4 was re-fetched
-2026-10-08 for P2b.2b.2b.1; its digest is that fetch's. To check a later fetch against the one used here, compare its
-SHA-256 with the digest below.
+All first fetched 2026-10-07 with `curl -k -sSL` (the Oxford Croquet sites' certificate is broken). Every Oxford
+Croquet page embeds a view counter in its footer (`<div id="foot-item3">Views: N</div>` on oxfordcroquet.org, `<span
+class="footerstyle">Hits: N</span>` on oxfordcroquet.com), so the raw file hashes differently on every fetch. Their
+digests below are therefore of the page with its counter line removed, taken from a re-fetch on 2026-10-08 and
+reproduced by a second fetch the same day:
 
-| Short name | Work | URL | SHA-256 of the fetched file |
+```
+curl -k -sSL -o page.html <URL>
+grep -vE ">(Views|Hits): [0-9]+<" page.html | shasum -a 256
+```
+
+One quotation from each page was spot-checked against that re-fetch. The CA PDF has no counter; its digest is of the
+raw file, and it reproduced on 2026-10-08. To check a later fetch against the one used here, compute its digest the
+same way and compare.
+
+| Short name | Work | URL | SHA-256 (Oxford pages: counter line removed) |
 |---|---|---|---|
-| Riches | John Riches, *Croquet Technique* (Oxford Croquet). The whole book is one page, its chapters anchors in it. | http://www.oxfordcroquet.com/coach/riches/croqtech/index.asp | `c9693c2efd4171b266ca5756e4ec513a808ea810f799925dfaf93ea6c426181f` |
-| Gugan 4 | Don Gugan, "The Physics of Croquet Strokes: Analysis of the CA high-speed DVD" (Oxford Croquet) | https://oxfordcroquet.org/tech/gugan4/ | `de69699eb6ed9c388a7d4545e4503002a1e9e6ef360d144c7bb8dd1b2a63c0dd` |
-| Gugan 5 | Don Gugan, "Croquet Drives, Pass-Rolls, Stop-Shots and Scatter-Shots" (Oxford Croquet) | https://oxfordcroquet.org/tech/gugan5/ | `b6e1c2fe9e5487c735e52511fd7dc7c6b5ad7d94db9bb52f1048ca824004d8a5` |
+| Riches | John Riches, *Croquet Technique* (Oxford Croquet). The whole book is one page, its chapters anchors in it. | http://www.oxfordcroquet.com/coach/riches/croqtech/index.asp | `22c97859ab5bc2837f046a6e394bc3c4b11ac4819e401ff74b9647b01b635984` |
+| Gugan 4 | Don Gugan, "The Physics of Croquet Strokes: Analysis of the CA high-speed DVD" (Oxford Croquet) | https://oxfordcroquet.org/tech/gugan4/ | `1b2eecb6b8c48253b30fe2c951c16a5edc99044edca324352ded51f3a5ff7e50` |
+| Gugan 5 | Don Gugan, "Croquet Drives, Pass-Rolls, Stop-Shots and Scatter-Shots" (Oxford Croquet) | https://oxfordcroquet.org/tech/gugan5/ | `057c2161fc7e53b9f35655e6a9ba1b1d9bb0d182e3d37825116546ed317cb42e` |
 | CA Dynamics | Croquet Association, *Project Croquet Dynamics* (2006), version 4 (PDF) | https://croquet.org.uk/?d=1475 | `f4df395c3a77aba0baef9f33fd5c1e7445833ad0a38d0a89d02cdd4781a873d2` |
 
 Search for a backswing-against-speed or downswing-time measurement (`croquet mallet backswing height swing speed
