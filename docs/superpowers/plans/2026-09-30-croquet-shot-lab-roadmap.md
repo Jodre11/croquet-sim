@@ -868,7 +868,7 @@ the Solomon grip with a 42" shaft and a 13.5" head, is 5'10"–5'11" with a long
     - also moved: coupling (T 0.04 / 0.08 s) half 1.82 and 6 hits / 2.57 and 7, full 1.57 and 7 / 1.84 and 6, pass
       0.63 and 4 / 1.01 and 11; effective mass by the strike 0.9545, 0.9328 and 0.9997 kg (closed forms 0.9737,
       0.9578, 0.9151, the pass roll 9.25 % above its own); the full roll's `timings` rows (ratio 1.79–2.57 within
-      20 ms of on time; the arc 50 ms early 65.32, 20 ms early 15.74).
+      20 ms of on time but for the arc 20 ms early, 15.74; the arc 50 ms early 65.32).
   - **The AC stop's and the rolls' off-canonical `up` sweep rows**, re-recorded. Under fixed hands the lean follows the
     contact height (P2b.2b.2b.1 design §3.3). The AC stop's `presets`: `impact-cap` 15 of 180 (was 12),
     `impact-off-face` 61 (was 59), `impact-head-deep` 60 as before; its reach at 6 m/s 4.048114 m/s at `up` −3 mm

@@ -285,7 +285,7 @@ relative to the hands after its check.
 - **The hands are derived:** each preset's `handsAhead` comes from its lean, with the reference mallet and ball (its
   §4).
 
-§5.1–§5.4 and §7 are updated where they state the stance.
+§5.1–§5.4, §7 and §10 are updated where they state the stance.
 
 ## 1. Goal and exit criteria
 
@@ -1290,11 +1290,12 @@ single-ball stroke (§6.3).
 **Beyond P2b, required in the final implementation** (roadmap P2 row): 29.1.10 by a part of the body (the body is
 not modelled; the mallet's part is P2b.2b.3's); variability of swing and aim (accuracy), and conditions such as
 wind, under which a hoop could block a shot or a glancing blow redirect it or limit its power (no phase named yet);
-divots and lasting turf damage; a fully articulated body (shoulder, elbow and wrist) beyond this phase's translating
-pivot and arm mass, with the bottom hand's position as the input from which the shaft's lean and the push–swing balance
-follow (each preset sets them directly until then). Three- and four-ball cannons remain deferred as before. Casting
-versus planted swings, and how much of the set-up a weaker shot uses, belong to the human-interaction design (P4: how
-the player sets up and rehearses a shot), not here.
+divots and lasting turf damage; a fully articulated body beyond this phase's translating pivot and arm mass: the feet,
+and the shoulder, elbow and wrist between them and the hands, from which the hands' position would follow (since
+P2b.2b.2b.1 the top hand's position at contact is the stance's input, and the bottom hand's position follows the rigid
+shaft). Three- and four-ball cannons remain deferred as before. Casting versus planted swings, and how much of the
+set-up a weaker shot uses, belong to the human-interaction design (P4: how the player sets up and rehearses a shot),
+not here.
 
 ## 11. Roadmap changes (in this PR)
 

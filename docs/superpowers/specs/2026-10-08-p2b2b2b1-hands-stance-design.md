@@ -92,8 +92,9 @@ reference/sources/README.md       Gugan 4 Table 6 cited
 tests/engine/support/shot.ts      testProfile converts a test's lean; backswingFor's memo key gains the contact height
 ```
 
-`profile.ts` imports the two functions from `buildContact.ts`, which imports nothing from `profile.ts`. `SwingStance`
-is already exported, so its shape changes in the public API; the two functions stay internal until P3 or P4 reads them.
+`profile.ts` imports `handsAheadFor` from `buildContact.ts`, which imports nothing from `profile.ts`; test support
+imports both functions. `SwingStance` is already exported, so its shape changes in the public API; the two functions
+stay internal until P3 or P4 reads them.
 Everything stays under the determinism lint (`+ − × ÷ √`, the engine's `sinCos` and `atan2`).
 
 ## 3. The stance

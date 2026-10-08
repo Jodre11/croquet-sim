@@ -98,7 +98,9 @@ figure and no kinematic pair was sourced: Riches gives only comparisons.
 
 **Amended 2026-10-08 (P2b.2b.2b.1).** The rolls' defaults (§5.3) are refitted at Gugan's measured leans, 24°, 31° and
 34°, by `scripts/fitStrokeShape.ts`, unchanged. The swing presets' entries are byte-identical (P2b.2b.2b.1 design §4),
-but for the AC stop's `torqueMax` and `defaultSpeed`, which differ in their last digit only: fit noise.
+but for the AC stop's `torqueMax` and `defaultSpeed`, which differ in their last digit only: fit noise. The
+`WAKE_MARGIN` reach-filter residue above (6.55e-12 m, 153× headroom) is now 7.17e-12 m, 140× headroom, at the AC
+stop's canonical contact: P2b.2b.2b.1's rounding drift.
 
 ## 1. Goal and exit criteria
 
