@@ -336,10 +336,10 @@ export interface ContactPose {
 }
 
 /**
- * The contact pose of `setup` on `world` (design §5.2): the arc radius r = top (step 1), θ_c = −lean, the lean from the
- * top hand's position (step 2; P2b.2b.2b.1 design §3.2), the head pitched rigidly with the shaft (step 3), its face
- * START_GAP short of the sunk striker at (up, side) (step 4), the pivot r up the shaft from the socket (step 5), and the
- * head a solid cylinder of the profile's mallet (step 10). Takes the setup as checked (planStroke).
+ * The contact pose of `setup` on `world` (design §5.2): the arc radius r = top (step 1), θ_c = −lean, the lean from
+ * the top hand's position (step 2; P2b.2b.2b.1 design §3.2), the head pitched rigidly with the shaft (step 3), its
+ * face START_GAP short of the sunk striker at (up, side) (step 4), the pivot r up the shaft from the socket (step 5),
+ * and the head a solid cylinder of the profile's mallet (step 10). Takes the setup as checked (planStroke).
  */
 export function contactPose(setup: ShotSetup, world: World): ContactPose {
     const { stroke, profile } = setup;

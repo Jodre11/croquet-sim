@@ -920,4 +920,22 @@ describe("the stance's geometry (P2b.2b.2b.1 design §3.2, §3.3)", () => {
         }
         expect(stanceLean(handsAheadFor(0, top, 0, GEOMETRY), top, 0.01, GEOMETRY)).toBe(0);
     });
+
+    it("keeps the lean inside ±90° for every top-hand position the stance accepts", () => {
+        // Pins the bound the old |lean| < 90° check enforced (P2b.2b.2b.1 design §3.4).
+        const samples = 50;
+        for (const top of [0.3, 0.6, 0.9]) {
+            for (const up of [-0.03, 0, 0.03]) {
+                const A = RHO + top - up;
+                const D = Math.sqrt(A * A + B * B);
+                for (let k = 0; k < samples; k++) {
+                    const handsAhead = 0 - D + ((k + 0.5) * (A + D)) / samples;
+                    const lean = stanceLean(handsAhead, top, up, GEOMETRY);
+                    expect(Math.abs(lean), `top ${top} m, up ${up} m, handsAhead ${handsAhead} m`).toBeLessThan(
+                        Math.PI / 2,
+                    );
+                }
+            }
+        }
+    });
 });
