@@ -41,36 +41,39 @@ Exit criteria:
 
 1. The analytic cases of §5.1 hold.
 2. Every preset's canonical contact pose (swing spec §5.5) has its default lean (§4): exactly 0 for single-ball, the
-   drive and the GC stop; within 1e-12 rad of −4°, 24°, 31° and 34° for the AC stop and the half, full and pass rolls.
+   drive and the GC stop, at any `up`; within 1e-12 rad of −4°, 24°, 31° and 34° for the AC stop and the half, full
+   and pass rolls.
 3. Force-table drives are bit-identical to `main`: `scripts/impactDigest.ts` byte-identical; the shot-mix work units
-   (p99 143,084, p99.9 362,050, max 408,030), `SLOW_TESTS=1`, the obstacle fuzz and the reach filter reproduce exactly.
-   The single-ball, drive and GC-stop presets are bit-identical in every result; the AC stop's figures are unchanged at
-   the probes' printed precision, its drift measured and recorded.
+   (p99 143,084, p99.9 362,050, max 408,030), `SLOW_TESTS=1` and the obstacle fuzz reproduce exactly. The single-ball,
+   drive and GC-stop presets are bit-identical in every result, their swept `up` included. The AC stop's lean
+   round-trips only to rounding (a few 1e-17 rad), so its canonical figures are required unchanged at the probes'
+   printed precision, its drift recorded, the probe's AC-stop reach-filter residue among them; its and the rolls'
+   off-canonical `up` sweeps move by design (§3.3) and are re-recorded.
 4. The three rolls' canonical setups meet P2b.2b.2a's exit criterion 3 at their new leans: `simulateShot` with
    `trajectory: true` from top to finish with no `RangeError`, no re-entry guard hit, no ball centre more than 5 mm
    above R, no `follow-cap`, the trajectory continuous at every boundary.
 5. Each roll's refitted defaults (`fitStrokeShape.ts`) plan its canonical contact speed within ±2 % of 3 m/s, as in
-   P2b.2b.2a's exit criterion 5; the swing presets' `swing.json` entries are byte-identical.
-6. `ENGINE_VERSION` is "0.8.0"; `stanceLean` and `handsAheadFor` are exported from `src/engine/index.ts`.
+   P2b.2b.2a's exit criterion 5; the single-ball, drive and GC-stop `swing.json` entries are byte-identical, and the
+   AC stop's move at most at rounding level, recorded.
+6. `ENGINE_VERSION` is "0.8.0".
 
 The rolls' ratios, distances and re-hits are recorded in the roadmap as observations (§6).
 
 ## 2. Architecture
 
 ```
-src/engine/swing/stance.ts        new: stanceLean, handsAheadFor, START_GAP (moved from buildContact.ts)
 src/engine/swing/types.ts         SwingStance.handsAhead replaces .lean
-src/engine/swing/buildContact.ts  contactPose and validation read the lean from stanceLean
+src/engine/swing/buildContact.ts  new stanceLean, handsAheadFor; contactPose and validation read the lean from them
 src/engine/swing/profile.ts       default leans (§4), each preset's handsAhead derived from its lean at load
-src/engine/index.ts               exports stanceLean, handsAheadFor
 src/engine/simulate.ts            ENGINE_VERSION 0.8.0
 reference/swing.json              the rolls' refitted defaults (fitStrokeShape.ts, unchanged)
 reference/sources/README.md       Gugan 4 Table 6 cited
-tests/engine/support/shot.ts      testProfile converts a test's lean; backswingFor reads stanceLean
+tests/engine/support/shot.ts      testProfile converts a test's lean; backswingFor's memo key gains the contact height
 ```
 
-`stance.ts` holds only pure geometry, so `profile.ts` and `buildContact.ts` both import it without a cycle. Everything
-stays under the determinism lint (`+ − × ÷ √`, the engine's `sinCos` and `atan2`).
+`profile.ts` imports the two functions from `buildContact.ts`, which imports nothing from `profile.ts`. `SwingStance`
+is already exported, so its shape changes in the public API; the two functions stay internal until P3 or P4 reads them.
+Everything stays under the determinism lint (`+ − × ÷ √`, the engine's `sinCos` and `atan2`).
 
 ## 3. The stance
 
@@ -125,14 +128,22 @@ fixes the lean. The other branch (α below φ − 90°, the hands far behind and
 
 The face is flat, so it meets the ball where its normal passes through the ball's centre: R·sin α above the centre, on
 its back, whatever `up` (which moves the face, not the point on the ball). The player's two cues are one angle: hands
-further forward, or the same hands lower on the handle, steepen the lean and raise the point of impact. A higher `up`
-with the hands held still lowers A and so the lean, as it would in play.
+further forward, or the same hands lower on the handle, steepen the lean and raise the point of impact.
+
+With the hands held still, the lean follows the contact height on the face: at fixed X, dα = −sin α·dA/(A·cos α +
+B·sin α), the denominator positive on the branch. A higher `up` lowers A, which steepens a forward lean (the head sits
+lower under hands that have not moved) and leans a backward one, the AC stop's, further back; an upright shaft stays
+exactly upright (X = −B gives 0 at any A). On the rolls it is about 0.05° per millimetre (the full roll 31.47° at
+`up` +10 mm, 30.54° at −10 mm).
 
 ### 3.4 Rejections
 
 `planStroke` replaces "|lean| ≥ 90°" by: `handsAhead` outside (−D, A) for the stroke's `top` and `up`, a `RangeError`
-naming `profile.stance.<type>.handsAhead`, the range and the lean it would need. `handsAhead` joins the finite-number
-checks in place of `lean`. Every other rejection, the head below the turf at contact among them, stays as it is.
+naming `profile.stance.<type>.handsAhead`, its value and the range; at or beyond A the shaft would lean past 90°, at
+or below −D the hands lie off the branch. `validate` gains the world's ball radius (`planStroke` and `plannedSpeed`
+pass it), and the check runs after the contact-off-face check, since A > 0 rests on |up| < ρ. `handsAhead` joins the
+finite-number checks in place of `lean`. Every other rejection, the head below the turf at contact among them, stays
+as it is.
 
 ## 4. The default stance
 
@@ -141,6 +152,11 @@ profile loads, by `handsAheadFor` with the reference mallet and ball, at the pre
 0; −20 mm for the AC stop, its canonical contact). The stored input is the hand position; the lean is only where its
 default comes from. R is `ballReference.diameter.value / 2` and ρ is `headDiameter / 2`, computed as `defaultWorld` and
 `contactPose` compute them, so the upright presets' derived X and the pose's B agree to the bit.
+
+The defaults are defined by their leans for the mallet and ball the profile is built with: the reference ones here, so
+a change to the reference mallet (P2b.2b.2b.2's market dimensions) re-derives the hands and keeps the leans. A stance
+entered as hands keeps its hands when its mallet changes, and its lean follows; whether P3 re-derives a player's
+defaults per mallet is P3's decision (§8).
 
 | Preset | Lean | Source | top, bottom (m) | handsAhead (m) | Impact above the centre (mm) |
 |---|---|---|---|---|---|
@@ -182,28 +198,32 @@ derives from it), and leaves the swing presets' entries byte-identical.
 - The round trip: `stanceLean(handsAheadFor(α, …), …)` returns α within 1e-12 rad over leans −30° to 80° in 5° steps,
   tops 0.3–0.9 m and `up` −0.03 to 0.03 m.
 - An upright shaft: X = −B gives a lean of exactly 0 for every top and `up`.
-- Monotonic: X rises strictly with the lean across the branch.
-- The pose: `contactPose` puts the top hand `handsAhead` ahead of the ball's centre along aim, within 1e-12 m, and the
-  face's touching point R·sin α above the ball's centre.
-- The face offset: raising `up` with `handsAhead` held lowers the lean by what A predicts.
+- The pose: at `up` 0 and at `up` ±10 mm, `contactPose` puts the top hand `handsAhead` ahead of the ball's centre
+  along aim, within 1e-12 m, the face pitched by the lean `stanceLean` gives.
 - Rejections: `handsAhead` at or beyond A, at or below −D, and non-finite, each naming `handsAhead`.
 
 ### 5.2 Migration and bit-identity
 
 The tests that set a lean to test the lean ("turns the lean into the contact angle", "pitches the face down by the
 lean", the rejection of a lean of 90° and the others in `buildContact.test.ts`) build their stance through
-`testProfile`, which accepts a `lean` and converts it with `handsAheadFor` at the shot's `up`; a test of the 90° bound
-becomes a test of `handsAhead` at A. `backswingFor` reads the lean through `stanceLean`. `CANONICAL_CLEARANCE` is
-regenerated for the three rolls, and every roll figure the lean moves in a test is re-recorded, each listed in the
-plan. Exit criterion 3's bit-identity is checked against `main`.
+`testProfile`. It accepts a `lean`, with the shot's `up` (default 0) and the ball's radius (default `TEST_BALL.radius`),
+and converts it with `handsAheadFor` and the profile's own mallet after its overrides; the tests that build their shot
+at `up` ≠ 0 pass it. The exact checks of θ_c at a non-zero lean (`toBe(-0.2)` and the like) become 1e-12 tolerances;
+at lean 0 they stay exact. A test of the 90° bound becomes a test of `handsAhead` at A. `backswingFor` reads the lean
+through `stanceLean`; its memo key adds `stroke.contact.up` and the world's ball radius, and its doc no longer says the
+planned speed ignores the contact point. `CANONICAL_CLEARANCE` is regenerated for the three rolls, and every roll
+figure the lean moves in a test is re-recorded, each listed in the plan. Exit criterion 3's bit-identity is checked
+against `main`.
 
 ## 6. Probe (recorded in the roadmap)
 
 `scripts/swingProbe.ts` and `scripts/strokeProbe.ts` re-run in full, raw output kept under `docs/superpowers/probes/`
-(dated 2026-10-08). Their canonical tables gain each preset's lean and point of impact. Recorded against P2b.2b.2a's:
-the rolls' ratios over 2–4 m/s, their canonical runs (downswing, impact, finish, re-hit), the re-catches, the cap and
-flag tallies and the faults; the swing presets confirmed unchanged. The "User play data and checks" full-roll line is
-re-measured (knee, intensity 1, distances in yards on a 10 s lawn).
+(dated 2026-10-08). Their canonical tables gain each preset's `handsAhead`, lean and point of impact, the player's
+terms. Recorded against P2b.2b.2a's: the rolls' ratios over 2–4 m/s, their canonical runs (downswing, impact, finish,
+re-hit), the re-catches, the cap and flag tallies and the faults; the single-ball, drive and GC-stop figures confirmed
+bit-identical and the AC stop's canonical figures unchanged at the printed precision; the AC stop's and the rolls'
+off-canonical `up` sweep rows re-recorded, their lean following the contact height (§3.3). The "User play data and
+checks" full-roll line is re-measured (knee, intensity 1, distances in yards on a 10 s lawn).
 
 ## 7. Amendments to earlier specs (docs, in this PR)
 
@@ -221,12 +241,15 @@ re-measured (knee, intensity 1, distances in yards on a 10 s lawn).
 - To P2b.2b.2c: Gugan's face angles for the drives and stops (−8° to −2°) as a sourced check; every ratio.
 - To the articulated body (beyond P2b): the feet and the body between them and the hands, from which the hands'
   position would follow; the bottom hand's position in space, which follows the rigid shaft here.
-- To P3: grip style pre-filling the hands (product spec §4), per-player hand positions, face presets beyond wood.
+- To P3: grip style pre-filling the hands (product spec §4), per-player hand positions and how an entered stance
+  behaves when the player's mallet changes (§4), face presets beyond wood; exporting `stanceLean` and `handsAheadFor`
+  when a reader needs them.
 
 ## 9. Roadmap changes (in this PR)
 
 - The P2 row: P2b.2b.2b split into 2b.1, 2b.2 and 2b.3 as above, with their exit criteria; "Turf strike beyond a
-  graze" becomes 2b.3; the face presets beyond wood move to the P3 row.
+  graze" becomes 2b.3; the face presets beyond wood move to the P3 row, whose "the stance (hands, grips and lean)" is
+  restated as the top hand's position and the grips.
 - A new section, "P2b.2b.2b decisions and findings (2026-10-08)": the split and its success criterion; the diagnosis;
   the sourcing for 2b.2 and 2b.3 (the roll's second contact, the face's e(U) and T(U), the turf under load, head–turf
   and ploughing, end-weighting, faces), each with its URL; the mallet survey against `mallet.json`.
