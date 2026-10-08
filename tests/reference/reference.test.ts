@@ -8,7 +8,14 @@ import {
     lawnReference,
     lawsReference,
     malletReference,
+    readShape,
+    SWING_REFERENCE_TYPES,
+    swingReference,
+    type SwingReferenceType,
 } from "../../src/reference/index";
+import { ReferenceDataError } from "../../src/reference/schema";
+import swingJson from "../../reference/swing.json";
+import { STROKE_TYPES } from "../../src/engine/swing/types";
 
 describe("reference data", () => {
     it("loads every topic", () => {
@@ -129,5 +136,113 @@ describe("swing, coupling and head–turf reference data", () => {
         const keys: readonly string[] = FAULT_LAW_KEYS;
         expect(keys.indexOf("29.1.14")).toBe(keys.indexOf("29.1.13") + 1);
         expect(lawsReference.faults["29.1.14"].quote).toContain("damages the court with the mallet");
+    });
+});
+
+describe("swing reference (P2b.2b.2a design §6.1)", () => {
+    it("has an entry for every stroke type, in the presets' order", () => {
+        expect(SWING_REFERENCE_TYPES).toEqual(STROKE_TYPES);
+        expect(Object.keys(swingReference)).toEqual([...STROKE_TYPES]);
+    });
+
+    it("keeps the top hand still in every swing preset", () => {
+        for (const type of ["single-ball", "drive", "stop-ac", "stop-gc"] as const) {
+            expect(swingReference[type].pendulumShare.value, type).toBe(1);
+        }
+    });
+
+    it("gives every stroke type a share in [0, 1], a hands' angle in (0, 90°) and a finish", () => {
+        for (const type of SWING_REFERENCE_TYPES) {
+            const shape = swingReference[type];
+            expect(shape.pendulumShare.value, type).toBeGreaterThanOrEqual(0);
+            expect(shape.pendulumShare.value, type).toBeLessThanOrEqual(1);
+            expect(shape.handAngle.value, type).toBeGreaterThan(0);
+            expect(shape.handAngle.value, type).toBeLessThan(Math.PI / 2);
+            expect(shape.finish.quote.length, type).toBeGreaterThan(0);
+        }
+    });
+
+    it("gives every sourced range low ≤ high, and every kinematic pair one measure", () => {
+        for (const type of SWING_REFERENCE_TYPES) {
+            const { backswingRange, kinematics } = swingReference[type];
+            if (backswingRange !== null) {
+                expect(backswingRange.low.value, type).toBeLessThanOrEqual(backswingRange.high.value);
+                expect(backswingRange.low.value, type).toBeGreaterThan(0);
+            }
+            for (const pair of kinematics) {
+                expect(pair.backswing, type).toBeGreaterThan(0);
+                expect((pair.contactSpeed === null) !== (pair.downswingTime === null), type).toBe(true);
+            }
+        }
+    });
+
+    it("marks every placeholder as derived", () => {
+        for (const type of SWING_REFERENCE_TYPES) {
+            for (const entry of [swingReference[type].pendulumShare, swingReference[type].handAngle]) {
+                if (entry.provisional === "placeholder") {
+                    expect(entry.provenance, type).toBe("derived");
+                }
+            }
+        }
+    });
+
+    it("holds the fit's defaults: a backswing, an intensity in [0, 1] and its planned speed", () => {
+        for (const type of SWING_REFERENCE_TYPES) {
+            const shape = swingReference[type];
+            expect(shape.defaultBackswing.value, type).toBeGreaterThan(0);
+            expect(shape.defaultIntensity.value, type).toBeGreaterThanOrEqual(0);
+            expect(shape.defaultIntensity.value, type).toBeLessThanOrEqual(1);
+            // Exit criterion 5: 3 m/s within 2 %, or a default at a sourced bound.
+            const range = shape.backswingRange;
+            const atBound =
+                range !== null &&
+                (shape.defaultBackswing.value === range.low.value || shape.defaultBackswing.value === range.high.value);
+            if (!atBound) {
+                expect(Math.abs(shape.defaultSpeed.value / 3 - 1), type).toBeLessThanOrEqual(0.02);
+            }
+        }
+    });
+
+    it("gives the swing presets an effort and the rolls a hands' tempo, fast no slower than slow", () => {
+        for (const type of SWING_REFERENCE_TYPES) {
+            const { effort, handTempo } = swingReference[type];
+            const swing = ["single-ball", "drive", "stop-ac", "stop-gc"].includes(type);
+            expect(effort === null, type).toBe(!swing);
+            expect(handTempo === null, type).toBe(swing);
+            if (effort !== null) {
+                expect(effort.torqueMax.value, type).toBeGreaterThanOrEqual(0);
+                expect(effort.tempoFast.value, type).toBeLessThanOrEqual(effort.tempoSlow.value);
+                expect(effort.tempoFast.value, type).toBeGreaterThan(0);
+            }
+            if (handTempo !== null) {
+                expect(handTempo.fast.value, type).toBeLessThanOrEqual(handTempo.slow.value);
+                expect(handTempo.fast.value, type).toBeGreaterThan(0);
+            }
+        }
+    });
+
+    it("halves the placeholder tempos (design §6.2)", () => {
+        for (const type of SWING_REFERENCE_TYPES) {
+            const { effort, handTempo } = swingReference[type];
+            if (effort?.tempoSlow.provisional === "placeholder") {
+                expect(effort.tempoFast.value, type).toBeCloseTo(effort.tempoSlow.value / 2, 12);
+            }
+            if (handTempo?.slow.provisional === "placeholder") {
+                expect(handTempo.fast.value, type).toBeCloseTo(handTempo.slow.value / 2, 12);
+            }
+        }
+    });
+
+    it("rejects an effort or a hands' tempo given only in part, naming the missing key", () => {
+        const without = (type: SwingReferenceType, key: string): unknown => {
+            const entry = (swingJson as Record<string, Record<string, unknown>>)[type] ?? {};
+            return { ...swingJson, [type]: Object.fromEntries(Object.entries(entry).filter(([k]) => k !== key)) };
+        };
+        expect(() => readShape(without("drive", "tempoSlow"), "drive")).toThrow(ReferenceDataError);
+        expect(() => readShape(without("drive", "tempoSlow"), "drive")).toThrow(/swing\.drive\.tempoSlow/);
+        expect(() => readShape(without("full-roll", "handTempoSlow"), "full-roll")).toThrow(
+            /swing\.full-roll\.handTempoSlow/,
+        );
+        expect(readShape(swingJson, "drive")).toEqual(swingReference.drive);
     });
 });

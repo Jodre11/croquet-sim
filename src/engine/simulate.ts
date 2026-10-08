@@ -72,7 +72,7 @@ import {
 import { motionParamsAt, obstaclesOf, turfAt, validateWorld } from "./world";
 
 /** Version of the physics; recorded in every result and share link. */
-export const ENGINE_VERSION = "0.6.0";
+export const ENGINE_VERSION = "0.7.0";
 
 /**
  * Work units (see linalg.ts) the resting-contact solver may spend in one shot (design §5). Fixed from the prototype's

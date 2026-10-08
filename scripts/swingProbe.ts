@@ -10,7 +10,8 @@
  *   bottom hand's release, the hands' and the turf's braking impulses (design §3.7), the impact's length after
  *   contactAt and how often each impact flag fired;
  * - presets: each preset over speed × drive × contact: how often impact-head-deep, impact-cap,
- *   impact-head-approaching and impact-off-face fire, and the longest impact after contactAt that ended before the cap;
+ *   impact-head-approaching and impact-off-face fire, the longest impact after contactAt that ended before the cap,
+ *   and the rejected runs tallied by speed, contact height and message;
  * - dip: the AC stop's dip depth from 8 to 14 mm: the head–turf penetration against HEAD_DEEP_LIMIT, and whether the
  *   first head–turf interval starts after the first face–striker interval ends;
  * - coupling: the canonical set at T = 0.04 s against HAND_COUPLING's period (0.08 s), both at its ζ, with the hands'
@@ -18,8 +19,9 @@
  * - mass: the swung body's effective mass at the face centre along aim (design §3.4) against the strike's measure;
  * - tracking: the head's largest distance from the path with no ball and no turf, per phase: firm before contact,
  *   carry up to the reach's end, inside a check, and swing mode after contact outside a check (the residual);
- * - cost: µs/step of the tracked canonical impacts against P2b.2a's force-table strokes, and the WAKE_MARGIN reach
- *   filter's headroom over a 0.51 s impact;
+ * - cost: the tracked canonical impacts against P2b.2a's force-table strokes: simulateImpact's whole time, its fixed
+ *   preparation (prepareTrack) and its integration's µs/step (the rest over its steps); and the WAKE_MARGIN reach
+ *   filter's headroom over the longest impact (MAX_LEAD plus TRACK_IMPACT_CAP);
  * - timings: for the AC stop and the full roll, each action from 50 ms early to 20 ms late, and the AC stop's dip from
  *   none to twice its depth: lawn or ball first, the dig, the slide, the striker's ball's launch, and after phase 2
  *   both balls' distances and the coaching ratio;
@@ -71,7 +73,7 @@ import { BALL_IDS, type BallId, type BallState, type BallStates, type ShotResult
 import { defaultWorld, uprightsOf } from "../src/engine/world";
 import { contactReference, malletReference } from "../src/reference/index";
 import { drive, recorder, socketAt, strike } from "../tests/engine/support/impact";
-import { GC_STOP_GAP, canonicalSetup } from "../tests/engine/support/shot";
+import { GC_STOP_GAP, backswingFor, canonicalSetup } from "../tests/engine/support/shot";
 
 // The project has no Node types; this script runs under tsx and reads only its environment.
 declare const process: { readonly env: Readonly<Record<string, string | undefined>> };
@@ -130,10 +132,30 @@ function quick(setup: ShotSetup): Run {
     return { setup, contact, impact, steps: [], motion: simulateFreeMotion(impact.handover, WORLD) };
 }
 
-/** `type`'s canonical setup with `stroke` fields replaced. */
-function canonical(type: StrokeType, stroke: Partial<ShotSetup["stroke"]> = {}): ShotSetup {
+/** `type`'s canonical setup with `stroke` fields replaced; a `speed` (m/s) sets the backswing that plans it. */
+function canonical(
+    type: StrokeType,
+    stroke: Partial<ShotSetup["stroke"]> & { readonly speed?: number } = {},
+): ShotSetup {
+    const { speed, ...rest } = stroke;
     const base = canonicalSetup(type);
-    return { ...base, stroke: { ...base.stroke, ...stroke } };
+    const setup = { ...base, stroke: { ...base.stroke, ...rest } };
+    if (speed === undefined) {
+        return setup;
+    }
+    return { ...setup, stroke: { ...setup.stroke, backswing: backswingFor(setup, speed, WORLD) } };
+}
+
+/** `f()`, or the RangeError it throws (a speed beyond the preset's reach), so that a sweep records it and goes on. */
+function attempt<T>(f: () => T): T | RangeError {
+    try {
+        return f();
+    } catch (error) {
+        if (error instanceof RangeError) {
+            return error;
+        }
+        throw error;
+    }
 }
 
 /** The ids of `balls` in BALL_IDS order: the order of the impact's snapshots. */
@@ -517,7 +539,10 @@ function ratios(): void {
             "2–4 m/s ==",
     );
     for (const type of CROQUET_STROKES) {
-        const speeds = [2, 2.5, 3, 3.5, 4].map((speed) => fmt(ratio(run(canonical(type, { speed }))), 2));
+        const speeds = [2, 2.5, 3, 3.5, 4].map((speed) => {
+            const r = attempt(() => run(canonical(type, { speed })));
+            return r instanceof RangeError ? "unreachable" : fmt(ratio(r), 2);
+        });
         console.log(
             `${type.padEnd(11)} 3 m/s ${speeds[2]} (coaching ${COACHING[type]}); ` +
                 `2, 2.5, 3, 3.5, 4 m/s: ${speeds.join(", ")}`,
@@ -526,7 +551,10 @@ function ratios(): void {
     // The player's push after contact (design §3.3): none against a full restoration of the arc's speed.
     for (const guideEffort of [0, 1]) {
         const cells = [2, 3, 4].map((speed) => {
-            const r = run(canonical("drive", { speed, guideEffort }));
+            const r = attempt(() => run(canonical("drive", { speed, guideEffort })));
+            if (r instanceof RangeError) {
+                return `${speed} m/s unreachable`;
+            }
             const hits = r.impact.timeline[`face/${r.setup.striker}`]?.length ?? 0;
             const after = r.impact.duration - trackOf(r.contact).arc.contactAt;
             return `${speed} m/s ${fmt(ratio(r), 2)}, ${hits} hits, ${ms(after)} ms after contactAt`;
@@ -568,17 +596,23 @@ function presets(): void {
         let rejected = 0;
         let longest = 0;
         const counts = new Map<string, number>(FLAGS.map((kind) => [kind, 0]));
+        // The rejections by speed, contact height (from the canonical) and message.
+        const reasons = new Map<string, number>();
         for (const speed of [1, 2, 3, 4, 6]) {
             for (const strokeDrive of [-1, -0.5, 0, 0.5, 1]) {
                 for (const up of [up0 - 0.003, up0, up0 + 0.003]) {
                     for (const side of [-0.01, 0, 0.01]) {
-                        const setup = canonical(type, { speed, drive: strokeDrive, contact: { up, side } });
+                        let setup: ShotSetup;
                         let contact: ContactState;
                         try {
+                            // A speed beyond the preset's reach throws a RangeError, as an unreachable shot.
+                            setup = canonical(type, { speed, drive: strokeDrive, contact: { up, side } });
                             contact = buildContact(setup, WORLD);
                         } catch (error) {
                             if (error instanceof RangeError) {
                                 rejected++;
+                                const reason = `${speed} m/s, up ${mm(up - up0)} mm: ${error.message}`;
+                                reasons.set(reason, (reasons.get(reason) ?? 0) + 1);
                                 continue;
                             }
                             throw error;
@@ -606,6 +640,9 @@ function presets(): void {
                 `(TRACK_IMPACT_CAP ${ms(TRACK_IMPACT_CAP)} ms); canonical approach ${mm(approach.clearance)} mm, ` +
                 `${ms(approach.before)} ms before contact`,
         );
+        for (const [reason, count] of reasons) {
+            console.log(`${"".padEnd(11)} rejected ${count}× at ${reason}`);
+        }
     }
 }
 
@@ -740,7 +777,7 @@ function tracking(): void {
             "no turf: socket (m) and angle (rad) from the path ==",
     );
     for (const type of STROKE_TYPES) {
-        // The hands timed MAX_LEAD early give 60 ms of firm grip before contact; the rolls' hand window runs then.
+        // The hands timed MAX_LEAD early give MAX_LEAD of firm grip before contact; the rolls' hand window runs then.
         const contact = buildContact(canonical(type, { timing: { ...ON_TIME, hands: -MAX_LEAD } }), WORLD);
         const setup = { ...prepareImpact(contact, {}, WORLD), headTurf: null };
         const track = setup.drive as PreparedTrack;
@@ -832,23 +869,32 @@ const FORCE_STROKES: readonly ForceStroke[] = [
 ];
 
 function cost(): void {
-    console.log(`== Impact time per step (${REPEAT} runs after 5 warm-up; for P5) ==`);
-    const time = (name: string, contact: ContactState, balls: BallStates): void => {
+    console.log(
+        `== Impact time: in all, its fixed preparation (prepareTrack) and its integration per step ` +
+            `(medians of ${REPEAT} runs after 5 warm-up; for P5) ==`,
+    );
+    const medianOf = (run: () => void): number => {
         for (let i = 0; i < 5; i++) {
-            simulateImpact(contact, balls, WORLD);
+            run();
         }
         const times: number[] = [];
-        let steps = 0;
         for (let i = 0; i < REPEAT; i++) {
             const start = performance.now();
-            steps = simulateImpact(contact, balls, WORLD).steps;
+            run();
             times.push(performance.now() - start);
         }
         times.sort((a, b) => a - b);
-        const median = times[Math.floor(times.length / 2)] as number;
+        return times[Math.floor(times.length / 2)] as number;
+    };
+    const time = (name: string, contact: ContactState, balls: BallStates): void => {
+        const { drive } = contact;
+        const steps = simulateImpact(contact, balls, WORLD).steps;
+        const all = medianOf(() => simulateImpact(contact, balls, WORLD));
+        // simulateImpact prepares a tracked drive once, then integrates: the preparation is not a per-step cost.
+        const prepare = drive.kind === "track" ? medianOf(() => prepareTrack(drive, contact.head, WORLD.gravity)) : 0;
         console.log(
-            `${name.padEnd(20)} ${steps} steps: median ${fmt(median, 3)} ms ` +
-                `(${fmt((median * 1e3) / steps, 3)} µs/step)`,
+            `${name.padEnd(20)} ${fmt(all, 3)} ms in all: preparation ${fmt(prepare, 3)} ms, then ${steps} steps ` +
+                `at ${fmt(((all - prepare) * 1e3) / steps, 3)} µs/step`,
         );
     };
     for (const type of STROKE_TYPES) {
@@ -859,7 +905,8 @@ function cost(): void {
         time(`force ${stroke.name}`, stroke.contact, stroke.balls);
     }
     // The longest lead-in (MAX_LEAD) plus the cap: a gentle AC stop (1 m/s, drive 0.5) whose head comes to rest on
-    // the turf, a closed contact that holds the impact to the cap, its hands (which carry no share) timed 60 ms early.
+    // the turf, a closed contact that holds the impact to the cap, its hands (which carry no share) timed MAX_LEAD
+    // early.
     const r = run(canonical("stop-ac", { speed: 1, drive: 0.5, timing: { ...ON_TIME, hands: -MAX_LEAD } }));
     const ids = idsOf(r.setup.balls);
     const travel = ids.map(() => 0);
@@ -944,7 +991,11 @@ function gc(): void {
             "their ratio (target over striker); then stop-gc against single-ball over the gap ==",
     );
     for (const speed of [2, 2.5, 3, 3.5, 4]) {
-        const r = run(canonical("stop-gc", { speed }));
+        const r = attempt(() => run(canonical("stop-gc", { speed })));
+        if (r instanceof RangeError) {
+            console.log(`stop-gc ${fmt(speed, 1)} m/s, gap ${GC_STOP_GAP} m: rejected (${r.message})`);
+            continue;
+        }
         console.log(`stop-gc ${fmt(speed, 1)} m/s, gap ${GC_STOP_GAP} m: ${touchText(r)}; ${crossingText(r)}`);
     }
     for (const gap of GAPS) {

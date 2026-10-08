@@ -28,6 +28,14 @@ describe("readValue", () => {
     it("names the offending path in the error", () => {
         expect(() => readValue({}, "diameter", "ball")).toThrow(/ball\.diameter/);
     });
+
+    it("reads a placeholder's provisional mark and rejects any other", () => {
+        const placeholder = { diameter: { ...good.diameter, provisional: "placeholder" } };
+        expect(readValue(placeholder, "diameter", "ball").provisional).toBe("placeholder");
+        expect(readValue(good, "diameter", "ball")).not.toHaveProperty("provisional");
+        const other = { diameter: { ...good.diameter, provisional: "guess" } };
+        expect(() => readValue(other, "diameter", "ball")).toThrow(/provisional/);
+    });
 });
 
 describe("readQuote and readArray", () => {

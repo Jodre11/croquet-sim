@@ -16,7 +16,7 @@ export type {
 } from "./impact/types";
 export { vec3, type Vec3 } from "./math/vec3";
 export { stateAtTime } from "./sample";
-export { simulateShot, type ShotOutcome } from "./shot";
+export { simulateShot, type ShotOptions, type ShotOutcome } from "./shot";
 export { ENGINE_VERSION, simulateFreeMotion } from "./simulate";
 export type { SwingApproach } from "./swing/buildContact";
 export { ON_TIME, defaultProfile } from "./swing/profile";
@@ -27,8 +27,10 @@ export {
     type StrokeType,
     type SwingDrive,
     type SwingProfile,
+    type SwingShape,
     type SwingStance,
 } from "./swing/types";
+export type { StrokeSample, SwingTrajectory } from "./swing/trajectory";
 export {
     BALL_IDS,
     type BallId,

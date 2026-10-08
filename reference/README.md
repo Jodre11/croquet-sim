@@ -8,6 +8,13 @@ Every physical constant the app uses lives here, one JSON file per topic, and ev
 - **Value:** `{ "value": <number, SI>, "unit": "<SI unit>", "bounds": [lo, hi]?, "source": "<citation or URL>",
 "provenance": "direct" | "analogue" | "derived", "note": "<original units, conversion, caveats>"? }`
 - **Quote:** `{ "quote": "<verbatim text>", "source": …, "provenance": …, "note": …? }`
+- **Placeholder:** any entry may carry `"provisional": "placeholder"`: a labelled stand-in, by a stated rule, until
+  data or a fit replaces it (swing.json; P2b.2b.2a design §6.2). Its `provenance` is `"derived"` and its `source`
+  names the rule.
+- **Stroke shape** (swing.json): one object per stroke type, keyed by the type, holding values and quotes as above
+  and an optional `kinematics` array of `{ "backswing", "contactSpeed" | "downswingTime", "source", "provenance",
+"note"? }`. `reference/sources/README.md` cites each source (URL, fetch date, SHA-256 of the fetched file) and
+  quotes the extracted passages; the originals are cited, not mirrored.
 - **Offset rule** (laws.json): a quote plus `"ballRadii"` and `"uprightRadii"` coefficients (see below).
 - **Fault law** (laws.json): a quote keyed by its Law number (`"29.1.8"`) or Glossary entry (`"groupOfBalls"`), the
   text the fault judge (`src/engine/faults.ts`) applies.

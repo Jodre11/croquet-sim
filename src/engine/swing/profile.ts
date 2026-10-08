@@ -11,11 +11,180 @@
  *   the AC stop's dip depth is a user decision (2026-10-05). Every preset's guideEffort is 1, the full restoration of
  *   the arc's speed a full shot aims at; a softer shot uses less, a very soft one none (user's account, 2026-10-06).
  *   P2b.2b.2 sets the per-type defaults; the P4 planner chooses it per shot.
+ * - Shape (P2b.2b.2a design §5.3): reference/swing.json, sourced or labelled placeholders, its effort and tempos fitted
+ *   by scripts/fitStrokeShape.ts. The swing presets read the effort and the rolls the hands' tempo; the unread member
+ *   repeats the read one's tempos.
  */
-import { contactReference, malletReference } from "../../reference/index";
-import type { StrokeTiming, StrokeType, SwingProfile } from "./types";
+import { contactReference, malletReference, swingReference, type StrokeShapeReference } from "../../reference/index";
+import { ReferenceDataError } from "../../reference/schema";
+import type { StrokeMode } from "../impact/types";
+import {
+    STROKE_TYPES,
+    type StrokeTiming,
+    type StrokeType,
+    type SwingDrive,
+    type SwingProfile,
+    type SwingShape,
+} from "./types";
 
 const DEG = Math.PI / 180;
+
+/**
+ * The shape of stroke type `type` driven in `mode`, from its reference/swing.json entry `ref` (design §5.3). A swing
+ * preset reads the effort and a carry preset the hands' tempo; the unread member, where `ref` lacks it, repeats the
+ * read one's tempos. Throws a ReferenceDataError naming the type and the keys when `ref` lacks the member `mode` reads.
+ */
+export function shapeOf(type: StrokeType, mode: StrokeMode, ref: StrokeShapeReference): SwingShape {
+    const path = `swing.${type}`;
+    let effort: SwingShape["effort"];
+    let handTempo: SwingShape["handTempo"];
+    if (mode === "swing") {
+        if (ref.effort === null) {
+            throw new ReferenceDataError(path, "a swing-mode preset needs torqueMax, tempoSlow and tempoFast");
+        }
+        effort = {
+            torqueMax: ref.effort.torqueMax.value,
+            tempoSlow: ref.effort.tempoSlow.value,
+            tempoFast: ref.effort.tempoFast.value,
+        };
+        handTempo =
+            ref.handTempo === null
+                ? { slow: effort.tempoSlow, fast: effort.tempoFast }
+                : { slow: ref.handTempo.slow.value, fast: ref.handTempo.fast.value };
+    } else {
+        if (ref.handTempo === null) {
+            throw new ReferenceDataError(path, "a carry-mode preset needs handTempoSlow and handTempoFast");
+        }
+        handTempo = { slow: ref.handTempo.slow.value, fast: ref.handTempo.fast.value };
+        // Carry mode never reads the effort: no torque.
+        effort =
+            ref.effort === null
+                ? { torqueMax: 0, tempoSlow: handTempo.slow, tempoFast: handTempo.fast }
+                : {
+                      torqueMax: ref.effort.torqueMax.value,
+                      tempoSlow: ref.effort.tempoSlow.value,
+                      tempoFast: ref.effort.tempoFast.value,
+                  };
+    }
+    return {
+        pendulumShare: ref.pendulumShare.value,
+        handAngle: ref.handAngle.value,
+        effort,
+        handTempo,
+        defaultIntensity: ref.defaultIntensity.value,
+    };
+}
+
+/** The default drive per stroke type (design §5.4). Provisional throughout. */
+const DRIVE: Readonly<Record<StrokeType, SwingDrive>> = {
+    // Swing: the top hand still (no hand share), the pendulum's light push over 10 ms, then its free swing; no
+    // dip, no reach (prototype).
+    "single-ball": {
+        mode: "swing",
+        speedGain: 0.2,
+        window: 0.01,
+        handGain: 0,
+        handWindow: 0.01,
+        handDrop: 0,
+        dropTime: 0.01,
+        handReach: 0,
+        groundDepth: 0,
+        guideEffort: 1,
+    },
+    // As single-ball over a 5 ms window: the follow-through rises and dies by itself, and the head catches the
+    // striker's ball again (prototype).
+    drive: {
+        mode: "swing",
+        speedGain: 0.2,
+        window: 0.005,
+        handGain: 0,
+        handWindow: 0.005,
+        handDrop: 0,
+        dropTime: 0.01,
+        handReach: 0,
+        groundDepth: 0,
+        guideEffort: 1,
+    },
+    // Swing, checked: speedGain 1 at drive −1 brings the pendulum to rest at its window's end. The check does not
+    // lift the head: it still rises through the window, pitching further face-up, so its rear rim drops (8.78 mm
+    // clear at contact, 7.99 mm at the window's end before the dip). The dip, fed forward in full whatever the
+    // relaxed grips, takes the path's lowest point 2.99 mm below the turf at 20 ms, its rear rim first reaching
+    // the turf 12.7 ms after contact, after the ball has left (measured while planning). About 11 mm, a user
+    // decision (2026-10-05): the prototype's 14 mm drove the head 2.86 mm into the turf, past HEAD_DEEP_LIMIT;
+    // pre-flight confirms the value. The hands do not travel, so no reach.
+    "stop-ac": {
+        mode: "swing",
+        speedGain: 1,
+        window: 0.01,
+        handGain: 0,
+        handWindow: 0.01,
+        handDrop: 0.011,
+        dropTime: 0.02,
+        handReach: 0,
+        groundDepth: 0,
+        guideEffort: 1,
+    },
+    // Swing, checked through the firm, low bottom hand's lever: a hard, level shot with no follow-through; no dip
+    // (prototype). A single-ball stroke, the striker's ball crossing a gap to the target (design §5.4).
+    "stop-gc": {
+        mode: "swing",
+        speedGain: 1,
+        window: 0.01,
+        handGain: 0,
+        handWindow: 0.01,
+        handDrop: 0,
+        dropTime: 0.01,
+        handReach: 0,
+        groundDepth: 0,
+        guideEffort: 1,
+    },
+    // Carry (Riches: the slope "MAINTAINED throughout the swing", both hands moving "FORWARD at the SAME RATE",
+    // "the mallet head following through the ball and onto the ground"): the hands' speed from the downswing
+    // (P2b.2b.2a design §3.3), a light pendulum push, a 0.15 m reach, the head ending 5 mm below the turf
+    // (prototype).
+    "half-roll": {
+        mode: "carry",
+        speedGain: 0.1,
+        window: 0.02,
+        handGain: 0,
+        handWindow: 0.02,
+        handDrop: 0,
+        dropTime: 0.01,
+        handReach: 0.15,
+        groundDepth: 0.005,
+        guideEffort: 1,
+    },
+    // Carry: the hands' speed from the downswing (P2b.2b.2a design §3.3) and still accelerating, a 0.30 m reach,
+    // the head ending 2 mm below the turf (prototype). A known miss in this phase (design §10).
+    "full-roll": {
+        mode: "carry",
+        speedGain: 0.1,
+        window: 0.03,
+        handGain: 0.1,
+        handWindow: 0.03,
+        handDrop: 0,
+        dropTime: 0.01,
+        handReach: 0.3,
+        groundDepth: 0.002,
+        guideEffort: 1,
+    },
+    // Carry, the bottom hand punching in contact: the pendulum's speedGain 0.5 over 15 ms from contact on top of
+    // the hands' speed from the downswing (P2b.2b.2a design §3.3) and handGain 0.1. A 0.30 m reach; 0.2 m traps
+    // the striker's ball against the face, the head ending 2 mm below the turf (prototype). A known miss in this
+    // phase (design §10).
+    "pass-roll": {
+        mode: "carry",
+        speedGain: 0.5,
+        window: 0.015,
+        handGain: 0.1,
+        handWindow: 0.015,
+        handDrop: 0,
+        dropTime: 0.01,
+        handReach: 0.3,
+        groundDepth: 0.002,
+        guideEffort: 1,
+    },
+};
 
 /** The default profile (design §5.4). Provisional throughout. */
 export const defaultProfile: SwingProfile = {
@@ -51,120 +220,10 @@ export const defaultProfile: SwingProfile = {
         // least the full roll's.
         "pass-roll": { lean: 48 * DEG, top: 0.45, bottom: 0.09, gripTension: 1, bottomGrip: 1 },
     },
-    drive: {
-        // Swing: the top hand still (no hand share), the pendulum's light push over 10 ms, then its free swing; no
-        // dip, no reach (prototype).
-        "single-ball": {
-            mode: "swing",
-            speedGain: 0.2,
-            window: 0.01,
-            handShare: 0,
-            handGain: 0,
-            handWindow: 0.01,
-            handDrop: 0,
-            dropTime: 0.01,
-            handReach: 0,
-            groundDepth: 0,
-            guideEffort: 1,
-        },
-        // As single-ball over a 5 ms window: the follow-through rises and dies by itself, and the head catches the
-        // striker's ball again (prototype).
-        drive: {
-            mode: "swing",
-            speedGain: 0.2,
-            window: 0.005,
-            handShare: 0,
-            handGain: 0,
-            handWindow: 0.005,
-            handDrop: 0,
-            dropTime: 0.01,
-            handReach: 0,
-            groundDepth: 0,
-            guideEffort: 1,
-        },
-        // Swing, checked: speedGain 1 at drive −1 brings the pendulum to rest at its window's end. The check does not
-        // lift the head: it still rises through the window, pitching further face-up, so its rear rim drops (8.78 mm
-        // clear at contact, 7.99 mm at the window's end before the dip). The dip, fed forward in full whatever the
-        // relaxed grips, takes the path's lowest point 2.99 mm below the turf at 20 ms, its rear rim first reaching
-        // the turf 12.7 ms after contact, after the ball has left (measured while planning). About 11 mm, a user
-        // decision (2026-10-05): the prototype's 14 mm drove the head 2.86 mm into the turf, past HEAD_DEEP_LIMIT;
-        // pre-flight confirms the value. The hands do not travel, so no reach.
-        "stop-ac": {
-            mode: "swing",
-            speedGain: 1,
-            window: 0.01,
-            handShare: 0,
-            handGain: 0,
-            handWindow: 0.01,
-            handDrop: 0.011,
-            dropTime: 0.02,
-            handReach: 0,
-            groundDepth: 0,
-            guideEffort: 1,
-        },
-        // Swing, checked through the firm, low bottom hand's lever: a hard, level shot with no follow-through; no dip
-        // (prototype). A single-ball stroke, the striker's ball crossing a gap to the target (design §5.4).
-        "stop-gc": {
-            mode: "swing",
-            speedGain: 1,
-            window: 0.01,
-            handShare: 0,
-            handGain: 0,
-            handWindow: 0.01,
-            handDrop: 0,
-            dropTime: 0.01,
-            handReach: 0,
-            groundDepth: 0,
-            guideEffort: 1,
-        },
-        // Carry (Riches: the slope "MAINTAINED throughout the swing", both hands moving "FORWARD at the SAME RATE",
-        // "the mallet head following through the ball and onto the ground"): the hands 60 % of the head's speed, a
-        // light pendulum push, a 0.15 m reach, the head ending 5 mm below the turf (prototype).
-        "half-roll": {
-            mode: "carry",
-            speedGain: 0.1,
-            window: 0.02,
-            handShare: 0.6,
-            handGain: 0,
-            handWindow: 0.02,
-            handDrop: 0,
-            dropTime: 0.01,
-            handReach: 0.15,
-            groundDepth: 0.005,
-            guideEffort: 1,
-        },
-        // Carry: the hands 90 % of the head's speed and still accelerating, a 0.30 m reach, the head ending 2 mm below
-        // the turf (prototype). A known miss in this phase (design §10).
-        "full-roll": {
-            mode: "carry",
-            speedGain: 0.1,
-            window: 0.03,
-            handShare: 0.9,
-            handGain: 0.1,
-            handWindow: 0.03,
-            handDrop: 0,
-            dropTime: 0.01,
-            handReach: 0.3,
-            groundDepth: 0.002,
-            guideEffort: 1,
-        },
-        // Carry, the bottom hand punching in contact: the pendulum's speedGain 0.5 over 15 ms from contact on top of
-        // the hands' 85 % and handGain 0.1. A 0.30 m reach; 0.2 m traps the striker's ball against the face, the head
-        // ending 2 mm below the turf (prototype). A known miss in this phase (design §10).
-        "pass-roll": {
-            mode: "carry",
-            speedGain: 0.5,
-            window: 0.015,
-            handShare: 0.85,
-            handGain: 0.1,
-            handWindow: 0.015,
-            handDrop: 0,
-            dropTime: 0.01,
-            handReach: 0.3,
-            groundDepth: 0.002,
-            guideEffort: 1,
-        },
-    },
+    drive: DRIVE,
+    shape: Object.fromEntries(
+        STROKE_TYPES.map((type) => [type, shapeOf(type, DRIVE[type].mode, swingReference[type])]),
+    ) as Record<StrokeType, SwingShape>,
 };
 
 /** The planner's default `drive` per stroke type (design §5.4): −1 check … 0 coast … +1 push. */

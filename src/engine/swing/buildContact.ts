@@ -1,33 +1,38 @@
 /**
- * The swing model (P2b.2b.1 design §5.2). From a ShotSetup and the world it derives the mallet head, its wooden face,
- * its state at t = 0 and the tracked drive:
- * 1. the arc radius r = top: the shaft is rigid, so the pivot is the top hand, `top` from the socket along it;
- * 2. the contact angle θ_c = −lean, positive for a rising strike;
- * 3. the head's pitch about n at contact, θ_c: the head is rigid on the shaft, rot(n, θ_c) ⊗ q_aim, so a positive lean
- *    pitches the face down;
- * 4. the face's point at (up, side) from its centre on the line through the sunk centre along −f, R + START_GAP from
- *    it; the head's centre L/2 behind the face's, the socket on top of the head;
- * 5. the pivot, r from the socket up the shaft;
- * 6. the hands' speed V₀ = handShare·speed·aim, and ω₀, the larger root of |V₀ + ω₀·n × (c − pivot)| = speed;
- * 7. the arcs' changes, against the head's speed: α = drive·speedGain·(speed/ℓ)/window, ℓ the pivot's distance from
+ * The swing model (P2b.2b.1 design §5.2; P2b.2b.2a design §3). From a ShotSetup and the world it derives the mallet
+ * head, its wooden face, its state where the impact starts and the tracked drive:
+ * 1. the contact pose (contactPose): the arc radius r = top, θ_c = −lean, the head pitched rigidly with the shaft, its
+ *    face START_GAP short of the sunk striker at (up, side), the pivot r up the shaft;
+ * 2. the downswing (downswing.ts) from the backswing's top: ω₀ and the hands' V_c at contact, and from them the
+ *    planned contact speed;
+ * 3. the arcs' changes, against the planned speed: α = drive·speedGain·(speed/ℓ)/window, ℓ the pivot's distance from
  *    the head's centre, and A = drive·handGain·speed·aim/handWindow; the dip, handDrop over dropTime; the mode, the
  *    ground depth and the reach (the shot's, else the preset's); the coupling HAND_COUPLING; the hands the stance's,
  *    with the profile's body;
- * 8. the lead L, the earliest action's: the impact starts L before contact, everything coasting until its action, and
- *    the grips relax at contact;
- * 9. (swingApproach) the coasting path's lowest clearance over the turf in the MAX_LEAD before contact;
- * 10. the head a solid cylinder of the profile's mallet.
+ * 4. the lead L, the earliest action's, or TURF_MARGIN before the downswing first meets the turf if that is earlier
+ *    (P2b.2b.2a design §3.5): the impact starts L before contact, on the downswing, so a fat stroke's turf strike is
+ *    integrated; the grips relax at contact;
+ * 5. the approach: the downswing's lowest clearance over the turf, from one scan (planStroke, swingApproach).
  * The head starts on its own path (headOnPath at t = 0), so the hands start with no error to take up.
  */
 import { contactReference, malletReference } from "../../reference/index";
 import { headLowestPoint } from "../impact/contacts";
-import { rotate, solidCylinderInertia } from "../impact/rigidBody";
-import { HAND_COUPLING, headOnPath, pitchAxis, prepareTrack, swingOrientation } from "../impact/track";
-import type { ContactState, FaceMaterial, Hands, MalletHead, SwingArc, TrackDrive } from "../impact/types";
+import { rotate, solidCylinderInertia, type Quaternion } from "../impact/rigidBody";
+import {
+    HAND_COUPLING,
+    headOnPath,
+    pendulumOf,
+    pitchAxis,
+    prepareTrack,
+    swingOrientation,
+    swungBody,
+} from "../impact/track";
+import type { ContactState, FaceMaterial, Hands, MalletHead, StrokeMode, SwingArc, TrackDrive } from "../impact/types";
 import { sinCos } from "../math/elementary";
-import { add, cross, dot, length, scale, sub, vec3 } from "../math/vec3";
-import type { World } from "../types";
-import type { ShotSetup, SwingDrive, SwingStance } from "./types";
+import { add, cross, length, scale, sub, vec3, type Vec3 } from "../math/vec3";
+import type { BallState, World } from "../types";
+import { planDownswing, scanDownswing, type DownswingInput, type PlannedDownswing } from "./downswing";
+import type { ShotSetup, SwingDrive, SwingShape, SwingStance } from "./types";
 
 /**
  * Gap (m) between the face and the striker's sunk surface at contact (design §5.2 step 4). Numerical, not physical:
@@ -36,13 +41,17 @@ import type { ShotSetup, SwingDrive, SwingStance } from "./types";
 export const START_GAP = 1e-6;
 
 /**
- * The longest lead-in (s): how early an action may be timed (design §5.2 step 8), and how far back swingApproach
- * looks. A modelling bound, not physical: the rigid pendulum's backswing is not credible much further back.
+ * The longest lead-in (s): how early the impact may start, for an early action or a downswing meeting the turf
+ * (P2b.2b.2a design §3.5). A modelling bound, not physical: a head on the lawn that long before the ball is a gross
+ * mis-hit the impact cannot afford. Provisional, to be confirmed against the sourced downswing times.
  */
-export const MAX_LEAD = 0.06;
+export const MAX_LEAD = 0.15;
 
-/** Spacing (s) of swingApproach's samples. Numerical: 0.5 ms moves a 3 m/s head 1.5 mm. */
-const APPROACH_STEP = 5e-4;
+/**
+ * How long (s) before the downswing first meets the turf the impact starts (P2b.2b.2a design §3.5). Numerical, not
+ * physical: 5 ms of open steps before the head–turf pair closes.
+ */
+export const TURF_MARGIN = 0.005;
 
 /** The engine's face: wood (reference/mallet.json), with the sourced face–ball contact time. */
 const WOOD: FaceMaterial = {
@@ -58,7 +67,6 @@ const STANCE_NUMBERS: readonly (keyof SwingStance)[] = ["lean", "top", "bottom",
 const DRIVE_NUMBERS: readonly Exclude<keyof SwingDrive, "mode">[] = [
     "speedGain",
     "window",
-    "handShare",
     "handGain",
     "handWindow",
     "handDrop",
@@ -67,6 +75,9 @@ const DRIVE_NUMBERS: readonly Exclude<keyof SwingDrive, "mode">[] = [
     "groundDepth",
     "guideEffort",
 ];
+
+/** A shape's scalar numbers always read, each checked finite by name (handAngle only when read: design §3.2). */
+const SHAPE_NUMBERS: readonly ("pendulumShare" | "defaultIntensity")[] = ["pendulumShare", "defaultIntensity"];
 
 function fail(message: string): never {
     throw new RangeError(message);
@@ -96,57 +107,59 @@ function grip(value: number, name: string): void {
     }
 }
 
-function effort(value: number, name: string): void {
+function unit(value: number, name: string): void {
     if (!(value >= 0 && value <= 1)) {
         fail(`${name} must lie in [0, 1] (got ${value})`);
     }
 }
 
-/**
- * The contact state of `setup` on `world` (design §5.2). Throws a RangeError naming the check (design §5.3) for:
- * - a striker absent from the setup, or a stroke type missing from the profile's stance or drive;
- * - a mode other than "swing" or "carry";
- * - a non-finite number, or a non-positive mallet dimension or mass;
- * - top ≤ 0, or top > shaftLength (the top hand off the shaft); bottom outside (0, top); |lean| ≥ 90°;
- * - speed ≤ 0; |drive| > 1; the contact off the face (√(up² + side²) ≥ the head's radius);
- * - window, handWindow or dropTime ≤ 0; speedGain < 0; gripTension or bottomGrip outside (0, 1]; handShare outside
- *   [0, 1]; handDrop < 0; the preset's or the shot's handReach < 0; groundDepth < 0; the preset's or the shot's
- *   guideEffort outside [0, 1]; armMass < 0; reachSlack < 0;
- * - an action timed more than MAX_LEAD early;
- * - the head's lowest point below the turf at contact, or where an early action begins.
- * A swing that meets the turf between its start and the ball is not rejected: the impact simulates it.
- */
-export function buildContact(setup: ShotSetup, world: World): ContactState {
+/** A tempo pair: both positive, the fast no slower than the slow. */
+function tempos(slow: number, fast: number, slowName: string, fastName: string): void {
+    positive(slow, slowName);
+    positive(fast, fastName);
+    if (fast > slow) {
+        fail(`${fastName} must not exceed ${slowName} (got ${fast} > ${slow})`);
+    }
+}
+
+/** Checks `setup` (see planStroke). */
+function validate(setup: ShotSetup): void {
     const { stroke, profile } = setup;
-    const striker = setup.balls[setup.striker];
-    if (!striker) {
+    if (!setup.balls[setup.striker]) {
         fail(`striker ${setup.striker} is not in the setup`);
     }
     const { type, timing } = stroke;
     const stance = profile.stance[type];
     const push = profile.drive[type];
+    const shape = profile.shape[type];
     if (!stance) {
         fail(`profile.stance has no entry for ${type}`);
     }
     if (!push) {
         fail(`profile.drive has no entry for ${type}`);
     }
+    if (!shape) {
+        fail(`profile.shape has no entry for ${type}`);
+    }
     if (push.mode !== "swing" && push.mode !== "carry") {
         fail(`profile.drive.${type}.mode must be "swing" or "carry" (got ${String(push.mode)})`);
     }
     finiteNumber(stroke.aim, "stroke.aim");
-    finiteNumber(stroke.speed, "stroke.speed");
+    finiteNumber(stroke.backswing, "stroke.backswing");
     finiteNumber(stroke.drive, "stroke.drive");
     finiteNumber(stroke.contact.up, "stroke.contact.up");
     finiteNumber(stroke.contact.side, "stroke.contact.side");
     finiteNumber(timing.arc, "stroke.timing.arc");
     finiteNumber(timing.hands, "stroke.timing.hands");
     finiteNumber(timing.dip, "stroke.timing.dip");
-    if (stroke.handReach !== undefined) {
-        finiteNumber(stroke.handReach, "stroke.handReach");
-    }
-    if (stroke.guideEffort !== undefined) {
-        finiteNumber(stroke.guideEffort, "stroke.guideEffort");
+    for (const [name, value] of [
+        ["stroke.intensity", stroke.intensity],
+        ["stroke.handReach", stroke.handReach],
+        ["stroke.guideEffort", stroke.guideEffort],
+    ] as const) {
+        if (value !== undefined) {
+            finiteNumber(value, name);
+        }
     }
     for (const key of STANCE_NUMBERS) {
         finiteNumber(stance[key], `profile.stance.${type}.${key}`);
@@ -154,6 +167,18 @@ export function buildContact(setup: ShotSetup, world: World): ContactState {
     for (const key of DRIVE_NUMBERS) {
         finiteNumber(push[key], `profile.drive.${type}.${key}`);
     }
+    const where = `profile.shape.${type}`;
+    for (const key of SHAPE_NUMBERS) {
+        finiteNumber(shape[key], `${where}.${key}`);
+    }
+    if (shape.pendulumShare < 1) {
+        finiteNumber(shape.handAngle, `${where}.handAngle`);
+    }
+    finiteNumber(shape.effort.torqueMax, `${where}.effort.torqueMax`);
+    finiteNumber(shape.effort.tempoSlow, `${where}.effort.tempoSlow`);
+    finiteNumber(shape.effort.tempoFast, `${where}.effort.tempoFast`);
+    finiteNumber(shape.handTempo.slow, `${where}.handTempo.slow`);
+    finiteNumber(shape.handTempo.fast, `${where}.handTempo.fast`);
     const { mallet, body } = profile;
     for (const [key, value] of Object.entries(mallet)) {
         finiteNumber(value, `profile.mallet.${key}`);
@@ -176,8 +201,9 @@ export function buildContact(setup: ShotSetup, world: World): ContactState {
     if (!(Math.abs(lean) < Math.PI / 2)) {
         fail(`profile.stance.${type}.lean must lie within ±90° (got ${lean} rad)`);
     }
-    if (!(stroke.speed > 0)) {
-        fail(`stroke.speed must be positive (got ${stroke.speed})`);
+    positive(stroke.backswing, "stroke.backswing");
+    if (stroke.intensity !== undefined) {
+        unit(stroke.intensity, "stroke.intensity");
     }
     if (!(Math.abs(stroke.drive) <= 1)) {
         fail(`stroke.drive must lie in [-1, 1] (got ${stroke.drive})`);
@@ -193,90 +219,107 @@ export function buildContact(setup: ShotSetup, world: World): ContactState {
     nonNegative(push.speedGain, `profile.drive.${type}.speedGain`);
     grip(gripTension, `profile.stance.${type}.gripTension`);
     grip(bottomGrip, `profile.stance.${type}.bottomGrip`);
-    if (!(push.handShare >= 0 && push.handShare <= 1)) {
-        fail(`profile.drive.${type}.handShare must lie in [0, 1] (got ${push.handShare})`);
-    }
     nonNegative(push.handDrop, `profile.drive.${type}.handDrop`);
     nonNegative(push.handReach, `profile.drive.${type}.handReach`);
     if (stroke.handReach !== undefined) {
         nonNegative(stroke.handReach, "stroke.handReach");
     }
     nonNegative(push.groundDepth, `profile.drive.${type}.groundDepth`);
-    effort(push.guideEffort, `profile.drive.${type}.guideEffort`);
+    unit(push.guideEffort, `profile.drive.${type}.guideEffort`);
     if (stroke.guideEffort !== undefined) {
-        effort(stroke.guideEffort, "stroke.guideEffort");
+        unit(stroke.guideEffort, "stroke.guideEffort");
     }
     nonNegative(body.armMass, "profile.body.armMass");
     nonNegative(body.reachSlack, "profile.body.reachSlack");
-    // Step 8's lead: the earliest action's, none on time.
-    const lead = Math.max(0, 0 - timing.arc, 0 - timing.hands, 0 - timing.dip);
-    if (lead > MAX_LEAD) {
-        fail(`an action is timed more than ${MAX_LEAD} s early (${lead} s before contact)`);
+    unit(shape.pendulumShare, `${where}.pendulumShare`);
+    unit(shape.defaultIntensity, `${where}.defaultIntensity`);
+    if (shape.pendulumShare < 1 && !(shape.handAngle > 0 && shape.handAngle < Math.PI / 2)) {
+        fail(`${where}.handAngle must lie in (0, 90°) when pendulumShare < 1 (got ${shape.handAngle} rad)`);
     }
+    if (push.mode === "swing") {
+        if (!(shape.pendulumShare > 0)) {
+            fail(`${where}.pendulumShare must be positive in swing mode, where the pendulum leads (got 0)`);
+        }
+        const { torqueMax, tempoSlow, tempoFast } = shape.effort;
+        tempos(tempoSlow, tempoFast, `${where}.effort.tempoSlow`, `${where}.effort.tempoFast`);
+        nonNegative(torqueMax, `${where}.effort.torqueMax`);
+    } else {
+        tempos(shape.handTempo.slow, shape.handTempo.fast, `${where}.handTempo.slow`, `${where}.handTempo.fast`);
+    }
+}
 
+/** The hands of `setup`'s stance with its profile's body, and the shot's guide effort, else the preset's. */
+function handsOf(setup: ShotSetup): Hands {
+    const { stroke, profile } = setup;
+    const stance = profile.stance[stroke.type];
+    return {
+        bottom: stance.bottom,
+        gripTension: stance.gripTension,
+        bottomGrip: stance.bottomGrip,
+        armMass: profile.body.armMass,
+        reachSlack: profile.body.reachSlack,
+        guideEffort: stroke.guideEffort ?? profile.drive[stroke.type].guideEffort,
+    };
+}
+
+/** The downswing of a checked `setup` posed at `pose`, at the shot's intensity, else its preset's default. */
+function downswingOf(setup: ShotSetup, pose: ContactPose, hands: Hands, gravity: number): PlannedDownswing {
+    const { stroke, profile } = setup;
+    const shape = profile.shape[stroke.type];
+    const choice: StrokeChoice = {
+        mode: profile.drive[stroke.type].mode,
+        shape,
+        backswing: stroke.backswing,
+        intensity: stroke.intensity ?? shape.defaultIntensity,
+    };
+    return planDownswing(downswingInput(pose, hands, choice, gravity));
+}
+
+/** A stroke's pose at contact (design §5.2 steps 1–5, 10). */
+export interface ContactPose {
+    readonly head: MalletHead;
+    /** Unit, horizontal. */
+    readonly aim: Vec3;
+    /** θ_c = −lean (rad). */
+    readonly thetaContact: number;
+    readonly orientation: Quaternion;
+    readonly headCentre: Vec3;
+    /** The top hand at contact, P_c, and its distance from the socket along the shaft, r (m). */
+    readonly pivot: Vec3;
+    readonly radius: number;
+}
+
+/**
+ * The contact pose of `setup` on `world` (design §5.2): the arc radius r = top (step 1), θ_c = −lean (step 2), the
+ * head pitched rigidly with the shaft (step 3), its face START_GAP short of the sunk striker at (up, side) (step 4),
+ * the pivot r up the shaft from the socket (step 5), and the head a solid cylinder of the profile's mallet (step 10).
+ * Takes the setup as checked (planStroke).
+ */
+export function contactPose(setup: ShotSetup, world: World): ContactPose {
+    const { stroke, profile } = setup;
+    const striker = setup.balls[setup.striker] as BallState;
+    const { lean, top } = profile.stance[stroke.type];
+    const { mallet } = profile;
+    const rho = mallet.headDiameter / 2;
+    const { up, side } = stroke.contact;
     const R = world.ball.radius;
     const surface = world.lawn.surfaceAt(striker.position);
     const sunk = R - (world.ball.mass * world.gravity) / surface.turfStiffness;
     const centre = vec3(striker.position.x, striker.position.y, sunk);
-    // Steps 1 to 3: the pivot is the top hand, and the head, rigid on the shaft, pitches with it.
     const radius = top;
     const thetaC = 0 - lean;
     const [sa, ca] = sinCos(stroke.aim);
     const aim = vec3(ca, sa, 0);
     const orientation = swingOrientation(aim, thetaC);
-    // Step 4: f the face's outward normal (body x), its upward axis body z, `side` along body y (left of aim).
+    // f the face's outward normal (body x), its upward axis body z, `side` along body y (left of aim).
     const face = rotate(orientation, vec3(1, 0, 0));
     const upward = rotate(orientation, vec3(0, 0, 1));
     const left = rotate(orientation, vec3(0, 1, 0));
     const faceCentre = sub(sub(sub(centre, scale(face, R + START_GAP)), scale(upward, up)), scale(left, side));
     const headCentre = sub(faceCentre, scale(face, mallet.headLength / 2));
     const socket = add(headCentre, scale(upward, rho));
-    // Step 5.
     const [st, ct] = sinCos(thetaC);
     const pivot = sub(socket, scale(sub(scale(aim, st), vec3(0, 0, ct)), radius));
-    // Step 6: |w|²·ω² + 2·(V₀·w)·ω + |V₀|² − speed² = 0 with w = n × (c − pivot); |V₀| ≤ speed, so the larger root is
-    // never negative.
-    const pivotVelocity = scale(aim, push.handShare * stroke.speed);
-    const lever = cross(pitchAxis(aim), sub(headCentre, pivot));
-    const a = dot(lever, lever);
-    const b = dot(pivotVelocity, lever);
-    const c = dot(pivotVelocity, pivotVelocity) - stroke.speed * stroke.speed;
-    const omega0 = (Math.sqrt(b * b - a * c) - b) / a;
-    // Steps 7 and 8, the arc expressed from the start, L before contact.
-    const arc: SwingArc = {
-        pivot: sub(pivot, scale(pivotVelocity, lead)),
-        pivotVelocity,
-        pivotAcceleration: scale(aim, (stroke.drive * push.handGain * stroke.speed) / push.handWindow),
-        handStart: lead + timing.hands,
-        handWindow: push.handWindow,
-        aim,
-        radius,
-        theta0: thetaC - omega0 * lead,
-        omega0,
-        alpha: (stroke.drive * push.speedGain * stroke.speed) / (length(lever) * push.window),
-        arcStart: lead + timing.arc,
-        window: push.window,
-        dip: { start: lead + timing.dip, duration: push.dropTime, depth: push.handDrop },
-        contactAt: lead,
-        mode: push.mode,
-        handReach: stroke.handReach ?? push.handReach,
-        groundDepth: push.groundDepth,
-    };
-    const hands: Hands = {
-        bottom,
-        gripTension,
-        bottomGrip,
-        armMass: body.armMass,
-        reachSlack: body.reachSlack,
-        guideEffort: stroke.guideEffort ?? push.guideEffort,
-    };
-    const drive: TrackDrive = {
-        kind: "track",
-        arc,
-        coupling: { period: HAND_COUPLING.period, dampingRatio: HAND_COUPLING.dampingRatio, relaxAt: lead },
-        hands,
-    };
-    // Step 10.
     const head: MalletHead = {
         mass: mallet.headMass,
         inertia: solidCylinderInertia(mallet.headMass, mallet.headLength, rho),
@@ -284,6 +327,91 @@ export function buildContact(setup: ShotSetup, world: World): ContactState {
         radius: rho,
         socket: vec3(0, 0, rho),
     };
+    return { head, aim, thetaContact: thetaC, orientation, headCentre, pivot, radius };
+}
+
+/** The stroke's choices the downswing needs (design §3): its mode and shape, the backswing (m) and the intensity. */
+export interface StrokeChoice {
+    readonly mode: StrokeMode;
+    readonly shape: SwingShape;
+    readonly backswing: number;
+    readonly intensity: number;
+}
+
+/**
+ * The downswing's input for `pose` and `choice` (design §3.1): the pendulum of the swung body (the head and `hands`'
+ * arm mass at the top grip) under `gravity`, ℓ_h = ρ + r.
+ */
+export function downswingInput(pose: ContactPose, hands: Hands, choice: StrokeChoice, gravity: number): DownswingInput {
+    const body = swungBody(pose.head, hands, pose.radius);
+    return {
+        mode: choice.mode,
+        aim: pose.aim,
+        thetaContact: pose.thetaContact,
+        pivot: pose.pivot,
+        lever: pose.head.socket.z + pose.radius,
+        pendulum: pendulumOf(pose.head, body, pose.radius, gravity),
+        shape: choice.shape,
+        backswing: choice.backswing,
+        intensity: choice.intensity,
+    };
+}
+
+/** The head's planned speed at contact (design §3.4): |V_c + ω₀·n × (c − P_c)|. */
+export function poseSpeed(pose: ContactPose, planned: PlannedDownswing): number {
+    const lever = cross(pitchAxis(pose.aim), sub(pose.headCentre, pose.pivot));
+    return length(add(planned.handsVelocity, scale(lever, planned.omega)));
+}
+
+/** The downswing's closest approach to the turf before contact (P2b.2b.2a design §3.5). */
+export interface SwingApproach {
+    /** The head's lowest clearance above the turf (m); negative where it is in it. */
+    readonly clearance: number;
+    /** When, in s before the planned contact. */
+    readonly before: number;
+}
+
+/** A stroke planned (design §3, §5.2): its contact state, its approach and its planned contact speed (m/s). */
+export interface StrokePlan {
+    readonly contact: ContactState;
+    readonly approach: SwingApproach;
+    readonly contactSpeed: number;
+}
+
+/**
+ * Plans `setup` on `world` (P2b.2b.1 design §5.2; P2b.2b.2a design §3): the contact state, from one scan of the
+ * downswing the approach, and the planned contact speed. Throws a RangeError naming the check for:
+ * - a striker absent from the setup, or a stroke type missing from the profile's stance, drive or shape;
+ * - a mode other than "swing" or "carry";
+ * - a non-finite number, or a non-positive mallet dimension or mass;
+ * - top ≤ 0, or top > shaftLength; bottom outside (0, top); |lean| ≥ 90°;
+ * - backswing ≤ 0; an intensity outside [0, 1]; |drive| > 1; the contact off the face;
+ * - window, handWindow or dropTime ≤ 0; speedGain < 0; gripTension or bottomGrip outside (0, 1]; handDrop < 0; the
+ *   preset's or the shot's handReach < 0; groundDepth < 0; the preset's or the shot's guideEffort outside [0, 1];
+ *   armMass < 0; reachSlack < 0;
+ * - pendulumShare or defaultIntensity outside [0, 1]; handAngle outside (0, 90°) when pendulumShare < 1 (neither read
+ *   nor checked otherwise); in swing mode a pendulumShare of 0, an effort tempo ≤ 0 or tempoFast > tempoSlow, or
+ *   torqueMax < 0; in carry mode a hands' tempo ≤ 0 or fast > slow;
+ * - the downswing's (downswing.ts): a backswing beyond MAX_BACK_ANGLE, a non-positive effective inertia, a stall or a
+ *   fall beyond MAX_FALL;
+ * - an action timed more than MAX_LEAD early, or a downswing meeting the turf more than MAX_LEAD − TURF_MARGIN before
+ *   contact;
+ * - the head's lowest point below the turf at contact, or where the impact starts.
+ * A downswing that meets the turf before the ball is not rejected: the impact starts before it and simulates it
+ * (design §3.5).
+ */
+export function planStroke(setup: ShotSetup, world: World): StrokePlan {
+    validate(setup);
+    const { stroke, profile } = setup;
+    const { type, timing } = stroke;
+    const push = profile.drive[type];
+    // Step 4's lead: the earliest action's, none on time.
+    const actions = Math.max(0, 0 - timing.arc, 0 - timing.hands, 0 - timing.dip);
+    if (actions > MAX_LEAD) {
+        fail(`an action is timed more than ${MAX_LEAD} s early (${actions} s before contact)`);
+    }
+    const pose = contactPose(setup, world);
+    const { head, aim, radius, pivot, orientation, headCentre } = pose;
     const still = vec3(0, 0, 0);
     const atContact = headLowestPoint(
         { position: headCentre, orientation, velocity: still, angularVelocity: still },
@@ -292,60 +420,90 @@ export function buildContact(setup: ShotSetup, world: World): ContactState {
     if (atContact < 0) {
         fail(`the head is in the turf at contact: its lowest point is ${0 - atContact} m below it`);
     }
-    const start = headOnPath(prepareTrack(drive, head, world.gravity), head, 0);
+    const hands = handsOf(setup);
+    const planned = downswingOf(setup, pose, hands, world.gravity);
+    const contactSpeed = poseSpeed(pose, planned);
+    const scan = scanDownswing(planned.downswing, head, aim, radius);
+    // Step 4's lead: the earliest action's, or TURF_MARGIN before the downswing first meets the turf if earlier.
+    const turf = scan.grounded === null ? 0 : TURF_MARGIN - scan.grounded;
+    if (turf > MAX_LEAD) {
+        fail(
+            `the downswing meets the turf ${0 - (scan.grounded as number)} s before contact, so the impact would ` +
+                `start more than ${MAX_LEAD} s early: a gross mis-hit`,
+        );
+    }
+    const lead = Math.max(actions, turf);
+    const { omega: omega0, handsVelocity } = planned;
+    const lever = length(cross(pitchAxis(aim), sub(headCentre, pivot)));
+    // Steps 3 and 4, the arc expressed from the start, L before contact.
+    const arc: SwingArc = {
+        pivot: sub(pivot, scale(handsVelocity, lead)),
+        pivotVelocity: handsVelocity,
+        pivotAcceleration: scale(aim, (stroke.drive * push.handGain * contactSpeed) / push.handWindow),
+        handStart: lead + timing.hands,
+        handWindow: push.handWindow,
+        aim,
+        radius,
+        theta0: pose.thetaContact - omega0 * lead,
+        omega0,
+        alpha: (stroke.drive * push.speedGain * contactSpeed) / (lever * push.window),
+        arcStart: lead + timing.arc,
+        window: push.window,
+        dip: { start: lead + timing.dip, duration: push.dropTime, depth: push.handDrop },
+        contactAt: lead,
+        mode: push.mode,
+        handReach: stroke.handReach ?? push.handReach,
+        groundDepth: push.groundDepth,
+        downswing: planned.downswing,
+    };
+    const drive: TrackDrive = {
+        kind: "track",
+        arc,
+        coupling: { period: HAND_COUPLING.period, dampingRatio: HAND_COUPLING.dampingRatio, relaxAt: lead },
+        hands,
+    };
+    // t = 0 is at or before the pendulum's window (arcStart = L + the arc's timing ≥ 0), so no free table is read.
+    const start = headOnPath(prepareTrack(drive, head, world.gravity, false), head, 0);
+    // The lead starts the impact before the downswing's first sample in the turf, but a start before the release holds
+    // the head at the top: a short downswing whose top lies in the turf starts there.
     const clearance = headLowestPoint(start, head);
     if (clearance < 0) {
         fail(
-            `the head is in the turf ${lead} s before contact, where the earliest action begins: its lowest point is ` +
+            `the head is in the turf ${lead} s before contact, where the impact starts: its lowest point is ` +
                 `${0 - clearance} m below it (the stance is too low for that timing)`,
         );
     }
-    return { head, face: WOOD, ...start, drive };
+    return {
+        contact: { head, face: WOOD, ...start, drive },
+        approach: { clearance: scan.clearance, before: scan.before },
+        contactSpeed,
+    };
 }
 
-/** The coasting path's closest approach to the turf before contact (design §5.2 step 9). */
-export interface SwingApproach {
-    /** The head's lowest clearance above the turf (m); negative where it would have dug in. */
-    readonly clearance: number;
-    /** When, in s before the planned contact. */
-    readonly before: number;
+/** The contact state of `setup` on `world` (planStroke, whose checks it throws). */
+export function buildContact(setup: ShotSetup, world: World): ContactState {
+    return planStroke(setup, world).contact;
 }
 
 /**
- * How close the head's coasting path comes to the turf in the MAX_LEAD before the planned contact of a tracked contact
- * state, sampled every APPROACH_STEP. Every action is removed: no window's change and no dip, and each window and the
- * dip begin at the planned contact, so every sample (all at or before it) lies on the path's coasting branch whatever
- * the mode (a carry's slowing pendulum, a swing's free one and the reach all begin after it). A swing is simulated only
- * from its earliest action (design §5.2 step 8), so this reports the dig an on-time low swing would have made.
+ * The planned contact speed (m/s) of `setup` on `world` (design §3.4): the pose and the downswing only, no contact
+ * state built. Throws planStroke's checks of the setup and the downswing's.
+ */
+export function plannedSpeed(setup: ShotSetup, world: World): number {
+    validate(setup);
+    const pose = contactPose(setup, world);
+    return poseSpeed(pose, downswingOf(setup, pose, handsOf(setup), world.gravity));
+}
+
+/**
+ * How close a tracked contact state's downswing comes to the turf before the planned contact (design §3.5): the
+ * scan planStroke makes. Throws for a contact state with no downswing.
  */
 export function swingApproach(contact: ContactState): SwingApproach {
-    if (contact.drive.kind !== "track") {
-        fail("swingApproach needs a tracked contact state");
+    const arc = contact.drive.kind === "track" ? contact.drive.arc : undefined;
+    if (arc?.downswing === undefined) {
+        fail("swingApproach needs a tracked contact state with a downswing");
     }
-    const { arc } = contact.drive;
-    const still = vec3(0, 0, 0);
-    const coasting: TrackDrive = {
-        ...contact.drive,
-        arc: {
-            ...arc,
-            alpha: 0,
-            pivotAcceleration: still,
-            arcStart: arc.contactAt,
-            handStart: arc.contactAt,
-            dip: { ...arc.dip, start: arc.contactAt, depth: 0 },
-        },
-    };
-    const track = prepareTrack(coasting, contact.head, 0);
-    let clearance = Infinity;
-    let before = 0;
-    const samples = Math.round(MAX_LEAD / APPROACH_STEP);
-    for (let k = 0; k <= samples; k++) {
-        const back = k * APPROACH_STEP;
-        const z = headLowestPoint(headOnPath(track, contact.head, arc.contactAt - back), contact.head);
-        if (z < clearance) {
-            clearance = z;
-            before = back;
-        }
-    }
+    const { clearance, before } = scanDownswing(arc.downswing, contact.head, arc.aim, arc.radius);
     return { clearance, before };
 }

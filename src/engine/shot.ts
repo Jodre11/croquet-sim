@@ -6,25 +6,42 @@
 import { CONTACT_TOLERANCE } from "./detect";
 import { judgeFaults, type FaultReport, type StrokeContext } from "./faults";
 import { ballPairKey } from "./impact/contacts";
-import { simulateImpact } from "./impact/simulateImpact";
+import { simulateImpact, simulateStroke } from "./impact/simulateImpact";
 import type { ContactState, ImpactResult } from "./impact/types";
 import { sinCos } from "./math/elementary";
 import { horizontal, length, normalize, sub, vec3 } from "./math/vec3";
 import { simulateFreeMotion } from "./simulate";
-import { buildContact, swingApproach, type SwingApproach } from "./swing/buildContact";
+import { planStroke, type SwingApproach } from "./swing/buildContact";
+import { strokeTrajectory, type SwingTrajectory } from "./swing/trajectory";
 import { CROQUET_STROKES, type ShotSetup } from "./swing/types";
 import { BALL_IDS, type BallId, type BallState, type ShotResult, type World } from "./types";
 import { defaultWorld, validateWorld } from "./world";
 
+/** simulateShot's options (P2b.2b.2a design §5.1). */
+export interface ShotOptions {
+    /**
+     * Integrate the follow-through and return the whole stroke's trajectory (default false). It costs up to a second
+     * of tracked steps, which the P5 budget does not afford on every shot.
+     */
+    readonly trajectory?: boolean;
+}
+
 /** Everything a shot produced, stage by stage (design §6.1). */
 export interface ShotOutcome {
     readonly contact: ContactState;
-    /** The coasting path's lowest clearance over the turf in the 60 ms before contact, and when (design §5.2). */
+    /** The downswing's lowest clearance over the turf before contact, and when (P2b.2b.2a design §3.5). */
     readonly approach: SwingApproach;
+    /**
+     * The head's planned speed at contact (m/s; P2b.2b.2a design §3.4), from the contact-free downswing.
+     * `contact.velocity` is the head's where the impact starts, a lead before contact.
+     */
+    readonly contactSpeed: number;
     readonly context: StrokeContext;
     readonly impact: ImpactResult;
     readonly faults: FaultReport;
     readonly motion: ShotResult;
+    /** The whole stroke from the backswing's top to the finish, with `trajectory: true` (P2b.2b.2a design §4.3). */
+    readonly trajectory?: SwingTrajectory;
 }
 
 function fail(message: string): never {
@@ -120,24 +137,41 @@ export function strokeContext(setup: ShotSetup, impact: ImpactResult): StrokeCon
 }
 
 /**
- * Simulates a whole shot (design §6.1): checks the setup, then runs buildContact, swingApproach, simulateImpact,
- * strokeContext, judgeFaults and simulateFreeMotion(impact.handover) in that order. `world` defaults to
- * defaultWorld(setup.lawnSpeed). Throws the named RangeError of whichever stage rejects the input: a lawn speed that
- * is not positive or that the default world cannot use, a setup check (design §6.2), the swing model's checks, or the
- * impact's.
+ * Simulates a whole shot (design §6.1; P2b.2b.2a design §5.1): checks the setup, then runs planStroke, simulateImpact
+ * (simulateStroke with `trajectory`), strokeContext, judgeFaults and simulateFreeMotion(impact.handover) in that
+ * order, and with `trajectory` stitches the whole stroke. A passed `world` wins: `setup.lawnSpeed` is then neither
+ * read nor checked; without one it must suit defaultWorld (P2b.2b.2a design §9). Throws the named RangeError of
+ * whichever stage rejects the input: a lawn speed that is not positive or that the default world cannot use, a setup
+ * check (design §6.2), the swing model's checks, or the impact's.
  */
-export function simulateShot(setup: ShotSetup, world?: World): ShotOutcome {
-    if (!(setup.lawnSpeed > 0) || !Number.isFinite(setup.lawnSpeed)) {
+export function simulateShot(setup: ShotSetup, world?: World, options: ShotOptions = {}): ShotOutcome {
+    if (world === undefined && (!(setup.lawnSpeed > 0) || !Number.isFinite(setup.lawnSpeed))) {
         fail(`lawnSpeed must be a positive finite number (got ${setup.lawnSpeed})`);
     }
     const w = world ?? defaultWorld(setup.lawnSpeed);
     validateWorld(w);
     validateSetup(setup, w);
-    const contact = buildContact(setup, w);
-    const approach = swingApproach(contact);
-    const impact = simulateImpact(contact, setup.balls, w);
+    const { contact, approach, contactSpeed } = planStroke(setup, w);
+    let impact: ImpactResult;
+    let trajectory: SwingTrajectory | undefined;
+    if (options.trajectory === true) {
+        const stroke = simulateStroke(contact, setup.balls, w);
+        impact = stroke.result;
+        trajectory = strokeTrajectory(contact, stroke.follow, w.gravity);
+    } else {
+        impact = simulateImpact(contact, setup.balls, w);
+    }
     const context = strokeContext(setup, impact);
     const faults = judgeFaults(context, impact);
     const motion = simulateFreeMotion(impact.handover, w);
-    return { contact, approach, context, impact, faults, motion };
+    return {
+        contact,
+        approach,
+        contactSpeed,
+        context,
+        impact,
+        faults,
+        motion,
+        ...(trajectory === undefined ? {} : { trajectory }),
+    };
 }

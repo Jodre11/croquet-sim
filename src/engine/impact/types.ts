@@ -45,6 +45,31 @@ export interface Dip {
 }
 
 /**
+ * The contact-free downswing (P2b.2b.2a design §3), in s from the planned contact: from the release t_r < 0, the
+ * pendulum and the hands at rest at the backswing's top, to contact. The hands' path is P(σ) = P_b + Δ_h·σ² +
+ * Δ_z·(3σ² − 2σ³), σ from 0 at the top to 1 at contact. Swing mode tabulates θ, ω and α every FREE_STEP from the
+ * release, its last sample at contact, with σ = (θ − θ_top)/span; carry mode is closed-form, σ = (t − t_r)/tempo and
+ * θ = θ_top + span·σ².
+ */
+export interface Downswing {
+    /** t_r (s from contact, negative). */
+    readonly release: number;
+    /** θ at the top, and θ_c − θ_top (rad, ≥ 0). */
+    readonly thetaTop: number;
+    readonly span: number;
+    /** The hands at the top P_b, and Δ = P_c − P_b split into its horizontal part Δ_h and vertical part Δ_z (m). */
+    readonly handsTop: Vec3;
+    readonly across: Vec3;
+    readonly drop: Vec3;
+    /** Carry mode's hands' tempo T_h (s), with release = −tempo; null in swing mode. */
+    readonly tempo: number | null;
+    /** Swing mode's table (rad, rad/s, rad/s²); empty in carry mode. */
+    readonly theta: readonly number[];
+    readonly omega: readonly number[];
+    readonly alpha: readonly number[];
+}
+
+/**
  * The path the hands drive the mallet along (design §3.1), as two arcs: the pendulum, the mallet swinging about the
  * top hand (the pivot) in a vertical plane; and the hands' path through space, the pivot moving in that plane (leaning,
  * pushing forward, the body's weight) and dipping. Each runs at its initial rate until its window and changes rate
@@ -80,6 +105,14 @@ export interface SwingArc {
     readonly handReach: number;
     /** Carry only: the head's lowest point ends this far below the turf (m). */
     readonly groundDepth: number;
+    /**
+     * The downswing before contactAt (P2b.2b.2a design §3.5): before each window begins, and before contactAt, the
+     * pendulum and the hands follow it. Absent, the path coasts at ω₀ and V₀ (P2b.2b.1). The table's end state must
+     * equal the arc's contact state: θ at t = 0 equals theta0 + omega0·contactAt and ω equals omega0, and the hands
+     * at contact equal pivot + pivotVelocity·contactAt with velocity pivotVelocity (`planStroke` builds it so); a
+     * hand-built arc that breaks this has a velocity jump at contact.
+     */
+    readonly downswing?: Downswing;
 }
 
 /**
