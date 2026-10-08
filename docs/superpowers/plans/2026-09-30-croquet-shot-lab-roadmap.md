@@ -895,7 +895,8 @@ the Solomon grip with a 42" shaft and a 13.5" head, is 5'10"–5'11" with a long
   - **Test figures:** the rolls' `CANONICAL_CLEARANCE` and `CANONICAL_APPROACH` are 29.9165, 37.0506 and 40.1551 mm
     (each the analytic h₀ + (R + `START_GAP`)·sin α − ρ·cos α within 0.04 µm). The trajectory test's comment
     re-measured the head's acceleration as 38.5 to 196.9 m/s² ("~197", was "~205"); its 19.8 µm keeps "about
-    20 µm". Gugan 4 was re-fetched: it now hashes `de69699e…` (the full SHA-256 in `reference/sources/README.md`).
+    20 µm". Gugan 4 was re-fetched: it now hashes `de69699e…`. That raw digest included the page's view counter and
+    could not be reproduced; `reference/sources/README.md` now gives digests with the counter removed.
   - **What still waits for P2b.2b.2b.2 and P2b.2b.2b.3:** the dead stop and the follow-through re-hit of the
     canonical full roll are gone with the lean alone. The re-catches remain and on the pass and half rolls have grown
     (11 and 7 face intervals), and the ratios stay high against coaching (half 2.57, full 1.84); the half roll's
