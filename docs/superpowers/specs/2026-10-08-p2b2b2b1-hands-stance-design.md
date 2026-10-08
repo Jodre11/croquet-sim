@@ -39,6 +39,9 @@ every lean: they are P2b.2b.2b.2's.
   probes' sweeps solve their backswing through `backswingFor`, whose memo now keys on `up`, so a swept run can move at
   rounding level from the solver alone (§1 exit criterion 3, §5.2).
 - **Test support.** `testProfile` takes a lean or a `handsAhead`, not both.
+- **The success criterion** (user, after the slow-motion review). "No chatter" above is dropped: repeated face touches
+  during the push are desirable so long as the angle holds. The roadmap's "P2b.2b.2b decisions and findings
+  (2026-10-08)" records the roll as played, which is P2b.2b.2b.2's target.
 - **Findings from the run.** The outcome embeds `engineVersion`, so after the 0.8.0 bump the upright presets' digest
   is compared with the version normalised ("0.8.0" read as "0.7.0"); so compared it is identical over 81 runs, and no
   upright-preset line of either probe changed, not even in the swept rows. The AC stop's lean round-trips to 3e-17 rad
