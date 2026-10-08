@@ -28,7 +28,7 @@ import {
     swungBody,
 } from "../impact/track";
 import type { ContactState, FaceMaterial, Hands, MalletHead, StrokeMode, SwingArc, TrackDrive } from "../impact/types";
-import { sinCos } from "../math/elementary";
+import { atan2, sinCos } from "../math/elementary";
 import { add, cross, length, scale, sub, vec3, type Vec3 } from "../math/vec3";
 import type { BallState, World } from "../types";
 import { planDownswing, scanDownswing, type DownswingInput, type PlannedDownswing } from "./downswing";
@@ -120,6 +120,45 @@ function tempos(slow: number, fast: number, slowName: string, fastName: string):
     if (fast > slow) {
         fail(`${fastName} must not exceed ${slowName} (got ${fast} > ${slow})`);
     }
+}
+
+/** The rigid geometry between a stance's top hand and its lean (P2b.2b.2b.1 design §3.2): R, L and ρ (m). */
+export interface StanceGeometry {
+    readonly ballRadius: number;
+    readonly headLength: number;
+    readonly headRadius: number;
+}
+
+/**
+ * [A, B] (P2b.2b.2b.1 design §3.2): A = ρ + top − up, B = R + START_GAP + L/2. One operation order serves both
+ * directions, so a lean derived by handsAheadFor reads back through stanceLean with the same bits of A and B.
+ */
+function stanceArms(top: number, up: number, geometry: StanceGeometry): readonly [number, number] {
+    const { ballRadius, headLength, headRadius } = geometry;
+    return [headRadius + top - up, ballRadius + START_GAP + headLength / 2];
+}
+
+/**
+ * The top hand's horizontal distance (m) ahead of the striker's ball's centre along aim at contact (P2b.2b.2b.1
+ * design §3.2): X = A·sin α − B·cos α. The shaft leans `lean` (α, rad, positive pitching the face down), the top
+ * hand is `top` (m) up the shaft from the socket, and the ball is met `up` (m) above the face's centre.
+ */
+export function handsAheadFor(lean: number, top: number, up: number, geometry: StanceGeometry): number {
+    const [a, b] = stanceArms(top, up, geometry);
+    const [s, c] = sinCos(lean);
+    return a * s - b * c;
+}
+
+/**
+ * The shaft's lean (rad) at contact that puts the top hand `handsAhead` (m) ahead of the ball's centre: handsAheadFor
+ * inverted on the branch where the hands rise with the lean (P2b.2b.2b.1 design §3.2). With
+ * S = √(A² + (B − X)·(B + X)), α = atan2(A·X + B·S, A·S − B·X). At X = −B the product vanishes, so an upright shaft
+ * reads back as exactly 0. `handsAhead` must lie in (−D, A), with D² = A² + B²; planStroke checks it.
+ */
+export function stanceLean(handsAhead: number, top: number, up: number, geometry: StanceGeometry): number {
+    const [a, b] = stanceArms(top, up, geometry);
+    const s = Math.sqrt(a * a + (b - handsAhead) * (b + handsAhead));
+    return atan2(a * handsAhead + b * s, a * s - b * handsAhead);
 }
 
 /** Checks `setup` (see planStroke). */

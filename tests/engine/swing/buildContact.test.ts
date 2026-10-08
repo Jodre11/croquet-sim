@@ -20,9 +20,11 @@ import {
     buildContact,
     contactPose,
     downswingInput,
+    handsAheadFor,
     planStroke,
     plannedSpeed,
     poseSpeed,
+    stanceLean,
     swingApproach,
 } from "../../../src/engine/swing/buildContact";
 import { planDownswing, scanDownswing } from "../../../src/engine/swing/downswing";
@@ -726,5 +728,57 @@ describe("the lead (design §3.5)", () => {
             expect(dot(back, along), `aim ${aim}`).toBeLessThan(-0.1);
             expect(length(cross(back, along)), `aim ${aim}`).toBeLessThan(1e-9);
         }
+    });
+});
+
+describe("the stance's geometry (P2b.2b.2b.1 design §3.2, §3.3)", () => {
+    /** The test ball and head: R, L and ρ. */
+    const GEOMETRY = { ballRadius: R, headLength: LENGTH, headRadius: RHO };
+    /** B = R + START_GAP + L/2, in the engine's operation order. */
+    const B = R + START_GAP + LENGTH / 2;
+
+    it("reads every lean back from the top hand's position, within 1e-12 rad", () => {
+        for (let degrees = -30; degrees <= 80; degrees += 5) {
+            for (const top of [0.3, 0.45, 0.6, 0.75, 0.9]) {
+                for (const up of [-0.03, -0.015, 0, 0.015, 0.03]) {
+                    const lean = degrees * DEG;
+                    const back = stanceLean(handsAheadFor(lean, top, up, GEOMETRY), top, up, GEOMETRY);
+                    expect(Math.abs(back - lean), `${degrees}° at top ${top} m, up ${up} m`).toBeLessThan(1e-12);
+                }
+            }
+        }
+    });
+
+    it("puts an upright shaft's top hand B behind the ball's centre and reads it back as exactly 0", () => {
+        // Design §3.2: S² is formed as A² + (B − X)(B + X), so at X = −B it is fl(A²), S is A, and the lean's sine is
+        // exactly 0. This keeps the upright presets bit-identical (exit criterion 3).
+        for (const top of [0.3, 0.6, 0.9]) {
+            for (const up of [-0.03, 0, 0.03]) {
+                const hands = handsAheadFor(0, top, up, GEOMETRY);
+                expect(hands, `top ${top} m, up ${up} m`).toBe(0 - B);
+                expect(stanceLean(hands, top, up, GEOMETRY), `top ${top} m, up ${up} m`).toBe(0);
+            }
+        }
+    });
+
+    it("places the top hand at X = A·sin α − B·cos α, A = ρ + top − up", () => {
+        const [top, up, lean] = [0.6, 0.01, 0.5];
+        const A = RHO + top - up;
+        expect(handsAheadFor(lean, top, up, GEOMETRY)).toBeCloseTo(A * Math.sin(lean) - B * Math.cos(lean), 14);
+    });
+
+    it("leans further under the same hands as the contact rises, by sin α/(A·cos α + B·sin α) per metre", () => {
+        // Review focus 4 (design §3.3): at fixed X, dα = −sin α·dA/(A·cos α + B·sin α), and dA = −d(up). A higher
+        // contact steepens a forward lean and leans a backward one further back; an upright shaft stays upright.
+        const top = 0.6;
+        const h = 1e-5;
+        for (const lean of [-0.1, 0.5]) {
+            const hands = handsAheadFor(lean, top, 0, GEOMETRY);
+            const slope = (stanceLean(hands, top, h, GEOMETRY) - stanceLean(hands, top, 0 - h, GEOMETRY)) / (2 * h);
+            const A = RHO + top;
+            const expected = Math.sin(lean) / (A * Math.cos(lean) + B * Math.sin(lean));
+            expect(slope / expected, `lean ${lean} rad`).toBeCloseTo(1, 6);
+        }
+        expect(stanceLean(handsAheadFor(0, top, 0, GEOMETRY), top, 0.01, GEOMETRY)).toBe(0);
     });
 });
