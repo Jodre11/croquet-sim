@@ -26,7 +26,7 @@ import {
     swingApproach,
 } from "../../../src/engine/swing/buildContact";
 import { planDownswing, scanDownswing } from "../../../src/engine/swing/downswing";
-import { ON_TIME, defaultProfile } from "../../../src/engine/swing/profile";
+import { ON_TIME, defaultProfile, shapeOf } from "../../../src/engine/swing/profile";
 import {
     STROKE_TYPES,
     type ShotSetup,
@@ -37,6 +37,7 @@ import {
 import type { BallState } from "../../../src/engine/types";
 import { defaultWorld } from "../../../src/engine/world";
 import { contactReference, malletReference, swingReference } from "../../../src/reference/index";
+import { ReferenceDataError } from "../../../src/reference/schema";
 import { TEST_BALL, TEST_TURF, ballAt, testWorld } from "../support/fixtures";
 import { TEST_HANDS, mirrorBall, mirrorContact, mirrorQuat, mirrorSpin, mirrorVec, recorder } from "../support/impact";
 import { CANONICAL_CLEARANCE, GC_STOP_GAP, backswingFor, canonicalSetup, testProfile } from "../support/shot";
@@ -440,6 +441,25 @@ describe("defaultProfile", () => {
             }
         }
         expect(STROKE_TYPES.slice(0, 4).map((type) => defaultProfile.shape[type].pendulumShare)).toEqual([1, 1, 1, 1]);
+    });
+
+    it("rejects a swing preset with no effort and a carry preset with no hands' tempo", () => {
+        const drive = swingReference.drive;
+        const roll = swingReference["full-roll"];
+        expect(() => shapeOf("drive", "swing", { ...drive, effort: null })).toThrow(ReferenceDataError);
+        expect(() => shapeOf("drive", "swing", { ...drive, effort: null })).toThrow(/swing\.drive.*tempoSlow/);
+        expect(() => shapeOf("full-roll", "carry", { ...roll, handTempo: null })).toThrow(
+            /swing\.full-roll.*handTempoSlow/,
+        );
+        // The unread member repeats the read one's tempos, a carry preset's effort with no torque.
+        const swung = shapeOf("drive", "swing", { ...drive, handTempo: null });
+        expect(swung.handTempo).toEqual({ slow: swung.effort.tempoSlow, fast: swung.effort.tempoFast });
+        const carried = shapeOf("full-roll", "carry", { ...roll, effort: null });
+        expect(carried.effort).toEqual({
+            torqueMax: 0,
+            tempoSlow: carried.handTempo.slow,
+            tempoFast: carried.handTempo.fast,
+        });
     });
 });
 

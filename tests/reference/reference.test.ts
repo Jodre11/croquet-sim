@@ -8,9 +8,13 @@ import {
     lawnReference,
     lawsReference,
     malletReference,
+    readShape,
     SWING_REFERENCE_TYPES,
     swingReference,
+    type SwingReferenceType,
 } from "../../src/reference/index";
+import { ReferenceDataError } from "../../src/reference/schema";
+import swingJson from "../../reference/swing.json";
 import { STROKE_TYPES } from "../../src/engine/swing/types";
 
 describe("reference data", () => {
@@ -227,5 +231,18 @@ describe("swing reference (P2b.2b.2a design §6.1)", () => {
                 expect(handTempo.fast.value, type).toBeCloseTo(handTempo.slow.value / 2, 12);
             }
         }
+    });
+
+    it("rejects an effort or a hands' tempo given only in part, naming the missing key", () => {
+        const without = (type: SwingReferenceType, key: string): unknown => {
+            const entry = (swingJson as Record<string, Record<string, unknown>>)[type] ?? {};
+            return { ...swingJson, [type]: Object.fromEntries(Object.entries(entry).filter(([k]) => k !== key)) };
+        };
+        expect(() => readShape(without("drive", "tempoSlow"), "drive")).toThrow(ReferenceDataError);
+        expect(() => readShape(without("drive", "tempoSlow"), "drive")).toThrow(/swing\.drive\.tempoSlow/);
+        expect(() => readShape(without("full-roll", "handTempoSlow"), "full-roll")).toThrow(
+            /swing\.full-roll\.handTempoSlow/,
+        );
+        expect(readShape(swingJson, "drive")).toEqual(swingReference.drive);
     });
 });

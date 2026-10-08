@@ -257,7 +257,14 @@ function readPairs(entry: unknown, path: string): readonly KinematicPair[] {
     });
 }
 
-function readShape(section: unknown, type: SwingReferenceType): StrokeShapeReference {
+const EFFORT_KEYS: readonly string[] = ["torqueMax", "tempoSlow", "tempoFast"];
+const HAND_TEMPO_KEYS: readonly string[] = ["handTempoSlow", "handTempoFast"];
+
+/**
+ * Stroke type `type`'s entry in the swing section `section` (reference/swing.json). Throws a ReferenceDataError for a
+ * missing or malformed entry, or an effort or hands' tempo given only in part.
+ */
+export function readShape(section: unknown, type: SwingReferenceType): StrokeShapeReference {
     const path = `swing.${type}`;
     if (!has(section, type)) {
         throw new ReferenceDataError(path, "missing");
@@ -283,14 +290,15 @@ function readShape(section: unknown, type: SwingReferenceType): StrokeShapeRefer
         defaultBackswing: readValue(entry, "defaultBackswing", path),
         defaultIntensity: readValue(entry, "defaultIntensity", path),
         defaultSpeed: readValue(entry, "defaultSpeed", path),
-        effort: has(entry, "tempoSlow")
+        // Either member is given whole or not at all: a partial one fails naming the key it lacks.
+        effort: EFFORT_KEYS.some((key) => has(entry, key))
             ? {
                   torqueMax: readValue(entry, "torqueMax", path),
                   tempoSlow: readValue(entry, "tempoSlow", path),
                   tempoFast: readValue(entry, "tempoFast", path),
               }
             : null,
-        handTempo: has(entry, "handTempoSlow")
+        handTempo: HAND_TEMPO_KEYS.some((key) => has(entry, key))
             ? { slow: readValue(entry, "handTempoSlow", path), fast: readValue(entry, "handTempoFast", path) }
             : null,
     };
