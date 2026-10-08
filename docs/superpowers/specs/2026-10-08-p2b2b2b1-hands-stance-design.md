@@ -29,6 +29,26 @@ striker's ball into the turf, the head outruns it, and at the hands' reach the f
 and no re-hit; the pass roll at 34° gives 0.90–1.01. The re-catches at 0.1–0.4 m/s and the turf's throw-back remain at
 every lean: they are P2b.2b.2b.2's.
 
+**Amended 2026-10-08 (plan and implementation).**
+
+- **Exports.** `StanceGeometry`, `handsAheadFor` and `stanceLean` are exports of `buildContact.ts`, not of the
+  engine's API (§2).
+- **Order.** The mechanism landed first, with the old roll leans round-tripped. The rolls then moved to Gugan's
+  leans, with the refit.
+- **Bit-identity.** The upright presets' bit-identity is checked by a full-precision digest on fixed backswings. The
+  probes' sweeps solve their backswing through `backswingFor`, whose memo now keys on `up`, so a swept run can move at
+  rounding level from the solver alone (§1 exit criterion 3, §5.2).
+- **Test support.** `testProfile` takes a lean or a `handsAhead`, not both.
+- **Findings from the run.** The outcome embeds `engineVersion`, so after the 0.8.0 bump the upright presets' digest
+  is compared with the version normalised ("0.8.0" read as "0.7.0"); so compared it is identical over 81 runs, and no
+  upright-preset line of either probe changed, not even in the swept rows. The AC stop's lean round-trips to 3e-17 rad
+  at its canonical `up`, but off-canonical it moves by design (§3.3, about −0.082 rad/m at −4°): −2.4538e-4 rad at
+  `up` −23 mm and +2.4713e-4 rad at −17 mm, the planned speed by at most 4.3e-9 relative, with no run rejected or
+  accepted anew. The refit's `defaultSpeed` (3 against 3.0000000000000004) and the AC stop's `torqueMax` change in
+  the last digit only, fit noise. At Gugan's leans the full roll's dead stop and canonical re-hit are gone, but the
+  pass and half rolls' re-catches grew (11 and 7 face intervals), the full roll's ratio rises to 3.38 at 2 m/s, and
+  the pass roll's sweep now reaches the cap on 14 runs: P2b.2b.2b.2's.
+
 ## 1. Goal and exit criteria
 
 The stance is given in the player's terms. The grips along the shaft stay as they are; the shaft's lean at contact

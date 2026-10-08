@@ -6,7 +6,8 @@
  * - canonical: per preset at its default backswing, with the trajectory: the planned speed, the downswing's time and
  *   lowest clearance (and when), the lead, the impact's length, the finish's time and flags, the head's rise and
  *   travel along aim from contact to the finish (the apex, or the roll's reach), and the coaching ratio against
- *   P2b.2b.1's;
+ *   P2b.2b.1's; then the stance in the player's terms (the top hand ahead of the ball's centre, the lean and the
+ *   point of impact, P2b.2b.2b.1);
  * - fat: the canonical single-ball stroke met higher on the face (the head lower), 2 to 7 mm: the lead, the dig, and
  *   the planned against the real speed at the first face–ball contact;
  * - cost: per preset, planStroke (in swing mode the downswing's table and scan; it skips the free table),
@@ -23,7 +24,7 @@ import { prepareTrack } from "../src/engine/impact/track";
 import type { Downswing, TrackDrive } from "../src/engine/impact/types";
 import { dot, length, sub, type Vec3 } from "../src/engine/math/vec3";
 import { simulateShot, type ShotOutcome } from "../src/engine/shot";
-import { planStroke } from "../src/engine/swing/buildContact";
+import { contactPose, planStroke } from "../src/engine/swing/buildContact";
 import type { StrokeSample, SwingTrajectory } from "../src/engine/swing/trajectory";
 import { STROKE_TYPES, type ShotSetup, type StrokeType } from "../src/engine/swing/types";
 import type { BallId, BallState } from "../src/engine/types";
@@ -69,6 +70,16 @@ function ratio(setup: ShotSetup, outcome: ShotOutcome): number {
     return travelled(croqueted) / travelled(setup.striker);
 }
 
+/** A preset's stance in the player's terms (P2b.2b.2b.1 design §6): the top hand, the lean, the point of impact. */
+function stanceText(setup: ShotSetup): string {
+    const lean = 0 - contactPose(setup, WORLD).thetaContact;
+    const hands = setup.profile.stance[setup.stroke.type].handsAhead;
+    return (
+        `stance: the top hand ${fmt(hands)} m ahead of the ball's centre, lean ${fmt((lean * 180) / Math.PI, 2)}°, ` +
+        `impact ${mm(WORLD.ball.radius * Math.sin(lean))} mm above the centre`
+    );
+}
+
 function speeds(): void {
     console.log("== Planned contact speed (m/s) and downswing time (ms) against backswing, intensity 0 / 0.5 / 1 ==");
     for (const type of STROKE_TYPES) {
@@ -110,6 +121,7 @@ function canonical(): void {
                 `along aim from contact; ratio ${Number.isNaN(r) ? "none" : fmt(r, 2)}` +
                 `${before === undefined ? "" : ` (P2b.2b.1 ${fmt(before, 2)})`}`,
         );
+        console.log(`${"".padEnd(11)} ${stanceText(setup)}`);
     }
 }
 
