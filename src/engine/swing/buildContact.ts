@@ -1,8 +1,9 @@
 /**
  * The swing model (P2b.2b.1 design §5.2; P2b.2b.2a design §3). From a ShotSetup and the world it derives the mallet
  * head, its wooden face, its state where the impact starts and the tracked drive:
- * 1. the contact pose (contactPose): the arc radius r = top, θ_c = −lean, the head pitched rigidly with the shaft, its
- *    face START_GAP short of the sunk striker at (up, side), the pivot r up the shaft;
+ * 1. the contact pose (contactPose): the arc radius r = top, θ_c = −lean, the lean from the top hand's position
+ *    (stanceLean, P2b.2b.2b.1 design §3.2), the head pitched rigidly with the shaft, its face START_GAP short of the
+ *    sunk striker at (up, side), the pivot r up the shaft;
  * 2. the downswing (downswing.ts) from the backswing's top: ω₀ and the hands' V_c at contact, and from them the
  *    planned contact speed;
  * 3. the arcs' changes, against the planned speed: α = drive·speedGain·(speed/ℓ)/window, ℓ the pivot's distance from
@@ -61,7 +62,7 @@ const WOOD: FaceMaterial = {
 };
 
 /** A stance's numbers, each checked finite by name (a missing one included). */
-const STANCE_NUMBERS: readonly (keyof SwingStance)[] = ["lean", "top", "bottom", "gripTension", "bottomGrip"];
+const STANCE_NUMBERS: readonly (keyof SwingStance)[] = ["handsAhead", "top", "bottom", "gripTension", "bottomGrip"];
 
 /** A drive entry's numbers (all but its mode), each checked finite by name. */
 const DRIVE_NUMBERS: readonly Exclude<keyof SwingDrive, "mode">[] = [
@@ -161,8 +162,8 @@ export function stanceLean(handsAhead: number, top: number, up: number, geometry
     return atan2(a * handsAhead + b * s, a * s - b * handsAhead);
 }
 
-/** Checks `setup` (see planStroke). */
-function validate(setup: ShotSetup): void {
+/** Checks `setup` on a world whose ball has radius `ballRadius` (see planStroke). */
+function validate(setup: ShotSetup, ballRadius: number): void {
     const { stroke, profile } = setup;
     if (!setup.balls[setup.striker]) {
         fail(`striker ${setup.striker} is not in the setup`);
@@ -226,7 +227,7 @@ function validate(setup: ShotSetup): void {
     finiteNumber(body.armMass, "profile.body.armMass");
     finiteNumber(body.reachSlack, "profile.body.reachSlack");
 
-    const { lean, top, bottom, gripTension, bottomGrip } = stance;
+    const { handsAhead, top, bottom, gripTension, bottomGrip } = stance;
     positive(top, `profile.stance.${type}.top`);
     if (top > mallet.shaftLength) {
         fail(
@@ -236,9 +237,6 @@ function validate(setup: ShotSetup): void {
     }
     if (!(bottom > 0 && bottom < top)) {
         fail(`profile.stance.${type}.bottom must lie in (0, top) = (0, ${top}) m (got ${bottom})`);
-    }
-    if (!(Math.abs(lean) < Math.PI / 2)) {
-        fail(`profile.stance.${type}.lean must lie within ±90° (got ${lean} rad)`);
     }
     positive(stroke.backswing, "stroke.backswing");
     if (stroke.intensity !== undefined) {
@@ -251,6 +249,15 @@ function validate(setup: ShotSetup): void {
     const { up, side } = stroke.contact;
     if (!(Math.sqrt(up * up + side * side) < rho)) {
         fail(`the contact lies off the face: (${up}, ${side}) m from its centre, whose radius is ${rho} m`);
+    }
+    // A > 0 rests on the contact lying on the face, checked just above (P2b.2b.2b.1 design §3.4).
+    const [a, b] = stanceArms(top, up, { ballRadius, headLength: mallet.headLength, headRadius: rho });
+    const d = Math.sqrt(a * a + b * b);
+    if (!(handsAhead > 0 - d && handsAhead < a)) {
+        fail(
+            `profile.stance.${type}.handsAhead must lie in (−D, A) = (${0 - d}, ${a}) m for its top hand and the ` +
+                `contact's up (got ${handsAhead}): at A the shaft lies flat, at −D the hands leave the stance's branch`,
+        );
     }
     positive(push.window, `profile.drive.${type}.window`);
     positive(push.handWindow, `profile.drive.${type}.handWindow`);
@@ -329,19 +336,20 @@ export interface ContactPose {
 }
 
 /**
- * The contact pose of `setup` on `world` (design §5.2): the arc radius r = top (step 1), θ_c = −lean (step 2), the
- * head pitched rigidly with the shaft (step 3), its face START_GAP short of the sunk striker at (up, side) (step 4),
- * the pivot r up the shaft from the socket (step 5), and the head a solid cylinder of the profile's mallet (step 10).
- * Takes the setup as checked (planStroke).
+ * The contact pose of `setup` on `world` (design §5.2): the arc radius r = top (step 1), θ_c = −lean, the lean from the
+ * top hand's position (step 2; P2b.2b.2b.1 design §3.2), the head pitched rigidly with the shaft (step 3), its face
+ * START_GAP short of the sunk striker at (up, side) (step 4), the pivot r up the shaft from the socket (step 5), and the
+ * head a solid cylinder of the profile's mallet (step 10). Takes the setup as checked (planStroke).
  */
 export function contactPose(setup: ShotSetup, world: World): ContactPose {
     const { stroke, profile } = setup;
     const striker = setup.balls[setup.striker] as BallState;
-    const { lean, top } = profile.stance[stroke.type];
+    const { handsAhead, top } = profile.stance[stroke.type];
     const { mallet } = profile;
     const rho = mallet.headDiameter / 2;
     const { up, side } = stroke.contact;
     const R = world.ball.radius;
+    const lean = stanceLean(handsAhead, top, up, { ballRadius: R, headLength: mallet.headLength, headRadius: rho });
     const surface = world.lawn.surfaceAt(striker.position);
     const sunk = R - (world.ball.mass * world.gravity) / surface.turfStiffness;
     const centre = vec3(striker.position.x, striker.position.y, sunk);
@@ -423,8 +431,10 @@ export interface StrokePlan {
  * - a striker absent from the setup, or a stroke type missing from the profile's stance, drive or shape;
  * - a mode other than "swing" or "carry";
  * - a non-finite number, or a non-positive mallet dimension or mass;
- * - top ≤ 0, or top > shaftLength; bottom outside (0, top); |lean| ≥ 90°;
- * - backswing ≤ 0; an intensity outside [0, 1]; |drive| > 1; the contact off the face;
+ * - top ≤ 0, or top > shaftLength; bottom outside (0, top);
+ * - backswing ≤ 0; an intensity outside [0, 1]; |drive| > 1; the contact off the face; handsAhead outside (−D, A) for
+ *   the stroke's top hand and contact (P2b.2b.2b.1 design §3.4: at A the shaft lies flat, at −D the hands leave the
+ *   stance's branch);
  * - window, handWindow or dropTime ≤ 0; speedGain < 0; gripTension or bottomGrip outside (0, 1]; handDrop < 0; the
  *   preset's or the shot's handReach < 0; groundDepth < 0; the preset's or the shot's guideEffort outside [0, 1];
  *   armMass < 0; reachSlack < 0;
@@ -440,7 +450,7 @@ export interface StrokePlan {
  * (design §3.5).
  */
 export function planStroke(setup: ShotSetup, world: World): StrokePlan {
-    validate(setup);
+    validate(setup, world.ball.radius);
     const { stroke, profile } = setup;
     const { type, timing } = stroke;
     const push = profile.drive[type];
@@ -529,7 +539,7 @@ export function buildContact(setup: ShotSetup, world: World): ContactState {
  * state built. Throws planStroke's checks of the setup and the downswing's.
  */
 export function plannedSpeed(setup: ShotSetup, world: World): number {
-    validate(setup);
+    validate(setup, world.ball.radius);
     const pose = contactPose(setup, world);
     return poseSpeed(pose, downswingOf(setup, pose, handsOf(setup), world.gravity));
 }

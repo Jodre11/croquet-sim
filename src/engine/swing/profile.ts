@@ -4,7 +4,9 @@
  * - Mallet: reference/mallet.json (the head's mass, length and diameter; the 0.9144 m, 36 in, shaft, sourced).
  * - Body: reference/contact.json (`armMass` and `reachSlack`, the prototype's calibration).
  * - Stance: the hands measured from the socket along the shaft, and the leans, after John Riches, Croquet Technique
- *   (Oxford Croquet), quoted per preset below. The swing presets keep the top hand at the top of the handle, 0.805 m
+ *   (Oxford Croquet), quoted per preset below. Each preset is defined by its lean at its typical contact. Its top
+ *   hand's position at contact, the stance's input, is derived from that lean with the reference mallet and ball
+ *   (P2b.2b.2b.1 design §4). The swing presets keep the top hand at the top of the handle, 0.805 m
  *   from the socket (the sourced 35 in grip less the socket's height at address). The bottom hands and the grips are
  *   the prototype's calibration (proto-two-hands, aeadd4c).
  * - Drive: the prototype's calibration (aeadd4c), compared with the coaching ratios only as observations (design §9);
@@ -15,9 +17,16 @@
  *   by scripts/fitStrokeShape.ts. The swing presets read the effort and the rolls the hands' tempo; the unread member
  *   repeats the read one's tempos.
  */
-import { contactReference, malletReference, swingReference, type StrokeShapeReference } from "../../reference/index";
+import {
+    ballReference,
+    contactReference,
+    malletReference,
+    swingReference,
+    type StrokeShapeReference,
+} from "../../reference/index";
 import { ReferenceDataError } from "../../reference/schema";
 import type { StrokeMode } from "../impact/types";
+import { handsAheadFor } from "./buildContact";
 import {
     STROKE_TYPES,
     type StrokeTiming,
@@ -25,9 +34,29 @@ import {
     type SwingDrive,
     type SwingProfile,
     type SwingShape,
+    type SwingStance,
 } from "./types";
 
 const DEG = Math.PI / 180;
+
+/**
+ * The reference ball and mallet each default stance's hands are derived for (P2b.2b.2b.1 design §4). R and ρ are
+ * computed as defaultWorld and contactPose compute them, so an upright preset's hands and its pose's B agree to the
+ * bit.
+ */
+const REFERENCE_GEOMETRY = {
+    ballRadius: ballReference.diameter.value / 2,
+    headLength: malletReference.headLength.value,
+    headRadius: malletReference.headDiameter.value / 2,
+};
+
+/**
+ * A default stance defined by its shaft's lean (rad) at contact `up` (m) on the face, its typical contact. The top hand
+ * is placed where that lean puts it with the reference mallet and ball (design §4).
+ */
+function leaning(lean: number, up: number, hands: Omit<SwingStance, "handsAhead">): SwingStance {
+    return { handsAhead: handsAheadFor(lean, hands.top, up, REFERENCE_GEOMETRY), ...hands };
+}
 
 /**
  * The shape of stroke type `type` driven in `mode`, from its reference/swing.json entry `ref` (design §5.3). A swing
@@ -200,25 +229,26 @@ export const defaultProfile: SwingProfile = {
     },
     stance: {
         // The top hand fixed at the top of the handle; the bottom hand high and light, a guide only (prototype).
-        "single-ball": { lean: 0, top: 0.805, bottom: 0.7, gripTension: 1, bottomGrip: 0.1 },
+        "single-ball": leaning(0, 0, { top: 0.805, bottom: 0.7, gripTension: 1, bottomGrip: 0.1 }),
         // As single-ball, the bottom hand a little lower and firmer, still only a guide (prototype).
-        drive: { lean: 0, top: 0.805, bottom: 0.6, gripTension: 1, bottomGrip: 0.25 },
+        drive: leaning(0, 0, { top: 0.805, bottom: 0.6, gripTension: 1, bottomGrip: 0.25 }),
         // Feet set back, the ball met on the up: the shaft leans back 4°, so the strike rises 4° and the face tilts up
         // 4°, within the feasibility spike's 3–5° tilt (a 5° lean leaves the head only 4.03 mm clear at contact). Both
-        // grips relax at contact (prototype).
-        "stop-ac": { lean: -4 * DEG, top: 0.805, bottom: 0.45, gripTension: 0.1, bottomGrip: 0.1 },
+        // grips relax at contact (prototype). The lean is defined at its canonical contact, 20 mm below the face's
+        // centre.
+        "stop-ac": leaning(-4 * DEG, -0.02, { top: 0.805, bottom: 0.45, gripTension: 0.1, bottomGrip: 0.1 }),
         // The lower hand low and firm, checking the swing through its lever just after contact (prototype).
-        "stop-gc": { lean: 0, top: 0.805, bottom: 0.45, gripTension: 1, bottomGrip: 1 },
+        "stop-gc": leaning(0, 0, { top: 0.805, bottom: 0.45, gripTension: 1, bottomGrip: 1 }),
         // Riches: "Most players place the bottom hand almost half-way down the handle for this shot, leaving the other
         // hand at the top", the mallet "making an angle of about 75 degrees with the ground".
-        "half-roll": { lean: 15 * DEG, top: 0.805, bottom: 0.42, gripTension: 1, bottomGrip: 1 },
+        "half-roll": leaning(15 * DEG, 0, { top: 0.805, bottom: 0.42, gripTension: 1, bottomGrip: 1 }),
         // Riches: "Your lower hand should be placed at least two-thirds of the way down the handle, and your top hand
         // will also need to be moved, to about one-third of the way down the handle", giving "an angle of
         // approximately 45 degrees between the mallet handle and the ground".
-        "full-roll": { lean: 45 * DEG, top: 0.61, bottom: 0.3, gripTension: 1, bottomGrip: 1 },
+        "full-roll": leaning(45 * DEG, 0, { top: 0.61, bottom: 0.3, gripTension: 1, bottomGrip: 1 }),
         // Riches: "The bottom hand should be placed at the very bottom of the mallet shaft for this shot"; the slope at
         // least the full roll's.
-        "pass-roll": { lean: 48 * DEG, top: 0.45, bottom: 0.09, gripTension: 1, bottomGrip: 1 },
+        "pass-roll": leaning(48 * DEG, 0, { top: 0.45, bottom: 0.09, gripTension: 1, bottomGrip: 1 }),
     },
     drive: DRIVE,
     shape: Object.fromEntries(
