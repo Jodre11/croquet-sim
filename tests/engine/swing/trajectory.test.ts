@@ -30,12 +30,12 @@ const UP = vec3(0, 0, 1);
 
 describe("strokeTrajectory (design §4.3)", () => {
     it("runs from the release through the impact to the finish, in time order", () => {
-        expect(trajectory.top).toBe(down.release);
+        expect(trajectory.release).toBe(down.release);
         expect(trajectory.impactStart).toBe(0 - drive.arc.contactAt);
         expect(trajectory.impactEnd).toBeCloseTo(outcome.impact.duration - drive.arc.contactAt, 12);
         expect(trajectory.finish).toBeGreaterThanOrEqual(trajectory.impactEnd);
         const { samples } = trajectory;
-        expect((samples[0] as StrokeSample).t).toBeCloseTo(trajectory.top, 12);
+        expect((samples[0] as StrokeSample).t).toBeCloseTo(trajectory.release, 12);
         expect((samples[samples.length - 1] as StrokeSample).t).toBeCloseTo(trajectory.finish, 12);
         for (let i = 1; i < samples.length; i++) {
             const gap = (samples[i] as StrokeSample).t - (samples[i - 1] as StrokeSample).t;
@@ -118,13 +118,13 @@ describe("strokeTrajectory (design §4.3)", () => {
         const late = traced.trajectory as SwingTrajectory;
         const roll = traced.contact.drive as TrackDrive;
         const first = late.samples[0] as StrokeSample;
-        expect(late.top).toBeGreaterThan(late.impactStart);
+        expect(late.release).toBeGreaterThan(late.impactStart);
         expect(late.flags).not.toContain("follow-cap");
         expect(first.t).toBe(late.impactStart);
         expect(length(first.velocity)).toBe(0);
         expect(length(sub(first.top, (roll.arc.downswing as Downswing).handsTop))).toBeLessThan(1e-9);
-        const release = late.samples.find((s) => s.t >= late.top) as StrokeSample;
-        expect(release.t - late.top).toBeLessThanOrEqual(IMPACT_DT + 1e-12);
+        const release = late.samples.find((s) => s.t >= late.release) as StrokeSample;
+        expect(release.t - late.release).toBeLessThanOrEqual(IMPACT_DT + 1e-12);
         const jumps = boundaryJumps(late, roll);
         expect(jumps.map((j) => j.name)).toEqual(["release", "impact end"]);
         for (const jump of jumps) {

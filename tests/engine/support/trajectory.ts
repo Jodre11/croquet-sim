@@ -94,7 +94,7 @@ function lastAtOrBefore(samples: readonly StrokeSample[], t: number): number {
 export function boundaryJumps(trajectory: SwingTrajectory, drive: TrackDrive): BoundaryJump[] {
     const { samples } = trajectory;
     const { arc } = drive;
-    const jumps: BoundaryJump[] = [jumpAt(samples, "release", lastAtOrBefore(samples, trajectory.top), "after")];
+    const jumps: BoundaryJump[] = [jumpAt(samples, "release", lastAtOrBefore(samples, trajectory.release), "after")];
     const start = lastAtOrBefore(samples, trajectory.impactStart);
     if (start > 0) {
         jumps.push(jumpAt(samples, "impact start", start - 1, "before"));

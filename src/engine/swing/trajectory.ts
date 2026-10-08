@@ -41,7 +41,7 @@ export interface StrokeSample {
 export interface SwingTrajectory {
     readonly samples: readonly StrokeSample[];
     /** s from contact: the release t_r, the impact's start and end, and the finish. */
-    readonly top: number;
+    readonly release: number;
     readonly impactStart: number;
     readonly impactEnd: number;
     readonly finish: number;
@@ -87,7 +87,7 @@ export function strokeTrajectory(contact: ContactState, follow: FollowThrough, g
     }
     return {
         samples,
-        top: release,
+        release,
         impactStart,
         impactEnd: follow.impactEnd - arc.contactAt,
         finish: follow.finish - arc.contactAt,

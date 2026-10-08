@@ -294,7 +294,7 @@ interface StrokeSample {
 /** The whole stroke from the backswing's top to the finish, every 1 ms and at each boundary. */
 interface SwingTrajectory {
     readonly samples: readonly StrokeSample[];
-    readonly top: number;            // s from contact: the release t_r
+    readonly release: number;        // s from contact: the release t_r
     readonly impactStart: number;
     readonly impactEnd: number;
     readonly finish: number;

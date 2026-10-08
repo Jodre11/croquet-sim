@@ -4012,7 +4012,7 @@ Spec §4.3, §5.1 and §9's first bullet; exit criteria 3 and 4's identity claus
 - Consumes: `FollowThrough`, `FollowFlag`, `FOLLOW_SAMPLE` and `simulateStroke` (Task 7); `planStroke` (Task 5).
 - Produces:
   - `interface StrokeSample { t; head; orientation; velocity; top; bottom }`, with t in s from contact;
-  - `interface SwingTrajectory { samples; top; impactStart; impactEnd; finish; flags }`;
+  - `interface SwingTrajectory { samples; release; impactStart; impactEnd; finish; flags }`;
   - `strokeTrajectory(contact, follow, gravity): SwingTrajectory`;
   - `interface ShotOptions { trajectory?: boolean }`;
   - `ShotOutcome.contactSpeed: number` and `ShotOutcome.trajectory?: SwingTrajectory`;
@@ -4177,7 +4177,7 @@ export interface StrokeSample {
 export interface SwingTrajectory {
     readonly samples: readonly StrokeSample[];
     /** s from contact: the release t_r, the impact's start and end, and the finish. */
-    readonly top: number;
+    readonly release: number;
     readonly impactStart: number;
     readonly impactEnd: number;
     readonly finish: number;
@@ -4219,7 +4219,7 @@ export function strokeTrajectory(contact: ContactState, follow: FollowThrough, g
     }
     return {
         samples,
-        top: arc.downswing.release,
+        release: arc.downswing.release,
         impactStart: 0 - arc.contactAt,
         impactEnd: follow.impactEnd - arc.contactAt,
         finish: follow.finish - arc.contactAt,
