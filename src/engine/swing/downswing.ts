@@ -127,8 +127,9 @@ export function planDownswing(input: DownswingInput): PlannedDownswing {
         const [, cu] = sinCos(2 * Math.PI * u);
         return 0.5 * peak * (1 - cu);
     };
-    // §3.3: (I_P + M·d·(P′·t̂)/span)·θ̈ = −m·g·ℓ_h·sin θ − M·d·(P″·t̂)·σ̇² + τ_p, σ̇ = ω/span.
-    const accel = (theta: number, omega: number, tau: number): number => {
+    // §3.3: (I_P + M·d·(P′·t̂)/span)·θ̈ = −m·g·ℓ_h·sin θ − M·d·(P″·t̂)·σ̇² + τ_p, σ̇ = ω/span. Fails where the
+    // effective inertia (the bracket) is not positive, at every step and at contact.
+    const accelOrFail = (theta: number, omega: number, tau: number): number => {
         const [s, co] = sinCos(theta);
         const sigma = (theta - thetaTop) / span;
         const slope = add(scale(across, 2 * sigma), scale(drop, 6 * sigma - 6 * sigma * sigma));
@@ -151,7 +152,7 @@ export function planDownswing(input: DownswingInput): PlannedDownswing {
     let om = 0;
     for (let k = 0; ; k++) {
         const tau = k * FREE_STEP;
-        const a = accel(th, om, tau);
+        const a = accelOrFail(th, om, tau);
         alpha.push(a);
         const omNext = om + a * FREE_STEP;
         const thNext = th + omNext * FREE_STEP;
@@ -167,7 +168,7 @@ export function planDownswing(input: DownswingInput): PlannedDownswing {
             const omegaContact = om + f * (omNext - om);
             theta.push(thetaContact);
             omega.push(omegaContact);
-            alpha.push(accel(thetaContact, omegaContact, fall));
+            alpha.push(accelOrFail(thetaContact, omegaContact, fall));
             const downswing: Downswing = {
                 release: 0 - fall,
                 thetaTop,
