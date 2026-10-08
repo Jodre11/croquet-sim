@@ -662,6 +662,19 @@ describe("the lead (design §3.5)", () => {
         expect(() => buildContact(slow, WORLD)).toThrow(/meets the turf .* before contact/);
     });
 
+    it("rejects a short downswing whose top lies in the turf: the impact would start there", () => {
+        // A 5 mm backswing pitches the head's rear rim down more than it raises the head: met 10 mm above the face
+        // centre, the top is about 3.4 mm in the turf. Carried in 50 ms, the lead is TURF_MARGIN before the release,
+        // where the head is held at the top.
+        const quick = testProfile({ drive: { mode: "carry" }, shape: { handTempo: { slow: 0.1, fast: 0.05 } } });
+        const setup = shot({ backswing: 0.005, intensity: 1, contact: { up: 0.01, side: 0 } }, quick);
+        expect(() => buildContact(setup, WORLD)).toThrow(/the head is in the turf 0\.055 s before contact/);
+        // Met at the face centre, the same downswing stays clear and starts on time.
+        const clear = buildContact({ ...setup, stroke: { ...setup.stroke, contact: { up: 0, side: 0 } } }, WORLD);
+        expect(arcOf(clear).contactAt).toBe(0);
+        expect(headLowestPoint(clear, clear.head)).toBeGreaterThan(0);
+    });
+
     it("simulates a fat stroke: the turf slows the head before the ball, against the same swing raised clear", () => {
         // Spec §7.1. Raised clear: the ball met at the face centre, the head 10 mm higher on the same pendulum, so both
         // plan the same speed.

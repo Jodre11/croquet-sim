@@ -396,7 +396,7 @@ export interface StrokePlan {
  *   fall beyond MAX_FALL;
  * - an action timed more than MAX_LEAD early, or a downswing meeting the turf more than MAX_LEAD − TURF_MARGIN before
  *   contact;
- * - the head's lowest point below the turf at contact.
+ * - the head's lowest point below the turf at contact, or where the impact starts.
  * A downswing that meets the turf before the ball is not rejected: the impact starts before it and simulates it
  * (design §3.5).
  */
@@ -464,6 +464,15 @@ export function planStroke(setup: ShotSetup, world: World): StrokePlan {
     };
     // t = 0 is at or before the pendulum's window (arcStart = L + the arc's timing ≥ 0), so no free table is read.
     const start = headOnPath(prepareTrack(drive, head, world.gravity, false), head, 0);
+    // The lead starts the impact before the downswing's first sample in the turf, but a start before the release holds
+    // the head at the top: a short downswing whose top lies in the turf starts there.
+    const clearance = headLowestPoint(start, head);
+    if (clearance < 0) {
+        fail(
+            `the head is in the turf ${lead} s before contact, where the impact starts: its lowest point is ` +
+                `${0 - clearance} m below it (the stance is too low for that timing)`,
+        );
+    }
     return {
         contact: { head, face: WOOD, ...start, drive },
         approach: { clearance: scan.clearance, before: scan.before },
