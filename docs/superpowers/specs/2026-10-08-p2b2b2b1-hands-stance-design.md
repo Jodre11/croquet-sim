@@ -42,12 +42,13 @@ every lean: they are P2b.2b.2b.2's.
 - **Findings from the run.** The outcome embeds `engineVersion`, so after the 0.8.0 bump the upright presets' digest
   is compared with the version normalised ("0.8.0" read as "0.7.0"); so compared it is identical over 81 runs, and no
   upright-preset line of either probe changed, not even in the swept rows. The AC stop's lean round-trips to 3e-17 rad
-  at its canonical `up`, but off-canonical it moves by design (§3.3, about −0.082 rad/m at −4°): −2.4538e-4 rad at
-  `up` −23 mm and +2.4713e-4 rad at −17 mm, the planned speed by at most 4.3e-9 relative, with no run rejected or
-  accepted anew. The refit's `defaultSpeed` (3 against 3.0000000000000004) and the AC stop's `torqueMax` change in
-  the last digit only, fit noise. At Gugan's leans the full roll's dead stop and canonical re-hit are gone, but the
-  pass and half rolls' re-catches grew (11 and 7 face intervals), the full roll's ratio rises to 3.38 at 2 m/s, and
-  the pass roll's sweep now reaches the cap on 14 runs: P2b.2b.2b.2's.
+  at its canonical `up`, but off-canonical it moves by design (§3.3, about −0.082 rad/m at −4°): θ_c moves by
+  −2.4538e-4 rad at `up` −23 mm and +2.4713e-4 rad at −17 mm, the planned speed by at most 4.3e-9 relative, with no
+  run rejected or accepted anew. The refit's `defaultSpeed` (3 against 3.0000000000000004) and the AC stop's
+  `torqueMax` change in the last digit only, fit noise. At Gugan's leans the full roll's dead stop and canonical
+  re-hit are gone, but the half roll's canonical now crosses blue in its follow-through (a late re-hit at 70.7 ms),
+  the pass and half rolls' re-catches grew (11 and 7 face intervals), the full roll's ratio rises to 3.38 at 2 m/s,
+  and the pass roll's sweep now reaches the cap on 14 runs: P2b.2b.2b.2's.
 
 ## 1. Goal and exit criteria
 

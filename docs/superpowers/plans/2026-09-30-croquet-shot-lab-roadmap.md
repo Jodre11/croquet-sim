@@ -880,10 +880,11 @@ the Solomon grip with a 42" shaft and a 13.5" head, is 5'10"–5'11" with a long
     20 µm". Gugan 4 was re-fetched: it now hashes `de69699e…` (the full SHA-256 in `reference/sources/README.md`).
   - **What still waits for P2b.2b.2b.2 and P2b.2b.2b.3:** the dead stop and the follow-through re-hit of the
     canonical full roll are gone with the lean alone. The re-catches remain and on the pass and half rolls have grown
-    (11 and 7 face intervals), and the ratios stay high against coaching (half 2.57, full 1.84); the full roll's ratio
-    at 2 m/s (3.38) and early-mistimed arcs show the carry still pinning the striker's ball; the pass roll's new cap
-    runs. These are the face–ball and turf laws' (P2b.2b.2b.2). Distances from knee remain short of a long hoop: the
-    effort ceiling (P2b.2b.2c).
+    (11 and 7 face intervals), and the ratios stay high against coaching (half 2.57, full 1.84); the half roll's
+    canonical now has a late re-hit (it crosses blue at 70.7 ms); the full roll's ratio at 2 m/s (3.38) and
+    early-mistimed arcs show the carry still pinning the striker's ball; the pass roll's new cap runs. These are the
+    face–ball and turf laws' (P2b.2b.2b.2). Distances from knee remain short of a long hoop: the effort ceiling
+    (P2b.2b.2c).
   - **Public:** `SwingStance.handsAhead` replaces `lean` in `src/engine/index.ts`'s types (`ENGINE_VERSION` 0.8.0).
 
 ## Provisional numbers — where each is confirmed
