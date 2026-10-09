@@ -1,0 +1,526 @@
+== Coaching ratios (design §9): croqueted ÷ striker distance, the croquet strokes' canonical setups and 2–4 m/s ==
+drive       3 m/s 2.92 (coaching 3–4); 2, 2.5, 3, 3.5, 4 m/s: 2.51, 2.71, 2.92, 2.91, 3.14
+stop-ac     3 m/s 6.46 (coaching 6–10); 2, 2.5, 3, 3.5, 4 m/s: 5.55, 5.99, 6.46, 6.89, 7.26
+half-roll   3 m/s 2.70 (coaching about 2); 2, 2.5, 3, 3.5, 4 m/s: 2.43, 2.49, 2.70, 2.83, 2.94
+full-roll   3 m/s 1.46 (coaching about 1); 2, 2.5, 3, 3.5, 4 m/s: 1.07, 1.25, 1.46, 1.49, 1.45
+pass-roll   3 m/s 16.00 (coaching below 1); 2, 2.5, 3, 3.5, 4 m/s: 7.45, 11.27, 16.00, 20.47, 29.21
+drive, guideEffort 0: 2 m/s 4.48, 1 hits, 54.9 ms after contactAt; 3 m/s 5.57, 1 hits, 76.5 ms after contactAt; 4 m/s 6.53, 1 hits, 100.6 ms after contactAt
+drive, guideEffort 1: 2 m/s 2.51, 2 hits, 264.7 ms after contactAt; 3 m/s 2.92, 2 hits, 180.6 ms after contactAt; 4 m/s 3.14, 2 hits, 135.9 ms after contactAt
+== The GC stop (design §5.4, §9): after the striker's first touch on the target, both distances and their ratio (target over striker); then stop-gc against single-ball over the gap ==
+stop-gc 2.0 m/s, gap 0.3 m: touch in phase 2 142.8 ms after contactAt; after it the striker 0.325 m, the target 0.942 m, ratio 2.90; no crossing; no obstacle
+stop-gc 2.5 m/s, gap 0.3 m: touch in phase 2 108.3 ms after contactAt; after it the striker 0.267 m, the target 1.909 m, ratio 7.15; no crossing; no obstacle
+stop-gc 3.0 m/s, gap 0.3 m: touch in phase 2 89.9 ms after contactAt; after it the striker 0.323 m, the target 2.901 m, ratio 8.97; no crossing; no obstacle
+stop-gc 3.5 m/s, gap 0.3 m: touch in phase 2 76.4 ms after contactAt; after it the striker 0.407 m, the target 4.012 m, ratio 9.86; no crossing; no obstacle
+stop-gc 4.0 m/s, gap 0.3 m: touch in phase 2 65.3 ms after contactAt; after it the striker 0.419 m, the target 5.592 m, ratio 13.34; no crossing; no obstacle
+gap 0.05 m stop-gc     1 hits, 10.0 ms; touch in phase 2 14.3 ms after contactAt; after it the striker 0.141 m, the target 4.191 m, ratio 29.78; no crossing; no obstacle
+gap 0.05 m single-ball 1 hits, 10.0 ms; touch in phase 2 13.8 ms after contactAt; after it the striker 0.155 m, the target 4.549 m, ratio 29.42; crosses blue 23.8 ms after contactAt, 0.246 mm deep, head 2.992 m/s, ball 0.526 m/s; no obstacle
+gap 0.10 m stop-gc     1 hits, 10.0 ms; touch in phase 2 28.5 ms after contactAt; after it the striker 0.176 m, the target 3.602 m, ratio 20.43; no crossing; no obstacle
+gap 0.10 m single-ball 1 hits, 10.0 ms; touch in phase 2 27.3 ms after contactAt; after it the striker 0.198 m, the target 3.930 m, ratio 19.87; crosses blue 40.5 ms after contactAt, 0.033 mm deep, head 2.973 m/s, ball 0.498 m/s; no obstacle
+gap 0.20 m stop-gc     1 hits, 10.0 ms; touch in phase 2 58.6 ms after contactAt; after it the striker 0.239 m, the target 3.182 m, ratio 13.31; no crossing; no obstacle
+gap 0.20 m single-ball 1 hits, 10.0 ms; touch in phase 2 56.0 ms after contactAt; after it the striker 0.244 m, the target 3.505 m, ratio 14.35; crosses blue 75.5 ms after contactAt, 0.024 mm deep, head 2.904 m/s, ball 0.479 m/s; no obstacle
+gap 0.30 m stop-gc     1 hits, 10.0 ms; touch in phase 2 89.9 ms after contactAt; after it the striker 0.323 m, the target 2.901 m, ratio 8.97; no crossing; no obstacle
+gap 0.30 m single-ball 1 hits, 10.0 ms; touch in phase 2 85.8 ms after contactAt; after it the striker 0.326 m, the target 3.223 m, ratio 9.89; no crossing; no obstacle
+gap 0.50 m stop-gc     1 hits, 10.0 ms; touch in phase 2 157.6 ms after contactAt; after it the striker 0.558 m, the target 2.337 m, ratio 4.19; no crossing; no obstacle
+gap 0.50 m single-ball 1 hits, 10.0 ms; touch in phase 2 149.6 ms after contactAt; after it the striker 0.538 m, the target 2.660 m, ratio 4.95; no crossing; no obstacle
+gap 0.75 m stop-gc     1 hits, 10.0 ms; touch in phase 2 251.7 ms after contactAt; after it the striker 0.692 m, the target 2.028 m, ratio 2.93; no crossing; no obstacle
+gap 0.75 m single-ball 1 hits, 10.0 ms; touch in phase 2 238.6 ms after contactAt; after it the striker 0.759 m, the target 2.223 m, ratio 2.93; no crossing; no obstacle
+gap 1.00 m stop-gc     1 hits, 10.0 ms; touch in phase 2 348.9 ms after contactAt; after it the striker 0.659 m, the target 1.932 m, ratio 2.93; no crossing; no obstacle
+gap 1.00 m single-ball 1 hits, 10.0 ms; touch in phase 2 331.3 ms after contactAt; after it the striker 0.726 m, the target 2.127 m, ratio 2.93; no crossing; no obstacle
+== Canonical setups (design §5.5, §9; exit criterion 4) ==
+single-ball entry jumps 0 (worst 0.00 mm); highest ball centre 0.43 mm above R; regions face
+            release none; braking hands -0.054 N·s, turf 0.000 N·s; 10.0 ms after contactAt; impact-head-deep 0, impact-cap 0, impact-head-approaching 0, impact-off-face 0, impact-turf-pit 0
+            stance: the top hand -0.1603 m ahead of the ball's centre, lean 0.00°, impact 0.00 mm above the centre
+drive       entry jumps 0 (worst 0.00 mm); highest ball centre 1.49 mm above R; regions face
+            release 108.9 ms after contactAt, Δθ 8.39°; braking hands -1.259 N·s, turf 0.000 N·s; 180.6 ms after contactAt; impact-head-deep 0, impact-cap 0, impact-head-approaching 0, impact-off-face 0, impact-turf-pit 0
+            stance: the top hand -0.1603 m ahead of the ball's centre, lean 0.00°, impact 0.00 mm above the centre
+stop-ac     entry jumps 0 (worst 0.00 mm); highest ball centre 2.71 mm above R; regions face
+            release none; braking hands 0.217 N·s, turf 0.394 N·s; 21.4 ms after contactAt; impact-head-deep 0, impact-cap 0, impact-head-approaching 0, impact-off-face 0, impact-turf-pit 0
+            stance: the top hand -0.2202 m ahead of the ball's centre, lean -4.00°, impact -3.21 mm above the centre
+stop-gc     entry jumps 0 (worst 0.00 mm); highest ball centre 1.32 mm above R; regions face
+            release none; braking hands 1.170 N·s, turf 0.000 N·s; 10.0 ms after contactAt; impact-head-deep 0, impact-cap 0, impact-head-approaching 0, impact-off-face 0, impact-turf-pit 0
+            stance: the top hand -0.1603 m ahead of the ball's centre, lean 0.00°, impact 0.00 mm above the centre
+half-roll   entry jumps 0 (worst 0.00 mm); highest ball centre 0.79 mm above R; regions face
+            release none; braking hands -0.818 N·s, turf 0.000 N·s; 58.8 ms after contactAt; impact-head-deep 0, impact-cap 0, impact-head-approaching 0, impact-off-face 0, impact-turf-pit 0
+            stance: the top hand 0.1964 m ahead of the ball's centre, lean 24.00°, impact 18.73 mm above the centre
+full-roll   entry jumps 0 (worst 0.00 mm); highest ball centre 0.66 mm above R; regions face
+            release none; braking hands 1.047 N·s, turf 0.000 N·s; 111.8 ms after contactAt; impact-head-deep 0, impact-cap 0, impact-head-approaching 0, impact-off-face 0, impact-turf-pit 0
+            stance: the top hand 0.1964 m ahead of the ball's centre, lean 31.00°, impact 23.71 mm above the centre
+pass-roll   entry jumps 0 (worst 0.00 mm); highest ball centre 3.43 mm above R; regions face, rim
+            release none; braking hands -1.130 N·s, turf 0.000 N·s; 143.4 ms after contactAt; impact-head-deep 0, impact-cap 0, impact-head-approaching 0, impact-off-face 1, impact-turf-pit 0
+            stance: the top hand 0.1400 m ahead of the ball's centre, lean 34.00°, impact 25.74 mm above the centre
+== Preset sweep: speed × drive × contact for each preset ==
+single-ball 165 runs (60 rejected); runs raising impact-head-deep 0, impact-cap 0, impact-head-approaching 0, impact-off-face 0, impact-turf-pit 0
+            longest before the cap 24.4 ms after contactAt (TRACK_IMPACT_CAP 450.0 ms); canonical approach 0.12 mm, 36.3 ms before contact
+            rejected 15× at 1 m/s, up 3.00 mm: the downswing meets the turf 0.18945987283465188 s before contact, so the impact would start more than 0.15 s early: a gross mis-hit
+            rejected 15× at 6 m/s, up -3.00 mm: backswingFor: 6 m/s is beyond the single-ball stroke's reach (4.05301699156647 m/s at 0.8430999991569 m)
+            rejected 15× at 6 m/s, up 0.00 mm: backswingFor: 6 m/s is beyond the single-ball stroke's reach (4.05301699156647 m/s at 0.8430999991569 m)
+            rejected 15× at 6 m/s, up 3.00 mm: backswingFor: 6 m/s is beyond the single-ball stroke's reach (4.05301699156647 m/s at 0.8430999991569 m)
+drive       165 runs (60 rejected); runs raising impact-head-deep 0, impact-cap 0, impact-head-approaching 0, impact-off-face 69, impact-turf-pit 0
+            longest before the cap 317.8 ms after contactAt (TRACK_IMPACT_CAP 450.0 ms); canonical approach 0.12 mm, 36.3 ms before contact
+            rejected 15× at 1 m/s, up 3.00 mm: the downswing meets the turf 0.18945987283465188 s before contact, so the impact would start more than 0.15 s early: a gross mis-hit
+            rejected 15× at 6 m/s, up -3.00 mm: backswingFor: 6 m/s is beyond the drive stroke's reach (4.05301699156647 m/s at 0.8430999991569 m)
+            rejected 15× at 6 m/s, up 0.00 mm: backswingFor: 6 m/s is beyond the drive stroke's reach (4.05301699156647 m/s at 0.8430999991569 m)
+            rejected 15× at 6 m/s, up 3.00 mm: backswingFor: 6 m/s is beyond the drive stroke's reach (4.05301699156647 m/s at 0.8430999991569 m)
+stop-ac     180 runs (45 rejected); runs raising impact-head-deep 60, impact-cap 9, impact-head-approaching 0, impact-off-face 51, impact-turf-pit 0
+            longest before the cap 316.3 ms after contactAt (TRACK_IMPACT_CAP 450.0 ms); canonical approach 6.83 mm, 55.9 ms before contact
+            rejected 15× at 6 m/s, up -3.00 mm: backswingFor: 6 m/s is beyond the stop-ac stroke's reach (4.048113870753535 m/s at 0.8410606559166152 m)
+            rejected 15× at 6 m/s, up 0.00 mm: backswingFor: 6 m/s is beyond the stop-ac stroke's reach (4.048079207803777 m/s at 0.8410462499330116 m)
+            rejected 15× at 6 m/s, up 3.00 mm: backswingFor: 6 m/s is beyond the stop-ac stroke's reach (4.048044174086205 m/s at 0.8410316900170703 m)
+stop-gc     165 runs (60 rejected); runs raising impact-head-deep 0, impact-cap 0, impact-head-approaching 0, impact-off-face 9, impact-turf-pit 0
+            longest before the cap 331.4 ms after contactAt (TRACK_IMPACT_CAP 450.0 ms); canonical approach 0.12 mm, 36.3 ms before contact
+            rejected 15× at 1 m/s, up 3.00 mm: the downswing meets the turf 0.18945987283465188 s before contact, so the impact would start more than 0.15 s early: a gross mis-hit
+            rejected 15× at 6 m/s, up -3.00 mm: backswingFor: 6 m/s is beyond the stop-gc stroke's reach (4.05301699156647 m/s at 0.8430999991569 m)
+            rejected 15× at 6 m/s, up 0.00 mm: backswingFor: 6 m/s is beyond the stop-gc stroke's reach (4.05301699156647 m/s at 0.8430999991569 m)
+            rejected 15× at 6 m/s, up 3.00 mm: backswingFor: 6 m/s is beyond the stop-gc stroke's reach (4.05301699156647 m/s at 0.8430999991569 m)
+half-roll   225 runs (0 rejected); runs raising impact-head-deep 0, impact-cap 0, impact-head-approaching 0, impact-off-face 0, impact-turf-pit 0
+            longest before the cap 85.4 ms after contactAt (TRACK_IMPACT_CAP 450.0 ms); canonical approach 29.52 mm, 0.0 ms before contact
+full-roll   225 runs (0 rejected); runs raising impact-head-deep 0, impact-cap 0, impact-head-approaching 0, impact-off-face 27, impact-turf-pit 0
+            longest before the cap 392.5 ms after contactAt (TRACK_IMPACT_CAP 450.0 ms); canonical approach 36.65 mm, 0.0 ms before contact
+pass-roll   225 runs (0 rejected); runs raising impact-head-deep 0, impact-cap 0, impact-head-approaching 0, impact-off-face 176, impact-turf-pit 0
+            longest before the cap 447.6 ms after contactAt (TRACK_IMPACT_CAP 450.0 ms); canonical approach 39.76 mm, 0.0 ms before contact
+== The AC stop's dip (design §9): penetration under HEAD_DEEP_LIMIT 2.00 mm, the turf met after the ball ==
+dip 8.0 mm: face ends 1.4 ms, turf starts 16.0 ms; penetration 0.62 mm; turf braking 0.194 N·s; ratio 6.31; impact-head-deep 0, impact-cap 0, impact-head-approaching 0, impact-off-face 0, impact-turf-pit 0
+dip 8.5 mm: face ends 1.4 ms, turf starts 15.0 ms; penetration 0.86 mm; turf braking 0.260 N·s; ratio 6.34; impact-head-deep 0, impact-cap 0, impact-head-approaching 0, impact-off-face 0, impact-turf-pit 0
+dip 9.0 mm: face ends 1.4 ms, turf starts 14.2 ms; penetration 1.07 mm; turf braking 0.314 N·s; ratio 6.37; impact-head-deep 0, impact-cap 0, impact-head-approaching 0, impact-off-face 0, impact-turf-pit 0
+dip 9.5 mm: face ends 1.4 ms, turf starts 13.6 ms; penetration 1.28 mm; turf braking 0.346 N·s; ratio 6.39; impact-head-deep 0, impact-cap 0, impact-head-approaching 0, impact-off-face 0, impact-turf-pit 0
+dip 10.0 mm: face ends 1.4 ms, turf starts 13.1 ms; penetration 1.49 mm; turf braking 0.369 N·s; ratio 6.42; impact-head-deep 0, impact-cap 0, impact-head-approaching 0, impact-off-face 0, impact-turf-pit 0
+dip 10.5 mm: face ends 1.4 ms, turf starts 12.6 ms; penetration 1.69 mm; turf braking 0.384 N·s; ratio 6.43; impact-head-deep 0, impact-cap 0, impact-head-approaching 0, impact-off-face 0, impact-turf-pit 0
+dip 11.0 mm: face ends 1.4 ms, turf starts 12.2 ms; penetration 1.88 mm; turf braking 0.394 N·s; ratio 6.46; impact-head-deep 0, impact-cap 0, impact-head-approaching 0, impact-off-face 0, impact-turf-pit 0
+dip 11.5 mm: face ends 1.4 ms, turf starts 11.9 ms; penetration 2.07 mm; turf braking 0.401 N·s; ratio 6.48; impact-head-deep 1, impact-cap 0, impact-head-approaching 0, impact-off-face 0, impact-turf-pit 0
+dip 12.0 mm: face ends 1.4 ms, turf starts 11.5 ms; penetration 2.26 mm; turf braking 0.406 N·s; ratio 6.50; impact-head-deep 1, impact-cap 0, impact-head-approaching 0, impact-off-face 0, impact-turf-pit 0
+dip 12.5 mm: face ends 1.4 ms, turf starts 11.3 ms; penetration 2.45 mm; turf braking 0.410 N·s; ratio 6.52; impact-head-deep 1, impact-cap 0, impact-head-approaching 0, impact-off-face 0, impact-turf-pit 0
+dip 13.0 mm: face ends 1.4 ms, turf starts 11.0 ms; penetration 2.63 mm; turf braking 0.412 N·s; ratio 6.55; impact-head-deep 1, impact-cap 0, impact-head-approaching 0, impact-off-face 0, impact-turf-pit 0
+dip 13.5 mm: face ends 1.4 ms, turf starts 10.8 ms; penetration 2.81 mm; turf braking 0.414 N·s; ratio 6.59; impact-head-deep 1, impact-cap 0, impact-head-approaching 0, impact-off-face 0, impact-turf-pit 0
+dip 14.0 mm: face ends 1.4 ms, turf starts 10.6 ms; penetration 3.00 mm; turf braking 0.414 N·s; ratio 6.61; impact-head-deep 1, impact-cap 0, impact-head-approaching 0, impact-off-face 0, impact-turf-pit 0
+depths meeting both: 8.00–11.00 mm; the profile's handDrop is 11.00 mm
+== Coupling (design §9): the canonical set at T = 0.04 s against HAND_COUPLING's 0.08 s, ζ 0.7 ==
+single-ball T 0.04 s: no target, 1 hits; hands beyond feed-forward 14.46 mN·s of the balls' 1.7024 N·s (0.85 %); lag at the hands' window's end 15.363 mm
+single-ball T 0.08 s: no target, 1 hits; hands beyond feed-forward 7.62 mN·s of the balls' 1.7023 N·s (0.45 %); lag at the hands' window's end 15.442 mm
+drive       T 0.04 s: ratio 2.48, 2 hits; hands beyond feed-forward 91.23 mN·s of the balls' 2.3279 N·s (3.92 %); lag at the hands' window's end 9.598 mm
+drive       T 0.08 s: ratio 2.92, 2 hits; hands beyond feed-forward 48.90 mN·s of the balls' 2.3248 N·s (2.10 %); lag at the hands' window's end 9.730 mm
+stop-ac     T 0.04 s: ratio 6.46, 1 hits; hands beyond feed-forward 5.09 mN·s of the balls' 2.2959 N·s (0.22 %); lag at the hands' window's end 7.137 mm
+stop-ac     T 0.08 s: ratio 6.46, 1 hits; hands beyond feed-forward 2.63 mN·s of the balls' 2.2959 N·s (0.11 %); lag at the hands' window's end 7.130 mm
+stop-gc     T 0.04 s: touch in phase 2 89.9 ms after contactAt; after it the striker 0.324 m, the target 2.901 m, ratio 8.97, 1 hits; hands beyond feed-forward 6.09 mN·s of the balls' 1.6349 N·s (0.37 %); lag at the hands' window's end 7.466 mm
+stop-gc     T 0.08 s: touch in phase 2 89.9 ms after contactAt; after it the striker 0.323 m, the target 2.901 m, ratio 8.97, 1 hits; hands beyond feed-forward 3.15 mN·s of the balls' 1.6349 N·s (0.19 %); lag at the hands' window's end 7.471 mm
+half-roll   T 0.04 s: ratio 1.92, 5 hits; hands beyond feed-forward 274.49 mN·s of the balls' 2.1438 N·s (12.80 %); lag at the hands' window's end 29.532 mm
+half-roll   T 0.08 s: ratio 2.70, 3 hits; hands beyond feed-forward 147.79 mN·s of the balls' 2.1297 N·s (6.94 %); lag at the hands' window's end 33.214 mm
+full-roll   T 0.04 s: ratio 1.38, 6 hits; hands beyond feed-forward 243.92 mN·s of the balls' 1.9481 N·s (12.52 %); lag at the hands' window's end 35.393 mm
+full-roll   T 0.08 s: ratio 1.46, 11 hits; hands beyond feed-forward 129.89 mN·s of the balls' 1.9346 N·s (6.71 %); lag at the hands' window's end 39.697 mm
+pass-roll   T 0.04 s: ratio 16.58, 4 hits; hands beyond feed-forward 373.56 mN·s of the balls' 1.8915 N·s (19.75 %); lag at the hands' window's end 22.695 mm
+pass-roll   T 0.08 s: ratio 16.00, 6 hits; hands beyond feed-forward 191.14 mN·s of the balls' 1.8644 N·s (10.25 %); lag at the hands' window's end 24.921 mm
+== Effective mass at the face centre along aim (design §3.4; exit criterion 3: within 10 % of m) ==
+single-ball closed form 1.0066 kg (0.66 % from m); strike: every ball 1.0016 kg (-0.49 % from the closed form), the striker's ball alone 1.0016 kg
+drive       closed form 1.0066 kg (0.66 % from m); strike: every ball 1.0084 kg (0.18 % from the closed form), the striker's ball alone 0.2947 kg
+stop-ac     closed form 1.0278 kg (2.78 % from m); strike: every ball 0.9883 kg (-3.84 % from the closed form), the striker's ball alone 0.2826 kg
+stop-gc     closed form 1.0066 kg (0.66 % from m); strike: every ball 0.8939 kg (-11.19 % from the closed form), the striker's ball alone 0.8939 kg
+half-roll   closed form 0.9737 kg (-2.63 % from m); strike: every ball 0.9816 kg (0.82 % from the closed form), the striker's ball alone 0.2731 kg
+full-roll   closed form 0.9578 kg (-4.22 % from m); strike: every ball 0.9719 kg (1.47 % from the closed form), the striker's ball alone 0.2735 kg
+pass-roll   closed form 0.9151 kg (-8.49 % from m); strike: every ball 1.0460 kg (14.31 % from the closed form), the striker's ball alone 0.3612 kg
+== Tracking at HAND_COUPLING (T 0.08 s, ζ 0.7), no ball, no turf: socket (m) and angle (rad) from the path ==
+single-ball (γ_T 1) firm 2.08e-6, 5.00e-7; swing 4.20e-4, 5.46e-4
+drive       (γ_T 1) firm 2.04e-6, 3.86e-7; swing 4.62e-5, 6.77e-5
+stop-ac     (γ_T 0.1) firm 2.08e-6, 2.12e-7; check 1.27e-2, 1.73e-2; swing 7.04e-1, 8.61e-1
+stop-gc     (γ_T 1) firm 2.00e-6, 1.98e-7; check 6.80e-6, 8.68e-6; swing 3.63e-5, 5.80e-5
+half-roll   (γ_T 1) firm 1.23e-6, 1.38e-6; carry 2.72e-6, 2.29e-6; after the reach 4.51e-6, 1.93e-6
+full-roll   (γ_T 1) firm 5.08e-7, 8.66e-7; carry 4.32e-6, 1.98e-6; after the reach 4.65e-6, 4.80e-7
+pass-roll   (γ_T 1) firm 3.87e-7, 6.72e-7; carry 4.45e-6, 7.45e-6; after the reach 5.68e-6, 2.22e-6
+== Impact time: in all, its fixed preparation (prepareTrack) and its integration per step (medians of 50 runs after 5 warm-up; for P5) ==
+tracked single-ball  33.019 ms in all: preparation 25.640 ms, then 2000 steps at 3.690 µs/step
+tracked drive        299.297 ms in all: preparation 27.110 ms, then 36125 steps at 7.535 µs/step
+tracked stop-ac      49.577 ms in all: preparation 26.724 ms, then 4276 steps at 5.345 µs/step
+tracked stop-gc      41.655 ms in all: preparation 24.866 ms, then 2000 steps at 8.394 µs/step
+tracked half-roll    89.768 ms in all: preparation 0.004 ms, then 11751 steps at 7.639 µs/step
+tracked full-roll    234.887 ms in all: preparation 0.004 ms, then 22351 steps at 10.509 µs/step
+tracked pass-roll    384.984 ms in all: preparation 0.003 ms, then 28679 steps at 13.424 µs/step
+force centre 3 m/s   2.588 ms in all: preparation 0.000 ms, then 600 steps at 4.314 µs/step
+force croquet 3 m/s  4.502 ms in all: preparation 0.000 ms, then 600 steps at 7.504 µs/step
+force descending 10° 15.618 ms in all: preparation 0.000 ms, then 2064 steps at 7.567 µs/step
+force stop shot      4.501 ms in all: preparation 0.000 ms, then 600 steps at 7.502 µs/step
+reach filter over 120000 steps (600.0 ms): displacement beyond the summed path at most 1.49e-13 m against WAKE_MARGIN 1e-9 m (6723× headroom)
+== Timing (design §9): each action early or late, and the dip's depth ==
+stop-ac arc -50 ms: missed, dig 2.06 mm, slide 1.9 mm; ball 0.000 m/s at 0.00°; striker 0.000 m, croqueted 0.000 m, ratio 1.64; impact-head-deep 1, impact-cap 1, impact-head-approaching 0, impact-off-face 0, impact-turf-pit 0
+stop-ac arc -40 ms: missed, dig 1.40 mm, slide 1.3 mm; ball 0.000 m/s at 0.00°; striker 0.000 m, croqueted 0.000 m, ratio 1.62; impact-head-deep 0, impact-cap 1, impact-head-approaching 0, impact-off-face 0, impact-turf-pit 0
+stop-ac arc -30 ms: missed, dig 0.28 mm, slide 0.5 mm; ball 0.000 m/s at 0.00°; striker 0.000 m, croqueted 0.000 m, ratio 1.60; impact-head-deep 0, impact-cap 1, impact-head-approaching 0, impact-off-face 0, impact-turf-pit 0
+stop-ac arc -20 ms: missed, dig 0.29 mm, slide 0.3 mm; ball 0.000 m/s at 0.00°; striker 0.000 m, croqueted 0.000 m, ratio 1.58; impact-head-deep 0, impact-cap 1, impact-head-approaching 1, impact-off-face 0, impact-turf-pit 0
+stop-ac arc -10 ms: missed, dig 1.35 mm, slide 1.0 mm; ball 0.000 m/s at 0.00°; striker 0.000 m, croqueted 0.000 m, ratio 1.56; impact-head-deep 0, impact-cap 1, impact-head-approaching 1, impact-off-face 0, impact-turf-pit 0
+stop-ac arc -5 ms: ball first, dig 1.62 mm, slide 0.8 mm; ball 0.682 m/s at 3.06°; striker 0.238 m, croqueted 1.395 m, ratio 5.87; impact-head-deep 0, impact-cap 0, impact-head-approaching 0, impact-off-face 0, impact-turf-pit 0
+stop-ac arc 0 ms: ball first, dig 1.88 mm, slide 1.8 mm; ball 1.445 m/s at 1.56°; striker 0.936 m, croqueted 6.047 m, ratio 6.46; impact-head-deep 0, impact-cap 0, impact-head-approaching 0, impact-off-face 0, impact-turf-pit 0
+stop-ac arc 5 ms: ball first, dig 1.82 mm, slide 2.2 mm; ball 1.463 m/s at 1.49°; striker 0.954 m, croqueted 6.116 m, ratio 6.41; impact-head-deep 0, impact-cap 0, impact-head-approaching 0, impact-off-face 0, impact-turf-pit 0
+stop-ac arc 10 ms: ball first, dig 1.75 mm, slide 3.5 mm; ball 1.463 m/s at 1.50°; striker 0.954 m, croqueted 6.116 m, ratio 6.41; impact-head-deep 0, impact-cap 0, impact-head-approaching 0, impact-off-face 0, impact-turf-pit 0
+stop-ac arc 20 ms: ball first, dig 1.70 mm, slide 5.6 mm; ball 1.463 m/s at -1.81°; striker 0.954 m, croqueted 6.081 m, ratio 6.37; impact-head-deep 0, impact-cap 0, impact-head-approaching 0, impact-off-face 0, impact-turf-pit 0
+stop-ac hands -50 ms: ball first, dig 1.88 mm, slide 1.8 mm; ball 1.445 m/s at 1.56°; striker 0.935 m, croqueted 6.047 m, ratio 6.47; impact-head-deep 0, impact-cap 0, impact-head-approaching 0, impact-off-face 0, impact-turf-pit 0
+stop-ac hands -40 ms: ball first, dig 1.88 mm, slide 1.8 mm; ball 1.445 m/s at 1.56°; striker 0.935 m, croqueted 6.047 m, ratio 6.46; impact-head-deep 0, impact-cap 0, impact-head-approaching 0, impact-off-face 0, impact-turf-pit 0
+stop-ac hands -30 ms: ball first, dig 1.88 mm, slide 1.8 mm; ball 1.445 m/s at 1.55°; striker 0.935 m, croqueted 6.047 m, ratio 6.47; impact-head-deep 0, impact-cap 0, impact-head-approaching 0, impact-off-face 0, impact-turf-pit 0
+stop-ac hands -20 ms: ball first, dig 1.88 mm, slide 1.8 mm; ball 1.445 m/s at 1.56°; striker 0.936 m, croqueted 6.047 m, ratio 6.46; impact-head-deep 0, impact-cap 0, impact-head-approaching 0, impact-off-face 0, impact-turf-pit 0
+stop-ac hands -10 ms: ball first, dig 1.88 mm, slide 1.8 mm; ball 1.445 m/s at 1.56°; striker 0.936 m, croqueted 6.047 m, ratio 6.46; impact-head-deep 0, impact-cap 0, impact-head-approaching 0, impact-off-face 0, impact-turf-pit 0
+stop-ac hands -5 ms: ball first, dig 1.88 mm, slide 1.8 mm; ball 1.445 m/s at 1.56°; striker 0.936 m, croqueted 6.047 m, ratio 6.46; impact-head-deep 0, impact-cap 0, impact-head-approaching 0, impact-off-face 0, impact-turf-pit 0
+stop-ac hands 0 ms: ball first, dig 1.88 mm, slide 1.8 mm; ball 1.445 m/s at 1.56°; striker 0.936 m, croqueted 6.047 m, ratio 6.46; impact-head-deep 0, impact-cap 0, impact-head-approaching 0, impact-off-face 0, impact-turf-pit 0
+stop-ac hands 5 ms: ball first, dig 1.88 mm, slide 1.8 mm; ball 1.445 m/s at 1.56°; striker 0.936 m, croqueted 6.047 m, ratio 6.46; impact-head-deep 0, impact-cap 0, impact-head-approaching 0, impact-off-face 0, impact-turf-pit 0
+stop-ac hands 10 ms: ball first, dig 1.88 mm, slide 1.8 mm; ball 1.445 m/s at 1.56°; striker 0.936 m, croqueted 6.047 m, ratio 6.46; impact-head-deep 0, impact-cap 0, impact-head-approaching 0, impact-off-face 0, impact-turf-pit 0
+stop-ac hands 20 ms: ball first, dig 1.88 mm, slide 1.8 mm; ball 1.445 m/s at -1.79°; striker 0.936 m, croqueted 6.013 m, ratio 6.42; impact-head-deep 0, impact-cap 0, impact-head-approaching 0, impact-off-face 0, impact-turf-pit 0
+stop-ac dip -50 ms: lawn first, dig 0.63 mm, slide 39.3 mm; ball 1.351 m/s at 12.38°; striker 0.953 m, croqueted 4.636 m, ratio 4.87; impact-head-deep 0, impact-cap 0, impact-head-approaching 0, impact-off-face 0, impact-turf-pit 0
+stop-ac dip -40 ms: lawn first, dig 0.84 mm, slide 36.2 mm; ball 1.307 m/s at 13.62°; striker 0.916 m, croqueted 4.071 m, ratio 4.44; impact-head-deep 0, impact-cap 0, impact-head-approaching 0, impact-off-face 0, impact-turf-pit 0
+stop-ac dip -30 ms: lawn first, dig 0.84 mm, slide 36.0 mm; ball 1.307 m/s at 13.62°; striker 0.917 m, croqueted 4.070 m, ratio 4.44; impact-head-deep 0, impact-cap 0, impact-head-approaching 0, impact-off-face 0, impact-turf-pit 0
+stop-ac dip -20 ms: lawn first, dig 1.52 mm, slide 19.8 mm; ball 1.285 m/s at 18.13°; striker 0.972 m, croqueted 3.696 m, ratio 3.80; impact-head-deep 0, impact-cap 0, impact-head-approaching 0, impact-off-face 0, impact-turf-pit 0
+stop-ac dip -10 ms: ball first, dig 1.26 mm, slide 2.3 mm; ball 1.171 m/s at 9.93°; striker 0.662 m, croqueted 5.936 m, ratio 8.97; impact-head-deep 0, impact-cap 0, impact-head-approaching 0, impact-off-face 0, impact-turf-pit 0
+stop-ac dip -5 ms: ball first, dig 1.45 mm, slide 1.7 mm; ball 1.311 m/s at 2.42°; striker 0.753 m, croqueted 6.048 m, ratio 8.04; impact-head-deep 0, impact-cap 0, impact-head-approaching 0, impact-off-face 0, impact-turf-pit 0
+stop-ac dip 0 ms: ball first, dig 1.88 mm, slide 1.8 mm; ball 1.445 m/s at 1.56°; striker 0.936 m, croqueted 6.047 m, ratio 6.46; impact-head-deep 0, impact-cap 0, impact-head-approaching 0, impact-off-face 0, impact-turf-pit 0
+stop-ac dip 5 ms: ball first, dig 2.08 mm, slide 1.9 mm; ball 1.442 m/s at 1.44°; striker 0.990 m, croqueted 5.992 m, ratio 6.05; impact-head-deep 1, impact-cap 0, impact-head-approaching 0, impact-off-face 0, impact-turf-pit 0
+stop-ac dip 10 ms: ball first, dig 2.25 mm, slide 2.0 mm; ball 1.442 m/s at -0.41°; striker 0.990 m, croqueted 5.980 m, ratio 6.04; impact-head-deep 1, impact-cap 0, impact-head-approaching 0, impact-off-face 0, impact-turf-pit 0
+stop-ac dip 20 ms: ball first, dig 2.60 mm, slide 2.1 mm; ball 1.446 m/s at -4.07°; striker 0.990 m, croqueted 5.972 m, ratio 6.04; impact-head-deep 1, impact-cap 0, impact-head-approaching 0, impact-off-face 0, impact-turf-pit 0
+stop-ac dip ×0: ball first, dig 0.00 mm, slide 0.0 mm; ball 1.455 m/s at 7.68°; striker 0.990 m, croqueted 6.013 m, ratio 6.08; impact-head-deep 0, impact-cap 0, impact-head-approaching 0, impact-off-face 0, impact-turf-pit 0
+stop-ac dip ×0.5: ball first, dig 0.00 mm, slide 0.0 mm; ball 1.445 m/s at 2.95°; striker 0.965 m, croqueted 6.034 m, ratio 6.25; impact-head-deep 0, impact-cap 0, impact-head-approaching 0, impact-off-face 0, impact-turf-pit 0
+stop-ac dip ×1: ball first, dig 1.88 mm, slide 1.8 mm; ball 1.445 m/s at 1.56°; striker 0.936 m, croqueted 6.047 m, ratio 6.46; impact-head-deep 0, impact-cap 0, impact-head-approaching 0, impact-off-face 0, impact-turf-pit 0
+stop-ac dip ×1.5: ball first, dig 3.90 mm, slide 2.3 mm; ball 1.447 m/s at 1.25°; striker 0.906 m, croqueted 6.072 m, ratio 6.70; impact-head-deep 1, impact-cap 0, impact-head-approaching 0, impact-off-face 0, impact-turf-pit 0
+stop-ac dip ×2: ball first, dig 5.79 mm, slide 2.9 mm; ball 1.448 m/s at 0.40°; striker 0.881 m, croqueted 6.090 m, ratio 6.91; impact-head-deep 1, impact-cap 0, impact-head-approaching 0, impact-off-face 0, impact-turf-pit 0
+full-roll arc -50 ms: ball first, dig 0.00 mm, slide 0.0 mm; ball 1.334 m/s at 7.46°; striker 1.752 m, croqueted 3.151 m, ratio 1.80; impact-head-deep 0, impact-cap 0, impact-head-approaching 0, impact-off-face 1, impact-turf-pit 0
+full-roll arc -40 ms: ball first, dig 0.00 mm, slide 0.0 mm; ball 1.519 m/s at 7.94°; striker 2.217 m, croqueted 3.615 m, ratio 1.63; impact-head-deep 0, impact-cap 0, impact-head-approaching 0, impact-off-face 0, impact-turf-pit 0
+full-roll arc -30 ms: ball first, dig 0.00 mm, slide 0.0 mm; ball 1.559 m/s at 7.81°; striker 2.312 m, croqueted 4.001 m, ratio 1.73; impact-head-deep 0, impact-cap 0, impact-head-approaching 0, impact-off-face 0, impact-turf-pit 0
+full-roll arc -20 ms: ball first, dig 0.00 mm, slide 0.0 mm; ball 1.363 m/s at 8.19°; striker 1.875 m, croqueted 3.766 m, ratio 2.01; impact-head-deep 0, impact-cap 0, impact-head-approaching 0, impact-off-face 0, impact-turf-pit 0
+full-roll arc -10 ms: ball first, dig 0.00 mm, slide 0.0 mm; ball 1.492 m/s at 7.69°; striker 2.175 m, croqueted 3.545 m, ratio 1.63; impact-head-deep 0, impact-cap 0, impact-head-approaching 0, impact-off-face 0, impact-turf-pit 0
+full-roll arc -5 ms: ball first, dig 0.00 mm, slide 0.0 mm; ball 1.547 m/s at 6.44°; striker 2.269 m, croqueted 3.436 m, ratio 1.51; impact-head-deep 0, impact-cap 0, impact-head-approaching 0, impact-off-face 0, impact-turf-pit 0
+full-roll arc 0 ms: ball first, dig 0.00 mm, slide 0.0 mm; ball 1.576 m/s at 4.15°; striker 2.284 m, croqueted 3.325 m, ratio 1.46; impact-head-deep 0, impact-cap 0, impact-head-approaching 0, impact-off-face 0, impact-turf-pit 0
+full-roll arc 5 ms: ball first, dig 0.00 mm, slide 0.0 mm; ball 1.645 m/s at 2.59°; striker 2.393 m, croqueted 3.314 m, ratio 1.38; impact-head-deep 0, impact-cap 0, impact-head-approaching 0, impact-off-face 0, impact-turf-pit 0
+full-roll arc 10 ms: ball first, dig 0.00 mm, slide 0.0 mm; ball 1.737 m/s at 1.00°; striker 2.601 m, croqueted 3.322 m, ratio 1.28; impact-head-deep 0, impact-cap 0, impact-head-approaching 0, impact-off-face 0, impact-turf-pit 0
+full-roll arc 20 ms: ball first, dig 0.00 mm, slide 0.0 mm; ball 1.653 m/s at 4.03°; striker 2.479 m, croqueted 3.315 m, ratio 1.34; impact-head-deep 0, impact-cap 0, impact-head-approaching 0, impact-off-face 0, impact-turf-pit 0
+full-roll hands -50 ms: ball first, dig 0.00 mm, slide 0.0 mm; ball 1.227 m/s at 0.08°; striker 1.483 m, croqueted 3.733 m, ratio 2.52; impact-head-deep 0, impact-cap 0, impact-head-approaching 0, impact-off-face 0, impact-turf-pit 0
+full-roll hands -40 ms: ball first, dig 0.00 mm, slide 0.0 mm; ball 1.383 m/s at 1.08°; striker 1.797 m, croqueted 3.790 m, ratio 2.11; impact-head-deep 0, impact-cap 0, impact-head-approaching 0, impact-off-face 0, impact-turf-pit 0
+full-roll hands -30 ms: ball first, dig 0.00 mm, slide 0.0 mm; ball 1.513 m/s at 2.16°; striker 2.067 m, croqueted 3.836 m, ratio 1.86; impact-head-deep 0, impact-cap 0, impact-head-approaching 0, impact-off-face 0, impact-turf-pit 0
+full-roll hands -20 ms: ball first, dig 0.00 mm, slide 0.0 mm; ball 1.564 m/s at 1.64°; striker 2.168 m, croqueted 3.670 m, ratio 1.69; impact-head-deep 0, impact-cap 0, impact-head-approaching 0, impact-off-face 0, impact-turf-pit 0
+full-roll hands -10 ms: ball first, dig 0.00 mm, slide 0.0 mm; ball 1.579 m/s at -1.15°; striker 2.091 m, croqueted 3.501 m, ratio 1.67; impact-head-deep 0, impact-cap 0, impact-head-approaching 0, impact-off-face 0, impact-turf-pit 0
+full-roll hands -5 ms: ball first, dig 0.00 mm, slide 0.0 mm; ball 1.580 m/s at 0.00°; striker 2.147 m, croqueted 3.416 m, ratio 1.59; impact-head-deep 0, impact-cap 0, impact-head-approaching 0, impact-off-face 0, impact-turf-pit 0
+full-roll hands 0 ms: ball first, dig 0.00 mm, slide 0.0 mm; ball 1.576 m/s at 4.15°; striker 2.284 m, croqueted 3.325 m, ratio 1.46; impact-head-deep 0, impact-cap 0, impact-head-approaching 0, impact-off-face 0, impact-turf-pit 0
+full-roll hands 5 ms: ball first, dig 0.00 mm, slide 0.0 mm; ball 1.612 m/s at 3.81°; striker 2.364 m, croqueted 3.312 m, ratio 1.40; impact-head-deep 0, impact-cap 0, impact-head-approaching 0, impact-off-face 0, impact-turf-pit 0
+full-roll hands 10 ms: ball first, dig 0.00 mm, slide 0.0 mm; ball 1.620 m/s at 3.63°; striker 2.383 m, croqueted 3.310 m, ratio 1.39; impact-head-deep 0, impact-cap 0, impact-head-approaching 0, impact-off-face 0, impact-turf-pit 0
+full-roll hands 20 ms: ball first, dig 0.00 mm, slide 0.0 mm; ball 1.600 m/s at 4.42°; striker 2.339 m, croqueted 3.310 m, ratio 1.42; impact-head-deep 0, impact-cap 0, impact-head-approaching 0, impact-off-face 0, impact-turf-pit 0
+full-roll dip -50 ms: ball first, dig 0.00 mm, slide 0.0 mm; ball 1.575 m/s at 4.15°; striker 2.282 m, croqueted 3.326 m, ratio 1.46; impact-head-deep 0, impact-cap 0, impact-head-approaching 0, impact-off-face 0, impact-turf-pit 0
+full-roll dip -40 ms: ball first, dig 0.00 mm, slide 0.0 mm; ball 1.577 m/s at 4.14°; striker 2.284 m, croqueted 3.325 m, ratio 1.46; impact-head-deep 0, impact-cap 0, impact-head-approaching 0, impact-off-face 0, impact-turf-pit 0
+full-roll dip -30 ms: ball first, dig 0.00 mm, slide 0.0 mm; ball 1.577 m/s at 4.14°; striker 2.285 m, croqueted 3.326 m, ratio 1.46; impact-head-deep 0, impact-cap 0, impact-head-approaching 0, impact-off-face 0, impact-turf-pit 0
+full-roll dip -20 ms: ball first, dig 0.00 mm, slide 0.0 mm; ball 1.577 m/s at 4.14°; striker 2.285 m, croqueted 3.325 m, ratio 1.46; impact-head-deep 0, impact-cap 0, impact-head-approaching 0, impact-off-face 0, impact-turf-pit 0
+full-roll dip -10 ms: ball first, dig 0.00 mm, slide 0.0 mm; ball 1.576 m/s at 4.15°; striker 2.284 m, croqueted 3.325 m, ratio 1.46; impact-head-deep 0, impact-cap 0, impact-head-approaching 0, impact-off-face 0, impact-turf-pit 0
+full-roll dip -5 ms: ball first, dig 0.00 mm, slide 0.0 mm; ball 1.577 m/s at 4.15°; striker 2.284 m, croqueted 3.325 m, ratio 1.46; impact-head-deep 0, impact-cap 0, impact-head-approaching 0, impact-off-face 0, impact-turf-pit 0
+full-roll dip 0 ms: ball first, dig 0.00 mm, slide 0.0 mm; ball 1.576 m/s at 4.15°; striker 2.284 m, croqueted 3.325 m, ratio 1.46; impact-head-deep 0, impact-cap 0, impact-head-approaching 0, impact-off-face 0, impact-turf-pit 0
+full-roll dip 5 ms: ball first, dig 0.00 mm, slide 0.0 mm; ball 1.576 m/s at 4.15°; striker 2.284 m, croqueted 3.325 m, ratio 1.46; impact-head-deep 0, impact-cap 0, impact-head-approaching 0, impact-off-face 0, impact-turf-pit 0
+full-roll dip 10 ms: ball first, dig 0.00 mm, slide 0.0 mm; ball 1.576 m/s at 4.15°; striker 2.284 m, croqueted 3.325 m, ratio 1.46; impact-head-deep 0, impact-cap 0, impact-head-approaching 0, impact-off-face 0, impact-turf-pit 0
+full-roll dip 20 ms: ball first, dig 0.00 mm, slide 0.0 mm; ball 1.576 m/s at 4.15°; striker 2.284 m, croqueted 3.325 m, ratio 1.46; impact-head-deep 0, impact-cap 0, impact-head-approaching 0, impact-off-face 0, impact-turf-pit 0
+== The late re-hit (design §3.5, §9): the real head at the impact's end, moved on by the planned follow-through out to FREE_SPAN, against every ball's phase-2 trajectory and, with the shaft, the hoops and the peg; measured, not integrated ==
+single-ball canonical: no crossing; no obstacle; preset sweep: 30 of 165 runs cross a ball, 0 an obstacle, 0 overlap one at the impact's end
+            speed 1, drive 0.5, up -3.00 mm, side -10.00 mm: crosses blue 113.0 ms after contactAt, 0.010 mm deep, head 1.021 m/s, ball 0.906 m/s; no obstacle
+            speed 1, drive 0.5, up -3.00 mm, side 0.00 mm: crosses blue 117.3 ms after contactAt, 0.001 mm deep, head 1.015 m/s, ball 0.909 m/s; no obstacle
+            speed 1, drive 0.5, up -3.00 mm, side 10.00 mm: crosses blue 113.0 ms after contactAt, 0.013 mm deep, head 1.021 m/s, ball 0.906 m/s; no obstacle
+            speed 1, drive 0.5, up 0.00 mm, side -10.00 mm: crosses blue 114.4 ms after contactAt, 0.005 mm deep, head 1.019 m/s, ball 0.904 m/s; no obstacle
+            speed 1, drive 0.5, up 0.00 mm, side 0.00 mm: crosses blue 118.9 ms after contactAt, 0.006 mm deep, head 1.013 m/s, ball 0.907 m/s; no obstacle
+            speed 1, drive 0.5, up 0.00 mm, side 10.00 mm: crosses blue 114.4 ms after contactAt, 0.008 mm deep, head 1.019 m/s, ball 0.904 m/s; no obstacle
+            speed 1, drive 1, up -3.00 mm, side -10.00 mm: crosses blue 73.7 ms after contactAt, 0.012 mm deep, head 1.164 m/s, ball 0.941 m/s; no obstacle
+            speed 1, drive 1, up -3.00 mm, side 0.00 mm: crosses blue 75.6 ms after contactAt, 0.021 mm deep, head 1.162 m/s, ball 0.939 m/s; no obstacle
+            speed 1, drive 1, up -3.00 mm, side 10.00 mm: crosses blue 73.7 ms after contactAt, 0.015 mm deep, head 1.164 m/s, ball 0.941 m/s; no obstacle
+            speed 1, drive 1, up 0.00 mm, side -10.00 mm: crosses blue 74.3 ms after contactAt, 0.016 mm deep, head 1.163 m/s, ball 0.937 m/s; no obstacle
+            speed 1, drive 1, up 0.00 mm, side 0.00 mm: crosses blue 76.2 ms after contactAt, 0.020 mm deep, head 1.161 m/s, ball 0.935 m/s; no obstacle
+            speed 1, drive 1, up 0.00 mm, side 10.00 mm: crosses blue 74.3 ms after contactAt, 0.019 mm deep, head 1.163 m/s, ball 0.937 m/s; no obstacle
+            speed 2, drive 0, up 3.00 mm, side -10.00 mm: crosses blue 51.7 ms after contactAt, 0.004 mm deep, head 1.962 m/s, ball 1.868 m/s; no obstacle
+            speed 2, drive 0, up 3.00 mm, side 0.00 mm: crosses blue 54.6 ms after contactAt, 0.001 mm deep, head 1.959 m/s, ball 1.866 m/s; no obstacle
+            speed 2, drive 0, up 3.00 mm, side 10.00 mm: crosses blue 51.6 ms after contactAt, 0.011 mm deep, head 1.962 m/s, ball 1.868 m/s; no obstacle
+            speed 2, drive 0.5, up 3.00 mm, side -10.00 mm: crosses blue 41.9 ms after contactAt, 0.007 mm deep, head 2.170 m/s, ball 2.006 m/s; no obstacle
+            speed 2, drive 0.5, up 3.00 mm, side 0.00 mm: crosses blue 41.1 ms after contactAt, 0.017 mm deep, head 2.171 m/s, ball 2.019 m/s; no obstacle
+            speed 2, drive 0.5, up 3.00 mm, side 10.00 mm: crosses blue 41.9 ms after contactAt, 0.011 mm deep, head 2.170 m/s, ball 2.006 m/s; no obstacle
+            speed 2, drive 1, up 3.00 mm, side -10.00 mm: crosses blue 49.7 ms after contactAt, 0.004 mm deep, head 2.358 m/s, ball 1.994 m/s; no obstacle
+            speed 2, drive 1, up 3.00 mm, side 0.00 mm: crosses blue 49.5 ms after contactAt, 0.028 mm deep, head 2.359 m/s, ball 2.007 m/s; no obstacle
+            speed 2, drive 1, up 3.00 mm, side 10.00 mm: crosses blue 49.7 ms after contactAt, 0.005 mm deep, head 2.358 m/s, ball 1.994 m/s; no obstacle
+            speed 3, drive 0.5, up 3.00 mm, side -10.00 mm: crosses blue 59.3 ms after contactAt, 0.012 mm deep, head 3.219 m/s, ball 3.012 m/s; no obstacle
+            speed 3, drive 0.5, up 3.00 mm, side 0.00 mm: crosses blue 62.0 ms after contactAt, 0.009 mm deep, head 3.213 m/s, ball 3.018 m/s; no obstacle
+            speed 3, drive 0.5, up 3.00 mm, side 10.00 mm: crosses blue 59.4 ms after contactAt, 0.009 mm deep, head 3.219 m/s, ball 3.012 m/s; no obstacle
+            speed 3, drive 1, up 3.00 mm, side -10.00 mm: crosses blue 40.5 ms after contactAt, 0.010 mm deep, head 3.550 m/s, ball 3.116 m/s; no obstacle
+            speed 3, drive 1, up 3.00 mm, side 0.00 mm: crosses blue 41.4 ms after contactAt, 0.013 mm deep, head 3.549 m/s, ball 3.130 m/s; no obstacle
+            speed 3, drive 1, up 3.00 mm, side 10.00 mm: crosses blue 40.7 ms after contactAt, 0.023 mm deep, head 3.550 m/s, ball 3.115 m/s; no obstacle
+            speed 4, drive 1, up 3.00 mm, side -10.00 mm: crosses blue 34.8 ms after contactAt, 0.030 mm deep, head 4.741 m/s, ball 4.158 m/s; no obstacle
+            speed 4, drive 1, up 3.00 mm, side 0.00 mm: crosses blue 34.5 ms after contactAt, 0.044 mm deep, head 4.742 m/s, ball 4.183 m/s; no obstacle
+            speed 4, drive 1, up 3.00 mm, side 10.00 mm: crosses blue 34.8 ms after contactAt, 0.030 mm deep, head 4.741 m/s, ball 4.158 m/s; no obstacle
+drive       canonical: no crossing; no obstacle; preset sweep: 18 of 165 runs cross a ball, 0 an obstacle, 0 overlap one at the impact's end
+            speed 1, drive -1, up -3.00 mm, side -10.00 mm: crosses blue 37.5 ms after contactAt, 0.007 mm deep, head 0.793 m/s, ball 0.500 m/s; no obstacle
+            speed 1, drive -1, up -3.00 mm, side 0.00 mm: crosses blue 36.5 ms after contactAt, 0.018 mm deep, head 0.794 m/s, ball 0.508 m/s; no obstacle
+            speed 1, drive -1, up -3.00 mm, side 10.00 mm: crosses blue 37.5 ms after contactAt, 0.006 mm deep, head 0.793 m/s, ball 0.500 m/s; no obstacle
+            speed 1, drive -1, up 0.00 mm, side -10.00 mm: crosses blue 37.5 ms after contactAt, 0.020 mm deep, head 0.793 m/s, ball 0.502 m/s; no obstacle
+            speed 1, drive -1, up 0.00 mm, side 0.00 mm: crosses blue 36.5 ms after contactAt, 0.028 mm deep, head 0.794 m/s, ball 0.510 m/s; no obstacle
+            speed 1, drive -1, up 0.00 mm, side 10.00 mm: crosses blue 37.5 ms after contactAt, 0.019 mm deep, head 0.793 m/s, ball 0.502 m/s; no obstacle
+            speed 1, drive -0.5, up -3.00 mm, side -10.00 mm: crosses blue 62.4 ms after contactAt, 0.018 mm deep, head 0.880 m/s, ball 0.455 m/s; no obstacle
+            speed 1, drive -0.5, up -3.00 mm, side 0.00 mm: crosses blue 59.0 ms after contactAt, 0.026 mm deep, head 0.882 m/s, ball 0.461 m/s; no obstacle
+            speed 1, drive -0.5, up -3.00 mm, side 10.00 mm: crosses blue 62.5 ms after contactAt, 0.005 mm deep, head 0.880 m/s, ball 0.455 m/s; no obstacle
+            speed 1, drive -0.5, up 0.00 mm, side -10.00 mm: crosses blue 62.1 ms after contactAt, 0.005 mm deep, head 0.880 m/s, ball 0.457 m/s; no obstacle
+            speed 1, drive -0.5, up 0.00 mm, side 0.00 mm: crosses blue 58.7 ms after contactAt, 0.015 mm deep, head 0.882 m/s, ball 0.462 m/s; no obstacle
+            speed 1, drive -0.5, up 0.00 mm, side 10.00 mm: crosses blue 62.3 ms after contactAt, 0.035 mm deep, head 0.880 m/s, ball 0.457 m/s; no obstacle
+            speed 2, drive -1, up -3.00 mm, side -10.00 mm: crosses blue 65.7 ms after contactAt, 0.003 mm deep, head 1.559 m/s, ball 0.810 m/s; no obstacle
+            speed 2, drive -1, up -3.00 mm, side 0.00 mm: crosses blue 63.7 ms after contactAt, 0.009 mm deep, head 1.562 m/s, ball 0.829 m/s; no obstacle
+            speed 2, drive -1, up -3.00 mm, side 10.00 mm: crosses blue 65.7 ms after contactAt, 0.003 mm deep, head 1.559 m/s, ball 0.810 m/s; no obstacle
+            speed 2, drive -1, up 0.00 mm, side -10.00 mm: crosses blue 65.5 ms after contactAt, 0.076 mm deep, head 1.560 m/s, ball 0.816 m/s; no obstacle
+            speed 2, drive -1, up 0.00 mm, side 0.00 mm: crosses blue 63.5 ms after contactAt, 0.047 mm deep, head 1.562 m/s, ball 0.834 m/s; no obstacle
+            speed 2, drive -1, up 0.00 mm, side 10.00 mm: crosses blue 65.4 ms after contactAt, 0.001 mm deep, head 1.560 m/s, ball 0.817 m/s; no obstacle
+stop-ac     canonical: no crossing; no obstacle; preset sweep: 12 of 180 runs cross a ball, 0 an obstacle, 0 overlap one at the impact's end
+            speed 1, drive 0, up -20.00 mm, side -10.00 mm: crosses blue 49.5 ms after contactAt, 0.002 mm deep, head 0.861 m/s, ball 0.439 m/s; no obstacle
+            speed 1, drive 0, up -20.00 mm, side 0.00 mm: crosses blue 47.9 ms after contactAt, 0.001 mm deep, head 0.864 m/s, ball 0.451 m/s; no obstacle
+            speed 1, drive 0, up -20.00 mm, side 10.00 mm: crosses blue 49.5 ms after contactAt, 0.002 mm deep, head 0.861 m/s, ball 0.439 m/s; no obstacle
+            speed 1, drive 0, up -17.00 mm, side -10.00 mm: crosses blue 45.6 ms after contactAt, 0.019 mm deep, head 0.863 m/s, ball 0.470 m/s; no obstacle
+            speed 1, drive 0, up -17.00 mm, side 0.00 mm: crosses blue 46.2 ms after contactAt, 0.026 mm deep, head 0.863 m/s, ball 0.471 m/s; no obstacle
+            speed 1, drive 0, up -17.00 mm, side 10.00 mm: crosses blue 45.6 ms after contactAt, 0.020 mm deep, head 0.863 m/s, ball 0.470 m/s; no obstacle
+            speed 2, drive 0, up -20.00 mm, side 0.00 mm: crosses blue 80.2 ms after contactAt, 0.022 mm deep, head 1.749 m/s, ball 0.749 m/s; no obstacle
+            speed 2, drive 0, up -17.00 mm, side -10.00 mm: crosses blue 78.0 ms after contactAt, 0.030 mm deep, head 1.734 m/s, ball 0.748 m/s; no obstacle
+            speed 2, drive 0, up -17.00 mm, side 0.00 mm: crosses blue 79.1 ms after contactAt, 0.014 mm deep, head 1.732 m/s, ball 0.750 m/s; no obstacle
+            speed 2, drive 0, up -17.00 mm, side 10.00 mm: crosses blue 77.9 ms after contactAt, 0.029 mm deep, head 1.735 m/s, ball 0.748 m/s; no obstacle
+            speed 3, drive 0, up -17.00 mm, side -10.00 mm: crosses blue 74.8 ms after contactAt, 0.027 mm deep, head 2.671 m/s, ball 1.194 m/s; no obstacle
+            speed 3, drive 0, up -17.00 mm, side 10.00 mm: crosses blue 74.8 ms after contactAt, 0.026 mm deep, head 2.671 m/s, ball 1.194 m/s; no obstacle
+stop-gc     canonical: no crossing; no obstacle; preset sweep: 39 of 165 runs cross a ball, 0 an obstacle, 0 overlap one at the impact's end
+            speed 1, drive 0.5, up -3.00 mm, side -10.00 mm: crosses blue 40.5 ms after contactAt, 0.022 mm deep, head 1.488 m/s, ball 1.111 m/s; no obstacle
+            speed 1, drive 0.5, up -3.00 mm, side 0.00 mm: crosses blue 38.5 ms after contactAt, 0.026 mm deep, head 1.489 m/s, ball 1.127 m/s; no obstacle
+            speed 1, drive 0.5, up -3.00 mm, side 10.00 mm: crosses blue 40.5 ms after contactAt, 0.022 mm deep, head 1.488 m/s, ball 1.111 m/s; no obstacle
+            speed 1, drive 0.5, up 0.00 mm, side -10.00 mm: crosses blue 41.7 ms after contactAt, 0.026 mm deep, head 1.487 m/s, ball 1.104 m/s; no obstacle
+            speed 1, drive 0.5, up 0.00 mm, side 0.00 mm: crosses blue 39.3 ms after contactAt, 0.037 mm deep, head 1.488 m/s, ball 1.122 m/s; no obstacle
+            speed 1, drive 0.5, up 0.00 mm, side 10.00 mm: crosses blue 41.6 ms after contactAt, 0.027 mm deep, head 1.487 m/s, ball 1.104 m/s; no obstacle
+            speed 2, drive 0.5, up -3.00 mm, side -10.00 mm: crosses blue 38.0 ms after contactAt, 0.006 mm deep, head 2.978 m/s, ball 2.389 m/s; no obstacle
+            speed 2, drive 0.5, up -3.00 mm, side 0.00 mm: crosses blue 37.3 ms after contactAt, 0.059 mm deep, head 2.979 m/s, ball 2.403 m/s; no obstacle
+            speed 2, drive 0.5, up -3.00 mm, side 10.00 mm: crosses blue 38.0 ms after contactAt, 0.005 mm deep, head 2.978 m/s, ball 2.389 m/s; no obstacle
+            speed 2, drive 0.5, up 0.00 mm, side -10.00 mm: crosses blue 38.6 ms after contactAt, 0.003 mm deep, head 2.978 m/s, ball 2.385 m/s; no obstacle
+            speed 2, drive 0.5, up 0.00 mm, side 0.00 mm: crosses blue 37.9 ms after contactAt, 0.054 mm deep, head 2.978 m/s, ball 2.399 m/s; no obstacle
+            speed 2, drive 0.5, up 0.00 mm, side 10.00 mm: crosses blue 38.6 ms after contactAt, 0.003 mm deep, head 2.978 m/s, ball 2.385 m/s; no obstacle
+            speed 2, drive 0.5, up 3.00 mm, side -10.00 mm: crosses blue 40.4 ms after contactAt, 0.043 mm deep, head 2.964 m/s, ball 2.515 m/s; no obstacle
+            speed 2, drive 0.5, up 3.00 mm, side 0.00 mm: crosses blue 39.7 ms after contactAt, 0.001 mm deep, head 2.965 m/s, ball 2.532 m/s; no obstacle
+            speed 2, drive 0.5, up 3.00 mm, side 10.00 mm: crosses blue 40.4 ms after contactAt, 0.042 mm deep, head 2.964 m/s, ball 2.515 m/s; no obstacle
+            speed 2, drive 1, up -3.00 mm, side -10.00 mm: crosses blue 57.0 ms after contactAt, 0.011 mm deep, head 3.937 m/s, ball 3.810 m/s; no obstacle
+            speed 2, drive 1, up -3.00 mm, side 0.00 mm: crosses blue 54.5 ms after contactAt, 0.025 mm deep, head 3.943 m/s, ball 3.834 m/s; no obstacle
+            speed 2, drive 1, up -3.00 mm, side 10.00 mm: crosses blue 57.0 ms after contactAt, 0.011 mm deep, head 3.937 m/s, ball 3.810 m/s; no obstacle
+            speed 2, drive 1, up 0.00 mm, side -10.00 mm: crosses blue 57.6 ms after contactAt, 0.021 mm deep, head 3.936 m/s, ball 3.802 m/s; no obstacle
+            speed 2, drive 1, up 0.00 mm, side 0.00 mm: crosses blue 55.6 ms after contactAt, 0.024 mm deep, head 3.941 m/s, ball 3.827 m/s; no obstacle
+            speed 2, drive 1, up 0.00 mm, side 10.00 mm: crosses blue 57.6 ms after contactAt, 0.021 mm deep, head 3.936 m/s, ball 3.802 m/s; no obstacle
+            speed 2, drive 1, up 3.00 mm, side -10.00 mm: crosses blue 66.4 ms after contactAt, 0.004 mm deep, head 3.902 m/s, ball 3.800 m/s; no obstacle
+            speed 2, drive 1, up 3.00 mm, side 0.00 mm: crosses blue 63.1 ms after contactAt, 0.021 mm deep, head 3.911 m/s, ball 3.823 m/s; no obstacle
+            speed 2, drive 1, up 3.00 mm, side 10.00 mm: crosses blue 66.5 ms after contactAt, 0.009 mm deep, head 3.902 m/s, ball 3.800 m/s; no obstacle
+            speed 3, drive 0.5, up -3.00 mm, side -10.00 mm: crosses blue 36.5 ms after contactAt, 0.081 mm deep, head 4.470 m/s, ball 3.510 m/s; no obstacle
+            speed 3, drive 0.5, up -3.00 mm, side 0.00 mm: crosses blue 35.8 ms after contactAt, 0.015 mm deep, head 4.471 m/s, ball 3.533 m/s; no obstacle
+            speed 3, drive 0.5, up -3.00 mm, side 10.00 mm: crosses blue 36.5 ms after contactAt, 0.082 mm deep, head 4.470 m/s, ball 3.510 m/s; no obstacle
+            speed 3, drive 0.5, up 0.00 mm, side -10.00 mm: crosses blue 37.0 ms after contactAt, 0.085 mm deep, head 4.469 m/s, ball 3.503 m/s; no obstacle
+            speed 3, drive 0.5, up 0.00 mm, side 0.00 mm: crosses blue 36.2 ms after contactAt, 0.001 mm deep, head 4.470 m/s, ball 3.527 m/s; no obstacle
+            speed 3, drive 0.5, up 0.00 mm, side 10.00 mm: crosses blue 37.0 ms after contactAt, 0.086 mm deep, head 4.469 m/s, ball 3.503 m/s; no obstacle
+            speed 3, drive 0.5, up 3.00 mm, side -10.00 mm: crosses blue 44.0 ms after contactAt, 0.080 mm deep, head 4.433 m/s, ball 3.645 m/s; no obstacle
+            speed 3, drive 0.5, up 3.00 mm, side 0.00 mm: crosses blue 43.1 ms after contactAt, 0.083 mm deep, head 4.435 m/s, ball 3.666 m/s; no obstacle
+            speed 3, drive 0.5, up 3.00 mm, side 10.00 mm: crosses blue 44.0 ms after contactAt, 0.082 mm deep, head 4.433 m/s, ball 3.644 m/s; no obstacle
+            speed 4, drive 0.5, up -3.00 mm, side -10.00 mm: crosses blue 41.1 ms after contactAt, 0.026 mm deep, head 5.947 m/s, ball 4.748 m/s; no obstacle
+            speed 4, drive 0.5, up -3.00 mm, side 0.00 mm: crosses blue 39.1 ms after contactAt, 0.021 mm deep, head 5.952 m/s, ball 4.775 m/s; no obstacle
+            speed 4, drive 0.5, up -3.00 mm, side 10.00 mm: crosses blue 41.1 ms after contactAt, 0.025 mm deep, head 5.947 m/s, ball 4.748 m/s; no obstacle
+            speed 4, drive 0.5, up 0.00 mm, side -10.00 mm: crosses blue 40.1 ms after contactAt, 0.063 mm deep, head 5.949 m/s, ball 4.742 m/s; no obstacle
+            speed 4, drive 0.5, up 0.00 mm, side 0.00 mm: crosses blue 38.7 ms after contactAt, 0.019 mm deep, head 5.953 m/s, ball 4.769 m/s; no obstacle
+            speed 4, drive 0.5, up 0.00 mm, side 10.00 mm: crosses blue 40.1 ms after contactAt, 0.062 mm deep, head 5.949 m/s, ball 4.742 m/s; no obstacle
+half-roll   canonical: no crossing; no obstacle; preset sweep: 104 of 225 runs cross a ball, 0 an obstacle, 0 overlap one at the impact's end
+            speed 1, drive -1, up -3.00 mm, side -10.00 mm: crosses blue 87.0 ms after contactAt, 0.005 mm deep, head 0.560 m/s, ball 0.508 m/s; no obstacle
+            speed 1, drive -1, up -3.00 mm, side 0.00 mm: crosses blue 89.8 ms after contactAt, 0.000 mm deep, head 0.560 m/s, ball 0.510 m/s; no obstacle
+            speed 1, drive -1, up -3.00 mm, side 10.00 mm: crosses blue 87.0 ms after contactAt, 0.005 mm deep, head 0.560 m/s, ball 0.508 m/s; no obstacle
+            speed 1, drive -1, up 0.00 mm, side -10.00 mm: crosses blue 87.5 ms after contactAt, 0.001 mm deep, head 0.561 m/s, ball 0.510 m/s; no obstacle
+            speed 1, drive -1, up 0.00 mm, side 0.00 mm: crosses blue 90.7 ms after contactAt, 0.002 mm deep, head 0.561 m/s, ball 0.512 m/s; no obstacle
+            speed 1, drive -1, up 0.00 mm, side 10.00 mm: crosses blue 87.5 ms after contactAt, 0.003 mm deep, head 0.561 m/s, ball 0.510 m/s; no obstacle
+            speed 1, drive -1, up 3.00 mm, side -10.00 mm: crosses blue 88.2 ms after contactAt, 0.005 mm deep, head 0.562 m/s, ball 0.512 m/s; no obstacle
+            speed 1, drive -1, up 3.00 mm, side 0.00 mm: crosses blue 91.5 ms after contactAt, 0.001 mm deep, head 0.562 m/s, ball 0.514 m/s; no obstacle
+            speed 1, drive -1, up 3.00 mm, side 10.00 mm: crosses blue 88.2 ms after contactAt, 0.003 mm deep, head 0.562 m/s, ball 0.512 m/s; no obstacle
+            speed 1, drive -0.5, up -3.00 mm, side -10.00 mm: crosses blue 115.7 ms after contactAt, 0.004 mm deep, head 0.560 m/s, ball 0.511 m/s; no obstacle
+            speed 1, drive -0.5, up -3.00 mm, side 0.00 mm: crosses blue 121.1 ms after contactAt, 0.002 mm deep, head 0.560 m/s, ball 0.510 m/s; no obstacle
+            speed 1, drive -0.5, up -3.00 mm, side 10.00 mm: crosses blue 116.3 ms after contactAt, 0.004 mm deep, head 0.560 m/s, ball 0.510 m/s; no obstacle
+            speed 1, drive -0.5, up 0.00 mm, side -10.00 mm: crosses blue 118.4 ms after contactAt, 0.002 mm deep, head 0.561 m/s, ball 0.511 m/s; no obstacle
+            speed 1, drive -0.5, up 0.00 mm, side 0.00 mm: crosses blue 123.8 ms after contactAt, 0.003 mm deep, head 0.561 m/s, ball 0.510 m/s; no obstacle
+            speed 1, drive -0.5, up 0.00 mm, side 10.00 mm: crosses blue 118.5 ms after contactAt, 0.001 mm deep, head 0.561 m/s, ball 0.511 m/s; no obstacle
+            speed 1, drive -0.5, up 3.00 mm, side -10.00 mm: crosses blue 120.4 ms after contactAt, 0.004 mm deep, head 0.562 m/s, ball 0.512 m/s; no obstacle
+            speed 1, drive -0.5, up 3.00 mm, side 0.00 mm: crosses blue 125.9 ms after contactAt, 0.001 mm deep, head 0.562 m/s, ball 0.511 m/s; no obstacle
+            speed 1, drive -0.5, up 3.00 mm, side 10.00 mm: crosses blue 121.2 ms after contactAt, 0.003 mm deep, head 0.562 m/s, ball 0.511 m/s; no obstacle
+            speed 1, drive 0, up -3.00 mm, side -10.00 mm: crosses blue 109.5 ms after contactAt, 0.001 mm deep, head 0.560 m/s, ball 0.519 m/s; no obstacle
+            speed 1, drive 0, up -3.00 mm, side 0.00 mm: crosses blue 115.7 ms after contactAt, 0.001 mm deep, head 0.560 m/s, ball 0.517 m/s; no obstacle
+            speed 1, drive 0, up -3.00 mm, side 10.00 mm: crosses blue 109.1 ms after contactAt, 0.001 mm deep, head 0.560 m/s, ball 0.519 m/s; no obstacle
+            speed 1, drive 0, up 0.00 mm, side -10.00 mm: crosses blue 111.1 ms after contactAt, 0.000 mm deep, head 0.561 m/s, ball 0.519 m/s; no obstacle
+            speed 1, drive 0, up 0.00 mm, side 0.00 mm: crosses blue 117.8 ms after contactAt, 0.003 mm deep, head 0.561 m/s, ball 0.518 m/s; no obstacle
+            speed 1, drive 0, up 0.00 mm, side 10.00 mm: crosses blue 111.5 ms after contactAt, 0.003 mm deep, head 0.561 m/s, ball 0.519 m/s; no obstacle
+            speed 1, drive 0, up 3.00 mm, side -10.00 mm: crosses blue 113.0 ms after contactAt, 0.000 mm deep, head 0.562 m/s, ball 0.520 m/s; no obstacle
+            speed 1, drive 0, up 3.00 mm, side 0.00 mm: crosses blue 120.1 ms after contactAt, 0.003 mm deep, head 0.562 m/s, ball 0.518 m/s; no obstacle
+            speed 1, drive 0, up 3.00 mm, side 10.00 mm: crosses blue 113.6 ms after contactAt, 0.002 mm deep, head 0.562 m/s, ball 0.519 m/s; no obstacle
+            speed 1, drive 0.5, up -3.00 mm, side -10.00 mm: crosses blue 94.7 ms after contactAt, 0.002 mm deep, head 0.560 m/s, ball 0.526 m/s; no obstacle
+            speed 1, drive 0.5, up -3.00 mm, side 0.00 mm: crosses blue 103.3 ms after contactAt, 0.002 mm deep, head 0.560 m/s, ball 0.525 m/s; no obstacle
+            speed 1, drive 0.5, up -3.00 mm, side 10.00 mm: crosses blue 95.4 ms after contactAt, 0.001 mm deep, head 0.560 m/s, ball 0.526 m/s; no obstacle
+            speed 1, drive 0.5, up 0.00 mm, side -10.00 mm: crosses blue 96.8 ms after contactAt, 0.003 mm deep, head 0.561 m/s, ball 0.526 m/s; no obstacle
+            speed 1, drive 0.5, up 0.00 mm, side 0.00 mm: crosses blue 105.3 ms after contactAt, 0.001 mm deep, head 0.561 m/s, ball 0.525 m/s; no obstacle
+            speed 1, drive 0.5, up 0.00 mm, side 10.00 mm: crosses blue 97.1 ms after contactAt, 0.001 mm deep, head 0.561 m/s, ball 0.526 m/s; no obstacle
+            speed 1, drive 0.5, up 3.00 mm, side -10.00 mm: crosses blue 98.5 ms after contactAt, 0.000 mm deep, head 0.562 m/s, ball 0.527 m/s; no obstacle
+            speed 1, drive 0.5, up 3.00 mm, side 0.00 mm: crosses blue 107.8 ms after contactAt, 0.002 mm deep, head 0.562 m/s, ball 0.525 m/s; no obstacle
+            speed 1, drive 0.5, up 3.00 mm, side 10.00 mm: crosses blue 99.1 ms after contactAt, 0.002 mm deep, head 0.562 m/s, ball 0.526 m/s; no obstacle
+            speed 1, drive 1, up -3.00 mm, side -10.00 mm: crosses blue 201.6 ms after contactAt, 0.004 mm deep, head 0.560 m/s, ball 0.465 m/s; no obstacle
+            speed 1, drive 1, up -3.00 mm, side 0.00 mm: crosses blue 209.2 ms after contactAt, 0.007 mm deep, head 0.560 m/s, ball 0.464 m/s; no obstacle
+            speed 1, drive 1, up -3.00 mm, side 10.00 mm: crosses blue 201.6 ms after contactAt, 0.005 mm deep, head 0.560 m/s, ball 0.465 m/s; no obstacle
+            speed 1, drive 1, up 0.00 mm, side -10.00 mm: crosses blue 203.4 ms after contactAt, 0.008 mm deep, head 0.561 m/s, ball 0.466 m/s; no obstacle
+            speed 1, drive 1, up 0.00 mm, side 0.00 mm: crosses blue 210.7 ms after contactAt, 0.006 mm deep, head 0.561 m/s, ball 0.464 m/s; no obstacle
+            speed 1, drive 1, up 0.00 mm, side 10.00 mm: crosses blue 203.1 ms after contactAt, 0.002 mm deep, head 0.561 m/s, ball 0.466 m/s; no obstacle
+            speed 1, drive 1, up 3.00 mm, side -10.00 mm: crosses blue 205.0 ms after contactAt, 0.006 mm deep, head 0.562 m/s, ball 0.467 m/s; no obstacle
+            speed 1, drive 1, up 3.00 mm, side 0.00 mm: crosses blue 212.3 ms after contactAt, 0.007 mm deep, head 0.562 m/s, ball 0.465 m/s; no obstacle
+            speed 1, drive 1, up 3.00 mm, side 10.00 mm: crosses blue 204.7 ms after contactAt, 0.003 mm deep, head 0.562 m/s, ball 0.467 m/s; no obstacle
+            speed 2, drive -1, up -3.00 mm, side -10.00 mm: crosses blue 68.1 ms after contactAt, 0.010 mm deep, head 1.173 m/s, ball 0.851 m/s; no obstacle
+            speed 2, drive -1, up -3.00 mm, side 0.00 mm: crosses blue 69.4 ms after contactAt, 0.023 mm deep, head 1.173 m/s, ball 0.857 m/s; no obstacle
+            speed 2, drive -1, up -3.00 mm, side 10.00 mm: crosses blue 68.3 ms after contactAt, 0.024 mm deep, head 1.173 m/s, ball 0.851 m/s; no obstacle
+            speed 2, drive -1, up 0.00 mm, side -10.00 mm: crosses blue 68.4 ms after contactAt, 0.018 mm deep, head 1.174 m/s, ball 0.855 m/s; no obstacle
+            speed 2, drive -1, up 0.00 mm, side 0.00 mm: crosses blue 69.8 ms after contactAt, 0.008 mm deep, head 1.174 m/s, ball 0.859 m/s; no obstacle
+            speed 2, drive -1, up 0.00 mm, side 10.00 mm: crosses blue 68.6 ms after contactAt, 0.000 mm deep, head 1.174 m/s, ball 0.858 m/s; no obstacle
+            speed 2, drive -1, up 3.00 mm, side -10.00 mm: crosses blue 68.7 ms after contactAt, 0.004 mm deep, head 1.175 m/s, ball 0.860 m/s; no obstacle
+            speed 2, drive -1, up 3.00 mm, side 0.00 mm: crosses blue 70.0 ms after contactAt, 0.011 mm deep, head 1.175 m/s, ball 0.862 m/s; no obstacle
+            speed 2, drive -1, up 3.00 mm, side 10.00 mm: crosses blue 68.8 ms after contactAt, 0.009 mm deep, head 1.175 m/s, ball 0.860 m/s; no obstacle
+            speed 2, drive -0.5, up -3.00 mm, side -10.00 mm: crosses blue 62.3 ms after contactAt, 0.020 mm deep, head 1.173 m/s, ball 0.872 m/s; no obstacle
+            speed 2, drive -0.5, up -3.00 mm, side 0.00 mm: crosses blue 64.5 ms after contactAt, 0.011 mm deep, head 1.173 m/s, ball 0.876 m/s; no obstacle
+            speed 2, drive -0.5, up -3.00 mm, side 10.00 mm: crosses blue 62.4 ms after contactAt, 0.007 mm deep, head 1.173 m/s, ball 0.873 m/s; no obstacle
+            speed 2, drive -0.5, up 0.00 mm, side -10.00 mm: crosses blue 62.6 ms after contactAt, 0.017 mm deep, head 1.174 m/s, ball 0.876 m/s; no obstacle
+            speed 2, drive -0.5, up 0.00 mm, side 0.00 mm: crosses blue 64.8 ms after contactAt, 0.011 mm deep, head 1.174 m/s, ball 0.880 m/s; no obstacle
+            speed 2, drive -0.5, up 0.00 mm, side 10.00 mm: crosses blue 62.9 ms after contactAt, 0.009 mm deep, head 1.174 m/s, ball 0.876 m/s; no obstacle
+            speed 2, drive -0.5, up 3.00 mm, side -10.00 mm: crosses blue 63.0 ms after contactAt, 0.013 mm deep, head 1.175 m/s, ball 0.880 m/s; no obstacle
+            speed 2, drive -0.5, up 3.00 mm, side 0.00 mm: crosses blue 65.4 ms after contactAt, 0.007 mm deep, head 1.175 m/s, ball 0.884 m/s; no obstacle
+            speed 2, drive -0.5, up 3.00 mm, side 10.00 mm: crosses blue 63.3 ms after contactAt, 0.012 mm deep, head 1.175 m/s, ball 0.880 m/s; no obstacle
+            speed 2, drive 0, up -3.00 mm, side -10.00 mm: crosses blue 58.3 ms after contactAt, 0.023 mm deep, head 1.173 m/s, ball 0.927 m/s; no obstacle
+            speed 2, drive 0, up -3.00 mm, side 0.00 mm: crosses blue 60.9 ms after contactAt, 0.012 mm deep, head 1.173 m/s, ball 0.933 m/s; no obstacle
+            speed 2, drive 0, up -3.00 mm, side 10.00 mm: crosses blue 58.6 ms after contactAt, 0.007 mm deep, head 1.173 m/s, ball 0.927 m/s; no obstacle
+            speed 2, drive 0, up 0.00 mm, side -10.00 mm: crosses blue 58.8 ms after contactAt, 0.008 mm deep, head 1.174 m/s, ball 0.930 m/s; no obstacle
+            speed 2, drive 0, up 0.00 mm, side 0.00 mm: crosses blue 61.3 ms after contactAt, 0.018 mm deep, head 1.174 m/s, ball 0.936 m/s; no obstacle
+            speed 2, drive 0, up 0.00 mm, side 10.00 mm: crosses blue 59.1 ms after contactAt, 0.020 mm deep, head 1.174 m/s, ball 0.930 m/s; no obstacle
+            speed 2, drive 0, up 3.00 mm, side -10.00 mm: crosses blue 59.1 ms after contactAt, 0.014 mm deep, head 1.175 m/s, ball 0.933 m/s; no obstacle
+            speed 2, drive 0, up 3.00 mm, side 0.00 mm: crosses blue 61.7 ms after contactAt, 0.014 mm deep, head 1.175 m/s, ball 0.939 m/s; no obstacle
+            speed 2, drive 0, up 3.00 mm, side 10.00 mm: crosses blue 59.5 ms after contactAt, 0.020 mm deep, head 1.175 m/s, ball 0.933 m/s; no obstacle
+            speed 2, drive 0.5, up -3.00 mm, side -10.00 mm: crosses blue 95.4 ms after contactAt, 0.021 mm deep, head 1.173 m/s, ball 0.917 m/s; no obstacle
+            speed 2, drive 0.5, up -3.00 mm, side 0.00 mm: crosses blue 97.9 ms after contactAt, 0.003 mm deep, head 1.173 m/s, ball 0.921 m/s; no obstacle
+            speed 2, drive 0.5, up -3.00 mm, side 10.00 mm: crosses blue 95.3 ms after contactAt, 0.016 mm deep, head 1.173 m/s, ball 0.917 m/s; no obstacle
+            speed 2, drive 0.5, up 0.00 mm, side -10.00 mm: crosses blue 95.9 ms after contactAt, 0.022 mm deep, head 1.174 m/s, ball 0.921 m/s; no obstacle
+            speed 2, drive 0.5, up 0.00 mm, side 0.00 mm: crosses blue 98.4 ms after contactAt, 0.003 mm deep, head 1.174 m/s, ball 0.924 m/s; no obstacle
+            speed 2, drive 0.5, up 0.00 mm, side 10.00 mm: crosses blue 96.1 ms after contactAt, 0.020 mm deep, head 1.174 m/s, ball 0.920 m/s; no obstacle
+            speed 2, drive 0.5, up 3.00 mm, side -10.00 mm: crosses blue 96.5 ms after contactAt, 0.016 mm deep, head 1.175 m/s, ball 0.924 m/s; no obstacle
+            speed 2, drive 0.5, up 3.00 mm, side 0.00 mm: crosses blue 99.3 ms after contactAt, 0.007 mm deep, head 1.175 m/s, ball 0.927 m/s; no obstacle
+            speed 2, drive 0.5, up 3.00 mm, side 10.00 mm: crosses blue 96.4 ms after contactAt, 0.015 mm deep, head 1.175 m/s, ball 0.924 m/s; no obstacle
+            speed 2, drive 1, up -3.00 mm, side -10.00 mm: crosses blue 65.0 ms after contactAt, 0.010 mm deep, head 1.173 m/s, ball 0.944 m/s; no obstacle
+            speed 2, drive 1, up -3.00 mm, side 0.00 mm: crosses blue 66.4 ms after contactAt, 0.008 mm deep, head 1.173 m/s, ball 0.949 m/s; no obstacle
+            speed 2, drive 1, up -3.00 mm, side 10.00 mm: crosses blue 65.0 ms after contactAt, 0.011 mm deep, head 1.173 m/s, ball 0.944 m/s; no obstacle
+            speed 2, drive 1, up 0.00 mm, side -10.00 mm: crosses blue 65.5 ms after contactAt, 0.012 mm deep, head 1.174 m/s, ball 0.948 m/s; no obstacle
+            speed 2, drive 1, up 0.00 mm, side 0.00 mm: crosses blue 67.1 ms after contactAt, 0.008 mm deep, head 1.174 m/s, ball 0.953 m/s; no obstacle
+            speed 2, drive 1, up 0.00 mm, side 10.00 mm: crosses blue 65.5 ms after contactAt, 0.019 mm deep, head 1.174 m/s, ball 0.948 m/s; no obstacle
+            speed 2, drive 1, up 3.00 mm, side -10.00 mm: crosses blue 66.1 ms after contactAt, 0.010 mm deep, head 1.175 m/s, ball 0.954 m/s; no obstacle
+            speed 2, drive 1, up 3.00 mm, side 0.00 mm: crosses blue 67.8 ms after contactAt, 0.016 mm deep, head 1.175 m/s, ball 0.958 m/s; no obstacle
+            speed 2, drive 1, up 3.00 mm, side 10.00 mm: crosses blue 66.4 ms after contactAt, 0.018 mm deep, head 1.175 m/s, ball 0.953 m/s; no obstacle
+            speed 3, drive -1, up -3.00 mm, side -10.00 mm: crosses blue 79.6 ms after contactAt, 0.005 mm deep, head 1.779 m/s, ball 1.210 m/s; no obstacle
+            speed 3, drive -1, up -3.00 mm, side 0.00 mm: crosses blue 81.3 ms after contactAt, 0.021 mm deep, head 1.876 m/s, ball 1.213 m/s; no obstacle
+            speed 3, drive -1, up -3.00 mm, side 10.00 mm: crosses blue 79.6 ms after contactAt, 0.020 mm deep, head 1.783 m/s, ball 1.209 m/s; no obstacle
+            speed 3, drive -1, up 0.00 mm, side -10.00 mm: crosses blue 81.1 ms after contactAt, 0.013 mm deep, head 1.740 m/s, ball 1.217 m/s; no obstacle
+            speed 3, drive -1, up 0.00 mm, side 0.00 mm: crosses blue 83.1 ms after contactAt, 0.006 mm deep, head 1.726 m/s, ball 1.221 m/s; no obstacle
+            speed 3, drive -1, up 0.00 mm, side 10.00 mm: crosses blue 81.0 ms after contactAt, 0.023 mm deep, head 1.739 m/s, ball 1.216 m/s; no obstacle
+            speed 3, drive -1, up 3.00 mm, side -10.00 mm: crosses blue 83.2 ms after contactAt, 0.005 mm deep, head 1.572 m/s, ball 1.225 m/s; no obstacle
+            speed 3, drive -1, up 3.00 mm, side 10.00 mm: crosses blue 83.3 ms after contactAt, 0.019 mm deep, head 1.564 m/s, ball 1.225 m/s; no obstacle
+            speed 4, drive -0.5, up 0.00 mm, side -10.00 mm: crosses blue 55.2 ms after contactAt, 0.018 mm deep, head 2.076 m/s, ball 1.823 m/s; no obstacle
+            speed 4, drive -0.5, up 0.00 mm, side 0.00 mm: crosses blue 54.0 ms after contactAt, 0.029 mm deep, head 2.095 m/s, ball 1.840 m/s; no obstacle
+            speed 4, drive -0.5, up 0.00 mm, side 10.00 mm: crosses blue 54.5 ms after contactAt, 0.004 mm deep, head 2.084 m/s, ball 1.827 m/s; no obstacle
+            speed 4, drive -0.5, up 3.00 mm, side -10.00 mm: crosses blue 57.2 ms after contactAt, 0.011 mm deep, head 1.990 m/s, ball 1.824 m/s; no obstacle
+            speed 4, drive -0.5, up 3.00 mm, side 0.00 mm: crosses blue 54.5 ms after contactAt, 0.037 mm deep, head 2.029 m/s, ball 1.852 m/s; no obstacle
+            speed 4, drive -0.5, up 3.00 mm, side 10.00 mm: crosses blue 56.9 ms after contactAt, 0.021 mm deep, head 1.989 m/s, ball 1.825 m/s; no obstacle
+full-roll   canonical: no crossing; no obstacle; preset sweep: 5 of 225 runs cross a ball, 0 an obstacle, 0 overlap one at the impact's end
+            speed 1, drive -1, up -3.00 mm, side 0.00 mm: crosses blue 66.7 ms after contactAt, 0.026 mm deep, head 0.805 m/s, ball 0.524 m/s; no obstacle
+            speed 1, drive -1, up 0.00 mm, side 0.00 mm: crosses blue 66.8 ms after contactAt, 0.016 mm deep, head 0.805 m/s, ball 0.526 m/s; no obstacle
+            speed 1, drive -1, up 3.00 mm, side -10.00 mm: crosses blue 65.9 ms after contactAt, 0.019 mm deep, head 0.805 m/s, ball 0.524 m/s; no obstacle
+            speed 1, drive -1, up 3.00 mm, side 0.00 mm: crosses blue 66.8 ms after contactAt, 0.022 mm deep, head 0.805 m/s, ball 0.528 m/s; no obstacle
+            speed 1, drive -1, up 3.00 mm, side 10.00 mm: crosses blue 65.9 ms after contactAt, 0.029 mm deep, head 0.805 m/s, ball 0.525 m/s; no obstacle
+pass-roll   canonical: no crossing; no obstacle; preset sweep: 88 of 225 runs cross a ball, 0 an obstacle, 15 overlap one at the impact's end
+            speed 1, drive -1, up -3.00 mm, side -10.00 mm: crosses blue 28.9 ms after contactAt, 0.023 mm deep, head 0.750 m/s, ball 0.568 m/s; no obstacle
+            speed 1, drive -1, up -3.00 mm, side 0.00 mm: crosses blue 28.0 ms after contactAt, 0.001 mm deep, head 0.733 m/s, ball 0.560 m/s; no obstacle
+            speed 1, drive -1, up -3.00 mm, side 10.00 mm: crosses blue 27.1 ms after contactAt, 0.022 mm deep, head 0.717 m/s, ball 0.547 m/s; no obstacle
+            speed 1, drive -1, up 0.00 mm, side -10.00 mm: crosses blue 28.7 ms after contactAt, 0.015 mm deep, head 0.747 m/s, ball 0.571 m/s; no obstacle
+            speed 1, drive -1, up 0.00 mm, side 0.00 mm: crosses blue 27.9 ms after contactAt, 0.021 mm deep, head 0.732 m/s, ball 0.564 m/s; no obstacle
+            speed 1, drive -1, up 0.00 mm, side 10.00 mm: crosses blue 26.8 ms after contactAt, 0.012 mm deep, head 0.712 m/s, ball 0.551 m/s; no obstacle
+            speed 1, drive -1, up 3.00 mm, side -10.00 mm: crosses blue 28.5 ms after contactAt, 0.009 mm deep, head 0.744 m/s, ball 0.575 m/s; no obstacle
+            speed 1, drive -1, up 3.00 mm, side 0.00 mm: crosses blue 27.6 ms after contactAt, 0.006 mm deep, head 0.727 m/s, ball 0.568 m/s; no obstacle
+            speed 1, drive -1, up 3.00 mm, side 10.00 mm: crosses blue 26.6 ms after contactAt, 0.009 mm deep, head 0.709 m/s, ball 0.555 m/s; no obstacle
+            speed 1, drive -0.5, up -3.00 mm, side -10.00 mm: crosses blue 40.5 ms after contactAt, 0.030 mm deep, head 0.821 m/s, ball 0.526 m/s; no obstacle
+            speed 1, drive -0.5, up -3.00 mm, side 0.00 mm: crosses blue 39.9 ms after contactAt, 0.015 mm deep, head 0.821 m/s, ball 0.517 m/s; no obstacle
+            speed 1, drive -0.5, up -3.00 mm, side 10.00 mm: overlaps blue at the impact's end; no crossing; no obstacle
+            speed 1, drive -0.5, up 0.00 mm, side -10.00 mm: crosses blue 40.6 ms after contactAt, 0.000 mm deep, head 0.822 m/s, ball 0.528 m/s; no obstacle
+            speed 1, drive -0.5, up 0.00 mm, side 0.00 mm: overlaps blue at the impact's end; no crossing; no obstacle
+            speed 1, drive -0.5, up 0.00 mm, side 10.00 mm: overlaps blue at the impact's end; no crossing; no obstacle
+            speed 1, drive -0.5, up 3.00 mm, side -10.00 mm: crosses blue 40.9 ms after contactAt, 0.009 mm deep, head 0.822 m/s, ball 0.532 m/s; no obstacle
+            speed 1, drive -0.5, up 3.00 mm, side 0.00 mm: overlaps blue at the impact's end; no crossing; no obstacle
+            speed 1, drive -0.5, up 3.00 mm, side 10.00 mm: overlaps blue at the impact's end; no crossing; no obstacle
+            speed 1, drive 0, up -3.00 mm, side -10.00 mm: overlaps blue at the impact's end; no crossing; no obstacle
+            speed 1, drive 0, up -3.00 mm, side 0.00 mm: overlaps blue at the impact's end; no crossing; no obstacle
+            speed 1, drive 0, up -3.00 mm, side 10.00 mm: overlaps blue at the impact's end; no crossing; no obstacle
+            speed 1, drive 0, up 0.00 mm, side -10.00 mm: overlaps blue at the impact's end; no crossing; no obstacle
+            speed 1, drive 0, up 0.00 mm, side 0.00 mm: overlaps blue at the impact's end; no crossing; no obstacle
+            speed 1, drive 0, up 0.00 mm, side 10.00 mm: overlaps blue at the impact's end; no crossing; no obstacle
+            speed 1, drive 0, up 3.00 mm, side -10.00 mm: overlaps blue at the impact's end; no crossing; no obstacle
+            speed 1, drive 0, up 3.00 mm, side 0.00 mm: overlaps blue at the impact's end; no crossing; no obstacle
+            speed 1, drive 0, up 3.00 mm, side 10.00 mm: overlaps blue at the impact's end; no crossing; no obstacle
+            speed 1, drive 0.5, up -3.00 mm, side -10.00 mm: crosses blue 399.3 ms after contactAt, 0.001 mm deep, head 0.000 m/s, ball 0.028 m/s; no obstacle
+            speed 1, drive 0.5, up -3.00 mm, side 0.00 mm: crosses blue 405.5 ms after contactAt, 0.000 mm deep, head 0.000 m/s, ball 0.037 m/s; no obstacle
+            speed 1, drive 0.5, up -3.00 mm, side 10.00 mm: crosses blue 409.3 ms after contactAt, 0.001 mm deep, head 0.000 m/s, ball 0.042 m/s; no obstacle
+            speed 1, drive 0.5, up 0.00 mm, side -10.00 mm: crosses blue 398.5 ms after contactAt, 0.000 mm deep, head 0.000 m/s, ball 0.025 m/s; no obstacle
+            speed 1, drive 0.5, up 0.00 mm, side 0.00 mm: crosses blue 403.9 ms after contactAt, 0.001 mm deep, head 0.000 m/s, ball 0.034 m/s; no obstacle
+            speed 1, drive 0.5, up 0.00 mm, side 10.00 mm: crosses blue 407.5 ms after contactAt, 0.000 mm deep, head 0.000 m/s, ball 0.040 m/s; no obstacle
+            speed 1, drive 0.5, up 3.00 mm, side -10.00 mm: crosses blue 399.4 ms after contactAt, 0.001 mm deep, head 0.000 m/s, ball 0.021 m/s; no obstacle
+            speed 1, drive 0.5, up 3.00 mm, side 0.00 mm: crosses blue 401.4 ms after contactAt, 0.000 mm deep, head 0.000 m/s, ball 0.032 m/s; no obstacle
+            speed 1, drive 0.5, up 3.00 mm, side 10.00 mm: crosses blue 403.3 ms after contactAt, 0.000 mm deep, head 0.000 m/s, ball 0.038 m/s; no obstacle
+            speed 1, drive 1, up -3.00 mm, side -10.00 mm: crosses blue 55.9 ms after contactAt, 0.006 mm deep, head 0.971 m/s, ball 0.705 m/s; no obstacle
+            speed 1, drive 1, up -3.00 mm, side 0.00 mm: crosses blue 55.7 ms after contactAt, 0.017 mm deep, head 0.971 m/s, ball 0.698 m/s; no obstacle
+            speed 1, drive 1, up -3.00 mm, side 10.00 mm: crosses blue 381.8 ms after contactAt, 0.002 mm deep, head 0.000 m/s, ball 0.090 m/s; no obstacle
+            speed 1, drive 1, up 0.00 mm, side -10.00 mm: crosses blue 55.5 ms after contactAt, 0.016 mm deep, head 0.972 m/s, ball 0.706 m/s; no obstacle
+            speed 1, drive 1, up 0.00 mm, side 0.00 mm: crosses blue 380.5 ms after contactAt, 0.000 mm deep, head 0.000 m/s, ball 0.053 m/s; no obstacle
+            speed 1, drive 1, up 0.00 mm, side 10.00 mm: crosses blue 380.4 ms after contactAt, 0.000 mm deep, head 0.000 m/s, ball 0.086 m/s; no obstacle
+            speed 1, drive 1, up 3.00 mm, side -10.00 mm: overlaps blue at the impact's end; no crossing; no obstacle
+            speed 1, drive 1, up 3.00 mm, side 0.00 mm: crosses blue 379.7 ms after contactAt, 0.002 mm deep, head 0.000 m/s, ball 0.052 m/s; no obstacle
+            speed 1, drive 1, up 3.00 mm, side 10.00 mm: crosses blue 379.5 ms after contactAt, 0.000 mm deep, head 0.000 m/s, ball 0.079 m/s; no obstacle
+            speed 2, drive -1, up -3.00 mm, side -10.00 mm: crosses blue 53.3 ms after contactAt, 0.006 mm deep, head 1.553 m/s, ball 0.959 m/s; no obstacle
+            speed 2, drive -1, up -3.00 mm, side 0.00 mm: crosses blue 30.7 ms after contactAt, 0.001 mm deep, head 1.553 m/s, ball 1.320 m/s; no obstacle
+            speed 2, drive -1, up -3.00 mm, side 10.00 mm: crosses blue 29.1 ms after contactAt, 0.003 mm deep, head 1.517 m/s, ball 1.261 m/s; no obstacle
+            speed 2, drive -1, up 0.00 mm, side -10.00 mm: crosses blue 32.2 ms after contactAt, 0.001 mm deep, head 1.554 m/s, ball 1.354 m/s; no obstacle
+            speed 2, drive -1, up 0.00 mm, side 0.00 mm: crosses blue 30.2 ms after contactAt, 0.004 mm deep, head 1.554 m/s, ball 1.309 m/s; no obstacle
+            speed 2, drive -1, up 0.00 mm, side 10.00 mm: crosses blue 28.6 ms after contactAt, 0.008 mm deep, head 1.502 m/s, ball 1.251 m/s; no obstacle
+            speed 2, drive -1, up 3.00 mm, side -10.00 mm: crosses blue 31.3 ms after contactAt, 0.001 mm deep, head 1.555 m/s, ball 1.347 m/s; no obstacle
+            speed 2, drive -1, up 3.00 mm, side 0.00 mm: crosses blue 29.8 ms after contactAt, 0.005 mm deep, head 1.549 m/s, ball 1.303 m/s; no obstacle
+            speed 2, drive -1, up 3.00 mm, side 10.00 mm: crosses blue 28.2 ms after contactAt, 0.001 mm deep, head 1.486 m/s, ball 1.243 m/s; no obstacle
+            speed 3, drive -1, up -3.00 mm, side -10.00 mm: crosses blue 61.9 ms after contactAt, 0.048 mm deep, head 2.342 m/s, ball 1.511 m/s; no obstacle
+            speed 3, drive -1, up -3.00 mm, side 0.00 mm: crosses blue 59.4 ms after contactAt, 0.037 mm deep, head 2.342 m/s, ball 1.515 m/s; no obstacle
+            speed 3, drive -1, up -3.00 mm, side 10.00 mm: crosses blue 56.6 ms after contactAt, 0.079 mm deep, head 2.342 m/s, ball 1.501 m/s; no obstacle
+            speed 3, drive -1, up 0.00 mm, side -10.00 mm: crosses blue 62.0 ms after contactAt, 0.040 mm deep, head 2.344 m/s, ball 1.505 m/s; no obstacle
+            speed 3, drive -1, up 0.00 mm, side 0.00 mm: crosses blue 58.6 ms after contactAt, 0.070 mm deep, head 2.344 m/s, ball 1.511 m/s; no obstacle
+            speed 3, drive -1, up 0.00 mm, side 10.00 mm: crosses blue 190.5 ms after contactAt, 0.005 mm deep, head 0.000 m/s, ball 0.294 m/s; no obstacle
+            speed 3, drive -1, up 3.00 mm, side -10.00 mm: crosses blue 61.2 ms after contactAt, 0.038 mm deep, head 2.346 m/s, ball 1.488 m/s; no obstacle
+            speed 3, drive -1, up 3.00 mm, side 0.00 mm: crosses blue 58.0 ms after contactAt, 0.030 mm deep, head 2.346 m/s, ball 1.510 m/s; no obstacle
+            speed 3, drive -1, up 3.00 mm, side 10.00 mm: crosses blue 194.9 ms after contactAt, 0.003 mm deep, head 0.000 m/s, ball 0.284 m/s; no obstacle
+            speed 3, drive -0.5, up -3.00 mm, side -10.00 mm: crosses blue 267.7 ms after contactAt, 0.000 mm deep, head 0.000 m/s, ball 0.100 m/s; no obstacle
+            speed 3, drive -0.5, up -3.00 mm, side 0.00 mm: crosses blue 245.0 ms after contactAt, 0.000 mm deep, head 0.000 m/s, ball 0.196 m/s; no obstacle
+            speed 3, drive -0.5, up 0.00 mm, side -10.00 mm: crosses blue 219.7 ms after contactAt, 0.001 mm deep, head 0.000 m/s, ball 0.133 m/s; no obstacle
+            speed 3, drive -0.5, up 0.00 mm, side 0.00 mm: crosses blue 208.1 ms after contactAt, 0.001 mm deep, head 0.000 m/s, ball 0.222 m/s; no obstacle
+            speed 3, drive -0.5, up 3.00 mm, side -10.00 mm: crosses blue 216.8 ms after contactAt, 0.000 mm deep, head 0.000 m/s, ball 0.168 m/s; no obstacle
+            speed 3, drive -0.5, up 3.00 mm, side 0.00 mm: crosses blue 205.6 ms after contactAt, 0.000 mm deep, head 0.000 m/s, ball 0.241 m/s; no obstacle
+            speed 4, drive -1, up -3.00 mm, side 0.00 mm: crosses blue 61.4 ms after contactAt, 0.076 mm deep, head 3.138 m/s, ball 2.109 m/s; no obstacle
+            speed 4, drive -1, up -3.00 mm, side 10.00 mm: crosses blue 31.1 ms after contactAt, 0.003 mm deep, head 3.138 m/s, ball 2.573 m/s; no obstacle
+            speed 4, drive -1, up 0.00 mm, side 10.00 mm: crosses blue 23.1 ms after contactAt, 0.041 mm deep, head 2.639 m/s, ball 1.952 m/s; no obstacle
+            speed 4, drive -1, up 3.00 mm, side 10.00 mm: crosses blue 23.9 ms after contactAt, 0.042 mm deep, head 2.703 m/s, ball 1.966 m/s; no obstacle
+            speed 4, drive 1, up -3.00 mm, side 0.00 mm: crosses blue 115.3 ms after contactAt, 0.003 mm deep, head 0.000 m/s, ball 0.084 m/s; no obstacle
+            speed 4, drive 1, up -3.00 mm, side 10.00 mm: crosses blue 115.8 ms after contactAt, 0.007 mm deep, head 0.000 m/s, ball 0.160 m/s; no obstacle
+            speed 4, drive 1, up 0.00 mm, side 0.00 mm: crosses blue 119.8 ms after contactAt, 0.002 mm deep, head 0.000 m/s, ball 0.069 m/s; no obstacle
+            speed 4, drive 1, up 0.00 mm, side 10.00 mm: crosses blue 113.6 ms after contactAt, 0.002 mm deep, head 0.000 m/s, ball 0.124 m/s; no obstacle
+            speed 4, drive 1, up 3.00 mm, side -10.00 mm: crosses blue 108.2 ms after contactAt, 0.002 mm deep, head 0.000 m/s, ball 0.155 m/s; no obstacle
+            speed 4, drive 1, up 3.00 mm, side 10.00 mm: crosses blue 116.2 ms after contactAt, 0.003 mm deep, head 0.000 m/s, ball 0.107 m/s; no obstacle
+            speed 6, drive -1, up -3.00 mm, side -10.00 mm: crosses blue 24.4 ms after contactAt, 0.004 mm deep, head 4.137 m/s, ball 2.934 m/s; no obstacle
+            speed 6, drive -1, up -3.00 mm, side 0.00 mm: crosses blue 26.8 ms after contactAt, 0.060 mm deep, head 4.389 m/s, ball 2.900 m/s; no obstacle
+            speed 6, drive -1, up -3.00 mm, side 10.00 mm: crosses blue 28.2 ms after contactAt, 0.110 mm deep, head 4.541 m/s, ball 2.844 m/s; no obstacle
+            speed 6, drive -1, up 0.00 mm, side -10.00 mm: crosses blue 25.2 ms after contactAt, 0.111 mm deep, head 4.223 m/s, ball 2.955 m/s; no obstacle
+            speed 6, drive -1, up 0.00 mm, side 0.00 mm: crosses blue 27.4 ms after contactAt, 0.045 mm deep, head 4.457 m/s, ball 2.922 m/s; no obstacle
+            speed 6, drive -1, up 0.00 mm, side 10.00 mm: crosses blue 28.7 ms after contactAt, 0.030 mm deep, head 4.599 m/s, ball 2.867 m/s; no obstacle
+            speed 6, drive -1, up 3.00 mm, side -10.00 mm: crosses blue 25.8 ms after contactAt, 0.079 mm deep, head 4.290 m/s, ball 2.976 m/s; no obstacle
+            speed 6, drive -1, up 3.00 mm, side 0.00 mm: crosses blue 27.9 ms after contactAt, 0.015 mm deep, head 4.515 m/s, ball 2.946 m/s; no obstacle
+            speed 6, drive -1, up 3.00 mm, side 10.00 mm: crosses blue 29.2 ms after contactAt, 0.094 mm deep, head 4.658 m/s, ball 2.891 m/s; no obstacle
+            speed 6, drive 0.5, up -3.00 mm, side -10.00 mm: crosses blue 83.3 ms after contactAt, 0.009 mm deep, head 0.000 m/s, ball 0.321 m/s; no obstacle
+            speed 6, drive 0.5, up -3.00 mm, side 0.00 mm: crosses blue 87.4 ms after contactAt, 0.009 mm deep, head 0.000 m/s, ball 0.153 m/s; no obstacle
+            speed 6, drive 0.5, up -3.00 mm, side 10.00 mm: crosses blue 85.3 ms after contactAt, 0.014 mm deep, head 0.000 m/s, ball 0.299 m/s; no obstacle
+            speed 6, drive 0.5, up 0.00 mm, side -10.00 mm: crosses blue 83.4 ms after contactAt, 0.007 mm deep, head 0.000 m/s, ball 0.273 m/s; no obstacle
+            speed 6, drive 0.5, up 0.00 mm, side 0.00 mm: crosses blue 87.3 ms after contactAt, 0.010 mm deep, head 0.000 m/s, ball 0.132 m/s; no obstacle
+            speed 6, drive 0.5, up 0.00 mm, side 10.00 mm: crosses blue 85.6 ms after contactAt, 0.010 mm deep, head 0.000 m/s, ball 0.274 m/s; no obstacle
+            speed 6, drive 0.5, up 3.00 mm, side -10.00 mm: crosses blue 83.3 ms after contactAt, 0.005 mm deep, head 0.000 m/s, ball 0.233 m/s; no obstacle
+            speed 6, drive 0.5, up 3.00 mm, side 10.00 mm: crosses blue 86.9 ms after contactAt, 0.007 mm deep, head 0.000 m/s, ball 0.229 m/s; no obstacle
+            speed 6, drive 1, up -3.00 mm, side -10.00 mm: crosses blue 71.6 ms after contactAt, 0.004 mm deep, head 0.000 m/s, ball 0.444 m/s; no obstacle
+            speed 6, drive 1, up -3.00 mm, side 0.00 mm: crosses blue 80.2 ms after contactAt, 0.001 mm deep, head 0.000 m/s, ball 0.151 m/s; no obstacle
+            speed 6, drive 1, up -3.00 mm, side 10.00 mm: crosses blue 78.5 ms after contactAt, 0.000 mm deep, head 0.000 m/s, ball 0.131 m/s; no obstacle
+            speed 6, drive 1, up 0.00 mm, side -10.00 mm: crosses blue 66.0 ms after contactAt, 0.015 mm deep, head 0.000 m/s, ball 0.493 m/s; no obstacle
+            speed 6, drive 1, up 0.00 mm, side 10.00 mm: crosses blue 79.8 ms after contactAt, 0.013 mm deep, head 0.000 m/s, ball 0.194 m/s; no obstacle
+            speed 6, drive 1, up 3.00 mm, side -10.00 mm: crosses blue 79.5 ms after contactAt, 0.002 mm deep, head 0.000 m/s, ball 0.247 m/s; no obstacle
+            speed 6, drive 1, up 3.00 mm, side 10.00 mm: crosses blue 75.1 ms after contactAt, 0.010 mm deep, head 0.000 m/s, ball 0.172 m/s; no obstacle
+through hoop 1, side 0.00 mm: no crossing; shaft 1/crown 143.2 ms after contactAt, 0.006 mm deep
+through hoop 1, side 10.00 mm: crosses blue 57.3 ms after contactAt, 0.009 mm deep, head 2.945 m/s, ball 0.590 m/s; head 1/b 100.0 ms after contactAt, 0.003 mm deep

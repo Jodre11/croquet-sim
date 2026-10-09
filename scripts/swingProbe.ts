@@ -71,7 +71,7 @@ import { ON_TIME, defaultProfile } from "../src/engine/swing/profile";
 import { CROQUET_STROKES, STROKE_TYPES, type ShotSetup, type StrokeType } from "../src/engine/swing/types";
 import { BALL_IDS, type BallId, type BallState, type BallStates, type ShotResult } from "../src/engine/types";
 import { defaultWorld, uprightsOf } from "../src/engine/world";
-import { contactReference, malletReference } from "../src/reference/index";
+import { malletReference } from "../src/reference/index";
 import { drive, recorder, socketAt, strike } from "../tests/engine/support/impact";
 import { GC_STOP_GAP, backswingFor, canonicalSetup } from "../tests/engine/support/shot";
 
@@ -100,8 +100,14 @@ const COACHING: Readonly<Record<StrokeType, string>> = {
     "pass-roll": "below 1",
 };
 
-/** The impact flags design §9 counts. */
-const FLAGS = ["impact-head-deep", "impact-cap", "impact-head-approaching", "impact-off-face"] as const;
+/** The impact flags design §9 counts, and the turf bed's pit flag (P2b.2b.2b.2a design §4.6, §6). */
+const FLAGS = [
+    "impact-head-deep",
+    "impact-cap",
+    "impact-head-approaching",
+    "impact-off-face",
+    "impact-turf-pit",
+] as const;
 
 /** One shot: its contact state, its impact with every snapshot, and phase 2. */
 interface Run {
@@ -833,11 +839,7 @@ const HEAD: MalletHead = {
     radius,
     socket: vec3(0, 0, radius),
 };
-const FACE: FaceMaterial = {
-    restitution: malletReference.faceRestitution.value,
-    friction: malletReference.faceFriction.value,
-    contactTime: contactReference.faceBallContactTime.value,
-};
+const FACE: FaceMaterial = { friction: malletReference.faceFriction.value };
 const at = (x: number, y: number): BallState => ({
     position: vec3(x, y, R),
     velocity: vec3(0, 0, 0),

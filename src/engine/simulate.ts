@@ -12,9 +12,9 @@
  * a slipping contact's slip ends, the contact opens, or another contact intervenes. For touching bodies, the decision
  * at t = 0 uses `approachSpeed` and the same solver that resolution uses, so detection and resolution always agree.
  *
- * A ball in flight follows its ballistic path until it lands (an impulse with the turf, resolve.ts) or strikes
- * something. Ball–ball contact is between spheres, measured in 3D; contact with an upright or the peg, the boundary and
- * the halt margin are measured on the horizontal projection of the centre.
+ * A ball in flight follows its ballistic path until it lands (on the turf bed, impact/landing.ts; P2b.2b.2b.2a design
+ * §4.7) or strikes something. Ball–ball contact is between spheres, measured in 3D; contact with an upright or the
+ * peg, the boundary and the halt margin are measured on the horizontal projection of the centre.
  */
 import {
     CONTACT_TOLERANCE,
@@ -25,6 +25,8 @@ import {
     isTouching,
     normalCurvature,
 } from "./detect";
+import { land, type Landing } from "./impact/landing";
+import { bedLawOf } from "./impact/turfBed";
 import { solveSystem } from "./linalg";
 import { ZERO, add, dot, horizontal, length, normalize, scale, sub, vec3, type Vec3 } from "./math/vec3";
 import {
@@ -54,7 +56,7 @@ import {
     type RestingMember,
     type RestingSolution,
 } from "./push";
-import { SETTLE_SPEED, resolveBallBall, resolveBallCylinder, resolveLanding, type TurfAt } from "./resolve";
+import { SETTLE_SPEED, resolveBallBall, resolveBallCylinder, type TurfAt } from "./resolve";
 import {
     BALL_IDS,
     type BallId,
@@ -72,7 +74,7 @@ import {
 import { motionParamsAt, obstaclesOf, turfAt, validateWorld } from "./world";
 
 /** Version of the physics; recorded in every result and share link. */
-export const ENGINE_VERSION = "0.8.0";
+export const ENGINE_VERSION = "0.9.0";
 
 /**
  * Work units (see linalg.ts) the resting-contact solver may spend in one shot (design §5). Fixed from the prototype's
@@ -97,6 +99,16 @@ export interface SimulationOptions {
     /** Work units the resting-contact solver may spend in the shot; SOLVE_BUDGET when omitted. */
     readonly solveBudget?: number;
     readonly probe?: SolveProbe;
+    /** Called after every landing (scripts/shotMix.ts records them). */
+    readonly landings?: (record: LandingRecord) => void;
+}
+
+/** One landing as the probe sees it (P2b.2b.2b.2a design §6): when, which ball, its state at touchdown, the landing. */
+export interface LandingRecord {
+    readonly t: number;
+    readonly ball: BallId;
+    readonly before: BallState;
+    readonly landing: Landing;
 }
 
 /** Event budget per shot. Reaching it marks the result aborted rather than looping forever. */
@@ -146,6 +158,7 @@ interface Simulation {
     readonly budget: number;
     work: number;
     readonly probe: SolveProbe | null;
+    readonly landings: ((record: LandingRecord) => void) | null;
 }
 
 type Candidate =
@@ -830,6 +843,7 @@ export function simulateFreeMotion(
         budget: options.solveBudget ?? SOLVE_BUDGET,
         work: 0,
         probe: options.probe ?? null,
+        landings: options.landings ?? null,
     };
     for (const id of BALL_IDS) {
         const s = initial[id];
@@ -913,8 +927,14 @@ export function simulateFreeMotion(
                 release(sim, group, now);
                 const R = world.ball.radius;
                 const touchdown = { ...s, position: vec3(s.position.x, s.position.y, R) };
-                reopen(sim, track, track.id, resolveLanding(touchdown, world.ball, sim.turf(touchdown.position)), now);
+                const law = bedLawOf(world.lawn.surfaceAt(touchdown.position));
+                const landing = land(touchdown, world.ball, world.gravity, law);
+                reopen(sim, track, track.id, landing.state, now);
                 sim.events.push({ kind: "landing", t: now, ball: track.id });
+                if (landing.outcome === "capped") {
+                    sim.events.push({ kind: "landing-cap", t: now, ball: track.id });
+                }
+                sim.landings?.({ t: now, ball: track.id, before: touchdown, landing });
                 if (previous.length > 0) {
                     settle(sim, group, now, previous);
                 }

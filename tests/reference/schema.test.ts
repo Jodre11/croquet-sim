@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ReferenceDataError, readArray, readQuote, readValue } from "../../src/reference/schema";
+import { ReferenceDataError, readArray, readFit, readQuote, readValue } from "../../src/reference/schema";
 
 const good = {
     diameter: { value: 0.09, unit: "m", bounds: [0.08, 0.1], source: "Some Laws, Rule 1", provenance: "direct" },
@@ -35,6 +35,29 @@ describe("readValue", () => {
         expect(readValue(good, "diameter", "ball")).not.toHaveProperty("provisional");
         const other = { diameter: { ...good.diameter, provisional: "guess" } };
         expect(() => readValue(other, "diameter", "ball")).toThrow(/provisional/);
+    });
+});
+
+describe("readFit", () => {
+    const fit = {
+        form: "y = a + b·x",
+        coefficients: { a: 1, b: 2 },
+        range: [0, 1],
+        rangeUnit: "m",
+        source: "s",
+        provenance: "direct",
+    };
+
+    it("reads a fit's form, its named coefficients and its range", () => {
+        const read = readFit({ f: fit }, "f", "t", ["a", "b"]);
+        expect(read.coefficients).toEqual({ a: 1, b: 2 });
+        expect(read.range).toEqual([0, 1]);
+        expect(read.form).toBe("y = a + b·x");
+    });
+
+    it("rejects a missing coefficient, naming it, and a range with lo ≥ hi", () => {
+        expect(() => readFit({ f: fit }, "f", "t", ["a", "c"])).toThrow(/t\.f\.coefficients\.c/);
+        expect(() => readFit({ f: { ...fit, range: [1, 1] } }, "f", "t", ["a"])).toThrow(/range/);
     });
 });
 

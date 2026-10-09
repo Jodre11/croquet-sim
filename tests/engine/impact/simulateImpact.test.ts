@@ -3,11 +3,12 @@ import { CONTACT_TOLERANCE } from "../../../src/engine/detect";
 import { add, length, sub, vec3 } from "../../../src/engine/math/vec3";
 import { stateAtTime } from "../../../src/engine/sample";
 import { ENGINE_VERSION, simulateFreeMotion } from "../../../src/engine/simulate";
-import type { BallStates, World } from "../../../src/engine/types";
+import type { BallStates, SurfaceProps, World } from "../../../src/engine/types";
 import { obstaclesOf, uniformLawn } from "../../../src/engine/world";
 import { obstacleContact } from "../../../src/engine/impact/contacts";
 import type { ImpactBall } from "../../../src/engine/impact/integrate";
 import { prepareImpact, simulateImpact, validateImpact } from "../../../src/engine/impact/simulateImpact";
+import { bedLawOf, staticSink } from "../../../src/engine/impact/turfBed";
 import type { ContactState, Coupling, Hands, StrokeMode, SwingArc } from "../../../src/engine/impact/types";
 import { TEST_BALL, TEST_TURF, ballAt, hoopWithUprightAt, testWorld } from "../support/fixtures";
 import { TEST_HEAD, drive, levelArc, onArc, strike, trackDrive } from "../support/impact";
@@ -15,19 +16,31 @@ import { TEST_HEAD, drive, levelArc, onArc, strike, trackDrive } from "../suppor
 const R = TEST_BALL.radius;
 const WORLD = testWorld();
 const BLUE = ballAt(5, 0);
-/** Blue's centre where the impact starts it: lowered by its static turf sink m·g/k_turf. */
-const SUNK = vec3(5, 0, R - (TEST_BALL.mass * WORLD.gravity) / WORLD.lawn.surfaceAt(BLUE.position).turfStiffness);
+/**
+ * Blue's centre where the impact starts it: lowered by its static sink on the bed (P2b.2b.2b.2a: turf bed; was
+ * m·g/k_turf).
+ */
+const SUNK = vec3(
+    5,
+    0,
+    R - staticSink(5, 0, R, TEST_BALL.mass * WORLD.gravity, bedLawOf(WORLD.lawn.surfaceAt(BLUE.position))),
+);
 
 describe("simulateImpact", () => {
-    it("is version 0.8.0", () => {
-        expect(ENGINE_VERSION).toBe("0.8.0");
+    it("is version 0.9.0", () => {
+        expect(ENGINE_VERSION).toBe("0.9.0");
     });
 
     it("starts a centre-struck ball rolling at 5/7 of its launch speed in phase 2", () => {
         const result = simulateImpact(strike(BLUE.position), { blue: BLUE }, WORLD);
         const h = result.handover.blue;
         expect(h?.position.z).toBe(R);
-        expect(h?.velocity.z).toBe(0);
+        // P2b.2b.2b.2a: turf bed (was 0: the ball sat still in its plane sink). Sliding over fresh cells, the ball
+        // rides about 0.32 mm deep in a slow vertical oscillation of a few µm, which the strike starts (traced); the
+        // impact ends at the drive window's close, 3 ms, with it rising at 4.7 mm/s, above SETTLE_SPEED, so the
+        // handover keeps it: a hop of about a millisecond that phase 2 lands.
+        expect(h?.velocity.z as number).toBeGreaterThan(0);
+        expect(h?.velocity.z as number).toBeLessThan(0.01);
         const launch = length(h?.velocity ?? vec3(0, 0, 0));
         const free = simulateFreeMotion(result.handover, WORLD);
         const rolling = free.events.find((e) => e.kind === "phase" && e.ball === "blue" && e.phase === "rolling");
@@ -54,7 +67,10 @@ describe("simulateImpact", () => {
         const result = simulateImpact(strike(BLUE.position), balls, WORLD);
         expect(length(result.balls.yellow?.velocity ?? vec3(1, 0, 0))).toBeLessThan(1e-9);
         expect(result.handover.yellow?.position).toEqual(vec3(8, 3, R));
-        expect(result.handover.yellow?.velocity).toEqual(vec3(0, 0, 0));
+        // P2b.2b.2b.2a: turf bed (was exactly zero). Yellow sits over a lattice corner, so its cells balance, but to
+        // rounding only (the bed's summation order is symmetric about y = 0, not about the ball): about 1e-16 m/s.
+        expect(length(result.handover.yellow?.velocity ?? vec3(1, 0, 0))).toBeLessThan(1e-12);
+        expect(result.handover.yellow?.velocity.z).toBe(0);
     });
 
     it("sends both balls of a croquet stroke forward, the croqueted one faster", () => {
@@ -96,6 +112,9 @@ describe("simulateImpact", () => {
 
 describe("validation", () => {
     const ok = strike(BLUE.position);
+    const good = WORLD.lawn.surfaceAt(vec3(15, 20, 0));
+    const badAtBall = (bad: Partial<SurfaceProps>): World =>
+        testWorld({ lawn: { width: 30, length: 40, surfaceAt: (p) => (p.x < 10 ? { ...good, ...bad } : good) } });
     // Each case names the check that must fire, so a case cannot pass on another check's error.
     const cases: [string, ContactState, BallStates, World, RegExp][] = [
         ["a moving ball", ok, { blue: { ...BLUE, velocity: vec3(0.1, 0, 0) } }, WORLD, /ball blue is not at rest/],
@@ -232,27 +251,6 @@ describe("validation", () => {
             /head\.radius/,
         ],
         [
-            "a non-positive contact time",
-            { ...ok, face: { ...ok.face, contactTime: 0 } },
-            { blue: BLUE },
-            WORLD,
-            /face\.contactTime/,
-        ],
-        [
-            "zero face restitution",
-            { ...ok, face: { ...ok.face, restitution: 0 } },
-            { blue: BLUE },
-            WORLD,
-            /face\.restitution/,
-        ],
-        [
-            "face restitution above 1",
-            { ...ok, face: { ...ok.face, restitution: 1.1 } },
-            { blue: BLUE },
-            WORLD,
-            /face\.restitution/,
-        ],
-        [
             "negative face friction",
             { ...ok, face: { ...ok.face, friction: -0.1 } },
             { blue: BLUE },
@@ -266,19 +264,15 @@ describe("validation", () => {
             testWorld({ ballBall: { restitution: 0, friction: 0.05 } }),
             /ballBall\.restitution/,
         ],
+        // P2b.2b.2b.2a: turf bed (was zero turf restitution, which no ball law reads now). The lawn is good at the
+        // court's centre, where validateWorld samples it, and bad at the ball.
+        ["a zero bed modulus at a ball", ok, { blue: BLUE }, badAtBall({ bedModulus: 0 }), /bedModulus at ball blue/],
         [
-            "zero turf restitution",
+            "a zero bed recovery at a ball",
             ok,
             { blue: BLUE },
-            testWorld({
-                lawn: uniformLawn(30, 40, {
-                    slidingFriction: 0.3,
-                    rollingResistance: 0.05,
-                    ...TEST_TURF,
-                    turfRestitution: 0,
-                }),
-            }),
-            /turfRestitution/,
+            badAtBall({ bedRecovery: 0 }),
+            /bedRecovery at ball blue/,
         ],
         [
             "a non-unit orientation",
@@ -296,6 +290,18 @@ describe("validation", () => {
 
     it("accepts touching balls", () => {
         expect(() => simulateImpact(ok, { blue: BLUE, red: ballAt(5 + 2 * R, 0) }, WORLD)).not.toThrow();
+    });
+
+    it("accepts a zero turf restitution at a ball, which no ball law reads (P2b.2b.2b.2a design §4.6)", () => {
+        const world = testWorld({
+            lawn: uniformLawn(30, 40, {
+                slidingFriction: 0.3,
+                rollingResistance: 0.05,
+                ...TEST_TURF,
+                turfRestitution: 0,
+            }),
+        });
+        expect(() => simulateImpact(ok, { blue: BLUE }, world)).not.toThrow();
     });
 });
 

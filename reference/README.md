@@ -8,6 +8,9 @@ Every physical constant the app uses lives here, one JSON file per topic, and ev
 - **Value:** `{ "value": <number, SI>, "unit": "<SI unit>", "bounds": [lo, hi]?, "source": "<citation or URL>",
 "provenance": "direct" | "analogue" | "derived", "note": "<original units, conversion, caveats>"? }`
 - **Quote:** `{ "quote": "<verbatim text>", "source": …, "provenance": …, "note": …? }`
+- **Fit:** `{ "form": "<formula>", "coefficients": { "<name>": <number, SI>, … }, "range": [lo, hi], "rangeUnit":
+"<unit of the fitted variable>", "source": …, "provenance": …, "note": …? }` (contact.json's face fits; P2b.2b.2b.2a
+  design §3.1). The range is where the fit was measured; the engine states how it treats speeds outside it.
 - **Placeholder:** any entry may carry `"provisional": "placeholder"`: a labelled stand-in, by a stated rule, until
   data or a fit replaces it (swing.json; P2b.2b.2a design §6.2). Its `provenance` is `"derived"` and its `source`
   names the rule.

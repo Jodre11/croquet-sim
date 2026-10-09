@@ -14,23 +14,33 @@
  *   prepareTrack alone (with the free table in swing mode only), simulateImpact's whole time and its integration's
  *   µs/step (its time less prepareTrack's, over its steps), and the follow-through's steps and µs/step;
  * - faults: per canonical setup, the striker's face intervals and the fault judge's findings (law, tier, ball and the
- *   contacts count).
+ *   contacts count);
+ * - pit: per roll's canonical setup at 2 and 3 m/s, the striker's ball in its pit against Gugan's held-out figures
+ *   (P2b.2b.2b.2a design §4.5): the apparent friction, the travel to the deepest point and the deepest δ; then a ball
+ *   rolling at 2 m/s across a fresh bed, its speed after 50 mm;
+ * - face: the face's e and T at the impact's 5 µs step against Gugan's fits, a free head on a free ball (design §5.1);
+ * - asPlayed: the full roll at 2 m/s against the roll as played (design §6): the lean through the contact, the face
+ *   behind the striker's ball, the hands' force at the end of their reach and the striker's ball's loss after it.
  * Run with `npx --yes tsx scripts/strokeProbe.ts`; environment: SECTION (one of the names above; default all), REPEAT
  * (timed runs per stroke, default 20). Not part of the test suite; its output goes into the roadmap's outcomes.
  */
-import { IMPACT_DT } from "../src/engine/impact/integrate";
+import { faceContactTimeAt, faceRestitutionAt } from "../src/engine/impact/contactLaw";
+import { IMPACT_DT, integrate, type ContactSample, type ImpactSnapshot } from "../src/engine/impact/integrate";
+import { IDENTITY, rotate } from "../src/engine/impact/rigidBody";
 import { simulateImpact, simulateStroke } from "../src/engine/impact/simulateImpact";
 import { prepareTrack } from "../src/engine/impact/track";
-import type { Downswing, TrackDrive } from "../src/engine/impact/types";
-import { dot, length, sub, type Vec3 } from "../src/engine/math/vec3";
+import { bedLawOf, bedLoad, bedRelax, newBallBed, staticSink } from "../src/engine/impact/turfBed";
+import type { Downswing, HeadState, ImpactResult, MalletHead, TrackDrive } from "../src/engine/impact/types";
+import { ZERO, add, dot, horizontal, length, scale, sub, vec3, type Vec3 } from "../src/engine/math/vec3";
 import { simulateShot, type ShotOutcome } from "../src/engine/shot";
 import { contactPose, planStroke } from "../src/engine/swing/buildContact";
 import type { StrokeSample, SwingTrajectory } from "../src/engine/swing/trajectory";
 import { STROKE_TYPES, type ShotSetup, type StrokeType } from "../src/engine/swing/types";
-import type { BallId, BallState } from "../src/engine/types";
+import { BALL_IDS, type BallId, type BallState } from "../src/engine/types";
 import { defaultWorld } from "../src/engine/world";
-import { recorder } from "../tests/engine/support/impact";
-import { canonicalSetup } from "../tests/engine/support/shot";
+import { TEST_BALL } from "../tests/engine/support/fixtures";
+import { TEST_HEAD, counter, faceLaw, freeBall, isolated, recorder } from "../tests/engine/support/impact";
+import { backswingFor, canonicalSetup } from "../tests/engine/support/shot";
 
 // The project has no Node types; this script runs under tsx and reads only its environment.
 declare const process: { readonly env: Readonly<Record<string, string | undefined>> };
@@ -212,7 +222,222 @@ function faults(): void {
     }
 }
 
-const SECTIONS: Readonly<Record<string, () => void>> = { speeds, canonical, fat, cost, faults };
+const ROLLS: readonly StrokeType[] = ["half-roll", "full-roll", "pass-roll"];
+
+/** `type`'s canonical setup with the backswing that plans `speed` (m/s). */
+function atSpeed(type: StrokeType, speed: number): ShotSetup {
+    const base = canonicalSetup(type, { world: WORLD });
+    return withStroke(base, { backswing: backswingFor(base, speed, WORLD) });
+}
+
+/** `setup`'s stroke with every impact snapshot, and the striker's index among the snapshots' balls. */
+function recorded(setup: ShotSetup): {
+    readonly plan: ReturnType<typeof planStroke>;
+    readonly impact: ImpactResult;
+    readonly steps: readonly ImpactSnapshot[];
+    readonly striker: number;
+} {
+    const plan = planStroke(setup, WORLD);
+    const probe = recorder();
+    const { result } = simulateStroke(plan.contact, setup.balls, WORLD, { probe });
+    const striker = BALL_IDS.filter((id) => setup.balls[id] !== undefined).indexOf(setup.striker);
+    return { plan, impact: result, steps: probe.snapshots, striker };
+}
+
+/** The turf's whole force on the ball in a bed sample: the resultant along its normal and the friction spring's. */
+const turfForce = (c: ContactSample): Vec3 => add(scale(c.normal, c.normalForce), c.tangentialForce);
+
+/** A head's lean about the pitch axis (rad, positive with the shaft leaning forward along `aim`), as the stance's. */
+function leanOf(head: HeadState, aim: Vec3): number {
+    const shaft = rotate(head.orientation, vec3(0, 0, 1));
+    return Math.atan2(dot(shaft, aim), shaft.z);
+}
+
+/** The centre of the face of `head` in state `state`: the head's axis is its local x, the face at +length/2. */
+const faceCentre = (state: HeadState, head: MalletHead): Vec3 =>
+    add(state.position, scale(rotate(state.orientation, vec3(1, 0, 0)), head.length / 2));
+
+const deg = (a: number): string => fmt((a * 180) / Math.PI, 2);
+
+/** Σ|horizontal turf force|·dt over Σ vertical turf force·dt over `samples`; the steps are all IMPACT_DT long. */
+function apparentFriction(samples: readonly ContactSample[]): number {
+    let along = 0;
+    let up = 0;
+    for (const c of samples) {
+        const f = turfForce(c);
+        along += Math.hypot(f.x, f.y) * IMPACT_DT;
+        up += f.z * IMPACT_DT;
+    }
+    return along / up;
+}
+
+/** A ball rolling at `speed` from its static sink over a fresh bed of the default lawn, as turfBed.test.ts runs one. */
+function rollingLoss(speed: number, distance: number): { readonly speed: number; readonly time: number } {
+    const { mass, radius } = WORLD.ball;
+    const law = bedLawOf(WORLD.lawn.surfaceAt(vec3(0, 0, 0)));
+    const sink = staticSink(0, 0, radius, mass * WORLD.gravity, law);
+    const bed = newBallBed(law, IMPACT_DT);
+    const inertia = 0.4 * mass * radius * radius;
+    let s: BallState = {
+        position: vec3(0, 0, radius - sink),
+        velocity: vec3(speed, 0, 0),
+        angularVelocity: vec3(0, speed / radius, 0),
+    };
+    let t = 0;
+    while (s.position.x < distance) {
+        const load = bedLoad(bed, s, radius, IMPACT_DT);
+        const force = add(vec3(0, 0, 0 - mass * WORLD.gravity), load === null ? ZERO : load.force);
+        const v = add(s.velocity, scale(force, IMPACT_DT / mass));
+        const w = load === null ? s.angularVelocity : add(s.angularVelocity, scale(load.torque, IMPACT_DT / inertia));
+        s = { position: add(s.position, scale(v, IMPACT_DT)), velocity: v, angularVelocity: w };
+        bedRelax(bed);
+        t += IMPACT_DT;
+    }
+    return { speed: Math.hypot(s.velocity.x, s.velocity.y), time: t };
+}
+
+function pit(): void {
+    console.log(
+        "== The striker's ball in its pit (§4.5, held out): the apparent friction Σ|F_h|·dt / ΣF_z·dt of its turf " +
+            "samples against Gugan's µ ≈ 1.0, from the impact's start until it first holds no cell after the strike " +
+            "(the pit) and over every sample; the travel from the first held sample to the deepest point against " +
+            "Gugan's 3.5–18 mm; the deepest δ ==",
+    );
+    for (const type of ROLLS) {
+        for (const speed of [2, 3]) {
+            const setup = atSpeed(type, speed);
+            const { impact, steps, striker } = recorded(setup);
+            const key = `turf/${setup.striker}`;
+            const strikeAt = (impact.timeline[`face/${setup.striker}`] ?? [])[0]?.start ?? 0;
+            const held = steps.filter((s) => s.contacts.some((c) => c.key === key));
+            const sampleOf = (s: ImpactSnapshot): ContactSample =>
+                s.contacts.find((c) => c.key === key) as ContactSample;
+            const lift = steps.find((s) => s.t > strikeAt && !s.contacts.some((c) => c.key === key));
+            const inPit = held.filter((s) => lift === undefined || s.t < lift.t);
+            const first = inPit[0];
+            if (first === undefined) {
+                console.log(`${type.padEnd(11)} ${fmt(speed, 1)} m/s: the striker's ball never holds a cell`);
+                continue;
+            }
+            const deepest = inPit.reduce((a, s) => (sampleOf(s).depth > sampleOf(a).depth ? s : a));
+            const travel = horizontal(
+                sub(deepest.balls[striker]?.position as Vec3, first.balls[striker]?.position as Vec3),
+            );
+            console.log(
+                `${type.padEnd(11)} ${fmt(speed, 1)} m/s: pit ${ms(first.t)}–${ms(lift?.t ?? impact.duration)} ms, ` +
+                    `apparent friction ${fmt(apparentFriction(inPit.map(sampleOf)), 3)} (every sample, ` +
+                    `${held.length} steps: ${fmt(apparentFriction(held.map(sampleOf)), 3)}); deepest ` +
+                    `${mm(sampleOf(deepest).depth)} mm at ${ms(deepest.t)} ms, ${mm(length(travel))} mm from the ` +
+                    `first held sample`,
+            );
+        }
+    }
+    const rolled = rollingLoss(2, 0.05);
+    console.log(
+        `rolling     2.0 m/s from the static sink across a fresh bed: ${fmt(rolled.speed)} m/s after 50 mm ` +
+            `(${ms(rolled.time)} ms), against 2 m/s`,
+    );
+}
+
+/**
+ * The face's e and T at the impact's 5 µs step (spec §5.1, recorded, not gated): the free, undriven test head strikes a
+ * free ball with no friction, as analytic.test.ts does at 1e-7 s.
+ */
+function face(): void {
+    console.log("== The face at the impact's 5 µs step: e and T against Gugan's fits (recorded, not gated) ==");
+    const R = TEST_BALL.radius;
+    for (const U of [0.5, 2.19, 2.83, 4.0, 5.5, 6.0]) {
+        const start = {
+            position: vec3(-R - 1e-5 - TEST_HEAD.length / 2, 0, 1),
+            orientation: IDENTITY,
+            velocity: vec3(U, 0, 0),
+            angularVelocity: ZERO,
+        };
+        const probe = counter("face/blue");
+        const run = integrate(
+            isolated({ start, face: faceLaw({ friction: 0 }), balls: [freeBall("blue", vec3(0, 0, 1))] }),
+            { cap: 4e-3, probe },
+        );
+        const T = probe.closed * IMPACT_DT;
+        const fitT = faceContactTimeAt(U);
+        const e = ((run.balls.blue?.velocity.x as number) - run.head.velocity.x) / U;
+        console.log(
+            `${fmt(U, 2)} m/s: e ${fmt(e, 5)} (fit ${fmt(faceRestitutionAt(U), 5)}, ` +
+                `${(e - faceRestitutionAt(U)).toExponential(2)}); T ${fmt(T * 1e3, 4)} ms (fit ` +
+                `${fmt(fitT * 1e3, 4)} ms, ${fmt((100 * (T - fitT)) / fitT, 2)} %)`,
+        );
+    }
+}
+
+/**
+ * The full roll at 2 m/s against the roll as played (roadmap, "The model's roll against the roll as played"), a
+ * baseline for P2b.2b.2b.2b: the lean through the contact (the first face–striker interval's start to the last's end),
+ * the face behind the striker's ball, and the hands' force at the end of their reach and what the striker's ball loses
+ * while the face is on it after that.
+ */
+function asPlayed(): void {
+    console.log("== The full roll at 2 m/s against the roll as played (P2b.2b.2b.2b's baseline) ==");
+    const setup = atSpeed("full-roll", 2);
+    const { plan, impact, steps, striker } = recorded(setup);
+    const drive = plan.contact.drive as TrackDrive;
+    const { aim } = drive.arc;
+    const head = plan.contact.head;
+    const intervals = impact.timeline[`face/${setup.striker}`] ?? [];
+    const from = intervals[0]?.start ?? 0;
+    const to = intervals[intervals.length - 1]?.end ?? impact.duration;
+    const window = steps.filter((s) => s.t >= from && s.t <= to);
+    const leans = window.map((s) => leanOf(s.head, aim));
+    const lowest = leans.reduce((a, b) => Math.min(a, b));
+    const highest = leans.reduce((a, b) => Math.max(a, b));
+    console.log(
+        `full-roll   ${intervals.length} face intervals over ${ms(from)}–${ms(to)} ms; lean at contact ` +
+            `${deg(leans[0] ?? NaN)}°, ${deg(lowest)}° to ${deg(highest)}° through the contact, ` +
+            `${deg(leans[leans.length - 1] ?? NaN)}° at its end`,
+    );
+    const ball = (s: ImpactSnapshot): BallState => s.balls[striker] as BallState;
+    const gaps = window.map((s) => ({
+        face: dot(sub(ball(s).position, faceCentre(s.head, head)), rotate(s.head.orientation, vec3(1, 0, 0))),
+        centre: dot(sub(ball(s).position, s.head.position), aim),
+    }));
+    const range = (xs: readonly number[]): string =>
+        `${mm(xs.reduce((a, b) => Math.min(a, b)))} to ${mm(xs.reduce((a, b) => Math.max(a, b)))} mm`;
+    console.log(
+        `${"".padEnd(11)} through the contact, the face's plane behind the striker's ball's surface ` +
+            `${range(gaps.map((g) => g.face - WORLD.ball.radius))}; the head's centre behind the ball's centre ` +
+            `along aim ${range(gaps.map((g) => g.centre))}`,
+    );
+    const reach = prepareTrack(drive, head, WORLD.gravity).reach;
+    if (reach === null) {
+        console.log(`${"".padEnd(11)} the hands' reach does not bind`);
+        return;
+    }
+    const pushOf = (s: ImpactSnapshot): number => (s.hand === undefined ? NaN : dot(s.hand.force, aim));
+    const atReach = steps.find((s) => s.t >= reach.t1);
+    const easing = steps.filter((s) => s.t >= reach.t1 && s.t <= reach.tStop);
+    let lost = 0;
+    let previous = atReach === undefined ? NaN : length(ball(atReach).velocity);
+    for (const s of steps.filter((x) => x.t > reach.t1)) {
+        const speed = length(ball(s).velocity);
+        if (s.contacts.some((c) => c.key === `face/${setup.striker}` && c.normalForce > 0)) {
+            lost += previous - speed;
+        }
+        previous = speed;
+    }
+    if (atReach === undefined) {
+        console.log(`${"".padEnd(11)} the hands reach 0.8·handReach at ${ms(reach.t1)} ms, after the impact`);
+        return;
+    }
+    const hardest = easing.reduce((a, s) => (pushOf(s) < pushOf(a) ? s : a), atReach);
+    console.log(
+        `${"".padEnd(11)} the hands reach 0.8·handReach at ${ms(reach.t1)} ms and rest at ${ms(reach.tStop)} ms; ` +
+            `their force along aim there ${fmt(pushOf(atReach), 1)} N, its lowest until they rest ` +
+            `${fmt(pushOf(hardest), 1)} N at ${ms(hardest.t)} ms; the striker's ball at ` +
+            `${fmt(length(ball(atReach).velocity))} m/s there loses ${fmt(lost)} m/s while the face is on it after ` +
+            `that; the impact ends at ${ms(impact.duration)} ms`,
+    );
+}
+
+const SECTIONS: Readonly<Record<string, () => void>> = { speeds, canonical, fat, cost, faults, pit, face, asPlayed };
 for (const [name, section] of Object.entries(SECTIONS)) {
     if (SECTION === "all" || SECTION === name) {
         section();

@@ -14,9 +14,17 @@
  * form is its ln((ζ + s)/(ζ − s))/s, using (ζ − s) = 1/(ζ + s) to avoid cancellation at large ζ. The release condition
  * is linear in v, so e does not depend on the impact speed. ζ·τ(ζ) increases strictly from 0 towards infinity, so the
  * ζ giving a restitution is found by bisection on ln e, which needs no exp.
+ *
+ * The face–ball law (P2b.2b.2b.2a design §3) is Hertzian, F = √δ·(k·δ + c·δ′), clamped at zero (Kuwabara and Kono
+ * 1987; Brilliantov et al. 1996). Scaled by the reduced mass m, k and the closing speed U (length L = (m·U²/k)^{2/5},
+ * time L/U), it has one parameter, the dimensionless damping ĉ = c·L^{3/2}/(m·U). Its central collision's e(ĉ) and
+ * duration τ(ĉ) follow by integration (hertzBounce). A closure at U takes ĉ and τ from a table over U, built once from
+ * Gugan's wood fits, and sets L = U·T(U)/τ, k = m·U²/L^{5/2} and c = ĉ·m·U/L^{3/2}, so that the fits hold.
  */
-import { atan2, ln } from "../math/elementary";
-import { length, scale, sub, type Vec3 } from "../math/vec3";
+import { contactReference } from "../../reference/index";
+import { atan2, ln, pow } from "../math/elementary";
+import { dot, length, scale, sub, type Vec3 } from "../math/vec3";
+import type { FaceLaw } from "./types";
 
 /** k_t/k, a contact's tangential stiffness relative to its normal stiffness (Silbert et al. 2001; contact.json). */
 export const TANGENTIAL_STIFFNESS_RATIO = 2 / 7;
@@ -156,4 +164,207 @@ export function tangentialForce(law: PairLaw, spring: Vec3, slip: Vec3, normal: 
     }
     const force = scale(trial, limit / size);
     return { force, spring: scale(force, -1 / law.tangentialStiffness), sliding: true };
+}
+
+/**
+ * A tangential spring ξ carried into a step (P2b.2b.2b.2a design §3.5, §4.3; plan decision 2): projected onto the
+ * tangent plane of unit normal `normal`, then, if its stiffness has grown from `before` to `now`, scaled by
+ * before/now. The force it carries then does not grow, and its stored energy ½·k_t·ξ² never rises without slip. A
+ * stiffness that shrinks keeps ξ, so the force and the energy fall with it. A spring loaded from rest (`before` 0) is
+ * kept. A linear law's stiffness never changes, so its pairs are as before.
+ */
+export function carrySpring(spring: Vec3, normal: Vec3, before: number, now: number): Vec3 {
+    const carried = sub(spring, scale(normal, dot(spring, normal)));
+    return now > before && before > 0 ? scale(carried, before / now) : carried;
+}
+
+const RESTITUTION_FIT = contactReference.faceRestitutionFit.coefficients as {
+    readonly a: number;
+    readonly b: number;
+    readonly p: number;
+};
+const TIME_FIT = contactReference.faceContactTimeFit.coefficients as {
+    readonly t0: number;
+    readonly u0: number;
+    readonly q: number;
+};
+
+/** The face fits' speed range (m/s): a closure's speed is clamped to it (design §3.3). */
+export const FACE_SPEED_MIN = contactReference.faceRestitutionFit.range[0];
+export const FACE_SPEED_MAX = contactReference.faceRestitutionFit.range[1];
+
+/** Gugan's restitution of a wooden face at closing speed U (m/s): √(1 − (a + b·U^p)). */
+export function faceRestitutionAt(speed: number): number {
+    return Math.sqrt(1 - (RESTITUTION_FIT.a + RESTITUTION_FIT.b * pow(speed, RESTITUTION_FIT.p)));
+}
+
+/** Gugan's contact time (s) of a wooden face at closing speed U (m/s): t0·(U/u0)^q. */
+export function faceContactTimeAt(speed: number): number {
+    return TIME_FIT.t0 * pow(speed / TIME_FIT.u0, TIME_FIT.q);
+}
+
+/** A dimensionless central collision: its restitution, and its duration in units of L/U. */
+export interface HertzBounce {
+    readonly restitution: number;
+    readonly duration: number;
+}
+
+/**
+ * Step of the dimensionless integration, in units of L/U. Numerical, not physical: RK4 at this step agrees with one at
+ * 1e-5 to 1e-6 in e and 6e-7 relative in τ over ĉ ∈ [0, 1] (pre-flight). The force's √x is not smooth at the touch,
+ * which costs RK4 its order in the first steps, but at ĉ ≈ 0.2 that error is below 1e-5.
+ */
+const HERTZ_STEP = 2e-3;
+
+/**
+ * The clamped law's central collision at damping ĉ (design §3.4): x'' = −√x·(x + ĉ·x′) from x = 0, x′ = 1, by RK4,
+ * until the force √x·(x + ĉ·x′) falls to zero. The release is interpolated linearly within its step, both its time
+ * and the velocity at it, whose negative is e.
+ */
+export function hertzBounce(damping: number, step = HERTZ_STEP): HertzBounce {
+    const accel = (x: number, v: number): number => (x > 0 ? 0 - Math.sqrt(x) * (x + damping * v) : 0);
+    const h = step;
+    let x = 0;
+    let v = 1;
+    let s = 0;
+    let force = damping;
+    for (;;) {
+        const k1x = v;
+        const k1v = accel(x, v);
+        const k2x = v + (h / 2) * k1v;
+        const k2v = accel(x + (h / 2) * k1x, v + (h / 2) * k1v);
+        const k3x = v + (h / 2) * k2v;
+        const k3v = accel(x + (h / 2) * k2x, v + (h / 2) * k2v);
+        const k4x = v + h * k3v;
+        const k4v = accel(x + h * k3x, v + h * k3v);
+        const nx = x + (h / 6) * (k1x + 2 * k2x + 2 * k3x + k4x);
+        const nv = v + (h / 6) * (k1v + 2 * k2v + 2 * k3v + k4v);
+        // x + ĉ·x′ carries the force's sign while x > 0, and falls through zero at the release (at x = 0 if ĉ = 0).
+        const next = nx + damping * nv;
+        if (s > 0 && next <= 0) {
+            const theta = force / (force - next);
+            return { restitution: 0 - (v + theta * (nv - v)), duration: s + theta * h };
+        }
+        x = nx;
+        v = nv;
+        s += h;
+        force = next;
+    }
+}
+
+/**
+ * Spacing (m/s) of the closure table's speed grid. Numerical, not physical: linear interpolation between its points
+ * misses the fit's e by at most 3.3e-5 at mid-grid (pre-flight), within §5.1's 1e-4.
+ */
+const TABLE_SPACING = 0.1;
+
+/** Bisection steps on ĉ: from a bracket of width 1, 2^-30 ≈ 1e-9, far below the table's interpolation error. */
+const DAMPING_STEPS = 30;
+
+interface TableRow {
+    readonly damping: number;
+    readonly duration: number;
+}
+
+/** The ĉ whose bounce has restitution `target`, by bisection on [0, hi], hi doubled from 1 until e(hi) ≤ target. */
+function dampingFor(target: number): number {
+    let lo = 0;
+    let hi = 1;
+    while (hertzBounce(hi).restitution > target) {
+        hi *= 2;
+    }
+    for (let n = 0; n < DAMPING_STEPS; n++) {
+        const mid = lo + (hi - lo) / 2;
+        if (hertzBounce(mid).restitution > target) {
+            lo = mid;
+        } else {
+            hi = mid;
+        }
+    }
+    return lo + (hi - lo) / 2;
+}
+
+let table: readonly TableRow[] | null = null;
+
+/**
+ * The closure table (design §3.4; plan decision 5): ĉ(U) and τ(U) at U = FACE_SPEED_MIN + i·TABLE_SPACING, the last
+ * point FACE_SPEED_MAX. Built once, on the first closure, from constants only, so every run reads the same table.
+ */
+function closureTable(): readonly TableRow[] {
+    if (table !== null) {
+        return table;
+    }
+    const count = Math.round((FACE_SPEED_MAX - FACE_SPEED_MIN) / TABLE_SPACING);
+    const rows: TableRow[] = [];
+    for (let i = 0; i <= count; i++) {
+        const speed = i === count ? FACE_SPEED_MAX : FACE_SPEED_MIN + i * TABLE_SPACING;
+        const damping = dampingFor(faceRestitutionAt(speed));
+        rows.push({ damping, duration: hertzBounce(damping).duration });
+    }
+    table = rows;
+    return rows;
+}
+
+/**
+ * A face–ball contact's law from its closure until it opens (design §3.3): the closing speed U as met (m/s), the
+ * Hertzian stiffness k (N/m^{3/2}) and damping c (N·s/m^{3/2}) set from U clamped to [FACE_SPEED_MIN,
+ * FACE_SPEED_MAX], and the face's friction.
+ */
+export interface HertzClosure {
+    readonly speed: number;
+    readonly stiffness: number;
+    readonly damping: number;
+    readonly friction: number;
+}
+
+/**
+ * Closes a face–ball pair of law `law` at closing speed `speed` (design §3.3): ĉ and τ interpolated linearly in the
+ * clamped speed u, then L = u·T(u)/τ, k = m·u²/L^{5/2} and c = ĉ·m·u/L^{3/2}. A speed of zero or less, or NaN, takes
+ * the slowest law.
+ */
+export function closeFace(law: FaceLaw, speed: number): HertzClosure {
+    const u = speed > FACE_SPEED_MIN ? Math.min(speed, FACE_SPEED_MAX) : FACE_SPEED_MIN;
+    const rows = closureTable();
+    const at = (u - FACE_SPEED_MIN) / TABLE_SPACING;
+    const i = Math.min(rows.length - 2, Math.floor(at));
+    const f = at - i;
+    const a = rows[i] as TableRow;
+    const b = rows[i + 1] as TableRow;
+    const damping = a.damping + (b.damping - a.damping) * f;
+    const duration = a.duration + (b.duration - a.duration) * f;
+    const L = (u * faceContactTimeAt(u)) / duration;
+    const root = Math.sqrt(L);
+    return {
+        speed,
+        stiffness: (law.mass * u * u) / (L * L * root),
+        damping: (damping * law.mass * u) / (L * root),
+        friction: law.friction,
+    };
+}
+
+/** The face's normal force (N) at penetration `depth` > 0 closing at `rate` (m/s): √δ·(k·δ + c·δ′), clamped at 0. */
+export function hertzForce(closure: HertzClosure, depth: number, rate: number): number {
+    return Math.max(0, Math.sqrt(depth) * (closure.stiffness * depth + closure.damping * rate));
+}
+
+/**
+ * The closed face's current linearised law at `depth` (design §3.5): the normal's tangent stiffness (3/2)·k·√δ and
+ * damping c·√δ, k_t = TANGENTIAL_STIFFNESS_RATIO of that stiffness, c_t = c_n·√(k_t/k_n), and the friction.
+ */
+export function hertzTangent(closure: HertzClosure, depth: number): PairLaw {
+    const root = Math.sqrt(depth);
+    const stiffness = 1.5 * closure.stiffness * root;
+    const damping = closure.damping * root;
+    return {
+        stiffness,
+        damping,
+        tangentialStiffness: TANGENTIAL_STIFFNESS_RATIO * stiffness,
+        tangentialDamping: damping * Math.sqrt(TANGENTIAL_STIFFNESS_RATIO),
+        friction: closure.friction,
+    };
+}
+
+/** The face's stored elastic energy (J) at `depth`: (2/5)·k·δ^{5/2}. */
+export function hertzEnergy(closure: HertzClosure, depth: number): number {
+    return 0.4 * closure.stiffness * depth * depth * Math.sqrt(depth);
 }

@@ -3,7 +3,7 @@
  * do not move when reference data does. src/ must never import this file.
  */
 import { ZERO, add, length, lengthSq, scale, sub, vec3, type Vec3 } from "../../../src/engine/math/vec3";
-import { lawFromContactTime, type PairLaw } from "../../../src/engine/impact/contactLaw";
+import { lawFromContactTime } from "../../../src/engine/impact/contactLaw";
 import type { ImpactBall, ImpactProbe, ImpactSetup, ImpactSnapshot } from "../../../src/engine/impact/integrate";
 import {
     IDENTITY,
@@ -16,12 +16,15 @@ import {
 } from "../../../src/engine/impact/rigidBody";
 import { validateImpact } from "../../../src/engine/impact/simulateImpact";
 import { headOnPath, prepareTrack, swingOrientation } from "../../../src/engine/impact/track";
+import { BED_CELL } from "../../../src/engine/impact/turfBed";
 import type {
+    BedLaw,
     ContactState,
     Coupling,
     Dip,
     Drive,
     DriveSample,
+    FaceLaw,
     FaceMaterial,
     Hands,
     HeadState,
@@ -32,7 +35,7 @@ import type {
 import { sinCos } from "../../../src/engine/math/elementary";
 import type { BallParams, BallState, BallStates, World } from "../../../src/engine/types";
 import { STANDARD_GRAVITY, uprightsOf } from "../../../src/engine/world";
-import { TEST_BALL, ballAt, hoopWithUprightAt, testHoop } from "./fixtures";
+import { TEST_BALL, TEST_TURF, ballAt, hoopWithUprightAt, testHoop } from "./fixtures";
 
 const R = TEST_BALL.radius;
 
@@ -45,7 +48,7 @@ export const TEST_HEAD: MalletHead = {
     socket: vec3(0, 0, 0.032),
 };
 
-export const TEST_FACE: FaceMaterial = { restitution: 0.8, friction: 0.4, contactTime: 6e-4 };
+export const TEST_FACE: FaceMaterial = { friction: 0.4 };
 
 /** A coupling for tracked test heads: plausible, not sourced (design §3.4 sets the engine's); contact at t = 0. */
 export const TEST_COUPLING: Coupling = { period: 0.04, dampingRatio: 0.7, relaxAt: 0 };
@@ -164,20 +167,24 @@ export function strike(centre: Vec3, o: StrikeOptions = {}): ContactState {
     };
 }
 
-/** The face law of TEST_FACE (or `face`) against a test ball, for a head of mass `headMass`. */
-export function faceLaw(face: FaceMaterial = TEST_FACE, headMass = TEST_HEAD.mass): PairLaw {
-    const massEff = (headMass * TEST_BALL.mass) / (headMass + TEST_BALL.mass);
-    return lawFromContactTime(massEff, face.restitution, face.contactTime, face.friction);
+/** The face law of a test head of mass `headMass` against a test ball, with TEST_FACE's friction (or `face`'s). */
+export function faceLaw(face: FaceMaterial = TEST_FACE, headMass = TEST_HEAD.mass): FaceLaw {
+    return { mass: (headMass * TEST_BALL.mass) / (headMass + TEST_BALL.mass), friction: face.friction };
 }
 
-/** A ball free in space at `position`, without turf under it. */
+/** A ball free in space at `position`, by default without turf under it; `turf` gives it a bed. */
 export function freeBall(
     id: ImpactBall["id"],
     position: Vec3,
     velocity: Vec3 = ZERO,
-    turf: PairLaw | null = null,
+    turf: BedLaw | null = null,
 ): ImpactBall {
     return { id, state: { position, velocity, angularVelocity: ZERO }, turf };
+}
+
+/** A plausible test bed (fixtures' TEST_TURF): k_w 3e8 N/m³, τ_r 2 ms, µ `friction`, 2 mm cells. */
+export function testBed(friction = 0.3): BedLaw {
+    return { modulus: TEST_TURF.bedModulus, recovery: TEST_TURF.bedRecovery, friction, cell: BED_CELL };
 }
 
 /**
@@ -240,8 +247,9 @@ function headKinetic(state: HeadState, head: MalletHead): number {
 }
 
 /**
- * Kinetic, gravitational and stored spring energy (J) of a snapshot. The contact depth is the pre-step value, against
- * post-step states: a time-level mix, biased by about 0.6% of an undamped contact's energy (see invariants.test.ts).
+ * Kinetic and gravitational energy (J) of a snapshot, and the stored energy of each contact, as the integrator reports
+ * it (`storedEnergy`), with its tangential spring's. The contact depth is the pre-step value, against post-step
+ * states: a time-level mix, biased by about 0.6% of an undamped contact's energy (see invariants.test.ts).
  */
 export function impactEnergy(s: ImpactSnapshot, head: MalletHead, ball: BallParams, gravity: number): number {
     const inertia = 0.4 * ball.mass * ball.radius * ball.radius;
@@ -251,7 +259,7 @@ export function impactEnergy(s: ImpactSnapshot, head: MalletHead, ball: BallPara
         e += ball.mass * gravity * b.position.z;
     }
     for (const c of s.contacts) {
-        e += 0.5 * c.law.stiffness * c.depth * c.depth + 0.5 * c.law.tangentialStiffness * lengthSq(c.spring);
+        e += c.storedEnergy + 0.5 * c.law.tangentialStiffness * lengthSq(c.spring);
     }
     return e;
 }

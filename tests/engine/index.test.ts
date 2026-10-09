@@ -66,7 +66,7 @@ describe("engine public API", () => {
         expect(engine.CROQUET_STROKES).toEqual(["drive", "stop-ac", "half-roll", "full-roll", "pass-roll"]);
         expect(engine.ON_TIME).toEqual({ arc: 0, hands: 0, dip: 0 });
         expect(engine.defaultProfile.mallet.headMass).toBeGreaterThan(0);
-        expect(engine.ENGINE_VERSION).toBe("0.8.0");
+        expect(engine.ENGINE_VERSION).toBe("0.9.0");
         const types: Exported | null = null;
         expect(types).toBeNull();
     });

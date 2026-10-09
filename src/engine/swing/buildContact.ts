@@ -16,7 +16,7 @@
  * 5. the approach: the downswing's lowest clearance over the turf, from one scan (planStroke, swingApproach).
  * The head starts on its own path (headOnPath at t = 0), so the hands start with no error to take up.
  */
-import { contactReference, malletReference } from "../../reference/index";
+import { malletReference } from "../../reference/index";
 import { headLowestPoint } from "../impact/contacts";
 import { rotate, solidCylinderInertia, type Quaternion } from "../impact/rigidBody";
 import {
@@ -28,6 +28,7 @@ import {
     swingOrientation,
     swungBody,
 } from "../impact/track";
+import { bedLawOf, staticSink } from "../impact/turfBed";
 import type { ContactState, FaceMaterial, Hands, MalletHead, StrokeMode, SwingArc, TrackDrive } from "../impact/types";
 import { atan2, sinCos } from "../math/elementary";
 import { add, cross, length, scale, sub, vec3, type Vec3 } from "../math/vec3";
@@ -54,12 +55,8 @@ export const MAX_LEAD = 0.15;
  */
 export const TURF_MARGIN = 0.005;
 
-/** The engine's face: wood (reference/mallet.json), with the sourced face–ball contact time. */
-const WOOD: FaceMaterial = {
-    restitution: malletReference.faceRestitution.value,
-    friction: malletReference.faceFriction.value,
-    contactTime: contactReference.faceBallContactTime.value,
-};
+/** The engine's face: wood (reference/mallet.json); its restitution and contact time are contact.json's fits. */
+const WOOD: FaceMaterial = { friction: malletReference.faceFriction.value };
 
 /** A stance's numbers, each checked finite by name (a missing one included). */
 const STANCE_NUMBERS: readonly (keyof SwingStance)[] = ["handsAhead", "top", "bottom", "gripTension", "bottomGrip"];
@@ -351,7 +348,8 @@ export function contactPose(setup: ShotSetup, world: World): ContactPose {
     const R = world.ball.radius;
     const lean = stanceLean(handsAhead, top, up, { ballRadius: R, headLength: mallet.headLength, headRadius: rho });
     const surface = world.lawn.surfaceAt(striker.position);
-    const sunk = R - (world.ball.mass * world.gravity) / surface.turfStiffness;
+    const sunk =
+        R - staticSink(striker.position.x, striker.position.y, R, world.ball.mass * world.gravity, bedLawOf(surface));
     const centre = vec3(striker.position.x, striker.position.y, sunk);
     const radius = top;
     const thetaC = 0 - lean;

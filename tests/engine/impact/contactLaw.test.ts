@@ -2,16 +2,27 @@ import { describe, expect, it } from "vitest";
 import { contactReference } from "../../../src/reference/index";
 import { length, scale, sub, vec3 } from "../../../src/engine/math/vec3";
 import {
+    FACE_SPEED_MAX,
+    FACE_SPEED_MIN,
     TANGENTIAL_STIFFNESS_RATIO,
     ZETA_MAX,
+    carrySpring,
+    closeFace,
     contactTimeFactor,
     dampingRatio,
+    faceContactTimeAt,
+    faceRestitutionAt,
+    hertzBounce,
+    hertzEnergy,
+    hertzForce,
+    hertzTangent,
     lawFromContactTime,
     lawFromStiffness,
     lnRestitution,
     normalForce,
     tangentialForce,
 } from "../../../src/engine/impact/contactLaw";
+import type { FaceLaw } from "../../../src/engine/impact/types";
 
 /**
  * Independent check of the clamped law: integrates δ'' = −2ζ·δ' − δ (m = k = 1) from δ = 0, δ' = 1 by RK4 until the
@@ -170,5 +181,153 @@ describe("forces", () => {
         const t = tangentialForce(law, vec3(1e-3, 0, 0), vec3(0.1, 0, 0), 0);
         expect(length(t.force)).toBe(0);
         expect(t.sliding).toBe(true);
+    });
+});
+
+/**
+ * A clamped Hertz–Kuwabara–Kono contact integrated directly (RK4, step h over the contact): reduced mass m meeting at
+ * U, m·δ'' = −√δ·(k·δ + c·δ′). Returns e (the velocity at release over U) and T (when the force falls to zero), with
+ * the release interpolated within its step.
+ */
+function directBounce(m: number, k: number, c: number, U: number, h = 1e-8): { e: number; T: number } {
+    const accel = (x: number, v: number): number => (x > 0 ? -(Math.sqrt(x) * (k * x + c * v)) / m : 0);
+    let x = 0;
+    let v = U;
+    let t = 0;
+    let phi = c * v;
+    for (;;) {
+        const k1x = v;
+        const k1v = accel(x, v);
+        const k2x = v + (h / 2) * k1v;
+        const k2v = accel(x + (h / 2) * k1x, v + (h / 2) * k1v);
+        const k3x = v + (h / 2) * k2v;
+        const k3v = accel(x + (h / 2) * k2x, v + (h / 2) * k2v);
+        const k4x = v + h * k3v;
+        const k4v = accel(x + h * k3x, v + h * k3v);
+        const nx = x + (h / 6) * (k1x + 2 * k2x + 2 * k3x + k4x);
+        const nv = v + (h / 6) * (k1v + 2 * k2v + 2 * k3v + k4v);
+        const nphi = k * nx + c * nv;
+        if (t > 0 && nphi <= 0) {
+            const theta = phi / (phi - nphi);
+            return { e: -(v + theta * (nv - v)) / U, T: t + theta * h };
+        }
+        x = nx;
+        v = nv;
+        t += h;
+        phi = nphi;
+    }
+}
+
+const FACE: FaceLaw = { mass: 0.3, friction: 0.5 };
+
+describe("the face fits", () => {
+    it("give Gugan's e and T at the ends of the range", () => {
+        expect(faceRestitutionAt(0.5)).toBeCloseTo(0.854, 3);
+        expect(faceRestitutionAt(6)).toBeCloseTo(0.793, 3);
+        expect(faceContactTimeAt(2.19)).toBeCloseTo(0.97e-3, 9);
+        expect(FACE_SPEED_MIN).toBe(0.5);
+        expect(FACE_SPEED_MAX).toBe(6);
+    });
+});
+
+describe("hertzBounce", () => {
+    it("is elastic and lasts Hertz's τ = 3.2181 undamped (the dimensionless law)", () => {
+        // Undamped Hertz: τ = 2·∫₀¹ dx/√(1 − x^{5/2}) in these units, 3.21806… (pre-flight, RK4 at 1e-5).
+        const b = hertzBounce(0);
+        expect(b.restitution).toBeCloseTo(1, 8);
+        expect(b.duration).toBeCloseTo(3.218065, 5);
+    });
+
+    it("falls monotonically in e as the damping grows", () => {
+        let last = 1;
+        for (const c of [0.05, 0.1, 0.2, 0.5, 1]) {
+            const e = hertzBounce(c).restitution;
+            expect(e).toBeLessThan(last);
+            last = e;
+        }
+    });
+});
+
+describe("closeFace", () => {
+    it.each([0.5, 2.19, 2.83, 4.0, 5.5, 6.0])(
+        "sets k and c so that a direct integration at %s m/s gives the fit's e within 1e-4 and T within 0.1 %",
+        (U) => {
+            const closure = closeFace(FACE, U);
+            const { e, T } = directBounce(FACE.mass, closure.stiffness, closure.damping, U);
+            expect(Math.abs(e - faceRestitutionAt(U))).toBeLessThan(1e-4);
+            expect(Math.abs(T - faceContactTimeAt(U)) / faceContactTimeAt(U)).toBeLessThan(1e-3);
+        },
+    );
+
+    it("takes the clamped speed's law outside [0.5, 6] m/s", () => {
+        expect(closeFace(FACE, 0.2)).toEqual({ ...closeFace(FACE, 0.5), speed: 0.2 });
+        expect(closeFace(FACE, 9)).toEqual({ ...closeFace(FACE, 6), speed: 9 });
+    });
+
+    it("takes the 0.5 m/s law at a closing speed of zero or less (review focus 1)", () => {
+        for (const U of [0, -0.3, -0]) {
+            const closure = closeFace(FACE, U);
+            expect(closure.stiffness).toBe(closeFace(FACE, 0.5).stiffness);
+            expect(closure.damping).toBe(closeFace(FACE, 0.5).damping);
+            expect(Number.isFinite(closure.stiffness) && closure.stiffness > 0).toBe(true);
+        }
+    });
+
+    it("scales k and c with the reduced mass, as a law in m, k and U must", () => {
+        const light = closeFace({ mass: 0.2, friction: 0.5 }, 3);
+        const heavy = closeFace({ mass: 0.4, friction: 0.5 }, 3);
+        expect(heavy.stiffness / light.stiffness).toBeCloseTo(2, 12);
+        expect(heavy.damping / light.damping).toBeCloseTo(2, 12);
+    });
+});
+
+describe("the Hertzian force", () => {
+    const closure = closeFace(FACE, 3);
+
+    it("rises from zero at touch with no step, and never pulls", () => {
+        expect(hertzForce(closure, 0, 3)).toBe(0);
+        // At δ = 1e-12 the force is c·√δ·U ≈ 0.02 N (c ≈ 6.4e3): no step, but not below 1e-3 N in absolute terms. It is
+        // under a thousandth of the force at δ = 1e-5.
+        expect(hertzForce(closure, 1e-12, 3)).toBeLessThan(1e-3 * hertzForce(closure, 1e-5, 3));
+        for (const rate of [-10, -1, 0, 1, 10]) {
+            expect(hertzForce(closure, 1e-5, rate)).toBeGreaterThanOrEqual(0);
+        }
+    });
+
+    it("has k_t = (2/7)·(3/2)·k·√δ and c_t = c·√δ·√(2/7) at a closed contact", () => {
+        const depth = 2e-5;
+        const law = hertzTangent(closure, depth);
+        expect(law.tangentialStiffness).toBeCloseTo(
+            TANGENTIAL_STIFFNESS_RATIO * 1.5 * closure.stiffness * Math.sqrt(depth),
+            6,
+        );
+        expect(law.tangentialDamping).toBeCloseTo(
+            closure.damping * Math.sqrt(depth) * Math.sqrt(TANGENTIAL_STIFFNESS_RATIO),
+            9,
+        );
+        expect(law.friction).toBe(FACE.friction);
+    });
+
+    it("stores (2/5)·k·δ^{5/2}, the work of the elastic part", () => {
+        const depth = 3e-5;
+        expect(hertzEnergy(closure, depth)).toBeCloseTo(0.4 * closure.stiffness * Math.pow(depth, 2.5), 12);
+    });
+});
+
+describe("carrySpring", () => {
+    const n = vec3(0, 0, 1);
+
+    it("projects the spring onto the tangent plane", () => {
+        expect(carrySpring(vec3(1e-6, 2e-6, 3e-6), n, 5, 5)).toEqual(vec3(1e-6, 2e-6, 0));
+    });
+
+    it("keeps the force when the stiffness grows, and the displacement when it shrinks", () => {
+        const grown = carrySpring(vec3(1e-6, 0, 0), n, 100, 400);
+        expect(grown.x * 400).toBeCloseTo(1e-6 * 100, 18);
+        expect(carrySpring(vec3(1e-6, 0, 0), n, 400, 100)).toEqual(vec3(1e-6, 0, 0));
+    });
+
+    it("leaves a spring loaded from rest as it is", () => {
+        expect(carrySpring(vec3(1e-6, 0, 0), n, 0, 400)).toEqual(vec3(1e-6, 0, 0));
     });
 });
