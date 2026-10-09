@@ -24,6 +24,15 @@ export interface FaceMaterial {
     readonly contactTime: number;
 }
 
+/**
+ * A face's law against a ball (P2b.2b.2b.2a design §3.6): the pair's reduced mass (kg) and the face's friction. Each
+ * closure sets the Hertzian k and c from it with the wood fits (contactLaw.ts closeFace).
+ */
+export interface FaceLaw {
+    readonly mass: number;
+    readonly friction: number;
+}
+
 /** Applied force at time t (s from the start of the impact), world frame. Linear between samples. */
 export interface DriveSample {
     readonly t: number;
