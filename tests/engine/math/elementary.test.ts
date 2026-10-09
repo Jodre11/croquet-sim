@@ -9,6 +9,11 @@ function close(a: number, reference: number, ulps: number): boolean {
     return Math.abs(a - reference) <= ulps * EPS * Math.max(1, Math.abs(reference));
 }
 
+/** |a − reference| within `ulps` units of the reference's own magnitude: relative, so small results are checked. */
+function closeRelative(a: number, reference: number, ulps: number): boolean {
+    return Math.abs(a - reference) <= ulps * EPS * Math.abs(reference);
+}
+
 describe("ln", () => {
     it("agrees with Math.log to a few ulps over the whole range", () => {
         const random = rng(3);
@@ -77,7 +82,7 @@ describe("exp", () => {
         const random = rng(5);
         for (let n = 0; n < 5000; n++) {
             const x = (random() - 0.5) * 1400;
-            expect(close(exp(x), Math.exp(x), 4), `x = ${x}`).toBe(true);
+            expect(closeRelative(exp(x), Math.exp(x), 4), `x = ${x}`).toBe(true);
         }
     });
 
@@ -85,7 +90,7 @@ describe("exp", () => {
         const random = rng(6);
         for (let n = 0; n < 2000; n++) {
             const x = (random() - 0.5) * 2 * Math.pow(10, -Math.floor(random() * 12));
-            expect(close(exp(x), Math.exp(x), 2), `x = ${x}`).toBe(true);
+            expect(closeRelative(exp(x), Math.exp(x), 2), `x = ${x}`).toBe(true);
         }
         expect(exp(0)).toBe(1);
     });
@@ -106,7 +111,7 @@ describe("pow", () => {
             for (let n = 0; n < 1000; n++) {
                 const x = 0.05 + 20 * random();
                 // exp(y·ln x) amplifies ln's few ulps by |y·ln x| ≤ 7.5 here.
-                expect(close(pow(x, y), Math.pow(x, y), 16), `x = ${x}, y = ${y}`).toBe(true);
+                expect(closeRelative(pow(x, y), Math.pow(x, y), 16), `x = ${x}, y = ${y}`).toBe(true);
             }
         }
     });

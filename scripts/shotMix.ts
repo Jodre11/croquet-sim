@@ -2,8 +2,9 @@
  * Realistic shot mix through the engine with friction on (P2a.2 design §6, performance measurement). Generates
  * croquet-like shots (croquet strokes, rushes, cannons, hoop approaches, jammed balls, peg play, pushes, single
  * balls), runs each twice (the first warms the JIT and is discarded) and reports per shot the resting-contact solves,
- * their work units and time, the engine's time, and the landings per shot. Run with `npx --yes tsx scripts/shotMix.ts`; environment: COUNT
- * (shots, default 3000), SEED (default 7). Not part of the test suite.
+ * their work units and time, the engine's time, and the landings per shot. Run with
+ * `npx --yes tsx scripts/shotMix.ts`; environment: COUNT (shots, default 3000), SEED (default 7). Not part of the test
+ * suite.
  */
 import { ZERO, add, scale, vec3, type Vec3 } from "../src/engine/math/vec3";
 import { rollingSpin } from "../src/engine/motion";
