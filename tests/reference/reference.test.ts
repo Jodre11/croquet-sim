@@ -73,6 +73,8 @@ describe("reference data", () => {
 describe("impact reference data", () => {
     it("loads contact durations, turf stiffness and the tangential ratio", () => {
         expect(contactReference.ballTurfStiffness.value).toBeGreaterThan(0);
+        expect(contactReference.bedModulus.value).toBeGreaterThan(0);
+        expect(contactReference.bedRecovery.value).toBeGreaterThan(0);
         expect(contactReference.ballBallContactTime.value).toBeGreaterThan(0);
         expect(contactReference.faceBallContactTime.value).toBeGreaterThan(0);
         expect(contactReference.tangentialStiffnessRatio.value).toBeCloseTo(2 / 7, 15);
@@ -87,10 +89,12 @@ describe("impact reference data", () => {
     });
 
     it("gives every impact value bounds, so the probe can sweep them, and every fit a range", () => {
+        // The bed's fitted pair has no bounds: one court only, and lawn presets are P3's (P2b.2b.2b.2a design §4.4).
+        const unbounded = [contactReference.bedModulus, contactReference.bedRecovery];
         for (const v of [...Object.values(contactReference), ...Object.values(malletReference)]) {
             if ("range" in v) {
                 expect(v.range[0], v.source).toBeLessThan(v.range[1]);
-            } else {
+            } else if (!unbounded.includes(v)) {
                 expect(v.bounds, v.source).toBeDefined();
             }
         }

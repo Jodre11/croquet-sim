@@ -164,6 +164,8 @@ export const frictionReference = {
  */
 export const contactReference = {
     ballTurfStiffness: readValue(contactJson, "ballTurfStiffness", "contact"),
+    bedModulus: readValue(contactJson, "bedModulus", "contact"),
+    bedRecovery: readValue(contactJson, "bedRecovery", "contact"),
     ballBallContactTime: readValue(contactJson, "ballBallContactTime", "contact"),
     ballObstacleContactTime: readValue(contactJson, "ballObstacleContactTime", "contact"),
     faceBallContactTime: readValue(contactJson, "faceBallContactTime", "contact"),

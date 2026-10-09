@@ -133,6 +133,8 @@ export function validateWorld(world: World): void {
     requireMaterial(world.ballUpright, "ballUpright");
     requireMaterial(world.peg.material, "peg.material");
     requirePositive(surface.turfStiffness, "lawn.turfStiffness");
+    requirePositive(surface.bedModulus, "lawn.bedModulus");
+    requirePositive(surface.bedRecovery, "lawn.bedRecovery");
     requireMaterial({ restitution: surface.turfRestitution, friction: 0 }, "lawn.turf");
     requirePositive(world.ballBallContactTime, "ballBallContactTime");
     requirePositive(world.peg.radius, "peg.radius");
@@ -164,6 +166,8 @@ export function defaultWorld(lawnSpeedSeconds: number = lawnReference.defaultSpe
         ),
         turfStiffness: contactReference.ballTurfStiffness.value,
         turfRestitution: frictionReference.ballTurfRestitution.value,
+        bedModulus: contactReference.bedModulus.value,
+        bedRecovery: contactReference.bedRecovery.value,
     };
     return {
         gravity: STANDARD_GRAVITY,

@@ -57,15 +57,18 @@ export interface PushMotion {
 
 /**
  * Turf properties at a point. `slidingFriction` and `rollingResistance` are dimensionless (multiply by g for a
- * deceleration). `turfStiffness` (N/m) and `turfRestitution` are the ball–turf contact's spring and restitution:
- * phase 2 uses the restitution for landings, the impact (phase 1) both. Every turf property lives here so that a lawn
- * can vary them by position, and a match can change them between shots through the Lawn it passes in.
+ * deceleration). `bedModulus` (N/m³) and `bedRecovery` (s) are the turf bed's under a ball (P2b.2b.2b.2a design §4),
+ * in the impact and at phase 2's landings. `turfStiffness` (N/m) and `turfRestitution` are the plane law the mallet
+ * head meets (P2b.2b.1 design §4.1). Every turf property lives here so that a lawn can vary them by position, and a
+ * match can change them between shots through the Lawn it passes in.
  */
 export interface SurfaceProps {
     readonly slidingFriction: number;
     readonly rollingResistance: number;
     readonly turfStiffness: number;
     readonly turfRestitution: number;
+    readonly bedModulus: number;
+    readonly bedRecovery: number;
 }
 
 /** The court surface. Extent x ∈ [0, width], y ∈ [0, length] (m). */

@@ -15,6 +15,8 @@ import {
     type BallBed,
 } from "../../../src/engine/impact/turfBed";
 import type { BedLaw } from "../../../src/engine/impact/types";
+import { land } from "../../../src/engine/impact/landing";
+import { ballReference, contactReference } from "../../../src/reference/index";
 import { TEST_BALL } from "../support/fixtures";
 
 const R = TEST_BALL.radius;
@@ -227,5 +229,47 @@ describe("determinism", () => {
         expect(Math.abs((lf?.normalForce as number) / (ln?.normalForce as number) - 1)).toBeLessThan(1e-9);
         expect(far.visits).toBe(near.visits);
         expect(lf?.held).toBe(ln?.held);
+    });
+});
+
+describe("the fitted bed (scripts/turfFit.ts)", () => {
+    const FITTED: BedLaw = {
+        modulus: contactReference.bedModulus.value,
+        recovery: contactReference.bedRecovery.value,
+        friction: 0.48,
+        cell: BED_CELL,
+    };
+    // The reference ball, which the fit used (scripts/turfFit.ts).
+    const BALL = { radius: ballReference.diameter.value / 2, mass: ballReference.mass.value };
+    const vertical = (law: BedLaw, speed: number): { e: number; depth: number } => {
+        const l = land(
+            { position: vec3(0.0007, 0.0011, BALL.radius), velocity: vec3(0, 0, -speed), angularVelocity: ZERO },
+            BALL,
+            G,
+            law,
+        );
+        return { e: l.state.velocity.z / speed, depth: l.peakDepth };
+    };
+
+    it("gives A4R's e 0.5 and 7.2 mm at 5 m/s within the fit's tolerance", () => {
+        const r = vertical(FITTED, 5);
+        expect(Math.abs(r.e / 0.5 - 1)).toBeLessThan(1e-4);
+        expect(Math.abs(r.depth / 7.2e-3 - 1)).toBeLessThan(1e-4);
+    });
+
+    it("loses more the faster the ball strikes: e falls monotonically over 1–6 m/s", () => {
+        let last = 1;
+        for (const v of [1, 2, 3, 4, 5, 6]) {
+            const e = vertical(FITTED, v).e;
+            expect(e, `${v} m/s`).toBeLessThan(last);
+            last = e;
+        }
+    });
+
+    it.each([2, 5, 6])("agrees between h = 1 mm and h = 2 mm within 1 %% at %s m/s", (v) => {
+        const a = vertical(FITTED, v);
+        const b = vertical({ ...FITTED, cell: 1e-3 }, v);
+        expect(Math.abs(b.e / a.e - 1)).toBeLessThan(1e-2);
+        expect(Math.abs(b.depth / a.depth - 1)).toBeLessThan(1e-2);
     });
 });

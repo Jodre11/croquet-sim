@@ -115,6 +115,28 @@ describe("validateWorld", () => {
                 }),
             },
         ],
+        [
+            "non-positive bed modulus",
+            {
+                lawn: uniformLawn(30, 40, {
+                    slidingFriction: 0.3,
+                    rollingResistance: 0.05,
+                    ...TEST_TURF,
+                    bedModulus: 0,
+                }),
+            },
+        ],
+        [
+            "non-positive bed recovery",
+            {
+                lawn: uniformLawn(30, 40, {
+                    slidingFriction: 0.3,
+                    rollingResistance: 0.05,
+                    ...TEST_TURF,
+                    bedRecovery: -1,
+                }),
+            },
+        ],
         ["non-positive ball–ball contact time", { ballBallContactTime: 0 }],
         ["non-positive crown clearance", { hoops: [{ ...testHoop("1", 5, 5), crownClearance: 0 }] }],
         ["non-positive hoop contact time", { hoops: [{ ...testHoop("1", 5, 5), contactTime: 0 }] }],

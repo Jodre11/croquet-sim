@@ -19,7 +19,7 @@
  */
 import { exp } from "../math/elementary";
 import { ZERO, add, cross, dot, length, scale, sub, vec3, type Vec3 } from "../math/vec3";
-import type { BallState } from "../types";
+import type { BallState, SurfaceProps } from "../types";
 import { TANGENTIAL_STIFFNESS_RATIO, carrySpring, tangentialForce, type PairLaw } from "./contactLaw";
 import type { BedLaw } from "./types";
 
@@ -378,4 +378,14 @@ export function freshPotential(fresh: FreshBed, depth: number): number {
  */
 export function isBouncing(fresh: FreshBed, mass: number, gravity: number, vz: number, depth: number): boolean {
     return 0.5 * mass * vz * vz + freshPotential(fresh, depth) - mass * gravity * depth > 0;
+}
+
+/** The bed's law at a lawn surface (design §4.4): its modulus and recovery, its sliding friction, and BED_CELL. */
+export function bedLawOf(surface: SurfaceProps): BedLaw {
+    return {
+        modulus: surface.bedModulus,
+        recovery: surface.bedRecovery,
+        friction: surface.slidingFriction,
+        cell: BED_CELL,
+    };
 }

@@ -6,6 +6,7 @@ import type { BedLaw } from "../../../src/engine/impact/types";
 import { SETTLE_SPEED } from "../../../src/engine/resolve";
 import type { BallState } from "../../../src/engine/types";
 import { STANDARD_GRAVITY } from "../../../src/engine/world";
+import { ballReference, contactReference } from "../../../src/reference/index";
 import { TEST_BALL } from "../support/fixtures";
 import { rng } from "../support/rng";
 
@@ -37,6 +38,18 @@ describe("a landing on a fresh bed", () => {
         expect(length(l.state.angularVelocity)).toBeLessThan(1e-2);
         expect(l.peakDepth).toBeGreaterThan(0);
         expect(l.duration).toBeGreaterThan(0);
+    });
+
+    it("leaves a vertical 5 m/s landing with no spin at e = 0.5 on the fitted bed", () => {
+        const fitted: BedLaw = {
+            modulus: contactReference.bedModulus.value,
+            recovery: contactReference.bedRecovery.value,
+            friction: 0.48,
+            cell: BED_CELL,
+        };
+        const ball = { radius: ballReference.diameter.value / 2, mass: ballReference.mass.value };
+        const l = land({ ...falling(vec3(0, 0, -5)), position: vec3(0.0007, 0.0011, ball.radius) }, ball, G, fitted);
+        expect(Math.abs(l.state.velocity.z / 5 - 0.5)).toBeLessThan(5e-5);
     });
 
     it("leaves the ball on the turf, with its horizontal velocity and spin, when it lands slower than settling", () => {
