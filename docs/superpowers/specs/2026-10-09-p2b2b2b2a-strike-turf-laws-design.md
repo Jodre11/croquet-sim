@@ -347,7 +347,12 @@ Recorded:
 - **P2b.2b.2b.2c:** the square head, end-weighting, the market's dimensions in `mallet.json`.
 - **P2b.2b.2b.3:** the head in the bed, ploughing, the grip breaking.
 - **Later:** a landing's duration and travel in phase 2's clock (§4.7); cells shared by two balls; a pit that outlasts
-  the impact or a landing; lawn presets and the bed's bounds (P3); face materials beyond wood (P3).
+  the impact or a landing; lawn presets and the bed's bounds (P3); face materials beyond wood (P3). For the lawn
+  presets, the user's observation (2026-10-09): "hard dry ground is more elastic than soft grassier lawn. Slow lawns
+  deform rather than bounce". In the bed's terms a hard dry lawn is stiffer (higher k_w) and recovers sooner (shorter
+  τ_r), and a soft slow lawn the reverse, with more of its loss rate-independent. It is P3's qualitative check, not a
+  fit target; Gugan's Bristol drop (0.15 at 6 m/s on a "typically grassed, 'hard' court") suggests the grass cover
+  matters as well as the ground's firmness.
 
 ## 8. Roadmap changes (in this PR)
 
