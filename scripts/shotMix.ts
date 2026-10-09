@@ -2,15 +2,17 @@
  * Realistic shot mix through the engine with friction on (P2a.2 design §6, performance measurement). Generates
  * croquet-like shots (croquet strokes, rushes, cannons, hoop approaches, jammed balls, peg play, pushes, single
  * balls), runs each twice (the first warms the JIT and is discarded) and reports per shot the resting-contact solves,
- * their work units and time, the engine's time, and the landings per shot. Run with
+ * their work units and time, the engine's time, the landings per shot, and each landing's figures on the default
+ * lawn's turf bed (its duration, travel, spin before and after, and cost; P2b.2b.2b.2a design §6). Run with
  * `npx --yes tsx scripts/shotMix.ts`; environment: COUNT (shots, default 3000), SEED (default 7). Not part of the test
  * suite.
  */
-import { ZERO, add, scale, vec3, type Vec3 } from "../src/engine/math/vec3";
+import { ZERO, add, length, scale, vec3, type Vec3 } from "../src/engine/math/vec3";
 import { rollingSpin } from "../src/engine/motion";
-import { SOLVE_BUDGET, simulateFreeMotion } from "../src/engine/simulate";
+import { SOLVE_BUDGET, simulateFreeMotion, type LandingRecord } from "../src/engine/simulate";
 import type { BallId, BallState, BallStates, World } from "../src/engine/types";
-import { obstaclesOf, uprightsOf } from "../src/engine/world";
+import { obstaclesOf, uniformLawn, uprightsOf } from "../src/engine/world";
+import { contactReference } from "../src/reference/index";
 import { testHoop, testWorld } from "../tests/engine/support/fixtures";
 import { rng } from "../tests/engine/support/rng";
 
@@ -33,7 +35,16 @@ const HOOPS = [
     testHoop("5", 15, 13.6),
     testHoop("6", 15, 26.4),
 ];
-const WORLD: World = testWorld({ hoops: HOOPS });
+// The default lawn's turf bed (P2b.2b.2b.2a decision 12), so that the landings meet the fitted bed.
+const SURFACE = testWorld().lawn.surfaceAt(vec3(0, 0, 0));
+const WORLD: World = testWorld({
+    hoops: HOOPS,
+    lawn: uniformLawn(30, 40, {
+        ...SURFACE,
+        bedModulus: contactReference.bedModulus.value,
+        bedRecovery: contactReference.bedRecovery.value,
+    }),
+});
 const OBSTACLES = obstaclesOf(WORLD);
 const IDS: readonly BallId[] = ["blue", "red", "black", "yellow"];
 
@@ -260,9 +271,22 @@ interface Shot {
     readonly fallbacks: number;
     /** Landing events in the shot: each bounce on the turf counts one. */
     readonly landings: number;
+    /** Steps and bed column visits over the shot's landings: their cost. */
+    readonly landingSteps: number;
+    readonly landingVisits: number;
+}
+
+/** One landing's figures, from the timed run's probe (P2b.2b.2b.2a design §6). */
+interface LandingFigures {
+    readonly duration: number;
+    readonly travel: number;
+    readonly spinBefore: number;
+    readonly spinAfter: number;
 }
 
 const shots: Shot[] = [];
+const landingFigures: LandingFigures[] = [];
+let landingCaps = 0;
 for (let i = 0; i < COUNT; i++) {
     const { name, states } = makeShot();
     simulateFreeMotion(states, WORLD);
@@ -282,28 +306,43 @@ for (let i = 0; i < COUNT; i++) {
             largest = Math.max(largest, bodies);
         },
     };
+    let landingSteps = 0;
+    let landingVisits = 0;
+    const onLanding = (r: LandingRecord): void => {
+        landingSteps += r.landing.steps;
+        landingVisits += r.landing.visits;
+        landingFigures.push({
+            duration: r.landing.duration,
+            travel: r.landing.travel,
+            spinBefore: length(r.before.angularVelocity),
+            spinAfter: length(r.landing.state.angularVelocity),
+        });
+    };
     const t0 = performance.now();
-    const result = simulateFreeMotion(states, WORLD, undefined, { probe });
+    const result = simulateFreeMotion(states, WORLD, undefined, { probe, landings: onLanding });
     const engineMs = performance.now() - t0;
     const fallbacks = result.events.filter(
         (e) => e.kind === "approximate-hold" || e.kind === "approximate-slip" || e.kind === "budget-hold",
     ).length;
     const landings = result.events.filter((e) => e.kind === "landing").length;
-    shots.push({ name, solves, largest, work, solverMs, engineMs, fallbacks, landings });
+    landingCaps += result.events.filter((e) => e.kind === "landing-cap").length;
+    shots.push({ name, solves, largest, work, solverMs, engineMs, fallbacks, landings, landingSteps, landingVisits });
 }
 
 const quantile = (xs: readonly number[], q: number): number => {
     const sorted = [...xs].sort((a, b) => a - b);
     return sorted[Math.min(sorted.length - 1, Math.floor(q * sorted.length))] as number;
 };
+/** Percentiles of a list of figures. */
+const percentiles = (label: string, xs: readonly number[]): string =>
+    xs.length === 0
+        ? `${label}: none`
+        : `${label}: p50 ${quantile(xs, 0.5).toFixed(3)}, p99 ${quantile(xs, 0.99).toFixed(3)}, ` +
+          `p99.9 ${quantile(xs, 0.999).toFixed(3)}, max ${Math.max(...xs).toFixed(3)}`;
+type Measure = "solves" | "work" | "solverMs" | "engineMs" | "landings" | "landingSteps" | "landingVisits";
+const perShot = (key: Measure): number[] => shots.map((s) => s[key]);
 /** Percentiles over the shots of one per-shot measure. */
-const row = (label: string, key: "solves" | "work" | "solverMs" | "engineMs" | "landings"): string => {
-    const xs = shots.map((s) => s[key]);
-    return (
-        `${label}: p50 ${quantile(xs, 0.5).toFixed(3)}, p99 ${quantile(xs, 0.99).toFixed(3)}, ` +
-        `p99.9 ${quantile(xs, 0.999).toFixed(3)}, max ${Math.max(...xs).toFixed(3)}`
-    );
-};
+const row = (label: string, key: Measure): string => percentiles(label, perShot(key));
 const worst = shots.reduce((a, b) => (b.engineMs > a.engineMs ? b : a));
 console.log(`${shots.length} shots, seed ${SEED}, budget ${SOLVE_BUDGET} units`);
 console.log(`shots with no solve: ${((100 * shots.filter((s) => s.solves === 0).length) / shots.length).toFixed(1)}%`);
@@ -315,6 +354,18 @@ console.log(row("engine ms per shot", "engineMs"));
 console.log(`fallback events: ${shots.reduce((s, x) => s + x.fallbacks, 0)}`);
 console.log(row("landings per shot", "landings"));
 console.log(`landings in all: ${shots.reduce((s, x) => s + x.landings, 0)}`);
+const durations = landingFigures.map((f) => f.duration * 1e3);
+const travels = landingFigures.map((f) => f.travel * 1e3);
+console.log(percentiles("landing duration (ms)", durations));
+console.log(percentiles("landing travel (mm)", travels));
+const fell = landingFigures.filter((f) => f.spinAfter < f.spinBefore).length;
+const fellShare = landingFigures.length === 0 ? "none" : `${((100 * fell) / landingFigures.length).toFixed(1)}%`;
+console.log(`landings whose |ω| fell: ${fellShare}`);
+const ratios = landingFigures.filter((f) => f.spinBefore > 0).map((f) => f.spinAfter / f.spinBefore);
+console.log(`median |ω| after / before: ${ratios.length === 0 ? "none" : quantile(ratios, 0.5).toFixed(4)}`);
+console.log(row("landing steps per shot", "landingSteps"));
+console.log(row("landing column visits per shot", "landingVisits"));
+console.log(`landing-cap events: ${landingCaps}`);
 console.log(
     `worst shot: ${worst.name}, ${worst.solves} solves, ${worst.work} units, ` +
         `solver ${worst.solverMs.toFixed(1)} ms, engine ${worst.engineMs.toFixed(1)} ms`,

@@ -174,6 +174,15 @@ export type ShotEvent =
     | { readonly kind: "landing"; readonly t: number; readonly ball: BallId }
     | {
           /**
+           * A landing that had neither left the turf nor settled after LANDING_CAP was settled (P2b.2b.2b.2a design
+           * §4.7): outside the validated model, as the jump flag is.
+           */
+          readonly kind: "landing-cap";
+          readonly t: number;
+          readonly ball: BallId;
+      }
+    | {
+          /**
            * The shot left the validated model: `ball` passed over the ball `over` (its centre came within one radius of
            * the other's, horizontally), or its top reached a hoop crown's underside (`over` is "crown").
            */

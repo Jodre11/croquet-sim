@@ -84,10 +84,9 @@ export function motionParamsAt(world: World, position: Vec3): MotionParams {
     };
 }
 
-/** Returns the turf's restitution and sliding friction at `position`, for impulses on a ball there. */
-export function turfAt(world: World, position: Vec3): ContactMaterial {
-    const surface = world.lawn.surfaceAt(position);
-    return { restitution: surface.turfRestitution, friction: surface.slidingFriction };
+/** Returns the turf's sliding friction at `position`, for impulses on a ball there. */
+export function turfAt(world: World, position: Vec3): number {
+    return world.lawn.surfaceAt(position).slidingFriction;
 }
 
 /** Evaluates a signed-offset rule for the given ball and upright radii. */

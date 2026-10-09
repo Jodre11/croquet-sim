@@ -2,8 +2,9 @@
  * Reference integrator for cross-checking the event-driven solver. Integrates the turf forces and flight with
  * semi-implicit Euler at a fixed step and detects contacts and landings by overlap. Test-only and deliberately slow.
  *
- * It shares `resolveBallBall`/`resolveBallCylinder`/`resolveLanding` with the engine, so it independently checks event
- * timing, flight and pushing but not the impulse model, which resolve.test.ts covers directly. Pushing is integrated
+ * It shares `resolveBallBall`/`resolveBallCylinder` and the landing on the turf bed (`impact/landing.ts`) with the
+ * engine, so it independently checks event timing, flight and pushing but not the impulse or landing model, which
+ * resolve.test.ts and landing.test.ts cover directly. Pushing is integrated
  * as many small impulses; each one's downward part is taken by the turf with its impulsive turf friction, so the turf's
  * friction tracks the load a push puts on a ball step by step. The next step's turf forces then scale with the load
  * L = g − (upward push impulse in this step)/dt (spec §5): rolling resistance by max(L, 0)/g, sliding friction by
@@ -36,7 +37,9 @@ import {
 } from "../../../src/engine/math/vec3";
 import { classify, contactSlip, onTurf, rollingSpin } from "../../../src/engine/motion";
 import { RESTING_SPEED } from "../../../src/engine/push";
-import { resolveBallBall, resolveBallCylinder, resolveLanding } from "../../../src/engine/resolve";
+import { land } from "../../../src/engine/impact/landing";
+import { bedLawOf } from "../../../src/engine/impact/turfBed";
+import { resolveBallBall, resolveBallCylinder } from "../../../src/engine/resolve";
 import {
     BALL_IDS,
     type BallId,
@@ -56,9 +59,9 @@ function fly(s: BallState, world: World, dt: number): BallState {
     if (position.z > R) {
         return { position, velocity, angularVelocity: s.angularVelocity };
     }
-    // Landed within the step: back on the turf, with the engine's landing impulse.
+    // Landed within the step: back on the turf, with the engine's landing on the turf bed.
     const touchdown = { position: vec3(position.x, position.y, R), velocity, angularVelocity: s.angularVelocity };
-    return resolveLanding(touchdown, world.ball, turfAt(world, touchdown.position));
+    return land(touchdown, world.ball, world.gravity, bedLawOf(world.lawn.surfaceAt(touchdown.position))).state;
 }
 
 /**
@@ -110,7 +113,7 @@ function step(s: BallState, world: World, dt: number, load: number): BallState {
 }
 
 /** Turf without friction: resolving against it leaves only the contact impulse's own changes. */
-const BARE_TURF = (): ContactMaterial => ({ restitution: 0, friction: 0 });
+const BARE_TURF = (): number => 0;
 
 /**
  * The part of a contact impulse j (per unit mass) across the unit normal n, read off the spin change dw it caused at
