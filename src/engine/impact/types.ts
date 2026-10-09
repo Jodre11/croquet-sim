@@ -33,6 +33,17 @@ export interface FaceLaw {
     readonly friction: number;
 }
 
+/**
+ * The turf bed's law under a ball (P2b.2b.2b.2a design §4): the bed modulus k_w (N/m³), its recovery time τ_r (s;
+ * 0, in isolated tests only, makes every cell an undamped spring), the sliding friction µ and the cell's side h (m).
+ */
+export interface BedLaw {
+    readonly modulus: number;
+    readonly recovery: number;
+    readonly friction: number;
+    readonly cell: number;
+}
+
 /** Applied force at time t (s from the start of the impact), world frame. Linear between samples. */
 export interface DriveSample {
     readonly t: number;
