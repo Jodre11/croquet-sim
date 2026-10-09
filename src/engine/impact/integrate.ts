@@ -3,7 +3,8 @@
  * balls and the turf. Each step:
  * 1. computes every force from the current state: the hands' load (a force table at the socket, or a tracked drive's
  *    two hands, track.ts) and gravity, then each closed pair in pair-list order, then the head–turf pair if the set-up
- *    has it (P2b.2b.1 design §4);
+ *    has it (P2b.2b.1 design §4); a face–ball pair closes with its own Hertzian law (contactLaw.ts closeFace;
+ *    P2b.2b.2b.2a design §3.3);
  * 2. updates every velocity from those forces, the head's spin through Euler's equations in its body frame (for a
  *    tracked drive, the swung body's: the head and the arm mass, P2b.2b.1 design §3.3);
  * 3. updates every position, and the head's orientation, from the new velocities.
@@ -46,7 +47,17 @@
 import { contactReference } from "../../reference/index";
 import { ZERO, add, cross, dot, horizontal, length, scale, sub, vec3, type Vec3 } from "../math/vec3";
 import type { BallId, BallParams, BallState, BallStates } from "../types";
-import { normalForce, tangentialForce, type PairLaw } from "./contactLaw";
+import {
+    carrySpring,
+    closeFace,
+    hertzEnergy,
+    hertzForce,
+    hertzTangent,
+    normalForce,
+    tangentialForce,
+    type HertzClosure,
+    type PairLaw,
+} from "./contactLaw";
 import {
     HEAD_REGIONS,
     HEAD_TURF_KEY,
@@ -79,7 +90,16 @@ import {
     type PreparedTrack,
     type SwungBody,
 } from "./track";
-import type { ContactInterval, DriveSample, ForceDrive, HeadState, ImpactEvent, ImpactRun, MalletHead } from "./types";
+import type {
+    ContactInterval,
+    DriveSample,
+    FaceLaw,
+    ForceDrive,
+    HeadState,
+    ImpactEvent,
+    ImpactRun,
+    MalletHead,
+} from "./types";
 
 /**
  * Integration step (s): about 1/100 of the shortest sourced contact duration, 0.5 ms (the lower bound of the ball–ball
@@ -177,7 +197,8 @@ export interface ImpactSetup {
     readonly start: HeadState;
     /** The hands: a force table, or a tracked drive prepared once (track.ts). */
     readonly drive: ForceDrive | PreparedTrack;
-    readonly face: PairLaw;
+    /** The face's law: each closure's k and c follow from it (P2b.2b.2b.2a design §3.3). */
+    readonly face: FaceLaw;
     readonly ballBall: PairLaw;
     readonly ball: BallParams;
     readonly gravity: number;
@@ -204,6 +225,10 @@ export interface ContactSample {
     readonly tangentialForce: Vec3;
     readonly spring: Vec3;
     readonly law: PairLaw;
+    /** The pair's stored normal energy (J): ½·k·δ², the face's (2/5)·k·δ^{5/2}, or the bed's Σ ½·A·k_w·w². */
+    readonly storedEnergy: number;
+    /** A face–ball pair's closing speed at its closure (m/s), which set its k and c; absent for other pairs. */
+    readonly closingSpeed?: number;
 }
 
 /** The state after one step (t is its end), with the drive and contact forces applied during it. */
@@ -317,9 +342,14 @@ export function driveAt(drive: readonly DriveSample[], t: number): Vec3 {
 
 interface PairState {
     readonly pair: Pair;
-    readonly law: PairLaw;
+    /** The pair's linear law; null for a face–ball pair, whose law follows from its closure. */
+    readonly law: PairLaw | null;
+    /** A face–ball pair's closure while it is closed (design §3.3); null while open, and for every other pair. */
+    closure: HertzClosure | null;
     /** Elastic tangential displacement ξ; cleared whenever the pair is open. */
     spring: Vec3;
+    /** The tangential stiffness ξ last carried (carrySpring); 0 while the pair is open. */
+    tangent: number;
     peak: number;
     /** The pair's contact timeline. */
     readonly line: PairTimeline;
@@ -332,10 +362,10 @@ interface PairState {
     readonly regions: readonly PairTimeline[] | null;
 }
 
-function lawOf(setup: ImpactSetup, pair: Pair): PairLaw {
+function lawOf(setup: ImpactSetup, pair: Pair): PairLaw | null {
     switch (pair.kind) {
         case "face-ball":
-            return setup.face;
+            return null;
         case "ball-ball":
             return setup.ballBall;
         case "ball-turf":
@@ -370,6 +400,7 @@ interface StepLoads {
  */
 function applyPair(
     p: PairState,
+    face: FaceLaw,
     contact: Penetration,
     head: HeadState,
     balls: readonly BallState[],
@@ -389,12 +420,27 @@ function applyPair(
               : ZERO;
     const u = sub(pointVelocity(sb.position, sb.velocity, sb.angularVelocity, contact.point), va);
     const along = dot(u, contact.normal);
-    const normal = normalForce(p.law, contact.depth, 0 - along);
+    let law: PairLaw;
+    let normal: number;
+    let storedEnergy: number;
+    if (pair.kind === "face-ball") {
+        if (p.closure === null) {
+            p.closure = closeFace(face, 0 - along);
+        }
+        law = hertzTangent(p.closure, contact.depth);
+        normal = hertzForce(p.closure, contact.depth, 0 - along);
+        storedEnergy = hertzEnergy(p.closure, contact.depth);
+    } else {
+        law = p.law as PairLaw;
+        normal = normalForce(law, contact.depth, 0 - along);
+        storedEnergy = 0.5 * law.stiffness * contact.depth * contact.depth;
+    }
     const slip = sub(u, scale(contact.normal, along));
-    // ξ carried over, projected onto the current tangent plane, then advanced by this step's slip.
-    const carried = sub(p.spring, scale(contact.normal, dot(p.spring, contact.normal)));
-    const tangential = tangentialForce(p.law, add(carried, scale(slip, dt)), slip, normal);
+    // ξ carried over onto the current tangent plane (and held to its force if k_t grew), then advanced by the slip.
+    const carried = carrySpring(p.spring, contact.normal, p.tangent, law.tangentialStiffness);
+    const tangential = tangentialForce(law, add(carried, scale(slip, dt)), slip, normal);
     p.spring = tangential.spring;
+    p.tangent = law.tangentialStiffness;
     const force = add(scale(contact.normal, normal), tangential.force);
     loads.forces[pair.b] = add(loads.forces[pair.b] as Vec3, force);
     loads.torques[pair.b] = add(loads.torques[pair.b] as Vec3, cross(sub(contact.point, sb.position), force));
@@ -412,7 +458,9 @@ function applyPair(
         normalForce: normal,
         tangentialForce: tangential.force,
         spring: tangential.spring,
-        law: p.law,
+        law,
+        storedEnergy,
+        ...(p.closure === null ? {} : { closingSpeed: p.closure.speed }),
     });
     return normal;
 }
@@ -759,7 +807,9 @@ export function integrateStroke(setup: ImpactSetup, options: ImpactOptions = {},
     ).map((pair) => ({
         pair,
         law: lawOf(setup, pair),
+        closure: null,
         spring: ZERO,
+        tangent: 0,
         peak: 0,
         line: emptyTimeline(),
         wakeAt: 0,
@@ -824,6 +874,8 @@ export function integrateStroke(setup: ImpactSetup, options: ImpactOptions = {},
             const contact = p.regions === null ? pairContact(pair, state, head, balls, R, setup.obstacles) : hit;
             if (contact === OFF_FACE || contact === null) {
                 p.spring = ZERO;
+                p.closure = null;
+                p.tangent = 0;
                 if (pair.kind === "ball-obstacle") {
                     const gap = obstacleGap(
                         (balls[pair.b] as BallState).position,
@@ -863,7 +915,7 @@ export function integrateStroke(setup: ImpactSetup, options: ImpactOptions = {},
                 events.push({ kind: "impact-off-face", t, ball: ids[pair.b] as BallId });
             }
             p.peak = Math.max(p.peak, contact.depth);
-            const force = applyPair(p, contact, state, balls, dt, loads, options.probe ? samples : null);
+            const force = applyPair(p, setup.face, contact, state, balls, dt, loads, options.probe ? samples : null);
             recordStep(p.line, true, force, t);
             recordRegions(p.regions, hit === null ? null : hit.region, force, t);
         }

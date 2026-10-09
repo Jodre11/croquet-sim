@@ -38,11 +38,7 @@ const HEAD: MalletHead = {
     radius,
     socket: vec3(0, 0, radius),
 };
-const FACE: FaceMaterial = {
-    restitution: malletReference.faceRestitution.value,
-    friction: malletReference.faceFriction.value,
-    contactTime: contactReference.faceBallContactTime.value,
-};
+const FACE: FaceMaterial = { friction: malletReference.faceFriction.value };
 const at = (x: number, y: number): BallState => ({
     position: vec3(x, y, R),
     velocity: vec3(0, 0, 0),
@@ -104,15 +100,14 @@ function report(label: string, stroke: Stroke, face: FaceMaterial, world: World)
 }
 
 function sweep(): void {
-    console.log("== Stiffness sensitivity (each swept across its reference bounds) ==");
-    const [flo, fhi] = contactReference.faceBallContactTime.bounds as [number, number];
+    console.log(
+        "== Stiffness sensitivity (each swept across its reference bounds; the face law is Gugan's fits, not a swept " +
+            "time) ==",
+    );
     const [blo, bhi] = contactReference.ballBallContactTime.bounds as [number, number];
     const [tlo, thi] = contactReference.ballTurfStiffness.bounds as [number, number];
     for (const stroke of STROKES) {
         report("reference", stroke, FACE, BASE);
-        for (const T of [flo, fhi]) {
-            report(`face contact ${fmt(T * 1e3, 2)} ms`, stroke, { ...FACE, contactTime: T }, BASE);
-        }
         for (const T of [blo, bhi]) {
             report(`ball–ball contact ${fmt(T * 1e3, 2)} ms`, stroke, FACE, { ...BASE, ballBallContactTime: T });
         }

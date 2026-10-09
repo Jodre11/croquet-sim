@@ -263,11 +263,8 @@ describe("buildContact, step by step", () => {
             radius: 0.032,
             socket: vec3(0, 0, 0.032),
         });
-        expect(c.face).toEqual({
-            restitution: malletReference.faceRestitution.value,
-            friction: malletReference.faceFriction.value,
-            contactTime: contactReference.faceBallContactTime.value,
-        });
+        // P2b.2b.2b.2a design §3.6: the face's restitution and contact time are contact.json's wood fits.
+        expect(c.face).toEqual({ friction: malletReference.faceFriction.value });
     });
 
     it("starts the head exactly on its own path", () => {

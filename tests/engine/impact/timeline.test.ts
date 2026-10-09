@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { ZERO, vec3 } from "../../../src/engine/math/vec3";
-import { lawFromContactTime, lawFromStiffness } from "../../../src/engine/impact/contactLaw";
+import {
+    closeFace,
+    faceContactTimeAt,
+    lawFromContactTime,
+    lawFromStiffness,
+} from "../../../src/engine/impact/contactLaw";
 import { faceClearance } from "../../../src/engine/impact/contacts";
 import { IMPACT_DT, integrate, type ImpactObstacle, type ImpactSnapshot } from "../../../src/engine/impact/integrate";
 import { IDENTITY } from "../../../src/engine/impact/rigidBody";
@@ -9,7 +14,7 @@ import type { ContactInterval, HeadState } from "../../../src/engine/impact/type
 import type { BallState } from "../../../src/engine/types";
 import { STANDARD_GRAVITY } from "../../../src/engine/world";
 import { TEST_BALL } from "../support/fixtures";
-import { TEST_FACE, TEST_HEAD, faceLaw, freeBall, isolated, recorder } from "../support/impact";
+import { TEST_HEAD, faceLaw, freeBall, isolated, recorder } from "../support/impact";
 
 const R = TEST_BALL.radius;
 const M = TEST_BALL.mass;
@@ -57,8 +62,8 @@ describe("the timeline recorder", () => {
 });
 
 describe("the integrator's timeline", () => {
-    it("records a double tap off a wall: two face intervals, the wall between them, and the gap's clearance", () => {
-        const law = faceLaw({ ...TEST_FACE, friction: 0 });
+    it("records a double tap off a wall: face intervals, the wall between the first two, the gap's clearance", () => {
+        const law = faceLaw({ friction: 0 });
         const gap = 1.01e-4;
         const start: HeadState = {
             position: vec3(-R - gap - TEST_HEAD.length / 2, 0, 1),
@@ -66,8 +71,10 @@ describe("the integrator's timeline", () => {
             velocity: vec3(2, 0, 0),
             angularVelocity: ZERO,
         };
-        // 2 mm leaves the first face contact released before the wall closes. Pre-flight: face [55, 680) µs and
-        // [1945, 2575) µs, wall [1140, 1930) µs between them, clearance after the first 0.950 mm.
+        // 2 mm leaves the first face contact released before the wall closes. P2b.2b.2b.2a: Hertzian face (was face
+        // [55, 680) µs and [1945, 2575) µs, wall [1140, 1930) µs between them, clearance after the first 0.950 mm):
+        // face [55, 1095), [1980, 3065) and [3490, 4985) µs, wall [1320, 2115) and [2765, 3560) µs, clearance after
+        // the first 0.598 mm.
         const wall: ImpactObstacle = {
             id: "wall",
             centre: vec3(R + 2e-3 + 10, 0, 0),
@@ -92,14 +99,20 @@ describe("the integrator's timeline", () => {
             { probe },
         );
         const faces = run.timeline["face/blue"] ?? [];
-        expect(faces).toHaveLength(2);
-        const [first, second] = faces as [ContactInterval, ContactInterval];
+        // P2b.2b.2b.2a: Hertzian face (was 2): the longer face contact brings the head onto blue while blue is still
+        // on the wall, and blue, squeezed between them, leaves the wall again into a third tap.
+        expect(faces).toHaveLength(3);
+        const [first, second] = faces as [ContactInterval, ContactInterval, ContactInterval];
         // The face plane reaches the ball during step 10 (gap / speed = 10.1 steps): the pair is closed from step 11.
         expect(first.start).toBe(11 * IMPACT_DT);
-        // Clamped law: the force releases with δ = c·e·v/k still positive, which then closes at e·v: c/k later.
-        // Pre-flight: 4.73 µs off.
+        // Clamped law: the force releases with δ = c·e·v/k still positive, which then closes at e·v: c/k later. The
+        // Hertzian face's force √δ·(k·δ + c·δ′) releases at the same δ (P2b.2b.2b.2a), with the closure's k and c and
+        // T the fit's at its closing speed. P2b.2b.2b.2a: Hertzian face (was 4.73 µs off): 4.18 µs off at 2 m/s.
+        const touch = probe.snapshots.flatMap((s) => s.contacts).find((c) => c.key === "face/blue");
+        const speed = touch?.closingSpeed as number;
+        const closure = closeFace(law, speed);
         expect(
-            Math.abs(first.end - first.start - (TEST_FACE.contactTime + law.damping / law.stiffness)),
+            Math.abs(first.end - first.start - (faceContactTimeAt(speed) + closure.damping / closure.stiffness)),
         ).toBeLessThanOrEqual(2 * IMPACT_DT);
         expect(first.peakForce).toBeGreaterThan(0);
         const wallFirst = (run.timeline["blue@wall"] ?? [])[0] as ContactInterval;

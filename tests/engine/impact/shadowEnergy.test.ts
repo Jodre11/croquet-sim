@@ -3,11 +3,10 @@ import { lengthSq, vec3 } from "../../../src/engine/math/vec3";
 import { lawFromContactTime, lawFromStiffness, type PairLaw } from "../../../src/engine/impact/contactLaw";
 import { integrate, type ImpactSetup } from "../../../src/engine/impact/integrate";
 import type { HeadState } from "../../../src/engine/impact/types";
-import { IDENTITY } from "../../../src/engine/impact/rigidBody";
 import type { BallState } from "../../../src/engine/types";
 import { STANDARD_GRAVITY } from "../../../src/engine/world";
 import { TEST_BALL, TEST_TURF } from "../support/fixtures";
-import { TEST_FACE, TEST_HEAD, faceLaw, freeBall, isolated, recorder } from "../support/impact";
+import { freeBall, isolated, recorder } from "../support/impact";
 
 /**
  * The integrator's shadow energy (P2b.1 outcomes, "Energy invariant"). Semi-implicit Euler, v' = v + F(x)·dt/m then
@@ -20,6 +19,9 @@ import { TEST_FACE, TEST_HEAD, faceLaw, freeBall, isolated, recorder } from "../
  * computed here from the signed depths. Q less the accumulated J is then constant to rounding, which the time-level
  * mix of invariants.test.ts cannot be. The cases are undamped (e = 1), frictionless and central, so that each depth is
  * linear in the positions and the head does not turn; rotation, damping and friction have no exact shadow energy here.
+ *
+ * The face is Hertzian since P2b.2b.2b.2a: a nonlinear spring has no exact shadow energy under this scheme, so the
+ * face's energy is checked by invariants.test.ts through `storedEnergy`.
  */
 
 const R = TEST_BALL.radius;
@@ -99,22 +101,6 @@ function shadowDrift(setup: ImpactSetup, springs: readonly Spring[], cap?: numbe
 }
 
 describe("shadow energy", () => {
-    it("is conserved to rounding through an undamped central face–ball strike", () => {
-        const law = faceLaw({ ...TEST_FACE, restitution: 1, friction: 0 });
-        const start: HeadState = {
-            position: vec3(0 - R - 1e-3 - TEST_HEAD.length / 2, 0, 0),
-            orientation: IDENTITY,
-            velocity: vec3(2, 0, 0),
-            angularVelocity: vec3(0, 0, 0),
-        };
-        const setup = isolated({ start, face: law, balls: [freeBall("blue", vec3(0, 0, 0))] });
-        const front = (s: RunState): number =>
-            s.head.position.x + TEST_HEAD.length / 2 + R - (s.balls[0] as BallState).position.x;
-        const { drift, jumps } = shadowDrift(setup, [{ law, depth: front }]);
-        expect(drift).toBeLessThan(SHADOW_TOLERANCE);
-        expect(jumps).toBeGreaterThan(JUMP_MARGIN * SHADOW_TOLERANCE);
-    });
-
     it("is conserved to rounding through an undamped head-on ball–ball collision", () => {
         const law = lawFromContactTime(M / 2, 1, 7e-4, 0);
         const setup = isolated({

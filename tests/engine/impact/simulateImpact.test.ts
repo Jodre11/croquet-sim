@@ -232,27 +232,6 @@ describe("validation", () => {
             /head\.radius/,
         ],
         [
-            "a non-positive contact time",
-            { ...ok, face: { ...ok.face, contactTime: 0 } },
-            { blue: BLUE },
-            WORLD,
-            /face\.contactTime/,
-        ],
-        [
-            "zero face restitution",
-            { ...ok, face: { ...ok.face, restitution: 0 } },
-            { blue: BLUE },
-            WORLD,
-            /face\.restitution/,
-        ],
-        [
-            "face restitution above 1",
-            { ...ok, face: { ...ok.face, restitution: 1.1 } },
-            { blue: BLUE },
-            WORLD,
-            /face\.restitution/,
-        ],
-        [
             "negative face friction",
             { ...ok, face: { ...ok.face, friction: -0.1 } },
             { blue: BLUE },

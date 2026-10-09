@@ -71,7 +71,7 @@ import { ON_TIME, defaultProfile } from "../src/engine/swing/profile";
 import { CROQUET_STROKES, STROKE_TYPES, type ShotSetup, type StrokeType } from "../src/engine/swing/types";
 import { BALL_IDS, type BallId, type BallState, type BallStates, type ShotResult } from "../src/engine/types";
 import { defaultWorld, uprightsOf } from "../src/engine/world";
-import { contactReference, malletReference } from "../src/reference/index";
+import { malletReference } from "../src/reference/index";
 import { drive, recorder, socketAt, strike } from "../tests/engine/support/impact";
 import { GC_STOP_GAP, backswingFor, canonicalSetup } from "../tests/engine/support/shot";
 
@@ -833,11 +833,7 @@ const HEAD: MalletHead = {
     radius,
     socket: vec3(0, 0, radius),
 };
-const FACE: FaceMaterial = {
-    restitution: malletReference.faceRestitution.value,
-    friction: malletReference.faceFriction.value,
-    contactTime: contactReference.faceBallContactTime.value,
-};
+const FACE: FaceMaterial = { friction: malletReference.faceFriction.value };
 const at = (x: number, y: number): BallState => ({
     position: vec3(x, y, R),
     velocity: vec3(0, 0, 0),

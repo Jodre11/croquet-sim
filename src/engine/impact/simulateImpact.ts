@@ -1,10 +1,11 @@
 /**
- * Phase 1 of a shot (P2b.1 design §3). Checks the ContactState and the balls. Solves every contact law once: face–ball
- * and ball–ball once, ball–turf once per ball from the surface where it lies, and the head–turf law once for a tracked
- * drive, from the surface under the head's lowest point. Prepares a tracked drive once (track.ts). Starts each ball at
- * its static turf sink m·g/k_turf, so that the impact does not open with a spurious bounce. Each obstacle's law is
- * solved once: the ball's mass (the obstacle is immovable), the obstacle's material and its own contact time.
- * Integrates the impact and hands the balls over to phase 2.
+ * Phase 1 of a shot (P2b.1 design §3). Checks the ContactState and the balls. Solves every linear contact law once:
+ * ball–ball once, ball–turf once per ball from the surface where it lies, and the head–turf law once for a tracked
+ * drive, from the surface under the head's lowest point. The face–ball law is the pair's reduced mass and the face's
+ * friction, from which each closure sets its own (P2b.2b.2b.2a design §3.3). Prepares a tracked drive once
+ * (track.ts). Starts each ball at its static turf sink m·g/k_turf, so that the impact does not open with a spurious
+ * bounce. Each obstacle's law is solved once: the ball's mass (the obstacle is immovable), the obstacle's material
+ * and its own contact time. Integrates the impact and hands the balls over to phase 2.
  */
 import { CONTACT_TOLERANCE } from "../detect";
 import { contactReference } from "../../reference/index";
@@ -270,8 +271,8 @@ function cylinderDistance(contact: ContactState, centre: Vec3): number {
  *   its path);
  * - for a tracked drive, turf under the head's lowest point with a non-positive stiffness or a restitution outside
  *   (0, 1] (the head–turf law, P2b.2b.1 design §4.1);
- * - a non-positive mass, inertia, length, radius or contact time;
- * - a restitution outside (0, 1] (face, ball–ball, ball–upright, peg) or a negative friction;
+ * - a non-positive mass, inertia, length, radius or ball–ball contact time;
+ * - a restitution outside (0, 1] (ball–ball, ball–upright, peg) or a negative friction;
  * - a non-unit orientation.
  */
 export function validateImpact(contact: ContactState, balls: BallStates, world: World): void {
@@ -284,8 +285,6 @@ export function validateImpact(contact: ContactState, balls: BallStates, world: 
     positive(head.length, "head.length");
     positive(head.radius, "head.radius");
     finite(head.socket, "head.socket");
-    positive(face.contactTime, "face.contactTime");
-    restitution(face.restitution, "face.restitution");
     friction(face.friction, "face.friction");
     positive(world.ballBallContactTime, "ballBallContactTime");
     restitution(world.ballBall.restitution, "ballBall.restitution");
@@ -394,7 +393,7 @@ export function prepareImpact(contact: ContactState, balls: BallStates, world: W
             angularVelocity: contact.angularVelocity,
         },
         drive: contact.drive.kind === "force" ? contact.drive : prepareTrack(contact.drive, contact.head, gravity),
-        face: lawFromContactTime(faceMass, contact.face.restitution, contact.face.contactTime, contact.face.friction),
+        face: { mass: faceMass, friction: contact.face.friction },
         ballBall: lawFromContactTime(
             ball.mass / 2,
             world.ballBall.restitution,

@@ -17,11 +17,12 @@ export interface MalletHead {
     readonly socket: Vec3;
 }
 
-/** A face's restitution and Coulomb friction against a ball, and the duration (s) of a central strike. */
+/**
+ * A face's Coulomb friction against a ball. Its restitution and contact duration are the wood fits (contact.json;
+ * P2b.2b.2b.2a design §3.6), the only face with measured data: other faces are P3's.
+ */
 export interface FaceMaterial {
-    readonly restitution: number;
     readonly friction: number;
-    readonly contactTime: number;
 }
 
 /**

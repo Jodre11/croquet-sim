@@ -9,7 +9,8 @@ import { rng } from "../support/rng";
 const R = TEST_BALL.radius;
 /**
  * Deepest penetration any pair may reach inside the fuzz ranges: 1.5× the worst of 2000 strokes (pre-flight: turf
- * 6.0 mm, ball–ball 1.8 mm, face 1.4 mm).
+ * 6.0 mm, ball–ball 1.8 mm, face 1.4 mm). P2b.2b.2b.2a: Hertzian face, re-measured over 2000 strokes: turf 6.07 mm,
+ * ball–ball 1.77 mm, face 1.89 mm; the obstacle fuzz's turf 6.19 mm and face 2.09 mm. The bound is kept.
  */
 const PENETRATION_BOUND = 0.2 * R;
 const WORLD = testWorld();
@@ -40,10 +41,13 @@ describe("impact fuzz", () => {
 
 /**
  * 1.5× the worst obstacle-pair penetration over 2000 obstacle-fuzz strokes (pre-flight: 1.745 mm = 0.038 R). The
- * contact-time upper bound, 1.0e-3 s, keeps it at 0.055 R.
+ * contact-time upper bound, 1.0e-3 s, keeps it at 0.055 R. P2b.2b.2b.2a: Hertzian face, re-measured: 1.730 mm.
  */
 const OBSTACLE_PENETRATION_BOUND = 0.06 * R;
-/** Half the share of strokes in which an obstacle pair closes (pre-flight: 17.45 % of 2000). */
+/**
+ * Half the share of strokes in which an obstacle pair closes (pre-flight: 17.45 % of 2000; P2b.2b.2b.2a: Hertzian
+ * face, 17.50 %).
+ */
 const OBSTACLE_SHARE = 0.087;
 
 describe("obstacle fuzz", () => {

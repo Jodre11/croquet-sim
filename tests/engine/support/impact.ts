@@ -22,6 +22,7 @@ import type {
     Dip,
     Drive,
     DriveSample,
+    FaceLaw,
     FaceMaterial,
     Hands,
     HeadState,
@@ -45,7 +46,7 @@ export const TEST_HEAD: MalletHead = {
     socket: vec3(0, 0, 0.032),
 };
 
-export const TEST_FACE: FaceMaterial = { restitution: 0.8, friction: 0.4, contactTime: 6e-4 };
+export const TEST_FACE: FaceMaterial = { friction: 0.4 };
 
 /** A coupling for tracked test heads: plausible, not sourced (design §3.4 sets the engine's); contact at t = 0. */
 export const TEST_COUPLING: Coupling = { period: 0.04, dampingRatio: 0.7, relaxAt: 0 };
@@ -164,10 +165,9 @@ export function strike(centre: Vec3, o: StrikeOptions = {}): ContactState {
     };
 }
 
-/** The face law of TEST_FACE (or `face`) against a test ball, for a head of mass `headMass`. */
-export function faceLaw(face: FaceMaterial = TEST_FACE, headMass = TEST_HEAD.mass): PairLaw {
-    const massEff = (headMass * TEST_BALL.mass) / (headMass + TEST_BALL.mass);
-    return lawFromContactTime(massEff, face.restitution, face.contactTime, face.friction);
+/** The face law of a test head of mass `headMass` against a test ball, with TEST_FACE's friction (or `face`'s). */
+export function faceLaw(face: FaceMaterial = TEST_FACE, headMass = TEST_HEAD.mass): FaceLaw {
+    return { mass: (headMass * TEST_BALL.mass) / (headMass + TEST_BALL.mass), friction: face.friction };
 }
 
 /** A ball free in space at `position`, without turf under it. */
@@ -240,8 +240,9 @@ function headKinetic(state: HeadState, head: MalletHead): number {
 }
 
 /**
- * Kinetic, gravitational and stored spring energy (J) of a snapshot. The contact depth is the pre-step value, against
- * post-step states: a time-level mix, biased by about 0.6% of an undamped contact's energy (see invariants.test.ts).
+ * Kinetic and gravitational energy (J) of a snapshot, and the stored energy of each contact, as the integrator reports
+ * it (`storedEnergy`), with its tangential spring's. The contact depth is the pre-step value, against post-step
+ * states: a time-level mix, biased by about 0.6% of an undamped contact's energy (see invariants.test.ts).
  */
 export function impactEnergy(s: ImpactSnapshot, head: MalletHead, ball: BallParams, gravity: number): number {
     const inertia = 0.4 * ball.mass * ball.radius * ball.radius;
@@ -251,7 +252,7 @@ export function impactEnergy(s: ImpactSnapshot, head: MalletHead, ball: BallPara
         e += ball.mass * gravity * b.position.z;
     }
     for (const c of s.contacts) {
-        e += 0.5 * c.law.stiffness * c.depth * c.depth + 0.5 * c.law.tangentialStiffness * lengthSq(c.spring);
+        e += c.storedEnergy + 0.5 * c.law.tangentialStiffness * lengthSq(c.spring);
     }
     return e;
 }

@@ -16,7 +16,7 @@
  * 5. the approach: the downswing's lowest clearance over the turf, from one scan (planStroke, swingApproach).
  * The head starts on its own path (headOnPath at t = 0), so the hands start with no error to take up.
  */
-import { contactReference, malletReference } from "../../reference/index";
+import { malletReference } from "../../reference/index";
 import { headLowestPoint } from "../impact/contacts";
 import { rotate, solidCylinderInertia, type Quaternion } from "../impact/rigidBody";
 import {
@@ -54,12 +54,8 @@ export const MAX_LEAD = 0.15;
  */
 export const TURF_MARGIN = 0.005;
 
-/** The engine's face: wood (reference/mallet.json), with the sourced face–ball contact time. */
-const WOOD: FaceMaterial = {
-    restitution: malletReference.faceRestitution.value,
-    friction: malletReference.faceFriction.value,
-    contactTime: contactReference.faceBallContactTime.value,
-};
+/** The engine's face: wood (reference/mallet.json); its restitution and contact time are contact.json's fits. */
+const WOOD: FaceMaterial = { friction: malletReference.faceFriction.value };
 
 /** A stance's numbers, each checked finite by name (a missing one included). */
 const STANCE_NUMBERS: readonly (keyof SwingStance)[] = ["handsAhead", "top", "bottom", "gripTension", "bottomGrip"];

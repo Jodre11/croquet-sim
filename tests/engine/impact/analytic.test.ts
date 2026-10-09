@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { ZERO, add, cross, dot, length, scale, sub, vec3 } from "../../../src/engine/math/vec3";
 import {
+    closeFace,
     contactTimeFactor,
     dampingRatio,
+    faceContactTimeAt,
+    faceRestitutionAt,
     lawFromContactTime,
     lawFromStiffness,
     type PairLaw,
@@ -14,14 +17,16 @@ import type { MalletHead } from "../../../src/engine/impact/types";
 import type { BallState } from "../../../src/engine/types";
 import { STANDARD_GRAVITY } from "../../../src/engine/world";
 import { TEST_BALL, ballAt, hoopWithUprightAt, testWorld } from "../support/fixtures";
-import { TEST_FACE, TEST_HEAD, counter, faceLaw, freeBall, isolated, strike } from "../support/impact";
+import { TEST_HEAD, counter, faceLaw, freeBall, isolated, recorder, strike } from "../support/impact";
 
 const R = TEST_BALL.radius;
 const M = TEST_BALL.mass;
 /**
  * Relative tolerance on contact times and restitutions at dt = 1e-7 s. Pre-flight: the worst measured errors are the
  * ball–ball contact time (1.43e-4, one step of 1e-7 s in 7e-4 s) and the obstacle head-on restitution (8.98e-5); the
- * peg case, at e = 0.4, has its own bound.
+ * peg case, at e = 0.4, has its own bound. The Hertzian face (P2b.2b.2b.2a design §5.1) is held to its fits with
+ * the same figure as an absolute bound on e, and ten times it on T (0.3 %): over 0.5–6 m/s its worst errors are
+ * 2.2e-6 in e (6 m/s) and 7.2e-5 relative in T (5.5 m/s), under one step of the count.
  */
 const LAW_TOLERANCE = 3e-4;
 const FINE = 1e-7;
@@ -31,25 +36,28 @@ function closedForm(massEff: number, restitution: number, stiffness: number): nu
 }
 
 describe("one contact of each pair", () => {
-    it("face–ball: the free, undriven head strikes a free ball with the face's contact time and restitution", () => {
-        const law = faceLaw({ ...TEST_FACE, friction: 0 });
-        const start = {
-            position: vec3(-R - 1e-4 - TEST_HEAD.length / 2, 0, 1),
-            orientation: IDENTITY,
-            velocity: vec3(2, 0, 0),
-            angularVelocity: ZERO,
-        };
-        const probe = counter("face/blue");
-        const run = integrate(isolated({ start, face: law, balls: [freeBall("blue", vec3(0, 0, 1))] }), {
-            dt: FINE,
-            probe,
-        });
-        expect(Math.abs(probe.closed * FINE - TEST_FACE.contactTime) / TEST_FACE.contactTime).toBeLessThan(
-            LAW_TOLERANCE,
-        );
-        const e = ((run.balls.blue?.velocity.x as number) - run.head.velocity.x) / 2;
-        expect(Math.abs(e - TEST_FACE.restitution) / TEST_FACE.restitution).toBeLessThan(LAW_TOLERANCE);
-    });
+    it.each([0.5, 2.19, 2.83, 4.0, 5.5, 6.0])(
+        "face–ball at %s m/s: the free, undriven head strikes a free ball with Gugan's e and T (dt = 1e-7 s)",
+        (U) => {
+            const law = faceLaw({ friction: 0 });
+            const start = {
+                position: vec3(-R - 1e-5 - TEST_HEAD.length / 2, 0, 1),
+                orientation: IDENTITY,
+                velocity: vec3(U, 0, 0),
+                angularVelocity: ZERO,
+            };
+            const probe = counter("face/blue");
+            const run = integrate(isolated({ start, face: law, balls: [freeBall("blue", vec3(0, 0, 1))] }), {
+                dt: FINE,
+                cap: 4e-3,
+                probe,
+            });
+            const T = faceContactTimeAt(U);
+            expect(Math.abs(probe.closed * FINE - T) / T).toBeLessThan(LAW_TOLERANCE * 10);
+            const e = ((run.balls.blue?.velocity.x as number) - run.head.velocity.x) / U;
+            expect(Math.abs(e - faceRestitutionAt(U))).toBeLessThan(LAW_TOLERANCE);
+        },
+    );
 
     it("ball–ball: two balls head-on, no turf, no gravity, exchange velocity per e", () => {
         const e = 0.8;
@@ -83,6 +91,47 @@ describe("one contact of each pair", () => {
     }
 });
 
+describe("face closures", () => {
+    it("sets a re-touch's k and c from its own closing speed", () => {
+        // None of support/impact.ts's SCENARIOS re-touches on the Hertzian face (croquet and push each have one face
+        // interval), so the head is pushed on into a free ball: blue leaves faster than the head, which the push brings
+        // back onto it (closures at 2.00 and 1.63 m/s). The socket is at the head's centre, so the push does not pitch
+        // the head off the face.
+        const law = faceLaw();
+        const head = { ...TEST_HEAD, socket: ZERO };
+        const push = vec3(300, 0, 0);
+        const start = {
+            position: vec3(-R - 1e-5 - head.length / 2, 0, 1),
+            orientation: IDENTITY,
+            velocity: vec3(2, 0, 0),
+            angularVelocity: ZERO,
+        };
+        const setup = isolated({
+            head,
+            start,
+            drive: {
+                kind: "force",
+                samples: [
+                    { t: 0, force: push },
+                    { t: 0.02, force: push },
+                ],
+            },
+            face: law,
+            balls: [freeBall("blue", vec3(0, 0, 1))],
+        });
+        const probe = recorder();
+        const run = integrate(setup, { cap: 0.03, probe });
+        const faces = probe.snapshots.flatMap((s) => s.contacts.filter((c) => c.key === "face/blue"));
+        const speeds = [...new Set(faces.map((c) => c.closingSpeed))];
+        expect((run.timeline["face/blue"] ?? []).length).toBeGreaterThan(1);
+        expect((run.timeline["face/blue"] ?? []).length).toBe(speeds.length);
+        for (const c of faces) {
+            const closure = closeFace(law, c.closingSpeed as number);
+            expect(c.law.stiffness).toBe(1.5 * closure.stiffness * Math.sqrt(c.depth));
+        }
+    });
+});
+
 describe("a ball dropped on the turf", () => {
     it("rebounds at the turf's restitution, gravity on", () => {
         const e = 0.5;
@@ -113,21 +162,27 @@ describe("a ball on a fixed inclined face", () => {
     // A ball can roll, so its contact sticks (rolls without slip, a = 5/7·g·sinθ) while tanθ ≤ 7μ/2 and slips
     // (a = g·(sinθ − μ·cosθ)) above it. The face belongs to a head of enormous mass whose weight the drive carries,
     // applied at its centre of mass: at the usual socket the drive and gravity form a couple that, on the tilted head,
-    // spins it at about 60 rad/s² whatever its mass, and the face would no longer be fixed.
+    // spins it at about 60 rad/s² whatever its mass, and the face would no longer be fixed. The face is Hertzian
+    // (P2b.2b.2b.2a): the ball starts at rest, so the pair closes at no closing speed and takes the 0.5 m/s law, and
+    // it is placed at that law's static sink, k·δ^{3/2} = m·g·cosθ.
     const mu = 0.2;
     const huge: MalletHead = { ...TEST_HEAD, mass: 1e9, inertia: solidCylinderInertia(1e9, 0.23, 0.032), socket: ZERO };
 
     function slide(theta: number): { acceleration: number; slip: number } {
-        const law = lawFromContactTime((1e9 * M) / (1e9 + M), 0.8, 6e-4, mu);
+        const law = { mass: (1e9 * M) / (1e9 + M), friction: mu };
         // The +x face's outward normal tilted θ from vertical, towards +x.
         const orientation = axisAngle(vec3(0, 1, 0), -(Math.PI / 2 - theta));
         const n = rotate(orientation, vec3(1, 0, 0));
         const position = vec3(0, 0, 1);
         const faceCentre = add(position, scale(n, huge.length / 2));
-        const sink = (M * STANDARD_GRAVITY * Math.cos(theta)) / law.stiffness;
+        const sink = Math.pow((M * STANDARD_GRAVITY * Math.cos(theta)) / closeFace(law, 0).stiffness, 2 / 3);
         const centre = add(faceCentre, scale(n, R - sink));
         const weight = vec3(0, 0, huge.mass * STANDARD_GRAVITY);
-        const t = 0.02;
+        // P2b.2b.2b.2a: Hertzian face (was 0.02 s). Under the ball's weight alone the tangential spring,
+        // (2/7)·(3/2)·k·√δ, is far softer than the old linear face's, and its damping ratio, which falls as δ^{1/4},
+        // lighter, so the start-up ringing decays more slowly (sticking slip 4.6e-4 m/s at 20 ms, 6.4e-5 m/s at
+        // 60 ms). The ball moves at most 9 mm down the 32 mm face.
+        const t = 0.06;
         const run = integrate(
             isolated({
                 head: huge,
@@ -156,17 +211,19 @@ describe("a ball on a fixed inclined face", () => {
         const theta = Math.atan(0.5);
         const { acceleration, slip } = slide(theta);
         const expected = (5 / 7) * STANDARD_GRAVITY * Math.sin(theta);
-        // Pre-flight: 2.2e-6 relative, and slip 2.4e-7 m/s (the tangential spring's decaying ringing); the slipping
-        // case below reaches 0.03 m/s.
-        expect(Math.abs(acceleration - expected) / expected).toBeLessThan(1e-5);
-        expect(slip).toBeLessThan(1e-6);
+        // P2b.2b.2b.2a: Hertzian face (was 2.2e-6 relative and slip 2.4e-7 m/s at 20 ms, bounds 1e-5 and 1e-6): 1.24e-4
+        // relative, and slip 6.4e-5 m/s (the tangential spring's decaying ringing); the slipping case below reaches
+        // 0.09 m/s.
+        expect(Math.abs(acceleration - expected) / expected).toBeLessThan(2e-4);
+        expect(slip).toBeLessThan(1e-4);
     });
 
     it("slips above tanθ = 7μ/2", () => {
         const theta = Math.atan(0.9);
         const { acceleration, slip } = slide(theta);
         const expected = STANDARD_GRAVITY * (Math.sin(theta) - mu * Math.cos(theta));
-        // Pre-flight: 1.9e-3, the start-up transient while the contact first sticks.
+        // The start-up transient while the contact first sticks. P2b.2b.2b.2a: Hertzian face (was 1.9e-3 at 20 ms):
+        // 3.13e-3 at 60 ms.
         expect(Math.abs(acceleration - expected) / expected).toBeLessThan(4e-3);
         expect(slip).toBeGreaterThan(0.01);
     });
