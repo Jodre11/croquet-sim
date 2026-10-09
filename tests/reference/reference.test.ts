@@ -86,10 +86,34 @@ describe("impact reference data", () => {
         expect(malletReference.headLength.value).toBeGreaterThan(malletReference.headDiameter.value);
     });
 
-    it("gives every impact value bounds, so the probe can sweep them", () => {
+    it("gives every impact value bounds, so the probe can sweep them, and every fit a range", () => {
         for (const v of [...Object.values(contactReference), ...Object.values(malletReference)]) {
-            expect(v.bounds, v.source).toBeDefined();
+            if ("range" in v) {
+                expect(v.range[0], v.source).toBeLessThan(v.range[1]);
+            } else {
+                expect(v.bounds, v.source).toBeDefined();
+            }
         }
+    });
+
+    it("loads Gugan's face fits, which reproduce his tabulated restitutions and contact times", () => {
+        const e = contactReference.faceRestitutionFit;
+        const { a, b, p } = e.coefficients as { a: number; b: number; p: number };
+        expect(e.range).toEqual([0.5, 6]);
+        expect(e.rangeUnit).toBe("m/s");
+        const restitution = (u: number): number => Math.sqrt(1 - (a + b * Math.pow(u, p)));
+        // Spec §3.1: e from 0.854 at 0.5 m/s to 0.793 at 6 m/s.
+        expect(restitution(0.5)).toBeCloseTo(0.854, 3);
+        expect(restitution(6)).toBeCloseTo(0.793, 3);
+        const t = contactReference.faceContactTimeFit;
+        const { t0, u0, q } = t.coefficients as { t0: number; u0: number; q: number };
+        const duration = (u: number): number => t0 * Math.pow(u / u0, q);
+        // T falls from 0.97 ms at 2.19 m/s to 0.79 ms at 5.50 m/s; spec §3.3's extrapolations at 0.5 and 6 m/s.
+        expect(duration(2.19)).toBeCloseTo(0.97e-3, 8);
+        // The fit gives 0.785 ms at 5.50 m/s; the table's 0.79 is rounded to 0.01 ms.
+        expect(Math.abs(duration(5.5) * 1e3 - 0.79)).toBeLessThan(0.01);
+        expect(duration(0.5) * 1e3).toBeCloseTo(1.36, 2);
+        expect(duration(6) * 1e3).toBeCloseTo(0.77, 2);
     });
 });
 
