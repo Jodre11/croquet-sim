@@ -2,7 +2,7 @@
  * Realistic shot mix through the engine with friction on (P2a.2 design §6, performance measurement). Generates
  * croquet-like shots (croquet strokes, rushes, cannons, hoop approaches, jammed balls, peg play, pushes, single
  * balls), runs each twice (the first warms the JIT and is discarded) and reports per shot the resting-contact solves,
- * their work units and time, and the engine's time. Run with `npx --yes tsx scripts/shotMix.ts`; environment: COUNT
+ * their work units and time, the engine's time, and the landings per shot. Run with `npx --yes tsx scripts/shotMix.ts`; environment: COUNT
  * (shots, default 3000), SEED (default 7). Not part of the test suite.
  */
 import { ZERO, add, scale, vec3, type Vec3 } from "../src/engine/math/vec3";
@@ -257,6 +257,8 @@ interface Shot {
     readonly solverMs: number;
     readonly engineMs: number;
     readonly fallbacks: number;
+    /** Landing events in the shot: each bounce on the turf counts one. */
+    readonly landings: number;
 }
 
 const shots: Shot[] = [];
@@ -285,7 +287,8 @@ for (let i = 0; i < COUNT; i++) {
     const fallbacks = result.events.filter(
         (e) => e.kind === "approximate-hold" || e.kind === "approximate-slip" || e.kind === "budget-hold",
     ).length;
-    shots.push({ name, solves, largest, work, solverMs, engineMs, fallbacks });
+    const landings = result.events.filter((e) => e.kind === "landing").length;
+    shots.push({ name, solves, largest, work, solverMs, engineMs, fallbacks, landings });
 }
 
 const quantile = (xs: readonly number[], q: number): number => {
@@ -293,7 +296,7 @@ const quantile = (xs: readonly number[], q: number): number => {
     return sorted[Math.min(sorted.length - 1, Math.floor(q * sorted.length))] as number;
 };
 /** Percentiles over the shots of one per-shot measure. */
-const row = (label: string, key: "solves" | "work" | "solverMs" | "engineMs"): string => {
+const row = (label: string, key: "solves" | "work" | "solverMs" | "engineMs" | "landings"): string => {
     const xs = shots.map((s) => s[key]);
     return (
         `${label}: p50 ${quantile(xs, 0.5).toFixed(3)}, p99 ${quantile(xs, 0.99).toFixed(3)}, ` +
@@ -309,6 +312,8 @@ console.log(row("work units per shot", "work"));
 console.log(row("solver ms per shot", "solverMs"));
 console.log(row("engine ms per shot", "engineMs"));
 console.log(`fallback events: ${shots.reduce((s, x) => s + x.fallbacks, 0)}`);
+console.log(row("landings per shot", "landings"));
+console.log(`landings in all: ${shots.reduce((s, x) => s + x.landings, 0)}`);
 console.log(
     `worst shot: ${worst.name}, ${worst.solves} solves, ${worst.work} units, ` +
         `solver ${worst.solverMs.toFixed(1)} ms, engine ${worst.engineMs.toFixed(1)} ms`,

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { atan2, ln, sinCos } from "../../../src/engine/math/elementary";
+import { atan2, exp, ln, pow, sinCos } from "../../../src/engine/math/elementary";
 import { rng } from "../support/rng";
 
 const EPS = Number.EPSILON;
@@ -69,5 +69,52 @@ describe("atan2", () => {
         expect(Math.abs(atan2(0, -1) - Math.PI)).toBeLessThanOrEqual(2 * EPS);
         expect(Math.abs(atan2(-1, 0) + Math.PI / 2)).toBeLessThanOrEqual(EPS);
         expect(atan2(0, 0)).toBe(0);
+    });
+});
+
+describe("exp", () => {
+    it("agrees with Math.exp to a few ulps over [−700, 700]", () => {
+        const random = rng(5);
+        for (let n = 0; n < 5000; n++) {
+            const x = (random() - 0.5) * 1400;
+            expect(close(exp(x), Math.exp(x), 4), `x = ${x}`).toBe(true);
+        }
+    });
+
+    it("is accurate near 0, where the bed's decay and the fits' powers read it", () => {
+        const random = rng(6);
+        for (let n = 0; n < 2000; n++) {
+            const x = (random() - 0.5) * 2 * Math.pow(10, -Math.floor(random() * 12));
+            expect(close(exp(x), Math.exp(x), 2), `x = ${x}`).toBe(true);
+        }
+        expect(exp(0)).toBe(1);
+    });
+
+    it("handles the edges", () => {
+        expect(exp(Number.NaN)).toBeNaN();
+        expect(exp(Infinity)).toBe(Infinity);
+        expect(exp(-Infinity)).toBe(0);
+        expect(exp(800)).toBe(Infinity);
+        expect(exp(-800)).toBe(0);
+    });
+});
+
+describe("pow", () => {
+    it("agrees with Math.pow for the bases and exponents the engine uses", () => {
+        const random = rng(7);
+        for (const y of [0.4, -0.23, 0.2, 2.5, -1.5]) {
+            for (let n = 0; n < 1000; n++) {
+                const x = 0.05 + 20 * random();
+                // exp(y·ln x) amplifies ln's few ulps by |y·ln x| ≤ 7.5 here.
+                expect(close(pow(x, y), Math.pow(x, y), 16), `x = ${x}, y = ${y}`).toBe(true);
+            }
+        }
+    });
+
+    it("is 0 for a zero base and a positive exponent, and NaN for any other non-positive base", () => {
+        expect(pow(0, 0.4)).toBe(0);
+        expect(pow(0, -1)).toBeNaN();
+        expect(pow(-2, 0.4)).toBeNaN();
+        expect(pow(1, 0.4)).toBe(1);
     });
 });
