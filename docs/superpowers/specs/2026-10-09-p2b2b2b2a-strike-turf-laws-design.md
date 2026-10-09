@@ -406,8 +406,8 @@ Recorded:
 
 ## Amendments (implementation, 2026-10-09)
 
-The plan's decisions, the user's decisions during the run, the controller's rulings and the behaviour the design did
-not predict. The figures are in the roadmap's "P2b.2b.2b.2a outcomes (2026-10-09)".
+The plan's decisions, the user's decisions during the run, the implementation's rulings and the behaviour the design
+did not predict. The figures are in the roadmap's "P2b.2b.2b.2a outcomes (2026-10-09)".
 
 **The plan's decisions.**
 
@@ -447,7 +447,7 @@ not predict. The figures are in the roadmap's "P2b.2b.2b.2a outcomes (2026-10-09
   about zero at a cell centre or corner.
 - **The low-speed gate** (§4.4): accept and record. The bed keeps its two fitted parameters (k_w 1.62461e8 N/m³,
   τ_r 7.55047e-4 s). Recorded for P3's lawn presets: e 0.62–0.66 over 0.2–1 m/s, rising as the speed falls (the
-  Kelvin–Voigt signature), and 0.38 at 0.1 m/s, where Penner's golf analogue falls towards 0.51; drops of 0.05, 0.1
+  Kelvin–Voigt signature), and 0.38 at 0.1 m/s, where Penner's golf analogue rises towards 0.51; drops of 0.05, 0.1
   and 0.3 m settle in 7, 7 and 8 landings; the held-out A2R and A3R penetrations are 5.31 and 5.81 mm against Gugan's
   4.0 and 5.0 (the model's depth goes as about v^0.6 against Gugan's near-linear rise; about 4.9 and 5.5 mm if the
   model's own e converts the rebound speeds). The user observed, anecdotally, that a golf ball is smaller, lighter and
@@ -463,7 +463,12 @@ not predict. The figures are in the roadmap's "P2b.2b.2b.2a outcomes (2026-10-09
   - the pass roll's ratio at 2, 2.5, 3, 3.5 and 4 m/s is 7.45, 11.27, 16.00, 20.47 and 29.21 (was 1.57, 1.12, 1.01,
     0.96, 0.95): its dead stop holds at every speed, not just the canonical;
   - in the pass roll's late re-hit sweep, 15 of 225 runs (all at 1 m/s) end the impact with the head overlapping blue
-    (was none, on any preset), and 88 cross a ball (was 57). This is a validity item P2b.2b.2b.2b must close;
+    (was none, on any preset), and 88 cross a ball (was 57). The overlap, 0.002–0.078 mm against a 0.43–0.44 mm
+    static sink, is an artefact of the handover: the probe measures it against the handed-over ball, which the handover
+    lifts 0.30–0.32 mm out of the bed's deeper pit to z = R beneath a head resting just clear of it. Against blue at the
+    impact's last step the head is clear in all 15, so it is not geometric overlap inside the impact. It stays a
+    validity item P2b.2b.2b.2b must close, but its fix is a handover rule (the head's clearance against the lifted
+    ball), which touches this phase's handover code;
   - the late re-hit sweep's crossings elsewhere: drive 18 of 165 (was 0), half roll 104 of 225 (45), full roll 5 (27),
     GC stop 39 (33), AC stop 12 (13); no canonical crosses a ball;
   - the drive's ratio at 3 m/s is 2.92 (was 3.32), below its coaching 3–4: recorded only, as coaching ratios are never
@@ -472,10 +477,11 @@ not predict. The figures are in the roadmap's "P2b.2b.2b.2a outcomes (2026-10-09
     344 ms (was 38), and the shot mix's engine time per shot p50 4.1, p99 53 and max 91 ms (was 0.23, 10 and 25),
     recorded beside P5's provisional 200 ms.
 
-  The first three are one mechanism: under the new laws the face and the follow-through keep working on a striker's
-  ball sitting in its pit, the pass roll's pinning above, which the user deferred to P2b.2b.2b.2b's stroke work.
+  The first three, but for the end overlaps, are one mechanism: under the new laws the face and the follow-through
+  keep working on a striker's ball sitting in its pit, the pass roll's pinning above, which the user deferred to
+  P2b.2b.2b.2b's stroke work. The end overlaps are the handover's lift of a ball left in its pit, deferred with it.
 
-**The controller's rulings.**
+**The implementation's rulings.**
 
 - **Gugan's 0.79 ms at 5.50 m/s** is a 0.01 ms rounding: the fit gives 0.785 ms, and the test checks |T − 0.79 ms|
   < 0.01 ms.
@@ -503,3 +509,8 @@ not predict. The figures are in the roadmap's "P2b.2b.2b.2a outcomes (2026-10-09
   hop may take more bounces: the settling rule ends the low-speed bounces. The cap's test lawn with τ_r 10 s did not
   cap, as τ_r is also each cell's damping; the test uses k_w 1e5 N/m³ and τ_r 2e-3 s. Exit criterion 2: the phase-2
   digest's shots with no landing are identical (299, none moved), and the 301 with a landing move.
+- **The landings' length and the cap's margin** (§4.7). §4.7 estimated a landing at about 1–5 ms of contact and set
+  the cap at ten times the longest; measured landings take 15–25 ms (the shot mix's p50 15.0, p99 24.0 and max 24.8
+  ms; the fitted bed's contact 22.6 ms at 0.1 m/s), so the 50 ms cap's margin is about 2×. A softer or less damped P3
+  lawn may reach `landing-cap`, so P3's presets must re-check it. The landings' cost, not the solver, now drives phase
+  2's engine time.

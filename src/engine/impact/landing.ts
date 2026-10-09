@@ -18,8 +18,9 @@ import { bedLoad, bedRelax, freshBed, isBouncing, newBallBed } from "./turfBed";
 import type { BedLaw } from "./types";
 
 /**
- * Longest landing (s) before it is settled with `landing-cap` (design §4.7): ten times the longest bed contact the
- * fit implies. A modelling bound, not physical.
+ * Longest landing (s) before it is settled with `landing-cap` (design §4.7): about twice the longest landing measured
+ * (the fitted bed's contact 22.6 ms at 0.1 m/s; the shot mix's landings p99 24.0 ms, max 24.8 ms). A modelling bound,
+ * not physical.
  */
 export const LANDING_CAP = 0.05;
 

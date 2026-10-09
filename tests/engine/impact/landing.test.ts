@@ -33,7 +33,7 @@ describe("a landing on a fresh bed", () => {
         expect(l.state.position).toEqual(vec3(3.0007, 4.0011, R));
         expect(l.state.velocity.z).toBeGreaterThan(SETTLE_SPEED);
         expect(l.state.velocity.z).toBeLessThan(3);
-        // The lattice's sideways push is about 1e-4 of the weight; over a few ms it moves nothing measurable.
+        // The lattice's sideways push is up to about 1.4e-3 of the weight; over a few ms it moves nothing measurable.
         expect(length(horizontal(l.state.velocity))).toBeLessThan(1e-4);
         expect(length(l.state.angularVelocity)).toBeLessThan(1e-2);
         expect(l.peakDepth).toBeGreaterThan(0);
