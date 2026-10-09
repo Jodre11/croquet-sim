@@ -68,9 +68,11 @@ src/engine/impact/simulateImpact.ts  the bed's static sink replaces m·g/turfSti
 src/engine/impact/types.ts           FaceMaterial loses restitution and contactTime; the face and bed law types; the
                                      flag impact-turf-pit
 src/engine/swing/buildContact.ts     places the striker's ball at the bed's static sink
-src/engine/resolve.ts                a landing runs landing.ts instead of the restitution impulse
+src/engine/simulate.ts               a landing calls landing.ts instead of resolveLanding (§4.7)
+src/engine/resolve.ts                resolveLanding deleted
+src/engine/impact/handover.ts        header: the residual sink is the bed's stored energy (§4.6)
 src/engine/types.ts, world.ts        SurfaceProps gains bedModulus and bedRecovery, validated
-src/engine/simulate.ts               ENGINE_VERSION 0.9.0
+src/engine/simulate.ts               ENGINE_VERSION 0.9.0; the flag landing-cap
 reference/contact.json               faceRestitutionFit, faceContactTimeFit, bedModulus, bedRecovery
 reference/mallet.json                faceRestitution's note: a check, no longer read by the engine
 reference/friction.json              ballTurfSliding's note: Gugan's µ ≈ 1.0 is now a held-out check (§4.3)
@@ -122,11 +124,12 @@ m/s, the range of Gugan's measured e; the T fit is extrapolated as its power law
 ### 3.4 The table
 
 Scaled by the reduced mass m, k and U, the law has one parameter, a dimensionless damping ĉ. Its central collision's
-restitution e(ĉ) and dimensionless duration τ(ĉ) (T = τ·(m/k)^{2/5}·U^{−1/5}) are integrated once at module load,
-with exact operations only, on a fixed grid of ĉ, so the table is deterministic. A closure inverts e(ĉ) for ĉ by
-bisection with linear interpolation between grid points, then sets k from τ(ĉ) and T(U), and c from ĉ. No closure
-integrates anything. e(ĉ) is monotone decreasing; the grid's spacing and the table's integration step are chosen in
-the plan to meet §5.1's table targets.
+restitution e(ĉ) and dimensionless duration τ(ĉ) (T = τ·(m/k)^{2/5}·U^{−1/5}) follow from integrating it. The fits are
+fixed and U is clamped, so ĉ and τ depend on U alone. At module load, for each point of a fixed grid in U over
+[0.5, 6] m/s, ĉ(U) is found by bisection on e(ĉ) (each trial one dimensionless integration) to the fit's e(U), and
+τ(U) recorded, all with exact operations only, so the table is deterministic. A closure interpolates ĉ and τ linearly
+in U, then sets k from m, τ and T(U), and c from ĉ. No closure integrates or inverts anything. The grid's spacing and
+the integration step are chosen in the plan to meet §5.1's table targets.
 
 `exp` is added to `elementary.ts` (argument reduction by ln 2, as `ln` uses), with `pow(x, y) = exp(y·ln x)` for x > 0,
 for U^0.4, U^−0.23, the fractional powers of §3.4 and the bed's decay. Both are tested against `Math.*` like the
@@ -143,9 +146,11 @@ now). Friction µ stays `faceFriction` (0.5).
 
 `FaceMaterial` keeps `friction` and loses `restitution` and `contactTime`: the face's restitution and duration are the
 wood fits of §3.1, the only face with measured data (other faces are P3's). `validateImpact` drops their checks;
-`buildContact.ts`, `swingProbe.ts` and `impactProbe.ts` stop filling them. The impact's per-pair law for the face
-(`ImpactSetup.face`, built by tests in `tests/engine/support/impact.ts`) becomes a `FaceLaw`: the reduced mass, the
-friction and the two fits, from which each closure's k and c follow. Ball–ball and ball–obstacle pairs keep `PairLaw`.
+`buildContact.ts`, `swingProbe.ts` and `impactProbe.ts` stop filling them. The two fits are module constants of
+`contactLaw.ts`, read from `contact.json`. The impact's per-pair law for the face (`ImpactSetup.face`, built by tests
+in `tests/engine/support/impact.ts`) becomes a `FaceLaw`: the reduced mass and the friction, from which each closure's
+k and c follow with the table. A second face material, when P3 brings one, adds its fits as a parameter. Ball–ball
+and ball–obstacle pairs keep `PairLaw`.
 
 ### 3.7 What stays linear
 
@@ -157,12 +162,19 @@ The ball–ball pair: Gugan 4 Table 1 gives a ball–ball contact time with no s
 
 ### 4.1 Cells
 
-The turf near each ball is a sparse grid of square cells of side h = 2 mm, fixed in the ground and aligned with world
-x and y, keyed by integer cell coordinates and visited in a fixed order. A cell is created when a ball's surface first
-reaches its centre's column below z = 0. Each holds its surface depth w ≥ 0 (its surface at z = −w) and whether a
-ball holds it. Each ball has its own cells. A ball whose surface reaches a cell another ball holds throws a
-`RangeError`, as the engine's other geometric guards do: two balls are never both pressed in within 2 mm of each other
-in play, and the error names the case if one ever is.
+The turf is a sparse grid of square cells of side h = 2 mm on one world lattice: cell (i, j) is centred at
+((i + ½)·h, (j + ½)·h), so the lattice is symmetric about x = 0 and y = 0. Each ball has its own sparse set of cells,
+keyed by (i, j). A cell is created when the ball's surface first reaches its centre's column below z = 0. Each holds
+its surface depth w ≥ 0 (its surface at z = −w) and whether the ball holds it.
+
+**Summation order.** A ball's resultant is summed so that a set-up mirrored across y = 0 gives the mirrored result
+bit for bit (`invariants.test.ts`'s exact mirroring stays): cells j and −j − 1 of the same i are added to each other
+first (IEEE addition is commutative, so the pair's sum does not depend on which is which), and the pair sums are then
+accumulated in ascending (i, j ≥ 0) order.
+
+**Two balls.** Two balls that both hold cells and whose centres lie within 2R + h of each other horizontally throw a
+`RangeError`, as the engine's other geometric guards do: two balls are never both pressed in that close in play, and
+the error names the case if one ever is.
 
 ### 4.2 Each cell's law
 
@@ -220,28 +232,46 @@ stiffer than they load, with Penner's low-speed 0.51 as an analogue) before any 
 
 - Gugan's A2R and A3R penetrations, 4.0 and 5.0 mm, at their implied downward speeds 3.04 and 3.52 m/s (upward speeds
   1.52 and 1.76 m/s over e 0.5).
-- e against impact speed from 1 to 6 m/s, compared in shape with Penner's golf fit e = 0.510 − 0.0375|v| + 0.000903v²
-  (Can. J. Phys. 80, 931 (2002)).
+- e against impact speed: the low-speed gate's sweep over 0.1–6 m/s (§4.4) is the record, compared in shape with
+  Penner's golf fit e = 0.510 − 0.0375|v| + 0.000903v² (Can. J. Phys. 80, 931 (2002)).
 - The apparent friction in the rolls, the horizontal over the vertical turf impulse while the striker's ball is in its
   pit, against Gugan's µ ≈ 1.0.
 - The distance from first contact to maximum penetration in the rolls, against Gugan's 3.5–18 mm.
 
 ### 4.6 The bed in the impact
 
-- **Static sink.** A ball at rest on a fresh bed sinks to δ₀ where the held cells carry its weight. `turfBed.ts`
-  solves it once per surface and ball, by bisection on the cells' summed force on the grid (about 0.3 mm at
-  k_w ≈ 3e8, against today's linear m·g/turfStiffness of 0.04 mm). It replaces `staticSink`: `prepareImpact` and
-  `validateImpact` (`simulateImpact.ts`) and `buildContact.ts` place the balls there, and each ball starts with the
-  cells under it held at that equilibrium, so it starts at rest. The stance's geometry moves by the sink's change
-  (about 0.26 mm in the contact height), so `CANONICAL_CLEARANCE`, `CANONICAL_APPROACH` and the stance probe lines are
-  re-recorded; the stance's own analytic cases (the round trip, the upright shaft) do not depend on the sink.
-- **In the turf** means holding at least one cell. **Still bouncing** keeps today's rule with the bed's potential: a
-  ball's vertical oscillation energy about δ₀, ½·m·v_z² + U(δ) − U(δ₀) − m·g·(δ − δ₀), exceeds U(δ₀), with
-  U(δ) the energy stored in the held cells, Σ ½·A·k_w·w². `isBouncing` (`integrate.ts`) takes this form.
-- **The lift event** (`turf-lift`) fires when a ball that held cells holds none, rising.
-- **At the impact's end** the bed is dropped and phase 2 starts as today. If a ball's surface is then more than 1 mm
-  below z = 0 over any cell it holds, the outcome carries the new flag `impact-turf-pit`, an outcome flag like
-  `impact-off-face` (recorded, not gated).
+- **Static sink.** A ball at rest on a fresh bed sinks to δ₀ where the held cells carry its weight. On the world
+  lattice the summed force depends on the ball's offset within its cell (about 20 cells under a 0.3 mm sink), so
+  `turfBed.ts` solves δ₀ for the ball's actual horizontal position, by bisection on the cells' summed force (about
+  0.3 mm at k_w ≈ 3e8, against today's linear m·g/turfStiffness of 0.04 mm). The same function replaces `staticSink`
+  in `prepareImpact` and `validateImpact` (`simulateImpact.ts`) and in `buildContact.ts`, each at the ball's position,
+  so the validated, placed and started positions agree. Each ball starts with the cells under it held at that
+  equilibrium, so it starts at rest. The stance's geometry moves by the sink's change (about 0.26 mm in the contact
+  height), so `CANONICAL_CLEARANCE`, `CANONICAL_APPROACH` and the stance probe lines are re-recorded; the stance's own
+  analytic cases (the round trip, the upright shaft) do not depend on the sink.
+- **Depth.** A ball's depth is δ = R − z, the depth of its lowest point below the undeformed surface, whatever the
+  cells under it hold.
+- **In the turf** means holding at least one cell.
+- **Still bouncing.** The rule keeps today's form with a fresh bed's static potential U_f(δ) (the work to press the
+  ball slowly to δ into a fresh bed at its position, tabulated with the sink's solve), a function of δ alone. The
+  ball's vertical oscillation energy E = ½·m·v_z² + U_f(δ) − U_f(δ₀) − m·g·(δ − δ₀) is compared with what it needs
+  to reach the surface from rest at δ₀, E(0) = m·g·δ₀ − U_f(δ₀): a ball is still bouncing while E exceeds it. For the
+  linear spring that threshold is ½·m·g·δ₀ = U(δ₀), today's rule (`integrate.ts` `isBouncing`); for a Winkler bed it
+  is (2/3)·m·g·δ₀. A ball rolling over its own pit rides at a depth the pit sets, not δ₀; E then measures how far its
+  vertical state is from rest on a fresh bed, which is what ends the impact. §5.1 checks that a ball rolling at 1–5
+  m/s on the bed is classified not bouncing; should it not be, the plan stops and raises it.
+- **The lift event** (`turf-lift`) fires once per ball, as now (`lifted`), the first time a ball that held cells holds
+  none while rising.
+- **At the impact's end** the bed is dropped and phase 2 starts. `handover.ts` is unchanged in behaviour: a ball below
+  R is placed at R, keeping an upward velocity of at least `SETTLE_SPEED` and otherwise losing its vertical velocity.
+  Its header's "residual sink m·g·δ₀/2" becomes the bed's stored energy at δ₀, U_f(δ₀), discarded as before. If a
+  ball's surface is then more than 1 mm below z = 0 over any cell it holds, the outcome carries the new flag
+  `impact-turf-pit`, an outcome flag like `impact-off-face` (recorded, not gated).
+- **Probe and validation.** In the impact's probe the bed pair appears as one contact per ball, as the plane did: its
+  normal the resultant's direction, its normal force the resultant's size, its tangential force the friction spring's
+  and its friction µ (`invariants.test.ts` reads these). `validateImpact` stops checking `turfStiffness` and
+  `turfRestitution` at each ball (no ball law reads them) and checks `bedModulus` and `bedRecovery` instead; it keeps
+  checking them under the head.
 - **The head** does not press the bed. The head–turf pair keeps the plane law (P2b.2b.2b.3).
 - **Stability.** The explicit step is 5 µs. The bed's total damping at the A4R footprint is of order η·π·2Rδ ≈ 1.3e3
   N·s/m at τ_r = 2 ms, giving 2m/c ≈ 0.7 ms, two orders above the step. The plan checks this against the fitted τ_r.
@@ -251,11 +281,15 @@ stiffer than they load, with Penner's low-speed 0.51 as an analogue) before any 
 A ball landing in phase 2 meets the same bed (user decision, 2026-10-09), so a slanted landing meets the pit and the
 ramp, and its spin changes by the bed's friction, not by an impulse.
 
-- **The landing.** Where `resolve.ts` now applies the restitution impulse Λ = (1 + e)·m·|v_z| with impulsive friction,
-  `landing.ts` runs the ball alone, under gravity, on a fresh bed anchored where it lands, at the impact's 5 µs step,
-  with its velocity and spin. It ends when the ball holds no cell and rises (it leaves), or when it stops bouncing by
-  §4.6's rule (it settles: its vertical velocity and depth are set to rest on the flat turf, its horizontal velocity
-  and spin kept).
+- **The landing.** Where `simulate.ts` now calls `resolveLanding` (`resolve.ts`) for the restitution impulse
+  Λ = (1 + e)·m·|v_z| with impulsive friction, it calls `landing.ts` instead, which runs the ball alone, under gravity,
+  on a fresh bed on the world lattice (§4.1), at the impact's 5 µs step, from touchdown (z = R) with its velocity and
+  spin. It ends when the ball holds no cell and rises (it leaves), or when it stops bouncing by §4.6's rule (it
+  settles: its vertical velocity and depth are set to rest on the flat turf, its horizontal velocity and spin kept).
+  `resolveLanding` is deleted, and with it phase 2's only read of `turfRestitution`: `turfAt` keeps the friction alone.
+- **Cap.** A landing that has neither left nor settled after 50 ms (ten times the longest bed contact the fit implies)
+  is settled as above and the outcome carries the new flag `landing-cap`, recorded like the impact's `impact-cap`, so
+  a pathology surfaces without aborting a sweep.
 - **Phase 2's clock.** The landing's outcome (velocity and spin) is applied at the landing instant, as the impulse is
   now. The contact's few milliseconds and millimetres of travel are not carried into phase 2's clock or position, so
   phase 2's event order is unchanged. This is a simplification, recorded; the per-landing duration and travel are
@@ -280,11 +314,15 @@ ramp, and its spin changes by the bed's friction, not by an impulse.
   - a closure below 0.5 m/s, or above 6 m/s, takes the clamped speed's law;
   - the force never pulls;
   - a re-touch after opening sets new k and c from its own U;
-  - the table's inversion round-trips: ĉ → e → ĉ within the bisection's resolution;
-  - k_t equals (2/7)·(3/2)·k·√δ at every step of a contact.
+  - at a single step of a closed contact, k_t equals (2/7)·(3/2)·k·√δ.
 - **Bed:**
   - a sphere pressed slowly into a fresh bed: the force matches the Winkler closed form within 1 % at δ ≤ 2 mm;
-  - the static sink: a ball placed at δ₀ with its cells held stays within 1 µm of it for 50 ms;
+  - the static sink: a ball placed at δ₀ with its cells held stays within 1 µm of it for 50 ms, at a cell centre and
+    at an offset of h/3 in x and y;
+  - the bouncing threshold: on a Winkler bed in the continuum limit, E(0) = m·g·δ₀ − U_f(δ₀) equals (2/3)·m·g·δ₀
+    within 1 %; a ball released from rest just below the threshold's height stays in the turf and one just above
+    lifts;
+  - a ball rolling at 1, 3 and 5 m/s across a fresh bed is classified not bouncing within 20 ms of its first contact;
   - a single released cell recovers as w₀·exp(−t/τ_r) within 1e-12 relative;
   - a free vertical impact at 5 m/s gives e = 0.5 and 7.2 mm within the fit's tolerance;
   - e falls monotonically over 1–6 m/s;
@@ -292,13 +330,15 @@ ramp, and its spin changes by the bed's friction, not by an impulse.
   - a ball rolling without slipping across a fresh bed under its own weight: the ramp's horizontal force opposes the
     motion;
   - a ball sliding horizontally on a held bed slides at Hall's µ against the resultant normal;
-  - a ball whose surface reaches a cell another ball holds throws a `RangeError`.
+  - two balls both holding cells within 2R + h of each other throw a `RangeError`;
+  - a ball on the bed mirrored across y = 0 gives the exactly mirrored resultant.
 - **Landings:**
   - a vertical landing at 5 m/s with no spin leaves at e = 0.5 within the fit's tolerance;
   - a landing with no spin and no horizontal speed gains none;
   - a landing slower than the settling threshold ends at rest on the turf, with its horizontal velocity and spin kept;
   - a slanted landing loses horizontal speed to the ramp and friction, and its spin moves towards rolling at its new
-    speed (direction asserted, size recorded).
+    speed (direction asserted, size recorded);
+  - a landing forced past 50 ms (by a test-only cap of a few steps) settles and raises `landing-cap`.
 - **Integration:** `impact-turf-pit` is raised by a set-up that ends with a ball in a deep pit and not otherwise;
   the lift event fires when a ball leaves its last cell.
 
@@ -313,7 +353,8 @@ ramp, and its spin changes by the bed's friction, not by an impulse.
   (restitution, contact time, sticking, the 5/7 roll) moves to §5.1's cases where the old law's closed form no longer
   applies. Ball–ball and ball–obstacle analytic cases are unchanged.
 - The shadow-energy and invariant tests (`shadowEnergy.test.ts`, `invariants.test.ts`) keep their momentum
-  invariants. The shadow energy gains the face's Hertzian potential, (2/5)·k·δ^{5/2}, and the bed's stored energy
+  invariants, and the exact mirroring across the strike line (§4.1's summation order). The shadow energy gains the
+  face's Hertzian potential, (2/5)·k·δ^{5/2}, and the bed's stored energy
   Σ ½·A·k_w·w² over its cells (held and released), the released cells' recovery counted as loss.
 - The stance's figures that depend on the sink (`CANONICAL_CLEARANCE`, `CANONICAL_APPROACH`) are re-recorded (§4.6);
   those that depend only on geometry are unchanged.
@@ -335,7 +376,7 @@ Recorded:
 - the held-out checks of §3.1 and §4.5, and the rolling ball's loss over 50 mm on a fresh bed;
 - the landings: per landing in the shot mix, the duration and travel of its contact, and the ball's spin before and
   after against the user's observation that a bounce reduces spin;
-- the cap and flag tallies of the `presets` sweep, `impact-turf-pit` among them;
+- the cap and flag tallies of the `presets` sweep and the shot mix, `impact-turf-pit` and `landing-cap` among them;
 - the shot mix's work units against P2b.2b.2b.1's (p99 143,084, p99.9 362,050, max 408,030), the bed's and the
   landings' shares, and the bounce counts before and after.
 
