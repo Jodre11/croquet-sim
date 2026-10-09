@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { ZERO, vec3 } from "../../../src/engine/math/vec3";
 import { contactReference } from "../../../src/reference/index";
-import { lawFromStiffness } from "../../../src/engine/impact/contactLaw";
-import { IMPACT_DT, driveAt, integrate } from "../../../src/engine/impact/integrate";
+import { IMPACT_DT, RELEASE_STEPS, TURF_PIT_DEPTH, driveAt, integrate } from "../../../src/engine/impact/integrate";
 import { IDENTITY } from "../../../src/engine/impact/rigidBody";
-import { TEST_BALL } from "../support/fixtures";
-import { TEST_HEAD, freeBall, isolated } from "../support/impact";
+import { simulateImpact } from "../../../src/engine/impact/simulateImpact";
+import { staticSink } from "../../../src/engine/impact/turfBed";
+import { STANDARD_GRAVITY } from "../../../src/engine/world";
+import { TEST_BALL, ballAt, testWorld } from "../support/fixtures";
+import { TEST_HEAD, freeBall, isolated, strike, testBed } from "../support/impact";
 
 const R = TEST_BALL.radius;
 
@@ -77,31 +79,33 @@ describe("events and termination", () => {
         expect(run.duration).toBeGreaterThanOrEqual(20e-3);
     });
 
-    it("raises turf-lift once, when a ball driven into the turf first rises back to z = R", () => {
-        const setup = isolated({
-            gravity: 9.80665,
-            balls: [freeBall("blue", vec3(0, 0, R), vec3(0, 0, -2), lawFromStiffness(TEST_BALL.mass, 0.5, 2e5, 0.3))],
-        });
-        const run = integrate(setup, { cap: 20e-3 });
-        expect(run.events.filter((e) => e.kind === "turf-lift")).toHaveLength(1);
-    });
-
     it("stays open while a struck ball is still bouncing out of its hollow", () => {
-        // The face strike lasts about 0.6 ms; the ball, driven 1 m/s into the turf, needs about 4 ms to leave it.
+        // P2b.2b.2b.2a: turf bed (was the plane law, 2e5 N/m at e 0.5, with its ball leaving at z = R). The face
+        // strike closes in under 1 ms; the ball, driven 1 m/s into the test bed, is still bouncing (turfBed.ts
+        // isBouncing) well after the face has let go and RELEASE_STEPS have passed, so the impact runs on until it
+        // lets go of its last cell, rising.
         const start = {
             position: vec3(-R - 1e-4 - TEST_HEAD.length / 2, 0, R),
             orientation: IDENTITY,
             velocity: vec3(2, 0, 0),
             angularVelocity: ZERO,
         };
-        const turf = lawFromStiffness(TEST_BALL.mass, 0.5, 2e5, 0.3);
         const run = integrate(
-            isolated({ start, gravity: 9.80665, balls: [freeBall("blue", vec3(0, 0, R), vec3(0, 0, -1), turf)] }),
+            isolated({
+                start,
+                gravity: STANDARD_GRAVITY,
+                balls: [freeBall("blue", vec3(0, 0, R), vec3(0, 0, -1), testBed())],
+            }),
             { cap: 20e-3 },
         );
+        const face = run.timeline["face/blue"] ?? [];
+        const faceEnd = (face[face.length - 1] as { end: number }).end;
+        const lift = run.events.filter((e) => e.kind === "turf-lift");
         expect(run.events.filter((e) => e.kind === "impact-cap")).toEqual([]);
-        expect(run.events.filter((e) => e.kind === "turf-lift")).toHaveLength(1);
-        expect(run.balls.blue?.position.z as number).toBeGreaterThanOrEqual(R);
+        expect(lift).toHaveLength(1);
+        expect((lift[0] as { t: number }).t).toBeGreaterThan(faceEnd + RELEASE_STEPS * IMPACT_DT);
+        expect(run.duration).toBeGreaterThanOrEqual((lift[0] as { t: number }).t);
+        expect(run.balls.blue?.velocity.z as number).toBeGreaterThan(0);
     });
 
     it("flags a ball at the rim once and forms no face contact", () => {
@@ -142,5 +146,62 @@ describe("events and termination", () => {
         };
         const setup = isolated({ start, gravity: 9.80665, balls: [freeBall("blue", vec3(0, 0, 1))] });
         expect(integrate(setup)).toStrictEqual(integrate(setup));
+    });
+});
+
+describe("the bed in the impact", () => {
+    it("raises turf-lift once, when a ball rising out of the bed lets go of its last cell", () => {
+        const run = integrate(
+            isolated({
+                gravity: STANDARD_GRAVITY,
+                balls: [freeBall("blue", vec3(0, 0, R), vec3(0, 0, -3), testBed())],
+            }),
+            { cap: 20e-3 },
+        );
+        const lifts = run.events.filter((e) => e.kind === "turf-lift");
+        expect(lifts).toHaveLength(1);
+        expect(run.balls.blue?.velocity.z as number).toBeGreaterThan(0);
+    });
+
+    it("flags impact-turf-pit for a ball ending pressed more than 1 mm into the bed, and not otherwise", () => {
+        // Driven down at 3 m/s and cut off by the cap 2 ms in, the ball is still deep in its pit; at rest at its
+        // sink (about 0.3 mm) it is not.
+        const deep = integrate(
+            isolated({
+                gravity: STANDARD_GRAVITY,
+                balls: [freeBall("blue", vec3(0, 0, R), vec3(0, 0, -3), testBed())],
+            }),
+            { cap: 2e-3 },
+        );
+        expect(deep.events.some((e) => e.kind === "impact-turf-pit")).toBe(true);
+        const sink = staticSink(0, 0, R, TEST_BALL.mass * STANDARD_GRAVITY, testBed());
+        const resting = integrate(
+            isolated({ gravity: STANDARD_GRAVITY, balls: [freeBall("blue", vec3(0, 0, R - sink), ZERO, testBed())] }),
+            { cap: 2e-3 },
+        );
+        expect(resting.events.some((e) => e.kind === "impact-turf-pit")).toBe(false);
+        expect(TURF_PIT_DEPTH).toBe(1e-3);
+    });
+
+    it("throws a RangeError when two balls holding cells come within a cell of each other's footprint", () => {
+        // Two balls pressed 7 mm in (footprints about 25 mm) with centres 40 mm apart overlap the guard's reach.
+        const balls = [
+            freeBall("blue", vec3(0, 0, R - 7e-3), ZERO, testBed()),
+            freeBall("red", vec3(0.04, 0, R - 7e-3), ZERO, testBed()),
+        ];
+        expect(() => integrate(isolated({ gravity: STANDARD_GRAVITY, balls }), { cap: 1e-4 })).toThrow(RangeError);
+    });
+
+    it("starts two touching balls on the bed with no guard (review focus 2)", () => {
+        const world = testWorld();
+        const result = simulateImpact(
+            strike(ballAt(5, 0).position, { speed: 3 }),
+            {
+                blue: ballAt(5, 0),
+                red: ballAt(5 + 2 * R, 0),
+            },
+            world,
+        );
+        expect(result.handover.red?.velocity.x as number).toBeGreaterThan(0);
     });
 });

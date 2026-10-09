@@ -440,8 +440,16 @@ describe("the mechanisms (design §8.1), on the canonical setups", () => {
         expect(impact.events.map((e) => e.kind)).not.toContain("impact-head-deep");
     });
 
-    it("the pass roll's punch leaves the striker's ball faster than a coasting pass roll", () => {
-        // Prototype: 1.226 m/s at drive +1, 1.099 m/s at drive 0.
+    // Expected to fail (user decision, 2026-10-09). On the bed (P2b.2b.2b.2a) the canonical pass roll's follow-through
+    // keeps the 34°-leaning face on the striker's ball: the ball rebounds only about 1.8 mm and is back in its pit by
+    // 46 ms, the face catches it at about 2.7 m/s and pins it 2–4 mm deep until the head stops. So the punched ball
+    // leaves at 0.038 m/s and the coasted one at 0.088 m/s. A model finding, recorded in the roadmap; P2b.2b.2b.2b (the
+    // roll's stroke: descent, follow-through, hands) owns it. This test flips, and alerts, when that phase fixes it;
+    // it then goes back to `it`.
+    it.fails("the pass roll's punch leaves the striker's ball faster than a coasting pass roll", () => {
+        // Prototype: 1.226 m/s at drive +1, 1.099 m/s at drive 0. P2b.2b.2b.2a: Hertzian face (was 1.099 at drive 0):
+        // 1.894 m/s at drive +1, 0.29 m/s at drive 0, the coasted ball already pinned under the face. P2b.2b.2b.2a:
+        // turf bed (was 1.894 and 0.29): 0.038 m/s at drive +1, 0.088 m/s at drive 0, both pinned.
         const punched = simulateShot(canonicalSetup("pass-roll")).impact;
         const coasted = simulateShot(canonicalSetup("pass-roll", { stroke: { drive: 0 } })).impact;
         expect(strikerSpeed(punched)).toBeGreaterThan(strikerSpeed(coasted));

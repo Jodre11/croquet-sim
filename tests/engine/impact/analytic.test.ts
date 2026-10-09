@@ -2,12 +2,9 @@ import { describe, expect, it } from "vitest";
 import { ZERO, add, cross, dot, length, scale, sub, vec3 } from "../../../src/engine/math/vec3";
 import {
     closeFace,
-    contactTimeFactor,
-    dampingRatio,
     faceContactTimeAt,
     faceRestitutionAt,
     lawFromContactTime,
-    lawFromStiffness,
     type PairLaw,
 } from "../../../src/engine/impact/contactLaw";
 import { integrate, type ImpactObstacle, type ImpactSnapshot } from "../../../src/engine/impact/integrate";
@@ -17,7 +14,7 @@ import type { MalletHead } from "../../../src/engine/impact/types";
 import type { BallState } from "../../../src/engine/types";
 import { STANDARD_GRAVITY } from "../../../src/engine/world";
 import { TEST_BALL, ballAt, hoopWithUprightAt, testWorld } from "../support/fixtures";
-import { TEST_HEAD, counter, faceLaw, freeBall, isolated, recorder, strike } from "../support/impact";
+import { TEST_HEAD, counter, faceLaw, freeBall, isolated, recorder, strike, testBed } from "../support/impact";
 
 const R = TEST_BALL.radius;
 const M = TEST_BALL.mass;
@@ -30,10 +27,6 @@ const M = TEST_BALL.mass;
  */
 const LAW_TOLERANCE = 3e-4;
 const FINE = 1e-7;
-
-function closedForm(massEff: number, restitution: number, stiffness: number): number {
-    return contactTimeFactor(dampingRatio(restitution)) / Math.sqrt(stiffness / massEff);
-}
 
 describe("one contact of each pair", () => {
     it.each([0.5, 2.19, 2.83, 4.0, 5.5, 6.0])(
@@ -75,20 +68,9 @@ describe("one contact of each pair", () => {
         expect(run.balls.red?.velocity.x as number).toBeCloseTo((1 + e) / 2, 3);
     });
 
-    // e = 0.5 below ζ = 1/√2; 0.15 between 1/√2 and 1 (the sourced turf lower bound); 0.1 overdamped.
-    for (const e of [0.5, 0.15, 0.1]) {
-        it(`ball–turf, e = ${e}: contact time and rebound match the clamped closed form`, () => {
-            const k = 2e5;
-            const probe = counter("turf/blue");
-            const run = integrate(
-                isolated({ balls: [freeBall("blue", vec3(0, 0, R), vec3(0, 0, -1), lawFromStiffness(M, e, k, 0))] }),
-                { dt: FINE, cap: 8e-3, probe },
-            );
-            const T = closedForm(M, e, k);
-            expect(Math.abs(probe.closed * FINE - T) / T).toBeLessThan(LAW_TOLERANCE);
-            expect(Math.abs((run.balls.blue?.velocity.z as number) - e) / e).toBeLessThan(LAW_TOLERANCE);
-        });
-    }
+    // P2b.2b.2b.2a: turf bed (was three ball–turf cases at e 0.5, 0.15 and 0.1 against the clamped plane's closed
+    // form). The bed has no closed form for T or e: its fitted e and penetration are turfBed.test.ts's, and a landing's
+    // rebound is landing.test.ts's.
 });
 
 describe("face closures", () => {
@@ -133,28 +115,32 @@ describe("face closures", () => {
 });
 
 describe("a ball dropped on the turf", () => {
-    it("rebounds at the turf's restitution, gravity on", () => {
-        const e = 0.5;
+    it("lifts out of the bed once, rebounding slower than it landed, gravity on", () => {
+        // P2b.2b.2b.2a: turf bed (was the plane's e = 0.5 within 5e-3, read where the ball regained z = R). The bed's
+        // loss is its recovery lag; the rebound is read in the first step after the ball lets go of its last cell.
         const v = 5;
         let rebound = NaN;
+        let held = false;
         const probe = {
             step(s: ImpactSnapshot): void {
-                const b = s.balls[0] as { position: { z: number }; velocity: { z: number } };
-                if (Number.isNaN(rebound) && b.velocity.z > 0 && b.position.z >= R) {
-                    rebound = b.velocity.z;
+                const holding = s.contacts.some((c) => c.key === "turf/blue");
+                const vz = (s.balls[0] as BallState).velocity.z;
+                if (Number.isNaN(rebound) && held && !holding && vz > 0) {
+                    rebound = vz;
                 }
+                held = held || holding;
             },
         };
         const run = integrate(
             isolated({
                 gravity: STANDARD_GRAVITY,
-                balls: [freeBall("blue", vec3(0, 0, R), vec3(0, 0, -v), lawFromStiffness(M, e, 2e5, 0.3))],
+                balls: [freeBall("blue", vec3(0, 0, R), vec3(0, 0, -v), testBed())],
             }),
-            { dt: FINE, cap: 10e-3, probe },
+            { cap: 20e-3, probe },
         );
         expect(run.events.filter((x) => x.kind === "turf-lift")).toHaveLength(1);
-        // Gravity acts through the contact, and the rebound is read where the ball regains z = R (pre-flight: 2.3e-3).
-        expect(Math.abs(rebound / v - e)).toBeLessThan(5e-3);
+        expect(rebound).toBeGreaterThan(0);
+        expect(rebound).toBeLessThan(v);
     });
 });
 

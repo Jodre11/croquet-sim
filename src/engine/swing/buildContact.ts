@@ -28,6 +28,7 @@ import {
     swingOrientation,
     swungBody,
 } from "../impact/track";
+import { bedLawOf, staticSink } from "../impact/turfBed";
 import type { ContactState, FaceMaterial, Hands, MalletHead, StrokeMode, SwingArc, TrackDrive } from "../impact/types";
 import { atan2, sinCos } from "../math/elementary";
 import { add, cross, length, scale, sub, vec3, type Vec3 } from "../math/vec3";
@@ -347,7 +348,8 @@ export function contactPose(setup: ShotSetup, world: World): ContactPose {
     const R = world.ball.radius;
     const lean = stanceLean(handsAhead, top, up, { ballRadius: R, headLength: mallet.headLength, headRadius: rho });
     const surface = world.lawn.surfaceAt(striker.position);
-    const sunk = R - (world.ball.mass * world.gravity) / surface.turfStiffness;
+    const sunk =
+        R - staticSink(striker.position.x, striker.position.y, R, world.ball.mass * world.gravity, bedLawOf(surface));
     const centre = vec3(striker.position.x, striker.position.y, sunk);
     const radius = top;
     const thetaC = 0 - lean;

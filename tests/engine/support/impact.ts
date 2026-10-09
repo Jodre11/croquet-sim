@@ -3,7 +3,7 @@
  * do not move when reference data does. src/ must never import this file.
  */
 import { ZERO, add, length, lengthSq, scale, sub, vec3, type Vec3 } from "../../../src/engine/math/vec3";
-import { lawFromContactTime, type PairLaw } from "../../../src/engine/impact/contactLaw";
+import { lawFromContactTime } from "../../../src/engine/impact/contactLaw";
 import type { ImpactBall, ImpactProbe, ImpactSetup, ImpactSnapshot } from "../../../src/engine/impact/integrate";
 import {
     IDENTITY,
@@ -16,7 +16,9 @@ import {
 } from "../../../src/engine/impact/rigidBody";
 import { validateImpact } from "../../../src/engine/impact/simulateImpact";
 import { headOnPath, prepareTrack, swingOrientation } from "../../../src/engine/impact/track";
+import { BED_CELL } from "../../../src/engine/impact/turfBed";
 import type {
+    BedLaw,
     ContactState,
     Coupling,
     Dip,
@@ -33,7 +35,7 @@ import type {
 import { sinCos } from "../../../src/engine/math/elementary";
 import type { BallParams, BallState, BallStates, World } from "../../../src/engine/types";
 import { STANDARD_GRAVITY, uprightsOf } from "../../../src/engine/world";
-import { TEST_BALL, ballAt, hoopWithUprightAt, testHoop } from "./fixtures";
+import { TEST_BALL, TEST_TURF, ballAt, hoopWithUprightAt, testHoop } from "./fixtures";
 
 const R = TEST_BALL.radius;
 
@@ -170,14 +172,19 @@ export function faceLaw(face: FaceMaterial = TEST_FACE, headMass = TEST_HEAD.mas
     return { mass: (headMass * TEST_BALL.mass) / (headMass + TEST_BALL.mass), friction: face.friction };
 }
 
-/** A ball free in space at `position`, without turf under it. */
+/** A ball free in space at `position`, by default without turf under it; `turf` gives it a bed. */
 export function freeBall(
     id: ImpactBall["id"],
     position: Vec3,
     velocity: Vec3 = ZERO,
-    turf: PairLaw | null = null,
+    turf: BedLaw | null = null,
 ): ImpactBall {
     return { id, state: { position, velocity, angularVelocity: ZERO }, turf };
+}
+
+/** A plausible test bed (fixtures' TEST_TURF): k_w 3e8 N/m³, τ_r 2 ms, µ `friction`, 2 mm cells. */
+export function testBed(friction = 0.3): BedLaw {
+    return { modulus: TEST_TURF.bedModulus, recovery: TEST_TURF.bedRecovery, friction, cell: BED_CELL };
 }
 
 /**

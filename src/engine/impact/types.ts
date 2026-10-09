@@ -201,8 +201,8 @@ export interface ContactState extends HeadState {
 }
 
 /**
- * Something that happened during the impact; t is seconds from its start. `turf-lift`: a ball's centre first rose to
- * z = R from below. The others mark a result outside the validated model, as phase 2's jump flag does:
+ * Something that happened during the impact; t is seconds from its start. `turf-lift`: a ball that held cells of the
+ * bed first held none while rising. The others mark a result outside the validated model, as phase 2's jump flag does:
  * - `impact-cap`: the impact reached its cap (IMPACT_CAP, or TRACK_IMPACT_CAP for a tracked drive);
  * - `impact-head-approaching`: when it ended the head was still closing on a ball within reach (a force table's
  *   second strike, a double tap, is a fault and is not modelled; a tracked drive integrates it and so raises this only
@@ -213,7 +213,9 @@ export interface ContactState extends HeadState {
  *   credible (P2b.2b.1 design §4.2);
  * - `impact-off-face`: a ball touched the head off its face: a force table's face rim (edge strokes are not
  *   modelled), or any region but the face for a tracked drive (P2b.2b.1 design §4.5; no Law judgement is made of it
- *   in this phase).
+ *   in this phase);
+ * - `impact-turf-pit`: when the impact ended, a ball's surface lay more than TURF_PIT_DEPTH below the turf over a
+ *   cell it held (P2b.2b.2b.2a design §4.6); the handover places it on the flat lawn, and the pit is discarded.
  */
 export type ImpactEvent =
     | { readonly kind: "turf-lift"; readonly t: number; readonly ball: BallId }
@@ -221,7 +223,8 @@ export type ImpactEvent =
     | { readonly kind: "impact-head-approaching"; readonly t: number; readonly ball: BallId }
     | { readonly kind: "impact-mallet-grounded"; readonly t: number }
     | { readonly kind: "impact-head-deep"; readonly t: number }
-    | { readonly kind: "impact-off-face"; readonly t: number; readonly ball: BallId };
+    | { readonly kind: "impact-off-face"; readonly t: number; readonly ball: BallId }
+    | { readonly kind: "impact-turf-pit"; readonly t: number; readonly ball: BallId };
 
 /**
  * One contact interval of a pair (P2b.2a design §5): [start, end) in s from the impact's start, whole steps, and the

@@ -13,13 +13,14 @@
  * set-ups mirrored across a vertical plane give exactly mirrored results. Obstacles (hoop uprights and the peg) are
  * immovable: a ball–obstacle pair's force acts on the ball alone.
  *
- * The impact ends once a face–ball contact has closed, the drive window has closed, no face–ball, ball–ball,
- * ball–obstacle or head–turf contact has been closed for RELEASE_STEPS steps, and no ball in turf contact is still
- * bouncing in it; or at the cap. A ball bounces while its vertical oscillation energy about the static sink δ₀ = m·g/k,
- * ½·m·v_z² + ½·k·(δ − δ₀)², exceeds the static spring's ½·k·δ₀²: it will reach δ = 0 and leave the turf, so the
- * turf's rebound, which dominates lift, is integrated rather than discarded at handover. Below that the ball only
- * settles in its hollow, and the handover discards at most m·g·δ₀/2 (design §6). Isolated set-ups (tests) may give
- * balls any state and leave the turf out; simulateImpact.ts prepares and validates real ones.
+ * The balls stand on the turf bed (turfBed.ts; P2b.2b.2b.2a design §4): each ball–turf pair is its ball's own cells,
+ * stepped with the pair, and a ball is in the turf while it holds a cell. The impact ends once a face–ball contact has
+ * closed, the drive window has closed, no face–ball, ball–ball, ball–obstacle or head–turf contact has been closed for
+ * RELEASE_STEPS steps, and no ball in the turf is still bouncing (turfBed.ts isBouncing: its vertical energy measured
+ * from rest at the surface on a fresh bed is positive), or at the cap. At the end a ball still pressed more than
+ * TURF_PIT_DEPTH into its pit raises `impact-turf-pit`. Two balls whose footprints come within a cell of each other
+ * while both hold cells throw a RangeError (plan decision 1). Isolated set-ups (tests) may give balls any state and
+ * leave the turf out; simulateImpact.ts prepares and validates real ones.
  *
  * A tracked drive (P2b.2b.1 design §3.5) ends on the same conditions, both arcs' windows and the dip standing for the
  * drive window, and only once the head is neither closing on any ball within reach (headClosing) nor would reach one
@@ -80,6 +81,17 @@ import {
 import { angularAcceleration, integrateOrientation, rotate, rotateInverse } from "./rigidBody";
 import { closeTimeline, emptyTimeline, inGap, noteClearance, recordStep, type PairTimeline } from "./timeline";
 import {
+    bedEnergy,
+    bedLoad,
+    bedRelax,
+    freshBed,
+    heldDepth,
+    isBouncing,
+    newBallBed,
+    type BallBed,
+    type FreshBed,
+} from "./turfBed";
+import {
     handLoad,
     handsAt,
     holdPendulum,
@@ -91,6 +103,7 @@ import {
     type SwungBody,
 } from "./track";
 import type {
+    BedLaw,
     ContactInterval,
     DriveSample,
     FaceLaw,
@@ -165,6 +178,12 @@ export const FOLLOW_SAMPLE = 1e-3;
 export const FINISH_SPEED = 1e-3;
 
 /**
+ * Depth (m) of a held cell past which an impact's end raises `impact-turf-pit` (P2b.2b.2b.2a design §4.6). A
+ * modelling bound, not physical: the handover discards a pit, and one deeper than this is a result to look at.
+ */
+export const TURF_PIT_DEPTH = 1e-3;
+
+/**
  * Slack (m) subtracted from a ball–obstacle pair's gap before it is skipped (see the file header). Numerical, not
  * physical: it covers the drift between a ball's summed path length (the travel sum's own rounding included) and its
  * rounded position updates. A step rounds each horizontal coordinate by at most half an ulp (about 2e-15 m on a
@@ -179,11 +198,11 @@ const WAKE_MARGIN = 1e-9;
 
 const UP = vec3(0, 0, 1);
 
-/** A ball entering the integrator: its state and its turf law (null: no turf under it, for isolated test cases). */
+/** A ball entering the integrator: its state and its turf bed's law (null: no turf under it, for isolated tests). */
 export interface ImpactBall {
     readonly id: BallId;
     readonly state: BallState;
-    readonly turf: PairLaw | null;
+    readonly turf: BedLaw | null;
 }
 
 /** A fixed obstacle in the impact: its geometry and its ball–obstacle law (P2b.2a design §4). */
@@ -342,7 +361,10 @@ export function driveAt(drive: readonly DriveSample[], t: number): Vec3 {
 
 interface PairState {
     readonly pair: Pair;
-    /** The pair's linear law; null for a face–ball pair, whose law follows from its closure. */
+    /**
+     * The pair's linear law; null for a face–ball pair, whose law follows from its closure, and for a ball–turf pair,
+     * the ball's bed.
+     */
     readonly law: PairLaw | null;
     /** A face–ball pair's closure while it is closed (design §3.3); null while open, and for every other pair. */
     closure: HertzClosure | null;
@@ -369,20 +391,10 @@ function lawOf(setup: ImpactSetup, pair: Pair): PairLaw | null {
         case "ball-ball":
             return setup.ballBall;
         case "ball-turf":
-            return (setup.balls[pair.b] as ImpactBall).turf as PairLaw;
+            return null;
         case "ball-obstacle":
             return (setup.obstacles[pair.a] as ImpactObstacle).law;
     }
-}
-
-/**
- * True while a ball at turf penetration δ (`depth`) still bounces (see the file header): its vertical oscillation
- * energy about the static sink δ₀ = m·g/k, ½·m·v_z² + ½·k·(δ − δ₀)², exceeds the static spring's ½·k·δ₀².
- */
-function isBouncing(mass: number, vz: number, stiffness: number, depth: number, gravity: number): boolean {
-    const sink = (mass * gravity) / stiffness;
-    const offset = depth - sink;
-    return 0.5 * mass * vz * vz + 0.5 * stiffness * offset * offset > 0.5 * stiffness * sink * sink;
 }
 
 /** One step's forces and torques, summed in pair-list order: on the head (world frame) and on each ball. */
@@ -394,9 +406,10 @@ interface StepLoads {
 }
 
 /**
- * The normal and tangential force of one closed pair, from the current state; returns the normal force (N). Advances
- * the pair's tangential spring, adds the force to body B and its reaction to body A (the head, the other ball, or the
- * immovable turf), and appends the pair as the probe sees it to `samples` (null without a probe).
+ * The normal and tangential force of one closed face–ball, ball–ball or ball–obstacle pair (the ball–turf pair is the
+ * bed's, bedLoad), from the current state; returns the normal force (N). Advances the pair's tangential spring, adds
+ * the force to body B and its reaction to body A (the head, the other ball, or the immovable obstacle), and appends the
+ * pair as the probe sees it to `samples` (null without a probe).
  */
 function applyPair(
     p: PairState,
@@ -411,7 +424,7 @@ function applyPair(
     const { pair } = p;
     const sb = balls[pair.b] as BallState;
     const sa = pair.kind === "ball-ball" ? (balls[pair.a] as BallState) : null;
-    // u: velocity of B's material point at the contact relative to A's (the turf's and an obstacle's are zero).
+    // u: velocity of B's material point at the contact relative to A's (an obstacle's is zero).
     const va =
         pair.kind === "face-ball"
             ? pointVelocity(head.position, head.velocity, head.angularVelocity, contact.point)
@@ -621,19 +634,60 @@ function advance(
     return next;
 }
 
-/** Which balls are in turf contact, and which have left it once; the latter raise `turf-lift` (design §4). */
+/**
+ * Which balls hold cells of their bed, and which have let go of them once while rising; the latter raise `turf-lift`
+ * (P2b.2b.2b.2a design §4.6).
+ */
 interface TurfTrack {
     readonly inTurf: boolean[];
     readonly lifted: boolean[];
 }
 
 /**
- * Updates `track` after a step at time `now`, raising `turf-lift` for a ball that first leaves the turf, and returns
- * whether any ball in turf contact is still bouncing in it (see the file header).
+ * Throws a RangeError when two balls both hold cells and their footprints come within a cell of each other (plan
+ * decision 1, amending design §4.1): centres closer horizontally than ρ_a + ρ_b + h, ρ = √(R² − z²) each ball's
+ * footprint radius. A ball's cells are its own, so footprints that could reach one column are outside the model;
+ * two balls touching at rest are far clear of it.
+ */
+function guardFootprints(
+    balls: readonly BallState[],
+    beds: readonly (BallBed | null)[],
+    radius: number,
+    ids: readonly BallId[],
+): void {
+    for (let a = 0; a < beds.length; a++) {
+        const ba = beds[a];
+        if (ba === null || ba === undefined || ba.held === 0) {
+            continue;
+        }
+        for (let b = a + 1; b < beds.length; b++) {
+            const bb = beds[b];
+            if (bb === null || bb === undefined || bb.held === 0) {
+                continue;
+            }
+            const pa = (balls[a] as BallState).position;
+            const pb = (balls[b] as BallState).position;
+            const reach =
+                Math.sqrt(Math.max(0, radius * radius - pa.z * pa.z)) +
+                Math.sqrt(Math.max(0, radius * radius - pb.z * pb.z)) +
+                Math.max(ba.law.cell, bb.law.cell);
+            if (length(horizontal(sub(pa, pb))) < reach) {
+                throw new RangeError(`balls ${ids[a]} and ${ids[b]} press the turf within a cell of each other`);
+            }
+        }
+    }
+}
+
+/**
+ * Updates `track` after a step at time `now`, raising `turf-lift` for a ball that first lets go of its last cell while
+ * rising, and returns whether any ball in the turf is still bouncing in it (turfBed.ts isBouncing, on the fresh bed
+ * under its starting position; see the file header).
  */
 function trackTurf(
     balls: readonly BallState[],
     setup: ImpactSetup,
+    beds: readonly (BallBed | null)[],
+    fresh: readonly (FreshBed | null)[],
     track: TurfTrack,
     now: number,
     events: ImpactEvent[],
@@ -641,18 +695,19 @@ function trackTurf(
     const R = setup.ball.radius;
     let turfMoving = false;
     for (let i = 0; i < balls.length; i++) {
-        const entry = setup.balls[i] as ImpactBall;
-        if (entry.turf === null) {
+        const bed = beds[i];
+        if (bed === null || bed === undefined) {
             continue;
         }
         const s = balls[i] as BallState;
-        const below = s.position.z < R;
-        if (track.inTurf[i] && !below && !track.lifted[i]) {
+        const holding = bed.held > 0;
+        if (track.inTurf[i] && !holding && s.velocity.z > 0 && !track.lifted[i]) {
             track.lifted[i] = true;
-            events.push({ kind: "turf-lift", t: now, ball: entry.id });
+            events.push({ kind: "turf-lift", t: now, ball: (setup.balls[i] as ImpactBall).id });
         }
-        track.inTurf[i] = below;
-        if (below && isBouncing(setup.ball.mass, s.velocity.z, entry.turf.stiffness, R - s.position.z, setup.gravity)) {
+        track.inTurf[i] = holding;
+        const base = fresh[i] as FreshBed;
+        if (holding && isBouncing(base, setup.ball.mass, setup.gravity, s.velocity.z, R - s.position.z)) {
             turfMoving = true;
         }
     }
@@ -817,12 +872,14 @@ export function integrateStroke(setup: ImpactSetup, options: ImpactOptions = {},
     }));
     const balls: BallState[] = setup.balls.map((b) => b.state);
     const travel = balls.map(() => 0);
+    const beds: (BallBed | null)[] = setup.balls.map((b) => (b.turf === null ? null : newBallBed(b.turf, dt)));
+    const fresh: (FreshBed | null)[] = setup.balls.map((b) =>
+        b.turf === null ? null : freshBed(b.state.position.x, b.state.position.y, R, b.turf),
+    );
     const touchingAtStart = pairs.filter((p) => pairTouching(p.pair, balls, R, setup.obstacles)).map((p) => p.pair.key);
     const events: ImpactEvent[] = [];
-    const track: TurfTrack = {
-        inTurf: balls.map((s, i) => hasTurf[i] === true && s.position.z < R),
-        lifted: balls.map(() => false),
-    };
+    // The first step's load sets each ball's hold.
+    const track: TurfTrack = { inTurf: balls.map(() => false), lifted: balls.map(() => false) };
     const offFace = balls.map(() => false);
     const turf: HeadTurfState | null =
         setup.headTurf === null
@@ -863,6 +920,32 @@ export function integrateStroke(setup: ImpactSetup, options: ImpactOptions = {},
 
         for (const p of pairs) {
             const { pair } = p;
+            if (pair.kind === "ball-turf") {
+                const sb = balls[pair.b] as BallState;
+                const bed = beds[pair.b] as BallBed;
+                const load = bedLoad(bed, sb, R, dt);
+                if (load === null) {
+                    recordStep(p.line, false, 0, t);
+                    continue;
+                }
+                p.peak = Math.max(p.peak, R - sb.position.z);
+                loads.forces[pair.b] = add(loads.forces[pair.b] as Vec3, load.force);
+                loads.torques[pair.b] = add(loads.torques[pair.b] as Vec3, load.torque);
+                if (options.probe) {
+                    samples.push({
+                        key: pair.key,
+                        normal: load.normal,
+                        depth: R - sb.position.z,
+                        normalForce: load.normalForce,
+                        tangentialForce: load.tangentialForce,
+                        spring: load.spring,
+                        law: load.law,
+                        storedEnergy: bedEnergy(bed),
+                    });
+                }
+                recordStep(p.line, true, load.normalForce, t);
+                continue;
+            }
             // A skipped pair was open when last evaluated: its spring is already ZERO and it has no open interval, so
             // evaluating it would change nothing.
             if (pair.kind === "ball-obstacle" && (travel[pair.b] as number) < p.wakeAt) {
@@ -895,9 +978,7 @@ export function integrateStroke(setup: ImpactSetup, options: ImpactOptions = {},
                 }
                 continue;
             }
-            if (pair.kind !== "ball-turf") {
-                hardClosed = true;
-            }
+            hardClosed = true;
             if (pair.kind === "face-ball") {
                 struck = true;
             }
@@ -925,14 +1006,20 @@ export function integrateStroke(setup: ImpactSetup, options: ImpactOptions = {},
         if (turfForce !== null) {
             hardClosed = true;
         }
+        guardFootprints(balls, beds, R, ids);
 
         state = advance(state, balls, travel, loads, setup, ballInertia, dt);
+        for (const bed of beds) {
+            if (bed !== null) {
+                bedRelax(bed);
+            }
+        }
         steps++;
         const now = steps * dt;
         if (trace !== null && (steps % every === 0 || (t < releaseAt && releaseAt <= now))) {
             trace.push({ t: now, head: state });
         }
-        const turfMoving = trackTurf(balls, setup, track, now, events);
+        const turfMoving = trackTurf(balls, setup, beds, fresh, track, now, events);
         if (turf === null) {
             if (!grounded && headLowestPoint(state, head) < 0) {
                 grounded = true;
@@ -975,6 +1062,11 @@ export function integrateStroke(setup: ImpactSetup, options: ImpactOptions = {},
         }
     }
 
+    beds.forEach((bed, i) => {
+        if (bed !== null && heldDepth(bed) > TURF_PIT_DEPTH) {
+            events.push({ kind: "impact-turf-pit", t: steps * dt, ball: ids[i] as BallId });
+        }
+    });
     const run = finish(setup, state, balls, pairs, turf, jumps, events, steps, steps * dt, touchingAtStart);
     const done =
         grip.releasedAt === null ? run : { ...run, release: { t: grip.releasedAt, deltaTheta: grip.releaseDelta } };

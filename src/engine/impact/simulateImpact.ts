@@ -1,16 +1,17 @@
 /**
  * Phase 1 of a shot (P2b.1 design §3). Checks the ContactState and the balls. Solves every linear contact law once:
- * ball–ball once, ball–turf once per ball from the surface where it lies, and the head–turf law once for a tracked
- * drive, from the surface under the head's lowest point. The face–ball law is the pair's reduced mass and the face's
- * friction, from which each closure sets its own (P2b.2b.2b.2a design §3.3). Prepares a tracked drive once
- * (track.ts). Starts each ball at its static turf sink m·g/k_turf, so that the impact does not open with a spurious
- * bounce. Each obstacle's law is solved once: the ball's mass (the obstacle is immovable), the obstacle's material
- * and its own contact time. Integrates the impact and hands the balls over to phase 2.
+ * ball–ball once, and the head–turf law once for a tracked drive, from the surface under the head's lowest point.
+ * Each ball's turf is its bed's law, from the surface where it lies (turfBed.ts bedLawOf; P2b.2b.2b.2a design §4).
+ * The face–ball law is the pair's reduced mass and the face's friction, from which each closure sets its own
+ * (P2b.2b.2b.2a design §3.3). Prepares a tracked drive once (track.ts). Starts each ball at its static sink on the bed
+ * (turfBed.ts staticSink, at its own position), so that the impact does not open with a spurious bounce. Each
+ * obstacle's law is solved once: the ball's mass (the obstacle is immovable), the obstacle's material and its own
+ * contact time. Integrates the impact and hands the balls over to phase 2.
  */
 import { CONTACT_TOLERANCE } from "../detect";
 import { contactReference } from "../../reference/index";
 import { dot, horizontal, length, sub, vec3, type Vec3 } from "../math/vec3";
-import { BALL_IDS, type BallParams, type BallState, type BallStates, type SurfaceProps, type World } from "../types";
+import { BALL_IDS, type BallState, type BallStates, type World } from "../types";
 import { obstaclesOf, validateWorld } from "../world";
 import { lawFromContactTime, lawFromStiffness, type PairLaw } from "./contactLaw";
 import { headBottom, headLowestPoint, outsideObstacle } from "./contacts";
@@ -25,6 +26,7 @@ import {
     type ImpactSetup,
 } from "./integrate";
 import { FREE_STEP, pitchAxis, prepareTrack } from "./track";
+import { bedLawOf, staticSink } from "./turfBed";
 import type {
     ContactState,
     DriveSample,
@@ -241,14 +243,6 @@ function validateTrack(drive: TrackDrive): void {
 }
 
 /**
- * Depth (m) at which a ball at rest sinks into the turf, m·g/k_turf: where its turf spring carries its weight. The one
- * definition both validateImpact and prepareImpact use, so the validated position is where the impact starts the ball.
- */
-function staticSink(ball: BallParams, gravity: number, surface: SurfaceProps): number {
-    return (ball.mass * gravity) / surface.turfStiffness;
-}
-
-/**
  * Distance (m) from `centre` to the solid head cylinder (axis = body x, half-length L/2, radius r), or 0 inside it.
  * Covers the faces, the rims and the barrel, which `faceContact` does not (it misses the barrel and accepts a rim
  * overlap as OFF_FACE).
@@ -265,7 +259,9 @@ function cylinderDistance(contact: ContactState, centre: Vec3): number {
  * - a ball not at rest on the turf;
  * - two balls overlapping, or a ball overlapping an obstacle, by more than CONTACT_TOLERANCE (a ball touching one is
  *   accepted, and prepareImpact starts it at zero gap);
- * - the head (faces, rims or barrel) in a ball at its static sink, or in the turf, at t = 0;
+ * - turf under a ball with a non-positive or non-finite bedModulus or bedRecovery (the bed, P2b.2b.2b.2a design §4.6);
+ * - the head (faces, rims or barrel) in a ball at its static sink on the bed (turfBed.ts staticSink, at its own
+ *   position), or in the turf, at t = 0;
  * - a force table that is empty, does not start at 0 or does not increase strictly;
  * - a tracked drive whose arc, coupling or hands are out of range (P2b.2b.1 design §3.6; the head need not start on
  *   its path);
@@ -317,8 +313,8 @@ export function validateImpact(contact: ContactState, balls: BallStates, world: 
             fail(`ball ${id} is not at rest on the turf`);
         }
         const surface = world.lawn.surfaceAt(p);
-        positive(surface.turfStiffness, `turfStiffness at ball ${id}`);
-        restitution(surface.turfRestitution, `turfRestitution at ball ${id}`);
+        positive(surface.bedModulus, `bedModulus at ball ${id}`);
+        positive(surface.bedRecovery, `bedRecovery at ball ${id}`);
         friction(surface.slidingFriction, `slidingFriction at ball ${id}`);
         for (const o of obstacles) {
             if (length(horizontal(sub(p, o.centre))) - R - o.radius < 0 - CONTACT_TOLERANCE) {
@@ -333,7 +329,7 @@ export function validateImpact(contact: ContactState, balls: BallStates, world: 
         // The whole cylinder, with CONTACT_TOLERANCE: a face exactly touching the ball is valid at any orientation.
         // Checked where the impact starts the ball, at its static sink (prepareImpact): a face tilted upwards that
         // touches the ball at z = R would otherwise start pressed sink·n_z into it.
-        const sunk = vec3(p.x, p.y, R - staticSink(world.ball, world.gravity, surface));
+        const sunk = vec3(p.x, p.y, R - staticSink(p.x, p.y, R, world.ball.mass * world.gravity, bedLawOf(surface)));
         if (cylinderDistance(contact, sunk) < R - CONTACT_TOLERANCE) {
             fail(`head penetrates ball ${id}`);
         }
@@ -341,15 +337,17 @@ export function validateImpact(contact: ContactState, balls: BallStates, world: 
 }
 
 /**
- * Solves every law and places each ball at its static turf sink: z = R − m·g/k_turf, where its turf spring carries
- * exactly its weight. A tracked drive is prepared once (prepareTrack): its windows' end states, its reach, its swung
- * body and, in swing mode, its free pendulum's table. Touching balls stay touching, as equal balls on equal turf sink
- * equally. Input must have passed validateImpact. A ball touching an obstacle, which validateImpact accepts within
- * CONTACT_TOLERANCE, is moved horizontally outward until its penetration is at most zero (at most CONTACT_TOLERANCE): a
- * closed pair from t = 0 would hold the impact open against turf friction and fake a crush on a legal stroke (P2b.2a
- * design §4). Correcting for one obstacle can push the ball back into another, so the ordered pass over the obstacles
- * repeats until a pass moves nothing, at most PLACEMENT_PASSES times; a ball clear after the first pass is not moved
- * again. Throws an Error if the last pass still moved a ball, i.e. the placement did not settle.
+ * Solves every law and places each ball at its static sink on the bed (turfBed.ts staticSink, at its own position),
+ * where a fresh bed's cells carry exactly its weight; each ball's entry carries its bed's law. A tracked drive is
+ * prepared once (prepareTrack): its windows' end states, its reach, its swung body and, in swing mode, its free
+ * pendulum's table. Touching balls stay touching: their sinks differ only with their offsets on the lattice, by up to
+ * about 8 µm on the default lawn, so they part by at most Δz²/(4R), about 3e-10 m. Input must have passed
+ * validateImpact. A ball touching an obstacle, which validateImpact accepts within CONTACT_TOLERANCE, is moved
+ * horizontally outward until its penetration is at most zero (at most CONTACT_TOLERANCE): a closed pair from t = 0
+ * would hold the impact open against turf friction and fake a crush on a legal stroke (P2b.2a design §4). Correcting
+ * for one obstacle can push the ball back into another, so the ordered pass over the obstacles repeats until a pass
+ * moves nothing, at most PLACEMENT_PASSES times; a ball clear after the first pass is not moved again. Throws an Error
+ * if the last pass still moved a ball, i.e. the placement did not settle.
  */
 export function prepareImpact(contact: ContactState, balls: BallStates, world: World): ImpactSetup {
     const { ball, gravity } = world;
@@ -360,8 +358,8 @@ export function prepareImpact(contact: ContactState, balls: BallStates, world: W
         if (!s) {
             continue;
         }
-        const surface = world.lawn.surfaceAt(s.position);
-        const sink = staticSink(ball, gravity, surface);
+        const law = bedLawOf(world.lawn.surfaceAt(s.position));
+        const sink = staticSink(s.position.x, s.position.y, ball.radius, ball.mass * gravity, law);
         let position = vec3(s.position.x, s.position.y, s.position.z - sink);
         let settled = false;
         for (let pass = 0; pass < PLACEMENT_PASSES && !settled; pass++) {
@@ -380,7 +378,7 @@ export function prepareImpact(contact: ContactState, balls: BallStates, world: W
         entries.push({
             id,
             state: { ...s, position },
-            turf: lawFromStiffness(ball.mass, surface.turfRestitution, surface.turfStiffness, surface.slidingFriction),
+            turf: law,
         });
     }
     const faceMass = (contact.head.mass * ball.mass) / (contact.head.mass + ball.mass);

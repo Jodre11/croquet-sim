@@ -11,6 +11,7 @@ import {
     prepareTrack,
     swungBody,
 } from "../../../src/engine/impact/track";
+import { bedLawOf, staticSink } from "../../../src/engine/impact/turfBed";
 import type { ContactState, Downswing, StrokeMode, TrackDrive } from "../../../src/engine/impact/types";
 import { add, cross, dot, horizontal, length, scale, sub, vec3, type Vec3 } from "../../../src/engine/math/vec3";
 import {
@@ -41,15 +42,18 @@ import type { BallState } from "../../../src/engine/types";
 import { defaultWorld } from "../../../src/engine/world";
 import { contactReference, malletReference, swingReference } from "../../../src/reference/index";
 import { ReferenceDataError } from "../../../src/reference/schema";
-import { TEST_BALL, TEST_TURF, ballAt, testWorld } from "../support/fixtures";
+import { TEST_BALL, ballAt, testWorld } from "../support/fixtures";
 import { TEST_HANDS, mirrorBall, mirrorContact, mirrorQuat, mirrorSpin, mirrorVec, recorder } from "../support/impact";
 import { CANONICAL_CLEARANCE, GC_STOP_GAP, backswingFor, canonicalSetup, testProfile } from "../support/shot";
 
 const WORLD = testWorld();
 const R = TEST_BALL.radius;
-/** The striker's sunk centre height, where the face is placed against it. */
-const SUNK_Z = R - (TEST_BALL.mass * WORLD.gravity) / TEST_TURF.turfStiffness;
 const BLUE = ballAt(5, 3);
+/**
+ * The striker's sunk centre height, where the face is placed against it: R less its static sink on the bed at its
+ * position (P2b.2b.2b.2a: turf bed; was R − m·g/k_turf).
+ */
+const SUNK_Z = R - staticSink(5, 3, R, TEST_BALL.mass * WORLD.gravity, bedLawOf(WORLD.lawn.surfaceAt(BLUE.position)));
 /** The test profile's top hand (the arc radius), and the test head's radius and length. */
 const TOP = 0.8;
 const RHO = 0.032;
@@ -294,7 +298,8 @@ describe("swingApproach", () => {
     it("finds a low swing's downswing in the turf before contact, at its least clearance", () => {
         // Level, the ball met 10 mm above the face centre: the head's lowest point is h₀ − 0.01 − ρ clear at contact.
         // The top hand is still, so swung back by φ the head's front rim dips to P_z − (r + 2ρ)·cos φ − (L/2)·sin φ,
-        // least at tan φ* = (L/2)/(r + 2ρ): about 3.64 mm in the turf (P2b.2b.1's coasting figure: the same circle).
+        // least at tan φ* = (L/2)/(r + 2ρ): about 3.94 mm in the turf (P2b.2b.2b.2a: turf bed, h₀ on the test bed's
+        // sink; was 3.64 mm, P2b.2b.1's coasting figure: the same circle).
         const c = buildContact(shot({ contact: { up: 0.01, side: 0 } }), WORLD);
         const pose = contactPose(shot({ contact: { up: 0.01, side: 0 } }), WORLD);
         const still = vec3(0, 0, 0);
@@ -371,16 +376,20 @@ describe("buildContact, mirrored", () => {
  * The downswing's least clearance on each canonical setup. The swing presets swing about a still top hand, so theirs
  * is the circle's: P2b.2b.1's coasting approach on prototype aeadd4c's geometry (the level presets' minimum lies
  * 36.25 ms before contact at 3 m/s, the AC stop's 56 ms). The rolls' hands rise behind contact and their pendulum
- * swings the head up, already past the rim's lowest angle, so theirs is at contact: CANONICAL_CLEARANCE.
+ * swings the head up, already past the rim's lowest angle, so theirs is at contact: CANONICAL_CLEARANCE. Every figure
+ * moves with the sink h₀ = R − δ₀ (CANONICAL_CLEARANCE's δ₀, the bed's static sink at the striker's position).
  */
 const CANONICAL_APPROACH: Readonly<Record<StrokeType, number>> = {
-    "single-ball": 0.51544e-3,
-    drive: 0.51544e-3,
-    "stop-ac": 7.2281e-3,
-    "stop-gc": 0.51544e-3,
-    "half-roll": 29.9165e-3,
-    "full-roll": 37.0506e-3,
-    "pass-roll": 40.1551e-3,
+    // P2b.2b.2b.2a: turf bed (was 0.51544e-3, at δ₀ = m·g/k_turf): 0.3962 mm lower, as h₀.
+    "single-ball": 0.1189e-3,
+    drive: 0.1189e-3,
+    // P2b.2b.2b.2a: turf bed (was 7.2281e-3).
+    "stop-ac": 6.8318e-3,
+    "stop-gc": 0.1189e-3,
+    // P2b.2b.2b.2a: turf bed: CANONICAL_CLEARANCE's (was 29.9165e-3, 37.0506e-3 and 40.1551e-3).
+    "half-roll": 29.5203e-3,
+    "full-roll": 36.6544e-3,
+    "pass-roll": 39.7589e-3,
 };
 
 /** Each preset's default lean in degrees (P2b.2b.2b.1 design §4): the swing presets' unchanged, the rolls' Gugan's. */

@@ -1,7 +1,8 @@
 /**
  * Impact probe (P2b.1 design §1: recorded, not gated). On the default world, with the sourced head and face
  * (reference/mallet.json, contact.json), reports:
- * - stiffness sensitivity: each stiffness swept across its reference bounds, and the handover;
+ * - stiffness sensitivity: the ball–ball contact time swept across its reference bounds, and the bed's modulus and
+ *   recovery each at ×½ and ×2 of its fitted value, and the handover;
  * - the stop-shot probe: whether the striker's ball clears the turf while it transfers its momentum, and where it
  *   meets the croqueted ball;
  * - the crush distance: the largest gap to an upright straight ahead that still raises 29.1.8, per head speed
@@ -79,9 +80,15 @@ const STROKES: readonly Stroke[] = [
     },
 ];
 
-function withTurf(stiffness: number): World {
+/** The default world with its lawn's bed set to `modulus` (N/m³) and `recovery` (s). */
+function withBed(modulus: number, recovery: number): World {
     const surface = BASE.lawn.surfaceAt(vec3(0, 0, 0));
-    return { ...BASE, lawn: uniformLawn(BASE.lawn.width, BASE.lawn.length, { ...surface, turfStiffness: stiffness }) };
+    const lawn = uniformLawn(BASE.lawn.width, BASE.lawn.length, {
+        ...surface,
+        bedModulus: modulus,
+        bedRecovery: recovery,
+    });
+    return { ...BASE, lawn };
 }
 
 const fmt = (x: number, digits = 4): string => x.toFixed(digits);
@@ -101,18 +108,22 @@ function report(label: string, stroke: Stroke, face: FaceMaterial, world: World)
 
 function sweep(): void {
     console.log(
-        "== Stiffness sensitivity (each swept across its reference bounds; the face law is Gugan's fits, not a swept " +
-            "time) ==",
+        "== Stiffness sensitivity (the ball–ball time swept across its reference bounds, the bed's fitted values " +
+            "×½ and ×2, as it has no bounds; the face law is Gugan's fits, not a swept time) ==",
     );
     const [blo, bhi] = contactReference.ballBallContactTime.bounds as [number, number];
-    const [tlo, thi] = contactReference.ballTurfStiffness.bounds as [number, number];
+    const modulus = contactReference.bedModulus.value;
+    const recovery = contactReference.bedRecovery.value;
     for (const stroke of STROKES) {
         report("reference", stroke, FACE, BASE);
         for (const T of [blo, bhi]) {
             report(`ball–ball contact ${fmt(T * 1e3, 2)} ms`, stroke, FACE, { ...BASE, ballBallContactTime: T });
         }
-        for (const k of [tlo, thi]) {
-            report(`turf ${k.toExponential(2)} N/m`, stroke, FACE, withTurf(k));
+        for (const k of [modulus / 2, modulus * 2]) {
+            report(`bed modulus ${k.toExponential(2)} N/m³`, stroke, FACE, withBed(k, recovery));
+        }
+        for (const tau of [recovery / 2, recovery * 2]) {
+            report(`bed recovery ${fmt(tau * 1e3, 3)} ms`, stroke, FACE, withBed(modulus, tau));
         }
     }
 }

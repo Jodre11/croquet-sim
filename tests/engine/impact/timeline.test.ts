@@ -1,20 +1,16 @@
 import { describe, expect, it } from "vitest";
 import { ZERO, vec3 } from "../../../src/engine/math/vec3";
-import {
-    closeFace,
-    faceContactTimeAt,
-    lawFromContactTime,
-    lawFromStiffness,
-} from "../../../src/engine/impact/contactLaw";
+import { closeFace, faceContactTimeAt, lawFromContactTime } from "../../../src/engine/impact/contactLaw";
 import { faceClearance } from "../../../src/engine/impact/contacts";
 import { IMPACT_DT, integrate, type ImpactObstacle, type ImpactSnapshot } from "../../../src/engine/impact/integrate";
 import { IDENTITY } from "../../../src/engine/impact/rigidBody";
 import { closeTimeline, emptyTimeline, inGap, noteClearance, recordStep } from "../../../src/engine/impact/timeline";
+import { staticSink } from "../../../src/engine/impact/turfBed";
 import type { ContactInterval, HeadState } from "../../../src/engine/impact/types";
 import type { BallState } from "../../../src/engine/types";
 import { STANDARD_GRAVITY } from "../../../src/engine/world";
 import { TEST_BALL } from "../support/fixtures";
-import { TEST_HEAD, faceLaw, freeBall, isolated, recorder } from "../support/impact";
+import { TEST_HEAD, faceLaw, freeBall, isolated, recorder, testBed } from "../support/impact";
 
 const R = TEST_BALL.radius;
 const M = TEST_BALL.mass;
@@ -151,18 +147,18 @@ describe("the integrator's timeline", () => {
     });
 
     it("ends an interval still open when the impact ends at the impact's duration", () => {
-        const k = 2e5;
-        const sink = (M * STANDARD_GRAVITY) / k;
+        // P2b.2b.2b.2a: turf bed (was a plane spring of 2e5 N/m at its sink m·g/k).
+        const sink = staticSink(0, 0, R, M * STANDARD_GRAVITY, testBed());
         const run = integrate(
             isolated({
                 gravity: STANDARD_GRAVITY,
-                balls: [freeBall("blue", vec3(0, 0, R - sink), ZERO, lawFromStiffness(M, 0.5, k, 0.3))],
+                balls: [freeBall("blue", vec3(0, 0, R - sink), ZERO, testBed())],
             }),
             { cap: 1e-4 },
         );
         const turf = run.timeline["turf/blue"] ?? [];
         expect(turf).toEqual([{ start: 0, end: run.duration, peakForce: expect.any(Number) }]);
-        // The ball rests at its static sink, so its turf spring carries its weight throughout.
+        // The ball rests at its static sink, so its bed's cells carry its weight throughout.
         expect(turf[0]?.peakForce).toBeGreaterThan(0);
     });
 

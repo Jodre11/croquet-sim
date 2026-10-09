@@ -1,10 +1,11 @@
 /**
  * Contacts of the impact phase (P2b.1 design §4): the pair list and each pair's geometry. A pair is body A acting on
- * body B along the unit normal n from A to B: the mallet face on a ball, the earlier ball in BALL_IDS order on the
- * later one, or the turf on a ball. Penetration δ > 0 means the pair is closed. The contact point lies on the
- * normal's line, δ/2 inside ball B's undeformed surface: x = c_B − (R − δ/2)·n. The ball–obstacle pair (P2b.2a design
- * §4) acts from a hoop upright or the peg, an immovable vertical cylinder, along the horizontal normal from its axis to
- * the ball's centre. The head–turf pair (P2b.2b.1 design §4.1) acts from the turf on the head's lowest point, along ẑ.
+ * body B along the unit normal n from A to B: the mallet face on a ball, or the earlier ball in BALL_IDS order on the
+ * later one (the ball–turf pair is the bed's, turfBed.ts). Penetration δ > 0 means the pair is closed. The contact
+ * point lies on the normal's line, δ/2 inside ball B's undeformed surface: x = c_B − (R − δ/2)·n. The ball–obstacle
+ * pair (P2b.2a design §4) acts from a hoop upright or the peg, an immovable vertical cylinder, along the horizontal
+ * normal from its axis to the ball's centre. The head–turf pair (P2b.2b.1 design §4.1) acts from the turf on the
+ * head's lowest point, along ẑ.
  * For a tracked drive the face–ball pair meets the whole head, a solid cylinder (design §4.5, headBallContact).
  */
 import { CONTACT_TOLERANCE } from "../detect";
@@ -215,15 +216,6 @@ export function ballBallContact(a: Vec3, b: Vec3, radius: number): Penetration |
     return { normal, depth, point: sub(b, scale(normal, radius - depth / 2)) };
 }
 
-/** The turf's contact with a ball centred at `centre`: closed while z < R, whatever its force (design §4). */
-export function turfContact(centre: Vec3, radius: number): Penetration | null {
-    const depth = radius - centre.z;
-    if (!(depth > 0)) {
-        return null;
-    }
-    return { normal: UP, depth, point: vec3(centre.x, centre.y, centre.z - (radius - depth / 2)) };
-}
-
 /**
  * The contact of `obstacle` with a ball centred at `centre`, or null while they are at least R + r apart
  * horizontally. The obstacle is an infinite vertical cylinder (a ball above a crown is phase 2's jump flag), so the
@@ -306,7 +298,7 @@ export function pairContact(
         case "ball-ball":
             return ballBallContact((balls[pair.a] as BallState).position, centre, radius);
         case "ball-turf":
-            return turfContact(centre, radius);
+            throw new Error("the ball–turf pair is the bed's (turfBed.ts bedLoad)");
         case "ball-obstacle":
             return obstacleContact(centre, radius, obstacles[pair.a] as ObstacleGeometry);
     }
