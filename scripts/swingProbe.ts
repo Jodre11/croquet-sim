@@ -100,8 +100,14 @@ const COACHING: Readonly<Record<StrokeType, string>> = {
     "pass-roll": "below 1",
 };
 
-/** The impact flags design §9 counts. */
-const FLAGS = ["impact-head-deep", "impact-cap", "impact-head-approaching", "impact-off-face"] as const;
+/** The impact flags design §9 counts, and the turf bed's pit flag (P2b.2b.2b.2a design §4.6, §6). */
+const FLAGS = [
+    "impact-head-deep",
+    "impact-cap",
+    "impact-head-approaching",
+    "impact-off-face",
+    "impact-turf-pit",
+] as const;
 
 /** One shot: its contact state, its impact with every snapshot, and phase 2. */
 interface Run {

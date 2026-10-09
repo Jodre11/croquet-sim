@@ -403,3 +403,103 @@ Recorded:
   the user's observation on spin after a bounce.
 - A new "P2b.2b.2b.2a outcomes" section with §6's figures.
 - "Provisional numbers" unchanged.
+
+## Amendments (implementation, 2026-10-09)
+
+The plan's decisions, the user's decisions during the run, the controller's rulings and the behaviour the design did
+not predict. The figures are in the roadmap's "P2b.2b.2b.2a outcomes (2026-10-09)".
+
+**The plan's decisions.**
+
+- **1. The two-ball guard is on the footprints** (§4.1; user confirmed before planning). Every croquet stroke starts
+  with two touching balls on the bed, 2R apart, so a guard at 2R + h would reject every croquet stroke. The engine
+  throws when two balls holding cells have centres closer horizontally than ρ_a + ρ_b + h, ρ = √(R² − z²) each
+  footprint's radius. The user: "also a problem if a ball bounces in roquet / the area of actual turf contact is
+  always going to be significantly smaller then the cross section of the ball".
+- **2. The tangential spring keeps its force when its stiffness grows** (§3.5, §4.3). The carried ξ is scaled by
+  k_before/k_now when k_t grows and kept when it shrinks, so the stored energy never rises without slip. The linear
+  laws' pairs are unchanged.
+- **3. A probe sample carries its stored energy** (`ContactSample.storedEnergy`: ½·k·δ², (2/5)·k·δ^{5/2} or
+  Σ ½·A·k_w·w²) and a face pair's `closingSpeed`.
+- **4. Fits are a new reference entry shape**, `{ form, coefficients, range, rangeUnit, source, provenance, note }`,
+  read by `readFit`. The bed's fitted pair is the one impact value without bounds.
+- **5. The face table is built on the first closure**, not at module load (§3.4); the numbers are the same. It builds
+  in about 51 ms.
+- **6. The bouncing rule is written in its reduced form**, ½·m·v_z² + U_f(δ) − m·g·δ > 0: §4.6's E > E(0) with both
+  sides expanded.
+- **7. The new flags are events**: `impact-turf-pit` an `ImpactEvent`, `landing-cap` a `ShotEvent`.
+- **8. The shadow-energy test** drops its face case (a Hertzian spring has no exact shadow energy under semi-implicit
+  Euler) and moves its turf case to a bed with zero recovery; `invariants.test.ts` carries the Hertzian and bed
+  energies through `storedEnergy` (§5.2).
+- **9. `TurfAt` returns the sliding friction alone**, since phase 2 no longer reads the turf's restitution (§4.7).
+- **10. Phase 2 gains a landing probe**, `SimulationOptions.landings`, for the shot mix's per-landing figures and work
+  counts (§6).
+- **11. The low-speed gate always stops for the user** (§4.4), whatever its figures show.
+- **12. The shot mix's world takes the default lawn's bed**, so its landing figures are the fitted lawn's.
+
+**The user's decisions during the run.**
+
+- **The lattice's sideways push** (§4.1, §5.1). The 2 mm lattice pushes a resting ball sideways with up to about
+  1.4e-3 of its weight (none at a cell centre or corner; 1.2e-3 at h/6, 1.3e-3 at h/4 and 1.0e-3 at h/3 on the
+  diagonal, 1.4e-3 at h/3 along x), about 70 times the planning estimate. Off-centre a resting ball rolls as
+  a = F/(1.4·m): about 0.35 µm in 10 ms and 6.4 µm per axis in 50 ms. Accepted and recorded: §5.1's rest test runs
+  10 ms, not 50 ms, with its 1 µm bound, and a test pins the push at no more than 1.5e-3 of the weight off-centre and
+  about zero at a cell centre or corner.
+- **The low-speed gate** (§4.4): accept and record. The bed keeps its two fitted parameters (k_w 1.62461e8 N/m³,
+  τ_r 7.55047e-4 s). Recorded for P3's lawn presets: e 0.62–0.66 over 0.2–1 m/s, rising as the speed falls (the
+  Kelvin–Voigt signature), and 0.38 at 0.1 m/s, where Penner's golf analogue falls towards 0.51; drops of 0.05, 0.1
+  and 0.3 m settle in 7, 7 and 8 landings; the held-out A2R and A3R penetrations are 5.31 and 5.81 mm against Gugan's
+  4.0 and 5.0 (the model's depth goes as about v^0.6 against Gugan's near-linear rise; about 4.9 and 5.5 mm if the
+  model's own e converts the rebound speeds). The user observed, anecdotally, that a golf ball is smaller, lighter and
+  more elastic than a croquet ball; on turf the ball's own elasticity matters little, and m/R² is about twice as high
+  for croquet, so it sinks deeper and Penner's 0.51 is likely a generous analogue. A note beside the comparison, not
+  a fit target.
+- **The pass roll pinned in its pit** (§1: no stroke or hand behaviour changes). On the bed, the canonical pass roll's
+  follow-through (the face leaning 34°, the hands slowing the head over about 60 ms) pins the striker's ball in its
+  pit: it is handed over at 0.038 m/s punched and 0.088 m/s coasted (coasted was already 0.29 m/s on the Hertzian
+  face alone, from the prototype's 1.099 m/s). The "punch beats coast" test is `it.fails`, owned by P2b.2b.2b.2b
+  (the roll's stroke), and the roadmap records it as a model finding.
+- **The probe's findings** (§6; user decision after the probe: record all five as findings, before → after):
+  - the pass roll's ratio at 2, 2.5, 3, 3.5 and 4 m/s is 7.45, 11.27, 16.00, 20.47 and 29.21 (was 1.57, 1.12, 1.01,
+    0.96, 0.95): its dead stop holds at every speed, not just the canonical;
+  - in the pass roll's late re-hit sweep, 15 of 225 runs (all at 1 m/s) end the impact with the head overlapping blue
+    (was none, on any preset), and 88 cross a ball (was 57). This is a validity item P2b.2b.2b.2b must close;
+  - the late re-hit sweep's crossings elsewhere: drive 18 of 165 (was 0), half roll 104 of 225 (45), full roll 5 (27),
+    GC stop 39 (33), AC stop 12 (13); no canonical crosses a ball;
+  - the drive's ratio at 3 m/s is 2.92 (was 3.32), below its coaching 3–4: recorded only, as coaching ratios are never
+    targets;
+  - the cost (machine-dependent): the roll impacts 6.8–12.0 µs/step (was 1.7–1.8), the pass roll's `simulateImpact`
+    344 ms (was 38), and the shot mix's engine time per shot p50 4.1, p99 53 and max 91 ms (was 0.23, 10 and 25),
+    recorded beside P5's provisional 200 ms.
+
+  The first three are one mechanism: under the new laws the face and the follow-through keep working on a striker's
+  ball sitting in its pit, the pass roll's pinning above, which the user deferred to P2b.2b.2b.2b's stroke work.
+
+**The controller's rulings.**
+
+- **Gugan's 0.79 ms at 5.50 m/s** is a 0.01 ms rounding: the fit gives 0.785 ms, and the test checks |T − 0.79 ms|
+  < 0.01 ms.
+- **"Rises from zero at touch"** (§3.2) compares the force at δ = 1e-12 m with that at 1e-5 m (below 1e-3 of it). The
+  plan's absolute bound of 1e-3 N was mis-scaled: c·√δ·U is about 0.019 N there.
+- **The cell-recovery test** releases cells through the law, with an upward velocity, and asserts that they exist; the
+  plan's version teleported the ball, which reset every cell.
+- **e and T at the impact's 5 µs step** (§5.1, recorded, not gated), which no task scheduled, are printed by
+  `scripts/strokeProbe.ts`'s `face` section.
+- **The phase-2 mirror test across x = 15** is re-recorded at precision 5: the bed is bit-exact only across y = 0
+  (§4.1), and a µm hop's last-ulp difference grows to about 3e-6 m through the collisions.
+
+**Behaviour the design did not predict.**
+
+- **The Hertzian face** (§3). The straight croquet drive's 1.1 ms re-catch merges into its first contact, and its
+  `impact-off-face` at 74 ms is gone; the timeline's double tap has three face intervals, not two; the fuzz's worst
+  face penetration rises from 1.4 to 1.89 mm (its bounds kept); an inclined-face test runs 0.06 s (was 0.02) with
+  bounds 2e-4 and 1e-4 (were 1e-5 and 1e-6), because k_t and c_t ∝ √δ ring down slowly at light load. No scenario
+  re-touches the face, so the re-touch test pushes an isolated head.
+- **The bed in the impact** (§4.6). The stance's contact height moves 0.396 mm, not about 0.26 mm (that assumed
+  k_w ≈ 3e8 N/m³; δ₀ ∝ k_w^−½). A centre-struck ball is handed over rising at about 4.7 mm/s, a µm vertical
+  oscillation on the bed cut at the drive window's close, so routine strokes now give phase 2 a µm hop and a landing
+  on the bed. A resting ball away from y = 0 drifts at about 1e-16 m/s from rounding.
+- **Landings on the bed** (§4.7). A 0.5 m drop settles in 4 landings (was 12), against §4.7's expectation that a small
+  hop may take more bounces: the settling rule ends the low-speed bounces. The cap's test lawn with τ_r 10 s did not
+  cap, as τ_r is also each cell's damping; the test uses k_w 1e5 N/m³ and τ_r 2e-3 s. Exit criterion 2: the phase-2
+  digest's shots with no landing are identical (299, none moved), and the 301 with a landing move.
