@@ -1033,8 +1033,9 @@ the fit's in `…-turfFit.txt`. Observations, not gates, but for exit criteria 2
     `landing-cap` never;
   - the landings' cost, counted apart from the solver's work units: steps per shot p50 1,645, p99 13,222, max 22,963;
     bed column visits per shot p50 92,232, p99 1,441,285, max 2,243,606. The engine's time per shot (machine-
-    dependent) p50 4.1 ms, p99 53.3 and max 91.2 (was 0.23, 10.0 and 25.4). The rise is the landings': the solver's
-    time barely moved, and the worst shot is now a hoop shot with no solve;
+    dependent) p50 4.1 ms, p99 53.3 and max 91.2 (was 0.23, 10.0 and 25.4). The solver's time rose less, p99 3.3 to
+    5.9 ms and max 7.8 to 13.1; the landings carry the rest: the median shot has no solve but 1,645 landing steps,
+    and the worst shot is now a hoop shot with no solve;
   - the spin against the user's observation: its size fell on 82.6 % of the landings, the median ratio after to
     before 0.9525.
 - **The full roll at 2 m/s against the roll as played** (`asPlayed`; the baseline for P2b.2b.2b.2b, against "The
