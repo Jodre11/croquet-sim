@@ -208,6 +208,14 @@ the ball holds no cell. Two targets, two parameters; the fit is solved to 1e-4 r
 `contact.json` with the derivation. No bounds are given (they are optional in `reference/README.md`); lawn presets
 are P3's. An order-of-magnitude estimate for the plan: the energy balance at 7.2 mm gives k_w ≈ 3e8 N/m³.
 
+**Low-speed pre-flight gate** (user decision, 2026-10-09). The bed's only loss is its recovery lag, which grows with
+speed, so at low speed its e tends towards 1. Real thatch also loses energy at a rate-independent level: Penner's golf
+turf levels off near 0.51, and no croquet measurement below 5 m/s was found (Gugan 1's bounce tests are on wood and
+steel). The plan's first task after the fit therefore records the fitted bed's e over 0.1–6 m/s and the bounce counts
+of a ball dropped from 0.05, 0.1 and 0.3 m until it settles. If e runs well above about 0.6 at low speed, or the bounce
+counts pile up, the plan stops and brings the user the options (for example a rate-independent floor, cells unloading
+stiffer than they load, with Penner's low-speed 0.51 as an analogue) before any landing result is trusted.
+
 ### 4.5 Held-out checks (recorded, not gated)
 
 - Gugan's A2R and A3R penetrations, 4.0 and 5.0 mm, at their implied downward speeds 3.04 and 3.52 m/s (upward speeds
