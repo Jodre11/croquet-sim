@@ -104,8 +104,33 @@ function span(centre: number, rho: number, h: number): readonly [number, number]
 }
 
 /**
- * Updates the cell of column (i, j) under ball state `s` (design §4.2), creating it, held, where the ball's lowest
- * surface over its centre lies below z = 0. Returns its push on the ball (N), or null unless it is held.
+ * Visits the columns of a footprint of radius ρ about (x, y), as span pads it, in the bed's summation order (see the
+ * file header): i ascending, then p = max(j, −j − 1) ascending, calling `pair` once per (i, p) with its mirror pair
+ * j = p and j = −p − 1, each null where it lies outside the footprint's range.
+ */
+function mirrorPairs(
+    x: number,
+    y: number,
+    rho: number,
+    h: number,
+    pair: (i: number, a: number | null, b: number | null) => void,
+): void {
+    const [i0, i1] = span(x, rho, h);
+    const [j0, j1] = span(y, rho, h);
+    const pLo = j0 >= 0 ? j0 : j1 < 0 ? 0 - j1 - 1 : 0;
+    const pHi = Math.max(j1, 0 - j0 - 1);
+    for (let i = i0; i <= i1; i++) {
+        for (let p = pLo; p <= pHi; p++) {
+            const q = 0 - p - 1;
+            pair(i, p >= j0 && p <= j1 ? p : null, q >= j0 && q <= j1 ? q : null);
+        }
+    }
+}
+
+/**
+ * Updates `bed` at column (i, j) under ball state `s` (design §4.2): counts the visit and updates the column's cell,
+ * creating it, held, where the ball's lowest surface over its centre lies below z = 0. Returns its push on the ball
+ * (N), or null unless it is held.
  */
 function column(bed: BallBed, i: number, j: number, s: BallState, radius: number): Vec3 | null {
     bed.visits += 1;
@@ -154,11 +179,12 @@ function column(bed: BallBed, i: number, j: number, s: BallState, radius: number
 }
 
 /**
- * Updates `bed` under ball state `s` and returns its load for a step of `dt` (design §4.2, §4.3), or null while it
- * holds no cell (its friction spring then reset). Visits every column under the ball's footprint ρ = √(R² − z²), and
- * releases every held cell outside it, so a cell's state depends only on itself and the ball (see the file header).
- * Friction acts where the resultant's line meets the ball's surface, below the centre, at µ times the resultant's
- * size; its spring follows §3.5's rule on the bed's tangent stiffness k_w·A·N, carried by carrySpring.
+ * Updates `bed` (its step, cells, held count and friction spring) under ball state `s` and returns its load for a step
+ * of `dt` (design §4.2, §4.3), or null while it holds no cell (its friction spring then reset). Visits every column
+ * under the ball's footprint ρ = √(R² − z²), and releases every held cell outside it, so a cell's state depends only
+ * on itself and the ball (see the file header). Friction acts where the resultant's line meets the ball's surface,
+ * below the centre, at µ times the resultant's size; its spring follows §3.5's rule on the bed's tangent stiffness
+ * k_w·A·N, carried by carrySpring.
  */
 export function bedLoad(bed: BallBed, s: BallState, radius: number, dt: number): BedLoad | null {
     bed.step += 1;
@@ -168,23 +194,15 @@ export function bedLoad(bed: BallBed, s: BallState, radius: number, dt: number):
     let held = 0;
     if (z < radius) {
         const rho = Math.sqrt(radius * radius - z * z);
-        const [i0, i1] = span(x, rho, h);
-        const [j0, j1] = span(y, rho, h);
-        // p = max(j, −j − 1) over [j0, j1]: each p sums its mirror pair (p, −p − 1), whichever of them lie in range.
-        const pLo = j0 >= 0 ? j0 : j1 < 0 ? 0 - j1 - 1 : 0;
-        const pHi = Math.max(j1, 0 - j0 - 1);
-        for (let i = i0; i <= i1; i++) {
-            for (let p = pLo; p <= pHi; p++) {
-                const q = 0 - p - 1;
-                const a = p >= j0 && p <= j1 ? column(bed, i, p, s, radius) : null;
-                const b = q >= j0 && q <= j1 ? column(bed, i, q, s, radius) : null;
-                const pair = a === null ? b : b === null ? a : add(a, b);
-                if (pair !== null) {
-                    held += (a === null ? 0 : 1) + (b === null ? 0 : 1);
-                    resultant = add(resultant, pair);
-                }
+        mirrorPairs(x, y, rho, h, (i, ja, jb) => {
+            const a = ja === null ? null : column(bed, i, ja, s, radius);
+            const b = jb === null ? null : column(bed, i, jb, s, radius);
+            const pair = a === null ? b : b === null ? a : add(a, b);
+            if (pair !== null) {
+                held += (a === null ? 0 : 1) + (b === null ? 0 : 1);
+                resultant = add(resultant, pair);
             }
-        }
+        });
     }
     for (const cell of bed.cells.values()) {
         if (cell.held && cell.seen !== bed.step) {
@@ -277,10 +295,6 @@ export function freshForce(x: number, y: number, radius: number, depth: number, 
     const h = law.cell;
     const R2 = radius * radius;
     const rho = Math.sqrt(R2 - z * z);
-    const [i0, i1] = span(x, rho, h);
-    const [j0, j1] = span(y, rho, h);
-    const pLo = j0 >= 0 ? j0 : j1 < 0 ? 0 - j1 - 1 : 0;
-    const pHi = Math.max(j1, 0 - j0 - 1);
     const one = (i: number, j: number): number => {
         const dx = (i + 0.5) * h - x;
         const dy = (j + 0.5) * h - y;
@@ -292,14 +306,11 @@ export function freshForce(x: number, y: number, radius: number, depth: number, 
         return zb < 0 ? h * h * law.modulus * (0 - zb) : 0;
     };
     let total = 0;
-    for (let i = i0; i <= i1; i++) {
-        for (let p = pLo; p <= pHi; p++) {
-            const q = 0 - p - 1;
-            const a = p >= j0 && p <= j1 ? one(i, p) : 0;
-            const b = q >= j0 && q <= j1 ? one(i, q) : 0;
-            total += a + b;
-        }
-    }
+    mirrorPairs(x, y, rho, h, (i, ja, jb) => {
+        const a = ja === null ? 0 : one(i, ja);
+        const b = jb === null ? 0 : one(i, jb);
+        total += a + b;
+    });
     return total;
 }
 
