@@ -7,7 +7,13 @@ import type { BallStates, SurfaceProps, World } from "../../../src/engine/types"
 import { obstaclesOf, uniformLawn } from "../../../src/engine/world";
 import { obstacleContact } from "../../../src/engine/impact/contacts";
 import type { ImpactBall } from "../../../src/engine/impact/integrate";
-import { prepareImpact, simulateImpact, validateImpact } from "../../../src/engine/impact/simulateImpact";
+import {
+    prepareImpact,
+    simulateImpact,
+    sinkSolver,
+    validateImpact,
+    type SinkSolver,
+} from "../../../src/engine/impact/simulateImpact";
 import { bedLawOf, staticSink } from "../../../src/engine/impact/turfBed";
 import type { ContactState, Coupling, Hands, StrokeMode, SwingArc } from "../../../src/engine/impact/types";
 import { TEST_BALL, TEST_TURF, ballAt, hoopWithUprightAt, testWorld } from "../support/fixtures";
@@ -306,19 +312,33 @@ describe("validation", () => {
 });
 
 describe("the balls' static sinks", () => {
-    it("are solved once, by validateImpact, and taken by prepareImpact", () => {
-        const red = ballAt(5, 0.5);
-        const contact = strike(BLUE.position);
-        const sinks = validateImpact(contact, { blue: BLUE, red }, WORLD);
-        expect(Object.keys(sinks)).toEqual(["blue", "red"]);
+    it("are solved by sinkSolver as staticSink solves them, the same at every call", () => {
+        const sink = sinkSolver(WORLD);
+        const first = sink(BLUE.position);
         const weight = TEST_BALL.mass * WORLD.gravity;
-        expect(sinks.blue).toBe(staticSink(5, 0, R, weight, bedLawOf(WORLD.lawn.surfaceAt(BLUE.position))));
-        expect(sinks.red).toBe(staticSink(5, 0.5, R, weight, bedLawOf(WORLD.lawn.surfaceAt(red.position))));
-        // prepareImpact places a ball at the sink it is given, and solves the same sink itself where it has none.
-        const given = prepareImpact(contact, { blue: BLUE }, WORLD, { blue: 1e-3 });
+        const red = ballAt(5, 0.5);
+        expect(sink(red.position)).toBe(staticSink(5, 0.5, R, weight, bedLawOf(WORLD.lawn.surfaceAt(red.position))));
+        expect(first).toBe(staticSink(5, 0, R, weight, bedLawOf(WORLD.lawn.surfaceAt(BLUE.position))));
+        expect(sink(BLUE.position)).toBe(first);
+    });
+
+    it("are asked of the one solver by validateImpact and prepareImpact, once per ball each", () => {
+        const red = ballAt(5, 0.5);
+        const balls = { blue: BLUE, red };
+        const contact = strike(BLUE.position);
+        const real = sinkSolver(WORLD);
+        const asked: number[] = [];
+        const counted: SinkSolver = (p) => {
+            asked.push(p.y);
+            return real(p);
+        };
+        validateImpact(contact, balls, WORLD, counted);
+        const setup = prepareImpact(contact, balls, WORLD, counted);
+        expect(asked).toEqual([0, 0.5, 0, 0.5]);
+        expect((setup.balls[0] as ImpactBall).state.position).toEqual(SUNK);
+        // prepareImpact places a ball at the sink its solver gives.
+        const given = prepareImpact(contact, { blue: BLUE }, WORLD, () => 1e-3);
         expect((given.balls[0] as ImpactBall).state.position.z).toBe(R - 1e-3);
-        const solved = prepareImpact(contact, { blue: BLUE }, WORLD);
-        expect((solved.balls[0] as ImpactBall).state.position).toEqual(SUNK);
     });
 });
 

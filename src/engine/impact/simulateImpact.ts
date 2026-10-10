@@ -11,7 +11,7 @@
 import { CONTACT_TOLERANCE } from "../detect";
 import { contactReference } from "../../reference/index";
 import { dot, horizontal, length, sub, vec3, type Vec3 } from "../math/vec3";
-import { BALL_IDS, type BallId, type BallState, type BallStates, type World } from "../types";
+import { BALL_IDS, type BallState, type BallStates, type World } from "../types";
 import { obstaclesOf, validateWorld } from "../world";
 import { lawFromContactTime, lawFromStiffness, type PairLaw } from "./contactLaw";
 import { headBottom, headLowestPoint, outsideObstacle } from "./contacts";
@@ -56,8 +56,8 @@ const END_TOLERANCE = 1e-9;
  */
 const PLACEMENT_PASSES = 64;
 
-/** Each present ball's static sink (m) on the bed at its position (turfBed.ts staticSink). */
-export type BallSinks = Partial<Record<BallId, number>>;
+/** A ball's static sink (m) on the bed at a position (turfBed.ts staticSink), as sinkSolver solves it. */
+export type SinkSolver = (position: Vec3) => number;
 
 /**
  * Friction of the mallet head on the turf (P2b.2b.1 design §4.1; reference/contact.json): the analogue of a ball
@@ -258,6 +258,24 @@ function cylinderDistance(contact: ContactState, centre: Vec3): number {
 }
 
 /**
+ * A SinkSolver for `world`'s ball on its lawn: solves the sink at a position once and remembers it. Call it only at a
+ * position whose turf validateImpact checks (bedModulus, bedRecovery); elsewhere staticSink may throw or mislead.
+ */
+export function sinkSolver(world: World): SinkSolver {
+    const { ball, gravity, lawn } = world;
+    const solved = new Map<string, number>();
+    return (p) => {
+        const key = `${p.x} ${p.y}`;
+        let sink = solved.get(key);
+        if (sink === undefined) {
+            sink = staticSink(p.x, p.y, ball.radius, ball.mass * gravity, bedLawOf(lawn.surfaceAt(p)));
+            solved.set(key, sink);
+        }
+        return sink;
+    };
+}
+
+/**
  * Throws a RangeError if the impact's input is invalid (design §3):
  * - a ball not at rest on the turf;
  * - two balls overlapping, or a ball overlapping an obstacle, by more than CONTACT_TOLERANCE (a ball touching one is
@@ -273,9 +291,15 @@ function cylinderDistance(contact: ContactState, centre: Vec3): number {
  * - a non-positive mass, inertia, length, radius or ball–ball contact time;
  * - a restitution outside (0, 1] (ball–ball, ball–upright, peg) or a negative friction;
  * - a non-unit orientation.
- * Returns each ball's static sink, solved for the head check, so that prepareImpact need not solve it again.
+ * A ball's sink comes from `sink`, called only once its turf has been checked; pass prepareImpact the same solver
+ * so that each ball's sink is solved once.
  */
-export function validateImpact(contact: ContactState, balls: BallStates, world: World): BallSinks {
+export function validateImpact(
+    contact: ContactState,
+    balls: BallStates,
+    world: World,
+    sink: SinkSolver = sinkSolver(world),
+): void {
     const { head, face } = contact;
     const R = world.ball.radius;
     positive(head.mass, "head.mass");
@@ -310,7 +334,6 @@ export function validateImpact(contact: ContactState, balls: BallStates, world: 
     }
     const present = BALL_IDS.filter((id) => balls[id]);
     const obstacles = obstaclesOf(world);
-    const sinks: BallSinks = {};
     present.forEach((id, i) => {
         const { position: p, velocity: v, angularVelocity: w } = balls[id] as BallState;
         const still = v.x === 0 && v.y === 0 && v.z === 0 && w.x === 0 && w.y === 0 && w.z === 0;
@@ -334,13 +357,10 @@ export function validateImpact(contact: ContactState, balls: BallStates, world: 
         // The whole cylinder, with CONTACT_TOLERANCE: a face exactly touching the ball is valid at any orientation.
         // Checked where the impact starts the ball, at its static sink (prepareImpact): a face tilted upwards that
         // touches the ball at z = R would otherwise start pressed sink·n_z into it.
-        const sink = staticSink(p.x, p.y, R, world.ball.mass * world.gravity, bedLawOf(surface));
-        if (cylinderDistance(contact, vec3(p.x, p.y, R - sink)) < R - CONTACT_TOLERANCE) {
+        if (cylinderDistance(contact, vec3(p.x, p.y, R - sink(p))) < R - CONTACT_TOLERANCE) {
             fail(`head penetrates ball ${id}`);
         }
-        sinks[id] = sink;
     });
-    return sinks;
 }
 
 /**
@@ -354,14 +374,14 @@ export function validateImpact(contact: ContactState, balls: BallStates, world: 
  * would hold the impact open against turf friction and fake a crush on a legal stroke (P2b.2a design §4). Correcting
  * for one obstacle can push the ball back into another, so the ordered pass over the obstacles repeats until a pass
  * moves nothing, at most PLACEMENT_PASSES times; a ball clear after the first pass is not moved again. Throws an Error
- * if the last pass still moved a ball, i.e. the placement did not settle. A ball's sink is taken from `sinks`
- * (validateImpact's), or solved where it has none.
+ * if the last pass still moved a ball, i.e. the placement did not settle. A ball's sink comes from `sink`
+ * (validateImpact's solver, so that it is solved once).
  */
 export function prepareImpact(
     contact: ContactState,
     balls: BallStates,
     world: World,
-    sinks: BallSinks = {},
+    sink: SinkSolver = sinkSolver(world),
 ): ImpactSetup {
     const { ball, gravity } = world;
     const obstacles = obstaclesOf(world);
@@ -372,8 +392,7 @@ export function prepareImpact(
             continue;
         }
         const law = bedLawOf(world.lawn.surfaceAt(s.position));
-        const sink = sinks[id] ?? staticSink(s.position.x, s.position.y, ball.radius, ball.mass * gravity, law);
-        let position = vec3(s.position.x, s.position.y, s.position.z - sink);
+        let position = vec3(s.position.x, s.position.y, s.position.z - sink(s.position));
         let settled = false;
         for (let pass = 0; pass < PLACEMENT_PASSES && !settled; pass++) {
             settled = true;
@@ -441,8 +460,9 @@ export function simulateImpact(
     options: ImpactOptions = {},
 ): ImpactResult {
     validateWorld(world);
-    const sinks = validateImpact(contact, balls, world);
-    return handedOver(integrate(prepareImpact(contact, balls, world, sinks), options), world);
+    const sink = sinkSolver(world);
+    validateImpact(contact, balls, world, sink);
+    return handedOver(integrate(prepareImpact(contact, balls, world, sink), options), world);
 }
 
 /**
@@ -459,7 +479,8 @@ export function simulateStroke(
         fail("simulateStroke needs a tracked drive");
     }
     validateWorld(world);
-    const sinks = validateImpact(contact, balls, world);
-    const { run, follow } = integrateStroke(prepareImpact(contact, balls, world, sinks), options, true);
+    const sink = sinkSolver(world);
+    validateImpact(contact, balls, world, sink);
+    const { run, follow } = integrateStroke(prepareImpact(contact, balls, world, sink), options, true);
     return { result: handedOver(run, world), follow: follow as FollowThrough };
 }
