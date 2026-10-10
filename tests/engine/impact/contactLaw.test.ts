@@ -312,6 +312,21 @@ describe("the Hertzian force", () => {
         const depth = 3e-5;
         expect(hertzEnergy(closure, depth)).toBeCloseTo(0.4 * closure.stiffness * Math.pow(depth, 2.5), 12);
     });
+
+    it("stores the work of the elastic force, its numerical integral from touch", () => {
+        // ∫₀^δ hertzForce(x, 0) dx by Simpson's rule in u = √x (dx = 2u·du), where the integrand 2u·F(u²) ∝ u⁴ is
+        // smooth, so the rule converges at its full order; independent of hertzEnergy's closed form.
+        const depth = 3e-5;
+        const n = 1000;
+        const step = Math.sqrt(depth) / n;
+        const f = (u: number): number => 2 * u * hertzForce(closure, u * u, 0);
+        let sum = f(0) + f(n * step);
+        for (let i = 1; i < n; i++) {
+            sum += (i % 2 === 1 ? 4 : 2) * f(i * step);
+        }
+        const work = (sum * step) / 3;
+        expect(hertzEnergy(closure, depth) / work).toBeCloseTo(1, 10);
+    });
 });
 
 describe("carrySpring", () => {

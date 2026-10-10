@@ -4,11 +4,13 @@ import type { BallState } from "../../../src/engine/types";
 import { STANDARD_GRAVITY } from "../../../src/engine/world";
 import {
     BED_CELL,
+    bedEnergy,
     bedLoad,
     bedRelax,
     freshBed,
     freshForce,
     freshPotential,
+    heldDepth,
     isBouncing,
     newBallBed,
     staticSink,
@@ -171,6 +173,48 @@ describe("a cell's recovery", () => {
             const expected = (depths.get(key) as number) * Math.exp((-200 * DT) / LAW.recovery);
             expect(Math.abs(cell.w / expected - 1)).toBeLessThan(1e-12);
         }
+    });
+});
+
+describe("the bed's stored energy and held depth", () => {
+    const CENTRE = 0.5 * BED_CELL;
+    const DEPTH = 1e-3;
+
+    it("are zero on a bed with no cell", () => {
+        const bed = newBallBed(LAW, DT);
+        expect(bedEnergy(bed)).toBe(0);
+        expect(heldDepth(bed)).toBe(0);
+    });
+
+    it("store ½·A·k_w·w² per column and hold the full depth under the centre of a ball pressed at rest", () => {
+        const bed = newBallBed(LAW, DT);
+        bedLoad(bed, at(CENTRE, CENTRE, R - DEPTH), R, DT);
+        // Every column whose centre lies within the footprint holds w = δ − (R − √(R² − r²)), enumerated directly.
+        let sum = 0;
+        for (let i = -30; i < 30; i++) {
+            for (let j = -30; j < 30; j++) {
+                const r2 = ((i + 0.5) * BED_CELL - CENTRE) ** 2 + ((j + 0.5) * BED_CELL - CENTRE) ** 2;
+                const w = r2 < R * R ? DEPTH - (R - Math.sqrt(R * R - r2)) : 0;
+                sum += w > 0 ? w * w : 0;
+            }
+        }
+        expect(bedEnergy(bed) / (0.5 * BED_CELL * BED_CELL * LAW.modulus * sum)).toBeCloseTo(1, 12);
+        // The column under the ball's centre is the deepest: its surface lies the full δ below z = 0.
+        expect(heldDepth(bed)).toBeCloseTo(DEPTH, 15);
+    });
+
+    it("keep a released cell's energy, which decays as w², but drop it from the held depth", () => {
+        const bed = newBallBed(LAW, DT);
+        bedLoad(bed, at(CENTRE, CENTRE, R - DEPTH), R, DT);
+        // Rising fast at the same place, every held cell's force goes negative and releases at its depth.
+        bedLoad(bed, at(CENTRE, CENTRE, R - DEPTH, vec3(0, 0, 10)), R, DT);
+        const released = bedEnergy(bed);
+        expect(released).toBeGreaterThan(0);
+        expect(heldDepth(bed)).toBe(0);
+        for (let n = 0; n < 50; n++) {
+            bedRelax(bed);
+        }
+        expect(bedEnergy(bed) / (released * Math.exp((-2 * 50 * DT) / LAW.recovery))).toBeCloseTo(1, 12);
     });
 });
 
