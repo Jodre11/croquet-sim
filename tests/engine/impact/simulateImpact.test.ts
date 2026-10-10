@@ -305,6 +305,23 @@ describe("validation", () => {
     });
 });
 
+describe("the balls' static sinks", () => {
+    it("are solved once, by validateImpact, and taken by prepareImpact", () => {
+        const red = ballAt(5, 0.5);
+        const contact = strike(BLUE.position);
+        const sinks = validateImpact(contact, { blue: BLUE, red }, WORLD);
+        expect(Object.keys(sinks)).toEqual(["blue", "red"]);
+        const weight = TEST_BALL.mass * WORLD.gravity;
+        expect(sinks.blue).toBe(staticSink(5, 0, R, weight, bedLawOf(WORLD.lawn.surfaceAt(BLUE.position))));
+        expect(sinks.red).toBe(staticSink(5, 0.5, R, weight, bedLawOf(WORLD.lawn.surfaceAt(red.position))));
+        // prepareImpact places a ball at the sink it is given, and solves the same sink itself where it has none.
+        const given = prepareImpact(contact, { blue: BLUE }, WORLD, { blue: 1e-3 });
+        expect((given.balls[0] as ImpactBall).state.position.z).toBe(R - 1e-3);
+        const solved = prepareImpact(contact, { blue: BLUE }, WORLD);
+        expect((solved.balls[0] as ImpactBall).state.position).toEqual(SUNK);
+    });
+});
+
 describe("a ball touching an obstacle", () => {
     const PEG = WORLD.peg;
     const reach = R + PEG.radius;
