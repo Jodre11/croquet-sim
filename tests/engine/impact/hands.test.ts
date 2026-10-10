@@ -618,8 +618,10 @@ describe("the tracked end rule", () => {
 
     it("integrates a straight croquet drive's re-contact rather than flagging it", () => {
         const { run } = strikeRun([freeBall("blue", BALL), freeBall("red", RED)]);
-        // Drafting: five face–blue intervals, the second from 1.1 ms, the last a maintained push until the face,
-        // pitching up with the gravity-free swing, leaves blue (impact-off-face at 74 ms); the impact ends at 120.5 ms.
+        // P2b.2b.2b.2a: Hertzian face (was five face–blue intervals, the second from 1.1 ms, the last a maintained push
+        // until the face, pitching up with the gravity-free swing, left blue: impact-off-face at 74 ms; the impact
+        // ended at 120.5 ms): three face–blue intervals, from 0.005, 18.65 and 44.29 ms, no event, and the impact
+        // ends at 115.66 ms.
         expect((run.timeline["face/blue"] ?? []).length).toBeGreaterThanOrEqual(2);
         const kinds = run.events.map((e) => e.kind);
         expect(kinds).not.toContain("impact-head-approaching");
@@ -627,8 +629,10 @@ describe("the tracked end rule", () => {
     });
 
     it("keeps running while the head closes on a ball, and flags it if the cap comes first", () => {
-        // At 2.5 ms the head, slowed below blue by the strike, is closing on it again (drafting: 2.34–3.17 ms).
-        const { run } = strikeRun([freeBall("blue", BALL), freeBall("red", RED)], 2.5e-3);
+        // At 12 ms the head, slowed below blue by the strike, is closing on it again. P2b.2b.2b.2a: Hertzian face (was
+        // 2.5 ms, closing 2.34–3.17 ms): the face's longer contact holds blue through its transfer to red, so the old
+        // re-catch at 1.1 ms is now part of the first interval, and the head next closes 9.27–19.31 ms.
+        const { run } = strikeRun([freeBall("blue", BALL), freeBall("red", RED)], 12e-3);
         expect(run.events.map((e) => e.kind)).toEqual(["impact-cap", "impact-head-approaching"]);
     });
 });

@@ -13,6 +13,7 @@ import swingJson from "../../reference/swing.json";
 import {
     ReferenceDataError,
     readArray,
+    readFit,
     readNumber,
     readQuote,
     readSourced,
@@ -158,14 +159,18 @@ export const frictionReference = {
 } as const;
 
 /**
- * Impact-phase contact data: turf stiffness, contact durations, the tangential ratio, the hand coupling, the default
- * body's arm mass and reach slack, and the head–turf pair.
+ * Impact-phase contact data: turf stiffness, contact durations, the tangential ratio, Gugan's face fits, the hand
+ * coupling, the default body's arm mass and reach slack, and the head–turf pair.
  */
 export const contactReference = {
     ballTurfStiffness: readValue(contactJson, "ballTurfStiffness", "contact"),
+    bedModulus: readValue(contactJson, "bedModulus", "contact"),
+    bedRecovery: readValue(contactJson, "bedRecovery", "contact"),
     ballBallContactTime: readValue(contactJson, "ballBallContactTime", "contact"),
     ballObstacleContactTime: readValue(contactJson, "ballObstacleContactTime", "contact"),
     faceBallContactTime: readValue(contactJson, "faceBallContactTime", "contact"),
+    faceRestitutionFit: readFit(contactJson, "faceRestitutionFit", "contact", ["a", "b", "p"]),
+    faceContactTimeFit: readFit(contactJson, "faceContactTimeFit", "contact", ["t0", "u0", "q"]),
     tangentialStiffnessRatio: readValue(contactJson, "tangentialStiffnessRatio", "contact"),
     handCouplingPeriod: readValue(contactJson, "handCouplingPeriod", "contact"),
     handCouplingDampingRatio: readValue(contactJson, "handCouplingDampingRatio", "contact"),

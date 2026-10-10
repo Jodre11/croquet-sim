@@ -1,0 +1,63 @@
+== Planned contact speed (m/s) and downswing time (ms) against backswing, intensity 0 / 0.5 / 1 ==
+single-ball 0.02 m: 0.624 (463.5) / 2.404 (215.3) / 3.382 (155.8); 0.05 m: 0.987 (465.6) / 3.080 (243.5) / 4.177 (179.8); 0.10 m: 1.396 (469.2) / 3.677 (267.9) / 4.763 (202.1); 0.20 m: 1.974 (476.8) / 4.364 (295.8) / 5.297 (229.5); 0.30 m: 2.418 (485.0) / 4.816 (314.7) / 5.606 (249.2); 0.50 m: 3.121 (503.6) / 5.447 (343.9) / 6.082 (279.9); 0.70 m: 3.693 (526.0) / 5.901 (369.6) / 6.466 (306.2)
+drive       0.02 m: 0.624 (463.5) / 2.404 (215.3) / 3.382 (155.8); 0.05 m: 0.987 (465.6) / 3.080 (243.5) / 4.177 (179.8); 0.10 m: 1.396 (469.2) / 3.677 (267.9) / 4.763 (202.1); 0.20 m: 1.974 (476.8) / 4.364 (295.8) / 5.297 (229.5); 0.30 m: 2.418 (485.0) / 4.816 (314.7) / 5.606 (249.2); 0.50 m: 3.121 (503.6) / 5.447 (343.9) / 6.082 (279.9); 0.70 m: 3.693 (526.0) / 5.901 (369.6) / 6.466 (306.2)
+stop-ac     0.02 m: 0.624 (554.9) / 2.738 (246.2) / 3.798 (178.6); 0.05 m: 0.987 (524.6) / 3.272 (268.9) / 4.375 (199.2); 0.10 m: 1.396 (511.2) / 3.784 (289.8) / 4.836 (219.5); 0.20 m: 1.974 (506.7) / 4.410 (314.8) / 5.301 (245.4); 0.30 m: 2.418 (509.5) / 4.840 (332.2) / 5.603 (264.2); 0.50 m: 3.121 (522.6) / 5.459 (359.5) / 6.083 (293.8); 0.70 m: 3.693 (542.2) / 5.914 (384.1) / 6.469 (319.4)
+stop-gc     0.02 m: 0.624 (463.5) / 2.404 (215.3) / 3.382 (155.8); 0.05 m: 0.987 (465.6) / 3.080 (243.5) / 4.177 (179.8); 0.10 m: 1.396 (469.2) / 3.677 (267.9) / 4.763 (202.1); 0.20 m: 1.974 (476.8) / 4.364 (295.8) / 5.297 (229.5); 0.30 m: 2.418 (485.0) / 4.816 (314.7) / 5.606 (249.2); 0.50 m: 3.121 (503.6) / 5.447 (343.9) / 6.082 (279.9); 0.70 m: 3.693 (526.0) / 5.901 (369.6) / 6.466 (306.2)
+half-roll   0.02 m: 0.156 (499.8) / 0.209 (374.8) / 0.313 (249.9); 0.05 m: 0.385 (499.8) / 0.513 (374.8) / 0.770 (249.9); 0.10 m: 0.752 (499.8) / 1.003 (374.8) / 1.504 (249.9); 0.20 m: 1.450 (499.8) / 1.934 (374.8) / 2.901 (249.9); 0.30 m: 2.116 (499.8) / 2.822 (374.8) / 4.233 (249.9); 0.50 m: 3.387 (499.8) / 4.516 (374.8) / 6.774 (249.9); 0.70 m: 4.607 (499.8) / 6.143 (374.8) / 9.214 (249.9)
+full-roll   0.02 m: 0.138 (499.8) / 0.184 (374.8) / 0.276 (249.9); 0.05 m: 0.345 (499.8) / 0.460 (374.8) / 0.691 (249.9); 0.10 m: 0.690 (499.8) / 0.920 (374.8) / 1.380 (249.9); 0.20 m: 1.377 (499.8) / 1.836 (374.8) / 2.754 (249.9); 0.30 m: 2.061 (499.8) / 2.748 (374.8) / 4.123 (249.9); 0.50 m: 3.424 (499.8) / 4.565 (374.8) / 6.848 (249.9); 0.70 m: 4.779 (499.8) / 6.373 (374.8) / 9.559 (249.9)
+pass-roll   0.02 m: 0.136 (499.8) / 0.181 (374.8) / 0.272 (249.9); 0.05 m: 0.339 (499.8) / 0.453 (374.8) / 0.679 (249.9); 0.10 m: 0.677 (499.8) / 0.903 (374.8) / 1.355 (249.9); 0.20 m: 1.349 (499.8) / 1.798 (374.8) / 2.697 (249.9); 0.30 m: 2.015 (499.8) / 2.687 (374.8) / 4.030 (249.9); 0.50 m: 3.338 (499.8) / 4.450 (374.8) / 6.675 (249.9); 0.70 m: 4.649 (499.8) / 6.199 (374.8) / 9.298 (249.9)
+== Canonical setups at the default backswing, with the trajectory ==
+single-ball backswing 461.92 mm, intensity 0.000, planned 3.0000 m/s; downswing 499.8 ms, lowest 0.12 mm 36.3 ms before contact; lead 0.0 ms; impact to 10.0 ms after contact; finish 509.9 ms []; head at the finish 141.21 mm up and 468.94 mm along aim from contact; ratio none
+            stance: the top hand -0.1603 m ahead of the ball's centre, lean 0.00°, impact 0.00 mm above the centre
+drive       backswing 461.92 mm, intensity 0.000, planned 3.0000 m/s; downswing 499.8 ms, lowest 0.12 mm 36.3 ms before contact; lead 0.0 ms; impact to 180.6 ms after contact; finish 549.4 ms []; head at the finish 205.56 mm up and 568.98 mm along aim from contact; ratio 2.92 (P2b.2b.1 3.32)
+            stance: the top hand -0.1603 m ahead of the ball's centre, lean 0.00°, impact 0.00 mm above the centre
+stop-ac     backswing 461.92 mm, intensity 0.000, planned 3.0000 m/s; downswing 519.6 ms, lowest 6.83 mm 55.9 ms before contact; lead 0.0 ms; impact to 21.4 ms after contact; finish 53.1 ms []; head at the finish -7.62 mm up and 11.16 mm along aim from contact; ratio 6.46 (P2b.2b.1 6.46)
+            stance: the top hand -0.2202 m ahead of the ball's centre, lean -4.00°, impact -3.21 mm above the centre
+stop-gc     backswing 461.92 mm, intensity 0.000, planned 3.0000 m/s; downswing 499.8 ms, lowest 0.12 mm 36.3 ms before contact; lead 0.0 ms; impact to 10.0 ms after contact; finish 98.4 ms []; head at the finish 0.18 mm up and 17.47 mm along aim from contact; ratio none
+            stance: the top hand -0.1603 m ahead of the ball's centre, lean 0.00°, impact 0.00 mm above the centre
+half-roll   backswing 438.01 mm, intensity 0.000, planned 3.0000 m/s; downswing 499.8 ms, lowest 29.52 mm 0.0 ms before contact; lead 0.0 ms; impact to 58.8 ms after contact; finish 259.7 ms []; head at the finish -4.48 mm up and 112.56 mm along aim from contact; ratio 2.70 (P2b.2b.1 2.83)
+            stance: the top hand 0.1964 m ahead of the ball's centre, lean 24.00°, impact 18.73 mm above the centre
+full-roll   backswing 437.65 mm, intensity 0.000, planned 3.0000 m/s; downswing 499.8 ms, lowest 36.65 mm 0.0 ms before contact; lead 0.0 ms; impact to 111.8 ms after contact; finish 297.4 ms []; head at the finish 39.09 mm up and 214.62 mm along aim from contact; ratio 1.46 (P2b.2b.1 2.14)
+            stance: the top hand 0.1964 m ahead of the ball's centre, lean 31.00°, impact 23.71 mm above the centre
+pass-roll   backswing 448.76 mm, intensity 0.000, planned 3.0000 m/s; downswing 499.8 ms, lowest 39.76 mm 0.0 ms before contact; lead 0.0 ms; impact to 143.4 ms after contact; finish 187.5 ms []; head at the finish 70.12 mm up and 246.67 mm along aim from contact; ratio 16.00 (P2b.2b.1 1.59)
+            stance: the top hand 0.1400 m ahead of the ball's centre, lean 34.00°, impact 25.74 mm above the centre
+== Fat strokes: the canonical single-ball stroke met higher on the face, the head lower ==
+up 2.00 mm: lead 59.9 ms, lowest -1.88 mm; planned 3.0000 m/s, real 2.6953 m/s at the first strike; turf from -54.9 ms, 0.58 mm deep; flags [turf-lift]
+up 4.00 mm: lead 68.0 ms, lowest -3.88 mm; planned 3.0000 m/s, real 2.4750 m/s at the first strike; turf from -63.0 ms, 0.89 mm deep; flags [turf-lift]
+up 6.00 mm: lead 74.2 ms, lowest -5.88 mm; planned 3.0000 m/s, real 2.2998 m/s at the first strike; turf from -69.2 ms, 1.11 mm deep; flags [turf-lift]
+up 7.00 mm: lead 77.0 ms, lowest -6.88 mm; planned 3.0000 m/s, real 2.1751 m/s at the first strike; turf from -72.0 ms, 1.21 mm deep; flags [turf-lift]
+== Cost (machine-dependent) ==
+single-ball planStroke 44.87 ms (downswing 99960 steps, no free table); prepareTrack alone 24.20 ms (with the free table); simulateImpact 33.05 ms in all: preparation 24.20 ms, then 2000 steps at 4.428 µs/step; follow-through 99979 steps at 1.294 µs/step
+drive       planStroke 42.73 ms (downswing 99960 steps, no free table); prepareTrack alone 24.96 ms (with the free table); simulateImpact 262.03 ms in all: preparation 24.96 ms, then 36125 steps at 6.562 µs/step; follow-through 73757 steps at 1.329 µs/step
+stop-ac     planStroke 47.99 ms (downswing 103919 steps, no free table); prepareTrack alone 26.23 ms (with the free table); simulateImpact 45.14 ms in all: preparation 26.23 ms, then 4276 steps at 4.423 µs/step; follow-through 6351 steps at 1.319 µs/step
+stop-gc     planStroke 47.65 ms (downswing 99960 steps, no free table); prepareTrack alone 25.33 ms (with the free table); simulateImpact 38.50 ms in all: preparation 25.33 ms, then 2000 steps at 6.584 µs/step; follow-through 17683 steps at 1.393 µs/step
+half-roll   planStroke 22.46 ms (closed-form downswing, no free table); prepareTrack alone 0.01 ms (without the free table); simulateImpact 80.07 ms in all: preparation 0.01 ms, then 11751 steps at 6.813 µs/step; follow-through 40195 steps at 1.209 µs/step
+full-roll   planStroke 19.42 ms (closed-form downswing, no free table); prepareTrack alone 0.00 ms (without the free table); simulateImpact 213.72 ms in all: preparation 0.00 ms, then 22351 steps at 9.562 µs/step; follow-through 37137 steps at 1.162 µs/step
+pass-roll   planStroke 19.24 ms (closed-form downswing, no free table); prepareTrack alone 0.00 ms (without the free table); simulateImpact 344.08 ms in all: preparation 0.00 ms, then 28679 steps at 11.997 µs/step; follow-through 8822 steps at 0.562 µs/step
+== Fault judge on the canonical setups: face intervals on the striker's ball, and each finding ==
+single-ball 1 face intervals; no finding
+drive       2 face intervals; 29.1.6.1 possible-fault on blue, contacts 2
+stop-ac     1 face intervals; no finding
+stop-gc     1 face intervals; no finding
+half-roll   3 face intervals; 29.1.6.1 possible-fault on blue, contacts 3
+full-roll   11 face intervals; 29.1.6.1 possible-fault on blue, contacts 11
+pass-roll   6 face intervals; 29.1.6.1 possible-fault on blue, contacts 6
+== The striker's ball in its pit (§4.5, held out): the apparent friction Σ|F_h|·dt / ΣF_z·dt of its turf samples against Gugan's µ ≈ 1.0, from the impact's start until it first holds no cell after the strike (the pit) and over every sample; the travel from the first held sample to the deepest point against Gugan's 3.5–18 mm; the deepest δ ==
+half-roll   2.0 m/s: pit 0.0–13.9 ms, apparent friction 0.210 (every sample, 5848 steps: 0.251); deepest 2.45 mm at 4.4 ms, 3.74 mm from the first held sample
+half-roll   3.0 m/s: pit 0.0–12.9 ms, apparent friction 0.212 (every sample, 5811 steps: 0.265); deepest 3.06 mm at 3.9 ms, 4.74 mm from the first held sample
+full-roll   2.0 m/s: pit 0.0–9.2 ms, apparent friction 0.063 (every sample, 30367 steps: 0.376); deepest 2.56 mm at 4.3 ms, 3.69 mm from the first held sample
+full-roll   3.0 m/s: pit 0.0–111.8 ms, apparent friction 0.397 (every sample, 22350 steps: 0.397); deepest 3.21 mm at 3.9 ms, 4.66 mm from the first held sample
+pass-roll   2.0 m/s: pit 0.0–27.0 ms, apparent friction 0.438 (every sample, 33230 steps: 0.380); deepest 3.20 mm at 15.3 ms, 20.10 mm from the first held sample
+pass-roll   3.0 m/s: pit 0.0–27.1 ms, apparent friction 0.458 (every sample, 19667 steps: 0.358); deepest 3.97 mm at 15.6 ms, 29.07 mm from the first held sample
+rolling     2.0 m/s from the static sink across a fresh bed: 1.9953 m/s after 50 mm (25.0 ms), against 2 m/s
+== The face at the impact's 5 µs step: e and T against Gugan's fits (recorded, not gated) ==
+0.50 m/s: e 0.85361 (fit 0.85361, 6.26e-6); T 1.3600 ms (fit 1.3624 ms, -0.18 %)
+2.19 m/s: e 0.82556 (fit 0.82562, -5.38e-5); T 0.9700 ms (fit 0.9700 ms, 0.00 %)
+2.83 m/s: e 0.81862 (fit 0.81870, -8.02e-5); T 0.9150 ms (fit 0.9145 ms, 0.06 %)
+4.00 m/s: e 0.80795 (fit 0.80804, -8.99e-5); T 0.8450 ms (fit 0.8445 ms, 0.06 %)
+5.50 m/s: e 0.79661 (fit 0.79669, -8.79e-5); T 0.7850 ms (fit 0.7849 ms, 0.02 %)
+6.00 m/s: e 0.79321 (fit 0.79330, -9.29e-5); T 0.7700 ms (fit 0.7693 ms, 0.09 %)
+== The full roll at 2 m/s against the roll as played (P2b.2b.2b.2b's baseline) ==
+full-roll   9 face intervals over 0.0–152.0 ms; lean at contact 31.00°, 31.00° to 39.67° through the contact, 39.67° at its end
+            through the contact, the face's plane behind the striker's ball's surface -0.61 to 1.42 mm; the head's centre behind the ball's centre along aim 106.64 to 137.43 mm
+            the hands reach 0.8·handReach at 120.6 ms and rest at 180.1 ms; their force along aim there 10.3 N, its lowest until they rest -55.2 N at 162.3 ms; the striker's ball at 1.2915 m/s there loses 0.0600 m/s while the face is on it after that; the impact ends at 162.3 ms

@@ -5,7 +5,21 @@
         "bounds": [100000, 270000],
         "source": "Don Gugan, 'The Physics of Croquet Strokes: Analysis of the CA high-speed DVD', section 7.1 and Table 4(b) (2009; Oxford Croquet), https://oxfordcroquet.org/tech/gugan4/",
         "provenance": "derived",
-        "note": "Gugan, roll stroke A4R from 8000 frame/s video: \"The transient hollow formed in the ground is surprisingly large, about 50 mm in diameter for A4R.\" and \"the downward velocity of the ball can be estimated to be close to 5 m/s immediately after impact, so comparing this with the upward velocity of 2.48 m/s gives a CoR for the ground of about 0.5.\" Table 4(b) 'Maximum penetration into ground, mm': A2R 4.0, A3R 5.0, A4R 7.2 (upward speeds leaving the ground 1.52, 1.76, 2.48 m/s). The 50 mm chord on a ball of radius 46.04 mm gives 7.38 mm, agreeing with the measured 7.2 mm. Derivation with the impact model's own law (linear spring-dashpot clamped at zero force, damping from e = 0.5, damping ratio 0.2553): the peak penetration at impact speed v is 0.7071·v/ω0 with ω0 = sqrt(k/m), so k = m·(0.7071·v/δmax)² = 0.5·m·v²/δmax² = 0.5 × 0.45359 × 25 / 0.0072² = 1.09e5 N/m (A4R), giving a contact time of 5.5 ms. Bounds: lower 1.0e5 (the same derivation allowing for the hollow already 2.2 mm deep when the mallet releases the ball); upper 2.7e5 from the undamped energy balance k = m·v²/δmax² over A2R to A4R (taking each downward speed as upward speed / 0.5): 2.62e5, 2.25e5, 2.15e5 N/m. Gugan's timing favours the stiffer end: \"assuming that the almost linear region after about 5 ms is due to flight\". One court only; Gugan: \"courts can be expected to vary greatly depending on their composition, their grass covering, and their dampness\". Feeds the default lawn's turfStiffness."
+        "note": "Gugan, roll stroke A4R from 8000 frame/s video: \"The transient hollow formed in the ground is surprisingly large, about 50 mm in diameter for A4R.\" and \"the downward velocity of the ball can be estimated to be close to 5 m/s immediately after impact, so comparing this with the upward velocity of 2.48 m/s gives a CoR for the ground of about 0.5.\" Table 4(b) 'Maximum penetration into ground, mm': A2R 4.0, A3R 5.0, A4R 7.2 (upward speeds leaving the ground 1.52, 1.76, 2.48 m/s). The 50 mm chord on a ball of radius 46.04 mm gives 7.38 mm, agreeing with the measured 7.2 mm. Derivation with the impact model's own law (linear spring-dashpot clamped at zero force, damping from e = 0.5, damping ratio 0.2553): the peak penetration at impact speed v is 0.7071·v/ω0 with ω0 = sqrt(k/m), so k = m·(0.7071·v/δmax)² = 0.5·m·v²/δmax² = 0.5 × 0.45359 × 25 / 0.0072² = 1.09e5 N/m (A4R), giving a contact time of 5.5 ms. Bounds: lower 1.0e5 (the same derivation allowing for the hollow already 2.2 mm deep when the mallet releases the ball); upper 2.7e5 from the undamped energy balance k = m·v²/δmax² over A2R to A4R (taking each downward speed as upward speed / 0.5): 2.62e5, 2.25e5, 2.15e5 N/m. Gugan's timing favours the stiffer end: \"assuming that the almost linear region after about 5 ms is due to flight\". One court only; Gugan: \"courts can be expected to vary greatly depending on their composition, their grass covering, and their dampness\". Feeds the default lawn's turfStiffness. Since P2b.2b.2b.2a it feeds the head–turf plane law alone; the balls stand on the bed (bedModulus, bedRecovery)."
+    },
+    "bedModulus": {
+        "value": 162461000,
+        "unit": "N/m^3",
+        "source": "Fitted (scripts/turfFit.ts) to Don Gugan, 'The Physics of Croquet Strokes: Analysis of the CA high-speed DVD', section 7.1 and Table 4(b) (2009; Oxford Croquet), https://oxfordcroquet.org/tech/gugan4/",
+        "provenance": "derived",
+        "note": "The turf bed's modulus (P2b.2b.2b.2a design §4.2, §4.4). Two targets, two parameters, with bedRecovery: a free ball meeting a fresh bed vertically at 5 m/s leaves at e 0.5 after a maximum penetration of 7.2 mm (A4R; Gugan: \"the downward velocity of the ball can be estimated to be close to 5 m/s immediately after impact, so comparing this with the upward velocity of 2.48 m/s gives a CoR for the ground of about 0.5\"). Solved to 1e-4 relative on both; the energy balance at 7.2 mm gives about 3e8 N/m³ for an elastic bed. No bounds: one court only (Gugan: \"courts can be expected to vary greatly\"); lawn presets and their bounds are P3's."
+    },
+    "bedRecovery": {
+        "value": 0.000755047,
+        "unit": "s",
+        "source": "Fitted (scripts/turfFit.ts) to Don Gugan, 'The Physics of Croquet Strokes: Analysis of the CA high-speed DVD', section 7.1 and Table 4(b) (2009; Oxford Croquet), https://oxfordcroquet.org/tech/gugan4/",
+        "provenance": "derived",
+        "note": "The turf bed's recovery time τ_r = η/k_w (P2b.2b.2b.2a design §4.2, §4.4), fitted with bedModulus to A4R (see its note). Held out: A2R and A3R's penetrations, 4.0 and 5.0 mm (docs/superpowers/probes/2026-10-09-p2b2b2b2a-turfFit.txt). No bounds (P3)."
     },
     "ballBallContactTime": {
         "value": 0.00075,
@@ -29,7 +43,25 @@
         "bounds": [0.0006, 0.0012],
         "source": "Stan Hall, 'When a Mallet Strikes a Ball', Table 1 (Oxford Croquet), https://oxfordcroquet.org/tech/hall/; Don Gugan, 'The Physics of Croquet Strokes: Analysis of the CA high-speed DVD', Tables 2, 3 and 4(a) (2009; Oxford Croquet), https://oxfordcroquet.org/tech/gugan4/",
         "provenance": "direct",
-        "note": "Hall, electrical timing: \"For single ball strokes the contact time is almost constant at 1 ms except for very short distances in which case the time is longer.\" (Table 1 averages from 7.3 to 2.4 m/s: Dawson 0.89, 1.0, 1.18 ms; Jaques <0.84, 0.94, 1.03 ms; 2.9 ms (Dawson) and 1.32 ms (Jaques) for a 0.6 m stroke). Gugan, high-speed video, 'Duration of contact, Th, ms (± 0.1 ms)': drives 1.00, 0.75, 0.60, 0.60; stop shots 0.75, 0.63, 0.63; rolls 1.13, 1.25, 1.00, 0.88. Value 0.8 ms is the centre of the drive and stop-shot figures; bounds run from Gugan's shortest to Hall's 2.4 m/s average. Gugan notes Hertzian theory predicts shorter contacts for stronger strokes but \"the effect is weak\"; the linear law here makes it speed-independent."
+        "note": "Hall, electrical timing: \"For single ball strokes the contact time is almost constant at 1 ms except for very short distances in which case the time is longer.\" (Table 1 averages from 7.3 to 2.4 m/s: Dawson 0.89, 1.0, 1.18 ms; Jaques <0.84, 0.94, 1.03 ms; 2.9 ms (Dawson) and 1.32 ms (Jaques) for a 0.6 m stroke). Gugan, high-speed video, 'Duration of contact, Th, ms (± 0.1 ms)': drives 1.00, 0.75, 0.60, 0.60; stop shots 0.75, 0.63, 0.63; rolls 1.13, 1.25, 1.00, 0.88. Value 0.8 ms is the centre of the drive and stop-shot figures; bounds run from Gugan's shortest to Hall's 2.4 m/s average. Gugan notes Hertzian theory predicts shorter contacts for stronger strokes but \"the effect is weak\"; the linear law here made it speed-independent. Since P2b.2b.2b.2a a check, no longer read by the engine: the face's contact time is faceContactTimeFit (0.8 ms is the fit's value near 2.83 m/s)."
+    },
+    "faceRestitutionFit": {
+        "form": "1 - e^2 = a + b * U^p, U the closing speed (m/s)",
+        "coefficients": { "a": 0.213, "b": 0.077, "p": 0.4 },
+        "range": [0.5, 6],
+        "rangeUnit": "m/s",
+        "source": "Don Gugan, 'Inelastic collision and the Hertz theory of impact', Am. J. Phys. 68, 920 (2000), DOI 10.1119/1.1285850, https://oxfordcroquet.org/tech/gugan/",
+        "provenance": "direct",
+        "note": "Gugan: with K(U) ≡ (1-e^2(U)), \"both sets of data can be expressed by K(U) = K0 + K1U^0.4\", with K0 and K1 \"0.213(5) and 0.077(4) on wood\" (the croquet ball on a wooden face; 0.198(2) and 0.112(2) on steel). e falls from 0.854 at 0.5 m/s to 0.793 at 6 m/s, agreeing with Gugan 1 Table I (85.7 % at 0.50 m/s to 79.5 % at 6.01 m/s; mallet.json faceRestitution). The range is that of Gugan's measured e; the engine clamps a closing speed to it (P2b.2b.2b.2a design §3.3)."
+    },
+    "faceContactTimeFit": {
+        "form": "T = t0 * (U / u0)^q, U the closing speed (m/s)",
+        "coefficients": { "t0": 0.00097, "u0": 2.19, "q": -0.23 },
+        "range": [0.5, 6],
+        "rangeUnit": "m/s",
+        "source": "Don Gugan, 'Inelastic collision and the Hertz theory of impact', Am. J. Phys. 68, 920 (2000), DOI 10.1119/1.1285850, https://oxfordcroquet.org/tech/gugan/",
+        "provenance": "derived",
+        "note": "Gugan, Table I (the Jaques croquet ball on wood): T 0.97 ms at 2.19 m/s, 0.79 ms at 5.50 m/s. \"The data were compared with Hertz's theory using weighted, least-squares, log-log fits. This gave exponents of 0.77 ± 0.03 and -0.23 ± 0.03 for A(U) and T(U), respectively, compared with values of 0.8 and -0.2 given by Eqs. (5).\" Only q = -0.23 is Gugan's regression; t0 and u0 anchor on Table I's first row. The fit sits 0.031 ms above the 3.67 m/s row (0.861 ms against 0.83 ms) and 0.023 ms above the 4.24 m/s row (0.833 ms against 0.81 ms), outside Gugan's standard deviation of the times, \"± 0.02 ms\". Measured over 2.19-5.50 m/s; Hertz predicts U^-0.2. Extrapolated as its power law over the face's range (1.36 ms at 0.5 m/s, 0.77 ms at 6 m/s; P2b.2b.2b.2a design §3.3). Held out: Hall's longer contacts on slow strokes (1.3-2.9 ms on a 0.6 m stroke; faceBallContactTime's note)."
     },
     "tangentialStiffnessRatio": {
         "value": 0.2857142857142857,

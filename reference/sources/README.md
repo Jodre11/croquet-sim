@@ -127,3 +127,22 @@ tends to put roll on the ball". The rolls' default leans are the means at the ta
 These replace Riches' "about 75 degrees with the ground" (half roll), "approximately 45 degrees" (full roll), and the
 pass roll's handle sloping "at least as much as for a full roll". `profile.ts` keeps them as coaching cues. Table 5's
 two-ball drives and stops measure α from −8° to −2°. They are P2b.2b.2c's calibration check, not used here.
+
+## The strike and turf laws (P2b.2b.2b.2a design §3.1, §4)
+
+Fetched 2026-10-09 with `curl -k -sSL`; digest of the page with its counter line removed, as above.
+
+| Short name | Work | URL | SHA-256 (counter line removed) |
+|---|---|---|---|
+| Gugan 2000 | Don Gugan, "Inelastic collision and the Hertz theory of impact", Am. J. Phys. 68, 920 (2000), DOI 10.1119/1.1285850 | https://oxfordcroquet.org/tech/gugan/ | `bf8f1a991888f30de81e05ff9f17362d4a0da975afef63fcdf93f5b2d4944b94` |
+
+Gugan 4 (above) gives A4R's ground restitution and penetrations (Table 4(b), §7.1), which the bed is fitted to
+(`scripts/turfFit.ts`). Penner, Can. J. Phys. 80, 931 (2002), and Hall, "When a Mallet Strikes a Ball", are cited
+in `reference/friction.json` and are not re-fetched here.
+
+- Gugan 2000, "both sets of data can be expressed by K(U) = K0 + K1U^0.4" with K(U) ≡ (1-e²(U)), K0 and K1 "0.213(5)
+  and 0.077(4) on wood": the face's restitution against its closing speed on wood. It does not cover faces other than
+  wood, or speeds outside 0.5–6 m/s.
+- Gugan 2000, "This gave exponents of 0.77 ± 0.03 and -0.23 ± 0.03 for A(U) and T(U), respectively, compared with
+  values of 0.8 and -0.2 given by Eqs. (5)." with Table I (T 0.97 ms at 2.19 m/s, 0.79 ms at 5.50 m/s): the contact's
+  duration over 2.19–5.50 m/s. Outside that range it is extrapolated.

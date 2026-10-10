@@ -309,9 +309,13 @@ describe("invariants", () => {
         ) as BallStates;
         const a = simulateFreeMotion(complex, hoopWorld);
         const b = simulateFreeMotion(mirrored, hoopWorld);
+        // P2b.2b.2b.2a: turf bed (was 1e-9). The bed is mirror-exact only across y = 0 (design §4.1; pinned in
+        // turfBed.test's "gives the exactly mirrored load …"). Under this x-mirror, blue's µm-hop landing at
+        // t ≈ 0.019 s gives last-ulp different outcomes, which the push and collisions amplify to ~6e-7 m (x) and
+        // ~2.9e-6 m (y) at rest.
         for (const id of Object.keys(complex) as BallId[]) {
-            expect(b.rest[id]?.x).toBeCloseTo(30 - (a.rest[id]?.x ?? 0), 9);
-            expect(b.rest[id]?.y).toBeCloseTo(a.rest[id]?.y ?? 0, 9);
+            expect(b.rest[id]?.x).toBeCloseTo(30 - (a.rest[id]?.x ?? 0), 5);
+            expect(b.rest[id]?.y).toBeCloseTo(a.rest[id]?.y ?? 0, 5);
         }
     });
 

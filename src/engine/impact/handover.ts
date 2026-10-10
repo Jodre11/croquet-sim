@@ -3,8 +3,8 @@
  *
  * A ball clear of the turf (z ≥ R) goes as it is. A ball still in turf contact (z < R) is placed on the lawn,
  * z = R. It keeps an upward vertical velocity of at least SETTLE_SPEED, so it starts airborne; otherwise it loses its
- * vertical velocity, phase 2's own rule for a ball on the plane. The stored energy of its residual sink, m·g·δ₀/2, is
- * discarded.
+ * vertical velocity, phase 2's own rule for a ball on the plane. The bed's stored energy at its residual sink, U_f(δ₀),
+ * is discarded with the bed (P2b.2b.2b.2a design §4.6).
  *
  * Contacts release while δ > 0, so a pair can end the impact still overlapping. Each such pair, in BALL_IDS order, is
  * pushed apart along its normal to zero gap, each ball half the overlap, velocities unchanged. A ball is never moved

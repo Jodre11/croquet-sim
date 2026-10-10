@@ -1,0 +1,18 @@
+3000 shots, seed 7, budget 22000000 units
+shots with no solve: 97.6%
+largest group: 2 balls
+solves per shot: p50 0.000, p99 172.000, p99.9 320.000, max 405.000
+work units per shot: p50 0.000, p99 152168.000, p99.9 315644.000, max 405196.000
+solver ms per shot: p50 0.000, p99 5.882, p99.9 12.273, max 13.119
+engine ms per shot: p50 4.115, p99 53.252, p99.9 72.236, max 91.199
+fallback events: 0
+landings per shot: p50 1.000, p99 4.000, p99.9 6.000, max 7.000
+landings in all: 3951
+landing duration (ms): p50 15.040, p99 24.030, p99.9 24.755, max 24.835
+landing travel (mm): p50 8.015, p99 65.788, p99.9 85.732, max 94.572
+landings whose |ω| fell: 82.6%
+median |ω| after / before: 0.9525
+landing steps per shot: p50 1645.000, p99 13222.000, p99.9 16593.000, max 22963.000
+landing column visits per shot: p50 92232.000, p99 1441285.000, p99.9 1692133.000, max 2243606.000
+landing-cap events: 0
+worst shot: hoop, 0 solves, 0 units, solver 0.0 ms, engine 91.2 ms

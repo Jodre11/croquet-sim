@@ -1,0 +1,30 @@
+== Fit (A4R: e 0.5 and 7.2 mm at 5 m/s) ==
+bedModulus 1.62461e+8 N/m³, bedRecovery 0.000755047 s
+check: e 0.500000 (rel 1.58e-8), depth 7.2000 mm (rel 4.34e-11), contact 5.180 ms
+within 0.0001 relative on both: true
+== Held out: A2R and A3R (Gugan 4 Table 4(b): 4.0 and 5.0 mm) ==
+A2R at 3.04 m/s: depth 5.31 mm, e 0.541
+A3R at 3.52 m/s: depth 5.81 mm, e 0.529
+== e against impact speed (Penner's golf fit e = 0.510 − 0.0375v + 0.000903v², an analogue) ==
+0.10 m/s: e 0.3816, depth 0.855 mm, contact 22.580 ms; Penner 0.506
+0.20 m/s: e 0.6402, depth 1.109 mm, contact 16.170 ms; Penner 0.503
+0.30 m/s: e 0.6623, depth 1.353 mm, contact 13.710 ms; Penner 0.499
+0.50 m/s: e 0.6572, depth 1.792 mm, contact 11.310 ms; Penner 0.491
+0.75 m/s: e 0.6395, depth 2.270 mm, contact 9.780 ms; Penner 0.482
+1.00 m/s: e 0.6226, depth 2.695 mm, contact 8.845 ms; Penner 0.473
+1.50 m/s: e 0.5953, depth 3.446 mm, contact 7.705 ms; Penner 0.456
+2.00 m/s: e 0.5739, depth 4.108 mm, contact 6.995 ms; Penner 0.439
+3.00 m/s: e 0.5420, depth 5.265 mm, contact 6.120 ms; Penner 0.406
+4.00 m/s: e 0.5185, depth 6.280 mm, contact 5.570 ms; Penner 0.374
+5.00 m/s: e 0.5000, depth 7.200 mm, contact 5.180 ms; Penner 0.345
+6.00 m/s: e 0.4848, depth 8.051 mm, contact 4.885 ms; Penner 0.318
+== Low-speed gate: landings until the ball stays on the turf ==
+drop 0.05 m (0.990 m/s): 7 landings
+drop 0.1 m (1.400 m/s): 7 landings
+drop 0.3 m (2.426 m/s): 8 landings
+== Stability (§4.6): the bed's damping at A4R's footprint against the 5 µs step ==
+c ≈ 255.5 N·s/m, 2m/c 3.551 ms, c·dt/m 2.816e-3
+== Grid convergence (§5.1): h = 1 mm against 2 mm ==
+2 m/s: e 0.5739 / 0.5739 (rel 9.21e-6), depth 4.108 / 4.108 mm
+5 m/s: e 0.5000 / 0.5000 (rel 8.11e-6), depth 7.200 / 7.200 mm
+6 m/s: e 0.4848 / 0.4848 (rel 2.83e-5), depth 8.051 / 8.051 mm

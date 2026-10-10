@@ -183,19 +183,24 @@ export function canonicalSetup(type: StrokeType, over: CanonicalOptions = {}): S
 
 /**
  * The head's lowest point above the turf (m) at contact in each canonical setup on the default world, with the default
- * profile. It is measured on prototype aeadd4c's geometry: h₀ = R − sink = 45.997 mm, ρ = 38.1 mm, L = 228.6 mm. The
- * head is pitched by −lean, so the figure is independent of the arc radius. The rolls' figures were re-measured at
- * Gugan's leans (P2b.2b.2b.1). For a forward lean α at `up` 0 the lowest point is the face's lower rim, at
- * h₀ + (R + START_GAP)·sin α − ρ·cos α.
+ * profile. It is measured on prototype aeadd4c's geometry: h₀ = R − δ₀, ρ = 38.1 mm, L = 228.6 mm, with δ₀ the
+ * striker's static sink on the default bed at its position (9.6012, 4), turfBed.ts staticSink: 0.4366 mm, so
+ * h₀ = 45.6009 mm. P2b.2b.2b.2a: turf bed (was δ₀ = m·g/k_turf = 0.0404 mm, h₀ = 45.997 mm; every figure falls by the
+ * sink's change, 0.3962 mm). The head is pitched by −lean, so the figure is independent of the arc radius. The rolls'
+ * figures were re-measured at Gugan's leans (P2b.2b.2b.1). For a forward lean α at `up` 0 the lowest point is the
+ * face's lower rim, at h₀ + (R + START_GAP)·sin α − ρ·cos α; level, it is h₀ − ρ.
  */
 export const CANONICAL_CLEARANCE: Readonly<Record<StrokeType, number>> = {
-    "single-ball": 7.8971e-3,
-    drive: 7.8971e-3,
-    "stop-ac": 8.7833e-3,
-    "stop-gc": 7.8971e-3,
-    "half-roll": 29.9165e-3,
-    "full-roll": 37.0506e-3,
-    "pass-roll": 40.1551e-3,
+    // P2b.2b.2b.2a: turf bed (was 7.8971e-3): h₀ − ρ.
+    "single-ball": 7.5009e-3,
+    drive: 7.5009e-3,
+    // P2b.2b.2b.2a: turf bed (was 8.7833e-3).
+    "stop-ac": 8.3872e-3,
+    "stop-gc": 7.5009e-3,
+    // P2b.2b.2b.2a: turf bed (was 29.9165e-3, 37.0506e-3 and 40.1551e-3): h₀ + (R + START_GAP)·sin α − ρ·cos α.
+    "half-roll": 29.5203e-3,
+    "full-roll": 36.6544e-3,
+    "pass-roll": 39.7589e-3,
 };
 
 const SOLVED = new Map<string, number>();

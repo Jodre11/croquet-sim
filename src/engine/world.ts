@@ -84,10 +84,9 @@ export function motionParamsAt(world: World, position: Vec3): MotionParams {
     };
 }
 
-/** Returns the turf's restitution and sliding friction at `position`, for impulses on a ball there. */
-export function turfAt(world: World, position: Vec3): ContactMaterial {
-    const surface = world.lawn.surfaceAt(position);
-    return { restitution: surface.turfRestitution, friction: surface.slidingFriction };
+/** Returns the turf's sliding friction at `position`, for impulses on a ball there. */
+export function turfAt(world: World, position: Vec3): number {
+    return world.lawn.surfaceAt(position).slidingFriction;
 }
 
 /** Evaluates a signed-offset rule for the given ball and upright radii. */
@@ -133,6 +132,8 @@ export function validateWorld(world: World): void {
     requireMaterial(world.ballUpright, "ballUpright");
     requireMaterial(world.peg.material, "peg.material");
     requirePositive(surface.turfStiffness, "lawn.turfStiffness");
+    requirePositive(surface.bedModulus, "lawn.bedModulus");
+    requirePositive(surface.bedRecovery, "lawn.bedRecovery");
     requireMaterial({ restitution: surface.turfRestitution, friction: 0 }, "lawn.turf");
     requirePositive(world.ballBallContactTime, "ballBallContactTime");
     requirePositive(world.peg.radius, "peg.radius");
@@ -164,6 +165,8 @@ export function defaultWorld(lawnSpeedSeconds: number = lawnReference.defaultSpe
         ),
         turfStiffness: contactReference.ballTurfStiffness.value,
         turfRestitution: frictionReference.ballTurfRestitution.value,
+        bedModulus: contactReference.bedModulus.value,
+        bedRecovery: contactReference.bedRecovery.value,
     };
     return {
         gravity: STANDARD_GRAVITY,

@@ -17,11 +17,32 @@ export interface MalletHead {
     readonly socket: Vec3;
 }
 
-/** A face's restitution and Coulomb friction against a ball, and the duration (s) of a central strike. */
+/**
+ * A face's Coulomb friction against a ball. Its restitution and contact duration are the wood fits (contact.json;
+ * P2b.2b.2b.2a design §3.6), the only face with measured data: other faces are P3's.
+ */
 export interface FaceMaterial {
-    readonly restitution: number;
     readonly friction: number;
-    readonly contactTime: number;
+}
+
+/**
+ * A face's law against a ball (P2b.2b.2b.2a design §3.6): the pair's reduced mass (kg) and the face's friction. Each
+ * closure sets the Hertzian k and c from it with the wood fits (contactLaw.ts closeFace).
+ */
+export interface FaceLaw {
+    readonly mass: number;
+    readonly friction: number;
+}
+
+/**
+ * The turf bed's law under a ball (P2b.2b.2b.2a design §4): the bed modulus k_w (N/m³), its recovery time τ_r (s;
+ * 0, in isolated tests only, makes every cell an undamped spring), the sliding friction µ and the cell's side h (m).
+ */
+export interface BedLaw {
+    readonly modulus: number;
+    readonly recovery: number;
+    readonly friction: number;
+    readonly cell: number;
 }
 
 /** Applied force at time t (s from the start of the impact), world frame. Linear between samples. */
@@ -180,8 +201,8 @@ export interface ContactState extends HeadState {
 }
 
 /**
- * Something that happened during the impact; t is seconds from its start. `turf-lift`: a ball's centre first rose to
- * z = R from below. The others mark a result outside the validated model, as phase 2's jump flag does:
+ * Something that happened during the impact; t is seconds from its start. `turf-lift`: a ball that held cells of the
+ * bed first held none while rising. The others mark a result outside the validated model, as phase 2's jump flag does:
  * - `impact-cap`: the impact reached its cap (IMPACT_CAP, or TRACK_IMPACT_CAP for a tracked drive);
  * - `impact-head-approaching`: when it ended the head was still closing on a ball within reach (a force table's
  *   second strike, a double tap, is a fault and is not modelled; a tracked drive integrates it and so raises this only
@@ -192,7 +213,9 @@ export interface ContactState extends HeadState {
  *   credible (P2b.2b.1 design §4.2);
  * - `impact-off-face`: a ball touched the head off its face: a force table's face rim (edge strokes are not
  *   modelled), or any region but the face for a tracked drive (P2b.2b.1 design §4.5; no Law judgement is made of it
- *   in this phase).
+ *   in this phase);
+ * - `impact-turf-pit`: when the impact ended, a ball's surface lay more than TURF_PIT_DEPTH below the turf over a
+ *   cell it held (P2b.2b.2b.2a design §4.6); the handover places it on the flat lawn, and the pit is discarded.
  */
 export type ImpactEvent =
     | { readonly kind: "turf-lift"; readonly t: number; readonly ball: BallId }
@@ -200,7 +223,8 @@ export type ImpactEvent =
     | { readonly kind: "impact-head-approaching"; readonly t: number; readonly ball: BallId }
     | { readonly kind: "impact-mallet-grounded"; readonly t: number }
     | { readonly kind: "impact-head-deep"; readonly t: number }
-    | { readonly kind: "impact-off-face"; readonly t: number; readonly ball: BallId };
+    | { readonly kind: "impact-off-face"; readonly t: number; readonly ball: BallId }
+    | { readonly kind: "impact-turf-pit"; readonly t: number; readonly ball: BallId };
 
 /**
  * One contact interval of a pair (P2b.2a design §5): [start, end) in s from the impact's start, whole steps, and the

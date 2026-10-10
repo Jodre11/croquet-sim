@@ -119,6 +119,38 @@ export function readValue(section: unknown, key: string, path: string): Referenc
     return { ...result, bounds: [lo, hi] };
 }
 
+/** A sourced fit: its formula, its named coefficients (SI), and the range of the variable it was measured over. */
+export interface ReferenceFit extends Sourced {
+    readonly form: string;
+    readonly coefficients: Readonly<Record<string, number>>;
+    readonly range: readonly [number, number];
+    readonly rangeUnit: string;
+}
+
+/** Reads a sourced fit, checking that it has every coefficient in `names` and a range lo < hi. */
+export function readFit(section: unknown, key: string, path: string, names: readonly string[]): ReferenceFit {
+    const item = entry(section, key, path);
+    const itemPath = `${path}.${key}`;
+    const form = readString(item, "form", itemPath);
+    const table = entry(item, "coefficients", itemPath);
+    const coefficients: Record<string, number> = {};
+    for (const name of names) {
+        coefficients[name] = readNumber(table, name, `${itemPath}.coefficients`);
+    }
+    const range = readArray(item, "range", itemPath);
+    const [lo, hi] = range;
+    if (range.length !== 2 || typeof lo !== "number" || typeof hi !== "number" || !(lo < hi)) {
+        throw new ReferenceDataError(`${itemPath}.range`, "must be [lo, hi] with lo < hi");
+    }
+    return {
+        form,
+        coefficients,
+        range: [lo, hi],
+        rangeUnit: readString(item, "rangeUnit", itemPath),
+        ...readSourced(item, itemPath),
+    };
+}
+
 /** Reads a sourced verbatim quotation. */
 export function readQuote(section: unknown, key: string, path: string): ReferenceQuote {
     const item = entry(section, key, path);

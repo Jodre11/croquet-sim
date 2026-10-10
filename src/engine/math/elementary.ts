@@ -1,7 +1,8 @@
 /**
- * Elementary functions from IEEE-exact operations only (+ − × ÷ and Math.sqrt), so that every JavaScript engine
- * computes the same bits. Math.sin, Math.log and the like are not guaranteed bit-identical across engines, which
- * would make results engine-dependent (spec §5, Determinism). Accurate to a few ulps (tests compare with Math.*).
+ * Elementary functions (ln, exp, pow, sinCos and atan2) from IEEE-exact operations only (+ − × ÷ and Math.sqrt), so
+ * that every JavaScript engine computes the same bits. Math.sin, Math.log and the like are not guaranteed
+ * bit-identical across engines, which would make results engine-dependent (spec §5, Determinism). Accurate to a few
+ * ulps (tests compare with Math.*).
  */
 
 /** ln 2 split so that k·LN2_HI is exact for |k| < 2^11 (Cody and Waite); LN2_LO is the remainder. */
@@ -88,6 +89,64 @@ export function sinCos(phi: number): readonly [number, number] {
         default:
             return [0 - c, s];
     }
+}
+
+/** 1/ln 2, the reduction's multiplier. Its rounding can only move k at a tie, which the remainder r absorbs. */
+const INV_LN2 = 1.4426950408889634;
+
+/** Above EXP_MAX e^x overflows; below EXP_MIN it underflows to 0 (Math.exp's limits, rounded outward). */
+const EXP_MAX = 709.79;
+const EXP_MIN = -745.14;
+
+/**
+ * e^x. x = k·ln 2 + r with |r| ≤ ½·ln 2 (Cody and Waite, as ln), e^r by its Taylor series to r¹⁷ (the next term is
+ * below 1e-21 of the sum), then scaled by 2^k in exact steps. NaN for NaN, +Infinity above EXP_MAX, 0 below EXP_MIN.
+ */
+export function exp(x: number): number {
+    if (Number.isNaN(x)) {
+        return NaN;
+    }
+    if (x > EXP_MAX) {
+        return Infinity;
+    }
+    if (x < EXP_MIN) {
+        return 0;
+    }
+    let k = Math.round(x * INV_LN2);
+    const r = x - k * LN2_HI - k * LN2_LO;
+    // e^r = 1 + r·(1 + r/2·(1 + r/3·(…))), by Horner from the innermost term.
+    let y = 1;
+    for (let n = 17; n >= 1; n--) {
+        y = 1 + (r / n) * y;
+    }
+    while (k >= 64) {
+        y *= TWO_64;
+        k -= 64;
+    }
+    while (k <= -64) {
+        y *= TWO_MINUS_64;
+        k += 64;
+    }
+    while (k > 0) {
+        y *= 2;
+        k -= 1;
+    }
+    while (k < 0) {
+        y *= 0.5;
+        k += 1;
+    }
+    return y;
+}
+
+/**
+ * x^y for x > 0, as exp(y·ln x): accurate to a few ulps times |y·ln x|. 0 for x = 0 and y > 0; NaN for any other base
+ * not positive.
+ */
+export function pow(x: number, y: number): number {
+    if (x > 0) {
+        return exp(y * ln(x));
+    }
+    return x === 0 && y > 0 ? 0 : NaN;
 }
 
 /** Arctangent of t in [0, 1]: two half-angle reductions leave |u| ≤ tan(π/16), then the series to u²⁵. */

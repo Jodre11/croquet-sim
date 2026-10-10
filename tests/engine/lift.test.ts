@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { CONTACT_TOLERANCE } from "../../src/engine/detect";
-import { vec3 } from "../../src/engine/math/vec3";
+import { land } from "../../src/engine/impact/landing";
+import { bedLawOf } from "../../src/engine/impact/turfBed";
+import { ZERO, vec3 } from "../../src/engine/math/vec3";
 import { SETTLE_SPEED } from "../../src/engine/resolve";
 import { stateAtTime } from "../../src/engine/sample";
-import { simulateFreeMotion } from "../../src/engine/simulate";
+import { simulateFreeMotion, type LandingRecord } from "../../src/engine/simulate";
 import {
     BALL_IDS,
     type BallId,
@@ -12,14 +14,15 @@ import {
     type ShotEvent,
     type ShotResult,
 } from "../../src/engine/types";
-import { STANDARD_GRAVITY } from "../../src/engine/world";
+import { STANDARD_GRAVITY, uniformLawn } from "../../src/engine/world";
 import { mechanicalEnergy } from "./support/energy";
-import { TEST_BALL, airborneAt, ballAt, rollingBallAt, testHoop, testWorld } from "./support/fixtures";
+import { TEST_BALL, TEST_TURF, airborneAt, ballAt, rollingBallAt, testHoop, testWorld } from "./support/fixtures";
 import { worstPenetration } from "./support/penetration";
 
 const R = TEST_BALL.radius;
 const G = STANDARD_GRAVITY;
-const E_TURF = 0.5;
+/** The half-metre drop's landing count on testWorld's bed, recorded from the run. */
+const LANDINGS_HALF_METRE = 4;
 
 function landings(result: ShotResult, ball: BallId): number[] {
     return result.events.filter((e) => e.kind === "landing" && e.ball === ball).map((e) => e.t);
@@ -37,36 +40,97 @@ describe("flight and landing", () => {
     it("lands where and when the ballistic closed form says, and rebounds with the turf's restitution", () => {
         const h = 0.1;
         const v = vec3(1, 0.5, 0.8);
-        const result = simulateFreeMotion({ blue: airborneAt(5, 5, R + h, v, vec3(-0.5 / R, 1 / R, 0)) }, testWorld());
+        const world = testWorld();
+        const records: LandingRecord[] = [];
+        const result = simulateFreeMotion(
+            { blue: airborneAt(5, 5, R + h, v, vec3(-0.5 / R, 1 / R, 0)) },
+            world,
+            undefined,
+            { landings: (r) => records.push(r) },
+        );
         const t = (v.z + Math.sqrt(v.z * v.z + 2 * G * h)) / G;
         expect(landings(result, "blue")[0]).toBeCloseTo(t, 12);
+        // The touchdown is the closed form's: the ballistic point and velocity at t, on the turf.
+        const touchdown = records[0]?.before as BallState;
+        expect(touchdown.position.x).toBeCloseTo(5 + v.x * t, 12);
+        expect(touchdown.position.y).toBeCloseTo(5 + v.y * t, 12);
+        expect(touchdown.position.z).toBe(R);
+        expect(touchdown.velocity.x).toBeCloseTo(v.x, 12);
+        expect(touchdown.velocity.z).toBeCloseTo(v.z - G * t, 12);
+        // P2b.2b.2b.2a: turf bed. The rebound is the bed's landing (impact/landing.ts), applied at touchdown.
         const second = result.segments.blue?.[1];
         expect(second?.t0).toBeCloseTo(t, 12);
-        expect(second?.start.position.x).toBeCloseTo(5 + v.x * t, 12);
-        expect(second?.start.position.y).toBeCloseTo(5 + v.y * t, 12);
-        expect(second?.start.position.z).toBe(R);
-        // The spin matches the horizontal velocity (no turf slip), so the landing leaves it unchanged.
-        expect(second?.start.velocity.x).toBeCloseTo(v.x, 12);
-        expect(second?.start.velocity.z).toBeCloseTo(E_TURF * (G * t - v.z), 12);
+        const surface = world.lawn.surfaceAt(touchdown.position);
+        expect(second?.start).toEqual(land(touchdown, world.ball, world.gravity, bedLawOf(surface)).state);
+        // The bed takes energy and returns some: 0 < e < 1.
+        const e = (second?.start.velocity.z as number) / (0 - touchdown.velocity.z);
+        expect(e).toBeGreaterThan(0);
+        expect(e).toBeLessThan(1);
     });
 
-    it("bounces with geometrically shrinking hops and settles on the turf (drop test)", () => {
+    it("bounces with shrinking hops and settles on the turf (drop test)", () => {
         const h = 0.5;
         const result = simulateFreeMotion({ blue: airborneAt(5, 5, R + h) }, testWorld());
-        const v1 = Math.sqrt(2 * G * h);
         const times = landings(result, "blue");
-        let expected = 0;
-        while (v1 * E_TURF ** expected >= SETTLE_SPEED) {
-            expected++;
-        }
-        expect(times.length).toBe(expected);
         expect(times[0]).toBeCloseTo(Math.sqrt((2 * h) / G), 12);
-        for (let k = 1; k < times.length; k++) {
-            const flight = (2 * v1 * E_TURF ** k) / G;
-            expect((times[k] as number) - (times[k - 1] as number)).toBeCloseTo(flight, 10);
+        // P2b.2b.2b.2a: turf bed. Each landing's e < 1, so each hop's flight (and so its rise) is shorter than the
+        // one before; the bed's e rises at low speed, so the hops no longer shrink geometrically (design §4.7).
+        for (let k = 2; k < times.length; k++) {
+            const flight = (times[k] as number) - (times[k - 1] as number);
+            expect(flight).toBeLessThan((times[k - 1] as number) - (times[k - 2] as number));
         }
+        // P2b.2b.2b.2a: turf bed (was 12 at the constant e = 0.5): recorded from the run. The bed's e rises at low
+        // speed, but once a landing is too slow to bounce out, §4.6's settle rule ends it in the turf.
+        expect(times.length).toBe(LANDINGS_HALF_METRE);
         expect(result.rest.blue).toEqual(vec3(5, 5, R));
         expect(result.aborted).toBe(false);
+    });
+
+    it("settles a 1 mm drop in a few landings, with no landing-cap (review focus 5)", () => {
+        const world = testWorld();
+        const result = simulateFreeMotion(
+            { blue: { position: vec3(5, 5, R + 1e-3), velocity: ZERO, angularVelocity: ZERO } },
+            world,
+        );
+        const landings = result.events.filter((e) => e.kind === "landing").length;
+        expect(landings).toBeGreaterThan(0);
+        // Recorded from the run (1: the 0.14 m/s touchdown settles in the bed at once); each landing's e < 1 bounds
+        // it, and the settle rule ends it.
+        expect(landings).toBeLessThan(20);
+        expect(result.events.some((e) => e.kind === "landing-cap")).toBe(false);
+        expect(result.aborted).toBe(false);
+    });
+
+    it("raises landing-cap when a landing is forced past its cap", () => {
+        // A bed so soft (k_w 1e5 N/m³, 3000 times below testWorld's) and so lightly damped (τ_r 2 ms) that a 3.7 m/s
+        // landing sinks about 150 mm and rings on it, neither leaving nor settling, past 50 ms. A slowly recovering bed
+        // (τ_r 10 s, as first tried) does not cap: τ_r is also each cell's damping time (k_w·τ_r), so that bed stops
+        // the ball within 2 ms. Found by running the landing alone with land() over k_w and τ_r.
+        const soft = uniformLawn(30, 40, {
+            slidingFriction: 0.3,
+            rollingResistance: 0.05,
+            ...TEST_TURF,
+            bedModulus: 1e5,
+            bedRecovery: 2e-3,
+        });
+        const result = simulateFreeMotion(
+            { blue: { position: vec3(5, 5, R + 0.5), velocity: vec3(0, 0, -2), angularVelocity: ZERO } },
+            testWorld({ lawn: soft }),
+        );
+        expect(result.events.some((e) => e.kind === "landing-cap")).toBe(true);
+    });
+
+    it("reports every landing to the probe, with the ball before it and the landing's figures", () => {
+        const records: LandingRecord[] = [];
+        const result = simulateFreeMotion(
+            { blue: { position: vec3(5, 5, R + 0.05), velocity: vec3(1, 0, 0), angularVelocity: ZERO } },
+            testWorld(),
+            undefined,
+            { landings: (r) => records.push(r) },
+        );
+        expect(records).toHaveLength(result.events.filter((e) => e.kind === "landing").length);
+        expect(records[0]?.before.velocity.z as number).toBeLessThan(0);
+        expect(records[0]?.landing.duration as number).toBeGreaterThan(0);
     });
 
     it("starts a ball on the lawn plane airborne only if it rises at least at the settle speed", () => {

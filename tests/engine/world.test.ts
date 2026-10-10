@@ -73,8 +73,9 @@ describe("motionParamsAt", () => {
 });
 
 describe("turfAt", () => {
-    it("pairs the surface's turf restitution with its sliding friction", () => {
-        expect(turfAt(testWorld(), vec3(1, 1, 0))).toEqual({ restitution: 0.5, friction: 0.3 });
+    // P2b.2b.2b.2a: turf bed. Landings no longer read the turf's restitution (design §4.7), so turfAt is the friction.
+    it("returns the surface's sliding friction", () => {
+        expect(turfAt(testWorld(), vec3(1, 1, 0))).toBe(0.3);
     });
 });
 
@@ -112,6 +113,28 @@ describe("validateWorld", () => {
                     rollingResistance: 0.05,
                     ...TEST_TURF,
                     turfStiffness: 0,
+                }),
+            },
+        ],
+        [
+            "non-positive bed modulus",
+            {
+                lawn: uniformLawn(30, 40, {
+                    slidingFriction: 0.3,
+                    rollingResistance: 0.05,
+                    ...TEST_TURF,
+                    bedModulus: 0,
+                }),
+            },
+        ],
+        [
+            "non-positive bed recovery",
+            {
+                lawn: uniformLawn(30, 40, {
+                    slidingFriction: 0.3,
+                    rollingResistance: 0.05,
+                    ...TEST_TURF,
+                    bedRecovery: -1,
                 }),
             },
         ],

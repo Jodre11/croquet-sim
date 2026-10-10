@@ -11,7 +11,7 @@ import { STANDARD_GRAVITY, hoopHalfSpan, hoopLateral, uniformLawn } from "../../
 export const TEST_BALL = { radius: 0.046, mass: 0.454 } as const;
 
 /** Ball–turf contact of the test lawn (impact phase). Plausible, not sourced. */
-export const TEST_TURF = { turfStiffness: 2e5, turfRestitution: 0.5 } as const;
+export const TEST_TURF = { turfStiffness: 2e5, turfRestitution: 0.5, bedModulus: 3e8, bedRecovery: 2e-3 } as const;
 
 /** A 30 × 40 m lawn, peg at (15, 20), no hoops unless overridden. Symmetric about x = 15. */
 export function testWorld(overrides: Partial<World> = {}): World {

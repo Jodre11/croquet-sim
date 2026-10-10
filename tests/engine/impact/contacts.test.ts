@@ -23,7 +23,6 @@ import {
     pairList,
     pairTouching,
     pointVelocity,
-    turfContact,
     type HeadPenetration,
     type HeadRegion,
     type ObstacleGeometry,
@@ -229,7 +228,7 @@ describe("faceContact", () => {
     });
 });
 
-describe("ball and turf contacts", () => {
+describe("ball–ball contacts", () => {
     it("closes two balls closer than 2R along the line of centres", () => {
         const c = ballBallContact(vec3(0, 0, R), vec3(2 * R - 1e-5, 0, R), R) as Penetration;
         expect(c.normal).toEqual(vec3(1, 0, 0));
@@ -240,18 +239,12 @@ describe("ball and turf contacts", () => {
     it("rejects coincident ball centres, which have no normal", () => {
         expect(() => ballBallContact(vec3(1, 2, R), vec3(1, 2, R), R)).toThrow(RangeError);
     });
-
-    it("closes the turf while z < R, whatever the velocity", () => {
-        const c = turfContact(vec3(1, 2, R - 2e-5), R) as Penetration;
-        expect(c.normal).toEqual(vec3(0, 0, 1));
-        expect(c.depth).toBeCloseTo(2e-5, 15);
-        expect(turfContact(vec3(1, 2, R), R)).toBeNull();
-    });
 });
 
 describe("pairContact", () => {
     it("routes each pair kind to its leaf contact with the right bodies", () => {
-        // Blue touches the face, red and the turf; red is clear of the face.
+        // Blue touches the face and red; red is clear of the face. The ball–turf pairs are the bed's (turfBed.ts):
+        // pairContact refuses them (P2b.2b.2b.2a: turf bed; was the plane's turfContact).
         const state: HeadState = { ...headAt(0), position: vec3(-0.1, 0, R - 2e-5) };
         const balls: BallState[] = [
             { position: vec3(R - 1e-4, 0, R - 2e-5), velocity: ZERO, angularVelocity: ZERO },
@@ -260,20 +253,23 @@ describe("pairContact", () => {
         const [p0, p1] = [balls[0] as BallState, balls[1] as BallState];
         const far: ObstacleGeometry = { id: "1/a", centre: vec3(R - 1e-4 + R + 0.008 - 1e-5, 0, 0), radius: 0.008 };
         const pairs = pairList(["blue", "red"], [true, true], ["1/a"]);
-        const byKey = Object.fromEntries(pairs.map((p) => [p.key, pairContact(p, state, HEAD, balls, R, [far])]));
+        const turf = pairs.filter((p) => p.kind === "ball-turf");
+        const others = pairs.filter((p) => p.kind !== "ball-turf");
+        const byKey = Object.fromEntries(others.map((p) => [p.key, pairContact(p, state, HEAD, balls, R, [far])]));
         expect(byKey).toEqual({
             "face/blue": faceContact(state, HEAD, p0.position, R),
             "face/red": faceContact(state, HEAD, p1.position, R),
             "blue/red": ballBallContact(p0.position, p1.position, R),
-            "turf/blue": turfContact(p0.position, R),
-            "turf/red": turfContact(p1.position, R),
             "blue@1/a": obstacleContact(p0.position, R, far),
             "red@1/a": obstacleContact(p1.position, R, far),
         });
         expect(byKey["blue@1/a"]).not.toBeNull();
         expect(byKey["face/blue"]).not.toBeNull();
         expect(byKey["blue/red"]).not.toBeNull();
-        expect(byKey["turf/red"]).not.toBeNull();
+        expect(turf.map((p) => p.key)).toEqual(["turf/blue", "turf/red"]);
+        for (const p of turf) {
+            expect(() => pairContact(p, state, HEAD, balls, R, [far])).toThrow("the ball–turf pair is the bed's");
+        }
     });
 });
 
