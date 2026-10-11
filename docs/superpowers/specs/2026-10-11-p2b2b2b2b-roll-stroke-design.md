@@ -62,8 +62,9 @@ a number to fit.
 
 ## Decisions (user, 2026-10-11)
 
-- **Compliant hands on an intended path**, over a prescribed hands' arc and over today's path plus an angle spring
-  alone. The dip, its timing and its recovery are to emerge from the load, not be drawn. "Let's model it and see what
+- **Compliant hands on an intended path**, over a rigidly prescribed hands' path alone and over today's path plus an
+  angle spring alone. The intended path (the hands' arc, below) is the player's intention. The load-driven dip, its
+  timing and its recovery are to emerge from the flex on top of it, not be drawn. "Let's model it and see what
   emerges, it may need refinement."
 - **The intended path is the hands' own arc** (user, 2026-10-11, correcting the first draft's level path). The hands
   travel a shallow arc in the swing plane, centred high above. It descends into contact, so the hands arrive moving
