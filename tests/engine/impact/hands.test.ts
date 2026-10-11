@@ -1,16 +1,19 @@
 import { describe, expect, it } from "vitest";
 import { ZERO, add, cross, dot, length, scale, sub, vec3, type Vec3 } from "../../../src/engine/math/vec3";
 import {
+    FOLLOW_CAP,
     IMPACT_DT,
     LOOK_AHEAD,
     RELEASE_STEPS,
     TRACK_IMPACT_CAP,
     integrate,
+    integrateStroke,
     type ImpactBall,
     type ImpactProbe,
     type ImpactSnapshot,
+    type StrokeState,
 } from "../../../src/engine/impact/integrate";
-import { multiply, rotate, rotateInverse, type Quaternion } from "../../../src/engine/impact/rigidBody";
+import { axisAngle, multiply, rotate, rotateInverse, type Quaternion } from "../../../src/engine/impact/rigidBody";
 import {
     HAND_COUPLING,
     handLoad,
@@ -31,8 +34,10 @@ import { TEST_BALL } from "../support/fixtures";
 import {
     NO_DIP,
     TEST_COUPLING,
+    TEST_FLEX,
     TEST_HANDS,
     TEST_HEAD,
+    TEST_PENDULUM_FORCE,
     freeBall,
     isolated,
     levelArc,
@@ -50,6 +55,12 @@ const ARMED: Hands = { ...TEST_HANDS, armMass: 0.8 };
 
 /** The test coupling relaxing only after every run here: the whole run is before contact, the grips firm. */
 const BEFORE: Coupling = { ...TEST_COUPLING, relaxAt: 1 };
+
+/** The shaft's lean about the pitch axis (rad, forward positive), −θ for a head on a +x aim. */
+const leanOf = (head: HeadState): number => {
+    const s = rotate(head.orientation, UP);
+    return Math.atan2(s.x, s.z);
+};
 
 const conj = (q: Quaternion): Quaternion => ({ w: q.w, x: -q.x, y: -q.y, z: -q.z });
 const dist = (a: Vec3, b: Vec3): number => length(sub(a, b));
@@ -101,19 +112,6 @@ const TIMED: SwingArc = {
     window: 0.03,
     dip: { start: 0.005, duration: 0.02, depth: 0.01 },
     mode: "carry",
-};
-
-/**
- * A carry from contact: the pendulum's window short, no dip, a 0.15 m push, its hands arriving on their 11 m arc,
- * lowest 75 mm on.
- */
-const CARRY: SwingArc = {
-    ...TIMED,
-    pivot: vec3(2, 3, 0.8),
-    pivotVelocity: add(scale(AIM, 2.5), vec3(0, 0, (-2.5 * 0.075) / Math.sqrt(11 * 11 - 0.075 * 0.075))),
-    window: 0.01,
-    dip: NO_DIP,
-    handReach: 0.15,
 };
 
 const prepare = (arc: SwingArc, coupling: Coupling = TEST_COUPLING, hands: Hands = TEST_HANDS): PreparedTrack =>
@@ -243,40 +241,6 @@ describe("a tracked head with no ball", () => {
     });
 });
 
-describe("a carry with firm grips", () => {
-    const track = prepare(CARRY, TEST_COUPLING, ARMED);
-    const push = track.push as Push;
-
-    it("follows the path from contact to the push's end", () => {
-        const { socket, angle } = tracking(CARRY, { coupling: TEST_COUPLING, cap: push.end as number });
-        // Drafting measured 2.76e-6 m and 5.58e-6 rad (pre-flight re-measures them). P2b.2b.2b.2b: hands' arc;
-        // re-measured: 1.40e-5 m (was < 6e-6). The run's last step lands at most IMPACT_DT past the push's end, where
-        // the intended path stops at once (design §4.1) while the head still moves at about 3 m/s: up to 1.5e-5 m.
-        expect(socket).toBeLessThan(2e-5);
-        expect(angle).toBeLessThan(1.2e-5);
-    });
-
-    it("holds the slope: the head's pitch stays on the path's held θ to the push's end", () => {
-        const pitchOf = (q: Quaternion): number => {
-            const s = rotate(q, UP);
-            return Math.atan2(-dot(s, AIM), s.z);
-        };
-        let worst = 0;
-        const probe: ImpactProbe = {
-            step(s) {
-                if (s.t >= CARRY.arcStart + 2 * CARRY.window) {
-                    const lag = pitchOf(s.head.orientation) - pitchOf(pathAt(track, s.t).orientation);
-                    worst = Math.max(worst, Math.abs(lag));
-                }
-            },
-        };
-        const start = headOnPath(track, TEST_HEAD, 0);
-        integrate(isolated({ start, drive: track, gravity: STANDARD_GRAVITY }), { probe, cap: push.end as number });
-        // Within the tracking bound above; drafting measured 5.58e-6 rad.
-        expect(worst).toBeLessThan(1.2e-5);
-    });
-});
-
 /** A damped oscillator from x(0) = x0 at rest, settling to 0. */
 function oscillator(x0: number, omega: number, zeta: number, t: number): number {
     const root = Math.sqrt(1 - zeta * zeta);
@@ -371,18 +335,6 @@ describe("the feed-forward split", () => {
         }
     });
 
-    it("from contact feeds the top hand γ_T of its share plus the dip in full, in carry mode", () => {
-        const t = 0.009;
-        const track = prepare(TIMED, TEST_COUPLING, ARMED);
-        const firm = loadOnPath(track, t);
-        const soft = loadOnPath(prepare(TIMED, TEST_COUPLING, { ...ARMED, gripTension: 0.1 }), t);
-        const dip = dipForce(track, t);
-        expect(length(dip)).toBeGreaterThan(100);
-        expect(dist(add(firm.top, firm.bottom), rigidWrench(track, t).force)).toBeLessThan(1e-9);
-        expect(dist(sub(soft.top, dip), scale(sub(firm.top, dip), 0.1))).toBeLessThan(1e-9);
-        expect(length(firm.bottom)).toBeGreaterThan(1);
-    });
-
     it("feeds the top hand the whole F_s in swing mode outside a check", () => {
         const arc: SwingArc = { ...TIMED, mode: "swing" };
         const t = 0.009;
@@ -407,17 +359,6 @@ describe("the feed-forward split", () => {
         expect(dist(add(firm.top, firm.bottom), rigidWrench(track, t).force)).toBeLessThan(1e-9);
         expect(dist(sub(soft.top, dip), scale(sub(firm.top, dip), 0.1))).toBeLessThan(1e-9);
         expect(length(firm.bottom)).toBeGreaterThan(1);
-    });
-
-    it("keeps the top hand's share after the bottom hand's release, and drops the bottom hand's", () => {
-        const track = prepare(TIMED, TEST_COUPLING, ARMED);
-        const t = 0.009;
-        const held = loadOnPath(track, t);
-        const open: GripState = { contactPitch: TIMED.theta0, releasedAt: 0, releaseDelta: 0.1 };
-        const released = loadOnPath(track, t, open);
-        expect(dist(released.top, held.top)).toBeLessThan(1e-9);
-        expect(length(released.bottom)).toBeLessThan(1e-9);
-        expect(dist(released.feedForward, released.top)).toBeLessThan(1e-9);
     });
 });
 
@@ -500,7 +441,16 @@ describe("the bottom hand's rate guide", () => {
             const track = prepare(still(), TEST_COUPLING, withEffort(guideEffort));
             const head = headOnPath(track, TEST_HEAD, t);
             const slow = { ...head, velocity: sub(head.velocity, vec3(0.5, 0, 0)) };
-            const open: GripState = { contactPitch: 0, releasedAt: 1e-3, releaseDelta: 0.08 };
+            const open: GripState = {
+                contactPitch: 0,
+                releasedAt: 1e-3,
+                releaseDelta: 0.08,
+                flex: null,
+                topStiffness: 0,
+                bottomStiffness: 0,
+                vertical: false,
+                rising: false,
+            };
             return handLoad(track, slow, TEST_HEAD, t, open).bottom;
         };
         expect(length(released(1))).toBeGreaterThan(0);
@@ -554,7 +504,16 @@ describe("release by reach", () => {
     });
 
     it("then pushes only forward along e on its velocity lag, with no feed-forward and no couple", () => {
-        const grip: GripState = { contactPitch: 0, releasedAt: 1e-3, releaseDelta: 0.08 };
+        const grip: GripState = {
+            contactPitch: 0,
+            releasedAt: 1e-3,
+            releaseDelta: 0.08,
+            flex: null,
+            topStiffness: 0,
+            bottomStiffness: 0,
+            vertical: false,
+            rising: false,
+        };
         const turn = 0.08;
         const e = forwardOf(turned(turn), track.arc.aim);
         const resting = handLoad(track, turned(turn), TEST_HEAD, 2e-3, grip);
@@ -644,5 +603,230 @@ describe("the tracked end rule", () => {
         // re-catch at 1.1 ms is now part of the first interval, and the head next closes 9.27–19.31 ms.
         const { run } = strikeRun([freeBall("blue", BALL), freeBall("red", RED)], 12e-3);
         expect(run.events.map((e) => e.kind)).toEqual(["impact-cap", "impact-head-approaching"]);
+    });
+});
+
+describe("the flex (P2b.2b.2b.2b design §3.1, §7.1)", () => {
+    /** A still carry in a vertical swing plane: the hands never travel, so no pendulum phase. */
+    const STILL = (o: Partial<SwingArc> = {}): SwingArc =>
+        still({ mode: "carry", handReach: 0.1, pendulumAt: 1, ...o });
+    const prepareAt = (arc: SwingArc, gravity: number, hands: Hands = TEST_HANDS): PreparedTrack =>
+        prepareTrack(trackDrive(arc, TEST_COUPLING, hands), TEST_HEAD, gravity);
+
+    it("stiffens each hand by κ times its feed-forward: the top hand holds the weight, the bottom none", () => {
+        // A vertical shaft at rest: F_ff is the weight, all along the shaft, so the top hand carries it and the bottom
+        // hand's share is zero.
+        const track = prepareAt(STILL(), STANDARD_GRAVITY);
+        const grip = newGripState();
+        handLoad(track, headOnPath(track, TEST_HEAD, 0), TEST_HEAD, 0, grip);
+        expect(grip.topStiffness).toBeCloseTo(TEST_FLEX.stiffness + TEST_FLEX.stiffnessPerForce * STANDARD_GRAVITY, 9);
+        expect(grip.bottomStiffness).toBeCloseTo(TEST_FLEX.stiffness, 9);
+    });
+
+    it("rings a head moving along the shaft as the damped oscillator of both grips' springs", () => {
+        // Along a vertical shaft both grips' springs (2·k₀, no gravity, no feed-forward) act on the swung body M with
+        // both dampers: ω = √(2k₀/M), ζ = c/√(2k₀·M) = ζ_arm·√(2·m_arm/M). TEST_FLEX's 0.5 kg on the 1 kg test head
+        // makes that ζ_arm exactly.
+        const track = prepareAt(STILL(), 0);
+        const start = headOnPath(track, TEST_HEAD, 0);
+        const v0 = 0.01;
+        const moving = { ...start, velocity: vec3(0, 0, v0) };
+        const omega = Math.sqrt((2 * TEST_FLEX.stiffness) / TEST_HEAD.mass);
+        const zeta = TEST_FLEX.dampingRatio;
+        const wd = omega * Math.sqrt(1 - zeta * zeta);
+        let worst = 0;
+        const probe: ImpactProbe = {
+            step(s) {
+                const x = s.head.position.z - start.position.z;
+                const expected = (v0 / wd) * Math.exp(-zeta * omega * s.t) * Math.sin(wd * s.t);
+                worst = Math.max(worst, Math.abs(x - expected));
+            },
+        };
+        integrate(isolated({ start: moving, drive: track, gravity: 0 }), { probe, cap: 0.6 });
+        expect(worst).toBeLessThan(0.01 * (v0 / omega));
+    });
+
+    it("resists a small pitch with k_top·r_top² + k_bot·r_bot²: the angle hold from the two grips", () => {
+        // No gravity and a still path: F_ff is zero, so both hands are at k₀. A turn δθ about the head's centre moves
+        // each grip r·δθ and costs a moment k·r² δθ about the pitch axis.
+        const track = prepareAt(STILL({ theta0: -0.5 }), 0);
+        const grip = newGripState();
+        const on = headOnPath(track, TEST_HEAD, 0);
+        handLoad(track, on, TEST_HEAD, 0, grip);
+        const turn = 1e-5;
+        const turned = { ...on, orientation: multiply(axisAngle(track.axis, turn), on.orientation) };
+        const load = handLoad(track, turned, TEST_HEAD, 0, grip);
+        const rTop = TEST_HEAD.socket.z + track.arc.radius;
+        const rBottom = TEST_HEAD.socket.z + TEST_HANDS.bottom;
+        const expected = 0 - TEST_FLEX.stiffness * (rTop * rTop + rBottom * rBottom) * turn;
+        expect(Math.abs(dot(load.torque, track.axis) / expected - 1)).toBeLessThan(0.01);
+    });
+
+    it("has no runaway: a head held off its intended point by d or 10·d feels exactly ten times the spring", () => {
+        const track = prepareAt(STILL(), STANDARD_GRAVITY);
+        const grip = newGripState();
+        const on = headOnPath(track, TEST_HEAD, 0);
+        const fed = handLoad(track, on, TEST_HEAD, 0, grip).force;
+        const shifted = (d: number): Vec3 =>
+            sub(handLoad(track, { ...on, position: add(on.position, vec3(d, 0, 0)) }, TEST_HEAD, 0, grip).force, fed);
+        expect(shifted(1e-2).x).toBeCloseTo(10 * shifted(1e-3).x, 9);
+    });
+
+    it("pushes no harder along aim than its springs and dampers once the push has stopped: no brake", () => {
+        // Design §7.1: the intended path stops at once, so past the push's end and the pendulum's held slope the
+        // planned acceleration is zero and the feed-forward has no deceleration term along aim.
+        const arc = STILL({ pivotVelocity: vec3(1, 0, 0), handReach: 0.05, window: 0.005, handWindow: 0.005 });
+        const track = prepareAt(arc, 0);
+        const end = (track.push as Push).end as number;
+        const grip = newGripState();
+        for (const t of [end + 0.02, end + 0.05]) {
+            const load = handLoad(track, headOnPath(track, TEST_HEAD, t), TEST_HEAD, t, grip);
+            expect(Math.abs(dot(load.feedForward, arc.aim))).toBeLessThan(1e-9);
+        }
+    });
+});
+
+describe("the pendulum phase (P2b.2b.2b.2b design §4.2, §4.3, §7.1)", () => {
+    /** Hands with an undamped flex, a short pendulum: a 0.5 m top grip, the bottom grip 0.25 m from the socket. */
+    const FREE: Hands = { ...TEST_HANDS, bottom: 0.25, flex: { ...TEST_FLEX, dampingRatio: 0 } };
+    /** Leaning 0.5 rad, still, the pendulum phase from contact (pendulumAt 0 on still hands). */
+    const SWUNG = (effort: number): SwingArc =>
+        still({ mode: "carry", radius: 0.5, theta0: -0.5, handReach: 0.1, pendulumAt: 0, pendulumEffort: effort });
+    const prepared = (effort: number, gravity = STANDARD_GRAVITY): PreparedTrack =>
+        prepareTrack(trackDrive(SWUNG(effort), TEST_COUPLING, FREE), TEST_HEAD, gravity);
+    const UP_AXIS = vec3(0, 0, 1);
+
+    /** The swung body's energy, the top hand's feed-forward potential −F_ff·x_top and its spring's energy. */
+    function energy(track: PreparedTrack, s: ImpactSnapshot, topStart: Vec3): number {
+        const { head } = s;
+        const shaft = rotate(head.orientation, UP_AXIS);
+        const top = add(head.position, scale(shaft, TEST_HEAD.socket.z + track.arc.radius));
+        const w = rotateInverse(head.orientation, head.angularVelocity);
+        const I = TEST_HEAD.inertia;
+        const kinetic =
+            0.5 * TEST_HEAD.mass * dot(head.velocity, head.velocity) +
+            0.5 * (I.x * w.x * w.x + I.y * w.y * w.y + I.z * w.z * w.z);
+        const weight = TEST_HEAD.mass * STANDARD_GRAVITY;
+        const k = FREE.flex.stiffness + FREE.flex.stiffnessPerForce * weight;
+        const offset = sub(top, topStart);
+        return kinetic + weight * head.position.z - weight * top.z + 0.5 * k * dot(offset, offset);
+    }
+
+    /** The top grip of the head on `track`'s path at t = 0, where the flex takes hold. */
+    const topAtStart = (track: PreparedTrack): Vec3 => {
+        const start = headOnPath(track, TEST_HEAD, 0);
+        return add(start.position, scale(rotate(start.orientation, UP_AXIS), TEST_HEAD.socket.z + track.arc.radius));
+    };
+
+    it("at effort 0 is a free pendulum about the top hand: an undamped flex conserves the energy", () => {
+        // The run is 140,000 steps, so the probe keeps running extremes rather than every snapshot.
+        const track = prepared(0);
+        const topStart = topAtStart(track);
+        let lowest = Infinity;
+        let highest = 0 - Infinity;
+        let pitch = 0 - Infinity;
+        const probe: ImpactProbe = {
+            step(s) {
+                const e = energy(track, s, topStart);
+                lowest = Math.min(lowest, e);
+                highest = Math.max(highest, e);
+                pitch = Math.max(pitch, 0 - leanOf(s.head));
+            },
+        };
+        const start = headOnPath(track, TEST_HEAD, 0);
+        integrate(isolated({ start, drive: track, gravity: STANDARD_GRAVITY }), { probe, cap: 0.7 });
+        // The swing's potential range, m·g·ℓ_h·(1 − cos 0.5) with ℓ_h = ρ + r = 0.532 m, sets the scale;
+        // semi-implicit Euler's error is O(dt) of it.
+        const range = TEST_HEAD.mass * STANDARD_GRAVITY * 0.532 * (1 - Math.cos(0.5));
+        expect(highest - lowest).toBeLessThan(1e-3 * range);
+        expect(pitch).toBeGreaterThan(0.4);
+    });
+
+    it("pushes the bottom grip up to vertical and not after, adding F_pendulum's work within 1 %", () => {
+        // Review focus 3 at full effort. The work is F_pendulum·(e·v_B)·dt summed from the kinematics, not from the
+        // reported force, up to the first step past vertical.
+        const track = prepared(1);
+        const topStart = topAtStart(track);
+        const aim = track.arc.aim;
+        let work = 0;
+        let previous = 0;
+        let before = NaN;
+        let atVertical = NaN;
+        let past = false;
+        let pushedAfter = 0;
+        const probe: ImpactProbe = {
+            step(s) {
+                if (Number.isNaN(before)) {
+                    before = energy(track, s, topStart);
+                }
+                if (past) {
+                    pushedAfter = Math.max(pushedAfter, length((s.hand as NonNullable<ImpactSnapshot["hand"]>).bottom));
+                    return;
+                }
+                if (0 - leanOf(s.head) >= 0) {
+                    past = true;
+                    return;
+                }
+                const shaft = rotate(s.head.orientation, UP_AXIS);
+                const arm = scale(shaft, TEST_HEAD.socket.z + FREE.bottom);
+                const v = add(s.head.velocity, cross(s.head.angularVelocity, arm));
+                const forward = sub(aim, scale(shaft, dot(aim, shaft)));
+                work += TEST_PENDULUM_FORCE * dot(scale(forward, 1 / length(forward)), v) * (s.t - previous);
+                previous = s.t;
+                atVertical = energy(track, s, topStart);
+            },
+        };
+        const start = headOnPath(track, TEST_HEAD, 0);
+        integrate(isolated({ start, drive: track, gravity: STANDARD_GRAVITY }), { probe, cap: 0.7 });
+        expect(past).toBe(true);
+        expect(Math.abs((atVertical - before) / work - 1)).toBeLessThan(0.01);
+        // One step past vertical the latch is set; every later step's bottom hand is off the mallet.
+        expect(pushedAfter).toBe(0);
+    });
+
+    it("finishes at the swing's first apex after it starts, past vertical, never at the cap", () => {
+        // With TEST_FLEX's damping: an undamped flex rings the head's fast pitch mode (the head turning about its own
+        // centre against the soft top spring), which reverses the pitch rate 20 ms in, at θ −0.457, and is the first
+        // apex there. Damped, the rate stays positive to the swing's top.
+        const damped: Hands = { ...FREE, flex: TEST_FLEX };
+        const track = prepareTrack(trackDrive(SWUNG(0), TEST_COUPLING, damped), TEST_HEAD, STANDARD_GRAVITY);
+        const start = headOnPath(track, TEST_HEAD, 0);
+        const { follow } = integrateStroke(
+            isolated({ start, drive: track, gravity: STANDARD_GRAVITY }),
+            { cap: 0.01 },
+            true,
+        );
+        const done = follow as NonNullable<typeof follow>;
+        expect(done.flags).not.toContain("follow-cap");
+        expect(done.finish).toBeLessThan(FOLLOW_CAP);
+        const last = done.samples[done.samples.length - 1] as StrokeState;
+        // Released at rest 0.5 rad back, it tops out near 0.5 rad forward (the flex barely moves the pivot).
+        expect(-leanOf(last.head)).toBeGreaterThan(0.4);
+    });
+
+    it("caps a head that never swings forward", () => {
+        // No gravity and still hands: the pendulum phase starts with the head turning back about the top grip at
+        // 1 rad/s, and nothing turns it forward. (A head at rest is no test: its pitch rate is rounding, ±1e-14 rad/s.)
+        const track = prepared(0, 0);
+        const on = headOnPath(track, TEST_HEAD, 0);
+        const top = add(on.position, scale(rotate(on.orientation, UP_AXIS), TEST_HEAD.socket.z + track.arc.radius));
+        const spin = scale(track.axis, -1);
+        const start = { ...on, velocity: cross(spin, sub(on.position, top)), angularVelocity: spin };
+        const { follow } = integrateStroke(isolated({ start, drive: track, gravity: 0 }), { cap: 0.01 }, true);
+        expect((follow as NonNullable<typeof follow>).flags).toContain("follow-cap");
+    });
+
+    it("caps a carry whose hands never reach the pendulum point", () => {
+        // Review focus 2: still hands and pendulumAt 1 never start the pendulum phase, so the follow-through runs on.
+        const arc = still({ mode: "carry", radius: 0.5, theta0: -0.5, handReach: 0.1, pendulumAt: 1 });
+        const track = prepareTrack(trackDrive(arc, TEST_COUPLING, FREE), TEST_HEAD, STANDARD_GRAVITY);
+        expect((track.push as Push).pendulum).toBeNull();
+        const start = headOnPath(track, TEST_HEAD, 0);
+        const { follow } = integrateStroke(
+            isolated({ start, drive: track, gravity: STANDARD_GRAVITY }),
+            { cap: 0.01 },
+            true,
+        );
+        expect((follow as NonNullable<typeof follow>).flags).toContain("follow-cap");
     });
 });

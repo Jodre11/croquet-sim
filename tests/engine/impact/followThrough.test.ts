@@ -125,18 +125,18 @@ describe("the follow-through (design §4)", () => {
         }
     });
 
-    it("finishes a carry once the hands' push has ended and the head is at rest", () => {
+    it("finishes a carry at its first apex after the pendulum phase starts", () => {
         const { contact, follow } = stroke(shot({ backswing: 0.25 }, CARRY));
-        expect(follow.flags).toEqual([]);
         const push = prepareTrack(contact.drive as TrackDrive, contact.head, WORLD.gravity).push as Push;
-        expect(push.end).not.toBeNull();
-        expect(follow.finish).toBeGreaterThanOrEqual(push.end as number);
-        expect(length(last(follow).head.velocity)).toBeLessThan(FINISH_SPEED);
+        expect(push.pendulum).not.toBeNull();
+        expect(follow.finish).toBeGreaterThan(push.pendulum as number);
+        expect(follow.flags).not.toContain("follow-cap");
     });
 
     it("caps a carry whose hands never stop", () => {
-        // Review focus 5: a 10 m reach never binds, so the carry never finishes. The hands' arc must exceed the
-        // reach (P2b.2b.2b.2b), so its radius is 11 m, as levelArc's.
+        // Review focus 5: a 10 m push reaches its pendulum point (8 m) only after REACH_SEARCH (0.5 s), so the
+        // pendulum phase never starts and the carry never finishes. The hands' arc must exceed the push
+        // (P2b.2b.2b.2b), so its radius is 11 m, as levelArc's.
         const endless = testProfile({
             drive: { mode: "carry", handReach: 10, handArcRadius: 11 },
             shape: { pendulumShare: 0.5 },
@@ -148,8 +148,12 @@ describe("the follow-through (design §4)", () => {
         expect(follow.finish).toBeLessThan(contactAt + FOLLOW_CAP + 1e-5);
     });
 
-    // P2b.2b.2b.2b: hands' arc — a dip inside trackEnd lengthens the impact, so it can no longer drive the
-    // follow-through deep; Task 5 re-establishes the case on the flex.
+    // P2b.2b.2b.2b: awaits the pre-flight gate (Task 6). A dip is part of trackEnd, so a late dip lengthens the impact
+    // and drives the head deep inside it (this setup: impact-head-deep, 5.4 mm, and the follow-through finishes at the
+    // impact's end), never in the follow-through. On the flex no test-profile carry drives the follow-through past
+    // 2 × HEAD_DEEP_LIMIT: the pendulum phase at any pendulumAt or effort tried reaches at most 0.31 mm into the turf.
+    // On this file's world the canonical full roll's pendulum phase swings its head into the turf 2.04 mm deep
+    // (follow-head-deep), short of 2 × HEAD_DEEP_LIMIT and subject to the gate.
     it.skip("flags a follow-through that drives the head deep, not the impact", () => {
         // A deep, late dip: the hands lower 0.2 m over 50 ms from 100 ms, long after the ball has gone. The turf and
         // the compliant hands hold the head well above that path, but a planned dig far outside play presses it past

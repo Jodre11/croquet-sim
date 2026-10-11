@@ -22,10 +22,11 @@
  * while both hold cells throw a RangeError (plan decision 1). Isolated set-ups (tests) may give balls any state and
  * leave the turf out; simulateImpact.ts prepares and validates real ones.
  *
- * A tracked drive (P2b.2b.1 design §3.5) ends on the same conditions, both arcs' windows and the dip standing for the
- * drive window, and only once the head is neither closing on any ball within reach (headClosing) nor would reach one
- * ahead of its face within LOOK_AHEAD: a re-contact is integrated, not flagged. Its cap is TRACK_IMPACT_CAP after the
- * planned contact.
+ * A tracked drive (P2b.2b.1 design §3.5) ends on the same conditions, both arcs' windows and the dip (and, in carry
+ * mode, the pendulum phase's start; P2b.2b.2b.2b design §4.2) standing for the drive window, and only once the head
+ * is neither closing on any ball within reach (headClosing) nor would reach one ahead of its face within LOOK_AHEAD:
+ * a re-contact is integrated, not flagged. In carry mode it also waits until the hands have started the pendulum
+ * phase. Its cap is TRACK_IMPACT_CAP after the planned contact.
  *
  * A tracked drive's face–ball pairs meet the whole head, a solid cylinder (contacts.ts headBallContact; P2b.2b.1
  * design §4.5): each also records its intervals per region of the head, and a contact off the face raises
@@ -174,7 +175,7 @@ export const FOLLOW_CAP = 1;
 /** Spacing (s) of the stroke's samples (P2b.2b.2a design §4.3). Numerical: 1 ms moves a 3 m/s head 3 mm. */
 export const FOLLOW_SAMPLE = 1e-3;
 
-/** Speed (m/s) below which a check's or a carry's head is at rest (P2b.2b.2a design §4.2). Numerical, not physical. */
+/** Speed (m/s) below which a check's head is at rest (P2b.2b.2a design §4.2). Numerical, not physical. */
 export const FINISH_SPEED = 1e-3;
 
 /**
@@ -327,23 +328,18 @@ function finishKind(plan: PreparedTrack): FinishKind {
 
 /**
  * True once the head in `state` at time t has reached its finish (P2b.2b.2a design §4.2): a swing at the pendulum's
- * apex, its pitch rate about n at or below zero; a check at rest relative to the hands; a carry at rest once the
- * hands' push has ended (never, where the push does not end; P2b.2b.2b.2b design §4.1).
+ * apex, its pitch rate about n at or below zero; a check at rest relative to the hands; a carry at the first apex
+ * after its pendulum phase starts, its pitch rate at or below zero once it has been positive (`grip.rising`;
+ * P2b.2b.2b.2b design §4.3).
  */
-function finished(kind: FinishKind, plan: PreparedTrack, state: HeadState, t: number): boolean {
+function finished(kind: FinishKind, plan: PreparedTrack, state: HeadState, t: number, grip: GripState): boolean {
     switch (kind) {
         case "swing":
             return dot(state.angularVelocity, plan.axis) <= 0;
         case "check":
             return length(sub(state.velocity, handsAt(plan, t).velocity)) < FINISH_SPEED;
         case "carry":
-            // At rest once the push has ended (never, where it does not end).
-            return (
-                plan.push !== null &&
-                plan.push.end !== null &&
-                t >= plan.push.end &&
-                length(state.velocity) < FINISH_SPEED
-            );
+            return grip.rising && dot(state.angularVelocity, plan.axis) <= 0;
     }
 }
 
@@ -796,11 +792,15 @@ function finish(
     return { ...run, headRegions, entryJumps: { count: jumps.count, worst: jumps.worst, keys: [...jumps.keys] } };
 }
 
-/** When a tracked drive's actions are over: both arcs' windows and, if it has depth, the dip (design §3.5). */
+/**
+ * When a tracked drive's actions are over: both arcs' windows, the dip if it has depth and, in carry mode, the
+ * pendulum phase's start (P2b.2b.2b.2b design §4.2), so that its start and effort can act on the balls.
+ */
 function trackEnd(plan: PreparedTrack): number {
-    const { arc } = plan;
+    const { arc, push } = plan;
     const dip = arc.dip.depth > 0 ? arc.dip.start + arc.dip.duration : 0;
-    return Math.max(arc.arcStart + arc.window, arc.handStart + arc.handWindow, dip);
+    const pendulum = push === null || push.pendulum === null ? 0 : push.pendulum;
+    return Math.max(arc.arcStart + arc.window, arc.handStart + arc.handWindow, dip, pendulum);
 }
 
 /**
@@ -1059,7 +1059,11 @@ export function integrateStroke(setup: ImpactSetup, options: ImpactOptions = {},
 
         quiet = hardClosed ? 0 : quiet + 1;
         const settled = struck && now >= driveEnd && quiet >= RELEASE_STEPS && !turfMoving;
-        if (settled && (plan.kind === "force" || !stillReaching(state, head, balls, R, plan, now))) {
+        // In carry mode the hands must have started the pendulum phase, which opens the bottom hand (P2b.2b.2b.2b
+        // design §4.2): its start bounds driveEnd, but the step ending there loaded the hands just before it.
+        const waiting =
+            plan.kind === "track" && plan.push !== null && plan.push.pendulum !== null && grip.releasedAt === null;
+        if (settled && !waiting && (plan.kind === "force" || !stillReaching(state, head, balls, R, plan, now))) {
             break;
         }
         if (now >= cap) {
@@ -1128,7 +1132,7 @@ function continueStroke(
     let deep = false;
     for (;;) {
         const t = steps * dt;
-        if (finished(kind, plan, state, t)) {
+        if (finished(kind, plan, state, t, grip)) {
             break;
         }
         if (t >= cap) {

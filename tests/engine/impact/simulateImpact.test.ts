@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { CONTACT_TOLERANCE } from "../../../src/engine/detect";
-import { add, length, sub, vec3 } from "../../../src/engine/math/vec3";
+import { add, length, sub, vec3, type Vec3 } from "../../../src/engine/math/vec3";
 import { stateAtTime } from "../../../src/engine/sample";
+import { simulateShot } from "../../../src/engine/shot";
 import { ENGINE_VERSION, simulateFreeMotion } from "../../../src/engine/simulate";
-import type { BallStates, SurfaceProps, World } from "../../../src/engine/types";
+import { buildContact } from "../../../src/engine/swing/buildContact";
+import type { BallState, BallStates, SurfaceProps, World } from "../../../src/engine/types";
 import { obstaclesOf, uniformLawn } from "../../../src/engine/world";
 import { obstacleContact } from "../../../src/engine/impact/contacts";
 import type { ImpactBall } from "../../../src/engine/impact/integrate";
@@ -14,10 +16,23 @@ import {
     validateImpact,
     type SinkSolver,
 } from "../../../src/engine/impact/simulateImpact";
+import { prepareTrack, type Push } from "../../../src/engine/impact/track";
 import { bedLawOf, staticSink } from "../../../src/engine/impact/turfBed";
-import type { ContactState, Coupling, Hands, StrokeMode, SwingArc } from "../../../src/engine/impact/types";
+import type { ContactState, Coupling, Hands, StrokeMode, SwingArc, TrackDrive } from "../../../src/engine/impact/types";
 import { TEST_BALL, TEST_TURF, ballAt, hoopWithUprightAt, testWorld } from "../support/fixtures";
-import { TEST_FLEX, TEST_HEAD, drive, levelArc, onArc, strike, trackDrive } from "../support/impact";
+import {
+    TEST_FLEX,
+    TEST_HEAD,
+    drive,
+    levelArc,
+    mirrorBall,
+    mirrorContact,
+    mirrorVec,
+    onArc,
+    strike,
+    trackDrive,
+} from "../support/impact";
+import { canonicalSetup } from "../support/shot";
 
 const R = TEST_BALL.radius;
 const WORLD = testWorld();
@@ -525,5 +540,49 @@ describe("simulateImpact with a tracked drive", () => {
     it.each(rejections)("rejects %s", (_name, contact, pattern) => {
         expect(() => simulateImpact(contact, { blue: BLUE }, WORLD)).toThrow(RangeError);
         expect(() => simulateImpact(contact, { blue: BLUE }, WORLD)).toThrow(pattern);
+    });
+});
+
+describe("the roll's impact (P2b.2b.2b.2b design §4.2)", () => {
+    it("never ends before the pendulum phase starts, and records its start as the release", () => {
+        for (const pendulumAt of [0.5, 1]) {
+            const setup = canonicalSetup("full-roll", { world: WORLD, stroke: { pendulumAt } });
+            const contact = buildContact(setup, WORLD);
+            const track = prepareTrack(contact.drive as TrackDrive, contact.head, WORLD.gravity);
+            const pendulum = (track.push as Push).pendulum as number;
+            const result = simulateImpact(contact, setup.balls, WORLD);
+            expect(result.duration, `pendulumAt ${pendulumAt}`).toBeGreaterThanOrEqual(pendulum);
+            expect(result.release?.t, `pendulumAt ${pendulumAt}`).toBeCloseTo(pendulum, 4);
+        }
+    });
+
+    it("runs a roll with no push to a normal finish", () => {
+        // Review focus 1: a push of 0 puts the arc's low point at contact and starts the pendulum phase there.
+        const setup = canonicalSetup("half-roll", { world: WORLD, stroke: { handReach: 0 } });
+        const outcome = simulateShot(setup, WORLD, { trajectory: true });
+        expect(outcome.impact.events.map((e) => e.kind)).not.toContain("impact-cap");
+        expect(Number.isFinite(outcome.impact.duration)).toBe(true);
+    });
+
+    it("mirrors a canonical roll exactly", () => {
+        // Review focus 5: the arc, the flex and the pendulum phase reflect across y = 0 as every tracked drive does
+        // (invariants.test.ts's mirror case). On the test world, whose lawn is uniform, the full roll is aimed along
+        // +x with the striker on y = 0, so its mirror is the same court.
+        const world = testWorld();
+        const R = world.ball.radius;
+        const base = canonicalSetup("full-roll", { world, stroke: { aim: 0 } });
+        const setup = { ...base, balls: { blue: ballAt(5, 0), red: ballAt(5 + 2 * R, 0) } };
+        const contact = buildContact(setup, world);
+        const run = simulateImpact(contact, setup.balls, world);
+        const reflected: BallStates = { blue: mirrorBall(ballAt(5, 0)), red: mirrorBall(ballAt(5 + 2 * R, 0)) };
+        const mirrored = simulateImpact(mirrorContact(contact), reflected, world);
+        const same = (a: Vec3, b: Vec3): boolean => a.x === b.x && a.y === b.y && a.z === b.z;
+        expect(mirrored.steps).toBe(run.steps);
+        for (const id of ["blue", "red"] as const) {
+            const a = run.handover[id] as BallState;
+            const b = mirrored.handover[id] as BallState;
+            expect(same(mirrorVec(a.position), b.position), id).toBe(true);
+            expect(same(mirrorVec(a.velocity), b.velocity), id).toBe(true);
+        }
     });
 });

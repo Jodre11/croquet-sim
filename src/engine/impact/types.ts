@@ -178,12 +178,12 @@ export interface FlexLaw {
  * Two hands on the rigid, massless shaft, which is the head's up axis through the socket (design §3.1): the top hand at
  * the arc radius, the bottom hand `bottom` from the socket (m, in (0, radius)). From `relaxAt` on the top hand grips
  * with γ_T = `gripTension` and the bottom hand with g_B = `bottomGrip`, both in (0, 1]. The player's arm mass
- * `armMass` (kg) rides rigidly at the top grip. The bottom hand opens once the shaft has turned through `reachSlack`
- * (m of hand travel). `guideEffort` (in [0, 1]) scales the bottom hand's push after contact in swing mode (the rate
- * guide outside a check, and the push after the release): 1 restores the planned arc's speed, 0 is no extra push; a
- * check's guide acts in full (design §3.3; the player's choice, user's account, 2026-10-06). In carry mode from
- * contact each hand flexes by `flex`, and the bottom hand's push in the pendulum phase is at most `pendulumForce`
- * (P2b.2b.2b.2b design §3, §4.2).
+ * `armMass` (kg) rides rigidly at the top grip. In swing mode the bottom hand opens once the shaft has turned through
+ * `reachSlack` (m of hand travel); in carry mode at the pendulum phase's start. `guideEffort` (in [0, 1]) scales the
+ * bottom hand's push after contact in swing mode (the rate guide outside a check, and the push after the release): 1
+ * restores the planned arc's speed, 0 is no extra push; a check's guide acts in full (design §3.3; the player's
+ * choice, user's account, 2026-10-06). In carry mode from contact each hand flexes by `flex`, and the bottom hand's
+ * push in the pendulum phase is at most `pendulumForce` (P2b.2b.2b.2b design §3, §4.2).
  */
 export interface Hands {
     readonly bottom: number;
@@ -296,8 +296,9 @@ export interface ImpactRun {
     /** Keys of the ball–ball and ball–obstacle pairs touching (within CONTACT_TOLERANCE) at t = 0, in pair order. */
     readonly touchingAtStart: readonly string[];
     /**
-     * A tracked drive's bottom hand opening by reach (P2b.2b.1 design §3.3): when (s), and the shaft's turn since
-     * relaxAt (contact) then (rad). Absent if it never opened, and for a force table.
+     * A tracked drive's bottom hand opening (P2b.2b.1 design §3.3): by reach in swing mode, at the pendulum phase's
+     * start in carry mode (P2b.2b.2b.2b design §4.2): when (s), and the shaft's turn since relaxAt (contact) then
+     * (rad). Absent if it never opened, and for a force table.
      */
     readonly release?: { readonly t: number; readonly deltaTheta: number };
     /**

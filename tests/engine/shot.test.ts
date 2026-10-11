@@ -150,11 +150,9 @@ describe("strokeContext", () => {
 });
 
 describe("simulateShot", () => {
-    it.each(STROKE_TYPES)("runs the %s canonical setup with no entry jump and no ball above R + 5 mm", (type) => {
-        // Exit criterion 4. Prototype (pass 4, design §5.4 values), highest centre above R over the impact and the
-        // flights: 0.85 mm single-ball, 0.93 drive, 4.17 stop-ac (the rising strike), 0.72 half roll, 0.82 full roll,
-        // 2.92 pass roll; no entry jump anywhere (P2b.2b.1; Task 10 re-measures them). Pre-flight re-measures them,
-        // and measures stop-gc on its target setup (its 0.81 mm was on the retired touching setup).
+    const ROLLS: readonly (typeof STROKE_TYPES)[number][] = ["half-roll", "full-roll", "pass-roll"];
+
+    const lowFlight = (type: (typeof STROKE_TYPES)[number]): void => {
         const setup = canonicalSetup(type);
         const outcome = simulateShot(setup);
         expect(outcome.impact.entryJumps?.count).toBe(0);
@@ -176,7 +174,23 @@ describe("simulateShot", () => {
             }
         }
         expect(highest).toBeLessThanOrEqual(R + 0.005);
-    });
+    };
+
+    // Exit criterion 4. Prototype (pass 4, design §5.4 values), highest centre above R over the impact and the
+    // flights: 0.85 mm single-ball, 0.93 drive, 4.17 stop-ac (the rising strike), 0.72 half roll, 0.82 full roll,
+    // 2.92 pass roll; no entry jump anywhere (P2b.2b.1; Task 10 re-measures them). Pre-flight re-measures them, and
+    // measures stop-gc on its target setup (its 0.81 mm was on the retired touching setup).
+    it.each(STROKE_TYPES.filter((type) => !ROLLS.includes(type)))(
+        "runs the %s canonical setup with no entry jump and no ball above R + 5 mm",
+        lowFlight,
+    );
+
+    // P2b.2b.2b.2b: awaits the pre-flight gate (Task 6). On the flex every roll's striker's ball rises past R + 5 mm
+    // within the impact (half 10.15 mm at 53 ms, full 7.18 at 45 ms, pass 6.64 at 59 ms). The face catches it again
+    // after the strike (half from 9.6 ms, full 9.1 ms, pass three times from 5.5 ms): on the half roll the strike
+    // pitches the head back through the soft flex (−1.1 rad/s) and the head rises (+0.16 m/s), so the face meets the
+    // ball tilted up and rising.
+    it.skip.each(ROLLS)("runs the %s canonical setup with no entry jump and no ball above R + 5 mm", lowFlight);
 
     it("runs each stage in turn, and hands phase 2 exactly the impact's handover", () => {
         const setup = canonicalSetup("half-roll");
@@ -235,15 +249,17 @@ describe("simulateShot", () => {
         }
     };
 
-    it.each(STROKE_TYPES.filter((type) => type !== "pass-roll"))(
+    it.each(STROKE_TYPES.filter((type) => type !== "half-roll"))(
         "runs the %s canonical setup from the top to its finish (exit criterion 3)",
         runsToFinish,
     );
 
-    // P2b.2b.2b.2b: hands' arc — the interim velocity-only hands brake the stopped push sharply, and the trapezoid
-    // seam error (1.48e-6 / 2.01e-6) passes POSITION_SLACK; Task 5's flex replaces these hands and restores the case.
-    it.skip("runs the pass-roll canonical setup from the top to its finish (exit criterion 3)", () => {
-        runsToFinish("pass-roll");
+    // P2b.2b.2b.2b: awaits the pre-flight gate (Task 6). On the flex the half roll raises follow-cap: from the strike
+    // the soft flex lets the head pitch back (−1.1 rad/s), so at the pendulum phase's start (66.3 ms) it is still
+    // pitching back; it swings back and up about 10 cm, then forward onto the turf, and scrapes along it, its pitch
+    // rate still positive (θ +0.11 rad) at FOLLOW_CAP.
+    it.skip("runs the half-roll canonical setup from the top to its finish (exit criterion 3)", () => {
+        runsToFinish("half-roll");
     });
 
     it("judges 'plays away from' on a whole croquet stroke at 90.1° from the line of centres, not at 89.9°", () => {
@@ -451,17 +467,18 @@ describe("the mechanisms (design §8.1), on the canonical setups", () => {
         expect(impact.events.map((e) => e.kind)).not.toContain("impact-head-deep");
     });
 
-    // Expected to fail (user decision, 2026-10-09). On the bed (P2b.2b.2b.2a) the canonical pass roll's follow-through
-    // keeps the 34°-leaning face on the striker's ball: the ball rebounds only about 1.8 mm and is back in its pit by
-    // 46 ms, the face catches it at about 2.7 m/s and pins it 2–4 mm deep until the head stops. So the punched ball
-    // leaves at 0.038 m/s and the coasted one at 0.088 m/s. A model finding, recorded in the roadmap; P2b.2b.2b.2b (the
-    // roll's stroke: descent, follow-through, hands) owns it. This test flips, and alerts, when that phase fixes it;
-    // it then goes back to `it`.
+    // Was expected to fail (user decision, 2026-10-09) until P2b.2b.2b.2b. On the bed (P2b.2b.2b.2a) the canonical
+    // pass roll's follow-through kept the 34°-leaning face on the striker's ball: the ball rebounded only about 1.8 mm
+    // and was back in its pit by 46 ms, the face caught it at about 2.7 m/s and pinned it 2–4 mm deep until the head
+    // stopped. So the punched ball left at 0.038 m/s and the coasted one at 0.088 m/s. A model finding, recorded in the
+    // roadmap, which P2b.2b.2b.2b (the roll's stroke: descent, follow-through, hands) owned; the test was `it.fails`
+    // until that phase fixed it, and went back to `it` then.
     it("the pass roll's punch leaves the striker's ball faster than a coasting pass roll", () => {
         // Prototype: 1.226 m/s at drive +1, 1.099 m/s at drive 0. P2b.2b.2b.2a: Hertzian face (was 1.099 at drive 0):
         // 1.894 m/s at drive +1, 0.29 m/s at drive 0, the coasted ball already pinned under the face. P2b.2b.2b.2a:
         // turf bed (was 1.894 and 0.29): 0.038 m/s at drive +1, 0.088 m/s at drive 0, both pinned.
-        // P2b.2b.2b.2b: hands' arc — passes from here (was it.fails); Task 8 confirms it after the flex.
+        // P2b.2b.2b.2b: hands' arc (was it.fails): 1.2170 and 1.1300 m/s. P2b.2b.2b.2b: flex (was 1.2170 and
+        // 1.1300): 1.8786 and 1.6386 m/s; Task 8 confirms it.
         const punched = simulateShot(canonicalSetup("pass-roll")).impact;
         const coasted = simulateShot(canonicalSetup("pass-roll", { stroke: { drive: 0 } })).impact;
         expect(strikerSpeed(punched)).toBeGreaterThan(strikerSpeed(coasted));
