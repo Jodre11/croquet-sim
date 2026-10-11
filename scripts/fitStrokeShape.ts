@@ -21,7 +21,7 @@
  */
 import swingJson from "../reference/swing.json";
 import type { Hands, StrokeMode } from "../src/engine/impact/types";
-import { contactPose, downswingInput, poseSpeed, type ContactPose } from "../src/engine/swing/buildContact";
+import { arcArrival, contactPose, downswingInput, poseSpeed, type ContactPose } from "../src/engine/swing/buildContact";
 import { MAX_BACK_ANGLE, planDownswing, type PlannedDownswing } from "../src/engine/swing/downswing";
 import { defaultProfile } from "../src/engine/swing/profile";
 import type { StrokeType, SwingShape } from "../src/engine/swing/types";
@@ -54,6 +54,7 @@ interface Case {
     readonly pose: ContactPose;
     readonly hands: Hands;
     readonly mode: StrokeMode;
+    readonly arrival: number;
     readonly shape: SwingShape;
 }
 
@@ -74,6 +75,14 @@ function caseOf(type: StrokeType): Case {
             pendulumForce: defaultProfile.body.pendulumForce,
         },
         mode: defaultProfile.drive[type].mode,
+        arrival:
+            defaultProfile.drive[type].mode === "carry"
+                ? arcArrival(
+                      defaultProfile.drive[type].handArcRadius,
+                      defaultProfile.drive[type].handArcLow,
+                      defaultProfile.drive[type].handReach,
+                  )
+                : 0,
         shape: {
             pendulumShare: ref.pendulumShare.value,
             handAngle: ref.handAngle.value,
@@ -85,7 +94,7 @@ function caseOf(type: StrokeType): Case {
 }
 
 function plan(c: Case, shape: SwingShape, backswing: number, intensity: number): PlannedDownswing {
-    const choice = { mode: c.mode, shape, backswing, intensity };
+    const choice = { mode: c.mode, shape, backswing, intensity, arrival: c.arrival };
     return planDownswing(downswingInput(c.pose, c.hands, choice, WORLD.gravity));
 }
 

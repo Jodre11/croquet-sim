@@ -406,17 +406,19 @@ function asPlayed(): void {
             `${range(gaps.map((g) => g.face - WORLD.ball.radius))}; the head's centre behind the ball's centre ` +
             `along aim ${range(gaps.map((g) => g.centre))}`,
     );
-    const reach = prepareTrack(drive, head, WORLD.gravity).reach;
-    if (reach === null) {
-        console.log(`${"".padEnd(11)} the hands' reach does not bind`);
+    const push = prepareTrack(drive, head, WORLD.gravity).push;
+    const pendulum = push?.pendulum ?? null;
+    const end = push?.end ?? null;
+    if (pendulum === null || end === null) {
+        console.log(`${"".padEnd(11)} the push does not end`);
         return;
     }
     const pushOf = (s: ImpactSnapshot): number => (s.hand === undefined ? NaN : dot(s.hand.force, aim));
-    const atReach = steps.find((s) => s.t >= reach.t1);
-    const easing = steps.filter((s) => s.t >= reach.t1 && s.t <= reach.tStop);
+    const atReach = steps.find((s) => s.t >= pendulum);
+    const easing = steps.filter((s) => s.t >= pendulum && s.t <= end);
     let lost = 0;
     let previous = atReach === undefined ? NaN : length(ball(atReach).velocity);
-    for (const s of steps.filter((x) => x.t > reach.t1)) {
+    for (const s of steps.filter((x) => x.t > pendulum)) {
         const speed = length(ball(s).velocity);
         if (s.contacts.some((c) => c.key === `face/${setup.striker}` && c.normalForce > 0)) {
             lost += previous - speed;
@@ -424,12 +426,15 @@ function asPlayed(): void {
         previous = speed;
     }
     if (atReach === undefined) {
-        console.log(`${"".padEnd(11)} the hands reach 0.8·handReach at ${ms(reach.t1)} ms, after the impact`);
+        console.log(
+            `${"".padEnd(11)} the hands' push reaches its pendulum point at ${ms(pendulum)} ms, after the impact`,
+        );
         return;
     }
     const hardest = easing.reduce((a, s) => (pushOf(s) < pushOf(a) ? s : a), atReach);
     console.log(
-        `${"".padEnd(11)} the hands reach 0.8·handReach at ${ms(reach.t1)} ms and rest at ${ms(reach.tStop)} ms; ` +
+        `${"".padEnd(11)} the hands' push reaches its pendulum point at ${ms(pendulum)} ms and ends at ` +
+            `${ms(end)} ms; ` +
             `their force along aim there ${fmt(pushOf(atReach), 1)} N, its lowest until they rest ` +
             `${fmt(pushOf(hardest), 1)} N at ${ms(hardest.t)} ms; the striker's ball at ` +
             `${fmt(length(ball(atReach).velocity))} m/s there loses ${fmt(lost)} m/s while the face is on it after ` +

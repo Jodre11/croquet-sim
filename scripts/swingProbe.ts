@@ -809,7 +809,7 @@ function tracking(): void {
             if (arc.mode === "swing") {
                 return "swing";
             }
-            return t <= (track.reach?.tStop ?? Infinity) ? "carry" : "after the reach";
+            return t <= (track.push?.end ?? Infinity) ? "carry" : "after the push";
         };
         const worst = new Map<string, { socket: number; angle: number }>();
         integrate(setup, {

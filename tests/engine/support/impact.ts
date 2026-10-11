@@ -113,7 +113,6 @@ export function levelArc(centre: Vec3, o: Partial<SwingArc> = {}): SwingArc {
         pendulumEffort: 0,
         handArcRadius: 11,
         handArcLow: 0.5,
-        groundDepth: 0,
         ...o,
     };
 }
@@ -424,6 +423,7 @@ function mirrorDrive(d: Drive): Drive {
                           handsTop: mirrorVec(down.handsTop),
                           across: mirrorVec(down.across),
                           drop: mirrorVec(down.drop),
+                          tangent: mirrorVec(down.tangent),
                       },
                   }),
         },

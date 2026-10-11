@@ -5,6 +5,7 @@ import { simulateImpact } from "../../../src/engine/impact/simulateImpact";
 import {
     HAND_COUPLING,
     downswingAt,
+    handsAt,
     headOnPath,
     pendulumOf,
     pitchAxis,
@@ -18,6 +19,7 @@ import {
     MAX_LEAD,
     START_GAP,
     TURF_MARGIN,
+    arcArrival,
     buildContact,
     contactPose,
     downswingInput,
@@ -201,14 +203,14 @@ describe("buildContact, step by step", () => {
         }
     });
 
-    it("copies the mode, the reach and the ground depth, the hands and the body, and grips with HAND_COUPLING", () => {
+    it("copies the mode and the reach, the hands and the body, and grips with HAND_COUPLING", () => {
         const profile = testProfile({
             stance: { top: 0.7, bottom: 0.3, gripTension: 0.6, bottomGrip: 0.25 },
-            drive: { mode: "carry", handReach: 0.2, groundDepth: 0.004, guideEffort: 0.4 },
+            drive: { mode: "carry", handReach: 0.2, guideEffort: 0.4 },
             body: { armMass: 0.8, reachSlack: 0.02 },
         });
         const drive = buildContact(shot({}, profile), WORLD).drive as TrackDrive;
-        expect([drive.arc.mode, drive.arc.handReach, drive.arc.groundDepth]).toEqual(["carry", 0.2, 0.004]);
+        expect([drive.arc.mode, drive.arc.handReach]).toEqual(["carry", 0.2]);
         expect(drive.hands).toEqual({
             bottom: 0.3,
             gripTension: 0.6,
@@ -504,6 +506,27 @@ describe("the default profile's canonical setups", () => {
         expect(setup).not.toHaveProperty("croqueted");
         expect(() => canonicalSetup("stop-ac", { world, targetGap: 0.1 })).toThrow(/no targetGap/);
     });
+
+    it("plans a roll's hands arriving on their arc: the path continuous through contact (P2b.2b.2b.2b §4.1)", () => {
+        for (const type of ["half-roll", "full-roll", "pass-roll"] as const) {
+            const setup = canonicalSetup(type, { world: WORLD });
+            const drive = buildContact(setup, WORLD).drive as TrackDrive;
+            const track = prepareTrack(drive, buildContact(setup, WORLD).head, WORLD.gravity);
+            const { arc } = drive;
+            const before = handsAt(track, arc.contactAt - 1e-9);
+            const after = handsAt(track, arc.contactAt + 1e-9);
+            expect(length(sub(before.velocity, after.velocity)), type).toBeLessThan(1e-6);
+            // 1 ns after contact the slope has turned with the arc, by about ṡ·1e-9/ρ_h ≈ 1.2e-9.
+            const v = after.velocity;
+            const slope = v.z / Math.hypot(v.x, v.y);
+            expect(slope, type).toBeCloseTo(arcArrival(arc.handArcRadius, arc.handArcLow, arc.handReach), 8);
+        }
+    });
+
+    it("gives the arc's slope at contact: level for no push, −s_low/√(ρ² − s_low²) otherwise", () => {
+        expect(arcArrival(1.5, 0.5, 0)).toBe(0);
+        expect(arcArrival(1.5, 0.5, 0.3)).toBeCloseTo(-0.15 / Math.sqrt(1.5 * 1.5 - 0.15 * 0.15), 15);
+    });
 });
 
 describe("defaultProfile", () => {
@@ -673,11 +696,6 @@ describe("buildContact rejections", () => {
             /drive\.single-ball\.guideEffort must lie in \[0, 1\]/,
         ],
         ["a shot's guide effort above 1", shot({ guideEffort: 1.5 }), /stroke\.guideEffort must lie in \[0, 1\]/],
-        [
-            "a negative ground depth",
-            shot({}, testProfile({ drive: { groundDepth: -0.001 } })),
-            /groundDepth must be non-negative/,
-        ],
         ["a negative arm mass", shot({}, testProfile({ body: { armMass: -0.1 } })), /armMass must be non-negative/],
         [
             "a negative reach slack",
@@ -771,7 +789,12 @@ describe("contactPose (design §5.2 steps 1–5, 10)", () => {
             handTempo: { slow: 0.4, fast: 0.2 },
             defaultIntensity: 0,
         };
-        const input = downswingInput(pose, hands, { mode: "swing", shape, backswing: 0.3, intensity: 0 }, 9.8);
+        const input = downswingInput(
+            pose,
+            hands,
+            { mode: "swing", shape, backswing: 0.3, intensity: 0, arrival: 0 },
+            9.8,
+        );
         expect(input.lever).toBe(RHO + TOP);
         expect(input.pendulum).toEqual(pendulumOf(pose.head, swungBody(pose.head, hands, TOP), TOP, 9.8));
         const planned = planDownswing(input);

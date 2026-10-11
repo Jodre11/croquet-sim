@@ -76,7 +76,6 @@ export function testProfile(o: TestProfileOptions = {}): SwingProfile {
         handDrop: 0,
         dropTime: 0.01,
         handReach: 0,
-        groundDepth: 0,
         guideEffort: 1,
         pendulumAt: 0.8,
         pendulumEffort: 0,

@@ -68,9 +68,9 @@ export interface Dip {
 /**
  * The contact-free downswing (P2b.2b.2a design §3), in s from the planned contact: from the release t_r < 0, the
  * pendulum and the hands at rest at the backswing's top, to contact. The hands' path is P(σ) = P_b + Δ_h·σ² +
- * Δ_z·(3σ² − 2σ³), σ from 0 at the top to 1 at contact. Swing mode tabulates θ, ω and α every FREE_STEP from the
- * release, its last sample at contact, with σ = (θ − θ_top)/span; carry mode is closed-form, σ = (t − t_r)/tempo and
- * θ = θ_top + span·σ².
+ * Δ_z·(3σ² − 2σ³) + T·(σ³ − σ²), σ from 0 at the top to 1 at contact. Swing mode tabulates θ, ω and α every
+ * FREE_STEP from the release, its last sample at contact, with σ = (θ − θ_top)/span; carry mode is closed-form,
+ * σ = (t − t_r)/tempo and θ = θ_top + span·σ².
  */
 export interface Downswing {
     /** t_r (s from contact, negative). */
@@ -82,6 +82,11 @@ export interface Downswing {
     readonly handsTop: Vec3;
     readonly across: Vec3;
     readonly drop: Vec3;
+    /**
+     * Carry mode's Hermite end term T (m, vertical; P2b.2b.2b.2b design §4.1): the hands' path gains T·(σ³ − σ²), so
+     * its slope at contact is 2·Δ_h + T and it arrives on the hands' arc. ZERO in swing mode, whose hands arrive level.
+     */
+    readonly tangent: Vec3;
     /** Carry mode's hands' tempo T_h (s), with release = −tempo; null in swing mode. */
     readonly tempo: number | null;
     /** Swing mode's table (rad, rad/s, rad/s²); empty in carry mode. */
@@ -137,8 +142,6 @@ export interface SwingArc {
      */
     readonly handArcRadius: number;
     readonly handArcLow: number;
-    /** Carry only: the head's lowest point ends this far below the turf (m). */
-    readonly groundDepth: number;
     /**
      * The downswing before contactAt (P2b.2b.2a design §3.5): before each window begins, and before contactAt, the
      * pendulum and the hands follow it. Absent, the path coasts at ω₀ and V₀ (P2b.2b.1). The table's end state must

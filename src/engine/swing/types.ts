@@ -54,11 +54,11 @@ export interface SwingStance {
  * times that speed. The hands: from their speed at contact (P2b.2b.2a design §3.3), changing by `handGain` times the
  * head's speed over `handWindow` (s) at full `drive`. The dip: whatever `drive`, the hands lower by `handDrop` (m)
  * over `dropTime` (s), rest to rest. The reach: the hands' path travels `handReach` (m) along aim after contact, the
- * default for the shot's own. In carry mode the head's lowest point ends `groundDepth` (m) below the turf. In swing
- * mode the bottom hand's push after contact is `guideEffort` (in [0, 1]) of a full restoration of the arc's speed, the
- * default for the shot's own. In carry mode `handReach` is the push's length. The pendulum phase starts at
- * `pendulumAt` of it, its effort `pendulumEffort`, and the hands travel their arc, `handArcRadius` and `handArcLow`
- * (P2b.2b.2b.2b design §4, §6). Swing mode carries these four and never reads them.
+ * default for the shot's own. In swing mode the bottom hand's push after contact is `guideEffort` (in [0, 1]) of a
+ * full restoration of the arc's speed, the default for the shot's own. In carry mode `handReach` is the push's
+ * length. The pendulum phase starts at `pendulumAt` of it, its effort `pendulumEffort`, and the hands travel their
+ * arc, `handArcRadius` and `handArcLow` (P2b.2b.2b.2b design §4, §6). Swing mode carries these four and never reads
+ * them.
  */
 export interface SwingDrive {
     readonly mode: StrokeMode;
@@ -69,7 +69,6 @@ export interface SwingDrive {
     readonly handDrop: number;
     readonly dropTime: number;
     readonly handReach: number;
-    readonly groundDepth: number;
     readonly guideEffort: number;
     /** Carry mode's pendulum phase (P2b.2b.2b.2b design §4.2): its start, a fraction of the push, and its effort. */
     readonly pendulumAt: number;

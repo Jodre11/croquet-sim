@@ -328,7 +328,7 @@ function finishKind(plan: PreparedTrack): FinishKind {
 /**
  * True once the head in `state` at time t has reached its finish (P2b.2b.2a design §4.2): a swing at the pendulum's
  * apex, its pitch rate about n at or below zero; a check at rest relative to the hands; a carry at rest once the
- * hands' reach has ended (never, where the reach does not bind).
+ * hands' push has ended (never, where the push does not end; P2b.2b.2b.2b design §4.1).
  */
 function finished(kind: FinishKind, plan: PreparedTrack, state: HeadState, t: number): boolean {
     switch (kind) {
@@ -337,7 +337,13 @@ function finished(kind: FinishKind, plan: PreparedTrack, state: HeadState, t: nu
         case "check":
             return length(sub(state.velocity, handsAt(plan, t).velocity)) < FINISH_SPEED;
         case "carry":
-            return plan.reach !== null && t >= plan.reach.tStop && length(state.velocity) < FINISH_SPEED;
+            // At rest once the push has ended (never, where it does not end).
+            return (
+                plan.push !== null &&
+                plan.push.end !== null &&
+                t >= plan.push.end &&
+                length(state.velocity) < FINISH_SPEED
+            );
     }
 }
 

@@ -134,9 +134,10 @@ function validateForce(drive: ForceDrive): void {
 
 /**
  * Checks a tracked drive's downswing (P2b.2b.2a design §3): a negative release; a finite top, a non-negative span;
- * finite hands, Δ_h in the swing plane and Δ_z vertical; in carry mode a positive tempo with release = −tempo and no
- * table; in swing mode no tempo, a positive span and a finite table of θ, ω and α of one length, at least 2, whose
- * samples every FREE_STEP from the release end at contact.
+ * finite hands, Δ_h in the swing plane, Δ_z vertical and the Hermite term T vertical (P2b.2b.2b.2b design §4.1); in
+ * carry mode a positive tempo with release = −tempo and no table; in swing mode T zero, no tempo, a positive span and
+ * a finite table of θ, ω and α of one length, at least 2, whose samples every FREE_STEP from the release end at
+ * contact.
  */
 function validateDownswing(down: Downswing, mode: StrokeMode, n: Vec3): void {
     finiteNumber(down.release, "arc.downswing.release");
@@ -155,12 +156,19 @@ function validateDownswing(down: Downswing, mode: StrokeMode, n: Vec3): void {
     if (!(down.drop.x === 0 && down.drop.y === 0)) {
         fail("arc.downswing.drop must be vertical");
     }
+    finite(down.tangent, "arc.downswing.tangent");
+    if (!(down.tangent.x === 0 && down.tangent.y === 0)) {
+        fail("arc.downswing.tangent must be vertical");
+    }
     if (mode === "carry") {
         const { tempo } = down;
         if (tempo === null || !(tempo > 0) || down.release !== 0 - tempo || down.theta.length > 0) {
             fail("arc.downswing must be closed-form in carry mode: a positive tempo, release = −tempo, no table");
         }
         return;
+    }
+    if (down.tangent.z !== 0) {
+        fail("arc.downswing.tangent must be zero in swing mode");
     }
     const count = down.theta.length;
     if (
@@ -187,7 +195,7 @@ function validateDownswing(down: Downswing, mode: StrokeMode, n: Vec3): void {
 /**
  * Checks a tracked drive (P2b.2b.1 design §3.6), in this order: every vector and angle finite; a positive radius,
  * windows and dip duration; non-negative start times, contact time and dip start; a non-negative dip depth; a mode of
- * "swing" or "carry"; a non-negative reach and ground depth; aim a horizontal unit vector within UNIT_TOLERANCE; a
+ * "swing" or "carry"; a non-negative reach; aim a horizontal unit vector within UNIT_TOLERANCE; a
  * positive period, a non-negative damping ratio and relaxation time; the bottom hand between the socket and the top
  * hand, both grips in (0, 1], a non-negative arm mass and reach slack, a guide effort in [0, 1]; a pendulumAt,
  * pendulumEffort and handArcLow in [0, 1]; a handArcRadius above the reach; a flex whose values are positive, its
@@ -217,7 +225,6 @@ function validateTrack(drive: TrackDrive): void {
         fail(`arc.mode must be "swing" or "carry" (got ${arc.mode})`);
     }
     friction(arc.handReach, "arc.handReach");
-    friction(arc.groundDepth, "arc.groundDepth");
     const { aim } = arc;
     if (!(Math.abs(aim.z) <= UNIT_TOLERANCE && Math.abs(dot(aim, aim) - 1) <= UNIT_TOLERANCE)) {
         fail("arc.aim must be a horizontal unit vector");

@@ -472,7 +472,6 @@ describe("simulateImpact with a tracked drive", () => {
             /arc\.mode must be "swing" or "carry"/,
         ],
         ["a negative reach", withArc({ handReach: -0.01 }), /arc\.handReach must be non-negative/],
-        ["a negative ground depth", withArc({ groundDepth: -0.001 }), /arc\.groundDepth must be non-negative/],
         ["an aim that is not unit", withArc({ aim: vec3(1.1, 0, 0) }), /arc\.aim must be a horizontal unit vector/],
         ["an aim that is not horizontal", withArc({ aim: vec3(0.8, 0, 0.6) }), /arc\.aim must be a horizontal/],
         ["a non-positive period", withCoupling({ period: 0 }), /coupling\.period must be a positive/],

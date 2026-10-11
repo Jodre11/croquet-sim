@@ -125,7 +125,6 @@ const DRIVE: Readonly<Record<StrokeType, SwingDrive>> = {
         handDrop: 0,
         dropTime: 0.01,
         handReach: 0,
-        groundDepth: 0,
         guideEffort: 1,
         pendulumAt: 0.8,
         pendulumEffort: 0,
@@ -143,7 +142,6 @@ const DRIVE: Readonly<Record<StrokeType, SwingDrive>> = {
         handDrop: 0,
         dropTime: 0.01,
         handReach: 0,
-        groundDepth: 0,
         guideEffort: 1,
         pendulumAt: 0.8,
         pendulumEffort: 0,
@@ -166,7 +164,6 @@ const DRIVE: Readonly<Record<StrokeType, SwingDrive>> = {
         handDrop: 0.011,
         dropTime: 0.02,
         handReach: 0,
-        groundDepth: 0,
         guideEffort: 1,
         pendulumAt: 0.8,
         pendulumEffort: 0,
@@ -184,7 +181,6 @@ const DRIVE: Readonly<Record<StrokeType, SwingDrive>> = {
         handDrop: 0,
         dropTime: 0.01,
         handReach: 0,
-        groundDepth: 0,
         guideEffort: 1,
         pendulumAt: 0.8,
         pendulumEffort: 0,
@@ -193,8 +189,7 @@ const DRIVE: Readonly<Record<StrokeType, SwingDrive>> = {
     },
     // Carry (Riches: the slope "MAINTAINED throughout the swing", both hands moving "FORWARD at the SAME RATE",
     // "the mallet head following through the ball and onto the ground"): the hands' speed from the downswing
-    // (P2b.2b.2a design §3.3), a light pendulum push, a 0.15 m reach, the head ending 5 mm below the turf
-    // (prototype).
+    // (P2b.2b.2a design §3.3), a light pendulum push, the push 0.15 m (prototype).
     "half-roll": {
         mode: "carry",
         speedGain: 0.1,
@@ -204,15 +199,14 @@ const DRIVE: Readonly<Record<StrokeType, SwingDrive>> = {
         handDrop: 0,
         dropTime: 0.01,
         handReach: 0.15,
-        groundDepth: 0.005,
         guideEffort: 1,
         pendulumAt: 0.8,
         pendulumEffort: 0,
         handArcRadius: 1.5,
         handArcLow: 0.5,
     },
-    // Carry: the hands' speed from the downswing (P2b.2b.2a design §3.3) and still accelerating, a 0.30 m reach,
-    // the head ending 2 mm below the turf (prototype). A known miss in this phase (design §10).
+    // Carry: the hands' speed from the downswing (P2b.2b.2a design §3.3) and still accelerating, the push 0.30 m
+    // (prototype). A known miss in this phase (design §10).
     "full-roll": {
         mode: "carry",
         speedGain: 0.1,
@@ -222,7 +216,6 @@ const DRIVE: Readonly<Record<StrokeType, SwingDrive>> = {
         handDrop: 0,
         dropTime: 0.01,
         handReach: 0.3,
-        groundDepth: 0.002,
         guideEffort: 1,
         pendulumAt: 0.8,
         pendulumEffort: 0,
@@ -230,9 +223,8 @@ const DRIVE: Readonly<Record<StrokeType, SwingDrive>> = {
         handArcLow: 0.5,
     },
     // Carry, the bottom hand punching in contact: the pendulum's speedGain 0.5 over 15 ms from contact on top of
-    // the hands' speed from the downswing (P2b.2b.2a design §3.3) and handGain 0.1. A 0.30 m reach; 0.2 m traps
-    // the striker's ball against the face, the head ending 2 mm below the turf (prototype). A known miss in this
-    // phase (design §10).
+    // the hands' speed from the downswing (P2b.2b.2a design §3.3) and handGain 0.1. The push 0.30 m; 0.2 m traps
+    // the striker's ball against the face (prototype). A known miss in this phase (design §10).
     "pass-roll": {
         mode: "carry",
         speedGain: 0.5,
@@ -242,7 +234,6 @@ const DRIVE: Readonly<Record<StrokeType, SwingDrive>> = {
         handDrop: 0,
         dropTime: 0.01,
         handReach: 0.3,
-        groundDepth: 0.002,
         guideEffort: 1,
         pendulumAt: 0.8,
         pendulumEffort: 0,

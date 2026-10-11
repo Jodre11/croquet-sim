@@ -22,7 +22,7 @@ import {
     type GripState,
     type HandLoad,
     type PreparedTrack,
-    type Reach,
+    type Push,
 } from "../../../src/engine/impact/track";
 import type { Coupling, Hands, HeadState, SwingArc } from "../../../src/engine/impact/types";
 import { STANDARD_GRAVITY } from "../../../src/engine/world";
@@ -82,13 +82,15 @@ const COAST: SwingArc = {
     pendulumEffort: 0,
     handArcRadius: 11,
     handArcLow: 0.5,
-    groundDepth: 0,
 };
 
-/** A power roll in carry mode, each action timed: the pendulum's window from 10 ms, the hands' from 20 ms, a dip. */
+/**
+ * A power roll in carry mode, each action timed: the pendulum's window from 10 ms, the hands' from 20 ms, a dip. Its
+ * hands arrive on their 11 m arc, lowest 5 m on, descending at its slope −5/√(11² − 5²) (P2b.2b.2b.2b design §4.1).
+ */
 const TIMED: SwingArc = {
     ...COAST,
-    pivotVelocity: scale(AIM, 2.5),
+    pivotVelocity: add(scale(AIM, 2.5), vec3(0, 0, (-2.5 * 5) / Math.sqrt(11 * 11 - 5 * 5))),
     pivotAcceleration: scale(AIM, 20),
     handStart: 0.02,
     handWindow: 0.03,
@@ -101,14 +103,17 @@ const TIMED: SwingArc = {
     mode: "carry",
 };
 
-/** A carry from contact: the pendulum's window short, no dip, a reach that binds and a descent to 2 mm deep. */
+/**
+ * A carry from contact: the pendulum's window short, no dip, a 0.15 m push, its hands arriving on their 11 m arc,
+ * lowest 75 mm on.
+ */
 const CARRY: SwingArc = {
     ...TIMED,
     pivot: vec3(2, 3, 0.8),
+    pivotVelocity: add(scale(AIM, 2.5), vec3(0, 0, (-2.5 * 0.075) / Math.sqrt(11 * 11 - 0.075 * 0.075))),
     window: 0.01,
     dip: NO_DIP,
     handReach: 0.15,
-    groundDepth: 0.002,
 };
 
 const prepare = (arc: SwingArc, coupling: Coupling = TEST_COUPLING, hands: Hands = TEST_HANDS): PreparedTrack =>
@@ -240,17 +245,18 @@ describe("a tracked head with no ball", () => {
 
 describe("a carry with firm grips", () => {
     const track = prepare(CARRY, TEST_COUPLING, ARMED);
-    const reach = track.reach as Reach;
+    const push = track.push as Push;
 
-    it("follows the path from contact to the reach's end, the descent included", () => {
-        expect(reach.descent).toBeGreaterThan(0.01);
-        const { socket, angle } = tracking(CARRY, { coupling: TEST_COUPLING, cap: reach.tStop });
-        // Drafting measured 2.76e-6 m and 5.58e-6 rad (pre-flight re-measures them).
-        expect(socket).toBeLessThan(6e-6);
+    it("follows the path from contact to the push's end", () => {
+        const { socket, angle } = tracking(CARRY, { coupling: TEST_COUPLING, cap: push.end as number });
+        // Drafting measured 2.76e-6 m and 5.58e-6 rad (pre-flight re-measures them). P2b.2b.2b.2b: hands' arc;
+        // re-measured: 1.40e-5 m (was < 6e-6). The run's last step lands at most IMPACT_DT past the push's end, where
+        // the intended path stops at once (design §4.1) while the head still moves at about 3 m/s: up to 1.5e-5 m.
+        expect(socket).toBeLessThan(2e-5);
         expect(angle).toBeLessThan(1.2e-5);
     });
 
-    it("holds the slope: the head's pitch stays on the path's held θ to the reach's end", () => {
+    it("holds the slope: the head's pitch stays on the path's held θ to the push's end", () => {
         const pitchOf = (q: Quaternion): number => {
             const s = rotate(q, UP);
             return Math.atan2(-dot(s, AIM), s.z);
@@ -265,7 +271,7 @@ describe("a carry with firm grips", () => {
             },
         };
         const start = headOnPath(track, TEST_HEAD, 0);
-        integrate(isolated({ start, drive: track, gravity: STANDARD_GRAVITY }), { probe, cap: reach.tStop });
+        integrate(isolated({ start, drive: track, gravity: STANDARD_GRAVITY }), { probe, cap: push.end as number });
         // Within the tracking bound above; drafting measured 5.58e-6 rad.
         expect(worst).toBeLessThan(1.2e-5);
     });

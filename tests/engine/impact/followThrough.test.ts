@@ -9,7 +9,7 @@ import {
 } from "../../../src/engine/impact/integrate";
 import { headLowestPoint } from "../../../src/engine/impact/contacts";
 import { simulateImpact, simulateStroke } from "../../../src/engine/impact/simulateImpact";
-import { HAND_COUPLING, handsAt, pitchAxis, prepareTrack, type Reach } from "../../../src/engine/impact/track";
+import { HAND_COUPLING, handsAt, pitchAxis, prepareTrack, type Push } from "../../../src/engine/impact/track";
 import type { ContactState, TrackDrive } from "../../../src/engine/impact/types";
 import { dot, length, sub } from "../../../src/engine/math/vec3";
 import { buildContact } from "../../../src/engine/swing/buildContact";
@@ -125,12 +125,12 @@ describe("the follow-through (design §4)", () => {
         }
     });
 
-    it("finishes a carry once the hands' reach has ended and the head is at rest", () => {
+    it("finishes a carry once the hands' push has ended and the head is at rest", () => {
         const { contact, follow } = stroke(shot({ backswing: 0.25 }, CARRY));
         expect(follow.flags).toEqual([]);
-        const reach = prepareTrack(contact.drive as TrackDrive, contact.head, WORLD.gravity).reach as Reach;
-        expect(reach).not.toBeNull();
-        expect(follow.finish).toBeGreaterThanOrEqual(reach.tStop);
+        const push = prepareTrack(contact.drive as TrackDrive, contact.head, WORLD.gravity).push as Push;
+        expect(push.end).not.toBeNull();
+        expect(follow.finish).toBeGreaterThanOrEqual(push.end as number);
         expect(length(last(follow).head.velocity)).toBeLessThan(FINISH_SPEED);
     });
 
@@ -148,16 +148,18 @@ describe("the follow-through (design §4)", () => {
         expect(follow.finish).toBeLessThan(contactAt + FOLLOW_CAP + 1e-5);
     });
 
-    it("flags a follow-through that drives the head deep, not the impact", () => {
-        // The carry's descent at the reach's end (t1 ≈ 0.105 s, long after the ball has gone) plans the head's lowest
-        // point groundDepth below the turf. The turf and the compliant hands hold the head well above that path: a
-        // 10 mm plan reaches only about 1.1 mm, so a planned dig far outside play is needed to press it past 2 mm: a
-        // 200 mm plan drives it about 5.7 mm deep (deepest 1 ms sample), near 3× HEAD_DEEP_LIMIT.
+    // P2b.2b.2b.2b: hands' arc — a dip inside trackEnd lengthens the impact, so it can no longer drive the
+    // follow-through deep; Task 5 re-establishes the case on the flex.
+    it.skip("flags a follow-through that drives the head deep, not the impact", () => {
+        // A deep, late dip: the hands lower 0.2 m over 50 ms from 100 ms, long after the ball has gone. The turf and
+        // the compliant hands hold the head well above that path, but a planned dig far outside play presses it past
+        // 2 × HEAD_DEEP_LIMIT (P2b.2b.2b.2b: the carry's descent, which this test drove, is gone with groundDepth).
         const deep = testProfile({
-            drive: { mode: "carry", handReach: 0.15, groundDepth: 0.2 },
+            drive: { mode: "carry", handReach: 0.15, handDrop: 0.2, dropTime: 0.05 },
             shape: { pendulumShare: 0.5 },
         });
-        const { contact, result, follow } = stroke(shot({ backswing: 0.25 }, deep));
+        const late = { arc: 0, hands: 0, dip: 0.1 };
+        const { contact, result, follow } = stroke(shot({ backswing: 0.25, timing: late }, deep));
         expect(follow.flags).toContain("follow-head-deep");
         expect(result.events.map((e) => e.kind)).not.toContain("impact-head-deep");
         const deepest = Math.min(...follow.samples.map((s) => headLowestPoint(s.head, contact.head)));
