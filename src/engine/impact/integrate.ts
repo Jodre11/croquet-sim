@@ -1059,8 +1059,7 @@ export function integrateStroke(setup: ImpactSetup, options: ImpactOptions = {},
 
         quiet = hardClosed ? 0 : quiet + 1;
         const settled = struck && now >= driveEnd && quiet >= RELEASE_STEPS && !turfMoving;
-        // In carry mode the hands must have started the pendulum phase, which opens the bottom hand (P2b.2b.2b.2b
-        // design §4.2): its start bounds driveEnd, but the step ending there loaded the hands just before it.
+        // Carry waits for the pendulum phase (§4.2): trackEnd is not enough, as the end test runs at t + dt.
         const waiting =
             plan.kind === "track" && plan.push !== null && plan.push.pendulum !== null && grip.releasedAt === null;
         if (settled && !waiting && (plan.kind === "force" || !stillReaching(state, head, balls, R, plan, now))) {

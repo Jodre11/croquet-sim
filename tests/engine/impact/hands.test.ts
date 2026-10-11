@@ -785,10 +785,11 @@ describe("the pendulum phase (P2b.2b.2b.2b design §4.2, §4.3, §7.1)", () => {
     });
 
     it("finishes at the swing's first apex after it starts, past vertical, never at the cap", () => {
-        // With TEST_FLEX's damping: an undamped flex rings the head's fast pitch mode (the head turning about its own
-        // centre against the soft top spring), which reverses the pitch rate 20 ms in, at θ −0.457, and is the first
-        // apex there. Damped, the rate stays positive to the swing's top.
-        const damped: Hands = { ...FREE, flex: TEST_FLEX };
+        // With TEST_FLEX's damping (ζ 0.3), not FREE's: the undamped flex is far from leaving the pivot be. It rings
+        // the head's fast pitch mode (the head turning about its own centre against the soft top spring), which
+        // reverses the pitch rate about 20 ms in, at θ −0.457, and would fire the finish there. Damped, the rate stays
+        // positive to the swing's top.
+        const damped: Hands = { ...TEST_HANDS, bottom: 0.25 };
         const track = prepareTrack(trackDrive(SWUNG(0), TEST_COUPLING, damped), TEST_HEAD, STANDARD_GRAVITY);
         const start = headOnPath(track, TEST_HEAD, 0);
         const { follow } = integrateStroke(
