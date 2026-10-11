@@ -124,6 +124,19 @@ export interface SwingArc {
     readonly mode: StrokeMode;
     /** How far the hands' path travels along aim after contactAt (m). */
     readonly handReach: number;
+    /**
+     * Carry only (P2b.2b.2b.2b design §4.2): the pendulum phase starts once the intended path has travelled
+     * `pendulumAt` (in [0, 1]) of the push length `handReach`; the bottom hand then pushes with `pendulumEffort` (in
+     * [0, 1]) of the hands' pendulumForce until the shaft passes vertical.
+     */
+    readonly pendulumAt: number;
+    readonly pendulumEffort: number;
+    /**
+     * Carry only (design §4.1): the hands' arc, a circle of radius `handArcRadius` (m, above the push length) in the
+     * swing plane, lowest `handArcLow` (in [0, 1]) of the push length ahead of the hands at contact.
+     */
+    readonly handArcRadius: number;
+    readonly handArcLow: number;
     /** Carry only: the head's lowest point ends this far below the turf (m). */
     readonly groundDepth: number;
     /**
@@ -165,7 +178,9 @@ export interface FlexLaw {
  * `armMass` (kg) rides rigidly at the top grip. The bottom hand opens once the shaft has turned through `reachSlack`
  * (m of hand travel). `guideEffort` (in [0, 1]) scales the bottom hand's push after contact in swing mode (the rate
  * guide outside a check, and the push after the release): 1 restores the planned arc's speed, 0 is no extra push; a
- * check's guide acts in full (design §3.3; the player's choice, user's account, 2026-10-06).
+ * check's guide acts in full (design §3.3; the player's choice, user's account, 2026-10-06). In carry mode from
+ * contact each hand flexes by `flex`, and the bottom hand's push in the pendulum phase is at most `pendulumForce`
+ * (P2b.2b.2b.2b design §3, §4.2).
  */
 export interface Hands {
     readonly bottom: number;
@@ -174,6 +189,13 @@ export interface Hands {
     readonly armMass: number;
     readonly reachSlack: number;
     readonly guideEffort: number;
+    /** Carry mode from contact (P2b.2b.2b.2b design §3.1): each hand's flex. */
+    readonly flex: FlexLaw;
+    /**
+     * F_pendulum (N, design §4.2): the largest forward push the bottom hand gives perpendicular to the shaft in the
+     * pendulum phase, by wrist and forearm.
+     */
+    readonly pendulumForce: number;
 }
 
 /** A tracked drive (design §3): two hands drive the mallet along `arc`, holding it through `coupling`. */

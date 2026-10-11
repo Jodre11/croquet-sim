@@ -17,7 +17,7 @@ import { atan2, sinCos } from "../math/elementary";
 import { ZERO, add, cross, dot, scale, sub, vec3, type Vec3 } from "../math/vec3";
 import { headLowestPoint } from "./contacts";
 import { multiply, rotate, rotateInverse, type Quaternion } from "./rigidBody";
-import type { Coupling, Downswing, Hands, HeadState, MalletHead, SwingArc, TrackDrive } from "./types";
+import type { Coupling, Downswing, FlexLaw, Hands, HeadState, MalletHead, SwingArc, TrackDrive } from "./types";
 
 const UP = vec3(0, 0, 1);
 const FORWARD = vec3(1, 0, 0);
@@ -30,6 +30,17 @@ export const HAND_COUPLING = {
     period: contactReference.handCouplingPeriod.value,
     dampingRatio: contactReference.handCouplingDampingRatio.value,
 } as const;
+
+/** The arm's flex (P2b.2b.2b.2b design §3.1, §3.2), reference/contact.json's measured arm values. */
+export const ARM_FLEX: FlexLaw = {
+    stiffness: contactReference.armStiffness.value,
+    stiffnessPerForce: contactReference.armStiffnessPerForce.value,
+    dampingRatio: contactReference.armDampingRatio.value,
+    endpointMass: contactReference.armEndpointMass.value,
+};
+
+/** F_pendulum (N, design §4.2): the bottom hand's largest push in the pendulum phase (reference/contact.json). */
+export const PENDULUM_FORCE = contactReference.pendulumForce.value;
 
 /**
  * Step (s) of the free pendulum's table (design §3.2): the impact's own step, so the table resolves the swing as

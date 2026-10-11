@@ -189,7 +189,9 @@ function validateDownswing(down: Downswing, mode: StrokeMode, n: Vec3): void {
  * windows and dip duration; non-negative start times, contact time and dip start; a non-negative dip depth; a mode of
  * "swing" or "carry"; a non-negative reach and ground depth; aim a horizontal unit vector within UNIT_TOLERANCE; a
  * positive period, a non-negative damping ratio and relaxation time; the bottom hand between the socket and the top
- * hand, both grips in (0, 1], a non-negative arm mass and reach slack, a guide effort in [0, 1]; the pivot's velocity
+ * hand, both grips in (0, 1], a non-negative arm mass and reach slack, a guide effort in [0, 1]; a pendulumAt,
+ * pendulumEffort and handArcLow in [0, 1]; a handArcRadius above the reach; a flex whose values are positive, its
+ * damping ratio at most 1; a positive pendulumForce (P2b.2b.2b.2b design §6); the pivot's velocity
  * and acceleration in the swing plane, their component along the pitch axis within UNIT_TOLERANCE of their size; and a
  * downswing, if given, well formed (validateDownswing). The head need not start on the path.
  */
@@ -233,6 +235,29 @@ function validateTrack(drive: TrackDrive): void {
     if (!(hands.guideEffort >= 0 && hands.guideEffort <= 1)) {
         fail(`hands.guideEffort must lie in [0, 1] (got ${hands.guideEffort})`);
     }
+    for (const [name, value] of [
+        ["arc.pendulumAt", arc.pendulumAt],
+        ["arc.pendulumEffort", arc.pendulumEffort],
+        ["arc.handArcLow", arc.handArcLow],
+    ] as const) {
+        finiteNumber(value, name);
+        if (!(value >= 0 && value <= 1)) {
+            fail(`${name} must lie in [0, 1] (got ${value})`);
+        }
+    }
+    finiteNumber(arc.handArcRadius, "arc.handArcRadius");
+    if (!(arc.handArcRadius > arc.handReach)) {
+        fail(`arc.handArcRadius must exceed arc.handReach (got ${arc.handArcRadius} and ${arc.handReach})`);
+    }
+    for (const [key, value] of Object.entries(hands.flex)) {
+        finiteNumber(value, `hands.flex.${key}`);
+        positive(value, `hands.flex.${key}`);
+    }
+    if (!(hands.flex.dampingRatio <= 1)) {
+        fail(`hands.flex.dampingRatio must lie in (0, 1] (got ${hands.flex.dampingRatio})`);
+    }
+    finiteNumber(hands.pendulumForce, "hands.pendulumForce");
+    positive(hands.pendulumForce, "hands.pendulumForce");
     const n = pitchAxis(aim);
     if (!(Math.abs(dot(arc.pivotVelocity, n)) <= UNIT_TOLERANCE * length(arc.pivotVelocity))) {
         fail("arc.pivotVelocity must lie in the swing plane");

@@ -78,6 +78,10 @@ const COAST: SwingArc = {
     contactAt: 0,
     mode: "swing",
     handReach: 10,
+    pendulumAt: 0.8,
+    pendulumEffort: 0,
+    handArcRadius: 11,
+    handArcLow: 0.5,
     groundDepth: 0,
 };
 

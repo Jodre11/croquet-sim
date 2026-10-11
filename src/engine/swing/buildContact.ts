@@ -72,6 +72,10 @@ const DRIVE_NUMBERS: readonly Exclude<keyof SwingDrive, "mode">[] = [
     "handReach",
     "groundDepth",
     "guideEffort",
+    "pendulumAt",
+    "pendulumEffort",
+    "handArcRadius",
+    "handArcLow",
 ];
 
 /** A shape's scalar numbers always read, each checked finite by name (handAngle only when read: design §3.2). */
@@ -193,6 +197,8 @@ function validate(setup: ShotSetup, ballRadius: number): void {
         ["stroke.intensity", stroke.intensity],
         ["stroke.handReach", stroke.handReach],
         ["stroke.guideEffort", stroke.guideEffort],
+        ["stroke.pendulumAt", stroke.pendulumAt],
+        ["stroke.pendulumEffort", stroke.pendulumEffort],
     ] as const) {
         if (value !== undefined) {
             finiteNumber(value, name);
@@ -272,6 +278,32 @@ function validate(setup: ShotSetup, ballRadius: number): void {
     if (stroke.guideEffort !== undefined) {
         unit(stroke.guideEffort, "stroke.guideEffort");
     }
+    unit(push.pendulumAt, `profile.drive.${type}.pendulumAt`);
+    unit(push.pendulumEffort, `profile.drive.${type}.pendulumEffort`);
+    unit(push.handArcLow, `profile.drive.${type}.handArcLow`);
+    if (stroke.pendulumAt !== undefined) {
+        unit(stroke.pendulumAt, "stroke.pendulumAt");
+    }
+    if (stroke.pendulumEffort !== undefined) {
+        unit(stroke.pendulumEffort, "stroke.pendulumEffort");
+    }
+    const pushLength = stroke.handReach ?? push.handReach;
+    if (!(push.handArcRadius > pushLength)) {
+        fail(
+            `profile.drive.${type}.handArcRadius must exceed the push length ${pushLength} m, so that the hands' arc ` +
+                `is defined over the whole push (got ${push.handArcRadius})`,
+        );
+    }
+    const { flex } = body;
+    for (const [key, value] of Object.entries(flex)) {
+        finiteNumber(value, `profile.body.flex.${key}`);
+        positive(value, `profile.body.flex.${key}`);
+    }
+    if (!(flex.dampingRatio <= 1)) {
+        fail(`profile.body.flex.dampingRatio must lie in (0, 1] (got ${flex.dampingRatio})`);
+    }
+    finiteNumber(body.pendulumForce, "profile.body.pendulumForce");
+    positive(body.pendulumForce, "profile.body.pendulumForce");
     nonNegative(body.armMass, "profile.body.armMass");
     nonNegative(body.reachSlack, "profile.body.reachSlack");
     unit(shape.pendulumShare, `${where}.pendulumShare`);
@@ -302,6 +334,8 @@ function handsOf(setup: ShotSetup): Hands {
         armMass: profile.body.armMass,
         reachSlack: profile.body.reachSlack,
         guideEffort: stroke.guideEffort ?? profile.drive[stroke.type].guideEffort,
+        flex: profile.body.flex,
+        pendulumForce: profile.body.pendulumForce,
     };
 }
 
@@ -435,7 +469,9 @@ export interface StrokePlan {
  *   stance's branch);
  * - window, handWindow or dropTime ≤ 0; speedGain < 0; gripTension or bottomGrip outside (0, 1]; handDrop < 0; the
  *   preset's or the shot's handReach < 0; groundDepth < 0; the preset's or the shot's guideEffort outside [0, 1];
- *   armMass < 0; reachSlack < 0;
+ *   armMass < 0; reachSlack < 0; the preset's or the shot's pendulumAt or pendulumEffort outside [0, 1]; handArcLow
+ *   outside [0, 1]; handArcRadius not above the push length; a flex value not positive, or a flex damping ratio above
+ *   1; pendulumForce not positive (P2b.2b.2b.2b design §6);
  * - pendulumShare or defaultIntensity outside [0, 1]; handAngle outside (0, 90°) when pendulumShare < 1 (neither read
  *   nor checked otherwise); in swing mode a pendulumShare of 0, an effort tempo ≤ 0 or tempoFast > tempoSlow, or
  *   torqueMax < 0; in carry mode a hands' tempo ≤ 0 or fast > slow;
@@ -500,6 +536,10 @@ export function planStroke(setup: ShotSetup, world: World): StrokePlan {
         contactAt: lead,
         mode: push.mode,
         handReach: stroke.handReach ?? push.handReach,
+        pendulumAt: stroke.pendulumAt ?? push.pendulumAt,
+        pendulumEffort: stroke.pendulumEffort ?? push.pendulumEffort,
+        handArcRadius: push.handArcRadius,
+        handArcLow: push.handArcLow,
         groundDepth: push.groundDepth,
         downswing: planned.downswing,
     };

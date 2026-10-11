@@ -17,7 +17,7 @@ import {
 import { bedLawOf, staticSink } from "../../../src/engine/impact/turfBed";
 import type { ContactState, Coupling, Hands, StrokeMode, SwingArc } from "../../../src/engine/impact/types";
 import { TEST_BALL, TEST_TURF, ballAt, hoopWithUprightAt, testWorld } from "../support/fixtures";
-import { TEST_HEAD, drive, levelArc, onArc, strike, trackDrive } from "../support/impact";
+import { TEST_FLEX, TEST_HEAD, drive, levelArc, onArc, strike, trackDrive } from "../support/impact";
 
 const R = TEST_BALL.radius;
 const WORLD = testWorld();
@@ -492,6 +492,25 @@ describe("simulateImpact with a tracked drive", () => {
         ["a negative reach slack", withHands({ reachSlack: -0.01 }), /hands\.reachSlack must be non-negative/],
         ["a negative guide effort", withHands({ guideEffort: -0.1 }), /hands\.guideEffort must lie in \[0, 1\]/],
         ["a guide effort above 1", withHands({ guideEffort: 1.5 }), /hands\.guideEffort must lie in \[0, 1\]/],
+        ["a pendulumAt above 1", withArc({ pendulumAt: 1.5 }), /arc\.pendulumAt must lie in \[0, 1\]/],
+        ["a negative pendulumEffort", withArc({ pendulumEffort: -1 }), /arc\.pendulumEffort must lie in \[0, 1\]/],
+        ["a handArcLow above 1", withArc({ handArcLow: 1.5 }), /arc\.handArcLow must lie in \[0, 1\]/],
+        [
+            "an arc no longer than the push",
+            withArc({ mode: "carry", handReach: 2, handArcRadius: 2 }),
+            /arc\.handArcRadius must exceed arc\.handReach/,
+        ],
+        [
+            "a flex with no stiffness",
+            withHands({ flex: { ...TEST_FLEX, stiffness: 0 } }),
+            /hands\.flex\.stiffness must be a positive/,
+        ],
+        [
+            "a flex damping ratio above 1",
+            withHands({ flex: { ...TEST_FLEX, dampingRatio: 1.5 } }),
+            /hands\.flex\.dampingRatio must lie in \(0, 1\]/,
+        ],
+        ["no pendulum force", withHands({ pendulumForce: 0 }), /hands\.pendulumForce must be a positive/],
         [
             "a pivot velocity out of the swing plane",
             withArc({ pivotVelocity: vec3(0, 0.1, 0) }),

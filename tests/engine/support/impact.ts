@@ -26,6 +26,7 @@ import type {
     DriveSample,
     FaceLaw,
     FaceMaterial,
+    FlexLaw,
     Hands,
     HeadState,
     MalletHead,
@@ -53,6 +54,12 @@ export const TEST_FACE: FaceMaterial = { friction: 0.4 };
 /** A coupling for tracked test heads: plausible, not sourced (design §3.4 sets the engine's); contact at t = 0. */
 export const TEST_COUPLING: Coupling = { period: 0.04, dampingRatio: 0.7, relaxAt: 0 };
 
+/** A plausible, unsourced arm (P2b.2b.2b.2b design §3.1): k₀ 200 N/m, κ 20 /m, ζ 0.3 on 0.5 kg. */
+export const TEST_FLEX: FlexLaw = { stiffness: 200, stiffnessPerForce: 20, dampingRatio: 0.3, endpointMass: 0.5 };
+
+/** A plausible, unsourced pendulum push (N). */
+export const TEST_PENDULUM_FORCE = 20;
+
 /** Two firm hands with no arm mass, so the swung body is the head and head-only closed forms hold; a full guide. */
 export const TEST_HANDS: Hands = {
     bottom: 0.4,
@@ -61,6 +68,8 @@ export const TEST_HANDS: Hands = {
     armMass: 0,
     reachSlack: 0.03,
     guideEffort: 1,
+    flex: TEST_FLEX,
+    pendulumForce: TEST_PENDULUM_FORCE,
 };
 
 /** A dip of no depth. */
@@ -73,7 +82,8 @@ export function trackDrive(arc: SwingArc, coupling: Coupling = TEST_COUPLING, ha
 
 /**
  * A still, level swing-mode arc whose test head on the path at t = 0 has its centre at `centre`: aim +x, radius 0.8,
- * θ₀, ω₀ and α 0, both windows 0.01 s from t = 0, no dip, contact at t = 0, a reach of 10 m (it never binds) and no
+ * θ₀, ω₀ and α 0, both windows 0.01 s from t = 0, no dip, contact at t = 0, a reach of 10 m (it never binds), a hands'
+ * arc of radius 11 m (above the reach), lowest halfway, a pendulum phase at 0.8 of the push with no effort, and no
  * ground depth. `o` overrides any field; the pivot follows an overridden aim, radius or θ₀ unless `o` sets it.
  */
 export function levelArc(centre: Vec3, o: Partial<SwingArc> = {}): SwingArc {
@@ -99,6 +109,10 @@ export function levelArc(centre: Vec3, o: Partial<SwingArc> = {}): SwingArc {
         contactAt: 0,
         mode: "swing",
         handReach: 10,
+        pendulumAt: 0.8,
+        pendulumEffort: 0,
+        handArcRadius: 11,
+        handArcLow: 0.5,
         groundDepth: 0,
         ...o,
     };

@@ -135,8 +135,12 @@ describe("the follow-through (design §4)", () => {
     });
 
     it("caps a carry whose hands never stop", () => {
-        // Review focus 5: a 10 m reach never binds, so the carry never finishes.
-        const endless = testProfile({ drive: { mode: "carry", handReach: 10 }, shape: { pendulumShare: 0.5 } });
+        // Review focus 5: a 10 m reach never binds, so the carry never finishes. The hands' arc must exceed the
+        // reach (P2b.2b.2b.2b), so its radius is 11 m, as levelArc's.
+        const endless = testProfile({
+            drive: { mode: "carry", handReach: 10, handArcRadius: 11 },
+            shape: { pendulumShare: 0.5 },
+        });
         const { contact, follow } = stroke(shot({ backswing: 0.25 }, endless));
         expect(follow.flags).toEqual(["follow-cap"]);
         const contactAt = (contact.drive as TrackDrive).arc.contactAt;

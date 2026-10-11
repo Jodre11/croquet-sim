@@ -2,7 +2,8 @@
  * The default swing profile, "typical club player" (P2b.2b.1 design §5.4). Every value is provisional, to be refined
  * from outcomes; P2b.2b.2 sources or fits them.
  * - Mallet: reference/mallet.json (the head's mass, length and diameter; the 0.9144 m, 36 in, shaft, sourced).
- * - Body: reference/contact.json (`armMass` and `reachSlack`, the prototype's calibration).
+ * - Body: reference/contact.json (`armMass` and `reachSlack`, the prototype's calibration),
+ *   the arm's flex and pendulum push (P2b.2b.2b.2b), measured.
  * - Stance: the hands measured from the socket along the shaft, after John Riches, Croquet Technique (Oxford Croquet),
  *   quoted per preset below. The swing presets keep their own leans. The rolls' leans are Don Gugan's measured face
  *   angles (Gugan 4, Table 6), with Riches' angles kept as cues (user decision, 2026-10-08). Each preset is defined by
@@ -26,6 +27,7 @@ import {
     type StrokeShapeReference,
 } from "../../reference/index";
 import { ReferenceDataError } from "../../reference/schema";
+import { ARM_FLEX, PENDULUM_FORCE } from "../impact/track";
 import type { StrokeMode } from "../impact/types";
 import { handsAheadFor } from "./buildContact";
 import {
@@ -105,6 +107,11 @@ export function shapeOf(type: StrokeType, mode: StrokeMode, ref: StrokeShapeRefe
     };
 }
 
+// The rolls' pendulum phase and hands' arc (P2b.2b.2b.2b design §6): presets, not fits. pendulumAt 0.8 is where the
+// reach used to begin braking, and pendulumEffort 0 lets the mallet swing. The hands' arc is a placeholder, unsourced,
+// as handAngle is: a 1.5 m radius, about a standing player's shoulder height (the user's "origin much higher in the
+// sky"), lowest halfway along the push (the middle of the user's "partway through the push … or at its end"). The
+// swing presets carry the same four values for the type's sake and never read them.
 /** The default drive per stroke type (design §5.4). Provisional throughout. */
 const DRIVE: Readonly<Record<StrokeType, SwingDrive>> = {
     // Swing: the top hand still (no hand share), the pendulum's light push over 10 ms, then its free swing; no
@@ -120,6 +127,10 @@ const DRIVE: Readonly<Record<StrokeType, SwingDrive>> = {
         handReach: 0,
         groundDepth: 0,
         guideEffort: 1,
+        pendulumAt: 0.8,
+        pendulumEffort: 0,
+        handArcRadius: 1.5,
+        handArcLow: 0.5,
     },
     // As single-ball over a 5 ms window: the follow-through rises and dies by itself, and the head catches the
     // striker's ball again (prototype).
@@ -134,6 +145,10 @@ const DRIVE: Readonly<Record<StrokeType, SwingDrive>> = {
         handReach: 0,
         groundDepth: 0,
         guideEffort: 1,
+        pendulumAt: 0.8,
+        pendulumEffort: 0,
+        handArcRadius: 1.5,
+        handArcLow: 0.5,
     },
     // Swing, checked: speedGain 1 at drive −1 brings the pendulum to rest at its window's end. The check does not
     // lift the head: it still rises through the window, pitching further face-up, so its rear rim drops (8.78 mm
@@ -153,6 +168,10 @@ const DRIVE: Readonly<Record<StrokeType, SwingDrive>> = {
         handReach: 0,
         groundDepth: 0,
         guideEffort: 1,
+        pendulumAt: 0.8,
+        pendulumEffort: 0,
+        handArcRadius: 1.5,
+        handArcLow: 0.5,
     },
     // Swing, checked through the firm, low bottom hand's lever: a hard, level shot with no follow-through; no dip
     // (prototype). A single-ball stroke, the striker's ball crossing a gap to the target (design §5.4).
@@ -167,6 +186,10 @@ const DRIVE: Readonly<Record<StrokeType, SwingDrive>> = {
         handReach: 0,
         groundDepth: 0,
         guideEffort: 1,
+        pendulumAt: 0.8,
+        pendulumEffort: 0,
+        handArcRadius: 1.5,
+        handArcLow: 0.5,
     },
     // Carry (Riches: the slope "MAINTAINED throughout the swing", both hands moving "FORWARD at the SAME RATE",
     // "the mallet head following through the ball and onto the ground"): the hands' speed from the downswing
@@ -183,6 +206,10 @@ const DRIVE: Readonly<Record<StrokeType, SwingDrive>> = {
         handReach: 0.15,
         groundDepth: 0.005,
         guideEffort: 1,
+        pendulumAt: 0.8,
+        pendulumEffort: 0,
+        handArcRadius: 1.5,
+        handArcLow: 0.5,
     },
     // Carry: the hands' speed from the downswing (P2b.2b.2a design §3.3) and still accelerating, a 0.30 m reach,
     // the head ending 2 mm below the turf (prototype). A known miss in this phase (design §10).
@@ -197,6 +224,10 @@ const DRIVE: Readonly<Record<StrokeType, SwingDrive>> = {
         handReach: 0.3,
         groundDepth: 0.002,
         guideEffort: 1,
+        pendulumAt: 0.8,
+        pendulumEffort: 0,
+        handArcRadius: 1.5,
+        handArcLow: 0.5,
     },
     // Carry, the bottom hand punching in contact: the pendulum's speedGain 0.5 over 15 ms from contact on top of
     // the hands' speed from the downswing (P2b.2b.2a design §3.3) and handGain 0.1. A 0.30 m reach; 0.2 m traps
@@ -213,6 +244,10 @@ const DRIVE: Readonly<Record<StrokeType, SwingDrive>> = {
         handReach: 0.3,
         groundDepth: 0.002,
         guideEffort: 1,
+        pendulumAt: 0.8,
+        pendulumEffort: 0,
+        handArcRadius: 1.5,
+        handArcLow: 0.5,
     },
 };
 
@@ -227,6 +262,8 @@ export const defaultProfile: SwingProfile = {
     body: {
         armMass: contactReference.armMass.value,
         reachSlack: contactReference.reachSlack.value,
+        flex: ARM_FLEX,
+        pendulumForce: PENDULUM_FORCE,
     },
     stance: {
         // The top hand fixed at the top of the handle; the bottom hand high and light, a guide only (prototype). Riches

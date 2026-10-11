@@ -70,6 +70,8 @@ function caseOf(type: StrokeType): Case {
             armMass: defaultProfile.body.armMass,
             reachSlack: defaultProfile.body.reachSlack,
             guideEffort: 1,
+            flex: defaultProfile.body.flex,
+            pendulumForce: defaultProfile.body.pendulumForce,
         },
         mode: defaultProfile.drive[type].mode,
         shape: {

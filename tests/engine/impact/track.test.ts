@@ -60,6 +60,10 @@ const ROLL: SwingArc = {
     contactAt: 0,
     mode: "carry",
     handReach: 10,
+    pendulumAt: 0.8,
+    pendulumEffort: 0,
+    handArcRadius: 11,
+    handArcLow: 0.5,
     groundDepth: 0,
 };
 

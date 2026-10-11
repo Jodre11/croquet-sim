@@ -43,7 +43,17 @@ import { defaultWorld } from "../../../src/engine/world";
 import { contactReference, malletReference, swingReference } from "../../../src/reference/index";
 import { ReferenceDataError } from "../../../src/reference/schema";
 import { TEST_BALL, ballAt, testWorld } from "../support/fixtures";
-import { TEST_HANDS, mirrorBall, mirrorContact, mirrorQuat, mirrorSpin, mirrorVec, recorder } from "../support/impact";
+import {
+    TEST_FLEX,
+    TEST_HANDS,
+    TEST_PENDULUM_FORCE,
+    mirrorBall,
+    mirrorContact,
+    mirrorQuat,
+    mirrorSpin,
+    mirrorVec,
+    recorder,
+} from "../support/impact";
 import { CANONICAL_CLEARANCE, GC_STOP_GAP, backswingFor, canonicalSetup, testProfile } from "../support/shot";
 
 const WORLD = testWorld();
@@ -206,6 +216,8 @@ describe("buildContact, step by step", () => {
             armMass: 0.8,
             reachSlack: 0.02,
             guideEffort: 0.4,
+            flex: TEST_FLEX,
+            pendulumForce: TEST_PENDULUM_FORCE,
         });
         expect(drive.coupling).toEqual({
             period: HAND_COUPLING.period,
@@ -221,6 +233,38 @@ describe("buildContact, step by step", () => {
         const guided = testProfile({ drive: { guideEffort: 0.4 } });
         expect(effortOf(shot({}, guided))).toBe(0.4);
         expect(effortOf(shot({ guideEffort: 0 }, guided))).toBe(0);
+    });
+
+    it("carries the pendulum phase's inputs, the hands' arc and the arm's law into the drive (P2b.2b.2b.2b §6)", () => {
+        const flex = { stiffness: 300, stiffnessPerForce: 5, dampingRatio: 0.4, endpointMass: 0.6 };
+        const profile = testProfile({
+            drive: { mode: "carry", handReach: 0.2, pendulumAt: 0.7, pendulumEffort: 0.2, handArcRadius: 1.2 },
+            body: { flex, pendulumForce: 25 },
+        });
+        const preset = (buildContact(shot({}, profile), WORLD).drive as TrackDrive).arc;
+        expect([preset.pendulumAt, preset.pendulumEffort, preset.handArcRadius, preset.handArcLow]).toEqual([
+            0.7, 0.2, 1.2, 0.5,
+        ]);
+        const own = (buildContact(shot({ pendulumAt: 0.4, pendulumEffort: 1 }, profile), WORLD).drive as TrackDrive)
+            .arc;
+        expect([own.pendulumAt, own.pendulumEffort]).toEqual([0.4, 1]);
+        const { hands } = buildContact(shot({}, profile), WORLD).drive as TrackDrive;
+        expect([hands.flex, hands.pendulumForce]).toEqual([flex, 25]);
+    });
+
+    it.each([
+        ["stroke.pendulumAt", { pendulumAt: 1.1 }, {}, /stroke\.pendulumAt must lie in \[0, 1\]/],
+        ["stroke.pendulumEffort", { pendulumEffort: -0.1 }, {}, /stroke\.pendulumEffort must lie in \[0, 1\]/],
+        ["the preset's pendulumAt", {}, { pendulumAt: Number.NaN }, /pendulumAt must be finite/],
+        ["the preset's handArcLow", {}, { handArcLow: 2 }, /handArcLow must lie in \[0, 1\]/],
+        [
+            "an arc no longer than the push",
+            { handReach: 0.5 },
+            { handArcRadius: 0.5 },
+            /handArcRadius must exceed the push length/,
+        ],
+    ] as const)("rejects %s", (_name, stroke, drive, message) => {
+        expect(() => buildContact(shot(stroke, testProfile({ drive })), WORLD)).toThrow(message);
     });
 
     it("dips the hands as the profile says, whatever the drive, still meeting the ball on the up", () => {
@@ -473,6 +517,13 @@ describe("defaultProfile", () => {
         expect(defaultProfile.body).toEqual({
             armMass: contactReference.armMass.value,
             reachSlack: contactReference.reachSlack.value,
+            flex: {
+                stiffness: contactReference.armStiffness.value,
+                stiffnessPerForce: contactReference.armStiffnessPerForce.value,
+                dampingRatio: contactReference.armDampingRatio.value,
+                endpointMass: contactReference.armEndpointMass.value,
+            },
+            pendulumForce: contactReference.pendulumForce.value,
         });
     });
 
