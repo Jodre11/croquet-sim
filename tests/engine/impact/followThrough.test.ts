@@ -154,7 +154,9 @@ describe("the follow-through (design §4)", () => {
     // 2 × HEAD_DEEP_LIMIT: the pendulum phase at any pendulumAt or effort tried reaches at most 0.31 mm into the turf.
     // On this file's world the canonical full roll's pendulum phase swings its head into the turf 1.95 mm deep, short
     // of HEAD_DEEP_LIMIT (2.04 mm, follow-head-deep, before the push intent, gate round 1). With the push intent this
-    // setup still digs inside the impact: impact-head-deep, 5.84 mm at 126 ms (was 5.4 mm).
+    // setup still digs inside the impact: impact-head-deep, 5.84 mm at 126 ms (was 5.4 mm). With the hands' mass and
+    // grip tissue (gate round 2) it still does: impact-head-deep from 108.7 ms, 5.48 mm deep, and the full roll's
+    // follow-through on this world reaches 1.79 mm into the turf.
     it.skip("flags a follow-through that drives the head deep, not the impact", () => {
         // A deep, late dip: the hands lower 0.2 m over 50 ms from 100 ms, long after the ball has gone. The turf and
         // the compliant hands hold the head well above that path, but a planned dig far outside play presses it past

@@ -16,14 +16,18 @@ import {
 import { axisAngle, multiply, rotate, rotateInverse, type Quaternion } from "../../../src/engine/impact/rigidBody";
 import {
     HAND_COUPLING,
+    advanceHands,
     handLoad,
     headOnPath,
     newGripState,
     pathAt,
     prepareTrack,
     swingOrientation,
+    tissueForce,
     type GripState,
     type HandLoad,
+    type HandMass,
+    type HandMassState,
     type PreparedTrack,
     pushResponse,
     senseResistance,
@@ -173,9 +177,11 @@ describe("a tracked head with no ball", () => {
     it("follows a power roll's arcs and a timed dip before contact", () => {
         const { socket, angle } = tracking(TIMED);
         // Drafting measured 2.53e-6 m and 2.33e-6 rad, halving exactly at dt/2: the integrator's O(dt) error on the
-        // dip's steps in acceleration (pre-flight D4.2; re-measured in pre-flight).
+        // dip's steps in acceleration (pre-flight D4.2; re-measured in pre-flight). P2b.2b.2b.2b: fast impedance (was
+        // 5e-6 rad): a carry's swung body is now the head alone, ARMED's arm mass replaced by the hand masses from the
+        // flex's start, and the lighter body tracks to 3.71e-6 m and 5.18e-6 rad, still halving exactly at dt/2.
         expect(socket).toBeLessThan(5e-6);
-        expect(angle).toBeLessThan(5e-6);
+        expect(angle).toBeLessThan(6e-6);
     });
 
     it("converges on a full check as the step shrinks: the residual is the integrator's", () => {
@@ -457,6 +463,8 @@ describe("the bottom hand's rate guide", () => {
                 vertical: false,
                 rising: false,
                 resistance: 0,
+                topHand: null,
+                bottomHand: null,
             };
             return handLoad(track, slow, TEST_HEAD, t, open).bottom;
         };
@@ -521,6 +529,8 @@ describe("release by reach", () => {
             vertical: false,
             rising: false,
             resistance: 0,
+            topHand: null,
+            bottomHand: null,
         };
         const turn = 0.08;
         const e = forwardOf(turned(turn), track.arc.aim);
@@ -623,24 +633,30 @@ describe("the flex (P2b.2b.2b.2b design §3.1, §7.1)", () => {
 
     it("stiffens each hand by κ times its feed-forward: the top hand holds the weight, the bottom none", () => {
         // A vertical shaft at rest: F_ff is the weight, all along the shaft, so the top hand carries it and the bottom
-        // hand's share is zero.
+        // hand's share is zero. Each arm also holds its own hand mass's weight (gate round 2: fast impedance).
         const track = prepareAt(STILL(), STANDARD_GRAVITY);
         const grip = newGripState();
         handLoad(track, headOnPath(track, TEST_HEAD, 0), TEST_HEAD, 0, grip);
-        expect(grip.topStiffness).toBeCloseTo(TEST_FLEX.stiffness + TEST_FLEX.stiffnessPerForce * STANDARD_GRAVITY, 9);
-        expect(grip.bottomStiffness).toBeCloseTo(TEST_FLEX.stiffness, 9);
+        const hand = TEST_HANDS.handMass * STANDARD_GRAVITY;
+        expect(grip.topStiffness).toBeCloseTo(
+            TEST_FLEX.stiffness + TEST_FLEX.stiffnessPerForce * (STANDARD_GRAVITY + hand),
+            9,
+        );
+        expect(grip.bottomStiffness).toBeCloseTo(TEST_FLEX.stiffness + TEST_FLEX.stiffnessPerForce * hand, 9);
     });
 
     it("rings a head moving along the shaft as the damped oscillator of both grips' springs", () => {
-        // Along a vertical shaft both grips' springs (2·k₀, no gravity, no feed-forward) act on the swung body M with
-        // both dampers: ω = √(2k₀/M), ζ = c/√(2k₀·M) = ζ_arm·√(2·m_arm/M). TEST_FLEX's 0.5 kg on the 1 kg test head
-        // makes that ζ_arm exactly.
-        const track = prepareAt(STILL(), 0);
+        // Along a vertical shaft both grips' springs (2·k₀, no gravity, no feed-forward) act on the swung body M and
+        // both hand masses, which the tissue holds to it, with both dampers: ω = √(2k₀/M'), ζ = c/√(2k₀·M') =
+        // ζ_arm·√(2·m_arm/M'), M' = M + 2·m_h. A stiff tissue (10⁶ N/m) keeps its own mode out of the slow one.
+        const stiff: Hands = { ...TEST_HANDS, gripStiffness: 1e6 };
+        const track = prepareAt(STILL(), 0, stiff);
         const start = headOnPath(track, TEST_HEAD, 0);
         const v0 = 0.01;
         const moving = { ...start, velocity: vec3(0, 0, v0) };
-        const omega = Math.sqrt((2 * TEST_FLEX.stiffness) / TEST_HEAD.mass);
-        const zeta = TEST_FLEX.dampingRatio;
+        const carried = TEST_HEAD.mass + 2 * stiff.handMass;
+        const omega = Math.sqrt((2 * TEST_FLEX.stiffness) / carried);
+        const zeta = TEST_FLEX.dampingRatio * Math.sqrt((2 * TEST_FLEX.endpointMass) / carried);
         const wd = omega * Math.sqrt(1 - zeta * zeta);
         let worst = 0;
         const probe: ImpactProbe = {
@@ -654,9 +670,10 @@ describe("the flex (P2b.2b.2b.2b design §3.1, §7.1)", () => {
         expect(worst).toBeLessThan(0.01 * (v0 / omega));
     });
 
-    it("resists a small pitch with k_top·r_top² + k_bot·r_bot²: the angle hold from the two grips", () => {
-        // No gravity and a still path: F_ff is zero, so both hands are at k₀. A turn δθ about the head's centre moves
-        // each grip r·δθ and costs a moment k·r² δθ about the pitch axis.
+    it("resists a sudden small pitch with k_t·(r_top² + r_bot²): the angle hold from the two grips' tissue", () => {
+        // No gravity and a still path: F_ff is zero. A turn δθ about the head's centre, too sudden for the hand masses
+        // to follow, moves each grip r·δθ against its tissue and costs a moment k_t·r² δθ about the pitch axis (gate
+        // round 2: the hand's fast impedance; was the flex's k₀·r² before the hand masses).
         const track = prepareAt(STILL({ theta0: -0.5 }), 0);
         const grip = newGripState();
         const on = headOnPath(track, TEST_HEAD, 0);
@@ -666,7 +683,7 @@ describe("the flex (P2b.2b.2b.2b design §3.1, §7.1)", () => {
         const load = handLoad(track, turned, TEST_HEAD, 0, grip);
         const rTop = TEST_HEAD.socket.z + track.arc.radius;
         const rBottom = TEST_HEAD.socket.z + TEST_HANDS.bottom;
-        const expected = 0 - TEST_FLEX.stiffness * (rTop * rTop + rBottom * rBottom) * turn;
+        const expected = 0 - TEST_HANDS.gripStiffness * (rTop * rTop + rBottom * rBottom) * turn;
         expect(Math.abs(dot(load.torque, track.axis) / expected - 1)).toBeLessThan(0.01);
     });
 
@@ -730,8 +747,10 @@ describe("the push intent (P2b.2b.2b.2b gate ruling 2026-10-11)", () => {
             const bottomShare = scale(track.arc.aim, (P * a) / (a - b));
             expect(dist(sub(load.top, plain.top), topShare), `R ${R}`).toBeLessThan(1e-9);
             expect(dist(sub(load.bottom, plain.bottom), bottomShare), `R ${R}`).toBeLessThan(1e-9);
-            // Each hand's stiffness follows its larger share: k = k₀ + κ·|F_ff,h|.
-            const k = (share: Vec3): number => TEST_FLEX.stiffness + TEST_FLEX.stiffnessPerForce * length(share);
+            // Each hand's stiffness follows its larger share: k = k₀ + κ·|F_ff,h|, F_ff,h with its hand mass's weight.
+            const handWeight = vec3(0, 0, TEST_HANDS.handMass * STANDARD_GRAVITY);
+            const k = (share: Vec3): number =>
+                TEST_FLEX.stiffness + TEST_FLEX.stiffnessPerForce * length(add(share, handWeight));
             expect(grip.topStiffness, `R ${R}`).toBeCloseTo(k(load.top), 9);
             expect(grip.bottomStiffness, `R ${R}`).toBeCloseTo(k(load.bottom), 9);
             expect(grip.topStiffness, `R ${R}`).toBeGreaterThan(grip0.topStiffness);
@@ -783,7 +802,8 @@ describe("the push intent (P2b.2b.2b.2b gate ruling 2026-10-11)", () => {
 
     /**
      * Replays `snapshots`' hands from `start` with a grip state whose sensed resistance R̃ follows, after each step,
-     * that step's head–ball contacts alone through the lag (or stays 0 without `fromBalls`). Returns the steps whose
+     * that step's head–ball contacts alone through the lag (or stays 0 without `fromBalls`), its hand masses advanced
+     * after each step as the integrator advances them. Returns the steps whose
      * hands' force differs from the integrator's, the largest R and the largest R̃.
      */
     function replay(track: PreparedTrack, start: HeadState, snapshots: readonly ImpactSnapshot[], fromBalls = true) {
@@ -808,6 +828,7 @@ describe("the push intent (P2b.2b.2b.2b gate ruling 2026-10-11)", () => {
             }
             const resistance = fromBalls ? Math.max(0, 0 - dot(track.arc.aim, onHead)) : 0;
             grip.resistance = grip.resistance + (resistance - grip.resistance) * response;
+            advanceHands(grip, track.hands, IMPACT_DT);
             largest = Math.max(largest, resistance);
             sensed = Math.max(sensed, grip.resistance);
             state = s.head;
@@ -856,9 +877,225 @@ describe("the push intent (P2b.2b.2b.2b gate ruling 2026-10-11)", () => {
     });
 });
 
+describe("the hands' fast impedance (P2b.2b.2b.2b gate round 2 ruling, 2026-10-11)", () => {
+    /** A still carry in a vertical swing plane: the hands never travel, so no pendulum phase. */
+    const HOLDING = (o: Partial<SwingArc> = {}): SwingArc =>
+        still({ mode: "carry", handReach: 0.1, pendulumAt: 1, ...o });
+    const prepareAt = (arc: SwingArc, gravity: number, hands: Hands = TEST_HANDS): PreparedTrack =>
+        prepareTrack(trackDrive(arc, TEST_COUPLING, hands), TEST_HEAD, gravity);
+    const shaftOf = (head: HeadState): Vec3 => rotate(head.orientation, UP);
+    const gripOf = (head: HeadState, along: number): Vec3 => add(head.position, scale(shaftOf(head), along));
+    const gripVelocityOf = (head: HeadState, along: number): Vec3 =>
+        add(head.velocity, cross(head.angularVelocity, scale(shaftOf(head), along)));
+    const masses = (s: ImpactSnapshot): NonNullable<NonNullable<ImpactSnapshot["hand"]>["masses"]> =>
+        (s.hand as NonNullable<ImpactSnapshot["hand"]>).masses as NonNullable<
+            NonNullable<ImpactSnapshot["hand"]>["masses"]
+        >;
+
+    it("rings a hand mass on its tissue, the grip held still, as the damped oscillator √(k_t/m_h)", () => {
+        // No slow flex and no gravity: m_h·ü = −k_t·u − c_t·u̇, so ω = √(k_t/m_h) and ζ = c_t/(2√(k_t·m_h)).
+        // Semi-implicit Euler's error is O(ω·dt) = 1.6e-3 of the swing.
+        const k = TEST_HANDS.gripStiffness;
+        const m = TEST_HANDS.handMass;
+        const omega = Math.sqrt(k / m);
+        const zeta = TEST_HANDS.gripDamping / (2 * Math.sqrt(k * m));
+        const wd = omega * Math.sqrt(1 - zeta * zeta);
+        const x0 = 1e-4;
+        const fixed = vec3(0, 0, 1);
+        const grip: GripState = {
+            ...newGripState(),
+            topHand: { position: add(fixed, vec3(x0, 0, 0)), velocity: ZERO, preload: ZERO, force: ZERO },
+        };
+        let worst = 0;
+        const steps = Math.round(0.1 / IMPACT_DT);
+        for (let i = 1; i <= steps; i++) {
+            const hand = grip.topHand as HandMass;
+            hand.force = scale(tissueForce(TEST_HANDS, hand, fixed, ZERO), -1);
+            advanceHands(grip, TEST_HANDS, IMPACT_DT);
+            const t = i * IMPACT_DT;
+            const expected =
+                x0 *
+                Math.exp(-zeta * omega * t) *
+                (Math.cos(wd * t) + (zeta / Math.sqrt(1 - zeta * zeta)) * Math.sin(wd * t));
+            worst = Math.max(worst, Math.abs((grip.topHand as HandMass).position.x - fixed.x - expected));
+        }
+        expect(worst).toBeLessThan(1e-2 * x0);
+    });
+
+    it("hangs a still head on the flex with each hand mass in equilibrium: the tissue carries its share", () => {
+        // A vertical shaft at rest under gravity: the top hand's share is the head's weight, the bottom hand's none.
+        // The hand masses start with their tissue compressed under that share and hang on the slow flex, which also
+        // carries their weight, so nothing moves.
+        const track = prepareAt(HOLDING(), STANDARD_GRAVITY);
+        const start = headOnPath(track, TEST_HEAD, 0);
+        const weight = vec3(0, 0, TEST_HEAD.mass * STANDARD_GRAVITY);
+        let force = 0;
+        let drift = 0;
+        let moved = 0;
+        let first: Vec3 | null = null;
+        const probe: ImpactProbe = {
+            step(s) {
+                const hand = s.hand as NonNullable<ImpactSnapshot["hand"]>;
+                force = Math.max(force, dist(hand.top, weight), length(hand.bottom));
+                drift = Math.max(drift, dist(s.head.position, start.position));
+                const top = (masses(s).top as HandMassState).position;
+                first ??= top;
+                moved = Math.max(moved, dist(top, first));
+            },
+        };
+        integrate(isolated({ start, drive: track, gravity: STANDARD_GRAVITY }), { probe, cap: 0.2 });
+        expect(force).toBeLessThan(1e-9);
+        expect(drift).toBeLessThan(1e-12);
+        expect(moved).toBeLessThan(1e-12);
+    });
+
+    it("conserves the energy of the head, the hand masses and every spring with no damper and no feed-forward", () => {
+        // No gravity on a still path: F_ff is zero, so k = k₀ and nothing feeds the hands. The head is pushed along
+        // aim and swings in the plane, on the slow flex and the tissue in series, ζ_arm and c_t 0. The energy is the
+        // head's and the hand masses' kinetic energy, each slow spring's ½k₀|y − x̂|² and each tissue's ½k_t|x − y|²,
+        // x̂ the hand's start (still hands) and x the grip.
+        const undamped: Hands = { ...TEST_HANDS, flex: { ...TEST_FLEX, dampingRatio: 0 }, gripDamping: 0 };
+        const track = prepareAt(HOLDING(), 0, undamped);
+        const on = headOnPath(track, TEST_HEAD, 0);
+        const start = { ...on, velocity: scale(track.arc.aim, 0.05) };
+        const a = TEST_HEAD.socket.z + track.arc.radius;
+        const b = TEST_HEAD.socket.z + undamped.bottom;
+        const topHome = gripOf(on, a);
+        const bottomHome = gripOf(on, b);
+        const k = undamped.flex.stiffness;
+        const kt = undamped.gripStiffness;
+        const half = (v: Vec3): number => 0.5 * dot(v, v);
+        const energy = (s: ImpactSnapshot): number => {
+            const { head } = s;
+            const w = rotateInverse(head.orientation, head.angularVelocity);
+            const I = TEST_HEAD.inertia;
+            const { top, bottom } = masses(s) as { top: HandMassState; bottom: HandMassState };
+            return (
+                TEST_HEAD.mass * half(head.velocity) +
+                0.5 * (I.x * w.x * w.x + I.y * w.y * w.y + I.z * w.z * w.z) +
+                undamped.handMass * (half(top.velocity) + half(bottom.velocity)) +
+                k * (half(sub(top.position, topHome)) + half(sub(bottom.position, bottomHome))) +
+                kt * (half(sub(gripOf(head, a), top.position)) + half(sub(gripOf(head, b), bottom.position)))
+            );
+        };
+        let lowest = Infinity;
+        let highest = 0 - Infinity;
+        const probe: ImpactProbe = {
+            step(s) {
+                const e = energy(s);
+                lowest = Math.min(lowest, e);
+                highest = Math.max(highest, e);
+            },
+        };
+        integrate(isolated({ start, drive: track, gravity: 0 }), { probe, cap: 0.3 });
+        const initial = TEST_HEAD.mass * half(start.velocity) + 2 * undamped.handMass * half(start.velocity);
+        // Semi-implicit Euler holds the energy to O(ω·dt) of it, ω the tissue's fastest mode.
+        expect(highest - lowest).toBeLessThan(1e-2 * initial);
+        expect(lowest).toBeGreaterThan(0.5 * initial);
+    });
+
+    it("drops the bottom hand's mass and tissue in the pendulum phase: its push acts at the grip", () => {
+        // Hands travelling along aim reach half the 5 cm push at 25 ms, the shaft leaning back 0.3 rad (short of
+        // vertical, so the bottom hand pushes). Before it both hands hold the mallet through their tissue; from it the
+        // bottom hand's mass leaves the model and its push along e is applied directly.
+        const arc = HOLDING({
+            theta0: -0.3,
+            pivotVelocity: vec3(1, 0, 0),
+            handReach: 0.05,
+            pendulumAt: 0.5,
+            pendulumEffort: 1,
+            window: 0.005,
+            handWindow: 0.005,
+        });
+        const track = prepareAt(arc, STANDARD_GRAVITY);
+        const pendulum = (track.push as Push).pendulum as number;
+        const grip = newGripState();
+        handLoad(track, headOnPath(track, TEST_HEAD, 0), TEST_HEAD, 0, grip);
+        expect(grip.topHand).not.toBeNull();
+        expect(grip.bottomHand).not.toBeNull();
+        const t = pendulum + 1e-3;
+        const on = headOnPath(track, TEST_HEAD, t);
+        const load = handLoad(track, on, TEST_HEAD, t, grip);
+        expect(grip.bottomHand).toBeNull();
+        expect(grip.topHand).not.toBeNull();
+        const s = shaftOf(on);
+        const e = sub(arc.aim, scale(s, dot(arc.aim, s)));
+        expect(dist(load.bottom, scale(e, TEST_PENDULUM_FORCE / length(e)))).toBeLessThan(1e-9);
+        // Integrated: once released, no step carries a bottom hand mass.
+        let after = 0;
+        let carried = 0;
+        const probe: ImpactProbe = {
+            step(snap) {
+                if (snap.t > pendulum + 1e-4) {
+                    after++;
+                    if (masses(snap).bottom !== null) {
+                        carried++;
+                    }
+                }
+            },
+        };
+        const start = headOnPath(track, TEST_HEAD, 0);
+        integrate(isolated({ start, drive: track, gravity: STANDARD_GRAVITY }), { probe, cap: pendulum + 0.01 });
+        expect(after).toBeGreaterThan(0);
+        expect(carried).toBe(0);
+    });
+
+    it("is never read in swing mode", () => {
+        const track = prepareAt(still({ omega0: 3 }), STANDARD_GRAVITY);
+        const t = 0.002;
+        const on = headOnPath(track, TEST_HEAD, t);
+        const hand = (): HandMass => ({
+            position: vec3(1, 2, 3),
+            velocity: vec3(4, 5, 6),
+            preload: vec3(0.1, 0, 0),
+            force: vec3(7, 8, 9),
+        });
+        const held: GripState = { ...newGripState(), topHand: hand(), bottomHand: hand() };
+        expect(handLoad(track, on, TEST_HEAD, t, held)).toEqual(handLoad(track, on, TEST_HEAD, t, newGripState()));
+        expect(held.topHand).toEqual(hand());
+        expect(held.bottomHand).toEqual(hand());
+    });
+
+    it("holds the mallet through the tissue in a carry run: each hand mass rides its grip", () => {
+        // Sanity for the series chain: the hands' force on the mallet is the tissue's, k_t·(y − x) + c_t·(u − v), at
+        // every step of a 3 m/s carry into a free ball.
+        const ball = vec3(0, 0, 1);
+        const begin = vec3(ball.x - R - 1e-6 - TEST_HEAD.length / 2, 0, ball.z);
+        const omega0 = 3 / (0.8 + TEST_HEAD.socket.z);
+        const track = prepareAt(levelArc(begin, { mode: "carry", handReach: 0.1, pendulumAt: 1, omega0 }), 0);
+        const a = TEST_HEAD.socket.z + track.arc.radius;
+        const probe = recorder();
+        const head = headOnPath(track, TEST_HEAD, 0);
+        integrate(isolated({ start: head, drive: track, balls: [freeBall("blue", ball)] }), { probe, cap: 3e-3 });
+        let previous = head;
+        let worst = 0;
+        let largest = 0;
+        let prior: HandMassState | null = null;
+        for (const s of probe.snapshots) {
+            const top = masses(s).top as HandMassState;
+            if (prior !== null) {
+                const expected = add(
+                    scale(sub(prior.position, gripOf(previous, a)), TEST_HANDS.gripStiffness),
+                    scale(sub(prior.velocity, gripVelocityOf(previous, a)), TEST_HANDS.gripDamping),
+                );
+                const hand = s.hand as NonNullable<ImpactSnapshot["hand"]>;
+                worst = Math.max(worst, dist(hand.top, expected));
+                largest = Math.max(largest, length(hand.top));
+            }
+            prior = top;
+            previous = s.head;
+        }
+        expect(largest).toBeGreaterThan(1);
+        expect(worst).toBeLessThan(1e-9 * largest);
+    });
+});
+
 describe("the pendulum phase (P2b.2b.2b.2b design §4.2, §4.3, §7.1)", () => {
-    /** Hands with an undamped flex, a short pendulum: a 0.5 m top grip, the bottom grip 0.25 m from the socket. */
-    const FREE: Hands = { ...TEST_HANDS, bottom: 0.25, flex: { ...TEST_FLEX, dampingRatio: 0 } };
+    /**
+     * Hands with an undamped flex and tissue, a short pendulum: a 0.5 m top grip, the bottom grip 0.25 m from the
+     * socket.
+     */
+    const FREE: Hands = { ...TEST_HANDS, bottom: 0.25, flex: { ...TEST_FLEX, dampingRatio: 0 }, gripDamping: 0 };
     /** Leaning 0.5 rad, still, the pendulum phase from contact (pendulumAt 0 on still hands). */
     const SWUNG = (effort: number): SwingArc =>
         still({ mode: "carry", radius: 0.5, theta0: -0.5, handReach: 0.1, pendulumAt: 0, pendulumEffort: effort });
@@ -866,20 +1103,36 @@ describe("the pendulum phase (P2b.2b.2b.2b design §4.2, §4.3, §7.1)", () => {
         prepareTrack(trackDrive(SWUNG(effort), TEST_COUPLING, FREE), TEST_HEAD, gravity);
     const UP_AXIS = vec3(0, 0, 1);
 
-    /** The swung body's energy, the top hand's feed-forward potential −F_ff·x_top and its spring's energy. */
+    /**
+     * The swung body's and the top hand mass's energy (gate round 2: fast impedance): their kinetic energy and
+     * weight, the top arm's feed-forward potential −F_ff·y (the head's and the hand's weight, on the hand mass at y),
+     * its slow spring's energy from the hand's start and the tissue's between the hand and the top grip.
+     */
     function energy(track: PreparedTrack, s: ImpactSnapshot, topStart: Vec3): number {
         const { head } = s;
         const shaft = rotate(head.orientation, UP_AXIS);
         const top = add(head.position, scale(shaft, TEST_HEAD.socket.z + track.arc.radius));
+        const hand = (s.hand as NonNullable<ImpactSnapshot["hand"]>).masses?.top as HandMassState;
         const w = rotateInverse(head.orientation, head.angularVelocity);
         const I = TEST_HEAD.inertia;
         const kinetic =
             0.5 * TEST_HEAD.mass * dot(head.velocity, head.velocity) +
-            0.5 * (I.x * w.x * w.x + I.y * w.y * w.y + I.z * w.z * w.z);
+            0.5 * (I.x * w.x * w.x + I.y * w.y * w.y + I.z * w.z * w.z) +
+            0.5 * FREE.handMass * dot(hand.velocity, hand.velocity);
         const weight = TEST_HEAD.mass * STANDARD_GRAVITY;
-        const k = FREE.flex.stiffness + FREE.flex.stiffnessPerForce * weight;
-        const offset = sub(top, topStart);
-        return kinetic + weight * head.position.z - weight * top.z + 0.5 * k * dot(offset, offset);
+        const handWeight = FREE.handMass * STANDARD_GRAVITY;
+        const k = FREE.flex.stiffness + FREE.flex.stiffnessPerForce * (weight + handWeight);
+        // The hand started with its tissue compressed under the head's weight: its intended point is that start.
+        const offset = sub(hand.position, add(topStart, vec3(0, 0, weight / FREE.gripStiffness)));
+        const tissue = sub(top, hand.position);
+        return (
+            kinetic +
+            weight * head.position.z +
+            handWeight * hand.position.z -
+            (weight + handWeight) * hand.position.z +
+            0.5 * k * dot(offset, offset) +
+            0.5 * FREE.gripStiffness * dot(tissue, tissue)
+        );
     }
 
     /** The top grip of the head on `track`'s path at t = 0, where the flex takes hold. */

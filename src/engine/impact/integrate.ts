@@ -96,6 +96,7 @@ import {
     type FreshBed,
 } from "./turfBed";
 import {
+    advanceHands,
     handLoad,
     handsAt,
     holdPendulum,
@@ -105,6 +106,7 @@ import {
     senseResistance,
     type GripState,
     type HandLoad,
+    type HandMassState,
     type PreparedTrack,
     type SwungBody,
 } from "./track";
@@ -265,8 +267,18 @@ export interface ImpactSnapshot {
     /** In setup order. */
     readonly balls: readonly BallState[];
     readonly contacts: readonly ContactSample[];
-    /** A tracked drive's F, its feed-forward parts and each hand's force (P2b.2b.1 design §3.7); absent otherwise. */
-    readonly hand?: { readonly force: Vec3; readonly feedForward: Vec3; readonly top: Vec3; readonly bottom: Vec3 };
+    /**
+     * A tracked drive's F, its feed-forward parts and each hand's force (P2b.2b.1 design §3.7); absent otherwise. In
+     * carry mode once the flex has taken hold, also each hand mass after the step (gate round 2 ruling, 2026-10-11;
+     * the bottom's null once it has let go).
+     */
+    readonly hand?: {
+        readonly force: Vec3;
+        readonly feedForward: Vec3;
+        readonly top: Vec3;
+        readonly bottom: Vec3;
+        readonly masses?: { readonly top: HandMassState | null; readonly bottom: HandMassState | null };
+    };
     /** The turf's total force on the head (zero while the pair is open); absent without the head–turf pair. */
     readonly headTurf?: Vec3;
 }
@@ -346,6 +358,19 @@ function finished(kind: FinishKind, plan: PreparedTrack, state: HeadState, t: nu
         case "carry":
             return grip.rising && dot(state.angularVelocity, plan.axis) <= 0;
     }
+}
+
+/**
+ * The probe's copy of `grip`'s hand masses (gate round 2 ruling, 2026-10-11): nothing before the flex takes hold, so a
+ * swing-mode snapshot keeps its shape.
+ */
+function massesOf(grip: GripState): { readonly masses?: NonNullable<ImpactSnapshot["hand"]>["masses"] } {
+    if (grip.topHand === null) {
+        return {};
+    }
+    const copy = (hand: HandMassState | null): HandMassState | null =>
+        hand === null ? null : { position: hand.position, velocity: hand.velocity };
+    return { masses: { top: copy(grip.topHand), bottom: copy(grip.bottomHand) } };
 }
 
 /** The drive at time t: linear between samples, the last sample's force at its own time, and zero after it. */
@@ -1036,6 +1061,10 @@ export function integrateStroke(setup: ImpactSetup, options: ImpactOptions = {},
         guardFootprints(balls, beds, R, ids);
 
         state = advance(state, balls, travel, loads, setup, ballInertia, dt);
+        // Carry mode's hand masses step with the head, under the forces handLoad gave them (gate round 2 ruling).
+        if (carry && plan.kind === "track") {
+            advanceHands(grip, plan.hands, dt);
+        }
         for (const bed of beds) {
             if (bed !== null) {
                 bedRelax(bed);
@@ -1071,6 +1100,7 @@ export function integrateStroke(setup: ImpactSetup, options: ImpactOptions = {},
                                         feedForward: hand.feedForward,
                                         top: hand.top,
                                         bottom: hand.bottom,
+                                        ...massesOf(grip),
                                     },
                                 }),
                           ...(turf === null ? {} : { headTurf: turfForce ?? ZERO }),
@@ -1176,6 +1206,9 @@ function continueStroke(
             applyHeadTurf(ground, state, head, dt, loads, t, null);
         }
         state = advance(state, none, [], loads, setup, 0, dt);
+        if (kind === "carry") {
+            advanceHands(grip, plan.hands, dt);
+        }
         steps++;
         if (ground !== null && !deep && headLowestPoint(state, head) < 0 - HEAD_DEEP_LIMIT) {
             deep = true;

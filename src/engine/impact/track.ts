@@ -8,7 +8,8 @@
  * arc and stops at the push length (P2b.2b.2b.2b design §4.1), and the hands flex to an intended path that starts from
  * the actual grips, then swing the mallet through the pendulum phase (carryLoad; P2b.2b.2b.2b design §3, §4). Through
  * the push they also push along aim against the balls' resistance, at the muscles' pace and capped (pushIntent; gate
- * ruling 2026-10-11).
+ * ruling 2026-10-11). From the flex's start each hand is a mass on its grip tissue, in series with its flex (gate round
+ * 2 ruling, 2026-10-11).
  * Everything is continuous in position and velocity.
  *
  * Frames. n = aim × ẑ is the pitch axis: a positive rotation about it tilts aim upward. The head is rigid on the shaft,
@@ -19,7 +20,7 @@
 import { contactReference } from "../../reference/index";
 import { atan2, exp, sinCos } from "../math/elementary";
 import { ZERO, add, cross, dot, length, scale, sub, vec3, type Vec3 } from "../math/vec3";
-import { flexForce, flexGains } from "./flex";
+import { flexForce, flexGains, type FlexGains } from "./flex";
 import { multiply, rotate, rotateInverse, type Quaternion } from "./rigidBody";
 import type { Coupling, Downswing, FlexLaw, Hands, HeadState, MalletHead, SwingArc, TrackDrive } from "./types";
 
@@ -51,6 +52,16 @@ export const PUSH_FORCE = contactReference.pushForce.value;
 
 /** τ_push (s, gate ruling amendment 2026-10-11): the push intent's response time constant (reference/contact.json). */
 export const PUSH_RESPONSE_TIME = contactReference.pushResponseTime.value;
+
+/**
+ * m_h (kg), k_t (N/m) and c_t (N·s/m), gate round 2 ruling 2026-10-11: each hand's mass and its grip tissue in carry
+ * mode, from one hand–arm impedance model (reference/contact.json).
+ */
+export const GRIP_TISSUE = {
+    handMass: contactReference.handMass.value,
+    gripStiffness: contactReference.gripStiffness.value,
+    gripDamping: contactReference.gripDamping.value,
+} as const;
 
 /**
  * Step (s) of the free pendulum's table (design §3.2): the impact's own step, so the table resolves the swing as
@@ -247,6 +258,8 @@ export interface PreparedTrack {
     readonly body: SwungBody;
     /** The head's weight m·g (N). */
     readonly headWeight: number;
+    /** Each hand mass's weight m_h·g (N; gate round 2 ruling, 2026-10-11), read in carry mode only. */
+    readonly handWeight: number;
     /** Gains of a firm grip (g = 1, both hands before relaxAt), the top hand's (γ_T) and the bottom hand's (g_B). */
     readonly firm: HandGains;
     readonly top: HandGains;
@@ -625,7 +638,9 @@ export function prepareTrack(drive: TrackDrive, head: MalletHead, gravity: numbe
     const wh = arc.handWindow;
     const atArc = beforeWindow(arc, arc.arcStart);
     const atHands = beforeHands(arc, arc.handStart);
-    const body = swungBody(head, hands, arc.radius);
+    // Carry mode's hands hold the mallet through their own masses on their grip tissue (gate round 2 ruling,
+    // 2026-10-11), which replace the arm mass riding rigidly at the top grip: its swung body is the head.
+    const body = swungBody(head, arc.mode === "carry" ? { ...hands, armMass: 0 } : hands, arc.radius);
     const plain: PreparedTrack = {
         kind: "track",
         arc,
@@ -647,6 +662,7 @@ export function prepareTrack(drive: TrackDrive, head: MalletHead, gravity: numbe
         free: null,
         body,
         headWeight: head.mass * gravity,
+        handWeight: hands.handMass * gravity,
         firm: handGains(coupling, 1, body),
         top: handGains(coupling, hands.gripTension, body),
         bottom: handGains(coupling, hands.bottomGrip, body),
@@ -832,7 +848,10 @@ export interface FlexStart {
  * the head has pitched forward in it (the next apex is the finish; P2b.2b.2b.2b design §4.2, §4.3), and the hands'
  * sensed resistance R̃ (N): the balls' resistance R = max(0, −aim·F_balls), F_balls their total force on the head,
  * followed through a first-order lag (senseResistance), which the integrator updates in carry mode after each step's
- * contacts and the push intent reads (gate ruling 2026-10-11 and its amendment). Mutable; handLoad updates it.
+ * contacts and the push intent reads (gate ruling 2026-10-11 and its amendment). In carry mode from where the flex
+ * takes hold, each hand's mass on its grip tissue (gate round 2 ruling, 2026-10-11): null before then, and the bottom
+ * hand's null once it has let go. Mutable; handLoad updates it, and the integrator moves the hand masses each step
+ * (advanceHands).
  */
 export interface GripState {
     contactPitch: number | null;
@@ -844,9 +863,11 @@ export interface GripState {
     vertical: boolean;
     rising: boolean;
     resistance: number;
+    topHand: HandMass | null;
+    bottomHand: HandMass | null;
 }
 
-/** A grip state for a new run: no contact yet, the bottom hand closed, no flex, no resistance. */
+/** A grip state for a new run: no contact yet, the bottom hand closed, no flex, no resistance, no hand masses. */
 export function newGripState(): GripState {
     return {
         contactPitch: null,
@@ -858,7 +879,90 @@ export function newGripState(): GripState {
         vertical: false,
         rising: false,
         resistance: 0,
+        topHand: null,
+        bottomHand: null,
     };
+}
+
+/** A hand mass's position and velocity (world frame). */
+export interface HandMassState {
+    readonly position: Vec3;
+    readonly velocity: Vec3;
+}
+
+/**
+ * One hand's mass y_h on its grip tissue in carry mode (gate round 2 ruling, 2026-10-11): its position and velocity
+ * (world frame); `preload`, where it started less its grip there (m), the tissue's compression under the hand's share
+ * then, by which its intended point sits off the grip's; and `force`, the net force on it (N) from the last handLoad,
+ * which advanceHands applies. Mutable.
+ */
+export interface HandMass {
+    position: Vec3;
+    velocity: Vec3;
+    readonly preload: Vec3;
+    force: Vec3;
+}
+
+/**
+ * The grip tissue's force on the mallet (N, world frame) at a grip at `at` moving at `velocity`, from `hand`:
+ * F_t = k_t·(y_h − x_g) + c_t·(u_h − v_g). The hand mass feels −F_t.
+ */
+export function tissueForce(hands: Hands, hand: HandMassState, at: Vec3, velocity: Vec3): Vec3 {
+    return add(
+        scale(sub(hand.position, at), hands.gripStiffness),
+        scale(sub(hand.velocity, velocity), hands.gripDamping),
+    );
+}
+
+/**
+ * Moves each hand mass of `grip` by one semi-implicit Euler step of `dt` (s) under its force from the last handLoad:
+ * u_h ← u_h + F/m_h·dt, then y_h ← y_h + u_h·dt, as the integrator moves the head.
+ */
+export function advanceHands(grip: GripState, hands: Hands, dt: number): void {
+    for (const hand of [grip.topHand, grip.bottomHand]) {
+        if (hand !== null) {
+            hand.velocity = add(hand.velocity, scale(hand.force, dt / hands.handMass));
+            hand.position = add(hand.position, scale(hand.velocity, dt));
+        }
+    }
+}
+
+/**
+ * A hand mass taking hold of a grip at `at` moving at `velocity`, its tissue already compressed under `share` (N), the
+ * hand's share of the feed-forward, so that it holds the mallet as the flex did from the first step.
+ */
+function holdGrip(hands: Hands, at: Vec3, velocity: Vec3, share: Vec3): HandMass {
+    const preload = scale(share, 1 / hands.gripStiffness);
+    return { position: add(at, preload), velocity, preload, force: ZERO };
+}
+
+/**
+ * One hand's force on the mallet through its mass and tissue (gate round 2 ruling, 2026-10-11): the arm's flex
+ * `gains` drive the hand mass with `fed` (its share of F_ff plus its own mass's m_h·(a + g)) towards `target` (the
+ * flex's intended point, moved by the hand's preload) at `targetVelocity`; the tissue pulls the mallet's grip at
+ * `at`, moving at `velocity`, towards the hand; the hand's `weight` m_h·g (N) pulls it down. Sets the hand's net force,
+ * for advanceHands, and returns the tissue's force on the mallet.
+ */
+function handThroughTissue(
+    hands: Hands,
+    hand: HandMass,
+    gains: FlexGains,
+    fed: Vec3,
+    target: Vec3,
+    targetVelocity: Vec3,
+    at: Vec3,
+    velocity: Vec3,
+    weight: number,
+): Vec3 {
+    const slow = flexForce(
+        fed,
+        gains,
+        sub(hand.position, add(target, hand.preload)),
+        sub(hand.velocity, targetVelocity),
+    );
+    const tissue = tissueForce(hands, hand, at, velocity);
+    hand.force = sub(sub(slow, tissue), vec3(0, 0, weight));
+    return tissue;
 }
 
 /**
@@ -940,6 +1044,9 @@ interface CarryStep {
     readonly spinLag: Vec3;
     /** The shaft's axis. */
     readonly s: Vec3;
+    /** The top and bottom grips' accelerations on the path (m/s²), which the hand masses' feed-forward carries. */
+    readonly topAcceleration: Vec3;
+    readonly bottomAcceleration: Vec3;
 }
 
 /**
@@ -948,8 +1055,10 @@ interface CarryStep {
  * planned pivot since then; the bottom grip also turns with the planned pitch. Once the intended path has travelled
  * pendulumAt of the push the pendulum phase starts: the top hand alone feeds the whole F_ff and flexes, and the bottom
  * hand lets go and pushes forward along e with pendulumEffort·pendulumForce until the shaft passes vertical, then is
- * off the mallet; no twist acts. Updates `grip`: where the flex took hold, the hands' stiffnesses, the release (the
- * pendulum phase's start), and the vertical and rising latches.
+ * off the mallet; no twist acts. Each holding hand's flex drives its hand mass, not the grip, and the mass holds the
+ * grip through its tissue (handThroughTissue; gate round 2 ruling, 2026-10-11); the bottom hand's mass leaves with
+ * it. Updates `grip`: where the flex took hold, the hand masses, the hands' stiffnesses, the release (the pendulum
+ * phase's start), and the vertical and rising latches.
  */
 function carryLoad(
     track: PreparedTrack,
@@ -979,9 +1088,29 @@ function carryLoad(
     const push = track.push as Push;
     const pendulum = push.pendulum !== null && t >= push.pendulum;
     const topFed = pendulum ? step.whole : step.top;
-    const topGains = flexGains(hands.flex, length(topFed));
+    // Each arm also carries its own hand mass along the path and holds up its weight: m_h·(a + g).
+    const own = (acceleration: Vec3): Vec3 => add(scale(acceleration, hands.handMass), vec3(0, 0, track.handWeight));
+    const topArmFed = add(topFed, own(step.topAcceleration));
+    const topGains = flexGains(hands.flex, length(topArmFed));
     grip.topStiffness = topGains.stiffness;
-    const top = flexForce(topFed, topGains, sub(topAt, add(from.top, moved)), sub(topVelocity, planned.velocity));
+    if (grip.topHand === null) {
+        grip.topHand = holdGrip(hands, topAt, topVelocity, topFed);
+        if (!pendulum) {
+            const velocity = add(state.velocity, cross(state.angularVelocity, step.bottomArm));
+            grip.bottomHand = holdGrip(hands, bottomAt, velocity, step.bottom);
+        }
+    }
+    const top = handThroughTissue(
+        hands,
+        grip.topHand,
+        topGains,
+        topArmFed,
+        add(from.top, moved),
+        planned.velocity,
+        topAt,
+        topVelocity,
+        track.handWeight,
+    );
     if (!pendulum) {
         // The bottom grip's intended point turns with the planned pitch about the intended top grip:
         // x̂_B = x_B(0) + ΔP + (r − b)·(radial(θ̂) − radial(θ̂₀)), θ̂ = pitch₀ + θ − θ₀.
@@ -995,13 +1124,19 @@ function carryLoad(
         const turning = lever * dot(path.angularVelocity, track.axis);
         const bottomTargetVelocity = add(planned.velocity, scale(tangent, turning));
         const bottomVelocity = add(state.velocity, cross(state.angularVelocity, step.bottomArm));
-        const bottomGains = flexGains(hands.flex, length(step.bottom));
+        const bottomArmFed = add(step.bottom, own(step.bottomAcceleration));
+        const bottomGains = flexGains(hands.flex, length(bottomArmFed));
         grip.bottomStiffness = bottomGains.stiffness;
-        const bottom = flexForce(
-            step.bottom,
+        const bottom = handThroughTissue(
+            hands,
+            grip.bottomHand as HandMass,
             bottomGains,
-            sub(bottomAt, bottomTarget),
-            sub(bottomVelocity, bottomTargetVelocity),
+            bottomArmFed,
+            bottomTarget,
+            bottomTargetVelocity,
+            bottomAt,
+            bottomVelocity,
+            track.handWeight,
         );
         const twist = hands.bottomGrip * step.twist + track.bottom.twistDamping * dot(step.spinLag, step.s);
         return load(top, bottom, twist, add(step.top, step.bottom));
@@ -1011,6 +1146,7 @@ function carryLoad(
         grip.releaseDelta = step.pitch - (grip.contactPitch as number);
     }
     grip.bottomStiffness = 0;
+    grip.bottomHand = null;
     if (step.rate > 0) {
         grip.rising = true;
     }
@@ -1032,7 +1168,8 @@ function carryLoad(
  * its damper; the bottom hand a one-sided rate guide (with g_B·F_B inside a check), until it opens once the shaft has
  * turned through the reach slack. In carry mode from relaxAt both hands flex instead, then the pendulum phase
  * (carryLoad; P2b.2b.2b.2b design §3, §4); through the push F_ff gains the push intent before it is shared
- * (pushIntent; gate ruling 2026-10-11). In swing mode the guide outside a check and the push after the release are
+ * (pushIntent; gate ruling 2026-10-11), and each hand holds the mallet through its mass and grip tissue (gate round 2
+ * ruling). In swing mode the guide outside a check and the push after the release are
  * scaled by `guideEffort`; a check acts in full. A check in swing mode brakes the head to rest, not past it: the hands
  * apply the head's share of the planned deceleration (checkShare), and the guide steers its pitch rate into
  * [0, ω_path]. With `gripped`, the hands grip firmly with springs and dampers at any t, as before relaxAt but with no
@@ -1152,6 +1289,14 @@ export function handLoad(
             bottomArm,
             spinLag,
             s,
+            topAcceleration: add(
+                add(socketAcceleration, cross(angularAcceleration, topLever)),
+                cross(w, cross(w, topLever)),
+            ),
+            bottomAcceleration: add(
+                add(socketAcceleration, cross(angularAcceleration, bottomLever)),
+                cross(w, cross(w, bottomLever)),
+            ),
         });
     }
     // Release by reach (swing mode): the bottom hand opens for good once the shaft has turned through the slack since

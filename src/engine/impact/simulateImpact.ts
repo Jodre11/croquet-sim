@@ -199,8 +199,8 @@ function validateDownswing(down: Downswing, mode: StrokeMode, n: Vec3): void {
  * positive period, a non-negative damping ratio and relaxation time; the bottom hand between the socket and the top
  * hand, both grips in (0, 1], a non-negative arm mass and reach slack, a guide effort in [0, 1]; a pendulumAt,
  * pendulumEffort and handArcLow in [0, 1]; a handArcRadius above the reach; a flex whose values are positive, its
- * damping ratio at most 1; a positive pendulumForce (P2b.2b.2b.2b design §6), pushForce and pushResponseTime (its
- * gate ruling, 2026-10-11); the pivot's velocity
+ * damping ratio at most 1; a positive pendulumForce (P2b.2b.2b.2b design §6), pushForce, pushResponseTime, handMass,
+ * gripStiffness and gripDamping (its gate rulings, 2026-10-11); the pivot's velocity
  * and acceleration in the swing plane, their component along the pitch axis within UNIT_TOLERANCE of their size; and a
  * downswing, if given, well formed (validateDownswing). The head need not start on the path.
  */
@@ -270,6 +270,10 @@ function validateTrack(drive: TrackDrive): void {
     positive(hands.pushForce, "hands.pushForce");
     finiteNumber(hands.pushResponseTime, "hands.pushResponseTime");
     positive(hands.pushResponseTime, "hands.pushResponseTime");
+    for (const key of ["handMass", "gripStiffness", "gripDamping"] as const) {
+        finiteNumber(hands[key], `hands.${key}`);
+        positive(hands[key], `hands.${key}`);
+    }
     const n = pitchAxis(aim);
     if (!(Math.abs(dot(arc.pivotVelocity, n)) <= UNIT_TOLERANCE * length(arc.pivotVelocity))) {
         fail("arc.pivotVelocity must lie in the swing plane");

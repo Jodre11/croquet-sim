@@ -47,6 +47,9 @@ import { ReferenceDataError } from "../../../src/reference/schema";
 import { TEST_BALL, ballAt, testWorld } from "../support/fixtures";
 import {
     TEST_FLEX,
+    TEST_GRIP_DAMPING,
+    TEST_GRIP_STIFFNESS,
+    TEST_HAND_MASS,
     TEST_HANDS,
     TEST_PENDULUM_FORCE,
     TEST_PUSH_FORCE,
@@ -224,6 +227,9 @@ describe("buildContact, step by step", () => {
             pendulumForce: TEST_PENDULUM_FORCE,
             pushForce: TEST_PUSH_FORCE,
             pushResponseTime: TEST_PUSH_RESPONSE_TIME,
+            handMass: TEST_HAND_MASS,
+            gripStiffness: TEST_GRIP_STIFFNESS,
+            gripDamping: TEST_GRIP_DAMPING,
         });
         expect(drive.coupling).toEqual({
             period: HAND_COUPLING.period,
@@ -245,7 +251,15 @@ describe("buildContact, step by step", () => {
         const flex = { stiffness: 300, stiffnessPerForce: 5, dampingRatio: 0.4, endpointMass: 0.6 };
         const profile = testProfile({
             drive: { mode: "carry", handReach: 0.2, pendulumAt: 0.7, pendulumEffort: 0.2, handArcRadius: 1.2 },
-            body: { flex, pendulumForce: 25, pushForce: 120, pushResponseTime: 0.05 },
+            body: {
+                flex,
+                pendulumForce: 25,
+                pushForce: 120,
+                pushResponseTime: 0.05,
+                handMass: 0.4,
+                gripStiffness: 5e4,
+                gripDamping: 80,
+            },
         });
         const preset = (buildContact(shot({}, profile), WORLD).drive as TrackDrive).arc;
         expect([preset.pendulumAt, preset.pendulumEffort, preset.handArcRadius, preset.handArcLow]).toEqual([
@@ -261,6 +275,7 @@ describe("buildContact, step by step", () => {
             120,
             0.05,
         ]);
+        expect([hands.handMass, hands.gripStiffness, hands.gripDamping]).toEqual([0.4, 5e4, 80]);
     });
 
     it.each([
@@ -272,6 +287,12 @@ describe("buildContact, step by step", () => {
             { pushResponseTime: Infinity },
             /profile\.body\.pushResponseTime must be finite/,
         ],
+        ["no hand mass", { handMass: 0 }, /profile\.body\.handMass must be positive/],
+        ["an infinite hand mass", { handMass: Infinity }, /profile\.body\.handMass must be finite/],
+        ["no grip stiffness", { gripStiffness: 0 }, /profile\.body\.gripStiffness must be positive/],
+        ["an infinite grip stiffness", { gripStiffness: Infinity }, /profile\.body\.gripStiffness must be finite/],
+        ["no grip damping", { gripDamping: 0 }, /profile\.body\.gripDamping must be positive/],
+        ["an infinite grip damping", { gripDamping: Infinity }, /profile\.body\.gripDamping must be finite/],
     ] as const)("rejects %s (P2b.2b.2b.2b gate ruling 2026-10-11)", (_name, body, message) => {
         expect(() => buildContact(shot({}, testProfile({ body })), WORLD)).toThrow(message);
     });
@@ -571,6 +592,9 @@ describe("defaultProfile", () => {
             pendulumForce: contactReference.pendulumForce.value,
             pushForce: contactReference.pushForce.value,
             pushResponseTime: contactReference.pushResponseTime.value,
+            handMass: contactReference.handMass.value,
+            gripStiffness: contactReference.gripStiffness.value,
+            gripDamping: contactReference.gripDamping.value,
         });
     });
 

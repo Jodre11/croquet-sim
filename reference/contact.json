@@ -174,5 +174,29 @@
         "source": "Augustsson, Gunhamn and Andersson, 'Relationship Between Early and Maximal Isometric Upper-Body Push and Pull Force Production Among Elite Female and Male Swedish Track and Field Throwers', Sports 13(7):226 (2025), DOI 10.3390/sports13070226, https://www.ebi.ac.uk/europepmc/webservices/rest/PMC12300538/fullTextXML",
         "provenance": "derived",
         "note": "τ_push, the time constant of the hands' push intent: the sensed resistance follows the balls' resistance as R̃ ← R̃ + (R − R̃)·(1 − exp(−dt/τ_push)) (gate ruling amendment, user, 2026-10-11: primed hands, no reflex delay, the push building at the muscles' pace). A voluntary force rise from force onset, so no reflex or electromechanical delay is in it: Augustsson et al. measured an isometric two-handed bench-press push, 'as quickly and forcefully as possible', in 17 female and 13 male throwers, force onset found as Tillin et al. describe. Table 2, push force as a percentage of peak force at 50, 100, 150, 200 and 250 ms: females 39, 60, 72, 80, 84; males 37, 56, 66, 72, 77. The time to 1 − 1/e (63.2 %) of peak, interpolated linearly between 100 and 150 ms, is 113.4 ms (females) and 136.1 ms (males); the value is their mean, 124.7 ms, rounded to 0.125 s. Bounds: τ = −t/ln(1 − F(t)/F_peak) at each reported time for either sex, 101.2 ms (females, 50 ms) to 170.1 ms (males, 250 ms); the rise is not exactly exponential. Trained throwers; an untrained player is likely slower."
+    },
+    "handMass": {
+        "value": 0.259,
+        "unit": "kg",
+        "bounds": [0.259, 0.457],
+        "source": "Dong, Welcome, McDowell and Wu, 'Modeling of the biodynamic responses distributed at the fingers and palm of the hand in three orthogonal directions', J Sound Vib 332(4):1125–1140 (2013), DOI 10.1016/j.jsv.2012.10.003, PMC4656148, author manuscript https://stacks.cdc.gov/view/cdc/36218/cdc_36218_DS1.pdf",
+        "provenance": "derived",
+        "note": "m_h, the mass of one hand on its grip tissue (gate round 2 ruling, user, 2026-10-11: 'Add fast impedance'). Dong et al. fit a 5-DOF lumped model to the driving-point impedance measured at the fingers and the palm of seven subjects holding a handle (30 N grip, 50 N push, 16–500 Hz) in each of ISO 5349's directions. The x_h direction is taken: normal to the palm, the direction of a palm pushing a shaft along aim; in it M1 is 'only the effective mass of the palm–hand dorsum substructure' (the z_h model's M1 lumps the forearm in). The hand is the two branches that hold the handle through tissue, the palm (M1 on K3, C3) and the fingers (M2 on K4, C4), lumped into one mass on one spring and damper in parallel: m_h = M1 + M2, k_t = K3 + K4, c_t = C3 + C4. The skin masses M3 and M4 (0.015–0.016 kg each, rigid on the handle) are left out. Value: the mean property-based 5-DOF model, x_h (Table 2, the paper's preferred, 'more reliable'), 0.178 + 0.081 kg. Bounds: the same sum over the paper's x_h models, the mean response-based 5-DOF 0.267 kg and 4-DOF 0.297 kg (Table 1) and the proposed ISO 10068 revision's 5-DOF 0.4574 kg (Table 3)."
+    },
+    "gripStiffness": {
+        "value": 152476,
+        "unit": "N/m",
+        "bounds": [69844, 162586],
+        "source": "Dong, Welcome, McDowell and Wu, 'Modeling of the biodynamic responses distributed at the fingers and palm of the hand in three orthogonal directions', J Sound Vib 332(4):1125–1140 (2013), DOI 10.1016/j.jsv.2012.10.003, PMC4656148, author manuscript https://stacks.cdc.gov/view/cdc/36218/cdc_36218_DS1.pdf",
+        "provenance": "derived",
+        "note": "k_t, the grip tissue's stiffness between one hand's mass and the handle (gate round 2 ruling, user, 2026-10-11). The same model as handMass (see its note): x_h, the mean property-based 5-DOF model (Table 2), the palm's contact stiffness K3 43,205 N/m and the fingers' K4 109,271 N/m in parallel. Bounds: the same sum over the paper's x_h models, the mean response-based 5-DOF 155,780 N/m and 4-DOF 162,586 N/m (Table 1) and the proposed ISO 10068 revision's 5-DOF 69,844 N/m (Table 3, whose palm stiffness the authors call 'unrealistically much lower')."
+    },
+    "gripDamping": {
+        "value": 122.8,
+        "unit": "N·s/m",
+        "bounds": [122.8, 210.1],
+        "source": "Dong, Welcome, McDowell and Wu, 'Modeling of the biodynamic responses distributed at the fingers and palm of the hand in three orthogonal directions', J Sound Vib 332(4):1125–1140 (2013), DOI 10.1016/j.jsv.2012.10.003, PMC4656148, author manuscript https://stacks.cdc.gov/view/cdc/36218/cdc_36218_DS1.pdf",
+        "provenance": "derived",
+        "note": "c_t, the grip tissue's damping between one hand's mass and the handle (gate round 2 ruling, user, 2026-10-11). The same model as handMass (see its note): x_h, the mean property-based 5-DOF model (Table 2), the palm's C3 57.0 N·s/m and the fingers' C4 65.8 N·s/m in parallel. Bounds: the same sum over the paper's x_h models, the mean response-based 5-DOF 131.9 N·s/m and 4-DOF 129.7 N·s/m (Table 1) and the proposed ISO 10068 revision's 5-DOF 210.1 N·s/m (Table 3)."
     }
 }

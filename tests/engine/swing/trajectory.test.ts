@@ -106,7 +106,8 @@ describe("strokeTrajectory (design §4.3)", () => {
     // P2b.2b.2b.2b: push intent (was skipped at the pre-flight gate: follow-cap, its forward swing not topped out by
     // FOLLOW_CAP, θ +0.21 rad). The top hand still throws the head back to θ −1.231 rad once the pendulum phase starts;
     // the swing forward now tops out short of vertical, at θ −0.709 rad, 734.6 ms after the impact's start, which the
-    // carry's finish rule takes as the apex.
+    // carry's finish rule takes as the apex. With the hands' mass and grip tissue (gate round 2) the head is thrown
+    // back only to θ −0.961 rad and tops out just past vertical, θ +0.044 rad at 467.3 ms, with follow-head-deep.
     it("starts at the impact's start, the head at rest at the top, when the lead outlasts the downswing", () => {
         // A full roll with a 0.13 s hands' tempo (release 0.13 s before contact) and its arc 0.1455 s early: the
         // impact starts 15.5 ms before the release, the hands still at the top, so no downswing samples come first.

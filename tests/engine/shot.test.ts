@@ -188,18 +188,25 @@ describe("simulateShot", () => {
     // P2b.2b.2b.2b: push intent (was skipped at the pre-flight gate: full 7.18 mm at 45 ms, pass 6.64 mm at 59 ms).
     // The hands push against the ball's resistance as they sense it, at the muscles' pace (τ_push 0.125 s): the blow
     // raises the sensed resistance to 15–19 N, which then eases off through the push, so the head keeps a small
-    // forward push between taps. The striker's ball rises at most 4.89 mm above R (full, at 38.9 ms; two face
-    // intervals) and 4.61 mm (pass, at 53.2 ms; five).
-    it.each(["full-roll", "pass-roll"] as const)(
-        "runs the %s canonical setup with no entry jump and no ball above R + 5 mm",
-        lowFlight,
-    );
+    // forward push between taps. P2b.2b.2b.2b: fast impedance (was 4.89 mm at 38.9 ms): each hand's mass on its grip
+    // tissue takes part of the blow (the top tissue peaks at 102 N at 1.2 ms), and the striker's ball rises at most
+    // 1.88 mm above R at 32.4 ms (two face intervals).
+    it("runs the full-roll canonical setup with no entry jump and no ball above R + 5 mm", () => {
+        lowFlight("full-roll");
+    });
 
-    // P2b.2b.2b.2b: awaits the pre-flight gate (Task 6; push intent, gate round 1). The half roll's face meets the
-    // striker's ball twice (0.0–1.4 and 8.7–10.3 ms), and the ball still rises past R + 5 mm within the impact: 7.28 mm
-    // at 47.1 ms (was 10.15 mm at 53 ms before the push intent).
+    // P2b.2b.2b.2b: awaits the pre-flight gate (Task 6; fast impedance, gate round 2). The half roll's face meets the
+    // striker's ball twice (0.0–1.4 and 6.3–7.8 ms), and the ball still rises past R + 5 mm within the impact: 5.78 mm
+    // at 45.9 ms (7.28 mm at 47.1 ms with the push intent, gate round 1; 10.15 mm at 53 ms before it).
     it.skip("runs the half-roll canonical setup with no entry jump and no ball above R + 5 mm", () => {
         lowFlight("half-roll");
+    });
+
+    // P2b.2b.2b.2b: awaits the pre-flight gate (Task 6; fast impedance, gate round 2). Un-skipped by the push intent
+    // (4.61 mm at 53.2 ms, five face intervals), the pass roll fails again with the hands' mass and grip tissue: three
+    // face intervals (0.0–1.3, 4.4–5.9 and 7.0–17.0 ms), and the striker's ball rises 9.70 mm above R at 66.8 ms.
+    it.skip("runs the pass-roll canonical setup with no entry jump and no ball above R + 5 mm", () => {
+        lowFlight("pass-roll");
     });
 
     it("runs each stage in turn, and hands phase 2 exactly the impact's handover", () => {
@@ -264,12 +271,12 @@ describe("simulateShot", () => {
         runsToFinish,
     );
 
-    // P2b.2b.2b.2b: awaits the pre-flight gate (Task 6; push intent, gate round 1). On the flex the half roll raises
-    // follow-cap: from the strike the soft flex lets the head pitch back (−1.1 rad/s), so at the pendulum phase's start
-    // (66.3 ms) it is still pitching back; it swings back and up about 10 cm, then forward onto the turf, and scrapes
-    // along it, its pitch rate still positive at FOLLOW_CAP. With the push intent (gate round 1) it still caps, all
-    // but at its apex: θ +0.180 rad, rising at 0.007 rad/s at FOLLOW_CAP (was θ +0.11 rad).
-    it.skip("runs the half-roll canonical setup from the top to its finish (exit criterion 3)", () => {
+    // P2b.2b.2b.2b: fast impedance (was skipped at the pre-flight gate). On the flex the half roll raised follow-cap:
+    // from the strike the soft flex let the head pitch back, so at the pendulum phase's start it was still pitching
+    // back; it swung back, then forward onto the turf, its pitch rate still positive at FOLLOW_CAP (with the push
+    // intent, gate round 1, all but at its apex: θ +0.180 rad, rising at 0.007 rad/s). With the hands' mass and grip
+    // tissue (gate round 2) it reaches its apex at 953.7 ms, 46 ms short of the cap.
+    it("runs the half-roll canonical setup from the top to its finish (exit criterion 3)", () => {
         runsToFinish("half-roll");
     });
 

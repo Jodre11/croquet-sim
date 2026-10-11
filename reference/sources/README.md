@@ -236,3 +236,35 @@ takes a voluntary force rise from force onset (no reflex latency), not a reflex 
   from models (Winters and Stark 1985; Stroeve 1999), not a measured voluntary force rise; Maffiuletti et al.,
   *Eur. J. Appl. Physiol.* 116:1091 (2016, PMC4875063), a review, gives an electromechanical delay of "<13 ms for
   voluntary contractions" and no time constant.
+
+### The gate ruling, round 2 (2026-10-11): the hands' fast impedance
+
+The user's round 2 ruling ("Add fast impedance") makes each hand a mass on its grip tissue, a stiff spring and damper,
+in series with the arm's slow flex. The source behind `reference/contact.json`'s `handMass`, `gripStiffness` and
+`gripDamping` is one lumped model fitted to the measured driving-point impedance of the hand–arm system. Fetched
+2026-10-11 with `curl -sS -L`; the digest is of the raw PDF (the NIOSH author manuscript). Europe PMC's
+`PMC4656148/fullTextXML` returned HTTP 500. Measurements of the human hand only.
+
+| Short name | Work | URL | SHA-256 |
+|---|---|---|---|
+| Dong et al. | Dong, Welcome, McDowell and Wu, "Modeling of the biodynamic responses distributed at the fingers and palm of the hand in three orthogonal directions", *J. Sound Vib.* 332(4):1125–1140 (2013; the manuscript and Europe PMC print volume 232), DOI 10.1016/j.jsv.2012.10.003, PMC4656148 | https://stacks.cdc.gov/view/cdc/36218/cdc_36218_DS1.pdf | `b4ec02c52f3d966a4c945c37c3dd9b32b41f3119eea39b807b78166a494b5520` |
+
+- Dong et al., method: "seven subjects participated in the measurements of the driving-point mechanical impedance
+  distributed at the fingers and the palm of the hand exposed to three-dimensional vibrations. A broadband random
+  vibration in the 16–500 Hz range was used"; "The applied hand forces were 30 N grip and 50 N push."
+- The model: "M4 represents the effective mass of finger skin contacting the handle whereas M2 is the effective mass due
+  to the remaining finger tissues"; "Whereas M3 represents the effective mass of palm skin contacting the handle, M1
+  represents the remaining effective mass of the palm–wrist–forearm substructures" (z_h); in the x_h and y_h models
+  "M1 in these models represents only the effective mass of the palm–hand dorsum substructure". M1 rides on the palm's
+  contact spring and damper (K3, C3), M2 on the fingers' (K4, C4), the two branches in parallel on the handle.
+- The direction: x_h, normal to the palm, along which a palm pushes a shaft forward; z_h's M1 includes the forearm.
+- Table 2, "Comparisons of the mean property-based and mean response-based 5-DOF models", x_h, Property: M1 0.178 kg,
+  M2 0.081 kg, K3 43,205 N/m, K4 109,271 N/m, C3 57.0 N s/m, C4 65.8 N s/m. "A study indicated that the mean
+  property-based models are more reliable than the mean response-based models [30]; hence, the mean property-based
+  models were used in the following applications."
+- The lumping: one hand mass on one tissue spring and damper, m_h = M1 + M2 = 0.259 kg, k_t = K3 + K4 = 152,476 N/m,
+  c_t = C3 + C4 = 122.8 N·s/m; the skin masses M3 and M4, rigid on the handle, are left out. Bounds: the same sums over
+  the paper's other x_h models, the mean response-based 5-DOF (Table 1: 0.267 kg, 155,780 N/m, 131.9 N·s/m) and 4-DOF
+  (0.297 kg, 162,586 N/m, 129.7 N·s/m), and the proposed ISO 10068 revision's 5-DOF (Table 3: 0.4574 kg, 69,844 N/m,
+  210.1 N·s/m; "the palm contact stiffness (K3) in the model for the xh or yh direction is unrealistically much lower
+  than that in the new model").

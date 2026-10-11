@@ -66,6 +66,15 @@ export const TEST_PUSH_FORCE = 100;
 /** A plausible, unsourced time constant (s) of the push intent's response (gate ruling amendment, 2026-10-11). */
 export const TEST_PUSH_RESPONSE_TIME = 0.03;
 
+/** A plausible, unsourced hand mass (kg) on its grip tissue (P2b.2b.2b.2b gate round 2 ruling, 2026-10-11). */
+export const TEST_HAND_MASS = 0.3;
+
+/** A plausible, unsourced grip tissue stiffness (N/m). */
+export const TEST_GRIP_STIFFNESS = 3e4;
+
+/** A plausible, unsourced grip tissue damping (N·s/m). */
+export const TEST_GRIP_DAMPING = 100;
+
 /** Two firm hands with no arm mass, so the swung body is the head and head-only closed forms hold; a full guide. */
 export const TEST_HANDS: Hands = {
     bottom: 0.4,
@@ -78,6 +87,9 @@ export const TEST_HANDS: Hands = {
     pendulumForce: TEST_PENDULUM_FORCE,
     pushForce: TEST_PUSH_FORCE,
     pushResponseTime: TEST_PUSH_RESPONSE_TIME,
+    handMass: TEST_HAND_MASS,
+    gripStiffness: TEST_GRIP_STIFFNESS,
+    gripDamping: TEST_GRIP_DAMPING,
 };
 
 /** A dip of no depth. */

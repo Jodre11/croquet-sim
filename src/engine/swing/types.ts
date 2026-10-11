@@ -104,7 +104,8 @@ export interface SwingProfile {
     };
     /**
      * The player's body: the arm mass at the top grip (kg), the reach slack (m), the arm's flex, pendulum push and push
-     * (the push intent's cap, N, and its response time constant, s).
+     * (the push intent's cap, N, and its response time constant, s), and each hand's mass (kg) on its grip tissue's
+     * stiffness (N/m) and damping (N·s/m).
      */
     readonly body: {
         readonly armMass: number;
@@ -113,6 +114,9 @@ export interface SwingProfile {
         readonly pendulumForce: number;
         readonly pushForce: number;
         readonly pushResponseTime: number;
+        readonly handMass: number;
+        readonly gripStiffness: number;
+        readonly gripDamping: number;
     };
     readonly stance: Readonly<Record<StrokeType, SwingStance>>;
     readonly drive: Readonly<Record<StrokeType, SwingDrive>>;
