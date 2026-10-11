@@ -525,6 +525,8 @@ describe("simulateImpact with a tracked drive", () => {
             /hands\.flex\.dampingRatio must lie in \(0, 1\]/,
         ],
         ["no pendulum force", withHands({ pendulumForce: 0 }), /hands\.pendulumForce must be a positive/],
+        ["no push force", withHands({ pushForce: 0 }), /hands\.pushForce must be a positive/],
+        ["an infinite push force", withHands({ pushForce: Infinity }), /hands\.pushForce must be finite/],
         [
             "a pivot velocity out of the swing plane",
             withArc({ pivotVelocity: vec3(0, 0.1, 0) }),

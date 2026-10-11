@@ -102,12 +102,16 @@ export interface SwingProfile {
         readonly headDiameter: number;
         readonly shaftLength: number;
     };
-    /** The player's body: the arm mass at the top grip (kg), the reach slack (m), the arm's flex and pendulum push. */
+    /**
+     * The player's body: the arm mass at the top grip (kg), the reach slack (m), the arm's flex, pendulum push and push
+     * (the push intent's cap, N).
+     */
     readonly body: {
         readonly armMass: number;
         readonly reachSlack: number;
         readonly flex: FlexLaw;
         readonly pendulumForce: number;
+        readonly pushForce: number;
     };
     readonly stance: Readonly<Record<StrokeType, SwingStance>>;
     readonly drive: Readonly<Record<StrokeType, SwingDrive>>;

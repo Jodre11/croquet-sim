@@ -189,3 +189,29 @@ REST API serves the open full texts; the search results give the paywalled paper
   extension) to 104.24 (90° flexion); females "Average over all postures: 55.42", from 39.11 (75° extension) to 79.89
   (75° flexion). `pendulumForce` is the mean of the two, 64.3 N, bounded by 39.11–104.24 N. Hallbeck's paper is
   paywalled and was not fetched; the review's table is open. It is the force at the hand, with no lever arm given.
+
+### The gate ruling (2026-10-11): the hands' push intent
+
+The source behind `reference/contact.json`'s `pushForce`, the cap on the hands' push intent ("match resistance,
+capped"). Fetched 2026-10-11 with `curl -sS -L`; the digest is of the raw PDF. Measurements of the human arm only.
+
+| Short name | Work | URL | SHA-256 |
+|---|---|---|---|
+| Das and Wang | Das and Wang, "Isometric Pull-Push Strengths in Workspace: 1. Strength Profiles", *Int. J. Occup. Saf. Ergon. (JOSE)* 10(1):43–58 (2004), DOI 10.1080/10803548.2004.11076594 | https://www.ciop.pl/CIOPPortalWAR/file/8665/2013031212638&das1.pdf | `884a7e5e214f7fdce557bc01b3c4e5d0502c159acf232320de0ff36d859dc513` |
+
+- Das and Wang, method: "The participants studied consisted of 8 men and 8 women, university students of working
+  age"; "Radial pull and push exertions were measured for each of the 24 measurement locations defined by reach level
+  (normal, maximum and extreme), vertical angle (φ) relative to the elbow (normal reach) or shoulder (maximum and
+  extreme reach), and horizontal angle (θ) relative to the right shoulder"; the participants "were instructed not to
+  actively use their left arm to either assist or stabilize themselves". One arm, isometric, 5 s exertions, the middle
+  3 s averaged.
+- Table 7, "Push Strength (N) of Standing Men", φ 0°, θ 90° (horizontal, straight ahead), mean: normal reach 89.39,
+  maximum 77.92, extreme 106.34. Table 8, "Push Strength (N) of Standing Women", the same row: "660.22" (a misprint for
+  66.22: its SD is 18.48 and the row's other means are 48–108 N), 48.49, 78.11. `pushForce` is the mean of the two
+  extreme-reach means, the largest for both sexes, (106.34 + 78.11)/2 = 92.2 N; its bounds are the row's lowest and
+  highest means, 48.49 and 106.34 N.
+- No open two-handed standing push figure was reachable: Halim et al., "Elbow-Height Handle and Staggered Stance
+  Exhibited Greatest Force in Pushing and Pulling", *Malays. J. Med. Health Sci.* 18(5):104 (2022), DOI
+  10.47836/mjmhs.18.5.15, measures one, but its journal host did not answer and its PDF link returned 404. Seo and
+  Armstrong's push studies (*Ergonomics* 2009, seated; 2010) returned no full text from Europe PMC (HTTP 500). One
+  arm's push therefore caps the two hands' together.

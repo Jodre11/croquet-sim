@@ -182,8 +182,9 @@ export interface FlexLaw {
  * `reachSlack` (m of hand travel); in carry mode at the pendulum phase's start. `guideEffort` (in [0, 1]) scales the
  * bottom hand's push after contact in swing mode (the rate guide outside a check, and the push after the release): 1
  * restores the planned arc's speed, 0 is no extra push; a check's guide acts in full (design §3.3; the player's
- * choice, user's account, 2026-10-06). In carry mode from contact each hand flexes by `flex`, and the bottom hand's
- * push in the pendulum phase is at most `pendulumForce` (P2b.2b.2b.2b design §3, §4.2).
+ * choice, user's account, 2026-10-06). In carry mode from contact each hand flexes by `flex`, the hands' push intent
+ * through the push is at most `pushForce`, and the bottom hand's push in the pendulum phase is at most `pendulumForce`
+ * (P2b.2b.2b.2b design §3, §4.2; gate ruling 2026-10-11).
  */
 export interface Hands {
     readonly bottom: number;
@@ -199,6 +200,11 @@ export interface Hands {
      * pendulum phase, by wrist and forearm.
      */
     readonly pendulumForce: number;
+    /**
+     * F_push (N): carry mode's push intent cap (gate ruling 2026-10-11). Through the push the hands push along aim
+     * with the balls' resistance on the head at the last step, up to this.
+     */
+    readonly pushForce: number;
 }
 
 /** A tracked drive (design §3): two hands drive the mallet along `arc`, holding it through `coupling`. */

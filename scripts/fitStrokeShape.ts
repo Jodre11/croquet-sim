@@ -73,6 +73,7 @@ function caseOf(type: StrokeType): Case {
             guideEffort: 1,
             flex: defaultProfile.body.flex,
             pendulumForce: defaultProfile.body.pendulumForce,
+            pushForce: defaultProfile.body.pushForce,
         },
         mode: defaultProfile.drive[type].mode,
         arrival:

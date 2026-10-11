@@ -60,6 +60,9 @@ export const TEST_FLEX: FlexLaw = { stiffness: 200, stiffnessPerForce: 20, dampi
 /** A plausible, unsourced pendulum push (N). */
 export const TEST_PENDULUM_FORCE = 20;
 
+/** A plausible, unsourced cap (N) on the hands' push intent (P2b.2b.2b.2b gate ruling 2026-10-11). */
+export const TEST_PUSH_FORCE = 100;
+
 /** Two firm hands with no arm mass, so the swung body is the head and head-only closed forms hold; a full guide. */
 export const TEST_HANDS: Hands = {
     bottom: 0.4,
@@ -70,6 +73,7 @@ export const TEST_HANDS: Hands = {
     guideEffort: 1,
     flex: TEST_FLEX,
     pendulumForce: TEST_PENDULUM_FORCE,
+    pushForce: TEST_PUSH_FORCE,
 };
 
 /** A dip of no depth. */

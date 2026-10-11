@@ -3,7 +3,7 @@
  * from outcomes; P2b.2b.2 sources or fits them.
  * - Mallet: reference/mallet.json (the head's mass, length and diameter; the 0.9144 m, 36 in, shaft, sourced).
  * - Body: reference/contact.json (`armMass` and `reachSlack`, the prototype's calibration),
- *   the arm's flex and pendulum push (P2b.2b.2b.2b), measured.
+ *   the arm's flex and pendulum push (P2b.2b.2b.2b), and the push intent's cap (its gate ruling), measured.
  * - Stance: the hands measured from the socket along the shaft, after John Riches, Croquet Technique (Oxford Croquet),
  *   quoted per preset below. The swing presets keep their own leans. The rolls' leans are Don Gugan's measured face
  *   angles (Gugan 4, Table 6), with Riches' angles kept as cues (user decision, 2026-10-08). Each preset is defined by
@@ -27,7 +27,7 @@ import {
     type StrokeShapeReference,
 } from "../../reference/index";
 import { ReferenceDataError } from "../../reference/schema";
-import { ARM_FLEX, PENDULUM_FORCE } from "../impact/track";
+import { ARM_FLEX, PENDULUM_FORCE, PUSH_FORCE } from "../impact/track";
 import type { StrokeMode } from "../impact/types";
 import { handsAheadFor } from "./buildContact";
 import {
@@ -255,6 +255,7 @@ export const defaultProfile: SwingProfile = {
         reachSlack: contactReference.reachSlack.value,
         flex: ARM_FLEX,
         pendulumForce: PENDULUM_FORCE,
+        pushForce: PUSH_FORCE,
     },
     stance: {
         // The top hand fixed at the top of the handle; the bottom hand high and light, a guide only (prototype). Riches

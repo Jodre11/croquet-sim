@@ -106,7 +106,9 @@ describe("strokeTrajectory (design §4.3)", () => {
     // P2b.2b.2b.2b: awaits the pre-flight gate (Task 6). On the flex its seams are within POSITION_SLACK (the release
     // 2.43e-7 m, the impact's end 5.0e-8 m; the hands' arc's interim hands exceeded it), but it raises follow-cap: the
     // pendulum phase starts at 0.168 s while the hands still drive, the top hand alone throws the head back to
-    // θ ≈ −1.25 rad, and its forward swing has not topped out (θ +0.21 rad, still rising) by FOLLOW_CAP.
+    // θ ≈ −1.25 rad, and its forward swing has not topped out by FOLLOW_CAP. The push intent (gate round 1) acts only
+    // while the face is on the ball and leaves that: θ −1.254 rad at its least, +0.275 rad and rising at 2.3 rad/s at
+    // FOLLOW_CAP (was +0.21 rad).
     it.skip("starts at the impact's start, the head at rest at the top, when the lead outlasts the downswing", () => {
         // A full roll with a 0.13 s hands' tempo (release 0.13 s before contact) and its arc 0.1455 s early: the
         // impact starts 15.5 ms before the release, the hands still at the top, so no downswing samples come first.

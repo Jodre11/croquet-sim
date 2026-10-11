@@ -150,13 +150,14 @@ describe("swing, coupling and head–turf reference data", () => {
         expect(contactReference.reachSlack.unit).toBe("m");
     });
 
-    it("loads the arm's flex and pendulum push, each positive within its bounds (P2b.2b.2b.2b design §3.2)", () => {
+    it("loads the arm's flex, pendulum push and push, each positive within its bounds (P2b.2b.2b.2b §3.2)", () => {
         const arm = {
             armStiffness: "N/m",
             armStiffnessPerForce: "1/m",
             armDampingRatio: "1",
             armEndpointMass: "kg",
             pendulumForce: "N",
+            pushForce: "N",
         } as const;
         for (const [key, unit] of Object.entries(arm)) {
             const value = contactReference[key as keyof typeof arm];

@@ -49,6 +49,7 @@ import {
     TEST_FLEX,
     TEST_HANDS,
     TEST_PENDULUM_FORCE,
+    TEST_PUSH_FORCE,
     mirrorBall,
     mirrorContact,
     mirrorQuat,
@@ -220,6 +221,7 @@ describe("buildContact, step by step", () => {
             guideEffort: 0.4,
             flex: TEST_FLEX,
             pendulumForce: TEST_PENDULUM_FORCE,
+            pushForce: TEST_PUSH_FORCE,
         });
         expect(drive.coupling).toEqual({
             period: HAND_COUPLING.period,
@@ -241,7 +243,7 @@ describe("buildContact, step by step", () => {
         const flex = { stiffness: 300, stiffnessPerForce: 5, dampingRatio: 0.4, endpointMass: 0.6 };
         const profile = testProfile({
             drive: { mode: "carry", handReach: 0.2, pendulumAt: 0.7, pendulumEffort: 0.2, handArcRadius: 1.2 },
-            body: { flex, pendulumForce: 25 },
+            body: { flex, pendulumForce: 25, pushForce: 120 },
         });
         const preset = (buildContact(shot({}, profile), WORLD).drive as TrackDrive).arc;
         expect([preset.pendulumAt, preset.pendulumEffort, preset.handArcRadius, preset.handArcLow]).toEqual([
@@ -251,7 +253,14 @@ describe("buildContact, step by step", () => {
             .arc;
         expect([own.pendulumAt, own.pendulumEffort]).toEqual([0.4, 1]);
         const { hands } = buildContact(shot({}, profile), WORLD).drive as TrackDrive;
-        expect([hands.flex, hands.pendulumForce]).toEqual([flex, 25]);
+        expect([hands.flex, hands.pendulumForce, hands.pushForce]).toEqual([flex, 25, 120]);
+    });
+
+    it.each([
+        ["no push force", 0, /profile\.body\.pushForce must be positive/],
+        ["an infinite push force", Infinity, /profile\.body\.pushForce must be finite/],
+    ] as const)("rejects %s (P2b.2b.2b.2b gate ruling 2026-10-11)", (_name, pushForce, message) => {
+        expect(() => buildContact(shot({}, testProfile({ body: { pushForce } })), WORLD)).toThrow(message);
     });
 
     it.each([
@@ -547,6 +556,7 @@ describe("defaultProfile", () => {
                 endpointMass: contactReference.armEndpointMass.value,
             },
             pendulumForce: contactReference.pendulumForce.value,
+            pushForce: contactReference.pushForce.value,
         });
     });
 

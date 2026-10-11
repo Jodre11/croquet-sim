@@ -6,7 +6,8 @@
  * constantly through its window. After its window the pendulum swings freely (swing mode) or slows to a held slope
  * (carry mode). The dip lowers the pivot from rest to rest. In carry mode after contact the pivot travels the hands'
  * arc and stops at the push length (P2b.2b.2b.2b design §4.1), and the hands flex to an intended path that starts from
- * the actual grips, then swing the mallet through the pendulum phase (carryLoad; P2b.2b.2b.2b design §3, §4).
+ * the actual grips, then swing the mallet through the pendulum phase (carryLoad; P2b.2b.2b.2b design §3, §4). Through
+ * the push they also push along aim against the balls' resistance, capped (pushIntent; gate ruling 2026-10-11).
  * Everything is continuous in position and velocity.
  *
  * Frames. n = aim × ẑ is the pitch axis: a positive rotation about it tilts aim upward. The head is rigid on the shaft,
@@ -43,6 +44,9 @@ export const ARM_FLEX: FlexLaw = {
 
 /** F_pendulum (N, design §4.2): the bottom hand's largest push in the pendulum phase (reference/contact.json). */
 export const PENDULUM_FORCE = contactReference.pendulumForce.value;
+
+/** F_push (N, gate ruling 2026-10-11): the cap on the hands' push intent in carry mode (reference/contact.json). */
+export const PUSH_FORCE = contactReference.pushForce.value;
 
 /**
  * Step (s) of the free pendulum's table (design §3.2): the impact's own step, so the table resolves the swing as
@@ -821,7 +825,9 @@ export interface FlexStart {
  * reach in swing mode; at the pendulum phase's start in carry mode) and the shaft's turn since relaxAt then. In carry
  * mode also where the flex took hold, each hand's last stiffness (N/m; the bottom hand's 0 once it has let go),
  * whether the shaft has passed vertical in the pendulum phase (the bottom hand is then off the mallet) and whether
- * the head has pitched forward in it (the next apex is the finish; P2b.2b.2b.2b design §4.2, §4.3). Mutable;
+ * the head has pitched forward in it (the next apex is the finish; P2b.2b.2b.2b design §4.2, §4.3), and the balls'
+ * resistance R (N) at the last step: max(0, −aim·F_balls), F_balls their total force on the head, which the integrator
+ * writes in carry mode after each step's contacts and the push intent reads (gate ruling 2026-10-11). Mutable;
  * handLoad updates it.
  */
 export interface GripState {
@@ -833,9 +839,10 @@ export interface GripState {
     bottomStiffness: number;
     vertical: boolean;
     rising: boolean;
+    resistance: number;
 }
 
-/** A grip state for a new run: no contact yet, the bottom hand closed, no flex. */
+/** A grip state for a new run: no contact yet, the bottom hand closed, no flex, no resistance. */
 export function newGripState(): GripState {
     return {
         contactPitch: null,
@@ -846,7 +853,21 @@ export function newGripState(): GripState {
         bottomStiffness: 0,
         vertical: false,
         rising: false,
+        resistance: 0,
     };
+}
+
+/**
+ * Carry mode's push intent at time t (gate ruling 2026-10-11): through the push, until the pendulum phase starts, the
+ * hands push along aim with the balls' resistance at the last step, up to the arm's push: P = min(R, F_push)·aim.
+ * Null where it is nil: no resistance, or in the pendulum phase.
+ */
+function pushIntent(track: PreparedTrack, t: number, grip: GripState): Vec3 | null {
+    const push = track.push as Push;
+    if (!(grip.resistance > 0) || (push.pendulum !== null && t >= push.pendulum)) {
+        return null;
+    }
+    return scale(track.arc.aim, Math.min(grip.resistance, track.hands.pushForce));
 }
 
 /** The hands' load in one step (design §3.3, §3.7), world frame. */
@@ -993,7 +1014,8 @@ function carryLoad(
  * path's velocity only: the top hand γ_T times its share (the whole F_s in swing mode outside a check) plus F_d, and
  * its damper; the bottom hand a one-sided rate guide (with g_B·F_B inside a check), until it opens once the shaft has
  * turned through the reach slack. In carry mode from relaxAt both hands flex instead, then the pendulum phase
- * (carryLoad; P2b.2b.2b.2b design §3, §4). In swing mode the guide outside a check and the push after the release are
+ * (carryLoad; P2b.2b.2b.2b design §3, §4); through the push F_ff gains the push intent before it is shared
+ * (pushIntent; gate ruling 2026-10-11). In swing mode the guide outside a check and the push after the release are
  * scaled by `guideEffort`; a check acts in full. A check in swing mode brakes the head to rest, not past it: the hands
  * apply the head's share of the planned deceleration (checkShare), and the guide steers its pitch rate into
  * [0, ω_path]. With `gripped`, the hands grip firmly with springs and dampers at any t, as before relaxAt but with no
@@ -1040,7 +1062,11 @@ export function handLoad(
     // The hands hold the head's weight, which acts at the head's centre, r_h = −δ·s from the swung body's.
     const tau = add(rotate(q, spin), cross(scale(s, 0 - body.offset), weight));
     const dip = contact ? scale(path.dipAcceleration, body.mass) : ZERO;
-    const shared = sub(feedForward, dip);
+    // Carry mode's push intent joins F_ff before the sharing, so both hands' shares and stiffnesses carry it. Swing
+    // mode never reads it.
+    const intent = contact && carry ? pushIntent(track, t, grip) : null;
+    const fed = intent === null ? feedForward : add(feedForward, intent);
+    const shared = sub(fed, dip);
     const along = scale(s, dot(shared, s));
     const perpendicular = sub(shared, along);
     const G = cross(tau, s);
@@ -1101,7 +1127,7 @@ export function handLoad(
         return carryLoad(track, state, t, grip, path, {
             top: add(topShare, dip),
             bottom: bottomShare,
-            whole: feedForward,
+            whole: fed,
             twist: twistShare,
             pitch: pitchNow,
             rate,

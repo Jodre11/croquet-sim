@@ -302,6 +302,8 @@ function validate(setup: ShotSetup, ballRadius: number): void {
     }
     finiteNumber(body.pendulumForce, "profile.body.pendulumForce");
     positive(body.pendulumForce, "profile.body.pendulumForce");
+    finiteNumber(body.pushForce, "profile.body.pushForce");
+    positive(body.pushForce, "profile.body.pushForce");
     nonNegative(body.armMass, "profile.body.armMass");
     nonNegative(body.reachSlack, "profile.body.reachSlack");
     unit(shape.pendulumShare, `${where}.pendulumShare`);
@@ -334,6 +336,7 @@ function handsOf(setup: ShotSetup): Hands {
         guideEffort: stroke.guideEffort ?? profile.drive[stroke.type].guideEffort,
         flex: profile.body.flex,
         pendulumForce: profile.body.pendulumForce,
+        pushForce: profile.body.pushForce,
     };
 }
 
@@ -488,7 +491,7 @@ export interface StrokePlan {
  *   preset's or the shot's handReach < 0; the preset's or the shot's guideEffort outside [0, 1];
  *   armMass < 0; reachSlack < 0; the preset's or the shot's pendulumAt or pendulumEffort outside [0, 1]; handArcLow
  *   outside [0, 1]; handArcRadius not above the push length; a flex value not positive, or a flex damping ratio above
- *   1; pendulumForce not positive (P2b.2b.2b.2b design §6);
+ *   1; pendulumForce not positive (P2b.2b.2b.2b design §6); pushForce not positive (its gate ruling, 2026-10-11);
  * - pendulumShare or defaultIntensity outside [0, 1]; handAngle outside (0, 90°) when pendulumShare < 1 (neither read
  *   nor checked otherwise); in swing mode a pendulumShare of 0, an effort tempo ≤ 0 or tempoFast > tempoSlow, or
  *   torqueMax < 0; in carry mode a hands' tempo ≤ 0 or fast > slow;

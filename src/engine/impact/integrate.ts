@@ -26,7 +26,9 @@
  * mode, the pendulum phase's start; P2b.2b.2b.2b design §4.2) standing for the drive window, and only once the head
  * is neither closing on any ball within reach (headClosing) nor would reach one ahead of its face within LOOK_AHEAD:
  * a re-contact is integrated, not flagged. In carry mode it also waits until the hands have started the pendulum
- * phase. Its cap is TRACK_IMPACT_CAP after the planned contact.
+ * phase. Its cap is TRACK_IMPACT_CAP after the planned contact. In carry mode each step, once its contacts are
+ * resolved, records the balls' resistance along aim (their total force on the head) for the hands' push intent on the
+ * next step (track.ts; gate ruling 2026-10-11).
  *
  * A tracked drive's face–ball pairs meet the whole head, a solid cylinder (contacts.ts headBallContact; P2b.2b.1
  * design §4.5): each also records its intervals per region of the head, and a contact off the face raises
@@ -399,12 +401,16 @@ function lawOf(setup: ImpactSetup, pair: Pair): PairLaw | null {
     }
 }
 
-/** One step's forces and torques, summed in pair-list order: on the head (world frame) and on each ball. */
+/**
+ * One step's forces and torques, summed in pair-list order: on the head (world frame) and on each ball. In carry mode
+ * also the balls' total force on the head, for the push intent (gate ruling 2026-10-11); null otherwise.
+ */
 interface StepLoads {
     headForce: Vec3;
     headTorque: Vec3;
     readonly forces: Vec3[];
     readonly torques: Vec3[];
+    ballsOnHead: Vec3 | null;
 }
 
 /**
@@ -462,6 +468,9 @@ function applyPair(
     if (pair.kind === "face-ball") {
         loads.headForce = sub(loads.headForce, force);
         loads.headTorque = sub(loads.headTorque, cross(sub(contact.point, head.position), force));
+        if (loads.ballsOnHead !== null) {
+            loads.ballsOnHead = sub(loads.ballsOnHead, force);
+        }
     } else if (sa) {
         loads.forces[pair.a] = sub(loads.forces[pair.a] as Vec3, force);
         loads.torques[pair.a] = sub(loads.torques[pair.a] as Vec3, cross(sub(contact.point, sa.position), force));
@@ -861,6 +870,7 @@ export function integrateStroke(setup: ImpactSetup, options: ImpactOptions = {},
     const ids = setup.balls.map((b) => b.id);
     const hasTurf = setup.balls.map((b) => b.turf !== null);
     const tracked = plan.kind === "track";
+    const carry = plan.kind === "track" && plan.arc.mode === "carry";
     const pairs: PairState[] = pairList(
         ids,
         hasTurf,
@@ -920,6 +930,7 @@ export function integrateStroke(setup: ImpactSetup, options: ImpactOptions = {},
             headTorque,
             forces: balls.map(() => ballWeight),
             torques: balls.map(() => ZERO),
+            ballsOnHead: carry ? ZERO : null,
         };
         const samples: ContactSample[] = [];
         let hardClosed = false;
@@ -1005,6 +1016,10 @@ export function integrateStroke(setup: ImpactSetup, options: ImpactOptions = {},
             const force = applyPair(p, setup.face, contact, state, balls, dt, loads, options.probe ? samples : null);
             recordStep(p.line, true, force, t);
             recordRegions(p.regions, hit === null ? null : hit.region, force, t);
+        }
+        // The balls' resistance along aim, which the hands' push intent reads next step (gate ruling 2026-10-11).
+        if (loads.ballsOnHead !== null && plan.kind === "track") {
+            grip.resistance = Math.max(0, 0 - dot(plan.arc.aim, loads.ballsOnHead));
         }
 
         // The head–turf pair comes after every other pair (design §4.1).
@@ -1112,6 +1127,10 @@ function continueStroke(
     const { head } = setup;
     const every = Math.max(1, Math.round(FOLLOW_SAMPLE / dt));
     const kind = finishKind(plan);
+    // The balls are removed, so nothing resists a carry's push intent any more.
+    if (kind === "carry") {
+        grip.resistance = 0;
+    }
     // A stop holds its mallet still after the check (user decision 2026-10-07; Riches: "NO FOLLOW-THROUGH"): from the
     // check's window's end, or the impact's end if later, the pendulum is held and the hands grip the head firmly.
     const holdFrom = kind === "check" ? Math.max(plan.arc.arcStart + plan.arc.window, first * dt) : Infinity;
@@ -1145,6 +1164,7 @@ function continueStroke(
             headTorque: hand.torque,
             forces: [],
             torques: [],
+            ballsOnHead: null,
         };
         if (ground !== null) {
             applyHeadTurf(ground, state, head, dt, loads, t, null);
