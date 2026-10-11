@@ -118,5 +118,45 @@
         "source": "P2b.2b.1 design §4.2 (docs/superpowers/specs/2026-10-04-p2b2b1-swing-shot-design.md); upper bound: Don Gugan, 'The Physics of Croquet Strokes: Analysis of the CA high-speed DVD', Table 4(b) (2009; Oxford Croquet), https://oxfordcroquet.org/tech/gugan4/",
         "provenance": "derived",
         "note": "A model limit, not a property of turf. The impact's turf is a plane with a linear spring, fitted to a ball pressed into it (ballTurfStiffness); a mallet head's edge or rim presses a footprint that law was not fitted to, so a head driven more than this below the turf plane raises impact-head-deep. Provisional. Upper bound: the deepest ball penetration Gugan measured, 7.2 mm (Table 4(b), roll A4R)."
+    },
+    "armStiffness": {
+        "value": 116,
+        "unit": "N/m",
+        "bounds": [45, 445],
+        "source": "Fortineau, Siegler, Makarov and Rodriguez-Ayerbe, 'Human arm endpoint-impedance in rhythmic human-robot interaction exhibits cyclic variations', PLoS One 18(12):e0295640 (2023), DOI 10.1371/journal.pone.0295640, https://www.ebi.ac.uk/europepmc/webservices/rest/PMC10721195/fullTextXML",
+        "provenance": "direct",
+        "note": "k₀, the arm's endpoint stiffness at low effort: each hand's flex spring is k_h = k₀ + κ·|F_ff,h| (P2b.2b.2b.2b design §3.1-§3.2). Quoted: \"The average estimated stiffness was 116 N/m (SD 60), with a minimum value of 45 N/m and a maximum of 401 N/m\" (Experiment H, 31 participants at two target heights), and \"endpoint-impedance parameters ranged from 45 to 445 N/m\" over both experiments. The rule takes the paper's mean over its 31 participants, which it reports. Bounds: the reported range over both experiments, 45-445 N/m."
+    },
+    "armStiffnessPerForce": {
+        "value": 2.55,
+        "unit": "1/m",
+        "bounds": [2.46, 2.56],
+        "source": "Takagi, Xiong, Kambara and Koike, 'Endpoint stiffness magnitude increases linearly with a stronger power grasp', Sci. Rep. 10:379 (2020), DOI 10.1038/s41598-019-57267-0, https://www.ebi.ac.uk/europepmc/webservices/rest/PMC6962455/fullTextXML",
+        "provenance": "analogue",
+        "note": "κ, the endpoint stiffness gained per newton of the hand's force, in N/m per N (design §3.1-§3.2). Analogue: the slope is against the hand's power-grasp force, not the arm's voluntary push. No open figure was found for the slope against the arm's voluntary force: Perreault, Kirsch and Crago (2001, 2002, 2004) report it but are paywalled, and their abstracts give no number. Takagi, Table 1, the major-axis term K yy at the centre posture: \"166.9 ± 20.3\" N/m at 5 N of grasp to \"205.2 ± 27.2\" N/m at 20 N, (205.2 - 166.9)/15 = 2.55 N/m per N; the paper: \"The endpoint stiffness magnitude increased linearly with the grasp force, and this linear relationship did not depend on the arm's posture\". Bounds: K yy's slope over the left (2.48), centre (2.55) and right (2.46) postures and the second experiment's centre (2.56). K xx rises less, 0.23-0.91 N/m per N."
+    },
+    "armDampingRatio": {
+        "value": 0.69,
+        "unit": "1",
+        "bounds": [0.058, 1.42],
+        "source": "Derived from Fortineau, Siegler, Makarov and Rodriguez-Ayerbe, PLoS One 18(12):e0295640 (2023), DOI 10.1371/journal.pone.0295640, https://www.ebi.ac.uk/europepmc/webservices/rest/PMC10721195/fullTextXML, and its S1 Data, https://journals.plos.org/plosone/article/file?type=supplementary&id=10.1371/journal.pone.0295640.s001",
+        "provenance": "derived",
+        "note": "ζ_arm, held constant so that each hand's damper is c_h = 2·ζ_arm·√(k_h·m_arm), as Perreault, Kirsch and Crago (Exp. Brain Res. 157:507, 2004) found the arm's damping ratio \"remarkably consistent\" across forces and postures (design §3.1-§3.2). No open copy or citing paper quotes their ratio, so it is derived from Fortineau's Experiment H means: \"The average estimated damping was 9.9 Ns/m (SD 3.1)\", stiffness 116 N/m and mass 0.4465 kg (armStiffness, armEndpointMass); 9.9/(2·√(116·0.4465)) = 0.69. Bounds: B/(2·√(K·M)) over the S1 Data's 62 Experiment H estimations (31 participants at two heights), 0.058-1.42; 12 of them exceed 1."
+    },
+    "armEndpointMass": {
+        "value": 0.4465,
+        "unit": "kg",
+        "bounds": [0.227, 0.893],
+        "source": "Fortineau, Siegler, Makarov and Rodriguez-Ayerbe, 'Human arm endpoint-impedance in rhythmic human-robot interaction exhibits cyclic variations', PLoS One 18(12):e0295640 (2023), DOI 10.1371/journal.pone.0295640, https://www.ebi.ac.uk/europepmc/webservices/rest/PMC10721195/fullTextXML",
+        "provenance": "derived",
+        "note": "m_arm, the arm's measured endpoint mass, which sets each hand's damper with ζ_arm (design §3.1-§3.2). Quoted: \"The average mass estimated for h 1 * was 459 g (SD 126) and 434 g (SD 94)\" (Experiment H; the S1 Data label the second h3*), and \"227 to 893 g\" over both experiments. The paper gives no single mean, so this is the mean of the two, each over the same 31 participants: (459 + 434)/2 = 446.5 g; the S1 Data's 62 values give 446.8 g. It is the endpoint inertia the robot felt at the hand, not the armMass the swing carries. Bounds: the reported range, 227-893 g."
+    },
+    "pendulumForce": {
+        "value": 64.3,
+        "unit": "N",
+        "bounds": [39.1, 104.2],
+        "source": "Hallbeck, 'Flexion and extension forces generated by wrist-dedicated muscles over the range of motion', Appl. Ergon. 25(6):379 (1994), DOI 10.1016/0003-6870(94)90057-4, as tabulated by Napper, Sayal, Holmes and Cudlip, 'Sex differences in wrist strength: a systematic review', PeerJ 11:e16557 (2023), DOI 10.7717/peerj.16557, https://www.ebi.ac.uk/europepmc/webservices/rest/PMC10725665/fullTextXML",
+        "provenance": "derived",
+        "note": "F_pendulum, the largest forward force the bottom hand applies perpendicular to the shaft by wrist and forearm in the pendulum phase, scaled by pendulumEffort (design §4.2). A measured maximal wrist-flexion force at the hand: Napper et al., Table 3, Hallbeck (1994), 30 males and 30 females, force transducer, isometric (N): males \"Average over all postures: 73.15\", females \"Average over all postures: 55.42\", over wrist postures from 90° flexion to 90° extension. Hallbeck's paper is paywalled; the review's table is open. The value is the mean of the two equal groups, (73.15 + 55.42)/2 = 64.3 N. Bounds: the lowest and highest posture means of either sex, females at 75° extension (39.11 N) and males at 90° flexion (104.24 N)."
     }
 }

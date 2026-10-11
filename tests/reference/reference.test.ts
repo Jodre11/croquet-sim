@@ -150,6 +150,26 @@ describe("swing, coupling and head–turf reference data", () => {
         expect(contactReference.reachSlack.unit).toBe("m");
     });
 
+    it("loads the arm's flex and pendulum push, each positive within its bounds (P2b.2b.2b.2b design §3.2)", () => {
+        const arm = {
+            armStiffness: "N/m",
+            armStiffnessPerForce: "1/m",
+            armDampingRatio: "1",
+            armEndpointMass: "kg",
+            pendulumForce: "N",
+        } as const;
+        for (const [key, unit] of Object.entries(arm)) {
+            const value = contactReference[key as keyof typeof arm];
+            expect(value.unit, key).toBe(unit);
+            expect(value.value, key).toBeGreaterThan(0);
+            const [low, high] = value.bounds as readonly [number, number];
+            expect(value.value, key).toBeGreaterThanOrEqual(low);
+            expect(value.value, key).toBeLessThanOrEqual(high);
+        }
+        // A damping ratio above 1 is overdamped; the flex law takes ζ_arm in (0, 1] (design §6).
+        expect(contactReference.armDampingRatio.value).toBeLessThanOrEqual(1);
+    });
+
     it("loads the head–turf friction and the deep-head limit", () => {
         expect(contactReference.headTurfFriction.value).toBe(0.5);
         expect(contactReference.headTurfFriction.bounds).toEqual([0.3, 0.7]);
