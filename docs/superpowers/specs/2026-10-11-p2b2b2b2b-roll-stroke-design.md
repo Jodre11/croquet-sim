@@ -1,0 +1,323 @@
+# P2b.2b.2b.2b — The Roll's Stroke: Design
+
+**Product spec:** `2026-09-30-croquet-shot-lab-design.md` §4 (impact phase).
+**Stroke shape spec:** `2026-10-06-p2b2b2a-stroke-shape-design.md` (the carry mode; "hands arrive with no vertical
+velocity", reopened here).
+**Stance spec:** `2026-10-08-p2b2b2b1-hands-stance-design.md` (the rolls' leans and grips).
+**Laws spec:** `2026-10-09-p2b2b2b2a-strike-turf-laws-design.md` (the Hertzian face, the turf bed; "Why this split";
+its amendments).
+**Roadmap:** P2 row; "P2b.2b.2b decisions and findings (2026-10-08)", including "The roll as played" and "The model's
+roll against the roll as played"; "P2b.2b.2b.2a outcomes (2026-10-09)".
+
+**Why this step.** P2b.2b.2b.2 lands in three steps (user decision, 2026-10-09): the laws (2a, done), the roll's
+stroke (this document), then the mallet (2c). On 2a's laws the rolls still fail in the stroke, not the laws:
+
+- the canonical full roll's hands brake while the face is on the ball;
+- nothing holds the face angle once the ball pitches the mallet;
+- the mallet never arcs back through vertical;
+- the pass roll's follow-through pins the striker's ball in its pit at every speed, with ratios of 7.45–29.21 over
+  2–4 m/s and the "punch beats coast" test `it.fails`;
+- 15 of the pass roll's 225 late re-hit runs end with the head overlapping the striker's ball as handed over.
+
+**Circularity.** The new law's numbers come from published measurements of the human arm (physiology), never from a
+coaching ratio, Gugan's or Hall's roll figures, or the user's play. Those are recorded beside the model as held-out
+checks. The roll as played (below) is the behavioural target. Ratios are recorded, not gated, and P2b.2b.2c
+calibrates them.
+
+**Vocabulary.** "Split" and "ratio" keep their croquet meanings only. Split: the balls go off in significantly
+different directions. Ratio: the relative travel of the two balls. The distribution of time and effort between a
+roll's two phases is its **phasing**. The second phase is the **pendulum phase**: the same rotation about the top hand
+that the downswing already calls the pendulum (`pendulumShare`), so the word gains no new meaning. If the croquet
+literature has an established term, it is a later rename.
+
+## The roll as played (user, 2026-10-11)
+
+This extends the roadmap's "The roll as played" (2026-10-08) with the brainstorm's account. It describes behaviour, not
+a number to fit.
+
+- **Two phases.** A roll needs an initial, conscious hands-forward push with the mallet at the stance's angle. Then,
+  depending on the power and the ratio wanted, the player continues or accelerates the pendulum action towards the end
+  of the stroke. The body takes whatever position it needs to maintain the push, so the model cares about the hands,
+  not the body.
+- **The hands' path.**
+  - The hands consciously travel forward, but they dip a little during the push: that keeps the face on the ball while
+    the mallet's angle rises from about 31° to about 42°.
+  - The dip is a flex: the arms and wrists give as the balls and turf resist the push.
+  - The recovery from the flex is part of what drives the balls forward.
+  - The hands rise again in the pendulum phase.
+  - The low point falls partway through the push or at its end, later for a longer push.
+  - The user's sense is of the hands on a shallow arc whose centre is high above, perhaps more ovoid than circular.
+- **The angle.** It rises through the push as the flex gives, a few degrees above the contact lean being normal, but
+  never beyond 45°. The head stays behind the striker's ball, and the repeated face touches are part of the push.
+- **The phasing, per shot.**
+  - The ball's position back in the stance sets the push's length.
+  - The player then chooses how hard to push and when to start the pendulum phase. A harder push needs the pendulum
+    phase sooner.
+  - A harder, punchier pendulum phase sends the striker's ball further.
+  - A close-range roll uses a short push and little pendulum phase. A full-lawn roll needs a long, fast push with
+    excellent timing of the pendulum phase.
+  - Starting the pendulum phase too soon is a common mistake and gives a poor shot.
+  - The player thinks mainly of where the balls should end up and lets the rest happen subconsciously. Choosing the
+    inputs from a target is the planner's job (P4), not this step's.
+
+## Decisions (user, 2026-10-11)
+
+- **Compliant hands on an intended path**, over a prescribed hands' arc and over today's path plus an angle spring
+  alone. The dip, its timing and its recovery are to emerge from the load, not be drawn. "Let's model it and see what
+  emerges, it may need refinement."
+- **The intended path is forward and level.** The hands push consciously forward, and the arc the user senses is the
+  flex's. No arc radius is invented.
+- **The flex law's form** (§3): stiffness rising linearly with the hand's force, damping at a constant damping ratio,
+  both from the arm literature.
+- **The pendulum phase** (§4): the bottom hand stops holding and drives the mallet's rotation about the top hand.
+- **A pre-flight gate** (§8) stops for the user on the canonical rolls before anything else is built on the mechanism.
+- **Calibration waits.** "We can calibrate when/if it works": P2b.2b.2c.
+
+## 1. Goal and exit criteria
+
+In carry mode (the three rolls) the hands hold the mallet through a measured, compliant flex from contact on. They push
+forward without braking, and they hand over to a pendulum phase that swings the mallet through vertical. The stroke's
+inputs gain the pendulum phase's start and effort. The handover keeps a lifted ball clear of the head.
+
+Exit criteria:
+
+1. The analytic cases of §7.1 hold.
+2. The pass roll's "punch beats coast" test passes, and its `it.fails` is removed.
+3. No impact ends with the head overlapping a ball as handed over, over the late re-hit sweep of every preset
+   (`scripts/swingProbe.ts`).
+4. The swing-mode presets (single-ball, drive, AC stop, GC stop) are bit-identical: the impact digest's cases, the
+   phase-2 digest, and the presets' full-precision digest from `swingProbe.ts` once `engineVersion` is normalised. The
+   one allowed exception is a case whose impact ends with the head overlapping a lifted ball, which the handover rule
+   (§5) moves. Each such case is listed (2a recorded none outside the pass roll).
+5. Every preset's canonical setup meets P2b.2b.2b.1's exit criterion 4: `simulateShot` with `trajectory: true` runs from
+   top to finish with no `RangeError`, no re-entry guard hit, no ball centre more than 5 mm above R, no `follow-cap`,
+   and the trajectory continuous at every boundary.
+6. The pre-flight gate (§8) has run and the user has ruled on it.
+7. The figures of §9 are recorded in the roadmap. They are observations, not gates.
+8. `ENGINE_VERSION` is "0.10.0".
+
+The pass roll's ratios, the crossings and the longest impact are recorded against 2a's (§9), not gated: exit criterion
+2 is the test of the pinned pass roll, and the ratio is P2b.2b.2c's to calibrate.
+
+## 2. Architecture
+
+```
+src/engine/impact/flex.ts            new: the hands' flex law, k = k₀ + κ·|F|, c at the damping ratio ζ_arm (§3)
+src/engine/impact/track.ts           carry mode after contact: both hands on the flex to the intended path; the push
+                                     with no brake; the pendulum phase (§4); the reach's scripted descent removed
+src/engine/impact/types.ts           SwingArc (carry) gains pendulumAt and pendulumEffort; FlexLaw
+src/engine/impact/integrate.ts       carry's finish: the mallet past vertical at its swing's apex (§4.3)
+src/engine/impact/handover.ts        the head-clearance rule (§5)
+src/engine/impact/simulateImpact.ts  handedOver passes the head; validation of the new inputs
+src/engine/swing/types.ts            ShotSetup.stroke gains pendulumAt? and pendulumEffort?; SwingDrive gains their
+                                     defaults and loses groundDepth
+src/engine/swing/buildContact.ts     planStroke carries the pendulum inputs into the arc
+src/engine/swing/profile.ts          the rolls' canonical pendulumAt and pendulumEffort (§6)
+src/engine/simulate.ts               ENGINE_VERSION 0.10.0
+reference/contact.json               armStiffness (k₀), armStiffnessPerForce (κ), armDampingRatio (ζ_arm),
+                                     pendulumForce (F_pendulum), each sourced (§3.2)
+scripts/strokeProbe.ts               asPlayed for all three rolls; the pendulum-timing sweep (§9)
+scripts/swingProbe.ts                re-run: braking hands, the late re-hit sweep with the handover rule
+```
+
+Unchanged:
+
+- the swing mode (single-ball, drive, AC stop, GC stop), whose `handLoad` branch is untouched;
+- the downswing to contact in carry mode: the hands lead with today's feed-forward, springs and dampers until
+  `relaxAt` (contact);
+- the face–ball and turf laws, the head–turf law (P2b.2b.2b.3's), and the mallet (P2b.2b.2b.2c's).
+
+Everything stays under the determinism lint.
+
+## 3. The flex
+
+### 3.1 The law
+
+From contact on, in carry mode, each hand h (top and bottom grip) is tied to its point on the intended path
+(§4.1) by a spring-damper in three dimensions:
+
+- F_h = −k_h·(x_h − x̂_h) − c_h·(v_h − v̂_h), where x_h is the grip point on the shaft and x̂_h its intended position.
+- k_h = k₀ + κ·|F_h,prev|: the stiffness rises linearly with the force the hand exerts (Perreault et al.). It is
+  evaluated on the previous step's force, so the law stays explicit (a modelling choice, not the source's).
+- c_h = 2·ζ_arm·√(k_h·m_h), with m_h the hand's share of the swung body: the damping ratio is held constant.
+
+The two hands sit at different distances from the socket (`bottom` < `top`), so their springs together resist the
+mallet's pitch with a stiffness of about k·d², d = top − bottom. **The angle hold emerges from the two hands' flex**,
+with no separate angle spring. When the ball and turf pitch the mallet up, the springs store the load, and their
+recovery drives the face on: the user's flex and recovery.
+
+Today's carry branch after contact (`track.ts` `handLoad`) is replaced. That branch drops to velocity-only coupling at
+contact (grip-tension and bottom-grip shares plus dampers on velocity lag), so nothing restores the angle. The twist
+about the shaft keeps today's damper and grip share, since the roll's question is the pitch.
+
+### 3.2 Sources
+
+Physiology, cited and not mirrored (repo rule):
+
+- **Low-effort endpoint stiffness and damping:** 45–445 N/m and 2.2–17.5 N·s/m, mass 227–893 g, over 31 participants
+  in a rhythmic task (Fortineau, Siegler, Makarov and Rodriguez-Ayerbe, *PLoS One* 18(12):e0295640, 2023, DOI
+  10.1371/journal.pone.0295640). Earlier ranges quoted there: 150–700 N/m (Burdet et al., *Nature* 414:446, 2001,
+  DOI 10.1038/35106566), 44–189 N/m (Tsuji and Tanaka) and 49–339 N/m (Erden and Billard).
+- **Stiffness rises linearly with the arm's force, and the damping ratio stays nearly constant** across forces and
+  postures (Perreault, Kirsch and Crago, *Exp. Brain Res.* 157(4):507–517, 2004, DOI 10.1007/s00221-004-1864-7).
+- **Stiffness rises linearly with grip force**, independent of posture: Kyy at the centre 167 N/m at 5 N of grasp to
+  205 N/m at 20 N (Takagi, Xiong, Kambara and Koike, *Sci. Rep.* 10:379, 2020, DOI 10.1038/s41598-019-57267-0).
+
+**Sourcing gaps, closed by the plan's first task.** κ (stiffness per newton of the hand's force), ζ_arm and F_pendulum
+(the wrist and forearm's forward push, §4.2) need numbers. Perreault's papers (2002, 2004) are paywalled, and the
+low-force studies do not reach a roll's 100–150 N. The task finds open figures (Europe PMC full texts, theses,
+reviews). If it cannot, it **stops for the user** with the candidates, and does not guess.
+
+### 3.3 Scale
+
+Today's coupling is about 11,000 N/m (`HAND_COUPLING`, T 0.08 s on the 1.8 kg swung body). The measured arm is 10–100×
+softer at low effort and much stiffer under a roll's push. The flex may therefore be centimetres, not millimetres. That
+is plausible for the user's dip, but it is what the pre-flight gate (§8) is for.
+
+## 4. The push, the pendulum phase and the finish
+
+### 4.1 The push (contact to the pendulum phase)
+
+- **The intended path.** The hands' intended path runs forward and level along aim from their contact position, at
+  today's carry profile: the hands' acceleration over `handWindow` at full `drive`, then a coast. Both grip points'
+  intended positions follow it rigidly at the arc's planned pitch θ(t) (below).
+- **The push length** is the shot's `handReach` (absent: the preset's). The intended path stops advancing once it has
+  travelled the push length along aim. It stops at once, not on a deceleration ramp: the flex is soft, so the hands
+  pass from push to rest through the springs, not through a scripted brake.
+- **Removed:** the reach's constant deceleration over its last 0.2 (`computeReach`'s brake, `track.ts`) and the carry
+  descent's rest-to-rest lowering by `groundDepth` (`SwingDrive.groundDepth` goes). The hands' dip is the flex's.
+- **The planned pitch θ(t).** The pendulum term in the push is today's: the arc's `speedGain` over `window` from the
+  contact pitch, then today's "slope held" ramp to zero rate, after which θ holds. It sets the intended pitch that the
+  two hands' intended positions follow; the actual pitch departs from it only through the flex.
+
+### 4.2 The pendulum phase
+
+It starts when the intended path has travelled `pendulumAt` × push length along aim (`pendulumAt` in [0, 1]):
+
+- **The bottom hand changes job.** It lets go of its spring and instead pushes forward, perpendicular to the shaft in
+  the swing plane, with `pendulumEffort` × F_pendulum (`pendulumEffort` in [0, 1]). That rotates the mallet about the
+  top hand. At effort 0 it simply lets go, and the mallet swings on its own momentum and weight.
+- **The top hand stays on its flex spring.** Its stiffness follows its force (§3.1), so as the push's load eases it
+  relaxes towards k₀ and becomes a soft pivot rather than a brake. Its intended position keeps to the intended path,
+  which stops at the push length. The hands' rise emerges as the mallet swings up past vertical and the flex recovers.
+- **Starting it too soon is allowed** (user: "a common mistake… not a good shot"). With no bottom hand holding the
+  angle before the push has done its work, the head climbs over the striker's ball or leaves it early. The run gives a
+  poor ratio or a fault flag from the physics, not a rejected input.
+
+### 4.3 The finish
+
+In carry mode the follow-through ends at the pendulum's apex: the mallet has passed vertical (pitch > 0 in the arc's
+sense, positive swinging forward) and its pitch rate has fallen to zero. This reuses the swing mode's apex rule
+(`integrate.ts` `finished`) in place of carry's "t ≥ reach.tStop and the head at rest". `FOLLOW_CAP` (1 s) stays as the
+guard. A run whose pendulum phase never brings the mallet past vertical (effort 0 and too little momentum) ends at rest
+relative to the top hand, as the check mode's rule does.
+
+## 5. The handover rule
+
+`handedOver` (`simulateImpact.ts`) passes the run's head pose and the `MalletHead` to `handover`. After `placed` lifts
+each ball from its pit to z = R, and before the ball-pair and obstacle separation:
+
+- the head's clearance against the lifted ball (`contacts.ts`' face, rim and barrel distance) is checked;
+- a ball the head overlaps moves horizontally along the face's outward normal until it is clear (to within
+  `CONTACT_TOLERANCE`), keeping its velocity;
+- the move is added to `overlapCorrection`, and the existing passes then separate it from other balls and obstacles as
+  today.
+
+The pass roll's 15 overlaps (0.002–0.078 mm) become corrections of that size. A head deep in a ball at the impact's
+end (the impact's own `impact-head-deep`) is not this rule's: it is an impact fault, flagged as today.
+
+## 6. Inputs, presets and validation
+
+- **`ShotSetup.stroke`** gains `pendulumAt?` and `pendulumEffort?`, each in [0, 1], absent meaning the preset's.
+  `handReach?` stays and is documented as the push length in carry mode.
+- **`SwingDrive`** gains `pendulumAt` and `pendulumEffort` (the defaults) and loses `groundDepth`.
+- **The rolls' canonical values** are presets, not fits:
+  - half roll: push 0.15 m;
+  - full and pass rolls: push 0.3 m;
+  - every roll: `pendulumAt` 0.8 (where today's reach began braking) and `pendulumEffort` 0 (let it swing).
+- **The swing-mode presets** carry the two fields for the type's sake and never read them.
+- **Validation:** `pendulumAt` and `pendulumEffort` finite and within [0, 1]; the flex's sourced values positive;
+  ζ_arm within (0, 1]. The rest is as today.
+
+The pre-flight gate (§8) may move these defaults on the user's ruling. Nothing is tuned to a ratio.
+
+## 7. Testing
+
+### 7.1 Analytic cases
+
+- **The flex alone.** A still grip point given a step load F deflects F/k and rings at ζ_arm. The stiffness after the
+  load is k₀ + κ·F.
+- **The pitch stiffness.** Two hands on a rigid mallet resist a small pitch δθ with a moment k_top·r_top² +
+  k_bot·r_bot² about the pitch axis within 1 %, the grip points at their distances from the pitch axis.
+- **No brake.** A carry run with no ball: once the intended path stops, the hands' force along aim stays within the
+  flex's spring and damper. There is no feed-forward deceleration term.
+- **The pendulum phase at effort 0** is a free pendulum about the top hand: with the top hand's damping set to zero it
+  conserves the mallet's energy about the pivot to within the integrator's error over its swing.
+- **The pendulum phase at effort 1** adds the work F_pendulum·(path of the bottom grip), within 1 %.
+- **The finish** falls at the apex past vertical. A run that never passes vertical ends at relative rest, not at the
+  cap.
+- **The handover rule** clears a lifted ball beneath a head resting just clear of the pit, by the overlap's size, and
+  leaves a ball the head does not touch bit-identical.
+- **The pass roll's "punch beats coast"** (`tests/engine/shot.test.ts`) passes.
+
+### 7.2 Bit-identity
+
+The swing-mode presets are bit-identical (exit criterion 4). The rolls move. Their tests' recorded figures
+(`CANONICAL_*`, the stroke tests' ratios and timings) are re-recorded from the plan's run, and each change is listed
+in the amendments.
+
+## 8. The pre-flight gate
+
+Once the flex (§3), the push (§4.1) and the pendulum phase (§4.2) land, the plan **stops for the user** before the
+handover rule, the probes, the presets' defaults or the roadmap are recorded. It shows the three canonical rolls at 2
+and 3 m/s:
+
+- the lean through contact, its peak against 45°, and the pitch through vertical;
+- the hands' dip: its depth, when it bottoms out, and its recovery;
+- the descent β at contact against Gugan's 6–16°;
+- the head behind the ball along aim;
+- the face intervals;
+- the ratio;
+- a slow-motion export (as 2a's review).
+
+The user rules: go on, change the defaults, or change the mechanism. The gate always stops, whatever the figures show.
+
+## 9. Probe (recorded in the roadmap)
+
+- **`asPlayed` for all three rolls** (today: the full roll at 2 m/s only): the figures of §8, plus the hands' force
+  along aim at the pendulum phase's start and its minimum (no brake), and the striker's speed lost while the face is
+  on it.
+- **The pendulum-timing sweep:** `pendulumAt` over 0.2–1.0 at a slow and a fast push (short and long range), the ratio
+  and the striker's distance at each. It records how sensitive the outcome is to timing, which the user expects to be
+  highest on a long, fast push. Recorded only.
+- **The held-out checks** (each against a measurement it was never fitted to):
+  - the descent β against Gugan 4's stroke angle, 6–16° on rolls;
+  - the apparent contact against the CA's 30–58 ms (Project Croquet Dynamics);
+  - the second contact against Gugan 4's and Hall's several milliseconds;
+  - the face intervals against Cross's seven taps, "the ball sticks to the mallet";
+  - the rolls' ratios beside Gugan's: full 1.20–1.24, pass 0.94–1.21, half 2.30–2.46.
+- **2a's items, re-recorded:** the ratios over 2–4 m/s for every preset; the striker's face intervals; the late re-hit
+  sweep's crossings and the handover's overlaps (none, exit criterion 3); the cap and flag tallies; the longest impact
+  against the 450 ms cap; braking hands (`swingProbe.ts`); and cost per step against P5's provisional budget.
+
+## 10. Deferred
+
+- **P2b.2b.2b.2c:** the square head, end-weighting, the market's dimensions.
+- **P2b.2b.2b.3:** the head in the bed, ploughing, the grip breaking.
+- **P2b.2b.2c:** calibration: the rolls' ratios, the phasing's defaults against strokes as played, and the effort
+  ceiling.
+- **P3/P4:** per-player phasing, choosing the inputs from where the balls should end up (the planner), and the
+  mapping of perceived effort to intensity.
+- **Later:** a direction-dependent (elliptical) arm stiffness. The literature measures an ellipse, and the user's
+  "more ovoid than circular" may be its trace; this step's flex is isotropic unless the pre-flight gate asks for more.
+
+## 11. Roadmap changes (in this PR)
+
+- The P2 row: P2b.2b.2b.2b named with this spec; its exit criteria as §1.
+- "P2b.2b.2b decisions and findings": the user's account and decisions of 2026-10-11, and the vocabulary note.
+- A new "P2b.2b.2b.2b outcomes" section with §9's figures and the pre-flight gate's ruling.
+- "Provisional numbers" unchanged.
+
+**Housekeeping** shipped first, as its own PR (#23): `eslint-plugin-svelte` 3.23.1 and `prettier` 3.9.10. TypeScript 7
+is still blocked by typescript-eslint and svelte-check, and the actions and runner are current. The 2a pre-review's
+follow-ups landed in #24.
