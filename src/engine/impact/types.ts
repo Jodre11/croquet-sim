@@ -147,6 +147,18 @@ export interface Coupling {
 }
 
 /**
+ * The arm's flex under a hand (P2b.2b.2b.2b design §3.1): its stiffness k = k₀ + κ·|F_ff| rises linearly with the force
+ * the hand applies voluntarily, its feed-forward, and its damping holds the ratio ζ_arm on the arm's endpoint mass:
+ * c = 2·ζ_arm·√(k·m_arm). k₀ (N/m), κ (1/m), ζ_arm and m_arm (kg) are reference/contact.json's arm values.
+ */
+export interface FlexLaw {
+    readonly stiffness: number;
+    readonly stiffnessPerForce: number;
+    readonly dampingRatio: number;
+    readonly endpointMass: number;
+}
+
+/**
  * Two hands on the rigid, massless shaft, which is the head's up axis through the socket (design §3.1): the top hand at
  * the arc radius, the bottom hand `bottom` from the socket (m, in (0, radius)). From `relaxAt` on the top hand grips
  * with γ_T = `gripTension` and the bottom hand with g_B = `bottomGrip`, both in (0, 1]. The player's arm mass
