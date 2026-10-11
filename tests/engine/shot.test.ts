@@ -496,7 +496,8 @@ describe("the mechanisms (design §8.1), on the canonical setups", () => {
         // 1.894 m/s at drive +1, 0.29 m/s at drive 0, the coasted ball already pinned under the face. P2b.2b.2b.2a:
         // turf bed (was 1.894 and 0.29): 0.038 m/s at drive +1, 0.088 m/s at drive 0, both pinned.
         // P2b.2b.2b.2b: hands' arc (was it.fails): 1.2170 and 1.1300 m/s. P2b.2b.2b.2b: flex (was 1.2170 and
-        // 1.1300): 1.8786 and 1.6386 m/s; Task 8 confirms it.
+        // 1.1300): 1.8786 and 1.6386 m/s; Task 8 confirms it. P2b.2b.2b.2b: push intent and fast impedance (was 1.8786
+        // and 1.6386): 1.7016 and 1.2624 m/s.
         const punched = simulateShot(canonicalSetup("pass-roll")).impact;
         const coasted = simulateShot(canonicalSetup("pass-roll", { stroke: { drive: 0 } })).impact;
         expect(strikerSpeed(punched)).toBeGreaterThan(strikerSpeed(coasted));

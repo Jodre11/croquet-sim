@@ -218,7 +218,8 @@ capped"). Fetched 2026-10-11 with `curl -sS -L`; the digest is of the raw PDF. M
 
 The amendment (user, 2026-10-11: "The hands are primed and the brain is expecting the resistance but they are still
 human hands") adds `pushResponseTime`, τ_push, at which the hands' sensed resistance follows the balls'. The rule
-takes a voluntary force rise from force onset (no reflex latency), not a reflex loop's delay.
+takes a voluntary force rise from force onset (no reflex latency), not a reflex loop's delay. Fetched 2026-10-11; the
+digest is of the raw fullTextXML as Europe PMC returned it.
 
 | Short name | Work | URL | SHA-256 |
 |---|---|---|---|

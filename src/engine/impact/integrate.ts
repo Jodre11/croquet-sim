@@ -1163,10 +1163,10 @@ function continueStroke(
     const { head } = setup;
     const every = Math.max(1, Math.round(FOLLOW_SAMPLE / dt));
     const kind = finishKind(plan);
-    // The balls are removed, so nothing resists a carry's push intent any more.
-    if (kind === "carry") {
-        grip.resistance = 0;
-    }
+    // The balls are removed, so nothing resists a carry's push intent any more: the hands' sensed resistance relaxes to
+    // 0 at the muscles' pace, as it would after any blow. It only matters where the push never reaches the pendulum
+    // phase (push.pendulum null); in the pendulum phase the intent is nil whatever it senses.
+    const response = kind === "carry" ? pushResponse(plan.hands, dt) : 0;
     // A stop holds its mallet still after the check (user decision 2026-10-07; Riches: "NO FOLLOW-THROUGH"): from the
     // check's window's end, or the impact's end if later, the pendulum is held and the hands grip the head firmly.
     const holdFrom = kind === "check" ? Math.max(plan.arc.arcStart + plan.arc.window, first * dt) : Infinity;
@@ -1208,6 +1208,7 @@ function continueStroke(
         state = advance(state, none, [], loads, setup, 0, dt);
         if (kind === "carry") {
             advanceHands(grip, plan.hands, dt);
+            grip.resistance = senseResistance(grip.resistance, 0, response);
         }
         steps++;
         if (ground !== null && !deep && headLowestPoint(state, head) < 0 - HEAD_DEEP_LIMIT) {
