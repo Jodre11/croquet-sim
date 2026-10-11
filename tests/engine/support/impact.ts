@@ -63,6 +63,9 @@ export const TEST_PENDULUM_FORCE = 20;
 /** A plausible, unsourced cap (N) on the hands' push intent (P2b.2b.2b.2b gate ruling 2026-10-11). */
 export const TEST_PUSH_FORCE = 100;
 
+/** A plausible, unsourced time constant (s) of the push intent's response (gate ruling amendment, 2026-10-11). */
+export const TEST_PUSH_RESPONSE_TIME = 0.03;
+
 /** Two firm hands with no arm mass, so the swung body is the head and head-only closed forms hold; a full guide. */
 export const TEST_HANDS: Hands = {
     bottom: 0.4,
@@ -74,6 +77,7 @@ export const TEST_HANDS: Hands = {
     flex: TEST_FLEX,
     pendulumForce: TEST_PENDULUM_FORCE,
     pushForce: TEST_PUSH_FORCE,
+    pushResponseTime: TEST_PUSH_RESPONSE_TIME,
 };
 
 /** A dip of no depth. */

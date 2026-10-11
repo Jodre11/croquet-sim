@@ -25,8 +25,11 @@ import {
     type GripState,
     type HandLoad,
     type PreparedTrack,
+    pushResponse,
+    senseResistance,
     type Push,
 } from "../../../src/engine/impact/track";
+import { exp } from "../../../src/engine/math/elementary";
 import type { Coupling, Hands, HeadState, SwingArc } from "../../../src/engine/impact/types";
 import { STANDARD_GRAVITY } from "../../../src/engine/world";
 import { contactReference } from "../../../src/reference/index";
@@ -40,6 +43,7 @@ import {
     TEST_HEAD,
     TEST_PENDULUM_FORCE,
     TEST_PUSH_FORCE,
+    TEST_PUSH_RESPONSE_TIME,
     freeBall,
     isolated,
     levelArc,
@@ -755,17 +759,41 @@ describe("the push intent (P2b.2b.2b.2b gate ruling 2026-10-11)", () => {
         );
     });
 
+    it("answers a held resistance at the muscles' pace: 1 − 1/e of it after τ_push", () => {
+        // Amendment (user, 2026-10-11): R̃ ← R̃ + (R − R̃)·(1 − exp(−dt/τ_push)). After n = τ/dt steps from 0 under a
+        // held R, R̃ = R·(1 − (exp(−dt/τ))ⁿ), 1 − 1/e of R up to the steps' rounding.
+        const response = pushResponse(TEST_HANDS, IMPACT_DT);
+        expect(response).toBeCloseTo(1 - Math.exp(-IMPACT_DT / TEST_PUSH_RESPONSE_TIME), 15);
+        const held = 1000;
+        const answered = (steps: number): number => {
+            let sensed = 0;
+            for (let i = 0; i < steps; i++) {
+                sensed = senseResistance(sensed, held, response);
+            }
+            return sensed;
+        };
+        const tau = Math.round(TEST_PUSH_RESPONSE_TIME / IMPACT_DT);
+        expect(answered(tau) / held).toBeCloseTo(1 - Math.exp(-1), 9);
+        // The first blow, about 1.25 ms of a held resistance, is answered with only 1 − exp(−1.25 ms/τ) of it.
+        const blow = Math.round(1.25e-3 / IMPACT_DT);
+        expect(answered(blow) / held).toBeCloseTo(1 - Math.exp(-1.25e-3 / TEST_PUSH_RESPONSE_TIME), 9);
+        // And relaxes at the same pace once the resistance has gone.
+        expect(senseResistance(held, 0, response)).toBeCloseTo(held * (1 - response), 9);
+    });
+
     /**
-     * Replays `snapshots`' hands from `start` with a grip state whose resistance is set after each step from that
-     * step's head–ball contacts alone, as the ruling defines R (or held at 0 without `fromBalls`). Returns the steps
-     * whose hands' force differs from the integrator's, and the largest R.
+     * Replays `snapshots`' hands from `start` with a grip state whose sensed resistance R̃ follows, after each step,
+     * that step's head–ball contacts alone through the lag (or stays 0 without `fromBalls`). Returns the steps whose
+     * hands' force differs from the integrator's, the largest R and the largest R̃.
      */
     function replay(track: PreparedTrack, start: HeadState, snapshots: readonly ImpactSnapshot[], fromBalls = true) {
         const grip = newGripState();
+        const response = 1 - exp(0 - IMPACT_DT / track.hands.pushResponseTime);
         let state = start;
         let t = 0;
         let differ = 0;
         let largest = 0;
+        let sensed = 0;
         for (const s of snapshots) {
             const load = handLoad(track, state, TEST_HEAD, t, grip);
             const hand = s.hand as NonNullable<ImpactSnapshot["hand"]>;
@@ -778,18 +806,21 @@ describe("the push intent (P2b.2b.2b.2b gate ruling 2026-10-11)", () => {
                     onHead = sub(onHead, add(scale(c.normal, c.normalForce), c.tangentialForce));
                 }
             }
-            grip.resistance = fromBalls ? Math.max(0, 0 - dot(track.arc.aim, onHead)) : 0;
-            largest = Math.max(largest, grip.resistance);
+            const resistance = fromBalls ? Math.max(0, 0 - dot(track.arc.aim, onHead)) : 0;
+            grip.resistance = grip.resistance + (resistance - grip.resistance) * response;
+            largest = Math.max(largest, resistance);
+            sensed = Math.max(sensed, grip.resistance);
             state = s.head;
             t = s.t;
         }
-        return { differ, largest };
+        return { differ, largest, sensed };
     }
     const same = (a: Vec3, b: Vec3): boolean => Object.is(a.x, b.x) && Object.is(a.y, b.y) && Object.is(a.z, b.z);
 
-    it("takes R from the balls' push on the head at the last step", () => {
-        // A 3 m/s carry, gravity off, into a free ball: every step's hands match a replay that sets R from the step's
-        // head–ball contacts, and the ball resists past the cap; with R held at 0 they would not.
+    it("follows the balls' push on the head through the lag", () => {
+        // A 3 m/s carry, gravity off, into a free ball: every step's hands match a replay whose R̃ follows the steps'
+        // head–ball contacts through the lag; the ball resists past the cap, R̃ far less (the blow is over in about
+        // 1.3 ms against τ 30 ms); with R̃ held at 0 the hands would differ.
         const ball = vec3(0, 0, 1);
         const start = vec3(ball.x - R - 1e-6 - TEST_HEAD.length / 2, 0, ball.z);
         const omega0 = 3 / (0.8 + TEST_HEAD.socket.z);
@@ -798,9 +829,11 @@ describe("the push intent (P2b.2b.2b.2b gate ruling 2026-10-11)", () => {
         const probe = recorder();
         const head = headOnPath(track, TEST_HEAD, 0);
         integrate(isolated({ start: head, drive: track, balls: [freeBall("blue", ball)] }), { probe, cap: 3e-3 });
-        const { differ, largest } = replay(track, head, probe.snapshots);
+        const { differ, largest, sensed } = replay(track, head, probe.snapshots);
         expect(differ).toBe(0);
         expect(largest).toBeGreaterThan(TEST_PUSH_FORCE);
+        expect(sensed).toBeGreaterThan(0);
+        expect(sensed).toBeLessThan(0.1 * largest);
         expect(replay(track, head, probe.snapshots, false).differ).toBeGreaterThan(0);
     });
 
@@ -816,9 +849,10 @@ describe("the push intent (P2b.2b.2b.2b gate ruling 2026-10-11)", () => {
         integrate(isolated({ start, drive: track, gravity: STANDARD_GRAVITY, headTurf: turf }), { probe, cap: 5e-3 });
         const back = Math.min(...probe.snapshots.map((s) => dot(s.headTurf ?? ZERO, track.arc.aim)));
         expect(back).toBeLessThan(-1);
-        const { differ, largest } = replay(track, start, probe.snapshots);
+        const { differ, largest, sensed } = replay(track, start, probe.snapshots);
         expect(differ).toBe(0);
         expect(largest).toBe(0);
+        expect(sensed).toBe(0);
     });
 });
 

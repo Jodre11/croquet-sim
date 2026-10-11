@@ -7,7 +7,8 @@
  * (carry mode). The dip lowers the pivot from rest to rest. In carry mode after contact the pivot travels the hands'
  * arc and stops at the push length (P2b.2b.2b.2b design §4.1), and the hands flex to an intended path that starts from
  * the actual grips, then swing the mallet through the pendulum phase (carryLoad; P2b.2b.2b.2b design §3, §4). Through
- * the push they also push along aim against the balls' resistance, capped (pushIntent; gate ruling 2026-10-11).
+ * the push they also push along aim against the balls' resistance, at the muscles' pace and capped (pushIntent; gate
+ * ruling 2026-10-11).
  * Everything is continuous in position and velocity.
  *
  * Frames. n = aim × ẑ is the pitch axis: a positive rotation about it tilts aim upward. The head is rigid on the shaft,
@@ -16,7 +17,7 @@
  * §3.3). Exact operations only (sinCos and atan2 from elementary.ts), like the rest of the engine.
  */
 import { contactReference } from "../../reference/index";
-import { atan2, sinCos } from "../math/elementary";
+import { atan2, exp, sinCos } from "../math/elementary";
 import { ZERO, add, cross, dot, length, scale, sub, vec3, type Vec3 } from "../math/vec3";
 import { flexForce, flexGains } from "./flex";
 import { multiply, rotate, rotateInverse, type Quaternion } from "./rigidBody";
@@ -47,6 +48,9 @@ export const PENDULUM_FORCE = contactReference.pendulumForce.value;
 
 /** F_push (N, gate ruling 2026-10-11): the cap on the hands' push intent in carry mode (reference/contact.json). */
 export const PUSH_FORCE = contactReference.pushForce.value;
+
+/** τ_push (s, gate ruling amendment 2026-10-11): the push intent's response time constant (reference/contact.json). */
+export const PUSH_RESPONSE_TIME = contactReference.pushResponseTime.value;
 
 /**
  * Step (s) of the free pendulum's table (design §3.2): the impact's own step, so the table resolves the swing as
@@ -825,10 +829,10 @@ export interface FlexStart {
  * reach in swing mode; at the pendulum phase's start in carry mode) and the shaft's turn since relaxAt then. In carry
  * mode also where the flex took hold, each hand's last stiffness (N/m; the bottom hand's 0 once it has let go),
  * whether the shaft has passed vertical in the pendulum phase (the bottom hand is then off the mallet) and whether
- * the head has pitched forward in it (the next apex is the finish; P2b.2b.2b.2b design §4.2, §4.3), and the balls'
- * resistance R (N) at the last step: max(0, −aim·F_balls), F_balls their total force on the head, which the integrator
- * writes in carry mode after each step's contacts and the push intent reads (gate ruling 2026-10-11). Mutable;
- * handLoad updates it.
+ * the head has pitched forward in it (the next apex is the finish; P2b.2b.2b.2b design §4.2, §4.3), and the hands'
+ * sensed resistance R̃ (N): the balls' resistance R = max(0, −aim·F_balls), F_balls their total force on the head,
+ * followed through a first-order lag (senseResistance), which the integrator updates in carry mode after each step's
+ * contacts and the push intent reads (gate ruling 2026-10-11 and its amendment). Mutable; handLoad updates it.
  */
 export interface GripState {
     contactPitch: number | null;
@@ -858,9 +862,22 @@ export function newGripState(): GripState {
 }
 
 /**
- * Carry mode's push intent at time t (gate ruling 2026-10-11): through the push, until the pendulum phase starts, the
- * hands push along aim with the balls' resistance at the last step, up to the arm's push: P = min(R, F_push)·aim.
- * Null where it is nil: no resistance, or in the pendulum phase.
+ * The share of the gap between the balls' resistance and the hands' sensed resistance that one step of `dt` (s)
+ * closes (gate ruling amendment, 2026-10-11): 1 − exp(−dt/τ_push), the muscles' first-order force rise.
+ */
+export function pushResponse(hands: Hands, dt: number): number {
+    return 1 - exp(0 - dt / hands.pushResponseTime);
+}
+
+/** The hands' sensed resistance R̃ (N) after one step: `sensed` moved towards the balls' `resistance` by `response`. */
+export function senseResistance(sensed: number, resistance: number, response: number): number {
+    return sensed + (resistance - sensed) * response;
+}
+
+/**
+ * Carry mode's push intent at time t (gate ruling 2026-10-11 and its amendment): through the push, until the pendulum
+ * phase starts, the hands push along aim with the balls' resistance as they sense it (R̃, lagged at the muscles'
+ * pace), up to the arm's push: P = min(R̃, F_push)·aim. Null where it is nil: no resistance, or in the pendulum phase.
  */
 function pushIntent(track: PreparedTrack, t: number, grip: GripState): Vec3 | null {
     const push = track.push as Push;

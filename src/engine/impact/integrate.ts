@@ -27,8 +27,9 @@
  * is neither closing on any ball within reach (headClosing) nor would reach one ahead of its face within LOOK_AHEAD:
  * a re-contact is integrated, not flagged. In carry mode it also waits until the hands have started the pendulum
  * phase. Its cap is TRACK_IMPACT_CAP after the planned contact. In carry mode each step, once its contacts are
- * resolved, records the balls' resistance along aim (their total force on the head) for the hands' push intent on the
- * next step (track.ts; gate ruling 2026-10-11).
+ * resolved, moves the hands' sensed resistance towards the balls' resistance along aim (their total force on the head)
+ * at the muscles' pace, for the hands' push intent on the next step (track.ts; gate ruling 2026-10-11 and its
+ * amendment).
  *
  * A tracked drive's face–ball pairs meet the whole head, a solid cylinder (contacts.ts headBallContact; P2b.2b.1
  * design §4.5): each also records its intervals per region of the head, and a contact off the face raises
@@ -100,6 +101,8 @@ import {
     holdPendulum,
     newGripState,
     pathAt,
+    pushResponse,
+    senseResistance,
     type GripState,
     type HandLoad,
     type PreparedTrack,
@@ -871,6 +874,7 @@ export function integrateStroke(setup: ImpactSetup, options: ImpactOptions = {},
     const hasTurf = setup.balls.map((b) => b.turf !== null);
     const tracked = plan.kind === "track";
     const carry = plan.kind === "track" && plan.arc.mode === "carry";
+    const response = carry ? pushResponse(plan.hands, dt) : 0;
     const pairs: PairState[] = pairList(
         ids,
         hasTurf,
@@ -1017,9 +1021,11 @@ export function integrateStroke(setup: ImpactSetup, options: ImpactOptions = {},
             recordStep(p.line, true, force, t);
             recordRegions(p.regions, hit === null ? null : hit.region, force, t);
         }
-        // The balls' resistance along aim, which the hands' push intent reads next step (gate ruling 2026-10-11).
+        // The balls' resistance along aim, which the hands sense at the muscles' pace and their push intent reads from
+        // the next step (gate ruling 2026-10-11 and its amendment).
         if (loads.ballsOnHead !== null && plan.kind === "track") {
-            grip.resistance = Math.max(0, 0 - dot(plan.arc.aim, loads.ballsOnHead));
+            const resistance = Math.max(0, 0 - dot(plan.arc.aim, loads.ballsOnHead));
+            grip.resistance = senseResistance(grip.resistance, resistance, response);
         }
 
         // The head–turf pair comes after every other pair (design §4.1).

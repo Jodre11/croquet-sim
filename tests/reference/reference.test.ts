@@ -158,6 +158,7 @@ describe("swing, coupling and head–turf reference data", () => {
             armEndpointMass: "kg",
             pendulumForce: "N",
             pushForce: "N",
+            pushResponseTime: "s",
         } as const;
         for (const [key, unit] of Object.entries(arm)) {
             const value = contactReference[key as keyof typeof arm];

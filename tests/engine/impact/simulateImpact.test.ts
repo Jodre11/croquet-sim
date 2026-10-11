@@ -527,6 +527,12 @@ describe("simulateImpact with a tracked drive", () => {
         ["no pendulum force", withHands({ pendulumForce: 0 }), /hands\.pendulumForce must be a positive/],
         ["no push force", withHands({ pushForce: 0 }), /hands\.pushForce must be a positive/],
         ["an infinite push force", withHands({ pushForce: Infinity }), /hands\.pushForce must be finite/],
+        ["no push response time", withHands({ pushResponseTime: 0 }), /hands\.pushResponseTime must be a positive/],
+        [
+            "an infinite push response time",
+            withHands({ pushResponseTime: Infinity }),
+            /hands\.pushResponseTime must be finite/,
+        ],
         [
             "a pivot velocity out of the swing plane",
             withArc({ pivotVelocity: vec3(0, 0.1, 0) }),

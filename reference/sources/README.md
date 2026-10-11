@@ -215,3 +215,24 @@ capped"). Fetched 2026-10-11 with `curl -sS -L`; the digest is of the raw PDF. M
   10.47836/mjmhs.18.5.15, measures one, but its journal host did not answer and its PDF link returned 404. Seo and
   Armstrong's push studies (*Ergonomics* 2009, seated; 2010) returned no full text from Europe PMC (HTTP 500). One
   arm's push therefore caps the two hands' together.
+
+The amendment (user, 2026-10-11: "The hands are primed and the brain is expecting the resistance but they are still
+human hands") adds `pushResponseTime`, τ_push, at which the hands' sensed resistance follows the balls'. The rule
+takes a voluntary force rise from force onset (no reflex latency), not a reflex loop's delay.
+
+| Short name | Work | URL | SHA-256 |
+|---|---|---|---|
+| Augustsson | Augustsson, Gunhamn and Andersson, "Relationship Between Early and Maximal Isometric Upper-Body Push and Pull Force Production Among Elite Female and Male Swedish Track and Field Throwers", *Sports* 13(7):226 (2025), DOI 10.3390/sports13070226 | https://www.ebi.ac.uk/europepmc/webservices/rest/PMC12300538/fullTextXML | `d2df6c4d784f29551977e6564dcd9ff8e0b624da348f4628411947e2a696c588` |
+
+- Augustsson, method: 17 female and 13 male elite throwers; an isometric bench press (push) at 50 % of the range of
+  motion, both hands on the bar, "instructions to exert maximal force against the bar as quickly and forcefully as
+  possible for 4 s"; "Force onset was manually identified … following the protocol described by Tillin et al.".
+- Table 2, "Force @ 50 ms, %" to "Force @ 250 ms, %" of peak, bench press: females 39, 60, 72, 80, 84; males 37, 56,
+  66, 72, 77. The time to 1 − 1/e (63.2 %) of peak, linear between 100 and 150 ms, is 113.4 ms (females) and 136.1 ms
+  (males); `pushResponseTime` is their mean, 124.7 ms, rounded to 0.125 s. Its bounds are τ = −t/ln(1 − F(t)/F_peak)
+  at each reported time, 101.2 ms (females at 50 ms) to 170.1 ms (males at 250 ms): the rise slows, so it is not
+  exactly exponential.
+- Not used: Sensors 18:1004 (2018, PMC5948752) quotes activation time constants of "5–40 ms" for the elbow muscles,
+  from models (Winters and Stark 1985; Stroeve 1999), not a measured voluntary force rise; Maffiuletti et al.,
+  *Eur. J. Appl. Physiol.* 116:1091 (2016, PMC4875063), a review, gives an electromechanical delay of "<13 ms for
+  voluntary contractions" and no time constant.

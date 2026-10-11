@@ -160,8 +160,8 @@ export const frictionReference = {
 
 /**
  * Impact-phase contact data: turf stiffness, contact durations, the tangential ratio, Gugan's face fits, the hand
- * coupling, the default body's arm mass and reach slack, the head–turf pair, and the arm's flex, pendulum push and
- * push (P2b.2b.2b.2b).
+ * coupling, the default body's arm mass and reach slack, the head–turf pair, and the arm's flex, pendulum push, push
+ * and push response time (P2b.2b.2b.2b).
  */
 export const contactReference = {
     ballTurfStiffness: readValue(contactJson, "ballTurfStiffness", "contact"),
@@ -185,6 +185,7 @@ export const contactReference = {
     armEndpointMass: readValue(contactJson, "armEndpointMass", "contact"),
     pendulumForce: readValue(contactJson, "pendulumForce", "contact"),
     pushForce: readValue(contactJson, "pushForce", "contact"),
+    pushResponseTime: readValue(contactJson, "pushResponseTime", "contact"),
 } as const;
 
 /** One mallet face, one typical round head and the default shaft (P2b.1, P2b.2b.1). */
