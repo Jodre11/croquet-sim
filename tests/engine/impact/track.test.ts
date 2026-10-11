@@ -5,6 +5,7 @@ import {
     FREE_SPAN,
     FREE_STEP,
     aimRotation,
+    carryBody,
     downswingAt,
     downswingHands,
     downswingSamples,
@@ -296,11 +297,13 @@ describe("the swing path", () => {
     });
 
     it("gives each grip its gains: firm, the top hand's γ_T and the bottom hand's g_B", () => {
-        // Swing mode, whose swung body carries the arm mass; a carry's is the head alone, its hands' own masses on
-        // their grip tissue replacing the arm mass (P2b.2b.2b.2b gate round 2 ruling, 2026-10-11).
+        // Swing mode, whose swung body carries the arm mass; a carry's is the head with the hands' skin at the grips,
+        // its hand–arm chains replacing the arm mass (P2b.2b.2b.2b gate round 3 ruling, 2026-10-11).
         const hands: Hands = { ...ARMED, gripTension: 0.1, bottomGrip: 0.25 };
         const t = prepare({ ...TIMED, mode: "swing" }, hands);
-        expect(prepare(TIMED, hands).body).toEqual({ mass: TEST_HEAD.mass, inertia: TEST_HEAD.inertia, offset: 0 });
+        const carried = prepare(TIMED, hands);
+        expect(carried.body).toEqual(carryBody(TEST_HEAD, hands.chain, TIMED.radius, hands.bottom));
+        expect(carried.released).toEqual(carryBody(TEST_HEAD, hands.chain, TIMED.radius, null));
         const rate = (2 * Math.PI) / TEST_COUPLING.period;
         const zeta = TEST_COUPLING.dampingRatio;
         const M = 1.8;

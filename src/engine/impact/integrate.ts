@@ -96,7 +96,7 @@ import {
     type FreshBed,
 } from "./turfBed";
 import {
-    advanceHands,
+    advanceChains,
     handLoad,
     handsAt,
     holdPendulum,
@@ -104,9 +104,12 @@ import {
     pathAt,
     pushResponse,
     senseResistance,
+    swungOf,
+    type ArmChain,
+    type ArmChainState,
+    type ChainMassState,
     type GripState,
     type HandLoad,
-    type HandMassState,
     type PreparedTrack,
     type SwungBody,
 } from "./track";
@@ -269,15 +272,15 @@ export interface ImpactSnapshot {
     readonly contacts: readonly ContactSample[];
     /**
      * A tracked drive's F, its feed-forward parts and each hand's force (P2b.2b.1 design §3.7); absent otherwise. In
-     * carry mode once the flex has taken hold, also each hand mass after the step (gate round 2 ruling, 2026-10-11;
-     * the bottom's null once it has let go).
+     * carry mode once the flex has taken hold, also each hand–arm chain's masses after the step (gate round 3 ruling,
+     * 2026-10-11; the bottom's null once it has let go).
      */
     readonly hand?: {
         readonly force: Vec3;
         readonly feedForward: Vec3;
         readonly top: Vec3;
         readonly bottom: Vec3;
-        readonly masses?: { readonly top: HandMassState | null; readonly bottom: HandMassState | null };
+        readonly chains?: { readonly top: ArmChainState | null; readonly bottom: ArmChainState | null };
     };
     /** The turf's total force on the head (zero while the pair is open); absent without the head–turf pair. */
     readonly headTurf?: Vec3;
@@ -361,16 +364,19 @@ function finished(kind: FinishKind, plan: PreparedTrack, state: HeadState, t: nu
 }
 
 /**
- * The probe's copy of `grip`'s hand masses (gate round 2 ruling, 2026-10-11): nothing before the flex takes hold, so a
- * swing-mode snapshot keeps its shape.
+ * The probe's copy of `grip`'s hand–arm chains (gate round 3 ruling, 2026-10-11): nothing before the flex takes hold,
+ * so a swing-mode snapshot keeps its shape.
  */
-function massesOf(grip: GripState): { readonly masses?: NonNullable<ImpactSnapshot["hand"]>["masses"] } {
-    if (grip.topHand === null) {
+function chainsOf(grip: GripState): { readonly chains?: NonNullable<ImpactSnapshot["hand"]>["chains"] } {
+    if (grip.topChain === null) {
         return {};
     }
-    const copy = (hand: HandMassState | null): HandMassState | null =>
-        hand === null ? null : { position: hand.position, velocity: hand.velocity };
-    return { masses: { top: copy(grip.topHand), bottom: copy(grip.bottomHand) } };
+    const mass = (m: ChainMassState): ChainMassState => ({ position: m.position, velocity: m.velocity });
+    const copy = (arm: ArmChain | null): ArmChainState | null =>
+        arm === null
+            ? null
+            : { forearm: mass(arm.forearm), hand: mass(arm.hand), fingers: mass(arm.fingers), preload: arm.preload };
+    return { chains: { top: copy(grip.topChain), bottom: copy(grip.bottomChain) } };
 }
 
 /** The drive at time t: linear between samples, the last sample's force at its own time, and zero after it. */
@@ -648,7 +654,7 @@ function stepSwung(state: HeadState, loads: StepLoads, body: SwungBody, dt: numb
 /**
  * One semi-implicit Euler step of every body under `loads`: velocities from the forces, then positions (and the head's
  * orientation) from the new velocities. Returns the head's new state, replaces each ball's in `balls` and adds each
- * ball's horizontal path length this step to `travel`.
+ * ball's horizontal path length this step to `travel`. A tracked drive's swung body is the one `grip` gives (swungOf).
  */
 function advance(
     state: HeadState,
@@ -658,9 +664,11 @@ function advance(
     setup: ImpactSetup,
     ballInertia: number,
     dt: number,
+    grip: GripState,
 ): HeadState {
     const { head, ball, drive } = setup;
-    const next = drive.kind === "force" ? stepHead(state, loads, head, dt) : stepSwung(state, loads, drive.body, dt);
+    const next =
+        drive.kind === "force" ? stepHead(state, loads, head, dt) : stepSwung(state, loads, swungOf(drive, grip), dt);
     for (let i = 0; i < balls.length; i++) {
         const s = balls[i] as BallState;
         const v = add(s.velocity, scale(loads.forces[i] as Vec3, dt / ball.mass));
@@ -1060,10 +1068,10 @@ export function integrateStroke(setup: ImpactSetup, options: ImpactOptions = {},
         }
         guardFootprints(balls, beds, R, ids);
 
-        state = advance(state, balls, travel, loads, setup, ballInertia, dt);
-        // Carry mode's hand masses step with the head, under the forces handLoad gave them (gate round 2 ruling).
+        state = advance(state, balls, travel, loads, setup, ballInertia, dt, grip);
+        // Carry mode's hand–arm chains step with the head, under the forces handLoad gave them (gate round 3 ruling).
         if (carry && plan.kind === "track") {
-            advanceHands(grip, plan.hands, dt);
+            advanceChains(grip, plan.hands.chain, dt);
         }
         for (const bed of beds) {
             if (bed !== null) {
@@ -1100,7 +1108,7 @@ export function integrateStroke(setup: ImpactSetup, options: ImpactOptions = {},
                                         feedForward: hand.feedForward,
                                         top: hand.top,
                                         bottom: hand.bottom,
-                                        ...massesOf(grip),
+                                        ...chainsOf(grip),
                                     },
                                 }),
                           ...(turf === null ? {} : { headTurf: turfForce ?? ZERO }),
@@ -1205,9 +1213,9 @@ function continueStroke(
         if (ground !== null) {
             applyHeadTurf(ground, state, head, dt, loads, t, null);
         }
-        state = advance(state, none, [], loads, setup, 0, dt);
+        state = advance(state, none, [], loads, setup, 0, dt, grip);
         if (kind === "carry") {
-            advanceHands(grip, plan.hands, dt);
+            advanceChains(grip, plan.hands.chain, dt);
             grip.resistance = senseResistance(grip.resistance, 0, response);
         }
         steps++;

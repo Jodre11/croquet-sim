@@ -27,6 +27,7 @@ import type {
     FaceLaw,
     FaceMaterial,
     FlexLaw,
+    HandChain,
     Hands,
     HeadState,
     MalletHead,
@@ -66,16 +67,31 @@ export const TEST_PUSH_FORCE = 100;
 /** A plausible, unsourced time constant (s) of the push intent's response (gate ruling amendment, 2026-10-11). */
 export const TEST_PUSH_RESPONSE_TIME = 0.03;
 
-/** A plausible, unsourced hand mass (kg) on its grip tissue (P2b.2b.2b.2b gate round 2 ruling, 2026-10-11). */
-export const TEST_HAND_MASS = 0.3;
+/**
+ * A plausible, unsourced hand–arm chain (P2b.2b.2b.2b gate round 3 ruling, 2026-10-11), in kg, N/m and N·s/m: forearm
+ * 0.3, hand 0.2, fingers 0.08, each skin 0.015; wrist 10⁴ and 40, knuckle 4000 and 60, palm 4·10⁴ and 60, fingers 10⁵
+ * and 70.
+ */
+export const TEST_CHAIN: HandChain = {
+    forearmMass: 0.3,
+    handMass: 0.2,
+    fingerMass: 0.08,
+    palmSkinMass: 0.015,
+    fingerSkinMass: 0.015,
+    wristStiffness: 1e4,
+    wristDamping: 40,
+    knuckleStiffness: 4000,
+    knuckleDamping: 60,
+    palmStiffness: 4e4,
+    palmDamping: 60,
+    fingerStiffness: 1e5,
+    fingerDamping: 70,
+};
 
-/** A plausible, unsourced grip tissue stiffness (N/m). */
-export const TEST_GRIP_STIFFNESS = 3e4;
-
-/** A plausible, unsourced grip tissue damping (N·s/m). */
-export const TEST_GRIP_DAMPING = 100;
-
-/** Two firm hands with no arm mass, so the swung body is the head and head-only closed forms hold; a full guide. */
+/**
+ * Two firm hands with no arm mass, so a swing-mode swung body is the head and head-only closed forms hold (a carry's
+ * also carries the chains' skin); a full guide.
+ */
 export const TEST_HANDS: Hands = {
     bottom: 0.4,
     gripTension: 1,
@@ -87,9 +103,7 @@ export const TEST_HANDS: Hands = {
     pendulumForce: TEST_PENDULUM_FORCE,
     pushForce: TEST_PUSH_FORCE,
     pushResponseTime: TEST_PUSH_RESPONSE_TIME,
-    handMass: TEST_HAND_MASS,
-    gripStiffness: TEST_GRIP_STIFFNESS,
-    gripDamping: TEST_GRIP_DAMPING,
+    chain: TEST_CHAIN,
 };
 
 /** A dip of no depth. */

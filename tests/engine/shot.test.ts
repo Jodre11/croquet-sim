@@ -190,21 +190,24 @@ describe("simulateShot", () => {
     // raises the sensed resistance to 15–19 N, which then eases off through the push, so the head keeps a small
     // forward push between taps. P2b.2b.2b.2b: fast impedance (was 4.89 mm at 38.9 ms): each hand's mass on its grip
     // tissue takes part of the blow (the top tissue peaks at 102 N at 1.2 ms), and the striker's ball rises at most
-    // 1.88 mm above R at 32.4 ms (two face intervals).
+    // 1.88 mm above R at 32.4 ms (two face intervals). P2b.2b.2b.2b: arm chain (was 1.88 mm at 32.4 ms): 2.24 mm at
+    // 31.3 ms, three face intervals.
     it("runs the full-roll canonical setup with no entry jump and no ball above R + 5 mm", () => {
         lowFlight("full-roll");
     });
 
-    // P2b.2b.2b.2b: awaits the pre-flight gate (Task 6; fast impedance, gate round 2). The half roll's face meets the
-    // striker's ball twice (0.0–1.4 and 6.3–7.8 ms), and the ball still rises past R + 5 mm within the impact: 5.78 mm
-    // at 45.9 ms (7.28 mm at 47.1 ms with the push intent, gate round 1; 10.15 mm at 53 ms before it).
-    it.skip("runs the half-roll canonical setup with no entry jump and no ball above R + 5 mm", () => {
+    // P2b.2b.2b.2b: arm chain (was skipped at the pre-flight gate: 5.78 mm at 45.9 ms with the hands' mass and grip
+    // tissue, 7.28 mm with the push intent, 10.15 mm before it). With each hand–arm chain the half roll's face meets
+    // the striker's ball three times (0.0–1.4, 7.3–8.8 and 25.0–26.7 ms), and the ball rises at most 3.74 mm above R
+    // at 26.0 ms.
+    it("runs the half-roll canonical setup with no entry jump and no ball above R + 5 mm", () => {
         lowFlight("half-roll");
     });
 
-    // P2b.2b.2b.2b: awaits the pre-flight gate (Task 6; fast impedance, gate round 2). Un-skipped by the push intent
-    // (4.61 mm at 53.2 ms, five face intervals), the pass roll fails again with the hands' mass and grip tissue: three
-    // face intervals (0.0–1.3, 4.4–5.9 and 7.0–17.0 ms), and the striker's ball rises 9.70 mm above R at 66.8 ms.
+    // P2b.2b.2b.2b: awaits the pre-flight gate (Task 6; arm chain, gate round 3). Un-skipped by the push intent (4.61
+    // mm), re-skipped with the hands' mass and grip tissue (9.70 mm at 66.8 ms), the pass roll still fails with each
+    // hand–arm chain: five face intervals (0.0–1.2, 5.6–7.0, 9.9–11.6, 13.3–15.4 and 15.7–26.5 ms), and the striker's
+    // ball is 14.52 mm above R at the impact's end (83.1 ms), its highest.
     it.skip("runs the pass-roll canonical setup with no entry jump and no ball above R + 5 mm", () => {
         lowFlight("pass-roll");
     });
@@ -275,7 +278,8 @@ describe("simulateShot", () => {
     // from the strike the soft flex let the head pitch back, so at the pendulum phase's start it was still pitching
     // back; it swung back, then forward onto the turf, its pitch rate still positive at FOLLOW_CAP (with the push
     // intent, gate round 1, all but at its apex: θ +0.180 rad, rising at 0.007 rad/s). With the hands' mass and grip
-    // tissue (gate round 2) it reaches its apex at 953.7 ms, 46 ms short of the cap.
+    // tissue (gate round 2) it reaches its apex at 953.7 ms, 46 ms short of the cap. P2b.2b.2b.2b: arm chain (was
+    // 953.7 ms): 894.4 ms, θ +0.298 rad.
     it("runs the half-roll canonical setup from the top to its finish (exit criterion 3)", () => {
         runsToFinish("half-roll");
     });
@@ -497,7 +501,7 @@ describe("the mechanisms (design §8.1), on the canonical setups", () => {
         // turf bed (was 1.894 and 0.29): 0.038 m/s at drive +1, 0.088 m/s at drive 0, both pinned.
         // P2b.2b.2b.2b: hands' arc (was it.fails): 1.2170 and 1.1300 m/s. P2b.2b.2b.2b: flex (was 1.2170 and
         // 1.1300): 1.8786 and 1.6386 m/s; Task 8 confirms it. P2b.2b.2b.2b: push intent and fast impedance (was 1.8786
-        // and 1.6386): 1.7016 and 1.2624 m/s.
+        // and 1.6386): 1.7016 and 1.2624 m/s. P2b.2b.2b.2b: arm chain (was 1.7016 and 1.2624): 1.8493 and 1.2824 m/s.
         const punched = simulateShot(canonicalSetup("pass-roll")).impact;
         const coasted = simulateShot(canonicalSetup("pass-roll", { stroke: { drive: 0 } })).impact;
         expect(strikerSpeed(punched)).toBeGreaterThan(strikerSpeed(coasted));

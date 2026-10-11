@@ -75,9 +75,7 @@ function caseOf(type: StrokeType): Case {
             pendulumForce: defaultProfile.body.pendulumForce,
             pushForce: defaultProfile.body.pushForce,
             pushResponseTime: defaultProfile.body.pushResponseTime,
-            handMass: defaultProfile.body.handMass,
-            gripStiffness: defaultProfile.body.gripStiffness,
-            gripDamping: defaultProfile.body.gripDamping,
+            chain: defaultProfile.body.chain,
         },
         mode: defaultProfile.drive[type].mode,
         arrival:

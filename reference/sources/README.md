@@ -269,3 +269,27 @@ in series with the arm's slow flex. The source behind `reference/contact.json`'s
   (0.297 kg, 162,586 N/m, 129.7 N·s/m), and the proposed ISO 10068 revision's 5-DOF (Table 3: 0.4574 kg, 69,844 N/m,
   210.1 N·s/m; "the palm contact stiffness (K3) in the model for the xh or yh direction is unrealistically much lower
   than that in the new model").
+
+The round 3 ruling (user, 2026-10-11, "Full arm chain") replaces the lumped hand by the same model's whole chain,
+un-lumped: `forearmMass` M0, `handMass` M1, `fingerMass` M2, `palmSkinMass` M3, `fingerSkinMass` M4,
+`shoulderStiffness`/`shoulderDamping` K0/C0, `wristStiffness`/`wristDamping` K1/C1, `knuckleStiffness`/`knuckleDamping`
+K2/C2, `palmStiffness`/`palmDamping` K3/C3 and `fingerStiffness`/`fingerDamping` K4/C4, each from the same file (no new
+fetch), x_h, mean property-based (Table 2), provenance "direct".
+
+- The topology, from the text: "The upper portions of the diagrams represent the fingers positioned on one side of the
+  handle, and are simulated using two masses (M4 and M2) coupled via linear stiffness (K4) and viscous damping (C4)";
+  "The lower portions of the diagrams constitute the palm–wrist–forearm substructures represented by two masses (M3
+  and M1) coupled via K3 and C3"; "A group of spring–damper elements (K1 and C1 in the 4-DOF and K0 and C0 in the 5-DOF)
+  was used to represent the boundary condition of each model"; in x_h and y_h "flexible connectors are required to link
+  the effective masses of the palm and hand dorsum to that of the forearm ... the effective mass of the wrist and
+  forearm is represented by M0 in the 5-DOF model"; K2, C2 is "a connection with very little stiffness (K2) but
+  relatively large damping (C2) between the fingers and the hand dorsum". So: ground–K0–M0–K1–M1–K3–M3 (handle) and
+  M1–K2–M2–K4–M4 (handle). The figures themselves were not read (the PDF's text layer has no drawing); the topology is
+  confirmed by its undamped natural frequencies with the handle held, 26.7, 90.8 and 188.3 Hz, against Table 2's f0,
+  f1, f2 of 26.7, 90.9 and 188.5 Hz (and the response-based set's 22.6, 80.3, 191.2 Hz, exactly Table 1's).
+- Table 2, x_h, Property: M0 0.344, M1 0.178, M2 0.081, M3 0.015, M4 0.016 kg; K0 1611, K1 9988, K2 3991, K3 43,205,
+  K4 109,271 N/m; C0 12.8, C1 36.0, C2 56.2, C3 57.0, C4 65.8 N s/m.
+- Bounds: each parameter over the paper's three x_h 5-DOF sets, the response-based (Table 1), the property-based
+  (Table 2) and the proposed ISO revision's (Table 3).
+- K0 and C0 are recorded but not used by the engine: the arm's measured slow flex (`armStiffness`, Fortineau) is the
+  same path from the forearm to the body, so it takes their place rather than sit in series with them.

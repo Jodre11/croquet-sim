@@ -11,7 +11,7 @@
  * The product spec's grip style, weighting and face material have no engine reader yet.
  */
 import type { HoopTarget } from "../hoopRun";
-import type { FlexLaw, StrokeMode } from "../impact/types";
+import type { FlexLaw, HandChain, StrokeMode } from "../impact/types";
 import type { BallId, BallStates } from "../types";
 
 /** The strokes the swing model plays. */
@@ -104,8 +104,7 @@ export interface SwingProfile {
     };
     /**
      * The player's body: the arm mass at the top grip (kg), the reach slack (m), the arm's flex, pendulum push and push
-     * (the push intent's cap, N, and its response time constant, s), and each hand's mass (kg) on its grip tissue's
-     * stiffness (N/m) and damping (N·s/m).
+     * (the push intent's cap, N, and its response time constant, s), and each hand's and arm's hand–arm chain.
      */
     readonly body: {
         readonly armMass: number;
@@ -114,9 +113,7 @@ export interface SwingProfile {
         readonly pendulumForce: number;
         readonly pushForce: number;
         readonly pushResponseTime: number;
-        readonly handMass: number;
-        readonly gripStiffness: number;
-        readonly gripDamping: number;
+        readonly chain: HandChain;
     };
     readonly stance: Readonly<Record<StrokeType, SwingStance>>;
     readonly drive: Readonly<Record<StrokeType, SwingDrive>>;

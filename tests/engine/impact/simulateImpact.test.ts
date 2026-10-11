@@ -21,6 +21,7 @@ import { bedLawOf, staticSink } from "../../../src/engine/impact/turfBed";
 import type { ContactState, Coupling, Hands, StrokeMode, SwingArc, TrackDrive } from "../../../src/engine/impact/types";
 import { TEST_BALL, TEST_TURF, ballAt, hoopWithUprightAt, testWorld } from "../support/fixtures";
 import {
+    TEST_CHAIN,
     TEST_FLEX,
     TEST_HEAD,
     drive,
@@ -533,12 +534,21 @@ describe("simulateImpact with a tracked drive", () => {
             withHands({ pushResponseTime: Infinity }),
             /hands\.pushResponseTime must be finite/,
         ],
-        ["no hand mass", withHands({ handMass: 0 }), /hands\.handMass must be a positive/],
-        ["an infinite hand mass", withHands({ handMass: Infinity }), /hands\.handMass must be finite/],
-        ["no grip stiffness", withHands({ gripStiffness: 0 }), /hands\.gripStiffness must be a positive/],
-        ["an infinite grip stiffness", withHands({ gripStiffness: Infinity }), /hands\.gripStiffness must be finite/],
-        ["no grip damping", withHands({ gripDamping: 0 }), /hands\.gripDamping must be a positive/],
-        ["an infinite grip damping", withHands({ gripDamping: Infinity }), /hands\.gripDamping must be finite/],
+        [
+            "a chain with no hand mass",
+            withHands({ chain: { ...TEST_CHAIN, handMass: 0 } }),
+            /hands\.chain\.handMass must be a positive/,
+        ],
+        [
+            "a chain with an infinite wrist stiffness",
+            withHands({ chain: { ...TEST_CHAIN, wristStiffness: Infinity } }),
+            /hands\.chain\.wristStiffness must be finite/,
+        ],
+        [
+            "a chain with no knuckle damping",
+            withHands({ chain: { ...TEST_CHAIN, knuckleDamping: 0 } }),
+            /hands\.chain\.knuckleDamping must be a positive/,
+        ],
         [
             "a pivot velocity out of the swing plane",
             withArc({ pivotVelocity: vec3(0, 0.1, 0) }),

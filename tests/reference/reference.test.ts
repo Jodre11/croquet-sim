@@ -150,7 +150,7 @@ describe("swing, coupling and head–turf reference data", () => {
         expect(contactReference.reachSlack.unit).toBe("m");
     });
 
-    it("loads the arm's flex, push and the hands' tissue, each positive within its bounds (P2b.2b.2b.2b §3.2)", () => {
+    it("loads the arm's flex, push and the hand–arm chain, each positive within its bounds (P2b.2b.2b.2b §3.2)", () => {
         const arm = {
             armStiffness: "N/m",
             armStiffnessPerForce: "1/m",
@@ -159,9 +159,21 @@ describe("swing, coupling and head–turf reference data", () => {
             pendulumForce: "N",
             pushForce: "N",
             pushResponseTime: "s",
+            forearmMass: "kg",
             handMass: "kg",
-            gripStiffness: "N/m",
-            gripDamping: "N·s/m",
+            fingerMass: "kg",
+            palmSkinMass: "kg",
+            fingerSkinMass: "kg",
+            shoulderStiffness: "N/m",
+            shoulderDamping: "N·s/m",
+            wristStiffness: "N/m",
+            wristDamping: "N·s/m",
+            knuckleStiffness: "N/m",
+            knuckleDamping: "N·s/m",
+            palmStiffness: "N/m",
+            palmDamping: "N·s/m",
+            fingerStiffness: "N/m",
+            fingerDamping: "N·s/m",
         } as const;
         for (const [key, unit] of Object.entries(arm)) {
             const value = contactReference[key as keyof typeof arm];
