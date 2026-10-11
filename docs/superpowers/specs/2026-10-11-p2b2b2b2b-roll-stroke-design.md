@@ -91,17 +91,27 @@ Exit criteria:
    `stroke.drive` +1 with 0 (the push's punch), at the canonical pendulum phase.
 3. No impact ends with the head overlapping a ball as handed over, over the late re-hit sweep of every preset
    (`scripts/swingProbe.ts`).
-4. The swing-mode presets (single-ball, drive, AC stop, GC stop) are bit-identical: the impact digest's cases, the
+4. **The head stays on point behind the striker's ball** (user, 2026-10-11: "we mustn't repeat the failure of
+   letting the mallet head roll over the top of the ball"). It is the old 45° roll's dead-stop mechanism, and the
+   flex's dip, which steepens the lean, could revive it. On every roll's canonical runs at 2 and 3 m/s, and on every
+   run of the `presets` sweep (225 a roll), from contact until the face last leaves the striker's ball:
+   - the head's centre stays behind the striker's ball's centre along aim;
+   - every face contact point on the striker's ball lies below the ball's centre height plus R·sin 45° (the face
+     meeting the ball no higher than a 45° lean puts it);
+   - the lean never exceeds 45°.
+
+   A run that fails is counted and listed. Any failure on a canonical run stops the plan for the user.
+5. The swing-mode presets (single-ball, drive, AC stop, GC stop) are bit-identical: the impact digest's cases, the
    phase-2 digest, and a full-precision digest of every swing preset's canonical and sweep runs (a throwaway script,
    as P2b.2b.2b.1's plan's `presetDigest`), with the outcome's `engineVersion` normalised. The
    one allowed exception is a case whose impact ends with the head overlapping a lifted ball, which the handover rule
    (§5) moves. Each such case is listed (2a recorded none outside the pass roll).
-5. Every preset's canonical setup meets P2b.2b.2b.1's exit criterion 4: `simulateShot` with `trajectory: true` runs from
+6. Every preset's canonical setup meets P2b.2b.2b.1's exit criterion 4: `simulateShot` with `trajectory: true` runs from
    top to finish with no `RangeError`, no re-entry guard hit, no ball centre more than 5 mm above R, no `follow-cap`,
    and the trajectory continuous at every boundary.
-6. The pre-flight gate (§8) has run and the user has ruled on it.
-7. The figures of §9 are recorded in the roadmap. They are observations, not gates.
-8. `ENGINE_VERSION` is "0.10.0".
+7. The pre-flight gate (§8) has run and the user has ruled on it.
+8. The figures of §9 are recorded in the roadmap. They are observations, not gates.
+9. `ENGINE_VERSION` is "0.10.0".
 
 The pass roll's ratios, the crossings and the longest impact are recorded against 2a's (§9), not gated: exit criterion
 2 is the test of the pinned pass roll, and the ratio is P2b.2b.2c's to calibrate.
@@ -151,7 +161,8 @@ three dimensions to its point on the intended path (§4.1):
   weight and the intended motion's inertia, split over the two grips so that their moments give the intended motion's
   wrench. The player holds the mallet's weight and drives its intended motion. The flex is the arm's give under the
   load beyond that, the balls and turf resisting the push, as the user describes it. Without the feed-forward the head's
-  weight alone would sag the hands 2–22 cm at k₀.
+  weight alone would sag the hands 2–22 cm at k₀. This was the lead's call in the spec review, not the user's; it is
+  revisitable at the pre-flight gate (§8), which can show the springs-carry-all variant if the dip looks wrong.
 - **k_h = k₀ + κ·|F_ff,h|**: the stiffness rises linearly with the force the arm generates voluntarily, which is what
   Perreault et al. measured (stiffness against voluntary isometric force). It is driven by the feed-forward, not by the
   spring's own force, so it has no feedback loop. A law on the total force, F ≈ k·x with k = k₀ + κ·|F|, runs away at
@@ -310,7 +321,7 @@ The pre-flight gate (§8) may move these defaults on the user's ruling. Nothing 
 
 ### 7.2 Bit-identity
 
-The swing-mode presets are bit-identical (exit criterion 4). The rolls move. Their tests' recorded figures
+The swing-mode presets are bit-identical (exit criterion 5). The rolls move. Their tests' recorded figures
 (`CANONICAL_*`, the stroke tests' ratios and timings) are re-recorded from the plan's run, and each change is listed
 in the amendments.
 
@@ -320,17 +331,20 @@ Once the flex (§3), the push (§4.1) and the pendulum phase (§4.2) land, the p
 handover rule, the probes, the presets' defaults or the roadmap are recorded. It shows the three canonical rolls at 2
 and 3 m/s:
 
-- the lean through contact, its peak against 45°, and the pitch through vertical;
+- **first, the head on point** (exit criterion 4): the head's centre behind the striker's ball's centre along aim, the
+  face's contact points against R·sin 45° above the ball's centre, and the peak lean against 45°, through every face
+  interval. A climb over the ball is the mechanism failing, whatever else the figures show;
+- the lean through contact and the pitch through vertical;
 - the hands' dip: its depth, when it bottoms out, and its recovery;
 - the head's descent through the push (its path's angle below horizontal while the face is on the ball), beside the
   descent at contact, which is unchanged by construction (2a's downswing: half 9.70°, full 3.05°, pass 4.48° at 3 m/s)
   and against Gugan's stroke angle β of 6–16°;
-- the head behind the ball along aim;
 - the face intervals;
 - the ratio;
 - a slow-motion export (as 2a's review).
 
-The user rules: go on, change the defaults, or change the mechanism. The gate always stops, whatever the figures show.
+The user rules: go on, change the defaults, or change the mechanism (including the weight support of §3.1). The gate
+always stops, whatever the figures show.
 
 ## 9. Probe (recorded in the roadmap)
 
