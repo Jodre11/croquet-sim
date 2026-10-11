@@ -65,16 +65,21 @@ a number to fit.
 - **Compliant hands on an intended path**, over a prescribed hands' arc and over today's path plus an angle spring
   alone. The dip, its timing and its recovery are to emerge from the load, not be drawn. "Let's model it and see what
   emerges, it may need refinement."
-- **The intended path is forward and level.** The hands push consciously forward, and the arc the user senses is the
-  flex's. No arc radius is invented.
+- **The intended path is the hands' own arc** (user, 2026-10-11, correcting the first draft's level path). The hands
+  travel a shallow arc in the swing plane, centred high above. It descends into contact, so the hands arrive moving
+  down. It bottoms out partway through the push and rises through the pendulum phase. The flex sits on top of it,
+  adding the load-driven dip and recovery. The arc's shape is a preset input per player, unsourced and flagged as a
+  placeholder like `handAngle` (§4.1, §6). A circle first; "more ovoid than circular" is a later refinement.
 - **The flex law's form** (§3): stiffness rising linearly with the hand's force, damping at a constant damping ratio,
   both from the arm literature.
 - **The pendulum phase** (§4): the bottom hand stops holding and drives the mallet's rotation about the top hand. Its
   driven effort ships in this step, over letting go alone with the effort deferred to P2b.2b.2c (spec review, user
   decision 2026-10-11): it is the player's control for sending the striker's ball further.
-- **The descent at contact is unchanged.** The user's descent is the flex's dip after contact, so the downswing keeps
-  P2b.2b.2a's level-arriving hands. "The rolls' descent through contact" is the flex's, recorded through the push
-  against Gugan's β (§8, §9). If the gate shows the contact's descent short, it is revisited there.
+- **The hands descend at contact** (user, 2026-10-11: the low point falls "partway through the push: the hands still
+  descend at contact"; the first draft wrongly kept level-arriving hands). This reopens P2b.2b.2a's "hands arrive with
+  no vertical velocity", as the roadmap's scope for this step says. The carry downswing's hands' path ends tangent to
+  the hands' arc (§4.1). The head's descent at contact follows from the arc and the pendulum, and Gugan's 6–16° is a
+  held-out check, never a target.
 - **A pre-flight gate** (§8) stops for the user on the canonical rolls before anything else is built on the mechanism.
 - **Calibration waits.** "We can calibrate when/if it works": P2b.2b.2c.
 
@@ -129,9 +134,11 @@ src/engine/impact/integrate.ts       carry's finish at the swing's apex after th
 src/engine/impact/handover.ts        the head-clearance rule (§5)
 src/engine/impact/simulateImpact.ts  handedOver passes the head; validation of the new inputs
 src/engine/swing/types.ts            ShotSetup.stroke gains pendulumAt? and pendulumEffort?; SwingDrive gains their
-                                     defaults and loses groundDepth
-src/engine/swing/buildContact.ts     planStroke carries the pendulum inputs into the arc
-src/engine/swing/profile.ts          the rolls' canonical pendulumAt and pendulumEffort (§6)
+                                     defaults and the hands' arc (handArcRadius, handArcLow), and loses groundDepth
+src/engine/swing/downswing.ts        carry: the hands' path ends tangent to the hands' arc, descending (§4.1)
+src/engine/swing/buildContact.ts     planStroke carries the pendulum inputs and the hands' arc into the arc
+src/engine/swing/profile.ts          the rolls' canonical pendulumAt, pendulumEffort and hands' arc (§6)
+scripts/fitStrokeShape.ts            re-run for the rolls: their defaultBackswing h₀ moves with the new downswing
 src/engine/simulate.ts               ENGINE_VERSION 0.10.0
 reference/contact.json               armStiffness (k₀), armStiffnessPerForce (κ), armDampingRatio (ζ_arm),
                                      armEndpointMass (m_arm), pendulumForce (F_pendulum), each sourced (§3.2)
@@ -142,8 +149,8 @@ scripts/swingProbe.ts                re-run: braking hands, the late re-hit swee
 Unchanged:
 
 - the swing mode (single-ball, drive, AC stop, GC stop), whose `handLoad` branch is untouched;
-- the downswing to contact in carry mode: the hands lead with today's feed-forward, springs and dampers until
-  `relaxAt` (contact);
+- the downswing's coupling in carry mode: the hands lead with today's feed-forward, springs and dampers until
+  `relaxAt` (contact). Only the carry hands' path's last part changes, to arrive descending (§4.1);
 - the face–ball and turf laws, the head–turf law (P2b.2b.2b.3's), and the mallet (P2b.2b.2b.2c's).
 
 Everything stays under the determinism lint.
@@ -210,12 +217,21 @@ is plausible for the user's dip, but it is what the pre-flight gate (§8) is for
 
 ### 4.1 The push (contact to the pendulum phase)
 
-- **The intended path.** The hands' intended path runs forward and level along aim at today's carry profile: the
-  hands' acceleration over `handWindow` at full `drive`, then a coast. Both grip points' intended positions follow it
-  rigidly at the arc's planned pitch θ(t) (below). It starts from the grips' **actual** positions and velocities at
-  `relaxAt` (contact), not the planned ones: the carry downswing has no position spring, so the two differ, and starting
-  from the plan would put a step force on the mallet at contact. From there x̂_h(t) is the actual start plus the planned
-  motion since `relaxAt`. The dip (`handDrop` over `dropTime`) still adds to the intended path as today.
+- **The hands' arc.** The top hand's intended path is a circular arc in the swing plane, of radius `handArcRadius`
+  (ρ_h). Its lowest point lies `handArcLow` × push length ahead of the hands' contact position along aim. At along-aim
+  travel s from contact, the intended height is z_low + ρ_h − √(ρ_h² − (s − s_low)²), s_low = `handArcLow` × push
+  length. The hands therefore arrive descending at asin(s_low/ρ_h), bottom out at s_low, and rise after it. Along
+  aim the intended motion keeps today's carry profile: the hands' acceleration over `handWindow` at full `drive`, then
+  a coast. Both grip points' intended positions follow it rigidly at the arc's planned pitch θ(t) (below).
+- **It starts from the actual grips.** The intended path starts from the grips' **actual** positions and velocities at
+  `relaxAt` (contact), not the planned ones: the carry downswing has no position spring, so the two differ, and
+  starting from the plan would put a step force on the mallet at contact. From there x̂_h(t) is the actual start plus
+  the planned motion since `relaxAt`. The dip (`handDrop` over `dropTime`) still adds to the intended path as today.
+- **The downswing arrives on the arc.** Today's carry hands' path P(σ) = P_b + Δ_h·σ² + Δ_z·(3σ² − 2σ³) arrives level
+  (the Δ_z cubic's slope is 0 at σ = 1, `downswing.ts`). Its vertical term becomes the cubic Hermite with the same ends
+  and an end slope matching the arc's tangent at contact, so position and velocity are continuous at contact. The
+  head's speed at contact changes, so `scripts/fitStrokeShape.ts` re-fits the rolls' `defaultBackswing` h₀ to their
+  planned speed (as P2b.2b.2b.1 did). The swing-mode presets' downswings are untouched.
 - **The push length** is the shot's `handReach` (absent: the preset's). The intended path stops advancing once it has
   travelled the push length along aim. It stops at once, not on a deceleration ramp: the flex is soft, so the hands
   pass from push to rest through the springs, not through a scripted brake.
@@ -228,7 +244,7 @@ is plausible for the user's dip, but it is what the pre-flight gate (§8) is for
     start.
 
   `computeReach` and `pivotAt` are shared with swing mode, where a shot's `handReach` still brakes as today. The hands'
-  dip is the flex's.
+  dip is the arc's plus the flex's.
 - **The planned pitch θ(t).** The pendulum term in the push is today's: the arc's `speedGain` over `window` from the
   contact pitch, then today's "slope held" ramp to zero rate, after which θ holds. It sets the intended pitch that the
   two hands' intended positions follow; the actual pitch departs from it only through the flex.
@@ -286,14 +302,21 @@ The pass roll's 15 overlaps (0.002–0.078 mm) become corrections of that size.
 
 - **`ShotSetup.stroke`** gains `pendulumAt?` and `pendulumEffort?`, each in [0, 1], absent meaning the preset's.
   `handReach?` stays and is documented as the push length in carry mode.
-- **`SwingDrive`** gains `pendulumAt` and `pendulumEffort` (the defaults) and loses `groundDepth`.
+- **`SwingDrive`** gains `pendulumAt` and `pendulumEffort` (the defaults), `handArcRadius` (m) and `handArcLow` (in
+  [0, 1], a fraction of the push length), and loses `groundDepth`. The hands' arc is the player's, a preset value like
+  the stance, not a per-shot input.
 - **The rolls' canonical values** are presets, not fits:
   - half roll: push 0.15 m;
   - full and pass rolls: push 0.3 m;
-  - every roll: `pendulumAt` 0.8 (where today's reach began braking) and `pendulumEffort` 0 (let it swing).
+  - every roll: `pendulumAt` 0.8 (where today's reach began braking) and `pendulumEffort` 0 (let it swing);
+  - every roll: `handArcRadius` 1.5 m and `handArcLow` 0.5, **placeholders**, unsourced and flagged as `handAngle` is.
+    The radius is about a standing player's shoulder height, the user's "origin much higher in the sky". The low point
+    halfway along the push is the middle of the user's "partway through the push … or at its end". On the full roll's
+    0.3 m push, the hands arrive descending at asin(0.15/1.5) ≈ 5.7°.
 - **The swing-mode presets** carry the two fields for the type's sake and never read them.
-- **Validation:** `pendulumAt` and `pendulumEffort` finite and within [0, 1]; the flex's sourced values positive;
-  ζ_arm within (0, 1]. The rest is as today.
+- **Validation:** `pendulumAt`, `pendulumEffort` and `handArcLow` finite and within [0, 1]; `handArcRadius` finite and
+  greater than the push length (so the arc is defined over the whole push); the flex's sourced values positive; ζ_arm
+  within (0, 1]. The rest is as today.
 
 The pre-flight gate (§8) may move these defaults on the user's ruling. Nothing is tuned to a ratio.
 
@@ -305,6 +328,8 @@ The pre-flight gate (§8) may move these defaults on the user's ruling. Nothing 
   load is k₀ + κ·F.
 - **The pitch stiffness.** Two hands on a rigid mallet resist a small pitch δθ with a moment k_top·r_top² +
   k_bot·r_bot² about the pitch axis within 1 %, the grip points at their distances from the pitch axis.
+- **The hands' arc.** The carry downswing's hands arrive at contact with position and velocity continuous onto the
+  arc, descending at asin(s_low/ρ_h), and the intended path bottoms out at s_low.
 - **No brake.** A carry run with no ball: once the intended path stops, the hands' force along aim stays within the
   flex's spring and damper. There is no feed-forward deceleration term.
 - **The pendulum phase at effort 0** is a free pendulum about the top hand: with the top hand's damping set to zero it
@@ -336,15 +361,15 @@ and 3 m/s:
   interval. A climb over the ball is the mechanism failing, whatever else the figures show;
 - the lean through contact and the pitch through vertical;
 - the hands' dip: its depth, when it bottoms out, and its recovery;
-- the head's descent through the push (its path's angle below horizontal while the face is on the ball), beside the
-  descent at contact, which is unchanged by construction (2a's downswing: half 9.70°, full 3.05°, pass 4.48° at 3 m/s)
-  and against Gugan's stroke angle β of 6–16°;
+- the head's descent at contact and through the push (its path's angle below horizontal while the face is on the
+  ball), against Gugan's stroke angle β of 6–16° and beside 2a's contact figures (half 9.70°, full 3.05°, pass 4.48°
+  at 3 m/s);
 - the face intervals;
 - the ratio;
 - a slow-motion export (as 2a's review).
 
-The user rules: go on, change the defaults, or change the mechanism (including the weight support of §3.1). The gate
-always stops, whatever the figures show.
+The user rules: go on, change the defaults (the hands' arc's placeholders among them), or change the mechanism
+(including the weight support of §3.1). The gate always stops, whatever the figures show.
 
 ## 9. Probe (recorded in the roadmap)
 
@@ -355,7 +380,7 @@ always stops, whatever the figures show.
   and the striker's distance at each. It records how sensitive the outcome is to timing, which the user expects to be
   highest on a long, fast push. Recorded only.
 - **The held-out checks** (each against a measurement it was never fitted to):
-  - the head's descent through the push against Gugan 4's stroke angle, 6–16° on rolls;
+  - the head's descent at contact and through the push against Gugan 4's stroke angle, 6–16° on rolls;
   - the apparent contact against the CA's 30–58 ms (Project Croquet Dynamics);
   - the second contact against Gugan 4's and Hall's several milliseconds;
   - the face intervals against Cross's seven taps, "the ball sticks to the mallet";
