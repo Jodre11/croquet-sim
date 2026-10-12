@@ -503,18 +503,15 @@ describe("the mechanisms (design §8.1), on the canonical setups", () => {
         expect(impact.events.map((e) => e.kind)).not.toContain("impact-head-deep");
     });
 
-    // Was expected to fail (user decision, 2026-10-09) until P2b.2b.2b.2b. On the bed (P2b.2b.2b.2a) the canonical
-    // pass roll's follow-through kept the 34°-leaning face on the striker's ball: the ball rebounded only about 1.8 mm
-    // and was back in its pit by 46 ms, the face caught it at about 2.7 m/s and pinned it 2–4 mm deep until the head
-    // stopped. So the punched ball left at 0.038 m/s and the coasted one at 0.088 m/s. A model finding, recorded in the
-    // roadmap, which P2b.2b.2b.2b (the roll's stroke: descent, follow-through, hands) owned; the test was `it.fails`
-    // until that phase fixed it, and went back to `it` then.
+    // Spec exit criterion 2 (P2b.2b.2b.2b). On the bed (P2b.2b.2b.2a) the canonical pass roll's follow-through kept its
+    // face on the striker's ball and pinned it in its pit; the roll's stroke (the flex, the push with no brake and the
+    // pendulum phase) lets it go. The test is unchanged: drive +1 against 0, at the canonical pendulum phase.
     it("the pass roll's punch leaves the striker's ball faster than a coasting pass roll", () => {
         // Prototype: 1.226 m/s at drive +1, 1.099 m/s at drive 0. P2b.2b.2b.2a: Hertzian face (was 1.099 at drive 0):
         // 1.894 m/s at drive +1, 0.29 m/s at drive 0, the coasted ball already pinned under the face. P2b.2b.2b.2a:
         // turf bed (was 1.894 and 0.29): 0.038 m/s at drive +1, 0.088 m/s at drive 0, both pinned.
         // P2b.2b.2b.2b: hands' arc (was it.fails): 1.2170 and 1.1300 m/s. P2b.2b.2b.2b: flex (was 1.2170 and
-        // 1.1300): 1.8786 and 1.6386 m/s; Task 8 confirms it. P2b.2b.2b.2b: push intent and fast impedance (was 1.8786
+        // 1.1300): 1.8786 and 1.6386 m/s. P2b.2b.2b.2b: push intent and fast impedance (was 1.8786
         // and 1.6386): 1.7016 and 1.2624 m/s. P2b.2b.2b.2b: arm chain (was 1.7016 and 1.2624): 1.8493 and 1.2824 m/s.
         // P2b.2b.2b.2b: continuous α (was 1.8493 and 1.2824): 1.8412 and 1.2824 m/s. P2b.2b.2b.2b: posture-holding
         // push (was 1.8412 and 1.2824): 2.1111 and 1.3187 m/s. P2b.2b.2b.2b: hold relaxes from the first departure
