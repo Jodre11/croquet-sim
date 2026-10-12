@@ -296,10 +296,10 @@ fetch), x_h, mean property-based (Table 2), provenance "direct".
 - K0 and C0 are recorded but not used by the engine: the arm's measured slow flex (`armStiffness`, Fortineau) is the
   same path from the forearm to the body, so it takes their place rather than sit in series with them.
 
-### The gate ruling, round 12 (2026-10-12): the arms hold their posture through the push
+### The gate ruling, round 11 (2026-10-12): the arms hold their posture through the push
 
 The user's ruling ("Posture holding in the push"): through the push each arm's flex takes the endpoint impedance the
-arm shows while it holds a posture, and the backswing and the pendulum phase keep Fortineau's rhythmic values
+arm shows while it holds a posture, and the rest of the stroke keeps Fortineau's rhythmic values
 (`armStiffness`, `armDampingRatio`). Both fetched 2026-10-12 with `curl -sS -L`; the digests are of the raw PDFs.
 Measurements of the human arm only.
 
@@ -324,5 +324,6 @@ Measurements of the human arm only.
   location", B yy (y from the shoulder towards the hand) for subjects A and C at four hand locations: 16.85, 30.02,
   19.32, 10.84, 27.69, 29.09, 19.91, 11.93 N s/m; `armHoldDamping` is their mean, 20.7 N·s/m, bounds 10.84–30.02.
 - κ (`armStiffnessPerForce`, Takagi's grasp-force analogue) stays on top of `armHoldStiffness`: Patel's subjects held
-  no handle, so his values carry no grasp force. The hold relaxes to the rhythmic flex from the pendulum phase's start
-  with `pushResponseTime`, the muscles' measured force rise (Augustsson et al.), so the hands' force never steps.
+  no handle, so his values carry no grasp force. The hold relaxes to the rhythmic flex from the ball's first departure
+  from the face (gate round 13 ruling, "Relax from first departure", 2026-10-12) with `pushResponseTime`, the muscles'
+  measured force rise (Augustsson et al.), so the hands' force never steps.

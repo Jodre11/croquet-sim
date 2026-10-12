@@ -719,7 +719,7 @@ describe("the flex (P2b.2b.2b.2b design §3.1, §7.1)", () => {
         expect(shifted(1e-2).x).toBeCloseTo(10 * shifted(1e-3).x, 9);
     });
 
-    describe("held at the arm's posture-holding impedance through the push (gate round 12 ruling, 2026-10-12)", () => {
+    describe("held at the arm's posture-holding impedance through the push (gate round 11, 'Posture holding')", () => {
         /** A plausible, unsourced posture-holding impedance, well apart from TEST_FLEX's rhythmic values. */
         const HELD: Hands = { ...TEST_HANDS, flex: { ...TEST_FLEX, hold: { stiffness: 900, damping: 25 } } };
         const force = 40;
@@ -742,10 +742,10 @@ describe("the flex (P2b.2b.2b.2b design §3.1, §7.1)", () => {
         });
 
         it("holds until the ball's first departure, then relaxes to the rhythmic flex at the muscles' pace", () => {
-            // Gate round 14 ruling (2026-10-12): from t_d, the first step the face–ball pair is open with the ball
-            // separating, the hold's weight is exp(−(t − t_d)/τ_push), so k is continuous at t_d and returns to the
-            // rhythmic value. Until a departure the arms hold, the pendulum phase included. Hands travelling along
-            // aim reach the pendulum phase partway through a 5 cm push.
+            // Gate round 13 ruling, "Relax from first departure" (2026-10-12): from t_d, the first step the face–ball
+            // pair is open with the ball separating, the hold's weight is exp(−(t − t_d)/τ_push), so k is continuous at
+            // t_d and returns to the rhythmic value. Until a departure the arms hold, the pendulum phase included.
+            // Hands travelling along aim reach the pendulum phase partway through a 5 cm push.
             const arc = STILL({
                 theta0: -0.3,
                 pivotVelocity: vec3(1, 0, 0),
@@ -770,6 +770,18 @@ describe("the flex (P2b.2b.2b.2b design §3.1, §7.1)", () => {
             const excess = (t: number, departedAt: number | null = departed): number =>
                 topStiffness(held, t, departedAt) - topStiffness(plain, t, departedAt);
             const full = (HELD.flex.hold as NonNullable<typeof HELD.flex.hold>).stiffness - TEST_FLEX.stiffness;
+            // The flex's force on the forearm is continuous across t_d. The flex takes hold at 1 ms; from then the
+            // forearm stays where it was while its intended point moves on, so the spring carries an offset, and a step
+            // in k at t_d would step the force by Δk times that offset.
+            const hold0 = { ...newGripState(), departedAt: departed };
+            handLoad(held, headOnPath(held, TEST_HEAD, 0.001), TEST_HEAD, 0.001, hold0);
+            const forearmForce = (t: number): Vec3 => {
+                const grip = structuredClone(hold0);
+                handLoad(held, headOnPath(held, TEST_HEAD, t), TEST_HEAD, t, grip);
+                return (grip.topChain as ArmChain).forearm.force;
+            };
+            const before = forearmForce(departed - 1e-9);
+            expect(dist(forearmForce(departed + 1e-9), before)).toBeLessThan(1e-6 * (1 + length(before)));
             for (const t of [0.001, departed / 2, departed - 1e-9]) {
                 expect(excess(t), `held at ${t}`).toBeCloseTo(full, 9);
             }

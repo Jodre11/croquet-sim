@@ -5,7 +5,7 @@
  * force, so it has no feedback loop. Its damping holds a constant ratio on the arm's endpoint mass (Perreault 2004;
  * Fortineau et al. 2023). The numbers are reference/contact.json's arm values. Through the push the arm holds its
  * posture at its measured posture-holding stiffness (Patel, O'Neill and Artemiadis 2014) and grasp viscosity (Tsuji et
- * al. 1995), on top of the same κ·|F_ff| (gate round 12 ruling, 2026-10-12).
+ * al. 1995), on top of the same κ·|F_ff| (gate round 11 ruling, "Posture holding in the push", 2026-10-12).
  */
 import { scale, sub, type Vec3 } from "../math/vec3";
 import type { FlexLaw } from "./types";
@@ -18,9 +18,9 @@ export interface FlexGains {
 
 /**
  * The gains of `law` for a hand whose feed-forward has size `force` (N), the arm holding its posture with weight
- * `hold` in [0, 1] (gate round 12 ruling, 2026-10-12). Rhythmic (weight 0, or no `law.hold`): k = k₀ + κ·|F_ff|,
- * c = 2·ζ·√(k·m_arm). Held (weight 1): k = k_hold + κ·|F_ff|, c = c_hold. Between them each gain is the weighted mean,
- * so a weight that moves continuously keeps the hand's force continuous.
+ * `hold` in [0, 1] (gate round 11 ruling, "Posture holding in the push", 2026-10-12). Rhythmic (weight 0, or no
+ * `law.hold`): k = k₀ + κ·|F_ff|, c = 2·ζ·√(k·m_arm). Held (weight 1): k = k_hold + κ·|F_ff|, c = c_hold. Between them
+ * each gain is the weighted mean, so a weight that moves continuously keeps the hand's force continuous.
  */
 export function flexGains(law: FlexLaw, force: number, hold = 0): FlexGains {
     const stiffness = law.stiffness + law.stiffnessPerForce * force;

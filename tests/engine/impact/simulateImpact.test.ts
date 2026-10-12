@@ -8,7 +8,7 @@ import { buildContact } from "../../../src/engine/swing/buildContact";
 import type { BallState, BallStates, SurfaceProps, World } from "../../../src/engine/types";
 import { obstaclesOf, uniformLawn } from "../../../src/engine/world";
 import { obstacleContact } from "../../../src/engine/impact/contacts";
-import type { ImpactBall } from "../../../src/engine/impact/integrate";
+import { IMPACT_DT, type ImpactBall } from "../../../src/engine/impact/integrate";
 import {
     prepareImpact,
     simulateImpact,
@@ -583,6 +583,20 @@ describe("the roll's impact (P2b.2b.2b.2b design §4.2)", () => {
             expect(result.duration, `pendulumAt ${pendulumAt}`).toBeGreaterThanOrEqual(pendulum);
             expect(result.release?.t, `pendulumAt ${pendulumAt}`).toBeCloseTo(pendulum, 4);
         }
+    });
+
+    it("latches the striker's ball's first departure, not a later one, as the hold's relaxation start", () => {
+        // Gate ruling round 13, "Relax from first departure": the canonical pass roll meets the striker's ball five
+        // times, and its departure is the end of the first face interval, to within a step; a latch that moved with
+        // each opening would end at the last.
+        const setup = canonicalSetup("pass-roll", { world: WORLD });
+        const result = simulateImpact(buildContact(setup, WORLD), setup.balls, WORLD);
+        const intervals = result.timeline[`face/${setup.striker}`] ?? [];
+        expect(intervals.length).toBeGreaterThan(1);
+        const first = intervals[0] as { start: number; end: number };
+        expect(result.departure).toBeDefined();
+        expect(Math.abs((result.departure as number) - first.end)).toBeLessThanOrEqual(IMPACT_DT * 1.000001);
+        expect(result.departure as number).toBeLessThan((intervals[1] as { start: number }).start);
     });
 
     it("runs a roll with no push to a normal finish", () => {

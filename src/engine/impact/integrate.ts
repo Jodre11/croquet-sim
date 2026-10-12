@@ -1025,9 +1025,11 @@ export function integrateStroke(setup: ImpactSetup, options: ImpactOptions = {},
                 p.regions === null ? null : headBallContact(state, head, (balls[pair.b] as BallState).position, R);
             const contact = p.regions === null ? pairContact(pair, state, head, balls, R, setup.obstacles) : hit;
             if (contact === OFF_FACE || contact === null) {
-                // Carry mode latches a ball's first departure from the face (gate round 14 ruling, 2026-10-12): the
-                // first step a face–ball pair closed at the last step is open, with the ball's material at the last
-                // contact point moving away from the head's along the last normal. The arms' hold relaxes from it.
+                // Carry mode latches a ball's first departure from the face (gate round 13 ruling, "Relax from first
+                // departure", 2026-10-12): the first step a face–ball pair closed at the last step is open, with the
+                // ball's material at the last contact point moving away from the head's along the last normal. The
+                // impact does not know which ball is the striker's, so any ball's counts; in a roll the face meets
+                // only the striker's. The arms' hold relaxes from it.
                 if (carry && grip.departedAt === null && pair.kind === "face-ball" && p.closure !== null) {
                     const sb = balls[pair.b] as BallState;
                     const point = sub(sb.position, scale(p.normal, R));

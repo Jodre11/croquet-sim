@@ -913,8 +913,9 @@ export interface FlexStart {
  * followed through a first-order lag (senseResistance), which the integrator updates in carry mode after each step's
  * contacts and the push intent reads (gate ruling 2026-10-11 and its amendment). In carry mode from where the flex
  * takes hold, each hand's hand–arm chain (gate round 3 ruling, 2026-10-11): null before then, and the bottom hand's
- * null once it has let go. In carry mode also when a ball first departed from the face (s; gate round 14 ruling,
- * 2026-10-12), which the integrator latches once, null until then; the arms' hold relaxes from it (holdWeight).
+ * null once it has let go. In carry mode also when a ball first departed from the face (s; gate round 13 ruling,
+ * "Relax from first departure", 2026-10-12), which the integrator latches once, null until then; the arms' hold
+ * relaxes from it (holdWeight).
  * Mutable; handLoad updates it, and the integrator moves the chains' masses each step (advanceChains).
  */
 export interface GripState {
@@ -1133,11 +1134,13 @@ function releasing(track: PreparedTrack, t: number): boolean {
 }
 
 /**
- * The weight in [0, 1] with which carry mode's arms hold their posture at time t (gate round 12 ruling, 2026-10-12):
- * 1 until a ball first departs from the face at t_d (grip.departedAt; gate round 14 ruling), then
- * exp(−(t − t_d)/τ_push), the arms relaxing to their rhythmic flex at the muscles' pace (the same first-order force
- * rise as the push intent's). The flex takes hold at contact with no offset and no lag, so its force does not depend
- * on k there, and the weight is continuous at t_d, so the hands' flex force never steps.
+ * The weight in [0, 1] with which carry mode's arms hold their posture at time t (gate round 11 ruling, "Posture
+ * holding in the push", 2026-10-12): 1 until a ball first departs from the face at t_d (grip.departedAt; gate round 13
+ * ruling, "Relax from first departure"), then exp(−(t − t_d)/τ_push), the arms relaxing to their rhythmic flex at the
+ * muscles' pace (the same first-order force rise as the push intent's). The flex takes hold at contact with no offset
+ * and no lag, so its force does not depend on k there, and the weight is continuous at t_d, so the hands' flex force
+ * never steps. With no departure, a stroke that strikes no ball, the arms hold at k_hold to the end, the pendulum
+ * phase and the follow-through included.
  */
 function holdWeight(track: PreparedTrack, t: number, grip: GripState): number {
     const departed = grip.departedAt;
@@ -1227,9 +1230,10 @@ interface CarryStep {
  * off the mallet; no twist acts. Each holding hand's flex drives its hand–arm chain's forearm, not the grip, and the
  * chain holds the grip through the palm and the fingers (chainForces; gate round 3 ruling, 2026-10-11); the bottom
  * hand's chain leaves with it. Through the push each arm holds its posture: its flex takes the arm's posture-holding
- * impedance, relaxing to the rhythmic flex from a ball's first departure from the face (holdWeight; gate round 12
- * and 14 rulings, 2026-10-12). Updates `grip`: where the flex took hold, the chains, the hands' stiffnesses, the
- * release (the pendulum phase's start), and the vertical and rising latches.
+ * impedance, relaxing to the rhythmic flex from a ball's first departure from the face (holdWeight; gate rounds 11
+ * and 13, "Posture holding in the push" and "Relax from first departure", 2026-10-12). Updates `grip`: where the
+ * flex took hold, the chains, the hands' stiffnesses, the release (the pendulum phase's start), and the vertical and
+ * rising latches.
  */
 function carryLoad(
     track: PreparedTrack,

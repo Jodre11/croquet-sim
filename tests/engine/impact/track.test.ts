@@ -280,6 +280,13 @@ describe("the swing path", () => {
                     1e-4,
                 );
             }
+            // The slope keeps the old linear fall's travel: θ at its end is θ_e + ω_e·W/2, and the rate is rest there.
+            const thetaEnd = pathAt(path, tw).theta;
+            expect(pathAt(path, tw + w).theta, `θ at the slope's end, α₀ ${arc.alpha}`).toBeCloseTo(
+                thetaEnd + (omegaEnd * w) / 2,
+                12,
+            );
+            expect(Math.abs(dot(pathAt(path, tw + w).angularVelocity, N))).toBeLessThan(1e-12);
             const bound = (6 * Math.abs(omegaEnd)) / (w * w) + (9 * Math.abs(arc.alpha)) / w;
             const h = w / 1000;
             for (let t = tw - 10 * h; t < tw + w + 10 * h; t += h) {

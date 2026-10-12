@@ -162,10 +162,9 @@ describe("the follow-through (design §4)", () => {
     // is unchanged (its test profile has no posture hold), and the full roll's follow-through reaches 1.56 mm.
     // P2b.2b.2b.2b: hold relaxes from the first departure (was 1.56 mm): the full roll's follow-through reaches
     // 1.08 mm. P2b.2b.2b.2b: flex, gate ruling 2026-10-12 (the gate accepted at 7843e2b): the setup still digs inside
-    // the impact (impact-head-deep from 111.8 ms, 4.15 mm), and the follow-through's deepest, 4.15 mm, is the impact's
-    // own. The cause is the design, not either traced gate cause: a dip is part of trackEnd, so a planned dig always
-    // lands inside the impact. Kept skipped: no carry setup on the flex puts a dig in the follow-through alone, so the
-    // test's premise has no case to assert.
+    // the impact (impact-head-deep from 111.8 ms, 4.15 mm). Kept skipped. A planned dip is part of trackEnd, so the
+    // impact lasts through it and the dip always lands inside the impact; no carry setup can dig in the
+    // follow-through alone, which is the case this test needs.
     it.skip("flags a follow-through that drives the head deep, not the impact", () => {
         // A deep, late dip: the hands lower 0.2 m over 50 ms from 100 ms, long after the ball has gone. The turf and
         // the compliant hands hold the head well above that path, but a planned dig far outside play presses it past

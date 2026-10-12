@@ -167,7 +167,7 @@ export interface Coupling {
  * the hand applies voluntarily, its feed-forward, and its damping holds the ratio ζ_arm on the arm's endpoint mass:
  * c = 2·ζ_arm·√(k·m_arm). k₀ (N/m), κ (1/m), ζ_arm and m_arm (kg) are reference/contact.json's arm values; they are
  * the arm's rhythmic impedance. Through the push the arm holds its posture instead, unless `hold` is null (gate round
- * 12 ruling, 2026-10-12): k = k_hold + κ·|F_ff| and c = c_hold.
+ * 11 ruling, "Posture holding in the push", 2026-10-12): k = k_hold + κ·|F_ff| and c = c_hold.
  */
 export interface FlexLaw {
     readonly stiffness: number;
@@ -350,8 +350,9 @@ export interface ImpactRun {
      */
     readonly release?: { readonly t: number; readonly deltaTheta: number };
     /**
-     * Carry mode's first departure of a ball from the face (s; gate round 14 ruling, 2026-10-12), from which the arms'
-     * hold relaxes. Absent if no ball left the face, and in swing mode.
+     * Carry mode's first departure of a ball from the face (s; gate round 13 ruling, "Relax from first departure",
+     * 2026-10-12), from which the arms' hold relaxes. The impact does not know which ball is the striker's, so it is
+     * any ball's; in a roll the face meets only the striker's. Absent if no ball left the face, and in swing mode.
      */
     readonly departure?: number;
     /**

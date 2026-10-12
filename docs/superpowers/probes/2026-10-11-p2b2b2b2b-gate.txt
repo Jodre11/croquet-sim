@@ -34,6 +34,15 @@ Round 13 (2026-10-12): "Relax from first departure" -> 7843e2b: taps 4/3, 7/3, 8
 Round 14 (2026-10-12): "Go on with round 14" -> the gate accepted at 7843e2b; the skipped cases re-baselined with
   their figures; follow-ups for the next phase: the plan's push outrunning the ball (the late re-contacts) and the
   turf bed's elastic rebound (the ball's rise).
+Follow-ups and behaviour changes recorded at the gate's review (2026-10-12):
+- The plan's push outrunning the ball: the late re-contacts at 2 m/s (round 12's trace).
+- The turf bed's elastic rebound: the pass roll's ball rise (round 5's trace).
+- A carry stroke that strikes no ball never departs, so its arms hold at k_hold to the end, the pendulum phase and the
+  follow-through included (holdWeight).
+- The continuous held slope (round 5, f99f831) changes a carry check's plan: with omega_e = 0 and alpha0 < 0, the
+  quartic takes the planned rate past rest and back inside the held slope, where the linear fall held it at rest; the
+  slope's net travel is still 0. Carry mode only: swing mode's checks run on the free pendulum and holdPendulum, which
+  the held slope does not touch (the swing digest is byte-identical).
 The output below is round 13's run at 7843e2b (file names r13): asPlayed, then the onPoint sweep appended.
 
 == The rolls against the roll as played (P2b.2b.2b.2b design §8) ==
