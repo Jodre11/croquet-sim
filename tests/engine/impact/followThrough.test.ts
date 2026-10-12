@@ -148,7 +148,7 @@ describe("the follow-through (design §4)", () => {
         expect(follow.finish).toBeLessThan(contactAt + FOLLOW_CAP + 1e-5);
     });
 
-    // P2b.2b.2b.2b: gate-ruled skip (round 14, 2026-10-12). A dip is part of trackEnd, so a late dip lengthens the impact
+    // P2b.2b.2b.2b: gate-ruled skip (round 14, 2026-10-12). A dip is part of trackEnd; a late dip lengthens the impact
     // and drives the head deep inside it (this setup: impact-head-deep, 5.4 mm, and the follow-through finishes at the
     // impact's end), never in the follow-through. On the flex no test-profile carry drives the follow-through past
     // 2 × HEAD_DEEP_LIMIT: the pendulum phase at any pendulumAt or effort tried reaches at most 0.31 mm into the turf.

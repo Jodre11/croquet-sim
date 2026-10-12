@@ -1309,9 +1309,8 @@ amendments. Observations, not gates, but for the exit criteria.
     about 38 % of its excess at the pendulum phase's start (121.6 and 124.8 ms). So the pass roll at 2 m/s fails exit
     criterion 4 (33.49 mm, 43.4°);
   - **the pass roll's lean beyond 45°:** 28 of its 141 off-point runs lean past 45° (2 at 3 m/s, 14 at 4, 12 at 6, up
-    to 52.7°), untraced; a count of its own, besides the contact
-    height above R·sin 45° that every miss shows (the final review's figure of 29 is not reproduced: the lean column
-    of both probe records gives 28);
+    to 52.7°), untraced. It is counted on its own, beside the contact height above R·sin 45° that every miss shows.
+    The final review's figure of 29 is not reproduced: the lean column of both probe records gives 28;
   - the full and pass rolls at 3 m/s finish `follow-head-deep`: the pendulum phase swings the head into the turf;
   - the full roll at 1 m/s (drive −1, up +3 mm) never releases the ball: the head's rim presses it down (n_z −0.95,
     2.2 N) from 221.7 ms until the 450 ms cap (Task 8's trace);
