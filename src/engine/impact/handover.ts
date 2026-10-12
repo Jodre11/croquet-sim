@@ -16,8 +16,9 @@
  *
  * A tracked drive's head is also cleared (P2b.2b.2b.2b design §5). A ball the head overlaps by more than
  * CONTACT_TOLERANCE is moved horizontally along the horizontal part of the contact's normal, by depth/|n_h|, so that a
- * tilted face clears too. Its velocity is kept. That is the lift's artefact, at most the static sink. An overlap
- * deeper than the ball's limit, or along a normal with no horizontal part, throws an Error naming the ball.
+ * tilted face clears too. Its velocity is kept. That is the lift's artefact: the ball's actual lift to the lawn (its
+ * depth in the turf at the impact's end, capped at TURF_PIT_DEPTH; simulateImpact's handoverLimit). An overlap deeper
+ * than the ball's limit, or along a normal with no horizontal part, throws an Error naming the ball.
  *
  * One pass cannot separate a chain of three balls: separating the second pair pushes the middle ball back into the
  * first. The same fixed-order pass therefore repeats until no pair overlaps by more than HANDOVER_RESIDUAL, at most
@@ -47,7 +48,7 @@ const VERTICAL_NORMAL = 1e-12;
 
 /**
  * The head at the impact's end, for the head-clearance rule (P2b.2b.2b.2b design §5): its state and shape, and per
- * ball the deepest overlap (m) the rule may remove, its static sink plus CONTACT_TOLERANCE.
+ * ball the deepest overlap (m) the rule may remove, its lift to the lawn (handoverLimit) plus CONTACT_TOLERANCE.
  */
 export interface HandoverHead {
     readonly state: HeadState;

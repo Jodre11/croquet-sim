@@ -1,15 +1,20 @@
 import { describe, expect, it } from "vitest";
 import { add, horizontal, length, scale, sub, vec3, type Vec3 } from "../../../src/engine/math/vec3";
 import { SETTLE_SPEED } from "../../../src/engine/resolve";
+import { simulateShot } from "../../../src/engine/shot";
 import { simulateFreeMotion } from "../../../src/engine/simulate";
 import type { BallState } from "../../../src/engine/types";
-import { uprightsOf } from "../../../src/engine/world";
+import { defaultWorld, uprightsOf } from "../../../src/engine/world";
 import { headBallContact, obstacleContact, type ObstacleGeometry } from "../../../src/engine/impact/contacts";
+import { CONTACT_TOLERANCE } from "../../../src/engine/detect";
 import { handover } from "../../../src/engine/impact/handover";
+import { TURF_PIT_DEPTH } from "../../../src/engine/impact/integrate";
+import { handoverLimit } from "../../../src/engine/impact/simulateImpact";
 import { axisAngle, rotate } from "../../../src/engine/impact/rigidBody";
 import type { HeadState } from "../../../src/engine/impact/types";
 import { TEST_BALL, airborneAt, hoopWithUprightAt, testWorld } from "../support/fixtures";
 import { TEST_HEAD } from "../support/impact";
+import { backswingFor, canonicalSetup } from "../support/shot";
 
 const R = TEST_BALL.radius;
 
@@ -196,6 +201,35 @@ describe("handover with the head (P2b.2b.2b.2b design §5)", () => {
         );
     });
 
+    // Gate ruling 2026-10-12 ("Option 1 alone"): a ball the impact leaves sunk deeper than its static sink is lifted by
+    // its actual depth, so the head's overlap after the lift can be that deep. Traced on four full-roll and pass-roll
+    // sweep runs (lifts of 534 to 723 µm against a static sink of 437 µm).
+    it("clears a ball sunk deeper than its static sink, lifted into the face by its actual depth", () => {
+        const ball = { position: vec3(R - 5.5e-4, 0, R), velocity: vec3(0, 0, 0), angularVelocity: vec3(0, 0, 0) };
+        const sunk = { blue: handoverLimit(6e-4, 4.4e-4) };
+        const out = handover({ blue: ball }, R, [], undefined, { state: headAt(R), head: TEST_HEAD, limits: sunk });
+        const moved = (out.balls.blue as BallState).position;
+        expect(headBallContact(headAt(R), TEST_HEAD, moved, R)?.depth ?? 0).toBeLessThanOrEqual(1e-9);
+        expect(out.overlapCorrection).toBeCloseTo(5.5e-4, 12);
+    });
+
+    it("still throws for a ball lifted past the turf-pit depth", () => {
+        const ball = { position: vec3(R - 1.2e-3, 0, R), velocity: vec3(0, 0, 0), angularVelocity: vec3(0, 0, 0) };
+        const pit = { blue: handoverLimit(2e-3, 4.4e-4) };
+        expect(() =>
+            handover({ blue: ball }, R, [], undefined, { state: headAt(R), head: TEST_HEAD, limits: pit }),
+        ).toThrow(/head overlaps ball blue/);
+    });
+
+    it("limits a lift by its actual depth, capped at the turf-pit depth, never below the static sink", () => {
+        const sink = 4.4e-4;
+        expect(handoverLimit(-1e-3, sink)).toBe(sink + CONTACT_TOLERANCE);
+        expect(handoverLimit(0, sink)).toBe(sink + CONTACT_TOLERANCE);
+        expect(handoverLimit(3e-4, sink)).toBe(sink + CONTACT_TOLERANCE);
+        expect(handoverLimit(6e-4, sink)).toBe(6e-4 + CONTACT_TOLERANCE);
+        expect(handoverLimit(5e-3, sink)).toBe(TURF_PIT_DEPTH + CONTACT_TOLERANCE);
+    });
+
     it("throws for a head on top of a ball", () => {
         // Review focus 4: a vertical normal has no horizontal way out.
         const state: HeadState = {
@@ -223,5 +257,27 @@ describe("handover with the head (P2b.2b.2b.2b design §5)", () => {
         const r = (out.balls.red as BallState).position;
         expect(headBallContact(headAt(R), TEST_HEAD, b, R)?.depth ?? 0).toBeLessThanOrEqual(1e-9);
         expect(length(sub(r, b))).toBeGreaterThanOrEqual(2 * R - 1e-12);
+    });
+});
+
+describe("handover of a ball sunk under the head, on whole rolls", () => {
+    // Gate ruling 2026-10-12 ("Option 1 alone"). Four preset-sweep runs end with the striker's ball 534 to 723 µm
+    // deep in the turf, past its 437 µm static sink, under the head: the 1 m/s full roll at the 450 ms cap with the
+    // rim pressing it down, the 2 m/s pass roll 0.25 ms after its last face interval. The handover lifts the ball by
+    // that depth, so the head's overlap after the lift (515 to 577 µm) is cleared by the lift, not thrown.
+    const world = defaultWorld();
+    it.each([
+        ["full-roll", 1, -1, -0.01],
+        ["full-roll", 1, -1, 0],
+        ["full-roll", 1, -1, 0.01],
+        ["pass-roll", 2, 1, 0],
+    ] as const)("hands over the %s at %s m/s, drive %s, side %s, with the head cleared of a lifted ball", (...run) => {
+        const [type, speed, drive, side] = run;
+        const base = canonicalSetup(type);
+        const up = base.stroke.contact.up + (type === "full-roll" ? 0.003 : -0.003);
+        const stroke = { ...base.stroke, drive, contact: { up, side } };
+        const setup = { ...base, stroke: { ...stroke, backswing: backswingFor({ ...base, stroke }, speed, world) } };
+        const outcome = simulateShot(setup, world);
+        expect(outcome.impact.overlapCorrection).toBeGreaterThan(5e-4);
     });
 });

@@ -20,6 +20,7 @@ import { rotateInverse } from "./rigidBody";
 import {
     integrate,
     integrateStroke,
+    TURF_PIT_DEPTH,
     type FollowThrough,
     type ImpactBall,
     type ImpactOptions,
@@ -487,9 +488,22 @@ export function prepareImpact(
 }
 
 /**
+ * The deepest head overlap (m) the handover may clear from a ball (P2b.2b.2b.2b design §5), the lift it was given. The
+ * handover sets a ball in the turf on the lawn (z = R), lifting it by its depth R − z at the impact's end, and the head
+ * over it then overlaps by up to that lift: `depth` (m, zero or negative for a ball at or above R). A ball that ended
+ * deeper than its static sink `sink` (m) is lifted by that depth, capped at TURF_PIT_DEPTH, the depth past which the
+ * integrator flags a pit as a result to look at; one at or above the lawn, or shallower than its static sink, keeps
+ * the static sink. Plus CONTACT_TOLERANCE.
+ */
+export function handoverLimit(depth: number, sink: number): number {
+    return Math.max(sink, Math.min(depth, TURF_PIT_DEPTH)) + CONTACT_TOLERANCE;
+}
+
+/**
  * The impact's result: `run` with its balls handed over to phase 2 (design §6). A tracked drive's head is cleared from
- * the balls too (P2b.2b.2b.2b design §5), each ball's limit its static sink at its starting position plus
- * CONTACT_TOLERANCE; a force table's head is its face alone, so it is not.
+ * the balls too (P2b.2b.2b.2b design §5), each ball's limit handoverLimit, its actual lift (its depth R − z at the
+ * impact's end, at least its static sink at its starting position); a force table's head is its face alone, so it is
+ * not.
  */
 function handedOver(
     run: ImpactRun,
@@ -503,8 +517,9 @@ function handedOver(
         const limits: Partial<Record<BallId, number>> = {};
         for (const id of BALL_IDS) {
             const b = balls[id];
-            if (b !== undefined) {
-                limits[id] = sink(b.position) + CONTACT_TOLERANCE;
+            const ended = run.balls[id];
+            if (b !== undefined && ended !== undefined) {
+                limits[id] = handoverLimit(world.ball.radius - ended.position.z, sink(b.position));
             }
         }
         mallet = { state: run.head, head: contact.head, limits };
