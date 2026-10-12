@@ -473,6 +473,7 @@ describe("the bottom hand's rate guide", () => {
                 resistance: 0,
                 topChain: null,
                 bottomChain: null,
+                departedAt: null,
             };
             return handLoad(track, slow, TEST_HEAD, t, open).bottom;
         };
@@ -539,6 +540,7 @@ describe("release by reach", () => {
             resistance: 0,
             topChain: null,
             bottomChain: null,
+            departedAt: null,
         };
         const turn = 0.08;
         const e = forwardOf(turned(turn), track.arc.aim);
@@ -739,10 +741,11 @@ describe("the flex (P2b.2b.2b.2b design §3.1, §7.1)", () => {
             expect(flexGains(TEST_FLEX, force, 1)).toEqual(flexGains(TEST_FLEX, force));
         });
 
-        it("holds through the push, then relaxes to the rhythmic flex at the muscles' pace", () => {
-            // Hands travelling along aim reach the pendulum phase partway through a 5 cm push. Until then each hand's
-            // stiffness is the held one; from its start t_p the hold's weight is exp(−(t − t_p)/τ_push), so k is
-            // continuous at t_p and returns to the rhythmic value, which stays in force after the push.
+        it("holds until the ball's first departure, then relaxes to the rhythmic flex at the muscles' pace", () => {
+            // Gate round 14 ruling (2026-10-12): from t_d, the first step the face–ball pair is open with the ball
+            // separating, the hold's weight is exp(−(t − t_d)/τ_push), so k is continuous at t_d and returns to the
+            // rhythmic value. Until a departure the arms hold, the pendulum phase included. Hands travelling along
+            // aim reach the pendulum phase partway through a 5 cm push.
             const arc = STILL({
                 theta0: -0.3,
                 pivotVelocity: vec3(1, 0, 0),
@@ -758,21 +761,54 @@ describe("the flex (P2b.2b.2b.2b design §3.1, §7.1)", () => {
             const plain = prepareAt(arc, STANDARD_GRAVITY);
             const pendulum = (held.push as Push).pendulum as number;
             const tau = HELD.pushResponseTime;
-            const topStiffness = (track: PreparedTrack, t: number): number => {
-                const grip = newGripState();
+            const departed = pendulum / 2;
+            const topStiffness = (track: PreparedTrack, t: number, departedAt: number | null): number => {
+                const grip = { ...newGripState(), departedAt };
                 handLoad(track, headOnPath(track, TEST_HEAD, t), TEST_HEAD, t, grip);
                 return grip.topStiffness;
             };
-            const excess = (t: number): number => topStiffness(held, t) - topStiffness(plain, t);
+            const excess = (t: number, departedAt: number | null = departed): number =>
+                topStiffness(held, t, departedAt) - topStiffness(plain, t, departedAt);
             const full = (HELD.flex.hold as NonNullable<typeof HELD.flex.hold>).stiffness - TEST_FLEX.stiffness;
-            for (const t of [0.001, pendulum / 2, pendulum - 1e-9]) {
+            for (const t of [0.001, departed / 2, departed - 1e-9]) {
                 expect(excess(t), `held at ${t}`).toBeCloseTo(full, 9);
             }
-            expect(Math.abs(excess(pendulum + 1e-9) - full)).toBeLessThan(1e-4 * full);
+            expect(Math.abs(excess(departed + 1e-9) - full)).toBeLessThan(1e-4 * full);
             for (const n of [1, 2, 10]) {
-                const t = pendulum + n * tau;
+                const t = departed + n * tau;
                 expect(excess(t), `${n} τ`).toBeCloseTo(full * Math.exp(-n), 6);
             }
+            // With no departure the arms still hold, through the pendulum phase too.
+            for (const t of [pendulum + tau, pendulum + 10 * tau]) {
+                expect(excess(t, null), `no departure, ${t}`).toBeCloseTo(full, 9);
+            }
+        });
+
+        it("latches the first departure: the first step the face–ball pair opens with the ball separating", () => {
+            // A held 3 m/s carry into a free ball (gravity off): the run's departure is the end of the face's first
+            // interval on the ball, to within a step, and it stays there through any later taps. A run that strikes no
+            // ball never departs; swing mode never records one.
+            const ball = vec3(0, 0, 1);
+            const begin = vec3(ball.x - R - 1e-6 - TEST_HEAD.length / 2, 0, ball.z);
+            const omega0 = 3 / (0.8 + TEST_HEAD.socket.z);
+            const arc = levelArc(begin, { mode: "carry", handReach: 0.1, pendulumAt: 1, omega0 });
+            const track = prepareAt(arc, 0, HELD);
+            const head = headOnPath(track, TEST_HEAD, 0);
+            const run = integrate(isolated({ start: head, drive: track, balls: [freeBall("blue", ball)] }), {
+                cap: 0.03,
+            });
+            const first = (run.timeline["face/blue"] ?? [])[0] as { start: number; end: number };
+            expect(first).toBeDefined();
+            expect(run.departure).toBeDefined();
+            expect(Math.abs((run.departure as number) - first.end)).toBeLessThanOrEqual(IMPACT_DT * 1.000001);
+            const missed = integrate(isolated({ start: headOnPath(track, TEST_HEAD, 0), drive: track }), { cap: 0.03 });
+            expect(missed.departure).toBeUndefined();
+            const swing = prepareAt(levelArc(begin, { omega0 }), 0, HELD);
+            const swung = integrate(
+                isolated({ start: headOnPath(swing, TEST_HEAD, 0), drive: swing, balls: [freeBall("blue", ball)] }),
+                { cap: 0.03 },
+            );
+            expect(swung.departure).toBeUndefined();
         });
     });
 

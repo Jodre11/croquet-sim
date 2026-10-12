@@ -350,6 +350,11 @@ export interface ImpactRun {
      */
     readonly release?: { readonly t: number; readonly deltaTheta: number };
     /**
+     * Carry mode's first departure of a ball from the face (s; gate round 14 ruling, 2026-10-12), from which the arms'
+     * hold relaxes. Absent if no ball left the face, and in swing mode.
+     */
+    readonly departure?: number;
+    /**
      * Slip distance (m) at the head's contact point with the turf (P2b.2b.1 design §4.3): |horizontal velocity of the
      * head's material at its lowest point|·dt, summed per step while δ > 0; absent when the pair never closed.
      */

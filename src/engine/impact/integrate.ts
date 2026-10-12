@@ -421,6 +421,8 @@ interface PairState {
     spring: Vec3;
     /** The tangential stiffness ξ last carried (carrySpring); 0 while the pair is open. */
     tangent: number;
+    /** The contact normal (from A to B) at the pair's last closed step; ZERO until it first closes. */
+    normal: Vec3;
     peak: number;
     /** The pair's contact timeline. */
     readonly line: PairTimeline;
@@ -507,6 +509,7 @@ function applyPair(
     const tangential = tangentialForce(law, add(carried, scale(slip, dt)), slip, normal);
     p.spring = tangential.spring;
     p.tangent = law.tangentialStiffness;
+    p.normal = contact.normal;
     const force = add(scale(contact.normal, normal), tangential.force);
     loads.forces[pair.b] = add(loads.forces[pair.b] as Vec3, force);
     loads.torques[pair.b] = add(loads.torques[pair.b] as Vec3, cross(sub(contact.point, sb.position), force));
@@ -929,6 +932,7 @@ export function integrateStroke(setup: ImpactSetup, options: ImpactOptions = {},
         closure: null,
         spring: ZERO,
         tangent: 0,
+        normal: ZERO,
         peak: 0,
         line: emptyTimeline(),
         wakeAt: 0,
@@ -1021,6 +1025,20 @@ export function integrateStroke(setup: ImpactSetup, options: ImpactOptions = {},
                 p.regions === null ? null : headBallContact(state, head, (balls[pair.b] as BallState).position, R);
             const contact = p.regions === null ? pairContact(pair, state, head, balls, R, setup.obstacles) : hit;
             if (contact === OFF_FACE || contact === null) {
+                // Carry mode latches a ball's first departure from the face (gate round 14 ruling, 2026-10-12): the
+                // first step a face–ball pair closed at the last step is open, with the ball's material at the last
+                // contact point moving away from the head's along the last normal. The arms' hold relaxes from it.
+                if (carry && grip.departedAt === null && pair.kind === "face-ball" && p.closure !== null) {
+                    const sb = balls[pair.b] as BallState;
+                    const point = sub(sb.position, scale(p.normal, R));
+                    const away = sub(
+                        pointVelocity(sb.position, sb.velocity, sb.angularVelocity, point),
+                        pointVelocity(state.position, state.velocity, state.angularVelocity, point),
+                    );
+                    if (dot(away, p.normal) > 0) {
+                        grip.departedAt = t;
+                    }
+                }
                 p.spring = ZERO;
                 p.closure = null;
                 p.tangent = 0;
@@ -1147,8 +1165,9 @@ export function integrateStroke(setup: ImpactSetup, options: ImpactOptions = {},
         }
     });
     const run = finish(setup, state, balls, pairs, turf, jumps, events, steps, steps * dt, touchingAtStart);
-    const done =
+    const released =
         grip.releasedAt === null ? run : { ...run, release: { t: grip.releasedAt, deltaTheta: grip.releaseDelta } };
+    const done = grip.departedAt === null ? released : { ...released, departure: grip.departedAt };
     if (trace === null || plan.kind !== "track") {
         return { run: done, follow: null };
     }

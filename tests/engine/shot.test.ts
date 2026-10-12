@@ -213,7 +213,9 @@ describe("simulateShot", () => {
     // 18.82 mm at the impact's end (83.1 ms), the last interval 15.7–26.6 ms. P2b.2b.2b.2b: posture-holding push (was
     // 18.82 mm): the arms held at Patel's posture-holding stiffness and Tsuji's grasp viscosity through the push still
     // let the face leave the ball while the turf bed throws it up, at 0.620 m/s (was 0.622): 19.17 mm at 92.2 ms, six
-    // face intervals (the last two 15.7–26.3 and 105.0–106.4 ms), the impact ending at 106.6 ms.
+    // face intervals (the last two 15.7–26.3 and 105.0–106.4 ms), the impact ending at 106.6 ms. P2b.2b.2b.2b: hold
+    // relaxes from the first departure (was 19.17 mm, six face intervals): 19.17 mm at 92.3 ms, five face intervals,
+    // the last 15.7–26.3 ms, the late re-contact gone; the turf bed still throws the ball up (a known gap).
     it.skip("runs the pass-roll canonical setup with no entry jump and no ball above R + 5 mm", () => {
         lowFlight("pass-roll");
     });
@@ -287,6 +289,7 @@ describe("simulateShot", () => {
     // tissue (gate round 2) it reaches its apex at 953.7 ms, 46 ms short of the cap. P2b.2b.2b.2b: arm chain (was
     // 953.7 ms): 894.4 ms, θ +0.298 rad. P2b.2b.2b.2b: continuous α (was 894.4 ms, θ +0.298 rad): 883.7 ms,
     // θ +0.295 rad. P2b.2b.2b.2b: posture-holding push (was 883.7 ms, θ +0.295 rad): 911.3 ms, θ +0.208 rad.
+    // P2b.2b.2b.2b: hold relaxes from the first departure (was 911.3 ms, θ +0.208 rad): 904.6 ms, θ +0.243 rad.
     it("runs the half-roll canonical setup from the top to its finish (exit criterion 3)", () => {
         runsToFinish("half-roll");
     });
@@ -510,7 +513,8 @@ describe("the mechanisms (design §8.1), on the canonical setups", () => {
         // 1.1300): 1.8786 and 1.6386 m/s; Task 8 confirms it. P2b.2b.2b.2b: push intent and fast impedance (was 1.8786
         // and 1.6386): 1.7016 and 1.2624 m/s. P2b.2b.2b.2b: arm chain (was 1.7016 and 1.2624): 1.8493 and 1.2824 m/s.
         // P2b.2b.2b.2b: continuous α (was 1.8493 and 1.2824): 1.8412 and 1.2824 m/s. P2b.2b.2b.2b: posture-holding
-        // push (was 1.8412 and 1.2824): 2.1111 and 1.3187 m/s.
+        // push (was 1.8412 and 1.2824): 2.1111 and 1.3187 m/s. P2b.2b.2b.2b: hold relaxes from the first departure
+        // (was 2.1111 and 1.3187): 1.8882 and 1.3607 m/s.
         const punched = simulateShot(canonicalSetup("pass-roll")).impact;
         const coasted = simulateShot(canonicalSetup("pass-roll", { stroke: { drive: 0 } })).impact;
         expect(strikerSpeed(punched)).toBeGreaterThan(strikerSpeed(coasted));
