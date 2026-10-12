@@ -158,7 +158,8 @@ describe("the follow-through (design §4)", () => {
     // grip tissue (gate round 2) it still does: impact-head-deep from 108.7 ms, 5.48 mm deep, and the full roll's
     // follow-through on this world reaches 1.79 mm into the turf. With each hand–arm chain (gate round 3) the setup
     // digs inside the impact (impact-head-deep from 111.8 ms, 4.15 mm) and its follow-through is flagged too; the full
-    // roll's follow-through on this world reaches 1.71 mm.
+    // roll's follow-through on this world reaches 1.71 mm. P2b.2b.2b.2b: posture-holding push (was 1.71 mm): the setup
+    // is unchanged (its test profile has no posture hold), and the full roll's follow-through reaches 1.56 mm.
     it.skip("flags a follow-through that drives the head deep, not the impact", () => {
         // A deep, late dip: the hands lower 0.2 m over 50 ms from 100 ms, long after the ball has gone. The turf and
         // the compliant hands hold the head well above that path, but a planned dig far outside play presses it past

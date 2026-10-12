@@ -183,6 +183,8 @@ export const contactReference = {
     armStiffnessPerForce: readValue(contactJson, "armStiffnessPerForce", "contact"),
     armDampingRatio: readValue(contactJson, "armDampingRatio", "contact"),
     armEndpointMass: readValue(contactJson, "armEndpointMass", "contact"),
+    armHoldStiffness: readValue(contactJson, "armHoldStiffness", "contact"),
+    armHoldDamping: readValue(contactJson, "armHoldDamping", "contact"),
     pendulumForce: readValue(contactJson, "pendulumForce", "contact"),
     pushForce: readValue(contactJson, "pushForce", "contact"),
     pushResponseTime: readValue(contactJson, "pushResponseTime", "contact"),

@@ -3,8 +3,8 @@ import { flexForce, flexGains } from "../../../src/engine/impact/flex";
 import type { FlexLaw } from "../../../src/engine/impact/types";
 import { vec3 } from "../../../src/engine/math/vec3";
 
-/** A plausible, unsourced law (as the test support's): k₀ 200 N/m, κ 20 /m, ζ 0.3 on 0.5 kg. */
-const LAW: FlexLaw = { stiffness: 200, stiffnessPerForce: 20, dampingRatio: 0.3, endpointMass: 0.5 };
+/** A plausible, unsourced law (as the test support's): k₀ 200 N/m, κ 20 /m, ζ 0.3 on 0.5 kg, no posture hold. */
+const LAW: FlexLaw = { stiffness: 200, stiffnessPerForce: 20, dampingRatio: 0.3, endpointMass: 0.5, hold: null };
 
 describe("the flex law (P2b.2b.2b.2b design §3.1)", () => {
     it("stiffens linearly with the hand's voluntary force: k = k₀ + κ·|F_ff|", () => {

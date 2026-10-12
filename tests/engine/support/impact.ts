@@ -55,8 +55,17 @@ export const TEST_FACE: FaceMaterial = { friction: 0.4 };
 /** A coupling for tracked test heads: plausible, not sourced (design §3.4 sets the engine's); contact at t = 0. */
 export const TEST_COUPLING: Coupling = { period: 0.04, dampingRatio: 0.7, relaxAt: 0 };
 
-/** A plausible, unsourced arm (P2b.2b.2b.2b design §3.1): k₀ 200 N/m, κ 20 /m, ζ 0.3 on 0.5 kg. */
-export const TEST_FLEX: FlexLaw = { stiffness: 200, stiffnessPerForce: 20, dampingRatio: 0.3, endpointMass: 0.5 };
+/**
+ * A plausible, unsourced arm (P2b.2b.2b.2b design §3.1): k₀ 200 N/m, κ 20 /m, ζ 0.3 on 0.5 kg, with no posture hold
+ * through the push, so its gains are the rhythmic law's throughout.
+ */
+export const TEST_FLEX: FlexLaw = {
+    stiffness: 200,
+    stiffnessPerForce: 20,
+    dampingRatio: 0.3,
+    endpointMass: 0.5,
+    hold: null,
+};
 
 /** A plausible, unsourced pendulum push (N). */
 export const TEST_PENDULUM_FORCE = 20;

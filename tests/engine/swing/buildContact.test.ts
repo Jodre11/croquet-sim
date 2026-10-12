@@ -244,7 +244,13 @@ describe("buildContact, step by step", () => {
     });
 
     it("carries the pendulum phase's inputs, the hands' arc and the arm's law into the drive (P2b.2b.2b.2b §6)", () => {
-        const flex = { stiffness: 300, stiffnessPerForce: 5, dampingRatio: 0.4, endpointMass: 0.6 };
+        const flex = {
+            stiffness: 300,
+            stiffnessPerForce: 5,
+            dampingRatio: 0.4,
+            endpointMass: 0.6,
+            hold: { stiffness: 900, damping: 20 },
+        };
         const chain = { ...TEST_CHAIN, forearmMass: 0.4, palmStiffness: 5e4, fingerDamping: 80 };
         const profile = testProfile({
             drive: { mode: "carry", handReach: 0.2, pendulumAt: 0.7, pendulumEffort: 0.2, handArcRadius: 1.2 },
@@ -586,6 +592,10 @@ describe("defaultProfile", () => {
                 stiffnessPerForce: contactReference.armStiffnessPerForce.value,
                 dampingRatio: contactReference.armDampingRatio.value,
                 endpointMass: contactReference.armEndpointMass.value,
+                hold: {
+                    stiffness: contactReference.armHoldStiffness.value,
+                    damping: contactReference.armHoldDamping.value,
+                },
             },
             pendulumForce: contactReference.pendulumForce.value,
             pushForce: contactReference.pushForce.value,

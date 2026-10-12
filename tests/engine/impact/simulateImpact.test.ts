@@ -521,6 +521,11 @@ describe("simulateImpact with a tracked drive", () => {
             /hands\.flex\.stiffness must be a positive/,
         ],
         [
+            "a flex hold with no damping",
+            withHands({ flex: { ...TEST_FLEX, hold: { stiffness: 900, damping: 0 } } }),
+            /hands\.flex\.hold\.damping must be a positive/,
+        ],
+        [
             "a flex damping ratio above 1",
             withHands({ flex: { ...TEST_FLEX, dampingRatio: 1.5 } }),
             /hands\.flex\.dampingRatio must lie in \(0, 1\]/,

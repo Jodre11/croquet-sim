@@ -38,6 +38,7 @@ import {
     type SwungBody,
 } from "../../../src/engine/impact/track";
 import { exp } from "../../../src/engine/math/elementary";
+import { flexGains } from "../../../src/engine/impact/flex";
 import type { Coupling, HandChain, Hands, HeadState, SwingArc } from "../../../src/engine/impact/types";
 import { STANDARD_GRAVITY } from "../../../src/engine/world";
 import { contactReference } from "../../../src/reference/index";
@@ -714,6 +715,65 @@ describe("the flex (P2b.2b.2b.2b design §3.1, §7.1)", () => {
         const shifted = (d: number): Vec3 =>
             sub(handLoad(track, { ...on, position: add(on.position, vec3(d, 0, 0)) }, TEST_HEAD, 0, grip).force, fed);
         expect(shifted(1e-2).x).toBeCloseTo(10 * shifted(1e-3).x, 9);
+    });
+
+    describe("held at the arm's posture-holding impedance through the push (gate round 12 ruling, 2026-10-12)", () => {
+        /** A plausible, unsourced posture-holding impedance, well apart from TEST_FLEX's rhythmic values. */
+        const HELD: Hands = { ...TEST_HANDS, flex: { ...TEST_FLEX, hold: { stiffness: 900, damping: 25 } } };
+        const force = 40;
+
+        it("blends the gains from the rhythmic flex to the held ones by the hold's weight", () => {
+            // Held (weight 1): k = k_hold + κ·|F_ff|, c = c_hold, the grasp's measured viscosity. Weight 0 is the
+            // rhythmic flex, k₀ + κ·|F_ff| with c = 2ζ√(k·m_arm); between them each gain is the weighted mean.
+            const law = HELD.flex;
+            const hold = law.hold as NonNullable<typeof law.hold>;
+            const rhythmic = flexGains(law, force);
+            expect(flexGains(law, force, 0)).toEqual(rhythmic);
+            const held = flexGains(law, force, 1);
+            expect(held.stiffness).toBeCloseTo(hold.stiffness + TEST_FLEX.stiffnessPerForce * force, 9);
+            expect(held.damping).toBeCloseTo(hold.damping, 12);
+            const half = flexGains(law, force, 0.25);
+            expect(half.stiffness).toBeCloseTo(0.75 * rhythmic.stiffness + 0.25 * held.stiffness, 9);
+            expect(half.damping).toBeCloseTo(0.75 * rhythmic.damping + 0.25 * held.damping, 9);
+            // With no hold the weight changes nothing.
+            expect(flexGains(TEST_FLEX, force, 1)).toEqual(flexGains(TEST_FLEX, force));
+        });
+
+        it("holds through the push, then relaxes to the rhythmic flex at the muscles' pace", () => {
+            // Hands travelling along aim reach the pendulum phase partway through a 5 cm push. Until then each hand's
+            // stiffness is the held one; from its start t_p the hold's weight is exp(−(t − t_p)/τ_push), so k is
+            // continuous at t_p and returns to the rhythmic value, which stays in force after the push.
+            const arc = STILL({
+                theta0: -0.3,
+                pivotVelocity: vec3(1, 0, 0),
+                handReach: 0.05,
+                pendulumAt: 0.5,
+                pendulumEffort: 1,
+                window: 0.005,
+                handWindow: 0.005,
+            });
+            // The same hands without the hold give the rhythmic k₀ + κ·|F_ff| at the same state; the hold adds
+            // (k_hold − k₀)·w on top, the κ·|F_ff| term common to both.
+            const held = prepareAt(arc, STANDARD_GRAVITY, HELD);
+            const plain = prepareAt(arc, STANDARD_GRAVITY);
+            const pendulum = (held.push as Push).pendulum as number;
+            const tau = HELD.pushResponseTime;
+            const topStiffness = (track: PreparedTrack, t: number): number => {
+                const grip = newGripState();
+                handLoad(track, headOnPath(track, TEST_HEAD, t), TEST_HEAD, t, grip);
+                return grip.topStiffness;
+            };
+            const excess = (t: number): number => topStiffness(held, t) - topStiffness(plain, t);
+            const full = (HELD.flex.hold as NonNullable<typeof HELD.flex.hold>).stiffness - TEST_FLEX.stiffness;
+            for (const t of [0.001, pendulum / 2, pendulum - 1e-9]) {
+                expect(excess(t), `held at ${t}`).toBeCloseTo(full, 9);
+            }
+            expect(Math.abs(excess(pendulum + 1e-9) - full)).toBeLessThan(1e-4 * full);
+            for (const n of [1, 2, 10]) {
+                const t = pendulum + n * tau;
+                expect(excess(t), `${n} τ`).toBeCloseTo(full * Math.exp(-n), 6);
+            }
+        });
     });
 
     it("pushes no harder along aim than its springs and dampers once the push has stopped: no brake", () => {

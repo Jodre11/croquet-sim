@@ -295,3 +295,34 @@ fetch), x_h, mean property-based (Table 2), provenance "direct".
   (Table 2) and the proposed ISO revision's (Table 3).
 - K0 and C0 are recorded but not used by the engine: the arm's measured slow flex (`armStiffness`, Fortineau) is the
   same path from the forearm to the body, so it takes their place rather than sit in series with them.
+
+### The gate ruling, round 12 (2026-10-12): the arms hold their posture through the push
+
+The user's ruling ("Posture holding in the push"): through the push each arm's flex takes the endpoint impedance the
+arm shows while it holds a posture, and the backswing and the pendulum phase keep Fortineau's rhythmic values
+(`armStiffness`, `armDampingRatio`). Both fetched 2026-10-12 with `curl -sS -L`; the digests are of the raw PDFs.
+Measurements of the human arm only.
+
+| Short name | Work | URL | SHA-256 |
+|---|---|---|---|
+| Patel et al. | Patel, O'Neill and Artemiadis, "On the effect of muscular co-contraction on the 3D human arm impedance", *IEEE Trans. Biomed. Eng.* (2014), DOI 10.1109/TBME.2014.2323938, the accepted manuscript | https://horc-lab.github.io/pdf/patel2014effect.pdf | `9249e7dffcd03f2a29382419cf2995cf16dcc579da035c1f9748f85ed84d1a15` |
+| Tsuji et al. | Tsuji, Morasso, Goto and Ito, "Human hand impedance characteristics during maintained posture", *Biol. Cybern.* 72:475–485 (1995), DOI 10.1007/BF00199890, a scan with no text layer, read from page renders | http://www.neuro-it.net/pdf_dateien/summer_2004/Tsuij%201995.PDF | `3571c22c3bb22d2c0fcfddb0dd8a88e96a642c750f90690662aeb26c49747db4` |
+
+- Patel et al., method: four male subjects, "strapped to the chair and their right arm was coupled to the robot arm via
+  a mechanical coupling", near the wrist; 8 mm perturbations "in 18 different directions in 3D space" over 100 ms, in
+  seven configurations, at co-contraction 0, 50, 75 and 100 % of a maximum. Fig. 1A draws the human-centred frame with
+  X up, Y lateral and Z forward from the subject.
+- Patel et al., Table I, "ARM STIFFNESS CHARACTERISTICS FOR 0% CO-CONTRACTION, AVERAGED ACROSS ALL SUBJECTS", K zz (the
+  fore–aft axis, along aim at a grip) over configurations 1–7: 1353.4, 854.3, 701.1, 504.2, 489.2, 601.2, 704.3 N/m;
+  `armHoldStiffness` is their mean, 744 N/m, bounds 489.2–1353.4. Co-contraction raises the stiffness "anisotropic[ally]
+  …, affecting primarily the secondary and tertiary axes"; the 0 % values are used, a posture held without deliberate
+  co-contraction. Damping is not reported: "the opposing forces due to inertia (I) and damping (B) were very small".
+- Tsuji et al., method: "While a subject maintains a given hand location, small external disturbances are applied to
+  his hand by a manipulandum", in a horizontal plane; "hand stiffness and viscosity increase with the grip force of the
+  subject".
+- Tsuji et al., Table 4, "Estimated hand impedance while the subjects grasped the handle in order to keep the hand
+  location", B yy (y from the shoulder towards the hand) for subjects A and C at four hand locations: 16.85, 30.02,
+  19.32, 10.84, 27.69, 29.09, 19.91, 11.93 N s/m; `armHoldDamping` is their mean, 20.7 N·s/m, bounds 10.84–30.02.
+- κ (`armStiffnessPerForce`, Takagi's grasp-force analogue) stays on top of `armHoldStiffness`: Patel's subjects held
+  no handle, so his values carry no grasp force. The hold relaxes to the rhythmic flex from the pendulum phase's start
+  with `pushResponseTime`, the muscles' measured force rise (Augustsson et al.), so the hands' force never steps.

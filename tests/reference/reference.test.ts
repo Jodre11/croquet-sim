@@ -156,6 +156,8 @@ describe("swing, coupling and head–turf reference data", () => {
             armStiffnessPerForce: "1/m",
             armDampingRatio: "1",
             armEndpointMass: "kg",
+            armHoldStiffness: "N/m",
+            armHoldDamping: "N·s/m",
             pendulumForce: "N",
             pushForce: "N",
             pushResponseTime: "s",

@@ -143,6 +143,22 @@
         "provenance": "derived",
         "note": "ζ_arm, held constant so that each hand's damper is c_h = 2·ζ_arm·√(k_h·m_arm), as Perreault, Kirsch and Crago (Exp. Brain Res. 157:507, 2004) found the arm's damping ratio \"remarkably consistent\" across forces and postures (design §3.1-§3.2). No open copy or citing paper quotes their ratio, so it is derived from Fortineau's Experiment H means: \"The average estimated damping was 9.9 Ns/m (SD 3.1)\", stiffness 116 N/m and mass 0.4465 kg (armStiffness, armEndpointMass); 9.9/(2·√(116·0.4465)) = 0.69. Bounds: B/(2·√(K·M)) over the S1 Data's 62 Experiment H estimations (31 participants at two heights), 0.058-1.42; 12 of them exceed 1."
     },
+    "armHoldStiffness": {
+        "value": 744,
+        "unit": "N/m",
+        "bounds": [489.2, 1353.4],
+        "source": "Patel, O'Neill and Artemiadis, 'On the effect of muscular co-contraction on the 3D human arm impedance', IEEE Trans. Biomed. Eng. (2014), DOI 10.1109/TBME.2014.2323938, accepted manuscript https://horc-lab.github.io/pdf/patel2014effect.pdf",
+        "provenance": "derived",
+        "note": "k_hold, each arm's endpoint stiffness while it holds its posture, the flex's k₀ through the push (gate round 12 ruling, 2026-10-12): k = k_hold + κ·|F_ff| there, κ the grasp-force analogue still on top, since Patel's subjects were coupled at the forearm with no grasp. Four male subjects, seated and strapped, the right forearm coupled near the wrist, 8 mm perturbations in 18 directions over 100 ms, seven 3D configurations, here at 0 % co-contraction. Fig. 1A sets the human-centred frame: X up, Y lateral, Z forward from the subject, so the fore-aft axis, along aim at the grip, is K zz. Table I, 'ARM STIFFNESS CHARACTERISTICS FOR 0% CO-CONTRACTION, AVERAGED ACROSS ALL SUBJECTS', K zz over configurations 1-7: 1353.4, 854.3, 701.1, 504.2, 489.2, 601.2 and 704.3 N/m; the value is their mean, 744.0 N/m, the configurations weighted alike as the paper does not single one out. Bounds: the configurations' means, 489.2-1353.4 N/m. The vertical K xx is 245.2-801.3 N/m (mean 535.3); the flex is isotropic and takes the along-aim axis, which carries the push."
+    },
+    "armHoldDamping": {
+        "value": 20.7,
+        "unit": "N·s/m",
+        "bounds": [10.84, 30.02],
+        "source": "Tsuji, Morasso, Goto and Ito, 'Human hand impedance characteristics during maintained posture', Biol. Cybern. 72:475-485 (1995), DOI 10.1007/BF00199890, copy http://www.neuro-it.net/pdf_dateien/summer_2004/Tsuij%201995.PDF",
+        "provenance": "derived",
+        "note": "c_hold, each arm's endpoint viscosity while it grasps and holds its posture, the flex's damper through the push (gate round 12 ruling, 2026-10-12), in place of 2·ζ_arm·√(k·m_arm). The abstract: 'hand stiffness and viscosity increase with the grip force of the subject'. Table 4, 'Estimated hand impedance while the subjects grasped the handle in order to keep the hand location', the fore-aft term B yy (y the shoulder-to-hand direction in the horizontal plane) for subjects A and C at hand locations 1-4: 16.85, 30.02, 19.32, 10.84, 27.69, 29.09, 19.91 and 11.93 N·s/m; the value is their mean, 20.71. Bounds: their range, 10.84-30.02. Without grasping (Table 1) the same terms are 5.5-23.0 N·s/m."
+    },
     "armEndpointMass": {
         "value": 0.4465,
         "unit": "kg",

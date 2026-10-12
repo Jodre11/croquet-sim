@@ -191,7 +191,7 @@ describe("simulateShot", () => {
     // forward push between taps. P2b.2b.2b.2b: fast impedance (was 4.89 mm at 38.9 ms): each hand's mass on its grip
     // tissue takes part of the blow (the top tissue peaks at 102 N at 1.2 ms), and the striker's ball rises at most
     // 1.88 mm above R at 32.4 ms (two face intervals). P2b.2b.2b.2b: arm chain (was 1.88 mm at 32.4 ms): 2.24 mm at
-    // 31.3 ms, three face intervals.
+    // 31.3 ms, three face intervals. P2b.2b.2b.2b: posture-holding push (was 2.24 mm at 31.3 ms): 2.29 mm at 31.5 ms.
     it("runs the full-roll canonical setup with no entry jump and no ball above R + 5 mm", () => {
         lowFlight("full-roll");
     });
@@ -200,7 +200,8 @@ describe("simulateShot", () => {
     // tissue, 7.28 mm with the push intent, 10.15 mm before it). With each hand–arm chain the half roll's face meets
     // the striker's ball three times (0.0–1.4, 7.3–8.8 and 25.0–26.7 ms), and the ball rises at most 3.74 mm above R
     // at 26.0 ms. P2b.2b.2b.2b: continuous α (was 3.74 mm at 26.0 ms): 3.67 mm at 25.6 ms, the third interval
-    // 24.7–26.4 ms.
+    // 24.7–26.4 ms. P2b.2b.2b.2b: posture-holding push (was 3.67 mm at 25.6 ms): 3.72 mm at 25.7 ms, the third interval
+    // 24.9–26.5 ms.
     it("runs the half-roll canonical setup with no entry jump and no ball above R + 5 mm", () => {
         lowFlight("half-roll");
     });
@@ -209,7 +210,10 @@ describe("simulateShot", () => {
     // mm), re-skipped with the hands' mass and grip tissue (9.70 mm at 66.8 ms), the pass roll still fails with each
     // hand–arm chain: five face intervals (0.0–1.2, 5.6–7.0, 9.9–11.6, 13.3–15.4 and 15.7–26.5 ms), and the striker's
     // ball is 14.52 mm above R at the impact's end (83.1 ms), its highest. P2b.2b.2b.2b: continuous α (was 14.52 mm):
-    // 18.82 mm at the impact's end (83.1 ms), the last interval 15.7–26.6 ms.
+    // 18.82 mm at the impact's end (83.1 ms), the last interval 15.7–26.6 ms. P2b.2b.2b.2b: posture-holding push (was
+    // 18.82 mm): the arms held at Patel's posture-holding stiffness and Tsuji's grasp viscosity through the push still
+    // let the face leave the ball while the turf bed throws it up, at 0.620 m/s (was 0.622): 19.17 mm at 92.2 ms, six
+    // face intervals (the last two 15.7–26.3 and 105.0–106.4 ms), the impact ending at 106.6 ms.
     it.skip("runs the pass-roll canonical setup with no entry jump and no ball above R + 5 mm", () => {
         lowFlight("pass-roll");
     });
@@ -282,7 +286,7 @@ describe("simulateShot", () => {
     // intent, gate round 1, all but at its apex: θ +0.180 rad, rising at 0.007 rad/s). With the hands' mass and grip
     // tissue (gate round 2) it reaches its apex at 953.7 ms, 46 ms short of the cap. P2b.2b.2b.2b: arm chain (was
     // 953.7 ms): 894.4 ms, θ +0.298 rad. P2b.2b.2b.2b: continuous α (was 894.4 ms, θ +0.298 rad): 883.7 ms,
-    // θ +0.295 rad.
+    // θ +0.295 rad. P2b.2b.2b.2b: posture-holding push (was 883.7 ms, θ +0.295 rad): 911.3 ms, θ +0.208 rad.
     it("runs the half-roll canonical setup from the top to its finish (exit criterion 3)", () => {
         runsToFinish("half-roll");
     });
@@ -505,7 +509,8 @@ describe("the mechanisms (design §8.1), on the canonical setups", () => {
         // P2b.2b.2b.2b: hands' arc (was it.fails): 1.2170 and 1.1300 m/s. P2b.2b.2b.2b: flex (was 1.2170 and
         // 1.1300): 1.8786 and 1.6386 m/s; Task 8 confirms it. P2b.2b.2b.2b: push intent and fast impedance (was 1.8786
         // and 1.6386): 1.7016 and 1.2624 m/s. P2b.2b.2b.2b: arm chain (was 1.7016 and 1.2624): 1.8493 and 1.2824 m/s.
-        // P2b.2b.2b.2b: continuous α (was 1.8493 and 1.2824): 1.8412 and 1.2824 m/s.
+        // P2b.2b.2b.2b: continuous α (was 1.8493 and 1.2824): 1.8412 and 1.2824 m/s. P2b.2b.2b.2b: posture-holding
+        // push (was 1.8412 and 1.2824): 2.1111 and 1.3187 m/s.
         const punched = simulateShot(canonicalSetup("pass-roll")).impact;
         const coasted = simulateShot(canonicalSetup("pass-roll", { stroke: { drive: 0 } })).impact;
         expect(strikerSpeed(punched)).toBeGreaterThan(strikerSpeed(coasted));

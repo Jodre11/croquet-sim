@@ -293,7 +293,9 @@ function validate(setup: ShotSetup, ballRadius: number): void {
         );
     }
     const { flex } = body;
-    for (const [key, value] of Object.entries(flex)) {
+    const { hold, ...flexValues } = flex;
+    const held = hold === null ? [] : Object.entries(hold).map(([key, value]) => [`hold.${key}`, value] as const);
+    for (const [key, value] of [...Object.entries(flexValues), ...held]) {
         finiteNumber(value, `profile.body.flex.${key}`);
         positive(value, `profile.body.flex.${key}`);
     }
