@@ -19,16 +19,31 @@
  *   (P2b.2b.2b.2a design §4.5): the apparent friction, the travel to the deepest point and the deepest δ; then a ball
  *   rolling at 2 m/s across a fresh bed, its speed after 50 mm;
  * - face: the face's e and T at the impact's 5 µs step against Gugan's fits, a free head on a free ball (design §5.1);
- * - asPlayed: the full roll at 2 m/s against the roll as played (design §6): the lean through the contact, the face
- *   behind the striker's ball, the hands' force at the end of their reach and the striker's ball's loss after it.
+ * - asPlayed: all three rolls at 2 and 3 m/s against the roll as played (P2b.2b.2b.2b design §8): the head on point,
+ *   the lean through the contact and the pitch through vertical, the hands' dip, the head's descent, the face
+ *   intervals, the hands' force at the pendulum phase's start and after the push, the striker's ball's loss while the
+ *   face is on it, the flex's step at contact and the ratio;
+ * - onPoint: exit criterion 4 (the head on point behind the striker's ball) over the preset grid for each roll;
+ * - timing: each roll at 2 and 4 m/s with pendulumAt from 0.2 to 1.0, the ratio and the striker's distance
+ *   (P2b.2b.2b.2b design §9);
+ * - heldOut: each roll at 3 m/s against the held-out measurements (design §9): the head's descent against Gugan 4's
+ *   6–16°, the apparent contact against the CA's 30–58 ms, the second contact against Gugan 4's and Hall's several
+ *   milliseconds, the face intervals against Cross's seven taps and the ratio against Gugan's.
  * Run with `npx --yes tsx scripts/strokeProbe.ts`; environment: SECTION (one of the names above; default all), REPEAT
  * (timed runs per stroke, default 20). Not part of the test suite; its output goes into the roadmap's outcomes.
  */
 import { faceContactTimeAt, faceRestitutionAt } from "../src/engine/impact/contactLaw";
-import { IMPACT_DT, integrate, type ContactSample, type ImpactSnapshot } from "../src/engine/impact/integrate";
+import { headBallContact } from "../src/engine/impact/contacts";
+import {
+    IMPACT_DT,
+    integrate,
+    type ContactSample,
+    type FollowThrough,
+    type ImpactSnapshot,
+} from "../src/engine/impact/integrate";
 import { IDENTITY, rotate } from "../src/engine/impact/rigidBody";
 import { simulateImpact, simulateStroke } from "../src/engine/impact/simulateImpact";
-import { prepareTrack } from "../src/engine/impact/track";
+import { prepareTrack, type Push } from "../src/engine/impact/track";
 import { bedLawOf, bedLoad, bedRelax, newBallBed, staticSink } from "../src/engine/impact/turfBed";
 import type { Downswing, HeadState, ImpactResult, MalletHead, TrackDrive } from "../src/engine/impact/types";
 import { ZERO, add, dot, horizontal, length, scale, sub, vec3, type Vec3 } from "../src/engine/math/vec3";
@@ -230,19 +245,27 @@ function atSpeed(type: StrokeType, speed: number): ShotSetup {
     return withStroke(base, { backswing: backswingFor(base, speed, WORLD) });
 }
 
-/** `setup`'s stroke with every impact snapshot, and the striker's index among the snapshots' balls. */
+/**
+ * `setup`'s stroke with every impact snapshot, the striker's index among the snapshots' balls, and the
+ * follow-through.
+ */
 function recorded(setup: ShotSetup): {
     readonly plan: ReturnType<typeof planStroke>;
     readonly impact: ImpactResult;
     readonly steps: readonly ImpactSnapshot[];
     readonly striker: number;
+    readonly follow: FollowThrough;
 } {
     const plan = planStroke(setup, WORLD);
     const probe = recorder();
-    const { result } = simulateStroke(plan.contact, setup.balls, WORLD, { probe });
+    const { result, follow } = simulateStroke(plan.contact, setup.balls, WORLD, { probe });
     const striker = BALL_IDS.filter((id) => setup.balls[id] !== undefined).indexOf(setup.striker);
-    return { plan, impact: result, steps: probe.snapshots, striker };
+    return { plan, impact: result, steps: probe.snapshots, striker, follow };
 }
+
+/** The least and the greatest of `xs` (Infinity and −Infinity when empty), with no argument spread. */
+const least = (xs: readonly number[]): number => xs.reduce((a, b) => Math.min(a, b), Infinity);
+const most = (xs: readonly number[]): number => xs.reduce((a, b) => Math.max(a, b), 0 - Infinity);
 
 /** The turf's whole force on the ball in a bed sample: the resultant along its normal and the friction spring's. */
 const turfForce = (c: ContactSample): Vec3 => add(scale(c.normal, c.normalForce), c.tangentialForce);
@@ -253,11 +276,75 @@ function leanOf(head: HeadState, aim: Vec3): number {
     return Math.atan2(dot(shaft, aim), shaft.z);
 }
 
-/** The centre of the face of `head` in state `state`: the head's axis is its local x, the face at +length/2. */
-const faceCentre = (state: HeadState, head: MalletHead): Vec3 =>
-    add(state.position, scale(rotate(state.orientation, vec3(1, 0, 0)), head.length / 2));
+/** Exit criterion 4 (P2b.2b.2b.2b design §1): the head on point behind the striker's ball through the contact. */
+interface OnPoint {
+    /** The least distance (m) of the head's centre behind the ball's centre along aim. */
+    readonly behind: number;
+    /** The highest face contact point (m) above the ball's centre. */
+    readonly height: number;
+    /** The largest lean (rad). */
+    readonly lean: number;
+    readonly holds: boolean;
+}
+
+/** R·sin 45°: the face meeting the ball no higher than a 45° lean puts it. */
+const ON_POINT_HEIGHT = WORLD.ball.radius * Math.SQRT1_2;
+
+/**
+ * The head on point (exit criterion 4) over `steps`, from the first step with the face–striker pair closed to the
+ * last: the head's centre behind the ball's centre along aim, every face contact point at most R·sin 45° above the
+ * ball's centre, and the lean at most 45°. `striker` is the striker's index among the snapshots' balls, `id` its id.
+ */
+function onPoint(steps: readonly ImpactSnapshot[], striker: number, id: BallId, head: MalletHead, aim: Vec3): OnPoint {
+    const key = `face/${id}`;
+    const touching = steps.map((s) => s.contacts.some((c) => c.key === key && c.normalForce > 0));
+    const first = touching.indexOf(true);
+    const last = touching.lastIndexOf(true);
+    let behind = Infinity;
+    let height = 0 - Infinity;
+    let lean = 0 - Infinity;
+    for (let i = Math.max(first, 0); first >= 0 && i <= last; i++) {
+        const s = steps[i] as ImpactSnapshot;
+        const ball = s.balls[striker] as BallState;
+        behind = Math.min(behind, dot(sub(ball.position, s.head.position), aim));
+        lean = Math.max(lean, leanOf(s.head, aim));
+        const hit = headBallContact(s.head, head, ball.position, WORLD.ball.radius);
+        if (hit !== null) {
+            height = Math.max(height, hit.point.z - ball.position.z);
+        }
+    }
+    const holds = behind > 0 && height <= ON_POINT_HEIGHT && lean <= Math.PI / 4;
+    return { behind, height, lean, holds };
+}
 
 const deg = (a: number): string => fmt((a * 180) / Math.PI, 2);
+
+/** The steps of `steps` at which the face presses on the ball `id`. */
+const faceOnBall = (steps: readonly ImpactSnapshot[], id: BallId): readonly ImpactSnapshot[] =>
+    steps.filter((s) => s.contacts.some((c) => c.key === `face/${id}` && c.normalForce > 0));
+
+/** The head's descent (rad, positive downward) below the horizontal along `aim` at each step the face is on `id`. */
+const descentsOn = (steps: readonly ImpactSnapshot[], id: BallId, aim: Vec3): readonly number[] =>
+    faceOnBall(steps, id).map((s) => Math.atan2(0 - s.head.velocity.z, dot(s.head.velocity, aim)));
+
+/**
+ * The face–striker intervals of `impact`, the apparent contact from the first's start to the last's end, and the gap
+ * from the first's end to the second's start (NaN with a single interval).
+ */
+function faceTiming(
+    impact: ImpactResult,
+    id: BallId,
+): { readonly count: number; readonly from: number; readonly to: number; readonly second: number } {
+    const intervals = impact.timeline[`face/${id}`] ?? [];
+    const first = intervals[0];
+    const next = intervals[1];
+    return {
+        count: intervals.length,
+        from: first?.start ?? NaN,
+        to: intervals[intervals.length - 1]?.end ?? NaN,
+        second: first === undefined || next === undefined ? NaN : next.start - first.end,
+    };
+}
 
 /** Σ|horizontal turf force|·dt over Σ vertical turf force·dt over `samples`; the steps are all IMPACT_DT long. */
 function apparentFriction(samples: readonly ContactSample[]): number {
@@ -370,74 +457,219 @@ function face(): void {
 }
 
 /**
- * The full roll at 2 m/s against the roll as played (roadmap, "The model's roll against the roll as played"), a
- * baseline for P2b.2b.2b.2b: the lean through the contact (the first face–striker interval's start to the last's end),
- * the face behind the striker's ball, and the hands' force at the end of their reach and what the striker's ball loses
- * while the face is on it after that.
+ * The rolls against the roll as played (P2b.2b.2b.2b design §8, §9), each at 2 and 3 m/s: first the head on point
+ * (exit criterion 4), then the lean through the contact and the pitch through vertical, the hands' dip, the head's
+ * descent at contact and through the push against Gugan's 6–16°, the face intervals, the ratio, the hands' force along
+ * aim at the pendulum phase's start and its minimum after the push, and the striker's speed lost while the face is on
+ * it.
  */
 function asPlayed(): void {
-    console.log("== The full roll at 2 m/s against the roll as played (P2b.2b.2b.2b's baseline) ==");
-    const setup = atSpeed("full-roll", 2);
-    const { plan, impact, steps, striker } = recorded(setup);
-    const drive = plan.contact.drive as TrackDrive;
-    const { aim } = drive.arc;
-    const head = plan.contact.head;
-    const intervals = impact.timeline[`face/${setup.striker}`] ?? [];
-    const from = intervals[0]?.start ?? 0;
-    const to = intervals[intervals.length - 1]?.end ?? impact.duration;
-    const window = steps.filter((s) => s.t >= from && s.t <= to);
-    const leans = window.map((s) => leanOf(s.head, aim));
-    const lowest = leans.reduce((a, b) => Math.min(a, b));
-    const highest = leans.reduce((a, b) => Math.max(a, b));
-    console.log(
-        `full-roll   ${intervals.length} face intervals over ${ms(from)}–${ms(to)} ms; lean at contact ` +
-            `${deg(leans[0] ?? NaN)}°, ${deg(lowest)}° to ${deg(highest)}° through the contact, ` +
-            `${deg(leans[leans.length - 1] ?? NaN)}° at its end`,
-    );
-    const ball = (s: ImpactSnapshot): BallState => s.balls[striker] as BallState;
-    const gaps = window.map((s) => ({
-        face: dot(sub(ball(s).position, faceCentre(s.head, head)), rotate(s.head.orientation, vec3(1, 0, 0))),
-        centre: dot(sub(ball(s).position, s.head.position), aim),
-    }));
-    const range = (xs: readonly number[]): string =>
-        `${mm(xs.reduce((a, b) => Math.min(a, b)))} to ${mm(xs.reduce((a, b) => Math.max(a, b)))} mm`;
-    console.log(
-        `${"".padEnd(11)} through the contact, the face's plane behind the striker's ball's surface ` +
-            `${range(gaps.map((g) => g.face - WORLD.ball.radius))}; the head's centre behind the ball's centre ` +
-            `along aim ${range(gaps.map((g) => g.centre))}`,
-    );
-    const reach = prepareTrack(drive, head, WORLD.gravity).reach;
-    if (reach === null) {
-        console.log(`${"".padEnd(11)} the hands' reach does not bind`);
-        return;
-    }
-    const pushOf = (s: ImpactSnapshot): number => (s.hand === undefined ? NaN : dot(s.hand.force, aim));
-    const atReach = steps.find((s) => s.t >= reach.t1);
-    const easing = steps.filter((s) => s.t >= reach.t1 && s.t <= reach.tStop);
-    let lost = 0;
-    let previous = atReach === undefined ? NaN : length(ball(atReach).velocity);
-    for (const s of steps.filter((x) => x.t > reach.t1)) {
-        const speed = length(ball(s).velocity);
-        if (s.contacts.some((c) => c.key === `face/${setup.striker}` && c.normalForce > 0)) {
-            lost += previous - speed;
+    console.log("== The rolls against the roll as played (P2b.2b.2b.2b design §8) ==");
+    for (const type of ROLLS) {
+        for (const speed of [2, 3]) {
+            const setup = atSpeed(type, speed);
+            const { plan, impact, steps, striker, follow } = recorded(setup);
+            const drive = plan.contact.drive as TrackDrive;
+            const { aim, contactAt } = drive.arc;
+            const head = plan.contact.head;
+            const track = prepareTrack(drive, head, WORLD.gravity);
+            const push = track.push as Push;
+            const label = `${type.padEnd(11)} ${fmt(speed, 1)} m/s`;
+            const point = onPoint(steps, striker, setup.striker, head, aim);
+            console.log(
+                `${label} ON POINT ${point.holds ? "holds" : "FAILS"}: the head's centre ${mm(point.behind)} mm ` +
+                    `behind the ball's centre at least; the face's contacts ${mm(point.height)} mm above it at ` +
+                    `most (R·sin 45° ${mm(ON_POINT_HEIGHT)} mm); the lean ${deg(point.lean)}° at most (45°)`,
+            );
+            const faces = faceTiming(impact, setup.striker);
+            const from = faces.count > 0 ? faces.from : contactAt;
+            const to = faces.count > 0 ? faces.to : impact.duration;
+            const window = steps.filter((s) => s.t >= from && s.t <= to);
+            const leans = window.map((s) => leanOf(s.head, aim));
+            const after = follow.samples.filter((s) => s.t >= impact.duration);
+            const pitchPeak = most(after.map((s) => 0 - leanOf(s.head, aim)));
+            console.log(
+                `${"".padEnd(11)} ${faces.count} face intervals over ${ms(from)}–${ms(to)} ms; lean at ` +
+                    `contact ${deg(leans[0] ?? NaN)}°, ${deg(least(leans))}° to ${deg(most(leans))}° ` +
+                    `through the contact; the follow-through's highest pitch ${deg(pitchPeak)}° ` +
+                    `(${pitchPeak >= 0 ? "past" : "short of"} vertical), finish at ${ms(follow.finish)} ms ` +
+                    `${follow.flags.length > 0 ? follow.flags.join(", ") : "unflagged"}`,
+            );
+            const topOf = (state: HeadState): Vec3 =>
+                add(state.position, scale(rotate(state.orientation, vec3(0, 0, 1)), head.socket.z + drive.arc.radius));
+            const z0 = topOf(plan.contact).z;
+            const heights = follow.samples.map((s) => ({ t: s.t, dz: topOf(s.head).z - z0 }));
+            const lowest = heights.reduce((a, b) => (b.dz < a.dz ? b : a));
+            const atPendulum = heights.find((h) => h.t >= (push.pendulum ?? Infinity));
+            const atFinish = heights[heights.length - 1] as { t: number; dz: number };
+            console.log(
+                `${"".padEnd(11)} the hands' dip: lowest ${mm(lowest.dz)} mm at ${ms(lowest.t - contactAt)} ms ` +
+                    `after contact; ${
+                        atPendulum === undefined
+                            ? "no pendulum phase"
+                            : `${mm(atPendulum.dz)} mm at the pendulum phase's start`
+                    }; ${mm(atFinish.dz)} mm at the finish`,
+            );
+            const descents = descentsOn(steps, setup.striker, aim);
+            console.log(
+                `${"".padEnd(11)} the head's descent at contact ${deg(descents[0] ?? NaN)}°, ` +
+                    `${deg(least(descents))}° to ${deg(most(descents))}° while the face is on the ` +
+                    "ball (Gugan's β 6–16°, held out; 2a at 3 m/s: half 9.70°, full 3.05°, pass 4.48°)",
+            );
+            const pushOf = (s: ImpactSnapshot): number => (s.hand === undefined ? NaN : dot(s.hand.force, aim));
+            const atStart = steps.find((s) => s.t >= (push.pendulum ?? Infinity));
+            // The impact may end before the push does (it ends at the pendulum phase's start once the ball has gone),
+            // leaving no step after the push's end to read; say so rather than print NaN.
+            const afterPush = steps.filter((s) => s.t >= (push.end ?? Infinity)).map(pushOf);
+            const pushes = afterPush.filter((f) => Number.isFinite(f));
+            const weakest =
+                pushes.length > 0
+                    ? `${fmt(least(pushes), 1)} N`
+                    : `— (the impact ends at ${ms(impact.duration)} ms, before the push's end` +
+                      `${push.end === null ? ", which never comes" : ` at ${ms(push.end)} ms`})`;
+            const ball = (s: ImpactSnapshot): BallState => s.balls[striker] as BallState;
+            let lost = 0;
+            for (let i = 1; i < steps.length; i++) {
+                const s = steps[i] as ImpactSnapshot;
+                if (s.contacts.some((c) => c.key === `face/${setup.striker}` && c.normalForce > 0)) {
+                    lost += Math.max(
+                        0,
+                        length(ball(steps[i - 1] as ImpactSnapshot).velocity) - length(ball(s).velocity),
+                    );
+                }
+            }
+            const contactStep = steps.find((s) => s.t >= contactAt);
+            const hand = contactStep?.hand;
+            const damperStep = hand === undefined ? NaN : length(sub(hand.force, hand.feedForward));
+            console.log(
+                `${"".padEnd(11)} the hands' force along aim at the pendulum phase's start ` +
+                    `${atStart === undefined ? "—" : fmt(pushOf(atStart), 1)} N, its least after the push ` +
+                    `${weakest} (no brake); the striker's ball loses ${fmt(lost)} m/s while the face is ` +
+                    `on it; the flex's step at contact ${fmt(damperStep, 2)} N (decision 2); ratio ` +
+                    `${fmt(ratio(setup, simulateShot(setup, WORLD)), 2)}`,
+            );
         }
-        previous = speed;
     }
-    if (atReach === undefined) {
-        console.log(`${"".padEnd(11)} the hands reach 0.8·handReach at ${ms(reach.t1)} ms, after the impact`);
-        return;
-    }
-    const hardest = easing.reduce((a, s) => (pushOf(s) < pushOf(a) ? s : a), atReach);
-    console.log(
-        `${"".padEnd(11)} the hands reach 0.8·handReach at ${ms(reach.t1)} ms and rest at ${ms(reach.tStop)} ms; ` +
-            `their force along aim there ${fmt(pushOf(atReach), 1)} N, its lowest until they rest ` +
-            `${fmt(pushOf(hardest), 1)} N at ${ms(hardest.t)} ms; the striker's ball at ` +
-            `${fmt(length(ball(atReach).velocity))} m/s there loses ${fmt(lost)} m/s while the face is on it after ` +
-            `that; the impact ends at ${ms(impact.duration)} ms`,
-    );
 }
 
-const SECTIONS: Readonly<Record<string, () => void>> = { speeds, canonical, fat, cost, faults, pit, face, asPlayed };
+/**
+ * Exit criterion 4 over swingProbe's preset grid for each roll (speed × drive × contact, 225 runs a roll): the runs
+ * whose head leaves its point, each listed.
+ */
+function onPointSweep(): void {
+    console.log("== The head on point (exit criterion 4) over the preset grid ==");
+    for (const type of ROLLS) {
+        const base = canonicalSetup(type, { world: WORLD });
+        const up0 = base.stroke.contact.up;
+        let runs = 0;
+        const failed: string[] = [];
+        for (const speed of [1, 2, 3, 4, 6]) {
+            for (const strokeDrive of [-1, -0.5, 0, 0.5, 1]) {
+                for (const up of [up0 - 0.003, up0, up0 + 0.003]) {
+                    for (const side of [-0.01, 0, 0.01]) {
+                        let setup: ShotSetup;
+                        try {
+                            const stroke = { ...base.stroke, drive: strokeDrive, contact: { up, side } };
+                            const backswing = backswingFor({ ...base, stroke }, speed, WORLD);
+                            setup = { ...base, stroke: { ...stroke, backswing } };
+                            planStroke(setup, WORLD);
+                        } catch (error) {
+                            if (error instanceof RangeError) {
+                                continue;
+                            }
+                            throw error;
+                        }
+                        const { plan, steps, striker } = recorded(setup);
+                        const drive = plan.contact.drive as TrackDrive;
+                        const point = onPoint(steps, striker, setup.striker, plan.contact.head, drive.arc.aim);
+                        runs++;
+                        if (!point.holds) {
+                            failed.push(
+                                `${speed} m/s drive ${strokeDrive} up ${mm(up - up0)} mm side ${mm(side)} mm: ` +
+                                    `behind ${mm(point.behind)} mm, height ${mm(point.height)} mm, ` +
+                                    `lean ${deg(point.lean)}°`,
+                            );
+                        }
+                    }
+                }
+            }
+        }
+        console.log(`${type.padEnd(11)} ${runs} runs, ${failed.length} off point`);
+        for (const line of failed) {
+            console.log(`${"".padEnd(11)} ${line}`);
+        }
+    }
+}
+
+/**
+ * The pendulum-timing sweep (P2b.2b.2b.2b design §9): each roll at a slow and a fast push (2 and 4 m/s), pendulumAt
+ * from 0.2 to 1.0, the ratio and the striker's distance at each. Recorded only: how sensitive the outcome is to the
+ * phasing, which the user expects to be highest on a long, fast push.
+ */
+function timing(): void {
+    console.log("== The pendulum-timing sweep (design §9): ratio and striker's distance against pendulumAt ==");
+    for (const type of ROLLS) {
+        for (const speed of [2, 4]) {
+            const cells: string[] = [];
+            for (const pendulumAt of [0.2, 0.4, 0.6, 0.8, 1]) {
+                const base = atSpeed(type, speed);
+                const setup = withStroke(base, { pendulumAt });
+                const outcome = simulateShot(setup, WORLD);
+                const start = (setup.balls[setup.striker] as BallState).position;
+                const travelled = length(horizontal(sub(outcome.motion.rest[setup.striker] as Vec3, start)));
+                const cell = `ratio ${fmt(ratio(setup, outcome), 2)}, striker ${fmt(travelled, 2)} m`;
+                cells.push(`${fmt(pendulumAt, 1)}: ${cell}`);
+            }
+            console.log(`${type.padEnd(11)} ${fmt(speed, 1)} m/s  ${cells.join("; ")}`);
+        }
+    }
+}
+
+/** Gugan's roll ratios (held out, P2b.2b.2b.2b design §9). */
+const GUGAN_RATIO: Partial<Record<StrokeType, readonly [number, number]>> = {
+    "half-roll": [2.3, 2.46],
+    "full-roll": [1.2, 1.24],
+    "pass-roll": [0.94, 1.21],
+};
+
+/**
+ * The held-out checks (P2b.2b.2b.2b design §9), each roll at 3 m/s: the head's descent against Gugan 4's stroke angle,
+ * the apparent contact against the CA's 30–58 ms, the second contact against Gugan 4's and Hall's several
+ * milliseconds, the face intervals against Cross's seven taps and the ratio against Gugan's. Recorded, not gated.
+ */
+function heldOut(): void {
+    console.log("== The held-out checks at 3 m/s (design §9): each measure against its measurement ==");
+    for (const type of ROLLS) {
+        const setup = atSpeed(type, 3);
+        const { plan, impact, steps } = recorded(setup);
+        const descents = descentsOn(steps, setup.striker, (plan.contact.drive as TrackDrive).arc.aim);
+        const faces = faceTiming(impact, setup.striker);
+        const [low, high] = GUGAN_RATIO[type] as readonly [number, number];
+        const r = ratio(setup, simulateShot(setup, WORLD));
+        console.log(
+            `${type.padEnd(11)} descent at contact ${deg(descents[0] ?? NaN)}°, ${deg(least(descents))}° to ` +
+                `${deg(most(descents))}° while the face is on the ball (Gugan 4: 6–16°); apparent contact ` +
+                `${ms(faces.to - faces.from)} ms (the CA: 30–58 ms); second contact ` +
+                `${Number.isNaN(faces.second) ? "none" : `${ms(faces.second)} ms after the first's end`} ` +
+                `(Gugan 4, Hall: several ms); ${faces.count} face intervals (Cross: seven taps); ratio ${fmt(r, 2)} ` +
+                `(Gugan: ${fmt(low, 2)}–${fmt(high, 2)})`,
+        );
+    }
+}
+
+const SECTIONS: Readonly<Record<string, () => void>> = {
+    speeds,
+    canonical,
+    fat,
+    cost,
+    faults,
+    pit,
+    face,
+    asPlayed,
+    onPoint: onPointSweep,
+    timing,
+    heldOut,
+};
 for (const [name, section] of Object.entries(SECTIONS)) {
     if (SECTION === "all" || SECTION === name) {
         section();

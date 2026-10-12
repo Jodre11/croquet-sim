@@ -20,6 +20,7 @@ import type { BallId, BallStates, World } from "../../../src/engine/types";
 import { defaultWorld } from "../../../src/engine/world";
 import { lawnReference, swingReference } from "../../../src/reference/index";
 import { TEST_BALL } from "./fixtures";
+import { TEST_CHAIN, TEST_FLEX, TEST_PENDULUM_FORCE, TEST_PUSH_FORCE, TEST_PUSH_RESPONSE_TIME } from "./impact";
 
 /**
  * What `testProfile` changes: the mallet, the body, and one stance, one drive and one shape entry for every stroke
@@ -41,9 +42,11 @@ export interface TestProfileOptions {
  * A profile with the test head (1 kg, 0.23 m long, 0.064 m across, on a 0.9 m shaft) and no arm mass, so that the
  * swung body is the head, as TEST_HANDS has it. Every stroke type has the same stance: level (lean 0, the top hand over
  * the socket at contact), the hands 0.8 m and 0.4 m from the socket, firm grips. Every type has the same drive: a
- * swing-mode coast with no dip or reach, and a full guide. Every type has the same shape: the pendulum alone (share 1),
- * by gravity alone (no effort), a 0.4 s pulse or hands' tempo halving at intensity 1, and intensity 0 by default.
- * Throws if the stance gives both a `lean` and `handsAhead`.
+ * swing-mode coast with no dip or reach, a full guide, a pendulum phase at 0.8 of the push with no effort and a 1.5 m
+ * hands' arc lowest halfway; the body has TEST_FLEX, TEST_PENDULUM_FORCE, TEST_PUSH_FORCE, TEST_PUSH_RESPONSE_TIME
+ * and TEST_CHAIN. Every type has the same shape: the pendulum alone (share 1), by gravity alone (no effort), a 0.4 s
+ * pulse or hands' tempo halving at intensity 1, and intensity 0 by default. Throws if the stance gives both a `lean`
+ * and `handsAhead`.
  */
 export function testProfile(o: TestProfileOptions = {}): SwingProfile {
     const mallet = { headMass: 1, headLength: 0.23, headDiameter: 0.064, shaftLength: 0.9, ...o.mallet };
@@ -74,8 +77,11 @@ export function testProfile(o: TestProfileOptions = {}): SwingProfile {
         handDrop: 0,
         dropTime: 0.01,
         handReach: 0,
-        groundDepth: 0,
         guideEffort: 1,
+        pendulumAt: 0.8,
+        pendulumEffort: 0,
+        handArcRadius: 1.5,
+        handArcLow: 0.5,
         ...o.drive,
     };
     const shape: SwingShape = {
@@ -90,7 +96,16 @@ export function testProfile(o: TestProfileOptions = {}): SwingProfile {
         Object.fromEntries(STROKE_TYPES.map((type) => [type, entry])) as Record<StrokeType, T>;
     return {
         mallet,
-        body: { armMass: 0, reachSlack: 0.03, ...o.body },
+        body: {
+            armMass: 0,
+            reachSlack: 0.03,
+            flex: TEST_FLEX,
+            pendulumForce: TEST_PENDULUM_FORCE,
+            pushForce: TEST_PUSH_FORCE,
+            pushResponseTime: TEST_PUSH_RESPONSE_TIME,
+            chain: TEST_CHAIN,
+            ...o.body,
+        },
         stance: every(stance),
         drive: every(drive),
         shape: every(shape),

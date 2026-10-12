@@ -26,6 +26,8 @@ import type {
     DriveSample,
     FaceLaw,
     FaceMaterial,
+    FlexLaw,
+    HandChain,
     Hands,
     HeadState,
     MalletHead,
@@ -53,7 +55,52 @@ export const TEST_FACE: FaceMaterial = { friction: 0.4 };
 /** A coupling for tracked test heads: plausible, not sourced (design §3.4 sets the engine's); contact at t = 0. */
 export const TEST_COUPLING: Coupling = { period: 0.04, dampingRatio: 0.7, relaxAt: 0 };
 
-/** Two firm hands with no arm mass, so the swung body is the head and head-only closed forms hold; a full guide. */
+/**
+ * A plausible, unsourced arm (P2b.2b.2b.2b design §3.1): k₀ 200 N/m, κ 20 /m, ζ 0.3 on 0.5 kg, with no posture hold
+ * through the push, so its gains are the rhythmic law's throughout.
+ */
+export const TEST_FLEX: FlexLaw = {
+    stiffness: 200,
+    stiffnessPerForce: 20,
+    dampingRatio: 0.3,
+    endpointMass: 0.5,
+    hold: null,
+};
+
+/** A plausible, unsourced pendulum push (N). */
+export const TEST_PENDULUM_FORCE = 20;
+
+/** A plausible, unsourced cap (N) on the hands' push intent (P2b.2b.2b.2b gate ruling 2026-10-11). */
+export const TEST_PUSH_FORCE = 100;
+
+/** A plausible, unsourced time constant (s) of the push intent's response (gate ruling amendment, 2026-10-11). */
+export const TEST_PUSH_RESPONSE_TIME = 0.03;
+
+/**
+ * A plausible, unsourced hand–arm chain (P2b.2b.2b.2b gate round 3 ruling, 2026-10-11), in kg, N/m and N·s/m: forearm
+ * 0.3, hand 0.2, fingers 0.08, each skin 0.015; wrist 10⁴ and 40, knuckle 4000 and 60, palm 4·10⁴ and 60, fingers 10⁵
+ * and 70.
+ */
+export const TEST_CHAIN: HandChain = {
+    forearmMass: 0.3,
+    handMass: 0.2,
+    fingerMass: 0.08,
+    palmSkinMass: 0.015,
+    fingerSkinMass: 0.015,
+    wristStiffness: 1e4,
+    wristDamping: 40,
+    knuckleStiffness: 4000,
+    knuckleDamping: 60,
+    palmStiffness: 4e4,
+    palmDamping: 60,
+    fingerStiffness: 1e5,
+    fingerDamping: 70,
+};
+
+/**
+ * Two firm hands with no arm mass, so a swing-mode swung body is the head and head-only closed forms hold (a carry's
+ * also carries the chains' skin); a full guide.
+ */
 export const TEST_HANDS: Hands = {
     bottom: 0.4,
     gripTension: 1,
@@ -61,6 +108,11 @@ export const TEST_HANDS: Hands = {
     armMass: 0,
     reachSlack: 0.03,
     guideEffort: 1,
+    flex: TEST_FLEX,
+    pendulumForce: TEST_PENDULUM_FORCE,
+    pushForce: TEST_PUSH_FORCE,
+    pushResponseTime: TEST_PUSH_RESPONSE_TIME,
+    chain: TEST_CHAIN,
 };
 
 /** A dip of no depth. */
@@ -73,7 +125,8 @@ export function trackDrive(arc: SwingArc, coupling: Coupling = TEST_COUPLING, ha
 
 /**
  * A still, level swing-mode arc whose test head on the path at t = 0 has its centre at `centre`: aim +x, radius 0.8,
- * θ₀, ω₀ and α 0, both windows 0.01 s from t = 0, no dip, contact at t = 0, a reach of 10 m (it never binds) and no
+ * θ₀, ω₀ and α 0, both windows 0.01 s from t = 0, no dip, contact at t = 0, a reach of 10 m (it never binds), a hands'
+ * arc of radius 11 m (above the reach), lowest halfway, a pendulum phase at 0.8 of the push with no effort, and no
  * ground depth. `o` overrides any field; the pivot follows an overridden aim, radius or θ₀ unless `o` sets it.
  */
 export function levelArc(centre: Vec3, o: Partial<SwingArc> = {}): SwingArc {
@@ -99,7 +152,10 @@ export function levelArc(centre: Vec3, o: Partial<SwingArc> = {}): SwingArc {
         contactAt: 0,
         mode: "swing",
         handReach: 10,
-        groundDepth: 0,
+        pendulumAt: 0.8,
+        pendulumEffort: 0,
+        handArcRadius: 11,
+        handArcLow: 0.5,
         ...o,
     };
 }
@@ -410,6 +466,7 @@ function mirrorDrive(d: Drive): Drive {
                           handsTop: mirrorVec(down.handsTop),
                           across: mirrorVec(down.across),
                           drop: mirrorVec(down.drop),
+                          tangent: mirrorVec(down.tangent),
                       },
                   }),
         },

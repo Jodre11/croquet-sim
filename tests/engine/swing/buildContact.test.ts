@@ -5,6 +5,7 @@ import { simulateImpact } from "../../../src/engine/impact/simulateImpact";
 import {
     HAND_COUPLING,
     downswingAt,
+    handsAt,
     headOnPath,
     pendulumOf,
     pitchAxis,
@@ -18,6 +19,7 @@ import {
     MAX_LEAD,
     START_GAP,
     TURF_MARGIN,
+    arcArrival,
     buildContact,
     contactPose,
     downswingInput,
@@ -43,7 +45,20 @@ import { defaultWorld } from "../../../src/engine/world";
 import { contactReference, malletReference, swingReference } from "../../../src/reference/index";
 import { ReferenceDataError } from "../../../src/reference/schema";
 import { TEST_BALL, ballAt, testWorld } from "../support/fixtures";
-import { TEST_HANDS, mirrorBall, mirrorContact, mirrorQuat, mirrorSpin, mirrorVec, recorder } from "../support/impact";
+import {
+    TEST_CHAIN,
+    TEST_FLEX,
+    TEST_HANDS,
+    TEST_PENDULUM_FORCE,
+    TEST_PUSH_FORCE,
+    TEST_PUSH_RESPONSE_TIME,
+    mirrorBall,
+    mirrorContact,
+    mirrorQuat,
+    mirrorSpin,
+    mirrorVec,
+    recorder,
+} from "../support/impact";
 import { CANONICAL_CLEARANCE, GC_STOP_GAP, backswingFor, canonicalSetup, testProfile } from "../support/shot";
 
 const WORLD = testWorld();
@@ -191,14 +206,14 @@ describe("buildContact, step by step", () => {
         }
     });
 
-    it("copies the mode, the reach and the ground depth, the hands and the body, and grips with HAND_COUPLING", () => {
+    it("copies the mode and the reach, the hands and the body, and grips with HAND_COUPLING", () => {
         const profile = testProfile({
             stance: { top: 0.7, bottom: 0.3, gripTension: 0.6, bottomGrip: 0.25 },
-            drive: { mode: "carry", handReach: 0.2, groundDepth: 0.004, guideEffort: 0.4 },
+            drive: { mode: "carry", handReach: 0.2, guideEffort: 0.4 },
             body: { armMass: 0.8, reachSlack: 0.02 },
         });
         const drive = buildContact(shot({}, profile), WORLD).drive as TrackDrive;
-        expect([drive.arc.mode, drive.arc.handReach, drive.arc.groundDepth]).toEqual(["carry", 0.2, 0.004]);
+        expect([drive.arc.mode, drive.arc.handReach]).toEqual(["carry", 0.2]);
         expect(drive.hands).toEqual({
             bottom: 0.3,
             gripTension: 0.6,
@@ -206,6 +221,11 @@ describe("buildContact, step by step", () => {
             armMass: 0.8,
             reachSlack: 0.02,
             guideEffort: 0.4,
+            flex: TEST_FLEX,
+            pendulumForce: TEST_PENDULUM_FORCE,
+            pushForce: TEST_PUSH_FORCE,
+            pushResponseTime: TEST_PUSH_RESPONSE_TIME,
+            chain: TEST_CHAIN,
         });
         expect(drive.coupling).toEqual({
             period: HAND_COUPLING.period,
@@ -221,6 +241,79 @@ describe("buildContact, step by step", () => {
         const guided = testProfile({ drive: { guideEffort: 0.4 } });
         expect(effortOf(shot({}, guided))).toBe(0.4);
         expect(effortOf(shot({ guideEffort: 0 }, guided))).toBe(0);
+    });
+
+    it("carries the pendulum phase's inputs, the hands' arc and the arm's law into the drive (P2b.2b.2b.2b §6)", () => {
+        const flex = {
+            stiffness: 300,
+            stiffnessPerForce: 5,
+            dampingRatio: 0.4,
+            endpointMass: 0.6,
+            hold: { stiffness: 900, damping: 20 },
+        };
+        const chain = { ...TEST_CHAIN, forearmMass: 0.4, palmStiffness: 5e4, fingerDamping: 80 };
+        const profile = testProfile({
+            drive: { mode: "carry", handReach: 0.2, pendulumAt: 0.7, pendulumEffort: 0.2, handArcRadius: 1.2 },
+            body: { flex, pendulumForce: 25, pushForce: 120, pushResponseTime: 0.05, chain },
+        });
+        const preset = (buildContact(shot({}, profile), WORLD).drive as TrackDrive).arc;
+        expect([preset.pendulumAt, preset.pendulumEffort, preset.handArcRadius, preset.handArcLow]).toEqual([
+            0.7, 0.2, 1.2, 0.5,
+        ]);
+        const own = (buildContact(shot({ pendulumAt: 0.4, pendulumEffort: 1 }, profile), WORLD).drive as TrackDrive)
+            .arc;
+        expect([own.pendulumAt, own.pendulumEffort]).toEqual([0.4, 1]);
+        const { hands } = buildContact(shot({}, profile), WORLD).drive as TrackDrive;
+        expect([hands.flex, hands.pendulumForce, hands.pushForce, hands.pushResponseTime]).toEqual([
+            flex,
+            25,
+            120,
+            0.05,
+        ]);
+        expect(hands.chain).toEqual(chain);
+    });
+
+    it.each([
+        ["no push force", { pushForce: 0 }, /profile\.body\.pushForce must be positive/],
+        ["an infinite push force", { pushForce: Infinity }, /profile\.body\.pushForce must be finite/],
+        ["no push response time", { pushResponseTime: 0 }, /profile\.body\.pushResponseTime must be positive/],
+        [
+            "an infinite push response time",
+            { pushResponseTime: Infinity },
+            /profile\.body\.pushResponseTime must be finite/,
+        ],
+        [
+            "no forearm mass",
+            { chain: { ...TEST_CHAIN, forearmMass: 0 } },
+            /profile\.body\.chain\.forearmMass must be positive/,
+        ],
+        [
+            "an infinite palm stiffness",
+            { chain: { ...TEST_CHAIN, palmStiffness: Infinity } },
+            /profile\.body\.chain\.palmStiffness must be finite/,
+        ],
+        [
+            "no finger damping",
+            { chain: { ...TEST_CHAIN, fingerDamping: 0 } },
+            /profile\.body\.chain\.fingerDamping must be positive/,
+        ],
+    ] as const)("rejects %s (P2b.2b.2b.2b gate ruling 2026-10-11)", (_name, body, message) => {
+        expect(() => buildContact(shot({}, testProfile({ body })), WORLD)).toThrow(message);
+    });
+
+    it.each([
+        ["stroke.pendulumAt", { pendulumAt: 1.1 }, {}, /stroke\.pendulumAt must lie in \[0, 1\]/],
+        ["stroke.pendulumEffort", { pendulumEffort: -0.1 }, {}, /stroke\.pendulumEffort must lie in \[0, 1\]/],
+        ["the preset's pendulumAt", {}, { pendulumAt: Number.NaN }, /pendulumAt must be finite/],
+        ["the preset's handArcLow", {}, { handArcLow: 2 }, /handArcLow must lie in \[0, 1\]/],
+        [
+            "an arc no longer than the push",
+            { handReach: 0.5 },
+            { handArcRadius: 0.5 },
+            /handArcRadius must exceed the push length/,
+        ],
+    ] as const)("rejects %s", (_name, stroke, drive, message) => {
+        expect(() => buildContact(shot(stroke, testProfile({ drive })), WORLD)).toThrow(message);
     });
 
     it("dips the hands as the profile says, whatever the drive, still meeting the ball on the up", () => {
@@ -460,6 +553,27 @@ describe("the default profile's canonical setups", () => {
         expect(setup).not.toHaveProperty("croqueted");
         expect(() => canonicalSetup("stop-ac", { world, targetGap: 0.1 })).toThrow(/no targetGap/);
     });
+
+    it("plans a roll's hands arriving on their arc: the path continuous through contact (P2b.2b.2b.2b §4.1)", () => {
+        for (const type of ["half-roll", "full-roll", "pass-roll"] as const) {
+            const setup = canonicalSetup(type, { world: WORLD });
+            const drive = buildContact(setup, WORLD).drive as TrackDrive;
+            const track = prepareTrack(drive, buildContact(setup, WORLD).head, WORLD.gravity);
+            const { arc } = drive;
+            const before = handsAt(track, arc.contactAt - 1e-9);
+            const after = handsAt(track, arc.contactAt + 1e-9);
+            expect(length(sub(before.velocity, after.velocity)), type).toBeLessThan(1e-6);
+            // 1 ns after contact the slope has turned with the arc, by about ṡ·1e-9/ρ_h ≈ 1.2e-9.
+            const v = after.velocity;
+            const slope = v.z / Math.hypot(v.x, v.y);
+            expect(slope, type).toBeCloseTo(arcArrival(arc.handArcRadius, arc.handArcLow, arc.handReach), 8);
+        }
+    });
+
+    it("gives the arc's slope at contact: level for no push, −s_low/√(ρ² − s_low²) otherwise", () => {
+        expect(arcArrival(1.5, 0.5, 0)).toBe(0);
+        expect(arcArrival(1.5, 0.5, 0.3)).toBeCloseTo(-0.15 / Math.sqrt(1.5 * 1.5 - 0.15 * 0.15), 15);
+    });
 });
 
 describe("defaultProfile", () => {
@@ -473,6 +587,34 @@ describe("defaultProfile", () => {
         expect(defaultProfile.body).toEqual({
             armMass: contactReference.armMass.value,
             reachSlack: contactReference.reachSlack.value,
+            flex: {
+                stiffness: contactReference.armStiffness.value,
+                stiffnessPerForce: contactReference.armStiffnessPerForce.value,
+                dampingRatio: contactReference.armDampingRatio.value,
+                endpointMass: contactReference.armEndpointMass.value,
+                hold: {
+                    stiffness: contactReference.armHoldStiffness.value,
+                    damping: contactReference.armHoldDamping.value,
+                },
+            },
+            pendulumForce: contactReference.pendulumForce.value,
+            pushForce: contactReference.pushForce.value,
+            pushResponseTime: contactReference.pushResponseTime.value,
+            chain: {
+                forearmMass: contactReference.forearmMass.value,
+                handMass: contactReference.handMass.value,
+                fingerMass: contactReference.fingerMass.value,
+                palmSkinMass: contactReference.palmSkinMass.value,
+                fingerSkinMass: contactReference.fingerSkinMass.value,
+                wristStiffness: contactReference.wristStiffness.value,
+                wristDamping: contactReference.wristDamping.value,
+                knuckleStiffness: contactReference.knuckleStiffness.value,
+                knuckleDamping: contactReference.knuckleDamping.value,
+                palmStiffness: contactReference.palmStiffness.value,
+                palmDamping: contactReference.palmDamping.value,
+                fingerStiffness: contactReference.fingerStiffness.value,
+                fingerDamping: contactReference.fingerDamping.value,
+            },
         });
     });
 
@@ -622,11 +764,6 @@ describe("buildContact rejections", () => {
             /drive\.single-ball\.guideEffort must lie in \[0, 1\]/,
         ],
         ["a shot's guide effort above 1", shot({ guideEffort: 1.5 }), /stroke\.guideEffort must lie in \[0, 1\]/],
-        [
-            "a negative ground depth",
-            shot({}, testProfile({ drive: { groundDepth: -0.001 } })),
-            /groundDepth must be non-negative/,
-        ],
         ["a negative arm mass", shot({}, testProfile({ body: { armMass: -0.1 } })), /armMass must be non-negative/],
         [
             "a negative reach slack",
@@ -720,7 +857,12 @@ describe("contactPose (design §5.2 steps 1–5, 10)", () => {
             handTempo: { slow: 0.4, fast: 0.2 },
             defaultIntensity: 0,
         };
-        const input = downswingInput(pose, hands, { mode: "swing", shape, backswing: 0.3, intensity: 0 }, 9.8);
+        const input = downswingInput(
+            pose,
+            hands,
+            { mode: "swing", shape, backswing: 0.3, intensity: 0, arrival: 0 },
+            9.8,
+        );
         expect(input.lever).toBe(RHO + TOP);
         expect(input.pendulum).toEqual(pendulumOf(pose.head, swungBody(pose.head, hands, TOP), TOP, 9.8));
         const planned = planDownswing(input);

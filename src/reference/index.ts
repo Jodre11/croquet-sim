@@ -160,7 +160,8 @@ export const frictionReference = {
 
 /**
  * Impact-phase contact data: turf stiffness, contact durations, the tangential ratio, Gugan's face fits, the hand
- * coupling, the default body's arm mass and reach slack, and the head–turf pair.
+ * coupling, the default body's arm mass and reach slack, the head–turf pair, the arm's flex, pendulum push, push and
+ * push response time, and the hand–arm chain (P2b.2b.2b.2b).
  */
 export const contactReference = {
     ballTurfStiffness: readValue(contactJson, "ballTurfStiffness", "contact"),
@@ -178,6 +179,30 @@ export const contactReference = {
     reachSlack: readValue(contactJson, "reachSlack", "contact"),
     headTurfFriction: readValue(contactJson, "headTurfFriction", "contact"),
     headDeepLimit: readValue(contactJson, "headDeepLimit", "contact"),
+    armStiffness: readValue(contactJson, "armStiffness", "contact"),
+    armStiffnessPerForce: readValue(contactJson, "armStiffnessPerForce", "contact"),
+    armDampingRatio: readValue(contactJson, "armDampingRatio", "contact"),
+    armEndpointMass: readValue(contactJson, "armEndpointMass", "contact"),
+    armHoldStiffness: readValue(contactJson, "armHoldStiffness", "contact"),
+    armHoldDamping: readValue(contactJson, "armHoldDamping", "contact"),
+    pendulumForce: readValue(contactJson, "pendulumForce", "contact"),
+    pushForce: readValue(contactJson, "pushForce", "contact"),
+    pushResponseTime: readValue(contactJson, "pushResponseTime", "contact"),
+    forearmMass: readValue(contactJson, "forearmMass", "contact"),
+    handMass: readValue(contactJson, "handMass", "contact"),
+    fingerMass: readValue(contactJson, "fingerMass", "contact"),
+    palmSkinMass: readValue(contactJson, "palmSkinMass", "contact"),
+    fingerSkinMass: readValue(contactJson, "fingerSkinMass", "contact"),
+    shoulderStiffness: readValue(contactJson, "shoulderStiffness", "contact"),
+    shoulderDamping: readValue(contactJson, "shoulderDamping", "contact"),
+    wristStiffness: readValue(contactJson, "wristStiffness", "contact"),
+    wristDamping: readValue(contactJson, "wristDamping", "contact"),
+    knuckleStiffness: readValue(contactJson, "knuckleStiffness", "contact"),
+    knuckleDamping: readValue(contactJson, "knuckleDamping", "contact"),
+    palmStiffness: readValue(contactJson, "palmStiffness", "contact"),
+    palmDamping: readValue(contactJson, "palmDamping", "contact"),
+    fingerStiffness: readValue(contactJson, "fingerStiffness", "contact"),
+    fingerDamping: readValue(contactJson, "fingerDamping", "contact"),
 } as const;
 
 /** One mallet face, one typical round head and the default shaft (P2b.1, P2b.2b.1). */

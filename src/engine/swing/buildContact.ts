@@ -70,8 +70,11 @@ const DRIVE_NUMBERS: readonly Exclude<keyof SwingDrive, "mode">[] = [
     "handDrop",
     "dropTime",
     "handReach",
-    "groundDepth",
     "guideEffort",
+    "pendulumAt",
+    "pendulumEffort",
+    "handArcRadius",
+    "handArcLow",
 ];
 
 /** A shape's scalar numbers always read, each checked finite by name (handAngle only when read: design §3.2). */
@@ -193,6 +196,8 @@ function validate(setup: ShotSetup, ballRadius: number): void {
         ["stroke.intensity", stroke.intensity],
         ["stroke.handReach", stroke.handReach],
         ["stroke.guideEffort", stroke.guideEffort],
+        ["stroke.pendulumAt", stroke.pendulumAt],
+        ["stroke.pendulumEffort", stroke.pendulumEffort],
     ] as const) {
         if (value !== undefined) {
             finiteNumber(value, name);
@@ -267,10 +272,47 @@ function validate(setup: ShotSetup, ballRadius: number): void {
     if (stroke.handReach !== undefined) {
         nonNegative(stroke.handReach, "stroke.handReach");
     }
-    nonNegative(push.groundDepth, `profile.drive.${type}.groundDepth`);
     unit(push.guideEffort, `profile.drive.${type}.guideEffort`);
     if (stroke.guideEffort !== undefined) {
         unit(stroke.guideEffort, "stroke.guideEffort");
+    }
+    unit(push.pendulumAt, `profile.drive.${type}.pendulumAt`);
+    unit(push.pendulumEffort, `profile.drive.${type}.pendulumEffort`);
+    unit(push.handArcLow, `profile.drive.${type}.handArcLow`);
+    if (stroke.pendulumAt !== undefined) {
+        unit(stroke.pendulumAt, "stroke.pendulumAt");
+    }
+    if (stroke.pendulumEffort !== undefined) {
+        unit(stroke.pendulumEffort, "stroke.pendulumEffort");
+    }
+    const pushLength = stroke.handReach ?? push.handReach;
+    // Checked in swing mode too, where the arc is never read: a profile that fails it fails either way. Changing that
+    // would be a behaviour change and needs its own ruling.
+    if (!(push.handArcRadius > pushLength)) {
+        fail(
+            `profile.drive.${type}.handArcRadius must exceed the push length ${pushLength} m, so that the hands' arc ` +
+                `is defined over the whole push (got ${push.handArcRadius})`,
+        );
+    }
+    const { flex } = body;
+    const { hold, ...flexValues } = flex;
+    const held = hold === null ? [] : Object.entries(hold).map(([key, value]) => [`hold.${key}`, value] as const);
+    for (const [key, value] of [...Object.entries(flexValues), ...held]) {
+        finiteNumber(value, `profile.body.flex.${key}`);
+        positive(value, `profile.body.flex.${key}`);
+    }
+    if (!(flex.dampingRatio <= 1)) {
+        fail(`profile.body.flex.dampingRatio must lie in (0, 1] (got ${flex.dampingRatio})`);
+    }
+    finiteNumber(body.pendulumForce, "profile.body.pendulumForce");
+    positive(body.pendulumForce, "profile.body.pendulumForce");
+    finiteNumber(body.pushForce, "profile.body.pushForce");
+    positive(body.pushForce, "profile.body.pushForce");
+    finiteNumber(body.pushResponseTime, "profile.body.pushResponseTime");
+    positive(body.pushResponseTime, "profile.body.pushResponseTime");
+    for (const [key, value] of Object.entries(body.chain)) {
+        finiteNumber(value, `profile.body.chain.${key}`);
+        positive(value, `profile.body.chain.${key}`);
     }
     nonNegative(body.armMass, "profile.body.armMass");
     nonNegative(body.reachSlack, "profile.body.reachSlack");
@@ -302,6 +344,11 @@ function handsOf(setup: ShotSetup): Hands {
         armMass: profile.body.armMass,
         reachSlack: profile.body.reachSlack,
         guideEffort: stroke.guideEffort ?? profile.drive[stroke.type].guideEffort,
+        flex: profile.body.flex,
+        pendulumForce: profile.body.pendulumForce,
+        pushForce: profile.body.pushForce,
+        pushResponseTime: profile.body.pushResponseTime,
+        chain: profile.body.chain,
     };
 }
 
@@ -309,11 +356,16 @@ function handsOf(setup: ShotSetup): Hands {
 function downswingOf(setup: ShotSetup, pose: ContactPose, hands: Hands, gravity: number): PlannedDownswing {
     const { stroke, profile } = setup;
     const shape = profile.shape[stroke.type];
+    const push = profile.drive[stroke.type];
     const choice: StrokeChoice = {
-        mode: profile.drive[stroke.type].mode,
+        mode: push.mode,
         shape,
         backswing: stroke.backswing,
         intensity: stroke.intensity ?? shape.defaultIntensity,
+        arrival:
+            push.mode === "carry"
+                ? arcArrival(push.handArcRadius, push.handArcLow, stroke.handReach ?? push.handReach)
+                : 0,
     };
     return planDownswing(downswingInput(pose, hands, choice, gravity));
 }
@@ -375,12 +427,25 @@ export function contactPose(setup: ShotSetup, world: World): ContactPose {
     return { head, aim, thetaContact: thetaC, orientation, headCentre, pivot, radius };
 }
 
-/** The stroke's choices the downswing needs (design §3): its mode and shape, the backswing (m) and the intensity. */
+/**
+ * The stroke's choices the downswing needs (design §3): its mode and shape, the backswing (m), the intensity and, in
+ * carry mode, the hands' arc's slope at contact (arcArrival).
+ */
 export interface StrokeChoice {
     readonly mode: StrokeMode;
     readonly shape: SwingShape;
     readonly backswing: number;
     readonly intensity: number;
+    readonly arrival: number;
+}
+
+/**
+ * The hands' arc's slope dz/ds at contact (P2b.2b.2b.2b design §4.1): the arc of radius `radius` (m) is lowest
+ * `low`·`push` ahead of the hands, so at contact it descends at −s_low/√(ρ_h² − s_low²). 0 (level) for no push.
+ */
+export function arcArrival(radius: number, low: number, push: number): number {
+    const s = low * push;
+    return (0 - s) / Math.sqrt(radius * radius - s * s);
 }
 
 /**
@@ -399,6 +464,7 @@ export function downswingInput(pose: ContactPose, hands: Hands, choice: StrokeCh
         shape: choice.shape,
         backswing: choice.backswing,
         intensity: choice.intensity,
+        arrival: choice.arrival,
     };
 }
 
@@ -434,8 +500,11 @@ export interface StrokePlan {
  *   the stroke's top hand and contact (P2b.2b.2b.1 design §3.4: at A the shaft lies flat, at −D the hands leave the
  *   stance's branch);
  * - window, handWindow or dropTime ≤ 0; speedGain < 0; gripTension or bottomGrip outside (0, 1]; handDrop < 0; the
- *   preset's or the shot's handReach < 0; groundDepth < 0; the preset's or the shot's guideEffort outside [0, 1];
- *   armMass < 0; reachSlack < 0;
+ *   preset's or the shot's handReach < 0; the preset's or the shot's guideEffort outside [0, 1];
+ *   armMass < 0; reachSlack < 0; the preset's or the shot's pendulumAt or pendulumEffort outside [0, 1]; handArcLow
+ *   outside [0, 1]; handArcRadius not above the push length; a flex value not positive, or a flex damping ratio above
+ *   1; pendulumForce not positive (P2b.2b.2b.2b design §6); pushForce, pushResponseTime or a hand–arm chain value
+ *   not positive (its gate rulings, 2026-10-11);
  * - pendulumShare or defaultIntensity outside [0, 1]; handAngle outside (0, 90°) when pendulumShare < 1 (neither read
  *   nor checked otherwise); in swing mode a pendulumShare of 0, an effort tempo ≤ 0 or tempoFast > tempoSlow, or
  *   torqueMax < 0; in carry mode a hands' tempo ≤ 0 or fast > slow;
@@ -500,7 +569,10 @@ export function planStroke(setup: ShotSetup, world: World): StrokePlan {
         contactAt: lead,
         mode: push.mode,
         handReach: stroke.handReach ?? push.handReach,
-        groundDepth: push.groundDepth,
+        pendulumAt: stroke.pendulumAt ?? push.pendulumAt,
+        pendulumEffort: stroke.pendulumEffort ?? push.pendulumEffort,
+        handArcRadius: push.handArcRadius,
+        handArcLow: push.handArcLow,
         downswing: planned.downswing,
     };
     const drive: TrackDrive = {

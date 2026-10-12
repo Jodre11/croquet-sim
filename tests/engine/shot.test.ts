@@ -150,11 +150,9 @@ describe("strokeContext", () => {
 });
 
 describe("simulateShot", () => {
-    it.each(STROKE_TYPES)("runs the %s canonical setup with no entry jump and no ball above R + 5 mm", (type) => {
-        // Exit criterion 4. Prototype (pass 4, design §5.4 values), highest centre above R over the impact and the
-        // flights: 0.85 mm single-ball, 0.93 drive, 4.17 stop-ac (the rising strike), 0.72 half roll, 0.82 full roll,
-        // 2.92 pass roll; no entry jump anywhere (P2b.2b.1; Task 10 re-measures them). Pre-flight re-measures them,
-        // and measures stop-gc on its target setup (its 0.81 mm was on the retired touching setup).
+    const ROLLS: readonly (typeof STROKE_TYPES)[number][] = ["half-roll", "full-roll", "pass-roll"];
+
+    const lowFlight = (type: (typeof STROKE_TYPES)[number]): void => {
         const setup = canonicalSetup(type);
         const outcome = simulateShot(setup);
         expect(outcome.impact.entryJumps?.count).toBe(0);
@@ -176,6 +174,54 @@ describe("simulateShot", () => {
             }
         }
         expect(highest).toBeLessThanOrEqual(R + 0.005);
+    };
+
+    // Exit criterion 4. Prototype (pass 4, design §5.4 values), highest centre above R over the impact and the
+    // flights: 0.85 mm single-ball, 0.93 drive, 4.17 stop-ac (the rising strike), 0.72 half roll, 0.82 full roll,
+    // 2.92 pass roll; no entry jump anywhere (P2b.2b.1; Task 10 re-measures them). Pre-flight re-measures them, and
+    // measures stop-gc on its target setup (its 0.81 mm was on the retired touching setup).
+    it.each(STROKE_TYPES.filter((type) => !ROLLS.includes(type)))(
+        "runs the %s canonical setup with no entry jump and no ball above R + 5 mm",
+        lowFlight,
+    );
+
+    // P2b.2b.2b.2b: push intent (was skipped at the pre-flight gate: full 7.18 mm at 45 ms, pass 6.64 mm at 59 ms).
+    // The hands push against the ball's resistance as they sense it, at the muscles' pace (τ_push 0.125 s): the blow
+    // raises the sensed resistance to 15–19 N, which then eases off through the push, so the head keeps a small
+    // forward push between taps. P2b.2b.2b.2b: fast impedance (was 4.89 mm at 38.9 ms): each hand's mass on its grip
+    // tissue takes part of the blow (the top tissue peaks at 102 N at 1.2 ms), and the striker's ball rises at most
+    // 1.88 mm above R at 32.4 ms (two face intervals). P2b.2b.2b.2b: arm chain (was 1.88 mm at 32.4 ms): 2.24 mm at
+    // 31.3 ms, three face intervals. P2b.2b.2b.2b: posture-holding push (was 2.24 mm at 31.3 ms): 2.29 mm at 31.5 ms.
+    it("runs the full-roll canonical setup with no entry jump and no ball above R + 5 mm", () => {
+        lowFlight("full-roll");
+    });
+
+    // P2b.2b.2b.2b: arm chain (was skipped at the pre-flight gate: 5.78 mm at 45.9 ms with the hands' mass and grip
+    // tissue, 7.28 mm with the push intent, 10.15 mm before it). With each hand–arm chain the half roll's face meets
+    // the striker's ball three times (0.0–1.4, 7.3–8.8 and 25.0–26.7 ms), and the ball rises at most 3.74 mm above R
+    // at 26.0 ms. P2b.2b.2b.2b: continuous α (was 3.74 mm at 26.0 ms): 3.67 mm at 25.6 ms, the third interval
+    // 24.7–26.4 ms. P2b.2b.2b.2b: posture-holding push (was 3.67 mm at 25.6 ms): 3.72 mm at 25.7 ms, the third interval
+    // 24.9–26.5 ms.
+    it("runs the half-roll canonical setup with no entry jump and no ball above R + 5 mm", () => {
+        lowFlight("half-roll");
+    });
+
+    // P2b.2b.2b.2b: gate-ruled skip (round 14, 2026-10-12; arm chain, round 3). Un-skipped by the push intent (4.61
+    // mm), re-skipped with the hands' mass and grip tissue (9.70 mm at 66.8 ms), the pass roll still fails with each
+    // hand–arm chain: five face intervals (0.0–1.2, 5.6–7.0, 9.9–11.6, 13.3–15.4 and 15.7–26.5 ms), and the striker's
+    // ball is 14.52 mm above R at the impact's end (83.1 ms), its highest. P2b.2b.2b.2b: continuous α (was 14.52 mm):
+    // 18.82 mm at the impact's end (83.1 ms), the last interval 15.7–26.6 ms. P2b.2b.2b.2b: posture-holding push (was
+    // 18.82 mm): the arms held at Patel's posture-holding stiffness and Tsuji's grasp viscosity through the push still
+    // let the face leave the ball while the turf bed throws it up, at 0.620 m/s (was 0.622): 19.17 mm at 92.2 ms, six
+    // face intervals (the last two 15.7–26.3 and 105.0–106.4 ms), the impact ending at 106.6 ms. P2b.2b.2b.2b: hold
+    // relaxes from the first departure (was 19.17 mm, six face intervals): 19.17 mm at 92.3 ms, five face intervals,
+    // the last 15.7–26.3 ms, the late re-contact gone; the turf bed still throws the ball up (a known gap).
+    // P2b.2b.2b.2b: flex, gate ruling 2026-10-12 (the gate accepted at 7843e2b): 19.17 mm at 92.3 ms, the ball leaving
+    // the bed at 0.620 m/s. The cause is the turf bed's elastic rebound (gate round 6): the leaning face presses the
+    // ball about 3 mm into the bed and lets go faster than the bed unloads. Kept skipped rather than loosened: R + 5 mm
+    // is exit criterion 6's bound, and the bed's missing rate-independent loss is a follow-up for the next phase.
+    it.skip("runs the pass-roll canonical setup with no entry jump and no ball above R + 5 mm", () => {
+        lowFlight("pass-roll");
     });
 
     it("runs each stage in turn, and hands phase 2 exactly the impact's handover", () => {
@@ -214,7 +260,7 @@ describe("simulateShot", () => {
         expect(simulateShot(setup, WORLD).motion.aborted).toBe(false);
     });
 
-    it.each(STROKE_TYPES)("runs the %s canonical setup from the top to its finish (exit criterion 3)", (type) => {
+    const runsToFinish = (type: (typeof STROKE_TYPES)[number]): void => {
         const outcome = simulateShot(canonicalSetup(type), WORLD, { trajectory: true });
         const trajectory = outcome.trajectory as SwingTrajectory;
         // Exit criterion 4's identity, on every canonical setup.
@@ -233,6 +279,23 @@ describe("simulateShot", () => {
             expect(jump.position, jump.name).toBeLessThanOrEqual(POSITION_SLACK);
             expect(jump.velocity, jump.name).toBeLessThanOrEqual(jump.bound);
         }
+    };
+
+    it.each(STROKE_TYPES.filter((type) => type !== "half-roll"))(
+        "runs the %s canonical setup from the top to its finish (exit criterion 3)",
+        runsToFinish,
+    );
+
+    // P2b.2b.2b.2b: fast impedance (was skipped at the pre-flight gate). On the flex the half roll raised follow-cap:
+    // from the strike the soft flex let the head pitch back, so at the pendulum phase's start it was still pitching
+    // back; it swung back, then forward onto the turf, its pitch rate still positive at FOLLOW_CAP (with the push
+    // intent, gate round 1, all but at its apex: θ +0.180 rad, rising at 0.007 rad/s). With the hands' mass and grip
+    // tissue (gate round 2) it reaches its apex at 953.7 ms, 46 ms short of the cap. P2b.2b.2b.2b: arm chain (was
+    // 953.7 ms): 894.4 ms, θ +0.298 rad. P2b.2b.2b.2b: continuous α (was 894.4 ms, θ +0.298 rad): 883.7 ms,
+    // θ +0.295 rad. P2b.2b.2b.2b: posture-holding push (was 883.7 ms, θ +0.295 rad): 911.3 ms, θ +0.208 rad.
+    // P2b.2b.2b.2b: hold relaxes from the first departure (was 911.3 ms, θ +0.208 rad): 904.6 ms, θ +0.243 rad.
+    it("runs the half-roll canonical setup from the top to its finish (exit criterion 3)", () => {
+        runsToFinish("half-roll");
     });
 
     it("judges 'plays away from' on a whole croquet stroke at 90.1° from the line of centres, not at 89.9°", () => {
@@ -440,16 +503,19 @@ describe("the mechanisms (design §8.1), on the canonical setups", () => {
         expect(impact.events.map((e) => e.kind)).not.toContain("impact-head-deep");
     });
 
-    // Expected to fail (user decision, 2026-10-09). On the bed (P2b.2b.2b.2a) the canonical pass roll's follow-through
-    // keeps the 34°-leaning face on the striker's ball: the ball rebounds only about 1.8 mm and is back in its pit by
-    // 46 ms, the face catches it at about 2.7 m/s and pins it 2–4 mm deep until the head stops. So the punched ball
-    // leaves at 0.038 m/s and the coasted one at 0.088 m/s. A model finding, recorded in the roadmap; P2b.2b.2b.2b (the
-    // roll's stroke: descent, follow-through, hands) owns it. This test flips, and alerts, when that phase fixes it;
-    // it then goes back to `it`.
-    it.fails("the pass roll's punch leaves the striker's ball faster than a coasting pass roll", () => {
+    // Spec exit criterion 2 (P2b.2b.2b.2b). On the bed (P2b.2b.2b.2a) the canonical pass roll's follow-through kept its
+    // face on the striker's ball and pinned it in its pit; the roll's stroke (the flex, the push with no brake and the
+    // pendulum phase) lets it go. The test is unchanged: drive +1 against 0, at the canonical pendulum phase.
+    it("the pass roll's punch leaves the striker's ball faster than a coasting pass roll", () => {
         // Prototype: 1.226 m/s at drive +1, 1.099 m/s at drive 0. P2b.2b.2b.2a: Hertzian face (was 1.099 at drive 0):
         // 1.894 m/s at drive +1, 0.29 m/s at drive 0, the coasted ball already pinned under the face. P2b.2b.2b.2a:
         // turf bed (was 1.894 and 0.29): 0.038 m/s at drive +1, 0.088 m/s at drive 0, both pinned.
+        // P2b.2b.2b.2b: hands' arc (was it.fails): 1.2170 and 1.1300 m/s. P2b.2b.2b.2b: flex (was 1.2170 and
+        // 1.1300): 1.8786 and 1.6386 m/s. P2b.2b.2b.2b: push intent and fast impedance (was 1.8786
+        // and 1.6386): 1.7016 and 1.2624 m/s. P2b.2b.2b.2b: arm chain (was 1.7016 and 1.2624): 1.8493 and 1.2824 m/s.
+        // P2b.2b.2b.2b: continuous α (was 1.8493 and 1.2824): 1.8412 and 1.2824 m/s. P2b.2b.2b.2b: posture-holding
+        // push (was 1.8412 and 1.2824): 2.1111 and 1.3187 m/s. P2b.2b.2b.2b: hold relaxes from the first departure
+        // (was 2.1111 and 1.3187): 1.8882 and 1.3607 m/s.
         const punched = simulateShot(canonicalSetup("pass-roll")).impact;
         const coasted = simulateShot(canonicalSetup("pass-roll", { stroke: { drive: 0 } })).impact;
         expect(strikerSpeed(punched)).toBeGreaterThan(strikerSpeed(coasted));

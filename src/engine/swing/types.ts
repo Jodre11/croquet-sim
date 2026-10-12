@@ -11,7 +11,7 @@
  * The product spec's grip style, weighting and face material have no engine reader yet.
  */
 import type { HoopTarget } from "../hoopRun";
-import type { StrokeMode } from "../impact/types";
+import type { FlexLaw, HandChain, StrokeMode } from "../impact/types";
 import type { BallId, BallStates } from "../types";
 
 /** The strokes the swing model plays. */
@@ -54,9 +54,11 @@ export interface SwingStance {
  * times that speed. The hands: from their speed at contact (P2b.2b.2a design §3.3), changing by `handGain` times the
  * head's speed over `handWindow` (s) at full `drive`. The dip: whatever `drive`, the hands lower by `handDrop` (m)
  * over `dropTime` (s), rest to rest. The reach: the hands' path travels `handReach` (m) along aim after contact, the
- * default for the shot's own. In carry mode the head's lowest point ends `groundDepth` (m) below the turf. In swing
- * mode the bottom hand's push after contact is `guideEffort` (in [0, 1]) of a full restoration of the arc's speed, the
- * default for the shot's own.
+ * default for the shot's own. In swing mode the bottom hand's push after contact is `guideEffort` (in [0, 1]) of a
+ * full restoration of the arc's speed, the default for the shot's own. In carry mode `handReach` is the push's
+ * length. The pendulum phase starts at `pendulumAt` of it, its effort `pendulumEffort`, and the hands travel their
+ * arc, `handArcRadius` and `handArcLow` (P2b.2b.2b.2b design §4, §6). Swing mode carries these four and never reads
+ * them.
  */
 export interface SwingDrive {
     readonly mode: StrokeMode;
@@ -67,8 +69,13 @@ export interface SwingDrive {
     readonly handDrop: number;
     readonly dropTime: number;
     readonly handReach: number;
-    readonly groundDepth: number;
     readonly guideEffort: number;
+    /** Carry mode's pendulum phase (P2b.2b.2b.2b design §4.2): its start, a fraction of the push, and its effort. */
+    readonly pendulumAt: number;
+    readonly pendulumEffort: number;
+    /** Carry mode's hands' arc (design §4.1, §6): its radius (m) and where it is lowest, a fraction of the push. */
+    readonly handArcRadius: number;
+    readonly handArcLow: number;
 }
 
 /**
@@ -95,8 +102,19 @@ export interface SwingProfile {
         readonly headDiameter: number;
         readonly shaftLength: number;
     };
-    /** The player's body: the arm mass at the top grip (kg) and the reach slack (m). */
-    readonly body: { readonly armMass: number; readonly reachSlack: number };
+    /**
+     * The player's body: the arm mass at the top grip (kg), the reach slack (m), the arm's flex, pendulum push and push
+     * (the push intent's cap, N, and its response time constant, s), and each hand's and arm's hand–arm chain.
+     */
+    readonly body: {
+        readonly armMass: number;
+        readonly reachSlack: number;
+        readonly flex: FlexLaw;
+        readonly pendulumForce: number;
+        readonly pushForce: number;
+        readonly pushResponseTime: number;
+        readonly chain: HandChain;
+    };
     readonly stance: Readonly<Record<StrokeType, SwingStance>>;
     readonly drive: Readonly<Record<StrokeType, SwingDrive>>;
     readonly shape: Readonly<Record<StrokeType, SwingShape>>;
@@ -131,6 +149,10 @@ export interface ShotSetup {
         readonly handReach?: number;
         /** The bottom hand's push after contact, in [0, 1]; absent: the preset's `guideEffort`. */
         readonly guideEffort?: number;
+        /** Carry mode: the pendulum phase's start, a fraction of the push in [0, 1]; absent: the preset's. */
+        readonly pendulumAt?: number;
+        /** Carry mode: the bottom hand's push in the pendulum phase, in [0, 1]; absent: the preset's. */
+        readonly pendulumEffort?: number;
     };
     readonly live: readonly BallId[];
     readonly continuation: boolean;

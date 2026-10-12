@@ -118,5 +118,197 @@
         "source": "P2b.2b.1 design §4.2 (docs/superpowers/specs/2026-10-04-p2b2b1-swing-shot-design.md); upper bound: Don Gugan, 'The Physics of Croquet Strokes: Analysis of the CA high-speed DVD', Table 4(b) (2009; Oxford Croquet), https://oxfordcroquet.org/tech/gugan4/",
         "provenance": "derived",
         "note": "A model limit, not a property of turf. The impact's turf is a plane with a linear spring, fitted to a ball pressed into it (ballTurfStiffness); a mallet head's edge or rim presses a footprint that law was not fitted to, so a head driven more than this below the turf plane raises impact-head-deep. Provisional. Upper bound: the deepest ball penetration Gugan measured, 7.2 mm (Table 4(b), roll A4R)."
+    },
+    "armStiffness": {
+        "value": 116,
+        "unit": "N/m",
+        "bounds": [45, 445],
+        "source": "Fortineau, Siegler, Makarov and Rodriguez-Ayerbe, 'Human arm endpoint-impedance in rhythmic human-robot interaction exhibits cyclic variations', PLoS One 18(12):e0295640 (2023), DOI 10.1371/journal.pone.0295640, https://www.ebi.ac.uk/europepmc/webservices/rest/PMC10721195/fullTextXML",
+        "provenance": "direct",
+        "note": "k₀, the arm's endpoint stiffness at low effort: each hand's flex spring is k_h = k₀ + κ·|F_ff,h| (P2b.2b.2b.2b design §3.1-§3.2). Quoted: \"The average estimated stiffness was 116 N/m (SD 60), with a minimum value of 45 N/m and a maximum of 401 N/m\" (Experiment H, 31 participants at two target heights), and \"endpoint-impedance parameters ranged from 45 to 445 N/m\" over both experiments. The rule takes the paper's mean over its 31 participants, which it reports. Bounds: the reported range over both experiments, 45-445 N/m."
+    },
+    "armStiffnessPerForce": {
+        "value": 2.55,
+        "unit": "1/m",
+        "bounds": [2.46, 2.56],
+        "source": "Takagi, Xiong, Kambara and Koike, 'Endpoint stiffness magnitude increases linearly with a stronger power grasp', Sci. Rep. 10:379 (2020), DOI 10.1038/s41598-019-57267-0, https://www.ebi.ac.uk/europepmc/webservices/rest/PMC6962455/fullTextXML",
+        "provenance": "analogue",
+        "note": "κ, the endpoint stiffness gained per newton of the hand's force, in N/m per N (design §3.1-§3.2). Analogue: the slope is against the hand's power-grasp force, not the arm's voluntary push. No open figure was found for the slope against the arm's voluntary force: Perreault, Kirsch and Crago (2001, 2002, 2004) report it but are paywalled, and their abstracts give no number. Takagi, Table 1, the major-axis term K yy at the centre posture: \"166.9 ± 20.3\" N/m at 5 N of grasp to \"205.2 ± 27.2\" N/m at 20 N, (205.2 - 166.9)/15 = 2.55 N/m per N; the paper: \"The endpoint stiffness magnitude increased linearly with the grasp force, and this linear relationship did not depend on the arm's posture\". Bounds: K yy's slope over the left (2.48), centre (2.55) and right (2.46) postures and the second experiment's centre (2.56). K xx rises less, 0.23-0.91 N/m per N."
+    },
+    "armDampingRatio": {
+        "value": 0.69,
+        "unit": "1",
+        "bounds": [0.058, 1.42],
+        "source": "Derived from Fortineau, Siegler, Makarov and Rodriguez-Ayerbe, PLoS One 18(12):e0295640 (2023), DOI 10.1371/journal.pone.0295640, https://www.ebi.ac.uk/europepmc/webservices/rest/PMC10721195/fullTextXML, and its S1 Data, https://journals.plos.org/plosone/article/file?type=supplementary&id=10.1371/journal.pone.0295640.s001",
+        "provenance": "derived",
+        "note": "ζ_arm, held constant so that each hand's damper is c_h = 2·ζ_arm·√(k_h·m_arm), as Perreault, Kirsch and Crago (Exp. Brain Res. 157:507, 2004) found the arm's damping ratio \"remarkably consistent\" across forces and postures (design §3.1-§3.2). No open copy or citing paper quotes their damping ratio, so it is derived from Fortineau's Experiment H means: \"The average estimated damping was 9.9 Ns/m (SD 3.1)\", stiffness 116 N/m and mass 0.4465 kg (armStiffness, armEndpointMass); 9.9/(2·√(116·0.4465)) = 0.69. Bounds: B/(2·√(K·M)) over the S1 Data's 62 Experiment H estimations (31 participants at two heights), 0.058-1.42; 12 of them exceed 1."
+    },
+    "armHoldStiffness": {
+        "value": 744,
+        "unit": "N/m",
+        "bounds": [489.2, 1353.4],
+        "source": "Patel, O'Neill and Artemiadis, 'On the effect of muscular co-contraction on the 3D human arm impedance', IEEE Trans. Biomed. Eng. (2014), DOI 10.1109/TBME.2014.2323938, accepted manuscript https://horc-lab.github.io/pdf/patel2014effect.pdf",
+        "provenance": "derived",
+        "note": "k_hold, each arm's endpoint stiffness while it holds its posture, the flex's k₀ through the push (gate round 11 ruling, 'Posture holding in the push', 2026-10-12): k = k_hold + κ·|F_ff| there, κ the grasp-force analogue still on top, since Patel's subjects were coupled at the forearm with no grasp. Four male subjects, seated and strapped, the right forearm coupled near the wrist, 8 mm perturbations in 18 directions over 100 ms, seven 3D configurations, here at 0 % co-contraction. Fig. 1A sets the human-centred frame: X up, Y lateral, Z forward from the subject, so the fore-aft axis, along aim at the grip, is K zz. Table I, 'ARM STIFFNESS CHARACTERISTICS FOR 0% CO-CONTRACTION, AVERAGED ACROSS ALL SUBJECTS', K zz over configurations 1-7: 1353.4, 854.3, 701.1, 504.2, 489.2, 601.2 and 704.3 N/m; the value is their mean, 744.0 N/m, the configurations weighted alike as the paper does not single one out. Bounds: the configurations' means, 489.2-1353.4 N/m. The vertical K xx is 245.2-801.3 N/m (mean 535.3); the flex is isotropic and takes the along-aim axis, which carries the push."
+    },
+    "armHoldDamping": {
+        "value": 20.7,
+        "unit": "N·s/m",
+        "bounds": [10.84, 30.02],
+        "source": "Tsuji, Morasso, Goto and Ito, 'Human hand impedance characteristics during maintained posture', Biol. Cybern. 72:475-485 (1995), DOI 10.1007/BF00199890, copy http://www.neuro-it.net/pdf_dateien/summer_2004/Tsuij%201995.PDF",
+        "provenance": "derived",
+        "note": "c_hold, each arm's endpoint viscosity while it grasps and holds its posture, the flex's damper through the push (gate round 11 ruling, 'Posture holding in the push', 2026-10-12), in place of 2·ζ_arm·√(k·m_arm). The abstract: 'hand stiffness and viscosity increase with the grip force of the subject'. Table 4, 'Estimated hand impedance while the subjects grasped the handle in order to keep the hand location', the fore-aft term B yy (y the shoulder-to-hand direction in the horizontal plane) for subjects A and C at hand locations 1-4: 16.85, 30.02, 19.32, 10.84, 27.69, 29.09, 19.91 and 11.93 N·s/m; the value is their mean, 20.71. Bounds: their range, 10.84-30.02. Without grasping (Table 1) the same terms are 5.5-23.0 N·s/m."
+    },
+    "armEndpointMass": {
+        "value": 0.4465,
+        "unit": "kg",
+        "bounds": [0.227, 0.893],
+        "source": "Fortineau, Siegler, Makarov and Rodriguez-Ayerbe, 'Human arm endpoint-impedance in rhythmic human-robot interaction exhibits cyclic variations', PLoS One 18(12):e0295640 (2023), DOI 10.1371/journal.pone.0295640, https://www.ebi.ac.uk/europepmc/webservices/rest/PMC10721195/fullTextXML",
+        "provenance": "derived",
+        "note": "m_arm, the arm's measured endpoint mass, which sets each hand's damper with ζ_arm (design §3.1-§3.2). Quoted: \"The average mass estimated for h 1 * was 459 g (SD 126) and 434 g (SD 94)\" (Experiment H; the S1 Data label the second h3*), and \"227 to 893 g\" over both experiments. The paper gives no single mean, so this is the mean of the two, each over the same 31 participants: (459 + 434)/2 = 446.5 g; the S1 Data's 62 values give 446.8 g. It is the endpoint inertia the robot felt at the hand, not the armMass the swing carries. Bounds: the reported range, 227-893 g."
+    },
+    "pendulumForce": {
+        "value": 64.3,
+        "unit": "N",
+        "bounds": [39.1, 104.2],
+        "source": "Hallbeck, 'Flexion and extension forces generated by wrist-dedicated muscles over the range of motion', Appl. Ergon. 25(6):379 (1994), DOI 10.1016/0003-6870(94)90057-4, as tabulated by Napper, Sayal, Holmes and Cudlip, 'Sex differences in wrist strength: a systematic review', PeerJ 11:e16557 (2023), DOI 10.7717/peerj.16557, https://www.ebi.ac.uk/europepmc/webservices/rest/PMC10725665/fullTextXML",
+        "provenance": "derived",
+        "note": "F_pendulum, the largest forward force the bottom hand applies perpendicular to the shaft by wrist and forearm in the pendulum phase, scaled by pendulumEffort (design §4.2). A measured maximal wrist-flexion force at the hand: Napper et al., Table 3, Hallbeck (1994), 30 males and 30 females, force transducer, isometric (N): males \"Average over all postures: 73.15\", females \"Average over all postures: 55.42\", over wrist postures from 90° flexion to 90° extension. Hallbeck's paper is paywalled; the review's table is open. The value is the mean of the two equal groups, (73.15 + 55.42)/2 = 64.3 N. Bounds: the lowest and highest posture means of either sex, females at 75° extension (39.11 N) and males at 90° flexion (104.24 N)."
+    },
+    "pushForce": {
+        "value": 92.2,
+        "unit": "N",
+        "bounds": [48.5, 106.3],
+        "source": "Das and Wang, 'Isometric Pull-Push Strengths in Workspace: 1. Strength Profiles', Int. J. Occup. Saf. Ergon. (JOSE) 10(1):43-58 (2004), DOI 10.1080/10803548.2004.11076594, https://www.ciop.pl/CIOPPortalWAR/file/8665/2013031212638&das1.pdf",
+        "provenance": "derived",
+        "note": "F_push, the cap on the hands' push intent in carry mode: through the push the hands push along aim with the balls' resistance on the head at the last step, up to F_push (P2b.2b.2b.2b gate ruling 2026-10-11). The largest forward horizontal push a standing adult gives at the hand: Das and Wang measured maximal isometric pushes of 8 men and 8 women, standing, with the preferred arm, level (vertical angle 0°: from the elbow at normal reach, from the shoulder at maximum and extreme reach, so the value's extreme-reach figures are at shoulder height) straight ahead (horizontal angle 90°), in the normal, maximum and extreme reach envelopes. Tables 7 and 8 (N, mean): men 89.39, 77.92 and 106.34; women \"660.22\" (a misprint for 66.22, its SD 18.48), 48.49 and 78.11. The largest is at extreme reach for both; the value is the mean of the two, (106.34 + 78.11)/2 = 92.2 N. One-handed: no open two-handed standing figure was found, so this caps the two hands' push together with one arm's strength. Bounds: the lowest and highest of those six means, 48.49 (women, maximum reach) and 106.34 N (men, extreme reach)."
+    },
+    "pushResponseTime": {
+        "value": 0.125,
+        "unit": "s",
+        "bounds": [0.101, 0.17],
+        "source": "Augustsson, Gunhamn and Andersson, 'Relationship Between Early and Maximal Isometric Upper-Body Push and Pull Force Production Among Elite Female and Male Swedish Track and Field Throwers', Sports 13(7):226 (2025), DOI 10.3390/sports13070226, https://www.ebi.ac.uk/europepmc/webservices/rest/PMC12300538/fullTextXML",
+        "provenance": "derived",
+        "note": "τ_push, the time constant of the hands' push intent: the sensed resistance follows the balls' resistance as R̃ ← R̃ + (R − R̃)·(1 − exp(−dt/τ_push)) (gate ruling amendment, user, 2026-10-11: primed hands, no reflex delay, the push building at the muscles' pace). A voluntary force rise from force onset, so no reflex or electromechanical delay is in it: Augustsson et al. measured an isometric two-handed bench-press push, 'as quickly and forcefully as possible', in 17 female and 13 male throwers, force onset found as Tillin et al. describe. Table 2, push force as a percentage of peak force at 50, 100, 150, 200 and 250 ms: females 39, 60, 72, 80, 84; males 37, 56, 66, 72, 77. The time to 1 − 1/e (63.2 %) of peak, interpolated linearly between 100 and 150 ms, is 113.4 ms (females) and 136.1 ms (males); the value is their mean, 124.7 ms, rounded to 0.125 s. Bounds: τ = −t/ln(1 − F(t)/F_peak) at each reported time for either sex, 101.2 ms (females, 50 ms) to 170.1 ms (males, 250 ms); the rise is not exactly exponential. Trained throwers; an untrained player is likely slower."
+    },
+    "forearmMass": {
+        "value": 0.344,
+        "unit": "kg",
+        "bounds": [0.236, 0.344],
+        "source": "Dong, Welcome, McDowell and Wu, 'Modeling of the biodynamic responses distributed at the fingers and palm of the hand in three orthogonal directions', J Sound Vib 332(4):1125–1140 (2013), DOI 10.1016/j.jsv.2012.10.003, PMC4656148, author manuscript https://stacks.cdc.gov/view/cdc/36218/cdc_36218_DS1.pdf",
+        "provenance": "direct",
+        "note": "M0, the effective mass of the wrist and forearm (x_h: 'the effective mass of the wrist and forearm is represented by M0 in the 5-DOF model'). Response-based 0.300, ISO 0.2360. Dong et al. fit a 5-DOF lumped model to the driving-point impedance measured at the fingers and the palm of seven subjects holding a handle (30 N grip, 50 N push, 16–500 Hz) in each of ISO 5349's directions. The x_h direction is taken, normal to the palm: the direction a palm pushes a shaft along aim. The model, as its text describes it: the finger skin M4 and the palm skin M3 move with the handle; M4 joins the fingers M2 through K4, C4; M3 joins the palm–hand dorsum M1 through K3, C3; M2 joins M1 through K2, C2; M1 joins the wrist and forearm M0 through K1, C1; M0 joins the ground (the body) through K0, C0. Value: the mean property-based 5-DOF model, x_h (Table 2), which the paper calls the more reliable; its undamped natural frequencies with the handle held, 26.7, 90.9 and 188.5 Hz, are reproduced by this topology (26.7, 90.8, 188.3 Hz). Bounds: the parameter over the paper's three x_h 5-DOF models, the mean response-based (Table 1), the mean property-based (Table 2) and the proposed ISO 10068 revision's (Table 3). Gate round 3 ruling (user, 2026-10-11, 'Full arm chain'): each hand holding the mallet in carry mode is this chain."
+    },
+    "handMass": {
+        "value": 0.178,
+        "unit": "kg",
+        "bounds": [0.178, 0.3998],
+        "source": "Dong, Welcome, McDowell and Wu, 'Modeling of the biodynamic responses distributed at the fingers and palm of the hand in three orthogonal directions', J Sound Vib 332(4):1125–1140 (2013), DOI 10.1016/j.jsv.2012.10.003, PMC4656148, author manuscript https://stacks.cdc.gov/view/cdc/36218/cdc_36218_DS1.pdf",
+        "provenance": "direct",
+        "note": "M1, 'only the effective mass of the palm–hand dorsum substructure' in x_h. Response-based 0.188, ISO 0.3998. The model, its direction and the bounds: see forearmMass."
+    },
+    "fingerMass": {
+        "value": 0.081,
+        "unit": "kg",
+        "bounds": [0.0576, 0.081],
+        "source": "Dong, Welcome, McDowell and Wu, 'Modeling of the biodynamic responses distributed at the fingers and palm of the hand in three orthogonal directions', J Sound Vib 332(4):1125–1140 (2013), DOI 10.1016/j.jsv.2012.10.003, PMC4656148, author manuscript https://stacks.cdc.gov/view/cdc/36218/cdc_36218_DS1.pdf",
+        "provenance": "direct",
+        "note": "M2, 'the effective mass due to the remaining finger tissues, mainly composed of finger bone masses'. Response-based 0.079, ISO 0.0576. The model, its direction and the bounds: see forearmMass."
+    },
+    "palmSkinMass": {
+        "value": 0.015,
+        "unit": "kg",
+        "bounds": [0.015, 0.0205],
+        "source": "Dong, Welcome, McDowell and Wu, 'Modeling of the biodynamic responses distributed at the fingers and palm of the hand in three orthogonal directions', J Sound Vib 332(4):1125–1140 (2013), DOI 10.1016/j.jsv.2012.10.003, PMC4656148, author manuscript https://stacks.cdc.gov/view/cdc/36218/cdc_36218_DS1.pdf",
+        "provenance": "direct",
+        "note": "M3, 'the effective mass of palm skin contacting the handle': it moves with the handle, so it rides rigidly at the grip. Response-based 0.015, ISO 0.0205. The model, its direction and the bounds: see forearmMass."
+    },
+    "fingerSkinMass": {
+        "value": 0.016,
+        "unit": "kg",
+        "bounds": [0.01, 0.016],
+        "source": "Dong, Welcome, McDowell and Wu, 'Modeling of the biodynamic responses distributed at the fingers and palm of the hand in three orthogonal directions', J Sound Vib 332(4):1125–1140 (2013), DOI 10.1016/j.jsv.2012.10.003, PMC4656148, author manuscript https://stacks.cdc.gov/view/cdc/36218/cdc_36218_DS1.pdf",
+        "provenance": "direct",
+        "note": "M4, 'the effective mass of finger skin contacting the handle': it moves with the handle, so it rides rigidly at the grip. Response-based 0.014, ISO 0.0100. The model, its direction and the bounds: see forearmMass."
+    },
+    "shoulderStiffness": {
+        "value": 1611,
+        "unit": "N/m",
+        "bounds": [1000, 1611],
+        "source": "Dong, Welcome, McDowell and Wu, 'Modeling of the biodynamic responses distributed at the fingers and palm of the hand in three orthogonal directions', J Sound Vib 332(4):1125–1140 (2013), DOI 10.1016/j.jsv.2012.10.003, PMC4656148, author manuscript https://stacks.cdc.gov/view/cdc/36218/cdc_36218_DS1.pdf",
+        "provenance": "direct",
+        "note": "K0, the model's boundary between M0 and the body ('A group of spring–damper elements … K0 and C0 in the 5-DOF … was used to represent the boundary condition'). The engine does not use it: the arm's measured slow flex (armStiffness) is that path from the forearm to the body, so it takes K0's place rather than sit in series with it. Kept to check the transcription against the paper's natural frequencies. Response-based 1152, ISO 1000. The model, its direction and the bounds: see forearmMass."
+    },
+    "shoulderDamping": {
+        "value": 12.8,
+        "unit": "N·s/m",
+        "bounds": [10.2, 21.8],
+        "source": "Dong, Welcome, McDowell and Wu, 'Modeling of the biodynamic responses distributed at the fingers and palm of the hand in three orthogonal directions', J Sound Vib 332(4):1125–1140 (2013), DOI 10.1016/j.jsv.2012.10.003, PMC4656148, author manuscript https://stacks.cdc.gov/view/cdc/36218/cdc_36218_DS1.pdf",
+        "provenance": "direct",
+        "note": "C0, with K0 the model's boundary to the body; replaced by the slow flex as K0 is. Response-based 10.2, ISO 21.8. The model, its direction and the bounds: see forearmMass."
+    },
+    "wristStiffness": {
+        "value": 9988,
+        "unit": "N/m",
+        "bounds": [5648, 9988],
+        "source": "Dong, Welcome, McDowell and Wu, 'Modeling of the biodynamic responses distributed at the fingers and palm of the hand in three orthogonal directions', J Sound Vib 332(4):1125–1140 (2013), DOI 10.1016/j.jsv.2012.10.003, PMC4656148, author manuscript https://stacks.cdc.gov/view/cdc/36218/cdc_36218_DS1.pdf",
+        "provenance": "direct",
+        "note": "K1, between the palm–hand dorsum M1 and the wrist and forearm M0 ('flexible connectors are required to link the effective masses of the palm and hand dorsum to that of the forearm'). Response-based 5648, ISO 6972. The model, its direction and the bounds: see forearmMass."
+    },
+    "wristDamping": {
+        "value": 36.0,
+        "unit": "N·s/m",
+        "bounds": [22.1, 36.2],
+        "source": "Dong, Welcome, McDowell and Wu, 'Modeling of the biodynamic responses distributed at the fingers and palm of the hand in three orthogonal directions', J Sound Vib 332(4):1125–1140 (2013), DOI 10.1016/j.jsv.2012.10.003, PMC4656148, author manuscript https://stacks.cdc.gov/view/cdc/36218/cdc_36218_DS1.pdf",
+        "provenance": "direct",
+        "note": "C1, with K1. Response-based 36.2, ISO 22.1. The model, its direction and the bounds: see forearmMass."
+    },
+    "knuckleStiffness": {
+        "value": 3991,
+        "unit": "N/m",
+        "bounds": [10, 3991],
+        "source": "Dong, Welcome, McDowell and Wu, 'Modeling of the biodynamic responses distributed at the fingers and palm of the hand in three orthogonal directions', J Sound Vib 332(4):1125–1140 (2013), DOI 10.1016/j.jsv.2012.10.003, PMC4656148, author manuscript https://stacks.cdc.gov/view/cdc/36218/cdc_36218_DS1.pdf",
+        "provenance": "direct",
+        "note": "K2, between the fingers M2 and the palm–hand dorsum M1 ('a connection with very little stiffness (K2) but relatively large damping (C2) between the fingers and the hand dorsum'). Response-based 10, ISO 100. The model, its direction and the bounds: see forearmMass."
+    },
+    "knuckleDamping": {
+        "value": 56.2,
+        "unit": "N·s/m",
+        "bounds": [56.2, 69.8],
+        "source": "Dong, Welcome, McDowell and Wu, 'Modeling of the biodynamic responses distributed at the fingers and palm of the hand in three orthogonal directions', J Sound Vib 332(4):1125–1140 (2013), DOI 10.1016/j.jsv.2012.10.003, PMC4656148, author manuscript https://stacks.cdc.gov/view/cdc/36218/cdc_36218_DS1.pdf",
+        "provenance": "direct",
+        "note": "C2, with K2. Response-based 67.2, ISO 69.8. The model, its direction and the bounds: see forearmMass."
+    },
+    "palmStiffness": {
+        "value": 43205,
+        "unit": "N/m",
+        "bounds": [4000, 43205],
+        "source": "Dong, Welcome, McDowell and Wu, 'Modeling of the biodynamic responses distributed at the fingers and palm of the hand in three orthogonal directions', J Sound Vib 332(4):1125–1140 (2013), DOI 10.1016/j.jsv.2012.10.003, PMC4656148, author manuscript https://stacks.cdc.gov/view/cdc/36218/cdc_36218_DS1.pdf",
+        "provenance": "direct",
+        "note": "K3, the palm's contact stiffness, between the palm skin M3 (the grip) and M1. Response-based 41,749, ISO 4000 ('unrealistically much lower than that in the new model'). The model, its direction and the bounds: see forearmMass."
+    },
+    "palmDamping": {
+        "value": 57.0,
+        "unit": "N·s/m",
+        "bounds": [55.9, 128.6],
+        "source": "Dong, Welcome, McDowell and Wu, 'Modeling of the biodynamic responses distributed at the fingers and palm of the hand in three orthogonal directions', J Sound Vib 332(4):1125–1140 (2013), DOI 10.1016/j.jsv.2012.10.003, PMC4656148, author manuscript https://stacks.cdc.gov/view/cdc/36218/cdc_36218_DS1.pdf",
+        "provenance": "direct",
+        "note": "C3, with K3. Response-based 55.9, ISO 128.6. The model, its direction and the bounds: see forearmMass."
+    },
+    "fingerStiffness": {
+        "value": 109271,
+        "unit": "N/m",
+        "bounds": [65844, 114031],
+        "source": "Dong, Welcome, McDowell and Wu, 'Modeling of the biodynamic responses distributed at the fingers and palm of the hand in three orthogonal directions', J Sound Vib 332(4):1125–1140 (2013), DOI 10.1016/j.jsv.2012.10.003, PMC4656148, author manuscript https://stacks.cdc.gov/view/cdc/36218/cdc_36218_DS1.pdf",
+        "provenance": "direct",
+        "note": "K4, the fingers' contact stiffness, between the finger skin M4 (the grip) and M2. Response-based 114,031, ISO 65,844. The model, its direction and the bounds: see forearmMass."
+    },
+    "fingerDamping": {
+        "value": 65.8,
+        "unit": "N·s/m",
+        "bounds": [65.8, 81.5],
+        "source": "Dong, Welcome, McDowell and Wu, 'Modeling of the biodynamic responses distributed at the fingers and palm of the hand in three orthogonal directions', J Sound Vib 332(4):1125–1140 (2013), DOI 10.1016/j.jsv.2012.10.003, PMC4656148, author manuscript https://stacks.cdc.gov/view/cdc/36218/cdc_36218_DS1.pdf",
+        "provenance": "direct",
+        "note": "C4, with K4. Response-based 76.0, ISO 81.5. The model, its direction and the bounds: see forearmMass."
     }
 }

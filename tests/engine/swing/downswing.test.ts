@@ -34,6 +34,7 @@ const PIVOT = vec3(0, 0, 0.9);
 /** The test head on a 0.8 m arc with no arm mass: the swung body is the head. */
 const PENDULUM = pendulumOf(TEST_HEAD, swungBody(TEST_HEAD, TEST_HANDS, RADIUS), RADIUS, STANDARD_GRAVITY);
 const DEG = Math.PI / 180;
+const dist = (a: Vec3, b: Vec3): number => length(sub(a, b));
 
 function shape(o: Partial<SwingShape> = {}): SwingShape {
     return {
@@ -57,6 +58,7 @@ function input(o: Partial<DownswingInput> = {}): DownswingInput {
         shape: shape(),
         backswing: 0.3,
         intensity: 0,
+        arrival: 0,
         ...o,
     };
 }
@@ -268,6 +270,25 @@ describe("the carry-mode downswing (design §3.3)", () => {
         expect(downswing.span).toBe(0);
         expect(omega).toBe(0);
         expect(downswingAt(downswing, -0.2).theta).toBe(-0.3);
+    });
+
+    it("ends the carry hands' path tangent to the hands' arc, descending at the arrival slope", () => {
+        // P2b.2b.2b.2b design §4.1: the vertical term is the cubic Hermite with the same ends and the arc's slope at
+        // contact, so the hands arrive moving down along the arc.
+        const arrival = -Math.tan(Math.asin(0.1));
+        const { downswing, handsVelocity } = carry({ arrival });
+        const at = downswingHands(downswing, 0, downswingAt(downswing, 0));
+        const along = Math.hypot(at.V.x, at.V.y);
+        expect(at.V.z / along).toBeCloseTo(arrival, 12);
+        expect(handsVelocity.z).toBeCloseTo(at.V.z, 12);
+        expect(dist(at.P, PIVOT)).toBeLessThan(1e-12);
+        const top = downswingHands(downswing, downswing.release, downswingAt(downswing, downswing.release));
+        expect(length(top.V)).toBe(0);
+    });
+
+    it("leaves swing mode's hands as they were: no tangent", () => {
+        const { downswing } = planDownswing(input({ arrival: -0.5 }));
+        expect(downswing.tangent).toEqual(vec3(0, 0, 0));
     });
 });
 

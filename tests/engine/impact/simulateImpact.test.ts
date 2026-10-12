@@ -1,12 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { CONTACT_TOLERANCE } from "../../../src/engine/detect";
-import { add, length, sub, vec3 } from "../../../src/engine/math/vec3";
+import { add, length, sub, vec3, type Vec3 } from "../../../src/engine/math/vec3";
 import { stateAtTime } from "../../../src/engine/sample";
+import { simulateShot } from "../../../src/engine/shot";
 import { ENGINE_VERSION, simulateFreeMotion } from "../../../src/engine/simulate";
-import type { BallStates, SurfaceProps, World } from "../../../src/engine/types";
+import { buildContact } from "../../../src/engine/swing/buildContact";
+import type { BallState, BallStates, SurfaceProps, World } from "../../../src/engine/types";
 import { obstaclesOf, uniformLawn } from "../../../src/engine/world";
 import { obstacleContact } from "../../../src/engine/impact/contacts";
-import type { ImpactBall } from "../../../src/engine/impact/integrate";
+import { IMPACT_DT, type ImpactBall } from "../../../src/engine/impact/integrate";
 import {
     prepareImpact,
     simulateImpact,
@@ -14,10 +16,24 @@ import {
     validateImpact,
     type SinkSolver,
 } from "../../../src/engine/impact/simulateImpact";
+import { prepareTrack, type Push } from "../../../src/engine/impact/track";
 import { bedLawOf, staticSink } from "../../../src/engine/impact/turfBed";
-import type { ContactState, Coupling, Hands, StrokeMode, SwingArc } from "../../../src/engine/impact/types";
+import type { ContactState, Coupling, Hands, StrokeMode, SwingArc, TrackDrive } from "../../../src/engine/impact/types";
 import { TEST_BALL, TEST_TURF, ballAt, hoopWithUprightAt, testWorld } from "../support/fixtures";
-import { TEST_HEAD, drive, levelArc, onArc, strike, trackDrive } from "../support/impact";
+import {
+    TEST_CHAIN,
+    TEST_FLEX,
+    TEST_HEAD,
+    drive,
+    levelArc,
+    mirrorBall,
+    mirrorContact,
+    mirrorVec,
+    onArc,
+    strike,
+    trackDrive,
+} from "../support/impact";
+import { canonicalSetup } from "../support/shot";
 
 const R = TEST_BALL.radius;
 const WORLD = testWorld();
@@ -33,8 +49,8 @@ const SUNK = vec3(
 );
 
 describe("simulateImpact", () => {
-    it("is version 0.9.0", () => {
-        expect(ENGINE_VERSION).toBe("0.9.0");
+    it("is version 0.10.0", () => {
+        expect(ENGINE_VERSION).toBe("0.10.0");
     });
 
     it("starts a centre-struck ball rolling at 5/7 of its launch speed in phase 2", () => {
@@ -472,7 +488,6 @@ describe("simulateImpact with a tracked drive", () => {
             /arc\.mode must be "swing" or "carry"/,
         ],
         ["a negative reach", withArc({ handReach: -0.01 }), /arc\.handReach must be non-negative/],
-        ["a negative ground depth", withArc({ groundDepth: -0.001 }), /arc\.groundDepth must be non-negative/],
         ["an aim that is not unit", withArc({ aim: vec3(1.1, 0, 0) }), /arc\.aim must be a horizontal unit vector/],
         ["an aim that is not horizontal", withArc({ aim: vec3(0.8, 0, 0.6) }), /arc\.aim must be a horizontal/],
         ["a non-positive period", withCoupling({ period: 0 }), /coupling\.period must be a positive/],
@@ -492,6 +507,53 @@ describe("simulateImpact with a tracked drive", () => {
         ["a negative reach slack", withHands({ reachSlack: -0.01 }), /hands\.reachSlack must be non-negative/],
         ["a negative guide effort", withHands({ guideEffort: -0.1 }), /hands\.guideEffort must lie in \[0, 1\]/],
         ["a guide effort above 1", withHands({ guideEffort: 1.5 }), /hands\.guideEffort must lie in \[0, 1\]/],
+        ["a pendulumAt above 1", withArc({ pendulumAt: 1.5 }), /arc\.pendulumAt must lie in \[0, 1\]/],
+        ["a negative pendulumEffort", withArc({ pendulumEffort: -1 }), /arc\.pendulumEffort must lie in \[0, 1\]/],
+        ["a handArcLow above 1", withArc({ handArcLow: 1.5 }), /arc\.handArcLow must lie in \[0, 1\]/],
+        [
+            "an arc no longer than the push",
+            withArc({ mode: "carry", handReach: 2, handArcRadius: 2 }),
+            /arc\.handArcRadius must exceed arc\.handReach/,
+        ],
+        [
+            "a flex with no stiffness",
+            withHands({ flex: { ...TEST_FLEX, stiffness: 0 } }),
+            /hands\.flex\.stiffness must be a positive/,
+        ],
+        [
+            "a flex hold with no damping",
+            withHands({ flex: { ...TEST_FLEX, hold: { stiffness: 900, damping: 0 } } }),
+            /hands\.flex\.hold\.damping must be a positive/,
+        ],
+        [
+            "a flex damping ratio above 1",
+            withHands({ flex: { ...TEST_FLEX, dampingRatio: 1.5 } }),
+            /hands\.flex\.dampingRatio must lie in \(0, 1\]/,
+        ],
+        ["no pendulum force", withHands({ pendulumForce: 0 }), /hands\.pendulumForce must be a positive/],
+        ["no push force", withHands({ pushForce: 0 }), /hands\.pushForce must be a positive/],
+        ["an infinite push force", withHands({ pushForce: Infinity }), /hands\.pushForce must be finite/],
+        ["no push response time", withHands({ pushResponseTime: 0 }), /hands\.pushResponseTime must be a positive/],
+        [
+            "an infinite push response time",
+            withHands({ pushResponseTime: Infinity }),
+            /hands\.pushResponseTime must be finite/,
+        ],
+        [
+            "a chain with no hand mass",
+            withHands({ chain: { ...TEST_CHAIN, handMass: 0 } }),
+            /hands\.chain\.handMass must be a positive/,
+        ],
+        [
+            "a chain with an infinite wrist stiffness",
+            withHands({ chain: { ...TEST_CHAIN, wristStiffness: Infinity } }),
+            /hands\.chain\.wristStiffness must be finite/,
+        ],
+        [
+            "a chain with no knuckle damping",
+            withHands({ chain: { ...TEST_CHAIN, knuckleDamping: 0 } }),
+            /hands\.chain\.knuckleDamping must be a positive/,
+        ],
         [
             "a pivot velocity out of the swing plane",
             withArc({ pivotVelocity: vec3(0, 0.1, 0) }),
@@ -507,5 +569,63 @@ describe("simulateImpact with a tracked drive", () => {
     it.each(rejections)("rejects %s", (_name, contact, pattern) => {
         expect(() => simulateImpact(contact, { blue: BLUE }, WORLD)).toThrow(RangeError);
         expect(() => simulateImpact(contact, { blue: BLUE }, WORLD)).toThrow(pattern);
+    });
+});
+
+describe("the roll's impact (P2b.2b.2b.2b design §4.2)", () => {
+    it("never ends before the pendulum phase starts, and records its start as the release", () => {
+        for (const pendulumAt of [0.5, 1]) {
+            const setup = canonicalSetup("full-roll", { world: WORLD, stroke: { pendulumAt } });
+            const contact = buildContact(setup, WORLD);
+            const track = prepareTrack(contact.drive as TrackDrive, contact.head, WORLD.gravity);
+            const pendulum = (track.push as Push).pendulum as number;
+            const result = simulateImpact(contact, setup.balls, WORLD);
+            expect(result.duration, `pendulumAt ${pendulumAt}`).toBeGreaterThanOrEqual(pendulum);
+            expect(result.release?.t, `pendulumAt ${pendulumAt}`).toBeCloseTo(pendulum, 4);
+        }
+    });
+
+    it("latches the striker's ball's first departure, not a later one, as the hold's relaxation start", () => {
+        // Gate ruling round 13, "Relax from first departure": the canonical pass roll meets the striker's ball five
+        // times, and its departure is the end of the first face interval, to within a step; a latch that moved with
+        // each opening would end at the last.
+        const setup = canonicalSetup("pass-roll", { world: WORLD });
+        const result = simulateImpact(buildContact(setup, WORLD), setup.balls, WORLD);
+        const intervals = result.timeline[`face/${setup.striker}`] ?? [];
+        expect(intervals.length).toBeGreaterThan(1);
+        const first = intervals[0] as { start: number; end: number };
+        expect(result.departure).toBeDefined();
+        expect(Math.abs((result.departure as number) - first.end)).toBeLessThanOrEqual(IMPACT_DT * 1.000001);
+        expect(result.departure as number).toBeLessThan((intervals[1] as { start: number }).start);
+    });
+
+    it("runs a roll with no push to a normal finish", () => {
+        // Review focus 1: a push of 0 puts the arc's low point at contact and starts the pendulum phase there.
+        const setup = canonicalSetup("half-roll", { world: WORLD, stroke: { handReach: 0 } });
+        const outcome = simulateShot(setup, WORLD, { trajectory: true });
+        expect(outcome.impact.events.map((e) => e.kind)).not.toContain("impact-cap");
+        expect(Number.isFinite(outcome.impact.duration)).toBe(true);
+    });
+
+    it("mirrors a canonical roll exactly", () => {
+        // Review focus 5: the arc, the flex and the pendulum phase reflect across y = 0 as every tracked drive does
+        // (invariants.test.ts's mirror case). On the test world, whose lawn is uniform, the full roll is aimed along
+        // +x with the striker on y = 0, so its mirror is the same court.
+        const world = testWorld();
+        const R = world.ball.radius;
+        const base = canonicalSetup("full-roll", { world, stroke: { aim: 0 } });
+        const setup = { ...base, balls: { blue: ballAt(5, 0), red: ballAt(5 + 2 * R, 0) } };
+        const contact = buildContact(setup, world);
+        const run = simulateImpact(contact, setup.balls, world);
+        const reflected: BallStates = { blue: mirrorBall(ballAt(5, 0)), red: mirrorBall(ballAt(5 + 2 * R, 0)) };
+        const mirrored = simulateImpact(mirrorContact(contact), reflected, world);
+        const same = (a: Vec3, b: Vec3): boolean => a.x === b.x && a.y === b.y && a.z === b.z;
+        expect(mirrored.steps).toBe(run.steps);
+        for (const id of ["blue", "red"] as const) {
+            const a = run.handover[id] as BallState;
+            const b = mirrored.handover[id] as BallState;
+            expect(same(mirrorVec(a.position), b.position), id).toBe(true);
+            expect(same(mirrorVec(a.velocity), b.velocity), id).toBe(true);
+        }
     });
 });

@@ -221,6 +221,8 @@ The hands' speed at contact, and so P2b.2b.1's `handShare`, now emerges; `SwingD
 contact the hands' window, the reach, the dip and the carry's descent act as in swing spec §3.2, from the hands'
 state at contact.
 
+Reopened for carry mode by P2b.2b.2b.2b: the hands arrive on their arc (P2b.2b.2b.2b design §4.1).
+
 ### 3.4 The forward integration
 
 In swing mode, from rest at θ_top, the downswing is integrated forward by semi-implicit Euler at `FREE_STEP` (5 µs),

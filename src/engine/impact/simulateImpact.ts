@@ -11,15 +11,16 @@
 import { CONTACT_TOLERANCE } from "../detect";
 import { contactReference } from "../../reference/index";
 import { dot, horizontal, length, sub, vec3, type Vec3 } from "../math/vec3";
-import { BALL_IDS, type BallState, type BallStates, type World } from "../types";
+import { BALL_IDS, type BallId, type BallState, type BallStates, type World } from "../types";
 import { obstaclesOf, validateWorld } from "../world";
 import { lawFromContactTime, lawFromStiffness, type PairLaw } from "./contactLaw";
 import { headBottom, headLowestPoint, outsideObstacle } from "./contacts";
-import { handover } from "./handover";
+import { handover, type HandoverHead } from "./handover";
 import { rotateInverse } from "./rigidBody";
 import {
     integrate,
     integrateStroke,
+    TURF_PIT_DEPTH,
     type FollowThrough,
     type ImpactBall,
     type ImpactOptions,
@@ -134,9 +135,10 @@ function validateForce(drive: ForceDrive): void {
 
 /**
  * Checks a tracked drive's downswing (P2b.2b.2a design §3): a negative release; a finite top, a non-negative span;
- * finite hands, Δ_h in the swing plane and Δ_z vertical; in carry mode a positive tempo with release = −tempo and no
- * table; in swing mode no tempo, a positive span and a finite table of θ, ω and α of one length, at least 2, whose
- * samples every FREE_STEP from the release end at contact.
+ * finite hands, Δ_h in the swing plane, Δ_z vertical and the Hermite term T vertical (P2b.2b.2b.2b design §4.1); in
+ * carry mode a positive tempo with release = −tempo and no table; in swing mode T zero, no tempo, a positive span and
+ * a finite table of θ, ω and α of one length, at least 2, whose samples every FREE_STEP from the release end at
+ * contact.
  */
 function validateDownswing(down: Downswing, mode: StrokeMode, n: Vec3): void {
     finiteNumber(down.release, "arc.downswing.release");
@@ -155,12 +157,19 @@ function validateDownswing(down: Downswing, mode: StrokeMode, n: Vec3): void {
     if (!(down.drop.x === 0 && down.drop.y === 0)) {
         fail("arc.downswing.drop must be vertical");
     }
+    finite(down.tangent, "arc.downswing.tangent");
+    if (!(down.tangent.x === 0 && down.tangent.y === 0)) {
+        fail("arc.downswing.tangent must be vertical");
+    }
     if (mode === "carry") {
         const { tempo } = down;
         if (tempo === null || !(tempo > 0) || down.release !== 0 - tempo || down.theta.length > 0) {
             fail("arc.downswing must be closed-form in carry mode: a positive tempo, release = −tempo, no table");
         }
         return;
+    }
+    if (down.tangent.z !== 0) {
+        fail("arc.downswing.tangent must be zero in swing mode");
     }
     const count = down.theta.length;
     if (
@@ -187,11 +196,14 @@ function validateDownswing(down: Downswing, mode: StrokeMode, n: Vec3): void {
 /**
  * Checks a tracked drive (P2b.2b.1 design §3.6), in this order: every vector and angle finite; a positive radius,
  * windows and dip duration; non-negative start times, contact time and dip start; a non-negative dip depth; a mode of
- * "swing" or "carry"; a non-negative reach and ground depth; aim a horizontal unit vector within UNIT_TOLERANCE; a
- * positive period, a non-negative damping ratio and relaxation time; the bottom hand between the socket and the top
- * hand, both grips in (0, 1], a non-negative arm mass and reach slack, a guide effort in [0, 1]; the pivot's velocity
- * and acceleration in the swing plane, their component along the pitch axis within UNIT_TOLERANCE of their size; and a
- * downswing, if given, well formed (validateDownswing). The head need not start on the path.
+ * "swing" or "carry"; a non-negative reach; aim a horizontal unit vector within UNIT_TOLERANCE; a positive period, a
+ * non-negative damping ratio and relaxation time; the bottom hand between the socket and the top hand, both grips in
+ * (0, 1], a non-negative arm mass and reach slack, a guide effort in [0, 1]; a pendulumAt, pendulumEffort and
+ * handArcLow in [0, 1]; a handArcRadius above the reach; a flex whose values (its hold's too, if any) are positive, its
+ * damping ratio at most 1; a positive pendulumForce (P2b.2b.2b.2b design §6), pushForce, pushResponseTime and every
+ * hand–arm chain value (its gate rulings, 2026-10-11); the pivot's velocity and acceleration in the swing plane, their
+ * component along the pitch axis within UNIT_TOLERANCE of their size; and a downswing, if given, well formed
+ * (validateDownswing). The head need not start on the path.
  */
 function validateTrack(drive: TrackDrive): void {
     const { arc, coupling, hands } = drive;
@@ -215,7 +227,6 @@ function validateTrack(drive: TrackDrive): void {
         fail(`arc.mode must be "swing" or "carry" (got ${arc.mode})`);
     }
     friction(arc.handReach, "arc.handReach");
-    friction(arc.groundDepth, "arc.groundDepth");
     const { aim } = arc;
     if (!(Math.abs(aim.z) <= UNIT_TOLERANCE && Math.abs(dot(aim, aim) - 1) <= UNIT_TOLERANCE)) {
         fail("arc.aim must be a horizontal unit vector");
@@ -232,6 +243,41 @@ function validateTrack(drive: TrackDrive): void {
     friction(hands.reachSlack, "hands.reachSlack");
     if (!(hands.guideEffort >= 0 && hands.guideEffort <= 1)) {
         fail(`hands.guideEffort must lie in [0, 1] (got ${hands.guideEffort})`);
+    }
+    for (const [name, value] of [
+        ["arc.pendulumAt", arc.pendulumAt],
+        ["arc.pendulumEffort", arc.pendulumEffort],
+        ["arc.handArcLow", arc.handArcLow],
+    ] as const) {
+        finiteNumber(value, name);
+        if (!(value >= 0 && value <= 1)) {
+            fail(`${name} must lie in [0, 1] (got ${value})`);
+        }
+    }
+    finiteNumber(arc.handArcRadius, "arc.handArcRadius");
+    // Checked in swing mode too, where the arc is never read: a drive that fails it fails either way. Changing that
+    // would be a behaviour change and needs its own ruling.
+    if (!(arc.handArcRadius > arc.handReach)) {
+        fail(`arc.handArcRadius must exceed arc.handReach (got ${arc.handArcRadius} and ${arc.handReach})`);
+    }
+    const { hold, ...flexValues } = hands.flex;
+    const held = hold === null ? [] : Object.entries(hold).map(([key, value]) => [`hold.${key}`, value] as const);
+    for (const [key, value] of [...Object.entries(flexValues), ...held]) {
+        finiteNumber(value, `hands.flex.${key}`);
+        positive(value, `hands.flex.${key}`);
+    }
+    if (!(hands.flex.dampingRatio <= 1)) {
+        fail(`hands.flex.dampingRatio must lie in (0, 1] (got ${hands.flex.dampingRatio})`);
+    }
+    finiteNumber(hands.pendulumForce, "hands.pendulumForce");
+    positive(hands.pendulumForce, "hands.pendulumForce");
+    finiteNumber(hands.pushForce, "hands.pushForce");
+    positive(hands.pushForce, "hands.pushForce");
+    finiteNumber(hands.pushResponseTime, "hands.pushResponseTime");
+    positive(hands.pushResponseTime, "hands.pushResponseTime");
+    for (const [key, value] of Object.entries(hands.chain)) {
+        finiteNumber(value, `hands.chain.${key}`);
+        positive(value, `hands.chain.${key}`);
     }
     const n = pitchAxis(aim);
     if (!(Math.abs(dot(arc.pivotVelocity, n)) <= UNIT_TOLERANCE * length(arc.pivotVelocity))) {
@@ -443,9 +489,44 @@ export function prepareImpact(
     };
 }
 
-/** The impact's result: `run` with its balls handed over to phase 2 (design §6). */
-function handedOver(run: ImpactRun, world: World): ImpactResult {
-    const handed = handover(run.balls, world.ball.radius, obstaclesOf(world));
+/**
+ * The deepest head overlap (m) the handover may clear from a ball (P2b.2b.2b.2b design §5), the lift it was given. The
+ * handover sets a ball in the turf on the lawn (z = R), lifting it by its depth R − z at the impact's end, and the head
+ * over it then overlaps by up to that lift: `depth` (m, zero or negative for a ball at or above R). A ball that ended
+ * deeper than its static sink `sink` (m) is lifted by that depth, capped at TURF_PIT_DEPTH, the depth past which the
+ * integrator flags a pit as a result to look at; one at or above the lawn, or shallower than its static sink, keeps
+ * the static sink. Plus CONTACT_TOLERANCE.
+ */
+export function handoverLimit(depth: number, sink: number): number {
+    return Math.max(sink, Math.min(depth, TURF_PIT_DEPTH)) + CONTACT_TOLERANCE;
+}
+
+/**
+ * The impact's result: `run` with its balls handed over to phase 2 (design §6). A tracked drive's head is cleared from
+ * the balls too (P2b.2b.2b.2b design §5), each ball's limit handoverLimit, its actual lift (its depth R − z at the
+ * impact's end, at least its static sink at its starting position); a force table's head is its face alone, so it is
+ * not.
+ */
+function handedOver(
+    run: ImpactRun,
+    world: World,
+    contact: ContactState,
+    balls: BallStates,
+    sink: SinkSolver,
+): ImpactResult {
+    let mallet: HandoverHead | null = null;
+    if (contact.drive.kind === "track") {
+        const limits: Partial<Record<BallId, number>> = {};
+        for (const id of BALL_IDS) {
+            const b = balls[id];
+            const ended = run.balls[id];
+            if (b !== undefined && ended !== undefined) {
+                limits[id] = handoverLimit(world.ball.radius - ended.position.z, sink(b.position));
+            }
+        }
+        mallet = { state: run.head, head: contact.head, limits };
+    }
+    const handed = handover(run.balls, world.ball.radius, obstaclesOf(world), undefined, mallet);
     return { ...run, handover: handed.balls, overlapCorrection: handed.overlapCorrection };
 }
 
@@ -462,7 +543,7 @@ export function simulateImpact(
     validateWorld(world);
     const sink = sinkSolver(world);
     validateImpact(contact, balls, world, sink);
-    return handedOver(integrate(prepareImpact(contact, balls, world, sink), options), world);
+    return handedOver(integrate(prepareImpact(contact, balls, world, sink), options), world, contact, balls, sink);
 }
 
 /**
@@ -482,5 +563,5 @@ export function simulateStroke(
     const sink = sinkSolver(world);
     validateImpact(contact, balls, world, sink);
     const { run, follow } = integrateStroke(prepareImpact(contact, balls, world, sink), options, true);
-    return { result: handedOver(run, world), follow: follow as FollowThrough };
+    return { result: handedOver(run, world, contact, balls, sink), follow: follow as FollowThrough };
 }

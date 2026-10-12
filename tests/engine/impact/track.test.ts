@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { add, cross, dot, length, scale, sub, vec3, type Vec3 } from "../../../src/engine/math/vec3";
 import { IDENTITY, multiply, rotate, type Quaternion } from "../../../src/engine/impact/rigidBody";
-import { headLowestPoint } from "../../../src/engine/impact/contacts";
 import {
     FREE_SPAN,
     FREE_STEP,
     aimRotation,
+    carryBody,
     downswingAt,
     downswingHands,
     downswingSamples,
@@ -24,6 +24,7 @@ import {
     type FreePendulum,
     type PathPoint,
     type PreparedTrack,
+    type Push,
     type Reach,
 } from "../../../src/engine/impact/track";
 import { validateImpact } from "../../../src/engine/impact/simulateImpact";
@@ -42,7 +43,11 @@ const ARMED: Hands = { ...TEST_HANDS, armMass: 0.8 };
 const conj = (q: Quaternion): Quaternion => ({ w: q.w, x: -q.x, y: -q.y, z: -q.z });
 const dist = (a: Vec3, b: Vec3): number => length(sub(a, b));
 
-/** A power roll's path in carry mode: both arcs speeding up from t = 0, the face pitched 0.6 rad down. */
+/**
+ * A power roll's path in carry mode: both arcs speeding up from t = 0, the face pitched 0.6 rad down. Its contact is
+ * at 1 s, after every time read here, so the hands' arc after contact (P2b.2b.2b.2b design §4.1; its own describe)
+ * leaves the windows and the dip on their closed forms.
+ */
 const ROLL: SwingArc = {
     pivot: vec3(2, 3, 1.5),
     pivotVelocity: scale(AIM, 2.5),
@@ -57,10 +62,13 @@ const ROLL: SwingArc = {
     arcStart: 0,
     window: 0.03,
     dip: NO_DIP,
-    contactAt: 0,
+    contactAt: 1,
     mode: "carry",
     handReach: 10,
-    groundDepth: 0,
+    pendulumAt: 0.8,
+    pendulumEffort: 0,
+    handArcRadius: 11,
+    handArcLow: 0.5,
 };
 
 /** The same, each action timed: the pendulum's window from 10 ms, the hands' from 20 ms, a 10 mm dip from 5 ms. */
@@ -100,19 +108,23 @@ function dipAt(arc: SwingArc, t: number): { readonly z: number; readonly v: numb
     return { z: D, v: 0 };
 }
 
-/** The closed forms of design §3.2 for a carry-mode arc whose reach does not bind, with Math.* (the engine: sinCos). */
+/** The closed forms of design §3.2 for a carry-mode arc before its contact, with Math.* (the engine: sinCos). */
 function closedForm(arc: SwingArc, t: number) {
     const p = phases(t, arc.arcStart, arc.window);
-    const omegaEnd = arc.omega0 + arc.alpha * arc.window;
-    const rate = omegaEnd / arc.window;
-    const u = Math.min(p.after, arc.window);
-    const omega = arc.omega0 + arc.alpha * p.into - rate * u;
-    const theta =
-        arc.theta0 +
-        arc.omega0 * (p.before + p.into) +
-        0.5 * arc.alpha * p.into * p.into +
-        omegaEnd * u -
-        0.5 * rate * u * u;
+    // The held slope (gate round 5 ruling): x = u/W, ω = ω_e·(1 − 3x² + 2x³) + α₀·W·(x − 9x²/2 + 6x³ − 5x⁴/2).
+    const W = arc.window;
+    const omegaEnd = arc.omega0 + arc.alpha * W;
+    const u = Math.min(p.after, W);
+    const x = u / W;
+    const omega =
+        p.after > 0
+            ? omegaEnd * (1 - 3 * x ** 2 + 2 * x ** 3) + arc.alpha * W * (x - 4.5 * x ** 2 + 6 * x ** 3 - 2.5 * x ** 4)
+            : arc.omega0 + arc.alpha * p.into;
+    const held =
+        W *
+        (omegaEnd * (x - x ** 3 + 0.5 * x ** 4) +
+            arc.alpha * W * (0.5 * x ** 2 - 1.5 * x ** 3 + 1.5 * x ** 4 - 0.5 * x ** 5));
+    const theta = arc.theta0 + arc.omega0 * (p.before + p.into) + 0.5 * arc.alpha * p.into * p.into + held;
     const h = phases(t, arc.handStart, arc.handWindow);
     const A = arc.pivotAcceleration;
     const V = add(arc.pivotVelocity, scale(A, h.into));
@@ -198,7 +210,9 @@ describe("the swing path", () => {
         expect(pathAt(track, 0.018).dipAcceleration.z).toBeCloseTo(a, 9);
         expect(pathAt(track, 0.009).pendulumAcceleration).toBe(0);
         expect(pathAt(track, 0.012).pendulumAcceleration).toBe(TIMED.alpha);
-        expect(pathAt(track, 0.045).pendulumAcceleration).toBeCloseTo(-(TIMED.omega0 + TIMED.alpha * 0.03) / 0.03, 9);
+        // The held slope's α at x = u/W = 0.5: −6ω_e/W·x(1 − x) + α₀·(1 − 9x + 18x² − 10x³) = −1.5·ω_e/W − α₀/4.
+        const omegaEnd = TIMED.omega0 + TIMED.alpha * 0.03;
+        expect(pathAt(track, 0.055).pendulumAcceleration).toBeCloseTo((-1.5 * omegaEnd) / 0.03 - TIMED.alpha / 4, 9);
     });
 
     it("holds the head's tilt while the hands alone move: a straight line at a constant orientation", () => {
@@ -233,17 +247,53 @@ describe("the swing path", () => {
             const w = dot(pathAt(prepare({ ...checked, mode }), ROLL.window).angularVelocity, N);
             expect(Math.abs(w), mode).toBeLessThan(1e-12);
         }
+        // Carry mode's held slope takes α from the check's α₀ back to 0 over one more window (continuous α, gate round
+        // 5 ruling), so the rate swings briefly past rest within it; from its end, 0.06 s, the head is held at rest
+        // where the check left it, the slope's net travel ω_e·W/2 being 0.
         const carry = prepare(checked);
-        for (const t of [0.05, 0.12]) {
+        for (const t of [0.065, 0.12]) {
             expect(Math.abs(dot(pathAt(carry, t).angularVelocity, N)), `at ${t}`).toBeLessThan(1e-12);
         }
-        expect(dist(pathAt(carry, 0.05).socket, pathAt(carry, 0.12).socket)).toBeLessThan(1e-12);
+        expect(dist(pathAt(carry, ROLL.window).socket, pathAt(carry, 0.12).socket)).toBeLessThan(1e-12);
+        expect(dist(pathAt(carry, 0.065).socket, pathAt(carry, 0.12).socket)).toBeLessThan(1e-12);
     });
 
     it("holds θ in carry mode after the second window", () => {
         const held = pathAt(track, TIMED.arcStart + 2 * TIMED.window).orientation;
         for (const t of [0.075, 0.1, 0.2]) {
             expect(pathAt(track, t).orientation, `at ${t}`).toEqual(held);
+        }
+    });
+
+    it("plans the held slope with a continuous α and a finite jerk (gate round 5 ruling, 2026-10-12)", () => {
+        // The held slope runs from the window's end, α the window's α₀, to rest one window W later, α 0. At both
+        // seams α must not step, and across the slope its rate of change stays within the profile's own bound,
+        // |j| ≤ 6·|ω_e|/W² + 9·|α₀|/W (ω_e the rate at the window's end). Both rolls: α₀ > 0 and a check, α₀ < 0.
+        for (const arc of [TIMED, { ...TIMED, alpha: -(TIMED.omega0 / TIMED.window) }]) {
+            const path = prepare(arc);
+            const w = arc.window;
+            const alpha = (t: number): number => pathAt(path, t).pendulumAcceleration;
+            const omegaEnd = arc.omega0 + arc.alpha * w;
+            const tw = arc.arcStart + w;
+            for (const seam of [tw, tw + w]) {
+                expect(Math.abs(alpha(seam + 1e-9) - alpha(seam - 1e-9)), `α at ${seam}, α₀ ${arc.alpha}`).toBeLessThan(
+                    1e-4,
+                );
+            }
+            // The slope keeps the old linear fall's travel: θ at its end is θ_e + ω_e·W/2, and the rate is rest there.
+            const thetaEnd = pathAt(path, tw).theta;
+            expect(pathAt(path, tw + w).theta, `θ at the slope's end, α₀ ${arc.alpha}`).toBeCloseTo(
+                thetaEnd + (omegaEnd * w) / 2,
+                12,
+            );
+            expect(Math.abs(dot(pathAt(path, tw + w).angularVelocity, N))).toBeLessThan(1e-12);
+            const bound = (6 * Math.abs(omegaEnd)) / (w * w) + (9 * Math.abs(arc.alpha)) / w;
+            const h = w / 1000;
+            for (let t = tw - 10 * h; t < tw + w + 10 * h; t += h) {
+                expect(Math.abs(alpha(t + h) - alpha(t)) / h, `jerk at ${t}, α₀ ${arc.alpha}`).toBeLessThan(
+                    1.01 * bound,
+                );
+            }
         }
     });
 
@@ -289,8 +339,13 @@ describe("the swing path", () => {
     });
 
     it("gives each grip its gains: firm, the top hand's γ_T and the bottom hand's g_B", () => {
+        // Swing mode, whose swung body carries the arm mass; a carry's is the head with the hands' skin at the grips,
+        // its hand–arm chains replacing the arm mass (P2b.2b.2b.2b gate round 3 ruling, 2026-10-11).
         const hands: Hands = { ...ARMED, gripTension: 0.1, bottomGrip: 0.25 };
-        const t = prepare(TIMED, hands);
+        const t = prepare({ ...TIMED, mode: "swing" }, hands);
+        const carried = prepare(TIMED, hands);
+        expect(carried.body).toEqual(carryBody(TEST_HEAD, hands.chain, TIMED.radius, hands.bottom));
+        expect(carried.released).toEqual(carryBody(TEST_HEAD, hands.chain, TIMED.radius, null));
         const rate = (2 * Math.PI) / TEST_COUPLING.period;
         const zeta = TEST_COUPLING.dampingRatio;
         const M = 1.8;
@@ -385,7 +440,7 @@ describe("the hands' reach", () => {
     });
 
     it("rests the along-aim motion from contactAt with a reach of 0", () => {
-        const arc = levelArc(CENTRE, { pivotVelocity: vec3(2, 0, 0), handReach: 0, contactAt: 0.02, mode: "carry" });
+        const arc = levelArc(CENTRE, { pivotVelocity: vec3(2, 0, 0), handReach: 0, contactAt: 0.02 });
         const track = prepare(arc);
         const at = pivotAt(track, arc.contactAt).P;
         for (const t of [0.03, 0.1]) {
@@ -401,22 +456,77 @@ describe("the hands' reach", () => {
         const brisk = prepare(levelArc(CENTRE, { pivotVelocity: vec3(0.17, 0, 0), handReach: 0.1 }));
         expect(brisk.reach?.t1).toBeCloseTo(0.08 / 0.17, 12);
     });
+});
 
-    it("in carry mode ends the head's lowest point groundDepth below the turf at t_s, and holds it", () => {
-        const low = vec3(0, 0, 0.05);
-        const arc = levelArc(low, { pivotVelocity: vec3(2, 0, 0), handReach: 0.15, mode: "carry", groundDepth: 0.005 });
-        const track = prepare(arc);
-        const reach = track.reach as Reach;
-        expect(reach.descent).toBeCloseTo(0.05 - TEST_HEAD.radius + 0.005, 12);
-        for (const t of [reach.tStop, reach.tStop + 0.05]) {
-            const lowest = headLowestPoint(headOnPath(track, TEST_HEAD, t), TEST_HEAD);
-            expect(lowest, `at ${t}`).toBeCloseTo(-0.005, 12);
+describe("the hands' arc after contact (P2b.2b.2b.2b design §4.1)", () => {
+    const AIM = vec3(1, 0, 0);
+    /** A carry from contact at 2 m/s along aim, the hands arriving on a 1.5 m arc lowest halfway along a 0.3 m push. */
+    const arrival = -0.15 / Math.sqrt(1.5 * 1.5 - 0.15 * 0.15);
+    const ARC = levelArc(vec3(0, 0, 0.5), {
+        mode: "carry",
+        pivotVelocity: vec3(2, 0, 2 * arrival),
+        handReach: 0.3,
+        handArcRadius: 1.5,
+        handArcLow: 0.5,
+        pendulumAt: 0.8,
+    });
+    const track = prepareTrack(trackDrive(ARC), TEST_HEAD, STANDARD_GRAVITY);
+    const push = track.push as Push;
+    const start = handsAt(track, 0).position;
+
+    it("has no reach in carry mode, and times the push and the pendulum phase along aim", () => {
+        expect(track.reach).toBeNull();
+        expect(push.end as number).toBeCloseTo(0.3 / 2, 12);
+        expect(push.pendulum as number).toBeCloseTo(0.24 / 2, 12);
+        expect(dot(sub(handsAt(track, push.end as number).position, start), AIM)).toBeCloseTo(0.3, 12);
+    });
+
+    it("descends at contact at asin(s_low/ρ_h), is lowest at s_low and back at contact height at its end", () => {
+        // 1 ns after contact the hands are 2 nm along the arc, which has turned by 2e-9/(ρ_h·cos) ≈ 1.3e-9 rad.
+        const v = handsAt(track, 1e-9).velocity;
+        expect(Math.atan2(-v.z, v.x)).toBeCloseTo(Math.asin(0.15 / 1.5), 8);
+        const low = handsAt(track, 0.15 / 2).position;
+        expect(low.z - start.z).toBeCloseTo(-(1.5 - Math.sqrt(1.5 * 1.5 - 0.15 * 0.15)), 12);
+        for (const t of [0.02, 0.05, 0.1, 0.13]) {
+            expect(handsAt(track, t).position.z).toBeGreaterThanOrEqual(low.z);
         }
-        for (const t of [reach.t1, (reach.t1 + reach.tStop) / 2, reach.tStop]) {
-            const before = pivotAt(track, t);
-            const after = pivotAt(track, t + 1e-12);
-            expect(dist(before.V, after.V), `velocity at ${t}`).toBeLessThan(1e-9);
+        expect(handsAt(track, push.end as number).position.z).toBeCloseTo(start.z, 12);
+    });
+
+    it("stops the intended path at once at the push length: no brake, no descent", () => {
+        for (const t of [push.end as number, 0.2, 0.5]) {
+            const hands = handsAt(track, t);
+            expect(hands.velocity).toEqual(vec3(0, 0, 0));
+            expect(dot(sub(hands.position, start), AIM)).toBeCloseTo(0.3, 12);
         }
+    });
+
+    it("is continuous in position at contact, and in velocity for an arc that arrives on it", () => {
+        const before = handsAt(track, -1e-9);
+        const after = handsAt(track, 1e-9);
+        expect(length(sub(before.position, after.position))).toBeLessThan(1e-8);
+        expect(length(sub(before.velocity, after.velocity))).toBeLessThan(1e-6);
+    });
+
+    it("starts the pendulum phase at contact for a push of length 0", () => {
+        // Review focus 1: the arc's low point is at contact, so the hands arrive level and rest there.
+        const none = prepareTrack(trackDrive({ ...ARC, handReach: 0 }), TEST_HEAD, STANDARD_GRAVITY);
+        const nonePush = none.push as Push;
+        expect([nonePush.end, nonePush.pendulum]).toEqual([0, 0]);
+        expect(handsAt(none, 0.1).velocity).toEqual(vec3(0, 0, 0));
+        expect(Number.isFinite(handsAt(none, 0.1).position.z)).toBe(true);
+    });
+
+    it("never starts the push's end or the pendulum phase for hands that never travel", () => {
+        const idle = { ...ARC, pivotVelocity: vec3(0, 0, 0) };
+        const never = prepareTrack(trackDrive(idle), TEST_HEAD, STANDARD_GRAVITY).push as Push;
+        expect([never.end, never.pendulum]).toEqual([null, null]);
+    });
+
+    it("leaves swing mode's path as it was: a reach and no push", () => {
+        const swing = prepareTrack(trackDrive({ ...ARC, mode: "swing" }), TEST_HEAD, STANDARD_GRAVITY);
+        expect(swing.push).toBeNull();
+        expect(swing.reach).not.toBeNull();
     });
 });
 
@@ -524,6 +634,7 @@ function uniformDownswing(
         handsTop: sub(sub(pivot, across), drop),
         across,
         drop,
+        tangent: vec3(0, 0, 0),
         tempo: null,
         theta,
         omega,
@@ -662,6 +773,7 @@ describe("the downswing (P2b.2b.2a design §3.5)", () => {
             handsTop: vec3(1, 2, 1),
             across,
             drop,
+            tangent: vec3(0, 0, 0),
             tempo: 0.4,
             theta: [],
             omega: [],

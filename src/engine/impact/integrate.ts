@@ -22,10 +22,14 @@
  * while both hold cells throw a RangeError (plan decision 1). Isolated set-ups (tests) may give balls any state and
  * leave the turf out; simulateImpact.ts prepares and validates real ones.
  *
- * A tracked drive (P2b.2b.1 design §3.5) ends on the same conditions, both arcs' windows and the dip standing for the
- * drive window, and only once the head is neither closing on any ball within reach (headClosing) nor would reach one
- * ahead of its face within LOOK_AHEAD: a re-contact is integrated, not flagged. Its cap is TRACK_IMPACT_CAP after the
- * planned contact.
+ * A tracked drive (P2b.2b.1 design §3.5) ends on the same conditions, both arcs' windows and the dip (and, in carry
+ * mode, the pendulum phase's start; P2b.2b.2b.2b design §4.2) standing for the drive window, and only once the head
+ * is neither closing on any ball within reach (headClosing) nor would reach one ahead of its face within LOOK_AHEAD:
+ * a re-contact is integrated, not flagged. In carry mode it also waits until the hands have started the pendulum
+ * phase. Its cap is TRACK_IMPACT_CAP after the planned contact. In carry mode each step, once its contacts are
+ * resolved, moves the hands' sensed resistance towards the balls' resistance along aim (their total force on the head)
+ * at the muscles' pace, for the hands' push intent on the next step (track.ts; gate ruling 2026-10-11 and its
+ * amendment).
  *
  * A tracked drive's face–ball pairs meet the whole head, a solid cylinder (contacts.ts headBallContact; P2b.2b.1
  * design §4.5): each also records its intervals per region of the head, and a contact off the face raises
@@ -92,11 +96,18 @@ import {
     type FreshBed,
 } from "./turfBed";
 import {
+    advanceChains,
     handLoad,
     handsAt,
     holdPendulum,
     newGripState,
     pathAt,
+    pushResponse,
+    senseResistance,
+    swungOf,
+    type ArmChain,
+    type ArmChainState,
+    type ChainMassState,
     type GripState,
     type HandLoad,
     type PreparedTrack,
@@ -174,7 +185,7 @@ export const FOLLOW_CAP = 1;
 /** Spacing (s) of the stroke's samples (P2b.2b.2a design §4.3). Numerical: 1 ms moves a 3 m/s head 3 mm. */
 export const FOLLOW_SAMPLE = 1e-3;
 
-/** Speed (m/s) below which a check's or a carry's head is at rest (P2b.2b.2a design §4.2). Numerical, not physical. */
+/** Speed (m/s) below which a check's head is at rest (P2b.2b.2a design §4.2). Numerical, not physical. */
 export const FINISH_SPEED = 1e-3;
 
 /**
@@ -259,15 +270,36 @@ export interface ImpactSnapshot {
     /** In setup order. */
     readonly balls: readonly BallState[];
     readonly contacts: readonly ContactSample[];
-    /** A tracked drive's F, its feed-forward parts and each hand's force (P2b.2b.1 design §3.7); absent otherwise. */
-    readonly hand?: { readonly force: Vec3; readonly feedForward: Vec3; readonly top: Vec3; readonly bottom: Vec3 };
+    /**
+     * A tracked drive's F, its feed-forward parts and each hand's force (P2b.2b.1 design §3.7); absent otherwise. In
+     * carry mode once the flex has taken hold, also each hand–arm chain's masses after the step (gate round 3 ruling,
+     * 2026-10-11; the bottom's null once it has let go).
+     */
+    readonly hand?: {
+        readonly force: Vec3;
+        readonly feedForward: Vec3;
+        readonly top: Vec3;
+        readonly bottom: Vec3;
+        readonly chains?: { readonly top: ArmChainState | null; readonly bottom: ArmChainState | null };
+    };
     /** The turf's total force on the head (zero while the pair is open); absent without the head–turf pair. */
     readonly headTurf?: Vec3;
 }
 
-/** Measurement seam: called after every step (tests and scripts/impactProbe.ts). */
+/** A follow-through step's end state (t is its end), with the hands' feed-forward applied during it. */
+export interface FollowSnapshot {
+    readonly t: number;
+    readonly head: HeadState;
+    readonly feedForward: Vec3;
+}
+
+/**
+ * Measurement seam: `step` is called after every impact step (tests and scripts/impactProbe.ts), `follow`, where
+ * given, after every follow-through step.
+ */
 export interface ImpactProbe {
     step(snapshot: ImpactSnapshot): void;
+    follow?(snapshot: FollowSnapshot): void;
 }
 
 /** Options of an impact. `dt` and `cap` exist for tests (convergence, isolated cases). */
@@ -327,18 +359,35 @@ function finishKind(plan: PreparedTrack): FinishKind {
 
 /**
  * True once the head in `state` at time t has reached its finish (P2b.2b.2a design §4.2): a swing at the pendulum's
- * apex, its pitch rate about n at or below zero; a check at rest relative to the hands; a carry at rest once the
- * hands' reach has ended (never, where the reach does not bind).
+ * apex, its pitch rate about n at or below zero; a check at rest relative to the hands; a carry at the first apex
+ * after its pendulum phase starts, its pitch rate at or below zero once it has been positive (`grip.rising`;
+ * P2b.2b.2b.2b design §4.3).
  */
-function finished(kind: FinishKind, plan: PreparedTrack, state: HeadState, t: number): boolean {
+function finished(kind: FinishKind, plan: PreparedTrack, state: HeadState, t: number, grip: GripState): boolean {
     switch (kind) {
         case "swing":
             return dot(state.angularVelocity, plan.axis) <= 0;
         case "check":
             return length(sub(state.velocity, handsAt(plan, t).velocity)) < FINISH_SPEED;
         case "carry":
-            return plan.reach !== null && t >= plan.reach.tStop && length(state.velocity) < FINISH_SPEED;
+            return grip.rising && dot(state.angularVelocity, plan.axis) <= 0;
     }
+}
+
+/**
+ * The probe's copy of `grip`'s hand–arm chains (gate round 3 ruling, 2026-10-11): nothing before the flex takes hold,
+ * so a swing-mode snapshot keeps its shape.
+ */
+function chainsOf(grip: GripState): { readonly chains?: NonNullable<ImpactSnapshot["hand"]>["chains"] } {
+    if (grip.topChain === null) {
+        return {};
+    }
+    const mass = (m: ChainMassState): ChainMassState => ({ position: m.position, velocity: m.velocity });
+    const copy = (arm: ArmChain | null): ArmChainState | null =>
+        arm === null
+            ? null
+            : { forearm: mass(arm.forearm), hand: mass(arm.hand), fingers: mass(arm.fingers), preload: arm.preload };
+    return { chains: { top: copy(grip.topChain), bottom: copy(grip.bottomChain) } };
 }
 
 /** The drive at time t: linear between samples, the last sample's force at its own time, and zero after it. */
@@ -372,6 +421,8 @@ interface PairState {
     spring: Vec3;
     /** The tangential stiffness ξ last carried (carrySpring); 0 while the pair is open. */
     tangent: number;
+    /** The contact normal (from A to B) at the pair's last closed step; ZERO until it first closes. */
+    normal: Vec3;
     peak: number;
     /** The pair's contact timeline. */
     readonly line: PairTimeline;
@@ -397,12 +448,16 @@ function lawOf(setup: ImpactSetup, pair: Pair): PairLaw | null {
     }
 }
 
-/** One step's forces and torques, summed in pair-list order: on the head (world frame) and on each ball. */
+/**
+ * One step's forces and torques, summed in pair-list order: on the head (world frame) and on each ball. In carry mode
+ * also the balls' total force on the head, for the push intent (gate ruling 2026-10-11); null otherwise.
+ */
 interface StepLoads {
     headForce: Vec3;
     headTorque: Vec3;
     readonly forces: Vec3[];
     readonly torques: Vec3[];
+    ballsOnHead: Vec3 | null;
 }
 
 /**
@@ -454,12 +509,16 @@ function applyPair(
     const tangential = tangentialForce(law, add(carried, scale(slip, dt)), slip, normal);
     p.spring = tangential.spring;
     p.tangent = law.tangentialStiffness;
+    p.normal = contact.normal;
     const force = add(scale(contact.normal, normal), tangential.force);
     loads.forces[pair.b] = add(loads.forces[pair.b] as Vec3, force);
     loads.torques[pair.b] = add(loads.torques[pair.b] as Vec3, cross(sub(contact.point, sb.position), force));
     if (pair.kind === "face-ball") {
         loads.headForce = sub(loads.headForce, force);
         loads.headTorque = sub(loads.headTorque, cross(sub(contact.point, head.position), force));
+        if (loads.ballsOnHead !== null) {
+            loads.ballsOnHead = sub(loads.ballsOnHead, force);
+        }
     } else if (sa) {
         loads.forces[pair.a] = sub(loads.forces[pair.a] as Vec3, force);
         loads.torques[pair.a] = sub(loads.torques[pair.a] as Vec3, cross(sub(contact.point, sa.position), force));
@@ -609,7 +668,7 @@ function stepSwung(state: HeadState, loads: StepLoads, body: SwungBody, dt: numb
 /**
  * One semi-implicit Euler step of every body under `loads`: velocities from the forces, then positions (and the head's
  * orientation) from the new velocities. Returns the head's new state, replaces each ball's in `balls` and adds each
- * ball's horizontal path length this step to `travel`.
+ * ball's horizontal path length this step to `travel`. A tracked drive's swung body is the one `grip` gives (swungOf).
  */
 function advance(
     state: HeadState,
@@ -619,9 +678,11 @@ function advance(
     setup: ImpactSetup,
     ballInertia: number,
     dt: number,
+    grip: GripState,
 ): HeadState {
     const { head, ball, drive } = setup;
-    const next = drive.kind === "force" ? stepHead(state, loads, head, dt) : stepSwung(state, loads, drive.body, dt);
+    const next =
+        drive.kind === "force" ? stepHead(state, loads, head, dt) : stepSwung(state, loads, swungOf(drive, grip), dt);
     for (let i = 0; i < balls.length; i++) {
         const s = balls[i] as BallState;
         const v = add(s.velocity, scale(loads.forces[i] as Vec3, dt / ball.mass));
@@ -790,11 +851,15 @@ function finish(
     return { ...run, headRegions, entryJumps: { count: jumps.count, worst: jumps.worst, keys: [...jumps.keys] } };
 }
 
-/** When a tracked drive's actions are over: both arcs' windows and, if it has depth, the dip (design §3.5). */
+/**
+ * When a tracked drive's actions are over: both arcs' windows, the dip if it has depth and, in carry mode, the
+ * pendulum phase's start (P2b.2b.2b.2b design §4.2), so that its start and effort can act on the balls.
+ */
 function trackEnd(plan: PreparedTrack): number {
-    const { arc } = plan;
+    const { arc, push } = plan;
     const dip = arc.dip.depth > 0 ? arc.dip.start + arc.dip.duration : 0;
-    return Math.max(arc.arcStart + arc.window, arc.handStart + arc.handWindow, dip);
+    const pendulum = push === null || push.pendulum === null ? 0 : push.pendulum;
+    return Math.max(arc.arcStart + arc.window, arc.handStart + arc.handWindow, dip, pendulum);
 }
 
 /**
@@ -855,6 +920,8 @@ export function integrateStroke(setup: ImpactSetup, options: ImpactOptions = {},
     const ids = setup.balls.map((b) => b.id);
     const hasTurf = setup.balls.map((b) => b.turf !== null);
     const tracked = plan.kind === "track";
+    const carry = plan.kind === "track" && plan.arc.mode === "carry";
+    const response = carry ? pushResponse(plan.hands, dt) : 0;
     const pairs: PairState[] = pairList(
         ids,
         hasTurf,
@@ -865,6 +932,7 @@ export function integrateStroke(setup: ImpactSetup, options: ImpactOptions = {},
         closure: null,
         spring: ZERO,
         tangent: 0,
+        normal: ZERO,
         peak: 0,
         line: emptyTimeline(),
         wakeAt: 0,
@@ -914,6 +982,7 @@ export function integrateStroke(setup: ImpactSetup, options: ImpactOptions = {},
             headTorque,
             forces: balls.map(() => ballWeight),
             torques: balls.map(() => ZERO),
+            ballsOnHead: carry ? ZERO : null,
         };
         const samples: ContactSample[] = [];
         let hardClosed = false;
@@ -956,6 +1025,22 @@ export function integrateStroke(setup: ImpactSetup, options: ImpactOptions = {},
                 p.regions === null ? null : headBallContact(state, head, (balls[pair.b] as BallState).position, R);
             const contact = p.regions === null ? pairContact(pair, state, head, balls, R, setup.obstacles) : hit;
             if (contact === OFF_FACE || contact === null) {
+                // Carry mode latches a ball's first departure from the face (gate round 13 ruling, "Relax from first
+                // departure", 2026-10-12): the first step a face–ball pair closed at the last step is open, with the
+                // ball's material at the last contact point moving away from the head's along the last normal. The
+                // impact does not know which ball is the striker's, so any ball's counts; in a roll the face meets
+                // only the striker's. The arms' hold relaxes from it.
+                if (carry && grip.departedAt === null && pair.kind === "face-ball" && p.closure !== null) {
+                    const sb = balls[pair.b] as BallState;
+                    const point = sub(sb.position, scale(p.normal, R));
+                    const away = sub(
+                        pointVelocity(sb.position, sb.velocity, sb.angularVelocity, point),
+                        pointVelocity(state.position, state.velocity, state.angularVelocity, point),
+                    );
+                    if (dot(away, p.normal) > 0) {
+                        grip.departedAt = t;
+                    }
+                }
                 p.spring = ZERO;
                 p.closure = null;
                 p.tangent = 0;
@@ -1000,6 +1085,12 @@ export function integrateStroke(setup: ImpactSetup, options: ImpactOptions = {},
             recordStep(p.line, true, force, t);
             recordRegions(p.regions, hit === null ? null : hit.region, force, t);
         }
+        // The balls' resistance along aim, which the hands sense at the muscles' pace and their push intent reads from
+        // the next step (gate ruling 2026-10-11 and its amendment).
+        if (loads.ballsOnHead !== null && plan.kind === "track") {
+            const resistance = Math.max(0, 0 - dot(plan.arc.aim, loads.ballsOnHead));
+            grip.resistance = senseResistance(grip.resistance, resistance, response);
+        }
 
         // The head–turf pair comes after every other pair (design §4.1).
         const turfForce = turf === null ? null : applyHeadTurf(turf, state, head, dt, loads, t, jumps);
@@ -1008,7 +1099,11 @@ export function integrateStroke(setup: ImpactSetup, options: ImpactOptions = {},
         }
         guardFootprints(balls, beds, R, ids);
 
-        state = advance(state, balls, travel, loads, setup, ballInertia, dt);
+        state = advance(state, balls, travel, loads, setup, ballInertia, dt, grip);
+        // Carry mode's hand–arm chains step with the head, under the forces handLoad gave them (gate round 3 ruling).
+        if (carry && plan.kind === "track") {
+            advanceChains(grip, plan.hands.chain, dt);
+        }
         for (const bed of beds) {
             if (bed !== null) {
                 bedRelax(bed);
@@ -1044,6 +1139,7 @@ export function integrateStroke(setup: ImpactSetup, options: ImpactOptions = {},
                                         feedForward: hand.feedForward,
                                         top: hand.top,
                                         bottom: hand.bottom,
+                                        ...chainsOf(grip),
                                     },
                                 }),
                           ...(turf === null ? {} : { headTurf: turfForce ?? ZERO }),
@@ -1053,7 +1149,10 @@ export function integrateStroke(setup: ImpactSetup, options: ImpactOptions = {},
 
         quiet = hardClosed ? 0 : quiet + 1;
         const settled = struck && now >= driveEnd && quiet >= RELEASE_STEPS && !turfMoving;
-        if (settled && (plan.kind === "force" || !stillReaching(state, head, balls, R, plan, now))) {
+        // Carry waits for the pendulum phase (§4.2): trackEnd is not enough, as the end test runs at t + dt.
+        const waiting =
+            plan.kind === "track" && plan.push !== null && plan.push.pendulum !== null && grip.releasedAt === null;
+        if (settled && !waiting && (plan.kind === "force" || !stillReaching(state, head, balls, R, plan, now))) {
             break;
         }
         if (now >= cap) {
@@ -1068,12 +1167,13 @@ export function integrateStroke(setup: ImpactSetup, options: ImpactOptions = {},
         }
     });
     const run = finish(setup, state, balls, pairs, turf, jumps, events, steps, steps * dt, touchingAtStart);
-    const done =
+    const released =
         grip.releasedAt === null ? run : { ...run, release: { t: grip.releasedAt, deltaTheta: grip.releaseDelta } };
+    const done = grip.departedAt === null ? released : { ...released, departure: grip.departedAt };
     if (trace === null || plan.kind !== "track") {
         return { run: done, follow: null };
     }
-    return { run: done, follow: continueStroke(setup, plan, state, grip, turf, steps, dt, trace) };
+    return { run: done, follow: continueStroke(setup, plan, state, grip, turf, steps, dt, trace, options.probe) };
 }
 
 /** Integrates the impact from `setup` until it ends (see the file header). */
@@ -1099,10 +1199,15 @@ function continueStroke(
     first: number,
     dt: number,
     trace: StrokeState[],
+    probe: ImpactProbe | undefined,
 ): FollowThrough {
     const { head } = setup;
     const every = Math.max(1, Math.round(FOLLOW_SAMPLE / dt));
     const kind = finishKind(plan);
+    // The balls are removed, so nothing resists a carry's push intent any more: the hands' sensed resistance relaxes to
+    // 0 at the muscles' pace, as it would after any blow. It only matters where the push never reaches the pendulum
+    // phase (push.pendulum null); in the pendulum phase the intent is nil whatever it senses.
+    const response = kind === "carry" ? pushResponse(plan.hands, dt) : 0;
     // A stop holds its mallet still after the check (user decision 2026-10-07; Riches: "NO FOLLOW-THROUGH"): from the
     // check's window's end, or the impact's end if later, the pendulum is held and the hands grip the head firmly.
     const holdFrom = kind === "check" ? Math.max(plan.arc.arcStart + plan.arc.window, first * dt) : Infinity;
@@ -1122,7 +1227,7 @@ function continueStroke(
     let deep = false;
     for (;;) {
         const t = steps * dt;
-        if (finished(kind, plan, state, t)) {
+        if (finished(kind, plan, state, t, grip)) {
             break;
         }
         if (t >= cap) {
@@ -1136,12 +1241,18 @@ function continueStroke(
             headTorque: hand.torque,
             forces: [],
             torques: [],
+            ballsOnHead: null,
         };
         if (ground !== null) {
             applyHeadTurf(ground, state, head, dt, loads, t, null);
         }
-        state = advance(state, none, [], loads, setup, 0, dt);
+        state = advance(state, none, [], loads, setup, 0, dt, grip);
+        if (kind === "carry") {
+            advanceChains(grip, plan.hands.chain, dt);
+            grip.resistance = senseResistance(grip.resistance, 0, response);
+        }
         steps++;
+        probe?.follow?.({ t: steps * dt, head: state, feedForward: hand.feedForward });
         if (ground !== null && !deep && headLowestPoint(state, head) < 0 - HEAD_DEEP_LIMIT) {
             deep = true;
             flags.push("follow-head-deep");

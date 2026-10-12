@@ -12,16 +12,25 @@
  *
  * Balls are also cleared from every obstacle they overlap (hoop uprights and the peg; P2b.2a design §6): moved
  * horizontally outward along the obstacle's normal to zero gap (outsideObstacle), velocities unchanged. Each pass
- * separates the ball pairs, then the ball–obstacle pairs, ball by ball and obstacle by obstacle.
+ * separates the ball pairs, then the ball–obstacle pairs, ball by ball and obstacle by obstacle, then the head.
+ *
+ * A tracked drive's head is also cleared (P2b.2b.2b.2b design §5). A ball the head overlaps by more than
+ * CONTACT_TOLERANCE is moved horizontally along the horizontal part of the contact's normal, by depth/|n_h|, so that a
+ * tilted face clears too. Its velocity is kept. That is the lift's artefact: the ball's actual lift to the lawn (its
+ * depth in the turf at the impact's end, capped at TURF_PIT_DEPTH; simulateImpact's handoverLimit). An overlap deeper
+ * than the ball's limit, along a normal with no horizontal part, or needing a sideways move of more than the ball's
+ * radius (HEAD_MOVE_RADII), throws an Error naming the ball.
  *
  * One pass cannot separate a chain of three balls: separating the second pair pushes the middle ball back into the
  * first. The same fixed-order pass therefore repeats until no pair overlaps by more than HANDOVER_RESIDUAL, at most
  * HANDOVER_PASSES times. A pair alone is separated by the first pass.
  */
-import { add, horizontal, length, scale, sub, vec3, type Vec3 } from "../math/vec3";
+import { CONTACT_TOLERANCE } from "../detect";
+import { add, dot, horizontal, length, scale, sub, vec3, type Vec3 } from "../math/vec3";
 import { SETTLE_SPEED } from "../resolve";
 import { BALL_IDS, type BallId, type BallState, type BallStates } from "../types";
-import { outsideObstacle, type ObstacleGeometry } from "./contacts";
+import { headBallContact, outsideObstacle, type ObstacleGeometry } from "./contacts";
+import type { HeadState, MalletHead } from "./types";
 
 /**
  * Overlap (m) a handover may leave. Numerical, not physical: far below phase 2's CONTACT_TOLERANCE (1e-9), so phase 2
@@ -31,6 +40,30 @@ const HANDOVER_RESIDUAL = 1e-12;
 
 /** Bound on the separation passes. Numerical, not physical: a chain's overlap shrinks geometrically per pass. */
 const HANDOVER_PASSES = 64;
+
+/**
+ * The size² at or below which a contact normal's horizontal part is taken as none: a normal within about 1e-6 rad of
+ * vertical, a head on top of the ball (design §5). Numerical, not physical.
+ */
+const VERTICAL_NORMAL = 1e-12;
+
+/**
+ * The longest sideways move of the head-clearance rule, in ball radii R: depth/|n_h| beyond R throws. Numerical, not
+ * physical: the move is unbounded as the normal nears vertical (1 mm at |n_h| = 1e-3 is 1 m), so a larger move comes
+ * from the division, not from the lift's artefact. R is the natural scale: a ball moved further than its own radius
+ * has left the place the head overlapped. The sweep's moves are 1.1 to 1.7 mm, a few percent of R.
+ */
+const HEAD_MOVE_RADII = 1;
+
+/**
+ * The head at the impact's end, for the head-clearance rule (P2b.2b.2b.2b design §5): its state and shape, and per
+ * ball the deepest overlap (m) the rule may remove, its lift to the lawn (handoverLimit) plus CONTACT_TOLERANCE.
+ */
+export interface HandoverHead {
+    readonly state: HeadState;
+    readonly head: MalletHead;
+    readonly limits: Readonly<Partial<Record<BallId, number>>>;
+}
 
 /**
  * The balls as phase 2 receives them, and the largest overlap (m) removed from a pair of balls or a ball and an
@@ -91,6 +124,7 @@ function worstOverlap(
     ids: readonly BallId[],
     obstacles: readonly ObstacleGeometry[],
     radius: number,
+    mallet: HandoverHead | null,
 ): { overlap: number; what: string } {
     let worst = { overlap: 0, what: "" };
     for (let i = 0; i < states.length; i++) {
@@ -107,6 +141,12 @@ function worstOverlap(
                 worst = { overlap, what: `ball ${ids[i]} and ${o.id}` };
             }
         }
+        if (mallet !== null) {
+            const hit = headBallContact(mallet.state, mallet.head, p, radius);
+            if (hit !== null && hit.depth > CONTACT_TOLERANCE && hit.depth > worst.overlap) {
+                worst = { overlap: hit.depth, what: `ball ${ids[i]} and the head` };
+            }
+        }
     }
     return worst;
 }
@@ -121,6 +161,7 @@ export function handover(
     radius: number,
     obstacles: readonly ObstacleGeometry[] = [],
     passes = HANDOVER_PASSES,
+    mallet: HandoverHead | null = null,
 ): Handover {
     if (!(passes >= 1) || !Number.isInteger(passes)) {
         throw new RangeError(`handover passes must be a positive integer (got ${passes})`);
@@ -155,13 +196,41 @@ export function handover(
                 }
             }
         }
-        if (!(worstOverlap(states, ids, obstacles, radius).overlap > HANDOVER_RESIDUAL)) {
+        if (mallet !== null) {
+            for (let i = 0; i < states.length; i++) {
+                const s = states[i] as BallState;
+                const hit = headBallContact(mallet.state, mallet.head, s.position, radius);
+                if (hit === null || !(hit.depth > CONTACT_TOLERANCE)) {
+                    continue;
+                }
+                const flat = horizontal(hit.normal);
+                const size = dot(flat, flat);
+                const limit = mallet.limits[ids[i] as BallId] ?? CONTACT_TOLERANCE;
+                if (hit.depth > limit || !(size > VERTICAL_NORMAL)) {
+                    throw new Error(
+                        `handover: the head overlaps ball ${ids[i]} by ${hit.depth} m along a normal with ` +
+                            `horizontal part ${Math.sqrt(size)}; the rule clears at most ${limit} m, sideways`,
+                    );
+                }
+                if (hit.depth / Math.sqrt(size) > HEAD_MOVE_RADII * radius) {
+                    throw new Error(
+                        `handover: the head overlaps ball ${ids[i]} by ${hit.depth} m along a normal with ` +
+                            `horizontal part ${Math.sqrt(size)}; the sideways move ${hit.depth / Math.sqrt(size)} m ` +
+                            `exceeds the ball's radius ${radius} m`,
+                    );
+                }
+                // Along n_h/|n_h| by depth/|n_h|, so that a tilted face clears too: flat·depth/|n_h|².
+                states[i] = { ...s, position: add(s.position, scale(flat, hit.depth / size)) };
+                overlapCorrection = Math.max(overlapCorrection, hit.depth);
+            }
+        }
+        if (!(worstOverlap(states, ids, obstacles, radius, mallet).overlap > HANDOVER_RESIDUAL)) {
             separatedAll = true;
             break;
         }
     }
     if (!separatedAll) {
-        const worst = worstOverlap(states, ids, obstacles, radius);
+        const worst = worstOverlap(states, ids, obstacles, radius, mallet);
         throw new Error(
             `handover: ${worst.what} still overlap by ${worst.overlap} m after ` +
                 `${passes} pass${passes === 1 ? "" : "es"}`,

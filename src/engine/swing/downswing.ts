@@ -3,7 +3,8 @@
  * planned contact, with no contact on the way.
  * - The top (§3.2): `pendulumShare` s of the backswing's height h raises the head about the hands, θ_top =
  *   −arccos(cos θ_c − s·h/ℓ_h); the hands start back and up along handAngle φ, d_h·sin φ = (1 − s)·h.
- * - The hands (§3.3) follow P(σ) = P_b + Δ_h·σ² + Δ_z·(3σ² − 2σ³), starting from rest and arriving level.
+ * - The hands (§3.3) follow P(σ) = P_b + Δ_h·σ² + Δ_z·(3σ² − 2σ³), starting from rest; in swing mode they arrive
+ *   level, in carry mode on the hands' arc, through the Hermite term T·(σ³ − σ²) (P2b.2b.2b.2b design §4.1).
  * - Swing mode (§3.1, §3.4): the pendulum leads and σ = (θ − θ_top)/(θ_c − θ_top). I_P·θ̈ = −m·g·ℓ_h·sin θ − M·d·(A·t̂)
  *   + τ_p(t) is solved for θ̈ with A = P″·σ̇² + P′·σ̈, and integrated by semi-implicit Euler every FREE_STEP until θ
  *   first reaches θ_c, the crossing step cut by linear interpolation in θ. The effort τ_p is a bell-shaped pulse,
@@ -50,6 +51,8 @@ export interface DownswingInput {
     /** h (m), the head centre's height at the top above its height at contact, and the intensity in [0, 1]. */
     readonly backswing: number;
     readonly intensity: number;
+    /** The hands' arc's slope dz/ds at contact (≤ 0; P2b.2b.2b.2b design §4.1). Carry mode only; 0 arrives level. */
+    readonly arrival: number;
 }
 
 /** A planned downswing and the path's state at contact. */
@@ -98,6 +101,9 @@ export function planDownswing(input: DownswingInput): PlannedDownswing {
     if (mode === "carry") {
         const { slow, fast } = shape.handTempo;
         const tempo = slow + intensity * (fast - slow);
+        // P2b.2b.2b.2b design §4.1: the vertical Hermite's end slope dP_z/dσ = 2·|Δ_h|·arrival, so that the hands'
+        // velocity at contact, (2·Δ_h + T)/tempo, runs along the arc's tangent.
+        const tangent = vec3(0, 0, 2 * Math.sqrt(dot(across, across)) * input.arrival);
         const downswing: Downswing = {
             release: 0 - tempo,
             thetaTop,
@@ -105,12 +111,17 @@ export function planDownswing(input: DownswingInput): PlannedDownswing {
             handsTop,
             across,
             drop,
+            tangent,
             tempo,
             theta: [],
             omega: [],
             alpha: [],
         };
-        return { downswing, omega: (2 * span) / tempo, handsVelocity: scale(across, 2 / tempo) };
+        return {
+            downswing,
+            omega: (2 * span) / tempo,
+            handsVelocity: scale(add(scale(across, 2), tangent), 1 / tempo),
+        };
     }
     if (!(span > 0)) {
         fail("a swing-mode downswing needs its pendulum to swing: pendulumShare must be positive");
@@ -176,6 +187,7 @@ export function planDownswing(input: DownswingInput): PlannedDownswing {
                 handsTop,
                 across,
                 drop,
+                tangent: ZERO,
                 tempo: null,
                 theta,
                 omega,

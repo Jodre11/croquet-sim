@@ -28,8 +28,9 @@
  * - rehit: the late re-hit (design §3.5, §9), a measurement only: the real head at the impact's end, moved on by the
  *   planned path's displacement and rotation out to FREE_SPAN, against every ball's phase-2 trajectory and, head and
  *   shaft, against the hoops' uprights and crowns and the peg; per preset, the canonical setup's first crossings, how
- *   many runs of the preset sweep cross a ball or an obstacle and how many overlap one at the impact's end, and each
- *   such run; then a single-ball stroke through a hoop, centred and with the face 10 mm off the ball's centre.
+ *   many runs of the preset sweep cross a ball or an obstacle and how many overlap one at the impact's end (a ball only
+ *   when the depth exceeds CONTACT_TOLERANCE, the handover rule's own threshold; P2b.2b.2b.2b Task 8), and each such
+ *   run; then a single-ball stroke through a hoop, centred and with the face 10 mm off the ball's centre.
  * Run with `npx --yes tsx scripts/swingProbe.ts`; environment: SECTION (one of the names above; default all), REPEAT
  * (timed runs per stroke, default 50). Not part of the test suite; its output goes into the roadmap's outcomes.
  */
@@ -40,6 +41,7 @@ import {
     integrate,
     type ImpactSnapshot,
 } from "../src/engine/impact/integrate";
+import { CONTACT_TOLERANCE } from "../src/engine/detect";
 import { ballPairKey, headBallContact } from "../src/engine/impact/contacts";
 import { multiply, rotate, solidCylinderInertia, type Quaternion } from "../src/engine/impact/rigidBody";
 import { prepareImpact, simulateImpact } from "../src/engine/impact/simulateImpact";
@@ -426,7 +428,9 @@ function crossing(r: Run): Crossing {
         return found;
     };
     let inside = touching(real, end);
-    const atEnd = [...inside.keys()];
+    const atEnd = [...inside.entries()]
+        .filter(([key, depth]) => !ids.includes(key as BallId) || depth > CONTACT_TOLERANCE)
+        .map(([key]) => key);
     let first: Crossing["first"] = null;
     let obstacle: Meeting | null = null;
     const samples = Math.floor((FREE_SPAN - end) / SWEEP_STEP);
@@ -809,7 +813,7 @@ function tracking(): void {
             if (arc.mode === "swing") {
                 return "swing";
             }
-            return t <= (track.reach?.tStop ?? Infinity) ? "carry" : "after the reach";
+            return t <= (track.push?.end ?? Infinity) ? "carry" : "after the push";
         };
         const worst = new Map<string, { socket: number; angle: number }>();
         integrate(setup, {
