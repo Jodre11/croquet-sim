@@ -28,6 +28,14 @@ describe("the flex law (P2b.2b.2b.2b design §3.1)", () => {
         expect(force.z).toBeCloseTo(30 + 400 * 0.02, 12);
     });
 
+    it("clamps a hold weight above 1 to the held gains, never past them", () => {
+        // A weight past 1 would extrapolate beyond the held gains, and could drive the damping negative.
+        const held: FlexLaw = { ...LAW, hold: { stiffness: 700, damping: 5 } };
+        expect(flexGains(held, 10, 2)).toEqual(flexGains(held, 10, 1));
+        expect(flexGains(held, 10, 1).stiffness).toBeCloseTo(900, 9);
+        expect(flexGains(held, 10, 1).damping).toBeCloseTo(5, 9);
+    });
+
     it("has no runaway: the spring's force is linear in its offset, its stiffness set by F_ff alone", () => {
         // Design §3.1: a law on the total force, k = k₀ + κ·|F|, would run away at x = 1/κ. Here k reads only the
         // feed-forward, so ten times the offset gives exactly ten times the spring's force.

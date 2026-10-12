@@ -18,7 +18,7 @@ export interface FlexGains {
 
 /**
  * The gains of `law` for a hand whose feed-forward has size `force` (N), the arm holding its posture with weight
- * `hold` in [0, 1] (gate round 11 ruling, "Posture holding in the push", 2026-10-12). Rhythmic (weight 0, or no
+ * `hold` in [0, 1], a larger weight taken as 1 (gate round 11 ruling, "Posture holding in the push", 2026-10-12). Rhythmic (weight 0, or no
  * `law.hold`): k = k₀ + κ·|F_ff|, c = 2·ζ·√(k·m_arm). Held (weight 1): k = k_hold + κ·|F_ff|, c = c_hold. Between them
  * each gain is the weighted mean, so a weight that moves continuously keeps the hand's force continuous.
  */
@@ -28,10 +28,12 @@ export function flexGains(law: FlexLaw, force: number, hold = 0): FlexGains {
     if (law.hold === null || !(hold > 0)) {
         return { stiffness, damping };
     }
+    // A weight past 1 would extrapolate beyond the held gains, and could drive the damping negative.
+    const weight = hold < 1 ? hold : 1;
     const heldStiffness = law.hold.stiffness + law.stiffnessPerForce * force;
     return {
-        stiffness: stiffness + (heldStiffness - stiffness) * hold,
-        damping: damping + (law.hold.damping - damping) * hold,
+        stiffness: stiffness + (heldStiffness - stiffness) * weight,
+        damping: damping + (law.hold.damping - damping) * weight,
     };
 }
 
