@@ -51,6 +51,19 @@ on a bevel or a side is not on the face.
 - **The edge radius is 3 mm, a flagged placeholder**: no bevel figure is published anywhere. Chosen over a sharp box
   and over 5 mm.
 
+Settled at spec review (2026-10-12), each with one sensible resolution:
+
+- **The head–turf law keeps the head's mass** (`simulateImpact.ts`'s `lawFromStiffness(contact.head.mass, …)`), as the
+  face law does. P2b.2b.2b.3 rebuilds the head–turf law next, so re-closing it here on the mallet's mass would be
+  re-fitted at once.
+- **Force-table runs stay the bare head's instrument**: `validateImpact` rejects a force plan whose head is not a
+  cylinder or whose shaft has mass. Every production stroke is tracked (`buildContact.ts`'s `kind: "track"`), so the
+  box and the shaft never meet `faceContact` or `stepHead`.
+- **The measured moment is the box's alone, and required for it.** A round head keeps its uniform solid; a round
+  head with a measured moment (Russ's traditional 9") waits for the bespoke-mallet preset, out of scope.
+- **The box keeps independent width and height.** The market's faces are often rectangular (DB 50×60 mm, Wood
+  Mallets 60×55 mm), and the roadmap's scope is the market's dimensions; the cost is one inertia term.
+
 ## 1. Goal and exit criteria
 
 The head is a cylinder or a rounded box, with its moment about the shaft set from a measurement; the shaft is a
@@ -77,18 +90,20 @@ Exit criteria:
 ```
 src/engine/impact/types.ts          MalletHead: radius → shape (HeadShape union), + shaft {mass, length}
 src/engine/impact/shape.ts          new: HeadShape, faceHalfHeight, the rounded box's distance, regions and support
-src/engine/impact/rigidBody.ts      + headInertia(shape, m, L, I_shaft?) and uniformBoxInertia; solidCylinderInertia
-                                    unchanged
-src/engine/impact/contacts.ts       headBallContact, faceContact, headLowestPoint, headBottom, headClosing dispatch on
-                                    shape.kind; the cylinder branches unchanged
-src/engine/impact/track.ts          + malletBody(head); swungBody and carryBody build on it
-src/engine/impact/integrate.ts      stillReaching dispatches on shape; region names per shape
-src/engine/impact/simulateImpact.ts cylinderDistance → headDistance; validateImpact checks the shape and the shaft
-src/engine/swing/types.ts           SwingProfile.mallet: head union, inertiaAboutShaft?, shaftMass
+src/engine/impact/rigidBody.ts      + boxInertia(m, L, h_y, h_z, I_shaft) (§4.1); solidCylinderInertia unchanged
+src/engine/impact/contacts.ts       headBallContact, headLowestPoint, headBottom, headClosing dispatch on shape.kind;
+                                    the cylinder branches unchanged; faceContact stays cylinder-only
+src/engine/impact/track.ts          + malletBody(head); swungBody and carryBody build on it; the weight terms (§4.3)
+src/engine/impact/integrate.ts      stillReaching dispatches on shape; region names per shape; the shaft's weight
+src/engine/impact/simulateImpact.ts cylinderDistance → headDistance; validateImpact's shape and shaft rules (§5.1)
+src/engine/swing/types.ts           SwingProfile.mallet: head union, shaftMass
 src/engine/swing/buildContact.ts    validate and contactPose per shape; ρ → faceHalfHeight(shape)
 src/engine/swing/profile.ts         the default mallet (§5); REFERENCE_GEOMETRY from it
+src/reference/index.ts              malletReference reads the new fields
 reference/mallet.json               the market's bounds and the new fields (§5)
 reference/sources/README.md         the sources' rows
+tests/engine/support/impact.ts      TEST_HEAD: shape cylinder, shaft {mass 0, length 0.9}; headKinetic and
+                                    impactEnergy count the shaft
 scripts/swingProbe.ts, strokeProbe.ts, impactProbe.ts   shape-aware head fixture and bounding sphere
 src/engine/simulate.ts              ENGINE_VERSION "0.11.0"
 ```
@@ -127,7 +142,7 @@ The regions come from the count of positive q_i:
 
 | Positive q_i | Region |
 |---|---|
-| x only | `face` (p_x > 0) or `back` |
+| x only | `face` (p_x ≥ 0, as the cylinder's) or `back` |
 | y only | `side` |
 | z only | `top` or `bottom` |
 | two | `edge` |
@@ -145,8 +160,7 @@ that the stance's contact point lies on the face becomes, for the box, |side| �
 
 ### 3.4 The other primitives
 
-- `faceContact` (force tables): on the face when the ball's centre projects inside the flat face; `OFF_FACE` when it
-  does not and d < R, which replaces the cylinder's rim band.
+- `faceContact` (force tables) stays cylinder-only: `validateImpact` rejects a force plan with a box head (Decisions).
 - `headLowestPoint`: z − Σ_i c_i·|R_zi| − e, R_zi the world-up components of the body axes.
 - `headBottom`: the support point −Σ_i sign(R_zi)·c_i·x̂_i − e·ẑ. With sign(0) = 0, a level face samples its midline;
   that is the tie rule. It is used only to sample `surfaceAt`.
@@ -165,22 +179,22 @@ A shaft collider: P2b.2b.3 sweeps the shaft against obstacles.
 
 ### 4.1 The head's inertia
 
-The profile's mallet gains an optional `inertiaAboutShaft` (kg·m², Russ's quantity: about the shaft axis through the
-head's centre). If it is set:
+The box head carries a required `inertiaAboutShaft` (kg·m², Russ's quantity: about the shaft axis through the head's
+centre). `boxInertia` gives:
 
 - I_z = `inertiaAboutShaft`;
 - I_y = I_z + m·(h_z² − h_y²)/3, which is I_z for a square section;
-- I_x = m·(h_y² + h_z²)/3 for a box, m·r²/2 for a cylinder (with r for h_y and h_z in I_y, so I_y = I_z).
+- I_x = m·(h_y² + h_z²)/3.
 
 The assumption is that every slice along the head has the same section, so the weighting varies along x alone, as end
 inserts do. The edge rounding is ignored in the section's moment, an error of order (e/h)².
 
 The realisable range, a `RangeError` outside it: m·h_y²/3 ≤ I_z ≤ m·(L²/4 + h_y²/3), from all mass on the shaft's
-axis to all mass at the faces (r²/4 for h_y²/3 on a cylinder). There is no lower bound at the uniform solid: Russ's
-traditional round 9" head (33.4 kg·cm²) sits below a uniform 9" solid (about 47).
+axis to all mass at the faces. There is no lower bound at the uniform solid: Russ's traditional round 9" head (33.4
+kg·cm²) sits below a uniform 9" solid (about 47). For reference, a uniform box of the default's size gives 67.8
+kg·cm² (m·(L² + 4h_y²)/12), computed by hand; there is no uniform-box path in the code.
 
-Unset, the inertia is the uniform solid of the shape: `solidCylinderInertia` unchanged, or the uniform box
-(m·(h_y² + h_z²)/3, m·(L² + 4h_z²)/12, m·(L² + 4h_y²)/12).
+The cylinder keeps `solidCylinderInertia`, unchanged (Decisions).
 
 Russ's figure includes the shaft about its own axis. A thin rod adds 0 there; a real 14 mm shaft adds about 0.3
 kg·cm², under 0.3 % of the modern range. The figure is used as the head's, and the error is recorded.
@@ -195,19 +209,37 @@ head. `malletBody(head)` returns the existing `SwungBody` form:
 - I' = (I_x + e, I_y + e, I_z), e = m·δ² + m_s·((h_z + ℓ/2 − δ)² + ℓ²/12).
 
 `swungBody` and `carryBody` build on `malletBody` rather than the bare head; the arm mass and the hand skin add as
-now. Every rigid-body path uses it, the force-table runs included. With `shaft.mass` 0 the code takes a literal branch
-that returns today's head (mass, inertia, offset 0), with no added zero terms, so the cylinder's digests stay
-bit-identical.
+now, and `stepSwung` integrates it. Force-table runs keep `stepHead` on the bare head: `validateImpact` requires their
+shaft's mass to be 0 (Decisions). With `shaft.mass` 0 the code takes a literal branch that returns today's head (mass,
+inertia, offset 0), with no added zero terms, so the cylinder's digests stay bit-identical.
 
-The shaft's weight is carried by the body like the head's, so the hands' load (`carryLoad`, the swing's torque balance)
-includes it.
+`validateImpact`'s shaft rules (`RangeError`): `shaft.length` finite and positive, `shaft.mass` finite and ≥ 0, and
+both 0 shaft mass and a cylinder head on a force plan.
 
-### 4.3 What moves
+### 4.3 The weight terms
 
-- the pendulum's I_P = I'_y + M·d² (`pendulumOf`);
+Every gravity term today puts the weight m·g at the head's centre. The shaft's weight m_s·g acts at its own centre,
+h_z + ℓ/2 above the head's centre along body z, so it carries a torque about the head's centre and about the hands.
+Each term changes as follows, and each takes the literal branch at m_s = 0:
+
+- **The integrator's loads** (`integrate.ts`, the force and track loops): the shaft's weight is a force at the shaft's
+  centre, its torque about the swung body's centre added, beside `headWeight` at the head's centre.
+- **`pendulumOf`**: its weight term becomes m·g·ℓ_h + m_s·g·(ℓ_h − h_z − ℓ/2), ℓ_h the head's centre's distance below
+  the top hand along the shaft. It is not M·g·d: the arm mass in the swung body has inertia but no weight, as now.
+- **`PreparedTrack`** carries the shaft's weight beside `headWeight`, and the hands' feed-forward torque (`track.ts`,
+  "the head's weight, which acts at the head's centre") adds the shaft's at its centre.
+- **The tests' energy helpers** (`headKinetic`, `impactEnergy`) count the shaft's kinetic and potential energy, so
+  §7.1's work–energy check sees the whole mallet.
+
+### 4.4 What moves
+
+- the pendulum's I_P = I'_y + M·d² and its weight term (`pendulumOf`);
 - the effective mass at the face (`effectiveMass` takes `malletBody`);
 - the twist gains (`handGains`), which scale with I_z: end-weighting stiffens the hands' twist at the same period;
+- the hands' load, through the weight terms of §4.3;
 - the downswing's fit (`fitStrokeShape`), through the pendulum.
+
+The head–turf law, like the face law, keeps the head's mass (Decisions).
 
 The face law's reduced mass keeps the head's mass (Decisions): for a centred strike on the bare head the effective mass
 at the face is m, which is the closure Gugan's T(U) was fitted to.
@@ -219,8 +251,8 @@ at the face is m, which is the closure Gugan's T(U) was fitted to.
 ```ts
 {
     headMass, headLength,
-    head: { kind: "round"; diameter } | { kind: "square"; faceWidth; faceHeight; edgeRadius },
-    inertiaAboutShaft?,     // kg·m²; unset = the uniform solid
+    head: { kind: "round"; diameter }
+        | { kind: "box"; faceWidth; faceHeight; edgeRadius; inertiaAboutShaft },   // inertia in kg·m²
     shaftLength, shaftMass,
 }
 ```
@@ -233,15 +265,26 @@ breaking change to a public type, so `ENGINE_VERSION` goes to "0.11.0". The test
 
 - every length and mass finite, the masses positive and `shaftMass` ≥ 0;
 - 0 ≤ e < min(h_y, h_z, L/2);
-- `inertiaAboutShaft`, if set, within §4.1's range;
+- a box's `inertiaAboutShaft` within §4.1's range;
 - the stance's contact point on the flat face, per shape (§3.3).
 
 ### 5.2 `reference/mallet.json`
 
-The market's bounds (roadmap, "The mallet survey"): head length 9–13" (0.2286–0.3302 m), shaft length 30–42"
-(0.762–1.0668 m), face width 50–65 mm and height 44–64 mm (the makers' spread, §5.3), Russ's moment 33.4–172
-kg·cm². New fields: `faceWidth`, `faceHeight`, `edgeRadius`, `inertiaAboutShaft`, `shaftMass`. `headDiameter` stays
-as the round head's field. As now, the bounds are checked on the reference values at load only.
+The bounds, each from §5.3's market spread:
+
+| Field | Bounds | Provenance tag |
+|---|---|---|
+| `headLength` | 9–13" (0.2286–0.3302 m) | `direct` |
+| `headMass` | 0.85–1.1 kg, unchanged | `direct` (a fill for the Pidcock 2000; the note says so) |
+| `faceWidth` | 50–65 mm (the makers) | `direct` (a fill; the note says so) |
+| `faceHeight` | 44–64 mm (the makers' 44–63, Plummer's square 64) | `direct` (a fill; the note says so) |
+| `edgeRadius` | none | `analogue`, with `provisional: "placeholder"` |
+| `inertiaAboutShaft` | 33.4–172 kg·cm² (Russ) | `direct` |
+| `shaftMass` | 0.227–0.398 kg (RPM's "8-10oz" low end to Plummer's 14 oz) | `derived` |
+| `shaftLength` | 30–42" (0.762–1.0668 m) | `direct`, unchanged value |
+| `headDiameter` | 0.0635–0.0762 m, unchanged; its note gains that the round head is now one shape of two | `direct` |
+
+As now, the bounds are checked on the reference values at load only, and `malletReference` reads the new fields.
 
 ### 5.3 The default mallet
 
@@ -255,7 +298,7 @@ SHA-256, by the README's counter-stripping convention) go into `reference/source
 | `inertiaAboutShaft` | 0.0146 kg·m² (146 kg·cm²) | Russ, measured on a bifilar torsion pendulum, head and shaft together: "Pidcock 2000 11" \| n/a \| 146 \| 60%". The shaft's own share is "less than 1" kg·cm² (Russ); Towlson's 0.29. Used as the head's; the error is under 0.7 %. |
 | `headLength` | 0.2794 m (11") | Russ's "11"" and Plummer's sample table, "Pidcock 2000 \| 280 \| 11 \| 1325". 11" is in the market's "10 - 11"" trend (Plummer). |
 | `headMass` | 1.0 kg | **Fill.** Not published for the Pidcock 2000. Plummer: "Typical isolated heads weigh around 1 kg" (today's `mallet.json` value). |
-| `head` | square, `faceWidth` = `faceHeight` = 0.05715 m (2.25") | **Fill.** Not published for the Pidcock 2000. Plummer: "Typical mallet faces are 2.25" - 2.5" (57 - 64 mm) square"; the lower end, near Invictus's 56 mm and DB's 50–60 mm. |
+| `head` | box, `faceWidth` = `faceHeight` = 0.05715 m (2.25") | **Fill.** Not published for the Pidcock 2000. Plummer: "Typical mallet faces are 2.25" - 2.5" (57 - 64 mm) square"; the lower end, near Invictus's 56 mm and DB's 50–60 mm. |
 | `edgeRadius` | 0.003 m | **Placeholder.** No figure anywhere. Plummer: "The corners and edges of the face should be rounded or bevelled"; Law 5.5.3: the edges "however they are bevelled or shaped, are not part of the end-faces". |
 | `shaftMass` | 0.325 kg | **Derived.** Plummer's whole mass for the Pidcock 2000, 1325 g, less the 1.0 kg fill. Inside the published shafts: RPM's handle "8-10oz" (227–283 g), Wood's "10 ounces", Plummer's "around 14 oz. (398 g)". |
 | `shaftLength` | 0.9144 m (36") | Today's value (USCA, Croquet Network); Plummer: "shaft length 36" (915 mm) or longer". Not published for the Pidcock 2000. |
@@ -270,8 +313,8 @@ Checks on the set:
   the head's height; the engine's `shaftLength` runs from the socket. The 36" figures used here are shaft lengths
   (USCA: "a 36” wood shaft"; Plummer: "shaft length").
 - **The market's spread**, recorded beside the default: faces 50–65 mm wide and 44–63 mm high (makers); heads 240–330
-  mm; whole mallets 1.10–1.47 kg; measured moments 33–172 kg·cm² (Russ, with the shaft) and 110–160 (Fenwick
-  Elliott's turntable, heads alone).
+  mm; whole mallets 1.10–1.47 kg in the pages fetched here (the roadmap's survey, 1.10–1.55); measured moments
+  33–172 kg·cm² (Russ, with the shaft) and 110–160 (Fenwick Elliott's turntable, heads alone).
 
 ### 5.4 The knock-on
 
@@ -301,15 +344,21 @@ Each is flagged in `mallet.json`'s note and in `profile.ts`'s comment, as `handA
   - the tie rule inside the core;
   - `headLowestPoint` and `headBottom` against sampled support points over random orientations;
   - the flat face's boundary: a centre just inside is `face`, just outside an `edge` with `impact-off-face`.
-- **Shape-neutrality:** a centred strike on a square head and on a round head with the same mass, the same set inertia
-  and no shaft gives bit-identical outcomes, since only the face plane is met.
+- **Shape-neutrality:** a centred, square-on tracked strike with no turf in reach, on a box head (e = 0, h_y = h_z = r)
+  and on a cylinder of radius r, with the same mass, the box's `inertiaAboutShaft` set to the cylinder's I_z and no
+  shaft. Only the face plane is met and I_y = I_z on both; I_x differs and is not excited. The outcomes (the balls'
+  states and the head's at the handover) agree within 1e-12 relative. They are not bit-identical: the box's face
+  distance, (|p_x| − (L/2 − e)) − e, rounds differently from the cylinder's |p_x| − L/2.
 - **The inertia:**
-  - the closed forms of §4.1; the uniform-box limit; I_y = I_z on a square section;
+  - the closed forms of §4.1; I_y = I_z on a square section; the I_y correction on a rectangular one;
   - both realisable extremes accepted, and a value just past either rejected;
-  - an off-centre strike on a free head: the twist rate after the strike ∝ 1/I_z, within 1e-9, through the integrator.
+  - an off-centre strike on a free box head: the head's spin about its z axis after the strike times I_z equals the
+    integrated torque ∫(r × F)·ẑ dt about its centre, within 1e-9 relative. (The twist rate alone is not ∝ 1/I_z: the
+    impulse itself depends on I_z through the contact point's velocity.)
 - **The shaft:**
   - `malletBody`'s closed form, and its exact reduction at m_s = 0 (the same object fields, bit for bit);
-  - the mallet swung freely about the top hand: its small-angle period 2π·√(I_P/(M·g·d)), within 0.1 %;
+  - the mallet swung freely about the top hand, no arm mass: its small-angle period 2π·√(I_P/W), W the weight term
+    of §4.3, within 0.1 %;
   - the downswing's work–energy balance still within 0.1 %.
 - **Validation:** each `RangeError` of §5.1.
 
@@ -334,9 +383,8 @@ sphere hypot(L/2, h_y, h_z) for a box, the regions listed per shape. Their runs 
 ## 8. The pre-flight gate
 
 After §7.2 step 5 and before any result is trusted, every preset's canonical runs at 2 and 3 m/s, the three rolls
-first, are run on the old head and the new. The run stops for the user with, per run: the ratio, the lean's drift
-through the push, the face touches and their regions, the flags, the ball's highest centre, the head's effective mass
-by the strike and the handover. Nothing is re-baselined until the user rules.
+first, are run on the old head and the new. The run stops for the user with §9's figures for those runs, old against
+new, and any handover throw. Nothing is re-baselined until the user rules.
 
 ## 9. Figures to record
 
