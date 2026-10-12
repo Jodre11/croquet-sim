@@ -199,7 +199,8 @@ describe("simulateShot", () => {
     // P2b.2b.2b.2b: arm chain (was skipped at the pre-flight gate: 5.78 mm at 45.9 ms with the hands' mass and grip
     // tissue, 7.28 mm with the push intent, 10.15 mm before it). With each hand–arm chain the half roll's face meets
     // the striker's ball three times (0.0–1.4, 7.3–8.8 and 25.0–26.7 ms), and the ball rises at most 3.74 mm above R
-    // at 26.0 ms.
+    // at 26.0 ms. P2b.2b.2b.2b: continuous α (was 3.74 mm at 26.0 ms): 3.67 mm at 25.6 ms, the third interval
+    // 24.7–26.4 ms.
     it("runs the half-roll canonical setup with no entry jump and no ball above R + 5 mm", () => {
         lowFlight("half-roll");
     });
@@ -207,7 +208,8 @@ describe("simulateShot", () => {
     // P2b.2b.2b.2b: awaits the pre-flight gate (Task 6; arm chain, gate round 3). Un-skipped by the push intent (4.61
     // mm), re-skipped with the hands' mass and grip tissue (9.70 mm at 66.8 ms), the pass roll still fails with each
     // hand–arm chain: five face intervals (0.0–1.2, 5.6–7.0, 9.9–11.6, 13.3–15.4 and 15.7–26.5 ms), and the striker's
-    // ball is 14.52 mm above R at the impact's end (83.1 ms), its highest.
+    // ball is 14.52 mm above R at the impact's end (83.1 ms), its highest. P2b.2b.2b.2b: continuous α (was 14.52 mm):
+    // 18.82 mm at the impact's end (83.1 ms), the last interval 15.7–26.6 ms.
     it.skip("runs the pass-roll canonical setup with no entry jump and no ball above R + 5 mm", () => {
         lowFlight("pass-roll");
     });
@@ -279,7 +281,8 @@ describe("simulateShot", () => {
     // back; it swung back, then forward onto the turf, its pitch rate still positive at FOLLOW_CAP (with the push
     // intent, gate round 1, all but at its apex: θ +0.180 rad, rising at 0.007 rad/s). With the hands' mass and grip
     // tissue (gate round 2) it reaches its apex at 953.7 ms, 46 ms short of the cap. P2b.2b.2b.2b: arm chain (was
-    // 953.7 ms): 894.4 ms, θ +0.298 rad.
+    // 953.7 ms): 894.4 ms, θ +0.298 rad. P2b.2b.2b.2b: continuous α (was 894.4 ms, θ +0.298 rad): 883.7 ms,
+    // θ +0.295 rad.
     it("runs the half-roll canonical setup from the top to its finish (exit criterion 3)", () => {
         runsToFinish("half-roll");
     });
@@ -502,6 +505,7 @@ describe("the mechanisms (design §8.1), on the canonical setups", () => {
         // P2b.2b.2b.2b: hands' arc (was it.fails): 1.2170 and 1.1300 m/s. P2b.2b.2b.2b: flex (was 1.2170 and
         // 1.1300): 1.8786 and 1.6386 m/s; Task 8 confirms it. P2b.2b.2b.2b: push intent and fast impedance (was 1.8786
         // and 1.6386): 1.7016 and 1.2624 m/s. P2b.2b.2b.2b: arm chain (was 1.7016 and 1.2624): 1.8493 and 1.2824 m/s.
+        // P2b.2b.2b.2b: continuous α (was 1.8493 and 1.2824): 1.8412 and 1.2824 m/s.
         const punched = simulateShot(canonicalSetup("pass-roll")).impact;
         const coasted = simulateShot(canonicalSetup("pass-roll", { stroke: { drive: 0 } })).impact;
         expect(strikerSpeed(punched)).toBeGreaterThan(strikerSpeed(coasted));

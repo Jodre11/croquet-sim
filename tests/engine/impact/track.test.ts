@@ -111,16 +111,20 @@ function dipAt(arc: SwingArc, t: number): { readonly z: number; readonly v: numb
 /** The closed forms of design §3.2 for a carry-mode arc before its contact, with Math.* (the engine: sinCos). */
 function closedForm(arc: SwingArc, t: number) {
     const p = phases(t, arc.arcStart, arc.window);
-    const omegaEnd = arc.omega0 + arc.alpha * arc.window;
-    const rate = omegaEnd / arc.window;
-    const u = Math.min(p.after, arc.window);
-    const omega = arc.omega0 + arc.alpha * p.into - rate * u;
-    const theta =
-        arc.theta0 +
-        arc.omega0 * (p.before + p.into) +
-        0.5 * arc.alpha * p.into * p.into +
-        omegaEnd * u -
-        0.5 * rate * u * u;
+    // The held slope (gate round 5 ruling): x = u/W, ω = ω_e·(1 − 3x² + 2x³) + α₀·W·(x − 9x²/2 + 6x³ − 5x⁴/2).
+    const W = arc.window;
+    const omegaEnd = arc.omega0 + arc.alpha * W;
+    const u = Math.min(p.after, W);
+    const x = u / W;
+    const omega =
+        p.after > 0
+            ? omegaEnd * (1 - 3 * x ** 2 + 2 * x ** 3) + arc.alpha * W * (x - 4.5 * x ** 2 + 6 * x ** 3 - 2.5 * x ** 4)
+            : arc.omega0 + arc.alpha * p.into;
+    const held =
+        W *
+        (omegaEnd * (x - x ** 3 + 0.5 * x ** 4) +
+            arc.alpha * W * (0.5 * x ** 2 - 1.5 * x ** 3 + 1.5 * x ** 4 - 0.5 * x ** 5));
+    const theta = arc.theta0 + arc.omega0 * (p.before + p.into) + 0.5 * arc.alpha * p.into * p.into + held;
     const h = phases(t, arc.handStart, arc.handWindow);
     const A = arc.pivotAcceleration;
     const V = add(arc.pivotVelocity, scale(A, h.into));
@@ -206,7 +210,9 @@ describe("the swing path", () => {
         expect(pathAt(track, 0.018).dipAcceleration.z).toBeCloseTo(a, 9);
         expect(pathAt(track, 0.009).pendulumAcceleration).toBe(0);
         expect(pathAt(track, 0.012).pendulumAcceleration).toBe(TIMED.alpha);
-        expect(pathAt(track, 0.045).pendulumAcceleration).toBeCloseTo(-(TIMED.omega0 + TIMED.alpha * 0.03) / 0.03, 9);
+        // The held slope's α at x = u/W = 0.5: −6ω_e/W·x(1 − x) + α₀·(1 − 9x + 18x² − 10x³) = −1.5·ω_e/W − α₀/4.
+        const omegaEnd = TIMED.omega0 + TIMED.alpha * 0.03;
+        expect(pathAt(track, 0.055).pendulumAcceleration).toBeCloseTo((-1.5 * omegaEnd) / 0.03 - TIMED.alpha / 4, 9);
     });
 
     it("holds the head's tilt while the hands alone move: a straight line at a constant orientation", () => {
@@ -241,17 +247,46 @@ describe("the swing path", () => {
             const w = dot(pathAt(prepare({ ...checked, mode }), ROLL.window).angularVelocity, N);
             expect(Math.abs(w), mode).toBeLessThan(1e-12);
         }
+        // Carry mode's held slope takes α from the check's α₀ back to 0 over one more window (continuous α, gate round
+        // 5 ruling), so the rate swings briefly past rest within it; from its end, 0.06 s, the head is held at rest
+        // where the check left it, the slope's net travel ω_e·W/2 being 0.
         const carry = prepare(checked);
-        for (const t of [0.05, 0.12]) {
+        for (const t of [0.065, 0.12]) {
             expect(Math.abs(dot(pathAt(carry, t).angularVelocity, N)), `at ${t}`).toBeLessThan(1e-12);
         }
-        expect(dist(pathAt(carry, 0.05).socket, pathAt(carry, 0.12).socket)).toBeLessThan(1e-12);
+        expect(dist(pathAt(carry, ROLL.window).socket, pathAt(carry, 0.12).socket)).toBeLessThan(1e-12);
+        expect(dist(pathAt(carry, 0.065).socket, pathAt(carry, 0.12).socket)).toBeLessThan(1e-12);
     });
 
     it("holds θ in carry mode after the second window", () => {
         const held = pathAt(track, TIMED.arcStart + 2 * TIMED.window).orientation;
         for (const t of [0.075, 0.1, 0.2]) {
             expect(pathAt(track, t).orientation, `at ${t}`).toEqual(held);
+        }
+    });
+
+    it("plans the held slope with a continuous α and a finite jerk (gate round 5 ruling, 2026-10-12)", () => {
+        // The held slope runs from the window's end, α the window's α₀, to rest one window W later, α 0. At both
+        // seams α must not step, and across the slope its rate of change stays within the profile's own bound,
+        // |j| ≤ 6·|ω_e|/W² + 9·|α₀|/W (ω_e the rate at the window's end). Both rolls: α₀ > 0 and a check, α₀ < 0.
+        for (const arc of [TIMED, { ...TIMED, alpha: -(TIMED.omega0 / TIMED.window) }]) {
+            const path = prepare(arc);
+            const w = arc.window;
+            const alpha = (t: number): number => pathAt(path, t).pendulumAcceleration;
+            const omegaEnd = arc.omega0 + arc.alpha * w;
+            const tw = arc.arcStart + w;
+            for (const seam of [tw, tw + w]) {
+                expect(Math.abs(alpha(seam + 1e-9) - alpha(seam - 1e-9)), `α at ${seam}, α₀ ${arc.alpha}`).toBeLessThan(
+                    1e-4,
+                );
+            }
+            const bound = (6 * Math.abs(omegaEnd)) / (w * w) + (9 * Math.abs(arc.alpha)) / w;
+            const h = w / 1000;
+            for (let t = tw - 10 * h; t < tw + w + 10 * h; t += h) {
+                expect(Math.abs(alpha(t + h) - alpha(t)) / h, `jerk at ${t}, α₀ ${arc.alpha}`).toBeLessThan(
+                    1.01 * bound,
+                );
+            }
         }
     });
 

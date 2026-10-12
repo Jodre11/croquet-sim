@@ -765,13 +765,24 @@ function pendulumAt(track: PreparedTrack, t: number): Swing {
         };
     }
     if (arc.mode === "carry") {
-        // The slope is held: the rate falls linearly to zero over one more window, then θ holds.
-        const u = Math.min(t - tw, arc.window);
-        const rate = track.omegaEnd / arc.window;
+        // The slope is held: over one more window W the rate falls from ω_e to rest, then θ holds. Its α runs on from
+        // the window's α₀ to 0 with no step (gate round 5 ruling, 2026-10-12): with x = u/W, ω is the quartic with
+        // ω(0) = ω_e, ω′(0) = α₀, ω(W) = ω′(W) = 0 and the linear fall's travel ∫ω = ω_e·W/2, so the seams' times, θ
+        // and ω there are the linear fall's:
+        // ω = ω_e·(1 − 3x² + 2x³) + α₀·W·(x − 9x²/2 + 6x³ − 5x⁴/2),
+        // α = 6·ω_e/W·(x² − x) + α₀·(1 − 9x + 18x² − 10x³),
+        // θ = θ_e + W·[ω_e·(x − x³ + x⁴/2) + α₀·W·(x²/2 − 3x³/2 + 3x⁴/2 − x⁵/2)].
+        const W = arc.window;
+        const u = Math.min(t - tw, W);
+        const x = u / W;
+        const we = track.omegaEnd;
+        const a0 = arc.alpha;
+        const fall = x * (1 + x * x * (x * 0.5 - 1));
+        const turn = x * x * (0.5 + x * (-1.5 + x * (1.5 - x * 0.5)));
         return {
-            theta: track.thetaEnd + track.omegaEnd * u - 0.5 * rate * u * u,
-            omega: track.omegaEnd - rate * u,
-            alpha: u < arc.window ? 0 - rate : 0,
+            theta: track.thetaEnd + W * (we * fall + a0 * W * turn),
+            omega: we * (1 + x * x * (2 * x - 3)) + a0 * W * x * (1 + x * (-4.5 + x * (6 - x * 2.5))),
+            alpha: u < W ? ((6 * we) / W) * x * (x - 1) + a0 * (1 + x * (-9 + x * (18 - x * 10))) : 0,
         };
     }
     // Swing mode: the free pendulum, interpolated in its table and clamped to its last sample beyond it.
