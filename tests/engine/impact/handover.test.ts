@@ -1,12 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { horizontal, length, sub, vec3, type Vec3 } from "../../../src/engine/math/vec3";
+import { add, horizontal, length, scale, sub, vec3, type Vec3 } from "../../../src/engine/math/vec3";
 import { SETTLE_SPEED } from "../../../src/engine/resolve";
 import { simulateFreeMotion } from "../../../src/engine/simulate";
 import type { BallState } from "../../../src/engine/types";
 import { uprightsOf } from "../../../src/engine/world";
-import { obstacleContact, type ObstacleGeometry } from "../../../src/engine/impact/contacts";
+import { headBallContact, obstacleContact, type ObstacleGeometry } from "../../../src/engine/impact/contacts";
 import { handover } from "../../../src/engine/impact/handover";
+import { axisAngle, rotate } from "../../../src/engine/impact/rigidBody";
+import type { HeadState } from "../../../src/engine/impact/types";
 import { TEST_BALL, airborneAt, hoopWithUprightAt, testWorld } from "../support/fixtures";
+import { TEST_HEAD } from "../support/impact";
 
 const R = TEST_BALL.radius;
 
@@ -131,5 +134,94 @@ describe("handover with obstacles", () => {
         const squeezed = { blue: airborneAt(6 + 0.008 + R - 5e-5, 5, R) };
         expect(() => handover(squeezed, R, [a, b], 1)).toThrow(/ball blue and A still overlap by [0-9.e-]+ m after 1/);
         expect(() => handover(squeezed, R, [a, b])).toThrow(/after 64 passes/);
+    });
+});
+
+describe("handover with the head (P2b.2b.2b.2b design §5)", () => {
+    /** The test head level, its face toward +x, the face's plane at x = 0, its axis at height h. */
+    const headAt = (h: number, pitch = 0): HeadState => ({
+        position: vec3(-TEST_HEAD.length / 2, 0, h),
+        orientation: axisAngle(vec3(0, 1, 0), pitch),
+        velocity: vec3(1, 0, 0),
+        angularVelocity: vec3(0, 0, 0),
+    });
+    const limits = { blue: 4.4e-4 + 1e-9 };
+
+    it("moves a ball lifted into the face out along the face's normal, by the overlap", () => {
+        // The ball lies 0.1 mm into the face's plane after the lift: its centre R − 1e-4 ahead of the face.
+        const ball = {
+            position: vec3(R - 1e-4, 0, R - 3e-4),
+            velocity: vec3(0.5, 0, 0),
+            angularVelocity: vec3(0, 0, 0),
+        };
+        const out = handover({ blue: ball }, R, [], undefined, { state: headAt(R), head: TEST_HEAD, limits });
+        const moved = out.balls.blue as BallState;
+        expect(moved.position.x).toBeCloseTo(R, 12);
+        expect(moved.position.z).toBe(R);
+        expect(moved.velocity).toEqual(ball.velocity);
+        expect(out.overlapCorrection).toBeCloseTo(1e-4, 12);
+    });
+
+    it("clears a tilted face too, moving the ball horizontally by depth/|n_h|", () => {
+        // The face pitched 0.2 rad. The ball, at z = R and y = 0, lies R − 0.1 mm from the face's plane, on the head's
+        // axis: the head is raised or lowered so that the axis passes through the ball's centre c = a + (L/2 + R −
+        // 1e-4)·n. (A ball at the head's own height would sit about 33 mm off the axis, beyond the face's 32 mm
+        // radius, on the rim.)
+        const n = rotate(axisAngle(vec3(0, 1, 0), 0.2), vec3(1, 0, 0));
+        const reach = TEST_HEAD.length / 2 + R - 1e-4;
+        const state = headAt(R - n.z * reach, 0.2);
+        const ball = {
+            position: add(state.position, scale(n, reach)),
+            velocity: vec3(0, 0, 0),
+            angularVelocity: vec3(0, 0, 0),
+        };
+        expect(headBallContact(state, TEST_HEAD, ball.position, R)?.region).toBe("face");
+        const out = handover({ blue: ball }, R, [], undefined, { state, head: TEST_HEAD, limits });
+        const moved = (out.balls.blue as BallState).position;
+        expect(headBallContact(state, TEST_HEAD, moved, R)?.depth ?? 0).toBeLessThanOrEqual(1e-9);
+        expect(moved.z).toBe(R);
+    });
+
+    it("leaves a ball the head does not touch bit-identical", () => {
+        const ball = { position: vec3(R + 1e-3, 0, R), velocity: vec3(0.5, 0, 0), angularVelocity: vec3(1, 2, 3) };
+        const out = handover({ blue: ball }, R, [], undefined, { state: headAt(R), head: TEST_HEAD, limits });
+        expect(out.balls.blue).toBe(ball);
+        expect(out.overlapCorrection).toBe(0);
+    });
+
+    it("throws past its bound: deeper than the static sink plus CONTACT_TOLERANCE", () => {
+        const ball = { position: vec3(R - 1e-3, 0, R), velocity: vec3(0, 0, 0), angularVelocity: vec3(0, 0, 0) };
+        expect(() => handover({ blue: ball }, R, [], undefined, { state: headAt(R), head: TEST_HEAD, limits })).toThrow(
+            /head overlaps ball blue/,
+        );
+    });
+
+    it("throws for a head on top of a ball", () => {
+        // Review focus 4: a vertical normal has no horizontal way out.
+        const state: HeadState = {
+            position: vec3(0, 0, 2 * R + TEST_HEAD.radius - 1e-4),
+            orientation: axisAngle(vec3(0, 0, 1), 0),
+            velocity: vec3(0, 0, 0),
+            angularVelocity: vec3(0, 0, 0),
+        };
+        const ball = { position: vec3(0, 0, R), velocity: vec3(0, 0, 0), angularVelocity: vec3(0, 0, 0) };
+        expect(() => handover({ blue: ball }, R, [], undefined, { state, head: TEST_HEAD, limits })).toThrow(
+            /head overlaps ball blue/,
+        );
+    });
+
+    it("moves a ball again that the pair pass pushes back into the head", () => {
+        // Red overlaps blue from ahead; separating them pushes blue back into the face, and the head pass clears it.
+        const blue = { position: vec3(R - 1e-4, 0, R), velocity: vec3(0, 0, 0), angularVelocity: vec3(0, 0, 0) };
+        const red = {
+            position: vec3(3 * R - 1e-4 - 2e-4, 0, R),
+            velocity: vec3(0, 0, 0),
+            angularVelocity: vec3(0, 0, 0),
+        };
+        const out = handover({ blue, red }, R, [], undefined, { state: headAt(R), head: TEST_HEAD, limits });
+        const b = (out.balls.blue as BallState).position;
+        const r = (out.balls.red as BallState).position;
+        expect(headBallContact(headAt(R), TEST_HEAD, b, R)?.depth ?? 0).toBeLessThanOrEqual(1e-9);
+        expect(length(sub(r, b))).toBeGreaterThanOrEqual(2 * R - 1e-12);
     });
 });

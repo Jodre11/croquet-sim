@@ -11,11 +11,11 @@
 import { CONTACT_TOLERANCE } from "../detect";
 import { contactReference } from "../../reference/index";
 import { dot, horizontal, length, sub, vec3, type Vec3 } from "../math/vec3";
-import { BALL_IDS, type BallState, type BallStates, type World } from "../types";
+import { BALL_IDS, type BallId, type BallState, type BallStates, type World } from "../types";
 import { obstaclesOf, validateWorld } from "../world";
 import { lawFromContactTime, lawFromStiffness, type PairLaw } from "./contactLaw";
 import { headBottom, headLowestPoint, outsideObstacle } from "./contacts";
-import { handover } from "./handover";
+import { handover, type HandoverHead } from "./handover";
 import { rotateInverse } from "./rigidBody";
 import {
     integrate,
@@ -486,9 +486,30 @@ export function prepareImpact(
     };
 }
 
-/** The impact's result: `run` with its balls handed over to phase 2 (design §6). */
-function handedOver(run: ImpactRun, world: World): ImpactResult {
-    const handed = handover(run.balls, world.ball.radius, obstaclesOf(world));
+/**
+ * The impact's result: `run` with its balls handed over to phase 2 (design §6). A tracked drive's head is cleared from
+ * the balls too (P2b.2b.2b.2b design §5), each ball's limit its static sink at its starting position plus
+ * CONTACT_TOLERANCE; a force table's head is its face alone, so it is not.
+ */
+function handedOver(
+    run: ImpactRun,
+    world: World,
+    contact: ContactState,
+    balls: BallStates,
+    sink: SinkSolver,
+): ImpactResult {
+    let mallet: HandoverHead | null = null;
+    if (contact.drive.kind === "track") {
+        const limits: Partial<Record<BallId, number>> = {};
+        for (const id of BALL_IDS) {
+            const b = balls[id];
+            if (b !== undefined) {
+                limits[id] = sink(b.position) + CONTACT_TOLERANCE;
+            }
+        }
+        mallet = { state: run.head, head: contact.head, limits };
+    }
+    const handed = handover(run.balls, world.ball.radius, obstaclesOf(world), undefined, mallet);
     return { ...run, handover: handed.balls, overlapCorrection: handed.overlapCorrection };
 }
 
@@ -505,7 +526,7 @@ export function simulateImpact(
     validateWorld(world);
     const sink = sinkSolver(world);
     validateImpact(contact, balls, world, sink);
-    return handedOver(integrate(prepareImpact(contact, balls, world, sink), options), world);
+    return handedOver(integrate(prepareImpact(contact, balls, world, sink), options), world, contact, balls, sink);
 }
 
 /**
@@ -525,5 +546,5 @@ export function simulateStroke(
     const sink = sinkSolver(world);
     validateImpact(contact, balls, world, sink);
     const { run, follow } = integrateStroke(prepareImpact(contact, balls, world, sink), options, true);
-    return { result: handedOver(run, world), follow: follow as FollowThrough };
+    return { result: handedOver(run, world, contact, balls, sink), follow: follow as FollowThrough };
 }
