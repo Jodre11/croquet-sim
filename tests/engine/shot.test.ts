@@ -216,6 +216,10 @@ describe("simulateShot", () => {
     // face intervals (the last two 15.7–26.3 and 105.0–106.4 ms), the impact ending at 106.6 ms. P2b.2b.2b.2b: hold
     // relaxes from the first departure (was 19.17 mm, six face intervals): 19.17 mm at 92.3 ms, five face intervals,
     // the last 15.7–26.3 ms, the late re-contact gone; the turf bed still throws the ball up (a known gap).
+    // P2b.2b.2b.2b: flex, gate ruling 2026-10-12 (the gate accepted at 7843e2b): 19.17 mm at 92.3 ms, the ball leaving
+    // the bed at 0.620 m/s. The cause is the turf bed's elastic rebound (gate round 6): the leaning face presses the
+    // ball about 3 mm into the bed and lets go faster than the bed unloads. Kept skipped rather than loosened: R + 5 mm
+    // is exit criterion 6's bound, and the bed's missing rate-independent loss is a follow-up for the next phase.
     it.skip("runs the pass-roll canonical setup with no entry jump and no ball above R + 5 mm", () => {
         lowFlight("pass-roll");
     });
