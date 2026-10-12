@@ -935,7 +935,12 @@ export function newGripState(): GripState {
     };
 }
 
-/** The swung body `track` steps with `grip`: carry mode's released body once the bottom hand has let go. */
+/**
+ * The swung body `track` steps with `grip`: carry mode's released body once the bottom hand has let go. It keys on
+ * grip.releasedAt where handLoad keys on releasing(track, t); the two agree at every step, because carryLoad sets
+ * releasedAt in the handLoad call of the first step in the pendulum phase, before that step's advance reads this, and
+ * the integrator's t only grows.
+ */
 export function swungOf(track: PreparedTrack, grip: GripState): SwungBody {
     return track.released !== null && grip.releasedAt !== null ? track.released : track.body;
 }
@@ -1084,6 +1089,10 @@ function holdChain(
     const u2 = scale(add(b2, scale(u1, k2)), 1 / d2);
     const u0 = add(u1, scale(b0, 1 / k1));
     const mass = (u: Vec3): ChainMass => ({ position: add(at, u), velocity, force: ZERO });
+    // The preload is frozen here, in the world frame: it does not turn with the shaft or follow later shares. That is
+    // acceptable because the feed-forward carries each step's share itself; a share changed by ΔF moves the chain's
+    // static offset by about ΔF/k₁, so the stale preload costs the flex k·ΔF/k₁, at most about 4 % of ΔF (k ≤ 400 N/m
+    // against the wrist's 9988 N/m), and the shaft's turn over the push moves its millimetres by less still.
     return { forearm: mass(u0), hand: mass(u1), fingers: mass(u2), preload: u0 };
 }
 

@@ -286,9 +286,20 @@ export interface ImpactSnapshot {
     readonly headTurf?: Vec3;
 }
 
-/** Measurement seam: called after every step (tests and scripts/impactProbe.ts). */
+/** A follow-through step's end state (t is its end), with the hands' feed-forward applied during it. */
+export interface FollowSnapshot {
+    readonly t: number;
+    readonly head: HeadState;
+    readonly feedForward: Vec3;
+}
+
+/**
+ * Measurement seam: `step` is called after every impact step (tests and scripts/impactProbe.ts), `follow`, where
+ * given, after every follow-through step.
+ */
 export interface ImpactProbe {
     step(snapshot: ImpactSnapshot): void;
+    follow?(snapshot: FollowSnapshot): void;
 }
 
 /** Options of an impact. `dt` and `cap` exist for tests (convergence, isolated cases). */
@@ -1141,7 +1152,7 @@ export function integrateStroke(setup: ImpactSetup, options: ImpactOptions = {},
     if (trace === null || plan.kind !== "track") {
         return { run: done, follow: null };
     }
-    return { run: done, follow: continueStroke(setup, plan, state, grip, turf, steps, dt, trace) };
+    return { run: done, follow: continueStroke(setup, plan, state, grip, turf, steps, dt, trace, options.probe) };
 }
 
 /** Integrates the impact from `setup` until it ends (see the file header). */
@@ -1167,6 +1178,7 @@ function continueStroke(
     first: number,
     dt: number,
     trace: StrokeState[],
+    probe: ImpactProbe | undefined,
 ): FollowThrough {
     const { head } = setup;
     const every = Math.max(1, Math.round(FOLLOW_SAMPLE / dt));
@@ -1219,6 +1231,7 @@ function continueStroke(
             grip.resistance = senseResistance(grip.resistance, 0, response);
         }
         steps++;
+        probe?.follow?.({ t: steps * dt, head: state, feedForward: hand.feedForward });
         if (ground !== null && !deep && headLowestPoint(state, head) < 0 - HEAD_DEEP_LIMIT) {
             deep = true;
             flags.push("follow-head-deep");

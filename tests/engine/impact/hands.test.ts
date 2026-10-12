@@ -880,6 +880,67 @@ describe("the push intent (P2b.2b.2b.2b gate ruling 2026-10-11)", () => {
         expect(replay(track, head, probe.snapshots, false).differ).toBeGreaterThan(0);
     });
 
+    it("relaxes in the follow-through, where the push never reaches the pendulum phase", () => {
+        // With the balls removed, each follow-through step relaxes R̃ towards 0 at the muscles' pace (round-1 review,
+        // 894aa76). On a still carry, whose push never reaches its pendulum phase, the intent stays on, so it falls by
+        // (1 − response) per step from the impact's last R̃: P_k = R̃₀·(1 − response)^k, R̃₀ the impact's last step's
+        // update, R̃ + (R − R̃)·response, of the R̃ that step's intent read. Each step's P is its feed-forward less
+        // that of a grip state sensing nothing, at the step's start.
+        const ball = vec3(0, 0, 1);
+        const begin = vec3(ball.x - R - 1e-6 - TEST_HEAD.length / 2, 0, ball.z);
+        const omega0 = 3 / (0.8 + TEST_HEAD.socket.z);
+        const track = prepareAt(levelArc(begin, { mode: "carry", handReach: 0.1, pendulumAt: 1, omega0 }), 0);
+        expect((track.push as Push).pendulum).toBeNull();
+        const response = pushResponse(TEST_HANDS, IMPACT_DT);
+        const aim = track.arc.aim;
+        const intent = (before: HeadState, t: number, feedForward: Vec3): number =>
+            dot(sub(feedForward, handLoad(track, before, TEST_HEAD, t, newGripState()).feedForward), aim);
+        const impact: ImpactSnapshot[] = [];
+        const follow: number[] = [];
+        let before: HeadState | null = null;
+        const probe: ImpactProbe = {
+            step(s) {
+                impact.push(s);
+            },
+            follow(s) {
+                if (follow.length < 400) {
+                    follow.push(
+                        intent(
+                            before ?? (impact[impact.length - 1] as ImpactSnapshot).head,
+                            s.t - IMPACT_DT,
+                            s.feedForward,
+                        ),
+                    );
+                }
+                before = s.head;
+            },
+        };
+        const head = headOnPath(track, TEST_HEAD, 0);
+        const setup = isolated({ start: head, drive: track, balls: [freeBall("blue", ball)] });
+        integrateStroke(setup, { probe, cap: 3e-3 }, true);
+        const last = impact[impact.length - 1] as ImpactSnapshot;
+        const lastHand = last.hand as NonNullable<ImpactSnapshot["hand"]>;
+        const read = intent(
+            (impact[impact.length - 2] as ImpactSnapshot).head,
+            last.t - IMPACT_DT,
+            lastHand.feedForward,
+        );
+        let onHead = ZERO;
+        for (const c of last.contacts) {
+            if (c.key.startsWith("face/")) {
+                onHead = sub(onHead, add(scale(c.normal, c.normalForce), c.tangentialForce));
+            }
+        }
+        const sensed = senseResistance(read, Math.max(0, 0 - dot(aim, onHead)), response);
+        // R̃ stays under the arm's push, so P is R̃ itself.
+        expect(sensed).toBeGreaterThan(1);
+        expect(sensed).toBeLessThan(TEST_PUSH_FORCE);
+        expect(follow.length).toBe(400);
+        follow.forEach((P, k) => {
+            expect(Math.abs(P - sensed * (1 - response) ** k), `step ${k}`).toBeLessThan(1e-9 * sensed);
+        });
+    });
+
     it("takes no resistance from the turf", () => {
         // A carry head pressed 1 mm into the turf and sliding forward: the turf's friction pushes it back along aim,
         // yet the hands match a replay whose R stays 0.
@@ -1067,9 +1128,9 @@ describe("the hand–arm chain (P2b.2b.2b.2b gate round 3 ruling, 2026-10-11)", 
         integrate(isolated({ start, drive: track, gravity: 0 }), { probe, cap: 0.3 });
         const moving = chain.forearmMass + chain.handMass + chain.fingerMass;
         const initial = (body.mass + 2 * moving) * half(start.velocity);
-        // Semi-implicit Euler holds the energy to O(ω·dt) of it, ω the chain's fastest mode.
-        expect(highest - lowest).toBeLessThan(1e-2 * initial);
-        expect(lowest).toBeGreaterThan(0.5 * initial);
+        // Every mass starts at the head's velocity with every spring unstretched, so the start's energy is `initial`.
+        // Semi-implicit Euler holds it to O(ω·dt), ω the chain's fastest mode.
+        expect(Math.max(highest - initial, initial - lowest)).toBeLessThan(1e-2 * initial);
     });
 
     it("drops the bottom hand's chain and skin in the pendulum phase: its push acts at the grip", () => {

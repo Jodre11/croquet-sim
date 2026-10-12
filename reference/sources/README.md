@@ -240,9 +240,10 @@ digest is of the raw fullTextXML as Europe PMC returned it.
 
 ### The gate ruling, round 2 (2026-10-11): the hands' fast impedance
 
-The user's round 2 ruling ("Add fast impedance") makes each hand a mass on its grip tissue, a stiff spring and damper,
-in series with the arm's slow flex. The source behind `reference/contact.json`'s `handMass`, `gripStiffness` and
-`gripDamping` is one lumped model fitted to the measured driving-point impedance of the hand–arm system. Fetched
+The user's round 2 ruling ("Add fast impedance") made each hand a mass on its grip tissue, a stiff spring and damper,
+in series with the arm's slow flex. Until round 3, `reference/contact.json` held that lumped hand as `handMass`
+(0.259 kg), `gripStiffness` and `gripDamping`, from one model fitted to the measured driving-point impedance of the
+hand–arm system; round 3 (below) replaced them. Fetched
 2026-10-11 with `curl -sS -L`; the digest is of the raw PDF (the NIOSH author manuscript). Europe PMC's
 `PMC4656148/fullTextXML` returned HTTP 500. Measurements of the human hand only.
 
@@ -263,8 +264,9 @@ in series with the arm's slow flex. The source behind `reference/contact.json`'s
   M2 0.081 kg, K3 43,205 N/m, K4 109,271 N/m, C3 57.0 N s/m, C4 65.8 N s/m. "A study indicated that the mean
   property-based models are more reliable than the mean response-based models [30]; hence, the mean property-based
   models were used in the following applications."
-- The lumping: one hand mass on one tissue spring and damper, m_h = M1 + M2 = 0.259 kg, k_t = K3 + K4 = 152,476 N/m,
-  c_t = C3 + C4 = 122.8 N·s/m; the skin masses M3 and M4, rigid on the handle, are left out. Bounds: the same sums over
+- The lumping, held until round 3: one hand mass on one tissue spring and damper, m_h = M1 + M2 = 0.259 kg,
+  k_t = K3 + K4 = 152,476 N/m, c_t = C3 + C4 = 122.8 N·s/m; the skin masses M3 and M4, rigid on the handle, were left
+  out. Bounds: the same sums over
   the paper's other x_h models, the mean response-based 5-DOF (Table 1: 0.267 kg, 155,780 N/m, 131.9 N·s/m) and 4-DOF
   (0.297 kg, 162,586 N/m, 129.7 N·s/m), and the proposed ISO 10068 revision's 5-DOF (Table 3: 0.4574 kg, 69,844 N/m,
   210.1 N·s/m; "the palm contact stiffness (K3) in the model for the xh or yh direction is unrealistically much lower
