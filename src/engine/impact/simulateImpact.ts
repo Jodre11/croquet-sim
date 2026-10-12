@@ -255,6 +255,8 @@ function validateTrack(drive: TrackDrive): void {
         }
     }
     finiteNumber(arc.handArcRadius, "arc.handArcRadius");
+    // Checked in swing mode too, where the arc is never read: a drive that fails it fails either way. Changing that
+    // would be a behaviour change and needs its own ruling.
     if (!(arc.handArcRadius > arc.handReach)) {
         fail(`arc.handArcRadius must exceed arc.handReach (got ${arc.handArcRadius} and ${arc.handReach})`);
     }

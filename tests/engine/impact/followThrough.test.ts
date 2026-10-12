@@ -148,7 +148,7 @@ describe("the follow-through (design §4)", () => {
         expect(follow.finish).toBeLessThan(contactAt + FOLLOW_CAP + 1e-5);
     });
 
-    // P2b.2b.2b.2b: awaits the pre-flight gate (Task 6). A dip is part of trackEnd, so a late dip lengthens the impact
+    // P2b.2b.2b.2b: gate-ruled skip (round 14, 2026-10-12). A dip is part of trackEnd, so a late dip lengthens the impact
     // and drives the head deep inside it (this setup: impact-head-deep, 5.4 mm, and the follow-through finishes at the
     // impact's end), never in the follow-through. On the flex no test-profile carry drives the follow-through past
     // 2 × HEAD_DEEP_LIMIT: the pendulum phase at any pendulumAt or effort tried reaches at most 0.31 mm into the turf.
@@ -163,8 +163,8 @@ describe("the follow-through (design §4)", () => {
     // P2b.2b.2b.2b: hold relaxes from the first departure (was 1.56 mm): the full roll's follow-through reaches
     // 1.08 mm. P2b.2b.2b.2b: flex, gate ruling 2026-10-12 (the gate accepted at 7843e2b): the setup still digs inside
     // the impact (impact-head-deep from 111.8 ms, 4.15 mm). Kept skipped. A planned dip is part of trackEnd, so the
-    // impact lasts through it and the dip always lands inside the impact; no carry setup can dig in the
-    // follow-through alone, which is the case this test needs.
+    // impact lasts through it and the dip always lands inside the impact; no setup on this file's world, at
+    // 2 × HEAD_DEEP_LIMIT, digs in the follow-through alone, which is the case this test needs.
     it.skip("flags a follow-through that drives the head deep, not the impact", () => {
         // A deep, late dip: the hands lower 0.2 m over 50 ms from 100 ms, long after the ball has gone. The turf and
         // the compliant hands hold the head well above that path, but a planned dig far outside play presses it past

@@ -18,7 +18,8 @@
  * CONTACT_TOLERANCE is moved horizontally along the horizontal part of the contact's normal, by depth/|n_h|, so that a
  * tilted face clears too. Its velocity is kept. That is the lift's artefact: the ball's actual lift to the lawn (its
  * depth in the turf at the impact's end, capped at TURF_PIT_DEPTH; simulateImpact's handoverLimit). An overlap deeper
- * than the ball's limit, or along a normal with no horizontal part, throws an Error naming the ball.
+ * than the ball's limit, along a normal with no horizontal part, or needing a sideways move of more than the ball's
+ * radius (HEAD_MOVE_RADII), throws an Error naming the ball.
  *
  * One pass cannot separate a chain of three balls: separating the second pair pushes the middle ball back into the
  * first. The same fixed-order pass therefore repeats until no pair overlaps by more than HANDOVER_RESIDUAL, at most
@@ -45,6 +46,14 @@ const HANDOVER_PASSES = 64;
  * vertical, a head on top of the ball (design §5). Numerical, not physical.
  */
 const VERTICAL_NORMAL = 1e-12;
+
+/**
+ * The longest sideways move of the head-clearance rule, in ball radii R: depth/|n_h| beyond R throws. Numerical, not
+ * physical: the move is unbounded as the normal nears vertical (1 mm at |n_h| = 1e-3 is 1 m), so a larger move comes
+ * from the division, not from the lift's artefact. R is the natural scale: a ball moved further than its own radius
+ * has left the place the head overlapped. The sweep's moves are 1.1 to 1.7 mm, a few percent of R.
+ */
+const HEAD_MOVE_RADII = 1;
 
 /**
  * The head at the impact's end, for the head-clearance rule (P2b.2b.2b.2b design §5): its state and shape, and per
@@ -201,6 +210,13 @@ export function handover(
                     throw new Error(
                         `handover: the head overlaps ball ${ids[i]} by ${hit.depth} m along a normal with ` +
                             `horizontal part ${Math.sqrt(size)}; the rule clears at most ${limit} m, sideways`,
+                    );
+                }
+                if (hit.depth / Math.sqrt(size) > HEAD_MOVE_RADII * radius) {
+                    throw new Error(
+                        `handover: the head overlaps ball ${ids[i]} by ${hit.depth} m along a normal with ` +
+                            `horizontal part ${Math.sqrt(size)}; the sideways move ${hit.depth / Math.sqrt(size)} m ` +
+                            `exceeds the ball's radius ${radius} m`,
                     );
                 }
                 // Along n_h/|n_h| by depth/|n_h|, so that a tilted face clears too: flat·depth/|n_h|².

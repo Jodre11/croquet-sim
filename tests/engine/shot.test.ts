@@ -206,7 +206,7 @@ describe("simulateShot", () => {
         lowFlight("half-roll");
     });
 
-    // P2b.2b.2b.2b: awaits the pre-flight gate (Task 6; arm chain, gate round 3). Un-skipped by the push intent (4.61
+    // P2b.2b.2b.2b: gate-ruled skip (round 14, 2026-10-12; arm chain, gate round 3). Un-skipped by the push intent (4.61
     // mm), re-skipped with the hands' mass and grip tissue (9.70 mm at 66.8 ms), the pass roll still fails with each
     // hand–arm chain: five face intervals (0.0–1.2, 5.6–7.0, 9.9–11.6, 13.3–15.4 and 15.7–26.5 ms), and the striker's
     // ball is 14.52 mm above R at the impact's end (83.1 ms), its highest. P2b.2b.2b.2b: continuous α (was 14.52 mm):

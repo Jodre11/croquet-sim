@@ -286,6 +286,8 @@ function validate(setup: ShotSetup, ballRadius: number): void {
         unit(stroke.pendulumEffort, "stroke.pendulumEffort");
     }
     const pushLength = stroke.handReach ?? push.handReach;
+    // Checked in swing mode too, where the arc is never read: a profile that fails it fails either way. Changing that
+    // would be a behaviour change and needs its own ruling.
     if (!(push.handArcRadius > pushLength)) {
         fail(
             `profile.drive.${type}.handArcRadius must exceed the push length ${pushLength} m, so that the hands' arc ` +

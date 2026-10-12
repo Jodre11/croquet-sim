@@ -1204,7 +1204,9 @@ amendments. Observations, not gates, but for the exit criteria.
 - **Exit criterion 4 over the preset grid** (`onPoint`, 225 runs a roll): half 0 off point, full 71 (45 at 1 m/s, 22
   at 2, 4 at 3), pass 141 (45 at 1 m/s, 41 at 2, 29 at 3, 14 at 4, 12 at 6), round 4 having had 0 / 52 / 79. Every
   miss is the face's contact above R·sin 45° (full 33.0–46.0 mm, lean 38.9–42.5°; pass 32.8–45.8 mm, lean
-  40.4–52.7°); no run ends with the head past the ball's centre. The counts were taken at the gate, before the
+  40.4–52.7°); of the pass roll's 141, 28 also lean beyond 45° (2 at 3 m/s, 14 at 4, 12 at 6; the most 52.7°),
+  counted from the round-13 onPoint lines with python3 -I and the same in the strokeProbe record; the rest miss on
+  contact height alone; no run ends with the head past the ball's centre. The counts were taken at the gate, before the
   handover limit (4fbee79), and they stand: on point is measured over the impact (the head behind the ball, the
   contact height, the lean), from the integrator's impact snapshots, and the handover acts only after the impact's
   end, so it cannot change them. This run, after 4fbee79, reproduces the gate's sweep byte for byte.
@@ -1306,6 +1308,10 @@ amendments. Observations, not gates, but for the exit criteria.
     has gone, the planned push runs on to its full length faster than the ball, and at 2 m/s the hold still has
     about 38 % of its excess at the pendulum phase's start (121.6 and 124.8 ms). So the pass roll at 2 m/s fails exit
     criterion 4 (33.49 mm, 43.4°);
+  - **the pass roll's lean beyond 45°:** 28 of its 141 off-point runs lean past 45° (2 at 3 m/s, 14 at 4, 12 at 6, up
+    to 52.7°), untraced; a count of its own, besides the contact
+    height above R·sin 45° that every miss shows (the final review's figure of 29 is not reproduced: the lean column
+    of both probe records gives 28);
   - the full and pass rolls at 3 m/s finish `follow-head-deep`: the pendulum phase swings the head into the turf;
   - the full roll at 1 m/s (drive −1, up +3 mm) never releases the ball: the head's rim presses it down (n_z −0.95,
     2.2 N) from 221.7 ms until the 450 ms cap (Task 8's trace);
@@ -1317,7 +1323,13 @@ amendments. Observations, not gates, but for the exit criteria.
     rest (the slope's net travel still 0; swing mode untouched);
   - two model artefacts (the gate's review): the hand skin carries no weight before contact, and the bottom skin's
     momentum is discarded at the release;
-  - the rolls' ratios stand above Gugan's for the half and full rolls; calibration is P2b.2b.2c's.
+  - the late re-hit crossings at 1 m/s (full roll 27, pass roll 33) are recorded but untraced; they likely share a
+    cause with the 1 m/s full roll never releasing the ball;
+  - the `rising` latch has no hysteresis: one step of positive pitch rate in the pendulum phase can end the
+    follow-through at a micro-apex. The canonical runs are fine; off-canonical finishes are unmeasured. The next phase
+    should record the finish's pitch and time in swingProbe's sweep;
+  - the rolls' ratios stand above Gugan's for the half and full rolls, and below it for the pass roll (0.90 against
+    Gugan's 0.94–1.21); calibration is P2b.2b.2c's.
 - **Tests:** `npm test` 1053 passed, 4 skipped (the pass roll's R + 5 mm, followThrough.test's deep follow-through
   and two slow cross-checks); the slow suite 1055 passed, 2 skipped (Task 8).
 - **Public:** `ShotSetup.stroke` gains `pendulumAt?` and `pendulumEffort?`; `SwingDrive` gains `pendulumAt`,

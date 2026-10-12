@@ -231,7 +231,7 @@ describe("handover with the head (P2b.2b.2b.2b design §5)", () => {
     });
 
     it("throws for a head on top of a ball", () => {
-        // Review focus 4: a vertical normal has no horizontal way out.
+        // A vertical normal has no horizontal part, so the rule has no sideways way out of the overlap.
         const state: HeadState = {
             position: vec3(0, 0, 2 * R + TEST_HEAD.radius - 1e-4),
             orientation: axisAngle(vec3(0, 0, 1), 0),
@@ -241,6 +241,26 @@ describe("handover with the head (P2b.2b.2b.2b design §5)", () => {
         const ball = { position: vec3(0, 0, R), velocity: vec3(0, 0, 0), angularVelocity: vec3(0, 0, 0) };
         expect(() => handover({ blue: ball }, R, [], undefined, { state, head: TEST_HEAD, limits })).toThrow(
             /head overlaps ball blue/,
+        );
+    });
+
+    it("throws for a head almost on top of a ball, whose sideways move would exceed the ball's radius", () => {
+        // The face pitched to within 1e-3 rad of straight down, so |n_h| ≈ 1e-3. The overlap, 0.1 mm, is within the
+        // ball's limit, but depth/|n_h| ≈ 0.1 m moves the ball well over R (36.8 mm): a numerical artefact.
+        const pitch = Math.PI / 2 - 1e-3;
+        const n = rotate(axisAngle(vec3(0, 1, 0), pitch), vec3(1, 0, 0));
+        const reach = TEST_HEAD.length / 2 + R - 1e-4;
+        const ballAt = vec3(0, 0, R);
+        const state: HeadState = {
+            position: sub(ballAt, scale(n, reach)),
+            orientation: axisAngle(vec3(0, 1, 0), pitch),
+            velocity: vec3(0, 0, 0),
+            angularVelocity: vec3(0, 0, 0),
+        };
+        const ball = { position: ballAt, velocity: vec3(0, 0, 0), angularVelocity: vec3(0, 0, 0) };
+        expect(headBallContact(state, TEST_HEAD, ballAt, R)?.region).toBe("face");
+        expect(() => handover({ blue: ball }, R, [], undefined, { state, head: TEST_HEAD, limits })).toThrow(
+            /head overlaps ball blue.*sideways move .* exceeds the ball's radius/,
         );
     });
 

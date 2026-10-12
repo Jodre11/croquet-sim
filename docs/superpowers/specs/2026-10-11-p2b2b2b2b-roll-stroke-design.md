@@ -224,8 +224,9 @@ is plausible for the user's dip, but it is what the pre-flight gate (§8) is for
   length. The hands therefore arrive descending at asin(s_low/ρ_h), bottom out at s_low, and rise after it. Along
   aim the intended motion keeps today's carry profile: the hands' acceleration over `handWindow` at full `drive`, then
   a coast. Both grip points' intended positions follow it rigidly at the arc's planned pitch θ(t) (below).
-- **It starts from the actual grips.** The intended path starts from the grips' **actual** positions and velocities at
-  `relaxAt` (contact), not the planned ones: the carry downswing has no position spring, so the two differ, and
+- **It starts from the actual grips.** The intended path starts from the grips' **actual** positions and velocities
+  (planned velocity: see Amendment 2) at `relaxAt` (contact), not the planned ones: the carry downswing has no
+  position spring, so the two differ, and
   starting from the plan would put a step force on the mallet at contact. From there x̂_h(t) is the actual start plus
   the planned motion since `relaxAt`. The dip (`handDrop` over `dropTime`) still adds to the intended path as today.
 - **The downswing arrives on the arc.** Today's carry hands' path P(σ) = P_b + Δ_h·σ² + Δ_z·(3σ² − 2σ³) arrives level
@@ -519,6 +520,8 @@ end, deeper than its static sink (436.6 µm), and the lift to z = R drove it 515
 - **"Option 1 alone" (2026-10-12):** the bound is the ball's actual depth at the impact's end, capped by the engine's
   existing pit bound: max(sink, min(R − z, `TURF_PIT_DEPTH`)) + `CONTACT_TOLERANCE`, `TURF_PIT_DEPTH` 1 mm (commit
   4fbee79). §5's "at most the static sink (about 0.44 mm)" is superseded. The four balls move 1.07–1.65 mm sideways.
+- The rule also throws when its sideways move depth/|n_h| would exceed R (final review, 2026-10-12; controller's
+  ruling).
 - The lead's ruling (2026-10-12): `swingProbe.ts` counts a ball overlapping at the impact's end only above
   `CONTACT_TOLERANCE`, the rule's own threshold.
 
