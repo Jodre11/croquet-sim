@@ -9,7 +9,7 @@ rather than guessed ones.
 | Plan | Delivers | Exit criteria |
 |---|---|---|
 | **P1 — Foundations and free-motion engine** (`2026-09-30-p1-free-motion-engine.md`) | Repo scaffold and CI; sourced reference data for ball, court, Laws, lawn speed and free-motion friction/restitution; deterministic event-driven phase-2 engine (sliding → rolling → stationary, ball–ball, uprights, peg, halt margin); out-of-court and hoop-passage events; hoop-run verdict; `ShotResult` sampling | Analytic cases pass (5/7 rule, head-on exchange, stop distances); energy/momentum invariants; mirror symmetry; determinism; event solver agrees with brute-force integration within 1 mm (the angled three-ball wedge push is cross-checked with ball–ball friction off, because pushing contacts are frictionless) |
-| **P2 — Impact phase and swing model** | **P2a.1 (lands first):** lift in free motion — airborne phase, landing event, 3D ball–ball contact normals, 3D impulse friction with impulsive turf friction, resting contact extended to airborne balls (3D normals, gravity; still frictionless), lift-aware hoop passage, out-of-court and halt, jump flag; sourced ball–turf restitution and crown clearance. **P2a.2:** Coulomb friction (3D, load-coupled) on coupled (pushing) contacts in `push.ts`, with stick/slip events and static friction in held clusters. **P2b.1** (`specs/2026-10-03-p2b1-impact-integrator-design.md`): reference data for face and turf contact and a typical mallet head; compliant small-step N-body impact integrator (mallet rigid body, balls, turf) driven by a force profile, tested with hand-built `ContactState`s; turf restitution and stiffness moved into `SurfaceProps`. **P2b.2** is split (decided 2026-10-04; see "P2b.2 decisions"). **P2b.2a** (`specs/2026-10-04-p2b2a-obstacles-faults-design.md`): ball–upright and ball–peg contact in the impact, a contact timeline, and a fault judge for the Laws' mallet faults (crushes, multiple contacts). **P2b.2b** is split (decided 2026-10-04). **P2b.2b.1** (`specs/2026-10-04-p2b2b1-swing-shot-design.md`): tracked drive as two arcs, the pendulum and the hands' path through space with its dip, each timed (and mistimable) by the player, two hands on a rigid shaft, in swing mode (single-ball, drive, stops) or carry mode (rolls), tracking the path's velocity from contact, the bottom hand releasing by reach; the whole head meeting the balls as a solid cylinder, with a re-entry guard; the GC stop a single-ball stroke over a gap to its target; mallet–turf contact, a lawn struck before the ball emerging from an early action; swing model `ShotSetup → ContactState` with provisional defaults, `simulateShot(setup)` wiring phase 1 into P1's phase 2, exported with the fault judge; 29.1.13's "plays away from" and 29.1.14 judged. **P2b.2b.2** is split (decided 2026-10-06). **P2b.2b.2a** (`specs/2026-10-06-p2b2b2a-stroke-shape-design.md`): the stroke shape. The backswing from its top, the downswing under gravity and the player's effort (effort and tempo one bounded intensity; a swing's pendulum leads, a roll's hands lead), the lead-in (a downswing meeting the turf simulated, the lead up to 150 ms), the follow-through to the stroke type's finish, and one `SwingTrajectory` from top to finish; the amplitude an input and the contact speed an outcome; the shape's figures sourced or labelled placeholders, the effort fitted to kinematics only. **P2b.2b.2b** is split (decided 2026-10-08; see "P2b.2b.2b decisions and findings (2026-10-08)"), each step its own PR, all before P2b.2b.2c. **P2b.2b.2b.1** (`specs/2026-10-08-p2b2b2b1-hands-stance-design.md`): the stance from the hands. The top hand's position at contact, `handsAhead`, replaces the shaft's lean as the input; the lean follows from the rigid geometry and the point of impact from the lean; the rolls take the face angles Gugan measured (24°, 31°, 34°). **P2b.2b.2b.2** is split (decided 2026-10-09), each step its own spec, plan and PR, in this order. **P2b.2b.2b.2a** (`specs/2026-10-09-p2b2b2b2a-strike-turf-laws-design.md`): the strike and turf laws, a Hertzian face–ball law with Gugan's e(U) and T(U), and a recovering turf bed under the balls and their landings. **P2b.2b.2b.2b:** the roll's stroke (the descent through contact and the hands, to the roll as played). **P2b.2b.2b.2c:** the mallet (the square head, end-weighting, the market's dimensions). **P2b.2b.2b.3:** turf strike beyond a graze (decided 2026-10-07): the head in the new turf, a ploughing drag so that a weak stroke is stopped dead, and a grip that breaks under a hard stroke, checked against Gugan's jab stop; it precedes P2b.2b.2c because the AC stop's calibration rests on the head–turf law. **P2b.2b.2c:** calibration and validation: coaching-ratio reference data and the swing defaults, which are hands-assisted, not gravity-only (user, 2026-10-08: nearly every real swing has some help from the hands to set up, keep or increase its amplitude, and a gravity-only swing is typical only of a soft, low-amplitude tap; P2b.2b.2a's defaults, h₀ at intensity 0, lift the head about 46 cm for 3 m/s, so a default backswing needs typical heights from the user or a source); the effort's ceiling and shape (see "User play data and checks (2026-10-08)": the ceiling is too low and the speed flattens above intensity 0.8); the contact-time fit; precondition for the T and ζ fit: a finite-state guard (a RangeError or a flag when the head state goes non-finite) in the impact's post-cap run, since a very stiff grip leaves NaN there (see "Carried open items"); the hand coupling's T and ζ, the arm mass, the reach slack and the grips fitted to the stop and drive ratios; the rolls, the stop → pass-roll ordering, pull and stop-shot lift as held-out validation; the GC stop's distances; crush calibration; 29.1.6.3. **P2b.2b.3** (decided 2026-10-06; first placed before P2b.2b.2 as P2b.2b.1b, then moved after it by the user: "first we must model the stroke shape and amplitude and calibrate to the different shot types, but we will need the model to be complete enough for the rest later"): the whole swing. The mallet is carried along the swing path P2b.2b.2 calibrates, the backswing from its top, the lead-in and the follow-through after the impact ends, and its head and its shaft (rigid on the head, from the socket to the top hand) are swept against every ball, the hoops' uprights and crowns, and the peg: in a real game they may lie in the swing's path and limit the playable stroke, and the crown stops the shaft when the head reaches through an open hoop (limiting the follow-through's arc) or is swung back through the jaws. Head–obstacle and shaft contact are new physics. On any crossing the impact integrator re-opens, so a ball that comes back into the follow-through's arc (stopped by a target, rebounding off a hoop or the peg, or pulling up short), another ball, a hoop or the peg is met within an integrated impact and the fault judge rules on it (29.1.6.1, 29.1.6.2, 29.1.11, 29.1.10; Law 29.3.2 lets the opponent leave the balls where they lie after the first stroke in error, so the re-hit's physics matters). P2b.2b.1 only counts the follow-through's crossings. Deferred beyond P2b but required in the final implementation: three- and four-ball cannons, including near a hoop or the peg; 29.1.10 by a part of the body (the mallet's part is P2b.2b.3's); variability of swing and aim (accuracy), a property of human input only, growing with the bottom hand's involvement (user, 2026-10-08), and conditions such as wind, under which a hoop could block a shot or a glancing blow redirect it or limit its power; divots and lasting turf damage, and with them a winter-rules variant that bans jump shots, because soft lawns deform and are damaged (user, 2026-10-09); a fully articulated body beyond P2b.2b.1's translating pivot: the feet, and the shoulder, elbow and wrist between them and the hands, from which the hands' position would follow (since P2b.2b.2b.1 the top hand's position at contact is the stance's input, and the bottom hand's position follows the rigid shaft); the Golf Croquet Rules' faults and remedies, in a GC-rules phase (until then a GC stroke is judged as an AC single-ball stroke) | P2a.1 (met): landing and above-equator strike analytic cases; bouncing balls settle; brute-force cross-check (now 3D) agrees within 1 mm including hopping scenarios. P2a.2 (met): generalised topspin-push closed form; angled wedge cross-check runs in the standard world (friction-off override removed) and agrees with brute force within 1 mm; no fallbacks (`approximate-hold`, `approximate-slip` or `budget-hold`) in limit-of-holding sweeps with friction on. P2b.1 (met): analytic contact, restitution, sticking and 5/7-roll cases through a real impact; invariants; `dt` convergence; handover accepted by phase 2; phase 2 bit-identical after the `SurfaceProps` move; stop-shot probe and stiffness sensitivity recorded. P2b.2a (met): obstacle analytic cases (contact time, restitution, stick and slip, the peg's own material); P2b.1 bit-identical without obstacles in reach (digest, shot mix, slow tests); no obstacle overlap handed to phase 2 (obstacle fuzz); fault table and the C29.20.4 sequences; crush geometry, with the crush distance recorded. P2b.2b.1 (met): tracked-drive, head–turf, head–ball and swing-model analytic cases; force-table drives bit-identical to P2b.2a; the swung body's effective mass at the face centre within 10 % of the head's mass on the drive's canonical setup, and measured by the strike; every default preset's canonical setup runs end to end with no re-entry guard hit and no ball centre more than 5 mm above R, its ratios recorded against the coaching ranges, the GC stop's distances after the touch over the gap, and the late re-hit's crossings. P2b.2b.2a: the downswing's analytic cases (the energy integral and the work–energy balance within 0.1 %); every preset's canonical setup run from top to finish with no re-entry guard hit, no ball above R + 5 mm and no `follow-cap`, its trajectory continuous at every boundary; force tables bit-identical; each preset's default planning 3 m/s within 2 % (or its sourced bound's nearest). P2b.2b.2b.1: the stance's analytic cases (the hands–lean round trip within 1e-12 rad, an upright shaft exactly upright at any contact height, the pose); every preset's canonical pose at its default lean; force tables and the upright presets bit-identical; the rolls' canonical setups run from top to finish as P2b.2b.2a's; each roll's refitted default planning 3 m/s within 2 %. P2b.2b.2b.2a: the laws' analytic cases; phase 2 bit-identical without a landing; every preset's canonical setup run end to end; the strokes and landings recorded. P2b.2b.2b.2b, P2b.2b.2b.2c and P2b.2b.2b.3: each law's analytic cases, and the rolls stop failing (no dead stop, credible distances, and the roll played as "P2b.2b.2b decisions and findings (2026-10-08)" describes: the angle held, never beyond 45°, through a push whose repeated face touches are acceptable); the ratios recorded, not gated (user, 2026-10-08). P2b.2b.2c: standard stroke ratios within tolerance of sourced figures (stop shot and drive are calibration targets, the rolls held-out validation; see "P2b.2 decisions"); stop → pass-roll monotonic; pull emerges on wide rolls without special-casing; stop-shot lift emerges in the AC stop (striker's ball clear of the turf during the transfer, meeting the croqueted ball just above its equator, no jump flag). P2b.2b.3: the head and the shaft are swept along the whole swing (backswing, lead-in and follow-through) against every ball, the uprights, the crowns and the peg; every crossing, including those the P2b.2b.1 probe counts, is integrated as a further contact within the impact and judged (29.1.6.1, 29.1.6.2, 29.1.11, 29.1.10); head–obstacle and shaft contact analytic cases; the crossing counts re-measured. |
+| **P2 — Impact phase and swing model** | **P2a.1 (lands first):** lift in free motion — airborne phase, landing event, 3D ball–ball contact normals, 3D impulse friction with impulsive turf friction, resting contact extended to airborne balls (3D normals, gravity; still frictionless), lift-aware hoop passage, out-of-court and halt, jump flag; sourced ball–turf restitution and crown clearance. **P2a.2:** Coulomb friction (3D, load-coupled) on coupled (pushing) contacts in `push.ts`, with stick/slip events and static friction in held clusters. **P2b.1** (`specs/2026-10-03-p2b1-impact-integrator-design.md`): reference data for face and turf contact and a typical mallet head; compliant small-step N-body impact integrator (mallet rigid body, balls, turf) driven by a force profile, tested with hand-built `ContactState`s; turf restitution and stiffness moved into `SurfaceProps`. **P2b.2** is split (decided 2026-10-04; see "P2b.2 decisions"). **P2b.2a** (`specs/2026-10-04-p2b2a-obstacles-faults-design.md`): ball–upright and ball–peg contact in the impact, a contact timeline, and a fault judge for the Laws' mallet faults (crushes, multiple contacts). **P2b.2b** is split (decided 2026-10-04). **P2b.2b.1** (`specs/2026-10-04-p2b2b1-swing-shot-design.md`): tracked drive as two arcs, the pendulum and the hands' path through space with its dip, each timed (and mistimable) by the player, two hands on a rigid shaft, in swing mode (single-ball, drive, stops) or carry mode (rolls), tracking the path's velocity from contact, the bottom hand releasing by reach; the whole head meeting the balls as a solid cylinder, with a re-entry guard; the GC stop a single-ball stroke over a gap to its target; mallet–turf contact, a lawn struck before the ball emerging from an early action; swing model `ShotSetup → ContactState` with provisional defaults, `simulateShot(setup)` wiring phase 1 into P1's phase 2, exported with the fault judge; 29.1.13's "plays away from" and 29.1.14 judged. **P2b.2b.2** is split (decided 2026-10-06). **P2b.2b.2a** (`specs/2026-10-06-p2b2b2a-stroke-shape-design.md`): the stroke shape. The backswing from its top, the downswing under gravity and the player's effort (effort and tempo one bounded intensity; a swing's pendulum leads, a roll's hands lead), the lead-in (a downswing meeting the turf simulated, the lead up to 150 ms), the follow-through to the stroke type's finish, and one `SwingTrajectory` from top to finish; the amplitude an input and the contact speed an outcome; the shape's figures sourced or labelled placeholders, the effort fitted to kinematics only. **P2b.2b.2b** is split (decided 2026-10-08; see "P2b.2b.2b decisions and findings (2026-10-08)"), each step its own PR, all before P2b.2b.2c. **P2b.2b.2b.1** (`specs/2026-10-08-p2b2b2b1-hands-stance-design.md`): the stance from the hands. The top hand's position at contact, `handsAhead`, replaces the shaft's lean as the input; the lean follows from the rigid geometry and the point of impact from the lean; the rolls take the face angles Gugan measured (24°, 31°, 34°). **P2b.2b.2b.2** is split (decided 2026-10-09), each step its own spec, plan and PR, in this order. **P2b.2b.2b.2a** (`specs/2026-10-09-p2b2b2b2a-strike-turf-laws-design.md`): the strike and turf laws, a Hertzian face–ball law with Gugan's e(U) and T(U), and a recovering turf bed under the balls and their landings. **P2b.2b.2b.2b** (`specs/2026-10-11-p2b2b2b2b-roll-stroke-design.md`, `plans/2026-10-11-p2b2b2b2b-roll-stroke.md`): the roll's stroke, to the roll as played. In carry mode the hands hold the mallet through a measured, compliant flex from contact on (each hand's measured hand–arm chain, a lagged push intent, the arm's posture-holding impedance until the ball first leaves the face), push forward on their own arc without braking, and hand over to a pendulum phase that swings the mallet through vertical; the stroke's inputs gain the pendulum phase's start and effort; the handover keeps a lifted ball clear of the head. **P2b.2b.2b.2c:** the mallet (the square head, end-weighting, the market's dimensions). **P2b.2b.2b.3:** turf strike beyond a graze (decided 2026-10-07): the head in the new turf, a ploughing drag so that a weak stroke is stopped dead, and a grip that breaks under a hard stroke, checked against Gugan's jab stop; it precedes P2b.2b.2c because the AC stop's calibration rests on the head–turf law. **P2b.2b.2c:** calibration and validation: coaching-ratio reference data and the swing defaults, which are hands-assisted, not gravity-only (user, 2026-10-08: nearly every real swing has some help from the hands to set up, keep or increase its amplitude, and a gravity-only swing is typical only of a soft, low-amplitude tap; P2b.2b.2a's defaults, h₀ at intensity 0, lift the head about 46 cm for 3 m/s, so a default backswing needs typical heights from the user or a source); the effort's ceiling and shape (see "User play data and checks (2026-10-08)": the ceiling is too low and the speed flattens above intensity 0.8); the contact-time fit; precondition for the T and ζ fit: a finite-state guard (a RangeError or a flag when the head state goes non-finite) in the impact's post-cap run, since a very stiff grip leaves NaN there (see "Carried open items"); the hand coupling's T and ζ, the arm mass, the reach slack and the grips fitted to the stop and drive ratios; the rolls, the stop → pass-roll ordering, pull and stop-shot lift as held-out validation; the GC stop's distances; crush calibration; 29.1.6.3. **P2b.2b.3** (decided 2026-10-06; first placed before P2b.2b.2 as P2b.2b.1b, then moved after it by the user: "first we must model the stroke shape and amplitude and calibrate to the different shot types, but we will need the model to be complete enough for the rest later"): the whole swing. The mallet is carried along the swing path P2b.2b.2 calibrates, the backswing from its top, the lead-in and the follow-through after the impact ends, and its head and its shaft (rigid on the head, from the socket to the top hand) are swept against every ball, the hoops' uprights and crowns, and the peg: in a real game they may lie in the swing's path and limit the playable stroke, and the crown stops the shaft when the head reaches through an open hoop (limiting the follow-through's arc) or is swung back through the jaws. Head–obstacle and shaft contact are new physics. On any crossing the impact integrator re-opens, so a ball that comes back into the follow-through's arc (stopped by a target, rebounding off a hoop or the peg, or pulling up short), another ball, a hoop or the peg is met within an integrated impact and the fault judge rules on it (29.1.6.1, 29.1.6.2, 29.1.11, 29.1.10; Law 29.3.2 lets the opponent leave the balls where they lie after the first stroke in error, so the re-hit's physics matters). P2b.2b.1 only counts the follow-through's crossings. Deferred beyond P2b but required in the final implementation: three- and four-ball cannons, including near a hoop or the peg; 29.1.10 by a part of the body (the mallet's part is P2b.2b.3's); variability of swing and aim (accuracy), a property of human input only, growing with the bottom hand's involvement (user, 2026-10-08), and conditions such as wind, under which a hoop could block a shot or a glancing blow redirect it or limit its power; divots and lasting turf damage, and with them a winter-rules variant that bans jump shots, because soft lawns deform and are damaged (user, 2026-10-09); a fully articulated body beyond P2b.2b.1's translating pivot: the feet, and the shoulder, elbow and wrist between them and the hands, from which the hands' position would follow (since P2b.2b.2b.1 the top hand's position at contact is the stance's input, and the bottom hand's position follows the rigid shaft); the Golf Croquet Rules' faults and remedies, in a GC-rules phase (until then a GC stroke is judged as an AC single-ball stroke) | P2a.1 (met): landing and above-equator strike analytic cases; bouncing balls settle; brute-force cross-check (now 3D) agrees within 1 mm including hopping scenarios. P2a.2 (met): generalised topspin-push closed form; angled wedge cross-check runs in the standard world (friction-off override removed) and agrees with brute force within 1 mm; no fallbacks (`approximate-hold`, `approximate-slip` or `budget-hold`) in limit-of-holding sweeps with friction on. P2b.1 (met): analytic contact, restitution, sticking and 5/7-roll cases through a real impact; invariants; `dt` convergence; handover accepted by phase 2; phase 2 bit-identical after the `SurfaceProps` move; stop-shot probe and stiffness sensitivity recorded. P2b.2a (met): obstacle analytic cases (contact time, restitution, stick and slip, the peg's own material); P2b.1 bit-identical without obstacles in reach (digest, shot mix, slow tests); no obstacle overlap handed to phase 2 (obstacle fuzz); fault table and the C29.20.4 sequences; crush geometry, with the crush distance recorded. P2b.2b.1 (met): tracked-drive, head–turf, head–ball and swing-model analytic cases; force-table drives bit-identical to P2b.2a; the swung body's effective mass at the face centre within 10 % of the head's mass on the drive's canonical setup, and measured by the strike; every default preset's canonical setup runs end to end with no re-entry guard hit and no ball centre more than 5 mm above R, its ratios recorded against the coaching ranges, the GC stop's distances after the touch over the gap, and the late re-hit's crossings. P2b.2b.2a: the downswing's analytic cases (the energy integral and the work–energy balance within 0.1 %); every preset's canonical setup run from top to finish with no re-entry guard hit, no ball above R + 5 mm and no `follow-cap`, its trajectory continuous at every boundary; force tables bit-identical; each preset's default planning 3 m/s within 2 % (or its sourced bound's nearest). P2b.2b.2b.1: the stance's analytic cases (the hands–lean round trip within 1e-12 rad, an upright shaft exactly upright at any contact height, the pose); every preset's canonical pose at its default lean; force tables and the upright presets bit-identical; the rolls' canonical setups run from top to finish as P2b.2b.2a's; each roll's refitted default planning 3 m/s within 2 %. P2b.2b.2b.2a: the laws' analytic cases; phase 2 bit-identical without a landing; every preset's canonical setup run end to end; the strokes and landings recorded. P2b.2b.2b.2b (met, with two exceptions the user accepted at the pre-flight gate; see "P2b.2b.2b.2b outcomes (2026-10-12)"): the flex's, the hands' arc's, the pendulum phase's, the finish's and the handover rule's analytic cases; the pass roll's "punch beats coast" test passes, its `it.fails` removed; no run of any preset's late re-hit sweep ends with the head overlapping a ball as handed over; the head stays on point behind the striker's ball (its centre behind the ball's along aim, every face contact no higher than R·sin 45° above the ball's centre, the lean at most 45°) on every roll's canonical runs at 2 and 3 m/s and over the preset sweep, each failure counted and listed (exception: the pass roll at 2 m/s, a late re-contact); the swing presets, force tables and phase 2 bit-identical; every preset's canonical setup run from top to finish as P2b.2b.2b.1's (exception: the pass roll's ball 19.17 mm above R, the turf's rebound); the pre-flight gate run and ruled on; the probe's figures recorded; `ENGINE_VERSION` 0.10.0. P2b.2b.2b.2c and P2b.2b.2b.3: each law's analytic cases, and the rolls stop failing (no dead stop, credible distances, and the roll played as "P2b.2b.2b decisions and findings (2026-10-08)" describes: the angle held, never beyond 45°, through a push whose repeated face touches are acceptable); the ratios recorded, not gated (user, 2026-10-08). P2b.2b.2c: standard stroke ratios within tolerance of sourced figures (stop shot and drive are calibration targets, the rolls held-out validation; see "P2b.2 decisions"); stop → pass-roll monotonic; pull emerges on wide rolls without special-casing; stop-shot lift emerges in the AC stop (striker's ball clear of the turf during the transfer, meeting the croqueted ball just above its equator, no jump flag). P2b.2b.3: the head and the shaft are swept along the whole swing (backswing, lead-in and follow-through) against every ball, the uprights, the crowns and the peg; every crossing, including those the P2b.2b.1 probe counts, is integrated as a further contact within the impact and judged (29.1.6.1, 29.1.6.2, 29.1.11, 29.1.10); head–obstacle and shaft contact analytic cases; the crossing counts re-measured. |
 | **P3 — Profiles and calibration** | Stored profile wrapping P2b.2b.1's physical `SwingProfile` (plus grip style, pre-filling the hands, weighting and face, with face presets beyond wood, of which only PTFE has measured data; home-lawn speed, fitted parameter bounds, versioning; which drive fields are fitted is decided here, the stance (the top hand's position at contact and the grips) and the body being entered; how an entered stance behaves when the player's mallet changes, its hands kept and its lean following, or its defaults re-derived per mallet; exporting `stanceLean` and `handsAheadFor` once a reader needs them), with the default "typical club player" profile from P2b.2b.2; fitting the effort and tempo (`torqueMax`, `tempoSlow`, `tempoFast`, the hands' tempo) per player; median-of-attempts input; optimiser fitting drive profile per stroke type; plausibility bounds and rejection | Round trip recovers fitted parameters within ±5 % and distances within ±2 %; out-of-bounds fits rejected |
 | **P4 — Planner, renderer and share links** | Svelte planner (placement with snap-back, nudge, croquet-stroke snap-into-contact, stroke controls in the player's order — shot type, balls, stance, hands, contact, then the rehearsed swing, its reach and its timing — target hoop, lawn speed; casting versus planted ways of setting up and rehearsing a shot, and how much of the set-up a weaker shot uses, decided here (user decisions 2026-10-05); both are styles of human input (user, 2026-10-08): casting rehearses the pendulum above the ball's plane, then dips it for the striking swing (finer line and weight, more risk of topping or hitting the turf); planting sets the face a few millimetres behind the ball on line, then takes one backswing and strikes on the first return (a cleaner, more powerful strike, no chance to adjust); the computer, unlike a human, always judges line and weight perfectly), Canvas 2D renderer, compare ghost overlay, honesty note, versioned fragment link format with migration and notices, wrapped local storage for profiles | Playwright suites at tablet/desktop/phone viewports in Chromium, WebKit, Firefox; link round-trips reproduce results |
 | **P5 — Delivery and budgets** | GitHub Pages deploy workflow; performance budget in CI (Chromium CPU throttle calibrated once against the reference iPad), including the cost of contact chatter (with friction on, P2a.2's realistic shot mix makes at most 404 resting-contact re-solves in a shot, and three-ball pushes up to 745 and about 75 ms of engine time on an Apple M4, which the work budget does not see; four-ball pushes end in `budget-hold`; see the P2a.2 outcomes); a swing stroke's fixed preparation, profiled on an Apple M4 (see the P2b.2b.2a outcomes' cost): (F2) fill the free pendulum's table lazily, up to the largest index read, not the whole 1.2 s (about 16 ms per `prepareTrack`, which `simulateImpact` and `simulateStroke` each run); (F3) rewrite `scanDownswing` in scalars with no per-sample allocation (about 31 ms per swing-mode `planStroke`) and cache it for `swingApproach`, which repeats it, keeping it arithmetic-identical since the lead depends on its `grounded`; (F4) the same for `planDownswing`'s acceleration (about 5 ms); bundle-size budget; cross-engine determinism test | All budgets enforced in CI; site live |
@@ -948,6 +948,86 @@ the Solomon grip with a 42" shaft and a 13.5" head, is 5'10"–5'11" with a long
   than bounce": P3's qualitative check for its lawn presets (the design's §7), not a fit target. Its consequence: a
   winter-rules variant that bans jump shots, because soft lawns deform and are damaged, recorded beside the deferred
   "divots and lasting turf damage" in the P2 row.
+- **The roll as played** (user, 2026-10-11, the P2b.2b.2b.2b brainstorm; the design's "The roll as played"). It
+  extends the account of 2026-10-08 and describes behaviour, not a number to fit:
+  - **Two phases.** A conscious hands-forward push with the mallet at the stance's angle, then, depending on the power
+    and the ratio wanted, the pendulum action continued or accelerated towards the end of the stroke. The body takes
+    whatever position it needs to maintain the push, so the model cares about the hands, not the body.
+  - **The hands' path.** The hands travel forward but dip a little during the push, which keeps the face on the ball
+    while the mallet's angle rises from about 31° to about 42°. The dip is a flex: the arms and wrists give as the
+    balls and turf resist the push, and the recovery from it helps drive the balls. The hands rise again in the
+    pendulum phase. The low point falls partway through the push or at its end, later for a longer push. The hands
+    feel as if on a shallow arc whose centre is high above, perhaps more ovoid than circular.
+  - **The angle** rises through the push as the flex gives, a few degrees above the contact lean, never beyond 45°.
+    The head stays behind the striker's ball, and the repeated face touches are part of the push.
+  - **The phasing, per shot.** The ball's position back in the stance sets the push's length. The player chooses how
+    hard to push and when to start the pendulum phase; a harder push needs it sooner, and a harder, punchier pendulum
+    phase sends the striker's ball further. A close-range roll uses a short push and little pendulum phase; a
+    full-lawn roll needs a long, fast push with excellent timing of the pendulum phase. Starting the pendulum phase
+    too soon is a common mistake and gives a poor shot. The player thinks mainly of where the balls should end up;
+    choosing the inputs from a target is the planner's job (P4).
+- **The user's decisions for P2b.2b.2b.2b** (2026-10-11, the design's "Decisions"):
+  - compliant hands on an intended path, over a rigidly prescribed hands' path alone and over today's path plus an
+    angle spring alone: "Let's model it and see what emerges, it may need refinement";
+  - the intended path is the hands' own arc, a shallow circle in the swing plane centred high above, descending into
+    contact (correcting the first draft's level path); its shape a per-player preset, a flagged placeholder like
+    `handAngle` (`handArcRadius` 1.5 m, `handArcLow` 0.5);
+  - the flex's form: a stiffness rising linearly with the hand's force and a constant damping ratio, both from the arm
+    literature;
+  - the pendulum phase's driven effort ships in this step (spec review), over letting go alone with the effort
+    deferred to P2b.2b.2c: it is the player's control for sending the striker's ball further;
+  - the hands descend at contact ("partway through the push: the hands still descend at contact"), reopening
+    P2b.2b.2a's "hands arrive with no vertical velocity"; Gugan's 6–16° descent a held-out check, never a target;
+  - a pre-flight gate that stops for the user on the canonical rolls; calibration waits ("We can calibrate when/if
+    it works": P2b.2b.2c);
+  - at plan review, on the plan's decision 2 (the intended path from the actual grips' positions, with the planned
+    velocity, not the actual): "Planned velocity".
+- **Vocabulary** (P2b.2b.2b.2b design). "Split" and "ratio" keep their croquet meanings only: a split sends the balls
+  off in significantly different directions, and the ratio is the two balls' relative travel. The distribution of
+  time and effort between a roll's two phases is its **phasing**; the second phase is the **pendulum phase**, the
+  rotation about the top hand that the downswing already calls the pendulum (`pendulumShare`). An established croquet
+  term, if one exists, is a later rename.
+- **The P2b.2b.2b.2b pre-flight gate's rulings** (user; the record, with each round's result, is the header of
+  `docs/superpowers/probes/2026-10-11-p2b2b2b2b-gate.txt`). On the flex as first built the face let the striker's ball
+  go: its damping, about 12 N·s/m against the old hands' 198, gave about 12 N of recovery against 120 N.
+  - Round 1 (2026-10-11): option 3, the push intent, "match resistance, capped", amended: "The hands are primed and
+    the brain is expecting the resistance but they are still human hands." A lagged, capped push intent (d807ecb,
+    2df07f8).
+  - Round 2 (2026-10-11): "Add fast impedance". A hand mass on grip tissue, Dong et al. 2013, lumped (52b297b).
+  - Round 3 (2026-10-11): "Full arm chain". Dong et al. 2013's x_h chain per hand (4edb059).
+  - Round 4 (2026-10-11): "Fix the lever pair". Stopped at the trace: the lever pair is exact and unique; no change.
+  - Round 5 (2026-10-12): "Trace pitch lag, smooth alpha". A continuous α in the held slope (f99f831); the pitch lag
+    starts with the blow on the light head, and the flex sets its recovery.
+  - Round 5's trace (2026-10-12): "Trace the ball rise". The turf bed's elastic rebound: the leaning face presses the
+    ball 3.09 mm in and lets go faster than the bed unloads; the ball leaves at 0.623 m/s.
+  - Round 6 (2026-10-12): "Face follows the ball". Stopped: the push intent is the wrong lever; its lag keeps it flat
+    through the 3 ms release.
+  - Round 7 (2026-10-12): "Firmer grip, sourced". Stopped: no parameter-level grip-force dependence of the x_h model.
+  - Round 8 (2026-10-12): "Read Aldien 2005 in full". A firm-grip fit is not feasible: one total-impedance curve per
+    grip level against fifteen parameters, and its 30 N magnitudes disagree with Dong's.
+  - Round 9 (2026-10-12): "Trace the head's rise". Not a plan defect: the soft flex turns the plan's lead into about
+    10 N against the bed's 100–200 N, so the face lets go; a flex ten times stiffer holds it (1.33 mm).
+  - Round 10 (2026-10-12): "Source arm impedance". A firm hold measures ×1.0–1.7 (at most ×3), not ×10; the lever is
+    the task behind k₀, rhythmic interaction against posture holding.
+  - Round 11 (2026-10-12): "Posture holding in the push". k_hold 744 N/m (Patel et al. 2014) and c_hold 20.7 N·s/m
+    (Tsuji et al. 1995) through the push (c5dcb29).
+  - Round 12 (2026-10-12): "End the hold when the ball goes". Stopped: "leaves for good" has no causal definition
+    without a tuned value; the late contacts come from the plan's push outrunning the ball.
+  - Round 13 (2026-10-12): "Relax from first departure". The hold relaxes with τ_push from the ball's first departure
+    from the face (7843e2b).
+  - Round 14 (2026-10-12): "Go on with round 14". The gate accepted at 7843e2b, the skipped cases re-baselined with
+    their figures, and two follow-ups for the next phase: the plan's push outrunning the ball and the turf bed's
+    elastic rebound.
+  - The levers ruled out, each with its trace in the gate record: the lever pair (exact, not spurious); the push
+    intent as the face's follower (too slow); a firm grip (Aldien 2005 unsourceable at the parameter level); and arm
+    impedance at ×10 (a firm hold measures ×1–3).
+- **The handover rule's rulings** (user, 2026-10-12). The late re-hit sweep found four off-canonical runs whose
+  handover threw, each ball sunk deeper than its static sink at the impact's end. "Trace it first", then "Option 1
+  alone": the rule's bound is the ball's actual depth at the impact's end, max(sink, min(R − z, `TURF_PIT_DEPTH`))
+  + `CONTACT_TOLERANCE`, `TURF_PIT_DEPTH` the engine's existing 1 mm pit bound (4fbee79).
+- **The turf and the jump shot** (user, 2026-10-12). A future jump shot (the ball driven into the ground, its energy
+  returned so it jumps a hoop) depends on the turf's rebound. Any turf loss must be sourced, and tested against both
+  the roll's press and a jump drive. The turf is never tuned against the roll's figures.
 
 ## P2b.2b.2b.2a outcomes (2026-10-09)
 
@@ -1073,6 +1153,175 @@ the fit's in `…-turfFit.txt`. Observations, not gates, but for exit criteria 2
   same expected fail.
 - **Public:** `FaceMaterial` loses `restitution` and `contactTime`; `SurfaceProps` gains `bedModulus` and
   `bedRecovery`; `ShotEvent` gains `landing-cap`; `ImpactEvent` gains `impact-turf-pit`; `ENGINE_VERSION` 0.9.0.
+
+## P2b.2b.2b.2b outcomes (2026-10-12)
+
+Measured by `scripts/strokeProbe.ts` and `scripts/swingProbe.ts` (node v26.11.1) on the branch at engine 0.10.0
+(162746e plus Task 9's probe sections), against P2b.2b.2b.2a's probe output from `main`. The raw output is in
+`docs/superpowers/probes/2026-10-12-p2b2b2b2b-strokeProbe.txt` and `…-swingProbe.txt`; the pre-flight gate's record is
+`…/2026-10-11-p2b2b2b2b-gate.txt`. The rulings are in "P2b.2b.2b decisions and findings" above and in the design's
+amendments. Observations, not gates, but for the exit criteria.
+
+- **The arm's sourced values** (`reference/contact.json`; the sources, digests and quotes in
+  `reference/sources/README.md`, cited, not mirrored). Measurements of the human arm only, none tuned to a croquet
+  figure:
+  - the rhythmic flex: k₀ 116 N/m (`armStiffness`) and m_arm 0.4465 kg (`armEndpointMass`), Fortineau et al. 2023's
+    means; ζ_arm 0.69 (`armDampingRatio`), derived from the same means; κ 2.55 N/m per N (`armStiffnessPerForce`),
+    Takagi et al. 2020's slope against grasp force, an analogue extrapolated from 5–20 N to a roll's push;
+  - the pendulum phase's push: F_pendulum 64.3 N (`pendulumForce`), Hallbeck 1994's isometric wrist flexion as tabled
+    by Napper et al. 2023;
+  - the push intent (gate round 1): F_push 92.2 N (`pushForce`, Das and Wang 2004, one arm's push at extreme reach)
+    and τ_push 0.125 s (`pushResponseTime`, Augustsson et al. 2025, a voluntary force rise);
+  - each hand's chain (gate rounds 2–3): Dong et al. 2013's x_h 5-DOF mean property-based model, forearm 0.344 kg,
+    hand 0.178, fingers 0.081, palm and finger skin 0.015 and 0.016 kg, and K1–K4 9988, 3991, 43,205 and 109,271 N/m
+    with C1–C4 36.0, 56.2, 57.0 and 65.8 N·s/m (K0 and C0 recorded, replaced by the slow flex);
+  - the posture-holding push (gate round 11): k_hold 744 N/m (`armHoldStiffness`, Patel et al. 2014, fore–aft at 0 %
+    co-contraction) and c_hold 20.7 N·s/m (`armHoldDamping`, Tsuji et al. 1995), relaxing with τ_push from the ball's
+    first departure (round 13).
+- **The rolls against the roll as played** (`asPlayed`, each roll's canonical setup at 2 / 3 m/s; byte-identical to
+  the gate's round-13 output):
+  - the head on point: half and full rolls hold at both speeds; the pass roll holds at 3 m/s and **fails at 2 m/s**
+    (the face's contact 33.49 mm above the ball's centre against R·sin 45° 32.55 mm, the lean 43.38°, at 136.8 ms);
+    the head's centre at least 140.93 / 145.54 mm (half), 102.31 / 127.10 (full) and 91.01 / 122.83 (pass) behind
+    the ball's;
+  - the face intervals: half 4 / 3 over 216.9 / 26.5 ms, full 7 / 3 over 112.1 / 35.1 ms, pass 8 / 5 over 136.8 /
+    26.3 ms (2a at 3 m/s: 3, 11, 6);
+  - the lean through the contact: half 21.44–28.69° / 23.97–25.68°, full 31.00–39.89° / 31.00–36.24°, pass
+    33.99–43.38° / 33.99–37.50°, never beyond 45°; the follow-through's highest pitch past vertical on every run,
+    12.03–19.42°;
+  - the finish: half 962.3 / 904.6 ms, full 823.1 / 639.1 ms, pass 816.6 / 586.2 ms; the full and pass rolls at
+    3 m/s with `follow-head-deep`, the rest unflagged;
+  - the hands' dip: lowest −6.96 / −8.74 mm (half, at 69.0 / 62.0 ms after contact), −16.18 / −20.25 (full, 83.0 /
+    70.0 ms), −12.49 / −8.00 (pass, 392.0 / 57.0 ms); at the finish +1.76 to +11.22 mm, risen again;
+  - the head's descent at contact 11.84 / 11.42° (half), 8.31 / 8.24° (full), 9.62 / 9.49° (pass), against Gugan's
+    6–16° (2a at 3 m/s: 9.70, 3.05, 4.48°);
+  - the hands' force along aim at the pendulum phase's start 9.1 / 22.3 N (half), 9.3 / 16.8 (full), 18.9 / 23.0
+    (pass); its least after the push −4.9 N (half 2 m/s; at 3 m/s the impact ends before the push does), −11.3 /
+    −20.9 (full), +3.7 / −25.7 (pass): the flex's spring and damper only, no brake;
+  - the striker's ball loses 0.39 / 0.80 m/s (half), 0.33 / 0.64 (full) and 0.65 / 1.03 (pass) while the face is on
+    it; the flex's step at contact 0.00 N on every run (decision 2);
+  - the ratio 1.75 / 3.08 (half), 1.57 / 1.48 (full), 0.70 / 0.90 (pass).
+- **Exit criterion 4 over the preset grid** (`onPoint`, 225 runs a roll): half 0 off point, full 71 (45 at 1 m/s, 22
+  at 2, 4 at 3), pass 141 (45 at 1 m/s, 41 at 2, 29 at 3, 14 at 4, 12 at 6), round 4 having had 0 / 52 / 79. Every
+  miss is the face's contact above R·sin 45° (full 33.0–46.0 mm, lean 38.9–42.5°; pass 32.8–45.8 mm, lean
+  40.4–52.7°); no run ends with the head past the ball's centre. The counts were taken at the gate, before the
+  handover limit (4fbee79), and they stand: on point is measured over the impact (the head behind the ball, the
+  contact height, the lean), from the integrator's impact snapshots, and the handover acts only after the impact's
+  end, so it cannot change them. This run, after 4fbee79, reproduces the gate's sweep byte for byte.
+- **The pendulum-timing sweep** (`timing`, `pendulumAt` 0.2 / 0.4 / 0.6 / 0.8 / 1.0; ratio, then the striker's
+  distance):
+  - half roll, 2 m/s: 2.57, 2.60, 2.55, 1.75, 1.69 (0.72–0.73 m, then 1.11 and 1.13 m); 4 m/s: 3.46, 3.00, 3.53,
+    3.52, 3.52 (2.03–2.41 m);
+  - full roll, 2 m/s: 1.57, 1.52, 1.54, 1.57, 1.57 (1.00–1.03 m); 4 m/s: 3.09, 1.58, 1.90, 2.49, 2.50 (1.91, 3.72,
+    3.11, 2.37, 2.40 m);
+  - pass roll, 2 m/s: 0.78, 0.78, 1.01, 0.70, 0.87 (1.29–1.79 m); 4 m/s: 1.18, 1.05, 1.04, 1.05, 1.03 (4.15, then
+    4.67 m).
+
+  The full roll at 4 m/s is the most sensitive to the phasing (its striker's distance 1.91–3.72 m), as the user
+  expects of a long, fast push; the half roll's is sensitive at 2 m/s. Recorded only.
+- **The held-out checks** (`heldOut`, each roll at 3 m/s, against measurements never fitted):
+  - the head's descent at contact against Gugan 4's stroke angle, 6–16°: half 11.42°, full 8.24°, pass 9.49°, all
+    inside; through the push it turns upward (to −16.49°, −27.59° and −24.78°), the head rising off the ball;
+  - the apparent contact against the CA's 30–58 ms: half 26.5 ms, full 35.1, pass 26.3; the full roll inside, the
+    others just short;
+  - the second contact against Gugan 4's and Hall's several milliseconds: it starts 5.9 ms (half), 6.2 (full) and
+    4.4 (pass) after the strike's end;
+  - the face intervals against Cross's seven taps: 3, 3 and 5;
+  - the ratio against Gugan's: half 3.08 (2.30–2.46), full 1.48 (1.20–1.24), pass 0.90 (0.94–1.21); P2b.2b.2c
+    calibrates them.
+- **2a's items, re-recorded** (the swing presets' lines are byte-identical to 2a's in both probes, but for the
+  machine-dependent times):
+  - the ratios over 2, 2.5, 3, 3.5 and 4 m/s: half roll 1.75, 2.84, 3.08, 3.27, 3.52 (was 2.43, 2.49, 2.70, 2.83,
+    2.94); full roll 1.57, 1.77, 1.48, 1.61, 2.49 (was 1.07, 1.25, 1.46, 1.49, 1.45); pass roll 0.70, 0.83, 0.90,
+    0.98, 1.05 (was 7.45, 11.27, 16.00, 20.47, 29.21): the pass roll's dead stop is gone at every speed. Drive, AC
+    stop and GC stop unchanged;
+  - the striker's face intervals on the canonicals (`faults`): half roll 3, full 3, pass 5 (was 3, 11, 6), each still
+    a 29.1.6.1 possible fault on the striker's ball; the swing presets unchanged;
+  - the late re-hit's crossings: no canonical crosses a ball. Sweep runs crossing a ball: half roll 0 of 225 (was
+    104), full roll 27 (5), pass roll 33 (88); the swing presets unchanged (single-ball 30, drive 18, AC stop 12, GC
+    stop 39); none an obstacle. The rolls' new crossings come at 1 m/s 356–450 ms after contact, the head at rest at
+    the push's length and the ball creeping on beneath its rim, 0.000–0.024 mm deep (the pass roll also at 2 m/s on
+    two runs and at 3 m/s, drive −1, on seven);
+  - the handover's overlaps (**exit criterion 3**): no run of any preset ends with the head overlapping a ball as
+    handed over (was 15 of the pass roll's). `swingProbe.ts` now counts a ball only above `CONTACT_TOLERANCE`
+    (1e-9 m), the rule's own threshold: without it the half roll would count 11 runs, each overlapping by less than
+    0.0005 µm. The four runs whose handover threw before 4fbee79 now clear by 1.07–1.65 mm sideways;
+  - the cap and flag tallies of the `presets` sweep (225 runs a roll, none rejected): `impact-cap` half roll 1, full
+    4 (was 0, 0); `impact-head-approaching` full roll 4 (was 0); `impact-off-face` full roll 83 (27), pass roll 127
+    (176); `impact-head-deep` and `impact-turf-pit` on no roll run. The swing presets' tallies unchanged;
+  - the longest impact before the cap: half 288.1, full 449.2 and pass 407.8 ms (was 85.4, 392.5, 447.6), against
+    the 450 ms cap;
+  - in `swingProbe.ts`'s canonical runs: the highest ball centre 3.72, 2.29 and 19.17 mm above R for the rolls (was
+    0.79, 0.66, 3.43); braking hands −0.467, −1.189 and −2.466 N·s (was −0.818, +1.047, −1.130), the full roll's
+    hands now pushing, not braking; the bottom hand's release (the pendulum phase's start) at 66.3, 81.4 and 83.1 ms
+    after contact, Δθ −5.50°, −10.66° and −14.66°; no impact flag on any canonical; entry jumps 0;
+  - cost (machine-dependent, beside P5's provisional ≤ 200 ms simulation): the roll impacts 11.1–12.4 µs/step
+    (`strokeProbe.ts`) and 10.5–12.4 (`swingProbe.ts`, medians), was 6.8, 9.6 and 12.0; `simulateImpact` 149, 345
+    and 347 ms for the half, full and pass rolls (was 127, 339 and 572 in the baseline run), the full and pass rolls
+    above the budget; the follow-throughs 89,207–167,665 steps at 2.8–2.9 µs/step. The swing presets' step counts
+    are unchanged.
+- **The rolls' re-fitted backswings** (Task 4, `scripts/fitStrokeShape.ts`): h₀ 435.4 mm (half, was 438.0), 433.7
+  (full, 437.7) and 443.9 (pass, 448.8), each planning 3.0000 m/s, the hands' tempo 0.4998 s; the hands now arrive
+  descending on their arc, so a smaller backswing reaches the same speed. The swing presets' entries are
+  byte-identical. In `speeds` the rolls plan about 1 % faster at each fixed backswing for the same reason.
+- **Also moved, by design:**
+  - the canonical runs (`strokeProbe.ts`): the impact 66.3, 154.9 and 140.2 ms for the rolls (was 58.8, 111.8,
+    143.4), the finish 904.6, 639.1 and 586.2 ms (was 259.7, 297.4, 187.5), the head at the finish 46.31, 67.10 and
+    49.96 mm below and 711.73, 782.42 and 752.77 mm along aim from contact;
+  - the pit (`pit`): the striker's ball leaves its cells by 8.8–9.5 ms on the half and full rolls and by 29–30 ms on
+    the pass roll, at 2 and 3 m/s (the full roll at 3 m/s never left before the impact's end); the travel to the
+    deepest point 3.57 / 4.51 mm (half), 3.43 / 4.33 (full) and 3.83 / 4.93 (pass, was 20.10 / 29.07), now inside
+    Gugan's 3.5–18 mm but for the full roll at 2 m/s; the apparent friction 0.24 / 0.22, 0.017 / 0.016 and 0.37 / 0.39
+    against Gugan's µ ≈ 1.0;
+  - coupling (T 0.04 / 0.08 s): the rolls no longer read `HAND_COUPLING` after contact, so both rows agree (half
+    3.08 and 3 hits, full 1.48 and 3, pass 0.90 and 5);
+  - effective mass by the strike: 0.9427, 0.9092 and 0.9026 kg (was 0.9816, 0.9719, 1.0460), the pass roll now
+    −1.37 % from its closed form (was +14.31 %);
+  - tracking with no ball and no turf: the carry departs from its path by 3.5–5.2 cm and 0.05–0.14 rad through the
+    push, and by 0.55–0.66 m after it (was µm): the soft flex sags under the swung body's own motion, and after the
+    push the pendulum phase swings the head off the path by design;
+  - the full roll's `timings` rows: within 10 ms of on time the ratio 1.47–1.73 (was 1.28–1.67); the arc 20–50 ms
+    early 2.67–3.01 (was 1.63–2.01); the hands 20–50 ms early 1.87–2.33 (1.69–2.52); the dip rows 1.46–1.48 (1.46).
+- **Re-recorded test figures** (Tasks 4–6; each "was … → now" chain is in the design's amendments and in the tests'
+  comments): the pass roll's "punch beats coast" passes, punched 1.8882 m/s against coasted 1.3607 (was `it.fails`);
+  the full and half rolls' highest ball 2.29 and 3.72 mm above R; the half roll's finish 904.6 ms; trajectory.test's
+  lead outlasting the downswing now finishes at θ −0.192 rad, 427.7 ms; hands.test's power roll 3.63e-6 m and 4.97e-6
+  rad; the arrival tolerances in track.test and buildContact.test 8 digits; hands.test's push-end bound 2e-5 m.
+  Still skipped: the pass roll's R + 5 mm (19.17 mm) and followThrough.test's deep follow-through (a planned dip
+  always lands inside the impact).
+- **The handover's corrections on a swing preset** (Task 7): none. Instrumented over every test outside
+  `handover.test.ts`, the rule never moved a ball; only its own tests do. The swing presets', force tables' and phase
+  2's results are unchanged.
+- **Exit criterion 5:** the swing presets' full-precision digest (904 lines, `engineVersion` normalised) is
+  byte-identical through every task and gate round; the impact digest shows no diff; phase 2's lines in the shot mix
+  are unchanged (Task 8).
+- **Known gaps and follow-ups** (for the next phase; each with its trace):
+  - **The pass roll's ball rise** of 19.17 mm above R at 3 m/s is the turf bed's elastic rebound (gate round 5's
+    trace): the leaning face presses the ball 3.09 mm in and lets go faster than the bed unloads, and the ball
+    leaves at 0.62 m/s. Exit criterion 6's R + 5 mm case stays skipped. **The user's note (2026-10-12):** a future
+    jump shot, the ball driven into the ground and its energy returned so that it jumps a hoop, depends on the turf's
+    rebound. Any turf loss must be sourced, and tested against both the roll's press and a jump drive. The turf is
+    never tuned against the roll's figures;
+  - **the late re-contacts** come from the plan's push outrunning the ball (gate round 12's trace): after the ball
+    has gone, the planned push runs on to its full length faster than the ball, and at 2 m/s the hold still has
+    about 38 % of its excess at the pendulum phase's start (121.6 and 124.8 ms). So the pass roll at 2 m/s fails exit
+    criterion 4 (33.49 mm, 43.4°);
+  - the full and pass rolls at 3 m/s finish `follow-head-deep`: the pendulum phase swings the head into the turf;
+  - the full roll at 1 m/s (drive −1, up +3 mm) never releases the ball: the head's rim presses it down (n_z −0.95,
+    2.2 N) from 221.7 ms until the 450 ms cap (Task 8's trace);
+  - the impact's quiet end can fire while the ball is still rising from the turf: the pass roll at 2 m/s, drive +1,
+    up −3 mm ends 0.25 ms after its last face interval with the ball 723 µm deep and the bed pushing it up (12.5 N
+    against its 4.4 N weight), the head 33 µm over it (Task 8's trace);
+  - the arms hold at k_hold indefinitely when no ball departs, the pendulum phase and the follow-through included;
+  - the planned rate of a carry check reverses inside the continuous held slope, where the linear fall held it at
+    rest (the slope's net travel still 0; swing mode untouched);
+  - two model artefacts (the gate's review): the hand skin carries no weight before contact, and the bottom skin's
+    momentum is discarded at the release;
+  - the rolls' ratios stand above Gugan's for the half and full rolls; calibration is P2b.2b.2c's.
+- **Tests:** `npm test` 1053 passed, 4 skipped (the pass roll's R + 5 mm, followThrough.test's deep follow-through
+  and two slow cross-checks); the slow suite 1055 passed, 2 skipped (Task 8).
+- **Public:** `ShotSetup.stroke` gains `pendulumAt?` and `pendulumEffort?`; `SwingDrive` gains `pendulumAt`,
+  `pendulumEffort`, `handArcRadius` and `handArcLow`, and loses `groundDepth`; `ENGINE_VERSION` 0.10.0.
 
 ## Provisional numbers — where each is confirmed
 

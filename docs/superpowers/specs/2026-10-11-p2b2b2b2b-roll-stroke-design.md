@@ -166,7 +166,7 @@ three dimensions to its point on the intended path (§4.1):
 - F_h = F_ff,h − k_h·(x_h − x̂_h) − c_h·(v_h − v̂_h), where x_h is the grip point on the shaft and x̂_h its intended
   position.
 - **F_ff,h is the hand's share of today's feed-forward** (`handLoad`'s topShare and bottomShare): the swung body's
-  weight and the intended motion's inertia, split over the two grips so that their moments give the intended motion's
+  weight and the intended motion's inertia, shared by the two grips so that their moments give the intended motion's
   wrench. The player holds the mallet's weight and drives its intended motion. The flex is the arm's give under the
   load beyond that, the balls and turf resisting the push, as the user describes it. Without the feed-forward the head's
   weight alone would sag the hands 2–22 cm at k₀. This was the lead's call in the spec review, not the user's; it is
@@ -411,3 +411,163 @@ The user rules: go on, change the defaults (the hands' arc's placeholders among 
 **Housekeeping** shipped first, as its own PR (#23): `eslint-plugin-svelte` 3.23.1 and `prettier` 3.9.10. TypeScript 7
 is still blocked by typescript-eslint and svelte-check, and the actions and runner are current. The 2a pre-review's
 follow-ups landed in #24.
+
+## Amendments (plan, 2026-10-12)
+
+The plan (`plans/2026-10-11-p2b2b2b2b-roll-stroke.md`) made twelve decisions while planning. The user ruled on
+decision 2 at plan review, on the pre-flight gate (§8) over fourteen rounds, and on the handover rule's bound (§5).
+Each is recorded here with its reason. The figures are in the roadmap's "P2b.2b.2b.2b outcomes (2026-10-12)".
+
+### The plan's decisions
+
+1. **Where the new inputs live.** `SwingArc` gains `pendulumAt`, `pendulumEffort`, `handArcRadius` and `handArcLow`,
+   and loses `groundDepth`. The arm's law is the player's body, like `armMass`: `Hands` and `SwingProfile.body` gain
+   `flex` and `pendulumForce`, which `profile.ts` reads from `reference/contact.json` and `planStroke` copies into
+   `Hands`. Swing mode carries them all and never reads them. Reason: the arm belongs to the player, the phasing to
+   the shot.
+2. **The intended path starts from the actual grips' positions, not their velocities** (§4.1 said both). The intended
+   position is the actual grip at the flex's first step plus the planned motion since then; the intended velocity is
+   the plan's. Reason: starting from the actual velocity would offset the intended velocity for the rest of the
+   stroke, never decaying, so the push would never come to rest at its length. The carry downswing's dampers keep the
+   actual velocity close to the plan's at contact; the flex's step there is 0.00 N on every gate run.
+   **The user's ruling (plan review, 2026-10-11): "Planned velocity"**, the plan as written. §4.1's "positions and
+   velocities" reads "positions, with the planned velocity".
+3. **In the pendulum phase the top hand's feed-forward is the whole F_ff**: the weight and the planned motion's
+   inertia. Reason: it is the only hand on the mallet, as swing mode's top hand outside a check; its stiffness follows
+   that force (§3.1).
+4. **In carry mode after contact the feed-forward shares are not scaled by the grips.** Reason: §3.1 gives each hand
+   "the hand's share of today's feed-forward". Every roll's grips are 1, so the rolls do not notice.
+5. **The finish needs a forward swing.** Through the push the shaft leans further, so the pitch rate is negative and
+   the apex rule would fire at once. The finish is the first step after the pendulum phase starts at which the pitch
+   rate is at or below zero after it has been positive: a latch in `GripState`, set by `handLoad`. A head that never
+   swings forward runs to `FOLLOW_CAP` and is flagged `follow-cap`. Reason: §4.3's apex is the forward swing's.
+6. **The handover rule acts on tracked drives only.** Reason: a force table's head is its face alone (P2b.1), so its
+   run may end with the barrel through a ball, which no handover rule should move. Force tables stay bit-identical.
+7. **The rule's bound per ball** is its static sink at its position at the impact's start (`sinkSolver`), plus
+   `CONTACT_TOLERANCE`. Reason: §5's "at most the static sink". Superseded by the user's ruling below.
+8. **A carry whose hands never reach the pendulum point** (still hands, say) never starts the pendulum phase; the
+   impact's end does not wait for it, and the follow-through runs to `FOLLOW_CAP` with `follow-cap`. Reason: the wait
+   (§4.2) is for a pendulum phase the plan reaches; one it never reaches must not hold the impact open.
+9. **`PathPoint` gains `theta`**, the planned pitch. Reason: the flex's intended bottom grip needs it.
+10. **`Downswing` gains `tangent`** (the Hermite term, vertical; `ZERO` in swing mode), and `DownswingInput` and
+    `StrokeChoice` gain `arrival`, the arc's slope dz/ds at contact. Reason: §4.1's downswing arriving on the arc.
+11. **The analytic finish cases** (§7.1) cover a free swing past vertical and a head that never swings forward.
+    Reason: a free pendulum's lowest point is vertical, so a swing that tops out short of vertical needs a ball, the
+    turf or moving hands to hold it back; the probe records that case on the rolls.
+12. **Exit criterion 4 is measured by a new probe section, `onPoint`** (`scripts/strokeProbe.ts`), on the canonical
+    runs at 2 and 3 m/s and on swingProbe's preset grid for each roll. Reason: the criterion is over the impact's
+    steps, which only a recorder sees.
+
+### The pre-flight gate (§8): the user's rulings
+
+The authoritative record is the header of `docs/superpowers/probes/2026-10-11-p2b2b2b2b-gate.txt`. On the flex as
+first built (§3) the face let the striker's ball go: the flex's damping (about 12 N·s/m against the old hands' 198)
+gave about 12 N of recovery against 120 N, and the taps fell from 11 to 2 on the full roll. The rulings:
+
+- **Round 1 (2026-10-11):** option 3, the push intent, "match resistance, capped", amended: "The hands are primed and
+  the brain is expecting the resistance but they are still human hands." Through the push the hands add the ball's
+  sensed resistance along aim through a first-order lag, τ_push 0.125 s (`pushResponseTime`, Augustsson et al. 2025),
+  capped at F_push 92.2 N (`pushForce`, Das and Wang 2004). Commits d807ecb, 2df07f8.
+- **Round 2 (2026-10-11): "Add fast impedance".** Each hand a mass on its grip tissue (Dong et al. 2013, lumped), in
+  series with the slow flex. Commit 52b297b.
+- **Round 3 (2026-10-11): "Full arm chain".** Dong et al. 2013's x_h chain per hand, un-lumped (forearm, hand and
+  finger masses, the skins rigid at the grip, five spring–dampers), the slow flex and the push acting on the forearm
+  mass. In carry mode the hand masses replace `armMass`. Commit 4edb059.
+- **Round 4 (2026-10-11): "Fix the lever pair".** Stopped at the trace: the sharing rule's lever pair is exact and
+  unique, not spurious; the plan's α steps through the lever a/b. No change.
+- **Round 5 (2026-10-12): "Trace pitch lag, smooth alpha".** The review fixes (74d96ca), then a continuous α in the
+  held slope (f99f831): §4.1's "slope held" ramp becomes a quartic with no step in the planned pitch's acceleration.
+  The trace: the pitch lag starts with the blow on the light head, and the flex sets its recovery.
+- **Round 5's trace (2026-10-12): "Trace the ball rise".** The pass roll's ball rise is the turf bed's elastic
+  rebound: the leaning face presses the ball 3.09 mm in and lets go faster than the bed unloads; the ball leaves at
+  0.623 m/s. No change.
+- **Round 6 (2026-10-12): "Face follows the ball".** Stopped: the push intent is the wrong lever; its lag keeps it
+  flat through the 3 ms release. No change.
+- **Round 7 (2026-10-12): "Firmer grip, sourced".** Stopped: no measured grip-force dependence of the x_h chain at the
+  parameter level. No change.
+- **Round 8 (2026-10-12): "Read Aldien 2005 in full".** A firm-grip fit is not feasible: one total-impedance curve per
+  grip level against fifteen parameters, and its 30 N magnitudes disagree with Dong's. No change.
+- **Round 9 (2026-10-12): "Trace the head's rise".** Not a plan defect: the soft flex turns the plan's lead into about
+  10 N against the bed's 100–200 N, so the face lets go; a flex ten times stiffer holds it (1.33 mm). No change.
+- **Round 10 (2026-10-12): "Source arm impedance".** A firm hold measures ×1.0–1.7 (at most ×3), not ×10; the lever
+  is the task behind k₀, rhythmic interaction against posture holding. No change.
+- **Round 11 (2026-10-12): "Posture holding in the push".** Through the push each arm's flex takes the posture-holding
+  endpoint impedance, k_hold 744 N/m (`armHoldStiffness`, Patel et al. 2014) plus κ·|F_ff| and c_hold 20.7 N·s/m
+  (`armHoldDamping`, Tsuji et al. 1995); Fortineau's rhythmic values elsewhere. Commit c5dcb29.
+- **Round 12 (2026-10-12): "End the hold when the ball goes".** Stopped: "leaves for good" has no causal definition
+  without a tuned value. The trace: the late contacts come from the plan's push outrunning the ball.
+- **Round 13 (2026-10-12): "Relax from first departure".** The hold relaxes as exp(−(t − t_d)/τ_push) from t_d, the
+  first step a face–ball pair is open with the ball separating along the last normal (`ImpactRun.departure`); with no
+  departure the arms hold. Commit 7843e2b.
+- **Round 14 (2026-10-12): "Go on with round 14".** The gate accepted at 7843e2b, the skipped cases re-baselined with
+  their figures, and two follow-ups recorded for the next phase: the plan's push outrunning the ball (the late
+  re-contacts) and the turf bed's elastic rebound (the ball's rise). Commits 6628a48 and d25b39c (the gate's review).
+
+So §3.1's law, as built, is the flex plus the lagged push intent, through each hand's Dong chain, held at the
+posture-holding impedance until the ball's first departure. The levers ruled out, each with its trace in the gate
+record: the lever pair (exact, not spurious); the push intent as the face's follower (too slow); a firm grip (Aldien
+2005 unsourceable at the parameter level); and arm impedance at ×10 (a firm hold measures ×1–3).
+
+### The handover rule (§5): the user's rulings
+
+Task 8's late re-hit sweep found four off-canonical runs whose handover threw: the full roll at 1 m/s, drive −1, up
++3 mm (three sides), and the pass roll at 2 m/s, drive +1, up −3 mm. Each ball sat 534–723 µm deep at the impact's
+end, deeper than its static sink (436.6 µm), and the lift to z = R drove it 515–577 µm into a head lying over it. At
+6628a48, before the rule, the same overlaps reached phase 2 unnoticed.
+
+- **"Trace it first" (2026-10-12):** trace only, with a hard stop before any change.
+- **"Option 1 alone" (2026-10-12):** the bound is the ball's actual depth at the impact's end, capped by the engine's
+  existing pit bound: max(sink, min(R − z, `TURF_PIT_DEPTH`)) + `CONTACT_TOLERANCE`, `TURF_PIT_DEPTH` 1 mm (commit
+  4fbee79). §5's "at most the static sink (about 0.44 mm)" is superseded. The four balls move 1.07–1.65 mm sideways.
+- The lead's ruling (2026-10-12): `swingProbe.ts` counts a ball overlapping at the impact's end only above
+  `CONTACT_TOLERANCE`, the rule's own threshold.
+
+### The user's note on the turf (2026-10-12)
+
+A future jump shot (the ball driven into the ground, its energy returned so it jumps a hoop) depends on the turf's
+rebound. Any turf loss must be sourced and tested against both the roll's press and a jump drive. The turf is never
+tuned against the roll's figures.
+
+### Against the exit criteria
+
+- Exit criterion 4: the pass roll at 2 m/s fails on its canonical run (the face's contact 33.49 mm above the ball's
+  centre, the lean 43.38°), a late re-contact of the plan's push outrunning the ball; the user accepted the gate with
+  it (round 14). The sweep's misses are recorded in the roadmap.
+- Exit criterion 6: the pass roll's canonical setup still raises its ball 19.17 mm above R (the turf's rebound). Its
+  R + 5 mm case stays `it.skip`, gate-ruled, rather than loosened.
+- Exit criterion 3 holds: no run of any preset ends with the head overlapping a ball as handed over.
+- Exit criterion 5 holds: the swing presets' full-precision digest (904 lines) is byte-identical, the impact digest
+  shows no diff and phase 2 is unchanged. The handover rule moved no ball outside its own tests.
+
+### Behaviour the spec did not predict
+
+- The full and pass rolls at 3 m/s finish with `follow-head-deep`.
+- The full roll at 1 m/s, drive −1, up +3 mm never releases the ball: the head's rim presses it down to the 450 ms
+  cap.
+- The impact's quiet end can fire while the ball is still rising from the turf (the pass roll at 2 m/s, drive +1,
+  up −3 mm, 0.25 ms after its last face interval).
+- The arms hold at k_hold to the end when no ball departs (a carry that strikes nothing).
+- The continuous held slope takes a carry check's planned rate past rest and back inside the slope, where the linear
+  fall held it at rest; its net travel is still 0. Swing mode's checks do not use it.
+- Two model artefacts: the hand skin carries no weight before contact, and the bottom skin's momentum is discarded at
+  the release.
+
+### Re-recorded test figures (§7.2)
+
+Each carries its step's comment in the test. The hands' arc (Task 4): the rolls' `defaultBackswing` h₀ 438.0 to
+435.4 mm (half), 437.7 to 433.7 (full) and 448.8 to 443.9 (pass); the arrival tolerances in track.test and
+buildContact.test from 9 to 8 digits (the arc turns 1.2–1.3e-9 rad in the 1 ns read); hands.test's push-end socket
+bound 2e-5 m (1.40e-5 measured). The flex and the gate (Task 5, Task 6), each as "was … → now":
+
+- "the pass roll's punch beats coast": it.fails → 1.2170 / 1.1300 m/s (the arc) → 1.8786 / 1.6386 (the flex) →
+  1.7016 / 1.2624 (push intent, fast impedance) → 1.8493 / 1.2824 (arm chain) → 1.8412 / 1.2824 (continuous α) →
+  2.1111 / 1.3187 (posture hold) → 1.8882 / 1.3607 m/s (first departure);
+- the full roll's R + 5 mm: 7.18 mm (skipped) → 4.89 → 1.88 → 2.24 → 2.29 mm at 31.5 ms;
+- the half roll's R + 5 mm: 10.15 mm (skipped) → 7.28 → 5.78 → 3.74 → 3.67 → 3.72 mm at 25.7 ms;
+- the pass roll's R + 5 mm, still skipped: 6.64 → 4.61 → 9.70 → 14.52 → 18.82 → 19.17 mm at 92.3 ms;
+- the half roll's finish: `follow-cap` (skipped) → 953.7 ms → 894.4 → 883.7 → 911.3 → 904.6 ms, θ +0.243 rad;
+- trajectory.test's lead outlasting the downswing: `follow-cap` (skipped) → θ −0.709 rad at 734.6 ms → +0.044 at
+  467.3 → −0.084 at 584.6 → −0.085 at 584.7 → −0.217 at 415.2 → −0.192 rad at 427.7 ms, `follow-head-deep`;
+- hands.test's power roll's arcs: 3.71e-6 m and 5.18e-6 rad → 3.63e-6 m and 4.97e-6 rad;
+- followThrough.test's deep follow-through, still skipped: the full roll's follow-through on its world 2.04 → 1.95 →
+  1.79 → 1.71 → 1.56 → 1.08 mm into the turf; a planned dip always lands inside the impact.

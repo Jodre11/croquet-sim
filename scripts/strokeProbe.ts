@@ -23,7 +23,12 @@
  *   the lean through the contact and the pitch through vertical, the hands' dip, the head's descent, the face
  *   intervals, the hands' force at the pendulum phase's start and after the push, the striker's ball's loss while the
  *   face is on it, the flex's step at contact and the ratio;
- * - onPoint: exit criterion 4 (the head on point behind the striker's ball) over the preset grid for each roll.
+ * - onPoint: exit criterion 4 (the head on point behind the striker's ball) over the preset grid for each roll;
+ * - timing: each roll at 2 and 4 m/s with pendulumAt from 0.2 to 1.0, the ratio and the striker's distance
+ *   (P2b.2b.2b.2b design §9);
+ * - heldOut: each roll at 3 m/s against the held-out measurements (design §9): the head's descent against Gugan 4's
+ *   6–16°, the apparent contact against the CA's 30–58 ms, the second contact against Gugan 4's and Hall's several
+ *   milliseconds, the face intervals against Cross's seven taps and the ratio against Gugan's.
  * Run with `npx --yes tsx scripts/strokeProbe.ts`; environment: SECTION (one of the names above; default all), REPEAT
  * (timed runs per stroke, default 20). Not part of the test suite; its output goes into the roadmap's outcomes.
  */
@@ -314,6 +319,33 @@ function onPoint(steps: readonly ImpactSnapshot[], striker: number, id: BallId, 
 
 const deg = (a: number): string => fmt((a * 180) / Math.PI, 2);
 
+/** The steps of `steps` at which the face presses on the ball `id`. */
+const faceOnBall = (steps: readonly ImpactSnapshot[], id: BallId): readonly ImpactSnapshot[] =>
+    steps.filter((s) => s.contacts.some((c) => c.key === `face/${id}` && c.normalForce > 0));
+
+/** The head's descent (rad, positive downward) below the horizontal along `aim` at each step the face is on `id`. */
+const descentsOn = (steps: readonly ImpactSnapshot[], id: BallId, aim: Vec3): readonly number[] =>
+    faceOnBall(steps, id).map((s) => Math.atan2(0 - s.head.velocity.z, dot(s.head.velocity, aim)));
+
+/**
+ * The face–striker intervals of `impact`, the apparent contact from the first's start to the last's end, and the gap
+ * from the first's end to the second's start (NaN with a single interval).
+ */
+function faceTiming(
+    impact: ImpactResult,
+    id: BallId,
+): { readonly count: number; readonly from: number; readonly to: number; readonly second: number } {
+    const intervals = impact.timeline[`face/${id}`] ?? [];
+    const first = intervals[0];
+    const next = intervals[1];
+    return {
+        count: intervals.length,
+        from: first?.start ?? NaN,
+        to: intervals[intervals.length - 1]?.end ?? NaN,
+        second: first === undefined || next === undefined ? NaN : next.start - first.end,
+    };
+}
+
 /** Σ|horizontal turf force|·dt over Σ vertical turf force·dt over `samples`; the steps are all IMPACT_DT long. */
 function apparentFriction(samples: readonly ContactSample[]): number {
     let along = 0;
@@ -449,15 +481,15 @@ function asPlayed(): void {
                     `behind the ball's centre at least; the face's contacts ${mm(point.height)} mm above it at ` +
                     `most (R·sin 45° ${mm(ON_POINT_HEIGHT)} mm); the lean ${deg(point.lean)}° at most (45°)`,
             );
-            const intervals = impact.timeline[`face/${setup.striker}`] ?? [];
-            const from = intervals[0]?.start ?? contactAt;
-            const to = intervals[intervals.length - 1]?.end ?? impact.duration;
+            const faces = faceTiming(impact, setup.striker);
+            const from = faces.count > 0 ? faces.from : contactAt;
+            const to = faces.count > 0 ? faces.to : impact.duration;
             const window = steps.filter((s) => s.t >= from && s.t <= to);
             const leans = window.map((s) => leanOf(s.head, aim));
             const after = follow.samples.filter((s) => s.t >= impact.duration);
             const pitchPeak = most(after.map((s) => 0 - leanOf(s.head, aim)));
             console.log(
-                `${"".padEnd(11)} ${intervals.length} face intervals over ${ms(from)}–${ms(to)} ms; lean at ` +
+                `${"".padEnd(11)} ${faces.count} face intervals over ${ms(from)}–${ms(to)} ms; lean at ` +
                     `contact ${deg(leans[0] ?? NaN)}°, ${deg(least(leans))}° to ${deg(most(leans))}° ` +
                     `through the contact; the follow-through's highest pitch ${deg(pitchPeak)}° ` +
                     `(${pitchPeak >= 0 ? "past" : "short of"} vertical), finish at ${ms(follow.finish)} ms ` +
@@ -478,12 +510,7 @@ function asPlayed(): void {
                             : `${mm(atPendulum.dz)} mm at the pendulum phase's start`
                     }; ${mm(atFinish.dz)} mm at the finish`,
             );
-            const descentOf = (s: ImpactSnapshot): number =>
-                Math.atan2(0 - s.head.velocity.z, dot(s.head.velocity, aim));
-            const onBall = steps.filter((s) =>
-                s.contacts.some((c) => c.key === `face/${setup.striker}` && c.normalForce > 0),
-            );
-            const descents = onBall.map(descentOf);
+            const descents = descentsOn(steps, setup.striker, aim);
             console.log(
                 `${"".padEnd(11)} the head's descent at contact ${deg(descents[0] ?? NaN)}°, ` +
                     `${deg(least(descents))}° to ${deg(most(descents))}° while the face is on the ` +
@@ -574,6 +601,62 @@ function onPointSweep(): void {
     }
 }
 
+/**
+ * The pendulum-timing sweep (P2b.2b.2b.2b design §9): each roll at a slow and a fast push (2 and 4 m/s), pendulumAt
+ * from 0.2 to 1.0, the ratio and the striker's distance at each. Recorded only: how sensitive the outcome is to the
+ * phasing, which the user expects to be highest on a long, fast push.
+ */
+function timing(): void {
+    console.log("== The pendulum-timing sweep (design §9): ratio and striker's distance against pendulumAt ==");
+    for (const type of ROLLS) {
+        for (const speed of [2, 4]) {
+            const cells: string[] = [];
+            for (const pendulumAt of [0.2, 0.4, 0.6, 0.8, 1]) {
+                const base = atSpeed(type, speed);
+                const setup = withStroke(base, { pendulumAt });
+                const outcome = simulateShot(setup, WORLD);
+                const start = (setup.balls[setup.striker] as BallState).position;
+                const travelled = length(horizontal(sub(outcome.motion.rest[setup.striker] as Vec3, start)));
+                const cell = `ratio ${fmt(ratio(setup, outcome), 2)}, striker ${fmt(travelled, 2)} m`;
+                cells.push(`${fmt(pendulumAt, 1)}: ${cell}`);
+            }
+            console.log(`${type.padEnd(11)} ${fmt(speed, 1)} m/s  ${cells.join("; ")}`);
+        }
+    }
+}
+
+/** Gugan's roll ratios (held out, P2b.2b.2b.2b design §9). */
+const GUGAN_RATIO: Partial<Record<StrokeType, readonly [number, number]>> = {
+    "half-roll": [2.3, 2.46],
+    "full-roll": [1.2, 1.24],
+    "pass-roll": [0.94, 1.21],
+};
+
+/**
+ * The held-out checks (P2b.2b.2b.2b design §9), each roll at 3 m/s: the head's descent against Gugan 4's stroke angle,
+ * the apparent contact against the CA's 30–58 ms, the second contact against Gugan 4's and Hall's several
+ * milliseconds, the face intervals against Cross's seven taps and the ratio against Gugan's. Recorded, not gated.
+ */
+function heldOut(): void {
+    console.log("== The held-out checks at 3 m/s (design §9): each measure against its measurement ==");
+    for (const type of ROLLS) {
+        const setup = atSpeed(type, 3);
+        const { plan, impact, steps } = recorded(setup);
+        const descents = descentsOn(steps, setup.striker, (plan.contact.drive as TrackDrive).arc.aim);
+        const faces = faceTiming(impact, setup.striker);
+        const [low, high] = GUGAN_RATIO[type] as readonly [number, number];
+        const r = ratio(setup, simulateShot(setup, WORLD));
+        console.log(
+            `${type.padEnd(11)} descent at contact ${deg(descents[0] ?? NaN)}°, ${deg(least(descents))}° to ` +
+                `${deg(most(descents))}° while the face is on the ball (Gugan 4: 6–16°); apparent contact ` +
+                `${ms(faces.to - faces.from)} ms (the CA: 30–58 ms); second contact ` +
+                `${Number.isNaN(faces.second) ? "none" : `${ms(faces.second)} ms after the first's end`} ` +
+                `(Gugan 4, Hall: several ms); ${faces.count} face intervals (Cross: seven taps); ratio ${fmt(r, 2)} ` +
+                `(Gugan: ${fmt(low, 2)}–${fmt(high, 2)})`,
+        );
+    }
+}
+
 const SECTIONS: Readonly<Record<string, () => void>> = {
     speeds,
     canonical,
@@ -584,6 +667,8 @@ const SECTIONS: Readonly<Record<string, () => void>> = {
     face,
     asPlayed,
     onPoint: onPointSweep,
+    timing,
+    heldOut,
 };
 for (const [name, section] of Object.entries(SECTIONS)) {
     if (SECTION === "all" || SECTION === name) {
