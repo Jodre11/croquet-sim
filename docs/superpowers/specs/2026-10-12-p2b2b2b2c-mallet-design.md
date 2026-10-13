@@ -235,7 +235,9 @@ Each term changes as follows, and each takes the literal branch at m_s = 0:
 
 - the pendulum's I_P = I'_y + M·d² and its weight term (`pendulumOf`);
 - the effective mass at the face (`effectiveMass` takes `malletBody`);
-- the twist gains (`handGains`), which scale with I_z: end-weighting stiffens the hands' twist at the same period;
+- the twist gains (`handGains`), which scale with I_z: end-weighting stiffens the hands' twist at the same period,
+  about 3.1× on the default. Real hands' grip does not follow the head, so §9 separates the two causes; whether the
+  gains should is calibration (P2b.2b.2c);
 - the hands' load, through the weight terms of §4.3;
 - the downswing's fit (`fitStrokeShape`), through the pendulum.
 
@@ -392,6 +394,12 @@ Per preset, against P2b.2b.2b.2b's: the ratios over 2–4 m/s; the canonical run
 position; the highest ball centre; the face intervals and their regions; the cap and flag tallies of the `presets`
 sweep; the late re-hit's crossings; the effective mass by the strike against its closed form; the refitted h₀ and
 backswings; the lean's drift through each roll's push.
+
+The twist, for each canonical run and for `stop-gc` at 3 m/s struck 10 mm off the face's centre line (a gate-only
+run, not a preset): the head's peak |ω_z| through the impact and its yaw at release. Each is recorded on the old head,
+on the new, and on the new with the twist gains held at the old head's I_z (§4.4), so that the head's inertia and the
+hands' stiffer twist are read apart. The hold is a test-only seam on the prepared track, not a `SwingProfile` field,
+and leaves the digests of §7.2 untouched.
 
 ## 10. Out of scope
 
