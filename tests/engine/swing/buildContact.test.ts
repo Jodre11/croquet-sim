@@ -525,7 +525,8 @@ describe("buildContact, mirrored", () => {
 /**
  * The downswing's least clearance on each canonical setup. The swing presets swing about a still top hand, so theirs
  * is the circle's: P2b.2b.1's coasting approach on prototype aeadd4c's geometry (the level presets' minimum lies
- * 36.25 ms before contact at 3 m/s, the AC stop's 56 ms). The rolls' hands rise behind contact and their pendulum
+ * 36.25 ms before contact at 3 m/s, the AC stop's 56 ms; the timings and the rim's lowest angle below are the
+ * P2b.2b.1 round head's figures). The rolls' hands rise behind contact and their pendulum
  * swings the head up, already past the rim's lowest angle, so theirs is at contact: CANONICAL_CLEARANCE. Every figure
  * moves with the sink h₀ = R − δ₀ (CANONICAL_CLEARANCE's δ₀, the bed's static sink at the striker's position).
  */

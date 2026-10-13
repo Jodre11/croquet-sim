@@ -5,10 +5,11 @@
  *   −arccos(cos θ_c − s·h/ℓ_h); the hands start back and up along handAngle φ, d_h·sin φ = (1 − s)·h.
  * - The hands (§3.3) follow P(σ) = P_b + Δ_h·σ² + Δ_z·(3σ² − 2σ³), starting from rest; in swing mode they arrive
  *   level, in carry mode on the hands' arc, through the Hermite term T·(σ³ − σ²) (P2b.2b.2b.2b design §4.1).
- * - Swing mode (§3.1, §3.4): the pendulum leads and σ = (θ − θ_top)/(θ_c − θ_top). I_P·θ̈ = −m·g·ℓ_h·sin θ − M·d·(A·t̂)
- *   + τ_p(t) is solved for θ̈ with A = P″·σ̇² + P′·σ̈, and integrated by semi-implicit Euler every FREE_STEP until θ
- *   first reaches θ_c, the crossing step cut by linear interpolation in θ. The effort τ_p is a bell-shaped pulse,
- *   i·τ_max·½·(1 − cos 2πu) over T(i) = T_slow + i·(T_fast − T_slow) from the release, clipped at contact.
+ * - Swing mode (§3.1, §3.4): the pendulum leads and σ = (θ − θ_top)/(θ_c − θ_top). I_P·θ̈ = −W·sin θ (W of
+ *   pendulumOf) − M·d·(A·t̂) + τ_p(t) is solved for θ̈ with A = P″·σ̇² + P′·σ̈, and integrated by semi-implicit Euler
+ *   every FREE_STEP until θ first reaches θ_c, the crossing step cut by linear interpolation in θ. The effort τ_p is a
+ *   bell-shaped pulse, i·τ_max·½·(1 − cos 2πu) over T(i) = T_slow + i·(T_fast − T_slow) from the release, clipped at
+ *   contact.
  * - Carry mode (§3.3): the hands lead on their own tempo T_h(i), σ = (t − t_r)/T_h, and the slope follows them, θ =
  *   θ_top + (θ_c − θ_top)·σ²; closed-form, so not tabulated (plan, "Decisions made while planning").
  */
@@ -138,7 +139,7 @@ export function planDownswing(input: DownswingInput): PlannedDownswing {
         const [, cu] = sinCos(2 * Math.PI * u);
         return 0.5 * peak * (1 - cu);
     };
-    // §3.3: (I_P + M·d·(P′·t̂)/span)·θ̈ = −m·g·ℓ_h·sin θ − M·d·(P″·t̂)·σ̇² + τ_p, σ̇ = ω/span. Fails where the
+    // §3.3: (I_P + M·d·(P′·t̂)/span)·θ̈ = −W·sin θ − M·d·(P″·t̂)·σ̇² + τ_p, σ̇ = ω/span. Fails where the
     // effective inertia (the bracket) is not positive, at every step and at contact.
     const accelOrFail = (theta: number, omega: number, tau: number): number => {
         const [s, co] = sinCos(theta);

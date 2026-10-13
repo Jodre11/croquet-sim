@@ -178,7 +178,8 @@ function canonicalUp(type: StrokeType): number {
 /**
  * The P2b.2b.2b.2b default mallet: the Jaques 9" round head, 1.0 kg, on a massless 36 in shaft. It keeps the round
  * head's turf and sunk-ball mechanisms under test after the default switched to the box (P2b.2b.2b.2c plan Task 7
- * ruling): the box clears the turf where the barrel's rim met it.
+ * ruling): the box clears the turf where the barrel's rim met it. Its runs use the re-fitted swing.json and a stance
+ * re-leaned by canonicalSetup, so it is not the P2b.2b.2b.2b engine exactly.
  */
 export const LEGACY_MALLET: SwingProfile["mallet"] = {
     headMass: malletReference.headMass.value,

@@ -1518,7 +1518,7 @@ design's amendments. Observations, not gates, but for the exit criteria. "Old â†
 - **Engine time** (`scripts/shotMix.ts`, COUNT=800, seed 7, run alone; machine-dependent): per shot p50 4.94 ms, p99
   101.8, p99.9 and max 116.7 (the worst a croquet shot with no solve), against P5's provisional â‰¤ 200 ms simulation;
   P2b.2b.2b.2a's 3000-shot run gave p50 4.1, p99 53.3 and max 91.2, and P2b.2b.2b.2b recorded none. Each figure is
-  from a single run. The run-to-run noise is unquantified and larger than any effect of the mallet, whose shot-mix
+  from a single run. The run-to-run noise is unquantified; the mallet cannot account for it, since the shot-mix
   results are bit-identical through this phase (the ratchet): Task 9's run, contended by three other runs, gave p99
   78.8 ms against this quiet run's 101.8. The p99 and the max rest on about 8 shots of the 800. P5 must measure this
   properly. The solver p99 9.1 ms, max 33.8; 97.5 % of shots make no solve.

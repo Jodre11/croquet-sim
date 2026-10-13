@@ -143,9 +143,9 @@ export function swingOrientation(aim: Vec3, theta: number): Quaternion {
 }
 
 /**
- * The swung body (design §3.3): the head and the arm mass at the top grip, one rigid body. Its centre lies `offset`
- * (δ, m) along the head's up axis (body z) from the head's centre; `inertia` is its principal inertia about that
- * centre, body frame.
+ * The swung body (design §3.3): the mallet (malletBody) and the arm mass at the top grip, one rigid
+ * body. Its centre lies `offset` (δ, m) along the head's up axis (body z) from the head's centre; `inertia` is its
+ * principal inertia about that centre, body frame.
  */
 export interface SwungBody {
     readonly mass: number;
@@ -392,8 +392,8 @@ export interface Swing {
 }
 
 /**
- * The pendulum about the top hand (design §3.2): I_P·θ̈ = −weight·sin θ − inertial·(A·t̂) + τ, with weight = m·g·ℓ_h
- * (N·m), inertial = M·d (kg·m) and inertia = I_P (kg·m²).
+ * The pendulum about the top hand (design §3.2): I_P·θ̈ = −weight·sin θ − inertial·(A·t̂) + τ, with weight W = m·g·ℓ_h
+ * plus the shaft's m_s·g·(ℓ_h − h_z − ℓ/2) (pendulumOf; N·m), inertial = M·d (kg·m) and inertia = I_P (kg·m²).
  */
 export interface Pendulum {
     readonly weight: number;

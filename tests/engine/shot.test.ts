@@ -377,7 +377,7 @@ describe("simulateShot", () => {
 });
 
 describe("the effective mass (exit criterion 3)", () => {
-    it("presents about the head's mass at the face on the canonical drive, and the strike measures it", () => {
+    it("presents between 0.9·m and M at the face on the canonical drive, and the strike measures it", () => {
         const setup = canonicalSetup("drive");
         const contact = buildContact(setup, WORLD);
         const { arc, hands } = contact.drive as TrackDrive;
@@ -392,7 +392,8 @@ describe("the effective mass (exit criterion 3)", () => {
 
         // The strike's own measure: the balls' momentum along aim gained over the first face–ball interval, over the
         // face centre's loss of speed along aim. Both balls count: in a croquet stroke the croqueted ball takes its
-        // share through the striker's during the interval. Prototype: 1.00655 kg, within 3.3e-5 of the closed form.
+        // share through the striker's during the interval. Prototype (the round head): 1.00655 kg, within 3.3e-5 of
+        // the closed form.
         const probe = recorder();
         const impact = simulateImpact(contact, setup.balls, WORLD, { probe });
         const strike = hits(impact)[0] as ContactInterval;
@@ -410,7 +411,7 @@ describe("the effective mass (exit criterion 3)", () => {
             s.balls.reduce((p, ball) => p + WORLD.ball.mass * dot(ball.velocity, arc.aim), 0);
         const measured = (momentum(after) - momentum(before)) / (faceSpeed(before.head) - faceSpeed(after.head));
         // 1 %: the hands draw 0.40 % of the single-ball strike's transfer (design §3.4) and the turf's friction on the
-        // balls over the 1.2 ms interval less; the prototype's agreement is 300 times closer.
+        // balls over the 1.2 ms interval less; the prototype's (the round head) agreement is 300 times closer.
         expect(Math.abs(measured / closed - 1)).toBeLessThanOrEqual(0.01);
     });
 });

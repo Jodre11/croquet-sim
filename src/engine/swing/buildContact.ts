@@ -519,8 +519,8 @@ export function arcArrival(radius: number, low: number, push: number): number {
 }
 
 /**
- * The downswing's input for `pose` and `choice` (design §3.1): the pendulum of the swung body (the head and `hands`'
- * arm mass at the top grip) under `gravity`, ℓ_h = ρ + r.
+ * The downswing's input for `pose` and `choice` (design §3.1): the pendulum of the swung body (the mallet, malletBody,
+ * and `hands`' arm mass at the top grip) under `gravity`, ℓ_h = ρ + r.
  */
 export function downswingInput(pose: ContactPose, hands: Hands, choice: StrokeChoice, gravity: number): DownswingInput {
     const body = swungBody(pose.head, hands, pose.radius);

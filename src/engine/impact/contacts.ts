@@ -146,7 +146,7 @@ export function regionsOf(shape: HeadShape): readonly HeadRegion[] {
     return shape.kind === "cylinder" ? HEAD_REGIONS : BOX_REGIONS;
 }
 
-/** A head–ball contact on the solid cylinder, with the region touched. */
+/** A head–ball contact on the whole head, with the region touched. */
 export interface HeadPenetration extends Penetration {
     readonly region: HeadRegion;
 }
@@ -428,8 +428,9 @@ export function outOfReach(
 /**
  * True when a face is still closing on the ball (design §5, head re-approach). The ball's centre must lie in front of
  * the face, with its surface within one ball radius of the face plane (0 < d < 2R). Its centre must project within
- * reach of the disc. And the face point under it must approach it along the face normal. A ball further off is not a
- * second strike of this stroke: a ball lying ahead in the line of play would otherwise be flagged on every stroke.
+ * the face's lateral reach (outOfReach). And the face point under it must approach it along the face normal. A ball
+ * further off is not a second strike of this stroke: a ball lying ahead in the line of play would otherwise be flagged
+ * on every stroke.
  */
 export function headClosing(state: HeadState, head: MalletHead, ball: BallState, radius: number): boolean {
     for (const side of FACES) {

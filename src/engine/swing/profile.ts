@@ -178,7 +178,8 @@ const DRIVE: Readonly<Record<StrokeType, SwingDrive>> = {
     // relaxed grips, takes the path's lowest point 2.99 mm below the turf at 20 ms, its rear rim first reaching
     // the turf 12.7 ms after contact, after the ball has left (measured while planning). About 11 mm, a user
     // decision (2026-10-05): the prototype's 14 mm drove the head 2.86 mm into the turf, past HEAD_DEEP_LIMIT;
-    // pre-flight confirms the value. The hands do not travel, so no reach.
+    // pre-flight confirms the value. The hands do not travel, so no reach. P2b.2b.2b.2c: on the box the head clears
+    // the turf at contact (14.55 mm; gate ruling B); the figures above are the round head's.
     "stop-ac": {
         mode: "swing",
         speedGain: 1,

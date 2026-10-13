@@ -6,7 +6,7 @@
  *    in pair-list order, then the head–turf pair if the set-up has it (P2b.2b.1 design §4); a face–ball pair closes
  *    with its own Hertzian law (contactLaw.ts closeFace; P2b.2b.2b.2a design §3.3);
  * 2. updates every velocity from those forces, the head's spin through Euler's equations in its body frame (for a
- *    tracked drive, the swung body's: the head and the arm mass, P2b.2b.1 design §3.3);
+ *    tracked drive, the swung body's: the mallet (malletBody) and the arm mass, P2b.2b.1 design §3.3);
  * 3. updates every position, and the head's orientation, from the new velocities.
  *
  * Bodies and pairs are visited in a fixed order and forces summed in it, so repeated runs are bit-identical, and
@@ -33,9 +33,9 @@
  *
  * A tracked drive's face–ball pairs meet the whole head, a solid cylinder or a rounded box (contacts.ts
  * headBallContact; P2b.2b.1 design §4.5; P2b.2b.2b.2c design §3): each also records its intervals per region of its
- * head, and a contact off the face raises
- * `impact-off-face` once per ball. A face–ball or head–turf interval that opens deeper than one step's closing could
- * make counts an entry jump (ImpactRun.entryJumps). A force table keeps the face-only contact and neither record.
+ * head, and a contact off the face raises `impact-off-face` once per ball. A face–ball or head–turf interval that
+ * opens deeper than one step's closing could make counts an entry jump (ImpactRun.entryJumps). A force table keeps
+ * the face-only contact and neither record.
  *
  * Every step also records whether each pair is in contact (closed, or a face at the rim), building the contact
  * timeline (timeline.ts; P2b.2a design §5); the pairs touching at t = 0 are listed in `touchingAtStart`. Recording
@@ -870,9 +870,8 @@ function trackEnd(plan: PreparedTrack): number {
  * True while a tracked head still reaches for a ball at time t (design §3.5): it is closing on one within reach
  * (headClosing), or its front face would reach one ahead of it within LOOK_AHEAD. A ball is ahead when its centre lies
  * a distance d > 0 in front of the face plane along the face normal f and within the face's lateral reach
- * (outOfReach); the face
- * closes at max(v_head·f, v_path·f) − v_ball·f, v_path the head's velocity on the path, which the hands still drive
- * towards, and would reach it if that is positive and d − R < closing·LOOK_AHEAD.
+ * (outOfReach); the face closes at max(v_head·f, v_path·f) − v_ball·f, v_path the head's velocity on the path, which
+ * the hands still drive towards, and would reach it if that is positive and d − R < closing·LOOK_AHEAD.
  */
 function stillReaching(
     state: HeadState,
