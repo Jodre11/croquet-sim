@@ -18,7 +18,7 @@
  */
 import { malletReference } from "../../reference/index";
 import { headLowestPoint } from "../impact/contacts";
-import { rotate, solidCylinderInertia, type Quaternion } from "../impact/rigidBody";
+import { boxInertia, rotate, solidCylinderInertia, type Quaternion } from "../impact/rigidBody";
 import { faceHalfHeight, type HeadShape } from "../impact/shape";
 import {
     HAND_COUPLING,
@@ -35,7 +35,7 @@ import { atan2, sinCos } from "../math/elementary";
 import { add, cross, length, scale, sub, vec3, type Vec3 } from "../math/vec3";
 import type { BallState, World } from "../types";
 import { planDownswing, scanDownswing, type DownswingInput, type PlannedDownswing } from "./downswing";
-import type { MalletHeadProfile, ShotSetup, SwingDrive, SwingShape, SwingStance } from "./types";
+import type { MalletHeadProfile, ShotSetup, SwingDrive, SwingProfile, SwingShape, SwingStance } from "./types";
 
 /**
  * Gap (m) between the face and the striker's sunk surface at contact (design §5.2 step 4). Numerical, not physical:
@@ -166,9 +166,33 @@ export function stanceLean(handsAhead: number, top: number, up: number, geometry
     return atan2(a * handsAhead + b * s, a * s - b * handsAhead);
 }
 
-/** The head shape of a profile's head (P2b.2b.2b.2c design §5.1): a round head's radius is half its diameter. */
+/**
+ * The head shape of a profile's head (P2b.2b.2b.2c design §5.1): a round head's radius is half its diameter, and a box
+ * head's half-extents half its face's width and height.
+ */
 export function headShapeOf(head: MalletHeadProfile): HeadShape {
-    return { kind: "cylinder", radius: head.diameter / 2 };
+    if (head.kind === "round") {
+        return { kind: "cylinder", radius: head.diameter / 2 };
+    }
+    return { kind: "box", halfWidth: head.faceWidth / 2, halfHeight: head.faceHeight / 2, edgeRadius: head.edgeRadius };
+}
+
+/**
+ * The principal moments of a profile's mallet head (P2b.2b.2b.2c design §4.1): a round head a uniform solid cylinder,
+ * a box head from its measured moment about the shaft (boxInertia, which throws a RangeError outside the realisable).
+ */
+function headInertia(mallet: SwingProfile["mallet"]): Vec3 {
+    const { head } = mallet;
+    if (head.kind === "round") {
+        return solidCylinderInertia(mallet.headMass, mallet.headLength, head.diameter / 2);
+    }
+    return boxInertia(
+        mallet.headMass,
+        mallet.headLength,
+        head.faceWidth / 2,
+        head.faceHeight / 2,
+        head.inertiaAboutShaft,
+    );
 }
 
 /** Checks `setup` on a world whose ball has radius `ballRadius` (see planStroke). */
@@ -236,11 +260,25 @@ function validate(setup: ShotSetup, ballRadius: number): void {
         positive(mallet[key], `profile.mallet.${key}`);
     }
     const { head } = mallet;
-    if (head.kind !== "round") {
-        fail(`profile.mallet.head.kind must be "round" (got ${String((head as { kind: unknown }).kind)})`);
+    if (head.kind === "round") {
+        finiteNumber(head.diameter, "profile.mallet.head.diameter");
+        positive(head.diameter, "profile.mallet.head.diameter");
+    } else if (head.kind === "box") {
+        for (const key of ["faceWidth", "faceHeight", "edgeRadius", "inertiaAboutShaft"] as const) {
+            finiteNumber(head[key], `profile.mallet.head.${key}`);
+        }
+        positive(head.faceWidth, "profile.mallet.head.faceWidth");
+        positive(head.faceHeight, "profile.mallet.head.faceHeight");
+        positive(head.inertiaAboutShaft, "profile.mallet.head.inertiaAboutShaft");
+        nonNegative(head.edgeRadius, "profile.mallet.head.edgeRadius");
+        const limit = Math.min(head.faceWidth / 2, head.faceHeight / 2, mallet.headLength / 2);
+        if (!(head.edgeRadius < limit)) {
+            fail(`profile.mallet.head.edgeRadius must lie in [0, ${limit}) m (got ${head.edgeRadius})`);
+        }
+        headInertia(mallet);
+    } else {
+        fail(`profile.mallet.head.kind must be "round" or "box" (got ${String((head as { kind: unknown }).kind)})`);
     }
-    finiteNumber(head.diameter, "profile.mallet.head.diameter");
-    positive(head.diameter, "profile.mallet.head.diameter");
     finiteNumber(body.armMass, "profile.body.armMass");
     finiteNumber(body.reachSlack, "profile.body.reachSlack");
 
@@ -262,10 +300,23 @@ function validate(setup: ShotSetup, ballRadius: number): void {
     if (!(Math.abs(stroke.drive) <= 1)) {
         fail(`stroke.drive must lie in [-1, 1] (got ${stroke.drive})`);
     }
-    const rho = faceHalfHeight(headShapeOf(head));
+    const headShape = headShapeOf(head);
+    const rho = faceHalfHeight(headShape);
     const { up, side } = stroke.contact;
-    if (!(Math.sqrt(up * up + side * side) < rho)) {
-        fail(`the contact lies off the face: (${up}, ${side}) m from its centre, whose radius is ${rho} m`);
+    if (headShape.kind === "cylinder") {
+        if (!(Math.sqrt(up * up + side * side) < rho)) {
+            fail(`the contact lies off the face: (${up}, ${side}) m from its centre, whose radius is ${rho} m`);
+        }
+    } else {
+        // A box's face is its flat part (design §3.3): within h_y − e across and h_z − e up of its centre.
+        const across = headShape.halfWidth - headShape.edgeRadius;
+        const height = headShape.halfHeight - headShape.edgeRadius;
+        if (!(Math.abs(side) <= across && Math.abs(up) <= height)) {
+            fail(
+                `the contact lies off the face: (${up}, ${side}) m from its centre, beyond its flat ±${height} m up ` +
+                    `and ±${across} m across`,
+            );
+        }
     }
     // A > 0 rests on the contact lying on the face, checked just above (P2b.2b.2b.1 design §3.4).
     const [a, b] = stanceArms(top, up, { ballRadius, headLength: mallet.headLength, faceHalfHeight: rho });
@@ -435,7 +486,7 @@ export function contactPose(setup: ShotSetup, world: World): ContactPose {
     const pivot = sub(socket, scale(sub(scale(aim, st), vec3(0, 0, ct)), radius));
     const head: MalletHead = {
         mass: mallet.headMass,
-        inertia: solidCylinderInertia(mallet.headMass, mallet.headLength, rho),
+        inertia: headInertia(mallet),
         length: mallet.headLength,
         shape,
         socket: vec3(0, 0, rho),
@@ -510,9 +561,10 @@ export interface StrokePlan {
  * downswing the approach, and the planned contact speed. Throws a RangeError naming the check for:
  * - a striker absent from the setup, or a stroke type missing from the profile's stance, drive or shape;
  * - a mode other than "swing" or "carry";
- * - a non-finite number, or a non-positive mallet dimension or mass;
+ * - a non-finite number, or a non-positive mallet dimension or mass; a box head's edge radius outside
+ *   [0, min(h_y, h_z, L/2)) or its moment about the shaft outside the realisable (P2b.2b.2b.2c design §5.1);
  * - top ≤ 0, or top > shaftLength; bottom outside (0, top);
- * - backswing ≤ 0; an intensity outside [0, 1]; |drive| > 1; the contact off the face; handsAhead outside (−D, A) for
+ * - backswing ≤ 0; an intensity outside [0, 1]; |drive| > 1; the contact off the face (a box's: off its flat part); handsAhead outside (−D, A) for
  *   the stroke's top hand and contact (P2b.2b.2b.1 design §3.4: at A the shaft lies flat, at −D the hands leave the
  *   stance's branch);
  * - window, handWindow or dropTime ≤ 0; speedGain < 0; gripTension or bottomGrip outside (0, 1]; handDrop < 0; the

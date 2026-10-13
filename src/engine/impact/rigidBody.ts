@@ -72,3 +72,30 @@ export function solidCylinderInertia(mass: number, length: number, radius: numbe
     const across = (mass * (3 * radius * radius + length * length)) / 12;
     return vec3(0.5 * mass * radius * radius, across, across);
 }
+
+/**
+ * Principal moments of a box head (P2b.2b.2b.2c design §4.1) whose every slice along body x has the same section,
+ * half-extents h_y and h_z, so its weighting varies along x alone, as end inserts do: I_z the measured moment about
+ * the shaft `aboutShaft`; I_y = I_z + m·(h_z² − h_y²)/3; I_x = m·(h_y² + h_z²)/3. The edge rounding is ignored, an
+ * error of order (e/h)². Throws a RangeError outside the realisable m·h_y²/3 ≤ I_z ≤ m·(L²/4 + h_y²/3), from all the
+ * mass on the shaft's axis to all of it at the faces.
+ */
+export function boxInertia(
+    mass: number,
+    length: number,
+    halfWidth: number,
+    halfHeight: number,
+    aboutShaft: number,
+): Vec3 {
+    const across = halfWidth * halfWidth;
+    const up = halfHeight * halfHeight;
+    const least = (mass * across) / 3;
+    const most = mass * ((length * length) / 4 + across / 3);
+    if (!(aboutShaft >= least && aboutShaft <= most)) {
+        throw new RangeError(
+            `the box head's moment about the shaft must lie in [${least}, ${most}] kg·m² for its mass, length and ` +
+                `width (got ${aboutShaft})`,
+        );
+    }
+    return vec3((mass * (across + up)) / 3, aboutShaft + (mass * (up - across)) / 3, aboutShaft);
+}

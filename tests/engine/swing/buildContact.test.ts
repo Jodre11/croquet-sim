@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { headLowestPoint } from "../../../src/engine/impact/contacts";
-import { rotate, solidCylinderInertia } from "../../../src/engine/impact/rigidBody";
+import { boxInertia, rotate, solidCylinderInertia } from "../../../src/engine/impact/rigidBody";
 import { simulateImpact } from "../../../src/engine/impact/simulateImpact";
 import {
     HAND_COUPLING,
@@ -34,6 +34,7 @@ import { planDownswing, scanDownswing } from "../../../src/engine/swing/downswin
 import { ON_TIME, defaultProfile, shapeOf } from "../../../src/engine/swing/profile";
 import {
     STROKE_TYPES,
+    type MalletHeadProfile,
     type ShotSetup,
     type StrokeType,
     type SwingProfile,
@@ -59,7 +60,14 @@ import {
     mirrorVec,
     recorder,
 } from "../support/impact";
-import { CANONICAL_CLEARANCE, GC_STOP_GAP, backswingFor, canonicalSetup, testProfile } from "../support/shot";
+import {
+    CANONICAL_CLEARANCE,
+    GC_STOP_GAP,
+    TEST_BOX_HEAD,
+    backswingFor,
+    canonicalSetup,
+    testProfile,
+} from "../support/shot";
 
 const WORLD = testWorld();
 const R = TEST_BALL.radius;
@@ -364,6 +372,34 @@ describe("buildContact, step by step", () => {
         expect(c.face).toEqual({ friction: malletReference.faceFriction.value });
     });
 
+    it("builds a box head from the profile's measured moment, its socket at half the face's height", () => {
+        // Review focus 3: a rectangular face, 60 mm wide and 50 mm high; the socket, ρ and the flat face come from the
+        // height.
+        const head = { ...TEST_BOX_HEAD, faceWidth: 0.06, faceHeight: 0.05 };
+        const c = buildContact(shot({}, testProfile({ mallet: { head } })), WORLD);
+        expect(c.head).toEqual({
+            mass: 1,
+            inertia: boxInertia(1, 0.23, 0.03, 0.025, TEST_BOX_HEAD.inertiaAboutShaft),
+            length: 0.23,
+            shape: { kind: "box", halfWidth: 0.03, halfHeight: 0.025, edgeRadius: 0.003 },
+            socket: vec3(0, 0, 0.025),
+        });
+    });
+
+    it("puts the socket at half the face's height on a rectangular face", () => {
+        // Review focus 3: the pivot lies r + h_z above the head's centre along the shaft, never r + h_y.
+        const head = { ...TEST_BOX_HEAD, faceWidth: 0.06, faceHeight: 0.05 };
+        const pose = contactPose(shot({}, testProfile({ mallet: { head } })), WORLD);
+        expect(length(sub(pose.pivot, pose.headCentre))).toBeCloseTo(0.8 + 0.025, 12);
+    });
+
+    it("plans and strikes with a sharp box, e = 0", () => {
+        // Review focus 2.
+        const setup = shot({}, testProfile({ mallet: { head: { ...TEST_BOX_HEAD, edgeRadius: 0 } } }));
+        const c = buildContact(setup, WORLD);
+        expect(() => simulateImpact(c, setup.balls, WORLD)).not.toThrow();
+    });
+
     it("starts the head exactly on its own path", () => {
         const profile = testProfile({ stance: { lean: 0.4 }, shape: { pendulumShare: 0.4 } });
         const c = buildContact(shot({ drive: 0.7, timing: { arc: -0.005, hands: 0, dip: 0 } }, profile), WORLD);
@@ -462,6 +498,25 @@ describe("buildContact, mirrored", () => {
         expect(rb.steps).toBe(ra.steps);
         const [qa, qb] = [mirrorQuat(ra.head.orientation), rb.head.orientation];
         expect(qa.w === qb.w && qa.x === qb.x && qa.y === qb.y && qa.z === qb.z).toBe(true);
+    });
+
+    it("gives a box-head setup mirrored across a vertical plane an exactly mirrored impact", () => {
+        // Review focus 4: the box's sign convention (p_i ≥ 0 counts as positive) must not break the mirror.
+        const profile = testProfile({ mallet: { head: TEST_BOX_HEAD }, stance: { lean: 0.1 }, up: -0.003 });
+        const stroke = { aim: 0.4, drive: 0.5, contact: { up: -0.003, side: 0.004 } };
+        const a = buildContact(shot(stroke, profile, ballAt(5, 3)), WORLD);
+        const b = buildContact(
+            shot({ ...stroke, aim: -0.4, contact: { up: -0.003, side: -0.004 } }, profile, ballAt(5, -3)),
+            WORLD,
+        );
+        const ra = simulateImpact(a, { blue: ballAt(5, 3) }, WORLD);
+        const rb = simulateImpact(b, { blue: ballAt(5, -3) }, WORLD);
+        const ha = ra.handover.blue as BallState;
+        const hb = rb.handover.blue as BallState;
+        expect(same(mirrorBall(ha).position, hb.position) && same(mirrorVec(ha.velocity), hb.velocity)).toBe(true);
+        expect(same(mirrorSpin(ha.angularVelocity), hb.angularVelocity)).toBe(true);
+        expect(rb.steps).toBe(ra.steps);
+        expect(Object.keys(rb.headRegions ?? {})).toEqual(Object.keys(ra.headRegions ?? {}));
     });
 });
 
@@ -737,6 +792,37 @@ describe("buildContact rejections", () => {
         ],
         ["a drive beyond ±1", shot({ drive: 1.5 }), /stroke\.drive must lie in/],
         ["a contact off the face", shot({ contact: { up: 0.03, side: 0.02 } }), /off the face/],
+        [
+            "a box head's contact off its flat face",
+            shot({ contact: { up: 0, side: 0.0295 } }, testProfile({ mallet: { head: TEST_BOX_HEAD } })),
+            /off the face/,
+        ],
+        [
+            "a box head whose edge radius reaches half its height",
+            shot({}, testProfile({ mallet: { head: { ...TEST_BOX_HEAD, edgeRadius: 0.032 } } })),
+            /profile\.mallet\.head\.edgeRadius must lie in \[0, 0\.032\)/,
+        ],
+        [
+            "a box head with a negative edge radius",
+            shot({}, testProfile({ mallet: { head: { ...TEST_BOX_HEAD, edgeRadius: -0.001 } } })),
+            /profile\.mallet\.head\.edgeRadius must be non-negative/,
+        ],
+        [
+            "a box head's moment past the realisable",
+            shot({}, testProfile({ mallet: { head: { ...TEST_BOX_HEAD, inertiaAboutShaft: 0.05 } } })),
+            /moment about the shaft must lie in/,
+        ],
+        [
+            "an unknown head kind",
+            shot(
+                {},
+                testProfile({
+                    mallet: { head: { kind: "oval" } as unknown as MalletHeadProfile },
+                    stance: { handsAhead: -0.1 },
+                }),
+            ),
+            /profile\.mallet\.head\.kind must be "round" or "box"/,
+        ],
         ["a non-positive window", shot({}, testProfile({ drive: { window: 0 } })), /\.window must be positive/],
         ["a non-positive hands' window", shot({}, testProfile({ drive: { handWindow: 0 } })), /handWindow/],
         ["a non-positive dip time", shot({}, testProfile({ drive: { dropTime: 0 } })), /dropTime must be positive/],

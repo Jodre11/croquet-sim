@@ -11,13 +11,14 @@ import {
     type HeadRegion,
 } from "../../../src/engine/impact/contacts";
 import { integrate } from "../../../src/engine/impact/integrate";
-import { IDENTITY, axisAngle, multiply, rotate, rotateInverse } from "../../../src/engine/impact/rigidBody";
+import { IDENTITY, axisAngle, boxInertia, multiply, rotate, rotateInverse } from "../../../src/engine/impact/rigidBody";
 import { boxCore, boxDistance, faceHalfHeight, type BoxShape } from "../../../src/engine/impact/shape";
-import type { HeadState } from "../../../src/engine/impact/types";
+import type { HeadState, MalletHead } from "../../../src/engine/impact/types";
 import { ZERO, add, length, scale, sub, vec3, type Vec3 } from "../../../src/engine/math/vec3";
 import { headShapeOf } from "../../../src/engine/swing/buildContact";
+import type { BallState } from "../../../src/engine/types";
 import { TEST_BALL } from "../support/fixtures";
-import { TEST_BOX, TEST_HEAD, TEST_RHO, freeBall, freeTracked } from "../support/impact";
+import { TEST_BOX, TEST_HEAD, TEST_RHO, freeBall, freeTracked, recorder } from "../support/impact";
 import { rng } from "../support/rng";
 
 describe("the head's shape (P2b.2b.2b.2c design §3.1)", () => {
@@ -259,5 +260,67 @@ describe("the rounded box (P2b.2b.2b.2c design §3.2)", () => {
         const run = integrate(freeTracked(TEST_BOX, centre, vec3(2, 0, 0), [ball]), { cap: 0.01 });
         expect(run.events.some((e) => e.kind === "impact-off-face" && e.ball === "blue")).toBe(true);
         expect(Object.keys(run.headRegions ?? {})).toContain("face/blue#edge");
+    });
+
+    it("turns a free box head struck off centre as its integrated torque about z: ω_z·I_z = ∫(r × F)·ẑ dt", () => {
+        // A free head (freeTracked: no hands, no gravity), level, at 2 m/s on a free ball 10 mm off its face's centre
+        // line at its height. Every force acts in the horizontal plane, so the head turns about z alone and ω × I·ω
+        // stays 0. The twist rate alone is not ∝ 1/I_z: the impulse itself depends on I_z through the contact point's
+        // velocity, so the identity is checked against the integrated torque.
+        const centre = vec3(0, 0, 0.5);
+        const probe = recorder();
+        const ball = freeBall("blue", vec3(L / 2 + R + 1e-3, 0.01, 0.5));
+        const setup = freeTracked(TEST_BOX, centre, vec3(2, 0, 0), [ball]);
+        integrate(setup, { cap: 0.01, probe });
+        let torque = 0;
+        let head = setup.start;
+        let blue = ball.state;
+        let t = 0;
+        for (const s of probe.snapshots) {
+            for (const c of s.contacts.filter((x) => x.key === "face/blue")) {
+                // The force on the head, at the contact point of the step's start (contacts.ts).
+                const point = sub(blue.position, scale(c.normal, R - c.depth / 2));
+                const onHead = scale(add(scale(c.normal, c.normalForce), c.tangentialForce), -1);
+                const r = sub(point, head.position);
+                torque += (r.x * onHead.y - r.y * onHead.x) * (s.t - t);
+            }
+            head = s.head;
+            blue = s.balls[0] as typeof blue;
+            t = s.t;
+        }
+        expect(torque).not.toBe(0);
+        const spin = head.angularVelocity;
+        expect(Math.abs(spin.z * TEST_BOX.inertia.z - torque)).toBeLessThanOrEqual(1e-9 * Math.abs(torque));
+        expect(Math.abs(spin.x) + Math.abs(spin.y)).toBeLessThan(1e-12);
+    });
+
+    it("strikes a centred ball as a cylinder of the same mass and moments does, within 1e-12 relative", () => {
+        // Shape-neutrality (design §7.1): e = 0, h_y = h_z = r, the box's moment about the shaft the cylinder's I_z, no
+        // shaft, no turf. Only the face plane is met; I_y = I_z on both, and I_x differs but is not excited. Not
+        // bit-identical: the box's face distance, (|p_x| − (L/2 − e)) − e, rounds differently from |p_x| − L/2.
+        const sharpBox: MalletHead = {
+            ...TEST_BOX,
+            inertia: boxInertia(1, 0.23, TEST_RHO, TEST_RHO, TEST_HEAD.inertia.z),
+            shape: { kind: "box", halfWidth: TEST_RHO, halfHeight: TEST_RHO, edgeRadius: 0 },
+        };
+        expect(sharpBox.inertia.y).toBe(TEST_HEAD.inertia.y);
+        const centre = vec3(0, 0, 0.5);
+        const run = (head: MalletHead) =>
+            integrate(freeTracked(head, centre, vec3(2, 0, 0), [freeBall("blue", vec3(L / 2 + R + 1e-3, 0, 0.5))]), {
+                cap: 0.01,
+            });
+        const a = run(sharpBox);
+        const b = run(TEST_HEAD);
+        const near = (x: Vec3, y: Vec3, scaleOf: number): void => {
+            expect(length(sub(x, y))).toBeLessThanOrEqual(1e-12 * scaleOf);
+        };
+        const ballA = a.balls.blue as BallState;
+        const ballB = b.balls.blue as BallState;
+        near(ballA.position, ballB.position, length(ballB.position));
+        near(ballA.velocity, ballB.velocity, 2);
+        near(ballA.angularVelocity, ballB.angularVelocity, 2 / R);
+        near(a.head.position, b.head.position, length(b.head.position));
+        near(a.head.velocity, b.head.velocity, 2);
+        near(a.head.angularVelocity, b.head.angularVelocity, 2 / R);
     });
 });

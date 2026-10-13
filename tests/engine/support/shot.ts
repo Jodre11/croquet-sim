@@ -10,6 +10,7 @@ import { DEFAULT_DRIVE, ON_TIME, defaultProfile } from "../../../src/engine/swin
 import {
     CROQUET_STROKES,
     STROKE_TYPES,
+    type MalletHeadProfile,
     type ShotSetup,
     type StrokeType,
     type SwingDrive,
@@ -21,7 +22,26 @@ import type { BallId, BallStates, World } from "../../../src/engine/types";
 import { defaultWorld } from "../../../src/engine/world";
 import { lawnReference, swingReference } from "../../../src/reference/index";
 import { TEST_BALL } from "./fixtures";
-import { TEST_CHAIN, TEST_FLEX, TEST_PENDULUM_FORCE, TEST_PUSH_FORCE, TEST_PUSH_RESPONSE_TIME } from "./impact";
+import {
+    TEST_CHAIN,
+    TEST_FLEX,
+    TEST_HEAD,
+    TEST_PENDULUM_FORCE,
+    TEST_PUSH_FORCE,
+    TEST_PUSH_RESPONSE_TIME,
+} from "./impact";
+
+/**
+ * A rounded box head for testProfile's mallet (P2b.2b.2b.2c design §5.1): TEST_BOX's 64 mm square face with 3 mm edges,
+ * its moment about the shaft TEST_HEAD's I_z. Unsourced.
+ */
+export const TEST_BOX_HEAD: Extract<MalletHeadProfile, { kind: "box" }> = {
+    kind: "box",
+    faceWidth: 0.064,
+    faceHeight: 0.064,
+    edgeRadius: 0.003,
+    inertiaAboutShaft: TEST_HEAD.inertia.z,
+};
 
 /**
  * What `testProfile` changes: the mallet, the body, and one stance, one drive and one shape entry for every stroke
