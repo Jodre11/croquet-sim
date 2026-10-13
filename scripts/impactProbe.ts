@@ -1,6 +1,6 @@
 /**
- * Impact probe (P2b.1 design §1: recorded, not gated). On the default world, with the sourced head and face
- * (reference/mallet.json, contact.json), reports:
+ * Impact probe (P2b.1 design §1: recorded, not gated). On the default world, with the force tables' Jaques round head
+ * (P2b.2b.2b.2c plan decision 8) and the sourced face (reference/mallet.json, contact.json), reports:
  * - stiffness sensitivity: the ball–ball contact time swept across its reference bounds, and the bed's modulus and
  *   recovery each at ×½ and ×2 of its fitted value, and the handover;
  * - the stop-shot probe: whether the striker's ball clears the turf while it transfers its momentum, and where it

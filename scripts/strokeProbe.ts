@@ -1,6 +1,7 @@
 /**
  * Stroke probe (P2b.2b.2a design §8: measurements recorded in the roadmap, not gated). On the default world with the
- * default profile's canonical setups (tests/engine/support/shot.ts), reports:
+ * default profile's canonical setups (the default mallet, a rounded box since P2b.2b.2b.2c;
+ * tests/engine/support/shot.ts), reports:
  * - speeds: per preset, the planned contact speed against the backswing at intensity 0, 0.5 and 1, with the
  *   downswing's time;
  * - canonical: per preset at its default backswing, with the trajectory: the planned speed, the downswing's time and

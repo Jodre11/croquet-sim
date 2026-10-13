@@ -408,3 +408,98 @@ and leaves the digests of §7.2 untouched.
 - Turf strike beyond a graze (P2b.2b.2b.3).
 - The user's bespoke mallet as a preset.
 - The P2b.2b.2b.2b follow-ups (the roadmap's list), unless the new head changes one; any such change is recorded.
+
+## Amendments (plan, 2026-10-13)
+
+The plan (`plans/2026-10-13-p2b2b2b2c-mallet.md`) made twelve decisions while planning. The user accepted decisions 1
+and 5 at plan review, and ruled on the pre-flight gate (§8). Four process rulings were made during execution. Each is
+recorded here with its reason. The figures are in the roadmap's "P2b.2b.2b.2c outcomes (2026-10-13)".
+
+### The plan's decisions
+
+1. **`headBottom` is also the head–turf contact point**, not only where `surfaceAt` is sampled. `headTurfContact` acts
+   at it. A box's support point with sign(0) = 0 puts a level box's turf contact on its bottom face's midline, under
+   the centre, as the level cylinder's is. Reason: since `headTurfContact` acts at it, §3.4's "used only to sample
+   `surfaceAt`" understated its role. **The user accepted it at plan review (2026-10-13).** §3.4's sentence reads
+   "used to sample `surfaceAt`, and as the head–turf contact point".
+2. **The regions are listed per shape.** `HEAD_REGIONS` stays the cylinder's five, in their order; the box's are
+   `BOX_REGIONS` (`face`, `edge`, `corner`, `side`, `top`, `bottom`, `back`), and `regionsOf(shape)` picks the list.
+   Reason: the integrator builds a face–ball pair's region timelines from that list, so a cylinder's run records
+   exactly what it recorded before (the ratchet).
+3. **The box's sign convention.** A body coordinate p_i ≥ 0 counts as positive for the normal's sign and for `face`
+   against `back` (as the cylinder's x ≥ 0 does), and for `top` against `bottom`. Reason: the head's own centre then
+   resolves to `side` along +y with no throw (of its q, y and z tie largest with e = 0, and the tie goes to y), and a
+   mirrored stroke mirrors exactly.
+4. **`StanceGeometry.headRadius` becomes `faceHalfHeight`**, its meaning: ρ, the socket's height above the head's
+   centre. Its three readers and the tests' geometry objects follow. Reason: a box has no radius (§3.1).
+5. **The old head's gate figures come from Task 1's baseline**, run on `main` before any change, not from a legacy
+   profile re-run after the switch. Reason: the switch re-fits `swing.json` (the rolls' hands' tempo, the swing
+   presets' effort and tempos) and recomputes every stance's `handsAhead` from `REFERENCE_GEOMETRY`, so re-running the
+   old head after it would mix the old mallet with the new fits. The baseline run is the P2b.2b.2b.2b engine exactly,
+   which is what §9 compares against. **The user accepted it at plan review (2026-10-13).**
+6. **The twist's figures** (§9). The peak |ω_s| is the largest |ω·s| over the impact's steps, s the shaft's axis. The
+   yaw at release is asin(f·n̂) at the last step the face pressed the striker's ball, f the face's normal and
+   n̂ = aim × ẑ: the face's turn out of the swing plane, positive to the right. Reason: §9 names the figures but not
+   their measure.
+7. **The twist hold** (§9) is `holdTwist(track, inertiaZ)`, exported from `track.ts` and called by nothing in the
+   engine. The gate's held runs go through `validateImpact`, `prepareImpact`, `holdTwist` and `integrateStroke`, and
+   skip the handover, which their figures do not read. Reason: §9's test-only seam on the prepared track.
+8. **The probes' force-table head is pinned to the Jaques round head**, 9" (0.2286 m) by 3" (`headDiameter`), the
+   head `mallet.json`'s `headDiameter` note quotes. Reason: a force table is the bare cylinder's instrument
+   (Decisions), so `impactProbe.ts` and `swingProbe.ts` must not change their force strokes when the default's
+   `headLength` moves to 11".
+9. **`REFERENCE_GEOMETRY` is computed from the default mallet object** with the helpers `contactPose` uses
+   (`headShapeOf`, `faceHalfHeight`). Reason: an upright preset's hands and its pose then agree to the bit after the
+   switch, as they did before.
+10. **The default profile's `shaftMass` is 0 until the switch** (Task 5 to Task 7). Reason: the ratchet's step 4,
+    "`shaftMass` 0 everywhere".
+11. **`mallet.json`'s new fields land in Task 6, unread; the `headLength` value moves to 11" in Task 7**, with the
+    switch. Reason: at 9" the default's 146 kg·cm² lies past the box's realisable maximum (133.4 kg·cm²), so the
+    realisability test arrives with the switch.
+12. **The shaft's bound runs 0.227–0.398 kg**, as §5.2 writes it. Reason: RPM's 8 oz is 0.2268 kg.
+
+### The pre-flight gate (§8): the user's rulings
+
+The record is `docs/superpowers/probes/2026-10-13-p2b2b2b2c-gate.txt` and its "== Ruling ==" section. The gate ran
+every preset's canonical setup at 2 and 3 m/s on the old head (Task 1's baseline), the new, and the new with the twist
+gains held, and no run threw.
+
+- **The gate (2026-10-13): "Go on".** The new default stands as built.
+- **The provisional rulings B–E (2026-10-13): "Confirm all".** Each was made while the default was switched (Task 7),
+  each a change §9 did not predict:
+  - **B. The canonical AC stop no longer meets the turf.** Its clearance at contact went from 8.39 to 14.55 mm, and
+    the profile's 11 mm dip reaches the turf only from 13 mm on the box. The three mechanism tests (29.1.14, the
+    relaxed head meeting the turf after the ball, a dip 30 ms early) run on `LEGACY_MALLET`, the P2b.2b.2b.2b round
+    head, so the mechanisms stay covered. Re-baselining them on the box would hollow them.
+  - **C. The sunk-ball handover on whole rolls no longer arises on the box.** Its four runs gave `overlapCorrection` 0,
+    and they use `LEGACY_MALLET`.
+  - **D. The effective mass at the face** is 1.1095 kg on the canonical drive against the head's 1.0 kg, as §4.4
+    predicts of the shaft. The test's bound becomes 0.9·m ≤ m_eff ≤ M, M the swung body's mass (the rigid body's
+    bound, 1/m_eff ≥ 1/M); the check that the strike measures the closed form is unchanged.
+  - **E. 45 preset-digest runs moved from rejected to accepted**: every 1 m/s, up +0.003 run of single-ball, drive
+    and stop-gc. Their downswing, which met the turf 0.189 s before contact on the old head, now clears it: the box's
+    underside sits 9.5 mm higher.
+- **The pass roll's rebound** (exit criterion 4): 20.756 mm above R at 3 m/s (11.577 mm at 2 m/s), against the
+  accepted 19.17 mm. It went to the gate and stands; it is written into its skipped test's comment.
+
+### Process rulings during execution
+
+Each was made by the controller, with its cost if wrong, and none changes the engine:
+
+- **The preset digest's normaliser** (Task 2). The throwaway `presetDigest.mts` hashes the outcome's `MalletHead`, so
+  its key layout (`radius` → `shape`, then Task 5's `shaft`) moved every digest with no arithmetic change. Its
+  replacer maps a cylinder head's `shape` back to the baseline's layout (`radius` in place, a massless shaft dropped;
+  a box, a shaft of mass or any other key left untouched), so the baseline taken on `main` stays valid. Cost if wrong:
+  a change hidden only if it lived solely in the renamed key, which carries the same number.
+- **`shotMix`'s "worst shot" line is timing** (Task 2): it names the slowest shot by engine time. The ratchet's
+  comparison filters out the lines matching `ms per shot|worst shot`.
+- **`TEST_BOX_HEAD`'s narrowed type** (Task 4): `Extract<MalletHeadProfile, { kind: "box" }>`, not
+  `MalletHeadProfile`, because the tests spread box-only fields that the union rejects under `npm run check`. A type
+  annotation only.
+- **The feed-forward test's tolerance** (Task 5). "Is held by the hands' feed-forward at the shaft's centre" holds the
+  feed-forward at 1e-12, which is exact, and the force and the torque at 1e-10: the firm grips' springs leave a
+  rounding floor of about 7e-12 N (5.8e-12 with no shaft, so it predates the shaft). Cost if wrong: a torque error
+  between 1e-12 and 1e-10 N·m would pass; "leaves a held mallet still" still pins the shaft weight's placement.
+
+§4.4's "`effectiveMass` takes `malletBody`" is met through `swungBody`, which builds on `malletBody` when the shaft
+has mass; `effectiveMass` takes a `SwungBody`, as before.

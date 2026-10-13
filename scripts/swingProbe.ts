@@ -1,14 +1,16 @@
 /**
  * Swing probe (P2b.2b.1 design §9: pre-flight measurements, recorded in the roadmap, not gated). On the default world
- * with the default profile's canonical setups (design §5.5, tests/engine/support/shot.ts), reports:
+ * with the default profile's canonical setups (the default mallet, a rounded box since P2b.2b.2b.2c; design §5.5,
+ * tests/engine/support/shot.ts), reports:
  * - ratios: the croqueted ÷ striker distance on each croquet stroke's canonical setup against its coaching range, and
  *   over 2–4 m/s; and the drive at guideEffort 0 and 1 over 2–4 m/s: its ratio, hits and length;
  * - gc: the GC stop, a single-ball stroke (design §5.4): after the striker's first touch on the target, how far the
  *   striker's ball and the target travel and their ratio, on its canonical setup over 2–4 m/s; then the gap from 0.05
  *   to 1 m for the stop-gc and single-ball presets alike, with the late re-hit's crossing at each;
- * - canonical: per canonical setup, the entry jumps, the highest ball centre above R, the head regions touched, the
- *   bottom hand's release, the hands' and the turf's braking impulses (design §3.7), the impact's length after
- *   contactAt and how often each impact flag fired; then the stance in the player's terms (P2b.2b.2b.1);
+ * - canonical: per canonical setup, the entry jumps, the highest ball centre above R, the head regions touched (a
+ *   box's: face, edge, corner, side, top, bottom, back), the bottom hand's release, the hands' and the turf's braking
+ *   impulses (design §3.7), the impact's length after contactAt and how often each impact flag fired; then the stance
+ *   in the player's terms (P2b.2b.2b.1);
  * - presets: each preset over speed × drive × contact: how often impact-head-deep, impact-cap,
  *   impact-head-approaching and impact-off-face fire, the longest impact after contactAt that ended before the cap,
  *   and the rejected runs tallied by speed, contact height and message;
@@ -16,12 +18,14 @@
  *   first head–turf interval starts after the first face–striker interval ends;
  * - coupling: the canonical set at T = 0.04 s against HAND_COUPLING's period (0.08 s), both at its ζ, with the hands'
  *   impulse in the strike against every ball's momentum change and the path lag at the hands' window's end;
- * - mass: the swung body's effective mass at the face centre along aim (design §3.4) against the strike's measure;
+ * - mass: the strike's effective mass at the face centre along aim (design §3.4) against its closed form, which
+ *   carries the shaft (P2b.2b.2b.2c design §4.4);
  * - tracking: the head's largest distance from the path with no ball and no turf, per phase: firm before contact,
  *   carry up to the reach's end, inside a check, and swing mode after contact outside a check (the residual);
- * - cost: the tracked canonical impacts against P2b.2a's force-table strokes: simulateImpact's whole time, its fixed
- *   preparation (prepareTrack) and its integration's µs/step (the rest over its steps); and the WAKE_MARGIN reach
- *   filter's headroom over the longest impact (MAX_LEAD plus TRACK_IMPACT_CAP);
+ * - cost: the tracked canonical impacts against P2b.2a's force-table strokes (the force tables' Jaques round head,
+ *   plan decision 8): simulateImpact's whole time, its fixed preparation (prepareTrack) and its integration's µs/step
+ *   (the rest over its steps); and the WAKE_MARGIN reach filter's headroom over the longest impact (MAX_LEAD plus
+ *   TRACK_IMPACT_CAP);
  * - timings: for the AC stop and the full roll, each action from 50 ms early to 20 ms late, and the AC stop's dip from
  *   none to twice its depth: lawn or ball first, the dig, the slide, the striker's ball's launch, and after phase 2
  *   both balls' distances and the coaching ratio;
@@ -761,7 +765,10 @@ function faceSpeed(state: HeadState, head: MalletHead, aim: Vec3): number {
 }
 
 function mass(): void {
-    console.log("== Effective mass at the face centre along aim (design §3.4; exit criterion 3: within 10 % of m) ==");
+    console.log(
+        "== Effective mass at the face centre along aim (design §3.4): the strike against its closed form, " +
+            "which carries the shaft (P2b.2b.2b.2c design §4.4) ==",
+    );
     for (const type of STROKE_TYPES) {
         const r = run(canonicalSetup(type));
         const tracked = trackOf(r.contact);
