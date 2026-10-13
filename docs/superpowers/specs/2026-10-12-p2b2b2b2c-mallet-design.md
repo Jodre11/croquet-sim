@@ -206,7 +206,7 @@ head. `malletBody(head)` returns the existing `SwungBody` form:
 
 - M = m + m_s;
 - δ = m_s·(h_z + ℓ/2)/M;
-- I' = (I_x + e, I_y + e, I_z), e = m·δ² + m_s·((h_z + ℓ/2 − δ)² + ℓ²/12).
+- I' = (I_x + ΔI, I_y + ΔI, I_z), ΔI = m·δ² + m_s·((h_z + ℓ/2 − δ)² + ℓ²/12).
 
 `swungBody` and `carryBody` build on `malletBody` rather than the bare head; the arm mass and the hand skin add as
 now, and `stepSwung` integrates it. Force-table runs keep `stepHead` on the bare head: `validateImpact` requires their
