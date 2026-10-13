@@ -20,6 +20,7 @@ import {
     TEST_COUPLING,
     TEST_HANDS,
     TEST_HEAD,
+    TEST_RHO,
     isolated,
     levelArc,
     onArc,
@@ -57,7 +58,7 @@ function lastStep(): ImpactProbe & { last: ImpactSnapshot | null } {
 describe("the head–turf pair", () => {
     it("settles a level head lowered onto the turf at m·g/k, without turning it", () => {
         const probe = recorder();
-        const run = integrate(onTurf(TEST_HEAD.radius), { cap: 0.05, probe });
+        const run = integrate(onTurf(TEST_RHO), { cap: 0.05, probe });
         // Pre-flight: 0.28 % off m·g/k; the turf force 0.34 % off m·g, both at the cap.
         expect(Math.abs(0 - headLowestPoint(run.head, TEST_HEAD) - SINK) / SINK).toBeLessThan(0.01);
         expect(length(run.head.angularVelocity)).toBe(0);
@@ -76,7 +77,7 @@ describe("the head–turf pair", () => {
         // bounces into its sink).
         const v0 = 1;
         const probe = recorder();
-        const run = integrate(onTurf(TEST_HEAD.radius - SINK, vec3(0, v0, 0)), { cap: 0.1, probe });
+        const run = integrate(onTurf(TEST_RHO - SINK, vec3(0, v0, 0)), { cap: 0.1, probe });
         const stops = v0 / (3 * MU * g);
         const mid = probe.snapshots.find((s) => s.t >= stops / 2) as ImpactSnapshot;
         const expected = v0 - MU * g * mid.t;
@@ -86,10 +87,10 @@ describe("the head–turf pair", () => {
     });
 
     it("raises impact-head-deep just over HEAD_DEEP_LIMIT, and not just under", () => {
-        const over = integrate(onTurf(TEST_HEAD.radius - HEAD_DEEP_LIMIT - 1e-6), { cap: 1e-3 });
+        const over = integrate(onTurf(TEST_RHO - HEAD_DEEP_LIMIT - 1e-6), { cap: 1e-3 });
         expect(over.events.filter((e) => e.kind === "impact-head-deep").map((e) => e.t)).toEqual([IMPACT_DT]);
         expect(over.events.some((e) => e.kind === "impact-mallet-grounded")).toBe(false);
-        const under = integrate(onTurf(TEST_HEAD.radius - HEAD_DEEP_LIMIT + 1e-6), { cap: 1e-3 });
+        const under = integrate(onTurf(TEST_RHO - HEAD_DEEP_LIMIT + 1e-6), { cap: 1e-3 });
         expect(under.events.some((e) => e.kind === "impact-head-deep")).toBe(false);
     });
 
@@ -112,7 +113,7 @@ describe("the head–turf pair", () => {
                     }
                 },
             };
-            const run = integrate(onTurf(TEST_HEAD.radius, ZERO, axisAngle(vec3(0, 1, 0), tilt)), { cap: 0.05, probe });
+            const run = integrate(onTurf(TEST_RHO, ZERO, axisAngle(vec3(0, 1, 0), tilt)), { cap: 0.05, probe });
             expect(early, `tilt ${tilt}`).toBeLessThan(0.02);
             expect(late, `tilt ${tilt}`).toBeLessThanOrEqual(early);
             // Pre-flight: 0.12 % off m·g/k, as for the level head.
@@ -134,7 +135,7 @@ describe("the head–turf pair", () => {
             [0.8, 1e-3],
         ] as const) {
             const hands = { ...TEST_HANDS, gripTension: gamma, armMass };
-            const arc = levelArc(vec3(0, 0, TEST_HEAD.radius + 1e-3));
+            const arc = levelArc(vec3(0, 0, TEST_RHO + 1e-3));
             const track = prepareTrack(trackDrive(arc, TEST_COUPLING, hands), TEST_HEAD, g);
             const probe = lastStep();
             const start = headOnPath(track, TEST_HEAD, 0);
@@ -174,7 +175,7 @@ describe("the head–turf pair", () => {
                 lawn: { width: 30, length: 40, surfaceAt: (p) => (p.x < 4.5 ? { ...good, ...bad } : good) },
             });
         const blue = ballAt(5, 0);
-        const tracked = onArc(trackDrive(levelArc(vec3(4.2, 0, TEST_HEAD.radius + 0.01))));
+        const tracked = onArc(trackDrive(levelArc(vec3(4.2, 0, TEST_RHO + 0.01))));
         expect(() => simulateImpact(tracked, { blue }, under({ turfStiffness: 0 }))).toThrow(
             /turfStiffness under the head must be a positive finite number/,
         );

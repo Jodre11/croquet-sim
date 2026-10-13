@@ -346,7 +346,7 @@ function segmentDistance(p1: Vec3, q1: Vec3, p2: Vec3, q2: Vec3): number {
  * ROD_STEP along its axis, each against the head's cylinder (`headBallContact`).
  */
 function rodOverlap(state: HeadState, head: MalletHead, rod: Rod): number {
-    const reach = Math.hypot(head.length / 2, head.radius) + rod.radius;
+    const reach = Math.hypot(head.length / 2, head.shape.radius) + rod.radius;
     if (length(sub(closestOnSegment(state.position, rod.a, rod.b), state.position)) >= reach) {
         return 0;
     }
@@ -835,12 +835,17 @@ function tracking(): void {
     }
 }
 
+/**
+ * The force tables' head (P2b.2b.2b.2c plan decision 8): the Jaques round head, 9 in long and 3 in across
+ * (reference/mallet.json's headDiameter note), a bare uniform cylinder, whatever the default mallet.
+ */
+const JAQUES_LENGTH = 0.2286;
 const radius = malletReference.headDiameter.value / 2;
 const HEAD: MalletHead = {
     mass: malletReference.headMass.value,
-    inertia: solidCylinderInertia(malletReference.headMass.value, malletReference.headLength.value, radius),
-    length: malletReference.headLength.value,
-    radius,
+    inertia: solidCylinderInertia(malletReference.headMass.value, JAQUES_LENGTH, radius),
+    length: JAQUES_LENGTH,
+    shape: { kind: "cylinder", radius },
     socket: vec3(0, 0, radius),
 };
 const FACE: FaceMaterial = { friction: malletReference.faceFriction.value };

@@ -13,7 +13,7 @@ import { handoverLimit } from "../../../src/engine/impact/simulateImpact";
 import { axisAngle, rotate } from "../../../src/engine/impact/rigidBody";
 import type { HeadState } from "../../../src/engine/impact/types";
 import { TEST_BALL, airborneAt, hoopWithUprightAt, testWorld } from "../support/fixtures";
-import { TEST_HEAD } from "../support/impact";
+import { TEST_HEAD, TEST_RHO } from "../support/impact";
 import { backswingFor, canonicalSetup } from "../support/shot";
 
 const R = TEST_BALL.radius;
@@ -233,7 +233,7 @@ describe("handover with the head (P2b.2b.2b.2b design §5)", () => {
     it("throws for a head on top of a ball", () => {
         // A vertical normal has no horizontal part, so the rule has no sideways way out of the overlap.
         const state: HeadState = {
-            position: vec3(0, 0, 2 * R + TEST_HEAD.radius - 1e-4),
+            position: vec3(0, 0, 2 * R + TEST_RHO - 1e-4),
             orientation: axisAngle(vec3(0, 0, 1), 0),
             velocity: vec3(0, 0, 0),
             angularVelocity: vec3(0, 0, 0),

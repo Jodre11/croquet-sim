@@ -267,10 +267,10 @@ describe("validation", () => {
         ],
         [
             "a non-positive head radius",
-            { ...ok, head: { ...ok.head, radius: 0 } },
+            { ...ok, head: { ...ok.head, shape: { kind: "cylinder", radius: 0 } } },
             { blue: BLUE },
             WORLD,
-            /head\.radius/,
+            /head\.shape\.radius/,
         ],
         [
             "negative face friction",

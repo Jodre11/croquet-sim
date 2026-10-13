@@ -94,12 +94,15 @@ export interface SwingShape {
     readonly defaultIntensity: number;
 }
 
+/** A profile's head (P2b.2b.2b.2c design §5.1): a round head of `diameter` (m). */
+export type MalletHeadProfile = { readonly kind: "round"; readonly diameter: number };
+
 /** The physical part of a player's profile (design §5.1); P3 wraps it into the stored profile. */
 export interface SwingProfile {
     readonly mallet: {
         readonly headMass: number;
         readonly headLength: number;
-        readonly headDiameter: number;
+        readonly head: MalletHeadProfile;
         readonly shaftLength: number;
     };
     /**

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { FOLLOW_SAMPLE, IMPACT_DT } from "../../../src/engine/impact/integrate";
 import { rotate } from "../../../src/engine/impact/rigidBody";
+import { faceHalfHeight } from "../../../src/engine/impact/shape";
 import {
     downswingAt,
     downswingHands,
@@ -13,6 +14,7 @@ import type { Downswing, TrackDrive } from "../../../src/engine/impact/types";
 import { sinCos } from "../../../src/engine/math/elementary";
 import { add, cross, dot, length, scale, sub, vec3 } from "../../../src/engine/math/vec3";
 import { simulateShot } from "../../../src/engine/shot";
+import { headShapeOf } from "../../../src/engine/swing/buildContact";
 import { strokeTrajectory, type StrokeSample, type SwingTrajectory } from "../../../src/engine/swing/trajectory";
 import type { BallState } from "../../../src/engine/types";
 import { defaultWorld } from "../../../src/engine/world";
@@ -156,7 +158,7 @@ describe("strokeTrajectory (design §4.3)", () => {
         // From the profile, not the drive: the socket ρ = d/2 above the head's centre, the hands `top` and `bottom`
         // from it, all on a line square to the head's length (body x).
         const stance = setup.profile.stance.drive;
-        const rho = setup.profile.mallet.headDiameter / 2;
+        const rho = faceHalfHeight(headShapeOf(setup.profile.mallet.head));
         for (const s of trajectory.samples) {
             const toTop = sub(s.top, s.head);
             const toBottom = sub(s.bottom, s.head);

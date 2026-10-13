@@ -31,10 +31,16 @@ import {
 import { IDENTITY, axisAngle, multiply, rotate, type Quaternion } from "../../../src/engine/impact/rigidBody";
 import type { HeadState, MalletHead } from "../../../src/engine/impact/types";
 import type { BallState } from "../../../src/engine/types";
-import { TEST_HEAD } from "../support/impact";
+import { TEST_HEAD, TEST_RHO } from "../support/impact";
 
 const R = 0.046;
-const HEAD: MalletHead = { mass: 1, inertia: vec3(1, 1, 1), length: 0.2, radius: 0.03, socket: vec3(0, 0, 0.03) };
+const HEAD: MalletHead = {
+    mass: 1,
+    inertia: vec3(1, 1, 1),
+    length: 0.2,
+    shape: { kind: "cylinder", radius: 0.03 },
+    socket: vec3(0, 0, 0.03),
+};
 
 /** The head at rest with its +x face centred at the origin's left, facing +x. */
 function headAt(x: number, velocity = ZERO): HeadState {
@@ -320,7 +326,7 @@ describe("the head's lowest point and its turf contact", () => {
     });
 
     it("lies under the centre for a level head", () => {
-        expect(headBottom(at(IDENTITY), TEST_HEAD)).toEqual(vec3(1, 2, 0.05 - TEST_HEAD.radius));
+        expect(headBottom(at(IDENTITY), TEST_HEAD)).toEqual(vec3(1, 2, 0.05 - TEST_RHO));
     });
 
     it("is the lower end's rim for a tilted head, as low as headLowestPoint says", () => {
@@ -334,7 +340,7 @@ describe("the head's lowest point and its turf contact", () => {
 
     it("closes only below the turf, acting upward at the lowest point", () => {
         expect(headTurfContact(at(IDENTITY), TEST_HEAD)).toBeNull();
-        const low = { ...at(IDENTITY), position: vec3(1, 2, TEST_HEAD.radius - 1e-4) };
+        const low = { ...at(IDENTITY), position: vec3(1, 2, TEST_RHO - 1e-4) };
         const contact = headTurfContact(low, TEST_HEAD);
         expect(contact?.normal).toEqual(vec3(0, 0, 1));
         expect(contact?.depth).toBeCloseTo(1e-4, 15);
@@ -386,7 +392,7 @@ describe("the whole head against a ball (headBallContact)", () => {
 
     it("breaks ties as the spec does: a rim only off both, else a disc only where e_x > e_r", () => {
         // Binary-exact dimensions at the origin, so the ties are exact: L/2 = 0.125, r = 0.0625, offsets of 1/32.
-        const exact: MalletHead = { ...HEAD, length: 0.25, radius: 0.0625 };
+        const exact: MalletHead = { ...HEAD, length: 0.25, shape: { kind: "cylinder", radius: 0.0625 } };
         const origin: HeadState = { position: ZERO, orientation: IDENTITY, velocity: ZERO, angularVelocity: ZERO };
         const cases: readonly [Vec3, HeadRegion, Vec3, number][] = [
             // Inside, e_x = e_r = −1/32: the barrel.

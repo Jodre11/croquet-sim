@@ -5,15 +5,19 @@
 import type { Vec3 } from "../math/vec3";
 import type { BallId, BallStates } from "../types";
 import type { Quaternion } from "./rigidBody";
+import type { HeadShape } from "./shape";
 
-/** The mallet head: a solid cylinder whose axis is the body x axis; the two end discs are its faces. */
+/**
+ * The mallet head: a solid of section `shape` along the body x axis, `length` long; its two ends are its faces
+ * (P2b.2b.2b.2c design §3.1).
+ */
 export interface MalletHead {
     readonly mass: number;
     /** Principal moments about the centre of mass, body frame (axis, and the two transverse axes). */
     readonly inertia: Vec3;
     readonly length: number;
-    readonly radius: number;
-    /** Where the shaft meets the head, body frame. The drive force acts here. */
+    readonly shape: HeadShape;
+    /** Where the shaft meets the head, body frame: (0, 0, faceHalfHeight). The drive force acts here. */
     readonly socket: Vec3;
 }
 

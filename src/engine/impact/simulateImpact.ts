@@ -299,7 +299,7 @@ function validateTrack(drive: TrackDrive): void {
 function cylinderDistance(contact: ContactState, centre: Vec3): number {
     const p = rotateInverse(contact.orientation, sub(centre, contact.position));
     const axial = Math.max(Math.abs(p.x) - contact.head.length / 2, 0);
-    const radial = Math.max(Math.sqrt(p.y * p.y + p.z * p.z) - contact.head.radius, 0);
+    const radial = Math.max(Math.sqrt(p.y * p.y + p.z * p.z) - contact.head.shape.radius, 0);
     return Math.sqrt(axial * axial + radial * radial);
 }
 
@@ -353,7 +353,7 @@ export function validateImpact(
     positive(head.inertia.y, "head.inertia.y");
     positive(head.inertia.z, "head.inertia.z");
     positive(head.length, "head.length");
-    positive(head.radius, "head.radius");
+    positive(head.shape.radius, "head.shape.radius");
     finite(head.socket, "head.socket");
     friction(face.friction, "face.friction");
     positive(world.ballBallContactTime, "ballBallContactTime");

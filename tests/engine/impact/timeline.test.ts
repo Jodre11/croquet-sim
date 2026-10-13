@@ -10,7 +10,7 @@ import type { ContactInterval, HeadState } from "../../../src/engine/impact/type
 import type { BallState } from "../../../src/engine/types";
 import { STANDARD_GRAVITY } from "../../../src/engine/world";
 import { TEST_BALL } from "../support/fixtures";
-import { TEST_HEAD, faceLaw, freeBall, isolated, recorder, testBed } from "../support/impact";
+import { TEST_HEAD, TEST_RHO, faceLaw, freeBall, isolated, recorder, testBed } from "../support/impact";
 
 const R = TEST_BALL.radius;
 const M = TEST_BALL.mass;
@@ -136,7 +136,7 @@ describe("the integrator's timeline", () => {
             velocity: ZERO,
             angularVelocity: ZERO,
         };
-        const ball = freeBall("blue", vec3(R + 2e-5, TEST_HEAD.radius + 1e-3, 1), vec3(-0.1, -2, 0));
+        const ball = freeBall("blue", vec3(R + 2e-5, TEST_RHO + 1e-3, 1), vec3(-0.1, -2, 0));
         const run = integrate(isolated({ start, balls: [ball] }), { cap: 2e-3 });
         const rim = run.events.find((e) => e.kind === "impact-off-face");
         const faces = run.timeline["face/blue"] ?? [];

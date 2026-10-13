@@ -2,8 +2,9 @@
  * Test-only swing profiles and the canonical setups (P2b.2b.1 design §5.5). `testProfile` is plausible but NOT
  * sourced, as fixtures.ts. src/ must never import this file.
  */
+import { faceHalfHeight } from "../../../src/engine/impact/shape";
 import { vec3 } from "../../../src/engine/math/vec3";
-import { handsAheadFor, plannedSpeed, stanceLean } from "../../../src/engine/swing/buildContact";
+import { handsAheadFor, headShapeOf, plannedSpeed, stanceLean } from "../../../src/engine/swing/buildContact";
 import { MAX_BACK_ANGLE } from "../../../src/engine/swing/downswing";
 import { DEFAULT_DRIVE, ON_TIME, defaultProfile } from "../../../src/engine/swing/profile";
 import {
@@ -49,7 +50,13 @@ export interface TestProfileOptions {
  * and `handsAhead`.
  */
 export function testProfile(o: TestProfileOptions = {}): SwingProfile {
-    const mallet = { headMass: 1, headLength: 0.23, headDiameter: 0.064, shaftLength: 0.9, ...o.mallet };
+    const mallet: SwingProfile["mallet"] = {
+        headMass: 1,
+        headLength: 0.23,
+        head: { kind: "round", diameter: 0.064 },
+        shaftLength: 0.9,
+        ...o.mallet,
+    };
     const { lean, ...given }: Partial<SwingStance> & { readonly lean?: number } = o.stance ?? {};
     if (lean !== undefined && given.handsAhead !== undefined) {
         throw new Error("testProfile: give the stance a lean or handsAhead, not both");
@@ -58,7 +65,7 @@ export function testProfile(o: TestProfileOptions = {}): SwingProfile {
     const geometry = {
         ballRadius: o.ballRadius ?? TEST_BALL.radius,
         headLength: mallet.headLength,
-        headRadius: mallet.headDiameter / 2,
+        faceHalfHeight: faceHalfHeight(headShapeOf(mallet.head)),
     };
     const stance: SwingStance = {
         handsAhead: handsAheadFor(lean ?? 0, top, o.up ?? 0, geometry),
@@ -250,11 +257,12 @@ export function backswingFor(setup: ShotSetup, speed: number, world: World = def
     if (known !== undefined) {
         return known;
     }
-    const lever = profile.mallet.headDiameter / 2 + stance.top;
+    const rho = faceHalfHeight(headShapeOf(profile.mallet.head));
+    const lever = rho + stance.top;
     const lean = stanceLean(stance.handsAhead, stance.top, stroke.contact.up, {
         ballRadius: world.ball.radius,
         headLength: profile.mallet.headLength,
-        headRadius: profile.mallet.headDiameter / 2,
+        faceHalfHeight: rho,
     });
     const room = lever * (Math.cos(lean) - Math.cos(MAX_BACK_ANGLE));
     let hi = shape.pendulumShare > 0 ? (room / shape.pendulumShare) * (1 - 1e-9) : 2;

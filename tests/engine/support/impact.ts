@@ -41,13 +41,16 @@ import { TEST_BALL, TEST_TURF, ballAt, hoopWithUprightAt, testHoop } from "./fix
 
 const R = TEST_BALL.radius;
 
+/** The test head's radius (m): its face's half-height and the socket's height. */
+export const TEST_RHO = 0.032;
+
 /** A 1.0 kg solid round head, 0.23 m long and 0.064 m across, shaft socket on top at the middle. */
 export const TEST_HEAD: MalletHead = {
     mass: 1,
-    inertia: solidCylinderInertia(1, 0.23, 0.032),
+    inertia: solidCylinderInertia(1, 0.23, TEST_RHO),
     length: 0.23,
-    radius: 0.032,
-    socket: vec3(0, 0, 0.032),
+    shape: { kind: "cylinder", radius: TEST_RHO },
+    socket: vec3(0, 0, TEST_RHO),
 };
 
 export const TEST_FACE: FaceMaterial = { friction: 0.4 };
@@ -397,8 +400,8 @@ export function randomStroke(random: () => number, world: World): { contact: Con
             yaw: uni(-0.3, 0.3),
             descent: uni(0, 0.5),
             pitch: uni(-0.2, 0.6),
-            lateral: uni(-0.8, 0.8) * TEST_HEAD.radius,
-            vertical: uni(-0.6, 0.6) * TEST_HEAD.radius,
+            lateral: uni(-0.8, 0.8) * TEST_RHO,
+            vertical: uni(-0.6, 0.6) * TEST_RHO,
             drive: (t) => drive(scale(t, force), window),
         });
         const balls: BallStates = { blue };

@@ -28,9 +28,10 @@ import {
     type StrokeShapeReference,
 } from "../../reference/index";
 import { ReferenceDataError } from "../../reference/schema";
+import { faceHalfHeight } from "../impact/shape";
 import { ARM_FLEX, HAND_CHAIN, PENDULUM_FORCE, PUSH_FORCE, PUSH_RESPONSE_TIME } from "../impact/track";
 import type { StrokeMode } from "../impact/types";
-import { handsAheadFor } from "./buildContact";
+import { handsAheadFor, headShapeOf } from "./buildContact";
 import {
     STROKE_TYPES,
     type StrokeTiming,
@@ -43,15 +44,23 @@ import {
 
 const DEG = Math.PI / 180;
 
+/** The default mallet (design §5.4): reference/mallet.json's round head and shaft. */
+const MALLET: SwingProfile["mallet"] = {
+    headMass: malletReference.headMass.value,
+    headLength: malletReference.headLength.value,
+    head: { kind: "round", diameter: malletReference.headDiameter.value },
+    shaftLength: malletReference.shaftLength.value,
+};
+
 /**
  * The reference ball and mallet each default stance's hands are derived for (P2b.2b.2b.1 design §4). R and ρ are
- * computed as defaultWorld and contactPose compute them, so an upright preset's hands and its pose's B agree to the
- * bit.
+ * computed as defaultWorld and contactPose compute them, ρ from the default mallet itself, so an upright preset's hands
+ * and its pose's B agree to the bit.
  */
 const REFERENCE_GEOMETRY = {
     ballRadius: ballReference.diameter.value / 2,
-    headLength: malletReference.headLength.value,
-    headRadius: malletReference.headDiameter.value / 2,
+    headLength: MALLET.headLength,
+    faceHalfHeight: faceHalfHeight(headShapeOf(MALLET.head)),
 };
 
 /**
@@ -245,12 +254,7 @@ const DRIVE: Readonly<Record<StrokeType, SwingDrive>> = {
 
 /** The default profile (design §5.4). Provisional throughout. */
 export const defaultProfile: SwingProfile = {
-    mallet: {
-        headMass: malletReference.headMass.value,
-        headLength: malletReference.headLength.value,
-        headDiameter: malletReference.headDiameter.value,
-        shaftLength: malletReference.shaftLength.value,
-    },
+    mallet: MALLET,
     body: {
         armMass: contactReference.armMass.value,
         reachSlack: contactReference.reachSlack.value,

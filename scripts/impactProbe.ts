@@ -31,12 +31,17 @@ declare const process: { readonly env: Readonly<Record<string, string | undefine
 const REPEAT = Number(process.env.REPEAT ?? "200");
 const BASE = defaultWorld();
 const R = BASE.ball.radius;
+/**
+ * The force tables' head (P2b.2b.2b.2c plan decision 8): the Jaques round head, 9 in long and 3 in across
+ * (reference/mallet.json's headDiameter note), a bare uniform cylinder, whatever the default mallet.
+ */
+const JAQUES_LENGTH = 0.2286;
 const radius = malletReference.headDiameter.value / 2;
 const HEAD: MalletHead = {
     mass: malletReference.headMass.value,
-    inertia: solidCylinderInertia(malletReference.headMass.value, malletReference.headLength.value, radius),
-    length: malletReference.headLength.value,
-    radius,
+    inertia: solidCylinderInertia(malletReference.headMass.value, JAQUES_LENGTH, radius),
+    length: JAQUES_LENGTH,
+    shape: { kind: "cylinder", radius },
     socket: vec3(0, 0, radius),
 };
 const FACE: FaceMaterial = { friction: malletReference.faceFriction.value };

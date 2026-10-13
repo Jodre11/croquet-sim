@@ -891,7 +891,7 @@ function stillReaching(
     for (const s of balls) {
         const offset = sub(s.position, face);
         const d = dot(offset, f);
-        if (!(d > 0) || length(sub(offset, scale(f, d))) >= head.radius + radius) {
+        if (!(d > 0) || length(sub(offset, scale(f, d))) >= head.shape.radius + radius) {
             continue;
         }
         const closing = speed - dot(s.velocity, f);

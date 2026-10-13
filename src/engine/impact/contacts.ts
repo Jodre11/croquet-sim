@@ -114,11 +114,11 @@ export function faceContact(
             continue;
         }
         const radial = length(sub(offset, scale(face.normal, d)));
-        if (radial <= head.radius) {
+        if (radial <= head.shape.radius) {
             const depth = radius - d;
             return { normal: face.normal, depth, point: sub(centre, scale(face.normal, radius - depth / 2)) };
         }
-        if (radial < head.radius + Math.sqrt(radius * radius - d * d)) {
+        if (radial < head.shape.radius + Math.sqrt(radius * radius - d * d)) {
             return OFF_FACE;
         }
     }
@@ -158,7 +158,7 @@ export function headBallContact(
     const across = sub(offset, scale(axis, x));
     const radial = length(across);
     const ex = Math.abs(x) - head.length / 2;
-    const er = radial - head.radius;
+    const er = radial - head.shape.radius;
     const end = x >= 0 ? axis : scale(axis, -1);
     let distance: number;
     let normal: Vec3;
@@ -339,7 +339,9 @@ export function pointVelocity(centre: Vec3, velocity: Vec3, angularVelocity: Vec
  */
 export function headLowestPoint(state: HeadState, head: MalletHead): number {
     const az = rotate(state.orientation, vec3(1, 0, 0)).z;
-    return state.position.z - (head.length / 2) * Math.abs(az) - head.radius * Math.sqrt(Math.max(0, 1 - az * az));
+    return (
+        state.position.z - (head.length / 2) * Math.abs(az) - head.shape.radius * Math.sqrt(Math.max(0, 1 - az * az))
+    );
 }
 
 /**
@@ -353,7 +355,7 @@ export function headClosing(state: HeadState, head: MalletHead, ball: BallState,
         const face = faceOf(state, head, side);
         const offset = sub(ball.position, face.centre);
         const d = dot(offset, face.normal);
-        if (!(d > 0 && d < 2 * radius) || length(sub(offset, scale(face.normal, d))) >= head.radius + radius) {
+        if (!(d > 0 && d < 2 * radius) || length(sub(offset, scale(face.normal, d))) >= head.shape.radius + radius) {
             continue;
         }
         const under = sub(ball.position, scale(face.normal, radius));
@@ -380,7 +382,7 @@ export function headBottom(state: HeadState, head: MalletHead): Vec3 {
     const end = a.z > 0 ? scale(a, half) : a.z < 0 ? scale(a, 0 - half) : vec3(0, 0, 0);
     const rise = vec3(0 - a.z * a.x, 0 - a.z * a.y, 1 - a.z * a.z);
     const size = length(rise);
-    const across = size > 0 ? scale(rise, head.radius / size) : vec3(0, 0, 0);
+    const across = size > 0 ? scale(rise, head.shape.radius / size) : vec3(0, 0, 0);
     return sub(sub(state.position, end), across);
 }
 

@@ -357,7 +357,7 @@ describe("buildContact, step by step", () => {
             mass: 1,
             inertia: solidCylinderInertia(1, 0.23, 0.032),
             length: 0.23,
-            radius: 0.032,
+            shape: { kind: "cylinder", radius: 0.032 },
             socket: vec3(0, 0, 0.032),
         });
         // P2b.2b.2b.2a design §3.6: the face's restitution and contact time are contact.json's wood fits.
@@ -581,7 +581,7 @@ describe("defaultProfile", () => {
         expect(defaultProfile.mallet).toEqual({
             headMass: malletReference.headMass.value,
             headLength: malletReference.headLength.value,
-            headDiameter: malletReference.headDiameter.value,
+            head: { kind: "round", diameter: malletReference.headDiameter.value },
             shaftLength: malletReference.shaftLength.value,
         });
         expect(defaultProfile.body).toEqual({
@@ -873,7 +873,7 @@ describe("contactPose (design §5.2 steps 1–5, 10)", () => {
     it("puts the top hand handsAhead ahead of the ball along aim, the face pitched by stanceLean's lean", () => {
         // P2b.2b.2b.1 design §5.1. `side` moves nothing along aim.
         const aim = vec3(Math.cos(0.4), Math.sin(0.4), 0);
-        const geometry = { ballRadius: R, headLength: LENGTH, headRadius: RHO };
+        const geometry = { ballRadius: R, headLength: LENGTH, faceHalfHeight: RHO };
         for (const handsAhead of [-0.25, -0.1, 0.12]) {
             for (const up of [-0.01, 0, 0.01]) {
                 const setup = shot({ contact: { up, side: 0.004 } }, testProfile({ stance: { handsAhead } }));
@@ -897,12 +897,12 @@ describe("contactPose (design §5.2 steps 1–5, 10)", () => {
             {
                 profile: { ...base, mallet: { ...base.mallet, headLength: 0.3 } },
                 world: WORLD,
-                geometry: { ballRadius: R, headLength: 0.3, headRadius: RHO },
+                geometry: { ballRadius: R, headLength: 0.3, faceHalfHeight: RHO },
             },
             {
                 profile: base,
                 world: testWorld({ ball: { ...WORLD.ball, radius: 0.05 } }),
-                geometry: { ballRadius: 0.05, headLength: LENGTH, headRadius: RHO },
+                geometry: { ballRadius: 0.05, headLength: LENGTH, faceHalfHeight: RHO },
             },
         ];
         for (const { profile, world, geometry } of cases) {
@@ -1020,7 +1020,7 @@ describe("the lead (design §3.5)", () => {
 
 describe("the stance's geometry (P2b.2b.2b.1 design §3.2, §3.3)", () => {
     /** The test ball and head: R, L and ρ. */
-    const GEOMETRY = { ballRadius: R, headLength: LENGTH, headRadius: RHO };
+    const GEOMETRY = { ballRadius: R, headLength: LENGTH, faceHalfHeight: RHO };
     /** B = R + START_GAP + L/2, in the engine's operation order. */
     const B = R + START_GAP + LENGTH / 2;
 

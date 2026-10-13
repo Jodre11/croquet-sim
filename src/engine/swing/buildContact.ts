@@ -19,6 +19,7 @@
 import { malletReference } from "../../reference/index";
 import { headLowestPoint } from "../impact/contacts";
 import { rotate, solidCylinderInertia, type Quaternion } from "../impact/rigidBody";
+import { faceHalfHeight, type HeadShape } from "../impact/shape";
 import {
     HAND_COUPLING,
     headOnPath,
@@ -34,7 +35,7 @@ import { atan2, sinCos } from "../math/elementary";
 import { add, cross, length, scale, sub, vec3, type Vec3 } from "../math/vec3";
 import type { BallState, World } from "../types";
 import { planDownswing, scanDownswing, type DownswingInput, type PlannedDownswing } from "./downswing";
-import type { ShotSetup, SwingDrive, SwingShape, SwingStance } from "./types";
+import type { MalletHeadProfile, ShotSetup, SwingDrive, SwingShape, SwingStance } from "./types";
 
 /**
  * Gap (m) between the face and the striker's sunk surface at contact (design §5.2 step 4). Numerical, not physical:
@@ -123,11 +124,14 @@ function tempos(slow: number, fast: number, slowName: string, fastName: string):
     }
 }
 
-/** The rigid geometry between a stance's top hand and its lean (P2b.2b.2b.1 design §3.2): R, L and ρ (m). */
+/**
+ * The rigid geometry between a stance's top hand and its lean (P2b.2b.2b.1 design §3.2): R, L and ρ (m), ρ the
+ * socket's height above the head's centre (faceHalfHeight).
+ */
 export interface StanceGeometry {
     readonly ballRadius: number;
     readonly headLength: number;
-    readonly headRadius: number;
+    readonly faceHalfHeight: number;
 }
 
 /**
@@ -135,8 +139,8 @@ export interface StanceGeometry {
  * directions, so a lean derived by handsAheadFor reads back through stanceLean with the same bits of A and B.
  */
 function stanceArms(top: number, up: number, geometry: StanceGeometry): readonly [number, number] {
-    const { ballRadius, headLength, headRadius } = geometry;
-    return [headRadius + top - up, ballRadius + START_GAP + headLength / 2];
+    const { ballRadius, headLength, faceHalfHeight } = geometry;
+    return [faceHalfHeight + top - up, ballRadius + START_GAP + headLength / 2];
 }
 
 /**
@@ -160,6 +164,11 @@ export function stanceLean(handsAhead: number, top: number, up: number, geometry
     const [a, b] = stanceArms(top, up, geometry);
     const s = Math.sqrt(a * a + (b - handsAhead) * (b + handsAhead));
     return atan2(a * handsAhead + b * s, a * s - b * handsAhead);
+}
+
+/** The head shape of a profile's head (P2b.2b.2b.2c design §5.1): a round head's radius is half its diameter. */
+export function headShapeOf(head: MalletHeadProfile): HeadShape {
+    return { kind: "cylinder", radius: head.diameter / 2 };
 }
 
 /** Checks `setup` on a world whose ball has radius `ballRadius` (see planStroke). */
@@ -222,10 +231,16 @@ function validate(setup: ShotSetup, ballRadius: number): void {
     finiteNumber(shape.handTempo.slow, `${where}.handTempo.slow`);
     finiteNumber(shape.handTempo.fast, `${where}.handTempo.fast`);
     const { mallet, body } = profile;
-    for (const [key, value] of Object.entries(mallet)) {
-        finiteNumber(value, `profile.mallet.${key}`);
-        positive(value, `profile.mallet.${key}`);
+    for (const key of ["headMass", "headLength", "shaftLength"] as const) {
+        finiteNumber(mallet[key], `profile.mallet.${key}`);
+        positive(mallet[key], `profile.mallet.${key}`);
     }
+    const { head } = mallet;
+    if (head.kind !== "round") {
+        fail(`profile.mallet.head.kind must be "round" (got ${String((head as { kind: unknown }).kind)})`);
+    }
+    finiteNumber(head.diameter, "profile.mallet.head.diameter");
+    positive(head.diameter, "profile.mallet.head.diameter");
     finiteNumber(body.armMass, "profile.body.armMass");
     finiteNumber(body.reachSlack, "profile.body.reachSlack");
 
@@ -247,13 +262,13 @@ function validate(setup: ShotSetup, ballRadius: number): void {
     if (!(Math.abs(stroke.drive) <= 1)) {
         fail(`stroke.drive must lie in [-1, 1] (got ${stroke.drive})`);
     }
-    const rho = mallet.headDiameter / 2;
+    const rho = faceHalfHeight(headShapeOf(head));
     const { up, side } = stroke.contact;
     if (!(Math.sqrt(up * up + side * side) < rho)) {
         fail(`the contact lies off the face: (${up}, ${side}) m from its centre, whose radius is ${rho} m`);
     }
     // A > 0 rests on the contact lying on the face, checked just above (P2b.2b.2b.1 design §3.4).
-    const [a, b] = stanceArms(top, up, { ballRadius, headLength: mallet.headLength, headRadius: rho });
+    const [a, b] = stanceArms(top, up, { ballRadius, headLength: mallet.headLength, faceHalfHeight: rho });
     const d = Math.sqrt(a * a + b * b);
     if (!(handsAhead > 0 - d && handsAhead < a)) {
         fail(
@@ -388,17 +403,18 @@ export interface ContactPose {
  * The contact pose of `setup` on `world` (design §5.2): the arc radius r = top (step 1), θ_c = −lean, the lean from
  * the top hand's position (step 2; P2b.2b.2b.1 design §3.2), the head pitched rigidly with the shaft (step 3), its
  * face START_GAP short of the sunk striker at (up, side) (step 4), the pivot r up the shaft from the socket (step 5),
- * and the head a solid cylinder of the profile's mallet (step 10). Takes the setup as checked (planStroke).
+ * and the head a solid of the profile's mallet (step 10). Takes the setup as checked (planStroke).
  */
 export function contactPose(setup: ShotSetup, world: World): ContactPose {
     const { stroke, profile } = setup;
     const striker = setup.balls[setup.striker] as BallState;
     const { handsAhead, top } = profile.stance[stroke.type];
     const { mallet } = profile;
-    const rho = mallet.headDiameter / 2;
+    const shape = headShapeOf(mallet.head);
+    const rho = faceHalfHeight(shape);
     const { up, side } = stroke.contact;
     const R = world.ball.radius;
-    const lean = stanceLean(handsAhead, top, up, { ballRadius: R, headLength: mallet.headLength, headRadius: rho });
+    const lean = stanceLean(handsAhead, top, up, { ballRadius: R, headLength: mallet.headLength, faceHalfHeight: rho });
     const surface = world.lawn.surfaceAt(striker.position);
     const sunk =
         R - staticSink(striker.position.x, striker.position.y, R, world.ball.mass * world.gravity, bedLawOf(surface));
@@ -421,7 +437,7 @@ export function contactPose(setup: ShotSetup, world: World): ContactPose {
         mass: mallet.headMass,
         inertia: solidCylinderInertia(mallet.headMass, mallet.headLength, rho),
         length: mallet.headLength,
-        radius: rho,
+        shape,
         socket: vec3(0, 0, rho),
     };
     return { head, aim, thetaContact: thetaC, orientation, headCentre, pivot, radius };
