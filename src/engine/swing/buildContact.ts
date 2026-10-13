@@ -259,6 +259,8 @@ function validate(setup: ShotSetup, ballRadius: number): void {
         finiteNumber(mallet[key], `profile.mallet.${key}`);
         positive(mallet[key], `profile.mallet.${key}`);
     }
+    finiteNumber(mallet.shaftMass, "profile.mallet.shaftMass");
+    nonNegative(mallet.shaftMass, "profile.mallet.shaftMass");
     const { head } = mallet;
     if (head.kind === "round") {
         finiteNumber(head.diameter, "profile.mallet.head.diameter");
@@ -490,6 +492,7 @@ export function contactPose(setup: ShotSetup, world: World): ContactPose {
         length: mallet.headLength,
         shape,
         socket: vec3(0, 0, rho),
+        shaft: { mass: mallet.shaftMass, length: mallet.shaftLength },
     };
     return { head, aim, thetaContact: thetaC, orientation, headCentre, pivot, radius };
 }
@@ -561,12 +564,13 @@ export interface StrokePlan {
  * downswing the approach, and the planned contact speed. Throws a RangeError naming the check for:
  * - a striker absent from the setup, or a stroke type missing from the profile's stance, drive or shape;
  * - a mode other than "swing" or "carry";
- * - a non-finite number, or a non-positive mallet dimension or mass; a box head's edge radius outside
- *   [0, min(h_y, h_z, L/2)) or its moment about the shaft outside the realisable (P2b.2b.2b.2c design §5.1);
+ * - a non-finite number, or a non-positive mallet dimension or mass, or a negative shaft mass; a box head's edge
+ *   radius outside [0, min(h_y, h_z, L/2)) or its moment about the shaft outside the realisable (P2b.2b.2b.2c design
+ *   §5.1);
  * - top ≤ 0, or top > shaftLength; bottom outside (0, top);
- * - backswing ≤ 0; an intensity outside [0, 1]; |drive| > 1; the contact off the face (a box's: off its flat part); handsAhead outside (−D, A) for
- *   the stroke's top hand and contact (P2b.2b.2b.1 design §3.4: at A the shaft lies flat, at −D the hands leave the
- *   stance's branch);
+ * - backswing ≤ 0; an intensity outside [0, 1]; |drive| > 1; the contact off the face (a box's: off its flat part);
+ *   handsAhead outside (−D, A) for the stroke's top hand and contact (P2b.2b.2b.1 design §3.4: at A the shaft lies
+ *   flat, at −D the hands leave the stance's branch);
  * - window, handWindow or dropTime ≤ 0; speedGain < 0; gripTension or bottomGrip outside (0, 1]; handDrop < 0; the
  *   preset's or the shot's handReach < 0; the preset's or the shot's guideEffort outside [0, 1];
  *   armMass < 0; reachSlack < 0; the preset's or the shot's pendulumAt or pendulumEffort outside [0, 1]; handArcLow

@@ -50,6 +50,8 @@ const MALLET: SwingProfile["mallet"] = {
     headLength: malletReference.headLength.value,
     head: { kind: "round", diameter: malletReference.headDiameter.value },
     shaftLength: malletReference.shaftLength.value,
+    // The shaft carries no mass until the default mallet switches (P2b.2b.2b.2c plan decision 10).
+    shaftMass: 0,
 };
 
 /**

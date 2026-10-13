@@ -2,9 +2,9 @@
  * The impact integrator (P2b.1 design §5): semi-implicit (symplectic) Euler at a fixed step over the mallet head, the
  * balls and the turf. Each step:
  * 1. computes every force from the current state: the hands' load (a force table at the socket, or a tracked drive's
- *    two hands, track.ts) and gravity, then each closed pair in pair-list order, then the head–turf pair if the set-up
- *    has it (P2b.2b.1 design §4); a face–ball pair closes with its own Hertzian law (contactLaw.ts closeFace;
- *    P2b.2b.2b.2a design §3.3);
+ *    two hands, track.ts) and gravity, the shaft's at its own centre (P2b.2b.2b.2c design §4.3), then each closed pair
+ *    in pair-list order, then the head–turf pair if the set-up has it (P2b.2b.1 design §4); a face–ball pair closes
+ *    with its own Hertzian law (contactLaw.ts closeFace; P2b.2b.2b.2a design §3.3);
  * 2. updates every velocity from those forces, the head's spin through Euler's equations in its body frame (for a
  *    tracked drive, the swung body's: the head and the arm mass, P2b.2b.1 design §3.3);
  * 3. updates every position, and the head's orientation, from the new velocities.
@@ -908,6 +908,20 @@ function stillReaching(
 }
 
 /**
+ * The shaft's weight (N, world frame) and its centre in the head's body frame, (0, 0, h_z + ℓ/2) (P2b.2b.2b.2c design
+ * §4.3), for the loads; null with no shaft mass, so that a bare head's loads gain no zero terms.
+ */
+function shaftWeightOf(head: MalletHead, gravity: number): { readonly force: Vec3; readonly at: Vec3 } | null {
+    if (head.shaft.mass === 0) {
+        return null;
+    }
+    return {
+        force: vec3(0, 0, 0 - head.shaft.mass * gravity),
+        at: vec3(0, 0, head.socket.z + head.shaft.length / 2),
+    };
+}
+
+/**
  * Integrates the impact from `setup` until it ends (see the file header) and, with `follow` and a tracked drive, the
  * follow-through (P2b.2b.2a design §4.1). The impact is the same either way: recording the samples only reads the
  * state, and the run is fixed before the follow-through starts.
@@ -921,6 +935,7 @@ export function integrateStroke(setup: ImpactSetup, options: ImpactOptions = {},
     const driveEnd = plan.kind === "force" ? (plan.samples[plan.samples.length - 1] as DriveSample).t : trackEnd(plan);
     const grip = newGripState();
     const headWeight = vec3(0, 0, 0 - head.mass * setup.gravity);
+    const shaft = shaftWeightOf(head, setup.gravity);
     const ballWeight = vec3(0, 0, 0 - ball.mass * setup.gravity);
     const ids = setup.balls.map((b) => b.id);
     const hasTurf = setup.balls.map((b) => b.turf !== null);
@@ -984,8 +999,9 @@ export function integrateStroke(setup: ImpactSetup, options: ImpactOptions = {},
             headTorque = hand.torque;
         }
         const loads: StepLoads = {
-            headForce: add(drive, headWeight),
-            headTorque,
+            headForce: shaft === null ? add(drive, headWeight) : add(add(drive, headWeight), shaft.force),
+            headTorque:
+                shaft === null ? headTorque : add(headTorque, cross(rotate(state.orientation, shaft.at), shaft.force)),
             forces: balls.map(() => ballWeight),
             torques: balls.map(() => ZERO),
             ballsOnHead: carry ? ZERO : null,
@@ -1221,6 +1237,7 @@ function continueStroke(
     const cap = plan.arc.contactAt + FOLLOW_CAP;
     const releaseAt = releaseTime(plan);
     const headWeight = vec3(0, 0, 0 - head.mass * setup.gravity);
+    const shaft = shaftWeightOf(head, setup.gravity);
     const ground: HeadTurfState | null =
         turf === null ? null : { law: turf.law, spring: turf.spring, peak: 0, line: emptyTimeline(), slide: 0 };
     const flags: FollowFlag[] = [];
@@ -1243,8 +1260,11 @@ function continueStroke(
         // The impact loop's hands, head–turf and advance, kept apart: sharing them would reorder the impact's sums.
         const hand = handLoad(path, state, head, t, grip, t >= holdFrom);
         const loads: StepLoads = {
-            headForce: add(hand.force, headWeight),
-            headTorque: hand.torque,
+            headForce: shaft === null ? add(hand.force, headWeight) : add(add(hand.force, headWeight), shaft.force),
+            headTorque:
+                shaft === null
+                    ? hand.torque
+                    : add(hand.torque, cross(rotate(state.orientation, shaft.at), shaft.force)),
             forces: [],
             torques: [],
             ballsOnHead: null,

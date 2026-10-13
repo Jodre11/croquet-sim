@@ -40,6 +40,7 @@ const HEAD: MalletHead = {
     length: 0.2,
     shape: { kind: "cylinder", radius: 0.03 },
     socket: vec3(0, 0, 0.03),
+    shaft: { mass: 0, length: 0.9 },
 };
 
 /** The head at rest with its +x face centred at the origin's left, facing +x. */

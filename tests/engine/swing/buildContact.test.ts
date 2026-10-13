@@ -367,6 +367,7 @@ describe("buildContact, step by step", () => {
             length: 0.23,
             shape: { kind: "cylinder", radius: 0.032 },
             socket: vec3(0, 0, 0.032),
+            shaft: { mass: 0, length: 0.9 },
         });
         // P2b.2b.2b.2a design §3.6: the face's restitution and contact time are contact.json's wood fits.
         expect(c.face).toEqual({ friction: malletReference.faceFriction.value });
@@ -383,6 +384,7 @@ describe("buildContact, step by step", () => {
             length: 0.23,
             shape: { kind: "box", halfWidth: 0.03, halfHeight: 0.025, edgeRadius: 0.003 },
             socket: vec3(0, 0, 0.025),
+            shaft: { mass: 0, length: 0.9 },
         });
     });
 
@@ -638,6 +640,7 @@ describe("defaultProfile", () => {
             headLength: malletReference.headLength.value,
             head: { kind: "round", diameter: malletReference.headDiameter.value },
             shaftLength: malletReference.shaftLength.value,
+            shaftMass: 0,
         });
         expect(defaultProfile.body).toEqual({
             armMass: contactReference.armMass.value,
@@ -811,6 +814,11 @@ describe("buildContact rejections", () => {
             "a box head's moment past the realisable",
             shot({}, testProfile({ mallet: { head: { ...TEST_BOX_HEAD, inertiaAboutShaft: 0.05 } } })),
             /moment about the shaft must lie in/,
+        ],
+        [
+            "a negative shaft mass",
+            shot({}, testProfile({ mallet: { shaftMass: -0.1 } })),
+            /profile\.mallet\.shaftMass must be non-negative/,
         ],
         [
             "an unknown head kind",

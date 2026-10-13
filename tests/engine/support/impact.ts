@@ -2,7 +2,7 @@
  * Test-only mallet, face and impact helpers. Plausible but deliberately NOT sourced (as fixtures.ts), so expectations
  * do not move when reference data does. src/ must never import this file.
  */
-import { ZERO, add, length, lengthSq, scale, sub, vec3, type Vec3 } from "../../../src/engine/math/vec3";
+import { ZERO, add, cross, length, lengthSq, scale, sub, vec3, type Vec3 } from "../../../src/engine/math/vec3";
 import { lawFromContactTime } from "../../../src/engine/impact/contactLaw";
 import type { ImpactBall, ImpactProbe, ImpactSetup, ImpactSnapshot } from "../../../src/engine/impact/integrate";
 import {
@@ -15,7 +15,7 @@ import {
     type Quaternion,
 } from "../../../src/engine/impact/rigidBody";
 import { validateImpact } from "../../../src/engine/impact/simulateImpact";
-import { headOnPath, prepareTrack, swingOrientation } from "../../../src/engine/impact/track";
+import { headOnPath, malletBody, prepareTrack, swingOrientation } from "../../../src/engine/impact/track";
 import { BED_CELL } from "../../../src/engine/impact/turfBed";
 import type {
     BedLaw,
@@ -51,6 +51,7 @@ export const TEST_HEAD: MalletHead = {
     length: 0.23,
     shape: { kind: "cylinder", radius: TEST_RHO },
     socket: vec3(0, 0, TEST_RHO),
+    shaft: { mass: 0, length: 0.9 },
 };
 
 /**
@@ -64,6 +65,7 @@ export const TEST_BOX: MalletHead = {
     length: 0.23,
     shape: { kind: "box", halfWidth: TEST_RHO, halfHeight: TEST_RHO, edgeRadius: 0.003 },
     socket: vec3(0, 0, TEST_RHO),
+    shaft: { mass: 0, length: 0.9 },
 };
 
 export const TEST_FACE: FaceMaterial = { friction: 0.4 };
@@ -330,18 +332,33 @@ export function recorder(): ImpactProbe & { readonly snapshots: ImpactSnapshot[]
 
 function headKinetic(state: HeadState, head: MalletHead): number {
     const w = rotateInverse(state.orientation, state.angularVelocity);
-    const rot = head.inertia.x * w.x * w.x + head.inertia.y * w.y * w.y + head.inertia.z * w.z * w.z;
-    return 0.5 * head.mass * lengthSq(state.velocity) + 0.5 * rot;
+    if (head.shaft.mass === 0) {
+        const rot = head.inertia.x * w.x * w.x + head.inertia.y * w.y * w.y + head.inertia.z * w.z * w.z;
+        return 0.5 * head.mass * lengthSq(state.velocity) + 0.5 * rot;
+    }
+    // The whole mallet (P2b.2b.2b.2c design §4.3): its centre δ up the shaft from the head's, moving at v + ω × δ·s.
+    const body = malletBody(head);
+    const centre = add(
+        state.velocity,
+        cross(state.angularVelocity, rotate(state.orientation, vec3(0, 0, body.offset))),
+    );
+    const I = body.inertia;
+    return 0.5 * body.mass * lengthSq(centre) + 0.5 * (I.x * w.x * w.x + I.y * w.y * w.y + I.z * w.z * w.z);
 }
 
 /**
  * Kinetic and gravitational energy (J) of a snapshot, and the stored energy of each contact, as the integrator reports
  * it (`storedEnergy`), with its tangential spring's. The contact depth is the pre-step value, against post-step
- * states: a time-level mix, biased by about 0.6% of an undamped contact's energy (see invariants.test.ts).
+ * states: a time-level mix, biased by about 0.6% of an undamped contact's energy (see invariants.test.ts). With a
+ * shaft, the whole mallet's kinetic energy and the shaft's weight at its centre (P2b.2b.2b.2c design §4.3).
  */
 export function impactEnergy(s: ImpactSnapshot, head: MalletHead, ball: BallParams, gravity: number): number {
     const inertia = 0.4 * ball.mass * ball.radius * ball.radius;
     let e = headKinetic(s.head, head) + head.mass * gravity * s.head.position.z;
+    if (head.shaft.mass !== 0) {
+        const rise = rotate(s.head.orientation, vec3(0, 0, head.socket.z + head.shaft.length / 2));
+        e += head.shaft.mass * gravity * (s.head.position.z + rise.z);
+    }
     for (const b of s.balls) {
         e += 0.5 * ball.mass * lengthSq(b.velocity) + 0.5 * inertia * lengthSq(b.angularVelocity);
         e += ball.mass * gravity * b.position.z;

@@ -298,6 +298,27 @@ describe("validation", () => {
         ],
         ["a force table with a box head", { ...ok, head: TEST_BOX }, { blue: BLUE }, WORLD, /force table's head/],
         [
+            "a non-positive shaft length",
+            { ...ok, head: { ...ok.head, shaft: { mass: 0, length: 0 } } },
+            { blue: BLUE },
+            WORLD,
+            /head\.shaft\.length/,
+        ],
+        [
+            "a negative shaft mass",
+            { ...ok, head: { ...ok.head, shaft: { mass: -0.1, length: 0.9 } } },
+            { blue: BLUE },
+            WORLD,
+            /head\.shaft\.mass/,
+        ],
+        [
+            "a force table with a shaft of mass",
+            { ...ok, head: { ...ok.head, shaft: { mass: 0.3, length: 0.9 } } },
+            { blue: BLUE },
+            WORLD,
+            /force table's shaft must have no mass/,
+        ],
+        [
             "negative face friction",
             { ...ok, face: { ...ok.face, friction: -0.1 } },
             { blue: BLUE },

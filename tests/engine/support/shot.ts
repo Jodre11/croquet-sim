@@ -75,6 +75,7 @@ export function testProfile(o: TestProfileOptions = {}): SwingProfile {
         headLength: 0.23,
         head: { kind: "round", diameter: 0.064 },
         shaftLength: 0.9,
+        shaftMass: 0,
         ...o.mallet,
     };
     const { lean, ...given }: Partial<SwingStance> & { readonly lean?: number } = o.stance ?? {};

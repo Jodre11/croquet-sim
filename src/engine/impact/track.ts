@@ -154,11 +154,54 @@ export interface SwungBody {
 }
 
 /**
+ * The mallet as one rigid body (P2b.2b.2b.2c design §4.2): `head` and its shaft, a thin uniform rod of mass m_s and
+ * length ℓ from the socket (0, 0, h_z) up body z. M = m + m_s, δ = m_s·(h_z + ℓ/2)/M along body z, and
+ * I' = (I_x + e, I_y + e, I_z), e = m·δ² + m_s·((h_z + ℓ/2 − δ)² + ℓ²/12). With no shaft mass it is the head itself:
+ * its mass, its inertia and offset 0, with no added zero terms.
+ */
+export function malletBody(head: MalletHead): SwungBody {
+    const { mass: rod, length } = head.shaft;
+    if (rod === 0) {
+        return { mass: head.mass, inertia: head.inertia, offset: 0 };
+    }
+    const mass = head.mass + rod;
+    const rise = head.socket.z + length / 2;
+    const offset = (rod * rise) / mass;
+    const extra = head.mass * offset * offset + rod * ((rise - offset) * (rise - offset) + (length * length) / 12);
+    const I = head.inertia;
+    return { mass, inertia: vec3(I.x + extra, I.y + extra, I.z), offset };
+}
+
+/**
+ * `base` with point masses rigid on its up axis, each `mass` (kg) at `height` (m) above the head's centre: the
+ * combined mass, centre and principal inertia by the parallel-axis rule.
+ */
+function withPoints(base: SwungBody, points: readonly { readonly mass: number; readonly height: number }[]): SwungBody {
+    let mass = base.mass;
+    let moment = base.mass * base.offset;
+    for (const p of points) {
+        mass += p.mass;
+        moment += p.mass * p.height;
+    }
+    const offset = moment / mass;
+    let extra = base.mass * (base.offset - offset) * (base.offset - offset);
+    for (const p of points) {
+        extra += p.mass * (p.height - offset) * (p.height - offset);
+    }
+    const I = base.inertia;
+    return { mass, inertia: vec3(I.x + extra, I.y + extra, I.z), offset };
+}
+
+/**
  * The swung body of `head` with `hands`' arm mass m_a at the top grip, `radius` from the socket (design §3.3):
  * M = m + m_a, δ = m_a·(ρ + r)/M, and I' = (I_x + e, I_y + e, I_z) with e = m·δ² + m_a·(ρ + r − δ)², ρ the socket's
- * height above the head's centre. With no arm mass it is the head.
+ * height above the head's centre. With no arm mass it is the head. Built on the mallet (malletBody) when the shaft has
+ * mass (P2b.2b.2b.2c design §4.2); with none, on the head alone, with no added zero terms.
  */
 export function swungBody(head: MalletHead, hands: Hands, radius: number): SwungBody {
+    if (head.shaft.mass !== 0) {
+        return withPoints(malletBody(head), [{ mass: hands.armMass, height: head.socket.z + radius }]);
+    }
     const arm = hands.armMass;
     const mass = head.mass + arm;
     const grip = head.socket.z + radius;
@@ -173,13 +216,18 @@ export function swungBody(head: MalletHead, hands: Hands, radius: number): Swung
  * M3 + M4 of `chain`, rigid at its grip: the top grip `radius` from the socket and, unless `bottom` is null, the bottom
  * grip `bottom` from it. M = m + Σ s, δ = Σ s·z/M and I' = (I_x + e, I_y + e, I_z), e = m·δ² + Σ s·(z − δ)², z each
  * grip's height above the head's centre. The skin's weight is the hand's to carry (carryLoad), so the body has inertia
- * from it and no weight.
+ * from it and no weight. Built on the mallet (malletBody) when the shaft has mass (P2b.2b.2b.2c design §4.2); with
+ * none, on the head alone, with no added zero terms.
  */
 export function carryBody(head: MalletHead, chain: HandChain, radius: number, bottom: number | null): SwungBody {
     const skin = chain.palmSkinMass + chain.fingerSkinMass;
     const top = head.socket.z + radius;
     const low = bottom === null ? 0 : head.socket.z + bottom;
     const bottomSkin = bottom === null ? 0 : skin;
+    if (head.shaft.mass !== 0) {
+        const grips = [{ mass: skin, height: top }];
+        return withPoints(malletBody(head), bottom === null ? grips : [...grips, { mass: skin, height: low }]);
+    }
     const mass = head.mass + skin + bottomSkin;
     const offset = (skin * top + bottomSkin * low) / mass;
     const extra =
@@ -258,8 +306,8 @@ export interface Push {
 
 /**
  * The free pendulum after the pendulum's window (swing mode, design §3.2): θ and ω tabulated every FREE_STEP from
- * `tw`, of I_P·θ̈ = −m·g·ℓ_h·sin θ − M·d·(A·t̂). `weight` is m·g·ℓ_h (N·m), `inertial` M·d (kg·m) and `inertia` I_P
- * (kg·m²).
+ * `tw`, of I_P·θ̈ = −W·sin θ − M·d·(A·t̂). `weight` is W, m·g·ℓ_h with the shaft's term (pendulumOf; N·m),
+ * `inertial` M·d (kg·m) and `inertia` I_P (kg·m²).
  */
 export interface FreePendulum {
     readonly tw: number;
@@ -308,6 +356,12 @@ export interface PreparedTrack {
     readonly released: SwungBody | null;
     /** The head's weight m·g (N). */
     readonly headWeight: number;
+    /**
+     * The shaft's weight m_s·g (N), 0 with no shaft mass, and its centre's height h_z + ℓ/2 above the head's centre
+     * along the shaft (m), where it acts (P2b.2b.2b.2c design §4.3).
+     */
+    readonly shaftWeight: number;
+    readonly shaftRise: number;
     /** g (m/s²), for the weights of carry mode's hand–arm chains (gate round 3 ruling, 2026-10-11). */
     readonly gravity: number;
     /** Gains of a firm grip (g = 1, both hands before relaxAt), the top hand's (γ_T) and the bottom hand's (g_B). */
@@ -349,12 +403,20 @@ export interface Pendulum {
 
 /**
  * The pendulum of `body` swinging `head` about a top hand `radius` from the socket under `gravity`: ℓ_h = ρ + r,
- * d = ℓ_h − δ, I_P = I'_y + M·d² (design §3.2).
+ * d = ℓ_h − δ, I_P = I'_y + M·d² (design §3.2). Its weight term is m·g·ℓ_h, plus the shaft's m_s·g·(ℓ_h − h_z − ℓ/2) at
+ * its own centre (P2b.2b.2b.2c design §4.3); the arm mass in the body has inertia but no weight.
  */
 export function pendulumOf(head: MalletHead, body: SwungBody, radius: number, gravity: number): Pendulum {
     const lh = head.socket.z + radius;
     const d = lh - body.offset;
-    return { weight: head.mass * gravity * lh, inertial: body.mass * d, inertia: body.inertia.y + body.mass * d * d };
+    const inertial = body.mass * d;
+    const inertia = body.inertia.y + body.mass * d * d;
+    const { mass: rod, length } = head.shaft;
+    if (rod === 0) {
+        return { weight: head.mass * gravity * lh, inertial, inertia };
+    }
+    const below = lh - head.socket.z - length / 2;
+    return { weight: head.mass * gravity * lh + rod * gravity * below, inertial, inertia };
 }
 
 /** How many samples the downswing's scan visits (P2b.2b.2a design §3.4): its table's, or carry mode's like it. */
@@ -714,6 +776,8 @@ export function prepareTrack(drive: TrackDrive, head: MalletHead, gravity: numbe
         body,
         released: carry ? carryBody(head, hands.chain, arc.radius, null) : null,
         headWeight: head.mass * gravity,
+        shaftWeight: head.shaft.mass * gravity,
+        shaftRise: head.socket.z + head.shaft.length / 2,
         gravity,
         firm: handGains(coupling, 1, body),
         top: handGains(coupling, hands.gripTension, body),
@@ -724,6 +788,23 @@ export function prepareTrack(drive: TrackDrive, head: MalletHead, gravity: numbe
     }
     const reached: PreparedTrack = { ...plain, reach: computeReach(plain) };
     return withFree ? { ...reached, free: computeFree(reached, head, gravity) } : reached;
+}
+
+/**
+ * A test-only seam (P2b.2b.2b.2c design §9; plan decision 7): `track` with its grips' twist gains as for a swung body
+ * of twist inertia `inertiaZ` (kg·m²) about the shaft, every other gain and the body unchanged, so that the head's
+ * inertia and the hands' stiffer twist are read apart. The engine never calls it.
+ */
+export function holdTwist(track: PreparedTrack, inertiaZ: number): PreparedTrack {
+    const I = track.body.inertia;
+    const body = { ...track.body, inertia: vec3(I.x, I.y, inertiaZ) };
+    const { coupling, hands } = track;
+    return {
+        ...track,
+        firm: handGains(coupling, 1, body),
+        top: handGains(coupling, hands.gripTension, body),
+        bottom: handGains(coupling, hands.bottomGrip, body),
+    };
 }
 
 /** The path at one instant: the socket's target and its derivatives, and the head's target orientation and spin. */
@@ -1329,8 +1410,9 @@ function carryLoad(
 
 /**
  * The hands' load on the head in `state` at time t (design §3.3), updating `grip`. The feed-forward is the wrench
- * that makes the path's rigid motion exact for the swung body: F_ff = M·a_c + m·g·ẑ and, about its centre,
- * τ_ff = I'·α_path + ω_path × (I'·ω_path) + r_h × m·g·ẑ. From relaxAt the dip's part F_d = M·a_d is set aside and
+ * that makes the path's rigid motion exact for the swung body: F_ff = M·a_c + m·g·ẑ + m_s·g·ẑ and, about its centre,
+ * τ_ff = I'·α_path + ω_path × (I'·ω_path) + r_h × m·g·ẑ + r_s × m_s·g·ẑ, r_s the shaft's centre from the swung body's
+ * (P2b.2b.2b.2c design §4.3). From relaxAt the dip's part F_d = M·a_d is set aside and
  * the rest, F_s, split over the hands so that their moments give τ_ff: the top hand F_∥ + F_T⊥, the bottom hand F_B
  * and the couple τ_ff·s. Before relaxAt both hands grip firmly with springs and dampers; on a downswing, dampers and
  * feed-forward only, with no position spring (P2b.2b.2a user decision 2026-10-07). From it they track the
@@ -1381,13 +1463,19 @@ export function handLoad(
     const d = rotate(path.orientation, sub(vec3(0, 0, body.offset), head.socket));
     const centre = add(add(socketAcceleration, cross(angularAcceleration, d)), cross(w, cross(w, d)));
     const weight = vec3(0, 0, track.headWeight);
-    const feedForward = add(scale(centre, body.mass), weight);
+    let feedForward = add(scale(centre, body.mass), weight);
     const I = body.inertia;
     const wb = rotateInverse(q, w);
     const ab = rotateInverse(q, angularAcceleration);
     const spin = add(vec3(I.x * ab.x, I.y * ab.y, I.z * ab.z), cross(wb, vec3(I.x * wb.x, I.y * wb.y, I.z * wb.z)));
     // The hands hold the head's weight, which acts at the head's centre, r_h = −δ·s from the swung body's.
-    const tau = add(rotate(q, spin), cross(scale(s, 0 - body.offset), weight));
+    let tau = add(rotate(q, spin), cross(scale(s, 0 - body.offset), weight));
+    if (track.shaftWeight !== 0) {
+        // And the shaft's, at its own centre, shaftRise up the shaft from the head's (P2b.2b.2b.2c design §4.3).
+        const shaftWeight = vec3(0, 0, track.shaftWeight);
+        feedForward = add(feedForward, shaftWeight);
+        tau = add(tau, cross(scale(s, track.shaftRise - body.offset), shaftWeight));
+    }
     const dip = contact ? scale(path.dipAcceleration, body.mass) : ZERO;
     // Carry mode's push intent joins F_ff before the sharing, so both hands' shares and stiffnesses carry it. Swing
     // mode never reads it.

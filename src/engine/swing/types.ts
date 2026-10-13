@@ -116,6 +116,8 @@ export interface SwingProfile {
         readonly headLength: number;
         readonly head: MalletHeadProfile;
         readonly shaftLength: number;
+        /** The shaft's mass (kg, ≥ 0), a thin uniform rod (P2b.2b.2b.2c design §4.2). */
+        readonly shaftMass: number;
     };
     /**
      * The player's body: the arm mass at the top grip (kg), the reach slack (m), the arm's flex, pendulum push and push

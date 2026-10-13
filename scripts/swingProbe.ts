@@ -855,6 +855,7 @@ const HEAD: MalletHead = {
     length: JAQUES_LENGTH,
     shape: { kind: "cylinder", radius },
     socket: vec3(0, 0, radius),
+    shaft: { mass: 0, length: malletReference.shaftLength.value },
 };
 const FACE: FaceMaterial = { friction: malletReference.faceFriction.value };
 const at = (x: number, y: number): BallState => ({

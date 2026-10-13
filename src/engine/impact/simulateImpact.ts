@@ -360,7 +360,8 @@ export function sinkSolver(world: World): SinkSolver {
  * - for a tracked drive, turf under the head's lowest point with a non-positive stiffness or a restitution outside
  *   (0, 1] (the head–turf law, P2b.2b.1 design §4.1);
  * - a non-positive mass, inertia, length, radius or ball–ball contact time; a box head's half-extents or edge radius
- *   out of range; a force table whose head is not a cylinder;
+ *   out of range; a force table whose head is not a cylinder; a shaft of non-positive length or negative mass; a
+ *   force table whose shaft has mass;
  * - a restitution outside (0, 1] (ball–ball, ball–upright, peg) or a negative friction;
  * - a non-unit orientation.
  * A ball's sink comes from `sink`, called only once its turf has been checked; pass prepareImpact the same solver
@@ -381,6 +382,8 @@ export function validateImpact(
     positive(head.length, "head.length");
     validateShape(head);
     finite(head.socket, "head.socket");
+    positive(head.shaft.length, "head.shaft.length");
+    friction(head.shaft.mass, "head.shaft.mass");
     friction(face.friction, "face.friction");
     positive(world.ballBallContactTime, "ballBallContactTime");
     restitution(world.ballBall.restitution, "ballBall.restitution");
@@ -397,6 +400,9 @@ export function validateImpact(
         validateForce(contact.drive);
         if (head.shape.kind !== "cylinder") {
             fail("a force table's head must be a cylinder, the bare round head (P2b.2b.2b.2c design §4.2)");
+        }
+        if (head.shaft.mass !== 0) {
+            fail("a force table's shaft must have no mass: force tables step the bare head (P2b.2b.2b.2c design §4.2)");
         }
     } else {
         validateTrack(contact.drive);
