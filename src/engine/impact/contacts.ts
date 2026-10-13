@@ -6,12 +6,14 @@
  * pair (P2b.2a design §4) acts from a hoop upright or the peg, an immovable vertical cylinder, along the horizontal
  * normal from its axis to the ball's centre. The head–turf pair (P2b.2b.1 design §4.1) acts from the turf on the
  * head's lowest point, along ẑ.
- * For a tracked drive the face–ball pair meets the whole head, a solid cylinder (design §4.5, headBallContact).
+ * For a tracked drive the face–ball pair meets the whole head (design §4.5, headBallContact): a solid cylinder or a
+ * rounded box (P2b.2b.2b.2c design §3). The force table's face-only contact is the cylinder's alone.
  */
 import { CONTACT_TOLERANCE } from "../detect";
 import { add, cross, dot, horizontal, length, scale, sub, vec3, type Vec3 } from "../math/vec3";
 import { BALL_IDS, type BallId, type BallState } from "../types";
-import { rotate } from "./rigidBody";
+import { rotate, rotateInverse } from "./rigidBody";
+import { boxCore, boxDistance, type BoxRegion, type BoxShape, type CylinderShape, type HeadShape } from "./shape";
 import type { HeadState, MalletHead } from "./types";
 
 /** The kinds of pair, in the order the pair list holds them. */
@@ -98,7 +100,8 @@ function faceOf(state: HeadState, head: MalletHead, side: 1 | -1): { readonly no
  * The face–ball contact of a ball centred at `centre`. For each face in turn (+x, then −x), d is the centre's signed
  * distance from the face plane along the face's outward normal. A ball with 0 < d < R whose centre projects inside the
  * face disc is in contact, δ = R − d. One whose projection lies outside the disc, but whose cross-section in the face
- * plane (radius √(R² − d²)) still reaches the disc, touches the rim instead: OFF_FACE. Otherwise null.
+ * plane (radius √(R² − d²)) still reaches the disc, touches the rim instead: OFF_FACE. Otherwise null. A cylinder's
+ * only.
  */
 export function faceContact(
     state: HeadState,
@@ -106,6 +109,10 @@ export function faceContact(
     centre: Vec3,
     radius: number,
 ): Penetration | typeof OFF_FACE | null {
+    const { shape } = head;
+    if (shape.kind !== "cylinder") {
+        throw new Error("faceContact is the cylinder's (P2b.2b.2b.2c design §3.4): a force table's head is a cylinder");
+    }
     for (const side of FACES) {
         const face = faceOf(state, head, side);
         const offset = sub(centre, face.centre);
@@ -114,22 +121,30 @@ export function faceContact(
             continue;
         }
         const radial = length(sub(offset, scale(face.normal, d)));
-        if (radial <= head.shape.radius) {
+        if (radial <= shape.radius) {
             const depth = radius - d;
             return { normal: face.normal, depth, point: sub(centre, scale(face.normal, radius - depth / 2)) };
         }
-        if (radial < head.shape.radius + Math.sqrt(radius * radius - d * d)) {
+        if (radial < shape.radius + Math.sqrt(radius * radius - d * d)) {
             return OFF_FACE;
         }
     }
     return null;
 }
 
-/** A region of the solid head a ball can touch (P2b.2b.1 design §4.5). */
-export type HeadRegion = "face" | "rim" | "barrel" | "back-rim" | "back";
+/** A region of the solid head a ball can touch (P2b.2b.1 design §4.5; P2b.2b.2b.2c design §3.2). */
+export type HeadRegion = "face" | "rim" | "barrel" | "back-rim" | "back" | BoxRegion;
 
-/** Every head region, in the order the integrator records them. */
+/** The cylinder's regions, in the order the integrator records them. */
 export const HEAD_REGIONS: readonly HeadRegion[] = ["face", "rim", "barrel", "back-rim", "back"];
+
+/** The rounded box's regions, in the order the integrator records them (P2b.2b.2b.2c plan decision 2). */
+export const BOX_REGIONS: readonly HeadRegion[] = ["face", "edge", "corner", "side", "top", "bottom", "back"];
+
+/** The regions of a head of `shape`, in the integrator's order. */
+export function regionsOf(shape: HeadShape): readonly HeadRegion[] {
+    return shape.kind === "cylinder" ? HEAD_REGIONS : BOX_REGIONS;
+}
 
 /** A head–ball contact on the solid cylinder, with the region touched. */
 export interface HeadPenetration extends Penetration {
@@ -146,9 +161,10 @@ export interface HeadPenetration extends Penetration {
  * δ = R − distance closes the pair when positive, at c_b − (R − δ/2)·n. A centre on the axis in the barrel region has
  * no normal and throws a RangeError (it lies at least r inside both faces).
  */
-export function headBallContact(
+function cylinderBallContact(
     state: HeadState,
     head: MalletHead,
+    shape: CylinderShape,
     centre: Vec3,
     radius: number,
 ): HeadPenetration | null {
@@ -158,7 +174,7 @@ export function headBallContact(
     const across = sub(offset, scale(axis, x));
     const radial = length(across);
     const ex = Math.abs(x) - head.length / 2;
-    const er = radial - head.shape.radius;
+    const er = radial - shape.radius;
     const end = x >= 0 ? axis : scale(axis, -1);
     let distance: number;
     let normal: Vec3;
@@ -184,6 +200,41 @@ export function headBallContact(
         return null;
     }
     return { normal, depth, point: sub(centre, scale(normal, radius - depth / 2)), region };
+}
+
+/** The contact of a ball centred at `centre` (world) with a rounded box head (P2b.2b.2b.2c design §3.2). */
+function boxBallContact(
+    state: HeadState,
+    head: MalletHead,
+    shape: BoxShape,
+    centre: Vec3,
+    radius: number,
+): HeadPenetration | null {
+    const hit = boxDistance(shape, head.length, rotateInverse(state.orientation, sub(centre, state.position)));
+    const depth = radius - hit.distance;
+    if (!(depth > 0)) {
+        return null;
+    }
+    const normal = rotate(state.orientation, hit.normal);
+    return { normal, depth, point: sub(centre, scale(normal, radius - depth / 2)), region: hit.region };
+}
+
+/**
+ * The contact of a ball centred at `centre` with the whole head (P2b.2b.1 design §4.5): its solid cylinder
+ * (cylinderBallContact) or its rounded box (P2b.2b.2b.2c design §3.2; boxBallContact). δ = R − distance closes the
+ * pair when positive, at c_b − (R − δ/2)·n. A cylinder throws a RangeError for a centre on its axis in the barrel
+ * region; a box has a normal everywhere.
+ */
+export function headBallContact(
+    state: HeadState,
+    head: MalletHead,
+    centre: Vec3,
+    radius: number,
+): HeadPenetration | null {
+    const { shape } = head;
+    return shape.kind === "cylinder"
+        ? cylinderBallContact(state, head, shape, centre, radius)
+        : boxBallContact(state, head, shape, centre, radius);
 }
 
 /**
@@ -334,14 +385,44 @@ export function pointVelocity(centre: Vec3, velocity: Vec3, angularVelocity: Vec
 }
 
 /**
- * Height of the head's lowest point. With a the unit axis, the lower end disc's rim is lowest:
- * z − (L/2)·|a_z| − r·√(1 − a_z²).
+ * Height of the head's lowest point. A cylinder's lower end disc's rim, with a the unit axis:
+ * z − (L/2)·|a_z| − r·√(1 − a_z²). A box's (P2b.2b.2b.2c design §3.4): z − Σ_i c_i·|R_zi| − e, R_zi the world-up
+ * component of body axis i.
  */
 export function headLowestPoint(state: HeadState, head: MalletHead): number {
+    const { shape } = head;
+    if (shape.kind === "box") {
+        const c = boxCore(shape, head.length);
+        const q = state.orientation;
+        const ax = rotate(q, vec3(1, 0, 0)).z;
+        const ay = rotate(q, vec3(0, 1, 0)).z;
+        const az = rotate(q, vec3(0, 0, 1)).z;
+        return state.position.z - c.x * Math.abs(ax) - c.y * Math.abs(ay) - c.z * Math.abs(az) - shape.edgeRadius;
+    }
     const az = rotate(state.orientation, vec3(1, 0, 0)).z;
-    return (
-        state.position.z - (head.length / 2) * Math.abs(az) - head.shape.radius * Math.sqrt(Math.max(0, 1 - az * az))
-    );
+    return state.position.z - (head.length / 2) * Math.abs(az) - shape.radius * Math.sqrt(Math.max(0, 1 - az * az));
+}
+
+/**
+ * True when a ball centred `offset` (world) from a face's centre, `d` along its outward unit `normal`, lies out of the
+ * face's lateral reach for a ball of `radius` (P2b.2b.1 design §3.5; P2b.2b.2b.2c design §3.4): for a cylinder, the
+ * offset across the normal at least r + R; for a box, the offset in the head's frame at least h_y + R to the side or
+ * h_z + R up or down.
+ */
+export function outOfReach(
+    state: HeadState,
+    head: MalletHead,
+    offset: Vec3,
+    normal: Vec3,
+    d: number,
+    radius: number,
+): boolean {
+    const { shape } = head;
+    if (shape.kind === "cylinder") {
+        return length(sub(offset, scale(normal, d))) >= shape.radius + radius;
+    }
+    const p = rotateInverse(state.orientation, offset);
+    return Math.abs(p.y) >= shape.halfWidth + radius || Math.abs(p.z) >= shape.halfHeight + radius;
 }
 
 /**
@@ -355,7 +436,7 @@ export function headClosing(state: HeadState, head: MalletHead, ball: BallState,
         const face = faceOf(state, head, side);
         const offset = sub(ball.position, face.centre);
         const d = dot(offset, face.normal);
-        if (!(d > 0 && d < 2 * radius) || length(sub(offset, scale(face.normal, d))) >= head.shape.radius + radius) {
+        if (!(d > 0 && d < 2 * radius) || outOfReach(state, head, offset, face.normal, d, radius)) {
             continue;
         }
         const under = sub(ball.position, scale(face.normal, radius));
@@ -374,15 +455,29 @@ export const HEAD_TURF_KEY = "head/turf";
  * The head's lowest point (P2b.2b.1 design §4.1). With a the unit axis and |a_z| < 1, it is
  * c − (L/2)·sign(a_z)·a − r·u, u the unit vector of ẑ − a_z·a: the lower end disc's rim, straight below the axis. For
  * a_z = 0 it lies under the centre, on the barrel; for |a_z| = 1, the face disc is level and it is the disc's centre.
- * Its height is headLowestPoint's, up to rounding.
+ * Its height is headLowestPoint's, up to rounding. A box's is its support point, −Σ_i sign(R_zi)·c_i·x̂_i − e·ẑ from
+ * its centre, sign(0) = 0. It is also the head–turf pair's contact point (headTurfContact).
  */
 export function headBottom(state: HeadState, head: MalletHead): Vec3 {
+    const { shape } = head;
+    if (shape.kind === "box") {
+        // The support point −Σ_i sign(R_zi)·c_i·x̂_i − e·ẑ, sign(0) = 0: a level face samples its midline (design
+        // §3.4; plan decision 1).
+        const c = boxCore(shape, head.length);
+        const q = state.orientation;
+        const sign = (v: number): number => (v > 0 ? 1 : v < 0 ? -1 : 0);
+        const ax = rotate(q, vec3(1, 0, 0));
+        const ay = rotate(q, vec3(0, 1, 0));
+        const az = rotate(q, vec3(0, 0, 1));
+        const lift = add(add(scale(ax, sign(ax.z) * c.x), scale(ay, sign(ay.z) * c.y)), scale(az, sign(az.z) * c.z));
+        return sub(sub(state.position, lift), vec3(0, 0, shape.edgeRadius));
+    }
     const a = rotate(state.orientation, vec3(1, 0, 0));
     const half = head.length / 2;
     const end = a.z > 0 ? scale(a, half) : a.z < 0 ? scale(a, 0 - half) : vec3(0, 0, 0);
     const rise = vec3(0 - a.z * a.x, 0 - a.z * a.y, 1 - a.z * a.z);
     const size = length(rise);
-    const across = size > 0 ? scale(rise, head.shape.radius / size) : vec3(0, 0, 0);
+    const across = size > 0 ? scale(rise, shape.radius / size) : vec3(0, 0, 0);
     return sub(sub(state.position, end), across);
 }
 

@@ -31,8 +31,9 @@
  * at the muscles' pace, for the hands' push intent on the next step (track.ts; gate ruling 2026-10-11 and its
  * amendment).
  *
- * A tracked drive's face–ball pairs meet the whole head, a solid cylinder (contacts.ts headBallContact; P2b.2b.1
- * design §4.5): each also records its intervals per region of the head, and a contact off the face raises
+ * A tracked drive's face–ball pairs meet the whole head, a solid cylinder or a rounded box (contacts.ts
+ * headBallContact; P2b.2b.1 design §4.5; P2b.2b.2b.2c design §3): each also records its intervals per region of its
+ * head, and a contact off the face raises
  * `impact-off-face` once per ball. A face–ball or head–turf interval that opens deeper than one step's closing could
  * make counts an entry jump (ImpactRun.entryJumps). A force table keeps the face-only contact and neither record.
  *
@@ -64,7 +65,6 @@ import {
     type PairLaw,
 } from "./contactLaw";
 import {
-    HEAD_REGIONS,
     HEAD_TURF_KEY,
     OFF_FACE,
     faceClearance,
@@ -73,10 +73,12 @@ import {
     headLowestPoint,
     headTurfContact,
     obstacleGap,
+    outOfReach,
     pairContact,
     pairList,
     pairTouching,
     pointVelocity,
+    regionsOf,
     type HeadRegion,
     type ObstacleGeometry,
     type Pair,
@@ -429,8 +431,8 @@ interface PairState {
     /** A ball–obstacle pair is skipped while ball B's path length is below this (m); 0 for every other pair. */
     wakeAt: number;
     /**
-     * A tracked drive's face–ball pair: its timeline per head region, in HEAD_REGIONS order (design §4.5); null for
-     * every other pair and for a force table.
+     * A tracked drive's face–ball pair: its timeline per head region, in its head's regions' order (regionsOf; design
+     * §4.5); null for every other pair and for a force table.
      */
     readonly regions: readonly PairTimeline[] | null;
 }
@@ -574,6 +576,7 @@ function noteEntry(jumps: EntryJumps, depth: number, closing: number, dt: number
  */
 function recordRegions(
     lines: readonly PairTimeline[] | null,
+    names: readonly HeadRegion[],
     region: HeadRegion | null,
     force: number,
     t: number,
@@ -581,8 +584,8 @@ function recordRegions(
     if (lines === null) {
         return;
     }
-    for (let i = 0; i < HEAD_REGIONS.length; i++) {
-        const on = HEAD_REGIONS[i] === region;
+    for (let i = 0; i < names.length; i++) {
+        const on = names[i] === region;
         recordStep(lines[i] as PairTimeline, on, on ? force : 0, t);
     }
 }
@@ -792,6 +795,7 @@ function finish(
     steps: number,
     duration: number,
     touchingAtStart: readonly string[],
+    names: readonly HeadRegion[],
 ): ImpactRun {
     const final: BallStates = {};
     for (let i = 0; i < balls.length; i++) {
@@ -841,10 +845,10 @@ function finish(
         if (lines === null) {
             continue;
         }
-        for (let i = 0; i < HEAD_REGIONS.length; i++) {
+        for (let i = 0; i < names.length; i++) {
             const intervals = closeTimeline(lines[i] as PairTimeline, duration);
             if (intervals.length > 0) {
-                headRegions[`${p.pair.key}#${HEAD_REGIONS[i] as HeadRegion}`] = intervals;
+                headRegions[`${p.pair.key}#${names[i] as HeadRegion}`] = intervals;
             }
         }
     }
@@ -865,7 +869,8 @@ function trackEnd(plan: PreparedTrack): number {
 /**
  * True while a tracked head still reaches for a ball at time t (design §3.5): it is closing on one within reach
  * (headClosing), or its front face would reach one ahead of it within LOOK_AHEAD. A ball is ahead when its centre lies
- * a distance d > 0 in front of the face plane along the face normal f and within ρ + R of the head's axis; the face
+ * a distance d > 0 in front of the face plane along the face normal f and within the face's lateral reach
+ * (outOfReach); the face
  * closes at max(v_head·f, v_path·f) − v_ball·f, v_path the head's velocity on the path, which the hands still drive
  * towards, and would reach it if that is positive and d − R < closing·LOOK_AHEAD.
  */
@@ -891,7 +896,7 @@ function stillReaching(
     for (const s of balls) {
         const offset = sub(s.position, face);
         const d = dot(offset, f);
-        if (!(d > 0) || length(sub(offset, scale(f, d))) >= head.shape.radius + radius) {
+        if (!(d > 0) || outOfReach(state, head, offset, f, d, radius)) {
             continue;
         }
         const closing = speed - dot(s.velocity, f);
@@ -920,6 +925,7 @@ export function integrateStroke(setup: ImpactSetup, options: ImpactOptions = {},
     const ids = setup.balls.map((b) => b.id);
     const hasTurf = setup.balls.map((b) => b.turf !== null);
     const tracked = plan.kind === "track";
+    const names = regionsOf(head.shape);
     const carry = plan.kind === "track" && plan.arc.mode === "carry";
     const response = carry ? pushResponse(plan.hands, dt) : 0;
     const pairs: PairState[] = pairList(
@@ -936,7 +942,7 @@ export function integrateStroke(setup: ImpactSetup, options: ImpactOptions = {},
         peak: 0,
         line: emptyTimeline(),
         wakeAt: 0,
-        regions: tracked && pair.kind === "face-ball" ? HEAD_REGIONS.map(() => emptyTimeline()) : null,
+        regions: tracked && pair.kind === "face-ball" ? names.map(() => emptyTimeline()) : null,
     }));
     const balls: BallState[] = setup.balls.map((b) => b.state);
     const travel = balls.map(() => 0);
@@ -1057,7 +1063,7 @@ export function integrateStroke(setup: ImpactSetup, options: ImpactOptions = {},
                     events.push({ kind: "impact-off-face", t, ball: ids[pair.b] as BallId });
                 }
                 recordStep(p.line, contact === OFF_FACE, 0, t);
-                recordRegions(p.regions, null, 0, t);
+                recordRegions(p.regions, names, null, 0, t);
                 if (pair.kind === "face-ball" && contact === null && inGap(p.line)) {
                     noteClearance(p.line, faceClearance(state, head, (balls[pair.b] as BallState).position, R));
                 }
@@ -1083,7 +1089,7 @@ export function integrateStroke(setup: ImpactSetup, options: ImpactOptions = {},
             p.peak = Math.max(p.peak, contact.depth);
             const force = applyPair(p, setup.face, contact, state, balls, dt, loads, options.probe ? samples : null);
             recordStep(p.line, true, force, t);
-            recordRegions(p.regions, hit === null ? null : hit.region, force, t);
+            recordRegions(p.regions, names, hit === null ? null : hit.region, force, t);
         }
         // The balls' resistance along aim, which the hands sense at the muscles' pace and their push intent reads from
         // the next step (gate ruling 2026-10-11 and its amendment).
@@ -1166,7 +1172,7 @@ export function integrateStroke(setup: ImpactSetup, options: ImpactOptions = {},
             events.push({ kind: "impact-turf-pit", t: steps * dt, ball: ids[i] as BallId });
         }
     });
-    const run = finish(setup, state, balls, pairs, turf, jumps, events, steps, steps * dt, touchingAtStart);
+    const run = finish(setup, state, balls, pairs, turf, jumps, events, steps, steps * dt, touchingAtStart, names);
     const released =
         grip.releasedAt === null ? run : { ...run, release: { t: grip.releasedAt, deltaTheta: grip.releaseDelta } };
     const done = grip.departedAt === null ? released : { ...released, departure: grip.departedAt };

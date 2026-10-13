@@ -53,6 +53,19 @@ export const TEST_HEAD: MalletHead = {
     socket: vec3(0, 0, TEST_RHO),
 };
 
+/**
+ * A 1.0 kg rounded box head as long as TEST_HEAD, its face 64 mm square with 3 mm edges, its socket at TEST_HEAD's
+ * height so that levelArc places it (P2b.2b.2b.2c design §3.2). Its inertia is a square section's, I_y = I_z and
+ * I_x = m·(h_y² + h_z²)/3, its moment about the shaft TEST_HEAD's I_z. Unsourced, as TEST_HEAD.
+ */
+export const TEST_BOX: MalletHead = {
+    mass: 1,
+    inertia: vec3((2 * TEST_RHO * TEST_RHO) / 3, TEST_HEAD.inertia.z, TEST_HEAD.inertia.z),
+    length: 0.23,
+    shape: { kind: "box", halfWidth: TEST_RHO, halfHeight: TEST_RHO, edgeRadius: 0.003 },
+    socket: vec3(0, 0, TEST_RHO),
+};
+
 export const TEST_FACE: FaceMaterial = { friction: 0.4 };
 
 /** A coupling for tracked test heads: plausible, not sourced (design §3.4 sets the engine's); contact at t = 0. */
@@ -271,6 +284,22 @@ export function isolated(overrides: Partial<ImpactSetup> = {}): ImpactSetup {
         headTurf: null,
         ...overrides,
     };
+}
+
+/**
+ * An isolated, tracked set-up whose hands apply nothing (P2b.2b.2b.2c design §7.1), so that `head` moves freely from
+ * `centre`, level, at `velocity`: gravity off, a still level arc, a coupling of damping ratio 0 relaxed at t = 0 and
+ * no arm mass. After relaxAt every hand force, feed-forward and twist is then exactly zero. Its face–ball pairs meet
+ * the whole head (headBallContact), as a tracked drive's do.
+ */
+export function freeTracked(head: MalletHead, centre: Vec3, velocity: Vec3, balls: readonly ImpactBall[]): ImpactSetup {
+    const drive = trackDrive(levelArc(centre), { period: 0.04, dampingRatio: 0, relaxAt: 0 });
+    return isolated({
+        head,
+        start: { position: centre, orientation: IDENTITY, velocity, angularVelocity: ZERO },
+        drive: prepareTrack(drive, head, 0),
+        balls,
+    });
 }
 
 /** A probe that counts the steps in which pair `key` carried a positive normal force, and keeps the last snapshot. */

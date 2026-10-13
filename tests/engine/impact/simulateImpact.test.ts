@@ -18,12 +18,15 @@ import {
 } from "../../../src/engine/impact/simulateImpact";
 import { prepareTrack, type Push } from "../../../src/engine/impact/track";
 import { bedLawOf, staticSink } from "../../../src/engine/impact/turfBed";
+import type { BoxShape } from "../../../src/engine/impact/shape";
 import type { ContactState, Coupling, Hands, StrokeMode, SwingArc, TrackDrive } from "../../../src/engine/impact/types";
 import { TEST_BALL, TEST_TURF, ballAt, hoopWithUprightAt, testWorld } from "../support/fixtures";
 import {
+    TEST_BOX,
     TEST_CHAIN,
     TEST_FLEX,
     TEST_HEAD,
+    TEST_RHO,
     drive,
     levelArc,
     mirrorBall,
@@ -273,6 +276,28 @@ describe("validation", () => {
             /head\.shape\.radius/,
         ],
         [
+            "a box head with a non-positive half-width",
+            { ...ok, head: { ...TEST_BOX, shape: { ...(TEST_BOX.shape as BoxShape), halfWidth: 0 } } },
+            { blue: BLUE },
+            WORLD,
+            /head\.shape\.halfWidth/,
+        ],
+        [
+            "a box head with a negative edge radius",
+            { ...ok, head: { ...TEST_BOX, shape: { ...(TEST_BOX.shape as BoxShape), edgeRadius: -1e-3 } } },
+            { blue: BLUE },
+            WORLD,
+            /head\.shape\.edgeRadius/,
+        ],
+        [
+            "a box head whose edge radius reaches its half-width (review focus 2)",
+            { ...ok, head: { ...TEST_BOX, shape: { ...(TEST_BOX.shape as BoxShape), edgeRadius: TEST_RHO } } },
+            { blue: BLUE },
+            WORLD,
+            /head\.shape\.edgeRadius must lie in \[0, 0\.032\)/,
+        ],
+        ["a force table with a box head", { ...ok, head: TEST_BOX }, { blue: BLUE }, WORLD, /force table's head/],
+        [
             "negative face friction",
             { ...ok, face: { ...ok.face, friction: -0.1 } },
             { blue: BLUE },
@@ -308,6 +333,12 @@ describe("validation", () => {
     it.each(cases)("rejects %s", (_label, contact, balls, world, message) => {
         expect(() => simulateImpact(contact, balls, world)).toThrow(RangeError);
         expect(() => simulateImpact(contact, balls, world)).toThrow(message);
+    });
+
+    it("accepts a tracked box head whose edge radius is just under its half-width (review focus 2)", () => {
+        const head = { ...TEST_BOX, shape: { ...(TEST_BOX.shape as BoxShape), edgeRadius: TEST_RHO - 1e-6 } };
+        const contact = onArc(trackDrive(levelArc(vec3(3, 0, 0.1))), head);
+        expect(() => simulateImpact(contact, { blue: BLUE }, WORLD, { cap: 1e-3 })).not.toThrow();
     });
 
     it("accepts touching balls", () => {

@@ -341,12 +341,20 @@ function segmentDistance(p1: Vec3, q1: Vec3, p2: Vec3, q2: Vec3): number {
     return length(sub(add(p1, scale(d1, s)), add(p2, scale(d2, t))));
 }
 
+/** The radius (m) of the sphere about the head's centre that holds it: hypot(L/2, r), or hypot(L/2, h_y, h_z). */
+function boundingRadius(head: MalletHead): number {
+    const { shape } = head;
+    return shape.kind === "cylinder"
+        ? Math.hypot(head.length / 2, shape.radius)
+        : Math.hypot(head.length / 2, shape.halfWidth, shape.halfHeight);
+}
+
 /**
  * How deep the head at `state` overlaps `rod` (m); 0 if apart: the deepest of spheres of the rod's radius every
- * ROD_STEP along its axis, each against the head's cylinder (`headBallContact`).
+ * ROD_STEP along its axis, each against the whole head (`headBallContact`).
  */
 function rodOverlap(state: HeadState, head: MalletHead, rod: Rod): number {
-    const reach = Math.hypot(head.length / 2, head.shape.radius) + rod.radius;
+    const reach = boundingRadius(head) + rod.radius;
     if (length(sub(closestOnSegment(state.position, rod.a, rod.b), state.position)) >= reach) {
         return 0;
     }
