@@ -220,6 +220,8 @@ describe("simulateShot", () => {
     // the bed at 0.620 m/s. The cause is the turf bed's elastic rebound (gate round 6): the leaning face presses the
     // ball about 3 mm into the bed and lets go faster than the bed unloads. Kept skipped rather than loosened: R + 5 mm
     // is exit criterion 6's bound, and the bed's missing rate-independent loss is a follow-up for the next phase.
+    // P2b.2b.2b.2c: the mallet, gate ruling 2026-10-13 (was 19.17 mm): on the Pidcock 2000 11" box, 20.756 mm at 3
+    // m/s (11.577 mm at 2 m/s), against the accepted 19.17 mm; kept skipped for the same cause.
     it.skip("runs the pass-roll canonical setup with no entry jump and no ball above R + 5 mm", () => {
         lowFlight("pass-roll");
     });
