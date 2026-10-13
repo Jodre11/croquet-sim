@@ -109,6 +109,18 @@ describe("impact reference data", () => {
         expect(malletReference.shaftLength.bounds).toEqual([0.762, 1.0668]);
     });
 
+    it("gives a realisable box: the default's moment within m·h_y²/3 and m·(L²/4 + h_y²/3) (design §5.3)", () => {
+        // With m 1.0 kg, L 0.2794 m and h_y 0.028575 m: [2.72, 197.9] kg·cm², 146 at 73.8 % of the maximum.
+        const m = malletReference.headMass.value;
+        const L = malletReference.headLength.value;
+        const h = malletReference.faceWidth.value / 2;
+        const I = malletReference.inertiaAboutShaft.value;
+        expect(L).toBe(0.2794);
+        expect(I).toBeGreaterThanOrEqual((m * h * h) / 3);
+        expect(I).toBeLessThanOrEqual(m * ((L * L) / 4 + (h * h) / 3));
+        expect(I / (m * ((L * L) / 4 + (h * h) / 3))).toBeCloseTo(0.738, 3);
+    });
+
     it("gives every impact value bounds, so the probe can sweep them, and every fit a range", () => {
         // The bed's fitted pair has no bounds: one court only, and lawn presets are P3's (P2b.2b.2b.2a design §4.4).
         // The edge radius is an unsourced placeholder (P2b.2b.2b.2c design §6).

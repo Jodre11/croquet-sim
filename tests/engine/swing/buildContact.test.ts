@@ -530,16 +530,18 @@ describe("buildContact, mirrored", () => {
  * moves with the sink h₀ = R − δ₀ (CANONICAL_CLEARANCE's δ₀, the bed's static sink at the striker's position).
  */
 const CANONICAL_APPROACH: Readonly<Record<StrokeType, number>> = {
-    // P2b.2b.2b.2a: turf bed (was 0.51544e-3, at δ₀ = m·g/k_turf): 0.3962 mm lower, as h₀.
-    "single-ball": 0.1189e-3,
-    drive: 0.1189e-3,
-    // P2b.2b.2b.2a: turf bed (was 7.2281e-3).
-    "stop-ac": 6.8318e-3,
-    "stop-gc": 0.1189e-3,
-    // P2b.2b.2b.2a: turf bed: CANONICAL_CLEARANCE's (was 29.9165e-3, 37.0506e-3 and 40.1551e-3).
-    "half-roll": 29.5203e-3,
-    "full-roll": 36.6544e-3,
-    "pass-roll": 39.7589e-3,
+    // P2b.2b.2b.2c: the mallet (was 0.1189e-3): 6.10 mm higher, less than the 9.525 mm the flat underside gains at
+    // contact, the minimum lying before contact on the arc, where the longer box is pitched.
+    "single-ball": 6.2186e-3,
+    drive: 6.2186e-3,
+    // P2b.2b.2b.2c: the mallet (was 6.8318e-3).
+    "stop-ac": 11.1829e-3,
+    // P2b.2b.2b.2c: the mallet (was 0.1189e-3).
+    "stop-gc": 6.2186e-3,
+    // P2b.2b.2b.2c: the mallet: CANONICAL_CLEARANCE's (was 29.5203e-3, 36.6544e-3 and 39.7589e-3).
+    "half-roll": 39.1827e-3,
+    "full-roll": 45.9355e-3,
+    "pass-roll": 48.8202e-3,
 };
 
 /** Each preset's default lean in degrees (P2b.2b.2b.1 design §4): the swing presets' unchanged, the rolls' Gugan's. */
@@ -638,9 +640,15 @@ describe("defaultProfile", () => {
         expect(defaultProfile.mallet).toEqual({
             headMass: malletReference.headMass.value,
             headLength: malletReference.headLength.value,
-            head: { kind: "round", diameter: malletReference.headDiameter.value },
+            head: {
+                kind: "box",
+                faceWidth: malletReference.faceWidth.value,
+                faceHeight: malletReference.faceHeight.value,
+                edgeRadius: malletReference.edgeRadius.value,
+                inertiaAboutShaft: malletReference.inertiaAboutShaft.value,
+            },
             shaftLength: malletReference.shaftLength.value,
-            shaftMass: 0,
+            shaftMass: malletReference.shaftMass.value,
         });
         expect(defaultProfile.body).toEqual({
             armMass: contactReference.armMass.value,

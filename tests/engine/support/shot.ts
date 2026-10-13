@@ -20,7 +20,7 @@ import {
 } from "../../../src/engine/swing/types";
 import type { BallId, BallStates, World } from "../../../src/engine/types";
 import { defaultWorld } from "../../../src/engine/world";
-import { lawnReference, swingReference } from "../../../src/reference/index";
+import { lawnReference, malletReference, swingReference } from "../../../src/reference/index";
 import { TEST_BALL } from "./fixtures";
 import {
     TEST_CHAIN,
@@ -151,9 +151,9 @@ export const GC_STOP_GAP = 0.3;
 
 /**
  * What `canonicalSetup` changes: the world (default `defaultWorld()`), fields of the stroke, fields of the preset's
- * own stance, drive and shape entries in `defaultProfile`, and, for a single-ball stroke, the gap (m, surface to
- * surface) to a target ball on the aim line ahead (default GC_STOP_GAP for the GC stop, no target otherwise). The balls
- * do not follow a changed aim.
+ * own stance, drive and shape entries in `defaultProfile`, the mallet, and, for a single-ball stroke, the gap (m,
+ * surface to surface) to a target ball on the aim line ahead (default GC_STOP_GAP for the GC stop, no target
+ * otherwise). The balls do not follow a changed aim.
  */
 export interface CanonicalOptions {
     readonly world?: World;
@@ -163,7 +163,30 @@ export interface CanonicalOptions {
     /** Fields of the preset's own shape. */
     readonly shape?: Partial<SwingShape>;
     readonly targetGap?: number;
+    /**
+     * The mallet in place of the default's, every preset's top hand moved to keep its default lean at its canonical
+     * contact with that mallet.
+     */
+    readonly mallet?: SwingProfile["mallet"];
 }
+
+/** A preset's canonical contact height `up` (m): the AC stop's −0.020 m, 0 otherwise. */
+function canonicalUp(type: StrokeType): number {
+    return type === "stop-ac" ? -0.02 : 0;
+}
+
+/**
+ * The P2b.2b.2b.2b default mallet: the Jaques 9" round head, 1.0 kg, on a massless 36 in shaft. It keeps the round
+ * head's turf and sunk-ball mechanisms under test after the default switched to the box (P2b.2b.2b.2c plan Task 7
+ * ruling): the box clears the turf where the barrel's rim met it.
+ */
+export const LEGACY_MALLET: SwingProfile["mallet"] = {
+    headMass: malletReference.headMass.value,
+    headLength: 0.2286,
+    head: { kind: "round", diameter: malletReference.headDiameter.value },
+    shaftLength: malletReference.shaftLength.value,
+    shaftMass: 0,
+};
 
 /**
  * A preset's canonical setup (design §5.5): the striker at CANONICAL_STRIKER, aim +y, the default backswing
@@ -196,9 +219,28 @@ export function canonicalSetup(type: StrokeType, over: CanonicalOptions = {}): S
         balls.red = at(x + (2 * R + gap) * Math.cos(aim), y + (2 * R + gap) * Math.sin(aim));
     }
     const live: BallId[] = !croquet && balls.red !== undefined ? ["red"] : [];
+    const mallet = over.mallet ?? defaultProfile.mallet;
+    const geometryOf = (m: SwingProfile["mallet"]) => ({
+        ballRadius: R,
+        headLength: m.headLength,
+        faceHalfHeight: faceHalfHeight(headShapeOf(m.head)),
+    });
+    const relean = (t: StrokeType, s: SwingStance): SwingStance => {
+        const up = canonicalUp(t);
+        const lean = stanceLean(s.handsAhead, s.top, up, geometryOf(defaultProfile.mallet));
+        return { ...s, handsAhead: handsAheadFor(lean, s.top, up, geometryOf(mallet)) };
+    };
+    const stances =
+        over.mallet === undefined
+            ? defaultProfile.stance
+            : (Object.fromEntries(STROKE_TYPES.map((t) => [t, relean(t, defaultProfile.stance[t])])) as Record<
+                  StrokeType,
+                  SwingStance
+              >);
     const profile: SwingProfile = {
         ...defaultProfile,
-        stance: { ...defaultProfile.stance, [type]: { ...defaultProfile.stance[type], ...over.stance } },
+        mallet,
+        stance: { ...stances, [type]: { ...stances[type], ...over.stance } },
         drive: { ...defaultProfile.drive, [type]: { ...defaultProfile.drive[type], ...over.drive } },
         shape: { ...defaultProfile.shape, [type]: { ...defaultProfile.shape[type], ...over.shape } },
     };
@@ -211,7 +253,7 @@ export function canonicalSetup(type: StrokeType, over: CanonicalOptions = {}): S
             aim,
             backswing: swingReference[type].defaultBackswing.value,
             drive: DEFAULT_DRIVE[type],
-            contact: { up: type === "stop-ac" ? -0.02 : 0, side: 0 },
+            contact: { up: canonicalUp(type), side: 0 },
             timing: ON_TIME,
             ...over.stroke,
         },
@@ -231,19 +273,23 @@ export function canonicalSetup(type: StrokeType, over: CanonicalOptions = {}): S
  * h₀ = 45.6009 mm. P2b.2b.2b.2a: turf bed (was δ₀ = m·g/k_turf = 0.0404 mm, h₀ = 45.997 mm; every figure falls by the
  * sink's change, 0.3962 mm). The head is pitched by −lean, so the figure is independent of the arc radius. The rolls'
  * figures were re-measured at Gugan's leans (P2b.2b.2b.1). For a forward lean α at `up` 0 the lowest point is the
- * face's lower rim, at h₀ + (R + START_GAP)·sin α − ρ·cos α; level, it is h₀ − ρ.
+ * face's lower rim, at h₀ + (R + START_GAP)·sin α − ρ·cos α; level, it is h₀ − ρ. P2b.2b.2b.2c: the mallet, a box
+ * with h_z = 28.575 mm, L = 279.4 mm and e = 3 mm in place of the barrel; each figure's formula is at its entry.
  */
 export const CANONICAL_CLEARANCE: Readonly<Record<StrokeType, number>> = {
-    // P2b.2b.2b.2a: turf bed (was 7.8971e-3): h₀ − ρ.
-    "single-ball": 7.5009e-3,
-    drive: 7.5009e-3,
-    // P2b.2b.2b.2a: turf bed (was 8.7833e-3).
-    "stop-ac": 8.3872e-3,
-    "stop-gc": 7.5009e-3,
-    // P2b.2b.2b.2a: turf bed (was 29.9165e-3, 37.0506e-3 and 40.1551e-3): h₀ + (R + START_GAP)·sin α − ρ·cos α.
-    "half-roll": 29.5203e-3,
-    "full-roll": 36.6544e-3,
-    "pass-roll": 39.7589e-3,
+    // P2b.2b.2b.2c: the mallet (was 7.5009e-3): the box's flat underside, h₀ − h_z, 9.525 mm above the barrel's rim.
+    "single-ball": 17.0259e-3,
+    drive: 17.0259e-3,
+    // P2b.2b.2b.2c: the mallet (was 8.3872e-3): the head's back corner, lowest under the backward lean, rises by
+    // (ρ − h_z)·cos α − (L − e − L₀)·|sin α| − e·(1 − cos α), L₀ the old 228.6 mm head.
+    "stop-ac": 14.5473e-3,
+    // P2b.2b.2b.2c: the mallet (was 7.5009e-3).
+    "stop-gc": 17.0259e-3,
+    // P2b.2b.2b.2c: the mallet (was 29.5203e-3, 36.6544e-3 and 39.7589e-3): the face's rounded lower edge,
+    // h₀ + (R + START_GAP)·sin α + e·sin α − (h_z − e)·cos α − e.
+    "half-roll": 39.1827e-3,
+    "full-roll": 45.9355e-3,
+    "pass-roll": 48.8202e-3,
 };
 
 const SOLVED = new Map<string, number>();

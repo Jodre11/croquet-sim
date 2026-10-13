@@ -24,12 +24,12 @@
         "note": "Plummer: \"Typical isolated heads weigh around 1 kg.\" His table gives a 229 mm wooden head (George Wood Mallets) at 987 g. Bounds derived: whole mallets \"in the range 2lb 12oz to 3lb 4oz\" (CA, 1.25-1.47 kg) less \"A typical isolated shaft weights around 14 oz. (398 g)\" (Oxford Croquet), 0.85-1.08 kg, rounded up to 1.1."
     },
     "headLength": {
-        "value": 0.2286,
+        "value": 0.2794,
         "unit": "m",
         "bounds": [0.2286, 0.3302],
-        "source": "Croquet Association, 'Choosing a Croquet Mallet', https://www.croquet.org.uk/?p=games%2Ftech%2FChoosingMallet; Oxford Croquet, 'Equipment - Croquet Mallets', https://oxfordcroquet.org/equip/mallets/",
+        "source": "Ivor Russ, 'Mallets: End-weighting and the Moment of Inertia' (Oxford Croquet), https://oxfordcroquet.org/tech/russ/; Ian Plummer, 'Mallet Making Notes' (Oxford Croquet), https://oxfordcroquet.org/equip/makingmallets/; Croquet Association, 'Choosing a Croquet Mallet', https://www.croquet.org.uk/?p=games%2Ftech%2FChoosingMallet; Oxford Croquet, 'Equipment - Croquet Mallets', https://oxfordcroquet.org/equip/mallets/",
         "provenance": "direct",
-        "note": "CA: \"A standard mallet has a head length of 9 to 9.5\", and this is recommended for beginners. Expert players may use longer head lengths up to 12\". Oxford Croquet: \"Older mallet heads could be as short as 9\" (230 mm) but the trend now is for 10 - 11\" (250 - 280 mm) heads.\" SI: 9 in × 0.0254 = 0.2286 m; 12 in = 0.3048 m. Bounds since P2b.2b.2b.2c (design §5.2): 9–13 in (0.2286–0.3302 m), the makers' heads 240–330 mm (reference/sources/README.md, fetched 2026-10-12)."
+        "note": "The Pidcock 2000 11\" (P2b.2b.2b.2c design §5.3): Russ's \"Pidcock 2000 11\"\" and Plummer's sample table, \"Pidcock 2000 | 280 | 11 | 1325\". 11 in = 0.2794 m, in the market's \"10 - 11\" (250 - 280 mm)\" trend (Plummer, Croquet Mallets). Until P2b.2b.2b.2c the value was 9 in, the CA's standard: CA: \"A standard mallet has a head length of 9 to 9.5\", and this is recommended for beginners. Expert players may use longer head lengths up to 12\". Oxford Croquet: \"Older mallet heads could be as short as 9\" (230 mm) but the trend now is for 10 - 11\" (250 - 280 mm) heads.\" SI: 9 in × 0.0254 = 0.2286 m; 12 in = 0.3048 m. Bounds since P2b.2b.2b.2c (design §5.2): 9–13 in (0.2286–0.3302 m), the makers' heads 240–330 mm (reference/sources/README.md, fetched 2026-10-12)."
     },
     "headDiameter": {
         "value": 0.0762,

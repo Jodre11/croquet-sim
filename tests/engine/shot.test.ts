@@ -14,7 +14,7 @@ import { STROKE_TYPES, type ShotSetup } from "../../src/engine/swing/types";
 import type { BallId, BallState, Hoop, World } from "../../src/engine/types";
 import { defaultWorld, hoopHalfSpan, hoopLateral } from "../../src/engine/world";
 import { recorder } from "./support/impact";
-import { CANONICAL_STRIKER, GC_STOP_GAP, backswingFor, canonicalSetup } from "./support/shot";
+import { CANONICAL_STRIKER, GC_STOP_GAP, LEGACY_MALLET, backswingFor, canonicalSetup } from "./support/shot";
 import { POSITION_SLACK, boundaryJumps } from "./support/trajectory";
 
 const WORLD = defaultWorld();
@@ -313,7 +313,8 @@ describe("simulateShot", () => {
     it("finds 29.1.14 only in a stroke of Law 29.2.3: the canonical AC stop's head meets the turf", () => {
         // Prototype: the head on the turf from 12.70 ms, 1.73 mm deep, 1.71 mm of slide (pre-flight, with the check to
         // rest: 12.52 ms, 1.80 mm, 1.83 mm).
-        const setup = canonicalSetup("stop-ac");
+        // P2b.2b.2b.2c: on the legacy round head; the default box clears the turf (gate).
+        const setup = canonicalSetup("stop-ac", { mallet: LEGACY_MALLET });
         const dug = simulateShot({ ...setup, hampered: true }).faults.findings.filter((f) => f.law === "29.1.14");
         expect(dug).toHaveLength(1);
         expect(dug[0]).toMatchObject({ tier: "possible-fault", ball: "blue" });
@@ -379,9 +380,13 @@ describe("the effective mass (exit criterion 3)", () => {
         const contact = buildContact(setup, WORLD);
         const { arc, hands } = contact.drive as TrackDrive;
         const { head } = contact;
-        // Prototype: 1.0066 kg against the head's 1.0 kg.
-        const closed = effectiveMass(swungBody(head, hands, arc.radius), head, contact.orientation, arc.aim);
-        expect(Math.abs(closed - head.mass)).toBeLessThanOrEqual(0.1 * head.mass);
+        // P2b.2b.2b.2c: the mallet (was 1.0066): 1.1095 kg against the head's 1.0 kg.
+        const body = swungBody(head, hands, arc.radius);
+        const closed = effectiveMass(body, head, contact.orientation, arc.aim);
+        // A rigid body's effective mass at any point is at most its mass, 1/m_eff ≥ 1/M; the shaft raises it past m
+        // (P2b.2b.2b.2c design §4.4).
+        expect(closed).toBeGreaterThanOrEqual(0.9 * head.mass);
+        expect(closed).toBeLessThanOrEqual(body.mass);
 
         // The strike's own measure: the balls' momentum along aim gained over the first face–ball interval, over the
         // face centre's loss of speed along aim. Both balls count: in a croquet stroke the croqueted ball takes its
@@ -495,7 +500,8 @@ describe("the mechanisms (design §8.1), on the canonical setups", () => {
         // D9.1, on the canonical stop. Prototype (11 mm dip): the first face interval ends at 1.17 ms, the head on
         // the turf 12.70–21.48 ms, 1.73 mm deep (10 mm: 1.32; 12 mm: 2.11 and impact-head-deep), turf +0.376 N·s.
         // Pre-flight, with the check to rest: 12.52–21.38 ms, 1.80 mm (10 mm: 1.40; 12 mm: 2.19 and deep), +0.401 N·s.
-        const { impact, turf } = braking(canonicalSetup("stop-ac"));
+        // P2b.2b.2b.2c: on the legacy round head; the default box clears the turf (gate).
+        const { impact, turf } = braking(canonicalSetup("stop-ac", { mallet: LEGACY_MALLET }));
         const dug = impact.timeline["head/turf"]?.[0] as ContactInterval;
         expect(dug).toBeDefined();
         expect(dug.start).toBeGreaterThanOrEqual((hits(impact)[0] as ContactInterval).end);
@@ -524,9 +530,10 @@ describe("the mechanisms (design §8.1), on the canonical setups", () => {
     it("a dip 30 ms early meets the lawn before the ball and sends the striker's ball off slower", () => {
         // Prototype: the impact starts 30 ms before contact; the head on the turf from 20.72 ms, the ball struck from
         // 31.05 ms; the striker's ball at 1.214 m/s against 1.380 on time.
-        const onTime = simulateShot(canonicalSetup("stop-ac")).impact;
+        // P2b.2b.2b.2c: on the legacy round head; the default box clears the turf (gate).
+        const onTime = simulateShot(canonicalSetup("stop-ac", { mallet: LEGACY_MALLET })).impact;
         const timing = { arc: 0, hands: 0, dip: -0.03 };
-        const early = simulateShot(canonicalSetup("stop-ac", { stroke: { timing } })).impact;
+        const early = simulateShot(canonicalSetup("stop-ac", { mallet: LEGACY_MALLET, stroke: { timing } })).impact;
         const dug = early.timeline["head/turf"]?.[0] as ContactInterval;
         expect(dug).toBeDefined();
         expect(dug.start).toBeLessThan((hits(early)[0] as ContactInterval).start);

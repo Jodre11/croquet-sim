@@ -14,7 +14,7 @@ import { axisAngle, rotate } from "../../../src/engine/impact/rigidBody";
 import type { HeadState } from "../../../src/engine/impact/types";
 import { TEST_BALL, airborneAt, hoopWithUprightAt, testWorld } from "../support/fixtures";
 import { TEST_HEAD, TEST_RHO } from "../support/impact";
-import { backswingFor, canonicalSetup } from "../support/shot";
+import { LEGACY_MALLET, backswingFor, canonicalSetup } from "../support/shot";
 
 const R = TEST_BALL.radius;
 
@@ -293,7 +293,8 @@ describe("handover of a ball sunk under the head, on whole rolls", () => {
         ["pass-roll", 2, 1, 0],
     ] as const)("hands over the %s at %s m/s, drive %s, side %s, with the head cleared of a lifted ball", (...run) => {
         const [type, speed, drive, side] = run;
-        const base = canonicalSetup(type);
+        // P2b.2b.2b.2c: on the legacy round head; the default box clears the turf (gate).
+        const base = canonicalSetup(type, { mallet: LEGACY_MALLET });
         const up = base.stroke.contact.up + (type === "full-roll" ? 0.003 : -0.003);
         const stroke = { ...base.stroke, drive, contact: { up, side } };
         const setup = { ...base, stroke: { ...stroke, backswing: backswingFor({ ...base, stroke }, speed, world) } };

@@ -1,7 +1,8 @@
 /**
  * The default swing profile, "typical club player" (P2b.2b.1 design §5.4). Every value is provisional, to be refined
  * from outcomes; P2b.2b.2 sources or fits them.
- * - Mallet: reference/mallet.json (the head's mass, length and diameter; the 0.9144 m, 36 in, shaft, sourced).
+ * - Mallet: reference/mallet.json, the Pidcock 2000 11" as a rounded box on a 36 in, 0.325 kg shaft (P2b.2b.2b.2c
+ *   design §5.3), its placeholders flagged at MALLET.
  * - Body: reference/contact.json (`armMass` and `reachSlack`, the prototype's calibration),
  *   the arm's flex and pendulum push (P2b.2b.2b.2b), the push intent's cap and response time and each hand's
  *   hand–arm chain (its gate rulings), measured.
@@ -44,14 +45,25 @@ import {
 
 const DEG = Math.PI / 180;
 
-/** The default mallet (design §5.4): reference/mallet.json's round head and shaft. */
+/**
+ * The default mallet (P2b.2b.2b.2c design §5.3): the Pidcock 2000 11", a wooden body with brass blocks at its ends and
+ * composite faces, as a rounded box with its measured moment about the shaft (reference/mallet.json). Placeholders
+ * (design §6): the edge radius, 3 mm, unsourced; the head's mass, the face and the shaft's length, the market's typical
+ * figures standing in for the Pidcock 2000's own, unpublished; the shaft's mass, derived from a fill; the shaft a thin
+ * rod, its moment about its own axis 0.
+ */
 const MALLET: SwingProfile["mallet"] = {
     headMass: malletReference.headMass.value,
     headLength: malletReference.headLength.value,
-    head: { kind: "round", diameter: malletReference.headDiameter.value },
+    head: {
+        kind: "box",
+        faceWidth: malletReference.faceWidth.value,
+        faceHeight: malletReference.faceHeight.value,
+        edgeRadius: malletReference.edgeRadius.value,
+        inertiaAboutShaft: malletReference.inertiaAboutShaft.value,
+    },
     shaftLength: malletReference.shaftLength.value,
-    // The shaft carries no mass until the default mallet switches (P2b.2b.2b.2c plan decision 10).
-    shaftMass: 0,
+    shaftMass: malletReference.shaftMass.value,
 };
 
 /**
