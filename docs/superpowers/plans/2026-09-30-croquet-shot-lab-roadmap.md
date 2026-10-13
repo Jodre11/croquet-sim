@@ -1510,15 +1510,18 @@ design's amendments. Observations, not gates, but for the exit criteria. "Old �
     head finishes higher (the drive at 3 m/s 205.6 → 240.1 mm up).
 - **The force tables** (`impactProbe.ts`, and `swingProbe.ts`'s force strokes) run on the Jaques round head, 9" by 3",
   whatever the default (the plan's decision 8); `impactProbe.ts`'s lines match the baseline's apart from its timings.
+  That baseline was reconstructed after the fact from a `git archive` extract of 862e176 (`main`'s code), as Task 1
+  took none (the design's amendments).
 - **Cost** (machine-dependent, beside P5's provisional ≤ 200 ms simulation; the three probes ran together, so their
   times are contended): the tracked impacts' steps single-ball 2000, drive 36,125 → 30,818, AC stop 4276 → 4000, GC
   stop 2000, half 13,257 → 13,436, full 30,986 → 30,770, pass 28,038 → 18,683.
 - **Engine time** (`scripts/shotMix.ts`, COUNT=800, seed 7, run alone; machine-dependent): per shot p50 4.94 ms, p99
   101.8, p99.9 and max 116.7 (the worst a croquet shot with no solve), against P5's provisional ≤ 200 ms simulation;
-  P2b.2b.2b.2a's 3000-shot run gave p50 4.1, p99 53.3 and max 91.2, and P2b.2b.2b.2b recorded none. The shot mix's
-  results are bit-identical through this phase (the ratchet), so the difference is not the mallet's but the sample's
-  (800 shots against 3000) and the machine's; the tracked strokes above carry the mallet's cost. The solver p99
-  9.1 ms, max 33.8; 97.5 % of shots make no solve.
+  P2b.2b.2b.2a's 3000-shot run gave p50 4.1, p99 53.3 and max 91.2, and P2b.2b.2b.2b recorded none. Each figure is
+  from a single run. The run-to-run noise is unquantified and larger than any effect of the mallet, whose shot-mix
+  results are bit-identical through this phase (the ratchet): Task 9's run, contended by three other runs, gave p99
+  78.8 ms against this quiet run's 101.8. The p99 and the max rest on about 8 shots of the 800. P5 must measure this
+  properly. The solver p99 9.1 ms, max 33.8; 97.5 % of shots make no solve.
 - **Tests:** `npm test` 1109 passed, 4 skipped; the slow suite 1111 passed, 2 skipped (Task 9).
 - **Public:** `SwingProfile.mallet` takes `head` (`{ kind: "round"; diameter }` or `{ kind: "box"; faceWidth;
   faceHeight; edgeRadius; inertiaAboutShaft }`) and `shaftMass`, `headDiameter` moving into `head`; `MalletHead` loses
@@ -1534,9 +1537,9 @@ design's amendments. Observations, not gates, but for the exit criteria. "Old �
 | ±5 % / ±2 % calibration round trip | P3 | Round-trip test |
 | ≤ 2,000-character links | P4 | Measured on worst-case setup plus profile |
 | ≤ 200 ms simulation, ≤ 250 KB gzipped | P5 | Throttled CI measurement and bundle report |
-| The default mallet's edge radius, 3 mm (P2b.2b.2b.2c, a placeholder: no bevel figure is published) | P3 (the player's mallet) | Measured on a real head, or entered by the player |
-| The default mallet's fills for the Pidcock 2000 11" (P2b.2b.2b.2c): the head's mass 1.0 kg, the face 57.15 mm square, the shaft's length 0.9144 m (36"); Plummer's and USCA's typical figures, the Pidcock 2000's own unpublished | P3 (the player's mallet) | A maker's figure or a weighing of the Pidcock 2000, or the player's own mallet |
-| The default mallet's shaft mass, 0.325 kg (P2b.2b.2b.2c, derived: Plummer's 1325 g whole mallet less the 1.0 kg head fill) | P3 (the player's mallet) | Follows the head's mass; a weighed shaft replaces it |
+| The default mallet's edge radius, 3 mm (P2b.2b.2b.2c, a placeholder: no bevel figure is published) | P3 (proposed; the player's mallet) | Measured on a real head, or entered by the player |
+| The default mallet's fills for the Pidcock 2000 11" (P2b.2b.2b.2c): the head's mass 1.0 kg, the face 57.15 mm square, the shaft's length 0.9144 m (36"); Plummer's and USCA's typical figures, the Pidcock 2000's own unpublished | P3 (proposed; the player's mallet) | A maker's figure or a weighing of the Pidcock 2000, or the player's own mallet |
+| The default mallet's shaft mass, 0.325 kg (P2b.2b.2b.2c, derived: Plummer's 1325 g whole mallet less the 1.0 kg head fill) | P3 (proposed; the player's mallet) | Follows the head's mass; a weighed shaft replaces it |
 
 ## Decisions deferred to the relevant plan
 

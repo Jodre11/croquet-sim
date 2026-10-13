@@ -163,7 +163,8 @@ that the stance's contact point lies on the face becomes, for the box, |side| �
 - `faceContact` (force tables) stays cylinder-only: `validateImpact` rejects a force plan with a box head (Decisions).
 - `headLowestPoint`: z − Σ_i c_i·|R_zi| − e, R_zi the world-up components of the body axes.
 - `headBottom`: the support point −Σ_i sign(R_zi)·c_i·x̂_i − e·ẑ. With sign(0) = 0, a level face samples its midline;
-  that is the tie rule. It is used only to sample `surfaceAt`.
+  that is the tie rule. It is used to sample `surfaceAt`, and is the head–turf pair's contact point (amended: plan
+  decision 1, accepted 2026-10-13).
 - `headClosing` and `stillReaching`: the lateral reach |p_y| < h_y + R and |p_z| < h_z + R.
 - `cylinderDistance` (impact validation) becomes `headDistance`, dispatched on shape.
 
@@ -421,15 +422,14 @@ recorded here with its reason. The figures are in the roadmap's "P2b.2b.2b.2c ou
    at it. A box's support point with sign(0) = 0 puts a level box's turf contact on its bottom face's midline, under
    the centre, as the level cylinder's is. Reason: since `headTurfContact` acts at it, §3.4's "used only to sample
    `surfaceAt`" understated its role. **The user accepted it at plan review (2026-10-13).** §3.4's sentence reads
-   "used to sample `surfaceAt`, and as the head–turf contact point".
+   "used to sample `surfaceAt`, and is the head–turf pair's contact point".
 2. **The regions are listed per shape.** `HEAD_REGIONS` stays the cylinder's five, in their order; the box's are
    `BOX_REGIONS` (`face`, `edge`, `corner`, `side`, `top`, `bottom`, `back`), and `regionsOf(shape)` picks the list.
    Reason: the integrator builds a face–ball pair's region timelines from that list, so a cylinder's run records
    exactly what it recorded before (the ratchet).
 3. **The box's sign convention.** A body coordinate p_i ≥ 0 counts as positive for the normal's sign and for `face`
    against `back` (as the cylinder's x ≥ 0 does), and for `top` against `bottom`. Reason: the head's own centre then
-   resolves to `side` along +y with no throw (of its q, y and z tie largest with e = 0, and the tie goes to y), and a
-   mirrored stroke mirrors exactly.
+   resolves to `side` along +y with no throw (of its q, y and z tie largest with e = 0, and the tie goes to y).
 4. **`StanceGeometry.headRadius` becomes `faceHalfHeight`**, its meaning: ρ, the socket's height above the head's
    centre. Its three readers and the tests' geometry objects follow. Reason: a box has no radius (§3.1).
 5. **The old head's gate figures come from Task 1's baseline**, run on `main` before any change, not from a legacy
@@ -500,6 +500,8 @@ Each was made by the controller, with its cost if wrong, and none changes the en
   feed-forward at 1e-12, which is exact, and the force and the torque at 1e-10: the firm grips' springs leave a
   rounding floor of about 7e-12 N (5.8e-12 with no shaft, so it predates the shaft). Cost if wrong: a torque error
   between 1e-12 and 1e-10 N·m would pass; "leaves a held mallet still" still pins the shaft weight's placement.
+- **The impactProbe baseline** (Task 10). Task 1 left no `impactProbe` baseline, so it was taken from a `git archive`
+  extract of 862e176 (`main`'s code), its script run by absolute path. Cost if wrong: none to the branch.
 
 §4.4's "`effectiveMass` takes `malletBody`" is met through `swungBody`, which builds on `malletBody` when the shaft
 has mass; `effectiveMass` takes a `SwungBody`, as before.
