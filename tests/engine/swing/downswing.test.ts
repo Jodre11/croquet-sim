@@ -22,7 +22,7 @@ import {
 } from "../../../src/engine/swing/downswing";
 import type { SwingShape } from "../../../src/engine/swing/types";
 import { STANDARD_GRAVITY } from "../../../src/engine/world";
-import { TEST_HANDS, TEST_HEAD, levelArc, trackDrive } from "../support/impact";
+import { TEST_BOX, TEST_HANDS, TEST_HEAD, levelArc, trackDrive } from "../support/impact";
 
 const AIM = vec3(1, 0, 0);
 const UP = vec3(0, 0, 1);
@@ -141,11 +141,16 @@ describe("the backswing's top (design §3.2)", () => {
 
 describe("the swing-mode downswing (design §3.1, §3.4)", () => {
     it("matches the energy integral with gravity alone and the hands still, within 0.1 %", () => {
-        for (const thetaContact of [0, 0.1, -0.2]) {
-            const { downswing, omega } = planDownswing(input({ thetaContact }));
-            const fall = PENDULUM.weight * (Math.cos(thetaContact) - Math.cos(downswing.thetaTop));
-            const kinetic = 0.5 * PENDULUM.inertia * omega * omega;
-            expect(Math.abs(kinetic / fall - 1), `θ_c ${thetaContact}`).toBeLessThanOrEqual(1e-3);
+        // P2b.2b.2b.2c: also on TEST_BOX with a 0.3 kg shaft, its weight term the head's and the rod's.
+        const shafted = { ...TEST_BOX, shaft: { mass: 0.3, length: 0.9 } };
+        const heavy = pendulumOf(shafted, swungBody(shafted, TEST_HANDS, RADIUS), RADIUS, STANDARD_GRAVITY);
+        for (const pendulum of [PENDULUM, heavy]) {
+            for (const thetaContact of [0, 0.1, -0.2]) {
+                const { downswing, omega } = planDownswing(input({ thetaContact, pendulum }));
+                const fall = pendulum.weight * (Math.cos(thetaContact) - Math.cos(downswing.thetaTop));
+                const kinetic = 0.5 * pendulum.inertia * omega * omega;
+                expect(Math.abs(kinetic / fall - 1), `θ_c ${thetaContact}`).toBeLessThanOrEqual(1e-3);
+            }
         }
     });
 

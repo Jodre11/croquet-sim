@@ -4,6 +4,7 @@ import {
     IDENTITY,
     angularAcceleration,
     axisAngle,
+    boxInertia,
     integrateOrientation,
     multiply,
     rotate,
@@ -119,5 +120,41 @@ describe("solidCylinderInertia", () => {
         expect(i.x).toBeCloseTo(0.5 * 0.032 * 0.032, 15);
         expect(i.y).toBeCloseTo((3 * 0.032 * 0.032 + 0.23 * 0.23) / 12, 15);
         expect(i.z).toBe(i.y);
+    });
+});
+
+describe("boxInertia (P2b.2b.2b.2c design §4.1)", () => {
+    const m = 1;
+    const L = 0.2794;
+    const h = 0.028575;
+
+    it("takes I_z from the measured moment, I_y = I_z on a square section, I_x = m·(h_y² + h_z²)/3", () => {
+        const I = boxInertia(m, L, h, h, 0.0146);
+        expect(I.z).toBe(0.0146);
+        expect(I.y).toBe(I.z);
+        expect(I.x).toBeCloseTo((m * 2 * h * h) / 3, 15);
+    });
+
+    it("corrects I_y by m·(h_z² − h_y²)/3 on a rectangular section", () => {
+        const I = boxInertia(m, L, 0.025, 0.03, 0.0146);
+        expect(I.y - I.z).toBeCloseTo((m * (0.03 * 0.03 - 0.025 * 0.025)) / 3, 15);
+        expect(I.x).toBeCloseTo((m * (0.025 * 0.025 + 0.03 * 0.03)) / 3, 15);
+    });
+
+    it("accepts both realisable extremes and rejects a value just past either", () => {
+        const least = (m * h * h) / 3;
+        const most = m * ((L * L) / 4 + (h * h) / 3);
+        expect(boxInertia(m, L, h, h, least).z).toBe(least);
+        expect(boxInertia(m, L, h, h, most).z).toBe(most);
+        expect(() => boxInertia(m, L, h, h, least * (1 - 1e-9))).toThrow(/moment about the shaft must lie in/);
+        expect(() => boxInertia(m, L, h, h, most * (1 + 1e-9))).toThrow(RangeError);
+    });
+
+    it("gives a uniform box's moments from a uniform box's measure", () => {
+        // A uniform box: I_z = m·(L² + 4h_y²)/12, 67.8 kg·cm² for the default's size (design §4.1).
+        const uniform = (m * (L * L + 4 * h * h)) / 12;
+        expect(uniform).toBeCloseTo(0.00678, 5);
+        const I = boxInertia(m, L, h, h, uniform);
+        expect(I.x).toBeCloseTo((m * (4 * h * h + 4 * h * h)) / 12, 15);
     });
 });

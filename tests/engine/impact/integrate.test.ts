@@ -7,7 +7,7 @@ import { simulateImpact } from "../../../src/engine/impact/simulateImpact";
 import { staticSink } from "../../../src/engine/impact/turfBed";
 import { STANDARD_GRAVITY } from "../../../src/engine/world";
 import { TEST_BALL, ballAt, testWorld } from "../support/fixtures";
-import { TEST_HEAD, freeBall, isolated, strike, testBed } from "../support/impact";
+import { TEST_HEAD, TEST_RHO, freeBall, isolated, strike, testBed } from "../support/impact";
 
 const R = TEST_BALL.radius;
 
@@ -112,7 +112,7 @@ describe("events and termination", () => {
         // The face plane R/2 short of the ball's centre, the face axis R/2 beyond the disc's edge: the ball's
         // cross-section in the face plane (radius √3·R/2) overlaps the disc while its centre projects outside it.
         const start = {
-            position: vec3(-R / 2 - TEST_HEAD.length / 2, -(TEST_HEAD.radius + R / 2), 1),
+            position: vec3(-R / 2 - TEST_HEAD.length / 2, -(TEST_RHO + R / 2), 1),
             orientation: IDENTITY,
             velocity: vec3(1, 0, 0),
             angularVelocity: ZERO,
@@ -125,7 +125,7 @@ describe("events and termination", () => {
 
     it("flags a head that goes below the turf plane once", () => {
         const start = {
-            position: vec3(0, 0, TEST_HEAD.radius + 1e-4),
+            position: vec3(0, 0, TEST_RHO + 1e-4),
             orientation: IDENTITY,
             velocity: vec3(0, 0, -1),
             angularVelocity: ZERO,

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { headLowestPoint } from "../../../src/engine/impact/contacts";
-import { rotate, solidCylinderInertia } from "../../../src/engine/impact/rigidBody";
+import { boxInertia, rotate, solidCylinderInertia } from "../../../src/engine/impact/rigidBody";
 import { simulateImpact } from "../../../src/engine/impact/simulateImpact";
 import {
     HAND_COUPLING,
@@ -34,6 +34,7 @@ import { planDownswing, scanDownswing } from "../../../src/engine/swing/downswin
 import { ON_TIME, defaultProfile, shapeOf } from "../../../src/engine/swing/profile";
 import {
     STROKE_TYPES,
+    type MalletHeadProfile,
     type ShotSetup,
     type StrokeType,
     type SwingProfile,
@@ -59,7 +60,14 @@ import {
     mirrorVec,
     recorder,
 } from "../support/impact";
-import { CANONICAL_CLEARANCE, GC_STOP_GAP, backswingFor, canonicalSetup, testProfile } from "../support/shot";
+import {
+    CANONICAL_CLEARANCE,
+    GC_STOP_GAP,
+    TEST_BOX_HEAD,
+    backswingFor,
+    canonicalSetup,
+    testProfile,
+} from "../support/shot";
 
 const WORLD = testWorld();
 const R = TEST_BALL.radius;
@@ -357,11 +365,41 @@ describe("buildContact, step by step", () => {
             mass: 1,
             inertia: solidCylinderInertia(1, 0.23, 0.032),
             length: 0.23,
-            radius: 0.032,
+            shape: { kind: "cylinder", radius: 0.032 },
             socket: vec3(0, 0, 0.032),
+            shaft: { mass: 0, length: 0.9 },
         });
         // P2b.2b.2b.2a design §3.6: the face's restitution and contact time are contact.json's wood fits.
         expect(c.face).toEqual({ friction: malletReference.faceFriction.value });
+    });
+
+    it("builds a box head from the profile's measured moment, its socket at half the face's height", () => {
+        // Review focus 3: a rectangular face, 60 mm wide and 50 mm high; the socket, ρ and the flat face come from the
+        // height.
+        const head = { ...TEST_BOX_HEAD, faceWidth: 0.06, faceHeight: 0.05 };
+        const c = buildContact(shot({}, testProfile({ mallet: { head } })), WORLD);
+        expect(c.head).toEqual({
+            mass: 1,
+            inertia: boxInertia(1, 0.23, 0.03, 0.025, TEST_BOX_HEAD.inertiaAboutShaft),
+            length: 0.23,
+            shape: { kind: "box", halfWidth: 0.03, halfHeight: 0.025, edgeRadius: 0.003 },
+            socket: vec3(0, 0, 0.025),
+            shaft: { mass: 0, length: 0.9 },
+        });
+    });
+
+    it("puts the socket at half the face's height on a rectangular face", () => {
+        // Review focus 3: the pivot lies r + h_z above the head's centre along the shaft, never r + h_y.
+        const head = { ...TEST_BOX_HEAD, faceWidth: 0.06, faceHeight: 0.05 };
+        const pose = contactPose(shot({}, testProfile({ mallet: { head } })), WORLD);
+        expect(length(sub(pose.pivot, pose.headCentre))).toBeCloseTo(0.8 + 0.025, 12);
+    });
+
+    it("plans and strikes with a sharp box, e = 0", () => {
+        // Review focus 2.
+        const setup = shot({}, testProfile({ mallet: { head: { ...TEST_BOX_HEAD, edgeRadius: 0 } } }));
+        const c = buildContact(setup, WORLD);
+        expect(() => simulateImpact(c, setup.balls, WORLD)).not.toThrow();
     });
 
     it("starts the head exactly on its own path", () => {
@@ -463,26 +501,48 @@ describe("buildContact, mirrored", () => {
         const [qa, qb] = [mirrorQuat(ra.head.orientation), rb.head.orientation];
         expect(qa.w === qb.w && qa.x === qb.x && qa.y === qb.y && qa.z === qb.z).toBe(true);
     });
+
+    it("gives a box-head setup mirrored across a vertical plane an exactly mirrored impact", () => {
+        // Review focus 4: the box's sign convention (p_i ≥ 0 counts as positive) must not break the mirror.
+        const profile = testProfile({ mallet: { head: TEST_BOX_HEAD }, stance: { lean: 0.1 }, up: -0.003 });
+        const stroke = { aim: 0.4, drive: 0.5, contact: { up: -0.003, side: 0.004 } };
+        const a = buildContact(shot(stroke, profile, ballAt(5, 3)), WORLD);
+        const b = buildContact(
+            shot({ ...stroke, aim: -0.4, contact: { up: -0.003, side: -0.004 } }, profile, ballAt(5, -3)),
+            WORLD,
+        );
+        const ra = simulateImpact(a, { blue: ballAt(5, 3) }, WORLD);
+        const rb = simulateImpact(b, { blue: ballAt(5, -3) }, WORLD);
+        const ha = ra.handover.blue as BallState;
+        const hb = rb.handover.blue as BallState;
+        expect(same(mirrorBall(ha).position, hb.position) && same(mirrorVec(ha.velocity), hb.velocity)).toBe(true);
+        expect(same(mirrorSpin(ha.angularVelocity), hb.angularVelocity)).toBe(true);
+        expect(rb.steps).toBe(ra.steps);
+        expect(Object.keys(rb.headRegions ?? {})).toEqual(Object.keys(ra.headRegions ?? {}));
+    });
 });
 
 /**
  * The downswing's least clearance on each canonical setup. The swing presets swing about a still top hand, so theirs
  * is the circle's: P2b.2b.1's coasting approach on prototype aeadd4c's geometry (the level presets' minimum lies
- * 36.25 ms before contact at 3 m/s, the AC stop's 56 ms). The rolls' hands rise behind contact and their pendulum
+ * 36.25 ms before contact at 3 m/s, the AC stop's 56 ms; the timings and the rim's lowest angle below are the
+ * P2b.2b.1 round head's figures). The rolls' hands rise behind contact and their pendulum
  * swings the head up, already past the rim's lowest angle, so theirs is at contact: CANONICAL_CLEARANCE. Every figure
  * moves with the sink h₀ = R − δ₀ (CANONICAL_CLEARANCE's δ₀, the bed's static sink at the striker's position).
  */
 const CANONICAL_APPROACH: Readonly<Record<StrokeType, number>> = {
-    // P2b.2b.2b.2a: turf bed (was 0.51544e-3, at δ₀ = m·g/k_turf): 0.3962 mm lower, as h₀.
-    "single-ball": 0.1189e-3,
-    drive: 0.1189e-3,
-    // P2b.2b.2b.2a: turf bed (was 7.2281e-3).
-    "stop-ac": 6.8318e-3,
-    "stop-gc": 0.1189e-3,
-    // P2b.2b.2b.2a: turf bed: CANONICAL_CLEARANCE's (was 29.9165e-3, 37.0506e-3 and 40.1551e-3).
-    "half-roll": 29.5203e-3,
-    "full-roll": 36.6544e-3,
-    "pass-roll": 39.7589e-3,
+    // P2b.2b.2b.2c: the mallet (was 0.1189e-3): 6.10 mm higher, less than the 9.525 mm the flat underside gains at
+    // contact, the minimum lying before contact on the arc, where the longer box is pitched.
+    "single-ball": 6.2186e-3,
+    drive: 6.2186e-3,
+    // P2b.2b.2b.2c: the mallet (was 6.8318e-3).
+    "stop-ac": 11.1829e-3,
+    // P2b.2b.2b.2c: the mallet (was 0.1189e-3).
+    "stop-gc": 6.2186e-3,
+    // P2b.2b.2b.2c: the mallet: CANONICAL_CLEARANCE's (was 29.5203e-3, 36.6544e-3 and 39.7589e-3).
+    "half-roll": 39.1827e-3,
+    "full-roll": 45.9355e-3,
+    "pass-roll": 48.8202e-3,
 };
 
 /** Each preset's default lean in degrees (P2b.2b.2b.1 design §4): the swing presets' unchanged, the rolls' Gugan's. */
@@ -581,8 +641,15 @@ describe("defaultProfile", () => {
         expect(defaultProfile.mallet).toEqual({
             headMass: malletReference.headMass.value,
             headLength: malletReference.headLength.value,
-            headDiameter: malletReference.headDiameter.value,
+            head: {
+                kind: "box",
+                faceWidth: malletReference.faceWidth.value,
+                faceHeight: malletReference.faceHeight.value,
+                edgeRadius: malletReference.edgeRadius.value,
+                inertiaAboutShaft: malletReference.inertiaAboutShaft.value,
+            },
             shaftLength: malletReference.shaftLength.value,
+            shaftMass: malletReference.shaftMass.value,
         });
         expect(defaultProfile.body).toEqual({
             armMass: contactReference.armMass.value,
@@ -737,6 +804,42 @@ describe("buildContact rejections", () => {
         ],
         ["a drive beyond ±1", shot({ drive: 1.5 }), /stroke\.drive must lie in/],
         ["a contact off the face", shot({ contact: { up: 0.03, side: 0.02 } }), /off the face/],
+        [
+            "a box head's contact off its flat face",
+            shot({ contact: { up: 0, side: 0.0295 } }, testProfile({ mallet: { head: TEST_BOX_HEAD } })),
+            /off the face/,
+        ],
+        [
+            "a box head whose edge radius reaches half its height",
+            shot({}, testProfile({ mallet: { head: { ...TEST_BOX_HEAD, edgeRadius: 0.032 } } })),
+            /profile\.mallet\.head\.edgeRadius must lie in \[0, 0\.032\)/,
+        ],
+        [
+            "a box head with a negative edge radius",
+            shot({}, testProfile({ mallet: { head: { ...TEST_BOX_HEAD, edgeRadius: -0.001 } } })),
+            /profile\.mallet\.head\.edgeRadius must be non-negative/,
+        ],
+        [
+            "a box head's moment past the realisable",
+            shot({}, testProfile({ mallet: { head: { ...TEST_BOX_HEAD, inertiaAboutShaft: 0.05 } } })),
+            /moment about the shaft must lie in/,
+        ],
+        [
+            "a negative shaft mass",
+            shot({}, testProfile({ mallet: { shaftMass: -0.1 } })),
+            /profile\.mallet\.shaftMass must be non-negative/,
+        ],
+        [
+            "an unknown head kind",
+            shot(
+                {},
+                testProfile({
+                    mallet: { head: { kind: "oval" } as unknown as MalletHeadProfile },
+                    stance: { handsAhead: -0.1 },
+                }),
+            ),
+            /profile\.mallet\.head\.kind must be "round" or "box"/,
+        ],
         ["a non-positive window", shot({}, testProfile({ drive: { window: 0 } })), /\.window must be positive/],
         ["a non-positive hands' window", shot({}, testProfile({ drive: { handWindow: 0 } })), /handWindow/],
         ["a non-positive dip time", shot({}, testProfile({ drive: { dropTime: 0 } })), /dropTime must be positive/],
@@ -873,7 +976,7 @@ describe("contactPose (design §5.2 steps 1–5, 10)", () => {
     it("puts the top hand handsAhead ahead of the ball along aim, the face pitched by stanceLean's lean", () => {
         // P2b.2b.2b.1 design §5.1. `side` moves nothing along aim.
         const aim = vec3(Math.cos(0.4), Math.sin(0.4), 0);
-        const geometry = { ballRadius: R, headLength: LENGTH, headRadius: RHO };
+        const geometry = { ballRadius: R, headLength: LENGTH, faceHalfHeight: RHO };
         for (const handsAhead of [-0.25, -0.1, 0.12]) {
             for (const up of [-0.01, 0, 0.01]) {
                 const setup = shot({ contact: { up, side: 0.004 } }, testProfile({ stance: { handsAhead } }));
@@ -897,12 +1000,12 @@ describe("contactPose (design §5.2 steps 1–5, 10)", () => {
             {
                 profile: { ...base, mallet: { ...base.mallet, headLength: 0.3 } },
                 world: WORLD,
-                geometry: { ballRadius: R, headLength: 0.3, headRadius: RHO },
+                geometry: { ballRadius: R, headLength: 0.3, faceHalfHeight: RHO },
             },
             {
                 profile: base,
                 world: testWorld({ ball: { ...WORLD.ball, radius: 0.05 } }),
-                geometry: { ballRadius: 0.05, headLength: LENGTH, headRadius: RHO },
+                geometry: { ballRadius: 0.05, headLength: LENGTH, faceHalfHeight: RHO },
             },
         ];
         for (const { profile, world, geometry } of cases) {
@@ -1020,7 +1123,7 @@ describe("the lead (design §3.5)", () => {
 
 describe("the stance's geometry (P2b.2b.2b.1 design §3.2, §3.3)", () => {
     /** The test ball and head: R, L and ρ. */
-    const GEOMETRY = { ballRadius: R, headLength: LENGTH, headRadius: RHO };
+    const GEOMETRY = { ballRadius: R, headLength: LENGTH, faceHalfHeight: RHO };
     /** B = R + START_GAP + L/2, in the engine's operation order. */
     const B = R + START_GAP + LENGTH / 2;
 

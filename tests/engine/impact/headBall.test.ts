@@ -9,11 +9,20 @@ import { ZERO, add, dot, scale, vec3, type Vec3 } from "../../../src/engine/math
 import type { BallState } from "../../../src/engine/types";
 import { STANDARD_GRAVITY } from "../../../src/engine/world";
 import { TEST_BALL, TEST_TURF } from "../support/fixtures";
-import { TEST_COUPLING, TEST_HANDS, TEST_HEAD, freeBall, isolated, levelArc, trackDrive } from "../support/impact";
+import {
+    TEST_COUPLING,
+    TEST_HANDS,
+    TEST_HEAD,
+    TEST_RHO,
+    freeBall,
+    isolated,
+    levelArc,
+    trackDrive,
+} from "../support/impact";
 
 const R = TEST_BALL.radius;
 const L = TEST_HEAD.length;
-const RHO = TEST_HEAD.radius;
+const RHO = TEST_RHO;
 /** The head's centre on the paths here, level, body frame along the world's; gravity is off unless a case sets it. */
 const C = vec3(0, 0, 1);
 /** A levelArc's pivot from the head's centre: its radius plus the socket's height. */

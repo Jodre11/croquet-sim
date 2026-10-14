@@ -327,3 +327,62 @@ Measurements of the human arm only.
   no handle, so his values carry no grasp force. The hold relaxes to the rhythmic flex from the ball's first departure
   from the face (gate round 13 ruling, "Relax from first departure", 2026-10-12) with `pushResponseTime`, the muscles'
   measured force rise (Augustsson et al.), so the hands' force never steps.
+
+## P2b.2b.2b.2c: the mallet (design §5.3)
+
+The sources behind the mallet's head, shaft and moment of inertia. Makers' published specifications and measurements of
+real mallets only; none is tuned to a croquet figure. All fetched 2026-10-12, by the convention above: Oxford Croquet
+pages with `curl -k -sSL -o page.html <URL>`, then `grep -vE ">(Views|Hits): [0-9]+<" page.html | shasum -a 256`, the
+digest of the page with its counter line removed.
+
+Every digest was reproduced by a second fetch the same day. For CA and Invictus, only the filtered digests reproduce.
+
+| Short name | URL | SHA-256 |
+|---|---|---|
+| Russ | https://oxfordcroquet.org/tech/russ/ | `9b2ea41d79bf950f2565e4ec085bfbdb8fd6b14a5049395588559302b90f3a82` (counter removed) |
+| Towlson | https://oxfordcroquet.org/tech/towlson/ | `be91d69449049248b33525b6d3ccc28bafeeb77e00cd0b501561c0e1e99f3d75` (counter removed) |
+| Plummer, Mallets | https://oxfordcroquet.org/equip/mallets/ | `7b5d31075f23805c6d80a30775f30770feadc51f598265b2a37136d2e7e159ab` (counter removed) |
+| Plummer, Mallet Making Notes | https://oxfordcroquet.org/equip/makingmallets/ | `19c16141ede05a28afeec8cf565940708dfd2075511ffed73505d3456fd9423f` (counter removed) |
+| Pidcock, Manor House (oxfordcroquet.com, "Hits" counter) | http://oxfordcroquet.com/equip/mallets/pidcock.asp | `51a391b96eee5324f73b6574b52ba855032f666b32b11c00adfeede8b245adc2` (counter removed) |
+| Pidcock, "Factors to Consider when Buying a Mallet" (SWF archive) | https://swfcroquet.org.uk/archive/SWAN/pidcock.htm | `9fb9bb4a7caacc146c36b299cfc7957a467a13f8e5979008ffe9263b8481f852` |
+| CA, Choosing a Croquet Mallet | https://www.croquet.org.uk/?p=games/tech/ChoosingMallet | raw changes per fetch (Cloudflare token); stable: `grep -vF '__CF$cv$params' page.html \| shasum -a 256` → `803efdf07d1e9ac541c63f074c82186e8d5d6f1ddbcbe1ccab3ac880def48e91` |
+| Wood Mallets, Mallet Options | https://www.woodmallets.com/croquet-mallet-options/ | `622477428686ab594cb686acec5db233a5457b9fb1f4f1b8a7987fb88ce0e0da` (`curl -sSL --compressed`; digest of the decompressed HTML) |
+| Terminator UK price list | https://terminatormallets.com/uk-pricelist/ | `02cc45ef17cddfb6d4baf29c6046f902a1deef3e4da263f95860ff1edce987d9` |
+| Invictus compare | https://invictusmallets.com/pages/compare-mallets | raw changes per fetch (Shopify IDs); stable: `grep -vE 'reqid\|requestId\|eventMetadataId\|shopify-y' page.html \| shasum -a 256` → `db1dca7d02661249347911ebd89448302944300ffb22e2a53e4b2208ab1d3206` |
+| croquetdev Mallets | https://croquetdev.com/mallets.html | `f24dd2673e7e5cb4b326b77bc707fb4dc7536841ffc30847de14b1cb2324e0d9` |
+| DB Mallets specifications | https://dbmallets.co.uk/our-mallets/specifications/ | `9dd9802e3019d00684795a8c127af1a86a062a28e2dd73f1546c71685c5ba605` (`--compressed`) |
+| Croquet Network 2016 directory | https://www.croquetnetwork.com/croquet-network-home/2016/2/26/2016-croquet-mallet-directory.html | `d38c7abc52ca02c5d3063f0b35eef755d047b54ed30fbb8f0609bf402014acc1` (`--compressed`) |
+| Fenwick Elliott, Testing MoI (Russ's "ref. 3"; dead host, Wayback) | http://web.archive.org/web/2015id_/http://www.insearchoftheperfectmallet.com/Testingmoi.htm | `a3bd77a697bc6b929bfe06537e09d41054982385f25c1cd2654af85755c1b536` |
+| Fenwick Elliott, raw data spreadsheet | http://web.archive.org/web/2015id_/http://www.insearchoftheperfectmallet.com/spreadsheetcalcs.xls | `c3d4bf9a8f7d7f75dcfa4e53c8dad769d558ec6313683820d2b2272ee1f44000` |
+| Fenwick Elliott, MoI theory (Russ's "ref. 2") | http://web.archive.org/web/2015id_/http://www.insearchoftheperfectmallet.com/moi.htm | `b161266905fc854bccf062a67c23f6a0efd62343dec68eff7500f5976d642fb7` |
+| RPM True Force (Wayback) | http://web.archive.org/web/2016id_/http://rpmallets.co.nz/index.php?route=product/product&product_id=50 | `149110f376dd241f389b0ad100579a514595aa39da13d8153f4ee5dd89cff614` |
+| RPM Carbon Rigid handle (Wayback) | http://web.archive.org/web/2016id_/http://rpmallets.co.nz/index.php?route=product/product&product_id=55 | `3aa68bdccf228f53c28c02db3b0ae80f88f2735564abdebde141533214cd46ec` |
+
+### What each gives the model
+
+- **Russ's method.** A bifilar torsion pendulum with the mallet upside-down in a cradle: "MoI = W.R2.T2 / 4.π2.L
+  where: W is the total weight in kg of the mallet (+ shaft, where applicable)"; "it is the MoI of the head and shaft
+  together that counts". It gives the moment about the shaft (`inertiaAboutShaft`), head and shaft together.
+- **The shaft's share of Russ's figure.** "For a typical wood shaft with diameter approx. 2.5cm this can be calculated
+  to be less than 1" (kg·cm²). Towlson gives 0.29 kg·cm². The model takes Russ's figure as the head's (design §4.1).
+- **Russ's table rows:** "Pidcock 2000 11"" n/a / 146 / 60%; "Pidcock 3000 12"" 172; RPM 11" plain 92, with metal sole
+  104; traditional round 9" 34.1 theory / 33.4 measured; rectangular 12" 34.7 / 37.6; DIY tube with brass and lead
+  111. Russ gives no dimensions or masses for any mallet; his "effectiveness" percentages cannot recover the masses.
+- **Plummer, Making Notes:** "Pidcock 2000 | 280 | 11 | 1325 | 2-14.5" (mm, in, g, lb-oz; 2 lb 14.5 oz is 1318 g);
+  "Typical isolated heads weigh around 1 kg"; "A typical isolated shaft weights around 14 oz. (398 g)"; "You can get
+  away with it if you put a really big radius or chamfer on the edges".
+- **Plummer, Mallets:** "Typical mallet faces are 2.25" - 2.5" (57 - 64 mm) square"; "the trend now is for 10 - 11"
+  (250 - 280 mm) heads"; "shaft length 36" (915 mm) or longer"; "The corners and edges of the face should be rounded or
+  bevelled. If the edges are sharp then they may cut the ball or crack and flake during a mis-hit."
+- **Law 5.5.3 (quoted by Towlson):** "The edges of the end-faces, however they are bevelled or shaped, are not part of
+  the end-faces". No source publishes a bevel's size: `edgeRadius` is a placeholder.
+- **Towlson** on the Pidcock 2000's build: "attach blocks of brass to the ends of the wood, and the faces are then
+  attached to the metal (this is also the method used by Alan Pidcock in Manor House's '2000' model)".
+- **Shaft weights:** RPM's handle "will add 8-10oz to your all up weight"; Wood Mallets: "The whole handle weighs and
+  average of just 10 ounces".
+- **The market's spread** (design §5.3): faces 50–65 mm wide and 44–63 mm high, heads 240–330 mm and whole mallets
+  1.10–1.47 kg in the makers' pages above; measured moments 33–172 kg·cm² (Russ, with the shaft) and 110–160
+  (Fenwick Elliott's turntable, heads alone).
+- **Two specimens.** Russ's 146 and Plummer's 1325 g come from different specimens; neither source links them.
+- **Not used:** Fenwick Elliott's RPM "Series 2000" figure of 80.5 kg·cm². The spreadsheet gives the same number for the
+  Dawson Millennium, which suggests a spreadsheet error.

@@ -2,13 +2,15 @@
  * Test-only swing profiles and the canonical setups (P2b.2b.1 design §5.5). `testProfile` is plausible but NOT
  * sourced, as fixtures.ts. src/ must never import this file.
  */
+import { faceHalfHeight } from "../../../src/engine/impact/shape";
 import { vec3 } from "../../../src/engine/math/vec3";
-import { handsAheadFor, plannedSpeed, stanceLean } from "../../../src/engine/swing/buildContact";
+import { handsAheadFor, headShapeOf, plannedSpeed, stanceLean } from "../../../src/engine/swing/buildContact";
 import { MAX_BACK_ANGLE } from "../../../src/engine/swing/downswing";
 import { DEFAULT_DRIVE, ON_TIME, defaultProfile } from "../../../src/engine/swing/profile";
 import {
     CROQUET_STROKES,
     STROKE_TYPES,
+    type MalletHeadProfile,
     type ShotSetup,
     type StrokeType,
     type SwingDrive,
@@ -18,9 +20,28 @@ import {
 } from "../../../src/engine/swing/types";
 import type { BallId, BallStates, World } from "../../../src/engine/types";
 import { defaultWorld } from "../../../src/engine/world";
-import { lawnReference, swingReference } from "../../../src/reference/index";
+import { lawnReference, malletReference, swingReference } from "../../../src/reference/index";
 import { TEST_BALL } from "./fixtures";
-import { TEST_CHAIN, TEST_FLEX, TEST_PENDULUM_FORCE, TEST_PUSH_FORCE, TEST_PUSH_RESPONSE_TIME } from "./impact";
+import {
+    TEST_CHAIN,
+    TEST_FLEX,
+    TEST_HEAD,
+    TEST_PENDULUM_FORCE,
+    TEST_PUSH_FORCE,
+    TEST_PUSH_RESPONSE_TIME,
+} from "./impact";
+
+/**
+ * A rounded box head for testProfile's mallet (P2b.2b.2b.2c design §5.1): TEST_BOX's 64 mm square face with 3 mm edges,
+ * its moment about the shaft TEST_HEAD's I_z. Unsourced.
+ */
+export const TEST_BOX_HEAD: Extract<MalletHeadProfile, { kind: "box" }> = {
+    kind: "box",
+    faceWidth: 0.064,
+    faceHeight: 0.064,
+    edgeRadius: 0.003,
+    inertiaAboutShaft: TEST_HEAD.inertia.z,
+};
 
 /**
  * What `testProfile` changes: the mallet, the body, and one stance, one drive and one shape entry for every stroke
@@ -49,7 +70,14 @@ export interface TestProfileOptions {
  * and `handsAhead`.
  */
 export function testProfile(o: TestProfileOptions = {}): SwingProfile {
-    const mallet = { headMass: 1, headLength: 0.23, headDiameter: 0.064, shaftLength: 0.9, ...o.mallet };
+    const mallet: SwingProfile["mallet"] = {
+        headMass: 1,
+        headLength: 0.23,
+        head: { kind: "round", diameter: 0.064 },
+        shaftLength: 0.9,
+        shaftMass: 0,
+        ...o.mallet,
+    };
     const { lean, ...given }: Partial<SwingStance> & { readonly lean?: number } = o.stance ?? {};
     if (lean !== undefined && given.handsAhead !== undefined) {
         throw new Error("testProfile: give the stance a lean or handsAhead, not both");
@@ -58,7 +86,7 @@ export function testProfile(o: TestProfileOptions = {}): SwingProfile {
     const geometry = {
         ballRadius: o.ballRadius ?? TEST_BALL.radius,
         headLength: mallet.headLength,
-        headRadius: mallet.headDiameter / 2,
+        faceHalfHeight: faceHalfHeight(headShapeOf(mallet.head)),
     };
     const stance: SwingStance = {
         handsAhead: handsAheadFor(lean ?? 0, top, o.up ?? 0, geometry),
@@ -123,9 +151,9 @@ export const GC_STOP_GAP = 0.3;
 
 /**
  * What `canonicalSetup` changes: the world (default `defaultWorld()`), fields of the stroke, fields of the preset's
- * own stance, drive and shape entries in `defaultProfile`, and, for a single-ball stroke, the gap (m, surface to
- * surface) to a target ball on the aim line ahead (default GC_STOP_GAP for the GC stop, no target otherwise). The balls
- * do not follow a changed aim.
+ * own stance, drive and shape entries in `defaultProfile`, the mallet, and, for a single-ball stroke, the gap (m,
+ * surface to surface) to a target ball on the aim line ahead (default GC_STOP_GAP for the GC stop, no target
+ * otherwise). The balls do not follow a changed aim.
  */
 export interface CanonicalOptions {
     readonly world?: World;
@@ -135,7 +163,31 @@ export interface CanonicalOptions {
     /** Fields of the preset's own shape. */
     readonly shape?: Partial<SwingShape>;
     readonly targetGap?: number;
+    /**
+     * The mallet in place of the default's, every preset's top hand moved to keep its default lean at its canonical
+     * contact with that mallet.
+     */
+    readonly mallet?: SwingProfile["mallet"];
 }
+
+/** A preset's canonical contact height `up` (m): the AC stop's −0.020 m, 0 otherwise. */
+function canonicalUp(type: StrokeType): number {
+    return type === "stop-ac" ? -0.02 : 0;
+}
+
+/**
+ * The P2b.2b.2b.2b default mallet: the Jaques 9" round head, 1.0 kg, on a massless 36 in shaft. It keeps the round
+ * head's turf and sunk-ball mechanisms under test after the default switched to the box (P2b.2b.2b.2c plan Task 7
+ * ruling): the box clears the turf where the barrel's rim met it. Its runs use the re-fitted swing.json and a stance
+ * re-leaned by canonicalSetup, so it is not the P2b.2b.2b.2b engine exactly.
+ */
+export const LEGACY_MALLET: SwingProfile["mallet"] = {
+    headMass: malletReference.headMass.value,
+    headLength: 0.2286,
+    head: { kind: "round", diameter: malletReference.headDiameter.value },
+    shaftLength: malletReference.shaftLength.value,
+    shaftMass: 0,
+};
 
 /**
  * A preset's canonical setup (design §5.5): the striker at CANONICAL_STRIKER, aim +y, the default backswing
@@ -168,9 +220,28 @@ export function canonicalSetup(type: StrokeType, over: CanonicalOptions = {}): S
         balls.red = at(x + (2 * R + gap) * Math.cos(aim), y + (2 * R + gap) * Math.sin(aim));
     }
     const live: BallId[] = !croquet && balls.red !== undefined ? ["red"] : [];
+    const mallet = over.mallet ?? defaultProfile.mallet;
+    const geometryOf = (m: SwingProfile["mallet"]) => ({
+        ballRadius: R,
+        headLength: m.headLength,
+        faceHalfHeight: faceHalfHeight(headShapeOf(m.head)),
+    });
+    const relean = (t: StrokeType, s: SwingStance): SwingStance => {
+        const up = canonicalUp(t);
+        const lean = stanceLean(s.handsAhead, s.top, up, geometryOf(defaultProfile.mallet));
+        return { ...s, handsAhead: handsAheadFor(lean, s.top, up, geometryOf(mallet)) };
+    };
+    const stances =
+        over.mallet === undefined
+            ? defaultProfile.stance
+            : (Object.fromEntries(STROKE_TYPES.map((t) => [t, relean(t, defaultProfile.stance[t])])) as Record<
+                  StrokeType,
+                  SwingStance
+              >);
     const profile: SwingProfile = {
         ...defaultProfile,
-        stance: { ...defaultProfile.stance, [type]: { ...defaultProfile.stance[type], ...over.stance } },
+        mallet,
+        stance: { ...stances, [type]: { ...stances[type], ...over.stance } },
         drive: { ...defaultProfile.drive, [type]: { ...defaultProfile.drive[type], ...over.drive } },
         shape: { ...defaultProfile.shape, [type]: { ...defaultProfile.shape[type], ...over.shape } },
     };
@@ -183,7 +254,7 @@ export function canonicalSetup(type: StrokeType, over: CanonicalOptions = {}): S
             aim,
             backswing: swingReference[type].defaultBackswing.value,
             drive: DEFAULT_DRIVE[type],
-            contact: { up: type === "stop-ac" ? -0.02 : 0, side: 0 },
+            contact: { up: canonicalUp(type), side: 0 },
             timing: ON_TIME,
             ...over.stroke,
         },
@@ -203,19 +274,23 @@ export function canonicalSetup(type: StrokeType, over: CanonicalOptions = {}): S
  * h₀ = 45.6009 mm. P2b.2b.2b.2a: turf bed (was δ₀ = m·g/k_turf = 0.0404 mm, h₀ = 45.997 mm; every figure falls by the
  * sink's change, 0.3962 mm). The head is pitched by −lean, so the figure is independent of the arc radius. The rolls'
  * figures were re-measured at Gugan's leans (P2b.2b.2b.1). For a forward lean α at `up` 0 the lowest point is the
- * face's lower rim, at h₀ + (R + START_GAP)·sin α − ρ·cos α; level, it is h₀ − ρ.
+ * face's lower rim, at h₀ + (R + START_GAP)·sin α − ρ·cos α; level, it is h₀ − ρ. P2b.2b.2b.2c: the mallet, a box
+ * with h_z = 28.575 mm, L = 279.4 mm and e = 3 mm in place of the barrel; each figure's formula is at its entry.
  */
 export const CANONICAL_CLEARANCE: Readonly<Record<StrokeType, number>> = {
-    // P2b.2b.2b.2a: turf bed (was 7.8971e-3): h₀ − ρ.
-    "single-ball": 7.5009e-3,
-    drive: 7.5009e-3,
-    // P2b.2b.2b.2a: turf bed (was 8.7833e-3).
-    "stop-ac": 8.3872e-3,
-    "stop-gc": 7.5009e-3,
-    // P2b.2b.2b.2a: turf bed (was 29.9165e-3, 37.0506e-3 and 40.1551e-3): h₀ + (R + START_GAP)·sin α − ρ·cos α.
-    "half-roll": 29.5203e-3,
-    "full-roll": 36.6544e-3,
-    "pass-roll": 39.7589e-3,
+    // P2b.2b.2b.2c: the mallet (was 7.5009e-3): the box's flat underside, h₀ − h_z, 9.525 mm above the barrel's rim.
+    "single-ball": 17.0259e-3,
+    drive: 17.0259e-3,
+    // P2b.2b.2b.2c: the mallet (was 8.3872e-3): the head's back corner, lowest under the backward lean, rises by
+    // (ρ − h_z)·cos α − (L − e − L₀)·|sin α| − e·(1 − cos α), L₀ the old 228.6 mm head.
+    "stop-ac": 14.5473e-3,
+    // P2b.2b.2b.2c: the mallet (was 7.5009e-3).
+    "stop-gc": 17.0259e-3,
+    // P2b.2b.2b.2c: the mallet (was 29.5203e-3, 36.6544e-3 and 39.7589e-3): the face's rounded lower edge,
+    // h₀ + (R + START_GAP)·sin α + e·sin α − (h_z − e)·cos α − e.
+    "half-roll": 39.1827e-3,
+    "full-roll": 45.9355e-3,
+    "pass-roll": 48.8202e-3,
 };
 
 const SOLVED = new Map<string, number>();
@@ -250,11 +325,12 @@ export function backswingFor(setup: ShotSetup, speed: number, world: World = def
     if (known !== undefined) {
         return known;
     }
-    const lever = profile.mallet.headDiameter / 2 + stance.top;
+    const rho = faceHalfHeight(headShapeOf(profile.mallet.head));
+    const lever = rho + stance.top;
     const lean = stanceLean(stance.handsAhead, stance.top, stroke.contact.up, {
         ballRadius: world.ball.radius,
         headLength: profile.mallet.headLength,
-        headRadius: profile.mallet.headDiameter / 2,
+        faceHalfHeight: rho,
     });
     const room = lever * (Math.cos(lean) - Math.cos(MAX_BACK_ANGLE));
     let hi = shape.pendulumShare > 0 ? (room / shape.pendulumShare) * (1 - 1e-9) : 2;

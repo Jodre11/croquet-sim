@@ -88,9 +88,43 @@ describe("impact reference data", () => {
         expect(malletReference.headLength.value).toBeGreaterThan(malletReference.headDiameter.value);
     });
 
+    it("loads the default box mallet's figures, each within its bounds (P2b.2b.2b.2c design §5.2)", () => {
+        const units = {
+            faceWidth: "m",
+            faceHeight: "m",
+            edgeRadius: "m",
+            inertiaAboutShaft: "kg·m²",
+            shaftMass: "kg",
+        } as const;
+        for (const [key, unit] of Object.entries(units)) {
+            const value = malletReference[key as keyof typeof units];
+            expect(value.unit, key).toBe(unit);
+            expect(value.value, key).toBeGreaterThan(0);
+        }
+        // The edge radius is unsourced: a flagged placeholder with no bounds (design §6).
+        expect(malletReference.edgeRadius.provisional).toBe("placeholder");
+        expect(malletReference.edgeRadius.bounds).toBeUndefined();
+        expect(malletReference.inertiaAboutShaft.bounds).toEqual([0.00334, 0.0172]);
+        expect(malletReference.headLength.bounds).toEqual([0.2286, 0.3302]);
+        expect(malletReference.shaftLength.bounds).toEqual([0.762, 1.0668]);
+    });
+
+    it("gives a realisable box: the default's moment within m·h_y²/3 and m·(L²/4 + h_y²/3) (design §5.3)", () => {
+        // With m 1.0 kg, L 0.2794 m and h_y 0.028575 m: [2.72, 197.9] kg·cm², 146 at 73.8 % of the maximum.
+        const m = malletReference.headMass.value;
+        const L = malletReference.headLength.value;
+        const h = malletReference.faceWidth.value / 2;
+        const I = malletReference.inertiaAboutShaft.value;
+        expect(L).toBe(0.2794);
+        expect(I).toBeGreaterThanOrEqual((m * h * h) / 3);
+        expect(I).toBeLessThanOrEqual(m * ((L * L) / 4 + (h * h) / 3));
+        expect(I / (m * ((L * L) / 4 + (h * h) / 3))).toBeCloseTo(0.738, 3);
+    });
+
     it("gives every impact value bounds, so the probe can sweep them, and every fit a range", () => {
         // The bed's fitted pair has no bounds: one court only, and lawn presets are P3's (P2b.2b.2b.2a design §4.4).
-        const unbounded = [contactReference.bedModulus, contactReference.bedRecovery];
+        // The edge radius is an unsourced placeholder (P2b.2b.2b.2c design §6).
+        const unbounded = [contactReference.bedModulus, contactReference.bedRecovery, malletReference.edgeRadius];
         for (const v of [...Object.values(contactReference), ...Object.values(malletReference)]) {
             if ("range" in v) {
                 expect(v.range[0], v.source).toBeLessThan(v.range[1]);

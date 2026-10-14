@@ -94,13 +94,30 @@ export interface SwingShape {
     readonly defaultIntensity: number;
 }
 
+/**
+ * A profile's head (P2b.2b.2b.2c design §5.1): a round head of `diameter` (m), a uniform solid; or a rounded box, its
+ * face `faceWidth` by `faceHeight` (m) with edges of `edgeRadius` (m), and its measured moment about the shaft
+ * `inertiaAboutShaft` (kg·m², Russ's quantity).
+ */
+export type MalletHeadProfile =
+    | { readonly kind: "round"; readonly diameter: number }
+    | {
+          readonly kind: "box";
+          readonly faceWidth: number;
+          readonly faceHeight: number;
+          readonly edgeRadius: number;
+          readonly inertiaAboutShaft: number;
+      };
+
 /** The physical part of a player's profile (design §5.1); P3 wraps it into the stored profile. */
 export interface SwingProfile {
     readonly mallet: {
         readonly headMass: number;
         readonly headLength: number;
-        readonly headDiameter: number;
+        readonly head: MalletHeadProfile;
         readonly shaftLength: number;
+        /** The shaft's mass (kg, ≥ 0), a thin uniform rod (P2b.2b.2b.2c design §4.2). */
+        readonly shaftMass: number;
     };
     /**
      * The player's body: the arm mass at the top grip (kg), the reach slack (m), the arm's flex, pendulum push and push

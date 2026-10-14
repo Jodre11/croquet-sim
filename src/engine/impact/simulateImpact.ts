@@ -17,6 +17,7 @@ import { lawFromContactTime, lawFromStiffness, type PairLaw } from "./contactLaw
 import { headBottom, headLowestPoint, outsideObstacle } from "./contacts";
 import { handover, type HandoverHead } from "./handover";
 import { rotateInverse } from "./rigidBody";
+import { boxDistance } from "./shape";
 import {
     integrate,
     integrateStroke,
@@ -35,6 +36,7 @@ import type {
     ForceDrive,
     ImpactResult,
     ImpactRun,
+    MalletHead,
     StrokeMode,
     TrackDrive,
 } from "./types";
@@ -292,15 +294,38 @@ function validateTrack(drive: TrackDrive): void {
 }
 
 /**
- * Distance (m) from `centre` to the solid head cylinder (axis = body x, half-length L/2, radius r), or 0 inside it.
- * Covers the faces, the rims and the barrel, which `faceContact` does not (it misses the barrel and accepts a rim
- * overlap as OFF_FACE).
+ * Distance (m) from `centre` to the solid head, or 0 inside it (P2b.2b.2b.2c design §3.4): a cylinder's faces, rims and
+ * barrel (axis = body x, half-length L/2, radius r), or a rounded box's whole surface. It covers what `faceContact`
+ * does not (it misses the barrel and accepts a rim overlap as OFF_FACE).
  */
-function cylinderDistance(contact: ContactState, centre: Vec3): number {
+function headDistance(contact: ContactState, centre: Vec3): number {
     const p = rotateInverse(contact.orientation, sub(centre, contact.position));
+    const { shape } = contact.head;
+    if (shape.kind === "box") {
+        return Math.max(boxDistance(shape, contact.head.length, p).distance, 0);
+    }
     const axial = Math.max(Math.abs(p.x) - contact.head.length / 2, 0);
-    const radial = Math.max(Math.sqrt(p.y * p.y + p.z * p.z) - contact.head.radius, 0);
+    const radial = Math.max(Math.sqrt(p.y * p.y + p.z * p.z) - shape.radius, 0);
     return Math.sqrt(axial * axial + radial * radial);
+}
+
+/**
+ * Checks the head's shape (P2b.2b.2b.2c design §3.1): a cylinder's positive radius; a box's positive half-extents and
+ * an edge radius in [0, min(h_y, h_z, L/2)).
+ */
+function validateShape(head: MalletHead): void {
+    const { shape } = head;
+    if (shape.kind === "cylinder") {
+        positive(shape.radius, "head.shape.radius");
+        return;
+    }
+    positive(shape.halfWidth, "head.shape.halfWidth");
+    positive(shape.halfHeight, "head.shape.halfHeight");
+    friction(shape.edgeRadius, "head.shape.edgeRadius");
+    const limit = Math.min(shape.halfWidth, shape.halfHeight, head.length / 2);
+    if (!(shape.edgeRadius < limit)) {
+        fail(`head.shape.edgeRadius must lie in [0, ${limit}) m (got ${shape.edgeRadius})`);
+    }
 }
 
 /**
@@ -327,14 +352,16 @@ export function sinkSolver(world: World): SinkSolver {
  * - two balls overlapping, or a ball overlapping an obstacle, by more than CONTACT_TOLERANCE (a ball touching one is
  *   accepted, and prepareImpact starts it at zero gap);
  * - turf under a ball with a non-positive or non-finite bedModulus or bedRecovery (the bed, P2b.2b.2b.2a design §4.6);
- * - the head (faces, rims or barrel) in a ball at its static sink on the bed (turfBed.ts staticSink, at its own
- *   position), or in the turf, at t = 0;
+ * - the head (a cylinder's faces, rims or barrel, or a box's surface) in a ball at its static sink on the bed
+ *   (turfBed.ts staticSink, at its own position), or in the turf, at t = 0;
  * - a force table that is empty, does not start at 0 or does not increase strictly;
  * - a tracked drive whose arc, coupling or hands are out of range (P2b.2b.1 design §3.6; the head need not start on
  *   its path);
  * - for a tracked drive, turf under the head's lowest point with a non-positive stiffness or a restitution outside
  *   (0, 1] (the head–turf law, P2b.2b.1 design §4.1);
- * - a non-positive mass, inertia, length, radius or ball–ball contact time;
+ * - a non-positive mass, inertia, length, radius or ball–ball contact time; a box head's half-extents or edge radius
+ *   out of range; a force table whose head is not a cylinder; a shaft of non-positive length or negative mass; a
+ *   force table whose shaft has mass;
  * - a restitution outside (0, 1] (ball–ball, ball–upright, peg) or a negative friction;
  * - a non-unit orientation.
  * A ball's sink comes from `sink`, called only once its turf has been checked; pass prepareImpact the same solver
@@ -353,8 +380,10 @@ export function validateImpact(
     positive(head.inertia.y, "head.inertia.y");
     positive(head.inertia.z, "head.inertia.z");
     positive(head.length, "head.length");
-    positive(head.radius, "head.radius");
+    validateShape(head);
     finite(head.socket, "head.socket");
+    positive(head.shaft.length, "head.shaft.length");
+    friction(head.shaft.mass, "head.shaft.mass");
     friction(face.friction, "face.friction");
     positive(world.ballBallContactTime, "ballBallContactTime");
     restitution(world.ballBall.restitution, "ballBall.restitution");
@@ -369,6 +398,12 @@ export function validateImpact(
     }
     if (contact.drive.kind === "force") {
         validateForce(contact.drive);
+        if (head.shape.kind !== "cylinder") {
+            fail("a force table's head must be a cylinder, the bare round head (P2b.2b.2b.2c design §4.2)");
+        }
+        if (head.shaft.mass !== 0) {
+            fail("a force table's shaft must have no mass: force tables step the bare head (P2b.2b.2b.2c design §4.2)");
+        }
     } else {
         validateTrack(contact.drive);
         const surface = world.lawn.surfaceAt(headBottom(contact, head));
@@ -400,10 +435,10 @@ export function validateImpact(
                 fail(`balls ${id} and ${other} overlap`);
             }
         }
-        // The whole cylinder, with CONTACT_TOLERANCE: a face exactly touching the ball is valid at any orientation.
+        // The whole head, with CONTACT_TOLERANCE: a face exactly touching the ball is valid at any orientation.
         // Checked where the impact starts the ball, at its static sink (prepareImpact): a face tilted upwards that
         // touches the ball at z = R would otherwise start pressed sink·n_z into it.
-        if (cylinderDistance(contact, vec3(p.x, p.y, R - sink(p))) < R - CONTACT_TOLERANCE) {
+        if (headDistance(contact, vec3(p.x, p.y, R - sink(p))) < R - CONTACT_TOLERANCE) {
             fail(`head penetrates ball ${id}`);
         }
     });

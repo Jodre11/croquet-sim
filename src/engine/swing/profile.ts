@@ -1,7 +1,8 @@
 /**
  * The default swing profile, "typical club player" (P2b.2b.1 design §5.4). Every value is provisional, to be refined
  * from outcomes; P2b.2b.2 sources or fits them.
- * - Mallet: reference/mallet.json (the head's mass, length and diameter; the 0.9144 m, 36 in, shaft, sourced).
+ * - Mallet: reference/mallet.json, the Pidcock 2000 11" as a rounded box on a 36 in, 0.325 kg shaft (P2b.2b.2b.2c
+ *   design §5.3), its placeholders flagged at MALLET.
  * - Body: reference/contact.json (`armMass` and `reachSlack`, the prototype's calibration),
  *   the arm's flex and pendulum push (P2b.2b.2b.2b), the push intent's cap and response time and each hand's
  *   hand–arm chain (its gate rulings), measured.
@@ -28,9 +29,10 @@ import {
     type StrokeShapeReference,
 } from "../../reference/index";
 import { ReferenceDataError } from "../../reference/schema";
+import { faceHalfHeight } from "../impact/shape";
 import { ARM_FLEX, HAND_CHAIN, PENDULUM_FORCE, PUSH_FORCE, PUSH_RESPONSE_TIME } from "../impact/track";
 import type { StrokeMode } from "../impact/types";
-import { handsAheadFor } from "./buildContact";
+import { handsAheadFor, headShapeOf } from "./buildContact";
 import {
     STROKE_TYPES,
     type StrokeTiming,
@@ -44,14 +46,35 @@ import {
 const DEG = Math.PI / 180;
 
 /**
+ * The default mallet (P2b.2b.2b.2c design §5.3): the Pidcock 2000 11", a wooden body with brass blocks at its ends and
+ * composite faces, as a rounded box with its measured moment about the shaft (reference/mallet.json). Placeholders
+ * (design §6): the edge radius, 3 mm, unsourced; the head's mass, the face and the shaft's length, the market's typical
+ * figures standing in for the Pidcock 2000's own, unpublished; the shaft's mass, derived from a fill; the shaft a thin
+ * rod, its moment about its own axis 0.
+ */
+const MALLET: SwingProfile["mallet"] = {
+    headMass: malletReference.headMass.value,
+    headLength: malletReference.headLength.value,
+    head: {
+        kind: "box",
+        faceWidth: malletReference.faceWidth.value,
+        faceHeight: malletReference.faceHeight.value,
+        edgeRadius: malletReference.edgeRadius.value,
+        inertiaAboutShaft: malletReference.inertiaAboutShaft.value,
+    },
+    shaftLength: malletReference.shaftLength.value,
+    shaftMass: malletReference.shaftMass.value,
+};
+
+/**
  * The reference ball and mallet each default stance's hands are derived for (P2b.2b.2b.1 design §4). R and ρ are
- * computed as defaultWorld and contactPose compute them, so an upright preset's hands and its pose's B agree to the
- * bit.
+ * computed as defaultWorld and contactPose compute them, ρ from the default mallet itself, so an upright preset's hands
+ * and its pose's B agree to the bit.
  */
 const REFERENCE_GEOMETRY = {
     ballRadius: ballReference.diameter.value / 2,
-    headLength: malletReference.headLength.value,
-    headRadius: malletReference.headDiameter.value / 2,
+    headLength: MALLET.headLength,
+    faceHalfHeight: faceHalfHeight(headShapeOf(MALLET.head)),
 };
 
 /**
@@ -155,7 +178,8 @@ const DRIVE: Readonly<Record<StrokeType, SwingDrive>> = {
     // relaxed grips, takes the path's lowest point 2.99 mm below the turf at 20 ms, its rear rim first reaching
     // the turf 12.7 ms after contact, after the ball has left (measured while planning). About 11 mm, a user
     // decision (2026-10-05): the prototype's 14 mm drove the head 2.86 mm into the turf, past HEAD_DEEP_LIMIT;
-    // pre-flight confirms the value. The hands do not travel, so no reach.
+    // pre-flight confirms the value. The hands do not travel, so no reach. P2b.2b.2b.2c: on the box the head clears
+    // the turf at contact (14.55 mm; gate ruling B); the figures above are the round head's.
     "stop-ac": {
         mode: "swing",
         speedGain: 1,
@@ -245,12 +269,7 @@ const DRIVE: Readonly<Record<StrokeType, SwingDrive>> = {
 
 /** The default profile (design §5.4). Provisional throughout. */
 export const defaultProfile: SwingProfile = {
-    mallet: {
-        headMass: malletReference.headMass.value,
-        headLength: malletReference.headLength.value,
-        headDiameter: malletReference.headDiameter.value,
-        shaftLength: malletReference.shaftLength.value,
-    },
+    mallet: MALLET,
     body: {
         armMass: contactReference.armMass.value,
         reachSlack: contactReference.reachSlack.value,

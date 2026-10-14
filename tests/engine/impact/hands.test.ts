@@ -51,6 +51,7 @@ import {
     TEST_FLEX,
     TEST_HANDS,
     TEST_HEAD,
+    TEST_RHO,
     TEST_PENDULUM_FORCE,
     TEST_PUSH_FORCE,
     TEST_PUSH_RESPONSE_TIME,
@@ -597,7 +598,7 @@ describe("the tracked end rule", () => {
         const ball = s.balls[0] as (typeof s.balls)[number];
         const offset = sub(ball.position, add(s.head.position, scale(f, TEST_HEAD.length / 2)));
         const d = dot(offset, f);
-        const ahead = d > 0 && length(sub(offset, scale(f, d))) < TEST_HEAD.radius + R;
+        const ahead = d > 0 && length(sub(offset, scale(f, d))) < TEST_RHO + R;
         const closing = Math.max(dot(s.head.velocity, f), dot(onPath, f)) - dot(ball.velocity, f);
         return ahead && closing > 0 && d - R < closing * LOOK_AHEAD;
     }
@@ -1052,7 +1053,7 @@ describe("the push intent (P2b.2b.2b.2b gate ruling 2026-10-11)", () => {
     it("takes no resistance from the turf", () => {
         // A carry head pressed 1 mm into the turf and sliding forward: the turf's friction pushes it back along aim,
         // yet the hands match a replay whose R stays 0.
-        const arc = levelArc(vec3(0, 0, TEST_HEAD.radius - 1e-3), { mode: "carry", handReach: 0.1, pendulumAt: 1 });
+        const arc = levelArc(vec3(0, 0, TEST_RHO - 1e-3), { mode: "carry", handReach: 0.1, pendulumAt: 1 });
         const track = prepareAt(arc, STANDARD_GRAVITY);
         const turf = lawFromStiffness(TEST_HEAD.mass, TEST_TURF.turfRestitution, TEST_TURF.turfStiffness, 0.5);
         const on = headOnPath(track, TEST_HEAD, 0);

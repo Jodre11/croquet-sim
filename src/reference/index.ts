@@ -205,14 +205,22 @@ export const contactReference = {
     fingerDamping: readValue(contactJson, "fingerDamping", "contact"),
 } as const;
 
-/** One mallet face, one typical round head and the default shaft (P2b.1, P2b.2b.1). */
+/**
+ * One mallet face, one typical round head, the default box head and its measured moment about the shaft, and the
+ * default shaft (P2b.1, P2b.2b.1, P2b.2b.2b.2c).
+ */
 export const malletReference = {
     faceRestitution: readValue(malletJson, "faceRestitution", "mallet"),
     faceFriction: readValue(malletJson, "faceFriction", "mallet"),
     headMass: readValue(malletJson, "headMass", "mallet"),
     headLength: readValue(malletJson, "headLength", "mallet"),
     headDiameter: readValue(malletJson, "headDiameter", "mallet"),
+    faceWidth: readValue(malletJson, "faceWidth", "mallet"),
+    faceHeight: readValue(malletJson, "faceHeight", "mallet"),
+    edgeRadius: readValue(malletJson, "edgeRadius", "mallet"),
+    inertiaAboutShaft: readValue(malletJson, "inertiaAboutShaft", "mallet"),
     shaftLength: readValue(malletJson, "shaftLength", "mallet"),
+    shaftMass: readValue(malletJson, "shaftMass", "mallet"),
 } as const;
 
 /** The stroke types reference/swing.json keys, in the presets' order (the engine's STROKE_TYPES). */

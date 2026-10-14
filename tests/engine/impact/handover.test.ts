@@ -13,8 +13,8 @@ import { handoverLimit } from "../../../src/engine/impact/simulateImpact";
 import { axisAngle, rotate } from "../../../src/engine/impact/rigidBody";
 import type { HeadState } from "../../../src/engine/impact/types";
 import { TEST_BALL, airborneAt, hoopWithUprightAt, testWorld } from "../support/fixtures";
-import { TEST_HEAD } from "../support/impact";
-import { backswingFor, canonicalSetup } from "../support/shot";
+import { TEST_HEAD, TEST_RHO } from "../support/impact";
+import { LEGACY_MALLET, backswingFor, canonicalSetup } from "../support/shot";
 
 const R = TEST_BALL.radius;
 
@@ -233,7 +233,7 @@ describe("handover with the head (P2b.2b.2b.2b design §5)", () => {
     it("throws for a head on top of a ball", () => {
         // A vertical normal has no horizontal part, so the rule has no sideways way out of the overlap.
         const state: HeadState = {
-            position: vec3(0, 0, 2 * R + TEST_HEAD.radius - 1e-4),
+            position: vec3(0, 0, 2 * R + TEST_RHO - 1e-4),
             orientation: axisAngle(vec3(0, 0, 1), 0),
             velocity: vec3(0, 0, 0),
             angularVelocity: vec3(0, 0, 0),
@@ -293,7 +293,8 @@ describe("handover of a ball sunk under the head, on whole rolls", () => {
         ["pass-roll", 2, 1, 0],
     ] as const)("hands over the %s at %s m/s, drive %s, side %s, with the head cleared of a lifted ball", (...run) => {
         const [type, speed, drive, side] = run;
-        const base = canonicalSetup(type);
+        // P2b.2b.2b.2c: on the legacy round head; the default box clears the turf (gate).
+        const base = canonicalSetup(type, { mallet: LEGACY_MALLET });
         const up = base.stroke.contact.up + (type === "full-roll" ? 0.003 : -0.003);
         const stroke = { ...base.stroke, drive, contact: { up, side } };
         const setup = { ...base, stroke: { ...stroke, backswing: backswingFor({ ...base, stroke }, speed, world) } };

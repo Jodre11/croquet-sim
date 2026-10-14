@@ -2,7 +2,7 @@
  * Test-only mallet, face and impact helpers. Plausible but deliberately NOT sourced (as fixtures.ts), so expectations
  * do not move when reference data does. src/ must never import this file.
  */
-import { ZERO, add, length, lengthSq, scale, sub, vec3, type Vec3 } from "../../../src/engine/math/vec3";
+import { ZERO, add, cross, length, lengthSq, scale, sub, vec3, type Vec3 } from "../../../src/engine/math/vec3";
 import { lawFromContactTime } from "../../../src/engine/impact/contactLaw";
 import type { ImpactBall, ImpactProbe, ImpactSetup, ImpactSnapshot } from "../../../src/engine/impact/integrate";
 import {
@@ -15,7 +15,7 @@ import {
     type Quaternion,
 } from "../../../src/engine/impact/rigidBody";
 import { validateImpact } from "../../../src/engine/impact/simulateImpact";
-import { headOnPath, prepareTrack, swingOrientation } from "../../../src/engine/impact/track";
+import { headOnPath, malletBody, prepareTrack, swingOrientation } from "../../../src/engine/impact/track";
 import { BED_CELL } from "../../../src/engine/impact/turfBed";
 import type {
     BedLaw,
@@ -41,13 +41,31 @@ import { TEST_BALL, TEST_TURF, ballAt, hoopWithUprightAt, testHoop } from "./fix
 
 const R = TEST_BALL.radius;
 
+/** The test head's radius (m): its face's half-height and the socket's height. */
+export const TEST_RHO = 0.032;
+
 /** A 1.0 kg solid round head, 0.23 m long and 0.064 m across, shaft socket on top at the middle. */
 export const TEST_HEAD: MalletHead = {
     mass: 1,
-    inertia: solidCylinderInertia(1, 0.23, 0.032),
+    inertia: solidCylinderInertia(1, 0.23, TEST_RHO),
     length: 0.23,
-    radius: 0.032,
-    socket: vec3(0, 0, 0.032),
+    shape: { kind: "cylinder", radius: TEST_RHO },
+    socket: vec3(0, 0, TEST_RHO),
+    shaft: { mass: 0, length: 0.9 },
+};
+
+/**
+ * A 1.0 kg rounded box head as long as TEST_HEAD, its face 64 mm square with 3 mm edges, its socket at TEST_HEAD's
+ * height so that levelArc places it (P2b.2b.2b.2c design §3.2). Its inertia is a square section's, I_y = I_z and
+ * I_x = m·(h_y² + h_z²)/3, its moment about the shaft TEST_HEAD's I_z. Unsourced, as TEST_HEAD.
+ */
+export const TEST_BOX: MalletHead = {
+    mass: 1,
+    inertia: vec3((2 * TEST_RHO * TEST_RHO) / 3, TEST_HEAD.inertia.z, TEST_HEAD.inertia.z),
+    length: 0.23,
+    shape: { kind: "box", halfWidth: TEST_RHO, halfHeight: TEST_RHO, edgeRadius: 0.003 },
+    socket: vec3(0, 0, TEST_RHO),
+    shaft: { mass: 0, length: 0.9 },
 };
 
 export const TEST_FACE: FaceMaterial = { friction: 0.4 };
@@ -270,6 +288,22 @@ export function isolated(overrides: Partial<ImpactSetup> = {}): ImpactSetup {
     };
 }
 
+/**
+ * An isolated, tracked set-up whose hands apply nothing (P2b.2b.2b.2c design §7.1), so that `head` moves freely from
+ * `centre`, level, at `velocity`: gravity off, a still level arc, a coupling of damping ratio 0 relaxed at t = 0 and
+ * no arm mass. After relaxAt every hand force, feed-forward and twist is then exactly zero. Its face–ball pairs meet
+ * the whole head (headBallContact), as a tracked drive's do.
+ */
+export function freeTracked(head: MalletHead, centre: Vec3, velocity: Vec3, balls: readonly ImpactBall[]): ImpactSetup {
+    const drive = trackDrive(levelArc(centre), { period: 0.04, dampingRatio: 0, relaxAt: 0 });
+    return isolated({
+        head,
+        start: { position: centre, orientation: IDENTITY, velocity, angularVelocity: ZERO },
+        drive: prepareTrack(drive, head, 0),
+        balls,
+    });
+}
+
 /** A probe that counts the steps in which pair `key` carried a positive normal force, and keeps the last snapshot. */
 export function counter(key: string): ImpactProbe & { closed: number; last: ImpactSnapshot | null } {
     const probe = {
@@ -298,18 +332,33 @@ export function recorder(): ImpactProbe & { readonly snapshots: ImpactSnapshot[]
 
 function headKinetic(state: HeadState, head: MalletHead): number {
     const w = rotateInverse(state.orientation, state.angularVelocity);
-    const rot = head.inertia.x * w.x * w.x + head.inertia.y * w.y * w.y + head.inertia.z * w.z * w.z;
-    return 0.5 * head.mass * lengthSq(state.velocity) + 0.5 * rot;
+    if (head.shaft.mass === 0) {
+        const rot = head.inertia.x * w.x * w.x + head.inertia.y * w.y * w.y + head.inertia.z * w.z * w.z;
+        return 0.5 * head.mass * lengthSq(state.velocity) + 0.5 * rot;
+    }
+    // The whole mallet (P2b.2b.2b.2c design §4.3): its centre δ up the shaft from the head's, moving at v + ω × δ·s.
+    const body = malletBody(head);
+    const centre = add(
+        state.velocity,
+        cross(state.angularVelocity, rotate(state.orientation, vec3(0, 0, body.offset))),
+    );
+    const I = body.inertia;
+    return 0.5 * body.mass * lengthSq(centre) + 0.5 * (I.x * w.x * w.x + I.y * w.y * w.y + I.z * w.z * w.z);
 }
 
 /**
  * Kinetic and gravitational energy (J) of a snapshot, and the stored energy of each contact, as the integrator reports
  * it (`storedEnergy`), with its tangential spring's. The contact depth is the pre-step value, against post-step
- * states: a time-level mix, biased by about 0.6% of an undamped contact's energy (see invariants.test.ts).
+ * states: a time-level mix, biased by about 0.6% of an undamped contact's energy (see invariants.test.ts). With a
+ * shaft, the whole mallet's kinetic energy and the shaft's weight at its centre (P2b.2b.2b.2c design §4.3).
  */
 export function impactEnergy(s: ImpactSnapshot, head: MalletHead, ball: BallParams, gravity: number): number {
     const inertia = 0.4 * ball.mass * ball.radius * ball.radius;
     let e = headKinetic(s.head, head) + head.mass * gravity * s.head.position.z;
+    if (head.shaft.mass !== 0) {
+        const rise = rotate(s.head.orientation, vec3(0, 0, head.socket.z + head.shaft.length / 2));
+        e += head.shaft.mass * gravity * (s.head.position.z + rise.z);
+    }
     for (const b of s.balls) {
         e += 0.5 * ball.mass * lengthSq(b.velocity) + 0.5 * inertia * lengthSq(b.angularVelocity);
         e += ball.mass * gravity * b.position.z;
@@ -397,8 +446,8 @@ export function randomStroke(random: () => number, world: World): { contact: Con
             yaw: uni(-0.3, 0.3),
             descent: uni(0, 0.5),
             pitch: uni(-0.2, 0.6),
-            lateral: uni(-0.8, 0.8) * TEST_HEAD.radius,
-            vertical: uni(-0.6, 0.6) * TEST_HEAD.radius,
+            lateral: uni(-0.8, 0.8) * TEST_RHO,
+            vertical: uni(-0.6, 0.6) * TEST_RHO,
             drive: (t) => drive(scale(t, force), window),
         });
         const balls: BallStates = { blue };
