@@ -362,6 +362,12 @@ with:
 
 - the three regimes' runs (§7.4), each with its forces, depths and speeds over time;
 - p_y and c within their bounds: the regimes and the jab at both ends of each;
+- the jab against the hands' check at 3 and 4 m/s (§7.3): the second-tap speed with and without the jab, beside the
+  hands' peak checking force and the turf's braking impulse. The turf's resistance hardly grows with speed (§4.3), so
+  the jab's share of the braking can grow on a hard stroke, as the user finds, only if the hands' check weakens with
+  speed. The model's only limit on the check is the grip's 435 N, a breakaway force far above what the arms can
+  likely apply to check. If the jab helps less at 4 m/s than at 3, the gate records it, and the arms' checking force
+  goes to P2b.2b.2c's calibration of the hands; this step does not change the law for it;
 - every preset run the ratchet's step 2 moved, and any run that saturated at step 1;
 - the canonical runs' figures against the baseline.
 
