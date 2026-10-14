@@ -245,11 +245,18 @@ All accessed 2026-10-14.
 | Figure | Default | Bounds | Source; provenance |
 |---|---|---|---|
 | Bearing yield p_y | 240 kPa | 170–310 kPa | Crum (MSU): sand rootzones' ultimate bearing, "on the order of 45 psi" well graded, "up to 25 psi" poorly graded; measured |
-| Root mat strength c | the bounds' midpoint | provisionally 70–140 kPa | Mascitti, McNitt & Serensits 2017: shear vane 17.8–33.6 N·m (7.0 cm head, 2.0 cm fins); the conversion to a strength is ours, labelled: the plan recomputes the bounds from the vane's published geometry by the standard vane formula and records the working |
+| Root mat strength c | 105 kPa | 73–138 kPa | Mascitti, McNitt & Serensits 2017: shear vane 17.8–33.6 N·m (a 7.0 cm head, 12 fins of 2.0 cm). The conversion is ours, labelled: a vane inserted from the surface shears its sides and its bottom end, T = π·c·(D²H/2 + D³/12) = 2.437e-4 m³·c, with D 7.0 cm and H 2.0 cm. It assumes the fins' "length" is their height; the plan confirms that from the paper's figure or methods. The other end conditions bound the doubt: both ends give 53–101 kPa, the sides alone 116–218 kPa |
 | N_c | 1.71 | — | Mak & Chen 2014 (Reece 1964), their shallowest tabulated depth at rake 18.5°; labelled: no open table against rake exists, and our depths are millimetres against their 50 mm. A reference constant, not a `SurfaceProps` field |
 | The hands' limit F_max | 435 N | 408–462 N | Young et al. 2009: breakaway strength with the load along a vertical cylinder, 435 ± 27 N; measured |
 | Sole friction µ | 0.5 | 0.3–0.7 | unchanged (Hall's ball sliding, an analogue) |
 | k_w, τ_r | the bed's | — | unchanged (P2b.2b.2b.2a's fit to Gugan 4) |
+
+**c and p_y vary from lawn to lawn and from day to day** (user, 2026-10-14: "very variable depending on the
+consistency and moistness of the turf"). Anderson et al. 2018 measure it: a clay rootzone's vane strength falls from
+204 to 156 to 64 kPa as its water content rises from 14.8 to 17.5 to 20 %. The defaults stand for one well-grassed,
+fairly firm lawn, not turf in general, and their bounds are one lawn's spread, not the range of lawns. That is why both
+figures are `SurfaceProps` fields (§6.3): P3's lawn presets (with the user's "hard dry ground is more elastic … slow
+lawns deform", 2026-10-09) vary them. Here, the gate runs the regimes and the jab at both ends of each bound (§8).
 
 Cross-checks, cited but not used as values:
 - Reece's full equation, as Mak & Chen give it, with their N_γ 2.45, N_a 0.35 and a rootzone density of 1.2–1.6 Mg/m³
@@ -414,3 +421,7 @@ the repo before it was applied:
 - The jab check: U and the second-tap speed are defined; a graze with no second tap counts as 0, outside the band; at
   least one graze is required. The hard-stroke comparison runs at 3 and 4 m/s only, and the AC stop's dip sweep is
   dropped (§7.3, §9).
+
+**After the review (2026-10-14).** c's bounds are worked from Mascitti's vane, 73–138 kPa (sides and bottom end
+sheared), with the one open assumption named (§6.2). The user notes that the turf's strength varies with its
+consistency and moisture; the defaults are one lawn's, and P3's lawn presets vary them (§6.2).
