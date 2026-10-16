@@ -386,3 +386,60 @@ Every digest was reproduced by a second fetch the same day. For CA and Invictus,
 - **Two specimens.** Russ's 146 and Plummer's 1325 g come from different specimens; neither source links them.
 - **Not used:** Fenwick Elliott's RPM "Series 2000" figure of 80.5 kg·cm². The spreadsheet gives the same number for the
   Dawson Millennium, which suggests a spreadsheet error.
+
+## P2b.2b.2b.3: the turf strike (design §6.2)
+
+The sources behind the mallet head's ploughing law in turf: the rootzone's bearing (`turfYield`), the root mat's
+strength (`turfMatStrength`), Reece's equation (`turfPloughFactor`) and the hand's breakaway strength (`gripLimit`).
+Fetched 2026-10-16, each digest reproduced by a second fetch into a separate directory; the digests are of the raw
+file (a web page is fetched with `--compressed`). An Oxford Croquet page is hashed with its counter line removed:
+`grep -vE ">(Views|Hits): [0-9]+<" page.html | shasum -a 256`. Nothing fetched is committed.
+
+| Short name | Work | URL | SHA-256 |
+|---|---|---|---|
+| Crum | Crum, "Engineering properties of high sand content soils used in golf putting greens and sports fields", MSU Research Update | https://archive.lib.msu.edu/tic/mitgc/article/199959.pdf | `58157c94013a67ebf3fc758113b4c8d3248e14012501f102b593ab54d4502ec9` |
+| Mascitti 2017 | Mascitti, McNitt and Serensits, *Int. Turfgrass Soc. Res. J.* 13:330–337 (2017), doi 10.2134/itsrj2017.01.0010 | https://propel.umass.edu/sites/default/files/publications/2026-04/Mascitti%20et%20al.%2C%202017.pdf | `abfca285e1bea92240c274022c0810be6f65df2dc2764f6a6e6064c7915c6bed` |
+| Mak & Chen 2014 | Mak and Chen, "Simulation of draft forces of a sweep in a loamy sand soil using the discrete element method", *Canadian Biosystems Engineering* 56:2.1–2.7 (2014) | https://library.csbe-scgab.ca/docs/journal/56/C14202.pdf | `2a91352a6fb847637ff918f4fad2f88bf2d360b9b8fc48173fd6020c7c7d092e` |
+| Young 2009 | Young, Woolley, Armstrong and Ashton-Miller, "Hand-handhold coupling: effect of handle shape, orientation, and friction on breakaway strength", *Human Factors* 51(5):705–717 (2009), doi 10.1177/0018720809355969 (an open full-text copy; title, authors and pages confirmed from it) | https://archive.org/download/wikipedia-scholarly-sources-corpus/10.1177%252F0016986208330564.zip/10.1177%252F0018720809355969.pdf | `fbb87758079f74490bcd4aa3befe71b774f6e21525fab4a3f29d002263a4aca6` |
+| Seo 2008 | Seo, Armstrong, Chaffin and Ashton-Miller, "The effect of handle friction and inward or outward torque on maximum axial push force", *Human Factors* 50(2):227–236 (2008) | https://stacks.cdc.gov/view/cdc/215050/cdc_215050_DS1.pdf | `11584ef7b610a0dde46774e7060b007d66583a12f509884d1cec5fde3ebd1908` |
+| Katsuragi & Durian 2007 | Katsuragi and Durian, "Unified force law for granular impact cratering" (arXiv cond-mat/0703072; abstract at https://arxiv.org/abs/cond-mat/0703072) | https://arxiv.org/pdf/cond-mat/0703072 | `116f0e0beea2217cc73e0f8a0f5bff37a4ff389b8385671d84aa9365f5ab0e24` |
+| Anderson 2018 | Anderson, Fleming, Sherratt and Severn, "Novel field equipment for assessing the stability of natural and hybrid turfs", *Sports Engineering* 21:321–331 (2018) | https://link.springer.com/content/pdf/10.1007/s12283-018-0273-2.pdf | `657f6488edd226715ec976d9b2e83bb20b93f809e9ae1c8a9b8bb4f50548d300` |
+| Woods 2012 | Woods, "A report on putting green performance characteristics" (Asian Turfgrass Center, August 2012) | https://www.files.asianturfgrass.com/20120802_data_report.pdf | `07fab7ff79311beaf11b392d61b3885b5e82275bc4e508a7c18654bbe5cec045` |
+| Caldwell 2023 | Caldwell, "Development and comparison of 3D dynamic models of golf clubhead-ball impacts", MASc thesis, University of Waterloo (2023) | https://uwspace.uwaterloo.ca/bitstreams/6b9d555c-f631-4399-90ed-768f01b850f4/download | `c579bf849033671c308dcff652a05852c69ccfe65c08c240f056d60fb67af317` |
+| Tutelman | Tutelman, "Required grip pressure" (2 July 2020), quoting Schmidt (2007), Loughborough PhD thesis | https://www.tutelman.com/golf/swing/gripPressure.php | `df56ef3afcfdaacc2aebffa53b901412e8c284b7f4be62afce8719480ecc6704` (`--compressed`) |
+| Gugan 5 | Gugan, Oxford Croquet, tech/gugan5 (cited since P2b.2b.2b.2a) | https://oxfordcroquet.org/tech/gugan5/ | `057c2161fc7e53b9f35655e6a9ba1b1d9bb0d182e3d37825116546ed317cb42e` (`curl -sSLk --compressed`; counter line removed; equals the digest recorded above) |
+
+### What each gives the model
+
+- **Crum:** the sand rootzone's ultimate bearing, "on the order of 45 psi" for the well-graded sands and "up to 25 psi"
+  for the poorly graded, gives `turfYield`'s bounds (310 and 172 kPa) and its default, 240 kPa, between them.
+- **Mascitti, McNitt & Serensits 2017:** the shear vane's torque range, 17.8–33.6 N·m (the extreme means in its
+  Table 3), and the vane: "12 vertically oriented fins (2.0-cm length) welded at right angles to a cutting head
+  (7.0-cm diam.)"; "The fins on the shear strength tester measure 20 mm. The sod profile was 44 mm thick, so the fins
+  did not penetrate past the depth of sod harvest", and the mat "comprised ~75% of the penetration depth of the fins":
+  the 2.0 cm is the fins' depth in the turf, that is their height. The
+  conversion is ours: T = π·c·(D²H/2 + D³/12) = 2.437e-4 m³·c, so c is 73–138 kPa, default 105 kPa
+  (`turfMatStrength`).
+- **Mak & Chen 2014:** Reece's equation, "D = (ρb·g·d²·Nγ + c·d·Nc + ρb·v²·d·Na)·w·sin(α + δ)" (their Eq. 1), and
+  their Table 2 at 50 mm: Nγ 2.45, Nc 1.71 and Na 0.35, at a rake angle of 18.5° (`turfPloughFactor`; the other two
+  cited, not used).
+- **Young 2009:** the breakaway strength, "for a vertical cylinder (435 ± 27 N)" (`gripLimit`); the horizontal
+  cylinders gave 668 ± 40 and 552 ± 104 N, the vertical rail 337 ± 24 N.
+- **Anderson 2018:** vane strengths "of the compacted Fireclay samples were 204, 156 and 64 kPa at 14.8, 17.5 and 20%
+  gravimetric water content, respectively", and test densities "(1.2–1.6 Mg/m3)": the turf varies from lawn to lawn and
+  day to day.
+- **Katsuragi & Durian 2007:** the inertial drag 0.8·ρ·A·v² ("0.8 g Db v²" in their text, in the page's own symbols),
+  cited as the check on dropping Reece's inertia term.
+- **Seo 2008:** hand–handle friction coefficients of 0.33 (aluminium) and 0.77 (rubber), and axial push forces of
+  65–179 N in the tables and text, cited.
+- **Tutelman (Schmidt 2007):** "The total force near impact is only 160N, or 36 pounds" for a Ryder Cup professional,
+  and for another trace "the force at impact is about 500N, or 113 pounds": golfers' grip 160–500 N at impact, cited.
+- **Woods 2012:** "Surface hardness measured with a 500 g Clegg impact hammer ranged from 57 to 137 gravities, with a
+  mean of 88.3": Clegg 57–137 g on greens, cited.
+- **Caldwell 2023:** the only golf club–ground model found; of its contact forces, "there is no experimental data to
+  compare these contact forces", cited.
+- **Gugan 5:** stop-shots "by using a downward 'jab' just before impact, so that friction between the ground and the
+  heel of the mallet stops it soon after impact"; "a mallet speed of 0.400U for the second tap, compared with 0.463U
+  for the unrestricted swing" (the mean of the seven lowest ratios); "even for the best 'stop' ... the mallet speed has
+  only been reduced to 0.295U" (the jab check, spec §7.3).
+- **No source** measures a club's or a mallet's loss of speed in turf.
