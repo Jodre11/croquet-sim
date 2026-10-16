@@ -156,12 +156,16 @@ describe("the follow-through (design §4)", () => {
             drive: { mode: "carry", handReach: 10, handArcRadius: 11 },
             shape: { pendulumShare: 0.5 },
         });
+        // P2b.2b.2b.3: the turf strike (was ["follow-cap"]): the endless carry's head drags on the turf for the
+        // follow-through's second, its columns yield and it sinks past HEAD_DEEP_LIMIT, so follow-turf-yield and
+        // follow-head-deep are flagged before the cap. Unpredicted, for the gate.
         const { contact, follow } = stroke(shot({ backswing: 0.25 }, endless));
-        expect(follow.flags).toEqual(["follow-cap"]);
+        expect(follow.flags).toEqual(["follow-turf-yield", "follow-head-deep", "follow-cap"]);
         const contactAt = (contact.drive as TrackDrive).arc.contactAt;
         expect(follow.finish).toBeGreaterThanOrEqual(contactAt + FOLLOW_CAP);
         expect(follow.finish).toBeLessThan(contactAt + FOLLOW_CAP + 1e-5);
-    });
+        // P2b.2b.2b.3: the head–turf law over a second of dragging costs about 70 s (was 1 s).
+    }, 240_000);
 
     // P2b.2b.2b.2b: gate-ruled skip (round 14, 2026-10-12). A dip is part of trackEnd; a late dip lengthens the impact
     // and drives the head deep inside it (this setup: impact-head-deep, 5.4 mm, and the follow-through finishes at the

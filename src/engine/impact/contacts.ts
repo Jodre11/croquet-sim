@@ -457,7 +457,7 @@ export const HEAD_TURF_KEY = "head/turf";
  * c − (L/2)·sign(a_z)·a − r·u, u the unit vector of ẑ − a_z·a: the lower end disc's rim, straight below the axis. For
  * a_z = 0 it lies under the centre, on the barrel; for |a_z| = 1, the face disc is level and it is the disc's centre.
  * Its height is headLowestPoint's, up to rounding. A box's is its support point, −Σ_i sign(R_zi)·c_i·x̂_i − e·ẑ from
- * its centre, sign(0) = 0. It is also the head–turf pair's contact point (headTurfContact).
+ * its centre, sign(0) = 0. simulateImpact samples the head's turf there.
  */
 export function headBottom(state: HeadState, head: MalletHead): Vec3 {
     const { shape } = head;
@@ -637,13 +637,4 @@ export function headUnderside(state: HeadState, head: MalletHead): (x: number, y
         );
         return entryOf(slabSpan(p.x, u.x, head.length / 2), round);
     };
-}
-
-/** The turf's contact with the head: closed while its lowest point is below the turf plane, along ẑ, acting there. */
-export function headTurfContact(state: HeadState, head: MalletHead): Penetration | null {
-    const point = headBottom(state, head);
-    if (!(point.z < 0)) {
-        return null;
-    }
-    return { normal: UP, depth: 0 - point.z, point };
 }

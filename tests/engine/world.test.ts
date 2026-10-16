@@ -95,28 +95,6 @@ describe("validateWorld", () => {
         ],
         ["non-unit hoop normal", { hoops: [{ ...testHoop("1", 5, 5), normal: vec3(0, 2, 0) }] }],
         [
-            "turf restitution above 1",
-            {
-                lawn: uniformLawn(30, 40, {
-                    slidingFriction: 0.3,
-                    rollingResistance: 0.05,
-                    ...TEST_TURF,
-                    turfRestitution: 1.5,
-                }),
-            },
-        ],
-        [
-            "non-positive turf stiffness",
-            {
-                lawn: uniformLawn(30, 40, {
-                    slidingFriction: 0.3,
-                    rollingResistance: 0.05,
-                    ...TEST_TURF,
-                    turfStiffness: 0,
-                }),
-            },
-        ],
-        [
             "non-positive bed modulus",
             {
                 lawn: uniformLawn(30, 40, {
@@ -179,8 +157,6 @@ describe("defaultWorld", () => {
             expect(hoop.crownClearance).toBeGreaterThan(2 * world.ball.radius);
         }
         const surface = world.lawn.surfaceAt(vec3(1, 1, 0));
-        expect(surface.turfRestitution).toBeGreaterThan(0);
-        expect(surface.turfStiffness).toBeGreaterThan(0);
         expect(surface.turfYield).toBeGreaterThan(0);
         expect(surface.turfMatStrength).toBeGreaterThan(0);
         expect(world.ballBallContactTime).toBeGreaterThan(0);

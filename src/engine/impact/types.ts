@@ -331,15 +331,18 @@ export interface ContactState extends HeadState {
  *   at the cap);
  * - `impact-mallet-grounded`: part of the head went below the turf plane with no head–turf pair (a force table:
  *   mallet–turf contact is not modelled);
- * - `impact-head-deep`: the head went more than HEAD_DEEP_LIMIT below the turf plane, where the head–turf pair is not
- *   credible (P2b.2b.1 design §4.2);
+ * - `impact-head-deep`: the head's lowest point went more than HEAD_DEEP_LIMIT below the turf plane: a stroke gone
+ *   beyond a graze that has probably damaged the lawn (P2b.2b.2b.3 design §4.4), not a limit of the model;
  * - `impact-off-face`: a ball touched the head off its face: a force table's face rim (edge strokes are not
  *   modelled), or any region but the face for a tracked drive (P2b.2b.1 design §4.5; no Law judgement is made of it
  *   in this phase);
  * - `impact-turf-pit`: when the impact ended, a ball's surface lay more than TURF_PIT_DEPTH below the turf over a
  *   cell it held (P2b.2b.2b.2a design §4.6); the handover places it on the flat lawn, and the pit is discarded;
  * - `grip-limit`: a hand's force first reached its grip's limit (P2b.2b.2b.3 design §5), with the hand; recorded, not
- *   judged.
+ *   judged;
+ * - `turf-yield`: a column of the head's turf first yielded (P2b.2b.2b.3 design §4.2); recorded, not judged;
+ * - `impact-head-stopped`: the head came to rest in the turf before any face contact (P2b.2b.2b.3 design §4.6): the
+ *   impact ends there and hands the balls over as they lie.
  */
 export type ImpactEvent =
     | { readonly kind: "turf-lift"; readonly t: number; readonly ball: BallId }
@@ -349,7 +352,9 @@ export type ImpactEvent =
     | { readonly kind: "impact-head-deep"; readonly t: number }
     | { readonly kind: "impact-off-face"; readonly t: number; readonly ball: BallId }
     | { readonly kind: "impact-turf-pit"; readonly t: number; readonly ball: BallId }
-    | { readonly kind: "grip-limit"; readonly t: number; readonly hand: HandName };
+    | { readonly kind: "grip-limit"; readonly t: number; readonly hand: HandName }
+    | { readonly kind: "turf-yield"; readonly t: number }
+    | { readonly kind: "impact-head-stopped"; readonly t: number };
 
 /**
  * One contact interval of a pair (P2b.2a design §5): [start, end) in s from the impact's start, whole steps, and the
@@ -396,8 +401,8 @@ export interface ImpactRun {
      */
     readonly departure?: number;
     /**
-     * Slip distance (m) at the head's contact point with the turf (P2b.2b.1 design §4.3): |horizontal velocity of the
-     * head's material at its lowest point|·dt, summed per step while δ > 0; absent when the pair never closed.
+     * Slip distance (m) of the head's material at the head–turf resistance's centre (P2b.2b.2b.3 design §4.3): its
+     * horizontal speed there·dt, summed per step while a column bears; absent when the pair never closed.
      */
     readonly headTurfSlide?: number;
     /**

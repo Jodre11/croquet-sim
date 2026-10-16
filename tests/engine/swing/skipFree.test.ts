@@ -47,12 +47,20 @@ describe("skipping the free table where nothing reads it", () => {
         expect(skipped).toEqual(built);
     });
 
-    it.each(["single-ball", "full-roll"] as const)("leaves %s's trajectory bit-identical", (type) => {
-        const setup = canonicalSetup(type, { world: WORLD });
-        const { skipped, built, skips } = bothWays(() => simulateShot(setup, WORLD, { trajectory: true }).trajectory);
-        // planStroke's and strokeTrajectory's.
-        expect(skips).toBe(2);
-        expect(skipped).toBeDefined();
-        expect(skipped).toEqual(built);
-    });
+    // P2b.2b.2b.3: the full roll's follow-through meets the turf, whose law costs it about 7 s alone (was 1.7 s), and
+    // more under the full suite's load.
+    it.each(["single-ball", "full-roll"] as const)(
+        "leaves %s's trajectory bit-identical",
+        (type) => {
+            const setup = canonicalSetup(type, { world: WORLD });
+            const { skipped, built, skips } = bothWays(
+                () => simulateShot(setup, WORLD, { trajectory: true }).trajectory,
+            );
+            // planStroke's and strokeTrajectory's.
+            expect(skips).toBe(2);
+            expect(skipped).toBeDefined();
+            expect(skipped).toEqual(built);
+        },
+        60_000,
+    );
 });

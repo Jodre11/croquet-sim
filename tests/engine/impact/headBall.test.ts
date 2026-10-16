@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { lawFromStiffness } from "../../../src/engine/impact/contactLaw";
 import { HEAD_TURF_KEY, type HeadRegion } from "../../../src/engine/impact/contacts";
 import { ENTRY_SLACK, integrate, type ImpactBall, type ImpactSetup } from "../../../src/engine/impact/integrate";
 import { IDENTITY } from "../../../src/engine/impact/rigidBody";
@@ -8,7 +7,7 @@ import type { Hands, SwingArc } from "../../../src/engine/impact/types";
 import { ZERO, add, dot, scale, vec3, type Vec3 } from "../../../src/engine/math/vec3";
 import type { BallState } from "../../../src/engine/types";
 import { STANDARD_GRAVITY } from "../../../src/engine/world";
-import { TEST_BALL, TEST_TURF } from "../support/fixtures";
+import { TEST_BALL } from "../support/fixtures";
 import {
     TEST_COUPLING,
     TEST_HANDS,
@@ -17,6 +16,7 @@ import {
     freeBall,
     isolated,
     levelArc,
+    testHeadTurf,
     trackDrive,
 } from "../support/impact";
 
@@ -28,7 +28,7 @@ const C = vec3(0, 0, 1);
 /** A levelArc's pivot from the head's centre: its radius plus the socket's height. */
 const ARM = levelArc(C).radius + TEST_HEAD.socket.z;
 const NO_JUMPS = { count: 0, worst: 0, keys: [] };
-const TURF = lawFromStiffness(TEST_HEAD.mass, TEST_TURF.turfRestitution, TEST_TURF.turfStiffness, 0.5);
+const TURF = testHeadTurf();
 
 /** An isolated set-up whose head is held on `arc`'s path, by TEST_COUPLING and `hands`, with `balls`. */
 function held(
@@ -92,12 +92,16 @@ describe("the re-entry guard", () => {
     });
 
     it("counts a head started in the turf as one entry jump on head/turf, and reports none for a force table", () => {
+        // P2b.2b.2b.3: the turf strike (was 3e-3 − ENTRY_SLACK): the jump's depth is the deepest bearing column's δ,
+        // taken at a column centre on the underside (design §4.4). The barrel's axis lies on a column boundary, y = 0,
+        // so the deepest centres are half a cell off it, where the barrel is ρ − √(ρ² − (h/2)²) higher: 15.4 µm.
         const low = vec3(0, 0, RHO - 3e-3);
         const over = { gravity: STANDARD_GRAVITY, headTurf: TURF };
         const run = integrate(held(levelArc(low), [], over), { cap: 1e-3 });
+        const half = TURF.cell / 2;
         expect(run.entryJumps?.count).toBe(1);
         expect(run.entryJumps?.keys).toEqual([`${HEAD_TURF_KEY}@0`]);
-        expect(run.entryJumps?.worst).toBeCloseTo(3e-3 - ENTRY_SLACK, 12);
+        expect(run.entryJumps?.worst).toBeCloseTo(3e-3 - RHO + Math.sqrt(RHO * RHO - half * half) - ENTRY_SLACK, 12);
         const start = { position: low, orientation: IDENTITY, velocity: ZERO, angularVelocity: ZERO };
         expect(integrate(isolated({ start, ...over }), { cap: 1e-3 })).not.toHaveProperty("entryJumps");
     });

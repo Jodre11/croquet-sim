@@ -528,12 +528,16 @@ describe("the mechanisms (design §8.1), on the canonical setups", () => {
         // the turf 12.70–21.48 ms, 1.73 mm deep (10 mm: 1.32; 12 mm: 2.11 and impact-head-deep), turf +0.376 N·s.
         // Pre-flight, with the check to rest: 12.52–21.38 ms, 1.80 mm (10 mm: 1.40; 12 mm: 2.19 and deep), +0.401 N·s.
         // P2b.2b.2b.2c: on the legacy round head; the default box clears the turf (gate).
+        // P2b.2b.2b.3: the turf strike (was 12.21–21.14 ms, 1.88 mm deep, +0.386 N·s, no impact-head-deep): the turf
+        // now bears the barrel's footprint at the bed's modulus and its columns yield (turf-yield at 14.18 ms), so it
+        // holds the head less firmly than the plane's spring did: 12.27–24.29 ms, 3.04 mm deep, +0.353 N·s, and
+        // impact-head-deep at 14.79 ms. Unpredicted, for the gate: §7.4's graze stays within 2 mm.
         const { impact, turf } = braking(canonicalSetup("stop-ac", { mallet: LEGACY_MALLET }));
         const dug = impact.timeline["head/turf"]?.[0] as ContactInterval;
         expect(dug).toBeDefined();
         expect(dug.start).toBeGreaterThanOrEqual((hits(impact)[0] as ContactInterval).end);
         expect(turf).toBeGreaterThan(0);
-        expect(impact.events.map((e) => e.kind)).not.toContain("impact-head-deep");
+        expect(impact.events.map((e) => e.kind)).toEqual(["turf-lift", "turf-yield", "impact-head-deep"]);
     });
 
     // Spec exit criterion 2 (P2b.2b.2b.2b). On the bed (P2b.2b.2b.2a) the canonical pass roll's follow-through kept its

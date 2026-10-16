@@ -1,6 +1,7 @@
 /**
  * Phase 1 of a shot (P2b.1 design §3). Checks the ContactState and the balls. Solves every linear contact law once:
- * ball–ball once, and the head–turf law once for a tracked drive, from the surface under the head's lowest point.
+ * ball–ball once, and the head–turf law once for a tracked drive, from the surface under the head's lowest point
+ * (headTurf.ts).
  * Each ball's turf is its bed's law, from the surface where it lies (turfBed.ts bedLawOf; P2b.2b.2b.2a design §4).
  * The face–ball law is the pair's reduced mass and the face's friction, from which each closure sets its own
  * (P2b.2b.2b.2a design §3.3). Prepares a tracked drive once (track.ts). Starts each ball at its static sink on the bed
@@ -9,13 +10,13 @@
  * contact time. Integrates the impact and hands the balls over to phase 2.
  */
 import { CONTACT_TOLERANCE } from "../detect";
-import { contactReference } from "../../reference/index";
 import { dot, horizontal, length, sub, vec3, type Vec3 } from "../math/vec3";
 import { BALL_IDS, type BallId, type BallState, type BallStates, type World } from "../types";
 import { obstaclesOf, validateWorld } from "../world";
-import { lawFromContactTime, lawFromStiffness, type PairLaw } from "./contactLaw";
+import { lawFromContactTime } from "./contactLaw";
 import { headBottom, headLowestPoint, outsideObstacle } from "./contacts";
 import { handover, type HandoverHead } from "./handover";
+import { headTurfLawOf } from "./headTurf";
 import { rotateInverse } from "./rigidBody";
 import { boxDistance } from "./shape";
 import {
@@ -34,6 +35,7 @@ import type {
     DriveSample,
     Downswing,
     ForceDrive,
+    HeadTurfLaw,
     ImpactResult,
     ImpactRun,
     MalletHead,
@@ -63,21 +65,14 @@ const PLACEMENT_PASSES = 64;
 export type SinkSolver = (position: Vec3) => number;
 
 /**
- * Friction of the mallet head on the turf (P2b.2b.1 design §4.1; reference/contact.json): the analogue of a ball
- * sliding on the turf. Provisional; P2b.2b.2 sources it.
+ * The head–turf law of a tracked drive, or null for a force table (P2b.2b.2b.3 design §2, §4): the turf under the
+ * head's lowest point at t = 0, sampled once (headTurf.ts headTurfLawOf).
  */
-export const HEAD_TURF_FRICTION = contactReference.headTurfFriction.value;
-
-/**
- * The head–turf law of a tracked drive, or null for a force table (design §4.1): the turf's stiffness, and damping
- * solved from its restitution with the head's mass, sampled once at the head's lowest point at t = 0.
- */
-function headTurfLaw(contact: ContactState, world: World): PairLaw | null {
+function headTurfLaw(contact: ContactState, world: World): HeadTurfLaw | null {
     if (contact.drive.kind === "force") {
         return null;
     }
-    const surface = world.lawn.surfaceAt(headBottom(contact, contact.head));
-    return lawFromStiffness(contact.head.mass, surface.turfRestitution, surface.turfStiffness, HEAD_TURF_FRICTION);
+    return headTurfLawOf(world.lawn.surfaceAt(headBottom(contact, contact.head)));
 }
 
 function fail(message: string): never {
@@ -359,8 +354,8 @@ export function sinkSolver(world: World): SinkSolver {
  * - a force table that is empty, does not start at 0 or does not increase strictly;
  * - a tracked drive whose arc, coupling or hands are out of range (P2b.2b.1 design §3.6; the head need not start on
  *   its path);
- * - for a tracked drive, turf under the head's lowest point with a non-positive stiffness or a restitution outside
- *   (0, 1] (the head–turf law, P2b.2b.1 design §4.1);
+ * - for a tracked drive, turf under the head's lowest point with a non-positive or non-finite bedModulus, bedRecovery,
+ *   turfYield or turfMatStrength (the head–turf law, P2b.2b.2b.3 design §4);
  * - a non-positive mass, inertia, length, radius or ball–ball contact time; a box head's half-extents or edge radius
  *   out of range; a force table whose head is not a cylinder; a shaft of non-positive length or negative mass; a
  *   force table whose shaft has mass;
@@ -409,8 +404,10 @@ export function validateImpact(
     } else {
         validateTrack(contact.drive);
         const surface = world.lawn.surfaceAt(headBottom(contact, head));
-        positive(surface.turfStiffness, "turfStiffness under the head");
-        restitution(surface.turfRestitution, "turfRestitution under the head");
+        positive(surface.bedModulus, "bedModulus under the head");
+        positive(surface.bedRecovery, "bedRecovery under the head");
+        positive(surface.turfYield, "turfYield under the head");
+        positive(surface.turfMatStrength, "turfMatStrength under the head");
     }
     if (headLowestPoint(contact, head) < 0) {
         fail("head penetrates the turf");

@@ -155,17 +155,15 @@ export const frictionReference = {
     ballUprightFriction: readValue(frictionJson, "ballUprightFriction", "friction"),
     ballPegRestitution: readValue(frictionJson, "ballPegRestitution", "friction"),
     ballPegFriction: readValue(frictionJson, "ballPegFriction", "friction"),
-    ballTurfRestitution: readValue(frictionJson, "ballTurfRestitution", "friction"),
 } as const;
 
 /**
- * Impact-phase contact data: turf stiffness, contact durations, the tangential ratio, Gugan's face fits, the hand
- * coupling, the default body's arm mass and reach slack, the head–turf law (its sole's friction, the turf's yield, the
- * root mat's strength and N_c), the arm's flex, pendulum push, push and push response time, and the hand–arm chain
+ * Impact-phase contact data: contact durations, the tangential ratio, Gugan's face fits, the hand coupling, the
+ * default body's arm mass and reach slack, the head–turf law (its sole's friction, the turf's yield, the root mat's
+ * strength and N_c), the arm's flex, pendulum push, push and push response time, and the hand–arm chain
  * (P2b.2b.2b.2b).
  */
 export const contactReference = {
-    ballTurfStiffness: readValue(contactJson, "ballTurfStiffness", "contact"),
     bedModulus: readValue(contactJson, "bedModulus", "contact"),
     bedRecovery: readValue(contactJson, "bedRecovery", "contact"),
     ballBallContactTime: readValue(contactJson, "ballBallContactTime", "contact"),

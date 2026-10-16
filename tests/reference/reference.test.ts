@@ -55,12 +55,7 @@ describe("reference data", () => {
     });
 
     it("keeps restitution within [0, 1] and friction non-negative", () => {
-        for (const key of [
-            "ballBallRestitution",
-            "ballUprightRestitution",
-            "ballPegRestitution",
-            "ballTurfRestitution",
-        ] as const) {
+        for (const key of ["ballBallRestitution", "ballUprightRestitution", "ballPegRestitution"] as const) {
             expect(frictionReference[key].value).toBeGreaterThanOrEqual(0);
             expect(frictionReference[key].value).toBeLessThanOrEqual(1);
         }
@@ -72,7 +67,6 @@ describe("reference data", () => {
 
 describe("impact reference data", () => {
     it("loads contact durations, turf stiffness and the tangential ratio", () => {
-        expect(contactReference.ballTurfStiffness.value).toBeGreaterThan(0);
         expect(contactReference.bedModulus.value).toBeGreaterThan(0);
         expect(contactReference.bedRecovery.value).toBeGreaterThan(0);
         expect(contactReference.ballBallContactTime.value).toBeGreaterThan(0);
