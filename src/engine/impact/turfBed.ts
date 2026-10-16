@@ -102,8 +102,7 @@ export interface BedLoad {
 
 /**
  * The cells' index range [lo, hi] along one axis for a footprint of radius ρ about `centre`, padded by one cell each
- * side: every column whose centre lies within ρ is inside, and a column outside is more than ρ + h/2 away. The head's
- * columns use it over the head's extent (P2b.2b.2b.3 design §4.1).
+ * side: every column whose centre lies within ρ is inside, and a column outside is more than ρ + h/2 away.
  */
 export function columnSpan(centre: number, rho: number, h: number): readonly [number, number] {
     return [Math.floor((centre - rho) / h) - 1, Math.floor((centre + rho) / h) + 1];

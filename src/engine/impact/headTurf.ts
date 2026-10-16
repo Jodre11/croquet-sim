@@ -3,10 +3,10 @@
  * law's state lives on the turf bed's world lattice (BED_CELL; cell (i, j) centred at ((i + ½)·h, (j + ½)·h)): a
  * column the head has yielded keeps its new floor as the head moves on, and a furrow stays behind it.
  *
- * Each step, while the head's lowest point is below the plane, the law visits every column under the head's
- * horizontal extent, padded one cell, in mirror pairs across y = 0 as the balls' bed does (turfBed.ts
- * mirrorPairsOver). A column is submerged while the head's underside over its centre (headUnderside) lies below
- * z = 0, δ deep:
+ * Each step, while the head's lowest point is below the plane, the law visits every column under the head's part
+ * below the plane (contacts.ts headReach), padded one cell, in mirror pairs across y = 0 as the balls' bed does
+ * (turfBed.ts mirrorPairsOver). A column is submerged while the head's underside over its centre (headUnderside) lies
+ * below z = 0, δ deep:
  * - bearing (§4.2): each column is elastic–plastic, with a set s ≥ 0, its surface at −s and its elastic deflection
  *   e = δ − s. While k_w·e > p_y the set moves to δ − p_y/k_w; it never falls. A column with e > 0 bears
  *   h²·max(0, k_w·(e + τ_r·e′)) upward at its point on the underside, e′ = −u_z of the head's material there;
@@ -30,8 +30,8 @@ import { contactReference } from "../../reference/index";
 import { ZERO, add, cross, horizontal, length, scale, sub, vec3, type Vec3 } from "../math/vec3";
 import type { SurfaceProps } from "../types";
 import { TANGENTIAL_STIFFNESS_RATIO, carrySpring, tangentialForce, type PairLaw } from "./contactLaw";
-import { headExtent, headLowestPoint, headUnderside, pointVelocity } from "./contacts";
-import { BED_CELL, cellKey, columnSpan, mirrorPairsOver } from "./turfBed";
+import { headLowestPoint, headReach, headUnderside, pointVelocity } from "./contacts";
+import { BED_CELL, cellKey, mirrorPairsOver } from "./turfBed";
 import type { HeadState, HeadTurfLaw, MalletHead } from "./types";
 
 /**
@@ -225,11 +225,15 @@ export function headTurfLoad(
     const onYield = (): void => {
         yields += 1;
     };
-    if (headLowestPoint(s, head) < 0) {
+    const below = headLowestPoint(s, head) < 0 ? headReach(s, head) : null;
+    if (below !== null) {
         const under = headUnderside(s, head);
-        const extent = headExtent(s, head);
-        const [i0, i1] = columnSpan(s.position.x, extent.x, h);
-        const [j0, j1] = columnSpan(s.position.y, extent.y, h);
+        // Only the columns under the head's part below the plane, padded a cell each side against rounding: a column
+        // outside has its underside above the plane, so bear would pass it over, and skipping it changes nothing.
+        const i0 = Math.floor(below[0] / h) - 1;
+        const i1 = Math.floor(below[1] / h) + 1;
+        const j0 = Math.floor(below[2] / h) - 1;
+        const j1 = Math.floor(below[3] / h) + 1;
         mirrorPairsOver(i0, i1, j0, j1, (i, ja, jb) => {
             const a = ja === null ? null : bear(bed, s, under, i, ja, onYield);
             const b = jb === null ? null : bear(bed, s, under, i, jb, onYield);

@@ -509,6 +509,77 @@ export function headExtent(state: HeadState, head: MalletHead): Vec3 {
     );
 }
 
+/** A horizontal bound [x0, x1, y0, y1] (m), as headReach gives it. */
+export type Reach = readonly [number, number, number, number];
+
+/** Widens `bound` (or none) to take in (x, y). */
+function reachTo(bound: Reach | null, x: number, y: number): Reach {
+    if (bound === null) {
+        return [x, x, y, y];
+    }
+    return [Math.min(bound[0], x), Math.max(bound[1], x), Math.min(bound[2], y), Math.max(bound[3], y)];
+}
+
+/** Widens `bound` (or none) to take in every point of segment a–b with z ≤ `top`. */
+function reachBelow(bound: Reach | null, a: Vec3, b: Vec3, top: number): Reach | null {
+    let reach = bound;
+    if (a.z <= top) {
+        reach = reachTo(reach, a.x, a.y);
+    }
+    if (b.z <= top) {
+        reach = reachTo(reach, b.x, b.y);
+    }
+    if ((a.z < top && b.z > top) || (a.z > top && b.z < top)) {
+        const t = (top - a.z) / (b.z - a.z);
+        reach = reachTo(reach, a.x + t * (b.x - a.x), a.y + t * (b.y - a.y));
+    }
+    return reach;
+}
+
+/**
+ * A horizontal bound [x0, x1, y0, y1] (m) on the head's part below the turf plane, or null where none of it is (the
+ * head–turf law's columns; cost only, P2b.2b.2b.3 Task 5 fix round): every (x, y) where headUnderside is below 0 lies
+ * within it. A rounded box is its core ⊕ a ball of radius e, so a point below z = 0 lies within e of a core point below
+ * z = e: the bound is the core's part below e (its vertices and its edges' crossings of z = e) widened by e. A
+ * cylinder's point lies within r of its axis, and below z = 0 only where the axis is below r·√(1 − a_z²): the axis's
+ * part below that, widened by r.
+ */
+export function headReach(state: HeadState, head: MalletHead): Reach | null {
+    const q = state.orientation;
+    const ax = rotate(q, vec3(1, 0, 0));
+    const c0 = state.position;
+    const { shape } = head;
+    let reach: Reach | null = null;
+    let grow: number;
+    if (shape.kind === "box") {
+        const core = boxCore(shape, head.length);
+        grow = shape.edgeRadius;
+        const x = scale(ax, core.x);
+        const y = scale(rotate(q, vec3(0, 1, 0)), core.y);
+        const z = scale(rotate(q, vec3(0, 0, 1)), core.z);
+        // The core's twelve edges, four along each body axis: every vertex is an end of some edge.
+        for (const s1 of SIGNS) {
+            for (const s2 of SIGNS) {
+                const xs = add(c0, add(scale(y, s1), scale(z, s2)));
+                reach = reachBelow(reach, sub(xs, x), add(xs, x), grow);
+                const ys = add(c0, add(scale(x, s1), scale(z, s2)));
+                reach = reachBelow(reach, sub(ys, y), add(ys, y), grow);
+                const zs = add(c0, add(scale(x, s1), scale(y, s2)));
+                reach = reachBelow(reach, sub(zs, z), add(zs, z), grow);
+            }
+        }
+    } else {
+        grow = shape.radius;
+        const half = scale(ax, head.length / 2);
+        const top = shape.radius * Math.sqrt(Math.max(0, 1 - ax.z * ax.z));
+        reach = reachBelow(null, sub(c0, half), add(c0, half), top);
+    }
+    if (reach === null) {
+        return null;
+    }
+    return [reach[0] - grow, reach[1] + grow, reach[2] - grow, reach[3] + grow];
+}
+
 /** The z with A·z² + 2·B·z + C ≤ 0, as [lo, hi]; every z for A = 0 and C ≤ 0; null where there is none. */
 function quadraticSpan(a: number, b: number, c: number): readonly [number, number] | null {
     if (a === 0) {
@@ -570,15 +641,40 @@ function rodEntry(
 const SIGNS = [-1, 1] as const;
 
 /**
- * Where the line p + z·u (body frame) enters the rounded box (P2b.2b.2b.3 plan decision 9). The box grown by e on
- * every axis contains it; where the line enters that box on a flat face (at most one coordinate beyond the core), the
- * entry is exact. Otherwise it enters on an edge or a corner, and the rounded box is the union of three slab-grown
- * boxes, twelve edge cylinders and eight corner spheres: its entry is the lowest of theirs.
+ * A rounded box's half-extents as roundedBoxEntry reads them, worked out once for a head's every column in a step
+ * (cost only): its core c, edge radius e, the core grown by e on every axis, and grown on x, y and z alone.
  */
-function roundedBoxEntry(p: Vec3, u: Vec3, shape: BoxShape, length: number): number {
+interface BoxFrame {
+    readonly c: Vec3;
+    readonly e: number;
+    readonly grown: Vec3;
+    readonly grownX: Vec3;
+    readonly grownY: Vec3;
+    readonly grownZ: Vec3;
+}
+
+function boxFrame(shape: BoxShape, length: number): BoxFrame {
     const c = boxCore(shape, length);
     const e = shape.edgeRadius;
-    const grown = boxEntry(p, u, vec3(c.x + e, c.y + e, c.z + e));
+    return {
+        c,
+        e,
+        grown: vec3(c.x + e, c.y + e, c.z + e),
+        grownX: vec3(c.x + e, c.y, c.z),
+        grownY: vec3(c.x, c.y + e, c.z),
+        grownZ: vec3(c.x, c.y, c.z + e),
+    };
+}
+
+/**
+ * Where the line p + z·u (body frame) enters the rounded box `f` (P2b.2b.2b.3 plan decision 9); `uu` is u·u. The box
+ * grown by e on every axis contains it; where the line enters that box on a flat face (at most one coordinate beyond
+ * the core), the entry is exact. Otherwise it enters on an edge or a corner, and the rounded box is the union of three
+ * slab-grown boxes, twelve edge cylinders and eight corner spheres: its entry is the lowest of theirs.
+ */
+function roundedBoxEntry(p: Vec3, u: Vec3, uu: number, f: BoxFrame): number {
+    const { c, e } = f;
+    const grown = boxEntry(p, u, f.grown);
     if (!(grown < Infinity) || e === 0) {
         return grown;
     }
@@ -587,12 +683,7 @@ function roundedBoxEntry(p: Vec3, u: Vec3, shape: BoxShape, length: number): num
     if (beyond <= 1) {
         return grown;
     }
-    let lowest = Math.min(
-        boxEntry(p, u, vec3(c.x + e, c.y, c.z)),
-        boxEntry(p, u, vec3(c.x, c.y + e, c.z)),
-        boxEntry(p, u, vec3(c.x, c.y, c.z + e)),
-    );
-    const uu = dot(u, u);
+    let lowest = Math.min(boxEntry(p, u, f.grownX), boxEntry(p, u, f.grownY), boxEntry(p, u, f.grownZ));
     for (const s1 of SIGNS) {
         for (const s2 of SIGNS) {
             lowest = Math.min(
@@ -625,16 +716,20 @@ export function headUnderside(state: HeadState, head: MalletHead): (x: number, y
     const u = rotateInverse(q, UP);
     const base = scale(u, 0 - state.position.z);
     const { shape } = head;
+    const frame = shape.kind === "box" ? boxFrame(shape, head.length) : null;
+    const uu = dot(u, u);
+    const { x: cx, y: cy } = state.position;
     return (x, y) => {
-        const p = add(add(scale(ex, x - state.position.x), scale(ey, y - state.position.y)), base);
-        if (shape.kind === "box") {
-            return roundedBoxEntry(p, u, shape, head.length);
+        // add(add(scale(ex, dx), scale(ey, dy)), base), spelt out to spare its temporaries: the same operations in the
+        // same order, so the same bits.
+        const dx = x - cx;
+        const dy = y - cy;
+        const p = vec3(ex.x * dx + ey.x * dy + base.x, ex.y * dx + ey.y * dy + base.y, ex.z * dx + ey.z * dy + base.z);
+        if (frame !== null) {
+            return roundedBoxEntry(p, u, uu, frame);
         }
-        const round = quadraticSpan(
-            u.y * u.y + u.z * u.z,
-            p.y * u.y + p.z * u.z,
-            p.y * p.y + p.z * p.z - shape.radius * shape.radius,
-        );
+        const r = (shape as CylinderShape).radius;
+        const round = quadraticSpan(u.y * u.y + u.z * u.z, p.y * u.y + p.z * u.z, p.y * p.y + p.z * p.z - r * r);
         return entryOf(slabSpan(p.x, u.x, head.length / 2), round);
     };
 }

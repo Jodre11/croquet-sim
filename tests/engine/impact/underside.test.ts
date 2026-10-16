@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { headExtent, headLowestPoint, headUnderside } from "../../../src/engine/impact/contacts";
+import { headExtent, headLowestPoint, headReach, headUnderside } from "../../../src/engine/impact/contacts";
 import {
     IDENTITY,
     axisAngle,
@@ -155,6 +155,39 @@ describe("the head's underside (P2b.2b.2b.3 design §4.1)", () => {
                     );
                     expect(Math.abs(rim.x)).toBeLessThanOrEqual(round.x + 1e-12);
                     expect(Math.abs(rim.y)).toBeLessThanOrEqual(round.y + 1e-12);
+                }
+            }
+        }
+    });
+
+    it("bounds the head's part below the plane within headReach, null where none is", () => {
+        // Task 5 fix round: the law visits only the columns within the reach, so every (x, y) whose underside lies
+        // below z = 0 must lie within it, unpadded. Tumbled heads cutting the plane at every depth, scanned on a 1 mm
+        // grid over the head's whole extent; a head clear of the plane has no reach.
+        const random = rng(41);
+        for (const head of [TEST_HEAD, TEST_BOX, TEST_SHARP]) {
+            for (let n = 0; n < 30; n++) {
+                const state = at(vec3(1, 2, (random() * 2 - 1) * 0.04), tumble(random));
+                const reach = headReach(state, head);
+                const [x0, x1, y0, y1] = reach ?? [Infinity, 0 - Infinity, Infinity, 0 - Infinity];
+                const extent = headExtent(state, head);
+                const under = headUnderside(state, head);
+                let below = 0;
+                const outside: string[] = [];
+                for (let x = 1 - extent.x; x <= 1 + extent.x; x += 0.001) {
+                    for (let y = 2 - extent.y; y <= 2 + extent.y; y += 0.001) {
+                        if (under(x, y) < 0) {
+                            below += 1;
+                            if (!(x >= x0 && x <= x1 && y >= y0 && y <= y1)) {
+                                outside.push(`${x} ${y}`);
+                            }
+                        }
+                    }
+                }
+                expect(outside, `${head.shape.kind} ${n}`).toEqual([]);
+                if (headLowestPoint(state, head) > 0) {
+                    expect(below, `${head.shape.kind} ${n}`).toBe(0);
+                    expect(reach, `${head.shape.kind} ${n}`).toBeNull();
                 }
             }
         }
