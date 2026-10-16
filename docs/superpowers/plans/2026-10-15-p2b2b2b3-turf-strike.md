@@ -77,10 +77,13 @@ spec's law; the user ruled them on 2026-10-15, before the plan was written.
 9. **The rounded box's underside** is exact. A box is the union of three slab-grown boxes, twelve edge cylinders and
    eight corner spheres. The underside is the entry into the box grown by e on every axis wherever that entry lies on
    a flat face; on an edge or a corner it is the lowest entry over the union.
-10. **The hands' slid offset is a world-frame vector**, as the chain's preload is (track.ts `holdChain`). It shifts
-    the hand's anchor on the shaft: the firm grip's grip point, or carry mode's anchor of the palm and finger springs.
-    It slides only where the hand holds a position spring: the firm grip with no downswing or `gripped`, and carry
-    mode's chain. Damper-only branches clip.
+10. **The hands' slid offset is held in the head's body frame** (plan review, 2026-10-16). The hand slides along the
+    shaft, which is fixed to the head, and the follow-through turns the shaft through large angles: a world-frame
+    offset along the shaft would end up across it. It is stored as `rotateInverse(q, slide)` and applied as
+    `rotate(q, offset)` (rigidBody.ts), q the head's orientation that step. It shifts the hand's anchor on the shaft:
+    the firm grip's grip point, or carry mode's anchor of the palm and finger springs. It slides only where the hand
+    holds a position spring: the firm grip with no downswing or `gripped`, and carry mode's chain. Damper-only
+    branches clip.
 11. **`HandLoad.saturated`** names the first hand that saturated in the step, the top hand if both did. `grip-limit`
     is raised once per impact; `follow-grip-limit` once per follow-through.
 12. **`TEST_GRIP_LIMIT` is 1e5 N** in the test hands and `testProfile`: far above any test hand, so that the tests
@@ -99,12 +102,39 @@ spec's law; the user ruled them on 2026-10-15, before the plan was written.
     be positive and finite there.
 18. **The jab** deepens `arc.dip.depth` to `handDrop + (jab ?? 0)`. At 0 that is `handDrop` to the bit, since
     `handDrop` is +0 or positive.
-19. **The regimes' and the late jab's setups** (spec §7.4) are found by Task 7's probe over a fixed candidate grid,
-    then pinned in the tests. If no candidate gives a regime, the task stops for the user.
+19. **The regimes' setups** (spec §7.4) are found by Task 7's probe over a fixed candidate grid, then pinned in the
+    tests. If no candidate gives one of the three regimes, the task stops for the user. The roll whose follow-through
+    yields the turf (the `follow-turf-yield` flag's test, §4.6) is searched the same way but is not a regime: none
+    found is recorded at the gate, not a stop (plan review, 2026-10-16).
 20. **U and the second tap** (spec §7.3) are read on the face region's intervals (`headRegions["face/blue#face"]`),
     from the head's state at each interval's start.
-21. **The cost figures** (spec §9) come from `ImpactSnapshot.headTurfColumns`, the columns visited in the step, which
-    is present whenever the snapshot carries `headTurf`.
+21. **The cost figures** (spec §9): the probe counts a step's columns as the law visits them, the product of the two
+    `columnSpan`s over `headExtent` whenever `headLowestPoint` is below the plane, computed from the snapshot's head
+    (plan review, 2026-10-16: no engine field is added for it).
+22. **turfYield's bounds are [172000, 310000] Pa and its provenance "derived"**: Crum's 25 and 45 psi are 172.4 and
+    310.3 kPa (the spec rounds the lower to 170), and the default 240 kPa is a value between two measured figures,
+    not itself measured (the spec says "measured").
+23. **Every cost figure is timed with its job running alone**, at the same `COUNT` before and after (spec §9; plan
+    review, 2026-10-16). The preset sweep's wall time answers the user's relayed note of 2026-10-15 ("check the cost
+    figures at the pre-flight gate"); the columns per step and `shotMix`'s engine time are §9's own.
+24. **The hand's slide** (spec §5, "the Cundall–Strack form"; plan review, 2026-10-16) takes two forms:
+    - **The firm grip's position spring** slides as `tangentialForce` resets its spring: the hand transmits the
+      clipped total F_max, and the offset is set so that the spring term alone carries F_max less the hand's share
+      (the planned feed-forward). The damper's force is never stored as stretch, so the spring holds at most F_max
+      plus the share's size, and nothing that "only cancels the dashpot" (contactLaw.ts).
+    - **Carry mode's chain** slides by the excess over the palm's and fingers' stiffness, so that the recomputed chain
+      transmits exactly F_max. There the slip lies at the skin, in series with the palm's and fingers' spring and
+      dashpot, which carry the transmitted force between them, and the chain's masses must feel what the hand
+      transmits.
+25. **"Keeps most of its speed"** (spec §7.4's graze) reads as the head's speed along aim at the ball above 0.5 of its
+    speed at the turf: the probe's qualifying test and the test's assertion are the same.
+26. **The angle of attack** (§7.1 case 4). With a level box, at the same entry speed and the same depth, every column
+    ploughs fresh turf at that depth whatever φ, so the ploughing part of the cap is the same. The peak rises with φ
+    through the sole's friction on the bearing, whose recovery term reads e′ = v·sin φ (§4.2). The test asserts both:
+    the peak cap rises, and at the step where the depth is exactly matched the ploughing part (cap − µ·N_b) is equal
+    across φ within one row of columns' share (2h/L; the box's horizontal travel shifts the lattice under it). Spec
+    §4.3's "the cap does not depend on speed" holds for the ploughing part only; Task 10 records this in the spec's
+    amendment note.
 
 ## Global Constraints
 
@@ -240,7 +270,7 @@ a test.
 | `tests/engine/impact/underside.test.ts` | New: the head's underside and extent (Task 3) |
 | `tests/engine/impact/headTurfLaw.test.ts` | New: the law alone, §7.1 cases 1–4 and 6 (Task 4) |
 | `tests/engine/impact/headTurf.test.ts` | Rewritten for the law in the integrator (Task 5) |
-| `tests/engine/turfStrike.test.ts` | New: the regimes, the late jab's flags, Gugan's jab (Task 7) |
+| `tests/engine/turfStrike.test.ts` | New: the regimes, the follow-through's flag, Gugan's jab (Task 7) |
 | Existing tests | Migrated (Tasks 2, 4, 5); re-baselined (Task 5); the AC stop's turf tests moved onto the box (Task 6) |
 | `scripts/turfStrikeProbe.ts` | New: the regimes' search, the jab sweep, the bounds, the cost (Task 7) |
 | `scripts/swingProbe.ts` | Its tallied flags (Task 10) |
@@ -426,7 +456,14 @@ Run: `npx --yes tsx scripts/swingProbe.ts > <temp>/baseline/swingProbe.txt`
 Run: `npx --yes tsx <temp>/scripts/gateFigures.mts > <temp>/baseline/gate.txt`
 
 The preset sweep's wall time (`real` in the `.time` file) is the cost baseline the gate compares (the law visits
-thousands of columns a step while the head is in the turf; spec §9's cost).
+thousands of columns a step while the head is in the turf; spec §9's cost). A timing taken alongside other jobs is not
+comparable (plan decision 23), so once every job above has finished and `pgrep -fl tsx` prints none, take the cost
+baselines again, each **alone**:
+
+Run: `/usr/bin/time -p npx --yes tsx <temp>/scripts/presetDigest.mts > <temp>/baseline/presetDigest-alone.txt 2> <temp>/baseline/presetDigest.time`
+Run: `cmp <temp>/baseline/presetDigest.txt <temp>/baseline/presetDigest-alone.txt` (identical), then delete
+`presetDigest-alone.txt`.
+Run: `env COUNT=800 npx --yes tsx scripts/shotMix.ts > <temp>/baseline/shotMix-cost.txt`
 
 `shotMix` and `impactProbe` print times, which vary from run to run. Later comparisons drop them:
 `grep -v "ms per shot" <shotMix file> > <file>.cmp` and `grep -v "µs/step" <impactProbe file> > <file>.cmp`.
@@ -541,7 +578,9 @@ Spec §5, §6.3 (`gripLimit`, `grip-limit`, `follow-grip-limit`), §7.1 case 5, 
 - Modify: `src/engine/swing/types.ts`, `src/engine/swing/buildContact.ts`, `src/engine/swing/profile.ts`
 - Modify: `tests/engine/support/impact.ts`, `tests/engine/support/shot.ts` (`TEST_GRIP_LIMIT`)
 - Create: `tests/engine/impact/gripLimit.test.ts`
-- Modify: `tests/engine/impact/simulateImpact.test.ts`, `tests/engine/swing/buildContact.test.ts` (validation rows)
+- Modify: `tests/engine/impact/simulateImpact.test.ts`, `tests/engine/swing/buildContact.test.ts` (validation rows;
+  the latter's `drive.hands` and `defaultProfile.body` expectations)
+- Modify: `scripts/fitStrokeShape.ts` (its `Hands` literal)
 - Modify: `tests/engine/shot.test.ts` (the impact's and the follow-through's grip-limit, once each)
 
 **Interfaces:**
@@ -624,8 +663,10 @@ import {
     headOnPath,
     newGripState,
     prepareTrack,
+    type GripState,
     type PreparedTrack,
 } from "../../../src/engine/impact/track";
+import { rotate } from "../../../src/engine/impact/rigidBody";
 import type { Coupling, HeadState } from "../../../src/engine/impact/types";
 import { add, dot, length, scale, sub, vec3, type Vec3 } from "../../../src/engine/math/vec3";
 import { STANDARD_GRAVITY } from "../../../src/engine/world";
@@ -635,15 +676,20 @@ import { TEST_HANDS, TEST_HEAD, levelArc, trackDrive } from "../support/impact";
 const FIRM: Coupling = { period: 0.04, dampingRatio: 0, relaxAt: 10 };
 
 /** A level path whose pivot runs along aim at 1 m/s, gravity off: the hands' feed-forward is then zero. */
-function running(limit: number): PreparedTrack {
+function running(limit: number, coupling: Coupling = FIRM): PreparedTrack {
     const arc = levelArc(vec3(0, 0, 1), { pivotVelocity: vec3(1, 0, 0) });
-    return prepareTrack(trackDrive(arc, FIRM, { ...TEST_HANDS, gripLimit: limit }), TEST_HEAD, 0);
+    return prepareTrack(trackDrive(arc, coupling, { ...TEST_HANDS, gripLimit: limit }), TEST_HEAD, 0);
 }
 
 /** The top grip's gap to its target on the path at time t, the head held at `head`. */
 function topGap(track: PreparedTrack, head: HeadState, t: number): Vec3 {
     const target = headOnPath(track, TEST_HEAD, t);
     return sub(target.position, head.position);
+}
+
+/** The top hand's slid offset in the world frame, the head at `head` (it is held in the head's frame). */
+function topOffset(grip: GripState, head: HeadState): Vec3 {
+    return rotate(head.orientation, grip.topOffset as Vec3);
 }
 
 describe("the hands' limit (P2b.2b.2b.3 design §5)", () => {
@@ -665,7 +711,7 @@ describe("the hands' limit (P2b.2b.2b.3 design §5)", () => {
             }
             if (saturatedAt >= 0) {
                 expect(Math.abs(length(load.top) - limit) / limit, `t ${t}`).toBeLessThan(1e-12);
-                const stretch = sub(topGap(track, head, t), grip.topOffset as Vec3);
+                const stretch = sub(topGap(track, head, t), topOffset(grip, head));
                 expect(0.5 * k * dot(stretch, stretch), `t ${t}`).toBeLessThanOrEqual(
                     ((limit * limit) / (2 * k)) * (1 + 1e-9),
                 );
@@ -673,6 +719,32 @@ describe("the hands' limit (P2b.2b.2b.3 design §5)", () => {
         }
         expect(saturatedAt).toBeGreaterThan(0);
         expect(length(topGap(track, head, 0.05))).toBeGreaterThan(0.04);
+    });
+
+    it("stores no stretch that only cancels the damper while a damped hand slides (plan decision 24)", () => {
+        // Case 5 with the grip's damping on: the path runs away at 1 m/s, so the damper alone pulls c·1 m/s, far past
+        // F_max = 50 N. The hand transmits 50 N; its spring is reset as tangentialForce resets its own, to carry F_max
+        // less the share (zero here), so k·|gap − offset| stays at F_max. Resetting it against the total instead
+        // would leave a stretch of (F_max − c·1 m/s)/k, over 100 N's worth pointing back against the path.
+        const limit = 50;
+        const track = running(limit, { period: 0.04, dampingRatio: 0.7, relaxAt: 10 });
+        expect(track.firm.damping).toBeGreaterThan(2 * limit);
+        const head = headOnPath(track, TEST_HEAD, 0);
+        const grip = newGripState();
+        const k = track.firm.stiffness;
+        let slid = 0;
+        for (let n = 0; n <= 50; n++) {
+            const t = n * 1e-3;
+            const load = handLoad(track, head, TEST_HEAD, t, grip);
+            if (load.saturated === null) {
+                continue;
+            }
+            slid++;
+            expect(Math.abs(length(load.top) - limit) / limit, `t ${t}`).toBeLessThan(1e-12);
+            const spring = scale(sub(topGap(track, head, t), topOffset(grip, head)), k);
+            expect(length(spring), `t ${t}`).toBeLessThanOrEqual(limit * (1 + 1e-9));
+        }
+        expect(slid).toBeGreaterThan(40);
     });
 
     it("returns under the limit with its offset kept once the load falls", () => {
@@ -685,7 +757,7 @@ describe("the hands' limit (P2b.2b.2b.3 design §5)", () => {
         }
         const offset = grip.topOffset as Vec3;
         // Move the head on to halve the spring's stretch: the force falls to F_max/2 and the anchor stays put.
-        const stretch = sub(topGap(track, held, 0.02), offset);
+        const stretch = sub(topGap(track, held, 0.02), topOffset(grip, held));
         const moved: HeadState = { ...held, position: add(held.position, scale(stretch, 0.5)) };
         const load = handLoad(track, moved, TEST_HEAD, 0.02, grip);
         expect(load.saturated).toBeNull();
@@ -777,8 +849,9 @@ export const GRIP_LIMIT = contactReference.gripLimit.value;
 
 Import `HandName` with the other types from `./types`.
 
-In `GripState`'s doc comment, append: "Each hand's slid offset (m, world frame; P2b.2b.2b.3 design §5): null until the
-hand first saturates, then how far its anchor on the shaft has slid, kept for the rest of the stroke." Add the fields
+In `GripState`'s doc comment, append: "Each hand's slid offset (m, in the head's frame; P2b.2b.2b.3 design §5): null
+until the hand first saturates, then how far its anchor on the shaft has slid, kept for the rest of the stroke." Add
+the fields
 after `departedAt`:
 
 ```ts
@@ -810,11 +883,17 @@ function heldTo(trial: Vec3, limit: number): Vec3 | null {
     return scale(trial, limit / Math.sqrt(squared));
 }
 
-/** A hand's offset after its anchor slides by `slide` (m; design §5): the first slide, or the sum. */
-function slid(offset: Vec3 | null, slide: Vec3): Vec3 {
-    return offset === null ? slide : add(offset, slide);
+/**
+ * A hand's offset (m, in the head's frame; plan decision 10) after its anchor slides by `slide` (m, world frame) with
+ * the head at orientation `q` (design §5): the first slide, or the sum.
+ */
+function slid(offset: Vec3 | null, slide: Vec3, q: Quaternion): Vec3 {
+    const body = rotateInverse(q, slide);
+    return offset === null ? body : add(offset, body);
 }
 ```
+
+`rotate`, `rotateInverse` and `Quaternion` are already imported from `./rigidBody`.
 
 **`carryLoad`.** Change its `load` helper to take the saturated hand:
 
@@ -832,9 +911,11 @@ function slid(offset: Vec3 | null, slide: Vec3): Vec3 {
 Before the chains are created, add the anchors, and create the chains at them:
 
 ```ts
-    // Each hand's anchor on the shaft, slid by its offset once it has saturated (design §5).
-    const topAnchor = grip.topOffset === null ? topAt : add(topAt, grip.topOffset);
-    const bottomAnchor = grip.bottomOffset === null ? bottomAt : add(bottomAt, grip.bottomOffset);
+    // Each hand's anchor on the shaft, slid by its offset once it has saturated (design §5), the offset held in the
+    // head's frame (plan decision 10).
+    const q = state.orientation;
+    const topAnchor = grip.topOffset === null ? topAt : add(topAt, rotate(q, grip.topOffset));
+    const bottomAnchor = grip.bottomOffset === null ? bottomAt : add(bottomAt, rotate(q, grip.bottomOffset));
     if (grip.topChain === null) {
         grip.topChain = holdChain(chain, topAnchor, topVelocity, topFed, step.topAcceleration, g);
         if (!pendulum) {
@@ -854,9 +935,9 @@ Replace `const top = chainForces(chain, topArm, topAt, topVelocity, topDrive, g)
     if (topHeld !== null) {
         // The hand transmits only F_max: its hold slides until the palm and fingers carry exactly that, and the
         // chain feels what the hand transmits (design §5). The force falls by the palm's and fingers' stiffness times
-        // the slide.
-        grip.topOffset = slid(grip.topOffset, scale(sub(top, topHeld), 1 / spring));
-        top = chainForces(chain, topArm, add(topAt, grip.topOffset), topVelocity, topDrive, g);
+        // the slide (plan decision 24: the slip lies at the skin, in series with the palm's and fingers' elements).
+        grip.topOffset = slid(grip.topOffset, scale(sub(top, topHeld), 1 / spring), q);
+        top = chainForces(chain, topArm, add(topAt, rotate(q, grip.topOffset)), topVelocity, topDrive, g);
         saturated = "top";
     }
 ```
@@ -868,8 +949,9 @@ In the `!pendulum` branch, replace
         let bottom = chainForces(chain, bottomArm, bottomAnchor, bottomVelocity, bottomDrive, g);
         const bottomHeld = heldTo(bottom, limit);
         if (bottomHeld !== null) {
-            grip.bottomOffset = slid(grip.bottomOffset, scale(sub(bottom, bottomHeld), 1 / spring));
-            bottom = chainForces(chain, bottomArm, add(bottomAt, grip.bottomOffset), bottomVelocity, bottomDrive, g);
+            grip.bottomOffset = slid(grip.bottomOffset, scale(sub(bottom, bottomHeld), 1 / spring), q);
+            const anchor = add(bottomAt, rotate(q, grip.bottomOffset));
+            bottom = chainForces(chain, bottomArm, anchor, bottomVelocity, bottomDrive, g);
             saturated = saturated ?? "bottom";
         }
 ```
@@ -892,11 +974,12 @@ Replace the `if (!contact) { … }` block with:
     if (!contact) {
         const g = track.firm;
         const limit = hands.gripLimit;
-        // The gaps to the path, less each hand's slid offset once it has saturated (design §5).
+        // The gaps to the path, less each hand's slid offset once it has saturated (design §5), the offset held in
+        // the head's frame (plan decision 10).
         const topReach = sub(add(path.socket, topLever), add(state.position, topArm));
         const bottomReach = sub(add(path.socket, bottomLever), add(state.position, bottomArm));
-        const topGap = grip.topOffset === null ? topReach : sub(topReach, grip.topOffset);
-        const bottomGap = grip.bottomOffset === null ? bottomReach : sub(bottomReach, grip.bottomOffset);
+        const topGap = grip.topOffset === null ? topReach : sub(topReach, rotate(q, grip.topOffset));
+        const bottomGap = grip.bottomOffset === null ? bottomReach : sub(bottomReach, rotate(q, grip.bottomOffset));
         // On a downswing the firm grip keeps the hands' planned pace (feed-forward and damper) but has no position
         // spring (P2b.2b.2a user decision 2026-10-07): a head the turf holds back stays where it is put, so a graze
         // costs the head speed instead of the grip refunding it. A gripped stop keeps the spring: it holds the mallet
@@ -913,13 +996,15 @@ Replace the `if (!contact) { … }` block with:
             twistShare +
             g.twistStiffness * dot(rotationError(path.orientation, q), s) +
             g.twistDamping * dot(spinLag, s);
-        // At the limit a spring's anchor slides by the excess over its stiffness, so the spring holds F_max and
-        // stores no more; a damper alone is capped (design §5).
+        // At the limit the hand transmits F_max, and a spring's anchor slides as tangentialForce resets its spring
+        // (plan decision 24): the spring alone then carries F_max less the hand's share, and never a stretch that
+        // only cancels the damper. A damper alone is capped (design §5).
         let saturated: HandName | null = null;
         const topHeld = heldTo(top, limit);
         if (topHeld !== null) {
             if (spring) {
-                grip.topOffset = slid(grip.topOffset, scale(sub(top, topHeld), 1 / g.stiffness));
+                const slide = sub(topGap, scale(sub(topHeld, topShare), 1 / g.stiffness));
+                grip.topOffset = slid(grip.topOffset, slide, q);
             }
             top = topHeld;
             saturated = "top";
@@ -927,7 +1012,8 @@ Replace the `if (!contact) { … }` block with:
         const bottomHeld = heldTo(bottom, limit);
         if (bottomHeld !== null) {
             if (spring) {
-                grip.bottomOffset = slid(grip.bottomOffset, scale(sub(bottom, bottomHeld), 1 / g.stiffness));
+                const slide = sub(across(bottomGap, s), scale(sub(bottomHeld, bottomShare), 1 / g.stiffness));
+                grip.bottomOffset = slid(grip.bottomOffset, slide, q);
             }
             bottom = bottomHeld;
             saturated = saturated ?? "bottom";
@@ -936,8 +1022,9 @@ Replace the `if (!contact) { … }` block with:
     }
 ```
 
-The bottom hand's force lies across the shaft (its share and its projected pull do), so its slide does too, and the
-next step's projected pull loses exactly the excess.
+After the slide the top spring's term k·(gap − offset) is exactly F_max less the share (to rounding). The bottom
+hand's force lies across the shaft (its share and its projected pull do), so its slide does too: only the gap's
+component across the shaft is reset, and the next step's projected spring term is F_max less the share.
 
 In the swing-mode contact branch, replace from `const top = add(topFed, …)` to the end of the function with:
 
@@ -1047,6 +1134,16 @@ export const TEST_GRIP_LIMIT = 1e5;
 and `gripLimit: TEST_GRIP_LIMIT,` in `TEST_HANDS`. `tests/engine/support/shot.ts`: import it, and add
 `gripLimit: TEST_GRIP_LIMIT,` to `testProfile`'s body, before `...o.body`. Update `testProfile`'s doc comment to list
 `TEST_GRIP_LIMIT`.
+
+The other places that build a `Hands` or a profile body in full (plan review, 2026-10-16):
+
+- `scripts/fitStrokeShape.ts` (its `Hands` literal, beside `pushResponseTime` and `chain`, about line 77): add
+  `gripLimit: defaultProfile.body.gripLimit,`. tsconfig includes `scripts/**`, so `npm run check` fails without it.
+- `tests/engine/swing/buildContact.test.ts`: the `drive.hands` `toEqual` (about lines 225–237) gains
+  `gripLimit: defaultProfile.body.gripLimit` (or the test profile's, as its neighbours read theirs), and the
+  `defaultProfile.body` `toEqual` (about line 654) gains `gripLimit: GRIP_LIMIT`, imported from `track.ts`.
+
+Search for any other: `grep -rn "pushResponseTime:" src scripts tests` lists every literal that builds one.
 
 - [ ] **Step 8: Run the tests**
 
@@ -1905,26 +2002,35 @@ describe("the dead stop (design §4.3; §7.1 case 3)", () => {
 describe("the angle of attack (design §4.3; §7.1 case 4)", () => {
     it("gives a steeper path a greater peak resistance, entering at the same speed and depth", () => {
         // A level sharp box driven at 2 m/s along a straight path φ below horizontal, from its sole on the turf until
-        // its sole is 3·y deep. At that depth the geometry is the same whatever φ: every column under the sole has
-        // yielded to the same set and ploughs fresh turf at the same depth. The steeper path presses down faster,
-        // e′ = v·sin φ, so its columns bear more through the bed's recovery, and the cap is greater.
-        const peaks = [5, 10, 20, 40, 80].map((degrees) => {
+        // its sole is exactly D = 3·y deep (the last step clamped to D). At that depth the geometry is the same
+        // whatever φ: every column under the sole ploughs fresh turf at depth D (plan decision 1), so the ploughing
+        // part of the cap, cap − µ·N_b, is the same within one row of columns' share, 2h/L (the box's travel shifts
+        // the lattice under it). The steeper path presses down faster, e′ = v·sin φ, so its columns bear more through
+        // the bed's recovery, and the peak cap is greater (plan decision 26).
+        const D = 3 * YIELD;
+        const runs = [5, 10, 20, 40, 80].map((degrees) => {
             const phi = (degrees * Math.PI) / 180;
             const velocity = vec3(2 * Math.cos(phi), 0, -2 * Math.sin(phi));
             const bed = newHeadTurfBed(LAW);
             let peak = 0;
             for (let k = 1; ; k++) {
                 const t = k * DT;
-                const depth = 2 * Math.sin(phi) * t;
+                const depth = Math.min(2 * Math.sin(phi) * t, D);
                 const at = state(vec3(velocity.x * t, 0, TEST_RHO - depth), velocity);
-                peak = Math.max(peak, headTurfLoad(bed, at, TEST_SHARP, DT, AIM)?.cap ?? 0);
-                if (depth >= 3 * YIELD) {
-                    return peak;
+                const load = headTurfLoad(bed, at, TEST_SHARP, DT, AIM);
+                peak = Math.max(peak, load?.cap ?? 0);
+                if (depth === D) {
+                    const last = load as HeadTurfLoad;
+                    return { peak, ploughing: last.cap - LAW.friction * last.bearing };
                 }
             }
         });
-        for (let k = 1; k < peaks.length; k++) {
-            expect(peaks[k]).toBeGreaterThan(peaks[k - 1] as number);
+        for (let k = 1; k < runs.length; k++) {
+            const [before, after] = [runs[k - 1], runs[k]] as [(typeof runs)[0], (typeof runs)[0]];
+            expect(after.peak).toBeGreaterThan(before.peak);
+            expect(rel(after.ploughing, (runs[0] as (typeof runs)[0]).ploughing)).toBeLessThan(
+                (2 * LAW.cell) / TEST_SHARP.length,
+            );
         }
     });
 });
@@ -1972,7 +2078,8 @@ describe("symmetry and convergence (design §7.1 case 6)", () => {
         const q = axisAngle(vec3(0, 1, 0), phi);
         const { halfWidth, halfHeight } = TEST_SHARP.shape as BoxShape;
         const half = TEST_SHARP.length / 2;
-        // The heel is the sole's −x end under a positive pitch about +y; put it 3 mm deep.
+        // A positive pitch about +y turns the body's x axis to (cos φ, 0, −sin φ), so the sole's +x end is the lowest;
+        // put that end 3 mm deep (the lowest corner lies half·sin φ + h_z·cos φ below the centre).
         const heel = 0.003;
         const z = 0 - heel + half * Math.sin(phi) + halfHeight * Math.cos(phi);
         const tilted = state(vec3(0.0003, 0.0001, z), ZERO, q);
@@ -1985,10 +2092,6 @@ describe("symmetry and convergence (design §7.1 case 6)", () => {
     });
 });
 ```
-
-Check the heel's sign while writing the last case: with `axisAngle(ŷ, φ)` the body x axis tilts to (cos φ, 0, −sin φ),
-so the +x end goes down. If so, the heel (the lowest end) is the +x end: keep the formula for z (the lowest corner is
-at height z − half·sin φ − h_z·cos φ either way) and fix only the comment.
 
 - [ ] **Step 4: Run them**
 
@@ -2064,8 +2167,8 @@ interface Column {
 
 /**
  * The head's turf in one run (design §4): its law, the columns it has borne on, keyed as the bed's cells (cellKey),
- * its horizontal spring ξ and the tangential stiffness that spring last carried (0 while no column bears), the loads
- * so far, and the columns the last load visited (a cost count; plan decision 21).
+ * its horizontal spring ξ and the tangential stiffness that spring last carried (0 while no column bears), and the
+ * loads so far.
  */
 export interface HeadTurfBed {
     readonly law: HeadTurfLaw;
@@ -2073,12 +2176,11 @@ export interface HeadTurfBed {
     spring: Vec3;
     tangent: number;
     step: number;
-    visits: number;
 }
 
 /** A head's turf with no column met yet. */
 export function newHeadTurfBed(law: HeadTurfLaw): HeadTurfBed {
-    return { law, columns: new Map(), spring: ZERO, tangent: 0, step: 0, visits: 0 };
+    return { law, columns: new Map(), spring: ZERO, tangent: 0, step: 0 };
 }
 
 /**
@@ -2143,7 +2245,6 @@ function bear(
     j: number,
     onYield: () => void,
 ): Bearing | null {
-    bed.visits += 1;
     const { law } = bed;
     const h = law.cell;
     const x = (i + 0.5) * h;
@@ -2194,7 +2295,6 @@ export function headTurfLoad(
     aim: Vec3,
 ): HeadTurfLoad | null {
     bed.step += 1;
-    bed.visits = 0;
     const { law } = bed;
     const h = law.cell;
     const bearings: Bearing[] = [];
@@ -2347,11 +2447,11 @@ Message: `Add the head–turf law: elastic–plastic bearing, ploughing and the 
 ---
 ### Task 5: The law wired in
 
-Spec §2, §4.4, §4.6, §6.3, §7.1 case 6 (in the integrator), §7.2 step 2, §7.5; decisions 6, 13–15, 17 and 21.
+Spec §2, §4.4, §4.6, §6.3, §7.1 case 6 (in the integrator), §7.2 step 2, §7.5; decisions 6, 13–15, 17 and 23.
 
 **Files:**
 - Modify: `src/engine/impact/integrate.ts` (the law, the settle test, `turf-yield`, `impact-head-stopped`,
-  `follow-turf-yield`, `headTurfColumns`)
+  `follow-turf-yield`)
 - Modify: `src/engine/impact/types.ts` (the events; `impact-head-deep`'s note)
 - Modify: `src/engine/impact/simulateImpact.ts` (`headTurfLaw`, the head's turf validation; `HEAD_TURF_FRICTION`
   moved)
@@ -2369,8 +2469,7 @@ Spec §2, §4.4, §4.6, §6.3, §7.1 case 6 (in the integrator), §7.2 step 2, �
 - Produces:
   - `ImpactSetup.headTurf: HeadTurfLaw | null`;
   - the events `{ kind: "turf-yield"; t }` and `{ kind: "impact-head-stopped"; t }`;
-  - `FollowFlag` gains `"follow-turf-yield"`;
-  - `ImpactSnapshot.headTurfColumns?: number`, beside `headTurf`.
+  - `FollowFlag` gains `"follow-turf-yield"`.
 
 - [ ] **Step 1: Rewrite the head–turf tests (failing)**
 
@@ -2378,7 +2477,7 @@ Replace `tests/engine/impact/headTurf.test.ts` with:
 
 ```ts
 import { describe, expect, it } from "vitest";
-import { HEAD_TURF_KEY } from "../../../src/engine/impact/contacts";
+import { HEAD_TURF_KEY, headLowestPoint } from "../../../src/engine/impact/contacts";
 import { HEAD_REST_SPEED, headTurfLawOf } from "../../../src/engine/impact/headTurf";
 import {
     HEAD_DEEP_LIMIT,
@@ -2476,10 +2575,13 @@ describe("the head–turf pair in the impact (P2b.2b.2b.3 design §4)", () => {
     });
 
     it("raises turf-yield once, when a column first yields", () => {
-        // A box pitched 0.3 rad dropped 10 mm meets the turf on its edge: the few columns under it pass the yield
-        // depth at once (0.67 mm on the test law), and more yield after; the event is raised once.
+        // A box pitched 0.3 rad meets the turf on its edge at 1 m/s, its lowest point starting 1 mm above the plane:
+        // the few columns under the edge pass the yield depth (0.67 mm on the test law) within a millisecond, and
+        // more yield after; the event is raised once.
         const q = axisAngle(vec3(0, 1, 0), 0.3);
-        const run = integrate(onTurf(TEST_BOX, vec3(0, 0, 0.06), ZERO, q), { cap: 0.02 });
+        const placed = { position: vec3(0, 0, 0.1), orientation: q, velocity: ZERO, angularVelocity: ZERO };
+        const z = 0.1 - headLowestPoint(placed, TEST_BOX) + 0.001;
+        const run = integrate(onTurf(TEST_BOX, vec3(0, 0, z), vec3(0, 0, -1), q), { cap: 0.02 });
         expect(run.events.filter((e) => e.kind === "turf-yield")).toHaveLength(1);
     });
 
@@ -2601,12 +2703,7 @@ import { HEAD_REST_SPEED, headTurfLoad, newHeadTurfBed, type HeadTurfBed, type H
     readonly headTurf: HeadTurfLaw | null;
 ```
 
-3. `ImpactSnapshot`, after `headTurf`:
-
-```ts
-    /** The head's turf columns visited in the step (a cost count; P2b.2b.2b.3 plan decision 21), with `headTurf`. */
-    readonly headTurfColumns?: number;
-```
+3. `ImpactSnapshot` is unchanged: the probe counts the columns from the snapshot's head itself (plan decision 21).
 
 4. `FollowFlag`: add `"follow-turf-yield"`, and to its comment "…, or a column of the head's turf first yielding in
    the follow-through".
@@ -2688,8 +2785,7 @@ function atRest(load: HeadTurfLoad, state: HeadState): boolean {
         resting = turfLoad !== null && atRest(turfLoad, state) ? resting + 1 : 0;
 ```
 
-   - in the probe's snapshot: `...(turf === null ? {} : { headTurf: turfLoad?.force ?? ZERO, headTurfColumns:
-     turf.bed.visits })`;
+   - in the probe's snapshot: `...(turf === null ? {} : { headTurf: turfLoad?.force ?? ZERO })`;
    - after the `settled` break and before the cap:
 
 ```ts
@@ -2832,9 +2928,12 @@ Task 10.
 
 - [ ] **Step 9: Run the ratchet (in the background)**
 
-Spec §7.2 step 2. Run each with `run_in_background: true`:
+Spec §7.2 step 2. First the timed sweep, **alone** (plan decision 23), with `run_in_background: true`:
 
 Run: `/usr/bin/time -p npx --yes tsx <temp>/scripts/presetDigest.mts > <temp>/after/presetDigest-task5.txt 2> <temp>/after/presetDigest-task5.time`
+
+When it has finished, run the others with `run_in_background: true`:
+
 Run: `npx --yes tsx scripts/impactDigest.ts > <temp>/after/impactDigest-task5.txt`
 Run: `npx --yes tsx scripts/shotMix.ts > <temp>/after/shotMix-task5.txt`
 Run: `npx --yes tsx scripts/impactProbe.ts > <temp>/after/impactProbe-task5.txt`
@@ -3107,8 +3206,9 @@ figures); decisions 19 and 20.
 - Create: `docs/superpowers/probes/<date>-p2b2b2b3-regimes.txt`
 
 **Interfaces:**
-- Consumes: Task 5's events and `headTurfColumns`; Task 6's `stroke.jab`.
-- Produces: the probe's sections `regimes`, `jab`, `bounds` and `cost`, each printing the lines Task 8 and Task 10
+- Consumes: Task 5's events; Task 3's `headExtent`, `columnSpan`; Task 6's `stroke.jab`.
+- Produces: the probe's sections `regimes`, `series`, `jab`, `bounds` and `cost`, each printing the lines Task 8 and
+  Task 10
   read; the found setups, pinned in the test.
 
 - [ ] **Step 1: Write the probe**
@@ -3119,8 +3219,11 @@ Create `scripts/turfStrikeProbe.ts`:
 /**
  * Turf strike probe (P2b.2b.2b.3 design §7.3, §7.4, §8, §9: recorded; the regimes and the jab check are gated by
  * tests/engine/turfStrike.test.ts). On the default world and profile, reports:
- * - regimes: plan decision 19's candidate grids for a light graze, a weak stroke stopped dead, a head biting in, and a
- *   roll's follow-through yielding the turf; each candidate's figures, and the first that qualifies (FOUND), or NONE;
+ * - regimes: plan decision 19's candidate grids for a light graze, a weak stroke stopped dead and a head biting in,
+ *   then the rolls for a follow-through yielding the turf (follow-turf-yield's test; not a regime); each candidate's
+ *   figures, and the first that qualifies (FOUND), or NONE;
+ * - series: each regime's found run over time, every 1 ms of the impact: the head's speed along aim, its lowest
+ *   point, the turf's bearing and resistance along aim, and each hand's force (design §8);
  * - jab: the AC stop at 3 m/s over jab 0–8 mm in 0.5 mm steps (Gugan 5, design §7.3; plan decision 20): U, the second
  *   tap and its ratio, whether the depth qualifies and is a graze, when the head first grounds, its lowest point, and
  *   the events and flags; the check's verdict; then the jab against the hands' check at 3 and 4 m/s: the second tap
@@ -3132,11 +3235,12 @@ Create `scripts/turfStrikeProbe.ts`:
  * Run with `npx --yes tsx scripts/turfStrikeProbe.ts`; environment: SECTION (one of the names above; default all). Not
  * part of the test suite; its output goes into the gate and the roadmap's outcomes.
  */
-import { headLowestPoint } from "../src/engine/impact/contacts";
+import { headExtent, headLowestPoint } from "../src/engine/impact/contacts";
+import { BED_CELL, columnSpan } from "../src/engine/impact/turfBed";
 import { IMPACT_DT, type FollowThrough, type ImpactProbe, type ImpactSnapshot } from "../src/engine/impact/integrate";
 import { simulateStroke } from "../src/engine/impact/simulateImpact";
 import type { HeadState, ImpactResult, MalletHead } from "../src/engine/impact/types";
-import { ZERO, dot, vec3, type Vec3 } from "../src/engine/math/vec3";
+import { ZERO, dot, length, vec3, type Vec3 } from "../src/engine/math/vec3";
 import { planStroke } from "../src/engine/swing/buildContact";
 import { STROKE_TYPES, type ShotSetup, type StrokeType } from "../src/engine/swing/types";
 import type { SurfaceProps, World } from "../src/engine/types";
@@ -3158,13 +3262,30 @@ function lawnWith(over: Partial<SurfaceProps>): World {
     return { ...WORLD, lawn: uniformLawn(WORLD.lawn.width, WORLD.lawn.length, { ...surface, ...over }) };
 }
 
-/** One impact step as the probe keeps it: the head after it, the hands' and the turf's forces during it. */
+/**
+ * One impact step as the probe keeps it: the head after it, the hands' forces (both, and each) and the turf's during
+ * it, and the head's turf columns over the head after it (plan decision 21: the law's own count, within a cell's
+ * row of the head before the step).
+ */
 interface Step {
     readonly t: number;
     readonly head: HeadState;
     readonly hand: Vec3;
+    readonly top: Vec3;
+    readonly bottom: Vec3;
     readonly turf: Vec3;
     readonly columns: number;
+}
+
+/** The columns the head–turf law visits with the head at `s` (plan decision 21): none while it is above the plane. */
+function columnsUnder(s: HeadState, head: MalletHead): number {
+    if (!(headLowestPoint(s, head) < 0)) {
+        return 0;
+    }
+    const extent = headExtent(s, head);
+    const [i0, i1] = columnSpan(s.position.x, extent.x, BED_CELL);
+    const [j0, j1] = columnSpan(s.position.y, extent.y, BED_CELL);
+    return (i1 - i0 + 1) * (j1 - j0 + 1);
 }
 
 /** One stroke: its setup, impact, follow-through and steps, the head at t = 0, the mallet head and the aim. */
@@ -3187,8 +3308,10 @@ function run(label: string, setup: ShotSetup, world: World = WORLD): Run {
                 t: s.t,
                 head: s.head,
                 hand: s.hand?.force ?? ZERO,
+                top: s.hand?.top ?? ZERO,
+                bottom: s.hand?.bottom ?? ZERO,
                 turf: s.headTurf ?? ZERO,
-                columns: s.headTurfColumns ?? 0,
+                columns: s.headTurf === undefined ? 0 : columnsUnder(s.head, plan.contact.head),
             });
         },
     };
@@ -3294,10 +3417,18 @@ function grid(
     );
 }
 
-/** Plan decision 19's regimes: name, candidates and test, in spec §7.4's order, then the follow-through's flag. */
-const REGIMES: readonly { name: string; candidates: Candidate[]; qualifies: (r: Run) => boolean }[] = [
+/** A grid's name, candidates and test. */
+interface Search {
+    readonly name: string;
+    readonly candidates: Candidate[];
+    readonly qualifies: (r: Run) => boolean;
+}
+
+/** Plan decision 19's regimes, in spec §7.4's order. */
+const REGIMES: readonly Search[] = [
     {
-        // A light graze: the dip grounds the head before the ball, never past HEAD_DEEP_LIMIT, and the ball is struck.
+        // A light graze: the dip grounds the head before the ball, never past HEAD_DEEP_LIMIT, and the ball is struck
+        // with the head keeping most of its speed, over half its speed at the turf (plan decision 25).
         name: "graze",
         candidates: grid("single-ball", 3, [-0.005, -0.01, -0.02, -0.03], [0.001, 0.002, 0.003, 0.004, 0.005, 0.006]),
         qualifies: (r) => {
@@ -3309,7 +3440,8 @@ const REGIMES: readonly { name: string; candidates: Candidate[]; qualifies: (r: 
                 turf !== undefined &&
                 turf < face &&
                 !marks.includes("impact-head-deep") &&
-                !marks.includes("grip-limit")
+                !marks.includes("grip-limit") &&
+                along(r, face) > 0.5 * along(r, turf)
             );
         },
     },
@@ -3325,21 +3457,53 @@ const REGIMES: readonly { name: string; candidates: Candidate[]; qualifies: (r: 
         candidates: grid("single-ball", 4, [-0.005, -0.01, -0.02], [0.01, 0.02, 0.03, 0.04]),
         qualifies: (r) => r.impact.events.some((e) => e.kind === "grip-limit"),
     },
-    {
-        // A roll's follow-through ploughing: its head yields the turf after the impact.
-        name: "follow",
-        candidates: (["half-roll", "full-roll", "pass-roll"] as const).flatMap((type) =>
-            [2, 3, 4].map((speed) => ({ label: `${type} ${speed} m/s`, setup: () => shot(type, speed) })),
-        ),
-        qualifies: (r) => r.follow.flags.includes("follow-turf-yield"),
-    },
 ];
 
+/** A roll whose follow-through yields the turf (follow-turf-yield's test, design §4.6): recorded, not a regime. */
+const FOLLOW: Search = {
+    name: "follow (not a regime)",
+    candidates: (["half-roll", "full-roll", "pass-roll"] as const).flatMap((type) =>
+        [2, 3, 4].map((speed) => ({ label: `${type} ${speed} m/s`, setup: () => shot(type, speed) })),
+    ),
+    qualifies: (r) => r.follow.flags.includes("follow-turf-yield"),
+};
+
+/** The three regimes' found runs on `world`, in REGIMES' order (null where none is found). */
 function regimes(world: World, quiet: boolean): (Run | null)[] {
     if (!quiet) {
         console.log("== regimes (design §7.4; plan decision 19) ==");
     }
     return REGIMES.map((g) => search(g.name, g.candidates, g.qualifies, world, quiet));
+}
+
+/** Each found regime's run over time, every 1 ms of the impact (design §8). */
+function series(found: readonly (Run | null)[]): void {
+    console.log("== series (design §8): t ms, speed m/s, lowest mm, bearing N, resistance N, top N, bottom N ==");
+    REGIMES.forEach((g, k) => {
+        const r = found[k];
+        if (r === undefined || r === null) {
+            console.log(`-- ${g.name}: none found --`);
+            return;
+        }
+        console.log(`-- ${g.name} (${r.label}) --`);
+        for (const s of r.steps) {
+            if (Math.round(s.t * 1e6) % 1000 !== 0) {
+                continue;
+            }
+            console.log(
+                [
+                    ms(s.t),
+                    dot(s.head.velocity, r.aim).toFixed(4),
+                    mm(headLowestPoint(s.head, r.head)),
+                    s.turf.z.toFixed(1),
+                    dot(s.turf, r.aim).toFixed(1),
+                    length(s.top).toFixed(1),
+                    length(s.bottom).toFixed(1),
+                ].join(" "),
+            );
+        }
+        console.log(`events ${r.impact.events.map((e) => `${e.kind}@${ms(e.t)}`).join(", ")}`);
+    });
 }
 
 /** Gugan's figures of one AC stop (design §7.3; plan decision 20), or null with no face interval. */
@@ -3471,9 +3635,15 @@ function cost(): void {
     }
 }
 
-if (SECTION === "all" || SECTION === "regimes" || SECTION === "bounds") {
-    const found = regimes(WORLD, SECTION === "bounds");
-    if (SECTION !== "regimes") {
+if (SECTION === "all" || SECTION === "regimes" || SECTION === "series" || SECTION === "bounds") {
+    const found = regimes(WORLD, SECTION === "bounds" || SECTION === "series");
+    if (SECTION === "all" || SECTION === "regimes") {
+        search(FOLLOW.name, FOLLOW.candidates, FOLLOW.qualifies, WORLD);
+    }
+    if (SECTION === "all" || SECTION === "series") {
+        series(found);
+    }
+    if (SECTION === "all" || SECTION === "bounds") {
         bounds(found);
     }
 }
@@ -3491,9 +3661,11 @@ Run: `npx prettier --write scripts/turfStrikeProbe.ts`, then `npm run lint` and 
 
 Run (in the background): `env SECTION=regimes npx --yes tsx scripts/turfStrikeProbe.ts > docs/superpowers/probes/<date>-p2b2b2b3-regimes.txt`
 
-When it finishes, read each `FOUND` line. If any regime prints `NONE`, **stop and report** to the user with its
-grid's lines: spec §7.4 requires each regime on a constructed setup, and the grid (decision 19) did not find one. Do
-not widen the grid without the user.
+When it finishes, read each `FOUND` line. If any of the three regimes (graze, stopped, biting) prints `NONE`, **stop
+and report** to the user with its grid's lines: spec §7.4 requires each regime on a constructed setup, and the grid
+(decision 19) did not find one. Do not widen the grid without the user. The roll's search ("follow (not a regime)")
+does not stop the task: if it prints `NONE`, write the follow-turf-yield test as `it.todo` with a comment naming the
+probe file, and the gate (Task 8) reports it.
 
 - [ ] **Step 3: Write the tests**
 
@@ -3552,6 +3724,7 @@ const timed = (dip: number, jab: number, extra: Partial<ShotSetup["stroke"]> = {
 
 describe("the three regimes (P2b.2b.2b.3 design §7.4)", () => {
     it("grazes: the head grounds before the ball, under 2 mm, strikes it and keeps most of its speed", () => {
+        // "Most" is over half its speed at the turf (plan decision 25), the probe's own qualifying test.
         // <Step 2's figures for GRAZE: the turf interval, the lowest point, the speeds at the turf and at the ball.>
         const { impact, speed } = along(shot(GRAZE.type, GRAZE.speed, timed(GRAZE.dip, GRAZE.jab)));
         const turf = impact.timeline["head/turf"]?.[0];
@@ -3578,7 +3751,9 @@ describe("the three regimes (P2b.2b.2b.3 design §7.4)", () => {
         const { impact } = along(shot(BITING.type, BITING.speed, timed(BITING.dip, BITING.jab)));
         expect(impact.events.map((e) => e.kind)).toContain("grip-limit");
     });
+});
 
+describe("the follow-through's flags (P2b.2b.2b.3 design §4.6)", () => {
     it("flags follow-turf-yield when a roll's follow-through yields the turf (design §4.6)", () => {
         // <Step 2's figures for FOLLOW.>
         const outcome = simulateShot(shot(FOLLOW.type, FOLLOW.speed), WORLD, { trajectory: true });
@@ -3654,7 +3829,7 @@ Spec §8, §9. **This task always stops for the user**, whatever the figures sho
 
 **Files:**
 - Create: `docs/superpowers/probes/<date>-p2b2b2b3-gate.txt` (the gate's raw output)
-- Temp: `<temp>/scripts/regimeSeries.mts`, `<temp>/after/*`
+- Temp: `<temp>/after/*`
 
 **Interfaces:**
 - Consumes: Task 1's baseline and scripts; Task 2's `saturated.txt`; Task 5's `moved-task5.txt`, `cost.txt`,
@@ -3662,94 +3837,33 @@ Spec §8, §9. **This task always stops for the user**, whatever the figures sho
 
 - [ ] **Step 1: The regimes over time**
 
-Create `<temp>/scripts/regimeSeries.mts`:
-
-```ts
-/**
- * P2b.2b.2b.3's gate (spec §8): each regime's run over time, every 1 ms of the impact: the head's speed along aim, its
- * lowest point, the turf's bearing and horizontal resistance along aim, and each hand's force. The setups are
- * tests/engine/turfStrike.test.ts's. Throwaway, never committed. Run from the worktree: npx --yes tsx <this>.
- */
-import { headLowestPoint } from
-    "/Users/jodre11/Repos/croquet-sim/.claude/worktrees/p2b2b2b3-turf-strike/src/engine/impact/contacts";
-import type { ImpactProbe } from
-    "/Users/jodre11/Repos/croquet-sim/.claude/worktrees/p2b2b2b3-turf-strike/src/engine/impact/integrate";
-import { simulateImpact } from
-    "/Users/jodre11/Repos/croquet-sim/.claude/worktrees/p2b2b2b3-turf-strike/src/engine/impact/simulateImpact";
-import type { TrackDrive } from
-    "/Users/jodre11/Repos/croquet-sim/.claude/worktrees/p2b2b2b3-turf-strike/src/engine/impact/types";
-import { ZERO, dot, length } from
-    "/Users/jodre11/Repos/croquet-sim/.claude/worktrees/p2b2b2b3-turf-strike/src/engine/math/vec3";
-import { buildContact } from
-    "/Users/jodre11/Repos/croquet-sim/.claude/worktrees/p2b2b2b3-turf-strike/src/engine/swing/buildContact";
-import type { ShotSetup, StrokeType } from
-    "/Users/jodre11/Repos/croquet-sim/.claude/worktrees/p2b2b2b3-turf-strike/src/engine/swing/types";
-import { defaultWorld } from "/Users/jodre11/Repos/croquet-sim/.claude/worktrees/p2b2b2b3-turf-strike/src/engine/world";
-import { backswingFor, canonicalSetup } from
-    "/Users/jodre11/Repos/croquet-sim/.claude/worktrees/p2b2b2b3-turf-strike/tests/engine/support/shot";
-
-const WORLD = defaultWorld();
-// Copy GRAZE, STOPPED and BITING from tests/engine/turfStrike.test.ts.
-const REGIMES = [
-    { name: "graze", type: "single-ball", speed: 3, dip: 0, jab: 0, intensity: undefined },
-    { name: "stopped", type: "single-ball", speed: 1, dip: 0, jab: 0, intensity: 0 },
-    { name: "biting", type: "single-ball", speed: 4, dip: 0, jab: 0, intensity: undefined },
-] as const;
-
-for (const g of REGIMES) {
-    const stroke = { jab: g.jab, timing: { arc: 0, hands: 0, dip: g.dip }, ...(g.intensity === undefined ? {} : { intensity: g.intensity }) };
-    const base = canonicalSetup(g.type as StrokeType, { world: WORLD, stroke });
-    const setup: ShotSetup = { ...base, stroke: { ...base.stroke, backswing: backswingFor(base, g.speed, WORLD) } };
-    const contact = buildContact(setup, WORLD);
-    const aim = (contact.drive as TrackDrive).arc.aim;
-    console.log(`== ${g.name}: t ms, speed m/s, lowest mm, bearing N, resistance N, top N, bottom N ==`);
-    const probe: ImpactProbe = {
-        step(s) {
-            if (Math.round(s.t * 1e6) % 1000 !== 0) {
-                return;
-            }
-            const turf = s.headTurf ?? ZERO;
-            console.log(
-                [
-                    (s.t * 1e3).toFixed(1),
-                    dot(s.head.velocity, aim).toFixed(4),
-                    (headLowestPoint(s.head, contact.head) * 1e3).toFixed(3),
-                    turf.z.toFixed(1),
-                    dot(turf, aim).toFixed(1),
-                    length(s.hand?.top ?? ZERO).toFixed(1),
-                    length(s.hand?.bottom ?? ZERO).toFixed(1),
-                ].join(" "),
-            );
-        },
-    };
-    const impact = simulateImpact(contact, setup.balls, WORLD, { probe });
-    console.log(`events ${impact.events.map((e) => `${e.kind}@${(e.t * 1e3).toFixed(2)}`).join(", ")}`);
-}
-```
-
-Set its three entries' `dip` and `jab` (and the stopped run's intensity 0) from `tests/engine/turfStrike.test.ts`.
+The probe's `series` section (Task 7) prints each found regime's run every 1 ms of the impact, from the setups its
+own `regimes` search finds, so nothing is copied by hand (plan review, 2026-10-16). Step 2 runs it.
 
 - [ ] **Step 2: Run the gate's figures (in the background)**
 
 Run each with `run_in_background: true`:
 
 Run: `npx --yes tsx <temp>/scripts/gateFigures.mts > <temp>/after/gate.txt`
-Run: `npx --yes tsx <temp>/scripts/regimeSeries.mts > <temp>/after/regimeSeries.txt`
 Run: `npx --yes tsx scripts/turfStrikeProbe.ts > <temp>/after/turfStrikeProbe.txt`
 Run: `npx --yes tsx scripts/strokeProbe.ts > <temp>/after/strokeProbe.txt`
 Run: `npx --yes tsx scripts/swingProbe.ts > <temp>/after/swingProbe.txt`
+
+When all four have finished and `pgrep -fl tsx` prints none, run the timed job **alone** (plan decision 23), at Task
+1's `COUNT`:
+
 Run: `env COUNT=800 npx --yes tsx scripts/shotMix.ts > <temp>/after/shotMix-cost.txt`
 
 - [ ] **Step 3: Write the gate file**
 
-When all six finish, write `docs/superpowers/probes/<date>-p2b2b2b3-gate.txt` with these sections, each under a
+When all five finish, write `docs/superpowers/probes/<date>-p2b2b2b3-gate.txt` with these sections, each under a
 heading line `== <name> ==`:
 
-1. **The cost** (spec §9; the side note of 2026-10-15): `<temp>/after/cost.txt` (the preset sweep's wall time,
-   baseline against now); the probe's `cost` section; `shotMix`'s engine time per shot from `shotMix-cost.txt`
-   against the baseline's.
-2. **The regimes** (spec §7.4): each found setup's line from the regimes file, then its series from
-   `regimeSeries.txt`.
+1. **The cost** (spec §9; the user's relayed note of 2026-10-15; plan decision 23): `<temp>/after/cost.txt` (the
+   preset sweep's wall time, timed alone, baseline against now); the probe's `cost` section; `shotMix`'s engine time
+   per shot from `shotMix-cost.txt` against `<temp>/baseline/shotMix-cost.txt`, both at COUNT=800 and run alone.
+2. **The regimes** (spec §7.4): each found setup's line from the regimes file, then its series from the probe's
+   `series` section; the roll's search ("follow (not a regime)"): its FOUND line, or NONE.
 3. **The bounds** (spec §6.2, §8): the probe's `bounds` section.
 4. **The jab** (spec §7.3): the probe's `jab` section, the jab check's verdict, and `jab-check.txt` if Task 7 wrote
    it.
@@ -3778,7 +3892,9 @@ Show the user, in this order:
    P2b.2b.2c, and this step does not change the law for it.
 6. **The canonical runs** against the baseline: the head–turf intervals, depth and slide, the follow-through's finish
    and flags (the full and pass rolls' among them), the highest ball centre and the pass roll's rebound against its
-   accepted 20.76 mm (exit criterion 5; a larger rise goes to the user here).
+   accepted 20.76 mm (exit criterion 5; a larger rise goes to the user here). Name every run whose follow-through now
+   ends at `follow-cap`: a head stopped in its furrow never rises, so carry mode's finish (`grip.rising`) is never
+   met, and exit criterion 5 fails at Task 9 unless the user rules on it here.
 7. **The ratchet**: every moved preset run, every saturated run, the late re-hit's crossings and any overlap at the
    impact's end (exit criterion 6).
 8. **The tests**: every re-baselined figure and every unpredicted one.
@@ -3933,10 +4049,11 @@ In `docs/superpowers/plans/2026-09-30-croquet-shot-lab-roadmap.md`:
 
 - [ ] **Step 4: Record this plan's decisions in the phase spec**
 
-Append to the phase spec an "Amendments (plan, <date>)" section. List decisions 1–21 above, each with its reason; the
-user's rulings on decisions 1 and 2 (2026-10-15, before the plan); and every gate ruling. Decisions 1 and 2 also amend
-§4.3's text: note there, in the amendment, which sentences they supersede ("its deepest column's elastic deflection
-e", "with no damping").
+Append to the phase spec an "Amendments (plan, <date>)" section. List decisions 1–26 above, each with its reason
+(22–26 and the changes to 10, 19 and 21 came from the plan's review, 2026-10-16); the user's rulings on decisions 1
+and 2 (2026-10-15, before the plan); and every gate ruling. Decisions 1 and 2 also amend §4.3's text: note there, in
+the amendment, which sentences they supersede ("its deepest column's elastic deflection e", "with no damping").
+Decision 26 qualifies §4.3's "The cap does not depend on speed" (the ploughing part only).
 
 - [ ] **Step 5: Check the documents**
 
