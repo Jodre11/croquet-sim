@@ -52,9 +52,11 @@ const timed = (up: number, dip: number, jab: number, extra: Partial<ShotSetup["s
 describe("the three regimes (P2b.2b.2b.3 design §7.4)", () => {
     it("grazes: the head grounds before the ball, under 2 mm, strikes it and keeps most of its speed", () => {
         // "Most" is over half its speed at the turf (plan decision 25), the probe's own qualifying test.
-        // The probe: head/turf from 5.33 ms, peak 1.700 mm, turf-yield; the face at 97.21 ms, 2.8217 m/s along aim at
-        // the turf and 2.2377 m/s at the ball. Struck 10 mm low, the dipping head scrapes the turf and ploughs it for
-        // ~92 ms, losing a fifth of its speed, before the face reaches the ball.
+        // The probe: the face at 97.21 ms at 2.2377 m/s along aim, against 3.0000 m/s for the same stroke clear of the
+        // turf (up 0) and 2.8217 m/s on entering the turf at 5.33 ms; then head/turf to 34.94 ms, peak 1.700 mm,
+        // turf-yield. Struck 10 mm low, the dipping head scrapes the turf and ploughs it for ~92 ms before the face
+        // reaches the ball: the graze's cost is power, a quarter of the stroke's speed, so the shot falls short of
+        // the one attempted; the lawn's damage is secondary.
         const { impact, speed } = along(shot(GRAZE.type, GRAZE.speed, timed(GRAZE.up, GRAZE.dip, GRAZE.jab)));
         const turf = impact.timeline["head/turf"]?.[0];
         const face = impact.timeline["face/blue"]?.[0];

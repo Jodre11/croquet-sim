@@ -231,7 +231,9 @@ interface Search {
 const REGIMES: readonly Search[] = [
     {
         // A light graze: the dip grounds the head before the ball, never past HEAD_DEEP_LIMIT, and the ball is struck
-        // with the head keeping most of its speed, over half its speed at the turf (plan decision 25).
+        // with the head keeping most of its speed, over half its speed at the turf (plan decision 25). Its cost is the
+        // power it loses, so the shot falls short of the one attempted; the lawn's damage is secondary (user ruling
+        // 2026-10-16).
         name: "graze",
         candidates: grid("single-ball", 3, [-0.005, -0.01, -0.02, -0.03], SMALL_JABS),
         qualifies: (r) => {
