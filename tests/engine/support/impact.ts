@@ -68,6 +68,17 @@ export const TEST_BOX: MalletHead = {
     shaft: { mass: 0, length: 0.9 },
 };
 
+/**
+ * A sharp 1.0 kg box (edge radius 0; P2b.2b.2b.3 design §7.1), 0.231 m long and 0.065 m wide, as tall as TEST_HEAD:
+ * centred over the origin, no column centre of the 2 mm lattice falls on its sole's edges (116 columns along, 32
+ * across), so the columns under it are counted exactly. Its inertia is TEST_BOX's; unsourced, as TEST_HEAD.
+ */
+export const TEST_SHARP: MalletHead = {
+    ...TEST_BOX,
+    length: 0.231,
+    shape: { kind: "box", halfWidth: 0.0325, halfHeight: TEST_RHO, edgeRadius: 0 },
+};
+
 export const TEST_FACE: FaceMaterial = { friction: 0.4 };
 
 /** A coupling for tracked test heads: plausible, not sourced (design §3.4 sets the engine's); contact at t = 0. */

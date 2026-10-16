@@ -4,8 +4,8 @@
  * later one (the ball–turf pair is the bed's, turfBed.ts). Penetration δ > 0 means the pair is closed. The contact
  * point lies on the normal's line, δ/2 inside ball B's undeformed surface: x = c_B − (R − δ/2)·n. The ball–obstacle
  * pair (P2b.2a design §4) acts from a hoop upright or the peg, an immovable vertical cylinder, along the horizontal
- * normal from its axis to the ball's centre. The head–turf pair (P2b.2b.1 design §4.1) acts from the turf on the
- * head's lowest point, along ẑ.
+ * normal from its axis to the ball's centre. The head–turf pair (P2b.2b.2b.3 design §4) acts from the turf's columns
+ * under the head's underside (headUnderside), on the turf bed's lattice (headTurf.ts).
  * For a tracked drive the face–ball pair meets the whole head (design §4.5, headBallContact): a solid cylinder or a
  * rounded box (P2b.2b.2b.2c design §3). The force table's face-only contact is the cylinder's alone.
  */
@@ -480,6 +480,163 @@ export function headBottom(state: HeadState, head: MalletHead): Vec3 {
     const size = length(rise);
     const across = size > 0 ? scale(rise, shape.radius / size) : vec3(0, 0, 0);
     return sub(sub(state.position, end), across);
+}
+
+/**
+ * The head's horizontal half-extents (m) about its centre along world x and y, z 0 (P2b.2b.2b.3 design §4.1; plan
+ * decision 8): a box's Σ_i |R_ki|·h_i over its full box's half-extents h = (L/2, h_y, h_z), which bound the rounded
+ * box; a cylinder's (L/2)·|a_k| + r·√(1 − a_k²), a the unit axis.
+ */
+export function headExtent(state: HeadState, head: MalletHead): Vec3 {
+    const q = state.orientation;
+    const ax = rotate(q, vec3(1, 0, 0));
+    const half = head.length / 2;
+    const { shape } = head;
+    if (shape.kind === "box") {
+        const ay = rotate(q, vec3(0, 1, 0));
+        const az = rotate(q, vec3(0, 0, 1));
+        return vec3(
+            Math.abs(ax.x) * half + Math.abs(ay.x) * shape.halfWidth + Math.abs(az.x) * shape.halfHeight,
+            Math.abs(ax.y) * half + Math.abs(ay.y) * shape.halfWidth + Math.abs(az.y) * shape.halfHeight,
+            0,
+        );
+    }
+    const r = shape.radius;
+    return vec3(
+        Math.abs(ax.x) * half + r * Math.sqrt(Math.max(0, 1 - ax.x * ax.x)),
+        Math.abs(ax.y) * half + r * Math.sqrt(Math.max(0, 1 - ax.y * ax.y)),
+        0,
+    );
+}
+
+/** The z with A·z² + 2·B·z + C ≤ 0, as [lo, hi]; every z for A = 0 and C ≤ 0; null where there is none. */
+function quadraticSpan(a: number, b: number, c: number): readonly [number, number] | null {
+    if (a === 0) {
+        return c <= 0 ? [0 - Infinity, Infinity] : null;
+    }
+    const disc = b * b - a * c;
+    if (disc < 0) {
+        return null;
+    }
+    const root = Math.sqrt(disc);
+    return [(0 - b - root) / a, (0 - b + root) / a];
+}
+
+/** The z with |p + z·u| ≤ half, one slab of a box, as [lo, hi]; every z for u = 0 inside it; null where none. */
+function slabSpan(p: number, u: number, half: number): readonly [number, number] | null {
+    if (u === 0) {
+        return Math.abs(p) <= half ? [0 - Infinity, Infinity] : null;
+    }
+    const a = (0 - half - p) / u;
+    const b = (half - p) / u;
+    return a < b ? [a, b] : [b, a];
+}
+
+/** The lowest z of two spans' overlap, or Infinity where either is null or they do not overlap. */
+function entryOf(a: readonly [number, number] | null, b: readonly [number, number] | null): number {
+    if (a === null || b === null) {
+        return Infinity;
+    }
+    const lo = Math.max(a[0], b[0]);
+    return lo <= Math.min(a[1], b[1]) ? lo : Infinity;
+}
+
+/** Where the line p + z·u (body frame) enters the axis-aligned box of half-extents `half`, or Infinity. */
+function boxEntry(p: Vec3, u: Vec3, half: Vec3): number {
+    const x = slabSpan(p.x, u.x, half.x);
+    const y = slabSpan(p.y, u.y, half.y);
+    const z = slabSpan(p.z, u.z, half.z);
+    return entryOf(x === null || y === null ? null : [Math.max(x[0], y[0]), Math.min(x[1], y[1])], z);
+}
+
+/**
+ * Where the line enters a cylinder of radius `radius` along one body axis: `along` and `rate` its axial coordinate
+ * and rate, within ±`half`; `a`, `b` and `ua`, `ub` its two across coordinates from the axis and their rates.
+ */
+function rodEntry(
+    along: number,
+    rate: number,
+    half: number,
+    a: number,
+    ua: number,
+    b: number,
+    ub: number,
+    radius: number,
+): number {
+    const round = quadraticSpan(ua * ua + ub * ub, a * ua + b * ub, a * a + b * b - radius * radius);
+    return entryOf(slabSpan(along, rate, half), round);
+}
+
+const SIGNS = [-1, 1] as const;
+
+/**
+ * Where the line p + z·u (body frame) enters the rounded box (P2b.2b.2b.3 plan decision 9). The box grown by e on
+ * every axis contains it; where the line enters that box on a flat face (at most one coordinate beyond the core), the
+ * entry is exact. Otherwise it enters on an edge or a corner, and the rounded box is the union of three slab-grown
+ * boxes, twelve edge cylinders and eight corner spheres: its entry is the lowest of theirs.
+ */
+function roundedBoxEntry(p: Vec3, u: Vec3, shape: BoxShape, length: number): number {
+    const c = boxCore(shape, length);
+    const e = shape.edgeRadius;
+    const grown = boxEntry(p, u, vec3(c.x + e, c.y + e, c.z + e));
+    if (!(grown < Infinity) || e === 0) {
+        return grown;
+    }
+    const q = add(p, scale(u, grown));
+    const beyond = (Math.abs(q.x) > c.x ? 1 : 0) + (Math.abs(q.y) > c.y ? 1 : 0) + (Math.abs(q.z) > c.z ? 1 : 0);
+    if (beyond <= 1) {
+        return grown;
+    }
+    let lowest = Math.min(
+        boxEntry(p, u, vec3(c.x + e, c.y, c.z)),
+        boxEntry(p, u, vec3(c.x, c.y + e, c.z)),
+        boxEntry(p, u, vec3(c.x, c.y, c.z + e)),
+    );
+    const uu = dot(u, u);
+    for (const s1 of SIGNS) {
+        for (const s2 of SIGNS) {
+            lowest = Math.min(
+                lowest,
+                rodEntry(p.x, u.x, c.x, p.y - s1 * c.y, u.y, p.z - s2 * c.z, u.z, e),
+                rodEntry(p.y, u.y, c.y, p.x - s1 * c.x, u.x, p.z - s2 * c.z, u.z, e),
+                rodEntry(p.z, u.z, c.z, p.x - s1 * c.x, u.x, p.y - s2 * c.y, u.y, e),
+            );
+            for (const s3 of SIGNS) {
+                const d = sub(p, vec3(s1 * c.x, s2 * c.y, s3 * c.z));
+                const ball = quadraticSpan(uu, dot(d, u), dot(d, d) - e * e);
+                lowest = Math.min(lowest, ball === null ? Infinity : ball[0]);
+            }
+        }
+    }
+    return lowest;
+}
+
+/**
+ * The head's underside over the turf (P2b.2b.2b.3 design §4.1): for head state `state`, a function giving the world
+ * height at which the vertical line through (x, y) enters the head from below (a cylinder, or the rounded box: its
+ * core box Minkowski-summed with a sphere of the edge radius), or Infinity where the line misses it. The line through
+ * (x, y) is p + z·u in the body frame, p the body-frame image of (x, y, 0) and u of ẑ, so its parameter is the world
+ * height. The head's frame is computed once, for the head's every column in a step.
+ */
+export function headUnderside(state: HeadState, head: MalletHead): (x: number, y: number) => number {
+    const q = state.orientation;
+    const ex = rotateInverse(q, vec3(1, 0, 0));
+    const ey = rotateInverse(q, vec3(0, 1, 0));
+    const u = rotateInverse(q, UP);
+    const base = scale(u, 0 - state.position.z);
+    const { shape } = head;
+    return (x, y) => {
+        const p = add(add(scale(ex, x - state.position.x), scale(ey, y - state.position.y)), base);
+        if (shape.kind === "box") {
+            return roundedBoxEntry(p, u, shape, head.length);
+        }
+        const round = quadraticSpan(
+            u.y * u.y + u.z * u.z,
+            p.y * u.y + p.z * u.z,
+            p.y * p.y + p.z * p.z - shape.radius * shape.radius,
+        );
+        return entryOf(slabSpan(p.x, u.x, head.length / 2), round);
+    };
 }
 
 /** The turf's contact with the head: closed while its lowest point is below the turf plane, along ẑ, acting there. */
