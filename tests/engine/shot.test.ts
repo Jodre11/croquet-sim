@@ -15,13 +15,21 @@ import { STROKE_TYPES, type ShotSetup } from "../../src/engine/swing/types";
 import type { BallId, BallState, Hoop, World } from "../../src/engine/types";
 import { defaultWorld, hoopHalfSpan, hoopLateral } from "../../src/engine/world";
 import { TEST_GRIP_LIMIT, recorder } from "./support/impact";
-import { CANONICAL_STRIKER, GC_STOP_GAP, LEGACY_MALLET, backswingFor, canonicalSetup } from "./support/shot";
+import { CANONICAL_STRIKER, GC_STOP_GAP, backswingFor, canonicalSetup } from "./support/shot";
 import { POSITION_SLACK, boundaryJumps } from "./support/trajectory";
 
 const WORLD = defaultWorld();
 const R = WORLD.ball.radius;
 const { x: X, y: Y } = CANONICAL_STRIKER;
 const at = (x: number, y: number): BallState => ({ position: vec3(x, y, R), velocity: ZERO, angularVelocity: ZERO });
+
+/**
+ * The jabs (m) at which the canonical AC stop's box grounds its heel (P2b.2b.2b.3 design §6.1, §7.5): the shallowest
+ * on time whose head meets the turf after the ball, and the shallowest whose dip 30 ms early meets it before the ball
+ * (plan Task 6 Step 5, 2026-10-16). They close the mallet's ruling B follow-up: the canonical AC stop clears the turf.
+ */
+const J_ON = 0.002;
+const J_EARLY = 0.004;
 
 /** A hand-built impact for strokeContext: only the pairs touching at the start matter. */
 function started(touchingAtStart: readonly string[]): ImpactResult {
@@ -332,8 +340,9 @@ describe("simulateShot", () => {
     it("finds 29.1.14 only in a stroke of Law 29.2.3: the canonical AC stop's head meets the turf", () => {
         // Prototype: the head on the turf from 12.70 ms, 1.73 mm deep, 1.71 mm of slide (pre-flight, with the check to
         // rest: 12.52 ms, 1.80 mm, 1.83 mm).
-        // P2b.2b.2b.2c: on the legacy round head; the default box clears the turf (gate).
-        const setup = canonicalSetup("stop-ac", { mallet: LEGACY_MALLET });
+        // P2b.2b.2b.3: the turf strike, on the default box through the jab (was on the legacy round head): the head on
+        // the turf from 18.34 ms, 0.32 mm deep.
+        const setup = canonicalSetup("stop-ac", { stroke: { jab: J_ON } });
         const dug = simulateShot({ ...setup, hampered: true }).faults.findings.filter((f) => f.law === "29.1.14");
         expect(dug).toHaveLength(1);
         expect(dug[0]).toMatchObject({ tier: "possible-fault", ball: "blue" });
@@ -528,19 +537,14 @@ describe("the mechanisms (design §8.1), on the canonical setups", () => {
         // D9.1, on the canonical stop. Prototype (11 mm dip): the first face interval ends at 1.17 ms, the head on
         // the turf 12.70–21.48 ms, 1.73 mm deep (10 mm: 1.32; 12 mm: 2.11 and impact-head-deep), turf +0.376 N·s.
         // Pre-flight, with the check to rest: 12.52–21.38 ms, 1.80 mm (10 mm: 1.40; 12 mm: 2.19 and deep), +0.401 N·s.
-        // P2b.2b.2b.2c: on the legacy round head; the default box clears the turf (gate).
-        // P2b.2b.2b.3: the turf strike (was 12.21–21.14 ms, 1.88 mm deep, +0.386 N·s, no impact-head-deep): the turf
-        // now bears the barrel's footprint at the bed's modulus and its columns yield (turf-yield at 14.18 ms), so it
-        // holds the head less firmly than the plane's spring did: 3.04 mm deep, and impact-head-deep at 14.79 ms.
-        // Unpredicted, for the gate: §7.4's graze stays within 2 mm. The impact's turf contact runs 12.27–20.25 ms,
-        // +0.286 N·s: once the ball has gone and the drive is done the follow-through carries it on (user ruling
-        // 2026-10-16; was 12.27–24.29 ms, +0.353 N·s).
-        const { impact, turf } = braking(canonicalSetup("stop-ac", { mallet: LEGACY_MALLET }));
+        // P2b.2b.2b.3: the turf strike, on the default box through the jab (was on the legacy round head): the head on
+        // the turf from 18.34 ms, 0.32 mm deep, the striker leaving at 1.5660 m/s, no turf-yield or impact-head-deep.
+        const { impact, turf } = braking(canonicalSetup("stop-ac", { stroke: { jab: J_ON } }));
         const dug = impact.timeline["head/turf"]?.[0] as ContactInterval;
         expect(dug).toBeDefined();
         expect(dug.start).toBeGreaterThanOrEqual((hits(impact)[0] as ContactInterval).end);
         expect(turf).toBeGreaterThan(0);
-        expect(impact.events.map((e) => e.kind)).toEqual(["turf-lift", "turf-yield", "impact-head-deep"]);
+        expect(impact.events.map((e) => e.kind)).toEqual(["turf-lift"]);
     });
 
     // Spec exit criterion 2 (P2b.2b.2b.2b). On the bed (P2b.2b.2b.2a) the canonical pass roll's follow-through kept its
@@ -564,14 +568,22 @@ describe("the mechanisms (design §8.1), on the canonical setups", () => {
     it("a dip 30 ms early meets the lawn before the ball and sends the striker's ball off slower", () => {
         // Prototype: the impact starts 30 ms before contact; the head on the turf from 20.72 ms, the ball struck from
         // 31.05 ms; the striker's ball at 1.214 m/s against 1.380 on time.
-        // P2b.2b.2b.2c: on the legacy round head; the default box clears the turf (gate).
-        const onTime = simulateShot(canonicalSetup("stop-ac", { mallet: LEGACY_MALLET })).impact;
+        // P2b.2b.2b.3: the turf strike, on the default box through the jab (was on the legacy round head): the head
+        // on the turf from 28.55 ms, 0.73 mm deep, the ball struck from 30.36 ms; the striker's ball at 1.5540 m/s
+        // against 1.5666 on time.
+        const onTime = simulateShot(canonicalSetup("stop-ac", { stroke: { jab: J_EARLY } })).impact;
         const timing = { arc: 0, hands: 0, dip: -0.03 };
-        const early = simulateShot(canonicalSetup("stop-ac", { mallet: LEGACY_MALLET, stroke: { timing } })).impact;
+        const early = simulateShot(canonicalSetup("stop-ac", { stroke: { jab: J_EARLY, timing } })).impact;
         const dug = early.timeline["head/turf"]?.[0] as ContactInterval;
         expect(dug).toBeDefined();
         expect(dug.start).toBeLessThan((hits(early)[0] as ContactInterval).start);
-        expect(strikerSpeed(early)).toBeLessThan(strikerSpeed(onTime));
+        // Along the lawn: the heel's touch also pops the ball up (vz 0.238 m/s against 0.059 on time), which the
+        // full speed counts as faster (1.5721 against 1.5677 m/s).
+        const along = (impact: ImpactResult): number => {
+            const { x, y } = (impact.handover.blue as BallState).velocity;
+            return Math.hypot(x, y);
+        };
+        expect(along(early)).toBeLessThan(along(onTime));
     });
 
     it.each(["single-ball", "half-roll"] as const)(

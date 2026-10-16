@@ -1132,6 +1132,39 @@ describe("the lead (design §3.5)", () => {
     });
 });
 
+describe("the jab (P2b.2b.2b.3 design §6.1)", () => {
+    const world = defaultWorld();
+
+    it("deepens the planned dip by the jab, on the dip's own timing", () => {
+        const setup = canonicalSetup("stop-ac");
+        const plain = planStroke(setup, world).contact.drive as TrackDrive;
+        const jabbed = planStroke({ ...setup, stroke: { ...setup.stroke, jab: 0.003 } }, world).contact
+            .drive as TrackDrive;
+        expect(jabbed.arc.dip.depth).toBe(setup.profile.drive["stop-ac"].handDrop + 0.003);
+        expect(jabbed.arc.dip.start).toBe(plain.arc.dip.start);
+        expect(jabbed.arc.dip.duration).toBe(plain.arc.dip.duration);
+    });
+
+    it.each(STROKE_TYPES)("leaves the %s stroke unchanged to the bit at a jab of 0", (type) => {
+        const setup = canonicalSetup(type);
+        expect(planStroke({ ...setup, stroke: { ...setup.stroke, jab: 0 } }, world)).toEqual(planStroke(setup, world));
+    });
+
+    it("rejects a negative, non-finite or carry-mode jab, and accepts a carry stroke's jab of 0", () => {
+        const ac = canonicalSetup("stop-ac");
+        for (const jab of [-0.001, Number.NaN, Infinity]) {
+            expect(() => planStroke({ ...ac, stroke: { ...ac.stroke, jab } }, world), `${jab}`).toThrow(
+                /stroke\.jab must be/,
+            );
+        }
+        const roll = canonicalSetup("full-roll");
+        expect(() => planStroke({ ...roll, stroke: { ...roll.stroke, jab: 0.001 } }, world)).toThrow(
+            /stroke\.jab must be 0 in carry mode/,
+        );
+        expect(planStroke({ ...roll, stroke: { ...roll.stroke, jab: 0 } }, world)).toEqual(planStroke(roll, world));
+    });
+});
+
 describe("the stance's geometry (P2b.2b.2b.1 design §3.2, §3.3)", () => {
     /** The test ball and head: R, L and ρ. */
     const GEOMETRY = { ballRadius: R, headLength: LENGTH, faceHalfHeight: RHO };

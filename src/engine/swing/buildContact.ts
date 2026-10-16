@@ -7,9 +7,9 @@
  * 2. the downswing (downswing.ts) from the backswing's top: ω₀ and the hands' V_c at contact, and from them the
  *    planned contact speed;
  * 3. the arcs' changes, against the planned speed: α = drive·speedGain·(speed/ℓ)/window, ℓ the pivot's distance from
- *    the head's centre, and A = drive·handGain·speed·aim/handWindow; the dip, handDrop over dropTime; the mode, the
- *    ground depth and the reach (the shot's, else the preset's); the coupling HAND_COUPLING; the hands the stance's,
- *    with the profile's body;
+ *    the head's centre, and A = drive·handGain·speed·aim/handWindow; the dip, handDrop deepened by the shot's jab,
+ *    over dropTime; the mode, the ground depth and the reach (the shot's, else the preset's); the coupling
+ *    HAND_COUPLING; the hands the stance's, with the profile's body;
  * 4. the lead L, the earliest action's, or TURF_MARGIN before the downswing first meets the turf if that is earlier
  *    (P2b.2b.2a design §3.5): the impact starts L before contact, on the downswing, so a fat stroke's turf strike is
  *    integrated; the grips relax at contact;
@@ -231,6 +231,7 @@ function validate(setup: ShotSetup, ballRadius: number): void {
         ["stroke.guideEffort", stroke.guideEffort],
         ["stroke.pendulumAt", stroke.pendulumAt],
         ["stroke.pendulumEffort", stroke.pendulumEffort],
+        ["stroke.jab", stroke.jab],
     ] as const) {
         if (value !== undefined) {
             finiteNumber(value, name);
@@ -352,6 +353,12 @@ function validate(setup: ShotSetup, ballRadius: number): void {
     }
     if (stroke.pendulumEffort !== undefined) {
         unit(stroke.pendulumEffort, "stroke.pendulumEffort");
+    }
+    if (stroke.jab !== undefined) {
+        nonNegative(stroke.jab, "stroke.jab");
+        if (push.mode === "carry" && stroke.jab !== 0) {
+            fail(`stroke.jab must be 0 in carry mode, where the hands lead on their own arc (got ${stroke.jab})`);
+        }
     }
     const pushLength = stroke.handReach ?? push.handReach;
     // Checked in swing mode too, where the arc is never read: a profile that fails it fails either way. Changing that
@@ -577,9 +584,10 @@ export interface StrokePlan {
  * - window, handWindow or dropTime ≤ 0; speedGain < 0; gripTension or bottomGrip outside (0, 1]; handDrop < 0; the
  *   preset's or the shot's handReach < 0; the preset's or the shot's guideEffort outside [0, 1];
  *   armMass < 0; reachSlack < 0; the preset's or the shot's pendulumAt or pendulumEffort outside [0, 1]; handArcLow
- *   outside [0, 1]; handArcRadius not above the push length; a flex value not positive, or a flex damping ratio above
- *   1; pendulumForce not positive (P2b.2b.2b.2b design §6); pushForce, pushResponseTime, gripLimit or a hand–arm
- *   chain value not positive (its gate rulings, 2026-10-11; P2b.2b.2b.3 design §5);
+ *   outside [0, 1]; a jab negative or non-finite, or non-zero in carry mode (P2b.2b.2b.3 design §6.1); handArcRadius
+ *   not above the push length; a flex value not positive, or a flex damping ratio above 1; pendulumForce not positive
+ *   (P2b.2b.2b.2b design §6); pushForce, pushResponseTime, gripLimit or a hand–arm chain value not positive (its gate
+ *   rulings, 2026-10-11; P2b.2b.2b.3 design §5);
  * - pendulumShare or defaultIntensity outside [0, 1]; handAngle outside (0, 90°) when pendulumShare < 1 (neither read
  *   nor checked otherwise); in swing mode a pendulumShare of 0, an effort tempo ≤ 0 or tempoFast > tempoSlow, or
  *   torqueMax < 0; in carry mode a hands' tempo ≤ 0 or fast > slow;
@@ -640,7 +648,7 @@ export function planStroke(setup: ShotSetup, world: World): StrokePlan {
         alpha: (stroke.drive * push.speedGain * contactSpeed) / (lever * push.window),
         arcStart: lead + timing.arc,
         window: push.window,
-        dip: { start: lead + timing.dip, duration: push.dropTime, depth: push.handDrop },
+        dip: { start: lead + timing.dip, duration: push.dropTime, depth: push.handDrop + (stroke.jab ?? 0) },
         contactAt: lead,
         mode: push.mode,
         handReach: stroke.handReach ?? push.handReach,

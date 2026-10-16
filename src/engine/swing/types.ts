@@ -172,6 +172,11 @@ export interface ShotSetup {
         readonly pendulumAt?: number;
         /** Carry mode: the bottom hand's push in the pendulum phase, in [0, 1]; absent: the preset's. */
         readonly pendulumEffort?: number;
+        /**
+         * The jab (m, ≥ 0; P2b.2b.2b.3 design §6.1): the hands' planned dip deepens by it on top of the preset's
+         * handDrop, on the dip's own timing, to ground the head deliberately. Swing mode only; absent: 0.
+         */
+        readonly jab?: number;
     };
     readonly live: readonly BallId[];
     readonly continuation: boolean;
