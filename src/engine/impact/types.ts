@@ -197,6 +197,9 @@ export interface FlexHold {
     readonly damping: number;
 }
 
+/** A hand on the shaft (P2b.2b.2b.3 design §5). */
+export type HandName = "top" | "bottom";
+
 /**
  * Two hands on the rigid, massless shaft, which is the head's up axis through the socket (design §3.1): the top hand at
  * the arc radius, the bottom hand `bottom` from the socket (m, in (0, radius)). From `relaxAt` on the top hand grips
@@ -237,6 +240,11 @@ export interface Hands {
     readonly pushResponseTime: number;
     /** Carry mode (gate round 3 ruling, 2026-10-11): each hand and arm, the hand–arm impedance model's chain. */
     readonly chain: HandChain;
+    /**
+     * F_max (N, P2b.2b.2b.3 design §5): each hand's force on the mallet is clipped to this magnitude. Where the hand
+     * holds a position spring its anchor slides at the limit, and the slid offset persists (GripState).
+     */
+    readonly gripLimit: number;
 }
 
 /**
@@ -314,7 +322,9 @@ export interface ContactState extends HeadState {
  *   modelled), or any region but the face for a tracked drive (P2b.2b.1 design §4.5; no Law judgement is made of it
  *   in this phase);
  * - `impact-turf-pit`: when the impact ended, a ball's surface lay more than TURF_PIT_DEPTH below the turf over a
- *   cell it held (P2b.2b.2b.2a design §4.6); the handover places it on the flat lawn, and the pit is discarded.
+ *   cell it held (P2b.2b.2b.2a design §4.6); the handover places it on the flat lawn, and the pit is discarded;
+ * - `grip-limit`: a hand's force first reached its grip's limit (P2b.2b.2b.3 design §5), with the hand; recorded, not
+ *   judged.
  */
 export type ImpactEvent =
     | { readonly kind: "turf-lift"; readonly t: number; readonly ball: BallId }
@@ -323,7 +333,8 @@ export type ImpactEvent =
     | { readonly kind: "impact-mallet-grounded"; readonly t: number }
     | { readonly kind: "impact-head-deep"; readonly t: number }
     | { readonly kind: "impact-off-face"; readonly t: number; readonly ball: BallId }
-    | { readonly kind: "impact-turf-pit"; readonly t: number; readonly ball: BallId };
+    | { readonly kind: "impact-turf-pit"; readonly t: number; readonly ball: BallId }
+    | { readonly kind: "grip-limit"; readonly t: number; readonly hand: HandName };
 
 /**
  * One contact interval of a pair (P2b.2a design §5): [start, end) in s from the impact's start, whole steps, and the

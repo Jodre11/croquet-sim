@@ -95,6 +95,12 @@ export const TEST_PUSH_FORCE = 100;
 export const TEST_PUSH_RESPONSE_TIME = 0.03;
 
 /**
+ * A grip limit (N) far above any test hand's force (P2b.2b.2b.3 plan decision 12), so that tests written before the
+ * limit keep their figures; the limit's own tests set theirs.
+ */
+export const TEST_GRIP_LIMIT = 1e5;
+
+/**
  * A plausible, unsourced hand–arm chain (P2b.2b.2b.2b gate round 3 ruling, 2026-10-11), in kg, N/m and N·s/m: forearm
  * 0.3, hand 0.2, fingers 0.08, each skin 0.015; wrist 10⁴ and 40, knuckle 4000 and 60, palm 4·10⁴ and 60, fingers 10⁵
  * and 70.
@@ -131,6 +137,7 @@ export const TEST_HANDS: Hands = {
     pushForce: TEST_PUSH_FORCE,
     pushResponseTime: TEST_PUSH_RESPONSE_TIME,
     chain: TEST_CHAIN,
+    gripLimit: TEST_GRIP_LIMIT,
 };
 
 /** A dip of no depth. */

@@ -191,6 +191,14 @@
         "provenance": "derived",
         "note": "τ_push, the time constant of the hands' push intent: the sensed resistance follows the balls' resistance as R̃ ← R̃ + (R − R̃)·(1 − exp(−dt/τ_push)) (gate ruling amendment, user, 2026-10-11: primed hands, no reflex delay, the push building at the muscles' pace). A voluntary force rise from force onset, so no reflex or electromechanical delay is in it: Augustsson et al. measured an isometric two-handed bench-press push, 'as quickly and forcefully as possible', in 17 female and 13 male throwers, force onset found as Tillin et al. describe. Table 2, push force as a percentage of peak force at 50, 100, 150, 200 and 250 ms: females 39, 60, 72, 80, 84; males 37, 56, 66, 72, 77. The time to 1 − 1/e (63.2 %) of peak, interpolated linearly between 100 and 150 ms, is 113.4 ms (females) and 136.1 ms (males); the value is their mean, 124.7 ms, rounded to 0.125 s. Bounds: τ = −t/ln(1 − F(t)/F_peak) at each reported time for either sex, 101.2 ms (females, 50 ms) to 170.1 ms (males, 250 ms); the rise is not exactly exponential. Trained throwers; an untrained player is likely slower."
     },
+    "gripLimit": {
+        "value": 435,
+        "unit": "N",
+        "bounds": [408, 462],
+        "source": "Young, Woolley, Armstrong and Ashton-Miller, 'Hand-handhold coupling: effect of handle shape, orientation, and friction on breakaway strength', Human Factors 51(5):705-717 (2009), DOI 10.1177/0018720809355969, https://archive.org/download/wikipedia-scholarly-sources-corpus/10.1177%252F0016986208330564.zip/10.1177%252F0018720809355969.pdf",
+        "provenance": "direct",
+        "note": "The hand's breakaway strength: the largest force a power grip holds on a handle along a vertical cylinder before the hand slips or the arm gives way, 435 ± 27 N (mean ± SD). The model clips each hand's force on the mallet to it (P2b.2b.2b.3 design §5), whether the grip breaks or the arm gives way (user, 2026-10-14). Bounds: the mean ± one SD. Grip tension does not scale it (P3). The twist is not limited (design §5)."
+    },
     "forearmMass": {
         "value": 0.344,
         "unit": "kg",

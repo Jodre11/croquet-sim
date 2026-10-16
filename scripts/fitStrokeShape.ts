@@ -76,6 +76,7 @@ function caseOf(type: StrokeType): Case {
             pushForce: defaultProfile.body.pushForce,
             pushResponseTime: defaultProfile.body.pushResponseTime,
             chain: defaultProfile.body.chain,
+            gripLimit: defaultProfile.body.gripLimit,
         },
         mode: defaultProfile.drive[type].mode,
         arrival:

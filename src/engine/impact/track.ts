@@ -31,6 +31,7 @@ import type {
     Downswing,
     FlexLaw,
     HandChain,
+    HandName,
     Hands,
     HeadState,
     MalletHead,
@@ -67,6 +68,9 @@ export const PUSH_FORCE = contactReference.pushForce.value;
 
 /** τ_push (s, gate ruling amendment 2026-10-11): the push intent's response time constant (reference/contact.json). */
 export const PUSH_RESPONSE_TIME = contactReference.pushResponseTime.value;
+
+/** F_max (N, P2b.2b.2b.3 design §5): the hands' grip limit (reference/contact.json, Young et al. 2009). */
+export const GRIP_LIMIT = contactReference.gripLimit.value;
 
 /**
  * Each hand and arm in carry mode (gate round 3 ruling, 2026-10-11): Dong et al. 2013's x_h 5-DOF hand–arm model
@@ -996,7 +1000,8 @@ export interface FlexStart {
  * takes hold, each hand's hand–arm chain (gate round 3 ruling, 2026-10-11): null before then, and the bottom hand's
  * null once it has let go. In carry mode also when a ball first departed from the face (s; gate round 13 ruling,
  * "Relax from first departure", 2026-10-12), which the integrator latches once, null until then; the arms' hold
- * relaxes from it (holdWeight).
+ * relaxes from it (holdWeight). Each hand's slid offset (m, in the head's frame; P2b.2b.2b.3 design §5): null until
+ * the hand first saturates, then how far its anchor on the shaft has slid, kept for the rest of the stroke.
  * Mutable; handLoad updates it, and the integrator moves the chains' masses each step (advanceChains).
  */
 export interface GripState {
@@ -1012,6 +1017,8 @@ export interface GripState {
     topChain: ArmChain | null;
     bottomChain: ArmChain | null;
     departedAt: number | null;
+    topOffset: Vec3 | null;
+    bottomOffset: Vec3 | null;
 }
 
 /**
@@ -1031,6 +1038,8 @@ export function newGripState(): GripState {
         topChain: null,
         bottomChain: null,
         departedAt: null,
+        topOffset: null,
+        bottomOffset: null,
     };
 }
 
@@ -1255,6 +1264,8 @@ export interface HandLoad {
     /** Each hand's force. */
     readonly top: Vec3;
     readonly bottom: Vec3;
+    /** The first hand whose force reached the grip's limit in this step, the top if both did; null if neither. */
+    readonly saturated: HandName | null;
 }
 
 /** θ_err = 2·sign(w)·vec(target ⊗ q̄), w the product's scalar part: the rotation taking q to `target` (world frame). */
@@ -1279,6 +1290,27 @@ function forwardOf(aim: Vec3, s: Vec3): Vec3 {
     const raw = across(aim, s);
     const rawSquared = dot(raw, raw);
     return rawSquared > FORWARD_UNDEFINED ? scale(raw, 1 / Math.sqrt(rawSquared)) : ZERO;
+}
+
+/**
+ * `trial` held to the grip's limit F_max (P2b.2b.2b.3 design §5): null while |trial| ≤ F_max, so that a hand below
+ * the limit keeps its arithmetic; otherwise `trial` scaled onto F_max.
+ */
+function heldTo(trial: Vec3, limit: number): Vec3 | null {
+    const squared = dot(trial, trial);
+    if (!(squared > limit * limit)) {
+        return null;
+    }
+    return scale(trial, limit / Math.sqrt(squared));
+}
+
+/**
+ * A hand's offset (m, in the head's frame; plan decision 10) after its anchor slides by `slide` (m, world frame) with
+ * the head at orientation `q` (design §5): the first slide, or the sum.
+ */
+function slid(offset: Vec3 | null, slide: Vec3, q: Quaternion): Vec3 {
+    const body = rotateInverse(q, slide);
+    return offset === null ? body : add(offset, body);
 }
 
 /** What carryLoad needs from handLoad's step: the feed-forward's shares, the shaft and the grips' arms. */
@@ -1334,22 +1366,28 @@ function carryLoad(
     const from = grip.flex;
     const moved = sub(planned.position, from.pivot);
     const topVelocity = add(state.velocity, cross(state.angularVelocity, step.topArm));
-    const load = (top: Vec3, bottom: Vec3, twist: number, fed: Vec3): HandLoad => ({
+    const load = (top: Vec3, bottom: Vec3, twist: number, fed: Vec3, saturated: HandName | null): HandLoad => ({
         force: add(top, bottom),
         feedForward: fed,
         torque: add(add(cross(step.topArm, top), cross(step.bottomArm, bottom)), scale(step.s, twist)),
         top,
         bottom,
+        saturated,
     });
     const pendulum = releasing(track, t);
     const topFed = pendulum ? step.whole : step.top;
     const { chain, flex } = hands;
     const g = track.gravity;
     const bottomVelocity = add(state.velocity, cross(state.angularVelocity, step.bottomArm));
+    // Each hand's anchor on the shaft, slid by its offset once it has saturated (design §5), the offset held in the
+    // head's frame (plan decision 10).
+    const q = state.orientation;
+    const topAnchor = grip.topOffset === null ? topAt : add(topAt, rotate(q, grip.topOffset));
+    const bottomAnchor = grip.bottomOffset === null ? bottomAt : add(bottomAt, rotate(q, grip.bottomOffset));
     if (grip.topChain === null) {
-        grip.topChain = holdChain(chain, topAt, topVelocity, topFed, step.topAcceleration, g);
+        grip.topChain = holdChain(chain, topAnchor, topVelocity, topFed, step.topAcceleration, g);
         if (!pendulum) {
-            grip.bottomChain = holdChain(chain, bottomAt, bottomVelocity, step.bottom, step.bottomAcceleration, g);
+            grip.bottomChain = holdChain(chain, bottomAnchor, bottomVelocity, step.bottom, step.bottomAcceleration, g);
         }
     }
     // Each arm's flex drives its chain's forearm, feeding it its share and the chain's own m·a and weight; its
@@ -1365,7 +1403,19 @@ function carryLoad(
         sub(topArm.forearm.position, add(add(from.top, moved), topArm.preload)),
         sub(topArm.forearm.velocity, planned.velocity),
     );
-    const top = chainForces(chain, topArm, topAt, topVelocity, topDrive, g);
+    const limit = hands.gripLimit;
+    const spring = chain.palmStiffness + chain.fingerStiffness;
+    let saturated: HandName | null = null;
+    let top = chainForces(chain, topArm, topAnchor, topVelocity, topDrive, g);
+    const topHeld = heldTo(top, limit);
+    if (topHeld !== null) {
+        // The hand transmits only F_max: its hold slides until the palm and fingers carry exactly that, and the
+        // chain feels what the hand transmits (design §5). The force falls by the palm's and fingers' stiffness times
+        // the slide (plan decision 24: the slip lies at the skin, in series with the palm's and fingers' elements).
+        grip.topOffset = slid(grip.topOffset, scale(sub(top, topHeld), 1 / spring), q);
+        top = chainForces(chain, topArm, add(topAt, rotate(q, grip.topOffset)), topVelocity, topDrive, g);
+        saturated = "top";
+    }
     if (!pendulum) {
         // The bottom grip's intended point turns with the planned pitch about the intended top grip:
         // x̂_B = x_B(0) + ΔP + (r − b)·(radial(θ̂) − radial(θ̂₀)), θ̂ = pitch₀ + θ − θ₀.
@@ -1388,9 +1438,16 @@ function carryLoad(
             sub(bottomArm.forearm.position, add(bottomTarget, bottomArm.preload)),
             sub(bottomArm.forearm.velocity, bottomTargetVelocity),
         );
-        const bottom = chainForces(chain, bottomArm, bottomAt, bottomVelocity, bottomDrive, g);
+        let bottom = chainForces(chain, bottomArm, bottomAnchor, bottomVelocity, bottomDrive, g);
+        const bottomHeld = heldTo(bottom, limit);
+        if (bottomHeld !== null) {
+            grip.bottomOffset = slid(grip.bottomOffset, scale(sub(bottom, bottomHeld), 1 / spring), q);
+            const anchor = add(bottomAt, rotate(q, grip.bottomOffset));
+            bottom = chainForces(chain, bottomArm, anchor, bottomVelocity, bottomDrive, g);
+            saturated = saturated ?? "bottom";
+        }
         const twist = hands.bottomGrip * step.twist + track.bottom.twistDamping * dot(step.spinLag, step.s);
-        return load(top, bottom, twist, add(step.top, step.bottom));
+        return load(top, bottom, twist, add(step.top, step.bottom), saturated);
     }
     if (grip.releasedAt === null) {
         grip.releasedAt = t;
@@ -1404,8 +1461,9 @@ function carryLoad(
     if (step.pitch >= 0) {
         grip.vertical = true;
     }
-    const bottom = grip.vertical ? ZERO : scale(forwardOf(arc.aim, step.s), arc.pendulumEffort * hands.pendulumForce);
-    return load(top, bottom, 0, topFed);
+    const pushed = grip.vertical ? ZERO : scale(forwardOf(arc.aim, step.s), arc.pendulumEffort * hands.pendulumForce);
+    const pushedHeld = heldTo(pushed, limit);
+    return load(top, pushedHeld ?? pushed, 0, topFed, pushedHeld === null ? saturated : (saturated ?? "bottom"));
 }
 
 /**
@@ -1426,7 +1484,8 @@ function carryLoad(
  * mode brakes the head to rest, not past it: the hands apply the head's share of the planned deceleration
  * (checkShare), and the guide steers its pitch rate into [0, ω_path]. With `gripped`, the hands grip firmly with
  * springs and dampers at any t, as before relaxAt but with no downswing gate: a stop's follow-through (P2b.2b.2a
- * design §4.2).
+ * design §4.2). Each hand's force is held to the grip's limit F_max (P2b.2b.2b.3 design §5): a position spring's
+ * anchor slides at it, by an offset kept in `grip` in the head's frame; a damper alone is capped.
  */
 export function handLoad(
     track: PreparedTrack,
@@ -1505,34 +1564,63 @@ export function handLoad(
         add(state.velocity, cross(state.angularVelocity, bottomArm)),
     );
     const spinLag = sub(w, state.angularVelocity);
-    const load = (top: Vec3, bottom: Vec3, twist: number, fed: Vec3): HandLoad => ({
+    const load = (top: Vec3, bottom: Vec3, twist: number, fed: Vec3, saturated: HandName | null): HandLoad => ({
         force: add(top, bottom),
         feedForward: fed,
         torque: add(add(cross(topArm, top), cross(bottomArm, bottom)), scale(s, twist)),
         top,
         bottom,
+        saturated,
     });
 
     if (!contact) {
         const g = track.firm;
-        const topGap = sub(add(path.socket, topLever), add(state.position, topArm));
-        const bottomGap = sub(add(path.socket, bottomLever), add(state.position, bottomArm));
+        const limit = hands.gripLimit;
+        // The gaps to the path, less each hand's slid offset once it has saturated (design §5), the offset held in
+        // the head's frame (plan decision 10).
+        const topReach = sub(add(path.socket, topLever), add(state.position, topArm));
+        const bottomReach = sub(add(path.socket, bottomLever), add(state.position, bottomArm));
+        const topGap = grip.topOffset === null ? topReach : sub(topReach, rotate(q, grip.topOffset));
+        const bottomGap = grip.bottomOffset === null ? bottomReach : sub(bottomReach, rotate(q, grip.bottomOffset));
         // On a downswing the firm grip keeps the hands' planned pace (feed-forward and damper) but has no position
         // spring (P2b.2b.2a user decision 2026-10-07): a head the turf holds back stays where it is put, so a graze
         // costs the head speed instead of the grip refunding it. A gripped stop keeps the spring: it holds the mallet
         // still.
         const spring = gripped || arc.downswing === undefined;
-        const top = spring
+        let top = spring
             ? add(add(topShare, scale(topGap, g.stiffness)), scale(topLag, g.damping))
             : add(topShare, scale(topLag, g.damping));
         const pull = spring
             ? add(scale(bottomGap, g.stiffness), scale(bottomLag, g.damping))
             : scale(bottomLag, g.damping);
+        let bottom = add(bottomShare, across(pull, s));
         const twist =
             twistShare +
             g.twistStiffness * dot(rotationError(path.orientation, q), s) +
             g.twistDamping * dot(spinLag, s);
-        return load(top, add(bottomShare, across(pull, s)), twist, add(topShare, bottomShare));
+        // At the limit the hand transmits F_max, and a spring's anchor slides as tangentialForce resets its spring
+        // (plan decision 24): the spring alone then carries F_max less the hand's share, and never a stretch that
+        // only cancels the damper. A damper alone is capped (design §5).
+        let saturated: HandName | null = null;
+        const topHeld = heldTo(top, limit);
+        if (topHeld !== null) {
+            if (spring) {
+                const slide = sub(topGap, scale(sub(topHeld, topShare), 1 / g.stiffness));
+                grip.topOffset = slid(grip.topOffset, slide, q);
+            }
+            top = topHeld;
+            saturated = "top";
+        }
+        const bottomHeld = heldTo(bottom, limit);
+        if (bottomHeld !== null) {
+            if (spring) {
+                const slide = sub(across(bottomGap, s), scale(sub(bottomHeld, bottomShare), 1 / g.stiffness));
+                grip.bottomOffset = slid(grip.bottomOffset, slide, q);
+            }
+            bottom = bottomHeld;
+            saturated = saturated ?? "bottom";
+        }
+        return load(top, bottom, twist, add(topShare, bottomShare), saturated);
     }
 
     const pitchNow = shaftPitch(s, arc.aim);
@@ -1570,11 +1658,19 @@ export function handLoad(
     // The player's effort on swing mode's push after contact (design §3.3): 1 restores the planned arc's speed.
     const effort = hands.guideEffort;
     const topFed = add(scale(checking ? topShare : shared, hands.gripTension), dip);
-    const top = add(topFed, scale(topLag, track.top.damping));
+    let top = add(topFed, scale(topLag, track.top.damping));
+    let saturated: HandName | null = null;
+    const topHeld = heldTo(top, hands.gripLimit);
+    if (topHeld !== null) {
+        top = topHeld;
+        saturated = "top";
+    }
     const g = track.bottom;
     const e = forwardOf(arc.aim, s);
     if (grip.releasedAt !== null) {
-        return load(top, scale(e, effort * Math.max(0, g.damping * dot(bottomLag, e))), 0, topFed);
+        const pushed = scale(e, effort * Math.max(0, g.damping * dot(bottomLag, e)));
+        const pushedHeld = heldTo(pushed, hands.gripLimit);
+        return load(top, pushedHeld ?? pushed, 0, topFed, pushedHeld === null ? saturated : (saturated ?? "bottom"));
     }
     const bottomFed = checking ? scale(bottomShare, hands.bottomGrip) : ZERO;
     const twist = (checking ? hands.bottomGrip * twistShare : 0) + g.twistDamping * dot(spinLag, s);
@@ -1584,5 +1680,12 @@ export function handLoad(
     const held = Math.min(Math.max(rate, 0), Math.max(planned, 0));
     const guide = g.damping * (checking ? held - rate : dot(spinLag, track.axis)) * lever;
     const bottom = add(bottomFed, scale(e, checking ? guide : effort * Math.max(0, guide)));
-    return load(top, bottom, twist, add(topFed, bottomFed));
+    const bottomHeld = heldTo(bottom, hands.gripLimit);
+    return load(
+        top,
+        bottomHeld ?? bottom,
+        twist,
+        add(topFed, bottomFed),
+        bottomHeld === null ? saturated : (saturated ?? "bottom"),
+    );
 }

@@ -13,7 +13,7 @@ import type { SwingTrajectory } from "../../src/engine/swing/trajectory";
 import { STROKE_TYPES, type ShotSetup } from "../../src/engine/swing/types";
 import type { BallId, BallState, Hoop, World } from "../../src/engine/types";
 import { defaultWorld, hoopHalfSpan, hoopLateral } from "../../src/engine/world";
-import { recorder } from "./support/impact";
+import { TEST_GRIP_LIMIT, recorder } from "./support/impact";
 import { CANONICAL_STRIKER, GC_STOP_GAP, LEGACY_MALLET, backswingFor, canonicalSetup } from "./support/shot";
 import { POSITION_SLACK, boundaryJumps } from "./support/trajectory";
 
@@ -62,6 +62,12 @@ const strikerSpeed = (impact: ImpactResult): number => length((impact.handover.b
 
 /** The head's velocity along aim (+y) at the end of the impact (m/s). */
 const headSpeed = (impact: ImpactResult): number => dot(impact.head.velocity, vec3(0, 1, 0));
+
+/** `setup` with its hands' grip limit at TEST_GRIP_LIMIT, far above any hand's force (P2b.2b.2b.3 plan decision 12). */
+const unlimited = (setup: ShotSetup): ShotSetup => ({
+    ...setup,
+    profile: { ...setup.profile, body: { ...setup.profile.body, gripLimit: TEST_GRIP_LIMIT } },
+});
 
 /** The croqueted ball's distance to rest over the striker's (the coaching ratio, design §9). */
 function ratio(setup: ShotSetup, outcome: ShotOutcome): number {
@@ -260,6 +266,16 @@ describe("simulateShot", () => {
         const setup = { ...canonicalSetup("single-ball"), lawnSpeed: 0 };
         expect(() => simulateShot(setup)).toThrow(/lawnSpeed/);
         expect(simulateShot(setup, WORLD).motion.aborted).toBe(false);
+    });
+
+    it("raises grip-limit once in the impact and follow-grip-limit once in the follow-through (P2b.2b.2b.3 §5)", () => {
+        // A 20 N grip cannot carry the hands' share of the mallet's weight and the downswing's pull, so a hand
+        // saturates in the impact and again in the follow-through: each is reported once, the first time.
+        const base = canonicalSetup("single-ball");
+        const setup = { ...base, profile: { ...base.profile, body: { ...base.profile.body, gripLimit: 20 } } };
+        const outcome = simulateShot(setup, WORLD, { trajectory: true });
+        expect(outcome.impact.events.filter((e) => e.kind === "grip-limit")).toHaveLength(1);
+        expect((outcome.trajectory as SwingTrajectory).flags.filter((f) => f === "follow-grip-limit")).toHaveLength(1);
     });
 
     const runsToFinish = (type: (typeof STROKE_TYPES)[number]): void => {
@@ -478,8 +494,9 @@ describe("the mechanisms (design §8.1), on the canonical setups", () => {
         // Pre-flight: the GC stop's head ends the impact at −3.2e-4 m/s along aim, its lowest after the strike (its
         // pitch rate −5.5e-7 rad/s); the single-ball stroke's at 1.3151 m/s. The planned deceleration alone, sized for
         // the unstruck head, left it at −1.0928 m/s, moving back.
+        // The hands at TEST_GRIP_LIMIT, so that the check alone is pinned; the default limit's case follows.
         const probe = recorder();
-        const setup = canonicalSetup("stop-gc");
+        const setup = unlimited(canonicalSetup("stop-gc"));
         const gcStop = simulateImpact(buildContact(setup, WORLD), setup.balls, WORLD, { probe });
         const strikeEnd = (hits(gcStop)[0] as ContactInterval).end;
         const lowest = Math.min(
@@ -489,6 +506,13 @@ describe("the mechanisms (design §8.1), on the canonical setups", () => {
         expect(Math.abs(headSpeed(gcStop))).toBeLessThan(0.01);
         expect(lowest).toBeGreaterThan(-0.01);
         expect(headSpeed(plain)).toBeGreaterThan(1);
+    });
+
+    it("the GC stop's check reaches the default grip limit, and says so (P2b.2b.2b.3 design §5)", () => {
+        // At F_max = 435 N (Young et al. 2009) a hand saturates in the GC stop's check: the impact records grip-limit.
+        const setup = canonicalSetup("stop-gc");
+        const gcStop = simulateImpact(buildContact(setup, WORLD), setup.balls, WORLD);
+        expect(gcStop.events.filter((e) => e.kind === "grip-limit")).toHaveLength(1);
     });
 
     it("the GC stop's check brakes the head through the hands: positive at drive −1, negative at 0", () => {

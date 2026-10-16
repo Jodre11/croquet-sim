@@ -48,7 +48,8 @@
  *
  * With a follow-through (integrateStroke, P2b.2b.2a design §4.1) a tracked drive's loop continues once the impact has
  * ended, the balls removed: the hands and the head–turf pair act on the head until the stroke type's finish, or
- * FOLLOW_CAP after contact. The impact's result is fixed before it starts.
+ * FOLLOW_CAP after contact. The impact's result is fixed before it starts. A hand first reaching its grip's limit
+ * raises `grip-limit` in the impact and `follow-grip-limit` in the follow-through (P2b.2b.2b.3 design §5).
  */
 import { contactReference } from "../../reference/index";
 import { ZERO, add, cross, dot, horizontal, length, scale, sub, vec3, type Vec3 } from "../math/vec3";
@@ -312,8 +313,11 @@ export interface ImpactOptions {
     readonly probe?: ImpactProbe;
 }
 
-/** A follow-through's flags (P2b.2b.2a design §4.1): the cap reached, or the head driven past HEAD_DEEP_LIMIT. */
-export type FollowFlag = "follow-cap" | "follow-head-deep";
+/**
+ * A follow-through's flags (P2b.2b.2a design §4.1): the cap reached, the head driven past HEAD_DEEP_LIMIT, or a hand
+ * first reaching its grip's limit in the follow-through (P2b.2b.2b.3 design §4.6).
+ */
+export type FollowFlag = "follow-cap" | "follow-head-deep" | "follow-grip-limit";
 
 /** The head at time t (s from t = 0). */
 export interface StrokeState {
@@ -974,6 +978,7 @@ export function integrateStroke(setup: ImpactSetup, options: ImpactOptions = {},
             ? null
             : { law: setup.headTurf, spring: ZERO, peak: 0, line: emptyTimeline(), slide: 0 };
     let deep = false;
+    let limited = false;
     const jumps: EntryJumps | null = tracked ? { count: 0, worst: 0, keys: [] } : null;
     let state: HeadState = setup.start;
     let grounded = false;
@@ -996,6 +1001,10 @@ export function integrateStroke(setup: ImpactSetup, options: ImpactOptions = {},
             hand = handLoad(plan, state, head, t, grip);
             drive = hand.force;
             headTorque = hand.torque;
+            if (hand.saturated !== null && !limited) {
+                limited = true;
+                events.push({ kind: "grip-limit", t, hand: hand.saturated });
+            }
         }
         const loads: StepLoads = {
             headForce: shaft === null ? add(drive, headWeight) : add(add(drive, headWeight), shaft.force),
@@ -1258,6 +1267,9 @@ function continueStroke(
         }
         // The impact loop's hands, head–turf and advance, kept apart: sharing them would reorder the impact's sums.
         const hand = handLoad(path, state, head, t, grip, t >= holdFrom);
+        if (hand.saturated !== null && !flags.includes("follow-grip-limit")) {
+            flags.push("follow-grip-limit");
+        }
         const loads: StepLoads = {
             headForce: shaft === null ? add(hand.force, headWeight) : add(add(hand.force, headWeight), shaft.force),
             headTorque:

@@ -226,6 +226,8 @@ describe("swing, coupling and head–turf reference data", () => {
     it("loads the head–turf friction and the deep-head limit", () => {
         expect(contactReference.headTurfFriction.value).toBe(0.5);
         expect(contactReference.headTurfFriction.bounds).toEqual([0.3, 0.7]);
+        expect(contactReference.gripLimit.value).toBe(435);
+        expect(contactReference.gripLimit.bounds).toEqual([408, 462]);
         expect(contactReference.headDeepLimit.value).toBe(0.002);
     });
 

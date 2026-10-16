@@ -378,6 +378,8 @@ function validate(setup: ShotSetup, ballRadius: number): void {
     positive(body.pushForce, "profile.body.pushForce");
     finiteNumber(body.pushResponseTime, "profile.body.pushResponseTime");
     positive(body.pushResponseTime, "profile.body.pushResponseTime");
+    finiteNumber(body.gripLimit, "profile.body.gripLimit");
+    positive(body.gripLimit, "profile.body.gripLimit");
     for (const [key, value] of Object.entries(body.chain)) {
         finiteNumber(value, `profile.body.chain.${key}`);
         positive(value, `profile.body.chain.${key}`);
@@ -417,6 +419,7 @@ function handsOf(setup: ShotSetup): Hands {
         pushForce: profile.body.pushForce,
         pushResponseTime: profile.body.pushResponseTime,
         chain: profile.body.chain,
+        gripLimit: profile.body.gripLimit,
     };
 }
 
@@ -575,8 +578,8 @@ export interface StrokePlan {
  *   preset's or the shot's handReach < 0; the preset's or the shot's guideEffort outside [0, 1];
  *   armMass < 0; reachSlack < 0; the preset's or the shot's pendulumAt or pendulumEffort outside [0, 1]; handArcLow
  *   outside [0, 1]; handArcRadius not above the push length; a flex value not positive, or a flex damping ratio above
- *   1; pendulumForce not positive (P2b.2b.2b.2b design §6); pushForce, pushResponseTime or a hand–arm chain value
- *   not positive (its gate rulings, 2026-10-11);
+ *   1; pendulumForce not positive (P2b.2b.2b.2b design §6); pushForce, pushResponseTime, gripLimit or a hand–arm
+ *   chain value not positive (its gate rulings, 2026-10-11; P2b.2b.2b.3 design §5);
  * - pendulumShare or defaultIntensity outside [0, 1]; handAngle outside (0, 90°) when pendulumShare < 1 (neither read
  *   nor checked otherwise); in swing mode a pendulumShare of 0, an effort tempo ≤ 0 or tempoFast > tempoSlow, or
  *   torqueMax < 0; in carry mode a hands' tempo ≤ 0 or fast > slow;

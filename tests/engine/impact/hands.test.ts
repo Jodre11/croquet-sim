@@ -475,6 +475,8 @@ describe("the bottom hand's rate guide", () => {
                 topChain: null,
                 bottomChain: null,
                 departedAt: null,
+                topOffset: null,
+                bottomOffset: null,
             };
             return handLoad(track, slow, TEST_HEAD, t, open).bottom;
         };
@@ -542,6 +544,8 @@ describe("release by reach", () => {
             topChain: null,
             bottomChain: null,
             departedAt: null,
+            topOffset: null,
+            bottomOffset: null,
         };
         const turn = 0.08;
         const e = forwardOf(turned(turn), track.arc.aim);

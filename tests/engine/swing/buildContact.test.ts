@@ -3,6 +3,7 @@ import { headLowestPoint } from "../../../src/engine/impact/contacts";
 import { boxInertia, rotate, solidCylinderInertia } from "../../../src/engine/impact/rigidBody";
 import { simulateImpact } from "../../../src/engine/impact/simulateImpact";
 import {
+    GRIP_LIMIT,
     HAND_COUPLING,
     downswingAt,
     handsAt,
@@ -49,6 +50,7 @@ import { TEST_BALL, ballAt, testWorld } from "../support/fixtures";
 import {
     TEST_CHAIN,
     TEST_FLEX,
+    TEST_GRIP_LIMIT,
     TEST_HANDS,
     TEST_PENDULUM_FORCE,
     TEST_PUSH_FORCE,
@@ -234,6 +236,7 @@ describe("buildContact, step by step", () => {
             pushForce: TEST_PUSH_FORCE,
             pushResponseTime: TEST_PUSH_RESPONSE_TIME,
             chain: TEST_CHAIN,
+            gripLimit: TEST_GRIP_LIMIT,
         });
         expect(drive.coupling).toEqual({
             period: HAND_COUPLING.period,
@@ -290,6 +293,10 @@ describe("buildContact, step by step", () => {
             { pushResponseTime: Infinity },
             /profile\.body\.pushResponseTime must be finite/,
         ],
+        ["no grip limit", { gripLimit: 0 }, /profile\.body\.gripLimit must be/],
+        ["a negative grip limit", { gripLimit: -1 }, /profile\.body\.gripLimit must be/],
+        ["a NaN grip limit", { gripLimit: NaN }, /profile\.body\.gripLimit must be/],
+        ["an infinite grip limit", { gripLimit: Infinity }, /profile\.body\.gripLimit must be/],
         [
             "no forearm mass",
             { chain: { ...TEST_CHAIN, forearmMass: 0 } },
@@ -682,6 +689,7 @@ describe("defaultProfile", () => {
                 fingerStiffness: contactReference.fingerStiffness.value,
                 fingerDamping: contactReference.fingerDamping.value,
             },
+            gripLimit: GRIP_LIMIT,
         });
     });
 

@@ -591,6 +591,10 @@ describe("simulateImpact with a tracked drive", () => {
             withHands({ pushResponseTime: Infinity }),
             /hands\.pushResponseTime must be finite/,
         ],
+        ["no grip limit", withHands({ gripLimit: 0 }), /hands\.gripLimit must be a positive finite number/],
+        ["a negative grip limit", withHands({ gripLimit: -1 }), /hands\.gripLimit must be a positive finite number/],
+        ["a NaN grip limit", withHands({ gripLimit: NaN }), /hands\.gripLimit must be finite/],
+        ["an infinite grip limit", withHands({ gripLimit: Infinity }), /hands\.gripLimit must be finite/],
         [
             "a chain with no hand mass",
             withHands({ chain: { ...TEST_CHAIN, handMass: 0 } }),
