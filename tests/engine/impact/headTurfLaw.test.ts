@@ -132,6 +132,24 @@ describe("ploughing and the sole's friction (design §4.3; §7.1 case 2)", () =>
         }
     });
 
+    it("sticks below the cap with k_t = (2/7)·k_w·h²·n and c_t = √(2/7)·k_w·τ_r·h²·n, and carries its spring", () => {
+        // Plan decision 2. A fresh bed under the level box, 0.5·y deep and still but for a slip v along x: the spring
+        // starts at rest, so the first step's trial is −(k_t·v·dt + c_t·v), far below the cap. Its n unchanged, the
+        // second step carries ξ = v·dt unscaled and adds v·dt more.
+        const v = 1e-3;
+        const bed = newHeadTurfBed(LAW);
+        const at = sunk(0.5 * YIELD, 0, vec3(v, 0, 0));
+        const first = headTurfLoad(bed, at, TEST_SHARP, DT, AIM) as HeadTurfLoad;
+        const kt = TANGENTIAL_STIFFNESS_RATIO * LAW.modulus * H * H * first.columns;
+        const ct = Math.sqrt(TANGENTIAL_STIFFNESS_RATIO) * LAW.modulus * LAW.recovery * H * H * first.columns;
+        expect(first.sliding).toBe(false);
+        expect(rel(first.resistance.x, 0 - (kt * v * DT + ct * v))).toBeLessThan(1e-12);
+        expect(Math.abs(first.resistance.y)).toBe(0);
+        const second = headTurfLoad(bed, at, TEST_SHARP, DT, AIM) as HeadTurfLoad;
+        expect(second.columns).toBe(first.columns);
+        expect(rel(second.resistance.x, 0 - (kt * 2 * v * DT + ct * v))).toBeLessThan(1e-12);
+    });
+
     it("ploughs only below the floor it left when it moves back along its furrow", () => {
         // Plan decision 1. Forward 0.1 m at depth d past yield, every column the box leaves keeps the set s = d − y.
         // Lifted out and lowered into its furrow, the box arrives over columns whose floor is −s, so each strip
@@ -252,6 +270,24 @@ describe("symmetry and convergence (design §7.1 case 6)", () => {
             expect(l.sliding).toBe(la.sliding);
         }
         expect(loaded).toBeGreaterThan(10);
+    });
+
+    it("gives a level box ploughing obliquely and its mirror the mirrored load, to the bit", () => {
+        // Moving obliquely, a strip across the trial holds columns of equal ploughing depth; the column it keeps must
+        // be chosen alike in the mirrored run, or the resistance's centre, and so the yaw torque, differ.
+        const d = 3 * YIELD;
+        const dt = 1e-4;
+        const a = newHeadTurfBed(LAW);
+        const b = newHeadTurfBed(LAW);
+        for (let k = 0; k < 300; k++) {
+            const sa = state(vec3(k * dt, 0.3 * k * dt, TEST_RHO - d), vec3(1, 0.3, 0));
+            const sb = state(mirrorVec(sa.position), mirrorVec(sa.velocity));
+            const la = headTurfLoad(a, sa, TEST_SHARP, dt, AIM) as HeadTurfLoad;
+            const lb = headTurfLoad(b, sb, TEST_SHARP, dt, AIM) as HeadTurfLoad;
+            expect(same(lb.force, mirrorVec(la.force)), `step ${k}`).toBe(true);
+            expect(same(lb.torque, mirrorSpin(la.torque)), `step ${k}`).toBe(true);
+            expect(lb.cap, `step ${k}`).toBe(la.cap);
+        }
     });
 
     it("converges with the lattice: a tilted box's bearing within a boundary column's share of the exact", () => {

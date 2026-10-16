@@ -119,10 +119,15 @@ export interface HeadTurfLoad {
     readonly columns: number;
 }
 
-/** One bearing column in one load: its force (N, upward), point, ploughing depth (m), δ (m) and e′ (m/s). */
+/**
+ * One bearing column in one load: its force (N, upward), its point (x, y, z) on the underside, its ploughing depth
+ * (m), δ (m) and e′ (m/s).
+ */
 interface Bearing {
     readonly force: number;
-    readonly point: Vec3;
+    readonly x: number;
+    readonly y: number;
+    readonly z: number;
     readonly plough: number;
     readonly depth: number;
     readonly rate: number;
@@ -132,7 +137,8 @@ interface Bearing {
  * Column (i, j) under the head (design §4.2; plan decision 1), counting the visit: null unless the head's underside
  * over its centre, `under(x, y)`, lies below the column's floor −s. A column the head arrives over takes its floor as
  * its entry floor; its set moves to δ − p_y/k_w while k_w·e > p_y (calling `onYield`); it bears
- * h²·max(0, k_w·(e + τ_r·e′)).
+ * h²·max(0, k_w·(e + τ_r·e′)). A column with e > 0 whose force is 0 (the head lifting off it faster than it
+ * recovers) is still returned: it counts in n, so in the spring's stiffness, and in the strips.
  */
 function bear(
     bed: HeadTurfBed,
@@ -168,15 +174,30 @@ function bear(
         column.set = depth - law.yieldPressure / law.modulus;
         onYield();
     }
-    const point = vec3(x, y, z);
-    const rate = 0 - pointVelocity(s.position, s.velocity, s.angularVelocity, point).z;
+    // e′ = −u_z, u = v + ω × r with r the point less the head's centre: u_z = v_z + ω_x·r_y − ω_y·r_x.
+    const w = s.angularVelocity;
+    const rate = 0 - (s.velocity.z + w.x * (y - s.position.y) - w.y * (x - s.position.x));
     const pressure = law.modulus * (depth - column.set + law.recovery * rate);
-    return { force: pressure > 0 ? h * h * pressure : 0, point, plough: depth - column.entry, depth, rate };
+    return { force: pressure > 0 ? h * h * pressure : 0, x, y, z, plough: depth - column.entry, depth, rate };
 }
 
-/** A bearing column's moment of its force about `centre` (N·m). */
-function turnOf(c: Bearing, centre: Vec3): Vec3 {
-    return cross(sub(c.point, centre), vec3(0, 0, c.force));
+/**
+ * Whether bearing column `c` takes strip's place as its ploughing column: the deeper ploughing, then on a tie the
+ * leading column, the greater projection on `along` (ax, ay), then the greater x. All three keys are unchanged by a
+ * mirror across y = 0, which also mirrors `along`, so a mirrored run keeps the mirrored column (plan decision 5). Two
+ * columns of one strip cannot tie on all three: equal x and equal projection put them at equal y unless ay is 0, and
+ * then the strips are the lattice's rows, each column of a row at its own x.
+ */
+function leads(c: Bearing, best: Bearing, ax: number, ay: number): boolean {
+    if (c.plough !== best.plough) {
+        return c.plough > best.plough;
+    }
+    const pc = c.x * ax + c.y * ay;
+    const pb = best.x * ax + best.y * ay;
+    if (pc !== pb) {
+        return pc > pb;
+    }
+    return c.x > best.x;
 }
 
 /**
@@ -195,9 +216,11 @@ export function headTurfLoad(
     const { law } = bed;
     const h = law.cell;
     const bearings: Bearing[] = [];
+    // N_b and M = Σ p·f, the bearing's moment about the origin, summed per mirror pair (see the file header).
     let bearing = 0;
-    let torque = ZERO;
-    let moment = ZERO;
+    let mx = 0;
+    let my = 0;
+    let mz = 0;
     let yields = 0;
     const onYield = (): void => {
         yields += 1;
@@ -221,14 +244,16 @@ export function headTurfLoad(
             }
             if (a !== null && b !== null) {
                 bearing += a.force + b.force;
-                torque = add(torque, add(turnOf(a, s.position), turnOf(b, s.position)));
-                moment = add(moment, add(scale(a.point, a.force), scale(b.point, b.force)));
+                mx += a.x * a.force + b.x * b.force;
+                my += a.y * a.force + b.y * b.force;
+                mz += a.z * a.force + b.z * b.force;
                 return;
             }
             const one = (a ?? b) as Bearing;
             bearing += one.force;
-            torque = add(torque, turnOf(one, s.position));
-            moment = add(moment, scale(one.point, one.force));
+            mx += one.x * one.force;
+            my += one.y * one.force;
+            mz += one.z * one.force;
         });
     }
     const n = bearings.length;
@@ -244,7 +269,9 @@ export function headTurfLoad(
         }
     }
     // The bearing's centre of pressure, or the deepest column's point where no column presses (plan decision 7).
-    const pressure = bearing > 0 ? scale(moment, 1 / bearing) : deepest.point;
+    const inverse = bearing > 0 ? 1 / bearing : 0;
+    const pressure =
+        bearing > 0 ? vec3(mx * inverse, my * inverse, mz * inverse) : vec3(deepest.x, deepest.y, deepest.z);
     const stiffness = law.modulus * h * h * n;
     const damping = stiffness * law.recovery;
     const spring: PairLaw = {
@@ -262,46 +289,77 @@ export function headTurfLoad(
     );
     const reach = length(lead);
     const along = reach > 0 ? scale(lead, 1 / reach) : aim;
-    const across = vec3(0 - along.y, along.x, 0);
-    const strips = new Map<number, Bearing>();
+    // The strip across the trial: a mirror across y = 0 negates the projection, so strip k becomes −k − 1.
+    const crossX = 0 - along.y;
+    const crossY = along.x;
+    let kMin = Infinity;
+    let kMax = 0 - Infinity;
+    const stripOf: number[] = [];
     for (const c of bearings) {
-        const k = Math.floor((c.point.x * across.x + c.point.y * across.y) / h);
-        const best = strips.get(k);
-        if (best === undefined || c.plough > best.plough) {
-            strips.set(k, c);
+        const k = Math.floor((c.x * crossX + c.y * crossY) / h);
+        stripOf.push(k);
+        kMin = Math.min(kMin, k);
+        kMax = Math.max(kMax, k);
+    }
+    const strips: (Bearing | undefined)[] = new Array<Bearing | undefined>(kMax - kMin + 1);
+    for (let m = 0; m < n; m++) {
+        const c = bearings[m] as Bearing;
+        const slot = (stripOf[m] as number) - kMin;
+        const best = strips[slot];
+        if (best === undefined || leads(c, best, along.x, along.y)) {
+            strips[slot] = c;
         }
     }
-    // Each strip's ploughing, summed over mirror pairs of strips in ascending p (plan decisions 4, 5).
+    const stripAt = (k: number): Bearing | undefined => (k < kMin || k > kMax ? undefined : strips[k - kMin]);
+    // Each strip's ploughing, summed over mirror pairs of strips (p, −p − 1) in ascending p (plan decisions 4, 5).
     const perDepth = h * law.matStrength * law.ploughFactor;
-    const order = [...new Set([...strips.keys()].map((k) => Math.max(k, 0 - k - 1)))].sort((a, b) => a - b);
+    const pLo = kMin >= 0 ? kMin : kMax < 0 ? 0 - kMax - 1 : 0;
+    const pHi = Math.max(kMax, 0 - kMin - 1);
     let ploughing = 0;
-    let ploughMoment = ZERO;
-    for (const p of order) {
-        const a = strips.get(p);
-        const b = strips.get(0 - p - 1);
+    let px = 0;
+    let py = 0;
+    let pz = 0;
+    for (let p = pLo; p <= pHi; p++) {
+        const a = stripAt(p);
+        const b = stripAt(0 - p - 1);
         if (a !== undefined && b !== undefined) {
             const ra = perDepth * a.plough;
             const rb = perDepth * b.plough;
             ploughing += ra + rb;
-            ploughMoment = add(ploughMoment, add(scale(a.point, ra), scale(b.point, rb)));
-        } else {
+            px += a.x * ra + b.x * rb;
+            py += a.y * ra + b.y * rb;
+            pz += a.z * ra + b.z * rb;
+        } else if (a !== undefined || b !== undefined) {
             const one = (a ?? b) as Bearing;
             const r = perDepth * one.plough;
             ploughing += r;
-            ploughMoment = add(ploughMoment, scale(one.point, r));
+            px += one.x * r;
+            py += one.y * r;
+            pz += one.z * r;
         }
     }
     const friction = law.friction * bearing;
     const cap = friction + ploughing;
-    const centre = cap > 0 ? scale(add(scale(pressure, friction), ploughMoment), 1 / cap) : pressure;
+    const share = cap > 0 ? 1 / cap : 0;
+    const centre =
+        cap > 0
+            ? vec3(
+                  (pressure.x * friction + px) * share,
+                  (pressure.y * friction + py) * share,
+                  (pressure.z * friction + pz) * share,
+              )
+            : pressure;
     const slip = horizontal(pointVelocity(s.position, s.velocity, s.angularVelocity, centre));
     const tangential = tangentialForce(spring, add(carried, scale(slip, dt)), slip, cap);
     bed.spring = tangential.spring;
     bed.tangent = spring.tangentialStiffness;
     const resistance = tangential.force;
+    // The bearing's moment about the centre c: Σ (pᵢ − c) × (0, 0, fᵢ) = (M − c·N_b) × ẑ.
+    const c = s.position;
+    const bearingTurn = vec3(my - c.y * bearing, 0 - (mx - c.x * bearing), 0);
     return {
         force: add(vec3(0, 0, bearing), resistance),
-        torque: add(torque, cross(sub(centre, s.position), resistance)),
+        torque: add(bearingTurn, cross(sub(centre, c), resistance)),
         bearing,
         resistance,
         cap,
