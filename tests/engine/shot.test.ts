@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { judgeFaults } from "../../src/engine/faults";
+import { headLowestPoint } from "../../src/engine/impact/contacts";
 import { IMPACT_DT, TRACK_IMPACT_CAP, type ImpactProbe, type ImpactSnapshot } from "../../src/engine/impact/integrate";
 import { IDENTITY, rotate } from "../../src/engine/impact/rigidBody";
 import { simulateImpact } from "../../src/engine/impact/simulateImpact";
@@ -530,8 +531,10 @@ describe("the mechanisms (design §8.1), on the canonical setups", () => {
         // P2b.2b.2b.2c: on the legacy round head; the default box clears the turf (gate).
         // P2b.2b.2b.3: the turf strike (was 12.21–21.14 ms, 1.88 mm deep, +0.386 N·s, no impact-head-deep): the turf
         // now bears the barrel's footprint at the bed's modulus and its columns yield (turf-yield at 14.18 ms), so it
-        // holds the head less firmly than the plane's spring did: 12.27–24.29 ms, 3.04 mm deep, +0.353 N·s, and
-        // impact-head-deep at 14.79 ms. Unpredicted, for the gate: §7.4's graze stays within 2 mm.
+        // holds the head less firmly than the plane's spring did: 3.04 mm deep, and impact-head-deep at 14.79 ms.
+        // Unpredicted, for the gate: §7.4's graze stays within 2 mm. The impact's turf contact runs 12.27–20.25 ms,
+        // +0.286 N·s: once the ball has gone and the drive is done the follow-through carries it on (user ruling
+        // 2026-10-16; was 12.27–24.29 ms, +0.353 N·s).
         const { impact, turf } = braking(canonicalSetup("stop-ac", { mallet: LEGACY_MALLET }));
         const dug = impact.timeline["head/turf"]?.[0] as ContactInterval;
         expect(dug).toBeDefined();
@@ -595,4 +598,31 @@ describe("the mechanisms (design §8.1), on the canonical setups", () => {
             expect(Math.abs(length(head.velocity) - planned.contactSpeed)).toBeLessThan(1e-4);
         },
     );
+});
+
+describe("the head's turf contact after the strike (P2b.2b.2b.3; user ruling 2026-10-16)", () => {
+    it("hands a stop whose head rests on the turf over to the follow-through, not to the cap", () => {
+        // The preset stop-ac 2 m/s, drive 0, up 3 mm above canonical (−0.017), side 0. After the check its relaxed
+        // hands follow the pendulum, which drags the head back and forth on the turf, carrying its weight about 0.5 mm
+        // deep; the pair held the impact open to TRACK_IMPACT_CAP (impact-cap at 450 ms). Once the ball has gone and
+        // the drive is done, the follow-through takes the head's turf contact over: the impact ends by itself (now at
+        // 262 ms, on its other terms) and the follow-through's head is in the turf.
+        const base = canonicalSetup("stop-ac", { world: WORLD });
+        const preset = { ...base.stroke, drive: 0, contact: { up: base.stroke.contact.up + 0.003, side: 0 } };
+        const setup = { ...base, stroke: preset };
+        const shot = { ...setup, stroke: { ...preset, backswing: backswingFor(setup, 2, WORLD) } };
+        const { impact, contact, trajectory } = simulateShot(shot, WORLD, { trajectory: true });
+        expect(impact.events.map((e) => e.kind)).not.toContain("impact-cap");
+        expect(impact.duration).toBeLessThan(TRACK_IMPACT_CAP);
+        expect(impact.handover.blue).toBeDefined();
+        const stroke = trajectory as SwingTrajectory;
+        const follow = stroke.samples.filter((s) => s.t > stroke.impactEnd);
+        const low = follow.map((s) =>
+            headLowestPoint(
+                { position: s.head, orientation: s.orientation, velocity: ZERO, angularVelocity: ZERO },
+                contact.head,
+            ),
+        );
+        expect(Math.min(...low)).toBeLessThan(0);
+    });
 });

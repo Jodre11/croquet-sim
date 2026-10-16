@@ -17,14 +17,14 @@
  * The balls stand on the turf bed (turfBed.ts; P2b.2b.2b.2a design §4): each ball–turf pair is its ball's own cells,
  * stepped with the pair, and a ball is in the turf while it holds a cell. The impact ends once a face–ball contact has
  * closed, the drive window has closed, no face–ball, ball–ball or ball–obstacle contact has been closed, and no
- * head–turf contact has held the head other than at rest (P2b.2b.2b.3 design §4.6), for RELEASE_STEPS steps, and no
- * ball in the turf is still bouncing (turfBed.ts isBouncing: its vertical energy measured from rest at the surface on
- * a fresh bed is positive), or at the cap. A head at rest in the turf for RELEASE_STEPS steps before any face contact
- * ends the impact with `impact-head-stopped`. A column first yielding raises `turf-yield` (`follow-turf-yield` in the
- * follow-through). At the end a ball still pressed more than TURF_PIT_DEPTH into its pit raises `impact-turf-pit`.
- * Two balls whose footprints come within a cell of each other while both hold cells throw a RangeError (plan decision
- * 1). Isolated set-ups (tests) may give balls any state and leave the turf out; simulateImpact.ts prepares and
- * validates real ones.
+ * head–turf contact has held the head other than at rest (P2b.2b.2b.3 design §4.6) while the ball was yet to be
+ * struck or the drive yet to be done, for RELEASE_STEPS steps, and no ball in the turf is still bouncing (turfBed.ts
+ * isBouncing: its vertical energy measured from rest at the surface on a fresh bed is positive), or at the cap. A head
+ * at rest in the turf for RELEASE_STEPS steps before any face contact ends the impact with `impact-head-stopped`. A
+ * column first yielding raises `turf-yield` (`follow-turf-yield` in the follow-through). At the end a ball still
+ * pressed more than TURF_PIT_DEPTH into its pit raises `impact-turf-pit`. Two balls whose footprints come within a
+ * cell of each other while both hold cells throw a RangeError (plan decision 1). Isolated set-ups (tests) may give
+ * balls any state and leave the turf out; simulateImpact.ts prepares and validates real ones.
  *
  * A tracked drive (P2b.2b.1 design §3.5) ends on the same conditions, both arcs' windows and the dip (and, in carry
  * mode, the pendulum phase's start; P2b.2b.2b.2b design §4.2) standing for the drive window, and only once the head
@@ -52,8 +52,10 @@
  *
  * With a follow-through (integrateStroke, P2b.2b.2a design §4.1) a tracked drive's loop continues once the impact has
  * ended, the balls removed: the hands and the head–turf pair act on the head until the stroke type's finish, or
- * FOLLOW_CAP after contact. The impact's result is fixed before it starts. A hand first reaching its grip's limit
- * raises `grip-limit` in the impact and `follow-grip-limit` in the follow-through (P2b.2b.2b.3 design §5).
+ * FOLLOW_CAP after contact. Once the ball has been struck and the drive is done the head's turf contact is the
+ * follow-through's to carry, on the same bed (user ruling 2026-10-16), so it does not hold the impact open. The
+ * impact's result is fixed before it starts. A hand first reaching its grip's limit raises `grip-limit` in the impact
+ * and `follow-grip-limit` in the follow-through (P2b.2b.2b.3 design §5).
  */
 import { contactReference } from "../../reference/index";
 import { ZERO, add, cross, dot, horizontal, length, scale, sub, vec3, type Vec3 } from "../math/vec3";
@@ -142,9 +144,11 @@ import type {
 export const IMPACT_DT = 5e-6;
 
 /**
- * Consecutive steps without a closed face–ball, ball–ball, ball–obstacle or head–turf contact after which the impact
- * may end. A numerical allowance for a contact to re-close (a croquet stroke's balls part and meet again), not
- * physical. Pre-flight: ×4 moves no ball's state 50 ms after the strike by more than 2.8e-4 of the head speed.
+ * Consecutive steps without a closed face–ball, ball–ball or ball–obstacle contact, or a head–turf contact holding
+ * the head other than at rest before the strike and the drive's end (see the file header), after which the impact
+ * may end; also how long a head must rest in the turf before any face contact to end it. A numerical allowance for a
+ * contact to re-close (a croquet stroke's balls part and meet again), not physical. Pre-flight: ×4 moves no ball's
+ * state 50 ms after the strike by more than 2.8e-4 of the head speed.
  */
 export const RELEASE_STEPS = 50;
 
@@ -1142,7 +1146,11 @@ export function integrateStroke(setup: ImpactSetup, options: ImpactOptions = {},
                 yielded = true;
                 events.push({ kind: "turf-yield", t });
             }
-            if (!atRest(turfLoad, state)) {
+            // Once the ball has been struck and the drive is done (the end rule's own terms; a face–ball contact still
+            // closed holds the impact open by itself), the follow-through takes the head's turf contact over on the
+            // same bed, so the pair no longer holds the impact open (user ruling 2026-10-16). Before then, only a head
+            // at rest in the turf lets it go.
+            if (!atRest(turfLoad, state) && !(struck && (steps + 1) * dt >= driveEnd)) {
                 hardClosed = true;
             }
         }

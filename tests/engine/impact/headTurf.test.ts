@@ -91,20 +91,26 @@ describe("the head–turf pair in the impact (P2b.2b.2b.3 design §4)", () => {
         expect(run.head.position.x).toBeLessThan((1.5 * v * v) / (2 * LAW.friction * g));
     });
 
-    it("lets a struck impact end by itself with the head at rest in the turf", () => {
-        // §4.6. TEST_BOX sliding on the turf at 0.15 m/s strikes a ball resting on its bed 2 mm ahead, then slides to
-        // rest. The pair holds the impact open while the head moves and counts as open once it rests, so the impact
-        // ends RELEASE_STEPS after that, well within IMPACT_CAP: the old rule would have run to the cap. TEST_HEAD, as
-        // a force table's face–ball pair is the cylinder's alone (faceContact).
+    it("ends a struck impact RELEASE_STEPS after the ball leaves the face, the head still sliding on the turf", () => {
+        // §4.6. A head sliding on the turf at 0.15 m/s strikes a ball resting on its bed 2 mm ahead. Once the ball has
+        // been struck and the drive is done, the head's turf contact is the follow-through's (user ruling
+        // 2026-10-16) and no longer holds the impact open, so the impact ends RELEASE_STEPS after the face interval,
+        // well within IMPACT_CAP, the head still sliding. P2b.2b.2b.3: the turf strike (was: ends at 24.42 ms, the
+        // head at rest, 0.61 mm/s; now 21.64 ms, sliding at 13.1 mm/s). TEST_HEAD, as a force table's face–ball pair
+        // is the cylinder's alone (faceContact).
         const sink = staticSink(0.117 + R, 0, R, TEST_BALL.mass * g, testBed());
         const blue = freeBall("blue", vec3(TEST_HEAD.length / 2 + 0.002 + R, 0, R - sink), ZERO, testBed());
         const run = integrate(onTurf(TEST_HEAD, vec3(0, 0, TEST_RHO), vec3(0.15, 0, 0), IDENTITY, LAW, [blue]));
         const kinds = run.events.map((e) => e.kind);
-        expect(run.timeline["face/blue"]?.length).toBeGreaterThan(0);
+        const face = run.timeline["face/blue"] ?? [];
+        const turf = run.timeline[HEAD_TURF_KEY] ?? [];
+        expect(face).toHaveLength(1);
         expect(kinds).not.toContain("impact-cap");
         expect(kinds).not.toContain("impact-head-stopped");
+        expect(run.duration).toBeCloseTo((face[0]?.end as number) + RELEASE_STEPS * IMPACT_DT, 12);
         expect(run.duration).toBeLessThan(IMPACT_CAP);
-        expect(length(horizontal(run.head.velocity))).toBeLessThan(HEAD_REST_SPEED);
+        expect(turf[turf.length - 1]?.end).toBe(run.duration);
+        expect(length(horizontal(run.head.velocity))).toBeGreaterThan(HEAD_REST_SPEED);
     });
 
     it("raises turf-yield once, when a column first yields", () => {
