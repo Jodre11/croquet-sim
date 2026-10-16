@@ -59,6 +59,21 @@ export interface BedLaw {
     readonly cell: number;
 }
 
+/**
+ * The head–turf law (P2b.2b.2b.3 design §4): the turf bed's modulus k_w (N/m³) and recovery τ_r (s) under the head,
+ * the turf's bearing yield p_y (Pa), the root mat's strength c (Pa), Reece's cohesion factor N_c, the sole's friction
+ * µ, and the column's side h (m), the bed's own lattice.
+ */
+export interface HeadTurfLaw {
+    readonly modulus: number;
+    readonly recovery: number;
+    readonly yieldPressure: number;
+    readonly matStrength: number;
+    readonly ploughFactor: number;
+    readonly friction: number;
+    readonly cell: number;
+}
+
 /** Applied force at time t (s from the start of the impact), world frame. Linear between samples. */
 export interface DriveSample {
     readonly t: number;

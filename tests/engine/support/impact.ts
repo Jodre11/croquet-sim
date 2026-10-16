@@ -30,6 +30,7 @@ import type {
     HandChain,
     Hands,
     HeadState,
+    HeadTurfLaw,
     MalletHead,
     SwingArc,
     TrackDrive,
@@ -277,6 +278,23 @@ export function freeBall(
 /** A plausible test bed (fixtures' TEST_TURF): k_w 3e8 N/m³, τ_r 2 ms, µ `friction`, 2 mm cells. */
 export function testBed(friction = 0.3): BedLaw {
     return { modulus: TEST_TURF.bedModulus, recovery: TEST_TURF.bedRecovery, friction, cell: BED_CELL };
+}
+
+/**
+ * A plausible test head–turf law (P2b.2b.2b.3 design §4) on the test bed: k_w 3e8 N/m³, τ_r 2 ms, p_y 200 kPa (so a
+ * fresh column yields at 0.67 mm), c 100 kPa, N_c 1.7, µ 0.5, 2 mm columns. Unsourced, as fixtures.ts. `o` overrides.
+ */
+export function testHeadTurf(o: Partial<HeadTurfLaw> = {}): HeadTurfLaw {
+    return {
+        modulus: TEST_TURF.bedModulus,
+        recovery: TEST_TURF.bedRecovery,
+        yieldPressure: TEST_TURF.turfYield,
+        matStrength: TEST_TURF.turfMatStrength,
+        ploughFactor: 1.7,
+        friction: 0.5,
+        cell: BED_CELL,
+        ...o,
+    };
 }
 
 /**

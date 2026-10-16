@@ -160,8 +160,9 @@ export const frictionReference = {
 
 /**
  * Impact-phase contact data: turf stiffness, contact durations, the tangential ratio, Gugan's face fits, the hand
- * coupling, the default body's arm mass and reach slack, the head–turf pair, the arm's flex, pendulum push, push and
- * push response time, and the hand–arm chain (P2b.2b.2b.2b).
+ * coupling, the default body's arm mass and reach slack, the head–turf law (its sole's friction, the turf's yield, the
+ * root mat's strength and N_c), the arm's flex, pendulum push, push and push response time, and the hand–arm chain
+ * (P2b.2b.2b.2b).
  */
 export const contactReference = {
     ballTurfStiffness: readValue(contactJson, "ballTurfStiffness", "contact"),
@@ -179,6 +180,9 @@ export const contactReference = {
     reachSlack: readValue(contactJson, "reachSlack", "contact"),
     headTurfFriction: readValue(contactJson, "headTurfFriction", "contact"),
     headDeepLimit: readValue(contactJson, "headDeepLimit", "contact"),
+    turfYield: readValue(contactJson, "turfYield", "contact"),
+    turfMatStrength: readValue(contactJson, "turfMatStrength", "contact"),
+    turfPloughFactor: readValue(contactJson, "turfPloughFactor", "contact"),
     armStiffness: readValue(contactJson, "armStiffness", "contact"),
     armStiffnessPerForce: readValue(contactJson, "armStiffnessPerForce", "contact"),
     armDampingRatio: readValue(contactJson, "armDampingRatio", "contact"),

@@ -138,6 +138,28 @@ describe("validateWorld", () => {
                 }),
             },
         ],
+        [
+            "non-positive turf yield",
+            {
+                lawn: uniformLawn(30, 40, {
+                    slidingFriction: 0.3,
+                    rollingResistance: 0.05,
+                    ...TEST_TURF,
+                    turfYield: 0,
+                }),
+            },
+        ],
+        [
+            "non-positive root mat strength",
+            {
+                lawn: uniformLawn(30, 40, {
+                    slidingFriction: 0.3,
+                    rollingResistance: 0.05,
+                    ...TEST_TURF,
+                    turfMatStrength: -1,
+                }),
+            },
+        ],
         ["non-positive ball–ball contact time", { ballBallContactTime: 0 }],
         ["non-positive crown clearance", { hoops: [{ ...testHoop("1", 5, 5), crownClearance: 0 }] }],
         ["non-positive hoop contact time", { hoops: [{ ...testHoop("1", 5, 5), contactTime: 0 }] }],
@@ -159,6 +181,8 @@ describe("defaultWorld", () => {
         const surface = world.lawn.surfaceAt(vec3(1, 1, 0));
         expect(surface.turfRestitution).toBeGreaterThan(0);
         expect(surface.turfStiffness).toBeGreaterThan(0);
+        expect(surface.turfYield).toBeGreaterThan(0);
+        expect(surface.turfMatStrength).toBeGreaterThan(0);
         expect(world.ballBallContactTime).toBeGreaterThan(0);
         const T = contactReference.ballObstacleContactTime.value;
         expect(world.hoops.every((h) => h.contactTime === T)).toBe(true);

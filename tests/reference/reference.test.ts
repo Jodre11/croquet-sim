@@ -124,7 +124,13 @@ describe("impact reference data", () => {
     it("gives every impact value bounds, so the probe can sweep them, and every fit a range", () => {
         // The bed's fitted pair has no bounds: one court only, and lawn presets are P3's (P2b.2b.2b.2a design §4.4).
         // The edge radius is an unsourced placeholder (P2b.2b.2b.2c design §6).
-        const unbounded = [contactReference.bedModulus, contactReference.bedRecovery, malletReference.edgeRadius];
+        // N_c is a labelled analogue: no open table against rake was found (P2b.2b.2b.3 design §6.2).
+        const unbounded = [
+            contactReference.bedModulus,
+            contactReference.bedRecovery,
+            contactReference.turfPloughFactor,
+            malletReference.edgeRadius,
+        ];
         for (const v of [...Object.values(contactReference), ...Object.values(malletReference)]) {
             if ("range" in v) {
                 expect(v.range[0], v.source).toBeLessThan(v.range[1]);
@@ -229,6 +235,11 @@ describe("swing, coupling and head–turf reference data", () => {
         expect(contactReference.gripLimit.value).toBe(435);
         expect(contactReference.gripLimit.bounds).toEqual([408, 462]);
         expect(contactReference.headDeepLimit.value).toBe(0.002);
+        expect(contactReference.turfYield.value).toBe(240000);
+        expect(contactReference.turfYield.bounds).toEqual([172000, 310000]);
+        expect(contactReference.turfMatStrength.value).toBe(105000);
+        expect(contactReference.turfMatStrength.bounds).toEqual([73000, 138000]);
+        expect(contactReference.turfPloughFactor.value).toBe(1.71);
     });
 
     it("loads the default shaft, 36 in", () => {
