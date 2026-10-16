@@ -13,16 +13,28 @@
  *   with no jab and at the shallowest graze, the hands' peak checking force and the turf's braking impulse;
  * - bounds: the regimes' found setups and the jab sweep's verdict at each end of turfYield's and turfMatStrength's
  *   bounds (design §6.2, §8), the other figures at their defaults;
- * - cost: per canonical setup at 3 m/s, the impact's steps and the head–turf columns visited per step, mean over the
- *   steps that visit any and worst (design §9; plan decision 21).
+ * - cost: per canonical setup at 3 m/s (the no-turf baseline), then the found graze and biting, the AC stop's deepest
+ *   graze and the roll whose follow-through yields the turf: the impact's and the follow-through's steps, the
+ *   head–turf columns visited per grounded step (mean, worst, total) and the run's wall time, split at the
+ *   follow-through's first step (design §9; plan decision 21);
+ * - power: the found graze's speed at the ball against the same stroke clear of the turf (up 0) and against its own
+ *   on entering the turf, and its planned path's speeds, which separate the turf's loss from the earlier start on the
+ *   arc (user, 2026-10-16: a graze's cost is the power it loses).
  * Run with `npx --yes tsx scripts/turfStrikeProbe.ts`; environment: SECTION (one of the names above; default all). Not
  * part of the test suite; its output goes into the gate and the roadmap's outcomes.
  */
 import { headExtent, headLowestPoint } from "../src/engine/impact/contacts";
 import { BED_CELL, columnSpan } from "../src/engine/impact/turfBed";
-import { IMPACT_DT, type FollowThrough, type ImpactProbe, type ImpactSnapshot } from "../src/engine/impact/integrate";
+import {
+    IMPACT_DT,
+    type FollowSnapshot,
+    type FollowThrough,
+    type ImpactProbe,
+    type ImpactSnapshot,
+} from "../src/engine/impact/integrate";
 import { simulateStroke } from "../src/engine/impact/simulateImpact";
-import type { HeadState, ImpactResult, MalletHead } from "../src/engine/impact/types";
+import { headOnPath, prepareTrack } from "../src/engine/impact/track";
+import type { ContactState, HeadState, ImpactResult, MalletHead } from "../src/engine/impact/types";
 import { ZERO, dot, length, vec3, type Vec3 } from "../src/engine/math/vec3";
 import { planStroke } from "../src/engine/swing/buildContact";
 import { STROKE_TYPES, type ShotSetup, type StrokeType } from "../src/engine/swing/types";
@@ -71,7 +83,11 @@ function columnsUnder(s: HeadState, head: MalletHead): number {
     return (i1 - i0 + 1) * (j1 - j0 + 1);
 }
 
-/** One stroke: its setup, impact, follow-through and steps, the head at t = 0, the mallet head and the aim. */
+/**
+ * One stroke: its setup, impact, follow-through and steps, the head at t = 0, the mallet head and the aim; the
+ * contact state; the columns under the head after each follow-through step; and the wall time (ms) of the impact and
+ * of the follow-through, split at the follow-through's first step (the probe's own work included).
+ */
 interface Run {
     readonly label: string;
     readonly impact: ImpactResult;
@@ -80,12 +96,21 @@ interface Run {
     readonly start: HeadState;
     readonly head: MalletHead;
     readonly aim: Vec3;
+    readonly contact: ContactState;
+    readonly follows: readonly number[];
+    readonly wall: { readonly impact: number; readonly follow: number };
 }
 
 function run(label: string, setup: ShotSetup, world: World = WORLD): Run {
     const plan = planStroke(setup, world);
     const steps: Step[] = [];
+    const follows: number[] = [];
+    let handover: number | undefined;
     const probe: ImpactProbe = {
+        follow(s: FollowSnapshot): void {
+            handover = handover ?? performance.now();
+            follows.push(columnsUnder(s.head, plan.contact.head));
+        },
         step(s: ImpactSnapshot): void {
             steps.push({
                 t: s.t,
@@ -98,10 +123,24 @@ function run(label: string, setup: ShotSetup, world: World = WORLD): Run {
             });
         },
     };
+    const begin = performance.now();
     const { result, follow } = simulateStroke(plan.contact, setup.balls, world, { probe });
+    const end = performance.now();
+    const split = handover ?? end;
     const drive = plan.contact.drive;
     const aim = drive.kind === "track" ? drive.arc.aim : vec3(1, 0, 0);
-    return { label, impact: result, follow, steps, start: plan.contact, head: plan.contact.head, aim };
+    return {
+        label,
+        impact: result,
+        follow,
+        steps,
+        start: plan.contact,
+        head: plan.contact.head,
+        aim,
+        contact: plan.contact,
+        follows,
+        wall: { impact: split - begin, follow: end - split },
+    };
 }
 
 /** A preset's canonical setup at `speed` (m/s), its stroke changed by `stroke`. */
@@ -143,10 +182,11 @@ function figures(r: Run): string {
     );
 }
 
-/** One candidate of a regime's grid. */
+/** One candidate of a regime's grid; a grid's also at any other strike height `up` (m). */
 interface Candidate {
     readonly label: string;
     readonly setup: () => ShotSetup;
+    readonly at?: (up: number) => ShotSetup;
 }
 
 /** Runs `candidates` in order on `world`, printing each, and returns the first that `qualifies`, or null. */
@@ -211,11 +251,20 @@ function grid(
 ): Candidate[] {
     return jabs.flatMap((jab) =>
         UPS.flatMap((up) =>
-            dips.map((dip) => ({
-                label: `${type} ${speed} m/s up ${up} m dip ${dip} s jab ${mm(jab)} mm`,
-                setup: () =>
-                    shot(type, speed, { ...extra, jab, contact: { up, side: 0 }, timing: { arc: 0, hands: 0, dip } }),
-            })),
+            dips.map((dip) => {
+                const at = (u: number): ShotSetup =>
+                    shot(type, speed, {
+                        ...extra,
+                        jab,
+                        contact: { up: u, side: 0 },
+                        timing: { arc: 0, hands: 0, dip },
+                    });
+                return {
+                    label: `${type} ${speed} m/s up ${up} m dip ${dip} s jab ${mm(jab)} mm`,
+                    setup: () => at(up),
+                    at,
+                };
+            }),
         ),
     );
 }
@@ -434,19 +483,107 @@ function bounds(found: readonly (Run | null)[]): void {
     }
 }
 
-function cost(): void {
-    console.log("== cost (design §9) ==");
-    for (const type of STROKE_TYPES) {
-        const r = run(`${type} 3 m/s`, shot(type, 3));
-        const visiting = r.steps.filter((s) => s.columns > 0);
-        const mean = visiting.reduce((sum, s) => sum + s.columns, 0) / Math.max(1, visiting.length);
-        const worst = visiting.reduce((most, s) => Math.max(most, s.columns), 0);
-        console.log(
-            `${r.label}: impact ${r.impact.steps} steps, ${visiting.length} with the head in the turf; ` +
-                `columns per such ` +
-                `step: mean ${mean.toFixed(1)}, worst ${worst}`,
+/** The regime `name`'s found run on the default lawn, searched quietly, or null. */
+function foundRun(name: string): Run | null {
+    const g = REGIMES.find((x) => x.name === name);
+    return g === undefined ? null : search(g.name, g.candidates, g.qualifies, WORLD, true);
+}
+
+/** A run's cost on one line (design §9; plan decision 21): steps, grounded steps' columns, wall time. */
+function costLine(r: Run): string {
+    const stats = (columns: readonly number[], steps: number): string => {
+        const grounded = columns.filter((c) => c > 0);
+        const total = grounded.reduce((sum, c) => sum + c, 0);
+        const worst = grounded.reduce((most, c) => Math.max(most, c), 0);
+        const mean = total / Math.max(1, grounded.length);
+        return (
+            `${steps} steps, ${grounded.length} grounded, columns per grounded step mean ${mean.toFixed(1)} ` +
+            `worst ${worst}, total ${total}`
         );
+    };
+    return (
+        `${r.label}: impact ${stats(
+            r.steps.map((s) => s.columns),
+            r.impact.steps,
+        )}; follow-through ${stats(r.follows, r.follows.length)}; wall ${r.wall.impact.toFixed(0)} ms impact, ` +
+        `${r.wall.follow.toFixed(0)} ms follow-through; ${kinds(r).join(",") || "no events"}`
+    );
+}
+
+function cost(): void {
+    console.log("== cost (design §9; plan decision 21) ==");
+    console.log("-- canonical setups at 3 m/s (the no-turf baseline) --");
+    for (const type of STROKE_TYPES) {
+        console.log(costLine(run(`${type} 3 m/s`, shot(type, 3))));
     }
+    console.log("-- with the head in the turf --");
+    for (const name of ["graze", "biting"]) {
+        const r = foundRun(name);
+        console.log(r === null ? `${name}: none found` : costLine({ ...r, label: `${name} (${r.label})` }));
+    }
+    console.log(costLine(run("stop-ac 3 m/s jab 4.500 mm (the deepest graze)", shot("stop-ac", 3, { jab: 0.0045 }))));
+    console.log(costLine(run("half-roll 4 m/s (follow-turf-yield)", shot("half-roll", 4))));
+}
+
+/**
+ * The found graze's power loss (user, 2026-10-16): its speed along aim at the ball against the same stroke clear of
+ * the turf (up 0), and against its own on entering the turf; then the planned path's speed (the arc undisturbed by
+ * the turf) at the impact's first step, at the turf, and at contact, and the clear stroke's path at the same time
+ * before contact, which separate the turf's loss from the graze's earlier start on the arc.
+ */
+function power(): void {
+    console.log("== power: the graze's loss (user, 2026-10-16) ==");
+    const g = REGIMES.find((x) => x.name === "graze");
+    const r = foundRun("graze");
+    const c = g?.candidates.find((x) => x.label === r?.label);
+    const turf = r === null ? undefined : turfStart(r);
+    const face = r === null ? undefined : faceStart(r);
+    if (r === null || c?.at === undefined || turf === undefined || face === undefined) {
+        console.log("graze: none found");
+        return;
+    }
+    const clear = run(`${c.label} at up 0`, c.at(0));
+    const clearFace = faceStart(clear);
+    if (clearFace === undefined) {
+        console.log(`${clear.label}: no face contact`);
+        return;
+    }
+    const ball = along(r, face);
+    const clearBall = along(clear, clearFace);
+    const entry = along(r, turf);
+    console.log(
+        `${r.label}: at the ball ${ball.toFixed(4)} m/s (face ${ms(face)} ms); ${clear.label}: at the ball ` +
+            `${clearBall.toFixed(4)} m/s (face ${ms(clearFace)} ms); ratio ${(ball / clearBall).toFixed(4)}; ` +
+            `on entering the turf ${entry.toFixed(4)} m/s (${ms(turf)} ms), at the ball ` +
+            `${(ball / entry).toFixed(4)} of it`,
+    );
+    const path = (x: Run) => {
+        const drive = x.contact.drive;
+        if (drive.kind !== "track") {
+            return null;
+        }
+        const track = prepareTrack(drive, x.head, WORLD.gravity);
+        return {
+            contactAt: drive.arc.contactAt,
+            speed: (t: number): number => dot(headOnPath(track, x.head, t).velocity, x.aim),
+        };
+    };
+    const p = path(r);
+    const q = path(clear);
+    if (p === null || q === null) {
+        console.log("no tracked drive");
+        return;
+    }
+    const first = IMPACT_DT;
+    const before = p.contactAt - first;
+    console.log(
+        `planned path, ${r.label}: contact at ${ms(p.contactAt)} ms; ${p.speed(first).toFixed(4)} m/s at ` +
+            `${ms(first)} ms (measured ${along(r, r.steps[0]?.t ?? first).toFixed(4)}), ` +
+            `${p.speed(turf).toFixed(4)} at the turf (${ms(turf)} ms), ${p.speed(p.contactAt).toFixed(4)} at ` +
+            `contact; the clear stroke's path ${ms(before)} ms before its contact: ` +
+            `${q.speed(q.contactAt - before).toFixed(4)} m/s, at its contact (${ms(q.contactAt)} ms) ` +
+            `${q.speed(q.contactAt).toFixed(4)} m/s`,
+    );
 }
 
 if (SECTION === "all" || SECTION === "regimes" || SECTION === "series" || SECTION === "bounds") {
@@ -466,4 +603,7 @@ if (SECTION === "all" || SECTION === "jab") {
 }
 if (SECTION === "all" || SECTION === "cost") {
     cost();
+}
+if (SECTION === "all" || SECTION === "power") {
+    power();
 }
