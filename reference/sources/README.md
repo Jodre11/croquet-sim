@@ -417,14 +417,14 @@ file (a web page is fetched with `--compressed`). An Oxford Croquet page is hash
   Table 3), and the vane: "12 vertically oriented fins (2.0-cm length) welded at right angles to a cutting head
   (7.0-cm diam.)"; "The fins on the shear strength tester measure 20 mm. The sod profile was 44 mm thick, so the fins
   did not penetrate past the depth of sod harvest", and the mat "comprised ~75% of the penetration depth of the fins":
-  the 2.0 cm is the fins' depth in the turf, that is their height. The
-  conversion is ours: T = π·c·(D²H/2 + D³/12) = 2.437e-4 m³·c, so c is 73–138 kPa, default 105 kPa
-  (`turfMatStrength`).
-- **Mak & Chen 2014:** Reece's equation, "D = (ρb·g·d²·Nγ + c·d·Nc + ρb·v²·d·Na)·w·sin(α + δ)" (their Eq. 1), and
-  their Table 2 at 50 mm: Nγ 2.45, Nc 1.71 and Na 0.35, at a rake angle of 18.5° (`turfPloughFactor`; the other two
-  cited, not used).
-- **Young 2009:** the breakaway strength, "for a vertical cylinder (435 ± 27 N)" (`gripLimit`); the horizontal
-  cylinders gave 668 ± 40 and 552 ± 104 N, the vertical rail 337 ± 24 N.
+  the 2.0 cm is the fins' depth in the turf, that is their height. The conversion is ours:
+  T = π·c·(D²H/2 + D³/12) = 2.437e-4 m³·c, so c is 73–138 kPa, default 105 kPa (`turfMatStrength`).
+- **Mak & Chen 2014:** Reece's equation, which they call the Universal Earthmoving Equation and give "according to
+  McKyes (1985)" as "D = (ρb·g·d²·Nγ + c·d·Nc + ρb·v²·d·Na)·w·sin(α + δ)" (their Eq. 1), and their Table 2 at 50 mm:
+  Nγ 2.45, Nc 1.71 and Na 0.35, at a rake angle of 18.5° (`turfPloughFactor`; the other two cited, not used).
+- **Young 2009:** the breakaway strength, "for a vertical cylinder (435 ± 27 N)" (`gripLimit`); for comparison, the
+  fixed horizontal cylinder ("high friction") gave 668 ± 40 and 691 ± 132 N in Experiments 1 and 2, the low-friction
+  horizontal cylinder 552 ± 104 N, and the vertical rail 337 ± 24 N.
 - **Anderson 2018:** vane strengths "of the compacted Fireclay samples were 204, 156 and 64 kPa at 14.8, 17.5 and 20%
   gravimetric water content, respectively", and test densities "(1.2–1.6 Mg/m3)": the turf varies from lawn to lawn and
   day to day.
