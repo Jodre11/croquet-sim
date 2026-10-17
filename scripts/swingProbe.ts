@@ -14,9 +14,9 @@
  * - presets: each preset over speed × drive × contact: how often impact-head-deep, impact-cap,
  *   impact-head-approaching, impact-off-face, turf-yield, grip-limit and impact-head-stopped fire, the longest impact
  *   after contactAt that ended before the cap, and the rejected runs tallied by speed, contact height and message;
- * - dip: the AC stop's dip depth from 8 to 14 mm: the head's lowest point against HEAD_DEEP_LIMIT, where a stroke goes
- *   beyond a graze (P2b.2b.2b.3), and whether the first head–turf interval starts after the first face–striker
- *   interval ends;
+ * - dip: the AC stop's dip depth from 8 to 14 mm: the head–turf peak penetration (the deepest bearing column's δ)
+ *   against HEAD_DEEP_LIMIT, where a stroke goes beyond a graze (P2b.2b.2b.3), and whether the first head–turf
+ *   interval starts after the first face–striker interval ends;
  * - coupling: the canonical set at T = 0.04 s against HAND_COUPLING's period (0.08 s), both at its ζ, with the hands'
  *   impulse in the strike against every ball's momentum change and the path lag at the hands' window's end;
  * - mass: the strike's effective mass at the face centre along aim (design §3.4) against its closed form, which
@@ -25,8 +25,8 @@
  *   carry up to the reach's end, inside a check, and swing mode after contact outside a check (the residual);
  * - cost: the tracked canonical impacts against P2b.2a's force-table strokes (the force tables' Jaques round head,
  *   plan decision 8): simulateImpact's whole time, its fixed preparation (prepareTrack) and its integration's µs/step
- *   (the rest over its steps); and the WAKE_MARGIN reach filter's headroom over the longest impact (MAX_LEAD plus
- *   TRACK_IMPACT_CAP);
+ *   (the rest over its steps); and the WAKE_MARGIN reach filter's headroom over a long impact (a gentle AC stop, its
+ *   hands timed MAX_LEAD early);
  * - timings: for the AC stop and the full roll, each action from 50 ms early to 20 ms late, and the AC stop's dip from
  *   none to twice its depth: lawn or ball first, the dig, the slide, the striker's ball's launch, and after phase 2
  *   both balls' distances and the coaching ratio;
@@ -949,9 +949,9 @@ function cost(): void {
     for (const stroke of FORCE_STROKES) {
         time(`force ${stroke.name}`, stroke.contact, stroke.balls);
     }
-    // The longest lead-in (MAX_LEAD) plus the cap: a gentle AC stop (1 m/s, drive 0.5) whose head comes to rest on
-    // the turf, a closed contact that holds the impact to the cap, its hands (which carry no share) timed MAX_LEAD
-    // early.
+    // A long impact: a gentle AC stop (1 m/s, drive 0.5), its hands (which carry no share) timed MAX_LEAD early. Its
+    // head settles on the turf after the strike; it held the impact to the cap until P2b.2b.2b.3 handed the turf over
+    // to the follow-through once the ball has gone.
     const r = run(canonical("stop-ac", { speed: 1, drive: 0.5, timing: { ...ON_TIME, hands: -MAX_LEAD } }));
     const ids = idsOf(r.setup.balls);
     const travel = ids.map(() => 0);

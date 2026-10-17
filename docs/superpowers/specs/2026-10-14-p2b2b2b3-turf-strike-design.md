@@ -550,7 +550,7 @@ figures are in the roadmap's "P2b.2b.2b.3 outcomes (2026-10-17)".
 19. **The regimes' setups are found by a fixed candidate grid** and pinned in the tests; a regime not found stops for
     the user. The follow-through's flag is searched the same way but is not a regime (changed at the plan's review).
     Amended by the user (2026-10-16): the grid adds `contact.up` from 0 to 0.02 m (a positive `up` strikes lower) with
-    jabs of 1–6 mm.
+    jabs of 1–6 mm (first relayed as −0.02 m; the sign corrected by the controller, the user told).
 20. **U and the second tap are read on the face region's intervals**, from the head's state at each interval's start,
     so that only the face's contacts count as taps.
 21. **The cost figures** count a step's columns as the law visits them, from the snapshot's head, with no engine
