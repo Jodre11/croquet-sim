@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 import { IMPACT_DT, type ImpactProbe } from "../../src/engine/impact/integrate";
 import { simulateImpact } from "../../src/engine/impact/simulateImpact";
 import type { TrackDrive } from "../../src/engine/impact/types";
-import { dot } from "../../src/engine/math/vec3";
+import { GRIP_LIMIT } from "../../src/engine/impact/track";
+import { dot, length } from "../../src/engine/math/vec3";
 import { simulateShot } from "../../src/engine/shot";
 import { buildContact } from "../../src/engine/swing/buildContact";
 import type { SwingTrajectory } from "../../src/engine/swing/trajectory";
@@ -19,7 +20,7 @@ const SLOW = Boolean(import.meta.env.SLOW_TESTS);
  * (docs/superpowers/probes/2026-10-16-p2b2b2b3-regimes.txt): the first candidate of each grid that qualifies.
  */
 const GRAZE = { type: "single-ball", speed: 3, up: 0.01, dip: -0.005, jab: 0.001 } as const;
-const BITING = { type: "single-ball", speed: 4, up: 0.01, dip: -0.005, jab: 0.005 } as const;
+const BITING = { type: "single-ball", speed: 4, up: 0.01, dip: -0.02, jab: 0.005 } as const;
 const FOLLOW = { type: "half-roll", speed: 4 } as const;
 
 /** A preset's canonical setup at `speed` (m/s), its dip `dip` s from contact and deepened by `jab` (m). */
@@ -28,18 +29,20 @@ function shot(type: StrokeType, speed: number, stroke: Partial<ShotSetup["stroke
     return { ...base, stroke: { ...base.stroke, backswing: backswingFor(base, speed, WORLD) } };
 }
 
-/** The impact of `setup`, and the head's speed along aim at any step's time. */
+/** The impact of `setup`, the head's speed along aim at any step's time, and each step's time and top hand's force. */
 function along(setup: ShotSetup) {
     const contact = buildContact(setup, WORLD);
     const aim = (contact.drive as TrackDrive).arc.aim;
     const speeds: number[] = [dot(contact.velocity, aim)];
+    const tops: { readonly t: number; readonly force: number }[] = [];
     const probe: ImpactProbe = {
         step: (s) => {
             speeds.push(dot(s.head.velocity, aim));
+            tops.push({ t: s.t, force: s.hand === undefined ? 0 : length(s.hand.top) });
         },
     };
     const impact = simulateImpact(contact, setup.balls, WORLD, { probe });
-    return { impact, speed: (t: number): number => speeds[Math.round(t / IMPACT_DT)] as number };
+    return { impact, tops, speed: (t: number): number => speeds[Math.round(t / IMPACT_DT)] as number };
 }
 
 const timed = (up: number, dip: number, jab: number, extra: Partial<ShotSetup["stroke"]> = {}) => ({
@@ -78,16 +81,19 @@ describe("the three regimes (P2b.2b.2b.3 design §7.4)", () => {
     // contact, a future feature.
     it.todo("stops a weak stroke dead in the turf before the ball: impact-head-stopped, not impact-cap");
 
-    it("lets a head biting in saturate a hand: grip-limit", () => {
-        // The probe: head/turf 5.25–29.55 ms, peak 2.009 mm, turf-yield@9.79, impact-head-deep@14.11; 3.8123 m/s
-        // along aim at the turf, 3.1843 m/s at the ball (face at 69.33 ms). The turf does not saturate the hand: the
-        // head leaves it at ~29.5 ms, and grip-limit comes at 57.61 ms, when the jab's dip loads the top hand (~410 N
-        // from 53 ms, 435 N held to 62 ms) with the head 3.7–5.5 mm above the turf. The same 5 mm jab saturates the
-        // top hand with no turf contact at all (up 0). Whether biting needs grip-limit within the head/turf interval
-        // is the user's ruling; the test keeps the probe's qualifying test (head/turf, then grip-limit).
-        const { impact } = along(shot(BITING.type, BITING.speed, timed(BITING.up, BITING.dip, BITING.jab)));
-        expect(impact.timeline["head/turf"]).toBeDefined();
-        expect(impact.events.map((e) => e.kind)).toContain("grip-limit");
+    it("lets a head biting in saturate a hand: the top hand held at its grip limit in the turf", () => {
+        // User ruling 2026-10-17 ("Hand held at limit in turf"): the top hand held at its 435 N limit at a step
+        // within a head/turf interval. The grip-limit event cannot show it: it marks only a hand's first saturation
+        // (integrate.ts, `!limited`), which here comes at 37.61 ms, with the head out of the turf. The probe:
+        // head/turf 5.25–29.55 and 42.65–50.16 ms, peak 2.009 mm, turf-yield@9.79, impact-head-deep@14.11; the top
+        // hand held at 435 N from 37.61 ms, eases to 433.8 N at 42 ms, and is held again from 42.65 ms, as the head
+        // re-enters the turf, to ~47 ms; 3.8123 m/s along aim at the turf, 2.9355 m/s at the ball (face at
+        // 71.19 ms). The 5 mm jab alone also saturates the top hand (up 0 never grounds the head and still raises
+        // grip-limit), so this shows the jab's load and the turf's coinciding, not the turf saturating it alone.
+        const { impact, tops } = along(shot(BITING.type, BITING.speed, timed(BITING.up, BITING.dip, BITING.jab)));
+        const turf = impact.timeline["head/turf"] ?? [];
+        const held = tops.filter((s) => s.force >= GRIP_LIMIT * (1 - 1e-6));
+        expect(held.some((s) => turf.some((i) => i.start <= s.t && s.t <= i.end))).toBe(true);
     });
 });
 
@@ -103,9 +109,11 @@ describe("the follow-through's flags (P2b.2b.2b.3 design §4.6)", () => {
 });
 
 describe("Gugan's jab (P2b.2b.2b.3 design §7.3; slow)", () => {
-    // P2b.2b.2b.3: failing before the gate's ruling (Task 8). The probe: six grazes (jab 2.0–4.5 mm), every one
-    // with a single face interval, so every ratio is 0; the striker's ball leaves at 0.52·U, above the band's top,
-    // before the head reaches the turf.
+    // P2b.2b.2b.3: the turf strike, gate ruling 2026-10-17: "Keep .fails + ruling". No graze has a second tap at
+    // any jab or at either end of p_y's and c's bounds (six grazes, jab 2.0–4.5 mm, each a single face interval, so
+    // every ratio is 0): the striker's ball leaves at 0.523·U, above the band's top of 0.463, before the head reaches
+    // the turf, which predates the turf law. P2b.2b.2c (the arms' checking force) may change it; `.fails` then turns
+    // red.
     it.runIf(SLOW).fails("puts every graze's second tap within [0.295, 0.463]·U, with at least one graze", () => {
         // Gugan 5: stop-shots with a downward jab, so that the heel's friction stops the mallet soon after impact;
         // over the seven lowest ratios the second tap's mallet speed is 0.400U, against 0.463U unrestricted, and the

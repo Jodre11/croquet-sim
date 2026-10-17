@@ -237,6 +237,9 @@ describe("simulateShot", () => {
     // is exit criterion 6's bound, and the bed's missing rate-independent loss is a follow-up for the next phase.
     // P2b.2b.2b.2c: the mallet, gate ruling 2026-10-13 (was 19.17 mm): on the Pidcock 2000 11" box, 20.756 mm at 3
     // m/s (11.577 mm at 2 m/s), against the accepted 19.17 mm; kept skipped for the same cause.
+    // P2b.2b.2b.3: the turf strike, gate ruling 2026-10-17: 20.756 mm at 3 m/s (11.577 mm at 2 m/s), unchanged
+    // against the accepted 20.76 mm; the impact never grounds the head, so the turf law leaves it as it was. Kept
+    // skipped for the same cause.
     it.skip("runs the pass-roll canonical setup with no entry jump and no ball above R + 5 mm", () => {
         lowFlight("pass-roll");
     });
@@ -565,7 +568,7 @@ describe("the mechanisms (design §8.1), on the canonical setups", () => {
         expect(strikerSpeed(punched)).toBeGreaterThan(strikerSpeed(coasted));
     });
 
-    it("a dip 30 ms early meets the lawn before the ball and sends the striker's ball off slower", () => {
+    it("a dip 30 ms early meets the lawn before the ball and sends the striker's ball slower along the lawn", () => {
         // Prototype: the impact starts 30 ms before contact; the head on the turf from 20.72 ms, the ball struck from
         // 31.05 ms; the striker's ball at 1.214 m/s against 1.380 on time.
         // P2b.2b.2b.3: the turf strike, on the default box through the jab (was on the legacy round head): the head
@@ -577,8 +580,9 @@ describe("the mechanisms (design §8.1), on the canonical setups", () => {
         const dug = early.timeline["head/turf"]?.[0] as ContactInterval;
         expect(dug).toBeDefined();
         expect(dug.start).toBeLessThan((hits(early)[0] as ContactInterval).start);
-        // Along the lawn: the heel's touch also pops the ball up (vz 0.238 m/s against 0.059 on time), which the
-        // full speed counts as faster (1.5721 against 1.5677 m/s).
+        // Along the lawn (user ruling 2026-10-17): full speed is not slower, because the heel's touch also lifts the
+        // ball (vertical 0.238 m/s against 0.059 on time), which the full speed counts as faster (1.5721 against
+        // 1.5677 m/s).
         const along = (impact: ImpactResult): number => {
             const { x, y } = (impact.handover.blue as BallState).velocity;
             return Math.hypot(x, y);

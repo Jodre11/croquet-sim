@@ -33,7 +33,7 @@ import {
     type ImpactSnapshot,
 } from "../src/engine/impact/integrate";
 import { simulateStroke } from "../src/engine/impact/simulateImpact";
-import { headOnPath, prepareTrack } from "../src/engine/impact/track";
+import { GRIP_LIMIT, headOnPath, prepareTrack } from "../src/engine/impact/track";
 import type { ContactState, HeadState, ImpactResult, MalletHead } from "../src/engine/impact/types";
 import { ZERO, dot, length, vec3, type Vec3 } from "../src/engine/math/vec3";
 import { planStroke } from "../src/engine/swing/buildContact";
@@ -276,6 +276,17 @@ interface Search {
     readonly qualifies: (r: Run) => boolean;
 }
 
+/**
+ * The first step's time at which the top hand is held at its grip limit, to 1 ppm (the slid hold carries exactly the
+ * limit, to rounding), with the head in the turf, or undefined.
+ */
+function heldInTurf(r: Run): number | undefined {
+    const turf = r.impact.timeline["head/turf"] ?? [];
+    return r.steps.find(
+        (s) => length(s.top) >= GRIP_LIMIT * (1 - 1e-6) && turf.some((i) => i.start <= s.t && s.t <= i.end),
+    )?.t;
+}
+
 /** Plan decision 19's regimes, in spec §7.4's order. */
 const REGIMES: readonly Search[] = [
     {
@@ -310,10 +321,13 @@ const REGIMES: readonly Search[] = [
     },
     {
         // A head biting in: a hard stroke struck low, the dip early, saturates a hand. The head must meet the turf in
-        // the impact, not saturate a hand on the drive alone (user ruling 2026-10-16, amending plan decision 19).
+        // the impact, not saturate a hand on the drive alone (user ruling 2026-10-16, amending plan decision 19): the
+        // top hand is held at its grip limit at a step within a head/turf interval (user ruling 2026-10-17, "Hand held
+        // at limit in turf"). The grip-limit event marks only a hand's first saturation, often before the head
+        // grounds, so the hand's force is read instead.
         name: "biting",
         candidates: grid("single-ball", 4, [-0.005, -0.01, -0.02], SMALL_JABS),
-        qualifies: (r) => turfStart(r) !== undefined && r.impact.events.some((e) => e.kind === "grip-limit"),
+        qualifies: (r) => heldInTurf(r) !== undefined,
     },
 ];
 
@@ -361,6 +375,10 @@ function series(found: readonly (Run | null)[]): void {
             );
         }
         console.log(`events ${r.impact.events.map((e) => `${e.kind}@${ms(e.t)}`).join(", ")}`);
+        const held = heldInTurf(r);
+        console.log(
+            `top hand held at the grip limit in the turf: ${held === undefined ? "never" : `from ${ms(held)} ms`}`,
+        );
     });
 }
 
