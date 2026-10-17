@@ -12,10 +12,11 @@
  *   impulses (design §3.7), the impact's length after contactAt and how often each impact flag fired; then the stance
  *   in the player's terms (P2b.2b.2b.1);
  * - presets: each preset over speed × drive × contact: how often impact-head-deep, impact-cap,
- *   impact-head-approaching and impact-off-face fire, the longest impact after contactAt that ended before the cap,
- *   and the rejected runs tallied by speed, contact height and message;
- * - dip: the AC stop's dip depth from 8 to 14 mm: the head–turf penetration against HEAD_DEEP_LIMIT, and whether the
- *   first head–turf interval starts after the first face–striker interval ends;
+ *   impact-head-approaching, impact-off-face, turf-yield, grip-limit and impact-head-stopped fire, the longest impact
+ *   after contactAt that ended before the cap, and the rejected runs tallied by speed, contact height and message;
+ * - dip: the AC stop's dip depth from 8 to 14 mm: the head's lowest point against HEAD_DEEP_LIMIT, where a stroke goes
+ *   beyond a graze (P2b.2b.2b.3), and whether the first head–turf interval starts after the first face–striker
+ *   interval ends;
  * - coupling: the canonical set at T = 0.04 s against HAND_COUPLING's period (0.08 s), both at its ζ, with the hands'
  *   impulse in the strike against every ball's momentum change and the path lag at the hands' window's end;
  * - mass: the strike's effective mass at the face centre along aim (design §3.4) against its closed form, which
@@ -106,13 +107,19 @@ const COACHING: Readonly<Record<StrokeType, string>> = {
     "pass-roll": "below 1",
 };
 
-/** The impact flags design §9 counts, and the turf bed's pit flag (P2b.2b.2b.2a design §4.6, §6). */
+/**
+ * The impact flags design §9 counts, the turf bed's pit flag (P2b.2b.2b.2a design §4.6, §6), and the turf strike's
+ * events (P2b.2b.2b.3 design §4.6, §5, §9).
+ */
 const FLAGS = [
     "impact-head-deep",
     "impact-cap",
     "impact-head-approaching",
     "impact-off-face",
     "impact-turf-pit",
+    "turf-yield",
+    "grip-limit",
+    "impact-head-stopped",
 ] as const;
 
 /** One shot: its contact state, its impact with every snapshot, and phase 2. */

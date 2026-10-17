@@ -164,7 +164,7 @@ describe("the follow-through (design §4)", () => {
         const contactAt = (contact.drive as TrackDrive).arc.contactAt;
         expect(follow.finish).toBeGreaterThanOrEqual(contactAt + FOLLOW_CAP);
         expect(follow.finish).toBeLessThan(contactAt + FOLLOW_CAP + 1e-5);
-        // P2b.2b.2b.3: the head–turf law over a second of dragging costs about 70 s (was 1 s).
+        // P2b.2b.2b.3: the head–turf law over a second of dragging costs about 30 s (was 1 s).
     }, 240_000);
 
     // P2b.2b.2b.2b: gate-ruled skip (round 14, 2026-10-12). A dip is part of trackEnd; a late dip lengthens the impact

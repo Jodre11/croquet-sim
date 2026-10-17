@@ -47,8 +47,8 @@ describe("skipping the free table where nothing reads it", () => {
         expect(skipped).toEqual(built);
     });
 
-    // P2b.2b.2b.3: the full roll's follow-through meets the turf, whose law costs it about 7 s alone (was 1.7 s), and
-    // more under the full suite's load.
+    // P2b.2b.2b.3: the full roll's follow-through meets the turf, whose law costs it about 4.5 s alone (was 1.7 s),
+    // and more under the full suite's load.
     it.each(["single-ball", "full-roll"] as const)(
         "leaves %s's trajectory bit-identical",
         (type) => {

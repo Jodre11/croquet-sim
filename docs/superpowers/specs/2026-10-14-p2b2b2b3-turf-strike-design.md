@@ -6,7 +6,7 @@
 **Laws spec:** `2026-10-09-p2b2b2b2a-strike-turf-laws-design.md` (the turf bed, §4).
 **Mallet spec:** `2026-10-12-p2b2b2b2c-mallet-design.md` (the rounded box; ruling B).
 **Roadmap:** P2 row; "P2b.2b.2a design (2026-10-06/07)" (the graze and the user's account); "P2b.2b.2b decisions and
-findings (2026-10-08)" (the split, Gugan 5's jab); "P2b.2b.2b.2c outcomes (2026-10-13)" (the AC stop's dip).
+findings (2026-10-08)" (the three steps, Gugan 5's jab); "P2b.2b.2b.2c outcomes (2026-10-13)" (the AC stop's dip).
 
 **Why this step.** The head meets the turf as a plane with a linear spring (about 110 N per mm) and Coulomb friction
 at its single lowest point. A light graze costs a fraction of the head's speed, as it should, but nothing ploughs: a
@@ -187,8 +187,8 @@ The cap does not depend on speed, so a weak stroke loses all its momentum to it 
 
 From the mid-range figures (§6.2), across the 57 mm face: a 1 mm graze ploughs with about 10 N, a fractional loss for
 a 1 kg head; at 10 mm about 100 N; at 20 mm about 200 N plus the bearing (a steep bite's footprint bearing p_y over
-tens of cm², hundreds of newtons), past the hands' limit. These are orders of magnitude for the design; the analytic cases and
-the probe measure them.
+tens of cm², hundreds of newtons), past the hands' limit. These are orders of magnitude for the design; the analytic
+cases and the probe measure them.
 
 ### 4.6 The run's end and the follow-through
 
@@ -378,7 +378,7 @@ outcomes.
 
 In the roadmap's "P2b.2b.2b.3 outcomes", from the probes on the branch against the Task 1 baseline:
 
-- the jab sweep at 3 m/s: the depth the heel first grounds, the second-tap speed, the ratio, the head's lowest point,
+- the jab sweep at 3 m/s: the depth the heel first grounds, the second-tap speed against U, the head's lowest point,
   `turf-yield` and `grip-limit` (impact events and follow-through flags); and the one 4 m/s run of §7.3;
 - the regimes' runs;
 - every preset's canonical figures and the sweep's cap and flag tallies, as P2b.2b.2b.2c recorded them;
@@ -431,3 +431,153 @@ the repo before it was applied:
 **After the review (2026-10-14).** c's bounds are worked from Mascitti's vane, 73–138 kPa (sides and bottom end
 sheared), with the one open assumption named (§6.2). The user notes that the turf's strength varies with its
 consistency and moisture; the defaults are one lawn's, and P3's lawn presets vary them (§6.2).
+
+## Amendments (plan, 2026-10-17)
+
+The plan (`plans/2026-10-15-p2b2b2b3-turf-strike.md`) made 26 decisions, listed below with their reasons. Decisions 1
+and 2 the user ruled on 2026-10-15, before the plan was written; 22–26, and the changes to 10, 19 and 21, came from the
+plan's review (2026-10-16). The user's rulings during execution and at the pre-flight gate follow, with the corrections
+they make to this design's text. The gate's record is `docs/superpowers/probes/2026-10-16-p2b2b2b3-gate.txt`; the
+figures are in the roadmap's "P2b.2b.2b.3 outcomes (2026-10-17)".
+
+**Corrections to this design's text.**
+
+- **§4.3, the ploughing depth** (decision 1). "Each strip's ploughing depth d_s is its deepest column's elastic
+  deflection e (the depth below the column's own floor −s, …)" is superseded: the depth is d = δ − s_entry, below
+  the floor the column had when the head arrived over it.
+- **§4.3, the spring** (decision 2). "With no damping" is superseded: the spring carries the bed's tangential damping.
+- **§4.3, "at rest"** (user, 2026-10-16). "At rest" is the full |v|: the spring sticks and the head's centre moves at
+  under 1 mm/s, counting the vertical speed. The horizontal speed alone let a plunging head end the impact before it
+  yielded.
+- **§4.3, "The cap does not depend on speed"** (decision 26) holds for the ploughing part only: the bearing's recovery
+  term reads the head's descent, so the sole's friction, and with it the peak, rises with the angle of attack.
+- **§4.3, Mak & Chen's equation.** The quotation is incomplete. Their Eq. 1, "according to McKyes (1985)", is
+  D = (ρ·g·d²·N_γ + c·d·N_c + ρ·v²·d·N_a)·w·sin(α + δ). The law drops the factor sin(α + δ) (user, 2026-10-16: leave
+  it out and show its effect at the gate). It resolves an inclined blade's force to the horizontal; the head's face
+  and heel are near vertical, where it is cos δ, about 0.85–0.9; N_c is already off its geometry (rake 18.5°,
+  labelled); and c's bounds absorb it. If wrong, the ploughing cap is up to about 1.15× high (1.45× at the paper's own
+  rake). The gate's ploughing probe (user, 2026-10-17, "Yes, run it") scaled the ploughing ×0.9 and ×0.85: no verdict
+  changes, and the graze's speed at the ball goes from 0.746 to 0.754 and 0.758 of the clear stroke's.
+- **§4.6, the run's end** (user, 2026-10-16). Once the ball has gone (struck, the drive done, no face contact), the
+  head–turf pair no longer holds the impact open: the turf contact hands over to the follow-through, which carries
+  the bed (decision 14). A head resting on the turf, dragged along aim by the relaxed hands' pendulum at 26–75 mm/s,
+  had held 20 more AC stop presets to `impact-cap`.
+- **§5, the premise** "Today's hands stay far below 435 N" is falsified: 109 of the 1582 preset runs saturate a hand
+  (single-ball 18, drive 9, GC stop 64, pass roll 18). The GC stop saturates 5 µs into its impact, where the check
+  law's planned deceleration, older than the limit, asks the top hand for 442 N and the bottom for 782 N for about
+  30 µs; every canonical GC stop raises `grip-limit` and `follow-grip-limit`. Below the limit the arithmetic is
+  unchanged, as §5 says: every other run is bit-identical.
+- **§6.2, the sources** (Task 1's reading). Crum gives 25 and 45 psi, 172.4 and 310.3 kPa, so p_y's bounds are 172–310
+  kPa and the default, between two measured figures, is derived, not measured (decision 22). Mascitti's 17.8–33.6 N·m
+  are the extreme means of its Table 3; the paper confirms the fins' 2.0 cm as their depth in the turf, their height,
+  which closes §6.2's open assumption. Anderson's 204, 156 and 64 kPa are from compacted Fireclay samples (§6.2 said a
+  clay rootzone), and its 1.2–1.6 Mg/m³ are its test densities. Seo's µ of
+  0.33 and 0.77 (aluminium and rubber) are literature values the paper quotes, cited as such, with its axial pushes of
+  65–179 N from its tables and text.
+- **§7.3, Gugan's jab** (exit criterion 4): the check fails, at the defaults and at all four bounds. No graze has a
+  second tap: the striker's ball leaves at 0.523·U, above the band's top of 0.463, in one face interval, before the
+  head reaches the turf. The cause predates the turf law. User ruling 2026-10-17: "Keep .fails + ruling": the check
+  stays `it.runIf(SLOW).fails`, its comment giving the ruling and the cause; P2b.2b.2c (the arms' checking force) may
+  change it.
+- **§7.4, the regimes** (exit criterion 3), on the setups found by decision 19's search, amended:
+  - **The light graze**: single-ball, 3 m/s, `up` 0.01 m, dip −0.005 s, jab 1 mm; peak 1.700 mm; the head reaches
+    the ball at 2.2377 m/s along aim, 0.746 of the same stroke clear of the turf. It is a fat contact about 0.2 m
+    behind the ball, not a graze at it: struck 10 mm low, the arc meets the turf early, and the impact starts about
+    75 ms before the planned contact.
+  - **The weak stroke stopped dead**: none found, and not gated: its test is `it.todo`. The user's account from play
+    (2026-10-16): a dig-in is an unintentional gross mis-hit, at any speed, when the head is off target low enough. It
+    is likelier when casting hard, because the dip lands early, about 10 cm before the ball. The common case is the
+    graze: lost power and the shot not attempted, otherwise only lawn damage. The planner rejects such a stroke by
+    design; a dig-in is a future feature, needing a relaxed gross-mis-hit rule and shaft–ball contact.
+  - **The head biting in** is redefined: the top hand held at its 435 N limit, to within 1 ppm, at any step while the
+    head is in the turf. `grip-limit` cannot show it, since it fires only on a hand's first saturation, which in the
+    found run comes with the head out of the turf. The rulings in sequence (2026-10-17): "Yes, require overlap"
+    (`grip-limit` within a head–turf interval), which found no run; then "Hand held at limit in turf". The found run:
+    single-ball, 4 m/s, `up` 0.01 m, dip −0.02 s, jab 5 mm; `grip-limit` at 37.61 ms; the top hand held at the limit
+    in the turf from 42.65 to about 47 ms; head/turf 42.65–50.16 ms (after 5.25–29.55 ms); the ball leaves at
+    2.9355 m/s. The jab alone also saturates the hand, so the run shows the jab and the turf coinciding, not the turf
+    causing the saturation.
+  - **The follow-through's flag** (not a regime): the half roll at 4 m/s, which runs to `follow-cap`.
+  - The graze and the head biting in occur at all four ends of p_y's and c's bounds.
+- **P2b.2b.1 §8.1's early dip** ("sends the striker's ball off slower") narrows to the speed along the lawn: on the
+  box the early heel lifts the ball (vz 0.238 against 0.059 m/s), so its full speed is not slower (1.5721 against
+  1.5677 m/s) while its speed along the lawn is (1.5540 against 1.5666). User ruling 2026-10-17: "Along the lawn +
+  rename"; the test is retitled "… sends the striker's ball slower along the lawn".
+- **§9, the cost** (the user's relayed note of 2026-10-15): the preset sweep costs ×1.34 (353.52 → 472.31 s, each timed
+  alone); `shotMix`'s engine time about ×1.1; about 4,500 columns per grounded step (worst 4,785).
+
+**The plan's decisions.**
+
+1. **The ploughing depth is measured below the column's entry floor**, d = δ − s_entry: 0 in fresh turf, −s in a
+   furrow the head has left. Yield caps e at p_y/k_w, about 1.48 mm on the default lawn, which would hold the
+   ploughing under about 15 N across the face, against §4.5's sizes and §7.1 case 2.
+2. **The horizontal spring carries the bed's tangential damping**: k_t = (2/7)·k_w·h²·n, c_t = √(2/7)·k_w·τ_r·h²·n, by
+   `tangentialForce` with friction 1 and `carrySpring`. An undamped spring keeps a stuck head oscillating, so §7.1
+   case 3 could never come to rest.
+3. **The strips lie across the carried spring plus this step's slip**, at the bearing's centre of pressure (along aim
+   when both are zero); the spring advances by the slip at the resistance's centre. This breaks the circularity of
+   the centre depending on the strips and the strips on the slip.
+4. **A strip's point is its deepest ploughing column's underside point**, the first in visit order on a tie: one
+   point per strip, deterministic.
+5. **The strips are summed in mirror pairs** in ascending p, as the bed sums its columns, so a mirrored stroke gives a
+   mirrored resistance to the bit wherever the strip boundaries fall.
+6. **The pair is closed while any column bears** (e > 0), its pressure clamped at 0: one closure drives the timeline,
+   the slide, the settle test and the entry guard, with the deepest bearing column's δ and e′.
+7. **A centre of pressure with no bearing force** is the deepest column's point, so it is always defined.
+8. **The head's columns** are visited over its horizontal extent, padded one cell as a ball's footprint is: the
+   rounded box bounded by its full half-extents, the cylinder by (L/2)·|a_k| + r·√(1 − a_k²).
+9. **The rounded box's underside is exact**: the union of three slab-grown boxes, twelve edge cylinders and eight
+   corner spheres, so the heel's and the edges' columns are right where the head bites.
+10. **The hands' slid offset is held in the head's body frame** (changed at the plan's review): the hand slides along
+    the shaft, which the follow-through turns through large angles; a world-frame offset would end up across it. It
+    slides only where the hand holds a position spring; damper-only branches clip.
+11. **`HandLoad.saturated`** names the first hand to saturate in a step, the top hand if both: one event per impact,
+    one flag per follow-through.
+12. **`TEST_GRIP_LIMIT` is 1e5 N** in the test hands, far above any, so the tests written before the limit keep their
+    figures; the limit's own tests set theirs.
+13. **`impact-head-stopped`** fires when no face contact has closed and the head has been at rest for `RELEASE_STEPS`
+    steps, overriding the drive window and the look-ahead, so a head stopped before the ball ends the impact rather
+    than holding it to the cap (§4.6).
+14. **The follow-through keeps the impact's bed**, its sets, entry floors and spring, so a furrow made in the impact
+    stays under the follow-through; the timeline, the peak and the slide stay the impact's.
+15. **`turfStiffness` and `turfRestitution` have no other reader**, so they go, and their reference entries with them;
+    `lawFromStiffness` stays, unread by the head.
+16. **N_c is `contact.json`'s `turfPloughFactor`**, exported as `PLOUGH_FACTOR`; `HEAD_TURF_FRICTION` moves to
+    headTurf.ts, beside the law that reads it.
+17. **The head's turf is validated under the head**: the four figures must be positive and finite there, as the balls'
+    are under the balls.
+18. **The jab deepens the planned dip** to `handDrop + (jab ?? 0)`, which is `handDrop` to the bit at 0.
+19. **The regimes' setups are found by a fixed candidate grid** and pinned in the tests; a regime not found stops for
+    the user. The follow-through's flag is searched the same way but is not a regime (changed at the plan's review).
+    Amended by the user (2026-10-16): the grid adds `contact.up` from 0 to 0.02 m (a positive `up` strikes lower) with
+    jabs of 1–6 mm.
+20. **U and the second tap are read on the face region's intervals**, from the head's state at each interval's start,
+    so that only the face's contacts count as taps.
+21. **The cost figures** count a step's columns as the law visits them, from the snapshot's head, with no engine
+    field added (changed at the plan's review).
+22. **turfYield's bounds are [172000, 310000] Pa and its provenance "derived"**: Crum's 25 and 45 psi convert to 172.4
+    and 310.3 kPa, and 240 kPa lies between two measured figures.
+23. **Every cost figure is timed with its job running alone**, at the same `COUNT` before and after, so the
+    comparison is not the machine's load.
+24. **The hand's slide** takes two forms. The firm grip's position spring slides as `tangentialForce` resets its
+    spring, so it never stores the damper's force as stretch. Carry mode's chain slides by the excess over the palm's
+    and fingers' stiffness, since the slip lies at the skin, in series with their spring and dashpot, and the chain's
+    masses must feel what the hand transmits. The user kept it as written (2026-10-16).
+25. **"Keeps most of its speed"** is the head's speed along aim at the ball above 0.5 of its speed at the turf, the
+    probe's qualifying test and the test's assertion alike.
+26. **The angle of attack**: with a level box at matched depth every column ploughs fresh turf whatever φ, so the
+    ploughing part is equal; the peak rises through the sole's friction on the bearing. The test asserts both.
+
+**The user's rulings.**
+
+- 2026-10-15, before the plan: decisions 1 and 2.
+- 2026-10-16: decision 24 kept as written; Mak & Chen's sin(α + δ) left out, its effect shown at the gate; "at rest"
+  the full |v| (§4.3); the turf contact handed over to the follow-through once the ball has gone (§4.6); decision 19
+  amended (`up` from 0 to 0.02 m, jabs of 1–6 mm), biting's qualifier to require head–turf contact; the dig-in account
+  (§7.4).
+- The pre-flight gate, 2026-10-17: the gate, "(a) Go on"; Gugan's jab check, "Keep .fails + ruling"; the early-dip
+  test, "Along the lawn + rename"; biting, "Yes, require overlap", then "Hand held at limit in turf"; the ploughing
+  probe, "Yes, run it"; gate round 1, "Go on".
+
+**The exit criteria.** All met but two, each ruled by the user: criterion 3's stopped regime (not gated, the dig-in
+account) and criterion 4's jab check (kept as an expected failure).
