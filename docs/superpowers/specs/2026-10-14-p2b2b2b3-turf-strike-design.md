@@ -533,10 +533,10 @@ figures are in the roadmap's "P2b.2b.2b.3 outcomes (2026-10-17)".
    rounded box bounded by its full half-extents, the cylinder by (L/2)·|a_k| + r·√(1 − a_k²).
 9. **The rounded box's underside is exact**: the union of three slab-grown boxes, twelve edge cylinders and eight
    corner spheres, so the heel's and the edges' columns are right where the head bites.
-10. **The hands' slid offset is held in the head's body frame** (changed at the plan's review; reworded by the user's
-    ruling, 2026-10-17): the anchor slides along the excess force, held in the head's frame so the follow-through's
-    large rotations carry it with the mallet (§5: whether the grip broke or the arm gave way is moot). It slides only
-    where the hand holds a position spring; damper-only branches clip.
+10. **The hands' slid offset is held in the head's body frame** (changed at the plan's review): the anchor slides along
+    the excess force, held in the head's frame so the follow-through's large rotations carry it with the mallet (§5:
+    whether the grip broke or the arm gave way is moot); a world-frame offset would be left behind as the mallet
+    turns. It slides only where the hand holds a position spring; damper-only branches clip.
 11. **`HandLoad.saturated`** names the first hand to saturate in a step, the top hand if both: one event per impact,
     one flag per follow-through.
 12. **`TEST_GRIP_LIMIT` is 1e5 N** in the test hands, far above any, so the tests written before the limit keep their
@@ -584,9 +584,10 @@ figures are in the roadmap's "P2b.2b.2b.3 outcomes (2026-10-17)".
 - The pre-flight gate, 2026-10-17: the gate, "(a) Go on"; Gugan's jab check, "Keep .fails + ruling"; the early-dip
   test, "Along the lawn + rename"; biting, "Yes, require overlap", then "Hand held at limit in turf"; the ploughing
   probe, "Yes, run it"; gate round 1, "Go on".
-- The final review, 2026-10-17: decision 10, "Accept 3D slide, reword". The slid anchor moves in three dimensions,
-  not along the shaft, and its drift is not bounded: the GC stop's follow-through drift reaches 0.378 m. Bounding it
-  is left to P2b.2b.2c (the arms' checking force).
+- The final review, 2026-10-17: decision 10, "Accept 3D slide, reword". The slid anchor moves along the excess force
+  in three dimensions, so it can drift partly across the shaft, and nothing bounds its drift but the 435 N limit: the
+  GC stop's follow-through drift reaches 0.378 m from that limit alone. Bounding it is left to P2b.2b.2c (the arms'
+  checking force).
 
 **The exit criteria.** All met but two, each ruled by the user: criterion 3's stopped regime (not gated, the dig-in
 account) and criterion 4's jab check (kept as an expected failure).

@@ -1125,8 +1125,8 @@ the Solomon grip with a 42" shaft and a 13.5" head, is 5'10"–5'11" with a long
     verdict;
   - gate round 1: **"Go on"**;
   - the final review, the hands' slide (plan decision 10): **"Accept 3D slide, reword"**: the slid anchor moves along
-    the excess force, held in the head's frame, not along the shaft; its drift is not bounded, and the GC stop's
-    follow-through drift reaches 0.378 m. Bounding it is left to P2b.2b.2c (the arms' checking force).
+    the excess force, held in the head's frame, so it can drift partly across the shaft; the GC stop's follow-through
+    drift reaches 0.378 m from the 435 N limit alone. Bounding it is left to P2b.2b.2c (the arms' checking force).
 
 ## P2b.2b.2b.2a outcomes (2026-10-09)
 
