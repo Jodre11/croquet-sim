@@ -396,41 +396,41 @@ top hand held at the grip limit in the turf: from 42.65 ms
 graze (single-ball 3 m/s up 0.01 m dip -0.005 s jab 1.000 mm): occurs; head/turf 5.33–38.54, 38.58–39.27 ms, peak 1.849 mm, lowest -1.849 mm; face 98.94–99.98 ms; speed along aim at the turf 2.8217, at the ball 2.1674 m/s; impact 103.81 ms; finish 602.63 ms; turf-yield,turf-lift
 stopped: none found on the default lawn
 biting (single-ball 4 m/s up 0.01 m dip -0.02 s jab 5.000 mm): occurs; head/turf 5.25–33.52, 33.80–33.89, 41.82–50.26 ms, peak 2.219 mm, lowest -2.220 mm; face 71.89–72.88 ms; speed along aim at the turf 3.8123, at the ball 2.8255 m/s; impact 77.44 ms; finish 577.63 ms; turf-yield,impact-head-deep,grip-limit,turf-lift
-verdict: FAIL; 5 grazes, ratios 0.0000, 0.0000, 0.0000, 0.0000, 0.0000; Gugan's 0.400 (0.295–0.463)
+verdict: FAIL; 5 grazes, fractions of U 0.0000, 0.0000, 0.0000, 0.0000, 0.0000; Gugan's 0.400 (0.295–0.463)
 -- turfYield 310000 Pa --
 graze (single-ball 3 m/s up 0.01 m dip -0.005 s jab 1.000 mm): occurs; head/turf 5.33–32.61, 32.65–33.37, 33.68–34.12 ms, peak 1.692 mm, lowest -1.692 mm; face 96.89–97.93 ms; speed along aim at the turf 2.8217, at the ball 2.2500 m/s; impact 101.56 ms; finish 599.64 ms; turf-lift
 stopped: none found on the default lawn
 biting (single-ball 4 m/s up 0.01 m dip -0.02 s jab 5.000 mm): occurs; head/turf 5.25–27.35, 27.50–27.82, 42.90–50.20 ms, peak 1.959 mm, lowest -1.959 mm; face 70.89–71.86 ms; speed along aim at the turf 3.8123, at the ball 2.9835 m/s; impact 73.89 ms; finish 575.72 ms; turf-yield,grip-limit,turf-lift
-verdict: FAIL; 6 grazes, ratios 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000; Gugan's 0.400 (0.295–0.463)
+verdict: FAIL; 6 grazes, fractions of U 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000; Gugan's 0.400 (0.295–0.463)
 -- turfMatStrength 73000 Pa --
 graze (single-ball 3 m/s up 0.01 m dip -0.005 s jab 1.000 mm): occurs; head/turf 5.33–33.64, 33.85–34.36 ms, peak 1.697 mm, lowest -1.698 mm; face 94.47–95.49 ms; speed along aim at the turf 2.8217, at the ball 2.3094 m/s; impact 98.98 ms; finish 596.85 ms; turf-yield,turf-lift
 stopped: none found on the default lawn
 biting (single-ball 4 m/s up 0.01 m dip -0.02 s jab 5.000 mm): occurs; head/turf 5.25–29.21, 29.50–29.62, 42.76–49.84 ms, peak 2.005 mm, lowest -2.005 mm; face 69.17–70.13 ms; speed along aim at the turf 3.8123, at the ball 3.0734 m/s; impact 72.07 ms; finish 573.95 ms; turf-yield,impact-head-deep,grip-limit,turf-lift
-verdict: FAIL; 6 grazes, ratios 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000; Gugan's 0.400 (0.295–0.463)
+verdict: FAIL; 6 grazes, fractions of U 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000; Gugan's 0.400 (0.295–0.463)
 -- turfMatStrength 138000 Pa --
 graze (single-ball 3 m/s up 0.01 m dip -0.005 s jab 1.000 mm): occurs; head/turf 5.33–34.05, 34.19–34.83, 35.33–35.56 ms, peak 1.703 mm, lowest -1.704 mm; face 100.27–101.31 ms; speed along aim at the turf 2.8217, at the ball 2.1634 m/s; impact 105.18 ms; finish 603.68 ms; turf-yield,turf-lift
 stopped: none found on the default lawn
 biting (single-ball 4 m/s up 0.01 m dip -0.02 s jab 5.000 mm): occurs; head/turf 5.25–29.43, 29.53–29.91, 42.41–50.24 ms, peak 2.013 mm, lowest -2.014 mm; face 73.59–74.57 ms; speed along aim at the turf 3.8123, at the ball 2.7870 m/s; impact 79.75 ms; finish 579.07 ms; turf-yield,impact-head-deep,grip-limit,turf-lift
-verdict: FAIL; 6 grazes, ratios 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000; Gugan's 0.400 (0.295–0.463)
+verdict: FAIL; 6 grazes, fractions of U 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000; Gugan's 0.400 (0.295–0.463)
 == jab: the AC stop at 3 m/s (design §7.3) ==
-jab 0.000 mm: U 2.9927 m/s, second tap 0.0000 m/s, ratio 0.0000, grounds never, does not qualify; lowest 1.646 mm; turf-lift
-jab 0.500 mm: U 2.9927 m/s, second tap 0.0000 m/s, ratio 0.0000, grounds never, does not qualify; lowest 1.145 mm; turf-lift
-jab 1.000 mm: U 2.9927 m/s, second tap 0.0000 m/s, ratio 0.0000, grounds never, does not qualify; lowest 0.644 mm; turf-lift
-jab 1.500 mm: U 2.9927 m/s, second tap 0.0000 m/s, ratio 0.0000, grounds never, does not qualify; lowest 0.142 mm; turf-lift
-jab 2.000 mm: U 2.9927 m/s, second tap 0.0000 m/s, ratio 0.0000, grounds 18.34 ms, graze; lowest -0.377 mm; turf-lift
-jab 2.500 mm: U 2.9927 m/s, second tap 0.0000 m/s, ratio 0.0000, grounds 17.20 ms, graze; lowest -0.816 mm; turf-lift
-jab 3.000 mm: U 2.9927 m/s, second tap 0.0000 m/s, ratio 0.0000, grounds 16.39 ms, graze; lowest -1.169 mm; turf-lift
-jab 3.500 mm: U 2.9927 m/s, second tap 0.0000 m/s, ratio 0.0000, grounds 15.69 ms, graze; lowest -1.470 mm; turf-lift
-jab 4.000 mm: U 2.9927 m/s, second tap 0.0000 m/s, ratio 0.0000, grounds 15.05 ms, graze; lowest -1.745 mm; turf-lift,turf-yield
-jab 4.500 mm: U 2.9927 m/s, second tap 0.0000 m/s, ratio 0.0000, grounds 14.56 ms, graze; lowest -1.999 mm; turf-lift,turf-yield
-jab 5.000 mm: U 2.9927 m/s, second tap 0.0000 m/s, ratio 0.0000, grounds 14.15 ms, qualifies, deep; lowest -2.240 mm; turf-lift,turf-yield,impact-head-deep
-jab 5.500 mm: U 2.9927 m/s, second tap 0.0000 m/s, ratio 0.0000, grounds 13.78 ms, qualifies, deep; lowest -2.446 mm; turf-lift,turf-yield,impact-head-deep
-jab 6.000 mm: U 2.9927 m/s, second tap 0.0000 m/s, ratio 0.0000, grounds 13.46 ms, qualifies, deep; lowest -2.641 mm; turf-lift,turf-yield,impact-head-deep
-jab 6.500 mm: U 2.9927 m/s, second tap 0.0000 m/s, ratio 0.0000, grounds 13.16 ms, qualifies, deep; lowest -2.830 mm; turf-lift,turf-yield,impact-head-deep
-jab 7.000 mm: U 2.9927 m/s, second tap 0.0000 m/s, ratio 0.0000, grounds 12.88 ms, qualifies, deep; lowest -3.016 mm; turf-lift,turf-yield,impact-head-deep,follow-turf-yield,follow-head-deep
-jab 7.500 mm: U 2.9927 m/s, second tap 0.0000 m/s, ratio 0.0000, grounds 12.63 ms, qualifies, deep; lowest -3.201 mm; turf-lift,turf-yield,impact-head-deep,follow-turf-yield,follow-head-deep
-jab 8.000 mm: U 2.9927 m/s, second tap 0.0000 m/s, ratio 0.0000, grounds 12.38 ms, qualifies, deep; lowest -3.383 mm; turf-lift,turf-yield,impact-head-deep,follow-head-deep,follow-turf-yield
-verdict: FAIL; 6 grazes, ratios 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000; Gugan's 0.400 (0.295–0.463)
+jab 0.000 mm: U 2.9927 m/s, second tap 0.0000 m/s, fraction of U 0.0000, grounds never, does not qualify; lowest 1.646 mm; turf-lift
+jab 0.500 mm: U 2.9927 m/s, second tap 0.0000 m/s, fraction of U 0.0000, grounds never, does not qualify; lowest 1.145 mm; turf-lift
+jab 1.000 mm: U 2.9927 m/s, second tap 0.0000 m/s, fraction of U 0.0000, grounds never, does not qualify; lowest 0.644 mm; turf-lift
+jab 1.500 mm: U 2.9927 m/s, second tap 0.0000 m/s, fraction of U 0.0000, grounds never, does not qualify; lowest 0.142 mm; turf-lift
+jab 2.000 mm: U 2.9927 m/s, second tap 0.0000 m/s, fraction of U 0.0000, grounds 18.34 ms, graze; lowest -0.377 mm; turf-lift
+jab 2.500 mm: U 2.9927 m/s, second tap 0.0000 m/s, fraction of U 0.0000, grounds 17.20 ms, graze; lowest -0.816 mm; turf-lift
+jab 3.000 mm: U 2.9927 m/s, second tap 0.0000 m/s, fraction of U 0.0000, grounds 16.39 ms, graze; lowest -1.169 mm; turf-lift
+jab 3.500 mm: U 2.9927 m/s, second tap 0.0000 m/s, fraction of U 0.0000, grounds 15.69 ms, graze; lowest -1.470 mm; turf-lift
+jab 4.000 mm: U 2.9927 m/s, second tap 0.0000 m/s, fraction of U 0.0000, grounds 15.05 ms, graze; lowest -1.745 mm; turf-lift,turf-yield
+jab 4.500 mm: U 2.9927 m/s, second tap 0.0000 m/s, fraction of U 0.0000, grounds 14.56 ms, graze; lowest -1.999 mm; turf-lift,turf-yield
+jab 5.000 mm: U 2.9927 m/s, second tap 0.0000 m/s, fraction of U 0.0000, grounds 14.15 ms, qualifies, deep; lowest -2.240 mm; turf-lift,turf-yield,impact-head-deep
+jab 5.500 mm: U 2.9927 m/s, second tap 0.0000 m/s, fraction of U 0.0000, grounds 13.78 ms, qualifies, deep; lowest -2.446 mm; turf-lift,turf-yield,impact-head-deep
+jab 6.000 mm: U 2.9927 m/s, second tap 0.0000 m/s, fraction of U 0.0000, grounds 13.46 ms, qualifies, deep; lowest -2.641 mm; turf-lift,turf-yield,impact-head-deep
+jab 6.500 mm: U 2.9927 m/s, second tap 0.0000 m/s, fraction of U 0.0000, grounds 13.16 ms, qualifies, deep; lowest -2.830 mm; turf-lift,turf-yield,impact-head-deep
+jab 7.000 mm: U 2.9927 m/s, second tap 0.0000 m/s, fraction of U 0.0000, grounds 12.88 ms, qualifies, deep; lowest -3.016 mm; turf-lift,turf-yield,impact-head-deep,follow-turf-yield,follow-head-deep
+jab 7.500 mm: U 2.9927 m/s, second tap 0.0000 m/s, fraction of U 0.0000, grounds 12.63 ms, qualifies, deep; lowest -3.201 mm; turf-lift,turf-yield,impact-head-deep,follow-turf-yield,follow-head-deep
+jab 8.000 mm: U 2.9927 m/s, second tap 0.0000 m/s, fraction of U 0.0000, grounds 12.38 ms, qualifies, deep; lowest -3.383 mm; turf-lift,turf-yield,impact-head-deep,follow-head-deep,follow-turf-yield
+verdict: FAIL; 6 grazes, fractions of U 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000; Gugan's 0.400 (0.295–0.463)
 == jab against the hands' check (design §7.3, §8) ==
 stop-ac 3 m/s jab 0.000 mm: second tap 0.0000 m/s (0.0000U); hands' peak check 53.5 N, impulse 0.2576 N·s; turf braking 0.0000 N·s; turf-lift
 stop-ac 3 m/s jab 2.000 mm: second tap 0.0000 m/s (0.0000U); hands' peak check 53.4 N, impulse 0.2575 N·s; turf braking 0.0129 N·s; turf-lift
@@ -438,18 +438,18 @@ stop-ac 4 m/s jab 0.000 mm: second tap 0.0000 m/s (0.0000U); hands' peak check 7
 stop-ac 4 m/s jab 2.000 mm: second tap 0.0000 m/s (0.0000U); hands' peak check 73.2 N, impulse 0.3594 N·s; turf braking 0.0523 N·s; turf-lift
 == cost (design §9; plan decision 21) ==
 -- canonical setups at 3 m/s (the no-turf baseline) --
-single-ball 3 m/s: impact 2000 steps, 0 grounded, columns per grounded step mean 0.0 worst 0, total 0; follow-through 97644 steps, 0 grounded, columns per grounded step mean 0.0 worst 0, total 0; wall 22 ms impact, 134 ms follow-through; turf-lift
-drive 3 m/s: impact 30818 steps, 0 grounded, columns per grounded step mean 0.0 worst 0, total 0; follow-through 75434 steps, 0 grounded, columns per grounded step mean 0.0 worst 0, total 0; wall 233 ms impact, 103 ms follow-through; turf-lift,impact-off-face
-stop-ac 3 m/s: impact 4000 steps, 0 grounded, columns per grounded step mean 0.0 worst 0, total 0; follow-through 23370 steps, 0 grounded, columns per grounded step mean 0.0 worst 0, total 0; wall 39 ms impact, 34 ms follow-through; turf-lift
-stop-gc 3 m/s: impact 2000 steps, 0 grounded, columns per grounded step mean 0.0 worst 0, total 0; follow-through 33870 steps, 0 grounded, columns per grounded step mean 0.0 worst 0, total 0; wall 30 ms impact, 57 ms follow-through; grip-limit,turf-lift,follow-grip-limit
-half-roll 3 m/s: impact 13436 steps, 0 grounded, columns per grounded step mean 0.0 worst 0, total 0; follow-through 158606 steps, 1335 grounded, columns per grounded step mean 4429.4 worst 4433, total 5913281; wall 115 ms impact, 519 ms follow-through; turf-lift,turf-lift
-full-roll 3 m/s: impact 30770 steps, 0 grounded, columns per grounded step mean 0.0 worst 0, total 0; follow-through 102354 steps, 3615 grounded, columns per grounded step mean 4510.1 worst 4526, total 16303985; wall 234 ms impact, 396 ms follow-through; turf-lift,turf-lift,follow-turf-yield,follow-head-deep
-pass-roll 3 m/s: impact 18683 steps, 0 grounded, columns per grounded step mean 0.0 worst 0, total 0; follow-through 60911 steps, 4435 grounded, columns per grounded step mean 4662.9 worst 4785, total 20679874; wall 185 ms impact, 311 ms follow-through; turf-lift,turf-lift,follow-turf-yield,follow-head-deep
+single-ball 3 m/s: impact 2000 steps, 0 grounded, columns per grounded step mean 0.0 worst 0, total 0; follow-through 97644 steps, 0 grounded, columns per grounded step mean 0.0 worst 0, total 0; wall 25 ms impact, 143 ms follow-through; turf-lift
+drive 3 m/s: impact 30818 steps, 0 grounded, columns per grounded step mean 0.0 worst 0, total 0; follow-through 75434 steps, 0 grounded, columns per grounded step mean 0.0 worst 0, total 0; wall 269 ms impact, 117 ms follow-through; turf-lift,impact-off-face
+stop-ac 3 m/s: impact 4000 steps, 0 grounded, columns per grounded step mean 0.0 worst 0, total 0; follow-through 23370 steps, 0 grounded, columns per grounded step mean 0.0 worst 0, total 0; wall 43 ms impact, 37 ms follow-through; turf-lift
+stop-gc 3 m/s: impact 2000 steps, 0 grounded, columns per grounded step mean 0.0 worst 0, total 0; follow-through 33870 steps, 0 grounded, columns per grounded step mean 0.0 worst 0, total 0; wall 35 ms impact, 60 ms follow-through; grip-limit,turf-lift,follow-grip-limit
+half-roll 3 m/s: impact 13436 steps, 0 grounded, columns per grounded step mean 0.0 worst 0, total 0; follow-through 158606 steps, 1335 grounded, columns per grounded step mean 1209.8 worst 2046, total 1615038; wall 138 ms impact, 596 ms follow-through; turf-lift,turf-lift
+full-roll 3 m/s: impact 30770 steps, 0 grounded, columns per grounded step mean 0.0 worst 0, total 0; follow-through 102354 steps, 3615 grounded, columns per grounded step mean 372.9 worst 527, total 1347942; wall 269 ms impact, 432 ms follow-through; turf-lift,turf-lift,follow-turf-yield,follow-head-deep
+pass-roll 3 m/s: impact 18683 steps, 0 grounded, columns per grounded step mean 0.0 worst 0, total 0; follow-through 60911 steps, 4435 grounded, columns per grounded step mean 313.8 worst 465, total 1391594; wall 203 ms impact, 352 ms follow-through; turf-lift,turf-lift,follow-turf-yield,follow-head-deep
 -- with the head in the turf --
-graze (single-ball 3 m/s up 0.01 m dip -0.005 s jab 1.000 mm): impact 20380 steps, 6044 grounded, columns per grounded step mean 4512.0 worst 4526, total 27270328; follow-through 99638 steps, 0 grounded, columns per grounded step mean 0.0 worst 0, total 0; wall 331 ms impact, 138 ms follow-through; turf-yield,turf-lift
-biting (single-ball 4 m/s up 0.01 m dip -0.02 s jab 5.000 mm): impact 14976 steps, 6495 grounded, columns per grounded step mean 4505.4 worst 4526, total 29262605; follow-through 100280 steps, 0 grounded, columns per grounded step mean 0.0 worst 0, total 0; wall 350 ms impact, 142 ms follow-through; turf-yield,impact-head-deep,grip-limit,turf-lift
-stop-ac 3 m/s jab 4.500 mm (the deepest graze): impact 4049 steps, 1139 grounded, columns per grounded step mean 4487.2 worst 4495, total 5110939; follow-through 15964 steps, 12331 grounded, columns per grounded step mean 4495.0 worst 4495, total 55427845; wall 111 ms impact, 643 ms follow-through; turf-lift,turf-yield
-half-roll 4 m/s (follow-turf-yield): impact 15364 steps, 0 grounded, columns per grounded step mean 0.0 worst 0, total 0; follow-through 184636 steps, 4317 grounded, columns per grounded step mean 4512.3 worst 4526, total 19479780; wall 115 ms impact, 572 ms follow-through; turf-lift,turf-lift,follow-turf-yield,follow-head-deep,follow-cap
+graze (single-ball 3 m/s up 0.01 m dip -0.005 s jab 1.000 mm): impact 20380 steps, 6044 grounded, columns per grounded step mean 261.8 worst 341, total 1582271; follow-through 99638 steps, 0 grounded, columns per grounded step mean 0.0 worst 0, total 0; wall 382 ms impact, 156 ms follow-through; turf-yield,turf-lift
+biting (single-ball 4 m/s up 0.01 m dip -0.02 s jab 5.000 mm): impact 14976 steps, 6495 grounded, columns per grounded step mean 297.1 worst 434, total 1929378; follow-through 100280 steps, 0 grounded, columns per grounded step mean 0.0 worst 0, total 0; wall 408 ms impact, 154 ms follow-through; turf-yield,impact-head-deep,grip-limit,turf-lift
+stop-ac 3 m/s jab 4.500 mm (the deepest graze): impact 4049 steps, 1139 grounded, columns per grounded step mean 459.7 worst 558, total 523590; follow-through 15964 steps, 12331 grounded, columns per grounded step mean 326.7 worst 465, total 4028574; wall 124 ms impact, 691 ms follow-through; turf-lift,turf-yield
+half-roll 4 m/s (follow-turf-yield): impact 15364 steps, 0 grounded, columns per grounded step mean 0.0 worst 0, total 0; follow-through 184636 steps, 4317 grounded, columns per grounded step mean 296.9 worst 403, total 1281822; wall 133 ms impact, 598 ms follow-through; turf-lift,turf-lift,follow-turf-yield,follow-head-deep,follow-cap
 == power: the graze's loss (user, 2026-10-16) ==
-single-ball 3 m/s up 0.01 m dip -0.005 s jab 1.000 mm: at the ball 2.2377 m/s (face 97.21 ms); single-ball 3 m/s up 0.01 m dip -0.005 s jab 1.000 mm at up 0: at the ball 3.0000 m/s (face 5.01 ms); ratio 0.7459; on entering the turf 2.8217 m/s (5.33 ms), at the ball 0.7930 of it
+single-ball 3 m/s up 0.01 m dip -0.005 s jab 1.000 mm: at the ball 2.2377 m/s (face 97.21 ms); single-ball 3 m/s up 0.01 m dip -0.005 s jab 1.000 mm at up 0: at the ball 3.0000 m/s (face 5.01 ms); fraction of the clear stroke's 0.7459; on entering the turf 2.8217 m/s (5.33 ms), at the ball 0.7930 of it
 planned path, single-ball 3 m/s up 0.01 m dip -0.005 s jab 1.000 mm: contact at 75.45 ms; 2.7946 m/s at 0.01 ms (measured 2.7946), 2.8217 at the turf (5.33 ms), 3.0000 at contact; the clear stroke's path 75.45 ms before its contact: 2.7946 m/s, at its contact (5.00 ms) 3.0000 m/s

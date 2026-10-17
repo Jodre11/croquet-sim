@@ -144,7 +144,7 @@ spec's law; the user ruled them on 2026-10-15, before the plan was written.
     exempt, and roadmap line 29 is a known pre-existing hit.
   - Run `npx prettier --write` on every code file and JSON file you touch. `npm run format:check` must pass.
   - `.prettierignore` lists `docs/`, so wrap markdown by hand.
-  - Prettier does not re-wrap comments or strings. Wrap any comment over 120 columns by hand, and split any template
+  - Prettier does not re-wrap comments or strings. Wrap any comment over 120 columns by hand, and break any template
     literal over 120 columns with `+`.
 - **Engine purity.** `src/engine/**` is pure and deterministic: no DOM, no time of day, no randomness.
 - **Determinism lint.**
@@ -1412,7 +1412,7 @@ export function cellKey(i: number, j: number): number {
 ```
 
   and use it in `column`: `const key = cellKey(i, j);`.
-- Split `mirrorPairs` so that the order is reusable over any block:
+- Factor `mirrorPairs` so that the order is reusable over any block:
 
 ```ts
 /**
@@ -2983,8 +2983,8 @@ When the runs finish:
   Expected: "unexplained 0". Every moved run met the turf on one side or the other, and the full and pass rolls'
   canonical runs are among them (their follow-throughs reach the turf). A moved run with no head–turf contact is a
   defect: stop.
-- The cost: compare `real` in `<temp>/after/presetDigest-task5.time` with the baseline's. Write both, and their ratio,
-  into `<temp>/after/cost.txt` for the gate. If the sweep takes more than three times as long, note which runs
+- The cost: compare `real` in `<temp>/after/presetDigest-task5.time` with the baseline's. Write both, and the
+  quotient, into `<temp>/after/cost.txt` for the gate. If the sweep takes more than three times as long, note which runs
   dominate (the ones with the longest head–turf intervals in `moved-task5.txt`) in the same file.
 
 Any other difference is a defect: stop.
@@ -3225,8 +3225,9 @@ Create `scripts/turfStrikeProbe.ts`:
  * - series: each regime's found run over time, every 1 ms of the impact: the head's speed along aim, its lowest
  *   point, the turf's bearing and resistance along aim, and each hand's force (design §8);
  * - jab: the AC stop at 3 m/s over jab 0–8 mm in 0.5 mm steps (Gugan 5, design §7.3; plan decision 20): U, the second
- *   tap and its ratio, whether the depth qualifies and is a graze, when the head first grounds, its lowest point, and
- *   the events and flags; the check's verdict; then the jab against the hands' check at 3 and 4 m/s: the second tap
+ *   tap and its fraction of U, whether the depth qualifies and is a graze, when the head first grounds, its lowest
+ *   point, and the events and flags; the check's verdict; then the jab against the hands' check at 3 and 4 m/s: the
+ *   second tap
  *   with no jab and at the shallowest graze, the hands' peak checking force and the turf's braking impulse;
  * - bounds: the regimes' found setups and the jab sweep's verdict at each end of turfYield's and turfMatStrength's
  *   bounds (design §6.2, §8), the other figures at their defaults;
@@ -3519,7 +3520,7 @@ function gugan(r: Run) {
     const grounds = turfStart(r);
     const qualifies = grounds !== undefined && grounds >= first.start && (second === undefined || grounds < second.start);
     const graze = qualifies && !r.impact.events.some((e) => e.kind === "impact-head-deep");
-    return { U, tap, ratio: tap / U, qualifies, graze, grounds, first, second };
+    return { U, tap, fraction: tap / U, qualifies, graze, grounds, first, second };
 }
 
 /** The hands' peak checking force and impulse and the turf's braking impulse along aim after the first face interval. */
@@ -3549,7 +3550,7 @@ function sweep(world: World, quiet: boolean): number | null {
         const r = run(`jab ${mm(jab)} mm`, shot("stop-ac", 3, { jab }), world);
         const g = gugan(r);
         if (g !== null && g.graze) {
-            grazes.push(g.ratio);
+            grazes.push(g.fraction);
             shallowest = shallowest ?? jab;
         }
         if (!quiet) {
@@ -3557,7 +3558,8 @@ function sweep(world: World, quiet: boolean): number | null {
                 `jab ${mm(jab)} mm: ` +
                     (g === null
                         ? "no face interval"
-                        : `U ${g.U.toFixed(4)} m/s, second tap ${g.tap.toFixed(4)} m/s, ratio ${g.ratio.toFixed(4)}, ` +
+                        : `U ${g.U.toFixed(4)} m/s, second tap ${g.tap.toFixed(4)} m/s, ` +
+                          `fraction of U ${g.fraction.toFixed(4)}, ` +
                           `grounds ${g.grounds === undefined ? "never" : `${ms(g.grounds)} ms`}, ` +
                           `${g.qualifies ? (g.graze ? "graze" : "qualifies, deep") : "does not qualify"}`) +
                     `; lowest ${mm(lowest(r))} mm; ${kinds(r).join(",") || "no events"}`,
@@ -3566,7 +3568,7 @@ function sweep(world: World, quiet: boolean): number | null {
     }
     const passes = grazes.length > 0 && grazes.every((x) => x >= 0.295 && x <= 0.463);
     console.log(
-        `verdict: ${passes ? "PASS" : "FAIL"}; ${grazes.length} grazes, ratios ` +
+        `verdict: ${passes ? "PASS" : "FAIL"}; ${grazes.length} grazes, fractions of U ` +
             `${grazes.map((x) => x.toFixed(4)).join(", ") || "none"}; Gugan's 0.400 (0.295–0.463)`,
     );
     return shallowest;
@@ -3583,7 +3585,8 @@ function jab(): void {
                 const g = gugan(r);
                 const b = braking(r);
                 console.log(
-                    `${r.label}: second tap ${g === null ? "-" : `${g.tap.toFixed(4)} m/s (${g.ratio.toFixed(4)}U)`}; ` +
+                    `${r.label}: second tap ` +
+                        `${g === null ? "-" : `${g.tap.toFixed(4)} m/s (${g.fraction.toFixed(4)}U)`}; ` +
                         `hands' peak check ${b.peak.toFixed(1)} N, impulse ${b.hands.toFixed(4)} N·s; turf braking ` +
                         `${b.turf.toFixed(4)} N·s; ${kinds(r).join(",") || "no events"}`,
                 );
@@ -3770,7 +3773,7 @@ describe("Gugan's jab (P2b.2b.2b.3 design §7.3; slow)", () => {
         // the head centre's speed along aim at the face region's first and second intervals' starts (plan decision
         // 20). A depth qualifies when the head–turf pair first closes after the first face contact begins and before
         // a second or the impact's end; a graze stays within HEAD_DEEP_LIMIT; a graze with no second tap counts 0.
-        const ratios: number[] = [];
+        const fractions: number[] = [];
         for (let k = 0; k <= 16; k++) {
             const { impact, speed } = along(shot("stop-ac", 3, { jab: k * 0.0005 }));
             const face = impact.headRegions?.["face/blue#face"] ?? [];
@@ -3783,13 +3786,13 @@ describe("Gugan's jab (P2b.2b.2b.3 design §7.3; slow)", () => {
             const qualifies =
                 grounds !== undefined && grounds >= first.start && (second === undefined || grounds < second.start);
             if (qualifies && !impact.events.some((e) => e.kind === "impact-head-deep")) {
-                ratios.push((second === undefined ? 0 : speed(second.start)) / speed(first.start));
+                fractions.push((second === undefined ? 0 : speed(second.start)) / speed(first.start));
             }
         }
-        expect(ratios.length).toBeGreaterThan(0);
-        for (const ratio of ratios) {
-            expect(ratio).toBeGreaterThanOrEqual(0.295);
-            expect(ratio).toBeLessThanOrEqual(0.463);
+        expect(fractions.length).toBeGreaterThan(0);
+        for (const fraction of fractions) {
+            expect(fraction).toBeGreaterThanOrEqual(0.295);
+            expect(fraction).toBeLessThanOrEqual(0.463);
         }
     });
 });
@@ -3807,7 +3810,7 @@ Expected: the regimes PASS (the setups are Step 2's own); the jab check is skipp
 
 Run: `env SLOW_TESTS=1 npx vitest run tests/engine/turfStrike.test.ts`
 Expected: the jab check runs. **Whatever it shows, do not change the law or the test for it**: the jab check is the
-gate's (Task 8). If it fails, record its ratios in `<temp>/after/jab-check.txt` for the gate, and mark the case
+gate's (Task 8). If it fails, record its fractions of U in `<temp>/after/jab-check.txt` for the gate, and mark the case
 `it.fails.runIf(SLOW)` with the comment "P2b.2b.2b.3: failing before the gate's ruling (Task 8)", so that the suite
 stays green until the user rules.
 
@@ -3885,8 +3888,8 @@ Show the user, in this order:
 3. **The three regimes**: each one's setup and its series (forces, depths, speeds over time).
 4. **The bounds**: whether each regime still occurs at each end of p_y's and c's bounds, and the jab check's verdict
    there.
-5. **The jab**: the sweep at 3 m/s (the depth the heel first grounds, each second tap and its ratio) against Gugan's
-   0.400U and its band, the check's verdict, and the no-jab value (the model's hands' check). Then the jab against the
+5. **The jab**: the sweep at 3 m/s (the depth the heel first grounds, each second tap and its fraction of U) against
+   Gugan's 0.400U and its band, the check's verdict, and the no-jab value (the model's hands' check). Then the jab against the
    hands' check at 3 and 4 m/s: the second tap with and without the jab, the hands' peak checking force and the
    turf's braking impulse. If the jab helps less at 4 m/s than at 3, say so: spec §8 sends the arms' checking force to
    P2b.2b.2c, and this step does not change the law for it.
@@ -4035,8 +4038,8 @@ In `docs/superpowers/plans/2026-09-30-croquet-shot-lab-roadmap.md`:
   two planning rulings of 2026-10-15 (decisions 1 and 2), and the gate's ruling(s), with the user's words and date.
 - **A new section "P2b.2b.2b.3 outcomes (<date>)"**, with spec §9's figures, from the probes against Task 1's
   baseline:
-  - the jab sweep at 3 m/s: the depth the heel first grounds, each second tap, its ratio, the head's lowest point,
-    `turf-yield` and `grip-limit` (impact events and follow-through flags); the check's verdict; and the 4 m/s run;
+  - the jab sweep at 3 m/s: the depth the heel first grounds, each second tap, its fraction of U, the head's lowest
+    point, `turf-yield` and `grip-limit` (impact events and follow-through flags); the check's verdict; and the 4 m/s run;
   - the regimes' runs and their setups;
   - every preset's canonical figures and the sweep's cap and flag tallies, as P2b.2b.2b.2c recorded them;
   - the full and pass rolls' follow-through finishes;

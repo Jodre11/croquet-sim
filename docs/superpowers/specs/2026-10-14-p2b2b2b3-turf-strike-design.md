@@ -114,7 +114,8 @@ a head and a ball pressing one column is outside the model, as two balls are tod
 ### 4.1 The columns
 
 Each step, when the head's lowest point (`headBottom`) is below the plane, the law visits every column within the
-head's horizontal bounds (padded one cell), in mirror pairs across aim as `bedLoad` does, so that a symmetric stroke
+head's horizontal bounds (padded one cell; narrowed by Task 5 to the head's part below the plane, see the plan's
+amendments), in mirror pairs across aim as `bedLoad` does, so that a symmetric stroke
 gives a symmetric force to the last bit. For each column the head's underside height z_u is the entry of the vertical
 line through the column's centre into the head (the rounded box: the Minkowski sum of its core box and a sphere of the
 edge radius; the round head: its cylinder). A column is submerged while z_u < 0, its depth δ = −z_u, its area h².
@@ -442,6 +443,9 @@ figures are in the roadmap's "P2b.2b.2b.3 outcomes (2026-10-17)".
 
 **Corrections to this design's text.**
 
+- **§4.1, the columns** (decision 8; Task 5, df36880). The visit is the columns under the head's part below the plane
+  (`headReach`), padded one cell, bit-identical to the extent's; law 385 → 36.9 µs per step. Where rounding leaves
+  that part empty at a ulp's depth, the head's whole horizontal extent stands in (`headColumns`).
 - **§4.3, the ploughing depth** (decision 1). "Each strip's ploughing depth d_s is its deepest column's elastic
   deflection e (the depth below the column's own floor −s, …)" is superseded: the depth is d = δ − s_entry, below
   the floor the column had when the head arrived over it.
@@ -504,7 +508,8 @@ figures are in the roadmap's "P2b.2b.2b.3 outcomes (2026-10-17)".
   1.5677 m/s) while its speed along the lawn is (1.5540 against 1.5666). User ruling 2026-10-17: "Along the lawn +
   rename"; the test is retitled "… sends the striker's ball slower along the lawn".
 - **§9, the cost** (the user's relayed note of 2026-10-15): the preset sweep costs ×1.34 (353.52 → 472.31 s, each timed
-  alone); `shotMix`'s engine time about ×1.1; about 4,500 columns per grounded step (worst 4,785).
+  alone); `shotMix`'s engine time about ×1.1; 262–460 columns per grounded step on the mean (the half roll's
+  follow-through at 3 m/s 1,210, the worst, 2,046).
 
 **The plan's decisions.**
 
@@ -528,9 +533,10 @@ figures are in the roadmap's "P2b.2b.2b.3 outcomes (2026-10-17)".
    rounded box bounded by its full half-extents, the cylinder by (L/2)·|a_k| + r·√(1 − a_k²).
 9. **The rounded box's underside is exact**: the union of three slab-grown boxes, twelve edge cylinders and eight
    corner spheres, so the heel's and the edges' columns are right where the head bites.
-10. **The hands' slid offset is held in the head's body frame** (changed at the plan's review): the hand slides along
-    the shaft, which the follow-through turns through large angles; a world-frame offset would end up across it. It
-    slides only where the hand holds a position spring; damper-only branches clip.
+10. **The hands' slid offset is held in the head's body frame** (changed at the plan's review; reworded by the user's
+    ruling, 2026-10-17): the anchor slides along the excess force, held in the head's frame so the follow-through's
+    large rotations carry it with the mallet (§5: whether the grip broke or the arm gave way is moot). It slides only
+    where the hand holds a position spring; damper-only branches clip.
 11. **`HandLoad.saturated`** names the first hand to saturate in a step, the top hand if both: one event per impact,
     one flag per follow-through.
 12. **`TEST_GRIP_LIMIT` is 1e5 N** in the test hands, far above any, so the tests written before the limit keep their
@@ -578,6 +584,9 @@ figures are in the roadmap's "P2b.2b.2b.3 outcomes (2026-10-17)".
 - The pre-flight gate, 2026-10-17: the gate, "(a) Go on"; Gugan's jab check, "Keep .fails + ruling"; the early-dip
   test, "Along the lawn + rename"; biting, "Yes, require overlap", then "Hand held at limit in turf"; the ploughing
   probe, "Yes, run it"; gate round 1, "Go on".
+- The final review, 2026-10-17: decision 10, "Accept 3D slide, reword". The slid anchor moves in three dimensions,
+  not along the shaft, and its drift is not bounded: the GC stop's follow-through drift reaches 0.378 m. Bounding it
+  is left to P2b.2b.2c (the arms' checking force).
 
 **The exit criteria.** All met but two, each ruled by the user: criterion 3's stopped regime (not gated, the dig-in
 account) and criterion 4's jab check (kept as an expected failure).

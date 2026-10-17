@@ -1539,3 +1539,16 @@ scale  graze                 peak      at the ball   ÷ clear 3.00 m/s  biting (
 At every scale: stopped NONE, follow half-roll 4 m/s. The factor's ~1.15× on the ploughing cap moves the graze's
 speed at the ball by 1.6% at most and changes no verdict.
 USER RULING 2026-10-17 (gate round 1): "Go on".
+CORRECTION 2026-10-17 (final review): the cost section's columns per grounded step counted the head's whole extent
+(plan decision 8's bound); since Task 5 (df36880) the law visits only headReach ± a cell. Corrected (the law's own
+range, headColumns), mean / worst / total, against the record's:
+  half-roll 3 m/s follow-through       1,209.8 / 2,046 / 1,615,038     (was 4,429.4 / 4,433 / 5,913,281)
+  full-roll 3 m/s follow-through         372.9 /   527 / 1,347,942     (was 4,510.1 / 4,526 / 16,303,985)
+  pass-roll 3 m/s follow-through         313.8 /   465 / 1,391,594     (was 4,662.9 / 4,785 / 20,679,874)
+  graze impact                           261.8 /   341 / 1,582,271     (was 4,512.0 / 4,526 / 27,270,328)
+  biting (dip -0.005 s) impact           286.9 /   372 / 1,426,310     (was 4,511.5 / 4,526 / 22,426,485)
+  stop-ac 3 m/s jab 4.5 mm impact        459.7 /   558 /   523,590     (was 4,487.2 / 4,495 / 5,110,939)
+  stop-ac 3 m/s jab 4.5 mm follow-thr.   326.7 /   465 / 4,028,574     (was 4,495.0 / 4,495 / 55,427,845)
+  half-roll 4 m/s follow-through         296.9 /   403 / 1,281,822     (was 4,512.3 / 4,526 / 19,479,780)
+So "~4,500 columns per grounded step (worst 4,785)" reads 262–460 on the mean (the half roll at 3 m/s 1,210; worst
+2,046), and the AC stop's "55.4 M column visits" reads 4.03 M. Step counts, flags and wall times are unchanged.
