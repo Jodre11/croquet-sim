@@ -3227,8 +3227,7 @@ Create `scripts/turfStrikeProbe.ts`:
  * - jab: the AC stop at 3 m/s over jab 0–8 mm in 0.5 mm steps (Gugan 5, design §7.3; plan decision 20): U, the second
  *   tap and its fraction of U, whether the depth qualifies and is a graze, when the head first grounds, its lowest
  *   point, and the events and flags; the check's verdict; then the jab against the hands' check at 3 and 4 m/s: the
- *   second tap
- *   with no jab and at the shallowest graze, the hands' peak checking force and the turf's braking impulse;
+ *   second tap with no jab and at the shallowest graze, the hands' peak checking force and the turf's braking impulse;
  * - bounds: the regimes' found setups and the jab sweep's verdict at each end of turfYield's and turfMatStrength's
  *   bounds (design §6.2, §8), the other figures at their defaults;
  * - cost: per canonical setup at 3 m/s, the impact's steps and the head–turf columns visited per step, mean over the
@@ -3889,10 +3888,10 @@ Show the user, in this order:
 4. **The bounds**: whether each regime still occurs at each end of p_y's and c's bounds, and the jab check's verdict
    there.
 5. **The jab**: the sweep at 3 m/s (the depth the heel first grounds, each second tap and its fraction of U) against
-   Gugan's 0.400U and its band, the check's verdict, and the no-jab value (the model's hands' check). Then the jab against the
-   hands' check at 3 and 4 m/s: the second tap with and without the jab, the hands' peak checking force and the
-   turf's braking impulse. If the jab helps less at 4 m/s than at 3, say so: spec §8 sends the arms' checking force to
-   P2b.2b.2c, and this step does not change the law for it.
+   Gugan's 0.400U and its band, the check's verdict, and the no-jab value (the model's hands' check). Then the jab
+   against the hands' check at 3 and 4 m/s: the second tap with and without the jab, the hands' peak checking force
+   and the turf's braking impulse. If the jab helps less at 4 m/s than at 3, say so: spec §8 sends the arms' checking
+   force to P2b.2b.2c, and this step does not change the law for it.
 6. **The canonical runs** against the baseline: the head–turf intervals, depth and slide, the follow-through's finish
    and flags (the full and pass rolls' among them), the highest ball centre and the pass roll's rebound against its
    accepted 20.76 mm (exit criterion 5; a larger rise goes to the user here). Name every run whose follow-through now
@@ -4039,7 +4038,8 @@ In `docs/superpowers/plans/2026-09-30-croquet-shot-lab-roadmap.md`:
 - **A new section "P2b.2b.2b.3 outcomes (<date>)"**, with spec §9's figures, from the probes against Task 1's
   baseline:
   - the jab sweep at 3 m/s: the depth the heel first grounds, each second tap, its fraction of U, the head's lowest
-    point, `turf-yield` and `grip-limit` (impact events and follow-through flags); the check's verdict; and the 4 m/s run;
+    point, `turf-yield` and `grip-limit` (impact events and follow-through flags); the check's verdict; and the 4 m/s
+    run;
   - the regimes' runs and their setups;
   - every preset's canonical figures and the sweep's cap and flag tallies, as P2b.2b.2b.2c recorded them;
   - the full and pass rolls' follow-through finishes;

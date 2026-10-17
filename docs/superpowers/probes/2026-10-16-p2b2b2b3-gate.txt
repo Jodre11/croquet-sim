@@ -1552,3 +1552,5 @@ range, headColumns), mean / worst / total, against the record's:
   half-roll 4 m/s follow-through         296.9 /   403 / 1,281,822     (was 4,512.3 / 4,526 / 19,479,780)
 So "~4,500 columns per grounded step (worst 4,785)" reads 262–460 on the mean (the half roll at 3 m/s 1,210; worst
 2,046), and the AC stop's "55.4 M column visits" reads 4.03 M. Step counts, flags and wall times are unchanged.
+The biting row is from a separate throwaway run at the gate's own biting setup (dip −0.005 s), which reproduced its
+14,450 / 4,971 steps; the regenerated probe's biting (dip −0.02 s) gives 297.1 / 434.

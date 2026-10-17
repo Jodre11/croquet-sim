@@ -585,8 +585,8 @@ figures are in the roadmap's "P2b.2b.2b.3 outcomes (2026-10-17)".
   test, "Along the lawn + rename"; biting, "Yes, require overlap", then "Hand held at limit in turf"; the ploughing
   probe, "Yes, run it"; gate round 1, "Go on".
 - The final review, 2026-10-17: decision 10, "Accept 3D slide, reword". The slid anchor moves along the excess force
-  in three dimensions, so it can drift partly across the shaft, and nothing bounds its drift but the 435 N limit: the
-  GC stop's follow-through drift reaches 0.378 m from that limit alone. Bounding it is left to P2b.2b.2c (the arms'
+  in three dimensions, so it can drift partly across the shaft, and its drift is not bounded: the GC stop's
+  follow-through drift reaches 0.378 m from the 435 N limit alone. Bounding it is left to P2b.2b.2c (the arms'
   checking force).
 
 **The exit criteria.** All met but two, each ruled by the user: criterion 3's stopped regime (not gated, the dig-in

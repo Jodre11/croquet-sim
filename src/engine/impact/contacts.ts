@@ -484,8 +484,9 @@ export function headBottom(state: HeadState, head: MalletHead): Vec3 {
 
 /**
  * The head's horizontal half-extents (m) about its centre along world x and y, z 0 (P2b.2b.2b.3 design §4.1): the
- * fallback bound of headColumns, and a bound on the whole head. A box's Σ_i |R_ki|·h_i over its full box's half-extents h = (L/2, h_y, h_z), which bound the rounded
- * box; a cylinder's (L/2)·|a_k| + r·√(1 − a_k²), a the unit axis.
+ * fallback bound of headColumns, and a bound on the whole head. A box's Σ_i |R_ki|·h_i over its full box's
+ * half-extents h = (L/2, h_y, h_z), which bound the rounded box; a cylinder's (L/2)·|a_k| + r·√(1 − a_k²), a the unit
+ * axis.
  */
 export function headExtent(state: HeadState, head: MalletHead): Vec3 {
     const q = state.orientation;
