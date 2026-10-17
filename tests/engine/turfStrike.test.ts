@@ -111,9 +111,9 @@ describe("the follow-through's flags (P2b.2b.2b.3 design §4.6)", () => {
 describe("Gugan's jab (P2b.2b.2b.3 design §7.3; slow)", () => {
     // P2b.2b.2b.3: the turf strike, gate ruling 2026-10-17: "Keep .fails + ruling". No graze has a second tap at
     // any jab or at either end of p_y's and c's bounds (six grazes, jab 2.0–4.5 mm, each a single face interval, so
-    // every ratio is 0): the striker's ball leaves at 0.523·U, above the band's top of 0.463, before the head reaches
-    // the turf, which predates the turf law. P2b.2b.2c (the arms' checking force) may change it; `.fails` then turns
-    // red.
+    // every fraction of U is 0): the striker's ball leaves at 0.523·U, above the band's top of 0.463, before the head
+    // reaches the turf, which predates the turf law. P2b.2b.2c (the arms' checking force) may change it; `.fails` then
+    // turns red.
     it.runIf(SLOW).fails("puts every graze's second tap within [0.295, 0.463]·U, with at least one graze", () => {
         // Gugan 5: stop-shots with a downward jab, so that the heel's friction stops the mallet soon after impact;
         // over the seven lowest ratios the second tap's mallet speed is 0.400U, against 0.463U unrestricted, and the
@@ -121,7 +121,7 @@ describe("Gugan's jab (P2b.2b.2b.3 design §7.3; slow)", () => {
         // the head centre's speed along aim at the face region's first and second intervals' starts (plan decision
         // 20). A depth qualifies when the head–turf pair first closes after the first face contact begins and before
         // a second or the impact's end; a graze stays within HEAD_DEEP_LIMIT; a graze with no second tap counts 0.
-        const ratios: number[] = [];
+        const fractions: number[] = [];
         for (let k = 0; k <= 16; k++) {
             const { impact, speed } = along(shot("stop-ac", 3, { jab: k * 0.0005 }));
             const face = impact.headRegions?.["face/blue#face"] ?? [];
@@ -134,13 +134,13 @@ describe("Gugan's jab (P2b.2b.2b.3 design §7.3; slow)", () => {
             const qualifies =
                 grounds !== undefined && grounds >= first.start && (second === undefined || grounds < second.start);
             if (qualifies && !impact.events.some((e) => e.kind === "impact-head-deep")) {
-                ratios.push((second === undefined ? 0 : speed(second.start)) / speed(first.start));
+                fractions.push((second === undefined ? 0 : speed(second.start)) / speed(first.start));
             }
         }
-        expect(ratios.length).toBeGreaterThan(0);
-        for (const ratio of ratios) {
-            expect(ratio).toBeGreaterThanOrEqual(0.295);
-            expect(ratio).toBeLessThanOrEqual(0.463);
+        expect(fractions.length).toBeGreaterThan(0);
+        for (const fraction of fractions) {
+            expect(fraction).toBeGreaterThanOrEqual(0.295);
+            expect(fraction).toBeLessThanOrEqual(0.463);
         }
     });
 });

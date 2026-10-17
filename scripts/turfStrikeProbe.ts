@@ -8,14 +8,14 @@
  * - series: each regime's found run over time, every 1 ms of the impact: the head's speed along aim, its lowest
  *   point, the turf's bearing and resistance along aim, and each hand's force (design §8);
  * - jab: the AC stop at 3 m/s over jab 0–8 mm in 0.5 mm steps (Gugan 5, design §7.3; plan decision 20): U, the second
- *   tap and its ratio, whether the depth qualifies and is a graze, when the head first grounds, its lowest point, and
- *   the events and flags; the check's verdict; then the jab against the hands' check at 3 and 4 m/s: the second tap
- *   with no jab and at the shallowest graze, the hands' peak checking force and the turf's braking impulse;
+ *   tap and its fraction of U, whether the depth qualifies and is a graze, when the head first grounds, its lowest
+ *   point, and the events and flags; the check's verdict; then the jab against the hands' check at 3 and 4 m/s: the
+ *   second tap with no jab and at the shallowest graze, the hands' peak checking force and the turf's braking impulse;
  * - bounds: the regimes' found setups and the jab sweep's verdict at each end of turfYield's and turfMatStrength's
  *   bounds (design §6.2, §8), the other figures at their defaults;
  * - cost: per canonical setup at 3 m/s (the no-turf baseline), then the found graze and biting, the AC stop's deepest
  *   graze and the roll whose follow-through yields the turf: the impact's and the follow-through's steps, the
- *   head–turf columns visited per grounded step (mean, worst, total) and the run's wall time, split at the
+ *   head–turf columns visited per grounded step (mean, worst, total) and the run's wall time, divided at the
  *   follow-through's first step (design §9; plan decision 21);
  * - power: the found graze's speed at the ball against the same stroke clear of the turf (up 0) and against its own
  *   on entering the turf, and its planned path's speeds, which separate the turf's loss from the earlier start on the
@@ -23,8 +23,9 @@
  * Run with `npx --yes tsx scripts/turfStrikeProbe.ts`; environment: SECTION (one of the names above; default all). Not
  * part of the test suite; its output goes into the gate and the roadmap's outcomes.
  */
-import { headExtent, headLowestPoint } from "../src/engine/impact/contacts";
-import { BED_CELL, columnSpan } from "../src/engine/impact/turfBed";
+import { headLowestPoint } from "../src/engine/impact/contacts";
+import { headColumns } from "../src/engine/impact/headTurf";
+import { BED_CELL } from "../src/engine/impact/turfBed";
 import {
     IMPACT_DT,
     type FollowSnapshot,
@@ -72,21 +73,23 @@ interface Step {
     readonly columns: number;
 }
 
-/** The columns the head–turf law visits with the head at `s` (plan decision 21): none while it is above the plane. */
+/**
+ * The columns the head–turf law visits with the head at `s` (plan decision 21; headColumns, its own range): none while
+ * it is above the plane.
+ */
 function columnsUnder(s: HeadState, head: MalletHead): number {
-    if (!(headLowestPoint(s, head) < 0)) {
+    const range = headColumns(s, head, BED_CELL);
+    if (range === null) {
         return 0;
     }
-    const extent = headExtent(s, head);
-    const [i0, i1] = columnSpan(s.position.x, extent.x, BED_CELL);
-    const [j0, j1] = columnSpan(s.position.y, extent.y, BED_CELL);
+    const [i0, i1, j0, j1] = range;
     return (i1 - i0 + 1) * (j1 - j0 + 1);
 }
 
 /**
  * One stroke: its setup, impact, follow-through and steps, the head at t = 0, the mallet head and the aim; the
  * contact state; the columns under the head after each follow-through step; and the wall time (ms) of the impact and
- * of the follow-through, split at the follow-through's first step (the probe's own work included).
+ * of the follow-through, divided at the follow-through's first step (the probe's own work included).
  */
 interface Run {
     readonly label: string;
@@ -126,7 +129,7 @@ function run(label: string, setup: ShotSetup, world: World = WORLD): Run {
     const begin = performance.now();
     const { result, follow } = simulateStroke(plan.contact, setup.balls, world, { probe });
     const end = performance.now();
-    const split = handover ?? end;
+    const boundary = handover ?? end;
     const drive = plan.contact.drive;
     const aim = drive.kind === "track" ? drive.arc.aim : vec3(1, 0, 0);
     return {
@@ -139,7 +142,7 @@ function run(label: string, setup: ShotSetup, world: World = WORLD): Run {
         aim,
         contact: plan.contact,
         follows,
-        wall: { impact: split - begin, follow: end - split },
+        wall: { impact: boundary - begin, follow: end - boundary },
     };
 }
 
@@ -396,7 +399,7 @@ function gugan(r: Run) {
     const qualifies =
         grounds !== undefined && grounds >= first.start && (second === undefined || grounds < second.start);
     const graze = qualifies && !r.impact.events.some((e) => e.kind === "impact-head-deep");
-    return { U, tap, ratio: tap / U, qualifies, graze, grounds, first, second };
+    return { U, tap, fraction: tap / U, qualifies, graze, grounds, first, second };
 }
 
 /**
@@ -428,7 +431,7 @@ function sweep(world: World, quiet: boolean): number | null {
         const r = run(`jab ${mm(jab)} mm`, shot("stop-ac", 3, { jab }), world);
         const g = gugan(r);
         if (g !== null && g.graze) {
-            grazes.push(g.ratio);
+            grazes.push(g.fraction);
             shallowest = shallowest ?? jab;
         }
         if (!quiet) {
@@ -436,7 +439,8 @@ function sweep(world: World, quiet: boolean): number | null {
                 `jab ${mm(jab)} mm: ` +
                     (g === null
                         ? "no face interval"
-                        : `U ${g.U.toFixed(4)} m/s, second tap ${g.tap.toFixed(4)} m/s, ratio ${g.ratio.toFixed(4)}, ` +
+                        : `U ${g.U.toFixed(4)} m/s, second tap ${g.tap.toFixed(4)} m/s, ` +
+                          `fraction of U ${g.fraction.toFixed(4)}, ` +
                           `grounds ${g.grounds === undefined ? "never" : `${ms(g.grounds)} ms`}, ` +
                           `${g.qualifies ? (g.graze ? "graze" : "qualifies, deep") : "does not qualify"}`) +
                     `; lowest ${mm(lowest(r))} mm; ${kinds(r).join(",") || "no events"}`,
@@ -445,7 +449,7 @@ function sweep(world: World, quiet: boolean): number | null {
     }
     const passes = grazes.length > 0 && grazes.every((x) => x >= 0.295 && x <= 0.463);
     console.log(
-        `verdict: ${passes ? "PASS" : "FAIL"}; ${grazes.length} grazes, ratios ` +
+        `verdict: ${passes ? "PASS" : "FAIL"}; ${grazes.length} grazes, fractions of U ` +
             `${grazes.map((x) => x.toFixed(4)).join(", ") || "none"}; Gugan's 0.400 (0.295–0.463)`,
     );
     return shallowest;
@@ -463,7 +467,7 @@ function jab(): void {
                 const b = braking(r);
                 console.log(
                     `${r.label}: second tap ` +
-                        `${g === null ? "-" : `${g.tap.toFixed(4)} m/s (${g.ratio.toFixed(4)}U)`}; ` +
+                        `${g === null ? "-" : `${g.tap.toFixed(4)} m/s (${g.fraction.toFixed(4)}U)`}; ` +
                         `hands' peak check ${b.peak.toFixed(1)} N, impulse ${b.hands.toFixed(4)} N·s; turf braking ` +
                         `${b.turf.toFixed(4)} N·s; ${kinds(r).join(",") || "no events"}`,
                 );
@@ -571,7 +575,8 @@ function power(): void {
     const entry = along(r, turf);
     console.log(
         `${r.label}: at the ball ${ball.toFixed(4)} m/s (face ${ms(face)} ms); ${clear.label}: at the ball ` +
-            `${clearBall.toFixed(4)} m/s (face ${ms(clearFace)} ms); ratio ${(ball / clearBall).toFixed(4)}; ` +
+            `${clearBall.toFixed(4)} m/s (face ${ms(clearFace)} ms); fraction of the clear stroke's ` +
+            `${(ball / clearBall).toFixed(4)}; ` +
             `on entering the turf ${entry.toFixed(4)} m/s (${ms(turf)} ms), at the ball ` +
             `${(ball / entry).toFixed(4)} of it`,
     );

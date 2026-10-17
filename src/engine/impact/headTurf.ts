@@ -30,7 +30,7 @@ import { contactReference } from "../../reference/index";
 import { ZERO, add, cross, horizontal, length, scale, sub, vec3, type Vec3 } from "../math/vec3";
 import type { SurfaceProps } from "../types";
 import { TANGENTIAL_STIFFNESS_RATIO, carrySpring, tangentialForce, type PairLaw } from "./contactLaw";
-import { headLowestPoint, headReach, headUnderside, pointVelocity } from "./contacts";
+import { headExtent, headLowestPoint, headReach, headUnderside, pointVelocity } from "./contacts";
 import { BED_CELL, cellKey, mirrorPairsOver } from "./turfBed";
 import type { HeadState, HeadTurfLaw, MalletHead } from "./types";
 
@@ -201,6 +201,26 @@ function leads(c: Bearing, best: Bearing, ax: number, ay: number): boolean {
 }
 
 /**
+ * The column range [i0, i1, j0, j1] headTurfLoad visits for head state `s` on a lattice of cell `h` (design §4.1), or
+ * null while the head's lowest point is above the plane: headReach's bound padded one cell, or, where rounding leaves
+ * it empty at a ulp's depth, the head's whole horizontal extent (headExtent). A column outside has its underside above
+ * the plane, so bear would pass it over, and skipping it changes nothing; the pad is against rounding.
+ */
+export function headColumns(
+    s: HeadState,
+    head: MalletHead,
+    h: number,
+): readonly [number, number, number, number] | null {
+    if (!(headLowestPoint(s, head) < 0)) {
+        return null;
+    }
+    const e = headExtent(s, head);
+    const { x, y } = s.position;
+    const [x0, x1, y0, y1] = headReach(s, head) ?? [x - e.x, x + e.x, y - e.y, y + e.y];
+    return [Math.floor(x0 / h) - 1, Math.floor(x1 / h) + 1, Math.floor(y0 / h) - 1, Math.floor(y1 / h) + 1];
+}
+
+/**
  * Updates `bed` under head state `s` and returns the turf's load on `head` for a step of `dt` (design §4), or null
  * while no column bears (the spring then reset). `aim` (unit, horizontal) orients the strips while the spring's trial
  * is zero (plan decision 3).
@@ -225,15 +245,10 @@ export function headTurfLoad(
     const onYield = (): void => {
         yields += 1;
     };
-    const below = headLowestPoint(s, head) < 0 ? headReach(s, head) : null;
-    if (below !== null) {
+    const range = headColumns(s, head, h);
+    if (range !== null) {
         const under = headUnderside(s, head);
-        // Only the columns under the head's part below the plane, padded a cell each side against rounding: a column
-        // outside has its underside above the plane, so bear would pass it over, and skipping it changes nothing.
-        const i0 = Math.floor(below[0] / h) - 1;
-        const i1 = Math.floor(below[1] / h) + 1;
-        const j0 = Math.floor(below[2] / h) - 1;
-        const j1 = Math.floor(below[3] / h) + 1;
+        const [i0, i1, j0, j1] = range;
         mirrorPairsOver(i0, i1, j0, j1, (i, ja, jb) => {
             const a = ja === null ? null : bear(bed, s, under, i, ja, onYield);
             const b = jb === null ? null : bear(bed, s, under, i, jb, onYield);

@@ -483,8 +483,8 @@ export function headBottom(state: HeadState, head: MalletHead): Vec3 {
 }
 
 /**
- * The head's horizontal half-extents (m) about its centre along world x and y, z 0 (P2b.2b.2b.3 design §4.1; plan
- * decision 8): a box's Σ_i |R_ki|·h_i over its full box's half-extents h = (L/2, h_y, h_z), which bound the rounded
+ * The head's horizontal half-extents (m) about its centre along world x and y, z 0 (P2b.2b.2b.3 design §4.1): the
+ * fallback bound of headColumns, and a bound on the whole head. A box's Σ_i |R_ki|·h_i over its full box's half-extents h = (L/2, h_y, h_z), which bound the rounded
  * box; a cylinder's (L/2)·|a_k| + r·√(1 − a_k²), a the unit axis.
  */
 export function headExtent(state: HeadState, head: MalletHead): Vec3 {
@@ -718,6 +718,7 @@ export function headUnderside(state: HeadState, head: MalletHead): (x: number, y
     const { shape } = head;
     const frame = shape.kind === "box" ? boxFrame(shape, head.length) : null;
     const uu = dot(u, u);
+    const radius = shape.kind === "box" ? 0 : shape.radius;
     const { x: cx, y: cy } = state.position;
     return (x, y) => {
         // add(add(scale(ex, dx), scale(ey, dy)), base), spelt out to spare its temporaries: the same operations in the
@@ -728,8 +729,11 @@ export function headUnderside(state: HeadState, head: MalletHead): (x: number, y
         if (frame !== null) {
             return roundedBoxEntry(p, u, uu, frame);
         }
-        const r = (shape as CylinderShape).radius;
-        const round = quadraticSpan(u.y * u.y + u.z * u.z, p.y * u.y + p.z * u.z, p.y * p.y + p.z * p.z - r * r);
+        const round = quadraticSpan(
+            u.y * u.y + u.z * u.z,
+            p.y * u.y + p.z * u.z,
+            p.y * p.y + p.z * p.z - radius * radius,
+        );
         return entryOf(slabSpan(p.x, u.x, head.length / 2), round);
     };
 }

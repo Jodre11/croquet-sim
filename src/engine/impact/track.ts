@@ -1413,6 +1413,8 @@ function carryLoad(
         // chain feels what the hand transmits (design §5). The force falls by the palm's and fingers' stiffness times
         // the slide (plan decision 24: the slip lies at the skin, in series with the palm's and fingers' elements).
         grip.topOffset = slid(grip.topOffset, scale(sub(top, topHeld), 1 / spring), q);
+        // chainForces is linear in the anchor, so this lands on F_max to rounding (gripLimit.test bounds it at 1e-9);
+        // it is not re-clipped.
         top = chainForces(chain, topArm, add(topAt, rotate(q, grip.topOffset)), topVelocity, topDrive, g);
         saturated = "top";
     }
@@ -1443,6 +1445,7 @@ function carryLoad(
         if (bottomHeld !== null) {
             grip.bottomOffset = slid(grip.bottomOffset, scale(sub(bottom, bottomHeld), 1 / spring), q);
             const anchor = add(bottomAt, rotate(q, grip.bottomOffset));
+            // On F_max to rounding, as the top hand's; not re-clipped.
             bottom = chainForces(chain, bottomArm, anchor, bottomVelocity, bottomDrive, g);
             saturated = saturated ?? "bottom";
         }
