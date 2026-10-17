@@ -640,5 +640,6 @@ describe("the head's turf contact after the strike (P2b.2b.2b.3; user ruling 202
             ),
         );
         expect(Math.min(...low)).toBeLessThan(0);
-    });
+        // The follow-through drags the head through the turf: about 5 s alone here, 23 s on the CI runner.
+    }, 60_000);
 });

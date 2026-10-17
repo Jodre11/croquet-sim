@@ -159,7 +159,8 @@ describe("the head–turf pair in the impact (P2b.2b.2b.3 design §4)", () => {
         const base = rest(IMPACT_DT, LAW);
         expect(rel(rest(IMPACT_DT / 2, LAW), base)).toBeLessThan(0.01);
         expect(rel(rest(IMPACT_DT, testHeadTurf({ cell: 0.001 })), base)).toBeLessThan(0.02);
-    }, 60_000);
+        // About 41 s in the local suite, 54 s on the CI runner.
+    }, 180_000);
 
     it("is given to a tracked drive and not to a force table", () => {
         const world = testWorld();
