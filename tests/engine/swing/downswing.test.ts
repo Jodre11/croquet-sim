@@ -20,7 +20,7 @@ import {
     type DownswingInput,
     type PlannedDownswing,
 } from "../../../src/engine/swing/downswing";
-import type { SwingShape } from "../../../src/engine/swing/types";
+import type { SwingEffort, SwingShape } from "../../../src/engine/swing/types";
 import { STANDARD_GRAVITY } from "../../../src/engine/world";
 import { TEST_BOX, TEST_HANDS, TEST_HEAD, levelArc, trackDrive } from "../support/impact";
 
@@ -40,7 +40,6 @@ function shape(o: Partial<SwingShape> = {}): SwingShape {
     return {
         pendulumShare: 1,
         handAngle: 0.5,
-        effort: { torqueMax: 0, tempoSlow: 0.4, tempoFast: 0.2 },
         handTempo: { slow: 0.4, fast: 0.2 },
         defaultIntensity: 0,
         ...o,
@@ -58,6 +57,7 @@ function input(o: Partial<DownswingInput> = {}): DownswingInput {
         shape: shape(),
         backswing: 0.3,
         backswingLimit: MAX_BACK_ANGLE,
+        effort: { torque: 0, speed: 1 },
         intensity: 0,
         arrival: 0,
         ...o,
@@ -82,10 +82,9 @@ function contactSpeed(thetaContact: number, omega: number, handsVelocity: Vec3 =
     return length(add(handsVelocity, scale(tangent, omega * LEVER)));
 }
 
-/** The pulse's torque (N·m) τ after the release. */
-function pulse(tau: number, peak: number, duration: number): number {
-    const u = tau / duration;
-    return u >= 0 && u <= 1 ? 0.5 * peak * (1 - Math.cos(2 * Math.PI * u)) : 0;
+/** The player's torque (N·m) at ω and intensity i: the Hill law i·τ_0·max(0, 1 − ω/ω_max) (P2b.2b.2c.1 design §4.4). */
+function hill(omega: number, intensity: number, effort: SwingEffort): number {
+    return intensity * effort.torque * Math.max(0, 1 - omega / effort.speed);
 }
 
 /** How long before the arc's t = 0 the planned contact falls, so that every downswing sample is at a time ≥ 0. */
@@ -167,13 +166,14 @@ describe("the swing-mode downswing (design §3.1, §3.4)", () => {
     });
 
     it("balances work and energy with the player's effort, within 0.1 %", () => {
-        const effort = { torqueMax: 2, tempoSlow: 0.4, tempoFast: 0.2 };
-        const { downswing, omega } = planDownswing(input({ intensity: 1, shape: shape({ effort }) }));
+        // P2b.2b.2c.1: the single-ball stroke (was a 2 N·m pulse over 0.2 s): the Hill law's torque at the table's ω.
+        const effort = { torque: 2, speed: 20 };
+        const { downswing, omega } = planDownswing(input({ intensity: 1, effort }));
         let work = 0;
-        for (let k = 0; k + 1 < downswingSamples(downswing); k++) {
-            const t0 = downswingTime(downswing, k);
-            const t1 = downswingTime(downswing, k + 1);
-            const torque = 0.5 * (pulse(t0 - downswing.release, 2, 0.2) + pulse(t1 - downswing.release, 2, 0.2));
+        for (let k = 0; k + 1 < downswing.theta.length; k++) {
+            const w0 = downswing.omega[k] as number;
+            const w1 = downswing.omega[k + 1] as number;
+            const torque = 0.5 * (hill(w0, 1, effort) + hill(w1, 1, effort));
             work += torque * ((downswing.theta[k + 1] as number) - (downswing.theta[k] as number));
         }
         const fall = PENDULUM.weight * (1 - Math.cos(downswing.thetaTop));
@@ -182,23 +182,23 @@ describe("the swing-mode downswing (design §3.1, §3.4)", () => {
     });
 
     it("swings faster and sooner with more intensity", () => {
-        // The pulse starts at the release, where the pendulum has barely moved, so its work ∫τ·dθ comes mostly from
-        // its later part. A torque small beside the weight's 8.2 N·m (2 N·m) leaves the quicker, shorter pulse of
-        // intensity 1 with slightly less work than the half-peak, longer one of 0.5; 20 N·m dominates, and the
-        // ordering is monotone.
-        const effort = { torqueMax: 20, tempoSlow: 0.4, tempoFast: 0.2 };
-        const at = (intensity: number) => planDownswing(input({ intensity, shape: shape({ effort }) }));
+        // P2b.2b.2c.1: the single-ball stroke (was a 20 N·m pulse over 0.4–0.2 s). The Hill law's torque at any ω
+        // rises with i and acts until contact, so the head is quicker at every θ: ω at contact rises and the fall
+        // shortens (the release comes later).
+        const effort = { torque: 20, speed: 20 };
+        const at = (intensity: number) => planDownswing(input({ intensity, effort }));
         expect(at(0.5).omega).toBeGreaterThan(at(0).omega);
         expect(at(1).omega).toBeGreaterThan(at(0.5).omega);
         expect(at(1).downswing.release).toBeGreaterThan(at(0).downswing.release);
     });
 
     it("integrates a near-horizontal backswing at full intensity", () => {
-        // Review focus 2: the shaft taken back to 85°, the pulse clipped at contact if it outlasts the fall.
+        // Review focus 2: the shaft taken back to 85°. P2b.2b.2c.1: the single-ball stroke (was a 3 N·m pulse over
+        // 0.3 s, clipped at contact): the Hill law's torque acts from the top until contact.
         const backswing = LEVER * (1 - Math.cos(85 * DEG));
-        const effort = { torqueMax: 3, tempoSlow: 0.6, tempoFast: 0.3 };
-        const still = planDownswing(input({ backswing, shape: shape({ effort }) }));
-        const full = planDownswing(input({ backswing, intensity: 1, shape: shape({ effort }) }));
+        const effort = { torque: 3, speed: 20 };
+        const still = planDownswing(input({ backswing, effort }));
+        const full = planDownswing(input({ backswing, intensity: 1, effort }));
         expect(Number.isFinite(full.omega)).toBe(true);
         expect(full.omega).toBeGreaterThan(still.omega);
     });

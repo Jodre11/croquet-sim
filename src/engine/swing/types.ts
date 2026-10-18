@@ -81,17 +81,26 @@ export interface SwingDrive {
 /**
  * How a stroke type's whole stroke is shaped (P2b.2b.2a design §3, §5.1). `pendulumShare` (in [0, 1]) of the
  * backswing's height comes from the pendulum and the rest from the hands, which start back and up along `handAngle`
- * (rad above horizontal; read only when the share is below 1). Swing mode reads `effort`: the player's torque pulse
- * peaks at intensity·torqueMax (N·m) over a duration from `tempoSlow` (s, intensity 0) to `tempoFast` (s, intensity
- * 1). Carry mode reads `handTempo`: the hands' downswing lasts from `slow` (s, intensity 0) to `fast` (s, intensity 1).
- * `defaultIntensity` (in [0, 1]) stands for a shot that gives none.
+ * (rad above horizontal; read only when the share is below 1). Carry mode reads `handTempo`: the hands' downswing lasts
+ * from `slow` (s, intensity 0) to `fast` (s, intensity 1); null where a swing preset has none (P2b.2b.2c.1 plan
+ * decision 7), and a carry stroke fails without one. Swing mode's effort is the body's (`SwingProfile.body.effort`,
+ * P2b.2b.2c.1 design §4.4). `defaultIntensity` (in [0, 1]) stands for a shot that gives none.
  */
 export interface SwingShape {
     readonly pendulumShare: number;
     readonly handAngle: number;
-    readonly effort: { readonly torqueMax: number; readonly tempoSlow: number; readonly tempoFast: number };
-    readonly handTempo: { readonly slow: number; readonly fast: number };
+    readonly handTempo: { readonly slow: number; readonly fast: number } | null;
     readonly defaultIntensity: number;
+}
+
+/**
+ * The player's effort in swing mode (P2b.2b.2c.1 design §4.4), a Hill-type torque–velocity law (Hill 1938): at
+ * intensity i the player's torque on the shaft is i·`torque`·max(0, 1 − ω/`speed`), `torque` τ_0 (N·m, ≥ 0) the
+ * isometric torque and `speed` ω_max (rad/s, > 0) the shaft's angular speed at which the player can add no more.
+ */
+export interface SwingEffort {
+    readonly torque: number;
+    readonly speed: number;
 }
 
 /**
@@ -122,8 +131,9 @@ export interface SwingProfile {
     /**
      * The player's body: the arm mass at the top grip (kg), the reach slack (m), the arm's flex, pendulum push and push
      * (the push intent's cap, N, and its response time constant, s), each hand's and arm's hand–arm chain, and the
-     * grip's limit (N; P2b.2b.2b.3 design §5), and the backswing's limit θ_max (rad from vertical, in (0, π/2]): the
-     * shaft's greatest angle at the top of a swing-mode backswing, where it meets the groin (P2b.2b.2c.1 design §5).
+     * grip's limit (N; P2b.2b.2b.3 design §5), the backswing's limit θ_max (rad from vertical, in (0, π/2]): the
+     * shaft's greatest angle at the top of a swing-mode backswing, where it meets the groin (P2b.2b.2c.1 design §5),
+     * and the player's effort in swing mode, shared by every swing preset (P2b.2b.2c.1 design §4.4).
      */
     readonly body: {
         readonly armMass: number;
@@ -135,6 +145,7 @@ export interface SwingProfile {
         readonly chain: HandChain;
         readonly gripLimit: number;
         readonly backswingLimit: number;
+        readonly effort: SwingEffort;
     };
     readonly stance: Readonly<Record<StrokeType, SwingStance>>;
     readonly drive: Readonly<Record<StrokeType, SwingDrive>>;

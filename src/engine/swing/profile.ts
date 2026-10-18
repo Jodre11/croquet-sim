@@ -6,7 +6,9 @@
  * - Body: reference/contact.json (`armMass` and `reachSlack`, the prototype's calibration),
  *   the arm's flex and pendulum push (P2b.2b.2b.2b), the push intent's cap and response time, each hand's
  *   hand–arm chain (its gate rulings) and the grip's limit (Young et al. 2009; P2b.2b.2b.3), measured; the
- *   backswing's limit θ_max from reference/swing.json (`body`), a placeholder from the user's account of the stance.
+ *   backswing's limit θ_max from reference/swing.json (`body`), a placeholder from the user's account of the stance;
+ *   and swing mode's effort, the Hill-type law's τ_0 and ω_max from reference/swing.json (`body`), fitted by
+ *   scripts/fitStrokeShape.ts to the 9.0 m/s ceiling with κ = ⅔, placeholders (P2b.2b.2c.1 design §4.3, §4.4).
  * - Stance: the hands measured from the socket along the shaft, after John Riches, Croquet Technique (Oxford Croquet),
  *   quoted per preset below. The swing presets keep their own leans. The rolls' leans are Don Gugan's measured face
  *   angles (Gugan 4, Table 6), with Riches' angles kept as cues (user decision, 2026-10-08). Each preset is defined by
@@ -18,9 +20,9 @@
  *   the AC stop's dip depth is a user decision (2026-10-05). Every preset's guideEffort is 1, the full restoration of
  *   the arc's speed a full shot aims at; a softer shot uses less, a very soft one none (user's account, 2026-10-06).
  *   P2b.2b.2 sets the per-type defaults; the P4 planner chooses it per shot.
- * - Shape (P2b.2b.2a design §5.3): reference/swing.json, sourced or labelled placeholders, its effort and tempos fitted
- *   by scripts/fitStrokeShape.ts. The swing presets read the effort and the rolls the hands' tempo; the unread member
- *   repeats the read one's tempos.
+ * - Shape (P2b.2b.2a design §5.3): reference/swing.json, sourced or labelled placeholders, its defaults fitted by
+ *   scripts/fitStrokeShape.ts. The rolls read the hands' tempo, frozen at engine 0.12.0's fit (P2b.2b.2c.1 design
+ *   §4.4); the swing presets have none (null) and swing under the body's effort.
  */
 import {
     ballReference,
@@ -88,47 +90,19 @@ function stanceFromLean(lean: number, up: number, hands: Omit<SwingStance, "hand
 }
 
 /**
- * The shape of stroke type `type` driven in `mode`, from its reference/swing.json entry `ref` (design §5.3). A swing
- * preset reads the effort and a carry preset the hands' tempo; the unread member, where `ref` lacks it, repeats the
- * read one's tempos. Throws a ReferenceDataError naming the type and the keys when `ref` lacks the member `mode` reads.
+ * The shape of stroke type `type` driven in `mode`, from its reference/swing.json entry `ref` (design §5.3). A carry
+ * preset reads the hands' tempo, and throws a ReferenceDataError naming the type and the keys when `ref` lacks it; a
+ * swing preset takes it from `ref` or null (P2b.2b.2c.1 plan decision 7), its effort being the body's. A swing
+ * preset's retired effort keys (torqueMax, tempoSlow, tempoFast) are rejected by readShape when swing.json loads.
  */
 export function shapeOf(type: StrokeType, mode: StrokeMode, ref: StrokeShapeReference): SwingShape {
-    const path = `swing.${type}`;
-    let effort: SwingShape["effort"];
-    let handTempo: SwingShape["handTempo"];
-    if (mode === "swing") {
-        if (ref.effort === null) {
-            throw new ReferenceDataError(path, "a swing-mode preset needs torqueMax, tempoSlow and tempoFast");
-        }
-        effort = {
-            torqueMax: ref.effort.torqueMax.value,
-            tempoSlow: ref.effort.tempoSlow.value,
-            tempoFast: ref.effort.tempoFast.value,
-        };
-        handTempo =
-            ref.handTempo === null
-                ? { slow: effort.tempoSlow, fast: effort.tempoFast }
-                : { slow: ref.handTempo.slow.value, fast: ref.handTempo.fast.value };
-    } else {
-        if (ref.handTempo === null) {
-            throw new ReferenceDataError(path, "a carry-mode preset needs handTempoSlow and handTempoFast");
-        }
-        handTempo = { slow: ref.handTempo.slow.value, fast: ref.handTempo.fast.value };
-        // Carry mode never reads the effort: no torque.
-        effort =
-            ref.effort === null
-                ? { torqueMax: 0, tempoSlow: handTempo.slow, tempoFast: handTempo.fast }
-                : {
-                      torqueMax: ref.effort.torqueMax.value,
-                      tempoSlow: ref.effort.tempoSlow.value,
-                      tempoFast: ref.effort.tempoFast.value,
-                  };
+    if (mode === "carry" && ref.handTempo === null) {
+        throw new ReferenceDataError(`swing.${type}`, "a carry-mode preset needs handTempoSlow and handTempoFast");
     }
     return {
         pendulumShare: ref.pendulumShare.value,
         handAngle: ref.handAngle.value,
-        effort,
-        handTempo,
+        handTempo: ref.handTempo === null ? null : { slow: ref.handTempo.slow.value, fast: ref.handTempo.fast.value },
         defaultIntensity: ref.defaultIntensity.value,
     };
 }
@@ -282,6 +256,7 @@ export const defaultProfile: SwingProfile = {
         chain: HAND_CHAIN,
         gripLimit: GRIP_LIMIT,
         backswingLimit: swingBodyReference.backswingLimit.value,
+        effort: { torque: swingBodyReference.effortTorque.value, speed: swingBodyReference.effortSpeed.value },
     },
     stance: {
         // The top hand fixed at the top of the handle; the bottom hand high and light, a guide only (prototype). Riches

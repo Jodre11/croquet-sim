@@ -33,12 +33,12 @@ function input(top: number, o: Partial<DownswingInput>): DownswingInput {
         shape: {
             pendulumShare: SHARE,
             handAngle: 0.5,
-            effort: { torqueMax: 0, tempoSlow: 0.4, tempoFast: 0.2 },
             handTempo: { slow: 0.4, fast: 0.2 },
             defaultIntensity: 0,
         },
         backswing: 0.3,
         backswingLimit: LIMIT,
+        effort: { torque: 0, speed: 1 },
         intensity: 0,
         arrival: 0,
         ...o,

@@ -3,11 +3,36 @@
         "backswingLimit": {
             "value": 1.3089969389957472,
             "unit": "rad",
-            "bounds": [1.1170107212763709, 1.5707963267948966],
+            "bounds": [1.117010721276371, 1.5707963267948966],
             "source": "Spec §5.2 (docs/superpowers/specs/2026-10-18-p2b2b2c1-single-ball-design.md) and the user's account of the stance (2026-10-18)",
             "provenance": "derived",
             "provisional": "placeholder",
             "note": "The shaft's greatest angle from vertical at the top of the backswing, 75°: where the shaft meets the groin. The head rises by ℓ·(1 − cos 75°) = 0.6178 m at it on the default mallet (ℓ = 0.833575 m). Bounds: 64°, the knee-height top, to 90°."
+        },
+        "effortTorque": {
+            "value": 57.087018102407455,
+            "unit": "N·m",
+            "source": "scripts/fitStrokeShape.ts: P2b.2b.2c.1 design §4.3–§4.5 (docs/superpowers/specs/2026-10-18-p2b2b2c1-single-ball-design.md)",
+            "provenance": "derived",
+            "provisional": "placeholder",
+            "note": "The isometric torque τ_0. τ_0 and ω_max solved jointly (design §4.4): the weakest swing preset, single-ball, reaches the ceiling 9 m/s (1.1 × the CA's A4D 8.18 m/s, design §4.3) at intensity 1 from its body-limited top (θ_max = 75.0°), and the drive's shaft there turns at κ·ω_max at contact, κ = 0.6667."
+        },
+        "effortSpeed": {
+            "value": 16.19530336512667,
+            "unit": "rad/s",
+            "source": "scripts/fitStrokeShape.ts: P2b.2b.2c.1 design §4.3–§4.5 (docs/superpowers/specs/2026-10-18-p2b2b2c1-single-ball-design.md)",
+            "provenance": "derived",
+            "provisional": "placeholder",
+            "note": "The speed ω_max at which the player adds no more. τ_0 and ω_max solved jointly (design §4.4): the weakest swing preset, single-ball, reaches the ceiling 9 m/s (1.1 × the CA's A4D 8.18 m/s, design §4.3) at intensity 1 from its body-limited top (θ_max = 75.0°), and the drive's shaft there turns at κ·ω_max at contact, κ = 0.6667."
+        },
+        "effortShare": {
+            "value": 0.6666666666666666,
+            "unit": "1",
+            "bounds": [0, 1],
+            "source": "Spec §4.4 (docs/superpowers/specs/2026-10-18-p2b2b2c1-single-ball-design.md)",
+            "provenance": "derived",
+            "provisional": "placeholder",
+            "note": "κ = ⅔, the share of ω_max the drive's shaft uses at contact at full effort from its body-limited top, so the torque left at contact is a third of τ_0. A labelled placeholder (design §4.4); the gate sees ½ and ¾ beside it. Read only by scripts/fitStrokeShape.ts."
         }
     },
     "single-ball": {
@@ -32,30 +57,6 @@
             "quote": "The follow-through should be directly along the line of aim, and also as low as possible along the ground.",
             "source": "John Riches, Croquet Technique, 'The Roquet' (Oxford Croquet), http://www.oxfordcroquet.com/coach/riches/croqtech/index.asp",
             "provenance": "direct"
-        },
-        "torqueMax": {
-            "value": 32.27694775817593,
-            "unit": "N·m",
-            "source": "scripts/fitStrokeShape.ts: P2b.2b.2a design §5.3 and §6.2 (docs/superpowers/specs/2026-10-06-p2b2b2a-stroke-shape-design.md)",
-            "provenance": "derived",
-            "provisional": "placeholder",
-            "note": "Placeholder (design §6.2): no kinematic pairs were sourced. h0 = 0.4486 m gives 3 m/s at intensity 0 in 0.4890 s; intensity 1 from h0 gives 6 m/s."
-        },
-        "tempoSlow": {
-            "value": 0.48896725688900183,
-            "unit": "s",
-            "source": "scripts/fitStrokeShape.ts: P2b.2b.2a design §5.3 and §6.2 (docs/superpowers/specs/2026-10-06-p2b2b2a-stroke-shape-design.md)",
-            "provenance": "derived",
-            "provisional": "placeholder",
-            "note": "Placeholder (design §6.2): no kinematic pairs were sourced. h0 = 0.4486 m gives 3 m/s at intensity 0 in 0.4890 s: the gravity-only fall time."
-        },
-        "tempoFast": {
-            "value": 0.24448362844450092,
-            "unit": "s",
-            "source": "scripts/fitStrokeShape.ts: P2b.2b.2a design §5.3 and §6.2 (docs/superpowers/specs/2026-10-06-p2b2b2a-stroke-shape-design.md)",
-            "provenance": "derived",
-            "provisional": "placeholder",
-            "note": "Placeholder (design §6.2): no kinematic pairs were sourced. h0 = 0.4486 m gives 3 m/s at intensity 0 in 0.4890 s: half the gravity-only fall time."
         },
         "defaultBackswing": {
             "value": 0.448599788489428,
@@ -103,30 +104,6 @@
             "source": "John Riches, Croquet Technique, 'The Drive' (Oxford Croquet), http://www.oxfordcroquet.com/coach/riches/croqtech/index.asp",
             "provenance": "direct"
         },
-        "torqueMax": {
-            "value": 32.27694775817593,
-            "unit": "N·m",
-            "source": "scripts/fitStrokeShape.ts: P2b.2b.2a design §5.3 and §6.2 (docs/superpowers/specs/2026-10-06-p2b2b2a-stroke-shape-design.md)",
-            "provenance": "derived",
-            "provisional": "placeholder",
-            "note": "Placeholder (design §6.2): no kinematic pairs were sourced. h0 = 0.4486 m gives 3 m/s at intensity 0 in 0.4890 s; intensity 1 from h0 gives 6 m/s."
-        },
-        "tempoSlow": {
-            "value": 0.48896725688900183,
-            "unit": "s",
-            "source": "scripts/fitStrokeShape.ts: P2b.2b.2a design §5.3 and §6.2 (docs/superpowers/specs/2026-10-06-p2b2b2a-stroke-shape-design.md)",
-            "provenance": "derived",
-            "provisional": "placeholder",
-            "note": "Placeholder (design §6.2): no kinematic pairs were sourced. h0 = 0.4486 m gives 3 m/s at intensity 0 in 0.4890 s: the gravity-only fall time."
-        },
-        "tempoFast": {
-            "value": 0.24448362844450092,
-            "unit": "s",
-            "source": "scripts/fitStrokeShape.ts: P2b.2b.2a design §5.3 and §6.2 (docs/superpowers/specs/2026-10-06-p2b2b2a-stroke-shape-design.md)",
-            "provenance": "derived",
-            "provisional": "placeholder",
-            "note": "Placeholder (design §6.2): no kinematic pairs were sourced. h0 = 0.4486 m gives 3 m/s at intensity 0 in 0.4890 s: half the gravity-only fall time."
-        },
         "defaultBackswing": {
             "value": 0.448599788489428,
             "unit": "m",
@@ -173,30 +150,6 @@
             "source": "John Riches, Croquet Technique, 'The Stop-Shot' (Oxford Croquet), http://www.oxfordcroquet.com/coach/riches/croqtech/index.asp",
             "provenance": "direct"
         },
-        "torqueMax": {
-            "value": 30.803561909794148,
-            "unit": "N·m",
-            "source": "scripts/fitStrokeShape.ts: P2b.2b.2a design §5.3 and §6.2 (docs/superpowers/specs/2026-10-06-p2b2b2a-stroke-shape-design.md)",
-            "provenance": "derived",
-            "provisional": "placeholder",
-            "note": "Placeholder (design §6.2): no kinematic pairs were sourced. h0 = 0.4486 m gives 3 m/s at intensity 0 in 0.5085 s; intensity 1 from h0 gives 6 m/s."
-        },
-        "tempoSlow": {
-            "value": 0.5085321127284251,
-            "unit": "s",
-            "source": "scripts/fitStrokeShape.ts: P2b.2b.2a design §5.3 and §6.2 (docs/superpowers/specs/2026-10-06-p2b2b2a-stroke-shape-design.md)",
-            "provenance": "derived",
-            "provisional": "placeholder",
-            "note": "Placeholder (design §6.2): no kinematic pairs were sourced. h0 = 0.4486 m gives 3 m/s at intensity 0 in 0.5085 s: the gravity-only fall time."
-        },
-        "tempoFast": {
-            "value": 0.25426605636421257,
-            "unit": "s",
-            "source": "scripts/fitStrokeShape.ts: P2b.2b.2a design §5.3 and §6.2 (docs/superpowers/specs/2026-10-06-p2b2b2a-stroke-shape-design.md)",
-            "provenance": "derived",
-            "provisional": "placeholder",
-            "note": "Placeholder (design §6.2): no kinematic pairs were sourced. h0 = 0.4486 m gives 3 m/s at intensity 0 in 0.5085 s: half the gravity-only fall time."
-        },
         "defaultBackswing": {
             "value": 0.44859926531543737,
             "unit": "m",
@@ -242,30 +195,6 @@
             "quote": "The most important and distinctive feature of the stop-shot is that there should be NO FOLLOW-THROUGH at all, or as little as possible.",
             "source": "John Riches, Croquet Technique, 'The Stop-Shot' (Oxford Croquet), http://www.oxfordcroquet.com/coach/riches/croqtech/index.asp",
             "provenance": "direct"
-        },
-        "torqueMax": {
-            "value": 32.27694775817593,
-            "unit": "N·m",
-            "source": "scripts/fitStrokeShape.ts: P2b.2b.2a design §5.3 and §6.2 (docs/superpowers/specs/2026-10-06-p2b2b2a-stroke-shape-design.md)",
-            "provenance": "derived",
-            "provisional": "placeholder",
-            "note": "Placeholder (design §6.2): no kinematic pairs were sourced. h0 = 0.4486 m gives 3 m/s at intensity 0 in 0.4890 s; intensity 1 from h0 gives 6 m/s."
-        },
-        "tempoSlow": {
-            "value": 0.48896725688900183,
-            "unit": "s",
-            "source": "scripts/fitStrokeShape.ts: P2b.2b.2a design §5.3 and §6.2 (docs/superpowers/specs/2026-10-06-p2b2b2a-stroke-shape-design.md)",
-            "provenance": "derived",
-            "provisional": "placeholder",
-            "note": "Placeholder (design §6.2): no kinematic pairs were sourced. h0 = 0.4486 m gives 3 m/s at intensity 0 in 0.4890 s: the gravity-only fall time."
-        },
-        "tempoFast": {
-            "value": 0.24448362844450092,
-            "unit": "s",
-            "source": "scripts/fitStrokeShape.ts: P2b.2b.2a design §5.3 and §6.2 (docs/superpowers/specs/2026-10-06-p2b2b2a-stroke-shape-design.md)",
-            "provenance": "derived",
-            "provisional": "placeholder",
-            "note": "Placeholder (design §6.2): no kinematic pairs were sourced. h0 = 0.4486 m gives 3 m/s at intensity 0 in 0.4890 s: half the gravity-only fall time."
         },
         "defaultBackswing": {
             "value": 0.448599788489428,
@@ -320,7 +249,7 @@
             "source": "scripts/fitStrokeShape.ts: P2b.2b.2a design §5.3 and §6.2 (docs/superpowers/specs/2026-10-06-p2b2b2a-stroke-shape-design.md)",
             "provenance": "derived",
             "provisional": "placeholder",
-            "note": "Placeholder (plan, \"Decisions made while planning\"): no roll tempo was sourced, so the single-ball stroke's gravity-only fall time from its h0."
+            "note": "Placeholder (plan, \"Decisions made while planning\"): no roll tempo was sourced, so the single-ball stroke's gravity-only fall time from its h0. Frozen at engine 0.12.0's fit (P2b.2b.2c.1 design §4.4)."
         },
         "handTempoFast": {
             "value": 0.24448362844450092,
@@ -328,14 +257,14 @@
             "source": "scripts/fitStrokeShape.ts: P2b.2b.2a design §5.3 and §6.2 (docs/superpowers/specs/2026-10-06-p2b2b2a-stroke-shape-design.md)",
             "provenance": "derived",
             "provisional": "placeholder",
-            "note": "Half handTempoSlow, so intensity 1 doubles the speed (design §6.2)."
+            "note": "Half handTempoSlow, so intensity 1 doubles the speed (design §6.2). Frozen at engine 0.12.0's fit (P2b.2b.2c.1 design §4.4)."
         },
         "defaultBackswing": {
             "value": 0.4255284852454616,
             "unit": "m",
             "source": "scripts/fitStrokeShape.ts: P2b.2b.2a design §5.3 and §6.2 (docs/superpowers/specs/2026-10-06-p2b2b2a-stroke-shape-design.md)",
             "provenance": "derived",
-            "note": "Design §5.3: h0 = 0.4255 m, the backswing that gives 3 m/s at intensity 0."
+            "note": "Design §5.3: h0 = 0.4255 m, the backswing that gives 3 m/s at intensity 0. Frozen at engine 0.12.0's fit (P2b.2b.2c.1 design §4.4)."
         },
         "defaultIntensity": {
             "value": 0,
@@ -388,7 +317,7 @@
             "source": "scripts/fitStrokeShape.ts: P2b.2b.2a design §5.3 and §6.2 (docs/superpowers/specs/2026-10-06-p2b2b2a-stroke-shape-design.md)",
             "provenance": "derived",
             "provisional": "placeholder",
-            "note": "Placeholder (plan, \"Decisions made while planning\"): no roll tempo was sourced, so the single-ball stroke's gravity-only fall time from its h0."
+            "note": "Placeholder (plan, \"Decisions made while planning\"): no roll tempo was sourced, so the single-ball stroke's gravity-only fall time from its h0. Frozen at engine 0.12.0's fit (P2b.2b.2c.1 design §4.4)."
         },
         "handTempoFast": {
             "value": 0.24448362844450092,
@@ -396,14 +325,14 @@
             "source": "scripts/fitStrokeShape.ts: P2b.2b.2a design §5.3 and §6.2 (docs/superpowers/specs/2026-10-06-p2b2b2a-stroke-shape-design.md)",
             "provenance": "derived",
             "provisional": "placeholder",
-            "note": "Half handTempoSlow, so intensity 1 doubles the speed (design §6.2)."
+            "note": "Half handTempoSlow, so intensity 1 doubles the speed (design §6.2). Frozen at engine 0.12.0's fit (P2b.2b.2c.1 design §4.4)."
         },
         "defaultBackswing": {
             "value": 0.42429585363805394,
             "unit": "m",
             "source": "scripts/fitStrokeShape.ts: P2b.2b.2a design §5.3 and §6.2 (docs/superpowers/specs/2026-10-06-p2b2b2a-stroke-shape-design.md)",
             "provenance": "derived",
-            "note": "Design §5.3: h0 = 0.4243 m, the backswing that gives 3 m/s at intensity 0."
+            "note": "Design §5.3: h0 = 0.4243 m, the backswing that gives 3 m/s at intensity 0. Frozen at engine 0.12.0's fit (P2b.2b.2c.1 design §4.4)."
         },
         "defaultIntensity": {
             "value": 0,
@@ -456,7 +385,7 @@
             "source": "scripts/fitStrokeShape.ts: P2b.2b.2a design §5.3 and §6.2 (docs/superpowers/specs/2026-10-06-p2b2b2a-stroke-shape-design.md)",
             "provenance": "derived",
             "provisional": "placeholder",
-            "note": "Placeholder (plan, \"Decisions made while planning\"): no roll tempo was sourced, so the single-ball stroke's gravity-only fall time from its h0."
+            "note": "Placeholder (plan, \"Decisions made while planning\"): no roll tempo was sourced, so the single-ball stroke's gravity-only fall time from its h0. Frozen at engine 0.12.0's fit (P2b.2b.2c.1 design §4.4)."
         },
         "handTempoFast": {
             "value": 0.24448362844450092,
@@ -464,14 +393,14 @@
             "source": "scripts/fitStrokeShape.ts: P2b.2b.2a design §5.3 and §6.2 (docs/superpowers/specs/2026-10-06-p2b2b2a-stroke-shape-design.md)",
             "provenance": "derived",
             "provisional": "placeholder",
-            "note": "Half handTempoSlow, so intensity 1 doubles the speed (design §6.2)."
+            "note": "Half handTempoSlow, so intensity 1 doubles the speed (design §6.2). Frozen at engine 0.12.0's fit (P2b.2b.2c.1 design §4.4)."
         },
         "defaultBackswing": {
             "value": 0.4342737510610276,
             "unit": "m",
             "source": "scripts/fitStrokeShape.ts: P2b.2b.2a design §5.3 and §6.2 (docs/superpowers/specs/2026-10-06-p2b2b2a-stroke-shape-design.md)",
             "provenance": "derived",
-            "note": "Design §5.3: h0 = 0.4343 m, the backswing that gives 3 m/s at intensity 0."
+            "note": "Design §5.3: h0 = 0.4343 m, the backswing that gives 3 m/s at intensity 0. Frozen at engine 0.12.0's fit (P2b.2b.2c.1 design §4.4)."
         },
         "defaultIntensity": {
             "value": 0,

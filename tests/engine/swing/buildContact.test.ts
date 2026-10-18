@@ -202,12 +202,10 @@ describe("buildContact, step by step", () => {
     });
 
     it("solves a leaning stance's backswing per contact height", () => {
-        // Review focus 2. Under fixed hands the lean follows `up` (P2b.2b.2b.1 design §3.3), and with an effort pulse
-        // the planned speed follows the lean, so a memo keyed without `up` would hand one height another's backswing.
-        const profile = testProfile({
-            stance: { lean: 0.4 },
-            shape: { effort: { torqueMax: 3, tempoSlow: 0.4, tempoFast: 0.2 } },
-        });
+        // Review focus 2. Under fixed hands the lean follows `up` (P2b.2b.2b.1 design §3.3), and with an effort the
+        // planned speed follows the lean, so a memo keyed without `up` would hand one height another's backswing.
+        // P2b.2b.2c.1: the single-ball stroke (was a 3 N·m pulse over 0.4–0.2 s): the body's Hill law, τ_0 = 3 N·m.
+        const profile = testProfile({ stance: { lean: 0.4 }, body: { effort: { torque: 3, speed: 20 } } });
         for (const up of [-0.01, 0.01]) {
             const setup = shot({ intensity: 1, contact: { up, side: 0 } }, profile);
             const backswing = backswingFor(setup, 2.5, WORLD);
@@ -691,6 +689,7 @@ describe("defaultProfile", () => {
             },
             gripLimit: GRIP_LIMIT,
             backswingLimit: swingBodyReference.backswingLimit.value,
+            effort: { torque: swingBodyReference.effortTorque.value, speed: swingBodyReference.effortSpeed.value },
         });
     });
 
@@ -710,37 +709,27 @@ describe("defaultProfile", () => {
             expect(shape.pendulumShare, type).toBe(ref.pendulumShare.value);
             expect(shape.handAngle, type).toBe(ref.handAngle.value);
             expect(shape.defaultIntensity, type).toBe(ref.defaultIntensity.value);
-            if (ref.effort !== null) {
-                expect(shape.effort, type).toEqual({
-                    torqueMax: ref.effort.torqueMax.value,
-                    tempoSlow: ref.effort.tempoSlow.value,
-                    tempoFast: ref.effort.tempoFast.value,
-                });
-            }
             const tempo = ref.handTempo;
-            if (tempo !== null) {
-                expect(shape.handTempo, type).toEqual({ slow: tempo.slow.value, fast: tempo.fast.value });
-            }
+            expect(shape.handTempo, type).toEqual(
+                tempo === null ? null : { slow: tempo.slow.value, fast: tempo.fast.value },
+            );
         }
         expect(STROKE_TYPES.slice(0, 4).map((type) => defaultProfile.shape[type].pendulumShare)).toEqual([1, 1, 1, 1]);
     });
 
-    it("rejects a swing preset with no effort and a carry preset with no hands' tempo", () => {
+    it("rejects a carry preset with no hands' tempo, and gives a swing preset without one none", () => {
+        // P2b.2b.2c.1 plan decision 7: the swing presets' effort is the body's, and their hands' tempo is null.
         const drive = swingReference.drive;
         const roll = swingReference["full-roll"];
-        expect(() => shapeOf("drive", "swing", { ...drive, effort: null })).toThrow(ReferenceDataError);
-        expect(() => shapeOf("drive", "swing", { ...drive, effort: null })).toThrow(/swing\.drive.*tempoSlow/);
+        expect(() => shapeOf("full-roll", "carry", { ...roll, handTempo: null })).toThrow(ReferenceDataError);
         expect(() => shapeOf("full-roll", "carry", { ...roll, handTempo: null })).toThrow(
             /swing\.full-roll.*handTempoSlow/,
         );
-        // The unread member repeats the read one's tempos, a carry preset's effort with no torque.
-        const swung = shapeOf("drive", "swing", { ...drive, handTempo: null });
-        expect(swung.handTempo).toEqual({ slow: swung.effort.tempoSlow, fast: swung.effort.tempoFast });
-        const carried = shapeOf("full-roll", "carry", { ...roll, effort: null });
-        expect(carried.effort).toEqual({
-            torqueMax: 0,
-            tempoSlow: carried.handTempo.slow,
-            tempoFast: carried.handTempo.fast,
+        expect(shapeOf("drive", "swing", { ...drive, handTempo: null }).handTempo).toBeNull();
+        const tempo = roll.handTempo as NonNullable<typeof roll.handTempo>;
+        expect(shapeOf("drive", "swing", { ...drive, handTempo: tempo }).handTempo).toEqual({
+            slow: tempo.slow.value,
+            fast: tempo.fast.value,
         });
     });
 });
@@ -903,19 +892,19 @@ describe("buildContact rejections", () => {
             /pendulumShare must be positive in swing mode/,
         ],
         [
-            "a non-positive slow tempo",
-            shot({}, testProfile({ shape: { effort: { torqueMax: 0, tempoSlow: 0, tempoFast: 0 } } })),
-            /effort\.tempoSlow must be positive/,
+            "a negative effort torque",
+            shot({}, testProfile({ body: { effort: { torque: -1, speed: 20 } } })),
+            /profile\.body\.effort\.torque must be non-negative/,
         ],
         [
-            "a fast tempo slower than the slow",
-            shot({}, testProfile({ shape: { effort: { torqueMax: 0, tempoSlow: 0.2, tempoFast: 0.3 } } })),
-            /effort\.tempoFast must not exceed .*effort\.tempoSlow/,
+            "a non-finite effort speed",
+            shot({}, testProfile({ body: { effort: { torque: 1, speed: NaN } } })),
+            /profile\.body\.effort\.speed must be finite/,
         ],
         [
-            "a negative peak torque",
-            shot({}, testProfile({ shape: { effort: { torqueMax: -1, tempoSlow: 0.4, tempoFast: 0.2 } } })),
-            /torqueMax must be non-negative/,
+            "a carry stroke with no hands' tempo",
+            shot({}, testProfile({ drive: { mode: "carry" }, shape: { handTempo: null } })),
+            /profile\.shape\.single-ball\.handTempo is required in carry mode/,
         ],
         [
             "a carry's fast hands' tempo slower than the slow",
@@ -965,16 +954,19 @@ describe("contactPose (design §5.2 steps 1–5, 10)", () => {
         const shape: SwingShape = {
             pendulumShare: 1,
             handAngle: 0.5,
-            effort: { torqueMax: 0, tempoSlow: 0.4, tempoFast: 0.2 },
             handTempo: { slow: 0.4, fast: 0.2 },
             defaultIntensity: 0,
         };
-        const input = downswingInput(
-            pose,
-            hands,
-            { mode: "swing", shape, backswing: 0.3, backswingLimit: MAX_BACK_ANGLE, intensity: 0, arrival: 0 },
-            9.8,
-        );
+        const choice = {
+            mode: "swing" as const,
+            shape,
+            backswing: 0.3,
+            backswingLimit: MAX_BACK_ANGLE,
+            effort: { torque: 0, speed: 1 },
+            intensity: 0,
+            arrival: 0,
+        };
+        const input = downswingInput(pose, hands, choice, 9.8);
         expect(input.lever).toBe(RHO + TOP);
         expect(input.pendulum).toEqual(pendulumOf(pose.head, swungBody(pose.head, hands, TOP), TOP, 9.8));
         const planned = planDownswing(input);

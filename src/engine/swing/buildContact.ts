@@ -4,8 +4,8 @@
  * 1. the contact pose (contactPose): the arc radius r = top, θ_c = −lean, the lean from the top hand's position
  *    (stanceLean, P2b.2b.2b.1 design §3.2), the head pitched rigidly with the shaft, its face START_GAP short of the
  *    sunk striker at (up, side), the pivot r up the shaft;
- * 2. the downswing (downswing.ts) from the backswing's top: ω₀ and the hands' V_c at contact, and from them the
- *    planned contact speed;
+ * 2. the downswing (downswing.ts) from the backswing's top, in swing mode under the body's effort law (P2b.2b.2c.1
+ *    design §4.4): ω₀ and the hands' V_c at contact, and from them the planned contact speed;
  * 3. the arcs' changes, against the planned speed: α = drive·speedGain·(speed/ℓ)/window, ℓ the pivot's distance from
  *    the head's centre, and A = drive·handGain·speed·aim/handWindow; the dip, handDrop deepened by the shot's jab,
  *    over dropTime; the mode, the ground depth and the reach (the shot's, else the preset's); the coupling
@@ -35,7 +35,15 @@ import { atan2, sinCos } from "../math/elementary";
 import { add, cross, dot, length, scale, sub, vec3, type Vec3 } from "../math/vec3";
 import type { BallState, World } from "../types";
 import { planDownswing, scanDownswing, type DownswingInput, type PlannedDownswing } from "./downswing";
-import type { MalletHeadProfile, ShotSetup, SwingDrive, SwingProfile, SwingShape, SwingStance } from "./types";
+import type {
+    MalletHeadProfile,
+    ShotSetup,
+    SwingDrive,
+    SwingEffort,
+    SwingProfile,
+    SwingShape,
+    SwingStance,
+} from "./types";
 
 /**
  * Gap (m) between the face and the striker's sunk surface at contact (design §5.2 step 4). Numerical, not physical:
@@ -253,11 +261,10 @@ function validate(setup: ShotSetup, ballRadius: number): void {
     if (shape.pendulumShare < 1) {
         finiteNumber(shape.handAngle, `${where}.handAngle`);
     }
-    finiteNumber(shape.effort.torqueMax, `${where}.effort.torqueMax`);
-    finiteNumber(shape.effort.tempoSlow, `${where}.effort.tempoSlow`);
-    finiteNumber(shape.effort.tempoFast, `${where}.effort.tempoFast`);
-    finiteNumber(shape.handTempo.slow, `${where}.handTempo.slow`);
-    finiteNumber(shape.handTempo.fast, `${where}.handTempo.fast`);
+    if (shape.handTempo !== null) {
+        finiteNumber(shape.handTempo.slow, `${where}.handTempo.slow`);
+        finiteNumber(shape.handTempo.fast, `${where}.handTempo.fast`);
+    }
     const { mallet, body } = profile;
     for (const key of ["headMass", "headLength", "shaftLength"] as const) {
         finiteNumber(mallet[key], `profile.mallet.${key}`);
@@ -400,6 +407,10 @@ function validate(setup: ShotSetup, ballRadius: number): void {
     if (!(body.backswingLimit > 0 && body.backswingLimit <= Math.PI / 2)) {
         fail(`profile.body.backswingLimit must lie in (0, π/2] (got ${body.backswingLimit})`);
     }
+    finiteNumber(body.effort.torque, "profile.body.effort.torque");
+    nonNegative(body.effort.torque, "profile.body.effort.torque");
+    finiteNumber(body.effort.speed, "profile.body.effort.speed");
+    positive(body.effort.speed, "profile.body.effort.speed");
     unit(shape.pendulumShare, `${where}.pendulumShare`);
     unit(shape.defaultIntensity, `${where}.defaultIntensity`);
     if (shape.pendulumShare < 1 && !(shape.handAngle > 0 && shape.handAngle < Math.PI / 2)) {
@@ -409,10 +420,10 @@ function validate(setup: ShotSetup, ballRadius: number): void {
         if (!(shape.pendulumShare > 0)) {
             fail(`${where}.pendulumShare must be positive in swing mode, where the pendulum leads (got 0)`);
         }
-        const { torqueMax, tempoSlow, tempoFast } = shape.effort;
-        tempos(tempoSlow, tempoFast, `${where}.effort.tempoSlow`, `${where}.effort.tempoFast`);
-        nonNegative(torqueMax, `${where}.effort.torqueMax`);
     } else {
+        if (shape.handTempo === null) {
+            fail(`${where}.handTempo is required in carry mode`);
+        }
         tempos(shape.handTempo.slow, shape.handTempo.fast, `${where}.handTempo.slow`, `${where}.handTempo.fast`);
     }
 }
@@ -447,6 +458,7 @@ function downswingOf(setup: ShotSetup, pose: ContactPose, hands: Hands, gravity:
         shape,
         backswing: stroke.backswing,
         backswingLimit: profile.body.backswingLimit,
+        effort: profile.body.effort,
         intensity: stroke.intensity ?? shape.defaultIntensity,
         arrival:
             push.mode === "carry"
@@ -516,8 +528,8 @@ export function contactPose(setup: ShotSetup, world: World): ContactPose {
 }
 
 /**
- * The stroke's choices the downswing needs (design §3): its mode and shape, the backswing (m), the intensity and, in
- * carry mode, the hands' arc's slope at contact (arcArrival).
+ * The stroke's choices the downswing needs (design §3): its mode and shape, the backswing (m), the body's limit and
+ * effort, the intensity and, in carry mode, the hands' arc's slope at contact (arcArrival).
  */
 export interface StrokeChoice {
     readonly mode: StrokeMode;
@@ -525,6 +537,8 @@ export interface StrokeChoice {
     readonly backswing: number;
     /** θ_max (rad from vertical), the body's limit on a swing-mode backswing. */
     readonly backswingLimit: number;
+    /** The player's effort in swing mode (P2b.2b.2c.1 design §4.4). */
+    readonly effort: SwingEffort;
     readonly intensity: number;
     readonly arrival: number;
 }
@@ -554,6 +568,7 @@ export function downswingInput(pose: ContactPose, hands: Hands, choice: StrokeCh
         shape: choice.shape,
         backswing: choice.backswing,
         backswingLimit: choice.backswingLimit,
+        effort: choice.effort,
         intensity: choice.intensity,
         arrival: choice.arrival,
     };
@@ -624,14 +639,15 @@ export interface StrokePlan {
  *   flat, at −D the hands leave the stance's branch);
  * - window, handWindow or dropTime ≤ 0; speedGain < 0; gripTension or bottomGrip outside (0, 1]; handDrop < 0; the
  *   preset's or the shot's handReach < 0; the preset's or the shot's guideEffort outside [0, 1];
- *   armMass < 0; reachSlack < 0; a backswingLimit non-finite or outside (0, π/2]; the preset's or the shot's
+ *   armMass < 0; reachSlack < 0; a backswingLimit non-finite or outside (0, π/2]; the body's effort torque τ_0 < 0
+ *   or its speed ω_max ≤ 0 (P2b.2b.2c.1 design §4.4); the preset's or the shot's
  *   pendulumAt or pendulumEffort outside [0, 1]; handArcLow outside [0, 1]; a jab negative or non-finite, or non-zero
  *   in carry mode (P2b.2b.2b.3 design §6.1); handArcRadius not above the push length; a flex value not positive, or a
  *   flex damping ratio above 1; pendulumForce not positive (P2b.2b.2b.2b design §6); pushForce, pushResponseTime,
  *   gripLimit or a hand–arm chain value not positive (its gate rulings, 2026-10-11; P2b.2b.2b.3 design §5);
  * - pendulumShare or defaultIntensity outside [0, 1]; handAngle outside (0, 90°) when pendulumShare < 1 (neither read
- *   nor checked otherwise); in swing mode a pendulumShare of 0, an effort tempo ≤ 0 or tempoFast > tempoSlow, or
- *   torqueMax < 0; in carry mode a hands' tempo ≤ 0 or fast > slow;
+ *   nor checked otherwise); in swing mode a pendulumShare of 0; in carry mode a null hands' tempo, or one ≤ 0 or
+ *   with fast > slow;
  * - the downswing's (downswing.ts): a backswing beyond the body's limit θ_max (swing mode) or MAX_BACK_ANGLE (carry
  *   mode), a non-positive effective inertia, a stall or a fall beyond MAX_FALL;
  * - an action timed more than MAX_LEAD early (the advance's among them), or a downswing meeting the turf more than
