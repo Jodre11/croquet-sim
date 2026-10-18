@@ -146,6 +146,11 @@ export interface StrokeTiming {
     readonly arc: number;
     readonly hands: number;
     readonly dip: number;
+    /**
+     * Swing mode only (P2b.2b.2c.1 design §6): when the hands' advance begins, their push forward along aim over the
+     * stroke's handReach; absent: no advance.
+     */
+    readonly advance?: number;
 }
 
 /** A shot to simulate (design §5.1, product spec §3). */

@@ -32,7 +32,7 @@ import {
 import { bedLawOf, staticSink } from "../impact/turfBed";
 import type { ContactState, FaceMaterial, Hands, MalletHead, StrokeMode, SwingArc, TrackDrive } from "../impact/types";
 import { atan2, sinCos } from "../math/elementary";
-import { add, cross, length, scale, sub, vec3, type Vec3 } from "../math/vec3";
+import { add, cross, dot, length, scale, sub, vec3, type Vec3 } from "../math/vec3";
 import type { BallState, World } from "../types";
 import { planDownswing, scanDownswing, type DownswingInput, type PlannedDownswing } from "./downswing";
 import type { MalletHeadProfile, ShotSetup, SwingDrive, SwingProfile, SwingShape, SwingStance } from "./types";
@@ -225,6 +225,9 @@ function validate(setup: ShotSetup, ballRadius: number): void {
     finiteNumber(timing.arc, "stroke.timing.arc");
     finiteNumber(timing.hands, "stroke.timing.hands");
     finiteNumber(timing.dip, "stroke.timing.dip");
+    if (timing.advance !== undefined) {
+        finiteNumber(timing.advance, "stroke.timing.advance");
+    }
     for (const [name, value] of [
         ["stroke.intensity", stroke.intensity],
         ["stroke.handReach", stroke.handReach],
@@ -562,6 +565,36 @@ export function poseSpeed(pose: ContactPose, planned: PlannedDownswing): number 
     return length(add(planned.handsVelocity, scale(lever, planned.omega)));
 }
 
+/** The head's planned velocity at contact along aim (m/s): aim·(V_c + ω₀·n × (c − P_c)) (plan decision 3). */
+function alongAim(pose: ContactPose, planned: PlannedDownswing): number {
+    const lever = cross(pitchAxis(pose.aim), sub(pose.headCentre, pose.pivot));
+    return dot(add(planned.handsVelocity, scale(lever, planned.omega)), pose.aim);
+}
+
+/**
+ * Checks `arc`'s advance at the head's planned speed `speed` along aim (plan decision 5): swing mode only, no check
+ * (α < 0), a positive handReach, and a ramp's travel V·W/2 under 0.8·handReach, so that the hands cruise before they
+ * ease to rest.
+ */
+function checkAdvance(arc: SwingArc, speed: number): void {
+    if (arc.mode !== "swing") {
+        fail("stroke.timing.advance needs swing mode: carry mode's hands push on their own arc");
+    }
+    if (arc.alpha < 0) {
+        fail("the advance cannot follow a check: the check holds the pendulum to rest relative to the hands");
+    }
+    if (!(arc.handReach > 0)) {
+        fail(`the advance travels the stroke's handReach, which must be positive (got ${arc.handReach})`);
+    }
+    const ramp = (speed * arc.window) / 2;
+    if (!(ramp / 0.8 < arc.handReach)) {
+        fail(
+            `the advance is too short for its ramp: the hands travel V·W/2 = ${ramp} m reaching ${speed} m/s, which ` +
+                `must be under 0.8·handReach = ${0.8 * arc.handReach} m`,
+        );
+    }
+}
+
 /** The downswing's closest approach to the turf before contact (P2b.2b.2a design §3.5). */
 export interface SwingApproach {
     /** The head's lowest clearance above the turf (m); negative where it is in it. */
@@ -601,8 +634,10 @@ export interface StrokePlan {
  *   torqueMax < 0; in carry mode a hands' tempo ≤ 0 or fast > slow;
  * - the downswing's (downswing.ts): a backswing beyond the body's limit θ_max (swing mode) or MAX_BACK_ANGLE (carry
  *   mode), a non-positive effective inertia, a stall or a fall beyond MAX_FALL;
- * - an action timed more than MAX_LEAD early, or a downswing meeting the turf more than MAX_LEAD − TURF_MARGIN before
- *   contact;
+ * - an action timed more than MAX_LEAD early (the advance's among them), or a downswing meeting the turf more than
+ *   MAX_LEAD − TURF_MARGIN before contact;
+ * - an advance (P2b.2b.2c.1 plan decision 5) in carry mode, on a check (α < 0), with a handReach ≤ 0, or with its
+ *   ramp's travel V·W/2 at or above 0.8·handReach (V the head's planned speed along aim at contact, W the window);
  * - the head's lowest point below the turf at contact, or where the impact starts.
  * A downswing that meets the turf before the ball is not rejected: the impact starts before it and simulates it
  * (design §3.5).
@@ -613,7 +648,8 @@ export function planStroke(setup: ShotSetup, world: World): StrokePlan {
     const { type, timing } = stroke;
     const push = profile.drive[type];
     // Step 4's lead: the earliest action's, none on time.
-    const actions = Math.max(0, 0 - timing.arc, 0 - timing.hands, 0 - timing.dip);
+    const given = Math.max(0, 0 - timing.arc, 0 - timing.hands, 0 - timing.dip);
+    const actions = timing.advance === undefined ? given : Math.max(given, 0 - timing.advance);
     if (actions > MAX_LEAD) {
         fail(`an action is timed more than ${MAX_LEAD} s early (${actions} s before contact)`);
     }
@@ -665,7 +701,13 @@ export function planStroke(setup: ShotSetup, world: World): StrokePlan {
         handArcRadius: push.handArcRadius,
         handArcLow: push.handArcLow,
         downswing: planned.downswing,
+        ...(timing.advance === undefined
+            ? {}
+            : { advance: { start: lead + timing.advance, speed: alongAim(pose, planned) } }),
     };
+    if (arc.advance !== undefined) {
+        checkAdvance(arc, arc.advance.speed);
+    }
     const drive: TrackDrive = {
         kind: "track",
         arc,

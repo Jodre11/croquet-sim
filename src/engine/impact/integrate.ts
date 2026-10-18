@@ -345,6 +345,11 @@ export interface FollowThrough {
     readonly impactEnd: number;
     readonly finish: number;
     readonly flags: readonly FollowFlag[];
+    /**
+     * The hands' advance (P2b.2b.2c.1 design §6; plan decision 6): its start and end, where the hands come to rest.
+     * Present only when it started before the finish.
+     */
+    readonly advanced?: { readonly start: number; readonly end: number };
 }
 
 /** integrateStroke's result: the impact as integrate returns it, and its follow-through if asked for. */
@@ -375,14 +380,19 @@ function finishKind(plan: PreparedTrack): FinishKind {
 
 /**
  * True once the head in `state` at time t has reached its finish (P2b.2b.2a design §4.2): a swing at the pendulum's
- * apex, its pitch rate about n at or below zero; a check at rest relative to the hands; a carry at the first apex
- * after its pendulum phase starts, its pitch rate at or below zero once it has been positive (`grip.rising`;
- * P2b.2b.2b.2b design §4.3).
+ * apex, its pitch rate about n at or below zero, outside its advance (before its start or from its end; P2b.2b.2c.1
+ * plan decision 4); a check at rest relative to the hands; a carry at the first apex after its pendulum phase starts,
+ * its pitch rate at or below zero once it has been positive (`grip.rising`; P2b.2b.2b.2b design §4.3).
  */
 function finished(kind: FinishKind, plan: PreparedTrack, state: HeadState, t: number, grip: GripState): boolean {
     switch (kind) {
-        case "swing":
+        case "swing": {
+            const pushed = plan.advance;
+            if (pushed !== null && t >= pushed.start && t < pushed.end) {
+                return false;
+            }
             return dot(state.angularVelocity, plan.axis) <= 0;
+        }
         case "check":
             return length(sub(state.velocity, handsAt(plan, t).velocity)) < FINISH_SPEED;
         case "carry":
@@ -1381,6 +1391,11 @@ function continueStroke(
     const end = steps * dt;
     if ((trace[trace.length - 1] as StrokeState).t !== end) {
         trace.push({ t: end, head: state });
+    }
+    const pushed = plan.advance;
+    if (pushed !== null && pushed.start < end) {
+        const advanced = { start: pushed.start, end: pushed.end };
+        return { samples: trace, impactEnd: first * dt, finish: end, flags, advanced };
     }
     return { samples: trace, impactEnd: first * dt, finish: end, flags };
 }

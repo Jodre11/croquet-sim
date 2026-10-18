@@ -179,6 +179,12 @@ export interface SwingArc {
      * hand-built arc that breaks this has a velocity jump at contact.
      */
     readonly downswing?: Downswing;
+    /**
+     * Swing only (P2b.2b.2c.1 design §6): the hands' advance, their push forward along aim over `handReach` from
+     * `start` (s from t = 0), ramping up to `speed` (m/s), the head's planned speed along aim at contact, over
+     * `window`. Absent: no advance.
+     */
+    readonly advance?: { readonly start: number; readonly speed: number };
 }
 
 /**
