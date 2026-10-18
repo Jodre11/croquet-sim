@@ -39,6 +39,11 @@ export const BED_DROP = 1e-6;
 const KEY_OFFSET = 1048576;
 const KEY_STRIDE = 2097152;
 
+/** A column's key on the lattice: (i + KEY_OFFSET)·KEY_STRIDE + (j + KEY_OFFSET), exact for |i|, |j| < 2^20. */
+export function cellKey(i: number, j: number): number {
+    return (i + KEY_OFFSET) * KEY_STRIDE + (j + KEY_OFFSET);
+}
+
 const ROOT_RATIO = Math.sqrt(TANGENTIAL_STIFFNESS_RATIO);
 
 interface Cell {
@@ -99,24 +104,22 @@ export interface BedLoad {
  * The cells' index range [lo, hi] along one axis for a footprint of radius ρ about `centre`, padded by one cell each
  * side: every column whose centre lies within ρ is inside, and a column outside is more than ρ + h/2 away.
  */
-function span(centre: number, rho: number, h: number): readonly [number, number] {
+export function columnSpan(centre: number, rho: number, h: number): readonly [number, number] {
     return [Math.floor((centre - rho) / h) - 1, Math.floor((centre + rho) / h) + 1];
 }
 
 /**
- * Visits the columns of a footprint of radius ρ about (x, y), as span pads it, in the bed's summation order (see the
- * file header): i ascending, then p = max(j, −j − 1) ascending, calling `pair` once per (i, p) with its mirror pair
- * j = p and j = −p − 1, each null where it lies outside the footprint's range.
+ * Visits the columns i0..i1 × j0..j1 in the bed's summation order (see the file header): i ascending, then
+ * p = max(j, −j − 1) ascending, calling `pair` once per (i, p) with its mirror pair j = p and j = −p − 1, each null
+ * where it lies outside [j0, j1]. The head's turf visits its columns so too (P2b.2b.2b.3 design §4.1).
  */
-function mirrorPairs(
-    x: number,
-    y: number,
-    rho: number,
-    h: number,
+export function mirrorPairsOver(
+    i0: number,
+    i1: number,
+    j0: number,
+    j1: number,
     pair: (i: number, a: number | null, b: number | null) => void,
 ): void {
-    const [i0, i1] = span(x, rho, h);
-    const [j0, j1] = span(y, rho, h);
     const pLo = j0 >= 0 ? j0 : j1 < 0 ? 0 - j1 - 1 : 0;
     const pHi = Math.max(j1, 0 - j0 - 1);
     for (let i = i0; i <= i1; i++) {
@@ -128,6 +131,23 @@ function mirrorPairs(
 }
 
 /**
+ * Visits the columns of a footprint of radius ρ about (x, y), as columnSpan pads it, in the bed's summation order (see
+ * the file header): i ascending, then p = max(j, −j − 1) ascending, calling `pair` once per (i, p) with its mirror
+ * pair j = p and j = −p − 1, each null where it lies outside the footprint's range.
+ */
+function mirrorPairs(
+    x: number,
+    y: number,
+    rho: number,
+    h: number,
+    pair: (i: number, a: number | null, b: number | null) => void,
+): void {
+    const [i0, i1] = columnSpan(x, rho, h);
+    const [j0, j1] = columnSpan(y, rho, h);
+    mirrorPairsOver(i0, i1, j0, j1, pair);
+}
+
+/**
  * Updates `bed` at column (i, j) under ball state `s` (design §4.2): counts the visit and updates the column's cell,
  * creating it, held, where the ball's lowest surface over its centre lies below z = 0. Returns its push on the ball
  * (N), or null unless it is held.
@@ -136,7 +156,7 @@ function column(bed: BallBed, i: number, j: number, s: BallState, radius: number
     bed.visits += 1;
     const { law } = bed;
     const h = law.cell;
-    const key = (i + KEY_OFFSET) * KEY_STRIDE + (j + KEY_OFFSET);
+    const key = cellKey(i, j);
     const dx = (i + 0.5) * h - s.position.x;
     const dy = (j + 0.5) * h - s.position.y;
     const r2 = dx * dx + dy * dy;
@@ -351,8 +371,8 @@ export interface FreshBed {
 export function freshBed(x: number, y: number, radius: number, law: BedLaw): FreshBed {
     const h = law.cell;
     const R2 = radius * radius;
-    const [i0, i1] = span(x, radius, h);
-    const [j0, j1] = span(y, radius, h);
+    const [i0, i1] = columnSpan(x, radius, h);
+    const [j0, j1] = columnSpan(y, radius, h);
     const engage: number[] = [];
     for (let i = i0; i <= i1; i++) {
         for (let j = j0; j <= j1; j++) {

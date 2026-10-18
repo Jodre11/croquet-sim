@@ -14,7 +14,6 @@ import {
     headBottom,
     headClosing,
     headLowestPoint,
-    headTurfContact,
     obstacleContact,
     obstacleGap,
     obstacleKey,
@@ -339,13 +338,7 @@ describe("the head's lowest point and its turf contact", () => {
         expect(dot(sub(p, centre), axis)).toBeCloseTo(-TEST_HEAD.length / 2, 15);
     });
 
-    it("closes only below the turf, acting upward at the lowest point", () => {
-        expect(headTurfContact(at(IDENTITY), TEST_HEAD)).toBeNull();
-        const low = { ...at(IDENTITY), position: vec3(1, 2, TEST_RHO - 1e-4) };
-        const contact = headTurfContact(low, TEST_HEAD);
-        expect(contact?.normal).toEqual(vec3(0, 0, 1));
-        expect(contact?.depth).toBeCloseTo(1e-4, 15);
-        expect(contact?.point).toEqual(headBottom(low, TEST_HEAD));
+    it("keys the head–turf pair as head/turf", () => {
         expect(HEAD_TURF_KEY).toBe("head/turf");
     });
 });

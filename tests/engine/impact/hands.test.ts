@@ -42,8 +42,7 @@ import { flexGains } from "../../../src/engine/impact/flex";
 import type { Coupling, HandChain, Hands, HeadState, SwingArc } from "../../../src/engine/impact/types";
 import { STANDARD_GRAVITY } from "../../../src/engine/world";
 import { contactReference } from "../../../src/reference/index";
-import { lawFromStiffness } from "../../../src/engine/impact/contactLaw";
-import { TEST_BALL, TEST_TURF } from "../support/fixtures";
+import { TEST_BALL } from "../support/fixtures";
 import {
     NO_DIP,
     TEST_CHAIN,
@@ -60,6 +59,7 @@ import {
     levelArc,
     recorder,
     socketAt,
+    testHeadTurf,
     trackDrive,
 } from "../support/impact";
 
@@ -475,6 +475,8 @@ describe("the bottom hand's rate guide", () => {
                 topChain: null,
                 bottomChain: null,
                 departedAt: null,
+                topOffset: null,
+                bottomOffset: null,
             };
             return handLoad(track, slow, TEST_HEAD, t, open).bottom;
         };
@@ -542,6 +544,8 @@ describe("release by reach", () => {
             topChain: null,
             bottomChain: null,
             departedAt: null,
+            topOffset: null,
+            bottomOffset: null,
         };
         const turn = 0.08;
         const e = forwardOf(turned(turn), track.arc.aim);
@@ -1055,7 +1059,7 @@ describe("the push intent (P2b.2b.2b.2b gate ruling 2026-10-11)", () => {
         // yet the hands match a replay whose R stays 0.
         const arc = levelArc(vec3(0, 0, TEST_RHO - 1e-3), { mode: "carry", handReach: 0.1, pendulumAt: 1 });
         const track = prepareAt(arc, STANDARD_GRAVITY);
-        const turf = lawFromStiffness(TEST_HEAD.mass, TEST_TURF.turfRestitution, TEST_TURF.turfStiffness, 0.5);
+        const turf = testHeadTurf();
         const on = headOnPath(track, TEST_HEAD, 0);
         const start = { ...on, velocity: add(on.velocity, scale(track.arc.aim, 0.5)) };
         const probe = recorder();

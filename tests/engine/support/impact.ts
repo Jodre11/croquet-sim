@@ -30,6 +30,7 @@ import type {
     HandChain,
     Hands,
     HeadState,
+    HeadTurfLaw,
     MalletHead,
     SwingArc,
     TrackDrive,
@@ -68,6 +69,17 @@ export const TEST_BOX: MalletHead = {
     shaft: { mass: 0, length: 0.9 },
 };
 
+/**
+ * A sharp 1.0 kg box (edge radius 0; P2b.2b.2b.3 design §7.1), 0.231 m long and 0.065 m wide, as tall as TEST_HEAD:
+ * centred over the origin, no column centre of the 2 mm lattice falls on its sole's edges (116 columns along, 32
+ * across), so the columns under it are counted exactly. Its inertia is TEST_BOX's; unsourced, as TEST_HEAD.
+ */
+export const TEST_SHARP: MalletHead = {
+    ...TEST_BOX,
+    length: 0.231,
+    shape: { kind: "box", halfWidth: 0.0325, halfHeight: TEST_RHO, edgeRadius: 0 },
+};
+
 export const TEST_FACE: FaceMaterial = { friction: 0.4 };
 
 /** A coupling for tracked test heads: plausible, not sourced (design §3.4 sets the engine's); contact at t = 0. */
@@ -93,6 +105,12 @@ export const TEST_PUSH_FORCE = 100;
 
 /** A plausible, unsourced time constant (s) of the push intent's response (gate ruling amendment, 2026-10-11). */
 export const TEST_PUSH_RESPONSE_TIME = 0.03;
+
+/**
+ * A grip limit (N) far above any test hand's force (P2b.2b.2b.3 plan decision 12), so that tests written before the
+ * limit keep their figures; the limit's own tests set theirs.
+ */
+export const TEST_GRIP_LIMIT = 1e5;
 
 /**
  * A plausible, unsourced hand–arm chain (P2b.2b.2b.2b gate round 3 ruling, 2026-10-11), in kg, N/m and N·s/m: forearm
@@ -131,6 +149,7 @@ export const TEST_HANDS: Hands = {
     pushForce: TEST_PUSH_FORCE,
     pushResponseTime: TEST_PUSH_RESPONSE_TIME,
     chain: TEST_CHAIN,
+    gripLimit: TEST_GRIP_LIMIT,
 };
 
 /** A dip of no depth. */
@@ -259,6 +278,23 @@ export function freeBall(
 /** A plausible test bed (fixtures' TEST_TURF): k_w 3e8 N/m³, τ_r 2 ms, µ `friction`, 2 mm cells. */
 export function testBed(friction = 0.3): BedLaw {
     return { modulus: TEST_TURF.bedModulus, recovery: TEST_TURF.bedRecovery, friction, cell: BED_CELL };
+}
+
+/**
+ * A plausible test head–turf law (P2b.2b.2b.3 design §4) on the test bed: k_w 3e8 N/m³, τ_r 2 ms, p_y 200 kPa (so a
+ * fresh column yields at 0.67 mm), c 100 kPa, N_c 1.7, µ 0.5, 2 mm columns. Unsourced, as fixtures.ts. `o` overrides.
+ */
+export function testHeadTurf(o: Partial<HeadTurfLaw> = {}): HeadTurfLaw {
+    return {
+        modulus: TEST_TURF.bedModulus,
+        recovery: TEST_TURF.bedRecovery,
+        yieldPressure: TEST_TURF.turfYield,
+        matStrength: TEST_TURF.turfMatStrength,
+        ploughFactor: 1.7,
+        friction: 0.5,
+        cell: BED_CELL,
+        ...o,
+    };
 }
 
 /**

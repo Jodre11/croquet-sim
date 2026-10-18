@@ -1,0 +1,455 @@
+== regimes (design §7.4; plan decision 19) ==
+-- graze --
+single-ball 3 m/s up 0 m dip -0.005 s jab 1.000 mm: head/turf none ms, peak 0.000 mm, lowest 13.860 mm; face 5.01–5.97 ms; speed along aim at the turf -, at the ball 3.0000 m/s; impact 15.00 ms; finish 503.10 ms; turf-lift
+single-ball 3 m/s up 0 m dip -0.01 s jab 1.000 mm: head/turf none ms, peak 0.000 mm, lowest 12.666 mm; face 10.01–10.97 ms; speed along aim at the turf -, at the ball 3.0000 m/s; impact 20.00 ms; finish 508.16 ms; turf-lift
+single-ball 3 m/s up 0 m dip -0.02 s jab 1.000 mm: head/turf none ms, peak 0.000 mm, lowest 9.425 mm; face 20.01–20.97 ms; speed along aim at the turf -, at the ball 3.0000 m/s; impact 30.00 ms; finish 518.16 ms; turf-lift
+single-ball 3 m/s up 0 m dip -0.03 s jab 1.000 mm: head/turf none ms, peak 0.000 mm, lowest 7.307 mm; face 30.01–30.97 ms; speed along aim at the turf -, at the ball 3.0000 m/s; impact 40.00 ms; finish 528.16 ms; turf-lift
+single-ball 3 m/s up 0.005 m dip -0.005 s jab 1.000 mm: head/turf none ms, peak 0.000 mm, lowest 8.832 mm; face 5.01–5.97 ms; speed along aim at the turf -, at the ball 3.0000 m/s; impact 15.00 ms; finish 502.77 ms; turf-lift
+single-ball 3 m/s up 0.005 m dip -0.01 s jab 1.000 mm: head/turf none ms, peak 0.000 mm, lowest 7.666 mm; face 10.01–10.97 ms; speed along aim at the turf -, at the ball 3.0000 m/s; impact 20.00 ms; finish 507.82 ms; turf-lift
+single-ball 3 m/s up 0.005 m dip -0.02 s jab 1.000 mm: head/turf none ms, peak 0.000 mm, lowest 4.425 mm; face 20.01–20.97 ms; speed along aim at the turf -, at the ball 3.0000 m/s; impact 30.00 ms; finish 517.82 ms; turf-lift
+single-ball 3 m/s up 0.005 m dip -0.03 s jab 1.000 mm: head/turf none ms, peak 0.000 mm, lowest 2.307 mm; face 30.01–30.97 ms; speed along aim at the turf -, at the ball 3.0000 m/s; impact 40.00 ms; finish 527.82 ms; turf-lift
+single-ball 3 m/s up 0.01 m dip -0.005 s jab 1.000 mm: head/turf 5.33–33.45, 33.48–34.20, 34.53–34.94 ms, peak 1.700 mm, lowest -1.701 mm; face 97.21–98.24 ms; speed along aim at the turf 2.8217, at the ball 2.2377 m/s; impact 101.90 ms; finish 600.09 ms; turf-yield,turf-lift
+FOUND graze: single-ball 3 m/s up 0.01 m dip -0.005 s jab 1.000 mm
+-- stopped --
+single-ball 1 m/s up 0 m dip -0.03 s jab 1.000 mm: head/turf none ms, peak 0.000 mm, lowest 12.671 mm; face 30.01–31.24 ms; speed along aim at the turf -, at the ball 1.0000 m/s; impact 40.00 ms; finish 520.52 ms; no events
+single-ball 1 m/s up 0 m dip -0.05 s jab 1.000 mm: head/turf none ms, peak 0.000 mm, lowest 10.316 mm; face 50.01–51.23 ms; speed along aim at the turf -, at the ball 1.0000 m/s; impact 60.00 ms; finish 540.52 ms; no events
+single-ball 1 m/s up 0 m dip -0.08 s jab 1.000 mm: head/turf none ms, peak 0.000 mm, lowest 7.571 mm; face 80.01–81.23 ms; speed along aim at the turf -, at the ball 1.0000 m/s; impact 90.00 ms; finish 570.53 ms; no events
+single-ball 1 m/s up 0 m dip -0.12 s jab 1.000 mm: head/turf none ms, peak 0.000 mm, lowest 5.575 mm; face 120.00–121.24 ms; speed along aim at the turf -, at the ball 1.0000 m/s; impact 130.00 ms; finish 610.52 ms; no events
+single-ball 1 m/s up 0.005 m dip -0.03 s jab 1.000 mm: head/turf none ms, peak 0.000 mm, lowest 7.671 mm; face 30.01–31.24 ms; speed along aim at the turf -, at the ball 1.0000 m/s; impact 40.00 ms; finish 520.01 ms; no events
+single-ball 1 m/s up 0.005 m dip -0.05 s jab 1.000 mm: head/turf none ms, peak 0.000 mm, lowest 5.316 mm; face 50.01–51.24 ms; speed along aim at the turf -, at the ball 1.0000 m/s; impact 60.00 ms; finish 540.01 ms; no events
+single-ball 1 m/s up 0.005 m dip -0.08 s jab 1.000 mm: head/turf none ms, peak 0.000 mm, lowest 2.571 mm; face 80.01–81.24 ms; speed along aim at the turf -, at the ball 1.0000 m/s; impact 90.00 ms; finish 570.01 ms; no events
+single-ball 1 m/s up 0.005 m dip -0.12 s jab 1.000 mm: head/turf none ms, peak 0.000 mm, lowest 0.575 mm; face 120.00–121.24 ms; speed along aim at the turf -, at the ball 1.0000 m/s; impact 130.00 ms; finish 610.00 ms; no events
+single-ball 1 m/s up 0.01 m dip -0.03 s jab 1.000 mm: threw the downswing meets the turf 0.23407961291160154 s before contact, so the impact would start more than 0.15 s early: a gross mis-hit
+single-ball 1 m/s up 0.01 m dip -0.05 s jab 1.000 mm: threw the downswing meets the turf 0.23407961291160154 s before contact, so the impact would start more than 0.15 s early: a gross mis-hit
+single-ball 1 m/s up 0.01 m dip -0.08 s jab 1.000 mm: threw the downswing meets the turf 0.23407961291160154 s before contact, so the impact would start more than 0.15 s early: a gross mis-hit
+single-ball 1 m/s up 0.01 m dip -0.12 s jab 1.000 mm: threw the downswing meets the turf 0.23407961291160154 s before contact, so the impact would start more than 0.15 s early: a gross mis-hit
+single-ball 1 m/s up 0.015 m dip -0.03 s jab 1.000 mm: threw the downswing meets the turf 0.30216461291160157 s before contact, so the impact would start more than 0.15 s early: a gross mis-hit
+single-ball 1 m/s up 0.015 m dip -0.05 s jab 1.000 mm: threw the downswing meets the turf 0.30216461291160157 s before contact, so the impact would start more than 0.15 s early: a gross mis-hit
+single-ball 1 m/s up 0.015 m dip -0.08 s jab 1.000 mm: threw the downswing meets the turf 0.30216461291160157 s before contact, so the impact would start more than 0.15 s early: a gross mis-hit
+single-ball 1 m/s up 0.015 m dip -0.12 s jab 1.000 mm: threw the downswing meets the turf 0.30216461291160157 s before contact, so the impact would start more than 0.15 s early: a gross mis-hit
+single-ball 1 m/s up 0.02 m dip -0.03 s jab 1.000 mm: threw the head is in the turf at contact: its lowest point is 0.0029741227305416238 m below it
+single-ball 1 m/s up 0.02 m dip -0.05 s jab 1.000 mm: threw the head is in the turf at contact: its lowest point is 0.0029741227305416238 m below it
+single-ball 1 m/s up 0.02 m dip -0.08 s jab 1.000 mm: threw the head is in the turf at contact: its lowest point is 0.0029741227305416238 m below it
+single-ball 1 m/s up 0.02 m dip -0.12 s jab 1.000 mm: threw the head is in the turf at contact: its lowest point is 0.0029741227305416238 m below it
+single-ball 1 m/s up 0 m dip -0.03 s jab 2.000 mm: head/turf none ms, peak 0.000 mm, lowest 11.877 mm; face 30.01–31.24 ms; speed along aim at the turf -, at the ball 1.0000 m/s; impact 40.00 ms; finish 520.42 ms; no events
+single-ball 1 m/s up 0 m dip -0.05 s jab 2.000 mm: head/turf none ms, peak 0.000 mm, lowest 9.393 mm; face 50.01–51.24 ms; speed along aim at the turf -, at the ball 1.0000 m/s; impact 60.00 ms; finish 540.42 ms; no events
+single-ball 1 m/s up 0 m dip -0.08 s jab 2.000 mm: head/turf none ms, peak 0.000 mm, lowest 6.605 mm; face 80.00–81.23 ms; speed along aim at the turf -, at the ball 1.0000 m/s; impact 90.00 ms; finish 570.42 ms; no events
+single-ball 1 m/s up 0 m dip -0.12 s jab 2.000 mm: head/turf none ms, peak 0.000 mm, lowest 4.579 mm; face 120.00–121.24 ms; speed along aim at the turf -, at the ball 1.0000 m/s; impact 130.00 ms; finish 610.42 ms; no events
+single-ball 1 m/s up 0.005 m dip -0.03 s jab 2.000 mm: head/turf none ms, peak 0.000 mm, lowest 6.877 mm; face 30.01–31.24 ms; speed along aim at the turf -, at the ball 1.0000 m/s; impact 40.00 ms; finish 515.90 ms; no events
+single-ball 1 m/s up 0.005 m dip -0.05 s jab 2.000 mm: head/turf none ms, peak 0.000 mm, lowest 4.393 mm; face 50.01–51.24 ms; speed along aim at the turf -, at the ball 1.0000 m/s; impact 60.00 ms; finish 535.90 ms; no events
+single-ball 1 m/s up 0.005 m dip -0.08 s jab 2.000 mm: head/turf none ms, peak 0.000 mm, lowest 1.605 mm; face 80.00–81.24 ms; speed along aim at the turf -, at the ball 1.0000 m/s; impact 90.00 ms; finish 565.90 ms; no events
+single-ball 1 m/s up 0.005 m dip -0.12 s jab 2.000 mm: head/turf 6.74–17.01, 17.27–18.55 ms, peak 0.411 mm, lowest -0.411 mm; face 124.62–125.87 ms; speed along aim at the turf 0.9158, at the ball 0.9633 m/s; impact 130.00 ms; finish 615.51 ms; no events
+single-ball 1 m/s up 0.01 m dip -0.03 s jab 2.000 mm: threw the downswing meets the turf 0.23407961291160154 s before contact, so the impact would start more than 0.15 s early: a gross mis-hit
+single-ball 1 m/s up 0.01 m dip -0.05 s jab 2.000 mm: threw the downswing meets the turf 0.23407961291160154 s before contact, so the impact would start more than 0.15 s early: a gross mis-hit
+single-ball 1 m/s up 0.01 m dip -0.08 s jab 2.000 mm: threw the downswing meets the turf 0.23407961291160154 s before contact, so the impact would start more than 0.15 s early: a gross mis-hit
+single-ball 1 m/s up 0.01 m dip -0.12 s jab 2.000 mm: threw the downswing meets the turf 0.23407961291160154 s before contact, so the impact would start more than 0.15 s early: a gross mis-hit
+single-ball 1 m/s up 0.015 m dip -0.03 s jab 2.000 mm: threw the downswing meets the turf 0.30216461291160157 s before contact, so the impact would start more than 0.15 s early: a gross mis-hit
+single-ball 1 m/s up 0.015 m dip -0.05 s jab 2.000 mm: threw the downswing meets the turf 0.30216461291160157 s before contact, so the impact would start more than 0.15 s early: a gross mis-hit
+single-ball 1 m/s up 0.015 m dip -0.08 s jab 2.000 mm: threw the downswing meets the turf 0.30216461291160157 s before contact, so the impact would start more than 0.15 s early: a gross mis-hit
+single-ball 1 m/s up 0.015 m dip -0.12 s jab 2.000 mm: threw the downswing meets the turf 0.30216461291160157 s before contact, so the impact would start more than 0.15 s early: a gross mis-hit
+single-ball 1 m/s up 0.02 m dip -0.03 s jab 2.000 mm: threw the head is in the turf at contact: its lowest point is 0.0029741227305416238 m below it
+single-ball 1 m/s up 0.02 m dip -0.05 s jab 2.000 mm: threw the head is in the turf at contact: its lowest point is 0.0029741227305416238 m below it
+single-ball 1 m/s up 0.02 m dip -0.08 s jab 2.000 mm: threw the head is in the turf at contact: its lowest point is 0.0029741227305416238 m below it
+single-ball 1 m/s up 0.02 m dip -0.12 s jab 2.000 mm: threw the head is in the turf at contact: its lowest point is 0.0029741227305416238 m below it
+single-ball 1 m/s up 0 m dip -0.03 s jab 3.000 mm: head/turf none ms, peak 0.000 mm, lowest 10.916 mm; face 30.01–31.24 ms; speed along aim at the turf -, at the ball 1.0000 m/s; impact 40.00 ms; finish 520.32 ms; no events
+single-ball 1 m/s up 0 m dip -0.05 s jab 3.000 mm: head/turf none ms, peak 0.000 mm, lowest 8.419 mm; face 50.01–51.24 ms; speed along aim at the turf -, at the ball 1.0000 m/s; impact 60.00 ms; finish 540.31 ms; no events
+single-ball 1 m/s up 0 m dip -0.08 s jab 3.000 mm: head/turf none ms, peak 0.000 mm, lowest 5.616 mm; face 80.00–81.23 ms; speed along aim at the turf -, at the ball 1.0000 m/s; impact 90.00 ms; finish 570.31 ms; no events
+single-ball 1 m/s up 0 m dip -0.12 s jab 3.000 mm: head/turf none ms, peak 0.000 mm, lowest 3.580 mm; face 120.00–121.23 ms; speed along aim at the turf -, at the ball 1.0001 m/s; impact 130.00 ms; finish 610.31 ms; no events
+single-ball 1 m/s up 0.005 m dip -0.03 s jab 3.000 mm: head/turf none ms, peak 0.000 mm, lowest 5.916 mm; face 30.01–31.24 ms; speed along aim at the turf -, at the ball 1.0000 m/s; impact 40.00 ms; finish 433.02 ms; no events
+single-ball 1 m/s up 0.005 m dip -0.05 s jab 3.000 mm: head/turf none ms, peak 0.000 mm, lowest 3.419 mm; face 50.01–51.24 ms; speed along aim at the turf -, at the ball 1.0000 m/s; impact 60.00 ms; finish 453.02 ms; no events
+single-ball 1 m/s up 0.005 m dip -0.08 s jab 3.000 mm: head/turf none ms, peak 0.000 mm, lowest 0.616 mm; face 80.00–81.24 ms; speed along aim at the turf -, at the ball 1.0000 m/s; impact 90.00 ms; finish 483.00 ms; no events
+single-ball 1 m/s up 0.005 m dip -0.12 s jab 3.000 mm: head/turf 4.97–19.19 ms, peak 1.242 mm, lowest -1.262 mm; face 157.19–158.50 ms; speed along aim at the turf 0.9132, at the ball 0.7794 m/s; impact 158.75 ms; finish 641.07 ms; no events
+single-ball 1 m/s up 0.01 m dip -0.03 s jab 3.000 mm: threw the downswing meets the turf 0.23407961291160154 s before contact, so the impact would start more than 0.15 s early: a gross mis-hit
+single-ball 1 m/s up 0.01 m dip -0.05 s jab 3.000 mm: threw the downswing meets the turf 0.23407961291160154 s before contact, so the impact would start more than 0.15 s early: a gross mis-hit
+single-ball 1 m/s up 0.01 m dip -0.08 s jab 3.000 mm: threw the downswing meets the turf 0.23407961291160154 s before contact, so the impact would start more than 0.15 s early: a gross mis-hit
+single-ball 1 m/s up 0.01 m dip -0.12 s jab 3.000 mm: threw the downswing meets the turf 0.23407961291160154 s before contact, so the impact would start more than 0.15 s early: a gross mis-hit
+single-ball 1 m/s up 0.015 m dip -0.03 s jab 3.000 mm: threw the downswing meets the turf 0.30216461291160157 s before contact, so the impact would start more than 0.15 s early: a gross mis-hit
+single-ball 1 m/s up 0.015 m dip -0.05 s jab 3.000 mm: threw the downswing meets the turf 0.30216461291160157 s before contact, so the impact would start more than 0.15 s early: a gross mis-hit
+single-ball 1 m/s up 0.015 m dip -0.08 s jab 3.000 mm: threw the downswing meets the turf 0.30216461291160157 s before contact, so the impact would start more than 0.15 s early: a gross mis-hit
+single-ball 1 m/s up 0.015 m dip -0.12 s jab 3.000 mm: threw the downswing meets the turf 0.30216461291160157 s before contact, so the impact would start more than 0.15 s early: a gross mis-hit
+single-ball 1 m/s up 0.02 m dip -0.03 s jab 3.000 mm: threw the head is in the turf at contact: its lowest point is 0.0029741227305416238 m below it
+single-ball 1 m/s up 0.02 m dip -0.05 s jab 3.000 mm: threw the head is in the turf at contact: its lowest point is 0.0029741227305416238 m below it
+single-ball 1 m/s up 0.02 m dip -0.08 s jab 3.000 mm: threw the head is in the turf at contact: its lowest point is 0.0029741227305416238 m below it
+single-ball 1 m/s up 0.02 m dip -0.12 s jab 3.000 mm: threw the head is in the turf at contact: its lowest point is 0.0029741227305416238 m below it
+single-ball 1 m/s up 0 m dip -0.03 s jab 4.000 mm: head/turf none ms, peak 0.000 mm, lowest 9.935 mm; face 30.01–31.24 ms; speed along aim at the turf -, at the ball 1.0000 m/s; impact 40.00 ms; finish 520.22 ms; no events
+single-ball 1 m/s up 0 m dip -0.05 s jab 4.000 mm: head/turf none ms, peak 0.000 mm, lowest 7.431 mm; face 50.01–51.24 ms; speed along aim at the turf -, at the ball 1.0000 m/s; impact 60.00 ms; finish 540.21 ms; no events
+single-ball 1 m/s up 0 m dip -0.08 s jab 4.000 mm: head/turf none ms, peak 0.000 mm, lowest 4.622 mm; face 80.00–81.23 ms; speed along aim at the turf -, at the ball 1.0000 m/s; impact 90.00 ms; finish 570.21 ms; no events
+single-ball 1 m/s up 0 m dip -0.12 s jab 4.000 mm: head/turf none ms, peak 0.000 mm, lowest 2.581 mm; face 120.00–121.23 ms; speed along aim at the turf -, at the ball 1.0001 m/s; impact 130.00 ms; finish 610.20 ms; no events
+single-ball 1 m/s up 0.005 m dip -0.03 s jab 4.000 mm: head/turf none ms, peak 0.000 mm, lowest 4.935 mm; face 30.01–31.25 ms; speed along aim at the turf -, at the ball 1.0000 m/s; impact 40.00 ms; finish 397.25 ms; no events
+single-ball 1 m/s up 0.005 m dip -0.05 s jab 4.000 mm: head/turf none ms, peak 0.000 mm, lowest 2.431 mm; face 50.01–51.24 ms; speed along aim at the turf -, at the ball 1.0000 m/s; impact 60.00 ms; finish 417.25 ms; no events
+single-ball 1 m/s up 0.005 m dip -0.08 s jab 4.000 mm: head/turf 7.46–13.10, 13.29–14.04 ms, peak 0.362 mm, lowest -0.371 mm; face 81.59–82.84 ms; speed along aim at the turf 0.9649, at the ball 0.9792 m/s; impact 90.00 ms; finish 458.19 ms; no events
+single-ball 1 m/s up 0.005 m dip -0.12 s jab 4.000 mm: head/turf 4.44–18.62 ms, peak 1.940 mm, lowest -1.996 mm; face 208.30–209.67 ms; speed along aim at the turf 0.9124, at the ball 0.6334 m/s; impact 217.38 ms; finish 704.17 ms; turf-yield
+single-ball 1 m/s up 0.01 m dip -0.03 s jab 4.000 mm: threw the downswing meets the turf 0.23407961291160154 s before contact, so the impact would start more than 0.15 s early: a gross mis-hit
+single-ball 1 m/s up 0.01 m dip -0.05 s jab 4.000 mm: threw the downswing meets the turf 0.23407961291160154 s before contact, so the impact would start more than 0.15 s early: a gross mis-hit
+single-ball 1 m/s up 0.01 m dip -0.08 s jab 4.000 mm: threw the downswing meets the turf 0.23407961291160154 s before contact, so the impact would start more than 0.15 s early: a gross mis-hit
+single-ball 1 m/s up 0.01 m dip -0.12 s jab 4.000 mm: threw the downswing meets the turf 0.23407961291160154 s before contact, so the impact would start more than 0.15 s early: a gross mis-hit
+single-ball 1 m/s up 0.015 m dip -0.03 s jab 4.000 mm: threw the downswing meets the turf 0.30216461291160157 s before contact, so the impact would start more than 0.15 s early: a gross mis-hit
+single-ball 1 m/s up 0.015 m dip -0.05 s jab 4.000 mm: threw the downswing meets the turf 0.30216461291160157 s before contact, so the impact would start more than 0.15 s early: a gross mis-hit
+single-ball 1 m/s up 0.015 m dip -0.08 s jab 4.000 mm: threw the downswing meets the turf 0.30216461291160157 s before contact, so the impact would start more than 0.15 s early: a gross mis-hit
+single-ball 1 m/s up 0.015 m dip -0.12 s jab 4.000 mm: threw the downswing meets the turf 0.30216461291160157 s before contact, so the impact would start more than 0.15 s early: a gross mis-hit
+single-ball 1 m/s up 0.02 m dip -0.03 s jab 4.000 mm: threw the head is in the turf at contact: its lowest point is 0.0029741227305416238 m below it
+single-ball 1 m/s up 0.02 m dip -0.05 s jab 4.000 mm: threw the head is in the turf at contact: its lowest point is 0.0029741227305416238 m below it
+single-ball 1 m/s up 0.02 m dip -0.08 s jab 4.000 mm: threw the head is in the turf at contact: its lowest point is 0.0029741227305416238 m below it
+single-ball 1 m/s up 0.02 m dip -0.12 s jab 4.000 mm: threw the head is in the turf at contact: its lowest point is 0.0029741227305416238 m below it
+single-ball 1 m/s up 0 m dip -0.03 s jab 5.000 mm: head/turf none ms, peak 0.000 mm, lowest 8.920 mm; face 30.01–31.24 ms; speed along aim at the turf -, at the ball 1.0000 m/s; impact 40.00 ms; finish 520.08 ms; grip-limit
+single-ball 1 m/s up 0 m dip -0.05 s jab 5.000 mm: head/turf none ms, peak 0.000 mm, lowest 6.395 mm; face 50.00–51.24 ms; speed along aim at the turf -, at the ball 1.0003 m/s; impact 60.00 ms; finish 540.02 ms; grip-limit
+single-ball 1 m/s up 0 m dip -0.08 s jab 5.000 mm: head/turf none ms, peak 0.000 mm, lowest 3.535 mm; face 79.96–81.19 ms; speed along aim at the turf -, at the ball 1.0011 m/s; impact 90.00 ms; finish 569.80 ms; grip-limit
+single-ball 1 m/s up 0 m dip -0.12 s jab 5.000 mm: head/turf none ms, peak 0.000 mm, lowest 1.573 mm; face 119.88–121.11 ms; speed along aim at the turf -, at the ball 1.0015 m/s; impact 130.00 ms; finish 609.68 ms; grip-limit
+single-ball 1 m/s up 0.005 m dip -0.03 s jab 5.000 mm: head/turf none ms, peak 0.000 mm, lowest 3.920 mm; face 30.01–31.25 ms; speed along aim at the turf -, at the ball 1.0000 m/s; impact 40.00 ms; finish 376.82 ms; grip-limit
+single-ball 1 m/s up 0.005 m dip -0.05 s jab 5.000 mm: head/turf none ms, peak 0.000 mm, lowest 1.395 mm; face 50.00–51.24 ms; speed along aim at the turf -, at the ball 1.0003 m/s; impact 60.00 ms; finish 392.07 ms; grip-limit
+single-ball 1 m/s up 0.005 m dip -0.08 s jab 5.000 mm: head/turf 5.93–16.55 ms, peak 1.240 mm, lowest -1.291 mm; face 102.76–104.07 ms; speed along aim at the turf 0.9629, at the ball 0.7739 m/s; impact 104.32 ms; finish 487.11 ms; grip-limit
+single-ball 1 m/s up 0.005 m dip -0.12 s jab 5.000 mm: head/turf 3.92–18.34 ms, peak 2.579 mm, lowest -2.590 mm; face 261.95–263.36 ms; speed along aim at the turf 0.9138, at the ball 0.5624 m/s; impact 272.97 ms; finish 754.49 ms; grip-limit,turf-yield,impact-head-deep
+single-ball 1 m/s up 0.01 m dip -0.03 s jab 5.000 mm: threw the downswing meets the turf 0.23407961291160154 s before contact, so the impact would start more than 0.15 s early: a gross mis-hit
+single-ball 1 m/s up 0.01 m dip -0.05 s jab 5.000 mm: threw the downswing meets the turf 0.23407961291160154 s before contact, so the impact would start more than 0.15 s early: a gross mis-hit
+single-ball 1 m/s up 0.01 m dip -0.08 s jab 5.000 mm: threw the downswing meets the turf 0.23407961291160154 s before contact, so the impact would start more than 0.15 s early: a gross mis-hit
+single-ball 1 m/s up 0.01 m dip -0.12 s jab 5.000 mm: threw the downswing meets the turf 0.23407961291160154 s before contact, so the impact would start more than 0.15 s early: a gross mis-hit
+single-ball 1 m/s up 0.015 m dip -0.03 s jab 5.000 mm: threw the downswing meets the turf 0.30216461291160157 s before contact, so the impact would start more than 0.15 s early: a gross mis-hit
+single-ball 1 m/s up 0.015 m dip -0.05 s jab 5.000 mm: threw the downswing meets the turf 0.30216461291160157 s before contact, so the impact would start more than 0.15 s early: a gross mis-hit
+single-ball 1 m/s up 0.015 m dip -0.08 s jab 5.000 mm: threw the downswing meets the turf 0.30216461291160157 s before contact, so the impact would start more than 0.15 s early: a gross mis-hit
+single-ball 1 m/s up 0.015 m dip -0.12 s jab 5.000 mm: threw the downswing meets the turf 0.30216461291160157 s before contact, so the impact would start more than 0.15 s early: a gross mis-hit
+single-ball 1 m/s up 0.02 m dip -0.03 s jab 5.000 mm: threw the head is in the turf at contact: its lowest point is 0.0029741227305416238 m below it
+single-ball 1 m/s up 0.02 m dip -0.05 s jab 5.000 mm: threw the head is in the turf at contact: its lowest point is 0.0029741227305416238 m below it
+single-ball 1 m/s up 0.02 m dip -0.08 s jab 5.000 mm: threw the head is in the turf at contact: its lowest point is 0.0029741227305416238 m below it
+single-ball 1 m/s up 0.02 m dip -0.12 s jab 5.000 mm: threw the head is in the turf at contact: its lowest point is 0.0029741227305416238 m below it
+single-ball 1 m/s up 0 m dip -0.03 s jab 6.000 mm: head/turf none ms, peak 0.000 mm, lowest 8.550 mm; face 30.01–31.25 ms; speed along aim at the turf -, at the ball 0.9995 m/s; impact 40.00 ms; finish 520.08 ms; grip-limit
+single-ball 1 m/s up 0 m dip -0.05 s jab 6.000 mm: head/turf none ms, peak 0.000 mm, lowest 6.086 mm; face 50.03–51.27 ms; speed along aim at the turf -, at the ball 0.9993 m/s; impact 60.00 ms; finish 540.14 ms; grip-limit
+single-ball 1 m/s up 0 m dip -0.08 s jab 6.000 mm: head/turf none ms, peak 0.000 mm, lowest 3.380 mm; face 80.11–81.34 ms; speed along aim at the turf -, at the ball 0.9987 m/s; impact 90.00 ms; finish 570.33 ms; grip-limit
+single-ball 1 m/s up 0 m dip -0.12 s jab 6.000 mm: head/turf none ms, peak 0.000 mm, lowest 1.500 mm; face 120.36–121.60 ms; speed along aim at the turf -, at the ball 0.9971 m/s; impact 130.00 ms; finish 610.87 ms; grip-limit
+single-ball 1 m/s up 0.005 m dip -0.03 s jab 6.000 mm: head/turf none ms, peak 0.000 mm, lowest 3.550 mm; face 30.01–31.25 ms; speed along aim at the turf -, at the ball 0.9995 m/s; impact 40.00 ms; finish 355.72 ms; grip-limit
+single-ball 1 m/s up 0.005 m dip -0.05 s jab 6.000 mm: head/turf none ms, peak 0.000 mm, lowest 1.086 mm; face 50.03–51.27 ms; speed along aim at the turf -, at the ball 0.9993 m/s; impact 60.00 ms; finish 389.24 ms; grip-limit
+single-ball 1 m/s up 0.005 m dip -0.08 s jab 6.000 mm: head/turf 5.81–16.70 ms, peak 1.343 mm, lowest -1.404 mm; face 108.07–109.40 ms; speed along aim at the turf 0.9700, at the ball 0.7372 m/s; impact 111.37 ms; finish 496.14 ms; grip-limit
+single-ball 1 m/s up 0.005 m dip -0.12 s jab 6.000 mm: head/turf 3.86–17.32 ms, peak 2.630 mm, lowest -2.639 mm; face 260.39–261.80 ms; speed along aim at the turf 0.9275, at the ball 0.5647 m/s; impact 271.37 ms; finish 754.37 ms; grip-limit,turf-yield,impact-head-deep
+single-ball 1 m/s up 0.01 m dip -0.03 s jab 6.000 mm: threw the downswing meets the turf 0.23407961291160154 s before contact, so the impact would start more than 0.15 s early: a gross mis-hit
+single-ball 1 m/s up 0.01 m dip -0.05 s jab 6.000 mm: threw the downswing meets the turf 0.23407961291160154 s before contact, so the impact would start more than 0.15 s early: a gross mis-hit
+single-ball 1 m/s up 0.01 m dip -0.08 s jab 6.000 mm: threw the downswing meets the turf 0.23407961291160154 s before contact, so the impact would start more than 0.15 s early: a gross mis-hit
+single-ball 1 m/s up 0.01 m dip -0.12 s jab 6.000 mm: threw the downswing meets the turf 0.23407961291160154 s before contact, so the impact would start more than 0.15 s early: a gross mis-hit
+single-ball 1 m/s up 0.015 m dip -0.03 s jab 6.000 mm: threw the downswing meets the turf 0.30216461291160157 s before contact, so the impact would start more than 0.15 s early: a gross mis-hit
+single-ball 1 m/s up 0.015 m dip -0.05 s jab 6.000 mm: threw the downswing meets the turf 0.30216461291160157 s before contact, so the impact would start more than 0.15 s early: a gross mis-hit
+single-ball 1 m/s up 0.015 m dip -0.08 s jab 6.000 mm: threw the downswing meets the turf 0.30216461291160157 s before contact, so the impact would start more than 0.15 s early: a gross mis-hit
+single-ball 1 m/s up 0.015 m dip -0.12 s jab 6.000 mm: threw the downswing meets the turf 0.30216461291160157 s before contact, so the impact would start more than 0.15 s early: a gross mis-hit
+single-ball 1 m/s up 0.02 m dip -0.03 s jab 6.000 mm: threw the head is in the turf at contact: its lowest point is 0.0029741227305416238 m below it
+single-ball 1 m/s up 0.02 m dip -0.05 s jab 6.000 mm: threw the head is in the turf at contact: its lowest point is 0.0029741227305416238 m below it
+single-ball 1 m/s up 0.02 m dip -0.08 s jab 6.000 mm: threw the head is in the turf at contact: its lowest point is 0.0029741227305416238 m below it
+single-ball 1 m/s up 0.02 m dip -0.12 s jab 6.000 mm: threw the head is in the turf at contact: its lowest point is 0.0029741227305416238 m below it
+NONE stopped
+-- biting --
+single-ball 4 m/s up 0 m dip -0.005 s jab 1.000 mm: head/turf none ms, peak 0.000 mm, lowest 13.228 mm; face 5.01–5.91 ms; speed along aim at the turf -, at the ball 4.0000 m/s; impact 15.00 ms; finish 509.57 ms; turf-lift
+single-ball 4 m/s up 0 m dip -0.01 s jab 1.000 mm: head/turf none ms, peak 0.000 mm, lowest 11.461 mm; face 10.01–10.91 ms; speed along aim at the turf -, at the ball 4.0000 m/s; impact 20.00 ms; finish 514.58 ms; turf-lift
+single-ball 4 m/s up 0 m dip -0.02 s jab 1.000 mm: head/turf none ms, peak 0.000 mm, lowest 7.886 mm; face 20.01–20.91 ms; speed along aim at the turf -, at the ball 4.0000 m/s; impact 30.00 ms; finish 524.58 ms; turf-lift
+single-ball 4 m/s up 0.005 m dip -0.005 s jab 1.000 mm: head/turf none ms, peak 0.000 mm, lowest 8.193 mm; face 5.01–5.91 ms; speed along aim at the turf -, at the ball 4.0000 m/s; impact 15.00 ms; finish 509.46 ms; turf-lift
+single-ball 4 m/s up 0.005 m dip -0.01 s jab 1.000 mm: head/turf none ms, peak 0.000 mm, lowest 6.461 mm; face 10.01–10.91 ms; speed along aim at the turf -, at the ball 4.0000 m/s; impact 20.00 ms; finish 514.47 ms; turf-lift
+single-ball 4 m/s up 0.005 m dip -0.02 s jab 1.000 mm: head/turf none ms, peak 0.000 mm, lowest 2.886 mm; face 20.01–20.91 ms; speed along aim at the turf -, at the ball 4.0000 m/s; impact 30.00 ms; finish 524.47 ms; turf-lift
+single-ball 4 m/s up 0.01 m dip -0.005 s jab 1.000 mm: head/turf 5.25–29.08, 29.10–29.55 ms, peak 2.009 mm, lowest -2.010 mm; face 69.42–70.38 ms; speed along aim at the turf 3.8123, at the ball 3.1541 m/s; impact 72.31 ms; finish 573.70 ms; turf-yield,impact-head-deep,turf-lift
+single-ball 4 m/s up 0.01 m dip -0.01 s jab 1.000 mm: head/turf 5.25–29.08, 29.10–29.55 ms, peak 2.009 mm, lowest -2.010 mm; face 69.45–70.41 ms; speed along aim at the turf 3.8123, at the ball 3.1463 m/s; impact 72.35 ms; finish 573.78 ms; turf-yield,impact-head-deep,turf-lift
+single-ball 4 m/s up 0.01 m dip -0.02 s jab 1.000 mm: head/turf 5.25–29.08, 29.10–29.55 ms, peak 2.009 mm, lowest -2.010 mm; face 69.45–70.41 ms; speed along aim at the turf 3.8123, at the ball 3.1463 m/s; impact 72.35 ms; finish 573.78 ms; turf-yield,impact-head-deep,turf-lift
+single-ball 4 m/s up 0.015 m dip -0.005 s jab 1.000 mm: head/turf 5.00–5.22, 5.27–45.30 ms, peak 3.687 mm, lowest -3.687 mm; face 119.46–120.52 ms; speed along aim at the turf 3.7311, at the ball 2.0471 m/s; impact 144.22 ms; finish 621.06 ms; turf-yield,impact-head-deep,turf-lift
+single-ball 4 m/s up 0.015 m dip -0.01 s jab 1.000 mm: head/turf 5.00–5.22, 5.27–45.30 ms, peak 3.687 mm, lowest -3.687 mm; face 120.07–121.12 ms; speed along aim at the turf 3.7311, at the ball 2.0246 m/s; impact 144.24 ms; finish 621.90 ms; turf-yield,impact-head-deep,turf-lift
+single-ball 4 m/s up 0.015 m dip -0.02 s jab 1.000 mm: head/turf 5.00–5.22, 5.27–45.30 ms, peak 3.687 mm, lowest -3.687 mm; face 120.07–121.12 ms; speed along aim at the turf 3.7311, at the ball 2.0246 m/s; impact 144.24 ms; finish 621.90 ms; turf-yield,impact-head-deep,turf-lift
+single-ball 4 m/s up 0.02 m dip -0.005 s jab 1.000 mm: threw the head is in the turf at contact: its lowest point is 0.0029741227305416238 m below it
+single-ball 4 m/s up 0.02 m dip -0.01 s jab 1.000 mm: threw the head is in the turf at contact: its lowest point is 0.0029741227305416238 m below it
+single-ball 4 m/s up 0.02 m dip -0.02 s jab 1.000 mm: threw the head is in the turf at contact: its lowest point is 0.0029741227305416238 m below it
+single-ball 4 m/s up 0 m dip -0.005 s jab 2.000 mm: head/turf none ms, peak 0.000 mm, lowest 12.316 mm; face 5.01–5.91 ms; speed along aim at the turf -, at the ball 4.0000 m/s; impact 15.00 ms; finish 509.53 ms; no events
+single-ball 4 m/s up 0 m dip -0.01 s jab 2.000 mm: head/turf none ms, peak 0.000 mm, lowest 11.461 mm; face 10.01–10.91 ms; speed along aim at the turf -, at the ball 4.0000 m/s; impact 20.00 ms; finish 514.56 ms; turf-lift
+single-ball 4 m/s up 0 m dip -0.02 s jab 2.000 mm: head/turf none ms, peak 0.000 mm, lowest 7.886 mm; face 20.01–20.91 ms; speed along aim at the turf -, at the ball 4.0000 m/s; impact 30.00 ms; finish 524.55 ms; turf-lift
+single-ball 4 m/s up 0.005 m dip -0.005 s jab 2.000 mm: head/turf none ms, peak 0.000 mm, lowest 7.281 mm; face 5.01–5.92 ms; speed along aim at the turf -, at the ball 4.0000 m/s; impact 15.00 ms; finish 509.43 ms; no events
+single-ball 4 m/s up 0.005 m dip -0.01 s jab 2.000 mm: head/turf none ms, peak 0.000 mm, lowest 6.461 mm; face 10.01–10.92 ms; speed along aim at the turf -, at the ball 4.0000 m/s; impact 20.00 ms; finish 514.45 ms; turf-lift
+single-ball 4 m/s up 0.005 m dip -0.02 s jab 2.000 mm: head/turf none ms, peak 0.000 mm, lowest 2.886 mm; face 20.01–20.92 ms; speed along aim at the turf -, at the ball 4.0000 m/s; impact 30.00 ms; finish 524.45 ms; turf-lift
+single-ball 4 m/s up 0.01 m dip -0.005 s jab 2.000 mm: head/turf 5.25–29.08, 29.10–29.55 ms, peak 2.009 mm, lowest -2.010 mm; face 69.40–70.36 ms; speed along aim at the turf 3.8123, at the ball 3.1620 m/s; impact 72.28 ms; finish 573.58 ms; turf-yield,impact-head-deep,turf-lift
+single-ball 4 m/s up 0.01 m dip -0.01 s jab 2.000 mm: head/turf 5.25–29.08, 29.10–29.55 ms, peak 2.009 mm, lowest -2.010 mm; face 69.45–70.41 ms; speed along aim at the turf 3.8123, at the ball 3.1463 m/s; impact 72.35 ms; finish 573.74 ms; turf-yield,impact-head-deep,turf-lift
+single-ball 4 m/s up 0.01 m dip -0.02 s jab 2.000 mm: head/turf 5.25–29.08, 29.10–29.55 ms, peak 2.009 mm, lowest -2.010 mm; face 69.45–70.41 ms; speed along aim at the turf 3.8123, at the ball 3.1463 m/s; impact 72.35 ms; finish 573.74 ms; turf-yield,impact-head-deep,turf-lift
+single-ball 4 m/s up 0.015 m dip -0.005 s jab 2.000 mm: head/turf 5.00–5.22, 5.27–45.30 ms, peak 3.687 mm, lowest -3.687 mm; face 118.87–119.92 ms; speed along aim at the turf 3.7311, at the ball 2.0697 m/s; impact 144.30 ms; finish 620.18 ms; turf-yield,impact-head-deep,turf-lift
+single-ball 4 m/s up 0.015 m dip -0.01 s jab 2.000 mm: head/turf 5.00–5.22, 5.27–45.30 ms, peak 3.687 mm, lowest -3.687 mm; face 120.06–121.12 ms; speed along aim at the turf 3.7311, at the ball 2.0246 m/s; impact 144.28 ms; finish 621.85 ms; turf-yield,impact-head-deep,turf-lift
+single-ball 4 m/s up 0.015 m dip -0.02 s jab 2.000 mm: head/turf 5.00–5.22, 5.27–45.30, 52.21–62.63, 62.96–63.33 ms, peak 3.687 mm, lowest -3.687 mm; face 123.57–124.64 ms; speed along aim at the turf 3.7311, at the ball 1.9310 m/s; impact 146.76 ms; finish 625.90 ms; turf-yield,impact-head-deep,turf-lift
+single-ball 4 m/s up 0.02 m dip -0.005 s jab 2.000 mm: threw the head is in the turf at contact: its lowest point is 0.0029741227305416238 m below it
+single-ball 4 m/s up 0.02 m dip -0.01 s jab 2.000 mm: threw the head is in the turf at contact: its lowest point is 0.0029741227305416238 m below it
+single-ball 4 m/s up 0.02 m dip -0.02 s jab 2.000 mm: threw the head is in the turf at contact: its lowest point is 0.0029741227305416238 m below it
+single-ball 4 m/s up 0 m dip -0.005 s jab 3.000 mm: head/turf none ms, peak 0.000 mm, lowest 11.404 mm; face 5.01–5.91 ms; speed along aim at the turf -, at the ball 4.0000 m/s; impact 15.00 ms; finish 509.50 ms; no events
+single-ball 4 m/s up 0 m dip -0.01 s jab 3.000 mm: head/turf none ms, peak 0.000 mm, lowest 11.116 mm; face 10.01–10.91 ms; speed along aim at the turf -, at the ball 4.0000 m/s; impact 20.00 ms; finish 514.53 ms; turf-lift
+single-ball 4 m/s up 0 m dip -0.02 s jab 3.000 mm: head/turf none ms, peak 0.000 mm, lowest 7.712 mm; face 20.01–20.91 ms; speed along aim at the turf -, at the ball 4.0000 m/s; impact 30.00 ms; finish 524.53 ms; turf-lift
+single-ball 4 m/s up 0.005 m dip -0.005 s jab 3.000 mm: head/turf none ms, peak 0.000 mm, lowest 6.369 mm; face 5.01–5.92 ms; speed along aim at the turf -, at the ball 4.0000 m/s; impact 15.00 ms; finish 509.40 ms; no events
+single-ball 4 m/s up 0.005 m dip -0.01 s jab 3.000 mm: head/turf none ms, peak 0.000 mm, lowest 6.080 mm; face 10.01–10.92 ms; speed along aim at the turf -, at the ball 4.0000 m/s; impact 20.00 ms; finish 514.43 ms; turf-lift
+single-ball 4 m/s up 0.005 m dip -0.02 s jab 3.000 mm: head/turf none ms, peak 0.000 mm, lowest 2.712 mm; face 20.01–20.92 ms; speed along aim at the turf -, at the ball 4.0000 m/s; impact 30.00 ms; finish 524.43 ms; turf-lift
+single-ball 4 m/s up 0.01 m dip -0.005 s jab 3.000 mm: head/turf 5.25–29.08, 29.10–29.55 ms, peak 2.009 mm, lowest -2.010 mm; face 69.38–70.33 ms; speed along aim at the turf 3.8123, at the ball 3.1698 m/s; impact 72.25 ms; finish 573.46 ms; turf-yield,impact-head-deep,turf-lift
+single-ball 4 m/s up 0.01 m dip -0.01 s jab 3.000 mm: head/turf 5.25–29.08, 29.10–29.55 ms, peak 2.009 mm, lowest -2.010 mm; face 69.45–70.41 ms; speed along aim at the turf 3.8123, at the ball 3.1463 m/s; impact 72.34 ms; finish 573.70 ms; turf-yield,impact-head-deep,turf-lift
+single-ball 4 m/s up 0.01 m dip -0.02 s jab 3.000 mm: head/turf 5.25–29.08, 29.10–29.55 ms, peak 2.009 mm, lowest -2.010 mm; face 69.45–70.41 ms; speed along aim at the turf 3.8123, at the ball 3.1463 m/s; impact 72.35 ms; finish 573.70 ms; turf-yield,impact-head-deep,turf-lift
+single-ball 4 m/s up 0.015 m dip -0.005 s jab 3.000 mm: head/turf 5.00–5.22, 5.27–45.30, 69.95–73.43 ms, peak 3.687 mm, lowest -3.687 mm; face 118.45–119.51 ms; speed along aim at the turf 3.7311, at the ball 2.0853 m/s; impact 144.49 ms; finish 619.54 ms; turf-yield,impact-head-deep,turf-lift
+single-ball 4 m/s up 0.015 m dip -0.01 s jab 3.000 mm: head/turf 5.00–5.22, 5.27–45.30, 63.55–71.88, 72.03–72.50 ms, peak 3.687 mm, lowest -3.687 mm; face 122.68–123.75 ms; speed along aim at the turf 3.7311, at the ball 1.9381 m/s; impact 145.79 ms; finish 625.10 ms; turf-yield,impact-head-deep,turf-lift
+single-ball 4 m/s up 0.015 m dip -0.02 s jab 3.000 mm: head/turf 5.00–5.22, 5.27–45.30, 51.18–63.70, 63.91–64.29 ms, peak 3.687 mm, lowest -3.687 mm; face 132.66–133.75 ms; speed along aim at the turf 3.7311, at the ball 1.7327 m/s; impact 163.16 ms; finish 636.31 ms; turf-yield,impact-head-deep,turf-lift
+single-ball 4 m/s up 0.02 m dip -0.005 s jab 3.000 mm: threw the head is in the turf at contact: its lowest point is 0.0029741227305416238 m below it
+single-ball 4 m/s up 0.02 m dip -0.01 s jab 3.000 mm: threw the head is in the turf at contact: its lowest point is 0.0029741227305416238 m below it
+single-ball 4 m/s up 0.02 m dip -0.02 s jab 3.000 mm: threw the head is in the turf at contact: its lowest point is 0.0029741227305416238 m below it
+single-ball 4 m/s up 0 m dip -0.005 s jab 4.000 mm: head/turf none ms, peak 0.000 mm, lowest 9.093 mm; face 5.01–5.91 ms; speed along aim at the turf -, at the ball 4.0000 m/s; impact 22.72 ms; finish 509.47 ms; turf-lift
+single-ball 4 m/s up 0 m dip -0.01 s jab 4.000 mm: head/turf none ms, peak 0.000 mm, lowest 10.107 mm; face 10.01–10.91 ms; speed along aim at the turf -, at the ball 4.0000 m/s; impact 20.00 ms; finish 514.51 ms; turf-lift
+single-ball 4 m/s up 0 m dip -0.02 s jab 4.000 mm: head/turf none ms, peak 0.000 mm, lowest 6.877 mm; face 20.01–20.91 ms; speed along aim at the turf -, at the ball 4.0000 m/s; impact 30.00 ms; finish 524.51 ms; turf-lift
+single-ball 4 m/s up 0.005 m dip -0.005 s jab 4.000 mm: head/turf none ms, peak 0.000 mm, lowest 4.034 mm; face 5.01–5.92 ms; speed along aim at the turf -, at the ball 4.0000 m/s; impact 22.77 ms; finish 509.37 ms; turf-lift
+single-ball 4 m/s up 0.005 m dip -0.01 s jab 4.000 mm: head/turf none ms, peak 0.000 mm, lowest 5.072 mm; face 10.01–10.92 ms; speed along aim at the turf -, at the ball 4.0000 m/s; impact 20.00 ms; finish 514.41 ms; turf-lift
+single-ball 4 m/s up 0.005 m dip -0.02 s jab 4.000 mm: head/turf none ms, peak 0.000 mm, lowest 1.877 mm; face 20.01–20.92 ms; speed along aim at the turf -, at the ball 4.0000 m/s; impact 30.00 ms; finish 524.41 ms; turf-lift
+single-ball 4 m/s up 0.01 m dip -0.005 s jab 4.000 mm: head/turf 5.25–29.08, 29.10–29.55 ms, peak 2.009 mm, lowest -2.010 mm; face 69.35–70.31 ms; speed along aim at the turf 3.8123, at the ball 3.1776 m/s; impact 72.21 ms; finish 573.35 ms; turf-yield,impact-head-deep,turf-lift
+single-ball 4 m/s up 0.01 m dip -0.01 s jab 4.000 mm: head/turf 5.25–29.08, 29.10–29.55 ms, peak 2.009 mm, lowest -2.010 mm; face 69.45–70.41 ms; speed along aim at the turf 3.8123, at the ball 3.1463 m/s; impact 72.34 ms; finish 573.67 ms; turf-yield,impact-head-deep,turf-lift
+single-ball 4 m/s up 0.01 m dip -0.02 s jab 4.000 mm: head/turf 5.25–29.08, 29.10–29.55, 43.52–48.23 ms, peak 2.009 mm, lowest -2.010 mm; face 69.69–70.66 ms; speed along aim at the turf 3.8123, at the ball 3.1147 m/s; impact 72.61 ms; finish 574.04 ms; turf-yield,impact-head-deep,turf-lift
+single-ball 4 m/s up 0.015 m dip -0.005 s jab 4.000 mm: head/turf 5.00–5.22, 5.27–45.30, 68.44–76.81, 76.91–77.29 ms, peak 3.687 mm, lowest -3.687 mm; face 121.45–122.52 ms; speed along aim at the turf 3.7311, at the ball 1.9682 m/s; impact 145.56 ms; finish 623.38 ms; turf-yield,impact-head-deep,turf-lift
+single-ball 4 m/s up 0.015 m dip -0.01 s jab 4.000 mm: head/turf 5.00–5.22, 5.27–45.30, 62.60–73.46 ms, peak 3.687 mm, lowest -3.687 mm; face 130.19–131.29 ms; speed along aim at the turf 3.7311, at the ball 1.7342 m/s; impact 161.32 ms; finish 634.47 ms; turf-yield,impact-head-deep,turf-lift
+single-ball 4 m/s up 0.015 m dip -0.02 s jab 4.000 mm: head/turf 5.00–5.22, 5.27–45.30, 50.93–64.65 ms, peak 3.687 mm, lowest -3.687 mm; face 143.76–144.88 ms; speed along aim at the turf 3.7311, at the ball 1.5547 m/s; impact 180.06 ms; finish 648.88 ms; turf-yield,impact-head-deep
+single-ball 4 m/s up 0.02 m dip -0.005 s jab 4.000 mm: threw the head is in the turf at contact: its lowest point is 0.0029741227305416238 m below it
+single-ball 4 m/s up 0.02 m dip -0.01 s jab 4.000 mm: threw the head is in the turf at contact: its lowest point is 0.0029741227305416238 m below it
+single-ball 4 m/s up 0.02 m dip -0.02 s jab 4.000 mm: threw the head is in the turf at contact: its lowest point is 0.0029741227305416238 m below it
+single-ball 4 m/s up 0 m dip -0.005 s jab 5.000 mm: head/turf none ms, peak 0.000 mm, lowest 8.454 mm; face 5.01–5.91 ms; speed along aim at the turf -, at the ball 4.0000 m/s; impact 19.49 ms; finish 509.44 ms; grip-limit,turf-lift
+single-ball 4 m/s up 0 m dip -0.01 s jab 5.000 mm: head/turf none ms, peak 0.000 mm, lowest 8.612 mm; face 10.01–10.91 ms; speed along aim at the turf -, at the ball 3.9995 m/s; impact 20.00 ms; finish 514.48 ms; grip-limit,turf-lift
+single-ball 4 m/s up 0 m dip -0.02 s jab 5.000 mm: head/turf none ms, peak 0.000 mm, lowest 5.917 mm; face 20.01–20.92 ms; speed along aim at the turf -, at the ball 3.9991 m/s; impact 30.00 ms; finish 524.44 ms; grip-limit,turf-lift
+single-ball 4 m/s up 0.005 m dip -0.005 s jab 5.000 mm: head/turf none ms, peak 0.000 mm, lowest 3.401 mm; face 5.01–5.92 ms; speed along aim at the turf -, at the ball 4.0000 m/s; impact 19.52 ms; finish 509.29 ms; grip-limit,turf-lift
+single-ball 4 m/s up 0.005 m dip -0.01 s jab 5.000 mm: head/turf none ms, peak 0.000 mm, lowest 3.577 mm; face 10.01–10.92 ms; speed along aim at the turf -, at the ball 3.9995 m/s; impact 20.00 ms; finish 512.69 ms; grip-limit,turf-lift
+single-ball 4 m/s up 0.005 m dip -0.02 s jab 5.000 mm: head/turf none ms, peak 0.000 mm, lowest 0.917 mm; face 20.01–20.92 ms; speed along aim at the turf -, at the ball 3.9991 m/s; impact 30.00 ms; finish 522.60 ms; grip-limit,turf-lift
+single-ball 4 m/s up 0.01 m dip -0.005 s jab 5.000 mm: head/turf 5.25–29.08, 29.10–29.55 ms, peak 2.009 mm, lowest -2.010 mm; face 69.33–70.28 ms; speed along aim at the turf 3.8123, at the ball 3.1843 m/s; impact 72.25 ms; finish 573.23 ms; turf-yield,impact-head-deep,grip-limit,turf-lift
+single-ball 4 m/s up 0.01 m dip -0.01 s jab 5.000 mm: head/turf 5.25–29.08, 29.10–29.55 ms, peak 2.009 mm, lowest -2.010 mm; face 69.45–70.41 ms; speed along aim at the turf 3.8123, at the ball 3.1453 m/s; impact 72.39 ms; finish 573.59 ms; turf-yield,impact-head-deep,grip-limit,turf-lift
+single-ball 4 m/s up 0.01 m dip -0.02 s jab 5.000 mm: head/turf 5.25–29.08, 29.10–29.55, 42.65–50.16 ms, peak 2.009 mm, lowest -2.010 mm; face 71.19–72.17 ms; speed along aim at the turf 3.8123, at the ball 2.9355 m/s; impact 74.88 ms; finish 576.28 ms; turf-yield,impact-head-deep,grip-limit,turf-lift
+FOUND biting: single-ball 4 m/s up 0.01 m dip -0.02 s jab 5.000 mm
+-- follow (not a regime) --
+half-roll 2 m/s: head/turf none ms, peak 0.000 mm, lowest 38.683 mm; face 0.01–1.50, 10.61–12.32 ms; speed along aim at the turf -, at the ball 1.9574 m/s; impact 102.95 ms; finish 880.46 ms; turf-lift,turf-lift
+half-roll 3 m/s: head/turf none ms, peak 0.000 mm, lowest 38.645 mm; face 0.01–1.41, 6.88–8.44, 27.13–28.80 ms; speed along aim at the turf -, at the ball 2.9405 m/s; impact 67.18 ms; finish 860.21 ms; turf-lift,turf-lift
+half-roll 4 m/s: head/turf none ms, peak 0.000 mm, lowest 38.608 mm; face 0.01–1.34, 5.10–6.63, 16.50–18.23 ms; speed along aim at the turf -, at the ball 3.9254 m/s; impact 76.82 ms; finish 1000.00 ms; turf-lift,turf-lift,follow-turf-yield,follow-head-deep,follow-cap
+FOUND follow (not a regime): half-roll 4 m/s
+== series (design §8): t ms, speed m/s, lowest mm, bearing N, resistance N, top N, bottom N ==
+-- graze (single-ball 3 m/s up 0.01 m dip -0.005 s jab 1.000 mm) --
+1.00 2.7998 1.213 0.0 0.0 24.0 0.0
+2.00 2.8050 0.894 0.0 0.0 24.0 0.0
+3.00 2.8101 0.585 0.0 0.0 24.1 0.0
+4.00 2.8151 0.287 0.0 0.0 24.1 0.0
+5.00 2.8201 -0.001 0.0 0.0 24.1 0.0
+6.00 2.8222 -0.278 11.1 -7.3 23.8 0.2
+7.00 2.8176 -0.541 17.0 -13.6 22.7 0.6
+8.00 2.8055 -0.786 32.4 -23.0 20.7 1.4
+9.00 2.7856 -1.008 47.2 -33.2 17.9 2.4
+10.00 2.7578 -1.204 56.3 -38.9 14.2 3.6
+11.00 2.7225 -1.369 70.1 -48.4 9.8 5.0
+12.00 2.6808 -1.501 76.3 -51.4 4.8 6.5
+13.00 2.6346 -1.599 85.7 -58.5 0.7 8.0
+14.00 2.5857 -1.663 85.6 -58.3 5.3 9.4
+15.00 2.5375 -1.695 78.3 -55.3 9.5 10.5
+16.00 2.4899 -1.700 80.1 -56.8 13.1 11.5
+17.00 2.4436 -1.680 75.0 -53.1 16.1 12.3
+18.00 2.3995 -1.640 66.2 -48.4 18.6 12.9
+19.00 2.3569 -1.581 68.7 -49.8 20.5 13.5
+20.00 2.3159 -1.506 66.2 -47.7 22.2 14.0
+21.00 2.2774 -1.417 61.3 -43.6 23.4 14.4
+22.00 2.2420 -1.317 54.1 -38.7 24.1 14.7
+23.00 2.2104 -1.209 44.9 -33.8 24.2 14.9
+24.00 2.1832 -1.095 37.3 -29.3 23.7 14.9
+25.00 2.1602 -0.979 32.1 -25.5 22.7 14.8
+26.00 2.1414 -0.864 25.4 -20.7 21.3 14.5
+27.00 2.1264 -0.751 20.5 -16.7 19.6 14.2
+28.00 2.1148 -0.641 15.3 -12.7 17.8 13.9
+29.00 2.1064 -0.537 11.2 -9.7 16.0 13.6
+30.00 2.1005 -0.437 8.1 -7.7 14.3 13.2
+31.00 2.0969 -0.344 5.0 -5.6 12.8 12.9
+32.00 2.0952 -0.255 3.2 -4.0 11.6 12.5
+33.00 2.0951 -0.171 1.9 -2.6 10.8 12.2
+34.00 2.0964 -0.092 0.4 -0.9 10.5 11.9
+35.00 2.0986 -0.016 0.0 0.0 10.6 11.7
+36.00 2.1011 0.057 0.0 0.0 10.9 11.4
+37.00 2.1037 0.129 0.0 0.0 11.4 11.2
+38.00 2.1064 0.199 0.0 0.0 12.0 11.0
+39.00 2.1091 0.270 0.0 0.0 12.6 10.8
+40.00 2.1119 0.340 0.0 0.0 13.3 10.6
+41.00 2.1147 0.412 0.0 0.0 13.9 10.5
+42.00 2.1175 0.485 0.0 0.0 14.5 10.3
+43.00 2.1204 0.559 0.0 0.0 15.1 10.1
+44.00 2.1232 0.636 0.0 0.0 15.6 9.9
+45.00 2.1261 0.716 0.0 0.0 16.0 9.8
+46.00 2.1289 0.799 0.0 0.0 16.5 9.6
+47.00 2.1318 0.885 0.0 0.0 16.9 9.4
+48.00 2.1346 0.974 0.0 0.0 17.2 9.2
+49.00 2.1374 1.068 0.0 0.0 17.5 9.1
+50.00 2.1402 1.165 0.0 0.0 17.8 8.9
+51.00 2.1429 1.266 0.0 0.0 18.0 8.7
+52.00 2.1456 1.372 0.0 0.0 18.3 8.6
+53.00 2.1483 1.482 0.0 0.0 18.5 8.4
+54.00 2.1509 1.597 0.0 0.0 18.6 8.2
+55.00 2.1535 1.717 0.0 0.0 18.8 8.0
+56.00 2.1561 1.842 0.0 0.0 18.9 7.9
+57.00 2.1586 1.972 0.0 0.0 19.1 7.7
+58.00 2.1611 2.106 0.0 0.0 19.2 7.5
+59.00 2.1635 2.246 0.0 0.0 19.3 7.4
+60.00 2.1659 2.392 0.0 0.0 19.3 7.2
+61.00 2.1682 2.542 0.0 0.0 19.4 7.0
+62.00 2.1704 2.698 0.0 0.0 19.5 6.9
+63.00 2.1727 2.860 0.0 0.0 19.5 6.7
+64.00 2.1748 3.027 0.0 0.0 19.6 6.5
+65.00 2.1769 3.200 0.0 0.0 19.6 6.4
+66.00 2.1790 3.378 0.0 0.0 19.6 6.2
+67.00 2.1810 3.562 0.0 0.0 19.7 6.0
+68.00 2.1829 3.752 0.0 0.0 19.7 5.9
+69.00 2.1848 3.947 0.0 0.0 19.7 5.7
+70.00 2.1866 4.148 0.0 0.0 19.7 5.5
+71.00 2.1884 4.349 0.0 0.0 70.4 32.0
+72.00 2.1902 4.520 0.0 0.0 70.1 30.9
+73.00 2.1918 4.656 0.0 0.0 69.8 29.8
+74.00 2.1934 4.759 0.0 0.0 69.5 28.7
+75.00 2.1950 4.827 0.0 0.0 69.2 27.6
+76.00 2.1982 4.874 0.0 0.0 105.5 7.9
+77.00 2.2026 4.959 0.0 0.0 105.3 7.7
+78.00 2.2068 5.092 0.0 0.0 105.1 7.7
+79.00 2.2109 5.272 0.0 0.0 105.0 7.6
+80.00 2.2147 5.499 0.0 0.0 104.9 7.5
+81.00 2.2173 5.767 0.0 0.0 20.6 7.5
+82.00 2.2189 6.045 0.0 0.0 20.6 7.5
+83.00 2.2204 6.329 0.0 0.0 20.6 7.5
+84.00 2.2219 6.619 0.0 0.0 20.6 7.4
+85.00 2.2234 6.915 0.0 0.0 20.6 7.4
+86.00 2.2248 7.218 0.0 0.0 20.7 7.4
+87.00 2.2262 7.526 0.0 0.0 20.7 7.4
+88.00 2.2275 7.841 0.0 0.0 20.7 7.4
+89.00 2.2288 8.162 0.0 0.0 20.7 7.4
+90.00 2.2301 8.490 0.0 0.0 20.7 7.3
+91.00 2.2313 8.823 0.0 0.0 20.7 7.3
+92.00 2.2324 9.163 0.0 0.0 20.7 7.3
+93.00 2.2335 9.509 0.0 0.0 20.7 7.3
+94.00 2.2346 9.861 0.0 0.0 20.7 7.3
+95.00 2.2356 10.220 0.0 0.0 20.7 7.3
+96.00 2.2366 10.585 0.0 0.0 20.7 7.2
+97.00 2.2375 10.956 0.0 0.0 20.7 7.2
+98.00 1.1192 11.258 0.0 0.0 28.8 17.9
+99.00 1.0600 11.422 0.0 0.0 28.0 18.5
+100.00 1.0621 11.592 0.0 0.0 27.4 18.5
+101.00 1.0641 11.716 0.0 0.0 26.8 18.4
+events turf-yield@12.15, turf-lift@101.90
+top hand held at the grip limit in the turf: never
+-- stopped: none found --
+-- biting (single-ball 4 m/s up 0.01 m dip -0.02 s jab 5.000 mm) --
+1.00 3.7816 1.679 0.0 0.0 33.5 0.0
+2.00 3.7890 1.231 0.0 0.0 33.5 0.0
+3.00 3.7963 0.801 0.0 0.0 33.6 0.0
+4.00 3.8035 0.390 0.0 0.0 33.6 0.0
+5.00 3.8106 -0.002 0.0 0.0 33.7 0.0
+6.00 3.8131 -0.373 11.0 -8.9 33.1 0.3
+7.00 3.8056 -0.720 33.6 -23.4 31.3 1.0
+8.00 3.7865 -1.034 53.9 -36.6 28.1 2.1
+9.00 3.7561 -1.311 72.0 -48.3 23.5 3.7
+10.00 3.7143 -1.543 90.9 -60.1 17.7 5.6
+11.00 3.6642 -1.726 98.8 -66.0 11.2 7.5
+12.00 3.6104 -1.860 100.3 -68.4 5.0 9.2
+13.00 3.5566 -1.949 96.2 -67.4 0.8 10.6
+14.00 3.5037 -1.997 91.4 -65.5 5.1 11.7
+15.00 3.4521 -2.009 85.0 -62.2 8.9 12.6
+16.00 3.4017 -1.989 74.8 -56.1 12.1 13.4
+17.00 3.3528 -1.941 74.5 -55.3 14.8 14.0
+18.00 3.3064 -1.866 76.5 -56.5 17.0 14.6
+19.00 3.2625 -1.769 71.5 -53.2 18.7 15.1
+20.00 3.2208 -1.651 62.1 -46.4 20.1 15.5
+21.00 3.1818 -1.515 62.7 -45.4 21.1 15.9
+22.00 3.1465 -1.363 57.3 -42.0 21.6 16.1
+23.00 3.1158 -1.198 45.4 -33.7 21.6 16.2
+24.00 3.0916 -1.024 35.4 -26.9 20.6 15.9
+25.00 3.0739 -0.846 21.9 -19.1 19.0 15.5
+26.00 3.0620 -0.667 14.9 -12.7 16.9 14.9
+27.00 3.0549 -0.490 6.2 -7.6 14.7 14.2
+28.00 3.0523 -0.316 2.7 -4.1 12.8 13.6
+29.00 3.0526 -0.144 0.0 -0.5 11.5 13.0
+30.00 3.0550 0.025 0.0 0.0 10.9 12.5
+31.00 3.0577 0.193 0.0 0.0 11.0 12.1
+32.00 3.0605 0.362 0.0 0.0 11.6 11.8
+33.00 3.0635 0.533 0.0 0.0 12.5 11.5
+34.00 3.0665 0.706 0.0 0.0 13.5 11.2
+35.00 3.0695 0.884 0.0 0.0 14.6 10.9
+36.00 3.0726 1.066 0.0 0.0 15.7 10.7
+37.00 3.0757 1.253 0.0 0.0 16.7 10.5
+38.00 3.0789 1.432 0.0 0.0 435.0 225.9
+39.00 3.0822 1.456 0.0 0.0 435.0 218.8
+40.00 3.0853 1.289 0.0 0.0 435.0 211.9
+41.00 3.0883 0.932 0.0 0.0 435.0 205.3
+42.00 3.0912 0.382 0.0 0.0 433.8 198.7
+43.00 3.0905 -0.329 26.2 -16.2 435.0 173.7
+44.00 3.0661 -0.901 86.0 -50.7 435.0 164.4
+45.00 3.0202 -1.240 118.3 -71.0 435.0 154.8
+46.00 2.9686 -1.336 104.3 -64.8 435.0 146.2
+47.00 2.9270 -1.193 67.4 -44.9 434.6 139.6
+48.00 2.9050 -0.843 22.8 -19.4 7.6 16.8
+49.00 2.8976 -0.452 2.0 -4.9 7.4 15.0
+50.00 2.8976 -0.064 0.0 -0.5 7.5 13.4
+51.00 2.8996 0.322 0.0 0.0 8.3 12.2
+52.00 2.9016 0.707 0.0 0.0 9.4 11.4
+53.00 2.9036 1.092 0.0 0.0 10.6 10.7
+54.00 2.9055 1.480 0.0 0.0 11.8 10.2
+55.00 2.9074 1.870 0.0 0.0 13.0 9.8
+56.00 2.9093 2.263 0.0 0.0 14.1 9.4
+57.00 2.9111 2.661 0.0 0.0 15.1 9.1
+58.00 2.9130 3.064 0.0 0.0 21.7 10.7
+59.00 2.9151 3.473 0.0 0.0 21.3 10.6
+60.00 2.9172 3.890 0.0 0.0 21.2 10.6
+61.00 2.9191 4.313 0.0 0.0 21.3 10.5
+62.00 2.9210 4.745 0.0 0.0 21.5 10.5
+63.00 2.9229 5.184 0.0 0.0 21.7 10.4
+64.00 2.9247 5.631 0.0 0.0 22.0 10.4
+65.00 2.9264 6.087 0.0 0.0 22.3 10.4
+66.00 2.9280 6.552 0.0 0.0 22.6 10.3
+67.00 2.9296 7.025 0.0 0.0 23.0 10.3
+68.00 2.9311 7.507 0.0 0.0 23.4 10.3
+69.00 2.9325 7.998 0.0 0.0 23.7 10.2
+70.00 2.9339 8.499 0.0 0.0 23.9 10.2
+71.00 2.9352 9.009 0.0 0.0 24.1 10.2
+72.00 1.4278 9.418 0.0 0.0 35.4 24.5
+73.00 1.4014 9.658 0.0 0.0 34.3 24.8
+74.00 1.4042 9.652 0.0 0.0 33.6 24.8
+events turf-yield@9.79, impact-head-deep@14.11, grip-limit@37.61, turf-lift@74.22
+top hand held at the grip limit in the turf: from 42.65 ms
+== bounds (design §6.2, §8) ==
+-- turfYield 172000 Pa --
+graze (single-ball 3 m/s up 0.01 m dip -0.005 s jab 1.000 mm): occurs; head/turf 5.33–38.54, 38.58–39.27 ms, peak 1.849 mm, lowest -1.849 mm; face 98.94–99.98 ms; speed along aim at the turf 2.8217, at the ball 2.1674 m/s; impact 103.81 ms; finish 602.63 ms; turf-yield,turf-lift
+stopped: none found on the default lawn
+biting (single-ball 4 m/s up 0.01 m dip -0.02 s jab 5.000 mm): occurs; head/turf 5.25–33.52, 33.80–33.89, 41.82–50.26 ms, peak 2.219 mm, lowest -2.220 mm; face 71.89–72.88 ms; speed along aim at the turf 3.8123, at the ball 2.8255 m/s; impact 77.44 ms; finish 577.63 ms; turf-yield,impact-head-deep,grip-limit,turf-lift
+verdict: FAIL; 5 grazes, fractions of U 0.0000, 0.0000, 0.0000, 0.0000, 0.0000; Gugan's 0.400 (0.295–0.463)
+-- turfYield 310000 Pa --
+graze (single-ball 3 m/s up 0.01 m dip -0.005 s jab 1.000 mm): occurs; head/turf 5.33–32.61, 32.65–33.37, 33.68–34.12 ms, peak 1.692 mm, lowest -1.692 mm; face 96.89–97.93 ms; speed along aim at the turf 2.8217, at the ball 2.2500 m/s; impact 101.56 ms; finish 599.64 ms; turf-lift
+stopped: none found on the default lawn
+biting (single-ball 4 m/s up 0.01 m dip -0.02 s jab 5.000 mm): occurs; head/turf 5.25–27.35, 27.50–27.82, 42.90–50.20 ms, peak 1.959 mm, lowest -1.959 mm; face 70.89–71.86 ms; speed along aim at the turf 3.8123, at the ball 2.9835 m/s; impact 73.89 ms; finish 575.72 ms; turf-yield,grip-limit,turf-lift
+verdict: FAIL; 6 grazes, fractions of U 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000; Gugan's 0.400 (0.295–0.463)
+-- turfMatStrength 73000 Pa --
+graze (single-ball 3 m/s up 0.01 m dip -0.005 s jab 1.000 mm): occurs; head/turf 5.33–33.64, 33.85–34.36 ms, peak 1.697 mm, lowest -1.698 mm; face 94.47–95.49 ms; speed along aim at the turf 2.8217, at the ball 2.3094 m/s; impact 98.98 ms; finish 596.85 ms; turf-yield,turf-lift
+stopped: none found on the default lawn
+biting (single-ball 4 m/s up 0.01 m dip -0.02 s jab 5.000 mm): occurs; head/turf 5.25–29.21, 29.50–29.62, 42.76–49.84 ms, peak 2.005 mm, lowest -2.005 mm; face 69.17–70.13 ms; speed along aim at the turf 3.8123, at the ball 3.0734 m/s; impact 72.07 ms; finish 573.95 ms; turf-yield,impact-head-deep,grip-limit,turf-lift
+verdict: FAIL; 6 grazes, fractions of U 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000; Gugan's 0.400 (0.295–0.463)
+-- turfMatStrength 138000 Pa --
+graze (single-ball 3 m/s up 0.01 m dip -0.005 s jab 1.000 mm): occurs; head/turf 5.33–34.05, 34.19–34.83, 35.33–35.56 ms, peak 1.703 mm, lowest -1.704 mm; face 100.27–101.31 ms; speed along aim at the turf 2.8217, at the ball 2.1634 m/s; impact 105.18 ms; finish 603.68 ms; turf-yield,turf-lift
+stopped: none found on the default lawn
+biting (single-ball 4 m/s up 0.01 m dip -0.02 s jab 5.000 mm): occurs; head/turf 5.25–29.43, 29.53–29.91, 42.41–50.24 ms, peak 2.013 mm, lowest -2.014 mm; face 73.59–74.57 ms; speed along aim at the turf 3.8123, at the ball 2.7870 m/s; impact 79.75 ms; finish 579.07 ms; turf-yield,impact-head-deep,grip-limit,turf-lift
+verdict: FAIL; 6 grazes, fractions of U 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000; Gugan's 0.400 (0.295–0.463)
+== jab: the AC stop at 3 m/s (design §7.3) ==
+jab 0.000 mm: U 2.9927 m/s, second tap 0.0000 m/s, fraction of U 0.0000, grounds never, does not qualify; lowest 1.646 mm; turf-lift
+jab 0.500 mm: U 2.9927 m/s, second tap 0.0000 m/s, fraction of U 0.0000, grounds never, does not qualify; lowest 1.145 mm; turf-lift
+jab 1.000 mm: U 2.9927 m/s, second tap 0.0000 m/s, fraction of U 0.0000, grounds never, does not qualify; lowest 0.644 mm; turf-lift
+jab 1.500 mm: U 2.9927 m/s, second tap 0.0000 m/s, fraction of U 0.0000, grounds never, does not qualify; lowest 0.142 mm; turf-lift
+jab 2.000 mm: U 2.9927 m/s, second tap 0.0000 m/s, fraction of U 0.0000, grounds 18.34 ms, graze; lowest -0.377 mm; turf-lift
+jab 2.500 mm: U 2.9927 m/s, second tap 0.0000 m/s, fraction of U 0.0000, grounds 17.20 ms, graze; lowest -0.816 mm; turf-lift
+jab 3.000 mm: U 2.9927 m/s, second tap 0.0000 m/s, fraction of U 0.0000, grounds 16.39 ms, graze; lowest -1.169 mm; turf-lift
+jab 3.500 mm: U 2.9927 m/s, second tap 0.0000 m/s, fraction of U 0.0000, grounds 15.69 ms, graze; lowest -1.470 mm; turf-lift
+jab 4.000 mm: U 2.9927 m/s, second tap 0.0000 m/s, fraction of U 0.0000, grounds 15.05 ms, graze; lowest -1.745 mm; turf-lift,turf-yield
+jab 4.500 mm: U 2.9927 m/s, second tap 0.0000 m/s, fraction of U 0.0000, grounds 14.56 ms, graze; lowest -1.999 mm; turf-lift,turf-yield
+jab 5.000 mm: U 2.9927 m/s, second tap 0.0000 m/s, fraction of U 0.0000, grounds 14.15 ms, qualifies, deep; lowest -2.240 mm; turf-lift,turf-yield,impact-head-deep
+jab 5.500 mm: U 2.9927 m/s, second tap 0.0000 m/s, fraction of U 0.0000, grounds 13.78 ms, qualifies, deep; lowest -2.446 mm; turf-lift,turf-yield,impact-head-deep
+jab 6.000 mm: U 2.9927 m/s, second tap 0.0000 m/s, fraction of U 0.0000, grounds 13.46 ms, qualifies, deep; lowest -2.641 mm; turf-lift,turf-yield,impact-head-deep
+jab 6.500 mm: U 2.9927 m/s, second tap 0.0000 m/s, fraction of U 0.0000, grounds 13.16 ms, qualifies, deep; lowest -2.830 mm; turf-lift,turf-yield,impact-head-deep
+jab 7.000 mm: U 2.9927 m/s, second tap 0.0000 m/s, fraction of U 0.0000, grounds 12.88 ms, qualifies, deep; lowest -3.016 mm; turf-lift,turf-yield,impact-head-deep,follow-turf-yield,follow-head-deep
+jab 7.500 mm: U 2.9927 m/s, second tap 0.0000 m/s, fraction of U 0.0000, grounds 12.63 ms, qualifies, deep; lowest -3.201 mm; turf-lift,turf-yield,impact-head-deep,follow-turf-yield,follow-head-deep
+jab 8.000 mm: U 2.9927 m/s, second tap 0.0000 m/s, fraction of U 0.0000, grounds 12.38 ms, qualifies, deep; lowest -3.383 mm; turf-lift,turf-yield,impact-head-deep,follow-head-deep,follow-turf-yield
+verdict: FAIL; 6 grazes, fractions of U 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000; Gugan's 0.400 (0.295–0.463)
+== jab against the hands' check (design §7.3, §8) ==
+stop-ac 3 m/s jab 0.000 mm: second tap 0.0000 m/s (0.0000U); hands' peak check 53.5 N, impulse 0.2576 N·s; turf braking 0.0000 N·s; turf-lift
+stop-ac 3 m/s jab 2.000 mm: second tap 0.0000 m/s (0.0000U); hands' peak check 53.4 N, impulse 0.2575 N·s; turf braking 0.0129 N·s; turf-lift
+stop-ac 4 m/s jab 0.000 mm: second tap 0.0000 m/s (0.0000U); hands' peak check 73.4 N, impulse 0.3584 N·s; turf braking 0.0000 N·s; turf-lift
+stop-ac 4 m/s jab 2.000 mm: second tap 0.0000 m/s (0.0000U); hands' peak check 73.2 N, impulse 0.3594 N·s; turf braking 0.0523 N·s; turf-lift
+== cost (design §9; plan decision 21) ==
+-- canonical setups at 3 m/s (the no-turf baseline) --
+single-ball 3 m/s: impact 2000 steps, 0 grounded, columns per grounded step mean 0.0 worst 0, total 0; follow-through 97644 steps, 0 grounded, columns per grounded step mean 0.0 worst 0, total 0; wall 25 ms impact, 143 ms follow-through; turf-lift
+drive 3 m/s: impact 30818 steps, 0 grounded, columns per grounded step mean 0.0 worst 0, total 0; follow-through 75434 steps, 0 grounded, columns per grounded step mean 0.0 worst 0, total 0; wall 269 ms impact, 117 ms follow-through; turf-lift,impact-off-face
+stop-ac 3 m/s: impact 4000 steps, 0 grounded, columns per grounded step mean 0.0 worst 0, total 0; follow-through 23370 steps, 0 grounded, columns per grounded step mean 0.0 worst 0, total 0; wall 43 ms impact, 37 ms follow-through; turf-lift
+stop-gc 3 m/s: impact 2000 steps, 0 grounded, columns per grounded step mean 0.0 worst 0, total 0; follow-through 33870 steps, 0 grounded, columns per grounded step mean 0.0 worst 0, total 0; wall 35 ms impact, 60 ms follow-through; grip-limit,turf-lift,follow-grip-limit
+half-roll 3 m/s: impact 13436 steps, 0 grounded, columns per grounded step mean 0.0 worst 0, total 0; follow-through 158606 steps, 1335 grounded, columns per grounded step mean 1209.8 worst 2046, total 1615038; wall 138 ms impact, 596 ms follow-through; turf-lift,turf-lift
+full-roll 3 m/s: impact 30770 steps, 0 grounded, columns per grounded step mean 0.0 worst 0, total 0; follow-through 102354 steps, 3615 grounded, columns per grounded step mean 372.9 worst 527, total 1347942; wall 269 ms impact, 432 ms follow-through; turf-lift,turf-lift,follow-turf-yield,follow-head-deep
+pass-roll 3 m/s: impact 18683 steps, 0 grounded, columns per grounded step mean 0.0 worst 0, total 0; follow-through 60911 steps, 4435 grounded, columns per grounded step mean 313.8 worst 465, total 1391594; wall 203 ms impact, 352 ms follow-through; turf-lift,turf-lift,follow-turf-yield,follow-head-deep
+-- with the head in the turf --
+graze (single-ball 3 m/s up 0.01 m dip -0.005 s jab 1.000 mm): impact 20380 steps, 6044 grounded, columns per grounded step mean 261.8 worst 341, total 1582271; follow-through 99638 steps, 0 grounded, columns per grounded step mean 0.0 worst 0, total 0; wall 382 ms impact, 156 ms follow-through; turf-yield,turf-lift
+biting (single-ball 4 m/s up 0.01 m dip -0.02 s jab 5.000 mm): impact 14976 steps, 6495 grounded, columns per grounded step mean 297.1 worst 434, total 1929378; follow-through 100280 steps, 0 grounded, columns per grounded step mean 0.0 worst 0, total 0; wall 408 ms impact, 154 ms follow-through; turf-yield,impact-head-deep,grip-limit,turf-lift
+stop-ac 3 m/s jab 4.500 mm (the deepest graze): impact 4049 steps, 1139 grounded, columns per grounded step mean 459.7 worst 558, total 523590; follow-through 15964 steps, 12331 grounded, columns per grounded step mean 326.7 worst 465, total 4028574; wall 124 ms impact, 691 ms follow-through; turf-lift,turf-yield
+half-roll 4 m/s (follow-turf-yield): impact 15364 steps, 0 grounded, columns per grounded step mean 0.0 worst 0, total 0; follow-through 184636 steps, 4317 grounded, columns per grounded step mean 296.9 worst 403, total 1281822; wall 133 ms impact, 598 ms follow-through; turf-lift,turf-lift,follow-turf-yield,follow-head-deep,follow-cap
+== power: the graze's loss (user, 2026-10-16) ==
+single-ball 3 m/s up 0.01 m dip -0.005 s jab 1.000 mm: at the ball 2.2377 m/s (face 97.21 ms); single-ball 3 m/s up 0.01 m dip -0.005 s jab 1.000 mm at up 0: at the ball 3.0000 m/s (face 5.01 ms); fraction of the clear stroke's 0.7459; on entering the turf 2.8217 m/s (5.33 ms), at the ball 0.7930 of it
+planned path, single-ball 3 m/s up 0.01 m dip -0.005 s jab 1.000 mm: contact at 75.45 ms; 2.7946 m/s at 0.01 ms (measured 2.7946), 2.8217 at the turf (5.33 ms), 3.0000 at contact; the clear stroke's path 75.45 ms before its contact: 2.7946 m/s, at its contact (5.00 ms) 3.0000 m/s

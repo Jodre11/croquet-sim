@@ -6,7 +6,7 @@ import { simulateShot } from "../../../src/engine/shot";
 import { ENGINE_VERSION, simulateFreeMotion } from "../../../src/engine/simulate";
 import { buildContact } from "../../../src/engine/swing/buildContact";
 import type { BallState, BallStates, SurfaceProps, World } from "../../../src/engine/types";
-import { obstaclesOf, uniformLawn } from "../../../src/engine/world";
+import { obstaclesOf } from "../../../src/engine/world";
 import { obstacleContact } from "../../../src/engine/impact/contacts";
 import { IMPACT_DT, type ImpactBall } from "../../../src/engine/impact/integrate";
 import {
@@ -20,7 +20,7 @@ import { prepareTrack, type Push } from "../../../src/engine/impact/track";
 import { bedLawOf, staticSink } from "../../../src/engine/impact/turfBed";
 import type { BoxShape } from "../../../src/engine/impact/shape";
 import type { ContactState, Coupling, Hands, StrokeMode, SwingArc, TrackDrive } from "../../../src/engine/impact/types";
-import { TEST_BALL, TEST_TURF, ballAt, hoopWithUprightAt, testWorld } from "../support/fixtures";
+import { TEST_BALL, ballAt, hoopWithUprightAt, testWorld } from "../support/fixtures";
 import {
     TEST_BOX,
     TEST_CHAIN,
@@ -52,8 +52,8 @@ const SUNK = vec3(
 );
 
 describe("simulateImpact", () => {
-    it("is version 0.11.0", () => {
-        expect(ENGINE_VERSION).toBe("0.11.0");
+    it("is version 0.12.0", () => {
+        expect(ENGINE_VERSION).toBe("0.12.0");
     });
 
     it("starts a centre-struck ball rolling at 5/7 of its launch speed in phase 2", () => {
@@ -365,18 +365,6 @@ describe("validation", () => {
     it("accepts touching balls", () => {
         expect(() => simulateImpact(ok, { blue: BLUE, red: ballAt(5 + 2 * R, 0) }, WORLD)).not.toThrow();
     });
-
-    it("accepts a zero turf restitution at a ball, which no ball law reads (P2b.2b.2b.2a design §4.6)", () => {
-        const world = testWorld({
-            lawn: uniformLawn(30, 40, {
-                slidingFriction: 0.3,
-                rollingResistance: 0.05,
-                ...TEST_TURF,
-                turfRestitution: 0,
-            }),
-        });
-        expect(() => simulateImpact(ok, { blue: BLUE }, world)).not.toThrow();
-    });
 });
 
 describe("the balls' static sinks", () => {
@@ -591,6 +579,10 @@ describe("simulateImpact with a tracked drive", () => {
             withHands({ pushResponseTime: Infinity }),
             /hands\.pushResponseTime must be finite/,
         ],
+        ["no grip limit", withHands({ gripLimit: 0 }), /hands\.gripLimit must be a positive finite number/],
+        ["a negative grip limit", withHands({ gripLimit: -1 }), /hands\.gripLimit must be a positive finite number/],
+        ["a NaN grip limit", withHands({ gripLimit: NaN }), /hands\.gripLimit must be finite/],
+        ["an infinite grip limit", withHands({ gripLimit: Infinity }), /hands\.gripLimit must be finite/],
         [
             "a chain with no hand mass",
             withHands({ chain: { ...TEST_CHAIN, handMass: 0 } }),

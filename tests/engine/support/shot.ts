@@ -25,6 +25,7 @@ import { TEST_BALL } from "./fixtures";
 import {
     TEST_CHAIN,
     TEST_FLEX,
+    TEST_GRIP_LIMIT,
     TEST_HEAD,
     TEST_PENDULUM_FORCE,
     TEST_PUSH_FORCE,
@@ -64,10 +65,10 @@ export interface TestProfileOptions {
  * swung body is the head, as TEST_HANDS has it. Every stroke type has the same stance: level (lean 0, the top hand over
  * the socket at contact), the hands 0.8 m and 0.4 m from the socket, firm grips. Every type has the same drive: a
  * swing-mode coast with no dip or reach, a full guide, a pendulum phase at 0.8 of the push with no effort and a 1.5 m
- * hands' arc lowest halfway; the body has TEST_FLEX, TEST_PENDULUM_FORCE, TEST_PUSH_FORCE, TEST_PUSH_RESPONSE_TIME
- * and TEST_CHAIN. Every type has the same shape: the pendulum alone (share 1), by gravity alone (no effort), a 0.4 s
- * pulse or hands' tempo halving at intensity 1, and intensity 0 by default. Throws if the stance gives both a `lean`
- * and `handsAhead`.
+ * hands' arc lowest halfway; the body has TEST_FLEX, TEST_PENDULUM_FORCE, TEST_PUSH_FORCE, TEST_PUSH_RESPONSE_TIME,
+ * TEST_CHAIN and TEST_GRIP_LIMIT. Every type has the same shape: the pendulum alone (share 1), by gravity alone (no
+ * effort), a 0.4 s pulse or hands' tempo halving at intensity 1, and intensity 0 by default. Throws if the stance
+ * gives both a `lean` and `handsAhead`.
  */
 export function testProfile(o: TestProfileOptions = {}): SwingProfile {
     const mallet: SwingProfile["mallet"] = {
@@ -132,6 +133,7 @@ export function testProfile(o: TestProfileOptions = {}): SwingProfile {
             pushForce: TEST_PUSH_FORCE,
             pushResponseTime: TEST_PUSH_RESPONSE_TIME,
             chain: TEST_CHAIN,
+            gripLimit: TEST_GRIP_LIMIT,
             ...o.body,
         },
         stance: every(stance),

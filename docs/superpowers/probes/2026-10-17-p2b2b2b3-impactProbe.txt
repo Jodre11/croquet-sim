@@ -1,0 +1,45 @@
+== Stiffness sensitivity (the ball–ball time swept across its reference bounds, the bed's fitted values ×½ and ×2, as it has no bounds; the face law is Gugan's fits, not a swept time) ==
+reference                    centre 3 m/s     blue v=(3.7375, 0.0000) ωy=0.46 lift=false 3.000 ms 600 steps
+ball–ball contact 0.50 ms    centre 3 m/s     blue v=(3.7375, 0.0000) ωy=0.46 lift=false 3.000 ms 600 steps
+ball–ball contact 0.87 ms    centre 3 m/s     blue v=(3.7375, 0.0000) ωy=0.46 lift=false 3.000 ms 600 steps
+bed modulus 8.12e+7 N/m³     centre 3 m/s     blue v=(3.7375, 0.0000) ωy=0.36 lift=false 3.000 ms 600 steps
+bed modulus 3.25e+8 N/m³     centre 3 m/s     blue v=(3.7370, 0.0000) ωy=0.54 lift=false 3.000 ms 600 steps
+bed recovery 0.378 ms        centre 3 m/s     blue v=(3.7389, 0.0000) ωy=0.40 lift=false 3.000 ms 600 steps
+bed recovery 1.510 ms        centre 3 m/s     blue v=(3.7341, 0.0026) ωy=0.60 lift=false 3.000 ms 600 steps
+reference                    croquet 3 m/s    blue v=(1.4808, 0.0000) ωy=0.14 red vx=3.6145 lift=false 3.000 ms 600 steps
+ball–ball contact 0.50 ms    croquet 3 m/s    blue v=(2.2579, 0.0000) ωy=0.17 red vx=3.3820 lift=false 3.000 ms 600 steps
+ball–ball contact 0.87 ms    croquet 3 m/s    blue v=(1.2069, 0.0000) ωy=0.14 red vx=3.6100 lift=false 3.000 ms 600 steps
+bed modulus 8.12e+7 N/m³     croquet 3 m/s    blue v=(1.4808, 0.0000) ωy=0.04 red vx=3.6145 lift=false 3.000 ms 600 steps
+bed modulus 3.25e+8 N/m³     croquet 3 m/s    blue v=(1.4806, 0.0000) ωy=0.22 red vx=3.6139 lift=false 3.000 ms 600 steps
+bed recovery 0.378 ms        croquet 3 m/s    blue v=(1.4814, 0.0000) ωy=0.14 red vx=3.6156 lift=false 3.000 ms 600 steps
+bed recovery 1.510 ms        croquet 3 m/s    blue v=(1.4797, 0.0000) ωy=0.16 red vx=3.6117 lift=false 3.000 ms 600 steps
+reference                    descending 10°   blue v=(3.0544, 0.4423) ωy=31.53 lift=true 10.320 ms 2064 steps
+ball–ball contact 0.50 ms    descending 10°   blue v=(3.0544, 0.4423) ωy=31.53 lift=true 10.320 ms 2064 steps
+ball–ball contact 0.87 ms    descending 10°   blue v=(3.0544, 0.4423) ωy=31.53 lift=true 10.320 ms 2064 steps
+bed modulus 8.12e+7 N/m³     descending 10°   blue v=(3.0218, 0.4712) ωy=32.95 lift=true 12.775 ms 2555 steps
+bed modulus 3.25e+8 N/m³     descending 10°   blue v=(3.0855, 0.4109) ωy=30.14 lift=true 8.365 ms 1673 steps
+bed recovery 0.378 ms        descending 10°   blue v=(3.0418, 0.5248) ωy=33.40 lift=true 10.270 ms 2054 steps
+bed recovery 1.510 ms        descending 10°   blue v=(3.0687, 0.3465) ωy=29.39 lift=true 10.525 ms 2105 steps
+reference                    stop shot        blue v=(1.4106, 0.0000) ωy=0.35 red vx=3.5047 lift=false 3.000 ms 600 steps
+ball–ball contact 0.50 ms    stop shot        blue v=(2.1730, 0.0000) ωy=0.17 red vx=3.2809 lift=false 3.000 ms 600 steps
+ball–ball contact 0.87 ms    stop shot        blue v=(1.1437, 0.0000) ωy=0.33 red vx=3.4992 lift=false 3.000 ms 600 steps
+bed modulus 8.12e+7 N/m³     stop shot        blue v=(1.4109, 0.0000) ωy=0.23 red vx=3.5049 lift=false 3.000 ms 600 steps
+bed modulus 3.25e+8 N/m³     stop shot        blue v=(1.4098, 0.0000) ωy=0.45 red vx=3.5041 lift=false 3.000 ms 600 steps
+bed recovery 0.378 ms        stop shot        blue v=(1.4112, 0.0000) ωy=0.34 red vx=3.5057 lift=false 3.000 ms 600 steps
+bed recovery 1.510 ms        stop shot        blue v=(1.4093, 0.0000) ωy=0.38 red vx=3.5020 lift=false 3.000 ms 600 steps
+== Stop-shot probe ==
+blue z − R during transfer: -0.459 … -0.432 mm; impulse share with blue clear of the turf 0.0 %; mean contact height above red's equator -0.008 mm
+events: 
+== Crush distance (largest gap to an upright straight ahead raising 29.1.8; C29.13.1: 1–2 mm) ==
+1 m/s: 1.335 mm
+2 m/s: 2.452 mm
+3 m/s: 3.520 mm
+4 m/s: 4.548 mm
+6 m/s: 6.593 mm
+== Face–ball gaps in single clean strikes (2000 P2b.1 fuzz strokes, blue alone) ==
+978 strokes, 3 with more than one face interval; shortest gap 3375.0 µs; one-step gaps: 0
+== Impact engine time per stroke (200 runs after 20 warm-up) ==
+centre 3 m/s     600 steps: median 2.135 ms (3.559 µs/step), p99 2.666 ms, max 2.897 ms
+croquet 3 m/s    600 steps: median 4.373 ms (7.289 µs/step), p99 5.351 ms, max 5.410 ms
+descending 10°   2064 steps: median 16.340 ms (7.917 µs/step), p99 17.902 ms, max 18.236 ms
+stop shot        600 steps: median 4.533 ms (7.556 µs/step), p99 5.030 ms, max 5.157 ms

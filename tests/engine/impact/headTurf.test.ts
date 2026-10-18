@@ -1,174 +1,179 @@
 import { describe, expect, it } from "vitest";
-import { lawFromStiffness } from "../../../src/engine/impact/contactLaw";
 import { HEAD_TURF_KEY, headLowestPoint } from "../../../src/engine/impact/contacts";
+import { HEAD_REST_SPEED, headTurfLawOf } from "../../../src/engine/impact/headTurf";
 import {
     HEAD_DEEP_LIMIT,
+    IMPACT_CAP,
     IMPACT_DT,
-    TRACK_IMPACT_CAP,
+    RELEASE_STEPS,
     integrate,
-    type ImpactProbe,
+    type ImpactBall,
     type ImpactSnapshot,
 } from "../../../src/engine/impact/integrate";
-import { IDENTITY, axisAngle, type Quaternion } from "../../../src/engine/impact/rigidBody";
-import { HEAD_TURF_FRICTION, prepareImpact, simulateImpact } from "../../../src/engine/impact/simulateImpact";
-import { headOnPath, prepareTrack } from "../../../src/engine/impact/track";
-import { ZERO, length, vec3, type Vec3 } from "../../../src/engine/math/vec3";
+import { IDENTITY, axisAngle, multiply, type Quaternion } from "../../../src/engine/impact/rigidBody";
+import { prepareImpact, simulateImpact } from "../../../src/engine/impact/simulateImpact";
+import { staticSink } from "../../../src/engine/impact/turfBed";
+import type { HeadTurfLaw, MalletHead } from "../../../src/engine/impact/types";
+import { ZERO, horizontal, length, vec3, type Vec3 } from "../../../src/engine/math/vec3";
 import type { SurfaceProps } from "../../../src/engine/types";
 import { STANDARD_GRAVITY } from "../../../src/engine/world";
-import { TEST_TURF, ballAt, testWorld } from "../support/fixtures";
+import { TEST_BALL, ballAt, testWorld } from "../support/fixtures";
 import {
-    TEST_COUPLING,
-    TEST_HANDS,
+    TEST_BOX,
     TEST_HEAD,
     TEST_RHO,
+    freeBall,
     isolated,
     levelArc,
+    mirrorQuat,
+    mirrorSpin,
+    mirrorVec,
     onArc,
     recorder,
     strike,
+    testBed,
+    testHeadTurf,
     trackDrive,
 } from "../support/impact";
 
 const g = STANDARD_GRAVITY;
-const MU = 0.5;
-const LAW = lawFromStiffness(TEST_HEAD.mass, TEST_TURF.turfRestitution, TEST_TURF.turfStiffness, MU);
-/** Where the turf carries the head's whole weight: m·g/k. */
-const SINK = (TEST_HEAD.mass * g) / TEST_TURF.turfStiffness;
+const R = TEST_BALL.radius;
+const LAW = testHeadTurf();
+const rel = (a: number, b: number): number => Math.abs(a - b) / Math.abs(b);
+const same = (a: Vec3, b: Vec3): boolean => a.x === b.x && a.y === b.y && a.z === b.z;
 
-/** An undriven head with its centre at height z, falling under gravity onto the test turf. */
-function onTurf(z: number, velocity: Vec3 = ZERO, orientation: Quaternion = IDENTITY) {
+/** An undriven `head` at `position`, under gravity, on the test head–turf law (or `law`); `balls` if any. */
+function onTurf(
+    head: MalletHead,
+    position: Vec3,
+    velocity: Vec3 = ZERO,
+    orientation: Quaternion = IDENTITY,
+    law: HeadTurfLaw = LAW,
+    balls: readonly ImpactBall[] = [],
+) {
     return isolated({
-        start: { position: vec3(0, 0, z), orientation, velocity, angularVelocity: ZERO },
+        head,
+        start: { position, orientation, velocity, angularVelocity: ZERO },
         gravity: g,
-        headTurf: LAW,
+        headTurf: law,
+        balls,
     });
 }
 
-/** A probe that keeps only the last snapshot. */
-function lastStep(): ImpactProbe & { last: ImpactSnapshot | null } {
-    const probe = {
-        last: null as ImpactSnapshot | null,
-        step(s: ImpactSnapshot): void {
-            probe.last = s;
-        },
-    };
-    return probe;
-}
-
-describe("the head–turf pair", () => {
-    it("settles a level head lowered onto the turf at m·g/k, without turning it", () => {
+describe("the head–turf pair in the impact (P2b.2b.2b.3 design §4)", () => {
+    it("ends a dropped box's impact with impact-head-stopped, RELEASE_STEPS after it first rests in the turf", () => {
+        // §4.6. A level box set down with no horizontal speed never loads its spring, so it is at rest in the turf
+        // once its centre's speed, vertical included (user ruling 2026-10-16), stays under HEAD_REST_SPEED: from the
+        // first step whose starting state is that slow and every later one is too, traced through the probe (the
+        // snapshot at t is the state the step starting at t reads; the last is read by no step). With no face contact
+        // the impact ends RELEASE_STEPS after that step's start.
         const probe = recorder();
-        const run = integrate(onTurf(TEST_RHO), { cap: 0.05, probe });
-        // Pre-flight: 0.28 % off m·g/k; the turf force 0.34 % off m·g, both at the cap.
-        expect(Math.abs(0 - headLowestPoint(run.head, TEST_HEAD) - SINK) / SINK).toBeLessThan(0.01);
-        expect(length(run.head.angularVelocity)).toBe(0);
-        expect(run.timeline[HEAD_TURF_KEY]).toHaveLength(1);
-        expect(run.peakPenetration[HEAD_TURF_KEY]).toBeGreaterThan(SINK);
-        expect(run.events.map((e) => e.kind)).toEqual(["impact-cap"]);
-        expect(probe.snapshots[0]?.headTurf).toEqual(ZERO);
-        const last = probe.snapshots[probe.snapshots.length - 1] as ImpactSnapshot;
-        expect(Math.abs((last.headTurf as Vec3).z - TEST_HEAD.mass * g) / (TEST_HEAD.mass * g)).toBeLessThan(0.01);
+        const run = integrate(onTurf(TEST_BOX, vec3(0, 0, TEST_RHO + 1e-4)), { cap: 0.05, probe });
+        const line = run.timeline[HEAD_TURF_KEY] ?? [];
+        expect(line.length).toBeGreaterThan(0);
+        expect(run.events.map((e) => e.kind)).toEqual(["impact-head-stopped"]);
+        const read = probe.snapshots.slice(0, -1);
+        const moving = read.map((s) => length(s.head.velocity) >= HEAD_REST_SPEED).lastIndexOf(true);
+        const rest = (read[moving + 1] as ImpactSnapshot).t;
+        expect(rest).toBeGreaterThan(line[0]?.start as number);
+        expect(run.duration).toBeCloseTo(rest + RELEASE_STEPS * IMPACT_DT, 12);
     });
 
-    it("slows a head sliding sideways at μ·g while it slides, and records the slide's closed form", () => {
-        // Sliding along body y at the static sink: friction at the barrel's bottom line also spins the head about its
-        // axis, so its bottom slips at v₀ − 3·μ·g·t (I = m·r²/2) and stops slipping at t = v₀/(3·μ·g), having slid
-        // v₀²/(6·μ·g). Pre-flight: the deceleration within 1e-12 of μ·g, the slide 0.39 % long (the bottom first
-        // bounces into its sink).
-        const v0 = 1;
-        const probe = recorder();
-        const run = integrate(onTurf(TEST_RHO - SINK, vec3(0, v0, 0)), { cap: 0.1, probe });
-        const stops = v0 / (3 * MU * g);
-        const mid = probe.snapshots.find((s) => s.t >= stops / 2) as ImpactSnapshot;
-        const expected = v0 - MU * g * mid.t;
-        expect(Math.abs(mid.head.velocity.y - expected) / (MU * g * mid.t)).toBeLessThan(0.01);
-        const slide = (v0 * v0) / (6 * MU * g);
-        expect(Math.abs((run.headTurfSlide as number) - slide) / slide).toBeLessThan(0.01);
+    it("stops a box sliding on the turf dead: impact-head-stopped, not impact-cap", () => {
+        // §4.6, §7.4 regime 2 in small. TEST_BOX set down moving 0.1 m/s along aim: at its micrometre sink the sole's
+        // friction, about µ·m·g, does nearly all the braking (the ploughing is a few hundredths of a newton), so it
+        // stops within about v²/(2·µ·g), 1.0 mm, and comes to rest well inside the cap.
+        const v = 0.1;
+        const run = integrate(onTurf(TEST_BOX, vec3(0, 0, TEST_RHO), vec3(v, 0, 0)), { cap: 0.1 });
+        expect(run.events.map((e) => e.kind)).toEqual(["impact-head-stopped"]);
+        expect(length(horizontal(run.head.velocity))).toBeLessThan(HEAD_REST_SPEED);
+        expect(run.head.position.x).toBeGreaterThan(0);
+        expect(run.head.position.x).toBeLessThan((1.5 * v * v) / (2 * LAW.friction * g));
+    });
+
+    it("ends a struck impact RELEASE_STEPS after the ball leaves the face, the head still sliding on the turf", () => {
+        // §4.6. A head sliding on the turf at 0.15 m/s strikes a ball resting on its bed 2 mm ahead. Once the ball has
+        // been struck and the drive is done, the head's turf contact is the follow-through's (user ruling
+        // 2026-10-16) and no longer holds the impact open, so the impact ends RELEASE_STEPS after the face interval,
+        // well within IMPACT_CAP, the head still sliding. P2b.2b.2b.3: the turf strike (was: ends at 24.42 ms, the
+        // head at rest, 0.61 mm/s; now 21.64 ms, sliding at 13.1 mm/s). TEST_HEAD, as a force table's face–ball pair
+        // is the cylinder's alone (faceContact).
+        const sink = staticSink(0.117 + R, 0, R, TEST_BALL.mass * g, testBed());
+        const blue = freeBall("blue", vec3(TEST_HEAD.length / 2 + 0.002 + R, 0, R - sink), ZERO, testBed());
+        const run = integrate(onTurf(TEST_HEAD, vec3(0, 0, TEST_RHO), vec3(0.15, 0, 0), IDENTITY, LAW, [blue]));
+        const kinds = run.events.map((e) => e.kind);
+        const face = run.timeline["face/blue"] ?? [];
+        const turf = run.timeline[HEAD_TURF_KEY] ?? [];
+        expect(face).toHaveLength(1);
+        expect(kinds).not.toContain("impact-cap");
+        expect(kinds).not.toContain("impact-head-stopped");
+        expect(run.duration).toBeCloseTo((face[0]?.end as number) + RELEASE_STEPS * IMPACT_DT, 12);
+        expect(run.duration).toBeLessThan(IMPACT_CAP);
+        expect(turf[turf.length - 1]?.end).toBe(run.duration);
+        expect(length(horizontal(run.head.velocity))).toBeGreaterThan(HEAD_REST_SPEED);
+    });
+
+    it("raises turf-yield once, when a column first yields", () => {
+        // A box pitched 0.3 rad meets the turf on its edge at 1 m/s, its lowest point starting 1 mm above the plane:
+        // the few columns under the edge pass the yield depth (0.67 mm on the test law) within a millisecond, and
+        // more yield after; the event is raised once.
+        const q = axisAngle(vec3(0, 1, 0), 0.3);
+        const placed = { position: vec3(0, 0, 0.1), orientation: q, velocity: ZERO, angularVelocity: ZERO };
+        const z = 0.1 - headLowestPoint(placed, TEST_BOX) + 0.001;
+        const run = integrate(onTurf(TEST_BOX, vec3(0, 0, z), vec3(0, 0, -1), q), { cap: 0.02 });
+        expect(run.events.filter((e) => e.kind === "turf-yield")).toHaveLength(1);
     });
 
     it("raises impact-head-deep just over HEAD_DEEP_LIMIT, and not just under", () => {
-        const over = integrate(onTurf(TEST_RHO - HEAD_DEEP_LIMIT - 1e-6), { cap: 1e-3 });
+        // Its measure is the head's lowest point, as before (design §4.4): a stroke gone beyond a graze.
+        const over = integrate(onTurf(TEST_HEAD, vec3(0, 0, TEST_RHO - HEAD_DEEP_LIMIT - 1e-6)), { cap: 1e-3 });
         expect(over.events.filter((e) => e.kind === "impact-head-deep").map((e) => e.t)).toEqual([IMPACT_DT]);
         expect(over.events.some((e) => e.kind === "impact-mallet-grounded")).toBe(false);
-        const under = integrate(onTurf(TEST_RHO - HEAD_DEEP_LIMIT + 1e-6), { cap: 1e-3 });
+        const under = integrate(onTurf(TEST_HEAD, vec3(0, 0, TEST_RHO - HEAD_DEEP_LIMIT + 1e-6)), { cap: 1e-3 });
         expect(under.events.some((e) => e.kind === "impact-head-deep")).toBe(false);
     });
 
-    it("rests a nearly level head without spinning it up, though its lowest point jumps between the end rims", () => {
-        // As the lowest point jumps from one end rim to the other the turf's moment about the centre switches sign, so
-        // the spin chatters. One step's moment impulse at the settling's peak load (1.5·m·g, pre-flight) is
-        // 1.5·m·g·(L/2)/I_y·dt ≈ 1.8e-3 rad/s; pre-flight measured the spin at 7.66e-3 rad/s at its largest (about four
-        // such impulses) and 5.20e-3 over the run's second half. The bound allows eleven impulses, and the second half
-        // must not exceed the first: a spin that grew would pass both within tens of steps.
-        for (const tilt of [1e-9, -1e-9]) {
-            let early = 0;
-            let late = 0;
-            const probe: ImpactProbe = {
-                step(s) {
-                    const spin = length(s.head.angularVelocity);
-                    if (s.t <= 0.025) {
-                        early = Math.max(early, spin);
-                    } else {
-                        late = Math.max(late, spin);
-                    }
-                },
-            };
-            const run = integrate(onTurf(TEST_RHO, ZERO, axisAngle(vec3(0, 1, 0), tilt)), { cap: 0.05, probe });
-            expect(early, `tilt ${tilt}`).toBeLessThan(0.02);
-            expect(late, `tilt ${tilt}`).toBeLessThanOrEqual(early);
-            // Pre-flight: 0.12 % off m·g/k, as for the level head.
-            expect(Math.abs(0 - headLowestPoint(run.head, TEST_HEAD) - SINK) / SINK).toBeLessThan(0.01);
-        }
+    it("mirrors a box sliding into the turf across y = 0, to the bit", () => {
+        const q = multiply(axisAngle(vec3(0, 0, 1), 0.3), axisAngle(vec3(0, 1, 0), 0.05));
+        const start = { position: vec3(0.01, 0.003, TEST_RHO + 0.002), velocity: vec3(0.4, 0.1, -0.2) };
+        const a = integrate(onTurf(TEST_BOX, start.position, start.velocity, q), { cap: 5e-3 });
+        const b = integrate(onTurf(TEST_BOX, mirrorVec(start.position), mirrorVec(start.velocity), mirrorQuat(q)), {
+            cap: 5e-3,
+        });
+        expect(a.timeline[HEAD_TURF_KEY]?.length).toBeGreaterThan(0);
+        expect(same(mirrorVec(a.head.position), b.head.position)).toBe(true);
+        expect(same(mirrorVec(a.head.velocity), b.head.velocity)).toBe(true);
+        expect(same(mirrorSpin(a.head.angularVelocity), b.head.angularVelocity)).toBe(true);
+        const qa = mirrorQuat(a.head.orientation);
+        const qb = b.head.orientation;
+        expect(qa.w === qb.w && qa.x === qb.x && qa.y === qb.y && qa.z === qb.z).toBe(true);
     });
 
-    it("brings a relaxed head, held 1 mm above the turf, down onto it to rest, whatever the arm mass", () => {
-        // γ_T = 0.1 on a still, level path: the top hand carries γ_T·m·g and damps the fall, so the head sinks at under
-        // the terminal rate (1 − γ_T)·m·g/c(γ_T), c(γ) = 2ζ·M·(2π/T)·√γ, and cannot reach the turf before
-        // 1 mm/terminal. At rest the damper is idle and the turf carries (1 − γ_T)·m·g: the arm's weight is the
-        // player's. Pre-flight, at TRACK_IMPACT_CAP: armMass 0, the turf from 18.2 ms (bound 7.9 ms), |v| 2.2e-13 m/s
-        // and the load 1.7e-12 off; armMass 0.8 kg, from 26.2 ms (bound 14.2 ms), |v| 6.4e-14 m/s and 9.1e-13 off
-        // (the prototype's figures, aeadd4c, were at the 0.15 s cap). The load bounds sit far above those figures, and
-        // far below the 89 % more the turf would carry were the 0.8 kg arm's weight applied.
-        const gamma = 0.1;
-        for (const [armMass, loadTolerance] of [
-            [0, 1e-6],
-            [0.8, 1e-3],
-        ] as const) {
-            const hands = { ...TEST_HANDS, gripTension: gamma, armMass };
-            const arc = levelArc(vec3(0, 0, TEST_RHO + 1e-3));
-            const track = prepareTrack(trackDrive(arc, TEST_COUPLING, hands), TEST_HEAD, g);
-            const probe = lastStep();
-            const start = headOnPath(track, TEST_HEAD, 0);
-            const run = integrate(isolated({ start, drive: track, gravity: g, headTurf: LAW }), { probe });
-            const M = TEST_HEAD.mass + armMass;
-            const damping = 2 * TEST_COUPLING.dampingRatio * M * ((2 * Math.PI) / TEST_COUPLING.period);
-            const terminal = ((1 - gamma) * TEST_HEAD.mass * g) / (damping * Math.sqrt(gamma));
-            const line = run.timeline[HEAD_TURF_KEY] ?? [];
-            expect(line, `armMass ${armMass}`).toHaveLength(1);
-            expect(line[0]?.start).toBeGreaterThanOrEqual(1e-3 / terminal);
-            expect(line[0]?.end).toBe(run.duration);
-            expect(run.events.map((e) => e.kind)).toEqual(["impact-cap"]);
-            expect(run.duration).toBeGreaterThanOrEqual(TRACK_IMPACT_CAP);
-            expect(length(run.head.velocity)).toBeLessThan(1e-6);
-            const rest = (1 - gamma) * TEST_HEAD.mass * g;
-            const load = ((probe.last as ImpactSnapshot).headTurf as Vec3).z;
-            expect(Math.abs(load - rest) / rest, `armMass ${armMass}`).toBeLessThan(loadTolerance);
-        }
-    });
+    it("converges in dt and in the lattice: where a sliding box comes to rest", () => {
+        // The box of "stops a box sliding on the turf dead", at IMPACT_DT and at half of it, and on 2 mm and 1 mm
+        // columns: its rest position agrees within 1 % (dt) and 2 % (the lattice, whose sole's area and edges move by
+        // a column's share).
+        const rest = (dt: number, law: HeadTurfLaw): number =>
+            integrate(onTurf(TEST_BOX, vec3(0, 0, TEST_RHO), vec3(0.1, 0, 0), IDENTITY, law), { dt, cap: 0.1 }).head
+                .position.x;
+        const base = rest(IMPACT_DT, LAW);
+        expect(rel(rest(IMPACT_DT / 2, LAW), base)).toBeLessThan(0.01);
+        expect(rel(rest(IMPACT_DT, testHeadTurf({ cell: 0.001 })), base)).toBeLessThan(0.02);
+        // About 41 s in the local suite, 54 s on the CI runner.
+    }, 180_000);
 
     it("is given to a tracked drive and not to a force table", () => {
         const world = testWorld();
         const blue = ballAt(5, 0);
         const turf = world.lawn.surfaceAt(blue.position);
         const tracked = onArc(trackDrive(levelArc(vec3(4, 0, 0.1))));
-        expect(prepareImpact(tracked, { blue }, world).headTurf).toEqual(
-            lawFromStiffness(TEST_HEAD.mass, turf.turfRestitution, turf.turfStiffness, HEAD_TURF_FRICTION),
-        );
+        expect(prepareImpact(tracked, { blue }, world).headTurf).toEqual(headTurfLawOf(turf));
         expect(prepareImpact(strike(blue.position), { blue }, world).headTurf).toBeNull();
     });
 
     it("rejects a tracked drive over turf the head–turf law cannot use", () => {
-        // The lawn is good at the ball and the court's centre (validateWorld samples there), bad under the head.
+        // Decision 17. The lawn is good at the ball and the court's centre (validateWorld samples there), bad under the
+        // head.
         const good = testWorld().lawn.surfaceAt(vec3(15, 20, 0));
         const under = (bad: Partial<SurfaceProps>) =>
             testWorld({
@@ -176,11 +181,13 @@ describe("the head–turf pair", () => {
             });
         const blue = ballAt(5, 0);
         const tracked = onArc(trackDrive(levelArc(vec3(4.2, 0, TEST_RHO + 0.01))));
-        expect(() => simulateImpact(tracked, { blue }, under({ turfStiffness: 0 }))).toThrow(
-            /turfStiffness under the head must be a positive finite number/,
-        );
-        expect(() => simulateImpact(tracked, { blue }, under({ turfRestitution: 0 }))).toThrow(
-            /turfRestitution under the head must lie in \(0, 1\]/,
-        );
+        for (const [bad, message] of [
+            [{ turfYield: 0 }, /turfYield under the head must be a positive finite number/],
+            [{ turfMatStrength: -1 }, /turfMatStrength under the head must be a positive finite number/],
+            [{ bedModulus: 0 }, /bedModulus under the head must be a positive finite number/],
+            [{ bedRecovery: Number.NaN }, /bedRecovery under the head must be a positive finite number/],
+        ] as const) {
+            expect(() => simulateImpact(tracked, { blue }, under(bad))).toThrow(message);
+        }
     });
 });

@@ -1,12 +1,4 @@
 {
-    "ballTurfStiffness": {
-        "value": 110000,
-        "unit": "N/m",
-        "bounds": [100000, 270000],
-        "source": "Don Gugan, 'The Physics of Croquet Strokes: Analysis of the CA high-speed DVD', section 7.1 and Table 4(b) (2009; Oxford Croquet), https://oxfordcroquet.org/tech/gugan4/",
-        "provenance": "derived",
-        "note": "Gugan, roll stroke A4R from 8000 frame/s video: \"The transient hollow formed in the ground is surprisingly large, about 50 mm in diameter for A4R.\" and \"the downward velocity of the ball can be estimated to be close to 5 m/s immediately after impact, so comparing this with the upward velocity of 2.48 m/s gives a CoR for the ground of about 0.5.\" Table 4(b) 'Maximum penetration into ground, mm': A2R 4.0, A3R 5.0, A4R 7.2 (upward speeds leaving the ground 1.52, 1.76, 2.48 m/s). The 50 mm chord on a ball of radius 46.04 mm gives 7.38 mm, agreeing with the measured 7.2 mm. Derivation with the impact model's own law (linear spring-dashpot clamped at zero force, damping from e = 0.5, damping ratio 0.2553): the peak penetration at impact speed v is 0.7071·v/ω0 with ω0 = sqrt(k/m), so k = m·(0.7071·v/δmax)² = 0.5·m·v²/δmax² = 0.5 × 0.45359 × 25 / 0.0072² = 1.09e5 N/m (A4R), giving a contact time of 5.5 ms. Bounds: lower 1.0e5 (the same derivation allowing for the hollow already 2.2 mm deep when the mallet releases the ball); upper 2.7e5 from the undamped energy balance k = m·v²/δmax² over A2R to A4R (taking each downward speed as upward speed / 0.5): 2.62e5, 2.25e5, 2.15e5 N/m. Gugan's timing favours the stiffer end: \"assuming that the almost linear region after about 5 ms is due to flight\". One court only; Gugan: \"courts can be expected to vary greatly depending on their composition, their grass covering, and their dampness\". Feeds the default lawn's turfStiffness. Since P2b.2b.2b.2a it feeds the head–turf plane law alone; the balls stand on the bed (bedModulus, bedRecovery)."
-    },
     "bedModulus": {
         "value": 162461000,
         "unit": "N/m^3",
@@ -109,7 +101,7 @@
         "bounds": [0.3, 0.7],
         "source": "Stan Hall, 'When a Mallet Strikes a Ball', section 'Coefficients of Friction' (1994; Oxford Croquet, updated 28 April 2026), https://oxfordcroquet.org/tech/hall/",
         "provenance": "analogue",
-        "note": "No measured friction of a mallet head on turf was found. Analogue: Hall slid croquet balls embedded in polystyrene along a croquet court: \"For a fairly fast court (normal, cut to 6mm) the coefficient was 0.48. For a fairly heavy court, the coefficient was 0.53.\" (friction.json ballTurfSliding). A wooden head's base or rim sliding on the same turf is taken alike: 0.5, between the two. Bounds: an allowance for wood against plastic and for a rim against a flat (P2b.2b.1 design §7). P2b.2b.2 sources it, and decides whether a heel ploughing into the turf needs a drag term."
+        "note": "No measured friction of a mallet head on turf was found. Analogue: Hall slid croquet balls embedded in polystyrene along a croquet court: \"For a fairly fast court (normal, cut to 6mm) the coefficient was 0.48. For a fairly heavy court, the coefficient was 0.53.\" (friction.json ballTurfSliding). A wooden head's base or rim sliding on the same turf is taken alike: 0.5, between the two. Bounds: an allowance for wood against plastic and for a rim against a flat (P2b.2b.1 design §7). P2b.2b.2b.3 keeps it as the sole's friction, beside the ploughing (turfMatStrength, turfPloughFactor)."
     },
     "headDeepLimit": {
         "value": 0.002,
@@ -117,7 +109,30 @@
         "bounds": [0.002, 0.0072],
         "source": "P2b.2b.1 design §4.2 (docs/superpowers/specs/2026-10-04-p2b2b1-swing-shot-design.md); upper bound: Don Gugan, 'The Physics of Croquet Strokes: Analysis of the CA high-speed DVD', Table 4(b) (2009; Oxford Croquet), https://oxfordcroquet.org/tech/gugan4/",
         "provenance": "derived",
-        "note": "A model limit, not a property of turf. The impact's turf is a plane with a linear spring, fitted to a ball pressed into it (ballTurfStiffness); a mallet head's edge or rim presses a footprint that law was not fitted to, so a head driven more than this below the turf plane raises impact-head-deep. Provisional. Upper bound: the deepest ball penetration Gugan measured, 7.2 mm (Table 4(b), roll A4R)."
+        "note": "Not a property of turf: a head driven more than this below the turf plane has gone beyond a graze and has probably damaged the lawn, and raises impact-head-deep (P2b.2b.2b.3 design §4.4). Since P2b.2b.2b.3 it is no longer a limit of the model, which ploughs at any depth. Upper bound: the deepest ball penetration Gugan measured, 7.2 mm (Table 4(b), roll A4R)."
+    },
+    "turfYield": {
+        "value": 240000,
+        "unit": "Pa",
+        "bounds": [172000, 310000],
+        "source": "Crum, 'Engineering properties of high sand content soils used in golf putting greens and sports fields' (MSU Research Update), https://archive.lib.msu.edu/tic/mitgc/article/199959.pdf",
+        "provenance": "derived",
+        "note": "p_y, the turf's bearing yield under the mallet head (P2b.2b.2b.3 design §4.2, §6.2): a column of the head's turf bears k_w·e until k_w·e reaches it, then yields and keeps a set. Crum gives sand rootzones' ultimate bearing \"on the order of 45 psi\" well graded and \"up to 25 psi\" poorly graded: 310 and 172 kPa, the bounds; the default 240 kPa lies between them. One well-grassed, fairly firm lawn, not turf in general (user, 2026-10-14: \"very variable depending on the consistency and moistness of the turf\"); P3's lawn presets vary it."
+    },
+    "turfMatStrength": {
+        "value": 105000,
+        "unit": "Pa",
+        "bounds": [73000, 138000],
+        "source": "Mascitti, McNitt and Serensits, Int. Turfgrass Soc. Res. J. 13:330–337 (2017), doi 10.2134/itsrj2017.01.0010, Table 3, https://propel.umass.edu/sites/default/files/publications/2026-04/Mascitti%20et%20al.%2C%202017.pdf",
+        "provenance": "derived",
+        "note": "c, the root mat's shear strength, Reece's cohesion (design §4.3, §6.2). Mascitti et al.'s shear vane read 17.8–33.6 N·m with a 7.0 cm head of 12 fins 2.0 cm high (\"The fins on the shear strength tester measure 20 mm\": their depth in the turf). The conversion is ours: a vane inserted from the surface shears its sides and its bottom end, T = π·c·(D²H/2 + D³/12) = 2.437e-4 m³·c with D 7.0 cm and H 2.0 cm, so c is 73–138 kPa, the bounds, and 105 kPa, the default. The other end conditions bound the doubt: both ends sheared give 53–101 kPa, the sides alone 116–218 kPa. Anderson et al. 2018 find a clay rootzone's vane strength falling from 204 to 64 kPa as it wets. One lawn's spread, not the range of lawns; P3's presets vary it."
+    },
+    "turfPloughFactor": {
+        "value": 1.71,
+        "unit": "1",
+        "source": "Mak and Chen, 'Simulation of draft forces of a sweep in a loamy sand soil using the discrete element method', Canadian Biosystems Engineering 56:2.1–2.7 (2014), Eq. 1 and Table 2, https://library.csbe-scgab.ca/docs/journal/56/C14202.pdf (after Reece 1964)",
+        "provenance": "analogue",
+        "note": "N_c, Reece's cohesion factor in D = (ρ·g·d²·N_γ + c·d·N_c + ρ·v²·d·N_a)·w (P2b.2b.2b.3 design §4.3): Mak and Chen's shallowest tabulated depth at rake 18.5°. Labelled: no open table against rake was found, and the head's ploughing depths are millimetres against their 50 mm. The law keeps the cohesion term alone: at d = 2 mm and 3 m/s across 57 mm it gives 20.5 N, the inertia term 0.5 N and the weight term 0.01 N (their N_γ 2.45 and N_a 0.35, a rootzone of 1.2–1.6 Mg/m³ after Anderson et al. 2018). A reference constant, not a SurfaceProps field."
     },
     "armStiffness": {
         "value": 116,
@@ -190,6 +205,14 @@
         "source": "Augustsson, Gunhamn and Andersson, 'Relationship Between Early and Maximal Isometric Upper-Body Push and Pull Force Production Among Elite Female and Male Swedish Track and Field Throwers', Sports 13(7):226 (2025), DOI 10.3390/sports13070226, https://www.ebi.ac.uk/europepmc/webservices/rest/PMC12300538/fullTextXML",
         "provenance": "derived",
         "note": "τ_push, the time constant of the hands' push intent: the sensed resistance follows the balls' resistance as R̃ ← R̃ + (R − R̃)·(1 − exp(−dt/τ_push)) (gate ruling amendment, user, 2026-10-11: primed hands, no reflex delay, the push building at the muscles' pace). A voluntary force rise from force onset, so no reflex or electromechanical delay is in it: Augustsson et al. measured an isometric two-handed bench-press push, 'as quickly and forcefully as possible', in 17 female and 13 male throwers, force onset found as Tillin et al. describe. Table 2, push force as a percentage of peak force at 50, 100, 150, 200 and 250 ms: females 39, 60, 72, 80, 84; males 37, 56, 66, 72, 77. The time to 1 − 1/e (63.2 %) of peak, interpolated linearly between 100 and 150 ms, is 113.4 ms (females) and 136.1 ms (males); the value is their mean, 124.7 ms, rounded to 0.125 s. Bounds: τ = −t/ln(1 − F(t)/F_peak) at each reported time for either sex, 101.2 ms (females, 50 ms) to 170.1 ms (males, 250 ms); the rise is not exactly exponential. Trained throwers; an untrained player is likely slower."
+    },
+    "gripLimit": {
+        "value": 435,
+        "unit": "N",
+        "bounds": [408, 462],
+        "source": "Young, Woolley, Armstrong and Ashton-Miller, 'Hand-handhold coupling: effect of handle shape, orientation, and friction on breakaway strength', Human Factors 51(5):705-717 (2009), DOI 10.1177/0018720809355969, https://archive.org/download/wikipedia-scholarly-sources-corpus/10.1177%252F0016986208330564.zip/10.1177%252F0018720809355969.pdf",
+        "provenance": "direct",
+        "note": "The hand's breakaway strength: the largest force a power grip holds on a handle along a vertical cylinder before the hand slips or the arm gives way, 435 ± 27 N (mean ± SD). The model clips each hand's force on the mallet to it (P2b.2b.2b.3 design §5), whether the grip breaks or the arm gives way (user, 2026-10-14). Bounds: the mean ± one SD. Grip tension does not scale it (P3). The twist is not limited (design §5)."
     },
     "forearmMass": {
         "value": 0.344,

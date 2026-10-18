@@ -121,7 +121,8 @@ export interface SwingProfile {
     };
     /**
      * The player's body: the arm mass at the top grip (kg), the reach slack (m), the arm's flex, pendulum push and push
-     * (the push intent's cap, N, and its response time constant, s), and each hand's and arm's hand–arm chain.
+     * (the push intent's cap, N, and its response time constant, s), each hand's and arm's hand–arm chain, and the
+     * grip's limit (N; P2b.2b.2b.3 design §5).
      */
     readonly body: {
         readonly armMass: number;
@@ -131,6 +132,7 @@ export interface SwingProfile {
         readonly pushForce: number;
         readonly pushResponseTime: number;
         readonly chain: HandChain;
+        readonly gripLimit: number;
     };
     readonly stance: Readonly<Record<StrokeType, SwingStance>>;
     readonly drive: Readonly<Record<StrokeType, SwingDrive>>;
@@ -170,6 +172,11 @@ export interface ShotSetup {
         readonly pendulumAt?: number;
         /** Carry mode: the bottom hand's push in the pendulum phase, in [0, 1]; absent: the preset's. */
         readonly pendulumEffort?: number;
+        /**
+         * The jab (m, ≥ 0; P2b.2b.2b.3 design §6.1): the hands' planned dip deepens by it on top of the preset's
+         * handDrop, on the dip's own timing, to ground the head deliberately. Swing mode only; absent: 0.
+         */
+        readonly jab?: number;
     };
     readonly live: readonly BallId[];
     readonly continuation: boolean;

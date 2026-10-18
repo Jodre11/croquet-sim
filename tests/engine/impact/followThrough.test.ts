@@ -18,6 +18,7 @@ import type { ShotSetup, SwingProfile } from "../../../src/engine/swing/types";
 import type { World } from "../../../src/engine/types";
 import { defaultWorld } from "../../../src/engine/world";
 import { ballAt, testWorld } from "../support/fixtures";
+import { TEST_GRIP_LIMIT } from "../support/impact";
 import { canonicalSetup, testProfile } from "../support/shot";
 
 const WORLD = testWorld();
@@ -60,6 +61,12 @@ const rateOf = (contact: ContactState, s: StrokeState): number =>
     dot(s.head.angularVelocity, pitchAxis((contact.drive as TrackDrive).arc.aim));
 
 const last = (follow: FollowThrough): StrokeState => follow.samples[follow.samples.length - 1] as StrokeState;
+
+/** `setup` with its hands' grip limit at TEST_GRIP_LIMIT, far above any hand's force (P2b.2b.2b.3 plan decision 12). */
+const unlimited = (setup: ShotSetup): ShotSetup => ({
+    ...setup,
+    profile: { ...setup.profile, body: { ...setup.profile.body, gripLimit: TEST_GRIP_LIMIT } },
+});
 
 describe("the follow-through (design §4)", () => {
     it("leaves the impact exactly as simulateImpact returns it", () => {
@@ -113,9 +120,10 @@ describe("the follow-through (design §4)", () => {
         // impact's end if later, the pendulum is held and the hands grip firmly. The canonical GC stop's head still
         // sinks at 7.2e-3 m/s at the impact's end; the AC stop's impact ends 11.6 ms after the window. Each settles
         // below FINISH_SPEED relative to the hands within the firm grip's period: 88 ms and 32 ms after the hold.
+        // The hands at TEST_GRIP_LIMIT, so that the hold alone is pinned; the default limit's case follows.
         const world = defaultWorld();
         for (const type of ["stop-gc", "stop-ac"] as const) {
-            const { contact, follow } = stroke(canonicalSetup(type, { world }), world);
+            const { contact, follow } = stroke(unlimited(canonicalSetup(type, { world })), world);
             expect(follow.flags, type).toEqual([]);
             expect(follow.finish, type).toBeGreaterThan(follow.impactEnd);
             expect(follow.finish - follow.impactEnd, type).toBeLessThan(1.5 * HAND_COUPLING.period);
@@ -123,6 +131,13 @@ describe("the follow-through (design §4)", () => {
             const end = last(follow);
             expect(length(sub(end.head.velocity, handsAt(plan, end.t).velocity)), type).toBeLessThan(FINISH_SPEED);
         }
+    });
+
+    it("flags the default grip limit reached in the GC stop's hold (P2b.2b.2b.3 design §5)", () => {
+        // At F_max = 435 N (Young et al. 2009) a hand saturates while the firm grip holds the GC stop's mallet.
+        const world = defaultWorld();
+        const { follow } = stroke(canonicalSetup("stop-gc", { world }), world);
+        expect(follow.flags).toEqual(["follow-grip-limit"]);
     });
 
     it("finishes a carry at its first apex after the pendulum phase starts", () => {
@@ -141,12 +156,16 @@ describe("the follow-through (design §4)", () => {
             drive: { mode: "carry", handReach: 10, handArcRadius: 11 },
             shape: { pendulumShare: 0.5 },
         });
+        // P2b.2b.2b.3: the turf strike (was ["follow-cap"]): the endless carry's head drags on the turf for the
+        // follow-through's second, its columns yield and it sinks past HEAD_DEEP_LIMIT, so follow-turf-yield and
+        // follow-head-deep are flagged before the cap. Unpredicted, for the gate.
         const { contact, follow } = stroke(shot({ backswing: 0.25 }, endless));
-        expect(follow.flags).toEqual(["follow-cap"]);
+        expect(follow.flags).toEqual(["follow-turf-yield", "follow-head-deep", "follow-cap"]);
         const contactAt = (contact.drive as TrackDrive).arc.contactAt;
         expect(follow.finish).toBeGreaterThanOrEqual(contactAt + FOLLOW_CAP);
         expect(follow.finish).toBeLessThan(contactAt + FOLLOW_CAP + 1e-5);
-    });
+        // P2b.2b.2b.3: the head–turf law over a second of dragging costs about 30 s (was 1 s).
+    }, 240_000);
 
     // P2b.2b.2b.2b: gate-ruled skip (round 14, 2026-10-12). A dip is part of trackEnd; a late dip lengthens the impact
     // and drives the head deep inside it (this setup: impact-head-deep, 5.4 mm, and the follow-through finishes at the

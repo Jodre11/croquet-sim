@@ -1,0 +1,1556 @@
+== Rulings and findings so far ==
+  FOR THE GATE: (a) spec §5's premise "today's hands stay far below 435 N" is falsified (109 presets); (b) stop-gc
+  head 0.012 m/s at impact end (0.005 unlimited), every canonical stop-gc raises grip-limit + follow-grip-limit;
+  (c) if the magnitude is judged unphysical, the lever is the check's α onset/sizing (pre-existing law), not the limit.
+USER RULING 2026-10-16: "at rest" counts vertical speed too (spec §4.3 said horizontal only; a plunging head ended the
+  impact before yielding). Task 10 amends §4.3. Dropped-box duration recomputed from first rest step.
+FOR THE GATE (cost): law ≈ 0.46 ms/step on a box footprint; followThrough "caps a carry…" 1 s → 72 s alone.
+USER RULING 2026-10-16: once the ball has gone (struck, drive done, no face contact), the head–turf pair no longer
+  holds the impact open; the follow-through carries the bed. Task 10 amends spec §4.6.
+Task 6 review: Approved; ratchet verified. FOR THE GATE: early-dip test — P2b.2b.1 §8.1 says "sends the striker's
+  ball off slower"; literal full speed fails (1.5721 vs 1.5677) as the heel pops the ball up (vz 0.238); the turf
+  does take energy (below the no-turf early trend ~1.583); the comparison is confounded by early timing's own gain.
+  Options: along-lawn (current), keep literal and record the failure, or compare against the same early timing at a
+  non-grounding jab. If along-lawn stands, rename the title. Minor: missing "// Review focus 5." comment.
+  follow FOUND half-roll 4 m/s. FOR THE GATE: grip-limit fires with no turf in every 1 m/s candidate and 3 m/s jab ≥ 5 mm.
+USER RULINGS 2026-10-16: regime search adds contact.up {0..−0.02} with small jabs (1–6 mm), amending decision 19;
+  biting's qualifies requires head/turf contact. Sent to implementer-task-7.
+FOR THE GATE: the follow-found half-roll 4 m/s also raises follow-cap (follow-through ran to its 1000 ms cap).
+FOR THE GATE: single-ball jab 10–40 mm raises the head's lowest point (7.49 → 8.25 mm) under grip-limit.
+USER RULING 2026-10-16 (from play): a dig-in is an unintentional gross mis-hit, any speed, when the head is off
+  target low enough; casting hard makes it likelier. The common case is the graze (scraping power loss); its cost is
+  lost power and not getting the shot attempted, and otherwise only lawn damage.
+Task 7: DONE_WITH_CONCERNS, commit 249d102; suite 1157 pass / 5 skip / 1 todo. FOR THE GATE: Gugan's jab check
+  FAILS — no second face interval at any jab (6 grazes, jab 2–4.5 mm, ratio 0); marked it.runIf(SLOW).fails;
+  <temp>/after/jab-check.txt. Bounds: graze and biting occur at every end; jab fails at every end. Graze damage
+  peak 1.70 mm + turf-yield. Probe cost section empty (no canonical setup grounds at 3 m/s) — Task 8 must still
+  give the user's cost figures. Reviewer task-reviewer-task-7 (opus) dispatched.
+Task 7 review: Needs fixes. FOR THE GATE: jab FAIL is genuine and pre-turf — striker's ball leaves at 0.523·U (band
+  top 0.463), face/blue one interval 0.01–1.47 ms, head grounds 14–18 ms after the face leaves; the handover can't
+  cut a second tap (stillReaching 30 ms look-ahead). Graze found = fat contact ~0.2 m behind the ball (impact starts
+  TURF_MARGIN before the arc meets turf, ~92 ms early), not a graze at the ball; biting's face at 69 ms; biting's
+  grip-limit at 57.6 ms comes from the jab's dip with the head ~5 mm clear, not from the turf (user to rule whether
+  biting needs grip-limit during the head/turf interval). I1 comment, I2 cost section empty (no follow-through
+  measure); minors: power-loss print, graze grip-limit parity, cause wording, jab comment. Fix round 1 sent.
+Task 7 fix round 1: 0c22d65. COST FOR THE GATE: ~4,500 columns per grounded step (worst 4,785); follow-through up to
+  184,636 steps (half-roll 4 m/s). graze 6,044/0 grounded steps, 299/135 ms wall; biting 4,971/0, 247/141 ms;
+  stop-ac 3 m/s jab 4.5 mm 1,139/12,331 (55.4 M column visits), 109/505 ms; half-roll 4 m/s 0/4,317, 116/486 ms.
+  Canonical rolls ground in their follow-through (1,335–4,435 steps). Power: 2.80 = planned arc at the earlier
+  start (2.7946 measured = planned); fair figure 0.746 vs 3.00 (25.4 %, ~44 % energy). Re-review (sonnet) dispatched.
+== The cost ==
+-- preset sweep, timed alone (real seconds): baseline/presetDigest.time against after/presetDigest-task5b.time --
+baseline: real 353.52
+now:      real 472.31
+-- after/cost.txt as it now stands (Task 5 fix round) --
+== cost (design §9; plan decision 21) ==
+-- canonical setups at 3 m/s (the no-turf baseline) --
+single-ball 3 m/s: impact 2000 steps, 0 grounded, columns per grounded step mean 0.0 worst 0, total 0; follow-through 97644 steps, 0 grounded, columns per grounded step mean 0.0 worst 0, total 0; wall 92 ms impact, 222 ms follow-through; turf-lift
+drive 3 m/s: impact 30818 steps, 0 grounded, columns per grounded step mean 0.0 worst 0, total 0; follow-through 75434 steps, 0 grounded, columns per grounded step mean 0.0 worst 0, total 0; wall 271 ms impact, 109 ms follow-through; turf-lift,impact-off-face
+stop-ac 3 m/s: impact 4000 steps, 0 grounded, columns per grounded step mean 0.0 worst 0, total 0; follow-through 23370 steps, 0 grounded, columns per grounded step mean 0.0 worst 0, total 0; wall 51 ms impact, 54 ms follow-through; turf-lift
+stop-gc 3 m/s: impact 2000 steps, 0 grounded, columns per grounded step mean 0.0 worst 0, total 0; follow-through 33870 steps, 0 grounded, columns per grounded step mean 0.0 worst 0, total 0; wall 36 ms impact, 62 ms follow-through; grip-limit,turf-lift,follow-grip-limit
+half-roll 3 m/s: impact 13436 steps, 0 grounded, columns per grounded step mean 0.0 worst 0, total 0; follow-through 158606 steps, 1335 grounded, columns per grounded step mean 4429.4 worst 4433, total 5913281; wall 126 ms impact, 501 ms follow-through; turf-lift,turf-lift
+full-roll 3 m/s: impact 30770 steps, 0 grounded, columns per grounded step mean 0.0 worst 0, total 0; follow-through 102354 steps, 3615 grounded, columns per grounded step mean 4510.1 worst 4526, total 16303985; wall 250 ms impact, 373 ms follow-through; turf-lift,turf-lift,follow-turf-yield,follow-head-deep
+pass-roll 3 m/s: impact 18683 steps, 0 grounded, columns per grounded step mean 0.0 worst 0, total 0; follow-through 60911 steps, 4435 grounded, columns per grounded step mean 4662.9 worst 4785, total 20679874; wall 182 ms impact, 275 ms follow-through; turf-lift,turf-lift,follow-turf-yield,follow-head-deep
+-- with the head in the turf --
+graze (single-ball 3 m/s up 0.01 m dip -0.005 s jab 1.000 mm): impact 20380 steps, 6044 grounded, columns per grounded step mean 4512.0 worst 4526, total 27270328; follow-through 99638 steps, 0 grounded, columns per grounded step mean 0.0 worst 0, total 0; wall 299 ms impact, 135 ms follow-through; turf-yield,turf-lift
+biting (single-ball 4 m/s up 0.01 m dip -0.005 s jab 5.000 mm): impact 14450 steps, 4971 grounded, columns per grounded step mean 4511.5 worst 4526, total 22426485; follow-through 100196 steps, 0 grounded, columns per grounded step mean 0.0 worst 0, total 0; wall 247 ms impact, 141 ms follow-through; turf-yield,impact-head-deep,grip-limit,turf-lift
+stop-ac 3 m/s jab 4.500 mm (the deepest graze): impact 4049 steps, 1139 grounded, columns per grounded step mean 4487.2 worst 4495, total 5110939; follow-through 15964 steps, 12331 grounded, columns per grounded step mean 4495.0 worst 4495, total 55427845; wall 109 ms impact, 505 ms follow-through; turf-lift,turf-yield
+half-roll 4 m/s (follow-turf-yield): impact 15364 steps, 0 grounded, columns per grounded step mean 0.0 worst 0, total 0; follow-through 184636 steps, 4317 grounded, columns per grounded step mean 4512.3 worst 4526, total 19479780; wall 116 ms impact, 486 ms follow-through; turf-lift,turf-lift,follow-turf-yield,follow-head-deep,follow-cap
+-- the probe's cost section (this gate run) --
+== cost (design §9; plan decision 21) ==
+-- canonical setups at 3 m/s (the no-turf baseline) --
+single-ball 3 m/s: impact 2000 steps, 0 grounded, columns per grounded step mean 0.0 worst 0, total 0; follow-through 97644 steps, 0 grounded, columns per grounded step mean 0.0 worst 0, total 0; wall 23 ms impact, 156 ms follow-through; turf-lift
+drive 3 m/s: impact 30818 steps, 0 grounded, columns per grounded step mean 0.0 worst 0, total 0; follow-through 75434 steps, 0 grounded, columns per grounded step mean 0.0 worst 0, total 0; wall 262 ms impact, 121 ms follow-through; turf-lift,impact-off-face
+stop-ac 3 m/s: impact 4000 steps, 0 grounded, columns per grounded step mean 0.0 worst 0, total 0; follow-through 23370 steps, 0 grounded, columns per grounded step mean 0.0 worst 0, total 0; wall 43 ms impact, 40 ms follow-through; turf-lift
+stop-gc 3 m/s: impact 2000 steps, 0 grounded, columns per grounded step mean 0.0 worst 0, total 0; follow-through 33870 steps, 0 grounded, columns per grounded step mean 0.0 worst 0, total 0; wall 34 ms impact, 63 ms follow-through; grip-limit,turf-lift,follow-grip-limit
+half-roll 3 m/s: impact 13436 steps, 0 grounded, columns per grounded step mean 0.0 worst 0, total 0; follow-through 158606 steps, 1335 grounded, columns per grounded step mean 4429.4 worst 4433, total 5913281; wall 123 ms impact, 575 ms follow-through; turf-lift,turf-lift
+full-roll 3 m/s: impact 30770 steps, 0 grounded, columns per grounded step mean 0.0 worst 0, total 0; follow-through 102354 steps, 3615 grounded, columns per grounded step mean 4510.1 worst 4526, total 16303985; wall 269 ms impact, 420 ms follow-through; turf-lift,turf-lift,follow-turf-yield,follow-head-deep
+pass-roll 3 m/s: impact 18683 steps, 0 grounded, columns per grounded step mean 0.0 worst 0, total 0; follow-through 60911 steps, 4435 grounded, columns per grounded step mean 4662.9 worst 4785, total 20679874; wall 208 ms impact, 327 ms follow-through; turf-lift,turf-lift,follow-turf-yield,follow-head-deep
+-- with the head in the turf --
+graze (single-ball 3 m/s up 0.01 m dip -0.005 s jab 1.000 mm): impact 20380 steps, 6044 grounded, columns per grounded step mean 4512.0 worst 4526, total 27270328; follow-through 99638 steps, 0 grounded, columns per grounded step mean 0.0 worst 0, total 0; wall 359 ms impact, 151 ms follow-through; turf-yield,turf-lift
+biting (single-ball 4 m/s up 0.01 m dip -0.005 s jab 5.000 mm): impact 14450 steps, 4971 grounded, columns per grounded step mean 4511.5 worst 4526, total 22426485; follow-through 100196 steps, 0 grounded, columns per grounded step mean 0.0 worst 0, total 0; wall 310 ms impact, 154 ms follow-through; turf-yield,impact-head-deep,grip-limit,turf-lift
+stop-ac 3 m/s jab 4.500 mm (the deepest graze): impact 4049 steps, 1139 grounded, columns per grounded step mean 4487.2 worst 4495, total 5110939; follow-through 15964 steps, 12331 grounded, columns per grounded step mean 4495.0 worst 4495, total 55427845; wall 109 ms impact, 632 ms follow-through; turf-lift,turf-yield
+half-roll 4 m/s (follow-turf-yield): impact 15364 steps, 0 grounded, columns per grounded step mean 0.0 worst 0, total 0; follow-through 184636 steps, 4317 grounded, columns per grounded step mean 4512.3 worst 4526, total 19479780; wall 123 ms impact, 571 ms follow-through; turf-lift,turf-lift,follow-turf-yield,follow-head-deep,follow-cap
+-- shotMix at COUNT=800, alone: baseline --
+800 shots, seed 7, budget 22000000 units
+shots with no solve: 97.5%
+largest group: 2 balls
+solves per shot: p50 0.000, p99 174.000, p99.9 271.000, max 271.000
+work units per shot: p50 0.000, p99 144330.000, p99.9 311622.000, max 311622.000
+solver ms per shot: p50 0.000, p99 4.156, p99.9 6.436, max 6.436
+engine ms per shot: p50 2.573, p99 38.601, p99.9 80.309, max 80.309
+fallback events: 0
+landings per shot: p50 1.000, p99 4.000, p99.9 6.000, max 6.000
+landings in all: 1027
+landing duration (ms): p50 15.235, p99 24.075, p99.9 24.680, max 24.750
+landing travel (mm): p50 7.918, p99 63.024, p99.9 75.144, max 77.676
+landings whose |ω| fell: 83.5%
+median |ω| after / before: 0.9533
+landing steps per shot: p50 1596.000, p99 13222.000, p99.9 16747.000, max 16747.000
+landing column visits per shot: p50 82068.000, p99 1449735.000, p99.9 1831177.000, max 1831177.000
+landing-cap events: 0
+worst shot: croquet, 0 solves, 0 units, solver 0.0 ms, engine 80.3 ms
+-- shotMix at COUNT=800, alone: now --
+800 shots, seed 7, budget 22000000 units
+shots with no solve: 97.5%
+largest group: 2 balls
+solves per shot: p50 0.000, p99 174.000, p99.9 271.000, max 271.000
+work units per shot: p50 0.000, p99 144330.000, p99.9 311622.000, max 311622.000
+solver ms per shot: p50 0.000, p99 4.121, p99.9 6.965, max 6.965
+engine ms per shot: p50 2.892, p99 41.538, p99.9 54.039, max 54.039
+fallback events: 0
+landings per shot: p50 1.000, p99 4.000, p99.9 6.000, max 6.000
+landings in all: 1027
+landing duration (ms): p50 15.235, p99 24.075, p99.9 24.680, max 24.750
+landing travel (mm): p50 7.918, p99 63.024, p99.9 75.144, max 77.676
+landings whose |ω| fell: 83.5%
+median |ω| after / before: 0.9533
+landing steps per shot: p50 1596.000, p99 13222.000, p99.9 16747.000, max 16747.000
+landing column visits per shot: p50 82068.000, p99 1449735.000, p99.9 1831177.000, max 1831177.000
+landing-cap events: 0
+worst shot: hoop, 0 solves, 0 units, solver 0.0 ms, engine 54.0 ms
+== The regimes ==
+FOUND graze: single-ball 3 m/s up 0.01 m dip -0.005 s jab 1.000 mm
+  setup line: single-ball 3 m/s up 0.01 m dip -0.005 s jab 1.000 mm: head/turf 5.33–33.45, 33.48–34.20, 34.53–34.94 ms, peak 1.700 mm, lowest -1.701 mm; face 97.21–98.24 ms; speed along aim at the turf 2.8217, at the ball 2.2377 m/s; impact 101.90 ms; finish 600.09 ms; turf-yield,turf-lift
+NONE stopped
+FOUND biting: single-ball 4 m/s up 0.01 m dip -0.005 s jab 5.000 mm
+  setup line: single-ball 4 m/s up 0.01 m dip -0.005 s jab 5.000 mm: head/turf 5.25–29.08, 29.10–29.55 ms, peak 2.009 mm, lowest -2.010 mm; face 69.33–70.28 ms; speed along aim at the turf 3.8123, at the ball 3.1843 m/s; impact 72.25 ms; finish 573.23 ms; turf-yield,impact-head-deep,grip-limit,turf-lift
+FOUND follow (not a regime): half-roll 4 m/s
+  setup line: half-roll 4 m/s: head/turf none ms, peak 0.000 mm, lowest 38.608 mm; face 0.01–1.34, 5.10–6.63, 16.50–18.23 ms; speed along aim at the turf -, at the ball 3.9254 m/s; impact 76.82 ms; finish 1000.00 ms; turf-lift,turf-lift,follow-turf-yield,follow-head-deep,follow-cap
+(the stopped regime's search: 1 NONE line; its runs are listed under 'Any throw' and in after/turfStrikeProbe.txt)
+-- series --
+== series (design §8): t ms, speed m/s, lowest mm, bearing N, resistance N, top N, bottom N ==
+-- graze (single-ball 3 m/s up 0.01 m dip -0.005 s jab 1.000 mm) --
+1.00 2.7998 1.213 0.0 0.0 24.0 0.0
+2.00 2.8050 0.894 0.0 0.0 24.0 0.0
+3.00 2.8101 0.585 0.0 0.0 24.1 0.0
+4.00 2.8151 0.287 0.0 0.0 24.1 0.0
+5.00 2.8201 -0.001 0.0 0.0 24.1 0.0
+6.00 2.8222 -0.278 11.1 -7.3 23.8 0.2
+7.00 2.8176 -0.541 17.0 -13.6 22.7 0.6
+8.00 2.8055 -0.786 32.4 -23.0 20.7 1.4
+9.00 2.7856 -1.008 47.2 -33.2 17.9 2.4
+10.00 2.7578 -1.204 56.3 -38.9 14.2 3.6
+11.00 2.7225 -1.369 70.1 -48.4 9.8 5.0
+12.00 2.6808 -1.501 76.3 -51.4 4.8 6.5
+13.00 2.6346 -1.599 85.7 -58.5 0.7 8.0
+14.00 2.5857 -1.663 85.6 -58.3 5.3 9.4
+15.00 2.5375 -1.695 78.3 -55.3 9.5 10.5
+16.00 2.4899 -1.700 80.1 -56.8 13.1 11.5
+17.00 2.4436 -1.680 75.0 -53.1 16.1 12.3
+18.00 2.3995 -1.640 66.2 -48.4 18.6 12.9
+19.00 2.3569 -1.581 68.7 -49.8 20.5 13.5
+20.00 2.3159 -1.506 66.2 -47.7 22.2 14.0
+21.00 2.2774 -1.417 61.3 -43.6 23.4 14.4
+22.00 2.2420 -1.317 54.1 -38.7 24.1 14.7
+23.00 2.2104 -1.209 44.9 -33.8 24.2 14.9
+24.00 2.1832 -1.095 37.3 -29.3 23.7 14.9
+25.00 2.1602 -0.979 32.1 -25.5 22.7 14.8
+26.00 2.1414 -0.864 25.4 -20.7 21.3 14.5
+27.00 2.1264 -0.751 20.5 -16.7 19.6 14.2
+28.00 2.1148 -0.641 15.3 -12.7 17.8 13.9
+29.00 2.1064 -0.537 11.2 -9.7 16.0 13.6
+30.00 2.1005 -0.437 8.1 -7.7 14.3 13.2
+31.00 2.0969 -0.344 5.0 -5.6 12.8 12.9
+32.00 2.0952 -0.255 3.2 -4.0 11.6 12.5
+33.00 2.0951 -0.171 1.9 -2.6 10.8 12.2
+34.00 2.0964 -0.092 0.4 -0.9 10.5 11.9
+35.00 2.0986 -0.016 0.0 0.0 10.6 11.7
+36.00 2.1011 0.057 0.0 0.0 10.9 11.4
+37.00 2.1037 0.129 0.0 0.0 11.4 11.2
+38.00 2.1064 0.199 0.0 0.0 12.0 11.0
+39.00 2.1091 0.270 0.0 0.0 12.6 10.8
+40.00 2.1119 0.340 0.0 0.0 13.3 10.6
+41.00 2.1147 0.412 0.0 0.0 13.9 10.5
+42.00 2.1175 0.485 0.0 0.0 14.5 10.3
+43.00 2.1204 0.559 0.0 0.0 15.1 10.1
+44.00 2.1232 0.636 0.0 0.0 15.6 9.9
+45.00 2.1261 0.716 0.0 0.0 16.0 9.8
+46.00 2.1289 0.799 0.0 0.0 16.5 9.6
+47.00 2.1318 0.885 0.0 0.0 16.9 9.4
+48.00 2.1346 0.974 0.0 0.0 17.2 9.2
+49.00 2.1374 1.068 0.0 0.0 17.5 9.1
+50.00 2.1402 1.165 0.0 0.0 17.8 8.9
+51.00 2.1429 1.266 0.0 0.0 18.0 8.7
+52.00 2.1456 1.372 0.0 0.0 18.3 8.6
+53.00 2.1483 1.482 0.0 0.0 18.5 8.4
+54.00 2.1509 1.597 0.0 0.0 18.6 8.2
+55.00 2.1535 1.717 0.0 0.0 18.8 8.0
+56.00 2.1561 1.842 0.0 0.0 18.9 7.9
+57.00 2.1586 1.972 0.0 0.0 19.1 7.7
+58.00 2.1611 2.106 0.0 0.0 19.2 7.5
+59.00 2.1635 2.246 0.0 0.0 19.3 7.4
+60.00 2.1659 2.392 0.0 0.0 19.3 7.2
+61.00 2.1682 2.542 0.0 0.0 19.4 7.0
+62.00 2.1704 2.698 0.0 0.0 19.5 6.9
+63.00 2.1727 2.860 0.0 0.0 19.5 6.7
+64.00 2.1748 3.027 0.0 0.0 19.6 6.5
+65.00 2.1769 3.200 0.0 0.0 19.6 6.4
+66.00 2.1790 3.378 0.0 0.0 19.6 6.2
+67.00 2.1810 3.562 0.0 0.0 19.7 6.0
+68.00 2.1829 3.752 0.0 0.0 19.7 5.9
+69.00 2.1848 3.947 0.0 0.0 19.7 5.7
+70.00 2.1866 4.148 0.0 0.0 19.7 5.5
+71.00 2.1884 4.349 0.0 0.0 70.4 32.0
+72.00 2.1902 4.520 0.0 0.0 70.1 30.9
+73.00 2.1918 4.656 0.0 0.0 69.8 29.8
+74.00 2.1934 4.759 0.0 0.0 69.5 28.7
+75.00 2.1950 4.827 0.0 0.0 69.2 27.6
+76.00 2.1982 4.874 0.0 0.0 105.5 7.9
+77.00 2.2026 4.959 0.0 0.0 105.3 7.7
+78.00 2.2068 5.092 0.0 0.0 105.1 7.7
+79.00 2.2109 5.272 0.0 0.0 105.0 7.6
+80.00 2.2147 5.499 0.0 0.0 104.9 7.5
+81.00 2.2173 5.767 0.0 0.0 20.6 7.5
+82.00 2.2189 6.045 0.0 0.0 20.6 7.5
+83.00 2.2204 6.329 0.0 0.0 20.6 7.5
+84.00 2.2219 6.619 0.0 0.0 20.6 7.4
+85.00 2.2234 6.915 0.0 0.0 20.6 7.4
+86.00 2.2248 7.218 0.0 0.0 20.7 7.4
+87.00 2.2262 7.526 0.0 0.0 20.7 7.4
+88.00 2.2275 7.841 0.0 0.0 20.7 7.4
+89.00 2.2288 8.162 0.0 0.0 20.7 7.4
+90.00 2.2301 8.490 0.0 0.0 20.7 7.3
+91.00 2.2313 8.823 0.0 0.0 20.7 7.3
+92.00 2.2324 9.163 0.0 0.0 20.7 7.3
+93.00 2.2335 9.509 0.0 0.0 20.7 7.3
+94.00 2.2346 9.861 0.0 0.0 20.7 7.3
+95.00 2.2356 10.220 0.0 0.0 20.7 7.3
+96.00 2.2366 10.585 0.0 0.0 20.7 7.2
+97.00 2.2375 10.956 0.0 0.0 20.7 7.2
+98.00 1.1192 11.258 0.0 0.0 28.8 17.9
+99.00 1.0600 11.422 0.0 0.0 28.0 18.5
+100.00 1.0621 11.592 0.0 0.0 27.4 18.5
+101.00 1.0641 11.716 0.0 0.0 26.8 18.4
+events turf-yield@12.15, turf-lift@101.90
+-- stopped: none found --
+-- biting (single-ball 4 m/s up 0.01 m dip -0.005 s jab 5.000 mm) --
+1.00 3.7816 1.679 0.0 0.0 33.5 0.0
+2.00 3.7890 1.231 0.0 0.0 33.5 0.0
+3.00 3.7963 0.801 0.0 0.0 33.6 0.0
+4.00 3.8035 0.390 0.0 0.0 33.6 0.0
+5.00 3.8106 -0.002 0.0 0.0 33.7 0.0
+6.00 3.8131 -0.373 11.0 -8.9 33.1 0.3
+7.00 3.8056 -0.720 33.6 -23.4 31.3 1.0
+8.00 3.7865 -1.034 53.9 -36.6 28.1 2.1
+9.00 3.7561 -1.311 72.0 -48.3 23.5 3.7
+10.00 3.7143 -1.543 90.9 -60.1 17.7 5.6
+11.00 3.6642 -1.726 98.8 -66.0 11.2 7.5
+12.00 3.6104 -1.860 100.3 -68.4 5.0 9.2
+13.00 3.5566 -1.949 96.2 -67.4 0.8 10.6
+14.00 3.5037 -1.997 91.4 -65.5 5.1 11.7
+15.00 3.4521 -2.009 85.0 -62.2 8.9 12.6
+16.00 3.4017 -1.989 74.8 -56.1 12.1 13.4
+17.00 3.3528 -1.941 74.5 -55.3 14.8 14.0
+18.00 3.3064 -1.866 76.5 -56.5 17.0 14.6
+19.00 3.2625 -1.769 71.5 -53.2 18.7 15.1
+20.00 3.2208 -1.651 62.1 -46.4 20.1 15.5
+21.00 3.1818 -1.515 62.7 -45.4 21.1 15.9
+22.00 3.1465 -1.363 57.3 -42.0 21.6 16.1
+23.00 3.1158 -1.198 45.4 -33.7 21.6 16.2
+24.00 3.0916 -1.024 35.4 -26.9 20.6 15.9
+25.00 3.0739 -0.846 21.9 -19.1 19.0 15.5
+26.00 3.0620 -0.667 14.9 -12.7 16.9 14.9
+27.00 3.0549 -0.490 6.2 -7.6 14.7 14.2
+28.00 3.0523 -0.316 2.7 -4.1 12.8 13.6
+29.00 3.0526 -0.144 0.0 -0.5 11.5 13.0
+30.00 3.0550 0.025 0.0 0.0 10.9 12.5
+31.00 3.0577 0.193 0.0 0.0 11.0 12.1
+32.00 3.0605 0.362 0.0 0.0 11.6 11.8
+33.00 3.0635 0.533 0.0 0.0 12.5 11.5
+34.00 3.0665 0.706 0.0 0.0 13.5 11.2
+35.00 3.0695 0.884 0.0 0.0 14.6 10.9
+36.00 3.0726 1.066 0.0 0.0 15.7 10.7
+37.00 3.0757 1.253 0.0 0.0 16.7 10.5
+38.00 3.0787 1.447 0.0 0.0 17.7 10.2
+39.00 3.0818 1.647 0.0 0.0 18.5 10.0
+40.00 3.0849 1.854 0.0 0.0 19.3 9.8
+41.00 3.0879 2.070 0.0 0.0 20.1 9.6
+42.00 3.0909 2.293 0.0 0.0 20.7 9.3
+43.00 3.0938 2.526 0.0 0.0 21.3 9.1
+44.00 3.0966 2.767 0.0 0.0 21.9 8.9
+45.00 3.0994 3.017 0.0 0.0 22.4 8.7
+46.00 3.1022 3.277 0.0 0.0 22.8 8.4
+47.00 3.1049 3.547 0.0 0.0 23.2 8.2
+48.00 3.1074 3.827 0.0 0.0 23.6 8.0
+49.00 3.1099 4.118 0.0 0.0 23.9 7.8
+50.00 3.1124 4.418 0.0 0.0 24.2 7.5
+51.00 3.1147 4.730 0.0 0.0 24.4 7.3
+52.00 3.1170 5.052 0.0 0.0 24.6 7.1
+53.00 3.1191 5.370 0.0 0.0 411.7 124.2
+54.00 3.1212 5.536 0.0 0.0 410.3 117.4
+55.00 3.1232 5.513 0.0 0.0 409.1 110.5
+56.00 3.1250 5.301 0.0 0.0 407.9 103.7
+57.00 3.1268 4.901 0.0 0.0 406.8 96.8
+58.00 3.1324 4.342 0.0 0.0 435.0 8.5
+59.00 3.1434 3.918 0.0 0.0 435.0 8.3
+60.00 3.1536 3.701 0.0 0.0 435.0 8.1
+61.00 3.1628 3.692 0.0 0.0 435.0 7.9
+62.00 3.1711 3.888 0.0 0.0 435.0 7.8
+63.00 3.1764 4.277 0.0 0.0 34.2 7.8
+64.00 3.1779 4.716 0.0 0.0 33.5 7.8
+65.00 3.1793 5.170 0.0 0.0 32.9 7.8
+66.00 3.1806 5.640 0.0 0.0 32.4 7.8
+67.00 3.1818 6.124 0.0 0.0 31.9 7.8
+68.00 3.1829 6.623 0.0 0.0 31.5 7.8
+69.00 3.1839 7.137 0.0 0.0 31.1 7.8
+70.00 1.7020 7.584 0.0 0.0 40.5 21.8
+71.00 1.5271 7.817 0.0 0.0 39.0 23.6
+72.00 1.5297 7.584 0.0 0.0 37.7 23.6
+events turf-yield@9.79, impact-head-deep@14.11, grip-limit@57.61, turf-lift@72.25
+-- power --
+== power: the graze's loss (user, 2026-10-16) ==
+single-ball 3 m/s up 0.01 m dip -0.005 s jab 1.000 mm: at the ball 2.2377 m/s (face 97.21 ms); single-ball 3 m/s up 0.01 m dip -0.005 s jab 1.000 mm at up 0: at the ball 3.0000 m/s (face 5.01 ms); ratio 0.7459; on entering the turf 2.8217 m/s (5.33 ms), at the ball 0.7930 of it
+planned path, single-ball 3 m/s up 0.01 m dip -0.005 s jab 1.000 mm: contact at 75.45 ms; 2.7946 m/s at 0.01 ms (measured 2.7946), 2.8217 at the turf (5.33 ms), 3.0000 at contact; the clear stroke's path 75.45 ms before its contact: 2.7946 m/s, at its contact (5.00 ms) 3.0000 m/s
+== The bounds ==
+== bounds (design §6.2, §8) ==
+-- turfYield 172000 Pa --
+graze (single-ball 3 m/s up 0.01 m dip -0.005 s jab 1.000 mm): occurs; head/turf 5.33–38.54, 38.58–39.27 ms, peak 1.849 mm, lowest -1.849 mm; face 98.94–99.98 ms; speed along aim at the turf 2.8217, at the ball 2.1674 m/s; impact 103.81 ms; finish 602.63 ms; turf-yield,turf-lift
+stopped: none found on the default lawn
+biting (single-ball 4 m/s up 0.01 m dip -0.005 s jab 5.000 mm): occurs; head/turf 5.25–33.52, 33.80–33.89 ms, peak 2.219 mm, lowest -2.220 mm; face 69.17–70.14 ms; speed along aim at the turf 3.8123, at the ball 3.1604 m/s; impact 72.11 ms; finish 573.23 ms; turf-yield,impact-head-deep,grip-limit,turf-lift
+verdict: FAIL; 5 grazes, ratios 0.0000, 0.0000, 0.0000, 0.0000, 0.0000; Gugan's 0.400 (0.295–0.463)
+-- turfYield 310000 Pa --
+graze (single-ball 3 m/s up 0.01 m dip -0.005 s jab 1.000 mm): occurs; head/turf 5.33–32.61, 32.65–33.37, 33.68–34.12 ms, peak 1.692 mm, lowest -1.692 mm; face 96.89–97.93 ms; speed along aim at the turf 2.8217, at the ball 2.2500 m/s; impact 101.56 ms; finish 599.64 ms; turf-lift
+stopped: none found on the default lawn
+biting (single-ball 4 m/s up 0.01 m dip -0.005 s jab 5.000 mm): occurs; head/turf 5.25–27.35, 27.50–27.82 ms, peak 1.959 mm, lowest -1.959 mm; face 69.34–70.30 ms; speed along aim at the turf 3.8123, at the ball 3.1983 m/s; impact 72.25 ms; finish 573.17 ms; turf-yield,grip-limit,turf-lift
+verdict: FAIL; 6 grazes, ratios 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000; Gugan's 0.400 (0.295–0.463)
+-- turfMatStrength 73000 Pa --
+graze (single-ball 3 m/s up 0.01 m dip -0.005 s jab 1.000 mm): occurs; head/turf 5.33–33.64, 33.85–34.36 ms, peak 1.697 mm, lowest -1.698 mm; face 94.47–95.49 ms; speed along aim at the turf 2.8217, at the ball 2.3094 m/s; impact 98.98 ms; finish 596.85 ms; turf-yield,turf-lift
+stopped: none found on the default lawn
+biting (single-ball 4 m/s up 0.01 m dip -0.005 s jab 5.000 mm): occurs; head/turf 5.25–29.21, 29.50–29.62 ms, peak 2.005 mm, lowest -2.005 mm; face 67.92–68.87 ms; speed along aim at the turf 3.8123, at the ball 3.2631 m/s; impact 70.78 ms; finish 571.86 ms; turf-yield,impact-head-deep,grip-limit,turf-lift
+verdict: FAIL; 6 grazes, ratios 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000; Gugan's 0.400 (0.295–0.463)
+-- turfMatStrength 138000 Pa --
+graze (single-ball 3 m/s up 0.01 m dip -0.005 s jab 1.000 mm): occurs; head/turf 5.33–34.05, 34.19–34.83, 35.33–35.56 ms, peak 1.703 mm, lowest -1.704 mm; face 100.27–101.31 ms; speed along aim at the turf 2.8217, at the ball 2.1634 m/s; impact 105.18 ms; finish 603.68 ms; turf-yield,turf-lift
+stopped: none found on the default lawn
+biting (single-ball 4 m/s up 0.01 m dip -0.005 s jab 5.000 mm): occurs; head/turf 5.25–29.43, 29.53–29.91 ms, peak 2.013 mm, lowest -2.014 mm; face 70.89–71.85 ms; speed along aim at the turf 3.8123, at the ball 3.1017 m/s; impact 73.88 ms; finish 574.75 ms; turf-yield,impact-head-deep,grip-limit,turf-lift
+verdict: FAIL; 6 grazes, ratios 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000; Gugan's 0.400 (0.295–0.463)
+== The jab ==
+== jab: the AC stop at 3 m/s (design §7.3) ==
+jab 0.000 mm: U 2.9927 m/s, second tap 0.0000 m/s, ratio 0.0000, grounds never, does not qualify; lowest 1.646 mm; turf-lift
+jab 0.500 mm: U 2.9927 m/s, second tap 0.0000 m/s, ratio 0.0000, grounds never, does not qualify; lowest 1.145 mm; turf-lift
+jab 1.000 mm: U 2.9927 m/s, second tap 0.0000 m/s, ratio 0.0000, grounds never, does not qualify; lowest 0.644 mm; turf-lift
+jab 1.500 mm: U 2.9927 m/s, second tap 0.0000 m/s, ratio 0.0000, grounds never, does not qualify; lowest 0.142 mm; turf-lift
+jab 2.000 mm: U 2.9927 m/s, second tap 0.0000 m/s, ratio 0.0000, grounds 18.34 ms, graze; lowest -0.377 mm; turf-lift
+jab 2.500 mm: U 2.9927 m/s, second tap 0.0000 m/s, ratio 0.0000, grounds 17.20 ms, graze; lowest -0.816 mm; turf-lift
+jab 3.000 mm: U 2.9927 m/s, second tap 0.0000 m/s, ratio 0.0000, grounds 16.39 ms, graze; lowest -1.169 mm; turf-lift
+jab 3.500 mm: U 2.9927 m/s, second tap 0.0000 m/s, ratio 0.0000, grounds 15.69 ms, graze; lowest -1.470 mm; turf-lift
+jab 4.000 mm: U 2.9927 m/s, second tap 0.0000 m/s, ratio 0.0000, grounds 15.05 ms, graze; lowest -1.745 mm; turf-lift,turf-yield
+jab 4.500 mm: U 2.9927 m/s, second tap 0.0000 m/s, ratio 0.0000, grounds 14.56 ms, graze; lowest -1.999 mm; turf-lift,turf-yield
+jab 5.000 mm: U 2.9927 m/s, second tap 0.0000 m/s, ratio 0.0000, grounds 14.15 ms, qualifies, deep; lowest -2.240 mm; turf-lift,turf-yield,impact-head-deep
+jab 5.500 mm: U 2.9927 m/s, second tap 0.0000 m/s, ratio 0.0000, grounds 13.78 ms, qualifies, deep; lowest -2.446 mm; turf-lift,turf-yield,impact-head-deep
+jab 6.000 mm: U 2.9927 m/s, second tap 0.0000 m/s, ratio 0.0000, grounds 13.46 ms, qualifies, deep; lowest -2.641 mm; turf-lift,turf-yield,impact-head-deep
+jab 6.500 mm: U 2.9927 m/s, second tap 0.0000 m/s, ratio 0.0000, grounds 13.16 ms, qualifies, deep; lowest -2.830 mm; turf-lift,turf-yield,impact-head-deep
+jab 7.000 mm: U 2.9927 m/s, second tap 0.0000 m/s, ratio 0.0000, grounds 12.88 ms, qualifies, deep; lowest -3.016 mm; turf-lift,turf-yield,impact-head-deep,follow-turf-yield,follow-head-deep
+jab 7.500 mm: U 2.9927 m/s, second tap 0.0000 m/s, ratio 0.0000, grounds 12.63 ms, qualifies, deep; lowest -3.201 mm; turf-lift,turf-yield,impact-head-deep,follow-turf-yield,follow-head-deep
+jab 8.000 mm: U 2.9927 m/s, second tap 0.0000 m/s, ratio 0.0000, grounds 12.38 ms, qualifies, deep; lowest -3.383 mm; turf-lift,turf-yield,impact-head-deep,follow-head-deep,follow-turf-yield
+verdict: FAIL; 6 grazes, ratios 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000; Gugan's 0.400 (0.295–0.463)
+== jab against the hands' check (design §7.3, §8) ==
+stop-ac 3 m/s jab 0.000 mm: second tap 0.0000 m/s (0.0000U); hands' peak check 53.5 N, impulse 0.2576 N·s; turf braking 0.0000 N·s; turf-lift
+stop-ac 3 m/s jab 2.000 mm: second tap 0.0000 m/s (0.0000U); hands' peak check 53.4 N, impulse 0.2575 N·s; turf braking 0.0129 N·s; turf-lift
+stop-ac 4 m/s jab 0.000 mm: second tap 0.0000 m/s (0.0000U); hands' peak check 73.4 N, impulse 0.3584 N·s; turf braking 0.0000 N·s; turf-lift
+stop-ac 4 m/s jab 2.000 mm: second tap 0.0000 m/s (0.0000U); hands' peak check 73.2 N, impulse 0.3594 N·s; turf braking 0.0523 N·s; turf-lift
+-- after/jab-check.txt --
+Gugan's jab check (tests/engine/turfStrike.test.ts, SLOW_TESTS=1), 2026-10-16, before the gate's ruling (Task 8): FAIL.
+The AC stop at 3 m/s over jab 0-8 mm (0.5 mm steps): 6 grazes (jab 2.0-4.5 mm), ratios 0.0000 x6.
+Every run has a single face interval: no second tap, so each graze counts 0 against the band [0.295, 0.463].
+U 2.9927 m/s throughout. The head grounds at 18.34 ms (jab 2 mm) to 14.56 ms (jab 4.5 mm), after the first face
+interval; jab >= 5 mm is deep (impact-head-deep).
+Hands' check after the first face interval: 3 m/s peak 53.5 N (jab 0) / 53.4 N (jab 2 mm), turf braking 0 / 0.0129 N.s;
+4 m/s peak 73.4 / 73.2 N, turf braking 0 / 0.0523 N.s.
+Full lines: docs/superpowers/probes/2026-10-16-p2b2b2b3-regimes.txt is regimes only; the jab section's output is in
+/tmp/claude-0637011b-b805-4207-b026-2e2ace4eb40c/jab.txt.
+== The canonical runs ==
+old: half-roll 2 m/s: impact 102.95 ms; head/turf none, peak 0.000 mm, slide 0.000 mm; face 0.01–1.50, 10.61–12.32; highest ball centre 3.995 mm above R; finish 881.48 ms unflagged; events turf-lift,turf-lift
+new: half-roll 2 m/s: impact 102.95 ms; head/turf none, peak 0.000 mm, slide 0.000 mm; face 0.01–1.50, 10.61–12.32; highest ball centre 3.995 mm above R; finish 880.46 ms unflagged; events turf-lift,turf-lift
+old: half-roll 3 m/s: impact 67.18 ms; head/turf none, peak 0.000 mm, slide 0.000 mm; face 0.01–1.41, 6.88–8.44, 27.13–28.80; highest ball centre 4.268 mm above R; finish 856.70 ms unflagged; events turf-lift,turf-lift
+new: half-roll 3 m/s: impact 67.18 ms; head/turf none, peak 0.000 mm, slide 0.000 mm; face 0.01–1.41, 6.88–8.44, 27.13–28.80; highest ball centre 4.268 mm above R; finish 860.21 ms unflagged; events turf-lift,turf-lift
+old: full-roll 2 m/s: impact 161.97 ms; head/turf none, peak 0.000 mm, slide 0.000 mm; face 0.01–1.46, 9.81–11.41, 45.89–47.35, 67.79–69.50, 78.55–80.30, 84.02–86.01, 88.20–90.47, 92.49–94.96, 99.01–101.58; highest ball centre 2.534 mm above R; finish 826.04 ms follow-head-deep; events turf-lift,turf-lift
+new: full-roll 2 m/s: impact 161.97 ms; head/turf none, peak 0.000 mm, slide 0.000 mm; face 0.01–1.46, 9.81–11.41, 45.89–47.35, 67.79–69.50, 78.55–80.30, 84.02–86.01, 88.20–90.47, 92.49–94.96, 99.01–101.58; highest ball centre 2.534 mm above R; finish 823.97 ms follow-turf-yield,follow-head-deep; events turf-lift,turf-lift
+old: full-roll 3 m/s: impact 153.85 ms; head/turf none, peak 0.000 mm, slide 0.000 mm; face 0.01–1.35, 7.07–8.53, 37.07–38.66; highest ball centre 1.936 mm above R; finish 692.58 ms follow-head-deep; events turf-lift,turf-lift
+new: full-roll 3 m/s: impact 153.85 ms; head/turf none, peak 0.000 mm, slide 0.000 mm; face 0.01–1.35, 7.07–8.53, 37.07–38.66; highest ball centre 1.936 mm above R; finish 665.62 ms follow-turf-yield,follow-head-deep; events turf-lift,turf-lift
+old: pass-roll 2 m/s: impact 193.03 ms; head/turf none, peak 0.000 mm, slide 0.000 mm; face 0.01–1.40, 6.54–8.04, 11.49–13.25, 15.04–17.36, 17.48–26.32, 138.82–140.06, 146.11–147.49, 153.56–155.19; highest ball centre 11.577 mm above R; finish 715.06 ms unflagged; events turf-lift,impact-off-face
+new: pass-roll 2 m/s: impact 193.03 ms; head/turf none, peak 0.000 mm, slide 0.000 mm; face 0.01–1.40, 6.54–8.04, 11.49–13.25, 15.04–17.36, 17.48–26.32, 138.82–140.06, 146.11–147.49, 153.56–155.19; highest ball centre 11.577 mm above R; finish 487.85 ms follow-turf-yield,follow-head-deep; events turf-lift,impact-off-face
+old: pass-roll 3 m/s: impact 93.42 ms; head/turf none, peak 0.000 mm, slide 0.000 mm; face 0.01–1.28, 5.37–6.82, 9.16–10.92, 12.21–26.72; highest ball centre 20.756 mm above R; finish 445.68 ms follow-head-deep; events turf-lift,turf-lift
+new: pass-roll 3 m/s: impact 93.42 ms; head/turf none, peak 0.000 mm, slide 0.000 mm; face 0.01–1.28, 5.37–6.82, 9.16–10.92, 12.21–26.72; highest ball centre 20.756 mm above R; finish 397.97 ms follow-turf-yield,follow-head-deep; events turf-lift,turf-lift
+old: single-ball 2 m/s: impact 10.00 ms; head/turf none, peak 0.000 mm, slide 0.000 mm; face 0.01–1.06; highest ball centre 0.176 mm above R; finish 494.55 ms unflagged; events turf-lift
+new: single-ball 2 m/s: impact 10.00 ms; head/turf none, peak 0.000 mm, slide 0.000 mm; face 0.01–1.06; highest ball centre 0.176 mm above R; finish 494.55 ms unflagged; events turf-lift
+old: single-ball 3 m/s: impact 10.00 ms; head/turf none, peak 0.000 mm, slide 0.000 mm; face 0.01–0.97; highest ball centre 0.643 mm above R; finish 498.22 ms unflagged; events turf-lift
+new: single-ball 3 m/s: impact 10.00 ms; head/turf none, peak 0.000 mm, slide 0.000 mm; face 0.01–0.97; highest ball centre 0.643 mm above R; finish 498.22 ms unflagged; events turf-lift
+old: drive 2 m/s: impact 215.38 ms; head/turf none, peak 0.000 mm, slide 0.000 mm; face 0.01–1.58, 128.25–129.80; highest ball centre 1.539 mm above R; finish 524.55 ms unflagged; events turf-lift,impact-off-face
+new: drive 2 m/s: impact 215.38 ms; head/turf none, peak 0.000 mm, slide 0.000 mm; face 0.01–1.58, 128.25–129.80; highest ball centre 1.539 mm above R; finish 524.55 ms unflagged; events turf-lift,impact-off-face
+old: drive 3 m/s: impact 154.09 ms; head/turf none, peak 0.000 mm, slide 0.000 mm; face 0.01–1.50, 109.09–110.60; highest ball centre 2.920 mm above R; finish 531.26 ms unflagged; events turf-lift,impact-off-face
+new: drive 3 m/s: impact 154.09 ms; head/turf none, peak 0.000 mm, slide 0.000 mm; face 0.01–1.50, 109.09–110.60; highest ball centre 2.920 mm above R; finish 531.26 ms unflagged; events turf-lift,impact-off-face
+old: stop-ac 2 m/s: impact 20.00 ms; head/turf none, peak 0.000 mm, slide 0.000 mm; face 0.01–1.55; highest ball centre 1.051 mm above R; finish 137.95 ms unflagged; events turf-lift
+new: stop-ac 2 m/s: impact 20.00 ms; head/turf none, peak 0.000 mm, slide 0.000 mm; face 0.01–1.55; highest ball centre 1.051 mm above R; finish 137.95 ms unflagged; events turf-lift
+old: stop-ac 3 m/s: impact 20.00 ms; head/turf none, peak 0.000 mm, slide 0.000 mm; face 0.01–1.47; highest ball centre 3.062 mm above R; finish 136.85 ms unflagged; events turf-lift
+new: stop-ac 3 m/s: impact 20.00 ms; head/turf none, peak 0.000 mm, slide 0.000 mm; face 0.01–1.47; highest ball centre 3.062 mm above R; finish 136.85 ms unflagged; events turf-lift
+old: stop-gc 2 m/s: impact 10.00 ms; head/turf none, peak 0.000 mm, slide 0.000 mm; face 0.01–1.05; highest ball centre 0.139 mm above R; finish 93.97 ms unflagged; events turf-lift
+new: stop-gc 2 m/s: impact 10.00 ms; head/turf none, peak 0.000 mm, slide 0.000 mm; face 0.01–1.05; highest ball centre 0.136 mm above R; finish 94.41 ms follow-grip-limit; events grip-limit,turf-lift
+old: stop-gc 3 m/s: impact 10.00 ms; head/turf none, peak 0.000 mm, slide 0.000 mm; face 0.01–0.96; highest ball centre 0.587 mm above R; finish 94.12 ms unflagged; events turf-lift
+new: stop-gc 3 m/s: impact 10.00 ms; head/turf none, peak 0.000 mm, slide 0.000 mm; face 0.01–0.96; highest ball centre 0.567 mm above R; finish 179.35 ms follow-grip-limit; events grip-limit,turf-lift
+== The ratchet ==
+-- saturated.txt (Task 2) --
+single-ball 3 m/s drive -1 up -0.003 side -0.01	baseline eab6434689226e8bbc59f3c181ffafcfb0ec59409b4e026c30894cdba4ed53d2 turf none	after c9d3b3e9b181718836101bc376690d1a0e363f84cf5c147807f426a16b7da07b	grip-limit top at 0.000005	unlimited impact peak top 461.4 N bottom 52.9 N
+single-ball 3 m/s drive -1 up -0.003 side 0	baseline c03bc9dcb5aabda6101deeee97db9b74cd75970790feb32acb1e0839c4e2e1dc turf none	after d02c640a1cae54d4a4d5723aea16d4cdb504cd304ce8e34c759bb2219eebba8e	grip-limit top at 0.000005	unlimited impact peak top 461.4 N bottom 52.9 N
+single-ball 3 m/s drive -1 up -0.003 side 0.01	baseline e384ee61e9545d79981469fe1887cb712396f27979bb3a977855d783d141d926 turf none	after 7e67d3245e138b86ee3b685b2d2ff52e7d8036c30edf95fff9fc7fc720910f5d	grip-limit top at 0.000005	unlimited impact peak top 461.4 N bottom 52.9 N
+single-ball 3 m/s drive -1 up 0 side -0.01	baseline 6f180605785f27b9edbfd0fda50eb791f91d8d1d4db993a576d2ad63306330c3 turf none	after 650824b45fabd8a86603129ae1f68a91c1c56fef0c9e3916a8edb18a2a0addfd	grip-limit top at 0.000005	unlimited impact peak top 461.4 N bottom 52.9 N
+single-ball 3 m/s drive -1 up 0 side 0	baseline eecfbd318ebbe0f2ccfab3966b82655a8dd9c511f4da8c839fa70b3c422c9801 turf none	after 29e9e4e0faa5f22caa85e9b10f965bf2cad49b1166a3e6ae35ba04afeb80c015	grip-limit top at 0.000005	unlimited impact peak top 461.4 N bottom 52.9 N
+single-ball 3 m/s drive -1 up 0 side 0.01	baseline ad1ca93a6140ce19bd5bf1d101735742b987980c80d39c5a3d08711d86c8fefc turf none	after 26e85f684133089fb7aaea6d67aa13fff3cf1ca56c7f0ce4a3f09e3baaf0a8f0	grip-limit top at 0.000005	unlimited impact peak top 461.4 N bottom 52.9 N
+single-ball 3 m/s drive -1 up 0.003 side -0.01	baseline 66d46d15cd14bb1bd5fe431dbc7be09abe0bc9f8c650e2625f303e88e50e3cd9 turf none	after 69a6af9122b2ae4dbca5e048662ce473e7a9094591d84a2f261d16ccbee70a21	grip-limit top at 0.000005	unlimited impact peak top 461.4 N bottom 52.9 N
+single-ball 3 m/s drive -1 up 0.003 side 0	baseline b67e82fe15674bd07cfded3443a7219fb2026b2af710740091dc8246974de291 turf none	after 6e32fe9a0d00eca17afd61d63f04bc21e29fee69fd13c3947610fe8558bdbd8d	grip-limit top at 0.000005	unlimited impact peak top 461.4 N bottom 52.9 N
+single-ball 3 m/s drive -1 up 0.003 side 0.01	baseline 1b00db95ce9eafcce96cd8d58b69af56d41ff2ad5eeff5838f7dd80fc980d567 turf none	after 1c35a731f545ced7c7a695260eb4f798904c4dff45eae23e7853d162d9dc5f32	grip-limit top at 0.000005	unlimited impact peak top 461.4 N bottom 52.9 N
+single-ball 4 m/s drive -1 up -0.003 side -0.01	baseline 43ccfd2fea712ce8103a05899592c00f49026c04cd2f76c01e8884fec903fcee turf none	after e8394b2f51e2a2575128fa19c6ed87fd6341c84c941ca593536d3af220d95efd	grip-limit top at 0.000005	unlimited impact peak top 615.2 N bottom 70.5 N
+single-ball 4 m/s drive -1 up -0.003 side 0	baseline ba20b6b2f4bbf5cfaa6b95399c64153b22df63b5f403894aaa50f0f0b194518c turf none	after 79749bbd24ae740a335c89f37e2c16f6d156197fa414c2e3b2fb5f567fe99bfb	grip-limit top at 0.000005	unlimited impact peak top 615.2 N bottom 70.5 N
+single-ball 4 m/s drive -1 up -0.003 side 0.01	baseline d9b955303845bc530218279b16b07a0be114d7648e0ae5ce098eb43a3ce45e29 turf none	after 477907dafccbefd906ceb513345ce7d8535a4198023bff7f6b96be579b7ea65e	grip-limit top at 0.000005	unlimited impact peak top 615.2 N bottom 70.5 N
+single-ball 4 m/s drive -1 up 0 side -0.01	baseline 75c4b95a7a4434440f4163f10dceb1e81d36f87eb59b7679cb6ed4f042c00472 turf none	after 7c13a095fda7a4b53fc0c33118ef747b07aa4a0d34750006add5a61dfa521c90	grip-limit top at 0.000005	unlimited impact peak top 615.2 N bottom 70.5 N
+single-ball 4 m/s drive -1 up 0 side 0	baseline 38dc06d5a7c37dc7b6505824e7ca5aa530faa4e3ab53035fc3f2bd2d67633660 turf none	after 3459db58b714265132f7ff372d8e00a6a744c6a5aeed11fea85a8e6b2e5927e1	grip-limit top at 0.000005	unlimited impact peak top 615.2 N bottom 70.5 N
+single-ball 4 m/s drive -1 up 0 side 0.01	baseline 9874da3c1f57ed544271292a2f6c9366411c49dd9db81689b251c82b7e849b3f turf none	after 6af33195c17ca8fee86023d244cd0bc8989405ea069f12bb63733188655251b4	grip-limit top at 0.000005	unlimited impact peak top 615.2 N bottom 70.5 N
+single-ball 4 m/s drive -1 up 0.003 side -0.01	baseline 01d11e55138b3dc152733b187dbe5e2433c0e3600afefa56a35e71f0b2fcf31d turf none	after 4784ddee04795504b6123992b98cde15f7858d082f73183be0cab5a458586805	grip-limit top at 0.000005	unlimited impact peak top 615.2 N bottom 70.5 N
+single-ball 4 m/s drive -1 up 0.003 side 0	baseline caf6ef8bfbd8e85224d014212f74262ba29405e8f4a560522707171d5beaaf03 turf none	after fbdd7295356fc0349c8018439b6662fc8c54d45d5b4d88a7199e0cfa3dcedbec	grip-limit top at 0.000005	unlimited impact peak top 615.2 N bottom 70.5 N
+single-ball 4 m/s drive -1 up 0.003 side 0.01	baseline d0c2ae49494577795694ad6fbd9a46a09f4dbf17a498311c3c2fb743f86555e2 turf none	after e9e7828a695a18e3517247dd56412c70e483b9e98467890df2696b0e178bf283	grip-limit top at 0.000005	unlimited impact peak top 615.2 N bottom 70.5 N
+drive 4 m/s drive -1 up -0.003 side -0.01	baseline e92e1b1f73b6394a103f02459536377996ae1ad1ee7f3f58cba2240b7f35afa1 turf none	after 382f7782c081d65c9e7b8d46809308c8849e92a6074c834694b7b17fa96ae263	grip-limit top at 0.000005	unlimited impact peak top 541.7 N bottom 180.6 N
+drive 4 m/s drive -1 up -0.003 side 0	baseline 22372aef7d87e26c5ca51f75449d501a1c724588b9dd0f57902bcc72fc364c2b turf none	after 6ef6fe9927717f2fac24f95ef2351bc274e8770e437a82fa84835f499f97726b	grip-limit top at 0.000005	unlimited impact peak top 541.7 N bottom 180.6 N
+drive 4 m/s drive -1 up -0.003 side 0.01	baseline 36ce1fc610dd6ee4a29358f858956b2ec3b72fbd5337f4f41290cb4a735924dc turf none	after ad59e958ee21adc730da644179215aa2f18007484ebacfc23d06e924fee47d38	grip-limit top at 0.000005	unlimited impact peak top 541.7 N bottom 180.6 N
+drive 4 m/s drive -1 up 0 side -0.01	baseline 10e50e3aaa810766ffd8d87b9e74ded51a713927e5ed6a5edf1c8bbd14dcdf59 turf none	after 5bd84f253d8510287de9fb97debb66d81fbf8486a22e7a271729869beeaba50d	grip-limit top at 0.000005	unlimited impact peak top 541.7 N bottom 180.6 N
+drive 4 m/s drive -1 up 0 side 0	baseline 839d8bbee6b92e1555bc72ec0309e3ae1a5a0417398a4f2fcb22885345664176 turf none	after 90f329c9a670a002c856828527c9e4fcfc16a37f2e68aa99adc957c2978bad5b	grip-limit top at 0.000005	unlimited impact peak top 541.7 N bottom 180.6 N
+drive 4 m/s drive -1 up 0 side 0.01	baseline 91560ccef9586e4f16b1a9e4daca689e2ee8d5815a4d7ad80ef3ba9870a40bea turf none	after cbb981637ff2f23456fa4ad82827309cb688a5245607406d01bf6767b3729238	grip-limit top at 0.000005	unlimited impact peak top 541.7 N bottom 180.6 N
+drive 4 m/s drive -1 up 0.003 side -0.01	baseline 9de45809c0563e7b50e101f8bbf448ce8119ba5a1a7b5a70ad1203204406be64 turf none	after d4bc60c024c75911e8ccf59d378cd590ad0dbb642071bd93dbc8736779a6c79d	grip-limit top at 0.000005	unlimited impact peak top 541.7 N bottom 180.6 N
+drive 4 m/s drive -1 up 0.003 side 0	baseline 056e75870c1370d42b03b7574fbf0aaf04be09261218fac254986e46d68e0d75 turf none	after 6ef926062f07fba2c1ef0f2c43ef7a0bcbfa01a7ebb70ef2f23373144bad6642	grip-limit top at 0.000005	unlimited impact peak top 541.7 N bottom 180.6 N
+drive 4 m/s drive -1 up 0.003 side 0.01	baseline 8e7c38d3d28f5b851a6f1fe0c3b4aa04d3e5e9a8f444ec9f2df6b97136b7fc6a turf none	after 23e23851494f15952e6538980d7ecee6ad8b705ecc57aba9812324877c5dfae5	grip-limit top at 0.000005	unlimited impact peak top 541.7 N bottom 180.6 N
+stop-gc canonical	baseline e1093922daf76030d2fcf2993c8e4ed10722cd33a378c9644e12f2e16bed7bcf turf none	after e5f9d5078376e7c1606b39ea5ef03d1be07657a2e2390174f5072a273cc9c122	grip-limit top at 0.000005	follow-grip-limit true	unlimited impact peak top 442.1 N bottom 782.2 N
+stop-gc 2 m/s drive -1 up -0.003 side -0.01	baseline 865c0fe6d80066280c17f1fb6a74acf226cc6238c9ad23a4fe1d98bf8be23253 turf none	after 5cea3572750508f7e8112b84c1016871ea3d267d5890978685368ba3fe8f9075	grip-limit bottom at 0.000005	unlimited impact peak top 294.8 N bottom 521.5 N
+stop-gc 2 m/s drive -1 up -0.003 side 0	baseline c7a35b407a732d7e45dc0ea2dfb2fca113983598e872a70699d16de422e8be8c turf none	after f04ed4c595a9a10b262d2b61a714c7da9d6850146cad02582f09dddd4b1b8693	grip-limit bottom at 0.000005	unlimited impact peak top 294.8 N bottom 521.5 N
+stop-gc 2 m/s drive -1 up -0.003 side 0.01	baseline 842f10eb565d1d9bd711ca5b6ef58a0c5623c14ec869e44bffcaf9f080d165c8 turf none	after 1ec84df789460d063d0f5addb3eaee6d49e4a172d6b00045ea44d401e5b20467	grip-limit bottom at 0.000005	unlimited impact peak top 294.8 N bottom 521.5 N
+stop-gc 2 m/s drive -1 up 0 side -0.01	baseline 9e929703f6f801e13f0b25915c0f3ad15823d6ec5007cddbbfeee604097840cc turf none	after 2423de6ffd0c5f135907ec8da5fa78febdfcec5f77bd2a68badc9ac11991b6ee	grip-limit bottom at 0.000005	unlimited impact peak top 294.8 N bottom 521.5 N
+stop-gc 2 m/s drive -1 up 0 side 0	baseline d58a7c5cf4cd681872997e1b6b651c2e9b67ce45468c4e56b292788de3ed5997 turf none	after 7dbced467c14621c271260ed78069831238780993565dccd923eb649d5f799af	grip-limit bottom at 0.000005	unlimited impact peak top 294.8 N bottom 521.5 N
+stop-gc 2 m/s drive -1 up 0 side 0.01	baseline f8993917a7a337fbd486995c25ae7861e3f788be1127ad8c2c0a21e33f37ea9f turf none	after b9fe847877fc48c66ded2eda04ea8128ae688bf9393ae65f3e9fccbaff41e4e1	grip-limit bottom at 0.000005	unlimited impact peak top 294.8 N bottom 521.5 N
+stop-gc 2 m/s drive -1 up 0.003 side -0.01	baseline de70db604484b0e943ea09fe76abfc4134d136d3836d57ca11a6a27ac846d663 turf none	after 96d491c1acd779107f5fd26eaa2c098d6e2da91cac2fe4820dc24bfe2218e2e5	grip-limit bottom at 0.000005	unlimited impact peak top 294.8 N bottom 521.5 N
+stop-gc 2 m/s drive -1 up 0.003 side 0	baseline 1aa4739be08682d6fde962a1c89b2f7eff79ed0963b3f46419d66fa3e9b6d533 turf none	after a56b916d1ebcbd291bc9cdbfcc45d50727937188bf6c1b7a2c9973895f1088ae	grip-limit bottom at 0.000005	unlimited impact peak top 294.8 N bottom 521.5 N
+stop-gc 2 m/s drive -1 up 0.003 side 0.01	baseline b706e7a3ba7513f3dcadcd53f920253f3b7cfe12e6e8d43843f65f6df90ddae3 turf none	after 524599447d54be6da181967348ec02e8db6dd571277b1dd8f0723ec7f565b7a2	grip-limit bottom at 0.000005	unlimited impact peak top 294.8 N bottom 521.5 N
+stop-gc 3 m/s drive -1 up -0.003 side -0.01	baseline e391123d534e4f8821eeeb1e6609066945117dc9383af40d83f262c22fa0c9a1 turf none	after 4b0928e564fddd9eac46e5deebcc52470fc673c4d9676aab2c16daf757579ef5	grip-limit top at 0.000005	unlimited impact peak top 442.1 N bottom 782.2 N
+stop-gc 3 m/s drive -1 up -0.003 side 0	baseline 3ca0187d7a9d99956ee72eb97f63d614e57fcdadd927c0647aee5d1142bf5ad1 turf none	after d07a776eb0493f899d2502c258c2087bdf8de4c41f3e7496771da75293213d4c	grip-limit top at 0.000005	unlimited impact peak top 442.1 N bottom 782.2 N
+stop-gc 3 m/s drive -1 up -0.003 side 0.01	baseline 3881302ccd3ecf479118fbf71dab66b145979f9b25c01c7935c97be5b071ac50 turf none	after 78bce1359ff8f250f6dfb1a8693f666fca80a22108cceb55df68d44cdc7457e4	grip-limit top at 0.000005	unlimited impact peak top 442.1 N bottom 782.2 N
+stop-gc 3 m/s drive -1 up 0 side -0.01	baseline 61f2a96ed7bb8e752df8aed8243ec321e3af5a7764352e9caea4d98c7fac0fbc turf none	after ccfa6c992ccd6ff084ab0cc7124b8314f6cf07efd3c4b6ce7687be290241f273	grip-limit top at 0.000005	unlimited impact peak top 442.1 N bottom 782.2 N
+stop-gc 3 m/s drive -1 up 0 side 0	baseline 7d875f6791e7973da78a50b2131f7e12e15f69abe524303133e3b4005f90659e turf none	after 8ef24c605a4b950b2530f14fa515602bc141a0ab5b272ad09a1be024d6c31d1a	grip-limit top at 0.000005	unlimited impact peak top 442.1 N bottom 782.2 N
+stop-gc 3 m/s drive -1 up 0 side 0.01	baseline 31bbce418cacc768a56a89252865f35c8c328aadde10a5acbf5062f3595996f5 turf none	after c004446ffb907d80dfe1933b2e9997f311baec7517d45f8f36b66914784b2b8f	grip-limit top at 0.000005	unlimited impact peak top 442.1 N bottom 782.2 N
+stop-gc 3 m/s drive -1 up 0.003 side -0.01	baseline fe56acc5d22a214e318f3e59ec0e6a276e40eb03cdc93c712bb0d283a7f0403e turf none	after f825c82c80f2872b2746edeb954ddd06d0b0ea58e65df717708b9bf35febf103	grip-limit top at 0.000005	unlimited impact peak top 442.1 N bottom 782.2 N
+stop-gc 3 m/s drive -1 up 0.003 side 0	baseline ac01dc0d802b1f2823abbcd85918140b6c45e0c394a2467e29b31dafeb204126 turf none	after c427bf53d5bd4a4adb1ebae2d99ad71f7a9a64625a82d8638c1cdf0784c9e43c	grip-limit top at 0.000005	unlimited impact peak top 442.1 N bottom 782.2 N
+stop-gc 3 m/s drive -1 up 0.003 side 0.01	baseline df2a5b07710dadd20b710e41a53b9da6c8cf2f68cefa1fbfc76ea1f1235f58a5 turf none	after 2b618475d365b60b2b355c0d8eb688744777effca00324ecb8309d0c120d9fe0	grip-limit top at 0.000005	unlimited impact peak top 442.1 N bottom 782.2 N
+stop-gc 3 m/s drive 1 up -0.003 side -0.01	baseline 8f221e03ed7bd712000e67dce90b23e50a40fc5b8dcc9baa67cbadc6f71634c6 turf none	after 125ad9fd50112106860039942110524e193c7ac3439d144fbedafc59edbc500d	grip-limit bottom at 0.005600000000000001	unlimited impact peak top 551.3 N bottom 547.7 N
+stop-gc 3 m/s drive 1 up -0.003 side 0	baseline fe64e46b13c93c4776e6a8c56998f8d58d67bfb92cbdc41e41ff25ae6095bd5e turf none	after a5233d54f27fc34813962e024204f6b037c133cf82b779a68a6b0bc0d497cbca	grip-limit bottom at 0.00559	unlimited impact peak top 551.5 N bottom 548.0 N
+stop-gc 3 m/s drive 1 up -0.003 side 0.01	baseline 3a1328924d7e19d9e00342edee5f116c45876724fe39c4d0086d1378343788ce turf none	after b7ebfd4cbe40cbb63f51b2a0ccda8d1f1c7e3f3a9c21c899924ea708af6d9997	grip-limit bottom at 0.005600000000000001	unlimited impact peak top 551.3 N bottom 547.7 N
+stop-gc 3 m/s drive 1 up 0 side -0.01	baseline ecbf7921c10801c531050a7575f28719c6a9e2c666ed2ab3212c273ba3aed31c turf none	after 9290ddc75ffb72f2488eb6571105e983f88d36246db0cad0832f716506b068dc	grip-limit bottom at 0.005625000000000001	unlimited impact peak top 550.7 N bottom 547.1 N
+stop-gc 3 m/s drive 1 up 0 side 0	baseline 9f380518e9ef85e2673ecd983a402187ab342f78fa661db5b41e39a73cd1e1fe turf none	after f4b16249d6dac1c91369d70b7150658fc0bbb1c201f45b39896fa2d45e626f6a	grip-limit bottom at 0.005615	unlimited impact peak top 550.9 N bottom 547.4 N
+stop-gc 3 m/s drive 1 up 0 side 0.01	baseline bbe60692685ab264e9ab3b41ae38832f011f4cb866bdcf6d2cdc2e5a076e587b turf none	after 0783157aaceeca05d95f11b4ac8666496dbfb883355d68bff4fb6cbbd3d25408	grip-limit bottom at 0.005625000000000001	unlimited impact peak top 550.7 N bottom 547.1 N
+stop-gc 3 m/s drive 1 up 0.003 side -0.01	baseline c00889250956419051311dfd97e8d648a1e837113b1b01fe91caa2b3b62b7e55 turf none	after dbc1bde0f4ebb4b1faaa25b7125076f2989a5295fba7d53112e64f5fd05a4830	grip-limit bottom at 0.005655	unlimited impact peak top 550.2 N bottom 546.4 N
+stop-gc 3 m/s drive 1 up 0.003 side 0	baseline 36e071388eee527ee591e1624b999407032a57a01b96b3b6e69b21c29648c71b turf none	after a3c4023bb84232e6672b9259568cf30d64e18ace30747533e332244a0c3937f6	grip-limit bottom at 0.005645000000000001	unlimited impact peak top 550.3 N bottom 546.7 N
+stop-gc 3 m/s drive 1 up 0.003 side 0.01	baseline c5cba3682adf93b3e33cd2534816505d577d32f6f5bee81de8651283ba46feac turf none	after d1c24a4d7f96b2b03f0baba580609cad1c9151fc749ff57f73d1a172ab391a57	grip-limit bottom at 0.005655	unlimited impact peak top 550.2 N bottom 546.4 N
+stop-gc 4 m/s drive -1 up -0.003 side -0.01	baseline 23ed0b5f269703c2fc746c4258bf47a54febe8c8e8bc5c220edd213e3a1ceae1 turf none	after 49c0be370db8515be34bed72a88d52b7daadb443da45752a6759b8b6a8bcc37c	grip-limit top at 0.000005	unlimited impact peak top 589.5 N bottom 1042.9 N
+stop-gc 4 m/s drive -1 up -0.003 side 0	baseline 4b85233a60200c055eccc1ef41cfa9368168eb6883db068c80588d614152ee2f turf none	after 044a9a6b3f8b41fe9ff6cc77377928ff6ae8a78c745fc047cc4288893e635ed6	grip-limit top at 0.000005	unlimited impact peak top 589.5 N bottom 1042.9 N
+stop-gc 4 m/s drive -1 up -0.003 side 0.01	baseline ddafd97c8b182f5ea73b5aeec312bc6ee0b910262272ed9054b48ee8fe8a0291 turf none	after 4bbcec6404f2f557b54ce558ac797543fe8099634611325f0df07d4670c016c5	grip-limit top at 0.000005	unlimited impact peak top 589.5 N bottom 1042.9 N
+stop-gc 4 m/s drive -1 up 0 side -0.01	baseline e95c4ba586f051641b749d834b84b47a5bd8ee1955734d4fbe04b49fed306289 turf none	after cf138a6e819b19251a25d4b96a13715b6b80cf7531b441669e8513b4c4f6782e	grip-limit top at 0.000005	unlimited impact peak top 589.5 N bottom 1042.9 N
+stop-gc 4 m/s drive -1 up 0 side 0	baseline 65aa45c14678bce4d82de29ceb97edb2121d056a51fa42b3d4e9faa3d55f2c5d turf none	after 3f14c8f64d1189add3d07036b4c1ce02dc00d06b415bf06e54d37e626db885f5	grip-limit top at 0.000005	unlimited impact peak top 589.5 N bottom 1042.9 N
+stop-gc 4 m/s drive -1 up 0 side 0.01	baseline 5f0dfa3e3235301c8e2bb25f74ac0700c67c74071a918fe1af6a66fef1484a39 turf none	after 0b6b67e65cc8b5ce75fadc623f5d3d9b89cb20ea2971625813e8edfca44080b8	grip-limit top at 0.000005	unlimited impact peak top 589.5 N bottom 1042.9 N
+stop-gc 4 m/s drive -1 up 0.003 side -0.01	baseline 9d036014159c2595190e7ec7fd2e289e5596b68d992db3c6d55afd3a94499db3 turf none	after 463b73042c829b41ecd4dc737a31ecb2304688d3d38d89a0b0900a5542f93f96	grip-limit top at 0.000005	unlimited impact peak top 589.5 N bottom 1042.9 N
+stop-gc 4 m/s drive -1 up 0.003 side 0	baseline 337959764956cee71b236ae982377a9b712be838205ef64cfa0e7b2d5804e2da turf none	after 3a69ee375263ae096c641d521ba311aa4fc1995c38d7754251eecb60392345b2	grip-limit top at 0.000005	unlimited impact peak top 589.5 N bottom 1042.9 N
+stop-gc 4 m/s drive -1 up 0.003 side 0.01	baseline e9e950a655a847e038135818806cad4cfb17ffd988b288366ba39a5c9371cc6c turf none	after c9a928ad89966f1b52880ba433a6c9dc18c54f94345121d200f8caf52f700760	grip-limit top at 0.000005	unlimited impact peak top 589.5 N bottom 1042.9 N
+stop-gc 4 m/s drive -0.5 up -0.003 side -0.01	baseline dbdfaae00291a15dbc7bda51a88a5d8f02fcb0af3699846e0a82f32ef25c1045 turf none	after 3e7e070aaf7e95234ce3ba3fe337b95af88c46a7540d81fac7f457bfdad5d128	grip-limit bottom at 0.000005	unlimited impact peak top 296.3 N bottom 521.5 N
+stop-gc 4 m/s drive -0.5 up -0.003 side 0	baseline 3a2f42406c30d386e054800042cf9f3651cd13fb4ccf7cc7bbe8b328073da248 turf none	after b39062c46b0637117a83d7c76501e928c9bd09bc75ed72ce54323e33f79bff63	grip-limit bottom at 0.000005	unlimited impact peak top 296.3 N bottom 521.5 N
+stop-gc 4 m/s drive -0.5 up -0.003 side 0.01	baseline e9134b8eee4a87982c4c4e97c0c3b592a848056ee31ec44d9aaef6b151c703ff turf none	after 5c35ed601fcaefbfadcd2bc3173600b4672ef4ce584fcdd6dc53c0ba623865f7	grip-limit bottom at 0.000005	unlimited impact peak top 296.3 N bottom 521.5 N
+stop-gc 4 m/s drive -0.5 up 0 side -0.01	baseline 45c3194886270ad0b1d2d5ef09973ac6c0c9e773ac4570cc181e238ccc7645e1 turf none	after 0b4d3a4af8daab575d56418beebb68273b5c0ce391b6e952fb3b0473df143f82	grip-limit bottom at 0.000005	unlimited impact peak top 296.3 N bottom 521.5 N
+stop-gc 4 m/s drive -0.5 up 0 side 0	baseline be06aaafe90bb112321b9253a12c784a06ecfe7962d0f680a8900210732eea98 turf none	after bb28f36cc26e38531c32061789e86cfc248dcd6d4f9f3598265f8618d46fe614	grip-limit bottom at 0.000005	unlimited impact peak top 296.3 N bottom 521.5 N
+stop-gc 4 m/s drive -0.5 up 0 side 0.01	baseline 63fc1e117d86f9d01d1b03e6787dc060d8507c66b5a1f9831925ef58a64fa11b turf none	after 615cef5dd62237005071cc73b8d76db407a9af675b60877e495b8bcb86d9241b	grip-limit bottom at 0.000005	unlimited impact peak top 296.3 N bottom 521.5 N
+stop-gc 4 m/s drive -0.5 up 0.003 side -0.01	baseline 2de1f3d9528f524025d4a18f74fbd99b1617d035cc5a8a82ccbac6bf18a4d93f turf none	after 4095c4185abc8d6fb2969b8b0348ecaf359cbbb76d35dcc3dc348e9ad92e56cc	grip-limit bottom at 0.000005	unlimited impact peak top 296.3 N bottom 521.5 N
+stop-gc 4 m/s drive -0.5 up 0.003 side 0	baseline 4774c120dad589490b394718d333c10ff68499e4a3c073623a81d1aabd38a3c9 turf none	after 3d3bdac1440369a500f42638e600643a7c2e5f11f868dff58cdeed0053b91704	grip-limit bottom at 0.000005	unlimited impact peak top 296.3 N bottom 521.5 N
+stop-gc 4 m/s drive -0.5 up 0.003 side 0.01	baseline b880eba7538d01da34406ac9bab8e09b59728eed6b1b65b8317839f1cda8232a turf none	after 11b3d3ddb8123e589638b60e97d9dbbf9624bf0790917c80d8af1a4d9ed71afb	grip-limit bottom at 0.000005	unlimited impact peak top 296.3 N bottom 521.5 N
+stop-gc 4 m/s drive 0.5 up -0.003 side -0.01	baseline 87ef83001962939ac7689a0a5a87ebf3a2732b7c95a5d69d08e130537de922dd turf none	after bb89a0ad66b5424d4921e3fd3f818de2e71d15deace0a8131250809e9ec4787f	grip-limit bottom at 0.008225000000000001	unlimited impact peak top 420.4 N bottom 454.6 N
+stop-gc 4 m/s drive 0.5 up -0.003 side 0	baseline dc0f53b31ddebd38833773be3cef78b7e2a60701d4129ed96ff3cf1caac663da turf none	after 3a3541d1d64baa5bc5dac6fb50241b8d4653b083c106319e493c9a2364529256	grip-limit bottom at 0.008195000000000001	unlimited impact peak top 420.6 N bottom 455.0 N
+stop-gc 4 m/s drive 0.5 up -0.003 side 0.01	baseline 636230e6ed2c302682fff2f688d7043c65c7ab5b9282e2ec539269e9cb7cf7b6 turf none	after 4f3f075ec9a4aaced8e5295540342c7d8d4969b0d732dd0889f4a07e843d7e04	grip-limit bottom at 0.008225000000000001	unlimited impact peak top 420.4 N bottom 454.6 N
+stop-gc 4 m/s drive 0.5 up 0 side -0.01	baseline f23e004ccc674c4be4fca1019e0c403d7847ae1b930eaee1b59d3875aff740a9 turf none	after 983dcfd31423472bbb3c518b5bfc99446d43bfeff1ca8c69dd8d1c06e8b80083	grip-limit bottom at 0.0083	unlimited impact peak top 419.7 N bottom 453.8 N
+stop-gc 4 m/s drive 0.5 up 0 side 0	baseline 412b95e27f178993b32aae0b1f5adfbf35ba2269110de84b41e1a211478e1a4d turf none	after 7c488db6f632ecd4d882681575a0413df7918976b59a0b60536d5808eb7d7a55	grip-limit bottom at 0.008270000000000001	unlimited impact peak top 419.9 N bottom 454.1 N
+stop-gc 4 m/s drive 0.5 up 0 side 0.01	baseline db02fea2cbd38f692ae47caf15ea130a99836d1614789c4f196a98bceb8eb929 turf none	after 8d597535a52650f88d0d90a076189686370454730efedb928a39cfd0664149b3	grip-limit bottom at 0.0083	unlimited impact peak top 419.7 N bottom 453.8 N
+stop-gc 4 m/s drive 0.5 up 0.003 side -0.01	baseline a3d41dfdd88ef8367375ce228edb16465e16872cf4bfe23d7e072ad9ff151e62 turf none	after a7d379dd66a808bcb7d5211945676ddbcc2e410a2e692ec441666cb151a5b28d	grip-limit bottom at 0.00838	unlimited impact peak top 418.9 N bottom 452.9 N
+stop-gc 4 m/s drive 0.5 up 0.003 side 0	baseline f406ddc5b80ff30390b71b148fbf76722fd23af8b3a9dd23bb1f293e6338cd81 turf none	after 6121429d5bc14fbe7839cc10df18dbcf2a3d0a5703e49198e60b34c1a249a4b5	grip-limit bottom at 0.008345	unlimited impact peak top 419.1 N bottom 453.3 N
+stop-gc 4 m/s drive 0.5 up 0.003 side 0.01	baseline afc5619d8e50e617528f4195752e4f6ae0e65a2278a44b62b6f85fe11e6f457d turf none	after 182320db0feb35de14e64b82f8c59bf09f65f153f7be60a05a82b31c5bf87fa9	grip-limit bottom at 0.00838	unlimited impact peak top 418.9 N bottom 452.9 N
+stop-gc 4 m/s drive 1 up -0.003 side -0.01	baseline af2c81fcaed0acaae93fdac1c7429ef1a845ec584206c303676eb2ad64a9e167 turf none	after fc17e133d290e40b4d9a1aa0cc1446ea779bcf8de2d193897dbe01db7cdd4e6d	grip-limit top at 0.000005	unlimited impact peak top 736.1 N bottom 728.6 N
+stop-gc 4 m/s drive 1 up -0.003 side 0	baseline 8852ecb05969f9ce5af010e0a48291c226f954ebb34d498dc610c463f26d4989 turf none	after 62f33b4f7919682c4e93c2fedf3cb21a44993488c20c4af3144e03f583fbc076	grip-limit top at 0.000005	unlimited impact peak top 736.3 N bottom 729.0 N
+stop-gc 4 m/s drive 1 up -0.003 side 0.01	baseline f369ad3e8b9c07047ab2391018e3498d6887733007e40f42e71d0715d06cd36f turf none	after c5af001a6db4a543064d0e56d02f046cc5a3ad981ce5ffe782f1d99283535a70	grip-limit top at 0.000005	unlimited impact peak top 736.1 N bottom 728.6 N
+stop-gc 4 m/s drive 1 up 0 side -0.01	baseline a68ebefdaeaf9efd0cef66e7abb7533d88e8237ced90d95e7517e4d56ded5d83 turf none	after f6a2d635a18a0278998f54c57590f81801f5eff399f7533398cdc4b51b0b4eef	grip-limit top at 0.000005	unlimited impact peak top 735.3 N bottom 727.8 N
+stop-gc 4 m/s drive 1 up 0 side 0	baseline 1ae43d4cee88a298c75a8f65c1b3917076037c5e43bd888abeab16ff46561dea turf none	after b757af2e3ea3ddb6565de24842199ec10178102def9d6586b73919ce8b2e5ec8	grip-limit top at 0.000005	unlimited impact peak top 735.5 N bottom 728.1 N
+stop-gc 4 m/s drive 1 up 0 side 0.01	baseline 84eb275f5303f79bed179e8467387a056b7523c73628dc43e570e09b4c298dbd turf none	after b51902146457ca0cfdde65f7481365e4922eb1200cd15a5f016f4b3491706e82	grip-limit top at 0.000005	unlimited impact peak top 735.3 N bottom 727.8 N
+stop-gc 4 m/s drive 1 up 0.003 side -0.01	baseline d038a24f8551e10d73eba65aaaf235e884652db530fc011417228e0478bb1b68 turf none	after d5a08453c6c5f1c569a6b64c79cb23059efa4062c9a4b212c7d53b1b02f56299	grip-limit top at 0.000005	unlimited impact peak top 734.5 N bottom 726.9 N
+stop-gc 4 m/s drive 1 up 0.003 side 0	baseline 643fe93359cb9b6bb1d0b02c40918c2e8fca16f2d420b20092e720d40540a9f4 turf none	after c458a1a02417c00f92beef8dea4f21005850dabfae452490a5ab71a426ad8c0c	grip-limit top at 0.000005	unlimited impact peak top 734.7 N bottom 727.3 N
+stop-gc 4 m/s drive 1 up 0.003 side 0.01	baseline 3cf06c353d5b2c0523ec37ce21e0a2436a535ba3b0fc88e1dd906e09a30094b1 turf none	after 537d1254022b057b2091583c12c62652d77efb4d227ccf6a74f2ebea09e2665f	grip-limit top at 0.000005	unlimited impact peak top 734.5 N bottom 726.9 N
+pass-roll 6 m/s drive -1 up -0.003 side -0.01	baseline a5b57f17ab5f0c54b3ea843e2aab513dfcdea3052b1f566a012a503c2c948036 turf none	after 4badf714590dc87455ae2857f4df36670d691fc4cf88e40981f135adda43c4b7	grip-limit bottom at 0.025820000000000003	unlimited impact peak top 184.6 N bottom 505.5 N
+pass-roll 6 m/s drive -1 up -0.003 side 0	baseline 86f584f6a2a65f5c9430f89bf259d32de7ec5402972ca9cc32e11c047820a07e turf none	after 834495f411334a7c78ca9bfc0870eb71459977081d730df7457eb4baeddc6166	grip-limit bottom at 0.025810000000000003	unlimited impact peak top 184.8 N bottom 506.1 N
+pass-roll 6 m/s drive -1 up -0.003 side 0.01	baseline fd5f7c288f34b36bb44e0fa307a93aaf32898037d83553097eef38b1e00a10c1 turf none	after a281b94915e05c22c0b40e669ca838676698c26f949febbeb3a0b1ed496c0ee4	grip-limit bottom at 0.025810000000000003	unlimited impact peak top 184.8 N bottom 506.2 N
+pass-roll 6 m/s drive -1 up 0 side -0.01	baseline 8ad78d17458744325e2124a16d2ebc00dba943ef7425019309528896dfddce6f turf none	after d6794061539d056d084c64a36842d2aa6faecf515c361c102d077330e5fd66bb	grip-limit bottom at 0.025820000000000003	unlimited impact peak top 184.4 N bottom 505.7 N
+pass-roll 6 m/s drive -1 up 0 side 0	baseline bc821083c4e3c1801c82be8dc184bde2b4c4b9d7cf2725f87e93a70049e563bf turf none	after 5bfe7510c0ff095b9c7676077f347efad8965fda688b44e9afbd225e74f514bc	grip-limit bottom at 0.025810000000000003	unlimited impact peak top 184.6 N bottom 506.2 N
+pass-roll 6 m/s drive -1 up 0 side 0.01	baseline b3f801998e1a6c1a028111486744eadd58f1db94e8792dde29a2e5b3352d51e4 turf none	after 462f71bda75f7abeb7f85b68b7456252441e69ca52085d4c9b3bd316fba4e054	grip-limit bottom at 0.02579	unlimited impact peak top 184.9 N bottom 507.2 N
+pass-roll 6 m/s drive -1 up 0.003 side -0.01	baseline bab7062de10e591a05f45616e3d14a3635aa65076e7dfbe4e1847a2e73db9315 turf none	after 8e54dffae79b80c6e1cbbedd50806897a1908697ac8badb3a89f1170a3a03d07	grip-limit bottom at 0.025815	unlimited impact peak top 184.2 N bottom 505.8 N
+pass-roll 6 m/s drive -1 up 0.003 side 0	baseline f986f612d1adee58beeccd64279c584fb2fff3d462fd8f4f2dba6ffe292c0f53 turf none	after 61b26e27061dc669f24f75996f1bd930884dd3c6d52cbcbf0dcae44a1db5cf3d	grip-limit bottom at 0.025805	unlimited impact peak top 184.4 N bottom 506.4 N
+pass-roll 6 m/s drive -1 up 0.003 side 0.01	baseline e06215335b8f5cbb8ae66e14ef263023d211b6e94f665dfd1089c4296ceb7136 turf none	after 277d0a1908d47df39c1377c825140df1310e94b7ed114e9895876f3308dc320f	grip-limit bottom at 0.025775000000000003	unlimited impact peak top 184.9 N bottom 508.0 N
+pass-roll 6 m/s drive 1 up -0.003 side -0.01	baseline 550234bad84266d3b212410817a69e498f22694fefd5dc5a571011dcb848b591 turf none	after 3ddb023c2c5bc21c502c3f608d47182d3e4f8b425c5c85bc5c6d509ced064f1f	grip-limit bottom at 0.007045000000000001	unlimited impact peak top 193.3 N bottom 593.7 N
+pass-roll 6 m/s drive 1 up -0.003 side 0	baseline 07cd25ac55bf859372b0805dc5116862a6ef35e9477f0c70160e8f3165df8dbe turf none	after f0995784c13045487f00a7d20243ccdc112d6e608400f16ba10ae17568a3349c	grip-limit bottom at 0.006915	unlimited impact peak top 193.0 N bottom 596.1 N
+pass-roll 6 m/s drive 1 up -0.003 side 0.01	baseline cc3ad700c24da7778ba6a4cc308f5e1518e255fd1982ab1a74a2b3c0c2e3bfc9 turf none	after 928f9a44673470c0a3b9720c8ddcab1b0b35dfaccc9a8ac155f0c52c244fc3bf	grip-limit bottom at 0.00683	unlimited impact peak top 192.7 N bottom 597.4 N
+pass-roll 6 m/s drive 1 up 0 side -0.01	baseline e954304133c70396f1640aaf905138de418345607e842fd12aee42be75f63c02 turf none	after f486b5388b86d89aefcd3fbd9823bc338f7d36722bff50c62e02caf79d68461f	grip-limit bottom at 0.006995	unlimited impact peak top 193.7 N bottom 594.9 N
+pass-roll 6 m/s drive 1 up 0 side 0	baseline 343b8d3d0becfb5dea11c51181f6f3b247c0d94de9c8e1a7b770144f223f3317 turf none	after 945bac50fbbdd8b63f423234d39ca848f03feb4b2ddc63a5c47c734ef616c838	grip-limit bottom at 0.006875000000000001	unlimited impact peak top 193.5 N bottom 597.4 N
+pass-roll 6 m/s drive 1 up 0 side 0.01	baseline a2add55fae01c4c0079a80b1ff2afd465da4b15037061095c046c3f322251e3e turf none	after d2b9642c28b6c0451a0837a5202b48e93ffe2bfd36b8db9ae8fac43260bc3dd9	grip-limit bottom at 0.006790000000000001	unlimited impact peak top 193.1 N bottom 598.7 N
+pass-roll 6 m/s drive 1 up 0.003 side -0.01	baseline 29738e7bc217aaf8a6d9b358005dd75c6aedbbabcdc4b5feeb86f5048682c7d0 turf none	after 8cc9a375a7a2a3b76ca6754a5b546ad046ccf3facecab9d88c196a974726a186	grip-limit bottom at 0.006955	unlimited impact peak top 194.2 N bottom 596.1 N
+pass-roll 6 m/s drive 1 up 0.003 side 0	baseline 4113d702f93a9b21798b3b55b10a0331734e7b6fe540267af84e36eb93f18e7b turf none	after 7163da1669f8f4042ff1f9e0dc56ad3bfc3c2887cae7f58913e4b227996fe6ec	grip-limit bottom at 0.006835000000000001	unlimited impact peak top 193.8 N bottom 598.7 N
+pass-roll 6 m/s drive 1 up 0.003 side 0.01	baseline 183aececcf204125348a9361013aa3c417436ba947895ec6ae01e80d1631dc05 turf none	after 7d6b6708e9776c9f164cc37f5eb609bc0446829d7a69b3e3917f157de8efc08c	grip-limit bottom at 0.006755000000000001	unlimited impact peak top 193.4 N bottom 600.0 N
+differing 109 of 1582; without grip-limit or follow-grip-limit: 0
+-- moved-task5b.txt (Task 5, final) --
+Notes on moved-task5.txt (movedRuns.py presetDigest-task3.txt presetDigest-task5.txt): moved 113; unexplained 3.
+
+The 3 "unexplained" runs are half-roll, full-roll and pass-roll canonical: the only runs the digest takes with
+trajectory: true, i.e. with the follow-through. The digest's turf column lists only the impact's head/turf timeline,
+so a follow-through's turf contact never shows there. Traced (canonDump.mts / canonDiff.py / canonLow.mts, on HEAD
+2153583 and on the Task 5 tree): in each, every outcome key but `trajectory` is bit-identical (the impact included),
+and the trajectory's first differing sample is exactly the follow-through's first sample with the head below the
+turf plane:
+  half-roll: t = 0.379 s (impact ends 67.18 ms); lowest point -1.30 mm -> -0.60 mm; flags [] -> []
+  full-roll: t = 0.344 s (impact ends 153.85 ms); -2.45 mm -> -3.47 mm; [follow-head-deep] -> [follow-turf-yield,
+             follow-head-deep]; finish 692.58 -> 665.62 ms
+  pass-roll: t = 0.364 s (impact ends 93.42 ms); -2.08 mm -> -3.83 mm; [follow-head-deep] -> [follow-turf-yield,
+             follow-head-deep]; finish 445.68 -> 397.97 ms
+The brief predicts these ("the full and pass rolls' canonical runs are among them (their follow-throughs reach the
+turf)"). So every moved run met the turf; the script's flag is a limit of its turf column.
+
+The other 110 moved runs are all stop-ac presets, each with head/turf intervals before and after.
+stop-ac 1 m/s drive -1 up -0.017 side -0.01
+  before: 92ea0d1590b8e1d2da8b64974e487bf9630fd43c656afde9cdb7759dea8d0d7b turf 17.105–28.330
+  after:  0bfd092ce51edd4b6524e7a473b4d26051418fd03799f6969d92fed50c6eb5c6 turf 17.105–20.245
+stop-ac 1 m/s drive -1 up -0.017 side 0
+  before: d5c0a2ca6b269345312dceb75c2a5b284028e599e1c99ee4b0e3fc3b341b10dd turf 17.160–28.550
+  after:  6302d733075b6ad599e25c20f826e5a73a8e3e0c53c8fc31de8ea751ee8317de turf 17.165–20.245
+stop-ac 1 m/s drive -1 up -0.017 side 0.01
+  before: 2fa0b265609249dffe1bf8a0e704ca196ce22962e37d32c99ca99d7d2a015075 turf 17.105–28.330
+  after:  cb47f98a1caa4663ceddfa07cfaef8a3956558a3e968590eb2a671a50b27165d turf 17.105–20.245
+stop-ac 1 m/s drive -0.5 up -0.017 side -0.01
+  before: b391a08123f50c237946f127ab4883829e044e634e2cf5cd1f881c7cb6f5a0e3 turf 17.050–27.765
+  after:  d588eeff543306834492d9341d5f54791b747154d6d6cf31542cfbfdd1d27099 turf 17.180–20.245
+stop-ac 1 m/s drive -0.5 up -0.017 side 0
+  before: 4c3d9857639d9722ec546dd5a159040914e8ff31c2bf37dd2c575b28120ad865 turf 17.100–27.960
+  after:  16445834ed91d3c2f6f6630efc5894fbc95785366362f90e62fde589c474eed1 turf 17.315–20.245
+stop-ac 1 m/s drive -0.5 up -0.017 side 0.01
+  before: d3bfe4383c3ae4733933d50872d7d7befc89271b227ded0b369ed2cde4c7319d turf 17.050–27.765
+  after:  1bb541495c5ea420562e23ac0ec6ad494ad414e72251e51513f4401134875047 turf 17.180–20.245
+stop-ac 1 m/s drive 0 up -0.017 side -0.01
+  before: 3944371dd8fad6aad609e105111e69f936081d3c5711d12c307ca00852bc437e turf 17.265–28.440
+  after:  2eb9cce4d469e8be8875a1e9f5711243c35e4286ddf1735ed7818b661a1485cc turf 17.275–20.330
+stop-ac 1 m/s drive 0 up -0.017 side 0
+  before: 90c7dee72e10eeb4843fb4025a2415bbd5bb2e620bc15aa1140f9e363912b76e turf 17.330–28.735
+  after:  1f31c06ec973b9c53506902b0983922ff0232022433fcf1b0c26119875dce921 turf 17.330–20.245
+stop-ac 1 m/s drive 0 up -0.017 side 0.01
+  before: 8de74f6cbf0a17ff8616fa38a2a1dc82e44c3901afafa403e6328258144d6baf turf 17.265–28.440
+  after:  a88c0336a27dc4216580efa87b90494648e80dd630e690b49300b5333e1b3898 turf 17.275–20.345
+stop-ac 1 m/s drive 0.5 up -0.023 side -0.01
+  before: 4793bc1b9c8ee98a82b709f3567baeb6e5e394d3cfa1fab2789032bfb440d642 turf 65.740–83.080,89.345–450.000
+  after:  7f11df9aca5f955f23c9e0ca51dab6cc20258cb06600713242a24b8e28c9b29b turf 66.080–171.120
+stop-ac 1 m/s drive 0.5 up -0.023 side 0
+  before: 52489e487fb750d9b367792dd5b85dd9814c59f6d589e7366f73cb173cf44d3e turf 66.145–83.530,89.765–450.000
+  after:  dde9d3d4bd0f134cc8b92edca1079056f379328c131c4305f8dfec70ddde74f4 turf 66.175–93.505,93.915–96.465,97.565–99.630,100.285–167.260
+stop-ac 1 m/s drive 0.5 up -0.023 side 0.01
+  before: a5cf076755eb934c182d834317ca46f3dcf06824efa3fce697adcece7bad02fd turf 65.715–83.055,89.330–450.000
+  after:  e70ec478899a3cbebbc14d3923c40c4d6ff18f9639222c7b90fcfccca299981d turf 66.060–171.025
+stop-ac 1 m/s drive 0.5 up -0.02 side -0.01
+  before: 5b9acc7cd7ccb3db5ec4e041fceef801cf8d097a0656ab323ef721f74a7496a0 turf 44.715–60.960,71.320–450.000
+  after:  69d4fbea8d78db73d2763bb8608b63020b689c065b556db61bd260b9b17991eb turf 45.340–70.220,78.080–79.385,80.095–225.090
+stop-ac 1 m/s drive 0.5 up -0.02 side 0
+  before: da8fc94ac120788da95daddd4be6de1c5332ce22625266fdf95b71cc8b0f962d turf 45.060–61.320,71.720–450.000
+  after:  efce8b404c3b2d781a5ca54fcdeee79a0df32b1585193796eba8782a6a0c0271 turf 45.490–69.630,80.340–82.205,82.390–225.185
+stop-ac 1 m/s drive 0.5 up -0.02 side 0.01
+  before: b87e76ecc64cc7a0bf177792715c7fe13b3e051f678520e665cb52c2c1b7beac turf 44.715–60.960,71.320–450.000
+  after:  70d91c4a9480633d9ec07179acbae09021f29c0cd43205b444a68c65ab09770b turf 45.340–70.245,78.045–79.415,80.065–224.950
+stop-ac 1 m/s drive 0.5 up -0.017 side -0.01
+  before: 289df110a10fb33a4b8cbb538c5f355c3afa6372c8a01b2a21253e4156ee754c turf 17.650–30.565,36.255–94.905,103.285–450.000
+  after:  c5733a4241eb075e4a3b55583f78f0abf3cb149e765b378a18ff76b56cc311f0 turf 17.860–243.850
+stop-ac 1 m/s drive 0.5 up -0.017 side 0
+  before: 3457ee3d6dfffe59622184494dab5270e30bf343caff482a7ac98128bf0535ae turf 17.720–31.295,35.365–95.400,103.855–450.000
+  after:  a760fd18a722bc19aed2364fa8dd02cb6e42349db4867c6822251b5093dd5064 turf 18.000–246.075
+stop-ac 1 m/s drive 0.5 up -0.017 side 0.01
+  before: b8997ebc35a85e6839409c1598a3d63f466842df59c0b6d4299cee2b485714db turf 17.650–30.565,36.255–94.905,103.260–450.000
+  after:  64e537e90adf7719201879fa81f1c4ceb001df36a733c09e25638e6301df1caa turf 17.855–243.895
+stop-ac 1 m/s drive 1 up -0.023 side -0.01
+  before: d7fa00a52c82088b0ea9ee96d995a661e7019f3d10637c0ce2543a7eb3ce200c turf 71.185–87.085,105.290–270.945
+  after:  2ec6c02ea9b8345fe4871b3162ce44f4e9cd66be9d60a8234ea47f216f7aeed2 turf 71.220–96.490,96.730–98.225,115.165–115.405,116.730–117.670,118.335–119.765,119.880–219.655
+stop-ac 1 m/s drive 1 up -0.023 side 0
+  before: 57cf38ab8fd73360993692699885bd74f70b2ce3e76db88f989469dcf77363f0 turf 71.675–87.590,106.460–268.110
+  after:  3f8758f55807f73e9d37c5681e38cffff92995ebdf5c6ec6d909621d82774a60 turf 72.145–95.940,118.430–118.905,119.935–121.100,121.450–225.355
+stop-ac 1 m/s drive 1 up -0.023 side 0.01
+  before: 73d6bb347ad6f4ae0fb5e224910cb3de4dfe1f7f99dd1ac7eb9423f5a9c6ad27 turf 71.190–87.095,105.245–270.935
+  after:  5c8cd38678d6ea64559ff1d56534bb27b226aa7f428d928c2f14551bd6ab0bdd turf 71.225–96.500,96.730–98.235,115.245–115.335,116.750–117.660,118.360–119.760,119.905–219.245
+stop-ac 1 m/s drive 1 up -0.02 side -0.01
+  before: 482eff887a137c4f97788a06d92c5214f5e94220fe2fc98cf9b2df5dc2a320b6 turf 46.695–65.595,66.145–113.850,129.445–450.000
+  after:  b94bee941d87c6c6c7a10f699c6b4295f7ad781ab33ab52e4dba59bd3019dbcc turf 46.960–241.305
+stop-ac 1 m/s drive 1 up -0.02 side 0
+  before: 430df7ae6c3b338d8440cfcf98b713535f525cf4d1dd13bfa231170b191186fc turf 47.040–115.155,131.430–450.000
+  after:  614574b94ecacac5664ee209f9c85117a3248321082bbd36531a7965d47abbbb turf 47.095–242.640
+stop-ac 1 m/s drive 1 up -0.02 side 0.01
+  before: c4346ec688b639e083e40141eaf4ec02c7faec56c0b575263b0022f721f2c736 turf 46.695–65.650,66.085–113.860,129.420–450.000
+  after:  69073061eb3993f65b0a49af5d04652c452bb540bb8c7d8bd214042d8deec5d8 turf 46.960–241.340
+stop-ac 1 m/s drive 1 up -0.017 side -0.01
+  before: cea5da58ee4aa540102dcbf18c48c2f21c1f0ba5ea529521936d350421fe54a5 turf 18.130–59.225,71.365–102.045,107.535–450.000
+  after:  ae7a372b019426f036d8c94d1e1cbb11f791858e2c61b20e1de443da4c130305 turf 18.285–244.190
+stop-ac 1 m/s drive 1 up -0.017 side 0
+  before: 74c42f9d5fc95721a2e44e12308b0a2602fe5759829258bd8665417688896feb turf 18.220–59.380,71.640–102.290,108.025–450.000
+  after:  94cc072e761abbb673e9e543f41637093e6746d3ac7979d3f296e51d3fed97f6 turf 18.335–244.045
+stop-ac 1 m/s drive 1 up -0.017 side 0.01
+  before: 4a93f49baf7276558441cefec84ed201e17379e5aea8f5760f2d792f2582f5f0 turf 18.130–59.225,71.350–102.045,107.520–450.000
+  after:  7361303d88f74c786a3da282c5176765db0bea9b0deba082a3b291bcda2c9fb1 turf 18.285–244.150
+stop-ac 2 m/s drive -1 up -0.017 side -0.01
+  before: 13049da7e135912c840a4b9248f943e15d3a3ddeb94f1279aeefc31252e90c39 turf 16.330–26.280
+  after:  1099dd55603060b61136f1a9f4abfdf3f51c31928f4e35cd0e29c216ad833ac2 turf 16.335–20.245
+stop-ac 2 m/s drive -1 up -0.017 side 0
+  before: d830fcb330d36705f8a7c0feede7c323c371ade48af800585c4c97c0cbe91084 turf 16.410–26.470
+  after:  302e47613aca3e266c3058ea36e0b631baf73583d0cd94e47128efe933c9bd65 turf 16.455–20.245
+stop-ac 2 m/s drive -1 up -0.017 side 0.01
+  before: 0321f9bd54c643ad5b235cbdb280497ea552364a24c91a462fe1693dd8b91478 turf 16.330–26.280
+  after:  7b91ed8d73853eb34c6894c72f841f67ff2bb2c68e6ae08f716dacd9521ef0c1 turf 16.335–20.245
+stop-ac 2 m/s drive -0.5 up -0.017 side -0.01
+  before: 366a895bc52505a2edd6849a0ec7635fa68d41016a8ec7623d3eb2fc7ccf37fb turf 16.255–25.950
+  after:  cdbca542160ee323419ff0bcbd4c4c1eef4ac3810671ce54c85c2031b2379868 turf 16.385–20.245
+stop-ac 2 m/s drive -0.5 up -0.017 side 0
+  before: 8b26e8301146ae42065dd1810d667ebc100b7df690a71977c64e1b766c92b5e4 turf 16.340–26.130
+  after:  bfcb384640318061866bdebac847069ddac7cf73e2db73cfe231ffcd14c80e42 turf 16.430–20.245
+stop-ac 2 m/s drive -0.5 up -0.017 side 0.01
+  before: 2e56553c519b59459fde0b398b6c3b1879a8ef9c326050b3f161de27dc1c9649 turf 16.255–25.950
+  after:  6af4e6022b30be2f8ae7b11e1a2d2c3f13ad03a73c3840580301daf34c131e85 turf 16.385–20.245
+stop-ac 2 m/s drive 0 up -0.023 side -0.01
+  before: 6899be68aa30593b4d8c6ce9b7e8bffa03f18cfd841900b63d7c1025525ce6d5 turf 59.105–74.525,112.055–192.385
+  after:  0c44fea039cd9195738751b3da6c8cc10a19e1e16c8a9c7437a6680d48b81fbf turf 59.145–59.805,59.845–85.800,86.780–87.140,122.485–123.575,123.945–229.055
+stop-ac 2 m/s drive 0 up -0.023 side 0
+  before: 1fdcffeab6c26859debc92fa2aeb1e43f22e277a1a5d556eeffbaa1cbf2fcf9f turf 59.825–75.250,114.230–188.795
+  after:  4e776f713f8479d5632a9f7c598b5ef7345aaac769b64d3c238ba583ce87fd4a turf 60.075–83.655,125.480–126.350,126.910–128.350,128.450–167.910,168.000–169.815,170.025–171.730,172.025–173.655,174.010–175.580,175.970–177.515,177.920–179.455,179.850–181.395,181.775–183.345,183.690–185.295,185.600–187.245,187.510–189.195,189.420–191.140,191.325–193.090,193.240–195.040,195.160–196.985,197.085–198.930,199.015–200.880,200.960–202.825,202.910–204.770,204.875–206.715,206.845–208.655,208.830–210.600,210.820–212.545,212.825–214.485,214.830–216.430,216.850–218.370,218.880–220.310,220.920–222.245,222.970–224.070
+stop-ac 2 m/s drive 0 up -0.023 side 0.01
+  before: 649e283fa0e4f70f17db43bfc3a34324b96525d20474fcab0612da6db636bf80 turf 59.105–74.525,111.990–192.390
+  after:  f4fcf13e91b06a8606b1e8fcebd4bbdd5a1400c2bb94fefd25bb7d077d0b1941 turf 59.135–59.825,59.840–85.825,86.755–87.190,122.445–123.570,123.905–228.625
+stop-ac 2 m/s drive 0 up -0.02 side -0.01
+  before: 4d4d0bdbd8a6abc652573d30dfe6bc8ac9b01ee42774244790caca2686436b58 turf 39.075–55.340,66.615–106.140,130.910–200.295
+  after:  3858d6db17b1a80eff39c67b42d80eb5d3cee3527888f6f04a89e1df81519298 turf 39.095–39.610,39.780–65.785,66.160–67.555,68.500–69.330,70.500–71.175,72.290–73.110,73.940–75.075,75.490–239.180
+stop-ac 2 m/s drive 0 up -0.02 side 0
+  before: c5f9df3d6e968dcb4675c12a6ce998ee4f872fb7ddaaa70a7072034e244ee126 turf 39.700–55.970,67.395–106.550,132.400–198.665
+  after:  fbebebd213de34596479e1af9723fdc8a2deceaccdac148b79e5d6cdb11dec24 turf 40.000–63.460,63.790–65.140,75.830–76.235,77.235–78.320,78.635–126.060,126.095–127.910,128.285–129.765,130.360–131.650,132.345–133.565,134.255–135.510,136.110–137.480,137.915–139.455,139.690–186.870,186.910–188.905,189.000–190.945,191.070–192.990,193.130–195.045,195.180–197.105,197.225–199.170,199.265–201.240,201.305–203.310,203.345–226.320,226.360–228.435,228.525–230.555,230.700–232.685,232.890–234.815,235.085–236.950,237.285–239.090,239.500–240.000
+stop-ac 2 m/s drive 0 up -0.02 side 0.01
+  before: d5b98217d30ed0a9a214f5b41f562ec29e5fb8e47cc21e7538b7da2d209238b4 turf 39.075–55.340,66.615–106.145,131.060–200.325
+  after:  ad58ec5d55e4bc9cff27cfa921920c6fbe5ec10d47304daa32e43e6569cedb7b turf 39.110–39.590,39.785–65.800,66.140–67.575,68.475–69.360,70.470–71.215,72.260–73.150,73.910–75.105,75.455–239.155
+stop-ac 2 m/s drive 0 up -0.017 side -0.01
+  before: 515b9f37387487eeab9da5944e3c73f762a35f5747b7d28f5239de5c16b5bad2 turf 16.620–26.705,48.270–120.455,154.855–172.190,189.295–205.360
+  after:  fec674170c846323c6f57c3d27ce3013636d52db1c641fb27abf7c6d543885be turf 16.655–37.690,37.740–40.045,40.265–262.915
+stop-ac 2 m/s drive 0 up -0.017 side 0
+  before: 81d9fc50d8816255f7926bafe4ef0806827f63a09b13119bb4282bbbe89bb9fb turf 16.720–26.960,46.950–121.360,157.785–174.760,200.005–211.580
+  after:  04c7f2f28a330d35c8cfcaa4fd868b3f64ba355a5e61383149615037229b85da turf 16.720–37.170,37.985–39.470,40.455–41.885,42.450–262.355
+stop-ac 2 m/s drive 0 up -0.017 side 0.01
+  before: 350d820933e18edd755fd16e7c08c1da8f65f7023c1c130e4a9618ae08f93714 turf 16.620–26.705,48.270–120.530,155.020–172.345,189.620–205.595
+  after:  f3e1e6c194140f6114fea0bd7db6bd971f157d8cf2dfbd3a4942094a16e7f733 turf 16.655–40.070,40.185–262.805
+stop-ac 2 m/s drive 0.5 up -0.023 side -0.01
+  before: c42de4dbe0171f35c41ae5285d159a59192e36292fbe34051219d97f16ca995d turf 69.560–84.980,104.675–117.380
+  after:  7923e614e8db034529002d400c6feea3f0b3790602db81f29ebc56f6071dbc57 turf 70.030–102.685,102.740–103.800,104.045–104.905,105.330–106.000,106.605–107.075,107.950–108.060
+stop-ac 2 m/s drive 0.5 up -0.023 side 0
+  before: 92e38f0f454957cb68b48c3a941d29954b56fd35b2ce32fc4891183f409c9674 turf 70.660–86.230,107.530–118.655
+  after:  989e454554c430a8cd35f49abdb7ec2b1805fc147f4b2b94e1b45a0b7568b093 turf 70.955–71.685,71.735–97.605,97.610–98.715,99.025–99.800,100.410–100.840
+stop-ac 2 m/s drive 0.5 up -0.023 side 0.01
+  before: 97b9f21e7cdf073f332eba6dcce7ed67bec80de61c086bc1e27c856cd62b8bdf turf 69.560–84.980,104.675–117.380
+  after:  e72071b2e9af436823b4c75a8ee293ee5452880b4ee8ed16d85f8cbba9f93968 turf 70.030–102.700,102.730–103.820,104.035–104.930,105.320–106.025,106.585–107.110,107.880–108.145
+stop-ac 2 m/s drive 0.5 up -0.02 side -0.01
+  before: a918630bc59fc076e923023cf09d074fcc3fe9a656eebf1b6360358a319d59bf turf 43.720–57.595,82.890–101.550
+  after:  879e99b9caaa263abdbb9289a5ed32d9c13f122c55a9cd4f61910ebc0597dab9 turf 44.205–69.340,69.455–70.605,71.005–71.850,72.450–73.090,73.810–74.330,75.105–75.575,76.350–76.830,77.545–78.095,78.705–79.350,79.835–80.595,80.940–81.830,82.020–83.045,83.080–123.480,123.525–124.530,124.740–125.565,125.945–126.580,127.185–127.550
+stop-ac 2 m/s drive 0.5 up -0.02 side 0
+  before: 9150bb6e6d3684d61cae6c9bab5e58eab4ad51f4fe61d492ca72d61084dbb57b turf 44.395–58.180,83.050–101.690
+  after:  0ce10a49aa97c56d8d5aedbc2aed5e9d45d27a7215bff590181a1a7f8219adcd turf 44.420–44.895,45.080–67.475,68.080–68.665,84.350–84.760,85.360–86.000,86.370–87.195,87.370–117.530,117.585–118.590,118.835–119.635,120.075–120.660,121.365–121.610
+stop-ac 2 m/s drive 0.5 up -0.02 side 0.01
+  before: 9f4f37c6430e8f76df0622acc942ae2fffb101c99bed989f6242e5ac9c62620d turf 43.720–57.595,82.890–101.555
+  after:  531b22a73262eae7dc9d6cf44fc9da72e9356192adade55dfbcdf3478727092c turf 44.210–69.355,69.420–70.625,70.970–71.875,72.410–73.120,73.775–74.365,75.070–75.610,76.310–76.870,77.510–78.125,78.670–79.380,79.800–80.620,80.905–81.850,81.985–123.450,123.560–124.490,124.770–125.515,125.985–126.505
+stop-ac 2 m/s drive 0.5 up -0.017 side -0.01
+  before: 651c848159b6fd8bf3b967c226946e51229a03ebe0c83351d0acb2828f350c85 turf 17.280–28.520,38.395–62.400,70.620–115.305
+  after:  cb131dd2a565e642655988c54f3540dcb904098bb281eb16792da17587cfd319 turf 17.420–130.450,130.530–131.540,131.725–132.620,132.915–133.695,134.100–134.755,135.300–135.790,136.545–136.775
+stop-ac 2 m/s drive 0.5 up -0.017 side 0
+  before: db144ed379a2a916d9129c2556e894cdbf2455cd63e851347a94f13ccafcf784 turf 17.405–29.200,36.930–62.980,69.945–114.930
+  after:  a510ff2fcdd8c105c8a05ded10baa2b4ff39bb8ac51a835462776afe30bd3e06 turf 17.480–122.240,122.270–123.355,123.500–124.465,124.725–125.565,125.940–126.655,127.155–127.730,128.385–128.780
+stop-ac 2 m/s drive 0.5 up -0.017 side 0.01
+  before: fe4b250481fd660021885399ef57bba0f62d861022c481f3f31cd169c53071f5 turf 17.280–28.520,38.395–62.400,70.625–115.310
+  after:  d5954ab6549f879edf8aa38008b15935c24346e9bdea4ba23c39065ce3d5c1df turf 17.415–130.470,130.530–131.560,131.725–132.645,132.915–133.720,134.100–134.780,135.295–135.825,136.525–136.825
+stop-ac 2 m/s drive 1 up -0.023 side -0.01
+  before: 4505caa0bda4f9bb51ca99cfafc0b9155428ec9c597246efc871a4545ed6b2eb turf 78.125–91.890
+  after:  239ca8d978140067f84ada0251b0927e847658d9c25575e6696dc420423f1263 turf 78.445–78.860,79.075–108.145,108.305–108.890,109.285–109.585
+stop-ac 2 m/s drive 1 up -0.023 side 0
+  before: f7183a71e15b6986e215848d77030b132bf87c3ed08cf80dc2c40d1506c8df97 turf 80.365–94.015
+  after:  c1fc959913e0e63ac7f7dabc7d453d40c227142658803c5d9511f6a256ede76e turf 80.695–81.080,81.435–82.065,82.190–103.560,103.620–104.340,104.570–105.100,105.550–105.805
+stop-ac 2 m/s drive 1 up -0.023 side 0.01
+  before: 1213016182c2b54ef469a9c16680cbfe73f17e5b82de4e30e5f728a053f886be turf 78.125–91.890
+  after:  0f59aaa55d8e2f67ee44d1d19f6891b173b78517e5a20b5e0f140c785ff670ff turf 78.440–78.840,79.075–107.330,107.345–108.100,108.300–108.845,109.290–109.525
+stop-ac 2 m/s drive 1 up -0.02 side -0.01
+  before: 89cb68cf48299a09e0c3c4deb208d6d0fa8f281492e2e7adde491363bca9ffee turf 51.725–67.545
+  after:  25764d62f61f8ca1ddb20fee91125b699080d65dcc7e9df95a36127e101a9cb3 turf 51.825–52.220,52.505–80.885,80.985–81.705,81.935–82.525,82.875–83.335,83.795–84.140,84.730–84.925
+stop-ac 2 m/s drive 1 up -0.02 side 0
+  before: 90e1eef1b98e66af8a23fca8908c8805334d6592cb9069300ebea9bcb04f1919 turf 52.935–68.670
+  after:  be9692c70fb9b2d442d82c6b8c65952a0b03bce8cd7e41dea07be9c0ae774a45 turf 53.440–77.990,78.165–78.785,79.195–79.555
+stop-ac 2 m/s drive 1 up -0.02 side 0.01
+  before: 962e438be63f8a09fa43a04ddc08391d7238c983725e7c08f87d5de662df5ab0 turf 51.725–67.545
+  after:  76a24e530dcfb6d1aaa8f842deb8b07f48c3cfcf81e29c3813e96540d6ad58fc turf 51.820–52.235,52.500–80.015,80.030–80.840,81.005–81.660,81.955–82.475,82.890–83.280,83.825–84.070
+stop-ac 2 m/s drive 1 up -0.017 side -0.01
+  before: 3efca5a6baeacf793287d64e57598d497caafc22d2adeb6a892ae937bf3d20f9 turf 18.275–47.125,50.755–87.330
+  after:  ed31d6f19fee02f0d4bd76afb2947e36591bc446c56f5224981201c9d594e912 turf 18.455–103.795,103.830–104.640,104.735–105.480,105.640–106.305,106.540–107.135,107.445–107.955,108.350–108.765,109.280–109.545
+stop-ac 2 m/s drive 1 up -0.017 side 0
+  before: 8bed7b72d75790bf53f93cc4f3a193376a9bc0d92162da52b5e2a1a1ba8b86cb turf 18.485–46.240,52.065–87.395
+  after:  a4f127cd49b1d846ceeed83e2b3d76d635ed5796fafb9740cabc553c37b84dfc turf 18.545–49.115,49.305–50.280,50.745–51.425,52.060–52.560,53.280–53.690,54.425–54.830,55.515–55.970,56.555–57.105,57.555–58.225,58.525–59.325,59.465–90.035,90.090–90.930,91.065–91.825,92.025–92.710,92.975–93.595,93.920–94.475,94.855–95.355,95.785–96.225,96.715–97.085,97.645–97.940,98.590–98.780
+stop-ac 2 m/s drive 1 up -0.017 side 0.01
+  before: 85e3b80cb2853800a0d77ea68b92d6a148ee51cff66b535de9acc592af6c64ac turf 18.275–47.120,50.760–87.335
+  after:  8cb635b2779011afefd236265f5c1309bd65403d1c762dd093cd11a2708b9900 turf 18.455–103.785,103.820–104.640,104.725–105.485,105.630–106.325,106.535–107.155,107.440–107.980,108.345–108.790,109.265–109.580
+stop-ac 3 m/s drive -1 up -0.017 side -0.01
+  before: afb65f14a9b1202a7c5f8b0f1ebb6e3ce3518ac607796ea09073ad1c816e69fd turf 15.660–25.275
+  after:  d758a3eeec925132fc24b7dc35d2bf7853ff68c4b28e6de7fbd9e6a552d42d59 turf 15.720–20.245
+stop-ac 3 m/s drive -1 up -0.017 side 0
+  before: 6607de43ada37b90d9360a26fb10c48ee98f099c7803cab5f751f9a705317f2c turf 15.760–25.455
+  after:  db2e99ef35ec4f7a6951b731d0c2618cf000b0b10c276276466e61bd1c6922b3 turf 15.915–20.245
+stop-ac 3 m/s drive -1 up -0.017 side 0.01
+  before: 688c764c5bbed95a5b6537b1c6fd4e598e51126e042188c58fbace83f9e9af79 turf 15.660–25.275
+  after:  39c69f0bf7fd4d111df964b6b43843ee0c30d87e58191532f6adb9dc4dd2fbbd turf 15.715–20.245
+stop-ac 3 m/s drive -0.5 up -0.017 side -0.01
+  before: c7073b6925b8a16752258ba82b4ef51a3173e3d52460209265bab0c552a017db turf 15.585–25.035
+  after:  c6a6f0d3ab2d7ae7baa36428097b5bc86fb755562869deffc19c789a034d1a2f turf 15.610–20.245
+stop-ac 3 m/s drive -0.5 up -0.017 side 0
+  before: 9c2463a2e8c4ff13e159c991ea24f2ecd2763b9fb4500ea0498a10ac74c85ff3 turf 15.685–25.190
+  after:  d5c874ee673bd4a317a367942ba840fa263465505a0193c774ee3260314fd1cb turf 15.685–20.245
+stop-ac 3 m/s drive -0.5 up -0.017 side 0.01
+  before: 5311675c8ab1cf7be252d7bbde379dc6706763793c6e5ecd9f8251f6b04a9040 turf 15.585–25.035
+  after:  9e98b9123bf23ba43a73f4adbbc6d444b96adaa4174923f91f288158162b7a8d turf 15.610–20.245
+stop-ac 3 m/s drive 0 up -0.023 side -0.01
+  before: 83db44f0bb1d468b9907394593fb6e84c7ca3b0dab2196ec0c0f7cbfca239e2d turf 58.550–72.675
+  after:  489e89bf2b69d58d261918e360439031879bedd243ca5a9eefcc7fa9db7fca99 turf 58.940–85.515,85.895–86.525
+stop-ac 3 m/s drive 0 up -0.023 side 0
+  before: 4c7b08ef8eacc8a41bd9afeb47f1efcbdc80ea4cfd173b0c254435b974c73bf4 turf 59.885–73.415
+  after:  eea010f6639a331c278ff6c02a006fcad088c57f77d56f724ea8cf30808749aa turf 59.900–60.200,60.545–81.400,81.715–82.425
+stop-ac 3 m/s drive 0 up -0.023 side 0.01
+  before: 8be34776c81259b3dbd088a2b60aaeafbf6af298c9b084e7c6d00234af82ead8 turf 58.550–72.675
+  after:  b26dd16877b01702269adabd42d9edec28a25741de56b97050d9e09214bf5ffe turf 58.940–84.395,84.425–85.490,85.895–86.545
+stop-ac 3 m/s drive 0 up -0.02 side -0.01
+  before: a2fb435c8893ed02b5be318c2c5489b952e7d93511e655df7e96049f87ab50c7 turf 36.445–52.305,70.795–81.480
+  after:  07a7b472f89365f2be6a9d14a0c6f0aa622d5a798bfb4e3b139f7e9f5615628f turf 37.030–64.310,64.320–65.355,65.645–66.380,66.905–67.380,68.210–68.275,78.980–78.990,79.860–80.210,80.835–81.335,81.815–82.435,82.800–83.540,83.930–84.675,85.215–85.790,86.510–86.880
+stop-ac 3 m/s drive 0 up -0.02 side 0
+  before: af2b44fb12d8c140cab164505cf1386f01a025f389a7f14820b3eb59cd02eff7 turf 37.390–53.220,72.540–81.830
+  after:  480030d657477546d3579abca792f3e20bbb4ee58a8c33608865382b02669346 turf 37.965–61.725,61.895–62.750,63.345–63.700
+stop-ac 3 m/s drive 0 up -0.02 side 0.01
+  before: 713dd786d70c05ecf3dbbddcf2d9f9c14039f4c5f2ba8f5e213940881e73b6a1 turf 36.445–52.305,70.795–81.480
+  after:  ad6bf3bdee4433b54ada65a5a6c3fbe59cf87981d0edbfc0300c862ca7f59626 turf 37.030–64.315,64.335–65.360,65.655–66.385,66.915–67.380,79.870–80.215,80.840–81.335,81.825–82.440,82.805–83.545,83.940–84.675,85.225–85.795,86.520–86.885
+stop-ac 3 m/s drive 0 up -0.017 side -0.01
+  before: 2080d9180bc171364372305d5f312de784c49bc5002d2131194e46faf1b89dbe turf 16.055–25.610,58.710–75.730,85.545–88.660
+  after:  363ace7ad25507eaf1d7d61f350b4d7b133e102793592c8814e83505d53845ff turf 16.100–32.585,32.710–33.855,47.150–47.305,48.110–48.790,49.105–99.755,99.810–100.850,101.080–101.935,102.335–103.000,103.600–104.030
+stop-ac 3 m/s drive 0 up -0.017 side 0
+  before: ceec84d2e0789394d44cdc8262b5e5269e0f4ad2f2247f445ae792440b8a9954 turf 16.175–25.815,56.735–73.555,83.080–89.585
+  after:  bfe2347040bb76e7776b535a33f7eb7a91ffae736ed018715c43c3670ec747fe turf 16.175–32.130,49.205–49.615,50.170–51.000,51.120–86.515,86.525–87.575,87.620–88.635,88.710–89.690,89.795–90.745,90.875–91.800,91.945–92.855,93.015–93.905,94.080–94.950,95.140–95.995,96.200–97.035,97.255–98.085,98.400–99.155,99.670–100.200,101.055–101.115
+stop-ac 3 m/s drive 0 up -0.017 side 0.01
+  before: af347aa5c214c8560833f83c66a71c27d53491af5311594e38fb01b3043f1ae4 turf 16.055–25.610,58.710–75.730,85.545–88.655
+  after:  f6050618546f4b5ab9832b09b8d5371d989d6769356aa51b5ae587855f7aade9 turf 16.100–32.565,32.750–33.850,48.145–48.785,49.140–99.755,99.835–100.845,101.105–101.925,102.370–102.975,103.680–103.960
+stop-ac 3 m/s drive 0.5 up -0.023 side -0.01
+  before: 944a769ab994d2958f2cec0d1459cbbd3c4bde784743a244217d78ea2f0b3f05 turf 73.710–85.310
+  after:  1b1be0eb9bfd91ed0479b40a16e1df28c3368482450fd0e3040365ef6bed77bc turf 74.035–74.270,74.640–75.120,75.275–96.370,96.460–96.995,97.245–97.585
+stop-ac 3 m/s drive 0.5 up -0.023 side 0
+  before: 99cf8aa14e53ab7595d30bbc38096d355d5c6b4f6c6ab93b6a7b3589a104a404 turf 76.990–87.320
+  after:  a439f2b7b999f436f18561de91428381ffb60c64e2c150881a380e0f209d21d0 turf 77.365–77.675,78.000–78.470,78.650–79.235,79.305–91.265,91.280–91.925,92.030–92.580,92.790–93.215,93.570–93.820
+stop-ac 3 m/s drive 0.5 up -0.023 side 0.01
+  before: a702780f9b524bd52fbe69401bca2671135ab26edf31553bed0c2407ead91f5d turf 73.710–85.310
+  after:  6ca9f0763b72e9ab066e9d52adab1fe1c6d348a5d99ee0bddbf02376fbd3a4cd turf 74.025–74.290,74.635–75.135,75.270–96.335,96.460–96.945,97.255–97.510
+stop-ac 3 m/s drive 0.5 up -0.02 side -0.01
+  before: a795b57ab579fe8db59a443c9947022c051de02069c7eb84a82369a4d5485d52 turf 45.085–59.610
+  after:  eaa3201aa8bb7df5495eea9d8463be69b23b29bcdd413a17293be44f39336f68 turf 45.590–75.545,75.600–76.305,76.480–77.055,77.350–77.790,78.240–78.495
+stop-ac 3 m/s drive 0.5 up -0.02 side 0
+  before: 7d63186636fad86da9fc4c43f56dfc3a8d21ee7e54ae64ac1c7efc3d2ee3fb56 turf 46.280–60.715
+  after:  1995f40782e8e0349d1ad1c5544ca157c0a1af79622aec4e9c1f544b77f3f2d9 turf 46.425–46.900,47.070–70.380,70.450–71.145,71.390–71.895,72.315–72.620
+stop-ac 3 m/s drive 0.5 up -0.02 side 0.01
+  before: aea623a31ee291212f69d5982c08524f0b98102e918e330e45ca1caca7feed1f turf 45.085–59.610
+  after:  ab5a1acea57c1fcf77d62a9d6228c662a57d39b6f9d8d12490536cae62ee6412 turf 45.595–75.500,75.605–76.265,76.485–77.015,77.350–77.750,78.240–78.450
+stop-ac 3 m/s drive 0.5 up -0.017 side -0.01
+  before: ef9bd1f4c281697d3bb123d0da909e4f41adf72e7906f042baa922eed1ce875e turf 16.930–26.795,45.185–61.295
+  after:  8a8a28680dae98ee66b5b35ecbb2857603b50ba0aa13b75bdcd314d2923d7aaf turf 16.935–87.455,87.470–88.195,88.270–88.925,89.075–89.650,89.875–90.365,90.680–91.070,91.510–91.745
+stop-ac 3 m/s drive 0.5 up -0.017 side 0
+  before: 2e6700602079cd0d7e0b1182a4fa44fde4f84fdd825b756e24209f9c985b6005 turf 17.100–27.265,42.715–60.230
+  after:  475ea962667b2c15955a63b51358f3eedf59eb102529e6f7e50ae874e5f8a2d1 turf 17.340–75.480,75.500–76.265,76.330–77.050,77.150–77.830,77.970–78.610,78.785–79.385,79.595–80.155,80.405–80.920,81.215–81.685,82.015–82.440,82.820–83.185,83.630–83.925,84.455–84.645
+stop-ac 3 m/s drive 0.5 up -0.017 side 0.01
+  before: 96e76ade1fb7aa6df4e3146fe3223e54cd00159b194742092a3d6cb2cce1627f turf 16.930–26.795,45.185–61.295
+  after:  ac3f53d7348e7cc2bf28662816b8444cf3291e0ab0e52dd6fbff729249f6937d turf 16.935–88.205,88.260–88.940,89.065–89.665,89.865–90.380,90.670–91.085,91.490–91.760
+stop-ac 3 m/s drive 1 up -0.02 side -0.01
+  before: 7cc3f9ccab62fa0a65eb7fbfb6f94cdaad2b9d9e640a60c305740e238ad8ed04 turf 65.680–76.885
+  after:  24b8d73b8ceb1e0cde8f72ac1d454cd5df83d659a540bb3036a64ed7921b0c20 turf 66.275–66.570,66.835–67.270,67.395–67.945,67.960–85.380,85.435–85.915,86.080–86.435,86.755–86.915
+stop-ac 3 m/s drive 1 up -0.02 side 0
+  before: 8283d1523edc1d6da609152e071bae8321d4c2717bf9c96923183d110aba949e turf 69.405–78.655
+  after:  8facb6d6117b8fe0bcad4dc1a22b55ed48a9cdd52790946827e0efe0ba1ee3c9 turf 69.790–70.035,70.350–70.705,70.925–71.360,71.500–72.000,72.075–72.635,72.655–80.435,80.465–81.005,81.085–81.570,81.710–82.125,82.340–82.670,82.985–83.190
+stop-ac 3 m/s drive 1 up -0.02 side 0.01
+  before: f8545a1a01cf0f2bbdcfe7e539e763f353a58fcf8e44c845dce979b3c5d11944 turf 65.680–76.885
+  after:  3810532e5a3a0a04f619f2ffaf686b6343c8123dfeb7a7a02589090998b1965b turf 66.275–66.585,66.830–67.280,67.395–85.390,85.435–85.925,86.080–86.450,86.745–86.940
+stop-ac 3 m/s drive 1 up -0.017 side -0.01
+  before: 4efc9b0d82988f5619de8bf6ad6215b78a49bd74e8f45600eceb6b4f614f6433 turf 18.570–59.040,61.135–74.095
+  after:  3c742cb7b1ef8ce44d2f2a921310ceccb7f931122d3cd35d5af89d54b7e034de turf 19.070–81.605,81.655–82.185,82.305–82.755,82.960–83.315,83.625–83.850
+stop-ac 3 m/s drive 1 up -0.017 side 0
+  before: da08e9f29a6fe12b6b383b324f4bb49a1b60dcd170f348ba9bad8f687c199c73 turf 19.035–59.260,60.970–73.685
+  after:  e9c895d84cc929fb2dc232dd23fa5b6f1f166880d01bbc048994e77cee45e3a6 turf 19.225–19.760,20.025–20.890,20.985–56.745,56.780–57.365,57.445–57.980,58.105–58.590,58.755–59.190,59.400–59.785,60.040–60.370,60.675–60.950,61.305–61.520,61.945–62.075,63.885–63.945,64.500–64.655,65.130–65.345,65.765–66.030,66.395–66.705,67.030–67.375,67.665–68.040,68.295–68.700,68.925–69.360,69.555–70.010,70.185–70.660,70.815–71.305,71.445–71.945,72.075–72.580,72.705–73.215,73.335–73.840,73.970–74.465,74.600–75.085,75.235–75.700,75.870–76.310,76.505–76.920,77.140–77.520,77.780–78.110,78.420–78.695,79.080–79.260
+stop-ac 3 m/s drive 1 up -0.017 side 0.01
+  before: 71961a0979dfd4a6dff35cedf579c7bab45328201c9eda312406ef04b219486f turf 18.570–59.040,61.135–74.095
+  after:  edd9be836481b5812ebd15f87d524f8ca552cc104ba6d48e5d9f65313cb486b5 turf 18.615–18.695,19.065–81.610,81.655–82.190,82.305–82.765,82.955–83.325,83.620–83.865
+stop-ac 4 m/s drive -1 up -0.017 side -0.01
+  before: cac44578b3a6178ef8852dc9558745f02d91de434371d00e4bf16427b6bc64e6 turf 15.075–24.635
+  after:  d1c3d208a676f15d2f8a79f953b5c1b23c1798c858439a3a8108a9e821d6a056 turf 15.215–20.245
+stop-ac 4 m/s drive -1 up -0.017 side 0
+  before: 4ebf07f3f2a65c40249486adbbd9fcc52375df0dfb58ba384d1d9ec800ea544a turf 15.190–24.800
+  after:  737df6479b7813f4d0be701457c93c954b93ed0e50c142b2d5236008d10b76e8 turf 15.275–20.245
+stop-ac 4 m/s drive -1 up -0.017 side 0.01
+  before: 574f02e9d2a8f6b09b65b8e4dbe42bd3658f2bbff7f7ea86497a5e366aaa1279 turf 15.075–24.635
+  after:  1cfbfd36dcc513a0fe890b30412f7c1edd8928f7624dbe8d2ffe1cc8246d009d turf 15.215–20.245
+stop-ac 4 m/s drive -0.5 up -0.017 side -0.01
+  before: 7d16fe95b1c2311644ab74f1716bc038c7bce874c10e4412ff6725aef845a5cd turf 15.005–24.395
+  after:  9b9446d2f39a7d6a910307e5ec7b4ee9d0ae1aeb13a71c012c36ea94f5a8ae01 turf 15.040–20.245
+stop-ac 4 m/s drive -0.5 up -0.017 side 0
+  before: 76498ec99c45324442ec06adfde75ec25cfb7cef1253eed1fe7b23db317fcd7d turf 15.120–24.535
+  after:  f39458b510dab20cf46ff9e15b0ad296a3221111509f8da83960713d26d83dd5 turf 15.245–20.245
+stop-ac 4 m/s drive -0.5 up -0.017 side 0.01
+  before: 7380180c91707d347448a8f2d3fa034243999a0f7d9643beccf7fa4b6b35b0df turf 15.005–24.395
+  after:  1209639c3731fe1722ed9b1ba511b6b2bb64ceac1472cde239b78c9a6c9ca35f turf 15.040–20.245
+stop-ac 4 m/s drive 0 up -0.023 side -0.01
+  before: a41ee32107c8ccb85c892d0ce6003f09b0e7aac6d8f8ec4a24faf048df7cf7da turf 60.840–74.005
+  after:  e5faa4110c3698a16205725c2a9c606af118ae16d36ba6dfbfa0c14fc506f0c1 turf 61.260–61.840,61.920–89.030,89.240–89.735
+stop-ac 4 m/s drive 0 up -0.023 side 0
+  before: 675750206ce7243758701fda95bb5d65292c4f974c738f67e9ba38e7f833eba5 turf 63.145–75.915
+  after:  0454f10b5ebe69e6b21935eeb5dfe92714b31586eba9356cddef3d9f780b3c4d turf 63.470–63.985,64.140–84.430,84.565–85.170,85.610–85.820
+stop-ac 4 m/s drive 0 up -0.023 side 0.01
+  before: b5db0d6383312f247321cd839f3ee6623c2bd3852fed064328292364a7b3c75d turf 60.840–74.005
+  after:  52734d48e0c45ba1643efc1ae33ad7e7f5e75c4e7e81e1505f1032c46b1d5be1 turf 61.255–61.855,61.920–89.050,89.240–89.765
+stop-ac 4 m/s drive 0 up -0.02 side -0.01
+  before: f868851194bdfb86b52270abd6ec882cac69356fd4392633694aa2c94dca6744 turf 34.710–49.560
+  after:  7911d5a222cb6637dae7827090be2eef033f7c9aacf556034fec7734dc1143c7 turf 35.325–72.335,72.395–73.170,73.315–74.000,74.230–74.820,75.145–75.625,76.070–76.405
+stop-ac 4 m/s drive 0 up -0.02 side 0
+  before: 8a89a1cfdab024fa2c578ab2c984ef043265babfef805cb721b39ffb5227e40e turf 36.120–50.835
+  after:  5b431b368570d6a12315ed1ac8103f5916dda50288050911da3b1da343f5a6aa turf 36.200–36.535,36.820–61.275,61.365–62.125,62.335–62.990,63.295–63.845,64.250–64.690,65.210–65.515
+stop-ac 4 m/s drive 0 up -0.02 side 0.01
+  before: 15208cd925c042d5b11c65cdcc722da886169574ae04573e54bb553b8dfadb12 turf 34.710–49.560
+  after:  8759d6eb1c9185c9046a01c7e5f999a085dc48b96ea55c21d70f5c6e43858160 turf 34.775–34.860,35.325–72.340,72.410–73.175,73.325–74.005,74.240–74.820,75.160–75.615,76.105–76.370
+stop-ac 4 m/s drive 0 up -0.017 side -0.01
+  before: b4a9aa1adaff3006843b042c872fff0c7e79f005dfae8f56eb082f3e97a53124 turf 15.565–24.815
+  after:  61665bbed3f0c090d725708465e27b32237be8bf8204edabd98ebff2f0660bd0 turf 15.630–30.015,30.045–30.910,77.385–77.495,78.155–78.320,78.940–79.120,79.740–79.905,80.550–80.670
+stop-ac 4 m/s drive 0 up -0.017 side 0
+  before: 28dcba663b2d98a683dfe659afbea1b8c92ec6d6842530eca479d7226fcfedf5 turf 15.705–24.985
+  after:  5584459e686e71b17f6c803a7eb8e1d089e2c49852be46adec10409a93afba44 turf 15.705–29.610
+stop-ac 4 m/s drive 0 up -0.017 side 0.01
+  before: 0c1684c10ae11e8ee9016c18037a5b669d11cef9270a41601dd134af73ca3221 turf 15.565–24.815
+  after:  184de96c4c72b91c8959c1aeffff045b8c0fe6415237bc74c7dd49bdd83a5e15 turf 15.630–30.925,75.815–75.875,76.545–76.745,77.315–77.575,78.100–78.385,78.890–79.185,79.685–79.975,80.485–80.750,81.300–81.505
+stop-ac 4 m/s drive 0.5 up -0.02 side -0.01
+  before: 490beb9755a1d601daf5f7f2d3058b9bb31c0a2a61de1c2a62dba9485ac189ac turf 60.635–67.835
+  after:  f0e648d6759df2e04d08a32092eb19a8a287e5b35560addca7797a1be73196ef turf 61.020–61.175,61.560–61.805,62.120–62.415,62.680–63.020,63.250–63.610,63.815–64.195,64.390–64.775,64.960–65.350,65.530–65.920,66.105–66.480,66.685–67.030,67.260–67.585,67.840–68.145,68.425–68.690,69.020–69.235,69.625–69.755
+stop-ac 4 m/s drive 0.5 up -0.02 side 0.01
+  before: 75fcbdfab8b68d1e27f982ac46652e9f347317cb2b52d59fb5308d67f53a43bf turf 60.635–67.835
+  after:  cba0e6a2f4a11337f76ed3ccda72874d4b44123f02ac05ce156de1fe44f05b54 turf 61.040–61.155,61.585–61.775,62.135–62.380,62.690–62.970,63.255–63.555,63.820–64.150,64.390–64.740,64.960–65.320,65.530–65.895,66.105–66.470,66.680–67.040,67.260–67.600,67.840–68.160,68.425–68.710,69.015–69.250,69.615–69.780
+stop-ac 4 m/s drive 0.5 up -0.017 side -0.01
+  before: d704d1a4f888d154c5036fc8d60c700fac6016bd250ee50e466708c4c8f13c80 turf 16.635–25.460
+  after:  8262c9cd23d10f8234a143eddb0287269d9079a8561fe71c9d4b851657d35a3e turf 16.795–66.685,66.715–67.260,67.320–67.830,67.930–68.395,68.540–68.955,69.150–69.505,69.765–70.050,70.395–70.575
+stop-ac 4 m/s drive 0.5 up -0.017 side 0
+  before: 8f922da6518354688248b809b3117ae8abbab309dcc3fd8e295bc8d8b744c160 turf 16.850–25.755
+  after:  0e76c3895167bcf82ff5d5f0d5585080508ced747886fd68282fcd934e9a1df9 turf 16.880–36.600,36.630–37.425,37.490–38.235,38.335–39.035,39.160–39.825,39.965–40.600,40.755–41.365,41.535–42.115,42.295–42.860,43.045–43.595,43.785–44.315,44.515–45.030,45.230–45.735,45.940–46.435,46.640–47.125,47.335–47.805,48.020–48.475,48.700–49.140,49.370–49.800,50.040–50.450,50.700–51.090,51.355–51.725,52.005–52.355,52.650–52.975,53.290–53.590,53.930–54.205,54.560–54.820,55.185–55.440,55.805–56.055,56.425–56.670,57.040–57.285,57.650–57.900,58.260–58.510,58.870–59.120,59.475–59.725,60.080–60.330,60.685–60.930,61.290–61.530,61.895–62.120,62.500–62.710,63.105–63.290,63.720–63.865,64.340–64.425
+stop-ac 4 m/s drive 0.5 up -0.017 side 0.01
+  before: ca4d20b233d2287ed7d7b361c197d72c301594c09ae7791a70b4e9239dfa0deb turf 16.635–25.460
+  after:  ec8337e495f56cee8769f93fb2ddaa9998ed6513685783bb53f4ddd5a18464df turf 16.795–66.695,66.715–67.270,67.325–67.840,67.930–68.405,68.540–68.965,69.150–69.515,69.765–70.055,70.400–70.570
+half-roll canonical
+  before: ad42b6bedbd9e89bde8d1a1abf09ce0ca59aed8665f9ef37b6e2dc4a4a07b0a9 turf none
+  after:  888690cd58607893c64234fa6a5bff75b249c5bfa3653af74e7db4205d1c313d turf none
+  ^ moved with no head-turf contact
+full-roll canonical
+  before: b3b2a0da9987ce7815a88843d43d4367bbae93e5705773ad1c7f1195a2ccb50c turf none
+  after:  b430e8af4ce00cb721ef0fb7110add1d1a7240a71afba79ed9a7fdab6ae80821 turf none
+  ^ moved with no head-turf contact
+pass-roll canonical
+  before: ed66ab031adedac05db2ab23686b0ef8d8ada7455e74fe41a569d169035d49fe turf none
+  after:  4672b5455eb7317947c990ccb20c0b81b7a0c8a93c9b6e2ea3a9f7606fe16678 turf none
+  ^ moved with no head-turf contact
+moved 113; unexplained 3
+-- swing probe presets: baseline --
+== Preset sweep: speed × drive × contact for each preset ==
+single-ball 180 runs (45 rejected); runs raising impact-head-deep 0, impact-cap 0, impact-head-approaching 0, impact-off-face 0, impact-turf-pit 0
+            longest before the cap 10.0 ms after contactAt (TRACK_IMPACT_CAP 450.0 ms); canonical approach 6.22 mm, 44.0 ms before contact
+            rejected 15× at 6 m/s, up -3.00 mm: backswingFor: 6 m/s is beyond the single-ball stroke's reach (4.089442092053967 m/s at 0.833574999166425 m)
+            rejected 15× at 6 m/s, up 0.00 mm: backswingFor: 6 m/s is beyond the single-ball stroke's reach (4.089442092053967 m/s at 0.833574999166425 m)
+            rejected 15× at 6 m/s, up 3.00 mm: backswingFor: 6 m/s is beyond the single-ball stroke's reach (4.089442092053967 m/s at 0.833574999166425 m)
+drive       180 runs (45 rejected); runs raising impact-head-deep 0, impact-cap 0, impact-head-approaching 0, impact-off-face 84, impact-turf-pit 0
+            longest before the cap 288.9 ms after contactAt (TRACK_IMPACT_CAP 450.0 ms); canonical approach 6.22 mm, 44.0 ms before contact
+            rejected 15× at 6 m/s, up -3.00 mm: backswingFor: 6 m/s is beyond the drive stroke's reach (4.089442092053967 m/s at 0.833574999166425 m)
+            rejected 15× at 6 m/s, up 0.00 mm: backswingFor: 6 m/s is beyond the drive stroke's reach (4.089442092053967 m/s at 0.833574999166425 m)
+            rejected 15× at 6 m/s, up 3.00 mm: backswingFor: 6 m/s is beyond the drive stroke's reach (4.089442092053967 m/s at 0.833574999166425 m)
+stop-ac     180 runs (45 rejected); runs raising impact-head-deep 0, impact-cap 15, impact-head-approaching 0, impact-off-face 57, impact-turf-pit 0
+            longest before the cap 271.2 ms after contactAt (TRACK_IMPACT_CAP 450.0 ms); canonical approach 11.18 mm, 63.3 ms before contact
+            rejected 15× at 6 m/s, up -3.00 mm: backswingFor: 6 m/s is beyond the stop-ac stroke's reach (4.084495408602591 m/s at 0.8315588859996869 m)
+            rejected 15× at 6 m/s, up 0.00 mm: backswingFor: 6 m/s is beyond the stop-ac stroke's reach (4.084459966740961 m/s at 0.8315444523637885 m)
+            rejected 15× at 6 m/s, up 3.00 mm: backswingFor: 6 m/s is beyond the stop-ac stroke's reach (4.0844241404790536 m/s at 0.8315298622955489 m)
+stop-gc     180 runs (45 rejected); runs raising impact-head-deep 0, impact-cap 0, impact-head-approaching 0, impact-off-face 12, impact-turf-pit 0
+            longest before the cap 58.7 ms after contactAt (TRACK_IMPACT_CAP 450.0 ms); canonical approach 6.22 mm, 44.0 ms before contact
+            rejected 15× at 6 m/s, up -3.00 mm: backswingFor: 6 m/s is beyond the stop-gc stroke's reach (4.089442092053967 m/s at 0.833574999166425 m)
+            rejected 15× at 6 m/s, up 0.00 mm: backswingFor: 6 m/s is beyond the stop-gc stroke's reach (4.089442092053967 m/s at 0.833574999166425 m)
+            rejected 15× at 6 m/s, up 3.00 mm: backswingFor: 6 m/s is beyond the stop-gc stroke's reach (4.089442092053967 m/s at 0.833574999166425 m)
+half-roll   225 runs (0 rejected); runs raising impact-head-deep 0, impact-cap 0, impact-head-approaching 0, impact-off-face 0, impact-turf-pit 0
+            longest before the cap 320.6 ms after contactAt (TRACK_IMPACT_CAP 450.0 ms); canonical approach 39.18 mm, 0.0 ms before contact
+full-roll   225 runs (0 rejected); runs raising impact-head-deep 0, impact-cap 0, impact-head-approaching 0, impact-off-face 83, impact-turf-pit 0
+            longest before the cap 427.1 ms after contactAt (TRACK_IMPACT_CAP 450.0 ms); canonical approach 45.94 mm, 0.0 ms before contact
+pass-roll   225 runs (0 rejected); runs raising impact-head-deep 0, impact-cap 0, impact-head-approaching 0, impact-off-face 127, impact-turf-pit 0
+            longest before the cap 413.5 ms after contactAt (TRACK_IMPACT_CAP 450.0 ms); canonical approach 48.82 mm, 0.0 ms before contact
+-- swing probe presets: now --
+== Preset sweep: speed × drive × contact for each preset ==
+single-ball 180 runs (45 rejected); runs raising impact-head-deep 0, impact-cap 0, impact-head-approaching 0, impact-off-face 0, impact-turf-pit 0
+            longest before the cap 10.0 ms after contactAt (TRACK_IMPACT_CAP 450.0 ms); canonical approach 6.22 mm, 44.0 ms before contact
+            rejected 15× at 6 m/s, up -3.00 mm: backswingFor: 6 m/s is beyond the single-ball stroke's reach (4.089442092053967 m/s at 0.833574999166425 m)
+            rejected 15× at 6 m/s, up 0.00 mm: backswingFor: 6 m/s is beyond the single-ball stroke's reach (4.089442092053967 m/s at 0.833574999166425 m)
+            rejected 15× at 6 m/s, up 3.00 mm: backswingFor: 6 m/s is beyond the single-ball stroke's reach (4.089442092053967 m/s at 0.833574999166425 m)
+drive       180 runs (45 rejected); runs raising impact-head-deep 0, impact-cap 0, impact-head-approaching 0, impact-off-face 84, impact-turf-pit 0
+            longest before the cap 288.9 ms after contactAt (TRACK_IMPACT_CAP 450.0 ms); canonical approach 6.22 mm, 44.0 ms before contact
+            rejected 15× at 6 m/s, up -3.00 mm: backswingFor: 6 m/s is beyond the drive stroke's reach (4.089442092053967 m/s at 0.833574999166425 m)
+            rejected 15× at 6 m/s, up 0.00 mm: backswingFor: 6 m/s is beyond the drive stroke's reach (4.089442092053967 m/s at 0.833574999166425 m)
+            rejected 15× at 6 m/s, up 3.00 mm: backswingFor: 6 m/s is beyond the drive stroke's reach (4.089442092053967 m/s at 0.833574999166425 m)
+stop-ac     180 runs (45 rejected); runs raising impact-head-deep 0, impact-cap 0, impact-head-approaching 0, impact-off-face 56, impact-turf-pit 0
+            longest before the cap 262.9 ms after contactAt (TRACK_IMPACT_CAP 450.0 ms); canonical approach 11.18 mm, 63.3 ms before contact
+            rejected 15× at 6 m/s, up -3.00 mm: backswingFor: 6 m/s is beyond the stop-ac stroke's reach (4.084495408602591 m/s at 0.8315588859996869 m)
+            rejected 15× at 6 m/s, up 0.00 mm: backswingFor: 6 m/s is beyond the stop-ac stroke's reach (4.084459966740961 m/s at 0.8315444523637885 m)
+            rejected 15× at 6 m/s, up 3.00 mm: backswingFor: 6 m/s is beyond the stop-ac stroke's reach (4.0844241404790536 m/s at 0.8315298622955489 m)
+stop-gc     180 runs (45 rejected); runs raising impact-head-deep 0, impact-cap 0, impact-head-approaching 0, impact-off-face 9, impact-turf-pit 0
+            longest before the cap 60.6 ms after contactAt (TRACK_IMPACT_CAP 450.0 ms); canonical approach 6.22 mm, 44.0 ms before contact
+            rejected 15× at 6 m/s, up -3.00 mm: backswingFor: 6 m/s is beyond the stop-gc stroke's reach (4.089442092053967 m/s at 0.833574999166425 m)
+            rejected 15× at 6 m/s, up 0.00 mm: backswingFor: 6 m/s is beyond the stop-gc stroke's reach (4.089442092053967 m/s at 0.833574999166425 m)
+            rejected 15× at 6 m/s, up 3.00 mm: backswingFor: 6 m/s is beyond the stop-gc stroke's reach (4.089442092053967 m/s at 0.833574999166425 m)
+half-roll   225 runs (0 rejected); runs raising impact-head-deep 0, impact-cap 0, impact-head-approaching 0, impact-off-face 0, impact-turf-pit 0
+            longest before the cap 320.6 ms after contactAt (TRACK_IMPACT_CAP 450.0 ms); canonical approach 39.18 mm, 0.0 ms before contact
+full-roll   225 runs (0 rejected); runs raising impact-head-deep 0, impact-cap 0, impact-head-approaching 0, impact-off-face 83, impact-turf-pit 0
+            longest before the cap 427.1 ms after contactAt (TRACK_IMPACT_CAP 450.0 ms); canonical approach 45.94 mm, 0.0 ms before contact
+pass-roll   225 runs (0 rejected); runs raising impact-head-deep 0, impact-cap 0, impact-head-approaching 0, impact-off-face 127, impact-turf-pit 0
+            longest before the cap 413.5 ms after contactAt (TRACK_IMPACT_CAP 450.0 ms); canonical approach 48.82 mm, 0.0 ms before contact
+-- swing probe rehit: baseline --
+== The late re-hit (design §3.5, §9): the real head at the impact's end, moved on by the planned follow-through out to FREE_SPAN, against every ball's phase-2 trajectory and, with the shaft, the hoops and the peg; measured, not integrated ==
+single-ball canonical: no crossing; no obstacle; preset sweep: 9 of 180 runs cross a ball, 0 an obstacle, 0 overlap one at the impact's end
+            speed 1, drive 1, up -3.00 mm, side -10.00 mm: crosses blue 87.2 ms after contactAt, 0.018 mm deep, head 1.147 m/s, ball 0.961 m/s; no obstacle
+            speed 1, drive 1, up -3.00 mm, side 0.00 mm: crosses blue 88.2 ms after contactAt, 0.011 mm deep, head 1.146 m/s, ball 0.963 m/s; no obstacle
+            speed 1, drive 1, up -3.00 mm, side 10.00 mm: crosses blue 87.2 ms after contactAt, 0.018 mm deep, head 1.147 m/s, ball 0.961 m/s; no obstacle
+            speed 1, drive 1, up 0.00 mm, side -10.00 mm: crosses blue 87.3 ms after contactAt, 0.002 mm deep, head 1.147 m/s, ball 0.960 m/s; no obstacle
+            speed 1, drive 1, up 0.00 mm, side 0.00 mm: crosses blue 88.3 ms after contactAt, 0.015 mm deep, head 1.146 m/s, ball 0.962 m/s; no obstacle
+            speed 1, drive 1, up 0.00 mm, side 10.00 mm: crosses blue 87.3 ms after contactAt, 0.002 mm deep, head 1.147 m/s, ball 0.960 m/s; no obstacle
+            speed 1, drive 1, up 3.00 mm, side -10.00 mm: crosses blue 88.1 ms after contactAt, 0.012 mm deep, head 1.146 m/s, ball 0.959 m/s; no obstacle
+            speed 1, drive 1, up 3.00 mm, side 0.00 mm: crosses blue 89.0 ms after contactAt, 0.007 mm deep, head 1.145 m/s, ball 0.960 m/s; no obstacle
+            speed 1, drive 1, up 3.00 mm, side 10.00 mm: crosses blue 88.1 ms after contactAt, 0.012 mm deep, head 1.146 m/s, ball 0.959 m/s; no obstacle
+drive       canonical: no crossing; no obstacle; preset sweep: 39 of 180 runs cross a ball, 0 an obstacle, 0 overlap one at the impact's end
+            speed 1, drive -1, up -3.00 mm, side -10.00 mm: crosses blue 30.3 ms after contactAt, 0.001 mm deep, head 0.796 m/s, ball 0.579 m/s; no obstacle
+            speed 1, drive -1, up -3.00 mm, side 0.00 mm: crosses blue 29.9 ms after contactAt, 0.010 mm deep, head 0.796 m/s, ball 0.583 m/s; no obstacle
+            speed 1, drive -1, up -3.00 mm, side 10.00 mm: crosses blue 30.4 ms after contactAt, 0.022 mm deep, head 0.796 m/s, ball 0.579 m/s; no obstacle
+            speed 1, drive -1, up 0.00 mm, side -10.00 mm: crosses blue 30.3 ms after contactAt, 0.004 mm deep, head 0.796 m/s, ball 0.580 m/s; no obstacle
+            speed 1, drive -1, up 0.00 mm, side 0.00 mm: crosses blue 30.0 ms after contactAt, 0.013 mm deep, head 0.796 m/s, ball 0.584 m/s; no obstacle
+            speed 1, drive -1, up 0.00 mm, side 10.00 mm: crosses blue 30.3 ms after contactAt, 0.004 mm deep, head 0.796 m/s, ball 0.580 m/s; no obstacle
+            speed 1, drive -1, up 3.00 mm, side -10.00 mm: crosses blue 30.4 ms after contactAt, 0.005 mm deep, head 0.796 m/s, ball 0.582 m/s; no obstacle
+            speed 1, drive -1, up 3.00 mm, side 0.00 mm: crosses blue 30.1 ms after contactAt, 0.014 mm deep, head 0.796 m/s, ball 0.585 m/s; no obstacle
+            speed 1, drive -1, up 3.00 mm, side 10.00 mm: crosses blue 30.4 ms after contactAt, 0.006 mm deep, head 0.796 m/s, ball 0.582 m/s; no obstacle
+            speed 1, drive -0.5, up -3.00 mm, side -10.00 mm: crosses blue 42.6 ms after contactAt, 0.024 mm deep, head 0.890 m/s, ball 0.532 m/s; no obstacle
+            speed 1, drive -0.5, up -3.00 mm, side 0.00 mm: crosses blue 42.0 ms after contactAt, 0.025 mm deep, head 0.891 m/s, ball 0.539 m/s; no obstacle
+            speed 1, drive -0.5, up -3.00 mm, side 10.00 mm: crosses blue 42.6 ms after contactAt, 0.024 mm deep, head 0.890 m/s, ball 0.532 m/s; no obstacle
+            speed 1, drive -0.5, up 0.00 mm, side -10.00 mm: crosses blue 42.4 ms after contactAt, 0.004 mm deep, head 0.890 m/s, ball 0.536 m/s; no obstacle
+            speed 1, drive -0.5, up 0.00 mm, side 0.00 mm: crosses blue 41.8 ms after contactAt, 0.005 mm deep, head 0.891 m/s, ball 0.542 m/s; no obstacle
+            speed 1, drive -0.5, up 0.00 mm, side 10.00 mm: crosses blue 42.4 ms after contactAt, 0.005 mm deep, head 0.890 m/s, ball 0.536 m/s; no obstacle
+            speed 1, drive -0.5, up 3.00 mm, side -10.00 mm: crosses blue 42.4 ms after contactAt, 0.018 mm deep, head 0.890 m/s, ball 0.539 m/s; no obstacle
+            speed 1, drive -0.5, up 3.00 mm, side 0.00 mm: crosses blue 41.7 ms after contactAt, 0.018 mm deep, head 0.891 m/s, ball 0.545 m/s; no obstacle
+            speed 1, drive -0.5, up 3.00 mm, side 10.00 mm: crosses blue 42.3 ms after contactAt, 0.019 mm deep, head 0.890 m/s, ball 0.539 m/s; no obstacle
+            speed 1, drive 0, up -3.00 mm, side -10.00 mm: crosses blue 91.2 ms after contactAt, 0.031 mm deep, head 0.950 m/s, ball 0.492 m/s; no obstacle
+            speed 1, drive 0, up -3.00 mm, side 0.00 mm: crosses blue 89.5 ms after contactAt, 0.039 mm deep, head 0.952 m/s, ball 0.494 m/s; no obstacle
+            speed 1, drive 0, up -3.00 mm, side 10.00 mm: crosses blue 91.4 ms after contactAt, 0.031 mm deep, head 0.950 m/s, ball 0.492 m/s; no obstacle
+            speed 1, drive 0, up 0.00 mm, side -10.00 mm: crosses blue 91.0 ms after contactAt, 0.028 mm deep, head 0.951 m/s, ball 0.493 m/s; no obstacle
+            speed 1, drive 0, up 0.00 mm, side 0.00 mm: crosses blue 89.4 ms after contactAt, 0.040 mm deep, head 0.952 m/s, ball 0.495 m/s; no obstacle
+            speed 1, drive 0, up 0.00 mm, side 10.00 mm: crosses blue 91.1 ms after contactAt, 0.021 mm deep, head 0.950 m/s, ball 0.493 m/s; no obstacle
+            speed 1, drive 0, up 3.00 mm, side -10.00 mm: crosses blue 90.7 ms after contactAt, 0.020 mm deep, head 0.951 m/s, ball 0.495 m/s; no obstacle
+            speed 1, drive 0, up 3.00 mm, side 0.00 mm: crosses blue 89.3 ms after contactAt, 0.031 mm deep, head 0.952 m/s, ball 0.496 m/s; no obstacle
+            speed 1, drive 0, up 3.00 mm, side 10.00 mm: crosses blue 90.9 ms after contactAt, 0.010 mm deep, head 0.951 m/s, ball 0.495 m/s; no obstacle
+            speed 2, drive -1, up -3.00 mm, side -10.00 mm: crosses blue 50.8 ms after contactAt, 0.018 mm deep, head 1.575 m/s, ball 0.978 m/s; no obstacle
+            speed 2, drive -1, up -3.00 mm, side 0.00 mm: crosses blue 49.5 ms after contactAt, 0.016 mm deep, head 1.576 m/s, ball 0.996 m/s; no obstacle
+            speed 2, drive -1, up -3.00 mm, side 10.00 mm: crosses blue 50.8 ms after contactAt, 0.017 mm deep, head 1.575 m/s, ball 0.977 m/s; no obstacle
+            speed 2, drive -1, up 0.00 mm, side -10.00 mm: crosses blue 50.1 ms after contactAt, 0.041 mm deep, head 1.575 m/s, ball 0.991 m/s; no obstacle
+            speed 2, drive -1, up 0.00 mm, side 0.00 mm: crosses blue 48.9 ms after contactAt, 0.032 mm deep, head 1.577 m/s, ball 1.007 m/s; no obstacle
+            speed 2, drive -1, up 0.00 mm, side 10.00 mm: crosses blue 50.1 ms after contactAt, 0.041 mm deep, head 1.575 m/s, ball 0.991 m/s; no obstacle
+            speed 2, drive -1, up 3.00 mm, side -10.00 mm: crosses blue 49.5 ms after contactAt, 0.055 mm deep, head 1.576 m/s, ball 1.005 m/s; no obstacle
+            speed 2, drive -1, up 3.00 mm, side 0.00 mm: crosses blue 48.5 ms after contactAt, 0.038 mm deep, head 1.577 m/s, ball 1.018 m/s; no obstacle
+            speed 2, drive -1, up 3.00 mm, side 10.00 mm: crosses blue 49.5 ms after contactAt, 0.055 mm deep, head 1.576 m/s, ball 1.004 m/s; no obstacle
+            speed 2, drive -0.5, up 3.00 mm, side 0.00 mm: crosses blue 76.3 ms after contactAt, 0.070 mm deep, head 1.736 m/s, ball 0.892 m/s; no obstacle
+            speed 3, drive -1, up 0.00 mm, side 0.00 mm: crosses blue 81.8 ms after contactAt, 0.003 mm deep, head 2.301 m/s, ball 1.297 m/s; no obstacle
+            speed 3, drive -1, up 3.00 mm, side 0.00 mm: crosses blue 79.4 ms after contactAt, 0.036 mm deep, head 2.307 m/s, ball 1.309 m/s; no obstacle
+stop-ac     canonical: no crossing; no obstacle; preset sweep: 9 of 180 runs cross a ball, 0 an obstacle, 0 overlap one at the impact's end
+            speed 1, drive 0, up -23.00 mm, side -10.00 mm: crosses blue 58.3 ms after contactAt, 0.040 mm deep, head 0.852 m/s, ball 0.466 m/s; no obstacle
+            speed 1, drive 0, up -23.00 mm, side 0.00 mm: crosses blue 54.0 ms after contactAt, 0.016 mm deep, head 0.857 m/s, ball 0.472 m/s; no obstacle
+            speed 1, drive 0, up -23.00 mm, side 10.00 mm: crosses blue 58.1 ms after contactAt, 0.000 mm deep, head 0.852 m/s, ball 0.466 m/s; no obstacle
+            speed 1, drive 0, up -20.00 mm, side -10.00 mm: crosses blue 55.8 ms after contactAt, 0.028 mm deep, head 0.854 m/s, ball 0.469 m/s; no obstacle
+            speed 1, drive 0, up -20.00 mm, side 0.00 mm: crosses blue 45.4 ms after contactAt, 0.030 mm deep, head 0.867 m/s, ball 0.527 m/s; no obstacle
+            speed 1, drive 0, up -20.00 mm, side 10.00 mm: crosses blue 55.8 ms after contactAt, 0.026 mm deep, head 0.854 m/s, ball 0.469 m/s; no obstacle
+            speed 1, drive 0, up -17.00 mm, side -10.00 mm: crosses blue 58.9 ms after contactAt, 0.030 mm deep, head 0.849 m/s, ball 0.468 m/s; no obstacle
+            speed 1, drive 0, up -17.00 mm, side 0.00 mm: crosses blue 59.5 ms after contactAt, 0.000 mm deep, head 0.848 m/s, ball 0.469 m/s; no obstacle
+            speed 1, drive 0, up -17.00 mm, side 10.00 mm: crosses blue 58.9 ms after contactAt, 0.032 mm deep, head 0.849 m/s, ball 0.468 m/s; no obstacle
+stop-gc     canonical: no crossing; no obstacle; preset sweep: 42 of 180 runs cross a ball, 0 an obstacle, 0 overlap one at the impact's end
+            speed 1, drive 0.5, up -3.00 mm, side -10.00 mm: crosses blue 33.5 ms after contactAt, 0.001 mm deep, head 1.492 m/s, ball 1.184 m/s; no obstacle
+            speed 1, drive 0.5, up -3.00 mm, side 0.00 mm: crosses blue 33.3 ms after contactAt, 0.021 mm deep, head 1.492 m/s, ball 1.187 m/s; no obstacle
+            speed 1, drive 0.5, up -3.00 mm, side 10.00 mm: crosses blue 33.5 ms after contactAt, 0.001 mm deep, head 1.492 m/s, ball 1.184 m/s; no obstacle
+            speed 1, drive 0.5, up 0.00 mm, side -10.00 mm: crosses blue 34.2 ms after contactAt, 0.028 mm deep, head 1.491 m/s, ball 1.180 m/s; no obstacle
+            speed 1, drive 0.5, up 0.00 mm, side 0.00 mm: crosses blue 33.9 ms after contactAt, 0.016 mm deep, head 1.491 m/s, ball 1.183 m/s; no obstacle
+            speed 1, drive 0.5, up 0.00 mm, side 10.00 mm: crosses blue 34.2 ms after contactAt, 0.028 mm deep, head 1.491 m/s, ball 1.180 m/s; no obstacle
+            speed 1, drive 0.5, up 3.00 mm, side -10.00 mm: crosses blue 34.7 ms after contactAt, 0.022 mm deep, head 1.491 m/s, ball 1.176 m/s; no obstacle
+            speed 1, drive 0.5, up 3.00 mm, side 0.00 mm: crosses blue 34.4 ms after contactAt, 0.009 mm deep, head 1.491 m/s, ball 1.179 m/s; no obstacle
+            speed 1, drive 0.5, up 3.00 mm, side 10.00 mm: crosses blue 34.7 ms after contactAt, 0.022 mm deep, head 1.491 m/s, ball 1.176 m/s; no obstacle
+            speed 1, drive 1, up -3.00 mm, side -10.00 mm: crosses blue 48.3 ms after contactAt, 0.006 mm deep, head 1.976 m/s, ball 1.905 m/s; no obstacle
+            speed 1, drive 1, up -3.00 mm, side 0.00 mm: crosses blue 46.9 ms after contactAt, 0.002 mm deep, head 1.977 m/s, ball 1.916 m/s; no obstacle
+            speed 1, drive 1, up -3.00 mm, side 10.00 mm: crosses blue 48.3 ms after contactAt, 0.007 mm deep, head 1.976 m/s, ball 1.905 m/s; no obstacle
+            speed 1, drive 1, up 0.00 mm, side -10.00 mm: crosses blue 50.5 ms after contactAt, 0.000 mm deep, head 1.973 m/s, ball 1.889 m/s; no obstacle
+            speed 1, drive 1, up 0.00 mm, side 0.00 mm: crosses blue 49.3 ms after contactAt, 0.006 mm deep, head 1.975 m/s, ball 1.900 m/s; no obstacle
+            speed 1, drive 1, up 0.00 mm, side 10.00 mm: crosses blue 50.5 ms after contactAt, 0.001 mm deep, head 1.973 m/s, ball 1.889 m/s; no obstacle
+            speed 1, drive 1, up 3.00 mm, side -10.00 mm: crosses blue 53.0 ms after contactAt, 0.013 mm deep, head 1.971 m/s, ball 1.871 m/s; no obstacle
+            speed 1, drive 1, up 3.00 mm, side 0.00 mm: crosses blue 51.7 ms after contactAt, 0.006 mm deep, head 1.972 m/s, ball 1.883 m/s; no obstacle
+            speed 1, drive 1, up 3.00 mm, side 10.00 mm: crosses blue 53.0 ms after contactAt, 0.013 mm deep, head 1.971 m/s, ball 1.871 m/s; no obstacle
+            speed 2, drive 0.5, up -3.00 mm, side -10.00 mm: crosses blue 33.9 ms after contactAt, 0.015 mm deep, head 2.983 m/s, ball 2.467 m/s; no obstacle
+            speed 2, drive 0.5, up -3.00 mm, side 0.00 mm: crosses blue 33.8 ms after contactAt, 0.057 mm deep, head 2.983 m/s, ball 2.473 m/s; no obstacle
+            speed 2, drive 0.5, up -3.00 mm, side 10.00 mm: crosses blue 33.9 ms after contactAt, 0.017 mm deep, head 2.983 m/s, ball 2.467 m/s; no obstacle
+            speed 2, drive 0.5, up 0.00 mm, side -10.00 mm: crosses blue 34.4 ms after contactAt, 0.032 mm deep, head 2.982 m/s, ball 2.459 m/s; no obstacle
+            speed 2, drive 0.5, up 0.00 mm, side 0.00 mm: crosses blue 34.2 ms after contactAt, 0.026 mm deep, head 2.982 m/s, ball 2.466 m/s; no obstacle
+            speed 2, drive 0.5, up 0.00 mm, side 10.00 mm: crosses blue 34.4 ms after contactAt, 0.033 mm deep, head 2.982 m/s, ball 2.459 m/s; no obstacle
+            speed 2, drive 0.5, up 3.00 mm, side -10.00 mm: crosses blue 35.0 ms after contactAt, 0.046 mm deep, head 2.981 m/s, ball 2.452 m/s; no obstacle
+            speed 2, drive 0.5, up 3.00 mm, side 0.00 mm: crosses blue 34.8 ms after contactAt, 0.039 mm deep, head 2.982 m/s, ball 2.458 m/s; no obstacle
+            speed 2, drive 0.5, up 3.00 mm, side 10.00 mm: crosses blue 35.0 ms after contactAt, 0.050 mm deep, head 2.981 m/s, ball 2.451 m/s; no obstacle
+            speed 2, drive 1, up 0.00 mm, side -10.00 mm: crosses blue 42.7 ms after contactAt, 0.010 mm deep, head 3.966 m/s, ball 3.961 m/s; no obstacle
+            speed 2, drive 1, up 0.00 mm, side 0.00 mm: crosses blue 44.9 ms after contactAt, 0.002 mm deep, head 3.962 m/s, ball 3.968 m/s; no obstacle
+            speed 2, drive 1, up 0.00 mm, side 10.00 mm: crosses blue 42.8 ms after contactAt, 0.009 mm deep, head 3.966 m/s, ball 3.961 m/s; no obstacle
+            speed 2, drive 1, up 3.00 mm, side -10.00 mm: crosses blue 42.8 ms after contactAt, 0.003 mm deep, head 3.966 m/s, ball 3.953 m/s; no obstacle
+            speed 2, drive 1, up 3.00 mm, side 0.00 mm: crosses blue 44.4 ms after contactAt, 0.008 mm deep, head 3.963 m/s, ball 3.960 m/s; no obstacle
+            speed 2, drive 1, up 3.00 mm, side 10.00 mm: crosses blue 42.9 ms after contactAt, 0.003 mm deep, head 3.966 m/s, ball 3.953 m/s; no obstacle
+            speed 3, drive 0.5, up -3.00 mm, side -10.00 mm: crosses blue 37.2 ms after contactAt, 0.016 mm deep, head 4.468 m/s, ball 3.661 m/s; no obstacle
+            speed 3, drive 0.5, up -3.00 mm, side 0.00 mm: crosses blue 37.0 ms after contactAt, 0.038 mm deep, head 4.468 m/s, ball 3.669 m/s; no obstacle
+            speed 3, drive 0.5, up -3.00 mm, side 10.00 mm: crosses blue 37.2 ms after contactAt, 0.017 mm deep, head 4.468 m/s, ball 3.661 m/s; no obstacle
+            speed 3, drive 0.5, up 0.00 mm, side -10.00 mm: crosses blue 36.4 ms after contactAt, 0.034 mm deep, head 4.469 m/s, ball 3.656 m/s; no obstacle
+            speed 3, drive 0.5, up 0.00 mm, side 0.00 mm: crosses blue 36.2 ms after contactAt, 0.051 mm deep, head 4.470 m/s, ball 3.664 m/s; no obstacle
+            speed 3, drive 0.5, up 0.00 mm, side 10.00 mm: crosses blue 36.4 ms after contactAt, 0.034 mm deep, head 4.469 m/s, ball 3.656 m/s; no obstacle
+            speed 3, drive 0.5, up 3.00 mm, side -10.00 mm: crosses blue 36.2 ms after contactAt, 0.030 mm deep, head 4.470 m/s, ball 3.650 m/s; no obstacle
+            speed 3, drive 0.5, up 3.00 mm, side 0.00 mm: crosses blue 36.0 ms after contactAt, 0.042 mm deep, head 4.470 m/s, ball 3.658 m/s; no obstacle
+            speed 3, drive 0.5, up 3.00 mm, side 10.00 mm: crosses blue 36.2 ms after contactAt, 0.031 mm deep, head 4.470 m/s, ball 3.650 m/s; no obstacle
+half-roll   canonical: no crossing; no obstacle; preset sweep: 0 of 225 runs cross a ball, 0 an obstacle, 0 overlap one at the impact's end
+full-roll   canonical: no crossing; no obstacle; preset sweep: 10 of 225 runs cross a ball, 0 an obstacle, 0 overlap one at the impact's end
+            speed 1, drive -1, up 3.00 mm, side -10.00 mm: crosses blue 437.9 ms after contactAt, 0.006 mm deep, head 0.000 m/s, ball 0.394 m/s; no obstacle
+            speed 1, drive -1, up 3.00 mm, side 0.00 mm: crosses blue 440.5 ms after contactAt, 0.007 mm deep, head 0.000 m/s, ball 0.385 m/s; no obstacle
+            speed 1, drive -1, up 3.00 mm, side 10.00 mm: crosses blue 438.0 ms after contactAt, 0.008 mm deep, head 0.000 m/s, ball 0.393 m/s; no obstacle
+            speed 2, drive -1, up -3.00 mm, side -10.00 mm: crosses blue 152.0 ms after contactAt, 0.057 mm deep, head 1.601 m/s, ball 1.012 m/s; no obstacle
+            speed 2, drive -1, up -3.00 mm, side 0.00 mm: crosses blue 153.0 ms after contactAt, 0.041 mm deep, head 1.601 m/s, ball 1.014 m/s; no obstacle
+            speed 2, drive -1, up -3.00 mm, side 10.00 mm: crosses blue 151.9 ms after contactAt, 0.050 mm deep, head 1.601 m/s, ball 1.011 m/s; no obstacle
+            speed 2, drive -1, up 0.00 mm, side -10.00 mm: crosses blue 151.6 ms after contactAt, 0.028 mm deep, head 1.602 m/s, ball 1.039 m/s; no obstacle
+            speed 2, drive -1, up 0.00 mm, side 0.00 mm: crosses blue 152.4 ms after contactAt, 0.019 mm deep, head 1.602 m/s, ball 1.042 m/s; no obstacle
+            speed 2, drive -1, up 0.00 mm, side 10.00 mm: crosses blue 151.6 ms after contactAt, 0.036 mm deep, head 1.602 m/s, ball 1.039 m/s; no obstacle
+            speed 2, drive -1, up 3.00 mm, side 0.00 mm: crosses blue 152.1 ms after contactAt, 0.039 mm deep, head 1.603 m/s, ball 1.067 m/s; no obstacle
+pass-roll   canonical: no crossing; no obstacle; preset sweep: 24 of 225 runs cross a ball, 0 an obstacle, 0 overlap one at the impact's end
+            speed 1, drive -1, up -3.00 mm, side -10.00 mm: crosses blue 453.5 ms after contactAt, 0.001 mm deep, head 0.000 m/s, ball 0.283 m/s; no obstacle
+            speed 1, drive -1, up -3.00 mm, side 0.00 mm: crosses blue 418.2 ms after contactAt, 0.006 mm deep, head 0.000 m/s, ball 0.358 m/s; no obstacle
+            speed 1, drive -1, up -3.00 mm, side 10.00 mm: crosses blue 428.6 ms after contactAt, 0.001 mm deep, head 0.000 m/s, ball 0.346 m/s; no obstacle
+            speed 1, drive -1, up 0.00 mm, side 0.00 mm: crosses blue 421.5 ms after contactAt, 0.001 mm deep, head 0.000 m/s, ball 0.367 m/s; no obstacle
+            speed 1, drive -1, up 0.00 mm, side 10.00 mm: crosses blue 420.5 ms after contactAt, 0.001 mm deep, head 0.000 m/s, ball 0.356 m/s; no obstacle
+            speed 1, drive -1, up 3.00 mm, side 0.00 mm: crosses blue 427.4 ms after contactAt, 0.007 mm deep, head 0.000 m/s, ball 0.392 m/s; no obstacle
+            speed 1, drive -1, up 3.00 mm, side 10.00 mm: crosses blue 423.7 ms after contactAt, 0.001 mm deep, head 0.000 m/s, ball 0.358 m/s; no obstacle
+            speed 1, drive -0.5, up 3.00 mm, side -10.00 mm: crosses blue 406.9 ms after contactAt, 0.004 mm deep, head 0.000 m/s, ball 0.351 m/s; no obstacle
+            speed 1, drive -0.5, up 3.00 mm, side 0.00 mm: crosses blue 403.8 ms after contactAt, 0.004 mm deep, head 0.000 m/s, ball 0.359 m/s; no obstacle
+            speed 1, drive -0.5, up 3.00 mm, side 10.00 mm: crosses blue 404.1 ms after contactAt, 0.002 mm deep, head 0.000 m/s, ball 0.356 m/s; no obstacle
+            speed 2, drive 1, up -3.00 mm, side -10.00 mm: crosses blue 145.7 ms after contactAt, 0.013 mm deep, head 1.941 m/s, ball 1.259 m/s; no obstacle
+            speed 2, drive 1, up -3.00 mm, side 0.00 mm: crosses blue 141.6 ms after contactAt, 0.020 mm deep, head 1.940 m/s, ball 1.271 m/s; no obstacle
+            speed 2, drive 1, up 0.00 mm, side -10.00 mm: crosses blue 143.1 ms after contactAt, 0.060 mm deep, head 1.941 m/s, ball 1.279 m/s; no obstacle
+            speed 3, drive -1, up -3.00 mm, side 0.00 mm: crosses blue 124.6 ms after contactAt, 0.030 mm deep, head 2.324 m/s, ball 1.411 m/s; no obstacle
+            speed 3, drive -1, up -3.00 mm, side 10.00 mm: crosses blue 121.1 ms after contactAt, 0.010 mm deep, head 2.323 m/s, ball 1.557 m/s; no obstacle
+            speed 3, drive -1, up 0.00 mm, side 0.00 mm: crosses blue 123.7 ms after contactAt, 0.013 mm deep, head 2.325 m/s, ball 1.437 m/s; no obstacle
+            speed 3, drive -1, up 0.00 mm, side 10.00 mm: crosses blue 120.6 ms after contactAt, 0.030 mm deep, head 2.324 m/s, ball 1.571 m/s; no obstacle
+            speed 3, drive -1, up 3.00 mm, side 0.00 mm: crosses blue 123.2 ms after contactAt, 0.076 mm deep, head 2.327 m/s, ball 1.437 m/s; no obstacle
+            speed 3, drive -1, up 3.00 mm, side 10.00 mm: crosses blue 120.3 ms after contactAt, 0.036 mm deep, head 2.326 m/s, ball 1.565 m/s; no obstacle
+            speed 3, drive -0.5, up -3.00 mm, side -10.00 mm: crosses blue 106.9 ms after contactAt, 0.064 mm deep, head 2.471 m/s, ball 1.443 m/s; no obstacle
+            speed 3, drive -0.5, up -3.00 mm, side 0.00 mm: crosses blue 102.1 ms after contactAt, 0.044 mm deep, head 2.469 m/s, ball 1.556 m/s; no obstacle
+            speed 3, drive -0.5, up 0.00 mm, side -10.00 mm: crosses blue 106.0 ms after contactAt, 0.051 mm deep, head 2.472 m/s, ball 1.444 m/s; no obstacle
+            speed 3, drive -0.5, up 0.00 mm, side 0.00 mm: crosses blue 101.4 ms after contactAt, 0.013 mm deep, head 2.471 m/s, ball 1.554 m/s; no obstacle
+            speed 3, drive -0.5, up 3.00 mm, side -10.00 mm: crosses blue 105.2 ms after contactAt, 0.080 mm deep, head 2.474 m/s, ball 1.437 m/s; no obstacle
+through hoop 1, side 0.00 mm: no crossing; shaft 1/crown 154.1 ms after contactAt, 0.014 mm deep
+through hoop 1, side 10.00 mm: no crossing; shaft 1/crown 154.1 ms after contactAt, 0.039 mm deep
+-- swing probe rehit: now --
+== The late re-hit (design §3.5, §9): the real head at the impact's end, moved on by the planned follow-through out to FREE_SPAN, against every ball's phase-2 trajectory and, with the shaft, the hoops and the peg; measured, not integrated ==
+single-ball canonical: no crossing; no obstacle; preset sweep: 9 of 180 runs cross a ball, 0 an obstacle, 0 overlap one at the impact's end
+            speed 1, drive 1, up -3.00 mm, side -10.00 mm: crosses blue 87.2 ms after contactAt, 0.018 mm deep, head 1.147 m/s, ball 0.961 m/s; no obstacle
+            speed 1, drive 1, up -3.00 mm, side 0.00 mm: crosses blue 88.2 ms after contactAt, 0.011 mm deep, head 1.146 m/s, ball 0.963 m/s; no obstacle
+            speed 1, drive 1, up -3.00 mm, side 10.00 mm: crosses blue 87.2 ms after contactAt, 0.018 mm deep, head 1.147 m/s, ball 0.961 m/s; no obstacle
+            speed 1, drive 1, up 0.00 mm, side -10.00 mm: crosses blue 87.3 ms after contactAt, 0.002 mm deep, head 1.147 m/s, ball 0.960 m/s; no obstacle
+            speed 1, drive 1, up 0.00 mm, side 0.00 mm: crosses blue 88.3 ms after contactAt, 0.015 mm deep, head 1.146 m/s, ball 0.962 m/s; no obstacle
+            speed 1, drive 1, up 0.00 mm, side 10.00 mm: crosses blue 87.3 ms after contactAt, 0.002 mm deep, head 1.147 m/s, ball 0.960 m/s; no obstacle
+            speed 1, drive 1, up 3.00 mm, side -10.00 mm: crosses blue 88.1 ms after contactAt, 0.012 mm deep, head 1.146 m/s, ball 0.959 m/s; no obstacle
+            speed 1, drive 1, up 3.00 mm, side 0.00 mm: crosses blue 89.0 ms after contactAt, 0.007 mm deep, head 1.145 m/s, ball 0.960 m/s; no obstacle
+            speed 1, drive 1, up 3.00 mm, side 10.00 mm: crosses blue 88.1 ms after contactAt, 0.012 mm deep, head 1.146 m/s, ball 0.959 m/s; no obstacle
+drive       canonical: no crossing; no obstacle; preset sweep: 39 of 180 runs cross a ball, 0 an obstacle, 0 overlap one at the impact's end
+            speed 1, drive -1, up -3.00 mm, side -10.00 mm: crosses blue 30.3 ms after contactAt, 0.001 mm deep, head 0.796 m/s, ball 0.579 m/s; no obstacle
+            speed 1, drive -1, up -3.00 mm, side 0.00 mm: crosses blue 29.9 ms after contactAt, 0.010 mm deep, head 0.796 m/s, ball 0.583 m/s; no obstacle
+            speed 1, drive -1, up -3.00 mm, side 10.00 mm: crosses blue 30.4 ms after contactAt, 0.022 mm deep, head 0.796 m/s, ball 0.579 m/s; no obstacle
+            speed 1, drive -1, up 0.00 mm, side -10.00 mm: crosses blue 30.3 ms after contactAt, 0.004 mm deep, head 0.796 m/s, ball 0.580 m/s; no obstacle
+            speed 1, drive -1, up 0.00 mm, side 0.00 mm: crosses blue 30.0 ms after contactAt, 0.013 mm deep, head 0.796 m/s, ball 0.584 m/s; no obstacle
+            speed 1, drive -1, up 0.00 mm, side 10.00 mm: crosses blue 30.3 ms after contactAt, 0.004 mm deep, head 0.796 m/s, ball 0.580 m/s; no obstacle
+            speed 1, drive -1, up 3.00 mm, side -10.00 mm: crosses blue 30.4 ms after contactAt, 0.005 mm deep, head 0.796 m/s, ball 0.582 m/s; no obstacle
+            speed 1, drive -1, up 3.00 mm, side 0.00 mm: crosses blue 30.1 ms after contactAt, 0.014 mm deep, head 0.796 m/s, ball 0.585 m/s; no obstacle
+            speed 1, drive -1, up 3.00 mm, side 10.00 mm: crosses blue 30.4 ms after contactAt, 0.006 mm deep, head 0.796 m/s, ball 0.582 m/s; no obstacle
+            speed 1, drive -0.5, up -3.00 mm, side -10.00 mm: crosses blue 42.6 ms after contactAt, 0.024 mm deep, head 0.890 m/s, ball 0.532 m/s; no obstacle
+            speed 1, drive -0.5, up -3.00 mm, side 0.00 mm: crosses blue 42.0 ms after contactAt, 0.025 mm deep, head 0.891 m/s, ball 0.539 m/s; no obstacle
+            speed 1, drive -0.5, up -3.00 mm, side 10.00 mm: crosses blue 42.6 ms after contactAt, 0.024 mm deep, head 0.890 m/s, ball 0.532 m/s; no obstacle
+            speed 1, drive -0.5, up 0.00 mm, side -10.00 mm: crosses blue 42.4 ms after contactAt, 0.004 mm deep, head 0.890 m/s, ball 0.536 m/s; no obstacle
+            speed 1, drive -0.5, up 0.00 mm, side 0.00 mm: crosses blue 41.8 ms after contactAt, 0.005 mm deep, head 0.891 m/s, ball 0.542 m/s; no obstacle
+            speed 1, drive -0.5, up 0.00 mm, side 10.00 mm: crosses blue 42.4 ms after contactAt, 0.005 mm deep, head 0.890 m/s, ball 0.536 m/s; no obstacle
+            speed 1, drive -0.5, up 3.00 mm, side -10.00 mm: crosses blue 42.4 ms after contactAt, 0.018 mm deep, head 0.890 m/s, ball 0.539 m/s; no obstacle
+            speed 1, drive -0.5, up 3.00 mm, side 0.00 mm: crosses blue 41.7 ms after contactAt, 0.018 mm deep, head 0.891 m/s, ball 0.545 m/s; no obstacle
+            speed 1, drive -0.5, up 3.00 mm, side 10.00 mm: crosses blue 42.3 ms after contactAt, 0.019 mm deep, head 0.890 m/s, ball 0.539 m/s; no obstacle
+            speed 1, drive 0, up -3.00 mm, side -10.00 mm: crosses blue 91.2 ms after contactAt, 0.031 mm deep, head 0.950 m/s, ball 0.492 m/s; no obstacle
+            speed 1, drive 0, up -3.00 mm, side 0.00 mm: crosses blue 89.5 ms after contactAt, 0.039 mm deep, head 0.952 m/s, ball 0.494 m/s; no obstacle
+            speed 1, drive 0, up -3.00 mm, side 10.00 mm: crosses blue 91.4 ms after contactAt, 0.031 mm deep, head 0.950 m/s, ball 0.492 m/s; no obstacle
+            speed 1, drive 0, up 0.00 mm, side -10.00 mm: crosses blue 91.0 ms after contactAt, 0.028 mm deep, head 0.951 m/s, ball 0.493 m/s; no obstacle
+            speed 1, drive 0, up 0.00 mm, side 0.00 mm: crosses blue 89.4 ms after contactAt, 0.040 mm deep, head 0.952 m/s, ball 0.495 m/s; no obstacle
+            speed 1, drive 0, up 0.00 mm, side 10.00 mm: crosses blue 91.1 ms after contactAt, 0.021 mm deep, head 0.950 m/s, ball 0.493 m/s; no obstacle
+            speed 1, drive 0, up 3.00 mm, side -10.00 mm: crosses blue 90.7 ms after contactAt, 0.020 mm deep, head 0.951 m/s, ball 0.495 m/s; no obstacle
+            speed 1, drive 0, up 3.00 mm, side 0.00 mm: crosses blue 89.3 ms after contactAt, 0.031 mm deep, head 0.952 m/s, ball 0.496 m/s; no obstacle
+            speed 1, drive 0, up 3.00 mm, side 10.00 mm: crosses blue 90.9 ms after contactAt, 0.010 mm deep, head 0.951 m/s, ball 0.495 m/s; no obstacle
+            speed 2, drive -1, up -3.00 mm, side -10.00 mm: crosses blue 50.8 ms after contactAt, 0.018 mm deep, head 1.575 m/s, ball 0.978 m/s; no obstacle
+            speed 2, drive -1, up -3.00 mm, side 0.00 mm: crosses blue 49.5 ms after contactAt, 0.016 mm deep, head 1.576 m/s, ball 0.996 m/s; no obstacle
+            speed 2, drive -1, up -3.00 mm, side 10.00 mm: crosses blue 50.8 ms after contactAt, 0.017 mm deep, head 1.575 m/s, ball 0.977 m/s; no obstacle
+            speed 2, drive -1, up 0.00 mm, side -10.00 mm: crosses blue 50.1 ms after contactAt, 0.041 mm deep, head 1.575 m/s, ball 0.991 m/s; no obstacle
+            speed 2, drive -1, up 0.00 mm, side 0.00 mm: crosses blue 48.9 ms after contactAt, 0.032 mm deep, head 1.577 m/s, ball 1.007 m/s; no obstacle
+            speed 2, drive -1, up 0.00 mm, side 10.00 mm: crosses blue 50.1 ms after contactAt, 0.041 mm deep, head 1.575 m/s, ball 0.991 m/s; no obstacle
+            speed 2, drive -1, up 3.00 mm, side -10.00 mm: crosses blue 49.5 ms after contactAt, 0.055 mm deep, head 1.576 m/s, ball 1.005 m/s; no obstacle
+            speed 2, drive -1, up 3.00 mm, side 0.00 mm: crosses blue 48.5 ms after contactAt, 0.038 mm deep, head 1.577 m/s, ball 1.018 m/s; no obstacle
+            speed 2, drive -1, up 3.00 mm, side 10.00 mm: crosses blue 49.5 ms after contactAt, 0.055 mm deep, head 1.576 m/s, ball 1.004 m/s; no obstacle
+            speed 2, drive -0.5, up 3.00 mm, side 0.00 mm: crosses blue 76.3 ms after contactAt, 0.070 mm deep, head 1.736 m/s, ball 0.892 m/s; no obstacle
+            speed 3, drive -1, up 0.00 mm, side 0.00 mm: crosses blue 81.8 ms after contactAt, 0.003 mm deep, head 2.301 m/s, ball 1.297 m/s; no obstacle
+            speed 3, drive -1, up 3.00 mm, side 0.00 mm: crosses blue 79.4 ms after contactAt, 0.036 mm deep, head 2.307 m/s, ball 1.309 m/s; no obstacle
+stop-ac     canonical: no crossing; no obstacle; preset sweep: 10 of 180 runs cross a ball, 0 an obstacle, 0 overlap one at the impact's end
+            speed 1, drive 0, up -23.00 mm, side -10.00 mm: crosses blue 58.3 ms after contactAt, 0.040 mm deep, head 0.852 m/s, ball 0.466 m/s; no obstacle
+            speed 1, drive 0, up -23.00 mm, side 0.00 mm: crosses blue 54.0 ms after contactAt, 0.016 mm deep, head 0.857 m/s, ball 0.472 m/s; no obstacle
+            speed 1, drive 0, up -23.00 mm, side 10.00 mm: crosses blue 58.1 ms after contactAt, 0.000 mm deep, head 0.852 m/s, ball 0.466 m/s; no obstacle
+            speed 1, drive 0, up -20.00 mm, side -10.00 mm: crosses blue 55.8 ms after contactAt, 0.028 mm deep, head 0.854 m/s, ball 0.469 m/s; no obstacle
+            speed 1, drive 0, up -20.00 mm, side 0.00 mm: crosses blue 45.4 ms after contactAt, 0.030 mm deep, head 0.867 m/s, ball 0.527 m/s; no obstacle
+            speed 1, drive 0, up -20.00 mm, side 10.00 mm: crosses blue 55.8 ms after contactAt, 0.026 mm deep, head 0.854 m/s, ball 0.469 m/s; no obstacle
+            speed 1, drive 0, up -17.00 mm, side -10.00 mm: crosses blue 45.1 ms after contactAt, 0.030 mm deep, head 0.866 m/s, ball 0.530 m/s; no obstacle
+            speed 1, drive 0, up -17.00 mm, side 0.00 mm: crosses blue 45.2 ms after contactAt, 0.021 mm deep, head 0.866 m/s, ball 0.532 m/s; no obstacle
+            speed 1, drive 0, up -17.00 mm, side 10.00 mm: crosses blue 45.1 ms after contactAt, 0.030 mm deep, head 0.866 m/s, ball 0.530 m/s; no obstacle
+            speed 1, drive 0.5, up -23.00 mm, side 0.00 mm: crosses blue 216.9 ms after contactAt, 0.004 mm deep, head 0.906 m/s, ball 0.669 m/s; no obstacle
+stop-gc     canonical: no crossing; no obstacle; preset sweep: 42 of 180 runs cross a ball, 0 an obstacle, 0 overlap one at the impact's end
+            speed 1, drive 0.5, up -3.00 mm, side -10.00 mm: crosses blue 33.5 ms after contactAt, 0.001 mm deep, head 1.492 m/s, ball 1.184 m/s; no obstacle
+            speed 1, drive 0.5, up -3.00 mm, side 0.00 mm: crosses blue 33.3 ms after contactAt, 0.021 mm deep, head 1.492 m/s, ball 1.187 m/s; no obstacle
+            speed 1, drive 0.5, up -3.00 mm, side 10.00 mm: crosses blue 33.5 ms after contactAt, 0.001 mm deep, head 1.492 m/s, ball 1.184 m/s; no obstacle
+            speed 1, drive 0.5, up 0.00 mm, side -10.00 mm: crosses blue 34.2 ms after contactAt, 0.028 mm deep, head 1.491 m/s, ball 1.180 m/s; no obstacle
+            speed 1, drive 0.5, up 0.00 mm, side 0.00 mm: crosses blue 33.9 ms after contactAt, 0.016 mm deep, head 1.491 m/s, ball 1.183 m/s; no obstacle
+            speed 1, drive 0.5, up 0.00 mm, side 10.00 mm: crosses blue 34.2 ms after contactAt, 0.028 mm deep, head 1.491 m/s, ball 1.180 m/s; no obstacle
+            speed 1, drive 0.5, up 3.00 mm, side -10.00 mm: crosses blue 34.7 ms after contactAt, 0.022 mm deep, head 1.491 m/s, ball 1.176 m/s; no obstacle
+            speed 1, drive 0.5, up 3.00 mm, side 0.00 mm: crosses blue 34.4 ms after contactAt, 0.009 mm deep, head 1.491 m/s, ball 1.179 m/s; no obstacle
+            speed 1, drive 0.5, up 3.00 mm, side 10.00 mm: crosses blue 34.7 ms after contactAt, 0.022 mm deep, head 1.491 m/s, ball 1.176 m/s; no obstacle
+            speed 1, drive 1, up -3.00 mm, side -10.00 mm: crosses blue 48.3 ms after contactAt, 0.006 mm deep, head 1.976 m/s, ball 1.905 m/s; no obstacle
+            speed 1, drive 1, up -3.00 mm, side 0.00 mm: crosses blue 46.9 ms after contactAt, 0.002 mm deep, head 1.977 m/s, ball 1.916 m/s; no obstacle
+            speed 1, drive 1, up -3.00 mm, side 10.00 mm: crosses blue 48.3 ms after contactAt, 0.007 mm deep, head 1.976 m/s, ball 1.905 m/s; no obstacle
+            speed 1, drive 1, up 0.00 mm, side -10.00 mm: crosses blue 50.5 ms after contactAt, 0.000 mm deep, head 1.973 m/s, ball 1.889 m/s; no obstacle
+            speed 1, drive 1, up 0.00 mm, side 0.00 mm: crosses blue 49.3 ms after contactAt, 0.006 mm deep, head 1.975 m/s, ball 1.900 m/s; no obstacle
+            speed 1, drive 1, up 0.00 mm, side 10.00 mm: crosses blue 50.5 ms after contactAt, 0.001 mm deep, head 1.973 m/s, ball 1.889 m/s; no obstacle
+            speed 1, drive 1, up 3.00 mm, side -10.00 mm: crosses blue 53.0 ms after contactAt, 0.013 mm deep, head 1.971 m/s, ball 1.871 m/s; no obstacle
+            speed 1, drive 1, up 3.00 mm, side 0.00 mm: crosses blue 51.7 ms after contactAt, 0.006 mm deep, head 1.972 m/s, ball 1.883 m/s; no obstacle
+            speed 1, drive 1, up 3.00 mm, side 10.00 mm: crosses blue 53.0 ms after contactAt, 0.013 mm deep, head 1.971 m/s, ball 1.871 m/s; no obstacle
+            speed 2, drive 0.5, up -3.00 mm, side -10.00 mm: crosses blue 33.9 ms after contactAt, 0.015 mm deep, head 2.983 m/s, ball 2.467 m/s; no obstacle
+            speed 2, drive 0.5, up -3.00 mm, side 0.00 mm: crosses blue 33.8 ms after contactAt, 0.057 mm deep, head 2.983 m/s, ball 2.473 m/s; no obstacle
+            speed 2, drive 0.5, up -3.00 mm, side 10.00 mm: crosses blue 33.9 ms after contactAt, 0.017 mm deep, head 2.983 m/s, ball 2.467 m/s; no obstacle
+            speed 2, drive 0.5, up 0.00 mm, side -10.00 mm: crosses blue 34.4 ms after contactAt, 0.032 mm deep, head 2.982 m/s, ball 2.459 m/s; no obstacle
+            speed 2, drive 0.5, up 0.00 mm, side 0.00 mm: crosses blue 34.2 ms after contactAt, 0.026 mm deep, head 2.982 m/s, ball 2.466 m/s; no obstacle
+            speed 2, drive 0.5, up 0.00 mm, side 10.00 mm: crosses blue 34.4 ms after contactAt, 0.033 mm deep, head 2.982 m/s, ball 2.459 m/s; no obstacle
+            speed 2, drive 0.5, up 3.00 mm, side -10.00 mm: crosses blue 35.0 ms after contactAt, 0.046 mm deep, head 2.981 m/s, ball 2.452 m/s; no obstacle
+            speed 2, drive 0.5, up 3.00 mm, side 0.00 mm: crosses blue 34.8 ms after contactAt, 0.039 mm deep, head 2.982 m/s, ball 2.458 m/s; no obstacle
+            speed 2, drive 0.5, up 3.00 mm, side 10.00 mm: crosses blue 35.0 ms after contactAt, 0.050 mm deep, head 2.981 m/s, ball 2.451 m/s; no obstacle
+            speed 2, drive 1, up 0.00 mm, side -10.00 mm: crosses blue 42.7 ms after contactAt, 0.010 mm deep, head 3.966 m/s, ball 3.961 m/s; no obstacle
+            speed 2, drive 1, up 0.00 mm, side 0.00 mm: crosses blue 44.9 ms after contactAt, 0.002 mm deep, head 3.962 m/s, ball 3.968 m/s; no obstacle
+            speed 2, drive 1, up 0.00 mm, side 10.00 mm: crosses blue 42.8 ms after contactAt, 0.009 mm deep, head 3.966 m/s, ball 3.961 m/s; no obstacle
+            speed 2, drive 1, up 3.00 mm, side -10.00 mm: crosses blue 42.8 ms after contactAt, 0.003 mm deep, head 3.966 m/s, ball 3.953 m/s; no obstacle
+            speed 2, drive 1, up 3.00 mm, side 0.00 mm: crosses blue 44.4 ms after contactAt, 0.008 mm deep, head 3.963 m/s, ball 3.960 m/s; no obstacle
+            speed 2, drive 1, up 3.00 mm, side 10.00 mm: crosses blue 42.9 ms after contactAt, 0.003 mm deep, head 3.966 m/s, ball 3.953 m/s; no obstacle
+            speed 3, drive 0.5, up -3.00 mm, side -10.00 mm: crosses blue 37.2 ms after contactAt, 0.016 mm deep, head 4.468 m/s, ball 3.661 m/s; no obstacle
+            speed 3, drive 0.5, up -3.00 mm, side 0.00 mm: crosses blue 37.0 ms after contactAt, 0.038 mm deep, head 4.468 m/s, ball 3.669 m/s; no obstacle
+            speed 3, drive 0.5, up -3.00 mm, side 10.00 mm: crosses blue 37.2 ms after contactAt, 0.017 mm deep, head 4.468 m/s, ball 3.661 m/s; no obstacle
+            speed 3, drive 0.5, up 0.00 mm, side -10.00 mm: crosses blue 36.4 ms after contactAt, 0.034 mm deep, head 4.469 m/s, ball 3.656 m/s; no obstacle
+            speed 3, drive 0.5, up 0.00 mm, side 0.00 mm: crosses blue 36.2 ms after contactAt, 0.051 mm deep, head 4.470 m/s, ball 3.664 m/s; no obstacle
+            speed 3, drive 0.5, up 0.00 mm, side 10.00 mm: crosses blue 36.4 ms after contactAt, 0.034 mm deep, head 4.469 m/s, ball 3.656 m/s; no obstacle
+            speed 3, drive 0.5, up 3.00 mm, side -10.00 mm: crosses blue 36.2 ms after contactAt, 0.030 mm deep, head 4.470 m/s, ball 3.650 m/s; no obstacle
+            speed 3, drive 0.5, up 3.00 mm, side 0.00 mm: crosses blue 36.0 ms after contactAt, 0.042 mm deep, head 4.470 m/s, ball 3.658 m/s; no obstacle
+            speed 3, drive 0.5, up 3.00 mm, side 10.00 mm: crosses blue 36.2 ms after contactAt, 0.031 mm deep, head 4.470 m/s, ball 3.650 m/s; no obstacle
+half-roll   canonical: no crossing; no obstacle; preset sweep: 0 of 225 runs cross a ball, 0 an obstacle, 0 overlap one at the impact's end
+full-roll   canonical: no crossing; no obstacle; preset sweep: 10 of 225 runs cross a ball, 0 an obstacle, 0 overlap one at the impact's end
+            speed 1, drive -1, up 3.00 mm, side -10.00 mm: crosses blue 437.9 ms after contactAt, 0.006 mm deep, head 0.000 m/s, ball 0.394 m/s; no obstacle
+            speed 1, drive -1, up 3.00 mm, side 0.00 mm: crosses blue 440.5 ms after contactAt, 0.007 mm deep, head 0.000 m/s, ball 0.385 m/s; no obstacle
+            speed 1, drive -1, up 3.00 mm, side 10.00 mm: crosses blue 438.0 ms after contactAt, 0.008 mm deep, head 0.000 m/s, ball 0.393 m/s; no obstacle
+            speed 2, drive -1, up -3.00 mm, side -10.00 mm: crosses blue 152.0 ms after contactAt, 0.057 mm deep, head 1.601 m/s, ball 1.012 m/s; no obstacle
+            speed 2, drive -1, up -3.00 mm, side 0.00 mm: crosses blue 153.0 ms after contactAt, 0.041 mm deep, head 1.601 m/s, ball 1.014 m/s; no obstacle
+            speed 2, drive -1, up -3.00 mm, side 10.00 mm: crosses blue 151.9 ms after contactAt, 0.050 mm deep, head 1.601 m/s, ball 1.011 m/s; no obstacle
+            speed 2, drive -1, up 0.00 mm, side -10.00 mm: crosses blue 151.6 ms after contactAt, 0.028 mm deep, head 1.602 m/s, ball 1.039 m/s; no obstacle
+            speed 2, drive -1, up 0.00 mm, side 0.00 mm: crosses blue 152.4 ms after contactAt, 0.019 mm deep, head 1.602 m/s, ball 1.042 m/s; no obstacle
+            speed 2, drive -1, up 0.00 mm, side 10.00 mm: crosses blue 151.6 ms after contactAt, 0.036 mm deep, head 1.602 m/s, ball 1.039 m/s; no obstacle
+            speed 2, drive -1, up 3.00 mm, side 0.00 mm: crosses blue 152.1 ms after contactAt, 0.039 mm deep, head 1.603 m/s, ball 1.067 m/s; no obstacle
+pass-roll   canonical: no crossing; no obstacle; preset sweep: 24 of 225 runs cross a ball, 0 an obstacle, 0 overlap one at the impact's end
+            speed 1, drive -1, up -3.00 mm, side -10.00 mm: crosses blue 453.5 ms after contactAt, 0.001 mm deep, head 0.000 m/s, ball 0.283 m/s; no obstacle
+            speed 1, drive -1, up -3.00 mm, side 0.00 mm: crosses blue 418.2 ms after contactAt, 0.006 mm deep, head 0.000 m/s, ball 0.358 m/s; no obstacle
+            speed 1, drive -1, up -3.00 mm, side 10.00 mm: crosses blue 428.6 ms after contactAt, 0.001 mm deep, head 0.000 m/s, ball 0.346 m/s; no obstacle
+            speed 1, drive -1, up 0.00 mm, side 0.00 mm: crosses blue 421.5 ms after contactAt, 0.001 mm deep, head 0.000 m/s, ball 0.367 m/s; no obstacle
+            speed 1, drive -1, up 0.00 mm, side 10.00 mm: crosses blue 420.5 ms after contactAt, 0.001 mm deep, head 0.000 m/s, ball 0.356 m/s; no obstacle
+            speed 1, drive -1, up 3.00 mm, side 0.00 mm: crosses blue 427.4 ms after contactAt, 0.007 mm deep, head 0.000 m/s, ball 0.392 m/s; no obstacle
+            speed 1, drive -1, up 3.00 mm, side 10.00 mm: crosses blue 423.7 ms after contactAt, 0.001 mm deep, head 0.000 m/s, ball 0.358 m/s; no obstacle
+            speed 1, drive -0.5, up 3.00 mm, side -10.00 mm: crosses blue 406.9 ms after contactAt, 0.004 mm deep, head 0.000 m/s, ball 0.351 m/s; no obstacle
+            speed 1, drive -0.5, up 3.00 mm, side 0.00 mm: crosses blue 403.8 ms after contactAt, 0.004 mm deep, head 0.000 m/s, ball 0.359 m/s; no obstacle
+            speed 1, drive -0.5, up 3.00 mm, side 10.00 mm: crosses blue 404.1 ms after contactAt, 0.002 mm deep, head 0.000 m/s, ball 0.356 m/s; no obstacle
+            speed 2, drive 1, up -3.00 mm, side -10.00 mm: crosses blue 145.7 ms after contactAt, 0.013 mm deep, head 1.941 m/s, ball 1.259 m/s; no obstacle
+            speed 2, drive 1, up -3.00 mm, side 0.00 mm: crosses blue 141.6 ms after contactAt, 0.020 mm deep, head 1.940 m/s, ball 1.271 m/s; no obstacle
+            speed 2, drive 1, up 0.00 mm, side -10.00 mm: crosses blue 143.1 ms after contactAt, 0.060 mm deep, head 1.941 m/s, ball 1.279 m/s; no obstacle
+            speed 3, drive -1, up -3.00 mm, side 0.00 mm: crosses blue 124.6 ms after contactAt, 0.030 mm deep, head 2.324 m/s, ball 1.411 m/s; no obstacle
+            speed 3, drive -1, up -3.00 mm, side 10.00 mm: crosses blue 121.1 ms after contactAt, 0.010 mm deep, head 2.323 m/s, ball 1.557 m/s; no obstacle
+            speed 3, drive -1, up 0.00 mm, side 0.00 mm: crosses blue 123.7 ms after contactAt, 0.013 mm deep, head 2.325 m/s, ball 1.437 m/s; no obstacle
+            speed 3, drive -1, up 0.00 mm, side 10.00 mm: crosses blue 120.6 ms after contactAt, 0.030 mm deep, head 2.324 m/s, ball 1.571 m/s; no obstacle
+            speed 3, drive -1, up 3.00 mm, side 0.00 mm: crosses blue 123.2 ms after contactAt, 0.076 mm deep, head 2.327 m/s, ball 1.437 m/s; no obstacle
+            speed 3, drive -1, up 3.00 mm, side 10.00 mm: crosses blue 120.3 ms after contactAt, 0.036 mm deep, head 2.326 m/s, ball 1.565 m/s; no obstacle
+            speed 3, drive -0.5, up -3.00 mm, side -10.00 mm: crosses blue 106.9 ms after contactAt, 0.064 mm deep, head 2.471 m/s, ball 1.443 m/s; no obstacle
+            speed 3, drive -0.5, up -3.00 mm, side 0.00 mm: crosses blue 102.1 ms after contactAt, 0.044 mm deep, head 2.469 m/s, ball 1.556 m/s; no obstacle
+            speed 3, drive -0.5, up 0.00 mm, side -10.00 mm: crosses blue 106.0 ms after contactAt, 0.051 mm deep, head 2.472 m/s, ball 1.444 m/s; no obstacle
+            speed 3, drive -0.5, up 0.00 mm, side 0.00 mm: crosses blue 101.4 ms after contactAt, 0.013 mm deep, head 2.471 m/s, ball 1.554 m/s; no obstacle
+            speed 3, drive -0.5, up 3.00 mm, side -10.00 mm: crosses blue 105.2 ms after contactAt, 0.080 mm deep, head 2.474 m/s, ball 1.437 m/s; no obstacle
+through hoop 1, side 0.00 mm: no crossing; shaft 1/crown 154.1 ms after contactAt, 0.014 mm deep
+through hoop 1, side 10.00 mm: no crossing; shaft 1/crown 154.1 ms after contactAt, 0.039 mm deep
+== The tests ==
+Task 5 (P2b.2b.2b.3) re-baselined tests, for the gate and Task 10.
+Old figures: the same tests instrumented and run on HEAD 2153583 (a detached checkout); new: the Task 5 tree, with
+the user's at-rest ruling (2026-10-16) applied. The at-rest ruling moved none of the figures below.
+
+1. tests/engine/impact/headBall.test.ts > the re-entry guard > counts a head started in the turf as one entry jump on
+   head/turf, and reports none for a force table
+   - entryJumps.worst: old 3e-3 - ENTRY_SLACK = 2.999000e-3; new 2.983371e-3 (count 1, keys unchanged).
+   - Premise was the plane law's lowest point: rewritten on the new mechanism (brief Step 8.4). The depth is the deepest
+     bearing column's δ (design §4.4), at column centres half a cell off the barrel's axis:
+     3e-3 - ρ + √(ρ² - (h/2)²) - ENTRY_SLACK, asserted to 12 places. Predicted.
+
+2. tests/engine/shot.test.ts > the mechanisms (design §8.1), on the canonical setups > the AC stop's relaxed head meets
+   the turf after the ball and the turf brakes it, not too deep (LEGACY_MALLET)
+   - head/turf: old 12.21-21.14 ms, peak 1.877 mm, 237.3 N, slide 1.77 mm; new 12.27-24.29 ms, 3.041 mm, 132.4 N,
+     slide 3.23 mm. Turf impulse along aim: old +0.386 N·s; new +0.353 N·s. Impact: old 21.39 ms; new 24.54 ms.
+   - events: old [turf-lift]; new [turf-lift, turf-yield @14.18 ms, impact-head-deep @14.79 ms].
+   - Assertion changed: not.toContain("impact-head-deep") -> toEqual(["turf-lift", "turf-yield",
+     "impact-head-deep"]), with an "Unpredicted, for the gate" note. UNPREDICTED (see unpredicted.txt).
+
+3. tests/engine/swing/buildContact.test.ts > the lead (design §3.5) > simulates a fat stroke: the turf slows the head
+   before the ball, against the same swing raised clear
+   - head/turf: old [5.00-14.55 ms, 110.8 N], peak 0.497 mm, slide 28.9 mm; new [5.43-47.67 ms, 18.75 N] and
+     [47.83-47.86 ms, 0 N], peak 2.544 mm, slide 129.6 mm.
+   - speed at the first strike: old 3.0297 m/s; new 2.9833 m/s (clean 3.1211 both; still > 0.9 x clean).
+   - events: old [turf-lift]; new [turf-yield @7.42 ms, impact-head-deep @13.94 ms, turf-lift].
+   - Assertion changed: not.toContain("impact-head-deep") -> toEqual(["turf-yield", "impact-head-deep",
+     "turf-lift"]), with an "Unpredicted, for the gate" note; the "3.03 against 3.12" comment re-baselined to 2.98.
+     UNPREDICTED.
+
+4. tests/engine/impact/followThrough.test.ts > the follow-through (design §4) > caps a carry whose hands never stop
+   - follow.flags: old ["follow-cap"]; new ["follow-turf-yield", "follow-head-deep", "follow-cap"]. finish 1.000 s and
+     impactEnd 10.815 ms unchanged.
+   - Run time: old 1.0 s; new 72 s alone, 93-107 s in the full suite. Given a 240_000 ms timeout (suite default
+     15 s; vitest fails a synchronous test that overruns it). UNPREDICTED.
+
+5. tests/engine/swing/skipFree.test.ts > skipping the free table where nothing reads it > leaves %s's trajectory
+   bit-identical (both cases)
+   - No figure moved. full-roll's case: old 1.7 s; new 6.7 s alone, 14.4-16.7 s in the full suite, where it timed out
+     once at 15 s. Given a 60_000 ms timeout (cost only).
+
+6. tests/engine/impact/headTurf.test.ts (the brief's rewrite), deviations from the brief's text:
+   - "lets a struck impact end by itself": TEST_HEAD in place of TEST_BOX (controller ruling 1): a force table's
+     face-ball pair is the cylinder's alone (faceContact throws for a box).
+   - "converges in dt and in the lattice": 60_000 ms timeout (controller ruling 3). 40.9-44.9 s in the full suite.
+     Rest x: 1.014513e-3 at dt, 1.014721e-3 at dt/2, 1.014600e-3 on 1 mm cells.
+   - "ends a dropped box's impact with impact-head-stopped": the expected end is traced from the first step whose
+     starting state is at rest under the user's ruling (2026-10-16: |v| over all three components), plus
+     RELEASE_STEPS·dt, exact to 1e-12; was the first bearing step plus RELEASE_STEPS·dt (4.765 ms; now 5.145 ms).
+
+Removed with their field (brief Step 6, not re-baselines): contacts.test.ts headTurfContact case (HEAD_TURF_KEY kept
+as its own case), simulateImpact.test.ts zero turf restitution case, world.test.ts turf restitution / stiffness rows
+and defaultWorld expectations, reference.test.ts ballTurfRestitution / ballTurfStiffness.
+
+Fix round 1 (old: df36880, a detached checkout; new: the Part B tree).
+Part A (df36880, "Visit only the columns the head can reach") moved no figure: bit-identical by the 113 moved preset
+runs, impactDigest and the whole suite.
+Part B (user ruling 2026-10-16: once the ball is struck and the drive done, the head-turf pair no longer holds the
+impact open):
+7. tests/engine/impact/headTurf.test.ts > "lets a struck impact end by itself with the head at rest in the turf",
+   renamed "ends a struck impact RELEASE_STEPS after the ball leaves the face, the head still sliding on the turf".
+   - old: impact 24.42 ms, the head at rest (0.61 mm/s), head/turf 1.785-24.42 ms; ball handed over at 0.0530 m/s.
+   - new: impact 21.64 ms = face end 21.39 ms + RELEASE_STEPS·dt (asserted to 1e-12), the head sliding at 13.1 mm/s,
+     head/turf 1.785-21.64 ms (open at the end); ball handed over at 0.0612 m/s (taken 2.8 ms earlier in its bed).
+   - Premise was the old end rule (the head had to come to rest): rewritten on the ruled rule. Predicted by the ruling.
+8. tests/engine/shot.test.ts > the AC stop's relaxed head meets the turf after the ball ... (LEGACY_MALLET)
+   - Assertions unchanged (they pass). Comment figures re-baselined: impact's turf contact 12.27-24.29 ms, +0.353 N·s
+     -> 12.27-20.25 ms, +0.286 N·s (impact 24.54 -> 20.25 ms); peak 3.04 mm, turf-yield and impact-head-deep unchanged.
+New test (RED then GREEN): shot.test.ts "hands a stop whose head rests on the turf over to the follow-through, not to
+the cap" (stop-ac 2 m/s drive 0 up -0.017 side 0): RED impact-cap at 450 ms; GREEN impact ends at 262.4 ms, the
+follow-through's head below the turf. Part A's new test: underside.test.ts "bounds the head's part below the plane
+within headReach, null where none is" (mutation-checked: dropping the widening fails it).
+Task 5 (P2b.2b.2b.3) movements the spec does not predict, for the gate (Task 8). Each is pinned in its test with an
+"Unpredicted, for the gate" note; the suite is green.
+
+Spec basis: §4.4 keeps impact-head-deep at 2 mm as "a stroke gone beyond a graze that has probably damaged the
+lawn"; §7.4 regime 1 expects a light graze that grounds the head "at under 2 mm", the head keeping most of its speed;
+§7.2 step 2 predicts follow-head-deep only for the full and pass rolls' preset finishes; §7.5 expects the LEGACY AC
+stop tests to be re-baselined and later moved onto the box (Task 6), without predicting a deep head.
+
+1. shot.test.ts, the AC stop's relaxed head on the turf (canonical stop-ac, LEGACY_MALLET, 3 m/s default).
+   New: turf-yield @14.18 ms and impact-head-deep @14.79 ms; peak 3.04 mm (was 1.88 mm, no event).
+   Mechanism: the relaxed round head lands on the lawn after the ball and bears on its barrel's narrow footprint. On
+   the default lawn a column yields once its elastic deflection passes p_y/k_w = 2.4e5/1.6246e8 = 1.48 mm; past it
+   each column carries at most p_y·h², so (inferred, not traced column by column) the head sinks until a wider
+   footprint carries it, here to 3.04 mm. The
+   plane law's linear spring had no yield and held it at 1.88 mm.
+
+2. buildContact.test.ts, the fat stroke (test pendulum, dip grounding the head before the ball).
+   New: turf-yield @7.42 ms, impact-head-deep @13.94 ms; peak 2.54 mm (was 0.50 mm); the head ploughs 5.43-47.67 ms,
+   129.6 mm of slide (was 5.00-14.55 ms, 28.9 mm); strike speed 2.983 m/s (was 3.030; clean 3.121).
+   Mechanism: as 1, the grazing head's columns yield and the head follows its arc down into the furrow; the loss stays
+   fractional (4.4 %) but the depth passes the 2 mm mark that §7.4's light graze is meant to stay under. Whether the
+   spec's regime-1 setup (Task 7/8) also passes 2 mm is not yet known.
+
+3. followThrough.test.ts, "caps a carry whose hands never stop" (test profile carry, endless push).
+   New flags: follow-turf-yield, follow-head-deep (before follow-cap).
+   Mechanism: the head drags on the turf for the follow-through's whole second; its columns yield and it sinks past
+   2 mm. Cost: the case's run time rose from 1.0 s to 72 s.
+
+Also raised newly, and part of 1-3 above: turf-yield in all three. No test newly raises impact-head-stopped or
+grip-limit.
+
+Task 6 (the jab), for the gate.
+4. shot.test.ts, "a dip 30 ms early meets the lawn before the ball ..." on the box at J_EARLY = 4.0 mm (canonical
+   stop-ac). The striker's full handover speed is NOT slower early (1.5721 m/s against 1.5677 on time): along the
+   lawn it is slower (1.5540 against 1.5666) but the early heel touch pops the ball up (vz 0.238 m/s against 0.059).
+   The test's comparison moved from the full speed to the speed along the lawn (hypot of x, y); comment in the test.
+   Mechanism: the early dip's heel strikes the turf (28.55 ms) just before the face (30.36 ms), the turf's reaction
+   tilts the face, adding a vertical component to the ball's departure.
+   Also: the AC stop on the box at J_ON = 2.0 mm raises only turf-lift (no turf-yield, no impact-head-deep); the
+   test's expected events moved from [turf-lift, turf-yield, impact-head-deep] to [turf-lift].
+-- Task 6's AC-stop jabs (J_ON, J_EARLY): see the unpredicted note 4 above --
+== Any throw ==
+turfStrikeProbe.txt:22: single-ball 1 m/s up 0.01 m dip -0.03 s jab 1.000 mm: threw the downswing meets the turf 0.23407961291160154 s before contact, so the impact would start more than 0.15 s early: a gross mis-hit
+turfStrikeProbe.txt:23: single-ball 1 m/s up 0.01 m dip -0.05 s jab 1.000 mm: threw the downswing meets the turf 0.23407961291160154 s before contact, so the impact would start more than 0.15 s early: a gross mis-hit
+turfStrikeProbe.txt:24: single-ball 1 m/s up 0.01 m dip -0.08 s jab 1.000 mm: threw the downswing meets the turf 0.23407961291160154 s before contact, so the impact would start more than 0.15 s early: a gross mis-hit
+turfStrikeProbe.txt:25: single-ball 1 m/s up 0.01 m dip -0.12 s jab 1.000 mm: threw the downswing meets the turf 0.23407961291160154 s before contact, so the impact would start more than 0.15 s early: a gross mis-hit
+turfStrikeProbe.txt:26: single-ball 1 m/s up 0.015 m dip -0.03 s jab 1.000 mm: threw the downswing meets the turf 0.30216461291160157 s before contact, so the impact would start more than 0.15 s early: a gross mis-hit
+turfStrikeProbe.txt:27: single-ball 1 m/s up 0.015 m dip -0.05 s jab 1.000 mm: threw the downswing meets the turf 0.30216461291160157 s before contact, so the impact would start more than 0.15 s early: a gross mis-hit
+turfStrikeProbe.txt:28: single-ball 1 m/s up 0.015 m dip -0.08 s jab 1.000 mm: threw the downswing meets the turf 0.30216461291160157 s before contact, so the impact would start more than 0.15 s early: a gross mis-hit
+turfStrikeProbe.txt:29: single-ball 1 m/s up 0.015 m dip -0.12 s jab 1.000 mm: threw the downswing meets the turf 0.30216461291160157 s before contact, so the impact would start more than 0.15 s early: a gross mis-hit
+turfStrikeProbe.txt:30: single-ball 1 m/s up 0.02 m dip -0.03 s jab 1.000 mm: threw the head is in the turf at contact: its lowest point is 0.0029741227305416238 m below it
+turfStrikeProbe.txt:31: single-ball 1 m/s up 0.02 m dip -0.05 s jab 1.000 mm: threw the head is in the turf at contact: its lowest point is 0.0029741227305416238 m below it
+turfStrikeProbe.txt:32: single-ball 1 m/s up 0.02 m dip -0.08 s jab 1.000 mm: threw the head is in the turf at contact: its lowest point is 0.0029741227305416238 m below it
+turfStrikeProbe.txt:33: single-ball 1 m/s up 0.02 m dip -0.12 s jab 1.000 mm: threw the head is in the turf at contact: its lowest point is 0.0029741227305416238 m below it
+turfStrikeProbe.txt:42: single-ball 1 m/s up 0.01 m dip -0.03 s jab 2.000 mm: threw the downswing meets the turf 0.23407961291160154 s before contact, so the impact would start more than 0.15 s early: a gross mis-hit
+turfStrikeProbe.txt:43: single-ball 1 m/s up 0.01 m dip -0.05 s jab 2.000 mm: threw the downswing meets the turf 0.23407961291160154 s before contact, so the impact would start more than 0.15 s early: a gross mis-hit
+turfStrikeProbe.txt:44: single-ball 1 m/s up 0.01 m dip -0.08 s jab 2.000 mm: threw the downswing meets the turf 0.23407961291160154 s before contact, so the impact would start more than 0.15 s early: a gross mis-hit
+turfStrikeProbe.txt:45: single-ball 1 m/s up 0.01 m dip -0.12 s jab 2.000 mm: threw the downswing meets the turf 0.23407961291160154 s before contact, so the impact would start more than 0.15 s early: a gross mis-hit
+turfStrikeProbe.txt:46: single-ball 1 m/s up 0.015 m dip -0.03 s jab 2.000 mm: threw the downswing meets the turf 0.30216461291160157 s before contact, so the impact would start more than 0.15 s early: a gross mis-hit
+turfStrikeProbe.txt:47: single-ball 1 m/s up 0.015 m dip -0.05 s jab 2.000 mm: threw the downswing meets the turf 0.30216461291160157 s before contact, so the impact would start more than 0.15 s early: a gross mis-hit
+turfStrikeProbe.txt:48: single-ball 1 m/s up 0.015 m dip -0.08 s jab 2.000 mm: threw the downswing meets the turf 0.30216461291160157 s before contact, so the impact would start more than 0.15 s early: a gross mis-hit
+turfStrikeProbe.txt:49: single-ball 1 m/s up 0.015 m dip -0.12 s jab 2.000 mm: threw the downswing meets the turf 0.30216461291160157 s before contact, so the impact would start more than 0.15 s early: a gross mis-hit
+turfStrikeProbe.txt:50: single-ball 1 m/s up 0.02 m dip -0.03 s jab 2.000 mm: threw the head is in the turf at contact: its lowest point is 0.0029741227305416238 m below it
+turfStrikeProbe.txt:51: single-ball 1 m/s up 0.02 m dip -0.05 s jab 2.000 mm: threw the head is in the turf at contact: its lowest point is 0.0029741227305416238 m below it
+turfStrikeProbe.txt:52: single-ball 1 m/s up 0.02 m dip -0.08 s jab 2.000 mm: threw the head is in the turf at contact: its lowest point is 0.0029741227305416238 m below it
+turfStrikeProbe.txt:53: single-ball 1 m/s up 0.02 m dip -0.12 s jab 2.000 mm: threw the head is in the turf at contact: its lowest point is 0.0029741227305416238 m below it
+turfStrikeProbe.txt:62: single-ball 1 m/s up 0.01 m dip -0.03 s jab 3.000 mm: threw the downswing meets the turf 0.23407961291160154 s before contact, so the impact would start more than 0.15 s early: a gross mis-hit
+turfStrikeProbe.txt:63: single-ball 1 m/s up 0.01 m dip -0.05 s jab 3.000 mm: threw the downswing meets the turf 0.23407961291160154 s before contact, so the impact would start more than 0.15 s early: a gross mis-hit
+turfStrikeProbe.txt:64: single-ball 1 m/s up 0.01 m dip -0.08 s jab 3.000 mm: threw the downswing meets the turf 0.23407961291160154 s before contact, so the impact would start more than 0.15 s early: a gross mis-hit
+turfStrikeProbe.txt:65: single-ball 1 m/s up 0.01 m dip -0.12 s jab 3.000 mm: threw the downswing meets the turf 0.23407961291160154 s before contact, so the impact would start more than 0.15 s early: a gross mis-hit
+turfStrikeProbe.txt:66: single-ball 1 m/s up 0.015 m dip -0.03 s jab 3.000 mm: threw the downswing meets the turf 0.30216461291160157 s before contact, so the impact would start more than 0.15 s early: a gross mis-hit
+turfStrikeProbe.txt:67: single-ball 1 m/s up 0.015 m dip -0.05 s jab 3.000 mm: threw the downswing meets the turf 0.30216461291160157 s before contact, so the impact would start more than 0.15 s early: a gross mis-hit
+turfStrikeProbe.txt:68: single-ball 1 m/s up 0.015 m dip -0.08 s jab 3.000 mm: threw the downswing meets the turf 0.30216461291160157 s before contact, so the impact would start more than 0.15 s early: a gross mis-hit
+turfStrikeProbe.txt:69: single-ball 1 m/s up 0.015 m dip -0.12 s jab 3.000 mm: threw the downswing meets the turf 0.30216461291160157 s before contact, so the impact would start more than 0.15 s early: a gross mis-hit
+turfStrikeProbe.txt:70: single-ball 1 m/s up 0.02 m dip -0.03 s jab 3.000 mm: threw the head is in the turf at contact: its lowest point is 0.0029741227305416238 m below it
+turfStrikeProbe.txt:71: single-ball 1 m/s up 0.02 m dip -0.05 s jab 3.000 mm: threw the head is in the turf at contact: its lowest point is 0.0029741227305416238 m below it
+turfStrikeProbe.txt:72: single-ball 1 m/s up 0.02 m dip -0.08 s jab 3.000 mm: threw the head is in the turf at contact: its lowest point is 0.0029741227305416238 m below it
+turfStrikeProbe.txt:73: single-ball 1 m/s up 0.02 m dip -0.12 s jab 3.000 mm: threw the head is in the turf at contact: its lowest point is 0.0029741227305416238 m below it
+turfStrikeProbe.txt:82: single-ball 1 m/s up 0.01 m dip -0.03 s jab 4.000 mm: threw the downswing meets the turf 0.23407961291160154 s before contact, so the impact would start more than 0.15 s early: a gross mis-hit
+turfStrikeProbe.txt:83: single-ball 1 m/s up 0.01 m dip -0.05 s jab 4.000 mm: threw the downswing meets the turf 0.23407961291160154 s before contact, so the impact would start more than 0.15 s early: a gross mis-hit
+turfStrikeProbe.txt:84: single-ball 1 m/s up 0.01 m dip -0.08 s jab 4.000 mm: threw the downswing meets the turf 0.23407961291160154 s before contact, so the impact would start more than 0.15 s early: a gross mis-hit
+turfStrikeProbe.txt:85: single-ball 1 m/s up 0.01 m dip -0.12 s jab 4.000 mm: threw the downswing meets the turf 0.23407961291160154 s before contact, so the impact would start more than 0.15 s early: a gross mis-hit
+turfStrikeProbe.txt:86: single-ball 1 m/s up 0.015 m dip -0.03 s jab 4.000 mm: threw the downswing meets the turf 0.30216461291160157 s before contact, so the impact would start more than 0.15 s early: a gross mis-hit
+turfStrikeProbe.txt:87: single-ball 1 m/s up 0.015 m dip -0.05 s jab 4.000 mm: threw the downswing meets the turf 0.30216461291160157 s before contact, so the impact would start more than 0.15 s early: a gross mis-hit
+turfStrikeProbe.txt:88: single-ball 1 m/s up 0.015 m dip -0.08 s jab 4.000 mm: threw the downswing meets the turf 0.30216461291160157 s before contact, so the impact would start more than 0.15 s early: a gross mis-hit
+turfStrikeProbe.txt:89: single-ball 1 m/s up 0.015 m dip -0.12 s jab 4.000 mm: threw the downswing meets the turf 0.30216461291160157 s before contact, so the impact would start more than 0.15 s early: a gross mis-hit
+turfStrikeProbe.txt:90: single-ball 1 m/s up 0.02 m dip -0.03 s jab 4.000 mm: threw the head is in the turf at contact: its lowest point is 0.0029741227305416238 m below it
+turfStrikeProbe.txt:91: single-ball 1 m/s up 0.02 m dip -0.05 s jab 4.000 mm: threw the head is in the turf at contact: its lowest point is 0.0029741227305416238 m below it
+turfStrikeProbe.txt:92: single-ball 1 m/s up 0.02 m dip -0.08 s jab 4.000 mm: threw the head is in the turf at contact: its lowest point is 0.0029741227305416238 m below it
+turfStrikeProbe.txt:93: single-ball 1 m/s up 0.02 m dip -0.12 s jab 4.000 mm: threw the head is in the turf at contact: its lowest point is 0.0029741227305416238 m below it
+turfStrikeProbe.txt:102: single-ball 1 m/s up 0.01 m dip -0.03 s jab 5.000 mm: threw the downswing meets the turf 0.23407961291160154 s before contact, so the impact would start more than 0.15 s early: a gross mis-hit
+turfStrikeProbe.txt:103: single-ball 1 m/s up 0.01 m dip -0.05 s jab 5.000 mm: threw the downswing meets the turf 0.23407961291160154 s before contact, so the impact would start more than 0.15 s early: a gross mis-hit
+turfStrikeProbe.txt:104: single-ball 1 m/s up 0.01 m dip -0.08 s jab 5.000 mm: threw the downswing meets the turf 0.23407961291160154 s before contact, so the impact would start more than 0.15 s early: a gross mis-hit
+turfStrikeProbe.txt:105: single-ball 1 m/s up 0.01 m dip -0.12 s jab 5.000 mm: threw the downswing meets the turf 0.23407961291160154 s before contact, so the impact would start more than 0.15 s early: a gross mis-hit
+turfStrikeProbe.txt:106: single-ball 1 m/s up 0.015 m dip -0.03 s jab 5.000 mm: threw the downswing meets the turf 0.30216461291160157 s before contact, so the impact would start more than 0.15 s early: a gross mis-hit
+turfStrikeProbe.txt:107: single-ball 1 m/s up 0.015 m dip -0.05 s jab 5.000 mm: threw the downswing meets the turf 0.30216461291160157 s before contact, so the impact would start more than 0.15 s early: a gross mis-hit
+turfStrikeProbe.txt:108: single-ball 1 m/s up 0.015 m dip -0.08 s jab 5.000 mm: threw the downswing meets the turf 0.30216461291160157 s before contact, so the impact would start more than 0.15 s early: a gross mis-hit
+turfStrikeProbe.txt:109: single-ball 1 m/s up 0.015 m dip -0.12 s jab 5.000 mm: threw the downswing meets the turf 0.30216461291160157 s before contact, so the impact would start more than 0.15 s early: a gross mis-hit
+turfStrikeProbe.txt:110: single-ball 1 m/s up 0.02 m dip -0.03 s jab 5.000 mm: threw the head is in the turf at contact: its lowest point is 0.0029741227305416238 m below it
+turfStrikeProbe.txt:111: single-ball 1 m/s up 0.02 m dip -0.05 s jab 5.000 mm: threw the head is in the turf at contact: its lowest point is 0.0029741227305416238 m below it
+turfStrikeProbe.txt:112: single-ball 1 m/s up 0.02 m dip -0.08 s jab 5.000 mm: threw the head is in the turf at contact: its lowest point is 0.0029741227305416238 m below it
+turfStrikeProbe.txt:113: single-ball 1 m/s up 0.02 m dip -0.12 s jab 5.000 mm: threw the head is in the turf at contact: its lowest point is 0.0029741227305416238 m below it
+turfStrikeProbe.txt:122: single-ball 1 m/s up 0.01 m dip -0.03 s jab 6.000 mm: threw the downswing meets the turf 0.23407961291160154 s before contact, so the impact would start more than 0.15 s early: a gross mis-hit
+turfStrikeProbe.txt:123: single-ball 1 m/s up 0.01 m dip -0.05 s jab 6.000 mm: threw the downswing meets the turf 0.23407961291160154 s before contact, so the impact would start more than 0.15 s early: a gross mis-hit
+turfStrikeProbe.txt:124: single-ball 1 m/s up 0.01 m dip -0.08 s jab 6.000 mm: threw the downswing meets the turf 0.23407961291160154 s before contact, so the impact would start more than 0.15 s early: a gross mis-hit
+turfStrikeProbe.txt:125: single-ball 1 m/s up 0.01 m dip -0.12 s jab 6.000 mm: threw the downswing meets the turf 0.23407961291160154 s before contact, so the impact would start more than 0.15 s early: a gross mis-hit
+turfStrikeProbe.txt:126: single-ball 1 m/s up 0.015 m dip -0.03 s jab 6.000 mm: threw the downswing meets the turf 0.30216461291160157 s before contact, so the impact would start more than 0.15 s early: a gross mis-hit
+turfStrikeProbe.txt:127: single-ball 1 m/s up 0.015 m dip -0.05 s jab 6.000 mm: threw the downswing meets the turf 0.30216461291160157 s before contact, so the impact would start more than 0.15 s early: a gross mis-hit
+turfStrikeProbe.txt:128: single-ball 1 m/s up 0.015 m dip -0.08 s jab 6.000 mm: threw the downswing meets the turf 0.30216461291160157 s before contact, so the impact would start more than 0.15 s early: a gross mis-hit
+turfStrikeProbe.txt:129: single-ball 1 m/s up 0.015 m dip -0.12 s jab 6.000 mm: threw the downswing meets the turf 0.30216461291160157 s before contact, so the impact would start more than 0.15 s early: a gross mis-hit
+turfStrikeProbe.txt:130: single-ball 1 m/s up 0.02 m dip -0.03 s jab 6.000 mm: threw the head is in the turf at contact: its lowest point is 0.0029741227305416238 m below it
+turfStrikeProbe.txt:131: single-ball 1 m/s up 0.02 m dip -0.05 s jab 6.000 mm: threw the head is in the turf at contact: its lowest point is 0.0029741227305416238 m below it
+turfStrikeProbe.txt:132: single-ball 1 m/s up 0.02 m dip -0.08 s jab 6.000 mm: threw the head is in the turf at contact: its lowest point is 0.0029741227305416238 m below it
+turfStrikeProbe.txt:133: single-ball 1 m/s up 0.02 m dip -0.12 s jab 6.000 mm: threw the head is in the turf at contact: its lowest point is 0.0029741227305416238 m below it
+turfStrikeProbe.txt:148: single-ball 4 m/s up 0.02 m dip -0.005 s jab 1.000 mm: threw the head is in the turf at contact: its lowest point is 0.0029741227305416238 m below it
+turfStrikeProbe.txt:149: single-ball 4 m/s up 0.02 m dip -0.01 s jab 1.000 mm: threw the head is in the turf at contact: its lowest point is 0.0029741227305416238 m below it
+turfStrikeProbe.txt:150: single-ball 4 m/s up 0.02 m dip -0.02 s jab 1.000 mm: threw the head is in the turf at contact: its lowest point is 0.0029741227305416238 m below it
+turfStrikeProbe.txt:163: single-ball 4 m/s up 0.02 m dip -0.005 s jab 2.000 mm: threw the head is in the turf at contact: its lowest point is 0.0029741227305416238 m below it
+turfStrikeProbe.txt:164: single-ball 4 m/s up 0.02 m dip -0.01 s jab 2.000 mm: threw the head is in the turf at contact: its lowest point is 0.0029741227305416238 m below it
+turfStrikeProbe.txt:165: single-ball 4 m/s up 0.02 m dip -0.02 s jab 2.000 mm: threw the head is in the turf at contact: its lowest point is 0.0029741227305416238 m below it
+turfStrikeProbe.txt:178: single-ball 4 m/s up 0.02 m dip -0.005 s jab 3.000 mm: threw the head is in the turf at contact: its lowest point is 0.0029741227305416238 m below it
+turfStrikeProbe.txt:179: single-ball 4 m/s up 0.02 m dip -0.01 s jab 3.000 mm: threw the head is in the turf at contact: its lowest point is 0.0029741227305416238 m below it
+turfStrikeProbe.txt:180: single-ball 4 m/s up 0.02 m dip -0.02 s jab 3.000 mm: threw the head is in the turf at contact: its lowest point is 0.0029741227305416238 m below it
+turfStrikeProbe.txt:193: single-ball 4 m/s up 0.02 m dip -0.005 s jab 4.000 mm: threw the head is in the turf at contact: its lowest point is 0.0029741227305416238 m below it
+turfStrikeProbe.txt:194: single-ball 4 m/s up 0.02 m dip -0.01 s jab 4.000 mm: threw the head is in the turf at contact: its lowest point is 0.0029741227305416238 m below it
+turfStrikeProbe.txt:195: single-ball 4 m/s up 0.02 m dip -0.02 s jab 4.000 mm: threw the head is in the turf at contact: its lowest point is 0.0029741227305416238 m below it
+(84 threw lines in all)
+
+== Gate round 1: the user's rulings, 2026-10-17 ==
+USER RULING 2026-10-17 (the gate): "(a) Go on".
+USER RULING 2026-10-17 (Gugan's jab check): "Keep .fails + ruling".
+USER RULING 2026-10-17 (the early-dip test): "Along the lawn + rename".
+USER RULING 2026-10-17 (biting): "Yes, require overlap": grip-limit must fall while the head is in the turf.
+USER RULING 2026-10-17 (the ploughing probe): "Yes, run it": ploughing scaled 0.85-0.9 for the dropped sin(α + δ).
+Round 1 found no biting run under the overlap rule: grip-limit is raised only on a hand's first saturation, which
+fell outside the turf, though in 8 of 12 grounding runs the top hand is held at 435 N inside a head/turf interval.
+USER RULING 2026-10-17 (biting): "Hand held at limit in turf": biting is the top hand held at 435 N at any step
+inside a head/turf interval, read from the hand force; the engine is unchanged.
+== Gate round 1: re-run ==
+The probe's biting test is now the top hand held at its grip limit (435 N, to 1 ppm) at a step inside a head/turf
+interval (user ruling 2026-10-17, "Hand held at limit in turf"); the engine is unchanged (git diff --stat -- src
+empty), so the ratchet, the canonical runs and the cost are not re-run.
+-- regimes --
+FOUND graze: single-ball 3 m/s up 0.01 m dip -0.005 s jab 1.000 mm (unchanged)
+  setup line: single-ball 3 m/s up 0.01 m dip -0.005 s jab 1.000 mm: head/turf 5.33–33.45, 33.48–34.20, 34.53–34.94 ms, peak 1.700 mm, lowest -1.701 mm; face 97.21–98.24 ms; speed along aim at the turf 2.8217, at the ball 2.2377 m/s; impact 101.90 ms; finish 600.09 ms; turf-yield,turf-lift
+NONE stopped
+FOUND biting: single-ball 4 m/s up 0.01 m dip -0.02 s jab 5.000 mm (was dip -0.005 s)
+  setup line: single-ball 4 m/s up 0.01 m dip -0.02 s jab 5.000 mm: head/turf 5.25–29.08, 29.10–29.55, 42.65–50.16 ms, peak 2.009 mm, lowest -2.010 mm; face 71.19–72.17 ms; speed along aim at the turf 3.8123, at the ball 2.9355 m/s; impact 74.88 ms; finish 576.28 ms; turf-yield,impact-head-deep,grip-limit,turf-lift
+FOUND follow (not a regime): half-roll 4 m/s (unchanged)
+Biting's grid in order: jabs 1–4 mm never hold a hand at the limit; at 5 mm, up 0.01 m dips -0.005 and -0.01 s
+saturate only with the head out of the turf (grip-limit at 57.61 and 52.61 ms, the head out from 29.55 ms); dip
+-0.02 s is the first held in the turf. The top hand is held from grip-limit@37.61 ms with the head out, eases to
+433.8 N at 42 ms, and is held again from 42.65 ms, as the head re-enters the turf, to ~47 ms. The 5 mm jab alone also
+saturates the top hand (up 0 never grounds and raises grip-limit), so the run shows the jab's load and the turf's
+coinciding.
+-- series (biting): t ms, speed m/s, lowest mm, bearing N, resistance N, top N, bottom N --
+1.00 3.7816 1.679 0.0 0.0 33.5 0.0
+2.00 3.7890 1.231 0.0 0.0 33.5 0.0
+3.00 3.7963 0.801 0.0 0.0 33.6 0.0
+4.00 3.8035 0.390 0.0 0.0 33.6 0.0
+5.00 3.8106 -0.002 0.0 0.0 33.7 0.0
+6.00 3.8131 -0.373 11.0 -8.9 33.1 0.3
+7.00 3.8056 -0.720 33.6 -23.4 31.3 1.0
+8.00 3.7865 -1.034 53.9 -36.6 28.1 2.1
+9.00 3.7561 -1.311 72.0 -48.3 23.5 3.7
+10.00 3.7143 -1.543 90.9 -60.1 17.7 5.6
+11.00 3.6642 -1.726 98.8 -66.0 11.2 7.5
+12.00 3.6104 -1.860 100.3 -68.4 5.0 9.2
+13.00 3.5566 -1.949 96.2 -67.4 0.8 10.6
+14.00 3.5037 -1.997 91.4 -65.5 5.1 11.7
+15.00 3.4521 -2.009 85.0 -62.2 8.9 12.6
+16.00 3.4017 -1.989 74.8 -56.1 12.1 13.4
+17.00 3.3528 -1.941 74.5 -55.3 14.8 14.0
+18.00 3.3064 -1.866 76.5 -56.5 17.0 14.6
+19.00 3.2625 -1.769 71.5 -53.2 18.7 15.1
+20.00 3.2208 -1.651 62.1 -46.4 20.1 15.5
+21.00 3.1818 -1.515 62.7 -45.4 21.1 15.9
+22.00 3.1465 -1.363 57.3 -42.0 21.6 16.1
+23.00 3.1158 -1.198 45.4 -33.7 21.6 16.2
+24.00 3.0916 -1.024 35.4 -26.9 20.6 15.9
+25.00 3.0739 -0.846 21.9 -19.1 19.0 15.5
+26.00 3.0620 -0.667 14.9 -12.7 16.9 14.9
+27.00 3.0549 -0.490 6.2 -7.6 14.7 14.2
+28.00 3.0523 -0.316 2.7 -4.1 12.8 13.6
+29.00 3.0526 -0.144 0.0 -0.5 11.5 13.0
+30.00 3.0550 0.025 0.0 0.0 10.9 12.5
+31.00 3.0577 0.193 0.0 0.0 11.0 12.1
+32.00 3.0605 0.362 0.0 0.0 11.6 11.8
+33.00 3.0635 0.533 0.0 0.0 12.5 11.5
+34.00 3.0665 0.706 0.0 0.0 13.5 11.2
+35.00 3.0695 0.884 0.0 0.0 14.6 10.9
+36.00 3.0726 1.066 0.0 0.0 15.7 10.7
+37.00 3.0757 1.253 0.0 0.0 16.7 10.5
+38.00 3.0789 1.432 0.0 0.0 435.0 225.9
+39.00 3.0822 1.456 0.0 0.0 435.0 218.8
+40.00 3.0853 1.289 0.0 0.0 435.0 211.9
+41.00 3.0883 0.932 0.0 0.0 435.0 205.3
+42.00 3.0912 0.382 0.0 0.0 433.8 198.7
+43.00 3.0905 -0.329 26.2 -16.2 435.0 173.7
+44.00 3.0661 -0.901 86.0 -50.7 435.0 164.4
+45.00 3.0202 -1.240 118.3 -71.0 435.0 154.8
+46.00 2.9686 -1.336 104.3 -64.8 435.0 146.2
+47.00 2.9270 -1.193 67.4 -44.9 434.6 139.6
+48.00 2.9050 -0.843 22.8 -19.4 7.6 16.8
+49.00 2.8976 -0.452 2.0 -4.9 7.4 15.0
+50.00 2.8976 -0.064 0.0 -0.5 7.5 13.4
+51.00 2.8996 0.322 0.0 0.0 8.3 12.2
+52.00 2.9016 0.707 0.0 0.0 9.4 11.4
+53.00 2.9036 1.092 0.0 0.0 10.6 10.7
+54.00 2.9055 1.480 0.0 0.0 11.8 10.2
+55.00 2.9074 1.870 0.0 0.0 13.0 9.8
+56.00 2.9093 2.263 0.0 0.0 14.1 9.4
+57.00 2.9111 2.661 0.0 0.0 15.1 9.1
+58.00 2.9130 3.064 0.0 0.0 21.7 10.7
+59.00 2.9151 3.473 0.0 0.0 21.3 10.6
+60.00 2.9172 3.890 0.0 0.0 21.2 10.6
+61.00 2.9191 4.313 0.0 0.0 21.3 10.5
+62.00 2.9210 4.745 0.0 0.0 21.5 10.5
+63.00 2.9229 5.184 0.0 0.0 21.7 10.4
+64.00 2.9247 5.631 0.0 0.0 22.0 10.4
+65.00 2.9264 6.087 0.0 0.0 22.3 10.4
+66.00 2.9280 6.552 0.0 0.0 22.6 10.3
+67.00 2.9296 7.025 0.0 0.0 23.0 10.3
+68.00 2.9311 7.507 0.0 0.0 23.4 10.3
+69.00 2.9325 7.998 0.0 0.0 23.7 10.2
+70.00 2.9339 8.499 0.0 0.0 23.9 10.2
+71.00 2.9352 9.009 0.0 0.0 24.1 10.2
+72.00 1.4278 9.418 0.0 0.0 35.4 24.5
+73.00 1.4014 9.658 0.0 0.0 34.3 24.8
+74.00 1.4042 9.652 0.0 0.0 33.6 24.8
+events turf-yield@9.79, impact-head-deep@14.11, grip-limit@37.61, turf-lift@74.22
+top hand held at the grip limit in the turf: from 42.65 ms
+-- bounds (biting under the new test; graze and the jab sweep as before) --
+-- turfYield 172000 Pa --
+graze (single-ball 3 m/s up 0.01 m dip -0.005 s jab 1.000 mm): occurs; head/turf 5.33–38.54, 38.58–39.27 ms, peak 1.849 mm, lowest -1.849 mm; face 98.94–99.98 ms; speed along aim at the turf 2.8217, at the ball 2.1674 m/s; impact 103.81 ms; finish 602.63 ms; turf-yield,turf-lift
+stopped: none found on the default lawn
+biting (single-ball 4 m/s up 0.01 m dip -0.02 s jab 5.000 mm): occurs; head/turf 5.25–33.52, 33.80–33.89, 41.82–50.26 ms, peak 2.219 mm, lowest -2.220 mm; face 71.89–72.88 ms; speed along aim at the turf 3.8123, at the ball 2.8255 m/s; impact 77.44 ms; finish 577.63 ms; turf-yield,impact-head-deep,grip-limit,turf-lift
+verdict: FAIL; 5 grazes, ratios 0.0000, 0.0000, 0.0000, 0.0000, 0.0000; Gugan's 0.400 (0.295–0.463)
+-- turfYield 310000 Pa --
+graze (single-ball 3 m/s up 0.01 m dip -0.005 s jab 1.000 mm): occurs; head/turf 5.33–32.61, 32.65–33.37, 33.68–34.12 ms, peak 1.692 mm, lowest -1.692 mm; face 96.89–97.93 ms; speed along aim at the turf 2.8217, at the ball 2.2500 m/s; impact 101.56 ms; finish 599.64 ms; turf-lift
+stopped: none found on the default lawn
+biting (single-ball 4 m/s up 0.01 m dip -0.02 s jab 5.000 mm): occurs; head/turf 5.25–27.35, 27.50–27.82, 42.90–50.20 ms, peak 1.959 mm, lowest -1.959 mm; face 70.89–71.86 ms; speed along aim at the turf 3.8123, at the ball 2.9835 m/s; impact 73.89 ms; finish 575.72 ms; turf-yield,grip-limit,turf-lift
+verdict: FAIL; 6 grazes, ratios 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000; Gugan's 0.400 (0.295–0.463)
+-- turfMatStrength 73000 Pa --
+graze (single-ball 3 m/s up 0.01 m dip -0.005 s jab 1.000 mm): occurs; head/turf 5.33–33.64, 33.85–34.36 ms, peak 1.697 mm, lowest -1.698 mm; face 94.47–95.49 ms; speed along aim at the turf 2.8217, at the ball 2.3094 m/s; impact 98.98 ms; finish 596.85 ms; turf-yield,turf-lift
+stopped: none found on the default lawn
+biting (single-ball 4 m/s up 0.01 m dip -0.02 s jab 5.000 mm): occurs; head/turf 5.25–29.21, 29.50–29.62, 42.76–49.84 ms, peak 2.005 mm, lowest -2.005 mm; face 69.17–70.13 ms; speed along aim at the turf 3.8123, at the ball 3.0734 m/s; impact 72.07 ms; finish 573.95 ms; turf-yield,impact-head-deep,grip-limit,turf-lift
+verdict: FAIL; 6 grazes, ratios 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000; Gugan's 0.400 (0.295–0.463)
+-- turfMatStrength 138000 Pa --
+graze (single-ball 3 m/s up 0.01 m dip -0.005 s jab 1.000 mm): occurs; head/turf 5.33–34.05, 34.19–34.83, 35.33–35.56 ms, peak 1.703 mm, lowest -1.704 mm; face 100.27–101.31 ms; speed along aim at the turf 2.8217, at the ball 2.1634 m/s; impact 105.18 ms; finish 603.68 ms; turf-yield,turf-lift
+stopped: none found on the default lawn
+biting (single-ball 4 m/s up 0.01 m dip -0.02 s jab 5.000 mm): occurs; head/turf 5.25–29.43, 29.53–29.91, 42.41–50.24 ms, peak 2.013 mm, lowest -2.014 mm; face 73.59–74.57 ms; speed along aim at the turf 3.8123, at the ball 2.7870 m/s; impact 79.75 ms; finish 579.07 ms; turf-yield,impact-head-deep,grip-limit,turf-lift
+verdict: FAIL; 6 grazes, ratios 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000; Gugan's 0.400 (0.295–0.463)
+-- ploughing probe (the dropped Mak & Chen sin(α + δ); throwaway, the ploughing term scaled by a temporary hook in headTurf.ts, reverted; git diff --stat -- src empty) --
+scale  graze                 peak      at the ball   ÷ clear 3.00 m/s  biting (held at the limit in the turf)
+1.00   FOUND (same setup)    1.700 mm  2.2377 m/s    0.746             FOUND (same setup), held from 42.65 ms; 2.9355 m/s at the ball
+0.90   FOUND (same setup)    1.699 mm  2.2613 m/s    0.754             FOUND (same setup), held from 42.64 ms; 2.9816 m/s at the ball
+0.85   FOUND (same setup)    1.699 mm  2.2731 m/s    0.758             FOUND (same setup), held from 42.64 ms; 3.0041 m/s at the ball
+At every scale: stopped NONE, follow half-roll 4 m/s. The factor's ~1.15× on the ploughing cap moves the graze's
+speed at the ball by 1.6% at most and changes no verdict.
+USER RULING 2026-10-17 (gate round 1): "Go on".
+CORRECTION 2026-10-17 (final review): the cost section's columns per grounded step counted the head's whole extent
+(plan decision 8's bound); since Task 5 (df36880) the law visits only headReach ± a cell. Corrected (the law's own
+range, headColumns), mean / worst / total, against the record's:
+  half-roll 3 m/s follow-through       1,209.8 / 2,046 / 1,615,038     (was 4,429.4 / 4,433 / 5,913,281)
+  full-roll 3 m/s follow-through         372.9 /   527 / 1,347,942     (was 4,510.1 / 4,526 / 16,303,985)
+  pass-roll 3 m/s follow-through         313.8 /   465 / 1,391,594     (was 4,662.9 / 4,785 / 20,679,874)
+  graze impact                           261.8 /   341 / 1,582,271     (was 4,512.0 / 4,526 / 27,270,328)
+  biting (dip -0.005 s) impact           286.9 /   372 / 1,426,310     (was 4,511.5 / 4,526 / 22,426,485)
+  stop-ac 3 m/s jab 4.5 mm impact        459.7 /   558 /   523,590     (was 4,487.2 / 4,495 / 5,110,939)
+  stop-ac 3 m/s jab 4.5 mm follow-thr.   326.7 /   465 / 4,028,574     (was 4,495.0 / 4,495 / 55,427,845)
+  half-roll 4 m/s follow-through         296.9 /   403 / 1,281,822     (was 4,512.3 / 4,526 / 19,479,780)
+So "~4,500 columns per grounded step (worst 4,785)" reads 262–460 on the mean (the half roll at 3 m/s 1,210; worst
+2,046), and the AC stop's "55.4 M column visits" reads 4.03 M. Step counts, flags and wall times are unchanged.
+The biting row is from a separate throwaway run at the gate's own biting setup (dip −0.005 s), which reproduced its
+14,450 / 4,971 steps; the regenerated probe's biting (dip −0.02 s) gives 297.1 / 434.

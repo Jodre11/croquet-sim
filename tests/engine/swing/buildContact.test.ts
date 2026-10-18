@@ -3,6 +3,7 @@ import { headLowestPoint } from "../../../src/engine/impact/contacts";
 import { boxInertia, rotate, solidCylinderInertia } from "../../../src/engine/impact/rigidBody";
 import { simulateImpact } from "../../../src/engine/impact/simulateImpact";
 import {
+    GRIP_LIMIT,
     HAND_COUPLING,
     downswingAt,
     handsAt,
@@ -49,6 +50,7 @@ import { TEST_BALL, ballAt, testWorld } from "../support/fixtures";
 import {
     TEST_CHAIN,
     TEST_FLEX,
+    TEST_GRIP_LIMIT,
     TEST_HANDS,
     TEST_PENDULUM_FORCE,
     TEST_PUSH_FORCE,
@@ -234,6 +236,7 @@ describe("buildContact, step by step", () => {
             pushForce: TEST_PUSH_FORCE,
             pushResponseTime: TEST_PUSH_RESPONSE_TIME,
             chain: TEST_CHAIN,
+            gripLimit: TEST_GRIP_LIMIT,
         });
         expect(drive.coupling).toEqual({
             period: HAND_COUPLING.period,
@@ -290,6 +293,10 @@ describe("buildContact, step by step", () => {
             { pushResponseTime: Infinity },
             /profile\.body\.pushResponseTime must be finite/,
         ],
+        ["no grip limit", { gripLimit: 0 }, /profile\.body\.gripLimit must be/],
+        ["a negative grip limit", { gripLimit: -1 }, /profile\.body\.gripLimit must be/],
+        ["a NaN grip limit", { gripLimit: NaN }, /profile\.body\.gripLimit must be/],
+        ["an infinite grip limit", { gripLimit: Infinity }, /profile\.body\.gripLimit must be/],
         [
             "no forearm mass",
             { chain: { ...TEST_CHAIN, forearmMass: 0 } },
@@ -682,6 +689,7 @@ describe("defaultProfile", () => {
                 fingerStiffness: contactReference.fingerStiffness.value,
                 fingerDamping: contactReference.fingerDamping.value,
             },
+            gripLimit: GRIP_LIMIT,
         });
     });
 
@@ -1089,11 +1097,14 @@ describe("the lead (design §3.5)", () => {
         expect((dug as { start: number }).start).toBeLessThan(fat.start);
         expect(fat.speed).toBeLessThan(clean.speed);
         // The loss is fractional (user decision 2026-10-07: a light graze costs "only fractionally"): measured about
-        // 3.03 against 3.12 m/s.
+        // 3.03 against 3.12 m/s. P2b.2b.2b.3: the turf strike (was 3.03): 2.98 against 3.12 m/s, the head ploughing.
         expect(fat.speed).toBeGreaterThan(0.9 * clean.speed);
-        // The firm grip has no position spring on a downswing, so the head stays where the turf put it: about 0.48 mm
-        // in, under the 2 mm limit.
-        expect(fat.impact.events.map((e) => e.kind)).not.toContain("impact-head-deep");
+        // The firm grip has no position spring on a downswing, so the head stays where the turf put it.
+        // P2b.2b.2b.3: the turf strike (was about 0.50 mm in, under the 2 mm limit, the turf 5.00–14.55 ms, 3.030 m/s
+        // at the strike): the grazing head yields the turf's columns (turf-yield at 7.42 ms) and ploughs a furrow
+        // 5.43–47.67 ms long, 129.6 mm of slide, sinking to 2.54 mm and raising impact-head-deep at 13.94 ms; 2.983
+        // m/s at the strike. Unpredicted, for the gate: the spec's light graze (§7.4) stays within 2 mm.
+        expect(fat.impact.events.map((e) => e.kind)).toEqual(["turf-yield", "impact-head-deep", "turf-lift"]);
     });
 
     it("plays a 2 mm backswing as a gentle tap", () => {
@@ -1118,6 +1129,39 @@ describe("the lead (design §3.5)", () => {
             expect(dot(back, along), `aim ${aim}`).toBeLessThan(-0.1);
             expect(length(cross(back, along)), `aim ${aim}`).toBeLessThan(1e-9);
         }
+    });
+});
+
+describe("the jab (P2b.2b.2b.3 design §6.1)", () => {
+    const world = defaultWorld();
+
+    it("deepens the planned dip by the jab, on the dip's own timing", () => {
+        const setup = canonicalSetup("stop-ac");
+        const plain = planStroke(setup, world).contact.drive as TrackDrive;
+        const jabbed = planStroke({ ...setup, stroke: { ...setup.stroke, jab: 0.003 } }, world).contact
+            .drive as TrackDrive;
+        expect(jabbed.arc.dip.depth).toBe(setup.profile.drive["stop-ac"].handDrop + 0.003);
+        expect(jabbed.arc.dip.start).toBe(plain.arc.dip.start);
+        expect(jabbed.arc.dip.duration).toBe(plain.arc.dip.duration);
+    });
+
+    it.each(STROKE_TYPES)("leaves the %s stroke unchanged to the bit at a jab of 0", (type) => {
+        const setup = canonicalSetup(type);
+        expect(planStroke({ ...setup, stroke: { ...setup.stroke, jab: 0 } }, world)).toEqual(planStroke(setup, world));
+    });
+
+    it("rejects a negative, non-finite or carry-mode jab, and accepts a carry stroke's jab of 0", () => {
+        const ac = canonicalSetup("stop-ac");
+        for (const jab of [-0.001, Number.NaN, Infinity]) {
+            expect(() => planStroke({ ...ac, stroke: { ...ac.stroke, jab } }, world), `${jab}`).toThrow(
+                /stroke\.jab must be/,
+            );
+        }
+        const roll = canonicalSetup("full-roll");
+        expect(() => planStroke({ ...roll, stroke: { ...roll.stroke, jab: 0.001 } }, world)).toThrow(
+            /stroke\.jab must be 0 in carry mode/,
+        );
+        expect(planStroke({ ...roll, stroke: { ...roll.stroke, jab: 0 } }, world)).toEqual(planStroke(roll, world));
     });
 });
 

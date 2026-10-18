@@ -33,8 +33,8 @@
  * test; evidence angle), judged only when the context carries the swing (P2b.2b.1 design §6.4).
  *
  * 29.1.14 (court damage) is a possible fault: a damaged lawn is something an adjudicator sees, and the Law judges its
- * effect on later strokes (C29.19.5), which the impact's plane turf does not keep. It is found when the head–turf
- * pair has an interval in a stroke of Law 29.2.3; no damage threshold is invented.
+ * effect on later strokes (C29.19.5), which the head's turf, discarded with the stroke, does not keep. It is found
+ * when the head–turf pair has an interval in a stroke of Law 29.2.3; no damage threshold is invented.
  */
 import { CONTACT_TOLERANCE } from "./detect";
 import { ballPairKey, faceKey, HEAD_TURF_KEY, obstacleKey } from "./impact/contacts";

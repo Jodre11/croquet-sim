@@ -3,8 +3,9 @@
  * balls and the turf. Each step:
  * 1. computes every force from the current state: the hands' load (a force table at the socket, or a tracked drive's
  *    two hands, track.ts) and gravity, the shaft's at its own centre (P2b.2b.2b.2c design §4.3), then each closed pair
- *    in pair-list order, then the head–turf pair if the set-up has it (P2b.2b.1 design §4); a face–ball pair closes
- *    with its own Hertzian law (contactLaw.ts closeFace; P2b.2b.2b.2a design §3.3);
+ *    in pair-list order, then the head–turf pair if the set-up has it (P2b.2b.2b.3 design §4: the turf's columns
+ *    under the head, headTurf.ts); a face–ball pair closes with its own Hertzian law (contactLaw.ts closeFace;
+ *    P2b.2b.2b.2a design §3.3);
  * 2. updates every velocity from those forces, the head's spin through Euler's equations in its body frame (for a
  *    tracked drive, the swung body's: the mallet (malletBody) and the arm mass, P2b.2b.1 design §3.3);
  * 3. updates every position, and the head's orientation, from the new velocities.
@@ -15,12 +16,15 @@
  *
  * The balls stand on the turf bed (turfBed.ts; P2b.2b.2b.2a design §4): each ball–turf pair is its ball's own cells,
  * stepped with the pair, and a ball is in the turf while it holds a cell. The impact ends once a face–ball contact has
- * closed, the drive window has closed, no face–ball, ball–ball, ball–obstacle or head–turf contact has been closed for
- * RELEASE_STEPS steps, and no ball in the turf is still bouncing (turfBed.ts isBouncing: its vertical energy measured
- * from rest at the surface on a fresh bed is positive), or at the cap. At the end a ball still pressed more than
- * TURF_PIT_DEPTH into its pit raises `impact-turf-pit`. Two balls whose footprints come within a cell of each other
- * while both hold cells throw a RangeError (plan decision 1). Isolated set-ups (tests) may give balls any state and
- * leave the turf out; simulateImpact.ts prepares and validates real ones.
+ * closed, the drive window has closed, no face–ball, ball–ball or ball–obstacle contact has been closed, and no
+ * head–turf contact has held the head other than at rest (P2b.2b.2b.3 design §4.6) while the ball was yet to be
+ * struck or the drive yet to be done, for RELEASE_STEPS steps, and no ball in the turf is still bouncing (turfBed.ts
+ * isBouncing: its vertical energy measured from rest at the surface on a fresh bed is positive), or at the cap. A head
+ * at rest in the turf for RELEASE_STEPS steps before any face contact ends the impact with `impact-head-stopped`. A
+ * column first yielding raises `turf-yield` (`follow-turf-yield` in the follow-through). At the end a ball still
+ * pressed more than TURF_PIT_DEPTH into its pit raises `impact-turf-pit`. Two balls whose footprints come within a
+ * cell of each other while both hold cells throw a RangeError (plan decision 1). Isolated set-ups (tests) may give
+ * balls any state and leave the turf out; simulateImpact.ts prepares and validates real ones.
  *
  * A tracked drive (P2b.2b.1 design §3.5) ends on the same conditions, both arcs' windows and the dip (and, in carry
  * mode, the pendulum phase's start; P2b.2b.2b.2b design §4.2) standing for the drive window, and only once the head
@@ -48,7 +52,10 @@
  *
  * With a follow-through (integrateStroke, P2b.2b.2a design §4.1) a tracked drive's loop continues once the impact has
  * ended, the balls removed: the hands and the head–turf pair act on the head until the stroke type's finish, or
- * FOLLOW_CAP after contact. The impact's result is fixed before it starts.
+ * FOLLOW_CAP after contact. Once the ball has been struck and the drive is done the head's turf contact is the
+ * follow-through's to carry, on the same bed (user ruling 2026-10-16), so it does not hold the impact open. The
+ * impact's result is fixed before it starts. A hand first reaching its grip's limit raises `grip-limit` in the impact
+ * and `follow-grip-limit` in the follow-through (P2b.2b.2b.3 design §5).
  */
 import { contactReference } from "../../reference/index";
 import { ZERO, add, cross, dot, horizontal, length, scale, sub, vec3, type Vec3 } from "../math/vec3";
@@ -71,7 +78,6 @@ import {
     headBallContact,
     headClosing,
     headLowestPoint,
-    headTurfContact,
     obstacleGap,
     outOfReach,
     pairContact,
@@ -84,6 +90,7 @@ import {
     type Pair,
     type Penetration,
 } from "./contacts";
+import { HEAD_REST_SPEED, headTurfLoad, newHeadTurfBed, type HeadTurfBed, type HeadTurfLoad } from "./headTurf";
 import { angularAcceleration, integrateOrientation, rotate, rotateInverse } from "./rigidBody";
 import { closeTimeline, emptyTimeline, inGap, noteClearance, recordStep, type PairTimeline } from "./timeline";
 import {
@@ -122,6 +129,7 @@ import type {
     FaceLaw,
     ForceDrive,
     HeadState,
+    HeadTurfLaw,
     ImpactEvent,
     ImpactRun,
     MalletHead,
@@ -136,9 +144,11 @@ import type {
 export const IMPACT_DT = 5e-6;
 
 /**
- * Consecutive steps without a closed face–ball, ball–ball, ball–obstacle or head–turf contact after which the impact
- * may end. A numerical allowance for a contact to re-close (a croquet stroke's balls part and meet again), not
- * physical. Pre-flight: ×4 moves no ball's state 50 ms after the strike by more than 2.8e-4 of the head speed.
+ * Consecutive steps without a closed face–ball, ball–ball or ball–obstacle contact, or a head–turf contact holding
+ * the head other than at rest before the strike and the drive's end (see the file header), after which the impact
+ * may end; also how long a head must rest in the turf before any face contact to end it. A numerical allowance for a
+ * contact to re-close (a croquet stroke's balls part and meet again), not physical. Pre-flight: ×4 moves no ball's
+ * state 50 ms after the strike by more than 2.8e-4 of the head speed.
  */
 export const RELEASE_STEPS = 50;
 
@@ -158,8 +168,8 @@ export const IMPACT_CAP = 0.06;
 export const TRACK_IMPACT_CAP = 0.45;
 
 /**
- * Depth (m) below the turf plane past which a head with the head–turf pair raises `impact-head-deep` (P2b.2b.1 design
- * §4.2; reference/contact.json): a model limit, past which a plane turf with a linear spring is not credible for it.
+ * Depth (m) below the turf plane past which a head with the head–turf pair raises `impact-head-deep` (P2b.2b.2b.3
+ * design §4.4; reference/contact.json): a stroke gone beyond a graze, which has probably damaged the lawn.
  */
 export const HEAD_DEEP_LIMIT = contactReference.headDeepLimit.value;
 
@@ -242,10 +252,10 @@ export interface ImpactSetup {
      */
     readonly obstacles: readonly ImpactObstacle[];
     /**
-     * The head–turf pair's law (P2b.2b.1 design §4.1), or null to leave the pair out: prepareImpact solves it for a
-     * tracked drive and gives a force table none. Isolated set-ups (tests) may give any head the pair.
+     * The head–turf law (P2b.2b.2b.3 design §4), or null to leave the pair out: prepareImpact gives a tracked drive
+     * the law of the turf under its head and a force table none. Isolated set-ups (tests) may give any head the pair.
      */
-    readonly headTurf: PairLaw | null;
+    readonly headTurf: HeadTurfLaw | null;
 }
 
 /** One closed pair in one step, as the probe sees it: forces applied during the step, on body B. */
@@ -312,8 +322,12 @@ export interface ImpactOptions {
     readonly probe?: ImpactProbe;
 }
 
-/** A follow-through's flags (P2b.2b.2a design §4.1): the cap reached, or the head driven past HEAD_DEEP_LIMIT. */
-export type FollowFlag = "follow-cap" | "follow-head-deep";
+/**
+ * A follow-through's flags (P2b.2b.2a design §4.1): the cap reached, the head driven past HEAD_DEEP_LIMIT, or a hand
+ * first reaching its grip's limit in the follow-through (P2b.2b.2b.3 design §4.6), or a column of the head's turf first
+ * yielding in the follow-through.
+ */
+export type FollowFlag = "follow-cap" | "follow-head-deep" | "follow-grip-limit" | "follow-turf-yield";
 
 /** The head at time t (s from t = 0). */
 export interface StrokeState {
@@ -539,14 +553,13 @@ function applyPair(
     return normal;
 }
 
-/** The head–turf pair while the impact runs (design §4). */
+/** The head–turf pair while the impact runs (P2b.2b.2b.3 design §4). */
 interface HeadTurfState {
-    readonly law: PairLaw;
-    /** Elastic tangential displacement ξ; cleared whenever the pair is open. */
-    spring: Vec3;
+    /** The law's state: the columns, their sets and entry floors, and the horizontal spring (headTurf.ts). */
+    readonly bed: HeadTurfBed;
     peak: number;
     readonly line: PairTimeline;
-    /** Slip distance (m) at the contact point: |horizontal velocity of the head's material|·dt, summed while closed. */
+    /** Slip distance (m) at the resistance's centre: the head's material's horizontal speed there·dt, summed. */
     slide: number;
 }
 
@@ -591,10 +604,11 @@ function recordRegions(
 }
 
 /**
- * The head–turf pair in one step (design §4.1), from the current state: the turf's clamped spring–dashpot and
- * Cundall–Strack friction act on the head at its lowest point. Adds the force and its moment about the head's centre
- * to the head's loads, records the step and the slide, counts an entry jump if the pair opens too deep (`jumps`, a
- * tracked drive's), and returns the force on the head, or null while the pair is open.
+ * The head–turf pair in one step (P2b.2b.2b.3 design §4): the turf's columns under the head bear on it, and its
+ * ploughing and the sole's friction resist through one spring (headTurf.ts headTurfLoad; the strips along `aim` while
+ * that spring's trial is zero). Adds the load and its moment to the head's loads, records the step and the slide,
+ * counts an entry jump if the pair opens too deep (`jumps`, a tracked drive's; plan decision 6), and returns the load,
+ * or null while no column bears.
  */
 function applyHeadTurf(
     p: HeadTurfState,
@@ -604,28 +618,31 @@ function applyHeadTurf(
     loads: StepLoads,
     t: number,
     jumps: EntryJumps | null,
-): Vec3 | null {
-    const contact = headTurfContact(state, head);
-    if (contact === null) {
-        p.spring = ZERO;
+    aim: Vec3,
+): HeadTurfLoad | null {
+    const load = headTurfLoad(p.bed, state, head, dt, aim);
+    if (load === null) {
         recordStep(p.line, false, 0, t);
         return null;
     }
-    p.peak = Math.max(p.peak, contact.depth);
-    const u = pointVelocity(state.position, state.velocity, state.angularVelocity, contact.point);
+    p.peak = Math.max(p.peak, load.depth);
     if (jumps !== null && p.line.start === null) {
-        noteEntry(jumps, contact.depth, u.z, dt, HEAD_TURF_KEY, t);
+        noteEntry(jumps, load.depth, load.closing, dt, HEAD_TURF_KEY, t);
     }
-    const normal = normalForce(p.law, contact.depth, 0 - u.z);
-    const slip = horizontal(u);
-    const tangential = tangentialForce(p.law, add(horizontal(p.spring), scale(slip, dt)), slip, normal);
-    p.spring = tangential.spring;
-    const force = add(vec3(0, 0, normal), tangential.force);
-    loads.headForce = add(loads.headForce, force);
-    loads.headTorque = add(loads.headTorque, cross(sub(contact.point, state.position), force));
-    p.slide += length(slip) * dt;
-    recordStep(p.line, true, normal, t);
-    return force;
+    loads.headForce = add(loads.headForce, load.force);
+    loads.headTorque = add(loads.headTorque, load.torque);
+    p.slide += length(load.slip) * dt;
+    recordStep(p.line, true, load.bearing, t);
+    return load;
+}
+
+/**
+ * True when the head–turf `load` holds the head at rest (P2b.2b.2b.3 design §4.3; user ruling 2026-10-16): its spring
+ * sticks and the head's centre moves at under HEAD_REST_SPEED, |v| over all three components, so that a head still
+ * sinking into the turf is not at rest.
+ */
+function atRest(load: HeadTurfLoad, state: HeadState): boolean {
+    return !load.sliding && length(state.velocity) < HEAD_REST_SPEED;
 }
 
 /** One semi-implicit Euler step of the head alone (a force table) under `loads`. */
@@ -972,8 +989,11 @@ export function integrateStroke(setup: ImpactSetup, options: ImpactOptions = {},
     const turf: HeadTurfState | null =
         setup.headTurf === null
             ? null
-            : { law: setup.headTurf, spring: ZERO, peak: 0, line: emptyTimeline(), slide: 0 };
+            : { bed: newHeadTurfBed(setup.headTurf), peak: 0, line: emptyTimeline(), slide: 0 };
     let deep = false;
+    let yielded = false;
+    let resting = 0;
+    let limited = false;
     const jumps: EntryJumps | null = tracked ? { count: 0, worst: 0, keys: [] } : null;
     let state: HeadState = setup.start;
     let grounded = false;
@@ -983,6 +1003,7 @@ export function integrateStroke(setup: ImpactSetup, options: ImpactOptions = {},
     const trace: StrokeState[] | null = follow && tracked ? [{ t: 0, head: setup.start }] : null;
     const every = Math.max(1, Math.round(FOLLOW_SAMPLE / dt));
     const releaseAt = plan.kind === "track" ? releaseTime(plan) : 0 - Infinity;
+    const aim = plan.kind === "track" ? plan.arc.aim : vec3(1, 0, 0);
 
     for (;;) {
         const t = steps * dt;
@@ -996,6 +1017,10 @@ export function integrateStroke(setup: ImpactSetup, options: ImpactOptions = {},
             hand = handLoad(plan, state, head, t, grip);
             drive = hand.force;
             headTorque = hand.torque;
+            if (hand.saturated !== null && !limited) {
+                limited = true;
+                events.push({ kind: "grip-limit", t, hand: hand.saturated });
+            }
         }
         const loads: StepLoads = {
             headForce: shaft === null ? add(drive, headWeight) : add(add(drive, headWeight), shaft.force),
@@ -1113,11 +1138,23 @@ export function integrateStroke(setup: ImpactSetup, options: ImpactOptions = {},
             grip.resistance = senseResistance(grip.resistance, resistance, response);
         }
 
-        // The head–turf pair comes after every other pair (design §4.1).
-        const turfForce = turf === null ? null : applyHeadTurf(turf, state, head, dt, loads, t, jumps);
-        if (turfForce !== null) {
-            hardClosed = true;
+        // The head–turf pair comes after every other pair (design §4.1). A head at rest in the turf no longer holds
+        // the impact open (P2b.2b.2b.3 design §4.6).
+        const turfLoad = turf === null ? null : applyHeadTurf(turf, state, head, dt, loads, t, jumps, aim);
+        if (turfLoad !== null) {
+            if (turfLoad.yielded && !yielded) {
+                yielded = true;
+                events.push({ kind: "turf-yield", t });
+            }
+            // Once the ball has been struck and the drive is done (the end rule's own terms; a face–ball contact still
+            // closed holds the impact open by itself), the follow-through takes the head's turf contact over on the
+            // same bed, so the pair no longer holds the impact open (user ruling 2026-10-16). Before then, only a head
+            // at rest in the turf lets it go.
+            if (!atRest(turfLoad, state) && !(struck && (steps + 1) * dt >= driveEnd)) {
+                hardClosed = true;
+            }
         }
+        resting = turfLoad !== null && atRest(turfLoad, state) ? resting + 1 : 0;
         guardFootprints(balls, beds, R, ids);
 
         state = advance(state, balls, travel, loads, setup, ballInertia, dt, grip);
@@ -1163,7 +1200,7 @@ export function integrateStroke(setup: ImpactSetup, options: ImpactOptions = {},
                                         ...chainsOf(grip),
                                     },
                                 }),
-                          ...(turf === null ? {} : { headTurf: turfForce ?? ZERO }),
+                          ...(turf === null ? {} : { headTurf: turfLoad?.force ?? ZERO }),
                       },
             );
         }
@@ -1174,6 +1211,12 @@ export function integrateStroke(setup: ImpactSetup, options: ImpactOptions = {},
         const waiting =
             plan.kind === "track" && plan.push !== null && plan.push.pendulum !== null && grip.releasedAt === null;
         if (settled && !waiting && (plan.kind === "force" || !stillReaching(state, head, balls, R, plan, now))) {
+            break;
+        }
+        // A head stopped dead in the turf before any face contact ends the impact (P2b.2b.2b.3 design §4.6; plan
+        // decision 13): the balls are handed over as they lie.
+        if (!struck && resting >= RELEASE_STEPS) {
+            events.push({ kind: "impact-head-stopped", t: now });
             break;
         }
         if (now >= cap) {
@@ -1204,12 +1247,13 @@ export function integrate(setup: ImpactSetup, options: ImpactOptions = {}): Impa
 
 /**
  * The follow-through (P2b.2b.2a design §4.1): the impact's loop continued from `start` at step `first`, with the balls
- * removed. The hands keep `grip`; the head–turf pair keeps its spring on a fresh timeline, so the run's timeline is
- * never touched. A stop holds its pendulum from the check's window's end (or the impact's end, if later), and the
- * hands grip the head firmly from then on (holdPendulum, handLoad's `gripped`). Appends to `trace` the head at the
- * impact's end, every FOLLOW_SAMPLE, at the first step at or after the release (releaseTime) if it falls here, and at
- * the finish: the stroke type's, or FOLLOW_CAP after contact with `follow-cap`. Flags `follow-head-deep` once, as the
- * impact flags `impact-head-deep`.
+ * removed. The hands keep `grip`; the head–turf pair keeps the impact's bed (its sets, entry floors and spring) on a
+ * fresh timeline, so the run's timeline is never touched. A stop holds its pendulum from the check's window's end (or
+ * the impact's end, if later), and the hands grip the head firmly from then on (holdPendulum, handLoad's `gripped`).
+ * Appends to `trace` the head at the impact's end, every FOLLOW_SAMPLE, at the first step at or after the release
+ * (releaseTime) if it falls here, and at the finish: the stroke type's, or FOLLOW_CAP after contact with `follow-cap`.
+ * Flags `follow-head-deep` once, as the impact flags `impact-head-deep`, and `follow-turf-yield` once, as it raises
+ * `turf-yield`.
  */
 function continueStroke(
     setup: ImpactSetup,
@@ -1238,7 +1282,7 @@ function continueStroke(
     const headWeight = vec3(0, 0, 0 - head.mass * setup.gravity);
     const shaft = shaftWeightOf(head, setup.gravity);
     const ground: HeadTurfState | null =
-        turf === null ? null : { law: turf.law, spring: turf.spring, peak: 0, line: emptyTimeline(), slide: 0 };
+        turf === null ? null : { bed: turf.bed, peak: 0, line: emptyTimeline(), slide: 0 };
     const flags: FollowFlag[] = [];
     const none: BallState[] = [];
     if ((trace[trace.length - 1] as StrokeState).t !== first * dt) {
@@ -1258,6 +1302,9 @@ function continueStroke(
         }
         // The impact loop's hands, head–turf and advance, kept apart: sharing them would reorder the impact's sums.
         const hand = handLoad(path, state, head, t, grip, t >= holdFrom);
+        if (hand.saturated !== null && !flags.includes("follow-grip-limit")) {
+            flags.push("follow-grip-limit");
+        }
         const loads: StepLoads = {
             headForce: shaft === null ? add(hand.force, headWeight) : add(add(hand.force, headWeight), shaft.force),
             headTorque:
@@ -1269,7 +1316,10 @@ function continueStroke(
             ballsOnHead: null,
         };
         if (ground !== null) {
-            applyHeadTurf(ground, state, head, dt, loads, t, null);
+            const load = applyHeadTurf(ground, state, head, dt, loads, t, null, plan.arc.aim);
+            if (load !== null && load.yielded && !flags.includes("follow-turf-yield")) {
+                flags.push("follow-turf-yield");
+            }
         }
         state = advance(state, none, [], loads, setup, 0, dt, grip);
         if (kind === "carry") {

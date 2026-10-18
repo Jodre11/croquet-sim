@@ -4,8 +4,8 @@
  * - Mallet: reference/mallet.json, the Pidcock 2000 11" as a rounded box on a 36 in, 0.325 kg shaft (P2b.2b.2b.2c
  *   design §5.3), its placeholders flagged at MALLET.
  * - Body: reference/contact.json (`armMass` and `reachSlack`, the prototype's calibration),
- *   the arm's flex and pendulum push (P2b.2b.2b.2b), the push intent's cap and response time and each hand's
- *   hand–arm chain (its gate rulings), measured.
+ *   the arm's flex and pendulum push (P2b.2b.2b.2b), the push intent's cap and response time, each hand's
+ *   hand–arm chain (its gate rulings) and the grip's limit (Young et al. 2009; P2b.2b.2b.3), measured.
  * - Stance: the hands measured from the socket along the shaft, after John Riches, Croquet Technique (Oxford Croquet),
  *   quoted per preset below. The swing presets keep their own leans. The rolls' leans are Don Gugan's measured face
  *   angles (Gugan 4, Table 6), with Riches' angles kept as cues (user decision, 2026-10-08). Each preset is defined by
@@ -30,7 +30,7 @@ import {
 } from "../../reference/index";
 import { ReferenceDataError } from "../../reference/schema";
 import { faceHalfHeight } from "../impact/shape";
-import { ARM_FLEX, HAND_CHAIN, PENDULUM_FORCE, PUSH_FORCE, PUSH_RESPONSE_TIME } from "../impact/track";
+import { ARM_FLEX, GRIP_LIMIT, HAND_CHAIN, PENDULUM_FORCE, PUSH_FORCE, PUSH_RESPONSE_TIME } from "../impact/track";
 import type { StrokeMode } from "../impact/types";
 import { handsAheadFor, headShapeOf } from "./buildContact";
 import {
@@ -278,6 +278,7 @@ export const defaultProfile: SwingProfile = {
         pushForce: PUSH_FORCE,
         pushResponseTime: PUSH_RESPONSE_TIME,
         chain: HAND_CHAIN,
+        gripLimit: GRIP_LIMIT,
     },
     stance: {
         // The top hand fixed at the top of the handle; the bottom hand high and light, a guide only (prototype). Riches
