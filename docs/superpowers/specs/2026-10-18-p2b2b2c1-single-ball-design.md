@@ -462,3 +462,10 @@ downswing's steps and `shotMix`'s engine time, run alone).
 - **The advance's two narrowings (user, 2026-10-18).** The spec review's two changes to the approved advance were put
   to the user afterwards, and both were confirmed: an advance before the window's end throws, the early push being
   `drive`'s; and the advance releases to the free swing, with no roll-style pendulum phase (§6.1, §6.2).
+- **The advance as played (user, 2026-10-18, while planning).** "In practice the 'levelness' is temporary, the
+  contact is extended by pushing the hands forward. The intent is not to stop or interrupt the arc of the mallet
+  head." And on its moment: "the intent is [from contact]. However this is down to the skill of the player." This
+  supersedes §6's held slope and release, and the moment's lower bound (§6.2, and the narrowing just above): the
+  advance is a player-timed action like the arc's, the hands' and the dip's, on time at contact, early or late as
+  played, and the mallet swings freely throughout, the head's path flattened only while the hands accelerate.
+  §8.1.5's 2 mm height test goes with the held slope. The plan's decisions 1–6 and 15 give the detail.
