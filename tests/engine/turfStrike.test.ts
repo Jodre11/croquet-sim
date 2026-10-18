@@ -81,7 +81,7 @@ describe("the three regimes (P2b.2b.2b.3 design §7.4)", () => {
     // contact, a future feature.
     it.todo("stops a weak stroke dead in the turf before the ball: impact-head-stopped, not impact-cap");
 
-    it("lets a head biting in saturate a hand: the top hand held at its grip limit in the turf", () => {
+    it("holds the top hand at its grip limit at a step with a biting head in the turf", () => {
         // User ruling 2026-10-17 ("Hand held at limit in turf"): the top hand held at its 435 N limit at a step
         // within a head/turf interval. The grip-limit event cannot show it: it marks only a hand's first saturation
         // (integrate.ts, `!limited`), which here comes at 37.61 ms, with the head out of the turf. The probe:
@@ -102,9 +102,11 @@ describe("the follow-through's flags (P2b.2b.2b.3 design §4.6)", () => {
         // The probe: half-roll at 4 m/s, the first roll of its search to yield (2 and 3 m/s do not); the impact
         // never grounds the head (lowest 38.6 mm), the follow-through ploughs it in and runs to its cap: flags
         // follow-turf-yield, follow-head-deep, follow-cap.
-        const outcome = simulateShot(shot(FOLLOW.type, FOLLOW.speed), WORLD, { trajectory: true });
+        const setup = shot(FOLLOW.type, FOLLOW.speed);
+        expect(along(setup).impact.timeline["head/turf"] ?? []).toHaveLength(0);
+        const outcome = simulateShot(setup, WORLD, { trajectory: true });
         const flags = (outcome.trajectory as SwingTrajectory).flags;
-        expect(flags.filter((f) => f === "follow-turf-yield")).toHaveLength(1);
+        expect(flags).toEqual(["follow-turf-yield", "follow-head-deep", "follow-cap"]);
     });
 });
 

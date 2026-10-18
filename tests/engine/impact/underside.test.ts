@@ -161,9 +161,9 @@ describe("the head's underside (P2b.2b.2b.3 design §4.1)", () => {
     });
 
     it("bounds the head's part below the plane within headReach, null where none is", () => {
-        // Task 5 fix round: the law visits only the columns within the reach, so every (x, y) whose underside lies
-        // below z = 0 must lie within it, unpadded. Tumbled heads cutting the plane at every depth, scanned on a 1 mm
-        // grid over the head's whole extent; a head clear of the plane has no reach.
+        // The law visits only the columns within the reach, so every (x, y) whose underside lies below z = 0 must lie
+        // within it, unpadded. Tumbled heads cutting the plane at every depth, scanned on a 1 mm grid over the head's
+        // whole extent; a head clear of the plane has no reach.
         const random = rng(41);
         for (const head of [TEST_HEAD, TEST_BOX, TEST_SHARP]) {
             for (let n = 0; n < 30; n++) {

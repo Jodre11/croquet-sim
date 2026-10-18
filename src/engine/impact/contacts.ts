@@ -539,7 +539,7 @@ function reachBelow(bound: Reach | null, a: Vec3, b: Vec3, top: number): Reach |
 
 /**
  * A horizontal bound [x0, x1, y0, y1] (m) on the head's part below the turf plane, or null where none of it is (the
- * head–turf law's columns; cost only, P2b.2b.2b.3 Task 5 fix round): every (x, y) where headUnderside is below 0 lies
+ * head–turf law's columns; a cost bound only): every (x, y) where headUnderside is below 0 lies
  * within it. A rounded box is its core ⊕ a ball of radius e, so a point below z = 0 lies within e of a core point below
  * z = e: the bound is the core's part below e (its vertices and its edges' crossings of z = e) widened by e. A
  * cylinder's point lies within r of its axis, and below z = 0 only where the axis is below r·√(1 − a_z²): the axis's
