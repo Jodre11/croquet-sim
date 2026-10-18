@@ -104,15 +104,15 @@ describe("the hands' advance (design §6, §8.1.5)", () => {
             expect(advanceTravel(a, seam - 1e-12).v).toBeCloseTo(advanceTravel(a, seam + 1e-12).v, 9);
         }
     });
-    it("slows the planned turn while late hands speed up: the planned ω at their ramp's end is lower", () => {
+    it("slows the head's turn while the hands speed up: its pitch rate at the ramp's end is lower", () => {
         // On time the ramp [contact, contact + W] coincides with the pendulum's window, whose α law prescribes θ, so
-        // the plan cannot see it (the run's hand load does: the flatten test). A late advance's ramp lies wholly in the
-        // free table, which integrates the hands' acceleration through freeAlpha (plan decision 1). 0.05 s after
-        // contact is after the window's end (W = 0.01 s) and well before the no-advance finish (about 0.498 s).
-        const late = level(0.05);
-        const RAMP_END = advanceOf(late).ramp;
-        expect(RAMP_END).toBeGreaterThan(arc().contactAt + 2 * arc().window);
-        expect(plannedOmega(late, RAMP_END)).toBeLessThan(plannedOmega(rising(), RAMP_END));
+        // the plan cannot show it: the planned ω there is bit-equal with and without the advance. The slowing reaches
+        // the head through swing mode's hand load, which pushes the top of the shaft forward along aim.
+        const RAMP_END = arc().contactAt + arc().window;
+        const at = (setup: ShotSetup): number =>
+            (pitchRates(setup).find(({ t }) => t >= RAMP_END) as { rate: number }).rate;
+        expect(plannedOmega(level(), RAMP_END)).toBe(plannedOmega(rising(), RAMP_END));
+        expect(at(level())).toBeLessThan(at(rising()));
     });
     it("flattens the head's rise over the advance", () => {
         // Plan decision 15: the head centre's highest point above its height at contact, contact to t_e.
