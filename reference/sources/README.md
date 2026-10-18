@@ -443,3 +443,26 @@ file (a web page is fetched with `--compressed`). An Oxford Croquet page is hash
   for the unrestricted swing" (the mean of the seven lowest ratios); "even for the best 'stop' ... the mallet speed has
   only been reduced to 0.295U" (the jab check, spec §7.3).
 - **No source** measures a club's or a mallet's loss of speed in turf.
+
+## P2b.2b.2c.1: the single-ball stroke (design §4.3, §4.4)
+
+The source behind the effort law's shape: the torque a muscle can give falls as its speed of shortening rises. Looked
+up 2026-10-18. Nothing fetched is committed.
+
+| Short name | Work | URL | SHA-256 |
+|---|---|---|---|
+| Hill 1938 | A. V. Hill, "The heat of shortening and the dynamic constants of muscle", *Proc. R. Soc. Lond. B* 126(843):136–195 (1938), doi 10.1098/rspb.1938.0050 | https://royalsocietypublishing.org/rspb/article/126/843/136/29289/The-heat-of-shortening-and-the-dynamic-constants | none: no open full text was reachable |
+
+### What each gives the model
+
+- **Hill 1938:** the force–velocity relation of a shortening muscle, (P + a)(v + b) = constant, whose force falls as the
+  speed of shortening rises; it shapes the torque that falls to zero at ω_max (design §4.4). No open full text could be
+  fetched on 2026-10-18: the Royal Society's PDF, abstract page, the AHA "Classic Pages" excerpt and the SciSpace copy
+  all answer HTTP 403, and the Scribd copy is a user upload, not a stable file. So the digest is not recorded and the
+  relation is cited from the DOI and the abstract page, not from a quotation of the full text. The only text seen is the
+  search index's abstract: "The hope was recently expressed (Hill 1937, p. 116) that with the development of a more
+  accurate and rapid technique for muscle heat measurement, a much more consistent picture might emerge of the energy
+  relations of muscles shortening (or lengthening) and doing positive (or negative) work." The form (P + a)(v + b) is
+  the textbook statement of the paper's result, unverified here against its text.
+- **The speed ceiling** is set from the CA's A4D mallet speed of 8.18 m/s already cited above ("Backswing against
+  contact speed"): 1.1 × 8.18 = 9.0 m/s, rounded (plan decision 11).
