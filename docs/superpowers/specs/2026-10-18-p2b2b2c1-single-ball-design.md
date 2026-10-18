@@ -459,3 +459,6 @@ downswing's steps and `shotMix`'s engine time, run alone).
   (§8.1.3) and the rise's general form given (§8.1.4). The files the change forces are named (§2). The full roll's
   check and §9's line numbers are cut. The guard stays in this step: it protects the new law's sweeps, and costs
   nothing where runs are finite.
+- **The advance's two narrowings (user, 2026-10-18).** The spec review's two changes to the approved advance were put
+  to the user afterwards, and both were confirmed: an advance before the window's end throws, the early push being
+  `drive`'s; and the advance releases to the free swing, with no roll-style pendulum phase (§6.1, §6.2).
