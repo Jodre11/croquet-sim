@@ -116,24 +116,30 @@ Exit criteria:
 
 ```
 src/engine/impact/
-  integrate.ts       the finite-state guard after each advance, in the impact and in continueStroke (§3); the finish
-                     rule for a carried swing-mode follow-through (§6.3)
-  track.ts           the carried follow-through in swing mode: the advance on the hands' arc and the held slope, then
-                     the pendulum phase (§6), reusing the carry mode's carryPivot and pendulumAt pieces
+  integrate.ts       the finite-state guard after each advance, in the impact and in continueStroke (§3); the swing
+                     finish armed only once an advance has released its held slope (§6.3)
+  track.ts           the swing-mode advance: the planned pivot's level travel and the held slope, then the free swing
+                     (§6), reusing carryPivot (at an infinite radius) and the carry mode's slope hold
 src/engine/swing/
-  downswing.ts       the effort law (§4); the body's backswing limit θ_max (§5) replacing MAX_BACK_ANGLE
-  types.ts           SwingProfile.body gains the effort law's τ_0, ω_max and onset (§4.4) and the backswing's limit
-                     (§5); SwingShape loses torqueMax, tempoSlow and tempoFast in swing mode;
-                     ShotSetup.stroke gains the follow-through's carry inputs in swing mode (§6.2)
-  buildContact.ts    validation of the new inputs; the planned speed through the new law
-  profile.ts         the defaults (§4.4, §5.3, §6.2)
-reference/swing.json, reference/sources/README.md
-scripts/fitStrokeShape.ts   the re-fit (§4.4, §5.3)
+  downswing.ts       the effort law (§4); the body's backswing limit θ_max in swing mode (§5); MAX_BACK_ANGLE kept as
+                     carry mode's limit and as θ_max's ceiling
+  types.ts           SwingProfile.body gains τ_0, ω_max and θ_max (§4.4, §5); SwingShape's effort loses torqueMax,
+                     tempoSlow and tempoFast in swing mode; ShotSetup.stroke gains the advance's moment (§6.2)
+  buildContact.ts    validation of the advance; the planned speed through the new law
+  profile.ts         the body's new figures; the swing presets' effort; swing mode's handTempo fallback (:99, :106-109)
+src/reference/index.ts      the swing-mode effort keys it requires (:301, :337-339) and the body's new entries
+reference/swing.json        a body block for τ_0, ω_max, κ and θ_max, each with its provenance; the swing presets'
+                            new defaults; the carry presets' handTempo and defaultBackswing frozen (§4.4)
+reference/sources/README.md Hill 1938; the CA A4D figure's use for the ceiling
+scripts/fitStrokeShape.ts   the re-fit of the swing presets only (§4.4, §4.5)
+tests/engine/support/shot.ts, tests/reference/reference.test.ts   MAX_BACK_ANGLE and the effort tempos they read
 ```
 
-The swing/carry split of the downswing stays: carry mode has no effort pulse and is not touched by §4. What changes is
-that the follow-through's mode is no longer fixed by the downswing's: a swing-mode stroke may be carried after contact
-(§6). The rolls' code paths are reused, not copied.
+The swing/carry split of the downswing stays: carry mode has no effort pulse and is not touched by §4 or §5. What
+changes is that a swing-mode stroke's hands may advance after contact (§6), reusing the rolls' pieces, not copying
+them. Its hand load and swung body stay swing mode's (`handLoad`, `swungBody`, `track.ts:759-760`): the ball has left
+the face within about a millisecond, so the carry mode's hand–arm chains could change no launch figure, and keeping
+swing mode's grips keeps every run without an advance bit-identical (my call).
 
 ## 3. The finite-state guard
 
@@ -179,10 +185,11 @@ today's strike laws (§8.5); if it does not, the gate (§10) decides, since the 
 **Preferred form (my call, the builder may choose another that meets §4.2 and records its source):** a Hill-type
 torque–velocity law, the player's torque falling as the swing speeds up:
 
-τ_p = i · τ_0 · max(0, 1 − ω/ω_max) · ρ(τ),
+τ_p = i · τ_0 · max(0, 1 − ω/ω_max),
 
-with ω the shaft's angular speed, τ_0 the player's isometric torque, ω_max the speed at which the player can add no
-more, and ρ a short onset ramp from the backswing's top (so the torque is not a step). It gives diminishing returns
+with ω the shaft's angular speed, τ_0 the player's isometric torque and ω_max the speed at which the player can add no
+more. The torque starts as a step at the backswing's top; an onset ramp is added only if the plan shows the step
+breaks a test (the work–energy balance, §8.1.2), and is then a labelled placeholder. It gives diminishing returns
 from the physiology itself (Hill 1938, the force–velocity relation of muscle), never turns over, and acts until
 contact; the tempo is then an outcome, a harder swing being a quicker one. `tempoSlow` and `tempoFast` leave swing
 mode (carry mode keeps its hands' tempo). Hill 1938 is fetched and cited in `reference/sources/README.md` by the plan
@@ -194,10 +201,18 @@ every swing preset, not per preset in `SwingShape`. Two unknowns need two condit
 - **ω_max** is set by the share of the player's speed the swing uses at full effort: at intensity 1 from the
   body-limited top, the shaft's angular speed at contact is κ·ω_max, with κ = ⅔ a labelled placeholder (the torque
   left at contact a third of τ_0), taken on the drive preset;
-- **τ_0** is then bisected so that the lowest U(1) over the swing presets, each from its body-limited top, is exactly
-  9.0 m/s (§4.3), so every preset meets the ceiling.
+- **τ_0** is set so that the lowest U(1) over the swing presets, each from its body-limited top, is exactly 9.0 m/s
+  (§4.3), so every preset meets the ceiling.
 
-κ shapes U(i)'s concavity; the gate (§10) sees U(i) at κ = ⅔ beside ½ and ¾. ρ's length is a labelled placeholder.
+The two are coupled (the contact's ω depends on τ_0), so they are solved jointly: an outer bisection on τ_0 for the
+ceiling, each step solving ω_max for κ, to 1e-9 relative in both. κ shapes U(i)'s concavity; the gate (§10) sees U(i)
+at κ = ⅔ beside ½ and ¾.
+
+**The carry presets are frozen.** Today the rolls' `handTempoSlow` is the single-ball stroke's gravity-only fall time
+and their `defaultBackswing` is bisected from `maxBackswing` (`fitStrokeShape.ts:113`, `:198`, `:221-224`); a re-fit
+would move them by ulps. The fit therefore re-fits the swing presets only, and the carry presets' `handTempoSlow`,
+`handTempoFast` and `defaultBackswing` keep today's values, their provenance in `swing.json` noting that they are
+frozen at engine 0.12.0's fit.
 
 **The torque ends at contact.** The impact window's law (α = drive·speedGain·U/(ℓ·window), `buildContact.ts:648`) is
 untouched: the impact is about a millisecond (Sutherland 1995), and whatever a freer stroke gains, it gains through
@@ -226,8 +241,10 @@ groin above the hands, where it limits nothing. A real stance also bends the kne
 
 So the limit is a direct body figure (decided 2026-10-18, §Amendments): `SwingProfile.body` gains **θ_max**, the
 shaft's largest angle back from vertical at the backswing's top, documented as "where the shaft meets the groin".
-θ_max replaces `MAX_BACK_ANGLE` in `planDownswing`'s check, and the `RangeError` for a backswing beyond it names the
-body's limit. θ_max is at most π/2: with a fixed pivot the head cannot rise above the hands.
+In swing mode θ_max replaces `MAX_BACK_ANGLE` in `planDownswing`'s check, and the `RangeError` for a backswing beyond
+it names the body's limit. θ_max is at most π/2 (`MAX_BACK_ANGLE`, kept as its ceiling): with a fixed pivot the head
+cannot rise above the hands. Carry mode keeps `MAX_BACK_ANGLE`: the rolls' stance differs (Riches: forward, the bottom
+hand half-way down), no account gives its limit, and the rolls stay bit-identical.
 
 ### 5.2 Its default
 
@@ -252,37 +269,48 @@ articulated body, deferred (§12). The grip's and a modified shaft's effect on �
 ### 6.1 The physics
 
 The rising style is today's: the top hand comes to rest after contact and the head swings freely up its arc. The level
-style is the player's hands advancing at the right moment, as in the roll: the hands travel forward along aim on their
-own path, the shaft's slope held, so the head travels on with them instead of rising, and then the mallet swings
-through as a pendulum. The roll's carry mode already has every piece: the hands' arc (`carryPivot`, `track.ts:703-720`;
-an infinite `handArcRadius` is level), the held slope (`track.ts:853-873`) and the pendulum phase (`pendulumAt`,
-`pendulumEffort`, `track.ts:839-888`, `:1342-1467`).
+style is the player's hands advancing at the right moment, as in the roll: the hands travel forward along aim, the
+shaft's slope held, so the head travels on with them instead of rising; at the end of the hands' travel the mallet is
+released to swing freely, as today. The roll's carry mode already has the pieces: the hands' arc (`carryPivot`,
+`track.ts:703-720`, level at an infinite `handArcRadius`) and the held slope (`track.ts:853-873`). The roll's
+pendulum phase (the bottom hand's push, `pendulumEffort`, `carryLoad`) is not used: it acts after the ball has gone and
+could change no launch figure.
 
 ### 6.2 The inputs
 
-A swing-mode stroke may carry its follow-through: from a player-set moment the hands advance on the roll's hands' arc
-with the slope held, over a player-set travel, and then hand over to the pendulum phase. The inputs are the moment
-(after contact, s, or before: an early advance drives the head into the ball, which the fault judge rules on as a
-push, as today), the travel, the arc and the pendulum phase's start and effort; their names and grouping are the
-builder's, reusing `StrokeTiming.hands`, `handReach`, `pendulumAt` and `pendulumEffort` where their meanings fit. With
-no advance set, the stroke is today's swing-mode follow-through, bit-identical (§8.2).
+One new input, the advance's **moment** (s from contact). The advance's travel is the existing `stroke.handReach` (the
+hands' travel along aim after contact); its path is level (`carryPivot` at an infinite radius), not an input. With no
+moment set, the stroke is today's swing-mode follow-through, bit-identical (§8.2).
+
+- **The moment's range.** No earlier than the impact window's end (`arcStart + window`): before it the window's α law
+  holds the path, as today, and a hands' drive into the ball before contact is the existing `drive` input (+1 a
+  push), whose faults the judge already rules on. A moment earlier than the window's end throws a `RangeError`. A
+  moment after the swing's finish has fired leaves the stroke as today's, since the follow-through has already ended;
+  it is recorded, not an error.
+- **The check strokes.** An advance on a stroke whose window checks (α < 0: the AC and GC stops, `integrate.ts:373`)
+  throws a `RangeError`: the check holds the pendulum to rest relative to the hands (`holdPendulum`), and the arms'
+  checking force is step 2's.
+- **The travel.** An advance needs `handReach` > 0 (the single-ball preset's default reach may be 0); a moment with no
+  travel throws a `RangeError`.
+- **The bottom hand.** `guideEffort` acts after the advance as it does today: the bottom hand stays a one-way rate
+  guide under swing mode's `handLoad`.
 
 **How the hands move (my calls).** Every swing preset's planned pivot is at rest after contact (handGain 0,
-pendulumShare 1), so the roll's `carryPivot` alone would not move it. The advance therefore starts the hands at the
-speed along aim that keeps the head's speed along aim continuous at the advance's moment (the shaft's slope then
-held), and eases them to rest over the set travel on the roll's hands' arc, as the reach eases today. The slope is
-held at its value at the advance's moment, so a late advance holds an already-risen head. The pendulum's angular speed
-at that moment is brought to the held slope by the carry mode's quartic over one window (`track.ts:847-870`). The
-builder may refine these if §8.1.5's tolerance cannot be met, and records why.
+pendulumShare 1), so `carryPivot` alone would not move it. The advance starts the hands at the speed along aim that
+keeps the head's speed along aim continuous at the moment, and eases them to rest over `handReach` on the level path,
+as the reach eases today. The slope is held at its value at the moment, so a late advance holds an already-risen head;
+the pendulum's angular speed there is brought to the held slope by the carry mode's quartic over one window
+(`track.ts:847-870`). At the end of the travel the slope is released and the head swings freely. The builder may
+refine these if §8.1.5's tolerance cannot be met, and records why.
 
-The engine never names a style:
-the level and the rising strokes are two ends of a continuum the inputs span, and a mistimed advance falls between
-them.
+The engine never names a style: the level and the rising strokes are two ends of a continuum the moment spans, and a
+mistimed advance falls between them.
 
 ### 6.3 The finish
 
-A carried swing-mode follow-through finishes as a carried roll does: at the first apex after the pendulum phase
-starts (`integrate.ts:366-391`), since the swing apex test never fires while the slope is held.
+The swing finish stays: the pendulum's apex, its pitch rate at or below zero (`integrate.ts:384-385`). While the slope
+is held the pitch rate is near zero, so with an advance set the finish is armed only once the travel has ended and the
+slope is released.
 
 ### 6.4 The ball's behaviour
 
@@ -304,15 +332,17 @@ away). Nothing is added for it; §8.4 checks that it emerges.
 1. **The guard.** A stroke with ζ ≥ 2 (the carried open item's setup) throws a `RangeError` naming the step; a
    constructed state with one NaN velocity is caught at the next step in the impact and in the follow-through.
 2. **The effort law.** At i = 0 the swing is gravity-only, to the bit against today's. At fixed ω the torque is
-   i·τ_0·(1 − ω/ω_max)·ρ; at ω ≥ ω_max it is 0. The work–energy balance of the downswing holds within 0.1 % (P2b.2b.2a's
+   i·τ_0·(1 − ω/ω_max); at ω ≥ ω_max it is 0. The work–energy balance of the downswing holds within 0.1 % (P2b.2b.2a's
    test) at every intensity.
-3. **Monotone and concave.** Over i in steps of 0.05 on every swing preset at its default and its body-limited
-   backswing: U strictly increasing, its second differences negative, and the slope at 1 as §4.2 requires.
+3. **Monotone and concave.** On every swing preset, over backswings from 0.05 m (an ankle-height tap) to the
+   body-limited top in ten equal steps, and over i in steps of 0.05: U strictly increasing, its second differences
+   negative, and the slope at 1 as §4.2 requires. This grid is §4.2's and exit criterion 2's "backswing range".
 4. **The backswing's limit.** For a constructed θ_max, a backswing to just inside it plans and one just beyond throws,
-   naming the body's limit; at the same θ_max a longer shaft gives a higher head, by ℓ(1 − cos θ_max).
-5. **The carried swing.** A swing-mode stroke with an advance on an infinite arc keeps the head centre's height within
-   a tolerance the plan sets (at most 2 mm) of its height at contact from the advance's start to the pendulum phase;
-   with no advance, bit-identical to today's.
+   naming the body's limit; the head's rise at θ_max is ℓ(cos θ_c − cos θ_max)/s (s the pendulum's share, θ_c the
+   shaft's angle at contact), so at the same θ_max a longer shaft gives a higher head. Carry mode's limit unchanged.
+5. **The advance.** A swing-mode stroke with an advance keeps the head centre's height within a tolerance the plan
+   sets (at most 2 mm) of its height at the moment, from the moment to the end of the travel; the swing finish fires
+   only after the release; the `RangeError`s of §6.2 fire; with no moment set, bit-identical to today's.
 
 ### 8.2 The ratchet
 
@@ -320,11 +350,11 @@ Baselines on `main` before any change: the throwaway preset digest, `scripts/imp
 phase 2 (timing lines dropped) and `scripts/impactProbe.ts`.
 
 1. After the guard: all four bit-identical.
-2. After the groin limit: bit-identical wherever no backswing reaches it; any run it now rejects listed.
-3. After the carried follow-through with no advance set: all bit-identical.
+2. After θ_max: bit-identical wherever no backswing reaches it; any run it now rejects listed.
+3. After the advance with no moment set: all bit-identical.
 4. After the effort law and the re-fit: the impact digest, `impactProbe`, the shot mix's phase 2 and every carry-mode
-   run (the rolls) bit-identical; every swing-mode run moves, each preset's moved runs counted and its canonical
-   figures listed old → new.
+   run (the rolls, their tempo and backswing frozen, §4.4) bit-identical; every swing-mode run moves, each preset's
+   moved runs counted and its canonical figures listed old → new.
 
 ### 8.3 The canonical runs
 
@@ -336,8 +366,9 @@ On constructed single-ball setups the plan fixes, at 3 and 5 m/s:
 
 1. **Both styles.** A rising and a level stroke at the same planned speed each run top to finish; their launch
    speeds, spins, skid lengths and travels recorded side by side (not gated against each other).
-2. **A mistimed advance.** A sweep of the advance's moment from early to late: early runs are judged by the fault judge
-   as today; the head's path moves continuously from level to rising; recorded.
+2. **A mistimed advance.** A sweep of the advance's moment from the window's end to past the swing's finish: the
+   head's path moves continuously from level to rising; recorded. The early side is the `drive` input's push, swept
+   beside it from 0 to +1 and judged by the fault judge as today.
 3. **The flick.** A sweep of the contact's place along the arc (by the arc's timing and `handsAhead`): the ball's
    launch angle rises with the head's rise angle at contact, and past some rise the ball leaves the turf; recorded,
    with the first sweep step at which the ball is airborne.
@@ -352,9 +383,9 @@ Against "User play data and checks (2026-10-08)", at the default world at 10 s, 
 - the single ball from a knee-height backswing (0.45 m) over intensity 0–1, against the user's 5, 15 and 30 yd
   strokes (felt effort is not intensity: P3 maps one to the other);
 - the default's body-limited top against the user's "about knee height";
-- the drive at the ceiling: the croqueted ball against the full 35 yd length (the default club player drives it);
-- the full roll's distance at full effort, recorded only (rolls untouched here; a full-lawn roll should be harder
-  than a full-lawn drive).
+- the drive at the ceiling: the croqueted ball against the full 35 yd length (the default club player drives it).
+
+The rolls are bit-identical here, so their distances stand as recorded; the full-lawn roll's check is step 3's.
 
 ### 8.6 The existing tests
 
@@ -364,25 +395,25 @@ turns red and is removed, the gate told.
 
 ## 9. The modes' split (recorded for the unified model)
 
-The plan lists, file and line, every place swing and carry mode or a single preset branches (the explore map of
-2026-10-18 found about twenty: `SwingDrive.mode` and its four carry-only fields, `shapeOf`, `DRIVE`/`DEFAULT_DRIVE`,
-`planDownswing`, `validate`, `arrival`, `prepareTrack`, `pivotAt`, `pendulumAt`, `handLoad`/`carryLoad`, `inCheck`,
-`finishKind`, the carry resistance and chains, the check hold, the fit's branch, `canonicalSetup`'s special cases), and
-records it in the roadmap as the unified model's debt. This step removes one: the follow-through's mode is no longer
-the downswing's.
+The roadmap records, by name, where swing and carry mode or a single preset branch, as the unified model's debt (the
+explore map of 2026-10-18 found about twenty): `SwingDrive.mode` and its four carry-only fields, `shapeOf`,
+`DRIVE`/`DEFAULT_DRIVE`, `planDownswing`, `validate`, `arrival`, `prepareTrack`, `pivotAt`, `pendulumAt`,
+`handLoad`/`carryLoad`, `inCheck`, `finishKind`, the carry resistance and chains, the check hold, the fit's branch,
+and `canonicalSetup`'s special cases. Line numbers are left to the step that merges the modes. This step narrows one:
+the hands' advance and held slope are no longer carry mode's alone.
 
 ## 10. The pre-flight gate
 
-The order of work is the ratchet's (§8.2): the guard, the backswing's limit, the carried follow-through with no
-advance, then the effort law with its fit of τ_0 and ω_max (§4.4) and the proposed defaults (§4.5) computed. The gate
-comes then, before the defaults are committed and the existing tests re-baselined; its sweeps run at the proposed
+The order of work is the ratchet's (§8.2): the guard, the backswing's limit, the advance with no moment set, then the
+effort law with its fit of τ_0 and ω_max (§4.4) and the proposed defaults (§4.5) computed. The gate comes then, before the defaults are committed and the existing tests re-baselined; its sweeps run at the proposed
 defaults, and U(i) also at today's for comparison. The plan stops for the user with:
 
 - U(i) for every swing preset from its default and its body-limited top, beside today's;
 - the proposed shared `defaultIntensity` and the backswings it gives at 3 m/s, beside the user's checks (§8.5);
 - the default body's θ_max and the head's rise at it, on the default mallet and on the user's (42" shaft, 13.5" head);
 - the styles' and the flick's sweeps (§8.4);
-- any run the groin limit rejects, and the guard's catches on the sweeps (expected none).
+- any run θ_max rejects, and the guard's catches on the sweeps (expected none);
+- the head-never-ahead tallies (§8.4.4), each for a ruling.
 
 The user rules in their own words; each ruling goes into this design's Amendments and the roadmap.
 
@@ -419,3 +450,12 @@ downswing's steps and `shotMix`'s engine time, run alone).
 - **The backswing's limit (user, 2026-10-18).** The geometric groin limit is replaced by a direct body figure θ_max
   (§5.1), as the author recommended; its default from the user's account, the head topping out "somewhere between
   knee and waist", 75° (§5.2).
+- **Spec review (2026-10-18; subtraction and completeness lenses).** The advance releases to today's free swing and
+  keeps the swing finish, armed after the release, with swing mode's hand load and body (§2, §6): no pendulum phase,
+  no carry finish, no arc input. Its one new input is the moment, bounded below by the impact window's end, with the
+  early side left to `drive`; advances on the check strokes or with no travel throw (§6.2). The onset ramp is dropped
+  unless a test needs it (§4.4). τ_0 and ω_max are solved jointly (§4.4). The carry presets' tempo and backswing are
+  frozen, so the rolls stay bit-identical (§4.4); θ_max is swing mode's alone (§5.1). The backswing range is defined
+  (§8.1.3) and the rise's general form given (§8.1.4). The files the change forces are named (§2). The full roll's
+  check and §9's line numbers are cut. The guard stays in this step: it protects the new law's sweeps, and costs
+  nothing where runs are finite.
