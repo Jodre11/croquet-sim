@@ -5,7 +5,8 @@
  *   design §5.3), its placeholders flagged at MALLET.
  * - Body: reference/contact.json (`armMass` and `reachSlack`, the prototype's calibration),
  *   the arm's flex and pendulum push (P2b.2b.2b.2b), the push intent's cap and response time, each hand's
- *   hand–arm chain (its gate rulings) and the grip's limit (Young et al. 2009; P2b.2b.2b.3), measured.
+ *   hand–arm chain (its gate rulings) and the grip's limit (Young et al. 2009; P2b.2b.2b.3), measured; the
+ *   backswing's limit θ_max from reference/swing.json (`body`), a placeholder from the user's account of the stance.
  * - Stance: the hands measured from the socket along the shaft, after John Riches, Croquet Technique (Oxford Croquet),
  *   quoted per preset below. The swing presets keep their own leans. The rolls' leans are Don Gugan's measured face
  *   angles (Gugan 4, Table 6), with Riches' angles kept as cues (user decision, 2026-10-08). Each preset is defined by
@@ -25,6 +26,7 @@ import {
     ballReference,
     contactReference,
     malletReference,
+    swingBodyReference,
     swingReference,
     type StrokeShapeReference,
 } from "../../reference/index";
@@ -279,6 +281,7 @@ export const defaultProfile: SwingProfile = {
         pushResponseTime: PUSH_RESPONSE_TIME,
         chain: HAND_CHAIN,
         gripLimit: GRIP_LIMIT,
+        backswingLimit: swingBodyReference.backswingLimit.value,
     },
     stance: {
         // The top hand fixed at the top of the handle; the bottom hand high and light, a guide only (prototype). Riches

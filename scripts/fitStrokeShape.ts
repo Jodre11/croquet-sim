@@ -98,7 +98,8 @@ function caseOf(type: StrokeType): Case {
 }
 
 function plan(c: Case, shape: SwingShape, backswing: number, intensity: number): PlannedDownswing {
-    const choice = { mode: c.mode, shape, backswing, intensity, arrival: c.arrival };
+    // The fit still brackets at MAX_BACK_ANGLE (maxBackswing); it moves to the body's θ_max in P2b.2b.2c.1 Task 5.
+    const choice = { mode: c.mode, shape, backswing, backswingLimit: MAX_BACK_ANGLE, intensity, arrival: c.arrival };
     return planDownswing(downswingInput(c.pose, c.hands, choice, WORLD.gravity));
 }
 

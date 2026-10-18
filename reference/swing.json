@@ -1,4 +1,15 @@
 {
+    "body": {
+        "backswingLimit": {
+            "value": 1.3089969389957472,
+            "unit": "rad",
+            "bounds": [1.1170107212763709, 1.5707963267948966],
+            "source": "Spec §5.2 (docs/superpowers/specs/2026-10-18-p2b2b2c1-single-ball-design.md) and the user's account of the stance (2026-10-18)",
+            "provenance": "derived",
+            "provisional": "placeholder",
+            "note": "The shaft's greatest angle from vertical at the top of the backswing, 75°: where the shaft meets the groin. The head rises by ℓ·(1 − cos 75°) = 0.6178 m at it on the default mallet (ℓ = 0.833575 m). Bounds: 64°, the knee-height top, to 90°."
+        }
+    },
     "single-ball": {
         "pendulumShare": {
             "value": 1,

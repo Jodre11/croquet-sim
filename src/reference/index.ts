@@ -237,6 +237,14 @@ export const SWING_REFERENCE_TYPES = [
     "pass-roll",
 ] as const;
 
+/**
+ * The default player's body as the swing sees it (reference/swing.json, `body`): the backswing's limit θ_max (rad), the
+ * shaft's greatest angle from vertical at the top of the backswing (P2b.2b.2c.1 design §5.2).
+ */
+export const swingBodyReference = {
+    backswingLimit: readValue(swingJson.body, "backswingLimit", "swing.body"),
+} as const;
+
 /** A key of `swingReference`. */
 export type SwingReferenceType = (typeof SWING_REFERENCE_TYPES)[number];
 

@@ -29,7 +29,10 @@ import { atan2, sinCos } from "../math/elementary";
 import { ZERO, add, dot, scale, sub, vec3, type Vec3 } from "../math/vec3";
 import type { SwingShape } from "./types";
 
-/** The furthest the shaft may be taken back (rad from vertical): horizontal. A modelling bound (design §3.2). */
+/**
+ * The furthest the shaft may be taken back (rad from vertical): horizontal. A modelling bound (design §3.2). Carry
+ * mode's limit and the ceiling of the body's θ_max (swing mode's, `DownswingInput.backswingLimit`).
+ */
 export const MAX_BACK_ANGLE = Math.PI / 2;
 
 /** The longest downswing (s) before it is rejected (design §3.4). A modelling bound: no stroke falls for 2 s. */
@@ -51,6 +54,11 @@ export interface DownswingInput {
     readonly shape: SwingShape;
     /** h (m), the head centre's height at the top above its height at contact, and the intensity in [0, 1]. */
     readonly backswing: number;
+    /**
+     * θ_max (rad from vertical, in (0, π/2]): the body's limit on a swing-mode backswing. Carry mode keeps
+     * MAX_BACK_ANGLE.
+     */
+    readonly backswingLimit: number;
     readonly intensity: number;
     /** The hands' arc's slope dz/ds at contact (≤ 0; P2b.2b.2b.2b design §4.1). Carry mode only; 0 arrives level. */
     readonly arrival: number;
@@ -70,21 +78,25 @@ function fail(message: string): never {
 }
 
 /**
- * Plans the downswing of `input` (design §3.2–§3.4). Throws a RangeError for a backswing beyond MAX_BACK_ANGLE, a
- * swing-mode downswing whose pendulum does not swing (pendulumShare 0), a non-positive effective inertia, a stall
- * (ω falling to zero or below before θ_c), or a fall beyond MAX_FALL. Every other input is taken as checked
- * (buildContact).
+ * Plans the downswing of `input` (design §3.2–§3.4). Throws a RangeError for a backswing beyond the body's limit θ_max
+ * (swing mode) or MAX_BACK_ANGLE (carry mode), a swing-mode downswing whose pendulum does not swing (pendulumShare
+ * 0), a non-positive effective inertia, a stall (ω falling to zero or below before θ_c), or a fall beyond MAX_FALL.
+ * Every other input is taken as checked (buildContact).
  */
 export function planDownswing(input: DownswingInput): PlannedDownswing {
     const { mode, aim, thetaContact, pivot, lever, shape, backswing, intensity } = input;
     const share = shape.pendulumShare;
     const [, cosContact] = sinCos(thetaContact);
     const c = cosContact - (share * backswing) / lever;
-    const [, cosMax] = sinCos(MAX_BACK_ANGLE);
+    const limit = mode === "swing" ? input.backswingLimit : MAX_BACK_ANGLE;
+    const [, cosMax] = sinCos(limit);
     if (c < cosMax) {
+        const detail = `a ${backswing} m backswing with pendulumShare ${share} on a ${lever} m pendulum`;
         fail(
-            `the backswing takes the shaft beyond ${MAX_BACK_ANGLE} rad from vertical: a ${backswing} m backswing ` +
-                `with pendulumShare ${share} on a ${lever} m pendulum`,
+            mode === "swing"
+                ? `the backswing takes the shaft beyond the body's backswing limit θ_max = ${limit} rad (where the ` +
+                      `shaft meets the groin): ${detail}`
+                : `the backswing takes the shaft beyond ${limit} rad from vertical: ${detail}`,
         );
     }
     // A share of 0 holds the slope: the pendulum stays at θ_c.

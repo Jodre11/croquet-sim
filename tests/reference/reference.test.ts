@@ -10,6 +10,7 @@ import {
     malletReference,
     readShape,
     SWING_REFERENCE_TYPES,
+    swingBodyReference,
     swingReference,
     type SwingReferenceType,
 } from "../../src/reference/index";
@@ -248,6 +249,17 @@ describe("swing, coupling and head–turf reference data", () => {
 });
 
 describe("swing reference (P2b.2b.2a design §6.1)", () => {
+    it("loads the body's backswing limit, a placeholder within its bounds in (0, π/2]", () => {
+        const limit = swingBodyReference.backswingLimit;
+        expect(limit.unit).toBe("rad");
+        expect(limit.provisional).toBe("placeholder");
+        const [low, high] = limit.bounds as readonly [number, number];
+        expect(limit.value).toBeGreaterThanOrEqual(low);
+        expect(limit.value).toBeLessThanOrEqual(high);
+        expect(low).toBeGreaterThan(0);
+        expect(high).toBeLessThanOrEqual(Math.PI / 2);
+    });
+
     it("has an entry for every stroke type, in the presets' order", () => {
         expect(SWING_REFERENCE_TYPES).toEqual(STROKE_TYPES);
         expect(Object.keys(swingReference)).toEqual([...STROKE_TYPES]);

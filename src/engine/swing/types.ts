@@ -122,7 +122,8 @@ export interface SwingProfile {
     /**
      * The player's body: the arm mass at the top grip (kg), the reach slack (m), the arm's flex, pendulum push and push
      * (the push intent's cap, N, and its response time constant, s), each hand's and arm's hand–arm chain, and the
-     * grip's limit (N; P2b.2b.2b.3 design §5).
+     * grip's limit (N; P2b.2b.2b.3 design §5), and the backswing's limit θ_max (rad from vertical, in (0, π/2]): the
+     * shaft's greatest angle at the top of a swing-mode backswing, where it meets the groin (P2b.2b.2c.1 design §5).
      */
     readonly body: {
         readonly armMass: number;
@@ -133,6 +134,7 @@ export interface SwingProfile {
         readonly pushResponseTime: number;
         readonly chain: HandChain;
         readonly gripLimit: number;
+        readonly backswingLimit: number;
     };
     readonly stance: Readonly<Record<StrokeType, SwingStance>>;
     readonly drive: Readonly<Record<StrokeType, SwingDrive>>;

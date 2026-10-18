@@ -134,6 +134,7 @@ export function testProfile(o: TestProfileOptions = {}): SwingProfile {
             pushResponseTime: TEST_PUSH_RESPONSE_TIME,
             chain: TEST_CHAIN,
             gripLimit: TEST_GRIP_LIMIT,
+            backswingLimit: MAX_BACK_ANGLE,
             ...o.body,
         },
         stance: every(stance),
@@ -153,8 +154,8 @@ export const GC_STOP_GAP = 0.3;
 
 /**
  * What `canonicalSetup` changes: the world (default `defaultWorld()`), fields of the stroke, fields of the preset's
- * own stance, drive and shape entries in `defaultProfile`, the mallet, and, for a single-ball stroke, the gap (m,
- * surface to surface) to a target ball on the aim line ahead (default GC_STOP_GAP for the GC stop, no target
+ * own stance, drive and shape entries in `defaultProfile`, the mallet, the body, and, for a single-ball stroke, the
+ * gap (m, surface to surface) to a target ball on the aim line ahead (default GC_STOP_GAP for the GC stop, no target
  * otherwise). The balls do not follow a changed aim.
  */
 export interface CanonicalOptions {
@@ -170,6 +171,8 @@ export interface CanonicalOptions {
      * contact with that mallet.
      */
     readonly mallet?: SwingProfile["mallet"];
+    /** Fields of the default body. */
+    readonly body?: Partial<SwingProfile["body"]>;
 }
 
 /** A preset's canonical contact height `up` (m): the AC stop's −0.020 m, 0 otherwise. */
@@ -243,6 +246,7 @@ export function canonicalSetup(type: StrokeType, over: CanonicalOptions = {}): S
     const profile: SwingProfile = {
         ...defaultProfile,
         mallet,
+        body: { ...defaultProfile.body, ...over.body },
         stance: { ...stances, [type]: { ...stances[type], ...over.stance } },
         drive: { ...defaultProfile.drive, [type]: { ...defaultProfile.drive[type], ...over.drive } },
         shape: { ...defaultProfile.shape, [type]: { ...defaultProfile.shape[type], ...over.shape } },
@@ -299,7 +303,8 @@ const SOLVED = new Map<string, number>();
 
 /**
  * The backswing (m) at which `setup`'s planned contact speed is `speed` (P2b.2b.2a design §5.3): bisection over (0,
- * the MAX_BACK_ANGLE bound] at the setup's intensity, or its preset's default, 60 halvings. Memoised on what the
+ * the MAX_BACK_ANGLE bound] at the setup's intensity, or its preset's default, 60 halvings; in swing mode a midpoint
+ * beyond the body's θ_max counts as reaching the speed, and the reach is the speed at θ_max. Memoised on what the
  * planned speed depends on: the type, the intensity, the contact's height (under fixed hands the lean follows it,
  * P2b.2b.2b.1 design §3.3), the profile's entries for the type, the speed, gravity and the ball's radius. It is not
  * memoised on the drive, the contact's side, the timing or the balls. Throws a RangeError for a speed beyond the
@@ -334,12 +339,26 @@ export function backswingFor(setup: ShotSetup, speed: number, world: World = def
         headLength: profile.mallet.headLength,
         faceHalfHeight: rho,
     });
-    const room = lever * (Math.cos(lean) - Math.cos(MAX_BACK_ANGLE));
-    let hi = shape.pendulumShare > 0 ? (room / shape.pendulumShare) * (1 - 1e-9) : 2;
-    const at = (backswing: number): number => plannedSpeed({ ...setup, stroke: { ...stroke, backswing } }, world);
-    if (at(hi) < speed) {
+    const reachOf = (angle: number): number =>
+        shape.pendulumShare > 0 ? ((lever * (Math.cos(lean) - Math.cos(angle))) / shape.pendulumShare) * (1 - 1e-9) : 2;
+    let hi = reachOf(MAX_BACK_ANGLE);
+    // Plan decision 8: the bracket stays at MAX_BACK_ANGLE, so a bisection that converges inside the body's limit takes
+    // the steps it always did. A midpoint beyond the limit (the planner's RangeError naming θ_max) counts as reaching
+    // the speed.
+    const at = (backswing: number): number => {
+        try {
+            return plannedSpeed({ ...setup, stroke: { ...stroke, backswing } }, world);
+        } catch (error) {
+            if (error instanceof RangeError && error.message.includes("θ_max")) {
+                return Infinity;
+            }
+            throw error;
+        }
+    };
+    const reach = profile.drive[type].mode === "swing" ? Math.min(hi, reachOf(profile.body.backswingLimit)) : hi;
+    if (at(reach) < speed) {
         throw new RangeError(
-            `backswingFor: ${speed} m/s is beyond the ${type} stroke's reach (${at(hi)} m/s at ${hi} m)`,
+            `backswingFor: ${speed} m/s is beyond the ${type} stroke's reach (${at(reach)} m/s at ${reach} m)`,
         );
     }
     let lo = 0;

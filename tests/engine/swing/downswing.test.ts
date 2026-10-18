@@ -57,6 +57,7 @@ function input(o: Partial<DownswingInput> = {}): DownswingInput {
         pendulum: PENDULUM,
         shape: shape(),
         backswing: 0.3,
+        backswingLimit: MAX_BACK_ANGLE,
         intensity: 0,
         arrival: 0,
         ...o,

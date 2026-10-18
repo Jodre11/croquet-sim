@@ -31,7 +31,7 @@ import {
     stanceLean,
     swingApproach,
 } from "../../../src/engine/swing/buildContact";
-import { planDownswing, scanDownswing } from "../../../src/engine/swing/downswing";
+import { MAX_BACK_ANGLE, planDownswing, scanDownswing } from "../../../src/engine/swing/downswing";
 import { ON_TIME, defaultProfile, shapeOf } from "../../../src/engine/swing/profile";
 import {
     STROKE_TYPES,
@@ -44,7 +44,7 @@ import {
 } from "../../../src/engine/swing/types";
 import type { BallState } from "../../../src/engine/types";
 import { defaultWorld } from "../../../src/engine/world";
-import { contactReference, malletReference, swingReference } from "../../../src/reference/index";
+import { contactReference, malletReference, swingBodyReference, swingReference } from "../../../src/reference/index";
 import { ReferenceDataError } from "../../../src/reference/schema";
 import { TEST_BALL, ballAt, testWorld } from "../support/fixtures";
 import {
@@ -690,6 +690,7 @@ describe("defaultProfile", () => {
                 fingerDamping: contactReference.fingerDamping.value,
             },
             gripLimit: GRIP_LIMIT,
+            backswingLimit: swingBodyReference.backswingLimit.value,
         });
     });
 
@@ -971,7 +972,7 @@ describe("contactPose (design §5.2 steps 1–5, 10)", () => {
         const input = downswingInput(
             pose,
             hands,
-            { mode: "swing", shape, backswing: 0.3, intensity: 0, arrival: 0 },
+            { mode: "swing", shape, backswing: 0.3, backswingLimit: MAX_BACK_ANGLE, intensity: 0, arrival: 0 },
             9.8,
         );
         expect(input.lever).toBe(RHO + TOP);
