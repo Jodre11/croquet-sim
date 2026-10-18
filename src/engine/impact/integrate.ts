@@ -715,6 +715,45 @@ function advance(
     return next;
 }
 
+function finiteVec(v: Vec3): boolean {
+    return Number.isFinite(v.x) && Number.isFinite(v.y) && Number.isFinite(v.z);
+}
+
+/**
+ * Throws a RangeError if the head's position, orientation, velocity or angular velocity, or any ball's position,
+ * velocity or angular velocity, is not finite, naming the body, the time `t` from contact (s), the `step` and whether
+ * it was the impact or the follow-through (P2b.2b.2c.1 design §3). Allocates nothing.
+ */
+export function assertFinite(
+    head: HeadState,
+    balls: readonly BallState[],
+    ids: readonly BallId[],
+    t: number,
+    step: number,
+    where: "impact" | "follow-through",
+): void {
+    const q = head.orientation;
+    const headOk =
+        finiteVec(head.position) &&
+        Number.isFinite(q.w) &&
+        Number.isFinite(q.x) &&
+        Number.isFinite(q.y) &&
+        Number.isFinite(q.z) &&
+        finiteVec(head.velocity) &&
+        finiteVec(head.angularVelocity);
+    if (!headOk) {
+        throw new RangeError(`the head state went non-finite ${t} s from contact, at step ${step} (${where})`);
+    }
+    for (let i = 0; i < balls.length; i++) {
+        const b = balls[i] as BallState;
+        if (!finiteVec(b.position) || !finiteVec(b.velocity) || !finiteVec(b.angularVelocity)) {
+            throw new RangeError(
+                `the ball ${ids[i] as BallId} state went non-finite ${t} s from contact, at step ${step} (${where})`,
+            );
+        }
+    }
+}
+
 /**
  * Which balls hold cells of their bed, and which have let go of them once while rising; the latter raise `turf-lift`
  * (P2b.2b.2b.2a design §4.6).
@@ -956,6 +995,7 @@ export function integrateStroke(setup: ImpactSetup, options: ImpactOptions = {},
     const ids = setup.balls.map((b) => b.id);
     const hasTurf = setup.balls.map((b) => b.turf !== null);
     const tracked = plan.kind === "track";
+    const contactAt = plan.kind === "track" ? plan.arc.contactAt : 0;
     const names = regionsOf(head.shape);
     const carry = plan.kind === "track" && plan.arc.mode === "carry";
     const response = carry ? pushResponse(plan.hands, dt) : 0;
@@ -1158,6 +1198,7 @@ export function integrateStroke(setup: ImpactSetup, options: ImpactOptions = {},
         guardFootprints(balls, beds, R, ids);
 
         state = advance(state, balls, travel, loads, setup, ballInertia, dt, grip);
+        assertFinite(state, balls, ids, (steps + 1) * dt - contactAt, steps + 1, "impact");
         // Carry mode's hand–arm chains step with the head, under the forces handLoad gave them (gate round 3 ruling).
         if (carry && plan.kind === "track") {
             advanceChains(grip, plan.hands.chain, dt);
@@ -1322,6 +1363,7 @@ function continueStroke(
             }
         }
         state = advance(state, none, [], loads, setup, 0, dt, grip);
+        assertFinite(state, none, [], (steps + 1) * dt - plan.arc.contactAt, steps + 1, "follow-through");
         if (kind === "carry") {
             advanceChains(grip, plan.hands.chain, dt);
             grip.resistance = senseResistance(grip.resistance, 0, response);
