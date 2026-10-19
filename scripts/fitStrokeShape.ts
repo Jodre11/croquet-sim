@@ -1,16 +1,15 @@
 /**
- * The stroke-shape fit (P2b.2b.2c.1 design §4.3–§4.5; plan decisions 11–14), on scripts/effortFit.ts:
- * 0. the body's backswing limit θ_max at knee height (design §5.2, gate ruling 4): the angle at which the default
- *    mallet's head rises KNEE_RISE (kneeLimit), written to body.backswingLimit with its derivation;
+ * The stroke-shape fit (P2b.2b.2c.1 design §4.3–§4.5 and its Amendments), on scripts/effortFit.ts:
+ * 0. the body's backswing limit θ_max at knee height (design §5.2), where the user's head tops out: the angle at which
+ *    the default mallet's head rises KNEE_RISE (kneeLimit), written to body.backswingLimit with its derivation;
  * 1. the body's effort, a labelled placeholder: τ_0 and ω_max solved jointly (fitEffort) so that the weakest swing
  *    preset at intensity 1 from its body-limited top (θ_max, from step 0) reaches CEILING, and the
  *    drive's shaft there turns at κ·ω_max at contact, κ swing.json's body.effortShare; written to body.effortTorque
  *    and body.effortSpeed;
  * 2. every swing preset's U(i) checked over design §8.1.3's grid (checkCurve): strictly increasing in i, concave, and
  *    its slope at i = 1 at least END_SLOPE_SHARE of its mean; the fit throws naming the preset if not;
- * 3. every swing preset's defaultBackswing h_0 and defaultSpeed kept as they are (the pre-flight gate's ruling 2,
- *    2026-10-18: the default stroke fixes the backswing, a stroke's intensity reaching the speeds from U(0) to U(1) at
- *    h_0), and U(0) and U(1) at h_0 reported.
+ * 3. every swing preset's defaultBackswing h_0 and defaultSpeed kept as they are (the default stroke fixes the
+ *    backswing, a stroke's intensity reaching the speeds from U(0) to U(1) at h_0), and U(0) and U(1) at h_0 reported.
  * The swing presets' retired effort pulse (torqueMax, tempoSlow, tempoFast) and every preset's retired defaultIntensity
  * are dropped. The carry presets are frozen at engine 0.12.0's fit (design §4.4): their handTempoSlow, handTempoFast
  * and defaultBackswing keep their values, their notes saying so; nothing else of theirs is touched.
@@ -46,8 +45,8 @@ const FIT_SOURCE =
 const FROZEN = "Frozen at engine 0.12.0's fit (P2b.2b.2c.1 design §4.4).";
 
 /**
- * The swing presets' retired effort pulse (P2b.2b.2a) and every preset's retired default intensity (the pre-flight
- * gate's ruling 2, 2026-10-18).
+ * The swing presets' retired effort pulse (P2b.2b.2a) and every preset's retired default intensity, a dead knob now
+ * that an absent intensity is 0 for every preset.
  */
 const RETIRED: readonly string[] = ["torqueMax", "tempoSlow", "tempoFast", "defaultIntensity"];
 
@@ -132,8 +131,8 @@ for (const type of SWING_REFERENCE_TYPES) {
         }
         continue;
     }
-    // The pre-flight gate's ruling 2 (2026-10-18): the default backswing h_0 is kept as it is, and the speeds between
-    // U(0) and U(1) at it are the ones a stroke reaches by its intensity alone.
+    // The default stroke fixes the backswing: h_0 is kept as it is, and the speeds between U(0) and U(1) at it are
+    // the ones a stroke reaches by its intensity alone.
     const h0 = swingReference[type].defaultBackswing.value;
     console.error(
         `${type.padEnd(11)} default backswing ${h0} m: U(0) ${fmt(speedAt(type, h0, 0, effort, profile), 6)} m/s, ` +

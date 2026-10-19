@@ -450,8 +450,8 @@ function handsOf(setup: ShotSetup): Hands {
 }
 
 /**
- * The downswing of a checked `setup` posed at `pose`, at the shot's intensity, else 0 (the pre-flight gate's ruling 2,
- * 2026-10-18).
+ * The downswing of a checked `setup` posed at `pose`, at the shot's intensity, else 0: gravity alone, no preset
+ * carrying a default intensity (P2b.2b.2c.1 design, Amendments).
  */
 function downswingOf(setup: ShotSetup, pose: ContactPose, hands: Hands, gravity: number): PlannedDownswing {
     const { stroke, profile } = setup;
@@ -584,18 +584,17 @@ export function poseSpeed(pose: ContactPose, planned: PlannedDownswing): number 
     return length(add(planned.handsVelocity, scale(lever, planned.omega)));
 }
 
-/** The head's planned velocity at contact along aim (m/s): aim·(V_c + ω₀·n × (c − P_c)) (plan decision 3). */
+/** The head's planned velocity at contact along aim (m/s), the advance's V: aim·(V_c + ω₀·n × (c − P_c)). */
 function alongAim(pose: ContactPose, planned: PlannedDownswing): number {
     const lever = cross(pitchAxis(pose.aim), sub(pose.headCentre, pose.pivot));
     return dot(add(planned.handsVelocity, scale(lever, planned.omega)), pose.aim);
 }
 
 /**
- * Checks `arc`'s `advance` (plan decision 5), at the head's planned speed V along aim and the body's peak acceleration
- * a: swing mode only, no check (α < 0), a positive handReach, a positive V (at 0 the cruise would never end; below
- * it the hands would ramp backwards), and a ramp's travel V·W/2 = V²/(2a) (W = V/a, the pre-flight gate's ruling 9)
- * under 0.8·handReach, so that the hands cruise before they ease to rest. planStroke calls it; a hand-built arc is not
- * checked.
+ * Checks `arc`'s `advance`, at the head's planned speed V along aim and the body's peak acceleration a: swing mode
+ * only, no check (α < 0), a positive handReach, a positive V (at 0 the cruise would never end; below it the hands
+ * would ramp backwards), and a ramp's travel V·W/2 = V²/(2a) (W = V/a) under 0.8·handReach, so that the hands cruise
+ * before they ease to rest. planStroke calls it; a hand-built arc is not checked.
  */
 export function checkAdvance(arc: SwingArc, advance: NonNullable<SwingArc["advance"]>): void {
     const { speed, accel } = advance;
@@ -650,12 +649,12 @@ export interface StrokePlan {
  * - window, handWindow or dropTime ≤ 0; speedGain < 0; gripTension or bottomGrip outside (0, 1]; handDrop < 0; the
  *   preset's or the shot's handReach < 0; the preset's or the shot's guideEffort outside [0, 1];
  *   armMass < 0; reachSlack < 0; a backswingLimit non-finite or outside (0, π/2]; the body's effort torque τ_0 < 0
- *   or its speed ω_max ≤ 0 (P2b.2b.2c.1 design §4.4); the body's hands' peak acceleration not positive (the
- *   P2b.2b.2c.1 pre-flight gate's ruling 9); the preset's or the shot's
- *   pendulumAt or pendulumEffort outside [0, 1]; handArcLow outside [0, 1]; a jab negative or non-finite, or non-zero
- *   in carry mode (P2b.2b.2b.3 design §6.1); handArcRadius not above the push length; a flex value not positive, or a
- *   flex damping ratio above 1; pendulumForce not positive (P2b.2b.2b.2b design §6); pushForce, pushResponseTime,
- *   gripLimit or a hand–arm chain value not positive (its gate rulings, 2026-10-11; P2b.2b.2b.3 design §5);
+ *   or its speed ω_max ≤ 0 (P2b.2b.2c.1 design §4.4); the body's hands' peak acceleration not positive; the preset's
+ *   or the shot's pendulumAt or pendulumEffort outside [0, 1]; handArcLow outside [0, 1]; a jab negative or
+ *   non-finite, or non-zero in carry mode (P2b.2b.2b.3 design §6.1); handArcRadius not above the push length; a flex
+ *   value not positive, or a flex damping ratio above 1; pendulumForce not positive (P2b.2b.2b.2b design §6);
+ *   pushForce, pushResponseTime, gripLimit or a hand–arm chain value not positive (its gate rulings, 2026-10-11;
+ *   P2b.2b.2b.3 design §5);
  * - pendulumShare outside [0, 1]; handAngle outside (0, 90°) when pendulumShare < 1 (neither read
  *   nor checked otherwise); in swing mode a pendulumShare of 0; in carry mode a null hands' tempo, or one ≤ 0 or
  *   with fast > slow;
@@ -663,7 +662,7 @@ export interface StrokePlan {
  *   mode), a non-positive effective inertia, a stall or a fall beyond MAX_FALL;
  * - an action timed more than MAX_LEAD early (the advance's among them), or a downswing meeting the turf more than
  *   MAX_LEAD − TURF_MARGIN before contact;
- * - an advance (P2b.2b.2c.1 plan decision 5) in carry mode, on a check (α < 0), with a handReach ≤ 0, with V ≤ 0, or
+ * - an advance (P2b.2b.2c.1 design §6.2) in carry mode, on a check (α < 0), with a handReach ≤ 0, with V ≤ 0, or
  *   with its ramp's travel V·W/2 at or above 0.8·handReach (V the head's planned speed along aim at contact, W = V/a
  *   the ramp's duration at the body's hands' peak acceleration a);
  * - the head's lowest point below the turf at contact, or where the impact starts.

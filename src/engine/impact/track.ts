@@ -598,7 +598,7 @@ function planPivot(track: PreparedTrack, t: number): Motion {
 }
 
 /**
- * The advance's travel along aim at time t (plan decision 3): `a` (m), `v` (m/s) and `acc` (m/s²); 0, 0, 0 before its
+ * The advance's travel along aim at time t, on a level path: `a` (m), `v` (m/s) and `acc` (m/s²); 0, 0, 0 before its
  * start, and handReach at rest from its end.
  */
 export function advanceTravel(
@@ -628,7 +628,7 @@ export function advanceTravel(
 
 /**
  * The pivot at time t: in carry mode after contactAt on the hands' arc (carryPivot); otherwise with the reach, without
- * the dip, and after the advance's start with its travel along aim (plan decision 3).
+ * the dip, and after the advance's start with its travel along aim, planned so that the free table includes it.
  */
 function pivotAt(track: PreparedTrack, t: number): Motion {
     const reached = reachedPivot(track, t);
@@ -793,8 +793,8 @@ function carryPivot(track: PreparedTrack, push: Push, t: number): Motion {
 }
 
 /**
- * The advance of `arc` from `given` (plan decision 3): with a the body's peak acceleration, V the speed and D the
- * handReach, the ramp ends W = V/a after the start (the pre-flight gate's ruling 9), the cruise once the hands have
+ * The advance of `arc` from `given`, its shape the reach's ease: with a the body's peak acceleration, V the speed and D
+ * the handReach, the ramp ends W = V/a after the start, the ramp a body property, the cruise once the hands have
  * travelled 0.8·D, and the deceleration V²/(0.4·D) brings them to rest at D. planStroke has checked that the ramp's
  * travel V·W/2 is under 0.8·D.
  */

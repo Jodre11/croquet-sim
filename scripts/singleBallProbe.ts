@@ -1,28 +1,28 @@
 /**
- * Single-ball probe (P2b.2b.2c.1 design §8.4, §8.5, §10; plan decisions 13, 16–19; the pre-flight gate's rulings of
- * 2026-10-18, rerun 2026-10-19, "ruling N" below): the gate's figures, on the default world and profile as
- * reference/swing.json holds them. Every stroke planning a speed takes the default stroke's inputs (strokeFor: the
- * preset's defaultBackswing fixed, the intensity solved, ruling 2). Every figure to 4 decimals. Reports:
+ * Single-ball probe (P2b.2b.2c.1 design §8.4, §8.5, §10): the pre-flight gate's figures, on the default world and
+ * profile as reference/swing.json holds them; its section headings cite the gate's rulings by number ("ruling N"), as
+ * the design's Amendments list them. Every stroke planning a speed takes the default stroke's inputs (strokeFor: the
+ * preset's defaultBackswing fixed, the intensity solved). Every figure to 4 decimals. Reports:
  * - A. U(i): every swing preset's planned contact speed at intensity 0, 0.1, …, 1 from its default backswing and from
  *   its body-limited top at κ = ⅔, and from its top at κ = ½ and ¾, each κ's τ_0 and ω_max fitted (fitEffort);
- * - B. the default stroke (ruling 2): each swing preset's defaultBackswing h_0, U(0) and U(1) from it, and strokeFor's
+ * - B. the default stroke: each swing preset's defaultBackswing h_0, U(0) and U(1) from it, and strokeFor's
  *   backswing, intensity and regime at 1, 2, …, 9 m/s, its rejections printed;
- * - C. θ_max (ruling 4): the body's θ_max and its derivation at knee height (the default mallet's head rising 0.48 m,
- *   kneeLimit), the head's rise at it on the default mallet and on the user's (plan decision 18), and the knee check;
+ * - C. θ_max: the body's θ_max and its derivation at knee height (the default mallet's head rising 0.48 m,
+ *   kneeLimit), the head's rise at it on the default mallet and on the user's, and the knee check;
  * - D. the styles: the single-ball stroke at 3 and 5 m/s, rising (no advance) and level (the advance on time, handReach
  *   0.3 m): the striker's launch and spin at the face's release and at handover (the impact can hold the ball on the
  *   turf long after the face lets it go), its skid and travel, the face's contact time, the head's highest point over
- *   the advance, the follow-through's finish and flags, the level stroke's hands' advance (ruling 9: the body's peak
+ *   the advance, the follow-through's finish and flags, the level stroke's hands' advance (the body's peak
  *   acceleration a, V, W = V/a, the ramp's, cruise's and rest's distances) and the planned hands' travel along aim
- *   from contact to rest (ruling 10c: at most handReach);
+ *   from contact to rest (at most handReach, the advance replacing the pivot's own reach);
  * - E. the mistimed advance: the single-ball stroke at 3 m/s with handReach 0.3 m, the advance from 0.02 s early to
  *   0.32 s late and none, then `drive` from 0 to 1 with no advance: the face's contact time, the head's highest point
  *   after contact, whether the advance started before the finish, and the fault judge's findings;
- * - F. the flick (plan decision 17, ruling 7): the single-ball stroke at 3 and 5 m/s, the stance's lean from −20° to
+ * - F. the flick: the single-ball stroke at 3 and 5 m/s, the stance's lean from −20° to
  *   +10° in 2° steps, the stroke re-solved at each lean for the speed: the head's rise angle at the first face contact,
  *   the striker's launch angle at the face's release (the measure) and at handover, airborne or not in phase 2
  *   (recorded, not the measure); per speed, the leans launching upward and the launch angle's trend over the lean;
- * - G. head ahead (plan decision 16, ruling 8): over D–F and the single-ball and GC stop presets' swingProbe grid
+ * - G. head ahead: over D–F and the single-ball and GC stop presets' swingProbe grid
  *   (speed × drive × contact height × side), every state with the head's centre ahead of the striker's ball's centre
  *   along aim within L/2 + 2R, across within faceWidth/2 + R, and its lowest point below the ball's top: at every
  *   impact step, and at every follow-through sample against the striker's phase-2 state; each such run with its times,
@@ -30,7 +30,7 @@
  * - H. the guard: every RangeError naming "non-finite" over the runs above, I's and J's, and the other rejections;
  * - I. θ_max's rejections: the count from the rejected-runs list given as the first argument, and how many of its runs
  *   the committed engine now plays through strokeFor (simulateShot) and how many it still rejects;
- * - J. the user's checks (design §8.5, ruling 3), through simulateShot on an open world: defaultWorld(10)'s gravity,
+ * - J. the user's checks (design §8.5), through simulateShot on an open world: defaultWorld(10)'s gravity,
  *   ball, materials and surface on a uniform OPEN_LAWN-square lawn with no hoops (its peg far off the line), the
  *   striker started at OPEN_START: the single ball from a 0.45 m backswing over intensity 0–1 against the user's 5, 15
  *   and 30 yd, and the drive from its top at intensity 1, both balls against the full 35 yd; each a distance to rest,
@@ -110,15 +110,15 @@ const LEVEL_REACH = 0.3;
 /** The user's knee-height top (m), the head's rise on the default mallet (design §5.2). */
 const KNEE = 0.48;
 
-/** The user's mallet (plan decision 18): a 42 in shaft and a 13.5 in head, the top hand 0.1094 m below the handle. */
+/** The user's mallet: a 42 in shaft and a 13.5 in head, the top hand 0.1094 m below the handle, else the default. */
 const USER_SHAFT = 1.0668;
 const USER_HEAD = 0.3429;
 const USER_TOP = 0.9574;
 
-/** B's speeds (m/s): strokeFor's three regimes across them (ruling 2). */
+/** B's speeds (m/s): strokeFor's three regimes across them. */
 const B_SPEEDS = [1, 2, 3, 4, 5, 6, 7, 8, 9];
 
-/** J's open lawn's side (m, ruling 3): far beyond any stroke's reach, so that every run comes to rest on it. */
+/** J's open lawn's side (m): far beyond any stroke's reach, so that every run comes to rest on it. */
 const OPEN_LAWN = 200;
 
 /** J's striker's start on the open lawn (m): mid-width, 150 m of lawn ahead along aim (+y). */
@@ -162,7 +162,7 @@ function attempt<T>(section: string, label: string, f: () => T): T | null {
     }
 }
 
-/** One run's head-ahead tally (plan decision 16): the states checked and the failing ones, times from contact. */
+/** One run's head-ahead tally: the states checked and the failing ones, times from contact. */
 interface Ahead {
     readonly states: number;
     readonly failures: number;
@@ -173,8 +173,9 @@ interface Ahead {
 }
 
 /**
- * Plan decision 16's check for `head` on `aim`: with d = aim·(c_head − c_ball) and e the across distance, horizontally,
- * a failure is d > 0, d < L/2 + 2R, e < faceWidth/2 + R and the head's lowest point below the ball's top.
+ * The head-ahead check for `head` on `aim`, a head low enough to block the ball's path: with d = aim·(c_head − c_ball)
+ * and e the across distance, horizontally, a failure is d > 0, d < L/2 + 2R, e < faceWidth/2 + R and the head's lowest
+ * point below the ball's top.
  */
 function aheadCheck(head: MalletHead, aim: Vec3, contactAt: number) {
     const along = head.length / 2 + 2 * R;
@@ -295,7 +296,7 @@ function atSpeed(type: StrokeType, speed: number, over: CanonicalOptions = {}): 
 }
 
 /**
- * strokeFor's regime for `setup`'s stroke (ruling 2): 1 with no intensity (gravity only), 2 at the preset's
+ * strokeFor's regime for `setup`'s stroke: 1 with no intensity (gravity only), 2 at the preset's
  * defaultBackswing h_0 with an intensity, 3 at intensity 1 with the backswing solved beyond h_0.
  */
 function regimeOf(setup: ShotSetup): 1 | 2 | 3 {
@@ -361,7 +362,7 @@ function launchText(state: BallState, aim: Vec3): string {
     );
 }
 
-/** Whether the striker's ball leaves the turf in phase 2 (plan decision 17: a `landing` event). */
+/** Whether the striker's ball leaves the turf in phase 2 (a `landing` event). */
 const airborne = (r: Run): boolean => r.motion.events.some((e) => e.kind === "landing" && e.ball === r.setup.striker);
 
 /** The face–striker contact: its first interval's length (ms) and the number of intervals. */
@@ -470,7 +471,7 @@ const geometryOf = (m: SwingProfile["mallet"]): StanceGeometry => ({
     faceHalfHeight: faceHalfHeight(headShapeOf(m.head)),
 });
 
-/** The user's mallet (plan decision 18) on the default profile, each swing preset's top hand moved, its lean kept. */
+/** The user's mallet on the default profile, each swing preset's top hand moved, its lean kept. */
 function userProfile(): SwingProfile {
     const mallet = { ...defaultProfile.mallet, shaftLength: USER_SHAFT, headLength: USER_HEAD };
     const stance: Record<StrokeType, SwingStance> = { ...defaultProfile.stance };
@@ -555,10 +556,10 @@ function sectionD(): void {
 }
 
 /**
- * The level stroke's hands' advance on its prepared track (ruling 9): the body's peak acceleration a, V, W = V/a, and
- * the advance's travel along aim at the ramp's end, over the cruise to 0.8·D and at rest; then (ruling 10c) the planned
- * hands' travel along aim from contact (handsAt, 1 ms steps): at the advance's rest, the most to the finish and at the
- * finish, against handReach. None without an advance.
+ * The level stroke's hands' advance on its prepared track: the body's peak acceleration a, V, W = V/a, and the
+ * advance's travel along aim at the ramp's end, over the cruise to 0.8·D and at rest; then the planned hands' travel
+ * along aim from contact (handsAt, 1 ms steps): at the advance's rest, the most to the finish and at the finish,
+ * against handReach, which the advance alone carries. None without an advance.
  */
 function advanceLines(r: Run): string[] {
     const track = prepareTrack(r.plan.contact.drive as TrackDrive, r.plan.contact.head, WORLD.gravity);
@@ -653,7 +654,7 @@ function sectionF(): void {
 }
 
 /**
- * F's summary over the played leans (ruling 7, no threshold): the leans whose launch angle at the face's release is
+ * F's summary over the played leans (recorded, no threshold): the leans whose launch angle at the face's release is
  * above 0 (the ball leaving upward), and the angle's trend over the lean: the direction of every step, and its first
  * and last values with the mean change per degree of lean.
  */
@@ -678,7 +679,7 @@ function flickSummary(angles: readonly { lean: number; launch: number }[]): stri
     );
 }
 
-/** Ruling 8's label for a head-ahead run: a known gap, not a failure. */
+/** The label for a head-ahead run: a known gap, not a failure. */
 const DOUBLE_TAP =
     "double tap (GC 11.2.4, AC 29.1.6.2): the head reaches the stopped striker's ball after the face has released " +
     "it; the follow-through does not yet detect head–ball contact (roadmap)";
@@ -829,7 +830,7 @@ async function sectionI(): Promise<void> {
 }
 
 /**
- * J's open world (ruling 3): defaultWorld(10)'s gravity, ball, materials and surface, no hoops, on a uniform lawn
+ * J's open world: defaultWorld(10)'s gravity, ball, materials and surface, no hoops, on a uniform lawn
  * OPEN_LAWN square. Its peg stays at the court's centre, far off J's lines.
  */
 function openWorld(): World {

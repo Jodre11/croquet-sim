@@ -30,9 +30,9 @@
  * - heldOut: each roll at 3 m/s against the held-out measurements (design §9): the head's descent against Gugan 4's
  *   6–16°, the apparent contact against the CA's 30–58 ms, the second contact against Gugan 4's and Hall's several
  *   milliseconds, the face intervals against Cross's seven taps and the ratio against Gugan's.
- * A stroke planning a speed takes the default stroke's inputs (strokeFor, the pre-flight gate's ruling 2, 2026-10-18:
- * a swing preset's defaultBackswing with the intensity solved, or the backswing solved at intensity 1 beyond it; a
- * carry preset's backswing); the speeds table's intensities are given.
+ * A stroke planning a speed takes the default stroke's inputs (strokeFor, the backswing fixed by default: a swing
+ * preset's defaultBackswing with the intensity solved, or the backswing solved at intensity 1 beyond it; a carry
+ * preset's backswing); the speeds table's intensities are given.
  * Run with `npx --yes tsx scripts/strokeProbe.ts`; environment: SECTION (one of the names above; default all), REPEAT
  * (timed runs per stroke, default 20). Not part of the test suite; its output goes into the roadmap's outcomes.
  */
@@ -244,8 +244,7 @@ function faults(): void {
 const ROLLS: readonly StrokeType[] = ["half-roll", "full-roll", "pass-roll"];
 
 /**
- * `type`'s canonical setup with the default stroke's inputs that plan `speed` (m/s): strokeFor (the pre-flight gate's
- * ruling 2, 2026-10-18).
+ * `type`'s canonical setup with the default stroke's inputs that plan `speed` (m/s): strokeFor.
  */
 function atSpeed(type: StrokeType, speed: number): ShotSetup {
     const base = canonicalSetup(type, { world: WORLD });

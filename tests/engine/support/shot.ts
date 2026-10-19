@@ -343,8 +343,8 @@ export function backswingFor(setup: ShotSetup, speed: number, world: World = def
     const reachOf = (angle: number): number =>
         shape.pendulumShare > 0 ? ((lever * (Math.cos(lean) - Math.cos(angle))) / shape.pendulumShare) * (1 - 1e-9) : 2;
     let hi = reachOf(MAX_BACK_ANGLE);
-    // Plan decision 8: the bracket stays at MAX_BACK_ANGLE, so a bisection that converges inside the body's limit takes
-    // the steps it always did. A midpoint beyond the limit (the planner's RangeError naming θ_max) counts as reaching
+    // The bracket stays at MAX_BACK_ANGLE, so a bisection that converges inside the body's limit takes the steps it
+    // always did, to the bit. A midpoint beyond the limit (the planner's RangeError naming θ_max) counts as reaching
     // the speed.
     const at = (backswing: number): number => {
         try {
@@ -379,8 +379,8 @@ export function backswingFor(setup: ShotSetup, speed: number, world: World = def
 const INTENSITY_BISECTIONS = 60;
 
 /**
- * The stroke inputs that plan `setup`'s contact speed `speed` (the pre-flight gate's ruling 2, 2026-10-18: the default
- * stroke fixes the backswing). A setup that gives an intensity, or a carry-mode one, takes backswingFor's backswing at
+ * The stroke inputs that plan `setup`'s contact speed `speed`, the default stroke fixing the backswing (P2b.2b.2c.1
+ * design, Amendments). A setup that gives an intensity, or a carry-mode one, takes backswingFor's backswing at
  * it. Otherwise, in swing mode, from the preset's defaultBackswing h_0 (reference/swing.json):
  * 1. speed ≤ U(0) at h_0: the backswing solved at intensity 0 (backswingFor), no intensity given;
  * 2. U(0) < speed ≤ U(1) at h_0: h_0 and the intensity solved by bisection over [0, 1] (U rises with i, design §4.2),

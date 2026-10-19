@@ -182,7 +182,7 @@ export interface SwingArc {
     /**
      * Swing only (P2b.2b.2c.1 design §6): the hands' advance, their push forward along aim over `handReach` from
      * `start` (s from t = 0), ramping up to `speed` (m/s), the head's planned speed along aim at contact, at the body's
-     * peak acceleration `accel` (m/s², the pre-flight gate's ruling 9), so over speed/accel. Absent: no advance.
+     * peak acceleration `accel` (m/s², a body property), so over speed/accel. Absent: no advance.
      * `planStroke` validates it (checkAdvance); a hand-built arc's advance is not checked.
      */
     readonly advance?: { readonly start: number; readonly speed: number; readonly accel: number };

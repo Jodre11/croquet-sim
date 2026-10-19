@@ -82,10 +82,10 @@ export interface SwingDrive {
  * How a stroke type's whole stroke is shaped (P2b.2b.2a design §3, §5.1). `pendulumShare` (in [0, 1]) of the
  * backswing's height comes from the pendulum and the rest from the hands, which start back and up along `handAngle`
  * (rad above horizontal; read only when the share is below 1). Carry mode reads `handTempo`: the hands' downswing lasts
- * from `slow` (s, intensity 0) to `fast` (s, intensity 1); null where a swing preset has none (P2b.2b.2c.1 plan
- * decision 7), and a carry stroke fails without one. Swing mode's effort is the body's (`SwingProfile.body.effort`,
- * P2b.2b.2c.1 design §4.4). A shot that gives no intensity swings at 0 (the pre-flight gate's ruling 2,
- * 2026-10-18).
+ * from `slow` (s, intensity 0) to `fast` (s, intensity 1); null where a swing preset has none, its downswing being the
+ * body's effort, and a carry stroke fails without one. Swing mode's effort is the body's (`SwingProfile.body.effort`,
+ * P2b.2b.2c.1 design §4.4). A shot that gives no intensity swings at 0, by gravity alone: no preset carries a default
+ * intensity (P2b.2b.2c.1 design, Amendments).
  */
 export interface SwingShape {
     readonly pendulumShare: number;
@@ -135,8 +135,8 @@ export interface SwingProfile {
      * grip's limit (N; P2b.2b.2b.3 design §5), the backswing's limit θ_max (rad from vertical, in (0, π/2]): the
      * shaft's greatest angle at the top of a swing-mode backswing, where it meets the groin (P2b.2b.2c.1 design §5),
      * the player's effort in swing mode, shared by every swing preset (P2b.2b.2c.1 design §4.4), and the hands' peak
-     * acceleration along aim (m/s², > 0), the advance's ramp W = V/a at the head's planned speed V along aim (the
-     * P2b.2b.2c.1 pre-flight gate's ruling 9).
+     * acceleration along aim (m/s², > 0), the advance's ramp W = V/a at the head's planned speed V along aim, a body
+     * property the player never sets.
      */
     readonly body: {
         readonly armMass: number;

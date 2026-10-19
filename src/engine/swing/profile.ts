@@ -9,9 +9,8 @@
  *   backswing's limit θ_max from reference/swing.json (`body`), a placeholder from the user's account of the stance;
  *   and swing mode's effort, the linear torque–velocity law's τ_0 and ω_max from reference/swing.json (`body`),
  *   fitted by scripts/fitStrokeShape.ts to the 9.0 m/s ceiling with κ = ⅔, placeholders (P2b.2b.2c.1 design §4.3,
- *   §4.4); and
- *   the hands' peak acceleration along aim from reference/swing.json (`body`), a calibration placeholder (the
- *   P2b.2b.2c.1 pre-flight gate's ruling 9).
+ *   §4.4); and the hands' peak acceleration along aim from reference/swing.json (`body`), a calibration placeholder,
+ *   a body property the player never sets (P2b.2b.2c.1 design, Amendments).
  * - Stance: the hands measured from the socket along the shaft, after John Riches, Croquet Technique (Oxford Croquet),
  *   quoted per preset below. The swing presets keep their own leans. The rolls' leans are Don Gugan's measured face
  *   angles (Gugan 4, Table 6), with Riches' angles kept as cues (user decision, 2026-10-08). Each preset is defined by
@@ -95,7 +94,7 @@ function stanceFromLean(lean: number, up: number, hands: Omit<SwingStance, "hand
 /**
  * The shape of stroke type `type` driven in `mode`, from its reference/swing.json entry `ref` (design §5.3). A carry
  * preset reads the hands' tempo, and throws a ReferenceDataError naming the type and the keys when `ref` lacks it; a
- * swing preset takes it from `ref` or null (P2b.2b.2c.1 plan decision 7), its effort being the body's. A swing
+ * swing preset takes it from `ref` or null, its effort being the body's, shared by every swing preset. A swing
  * preset's retired effort keys (torqueMax, tempoSlow, tempoFast) and any preset's retired defaultIntensity are rejected
  * by readShape when swing.json loads.
  */

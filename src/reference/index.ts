@@ -242,8 +242,8 @@ export const SWING_REFERENCE_TYPES = [
  * shaft's greatest angle from vertical at the top of the backswing (P2b.2b.2c.1 design §5.2); and the swing-mode
  * effort law's τ_0 (`effortTorque`, N·m) and ω_max (`effortSpeed`, rad/s), fitted by scripts/fitStrokeShape.ts, with
  * κ (`effortShare`), the share of ω_max the drive uses at contact at full effort, read only by the fit (design §4.4);
- * and the hands' peak acceleration along aim (`handAcceleration`, m/s²), which sets the advance's ramp (the pre-flight
- * gate's ruling 9).
+ * and the hands' peak acceleration along aim (`handAcceleration`, m/s²), which sets the advance's ramp, a body
+ * property the player never sets (P2b.2b.2c.1 design, Amendments).
  */
 export const swingBodyReference = {
     backswingLimit: readValue(swingJson.body, "backswingLimit", "swing.body"),
@@ -314,7 +314,7 @@ const HAND_TEMPO_KEYS: readonly string[] = ["handTempoSlow", "handTempoFast"];
 /**
  * Stroke type `type`'s entry in the swing section `section` (reference/swing.json). Throws a ReferenceDataError for a
  * missing or malformed entry, a hands' tempo given only in part, a retired effort key (torqueMax, tempoSlow,
- * tempoFast) or a retired defaultIntensity (the pre-flight gate's ruling 2, 2026-10-18).
+ * tempoFast) or a retired defaultIntensity, a dead knob now that an absent intensity is 0 for every preset.
  */
 export function readShape(section: unknown, type: SwingReferenceType): StrokeShapeReference {
     const path = `swing.${type}`;

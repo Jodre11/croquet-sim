@@ -108,8 +108,9 @@ describe("the backswing's limit (design §5, §8.1.4)", () => {
     });
 
     it("finds the knee-height θ_max where the default mallet's head rises 0.48 m", () => {
-        // Gate ruling 4 (2026-10-19): θ_max is the angle at which the default mallet's head rises KNEE_RISE, solved
-        // from its geometry; the gate measured ≈ 64.9021° on the single-ball preset's level contact (θ_c = 0).
+        // θ_max is knee height, where the user's head tops out: the angle at which the default mallet's head rises
+        // KNEE_RISE, solved from its geometry; the gate measured ≈ 64.9021° on the single-ball preset's level contact
+        // (θ_c = 0).
         const limit = kneeLimit();
         expect(KNEE_RISE).toBe(0.48);
         expect((limit * 180) / Math.PI).toBeCloseTo(64.9021, 4);

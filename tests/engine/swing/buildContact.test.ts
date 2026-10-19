@@ -718,7 +718,7 @@ describe("defaultProfile", () => {
     });
 
     it("rejects a carry preset with no hands' tempo, and gives a swing preset without one none", () => {
-        // P2b.2b.2c.1 plan decision 7: the swing presets' effort is the body's, and their hands' tempo is null.
+        // The swing presets' effort is the body's, shared by every swing preset, and their hands' tempo is null.
         const drive = swingReference.drive;
         const roll = swingReference["full-roll"];
         expect(() => shapeOf("full-roll", "carry", { ...roll, handTempo: null })).toThrow(ReferenceDataError);

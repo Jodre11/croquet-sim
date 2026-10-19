@@ -14,7 +14,7 @@ const H0 = swingReference["single-ball"].defaultBackswing.value;
 const speedOf = (stroke: Partial<ShotSetup["stroke"]>): number =>
     plannedSpeed({ ...BASE, stroke: { ...BASE.stroke, ...stroke } }, WORLD);
 
-/** U(0) and U(1) at h_0: the bounds of regime 2 (the pre-flight gate's ruling 2, 2026-10-18). */
+/** U(0) and U(1) at h_0: the bounds of regime 2, the default backswing with the intensity solved. */
 const U0 = speedOf({ backswing: H0, intensity: 0 });
 const U1 = speedOf({ backswing: H0, intensity: 1 });
 /** U(1) from the body-limited top: the most the stroke reaches. */

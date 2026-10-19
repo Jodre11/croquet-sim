@@ -34,7 +34,7 @@ function stroke(
     return { ...setup, stroke: { ...setup.stroke, backswing: backswingFor(setup, 3, WORLD) } };
 }
 
-/** The default body's hands' peak acceleration along aim (m/s², the pre-flight gate's ruling 9). */
+/** The default body's hands' peak acceleration along aim (m/s², a body property, never the player's). */
 const HAND_ACCEL = defaultProfile.body.handAcceleration;
 
 const plan = (setup: ShotSetup): StrokePlan => planStroke(setup, WORLD);
@@ -117,7 +117,7 @@ describe("the hands' advance (design §6, §8.1.5)", () => {
     });
 
     it("ramps the hands at the body's peak acceleration a, over W = V/a", () => {
-        // The pre-flight gate's ruling 9: the ramp is a body property, so a gentler body's lasts longer at the same V.
+        // The ramp is a body property, so a gentler body's lasts longer at the same V (P2b.2b.2c.1 design, Amendments).
         const a = advanceOf(level());
         expect(a.accel).toBe(HAND_ACCEL);
         expect(a.ramp - a.start).toBeCloseTo(a.speed / HAND_ACCEL, 15);
@@ -156,18 +156,18 @@ describe("the hands' advance (design §6, §8.1.5)", () => {
         expect(at(level())).toBeLessThan(at(rising()));
     });
     it("slows the planned turn while late hands speed up: the planned ω at their ramp's end is lower", () => {
-        // Plan decision 1, restored beside the run-based test (the pre-flight gate's ruling 10b). On time the ramp
-        // coincides with the pendulum's window, whose α law prescribes θ, so the plan cannot see it (the test above). A
-        // late advance's ramp lies wholly in the free table, which integrates the hands' acceleration through
-        // freeAlpha. 0.05 s after contact is after the window's end (W = 0.01 s) and well before the no-advance finish
-        // (about 0.498 s); its ramp lasts V/a, 0.01 s at 3 m/s.
+        // The plan's own ω, for a late advance. On time the ramp coincides with the pendulum's window, whose α law
+        // prescribes θ, so the plan cannot see it (the test above). A late advance's ramp lies wholly in the free
+        // table, which integrates the hands' acceleration through freeAlpha. 0.05 s after contact is after the window's
+        // end (W = 0.01 s) and well before the no-advance finish (about 0.498 s); its ramp lasts V/a, 0.01 s at 3 m/s.
         const late = level(0.05);
         const RAMP_END = advanceOf(late).ramp;
         expect(RAMP_END).toBeGreaterThan(arc().contactAt + 2 * arc().window);
         expect(plannedOmega(late, RAMP_END)).toBeLessThan(plannedOmega(rising(), RAMP_END));
     });
     it("flattens the head's rise over the advance", () => {
-        // Plan decision 15: the head centre's highest point above its height at contact, contact to t_e.
+        // The head centre's highest point above its height at contact, contact to t_e: the advance flattens the path
+        // while the hands accelerate, the arc never stopped.
         const { follow } = run(level());
         const end = (follow.advanced as { end: number }).end;
         expect(rise(level(), end)).toBeLessThan(rise(rising(), end));
@@ -179,9 +179,10 @@ describe("the hands' advance (design §6, §8.1.5)", () => {
         expect(follow.finish).toBeGreaterThan(end);
     });
     it("carries the hands handReach in all from contact, the advance replacing the pivot's own reach", () => {
-        // The pre-flight gate's ruling 10c (one budget). A pushed single-ball stroke whose planned pivot travels on
-        // along aim after contact (handGain 1 at drive +1), so that the plan's own reach binds: without an advance the
-        // reach carries the hands handReach; with one, the advance alone does, never the reach's distance on top.
+        // One budget: the advance replaces the planned pivot's own reach. A pushed single-ball stroke whose planned
+        // pivot travels on along aim after contact (handGain 1 at drive +1), so that the plan's own reach binds:
+        // without an advance the reach carries the hands handReach; with one, the advance alone does, never the reach's
+        // distance on top.
         const pushed = (timing: Partial<StrokeTiming>): ShotSetup => {
             const setup = canonicalSetup("single-ball", {
                 stroke: { drive: 1, handReach: 0.3, timing: { ...ON_TIME, ...timing } },

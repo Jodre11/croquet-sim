@@ -336,7 +336,7 @@ describe("swing reference (P2b.2b.2a design §6.1)", () => {
     });
 
     it("gives the rolls a hands' tempo, fast no slower than slow, and the swing presets none", () => {
-        // P2b.2b.2c.1 plan decision 7: the swing presets swing under the body's effort.
+        // The swing presets swing under the body's effort, shared by every swing preset.
         for (const type of SWING_REFERENCE_TYPES) {
             const { handTempo } = swingReference[type];
             const swing = ["single-ball", "drive", "stop-ac", "stop-gc"].includes(type);
@@ -378,8 +378,8 @@ describe("swing reference (P2b.2b.2a design §6.1)", () => {
     });
 
     it("rejects a default intensity as retired in every preset, naming the key", () => {
-        // The pre-flight gate's ruling 2 (2026-10-18): the default stroke fixes the backswing, and an absent
-        // intensity is 0 in both modes.
+        // The default stroke fixes the backswing, and an absent intensity is 0 in both modes, so a default intensity
+        // would be a dead knob.
         const entryOf = (type: SwingReferenceType): Record<string, unknown> =>
             (swingJson as unknown as Record<string, Record<string, unknown>>)[type] ?? {};
         for (const type of SWING_REFERENCE_TYPES) {

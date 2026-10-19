@@ -1,5 +1,5 @@
 /**
- * The swing-mode effort law's fit and checks (P2b.2b.2c.1 design §4.3, §4.4, §8.1.3; plan decisions 11–14), shared by
+ * The swing-mode effort law's fit and checks (P2b.2b.2c.1 design §4.3, §4.4, §8.1.3 and its Amendments), shared by
  * scripts/fitStrokeShape.ts and the effort tests, so the fit's solver and the tests agree by construction. Every
  * figure is the engine's own planned contact speed: each swing preset's canonical contact pose (canonicalSetup) and
  * hands, its downswing planned under the effort law and the speed read off the pose (poseSpeed), as
@@ -16,7 +16,7 @@ import { canonicalSetup } from "../tests/engine/support/shot";
 
 /**
  * The ceiling (m/s, design §4.3): every swing preset at intensity 1 from its body-limited top reaches at least
- * 1.1 × the CA's A4D 8.18 m/s = 8.998, rounded to 9.0 so that both forms hold (plan decision 11).
+ * 1.1 × the CA's A4D 8.18 m/s = 8.998, rounded to 9.0 so that both forms hold.
  */
 export const CEILING = 9.0;
 
@@ -25,10 +25,10 @@ export const SWING_PRESETS: readonly StrokeType[] = STROKE_TYPES.filter(
     (type) => defaultProfile.drive[type].mode === "swing",
 );
 
-/** The effort's bisections stop when the bracket is this close to its upper end, relative (plan decision 11). */
+/** Numerical, not physical: the effort's bisections stop when the bracket is this close to its upper end, relative. */
 const TOLERANCE = 1e-9;
 
-/** The body-limited top's margin inside θ_max, relative (plan decision 12), as maxBackswing's was. */
+/** The body-limited top's margin inside θ_max, relative, as maxBackswing's was, so that the top plans, not throws. */
 const TOP_MARGIN = 1e-9;
 
 /** Design §8.1.3's grid: the lowest backswing (m), the backswings' steps to the top, and the intensities' step. */
@@ -36,7 +36,7 @@ const GRID_LOW = 0.05;
 const GRID_BACKSWINGS = 10;
 const GRID_INTENSITIES = 20;
 
-/** Plan decision 14: dU/di at i = 1 at least this fraction of its mean over [0, 1]. */
+/** No flat top: dU/di at i = 1 at least this fraction of its mean over [0, 1], design §4.2's least fraction. */
 export const END_SLOPE_SHARE = 0.25;
 
 const WORLD = defaultWorld();
@@ -109,7 +109,7 @@ function plan(
 export const KNEE_RISE = 0.48;
 
 /**
- * θ_max (rad from vertical) at knee height (gate ruling 4, 2026-10-19): the shaft's angle at which the single-ball
+ * θ_max (rad from vertical) at knee height, where the user's head tops out: the shaft's angle at which the single-ball
  * preset's head rises KNEE_RISE above its contact height, solved from `profile`'s mallet and stance,
  * acos(cos θ_c − KNEE_RISE·s/ℓ), the inverse of bodyTop's rise without its margin.
  */
@@ -128,8 +128,8 @@ export function contactArm(
 }
 
 /**
- * The body-limited top (m, plan decision 12): h_top = ℓ·(cos θ_c − cos θ_max)/s·(1 − 1e-9), the backswing that takes
- * the shaft a hair inside the body's θ_max.
+ * The body-limited top (m): h_top = ℓ·(cos θ_c − cos θ_max)/s·(1 − 1e-9), the backswing that takes the shaft a hair
+ * inside the body's θ_max, so that the top plans rather than throws.
  */
 export function bodyTop(type: StrokeType, profile: SwingProfile = defaultProfile): number {
     const { pose } = caseOf(type, profile);
@@ -179,12 +179,12 @@ export function weakestTop(
 }
 
 /**
- * The body's effort for share `kappa` (design §4.4, plan decision 11), solved jointly. The outer bisection is on τ_0
- * over [0, hi], hi doubled from 1 N·m until the weakest preset's U(1) from its top reaches CEILING. For each τ_0 the
- * inner bisection is on ω_max over [lo, hi]: lo the gravity-only drive's ω at contact from its top over κ (where the
- * drive's ω_c(ω_max) ≥ κ·ω_max, the torque being non-negative), hi doubled until ω_c(ω_max) − κ·ω_max < 0. Each stops
- * when its bracket is within TOLERANCE of its upper end, relative, and gives that end: the τ_0 whose weakest U(1)
- * reaches CEILING and the ω_max at which the drive just falls short of κ·ω_max.
+ * The body's effort for share `kappa` (design §4.4), solved jointly. The outer bisection is on τ_0 over [0, hi], hi
+ * doubled from 1 N·m until the weakest preset's U(1) from its top reaches CEILING. For each τ_0 the inner bisection is
+ * on ω_max over [lo, hi]: lo the gravity-only drive's ω at contact from its top over κ (where the drive's ω_c(ω_max) ≥
+ * κ·ω_max, the torque being non-negative), hi doubled until ω_c(ω_max) − κ·ω_max < 0. Each stops when its bracket is
+ * within TOLERANCE of its upper end, relative, and gives that end: the τ_0 whose weakest U(1) reaches CEILING and the
+ * ω_max at which the drive just falls short of κ·ω_max.
  */
 export function fitEffort(kappa: number, profile: SwingProfile = defaultProfile): SwingEffort {
     const driveTop = bodyTop("drive", profile);
@@ -232,7 +232,7 @@ export function fitEffort(kappa: number, profile: SwingProfile = defaultProfile)
 /**
  * Design §4.2's constraints on swing preset `type` over §8.1.3's grid (backswings from GRID_LOW to the body-limited
  * top in GRID_BACKSWINGS equal steps, intensity in steps of 1/GRID_INTENSITIES): whether U strictly increases with i
- * and its second differences in i are all negative at every backswing, and plan decision 14's end slope
+ * and its second differences in i are all negative at every backswing, and the no-flat-top end slope
  * (U(1) − U(0.95))/0.05 with the mean slope U(1) − U(0), at the backswing where their ratio is least.
  */
 export function checkCurve(

@@ -346,8 +346,8 @@ export interface FollowThrough {
     readonly finish: number;
     readonly flags: readonly FollowFlag[];
     /**
-     * The hands' advance (P2b.2b.2c.1 design §6; plan decision 6): its start and end, where the hands come to rest.
-     * Present only when it started before the finish.
+     * The hands' advance (P2b.2b.2c.1 design §6): its start and end, where the hands come to rest. Present only when
+     * it started before the finish, so every run without one keeps its shape to the bit.
      */
     readonly advanced?: { readonly start: number; readonly end: number };
 }
@@ -380,9 +380,10 @@ function finishKind(plan: PreparedTrack): FinishKind {
 
 /**
  * True once the head in `state` at time t has reached its finish (P2b.2b.2a design §4.2): a swing at the pendulum's
- * apex, its pitch rate about n at or below zero, outside its advance (before its start or from its end; P2b.2b.2c.1
- * plan decision 4); a check at rest relative to the hands; a carry at the first apex after its pendulum phase starts,
- * its pitch rate at or below zero once it has been positive (`grip.rising`; P2b.2b.2b.2b design §4.3).
+ * apex, its pitch rate about n at or below zero, outside its advance (before its start or from its end, so it cannot
+ * fire while the hands still travel); a check at rest relative to the hands; a carry at the first apex after its
+ * pendulum phase starts, its pitch rate at or below zero once it has been positive (`grip.rising`; P2b.2b.2b.2b design
+ * §4.3).
  */
 function finished(kind: FinishKind, plan: PreparedTrack, state: HeadState, t: number, grip: GripState): boolean {
     switch (kind) {
