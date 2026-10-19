@@ -83,7 +83,8 @@ function sectionA(): void {
     );
     console.log(`the CA's travel unit: ${CA_MEASURE.unit} (${CA_MEASURE.unitLine})`);
     console.log(
-        `the CA's ball speed: a few milliseconds after impact, read at the face's release (${CA_MEASURE.pointLine})`,
+        "the CA's ball speed: a few milliseconds after impact; the model's read at the face's release " +
+            `(${CA_MEASURE.pointLine})`,
     );
     const world = fitWorld(TODAY, openWorld());
     const single = (speed: number): ShotSetup => opened(fitSetup("single-ball", TODAY, speed, world));

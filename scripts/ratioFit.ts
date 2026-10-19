@@ -189,13 +189,38 @@ const DIFFERENCE_SHARE = 0.01;
 
 type Pair = readonly [number, number];
 
+/** Numerical, not physical: the line search's evaluations along the free coordinate, its bracket shrunk to ~1e-8. */
+const LINE_EVALUATIONS = 40;
+
+/**
+ * Numerical, not physical: a Newton step moving no coordinate by more than this share of its bound's width has
+ * stalled. A step clamped onto a bound still moves the free coordinate by rounding, so an exact repeat is not awaited.
+ */
+const STALL_SHARE = 1e-9;
+
+/** The golden section's ratio, (√5 − 1)/2. */
+const GOLDEN = (Math.sqrt(5) - 1) / 2;
+
+/** One evaluated point: its values, and its score max(|e₀|/tol₀, |e₁|/tol₁). */
+interface Evaluated {
+    readonly point: Pair;
+    readonly values: Pair;
+    readonly score: number;
+    readonly done: boolean;
+}
+
 /**
  * A root of `evaluate` − `targets` within `bounds` (design §5.3): Newton from `start` (clamped into the bounds), the
  * Jacobian by forward differences of DIFFERENCE_SHARE of each bound's width (backward where forward would leave the
- * upper bound), each iterate clamped into the bounds, at most MAX_ITERATIONS steps. Converged when both errors are at
- * most SOLVE_TOLERANCE; otherwise, the Jacobian singular or an iterate repeating (clamped onto the same point), it
- * returns the evaluated point with the least max(|e₀|/tol₀, |e₁|/tol₁), the closest, with `converged: false`. No point
- * outside the bounds is ever evaluated. `evaluations` counts the calls of `evaluate`.
+ * upper bound), each iterate clamped into the bounds, at most MAX_ITERATIONS steps. Converged as soon as any evaluated
+ * point has both errors at most SOLVE_TOLERANCE; that point is returned. Otherwise the closest point is the evaluated
+ * one with the least max(|e₀|/tol₀, |e₁|/tol₁), returned with `converged: false`. When Newton ends unconverged with
+ * one coordinate pinned at a bound (a step moving neither coordinate by STALL_SHARE of its width, the Jacobian
+ * singular, or the steps spent), the closest point lies along that bound, where a clamped Newton step cannot reach it:
+ * a golden-section search over the free coordinate's bounds (its two ends included, LINE_EVALUATIONS in all), the
+ * pinned one held, minimises that score first. With both coordinates pinned, or neither, it does not search. No point
+ * outside the bounds is ever evaluated, and the point returned is always one evaluated, with its evaluated values.
+ * `evaluations` counts the calls of `evaluate`.
  */
 export function solvePair(
     evaluate: (x: Pair) => Pair,
@@ -206,21 +231,60 @@ export function solvePair(
 ): { readonly point: Pair; readonly values: Pair; readonly converged: boolean; readonly evaluations: number } {
     const clamp = (x: number, j: 0 | 1): number => Math.min(Math.max(x, bounds[j][0]), bounds[j][1]);
     let evaluations = 0;
-    let best: { point: Pair; values: Pair; score: number } | null = null;
-    const at = (point: Pair): { readonly values: Pair; readonly errors: Pair } => {
+    const seen: { best: Evaluated | null; found: Evaluated | null } = { best: null, found: null };
+    const at = (point: Pair): { readonly values: Pair; readonly errors: Pair; readonly score: number } => {
         const values = evaluate(point);
         evaluations++;
         const errors: Pair = [values[0] - targets[0], values[1] - targets[1]];
         const score = Math.max(Math.abs(errors[0]) / tolerances[0], Math.abs(errors[1]) / tolerances[1]);
-        if (best === null || score < best.score) {
-            best = { point, values, score };
+        const done = Math.abs(errors[0]) <= SOLVE_TOLERANCE && Math.abs(errors[1]) <= SOLVE_TOLERANCE;
+        const evaluated = { point, values, score, done };
+        if (seen.best === null || score < seen.best.score) {
+            seen.best = evaluated;
         }
-        return { values, errors };
+        if (done && (seen.found === null || score < seen.found.score)) {
+            seen.found = evaluated;
+        }
+        return { values, errors, score };
     };
-    const done = (e: Pair): boolean => Math.abs(e[0]) <= SOLVE_TOLERANCE && Math.abs(e[1]) <= SOLVE_TOLERANCE;
+    const pinned = (x: Pair, j: 0 | 1): boolean => x[j] === bounds[j][0] || x[j] === bounds[j][1];
+    // The free coordinate's golden-section search, the other held at its bound.
+    const along = (x: Pair, free: 0 | 1): void => {
+        const held = x[free === 0 ? 1 : 0];
+        const line = (t: number): Pair => (free === 0 ? [t, held] : [held, t]);
+        let [lo, hi] = bounds[free];
+        at(line(lo));
+        at(line(hi));
+        let p = hi - GOLDEN * (hi - lo);
+        let q = lo + GOLDEN * (hi - lo);
+        let fp = at(line(p)).score;
+        let fq = at(line(q)).score;
+        for (let i = 4; i < LINE_EVALUATIONS && seen.found === null; i++) {
+            if (fp <= fq) {
+                hi = q;
+                q = p;
+                fq = fp;
+                p = hi - GOLDEN * (hi - lo);
+                fp = at(line(p)).score;
+            } else {
+                lo = p;
+                p = q;
+                fp = fq;
+                q = lo + GOLDEN * (hi - lo);
+                fq = at(line(q)).score;
+            }
+        }
+    };
+    const stalled = (x: Pair): void => {
+        const first = pinned(x, 0);
+        const second = pinned(x, 1);
+        if (first !== second) {
+            along(x, first ? 1 : 0);
+        }
+    };
     let x: Pair = [clamp(start[0], 0), clamp(start[1], 1)];
     let here = at(x);
-    for (let k = 0; k < MAX_ITERATIONS && !done(here.errors); k++) {
+    for (let k = 0; k < MAX_ITERATIONS && seen.found === null; k++) {
         const column = (j: 0 | 1): Pair => {
             const width = bounds[j][1] - bounds[j][0];
             const h =
@@ -232,23 +296,27 @@ export function solvePair(
         };
         const [a, c] = column(0);
         const [b, d] = column(1);
+        if (seen.found !== null) {
+            break;
+        }
         const det = a * d - b * c;
         if (!(Math.abs(det) > 0) || !Number.isFinite(det)) {
             break;
         }
         const [e0, e1] = here.errors;
         const next: Pair = [clamp(x[0] + (b * e1 - d * e0) / det, 0), clamp(x[1] + (c * e0 - a * e1) / det, 1)];
-        if (next[0] === x[0] && next[1] === x[1]) {
+        const still = (j: 0 | 1): boolean => Math.abs(next[j] - x[j]) <= STALL_SHARE * (bounds[j][1] - bounds[j][0]);
+        if (still(0) && still(1)) {
             break;
         }
         x = next;
         here = at(x);
     }
-    if (done(here.errors)) {
-        return { point: x, values: here.values, converged: true, evaluations };
+    if (seen.found === null) {
+        stalled(x);
     }
-    const closest = best as unknown as { point: Pair; values: Pair };
-    return { point: closest.point, values: closest.values, converged: false, evaluations };
+    const closest = (seen.found ?? seen.best) as Evaluated;
+    return { point: closest.point, values: closest.values, converged: closest.done, evaluations };
 }
 
 /** A CA single-ball drive (Gugan 4, Table 2; the CA's Single Ball Shots): mallet and ball speed (m/s), travel (m). */
