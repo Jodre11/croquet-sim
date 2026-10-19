@@ -153,6 +153,17 @@ describe("the hands' advance (design §6, §8.1.5)", () => {
         expect(plannedOmega(level(), RAMP_END)).toBe(plannedOmega(rising(), RAMP_END));
         expect(at(level())).toBeLessThan(at(rising()));
     });
+    it("slows the planned turn while late hands speed up: the planned ω at their ramp's end is lower", () => {
+        // Plan decision 1, restored beside the run-based test (the pre-flight gate's ruling 10b). On time the ramp
+        // coincides with the pendulum's window, whose α law prescribes θ, so the plan cannot see it (the test above). A
+        // late advance's ramp lies wholly in the free table, which integrates the hands' acceleration through
+        // freeAlpha. 0.05 s after contact is after the window's end (W = 0.01 s) and well before the no-advance finish
+        // (about 0.498 s); its ramp lasts V/a, 0.01 s at 3 m/s.
+        const late = level(0.05);
+        const RAMP_END = advanceOf(late).ramp;
+        expect(RAMP_END).toBeGreaterThan(arc().contactAt + 2 * arc().window);
+        expect(plannedOmega(late, RAMP_END)).toBeLessThan(plannedOmega(rising(), RAMP_END));
+    });
     it("flattens the head's rise over the advance", () => {
         // Plan decision 15: the head centre's highest point above its height at contact, contact to t_e.
         const { follow } = run(level());

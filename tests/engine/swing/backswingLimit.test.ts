@@ -118,8 +118,9 @@ describe("the backswing's limit (design §5, §8.1.4)", () => {
         expect(bodyTop("single-ball", atKnee)).toBeCloseTo(KNEE_RISE, 8);
     });
 
-    it("gives the default player's θ_max as 75°", () => {
+    it("gives the default player's θ_max at knee height", () => {
+        // P2b.2b.2c.1: the single-ball stroke (was 75°, the placeholder before the pre-flight gate's ruling 4).
         expect(defaultProfile.body.backswingLimit).toBe(swingBodyReference.backswingLimit.value);
-        expect(defaultProfile.body.backswingLimit).toBeCloseTo((75 * Math.PI) / 180, 15);
+        expect(defaultProfile.body.backswingLimit).toBe(kneeLimit());
     });
 });

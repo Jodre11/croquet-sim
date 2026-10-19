@@ -1,29 +1,29 @@
 {
     "body": {
         "backswingLimit": {
-            "value": 1.3089969389957472,
+            "value": 1.1327544972853942,
             "unit": "rad",
             "bounds": [1.117010721276371, 1.5707963267948966],
-            "source": "Spec §5.2 (docs/superpowers/specs/2026-10-18-p2b2b2c1-single-ball-design.md) and the user's account of the stance (2026-10-18)",
+            "source": "Spec §5.2 (docs/superpowers/specs/2026-10-18-p2b2b2c1-single-ball-design.md), the user's account of the stance (2026-10-18) and the pre-flight gate's ruling 4 (2026-10-19); solved by scripts/fitStrokeShape.ts",
             "provenance": "derived",
             "provisional": "placeholder",
-            "note": "The shaft's greatest angle from vertical at the top of the backswing, 75°: where the shaft meets the groin. The head rises by ℓ·(1 − cos 75°) = 0.6178 m at it on the default mallet (ℓ = 0.833575 m). Bounds: 64°, the knee-height top, to 90°."
+            "note": "The shaft's greatest angle from vertical at the top of the backswing, at knee height: the angle at which the default mallet's head rises 0.48 m above its contact height (\"about knee height\", design §5.2), acos(cos θ_c − 0.48·s/ℓ) on the single-ball preset's canonical contact (θ_c = 0.0000°, s = 1, ℓ = 0.833575 m), 64.9021°. Bounds: 64° to 90°, the shaft horizontal."
         },
         "effortTorque": {
-            "value": 57.087018102407455,
+            "value": 68.5268520116806,
             "unit": "N·m",
             "source": "scripts/fitStrokeShape.ts: P2b.2b.2c.1 design §4.3–§4.5 (docs/superpowers/specs/2026-10-18-p2b2b2c1-single-ball-design.md)",
             "provenance": "derived",
             "provisional": "placeholder",
-            "note": "The isometric torque τ_0. τ_0 and ω_max solved jointly (design §4.4): the weakest swing preset, single-ball, reaches the ceiling 9 m/s (1.1 × the CA's A4D 8.18 m/s, design §4.3) at intensity 1 from its body-limited top (θ_max = 75.0°), and the drive's shaft there turns at κ·ω_max at contact, κ = 0.6667."
+            "note": "The isometric torque τ_0. τ_0 and ω_max solved jointly (design §4.4): the weakest swing preset, single-ball, reaches the ceiling 9 m/s (1.1 × the CA's A4D 8.18 m/s, design §4.3) at intensity 1 from its body-limited top (θ_max = 64.9021°), and the drive's shaft there turns at κ·ω_max at contact, κ = 0.6667."
         },
         "effortSpeed": {
-            "value": 16.19530336512667,
+            "value": 16.19530337086275,
             "unit": "rad/s",
             "source": "scripts/fitStrokeShape.ts: P2b.2b.2c.1 design §4.3–§4.5 (docs/superpowers/specs/2026-10-18-p2b2b2c1-single-ball-design.md)",
             "provenance": "derived",
             "provisional": "placeholder",
-            "note": "The speed ω_max at which the player adds no more. τ_0 and ω_max solved jointly (design §4.4): the weakest swing preset, single-ball, reaches the ceiling 9 m/s (1.1 × the CA's A4D 8.18 m/s, design §4.3) at intensity 1 from its body-limited top (θ_max = 75.0°), and the drive's shaft there turns at κ·ω_max at contact, κ = 0.6667."
+            "note": "The speed ω_max at which the player adds no more. τ_0 and ω_max solved jointly (design §4.4): the weakest swing preset, single-ball, reaches the ceiling 9 m/s (1.1 × the CA's A4D 8.18 m/s, design §4.3) at intensity 1 from its body-limited top (θ_max = 64.9021°), and the drive's shaft there turns at κ·ω_max at contact, κ = 0.6667."
         },
         "effortShare": {
             "value": 0.6666666666666666,
