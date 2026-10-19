@@ -8,14 +8,14 @@
  *    and body.effortSpeed;
  * 2. every swing preset's U(i) checked over design §8.1.3's grid (checkCurve): strictly increasing in i, concave, and
  *    its slope at i = 1 at least END_SLOPE_SHARE of its mean; the fit throws naming the preset if not;
- * 3. unless KEEP_DEFAULTS=1, every swing preset's default (design §4.5): intensity DEFAULT_INTENSITY, a labelled
- *    placeholder (plan decision 13), and the backswing in (0, h_top] planning CANONICAL_SPEED at it (fitDefault); a
- *    sourced backswing range that excludes that backswing makes the fit throw, for the gate.
- * The swing presets' retired effort pulse (torqueMax, tempoSlow, tempoFast) is dropped. The carry presets are frozen at
- * engine 0.12.0's fit (design §4.4): their handTempoSlow, handTempoFast and defaultBackswing keep their values, their
- * notes saying so; nothing else of theirs is touched.
+ * 3. every swing preset's defaultBackswing h_0 and defaultSpeed kept as they are (the pre-flight gate's ruling 2: the
+ *    default stroke fixes the backswing, a stroke's intensity reaching the speeds from U(0) to U(1) at h_0), and
+ *    U(0) and U(1) at h_0 reported.
+ * The swing presets' retired effort pulse (torqueMax, tempoSlow, tempoFast) and every preset's retired defaultIntensity
+ * are dropped. The carry presets are frozen at engine 0.12.0's fit (design §4.4): their handTempoSlow, handTempoFast
+ * and defaultBackswing keep their values, their notes saying so; nothing else of theirs is touched.
  * Never fitted to a ratio or to the user's play data. Prints reference/swing.json with its derived entries replaced to
- * stdout and a summary to stderr. Run with `[env KEEP_DEFAULTS=1] npx --yes tsx scripts/fitStrokeShape.ts > <file>`,
+ * stdout and a summary to stderr. Run with `npx --yes tsx scripts/fitStrokeShape.ts > <file>`,
  * copy the file over reference/swing.json and run Prettier on it. Throws if any stroke type has kinematic pairs
  * (P2b.2b.2a plan Task 4 Step 2).
  */
@@ -23,7 +23,6 @@ import swingJson from "../reference/swing.json";
 import { defaultProfile } from "../src/engine/swing/profile";
 import { SWING_REFERENCE_TYPES, swingBodyReference, swingReference } from "../src/reference/index";
 import {
-    CANONICAL_SPEED,
     CEILING,
     END_SLOPE_SHARE,
     KNEE_RISE,
@@ -32,15 +31,11 @@ import {
     checkCurve,
     contactArm,
     contactRate,
-    fitDefault,
     fitEffort,
     kneeLimit,
     speedAt,
     weakestTop,
 } from "./effortFit";
-
-/** The proposed shared default intensity (plan decision 13): a labelled placeholder, a quarter of full effort. */
-const DEFAULT_INTENSITY = 0.25;
 
 /** The source every entry this fit derives cites. */
 const FIT_SOURCE =
@@ -50,18 +45,13 @@ const FIT_SOURCE =
 /** The note appended to each frozen carry-preset entry. */
 const FROZEN = "Frozen at engine 0.12.0's fit (P2b.2b.2c.1 design §4.4).";
 
-/** The swing presets' retired effort pulse (P2b.2b.2a). */
-const RETIRED: readonly string[] = ["torqueMax", "tempoSlow", "tempoFast"];
+/** The swing presets' retired effort pulse (P2b.2b.2a) and every preset's retired default intensity (gate ruling 2). */
+const RETIRED: readonly string[] = ["torqueMax", "tempoSlow", "tempoFast", "defaultIntensity"];
 
-declare const process: { readonly env: Readonly<Record<string, string | undefined>> };
-
-const KEEP_DEFAULTS = process.env.KEEP_DEFAULTS === "1";
-
-function entry(value: number, unit: string, note: string, placeholder: boolean, bounds?: readonly [number, number]) {
+function entry(value: number, unit: string, note: string, placeholder: boolean) {
     return {
         value,
         unit,
-        ...(bounds === undefined ? {} : { bounds }),
         source: FIT_SOURCE,
         provenance: "derived",
         ...(placeholder ? { provisional: "placeholder" } : {}),
@@ -129,6 +119,7 @@ console.error(`drive κ·ω_max ${kappa * effort.speed} rad/s against ω at cont
 
 for (const type of SWING_REFERENCE_TYPES) {
     const given = out[type] as Record<string, unknown>;
+    out[type] = Object.fromEntries(Object.entries(given).filter(([key]) => !RETIRED.includes(key)));
     if (defaultProfile.drive[type].mode === "carry") {
         for (const key of ["handTempoSlow", "handTempoFast", "defaultBackswing"]) {
             const item = given[key] as { note?: string };
@@ -138,40 +129,12 @@ for (const type of SWING_REFERENCE_TYPES) {
         }
         continue;
     }
-    const record = Object.fromEntries(Object.entries(given).filter(([key]) => !RETIRED.includes(key)));
-    out[type] = record;
-    if (KEEP_DEFAULTS) {
-        continue;
-    }
-    const chosen = fitDefault(type, DEFAULT_INTENSITY, effort, profile);
-    const range = swingReference[type].backswingRange;
-    if (range !== null && !(chosen.backswing >= range.low.value && chosen.backswing <= range.high.value)) {
-        throw new Error(
-            `${type}: the default backswing ${chosen.backswing} m lies outside the sourced range ` +
-                `[${range.low.value}, ${range.high.value}] m (plan decision 13)`,
-        );
-    }
-    const why =
-        `Design §4.5: the backswing planning ${CANONICAL_SPEED} m/s at the shared default intensity ` +
-        `${DEFAULT_INTENSITY}, under the body's effort`;
-    record.defaultBackswing = entry(chosen.backswing, "m", `${why}.`, false);
-    record.defaultIntensity = entry(
-        DEFAULT_INTENSITY,
-        "1",
-        "A labelled placeholder (P2b.2b.2c.1 plan decision 13): a quarter of full effort, the lightest round figure " +
-            "plainly hands-assisted, shared by every swing preset.",
-        true,
-        [0, 1],
-    );
-    record.defaultSpeed = entry(
-        chosen.speed,
-        "m/s",
-        "The planned contact speed at the default backswing and intensity.",
-        false,
-    );
+    // Gate ruling 2: the default backswing h_0 is kept as it is, and the speeds between U(0) and U(1) at it are the
+    // ones a stroke reaches by its intensity alone.
+    const h0 = swingReference[type].defaultBackswing.value;
     console.error(
-        `${type.padEnd(11)} default ${fmt(chosen.backswing)} m at intensity ${DEFAULT_INTENSITY}, ` +
-            `${fmt(chosen.speed)} m/s`,
+        `${type.padEnd(11)} default backswing ${h0} m: U(0) ${fmt(speedAt(type, h0, 0, effort, profile), 6)} m/s, ` +
+            `U(1) ${fmt(speedAt(type, h0, 1, effort, profile), 6)} m/s`,
     );
 }
 console.log(JSON.stringify(out, null, 4));

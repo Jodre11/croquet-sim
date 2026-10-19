@@ -273,9 +273,8 @@ export interface StrokeShapeReference {
     /** The rolls' sourced tempo, or null. */
     readonly tempo: ReferenceQuote | null;
     readonly kinematics: readonly KinematicPair[];
-    /** The fit's default backswing (m) and intensity, and the planned speed (m/s) they give (design §5.3). */
+    /** The fit's default backswing (m), and the planned speed (m/s) it gives at intensity 0 (design §5.3). */
     readonly defaultBackswing: ReferenceValue;
-    readonly defaultIntensity: ReferenceValue;
     readonly defaultSpeed: ReferenceValue;
     /** Carry mode's hands' tempo (the rolls), or null. */
     readonly handTempo: { readonly slow: ReferenceValue; readonly fast: ReferenceValue } | null;
@@ -311,8 +310,8 @@ const HAND_TEMPO_KEYS: readonly string[] = ["handTempoSlow", "handTempoFast"];
 
 /**
  * Stroke type `type`'s entry in the swing section `section` (reference/swing.json). Throws a ReferenceDataError for a
- * missing or malformed entry, a hands' tempo given only in part, or a retired effort key (torqueMax, tempoSlow,
- * tempoFast).
+ * missing or malformed entry, a hands' tempo given only in part, a retired effort key (torqueMax, tempoSlow,
+ * tempoFast) or a retired defaultIntensity (the pre-flight gate's ruling 2, 2026-10-19).
  */
 export function readShape(section: unknown, type: SwingReferenceType): StrokeShapeReference {
     const path = `swing.${type}`;
@@ -327,6 +326,13 @@ export function readShape(section: unknown, type: SwingReferenceType): StrokeSha
                 "retired: swing mode's effort is the body's effortTorque and effortSpeed (P2b.2b.2c.1 design §4.4)",
             );
         }
+    }
+    if (has(entry, "defaultIntensity")) {
+        throw new ReferenceDataError(
+            `${path}.defaultIntensity`,
+            "retired: the default stroke fixes the backswing, and a stroke that gives no intensity swings at 0 " +
+                "(P2b.2b.2c.1 pre-flight gate, ruling 2)",
+        );
     }
     const low = has(entry, "backswingLow");
     if (low !== has(entry, "backswingHigh")) {
@@ -346,7 +352,6 @@ export function readShape(section: unknown, type: SwingReferenceType): StrokeSha
         tempo: has(entry, "tempo") ? readQuote(entry, "tempo", path) : null,
         kinematics: readPairs(entry, path),
         defaultBackswing: readValue(entry, "defaultBackswing", path),
-        defaultIntensity: readValue(entry, "defaultIntensity", path),
         defaultSpeed: readValue(entry, "defaultSpeed", path),
         // Given whole or not at all: a partial one fails naming the key it lacks.
         handTempo: HAND_TEMPO_KEYS.some((key) => has(entry, key))

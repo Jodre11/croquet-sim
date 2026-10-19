@@ -35,7 +35,6 @@ function input(top: number, o: Partial<DownswingInput>): DownswingInput {
             pendulumShare: SHARE,
             handAngle: 0.5,
             handTempo: { slow: 0.4, fast: 0.2 },
-            defaultIntensity: 0,
         },
         backswing: 0.3,
         backswingLimit: LIMIT,

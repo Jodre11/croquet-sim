@@ -320,12 +320,10 @@ describe("swing reference (P2b.2b.2a design §6.1)", () => {
         }
     });
 
-    it("holds the fit's defaults: a backswing, an intensity in [0, 1] and its planned speed", () => {
+    it("holds the fit's defaults: a backswing and its planned speed at intensity 0", () => {
         for (const type of SWING_REFERENCE_TYPES) {
             const shape = swingReference[type];
             expect(shape.defaultBackswing.value, type).toBeGreaterThan(0);
-            expect(shape.defaultIntensity.value, type).toBeGreaterThanOrEqual(0);
-            expect(shape.defaultIntensity.value, type).toBeLessThanOrEqual(1);
             // Exit criterion 5: 3 m/s within 2 %, or a default at a sourced bound.
             const range = shape.backswingRange;
             const atBound =
@@ -377,5 +375,21 @@ describe("swing reference (P2b.2b.2a design §6.1)", () => {
             expect(() => readShape(retired, "drive"), key).toThrow(new RegExp(`swing\\.drive\\.${key}.*retired`));
         }
         expect(readShape(swingJson, "drive")).toEqual(swingReference.drive);
+    });
+
+    it("rejects a default intensity as retired in every preset, naming the key", () => {
+        // The pre-flight gate's ruling 2 (2026-10-19): the default stroke fixes the backswing, and an absent
+        // intensity is 0 in both modes.
+        const entryOf = (type: SwingReferenceType): Record<string, unknown> =>
+            (swingJson as unknown as Record<string, Record<string, unknown>>)[type] ?? {};
+        for (const type of SWING_REFERENCE_TYPES) {
+            expect(entryOf(type), type).not.toHaveProperty("defaultIntensity");
+            const given = { value: 0, unit: "1", source: "test", provenance: "derived" };
+            const retired = { ...swingJson, [type]: { ...entryOf(type), defaultIntensity: given } };
+            expect(() => readShape(retired, type), type).toThrow(ReferenceDataError);
+            expect(() => readShape(retired, type), type).toThrow(
+                new RegExp(`swing\\.${type}\\.defaultIntensity.*retired`),
+            );
+        }
     });
 });

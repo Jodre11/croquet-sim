@@ -87,7 +87,7 @@ const DRIVE_NUMBERS: readonly Exclude<keyof SwingDrive, "mode">[] = [
 ];
 
 /** A shape's scalar numbers always read, each checked finite by name (handAngle only when read: design §3.2). */
-const SHAPE_NUMBERS: readonly ("pendulumShare" | "defaultIntensity")[] = ["pendulumShare", "defaultIntensity"];
+const SHAPE_NUMBERS: readonly "pendulumShare"[] = ["pendulumShare"];
 
 function fail(message: string): never {
     throw new RangeError(message);
@@ -412,7 +412,6 @@ function validate(setup: ShotSetup, ballRadius: number): void {
     finiteNumber(body.effort.speed, "profile.body.effort.speed");
     positive(body.effort.speed, "profile.body.effort.speed");
     unit(shape.pendulumShare, `${where}.pendulumShare`);
-    unit(shape.defaultIntensity, `${where}.defaultIntensity`);
     if (shape.pendulumShare < 1 && !(shape.handAngle > 0 && shape.handAngle < Math.PI / 2)) {
         fail(`${where}.handAngle must lie in (0, 90°) when pendulumShare < 1 (got ${shape.handAngle} rad)`);
     }
@@ -448,7 +447,7 @@ function handsOf(setup: ShotSetup): Hands {
     };
 }
 
-/** The downswing of a checked `setup` posed at `pose`, at the shot's intensity, else its preset's default. */
+/** The downswing of a checked `setup` posed at `pose`, at the shot's intensity, else 0 (the gate's ruling 2). */
 function downswingOf(setup: ShotSetup, pose: ContactPose, hands: Hands, gravity: number): PlannedDownswing {
     const { stroke, profile } = setup;
     const shape = profile.shape[stroke.type];
@@ -459,7 +458,7 @@ function downswingOf(setup: ShotSetup, pose: ContactPose, hands: Hands, gravity:
         backswing: stroke.backswing,
         backswingLimit: profile.body.backswingLimit,
         effort: profile.body.effort,
-        intensity: stroke.intensity ?? shape.defaultIntensity,
+        intensity: stroke.intensity ?? 0,
         arrival:
             push.mode === "carry"
                 ? arcArrival(push.handArcRadius, push.handArcLow, stroke.handReach ?? push.handReach)
@@ -645,7 +644,7 @@ export interface StrokePlan {
  *   in carry mode (P2b.2b.2b.3 design §6.1); handArcRadius not above the push length; a flex value not positive, or a
  *   flex damping ratio above 1; pendulumForce not positive (P2b.2b.2b.2b design §6); pushForce, pushResponseTime,
  *   gripLimit or a hand–arm chain value not positive (its gate rulings, 2026-10-11; P2b.2b.2b.3 design §5);
- * - pendulumShare or defaultIntensity outside [0, 1]; handAngle outside (0, 90°) when pendulumShare < 1 (neither read
+ * - pendulumShare outside [0, 1]; handAngle outside (0, 90°) when pendulumShare < 1 (neither read
  *   nor checked otherwise); in swing mode a pendulumShare of 0; in carry mode a null hands' tempo, or one ≤ 0 or
  *   with fast > slow;
  * - the downswing's (downswing.ts): a backswing beyond the body's limit θ_max (swing mode) or MAX_BACK_ANGLE (carry

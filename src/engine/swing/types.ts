@@ -84,13 +84,12 @@ export interface SwingDrive {
  * (rad above horizontal; read only when the share is below 1). Carry mode reads `handTempo`: the hands' downswing lasts
  * from `slow` (s, intensity 0) to `fast` (s, intensity 1); null where a swing preset has none (P2b.2b.2c.1 plan
  * decision 7), and a carry stroke fails without one. Swing mode's effort is the body's (`SwingProfile.body.effort`,
- * P2b.2b.2c.1 design §4.4). `defaultIntensity` (in [0, 1]) stands for a shot that gives none.
+ * P2b.2b.2c.1 design §4.4). A shot that gives no intensity swings at 0 (the pre-flight gate's ruling 2).
  */
 export interface SwingShape {
     readonly pendulumShare: number;
     readonly handAngle: number;
     readonly handTempo: { readonly slow: number; readonly fast: number } | null;
-    readonly defaultIntensity: number;
 }
 
 /**
@@ -175,7 +174,7 @@ export interface ShotSetup {
         readonly aim: number;
         /** The head centre's height at the backswing's top above its height at contact, m (P2b.2b.2a design §3.2). */
         readonly backswing: number;
-        /** Effort and tempo, one control in [0, 1]; absent: the preset's defaultIntensity (P2b.2b.2a design §3.1). */
+        /** Effort and tempo, one control in [0, 1] (P2b.2b.2a design §3.1); absent: 0. */
         readonly intensity?: number;
         /** −1 check … 0 coast … +1 push. */
         readonly drive: number;

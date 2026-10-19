@@ -20,16 +20,10 @@ import { canonicalSetup } from "../tests/engine/support/shot";
  */
 export const CEILING = 9.0;
 
-/** P2b.2b.1's canonical contact speed (m/s), which each default plans (design §4.5). */
-export const CANONICAL_SPEED = 3;
-
 /** The default profile's swing-mode stroke types, in the presets' order. */
 export const SWING_PRESETS: readonly StrokeType[] = STROKE_TYPES.filter(
     (type) => defaultProfile.drive[type].mode === "swing",
 );
-
-/** Halvings of the default's bisection: to a double's resolution. */
-const BISECTIONS = 60;
 
 /** The effort's bisections stop when the bracket is this close to its upper end, relative (plan decision 11). */
 const TOLERANCE = 1e-9;
@@ -233,34 +227,6 @@ export function fitEffort(kappa: number, profile: SwingProfile = defaultProfile)
         }
     }
     return best;
-}
-
-/**
- * Swing preset `type`'s default backswing (design §4.5, plan decision 13): the backswing in (0, h_top] that plans
- * CANONICAL_SPEED at `intensity` under `effort`, by bisection (60 halvings), and the speed it plans. Throws if even
- * the top falls short.
- */
-export function fitDefault(
-    type: StrokeType,
-    intensity: number,
-    effort: SwingEffort,
-    profile: SwingProfile = defaultProfile,
-): { backswing: number; speed: number } {
-    const at = (backswing: number): number => speedAt(type, backswing, intensity, effort, profile);
-    let hi = bodyTop(type, profile);
-    if (at(hi) < CANONICAL_SPEED) {
-        throw new Error(`${type}: ${CANONICAL_SPEED} m/s is beyond reach at intensity ${intensity}: ${at(hi)} m/s`);
-    }
-    let lo = 0;
-    for (let i = 0; i < BISECTIONS; i++) {
-        const mid = (lo + hi) / 2;
-        if (at(mid) < CANONICAL_SPEED) {
-            lo = mid;
-        } else {
-            hi = mid;
-        }
-    }
-    return { backswing: hi, speed: at(hi) };
 }
 
 /**

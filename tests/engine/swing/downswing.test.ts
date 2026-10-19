@@ -41,7 +41,6 @@ function shape(o: Partial<SwingShape> = {}): SwingShape {
         pendulumShare: 1,
         handAngle: 0.5,
         handTempo: { slow: 0.4, fast: 0.2 },
-        defaultIntensity: 0,
         ...o,
     };
 }

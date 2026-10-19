@@ -93,7 +93,8 @@ function stanceFromLean(lean: number, up: number, hands: Omit<SwingStance, "hand
  * The shape of stroke type `type` driven in `mode`, from its reference/swing.json entry `ref` (design §5.3). A carry
  * preset reads the hands' tempo, and throws a ReferenceDataError naming the type and the keys when `ref` lacks it; a
  * swing preset takes it from `ref` or null (P2b.2b.2c.1 plan decision 7), its effort being the body's. A swing
- * preset's retired effort keys (torqueMax, tempoSlow, tempoFast) are rejected by readShape when swing.json loads.
+ * preset's retired effort keys (torqueMax, tempoSlow, tempoFast) and any preset's retired defaultIntensity are rejected
+ * by readShape when swing.json loads.
  */
 export function shapeOf(type: StrokeType, mode: StrokeMode, ref: StrokeShapeReference): SwingShape {
     if (mode === "carry" && ref.handTempo === null) {
@@ -103,7 +104,6 @@ export function shapeOf(type: StrokeType, mode: StrokeMode, ref: StrokeShapeRefe
         pendulumShare: ref.pendulumShare.value,
         handAngle: ref.handAngle.value,
         handTempo: ref.handTempo === null ? null : { slow: ref.handTempo.slow.value, fast: ref.handTempo.fast.value },
-        defaultIntensity: ref.defaultIntensity.value,
     };
 }
 

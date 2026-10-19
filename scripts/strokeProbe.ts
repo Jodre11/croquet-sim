@@ -138,7 +138,7 @@ function canonical(): void {
         const before = P2B2B1_RATIO[type];
         console.log(
             `${type.padEnd(11)} backswing ${mm(setup.stroke.backswing)} mm, intensity ` +
-                `${fmt(setup.stroke.intensity ?? setup.profile.shape[type].defaultIntensity, 3)}, planned ` +
+                `${fmt(setup.stroke.intensity ?? 0, 3)}, planned ` +
                 `${fmt(outcome.contactSpeed)} m/s; downswing ${ms(0 - downOf(outcome).release)} ms, lowest ` +
                 `${mm(outcome.approach.clearance)} mm ${ms(outcome.approach.before)} ms before contact; lead ` +
                 `${ms(arc.contactAt)} ms; impact to ${ms(trajectory.impactEnd)} ms after contact; finish ` +

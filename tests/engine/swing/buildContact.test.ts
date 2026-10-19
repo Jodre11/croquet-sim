@@ -708,7 +708,6 @@ describe("defaultProfile", () => {
             const ref = swingReference[type];
             expect(shape.pendulumShare, type).toBe(ref.pendulumShare.value);
             expect(shape.handAngle, type).toBe(ref.handAngle.value);
-            expect(shape.defaultIntensity, type).toBe(ref.defaultIntensity.value);
             const tempo = ref.handTempo;
             expect(shape.handTempo, type).toEqual(
                 tempo === null ? null : { slow: tempo.slow.value, fast: tempo.fast.value },
@@ -911,11 +910,6 @@ describe("buildContact rejections", () => {
             shot({}, testProfile({ drive: { mode: "carry" }, shape: { handTempo: { slow: 0.2, fast: 0.3 } } })),
             /handTempo\.fast must not exceed .*handTempo\.slow/,
         ],
-        [
-            "a default intensity above 1",
-            shot({}, testProfile({ shape: { defaultIntensity: 1.5 } })),
-            /defaultIntensity must lie in \[0, 1\]/,
-        ],
         ["a backswing beyond the shaft horizontal", shot({ backswing: 2 }), /beyond/],
     ];
 
@@ -926,6 +920,14 @@ describe("buildContact rejections", () => {
     it("neither reads nor checks the hands' angle of a pendulum alone (P2b.2b.2a design §3.2)", () => {
         const setup = shot({}, testProfile({ shape: { pendulumShare: 1, handAngle: NaN } }));
         expect(planStroke(setup, WORLD).contactSpeed).toBe(plannedSpeed(shot(), WORLD));
+    });
+
+    it("plans a stroke that gives no intensity at intensity 0 (the pre-flight gate's ruling 2)", () => {
+        const profile = testProfile({ body: { effort: { torque: 40, speed: 20 } } });
+        expect(plannedSpeed(shot({}, profile), WORLD)).toBe(plannedSpeed(shot({ intensity: 0 }, profile), WORLD));
+        expect(plannedSpeed(shot({ intensity: 0.5 }, profile), WORLD)).toBeGreaterThan(
+            plannedSpeed(shot({}, profile), WORLD),
+        );
     });
 });
 
@@ -955,7 +957,6 @@ describe("contactPose (design §5.2 steps 1–5, 10)", () => {
             pendulumShare: 1,
             handAngle: 0.5,
             handTempo: { slow: 0.4, fast: 0.2 },
-            defaultIntensity: 0,
         };
         const choice = {
             mode: "swing" as const,
