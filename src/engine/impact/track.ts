@@ -293,6 +293,27 @@ export interface Reach {
 }
 
 /**
+ * The hands' advance along aim (P2b.2b.2c.1 design §6): a ramp from rest to V, a cruise at V, then an ease to rest at
+ * handReach, on a level path. Times are in s from t = 0.
+ */
+export interface Advance {
+    /** When the hands start from rest (s). */
+    readonly start: number;
+    /** V, the cruise speed: the head's planned speed along aim at contact (m/s). */
+    readonly speed: number;
+    /** a, the body's peak hand acceleration over the ramp (m/s²). */
+    readonly accel: number;
+    /** When the ramp reaches V, start + V/a (s). */
+    readonly ramp: number;
+    /** When the hands have travelled 0.8·handReach and start to ease (s). */
+    readonly cruise: number;
+    /** The ease's deceleration, V²/(0.4·handReach) (m/s²). */
+    readonly decel: number;
+    /** When the hands come to rest, handReach (m) along aim from where they started (s). */
+    readonly end: number;
+}
+
+/**
  * Carry mode's push (P2b.2b.2b.2b design §4.1, §4.2): from `start` (contactAt), the planned pivot at `origin`, the
  * intended path travels along aim at the plan's pace on the hands' arc. It reaches pendulumAt·handReach at
  * `pendulum` and the push length handReach at `end`, where it stops at once (s from t = 0; null where the plan does
@@ -352,6 +373,8 @@ export interface PreparedTrack {
     readonly reach: Reach | null;
     /** Carry mode's push (P2b.2b.2b.2b design §4.1); null in swing mode. In carry mode `reach` is null. */
     readonly push: Push | null;
+    /** Swing mode's advance (P2b.2b.2c.1 design §6); null without one, and in carry mode. */
+    readonly advance: Advance | null;
     /** Swing mode's free pendulum; null in carry mode, or in swing mode where prepareTrack skipped it. */
     readonly free: FreePendulum | null;
     /** The swung body; in carry mode with both hands' skin (carryBody). */
@@ -575,11 +598,55 @@ function planPivot(track: PreparedTrack, t: number): Motion {
 }
 
 /**
+ * The advance's travel along aim at time t, on a level path: `a` (m), `v` (m/s) and `acc` (m/s²); 0, 0, 0 before its
+ * start, and handReach at rest from its end.
+ */
+export function advanceTravel(
+    advance: Advance,
+    t: number,
+): { readonly a: number; readonly v: number; readonly acc: number } {
+    const { start, speed, accel, ramp, cruise, decel, end } = advance;
+    if (t < start) {
+        return { a: 0, v: 0, acc: 0 };
+    }
+    if (t < ramp) {
+        const tau = t - start;
+        return { a: 0.5 * accel * tau * tau, v: accel * tau, acc: accel };
+    }
+    const ramped = 0.5 * accel * (ramp - start) * (ramp - start);
+    if (t < cruise) {
+        return { a: ramped + speed * (t - ramp), v: speed, acc: 0 };
+    }
+    const cruised = ramped + speed * (cruise - ramp);
+    if (t < end) {
+        const u = t - cruise;
+        return { a: cruised + speed * u - 0.5 * decel * u * u, v: speed - decel * u, acc: 0 - decel };
+    }
+    const u = end - cruise;
+    return { a: cruised + speed * u - 0.5 * decel * u * u, v: 0, acc: 0 };
+}
+
+/**
  * The pivot at time t: in carry mode after contactAt on the hands' arc (carryPivot); otherwise with the reach, without
- * the dip. After t1 the along-aim component eases to rest; any other component in the swing plane runs on as planned,
- * so V stays continuous.
+ * the dip, and after the advance's start with its travel along aim, planned so that the free table includes it.
  */
 function pivotAt(track: PreparedTrack, t: number): Motion {
+    const reached = reachedPivot(track, t);
+    const { advance } = track;
+    if (advance === null || !(t > advance.start)) {
+        return reached;
+    }
+    const { aim } = track.arc;
+    const { a, v, acc } = advanceTravel(advance, t);
+    return { P: add(reached.P, scale(aim, a)), V: add(reached.V, scale(aim, v)), A: add(reached.A, scale(aim, acc)) };
+}
+
+/**
+ * The pivot at time t without the advance: in carry mode after contactAt on the hands' arc (carryPivot); otherwise
+ * with the reach, without the dip. After t1 the along-aim component eases to rest; any other component in the swing
+ * plane runs on as planned, so V stays continuous.
+ */
+function reachedPivot(track: PreparedTrack, t: number): Motion {
     const { push } = track;
     if (push !== null && t > push.start) {
         return carryPivot(track, push, t);
@@ -616,6 +683,12 @@ function freeAlpha(track: PreparedTrack, free: FreePendulum, theta: number, t: n
     return (0 - free.weight * s - free.inertial * along) / free.inertia;
 }
 
+/** A reach that rests the planned pivot's along-aim motion from contactAt: it travels no further along aim. */
+function restingReach(track: PreparedTrack): Reach {
+    const { contactAt } = track.arc;
+    return { t1: contactAt, p1: planPivot(track, contactAt).P, v1: 0, decel: 0, tStop: contactAt };
+}
+
 /**
  * The reach (design §3.2): where the planned pivot has travelled 0.8·handReach along aim from contactAt (by bisection;
  * the swing model's paths travel monotonically), and the ease to rest over the last 0.2·handReach. A handReach of 0
@@ -623,10 +696,10 @@ function freeAlpha(track: PreparedTrack, free: FreePendulum, theta: number, t: n
  */
 function computeReach(track: PreparedTrack): Reach | null {
     const { aim, contactAt, handReach } = track.arc;
-    const p0 = planPivot(track, contactAt).P;
     if (!(handReach > 0)) {
-        return { t1: contactAt, p1: p0, v1: 0, decel: 0, tStop: contactAt };
+        return restingReach(track);
     }
+    const p0 = planPivot(track, contactAt).P;
     const start = 0.8 * handReach;
     const along = (t: number): number => dot(sub(planPivot(track, t).P, p0), aim);
     let lo = contactAt;
@@ -719,6 +792,22 @@ function carryPivot(track: PreparedTrack, push: Push, t: number): Motion {
     };
 }
 
+/**
+ * The advance of `arc` from `given`, its shape the reach's ease: with a the body's peak acceleration, V the speed and D
+ * the handReach, the ramp ends W = V/a after the start, the ramp a body property, the cruise once the hands have
+ * travelled 0.8·D, and the deceleration V²/(0.4·D) brings them to rest at D. planStroke has checked that the ramp's
+ * travel V·W/2 is under 0.8·D.
+ */
+function advanceOf(arc: SwingArc, given: NonNullable<SwingArc["advance"]>): Advance {
+    const { start, speed, accel } = given;
+    const W = speed / accel;
+    const D = arc.handReach;
+    const ramp = start + W;
+    const cruise = ramp + (0.8 * D - (speed * W) / 2) / speed;
+    const ease = 0.4 * D;
+    return { start, speed, accel, ramp, cruise, decel: (speed * speed) / ease, end: cruise + ease / speed };
+}
+
 /** Tabulates swing mode's free pendulum from the window's end by semi-implicit Euler every FREE_STEP (design §3.2). */
 function computeFree(track: PreparedTrack, head: MalletHead, gravity: number): FreePendulum {
     const { arc, body } = track;
@@ -776,6 +865,7 @@ export function prepareTrack(drive: TrackDrive, head: MalletHead, gravity: numbe
         dipAccel: (4 * arc.dip.depth) / (arc.dip.duration * arc.dip.duration),
         reach: null,
         push: null,
+        advance: carry || arc.advance === undefined ? null : advanceOf(arc, arc.advance),
         free: null,
         body,
         released: carry ? carryBody(head, hands.chain, arc.radius, null) : null,
@@ -790,7 +880,10 @@ export function prepareTrack(drive: TrackDrive, head: MalletHead, gravity: numbe
     if (carry) {
         return { ...plain, push: computePush(plain) };
     }
-    const reached: PreparedTrack = { ...plain, reach: computeReach(plain) };
+    // An advance alone carries the hands handReach, so the planned pivot's own reach rests from contact: one budget,
+    // never the reach's distance on top (P2b.2b.2c.1 design, Amendments).
+    const reach = plain.advance === null ? computeReach(plain) : restingReach(plain);
+    const reached: PreparedTrack = { ...plain, reach };
     return withFree ? { ...reached, free: computeFree(reached, head, gravity) } : reached;
 }
 

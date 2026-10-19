@@ -30,6 +30,9 @@
  * - heldOut: each roll at 3 m/s against the held-out measurements (design §9): the head's descent against Gugan 4's
  *   6–16°, the apparent contact against the CA's 30–58 ms, the second contact against Gugan 4's and Hall's several
  *   milliseconds, the face intervals against Cross's seven taps and the ratio against Gugan's.
+ * A stroke planning a speed takes the default stroke's inputs (strokeFor, the backswing fixed by default: a swing
+ * preset's defaultBackswing with the intensity solved, or the backswing solved at intensity 1 beyond it; a carry
+ * preset's backswing); the speeds table's intensities are given.
  * Run with `npx --yes tsx scripts/strokeProbe.ts`; environment: SECTION (one of the names above; default all), REPEAT
  * (timed runs per stroke, default 20). Not part of the test suite; its output goes into the roadmap's outcomes.
  */
@@ -56,7 +59,7 @@ import { BALL_IDS, type BallId, type BallState } from "../src/engine/types";
 import { defaultWorld } from "../src/engine/world";
 import { TEST_BALL } from "../tests/engine/support/fixtures";
 import { TEST_HEAD, counter, faceLaw, freeBall, isolated, recorder } from "../tests/engine/support/impact";
-import { backswingFor, canonicalSetup } from "../tests/engine/support/shot";
+import { backswingFor, canonicalSetup, strokeFor } from "../tests/engine/support/shot";
 
 // The project has no Node types; this script runs under tsx and reads only its environment.
 declare const process: { readonly env: Readonly<Record<string, string | undefined>> };
@@ -138,7 +141,7 @@ function canonical(): void {
         const before = P2B2B1_RATIO[type];
         console.log(
             `${type.padEnd(11)} backswing ${mm(setup.stroke.backswing)} mm, intensity ` +
-                `${fmt(setup.stroke.intensity ?? setup.profile.shape[type].defaultIntensity, 3)}, planned ` +
+                `${fmt(setup.stroke.intensity ?? 0, 3)}, planned ` +
                 `${fmt(outcome.contactSpeed)} m/s; downswing ${ms(0 - downOf(outcome).release)} ms, lowest ` +
                 `${mm(outcome.approach.clearance)} mm ${ms(outcome.approach.before)} ms before contact; lead ` +
                 `${ms(arc.contactAt)} ms; impact to ${ms(trajectory.impactEnd)} ms after contact; finish ` +
@@ -240,10 +243,12 @@ function faults(): void {
 
 const ROLLS: readonly StrokeType[] = ["half-roll", "full-roll", "pass-roll"];
 
-/** `type`'s canonical setup with the backswing that plans `speed` (m/s). */
+/**
+ * `type`'s canonical setup with the default stroke's inputs that plan `speed` (m/s): strokeFor.
+ */
 function atSpeed(type: StrokeType, speed: number): ShotSetup {
     const base = canonicalSetup(type, { world: WORLD });
-    return withStroke(base, { backswing: backswingFor(base, speed, WORLD) });
+    return withStroke(base, strokeFor(base, speed, WORLD));
 }
 
 /**
@@ -571,6 +576,7 @@ function onPointSweep(): void {
                         let setup: ShotSetup;
                         try {
                             const stroke = { ...base.stroke, drive: strokeDrive, contact: { up, side } };
+                            // The rolls are carry presets, where strokeFor is backswingFor's result unchanged.
                             const backswing = backswingFor({ ...base, stroke }, speed, WORLD);
                             setup = { ...base, stroke: { ...stroke, backswing } };
                             planStroke(setup, WORLD);

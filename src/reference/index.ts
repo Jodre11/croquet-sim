@@ -237,6 +237,22 @@ export const SWING_REFERENCE_TYPES = [
     "pass-roll",
 ] as const;
 
+/**
+ * The default player's body as the swing sees it (reference/swing.json, `body`): the backswing's limit θ_max (rad), the
+ * shaft's greatest angle from vertical at the top of the backswing (P2b.2b.2c.1 design §5.2); and the swing-mode
+ * effort law's τ_0 (`effortTorque`, N·m) and ω_max (`effortSpeed`, rad/s), fitted by scripts/fitStrokeShape.ts, with
+ * κ (`effortShare`), the share of ω_max the drive uses at contact at full effort, read only by the fit (design §4.4);
+ * and the hands' peak acceleration along aim (`handAcceleration`, m/s²), which sets the advance's ramp, a body
+ * property the player never sets (P2b.2b.2c.1 design, Amendments).
+ */
+export const swingBodyReference = {
+    backswingLimit: readValue(swingJson.body, "backswingLimit", "swing.body"),
+    effortTorque: readValue(swingJson.body, "effortTorque", "swing.body"),
+    effortSpeed: readValue(swingJson.body, "effortSpeed", "swing.body"),
+    effortShare: readValue(swingJson.body, "effortShare", "swing.body"),
+    handAcceleration: readValue(swingJson.body, "handAcceleration", "swing.body"),
+} as const;
+
 /** A key of `swingReference`. */
 export type SwingReferenceType = (typeof SWING_REFERENCE_TYPES)[number];
 
@@ -260,16 +276,9 @@ export interface StrokeShapeReference {
     /** The rolls' sourced tempo, or null. */
     readonly tempo: ReferenceQuote | null;
     readonly kinematics: readonly KinematicPair[];
-    /** The fit's default backswing (m) and intensity, and the planned speed (m/s) they give (design §5.3). */
+    /** The fit's default backswing (m), and the planned speed (m/s) it gives at intensity 0 (design §5.3). */
     readonly defaultBackswing: ReferenceValue;
-    readonly defaultIntensity: ReferenceValue;
     readonly defaultSpeed: ReferenceValue;
-    /** Swing mode's effort (the swing presets), or null. */
-    readonly effort: {
-        readonly torqueMax: ReferenceValue;
-        readonly tempoSlow: ReferenceValue;
-        readonly tempoFast: ReferenceValue;
-    } | null;
     /** Carry mode's hands' tempo (the rolls), or null. */
     readonly handTempo: { readonly slow: ReferenceValue; readonly fast: ReferenceValue } | null;
 }
@@ -298,12 +307,14 @@ function readPairs(entry: unknown, path: string): readonly KinematicPair[] {
     });
 }
 
-const EFFORT_KEYS: readonly string[] = ["torqueMax", "tempoSlow", "tempoFast"];
+/** The swing presets' retired effort pulse (P2b.2b.2a): the effort is now the body's (P2b.2b.2c.1 design §4.4). */
+const RETIRED_KEYS: readonly string[] = ["torqueMax", "tempoSlow", "tempoFast"];
 const HAND_TEMPO_KEYS: readonly string[] = ["handTempoSlow", "handTempoFast"];
 
 /**
  * Stroke type `type`'s entry in the swing section `section` (reference/swing.json). Throws a ReferenceDataError for a
- * missing or malformed entry, or an effort or hands' tempo given only in part.
+ * missing or malformed entry, a hands' tempo given only in part, a retired effort key (torqueMax, tempoSlow,
+ * tempoFast) or a retired defaultIntensity, a dead knob now that an absent intensity is 0 for every preset.
  */
 export function readShape(section: unknown, type: SwingReferenceType): StrokeShapeReference {
     const path = `swing.${type}`;
@@ -311,6 +322,21 @@ export function readShape(section: unknown, type: SwingReferenceType): StrokeSha
         throw new ReferenceDataError(path, "missing");
     }
     const entry = (section as Record<string, unknown>)[type];
+    for (const key of RETIRED_KEYS) {
+        if (has(entry, key)) {
+            throw new ReferenceDataError(
+                `${path}.${key}`,
+                "retired: swing mode's effort is the body's effortTorque and effortSpeed (P2b.2b.2c.1 design §4.4)",
+            );
+        }
+    }
+    if (has(entry, "defaultIntensity")) {
+        throw new ReferenceDataError(
+            `${path}.defaultIntensity`,
+            "retired: the default stroke fixes the backswing, and a stroke that gives no intensity swings at 0 " +
+                "(see the P2b.2b.2c.1 design's Amendments, 2026-10-18)",
+        );
+    }
     const low = has(entry, "backswingLow");
     if (low !== has(entry, "backswingHigh")) {
         throw new ReferenceDataError(path, "backswingLow and backswingHigh must be given together");
@@ -329,16 +355,8 @@ export function readShape(section: unknown, type: SwingReferenceType): StrokeSha
         tempo: has(entry, "tempo") ? readQuote(entry, "tempo", path) : null,
         kinematics: readPairs(entry, path),
         defaultBackswing: readValue(entry, "defaultBackswing", path),
-        defaultIntensity: readValue(entry, "defaultIntensity", path),
         defaultSpeed: readValue(entry, "defaultSpeed", path),
-        // Either member is given whole or not at all: a partial one fails naming the key it lacks.
-        effort: EFFORT_KEYS.some((key) => has(entry, key))
-            ? {
-                  torqueMax: readValue(entry, "torqueMax", path),
-                  tempoSlow: readValue(entry, "tempoSlow", path),
-                  tempoFast: readValue(entry, "tempoFast", path),
-              }
-            : null,
+        // Given whole or not at all: a partial one fails naming the key it lacks.
         handTempo: HAND_TEMPO_KEYS.some((key) => has(entry, key))
             ? { slow: readValue(entry, "handTempoSlow", path), fast: readValue(entry, "handTempoFast", path) }
             : null,

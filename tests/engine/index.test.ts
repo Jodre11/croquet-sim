@@ -4,7 +4,7 @@ import * as engine from "../../src/engine/index";
 /**
  * Every type spec §6.5 adds to the public API (P2b.2b.1). Naming them here makes `npm run check` fail if one is not
  * exported; Vitest does not type-check.
- * P2b.2b.2a adds the stroke shape's types (spec §1, exit criterion 6).
+ * P2b.2b.2a adds the stroke shape's types (spec §1, exit criterion 6); P2b.2b.2c.1 the body's effort (design §4.4).
  */
 type Exported = [
     engine.ShotSetup,
@@ -27,6 +27,7 @@ type Exported = [
     engine.FaultReport,
     engine.Finding,
     engine.SwingShape,
+    engine.SwingEffort,
     engine.SwingTrajectory,
     engine.StrokeSample,
     engine.ShotOptions,
@@ -66,7 +67,7 @@ describe("engine public API", () => {
         expect(engine.CROQUET_STROKES).toEqual(["drive", "stop-ac", "half-roll", "full-roll", "pass-roll"]);
         expect(engine.ON_TIME).toEqual({ arc: 0, hands: 0, dip: 0 });
         expect(engine.defaultProfile.mallet.headMass).toBeGreaterThan(0);
-        expect(engine.ENGINE_VERSION).toBe("0.12.0");
+        expect(engine.ENGINE_VERSION).toBe("0.13.0");
         const types: Exported | null = null;
         expect(types).toBeNull();
     });

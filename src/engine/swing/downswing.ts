@@ -6,10 +6,12 @@
  * - The hands (§3.3) follow P(σ) = P_b + Δ_h·σ² + Δ_z·(3σ² − 2σ³), starting from rest; in swing mode they arrive
  *   level, in carry mode on the hands' arc, through the Hermite term T·(σ³ − σ²) (P2b.2b.2b.2b design §4.1).
  * - Swing mode (§3.1, §3.4): the pendulum leads and σ = (θ − θ_top)/(θ_c − θ_top). I_P·θ̈ = −W·sin θ (W of
- *   pendulumOf) − M·d·(A·t̂) + τ_p(t) is solved for θ̈ with A = P″·σ̇² + P′·σ̈, and integrated by semi-implicit Euler
- *   every FREE_STEP until θ first reaches θ_c, the crossing step cut by linear interpolation in θ. The effort τ_p is a
- *   bell-shaped pulse, i·τ_max·½·(1 − cos 2πu) over T(i) = T_slow + i·(T_fast − T_slow) from the release, clipped at
- *   contact.
+ *   pendulumOf) − M·d·(A·t̂) + τ_p(ω) is solved for θ̈ with A = P″·σ̇² + P′·σ̈, and integrated by semi-implicit Euler
+ *   every FREE_STEP until θ first reaches θ_c, the crossing step cut by linear interpolation in θ. The effort τ_p is
+ *   the player's, a torque–velocity law linear in ω, a simplification of Hill's hyperbolic force–velocity relation
+ *   (Hill 1938; P2b.2b.2c.1 design §4.4): τ_p = i·τ_0·max(0, 1 − ω/ω_max) with the body's τ_0 and ω_max
+ *   (effortTorque). It steps on at the top and acts until contact, falling as the swing speeds up, so effort gives
+ *   diminishing returns and the tempo follows from it; at intensity 0 it is +0 and the swing is gravity's alone.
  * - Carry mode (§3.3): the hands lead on their own tempo T_h(i), σ = (t − t_r)/T_h, and the slope follows them, θ =
  *   θ_top + (θ_c − θ_top)·σ²; closed-form, so not tabulated (plan, "Decisions made while planning").
  */
@@ -27,9 +29,12 @@ import {
 import type { Downswing, MalletHead, StrokeMode } from "../impact/types";
 import { atan2, sinCos } from "../math/elementary";
 import { ZERO, add, dot, scale, sub, vec3, type Vec3 } from "../math/vec3";
-import type { SwingShape } from "./types";
+import type { SwingEffort, SwingShape } from "./types";
 
-/** The furthest the shaft may be taken back (rad from vertical): horizontal. A modelling bound (design §3.2). */
+/**
+ * The furthest the shaft may be taken back (rad from vertical): horizontal. A modelling bound (design §3.2). Carry
+ * mode's limit and the ceiling of the body's θ_max (swing mode's, `DownswingInput.backswingLimit`).
+ */
 export const MAX_BACK_ANGLE = Math.PI / 2;
 
 /** The longest downswing (s) before it is rejected (design §3.4). A modelling bound: no stroke falls for 2 s. */
@@ -51,6 +56,13 @@ export interface DownswingInput {
     readonly shape: SwingShape;
     /** h (m), the head centre's height at the top above its height at contact, and the intensity in [0, 1]. */
     readonly backswing: number;
+    /**
+     * θ_max (rad from vertical, in (0, π/2]): the body's limit on a swing-mode backswing. Carry mode keeps
+     * MAX_BACK_ANGLE.
+     */
+    readonly backswingLimit: number;
+    /** The player's effort in swing mode (the body's τ_0 and ω_max). Carry mode never reads it. */
+    readonly effort: SwingEffort;
     readonly intensity: number;
     /** The hands' arc's slope dz/ds at contact (≤ 0; P2b.2b.2b.2b design §4.1). Carry mode only; 0 arrives level. */
     readonly arrival: number;
@@ -70,21 +82,37 @@ function fail(message: string): never {
 }
 
 /**
- * Plans the downswing of `input` (design §3.2–§3.4). Throws a RangeError for a backswing beyond MAX_BACK_ANGLE, a
- * swing-mode downswing whose pendulum does not swing (pendulumShare 0), a non-positive effective inertia, a stall
- * (ω falling to zero or below before θ_c), or a fall beyond MAX_FALL. Every other input is taken as checked
- * (buildContact).
+ * The player's torque (N·m) on the shaft at intensity `intensity` and angular speed `omega` (rad/s): the linear law
+ * i·τ_0·max(0, 1 − ω/ω_max) (P2b.2b.2c.1 design §4.4). Exactly +0 at intensity 0 and at or beyond ω_max, never
+ * negative or −0, so more effort never slows the swing and intensity 0 is the gravity-only swing to the bit.
+ */
+export function effortTorque(effort: SwingEffort, intensity: number, omega: number): number {
+    if (!(intensity > 0) || !(omega < effort.speed)) {
+        return 0;
+    }
+    return intensity * effort.torque * (1 - omega / effort.speed);
+}
+
+/**
+ * Plans the downswing of `input` (design §3.2–§3.4). Throws a RangeError for a backswing beyond the body's limit θ_max
+ * (swing mode) or MAX_BACK_ANGLE (carry mode), a carry-mode downswing with no hands' tempo, a swing-mode downswing
+ * whose pendulum does not swing (pendulumShare 0), a non-positive effective inertia, a stall (ω falling to zero or
+ * below before θ_c), or a fall beyond MAX_FALL. Every other input is taken as checked (buildContact).
  */
 export function planDownswing(input: DownswingInput): PlannedDownswing {
     const { mode, aim, thetaContact, pivot, lever, shape, backswing, intensity } = input;
     const share = shape.pendulumShare;
     const [, cosContact] = sinCos(thetaContact);
     const c = cosContact - (share * backswing) / lever;
-    const [, cosMax] = sinCos(MAX_BACK_ANGLE);
+    const limit = mode === "swing" ? input.backswingLimit : MAX_BACK_ANGLE;
+    const [, cosMax] = sinCos(limit);
     if (c < cosMax) {
+        const detail = `a ${backswing} m backswing with pendulumShare ${share} on a ${lever} m pendulum`;
         fail(
-            `the backswing takes the shaft beyond ${MAX_BACK_ANGLE} rad from vertical: a ${backswing} m backswing ` +
-                `with pendulumShare ${share} on a ${lever} m pendulum`,
+            mode === "swing"
+                ? `the backswing takes the shaft beyond the body's backswing limit θ_max = ${limit} rad (where the ` +
+                      `shaft meets the groin): ${detail}`
+                : `the backswing takes the shaft beyond ${limit} rad from vertical: ${detail}`,
         );
     }
     // A share of 0 holds the slope: the pendulum stays at θ_c.
@@ -100,6 +128,9 @@ export function planDownswing(input: DownswingInput): PlannedDownswing {
     }
     const handsTop = sub(sub(pivot, across), drop);
     if (mode === "carry") {
+        if (shape.handTempo === null) {
+            fail("a carry-mode downswing needs the hands' tempo: handTempo is null");
+        }
         const { slow, fast } = shape.handTempo;
         const tempo = slow + intensity * (fast - slow);
         // P2b.2b.2b.2b design §4.1: the vertical Hermite's end slope dP_z/dσ = 2·|Δ_h|·arrival, so that the hands'
@@ -128,20 +159,11 @@ export function planDownswing(input: DownswingInput): PlannedDownswing {
         fail("a swing-mode downswing needs its pendulum to swing: pendulumShare must be positive");
     }
     const { weight, inertial, inertia } = input.pendulum;
-    const { torqueMax, tempoSlow, tempoFast } = shape.effort;
-    const pulse = tempoSlow + intensity * (tempoFast - tempoSlow);
-    const peak = intensity * torqueMax;
-    const effort = (tau: number): number => {
-        const u = tau / pulse;
-        if (!(peak > 0 && u >= 0 && u <= 1)) {
-            return 0;
-        }
-        const [, cu] = sinCos(2 * Math.PI * u);
-        return 0.5 * peak * (1 - cu);
-    };
+    const { effort } = input;
     // §3.3: (I_P + M·d·(P′·t̂)/span)·θ̈ = −W·sin θ − M·d·(P″·t̂)·σ̇² + τ_p, σ̇ = ω/span. Fails where the
-    // effective inertia (the bracket) is not positive, at every step and at contact.
-    const accelOrFail = (theta: number, omega: number, tau: number): number => {
+    // effective inertia (the bracket) is not positive, at every step and at contact. τ_p is +0 at intensity 0, as the
+    // pulse it replaces was, so the sum keeps today's bits there.
+    const accelOrFail = (theta: number, omega: number): number => {
         const [s, co] = sinCos(theta);
         const sigma = (theta - thetaTop) / span;
         const slope = add(scale(across, 2 * sigma), scale(drop, 6 * sigma - 6 * sigma * sigma));
@@ -155,7 +177,8 @@ export function planDownswing(input: DownswingInput): PlannedDownswing {
             );
         }
         const rate = omega / span;
-        return (0 - weight * s - inertial * dot(bend, tangent) * rate * rate + effort(tau)) / coefficient;
+        const torque = effortTorque(effort, intensity, omega);
+        return (0 - weight * s - inertial * dot(bend, tangent) * rate * rate + torque) / coefficient;
     };
     const theta: number[] = [thetaTop];
     const omega: number[] = [0];
@@ -164,7 +187,7 @@ export function planDownswing(input: DownswingInput): PlannedDownswing {
     let om = 0;
     for (let k = 0; ; k++) {
         const tau = k * FREE_STEP;
-        const a = accelOrFail(th, om, tau);
+        const a = accelOrFail(th, om);
         alpha.push(a);
         const omNext = om + a * FREE_STEP;
         const thNext = th + omNext * FREE_STEP;
@@ -180,7 +203,7 @@ export function planDownswing(input: DownswingInput): PlannedDownswing {
             const omegaContact = om + f * (omNext - om);
             theta.push(thetaContact);
             omega.push(omegaContact);
-            alpha.push(accelOrFail(thetaContact, omegaContact, fall));
+            alpha.push(accelOrFail(thetaContact, omegaContact));
             const downswing: Downswing = {
                 release: 0 - fall,
                 thetaTop,

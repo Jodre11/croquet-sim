@@ -66,9 +66,10 @@ export interface TestProfileOptions {
  * the socket at contact), the hands 0.8 m and 0.4 m from the socket, firm grips. Every type has the same drive: a
  * swing-mode coast with no dip or reach, a full guide, a pendulum phase at 0.8 of the push with no effort and a 1.5 m
  * hands' arc lowest halfway; the body has TEST_FLEX, TEST_PENDULUM_FORCE, TEST_PUSH_FORCE, TEST_PUSH_RESPONSE_TIME,
- * TEST_CHAIN and TEST_GRIP_LIMIT. Every type has the same shape: the pendulum alone (share 1), by gravity alone (no
- * effort), a 0.4 s pulse or hands' tempo halving at intensity 1, and intensity 0 by default. Throws if the stance
- * gives both a `lean` and `handsAhead`.
+ * TEST_CHAIN, TEST_GRIP_LIMIT, no backswing limit short of MAX_BACK_ANGLE, no effort (τ_0 = 0, ω_max = 1 rad/s), so
+ * a swing-mode stroke falls by gravity alone, and the default's 300 m/s² hands' peak acceleration. Every type has the
+ * same shape: the pendulum alone (share 1) and a 0.4 s hands' tempo halving at intensity 1. Throws if the stance gives
+ * both a `lean` and `handsAhead`.
  */
 export function testProfile(o: TestProfileOptions = {}): SwingProfile {
     const mallet: SwingProfile["mallet"] = {
@@ -116,9 +117,7 @@ export function testProfile(o: TestProfileOptions = {}): SwingProfile {
     const shape: SwingShape = {
         pendulumShare: 1,
         handAngle: 0.5,
-        effort: { torqueMax: 0, tempoSlow: 0.4, tempoFast: 0.2 },
         handTempo: { slow: 0.4, fast: 0.2 },
-        defaultIntensity: 0,
         ...o.shape,
     };
     const every = <T>(entry: T): Record<StrokeType, T> =>
@@ -134,6 +133,9 @@ export function testProfile(o: TestProfileOptions = {}): SwingProfile {
             pushResponseTime: TEST_PUSH_RESPONSE_TIME,
             chain: TEST_CHAIN,
             gripLimit: TEST_GRIP_LIMIT,
+            backswingLimit: MAX_BACK_ANGLE,
+            effort: { torque: 0, speed: 1 },
+            handAcceleration: 300,
             ...o.body,
         },
         stance: every(stance),
@@ -153,8 +155,8 @@ export const GC_STOP_GAP = 0.3;
 
 /**
  * What `canonicalSetup` changes: the world (default `defaultWorld()`), fields of the stroke, fields of the preset's
- * own stance, drive and shape entries in `defaultProfile`, the mallet, and, for a single-ball stroke, the gap (m,
- * surface to surface) to a target ball on the aim line ahead (default GC_STOP_GAP for the GC stop, no target
+ * own stance, drive and shape entries in `defaultProfile`, the mallet, the body, and, for a single-ball stroke, the
+ * gap (m, surface to surface) to a target ball on the aim line ahead (default GC_STOP_GAP for the GC stop, no target
  * otherwise). The balls do not follow a changed aim.
  */
 export interface CanonicalOptions {
@@ -170,6 +172,8 @@ export interface CanonicalOptions {
      * contact with that mallet.
      */
     readonly mallet?: SwingProfile["mallet"];
+    /** Fields of the default body. */
+    readonly body?: Partial<SwingProfile["body"]>;
 }
 
 /** A preset's canonical contact height `up` (m): the AC stop's −0.020 m, 0 otherwise. */
@@ -193,7 +197,7 @@ export const LEGACY_MALLET: SwingProfile["mallet"] = {
 
 /**
  * A preset's canonical setup (design §5.5): the striker at CANONICAL_STRIKER, aim +y, the default backswing
- * (reference/swing.json: 3 m/s planned at the default intensity, exit criterion 5), the preset's default
+ * (reference/swing.json: 3 m/s planned at intensity 0, exit criterion 5), no intensity, the preset's default
  * drive, every action on time, the preset's reach, `side` 0, `up` 0 except the AC stop's −0.020 m. A croquet stroke's
  * croqueted ball touches the striker ahead along aim, 20° to the left of it for the pass roll, and `live` is empty. A
  * single-ball stroke's target, red, sits on the aim line `targetGap` ahead (the GC stop's GC_STOP_GAP by default),
@@ -243,6 +247,7 @@ export function canonicalSetup(type: StrokeType, over: CanonicalOptions = {}): S
     const profile: SwingProfile = {
         ...defaultProfile,
         mallet,
+        body: { ...defaultProfile.body, ...over.body },
         stance: { ...stances, [type]: { ...stances[type], ...over.stance } },
         drive: { ...defaultProfile.drive, [type]: { ...defaultProfile.drive[type], ...over.drive } },
         shape: { ...defaultProfile.shape, [type]: { ...defaultProfile.shape[type], ...over.shape } },
@@ -299,7 +304,8 @@ const SOLVED = new Map<string, number>();
 
 /**
  * The backswing (m) at which `setup`'s planned contact speed is `speed` (P2b.2b.2a design §5.3): bisection over (0,
- * the MAX_BACK_ANGLE bound] at the setup's intensity, or its preset's default, 60 halvings. Memoised on what the
+ * the MAX_BACK_ANGLE bound] at the setup's intensity, or 0 where it gives none, 60 halvings; in swing mode a midpoint
+ * beyond the body's θ_max counts as reaching the speed, and the reach is the speed at θ_max. Memoised on what the
  * planned speed depends on: the type, the intensity, the contact's height (under fixed hands the lean follows it,
  * P2b.2b.2b.1 design §3.3), the profile's entries for the type, the speed, gravity and the ball's radius. It is not
  * memoised on the drive, the contact's side, the timing or the balls. Throws a RangeError for a speed beyond the
@@ -334,12 +340,26 @@ export function backswingFor(setup: ShotSetup, speed: number, world: World = def
         headLength: profile.mallet.headLength,
         faceHalfHeight: rho,
     });
-    const room = lever * (Math.cos(lean) - Math.cos(MAX_BACK_ANGLE));
-    let hi = shape.pendulumShare > 0 ? (room / shape.pendulumShare) * (1 - 1e-9) : 2;
-    const at = (backswing: number): number => plannedSpeed({ ...setup, stroke: { ...stroke, backswing } }, world);
-    if (at(hi) < speed) {
+    const reachOf = (angle: number): number =>
+        shape.pendulumShare > 0 ? ((lever * (Math.cos(lean) - Math.cos(angle))) / shape.pendulumShare) * (1 - 1e-9) : 2;
+    let hi = reachOf(MAX_BACK_ANGLE);
+    // The bracket stays at MAX_BACK_ANGLE, so a bisection that converges inside the body's limit takes the steps it
+    // always did, to the bit. A midpoint beyond the limit (the planner's RangeError naming θ_max) counts as reaching
+    // the speed.
+    const at = (backswing: number): number => {
+        try {
+            return plannedSpeed({ ...setup, stroke: { ...stroke, backswing } }, world);
+        } catch (error) {
+            if (error instanceof RangeError && error.message.includes("θ_max")) {
+                return Infinity;
+            }
+            throw error;
+        }
+    };
+    const reach = profile.drive[type].mode === "swing" ? Math.min(hi, reachOf(profile.body.backswingLimit)) : hi;
+    if (at(reach) < speed) {
         throw new RangeError(
-            `backswingFor: ${speed} m/s is beyond the ${type} stroke's reach (${at(hi)} m/s at ${hi} m)`,
+            `backswingFor: ${speed} m/s is beyond the ${type} stroke's reach (${at(reach)} m/s at ${reach} m)`,
         );
     }
     let lo = 0;
@@ -353,4 +373,50 @@ export function backswingFor(setup: ShotSetup, speed: number, world: World = def
     }
     SOLVED.set(key, hi);
     return hi;
+}
+
+/** strokeFor's halvings of the intensity over [0, 1], to a double's resolution: numerical, not physical. */
+const INTENSITY_BISECTIONS = 60;
+
+/**
+ * The stroke inputs that plan `setup`'s contact speed `speed`, the default stroke fixing the backswing (P2b.2b.2c.1
+ * design, Amendments). A setup that gives an intensity, or a carry-mode one, takes backswingFor's backswing at
+ * it. Otherwise, in swing mode, from the preset's defaultBackswing h_0 (reference/swing.json):
+ * 1. speed ≤ U(0) at h_0: the backswing solved at intensity 0 (backswingFor), no intensity given;
+ * 2. U(0) < speed ≤ U(1) at h_0: h_0 and the intensity solved by bisection over [0, 1] (U rises with i, design §4.2),
+ *    the least found that reaches the speed;
+ * 3. speed > U(1) at h_0: intensity 1 and the backswing solved at it, up to θ_max; beyond, backswingFor's RangeError.
+ * Test support only.
+ */
+export function strokeFor(
+    setup: ShotSetup,
+    speed: number,
+    world: World = defaultWorld(),
+): { backswing: number; intensity?: number } {
+    const { stroke, profile } = setup;
+    const { type } = stroke;
+    if (stroke.intensity !== undefined || profile.drive[type].mode !== "swing") {
+        return { backswing: backswingFor(setup, speed, world) };
+    }
+    const backswing = swingReference[type].defaultBackswing.value;
+    const at = (intensity: number): number =>
+        plannedSpeed({ ...setup, stroke: { ...stroke, backswing, intensity } }, world);
+    if (speed <= at(0)) {
+        return { backswing: backswingFor(setup, speed, world) };
+    }
+    if (speed > at(1)) {
+        const full = { ...setup, stroke: { ...stroke, intensity: 1 } };
+        return { backswing: backswingFor(full, speed, world), intensity: 1 };
+    }
+    let lo = 0;
+    let hi = 1;
+    for (let i = 0; i < INTENSITY_BISECTIONS; i++) {
+        const mid = (lo + hi) / 2;
+        if (at(mid) < speed) {
+            lo = mid;
+        } else {
+            hi = mid;
+        }
+    }
+    return { backswing, intensity: hi };
 }

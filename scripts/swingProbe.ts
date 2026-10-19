@@ -36,6 +36,9 @@
  *   many runs of the preset sweep cross a ball or an obstacle and how many overlap one at the impact's end (a ball only
  *   when the depth exceeds CONTACT_TOLERANCE, the handover rule's own threshold; P2b.2b.2b.2b Task 8), and each such
  *   run; then a single-ball stroke through a hoop, centred and with the face 10 mm off the ball's centre.
+ * A stroke planning a speed takes the default stroke's inputs (strokeFor, the backswing fixed by default: a swing
+ * preset's defaultBackswing with the intensity solved, or the backswing solved at intensity 1 beyond it; a carry
+ * preset's backswing); "unreachable" is a speed beyond what that stroke reaches.
  * Run with `npx --yes tsx scripts/swingProbe.ts`; environment: SECTION (one of the names above; default all), REPEAT
  * (timed runs per stroke, default 50). Not part of the test suite; its output goes into the roadmap's outcomes.
  */
@@ -80,7 +83,7 @@ import { BALL_IDS, type BallId, type BallState, type BallStates, type ShotResult
 import { defaultWorld, uprightsOf } from "../src/engine/world";
 import { malletReference } from "../src/reference/index";
 import { drive, recorder, socketAt, strike } from "../tests/engine/support/impact";
-import { GC_STOP_GAP, backswingFor, canonicalSetup } from "../tests/engine/support/shot";
+import { GC_STOP_GAP, canonicalSetup, strokeFor } from "../tests/engine/support/shot";
 
 // The project has no Node types; this script runs under tsx and reads only its environment.
 declare const process: { readonly env: Readonly<Record<string, string | undefined>> };
@@ -151,7 +154,10 @@ function quick(setup: ShotSetup): Run {
     return { setup, contact, impact, steps: [], motion: simulateFreeMotion(impact.handover, WORLD) };
 }
 
-/** `type`'s canonical setup with `stroke` fields replaced; a `speed` (m/s) sets the backswing that plans it. */
+/**
+ * `type`'s canonical setup with `stroke` fields replaced; a `speed` (m/s) sets the default stroke's inputs that plan
+ * it (strokeFor: a swing preset's backswing and intensity in its three regimes, a carry preset's backswing).
+ */
 function canonical(
     type: StrokeType,
     stroke: Partial<ShotSetup["stroke"]> & { readonly speed?: number } = {},
@@ -162,10 +168,13 @@ function canonical(
     if (speed === undefined) {
         return setup;
     }
-    return { ...setup, stroke: { ...setup.stroke, backswing: backswingFor(setup, speed, WORLD) } };
+    return { ...setup, stroke: { ...setup.stroke, ...strokeFor(setup, speed, WORLD) } };
 }
 
-/** `f()`, or the RangeError it throws (a speed beyond the preset's reach), so that a sweep records it and goes on. */
+/**
+ * `f()`, or the RangeError it throws (a speed beyond the preset's reach: for a swing preset, beyond what θ_max reaches
+ * at intensity 1), so that a sweep records it and goes on.
+ */
 function attempt<T>(f: () => T): T | RangeError {
     try {
         return f();

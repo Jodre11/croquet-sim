@@ -7,7 +7,8 @@ import { dot, length } from "../../src/engine/math/vec3";
 import { simulateShot } from "../../src/engine/shot";
 import { buildContact } from "../../src/engine/swing/buildContact";
 import type { SwingTrajectory } from "../../src/engine/swing/trajectory";
-import type { ShotSetup, StrokeType } from "../../src/engine/swing/types";
+import { MAX_BACK_ANGLE } from "../../src/engine/swing/downswing";
+import type { ShotSetup, StrokeType, SwingProfile } from "../../src/engine/swing/types";
 import { defaultWorld } from "../../src/engine/world";
 import { backswingFor, canonicalSetup } from "./support/shot";
 
@@ -24,8 +25,13 @@ const BITING = { type: "single-ball", speed: 4, up: 0.01, dip: -0.02, jab: 0.005
 const FOLLOW = { type: "half-roll", speed: 4 } as const;
 
 /** A preset's canonical setup at `speed` (m/s), its dip `dip` s from contact and deepened by `jab` (m). */
-function shot(type: StrokeType, speed: number, stroke: Partial<ShotSetup["stroke"]> = {}): ShotSetup {
-    const base = canonicalSetup(type, { stroke });
+function shot(
+    type: StrokeType,
+    speed: number,
+    stroke: Partial<ShotSetup["stroke"]> = {},
+    body: Partial<SwingProfile["body"]> = {},
+): ShotSetup {
+    const base = canonicalSetup(type, { stroke, body });
     return { ...base, stroke: { ...base.stroke, backswing: backswingFor(base, speed, WORLD) } };
 }
 
@@ -90,7 +96,13 @@ describe("the three regimes (P2b.2b.2b.3 design §7.4)", () => {
         // re-enters the turf, to ~47 ms; 3.8123 m/s along aim at the turf, 2.9355 m/s at the ball (face at
         // 71.19 ms). The 5 mm jab alone also saturates the top hand (up 0 never grounds the head and still raises
         // grip-limit), so this shows the jab's load and the turf's coinciding, not the turf saturating it alone.
-        const { impact, tops } = along(shot(BITING.type, BITING.speed, timed(BITING.up, BITING.dip, BITING.jab)));
+        // P2b.2b.2c.1: the default body's θ_max (64.9°, knee height) reaches only 3.10 m/s by gravity alone, so this
+        // 4 m/s stroke, found before the body had a limit, keeps the shaft's old horizontal bound.
+        const { impact, tops } = along(
+            shot(BITING.type, BITING.speed, timed(BITING.up, BITING.dip, BITING.jab), {
+                backswingLimit: MAX_BACK_ANGLE,
+            }),
+        );
         const turf = impact.timeline["head/turf"] ?? [];
         const held = tops.filter((s) => s.force >= GRIP_LIMIT * (1 - 1e-6));
         expect(held.some((s) => turf.some((i) => i.start <= s.t && s.t <= i.end))).toBe(true);

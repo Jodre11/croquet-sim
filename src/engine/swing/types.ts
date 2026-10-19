@@ -81,17 +81,27 @@ export interface SwingDrive {
 /**
  * How a stroke type's whole stroke is shaped (P2b.2b.2a design §3, §5.1). `pendulumShare` (in [0, 1]) of the
  * backswing's height comes from the pendulum and the rest from the hands, which start back and up along `handAngle`
- * (rad above horizontal; read only when the share is below 1). Swing mode reads `effort`: the player's torque pulse
- * peaks at intensity·torqueMax (N·m) over a duration from `tempoSlow` (s, intensity 0) to `tempoFast` (s, intensity
- * 1). Carry mode reads `handTempo`: the hands' downswing lasts from `slow` (s, intensity 0) to `fast` (s, intensity 1).
- * `defaultIntensity` (in [0, 1]) stands for a shot that gives none.
+ * (rad above horizontal; read only when the share is below 1). Carry mode reads `handTempo`: the hands' downswing lasts
+ * from `slow` (s, intensity 0) to `fast` (s, intensity 1); null where a swing preset has none, its downswing being the
+ * body's effort, and a carry stroke fails without one. Swing mode's effort is the body's (`SwingProfile.body.effort`,
+ * P2b.2b.2c.1 design §4.4). A shot that gives no intensity swings at 0, by gravity alone: no preset carries a default
+ * intensity (P2b.2b.2c.1 design, Amendments).
  */
 export interface SwingShape {
     readonly pendulumShare: number;
     readonly handAngle: number;
-    readonly effort: { readonly torqueMax: number; readonly tempoSlow: number; readonly tempoFast: number };
-    readonly handTempo: { readonly slow: number; readonly fast: number };
-    readonly defaultIntensity: number;
+    readonly handTempo: { readonly slow: number; readonly fast: number } | null;
+}
+
+/**
+ * The player's effort in swing mode (P2b.2b.2c.1 design §4.4), a torque–velocity law linear in ω, a simplification of
+ * Hill's hyperbolic force–velocity relation (Hill 1938): at intensity i the player's torque on the shaft is
+ * i·`torque`·max(0, 1 − ω/`speed`), `torque` τ_0 (N·m, ≥ 0) the isometric torque and `speed` ω_max (rad/s, > 0) the
+ * shaft's angular speed at which the player can add no more.
+ */
+export interface SwingEffort {
+    readonly torque: number;
+    readonly speed: number;
 }
 
 /**
@@ -122,7 +132,11 @@ export interface SwingProfile {
     /**
      * The player's body: the arm mass at the top grip (kg), the reach slack (m), the arm's flex, pendulum push and push
      * (the push intent's cap, N, and its response time constant, s), each hand's and arm's hand–arm chain, and the
-     * grip's limit (N; P2b.2b.2b.3 design §5).
+     * grip's limit (N; P2b.2b.2b.3 design §5), the backswing's limit θ_max (rad from vertical, in (0, π/2]): the
+     * shaft's greatest angle at the top of a swing-mode backswing, where it meets the groin (P2b.2b.2c.1 design §5),
+     * the player's effort in swing mode, shared by every swing preset (P2b.2b.2c.1 design §4.4), and the hands' peak
+     * acceleration along aim (m/s², > 0), the advance's ramp W = V/a at the head's planned speed V along aim, a body
+     * property the player never sets.
      */
     readonly body: {
         readonly armMass: number;
@@ -133,6 +147,9 @@ export interface SwingProfile {
         readonly pushResponseTime: number;
         readonly chain: HandChain;
         readonly gripLimit: number;
+        readonly backswingLimit: number;
+        readonly effort: SwingEffort;
+        readonly handAcceleration: number;
     };
     readonly stance: Readonly<Record<StrokeType, SwingStance>>;
     readonly drive: Readonly<Record<StrokeType, SwingDrive>>;
@@ -144,6 +161,11 @@ export interface StrokeTiming {
     readonly arc: number;
     readonly hands: number;
     readonly dip: number;
+    /**
+     * Swing mode only (P2b.2b.2c.1 design §6): when the hands' advance begins, their push forward along aim over the
+     * stroke's handReach; absent: no advance.
+     */
+    readonly advance?: number;
 }
 
 /** A shot to simulate (design §5.1, product spec §3). */
@@ -157,7 +179,7 @@ export interface ShotSetup {
         readonly aim: number;
         /** The head centre's height at the backswing's top above its height at contact, m (P2b.2b.2a design §3.2). */
         readonly backswing: number;
-        /** Effort and tempo, one control in [0, 1]; absent: the preset's defaultIntensity (P2b.2b.2a design §3.1). */
+        /** Effort and tempo, one control in [0, 1] (P2b.2b.2a design §3.1); absent: 0. */
         readonly intensity?: number;
         /** −1 check … 0 coast … +1 push. */
         readonly drive: number;

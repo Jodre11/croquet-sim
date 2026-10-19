@@ -1,0 +1,611 @@
+# P2b.2b.2c.1 — The Single-Ball Stroke: Effort, Backswing and Follow-Through: Design
+
+**Product spec:** `2026-09-30-croquet-shot-lab-design.md` §4 (impact phase).
+**Swing spec:** `2026-10-04-p2b2b1-swing-shot-design.md` (swing and carry mode, the hands' path, the reach).
+**Stroke-shape spec:** `2026-10-06-p2b2b2a-stroke-shape-design.md` (the downswing, the effort pulse, the finish).
+**Stance spec:** `2026-10-08-p2b2b2b1-hands-stance-design.md` (the top hand's position at contact, the lean).
+**Roll spec:** `2026-10-11-p2b2b2b2b-roll-stroke-design.md` (the hands' arc, the held slope, the pendulum phase).
+**Turf-strike spec:** `2026-10-14-p2b2b2b3-turf-strike-design.md` (the hands' limit, the jab).
+**Roadmap:** P2 row; "User play data and checks (2026-10-08)"; "P2b.2b.2b decisions and findings (2026-10-08)";
+"P2b.2b.2b.3 outcomes (2026-10-17)"; "Carried open items".
+
+**Why this step.** P2b.2b.2c is split three ways (user, 2026-10-18; §Decisions). This is the first step: the
+single-ball stroke, the simplest and most consistent shot in real play, and the first the user would play in the lab
+to judge the calibration ("check that effort level correlates with distance"). Today:
+
+- **The effort tops out and turns over.** From a 0.45 m backswing the contact speed is 3.01, 4.99, 5.98, 6.03 and
+  6.00 m/s at intensity 0, 0.4, 0.8, 0.9 and 1.0. The pulse τ_p = i·τ_max·½(1 − cos 2πτ/T(i)) shortens as it
+  strengthens (T(i) = tempoSlow + i·(tempoFast − tempoSlow), tempoFast = tempoSlow/2), so its impulse grows as
+  i(1 − i/2), flat at i = 1; from i ≈ 0.85 it also ends before contact (`src/engine/swing/downswing.ts:131-141`). The
+  user's controlled strokes reach what the model gives at its physical maximum.
+- **Every default swing is gravity-only.** Every preset's `defaultIntensity` is 0, and each `defaultBackswing` is
+  bisected for 3 m/s at intensity 0 (`scripts/fitStrokeShape.ts:197-217`): h₀ = 0.4486 m. The user (2026-10-08):
+  nearly every real swing has some help from the hands; a gravity-only swing is typical only of a soft,
+  low-amplitude tap.
+- **The backswing's limit is a fixed angle**, the shaft horizontal (`MAX_BACK_ANGLE`, `downswing.ts:33`), not the
+  player's body.
+- **Only one follow-through can be played.** After contact a single-ball stroke's top hand eases to rest along aim
+  (`handReach`, `track.ts:624-652`) and the head swings freely up its arc. A follow-through kept level with the lawn
+  cannot be expressed: the dip only lowers, and the reach only travels along aim and decelerates.
+- **A non-finite head state runs on.** A very stiff grip (ζ ≥ 2, or a 0.01 s period) leaves NaN within 0.5 ms on a
+  fat stroke (roadmap "Carried open items"); nothing checks for it, so the impact runs to its cap and hands the NaN
+  state on (`integrate.ts:1160`, `:1209-1225`, `:1233`; `continueStroke` `:1324`). It precedes any fitting of the
+  hands (step 2).
+
+**Circularity.** The user's play data are checks, never fit targets (roadmap, 2026-10-08). The effort's ceiling is set
+from a published contact speed (§4.3), never from the user's yardages, which are then checked against (§8.5). The one
+exception is the backswing's limit: no source gives it, so its default comes from the user's account of the stance
+(§5.2), and the knee-height check is recorded, not claimed as validation. Coaching ratios are untouched here:
+the drive and stop are step 2's calibration targets.
+
+**Vocabulary.** "Split", "ratio" and "cut" keep their croquet meanings only. The pendulum/hands share is **phasing**,
+the turf's drag **ploughing**. The **rising** follow-through lets the head swing freely up its arc after contact; the
+**level** follow-through keeps the head travelling parallel to the lawn through and after contact. The **advance** is
+the hands' forward travel after contact. A **flick** is a contact with the head already rising.
+
+## Decisions (user, 2026-10-18)
+
+- **Housekeeping shipped first**, as #29: eslint 10.13.0, svelte-check 4.7.7, typescript-eslint 8.71.2, vitest 5.0.5.
+  TypeScript 7.0.2 stays blocked (typescript-eslint 8.71.2 needs `>=4.8.4 <6.1.0`). The actions (v7) and
+  `ubuntu-26.04` are current.
+- **P2b.2b.2c is split into three steps**, each its own spec, plan and PR, in this order:
+  1. **P2b.2b.2c.1** (this design): the single-ball stroke.
+  2. **P2b.2b.2c.2**: the croquet strokes' fit (contact times; the hands' T and ζ, the arm mass, the reach slack and
+     the grips, to the drive's and the stop's ratios), the arms' checking force bounding the hands' slid anchor,
+     Gugan's jab check re-run, and the carried grip-limit control run (`tests/engine/turfStrike.test.ts`).
+  3. **P2b.2b.2c.3**: held-out validation (the rolls, stop → pass-roll, pull, stop-shot lift, Sutherland's stop-shot
+     steps), the GC stop's distances, crush calibration and 29.1.6.3.
+- **The default club player drives the full lawn.** Only weaker, high-handicap players cannot; a full-lawn full roll
+  is more challenging. This overturns the roadmap's check "a full-power drive falls just short of the full length"
+  for the default player (amended in the roadmap).
+- **Effort has diminishing returns**, but no flat top and no turn-over: more effort always gives more speed.
+- **The follow-through is a power source (the user's hypothesis).** Swinging through more freely with an exaggerated
+  arc roughly doubles the distance for a small rise in felt effort (the play data's 15 yd and 30 yd strokes).
+  Sutherland's model (1995) holds that "follow through!" acts only before contact in a single-ball stroke; the design
+  takes no side: whatever power a freer stroke gains, it gains through the head's speed and the hands' coupling at
+  contact, produced by the model's own physics (§6).
+- **Two follow-through styles are both played**, at different times: the rising style (the user: straighter, more prone
+  to over-run) and the level style, achieved "by the player advancing their hands at the right moment. This is where
+  we see similarities with the roll." The lab must play both faithfully enough to test the experts' disagreement
+  (Riches 1995 calls a rising follow-through for top-spin a folk-law; Plummer credits a rising hoop finish with
+  top-spin; the CA manual uses a contact slightly on the upswing to skid the rush). No measurement exists either way.
+- **The flick is a discovery goal.** An over-arced, hard stroke can lift the striker's ball and make it bobble; the
+  user suspects a contact off the bottom of the arc, and wants the sim to find out. Its deflection after a bad pitch
+  needs an uneven lawn, deferred.
+- **Anti-goal (user, confirmed):** any of these behaviours scripted rather than produced by the physics. The ultimate
+  aim is a unified shot model producing every shot type purely from the right inputs: a direction, not this step's
+  goal, "somewhat derived from how we model the shapes of the different shot types". This step adds no per-shot-type
+  special case and lists where the modes split the model (§9).
+- **The backswing's limit is the player's body.** In the normal between-the-legs stroke the groin limits it; the
+  shaft's length matters. A side style, the mallet held to the side, is not limited by the body and allows a backswing
+  beyond waist height, at the cost of the stance's stability and off-centre aiming. In a typical club player's stance
+  the head tops out "somewhere between knee and waist", varying with the grip and the shaft's length; some players
+  lean forward in the swing to allow a longer backswing when power is needed.
+- **Anti-goal (user):** the head overtaking the striker's ball and dropping down to block its path, as earlier
+  animations of the rolls showed. "This is not what I see in real life."
+
+## 1. Goal and exit criteria
+
+A single-ball stroke's speed rises with effort to a ceiling above a strong player's hard stroke, with diminishing
+returns and no turn-over; the default swings are hands-assisted; the backswing ends where the shaft meets the groin;
+and a player can play the rising or the level follow-through by when and how the hands advance, with the flick's lift
+left to emerge.
+
+Exit criteria:
+
+1. The finite-state guard (§3) holds, its analytic cases pass, and every run that was finite is bit-identical (§8.2).
+2. The effort law's analytic cases (§8.1) hold, and on every swing preset over its backswing range the contact speed is
+   strictly increasing and concave in intensity on [0, 1] (§4.2).
+3. The ceiling (§4.3): every swing preset at intensity 1 from its body-limited top reaches at least 1.1 × 8.18 m/s.
+4. The backswing's limit (§5) and its analytic cases hold.
+5. Both follow-through styles are played from inputs alone (§6, §8.4), with no style named in the engine.
+6. The flick's lift emerges (§7, §8.4), with no special-casing.
+7. The head-never-ahead check (§8.4.4) has run on every one-ball stroke (the single-ball and GC stop presets) and its
+   tallies have gone to the gate. A head-ahead state does not block the step by itself: no physics is changed to
+   suppress it (the anti-scripting goal), and the user rules on each at the gate (my call).
+8. The ratchet of §8.2 holds.
+9. Every preset's canonical setup meets P2b.2b.2b.1's exit criterion 4, as P2b.2b.2b.3 restated it (top to finish,
+   no `RangeError`, no re-entry guard hit, no ball centre above R + 5 mm but the pass roll's turf rebound, re-measured,
+   no `follow-cap`, the trajectory continuous at every boundary), and each re-fitted default plans 3 m/s within 2 %.
+10. No impact ends with the head overlapping a ball as handed over, over every preset's late re-hit sweep.
+11. The pre-flight gate (§10) has run and the user has ruled on it.
+12. The figures of §11 are recorded in the roadmap. They are observations, not gates.
+13. `ENGINE_VERSION` is "0.13.0".
+
+## 2. Architecture
+
+```
+src/engine/impact/
+  integrate.ts       the finite-state guard after each advance, in the impact and in continueStroke (§3); the swing
+                     finish armed only once an advance has released its held slope (§6.3)
+  track.ts           the swing-mode advance: the planned pivot's level travel and the held slope, then the free swing
+                     (§6), reusing carryPivot (at an infinite radius) and the carry mode's slope hold
+src/engine/swing/
+  downswing.ts       the effort law (§4); the body's backswing limit θ_max in swing mode (§5); MAX_BACK_ANGLE kept as
+                     carry mode's limit and as θ_max's ceiling
+  types.ts           SwingProfile.body gains τ_0, ω_max and θ_max (§4.4, §5); SwingShape's effort loses torqueMax,
+                     tempoSlow and tempoFast in swing mode; ShotSetup.stroke gains the advance's moment (§6.2)
+  buildContact.ts    validation of the advance; the planned speed through the new law
+  profile.ts         the body's new figures; the swing presets' effort; swing mode's handTempo fallback (:99, :106-109)
+src/reference/index.ts      the swing-mode effort keys it requires (:301, :337-339) and the body's new entries
+reference/swing.json        a body block for τ_0, ω_max, κ and θ_max, each with its provenance; the swing presets'
+                            new defaults; the carry presets' handTempo and defaultBackswing frozen (§4.4)
+reference/sources/README.md Hill 1938; the CA A4D figure's use for the ceiling
+scripts/fitStrokeShape.ts   the re-fit of the swing presets only (§4.4, §4.5)
+tests/engine/support/shot.ts, tests/reference/reference.test.ts   MAX_BACK_ANGLE and the effort tempos they read
+```
+
+The swing/carry split of the downswing stays: carry mode has no effort pulse and is not touched by §4 or §5. What
+changes is that a swing-mode stroke's hands may advance after contact (§6), reusing the rolls' pieces, not copying
+them. Its hand load and swung body stay swing mode's (`handLoad`, `swungBody`, `track.ts:759-760`): the ball has left
+the face within about a millisecond, so the carry mode's hand–arm chains could change no launch figure, and keeping
+swing mode's grips keeps every run without an advance bit-identical (my call).
+
+## 3. The finite-state guard
+
+After every `advance` in the impact (`integrate.ts:1160`) and in `continueStroke` (`:1324`), the mallet's state
+(position, orientation, velocities) and every ball's are checked finite. On the first non-finite value the run throws
+a `RangeError` naming the time from contact, the step and which state went non-finite. A `RangeError`, not a flag
+(my call): it is how the engine already rejects an impossible setup, the planner (P4) already treats a `RangeError`
+as a rejected candidate, and a NaN state has no physical meaning to hand on. The check costs a pass over a few dozen
+numbers per step and adds no allocation.
+
+## 4. The effort law
+
+### 4.1 What is wrong
+
+The pulse's strength and its brevity both scale with intensity, so their product, the impulse, stops growing at i = 1,
+and a pulse that ends before contact pushes the head early and higher on its arc for no gain. Effort and tempo stay
+one control (P2b.2b.2a design §3.1); what changes is that the tempo must follow from the effort, not shorten against
+it.
+
+### 4.2 The law's constraints
+
+On every swing preset and every backswing in its range, the contact speed U(i) on [0, 1]:
+
+- **is strictly increasing**: more effort always gives more speed;
+- **is concave**: each further increment of effort gives less (diminishing returns, the user's account);
+- **has no flat top**: dU/di at i = 1 is at least a fixed fraction of its mean over [0, 1] (the plan sets it, at least
+  0.25), so the speed keeps rising to full effort;
+- **meets gravity at i = 0**: intensity 0 is the gravity-only swing, unchanged, so a soft tap is as today;
+- **acts until contact**: the player's torque is applied through the whole downswing, not ended before the face meets
+  the ball.
+
+### 4.3 The ceiling
+
+The CA's single-ball measurements (reference/sources/README.md, "Backswing against contact speed"; CA Dynamics, Single
+Ball Shots) record a hard single-ball stroke, A4D, at a mallet speed of 8.18 m/s. A measured hard stroke is not a
+maximum, so the ceiling sits above it: every swing preset at intensity 1 from its body-limited top (§5) reaches at
+least **1.1 × 8.18 = 9.0 m/s** (the 10 % margin is my call). For the default player's drive the user's claim is
+checked, not fitted: at the ceiling, the drive's croqueted ball at a 10 s lawn must pass the full 35 yd length through
+today's strike laws (§8.5); if it does not, the gate (§10) decides, since the drive's ratio is step 2's.
+
+### 4.4 The law's form
+
+**Preferred form (my call, the builder may choose another that meets §4.2 and records its source):** a torque–velocity
+law linear in ω, a simplification of Hill's hyperbolic force–velocity relation, the player's torque falling as the swing
+speeds up:
+
+τ_p = i · τ_0 · max(0, 1 − ω/ω_max),
+
+with ω the shaft's angular speed, τ_0 the player's isometric torque and ω_max the speed at which the player can add no
+more. The torque starts as a step at the backswing's top; an onset ramp is added only if the plan shows the step
+breaks a test (the work–energy balance, §8.1.2), and is then a labelled placeholder. It gives diminishing returns
+from the physiology itself (Hill 1938, the force–velocity relation of muscle), never turns over, and acts until
+contact; the tempo is then an outcome, a harder swing being a quicker one. `tempoSlow` and `tempoFast` leave swing
+mode (carry mode keeps its hands' tempo). Hill 1938 is fetched and cited in `reference/sources/README.md` by the plan
+(URL, date, SHA-256, a short quote), never mirrored.
+
+**Its figures (my calls).** τ_0 and ω_max are the player's body, so they live in `SwingProfile.body` and are shared by
+every swing preset, not per preset in `SwingShape`. Two unknowns need two conditions:
+
+- **ω_max** is set by the share of the player's speed the swing uses at full effort: at intensity 1 from the
+  body-limited top, the shaft's angular speed at contact is κ·ω_max, with κ = ⅔ a labelled placeholder (the torque
+  left at contact a third of τ_0), taken on the drive preset;
+- **τ_0** is set so that the lowest U(1) over the swing presets, each from its body-limited top, is exactly 9.0 m/s
+  (§4.3), so every preset meets the ceiling.
+
+The two are coupled (the contact's ω depends on τ_0), so they are solved jointly: an outer bisection on τ_0 for the
+ceiling, each step solving ω_max for κ, to 1e-9 relative in both. κ shapes U(i)'s concavity; the gate (§10) sees U(i)
+at κ = ⅔ beside ½ and ¾.
+
+**The carry presets are frozen.** Today the rolls' `handTempoSlow` is the single-ball stroke's gravity-only fall time
+and their `defaultBackswing` is bisected from `maxBackswing` (`fitStrokeShape.ts:113`, `:198`, `:221-224`); a re-fit
+would move them by ulps. The fit therefore re-fits the swing presets only, and the carry presets' `handTempoSlow`,
+`handTempoFast` and `defaultBackswing` keep today's values, their provenance in `swing.json` noting that they are
+frozen at engine 0.12.0's fit.
+
+**The torque ends at contact.** The impact window's law (α = drive·speedGain·U/(ℓ·window), `buildContact.ts:648`) is
+untouched: the impact is about a millisecond (Sutherland 1995), and whatever a freer stroke gains, it gains through
+the contact speed and the hands' coupling.
+
+### 4.5 The hands-assisted defaults
+
+Riches ("Swing High, Swing Low", 1995): "for most shots the height of the mallet BACKSWING should determine the length
+of the shot", and "an unnecessarily high backswing is far better than one which is not high enough". So the default
+stroke takes its length from the backswing, with a constant help from the hands:
+
+- every swing preset's `defaultIntensity` becomes one shared, labelled placeholder above 0 (the plan proposes it; the
+  gate sees it against the user's checks, §8.5);
+- each `defaultBackswing` is re-fitted so the canonical setup plans 3 m/s at that intensity, within 2 %, as today;
+- a gravity-only swing (intensity 0) stays available as an input, for the soft tap.
+
+## 5. The backswing's limit
+
+### 5.1 A body figure, not geometry
+
+In the normal between-the-legs stroke the backswing ends where the shaft meets the groin. A geometric limit (the line
+from the pivot through the head meeting a groin point) is too sensitive to be built from published figures: on the
+default 36" shaft the top hand sits about 0.88 m above the turf and a standing crotch height for a 5'10"–5'11" player
+is about 0.82–0.85 m, so a centimetre of groin height moves the limit several degrees, and a little more puts the
+groin above the hands, where it limits nothing. A real stance also bends the knees, which no source quantifies.
+
+So the limit is a direct body figure (decided 2026-10-18, §Amendments): `SwingProfile.body` gains **θ_max**, the
+shaft's largest angle back from vertical at the backswing's top, documented as "where the shaft meets the groin".
+In swing mode θ_max replaces `MAX_BACK_ANGLE` in `planDownswing`'s check, and the `RangeError` for a backswing beyond
+it names the body's limit. θ_max is at most π/2 (`MAX_BACK_ANGLE`, kept as its ceiling): with a fixed pivot the head
+cannot rise above the hands. Carry mode keeps `MAX_BACK_ANGLE`: the rolls' stance differs (Riches: forward, the bottom
+hand half-way down), no account gives its limit, and the rolls stay bit-identical.
+
+### 5.2 Its default
+
+The user (2026-10-18): the head tops out "somewhere between knee and waist", varying with the grip and the shaft's
+length. On the default mallet a knee-height top (a head rise of about 0.48 m) is about 64° and the shaft horizontal
+(the head level with the hands, about 0.85 m) is 90°; a waist-height head is above the hands and out of a fixed
+pivot's reach (§5.3). The default θ_max is **75°**, a labelled placeholder from the user's account (a head rise of
+about 0.63 m on the default mallet; the plan computes the exact figures). Because the default comes from the user's
+account, the knee-height check (§8.5) is no longer independent of it; it is recorded, not claimed as validation.
+
+The default θ_max sets each swing preset's body-limited top, from which the ceiling is fitted (§4.3). At the same
+θ_max a longer shaft gives a higher head, a shorter one a lower.
+
+### 5.3 Leaning forward
+
+Some players lean forward in the swing when power is needed, to allow a longer backswing (user, 2026-10-18). That
+moves the pivot, which the model's body cannot yet do beyond P2b.2b.1's translating pivot: it belongs with the fully
+articulated body, deferred (§12). The grip's and a modified shaft's effect on θ_max are ignored for now (user).
+
+## 6. The follow-through styles
+
+### 6.1 The physics
+
+The rising style is today's: the top hand comes to rest after contact and the head swings freely up its arc. The level
+style is the player's hands advancing at the right moment, as in the roll: the hands travel forward along aim, the
+shaft's slope held, so the head travels on with them instead of rising; at the end of the hands' travel the mallet is
+released to swing freely, as today. The roll's carry mode already has the pieces: the hands' arc (`carryPivot`,
+`track.ts:703-720`, level at an infinite `handArcRadius`) and the held slope (`track.ts:853-873`). The roll's
+pendulum phase (the bottom hand's push, `pendulumEffort`, `carryLoad`) is not used: it acts after the ball has gone and
+could change no launch figure.
+
+### 6.2 The inputs
+
+One new input, the advance's **moment** (s from contact). The advance's travel is the existing `stroke.handReach` (the
+hands' travel along aim after contact); its path is level (`carryPivot` at an infinite radius), not an input. With no
+moment set, the stroke is today's swing-mode follow-through, bit-identical (§8.2).
+
+- **The moment's range.** No earlier than the impact window's end (`arcStart + window`): before it the window's α law
+  holds the path, as today, and a hands' drive into the ball before contact is the existing `drive` input (+1 a
+  push), whose faults the judge already rules on. A moment earlier than the window's end throws a `RangeError`. A
+  moment after the swing's finish has fired leaves the stroke as today's, since the follow-through has already ended;
+  it is recorded, not an error.
+- **The check strokes.** An advance on a stroke whose window checks (α < 0: the AC and GC stops, `integrate.ts:373`)
+  throws a `RangeError`: the check holds the pendulum to rest relative to the hands (`holdPendulum`), and the arms'
+  checking force is step 2's.
+- **The travel.** An advance needs `handReach` > 0 (the single-ball preset's default reach may be 0); a moment with no
+  travel throws a `RangeError`.
+- **The bottom hand.** `guideEffort` acts after the advance as it does today: the bottom hand stays a one-way rate
+  guide under swing mode's `handLoad`.
+
+**How the hands move (my calls).** Every swing preset's planned pivot is at rest after contact (handGain 0,
+pendulumShare 1), so `carryPivot` alone would not move it. The advance starts the hands at the speed along aim that
+keeps the head's speed along aim continuous at the moment, and eases them to rest over `handReach` on the level path,
+as the reach eases today. The slope is held at its value at the moment, so a late advance holds an already-risen head;
+the pendulum's angular speed there is brought to the held slope by the carry mode's quartic over one window
+(`track.ts:847-870`). At the end of the travel the slope is released and the head swings freely. The builder may
+refine these if §8.1.5's tolerance cannot be met, and records why.
+
+The engine never names a style: the level and the rising strokes are two ends of a continuum the moment spans, and a
+mistimed advance falls between them.
+
+### 6.3 The finish
+
+The swing finish stays: the pendulum's apex, its pitch rate at or below zero (`integrate.ts:384-385`). While the slope
+is held the pitch rate is near zero, so with an advance set the finish is armed only once the travel has ended and the
+slope is released.
+
+### 6.4 The ball's behaviour
+
+Whether the level stroke "zings" the ball and the rising one runs straighter but over-runs is an outcome, read off the
+ball's speed, spin and skid at launch and its travel (phase 2), never a target. The face's friction already gives the
+ball its spin.
+
+## 7. The flick
+
+A contact with the head already rising comes from meeting the ball off the bottom of the arc, which the stance
+(`handsAhead`), the arc's timing and the ball's place already set. The ball's launch then follows from the face–ball
+law: lift and a skid, and a bobble on landing from the turf's rebound (the jump shot's turf rebound must not be damped
+away). Nothing is added for it; §8.4 checks that it emerges.
+
+## 8. Testing
+
+### 8.1 Analytic cases
+
+1. **The guard.** A stroke with ζ ≥ 2 (the carried open item's setup) throws a `RangeError` naming the step; a
+   constructed state with one NaN velocity is caught at the next step in the impact and in the follow-through.
+2. **The effort law.** At i = 0 the swing is gravity-only, to the bit against today's. At fixed ω the torque is
+   i·τ_0·(1 − ω/ω_max); at ω ≥ ω_max it is 0. The work–energy balance of the downswing holds within 0.1 % (P2b.2b.2a's
+   test) at every intensity.
+3. **Monotone and concave.** On every swing preset, over backswings from 0.05 m (an ankle-height tap) to the
+   body-limited top in ten equal steps, and over i in steps of 0.05: U strictly increasing, its second differences
+   negative, and the slope at 1 as §4.2 requires. This grid is §4.2's and exit criterion 2's "backswing range".
+4. **The backswing's limit.** For a constructed θ_max, a backswing to just inside it plans and one just beyond throws,
+   naming the body's limit; the head's rise at θ_max is ℓ(cos θ_c − cos θ_max)/s (s the pendulum's share, θ_c the
+   shaft's angle at contact), so at the same θ_max a longer shaft gives a higher head. Carry mode's limit unchanged.
+5. **The advance.** A swing-mode stroke with an advance keeps the head centre's height within a tolerance the plan
+   sets (at most 2 mm) of its height at the moment, from the moment to the end of the travel; the swing finish fires
+   only after the release; the `RangeError`s of §6.2 fire; with no moment set, bit-identical to today's.
+
+### 8.2 The ratchet
+
+Baselines on `main` before any change: the throwaway preset digest, `scripts/impactDigest.ts`, `scripts/shotMix.ts`
+phase 2 (timing lines dropped) and `scripts/impactProbe.ts`.
+
+1. After the guard: all four bit-identical.
+2. After θ_max: bit-identical wherever no backswing reaches it; any run it now rejects listed.
+3. After the advance with no moment set: all bit-identical.
+4. After the effort law and the re-fit: the impact digest, `impactProbe`, the shot mix's phase 2 and every carry-mode
+   run (the rolls, their tempo and backswing frozen, §4.4) bit-identical; every swing-mode run moves, each preset's
+   moved runs counted and its canonical figures listed old → new.
+
+### 8.3 The canonical runs
+
+As exit criterion 9, at the new defaults.
+
+### 8.4 The styles and the flick (gated, qualitative)
+
+On constructed single-ball setups the plan fixes, at 3 and 5 m/s:
+
+1. **Both styles.** A rising and a level stroke at the same planned speed each run top to finish; their launch
+   speeds, spins, skid lengths and travels recorded side by side (not gated against each other).
+2. **A mistimed advance.** A sweep of the advance's moment from the window's end to past the swing's finish: the
+   head's path moves continuously from level to rising; recorded. The early side is the `drive` input's push, swept
+   beside it from 0 to +1 and judged by the fault judge as today.
+3. **The flick.** A sweep of the contact's place along the arc (by the arc's timing and `handsAhead`): the ball's
+   launch angle rises with the head's rise angle at contact, and past some rise the ball leaves the turf; recorded,
+   with the first sweep step at which the ball is airborne.
+4. **The head never ahead.** Over 1–3 and every run of the single-ball and GC stop presets' sweeps: no state with
+   the head's centre ahead of the striker's ball's centre along aim and the head's lowest point below the ball's top
+   while the ball is within 2R of the head. Failures counted and listed, each with its time, for the gate.
+
+### 8.5 The user's checks (recorded, not gated)
+
+Against "User play data and checks (2026-10-08)", at the default world at 10 s, through `simulateShot`:
+
+- the single ball from a knee-height backswing (0.45 m) over intensity 0–1, against the user's 5, 15 and 30 yd
+  strokes (felt effort is not intensity: P3 maps one to the other);
+- the default's body-limited top against the user's "about knee height";
+- the drive at the ceiling: the croqueted ball against the full 35 yd length (the default club player drives it).
+
+The rolls are bit-identical here, so their distances stand as recorded; the full-lawn roll's check is step 3's.
+
+### 8.6 The existing tests
+
+Every test on a swing preset's default backswing or intensity is re-baselined, its comment "P2b.2b.2c.1: the
+single-ball stroke (was …)". Gugan's jab check stays `it.runIf(SLOW).fails`; if the new effort makes it pass, `.fails`
+turns red and is removed, the gate told.
+
+## 9. The modes' split (recorded for the unified model)
+
+The roadmap records, by name, where swing and carry mode or a single preset branch, as the unified model's debt (the
+explore map of 2026-10-18 found about twenty): `SwingDrive.mode` and its four carry-only fields, `shapeOf`,
+`DRIVE`/`DEFAULT_DRIVE`, `planDownswing`, `validate`, `arrival`, `prepareTrack`, `pivotAt`, `pendulumAt`,
+`handLoad`/`carryLoad`, `inCheck`, `finishKind`, the carry resistance and chains, the check hold, the fit's branch,
+and `canonicalSetup`'s special cases. Line numbers are left to the step that merges the modes. This step narrows one:
+the hands' advance is no longer carry mode's alone.
+
+## 10. The pre-flight gate
+
+The order of work is the ratchet's (§8.2): the guard, the backswing's limit, the advance with no moment set, then the
+effort law with its fit of τ_0 and ω_max (§4.4) and the proposed defaults (§4.5) computed. The gate comes then,
+before the defaults are committed and the existing tests re-baselined; its sweeps run at the proposed defaults, and
+U(i) also at today's for comparison. The plan stops for the user with:
+
+- U(i) for every swing preset from its default and its body-limited top, beside today's;
+- the proposed shared `defaultIntensity` and the backswings it gives at 3 m/s, beside the user's checks (§8.5);
+- the default body's θ_max and the head's rise at it, on the default mallet and on the user's (42" shaft, 13.5" head);
+- the styles' and the flick's sweeps (§8.4);
+- any run θ_max rejects, and the guard's catches on the sweeps (expected none);
+- the head-never-ahead tallies (§8.4.4), each for a ruling.
+
+The user rules in their own words; each ruling goes into this design's Amendments and the roadmap.
+
+## 11. Recorded figures
+
+In the roadmap's "P2b.2b.2c.1 outcomes": U(i) per swing preset; the ceiling's fitted τ_0 and ω_max; the defaults; the
+user's checks (§8.5); the styles' and the flick's sweeps; the head-never-ahead tallies; every preset's canonical
+figures and the sweep's cap and flag tallies as P2b.2b.2b.3 recorded them; the modes' split (§9); the cost (the
+downswing's steps and `shotMix`'s engine time, run alone).
+
+## 12. Out of scope
+
+- Step 2: the contact-time fit, the hands' T and ζ, the arm mass, the reach slack and the grips, the arms' checking
+  force, the drive's and the stop's ratios, ball-make elasticity (le Maitre's 2.7–4.2 by make), the grip-limit control
+  run.
+- Step 3: the rolls' validation, including the rolls' head-never-ahead check (the anti-goal above, measured on every
+  roll's runs and counted as the "head on point" check is), stop → pass-roll, pull, stop-shot lift, the GC stop's
+  distances, crush calibration, 29.1.6.3.
+- The rolls' effort (`pendulumEffort`, the hands' tempo): untouched.
+- The side style and the stance's stability and off-centre aim (P3, with the grip style; accuracy is deferred as
+  variability of human input).
+- θ_max's dependence on the grip and on modified shaft shapes (user: ignore for now); leaning forward for a longer
+  backswing (the fully articulated body, deferred in the P2 row).
+- Felt effort against intensity (P3); choosing backswing and intensity per shot (P4).
+- The bobbling ball's deflection on an uneven lawn (deferred with lawn variability).
+- Merging swing and carry mode (the unified model; §9 records the debt).
+
+## Amendments
+
+- **Builder check (2026-10-18).** Settled as the author's calls: the effort law's τ_0 and ω_max shared in the body,
+  fixed by κ and the weakest preset's ceiling (§4.4); the torque ending at contact (§4.4); how the hands move in the
+  advance (§6.2); the head-never-ahead check a gate item over the one-ball strokes (exit criterion 7, §8.4); the
+  order of work and the gate's defaults (§10).
+- **The backswing's limit (user, 2026-10-18).** The geometric groin limit is replaced by a direct body figure θ_max
+  (§5.1), as the author recommended; its default from the user's account, the head topping out "somewhere between
+  knee and waist", 75° (§5.2).
+- **Spec review (2026-10-18; subtraction and completeness lenses).** The advance releases to today's free swing and
+  keeps the swing finish, armed after the release, with swing mode's hand load and body (§2, §6): no pendulum phase,
+  no carry finish, no arc input. Its one new input is the moment, bounded below by the impact window's end, with the
+  early side left to `drive`; advances on the check strokes or with no travel throw (§6.2). The onset ramp is dropped
+  unless a test needs it (§4.4). τ_0 and ω_max are solved jointly (§4.4). The carry presets' tempo and backswing are
+  frozen, so the rolls stay bit-identical (§4.4); θ_max is swing mode's alone (§5.1). The backswing range is defined
+  (§8.1.3) and the rise's general form given (§8.1.4). The files the change forces are named (§2). The full roll's
+  check and §9's line numbers are cut. The guard stays in this step: it protects the new law's sweeps, and costs
+  nothing where runs are finite.
+- **The advance's two narrowings (user, 2026-10-18).** The spec review's two changes to the approved advance were put
+  to the user afterwards, and both were confirmed: an advance before the window's end throws, the early push being
+  `drive`'s; and the advance releases to the free swing, with no roll-style pendulum phase (§6.1, §6.2).
+- **The advance as played (user, 2026-10-18, while planning).** "In practice the 'levelness' is temporary, the
+  contact is extended by pushing the hands forward. The intent is not to stop or interrupt the arc of the mallet
+  head." And on its moment: "the intent is [from contact]. However this is down to the skill of the player." This
+  supersedes §6's held slope and release, and the moment's lower bound (§6.2, and the narrowing just above): the
+  advance is a player-timed action like the arc's, the hands' and the dip's, on time at contact, early or late as
+  played, and the mallet swings freely throughout, the head's path flattened only while the hands accelerate.
+  §8.1.5's 2 mm height test goes with the held slope. The plan's decisions 1–6 and 15 give the detail.
+- **The plan's decisions (2026-10-18), as built.** Each with its reason; where a later ruling changed one, it says so.
+  1. **The mallet swings freely through the advance**: no slope held, no grip firmed, swing mode's after-contact hand
+     load throughout, so the arc is never stopped (the user's "The intent is not to stop or interrupt the arc of the
+     mallet head"). Its premise, that the free pendulum integrates the hands' acceleration through `freeAlpha`, is
+     corrected below (gate item 10b).
+  2. **The advance is planned, not latched**: `prepareTrack` builds it once and the free table includes it, because it
+     is the player's motion, independent of what the strike does to the head; swing mode's load does not hold the
+     head's rotation to the plan, so a slowed head is not yanked onto it.
+  3. **The advance's travel**: from rest at its start the hands ramp to V (the head's planned speed along aim at
+     contact), cruise to 0.8·handReach and decelerate to rest at handReach, as the reach eases (`computeReach`), on a
+     level path, so the shape reuses the reach's and the advance itself is level. The ramp's length is now the body's
+     (gate item 9) and the advance is the hands' only travel (gate item 10c).
+  4. **The finish** is armed from the advance's end once it has started, so it cannot fire while the hands still
+     travel; a run whose apex comes before the advance's start finishes there, as today.
+  5. **The advance's input is a timing**, `StrokeTiming.advance` (s from contact, early negative, late positive),
+     because its moment is "down to the skill of the player" like the arc's, the hands' and the dip's: an early one
+     counts in the lead and is bounded by MAX_LEAD, and planStroke throws a `RangeError` for a non-finite value, carry
+     mode, a checking window, no travel, or a ramp too long for the travel.
+  6. **The advance is recorded** as `FollowThrough.advanced`, spread in only when it started before the finish, so
+     every run without one keeps its shape to the bit; one the finish beats leaves no field (recorded, not an error).
+  7. **The names**: `SwingEffort { torque; speed }`, `SwingProfile.body.effort` and `body.backswingLimit`, the
+     `swing.json` block `body` exported as `swingBodyReference`, `SwingShape.effort` gone and `handTempo` nullable in
+     swing mode, because τ_0, ω_max and θ_max are the player's body, shared by every swing preset (§4.4). The body
+     since gains `handAcceleration` (gate item 9), and `defaultIntensity` is retired (gate item 2).
+  8. **`backswingFor` keeps its bracket** at MAX_BACK_ANGLE, a midpoint beyond θ_max counting as reaching the speed, so
+     every bisection inside θ_max takes today's steps to the bit (the ratchet). Its reach check reads the speed at
+     θ_max and fires first, so the runs θ_max rejects read "beyond the … stroke's reach", the decision's own
+     consequence.
+  9. **The guard** checks every component of the head's and every ball's state with `Number.isFinite` after each
+     advance and names the body, the time from contact, the step and the phase, so a ball's NaN is caught as well as
+     the head's. The carried defect reproduces only with the hands' grip limit lifted (to 1e9 N): P2b.2b.2b.3's 435 N
+     limit otherwise bounds it, and the guard's test uses that setup.
+  10. **The Hill law** is i·τ_0·max(0, 1 − ω/ω_max), +0 at intensity 0, so the gravity-only swing is today's to the
+      bit; the torque steps on at the top, and no onset ramp was needed (the work–energy test held).
+  11. **The ceiling** is 9.0 m/s, the rounded 1.1 × 8.18 = 8.998, so both of §4.3's forms hold; τ_0 meets it on the
+      weakest preset and ω_max meets κ on the drive, each to 1e-9 relative.
+  12. **The body-limited top** sits a hair (1e-9) inside θ_max, as `maxBackswing` does, so the top plans rather than
+      throws.
+  13. **A shared default intensity of 0.25**, a labelled placeholder. Superseded by gate item 2.
+  14. **"No flat top"** is (U(1) − U(0.95))/0.05 ≥ 0.25·(U(1) − U(0)), §4.2's least fraction.
+  15. **The advance's test** replaces §8.1.5's 2 mm test, which assumed the withdrawn held slope: over the advance the
+      level stroke's head rises less than without it, its pitch rate turns positive after the advance (the arc
+      resumes), and its finish comes after it. The slowing on time is tested on the run's head (its pitch rate at the
+      ramp's end lower than without the advance, the planned ω bit-equal), since the plan cannot see the on-time ramp
+      (gate item 10b), beside the restored late-advance test of the plan's own ω.
+  16. **Head ahead** is the head ahead of the ball's centre along aim but within L/2 + 2R, across within half the face
+      plus R, and its lowest point below the ball's top, sampled at every impact step and follow-through sample: the
+      anti-goal's geometry, a head low enough to block the ball's path.
+  17. **The flick's sweep** varies the contact's place on the arc by the stance's lean, −20° to +10° in 2° steps, at 3
+      and 5 m/s, because the stance sets where on the arc the face meets the ball. Its measure is now the launch angle
+      (gate item 7), and the stroke is re-solved at each lean under gate item 2's default.
+  18. **The user's mallet** is a 42 in shaft and a 13.5 in head, the rest the default's, its top hand kept 0.1094 m
+      below the handle's top, so that §10's rise at θ_max on the user's mallet differs only by what the user named.
+  19. **The gate ran on an uncommitted `swing.json`**, so no default was committed before the user ruled. Because the
+      rulings changed code, they were applied as engine commits before the gate was rerun, the fit's output committed
+      with them; the plan's Task 7 (commit the defaults, re-baseline) therefore made no commit and recorded the
+      ratchet only.
+- **The pre-flight gate (user, 2026-10-18).** Each ruling in the user's words, then what it decided.
+  1. κ: "⅔ (Recommended)". κ stays ⅔ (τ_0 57.087018102407455 N·m and ω_max 16.19530336512667 rad/s at the first fit,
+     refitted under item 4).
+  2. The default intensity: "Fix backswing (Recommended)". Supersedes decision 13. The default backswing stays today's
+     0.4486 m and the intensity is solved for the speed, in three regimes for a stroke that gives a speed but neither
+     backswing nor intensity: up to U(0) from the default backswing, intensity 0 with the backswing solved as today
+     (bit-identical); between U(0) and U(1), the default backswing with the intensity solved; beyond U(1), intensity 1
+     with the backswing solved up to θ_max, beyond it rejected. A stroke that gives an intensity keeps today's path.
+     The engine has no speed-to-stroke solver: the regimes live in test support (`strokeFor`), and the engine's own
+     default (the preset's backswing, an absent intensity 0) is already main's 3 m/s stroke. `defaultIntensity` is
+     retired from every preset and rejected as a retired key, since every value was 0 but the swing presets' proposed
+     0.25 and a carry-only field would be a dead knob.
+  3. The user's checks: "Accept; rerun on full lawn (Recommended)". Recorded as measured, and rerun so that the
+     distances are real (see the corrections below).
+  4. θ_max: "64.9° (Recommended)". θ_max is knee height on the default mallet, the angle at which the single-ball
+     preset's head rises 0.48 m, acos(cos θ_c − 0.48·s/ℓ) = 64.9021° (1.1327544972853942 rad), still an angle,
+     derived by `fitStrokeShape.ts` and recorded with its derivation in `swing.json`. It supersedes §5.2's 75°. Refit
+     from the new top at κ ⅔ for 9.0 m/s: τ_0 68.5268520116806 N·m, ω_max 16.19530337086275 rad/s. The knee-height
+     check (§8.5) now holds by construction: recorded, not validation.
+  5. The styles: "Accept (Recommended)". The rising and level strokes stand as emergent; the level stroke's 46 ms hold
+     stays a hypothesis for later data.
+  6. The mistimed advance: "Accept (Recommended)". An advance at +0.32 s raising `follow-grip-limit` is the grip limit
+     working as designed, a flag, not a fault.
+  7. The flick: "Launch angle (Recommended)". §8.4.3's measure is the ball's launch angle at the face's release; that
+     it "leaves the turf" (phase 2's airborne) is recorded alongside, not judged; the turf's rebound stays.
+  8. Head ahead: "Record, roadmap item (Recommended)". The 11 GC stop runs at drive 1 are a known gap, a double tap
+     (GC 11.2.4, AC 29.1.6.2), not a failure: the follow-through should detect head–ball contact, play the second
+     contact and flag the fault naming the law; remedies belong to a later rules layer.
+  9. The hands' advance: "Profile now, push scale later (Recommended)". The user's model: "push" is the player's
+     intent; the ramp is a body property set for calibration, never by the player. The ramp becomes the body's peak
+     hand acceleration, `body.handAcceleration` 300 m/s² (W = V/a, 10 ms at 3 m/s as before), sweepable by probes and
+     tests; one player-facing push scale mapped onto handReach and V waits for data.
+  10. Three smaller items.
+      - (a) The turf strike's biting test (4 m/s, gravity only, beyond the 75° top's gravity-only 3.52 m/s): "Keep the
+        override (Recommended)". The test keeps gravity only and overrides θ_max with MAX_BACK_ANGLE, explicit and
+        commented.
+      - (b) Decision 1's premise: "Amend + restore test (Recommended)". Corrected: on time the advance's ramp lies
+        within the pendulum's prescribed impact window, and the free table starts at that window's end, so the plan
+        never sees the on-time ramp; only its deceleration, which speeds the turn, reaches `freeAlpha`. The on-time
+        flattening comes from the run, through swing mode's hand load. A late advance's ramp does pass through
+        `freeAlpha`, and the late-advance (+0.05 s) planned-ω test is restored beside the run-based one.
+      - (c) The hands' reach: "One budget (Recommended)". With an advance, it replaces the planned pivot's own reach,
+        so the hands travel handReach in all (0.3000 m at the rerun), not the reach's distance plus handReach.
+- **The builder's rulings applying the gate (2026-10-18 to 2026-10-19).**
+  - Under an advance, planned hands still moving along aim at contact (handGain > 0 or pendulumShare < 1) drop to
+    rest at contact. Kept for this step: no default preset has hands moving along aim at contact
+    (pendulumShare 1), and handReach 0 already behaves so; the cost is a hand-speed discontinuity on such custom
+    presets, mended later by blending the pivot's speed into the ramp. The user, at the rerun: "Keep, amend
+    (Recommended)".
+  - `SwingArc.advance` carries `accel` beside `start` and `speed`, an interface deviation from decision 5, so that the
+    travel's acceleration equals V/W to the bit (the ramp's end less its start need not equal W in floating point);
+    since gate item 9 it carries the body's `handAcceleration`.
+- **Corrections (2026-10-19).**
+  - The first gate's user's checks ran on `defaultWorld(10)`, which is the full court (10 is the lawn's pace in s, not
+    a size): its runs halted at the boundary because of their start and aim, not a small world. The rerun used an
+    open lawn instead, `defaultWorld(10)`'s gravity, ball, materials and surface on a 200 m square with no hoops, so
+    nothing halts and the distances to rest are real; the user's intent, real distances and a judgeable 35 yd, holds.
+  - The distances' excess was first put down to the lawn's pace without evidence; a figure unchanged from main shows
+    consistency, not correctness. That attribution is withdrawn. The user confirmed the 0.45 m is the head's rise
+    ("Head's rise"), the engine's h₀, so the candidates are the stroke's speed (gravity-only free fall, no player
+    braking) and the lawn's pace (10 s): the roadmap carries discriminating them before calibrating either. (The gap
+    this correction first named, intensity 0 from 0.45 m, 7.6 yd against the user's 5 yd, paired unlike strokes; see
+    the next correction.)
+  - The user's 5 yd stroke is from ankle height (about 0.05 m, guiding hands; roadmap "User play data and checks
+    (2026-10-08)"), so pairing it with intensity 0 from 0.45 m set unlike strokes side by side, and the blanket
+    "×1.5–1.7" presented at the rerun gate was wrong. Like for like, the user's percentages being felt effort, not
+    intensities: from knee at i 0.4, 34.9 yd against about 30 yd at about 40 % (×1.16); at i 0.3, 29.1 yd against
+    about 15 yd at about 30 %, cast (×1.9); the drive at i 1, 58.77 yd against 35 yd (×1.68); the ankle-height stroke
+    has no model run. Told so, the user ruled: "Stands, fix record (Recommended)". The J ruling below stands, its
+    record corrected.
+- **The pre-flight gate rerun (user, 2026-10-19).** The user's checks: "Record, roadmap (Recommended)", recorded as
+  measured on the open lawn (like for like ×1.16 and ×1.9 from knee, ×1.68 for the drive's croqueted ball, 58.77 yd
+  against 35 yd; corrected above), not a blocker, and a roadmap item. θ_max (C), the defaults (B) and the rejected
+  runs replayed (I): "Accept (Recommended)". The flick (F), with the θ_max rejections at leans −20°, −18° and −16° and
+  the 3 m/s leans of +2° to +10° taking the middle regime at intensity 0.0000: "Accept (Recommended)". The hands' drop
+  to rest under an advance: "Keep, amend (Recommended)" (above). The gate's cost, 343 s against 99 s, and the obsolete
+  75° rows of the effort curve: "Accept (Recommended)".
+- **Wording corrections (final review, 2026-10-19).** §9 named the held slope beside the hands' advance; the held slope
+  was withdrawn (plan decision 1), so §9 now names the advance alone. The builder's ruling on the hands' drop to rest
+  said "at the advance's start"; the code rests them from contact, so it now says so. §4.4's "Hill-type" law is linear
+  in ω, a simplification of Hill's hyperbolic relation, and now says so.

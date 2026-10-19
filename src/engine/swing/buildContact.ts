@@ -4,8 +4,8 @@
  * 1. the contact pose (contactPose): the arc radius r = top, θ_c = −lean, the lean from the top hand's position
  *    (stanceLean, P2b.2b.2b.1 design §3.2), the head pitched rigidly with the shaft, its face START_GAP short of the
  *    sunk striker at (up, side), the pivot r up the shaft;
- * 2. the downswing (downswing.ts) from the backswing's top: ω₀ and the hands' V_c at contact, and from them the
- *    planned contact speed;
+ * 2. the downswing (downswing.ts) from the backswing's top, in swing mode under the body's effort law (P2b.2b.2c.1
+ *    design §4.4): ω₀ and the hands' V_c at contact, and from them the planned contact speed;
  * 3. the arcs' changes, against the planned speed: α = drive·speedGain·(speed/ℓ)/window, ℓ the pivot's distance from
  *    the head's centre, and A = drive·handGain·speed·aim/handWindow; the dip, handDrop deepened by the shot's jab,
  *    over dropTime; the mode, the ground depth and the reach (the shot's, else the preset's); the coupling
@@ -32,10 +32,18 @@ import {
 import { bedLawOf, staticSink } from "../impact/turfBed";
 import type { ContactState, FaceMaterial, Hands, MalletHead, StrokeMode, SwingArc, TrackDrive } from "../impact/types";
 import { atan2, sinCos } from "../math/elementary";
-import { add, cross, length, scale, sub, vec3, type Vec3 } from "../math/vec3";
+import { add, cross, dot, length, scale, sub, vec3, type Vec3 } from "../math/vec3";
 import type { BallState, World } from "../types";
 import { planDownswing, scanDownswing, type DownswingInput, type PlannedDownswing } from "./downswing";
-import type { MalletHeadProfile, ShotSetup, SwingDrive, SwingProfile, SwingShape, SwingStance } from "./types";
+import type {
+    MalletHeadProfile,
+    ShotSetup,
+    SwingDrive,
+    SwingEffort,
+    SwingProfile,
+    SwingShape,
+    SwingStance,
+} from "./types";
 
 /**
  * Gap (m) between the face and the striker's sunk surface at contact (design §5.2 step 4). Numerical, not physical:
@@ -79,7 +87,7 @@ const DRIVE_NUMBERS: readonly Exclude<keyof SwingDrive, "mode">[] = [
 ];
 
 /** A shape's scalar numbers always read, each checked finite by name (handAngle only when read: design §3.2). */
-const SHAPE_NUMBERS: readonly ("pendulumShare" | "defaultIntensity")[] = ["pendulumShare", "defaultIntensity"];
+const SHAPE_NUMBERS: readonly "pendulumShare"[] = ["pendulumShare"];
 
 function fail(message: string): never {
     throw new RangeError(message);
@@ -225,6 +233,9 @@ function validate(setup: ShotSetup, ballRadius: number): void {
     finiteNumber(timing.arc, "stroke.timing.arc");
     finiteNumber(timing.hands, "stroke.timing.hands");
     finiteNumber(timing.dip, "stroke.timing.dip");
+    if (timing.advance !== undefined) {
+        finiteNumber(timing.advance, "stroke.timing.advance");
+    }
     for (const [name, value] of [
         ["stroke.intensity", stroke.intensity],
         ["stroke.handReach", stroke.handReach],
@@ -250,11 +261,10 @@ function validate(setup: ShotSetup, ballRadius: number): void {
     if (shape.pendulumShare < 1) {
         finiteNumber(shape.handAngle, `${where}.handAngle`);
     }
-    finiteNumber(shape.effort.torqueMax, `${where}.effort.torqueMax`);
-    finiteNumber(shape.effort.tempoSlow, `${where}.effort.tempoSlow`);
-    finiteNumber(shape.effort.tempoFast, `${where}.effort.tempoFast`);
-    finiteNumber(shape.handTempo.slow, `${where}.handTempo.slow`);
-    finiteNumber(shape.handTempo.fast, `${where}.handTempo.fast`);
+    if (shape.handTempo !== null) {
+        finiteNumber(shape.handTempo.slow, `${where}.handTempo.slow`);
+        finiteNumber(shape.handTempo.fast, `${where}.handTempo.fast`);
+    }
     const { mallet, body } = profile;
     for (const key of ["headMass", "headLength", "shaftLength"] as const) {
         finiteNumber(mallet[key], `profile.mallet.${key}`);
@@ -393,8 +403,17 @@ function validate(setup: ShotSetup, ballRadius: number): void {
     }
     nonNegative(body.armMass, "profile.body.armMass");
     nonNegative(body.reachSlack, "profile.body.reachSlack");
+    finiteNumber(body.backswingLimit, "profile.body.backswingLimit");
+    if (!(body.backswingLimit > 0 && body.backswingLimit <= Math.PI / 2)) {
+        fail(`profile.body.backswingLimit must lie in (0, π/2] (got ${body.backswingLimit})`);
+    }
+    finiteNumber(body.effort.torque, "profile.body.effort.torque");
+    nonNegative(body.effort.torque, "profile.body.effort.torque");
+    finiteNumber(body.effort.speed, "profile.body.effort.speed");
+    positive(body.effort.speed, "profile.body.effort.speed");
+    finiteNumber(body.handAcceleration, "profile.body.handAcceleration");
+    positive(body.handAcceleration, "profile.body.handAcceleration");
     unit(shape.pendulumShare, `${where}.pendulumShare`);
-    unit(shape.defaultIntensity, `${where}.defaultIntensity`);
     if (shape.pendulumShare < 1 && !(shape.handAngle > 0 && shape.handAngle < Math.PI / 2)) {
         fail(`${where}.handAngle must lie in (0, 90°) when pendulumShare < 1 (got ${shape.handAngle} rad)`);
     }
@@ -402,10 +421,10 @@ function validate(setup: ShotSetup, ballRadius: number): void {
         if (!(shape.pendulumShare > 0)) {
             fail(`${where}.pendulumShare must be positive in swing mode, where the pendulum leads (got 0)`);
         }
-        const { torqueMax, tempoSlow, tempoFast } = shape.effort;
-        tempos(tempoSlow, tempoFast, `${where}.effort.tempoSlow`, `${where}.effort.tempoFast`);
-        nonNegative(torqueMax, `${where}.effort.torqueMax`);
     } else {
+        if (shape.handTempo === null) {
+            fail(`${where}.handTempo is required in carry mode`);
+        }
         tempos(shape.handTempo.slow, shape.handTempo.fast, `${where}.handTempo.slow`, `${where}.handTempo.fast`);
     }
 }
@@ -430,7 +449,10 @@ function handsOf(setup: ShotSetup): Hands {
     };
 }
 
-/** The downswing of a checked `setup` posed at `pose`, at the shot's intensity, else its preset's default. */
+/**
+ * The downswing of a checked `setup` posed at `pose`, at the shot's intensity, else 0: gravity alone, no preset
+ * carrying a default intensity (P2b.2b.2c.1 design, Amendments).
+ */
 function downswingOf(setup: ShotSetup, pose: ContactPose, hands: Hands, gravity: number): PlannedDownswing {
     const { stroke, profile } = setup;
     const shape = profile.shape[stroke.type];
@@ -439,7 +461,9 @@ function downswingOf(setup: ShotSetup, pose: ContactPose, hands: Hands, gravity:
         mode: push.mode,
         shape,
         backswing: stroke.backswing,
-        intensity: stroke.intensity ?? shape.defaultIntensity,
+        backswingLimit: profile.body.backswingLimit,
+        effort: profile.body.effort,
+        intensity: stroke.intensity ?? 0,
         arrival:
             push.mode === "carry"
                 ? arcArrival(push.handArcRadius, push.handArcLow, stroke.handReach ?? push.handReach)
@@ -508,13 +532,17 @@ export function contactPose(setup: ShotSetup, world: World): ContactPose {
 }
 
 /**
- * The stroke's choices the downswing needs (design §3): its mode and shape, the backswing (m), the intensity and, in
- * carry mode, the hands' arc's slope at contact (arcArrival).
+ * The stroke's choices the downswing needs (design §3): its mode and shape, the backswing (m), the body's limit and
+ * effort, the intensity and, in carry mode, the hands' arc's slope at contact (arcArrival).
  */
 export interface StrokeChoice {
     readonly mode: StrokeMode;
     readonly shape: SwingShape;
     readonly backswing: number;
+    /** θ_max (rad from vertical), the body's limit on a swing-mode backswing. */
+    readonly backswingLimit: number;
+    /** The player's effort in swing mode (P2b.2b.2c.1 design §4.4). */
+    readonly effort: SwingEffort;
     readonly intensity: number;
     readonly arrival: number;
 }
@@ -543,6 +571,8 @@ export function downswingInput(pose: ContactPose, hands: Hands, choice: StrokeCh
         pendulum: pendulumOf(pose.head, body, pose.radius, gravity),
         shape: choice.shape,
         backswing: choice.backswing,
+        backswingLimit: choice.backswingLimit,
+        effort: choice.effort,
         intensity: choice.intensity,
         arrival: choice.arrival,
     };
@@ -552,6 +582,41 @@ export function downswingInput(pose: ContactPose, hands: Hands, choice: StrokeCh
 export function poseSpeed(pose: ContactPose, planned: PlannedDownswing): number {
     const lever = cross(pitchAxis(pose.aim), sub(pose.headCentre, pose.pivot));
     return length(add(planned.handsVelocity, scale(lever, planned.omega)));
+}
+
+/** The head's planned velocity at contact along aim (m/s), the advance's V: aim·(V_c + ω₀·n × (c − P_c)). */
+function alongAim(pose: ContactPose, planned: PlannedDownswing): number {
+    const lever = cross(pitchAxis(pose.aim), sub(pose.headCentre, pose.pivot));
+    return dot(add(planned.handsVelocity, scale(lever, planned.omega)), pose.aim);
+}
+
+/**
+ * Checks `arc`'s `advance`, at the head's planned speed V along aim and the body's peak acceleration a: swing mode
+ * only, no check (α < 0), a positive handReach, a positive V (at 0 the cruise would never end; below it the hands
+ * would ramp backwards), and a ramp's travel V·W/2 = V²/(2a) (W = V/a) under 0.8·handReach, so that the hands cruise
+ * before they ease to rest. planStroke calls it; a hand-built arc is not checked.
+ */
+export function checkAdvance(arc: SwingArc, advance: NonNullable<SwingArc["advance"]>): void {
+    const { speed, accel } = advance;
+    if (arc.mode !== "swing") {
+        fail("stroke.timing.advance needs swing mode: carry mode's hands push on their own arc");
+    }
+    if (arc.alpha < 0) {
+        fail("the advance cannot follow a check: the check holds the pendulum to rest relative to the hands");
+    }
+    if (!(arc.handReach > 0)) {
+        fail(`the advance travels the stroke's handReach, which must be positive (got ${arc.handReach})`);
+    }
+    if (!(speed > 0)) {
+        fail(`the advance cruises at the head's planned speed along aim, which must be positive (got ${speed} m/s)`);
+    }
+    const ramp = (speed * speed) / (2 * accel);
+    if (!(ramp / 0.8 < arc.handReach)) {
+        fail(
+            `the advance is too short for its ramp: the hands travel V²/(2a) = ${ramp} m reaching ${speed} m/s at ` +
+                `${accel} m/s², which must be under 0.8·handReach = ${0.8 * arc.handReach} m`,
+        );
+    }
 }
 
 /** The downswing's closest approach to the turf before contact (P2b.2b.2a design §3.5). */
@@ -583,18 +648,23 @@ export interface StrokePlan {
  *   flat, at −D the hands leave the stance's branch);
  * - window, handWindow or dropTime ≤ 0; speedGain < 0; gripTension or bottomGrip outside (0, 1]; handDrop < 0; the
  *   preset's or the shot's handReach < 0; the preset's or the shot's guideEffort outside [0, 1];
- *   armMass < 0; reachSlack < 0; the preset's or the shot's pendulumAt or pendulumEffort outside [0, 1]; handArcLow
- *   outside [0, 1]; a jab negative or non-finite, or non-zero in carry mode (P2b.2b.2b.3 design §6.1); handArcRadius
- *   not above the push length; a flex value not positive, or a flex damping ratio above 1; pendulumForce not positive
- *   (P2b.2b.2b.2b design §6); pushForce, pushResponseTime, gripLimit or a hand–arm chain value not positive (its gate
- *   rulings, 2026-10-11; P2b.2b.2b.3 design §5);
- * - pendulumShare or defaultIntensity outside [0, 1]; handAngle outside (0, 90°) when pendulumShare < 1 (neither read
- *   nor checked otherwise); in swing mode a pendulumShare of 0, an effort tempo ≤ 0 or tempoFast > tempoSlow, or
- *   torqueMax < 0; in carry mode a hands' tempo ≤ 0 or fast > slow;
- * - the downswing's (downswing.ts): a backswing beyond MAX_BACK_ANGLE, a non-positive effective inertia, a stall or a
- *   fall beyond MAX_FALL;
- * - an action timed more than MAX_LEAD early, or a downswing meeting the turf more than MAX_LEAD − TURF_MARGIN before
- *   contact;
+ *   armMass < 0; reachSlack < 0; a backswingLimit non-finite or outside (0, π/2]; the body's effort torque τ_0 < 0
+ *   or its speed ω_max ≤ 0 (P2b.2b.2c.1 design §4.4); the body's hands' peak acceleration not positive; the preset's
+ *   or the shot's pendulumAt or pendulumEffort outside [0, 1]; handArcLow outside [0, 1]; a jab negative or
+ *   non-finite, or non-zero in carry mode (P2b.2b.2b.3 design §6.1); handArcRadius not above the push length; a flex
+ *   value not positive, or a flex damping ratio above 1; pendulumForce not positive (P2b.2b.2b.2b design §6);
+ *   pushForce, pushResponseTime, gripLimit or a hand–arm chain value not positive (its gate rulings, 2026-10-11;
+ *   P2b.2b.2b.3 design §5);
+ * - pendulumShare outside [0, 1]; handAngle outside (0, 90°) when pendulumShare < 1 (neither read
+ *   nor checked otherwise); in swing mode a pendulumShare of 0; in carry mode a null hands' tempo, or one ≤ 0 or
+ *   with fast > slow;
+ * - the downswing's (downswing.ts): a backswing beyond the body's limit θ_max (swing mode) or MAX_BACK_ANGLE (carry
+ *   mode), a non-positive effective inertia, a stall or a fall beyond MAX_FALL;
+ * - an action timed more than MAX_LEAD early (the advance's among them), or a downswing meeting the turf more than
+ *   MAX_LEAD − TURF_MARGIN before contact;
+ * - an advance (P2b.2b.2c.1 design §6.2) in carry mode, on a check (α < 0), with a handReach ≤ 0, with V ≤ 0, or
+ *   with its ramp's travel V·W/2 at or above 0.8·handReach (V the head's planned speed along aim at contact, W = V/a
+ *   the ramp's duration at the body's hands' peak acceleration a);
  * - the head's lowest point below the turf at contact, or where the impact starts.
  * A downswing that meets the turf before the ball is not rejected: the impact starts before it and simulates it
  * (design §3.5).
@@ -605,7 +675,8 @@ export function planStroke(setup: ShotSetup, world: World): StrokePlan {
     const { type, timing } = stroke;
     const push = profile.drive[type];
     // Step 4's lead: the earliest action's, none on time.
-    const actions = Math.max(0, 0 - timing.arc, 0 - timing.hands, 0 - timing.dip);
+    const given = Math.max(0, 0 - timing.arc, 0 - timing.hands, 0 - timing.dip);
+    const actions = timing.advance === undefined ? given : Math.max(given, 0 - timing.advance);
     if (actions > MAX_LEAD) {
         fail(`an action is timed more than ${MAX_LEAD} s early (${actions} s before contact)`);
     }
@@ -657,7 +728,19 @@ export function planStroke(setup: ShotSetup, world: World): StrokePlan {
         handArcRadius: push.handArcRadius,
         handArcLow: push.handArcLow,
         downswing: planned.downswing,
+        ...(timing.advance === undefined
+            ? {}
+            : {
+                  advance: {
+                      start: lead + timing.advance,
+                      speed: alongAim(pose, planned),
+                      accel: profile.body.handAcceleration,
+                  },
+              }),
     };
+    if (arc.advance !== undefined) {
+        checkAdvance(arc, arc.advance);
+    }
     const drive: TrackDrive = {
         kind: "track",
         arc,
