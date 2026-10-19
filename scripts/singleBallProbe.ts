@@ -776,7 +776,7 @@ async function rejectionChecks(): Promise<string[]> {
     const out = [
         "== I. θ_max's rejections (design §8.2.2): the runs θ_max rejected when it landed. Its lines read " +
             "\"backswingFor: N m/s is beyond the <type> stroke's reach\", not θ_max: backswingFor's reach check " +
-            "reads the speed at θ_max and fires first (design Amendments, the plan's decision 8, 2026-10-18). " +
+            "reads the speed at θ_max and fires first (design Amendments, backswingFor's bracket, 2026-10-18). " +
             "Each run replayed " +
             "through strokeFor and simulateShot on the committed engine ==",
     ];
