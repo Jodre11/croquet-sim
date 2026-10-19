@@ -1,0 +1,204 @@
+== Main's law (main at 4647883, before P2b.2b.2c.1; plan Task 1's effortCurve baseline): U(i) (m/s) at i = 0, 0.1, …, 1, each swing preset from its default backswing then and from its top at 75° ==
+single-ball default backswing 0.448600: 3.000000 3.559859 4.090346 4.568978 4.988422 5.344717 5.632953 5.846395 5.978339 6.028338 6.000000
+single-ball top75 backswing 0.617830: 3.520677 4.055112 4.565138 5.027826 5.431834 5.770228 6.037442 6.229906 6.346816 6.387698 6.352854
+drive default backswing 0.448600: 3.000000 3.559859 4.090346 4.568978 4.988422 5.344717 5.632953 5.846395 5.978339 6.028338 6.000000
+drive top75 backswing 0.617830: 3.520677 4.055112 4.565138 5.027826 5.431834 5.770228 6.037442 6.229906 6.346816 6.387698 6.352854
+stop-ac default backswing 0.448599: 3.000000 3.568913 4.103341 4.583528 5.002993 5.357980 5.643661 5.853594 5.982060 6.030033 6.000000
+stop-ac top75 backswing 0.615799: 3.514889 4.059092 4.573338 5.037334 5.441098 5.778316 6.043770 6.234261 6.349163 6.388083 6.351396
+stop-gc default backswing 0.448600: 3.000000 3.559859 4.090346 4.568978 4.988422 5.344717 5.632953 5.846395 5.978339 6.028338 6.000000
+stop-gc top75 backswing 0.617830: 3.520677 4.055112 4.565138 5.027826 5.431834 5.770228 6.037442 6.229906 6.346816 6.387698 6.352854
+== A. U(i) (design §4.2, §10): planned contact speed (m/s) at i = 0, 0.1, …, 1, from each swing preset's default backswing and body-limited top ==
+the profile's effort: τ_0 68.5269 N·m, ω_max 16.1953 rad/s (κ 0.6667)
+κ = ½ (0.5000): τ_0 54.4090 N·m, ω_max 21.5937 rad/s
+  single-ball top     0.4800 m: 3.1032 4.3334 5.2164 5.9256 6.5256 7.0490 7.5148 7.9354 8.3193 8.6726 9.0000
+  drive       top     0.4800 m: 3.1032 4.3334 5.2164 5.9256 6.5256 7.0490 7.5148 7.9354 8.3193 8.6726 9.0000
+  stop-ac     top     0.4780 m: 3.0966 4.3882 5.3046 6.0368 6.6542 7.1913 7.6685 8.0985 8.4904 8.8506 9.1840
+  stop-gc     top     0.4800 m: 3.1032 4.3334 5.2164 5.9256 6.5256 7.0490 7.5148 7.9354 8.3193 8.6726 9.0000
+κ = ⅔ (0.6667): τ_0 68.5269 N·m, ω_max 16.1953 rad/s
+  single-ball default 0.4486 m: 3.0000 4.3893 5.3175 6.0335 6.6213 7.1209 7.5554 7.9394 8.2829 8.5931 8.8752
+  single-ball top     0.4800 m: 3.1032 4.4953 5.4287 6.1491 6.7401 7.2421 7.6783 8.0634 8.4076 8.7180 9.0000
+  drive       default 0.4486 m: 3.0000 4.3893 5.3175 6.0335 6.6213 7.1209 7.5554 7.9394 8.2829 8.5931 8.8752
+  drive       top     0.4800 m: 3.1032 4.4953 5.4287 6.1491 6.7401 7.2421 7.6783 8.0634 8.4076 8.7180 9.0000
+  stop-ac     default 0.4486 m: 3.0000 4.4571 5.4176 6.1541 6.7559 7.2658 7.7079 8.0976 8.4453 8.7585 9.0427
+  stop-ac     top     0.4780 m: 3.0966 4.5542 5.5186 6.2585 6.8628 7.3745 7.8178 8.2082 8.5562 8.8694 9.1533
+  stop-gc     default 0.4486 m: 3.0000 4.3893 5.3175 6.0335 6.6213 7.1209 7.5554 7.9394 8.2829 8.5931 8.8752
+  stop-gc     top     0.4800 m: 3.1032 4.4953 5.4287 6.1491 6.7401 7.2421 7.6783 8.0634 8.4076 8.7180 9.0000
+κ = ¾ (0.7500): τ_0 79.7278 N·m, ω_max 14.3958 rad/s
+  single-ball top     0.4800 m: 3.1032 4.6173 5.5843 6.3101 6.8926 7.3779 7.7921 8.1518 8.4680 8.7488 9.0000
+  drive       top     0.4800 m: 3.1032 4.6173 5.5843 6.3101 6.8926 7.3779 7.7921 8.1518 8.4680 8.7488 9.0000
+  stop-ac     top     0.4780 m: 3.0966 4.6790 5.6752 6.4179 7.0110 7.5031 7.9217 8.2839 8.6013 8.8823 9.1329
+  stop-gc     top     0.4800 m: 3.1032 4.6173 5.5843 6.3101 6.8926 7.3779 7.7921 8.1518 8.4680 8.7488 9.0000
+== B. The default stroke (design §4.5, ruling 2): each swing preset's defaultBackswing h_0, U(0) and U(1) from it, and strokeFor's inputs on its canonical setup at 1, 2, 3, 4, 5, 6, 7, 8, 9 m/s, each with its planned contact speed ==
+single-ball h_0 0.4486 m: U(0) 3.0000 m/s, U(1) 8.8752 m/s; top 0.4800 m
+  1 m/s: backswing 0.0498 m, no intensity (regime 1), planned 1.0000 m/s
+  2 m/s: backswing 0.1994 m, no intensity (regime 1), planned 2.0000 m/s
+  3 m/s: backswing 0.4486 m, no intensity (regime 1), planned 3.0000 m/s
+  4 m/s: backswing 0.4486 m, intensity 0.0665 (regime 2), planned 4.0000 m/s
+  5 m/s: backswing 0.4486 m, intensity 0.1623 (regime 2), planned 5.0000 m/s
+  6 m/s: backswing 0.4486 m, intensity 0.2948 (regime 2), planned 6.0000 m/s
+  7 m/s: backswing 0.4486 m, intensity 0.4744 (regime 2), planned 7.0000 m/s
+  8 m/s: backswing 0.4486 m, intensity 0.7169 (regime 2), planned 8.0000 m/s
+  9 m/s: backswing 0.4800 m, intensity 1.0000 (regime 3), planned 9.0000 m/s
+drive       h_0 0.4486 m: U(0) 3.0000 m/s, U(1) 8.8752 m/s; top 0.4800 m
+  1 m/s: backswing 0.0498 m, no intensity (regime 1), planned 1.0000 m/s
+  2 m/s: backswing 0.1994 m, no intensity (regime 1), planned 2.0000 m/s
+  3 m/s: backswing 0.4486 m, no intensity (regime 1), planned 3.0000 m/s
+  4 m/s: backswing 0.4486 m, intensity 0.0665 (regime 2), planned 4.0000 m/s
+  5 m/s: backswing 0.4486 m, intensity 0.1623 (regime 2), planned 5.0000 m/s
+  6 m/s: backswing 0.4486 m, intensity 0.2948 (regime 2), planned 6.0000 m/s
+  7 m/s: backswing 0.4486 m, intensity 0.4744 (regime 2), planned 7.0000 m/s
+  8 m/s: backswing 0.4486 m, intensity 0.7169 (regime 2), planned 8.0000 m/s
+  9 m/s: backswing 0.4800 m, intensity 1.0000 (regime 3), planned 9.0000 m/s
+stop-ac     h_0 0.4486 m: U(0) 3.0000 m/s, U(1) 9.0427 m/s; top 0.4780 m
+  1 m/s: backswing 0.0498 m, no intensity (regime 1), planned 1.0000 m/s
+  2 m/s: backswing 0.1994 m, no intensity (regime 1), planned 2.0000 m/s
+  3 m/s: backswing 0.4486 m, no intensity (regime 1), planned 3.0000 m/s
+  4 m/s: backswing 0.4486 m, intensity 0.0626 (regime 2), planned 4.0000 m/s
+  5 m/s: backswing 0.4486 m, intensity 0.1527 (regime 2), planned 5.0000 m/s
+  6 m/s: backswing 0.4486 m, intensity 0.2772 (regime 2), planned 6.0000 m/s
+  7 m/s: backswing 0.4486 m, intensity 0.4460 (regime 2), planned 7.0000 m/s
+  8 m/s: backswing 0.4486 m, intensity 0.6738 (regime 2), planned 8.0000 m/s
+  9 m/s: backswing 0.4486 m, intensity 0.9844 (regime 2), planned 9.0000 m/s
+stop-gc     h_0 0.4486 m: U(0) 3.0000 m/s, U(1) 8.8752 m/s; top 0.4800 m
+  1 m/s: backswing 0.0498 m, no intensity (regime 1), planned 1.0000 m/s
+  2 m/s: backswing 0.1994 m, no intensity (regime 1), planned 2.0000 m/s
+  3 m/s: backswing 0.4486 m, no intensity (regime 1), planned 3.0000 m/s
+  4 m/s: backswing 0.4486 m, intensity 0.0665 (regime 2), planned 4.0000 m/s
+  5 m/s: backswing 0.4486 m, intensity 0.1623 (regime 2), planned 5.0000 m/s
+  6 m/s: backswing 0.4486 m, intensity 0.2948 (regime 2), planned 6.0000 m/s
+  7 m/s: backswing 0.4486 m, intensity 0.4744 (regime 2), planned 7.0000 m/s
+  8 m/s: backswing 0.4486 m, intensity 0.7169 (regime 2), planned 8.0000 m/s
+  9 m/s: backswing 0.4800 m, intensity 1.0000 (regime 3), planned 9.0000 m/s
+== C. θ_max (design §5.2, plan decision 18, ruling 4): the head's rise (m) at θ_max 64.9021° on the default mallet and the user's (1.0668 m shaft, 0.3429 m head, top hand 0.9574 m); knee height 0.4800 m on the default ==
+θ_max 64.9021° (1.1327544972853942 rad, the profile's); derived at knee height (kneeLimit): the single-ball preset's head rising 0.4800 m on the default mallet, acos(cos θ_c − 0.4800·s/ℓ) with θ_c 0.0000°, s 1.0000, ℓ 0.8336 m = 64.9021°
+single-ball default: θ_c 0.0000°, ℓ 0.8336 m, rise 0.4800 m (knee 0.4800 m: -0.0000 m over it; knee height at 64.9021°; shaft horizontal 0.8336 m); user's: θ_c 0.0000°, ℓ 0.9860 m, rise 0.5678 m
+drive       default: θ_c 0.0000°, ℓ 0.8336 m, rise 0.4800 m (knee 0.4800 m: -0.0000 m over it; knee height at 64.9021°; shaft horizontal 0.8336 m); user's: θ_c 0.0000°, ℓ 0.9860 m, rise 0.5678 m
+stop-ac     default: θ_c 4.0000°, ℓ 0.8336 m, rise 0.4780 m (knee 0.4800 m: -0.0020 m over it; knee height at 65.0561°; shaft horizontal 0.8315 m); user's: θ_c 4.0000°, ℓ 0.9860 m, rise 0.5654 m
+stop-gc     default: θ_c 0.0000°, ℓ 0.8336 m, rise 0.4800 m (knee 0.4800 m: -0.0000 m over it; knee height at 64.9021°; shaft horizontal 0.8336 m); user's: θ_c 0.0000°, ℓ 0.9860 m, rise 0.5678 m
+== D. The styles (design §8.4.1): single-ball at 3 and 5 m/s, rising (no advance) and level (advance 0, handReach 0.3000 m) ==
+3 m/s rising backswing 0.4486 m, no intensity (regime 1); face 0.9650 ms, 1 hits
+             ball released at 0.0010 s: 3.8665 m/s (along 3.8635, up 0.1507), topspin 8.1403 rad/s (ωR/v 0.0970, |ω| 8.1403); handover at 0.0100 s: 3.8625 m/s (along 3.8620, up 0.0651), topspin 8.2171 rad/s (ωR/v 0.0980, |ω| 8.2171)
+             skid from the release 0.6042 m, rolling from 0.1830 s; travel 6.9186 m
+             head highest over the level advance 0.0234 m, after contact to the finish 0.1550 m; finish 0.4982 s, no flags, no advance recorded
+3 m/s level  backswing 0.4486 m, no intensity (regime 1); face 0.9650 ms, 1 hits
+             ball released at 0.0010 s: 3.8599 m/s (along 3.8576, up 0.1335), topspin 7.2188 rad/s (ωR/v 0.0862, |ω| 7.2188); handover at 0.0464 s: 3.6563 m/s (along 3.6557, up 0.0651), topspin 17.2629 rad/s (ωR/v 0.2174, |ω| 17.2629)
+             skid from the release 0.6776 m, rolling from 0.2036 s; travel 6.9354 m
+             head highest over the level advance 0.0169 m, after contact to the finish 0.3221 m; finish 0.6461 s, no flags, advanced 0.0000 to 0.1250 s
+             hands' advance (ruling 9): a 300.0000 m/s², V 3.0000 m/s, W = V/a 0.0100 s; from 0.0000 s, ramp's travel V²/(2a) 0.0150 m to 0.0100 s, cruise 0.2250 m to 0.8·D 0.2400 m at 0.0850 s, rest at 0.3000 m at 0.1250 s
+             hands' travel along aim from contact (ruling 10c): 0.3000 m at the advance's rest, at most 0.3000 m to the finish, 0.3000 m at it; handReach 0.3000 m
+5 m/s rising backswing 0.4486 m, intensity 0.1623 (regime 2); face 0.8600 ms, 1 hits
+             ball released at 0.0009 s: 6.3865 m/s (along 6.3814, up 0.2560), topspin 13.3478 rad/s (ωR/v 0.0963, |ω| 13.3478); handover at 0.0100 s: 6.3831 m/s (along 6.3809, up 0.1673), topspin 13.3722 rad/s (ωR/v 0.0965, |ω| 13.3722)
+             skid from the release 1.6168 m, rolling from 0.2948 s; travel 18.5370 m
+             head highest over the level advance 0.0295 m, after contact to the finish 0.4368 m; finish 0.5146 s, no flags, no advance recorded
+5 m/s level  backswing 0.4486 m, intensity 0.1623 (regime 2); face 0.8600 ms, 1 hits
+             ball released at 0.0009 s: 6.3806 m/s (along 6.3761, up 0.2397), topspin 12.4889 rad/s (ωR/v 0.0902, |ω| 12.4889); handover at 0.0127 s: 6.3767 m/s (along 6.3755, up 0.1247), topspin 12.5193 rad/s (ωR/v 0.0904, |ω| 12.5193)
+             skid from the release 1.6059 m, rolling from 0.2941 s; travel 18.4486 m
+             head highest over the level advance 0.0167 m, after contact to the finish 0.6043 m; finish 0.6173 s, no flags, advanced 0.0000 to 0.0803 s
+             hands' advance (ruling 9): a 300.0000 m/s², V 5.0000 m/s, W = V/a 0.0167 s; from 0.0000 s, ramp's travel V²/(2a) 0.0417 m to 0.0167 s, cruise 0.1983 m to 0.8·D 0.2400 m at 0.0563 s, rest at 0.3000 m at 0.0803 s
+             hands' travel along aim from contact (ruling 10c): 0.3000 m at the advance's rest, at most 0.3000 m to the finish, 0.3000 m at it; handReach 0.3000 m
+== E. The mistimed advance (design §8.4.2): single-ball 3 m/s, handReach 0.3000 m, the advance (s from contact) swept; then drive 0–1 with no advance at the preset's reach ==
+advance -0.0200: face 0.9250 ms, 1 hits; head's highest after contact 0.3869 m; advance started before the finish: yes; finish 0.6104 s, no flags, advanced -0.0200 to 0.1050 s; faults: none
+advance -0.0100: face 0.9350 ms, 1 hits; head's highest after contact 0.3468 m; advance started before the finish: yes; finish 0.6169 s, no flags, advanced -0.0100 to 0.1150 s; faults: none
+advance -0.0050: face 0.9450 ms, 1 hits; head's highest after contact 0.3307 m; advance started before the finish: yes; finish 0.6297 s, no flags, advanced -0.0050 to 0.1200 s; faults: none
+advance  0.0000: face 0.9650 ms, 1 hits; head's highest after contact 0.3221 m; advance started before the finish: yes; finish 0.6461 s, no flags, advanced 0.0000 to 0.1250 s; faults: none
+advance  0.0050: face 0.9650 ms, 1 hits; head's highest after contact 0.2513 m; advance started before the finish: yes; finish 0.6565 s, no flags, advanced 0.0050 to 0.1300 s; faults: none
+advance  0.0100: face 0.9650 ms, 1 hits; head's highest after contact 0.1820 m; advance started before the finish: yes; finish 0.6644 s, no flags, advanced 0.0100 to 0.1350 s; faults: none
+advance  0.0200: face 0.9650 ms, 1 hits; head's highest after contact 0.1770 m; advance started before the finish: yes; finish 0.6658 s, no flags, advanced 0.0200 to 0.1450 s; faults: none
+advance  0.0400: face 0.9650 ms, 1 hits; head's highest after contact 0.1673 m; advance started before the finish: yes; finish 0.6682 s, no flags, advanced 0.0400 to 0.1650 s; faults: none
+advance  0.0800: face 0.9650 ms, 1 hits; head's highest after contact 0.1489 m; advance started before the finish: yes; finish 0.6717 s, no flags, advanced 0.0800 to 0.2050 s; faults: none
+advance  0.1600: face 0.9650 ms, 1 hits; head's highest after contact 0.1187 m; advance started before the finish: yes; finish 0.6744 s, no flags, advanced 0.1600 to 0.2850 s; faults: none
+advance  0.3200: face 0.9650 ms, 1 hits; head's highest after contact 0.1126 m; advance started before the finish: yes; finish 0.6740 s, follow-grip-limit, advanced 0.3200 to 0.4450 s; faults: none
+advance    none: face 0.9650 ms, 1 hits; head's highest after contact 0.1550 m; advance started before the finish: no; finish 0.4982 s, no flags, no advance recorded; faults: none
+drive 0.0000: face 0.9650 ms, 1 hits; head's highest after contact 0.1550 m; advance started before the finish: no; finish 0.4982 s, no flags, no advance recorded; faults: none
+drive 0.2500: face 0.9650 ms, 1 hits; head's highest after contact 0.1610 m; advance started before the finish: no; finish 0.5010 s, no flags, no advance recorded; faults: none
+drive 0.5000: face 0.9650 ms, 1 hits; head's highest after contact 0.1670 m; advance started before the finish: no; finish 0.5036 s, no flags, no advance recorded; faults: none
+drive 0.7500: face 0.9650 ms, 1 hits; head's highest after contact 0.1730 m; advance started before the finish: no; finish 0.5060 s, no flags, no advance recorded; faults: none
+drive 1.0000: face 0.9650 ms, 1 hits; head's highest after contact 0.1791 m; advance started before the finish: no; finish 0.5080 s, no flags, no advance recorded; faults: none
+== F. The flick (design §8.4.3, plan decision 17, ruling 7): single-ball, the stance's lean −20° to +10° (negative: the hands behind), the stroke re-solved for the speed at each lean (strokeFor); the measure is the ball's launch angle at the face's release, phase 2's airborne recorded alongside ==
+3 m/s lean -20°: rejected
+3 m/s lean -18°: rejected
+3 m/s lean -16°: rejected
+3 m/s lean -14°: rejected
+3 m/s lean -12°: rejected
+3 m/s lean -10°: rejected
+3 m/s lean  -8°: rejected
+3 m/s lean  -6°: rejected
+3 m/s lean  -4°: rejected
+3 m/s lean  -2° (hands ahead -0.2147 m, backswing 0.4486 m, no intensity (regime 1)): head rising 2.0572° at the first face contact; launch angle at the face's release 4.1863° (3.6903 m/s), at handover 3.2526° (3.6863 m/s); airborne in phase 2 (recorded)
+3 m/s lean   0° (hands ahead -0.1857 m, backswing 0.4486 m, no intensity (regime 1)): head rising 0.0010° at the first face contact; launch angle at the face's release 2.2341° (3.8665 m/s), at handover 0.9656° (3.8625 m/s); airborne in phase 2 (recorded)
+3 m/s lean   2° (hands ahead -0.1565 m, backswing 0.4486 m, intensity 0.0000 (regime 2)): head rising -1.9990° at the first face contact; launch angle at the face's release 0.2613° (3.8659 m/s), at handover 0.0000° (3.8303 m/s); on the turf in phase 2 (recorded)
+3 m/s lean   4° (hands ahead -0.1271 m, backswing 0.4486 m, intensity 0.0000 (regime 2)): head rising -3.9990° at the first face contact; launch angle at the face's release -1.7042° (3.8649 m/s), at handover 0.8695° (3.6835 m/s); airborne in phase 2 (recorded)
+3 m/s lean   6° (hands ahead -0.0976 m, backswing 0.4486 m, intensity 0.0000 (regime 2)): head rising -5.9990° at the first face contact; launch angle at the face's release -3.6633° (3.8634 m/s), at handover 2.7925° (3.5672 m/s); airborne in phase 2 (recorded)
+3 m/s lean   8° (hands ahead -0.0679 m, backswing 0.4486 m, intensity 0.0000 (regime 2)): head rising -7.9990° at the first face contact; launch angle at the face's release -5.6186° (3.8615 m/s), at handover 4.4859° (3.4470 m/s); airborne in phase 2 (recorded)
+3 m/s lean  10° (hands ahead -0.0382 m, backswing 0.4486 m, intensity 0.0000 (regime 2)): head rising -9.9990° at the first face contact; launch angle at the face's release -7.5710° (3.8592 m/s), at handover 6.1838° (3.3259 m/s); airborne in phase 2 (recorded)
+3 m/s: launching upward at -2°, 0°, 2°; the launch angle falls at every step as the lean grows: 4.1863° at -2° to -7.5710° at 10°, -0.9798° per degree of lean
+5 m/s lean -20°: rejected
+5 m/s lean -18°: rejected
+5 m/s lean -16°: rejected
+5 m/s lean -14°: rejected
+5 m/s lean -12°: rejected
+5 m/s lean -10°: rejected
+5 m/s lean  -8°: rejected
+5 m/s lean  -6°: rejected
+5 m/s lean  -4°: rejected
+5 m/s lean  -2° (hands ahead -0.2147 m, backswing 0.4486 m, intensity 0.1574 (regime 2)): head rising 2.0718° at the first face contact; launch angle at the face's release 4.2836° (6.2457 m/s), at handover 3.5366° (6.2401 m/s); airborne in phase 2 (recorded)
+5 m/s lean   0° (hands ahead -0.1857 m, backswing 0.4486 m, intensity 0.1623 (regime 2)): head rising 0.0017° at the first face contact; launch angle at the face's release 2.2969° (6.3865 m/s), at handover 1.5021° (6.3831 m/s); airborne in phase 2 (recorded)
+5 m/s lean   2° (hands ahead -0.1565 m, backswing 0.4486 m, intensity 0.1674 (regime 2)): head rising -1.9983° at the first face contact; launch angle at the face's release 0.3168° (6.3857 m/s), at handover 0.0000° (6.3585 m/s); on the turf in phase 2 (recorded)
+5 m/s lean   4° (hands ahead -0.1271 m, backswing 0.4486 m, intensity 0.1725 (regime 2)): head rising -3.9983° at the first face contact; launch angle at the face's release -1.6527° (6.3841 m/s), at handover 1.2243° (6.1324 m/s); airborne in phase 2 (recorded)
+5 m/s lean   6° (hands ahead -0.0976 m, backswing 0.4486 m, intensity 0.1778 (regime 2)): head rising -5.9983° at the first face contact; launch angle at the face's release -3.6153° (6.3817 m/s), at handover 2.8799° (5.9206 m/s); airborne in phase 2 (recorded)
+5 m/s lean   8° (hands ahead -0.0679 m, backswing 0.4486 m, intensity 0.1831 (regime 2)): head rising -7.9983° at the first face contact; launch angle at the face's release -5.5726° (6.3786 m/s), at handover 4.4644° (5.7078 m/s); airborne in phase 2 (recorded)
+5 m/s lean  10° (hands ahead -0.0382 m, backswing 0.4486 m, intensity 0.1886 (regime 2)): head rising -9.9983° at the first face contact; launch angle at the face's release -7.5224° (6.3744 m/s), at handover 5.9950° (5.4948 m/s); airborne in phase 2 (recorded)
+5 m/s: launching upward at -2°, 0°, 2°; the launch angle falls at every step as the lean grows: 4.2836° at -2° to -7.5224° at 10°, -0.9838° per degree of lean
+== G. Head ahead (design §8.4.4, plan decision 16, ruling 8): d > 0, d < L/2 + 2R, e < faceWidth/2 + R and the head's lowest point below the ball's top; impact steps and follow-through samples. Each such run is labelled as the known gap, not a failure ==
+D               4 runs (0 rejected), 18020 states: 0 runs with the head ahead
+E               17 runs (0 rejected), 62483 states: 0 runs with the head ahead
+F               14 runs (18 rejected), 62411 states: 0 runs with the head ahead
+G single-ball   225 runs (0 rejected), 585445 states: 0 runs with the head ahead
+G stop-gc       225 runs (0 rejected), 882693 states: 11 runs with the head ahead
+                stop-gc 3 m/s drive 1 up 0.0000 side -0.0100: double tap (GC 11.2.4, AC 29.1.6.2): the head reaches the stopped striker's ball after the face has released it; the follow-through does not yet detect head–ball contact (roadmap); 1 states from 0.1190 to 0.1190 s, the head 0.0459 mm below the ball's top at most
+                stop-gc 3 m/s drive 1 up 0.0000 side 0.0100: double tap (GC 11.2.4, AC 29.1.6.2): the head reaches the stopped striker's ball after the face has released it; the follow-through does not yet detect head–ball contact (roadmap); 1 states from 0.1190 to 0.1190 s, the head 0.0540 mm below the ball's top at most
+                stop-gc 3 m/s drive 1 up 0.0030 side -0.0100: double tap (GC 11.2.4, AC 29.1.6.2): the head reaches the stopped striker's ball after the face has released it; the follow-through does not yet detect head–ball contact (roadmap); 5 states from 0.1200 to 0.1240 s, the head 11.2204 mm below the ball's top at most
+                stop-gc 3 m/s drive 1 up 0.0030 side 0.0000: double tap (GC 11.2.4, AC 29.1.6.2): the head reaches the stopped striker's ball after the face has released it; the follow-through does not yet detect head–ball contact (roadmap); 5 states from 0.1190 to 0.1230 s, the head 12.2045 mm below the ball's top at most
+                stop-gc 3 m/s drive 1 up 0.0030 side 0.0100: double tap (GC 11.2.4, AC 29.1.6.2): the head reaches the stopped striker's ball after the face has released it; the follow-through does not yet detect head–ball contact (roadmap); 5 states from 0.1200 to 0.1240 s, the head 11.2269 mm below the ball's top at most
+                stop-gc 4 m/s drive 1 up 0.0000 side -0.0100: double tap (GC 11.2.4, AC 29.1.6.2): the head reaches the stopped striker's ball after the face has released it; the follow-through does not yet detect head–ball contact (roadmap); 1 states from 0.0890 to 0.0890 s, the head 0.6026 mm below the ball's top at most
+                stop-gc 4 m/s drive 1 up 0.0000 side 0.0000: double tap (GC 11.2.4, AC 29.1.6.2): the head reaches the stopped striker's ball after the face has released it; the follow-through does not yet detect head–ball contact (roadmap); 1 states from 0.0890 to 0.0890 s, the head 0.4403 mm below the ball's top at most
+                stop-gc 4 m/s drive 1 up 0.0000 side 0.0100: double tap (GC 11.2.4, AC 29.1.6.2): the head reaches the stopped striker's ball after the face has released it; the follow-through does not yet detect head–ball contact (roadmap); 1 states from 0.0890 to 0.0890 s, the head 0.5940 mm below the ball's top at most
+                stop-gc 4 m/s drive 1 up 0.0030 side -0.0100: double tap (GC 11.2.4, AC 29.1.6.2): the head reaches the stopped striker's ball after the face has released it; the follow-through does not yet detect head–ball contact (roadmap); 2 states from 0.0890 to 0.0900 s, the head 3.5012 mm below the ball's top at most
+                stop-gc 4 m/s drive 1 up 0.0030 side 0.0000: double tap (GC 11.2.4, AC 29.1.6.2): the head reaches the stopped striker's ball after the face has released it; the follow-through does not yet detect head–ball contact (roadmap); 2 states from 0.0890 to 0.0900 s, the head 3.3458 mm below the ball's top at most
+                stop-gc 4 m/s drive 1 up 0.0030 side 0.0100: double tap (GC 11.2.4, AC 29.1.6.2): the head reaches the stopped striker's ball after the face has released it; the follow-through does not yet detect head–ball contact (roadmap); 2 states from 0.0890 to 0.0900 s, the head 3.4934 mm below the ball's top at most
+head-ahead runs: 11 of 485 (double tap, the known gap; roadmap)
+== H. The guard (design §3): RangeErrors naming "non-finite" over every run (expected none) ==
+guard catches: 0
+other rejections: 18
+  6× F: the backswing takes the shaft beyond the body's backswing limit θ_max = 1.1327544972853942 rad (where the shaft meets the groin): a 0.448599788489428 m backswing with pendulumShare 1 on a 0.8335750000000001 m pendulum
+  2× F: the head is in the turf at contact: its lowest point is 0.060219369064363676 m below it
+  2× F: the head is in the turf at contact: its lowest point is 0.04945398133905079 m below it
+  2× F: the head is in the turf at contact: its lowest point is 0.038576438948487335 m below it
+  2× F: the head is in the turf at contact: its lowest point is 0.027599994502519324 m below it
+  2× F: the head is in the turf at contact: its lowest point is 0.016538021107912467 m below it
+  2× F: the head is in the turf at contact: its lowest point is 0.005403996075281762 m below it
+== I. θ_max's rejections (design §8.2.2): Task 3's rejected-runs list. Its lines read "backswingFor: N m/s is beyond the <type> stroke's reach", not θ_max: backswingFor's reach check reads the speed at θ_max and fires first (plan decision 8, controller ruling). Each run replayed through strokeFor and simulateShot on the committed engine ==
+Task 3: 360 rejected runs (360 beyond the stroke's reach): single-ball 90, drive 90, stop-ac 90, stop-gc 90
+now played through strokeFor: 360; still rejected: 0
+  plays 90× single-ball regime 2
+  plays 90× drive regime 2
+  plays 90× stop-ac regime 2
+  plays 90× stop-gc regime 2
+== J. The user's checks (design §8.5, ruling 3; recorded, not gated): simulateShot on an open world (defaultWorld(10)'s gravity, ball, materials and surface, no hoops, a 200 m square lawn, the striker from (100.0000, 50.0000) m aiming +y); distances to rest; the user's single-ball strokes 5, 15 and 30 yd, the full lawn 35 yd ==
+single-ball 0.45 m, i 0.0000: 3.0047 m/s, 6.9399 m = 7.5895 yd
+single-ball 0.45 m, i 0.1000: 4.3941 m/s, 14.4879 m = 15.8442 yd
+single-ball 0.45 m, i 0.2000: 5.3225 m/s, 20.9402 m = 22.9004 yd
+single-ball 0.45 m, i 0.3000: 6.0388 m/s, 26.6174 m = 29.1091 yd
+single-ball 0.45 m, i 0.4000: 6.6267 m/s, 31.9247 m = 34.9133 yd
+single-ball 0.45 m, i 0.5000: 7.1264 m/s, 36.5675 m = 39.9907 yd
+single-ball 0.45 m, i 0.6000: 7.5610 m/s, 41.0675 m = 44.9120 yd
+single-ball 0.45 m, i 0.7000: 7.9451 m/s, 45.2329 m = 49.4673 yd
+single-ball 0.45 m, i 0.8000: 8.2886 m/s, 49.1040 m = 53.7008 yd
+single-ball 0.45 m, i 0.9000: 8.5988 m/s, 52.4764 m = 57.3889 yd
+single-ball 0.45 m, i 1.0000: 8.8809 m/s, 55.8898 m = 61.1219 yd
+drive from its top 0.4800 m at i 1: 9.0000 m/s; croqueted 53.7354 m = 58.7658 yd, striker 6.8141 m = 7.4519 yd; the user's full lawn 35 yd
+== K. The cost (design §11): the downswing table's length (samples) and its release (s) ==
+single-ball default 97795 samples, release -0.4890 s; top i 1 35304 samples, release -0.1765 s
+drive       default 97795 samples, release -0.4890 s; top i 1 35304 samples, release -0.1765 s
+stop-ac     default 101708 samples, release -0.5085 s; top i 1 36586 samples, release -0.1829 s
+stop-gc     default 97795 samples, release -0.4890 s; top i 1 35304 samples, release -0.1765 s
