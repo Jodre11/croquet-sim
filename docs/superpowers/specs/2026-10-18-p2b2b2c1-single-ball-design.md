@@ -182,8 +182,9 @@ today's strike laws (§8.5); if it does not, the gate (§10) decides, since the 
 
 ### 4.4 The law's form
 
-**Preferred form (my call, the builder may choose another that meets §4.2 and records its source):** a Hill-type
-torque–velocity law, the player's torque falling as the swing speeds up:
+**Preferred form (my call, the builder may choose another that meets §4.2 and records its source):** a torque–velocity
+law linear in ω, a simplification of Hill's hyperbolic force–velocity relation, the player's torque falling as the swing
+speeds up:
 
 τ_p = i · τ_0 · max(0, 1 − ω/ω_max),
 
@@ -400,7 +401,7 @@ explore map of 2026-10-18 found about twenty): `SwingDrive.mode` and its four ca
 `DRIVE`/`DEFAULT_DRIVE`, `planDownswing`, `validate`, `arrival`, `prepareTrack`, `pivotAt`, `pendulumAt`,
 `handLoad`/`carryLoad`, `inCheck`, `finishKind`, the carry resistance and chains, the check hold, the fit's branch,
 and `canonicalSetup`'s special cases. Line numbers are left to the step that merges the modes. This step narrows one:
-the hands' advance and held slope are no longer carry mode's alone.
+the hands' advance is no longer carry mode's alone.
 
 ## 10. The pre-flight gate
 
@@ -472,9 +473,9 @@ downswing's steps and `shotMix`'s engine time, run alone).
   §8.1.5's 2 mm height test goes with the held slope. The plan's decisions 1–6 and 15 give the detail.
 - **The plan's decisions (2026-10-18), as built.** Each with its reason; where a later ruling changed one, it says so.
   1. **The mallet swings freely through the advance**: no slope held, no grip firmed, swing mode's after-contact hand
-     load throughout, so the arc is never stopped (the user's "the intent is not to stop or interrupt the arc"). Its
-     premise, that the free pendulum integrates the hands' acceleration through `freeAlpha`, is corrected below (gate
-     item 10b).
+     load throughout, so the arc is never stopped (the user's "The intent is not to stop or interrupt the arc of the
+     mallet head"). Its premise, that the free pendulum integrates the hands' acceleration through `freeAlpha`, is
+     corrected below (gate item 10b).
   2. **The advance is planned, not latched**: `prepareTrack` builds it once and the free table includes it, because it
      is the player's motion, independent of what the strike does to the head; swing mode's load does not hold the
      head's rotation to the plan, so a slowed head is not yanked onto it.
@@ -572,7 +573,7 @@ downswing's steps and `shotMix`'s engine time, run alone).
         so the hands travel handReach in all (0.3000 m at the rerun), not the reach's distance plus handReach.
 - **The builder's rulings applying the gate (2026-10-18 to 2026-10-19).**
   - Under an advance, planned hands still moving along aim at contact (handGain > 0 or pendulumShare < 1) drop to
-    rest at the advance's start. Kept for this step: no default preset has hands moving along aim at contact
+    rest at contact. Kept for this step: no default preset has hands moving along aim at contact
     (pendulumShare 1), and handReach 0 already behaves so; the cost is a hand-speed discontinuity on such custom
     presets, mended later by blending the pivot's speed into the ramp. The user, at the rerun: "Keep, amend
     (Recommended)".
@@ -604,3 +605,7 @@ downswing's steps and `shotMix`'s engine time, run alone).
   the 3 m/s leans of +2° to +10° taking the middle regime at intensity 0.0000: "Accept (Recommended)". The hands' drop
   to rest under an advance: "Keep, amend (Recommended)" (above). The gate's cost, 343 s against 99 s, and the obsolete
   75° rows of the effort curve: "Accept (Recommended)".
+- **Wording corrections (final review, 2026-10-19).** §9 named the held slope beside the hands' advance; the held slope
+  was withdrawn (plan decision 1), so §9 now names the advance alone. The builder's ruling on the hands' drop to rest
+  said "at the advance's start"; the code rests them from contact, so it now says so. §4.4's "Hill-type" law is linear
+  in ω, a simplification of Hill's hyperbolic relation, and now says so.

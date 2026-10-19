@@ -456,13 +456,14 @@ up 2026-10-18. Nothing fetched is committed.
 ### What each gives the model
 
 - **Hill 1938:** the force–velocity relation of a shortening muscle, (P + a)(v + b) = constant, whose force falls as the
-  speed of shortening rises; it shapes the torque that falls to zero at ω_max (design §4.4). No open full text could be
-  fetched on 2026-10-18: the Royal Society's PDF, abstract page, the AHA "Classic Pages" excerpt and the SciSpace copy
-  all answer HTTP 403, and the Scribd copy is a user upload, not a stable file. So the digest is not recorded and the
-  relation is cited from the DOI and the abstract page, not from a quotation of the full text. The only text seen is the
-  search index's abstract: "The hope was recently expressed (Hill 1937, p. 116) that with the development of a more
-  accurate and rapid technique for muscle heat measurement, a much more consistent picture might emerge of the energy
-  relations of muscles shortening (or lengthening) and doing positive (or negative) work." The form (P + a)(v + b) is
-  the textbook statement of the paper's result, unverified here against its text.
+  speed of shortening rises; it shapes the torque that falls to zero at ω_max (design §4.4), which the model takes in a
+  linear simplification, i·τ_0·max(0, 1 − ω/ω_max), not Hill's hyperbola. No open full text could be fetched on
+  2026-10-18: the Royal Society's PDF, abstract page, the AHA "Classic Pages" excerpt and the SciSpace copy all answer
+  HTTP 403, and the Scribd copy is a user upload, not a stable file. So the digest is not recorded and the relation is
+  cited from the DOI and the abstract page, not from a quotation of the full text. The only text seen is the search
+  index's abstract: "The hope was recently expressed (Hill 1937, p. 116) that with the development of a more accurate
+  and rapid technique for muscle heat measurement, a much more consistent picture might emerge of the energy relations
+  of muscles shortening (or lengthening) and doing positive (or negative) work." The form (P + a)(v + b) is the textbook
+  statement of the paper's result, unverified here against its text.
 - **The speed ceiling** is set from the CA's A4D mallet speed of 8.18 m/s already cited above ("Backswing against
   contact speed"): 1.1 × 8.18 = 9.0 m/s, rounded (plan decision 11).
