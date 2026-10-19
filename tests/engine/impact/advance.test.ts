@@ -1,9 +1,16 @@
 import { describe, expect, it } from "vitest";
 import type { FollowSnapshot, ImpactSnapshot } from "../../../src/engine/impact/integrate";
 import { simulateStroke } from "../../../src/engine/impact/simulateImpact";
-import { advanceTravel, pathAt, pitchAxis, prepareTrack, type Advance } from "../../../src/engine/impact/track";
+import {
+    advanceTravel,
+    handsAt,
+    pathAt,
+    pitchAxis,
+    prepareTrack,
+    type Advance,
+} from "../../../src/engine/impact/track";
 import type { SwingArc, TrackDrive } from "../../../src/engine/impact/types";
-import { dot } from "../../../src/engine/math/vec3";
+import { dot, sub } from "../../../src/engine/math/vec3";
 import { MAX_LEAD, planStroke, type StrokePlan } from "../../../src/engine/swing/buildContact";
 import { ON_TIME, defaultProfile } from "../../../src/engine/swing/profile";
 import type { ShotSetup, StrokeTiming, StrokeType, SwingProfile } from "../../../src/engine/swing/types";
@@ -158,6 +165,38 @@ describe("the hands' advance (design §6, §8.1.5)", () => {
         expect(pitchRates(level()).some(({ t, rate }) => t > end && rate > 0)).toBe(true);
         expect(follow.finish).toBeGreaterThan(end);
     });
+    it("carries the hands handReach in all from contact, the advance replacing the pivot's own reach", () => {
+        // The pre-flight gate's ruling 10c (one budget). A pushed single-ball stroke whose planned pivot travels on
+        // along aim after contact (handGain 1 at drive +1), so that the plan's own reach binds: without an advance the
+        // reach carries the hands handReach; with one, the advance alone does, never the reach's distance on top.
+        const pushed = (timing: Partial<StrokeTiming>): ShotSetup => {
+            const setup = canonicalSetup("single-ball", {
+                stroke: { drive: 1, handReach: 0.3, timing: { ...ON_TIME, ...timing } },
+                drive: { handGain: 1 },
+            });
+            return { ...setup, stroke: { ...setup.stroke, backswing: backswingFor(setup, 3, WORLD) } };
+        };
+        const travel = (setup: ShotSetup): { most: number; last: number } => {
+            const { contact } = plan(setup);
+            const track = prepareTrack(contact.drive as TrackDrive, contact.head, WORLD.gravity);
+            const { aim, contactAt } = track.arc;
+            const from = handsAt(track, contactAt).position;
+            const along = (t: number): number => dot(sub(handsAt(track, t).position, from), aim);
+            let most = 0;
+            for (let k = 0; k <= 2000; k++) {
+                most = Math.max(most, along(contactAt + k * 1e-3));
+            }
+            return { most, last: along(contactAt + 2) };
+        };
+        // Numerical, not physical: the advance's closed form reaches handReach to rounding.
+        const TOLERANCE = 1e-12;
+        const without = travel(pushed({}));
+        expect(without.last).toBeCloseTo(0.3, 9);
+        const withAdvance = travel(pushed({ advance: 0 }));
+        expect(withAdvance.most).toBeLessThanOrEqual(0.3 + TOLERANCE);
+        expect(withAdvance.last).toBeCloseTo(0.3, 9);
+    });
+
     it("rejects carry mode, a check, no travel and a non-finite timing", () => {
         expect(() => plan(stroke({ handReach: 0.3 }, { advance: 0 }, "half-roll"))).toThrow(/advance .* swing mode/);
         expect(() => plan(stroke({ handReach: 0.3 }, { advance: 0 }, "stop-gc"))).toThrow(/advance .* check/);
