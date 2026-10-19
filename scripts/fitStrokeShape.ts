@@ -1,7 +1,9 @@
 /**
  * The stroke-shape fit (P2b.2b.2c.1 design §4.3–§4.5; plan decisions 11–14), on scripts/effortFit.ts:
+ * 0. the body's backswing limit θ_max at knee height (design §5.2, gate ruling 4): the angle at which the default
+ *    mallet's head rises KNEE_RISE (kneeLimit), written to body.backswingLimit with its derivation;
  * 1. the body's effort, a labelled placeholder: τ_0 and ω_max solved jointly (fitEffort) so that the weakest swing
- *    preset at intensity 1 from its body-limited top (θ_max, swing.json's body.backswingLimit) reaches CEILING, and the
+ *    preset at intensity 1 from its body-limited top (θ_max, from step 0) reaches CEILING, and the
  *    drive's shaft there turns at κ·ω_max at contact, κ swing.json's body.effortShare; written to body.effortTorque
  *    and body.effortSpeed;
  * 2. every swing preset's U(i) checked over design §8.1.3's grid (checkCurve): strictly increasing in i, concave, and
@@ -24,12 +26,15 @@ import {
     CANONICAL_SPEED,
     CEILING,
     END_SLOPE_SHARE,
+    KNEE_RISE,
     SWING_PRESETS,
     bodyTop,
     checkCurve,
+    contactArm,
     contactRate,
     fitDefault,
     fitEffort,
+    kneeLimit,
     speedAt,
     weakestTop,
 } from "./effortFit";
@@ -70,17 +75,31 @@ if (paired.length > 0) {
 }
 
 const kappa = swingBodyReference.effortShare.value;
-const profile = {
-    ...defaultProfile,
-    body: { ...defaultProfile.body, backswingLimit: swingBodyReference.backswingLimit.value },
-};
+const limit = kneeLimit();
+const profile = { ...defaultProfile, body: { ...defaultProfile.body, backswingLimit: limit } };
 const fmt = (x: number, digits = 4): string => x.toFixed(digits);
-const degrees = fmt((profile.body.backswingLimit * 180) / Math.PI, 1);
+const degrees = fmt((limit * 180) / Math.PI, 4);
+
+const out = JSON.parse(JSON.stringify(swingJson)) as Record<string, Record<string, unknown>>;
+const body = out.body as Record<string, unknown>;
+const arm = contactArm("single-ball", profile);
+const share = profile.shape["single-ball"].pendulumShare;
+body.backswingLimit = {
+    ...(body.backswingLimit as Record<string, unknown>),
+    value: limit,
+    source:
+        "Spec §5.2 (docs/superpowers/specs/2026-10-18-p2b2b2c1-single-ball-design.md), the user's account of the " +
+        "stance (2026-10-18) and the pre-flight gate's ruling 4 (2026-10-19); solved by scripts/fitStrokeShape.ts",
+    note:
+        `The shaft's greatest angle from vertical at the top of the backswing, at knee height: the angle at which ` +
+        `the default mallet's head rises ${KNEE_RISE} m above its contact height ("about knee height", design ` +
+        `§5.2), acos(cos θ_c − ${KNEE_RISE}·s/ℓ) on the single-ball preset's canonical contact (θ_c = ` +
+        `${fmt((arm.thetaContact * 180) / Math.PI)}°, s = ${share}, ℓ = ${fmt(arm.lever, 6)} m), ${degrees}°. ` +
+        "Bounds: 64° to 90°, the shaft horizontal.",
+};
 
 const effort = fitEffort(kappa, profile);
 const weakest = weakestTop(effort, profile);
-const out = JSON.parse(JSON.stringify(swingJson)) as Record<string, Record<string, unknown>>;
-const body = out.body as Record<string, unknown>;
 const rule =
     `τ_0 and ω_max solved jointly (design §4.4): the weakest swing preset, ${weakest.type}, reaches the ceiling ` +
     `${CEILING} m/s (1.1 × the CA's A4D 8.18 m/s, design §4.3) at intensity 1 from its body-limited top ` +

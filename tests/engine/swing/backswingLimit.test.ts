@@ -6,6 +6,7 @@ import { ON_TIME, defaultProfile } from "../../../src/engine/swing/profile";
 import type { ShotSetup, SwingProfile } from "../../../src/engine/swing/types";
 import { STANDARD_GRAVITY } from "../../../src/engine/world";
 import { swingBodyReference } from "../../../src/reference/index";
+import { KNEE_RISE, bodyTop, kneeLimit } from "../../../scripts/effortFit";
 import { ballAt, testWorld } from "../support/fixtures";
 import { TEST_HANDS, TEST_HEAD } from "../support/impact";
 import { testProfile } from "../support/shot";
@@ -105,6 +106,17 @@ describe("the backswing's limit (design §5, §8.1.4)", () => {
             expect(() => planStroke(shot(withLimit(bad)), WORLD)).toThrow(/profile\.body\.backswingLimit/);
         }
         expect(() => planStroke(shot(withLimit(Math.PI / 2)), WORLD)).not.toThrow();
+    });
+
+    it("finds the knee-height θ_max where the default mallet's head rises 0.48 m", () => {
+        // Gate ruling 4 (2026-10-19): θ_max is the angle at which the default mallet's head rises KNEE_RISE, solved
+        // from its geometry; the gate measured ≈ 64.9021° on the single-ball preset's level contact (θ_c = 0).
+        const limit = kneeLimit();
+        expect(KNEE_RISE).toBe(0.48);
+        expect((limit * 180) / Math.PI).toBeCloseTo(64.9021, 4);
+        const atKnee = { ...defaultProfile, body: { ...defaultProfile.body, backswingLimit: limit } };
+        // bodyTop sits 1e-9 (relative) inside the limit, as maxBackswing did.
+        expect(bodyTop("single-ball", atKnee)).toBeCloseTo(KNEE_RISE, 8);
     });
 
     it("gives the default player's θ_max as 75°", () => {

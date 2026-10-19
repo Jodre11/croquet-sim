@@ -111,6 +111,28 @@ function plan(
     return planDownswing(downswingInput(c.pose, c.hands, choice, WORLD.gravity));
 }
 
+/** The head's rise (m) at a knee-height top on the default mallet: the user's "about knee height" (design §5.2). */
+export const KNEE_RISE = 0.48;
+
+/**
+ * θ_max (rad from vertical) at knee height (gate ruling 4, 2026-10-19): the shaft's angle at which the single-ball
+ * preset's head rises KNEE_RISE above its contact height, solved from `profile`'s mallet and stance,
+ * acos(cos θ_c − KNEE_RISE·s/ℓ), the inverse of bodyTop's rise without its margin.
+ */
+export function kneeLimit(profile: SwingProfile = defaultProfile): number {
+    const { lever, thetaContact } = contactArm("single-ball", profile);
+    return Math.acos(Math.cos(thetaContact) - (KNEE_RISE * profile.shape["single-ball"].pendulumShare) / lever);
+}
+
+/** Swing preset `type`'s canonical pendulum lever ℓ = ρ + r (m) and its shaft's angle at contact θ_c (rad). */
+export function contactArm(
+    type: StrokeType,
+    profile: SwingProfile = defaultProfile,
+): { lever: number; thetaContact: number } {
+    const { pose } = caseOf(type, profile);
+    return { lever: pose.head.socket.z + pose.radius, thetaContact: pose.thetaContact };
+}
+
 /**
  * The body-limited top (m, plan decision 12): h_top = ℓ·(cos θ_c − cos θ_max)/s·(1 − 1e-9), the backswing that takes
  * the shaft a hair inside the body's θ_max.
