@@ -8,13 +8,23 @@
  *   (planned at releaseSpeedFor(the CA's ball speed): the travel to rest in metres against the CA's, and their ratio),
  *   A1D marked a very short stroke; then Gugan 5's drive on the drive preset at its target's speed on the open lawn:
  *   the croqueted ball's travel in yards against about seven.
- * Run with `npx --yes tsx scripts/croquetFitProbe.ts`; environment: SECTION (A; default all). Not part of the test
- * suite.
+ * - B. the drift (design §4.3): the single-ball, drive, AC stop and GC stop presets' canonical setups and the preset
+ *   digest's grid on the default world (the swing-mode presets: a check's hold follows any run planned with α < 0),
+ *   each played by planStroke and simulateStroke with a follow probe: each hand's peak and final slid |offset|,
+ *   the peak's time, each hand's peak |force| over the follow-through and the follow-grip-limit flag; then, per
+ *   preset, the run with the largest peak and the count of runs with an offset set.
+ * Run with `npx --yes tsx scripts/croquetFitProbe.ts`; environment: SECTION (A or B; default all). Not part of the
+ * test suite.
  */
+import type { FollowSnapshot, ImpactProbe } from "../src/engine/impact/integrate";
+import { simulateStroke } from "../src/engine/impact/simulateImpact";
 import { horizontal, length, sub, type Vec3 } from "../src/engine/math/vec3";
+import { planStroke } from "../src/engine/swing/buildContact";
 import type { ShotSetup } from "../src/engine/swing/types";
 import type { BallId, BallState, ShotResult } from "../src/engine/types";
+import { defaultWorld } from "../src/engine/world";
 import { ratioTargetsReference, swingReference } from "../src/reference/index";
+import { backswingFor, canonicalSetup } from "../tests/engine/support/shot";
 import { OPEN_LAWN, OPEN_START, openWorld, opened } from "./openLawn";
 import { CA_STROKES, TODAY, fitSetup, fitWorld, releaseSpeedFor, runFit } from "./ratioFit";
 
@@ -128,7 +138,124 @@ function sectionA(): void {
     );
 }
 
-const SECTIONS: Readonly<Record<string, () => void>> = { A: sectionA };
+/** The default world, on which the preset digest plays its runs. */
+const DRIFT_WORLD = defaultWorld();
+
+/** One hand's grip over a follow-through: its peak and final |offset| (m), the peak's time (s) and its peak |force|. */
+interface HandDrift {
+    peak: number;
+    peakAt: number;
+    final: number;
+    force: number;
+    set: boolean;
+}
+
+/** One run's drift: each hand's, and whether a hand reached its limit in the follow-through. */
+interface Drift {
+    readonly top: HandDrift;
+    readonly bottom: HandDrift;
+    readonly limited: boolean;
+}
+
+/** The hands' grip through `setup`'s follow-through, read from the follow probe after every step. */
+function driftOf(setup: ShotSetup): Drift {
+    const plan = planStroke(setup, DRIFT_WORLD);
+    const hand = (): HandDrift => ({ peak: 0, peakAt: 0, final: 0, force: 0, set: false });
+    const top = hand();
+    const bottom = hand();
+    const read = (h: HandDrift, force: Vec3, offset: Vec3 | null, t: number): void => {
+        h.force = Math.max(h.force, length(force));
+        const slid = offset === null ? 0 : length(offset);
+        h.set = h.set || offset !== null;
+        if (slid > h.peak) {
+            h.peak = slid;
+            h.peakAt = t;
+        }
+        h.final = slid;
+    };
+    const probe: ImpactProbe = {
+        step(): void {},
+        follow(s: FollowSnapshot): void {
+            read(top, s.top, s.offsets.top, s.t);
+            read(bottom, s.bottom, s.offsets.bottom, s.t);
+        },
+    };
+    const { follow } = simulateStroke(plan.contact, setup.balls, DRIFT_WORLD, { probe });
+    return { top, bottom, limited: follow.flags.includes("follow-grip-limit") };
+}
+
+const mm = (x: number): string => fmt(x * 1e3);
+
+/** One hand's drift as a line's part: peak and final |offset| (mm), the peak's time (ms) and peak |force| (N). */
+function handText(name: string, h: HandDrift): string {
+    return (
+        `${name} peak ${mm(h.peak)} mm at ${mm(h.peakAt)} ms, final ${mm(h.final)} mm, ` +
+        `peak force ${fmt(h.force)} N${h.set ? "" : " (no offset)"}`
+    );
+}
+
+function sectionB(): void {
+    console.log(
+        "== B. The drift (design §4.3): the single-ball, drive, AC stop and GC stop presets' canonical setups " +
+            "(3 m/s planned) and the preset digest's grid (5 speeds × 5 drives × 3 heights × 3 sides) on the " +
+            "default world, each through " +
+            "simulateStroke with a follow probe: each hand's peak and final |offset| (mm) over the follow-through, " +
+            "the peak's time (ms from t = 0), each hand's peak |force| (N) over it, and the follow-grip-limit flag ==",
+    );
+    // A check's hold, where an anchor slides, follows any run planned with α < 0, not the stops alone: a single-ball
+    // stroke at drive −1 is planned as a check and holds. The rolls are carry mode, which keeps its offset.
+    for (const type of ["single-ball", "drive", "stop-ac", "stop-gc"] as const) {
+        const base = canonicalSetup(type, { world: DRIFT_WORLD });
+        let largest: { label: string; peak: number } | null = null;
+        let set = 0;
+        let total = 0;
+        const report = (label: string, setup: () => ShotSetup): void => {
+            total++;
+            let drift: Drift;
+            try {
+                drift = driftOf(setup());
+            } catch (error) {
+                console.log(`${label}: rejected (${(error as Error).message})`);
+                return;
+            }
+            const peak = Math.max(drift.top.peak, drift.bottom.peak);
+            if (drift.top.set || drift.bottom.set) {
+                set++;
+            }
+            if (largest === null || peak > largest.peak) {
+                largest = { label, peak };
+            }
+            console.log(
+                `${label}: ${handText("top", drift.top)}; ${handText("bottom", drift.bottom)}; ` +
+                    `follow-grip-limit ${drift.limited ? "yes" : "no"}`,
+            );
+        };
+        report(`${type} canonical`, () => base);
+        const up0 = base.stroke.contact.up;
+        for (const speed of [1, 2, 3, 4, 6]) {
+            for (const drive of [-1, -0.5, 0, 0.5, 1]) {
+                for (const up of [up0 - 0.003, up0, up0 + 0.003]) {
+                    for (const side of [-0.01, 0, 0.01]) {
+                        report(`${type} ${speed} m/s drive ${drive} up ${up} side ${side}`, () => {
+                            const stroke = { ...base.stroke, drive, contact: { up, side } };
+                            const setup = { ...base, stroke };
+                            const backswing = backswingFor(setup, speed, DRIFT_WORLD);
+                            return { ...setup, stroke: { ...stroke, backswing } };
+                        });
+                    }
+                }
+            }
+        }
+        // Assigned only inside report, so the compiler would narrow it to its initial null here.
+        const best = largest as { label: string; peak: number } | null;
+        console.log(
+            `${type}: the largest peak ${best === null ? "none" : `${mm(best.peak)} mm, ${best.label}`}; ` +
+                `${set} of ${total} runs with an offset set`,
+        );
+    }
+}
+
+const SECTIONS: Readonly<Record<string, () => void>> = { A: sectionA, B: sectionB };
 if (SECTION !== "all" && SECTIONS[SECTION] === undefined) {
     throw new Error(`SECTION must be "all" or one of ${Object.keys(SECTIONS).join(", ")}`);
 }

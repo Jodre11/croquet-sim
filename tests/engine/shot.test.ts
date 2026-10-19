@@ -1,15 +1,22 @@
 import { describe, expect, it } from "vitest";
 import { judgeFaults } from "../../src/engine/faults";
 import { headLowestPoint } from "../../src/engine/impact/contacts";
-import { IMPACT_DT, TRACK_IMPACT_CAP, type ImpactProbe, type ImpactSnapshot } from "../../src/engine/impact/integrate";
+import {
+    IMPACT_DT,
+    TRACK_IMPACT_CAP,
+    type FollowSnapshot,
+    type ImpactProbe,
+    type ImpactSnapshot,
+} from "../../src/engine/impact/integrate";
 import { IDENTITY, rotate } from "../../src/engine/impact/rigidBody";
-import { simulateImpact } from "../../src/engine/impact/simulateImpact";
-import { effectiveMass, swungBody } from "../../src/engine/impact/track";
-import type { ContactInterval, HeadState, ImpactResult, TrackDrive } from "../../src/engine/impact/types";
+import { simulateImpact, simulateStroke } from "../../src/engine/impact/simulateImpact";
+import { GRIP_LIMIT, effectiveMass, swungBody } from "../../src/engine/impact/track";
+import type { ContactInterval, FlexHold, HeadState, ImpactResult, TrackDrive } from "../../src/engine/impact/types";
 import { ZERO, add, cross, dot, horizontal, length, scale, sub, vec3, type Vec3 } from "../../src/engine/math/vec3";
 import { simulateShot, strokeContext, type ShotOutcome } from "../../src/engine/shot";
 import { simulateFreeMotion } from "../../src/engine/simulate";
 import { MAX_LEAD, buildContact, planStroke, swingApproach } from "../../src/engine/swing/buildContact";
+import { defaultProfile } from "../../src/engine/swing/profile";
 import type { SwingTrajectory } from "../../src/engine/swing/trajectory";
 import { STROKE_TYPES, type ShotSetup } from "../../src/engine/swing/types";
 import type { BallId, BallState, Hoop, World } from "../../src/engine/types";
@@ -105,6 +112,20 @@ function braking(setup: ShotSetup) {
         turf -= dot(s.headTurf ?? ZERO, aim) * IMPACT_DT;
     }
     return { impact, hands, turf };
+}
+
+/** `setup`'s follow-through as the follow probe sees it: planStroke, then simulateStroke, every step's snapshot. */
+function followSamples(setup: ShotSetup): FollowSnapshot[] {
+    const samples: FollowSnapshot[] = [];
+    const probe: ImpactProbe = {
+        step(): void {},
+        follow(s: FollowSnapshot): void {
+            samples.push(s);
+        },
+    };
+    simulateStroke(planStroke(setup, WORLD).contact, setup.balls, WORLD, { probe });
+    expect(samples.length).toBeGreaterThan(0);
+    return samples;
 }
 
 describe("strokeContext", () => {
@@ -526,6 +547,19 @@ describe("the mechanisms (design §8.1), on the canonical setups", () => {
         const setup = canonicalSetup("stop-gc");
         const gcStop = simulateImpact(buildContact(setup, WORLD), setup.balls, WORLD);
         expect(gcStop.events.filter((e) => e.kind === "grip-limit")).toHaveLength(1);
+    });
+
+    it("never lets a hand exceed F_max in the GC stop's canonical follow-through", () => {
+        // §8.1.4: every follow probe sample's hand forces.
+        for (const s of followSamples(canonicalSetup("stop-gc"))) {
+            expect(length(s.top)).toBeLessThanOrEqual(GRIP_LIMIT * (1 + 1e-9));
+            expect(length(s.bottom)).toBeLessThanOrEqual(GRIP_LIMIT * (1 + 1e-9));
+        }
+    });
+
+    it("gives the default body an arm that returns a slid anchor in 27.8 ms", () => {
+        const hold = defaultProfile.body.flex.hold as FlexHold;
+        expect(hold.damping / hold.stiffness).toBeCloseTo(20.7 / 744, 15);
     });
 
     it("the GC stop's check brakes the head through the hands: positive at drive −1, negative at 0", () => {

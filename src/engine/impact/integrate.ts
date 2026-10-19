@@ -298,11 +298,17 @@ export interface ImpactSnapshot {
     readonly headTurf?: Vec3;
 }
 
-/** A follow-through step's end state (t is its end), with the hands' feed-forward applied during it. */
+/**
+ * A follow-through step's end state (t is its end), with the hands' feed-forward and each hand's force applied during
+ * it, and each hand's slid offset after the step's hands (m, in the head's frame; null until the hand first saturates).
+ */
 export interface FollowSnapshot {
     readonly t: number;
     readonly head: HeadState;
     readonly feedForward: Vec3;
+    readonly top: Vec3;
+    readonly bottom: Vec3;
+    readonly offsets: { readonly top: Vec3 | null; readonly bottom: Vec3 | null };
 }
 
 /**
@@ -1065,7 +1071,7 @@ export function integrateStroke(setup: ImpactSetup, options: ImpactOptions = {},
             drive = driveAt(plan.samples, t);
             headTorque = cross(rotate(state.orientation, head.socket), drive);
         } else {
-            hand = handLoad(plan, state, head, t, grip);
+            hand = handLoad(plan, state, head, t, grip, dt);
             drive = hand.force;
             headTorque = hand.torque;
             if (hand.saturated !== null && !limited) {
@@ -1353,7 +1359,7 @@ function continueStroke(
             break;
         }
         // The impact loop's hands, head–turf and advance, kept apart: sharing them would reorder the impact's sums.
-        const hand = handLoad(path, state, head, t, grip, t >= holdFrom);
+        const hand = handLoad(path, state, head, t, grip, dt, t >= holdFrom);
         if (hand.saturated !== null && !flags.includes("follow-grip-limit")) {
             flags.push("follow-grip-limit");
         }
@@ -1380,7 +1386,15 @@ function continueStroke(
             grip.resistance = senseResistance(grip.resistance, 0, response);
         }
         steps++;
-        probe?.follow?.({ t: steps * dt, head: state, feedForward: hand.feedForward });
+        // The offsets are immutable vectors that handLoad replaces, never mutates, so these references are copies.
+        probe?.follow?.({
+            t: steps * dt,
+            head: state,
+            feedForward: hand.feedForward,
+            top: hand.top,
+            bottom: hand.bottom,
+            offsets: { top: grip.topOffset, bottom: grip.bottomOffset },
+        });
         if (ground !== null && !deep && headLowestPoint(state, head) < 0 - HEAD_DEEP_LIMIT) {
             deep = true;
             flags.push("follow-head-deep");
