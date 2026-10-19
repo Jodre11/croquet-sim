@@ -293,18 +293,23 @@ export interface Reach {
 }
 
 /**
- * The hands' advance (P2b.2b.2c.1 design §6; plan decision 3): from rest at `start` the hands accelerate along aim at
- * `accel` a, the body's peak acceleration, until `ramp` = start + V/a (the pre-flight gate's ruling 9), run at `speed`
- * V until `cruise`, where they have travelled 0.8·handReach, then decelerate
- * at `decel` to rest at handReach at `end` (times in s from t = 0).
+ * The hands' advance along aim (P2b.2b.2c.1 design §6): a ramp from rest to V, a cruise at V, then an ease to rest at
+ * handReach, on a level path. Times are in s from t = 0.
  */
 export interface Advance {
+    /** When the hands start from rest (s). */
     readonly start: number;
+    /** V, the cruise speed: the head's planned speed along aim at contact (m/s). */
     readonly speed: number;
+    /** a, the body's peak hand acceleration over the ramp (m/s²). */
     readonly accel: number;
+    /** When the ramp reaches V, start + V/a (s). */
     readonly ramp: number;
+    /** When the hands have travelled 0.8·handReach and start to ease (s). */
     readonly cruise: number;
+    /** The ease's deceleration, V²/(0.4·handReach) (m/s²). */
     readonly decel: number;
+    /** When the hands come to rest, handReach (m) along aim from where they started (s). */
     readonly end: number;
 }
 
@@ -678,18 +683,23 @@ function freeAlpha(track: PreparedTrack, free: FreePendulum, theta: number, t: n
     return (0 - free.weight * s - free.inertial * along) / free.inertia;
 }
 
+/** A reach that rests the planned pivot's along-aim motion from contactAt: it travels no further along aim. */
+function restingReach(track: PreparedTrack): Reach {
+    const { contactAt } = track.arc;
+    return { t1: contactAt, p1: planPivot(track, contactAt).P, v1: 0, decel: 0, tStop: contactAt };
+}
+
 /**
  * The reach (design §3.2): where the planned pivot has travelled 0.8·handReach along aim from contactAt (by bisection;
  * the swing model's paths travel monotonically), and the ease to rest over the last 0.2·handReach. A handReach of 0
- * rests the along-aim motion from contactAt, and so does an advance, which alone carries the hands handReach (the
- * P2b.2b.2c.1 pre-flight gate's ruling 10c: one budget). Null if the plan does not travel that far within REACH_SEARCH.
+ * rests the along-aim motion from contactAt. Null if the plan does not travel that far within REACH_SEARCH.
  */
 function computeReach(track: PreparedTrack): Reach | null {
     const { aim, contactAt, handReach } = track.arc;
-    const p0 = planPivot(track, contactAt).P;
-    if (!(handReach > 0) || track.advance !== null) {
-        return { t1: contactAt, p1: p0, v1: 0, decel: 0, tStop: contactAt };
+    if (!(handReach > 0)) {
+        return restingReach(track);
     }
+    const p0 = planPivot(track, contactAt).P;
     const start = 0.8 * handReach;
     const along = (t: number): number => dot(sub(planPivot(track, t).P, p0), aim);
     let lo = contactAt;
@@ -870,7 +880,10 @@ export function prepareTrack(drive: TrackDrive, head: MalletHead, gravity: numbe
     if (carry) {
         return { ...plain, push: computePush(plain) };
     }
-    const reached: PreparedTrack = { ...plain, reach: computeReach(plain) };
+    // An advance alone carries the hands handReach, so the planned pivot's own reach rests from contact: one budget,
+    // never the reach's distance on top (P2b.2b.2c.1 design, Amendments).
+    const reach = plain.advance === null ? computeReach(plain) : restingReach(plain);
+    const reached: PreparedTrack = { ...plain, reach };
     return withFree ? { ...reached, free: computeFree(reached, head, gravity) } : reached;
 }
 

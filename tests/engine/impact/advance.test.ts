@@ -112,7 +112,8 @@ describe("the hands' advance (design §6, §8.1.5)", () => {
     it("gives the default body a peak hand acceleration of 300 m/s², a 10 ms ramp at 3 m/s", () => {
         expect(HAND_ACCEL).toBe(swingBodyReference.handAcceleration.value);
         expect(HAND_ACCEL).toBe(300);
-        expect(3 / HAND_ACCEL).toBeCloseTo(0.01, 15);
+        const a = advanceOf(level());
+        expect(a.ramp - a.start).toBeCloseTo(0.01, 6);
     });
 
     it("ramps the hands at the body's peak acceleration a, over W = V/a", () => {
@@ -146,8 +147,8 @@ describe("the hands' advance (design §6, §8.1.5)", () => {
     it("slows the head's turn while the hands speed up: its pitch rate at the ramp's end is lower", () => {
         // On time the ramp runs from contact for V/a, at 3 m/s and a = 300 m/s² the 10 ms of the pendulum's window,
         // whose α law prescribes θ, so the plan cannot show it: the planned ω there is bit-equal with and without the
-        // advance (only because the two coincide: a gentler body's ramp outlasts the window). The slowing reaches the head through swing mode's hand load, which pushes the top of the shaft
-        // forward along aim.
+        // advance (only because the two coincide: a gentler body's ramp outlasts the window). The slowing reaches the
+        // head through swing mode's hand load, which pushes the top of the shaft forward along aim.
         const RAMP_END = advanceOf(level()).ramp;
         const at = (setup: ShotSetup): number =>
             (pitchRates(setup).find(({ t }) => t >= RAMP_END) as { rate: number }).rate;
