@@ -294,7 +294,8 @@ export interface Reach {
 
 /**
  * The hands' advance (P2b.2b.2c.1 design §6; plan decision 3): from rest at `start` the hands accelerate along aim at
- * `accel` = V/W until `ramp`, run at `speed` V until `cruise`, where they have travelled 0.8·handReach, then decelerate
+ * `accel` a, the body's peak acceleration, until `ramp` = start + V/a (the pre-flight gate's ruling 9), run at `speed`
+ * V until `cruise`, where they have travelled 0.8·handReach, then decelerate
  * at `decel` to rest at handReach at `end` (times in s from t = 0).
  */
 export interface Advance {
@@ -781,18 +782,19 @@ function carryPivot(track: PreparedTrack, push: Push, t: number): Motion {
 }
 
 /**
- * The advance of `arc` from `given` (plan decision 3): with W the window, V the speed and D the handReach, the ramp
- * ends W after the start, the cruise once the hands have travelled 0.8·D, and the deceleration V²/(0.4·D) brings them
- * to rest at D. planStroke has checked that the ramp's travel V·W/2 is under 0.8·D.
+ * The advance of `arc` from `given` (plan decision 3): with a the body's peak acceleration, V the speed and D the
+ * handReach, the ramp ends W = V/a after the start (the pre-flight gate's ruling 9), the cruise once the hands have
+ * travelled 0.8·D, and the deceleration V²/(0.4·D) brings them to rest at D. planStroke has checked that the ramp's
+ * travel V·W/2 is under 0.8·D.
  */
-function advanceOf(arc: SwingArc, given: { readonly start: number; readonly speed: number }): Advance {
-    const { start, speed } = given;
-    const W = arc.window;
+function advanceOf(arc: SwingArc, given: NonNullable<SwingArc["advance"]>): Advance {
+    const { start, speed, accel } = given;
+    const W = speed / accel;
     const D = arc.handReach;
     const ramp = start + W;
     const cruise = ramp + (0.8 * D - (speed * W) / 2) / speed;
     const ease = 0.4 * D;
-    return { start, speed, accel: speed / W, ramp, cruise, decel: (speed * speed) / ease, end: cruise + ease / speed };
+    return { start, speed, accel, ramp, cruise, decel: (speed * speed) / ease, end: cruise + ease / speed };
 }
 
 /** Tabulates swing mode's free pendulum from the window's end by semi-implicit Euler every FREE_STEP (design §3.2). */

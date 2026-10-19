@@ -181,10 +181,10 @@ export interface SwingArc {
     readonly downswing?: Downswing;
     /**
      * Swing only (P2b.2b.2c.1 design §6): the hands' advance, their push forward along aim over `handReach` from
-     * `start` (s from t = 0), ramping up to `speed` (m/s), the head's planned speed along aim at contact, over
-     * `window`. Absent: no advance.
+     * `start` (s from t = 0), ramping up to `speed` (m/s), the head's planned speed along aim at contact, at the body's
+     * peak acceleration `accel` (m/s², the pre-flight gate's ruling 9), so over speed/accel. Absent: no advance.
      */
-    readonly advance?: { readonly start: number; readonly speed: number };
+    readonly advance?: { readonly start: number; readonly speed: number; readonly accel: number };
 }
 
 /**

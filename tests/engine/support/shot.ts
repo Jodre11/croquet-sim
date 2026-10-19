@@ -66,9 +66,10 @@ export interface TestProfileOptions {
  * the socket at contact), the hands 0.8 m and 0.4 m from the socket, firm grips. Every type has the same drive: a
  * swing-mode coast with no dip or reach, a full guide, a pendulum phase at 0.8 of the push with no effort and a 1.5 m
  * hands' arc lowest halfway; the body has TEST_FLEX, TEST_PENDULUM_FORCE, TEST_PUSH_FORCE, TEST_PUSH_RESPONSE_TIME,
- * TEST_CHAIN, TEST_GRIP_LIMIT, no backswing limit short of MAX_BACK_ANGLE and no effort (τ_0 = 0, ω_max = 1 rad/s), so
- * a swing-mode stroke falls by gravity alone. Every type has the same shape: the pendulum alone (share 1) and a 0.4 s
- * hands' tempo halving at intensity 1. Throws if the stance gives both a `lean` and `handsAhead`.
+ * TEST_CHAIN, TEST_GRIP_LIMIT, no backswing limit short of MAX_BACK_ANGLE, no effort (τ_0 = 0, ω_max = 1 rad/s), so
+ * a swing-mode stroke falls by gravity alone, and the default's 300 m/s² hands' peak acceleration. Every type has the
+ * same shape: the pendulum alone (share 1) and a 0.4 s hands' tempo halving at intensity 1. Throws if the stance gives
+ * both a `lean` and `handsAhead`.
  */
 export function testProfile(o: TestProfileOptions = {}): SwingProfile {
     const mallet: SwingProfile["mallet"] = {
@@ -134,6 +135,7 @@ export function testProfile(o: TestProfileOptions = {}): SwingProfile {
             gripLimit: TEST_GRIP_LIMIT,
             backswingLimit: MAX_BACK_ANGLE,
             effort: { torque: 0, speed: 1 },
+            handAcceleration: 300,
             ...o.body,
         },
         stance: every(stance),

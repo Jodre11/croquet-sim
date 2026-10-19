@@ -8,7 +8,9 @@
  *   hand–arm chain (its gate rulings) and the grip's limit (Young et al. 2009; P2b.2b.2b.3), measured; the
  *   backswing's limit θ_max from reference/swing.json (`body`), a placeholder from the user's account of the stance;
  *   and swing mode's effort, the Hill-type law's τ_0 and ω_max from reference/swing.json (`body`), fitted by
- *   scripts/fitStrokeShape.ts to the 9.0 m/s ceiling with κ = ⅔, placeholders (P2b.2b.2c.1 design §4.3, §4.4).
+ *   scripts/fitStrokeShape.ts to the 9.0 m/s ceiling with κ = ⅔, placeholders (P2b.2b.2c.1 design §4.3, §4.4); and
+ *   the hands' peak acceleration along aim from reference/swing.json (`body`), a calibration placeholder (the
+ *   P2b.2b.2c.1 pre-flight gate's ruling 9).
  * - Stance: the hands measured from the socket along the shaft, after John Riches, Croquet Technique (Oxford Croquet),
  *   quoted per preset below. The swing presets keep their own leans. The rolls' leans are Don Gugan's measured face
  *   angles (Gugan 4, Table 6), with Riches' angles kept as cues (user decision, 2026-10-08). Each preset is defined by
@@ -257,6 +259,7 @@ export const defaultProfile: SwingProfile = {
         gripLimit: GRIP_LIMIT,
         backswingLimit: swingBodyReference.backswingLimit.value,
         effort: { torque: swingBodyReference.effortTorque.value, speed: swingBodyReference.effortSpeed.value },
+        handAcceleration: swingBodyReference.handAcceleration.value,
     },
     stance: {
         // The top hand fixed at the top of the handle; the bottom hand high and light, a guide only (prototype). Riches

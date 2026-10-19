@@ -690,6 +690,7 @@ describe("defaultProfile", () => {
             gripLimit: GRIP_LIMIT,
             backswingLimit: swingBodyReference.backswingLimit.value,
             effort: { torque: swingBodyReference.effortTorque.value, speed: swingBodyReference.effortSpeed.value },
+            handAcceleration: swingBodyReference.handAcceleration.value,
         });
     });
 

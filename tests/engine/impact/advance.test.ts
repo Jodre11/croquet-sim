@@ -5,22 +5,30 @@ import { advanceTravel, pathAt, pitchAxis, prepareTrack, type Advance } from "..
 import type { SwingArc, TrackDrive } from "../../../src/engine/impact/types";
 import { dot } from "../../../src/engine/math/vec3";
 import { MAX_LEAD, planStroke, type StrokePlan } from "../../../src/engine/swing/buildContact";
-import { ON_TIME } from "../../../src/engine/swing/profile";
-import type { ShotSetup, StrokeTiming, StrokeType } from "../../../src/engine/swing/types";
+import { ON_TIME, defaultProfile } from "../../../src/engine/swing/profile";
+import type { ShotSetup, StrokeTiming, StrokeType, SwingProfile } from "../../../src/engine/swing/types";
 import { defaultWorld } from "../../../src/engine/world";
+import { swingBodyReference } from "../../../src/reference/index";
 import { backswingFor, canonicalSetup } from "../support/shot";
 
 const WORLD = defaultWorld();
 
-/** A canonical stroke of `type` with `over` in its stroke and `timing` over ON_TIME, its backswing planning 3 m/s. */
+/**
+ * A canonical stroke of `type` with `over` in its stroke, `timing` over ON_TIME and `body` over the default body, its
+ * backswing planning 3 m/s.
+ */
 function stroke(
     over: Partial<ShotSetup["stroke"]>,
     timing: Partial<StrokeTiming> = {},
     type: StrokeType = "single-ball",
+    body: Partial<SwingProfile["body"]> = {},
 ): ShotSetup {
-    const setup = canonicalSetup(type, { stroke: { ...over, timing: { ...ON_TIME, ...timing } } });
+    const setup = canonicalSetup(type, { stroke: { ...over, timing: { ...ON_TIME, ...timing } }, body });
     return { ...setup, stroke: { ...setup.stroke, backswing: backswingFor(setup, 3, WORLD) } };
 }
+
+/** The default body's hands' peak acceleration along aim (m/s², the pre-flight gate's ruling 9). */
+const HAND_ACCEL = defaultProfile.body.handAcceleration;
 
 const plan = (setup: ShotSetup): StrokePlan => planStroke(setup, WORLD);
 const arcOf = (planned: StrokePlan): SwingArc => (planned.contact.drive as TrackDrive).arc;
@@ -90,14 +98,38 @@ describe("the hands' advance (design §6, §8.1.5)", () => {
     // The canonical single-ball stroke at 3 m/s, the hands pushing 0.3 m from contact, on time.
     const level = (moment = 0) => stroke({ handReach: 0.3 }, { advance: moment });
     const rising = () => stroke({ handReach: 0.3 });
-    // V, the head's planned speed along aim at contact, and the stroke's window W; the ramp ends W after contact.
+    // V, the head's planned speed along aim at contact; the ramp ends V/a after the start, a the body's figure.
     const arc = () => arcOf(plan(level()));
     const speedOf = () => (arc().advance as { speed: number }).speed;
 
-    it("travels the hands exactly handReach, from rest to rest, continuously", () => {
-        const WINDOW = arc().window;
+    it("gives the default body a peak hand acceleration of 300 m/s², a 10 ms ramp at 3 m/s", () => {
+        expect(HAND_ACCEL).toBe(swingBodyReference.handAcceleration.value);
+        expect(HAND_ACCEL).toBe(300);
+        expect(3 / HAND_ACCEL).toBeCloseTo(0.01, 15);
+    });
+
+    it("ramps the hands at the body's peak acceleration a, over W = V/a", () => {
+        // The pre-flight gate's ruling 9: the ramp is a body property, so a gentler body's lasts longer at the same V.
         const a = advanceOf(level());
-        expect(advanceTravel(a, a.start)).toEqual({ a: 0, v: 0, acc: a.speed / WINDOW });
+        expect(a.accel).toBe(HAND_ACCEL);
+        expect(a.ramp - a.start).toBeCloseTo(a.speed / HAND_ACCEL, 15);
+        const gentle = advanceOf(stroke({ handReach: 0.3 }, { advance: 0 }, "single-ball", { handAcceleration: 150 }));
+        expect(gentle.accel).toBe(150);
+        expect(gentle.ramp - gentle.start).toBeCloseTo(gentle.speed / 150, 15);
+        expect(gentle.speed).toBe(a.speed);
+    });
+
+    it("rejects a non-finite or non-positive peak hand acceleration", () => {
+        for (const bad of [0, -300, Number.NaN, Number.POSITIVE_INFINITY]) {
+            expect(() => plan(stroke({}, {}, "single-ball", { handAcceleration: bad })), `${bad}`).toThrow(
+                /profile\.body\.handAcceleration/,
+            );
+        }
+    });
+
+    it("travels the hands exactly handReach, from rest to rest, continuously", () => {
+        const a = advanceOf(level());
+        expect(advanceTravel(a, a.start)).toEqual({ a: 0, v: 0, acc: HAND_ACCEL });
         expect(advanceTravel(a, a.end).a).toBeCloseTo(0.3, 12);
         expect(advanceTravel(a, a.end).v).toBeCloseTo(0, 12);
         for (const seam of [a.ramp, a.cruise]) {
@@ -133,10 +165,9 @@ describe("the hands' advance (design §6, §8.1.5)", () => {
         expect(() => plan(stroke({ handReach: 0.3 }, { advance: Number.NaN }))).toThrow(/advance must be finite/);
     });
     it("rejects a travel too short for the hands' ramp", () => {
-        // Review focus 2. V·W/2 ≥ 0.8·handReach throws; just above the bound plans.
+        // Review focus 2. The ramp's travel V·W/2 = V²/(2a) ≥ 0.8·handReach throws; just above the bound plans.
         const V = speedOf();
-        const WINDOW = arc().window;
-        const bound = (V * WINDOW) / 2 / 0.8;
+        const bound = (V * V) / (2 * HAND_ACCEL) / 0.8;
         expect(() => plan(stroke({ handReach: bound }, { advance: 0 }))).toThrow(/advance .* ramp/);
         expect(() => plan(stroke({ handReach: bound * (1 + 1e-9) }, { advance: 0 }))).not.toThrow();
     });

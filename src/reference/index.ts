@@ -241,13 +241,16 @@ export const SWING_REFERENCE_TYPES = [
  * The default player's body as the swing sees it (reference/swing.json, `body`): the backswing's limit θ_max (rad), the
  * shaft's greatest angle from vertical at the top of the backswing (P2b.2b.2c.1 design §5.2); and the swing-mode
  * effort law's τ_0 (`effortTorque`, N·m) and ω_max (`effortSpeed`, rad/s), fitted by scripts/fitStrokeShape.ts, with
- * κ (`effortShare`), the share of ω_max the drive uses at contact at full effort, read only by the fit (design §4.4).
+ * κ (`effortShare`), the share of ω_max the drive uses at contact at full effort, read only by the fit (design §4.4);
+ * and the hands' peak acceleration along aim (`handAcceleration`, m/s²), which sets the advance's ramp (the pre-flight
+ * gate's ruling 9).
  */
 export const swingBodyReference = {
     backswingLimit: readValue(swingJson.body, "backswingLimit", "swing.body"),
     effortTorque: readValue(swingJson.body, "effortTorque", "swing.body"),
     effortSpeed: readValue(swingJson.body, "effortSpeed", "swing.body"),
     effortShare: readValue(swingJson.body, "effortShare", "swing.body"),
+    handAcceleration: readValue(swingJson.body, "handAcceleration", "swing.body"),
 } as const;
 
 /** A key of `swingReference`. */

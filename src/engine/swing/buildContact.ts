@@ -411,6 +411,8 @@ function validate(setup: ShotSetup, ballRadius: number): void {
     nonNegative(body.effort.torque, "profile.body.effort.torque");
     finiteNumber(body.effort.speed, "profile.body.effort.speed");
     positive(body.effort.speed, "profile.body.effort.speed");
+    finiteNumber(body.handAcceleration, "profile.body.handAcceleration");
+    positive(body.handAcceleration, "profile.body.handAcceleration");
     unit(shape.pendulumShare, `${where}.pendulumShare`);
     if (shape.pendulumShare < 1 && !(shape.handAngle > 0 && shape.handAngle < Math.PI / 2)) {
         fail(`${where}.handAngle must lie in (0, 90°) when pendulumShare < 1 (got ${shape.handAngle} rad)`);
@@ -586,11 +588,12 @@ function alongAim(pose: ContactPose, planned: PlannedDownswing): number {
 }
 
 /**
- * Checks `arc`'s advance at the head's planned speed `speed` along aim (plan decision 5): swing mode only, no check
- * (α < 0), a positive handReach, and a ramp's travel V·W/2 under 0.8·handReach, so that the hands cruise before they
- * ease to rest.
+ * Checks `arc`'s `advance` (plan decision 5), at the head's planned speed V along aim and the body's peak acceleration
+ * a: swing mode only, no check (α < 0), a positive handReach, and a ramp's travel V·W/2 = V²/(2a) (W = V/a, the
+ * pre-flight gate's ruling 9) under 0.8·handReach, so that the hands cruise before they ease to rest.
  */
-function checkAdvance(arc: SwingArc, speed: number): void {
+function checkAdvance(arc: SwingArc, advance: NonNullable<SwingArc["advance"]>): void {
+    const { speed, accel } = advance;
     if (arc.mode !== "swing") {
         fail("stroke.timing.advance needs swing mode: carry mode's hands push on their own arc");
     }
@@ -600,11 +603,11 @@ function checkAdvance(arc: SwingArc, speed: number): void {
     if (!(arc.handReach > 0)) {
         fail(`the advance travels the stroke's handReach, which must be positive (got ${arc.handReach})`);
     }
-    const ramp = (speed * arc.window) / 2;
+    const ramp = (speed * speed) / (2 * accel);
     if (!(ramp / 0.8 < arc.handReach)) {
         fail(
-            `the advance is too short for its ramp: the hands travel V·W/2 = ${ramp} m reaching ${speed} m/s, which ` +
-                `must be under 0.8·handReach = ${0.8 * arc.handReach} m`,
+            `the advance is too short for its ramp: the hands travel V²/(2a) = ${ramp} m reaching ${speed} m/s at ` +
+                `${accel} m/s², which must be under 0.8·handReach = ${0.8 * arc.handReach} m`,
         );
     }
 }
@@ -639,7 +642,8 @@ export interface StrokePlan {
  * - window, handWindow or dropTime ≤ 0; speedGain < 0; gripTension or bottomGrip outside (0, 1]; handDrop < 0; the
  *   preset's or the shot's handReach < 0; the preset's or the shot's guideEffort outside [0, 1];
  *   armMass < 0; reachSlack < 0; a backswingLimit non-finite or outside (0, π/2]; the body's effort torque τ_0 < 0
- *   or its speed ω_max ≤ 0 (P2b.2b.2c.1 design §4.4); the preset's or the shot's
+ *   or its speed ω_max ≤ 0 (P2b.2b.2c.1 design §4.4); the body's hands' peak acceleration not positive (the
+ *   P2b.2b.2c.1 pre-flight gate's ruling 9); the preset's or the shot's
  *   pendulumAt or pendulumEffort outside [0, 1]; handArcLow outside [0, 1]; a jab negative or non-finite, or non-zero
  *   in carry mode (P2b.2b.2b.3 design §6.1); handArcRadius not above the push length; a flex value not positive, or a
  *   flex damping ratio above 1; pendulumForce not positive (P2b.2b.2b.2b design §6); pushForce, pushResponseTime,
@@ -652,7 +656,8 @@ export interface StrokePlan {
  * - an action timed more than MAX_LEAD early (the advance's among them), or a downswing meeting the turf more than
  *   MAX_LEAD − TURF_MARGIN before contact;
  * - an advance (P2b.2b.2c.1 plan decision 5) in carry mode, on a check (α < 0), with a handReach ≤ 0, or with its
- *   ramp's travel V·W/2 at or above 0.8·handReach (V the head's planned speed along aim at contact, W the window);
+ *   ramp's travel V·W/2 at or above 0.8·handReach (V the head's planned speed along aim at contact, W = V/a the
+ *   ramp's duration at the body's hands' peak acceleration a);
  * - the head's lowest point below the turf at contact, or where the impact starts.
  * A downswing that meets the turf before the ball is not rejected: the impact starts before it and simulates it
  * (design §3.5).
@@ -718,10 +723,16 @@ export function planStroke(setup: ShotSetup, world: World): StrokePlan {
         downswing: planned.downswing,
         ...(timing.advance === undefined
             ? {}
-            : { advance: { start: lead + timing.advance, speed: alongAim(pose, planned) } }),
+            : {
+                  advance: {
+                      start: lead + timing.advance,
+                      speed: alongAim(pose, planned),
+                      accel: profile.body.handAcceleration,
+                  },
+              }),
     };
     if (arc.advance !== undefined) {
-        checkAdvance(arc, arc.advance.speed);
+        checkAdvance(arc, arc.advance);
     }
     const drive: TrackDrive = {
         kind: "track",

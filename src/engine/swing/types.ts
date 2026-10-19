@@ -132,7 +132,9 @@ export interface SwingProfile {
      * (the push intent's cap, N, and its response time constant, s), each hand's and arm's hand–arm chain, and the
      * grip's limit (N; P2b.2b.2b.3 design §5), the backswing's limit θ_max (rad from vertical, in (0, π/2]): the
      * shaft's greatest angle at the top of a swing-mode backswing, where it meets the groin (P2b.2b.2c.1 design §5),
-     * and the player's effort in swing mode, shared by every swing preset (P2b.2b.2c.1 design §4.4).
+     * the player's effort in swing mode, shared by every swing preset (P2b.2b.2c.1 design §4.4), and the hands' peak
+     * acceleration along aim (m/s², > 0), the advance's ramp W = V/a at the head's planned speed V along aim (the
+     * P2b.2b.2c.1 pre-flight gate's ruling 9).
      */
     readonly body: {
         readonly armMass: number;
@@ -145,6 +147,7 @@ export interface SwingProfile {
         readonly gripLimit: number;
         readonly backswingLimit: number;
         readonly effort: SwingEffort;
+        readonly handAcceleration: number;
     };
     readonly stance: Readonly<Record<StrokeType, SwingStance>>;
     readonly drive: Readonly<Record<StrokeType, SwingDrive>>;

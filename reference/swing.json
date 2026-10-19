@@ -33,6 +33,14 @@
             "provenance": "derived",
             "provisional": "placeholder",
             "note": "κ = ⅔, the share of ω_max the drive's shaft uses at contact at full effort from its body-limited top, so the torque left at contact is a third of τ_0. A labelled placeholder (design §4.4); the gate sees ½ and ¾ beside it. Read only by scripts/fitStrokeShape.ts."
+        },
+        "handAcceleration": {
+            "value": 300,
+            "unit": "m/s²",
+            "source": "The P2b.2b.2c.1 pre-flight gate's ruling 9 (2026-10-19): the hands' ramp is a body property, set for calibration, never by the player",
+            "provenance": "derived",
+            "provisional": "placeholder",
+            "note": "The hands' peak acceleration along aim a: the advance's ramp lasts W = V/a at the head's planned speed V along aim. 300 m/s² keeps the 10 ms ramp the advance had at 3 m/s. No source: a calibration value awaiting data on players' hands."
         }
     },
     "single-ball": {
