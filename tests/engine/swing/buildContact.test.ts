@@ -923,13 +923,17 @@ describe("buildContact rejections", () => {
         expect(planStroke(setup, WORLD).contactSpeed).toBe(plannedSpeed(shot(), WORLD));
     });
 
-    it("plans a stroke that gives no intensity at intensity 0 (the pre-flight gate's ruling 2)", () => {
-        const profile = testProfile({ body: { effort: { torque: 40, speed: 20 } } });
-        expect(plannedSpeed(shot({}, profile), WORLD)).toBe(plannedSpeed(shot({ intensity: 0 }, profile), WORLD));
-        expect(plannedSpeed(shot({ intensity: 0.5 }, profile), WORLD)).toBeGreaterThan(
-            plannedSpeed(shot({}, profile), WORLD),
-        );
-    });
+    it(
+        "plans a stroke that gives no intensity at intensity 0 " +
+            "(the default backswing fixed, speeds above it by effort: the pre-flight gate, 2026-10-18)",
+        () => {
+            const profile = testProfile({ body: { effort: { torque: 40, speed: 20 } } });
+            expect(plannedSpeed(shot({}, profile), WORLD)).toBe(plannedSpeed(shot({ intensity: 0 }, profile), WORLD));
+            expect(plannedSpeed(shot({ intensity: 0.5 }, profile), WORLD)).toBeGreaterThan(
+                plannedSpeed(shot({}, profile), WORLD),
+            );
+        },
+    );
 });
 
 describe("contactPose (design §5.2 steps 1–5, 10)", () => {

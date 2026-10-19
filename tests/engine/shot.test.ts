@@ -312,7 +312,7 @@ describe("simulateShot", () => {
     };
 
     it.each(STROKE_TYPES.filter((type) => type !== "half-roll"))(
-        "runs the %s canonical setup from the top to its finish (exit criterion 3)",
+        "runs the %s canonical setup from the top to its finish (P2b.2b.2a design, exit criterion 3)",
         runsToFinish,
     );
 
@@ -324,7 +324,7 @@ describe("simulateShot", () => {
     // 953.7 ms): 894.4 ms, θ +0.298 rad. P2b.2b.2b.2b: continuous α (was 894.4 ms, θ +0.298 rad): 883.7 ms,
     // θ +0.295 rad. P2b.2b.2b.2b: posture-holding push (was 883.7 ms, θ +0.295 rad): 911.3 ms, θ +0.208 rad.
     // P2b.2b.2b.2b: hold relaxes from the first departure (was 911.3 ms, θ +0.208 rad): 904.6 ms, θ +0.243 rad.
-    it("runs the half-roll canonical setup from the top to its finish (exit criterion 3)", () => {
+    it("runs the half-roll canonical setup from the top to its finish (P2b.2b.2a design, exit criterion 3)", () => {
         runsToFinish("half-roll");
     });
 
@@ -405,7 +405,7 @@ describe("simulateShot", () => {
     });
 });
 
-describe("the effective mass (exit criterion 3)", () => {
+describe("the effective mass (P2b.2b.1 design, exit criterion 3)", () => {
     it("presents between 0.9·m and M at the face on the canonical drive, and the strike measures it", () => {
         const setup = canonicalSetup("drive");
         const contact = buildContact(setup, WORLD);

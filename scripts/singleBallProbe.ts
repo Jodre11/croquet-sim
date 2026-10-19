@@ -1,8 +1,8 @@
 /**
  * Single-ball probe (P2b.2b.2c.1 design §8.4, §8.5, §10): the pre-flight gate's figures, on the default world and
- * profile as reference/swing.json holds them; its section headings cite the gate's rulings by number ("ruling N"), as
- * the design's Amendments list them. Every stroke planning a speed takes the default stroke's inputs (strokeFor: the
- * preset's defaultBackswing fixed, the intensity solved). Every figure to 4 decimals. Reports:
+ * profile as reference/swing.json holds them; its section headings cite the design's section and the gate's date, and
+ * the design's Amendments list the gate's rulings. Every stroke planning a speed takes the default stroke's inputs
+ * (strokeFor: the preset's defaultBackswing fixed, the intensity solved). Every figure to 4 decimals. Reports:
  * - A. U(i): every swing preset's planned contact speed at intensity 0, 0.1, …, 1 from its default backswing and from
  *   its body-limited top at κ = ⅔, and from its top at κ = ½ and ¾, each κ's τ_0 and ω_max fitted (fitEffort);
  * - B. the default stroke: each swing preset's defaultBackswing h_0, U(0) and U(1) from it, and strokeFor's
@@ -438,7 +438,8 @@ function sectionA(): void {
 
 function sectionB(): void {
     console.log(
-        "== B. The default stroke (design §4.5, ruling 2): each swing preset's defaultBackswing h_0, U(0) and U(1) " +
+        "== B. The default stroke (design §4.5, the pre-flight gate, 2026-10-18): each swing preset's " +
+            "defaultBackswing h_0, U(0) and U(1) " +
             `from it, and strokeFor's inputs on its canonical setup at ${B_SPEEDS.join(", ")} m/s, each with its ` +
             "planned contact speed ==",
     );
@@ -487,7 +488,8 @@ function userProfile(): SwingProfile {
 function sectionC(): void {
     const limit = defaultProfile.body.backswingLimit;
     console.log(
-        `== C. θ_max (design §5.2, plan decision 18, ruling 4): the head's rise (m) at θ_max ${deg(limit)}° on the ` +
+        "== C. θ_max (design §5.2, the pre-flight gate, 2026-10-18): " +
+            `the head's rise (m) at θ_max ${deg(limit)}° on the ` +
             `default mallet and the user's (${fmt(USER_SHAFT)} m shaft, ${fmt(USER_HEAD)} m head, top hand ` +
             `${fmt(USER_TOP)} m); knee height ${fmt(KNEE)} m on the default ==`,
     );
@@ -578,11 +580,13 @@ function advanceLines(r: Run): string[] {
         most = Math.max(most, along(c + k * 1e-3));
     }
     return [
-        `hands' advance (ruling 9): a ${fmt(a.accel)} m/s², V ${fmt(a.speed)} m/s, W = V/a ${fmt(a.speed / a.accel)} ` +
+        "hands' advance (the pre-flight gate, 2026-10-18): " +
+            `a ${fmt(a.accel)} m/s², V ${fmt(a.speed)} m/s, W = V/a ${fmt(a.speed / a.accel)} ` +
             `s; from ${fmt(a.start - c)} s, ramp's travel V²/(2a) ${fmt(ramped)} m to ${fmt(a.ramp - c)} s, cruise ` +
             `${fmt(cruised - ramped)} m to 0.8·D ${fmt(cruised)} m at ${fmt(a.cruise - c)} s, rest at ` +
             `${fmt(advanceTravel(a, a.end).a)} m at ${fmt(a.end - c)} s`,
-        `hands' travel along aim from contact (ruling 10c): ${fmt(along(a.end))} m at the advance's rest, at most ` +
+        "hands' travel along aim from contact (the pre-flight gate, 2026-10-18): " +
+            `${fmt(along(a.end))} m at the advance's rest, at most ` +
             `${fmt(most)} m to the finish, ${fmt(along(r.follow.finish))} m at it; handReach ${fmt(reach)} m`,
     ];
 }
@@ -622,7 +626,8 @@ function sectionE(): void {
 
 function sectionF(): void {
     console.log(
-        "== F. The flick (design §8.4.3, plan decision 17, ruling 7): single-ball, the stance's lean −20° to +10° " +
+        "== F. The flick (design §8.4.3, the pre-flight gate, 2026-10-18): single-ball, " +
+            "the stance's lean −20° to +10° " +
             "(negative: the hands behind), the stroke re-solved for the speed at each lean (strokeFor); the measure " +
             "is the ball's launch angle at the face's release, phase 2's airborne recorded alongside ==",
     );
@@ -703,7 +708,8 @@ function grid(type: StrokeType): void {
 
 function sectionG(): void {
     console.log(
-        "== G. Head ahead (design §8.4.4, plan decision 16, ruling 8): d > 0, d < L/2 + 2R, e < faceWidth/2 + R and " +
+        "== G. Head ahead (design §8.4.4, the pre-flight gate, 2026-10-18): " +
+            "d > 0, d < L/2 + 2R, e < faceWidth/2 + R and " +
             "the head's lowest point below the ball's top; impact steps and follow-through samples. Each such run is " +
             "labelled as the known gap, not a failure ==",
     );
@@ -770,7 +776,8 @@ async function rejectionChecks(): Promise<string[]> {
     const out = [
         "== I. θ_max's rejections (design §8.2.2): the runs θ_max rejected when it landed. Its lines read " +
             "\"backswingFor: N m/s is beyond the <type> stroke's reach\", not θ_max: backswingFor's reach check " +
-            "reads the speed at θ_max and fires first (plan decision 8, controller ruling). Each run replayed " +
+            "reads the speed at θ_max and fires first (design Amendments, the plan's decision 8, 2026-10-18). " +
+            "Each run replayed " +
             "through strokeFor and simulateShot on the committed engine ==",
     ];
     if (path === undefined) {
@@ -857,7 +864,8 @@ function opened(setup: ShotSetup): ShotSetup {
 function userChecks(): string[] {
     const world = openWorld();
     const lines = [
-        "== J. The user's checks (design §8.5, ruling 3; recorded, not gated): simulateShot on an open world " +
+        "== J. The user's checks (design §8.5, the pre-flight gate, 2026-10-18; recorded, not gated): " +
+            "simulateShot on an open world " +
             `(defaultWorld(10)'s gravity, ball, materials and surface, no hoops, a ${OPEN_LAWN} m square lawn, the ` +
             `striker from (${fmt(OPEN_START.x)}, ${fmt(OPEN_START.y)}) m aiming +y); distances to rest; the user's ` +
             "single-ball strokes 5, 15 and 30 yd, the full lawn 35 yd ==",
