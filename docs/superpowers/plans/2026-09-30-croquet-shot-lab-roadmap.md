@@ -1822,9 +1822,11 @@ exit criteria. "Old → new" throughout.
 - **The user's checks** (section J; checks, not fit targets; on an open lawn, `defaultWorld(10)`'s surface on a 200 m
   square with no hoops, distances to rest): the single ball from 0.45 m at i 0, 0.1, …, 1: 7.59, 15.84, 22.90,
   29.11, 34.91, 39.99, 44.91, 49.47, 53.70, 57.39 and 61.12 yd (3.0047 to 8.8809 m/s); the drive from its top at
-  i 1, 9.0000 m/s: the croqueted ball 58.77 yd, the striker's 7.45 yd. Against the user's 5, 15 and 30 yd strokes and
-  the 35 yd length, every distance runs long by ×1.5–1.7 (i 0 7.59 against 5 yd; the drive 58.77 against 35 yd);
-  felt effort is not intensity (P3). The first gate ran on `defaultWorld(10)`, the full court: from i 0.5 its runs
+  i 1, 9.0000 m/s: the croqueted ball 58.77 yd, the striker's 7.45 yd. Like for like against the user's strokes, the
+  user's percentages being felt effort, not intensities (P3 maps one to the other): from knee at i 0.4, 34.91 yd
+  against about 30 yd at about 40 % felt (×1.16); at i 0.3, 29.11 yd against about 15 yd at about 30 % felt, cast
+  (×1.9); the drive at i 1, 58.77 yd against the 35 yd length (×1.68). The user's ankle-height 5 yd stroke (about
+  0.05 m, guiding hands) has no model run. The first gate ran on `defaultWorld(10)`, the full court: from i 0.5 its runs
   halted at the boundary (31.72 yd, at least). Recorded, and a carried item below.
 - **The canonical runs** (exit criterion 9): every preset's canonical setup unchanged, its defaults kept to the bit
   (`strokeProbe.ts`'s and `swingProbe.ts`'s `canonical`, the fat stroke and the coupling as P2b.2b.2b.3 recorded
@@ -1878,8 +1880,10 @@ exit criteria. "Old → new" throughout.
     bounds it.
   - Gugan's jab check: still an expected failure (`it.runIf(SLOW).fails`), as P2b.2b.2b.3 ruled; P2b.2b.2c.2's.
   - The weak stroke stopped dead: still `it.todo` (the user's dig-in account, 2026-10-16).
-  - The user's checks run long, ×1.5–1.7 on the open lawn (the drive's croqueted ball 58.77 yd against the user's
-    35 yd; i 0 7.59 against 5 yd). The user's figures are checks, not targets. Discriminate first between the
+  - The user's checks run long on the open lawn, like for like: knee at i 0.4 ×1.16 (34.91 against about 30 yd),
+    knee at i 0.3 ×1.9 (29.11 against about 15 yd, cast), the drive's croqueted ball ×1.68 (58.77 against 35 yd);
+    the ankle-height 5 yd stroke has no model run. The user's figures are checks, not targets, and their percentages
+    felt effort, not intensities. Discriminate first between the
     stroke's speed (gravity-only free fall, no braking by the player; the 9.0 m/s ceiling) and the lawn's pace
     (10 s), then calibrate whichever is at fault; never tune the lawn's pace alone to close the gap, which would move
     every distance.
@@ -1913,7 +1917,7 @@ exit criteria. "Old → new" throughout.
 | The turf's root mat strength c, 105 kPa, bounds 73–138 kPa (P2b.2b.2b.3; our conversion of Mascitti's vane torques, labelled); one lawn's figure | P3 (proposed; the lawn presets) | Measured on croquet lawns, or varied by the lawn presets |
 | Reece's cohesion factor N_c, 1.71 (P2b.2b.2b.3; an analogue: Mak & Chen's shallowest tabulated depth, 50 mm, at rake 18.5°, against the head's millimetres and near-vertical face) | Open | A factor for shallow, near-vertical tools, if one is published or measured |
 | The hands' grip limit F_max, 435 N (P2b.2b.2b.3; Young's breakaway strength for a vertical cylinder, 435 ± 27 N, a handhold, not a mallet's grip) | P2b.2b.2c (the arms' checking force) and P3 (grip tension) | Against the stops' and the arms' calibration; grip tension scaling it in P3 |
-| The effort's ceiling, 9.0 m/s at intensity 1 from the body-limited top (P2b.2b.2c.1; 1.1 × the CA's A4D 8.18 m/s, the 10 % margin the design's call), and with it τ_0 68.527 N·m | Open | The user's checks run long (×1.5–1.7): discriminated from the lawn's pace first (P2b.2b.2c.1 outcomes, carried) |
+| The effort's ceiling, 9.0 m/s at intensity 1 from the body-limited top (P2b.2b.2c.1; 1.1 × the CA's A4D 8.18 m/s, the 10 % margin the design's call), and with it τ_0 68.527 N·m | Open | The user's checks run long (knee ×1.16 and ×1.9, the drive ×1.68, like for like): discriminated from the lawn's pace first (P2b.2b.2c.1 outcomes, carried) |
 | κ, the share of ω_max the drive's shaft uses at contact at full effort, ⅔ (P2b.2b.2c.1, a placeholder), and with it ω_max 16.195 rad/s | Open | A measured full-effort swing |
 | The body's backswing limit θ_max, 64.9021°, knee height on the default mallet (P2b.2b.2c.1; the user's account of the stance, not a measurement) | P3 (proposed; the player's body) | Entered by the player, or measured |
 | The hands' peak acceleration along aim, 300 m/s² (P2b.2b.2c.1, a placeholder keeping the 10 ms ramp at 3 m/s) | Open | Data on players' hands, with the player-facing push scale (carried) |

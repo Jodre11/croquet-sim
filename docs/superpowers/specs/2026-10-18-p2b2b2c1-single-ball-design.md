@@ -584,15 +584,23 @@ downswing's steps and `shotMix`'s engine time, run alone).
     a size): its runs halted at the boundary because of their start and aim, not a small world. The rerun used an
     open lawn instead, `defaultWorld(10)`'s gravity, ball, materials and surface on a 200 m square with no hoops, so
     nothing halts and the distances to rest are real; the user's intent, real distances and a judgeable 35 yd, holds.
-  - The gap at intensity 0 (7.6 yd against the user's 5 yd) was first put down to the lawn's pace without evidence; a
-    figure unchanged from main shows consistency, not correctness. That attribution is withdrawn. The user confirmed
-    the 0.45 m is the head's rise ("Head's rise"), the engine's h₀, so the candidates are the stroke's speed
-    (gravity-only free fall, no player braking) and the lawn's pace (10 s): the roadmap carries discriminating them
-    before calibrating either.
+  - The distances' excess was first put down to the lawn's pace without evidence; a figure unchanged from main shows
+    consistency, not correctness. That attribution is withdrawn. The user confirmed the 0.45 m is the head's rise
+    ("Head's rise"), the engine's h₀, so the candidates are the stroke's speed (gravity-only free fall, no player
+    braking) and the lawn's pace (10 s): the roadmap carries discriminating them before calibrating either. (The gap
+    this correction first named, intensity 0 from 0.45 m, 7.6 yd against the user's 5 yd, paired unlike strokes; see
+    the next correction.)
+  - The user's 5 yd stroke is from ankle height (about 0.05 m, guiding hands; roadmap "User play data and checks
+    (2026-10-08)"), so pairing it with intensity 0 from 0.45 m set unlike strokes side by side, and the blanket
+    "×1.5–1.7" presented at the rerun gate was wrong. Like for like, the user's percentages being felt effort, not
+    intensities: from knee at i 0.4, 34.9 yd against about 30 yd at about 40 % (×1.16); at i 0.3, 29.1 yd against
+    about 15 yd at about 30 %, cast (×1.9); the drive at i 1, 58.77 yd against 35 yd (×1.68); the ankle-height stroke
+    has no model run. Told so, the user ruled: "Stands, fix record (Recommended)". The J ruling below stands, its
+    record corrected.
 - **The pre-flight gate rerun (user, 2026-10-19).** The user's checks: "Record, roadmap (Recommended)", recorded as
-  measured on the open lawn, every distance long by ×1.5–1.7 (the drive's croqueted ball 58.77 yd against 35 yd), not
-  a blocker, and a roadmap item. θ_max (C), the defaults (B) and the rejected runs replayed (I): "Accept
-  (Recommended)". The flick (F), with the θ_max rejections at leans −20°, −18° and −16° and the 3 m/s leans of +2° to
-  +10° taking the middle regime at intensity 0.0000: "Accept (Recommended)". The hands' drop to rest under an advance:
-  "Keep, amend (Recommended)" (above). The gate's cost, 343 s against 99 s, and the obsolete 75° rows of the effort
-  curve: "Accept (Recommended)".
+  measured on the open lawn (like for like ×1.16 and ×1.9 from knee, ×1.68 for the drive's croqueted ball, 58.77 yd
+  against 35 yd; corrected above), not a blocker, and a roadmap item. θ_max (C), the defaults (B) and the rejected
+  runs replayed (I): "Accept (Recommended)". The flick (F), with the θ_max rejections at leans −20°, −18° and −16° and
+  the 3 m/s leans of +2° to +10° taking the middle regime at intensity 0.0000: "Accept (Recommended)". The hands' drop
+  to rest under an advance: "Keep, amend (Recommended)" (above). The gate's cost, 343 s against 99 s, and the obsolete
+  75° rows of the effort curve: "Accept (Recommended)".
