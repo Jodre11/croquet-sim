@@ -84,7 +84,8 @@ export interface SwingDrive {
  * (rad above horizontal; read only when the share is below 1). Carry mode reads `handTempo`: the hands' downswing lasts
  * from `slow` (s, intensity 0) to `fast` (s, intensity 1); null where a swing preset has none (P2b.2b.2c.1 plan
  * decision 7), and a carry stroke fails without one. Swing mode's effort is the body's (`SwingProfile.body.effort`,
- * P2b.2b.2c.1 design §4.4). A shot that gives no intensity swings at 0 (the pre-flight gate's ruling 2).
+ * P2b.2b.2c.1 design §4.4). A shot that gives no intensity swings at 0 (the pre-flight gate's ruling 2,
+ * 2026-10-18).
  */
 export interface SwingShape {
     readonly pendulumShare: number;
@@ -93,9 +94,10 @@ export interface SwingShape {
 }
 
 /**
- * The player's effort in swing mode (P2b.2b.2c.1 design §4.4), a Hill-type torque–velocity law (Hill 1938): at
- * intensity i the player's torque on the shaft is i·`torque`·max(0, 1 − ω/`speed`), `torque` τ_0 (N·m, ≥ 0) the
- * isometric torque and `speed` ω_max (rad/s, > 0) the shaft's angular speed at which the player can add no more.
+ * The player's effort in swing mode (P2b.2b.2c.1 design §4.4), a torque–velocity law linear in ω, a simplification of
+ * Hill's hyperbolic force–velocity relation (Hill 1938): at intensity i the player's torque on the shaft is
+ * i·`torque`·max(0, 1 − ω/`speed`), `torque` τ_0 (N·m, ≥ 0) the isometric torque and `speed` ω_max (rad/s, > 0) the
+ * shaft's angular speed at which the player can add no more.
  */
 export interface SwingEffort {
     readonly torque: number;

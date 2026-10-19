@@ -14,13 +14,13 @@ const H0 = swingReference["single-ball"].defaultBackswing.value;
 const speedOf = (stroke: Partial<ShotSetup["stroke"]>): number =>
     plannedSpeed({ ...BASE, stroke: { ...BASE.stroke, ...stroke } }, WORLD);
 
-/** U(0) and U(1) at h_0: the bounds of regime 2 (gate ruling 2). */
+/** U(0) and U(1) at h_0: the bounds of regime 2 (the pre-flight gate's ruling 2, 2026-10-18). */
 const U0 = speedOf({ backswing: H0, intensity: 0 });
 const U1 = speedOf({ backswing: H0, intensity: 1 });
 /** U(1) from the body-limited top: the most the stroke reaches. */
 const TOP = speedOf({ backswing: bodyTop("single-ball"), intensity: 1 });
 
-describe("the default stroke for a speed (gate ruling 2: the backswing fixed)", () => {
+describe("the default stroke for a speed (the pre-flight gate's ruling 2, 2026-10-18: the backswing fixed)", () => {
     it("solves the backswing at intensity 0 at or below U(0) from the default backswing, as before", () => {
         // Regime 1: the gravity-only path, no intensity given, so the run is today's to the bit.
         for (const speed of [1, 2]) {

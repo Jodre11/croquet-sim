@@ -36,9 +36,9 @@
  *   many runs of the preset sweep cross a ball or an obstacle and how many overlap one at the impact's end (a ball only
  *   when the depth exceeds CONTACT_TOLERANCE, the handover rule's own threshold; P2b.2b.2b.2b Task 8), and each such
  *   run; then a single-ball stroke through a hoop, centred and with the face 10 mm off the ball's centre.
- * A stroke planning a speed takes the default stroke's inputs (strokeFor, the pre-flight gate's ruling 2: a swing
- * preset's defaultBackswing with the intensity solved, or the backswing solved at intensity 1 beyond it; a carry
- * preset's backswing); "unreachable" is a speed beyond what that stroke reaches.
+ * A stroke planning a speed takes the default stroke's inputs (strokeFor, the pre-flight gate's ruling 2, 2026-10-18:
+ * a swing preset's defaultBackswing with the intensity solved, or the backswing solved at intensity 1 beyond it; a
+ * carry preset's backswing); "unreachable" is a speed beyond what that stroke reaches.
  * Run with `npx --yes tsx scripts/swingProbe.ts`; environment: SECTION (one of the names above; default all), REPEAT
  * (timed runs per stroke, default 50). Not part of the test suite; its output goes into the roadmap's outcomes.
  */
@@ -156,7 +156,8 @@ function quick(setup: ShotSetup): Run {
 
 /**
  * `type`'s canonical setup with `stroke` fields replaced; a `speed` (m/s) sets the default stroke's inputs that plan
- * it (strokeFor, ruling 2: a swing preset's backswing and intensity in its three regimes, a carry preset's backswing).
+ * it (strokeFor, the pre-flight gate's ruling 2, 2026-10-18: a swing preset's backswing and intensity in its three
+ * regimes, a carry preset's backswing).
  */
 function canonical(
     type: StrokeType,

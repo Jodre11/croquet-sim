@@ -449,7 +449,10 @@ function handsOf(setup: ShotSetup): Hands {
     };
 }
 
-/** The downswing of a checked `setup` posed at `pose`, at the shot's intensity, else 0 (the gate's ruling 2). */
+/**
+ * The downswing of a checked `setup` posed at `pose`, at the shot's intensity, else 0 (the pre-flight gate's ruling 2,
+ * 2026-10-18).
+ */
 function downswingOf(setup: ShotSetup, pose: ContactPose, hands: Hands, gravity: number): PlannedDownswing {
     const { stroke, profile } = setup;
     const shape = profile.shape[stroke.type];

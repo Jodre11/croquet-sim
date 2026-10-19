@@ -7,8 +7,9 @@
  *   the arm's flex and pendulum push (P2b.2b.2b.2b), the push intent's cap and response time, each hand's
  *   hand–arm chain (its gate rulings) and the grip's limit (Young et al. 2009; P2b.2b.2b.3), measured; the
  *   backswing's limit θ_max from reference/swing.json (`body`), a placeholder from the user's account of the stance;
- *   and swing mode's effort, the Hill-type law's τ_0 and ω_max from reference/swing.json (`body`), fitted by
- *   scripts/fitStrokeShape.ts to the 9.0 m/s ceiling with κ = ⅔, placeholders (P2b.2b.2c.1 design §4.3, §4.4); and
+ *   and swing mode's effort, the linear torque–velocity law's τ_0 and ω_max from reference/swing.json (`body`),
+ *   fitted by scripts/fitStrokeShape.ts to the 9.0 m/s ceiling with κ = ⅔, placeholders (P2b.2b.2c.1 design §4.3,
+ *   §4.4); and
  *   the hands' peak acceleration along aim from reference/swing.json (`body`), a calibration placeholder (the
  *   P2b.2b.2c.1 pre-flight gate's ruling 9).
  * - Stance: the hands measured from the socket along the shaft, after John Riches, Croquet Technique (Oxford Croquet),

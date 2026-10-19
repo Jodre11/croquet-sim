@@ -379,7 +379,7 @@ export function backswingFor(setup: ShotSetup, speed: number, world: World = def
 const INTENSITY_BISECTIONS = 60;
 
 /**
- * The stroke inputs that plan `setup`'s contact speed `speed` (the pre-flight gate's ruling 2, 2026-10-19: the default
+ * The stroke inputs that plan `setup`'s contact speed `speed` (the pre-flight gate's ruling 2, 2026-10-18: the default
  * stroke fixes the backswing). A setup that gives an intensity, or a carry-mode one, takes backswingFor's backswing at
  * it. Otherwise, in swing mode, from the preset's defaultBackswing h_0 (reference/swing.json):
  * 1. speed ≤ U(0) at h_0: the backswing solved at intensity 0 (backswingFor), no intensity given;

@@ -8,9 +8,9 @@
  *    and body.effortSpeed;
  * 2. every swing preset's U(i) checked over design §8.1.3's grid (checkCurve): strictly increasing in i, concave, and
  *    its slope at i = 1 at least END_SLOPE_SHARE of its mean; the fit throws naming the preset if not;
- * 3. every swing preset's defaultBackswing h_0 and defaultSpeed kept as they are (the pre-flight gate's ruling 2: the
- *    default stroke fixes the backswing, a stroke's intensity reaching the speeds from U(0) to U(1) at h_0), and
- *    U(0) and U(1) at h_0 reported.
+ * 3. every swing preset's defaultBackswing h_0 and defaultSpeed kept as they are (the pre-flight gate's ruling 2,
+ *    2026-10-18: the default stroke fixes the backswing, a stroke's intensity reaching the speeds from U(0) to U(1) at
+ *    h_0), and U(0) and U(1) at h_0 reported.
  * The swing presets' retired effort pulse (torqueMax, tempoSlow, tempoFast) and every preset's retired defaultIntensity
  * are dropped. The carry presets are frozen at engine 0.12.0's fit (design §4.4): their handTempoSlow, handTempoFast
  * and defaultBackswing keep their values, their notes saying so; nothing else of theirs is touched.
@@ -45,7 +45,10 @@ const FIT_SOURCE =
 /** The note appended to each frozen carry-preset entry. */
 const FROZEN = "Frozen at engine 0.12.0's fit (P2b.2b.2c.1 design §4.4).";
 
-/** The swing presets' retired effort pulse (P2b.2b.2a) and every preset's retired default intensity (gate ruling 2). */
+/**
+ * The swing presets' retired effort pulse (P2b.2b.2a) and every preset's retired default intensity (the pre-flight
+ * gate's ruling 2, 2026-10-18).
+ */
 const RETIRED: readonly string[] = ["torqueMax", "tempoSlow", "tempoFast", "defaultIntensity"];
 
 function entry(value: number, unit: string, note: string, placeholder: boolean) {
@@ -129,8 +132,8 @@ for (const type of SWING_REFERENCE_TYPES) {
         }
         continue;
     }
-    // Gate ruling 2: the default backswing h_0 is kept as it is, and the speeds between U(0) and U(1) at it are the
-    // ones a stroke reaches by its intensity alone.
+    // The pre-flight gate's ruling 2 (2026-10-18): the default backswing h_0 is kept as it is, and the speeds between
+    // U(0) and U(1) at it are the ones a stroke reaches by its intensity alone.
     const h0 = swingReference[type].defaultBackswing.value;
     console.error(
         `${type.padEnd(11)} default backswing ${h0} m: U(0) ${fmt(speedAt(type, h0, 0, effort, profile), 6)} m/s, ` +

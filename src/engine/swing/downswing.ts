@@ -8,10 +8,10 @@
  * - Swing mode (§3.1, §3.4): the pendulum leads and σ = (θ − θ_top)/(θ_c − θ_top). I_P·θ̈ = −W·sin θ (W of
  *   pendulumOf) − M·d·(A·t̂) + τ_p(ω) is solved for θ̈ with A = P″·σ̇² + P′·σ̈, and integrated by semi-implicit Euler
  *   every FREE_STEP until θ first reaches θ_c, the crossing step cut by linear interpolation in θ. The effort τ_p is
- *   the player's, a Hill-type torque–velocity law (Hill 1938; P2b.2b.2c.1 design §4.4): τ_p = i·τ_0·max(0, 1 − ω/ω_max)
- *   with the body's τ_0 and ω_max (effortTorque). It steps on at the top and acts until contact, falling as the swing
- *   speeds up, so effort gives diminishing returns and the tempo follows from it; at intensity 0 it is +0 and the
- *   swing is gravity's alone.
+ *   the player's, a torque–velocity law linear in ω, a simplification of Hill's hyperbolic force–velocity relation
+ *   (Hill 1938; P2b.2b.2c.1 design §4.4): τ_p = i·τ_0·max(0, 1 − ω/ω_max) with the body's τ_0 and ω_max
+ *   (effortTorque). It steps on at the top and acts until contact, falling as the swing speeds up, so effort gives
+ *   diminishing returns and the tempo follows from it; at intensity 0 it is +0 and the swing is gravity's alone.
  * - Carry mode (§3.3): the hands lead on their own tempo T_h(i), σ = (t − t_r)/T_h, and the slope follows them, θ =
  *   θ_top + (θ_c − θ_top)·σ²; closed-form, so not tabulated (plan, "Decisions made while planning").
  */
@@ -82,7 +82,7 @@ function fail(message: string): never {
 }
 
 /**
- * The player's torque (N·m) on the shaft at intensity `intensity` and angular speed `omega` (rad/s): the Hill-type law
+ * The player's torque (N·m) on the shaft at intensity `intensity` and angular speed `omega` (rad/s): the linear law
  * i·τ_0·max(0, 1 − ω/ω_max) (P2b.2b.2c.1 design §4.4). Exactly +0 at intensity 0 and at or beyond ω_max, never
  * negative or −0, so more effort never slows the swing and intensity 0 is the gravity-only swing to the bit.
  */

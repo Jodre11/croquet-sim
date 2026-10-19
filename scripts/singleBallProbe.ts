@@ -1,8 +1,8 @@
 /**
  * Single-ball probe (P2b.2b.2c.1 design §8.4, §8.5, §10; plan decisions 13, 16–19; the pre-flight gate's rulings of
- * 2026-10-19): the gate's figures, on the default world and profile as reference/swing.json holds them. Every stroke
- * planning a speed takes the default stroke's inputs (strokeFor: the preset's defaultBackswing fixed, the intensity
- * solved, ruling 2). Every figure to 4 decimals. Reports:
+ * 2026-10-18, rerun 2026-10-19, "ruling N" below): the gate's figures, on the default world and profile as
+ * reference/swing.json holds them. Every stroke planning a speed takes the default stroke's inputs (strokeFor: the
+ * preset's defaultBackswing fixed, the intensity solved, ruling 2). Every figure to 4 decimals. Reports:
  * - A. U(i): every swing preset's planned contact speed at intensity 0, 0.1, …, 1 from its default backswing and from
  *   its body-limited top at κ = ⅔, and from its top at κ = ½ and ¾, each κ's τ_0 and ω_max fitted (fitEffort);
  * - B. the default stroke (ruling 2): each swing preset's defaultBackswing h_0, U(0) and U(1) from it, and strokeFor's
@@ -96,7 +96,7 @@ const YARD = 0.9144;
 /** The intensities of U(i): 0, 0.1, …, 1. */
 const INTENSITIES = Array.from({ length: 11 }, (_, k) => k / 10);
 
-/** The body's κ, swing.json's effortShare (⅔), and the gate's two others (plan Task 6). */
+/** The body's κ, swing.json's effortShare (⅔), and the gate's two others. */
 const KAPPA = swingBodyReference.effortShare.value;
 const KAPPAS: readonly (readonly [string, number])[] = [
     ["½", 1 / 2],
@@ -104,7 +104,7 @@ const KAPPAS: readonly (readonly [string, number])[] = [
     ["¾", 3 / 4],
 ];
 
-/** The level stroke's travel (m): the hands' advance over 0.3 m (plan Task 4's runs, design §8.4). */
+/** The level stroke's travel (m): the hands' advance over 0.3 m (design §8.4). */
 const LEVEL_REACH = 0.3;
 
 /** The user's knee-height top (m), the head's rise on the default mallet (design §5.2). */
@@ -760,16 +760,17 @@ async function readText(path: string): Promise<string> {
 const REJECTED_RUN = /^(\S+) (\S+) m\/s drive (\S+) up (\S+) side (\S+): rejected/;
 
 /**
- * I's lines: Task 3's rejected-runs list counted by preset, and each run replayed on the committed engine, its stroke
- * from strokeFor and run through simulateShot (computed before G and H, so that the guard's tally covers them).
+ * I's lines: the rejected-runs list (the runs θ_max rejected when it landed) counted by preset, and each run replayed
+ * on the committed engine, its stroke from strokeFor and run through simulateShot (computed before G and H, so that the
+ * guard's tally covers them).
  */
 async function rejectionChecks(): Promise<string[]> {
     const path = process.argv[2];
     const out = [
-        "== I. θ_max's rejections (design §8.2.2): Task 3's rejected-runs list. Its lines read \"backswingFor: N m/s " +
-            "is beyond the <type> stroke's reach\", not θ_max: backswingFor's reach check reads the speed at θ_max " +
-            "and fires first (plan decision 8, controller ruling). Each run replayed through strokeFor and " +
-            "simulateShot on the committed engine ==",
+        "== I. θ_max's rejections (design §8.2.2): the runs θ_max rejected when it landed. Its lines read " +
+            "\"backswingFor: N m/s is beyond the <type> stroke's reach\", not θ_max: backswingFor's reach check " +
+            "reads the speed at θ_max and fires first (plan decision 8, controller ruling). Each run replayed " +
+            "through strokeFor and simulateShot on the committed engine ==",
     ];
     if (path === undefined) {
         out.push("no list given");
@@ -806,7 +807,7 @@ async function rejectionChecks(): Promise<string[]> {
     }
     const total = (counts: Map<string, number>): number => [...counts.values()].reduce((sum, n) => sum + n, 0);
     out.push(
-        `Task 3: ${lines.length} rejected runs (${reach} beyond the stroke's reach): ` +
+        `the list: ${lines.length} rejected runs (${reach} beyond the stroke's reach): ` +
             `${[...byType].map(([type, count]) => `${type} ${count}`).join(", ")}`,
         `now played through strokeFor: ${total(plays)}; still rejected: ${total(still)}`,
     );

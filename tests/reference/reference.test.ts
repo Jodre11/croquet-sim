@@ -378,7 +378,7 @@ describe("swing reference (P2b.2b.2a design §6.1)", () => {
     });
 
     it("rejects a default intensity as retired in every preset, naming the key", () => {
-        // The pre-flight gate's ruling 2 (2026-10-19): the default stroke fixes the backswing, and an absent
+        // The pre-flight gate's ruling 2 (2026-10-18): the default stroke fixes the backswing, and an absent
         // intensity is 0 in both modes.
         const entryOf = (type: SwingReferenceType): Record<string, unknown> =>
             (swingJson as unknown as Record<string, Record<string, unknown>>)[type] ?? {};
