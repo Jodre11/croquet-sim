@@ -46,7 +46,7 @@ import { faceHalfHeight } from "../src/engine/impact/shape";
 import { simulateStroke } from "../src/engine/impact/simulateImpact";
 import { advanceTravel, handsAt, prepareTrack } from "../src/engine/impact/track";
 import type { HeadState, ImpactResult, MalletHead, SwingArc, TrackDrive } from "../src/engine/impact/types";
-import { add, dot, horizontal, length, scale, sub, vec3, type Vec3 } from "../src/engine/math/vec3";
+import { dot, horizontal, length, scale, sub, vec3, type Vec3 } from "../src/engine/math/vec3";
 import { judgeFaults } from "../src/engine/faults";
 import { stateAtTime } from "../src/engine/sample";
 import { simulateShot, strokeContext } from "../src/engine/shot";
@@ -63,18 +63,12 @@ import {
 } from "../src/engine/swing/buildContact";
 import { ON_TIME, defaultProfile } from "../src/engine/swing/profile";
 import type { ShotSetup, StrokeType, SwingEffort, SwingProfile, SwingStance } from "../src/engine/swing/types";
-import {
-    BALL_IDS,
-    type BallId,
-    type BallState,
-    type BallStates,
-    type ShotResult,
-    type World,
-} from "../src/engine/types";
-import { defaultWorld, uniformLawn } from "../src/engine/world";
+import { BALL_IDS, type BallId, type BallState, type ShotResult } from "../src/engine/types";
+import { defaultWorld } from "../src/engine/world";
 import { swingBodyReference, swingReference } from "../src/reference/index";
 import { canonicalSetup, strokeFor, type CanonicalOptions } from "../tests/engine/support/shot";
 import { SWING_PRESETS, bodyTop, contactArm, fitEffort, kneeLimit, speedAt } from "./effortFit";
+import { OPEN_LAWN, OPEN_START, openWorld, opened } from "./openLawn";
 
 // The project has no Node types; this script runs under tsx and reads its environment, its argument and one file.
 declare const process: {
@@ -117,12 +111,6 @@ const USER_TOP = 0.9574;
 
 /** B's speeds (m/s): strokeFor's three regimes across them. */
 const B_SPEEDS = [1, 2, 3, 4, 5, 6, 7, 8, 9];
-
-/** J's open lawn's side (m): far beyond any stroke's reach, so that every run comes to rest on it. */
-const OPEN_LAWN = 200;
-
-/** J's striker's start on the open lawn (m): mid-width, 150 m of lawn ahead along aim (+y). */
-const OPEN_START = vec3(OPEN_LAWN / 2, 50, 0);
 
 const EFFORTS = new Map<number, SwingEffort>();
 
@@ -834,30 +822,6 @@ async function sectionI(): Promise<void> {
     for (const line of rejections ?? (await rejectionChecks())) {
         console.log(line);
     }
-}
-
-/**
- * J's open world: defaultWorld(10)'s gravity, ball, materials and surface, no hoops, on a uniform lawn
- * OPEN_LAWN square. Its peg stays at the court's centre, far off J's lines.
- */
-function openWorld(): World {
-    const court = defaultWorld(10);
-    const surface = court.lawn.surfaceAt(vec3(court.lawn.width / 2, court.lawn.length / 2, 0));
-    return { ...court, hoops: [], lawn: uniformLawn(OPEN_LAWN, OPEN_LAWN, surface) };
-}
-
-/** `setup` with every ball moved by the one offset that puts the striker at OPEN_START. */
-function opened(setup: ShotSetup): ShotSetup {
-    const striker = (setup.balls[setup.striker] as BallState).position;
-    const offset = vec3(OPEN_START.x - striker.x, OPEN_START.y - striker.y, 0);
-    const balls: BallStates = {};
-    for (const id of BALL_IDS) {
-        const ball = setup.balls[id];
-        if (ball !== undefined) {
-            balls[id] = { ...ball, position: add(ball.position, offset) };
-        }
-    }
-    return { ...setup, balls };
 }
 
 /** J's lines: its shots run before G and H, so that the guard's tally covers them, and print in J's place. */
