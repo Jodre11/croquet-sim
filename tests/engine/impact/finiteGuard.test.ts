@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { assertFinite } from "../../../src/engine/impact/integrate";
-import { simulateImpact } from "../../../src/engine/impact/simulateImpact";
+import { simulateImpact, simulateStroke } from "../../../src/engine/impact/simulateImpact";
 import type { HeadState, TrackDrive } from "../../../src/engine/impact/types";
 import { vec3 } from "../../../src/engine/math/vec3";
 import { simulateShot } from "../../../src/engine/shot";
@@ -70,10 +70,24 @@ describe("the finite-state guard (design §3)", () => {
             /went non-finite .* s from contact, at step \d+ \(impact\)/,
         );
     });
-    it("catches one NaN velocity at the next step, in the impact and in the follow-through", () => {
+    it("names a NaN velocity's step and phase, and passes a finite state", () => {
         expect(() => assertFinite(nanHead, [], [], 0.001, 3, "impact")).toThrow(/head state .* at step 3 \(impact\)/);
         expect(() => assertFinite(nanHead, [], [], 0.2, 40000, "follow-through")).toThrow(/\(follow-through\)/);
         expect(() => assertFinite(finiteHead, [finiteBall], ["blue"], 0.001, 3, "impact")).not.toThrow();
+    });
+    it("catches a head gone non-finite in the follow-through at the next step", () => {
+        // A hand-built arc bypasses planStroke's check of the advance. The hands' 1e300 m/s² from 0.05 s after contact,
+        // after the impact's end, overflows the free pendulum's table there, so the head goes non-finite in the
+        // follow-through. (A NaN speed would not: it leaves the hands' velocity and acceleration finite, and after
+        // contact swing mode's hands read only those.)
+        const world = defaultWorld();
+        const setup = canonicalSetup("single-ball", { world, stroke: { handReach: 0.3 } });
+        const contact = buildContact(setup, world);
+        const drive = contact.drive as TrackDrive;
+        const advance = { start: drive.arc.contactAt + 0.05, speed: 1e300, accel: 1e300 };
+        const broken = { ...contact, drive: { ...drive, arc: { ...drive.arc, advance } } };
+        expect(() => simulateStroke(broken, setup.balls, world)).toThrow(RangeError);
+        expect(() => simulateStroke(broken, setup.balls, world)).toThrow(/at step \d+ \(follow-through\)/);
     });
     it("names the ball whose state went non-finite", () => {
         const spun = { ...finiteBall, angularVelocity: vec3(0, Number.NaN, 0) };
@@ -81,8 +95,8 @@ describe("the finite-state guard (design §3)", () => {
             /ball red state/,
         );
     });
-    it("leaves a finite stroke's run unchanged", () => {
-        // The canonical single-ball stroke at 3 m/s: its outcome equals the stored digest's run (ratchet, Step 5).
+    it("does not throw on a finite stroke", () => {
+        // The canonical single-ball stroke at 3 m/s; that its run is unchanged is the ratchet's to prove.
         const world = defaultWorld();
         expect(() => simulateShot(canonicalSetup("single-ball", { world }), world, { trajectory: true })).not.toThrow();
     });

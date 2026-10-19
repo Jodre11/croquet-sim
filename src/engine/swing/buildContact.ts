@@ -589,10 +589,12 @@ function alongAim(pose: ContactPose, planned: PlannedDownswing): number {
 
 /**
  * Checks `arc`'s `advance` (plan decision 5), at the head's planned speed V along aim and the body's peak acceleration
- * a: swing mode only, no check (α < 0), a positive handReach, and a ramp's travel V·W/2 = V²/(2a) (W = V/a, the
- * pre-flight gate's ruling 9) under 0.8·handReach, so that the hands cruise before they ease to rest.
+ * a: swing mode only, no check (α < 0), a positive handReach, a positive V (at 0 the cruise would never end; below
+ * it the hands would ramp backwards), and a ramp's travel V·W/2 = V²/(2a) (W = V/a, the pre-flight gate's ruling 9)
+ * under 0.8·handReach, so that the hands cruise before they ease to rest. planStroke calls it; a hand-built arc is not
+ * checked.
  */
-function checkAdvance(arc: SwingArc, advance: NonNullable<SwingArc["advance"]>): void {
+export function checkAdvance(arc: SwingArc, advance: NonNullable<SwingArc["advance"]>): void {
     const { speed, accel } = advance;
     if (arc.mode !== "swing") {
         fail("stroke.timing.advance needs swing mode: carry mode's hands push on their own arc");
@@ -602,6 +604,9 @@ function checkAdvance(arc: SwingArc, advance: NonNullable<SwingArc["advance"]>):
     }
     if (!(arc.handReach > 0)) {
         fail(`the advance travels the stroke's handReach, which must be positive (got ${arc.handReach})`);
+    }
+    if (!(speed > 0)) {
+        fail(`the advance cruises at the head's planned speed along aim, which must be positive (got ${speed} m/s)`);
     }
     const ramp = (speed * speed) / (2 * accel);
     if (!(ramp / 0.8 < arc.handReach)) {
@@ -655,9 +660,9 @@ export interface StrokePlan {
  *   mode), a non-positive effective inertia, a stall or a fall beyond MAX_FALL;
  * - an action timed more than MAX_LEAD early (the advance's among them), or a downswing meeting the turf more than
  *   MAX_LEAD − TURF_MARGIN before contact;
- * - an advance (P2b.2b.2c.1 plan decision 5) in carry mode, on a check (α < 0), with a handReach ≤ 0, or with its
- *   ramp's travel V·W/2 at or above 0.8·handReach (V the head's planned speed along aim at contact, W = V/a the
- *   ramp's duration at the body's hands' peak acceleration a);
+ * - an advance (P2b.2b.2c.1 plan decision 5) in carry mode, on a check (α < 0), with a handReach ≤ 0, with V ≤ 0, or
+ *   with its ramp's travel V·W/2 at or above 0.8·handReach (V the head's planned speed along aim at contact, W = V/a
+ *   the ramp's duration at the body's hands' peak acceleration a);
  * - the head's lowest point below the turf at contact, or where the impact starts.
  * A downswing that meets the turf before the ball is not rejected: the impact starts before it and simulates it
  * (design §3.5).

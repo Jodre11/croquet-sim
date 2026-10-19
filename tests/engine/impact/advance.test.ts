@@ -11,7 +11,7 @@ import {
 } from "../../../src/engine/impact/track";
 import type { SwingArc, TrackDrive } from "../../../src/engine/impact/types";
 import { dot, sub } from "../../../src/engine/math/vec3";
-import { MAX_LEAD, planStroke, type StrokePlan } from "../../../src/engine/swing/buildContact";
+import { MAX_LEAD, checkAdvance, planStroke, type StrokePlan } from "../../../src/engine/swing/buildContact";
 import { ON_TIME, defaultProfile } from "../../../src/engine/swing/profile";
 import type { ShotSetup, StrokeTiming, StrokeType, SwingProfile } from "../../../src/engine/swing/types";
 import { defaultWorld } from "../../../src/engine/world";
@@ -144,10 +144,11 @@ describe("the hands' advance (design §6, §8.1.5)", () => {
         }
     });
     it("slows the head's turn while the hands speed up: its pitch rate at the ramp's end is lower", () => {
-        // On time the ramp [contact, contact + W] coincides with the pendulum's window, whose α law prescribes θ, so
-        // the plan cannot show it: the planned ω there is bit-equal with and without the advance. The slowing reaches
-        // the head through swing mode's hand load, which pushes the top of the shaft forward along aim.
-        const RAMP_END = arc().contactAt + arc().window;
+        // On time the ramp runs from contact for V/a, at 3 m/s and a = 300 m/s² the 10 ms of the pendulum's window,
+        // whose α law prescribes θ, so the plan cannot show it: the planned ω there is bit-equal with and without the
+        // advance (only because the two coincide: a gentler body's ramp outlasts the window). The slowing reaches the head through swing mode's hand load, which pushes the top of the shaft
+        // forward along aim.
+        const RAMP_END = advanceOf(level()).ramp;
         const at = (setup: ShotSetup): number =>
             (pitchRates(setup).find(({ t }) => t >= RAMP_END) as { rate: number }).rate;
         expect(plannedOmega(level(), RAMP_END)).toBe(plannedOmega(rising(), RAMP_END));
@@ -213,6 +214,15 @@ describe("the hands' advance (design §6, §8.1.5)", () => {
         expect(() => plan(stroke({ handReach: 0.3 }, { advance: 0 }, "stop-gc"))).toThrow(/advance .* check/);
         expect(() => plan(stroke({ handReach: 0 }, { advance: 0 }))).toThrow(/advance .* handReach/);
         expect(() => plan(stroke({ handReach: 0.3 }, { advance: Number.NaN }))).toThrow(/advance must be finite/);
+    });
+    it("rejects a head not moving forward along aim at contact", () => {
+        // planStroke's own strokes all move forward, so the check is called on the canonical arc directly: a speed of 0
+        // would never end the cruise, a negative one ramp the hands backwards.
+        for (const bad of [0, -3, Number.NaN]) {
+            expect(() => checkAdvance(arc(), { start: 0, speed: bad, accel: HAND_ACCEL }), `${bad}`).toThrow(
+                /advance .* speed along aim, which must be positive/,
+            );
+        }
     });
     it("rejects a travel too short for the hands' ramp", () => {
         // Review focus 2. The ramp's travel V·W/2 = V²/(2a) ≥ 0.8·handReach throws; just above the bound plans.

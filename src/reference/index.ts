@@ -314,7 +314,7 @@ const HAND_TEMPO_KEYS: readonly string[] = ["handTempoSlow", "handTempoFast"];
 /**
  * Stroke type `type`'s entry in the swing section `section` (reference/swing.json). Throws a ReferenceDataError for a
  * missing or malformed entry, a hands' tempo given only in part, a retired effort key (torqueMax, tempoSlow,
- * tempoFast) or a retired defaultIntensity (the pre-flight gate's ruling 2, 2026-10-19).
+ * tempoFast) or a retired defaultIntensity (the pre-flight gate's ruling 2, 2026-10-18).
  */
 export function readShape(section: unknown, type: SwingReferenceType): StrokeShapeReference {
     const path = `swing.${type}`;
@@ -334,7 +334,7 @@ export function readShape(section: unknown, type: SwingReferenceType): StrokeSha
         throw new ReferenceDataError(
             `${path}.defaultIntensity`,
             "retired: the default stroke fixes the backswing, and a stroke that gives no intensity swings at 0 " +
-                "(P2b.2b.2c.1 pre-flight gate, ruling 2)",
+                "(see the P2b.2b.2c.1 design's Amendments, 2026-10-18)",
         );
     }
     const low = has(entry, "backswingLow");

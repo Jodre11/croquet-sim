@@ -4,7 +4,7 @@ import * as engine from "../../src/engine/index";
 /**
  * Every type spec §6.5 adds to the public API (P2b.2b.1). Naming them here makes `npm run check` fail if one is not
  * exported; Vitest does not type-check.
- * P2b.2b.2a adds the stroke shape's types (spec §1, exit criterion 6).
+ * P2b.2b.2a adds the stroke shape's types (spec §1, exit criterion 6); P2b.2b.2c.1 the body's effort (design §4.4).
  */
 type Exported = [
     engine.ShotSetup,
@@ -27,6 +27,7 @@ type Exported = [
     engine.FaultReport,
     engine.Finding,
     engine.SwingShape,
+    engine.SwingEffort,
     engine.SwingTrajectory,
     engine.StrokeSample,
     engine.ShotOptions,

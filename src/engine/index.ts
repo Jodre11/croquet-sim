@@ -26,6 +26,7 @@ export {
     type StrokeTiming,
     type StrokeType,
     type SwingDrive,
+    type SwingEffort,
     type SwingProfile,
     type SwingShape,
     type SwingStance,
