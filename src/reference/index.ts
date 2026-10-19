@@ -363,6 +363,39 @@ export function readShape(section: unknown, type: SwingReferenceType): StrokeSha
     };
 }
 
+/** The strokes whose distance ratio the fit targets (reference/swing.json, `ratioTargets`). */
+export type RatioTargetKey = "drive" | "stop-ac";
+
+/** A fit target: the croqueted ball's distance over the striker's ball's, and the mallet speed it was measured at. */
+export interface RatioTarget {
+    readonly ratio: ReferenceValue;
+    readonly speed: ReferenceValue;
+}
+
+/**
+ * Gugan 5's drive and stop-shot targets in the swing section `section`. Throws a ReferenceDataError for a missing or
+ * malformed entry, a ratio outside its tolerance bounds or without them, or a speed that is not positive.
+ */
+export function readRatioTargets(section: unknown): Readonly<Record<RatioTargetKey, RatioTarget>> {
+    const targets = has(section, "ratioTargets") ? (section as Record<string, unknown>)["ratioTargets"] : undefined;
+    const read = (key: RatioTargetKey): RatioTarget => {
+        const path = `swing.ratioTargets.${key}`;
+        const entry = has(targets, key) ? (targets as Record<string, unknown>)[key] : undefined;
+        const target = { ratio: readValue(entry, "ratio", path), speed: readValue(entry, "speed", path) };
+        if (target.ratio.bounds === undefined) {
+            throw new ReferenceDataError(`${path}.ratio`, "must give its tolerance as bounds");
+        }
+        if (!(target.speed.value > 0)) {
+            throw new ReferenceDataError(`${path}.speed`, "must be positive");
+        }
+        return target;
+    };
+    return { drive: read("drive"), "stop-ac": read("stop-ac") };
+}
+
+/** Gugan 5's drive and stop-shot ratio targets, which the croquet-stroke fit aims at (P2b.2b.2c.2 design §5.1). */
+export const ratioTargetsReference = readRatioTargets(swingJson);
+
 /**
  * The stroke shape per stroke type (P2b.2b.2a design §6): sourced figures, labelled placeholders and the fit's derived
  * defaults (scripts/fitStrokeShape.ts).

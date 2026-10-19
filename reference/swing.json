@@ -43,6 +43,42 @@
             "note": "The hands' peak acceleration along aim a: the advance's ramp lasts W = V/a at the head's planned speed V along aim. 300 m/s² keeps the 10 ms ramp the advance had at 3 m/s. No source: a calibration value awaiting data on players' hands."
         }
     },
+    "ratioTargets": {
+        "drive": {
+            "ratio": {
+                "value": 4.23,
+                "unit": "1",
+                "bounds": [4.03, 4.43],
+                "source": "Gugan 5, Results for Drives (https://oxfordcroquet.org/tech/gugan5/)",
+                "provenance": "direct",
+                "note": "The mean distance ratio of twelve pendulum drives, 4.23 ± 0.2 (the standard error of the mean), which the bounds take as the tolerance; Gugan's calculated ideal is 4.12 ± 0.04. The Croquet Association's drive band is 3.0–4.0 (Project Croquet Dynamics), recorded beside the target and not fitted to; the band's top, 4.0, sits just below this target's lower bound, 4.03, a gap recorded and not resolved (P2b.2b.2c.2 design §5.1)."
+            },
+            "speed": {
+                "value": 3,
+                "unit": "m/s",
+                "source": "Gugan 5, Experimental (https://oxfordcroquet.org/tech/gugan5/)",
+                "provenance": "direct",
+                "note": "\"The drives were of modest strength, with a mallet speed of about 3 m/s\"."
+            }
+        },
+        "stop-ac": {
+            "ratio": {
+                "value": 7.15,
+                "unit": "1",
+                "bounds": [6.55, 7.75],
+                "source": "Gugan 5, Results for Stop-Shots (https://oxfordcroquet.org/tech/gugan5/)",
+                "provenance": "direct",
+                "note": "The mean distance ratio of twelve 'jab' stop-shots, 7.15 ± 0.6 (the standard error of the mean), which the bounds take as the tolerance; the scatter of single strokes is about ± 2.0. The Croquet Association's stop band is 4.1–6.2 (Project Croquet Dynamics, C3S, C10S and C20S), recorded beside the target and not fitted to."
+            },
+            "speed": {
+                "value": 3,
+                "unit": "m/s",
+                "source": "Gugan 5, Experimental (https://oxfordcroquet.org/tech/gugan5/)",
+                "provenance": "derived",
+                "note": "Gugan 5 states no mallet speed for the stop-shots, only that they \"were of similar strength\" to the drives, whose mallet speed is about 3 m/s; the stop is therefore fitted at 3 m/s."
+            }
+        }
+    },
     "single-ball": {
         "pendulumShare": {
             "value": 1,
