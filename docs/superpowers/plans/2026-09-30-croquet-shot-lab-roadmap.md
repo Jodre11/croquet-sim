@@ -1954,11 +1954,12 @@ Observations, not gates, but for the exit criteria. "Old → new" throughout.
   - today the drive 3.3085 and the stop 5.9109, against 4.23 ± 0.2 and 7.15 ± 0.6;
   - only the ball–ball contact time moves the stop (2.3408 to 8.2790 across 0.5–0.87 ms); no hand parameter moves it
     by more than about 0.5 across its bounds (the arm mass's 6.33 to 5.84);
-  - in the coupling's period, damping-ratio and arm-mass sweeps the drive has two levels, 2.5–3.6 while the impact
-    raises `impact-off-face` (today's canonical drive does) and 4.77–4.89 when it does not, and each flips it between
-    them abruptly; the contact-time and reach-slack sweeps do not follow it (with the flag the reach slack's reaches
-    4.6207 and the contact time's 3.8490, without it the contact time's gives 2.0439–3.9269); the reach slack moves
-    the drive smoothly (4.6207 at 10 mm to 3.3085 at 30 mm) with the stop unchanged;
+  - in the coupling's period, damping-ratio and arm-mass sweeps the drive jumps abruptly between a lower band (about
+    1.3–3.6, 1.3493–3.6095; today's 3.3085 among them) and an upper band (about 4.76–4.89, 4.7550–4.8933).
+    `impact-off-face` is raised at every lower-band point but also at some upper-band points (ζ 0.6: 4.7905; the arm
+    mass 0.5 kg: 4.7550), so it does not mark the band. The contact-time and reach-slack sweeps move the drive without
+    such a jump (the contact time's 2.0439–3.9269 across 0.5–0.87 ms; the reach slack smoothly from 4.6207 at 10 mm
+    to 3.3085 at 30 mm, with the stop unchanged). The double hit below reads the jump as one clearance threshold;
   - the drive's effective mass at the face centre along aim 1.1095 kg (+10.95 % on the head's 1.0 kg) at today's
     values, within 0.9·m ≤ m_eff ≤ M at every point;
   - the probe ranked the contact time and the arm mass first (angle 80.0°, reachable at 0.814 ms and 0.3155 kg); the
