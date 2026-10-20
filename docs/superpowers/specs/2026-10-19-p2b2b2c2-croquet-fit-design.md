@@ -466,6 +466,12 @@ The drive's ratio has two levels: 2.5–3.6 whenever the impact raises `impact-o
 abruptly; the reach slack moves it smoothly across its whole range (4.62 to 3.31) and leaves the stop unchanged. The
 effective mass stays within 0.9·m ≤ m_eff ≤ M (ruling D, P2b.2b.2b.2c) at every point.
 
+(Corrected 2026-10-20, after the gate: the two levels hold in the period, damping-ratio and arm-mass sweeps only;
+with the flag the reach slack's sweep reaches 4.62 and the contact time's 3.85, and without it the contact time's
+gives 2.04–3.93. The ruled pair rests on the reach slack's smooth effect, which stands. No hand parameter moves the
+stop by more than about 0.5 across its bounds (the arm mass's 6.33 to 5.84), not 0.15, which is the arm mass's slope
+per bound width.)
+
 - **The pair to fit:** "Contact time + reach slack (Recommended)": `ballBallContactTime` and `reachSlack`. The
   probe's own ranking by slope angle put contact time + arm mass first; the recommendation departed from it because
   the arm mass's jump in the drive lies inside its bounds. The per-preset grips are not needed (a shared pair is
