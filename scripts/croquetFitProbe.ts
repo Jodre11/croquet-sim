@@ -573,13 +573,39 @@ function reachOf(sa: Sensitivity, sb: Sensitivity, errors: readonly [number, num
     }
 }
 
+/**
+ * How each candidate's values print: in a unit, to a precision, that tells its swept points apart (four decimals of a
+ * second would show 0.75 ms and 0.81 ms alike); `si` names the unit its per-unit slopes are in.
+ */
+const DISPLAY: Readonly<
+    Record<Candidate, { readonly scale: number; readonly digits: number; readonly unit: string; readonly si: string }>
+> = {
+    ballBallContactTime: { scale: 1e3, digits: 3, unit: " ms", si: "s" },
+    handCouplingPeriod: { scale: 1e3, digits: 1, unit: " ms", si: "s" },
+    handCouplingDampingRatio: { scale: 1, digits: 4, unit: "", si: "unit" },
+    armMass: { scale: 1, digits: 4, unit: " kg", si: "kg" },
+    reachSlack: { scale: 1e3, digits: 2, unit: " mm", si: "m" },
+};
+
+/** Candidate `key`'s value `v` in its display unit, without the unit. */
+const bare = (key: Candidate, v: number): string => (v * DISPLAY[key].scale).toFixed(DISPLAY[key].digits);
+
+/** Candidate `key`'s value `v` in its display unit. */
+const valueText = (key: Candidate, v: number): string => `${bare(key, v)}${DISPLAY[key].unit}`;
+
+/** Candidate `key`'s bounds in its display unit. */
+function boundsText(key: Candidate): string {
+    const [lo, hi] = BOUNDS[key];
+    return `[${bare(key, lo)}, ${bare(key, hi)}]${DISPLAY[key].unit}`;
+}
+
 /** A solved value beside its bounds, noted when it lies within SLOPE_SHARE of the width of a bound. */
 function solvedText(key: Candidate, v: number): string {
     const [lo, hi] = BOUNDS[key];
     const inside = lo <= v && v <= hi;
     const near = Math.min(Math.abs(v - lo), Math.abs(v - hi)) <= SLOPE_SHARE * (hi - lo);
     const where = inside ? (near ? "inside, near its bound" : "inside") : "OUTSIDE";
-    return `${key} ${fmt(v)} in [${fmt(lo)}, ${fmt(hi)}] (${where})`;
+    return `${key} ${valueText(key, v)} in ${boundsText(key)} (${where}; today ${valueText(key, TODAY[key])})`;
 }
 
 /** Both ratios' errors (ratio − target) and their shares of each tolerance. */
@@ -685,12 +711,13 @@ function sectionC(): void {
     );
     for (const key of keys) {
         const [lo, hi] = BOUNDS[key];
-        console.log(`${key} (today ${fmt(TODAY[key])}, bounds [${fmt(lo)}, ${fmt(hi)}]):`);
+        console.log(`${key} (today ${valueText(key, TODAY[key])}, bounds ${boundsText(key)}):`);
         for (const v of sweepOf(lo, hi, TODAY[key], SWEEP_POINTS)) {
             const point = evaluatePoint(withValue(TODAY, key, v), true);
             const mass = point.drive.mass === null ? "effective mass none" : massText(point.drive.mass);
             console.log(
-                `  ${fmt(v)}${v === TODAY[key] ? " (today)" : ""}: ${strokeEvalText("drive", point.drive)}; ` +
+                `  ${valueText(key, v)}${v === TODAY[key] ? " (today)" : ""}: ` +
+                    `${strokeEvalText("drive", point.drive)}; ` +
                     `${strokeEvalText("stop", point.stop)}; ${mass}`,
             );
         }
@@ -711,8 +738,9 @@ function sectionC(): void {
         const width = hi - lo;
         const none = Math.abs(drive * width) < NO_EFFECT && Math.abs(stop * width) < NO_EFFECT;
         console.log(
-            `${key} (${kind}): drive ${fmt(drive * width)}, stop ${fmt(stop * width)} per bound width ` +
-                `(${fmt(drive)}, ${fmt(stop)} per unit)${none ? "; no effect" : ""}`,
+            `${key} at ${valueText(key, TODAY[key])} in ${boundsText(key)} (${kind}): drive ` +
+                `${fmt(drive * width)}, stop ${fmt(stop * width)} per bound width (${fmt(drive)}, ${fmt(stop)} ` +
+                `per ${DISPLAY[key].si})${none ? "; no effect" : ""}`,
         );
         return { key, width, drive, stop };
     });
