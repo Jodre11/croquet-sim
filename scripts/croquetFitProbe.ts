@@ -22,8 +22,12 @@
  *   linear estimate's solution against today's errors, reachable within both bounds, with the effective mass there;
  *   the pairs ranked and the first reachable one with an unmarked mass recommended; and, only if no pair is
  *   reachable, the drive's and the AC stop's own grips swept the same way on their own presets.
- * Run with `npx --yes tsx scripts/croquetFitProbe.ts`; environment: SECTION (A, B or C; default all). Not part of the
- * test suite.
+ * - H. the ball makes (design §6): the makes behind the face law and Gugan 5's drives, whether they differ, and le
+ *   Maitre's spread by make (his stop shot's ratios, and his drive or roll's printed ratios against his own
+ *   distances), each quoted from reference/sources/README.md with its line.
+ * The fit's sections D-G are not here: the fit moved to a later step (the design's Amendments, 2026-10-20).
+ * Run with `npx --yes tsx scripts/croquetFitProbe.ts`; environment: SECTION (A, B, C or H; default all). Not part of
+ * the test suite.
  */
 import type { FollowSnapshot, ImpactProbe } from "../src/engine/impact/integrate";
 import { simulateStroke } from "../src/engine/impact/simulateImpact";
@@ -792,9 +796,71 @@ function sectionC(): void {
     }
 }
 
-const SECTIONS: Readonly<Record<string, () => void>> = { A: sectionA, B: sectionB, C: sectionC };
+/** One of le Maitre's makes: his stop shot ratio, and his drive or roll's printed ratio and distances (m). */
+interface MaitreMake {
+    readonly ball: string;
+    readonly stop: number;
+    readonly printed: number;
+    readonly forward: number;
+    readonly backward: number;
+}
+
+/** le Maitre's table, as reference/sources/README.md:528-533 copies it. */
+const MAITRE: readonly MaitreMake[] = [
+    { ball: "Walker", stop: 4.2, printed: 2.8, forward: 8.26, backward: 3.3 },
+    { ball: "Barlow", stop: 3.7, printed: 2.0, forward: 7.0, backward: 3.46 },
+    { ball: "Old Jaques", stop: 3.2, printed: 2.1, forward: 7.29, backward: 3.44 },
+    { ball: "New Jaques", stop: 2.7, printed: 1.8, forward: 6.34, backward: 3.18 },
+];
+
+function sectionH(): void {
+    console.log(
+        "== H. The ball makes (design §6; recorded, not judged): the sources' findings as " +
+            'reference/sources/README.md records them, section "P2b.2b.2c.2: the croquet strokes\' fit" ==',
+    );
+    console.log(
+        "the make behind the face law (README.md:512-514): Gugan 2000: " +
+            '"The ball used was a Jaques "Eclipse" ball (commonly used in the game of croquet), ' +
+            'which fell on a wooden mallet"',
+    );
+    console.log(
+        "the make in Gugan 5's drives (README.md:510-511): \"The balls were Dawson 'Internationals', all in " +
+            'excellent condition: independent measurements of their CoR were not made"',
+    );
+    console.log(
+        "whether the makes differ (README.md:516-518): " +
+            '"So the makes differ: the face fits come from a Jaques Eclipse and the targets from Dawson ' +
+            'Internationals." Recorded, not corrected; the fit takes the face fits as ' +
+            "sourced and moves only its listed candidates.",
+    );
+    console.log(
+        "le Maitre's spread (README.md:522-526): the stop shot's, forward ball over backward ball, not his drive's: " +
+            '"Calculation of the ratio of distance travelled by the forward ball to the backward ball gives a value ' +
+            'of 4.2 for Walker, 3.7 for Barlow, 3.2 for old Jaques and 2.7 for new Jaques balls."',
+    );
+    console.log(
+        "  his drive or roll (README.md:528-533) is a weighted-head follow-through stroke, not Gugan 5's pendulum " +
+            "drive; the README copies his printed ratios. Neither set is a target.",
+    );
+    for (const m of MAITRE) {
+        const own = m.forward / m.backward;
+        console.log(
+            `  ${m.ball}: stop ratio ${m.stop.toFixed(1)}; drive or roll ${m.forward.toFixed(3)} m forward, ` +
+                `${m.backward.toFixed(3)} m backward, printed ratio ${m.printed.toFixed(1)}, his own distances give ` +
+                `${own.toFixed(1)}`,
+        );
+    }
+}
+
+const SECTIONS: Readonly<Record<string, () => void>> = { A: sectionA, B: sectionB, C: sectionC, H: sectionH };
 if (SECTION !== "all" && SECTIONS[SECTION] === undefined) {
     throw new Error(`SECTION must be "all" or one of ${Object.keys(SECTIONS).join(", ")}`);
+}
+if (SECTION === "all") {
+    console.log(
+        "== all: sections A, B, C and H; D-G are not run, because the fit moved to a new step (the design's " +
+            "Amendments, 2026-10-20) ==",
+    );
 }
 for (const [name, section] of Object.entries(SECTIONS)) {
     if (runs(name)) {
