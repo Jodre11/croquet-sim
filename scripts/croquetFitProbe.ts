@@ -13,20 +13,43 @@
  *   each played by planStroke and simulateStroke with a follow probe: each hand's peak and final slid |offset|,
  *   the peak's time, each hand's peak |force| over the follow-through and the follow-grip-limit flag; then, per
  *   preset, the run with the largest peak and the count of runs with an offset set.
- * Run with `npx --yes tsx scripts/croquetFitProbe.ts`; environment: SECTION (A or B; default all). Not part of the
+ * - C. the sensitivity probe (design §5.2): today's drive and AC stop ratios at their targets' speeds and their errors
+ *   over each tolerance; per candidate, seven points evenly across its bounds (and today's value): both ratios, every
+ *   impact event, re-entry guard hit, follow-through flag (integrated apart, at the swept points only) and error, and
+ *   the drive's effective mass m_eff at the face centre along aim beside the head's mass m and the swung body's M,
+ *   marked outside [0.9·m, M] (ruling D, P2b.2b.2b.2c); each candidate's slopes at today's value (±1 % of its
+ *   bound's width, one-sided at a bound) times that width; per pair, the angle between their slope vectors and the
+ *   linear estimate's solution against today's errors, reachable within both bounds, with the effective mass there;
+ *   the pairs ranked and the first reachable one with an unmarked mass recommended; and, only if no pair is
+ *   reachable, the drive's and the AC stop's own grips swept the same way on their own presets.
+ * Run with `npx --yes tsx scripts/croquetFitProbe.ts`; environment: SECTION (A, B or C; default all). Not part of the
  * test suite.
  */
 import type { FollowSnapshot, ImpactProbe } from "../src/engine/impact/integrate";
 import { simulateStroke } from "../src/engine/impact/simulateImpact";
+import { effectiveMass, swungBody } from "../src/engine/impact/track";
+import type { ContactState, ImpactResult } from "../src/engine/impact/types";
 import { horizontal, length, sub, type Vec3 } from "../src/engine/math/vec3";
 import { planStroke } from "../src/engine/swing/buildContact";
+import { defaultProfile } from "../src/engine/swing/profile";
 import type { ShotSetup } from "../src/engine/swing/types";
-import type { BallId, BallState, ShotResult } from "../src/engine/types";
+import type { BallId, BallState, ShotResult, World } from "../src/engine/types";
 import { defaultWorld } from "../src/engine/world";
-import { ratioTargetsReference, swingReference } from "../src/reference/index";
-import { backswingFor, canonicalSetup } from "../tests/engine/support/shot";
+import { ratioTargetsReference, swingReference, type RatioTargetKey } from "../src/reference/index";
+import { backswingFor, canonicalSetup, strokeFor } from "../tests/engine/support/shot";
 import { OPEN_LAWN, OPEN_START, openWorld, opened } from "./openLawn";
-import { CA_STROKES, TODAY, fitSetup, fitWorld, releaseSpeedFor, runFit } from "./ratioFit";
+import {
+    BOUNDS,
+    CA_STROKES,
+    TODAY,
+    fitSetup,
+    fitWorld,
+    ratioOf,
+    releaseSpeedFor,
+    runFit,
+    type Candidate,
+    type FitParams,
+} from "./ratioFit";
 
 // The project has no Node types; this script runs under tsx and reads its environment.
 declare const process: { readonly env: Readonly<Record<string, string | undefined>> };
@@ -255,7 +278,493 @@ function sectionB(): void {
     }
 }
 
-const SECTIONS: Readonly<Record<string, () => void>> = { A: sectionA, B: sectionB };
+/** The two targets as the sensitivity probe reads them: the ratio, its tolerance (half its band) and its speed. */
+interface Target {
+    readonly label: string;
+    readonly type: RatioTargetKey;
+    readonly ratio: number;
+    readonly tolerance: number;
+    readonly speed: number;
+}
+
+function targetOf(label: string, type: RatioTargetKey): Target {
+    const { ratio, speed } = ratioTargetsReference[type];
+    const [lo, hi] = ratio.bounds as readonly [number, number];
+    return { label, type, ratio: ratio.value, tolerance: (hi - lo) / 2, speed: speed.value };
+}
+
+const TARGETS: readonly [Target, Target] = [targetOf("drive", "drive"), targetOf("stop", "stop-ac")];
+
+/**
+ * The effective-mass check's lower limit, a share of the head's mass m: the drive's effective mass at the face centre
+ * along aim lies in [0.9·m, M], M the swung body's mass (ruling D, P2b.2b.2b.2c; tests/engine/shot.test.ts).
+ */
+const MASS_FLOOR = 0.9;
+
+/** Numerical, not physical: the slope's difference step, a share of the bound's width. */
+const SLOPE_SHARE = 0.01;
+
+/** A scaled slope below this (ratio per bound width) on both ratios is "no effect". */
+const NO_EFFECT = 0.01;
+
+/** Numerical, not physical: a pair whose slope vectors lie within this angle (°) of parallel is degenerate. */
+const DEGENERATE_ANGLE = 1;
+
+/** Numerical, not physical: a scaled determinant below this share of its vectors' lengths' product is round-off. */
+const DEGENERATE_DET = 1e-12;
+
+/** The points swept across each bound, both ends included. */
+const SWEEP_POINTS = 7;
+
+/**
+ * The drive's effective mass (kg) at the face centre along aim, the head's mass m and the swung body's mass M, on
+ * `setup`'s planned contact; marked outside [MASS_FLOOR·m, M].
+ */
+interface MassCheck {
+    readonly effective: number;
+    readonly head: number;
+    readonly body: number;
+    readonly marked: boolean;
+}
+
+function massOf(setup: ShotSetup, world: World): MassCheck {
+    const contact = planStroke(setup, world).contact;
+    const drive = contact.drive;
+    if (drive.kind !== "track") {
+        throw new RangeError(`the ${setup.stroke.type} stroke's planned contact has no tracked drive`);
+    }
+    const { head, orientation } = contact;
+    const body = swungBody(head, drive.hands, drive.arc.radius);
+    const effective = effectiveMass(body, head, orientation, drive.arc.aim);
+    const marked = !(MASS_FLOOR * head.mass <= effective && effective <= body.mass);
+    return { effective, head: head.mass, body: body.mass, marked };
+}
+
+function massText(m: MassCheck): string {
+    const share = (m.effective - m.head) / m.head;
+    return (
+        `m_eff ${fmt(m.effective)} kg, ${share >= 0 ? "+" : ""}${fmt(share * 100)} % from the head's m ` +
+        `${fmt(m.head)} kg, the swung body's M ${fmt(m.body)} kg` +
+        `${m.marked ? ` MARKED: outside [${fmt(MASS_FLOOR)}·m, M] (ruling D, P2b.2b.2b.2c)` : ""}`
+    );
+}
+
+/** An error's text, whatever was thrown. */
+function errorText(error: unknown): string {
+    return error instanceof Error ? `${error.name}: ${error.message}` : `thrown: ${String(error)}`;
+}
+
+/**
+ * `setup`'s follow-through flags with `p`'s hands' coupling. The evaluator plays only the impact, which is all a ratio
+ * needs, so the follow-through is integrated apart, on the same coupling-replaced contact, for its flags alone.
+ */
+function followFlags(setup: ShotSetup, p: FitParams, world: World): readonly string[] {
+    const plan = planStroke(setup, world);
+    const drive = plan.contact.drive;
+    if (drive.kind !== "track") {
+        throw new RangeError(`the ${setup.stroke.type} stroke's planned contact has no tracked drive`);
+    }
+    const coupling = { ...drive.coupling, period: p.handCouplingPeriod, dampingRatio: p.handCouplingDampingRatio };
+    const contact: ContactState = { ...plan.contact, drive: { ...drive, coupling } };
+    return simulateStroke(contact, setup.balls, world).follow.flags;
+}
+
+/** One stroke's evaluation: its ratio (null when it threw) and every flag, cap, guard hit or error on the way. */
+interface StrokeEval {
+    readonly ratio: number | null;
+    readonly notes: readonly string[];
+    readonly mass: MassCheck | null;
+}
+
+/** The impact's events by kind, with their counts, and the re-entry guard's hits. */
+function impactNotes(impact: ImpactResult): string[] {
+    const counts = new Map<string, number>();
+    for (const e of impact.events) {
+        counts.set(e.kind, (counts.get(e.kind) ?? 0) + 1);
+    }
+    const notes = [...counts].map(([kind, n]) => `${kind}×${n}`);
+    const jumps = impact.entryJumps;
+    if (jumps !== undefined && jumps.count > 0) {
+        notes.push(`re-entry guard ×${jumps.count} (worst ${mm(jumps.worst)} mm: ${jumps.keys.join(", ")})`);
+    }
+    return notes;
+}
+
+/**
+ * `setup`'s stroke under `p` on `world` through the evaluator: its ratio, its impact's flags and guard hits, its
+ * follow-through's flags when `follow` asks (a second integration, so only at a swept point), and, when `withMass`
+ * asks, the drive's effective-mass check. Every throw is caught and noted.
+ */
+function evaluateStroke(
+    make: () => ShotSetup,
+    p: FitParams,
+    world: World,
+    { withMass, follow }: { readonly withMass: boolean; readonly follow: boolean },
+): StrokeEval {
+    const notes: string[] = [];
+    let setup: ShotSetup;
+    try {
+        setup = make();
+    } catch (error) {
+        return { ratio: null, notes: [`setup ${errorText(error)}`], mass: null };
+    }
+    let mass: MassCheck | null = null;
+    if (withMass) {
+        try {
+            mass = massOf(setup, world);
+        } catch (error) {
+            notes.push(`effective mass ${errorText(error)}`);
+        }
+    }
+    let ratio: number | null = null;
+    try {
+        const { impact, motion } = runFit(setup, p, world);
+        notes.push(...impactNotes(impact));
+        ratio = ratioOf(setup, motion);
+    } catch (error) {
+        notes.push(errorText(error));
+    }
+    if (follow) {
+        try {
+            notes.push(...followFlags(setup, p, world));
+        } catch (error) {
+            notes.push(`follow-through ${errorText(error)}`);
+        }
+    }
+    return { ratio, notes, mass };
+}
+
+/** Both targets' strokes at one point of the five candidates. */
+interface PointEval {
+    readonly drive: StrokeEval;
+    readonly stop: StrokeEval;
+    readonly follow: boolean;
+}
+
+const EVALUATED = new Map<string, PointEval>();
+
+/**
+ * Both targets' strokes under `p`, each at its target's speed on fitWorld(p), with their follow-through flags when
+ * `follow` asks; memoised on `p`, a point evaluated with its flags serving a request without them.
+ */
+function evaluatePoint(p: FitParams, follow: boolean): PointEval {
+    const key = JSON.stringify(p);
+    const known = EVALUATED.get(key);
+    if (known !== undefined && (known.follow || !follow)) {
+        return known;
+    }
+    const world = fitWorld(p);
+    const [drive, stop] = TARGETS.map((target) =>
+        evaluateStroke(() => fitSetup(target.type, p, target.speed, world), p, world, {
+            withMass: target.type === "drive",
+            follow,
+        }),
+    ) as [StrokeEval, StrokeEval];
+    const point = { drive, stop, follow };
+    EVALUATED.set(key, point);
+    return point;
+}
+
+const ratioText = (r: number | null): string => (r === null ? "none" : fmt(r));
+
+function strokeEvalText(label: string, s: StrokeEval): string {
+    return `${label} ${ratioText(s.ratio)}${s.notes.length > 0 ? ` [${s.notes.join("; ")}]` : ""}`;
+}
+
+/** `count` points evenly across `[lo, hi]`, both ends exact, and `today` added (sorted) if not among them. */
+function sweepOf(lo: number, hi: number, today: number, count: number): number[] {
+    const points = Array.from({ length: count }, (_, i) => (i === count - 1 ? hi : lo + (i * (hi - lo)) / (count - 1)));
+    if (!points.includes(today)) {
+        points.push(today);
+        points.sort((a, b) => a - b);
+    }
+    return points;
+}
+
+/**
+ * The slope (ratio per unit) at `today` of each value `f` gives, by a central difference of SLOPE_SHARE of the bound's
+ * width, one-sided where a side would leave the bounds; NaN where an evaluation gave no ratio. Its kind is named.
+ */
+function slopeOf(
+    lo: number,
+    hi: number,
+    today: number,
+    f: (x: number) => readonly (number | null)[],
+): { readonly slopes: readonly number[]; readonly kind: string } {
+    const h = SLOPE_SHARE * (hi - lo);
+    const up = today + h <= hi;
+    const down = today - h >= lo;
+    const plus = up ? today + h : today;
+    const minus = down ? today - h : today;
+    const kind = up && down ? "central" : up ? "forward (at its lower bound)" : "backward (at its upper bound)";
+    const fp = f(plus);
+    const fm = f(minus);
+    const slopes = fp.map((v, i) => {
+        const w = fm[i] ?? null;
+        return v === null || w === null ? NaN : (v - w) / (plus - minus);
+    });
+    return { slopes, kind };
+}
+
+/** A candidate's sensitivity: its bound's width, and each ratio's slope at today's value (ratio per unit). */
+interface Sensitivity {
+    readonly key: Candidate;
+    readonly width: number;
+    readonly drive: number;
+    readonly stop: number;
+}
+
+/** A pair's linear reach and distinctness. */
+interface PairReach {
+    readonly a: Candidate;
+    readonly b: Candidate;
+    readonly angle: number;
+    readonly degenerate: string | null;
+    readonly values: readonly [number, number] | null;
+    readonly reachable: boolean;
+    readonly mass: MassCheck | null;
+    readonly massError: string | null;
+}
+
+const withValue = (p: FitParams, key: Candidate, value: number): FitParams => ({ ...p, [key]: value });
+
+/**
+ * A pair's reach: the angle (°, in [0, 180]) between the two slope vectors in the (drive, stop) plane, each slope times
+ * its bound's width; and, unless near parallel, today's errors solved against those columns, reachable when both
+ * values lie inside their bounds, with the drive's effective mass at the solution.
+ */
+function reachOf(sa: Sensitivity, sb: Sensitivity, errors: readonly [number, number]): PairReach {
+    const ua = [sa.drive * sa.width, sa.stop * sa.width] as const;
+    const ub = [sb.drive * sb.width, sb.stop * sb.width] as const;
+    const det = ua[0] * ub[1] - ub[0] * ua[1];
+    const dot = ua[0] * ub[0] + ua[1] * ub[1];
+    const lengths = Math.hypot(ua[0], ua[1]) * Math.hypot(ub[0], ub[1]);
+    const angle = (Math.atan2(Math.abs(det), dot) * 180) / Math.PI;
+    const base = { a: sa.key, b: sb.key, angle, mass: null, massError: null };
+    let degenerate: string | null = null;
+    if (![det, dot, lengths].every(Number.isFinite)) {
+        degenerate = "a slope is missing";
+    } else if (!(lengths > 0)) {
+        degenerate = "a slope vector is zero";
+    } else if (angle < DEGENERATE_ANGLE || angle > 180 - DEGENERATE_ANGLE) {
+        degenerate = `near parallel (${fmt(angle)}°)`;
+    } else if (Math.abs(det) <= DEGENERATE_DET * lengths) {
+        degenerate = "determinant at round-off";
+    }
+    if (degenerate !== null) {
+        return { ...base, degenerate, values: null, reachable: false };
+    }
+    const [e0, e1] = errors;
+    const za = (ub[0] * e1 - ub[1] * e0) / det;
+    const zb = (ua[1] * e0 - ua[0] * e1) / det;
+    const values = [TODAY[sa.key] + za * sa.width, TODAY[sb.key] + zb * sb.width] as const;
+    const inside = (key: Candidate, v: number): boolean => BOUNDS[key][0] <= v && v <= BOUNDS[key][1];
+    const reachable = inside(sa.key, values[0]) && inside(sb.key, values[1]);
+    if (!reachable) {
+        return { ...base, degenerate, values, reachable };
+    }
+    const p = withValue(withValue(TODAY, sa.key, values[0]), sb.key, values[1]);
+    const world = fitWorld(p);
+    try {
+        const mass = massOf(fitSetup("drive", p, TARGETS[0].speed, world), world);
+        return { ...base, degenerate, values, reachable, mass };
+    } catch (error) {
+        return { ...base, degenerate, values, reachable, massError: errorText(error) };
+    }
+}
+
+/** A solved value beside its bounds, noted when it lies within SLOPE_SHARE of the width of a bound. */
+function solvedText(key: Candidate, v: number): string {
+    const [lo, hi] = BOUNDS[key];
+    const inside = lo <= v && v <= hi;
+    const near = Math.min(Math.abs(v - lo), Math.abs(v - hi)) <= SLOPE_SHARE * (hi - lo);
+    const where = inside ? (near ? "inside, near its bound" : "inside") : "OUTSIDE";
+    return `${key} ${fmt(v)} in [${fmt(lo)}, ${fmt(hi)}] (${where})`;
+}
+
+/** Both ratios' errors (ratio − target) and their shares of each tolerance. */
+function errorsText(drive: number | null, stop: number | null): string {
+    return [drive, stop]
+        .map((r, i) => {
+            const t = TARGETS[i] as Target;
+            if (r === null) {
+                return `${t.label} none`;
+            }
+            const e = r - t.ratio;
+            return (
+                `${t.label} ${fmt(r)} against ${fmt(t.ratio)} ± ${fmt(t.tolerance)} at ${fmt(t.speed)} m/s: ` +
+                `error ${fmt(e)}, ${fmt(e / t.tolerance)} tolerances`
+            );
+        })
+        .join("; ");
+}
+
+/** A preset's own grip, swept only when no shared pair can reach both targets. */
+interface GripCandidate {
+    readonly target: Target;
+    readonly field: "gripTension" | "bottomGrip";
+}
+
+/** The grips' sweep range: the presets' own values span 0.1 (the AC stop's) to 1, and a grip lies in (0, 1]. */
+const GRIP_BOUNDS = [0.1, 1] as const;
+
+/** The setup fitSetup builds for `type` under TODAY, with its own stance's `field` set to `value`. */
+function gripSetup(type: RatioTargetKey, field: GripCandidate["field"], value: number, world: World): ShotSetup {
+    const body = { armMass: TODAY.armMass, reachSlack: TODAY.reachSlack };
+    const stance = field === "gripTension" ? { gripTension: value } : { bottomGrip: value };
+    const setup = canonicalSetup(type, { world, body, stance });
+    const speed = ratioTargetsReference[type].speed.value;
+    return { ...setup, stroke: { ...setup.stroke, ...strokeFor(setup, speed, world) } };
+}
+
+function sweepGrips(): void {
+    console.log(
+        "-- C.6 The presets' own grips (no shared pair reaches both targets): the drive's and the AC stop's " +
+            `gripTension and bottomGrip, each on its own preset only, across [${fmt(GRIP_BOUNDS[0])}, ` +
+            `${fmt(GRIP_BOUNDS[1])}] (the presets' own range), the shared candidates at today's values; ` +
+            "follow-through flags at the swept points only --",
+    );
+    const world = fitWorld(TODAY);
+    const grips: readonly GripCandidate[] = TARGETS.flatMap((target) =>
+        (["gripTension", "bottomGrip"] as const).map((field) => ({ target, field })),
+    );
+    for (const { target, field } of grips) {
+        const today = defaultProfile.stance[target.type][field];
+        const [lo, hi] = GRIP_BOUNDS;
+        const seen = new Map<number, { readonly s: StrokeEval; readonly follow: boolean }>();
+        const at = (v: number, follow = false): StrokeEval => {
+            const known = seen.get(v);
+            if (known !== undefined && (known.follow || !follow)) {
+                return known.s;
+            }
+            const make = (): ShotSetup => gripSetup(target.type, field, v, world);
+            const s = evaluateStroke(make, TODAY, world, { withMass: target.type === "drive", follow });
+            seen.set(v, { s, follow });
+            return s;
+        };
+        console.log(`${target.type} ${field} (today ${fmt(today)}):`);
+        for (const v of sweepOf(lo, hi, today, SWEEP_POINTS)) {
+            const s = at(v, true);
+            const mass = s.mass === null ? "" : `; ${massText(s.mass)}`;
+            console.log(`  ${fmt(v)}${v === today ? " (today)" : ""}: ${strokeEvalText(target.label, s)}${mass}`);
+        }
+        const { slopes, kind } = slopeOf(lo, hi, today, (v) => [at(v).ratio]);
+        const slope = slopes[0] as number;
+        const width = hi - lo;
+        const now = at(today).ratio;
+        const solved = now === null || !(Math.abs(slope) > 0) ? null : today - (now - target.ratio) / slope;
+        const reach =
+            solved === null
+                ? "no linear estimate"
+                : `linear estimate ${fmt(solved)} (${lo <= solved && solved <= hi ? "inside" : "OUTSIDE"} its range)`;
+        console.log(`  slope (${kind}): ${fmt(slope * width)} per range width; ${reach}`);
+    }
+}
+
+function sectionC(): void {
+    console.log(
+        "== C. The sensitivity probe (design §5.2): the drive's and the AC stop's canonical setups at their " +
+            "targets' speeds through the fit's evaluator, each candidate swept across its bounds with the rest at " +
+            "today's values, the obstacles' contact times moved with the ball–ball contact time; the ratios from the " +
+            "evaluator's impact, the follow-through integrated apart (simulateStroke, the same coupling) for its " +
+            "flags only, at today's value and the swept points alone, not at the slopes' points ==",
+    );
+    const today = evaluatePoint(TODAY, true);
+    const ratios = [today.drive.ratio, today.stop.ratio] as const;
+    console.log(`-- C.1 Today's ratios: ${errorsText(ratios[0], ratios[1])} --`);
+    console.log(`today: ${strokeEvalText("drive", today.drive)}; ${strokeEvalText("stop", today.stop)}`);
+    if (today.drive.mass !== null) {
+        console.log(`today: ${massText(today.drive.mass)}`);
+    }
+    const keys = Object.keys(TODAY) as Candidate[];
+    console.log(
+        `-- C.2 Per candidate, ${SWEEP_POINTS} points evenly across its bounds (today's value added if not among ` +
+            "them): both ratios with any flag, cap, error or guard hit in brackets, and the drive's effective " +
+            "mass m_eff at the face centre along aim, its deviation from the head's mass m in %, and the swung " +
+            "body's mass M, MARKED outside [0.9·m, M] (ruling D, P2b.2b.2b.2c) --",
+    );
+    for (const key of keys) {
+        const [lo, hi] = BOUNDS[key];
+        console.log(`${key} (today ${fmt(TODAY[key])}, bounds [${fmt(lo)}, ${fmt(hi)}]):`);
+        for (const v of sweepOf(lo, hi, TODAY[key], SWEEP_POINTS)) {
+            const point = evaluatePoint(withValue(TODAY, key, v), true);
+            const mass = point.drive.mass === null ? "effective mass none" : massText(point.drive.mass);
+            console.log(
+                `  ${fmt(v)}${v === TODAY[key] ? " (today)" : ""}: ${strokeEvalText("drive", point.drive)}; ` +
+                    `${strokeEvalText("stop", point.stop)}; ${mass}`,
+            );
+        }
+    }
+    console.log(
+        `-- C.3 Slopes at today's value (a difference of ±${fmt(SLOPE_SHARE * 100)} % of the bound's width, ` +
+            "one-sided at a bound), each times its bound's width (ratio per bound width); no effect where both are " +
+            `under ${fmt(NO_EFFECT)} --`,
+    );
+    const sensitivities: Sensitivity[] = keys.map((key) => {
+        const [lo, hi] = BOUNDS[key];
+        const f = (v: number): readonly (number | null)[] => {
+            const point = evaluatePoint(withValue(TODAY, key, v), false);
+            return [point.drive.ratio, point.stop.ratio];
+        };
+        const { slopes, kind } = slopeOf(lo, hi, TODAY[key], f);
+        const [drive, stop] = slopes as [number, number];
+        const width = hi - lo;
+        const none = Math.abs(drive * width) < NO_EFFECT && Math.abs(stop * width) < NO_EFFECT;
+        console.log(
+            `${key} (${kind}): drive ${fmt(drive * width)}, stop ${fmt(stop * width)} per bound width ` +
+                `(${fmt(drive)}, ${fmt(stop)} per unit)${none ? "; no effect" : ""}`,
+        );
+        return { key, width, drive, stop };
+    });
+    console.log(
+        "-- C.4 Per pair: the angle between the two slope vectors (each slope times its bound's width), and today's " +
+            "errors solved against those slopes (linear), reachable when both values lie within their bounds, with " +
+            "the drive's effective mass at a reachable solution --",
+    );
+    const errors =
+        ratios[0] === null || ratios[1] === null
+            ? ([NaN, NaN] as const)
+            : ([ratios[0] - TARGETS[0].ratio, ratios[1] - TARGETS[1].ratio] as const);
+    const pairs: PairReach[] = [];
+    for (let i = 0; i < sensitivities.length; i++) {
+        for (let j = i + 1; j < sensitivities.length; j++) {
+            pairs.push(reachOf(sensitivities[i] as Sensitivity, sensitivities[j] as Sensitivity, errors));
+        }
+    }
+    const pairText = (r: PairReach): string => {
+        const head = `${r.a} + ${r.b}: angle ${fmt(r.angle)}°`;
+        if (r.degenerate !== null) {
+            return `${head}; degenerate (${r.degenerate}), not solved`;
+        }
+        const values = r.values as readonly [number, number];
+        const mass =
+            r.mass !== null ? `; ${massText(r.mass)}` : r.massError !== null ? `; effective mass ${r.massError}` : "";
+        return (
+            `${head}; ${solvedText(r.a, values[0])}, ${solvedText(r.b, values[1])}: ` +
+            `${r.reachable ? "reachable" : "not reachable"}${mass}`
+        );
+    };
+    for (const r of pairs) {
+        console.log(pairText(r));
+    }
+    console.log(
+        "-- C.5 Ranked: reachable pairs first, then the rest, then the degenerate; each by angle nearest 90° --",
+    );
+    const rank = (r: PairReach): number => (r.reachable ? 0 : r.degenerate === null ? 1 : 2);
+    const ranked = [...pairs].sort((x, y) => rank(x) - rank(y) || Math.abs(x.angle - 90) - Math.abs(y.angle - 90));
+    ranked.forEach((r, i) => console.log(`${i + 1}. ${pairText(r)}`));
+    const recommended = ranked.find((r) => r.reachable && r.mass !== null && !r.mass.marked);
+    console.log(
+        recommended === undefined
+            ? "recommendation: none (no reachable pair with an unmarked effective mass)"
+            : `recommendation: ${recommended.a} + ${recommended.b}`,
+    );
+    if (!pairs.some((r) => r.reachable)) {
+        sweepGrips();
+    }
+}
+
+const SECTIONS: Readonly<Record<string, () => void>> = { A: sectionA, B: sectionB, C: sectionC };
 if (SECTION !== "all" && SECTIONS[SECTION] === undefined) {
     throw new Error(`SECTION must be "all" or one of ${Object.keys(SECTIONS).join(", ")}`);
 }
