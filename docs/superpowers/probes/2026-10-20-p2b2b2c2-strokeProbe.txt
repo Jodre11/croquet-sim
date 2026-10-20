@@ -1,0 +1,282 @@
+== Planned contact speed (m/s) and downswing time (ms) against backswing, intensity 0 / 0.5 / 1 ==
+single-ball 0.02 m: 0.633 (454.2) / 3.406 (101.6) / 4.595 (74.2); 0.05 m: 1.002 (456.3) / 4.222 (127.8) / 5.611 (94.4); 0.10 m: 1.416 (459.8) / 4.968 (151.8) / 6.502 (113.6); 0.20 m: 2.003 (467.4) / 5.853 (180.5) / 7.514 (137.1); 0.30 m: 2.453 (475.5) / 6.452 (200.1) / 8.169 (153.7); 0.50 m: rejected (the backswing takes the shaft beyond the body's ) / rejected (the backswing takes the shaft beyond the body's ) / rejected (the backswing takes the shaft beyond the body's ); 0.70 m: rejected (the backswing takes the shaft beyond the body's ) / rejected (the backswing takes the shaft beyond the body's ) / rejected (the backswing takes the shaft beyond the body's )
+drive       0.02 m: 0.633 (454.2) / 3.406 (101.6) / 4.595 (74.2); 0.05 m: 1.002 (456.3) / 4.222 (127.8) / 5.611 (94.4); 0.10 m: 1.416 (459.8) / 4.968 (151.8) / 6.502 (113.6); 0.20 m: 2.003 (467.4) / 5.853 (180.5) / 7.514 (137.1); 0.30 m: 2.453 (475.5) / 6.452 (200.1) / 8.169 (153.7); 0.50 m: rejected (the backswing takes the shaft beyond the body's ) / rejected (the backswing takes the shaft beyond the body's ) / rejected (the backswing takes the shaft beyond the body's ); 0.70 m: rejected (the backswing takes the shaft beyond the body's ) / rejected (the backswing takes the shaft beyond the body's ) / rejected (the backswing takes the shaft beyond the body's )
+stop-ac     0.02 m: 0.633 (543.3) / 3.902 (119.8) / 5.238 (87.8); 0.05 m: 1.002 (513.7) / 4.585 (142.2) / 6.071 (105.3); 0.10 m: 1.416 (500.8) / 5.249 (163.9) / 6.851 (122.9); 0.20 m: 2.003 (496.5) / 6.065 (190.7) / 7.771 (145.1); 0.30 m: 2.453 (499.4) / 6.629 (209.4) / 8.380 (161.0); 0.50 m: rejected (the backswing takes the shaft beyond the body's ) / rejected (the backswing takes the shaft beyond the body's ) / rejected (the backswing takes the shaft beyond the body's ); 0.70 m: rejected (the backswing takes the shaft beyond the body's ) / rejected (the backswing takes the shaft beyond the body's ) / rejected (the backswing takes the shaft beyond the body's )
+stop-gc     0.02 m: 0.633 (454.2) / 3.406 (101.6) / 4.595 (74.2); 0.05 m: 1.002 (456.3) / 4.222 (127.8) / 5.611 (94.4); 0.10 m: 1.416 (459.8) / 4.968 (151.8) / 6.502 (113.6); 0.20 m: 2.003 (467.4) / 5.853 (180.5) / 7.514 (137.1); 0.30 m: 2.453 (475.5) / 6.452 (200.1) / 8.169 (153.7); 0.50 m: rejected (the backswing takes the shaft beyond the body's ) / rejected (the backswing takes the shaft beyond the body's ) / rejected (the backswing takes the shaft beyond the body's ); 0.70 m: rejected (the backswing takes the shaft beyond the body's ) / rejected (the backswing takes the shaft beyond the body's ) / rejected (the backswing takes the shaft beyond the body's )
+half-roll   0.02 m: 0.161 (489.0) / 0.214 (366.7) / 0.322 (244.5); 0.05 m: 0.395 (489.0) / 0.527 (366.7) / 0.791 (244.5); 0.10 m: 0.773 (489.0) / 1.030 (366.7) / 1.545 (244.5); 0.20 m: 1.490 (489.0) / 1.986 (366.7) / 2.980 (244.5); 0.30 m: 2.174 (489.0) / 2.898 (366.7) / 4.347 (244.5); 0.50 m: 3.478 (489.0) / 4.637 (366.7) / 6.956 (244.5); 0.70 m: 4.730 (489.0) / 6.307 (366.7) / 9.460 (244.5)
+full-roll   0.02 m: 0.143 (489.0) / 0.190 (366.7) / 0.285 (244.5); 0.05 m: 0.356 (489.0) / 0.475 (366.7) / 0.713 (244.5); 0.10 m: 0.712 (489.0) / 0.949 (366.7) / 1.423 (244.5); 0.20 m: 1.420 (489.0) / 1.894 (366.7) / 2.840 (244.5); 0.30 m: 2.126 (489.0) / 2.835 (366.7) / 4.252 (244.5); 0.50 m: 3.531 (489.0) / 4.708 (366.7) / 7.061 (244.5); 0.70 m: 4.928 (489.0) / 6.571 (366.7) / 9.856 (244.5)
+pass-roll   0.02 m: 0.141 (489.0) / 0.187 (366.7) / 0.281 (244.5); 0.05 m: 0.351 (489.0) / 0.468 (366.7) / 0.702 (244.5); 0.10 m: 0.700 (489.0) / 0.933 (366.7) / 1.400 (244.5); 0.20 m: 1.394 (489.0) / 1.858 (366.7) / 2.787 (244.5); 0.30 m: 2.082 (489.0) / 2.776 (366.7) / 4.164 (244.5); 0.50 m: 3.447 (489.0) / 4.596 (366.7) / 6.894 (244.5); 0.70 m: 4.801 (489.0) / 6.401 (366.7) / 9.601 (244.5)
+== Canonical setups at the default backswing, with the trajectory ==
+single-ball backswing 448.60 mm, intensity 0.000, planned 3.0000 m/s; downswing 489.0 ms, lowest 6.22 mm 44.0 ms before contact; lead 0.0 ms; impact to 10.0 ms after contact; finish 498.2 ms []; head at the finish 154.98 mm up and 486.18 mm along aim from contact; ratio none
+            stance: the top hand -0.1857 m ahead of the ball's centre, lean 0.00°, impact 0.00 mm above the centre
+drive       backswing 448.60 mm, intensity 0.000, planned 3.0000 m/s; downswing 489.0 ms, lowest 6.22 mm 44.0 ms before contact; lead 0.0 ms; impact to 154.1 ms after contact; finish 531.3 ms []; head at the finish 240.11 mm up and 600.33 mm along aim from contact; ratio 3.31 (P2b.2b.1 3.32)
+            stance: the top hand -0.1857 m ahead of the ball's centre, lean 0.00°, impact 0.00 mm above the centre
+stop-ac     backswing 448.60 mm, intensity 0.000, planned 3.0000 m/s; downswing 508.5 ms, lowest 11.18 mm 63.3 ms before contact; lead 0.0 ms; impact to 20.0 ms after contact; finish 136.8 ms []; head at the finish -10.09 mm up and 11.84 mm along aim from contact; ratio 5.91 (P2b.2b.1 6.46)
+            stance: the top hand -0.2448 m ahead of the ball's centre, lean -4.00°, impact -3.21 mm above the centre
+stop-gc     backswing 448.60 mm, intensity 0.000, planned 3.0000 m/s; downswing 489.0 ms, lowest 6.22 mm 44.0 ms before contact; lead 0.0 ms; impact to 10.0 ms after contact; finish 158.5 ms [follow-grip-limit]; head at the finish 0.04 mm up and 8.38 mm along aim from contact; ratio none
+            stance: the top hand -0.1857 m ahead of the ball's centre, lean 0.00°, impact 0.00 mm above the centre
+half-roll   backswing 425.53 mm, intensity 0.000, planned 3.0000 m/s; downswing 489.0 ms, lowest 39.18 mm 0.0 ms before contact; lead 0.0 ms; impact to 67.2 ms after contact; finish 860.2 ms []; head at the finish -28.54 mm up and 765.12 mm along aim from contact; ratio 2.94 (P2b.2b.1 2.83)
+            stance: the top hand 0.1694 m ahead of the ball's centre, lean 24.00°, impact 18.73 mm above the centre
+full-roll   backswing 424.30 mm, intensity 0.000, planned 3.0000 m/s; downswing 489.0 ms, lowest 45.94 mm 0.0 ms before contact; lead 0.0 ms; impact to 153.9 ms after contact; finish 665.6 ms [follow-turf-yield, follow-head-deep]; head at the finish -69.95 mm up and 777.09 mm along aim from contact; ratio 1.55 (P2b.2b.1 2.14)
+            stance: the top hand 0.1697 m ahead of the ball's centre, lean 31.00°, impact 23.71 mm above the centre
+pass-roll   backswing 434.27 mm, intensity 0.000, planned 3.0000 m/s; downswing 489.0 ms, lowest 48.82 mm 0.0 ms before contact; lead 0.0 ms; impact to 93.4 ms after contact; finish 398.0 ms [follow-turf-yield, follow-head-deep]; head at the finish -83.48 mm up and 645.53 mm along aim from contact; ratio 0.92 (P2b.2b.1 1.59)
+            stance: the top hand 0.1136 m ahead of the ball's centre, lean 34.00°, impact 25.74 mm above the centre
+== Fat strokes: the canonical single-ball stroke met higher on the face, the head lower ==
+up 2.00 mm: lead 0.0 ms, lowest 4.22 mm; planned 3.0000 m/s, real 3.0000 m/s at the first strike; turf never, 0.00 mm deep; flags [turf-lift]
+up 4.00 mm: lead 0.0 ms, lowest 2.22 mm; planned 3.0000 m/s, real 3.0000 m/s at the first strike; turf never, 0.00 mm deep; flags [turf-lift]
+up 6.00 mm: lead 0.0 ms, lowest 0.22 mm; planned 3.0000 m/s, real 3.0000 m/s at the first strike; turf never, 0.00 mm deep; flags [turf-lift]
+up 7.00 mm: lead 61.0 ms, lowest -0.78 mm; planned 3.0000 m/s, real 2.8561 m/s at the first strike; turf from -55.6 ms, 0.63 mm deep; flags [turf-lift]
+== Cost (machine-dependent) ==
+single-ball planStroke 45.21 ms (downswing 97794 steps, no free table); prepareTrack alone 18.90 ms (with the free table); simulateImpact 27.36 ms in all: preparation 18.90 ms, then 2000 steps at 4.231 µs/step; follow-through 97644 steps at 1.420 µs/step
+drive       planStroke 45.48 ms (downswing 97794 steps, no free table); prepareTrack alone 18.43 ms (with the free table); simulateImpact 233.37 ms in all: preparation 18.43 ms, then 30818 steps at 6.975 µs/step; follow-through 75434 steps at 1.209 µs/step
+stop-ac     planStroke 42.04 ms (downswing 101707 steps, no free table); prepareTrack alone 17.68 ms (with the free table); simulateImpact 35.78 ms in all: preparation 17.68 ms, then 4000 steps at 4.524 µs/step; follow-through 23370 steps at 1.370 µs/step
+stop-gc     planStroke 41.47 ms (downswing 97794 steps, no free table); prepareTrack alone 16.80 ms (with the free table); simulateImpact 27.92 ms in all: preparation 16.80 ms, then 2000 steps at 5.560 µs/step; follow-through 29693 steps at 1.526 µs/step
+half-roll   planStroke 25.43 ms (closed-form downswing, no free table); prepareTrack alone 0.00 ms (without the free table); simulateImpact 96.09 ms in all: preparation 0.00 ms, then 13436 steps at 7.152 µs/step; follow-through 158606 steps at 3.092 µs/step
+full-roll   planStroke 25.68 ms (closed-form downswing, no free table); prepareTrack alone 0.01 ms (without the free table); simulateImpact 215.36 ms in all: preparation 0.01 ms, then 30770 steps at 6.999 µs/step; follow-through 102354 steps at 3.542 µs/step
+pass-roll   planStroke 26.16 ms (closed-form downswing, no free table); prepareTrack alone 0.01 ms (without the free table); simulateImpact 170.57 ms in all: preparation 0.01 ms, then 18683 steps at 9.130 µs/step; follow-through 60911 steps at 4.833 µs/step
+== Fault judge on the canonical setups: face intervals on the striker's ball, and each finding ==
+single-ball 1 face intervals; no finding
+drive       2 face intervals; 29.1.6.1 possible-fault on blue, contacts 2
+stop-ac     1 face intervals; no finding
+stop-gc     1 face intervals; no finding
+half-roll   3 face intervals; 29.1.6.1 possible-fault on blue, contacts 3
+full-roll   3 face intervals; 29.1.6.1 possible-fault on blue, contacts 3
+pass-roll   4 face intervals; 29.1.6.1 possible-fault on blue, contacts 4
+== The striker's ball in its pit (§4.5, held out): the apparent friction Σ|F_h|·dt / ΣF_z·dt of its turf samples against Gugan's µ ≈ 1.0, from the impact's start until it first holds no cell after the strike (the pit) and over every sample; the travel from the first held sample to the deepest point against Gugan's 3.5–18 mm; the deepest δ ==
+half-roll   2.0 m/s: pit 0.0–9.1 ms, apparent friction 0.241 (every sample, 4620 steps: 0.274); deepest 2.60 mm at 4.3 ms, 3.75 mm from the first held sample
+half-roll   3.0 m/s: pit 0.0–9.9 ms, apparent friction 0.229 (every sample, 4734 steps: 0.288); deepest 3.26 mm at 3.9 ms, 4.74 mm from the first held sample
+full-roll   2.0 m/s: pit 0.0–8.7 ms, apparent friction 0.016 (every sample, 23541 steps: 0.234); deepest 2.85 mm at 4.1 ms, 3.61 mm from the first held sample
+full-roll   3.0 m/s: pit 0.0–10.4 ms, apparent friction 0.018 (every sample, 13356 steps: 0.152); deepest 3.59 mm at 3.7 ms, 4.55 mm from the first held sample
+pass-roll   2.0 m/s: pit 0.0–29.6 ms, apparent friction 0.379 (every sample, 19012 steps: 0.353); deepest 2.99 mm at 4.1 ms, 4.04 mm from the first held sample
+pass-roll   3.0 m/s: pit 0.0–28.7 ms, apparent friction 0.405 (every sample, 5748 steps: 0.405); deepest 3.77 mm at 3.6 ms, 5.20 mm from the first held sample
+rolling     2.0 m/s from the static sink across a fresh bed: 1.9953 m/s after 50 mm (25.0 ms), against 2 m/s
+== The face at the impact's 5 µs step: e and T against Gugan's fits (recorded, not gated) ==
+0.50 m/s: e 0.85361 (fit 0.85361, 6.26e-6); T 1.3600 ms (fit 1.3624 ms, -0.18 %)
+2.19 m/s: e 0.82556 (fit 0.82562, -5.38e-5); T 0.9700 ms (fit 0.9700 ms, 0.00 %)
+2.83 m/s: e 0.81862 (fit 0.81870, -8.02e-5); T 0.9150 ms (fit 0.9145 ms, 0.06 %)
+4.00 m/s: e 0.80795 (fit 0.80804, -8.99e-5); T 0.8450 ms (fit 0.8445 ms, 0.06 %)
+5.50 m/s: e 0.79661 (fit 0.79669, -8.79e-5); T 0.7850 ms (fit 0.7849 ms, 0.02 %)
+6.00 m/s: e 0.79321 (fit 0.79330, -9.29e-5); T 0.7700 ms (fit 0.7693 ms, 0.09 %)
+== The rolls against the roll as played (P2b.2b.2b.2b design §8) ==
+half-roll   2.0 m/s ON POINT holds: the head's centre 168.98 mm behind the ball's centre at least; the face's contacts 19.12 mm above it at most (R·sin 45° 32.55 mm); the lean 24.55° at most (45°)
+            2 face intervals over 0.0–12.3 ms; lean at contact 24.00°, 23.98° to 24.55° through the contact; the follow-through's highest pitch 18.16° (past vertical), finish at 880.5 ms unflagged
+            the hands' dip: lowest -17.71 mm at 429.0 ms after contact; -7.09 mm at the pendulum phase's start; 3.04 mm at the finish
+            the head's descent at contact 11.85°, -10.99° to 11.85° while the face is on the ball (Gugan's β 6–16°, held out; 2a at 3 m/s: half 9.70°, full 3.05°, pass 4.48°)
+            the hands' force along aim at the pendulum phase's start 9.1 N, its least after the push — (the impact ends at 102.9 ms, before the push's end at 128.7 ms) (no brake); the striker's ball loses 0.3650 m/s while the face is on it; the flex's step at contact 0.00 N (decision 2); ratio 2.42
+half-roll   3.0 m/s ON POINT holds: the head's centre 168.73 mm behind the ball's centre at least; the face's contacts 19.97 mm above it at most (R·sin 45° 32.55 mm); the lean 25.71° at most (45°)
+            3 face intervals over 0.0–28.8 ms; lean at contact 24.00°, 23.97° to 25.71° through the contact; the follow-through's highest pitch 17.77° (past vertical), finish at 860.2 ms unflagged
+            the hands' dip: lowest -20.43 mm at 380.0 ms after contact; -9.89 mm at the pendulum phase's start; 3.75 mm at the finish
+            the head's descent at contact 11.43°, -13.59° to 11.43° while the face is on the ball (Gugan's β 6–16°, held out; 2a at 3 m/s: half 9.70°, full 3.05°, pass 4.48°)
+            the hands' force along aim at the pendulum phase's start 21.8 N, its least after the push — (the impact ends at 67.2 ms, before the push's end at 82.9 ms) (no brake); the striker's ball loses 0.7745 m/s while the face is on it; the flex's step at contact 0.00 N (decision 2); ratio 2.94
+full-roll   2.0 m/s ON POINT holds: the head's centre 126.24 mm behind the ball's centre at least; the face's contacts 29.55 mm above it at most (R·sin 45° 32.55 mm); the lean 39.93° at most (45°)
+            9 face intervals over 0.0–101.6 ms; lean at contact 31.00°, 31.00° to 39.93° through the contact; the follow-through's highest pitch 11.22° (past vertical), finish at 824.0 ms follow-turf-yield, follow-head-deep
+            the hands' dip: lowest -15.98 mm at 79.0 ms after contact; -12.30 mm at the pendulum phase's start; 1.36 mm at the finish
+            the head's descent at contact 8.31°, -28.25° to 8.31° while the face is on the ball (Gugan's β 6–16°, held out; 2a at 3 m/s: half 9.70°, full 3.05°, pass 4.48°)
+            the hands' force along aim at the pendulum phase's start 7.1 N, its least after the push -17.4 N (no brake); the striker's ball loses 0.3356 m/s while the face is on it; the flex's step at contact 0.00 N (decision 2); ratio 2.21
+full-roll   3.0 m/s ON POINT holds: the head's centre 148.32 mm behind the ball's centre at least; the face's contacts 27.27 mm above it at most (R·sin 45° 32.55 mm); the lean 36.33° at most (45°)
+            3 face intervals over 0.0–38.7 ms; lean at contact 31.00°, 31.00° to 36.34° through the contact; the follow-through's highest pitch 11.93° (past vertical), finish at 665.6 ms follow-turf-yield, follow-head-deep
+            the hands' dip: lowest -20.83 mm at 76.0 ms after contact; -20.61 mm at the pendulum phase's start; 7.47 mm at the finish
+            the head's descent at contact 8.25°, -24.44° to 8.25° while the face is on the ball (Gugan's β 6–16°, held out; 2a at 3 m/s: half 9.70°, full 3.05°, pass 4.48°)
+            the hands' force along aim at the pendulum phase's start 15.6 N, its least after the push -34.9 N (no brake); the striker's ball loses 0.6251 m/s while the face is on it; the flex's step at contact 0.00 N (decision 2); ratio 1.55
+pass-roll   2.0 m/s ON POINT FAILS: the head's centre 104.34 mm behind the ball's centre at least; the face's contacts 40.10 mm above it at most (R·sin 45° 32.55 mm); the lean 44.52° at most (45°)
+            8 face intervals over 0.0–155.2 ms; lean at contact 34.00°, 33.99° to 44.52° through the contact; the follow-through's highest pitch 14.45° (past vertical), finish at 487.9 ms follow-turf-yield, follow-head-deep
+            the hands' dip: lowest -26.19 mm at 459.0 ms after contact; -9.88 mm at the pendulum phase's start; -19.45 mm at the finish
+            the head's descent at contact 9.62°, -20.82° to 9.62° while the face is on the ball (Gugan's β 6–16°, held out; 2a at 3 m/s: half 9.70°, full 3.05°, pass 4.48°)
+            the hands' force along aim at the pendulum phase's start 5.3 N, its least after the push -24.5 N (no brake); the striker's ball loses 0.7819 m/s while the face is on it; the flex's step at contact 0.00 N (decision 2); ratio 1.33
+pass-roll   3.0 m/s ON POINT holds: the head's centre 145.06 mm behind the ball's centre at least; the face's contacts 27.31 mm above it at most (R·sin 45° 32.55 mm); the lean 36.40° at most (45°)
+            4 face intervals over 0.0–26.7 ms; lean at contact 34.00°, 33.99° to 36.41° through the contact; the follow-through's highest pitch 14.57° (past vertical), finish at 398.0 ms follow-turf-yield, follow-head-deep
+            the hands' dip: lowest -24.47 mm at 370.0 ms after contact; -4.38 mm at the pendulum phase's start; -17.11 mm at the finish
+            the head's descent at contact 9.49°, -24.83° to 9.49° while the face is on the ball (Gugan's β 6–16°, held out; 2a at 3 m/s: half 9.70°, full 3.05°, pass 4.48°)
+            the hands' force along aim at the pendulum phase's start 20.4 N, its least after the push — (the impact ends at 93.4 ms, before the push's end at 103.7 ms) (no brake); the striker's ball loses 1.0618 m/s while the face is on it; the flex's step at contact 0.00 N (decision 2); ratio 0.92
+== The head on point (exit criterion 4) over the preset grid ==
+half-roll   225 runs, 0 off point
+full-roll   225 runs, 67 off point
+            1 m/s drive -1 up -3.00 mm side -10.00 mm: behind 111.99 mm, height 41.66 mm, lean 38.53°
+            1 m/s drive -1 up -3.00 mm side 0.00 mm: behind 111.26 mm, height 42.02 mm, lean 38.59°
+            1 m/s drive -1 up -3.00 mm side 10.00 mm: behind 112.06 mm, height 41.62 mm, lean 38.53°
+            1 m/s drive -1 up 0.00 mm side -10.00 mm: behind 113.65 mm, height 40.81 mm, lean 38.67°
+            1 m/s drive -1 up 0.00 mm side 0.00 mm: behind 113.33 mm, height 40.99 mm, lean 38.74°
+            1 m/s drive -1 up 0.00 mm side 10.00 mm: behind 113.69 mm, height 40.78 mm, lean 38.67°
+            1 m/s drive -1 up 3.00 mm side -10.00 mm: behind 113.92 mm, height 40.59 mm, lean 38.88°
+            1 m/s drive -1 up 3.00 mm side 0.00 mm: behind 114.69 mm, height 40.24 mm, lean 38.89°
+            1 m/s drive -1 up 3.00 mm side 10.00 mm: behind 114.03 mm, height 40.53 mm, lean 38.88°
+            1 m/s drive -0.5 up -3.00 mm side -10.00 mm: behind 109.29 mm, height 42.20 mm, lean 39.20°
+            1 m/s drive -0.5 up -3.00 mm side 0.00 mm: behind 109.62 mm, height 42.12 mm, lean 39.19°
+            1 m/s drive -0.5 up -3.00 mm side 10.00 mm: behind 109.34 mm, height 42.18 mm, lean 39.20°
+            1 m/s drive -0.5 up 0.00 mm side -10.00 mm: behind 110.41 mm, height 41.62 mm, lean 39.37°
+            1 m/s drive -0.5 up 0.00 mm side 0.00 mm: behind 110.52 mm, height 41.64 mm, lean 39.36°
+            1 m/s drive -0.5 up 0.00 mm side 10.00 mm: behind 110.33 mm, height 41.66 mm, lean 39.37°
+            1 m/s drive -0.5 up 3.00 mm side -10.00 mm: behind 111.25 mm, height 41.12 mm, lean 39.55°
+            1 m/s drive -0.5 up 3.00 mm side 0.00 mm: behind 111.38 mm, height 41.14 mm, lean 39.54°
+            1 m/s drive -0.5 up 3.00 mm side 10.00 mm: behind 111.17 mm, height 41.16 mm, lean 39.55°
+            1 m/s drive 0 up -3.00 mm side -10.00 mm: behind 107.91 mm, height 42.41 mm, lean 39.65°
+            1 m/s drive 0 up -3.00 mm side 0.00 mm: behind 108.06 mm, height 42.40 mm, lean 39.64°
+            1 m/s drive 0 up -3.00 mm side 10.00 mm: behind 107.67 mm, height 42.50 mm, lean 39.64°
+            1 m/s drive 0 up 0.00 mm side -10.00 mm: behind 108.82 mm, height 41.87 mm, lean 39.86°
+            1 m/s drive 0 up 0.00 mm side 0.00 mm: behind 107.88 mm, height 42.33 mm, lean 39.85°
+            1 m/s drive 0 up 0.00 mm side 10.00 mm: behind 108.78 mm, height 41.89 mm, lean 39.86°
+            1 m/s drive 0 up 3.00 mm side -10.00 mm: behind 109.41 mm, height 41.44 mm, lean 40.08°
+            1 m/s drive 0 up 3.00 mm side 0.00 mm: behind 108.44 mm, height 41.97 mm, lean 40.07°
+            1 m/s drive 0 up 3.00 mm side 10.00 mm: behind 109.33 mm, height 41.48 mm, lean 40.07°
+            1 m/s drive 0.5 up -3.00 mm side -10.00 mm: behind 107.15 mm, height 42.46 mm, lean 39.98°
+            1 m/s drive 0.5 up -3.00 mm side 0.00 mm: behind 107.18 mm, height 42.48 mm, lean 39.99°
+            1 m/s drive 0.5 up -3.00 mm side 10.00 mm: behind 107.13 mm, height 42.47 mm, lean 39.98°
+            1 m/s drive 0.5 up 0.00 mm side -10.00 mm: behind 107.66 mm, height 42.02 mm, lean 40.29°
+            1 m/s drive 0.5 up 0.00 mm side 0.00 mm: behind 107.74 mm, height 42.03 mm, lean 40.29°
+            1 m/s drive 0.5 up 0.00 mm side 10.00 mm: behind 107.65 mm, height 42.02 mm, lean 40.29°
+            1 m/s drive 0.5 up 3.00 mm side -10.00 mm: behind 107.83 mm, height 41.75 mm, lean 40.53°
+            1 m/s drive 0.5 up 3.00 mm side 0.00 mm: behind 108.06 mm, height 41.70 mm, lean 40.53°
+            1 m/s drive 0.5 up 3.00 mm side 10.00 mm: behind 107.86 mm, height 41.74 mm, lean 40.53°
+            1 m/s drive 1 up -3.00 mm side -10.00 mm: behind 106.57 mm, height 42.54 mm, lean 40.19°
+            1 m/s drive 1 up -3.00 mm side 0.00 mm: behind 106.64 mm, height 42.54 mm, lean 40.20°
+            1 m/s drive 1 up -3.00 mm side 10.00 mm: behind 106.54 mm, height 42.55 mm, lean 40.20°
+            1 m/s drive 1 up 0.00 mm side -10.00 mm: behind 106.67 mm, height 42.21 mm, lean 40.57°
+            1 m/s drive 1 up 0.00 mm side 0.00 mm: behind 106.77 mm, height 42.21 mm, lean 40.57°
+            1 m/s drive 1 up 0.00 mm side 10.00 mm: behind 106.72 mm, height 42.19 mm, lean 40.57°
+            1 m/s drive 1 up 3.00 mm side -10.00 mm: behind 106.77 mm, height 41.93 mm, lean 40.87°
+            1 m/s drive 1 up 3.00 mm side 0.00 mm: behind 106.83 mm, height 41.95 mm, lean 40.88°
+            1 m/s drive 1 up 3.00 mm side 10.00 mm: behind 106.83 mm, height 41.90 mm, lean 40.87°
+            2 m/s drive -1 up -3.00 mm side -10.00 mm: behind 122.40 mm, height 32.69 mm, lean 40.14°
+            2 m/s drive -1 up -3.00 mm side 0.00 mm: behind 122.37 mm, height 32.80 mm, lean 40.16°
+            2 m/s drive -1 up -3.00 mm side 10.00 mm: behind 122.42 mm, height 32.68 mm, lean 40.14°
+            2 m/s drive -1 up 3.00 mm side -10.00 mm: behind 116.92 mm, height 36.51 mm, lean 40.54°
+            2 m/s drive -1 up 3.00 mm side 10.00 mm: behind 116.88 mm, height 36.54 mm, lean 40.55°
+            2 m/s drive -0.5 up -3.00 mm side -10.00 mm: behind 107.18 mm, height 41.89 mm, lean 40.67°
+            2 m/s drive -0.5 up -3.00 mm side 0.00 mm: behind 106.63 mm, height 42.19 mm, lean 40.67°
+            2 m/s drive -0.5 up -3.00 mm side 10.00 mm: behind 107.03 mm, height 41.95 mm, lean 40.67°
+            2 m/s drive -0.5 up 0.00 mm side -10.00 mm: behind 115.35 mm, height 37.39 mm, lean 40.72°
+            2 m/s drive -0.5 up 0.00 mm side 0.00 mm: behind 114.07 mm, height 38.25 mm, lean 40.79°
+            2 m/s drive -0.5 up 0.00 mm side 10.00 mm: behind 114.42 mm, height 37.95 mm, lean 40.77°
+            2 m/s drive -0.5 up 3.00 mm side -10.00 mm: behind 119.18 mm, height 34.43 mm, lean 40.79°
+            2 m/s drive -0.5 up 3.00 mm side 0.00 mm: behind 119.03 mm, height 34.65 mm, lean 40.81°
+            2 m/s drive -0.5 up 3.00 mm side 10.00 mm: behind 119.19 mm, height 34.42 mm, lean 40.79°
+            2 m/s drive 0 up -3.00 mm side -10.00 mm: behind 117.60 mm, height 36.25 mm, lean 40.40°
+            2 m/s drive 0 up -3.00 mm side 0.00 mm: behind 117.30 mm, height 36.50 mm, lean 40.45°
+            2 m/s drive 0 up -3.00 mm side 10.00 mm: behind 117.60 mm, height 36.25 mm, lean 40.40°
+            2 m/s drive 0 up 0.00 mm side -10.00 mm: behind 120.78 mm, height 33.62 mm, lean 40.45°
+            2 m/s drive 0 up 0.00 mm side 0.00 mm: behind 120.60 mm, height 33.83 mm, lean 40.49°
+            2 m/s drive 0 up 0.00 mm side 10.00 mm: behind 120.78 mm, height 33.62 mm, lean 40.45°
+            2 m/s drive 0 up 3.00 mm side -10.00 mm: behind 116.71 mm, height 35.72 mm, lean 41.24°
+            2 m/s drive 0 up 3.00 mm side 10.00 mm: behind 116.27 mm, height 35.99 mm, lean 41.28°
+pass-roll   225 runs, 110 off point
+            1 m/s drive -1 up -3.00 mm side -10.00 mm: behind 101.19 mm, height 41.92 mm, lean 41.64°
+            1 m/s drive -1 up -3.00 mm side 0.00 mm: behind 91.27 mm, height 45.47 mm, lean 42.18°
+            1 m/s drive -1 up -3.00 mm side 10.00 mm: behind 91.27 mm, height 45.47 mm, lean 42.41°
+            1 m/s drive -1 up 0.00 mm side -10.00 mm: behind 102.39 mm, height 41.04 mm, lean 42.08°
+            1 m/s drive -1 up 0.00 mm side 0.00 mm: behind 88.25 mm, height 45.77 mm, lean 42.65°
+            1 m/s drive -1 up 0.00 mm side 10.00 mm: behind 91.22 mm, height 45.34 mm, lean 42.90°
+            1 m/s drive -1 up 3.00 mm side -10.00 mm: behind 103.06 mm, height 40.31 mm, lean 42.52°
+            1 m/s drive -1 up 3.00 mm side 0.00 mm: behind 84.36 mm, height 45.98 mm, lean 43.13°
+            1 m/s drive -1 up 3.00 mm side 10.00 mm: behind 85.15 mm, height 45.96 mm, lean 43.41°
+            1 m/s drive -0.5 up -3.00 mm side -10.00 mm: behind 88.27 mm, height 45.52 mm, lean 42.40°
+            1 m/s drive -0.5 up -3.00 mm side 0.00 mm: behind 87.57 mm, height 45.79 mm, lean 42.72°
+            1 m/s drive -0.5 up -3.00 mm side 10.00 mm: behind 87.87 mm, height 45.79 mm, lean 42.82°
+            1 m/s drive -0.5 up 0.00 mm side -10.00 mm: behind 88.42 mm, height 45.33 mm, lean 43.03°
+            1 m/s drive -0.5 up 0.00 mm side 0.00 mm: behind 89.69 mm, height 45.43 mm, lean 43.15°
+            1 m/s drive -0.5 up 0.00 mm side 10.00 mm: behind 89.82 mm, height 45.43 mm, lean 43.29°
+            1 m/s drive -0.5 up 3.00 mm side -10.00 mm: behind 90.60 mm, height 44.78 mm, lean 43.40°
+            1 m/s drive -0.5 up 3.00 mm side 0.00 mm: behind 91.41 mm, height 44.96 mm, lean 43.58°
+            1 m/s drive -0.5 up 3.00 mm side 10.00 mm: behind 91.15 mm, height 45.02 mm, lean 43.78°
+            1 m/s drive 0 up -3.00 mm side -10.00 mm: behind 84.71 mm, height 45.93 mm, lean 42.79°
+            1 m/s drive 0 up -3.00 mm side 0.00 mm: behind 85.10 mm, height 45.95 mm, lean 42.98°
+            1 m/s drive 0 up -3.00 mm side 10.00 mm: behind 84.86 mm, height 45.97 mm, lean 43.14°
+            1 m/s drive 0 up 0.00 mm side -10.00 mm: behind 86.03 mm, height 45.74 mm, lean 43.35°
+            1 m/s drive 0 up 0.00 mm side 0.00 mm: behind 85.91 mm, height 45.80 mm, lean 43.56°
+            1 m/s drive 0 up 0.00 mm side 10.00 mm: behind 85.27 mm, height 45.87 mm, lean 43.73°
+            1 m/s drive 0 up 3.00 mm side -10.00 mm: behind 87.42 mm, height 45.44 mm, lean 43.89°
+            1 m/s drive 0 up 3.00 mm side 0.00 mm: behind 87.36 mm, height 45.50 mm, lean 44.10°
+            1 m/s drive 0 up 3.00 mm side 10.00 mm: behind 86.51 mm, height 45.62 mm, lean 44.29°
+            1 m/s drive 0.5 up -3.00 mm side -10.00 mm: behind 84.33 mm, height 45.95 mm, lean 42.88°
+            1 m/s drive 0.5 up -3.00 mm side 0.00 mm: behind 84.65 mm, height 45.97 mm, lean 42.98°
+            1 m/s drive 0.5 up -3.00 mm side 10.00 mm: behind 84.95 mm, height 45.98 mm, lean 43.03°
+            1 m/s drive 0.5 up 0.00 mm side -10.00 mm: behind 85.24 mm, height 45.82 mm, lean 43.42°
+            1 m/s drive 0.5 up 0.00 mm side 0.00 mm: behind 86.03 mm, height 45.80 mm, lean 43.52°
+            1 m/s drive 0.5 up 0.00 mm side 10.00 mm: behind 86.35 mm, height 45.80 mm, lean 43.59°
+            1 m/s drive 0.5 up 3.00 mm side -10.00 mm: behind 87.04 mm, height 45.51 mm, lean 43.93°
+            1 m/s drive 0.5 up 3.00 mm side 0.00 mm: behind 87.70 mm, height 45.48 mm, lean 44.04°
+            1 m/s drive 0.5 up 3.00 mm side 10.00 mm: behind 88.01 mm, height 45.47 mm, lean 44.11°
+            1 m/s drive 1 up -3.00 mm side -10.00 mm: behind 107.28 mm, height 41.31 mm, lean 40.66°
+            1 m/s drive 1 up -3.00 mm side 0.00 mm: behind 106.96 mm, height 41.64 mm, lean 40.96°
+            1 m/s drive 1 up -3.00 mm side 10.00 mm: behind 104.80 mm, height 42.41 mm, lean 41.34°
+            1 m/s drive 1 up 0.00 mm side -10.00 mm: behind 107.31 mm, height 40.85 mm, lean 41.18°
+            1 m/s drive 1 up 0.00 mm side 0.00 mm: behind 106.64 mm, height 41.28 mm, lean 41.56°
+            1 m/s drive 1 up 0.00 mm side 10.00 mm: behind 105.21 mm, height 41.85 mm, lean 41.84°
+            1 m/s drive 1 up 3.00 mm side -10.00 mm: behind 106.93 mm, height 40.52 mm, lean 41.75°
+            1 m/s drive 1 up 3.00 mm side 0.00 mm: behind 106.86 mm, height 40.72 mm, lean 42.05°
+            1 m/s drive 1 up 3.00 mm side 10.00 mm: behind 105.97 mm, height 41.14 mm, lean 42.26°
+            2 m/s drive -1 up -3.00 mm side 10.00 mm: behind 116.22 mm, height 34.29 mm, lean 42.49°
+            2 m/s drive -1 up 3.00 mm side 0.00 mm: behind 115.63 mm, height 33.62 mm, lean 42.91°
+            2 m/s drive -1 up 3.00 mm side 10.00 mm: behind 115.88 mm, height 33.62 mm, lean 43.06°
+            2 m/s drive -0.5 up 0.00 mm side 10.00 mm: behind 105.63 mm, height 39.85 mm, lean 43.76°
+            2 m/s drive -0.5 up 3.00 mm side 0.00 mm: behind 105.48 mm, height 39.55 mm, lean 43.90°
+            2 m/s drive -0.5 up 3.00 mm side 10.00 mm: behind 105.40 mm, height 39.65 mm, lean 44.05°
+            2 m/s drive 0 up -3.00 mm side -10.00 mm: behind 98.84 mm, height 42.35 mm, lean 43.66°
+            2 m/s drive 0 up -3.00 mm side 0.00 mm: behind 102.03 mm, height 41.56 mm, lean 43.69°
+            2 m/s drive 0 up -3.00 mm side 10.00 mm: behind 97.87 mm, height 43.10 mm, lean 43.98°
+            2 m/s drive 0 up 0.00 mm side -10.00 mm: behind 99.92 mm, height 41.78 mm, lean 43.95°
+            2 m/s drive 0 up 0.00 mm side 0.00 mm: behind 100.24 mm, height 41.97 mm, lean 44.10°
+            2 m/s drive 0 up 0.00 mm side 10.00 mm: behind 99.92 mm, height 42.11 mm, lean 44.26°
+            2 m/s drive 0 up 3.00 mm side -10.00 mm: behind 101.43 mm, height 40.87 mm, lean 44.23°
+            2 m/s drive 0 up 3.00 mm side 0.00 mm: behind 101.87 mm, height 40.98 mm, lean 44.38°
+            2 m/s drive 0 up 3.00 mm side 10.00 mm: behind 101.12 mm, height 41.32 mm, lean 44.55°
+            2 m/s drive 0.5 up -3.00 mm side -10.00 mm: behind 113.62 mm, height 34.84 mm, lean 42.96°
+            2 m/s drive 0.5 up -3.00 mm side 0.00 mm: behind 115.36 mm, height 34.05 mm, lean 42.95°
+            2 m/s drive 0.5 up -3.00 mm side 10.00 mm: behind 115.72 mm, height 33.91 mm, lean 43.01°
+            2 m/s drive 1 up -3.00 mm side -10.00 mm: behind 113.43 mm, height 32.55 mm, lean 44.20°
+            2 m/s drive 1 up -3.00 mm side 0.00 mm: behind 114.31 mm, height 33.69 mm, lean 44.32°
+            2 m/s drive 1 up -3.00 mm side 10.00 mm: behind 100.69 mm, height 42.34 mm, lean 44.38°
+            2 m/s drive 1 up 0.00 mm side 0.00 mm: behind 104.34 mm, height 40.10 mm, lean 44.52°
+            2 m/s drive 1 up 0.00 mm side 10.00 mm: behind 105.90 mm, height 39.39 mm, lean 44.56°
+            2 m/s drive 1 up 3.00 mm side -10.00 mm: behind 103.82 mm, height 37.94 mm, lean 44.58°
+            2 m/s drive 1 up 3.00 mm side 0.00 mm: behind 108.06 mm, height 37.51 mm, lean 44.71°
+            2 m/s drive 1 up 3.00 mm side 10.00 mm: behind 108.32 mm, height 37.54 mm, lean 44.75°
+            3 m/s drive -1 up -3.00 mm side 0.00 mm: behind 110.09 mm, height 34.22 mm, lean 44.90°
+            3 m/s drive -1 up -3.00 mm side 10.00 mm: behind 112.89 mm, height 33.49 mm, lean 44.94°
+            3 m/s drive -1 up 0.00 mm side 0.00 mm: behind 112.30 mm, height 32.20 mm, lean 45.05°
+            3 m/s drive -1 up 0.00 mm side 10.00 mm: behind 114.73 mm, height 32.51 mm, lean 45.08°
+            3 m/s drive -1 up 3.00 mm side 0.00 mm: behind 114.33 mm, height 31.76 mm, lean 45.20°
+            3 m/s drive -1 up 3.00 mm side 10.00 mm: behind 116.57 mm, height 32.60 mm, lean 45.23°
+            3 m/s drive -0.5 up -3.00 mm side 10.00 mm: behind 108.13 mm, height 37.02 mm, lean 44.82°
+            3 m/s drive -0.5 up 0.00 mm side 10.00 mm: behind 110.82 mm, height 34.90 mm, lean 44.89°
+            3 m/s drive -0.5 up 3.00 mm side 0.00 mm: behind 111.80 mm, height 33.55 mm, lean 45.00°
+            3 m/s drive -0.5 up 3.00 mm side 10.00 mm: behind 113.17 mm, height 32.76 mm, lean 44.96°
+            3 m/s drive 0 up -3.00 mm side -10.00 mm: behind 106.10 mm, height 37.75 mm, lean 44.44°
+            3 m/s drive 0 up -3.00 mm side 0.00 mm: behind 108.00 mm, height 37.37 mm, lean 44.50°
+            3 m/s drive 0 up -3.00 mm side 10.00 mm: behind 104.52 mm, height 39.22 mm, lean 44.89°
+            3 m/s drive 0 up 0.00 mm side -10.00 mm: behind 109.74 mm, height 35.24 mm, lean 44.47°
+            3 m/s drive 0 up 0.00 mm side 0.00 mm: behind 105.69 mm, height 38.07 mm, lean 45.08°
+            3 m/s drive 0 up 0.00 mm side 10.00 mm: behind 108.49 mm, height 36.65 mm, lean 44.91°
+            3 m/s drive 0 up 3.00 mm side -10.00 mm: behind 108.65 mm, height 35.29 mm, lean 44.91°
+            3 m/s drive 0 up 3.00 mm side 0.00 mm: behind 109.98 mm, height 35.16 mm, lean 45.01°
+            3 m/s drive 0 up 3.00 mm side 10.00 mm: behind 106.88 mm, height 37.03 mm, lean 45.44°
+            4 m/s drive -1 up 3.00 mm side 10.00 mm: behind 106.06 mm, height 34.46 mm, lean 48.53°
+            4 m/s drive -0.5 up -3.00 mm side -10.00 mm: behind 109.64 mm, height 31.62 mm, lean 47.09°
+            4 m/s drive -0.5 up -3.00 mm side 0.00 mm: behind 127.21 mm, height 33.08 mm, lean 45.97°
+            4 m/s drive -0.5 up -3.00 mm side 10.00 mm: behind 133.46 mm, height 32.55 mm, lean 45.01°
+            4 m/s drive -0.5 up 0.00 mm side -10.00 mm: behind 120.88 mm, height 32.26 mm, lean 46.66°
+            4 m/s drive -0.5 up 0.00 mm side 0.00 mm: behind 132.74 mm, height 32.85 mm, lean 45.55°
+            4 m/s drive -0.5 up 3.00 mm side -10.00 mm: behind 128.82 mm, height 32.50 mm, lean 46.20°
+            4 m/s drive -0.5 up 3.00 mm side 0.00 mm: behind 137.71 mm, height 32.59 mm, lean 45.09°
+            4 m/s drive 0 up 0.00 mm side 10.00 mm: behind 95.26 mm, height 42.05 mm, lean 46.72°
+            4 m/s drive 0 up 3.00 mm side 0.00 mm: behind 100.00 mm, height 39.61 mm, lean 46.70°
+            4 m/s drive 0 up 3.00 mm side 10.00 mm: behind 102.29 mm, height 38.51 mm, lean 46.64°
+            6 m/s drive -1 up -3.00 mm side -10.00 mm: behind 96.26 mm, height 31.79 mm, lean 53.09°
+            6 m/s drive -1 up -3.00 mm side 0.00 mm: behind 119.86 mm, height 36.01 mm, lean 51.66°
+            6 m/s drive -1 up -3.00 mm side 10.00 mm: behind 124.38 mm, height 35.76 mm, lean 51.01°
+            6 m/s drive -1 up 0.00 mm side -10.00 mm: behind 109.83 mm, height 33.39 mm, lean 52.56°
+            6 m/s drive -1 up 0.00 mm side 0.00 mm: behind 124.42 mm, height 35.92 mm, lean 51.37°
+            6 m/s drive -1 up 0.00 mm side 10.00 mm: behind 112.86 mm, height 36.57 mm, lean 52.62°
+            6 m/s drive -1 up 3.00 mm side -10.00 mm: behind 117.78 mm, height 33.99 mm, lean 52.11°
+            6 m/s drive -1 up 3.00 mm side 0.00 mm: behind 127.88 mm, height 35.84 mm, lean 51.19°
+            6 m/s drive -1 up 3.00 mm side 10.00 mm: behind 94.20 mm, height 37.20 mm, lean 53.93°
+== The pendulum-timing sweep (design §9): ratio and striker's distance against pendulumAt ==
+half-roll   2.0 m/s  0.2: ratio 2.35, striker 0.83 m; 0.4: ratio 2.47, striker 0.81 m; 0.6: ratio 2.42, striker 0.82 m; 0.8: ratio 2.42, striker 0.82 m; 1.0: ratio 1.53, striker 1.36 m
+half-roll   4.0 m/s  0.2: ratio 3.20, striker 2.39 m; 0.4: ratio 2.79, striker 2.78 m; 0.6: ratio 3.28, striker 2.32 m; 0.8: ratio 3.30, striker 2.34 m; 1.0: ratio 3.30, striker 2.34 m
+full-roll   2.0 m/s  0.2: ratio 1.60, striker 1.04 m; 0.4: ratio 2.14, striker 0.77 m; 0.6: ratio 2.21, striker 0.75 m; 0.8: ratio 2.21, striker 0.75 m; 1.0: ratio 2.21, striker 0.75 m
+full-roll   4.0 m/s  0.2: ratio 3.03, striker 2.12 m; 0.4: ratio 2.21, striker 2.90 m; 0.6: ratio 2.21, striker 2.90 m; 0.8: ratio 2.19, striker 2.90 m; 1.0: ratio 2.19, striker 2.90 m
+pass-roll   2.0 m/s  0.2: ratio 0.79, striker 1.70 m; 0.4: ratio 0.79, striker 1.70 m; 0.6: ratio 0.87, striker 1.57 m; 0.8: ratio 1.33, striker 1.06 m; 1.0: ratio 1.42, striker 0.98 m
+pass-roll   4.0 m/s  0.2: ratio 1.20, striker 4.45 m; 0.4: ratio 1.06, striker 5.01 m; 0.6: ratio 1.05, striker 5.01 m; 0.8: ratio 1.06, striker 5.01 m; 1.0: ratio 1.06, striker 5.01 m
+== The held-out checks at 3 m/s (design §9): each measure against its measurement ==
+half-roll   descent at contact 11.43°, -13.59° to 11.43° while the face is on the ball (Gugan 4: 6–16°); apparent contact 28.8 ms (the CA: 30–58 ms); second contact 5.5 ms after the first's end (Gugan 4, Hall: several ms); 3 face intervals (Cross: seven taps); ratio 2.94 (Gugan: 2.30–2.46)
+full-roll   descent at contact 8.25°, -24.44° to 8.25° while the face is on the ball (Gugan 4: 6–16°); apparent contact 38.7 ms (the CA: 30–58 ms); second contact 5.7 ms after the first's end (Gugan 4, Hall: several ms); 3 face intervals (Cross: seven taps); ratio 1.55 (Gugan: 1.20–1.24)
+pass-roll   descent at contact 9.49°, -24.83° to 9.49° while the face is on the ball (Gugan 4: 6–16°); apparent contact 26.7 ms (the CA: 30–58 ms); second contact 4.1 ms after the first's end (Gugan 4, Hall: several ms); 4 face intervals (Cross: seven taps); ratio 0.92 (Gugan: 0.94–1.21)

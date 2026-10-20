@@ -264,7 +264,8 @@ export interface Hands {
     readonly chain: HandChain;
     /**
      * F_max (N, P2b.2b.2b.3 design §5): each hand's force on the mallet is clipped to this magnitude. Where the hand
-     * holds a position spring its anchor slides at the limit, and the slid offset persists (GripState).
+     * holds a position spring its anchor slides at the limit; the slid offset persists in carry mode and relaxes in
+     * swing mode under the limit (GripState).
      */
     readonly gripLimit: number;
 }

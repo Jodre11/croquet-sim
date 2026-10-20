@@ -467,3 +467,73 @@ up 2026-10-18. Nothing fetched is committed.
   statement of the paper's result, unverified here against its text.
 - **The speed ceiling** is set from the CA's A4D mallet speed of 8.18 m/s already cited above ("Backswing against
   contact speed"): 1.1 × 8.18 = 9.0 m/s, rounded (plan decision 11).
+
+## P2b.2b.2c.2: the croquet strokes' fit (design §3, §5.1, §6)
+
+The sources behind `reference/swing.json`'s `ratioTargets` and the checks the fit and the distance check rest on.
+Fetched 2026-10-19, each twice, with `curl -sSLk --compressed`. Where the page carries a per-fetch counter (Gugan's
+"Views" line, Oxford Croquet's "Hits" line), the digest is of the page with that line removed
+(`grep -v 'foot-item3">Views'`, `grep -v "Hits: "`), and the two fetches then agree. The CA's PDF is hashed raw.
+
+| Short name | Work | URL | SHA-256 |
+|---|---|---|---|
+| Gugan 5 | Gugan, "Croquet Drives, Pass-Rolls, Stop-Shots and Scatter-Shots" (page updated 20.iv.26) | https://oxfordcroquet.org/tech/gugan5/ | `057c2161fc7e53b9f35655e6a9ba1b1d9bb0d182e3d37825116546ed317cb42e` (counter line removed; equals the digest recorded above) |
+| Gugan 4 | Gugan, "The Physics of Croquet Strokes: Analysis of the CA high-speed DVD" | https://oxfordcroquet.org/tech/gugan4/ | `1b2eecb6b8c48253b30fe2c951c16a5edc99044edca324352ded51f3a5ff7e50` (counter line removed; equals the digest recorded above) |
+| CA Dynamics | Croquet Association, *Project Croquet Dynamics* (2006), version 4 (PDF) | https://croquet.org.uk/?d=1475 | `f4df395c3a77aba0baef9f33fd5c1e7445833ad0a38d0a89d02cdd4781a873d2` (raw; equals the digest recorded above) |
+| Gugan 2000 | Gugan, "Inelastic collision and the Hertz theory of impact" | https://oxfordcroquet.org/tech/gugan/ | `bf8f1a991888f30de81e05ff9f17362d4a0da975afef63fcdf93f5b2d4944b94` (counter line removed; equals the digest recorded above) |
+| le Maitre | R. le Maitre, "Test Results and Comments on the Strike Shot, Croquet Stop Shot, Croquet Drive or Roll, and the Roquet Shot" (page updated 8.iv.25) | http://www.oxfordcroquet.com/tech/rlm/1/index.asp | `ff4579581171fe710296af8aed34eaf151edaa342ddd4b6fb2e69fde92ec4037` (`Hits:` line removed) |
+
+Found with the web-search skill ("le Maitre croquet ball make drive distance ratio ..."); the page is `tech/rlm/1` on
+`oxfordcroquet.com`, the `.org` site's older host.
+
+### Check 1: the CA's ball-travel unit and where the ball speed was measured
+
+- Unit: metres. Gugan 4, Table 2, row 1: "Total ball travel, L, m (from TEXT file)", values 0.93, 9.74 (A1D, A2D); the
+  CA's own table heads the column "Ball Travel" with no unit, and its text says "ball movements of between 1 and 50m
+  was obtained". Gugan 5 gives the CA's strokes in metres as well ("C1D ... ratio of 4.0 at distance 6.21 m").
+- Measuring point: just after the impact, not at the release of a rolling ball. Gugan 4, §3: "The values of speed in
+  the tables are thus averages taken a few milliseconds *after* impact, and over times and distances of only a few ms
+  and mm respectively". The CA, §5: the software allows "accurate speed measurement of both balls and mallets".
+  Gugan 4, §5 notes the A4D ball speed differs between his reading (10.03 m/s) and the TEXT file's (8.62 m/s).
+- Consequence for the distance check: the ball speed it compares is the speed a few milliseconds after the strike,
+  which the probe reads at the face's release (plan decision 9).
+
+### Check 2: the stop's mallet speed
+
+- Not stated as a speed: Gugan 5, Experimental, gives the drives' mallet speed ("The drives were of modest strength,
+  with a mallet speed of about 3 m/s sending the croqueted ball about seven yards ...") and says of the stop-shots only
+  "and the stop-shots were of similar strength". The stop is fitted at 3 m/s, and its `swing.json` note says so.
+- Gugan 5's later "mallet speed of 0.400U for the second tap" is a fraction of the contact speed U, not a speed.
+
+### Check 3: the balls' makes, and whether they differ
+
+- Gugan 5 (the targets): "The balls were Dawson 'Internationals', all in excellent condition: independent
+  measurements of their CoR were not made". Its mallet: "older type hard-faced, square design of weight 3.25lbs".
+- Gugan 2000 (`faceRestitutionFit`, `faceContactTimeFit`): "The ball used was a Jaques "Eclipse" ball (commonly used
+  in the game of croquet), which fell on a wooden mallet", M = 454 g, R = 46 mm; the mallet "of unrecorded wood and
+  grain".
+- Gugan 4 and the CA's report name no make for the video's balls.
+- So the makes differ: the face fits come from a Jaques Eclipse and the targets from Dawson Internationals.
+  le Maitre shows that the make matters (below). The difference is recorded, not corrected; the fit takes the face fits
+  as sourced and moves only its listed candidates.
+
+### Check 4: le Maitre's ratios by make (the 2.7–4.2 spread)
+
+The 2.7–4.2 figures are the **stop shot's**, not the drive's. le Maitre, "Croquet Stop Shot": "Calculation of the ratio
+of distance travelled by the forward ball to the backward ball gives a value of 4.2 for Walker, 3.7 for Barlow, 3.2
+for old Jaques and 2.7 for new Jaques balls." His "Croquet Roll or Drive Shot" table (the mallet head weighted to
+2210 g, "more mallet energy ... because of the follow through") gives forward and backward distances (m) and the
+ratio:
+
+| Ball | Stop shot ratio | Drive or roll: forward, backward (m) | Drive or roll ratio |
+|---|---|---|---|
+| Walker | 4.2 | 8.260, 3.300 | 2.8 |
+| Barlow | 3.7 | 7.000, 3.460 | 2.0 |
+| Old Jaques | 3.2 | 7.290, 3.440 | 2.1 |
+| New Jaques | 2.7 | 6.340, 3.180 | 1.8 |
+
+His ratio is the forward ball's distance over the backward ball's, from a test rig on a bowling green with balls of
+the 1980s (he cites "the new rule book of 1986"). His "drive or roll" is the follow-through stroke with a weighted
+head, a different stroke from Gugan 5's pendulum drive (4.23), and his stop shots (2.7–4.2) sit below Gugan 5's
+jab stop-shots (7.15), so neither set is a target. They are recorded as the spread by make: the stop ratio falls from
+4.2 to 2.7 as the ball's restitution falls.

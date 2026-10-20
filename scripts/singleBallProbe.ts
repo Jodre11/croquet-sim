@@ -1,8 +1,8 @@
 /**
  * Single-ball probe (P2b.2b.2c.1 design §8.4, §8.5, §10): the pre-flight gate's figures, on the default world and
- * profile as reference/swing.json holds them; its section headings cite the gate's rulings by number ("ruling N"), as
- * the design's Amendments list them. Every stroke planning a speed takes the default stroke's inputs (strokeFor: the
- * preset's defaultBackswing fixed, the intensity solved). Every figure to 4 decimals. Reports:
+ * profile as reference/swing.json holds them; its section headings cite the design's section and the gate's date, and
+ * the design's Amendments list the gate's rulings. Every stroke planning a speed takes the default stroke's inputs
+ * (strokeFor: the preset's defaultBackswing fixed, the intensity solved). Every figure to 4 decimals. Reports:
  * - A. U(i): every swing preset's planned contact speed at intensity 0, 0.1, …, 1 from its default backswing and from
  *   its body-limited top at κ = ⅔, and from its top at κ = ½ and ¾, each κ's τ_0 and ω_max fitted (fitEffort);
  * - B. the default stroke: each swing preset's defaultBackswing h_0, U(0) and U(1) from it, and strokeFor's
@@ -46,7 +46,7 @@ import { faceHalfHeight } from "../src/engine/impact/shape";
 import { simulateStroke } from "../src/engine/impact/simulateImpact";
 import { advanceTravel, handsAt, prepareTrack } from "../src/engine/impact/track";
 import type { HeadState, ImpactResult, MalletHead, SwingArc, TrackDrive } from "../src/engine/impact/types";
-import { add, dot, horizontal, length, scale, sub, vec3, type Vec3 } from "../src/engine/math/vec3";
+import { dot, horizontal, length, scale, sub, vec3, type Vec3 } from "../src/engine/math/vec3";
 import { judgeFaults } from "../src/engine/faults";
 import { stateAtTime } from "../src/engine/sample";
 import { simulateShot, strokeContext } from "../src/engine/shot";
@@ -63,18 +63,12 @@ import {
 } from "../src/engine/swing/buildContact";
 import { ON_TIME, defaultProfile } from "../src/engine/swing/profile";
 import type { ShotSetup, StrokeType, SwingEffort, SwingProfile, SwingStance } from "../src/engine/swing/types";
-import {
-    BALL_IDS,
-    type BallId,
-    type BallState,
-    type BallStates,
-    type ShotResult,
-    type World,
-} from "../src/engine/types";
-import { defaultWorld, uniformLawn } from "../src/engine/world";
+import { BALL_IDS, type BallState, type ShotResult } from "../src/engine/types";
+import { defaultWorld } from "../src/engine/world";
 import { swingBodyReference, swingReference } from "../src/reference/index";
-import { canonicalSetup, strokeFor, type CanonicalOptions } from "../tests/engine/support/shot";
+import { canonicalSetup, regimeOf, strokeFor, type CanonicalOptions } from "../tests/engine/support/shot";
 import { SWING_PRESETS, bodyTop, contactArm, fitEffort, kneeLimit, speedAt } from "./effortFit";
+import { OPEN_LAWN, OPEN_START, haltedText, openWorld, opened } from "./openLawn";
 
 // The project has no Node types; this script runs under tsx and reads its environment, its argument and one file.
 declare const process: {
@@ -117,12 +111,6 @@ const USER_TOP = 0.9574;
 
 /** B's speeds (m/s): strokeFor's three regimes across them. */
 const B_SPEEDS = [1, 2, 3, 4, 5, 6, 7, 8, 9];
-
-/** J's open lawn's side (m): far beyond any stroke's reach, so that every run comes to rest on it. */
-const OPEN_LAWN = 200;
-
-/** J's striker's start on the open lawn (m): mid-width, 150 m of lawn ahead along aim (+y). */
-const OPEN_START = vec3(OPEN_LAWN / 2, 50, 0);
 
 const EFFORTS = new Map<number, SwingEffort>();
 
@@ -295,18 +283,6 @@ function atSpeed(type: StrokeType, speed: number, over: CanonicalOptions = {}): 
     return { ...setup, stroke: { ...setup.stroke, ...strokeFor(setup, speed, WORLD) } };
 }
 
-/**
- * strokeFor's regime for `setup`'s stroke: 1 with no intensity (gravity only), 2 at the preset's
- * defaultBackswing h_0 with an intensity, 3 at intensity 1 with the backswing solved beyond h_0.
- */
-function regimeOf(setup: ShotSetup): 1 | 2 | 3 {
-    const { type, backswing, intensity } = setup.stroke;
-    if (intensity === undefined) {
-        return 1;
-    }
-    return backswing === swingReference[type].defaultBackswing.value ? 2 : 3;
-}
-
 /** `setup`'s stroke inputs: its backswing, its intensity (or none) and strokeFor's regime. */
 function strokeText(setup: ShotSetup): string {
     const { backswing, intensity } = setup.stroke;
@@ -438,7 +414,8 @@ function sectionA(): void {
 
 function sectionB(): void {
     console.log(
-        "== B. The default stroke (design §4.5, ruling 2): each swing preset's defaultBackswing h_0, U(0) and U(1) " +
+        "== B. The default stroke (design §4.5, the pre-flight gate, 2026-10-18): each swing preset's " +
+            "defaultBackswing h_0, U(0) and U(1) " +
             `from it, and strokeFor's inputs on its canonical setup at ${B_SPEEDS.join(", ")} m/s, each with its ` +
             "planned contact speed ==",
     );
@@ -487,7 +464,8 @@ function userProfile(): SwingProfile {
 function sectionC(): void {
     const limit = defaultProfile.body.backswingLimit;
     console.log(
-        `== C. θ_max (design §5.2, plan decision 18, ruling 4): the head's rise (m) at θ_max ${deg(limit)}° on the ` +
+        "== C. θ_max (design §5.2, the pre-flight gate, 2026-10-18): " +
+            `the head's rise (m) at θ_max ${deg(limit)}° on the ` +
             `default mallet and the user's (${fmt(USER_SHAFT)} m shaft, ${fmt(USER_HEAD)} m head, top hand ` +
             `${fmt(USER_TOP)} m); knee height ${fmt(KNEE)} m on the default ==`,
     );
@@ -578,11 +556,13 @@ function advanceLines(r: Run): string[] {
         most = Math.max(most, along(c + k * 1e-3));
     }
     return [
-        `hands' advance (ruling 9): a ${fmt(a.accel)} m/s², V ${fmt(a.speed)} m/s, W = V/a ${fmt(a.speed / a.accel)} ` +
+        "hands' advance (the pre-flight gate, 2026-10-18): " +
+            `a ${fmt(a.accel)} m/s², V ${fmt(a.speed)} m/s, W = V/a ${fmt(a.speed / a.accel)} ` +
             `s; from ${fmt(a.start - c)} s, ramp's travel V²/(2a) ${fmt(ramped)} m to ${fmt(a.ramp - c)} s, cruise ` +
             `${fmt(cruised - ramped)} m to 0.8·D ${fmt(cruised)} m at ${fmt(a.cruise - c)} s, rest at ` +
             `${fmt(advanceTravel(a, a.end).a)} m at ${fmt(a.end - c)} s`,
-        `hands' travel along aim from contact (ruling 10c): ${fmt(along(a.end))} m at the advance's rest, at most ` +
+        "hands' travel along aim from contact (the pre-flight gate, 2026-10-18): " +
+            `${fmt(along(a.end))} m at the advance's rest, at most ` +
             `${fmt(most)} m to the finish, ${fmt(along(r.follow.finish))} m at it; handReach ${fmt(reach)} m`,
     ];
 }
@@ -622,7 +602,8 @@ function sectionE(): void {
 
 function sectionF(): void {
     console.log(
-        "== F. The flick (design §8.4.3, plan decision 17, ruling 7): single-ball, the stance's lean −20° to +10° " +
+        "== F. The flick (design §8.4.3, the pre-flight gate, 2026-10-18): single-ball, " +
+            "the stance's lean −20° to +10° " +
             "(negative: the hands behind), the stroke re-solved for the speed at each lean (strokeFor); the measure " +
             "is the ball's launch angle at the face's release, phase 2's airborne recorded alongside ==",
     );
@@ -703,7 +684,8 @@ function grid(type: StrokeType): void {
 
 function sectionG(): void {
     console.log(
-        "== G. Head ahead (design §8.4.4, plan decision 16, ruling 8): d > 0, d < L/2 + 2R, e < faceWidth/2 + R and " +
+        "== G. Head ahead (design §8.4.4, the pre-flight gate, 2026-10-18): " +
+            "d > 0, d < L/2 + 2R, e < faceWidth/2 + R and " +
             "the head's lowest point below the ball's top; impact steps and follow-through samples. Each such run is " +
             "labelled as the known gap, not a failure ==",
     );
@@ -770,7 +752,8 @@ async function rejectionChecks(): Promise<string[]> {
     const out = [
         "== I. θ_max's rejections (design §8.2.2): the runs θ_max rejected when it landed. Its lines read " +
             "\"backswingFor: N m/s is beyond the <type> stroke's reach\", not θ_max: backswingFor's reach check " +
-            "reads the speed at θ_max and fires first (plan decision 8, controller ruling). Each run replayed " +
+            "reads the speed at θ_max and fires first (design Amendments, backswingFor's bracket, 2026-10-18). " +
+            "Each run replayed " +
             "through strokeFor and simulateShot on the committed engine ==",
     ];
     if (path === undefined) {
@@ -829,35 +812,12 @@ async function sectionI(): Promise<void> {
     }
 }
 
-/**
- * J's open world: defaultWorld(10)'s gravity, ball, materials and surface, no hoops, on a uniform lawn
- * OPEN_LAWN square. Its peg stays at the court's centre, far off J's lines.
- */
-function openWorld(): World {
-    const court = defaultWorld(10);
-    const surface = court.lawn.surfaceAt(vec3(court.lawn.width / 2, court.lawn.length / 2, 0));
-    return { ...court, hoops: [], lawn: uniformLawn(OPEN_LAWN, OPEN_LAWN, surface) };
-}
-
-/** `setup` with every ball moved by the one offset that puts the striker at OPEN_START. */
-function opened(setup: ShotSetup): ShotSetup {
-    const striker = (setup.balls[setup.striker] as BallState).position;
-    const offset = vec3(OPEN_START.x - striker.x, OPEN_START.y - striker.y, 0);
-    const balls: BallStates = {};
-    for (const id of BALL_IDS) {
-        const ball = setup.balls[id];
-        if (ball !== undefined) {
-            balls[id] = { ...ball, position: add(ball.position, offset) };
-        }
-    }
-    return { ...setup, balls };
-}
-
 /** J's lines: its shots run before G and H, so that the guard's tally covers them, and print in J's place. */
 function userChecks(): string[] {
     const world = openWorld();
     const lines = [
-        "== J. The user's checks (design §8.5, ruling 3; recorded, not gated): simulateShot on an open world " +
+        "== J. The user's checks (design §8.5, the pre-flight gate, 2026-10-18; recorded, not gated): " +
+            "simulateShot on an open world " +
             `(defaultWorld(10)'s gravity, ball, materials and surface, no hoops, a ${OPEN_LAWN} m square lawn, the ` +
             `striker from (${fmt(OPEN_START.x)}, ${fmt(OPEN_START.y)}) m aiming +y); distances to rest; the user's ` +
             "single-ball strokes 5, 15 and 30 yd, the full lawn 35 yd ==",
@@ -891,12 +851,6 @@ function userChecks(): string[] {
             `${fmt(travel("blue") / YARD)} yd${haltedText(shot.motion, "blue")}; the user's full lawn 35 yd`,
     );
     return lines;
-}
-
-/** " (halted)" when phase 2 halted ball `id` past the open lawn's boundary: its distance is then not to rest. */
-function haltedText(motion: ShotResult, id: BallId): string {
-    const halted = motion.events.some((e) => e.kind === "halted" && e.ball === id);
-    return halted ? " (halted)" : "";
 }
 
 let checked: string[] | null = null;

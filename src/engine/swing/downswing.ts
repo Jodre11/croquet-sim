@@ -84,7 +84,8 @@ function fail(message: string): never {
 /**
  * The player's torque (N·m) on the shaft at intensity `intensity` and angular speed `omega` (rad/s): the linear law
  * i·τ_0·max(0, 1 − ω/ω_max) (P2b.2b.2c.1 design §4.4). Exactly +0 at intensity 0 and at or beyond ω_max, never
- * negative or −0, so more effort never slows the swing and intensity 0 is the gravity-only swing to the bit.
+ * negative: more effort never slows the swing. Never −0 either, because the integrator's sums keep the sign of zero
+ * and the gravity-only swing must stay bit-identical.
  */
 export function effortTorque(effort: SwingEffort, intensity: number, omega: number): number {
     if (!(intensity > 0) || !(omega < effort.speed)) {

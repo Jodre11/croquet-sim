@@ -1,0 +1,78 @@
+== C. The sensitivity probe (design §5.2): the drive's and the AC stop's canonical setups at their targets' speeds through the fit's evaluator, each candidate swept across its bounds with the rest at today's values, the obstacles' contact times moved with the ball–ball contact time; the ratios from the evaluator's impact, the follow-through integrated apart (simulateStroke, the same coupling) for its flags only, at today's value and the swept points alone, not at the slopes' points ==
+-- C.1 Today's ratios: drive 3.3085 against 4.2300 ± 0.2000 at 3.0000 m/s: error -0.9215, -4.6077 tolerances; stop 5.9109 against 7.1500 ± 0.6000 at 3.0000 m/s: error -1.2391, -2.0652 tolerances --
+today: drive 3.3085 [turf-lift×1; impact-off-face×1]; stop 5.9109 [turf-lift×1]
+today: m_eff 1.1095 kg, +10.9510 % from the head's m 1.0000 kg, the swung body's M 2.1250 kg
+-- C.2 Per candidate, 7 points evenly across its bounds (today's value added if not among them): both ratios with any flag, cap, error or guard hit in brackets, and the drive's effective mass m_eff at the face centre along aim, its deviation from the head's mass m in %, and the swung body's mass M, MARKED outside [0.9·m, M] (ruling D, P2b.2b.2b.2c) --
+ballBallContactTime (today 0.750 ms, bounds [0.500, 0.870] ms):
+  0.500 ms: drive 2.0439 [turf-lift×1]; stop 2.3408 [turf-lift×1]; m_eff 1.1095 kg, +10.9510 % from the head's m 1.0000 kg, the swung body's M 2.1250 kg
+  0.562 ms: drive 2.6229 [turf-lift×1]; stop 3.0121 [turf-lift×1]; m_eff 1.1095 kg, +10.9510 % from the head's m 1.0000 kg, the swung body's M 2.1250 kg
+  0.623 ms: drive 3.2277 [turf-lift×1]; stop 3.8245 [turf-lift×1]; m_eff 1.1095 kg, +10.9510 % from the head's m 1.0000 kg, the swung body's M 2.1250 kg
+  0.685 ms: drive 3.9269 [turf-lift×1]; stop 4.7745 [turf-lift×1]; m_eff 1.1095 kg, +10.9510 % from the head's m 1.0000 kg, the swung body's M 2.1250 kg
+  0.747 ms: drive 3.5886 [turf-lift×1; impact-off-face×1]; stop 5.8512 [turf-lift×1]; m_eff 1.1095 kg, +10.9510 % from the head's m 1.0000 kg, the swung body's M 2.1250 kg
+  0.750 ms (today): drive 3.3085 [turf-lift×1; impact-off-face×1]; stop 5.9109 [turf-lift×1]; m_eff 1.1095 kg, +10.9510 % from the head's m 1.0000 kg, the swung body's M 2.1250 kg
+  0.808 ms: drive 3.1930 [turf-lift×1; impact-off-face×1]; stop 7.0196 [turf-lift×1]; m_eff 1.1095 kg, +10.9510 % from the head's m 1.0000 kg, the swung body's M 2.1250 kg
+  0.870 ms: drive 3.8490 [turf-lift×1; impact-off-face×1]; stop 8.2790 [turf-lift×1]; m_eff 1.1095 kg, +10.9510 % from the head's m 1.0000 kg, the swung body's M 2.1250 kg
+handCouplingPeriod (today 80.0 ms, bounds [10.0, 200.0] ms):
+  10.0 ms: drive 1.3493 [grip-limit×1; turf-lift×1; impact-off-face×1]; stop 5.8878 [turf-lift×1]; m_eff 1.1095 kg, +10.9510 % from the head's m 1.0000 kg, the swung body's M 2.1250 kg
+  41.7 ms: drive 2.2295 [turf-lift×1; impact-off-face×1]; stop 5.9080 [turf-lift×1]; m_eff 1.1095 kg, +10.9510 % from the head's m 1.0000 kg, the swung body's M 2.1250 kg
+  73.3 ms: drive 3.0184 [turf-lift×1; impact-off-face×1]; stop 5.9105 [turf-lift×1]; m_eff 1.1095 kg, +10.9510 % from the head's m 1.0000 kg, the swung body's M 2.1250 kg
+  80.0 ms (today): drive 3.3085 [turf-lift×1; impact-off-face×1]; stop 5.9109 [turf-lift×1]; m_eff 1.1095 kg, +10.9510 % from the head's m 1.0000 kg, the swung body's M 2.1250 kg
+  105.0 ms: drive 4.7942 [turf-lift×1]; stop 5.9115 [turf-lift×1]; m_eff 1.1095 kg, +10.9510 % from the head's m 1.0000 kg, the swung body's M 2.1250 kg
+  136.7 ms: drive 4.7738 [turf-lift×1]; stop 5.9123 [turf-lift×1]; m_eff 1.1095 kg, +10.9510 % from the head's m 1.0000 kg, the swung body's M 2.1250 kg
+  168.3 ms: drive 4.7655 [turf-lift×1]; stop 5.9129 [turf-lift×1]; m_eff 1.1095 kg, +10.9510 % from the head's m 1.0000 kg, the swung body's M 2.1250 kg
+  200.0 ms: drive 4.7634 [turf-lift×1]; stop 5.9133 [turf-lift×1]; m_eff 1.1095 kg, +10.9510 % from the head's m 1.0000 kg, the swung body's M 2.1250 kg
+handCouplingDampingRatio (today 0.7000, bounds [0.2000, 1.0000]):
+  0.2000: drive 4.7712 [turf-lift×1]; stop 5.9135 [turf-lift×1]; m_eff 1.1095 kg, +10.9510 % from the head's m 1.0000 kg, the swung body's M 2.1250 kg
+  0.3333: drive 4.7656 [turf-lift×1]; stop 5.9129 [turf-lift×1]; m_eff 1.1095 kg, +10.9510 % from the head's m 1.0000 kg, the swung body's M 2.1250 kg
+  0.4667: drive 4.7825 [turf-lift×1]; stop 5.9119 [turf-lift×1]; m_eff 1.1095 kg, +10.9510 % from the head's m 1.0000 kg, the swung body's M 2.1250 kg
+  0.6000: drive 4.7905 [turf-lift×1; impact-off-face×1]; stop 5.9113 [turf-lift×1]; m_eff 1.1095 kg, +10.9510 % from the head's m 1.0000 kg, the swung body's M 2.1250 kg
+  0.7000 (today): drive 3.3085 [turf-lift×1; impact-off-face×1]; stop 5.9109 [turf-lift×1]; m_eff 1.1095 kg, +10.9510 % from the head's m 1.0000 kg, the swung body's M 2.1250 kg
+  0.7333: drive 3.2895 [turf-lift×1; impact-off-face×1]; stop 5.9108 [turf-lift×1]; m_eff 1.1095 kg, +10.9510 % from the head's m 1.0000 kg, the swung body's M 2.1250 kg
+  0.8667: drive 2.6820 [turf-lift×1; impact-off-face×1]; stop 5.9101 [turf-lift×1]; m_eff 1.1095 kg, +10.9510 % from the head's m 1.0000 kg, the swung body's M 2.1250 kg
+  1.0000: drive 2.5192 [turf-lift×1; impact-off-face×1]; stop 5.9095 [turf-lift×1]; m_eff 1.1095 kg, +10.9510 % from the head's m 1.0000 kg, the swung body's M 2.1250 kg
+armMass (today 0.8000 kg, bounds [0.0000, 1.5000] kg):
+  0.0000 kg: drive 4.8933 [turf-lift×1]; stop 6.3264 [turf-lift×1]; m_eff 1.1062 kg, +10.6239 % from the head's m 1.0000 kg, the swung body's M 1.3250 kg
+  0.2500 kg: drive 4.8309 [turf-lift×1]; stop 6.0419 [turf-lift×1]; m_eff 1.1086 kg, +10.8619 % from the head's m 1.0000 kg, the swung body's M 1.5750 kg
+  0.5000 kg: drive 4.7550 [turf-lift×1; impact-off-face×1]; stop 5.9620 [turf-lift×1]; m_eff 1.1092 kg, +10.9207 % from the head's m 1.0000 kg, the swung body's M 1.8250 kg
+  0.7500 kg: drive 3.6095 [turf-lift×1; impact-off-face×1]; stop 5.9177 [turf-lift×1]; m_eff 1.1095 kg, +10.9473 % from the head's m 1.0000 kg, the swung body's M 2.0750 kg
+  0.8000 kg (today): drive 3.3085 [turf-lift×1; impact-off-face×1]; stop 5.9109 [turf-lift×1]; m_eff 1.1095 kg, +10.9510 % from the head's m 1.0000 kg, the swung body's M 2.1250 kg
+  1.0000 kg: drive 3.0144 [turf-lift×1; impact-off-face×1]; stop 5.8919 [turf-lift×1]; m_eff 1.1096 kg, +10.9625 % from the head's m 1.0000 kg, the swung body's M 2.3250 kg
+  1.2500 kg: drive 2.7668 [turf-lift×1; impact-off-face×1]; stop 5.8729 [turf-lift×1]; m_eff 1.1097 kg, +10.9724 % from the head's m 1.0000 kg, the swung body's M 2.5750 kg
+  1.5000 kg: drive 2.6003 [turf-lift×1; impact-off-face×1]; stop 5.8409 [turf-lift×1]; m_eff 1.1098 kg, +10.9792 % from the head's m 1.0000 kg, the swung body's M 2.8250 kg
+reachSlack (today 30.00 mm, bounds [10.00, 30.00] mm):
+  10.00 mm: drive 4.6207 [turf-lift×1; impact-off-face×1]; stop 5.9109 [turf-lift×1]; m_eff 1.1095 kg, +10.9510 % from the head's m 1.0000 kg, the swung body's M 2.1250 kg
+  13.33 mm: drive 4.1932 [turf-lift×1; impact-off-face×1]; stop 5.9109 [turf-lift×1]; m_eff 1.1095 kg, +10.9510 % from the head's m 1.0000 kg, the swung body's M 2.1250 kg
+  16.67 mm: drive 3.9326 [turf-lift×1; impact-off-face×1]; stop 5.9109 [turf-lift×1]; m_eff 1.1095 kg, +10.9510 % from the head's m 1.0000 kg, the swung body's M 2.1250 kg
+  20.00 mm: drive 3.7651 [turf-lift×1; impact-off-face×1]; stop 5.9109 [turf-lift×1]; m_eff 1.1095 kg, +10.9510 % from the head's m 1.0000 kg, the swung body's M 2.1250 kg
+  23.33 mm: drive 3.6578 [turf-lift×1; impact-off-face×1]; stop 5.9109 [turf-lift×1]; m_eff 1.1095 kg, +10.9510 % from the head's m 1.0000 kg, the swung body's M 2.1250 kg
+  26.67 mm: drive 3.5400 [turf-lift×1; impact-off-face×1]; stop 5.9109 [turf-lift×1]; m_eff 1.1095 kg, +10.9510 % from the head's m 1.0000 kg, the swung body's M 2.1250 kg
+  30.00 mm (today): drive 3.3085 [turf-lift×1; impact-off-face×1]; stop 5.9109 [turf-lift×1]; m_eff 1.1095 kg, +10.9510 % from the head's m 1.0000 kg, the swung body's M 2.1250 kg
+-- C.3 Slopes at today's value (a difference of ±1.0000 % of the bound's width, one-sided at a bound), each times its bound's width (ratio per bound width); no effect where both are under 0.0100 --
+ballBallContactTime at 0.750 ms in [0.500, 0.870] ms (central): drive -1.5001, stop 6.8327 per bound width (-4054.2100, 18466.8138 per s)
+handCouplingPeriod at 80.0 ms in [10.0, 200.0] ms (central): drive 10.2371, stop 0.0128 per bound width (53.8797, 0.0672 per s)
+handCouplingDampingRatio at 0.7000 in [0.2000, 1.0000] (central): drive -5.8685, stop -0.0028 per bound width (-7.3357, -0.0035 per unit)
+armMass at 0.8000 kg in [0.0000, 1.5000] kg (central): drive -3.6621, stop -0.1524 per bound width (-2.4414, -0.1016 per kg)
+reachSlack at 30.00 mm in [10.00, 30.00] mm (backward (at its upper bound)): drive -17.4540, stop 0.0000 per bound width (-872.6985, 0.0000 per m)
+-- C.4 Per pair: the angle between the two slope vectors (each slope times its bound's width), and today's errors solved against those slopes (linear), reachable when both values lie within their bounds, with the drive's effective mass at a reachable solution --
+ballBallContactTime + handCouplingPeriod: angle 102.3108°; ballBallContactTime 0.817 ms in [0.500, 0.870] ms (inside; today 0.750 ms), handCouplingPeriod 102.1 ms in [10.0, 200.0] ms (inside; today 80.0 ms): reachable; m_eff 1.1095 kg, +10.9510 % from the head's m 1.0000 kg, the swung body's M 2.1250 kg
+ballBallContactTime + handCouplingDampingRatio: angle 77.6449°; ballBallContactTime 0.817 ms in [0.500, 0.870] ms (inside; today 0.750 ms), handCouplingDampingRatio 0.5373 in [0.2000, 1.0000] (inside; today 0.7000): reachable; m_eff 1.1095 kg, +10.9510 % from the head's m 1.0000 kg, the swung body's M 2.1250 kg
+ballBallContactTime + armMass: angle 80.0012°; ballBallContactTime 0.814 ms in [0.500, 0.870] ms (inside; today 0.750 ms), armMass 0.3155 kg in [0.0000, 1.5000] kg (inside; today 0.8000 kg): reachable; m_eff 1.1088 kg, +10.8833 % from the head's m 1.0000 kg, the swung body's M 1.6405 kg
+ballBallContactTime + reachSlack: angle 77.6177°; ballBallContactTime 0.817 ms in [0.500, 0.870] ms (inside; today 0.750 ms), reachSlack 28.63 mm in [10.00, 30.00] mm (inside; today 30.00 mm): reachable; m_eff 1.1095 kg, +10.9510 % from the head's m 1.0000 kg, the swung body's M 2.1250 kg
+handCouplingPeriod + handCouplingDampingRatio: angle 179.9557°; degenerate (near parallel (179.9557°)), not solved
+handCouplingPeriod + armMass: angle 177.6880°; handCouplingPeriod -472.0 ms in [10.0, 200.0] ms (OUTSIDE; today 80.0 ms), armMass -11.7589 kg in [0.0000, 1.5000] kg (OUTSIDE; today 0.8000 kg): not reachable
+handCouplingPeriod + reachSlack: angle 179.9285°; degenerate (near parallel (179.9285°)), not solved
+handCouplingDampingRatio + armMass: angle 2.3563°; handCouplingDampingRatio 4.6780 in [0.2000, 1.0000] (OUTSIDE; today 0.7000), armMass -11.5302 kg in [0.0000, 1.5000] kg (OUTSIDE; today 0.8000 kg): not reachable
+handCouplingDampingRatio + reachSlack: angle 0.0272°; degenerate (near parallel (0.0272°)), not solved
+armMass + reachSlack: angle 2.3835°; armMass -11.3939 kg in [0.0000, 1.5000] kg (OUTSIDE; today 0.8000 kg), reachSlack 63.06 mm in [10.00, 30.00] mm (OUTSIDE; today 30.00 mm): not reachable
+-- C.5 Ranked: reachable pairs first, then the rest, then the degenerate; each by angle nearest 90° --
+1. ballBallContactTime + armMass: angle 80.0012°; ballBallContactTime 0.814 ms in [0.500, 0.870] ms (inside; today 0.750 ms), armMass 0.3155 kg in [0.0000, 1.5000] kg (inside; today 0.8000 kg): reachable; m_eff 1.1088 kg, +10.8833 % from the head's m 1.0000 kg, the swung body's M 1.6405 kg
+2. ballBallContactTime + handCouplingPeriod: angle 102.3108°; ballBallContactTime 0.817 ms in [0.500, 0.870] ms (inside; today 0.750 ms), handCouplingPeriod 102.1 ms in [10.0, 200.0] ms (inside; today 80.0 ms): reachable; m_eff 1.1095 kg, +10.9510 % from the head's m 1.0000 kg, the swung body's M 2.1250 kg
+3. ballBallContactTime + handCouplingDampingRatio: angle 77.6449°; ballBallContactTime 0.817 ms in [0.500, 0.870] ms (inside; today 0.750 ms), handCouplingDampingRatio 0.5373 in [0.2000, 1.0000] (inside; today 0.7000): reachable; m_eff 1.1095 kg, +10.9510 % from the head's m 1.0000 kg, the swung body's M 2.1250 kg
+4. ballBallContactTime + reachSlack: angle 77.6177°; ballBallContactTime 0.817 ms in [0.500, 0.870] ms (inside; today 0.750 ms), reachSlack 28.63 mm in [10.00, 30.00] mm (inside; today 30.00 mm): reachable; m_eff 1.1095 kg, +10.9510 % from the head's m 1.0000 kg, the swung body's M 2.1250 kg
+5. armMass + reachSlack: angle 2.3835°; armMass -11.3939 kg in [0.0000, 1.5000] kg (OUTSIDE; today 0.8000 kg), reachSlack 63.06 mm in [10.00, 30.00] mm (OUTSIDE; today 30.00 mm): not reachable
+6. handCouplingDampingRatio + armMass: angle 2.3563°; handCouplingDampingRatio 4.6780 in [0.2000, 1.0000] (OUTSIDE; today 0.7000), armMass -11.5302 kg in [0.0000, 1.5000] kg (OUTSIDE; today 0.8000 kg): not reachable
+7. handCouplingPeriod + armMass: angle 177.6880°; handCouplingPeriod -472.0 ms in [10.0, 200.0] ms (OUTSIDE; today 80.0 ms), armMass -11.7589 kg in [0.0000, 1.5000] kg (OUTSIDE; today 0.8000 kg): not reachable
+8. handCouplingPeriod + reachSlack: angle 179.9285°; degenerate (near parallel (179.9285°)), not solved
+9. handCouplingPeriod + handCouplingDampingRatio: angle 179.9557°; degenerate (near parallel (179.9557°)), not solved
+10. handCouplingDampingRatio + reachSlack: angle 0.0272°; degenerate (near parallel (0.0272°)), not solved
+recommendation: ballBallContactTime + armMass

@@ -386,7 +386,8 @@ const INTENSITY_BISECTIONS = 60;
  * 2. U(0) < speed ≤ U(1) at h_0: h_0 and the intensity solved by bisection over [0, 1] (U rises with i, design §4.2),
  *    the least found that reaches the speed;
  * 3. speed > U(1) at h_0: intensity 1 and the backswing solved at it, up to θ_max; beyond, backswingFor's RangeError.
- * Test support only.
+ * h_0 is read from `swingReference` because `SwingProfile` carries no default backswing, so a setup with another
+ * mallet or body still starts from the default player's h_0. Test support only.
  */
 export function strokeFor(
     setup: ShotSetup,
@@ -419,4 +420,16 @@ export function strokeFor(
         }
     }
     return { backswing, intensity: hi };
+}
+
+/**
+ * strokeFor's regime for `setup`'s stroke: 1 with no intensity (gravity only), 2 at the preset's defaultBackswing h_0
+ * with an intensity, 3 at intensity 1 with the backswing solved beyond h_0. Test support only.
+ */
+export function regimeOf(setup: ShotSetup): 1 | 2 | 3 {
+    const { type, backswing, intensity } = setup.stroke;
+    if (intensity === undefined) {
+        return 1;
+    }
+    return backswing === swingReference[type].defaultBackswing.value ? 2 : 3;
 }

@@ -8,6 +8,8 @@ import {
     lawnReference,
     lawsReference,
     malletReference,
+    ratioTargetsReference,
+    readRatioTargets,
     readShape,
     SWING_REFERENCE_TYPES,
     swingBodyReference,
@@ -391,5 +393,54 @@ describe("swing reference (P2b.2b.2a design §6.1)", () => {
                 new RegExp(`swing\\.${type}\\.defaultIntensity.*retired`),
             );
         }
+    });
+});
+
+describe("the ratio targets (P2b.2b.2c.2 design §5.1)", () => {
+    type Target = { ratio: Record<string, unknown>; speed?: Record<string, unknown> };
+    // A deep copy of swing.json with one target's fields replaced; an undefined field is removed.
+    const withTarget = (key: "drive" | "stop-ac", change: Partial<Target>): unknown => {
+        const copy = JSON.parse(JSON.stringify(swingJson)) as { ratioTargets: Record<string, Target> };
+        const target = copy.ratioTargets[key] as Target;
+        copy.ratioTargets[key] = {
+            ratio: { ...target.ratio, ...change.ratio },
+            ...("speed" in change
+                ? change.speed === undefined
+                    ? {}
+                    : { speed: { ...target.speed, ...change.speed } }
+                : { speed: target.speed }),
+        };
+        return copy;
+    };
+
+    it("gives Gugan 5's drive and stop ratios with his tolerances as bounds", () => {
+        expect(ratioTargetsReference.drive.ratio.value).toBe(4.23);
+        expect(ratioTargetsReference.drive.ratio.bounds).toEqual([4.03, 4.43]);
+        expect(ratioTargetsReference["stop-ac"].ratio.value).toBe(7.15);
+        expect(ratioTargetsReference["stop-ac"].ratio.bounds).toEqual([6.55, 7.75]);
+        expect(ratioTargetsReference.drive.speed.value).toBe(3);
+        expect(ratioTargetsReference["stop-ac"].speed.value).toBe(3);
+    });
+
+    it("rejects a target outside its tolerance band, a missing or non-positive speed", () => {
+        expect(() => readRatioTargets(withTarget("drive", { ratio: { value: 5 } }))).toThrow(ReferenceDataError);
+        expect(() => readRatioTargets(withTarget("drive", { ratio: { value: 5 } }))).toThrow(
+            /ratioTargets\.drive\.ratio.*outside bounds/,
+        );
+        expect(() => readRatioTargets(withTarget("stop-ac", { speed: undefined }))).toThrow(ReferenceDataError);
+        expect(() => readRatioTargets(withTarget("stop-ac", { speed: undefined }))).toThrow(
+            /ratioTargets\.stop-ac\.speed.*missing/,
+        );
+        expect(() => readRatioTargets(withTarget("stop-ac", { speed: { value: 0 } }))).toThrow(
+            /ratioTargets\.stop-ac\.speed.*positive/,
+        );
+        expect(readRatioTargets(swingJson)).toEqual(ratioTargetsReference);
+    });
+
+    it("rejects a ratio that gives no tolerance bounds", () => {
+        const unbounded = withTarget("drive", {}) as { ratioTargets: { drive: { ratio: Record<string, unknown> } } };
+        delete unbounded.ratioTargets.drive.ratio["bounds"];
+        expect(() => readRatioTargets(unbounded)).toThrow(ReferenceDataError);
+        expect(() => readRatioTargets(unbounded)).toThrow(/must give its tolerance as bounds/);
     });
 });

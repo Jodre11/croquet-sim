@@ -336,7 +336,7 @@ function rigidWrench(track: PreparedTrack, t: number): { readonly force: Vec3; r
 
 /** The hand load on a head on the path at t, with a fresh grip state unless one is given. */
 function loadOnPath(track: PreparedTrack, t: number, grip: GripState = newGripState()): HandLoad {
-    return handLoad(track, headOnPath(track, TEST_HEAD, t), TEST_HEAD, t, grip);
+    return handLoad(track, headOnPath(track, TEST_HEAD, t), TEST_HEAD, t, grip, IMPACT_DT);
 }
 
 /** The dip's force M·a_d at t. */
@@ -403,11 +403,11 @@ describe("the bottom hand's rate guide", () => {
         const track = prepare(still(), TEST_COUPLING, TEST_HANDS);
         const t = 0.02;
         for (const extra of [0, 0.5]) {
-            const load = handLoad(track, spun(track, t, extra), TEST_HEAD, t, newGripState());
+            const load = handLoad(track, spun(track, t, extra), TEST_HEAD, t, newGripState(), IMPACT_DT);
             expect(length(load.bottom), `extra ${extra}`).toBe(0);
         }
         const lagging = spun(track, t, -0.5);
-        const load = handLoad(track, lagging, TEST_HEAD, t, newGripState());
+        const load = handLoad(track, lagging, TEST_HEAD, t, newGripState(), IMPACT_DT);
         const e = forwardOf(lagging, track.arc.aim);
         expect(dot(load.bottom, e)).toBeCloseTo(track.bottom.damping * 0.5 * lever, 9);
         expect(length(sub(load.bottom, scale(e, dot(load.bottom, e))))).toBeLessThan(1e-12);
@@ -422,7 +422,7 @@ describe("the bottom hand's rate guide", () => {
         expect(length(on.bottom)).toBeGreaterThan(1);
         expect(dist(loadOnPath(light, t).bottom, scale(on.bottom, 0.25))).toBeLessThan(1e-9);
         const leading = spun(track, t, 0.5);
-        const fast = handLoad(track, leading, TEST_HEAD, t, newGripState());
+        const fast = handLoad(track, leading, TEST_HEAD, t, newGripState(), IMPACT_DT);
         const e = forwardOf(leading, arc.aim);
         expect(dot(sub(fast.bottom, on.bottom), e)).toBeCloseTo(-track.bottom.damping * 0.5 * lever, 6);
     });
@@ -434,7 +434,7 @@ describe("the bottom hand's rate guide", () => {
         const track = prepare(arc, TEST_COUPLING, TEST_HANDS);
         const planned = dot(pathAt(track, t).angularVelocity, track.axis);
         const at = (share: number): HandLoad =>
-            handLoad(track, spun(track, t, (share - 1) * planned), TEST_HEAD, t, newGripState());
+            handLoad(track, spun(track, t, (share - 1) * planned), TEST_HEAD, t, newGripState(), IMPACT_DT);
         const [rest, half, full] = [at(0), at(0.5), at(1)];
         // Between rest and the path's rate the deceleration is in proportion and the guide neither pushes nor pulls.
         expect(length(sub(full.feedForward, rest.feedForward))).toBeGreaterThan(1);
@@ -442,7 +442,7 @@ describe("the bottom hand's rate guide", () => {
         expect(dist(half.bottom, scale(add(rest.bottom, full.bottom), 0.5))).toBeLessThan(1e-9);
         // Past rest none of it, and the guide returns the head towards rest.
         const behind = spun(track, t, -1.2 * planned);
-        const back = handLoad(track, behind, TEST_HEAD, t, newGripState());
+        const back = handLoad(track, behind, TEST_HEAD, t, newGripState(), IMPACT_DT);
         expect(dist(back.feedForward, rest.feedForward)).toBeLessThan(1e-9);
         const push = dot(sub(back.bottom, rest.bottom), forwardOf(behind, arc.aim));
         expect(push).toBeCloseTo(track.bottom.damping * 0.2 * planned * lever, 6);
@@ -453,7 +453,7 @@ describe("the bottom hand's rate guide", () => {
         const t = 0.02;
         const guided = (guideEffort: number): Vec3 => {
             const track = prepare(still(), TEST_COUPLING, withEffort(guideEffort));
-            return handLoad(track, spun(track, t, -0.5), TEST_HEAD, t, newGripState()).bottom;
+            return handLoad(track, spun(track, t, -0.5), TEST_HEAD, t, newGripState(), IMPACT_DT).bottom;
         };
         expect(length(guided(1))).toBeGreaterThan(0);
         expect(length(guided(0))).toBe(0);
@@ -478,7 +478,7 @@ describe("the bottom hand's rate guide", () => {
                 topOffset: null,
                 bottomOffset: null,
             };
-            return handLoad(track, slow, TEST_HEAD, t, open).bottom;
+            return handLoad(track, slow, TEST_HEAD, t, open, IMPACT_DT).bottom;
         };
         expect(length(released(1))).toBeGreaterThan(0);
         expect(length(released(0))).toBe(0);
@@ -486,7 +486,7 @@ describe("the bottom hand's rate guide", () => {
         const check = still({ omega0: 3, alpha: -300 });
         const checked = (guideEffort: number): Vec3 => {
             const track = prepare(check, TEST_COUPLING, withEffort(guideEffort));
-            return handLoad(track, spun(track, 0.005, 0.5), TEST_HEAD, 0.005, newGripState()).bottom;
+            return handLoad(track, spun(track, 0.005, 0.5), TEST_HEAD, 0.005, newGripState(), IMPACT_DT).bottom;
         };
         expect(length(checked(1))).toBeGreaterThan(1);
         expect(checked(0)).toEqual(checked(1));
@@ -500,7 +500,7 @@ describe("a shaft along the aim", () => {
         // An upright head under a vertical aim: the shaft is exactly along it, so the swing plane's forward is 0 / 0.
         const track: PreparedTrack = { ...path, arc: { ...path.arc, aim: UP } };
         const head: HeadState = { ...headOnPath(path, TEST_HEAD, t), orientation: { w: 1, x: 0, y: 0, z: 0 } };
-        const load = handLoad(track, head, TEST_HEAD, t, newGripState());
+        const load = handLoad(track, head, TEST_HEAD, t, newGripState(), IMPACT_DT);
         for (const v of [load.force, load.torque, load.top, load.bottom]) {
             expect(Number.isFinite(v.x + v.y + v.z)).toBe(true);
         }
@@ -521,11 +521,11 @@ describe("release by reach", () => {
 
     it("opens the bottom hand once the shaft has turned through the slack, recording when and how far", () => {
         const grip = newGripState();
-        handLoad(track, turned(0), TEST_HEAD, 0, grip);
-        handLoad(track, turned((TEST_HANDS.reachSlack - 1e-3) / lever), TEST_HEAD, 1e-3, grip);
+        handLoad(track, turned(0), TEST_HEAD, 0, grip, 1e-3);
+        handLoad(track, turned((TEST_HANDS.reachSlack - 1e-3) / lever), TEST_HEAD, 1e-3, grip, 1e-3);
         expect(grip.releasedAt).toBeNull();
         const turn = (TEST_HANDS.reachSlack + 1e-3) / lever;
-        handLoad(track, turned(turn), TEST_HEAD, 2e-3, grip);
+        handLoad(track, turned(turn), TEST_HEAD, 2e-3, grip, 1e-3);
         expect(grip.releasedAt).toBe(2e-3);
         expect(grip.releaseDelta).toBeCloseTo(turn, 12);
     });
@@ -549,13 +549,13 @@ describe("release by reach", () => {
         };
         const turn = 0.08;
         const e = forwardOf(turned(turn), track.arc.aim);
-        const resting = handLoad(track, turned(turn), TEST_HEAD, 2e-3, grip);
+        const resting = handLoad(track, turned(turn), TEST_HEAD, 2e-3, grip, IMPACT_DT);
         expect(length(resting.bottom)).toBe(0);
         expect(dot(resting.torque, rotate(turned(turn).orientation, UP))).toBeCloseTo(0, 12);
-        const pushing = handLoad(track, turned(turn, scale(e, -0.5)), TEST_HEAD, 2e-3, grip);
+        const pushing = handLoad(track, turned(turn, scale(e, -0.5)), TEST_HEAD, 2e-3, grip, IMPACT_DT);
         expect(dot(pushing.bottom, e)).toBeCloseTo(track.bottom.damping * 0.5, 9);
         expect(length(sub(pushing.bottom, scale(e, dot(pushing.bottom, e))))).toBeLessThan(1e-12);
-        const ahead = handLoad(track, turned(turn, scale(e, 0.5)), TEST_HEAD, 2e-3, grip);
+        const ahead = handLoad(track, turned(turn, scale(e, 0.5)), TEST_HEAD, 2e-3, grip, IMPACT_DT);
         expect(length(ahead.bottom)).toBe(0);
     });
 
@@ -651,7 +651,7 @@ describe("the flex (P2b.2b.2b.2b design §3.1, §7.1)", () => {
         // hand's share is zero. Each arm also holds up its whole hand–arm chain's weight (gate round 3: the chain).
         const track = prepareAt(STILL(), STANDARD_GRAVITY);
         const grip = newGripState();
-        handLoad(track, headOnPath(track, TEST_HEAD, 0), TEST_HEAD, 0, grip);
+        handLoad(track, headOnPath(track, TEST_HEAD, 0), TEST_HEAD, 0, grip, IMPACT_DT);
         const c = TEST_CHAIN;
         const chain =
             (c.forearmMass + c.handMass + c.fingerMass + c.palmSkinMass + c.fingerSkinMass) * STANDARD_GRAVITY;
@@ -703,10 +703,10 @@ describe("the flex (P2b.2b.2b.2b design §3.1, §7.1)", () => {
         const track = prepareAt(STILL({ theta0: -0.5 }), 0);
         const grip = newGripState();
         const on = headOnPath(track, TEST_HEAD, 0);
-        handLoad(track, on, TEST_HEAD, 0, grip);
+        handLoad(track, on, TEST_HEAD, 0, grip, IMPACT_DT);
         const turn = 1e-5;
         const turned = { ...on, orientation: multiply(axisAngle(track.axis, turn), on.orientation) };
-        const load = handLoad(track, turned, TEST_HEAD, 0, grip);
+        const load = handLoad(track, turned, TEST_HEAD, 0, grip, IMPACT_DT);
         const rTop = TEST_HEAD.socket.z + track.arc.radius;
         const rBottom = TEST_HEAD.socket.z + TEST_HANDS.bottom;
         const grips = TEST_CHAIN.palmStiffness + TEST_CHAIN.fingerStiffness;
@@ -718,9 +718,13 @@ describe("the flex (P2b.2b.2b.2b design §3.1, §7.1)", () => {
         const track = prepareAt(STILL(), STANDARD_GRAVITY);
         const grip = newGripState();
         const on = headOnPath(track, TEST_HEAD, 0);
-        const fed = handLoad(track, on, TEST_HEAD, 0, grip).force;
+        const fed = handLoad(track, on, TEST_HEAD, 0, grip, IMPACT_DT).force;
         const shifted = (d: number): Vec3 =>
-            sub(handLoad(track, { ...on, position: add(on.position, vec3(d, 0, 0)) }, TEST_HEAD, 0, grip).force, fed);
+            sub(
+                handLoad(track, { ...on, position: add(on.position, vec3(d, 0, 0)) }, TEST_HEAD, 0, grip, IMPACT_DT)
+                    .force,
+                fed,
+            );
         expect(shifted(1e-2).x).toBeCloseTo(10 * shifted(1e-3).x, 9);
     });
 
@@ -769,7 +773,7 @@ describe("the flex (P2b.2b.2b.2b design §3.1, §7.1)", () => {
             const departed = pendulum / 2;
             const topStiffness = (track: PreparedTrack, t: number, departedAt: number | null): number => {
                 const grip = { ...newGripState(), departedAt };
-                handLoad(track, headOnPath(track, TEST_HEAD, t), TEST_HEAD, t, grip);
+                handLoad(track, headOnPath(track, TEST_HEAD, t), TEST_HEAD, t, grip, IMPACT_DT);
                 return grip.topStiffness;
             };
             const excess = (t: number, departedAt: number | null = departed): number =>
@@ -779,10 +783,10 @@ describe("the flex (P2b.2b.2b.2b design §3.1, §7.1)", () => {
             // forearm stays where it was while its intended point moves on, so the spring carries an offset, and a step
             // in k at t_d would step the force by Δk times that offset.
             const hold0 = { ...newGripState(), departedAt: departed };
-            handLoad(held, headOnPath(held, TEST_HEAD, 0.001), TEST_HEAD, 0.001, hold0);
+            handLoad(held, headOnPath(held, TEST_HEAD, 0.001), TEST_HEAD, 0.001, hold0, IMPACT_DT);
             const forearmForce = (t: number): Vec3 => {
                 const grip = structuredClone(hold0);
-                handLoad(held, headOnPath(held, TEST_HEAD, t), TEST_HEAD, t, grip);
+                handLoad(held, headOnPath(held, TEST_HEAD, t), TEST_HEAD, t, grip, IMPACT_DT);
                 return (grip.topChain as ArmChain).forearm.force;
             };
             const before = forearmForce(departed - 1e-9);
@@ -837,7 +841,7 @@ describe("the flex (P2b.2b.2b.2b design §3.1, §7.1)", () => {
         const end = (track.push as Push).end as number;
         const grip = newGripState();
         for (const t of [end + 0.02, end + 0.05]) {
-            const load = handLoad(track, headOnPath(track, TEST_HEAD, t), TEST_HEAD, t, grip);
+            const load = handLoad(track, headOnPath(track, TEST_HEAD, t), TEST_HEAD, t, grip, IMPACT_DT);
             expect(Math.abs(dot(load.feedForward, arc.aim))).toBeLessThan(1e-9);
         }
     });
@@ -862,7 +866,7 @@ describe("the push intent (P2b.2b.2b.2b gate ruling 2026-10-11)", () => {
         const t = 0.002;
         const on = headOnPath(track, TEST_HEAD, t);
         const grip0 = resisted(0);
-        const plain = handLoad(track, on, TEST_HEAD, t, grip0);
+        const plain = handLoad(track, on, TEST_HEAD, t, grip0, IMPACT_DT);
         const a = TEST_HEAD.socket.z + track.arc.radius - track.body.offset;
         const b = TEST_HEAD.socket.z + TEST_HANDS.bottom - track.body.offset;
         for (const [R, P] of [
@@ -871,7 +875,7 @@ describe("the push intent (P2b.2b.2b.2b gate ruling 2026-10-11)", () => {
             [250, TEST_PUSH_FORCE],
         ] as const) {
             const grip = resisted(R);
-            const load = handLoad(track, on, TEST_HEAD, t, grip);
+            const load = handLoad(track, on, TEST_HEAD, t, grip, IMPACT_DT);
             expect(dist(sub(load.feedForward, plain.feedForward), scale(track.arc.aim, P)), `R ${R}`).toBeLessThan(
                 1e-9,
             );
@@ -892,7 +896,7 @@ describe("the push intent (P2b.2b.2b.2b gate ruling 2026-10-11)", () => {
             expect(grip.bottomStiffness, `R ${R}`).toBeGreaterThan(grip0.bottomStiffness);
         }
         for (const R of [0, -5]) {
-            expect(handLoad(track, on, TEST_HEAD, t, resisted(R)), `R ${R}`).toEqual(plain);
+            expect(handLoad(track, on, TEST_HEAD, t, resisted(R), IMPACT_DT), `R ${R}`).toEqual(plain);
         }
     });
 
@@ -901,15 +905,17 @@ describe("the push intent (P2b.2b.2b.2b gate ruling 2026-10-11)", () => {
         expect((track.push as Push).pendulum).toBe(0);
         const t = 0.002;
         const on = headOnPath(track, TEST_HEAD, t);
-        expect(handLoad(track, on, TEST_HEAD, t, resisted(50))).toEqual(handLoad(track, on, TEST_HEAD, t, resisted(0)));
+        expect(handLoad(track, on, TEST_HEAD, t, resisted(50), IMPACT_DT)).toEqual(
+            handLoad(track, on, TEST_HEAD, t, resisted(0), IMPACT_DT),
+        );
     });
 
     it("is never read in swing mode", () => {
         const track = prepareAt(still({ omega0: 3 }), STANDARD_GRAVITY);
         const t = 0.002;
         const on = headOnPath(track, TEST_HEAD, t);
-        expect(handLoad(track, on, TEST_HEAD, t, resisted(500))).toEqual(
-            handLoad(track, on, TEST_HEAD, t, resisted(0)),
+        expect(handLoad(track, on, TEST_HEAD, t, resisted(500), IMPACT_DT)).toEqual(
+            handLoad(track, on, TEST_HEAD, t, resisted(0), IMPACT_DT),
         );
     });
 
@@ -950,7 +956,7 @@ describe("the push intent (P2b.2b.2b.2b gate ruling 2026-10-11)", () => {
         let largest = 0;
         let sensed = 0;
         for (const s of snapshots) {
-            const load = handLoad(track, state, TEST_HEAD, t, grip);
+            const load = handLoad(track, state, TEST_HEAD, t, grip, IMPACT_DT);
             const hand = s.hand as NonNullable<ImpactSnapshot["hand"]>;
             if (!same(load.force, hand.force) || !same(load.feedForward, hand.feedForward)) {
                 differ++;
@@ -1007,7 +1013,7 @@ describe("the push intent (P2b.2b.2b.2b gate ruling 2026-10-11)", () => {
         const response = pushResponse(TEST_HANDS, IMPACT_DT);
         const aim = track.arc.aim;
         const intent = (before: HeadState, t: number, feedForward: Vec3): number =>
-            dot(sub(feedForward, handLoad(track, before, TEST_HEAD, t, newGripState()).feedForward), aim);
+            dot(sub(feedForward, handLoad(track, before, TEST_HEAD, t, newGripState(), IMPACT_DT).feedForward), aim);
         const impact: ImpactSnapshot[] = [];
         const follow: number[] = [];
         let before: HeadState | null = null;
@@ -1263,13 +1269,13 @@ describe("the hand–arm chain (P2b.2b.2b.2b gate round 3 ruling, 2026-10-11)", 
         const track = prepareAt(arc, STANDARD_GRAVITY);
         const pendulum = (track.push as Push).pendulum as number;
         const grip = newGripState();
-        handLoad(track, headOnPath(track, TEST_HEAD, 0), TEST_HEAD, 0, grip);
+        handLoad(track, headOnPath(track, TEST_HEAD, 0), TEST_HEAD, 0, grip, IMPACT_DT);
         expect(grip.topChain).not.toBeNull();
         expect(grip.bottomChain).not.toBeNull();
         expect(swungOf(track, grip)).toBe(track.body);
         const t = pendulum + 1e-3;
         const on = headOnPath(track, TEST_HEAD, t);
-        const load = handLoad(track, on, TEST_HEAD, t, grip);
+        const load = handLoad(track, on, TEST_HEAD, t, grip, IMPACT_DT);
         expect(grip.bottomChain).toBeNull();
         expect(grip.topChain).not.toBeNull();
         expect(swungOf(track, grip)).toBe(track.released);
@@ -1310,7 +1316,9 @@ describe("the hand–arm chain (P2b.2b.2b.2b gate round 3 ruling, 2026-10-11)", 
         });
         const arm = (): ArmChain => ({ forearm: mass(1), hand: mass(2), fingers: mass(3), preload: vec3(0.1, 0, 0) });
         const held: GripState = { ...newGripState(), topChain: arm(), bottomChain: arm() };
-        expect(handLoad(track, on, TEST_HEAD, t, held)).toEqual(handLoad(track, on, TEST_HEAD, t, newGripState()));
+        expect(handLoad(track, on, TEST_HEAD, t, held, IMPACT_DT)).toEqual(
+            handLoad(track, on, TEST_HEAD, t, newGripState(), IMPACT_DT),
+        );
         expect(held.topChain).toEqual(arm());
         expect(held.bottomChain).toEqual(arm());
     });

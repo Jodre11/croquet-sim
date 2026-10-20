@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { integrate, type ImpactSnapshot } from "../../../src/engine/impact/integrate";
+import { IMPACT_DT, integrate, type ImpactSnapshot } from "../../../src/engine/impact/integrate";
 import { rotate } from "../../../src/engine/impact/rigidBody";
 import {
     carryBody,
@@ -109,7 +109,7 @@ describe("the shaft's weight (P2b.2b.2b.2c design §4.3)", () => {
         // Before relaxAt the firm grips' springs act on a gap of about 1 ulp between headOnPath and handLoad (k ≈ 3.2e4
         // N/m, so about 7e-12 N, and the same with no shaft): the total force and torque carry a rounding floor
         // of order 1e-11, the feed-forward itself none.
-        const load = handLoad(track, state, SHAFTED, 0, newGripState());
+        const load = handLoad(track, state, SHAFTED, 0, newGripState(), IMPACT_DT);
         expect(length(sub(load.feedForward, vec3(0, 0, 1.3 * g)))).toBeLessThan(1e-12);
         expect(length(sub(load.force, vec3(0, 0, 1.3 * g)))).toBeLessThan(1e-10);
         const s = rotate(state.orientation, vec3(0, 0, 1));

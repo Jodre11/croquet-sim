@@ -1094,7 +1094,8 @@ export interface FlexStart {
  * null once it has let go. In carry mode also when a ball first departed from the face (s; gate round 13 ruling,
  * "Relax from first departure", 2026-10-12), which the integrator latches once, null until then; the arms' hold
  * relaxes from it (holdWeight). Each hand's slid offset (m, in the head's frame; P2b.2b.2b.3 design §5): null until
- * the hand first saturates, then how far its anchor on the shaft has slid, kept for the rest of the stroke.
+ * the hand first saturates, then how far its anchor on the shaft has slid; it persists in carry mode and, under the
+ * limit, relaxes in swing mode at the arm's rate (P2b.2b.2c.2 design §4.1).
  * Mutable; handLoad updates it, and the integrator moves the chains' masses each step (advanceChains).
  */
 export interface GripState {
@@ -1581,7 +1582,9 @@ function carryLoad(
  * (checkShare), and the guide steers its pitch rate into [0, ω_path]. With `gripped`, the hands grip firmly with
  * springs and dampers at any t, as before relaxAt but with no downswing gate: a stop's follow-through (P2b.2b.2a
  * design §4.2). Each hand's force is held to the grip's limit F_max (P2b.2b.2b.3 design §5): a position spring's
- * anchor slides at it, by an offset kept in `grip` in the head's frame; a damper alone is capped.
+ * anchor slides at it, by an offset kept in `grip` in the head's frame; a damper alone is capped. Under its limit in
+ * swing mode a slid anchor returns towards the hands' planned path at the arm's rate τ_arm = c_hold/k_hold, over the
+ * step `dt` (P2b.2b.2c.2 design §4.1), the force reaching the head only through the grip.
  */
 export function handLoad(
     track: PreparedTrack,
@@ -1589,6 +1592,7 @@ export function handLoad(
     head: MalletHead,
     t: number,
     grip: GripState,
+    dt: number,
     gripped = false,
 ): HandLoad {
     const { arc, hands } = track;
@@ -1715,6 +1719,19 @@ export function handLoad(
             }
             bottom = bottomHeld;
             saturated = saturated ?? "bottom";
+        }
+        // The arm returns a slid anchor under its limit (P2b.2b.2c.2 design §4.1): after this step's force, so a decay
+        // never tips a hand over F_max within its own step, and exact for any dt. A hand at its limit slides instead.
+        // Carry mode keeps its offset, its chain already holding the arm; with no hold every offset is kept as it was.
+        const arm = hands.flex.hold;
+        if (spring && !carry && arm !== null) {
+            const decay = exp(0 - dt / (arm.damping / arm.stiffness));
+            if (topHeld === null && grip.topOffset !== null) {
+                grip.topOffset = scale(grip.topOffset, decay);
+            }
+            if (bottomHeld === null && grip.bottomOffset !== null) {
+                grip.bottomOffset = scale(grip.bottomOffset, decay);
+            }
         }
         return load(top, bottom, twist, add(topShare, bottomShare), saturated);
     }
