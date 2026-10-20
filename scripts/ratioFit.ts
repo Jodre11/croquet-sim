@@ -142,7 +142,7 @@ export function runFit(
 }
 
 /** A ball's travel (m) on the turf from `setup`'s start to its rest in `motion`. */
-function travelOf(setup: ShotSetup, motion: ShotResult, id: keyof ShotResult["rest"]): number {
+export function travelOf(setup: ShotSetup, motion: ShotResult, id: keyof ShotResult["rest"]): number {
     const start = (setup.balls[id] as BallState).position;
     return length(horizontal(sub(motion.rest[id] as Vec3, start)));
 }
@@ -214,7 +214,8 @@ interface Evaluated {
  * Jacobian by forward differences of DIFFERENCE_SHARE of each bound's width (backward where forward would leave the
  * upper bound), each iterate clamped into the bounds, at most MAX_ITERATIONS steps. Converged as soon as any evaluated
  * point has both errors at most SOLVE_TOLERANCE; that point is returned. Otherwise the closest point is the evaluated
- * one with the least max(|e₀|/tol₀, |e₁|/tol₁), returned with `converged: false`. When Newton ends unconverged with
+ * one with the least max(|e₀|/tol₀, |e₁|/tol₁), returned with `converged: false`. The two measures differ by design
+ * (§5.3): `tolerances` (tol₀, tol₁) are the targets' own, which only rank points; SOLVE_TOLERANCE is the convergence. When Newton ends unconverged with
  * one coordinate pinned at a bound (a step moving neither coordinate by STALL_SHARE of its width, the Jacobian
  * singular, or the steps spent), the closest point lies along that bound, where a clamped Newton step cannot reach it:
  * a golden-section search over the free coordinate's bounds (its two ends included, LINE_EVALUATIONS in all), the
@@ -232,6 +233,8 @@ export function solvePair(
 ): { readonly point: Pair; readonly values: Pair; readonly converged: boolean; readonly evaluations: number } {
     const clamp = (x: number, j: 0 | 1): number => Math.min(Math.max(x, bounds[j][0]), bounds[j][1]);
     let evaluations = 0;
+    // Written only by `at`: `best` is the least-score point evaluated; `found` the least-score one with `done`, and
+    // once set every search stops. A point with `done` always sets `found`, so `best.done` is false while it is null.
     const seen: { best: Evaluated | null; found: Evaluated | null } = { best: null, found: null };
     const at = (point: Pair): { readonly values: Pair; readonly errors: Pair; readonly score: number } => {
         const values = evaluate(point);

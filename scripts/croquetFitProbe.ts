@@ -33,15 +33,15 @@ import type { FollowSnapshot, ImpactProbe } from "../src/engine/impact/integrate
 import { simulateStroke } from "../src/engine/impact/simulateImpact";
 import { effectiveMass, swungBody } from "../src/engine/impact/track";
 import type { ContactState, ImpactResult } from "../src/engine/impact/types";
-import { horizontal, length, sub, type Vec3 } from "../src/engine/math/vec3";
+import { length, type Vec3 } from "../src/engine/math/vec3";
 import { planStroke } from "../src/engine/swing/buildContact";
 import { defaultProfile } from "../src/engine/swing/profile";
 import type { ShotSetup } from "../src/engine/swing/types";
-import type { BallId, BallState, ShotResult, World } from "../src/engine/types";
+import type { BallId, World } from "../src/engine/types";
 import { defaultWorld } from "../src/engine/world";
-import { ratioTargetsReference, swingReference, type RatioTargetKey } from "../src/reference/index";
-import { backswingFor, canonicalSetup, strokeFor } from "../tests/engine/support/shot";
-import { OPEN_LAWN, OPEN_START, openWorld, opened } from "./openLawn";
+import { ratioTargetsReference, type RatioTargetKey } from "../src/reference/index";
+import { backswingFor, canonicalSetup, regimeOf, strokeFor } from "../tests/engine/support/shot";
+import { OPEN_LAWN, OPEN_START, haltedText, openWorld, opened } from "./openLawn";
 import {
     BOUNDS,
     CA_STROKES,
@@ -51,6 +51,7 @@ import {
     ratioOf,
     releaseSpeedFor,
     runFit,
+    travelOf,
     type Candidate,
     type FitParams,
 } from "./ratioFit";
@@ -82,34 +83,11 @@ const CA_MEASURE = {
         'thus averages taken a few milliseconds *after* impact\\""',
 };
 
-/**
- * strokeFor's regime for `setup`'s stroke: 1 with no intensity (gravity only), 2 at the preset's defaultBackswing h_0
- * with an intensity, 3 at intensity 1 with the backswing solved beyond h_0.
- */
-function regimeOf(setup: ShotSetup): 1 | 2 | 3 {
-    const { type, backswing, intensity } = setup.stroke;
-    if (intensity === undefined) {
-        return 1;
-    }
-    return backswing === swingReference[type].defaultBackswing.value ? 2 : 3;
-}
-
 /** `setup`'s stroke inputs: its backswing, its intensity (or none) and strokeFor's regime. */
 function strokeText(setup: ShotSetup): string {
     const { backswing, intensity } = setup.stroke;
     const effort = intensity === undefined ? "no intensity" : `intensity ${fmt(intensity)}`;
     return `backswing ${fmt(backswing)} m, ${effort} (regime ${regimeOf(setup)})`;
-}
-
-/** Ball `id`'s travel (m) on the turf from `setup`'s start to its rest in `motion`. */
-function travel(setup: ShotSetup, motion: ShotResult, id: BallId): number {
-    const start = (setup.balls[id] as BallState).position;
-    return length(horizontal(sub(motion.rest[id] as Vec3, start)));
-}
-
-/** " (halted)" when phase 2 halted ball `id` past the open lawn's boundary: its distance is then not to rest. */
-function haltedText(motion: ShotResult, id: BallId): string {
-    return motion.events.some((e) => e.kind === "halted" && e.ball === id) ? " (halted)" : "";
 }
 
 function sectionA(): void {
@@ -145,7 +123,7 @@ function sectionA(): void {
         const planned = releaseSpeedFor(ca.ballSpeed);
         const rolled = single(planned);
         const lawn = runFit(rolled, TODAY, world);
-        const distance = travel(rolled, lawn.motion, rolled.striker);
+        const distance = travelOf(rolled, lawn.motion, rolled.striker);
         console.log(
             `  the lawn's share: planned ${fmt(planned)} m/s (${strokeText(rolled)}), ball at the face's release ` +
                 `${fmt(length(lawn.release.velocity))} m/s: travel ${fmt(distance)} m` +
@@ -157,7 +135,7 @@ function sectionA(): void {
     const drive = opened(fitSetup("drive", TODAY, speed, world));
     const motion = runFit(drive, TODAY, world).motion;
     const croqueted = drive.croqueted as BallId;
-    const yards = travel(drive, motion, croqueted) / YARD;
+    const yards = travelOf(drive, motion, croqueted) / YARD;
     console.log(
         `Gugan 5's drive: planned ${fmt(speed)} m/s (${strokeText(drive)}): the croqueted ball ${fmt(yards)} yd` +
             `${haltedText(motion, croqueted)} against about ${GUGAN_DRIVE_YARDS} yd, ` +

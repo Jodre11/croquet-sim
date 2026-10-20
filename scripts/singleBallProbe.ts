@@ -63,12 +63,12 @@ import {
 } from "../src/engine/swing/buildContact";
 import { ON_TIME, defaultProfile } from "../src/engine/swing/profile";
 import type { ShotSetup, StrokeType, SwingEffort, SwingProfile, SwingStance } from "../src/engine/swing/types";
-import { BALL_IDS, type BallId, type BallState, type ShotResult } from "../src/engine/types";
+import { BALL_IDS, type BallState, type ShotResult } from "../src/engine/types";
 import { defaultWorld } from "../src/engine/world";
 import { swingBodyReference, swingReference } from "../src/reference/index";
-import { canonicalSetup, strokeFor, type CanonicalOptions } from "../tests/engine/support/shot";
+import { canonicalSetup, regimeOf, strokeFor, type CanonicalOptions } from "../tests/engine/support/shot";
 import { SWING_PRESETS, bodyTop, contactArm, fitEffort, kneeLimit, speedAt } from "./effortFit";
-import { OPEN_LAWN, OPEN_START, openWorld, opened } from "./openLawn";
+import { OPEN_LAWN, OPEN_START, haltedText, openWorld, opened } from "./openLawn";
 
 // The project has no Node types; this script runs under tsx and reads its environment, its argument and one file.
 declare const process: {
@@ -281,18 +281,6 @@ function stroke(section: string, label: string, make: () => ShotSetup): Run | nu
 function atSpeed(type: StrokeType, speed: number, over: CanonicalOptions = {}): ShotSetup {
     const setup = canonicalSetup(type, over);
     return { ...setup, stroke: { ...setup.stroke, ...strokeFor(setup, speed, WORLD) } };
-}
-
-/**
- * strokeFor's regime for `setup`'s stroke: 1 with no intensity (gravity only), 2 at the preset's
- * defaultBackswing h_0 with an intensity, 3 at intensity 1 with the backswing solved beyond h_0.
- */
-function regimeOf(setup: ShotSetup): 1 | 2 | 3 {
-    const { type, backswing, intensity } = setup.stroke;
-    if (intensity === undefined) {
-        return 1;
-    }
-    return backswing === swingReference[type].defaultBackswing.value ? 2 : 3;
 }
 
 /** `setup`'s stroke inputs: its backswing, its intensity (or none) and strokeFor's regime. */
@@ -863,12 +851,6 @@ function userChecks(): string[] {
             `${fmt(travel("blue") / YARD)} yd${haltedText(shot.motion, "blue")}; the user's full lawn 35 yd`,
     );
     return lines;
-}
-
-/** " (halted)" when phase 2 halted ball `id` past the open lawn's boundary: its distance is then not to rest. */
-function haltedText(motion: ShotResult, id: BallId): string {
-    const halted = motion.events.some((e) => e.kind === "halted" && e.ball === id);
-    return halted ? " (halted)" : "";
 }
 
 let checked: string[] | null = null;

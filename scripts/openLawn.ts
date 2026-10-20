@@ -5,7 +5,14 @@
  */
 import { add, vec3 } from "../src/engine/math/vec3";
 import type { ShotSetup } from "../src/engine/swing/types";
-import { BALL_IDS, type BallState, type BallStates, type World } from "../src/engine/types";
+import {
+    BALL_IDS,
+    type BallId,
+    type BallState,
+    type BallStates,
+    type ShotResult,
+    type World,
+} from "../src/engine/types";
 import { defaultWorld, uniformLawn } from "../src/engine/world";
 
 /** J's open lawn's side (m): far beyond any stroke's reach, so that every run comes to rest on it. */
@@ -36,4 +43,9 @@ export function opened(setup: ShotSetup): ShotSetup {
         }
     }
     return { ...setup, balls };
+}
+
+/** " (halted)" when phase 2 halted ball `id` past the open lawn's boundary: its distance is then not to rest. */
+export function haltedText(motion: ShotResult, id: BallId): string {
+    return motion.events.some((e) => e.kind === "halted" && e.ball === id) ? " (halted)" : "";
 }

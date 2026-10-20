@@ -421,3 +421,15 @@ export function strokeFor(
     }
     return { backswing, intensity: hi };
 }
+
+/**
+ * strokeFor's regime for `setup`'s stroke: 1 with no intensity (gravity only), 2 at the preset's defaultBackswing h_0
+ * with an intensity, 3 at intensity 1 with the backswing solved beyond h_0. Test support only.
+ */
+export function regimeOf(setup: ShotSetup): 1 | 2 | 3 {
+    const { type, backswing, intensity } = setup.stroke;
+    if (intensity === undefined) {
+        return 1;
+    }
+    return backswing === swingReference[type].defaultBackswing.value ? 2 : 3;
+}

@@ -1725,12 +1725,12 @@ export function handLoad(
         // Carry mode keeps its offset, its chain already holding the arm; with no hold every offset is kept as it was.
         const arm = hands.flex.hold;
         if (spring && !carry && arm !== null) {
-            const armTime = arm.damping / arm.stiffness;
+            const decay = exp(0 - dt / (arm.damping / arm.stiffness));
             if (topHeld === null && grip.topOffset !== null) {
-                grip.topOffset = scale(grip.topOffset, exp(0 - dt / armTime));
+                grip.topOffset = scale(grip.topOffset, decay);
             }
             if (bottomHeld === null && grip.bottomOffset !== null) {
-                grip.bottomOffset = scale(grip.bottomOffset, exp(0 - dt / armTime));
+                grip.bottomOffset = scale(grip.bottomOffset, decay);
             }
         }
         return load(top, bottom, twist, add(topShare, bottomShare), saturated);

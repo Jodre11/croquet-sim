@@ -1,10 +1,24 @@
 import { describe, expect, it } from "vitest";
 import { simulateShot } from "../../src/engine/shot";
 import type { ShotSetup } from "../../src/engine/swing/types";
-import { BALL_IDS, type ShotResult } from "../../src/engine/types";
+import { BALL_IDS, type BallState, type ShotResult } from "../../src/engine/types";
 import { defaultWorld } from "../../src/engine/world";
-import { BOUNDS, TODAY, fitSetup, fitWorld, ratioOf, ratiosAt, runFit, solvePair } from "../../scripts/ratioFit";
+import { length, sub } from "../../src/engine/math/vec3";
+import { OPEN_LAWN, OPEN_START, haltedText, openWorld, opened } from "../../scripts/openLawn";
+import {
+    BOUNDS,
+    TODAY,
+    fitSetup,
+    fitWorld,
+    ratioOf,
+    ratiosAt,
+    releaseSpeedFor,
+    runFit,
+    solvePair,
+} from "../../scripts/ratioFit";
 import { canonicalSetup, strokeFor } from "./support/shot";
+
+const SLOW = Boolean(import.meta.env.SLOW_TESTS);
 
 /** A phase 2 in which no ball moves: every rest position is the setup's. */
 function stillMotion(setup: ShotSetup): ShotResult {
@@ -67,6 +81,41 @@ describe("the fit's evaluator (P2b.2b.2c.2 design §5)", () => {
         // A still striker would hand the solver Infinity or NaN as a ratio.
         const setup = fitSetup("drive", TODAY, 3);
         expect(() => ratioOf(setup, stillMotion(setup))).toThrow(/striker's ball .* did not move/);
+    });
+});
+
+describe("the open lawn and the release speed (design §3)", () => {
+    it("moves every ball by one offset that puts the striker at OPEN_START, on a lawn with no hoops", () => {
+        // A setup moved unevenly would change the croquet stroke it plays, and a lawn edge or hoop within reach would
+        // stop a distance short of rest.
+        const setup = canonicalSetup("drive");
+        const moved = opened(setup);
+        const striker = moved.balls[moved.striker]?.position;
+        expect(striker?.x).toBe(OPEN_START.x);
+        expect(striker?.y).toBe(OPEN_START.y);
+        const gap = (s: ShotSetup): number =>
+            length(sub((s.balls[s.striker] as BallState).position, (s.balls.red as BallState).position));
+        expect(gap(moved)).toBeCloseTo(gap(setup), 12);
+        const world = openWorld();
+        expect(world.hoops).toEqual([]);
+        expect([world.lawn.width, world.lawn.length]).toEqual([OPEN_LAWN, OPEN_LAWN]);
+    });
+    // Slow: the bisection's 62 strikes take about 50 s.
+    it.runIf(SLOW)(
+        "plans the single-ball stroke whose ball leaves the face at the asked speed, rolling to rest",
+        () => {
+            // A bisection returning a bracket's end, or a stroke halted at the lawn's edge, would mis-measure the
+            // CA's lawn share. A2D's ball speed, 4.31 m/s, lies well inside the bracket.
+            const world = fitWorld(TODAY, openWorld());
+            const setup = opened(fitSetup("single-ball", TODAY, releaseSpeedFor(4.31), world));
+            const { motion, release } = runFit(setup, TODAY, world);
+            expect(length(release.velocity)).toBeCloseTo(4.31, 6);
+            expect(haltedText(motion, setup.striker)).toBe("");
+        },
+        240_000,
+    );
+    it("throws for a release speed outside the planned speeds' bracket", () => {
+        expect(() => releaseSpeedFor(100)).toThrow(RangeError);
     });
 });
 
