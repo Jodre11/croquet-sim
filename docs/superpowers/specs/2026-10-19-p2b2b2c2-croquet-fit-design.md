@@ -454,4 +454,118 @@ In "Provisional numbers":
 
 ## Amendments
 
-(None yet. Plan decisions and gate rulings are recorded here in the user's words.)
+Plan decisions and gate rulings are recorded here in the user's words.
+
+### The sensitivity gate (user, 2026-10-20)
+
+Put as one question with four options, pros, cons and a recommendation, on the figures in
+`docs/superpowers/probes/2026-10-19-p2b2b2c2-sensitivity.txt`. Only the ball–ball contact time moves the stop (2.34
+to 8.28 across its bounds; no hand parameter moves it by more than about 0.15), so every reachable pair includes it.
+The drive's ratio has two levels: 2.5–3.6 whenever the impact raises `impact-off-face` (today's canonical drive does),
+4.77–4.89 when it does not. The coupling's period, its damping ratio and the arm mass each flip it between them
+abruptly; the reach slack moves it smoothly across its whole range (4.62 to 3.31) and leaves the stop unchanged. The
+effective mass stays within 0.9·m ≤ m_eff ≤ M (ruling D, P2b.2b.2b.2c) at every point.
+
+- **The pair to fit:** "Contact time + reach slack (Recommended)": `ballBallContactTime` and `reachSlack`. The
+  probe's own ranking by slope angle put contact time + arm mass first; the recommendation departed from it because
+  the arm mass's jump in the drive lies inside its bounds. The per-preset grips are not needed (a shared pair is
+  reachable), and no bound is widened before the fit.
+
+### The fit's outcome (user, 2026-10-20)
+
+The ruled pair did not converge (101 evaluations). The closest point, by the larger error over its tolerance, is the
+contact time 0.762 ms and the reach slack 10 mm, its lower bound: the drive 3.89 (−0.34) and the stop 6.13 (−1.02),
+both outside Gugan's tolerances and inside the CA bands. With the stop on target (0.814 ms) the drive reaches about
+3.74. The drive's ratio is not smooth: near-identical points give 3.55 or 3.75 as the off-face contact comes and goes,
+and its two levels (about 2.5–3.8 with the contact, about 4.8 without) straddle Gugan's 4.23. Put as one question with
+four options (diagnose the off-face contact first; accept the closest; the stop on target; widen the slack's bound).
+
+- **Ruling:** "Diagnose off-face first (Recommended)": one bounded probe of the canonical drive's off-face contact
+  (which ball, when, which part of the head, why it switches), then the question is put again. Nothing is written to
+  `contact.json` until then.
+
+### The drive's double hit and the step divided (user, 2026-10-20)
+
+The diagnosis (evidence only, no code changed): on the canonical drive the off-face contact is a double hit. After the
+face releases the striker's ball (1.5 ms) the head slows to 0.80 m/s; the swing-mode bottom hand's post-contact push
+(`guideEffort` 1, restoring the planned arc's speed) brings it back to 1.81 m/s, and at 109 ms the rising, face-up
+head catches the striker's ball (rolling at 1.16 m/s) with its lower front edge, taking it to 1.71 m/s and its travel
+from 1.22 to 1.84 m. Without the catch the drive's ratio is about 5.0 (`guideEffort` 0: 5.01; 0.5: 4.75); the "two
+levels" are one clearance threshold (2.6 → 0.6 → 0.2 mm → contact), stable at half and double the impact step. The
+3.54/3.74 flips at near-identical points are a stick/slip branch on the catch's first step in the face–ball
+tangential law, and they vanish at half and double the step; the drive's own ratio is not step-converged (3.31, 3.48,
+3.47 at 5, 2.5 and 10 µs). Put as one question with four options (a new step first; grow this step; accept the
+closest; fit the stop only).
+
+- **Ruling:** "Split: new step first (Recommended)". This branch lands without the fit: the tidy, the sources and
+  targets, the evaluator and the distance check, the checking force, the sensitivity probe, the fit's script and its
+  unconverged attempt, and the diagnosis, each recorded. A new step settles the drive's follow-through (whether the
+  head re-accelerates after contact) and the impact's step convergence, then fits. The jab's and the control run's
+  re-runs (§7), which the spec places on the fitted model, move with the fit; this branch's pre-flight gate keeps the
+  sections that do not need the fit (A on `main`'s model, B, C as ruled, H).
+
+### The pre-flight gate (user, 2026-10-20)
+
+Each section was put as one question with options, pros, cons and a recommendation, on
+`docs/superpowers/probes/2026-10-20-p2b2b2c2-gate.txt`.
+
+- **A, the distance check** (unchanged by this branch). The strike's share is ×0.98, ×0.96, ×0.97 on A1D–A3D and
+  ×1.20 on A4D against the TEXT file's 8.62 m/s, ×1.03 against Gugan's own reading of 10.03 m/s; the lawn's share is
+  ×0.56 (A1D, a very short stroke), ×0.88, ×0.86, ×0.73; Gugan 5's drive ×0.95 of about seven yards. Before ruling the
+  user asked whether the croquet ratios are right (they are not: the drive 3.31 and the AC stop 5.91 against 4.23 and
+  7.15) and whether the lawn's pace bears on them (it does not to first order: both balls slow alike, so the ratio is
+  the square of the two launch speeds' ratio, set in the impact). **Ruling:** "Lawn pace, not the stroke
+  (Recommended)": the strike matches the CA within 2–4 % (A4D on Gugan's reading); the distance gaps are the lawns'
+  pace, the CA's faster than the default and the user's slower. The effort ceiling's row stands.
+- **B, the checking force.** The canonical GC stop's bottom hand slides to 23.8 mm at 10 ms on `main` and stays
+  there; on this branch it returns to 0.11 mm, and the head finishes 8.4 mm along aim (was 65.1 mm). The same 19 GC
+  stop runs slide, each recovering to 0.5 mm or less; 9 single-ball runs at 3 m/s and drive −1 slide too (9.5 mm),
+  because drive −1 plans a check and its hold grips, so §4.1's "the single-ball's runs never slide" holds only for
+  drive 0. The 0.378 m of §4.3 does not reproduce on `main`: the largest offset over every run is 23.8 mm.
+  **Ruling:** "Accept as it stands (Recommended)".
+- **C, the sensitivity probe:** ruled above ("The sensitivity gate").
+- **H, the ball makes.** The face law's fits come from a Jaques Eclipse (Gugan 2000), Gugan 5's targets from Dawson
+  Internationals; le Maitre's 2.7–4.2 by make is his stop shot (forward over backward ball), not his drive, as §6.3
+  had it (his drive or roll gives 1.8–2.8 as printed). **Ruling:** "Targets stand, record (Recommended)".
+- **D–G** move with the fit to the new step. No test was re-baselined on this branch.
+
+### Plan decisions and the builder's rulings
+
+The plan's "Decisions made while planning", each with its reason:
+
+1. `handLoad` takes the step's `dt` as a required argument before `gripped`, so no caller can forget it.
+2. τ_arm is `hands.flex.hold`'s damping over its stiffness (27.8 ms on the default body), and a null `hold` keeps every
+   offset as before, so the test hands' grip-limit tests stay bit-identical.
+3. The decay acts in `handLoad`'s pre-contact spring branch, swing mode only, per hand, on a hand that did not saturate
+   in that call, after the load is computed, so it holds §4.1's constraints 1 to 4.
+4. The follow probe sees each hand's force and its offset (`FollowSnapshot`'s `top`, `bottom` and `offsets`), probe
+   only, so section B can measure the drift with no run's arithmetic changed.
+5. The evaluator does not edit `contact.json`: the candidates enter through the world, the body and the planned
+   contact's coupling, and a parity test pins it to `simulateShot` to the bit at today's values.
+6. Every evaluation plans its target's speed exactly on the candidate's world and body, since the arm mass enters the
+   downswing.
+7. The solver is Newton on the two errors with a forward-difference Jacobian, clamped into the bounds, at most 20
+   iterations and converged at 0.01 on each ratio, returning the closest evaluated point otherwise, as §5.3 and exit
+   criterion 6 ask.
+8. `swing.json` gains a top-level `ratioTargets` block of `readValue` entries (ratio and speed, Gugan 5 as source),
+   exported as `ratioTargetsReference`, so the fit, the gate and the tests read one record.
+9. The distance check's open lawn moves to `scripts/openLawn.ts`, shared by both probes, and the ball's speed at the
+   face's release is read as `singleBallProbe` reads it, so the two compare like with like.
+10. Every preset digest run keeps its trajectory, so the stops' holds, where the checking force acts, are in the
+    ratchet.
+11. The sensitivity probe's slope is a central difference of ±1 % of the bound's width (one-sided at a bound), a pair's
+    distinctness the angle between its slope vectors scaled by the bounds' widths, and its reach a linear 2×2 solve, so
+    the gate compares candidates on a common scale.
+
+The builder's rulings during execution:
+
+- `tests/engine/shot.test.ts` carries the two §8.1.4 tests.
+- The solver's "closest" is the in-bounds minimiser of the larger weighted error, with a line search along the free
+  coordinate when one coordinate pins at a bound, as exit criterion 6 defines it; this refines decision 7.
+- The effective-mass mark uses the user's ruling D bound 0.9·m ≤ m_eff ≤ M (P2b.2b.2b.2c); §5.2's and exit criterion
+  8's "within 10 % of the head's mass" is stale (today 1.1095 kg, +10.95 %, inside the ruled bound).
+- Section C collects the follow-through's flags at the swept points only.
+- Section B covers the single-ball and drive presets too, since any run planned with drive below 0 gets a check hold
+  (§4.1's "the single-ball's runs never slide" holds only for drive 0).
+- The carry-mode case of §8.1.5 is tested in the pre-contact branch, the only place the decay's carry guard acts.
+- Task 7 (the held-out re-runs) and sections D–G move to P2b.2b.2c.2b with the fit.
