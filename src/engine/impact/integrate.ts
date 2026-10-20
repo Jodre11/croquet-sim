@@ -1386,7 +1386,8 @@ function continueStroke(
             grip.resistance = senseResistance(grip.resistance, 0, response);
         }
         steps++;
-        // The offsets are immutable vectors that handLoad replaces, never mutates, so these references are copies.
+        // The offsets are immutable vectors, so the snapshot keeps this step's offsets: handLoad replaces them, never
+        // mutates them.
         probe?.follow?.({
             t: steps * dt,
             head: state,

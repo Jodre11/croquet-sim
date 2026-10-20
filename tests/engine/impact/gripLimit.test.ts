@@ -326,7 +326,7 @@ describe("the arms' checking force (P2b.2b.2c.2 design §4, §8.1)", () => {
         expect(carryOffsetAfterEasing(withHold(HOLD))).toEqual(carryOffsetBeforeEasing(withHold(HOLD)));
     });
     it("keeps the offset finite at a long step, and as it was without a hold", () => {
-        // Review focus 1.
+        // A step far longer than τ_arm must shrink the offset by exp(−dt/τ), never overshoot to null or NaN.
         const long = underLimitStep(withHold(HOLD), 10 * TAU);
         expect(length(long.after)).toBeCloseTo(length(long.before) * Math.exp(-10), 12);
         expect(Number.isFinite(long.after.x)).toBe(true);
@@ -334,7 +334,8 @@ describe("the arms' checking force (P2b.2b.2c.2 design §4, §8.1)", () => {
         expect(none.after).toEqual(none.before);
     });
     it("slides on from the recovered offset when the load returns past F_max", () => {
-        // Review focus 2: saturate, relax 20 steps, saturate again; F_max to 1e-9, stretch energy ≤ F_max²/(2k).
+        // A recovered anchor slides on from where it stands, transmitting no more than F_max: saturate, relax 20
+        // steps, saturate again; F_max to 1e-9, stretch energy ≤ F_max²/(2k).
         for (const step of resaturation(withHold(HOLD))) {
             expect(Math.abs(length(step.top) - LIMIT) / LIMIT).toBeLessThan(1e-9);
             expect(step.energy).toBeLessThanOrEqual(((LIMIT * LIMIT) / (2 * K)) * (1 + 1e-9));

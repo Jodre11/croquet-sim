@@ -1,7 +1,7 @@
 == The croquet fit's attempt (design §5.3), 2026-10-20: `npx --yes tsx scripts/fitRatios.ts ballBallContactTime reachSlack`, its stderr ==
 -- The ruled pair (spec Amendments, "The sensitivity gate"): ballBallContactTime and reachSlack, within contact.json's bounds, from today's values --
 -- Not converged: the solver returned the closest point, reachSlack on its lower bound, both ratios outside Gugan 5's tolerances --
--- Nothing was written to contact.json (spec Amendments, "The fit's outcome" and "The drive's double hit and the split") --
+-- Nothing was written to contact.json (spec Amendments, "The fit's outcome" and "The drive's double hit and the step divided") --
 fitting ballBallContactTime [0.0005, 0.00087] and reachSlack [0.01, 0.03] to drive 4.23 ± 0.2 and stop 7.15 ± 0.6, from ballBallContactTime 0.00075, reachSlack 0.03
 #1: ballBallContactTime 0.00075, reachSlack 0.03: drive 3.3085, stop 5.9109
 #2: ballBallContactTime 0.0007537, reachSlack 0.03: drive 3.4354, stop 5.9815

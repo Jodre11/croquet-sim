@@ -56,7 +56,7 @@ touch is what lowers the ratio, by speeding the striker's ball (1.155 → 1.705 
 
 Two separate mechanisms, both visible in the fit's figures.
 
-### 3a. Catch or no catch: a geometric threshold, continuous in impulse, robust to dt
+### 3a. Catch or no catch: a geometric threshold, continuous in impulse, held at dt/2 and 2dt at the two points tried
 
 After release the bottom hand's guide pushes the head back towards the planned arc (planned socket speed 2.90 →
 2.50 m/s over 0–109 ms); the head recovers 0.80 → 1.81 m/s (offface3: 0.92 at 10 ms, 1.31 at 40, 1.67 at 80,
@@ -78,20 +78,21 @@ hemisphere is a race; the closest approach's clearance crosses zero smoothly as 
 | armMass 0.45 / 0.48 / 0.50 / 0.55 / 0.60 / 0.70 | 461.6 µm / 32 N / 82 N / 145+102 / 192+140 / 287+134 | 4.8212 / 4.8022 / 4.7550 / 4.5982 / 4.2394 / 3.7602 |
 
 So the onset is a threshold (a gap that just closes), the impulse grows from zero as the catch moves earlier (grazes
-of 16–82 N cost only ~0.05), and the ratio then falls steeply (4.80 → 3.3 over period 0.0925 → 0.080 or armMass
-0.48 → 0.80). The "bimodal" 4.77–4.89 / 2.5–3.8 picture is the sweeps' resolution over this steep stretch. At dt/2
-and 2dt the threshold side holds at every point tried (period 0.094: no catch at all three; armMass 0.5: catch at
-all three, 78 / 82 / 88 N, ratios 4.7573 / 4.7550 / 4.7226).
+of 16–82 N cost only ~0.05), and the ratio then falls steeply (4.80 → 3.3 over period 0.0925 → 0.080; 4.80 → 3.76
+over armMass 0.48 → 0.70, where the table stops). The "bimodal" 4.77–4.89 / 2.5–3.8 picture is the sweeps'
+resolution over this steep stretch. At dt/2 and 2dt the threshold side holds at every point tried (period 0.094: no
+catch at all three; armMass 0.5: catch at all three, 78 / 82 / 88 N, ratios 4.7573 / 4.7550 / 4.7226).
 
 ### 3b. The 3.54 / 3.74 flips among near-identical inputs: a numerical branch inside the catch
 
-The fit's pairs all catch; the flip is not catch versus none. Pair (0.81395394 ms, 10.69562 mm) → 3.5373 and
+The pairs examined all catch; the flip is not catch versus none. Pair (0.81395394 ms, 10.69562 mm) → 3.5373 and
 (0.81395591 ms, 10.69081 mm) → 3.7390: both catch at 78.475 ms with 401 / 404 N, region edge, normal (0.999, +0.046).
 The trajectories agree to ≤1 µm and ≤0.1 mm/s until then (offface4). They part in the first steps of the edge
 contact:
 
 - Entry step (78.500 ms): depth 12.0 vs 10.9 µm, N 16.9 vs 15.7 N, tangential force 7.4 vs 7.8 N against the
-  Coulomb limit μN = 0.5·N = 8.45 vs 7.85 N. A's trial force is under the limit (stick); B's is over it (slip).
+  Coulomb limit μN = 0.5·N = 8.45 vs 7.85 N. A's trial force is under the limit (stick). B's printed 7.8 N is also
+  under 7.85 N, but the printed values are rounded; B's slip is inferred from its later |T|/N = 0.500, not read here.
 - They stay on those branches through the contact: B's |T|/N is 0.500 at every sampled step, A's falls 0.44 → 0.30
   (at 78.800 ms: T 74.5 N, N 249.5 N vs T 123.9 N, N 248.1 N). The friction acts down on blue (its rolling rear
   surface slides upward against the head's edge), so B's ball leaves with vz −0.225 m/s against A's −0.167, sinks
@@ -129,9 +130,11 @@ For an artefact or an unvalidated input:
   2.5–2.9 m/s, more than twice the speed of the ball it just struck. guideEffort 0.5 or 0 removes the catch. Whether
   a player's hands do this in a drive is not established by any measurement found; it is the user's account
   (2026-10-06).
-- The size of what follows the catch (the ball driven into the turf and its bounces) is set by a stick/slip branch
-  chosen on the contact's entry step (3b): a numerical artefact of the tangential law's discretisation, worth up to
-  ~0.2 on the ratio (5 %), and the canonical ratio itself is not dt-converged (3.31 / 3.48 / 3.47).
+- The size of what follows the catch (the ball driven into the turf and its bounces) appears to be set by a
+  stick/slip branch chosen on the contact's entry step (3b; inferred, confidence medium). The outcome depends on the
+  step grid, worth up to ~0.2 on the ratio (5 %) between the two branches; that shows the dependence, not that it is
+  unphysical or purely numerical. Separately, the canonical ratio is not dt-converged (3.31 / 3.48 / 3.47), but that
+  spread comes with a third catch at the finer and coarser steps (3b), so it is not the stick/slip latch.
 - `impact-off-face` is a proxy: it reports the region (edge) of a pitched head, not the double hit; on a face-region
   catch the same double hit raises no flag.
 

@@ -424,10 +424,23 @@ describe("the ratio targets (P2b.2b.2c.2 design §5.1)", () => {
 
     it("rejects a target outside its tolerance band, a missing or non-positive speed", () => {
         expect(() => readRatioTargets(withTarget("drive", { ratio: { value: 5 } }))).toThrow(ReferenceDataError);
+        expect(() => readRatioTargets(withTarget("drive", { ratio: { value: 5 } }))).toThrow(
+            /ratioTargets\.drive\.ratio.*outside bounds/,
+        );
         expect(() => readRatioTargets(withTarget("stop-ac", { speed: undefined }))).toThrow(ReferenceDataError);
+        expect(() => readRatioTargets(withTarget("stop-ac", { speed: undefined }))).toThrow(
+            /ratioTargets\.stop-ac\.speed.*missing/,
+        );
         expect(() => readRatioTargets(withTarget("stop-ac", { speed: { value: 0 } }))).toThrow(
             /ratioTargets\.stop-ac\.speed.*positive/,
         );
         expect(readRatioTargets(swingJson)).toEqual(ratioTargetsReference);
+    });
+
+    it("rejects a ratio that gives no tolerance bounds", () => {
+        const unbounded = withTarget("drive", {}) as { ratioTargets: { drive: { ratio: Record<string, unknown> } } };
+        delete unbounded.ratioTargets.drive.ratio["bounds"];
+        expect(() => readRatioTargets(unbounded)).toThrow(ReferenceDataError);
+        expect(() => readRatioTargets(unbounded)).toThrow(/must give its tolerance as bounds/);
     });
 });

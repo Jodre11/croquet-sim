@@ -218,9 +218,10 @@ interface Evaluated {
  * one coordinate pinned at a bound (a step moving neither coordinate by STALL_SHARE of its width, the Jacobian
  * singular, or the steps spent), the closest point lies along that bound, where a clamped Newton step cannot reach it:
  * a golden-section search over the free coordinate's bounds (its two ends included, LINE_EVALUATIONS in all), the
- * pinned one held, minimises that score first. With both coordinates pinned, or neither, it does not search. No point
- * outside the bounds is ever evaluated, and the point returned is always one evaluated, with its evaluated values.
- * `evaluations` counts the calls of `evaluate`.
+ * pinned one held, minimises that score first. The search assumes the score is unimodal along the line, which the
+ * drive is known not to be, so a line minimum may be local. With both coordinates pinned, or neither, it does not
+ * search. No point outside the bounds is ever evaluated, and the point returned is the best one evaluated, with its
+ * evaluated values. `evaluations` counts the calls of `evaluate`.
  */
 export function solvePair(
     evaluate: (x: Pair) => Pair,
