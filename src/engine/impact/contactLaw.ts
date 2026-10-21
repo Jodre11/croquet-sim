@@ -23,7 +23,7 @@
  */
 import { contactReference } from "../../reference/index";
 import { atan2, ln, pow } from "../math/elementary";
-import { dot, length, scale, sub, type Vec3 } from "../math/vec3";
+import { add, dot, length, scale, sub, type Vec3 } from "../math/vec3";
 import type { FaceLaw } from "./types";
 
 /** k_t/k, a contact's tangential stiffness relative to its normal stiffness (Silbert et al. 2001; contact.json). */
@@ -164,6 +164,33 @@ export function tangentialForce(law: PairLaw, spring: Vec3, slip: Vec3, normal: 
     }
     const force = scale(trial, limit / size);
     return { force, spring: scale(force, -1 / law.tangentialStiffness), sliding: true };
+}
+
+/**
+ * One step of Cundall–Strack friction (tangentialForce) for a contact whose spring `carried` (carrySpring's) advances
+ * by `slip`·`dt`, `slid` saying whether it slid on its previous step. A contact that slid and would now stick is
+ * re-tested with its carried spring held on the current cone, k_t·|ξ| = μ·N, and keeps sliding unless that trial too
+ * lies within the cone. The slide's reset left the spring on the previous step's cone, so a cone grown within the
+ * step would otherwise re-stick the contact once c_t·|slip| fell below μ·ΔN, at a slip proportional to dt (the drive's
+ * ratio moved 0.03 between 2.5 and 10 µs); held on the current cone, it re-sticks only when its slip stops running
+ * along the spring, as the law does in the limit. Every other step is tangentialForce's own.
+ */
+export function frictionStep(
+    law: PairLaw,
+    carried: Vec3,
+    slip: Vec3,
+    dt: number,
+    normal: number,
+    slid: boolean,
+): Tangential {
+    const step = tangentialForce(law, add(carried, scale(slip, dt)), slip, normal);
+    const held = length(carried);
+    if (!slid || step.sliding || !(held > 0) || !(law.tangentialStiffness > 0)) {
+        return step;
+    }
+    const cone = scale(carried, (law.friction * normal) / (law.tangentialStiffness * held));
+    const kept = tangentialForce(law, add(cone, scale(slip, dt)), slip, normal);
+    return kept.sliding ? kept : step;
 }
 
 /**

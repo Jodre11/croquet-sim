@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { contactReference } from "../../../src/reference/index";
-import { length, scale, sub, vec3 } from "../../../src/engine/math/vec3";
+import { add, length, scale, sub, vec3 } from "../../../src/engine/math/vec3";
 import {
     FACE_SPEED_MAX,
     FACE_SPEED_MIN,
@@ -12,6 +12,7 @@ import {
     dampingRatio,
     faceContactTimeAt,
     faceRestitutionAt,
+    frictionStep,
     hertzBounce,
     hertzEnergy,
     hertzForce,
@@ -344,5 +345,83 @@ describe("carrySpring", () => {
 
     it("leaves a spring loaded from rest as it is", () => {
         expect(carrySpring(vec3(1e-6, 0, 0), n, 0, 400)).toEqual(vec3(1e-6, 0, 0));
+    });
+});
+
+describe("frictionStep", () => {
+    // The ball–ball law (two 0.4536 kg balls, e 0.72, 0.75 ms, μ 0.06): k_t ≈ 9.9e5 N/m, c_t ≈ 106 N·s/m.
+    const law = lawFromContactTime(0.4536 / 2, 0.72, 7.5e-4, 0.06);
+    // The two balls' contact point's tangential mass, (2/7)·m/2 (kg).
+    const M = (2 / 7) * (0.4536 / 2);
+    const spring = vec3(1e-5, 0, 0);
+
+    /**
+     * A block of mass M sliding at 0.05 m/s on a contact entered at 1.3 µs, off every step's grid, whose load then
+     * rises at 5.3e6 N/s, as the croqueted drive's ball–ball pair does at gap 0. Stepped as the impact steps a pair
+     * (the force from the step's start, then the velocity): the first step at which the contact sticks after sliding,
+     * and the block's velocity at that step's start.
+     */
+    function restick(dt: number): { t: number; v: number } {
+        let v = 0.05;
+        let xi = vec3(0, 0, 0);
+        let slid = false;
+        for (let k = 0; k * dt < 1e-3; k++) {
+            const t = k * dt;
+            const step = frictionStep(law, xi, vec3(v, 0, 0), dt, Math.max(0, 5.3e6 * (t - 1.3e-6)), slid);
+            if (slid && !step.sliding) {
+                return { t, v };
+            }
+            xi = step.spring;
+            slid = step.sliding;
+            v += (step.force.x / M) * dt;
+        }
+        throw new Error(`restick: no re-stick within 1 ms at dt ${dt}`);
+    }
+
+    it("re-sticks a sliding contact only once its slip has reversed, alike at 2.5, 5 and 10 µs", () => {
+        // Coulomb: the block stops at 1.3 µs + √(2·M·0.05/(μ·5.3e6)) ≈ 144.05 µs. Re-sticking where the dashpot's
+        // c_t·|slip| falls below one step's growth of the cone, μ·5.3e6·dt, stuck it 9, 19 and 34 µs early (at 2.5, 5
+        // and 10 µs). Held on the current cone, it slides on until the step in which its slip reverses: within two
+        // steps after the stop, never before it, and reversed by no more than one step of the cone's friction.
+        const stop = 1.3e-6 + Math.sqrt((2 * M * 0.05) / (0.06 * 5.3e6));
+        for (const dt of [2.5e-6, 5e-6, 1e-5]) {
+            const { t, v } = restick(dt);
+            expect(t, `dt ${dt}`).toBeGreaterThan(stop);
+            expect(t, `dt ${dt}`).toBeLessThanOrEqual(stop + 2 * dt);
+            expect(v, `dt ${dt}`).toBeLessThanOrEqual(0);
+            expect(v, `dt ${dt}`).toBeGreaterThanOrEqual((0 - 0.06 * 5.3e6 * t * dt) / M);
+        }
+    });
+
+    it("is tangentialForce's own step for a contact that did not slide on its previous step", () => {
+        const slip = vec3(0.02, -0.01, 0);
+        expect(frictionStep(law, spring, slip, 5e-6, 1000, false)).toEqual(
+            tangentialForce(law, add(spring, scale(slip, 5e-6)), slip, 1000),
+        );
+    });
+
+    it("is tangentialForce's own step for a contact that slides on", () => {
+        const slip = vec3(0.5, 0, 0);
+        const step = frictionStep(law, spring, slip, 5e-6, 50, true);
+        expect(step.sliding).toBe(true);
+        expect(step).toEqual(tangentialForce(law, add(spring, scale(slip, 5e-6)), slip, 50));
+    });
+
+    it("re-sticks, as tangentialForce does, a contact whose slip has reversed", () => {
+        // The spring is stretched along +x (its force −x); the slip now runs against it, so the contact sticks.
+        const slip = vec3(-1e-3, 0, 0);
+        const step = frictionStep(law, spring, slip, 5e-6, 1000, true);
+        expect(step.sliding).toBe(false);
+        expect(step).toEqual(tangentialForce(law, add(spring, scale(slip, 5e-6)), slip, 1000));
+    });
+
+    it("keeps sliding a contact whose cone grew within the step while its slip still runs along the spring", () => {
+        // k_t·|ξ| ≈ 9.9 N, the last step's cone; this step's is μ·N = 12 N. The trial, 9.9 + c_t·0.01 ≈ 11.0 N, lies
+        // within it, so tangentialForce alone sticks; held on the cone, 12 + 1.1 N lies outside, and it slides.
+        const slip = vec3(0.01, 0, 0);
+        expect(tangentialForce(law, add(spring, scale(slip, 5e-6)), slip, 200).sliding).toBe(false);
+        const step = frictionStep(law, spring, slip, 5e-6, 200, true);
+        expect(step.sliding).toBe(true);
+        expect(step.force.x).toBeCloseTo(-0.06 * 200, 12);
     });
 });

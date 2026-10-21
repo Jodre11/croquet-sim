@@ -225,11 +225,18 @@ describe("the read-out (P2b.2b.2c.2b design §5.2, §8.1)", () => {
         expect(leaving?.head).toBeCloseTo(0.8, 1);
         // The read-out's own, 1 ms after the last contact (2.5 ms): the croqueted ball skids on the turf with no
         // forward roll yet, and the turf's sliding friction on it (about 3.5–3.9 N against aim, under a normal force
-        // of about 7.2–8.1 N) slows it by about 0.008 m/s; the striker's ball and the mallet barely change.
+        // of about 7.2–8.1 N) slows it by about 0.008 m/s; the striker's ball and the mallet barely change. The
+        // ball–ball pair now slides on to its slip's reversal (frictionStep): its tangential impulse presses the
+        // croqueted ball into the turf about 2 % harder (−0.01803 against −0.01764 N·s). It leaves 6e-5 m/s slower
+        // and the turf's larger friction takes 9e-5 m/s more by the read (v₂ 3.75479 before). The mallet leaves 5e-5
+        // m/s slower (W 0.79048 before), through the face's friction on the striker's ball, whose motion the ball–ball
+        // pair's changed.
         expect(r.time).toBeCloseTo(2.5e-3, 12);
         expect(r.w1).toBeCloseTo(1.6175, 4);
-        expect(r.v2).toBeCloseTo(3.7548, 4);
-        expect(r.W).toBeCloseTo(0.7905, 4);
+        // P2b.2b.2c.2b: the step convergence fix (was 3.7548).
+        expect(r.v2).toBeCloseTo(3.7546, 4);
+        // P2b.2b.2c.2b: the step convergence fix (was 0.7905).
+        expect(r.W).toBeCloseTo(0.7904, 4);
     });
 });
 
