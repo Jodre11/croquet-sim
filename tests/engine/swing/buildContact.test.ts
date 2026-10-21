@@ -34,6 +34,7 @@ import {
 import { MAX_BACK_ANGLE, planDownswing, scanDownswing } from "../../../src/engine/swing/downswing";
 import { ON_TIME, defaultProfile, shapeOf } from "../../../src/engine/swing/profile";
 import {
+    CROQUET_STROKES,
     STROKE_TYPES,
     type MalletHeadProfile,
     type ShotSetup,
@@ -64,6 +65,7 @@ import {
 } from "../support/impact";
 import {
     CANONICAL_CLEARANCE,
+    DEFAULT_CROQUET_GAP,
     GC_STOP_GAP,
     TEST_BOX_HEAD,
     backswingFor,
@@ -617,6 +619,33 @@ describe("the default profile's canonical setups", () => {
         expect(setup.live).toEqual(["red"]);
         expect(setup).not.toHaveProperty("croqueted");
         expect(() => canonicalSetup("stop-ac", { world, targetGap: 0.1 })).toThrow(/no targetGap/);
+    });
+
+    it("places the croqueted ball 2R + croquetGap along the stroke's line, the pass roll's 20° kept", () => {
+        const radius = defaultWorld().ball.radius;
+        for (const type of CROQUET_STROKES) {
+            const s = canonicalSetup(type, { croquetGap: 0.0015 });
+            const d = sub((s.balls.red as BallState).position, (s.balls.blue as BallState).position);
+            expect(length(d)).toBeCloseTo(2 * radius + 0.0015, 12);
+            const line = Math.PI / 2 + (type === "pass-roll" ? (20 * Math.PI) / 180 : 0);
+            expect(Math.atan2(d.y, d.x)).toBeCloseTo(line, 12);
+        }
+    });
+    it("defaults the croquet gap to DEFAULT_CROQUET_GAP", () => {
+        const { balls } = canonicalSetup("drive");
+        const d = sub((balls.red as BallState).position, (balls.blue as BallState).position);
+        expect(length(d) - 2 * defaultWorld().ball.radius).toBeCloseTo(DEFAULT_CROQUET_GAP, 12);
+    });
+    it("decides the limit on the input, not the rounded positions", () => {
+        // Review focus 1.
+        expect(() => canonicalSetup("drive", { croquetGap: 0.002 })).toThrow(/canonicalSetup: .*croquetGap/);
+        expect(() => canonicalSetup("drive", { croquetGap: -1e-6 })).toThrow(/canonicalSetup: .*croquetGap/);
+        expect(() => canonicalSetup("drive", { croquetGap: 0.002 - 1e-9 })).not.toThrow();
+    });
+    it("rejects a gap option on the wrong kind of stroke", () => {
+        // Review focus 3.
+        expect(() => canonicalSetup("single-ball", { croquetGap: 0.001 })).toThrow(/canonicalSetup: .*croquetGap/);
+        expect(() => canonicalSetup("drive", { targetGap: 0.001 })).toThrow(/canonicalSetup: .*targetGap/);
     });
 
     it("plans a roll's hands arriving on their arc: the path continuous through contact (P2b.2b.2b.2b §4.1)", () => {

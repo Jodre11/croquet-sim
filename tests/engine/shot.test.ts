@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { judgeFaults } from "../../src/engine/faults";
-import { headLowestPoint } from "../../src/engine/impact/contacts";
+import { ballPairKey, headLowestPoint } from "../../src/engine/impact/contacts";
 import {
     IMPACT_DT,
     TRACK_IMPACT_CAP,
@@ -405,7 +405,7 @@ describe("simulateShot", () => {
         [
             "a croqueted ball not touching",
             { ...croquet, balls: { ...croquet.balls, red: at(X, Y + 2 * R + 0.01) } },
-            /must touch the striker/,
+            /within 2 mm of the striker/,
         ],
         [
             "a croqueted ball in a single-ball stroke",
@@ -423,6 +423,32 @@ describe("simulateShot", () => {
     it.each(rejections)("rejects %s", (_name, setup, pattern) => {
         expect(() => simulateShot(setup)).toThrow(RangeError);
         expect(() => simulateShot(setup)).toThrow(pattern);
+    });
+});
+
+describe("the croquet stroke's gap (P2b.2b.2c.2b design §3, §8.1)", () => {
+    const gapped = (g: number): ShotSetup => {
+        const setup = canonicalSetup("drive");
+        return { ...setup, balls: { ...setup.balls, red: at(X, Y + 2 * R + g) } };
+    };
+
+    it("accepts a croqueted ball 0, 1 and just under 2 mm from the striker", () => {
+        for (const g of [0, 0.001, 0.002 - 1e-9]) {
+            expect(() => simulateShot(gapped(g), WORLD)).not.toThrow();
+        }
+    });
+    it("rejects one at 2 mm and beyond, with the gap in its message", () => {
+        for (const g of [0.002 + 1e-12, 0.0025, 0.01]) {
+            expect(() => simulateShot(gapped(g), WORLD)).toThrow(/within 2 mm of the striker \(gap 0\.0/);
+        }
+    });
+    it("still accepts a croqueted ball overlapping within CONTACT_TOLERANCE", () => {
+        // Review focus 2: overlap is validateImpact's, as before.
+        expect(() => simulateShot(gapped(-5e-10), WORLD)).not.toThrow();
+    });
+    it("plays a gapped drive end to end", () => {
+        const outcome = simulateShot(canonicalSetup("drive", { croquetGap: 0.001 }), WORLD);
+        expect(outcome.impact.touchingAtStart).not.toContain(ballPairKey("blue", "red"));
     });
 });
 

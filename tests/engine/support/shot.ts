@@ -4,6 +4,7 @@
  */
 import { faceHalfHeight } from "../../../src/engine/impact/shape";
 import { vec3 } from "../../../src/engine/math/vec3";
+import { CROQUET_GAP_LIMIT } from "../../../src/engine/shot";
 import { handsAheadFor, headShapeOf, plannedSpeed, stanceLean } from "../../../src/engine/swing/buildContact";
 import { MAX_BACK_ANGLE } from "../../../src/engine/swing/downswing";
 import { DEFAULT_DRIVE, ON_TIME, defaultProfile } from "../../../src/engine/swing/profile";
@@ -153,11 +154,14 @@ export const CANONICAL_STRIKER = { x: 9.6012, y: 4 } as const;
 /** The GC stop's gap to its target, surface to surface (m): the user's optimum (design §5.5, 2026-10-06). */
 export const GC_STOP_GAP = 0.3;
 
+/** A croquet stroke's gap from the striker to the croqueted ball by default (m, surface to surface): touching. */
+export const DEFAULT_CROQUET_GAP = 0;
+
 /**
  * What `canonicalSetup` changes: the world (default `defaultWorld()`), fields of the stroke, fields of the preset's
  * own stance, drive and shape entries in `defaultProfile`, the mallet, the body, and, for a single-ball stroke, the
  * gap (m, surface to surface) to a target ball on the aim line ahead (default GC_STOP_GAP for the GC stop, no target
- * otherwise). The balls do not follow a changed aim.
+ * otherwise), and, for a croquet stroke, the gap to the croqueted ball. The balls do not follow a changed aim.
  */
 export interface CanonicalOptions {
     readonly world?: World;
@@ -167,6 +171,11 @@ export interface CanonicalOptions {
     /** Fields of the preset's own shape. */
     readonly shape?: Partial<SwingShape>;
     readonly targetGap?: number;
+    /**
+     * A croquet stroke's gap (m, surface to surface) from the striker to the croqueted ball, 0 ≤ gap <
+     * CROQUET_GAP_LIMIT (default DEFAULT_CROQUET_GAP).
+     */
+    readonly croquetGap?: number;
     /**
      * The mallet in place of the default's, every preset's top hand moved to keep its default lean at its canonical
      * contact with that mallet.
@@ -199,9 +208,11 @@ export const LEGACY_MALLET: SwingProfile["mallet"] = {
  * A preset's canonical setup (design §5.5): the striker at CANONICAL_STRIKER, aim +y, the default backswing
  * (reference/swing.json: 3 m/s planned at intensity 0, exit criterion 5), no intensity, the preset's default
  * drive, every action on time, the preset's reach, `side` 0, `up` 0 except the AC stop's −0.020 m. A croquet stroke's
- * croqueted ball touches the striker ahead along aim, 20° to the left of it for the pass roll, and `live` is empty. A
- * single-ball stroke's target, red, sits on the aim line `targetGap` ahead (the GC stop's GC_STOP_GAP by default),
- * and `live` holds every other ball: the target, if any. No other balls. Throws for a croquet stroke given a gap.
+ * croqueted ball lies `croquetGap` (default DEFAULT_CROQUET_GAP, 0 ≤ gap < CROQUET_GAP_LIMIT) from the striker ahead
+ * along aim, 20° to the left of it for the pass roll, and `live` is empty. A single-ball stroke's target, red, sits on
+ * the aim line `targetGap` ahead (the GC stop's GC_STOP_GAP by default), and `live` holds every other ball: the
+ * target, if any. No other balls. Throws an `Error` prefixed `canonicalSetup:` for `croquetGap` outside its range, for
+ * `croquetGap` on a single-ball stroke, and for `targetGap` on a croquet stroke.
  */
 export function canonicalSetup(type: StrokeType, over: CanonicalOptions = {}): ShotSetup {
     const world = over.world ?? defaultWorld();
@@ -218,10 +229,18 @@ export function canonicalSetup(type: StrokeType, over: CanonicalOptions = {}): S
     const gap = over.targetGap ?? (type === "stop-gc" ? GC_STOP_GAP : undefined);
     if (croquet) {
         if (over.targetGap !== undefined) {
-            throw new Error(`canonicalSetup: a ${type} stroke's croqueted ball touches the striker; no targetGap`);
+            throw new Error(`canonicalSetup: a ${type} stroke's croqueted ball lies croquetGap away; no targetGap`);
+        }
+        const croquetGap = over.croquetGap ?? DEFAULT_CROQUET_GAP;
+        // Checked on the input, so round-off in 2R + gap never decides the range.
+        if (!(croquetGap >= 0 && croquetGap < CROQUET_GAP_LIMIT)) {
+            throw new Error(`canonicalSetup: croquetGap ${croquetGap} m is outside [0, ${CROQUET_GAP_LIMIT})`);
         }
         const line = aim + (type === "pass-roll" ? (20 * Math.PI) / 180 : 0);
-        balls.red = at(x + 2 * R * Math.cos(line), y + 2 * R * Math.sin(line));
+        const reach = 2 * R + croquetGap;
+        balls.red = at(x + reach * Math.cos(line), y + reach * Math.sin(line));
+    } else if (over.croquetGap !== undefined) {
+        throw new Error(`canonicalSetup: croquetGap is for a croquet stroke, not ${type}`);
     } else if (gap !== undefined) {
         balls.red = at(x + (2 * R + gap) * Math.cos(aim), y + (2 * R + gap) * Math.sin(aim));
     }
