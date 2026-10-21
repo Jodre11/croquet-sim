@@ -166,12 +166,12 @@ export const GUGAN_MEANS = {
     v2w1: { value: 2.07, sem: 0.06 },
 } as const;
 
-/** One video frame in s: "images taken at a rate of 8000 per second (125 microseconds/frame)" (README line 645). */
+/** One video frame in s: "images taken at a rate of 8000 per second (125 microseconds/frame)" (README line 646). */
 export const VIDEO_FRAME = 1 / 8000;
 
 /**
  * The displacement in m at which the video first shows a body moving: Gugan 4's stated resolution, positions "to
- * about ± 0.2 mm" (README lines 647-656). His "several times greater" in practice gives no figure and is not applied.
+ * about ± 0.2 mm" (README lines 648-657). His "several times greater" in practice gives no figure and is not applied.
  */
 export const VISIBLE_SHIFT = 2e-4;
 
@@ -215,29 +215,29 @@ export const FIG4_TIMING: readonly FilmedTiming[] = [
 ];
 
 /**
- * Gugan 4, Table 1's three clean free collisions, B4GS, B6MS and B5MS (README lines 621-642): v₁ (row 6) in m/s, the
- * contact time Tb (row 5) in s, and each one's restitution from rows 6 and 7 by Gugan's (A7), e = 2·v₂/v₁ − 1. The
- * double-tap columns, among them the 0.50 and 0.87 ms readings, are left out. The harness is judged against Gugan's
- * mean, e = 0.72 ± 0.02, not these.
+ * Gugan 4, Table 1's three clean free collisions, B4GS, B6MS and B5MS (README lines 621-643): v₁ (row 6) in m/s and
+ * the contact time Tb (row 5) in s. The restitution is Gugan's stated e = 0.72 ± 0.02 (§4), from row 8's mean over all
+ * seven strokes; the clean strokes' own (A7) figures scatter about it and are in the README only. The double-tap
+ * columns, among them the 0.50 and 0.87 ms readings, are left out.
  */
 export const FREE_COLLISIONS: readonly {
     readonly speed: number;
     readonly restitution: number;
     readonly contactTime: number;
 }[] = [
-    { speed: 1.9, restitution: (2 * 1.57) / 1.9 - 1, contactTime: 7.5e-4 },
-    { speed: 5.54, restitution: (2 * 4.9) / 5.54 - 1, contactTime: 7.5e-4 },
-    { speed: 7.64, restitution: (2 * 6.53) / 7.64 - 1, contactTime: 7.5e-4 },
+    { speed: 1.9, restitution: 0.72, contactTime: 7.5e-4 },
+    { speed: 5.54, restitution: 0.72, contactTime: 7.5e-4 },
+    { speed: 7.64, restitution: 0.72, contactTime: 7.5e-4 },
 ];
 
 /**
  * Gugan 4, Table 2, column A2D: the face's contact in a single-ball drive as the video timed it, row 4's 0.75 ms
- * (± 0.1 ms) at row 7's U of 3.26 m/s (README line 643).
+ * (± 0.1 ms) at row 7's U of 3.26 m/s (README line 644).
  */
 export const SINGLE_BALL_FACE = { speed: 3.26, contactTime: 7.5e-4 } as const;
 
 /**
- * Gugan 5's drive and stop at "a mallet speed of about 3 m/s" (README lines 658-672): the drive's distance ratio
+ * Gugan 5's drive and stop at "a mallet speed of about 3 m/s" (README lines 659-673): the drive's distance ratio
  * 4.23 ± 0.2 (sem), its single strokes' standard deviation 0.6; the jab stop's 7.15 ± 0.6, "the scatter is about
  * ± 2.0"; the Dawson Internationals' e = 0.772 by the maker's bounce test.
  */

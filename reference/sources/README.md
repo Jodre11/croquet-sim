@@ -637,9 +637,10 @@ spacing (row 1) 33, 13, 13, 33, 13, 33, 33 mm:
   both in double-tap columns; Gugan marks the strokes as double taps but does not say that the double tap set the
   reading. "The ball on ball contact times, Tb, (row 5) show no significant variation with ball speed, and cluster
   around 0.75 ms (i.e. 6 video frames)". e: row 8 "has a mean value of 0.86 ± 0.01 ... This yields e = 0.72 ± 0.02".
-- `FREE_COLLISIONS` holds the three clean strokes (1.90, 5.54 and 7.64 m/s, each 0.75 ms). Each one's restitution is
-  e = 2·v2/v1 − 1 from rows 6 and 7 (Gugan's equation (A7), v2 = v1(1 + e)/2): 0.653, 0.769 and 0.709. The harness is
-  judged against the mean, 0.72 ± 0.02, not these.
+- `FREE_COLLISIONS` holds the three clean strokes (1.90, 5.54 and 7.64 m/s, each 0.75 ms), each with Gugan's stated
+  e = 0.72. That 0.72 is the seven-stroke mean: row 8 sums to 6.01, 6.01/7 = 0.859, and (A7), v2 = v1(1 + e)/2, gives
+  e ≈ 0.717. For context only, not held: the three clean strokes' own e = 2·v2/v1 − 1 from rows 6 and 7 are 0.653,
+  0.769 and 0.709, the scatter about that mean.
 - Table 2, "Data for horizontal motion of ball in single-ball drives", column A2D: row 4 "Duration of contact, Τh, ms
   (± 0.1 ms)" 0.75; row 7 "Mallet speed before impact, U, m/s" 3.26. `SINGLE_BALL_FACE` holds them.
 - The frame rate, §2: "images taken at a rate of 8000 per second (125 microseconds/frame)". `VIDEO_FRAME` is 1/8000 s.
