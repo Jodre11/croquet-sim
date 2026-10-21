@@ -294,7 +294,10 @@ describe("handover of a ball sunk under the head, on whole rolls", () => {
     ] as const)("hands over the %s at %s m/s, drive %s, side %s, with the head cleared of a lifted ball", (...run) => {
         const [type, speed, drive, side] = run;
         // P2b.2b.2b.2c: on the legacy round head; the default box clears the turf (gate).
-        const base = canonicalSetup(type, { mallet: LEGACY_MALLET });
+        // P2b.2b.2c.2b: the croquet gap's default, 1 mm; pinned at gap 0, where the sunk ball's lift was measured: at
+        // 1 mm the face meets the striker's ball again 4.2 ms in (full roll) and 3.7 ms in (pass roll), after the
+        // balls' contact, and every run's overlapCorrection is 0 (full roll 407.6–409.2 ms long, pass roll 169.4 ms).
+        const base = canonicalSetup(type, { croquetGap: 0, mallet: LEGACY_MALLET });
         const up = base.stroke.contact.up + (type === "full-roll" ? 0.003 : -0.003);
         const stroke = { ...base.stroke, drive, contact: { up, side } };
         const setup = { ...base, stroke: { ...stroke, backswing: backswingFor({ ...base, stroke }, speed, world) } };

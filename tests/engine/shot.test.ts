@@ -366,7 +366,10 @@ describe("simulateShot", () => {
         // rest: 12.52 ms, 1.80 mm, 1.83 mm).
         // P2b.2b.2b.3: the turf strike, on the default box through the jab (was on the legacy round head): the head on
         // the turf from 18.34 ms, 0.32 mm deep.
-        const setup = canonicalSetup("stop-ac", { stroke: { jab: J_ON } });
+        // P2b.2b.2c.2b: the croquet gap's default, 1 mm; pinned at gap 0, where the head's dig was measured: at 1 mm
+        // the face double-taps the striker's ball (0.005–1.095 and 1.265–2.620 ms) and the head never meets the turf
+        // by the impact's end at 20.000 ms, so no 29.1.14.
+        const setup = canonicalSetup("stop-ac", { croquetGap: 0, stroke: { jab: J_ON } });
         const dug = simulateShot({ ...setup, hampered: true }).faults.findings.filter((f) => f.law === "29.1.14");
         expect(dug).toHaveLength(1);
         expect(dug[0]).toMatchObject({ tier: "possible-fault", ball: "blue" });
@@ -508,9 +511,12 @@ describe("the mechanisms (design §8.1), on the canonical setups", () => {
         expect(impact.duration).toBeLessThan((contact.drive as TrackDrive).arc.contactAt + TRACK_IMPACT_CAP);
     });
 
-    it("no extra push: at guideEffort 0 the 2 m/s drive strikes once and ends by itself; at 1, more than once", () => {
+    it("no extra push: at guideEffort 0 the 2 m/s drive strikes twice and ends by itself; at 1, more often", () => {
         // Planning: at 0 one hit (0.01–1.20 ms), the impact ending by itself 110.6 ms after contactAt with no
         // impact-cap and no impact-head-approaching; at 1 four hits (from 0.01, 81.94, 126.77 and 159.11 ms), 268.9 ms.
+        // P2b.2b.2c.2b: the croquet gap's default, 1 mm (was one hit at 0 and more than one at 1): at 0 two hits
+        // (0.005–1.095 and 1.640–3.045 ms), the strike's double tap across the gap, the impact ending by itself
+        // 118.7 ms long; at 1 three, the push's re-hit from 82.52 ms after the double tap.
         const at = (guideEffort: number) =>
             simulateShot(
                 canonicalSetup("drive", {
@@ -518,12 +524,12 @@ describe("the mechanisms (design §8.1), on the canonical setups", () => {
                 }),
             );
         const none = at(0);
-        expect(hits(none.impact)).toHaveLength(1);
+        expect(hits(none.impact)).toHaveLength(2);
         const kinds = none.impact.events.map((e) => e.kind);
         expect(kinds).not.toContain("impact-cap");
         expect(kinds).not.toContain("impact-head-approaching");
         expect(none.impact.duration).toBeLessThan((none.contact.drive as TrackDrive).arc.contactAt + TRACK_IMPACT_CAP);
-        expect(hits(at(1).impact).length).toBeGreaterThan(1);
+        expect(hits(at(1).impact).length).toBeGreaterThan(2);
     });
 
     it("an accelerating bottom hand turns the drive's double hit into a triple and lowers its ratio", () => {
@@ -536,15 +542,17 @@ describe("the mechanisms (design §8.1), on the canonical setups", () => {
         expect(ratio(strong, pushed)).toBeLessThan(ratio(canonical, guided));
     });
 
-    it("the stops strike once, and the AC stop's coaching ratio exceeds the drive's", () => {
+    it("the GC stop strikes once, the AC stop twice, and the AC stop's coaching ratio exceeds the drive's", () => {
         // User decision (2026-10-06): the AC stop is told from the drive by its ratio, not by the striker's ball's
         // speed at the impact's end (1.3800 against 1.3919 m/s, taken 21.6 and 181 ms after contact). Pre-flight: one
         // hit each; ratios 6.464 (AC stop) and 3.316 (drive).
+        // P2b.2b.2c.2b: the croquet gap's default, 1 mm (was one hit each): the AC stop two (0.005–1.095 and
+        // 1.265–2.620 ms), the double tap: the striker's ball leaves the face, meets the croqueted ball 0.685 ms in
+        // and, slowed by it, is caught by the face again. The GC stop, a single-ball stroke, one.
         const drive = canonicalSetup("drive");
         const acStop = canonicalSetup("stop-ac");
-        for (const type of ["stop-ac", "stop-gc"] as const) {
-            expect(hits(simulateShot(canonicalSetup(type)).impact), type).toHaveLength(1);
-        }
+        expect(hits(simulateShot(acStop).impact)).toHaveLength(2);
+        expect(hits(simulateShot(canonicalSetup("stop-gc")).impact)).toHaveLength(1);
         expect(ratio(acStop, simulateShot(acStop))).toBeGreaterThan(ratio(drive, simulateShot(drive)));
     });
 
@@ -602,7 +610,10 @@ describe("the mechanisms (design §8.1), on the canonical setups", () => {
         // Pre-flight, with the check to rest: 12.52–21.38 ms, 1.80 mm (10 mm: 1.40; 12 mm: 2.19 and deep), +0.401 N·s.
         // P2b.2b.2b.3: the turf strike, on the default box through the jab (was on the legacy round head): the head on
         // the turf from 18.34 ms, 0.32 mm deep, the striker leaving at 1.5660 m/s, no turf-yield or impact-head-deep.
-        const { impact, turf } = braking(canonicalSetup("stop-ac", { stroke: { jab: J_ON } }));
+        // P2b.2b.2c.2b: the croquet gap's default, 1 mm; pinned at gap 0, where the turf's braking was measured: at
+        // 1 mm the face double-taps the striker's ball (0.005–1.095 and 1.265–2.620 ms), the head never meets the
+        // turf by the impact's end at 20.000 ms, and the striker's ball leaves at 1.4863 m/s.
+        const { impact, turf } = braking(canonicalSetup("stop-ac", { croquetGap: 0, stroke: { jab: J_ON } }));
         const dug = impact.timeline["head/turf"]?.[0] as ContactInterval;
         expect(dug).toBeDefined();
         expect(dug.start).toBeGreaterThanOrEqual((hits(impact)[0] as ContactInterval).end);
@@ -634,9 +645,14 @@ describe("the mechanisms (design §8.1), on the canonical setups", () => {
         // P2b.2b.2b.3: the turf strike, on the default box through the jab (was on the legacy round head): the head
         // on the turf from 28.55 ms, 0.73 mm deep, the ball struck from 30.36 ms; the striker's ball at 1.5540 m/s
         // against 1.5666 on time.
-        const onTime = simulateShot(canonicalSetup("stop-ac", { stroke: { jab: J_EARLY } })).impact;
+        // P2b.2b.2c.2b: the croquet gap's default, 1 mm; pinned at gap 0, where the early dip's slowing was measured:
+        // at 1 mm both runs double-tap the striker's ball (on time 0.005–1.095 and 1.265–2.620 ms, early 30.355–31.450
+        // and 31.635–32.985 ms), and along the lawn the early one leaves faster, 1.5050 against 1.4661 m/s.
+        const onTime = simulateShot(canonicalSetup("stop-ac", { croquetGap: 0, stroke: { jab: J_EARLY } })).impact;
         const timing = { arc: 0, hands: 0, dip: -0.03 };
-        const early = simulateShot(canonicalSetup("stop-ac", { stroke: { jab: J_EARLY, timing } })).impact;
+        const early = simulateShot(
+            canonicalSetup("stop-ac", { croquetGap: 0, stroke: { jab: J_EARLY, timing } }),
+        ).impact;
         const dug = early.timeline["head/turf"]?.[0] as ContactInterval;
         expect(dug).toBeDefined();
         expect(dug.start).toBeLessThan((hits(early)[0] as ContactInterval).start);
