@@ -1,0 +1,84 @@
+== I. The search (design §4): what keeps truly touching balls apart. Each candidate's tests of §4.1 with their figures: 1, C3S and C20S at gap 0 within §5.3's uncertainties of their rows; 2, v2/U across the gap within Table 5's spread; 3, the gapped strokes' means within Gugan's sem; for a law change also 4, Table 1's free collisions as the video times them; 5, the single-ball strokes unchanged within their measurement; 6, every constant sourced or argued; candidates a, c and d on the worktree's engine ==
+-- I.0 the harness on today's ball–ball law (prepareImpact's; dt 0.1000 µs, the video's threshold 0.2000 mm, a frame 0.1250 ms) --
+  test 4: miss: 1.9000 m/s: e 0.7200 (0.7200) pass, video 0.5299 ms (0.7500) miss, the law's own 0.7500 ms; 5.5400 m/s (beside): e 0.7200 (0.7200) pass, video 0.5867 ms (0.7500) miss, the law's own 0.7499 ms; 7.6400 m/s: e 0.7200 (0.7200) pass, video 0.6066 ms (0.7500) miss, the law's own 0.7499 ms
+-- I.a resolution of "touching": a gap hidden in Table 5's 0 (0-0.5 mm, section D's sweep) --
+  test 1: miss: C3S, no gap passes:
+      0.0000 mm: v2U 1.2466 (row 1.1458) miss, w1W 2.5548 (row 1.7321) miss, v2w1 2.1154 (row 2.2680) miss
+      0.0500 mm: v2U 1.2424 (row 1.1458) miss, w1W 2.4206 (row 1.7321) miss, v2w1 2.1556 (row 2.2680) miss
+      0.1000 mm: v2U 1.2373 (row 1.1458) miss, w1W 2.2429 (row 1.7321) miss, v2w1 2.2206 (row 2.2680) pass
+      0.1500 mm: v2U 1.2313 (row 1.1458) miss, w1W 2.0753 (row 1.7321) miss, v2w1 2.2896 (row 2.2680) pass
+      0.2000 mm: v2U 1.2245 (row 1.1458) miss, w1W 1.9279 (row 1.7321) miss, v2w1 2.3557 (row 2.2680) miss
+      0.2500 mm: v2U 1.2166 (row 1.1458) miss, w1W 1.8023 (row 1.7321) miss, v2w1 2.4137 (row 2.2680) miss
+      0.3000 mm: v2U 1.2084 (row 1.1458) miss, w1W 1.7043 (row 1.7321) pass, v2w1 2.4577 (row 2.2680) miss
+      0.4000 mm: v2U 1.1901 (row 1.1458) miss, w1W 1.5850 (row 1.7321) miss, v2w1 2.4857 (row 2.2680) miss
+      0.5000 mm: v2U 1.1709 (row 1.1458) miss, w1W 1.5631 (row 1.7321) miss, v2w1 2.4267 (row 2.2680) miss
+    C20S, no gap passes:
+      0.0000 mm: v2U 1.2402 (row 1.0862) miss, w1W 1.4930 (row 1.6111) miss, v2w1 2.8540 (row 2.1724) miss
+      0.0500 mm: v2U 1.2379 (row 1.0862) miss, w1W 1.4700 (row 1.6111) miss, v2w1 2.8695 (row 2.1724) miss
+      0.1000 mm: v2U 1.2347 (row 1.0862) miss, w1W 1.4438 (row 1.6111) miss, v2w1 2.8858 (row 2.1724) miss
+      0.1500 mm: v2U 1.2311 (row 1.0862) miss, w1W 1.4194 (row 1.6111) miss, v2w1 2.8985 (row 2.1724) miss
+      0.2000 mm: v2U 1.2272 (row 1.0862) miss, w1W 1.3994 (row 1.6111) miss, v2w1 2.9048 (row 2.1724) miss
+      0.2500 mm: v2U 1.2231 (row 1.0862) miss, w1W 1.3835 (row 1.6111) miss, v2w1 2.9047 (row 2.1724) miss
+      0.3000 mm: v2U 1.2188 (row 1.0862) miss, w1W 1.3739 (row 1.6111) miss, v2w1 2.8960 (row 2.1724) miss
+      0.4000 mm: v2U 1.2097 (row 1.0862) miss, w1W 1.3673 (row 1.6111) miss, v2w1 2.8584 (row 2.1724) miss
+      0.5000 mm: v2U 1.2005 (row 1.0862) miss, w1W 1.3822 (row 1.6111) miss, v2w1 2.7920 (row 2.1724) miss
+  test 2: miss: v2/U at C1D's U 2.5000 m/s against Table 5's 1.0286-1.1520: 0.0000 mm 1.2515, 0.2500 mm 1.2239, 0.5000 mm 1.1842, 1.0000 mm 1.1126, 1.9000 mm 1.0994
+  test 3: miss: the gapped strokes' means (8 counted): v2U 1.1252 (1.1000 ± 0.0200) miss, w1W 1.4953 (1.7100 ± 0.0500) miss, v2w1 2.6396 (2.0700 ± 0.0600) miss
+  a: miss; first failed test 1
+-- I.c the turf under the balls: impulses on the croqueted ball from the face's first contact --
+  C3S (stop-ac, U 1.9200 m/s):
+    0-0.5000 ms: bed normal 2.2271 mN·s (the weight's 2.2241), bed along aim -0.2624 mN·s; ball–ball normal 122.0897 mN·s, along aim 122.0897 mN·s; |bed along aim| over ball–ball along aim 0.0021
+    0-1.5000 ms: bed normal 6.5705 mN·s (the weight's 6.6723), bed along aim -2.4411 mN·s; ball–ball normal 1087.4298 mN·s, along aim 1087.4556 mN·s; |bed along aim| over ball–ball along aim 0.0022
+  C20S (stop-ac, U 5.8000 m/s):
+    0-0.5000 ms: bed normal 2.2343 mN·s (the weight's 2.2241), bed along aim -0.5827 mN·s; ball–ball normal 596.9702 mN·s, along aim 596.9707 mN·s; |bed along aim| over ball–ball along aim 0.0010
+    0-1.5000 ms: bed normal 7.0949 mN·s (the weight's 6.6723), bed along aim -3.1549 mN·s; ball–ball normal 3259.5443 mN·s, along aim 3259.7553 mN·s; |bed along aim| over ball–ball along aim 0.0010
+  the canonical drive (3.0000 m/s, guideEffort 0):
+    0-0.5000 ms: bed normal 2.2836 mN·s (the weight's 2.2241), bed along aim -0.4439 mN·s; ball–ball normal 228.1794 mN·s, along aim 228.1771 mN·s; |bed along aim| over ball–ball along aim 0.0019
+    0-1.5000 ms: bed normal 8.5551 mN·s (the weight's 6.6723), bed along aim -3.6440 mN·s; ball–ball normal 1710.5760 mN·s, along aim 1710.5856 mN·s; |bed along aim| over ball–ball along aim 0.0021
+  test 1: miss: C3S at gap 0: v2U 1.2466 (row 1.1458) miss, w1W 2.5548 (row 1.7321) miss, v2w1 2.1154 (row 2.2680) miss; C20S at gap 0: v2U 1.2402 (row 1.0862) miss, w1W 1.4930 (row 1.6111) miss, v2w1 2.8540 (row 2.1724) miss
+  test 2: miss: v2/U at C1D's U 2.5000 m/s against Table 5's 1.0286-1.1520: 0.0000 mm 1.2515, 0.2500 mm 1.2239, 0.5000 mm 1.1842, 1.0000 mm 1.1126, 1.9000 mm 1.0994
+  test 3: miss: the gapped strokes' means (8 counted): v2U 1.1252 (1.1000 ± 0.0200) miss, w1W 1.4953 (1.7100 ± 0.0500) miss, v2w1 2.6396 (2.0700 ± 0.0600) miss
+  c: miss; first failed test 1
+-- I.d off-line contact: the balls' normal and the striker's ball (ms from the face's first contact) --
+  C3S (stop-ac, U 1.9200 m/s):
+    the interval's start (0.0100 ms, 0.0985 N): normal 0.0000° off aim, (aim, side, up) (1.0000, 0.0000, 0.0000); the striker's ball risen 0.0000 mm, spin (aim, side, up) (-0.0000, 0.0055, 0.0000) rad/s
+    the peak force (0.8650 ms, 1582.9865 N): normal 0.0676° off aim, (aim, side, up) (1.0000, 0.0000, -0.0012); the striker's ball risen 0.1097 mm, spin (aim, side, up) (-0.0000, 3.6718, 0.0000) rad/s
+  C20S (stop-ac, U 5.8000 m/s):
+    the interval's start (0.0100 ms, 0.5579 N): normal 0.0000° off aim, (aim, side, up) (1.0000, 0.0000, -0.0000); the striker's ball risen 0.0000 mm, spin (aim, side, up) (0.0000, 0.0304, -0.0000) rad/s
+    the peak force (0.7450 ms, 5297.2692 N): normal 0.2070° off aim, (aim, side, up) (1.0000, 0.0000, -0.0036); the striker's ball risen 0.3319 mm, spin (aim, side, up) (-0.0000, 12.1478, 0.0000) rad/s
+  the canonical drive (3.0000 m/s, guideEffort 0):
+    the interval's start (0.0100 ms, 0.1925 N): normal 0.0000° off aim, (aim, side, up) (1.0000, 0.0000, 0.0000); the striker's ball risen 0.0000 mm, spin (aim, side, up) (-0.0000, 0.0107, -0.0000) rad/s
+    the peak force (0.8200 ms, 2590.9066 N): normal 0.0704° off aim, (aim, side, up) (1.0000, 0.0000, -0.0012); the striker's ball risen 0.0941 mm, spin (aim, side, up) (0.0000, 5.6155, 0.0000) rad/s
+  test 1: miss: C3S at gap 0: v2U 1.2466 (row 1.1458) miss, w1W 2.5548 (row 1.7321) miss, v2w1 2.1154 (row 2.2680) miss; C20S at gap 0: v2U 1.2402 (row 1.0862) miss, w1W 1.4930 (row 1.6111) miss, v2w1 2.8540 (row 2.1724) miss
+  test 2: miss: v2/U at C1D's U 2.5000 m/s against Table 5's 1.0286-1.1520: 0.0000 mm 1.2515, 0.2500 mm 1.2239, 0.5000 mm 1.1842, 1.0000 mm 1.1126, 1.9000 mm 1.0994
+  test 3: miss: the gapped strokes' means (8 counted): v2U 1.1252 (1.1000 ± 0.0200) miss, w1W 1.4953 (1.7100 ± 0.0500) miss, v2w1 2.6396 (2.0700 ± 0.0600) miss
+  d: miss; first failed test 1
+-- I summary: no candidate passes (a, c, d) --
+
+== Candidate b, run from its throwaway copy (<temp>/candidates/b; diff in the report) ==
+== I. The search (design §4): what keeps truly touching balls apart. Each candidate's tests of §4.1 with their figures: 1, C3S and C20S at gap 0 within §5.3's uncertainties of their rows; 2, v2/U across the gap within Table 5's spread; 3, the gapped strokes' means within Gugan's sem; for a law change also 4, Table 1's free collisions as the video times them; 5, the single-ball strokes unchanged within their measurement; 6, every constant sourced or argued; candidate b on this copy's engine ==
+  test 1: miss: C3S at gap 0: v2U 1.2567 (row 1.1458) miss, w1W 1.7540 (row 1.7321) pass, v2w1 2.6311 (row 2.2680) miss; C20S at gap 0: v2U 1.2218 (row 1.0862) miss, w1W 1.0737 (row 1.6111) miss, v2w1 3.4509 (row 2.1724) miss
+  test 2: miss: v2/U at C1D's U 2.5000 m/s against Table 5's 1.0286-1.1520: 0.0000 mm 1.2541, 0.2500 mm 1.2067, 0.5000 mm 1.1524, 1.0000 mm 1.1042, 1.9000 mm 1.0989
+  test 3: miss: the gapped strokes' means (8 counted): v2U 1.1112 (1.1000 ± 0.0200) pass, w1W 1.5376 (1.7100 ± 0.0500) miss, v2w1 2.5539 (2.0700 ± 0.0600) miss
+  test 4: miss: 1.9000 m/s: e 0.7200 (0.7200) pass, video 0.5299 ms (0.7500) miss, the law's own 0.7500 ms; 5.5400 m/s (beside): e 0.7200 (0.7200) pass, video 0.5867 ms (0.7500) miss, the law's own 0.7499 ms; 7.6400 m/s: e 0.7200 (0.7200) pass, video 0.6066 ms (0.7500) miss, the law's own 0.7499 ms
+  test 5: pass: A1D release 1.0201 m/s (today 1.0198, the CA's 1.0400) pass, travel 0.5228 m (today 0.5231, the CA's 0.9300) pass; A2D release 4.1201 m/s (today 4.1201, the CA's 4.3100) pass, travel 8.5942 m (today 8.5883, the CA's 9.7400) pass; A3D release 6.6741 m/s (today 6.6743, the CA's 6.8600) pass, travel 21.3847 m (today 21.3780, the CA's 24.7300) pass; A4D release 10.3455 m/s (today 10.3459, the CA's 8.6200) pass, travel 33.4959 m (today 33.4880, the CA's 45.8500) pass; Table 2's face contact at 3.2600 m/s 0.8000 ms (today 0.9450, the video's 0.7500 ± 0.1000) pass
+  test 6: pass: faceContactTimeAt scaled by one factor, so that it gives Gugan 4's Table 2 (A2D) face contact of 0.7500 ms at 3.2600 m/s: the video's own measurement of the face on the CA's single-ball strokes, the film the filmed strokes come from, where Gugan 2000's drop tests used a Jaques ball on unrecorded wood; its speed dependence (q) and the restitution fit are kept. Not matched to C3S, C20S or any two-ball stroke
+  b: miss; first failed test 1
+  the squeeze's direction, C3S and C20S at gap 0 (candidate, then the change from today's):
+    C3S: v2U 1.2567 (0.0101), w1W 1.7540 (-0.8007), v2w1 2.6311 (0.5157)
+    C20S: v2U 1.2218 (-0.0184), w1W 1.0737 (-0.4194), v2w1 3.4509 (0.5969)
+-- I summary: no candidate passes (b) --
+
+== Candidate e, run from its throwaway copy (<temp>/candidates/e; diff in the report) ==
+== I. The search (design §4): what keeps truly touching balls apart. Each candidate's tests of §4.1 with their figures: 1, C3S and C20S at gap 0 within §5.3's uncertainties of their rows; 2, v2/U across the gap within Table 5's spread; 3, the gapped strokes' means within Gugan's sem; for a law change also 4, Table 1's free collisions as the video times them; 5, the single-ball strokes unchanged within their measurement; 6, every constant sourced or argued; candidate e on this copy's engine ==
+  test 1: miss: C3S at gap 0: v2U 1.1896 (row 1.1458) miss, w1W 1.4480 (row 1.7321) miss, v2w1 2.6484 (row 2.2680) miss; C20S at gap 0: v2U 1.1588 (row 1.0862) miss, w1W 1.1956 (row 1.6111) miss, v2w1 2.8924 (row 2.1724) miss
+  test 2: miss: v2/U at C1D's U 2.5000 m/s against Table 5's 1.0286-1.1520: 0.0000 mm 1.1864, 0.2500 mm 1.1591, 0.5000 mm 1.1288, 1.0000 mm 1.1021, 1.9000 mm 1.0958
+  test 3: miss: the gapped strokes' means (8 counted): v2U 1.1018 (1.1000 ± 0.0200) pass, w1W 1.5442 (1.7100 ± 0.0500) miss, v2w1 2.5194 (2.0700 ± 0.0600) miss
+  test 4: pass: 1.9000 m/s: e 0.7200 (0.7200) pass, video 0.7020 ms (0.7500) pass, the law's own 0.9272 ms; 5.5400 m/s (beside): e 0.7200 (0.7200) pass, video 0.7742 ms (0.7500) pass, the law's own 0.9272 ms; 7.6400 m/s: e 0.7200 (0.7200) pass, video 0.7980 ms (0.7500) pass, the law's own 0.9272 ms
+  test 5: pass: A1D release 1.0198 m/s (today 1.0198, the CA's 1.0400) pass, travel 0.5231 m (today 0.5231, the CA's 0.9300) pass; A2D release 4.1201 m/s (today 4.1201, the CA's 4.3100) pass, travel 8.5883 m (today 8.5883, the CA's 9.7400) pass; A3D release 6.6743 m/s (today 6.6743, the CA's 6.8600) pass, travel 21.3780 m (today 21.3780, the CA's 24.7300) pass; A4D release 10.3459 m/s (today 10.3459, the CA's 8.6200) pass, travel 33.4880 m (today 33.4880, the CA's 45.8500) pass; Table 2's face contact at 3.2600 m/s 0.9450 ms (today 0.9450, the video's 0.7500 ± 0.1000) pass
+  test 6: pass: a Maxwell element for the ball–ball normal force (Maxwell 1867, Phil. Trans. R. Soc. 157, 49-88; Tschoegl, The Phenomenological Theory of Linear Viscoelastic Behavior, 1989): a spring k in series with a dashpot of relaxation time τ, F' = k·δ' − F/τ, clamped at zero, so that the damping force grows with the closing rate and the loss depends on the loading's rate, while every free collision keeps one e whatever its speed. Its two constants, k and τ, are fixed against Gugan 4's Table 1 alone: e = 0.72, and the video's contact time 0.75 ms on the mean of 1.90 and 7.64 m/s. Not matched to C3S, C20S or any two-ball stroke
+  e: miss; first failed test 1
+  the squeeze's direction, C3S and C20S at gap 0 (candidate, then the change from today's):
+    C3S: v2U 1.1896 (-0.0570), w1W 1.4480 (-1.1068), v2w1 2.6484 (0.5330)
+    C20S: v2U 1.1588 (-0.0814), w1W 1.1956 (-0.2975), v2w1 2.8924 (0.0385)
+-- I summary: no candidate passes (e) --

@@ -37,16 +37,24 @@
  *   its figures against its Table 5 row, the nominal strokes at ±0.5 mm, and the three means against Gugan's.
  * - F. the timing (design §7.1): the model's four times for six strokes beside both Fig. 4 readings.
  * - G. the convergence (design §6): the judged figures at dt/2, dt and 2·dt, each spread over its tolerance.
- * Sections I-M follow with the search and the other checks. `all` runs A, D-G (then I-M); B, C and H by name only.
- * Run with `npx --yes tsx scripts/croquetFitProbe.ts`; environment: SECTION (a letter; default all). Not part of the
- * test suite.
+ * - I. the search (design §4): what keeps truly touching balls apart. Today's ball–ball law through the free-collision
+ *   harness (scripts/squeeze.ts); then each candidate's tests of §4.1 with their figures and its verdict, a, c and d on
+ *   this engine: a, a gap hidden below Table 5's 0.5 mm resolution (section D's sweep); c, the bed's and the balls'
+ *   impulses on the croqueted ball over the strike's first 0.5 and 1.5 ms; d, the balls' normal and the striker's
+ *   ball's rise and spin at the ball–ball interval's start and peak. Candidates b and e change a law, so they run from
+ *   a throwaway copy of the worktree carrying it, with CANDIDATE (b or e) and TODAY_ROOT (the worktree, whose engine
+ *   is loaded beside the copy's for tests 1 and 5); they add tests 4–6.
+ * Sections J-M follow with the other checks. `all` runs A, D-G and I (then J-M); B, C and H by name only.
+ * Run with `npx --yes tsx scripts/croquetFitProbe.ts`; environment: SECTION (a letter; default all), CANDIDATE and
+ * TODAY_ROOT (section I in a copy). Not part of the test suite.
  */
+import type { PairLaw } from "../src/engine/impact/contactLaw";
 import { ballPairKey, faceKey } from "../src/engine/impact/contacts";
-import { IMPACT_DT, type FollowSnapshot, type ImpactProbe } from "../src/engine/impact/integrate";
-import { simulateImpact, simulateStroke } from "../src/engine/impact/simulateImpact";
+import { IMPACT_DT, type ContactSample, type FollowSnapshot, type ImpactProbe } from "../src/engine/impact/integrate";
+import { prepareImpact, simulateImpact, simulateStroke } from "../src/engine/impact/simulateImpact";
 import { swungBody } from "../src/engine/impact/track";
 import type { ContactInterval, ContactState, ImpactResult } from "../src/engine/impact/types";
-import { horizontal, length, sub, type Vec3 } from "../src/engine/math/vec3";
+import { add, cross, dot, horizontal, length, scale, sub, vec3, type Vec3 } from "../src/engine/math/vec3";
 import { CROQUET_GAP_LIMIT } from "../src/engine/shot";
 import { simulateFreeMotion } from "../src/engine/simulate";
 import { planStroke } from "../src/engine/swing/buildContact";
@@ -59,13 +67,17 @@ import { backswingFor, canonicalSetup, regimeOf, strokeFor } from "../tests/engi
 import {
     FIG4_TIMING,
     FILMED_STROKES,
+    FREE_COLLISIONS,
     GUGAN5,
     GUGAN_MEANS,
+    SINGLE_BALL_FACE,
     VIDEO_FRAME,
     VISIBLE_SHIFT,
     type FilmedStroke,
 } from "./filmedStrokes";
+import * as OpenLawn from "./openLawn";
 import { OPEN_LAWN, OPEN_START, haltedText, openWorld, opened } from "./openLawn";
+import * as RatioFit from "./ratioFit";
 import {
     BOUNDS,
     CA_STROKES,
@@ -91,6 +103,7 @@ import {
     type FitParams,
     type ReadOut,
 } from "./ratioFit";
+import { freeCollision, passes, type CandidateResult } from "./squeeze";
 
 // The project has no Node types; this script runs under tsx and reads its environment.
 declare const process: { readonly env: Readonly<Record<string, string | undefined>> };
@@ -1198,6 +1211,533 @@ function sectionG(): void {
     }
 }
 
+/**
+ * The candidate section I judges, from a throwaway copy of the worktree whose `src` carries its law (design §4.3):
+ * "b" or "e"; absent, the worktree's own engine and candidates a, c and d.
+ */
+const CANDIDATE = candidateOf(process.env.CANDIDATE);
+
+/** The CANDIDATE environment variable as a candidate's name; throws for anything but b, e or nothing. */
+function candidateOf(value: string | undefined): "b" | "e" | undefined {
+    if (value !== undefined && value !== "b" && value !== "e") {
+        throw new Error(`CANDIDATE must be "b" or "e", or absent for a, c and d (got "${value}")`);
+    }
+    return value;
+}
+
+/** Today's engine beside a candidate's: the worktree's own ratioFit and openLawn, loaded from TODAY_ROOT. */
+interface TodayEngine {
+    readonly fit: typeof RatioFit;
+    readonly lawn: typeof OpenLawn;
+}
+
+/**
+ * A copy's candidate is judged against today's engine in the same run (tests 1 and 5): with CANDIDATE set, TODAY_ROOT
+ * names the worktree, whose scripts (and through them its unchanged src) are loaded beside the copy's own.
+ */
+async function loadToday(): Promise<TodayEngine | null> {
+    if (CANDIDATE === undefined) {
+        return null;
+    }
+    const root = process.env.TODAY_ROOT;
+    if (root === undefined) {
+        throw new Error("CANDIDATE needs TODAY_ROOT, the worktree's path, for today's engine beside the candidate's");
+    }
+    const fit = (await import(`${root}/scripts/ratioFit.ts`)) as typeof RatioFit;
+    const lawn = (await import(`${root}/scripts/openLawn.ts`)) as typeof OpenLawn;
+    return { fit, lawn };
+}
+
+const TODAY_ENGINE = await loadToday();
+
+/** The search's tests' step for the free collisions (s), as the harness's own test plays them. */
+const FREE_DT = 1e-7;
+
+/** Gugan's ± on Table 1's e (§4: "e = 0.72 ± 0.02"). */
+const FREE_RESTITUTION_TOLERANCE = 0.02;
+
+/** The speeds (m/s) at which test 4 judges the video's contact time (design §4.1); 5.54 m/s is printed beside them. */
+const JUDGED_FREE_SPEEDS: readonly number[] = [1.9, 7.64];
+
+/**
+ * Test 2's gaps (m), design §4.1's 0, 0.25, 0.5, 1 and 2 mm: 2 mm lies outside a croquet stroke's range (gap < 2 mm),
+ * so its point is 0.1 mm inside the limit, as section E's shifted gaps keep.
+ */
+const INSENSITIVE_GAPS: readonly number[] = [0, 0.25e-3, 0.5e-3, 1e-3, CROQUET_GAP_LIMIT - 1e-4];
+
+/** Candidate a's gaps (m): section D's sweep from 0 to 0.5 mm, Table 5's resolution of a separation. */
+const HIDDEN_GAPS: readonly number[] = SWEEP_GAPS.filter((g) => g <= 0.5e-3 + 1e-12);
+
+/**
+ * Test 5's precisions: the speeds' "precision of measurement of about 3%" (Gugan 4, §9.3); Table 2's face contact
+ * "± 0.1 ms" (row 4); and the travel's, twice the speed's, a ball's travel to rest going with its speed squared.
+ */
+const SPEED_PRECISION = 0.03;
+const FACE_PRECISION = 1e-4;
+const TRAVEL_PRECISION = 2 * SPEED_PRECISION;
+
+/** The windows (s from the face's first contact) over which candidate c sums the impulses (design §4.2, c). */
+const TURF_WINDOWS: readonly number[] = [0.5e-3, 1.5e-3];
+
+/** Each law-changing candidate's constants and their written arguments (design §4.1, test 6). */
+const CONSTANTS: Readonly<Record<"b" | "e", string>> = {
+    b:
+        "faceContactTimeAt scaled by one factor, so that it gives Gugan 4's Table 2 (A2D) face contact of " +
+        `${ms(SINGLE_BALL_FACE.contactTime)} ms at ${fmt(SINGLE_BALL_FACE.speed)} m/s: the video's own measurement ` +
+        "of the face on the CA's single-ball strokes, the film the filmed strokes come from, where Gugan 2000's drop " +
+        "tests used a Jaques ball on unrecorded wood; its speed dependence (q) and the restitution fit are kept. Not " +
+        "matched to C3S, C20S or any two-ball stroke",
+    e:
+        "a Maxwell element for the ball–ball normal force (Maxwell 1867, Phil. Trans. R. Soc. 157, 49-88; Tschoegl, " +
+        "The Phenomenological Theory of Linear Viscoelastic Behavior, 1989): a spring k in series with a dashpot of " +
+        "relaxation time τ, F' = k·δ' − F/τ, clamped at zero, so that the damping force grows with the closing rate " +
+        "and the loss depends on the loading's rate, while every free collision keeps one e whatever its speed. Its " +
+        "two constants, k and τ, are fixed against Gugan 4's Table 1 alone: e = 0.72, and the video's contact time " +
+        "0.75 ms on the mean of 1.90 and 7.64 m/s. Not matched to C3S, C20S or any two-ball stroke",
+};
+
+type SearchTest = CandidateResult["tests"][number];
+
+/** A test's line: its number, verdict and figures. */
+function testLine(t: SearchTest): string {
+    return `  test ${t.test}: ${verdict(t.pass)}: ${t.text}`;
+}
+
+/** `r`'s verdict: pass, or the miss and its first failed test. */
+function verdictLine(r: CandidateResult): string {
+    const first = r.tests.find((t) => !t.pass);
+    return passes(r)
+        ? `  ${r.name}: PASSES EVERY TEST (${r.tests.map((t) => t.test).join(", ")}): the plan stops for the user`
+        : `  ${r.name}: miss; first failed test ${first === undefined ? "none" : first.test}`;
+}
+
+/** `figures`' three judged figures against `stroke`'s row, each within Gugan's sem: their text and whether all pass. */
+function againstRow(
+    stroke: FilmedStroke,
+    figures: ReturnType<typeof figuresOf>,
+): { readonly pass: boolean; readonly text: string } {
+    const row = rowOf(stroke);
+    const parts = MEAN_KEYS.map((key) => {
+        const diff = figures[key] - row[key];
+        return {
+            pass: Math.abs(diff) <= GUGAN_MEANS[key].sem,
+            text: `${key} ${fmt(figures[key])} (row ${fmt(row[key])})`,
+        };
+    });
+    return {
+        pass: parts.every((p) => p.pass),
+        text: parts.map((p) => `${p.text} ${verdict(p.pass)}`).join(", "),
+    };
+}
+
+/** The search's battery on one engine's filmed strokes (design §4.1, tests 1 and 3) and its test 2 sweep. */
+interface Battery {
+    readonly runs: ReturnType<typeof filmedStrokeRuns>;
+    readonly test1: SearchTest;
+    readonly test2: SearchTest;
+    readonly test3: SearchTest;
+}
+
+/**
+ * Tests 1–3 on the engine in hand (design §4.1): 1, C3S and C20S at gap 0 at their own U against their rows within
+ * §5.3's uncertainties; 2, v₂/U at C1D's U on the drive preset across INSENSITIVE_GAPS within Table 5's own spread of
+ * v₂/U; 3, the gapped strokes' means within Gugan's sem. Each stroke is played as section E plays it.
+ */
+function batteryOf(world: World): Battery {
+    const runs = filmedStrokeRuns(undefined, { world });
+    const touching = runs.filter((r) => r.stroke.name === "C3S" || r.stroke.name === "C20S");
+    const rows = touching.map((r) => ({ name: r.stroke.name, ...againstRow(r.stroke, r.figures) }));
+    const test1: SearchTest = {
+        test: 1,
+        pass: rows.every((r) => r.pass) && touching.every((r) => !r.read.open),
+        text: rows.map((r) => `${r.name} at gap 0: ${r.text}`).join("; "),
+    };
+    const spread = FILMED_STROKES.map((s) => rowOf(s).v2U);
+    const [lo, hi] = [Math.min(...spread), Math.max(...spread)];
+    const c1d = filmed("C1D");
+    const swept = INSENSITIVE_GAPS.map((gap) => {
+        const setup = guganSetup(c1d.preset, c1d.malletSpeed, gap, { world });
+        const read = readOut(setup, world);
+        return { gap, v2U: read.v2 / read.U, open: read.open };
+    });
+    const test2: SearchTest = {
+        test: 2,
+        pass: swept.every((s) => s.v2U >= lo && s.v2U <= hi && !s.open),
+        text:
+            `v2/U at C1D's U ${fmt(c1d.malletSpeed)} m/s against Table 5's ${fmt(lo)}-${fmt(hi)}: ` +
+            swept.map((s) => `${mm(s.gap)} mm ${fmt(s.v2U)}${s.open ? " OPEN" : ""}`).join(", "),
+    };
+    const gapped = runs.filter((r) => r.stroke.gap > 0);
+    const means = meansOf(gapped);
+    const parts = MEAN_KEYS.map((key) => {
+        const { value, sem } = GUGAN_MEANS[key];
+        return {
+            pass: Math.abs(means[key] - value) <= sem,
+            text: `${key} ${fmt(means[key])} (${fmt(value)} ± ${fmt(sem)})`,
+        };
+    });
+    const test3: SearchTest = {
+        test: 3,
+        pass: parts.every((p) => p.pass),
+        text:
+            `the gapped strokes' means (${gapped.filter((r) => !r.read.open).length} counted): ` +
+            parts.map((p) => `${p.text} ${verdict(p.pass)}`).join(", "),
+    };
+    return { runs, test1, test2, test3 };
+}
+
+/**
+ * Candidate a's test 1 (design §4.2, a): section D's sweep below 0.5 mm, the AC stop at C3S's and C20S's U with no jab,
+ * each gap's figures against the stroke's row; a stroke passes at any gap, the test when both do.
+ */
+function hiddenGapTest(): SearchTest {
+    const strokes = ["C3S", "C20S"].map((name) => {
+        const stroke = filmed(name);
+        const gaps = HIDDEN_GAPS.map((gap) => {
+            const setup = guganSetup("stop-ac", stroke.malletSpeed, gap, { world: STRIKE_WORLD, jab: 0 });
+            const { read, figures } = strikeOf(setup, STRIKE_WORLD);
+            const judged = againstRow(stroke, figures);
+            return { gap, pass: judged.pass && !read.open, text: `${mm(gap)} mm: ${judged.text}` };
+        });
+        return { name, pass: gaps.some((g) => g.pass), gaps };
+    });
+    return {
+        test: 1,
+        pass: strokes.every((s) => s.pass),
+        text: strokes
+            .map((s) => {
+                const hits = s.gaps.filter((g) => g.pass).map((g) => g.text.split(":")[0]);
+                const found = hits.length === 0 ? "no gap passes" : `passes at ${hits.join(", ")}`;
+                return `${s.name}, ${found}:\n      ${s.gaps.map((g) => g.text).join("\n      ")}`;
+            })
+            .join("\n    "),
+    };
+}
+
+/** One impact step as candidates c and d read it: the bed's and the balls' loads, and the striker's ball's state. */
+interface TraceStep {
+    readonly t: number;
+    readonly bed: { readonly normal: number; readonly force: Vec3 } | null;
+    readonly pair: ContactSample | null;
+    readonly striker: BallState;
+}
+
+/** `setup`'s impact on `world`, every step traced (TraceStep), with the face's first contact's start and the aim. */
+function traceOf(
+    setup: ShotSetup,
+    world: World,
+): { readonly steps: readonly TraceStep[]; readonly start: number; readonly aim: Vec3 } {
+    const contact = planStroke(setup, world).contact;
+    const drive = contact.drive;
+    const croqueted = setup.croqueted;
+    if (drive.kind !== "track" || croqueted === undefined) {
+        throw new RangeError(`traceOf: the ${setup.stroke.type} stroke needs a tracked drive and a croqueted ball`);
+    }
+    const ids = BALL_IDS.filter((id) => setup.balls[id] !== undefined);
+    const striker = ids.indexOf(setup.striker);
+    const bedKey = `turf/${croqueted}`;
+    const pairKey = ballPairKey(setup.striker, croqueted);
+    const steps: TraceStep[] = [];
+    const probe: ImpactProbe = {
+        step(s) {
+            const bed = s.contacts.find((c) => c.key === bedKey);
+            steps.push({
+                t: s.t,
+                bed:
+                    bed === undefined
+                        ? null
+                        : {
+                              normal: bed.normalForce,
+                              force: add(scale(bed.normal, bed.normalForce), bed.tangentialForce),
+                          },
+                pair: s.contacts.find((c) => c.key === pairKey) ?? null,
+                striker: s.balls[striker] as BallState,
+            });
+        },
+    };
+    const impact = simulateImpact(contact, setup.balls, world, { probe });
+    const first = (impact.timeline[faceKey(setup.striker)] ?? [])[0];
+    if (first === undefined) {
+        throw new RangeError(`traceOf: the face never touched the ${setup.striker} ball`);
+    }
+    return { steps, start: first.start, aim: drive.arc.aim };
+}
+
+/** The strokes candidates c and d read (design §4.2): C3S, C20S and the canonical drive, each at gap 0. */
+function touchingStrokes(): readonly { readonly label: string; readonly setup: ShotSetup }[] {
+    const c3s = filmed("C3S");
+    const c20s = filmed("C20S");
+    return [
+        { label: `C3S (stop-ac, U ${fmt(c3s.malletSpeed)} m/s)`, setup: guganSetup("stop-ac", c3s.malletSpeed, 0) },
+        { label: `C20S (stop-ac, U ${fmt(c20s.malletSpeed)} m/s)`, setup: guganSetup("stop-ac", c20s.malletSpeed, 0) },
+        {
+            label: `the canonical drive (${fmt(GUGAN5.speed)} m/s, guideEffort 0)`,
+            setup: guganSetup("drive", GUGAN5.speed, 0, { guideEffort: 0 }),
+        },
+    ];
+}
+
+/**
+ * Candidate c's figures (design §4.2, c): over each TURF_WINDOWS window from the face's first contact, the bed's normal
+ * impulse on the croqueted ball beside its weight's, the bed's whole impulse along aim, and the ball–ball pair's normal
+ * impulse and its impulse along aim on the croqueted ball, in mN·s.
+ */
+function turfText(trace: ReturnType<typeof traceOf>, world: World): string[] {
+    const dt = IMPACT_DT;
+    const milli = (x: number): string => fmt(x * 1e3);
+    return TURF_WINDOWS.map((w) => {
+        const within = trace.steps.filter((s) => s.t > trace.start && s.t <= trace.start + w);
+        const bedNormal = within.reduce((sum, s) => sum + (s.bed === null ? 0 : s.bed.normal * dt), 0);
+        const bedAim = within.reduce((sum, s) => sum + (s.bed === null ? 0 : dot(s.bed.force, trace.aim) * dt), 0);
+        const pairNormal = within.reduce((sum, s) => sum + (s.pair === null ? 0 : s.pair.normalForce * dt), 0);
+        const pairAim = within.reduce((sum, s) => {
+            if (s.pair === null) {
+                return sum;
+            }
+            const force = add(scale(s.pair.normal, s.pair.normalForce), s.pair.tangentialForce);
+            return sum + Math.abs(dot(force, trace.aim)) * dt;
+        }, 0);
+        const weight = world.ball.mass * world.gravity * w;
+        return (
+            `0-${ms(w)} ms: bed normal ${milli(bedNormal)} mN·s (the weight's ${milli(weight)}), bed along aim ` +
+            `${milli(bedAim)} mN·s; ball–ball normal ${milli(pairNormal)} mN·s, along aim ${milli(pairAim)} mN·s; ` +
+            `|bed along aim| over ball–ball along aim ${fmt(Math.abs(bedAim) / pairAim)}`
+        );
+    });
+}
+
+/**
+ * Candidate d's figures (design §4.2, d): at the ball–ball interval's first step and at its peak normal force within
+ * the strike window, the pair's normal's angle to aim and its components along aim, side and up, the striker's ball's
+ * rise from the face's first contact (mm) and its spin along aim, side and up (rad/s).
+ */
+function offLineText(trace: ReturnType<typeof traceOf>): string[] {
+    const aim = trace.aim;
+    const up = vec3(0, 0, 1);
+    const side = cross(up, aim);
+    const before = trace.steps.filter((s) => s.t <= trace.start);
+    const base = (before[before.length - 1] ?? trace.steps[0]) as TraceStep;
+    const loaded = trace.steps.flatMap((s) =>
+        s.pair !== null && s.pair.normalForce > 0 && s.t <= trace.start + STRIKE_WINDOW
+            ? [{ step: s, pair: s.pair }]
+            : [],
+    );
+    const first = loaded[0];
+    if (first === undefined) {
+        return ["the balls' pair never carried a force within the strike window"];
+    }
+    const peak = loaded.reduce((a, b) => (b.pair.normalForce > a.pair.normalForce ? b : a));
+    const parts = (v: Vec3): string => `(${fmt(dot(v, aim))}, ${fmt(dot(v, side))}, ${fmt(dot(v, up))})`;
+    return [
+        { label: "the interval's start", at: first },
+        { label: "the peak force", at: peak },
+    ].map(({ label, at: { step, pair } }) => {
+        const angle = (Math.acos(Math.min(1, Math.abs(dot(pair.normal, aim)))) * 180) / Math.PI;
+        return (
+            `${label} (${ms(step.t - trace.start)} ms, ${fmt(pair.normalForce)} N): normal ${fmt(angle)}° off aim, ` +
+            `(aim, side, up) ${parts(pair.normal)}; the striker's ball risen ` +
+            `${mm(step.striker.position.z - base.striker.position.z)} mm, spin (aim, side, up) ` +
+            `${parts(step.striker.angularVelocity)} rad/s`
+        );
+    });
+}
+
+/**
+ * Test 4 (design §4.1) on `law`: Table 1's free collisions (freeCollision at FREE_DT), e within ± 0.02 of Gugan's and
+ * the video's contact time within a frame of 0.75 ms at JUDGED_FREE_SPEEDS; the other speeds printed beside them.
+ */
+function freeTest(law: PairLaw): SearchTest {
+    const rows = FREE_COLLISIONS.map((c) => {
+        const r = freeCollision(c.speed, law, { dt: FREE_DT });
+        const judged = JUDGED_FREE_SPEEDS.includes(c.speed);
+        const eOk = Math.abs(r.restitution - c.restitution) <= FREE_RESTITUTION_TOLERANCE;
+        const tOk = Math.abs(r.videoTime - c.contactTime) <= VIDEO_FRAME;
+        return {
+            pass: !judged || (eOk && tOk),
+            text:
+                `${fmt(c.speed)} m/s${judged ? "" : " (beside)"}: e ${fmt(r.restitution)} (${fmt(c.restitution)}) ` +
+                `${verdict(eOk)}, video ${ms(r.videoTime)} ms (${ms(c.contactTime)}) ${verdict(tOk)}, the law's own ` +
+                `${ms(r.contactTime)} ms`,
+        };
+    });
+    return { test: 4, pass: rows.every((r) => r.pass), text: rows.map((r) => r.text).join("; ") };
+}
+
+/** The ball–ball law the engine itself builds on `world` (prepareImpact), as a croquet stroke meets it. */
+function engineBallBall(world: World): PairLaw {
+    const setup = canonicalSetup("drive", { world });
+    return prepareImpact(planStroke(setup, world).contact, setup.balls, world).ballBall;
+}
+
+/** The single-ball figures test 5 judges (design §4.1): section A's two shares, and Table 2's face contact. */
+interface SingleBallFigures {
+    readonly strokes: readonly { readonly name: string; readonly release: number; readonly travel: number }[];
+    readonly face: number;
+}
+
+/**
+ * `engine`'s single-ball figures on the open lawn, as section A plays them: per CA drive, the ball's speed at the
+ * face's release planned at the CA's mallet speed (the strike's share) and its travel to rest planned at
+ * releaseSpeedFor(the CA's ball speed) (the lawn's share); and the face's first contact's length planned at Table 2's
+ * A2D U.
+ */
+function singleBallOf(engine: TodayEngine): SingleBallFigures {
+    const { fit, lawn } = engine;
+    const world = fit.fitWorld(fit.TODAY, lawn.openWorld());
+    const single = (speed: number): ShotSetup => lawn.opened(fit.fitSetup("single-ball", fit.TODAY, speed, world));
+    const strokes = fit.CA_STROKES.map((ca) => {
+        const release = length(fit.runFit(single(ca.malletSpeed), fit.TODAY, world).release.velocity);
+        const rolled = single(fit.releaseSpeedFor(ca.ballSpeed));
+        const travel = fit.travelOf(rolled, fit.runFit(rolled, fit.TODAY, world).motion, rolled.striker);
+        return { name: ca.name, release, travel };
+    });
+    const struck = single(SINGLE_BALL_FACE.speed);
+    const first = (fit.runFit(struck, fit.TODAY, world).impact.timeline[faceKey(struck.striker)] ?? [])[0];
+    if (first === undefined) {
+        throw new RangeError("singleBallOf: the face never touched the single-ball stroke's ball");
+    }
+    return { strokes, face: first.end - first.start };
+}
+
+/**
+ * Test 5 (design §4.1): each single-ball figure unchanged from today's within its measurement's precision, or moved
+ * closer to the measurement than today's: the CA's ball speeds (SPEED_PRECISION), travels (TRAVEL_PRECISION) and
+ * Table 2's face contact (FACE_PRECISION).
+ */
+function singleBallTest(candidate: SingleBallFigures, today: SingleBallFigures): SearchTest {
+    const judge = (c: number, t: number, measured: number, precision: number): boolean =>
+        Math.abs(c - t) <= precision || Math.abs(c - measured) < Math.abs(t - measured);
+    const rows = CA_STROKES.map((ca, i) => {
+        const c = candidate.strokes[i] as SingleBallFigures["strokes"][number];
+        const t = today.strokes[i] as SingleBallFigures["strokes"][number];
+        const speedOk = judge(c.release, t.release, ca.ballSpeed, SPEED_PRECISION * ca.ballSpeed);
+        const travelOk = judge(c.travel, t.travel, ca.travel, TRAVEL_PRECISION * ca.travel);
+        return {
+            pass: speedOk && travelOk,
+            text:
+                `${ca.name} release ${fmt(c.release)} m/s (today ${fmt(t.release)}, the CA's ${fmt(ca.ballSpeed)}) ` +
+                `${verdict(speedOk)}, travel ${fmt(c.travel)} m (today ${fmt(t.travel)}, the CA's ${fmt(ca.travel)}) ` +
+                verdict(travelOk),
+        };
+    });
+    const faceOk = judge(candidate.face, today.face, SINGLE_BALL_FACE.contactTime, FACE_PRECISION);
+    rows.push({
+        pass: faceOk,
+        text:
+            `Table 2's face contact at ${fmt(SINGLE_BALL_FACE.speed)} m/s ${ms(candidate.face)} ms (today ` +
+            `${ms(today.face)}, the video's ${ms(SINGLE_BALL_FACE.contactTime)} ± ${ms(FACE_PRECISION)}) ` +
+            verdict(faceOk),
+    });
+    return { test: 5, pass: rows.every((r) => r.pass), text: rows.map((r) => r.text).join("; ") };
+}
+
+/** C3S's and C20S's figures at gap 0 on `fit`'s engine, as section E plays them, for the squeeze's direction. */
+function touchingFigures(fit: typeof RatioFit): readonly ReturnType<typeof figuresOf>[] {
+    const world = defaultWorld();
+    return ["C3S", "C20S"].map((name) => {
+        const stroke = filmed(name);
+        const setup = fit.guganSetup(stroke.preset, stroke.malletSpeed, 0, { world });
+        return fit.figuresOf(fit.readOut(setup, world), fit.effectiveMassOf(setup, world) / world.ball.mass);
+    });
+}
+
+/** The verdicts and lines of a candidate's block. */
+function report(r: CandidateResult): void {
+    for (const t of r.tests) {
+        console.log(testLine(t));
+    }
+    console.log(verdictLine(r));
+}
+
+/** Candidates a, c and d on the worktree's engine (design §4.3): tests 1–3, with c's and d's figures. */
+function searchToday(): readonly CandidateResult[] {
+    const world = defaultWorld();
+    console.log(
+        `-- I.0 the harness on today's ball–ball law (prepareImpact's; dt ${fmt(FREE_DT * 1e6)} µs, the video's ` +
+            `threshold ${mm(VISIBLE_SHIFT)} mm, a frame ${ms(VIDEO_FRAME)} ms) --`,
+    );
+    console.log(testLine(freeTest(engineBallBall(world))));
+    const battery = batteryOf(world);
+    console.log("-- I.a resolution of \"touching\": a gap hidden in Table 5's 0 (0-0.5 mm, section D's sweep) --");
+    const a: CandidateResult = { name: "a", tests: [hiddenGapTest(), battery.test2, battery.test3] };
+    report(a);
+    const traces = touchingStrokes().map(({ label, setup }) => ({ label, trace: traceOf(setup, world) }));
+    console.log("-- I.c the turf under the balls: impulses on the croqueted ball from the face's first contact --");
+    for (const { label, trace } of traces) {
+        console.log(`  ${label}:`);
+        for (const text of turfText(trace, world)) {
+            console.log(`    ${text}`);
+        }
+    }
+    const c: CandidateResult = { name: "c", tests: [battery.test1, battery.test2, battery.test3] };
+    report(c);
+    console.log(
+        "-- I.d off-line contact: the balls' normal and the striker's ball (ms from the face's first contact) --",
+    );
+    for (const { label, trace } of traces) {
+        console.log(`  ${label}:`);
+        for (const text of offLineText(trace)) {
+            console.log(`    ${text}`);
+        }
+    }
+    const d: CandidateResult = { name: "d", tests: [battery.test1, battery.test2, battery.test3] };
+    report(d);
+    return [a, c, d];
+}
+
+/**
+ * A law-changing candidate (b or e) on this copy's engine (design §4.3): tests 1–6, test 5 and the squeeze's direction
+ * against today's engine (TODAY_ENGINE) in the same run.
+ */
+function searchCandidate(name: "b" | "e", today: TodayEngine): CandidateResult {
+    const world = defaultWorld();
+    const battery = batteryOf(world);
+    const own: TodayEngine = { fit: RatioFit, lawn: OpenLawn };
+    const result: CandidateResult = {
+        name,
+        tests: [
+            battery.test1,
+            battery.test2,
+            battery.test3,
+            freeTest(engineBallBall(world)),
+            singleBallTest(singleBallOf(own), singleBallOf(today)),
+            { test: 6, pass: true, text: CONSTANTS[name] },
+        ],
+    };
+    report(result);
+    const before = touchingFigures(today.fit);
+    const after = touchingFigures(RatioFit);
+    console.log("  the squeeze's direction, C3S and C20S at gap 0 (candidate, then the change from today's):");
+    ["C3S", "C20S"].forEach((label, i) => {
+        const [c, t] = [after[i], before[i]] as [ReturnType<typeof figuresOf>, ReturnType<typeof figuresOf>];
+        console.log(
+            `    ${label}: ${MEAN_KEYS.map((key) => `${key} ${fmt(c[key])} (${fmt(c[key] - t[key])})`).join(", ")}`,
+        );
+    });
+    return result;
+}
+
+function sectionI(): void {
+    console.log(
+        "== I. The search (design §4): what keeps truly touching balls apart. Each candidate's tests of §4.1 with " +
+            "their figures: 1, C3S and C20S at gap 0 within §5.3's uncertainties of their rows; 2, v2/U across " +
+            "the gap within Table 5's spread; 3, the gapped strokes' means within Gugan's sem; for a law change " +
+            "also 4, Table 1's free collisions as the video times them; 5, the single-ball strokes unchanged " +
+            "within their measurement; 6, every constant sourced or argued" +
+            (CANDIDATE === undefined
+                ? "; candidates a, c and d on the worktree's engine =="
+                : `; candidate ${CANDIDATE} on this copy's engine ==`),
+    );
+    const results =
+        CANDIDATE === undefined || TODAY_ENGINE === null ? searchToday() : [searchCandidate(CANDIDATE, TODAY_ENGINE)];
+    const passing = results.filter(passes);
+    console.log(
+        passing.length === 0
+            ? `-- I summary: no candidate passes (${results.map((r) => r.name).join(", ")}) --`
+            : `-- I summary: ${passing.map((r) => r.name).join(", ")} PASSES EVERY TEST: stop for the user --`,
+    );
+}
+
 const SECTIONS: Readonly<Record<string, () => void>> = {
     A: sectionA,
     B: sectionB,
@@ -1207,10 +1747,11 @@ const SECTIONS: Readonly<Record<string, () => void>> = {
     F: sectionF,
     G: sectionG,
     H: sectionH,
+    I: sectionI,
 };
 
-/** The sections `all` runs, in order: B, C and H only by name. Later sections (I-M) are appended here. */
-const ALL_SECTIONS: readonly string[] = ["A", "D", "E", "F", "G"];
+/** The sections `all` runs, in order: B, C and H only by name. Later sections (J-M) are appended here. */
+const ALL_SECTIONS: readonly string[] = ["A", "D", "E", "F", "G", "I"];
 
 if (SECTION !== "all" && SECTIONS[SECTION] === undefined) {
     throw new Error(`SECTION must be "all" or one of ${Object.keys(SECTIONS).join(", ")}`);
