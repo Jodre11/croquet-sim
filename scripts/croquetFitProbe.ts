@@ -22,6 +22,10 @@
  *   linear estimate's solution against today's errors, reachable within both bounds, with the effective mass there;
  *   the pairs ranked and the first reachable one with an unmarked mass recommended; and, only if no pair is
  *   reachable, the drive's and the AC stop's own grips swept the same way on their own presets.
+ *   The solver behind this section is dormant since P2b.2b.2c.2b, whose impact work found the drive's excess in the
+ *   strike's squeeze, not in the fit's parameters; it is kept for a possible later fit of the hands' parameters.
+ *   Three review items are open before it runs again: parseCandidate's leniency (scripts/fitRatios.ts), the exit code
+ *   on "closest", and this section's "reachable" verdict across a jump; the roadmap carries them.
  * - H. the ball makes (design §6): the makes behind the face law and Gugan 5's drives, whether they differ, and le
  *   Maitre's spread by make (his stop shot's ratios, and his drive or roll's printed ratios against his own
  *   distances), each quoted from reference/sources/README.md with its line.

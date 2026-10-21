@@ -8,6 +8,11 @@
  * stdout. The ball–ball contact time, if fitted, keeps Gugan's measured cluster in its note, and
  * `ballObstacleContactTime`'s value follows it (its note derives it as equal), its bounds kept. Prints every
  * evaluation's point and ratios, the result, and any fitted value on a bound, to stderr.
+ *
+ * Dormant since P2b.2b.2c.2b, whose impact work found the drive's excess in the strike's squeeze, not in the fit's
+ * parameters. It is kept for a possible later fit of the hands' parameters. Three review items are open before it runs
+ * again: parseCandidate's leniency, the exit code on "closest", and section C's "reachable" verdict across a jump
+ * (scripts/croquetFitProbe.ts); the roadmap carries them.
  */
 import contactJson from "../reference/contact.json";
 import { ratioTargetsReference } from "../src/reference/index";
