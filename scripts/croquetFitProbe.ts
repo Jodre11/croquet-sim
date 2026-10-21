@@ -2017,6 +2017,22 @@ function sectionK(): void {
         );
     }
     console.log(
+        "-- K.2b transparency only, not the verdict: the same without B2GS, whose model (v2/w1)² of about 37 " +
+            "dominates the model's v2/w1 spread (the verdict below stays on all ten strokes) --",
+    );
+    const rest = counted.filter((r) => r.stroke.name !== "B2GS");
+    const restGaps = rest.map((r) => r.gap * 1e3);
+    for (const key of ["v2U", "v2w1"] as const) {
+        const film = rest.map((r) => rowOf(r.stroke)[key]);
+        const model = rest.map((r) => r.figures[key]);
+        console.log(
+            `${key} over ${rest.length} strokes without B2GS: film spread ${fmt(spreadOf(film))}, standard ` +
+                `deviation ${fmt(sdOf(film))}, slope on the gap ${fmt(slopeOfFit(restGaps, film))} per mm; model ` +
+                `spread ${fmt(spreadOf(model))}, standard deviation ${fmt(sdOf(model))}, slope ` +
+                `${fmt(slopeOfFit(restGaps, model))} per mm`,
+        );
+    }
+    console.log(
         "-- K.3 the criterion and the verdict: the sensitivities agree when, for both v2/U and v2/w1, the model's " +
             "spread across the strokes is within a factor of two of the film's (0.5 to 2 times) and the slopes of " +
             "the figure on the gap share a sign; the hypothesis (the gap's range reproduces Gugan 5's scatter) is " +
@@ -2270,8 +2286,8 @@ function sectionM(): void {
         }
     }
     console.log(
-        `grid: ${grid.length} runs, ${rejected} rejected, ${reContacts} with a second face–ball interval, ${unflagged} with a face-region ` +
-            "re-contact that impact-off-face does not flag",
+        `grid: ${grid.length} runs, ${rejected} rejected, ${reContacts} with a second face–ball interval, ` +
+            `${unflagged} with a face-region re-contact that impact-off-face does not flag`,
     );
     console.log(
         "-- M.4 the drive's effective mass at the face centre along aim (ruling D: 0.9·m ≤ m_eff ≤ M; m the head's " +
