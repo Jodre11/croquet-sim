@@ -537,3 +537,136 @@ the 1980s (he cites "the new rule book of 1986"). His "drive or roll" is the fol
 head, a different stroke from Gugan 5's pendulum drive (4.23), and his stop shots (2.7–4.2) sit below Gugan 5's
 jab stop-shots (7.15), so neither set is a target. They are recorded as the spread by make: the stop ratio falls from
 4.2 to 2.7 as the ball's restitution falls.
+
+## P2b.2b.2c.2b: the croquet stroke's squeeze (design §4, §5, §7)
+
+The sources behind `scripts/filmedStrokes.ts`: Gugan 4's filmed strokes, the impact's yardstick, and Gugan 5's drive
+and stop, the end-to-end check. Fetched 2026-10-21, each twice, with `curl -sSLk --compressed`. The digest is of the
+page with its counter line removed (`grep -v 'foot-item3">Views'`); the two fetches then agree, and each equals the
+digest recorded above. Fig. 4's image has no counter and is hashed raw; its two fetches agree.
+
+| Short name | Work | URL | SHA-256 |
+|---|---|---|---|
+| Gugan 4 | Gugan, "The Physics of Croquet Strokes: Analysis of the CA high-speed DVD" (Don Gugan 17.iii.09; page updated 4.v.26) | https://oxfordcroquet.org/tech/gugan4/ | `1b2eecb6b8c48253b30fe2c951c16a5edc99044edca324352ded51f3a5ff7e50` (counter line removed; equals the digest recorded above) |
+| Gugan 4, Fig. 4 | The same page's Fig. 4, "Contact times for all 2-ball drives, stop-shots, and close double-tap scatter shots" (JPEG, 732 × 724 px) | https://oxfordcroquet.org/tech/gugan4/fig4.jpg | `7bdacd510dc58989849aa9cb55fa45456e37dc3aa7c8d661102fb91ae79f9438` (raw) |
+| Gugan 5 | Gugan, "Croquet Drives, Pass-Rolls, Stop-Shots and Scatter-Shots" (page updated 20.iv.26) | https://oxfordcroquet.org/tech/gugan5/ | `057c2161fc7e53b9f35655e6a9ba1b1d9bb0d182e3d37825116546ed317cb42e` (counter line removed; equals the digest recorded above) |
+
+### Gugan 4, Table 5: the ten filmed two-ball strokes (`FILMED_STROKES`)
+
+Table 5, "Collected data for all 2-ball drives, stop-shots, and close, double-tap scatter shots". Its columns, in
+order: B2GS, B1GS, B1MS, B2MS, C3S, C10S, C20S, C1D, C3D, C10D. The rows `FILMED_STROKES` holds, verbatim as printed
+(row 2 in mm; `filmedStrokes.ts` holds it in m):
+
+| Row | Heading | B2GS | B1GS | B1MS | B2MS | C3S | C10S | C20S | C1D | C3D | C10D | Field |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | Initial mallet speed, U, m/s | 1.68 | 1.75 | 5.10 | 5.87 | 1.92 | 3.57 | 5.80 | 2.50 | 4.96 | 7.00 | `malletSpeed` |
+| 2 | Ball 1 - ball 2 separation, mm | 6 | 1 | 2 | 6 | 0 | 0.5* | 0 | 1* | 1* | 1* | `gap`, `nominal` (the asterisk) |
+| 5 | Final mallet speed, W, m/s | 0.53 | 0.54 | 1.70 | 1.90 | 0.56 | 1.07 | 1.80 | 0.76 | 1.46 | 2.32 | `malletAfter` |
+| 6 | Final speed ball 1, w1, m/s | 0.98 | 0.93 | 2.78 | 3.25 | 0.97 | 1.92 | 2.90 | 1.24 | 2.80 | 3.44 | `striker` |
+| 9 | Final speed ball 2, v2, m/s | 1.75 | 1.80 | 5.6 | 6.13 | 2.20 | 4.10 | 6.30 | 2.88 | 5.50 | 7.76 | `croqueted` |
+| 16 | Ratio, (v2/w1)r² | 3.6 | 4.3 | 4.9 | 3.6 | 6.5 | 5.2 | 5.5 | 4.8 | 4.2 | 5.1 | `squaredRatio` |
+| 17 | Ratio, L2/L1 | 3.4 | 4.2 | <u>6.5</u> | 2.8 | 6.6 | 4.2 | 4.1 | 4.0 | 3.0 | 3.8 | `distanceRatio` (B1MS: `null`) |
+
+Rows 12–14 (v2/w1, v2/U, w1/W), printed but not held, are the checks: C3S 2.27, 1.15, 1.73; C20S 2.17, 1.09, 1.61.
+Computed from rows 1, 5, 6 and 9 they are C3S 2.268, 1.146, 1.732 and C20S 2.172, 1.086, 1.611, equal to the printed
+values at their two decimals.
+
+- **The notes.** "N.b. (i), the asterisks in row 2 indicate where balls were nominally in contact, but were in fact
+  clearly separated, sometimes by more than the surface milling. (ii), the values of final mallet speed in row 5, W,
+  are those *after* the double tap. (iii), the value underlined in row 7 for stroke B1MS is in error, and this leads
+  to anomalies in rows 16 and 17 which are also underlined, see text." The page underlines B1MS's row 8 (L1 = 2.45 m),
+  row 17 (6.5) and row 18 (µ1), so note (iii) counts one row short of the table as printed: the error is in L1, and the
+  anomalies are the distance ratio and the lawn friction. Row 16 is computed from the speeds and roll, not from L1, and
+  is not underlined. The text: "the value of 2.45 m for its travel distance L1 (row 8 of Table 5) taken from TEXT is
+  anomalous ... a likely explanation is an inversion error in recording, e.g. writing 2.45 instead of 5.42". So B1MS's
+  `distanceRatio` is held as `null` and its `squaredRatio` as printed.
+- **What the speeds are.** §3: "The values of speed in the tables are thus averages taken a few milliseconds *after*
+  impact ... their precision is limited to a few percent".
+- **The three means**, §9.3, which `GUGAN_MEANS` holds and the test reproduces from the rows above (1.096, 1.709 and
+  2.074 from the ten strokes):
+  - v2/U: "The values of this ratio in row 13 of Table 5 show no clear systematic variation and, within the precision
+    of measurement of about 3% for the speeds, are approximately constant at 1.10 ± 0.02 (sem)".
+  - w1/W: "the mean from all ten measured values of the ratio is 1.71 ± 0.05".
+  - v2/w1: "the only useful statistic is the mean value of the ratio, 2.07 ± 0.06".
+- **Presets.** Each stroke is played on the preset design §5.2 names: the C…D strokes (drives) on `drive`, the C…S
+  (stop-shots) on `stop-ac`, the B… (close scatter shots) on `single-ball`.
+
+### Gugan 4, Fig. 4: the filmed timing (`FIG4_TIMING`)
+
+Caption: "N.b. (i), times shown by frame number from time of first contact, with frame rate 8,000/sec. (ii), first
+contact of mallet with ball 1, heavy line to left; second contact, heavy line to right. No clear separation could be
+seen for stroke C1D because of shadows over the point of contact. (iii), ball 1 on ball 2 contact, cross hatched line."
+§5.2: "The initial contact can be identified by the first slight movement of the ball, but its end is often uncertain
+to a frame or two". So the cross-hatched bar's start is when the croqueted ball is first seen moving, and its end when
+the croqueted ball leaves.
+
+Both readings, in frames from the mallet's first contact (1 frame = 0.125 ms), each ±0.5 frame on top of Gugan's "a
+frame or two". The research reading is the brainstorm's (2026-10-21), made by eye from the image. The re-reading is
+this step's: the bars' ends located by pixel on the fetched image, with the frame scale from its 5- and 25-frame
+gridlines (x = 205.5 and 618.5 px, so 20.65 px a frame, frame 0 at 102.25 px), rounded to 0.1 frame.
+`FIG4_TIMING` holds the re-reading.
+
+| Stroke | Research: mallet 1 | ball–ball | mallet 2 | Re-read: mallet 1 | ball–ball | mallet 2 |
+|---|---|---|---|---|---|---|
+| C3S | 0–5.2 | 4.8–11.3 | 11.0–19.1 | 0–5.2 | 4.8–11.2 | 11.0–19.1 |
+| C20S | 0–5.2 | 4.0–10.0 | 9.8–16.2 | 0–5.1 | 4.0–10.0 | 9.8–16.2 |
+| C1D | 0–6.5, then unresolved to 12.8 | 6.0–13.2 | 12.8–21.1 | 0–6.5, then unresolved to 12.8 | 5.9–13.2 | 12.8–21.1 |
+| C10S | 0–6.1 | 4.8–11.1 | 10.9–19.0 | 0–6.1 | 4.8–11.2 | 10.9–19.0 |
+| C3D | 0–7.9 | 4.8–11.3 | 10.8–16.2 | 0–7.9 | 4.8–11.2 | 10.9–16.2 |
+| C10D | 0–~6.0 | 3.8–9.3 | ~6.3–13.3 | 0–6.0 | 3.9–9.4 | 6.3–13.3 |
+
+The two agree within 0.1 frame everywhere. C1D's first heavy line ends at 6.5 frames and a light line runs on to the
+second contact at 12.8 (the caption's shadow); `FIG4_TIMING` holds 6.5 as its first contact's end.
+
+### Gugan 4, Table 1 and Table 2: the free collisions and the face (`FREE_COLLISIONS`, `SINGLE_BALL_FACE`)
+
+Table 1, "Data for ball on ball collisions from HSAVI scatter-shots, series B. N.b. (i), The half-shaded columns
+indicate double-taps, leading to low values of L2/L1 in row 3." Columns B4GS, B3GS, B7MS, B6MS, B3MS, B4MS, B5MS;
+spacing (row 1) 33, 13, 13, 33, 13, 33, 33 mm:
+
+| Row | Heading | B4GS | B3GS | B7MS | B6MS | B3MS | B4MS | B5MS |
+|---|---|---|---|---|---|---|---|---|
+| 5 | Ball /ball contact time, Tb, ms | 0.75 | 0.75 | 0.50 | 0.75 | 0.75 | 0.87 | 0.75 |
+| 6 | Initial speed of ball 1, v1, m/s | 1.90 | 2.27 | 3.54 | 5.54 | 6.40 | 7.25 | 7.64 |
+| 7 | Final speed of ball 2, v2, m/s | 1.57 | 1.97 | 3.00 | 4.90 | 5.60 | 6.13 | 6.53 |
+| 8 | Ratio, v2/v1 | 0.83 | 0.87 | 0.85 | 0.88 | 0.88 | 0.85 | 0.85 |
+| — | Double tap | | / | / | | / | / | |
+
+- "examination of stroke B7MS showed that although not classified as faulty, it too was a clear double tap". "The
+  three *clean* scatter shots in Table 1" are B4GS, B6MS and B5MS. The 0.50 ms (B7MS) and 0.87 ms (B4MS) readings are
+  both in double-tap columns; Gugan marks the strokes as double taps but does not say that the double tap set the
+  reading. "The ball on ball contact times, Tb, (row 5) show no significant variation with ball speed, and cluster
+  around 0.75 ms (i.e. 6 video frames)". e: row 8 "has a mean value of 0.86 ± 0.01 ... This yields e = 0.72 ± 0.02".
+- `FREE_COLLISIONS` holds the three clean strokes (1.90, 5.54 and 7.64 m/s, each 0.75 ms). Each one's restitution is
+  e = 2·v2/v1 − 1 from rows 6 and 7 (Gugan's equation (A7), v2 = v1(1 + e)/2): 0.653, 0.769 and 0.709. The harness is
+  judged against the mean, 0.72 ± 0.02, not these.
+- Table 2, "Data for horizontal motion of ball in single-ball drives", column A2D: row 4 "Duration of contact, Τh, ms
+  (± 0.1 ms)" 0.75; row 7 "Mallet speed before impact, U, m/s" 3.26. `SINGLE_BALL_FACE` holds them.
+- The frame rate, §2: "images taken at a rate of 8000 per second (125 microseconds/frame)". `VIDEO_FRAME` is 1/8000 s.
+
+### `VISIBLE_SHIFT`: the video's visibility threshold
+
+Gugan 4 states a resolution, §2: the images "are about 200 x 40 millimetre (mm) when expanded to life-size ... in
+principle it should be possible to measure the x and y positions, and the angles in the xy-plane for ball(s) and
+mallet to about ± 0.2 mm and about ± 0.2 degrees of arc. In practice however, the accuracy is reduced because the
+images show less than half the height of the ball, because the mallet had no clear reference marks, and also because
+of parallax, of indifferent focus, and of shadow over crucial parts of the image: the uncertainties of measurement
+prove to be several times greater than might be hoped." `VISIBLE_SHIFT` is therefore 0.2 mm, his stated resolution, as
+plan decision 6 directs, rather than the 0.1 mm fallback. The "several times greater" in practice is recorded, not
+applied: it gives no figure.
+
+### Gugan 5: the drive and the stop (`GUGAN5`)
+
+- The drive: "'pendulum' type drives, trying not to exert any extra force on the mallet shaft during the stroke";
+  "The drives were of modest strength, with a mallet speed of about 3 m/s"; "The dozen values of distance ratio shown
+  in figure 2 have a mean value of 4.23 ± 0.2 (where the uncertainty is the standard error of the mean) ... The
+  experimental scatter, i.e. the standard deviation of individual strokes, however is 0.6".
+- The stop: "stop-shots made trying to obtain the greatest possible distance ratio between the balls by using a
+  downward 'jab' just before impact"; "the stop-shots were of similar strength"; "The mean value of the ratio for the
+  twelve strokes is 7.15 ± 0.6, but the scatter is about ± 2.0".
+- The mallet: "The mallet used was an older type hard-faced, square design of weight 3.25lbs: but the relevant mass
+  for the analysis is the mass of the head of the mallet, which was found by taking moments about its point of balance
+  to be 2.30lbs, thus giving a value for the mass ratio, M/m, of 2.30 ± 0.01."
+- The balls: "The balls were Dawson 'Internationals' ... the makers report that under the standard bounce test '…
+  International balls rebound … 35½" – 36" …' (Bryan Dawson, private communication) corresponding to a CoR, e = 0 .772
+  ± 0.003" (the space in "0 .772" is the page's).
