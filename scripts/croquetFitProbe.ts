@@ -44,7 +44,18 @@
  *   ball's rise and spin at the ball–ball interval's start and peak. Candidates b and e change a law, so they run from
  *   a throwaway copy of the worktree carrying it, with CANDIDATE (b or e) and TODAY_ROOT (the worktree, whose engine
  *   is loaded beside the copy's for tests 1 and 5); they add tests 4–6.
- * Sections J-M follow with the other checks. `all` runs A, D-G and I (then J-M); B, C and H by name only.
+ * - J. Gugan 5's drive and stop across the gap (design §7.2): 3 m/s with Gugan's mallet at gaps 0 to 1.9 mm; the drive
+ *   (no push) against 4.23 ± 0.2, the AC stop at jabs 0-8 mm in 0.5 mm steps against 7.15 ± 0.6, on the world's
+ *   ball-ball restitution and on Gugan's 0.772 (a world variant, never adopted); where each target is reachable.
+ * - K. the scatter (design §7.3): the drive's standard deviation and the stop's range over J's gaps against Gugan 5's
+ *   0.6 and about ± 2.0, beside Table 5's spread of v2/U and v2/w1 and the model's across the same strokes; the
+ *   hypothesis judged only if the two sensitivities agree, else "unable to test".
+ * - L. the share (design §7.8): the squared speed ratio as the balls leave beside the distance ratio, for each filmed
+ *   stroke and for J's drive and stop at 1 mm, against Table 5's rows 16 and 17.
+ * - M. the jab, the re-contacts and the effective mass (design §7.5-§7.7): the jab test's sweep at the default croquet
+ *   gap, depth by depth; every face-ball interval with its region on the AC stop's canonical run and its preset
+ *   digest's grid; the drive's effective mass on its canonical setup and with Gugan's mallet.
+ * `all` runs A, D-G, I and J-M; B, C and H by name only.
  * Run with `npx --yes tsx scripts/croquetFitProbe.ts`; environment: SECTION (a letter; default all), CANDIDATE and
  * TODAY_ROOT (section I in a copy). Not part of the test suite.
  */
@@ -57,13 +68,13 @@ import type { ContactInterval, ContactState, ImpactResult } from "../src/engine/
 import { add, cross, dot, horizontal, length, scale, sub, vec3, type Vec3 } from "../src/engine/math/vec3";
 import { CROQUET_GAP_LIMIT } from "../src/engine/shot";
 import { simulateFreeMotion } from "../src/engine/simulate";
-import { planStroke } from "../src/engine/swing/buildContact";
+import { buildContact, planStroke } from "../src/engine/swing/buildContact";
 import { defaultProfile } from "../src/engine/swing/profile";
-import type { ShotSetup } from "../src/engine/swing/types";
+import type { ShotSetup, SwingProfile } from "../src/engine/swing/types";
 import { BALL_IDS, type BallId, type BallState, type World } from "../src/engine/types";
 import { defaultWorld } from "../src/engine/world";
 import { ratioTargetsReference, type RatioTargetKey } from "../src/reference/index";
-import { backswingFor, canonicalSetup, regimeOf, strokeFor } from "../tests/engine/support/shot";
+import { DEFAULT_CROQUET_GAP, backswingFor, canonicalSetup, regimeOf, strokeFor } from "../tests/engine/support/shot";
 import {
     FIG4_TIMING,
     FILMED_STROKES,
@@ -92,6 +103,7 @@ import {
     fitWorld,
     guganRatio,
     guganSetup,
+    gugansMallet,
     meansOf,
     ratioOf,
     readOut,
@@ -1738,6 +1750,552 @@ function sectionI(): void {
     );
 }
 
+/** The gaps (m) of design §7.2: 0, 0.25, 0.5, 1.0, 1.5 and 1.9 mm. */
+const GUGAN_GAPS = [0, 0.25, 0.5, 1, 1.5, 1.9].map((g) => g * 1e-3);
+
+/** The AC stop's jab depths (m) of design §7.2, as the jab test sweeps them: 0 to 8 mm in 0.5 mm steps. */
+const JAB_DEPTHS = Array.from({ length: 17 }, (_, k) => k * 0.0005);
+
+/**
+ * The world as played (the ball–ball restitution from the CA's video) and a variant with Gugan 5's Dawson
+ * Internationals' restitution, for the checks to repeat on. The variant is never adopted.
+ */
+const BALL_WORLDS: readonly { readonly label: string; readonly world: World }[] = [
+    {
+        label: `ball–ball restitution ${fmt(STRIKE_WORLD.ballBall.restitution)} (the model's, from the CA's video)`,
+        world: STRIKE_WORLD,
+    },
+    {
+        label: `ball–ball restitution ${fmt(GUGAN5.ballRestitution)} (Gugan 5's, the maker's bounce test; a variant)`,
+        world: { ...STRIKE_WORLD, ballBall: { ...STRIKE_WORLD.ballBall, restitution: GUGAN5.ballRestitution } },
+    },
+];
+
+// Gugan's mallet is solved per preset and world (about 11 s each) and does not depend on the gap or the jab.
+const GUGAN_MALLETS = new WeakMap<World, Map<string, SwingProfile["mallet"]>>();
+
+/** Gugan's mallet for `type` at 3 m/s on `world`, solved once. */
+function guganMallet(type: "drive" | "stop-ac", world: World): SwingProfile["mallet"] {
+    const cache = GUGAN_MALLETS.get(world) ?? new Map<string, SwingProfile["mallet"]>();
+    GUGAN_MALLETS.set(world, cache);
+    const cached = cache.get(type);
+    if (cached !== undefined) {
+        return cached;
+    }
+    const mallet = gugansMallet(type, GUGAN5.speed, world);
+    cache.set(type, mallet);
+    return mallet;
+}
+
+/** Design §7.2's stroke at `gap` (m) and `jab` (m, the stop's): guganSetup's, with the mallet solved once per world. */
+function guganPlayed(type: "drive" | "stop-ac", gap: number, jab: number, world: World): ShotSetup {
+    const setup = canonicalSetup(type, {
+        world,
+        croquetGap: gap,
+        mallet: guganMallet(type, world),
+        stroke: type === "drive" ? { guideEffort: 0 } : { jab },
+    });
+    return { ...setup, stroke: { ...setup.stroke, ...strokeFor(setup, GUGAN5.speed, world) } };
+}
+
+/** One of design §7.2's runs: its distance ratio and squared speed ratio, or the error it threw. */
+interface GuganRun {
+    readonly ratio: number | null;
+    readonly squared: number | null;
+    readonly open: boolean;
+    readonly error: string | null;
+}
+
+const GUGAN_RUNS = new WeakMap<World, Map<string, GuganRun>>();
+
+/** Design §7.2's run of `type` at `gap` and `jab`, played on `world` and kept. */
+function guganRun(type: "drive" | "stop-ac", gap: number, jab: number, world: World): GuganRun {
+    const cache = GUGAN_RUNS.get(world) ?? new Map<string, GuganRun>();
+    GUGAN_RUNS.set(world, cache);
+    const key = `${type}/${gap}/${jab}`;
+    const cached = cache.get(key);
+    if (cached !== undefined) {
+        return cached;
+    }
+    let run: GuganRun;
+    try {
+        const { read, figures, distance } = strikeOf(guganPlayed(type, gap, jab, world), world);
+        run = { ratio: distance, squared: figures.v2w1 ** 2, open: read.open, error: null };
+    } catch (error) {
+        run = { ratio: null, squared: null, open: false, error: errorText(error) };
+    }
+    cache.set(key, run);
+    return run;
+}
+
+/** A run's ratio, starred when within `tolerance` of `target`; the error or OPEN where there is one. */
+function ratioCell(run: GuganRun, target: number, tolerance: number): string {
+    if (run.ratio === null) {
+        return `${run.error}`;
+    }
+    const within = Math.abs(run.ratio - target) <= tolerance;
+    return `${fmt(run.ratio)}${within ? "*" : ""}${run.open ? " OPEN" : ""}`;
+}
+
+/**
+ * Whether `target` ± `tolerance` is reached by `ratios` at `gaps` (m): the tabulated gaps within it, the gaps between
+ * tabulated ones where the line through two neighbours crosses `target` (interpolated, not run), else the closest.
+ */
+function reachText(
+    gaps: readonly number[],
+    ratios: readonly (number | null)[],
+    target: number,
+    tolerance: number,
+): string {
+    const hits = gaps.filter((_, i) => {
+        const r = ratios[i];
+        return r !== null && r !== undefined && Math.abs(r - target) <= tolerance;
+    });
+    const crossings: string[] = [];
+    for (let i = 0; i + 1 < gaps.length; i++) {
+        const a = ratios[i];
+        const b = ratios[i + 1];
+        if (a !== null && a !== undefined && b !== null && b !== undefined && (a - target) * (b - target) < 0) {
+            const g = (gaps[i] as number) + ((target - a) / (b - a)) * ((gaps[i + 1] as number) - (gaps[i] as number));
+            crossings.push(`${mm(g)}`);
+        }
+    }
+    if (hits.length > 0) {
+        return `reachable: within ±${fmt(tolerance)} at gap ${hits.map(mm).join(", ")} mm`;
+    }
+    const errors = ratios.map((r, i) => ({
+        gap: gaps[i] as number,
+        error: r === null ? Infinity : Math.abs(r - target),
+    }));
+    const closest = errors.reduce((best, e) => (e.error < best.error ? e : best));
+    return (
+        `not reached at a tabulated gap (closest ${mm(closest.gap)} mm, off by ${fmt(closest.error)})` +
+        (crossings.length > 0
+            ? `; crosses ${fmt(target)} between tabulated gaps, interpolated near ${crossings.join(", ")} mm`
+            : "")
+    );
+}
+
+function sectionJ(): void {
+    console.log(
+        "== J. Gugan 5's drive and stop across the gap (design §7.2): 3 m/s, Gugan's mallet (effective mass " +
+            `${fmt(GUGAN_EFFECTIVE_MASS)} ball masses), croquet gaps ${GUGAN_GAPS.map(mm).join(", ")} mm; the drive ` +
+            `with no push (guideEffort 0) against ${fmt(GUGAN5.drive.ratio)} ± ${fmt(GUGAN5.drive.tolerance)}, the ` +
+            `AC stop at each jab depth against ${fmt(GUGAN5.stop.ratio)} ± ${fmt(GUGAN5.stop.tolerance)}; * marks a ` +
+            "ratio within its tolerance; each twice, on two ball–ball restitutions (the second a world variant, " +
+            "never adopted) ==",
+    );
+    for (const { label, world } of BALL_WORLDS) {
+        console.log(`-- J. ${label} --`);
+        const drive = GUGAN_GAPS.map((gap) => guganRun("drive", gap, 0, world));
+        console.log("drive, ratio L2/L1 at each gap:");
+        GUGAN_GAPS.forEach((gap, i) => {
+            console.log(
+                `  gap ${mm(gap)} mm: ${ratioCell(drive[i] as GuganRun, GUGAN5.drive.ratio, GUGAN5.drive.tolerance)}`,
+            );
+        });
+        console.log(
+            `  drive ${reachText(
+                GUGAN_GAPS,
+                drive.map((r) => r.ratio),
+                GUGAN5.drive.ratio,
+                GUGAN5.drive.tolerance,
+            )}`,
+        );
+        console.log("AC stop, ratio L2/L1 at each gap, per jab depth:");
+        const reached: string[] = [];
+        for (const jab of JAB_DEPTHS) {
+            const runs = GUGAN_GAPS.map((gap) => guganRun("stop-ac", gap, jab, world));
+            const cells = runs.map(
+                (r, i) =>
+                    `gap ${mm(GUGAN_GAPS[i] as number)}: ${ratioCell(r, GUGAN5.stop.ratio, GUGAN5.stop.tolerance)}`,
+            );
+            console.log(`  jab ${mm(jab)} mm: ${cells.join(", ")}`);
+            const text = reachText(
+                GUGAN_GAPS,
+                runs.map((r) => r.ratio),
+                GUGAN5.stop.ratio,
+                GUGAN5.stop.tolerance,
+            );
+            if (!text.startsWith("not reached") || text.includes("crosses")) {
+                reached.push(`jab ${mm(jab)} mm ${text}`);
+            }
+        }
+        console.log(
+            reached.length === 0
+                ? "  stop: not reachable at any jab depth within 0 to 2 mm, nor crossed between tabulated gaps"
+                : `  stop reach, by jab depth:\n    ${reached.join("\n    ")}`,
+        );
+    }
+}
+
+/** The sample standard deviation of `xs` (n − 1). */
+function sdOf(xs: readonly number[]): number {
+    const mean = xs.reduce((s, x) => s + x, 0) / xs.length;
+    return Math.sqrt(xs.reduce((s, x) => s + (x - mean) ** 2, 0) / (xs.length - 1));
+}
+
+/** The least-squares slope of `ys` on `xs`. */
+function slopeOfFit(xs: readonly number[], ys: readonly number[]): number {
+    const mx = xs.reduce((s, x) => s + x, 0) / xs.length;
+    const my = ys.reduce((s, y) => s + y, 0) / ys.length;
+    const sxy = xs.reduce((s, x, i) => s + (x - mx) * ((ys[i] as number) - my), 0);
+    return sxy / xs.reduce((s, x) => s + (x - mx) ** 2, 0);
+}
+
+/** How a model scatter compares with Gugan 5's, as a share of it. */
+function scatterVerdict(share: number): string {
+    if (share < 0.5) {
+        return "accounts for under half of it";
+    }
+    return share <= 2 ? "reproduces it (within a factor of two)" : "exceeds it by over a factor of two";
+}
+
+function sectionK(): void {
+    console.log(
+        "== K. The scatter (design §7.3): the gap's range (J's gaps) against Gugan 5's scatter, and the film's " +
+            "spread across its gaps beside the model's ==",
+    );
+    const verdicts: string[] = [];
+    for (const { label, world } of BALL_WORLDS) {
+        console.log(`-- K.1 ${label} --`);
+        const drive = GUGAN_GAPS.map((gap) => guganRun("drive", gap, 0, world).ratio);
+        const kept = drive.filter((r): r is number => r !== null);
+        const sd = sdOf(kept);
+        console.log(
+            `drive over ${kept.length} gaps: ratios ${kept.map(fmt).join(", ")}; sample standard deviation ` +
+                `${fmt(sd)} against Gugan 5's single strokes' ${fmt(GUGAN5.drive.sd)} ` +
+                `(${fmt(sd / GUGAN5.drive.sd)} of it: ` +
+                `${scatterVerdict(sd / GUGAN5.drive.sd)})`,
+        );
+        const halves: number[] = [];
+        for (const jab of JAB_DEPTHS) {
+            const ratios = GUGAN_GAPS.map((gap) => guganRun("stop-ac", gap, jab, world).ratio).filter(
+                (r): r is number => r !== null,
+            );
+            if (ratios.length < 2) {
+                console.log(`stop at jab ${mm(jab)} mm: fewer than two ratios`);
+                continue;
+            }
+            const range = spreadOf(ratios);
+            halves.push(range / 2);
+            console.log(
+                `stop at jab ${mm(jab)} mm: range ${fmt(range)}, half-range ${fmt(range / 2)} against Gugan 5's ` +
+                    `about ± ${fmt(GUGAN5.stop.spread)} (${fmt(range / 2 / GUGAN5.stop.spread)} of it)`,
+            );
+        }
+        const stopHalf = halves.length === 0 ? null : Math.max(...halves);
+        verdicts.push(
+            `${label}: drive's standard deviation ${fmt(sd / GUGAN5.drive.sd)} of Gugan 5's ` +
+                `(${scatterVerdict(sd / GUGAN5.drive.sd)}); ` +
+                (stopHalf === null
+                    ? "no stop range"
+                    : `stop's largest half-range over the jab depths ${fmt(stopHalf / GUGAN5.stop.spread)} of ` +
+                      `Gugan 5's (${scatterVerdict(stopHalf / GUGAN5.stop.spread)})`),
+        );
+    }
+    console.log(
+        "-- K.2 the film's spread across its gaps (Table 5, the ten strokes) beside the model's (section E's runs, " +
+            "the default mallet, the recorded gaps; strokes whose strike did not close in its window left out) --",
+    );
+    const counted = filmedStrokeRuns(undefined, { world: defaultWorld() }).filter((r) => !r.read.open);
+    const gaps = counted.map((r) => r.gap * 1e3);
+    let agree = true;
+    for (const key of ["v2U", "v2w1"] as const) {
+        const film = counted.map((r) => rowOf(r.stroke)[key]);
+        const model = counted.map((r) => r.figures[key]);
+        const [filmSpread, modelSpread] = [spreadOf(film), spreadOf(model)];
+        const [filmSlope, modelSlope] = [slopeOfFit(gaps, film), slopeOfFit(gaps, model)];
+        const share = modelSpread / filmSpread;
+        const ok = share >= 0.5 && share <= 2 && filmSlope * modelSlope > 0;
+        agree = agree && ok;
+        console.log(
+            `${key} over ${counted.length} strokes: film spread ${fmt(filmSpread)}, standard deviation ` +
+                `${fmt(sdOf(film))}, slope on the gap ${fmt(filmSlope)} per mm; model spread ${fmt(modelSpread)}, ` +
+                `standard deviation ${fmt(sdOf(model))}, slope ${fmt(modelSlope)} per mm; model/film spread ` +
+                `${fmt(share)}: ${ok ? "agree" : "disagree"}`,
+        );
+    }
+    console.log(
+        "-- K.3 the criterion and the verdict: the sensitivities agree when, for both v2/U and v2/w1, the model's " +
+            "spread across the strokes is within a factor of two of the film's (0.5 to 2 times) and the slopes of " +
+            "the figure on the gap share a sign; the hypothesis (the gap's range reproduces Gugan 5's scatter) is " +
+            "judged only then, the model's scatter within a factor of two of Gugan 5's counting as reproducing it --",
+    );
+    if (agree) {
+        console.log("sensitivities agree; the hypothesis judged:");
+        for (const text of verdicts) {
+            console.log(`  ${text}`);
+        }
+    } else {
+        console.log(
+            "sensitivities disagree: unable to test the user's hypothesis (the figures above are recorded, not judged)",
+        );
+    }
+}
+
+/** `setup`'s distance ratio: the second (croqueted, else live) ball's travel to rest over the striker's. */
+function distanceOf(setup: ShotSetup, motion: ReturnType<typeof simulateFreeMotion>): number | null {
+    const other = setup.croqueted ?? setup.live[0];
+    if (other === undefined) {
+        return null;
+    }
+    const striker = RatioFit.travelOf(setup, motion, setup.striker);
+    return striker > 0 ? RatioFit.travelOf(setup, motion, other) / striker : null;
+}
+
+/** The distance ratio's excess over the squared speed ratio, as a percentage; `none` where either is absent. */
+function shareText(squared: number | null, distance: number | null): string {
+    return squared === null || distance === null ? "none" : `${fmt((distance / squared - 1) * 100)} %`;
+}
+
+function sectionL(): void {
+    console.log(
+        "== L. The landing and slide-to-roll share (design §7.8): the squared speed ratio (v2/w1)² as the balls " +
+            "leave beside the distance ratio L2/L1 (the second ball's travel to rest over the striker's), and the " +
+            "distance ratio's excess over the squared ratio as the share (distance/squared − 1, in %) ==",
+    );
+    console.log(
+        "-- L.1 each filmed stroke at its recorded gap (the default mallet), against Table 5's rows 16 and 17 --",
+    );
+    const world = defaultWorld();
+    for (const { stroke, gap, read, figures } of filmedStrokeRuns(undefined, { world })) {
+        const setup = guganSetup(stroke.preset, stroke.malletSpeed, gap, { world });
+        const distance = distanceOf(setup, simulateFreeMotion(read.impact.handover, world));
+        const squared = figures.v2w1 ** 2;
+        console.log(
+            `${stroke.name}${read.open ? " OPEN" : ""}: model (v2/w1)² ${fmt(squared)}, L2/L1 ` +
+                `${distance === null ? "none" : fmt(distance)}, share ${shareText(squared, distance)}; film row 16 ` +
+                `${stroke.squaredRatio === null ? "none" : fmt(stroke.squaredRatio)}, row 17 ` +
+                `${stroke.distanceRatio === null ? "none" : fmt(stroke.distanceRatio)}, share ` +
+                shareText(stroke.squaredRatio, stroke.distanceRatio),
+        );
+    }
+    console.log("-- L.2 design §7.2's drive and stop at 1 mm (Gugan's mallet), beside Gugan 5's distance ratios --");
+    for (const { label, world: played } of BALL_WORLDS) {
+        console.log(`${label}:`);
+        const gap = 1e-3;
+        const lines: [string, GuganRun, number][] = [
+            ["drive", guganRun("drive", gap, 0, played), GUGAN5.drive.ratio],
+            ...JAB_DEPTHS.map((jab): [string, GuganRun, number] => [
+                `stop at jab ${mm(jab)} mm`,
+                guganRun("stop-ac", gap, jab, played),
+                GUGAN5.stop.ratio,
+            ]),
+        ];
+        for (const [name, run, target] of lines) {
+            console.log(
+                `  ${name}: ` +
+                    (run.ratio === null
+                        ? `${run.error}`
+                        : `(v2/w1)² ${fmt(run.squared as number)}, L2/L1 ${fmt(run.ratio)} ` +
+                          `(Gugan 5: ${fmt(target)}), share ${shareText(run.squared, run.ratio)}` +
+                          `${run.open ? " OPEN" : ""}`),
+            );
+        }
+    }
+}
+
+/** The jab test's band for the second tap's mallet speed over U (tests/engine/turfStrike.test.ts). */
+const JAB_BAND = [0.295, 0.463] as const;
+
+/** One face–ball contact of a run: its interval (s) and the head regions that touched during it. */
+interface FaceContact {
+    readonly start: number;
+    readonly end: number;
+    readonly regions: readonly string[];
+}
+
+/** Every face–ball interval of `impact` for `striker` with the regions overlapping it; if `impact-off-face` rose. */
+function facesOf(
+    impact: ImpactResult,
+    striker: BallId,
+): { readonly contacts: readonly FaceContact[]; readonly offFace: boolean } {
+    const key = faceKey(striker);
+    const regions = Object.entries(impact.headRegions ?? {}).filter(([k]) => k.startsWith(`${key}#`));
+    const contacts = (impact.timeline[key] ?? []).map((i) => ({
+        start: i.start,
+        end: i.end,
+        regions: regions
+            .filter(([, intervals]) => intervals.some((r) => r.start <= i.end && r.end >= i.start))
+            .map(([k]) => k.slice(key.length + 1)),
+    }));
+    const offFace = impact.events.some((e) => e.kind === "impact-off-face" && e.ball === striker);
+    return { contacts, offFace };
+}
+
+/** The contacts as text: each interval in ms with its regions. */
+function contactsText(contacts: readonly FaceContact[]): string {
+    return contacts.length === 0
+        ? "no face–ball interval"
+        : contacts.map((c) => `[${ms(c.start)}, ${ms(c.end)}] ms ${c.regions.join("+") || "no region"}`).join("; ");
+}
+
+/**
+ * The preset digest's grid for a preset (scripts of the ratchet, swingProbe's grid): 5 speeds × 5 drives × 3 heights ×
+ * 3 sides, each stroke planned at its speed on the preset's canonical setup. A run's setup is built on demand: a speed
+ * beyond the stroke's reach throws, which the digest records as a rejected run.
+ */
+function digestGrid(
+    type: "stop-ac",
+    world: World,
+): readonly { readonly label: string; readonly build: () => ShotSetup }[] {
+    const base = canonicalSetup(type, { world });
+    const up0 = base.stroke.contact.up;
+    const grid: { label: string; build: () => ShotSetup }[] = [];
+    for (const speed of [1, 2, 3, 4, 6]) {
+        for (const drive of [-1, -0.5, 0, 0.5, 1]) {
+            for (const up of [up0 - 0.003, up0, up0 + 0.003]) {
+                for (const side of [-0.01, 0, 0.01]) {
+                    const stroke = { ...base.stroke, drive, contact: { up, side } };
+                    const setup = { ...base, stroke };
+                    grid.push({
+                        label: `${type} ${speed} m/s drive ${drive} up ${up} side ${side}`,
+                        build: () => ({
+                            ...setup,
+                            stroke: { ...stroke, backswing: backswingFor(setup, speed, world) },
+                        }),
+                    });
+                }
+            }
+        }
+    }
+    return grid;
+}
+
+function sectionM(): void {
+    console.log(
+        "== M. The jab, the re-contacts and the effective mass (design §7.5-§7.7): the jab test's sweep at " +
+            `DEFAULT_CROQUET_GAP (${mm(DEFAULT_CROQUET_GAP)} mm), the AC stop's face–ball intervals, the drive's ` +
+            "effective mass ==",
+    );
+    const world = defaultWorld();
+    console.log(
+        "-- M.1 Gugan's jab (tests/engine/turfStrike.test.ts, the AC stop, the default mallet, " +
+            `${fmt(GUGAN5.speed)} m/s, the default world): each depth judged as the test judges it; the band is ` +
+            `[${fmt(JAB_BAND[0])}, ${fmt(JAB_BAND[1])}]·U, U and the second tap the head's speed along aim at the ` +
+            "face region's first " +
+            "and second intervals' starts --",
+    );
+    const fractions: number[] = [];
+    for (const jab of JAB_DEPTHS) {
+        const base = canonicalSetup("stop-ac", { world, croquetGap: DEFAULT_CROQUET_GAP, stroke: { jab } });
+        const setup = { ...base, stroke: { ...base.stroke, backswing: backswingFor(base, GUGAN5.speed, world) } };
+        const contact = buildContact(setup, world);
+        if (contact.drive.kind !== "track") {
+            throw new RangeError("the AC stop's contact has no tracked drive");
+        }
+        const { aim } = contact.drive.arc;
+        const speeds: number[] = [dot(contact.velocity, aim)];
+        const probe: ImpactProbe = {
+            step: (s) => {
+                speeds.push(dot(s.head.velocity, aim));
+            },
+        };
+        const impact = simulateImpact(contact, setup.balls, world, { probe });
+        const speed = (t: number): number => speeds[Math.round(t / IMPACT_DT)] as number;
+        const face = impact.headRegions?.[`${faceKey(setup.striker)}#face`] ?? [];
+        const first = face[0];
+        if (first === undefined) {
+            console.log(`jab ${mm(jab)} mm: no face-region interval (skipped by the test)`);
+            continue;
+        }
+        const second = face[1];
+        const grounds = impact.timeline["head/turf"]?.[0]?.start;
+        const qualifies =
+            grounds !== undefined && grounds >= first.start && (second === undefined || grounds < second.start);
+        const deep = impact.events.some((e) => e.kind === "impact-head-deep");
+        const fraction = (second === undefined ? 0 : speed(second.start)) / speed(first.start);
+        const counted = qualifies && !deep;
+        if (counted) {
+            fractions.push(fraction);
+        }
+        const tap =
+            second === undefined ? "none (counts 0)" : `${fmt(speed(second.start))} m/s at ${ms(second.start)} ms`;
+        const ground = grounds === undefined ? "never" : `${ms(grounds)} ms`;
+        const inBand = fraction >= JAB_BAND[0] && fraction <= JAB_BAND[1];
+        console.log(
+            `jab ${mm(jab)} mm: ${face.length} face-region interval(s), U ${fmt(speed(first.start))} m/s at ` +
+                `${ms(first.start)} ms, second tap ${tap}, head/turf grounds ${ground}, fraction ${fmt(fraction)}; ` +
+                `${qualifies ? "qualifies" : "does not qualify"}${deep ? ", impact-head-deep" : ""}: ` +
+                `${counted ? `counted, ${verdict(inBand)}` : "not counted"}`,
+        );
+    }
+    const allInBand = fractions.every((f) => f >= JAB_BAND[0] && f <= JAB_BAND[1]);
+    const testPasses = fractions.length > 0 && allInBand;
+    console.log(
+        `jab test: ${fractions.length} counted depth(s)` +
+            (fractions.length === 0
+                ? ""
+                : `, fractions ${fmt(Math.min(...fractions))} to ${fmt(Math.max(...fractions))}`) +
+            `; the assertions ${testPasses ? "now PASS (.fails would turn red)" : "still fail (as .fails expects)"}`,
+    );
+    console.log(
+        "-- M.2 the grip-limit control run (the test at :90-109, a single-ball stroke the gap cannot touch): not " +
+            "re-run, since no candidate that changes the face law was admitted --",
+    );
+    console.log(
+        "-- M.3 the AC stop's face–ball intervals with their head region: the canonical run, then the preset " +
+            "digest's grid (5 speeds × 5 drives × 3 heights × 3 sides, each planned at its speed), the impact alone; " +
+            "RE-CONTACT marks a later interval touching only the face region while impact-off-face was never raised, " +
+            "which it would not flag --",
+    );
+    const faceRun = (setup: ShotSetup): ReturnType<typeof facesOf> => {
+        const contact = planStroke(setup, world).contact;
+        return facesOf(simulateImpact(contact, setup.balls, world), setup.striker);
+    };
+    const canonical = canonicalSetup("stop-ac", { world });
+    const canon = faceRun(canonical);
+    console.log(
+        `canonical: ${contactsText(canon.contacts)}; impact-off-face ${canon.offFace ? "raised" : "not raised"}`,
+    );
+    let unflagged = 0;
+    let reContacts = 0;
+    let rejected = 0;
+    const grid = digestGrid("stop-ac", world);
+    for (const { label, build } of grid) {
+        try {
+            const { contacts, offFace } = faceRun(build());
+            const later = contacts.slice(1);
+            const faceOnly = later.some((c) => c.regions.length > 0 && c.regions.every((r) => r === "face"));
+            reContacts += later.length > 0 ? 1 : 0;
+            unflagged += faceOnly && !offFace ? 1 : 0;
+            console.log(
+                `${label}: ${contactsText(contacts)}; impact-off-face ${offFace ? "raised" : "not raised"}` +
+                    `${faceOnly && !offFace ? " RE-CONTACT" : ""}`,
+            );
+        } catch (error) {
+            rejected += 1;
+            console.log(`${label}: rejected (${errorText(error)})`);
+        }
+    }
+    console.log(
+        `grid: ${grid.length} runs, ${rejected} rejected, ${reContacts} with a second face–ball interval, ${unflagged} with a face-region ` +
+            "re-contact that impact-off-face does not flag",
+    );
+    console.log(
+        "-- M.4 the drive's effective mass at the face centre along aim (ruling D: 0.9·m ≤ m_eff ≤ M; m the head's " +
+            "mass, M the swung body's) against the filmed strokes' 2.30 to 2.41 ball masses (design §5.2) --",
+    );
+    for (const [label, setup] of [
+        [
+            "canonical drive, default mallet",
+            guganSetup("drive", GUGAN5.speed, DEFAULT_CROQUET_GAP, { world: STRIKE_WORLD }),
+        ],
+        ["drive with Gugan's mallet", guganPlayed("drive", DEFAULT_CROQUET_GAP, 0, STRIKE_WORLD)],
+    ] as const) {
+        const m = massOf(setup, STRIKE_WORLD);
+        const k = m.effective / STRIKE_WORLD.ball.mass;
+        console.log(
+            `${label}: ${massText(m)}; ${fmt(k)} ball masses against ${FILMED_MASS_RANGE.map(fmt).join(" to ")}: ` +
+                verdict(k >= FILMED_MASS_RANGE[0] && k <= FILMED_MASS_RANGE[1]),
+        );
+    }
+}
+
+/** The filmed strokes' effective mass in ball masses by momentum (design §5.2): 2.30 to 2.41. */
+const FILMED_MASS_RANGE = [2.3, 2.41] as const;
+
 const SECTIONS: Readonly<Record<string, () => void>> = {
     A: sectionA,
     B: sectionB,
@@ -1748,10 +2306,14 @@ const SECTIONS: Readonly<Record<string, () => void>> = {
     G: sectionG,
     H: sectionH,
     I: sectionI,
+    J: sectionJ,
+    K: sectionK,
+    L: sectionL,
+    M: sectionM,
 };
 
-/** The sections `all` runs, in order: B, C and H only by name. Later sections (J-M) are appended here. */
-const ALL_SECTIONS: readonly string[] = ["A", "D", "E", "F", "G", "I"];
+/** The sections `all` runs, in order: B, C and H only by name. */
+const ALL_SECTIONS: readonly string[] = ["A", "D", "E", "F", "G", "I", "J", "K", "L", "M"];
 
 if (SECTION !== "all" && SECTIONS[SECTION] === undefined) {
     throw new Error(`SECTION must be "all" or one of ${Object.keys(SECTIONS).join(", ")}`);
