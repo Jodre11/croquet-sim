@@ -35,7 +35,7 @@
  */
 import type { FollowSnapshot, ImpactProbe } from "../src/engine/impact/integrate";
 import { simulateStroke } from "../src/engine/impact/simulateImpact";
-import { effectiveMass, swungBody } from "../src/engine/impact/track";
+import { swungBody } from "../src/engine/impact/track";
 import type { ContactState, ImpactResult } from "../src/engine/impact/types";
 import { length, type Vec3 } from "../src/engine/math/vec3";
 import { planStroke } from "../src/engine/swing/buildContact";
@@ -50,6 +50,7 @@ import {
     BOUNDS,
     CA_STROKES,
     TODAY,
+    effectiveMassOf,
     fitSetup,
     fitWorld,
     ratioOf,
@@ -319,9 +320,9 @@ function massOf(setup: ShotSetup, world: World): MassCheck {
     if (drive.kind !== "track") {
         throw new RangeError(`the ${setup.stroke.type} stroke's planned contact has no tracked drive`);
     }
-    const { head, orientation } = contact;
+    const { head } = contact;
     const body = swungBody(head, drive.hands, drive.arc.radius);
-    const effective = effectiveMass(body, head, orientation, drive.arc.aim);
+    const effective = effectiveMassOf(setup, world);
     const marked = !(MASS_FLOOR * head.mass <= effective && effective <= body.mass);
     return { effective, head: head.mass, body: body.mass, marked };
 }
