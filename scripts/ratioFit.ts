@@ -38,7 +38,7 @@ import { defaultWorld } from "../src/engine/world";
 import { contactReference, ratioTargetsReference, type RatioTargetKey } from "../src/reference/index";
 import { canonicalSetup, strokeFor } from "../tests/engine/support/shot";
 import { CEILING } from "./effortFit";
-import { FILMED_STROKES, type FilmedStroke } from "./filmedStrokes";
+import { FILMED_STROKES, GUGAN5, type FilmedStroke } from "./filmedStrokes";
 import { openWorld, opened } from "./openLawn";
 
 /** The five shared candidates (design §5.2): one value each. */
@@ -708,4 +708,54 @@ export function filmedStrokeRuns(
         const read = readOut(setup, world, step);
         return { stroke, gap, read, figures: figuresOf(read, effectiveMassOf(setup, world) / world.ball.mass) };
     });
+}
+
+/** The steps (shares of the engine's IMPACT_DT) each judged figure is evaluated at for step convergence (design §6). */
+export const STEP_SHARES = [0.5, 1, 2] as const;
+
+/** The largest less the smallest of `xs`. */
+export function spreadOf(xs: readonly number[]): number {
+    return Math.max(...xs) - Math.min(...xs);
+}
+
+/**
+ * The mean of v₂/U, w₁/W and v₂/w₁ over `runs`' counted strokes, those whose strike closed within its window. Throws a
+ * RangeError when none did.
+ */
+export function meansOf(runs: ReturnType<typeof filmedStrokeRuns>): { v2U: number; w1W: number; v2w1: number } {
+    const counted = runs.filter((r) => !r.read.open);
+    if (counted.length === 0) {
+        throw new RangeError("meansOf: no filmed stroke closed within the strike's window");
+    }
+    const mean = (f: (r: (typeof counted)[number]) => number): number =>
+        counted.reduce((sum, r) => sum + f(r), 0) / counted.length;
+    return {
+        v2U: mean((r) => r.figures.v2U),
+        w1W: mean((r) => r.figures.w1W),
+        v2w1: mean((r) => r.figures.v2w1),
+    };
+}
+
+// Gugan's mallet is solved per setup (about 11 s each); the setup does not depend on the step, so each is built once.
+const guganStrokes = new WeakMap<World, Map<string, ShotSetup>>();
+
+/** Design §7.2's stroke at `gap` (m): 3 m/s with Gugan's mallet, the drive with no push, the stop with no jab. */
+export function guganStroke(type: "drive" | "stop-ac", gap: number, world: World): ShotSetup {
+    const cache = guganStrokes.get(world) ?? new Map<string, ShotSetup>();
+    guganStrokes.set(world, cache);
+    const key = `${type}/${gap}`;
+    const cached = cache.get(key);
+    if (cached !== undefined) {
+        return cached;
+    }
+    const options = type === "drive" ? { guideEffort: 0 } : { jab: 0 };
+    const setup = guganSetup(type, GUGAN5.speed, gap, { world, gugan: true, ...options });
+    cache.set(key, setup);
+    return setup;
+}
+
+/** The croquet ratio of design §7.2's `type` stroke at `gap` (m), played to rest at impact step `dt` (s). */
+export function guganRatio(type: "drive" | "stop-ac", gap: number, dt: number, world: World): number {
+    const setup = guganStroke(type, gap, world);
+    return ratioOf(setup, runFit(setup, TODAY, world, { dt }).motion);
 }

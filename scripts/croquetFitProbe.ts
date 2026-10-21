@@ -29,36 +29,67 @@
  * - H. the ball makes (design §6): the makes behind the face law and Gugan 5's drives, whether they differ, and le
  *   Maitre's spread by make (his stop shot's ratios, and his drive or roll's printed ratios against his own
  *   distances), each quoted from reference/sources/README.md with its line.
- * The fit's sections D-G are not here: the fit moved to a later step (the design's Amendments, 2026-10-20).
- * Run with `npx --yes tsx scripts/croquetFitProbe.ts`; environment: SECTION (A, B, C or H; default all). Not part of
- * the test suite.
+ * - D. gap 0 re-measured and the sweep (P2b.2b.2c.2b design §9): the canonical drive at 3 m/s with no push, on the
+ *   default mallet and Gugan's: the read-out's speeds, every face and ball–ball interval (ms), the squared speed ratio
+ *   and the distance ratio; then v₂/U, w₁/W, v₂/w₁ and the ratio across the gap from 0 to 1.9 mm, for the drive at 3
+ *   m/s and the AC stop at C3S's and C20S's U.
+ * - E. the filmed strokes (design §5.2, §5.3): each of Gugan 4's ten strokes on its preset at its U and recorded gap,
+ *   its figures against its Table 5 row, the nominal strokes at ±0.5 mm, and the three means against Gugan's.
+ * - F. the timing (design §7.1): the model's four times for six strokes beside both Fig. 4 readings.
+ * - G. the convergence (design §6): the judged figures at dt/2, dt and 2·dt, each spread over its tolerance.
+ * Sections I-M follow with the search and the other checks. `all` runs A, D-G (then I-M); B, C and H by name only.
+ * Run with `npx --yes tsx scripts/croquetFitProbe.ts`; environment: SECTION (a letter; default all). Not part of the
+ * test suite.
  */
-import type { FollowSnapshot, ImpactProbe } from "../src/engine/impact/integrate";
-import { simulateStroke } from "../src/engine/impact/simulateImpact";
+import { ballPairKey, faceKey } from "../src/engine/impact/contacts";
+import { IMPACT_DT, type FollowSnapshot, type ImpactProbe } from "../src/engine/impact/integrate";
+import { simulateImpact, simulateStroke } from "../src/engine/impact/simulateImpact";
 import { swungBody } from "../src/engine/impact/track";
-import type { ContactState, ImpactResult } from "../src/engine/impact/types";
-import { length, type Vec3 } from "../src/engine/math/vec3";
+import type { ContactInterval, ContactState, ImpactResult } from "../src/engine/impact/types";
+import { horizontal, length, sub, type Vec3 } from "../src/engine/math/vec3";
+import { CROQUET_GAP_LIMIT } from "../src/engine/shot";
+import { simulateFreeMotion } from "../src/engine/simulate";
 import { planStroke } from "../src/engine/swing/buildContact";
 import { defaultProfile } from "../src/engine/swing/profile";
 import type { ShotSetup } from "../src/engine/swing/types";
-import type { BallId, World } from "../src/engine/types";
+import { BALL_IDS, type BallId, type BallState, type World } from "../src/engine/types";
 import { defaultWorld } from "../src/engine/world";
 import { ratioTargetsReference, type RatioTargetKey } from "../src/reference/index";
 import { backswingFor, canonicalSetup, regimeOf, strokeFor } from "../tests/engine/support/shot";
+import {
+    FIG4_TIMING,
+    FILMED_STROKES,
+    GUGAN5,
+    GUGAN_MEANS,
+    VIDEO_FRAME,
+    VISIBLE_SHIFT,
+    type FilmedStroke,
+} from "./filmedStrokes";
 import { OPEN_LAWN, OPEN_START, haltedText, openWorld, opened } from "./openLawn";
 import {
     BOUNDS,
     CA_STROKES,
+    GUGAN_EFFECTIVE_MASS,
+    STEP_SHARES,
+    STRIKE_WINDOW,
     TODAY,
     effectiveMassOf,
+    figuresOf,
+    filmedStrokeRuns,
     fitSetup,
     fitWorld,
+    guganRatio,
+    guganSetup,
+    meansOf,
     ratioOf,
+    readOut,
     releaseSpeedFor,
     runFit,
+    spreadOf,
     travelOf,
     type Candidate,
     type FitParams,
+    type ReadOut,
 } from "./ratioFit";
 
 // The project has no Node types; this script runs under tsx and reads its environment.
@@ -66,7 +97,6 @@ declare const process: { readonly env: Readonly<Record<string, string | undefine
 
 const SECTION = process.env.SECTION ?? "all";
 const fmt = (x: number): string => x.toFixed(4);
-const runs = (section: string): boolean => SECTION === "all" || SECTION === section;
 
 /** A yard (m). */
 const YARD = 0.9144;
@@ -835,18 +865,359 @@ function sectionH(): void {
     }
 }
 
-const SECTIONS: Readonly<Record<string, () => void>> = { A: sectionA, B: sectionB, C: sectionC, H: sectionH };
+/** A time in ms to four decimals. */
+const ms = (t: number): string => fmt(t * 1e3);
+
+/** `ok` as the words the tables use. */
+const verdict = (ok: boolean): string => (ok ? "pass" : "miss");
+
+/** The world the filmed strokes and the gap sweep are played on. */
+const STRIKE_WORLD = fitWorld(TODAY);
+
+/** The face–ball and ball–ball intervals of `impact` as text, each key's in ms; the turf's and obstacles' left out. */
+function intervalTexts(impact: ImpactResult): string[] {
+    const isBall = (part: string | undefined): boolean => (BALL_IDS as readonly (string | undefined)[]).includes(part);
+    return Object.entries(impact.timeline)
+        .filter(([key]) => {
+            const parts = key.split("/");
+            return parts.length === 2 && (parts[0] === "face" ? isBall(parts[1]) : parts.every(isBall));
+        })
+        .map(([key, intervals]) => `${key} ${intervals.map((i) => `[${ms(i.start)}, ${ms(i.end)}]`).join(" ")} ms`);
+}
+
+/** `setup`'s read-out, its figures with k the mallet's effective mass over the ball's, and its distance ratio. */
+function strikeOf(
+    setup: ShotSetup,
+    world: World,
+): { readonly read: ReadOut; readonly figures: ReturnType<typeof figuresOf>; readonly distance: number } {
+    const read = readOut(setup, world);
+    const figures = figuresOf(read, effectiveMassOf(setup, world) / world.ball.mass);
+    const distance = ratioOf(setup, simulateFreeMotion(read.impact.handover, world));
+    return { read, figures, distance };
+}
+
+/** The read-out's speeds (m/s) and read time (ms), flagged when the strike did not close within its window. */
+function speedsText(r: ReadOut): string {
+    return (
+        `U ${fmt(r.U)}, W ${fmt(r.W)}, w1 ${fmt(r.w1)}, v2 ${fmt(r.v2)} m/s read at ${ms(r.time)} ms` +
+        `${r.open ? " (OPEN: a face interval not ended within the strike window)" : ""}`
+    );
+}
+
+/** The gaps (m) the sweep covers, finely below 0.5 mm (design §9). */
+const SWEEP_GAPS = [0, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.4, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 1.9].map((g) => g * 1e-3);
+
+/** Table 5's stroke `name`. */
+function filmed(name: string): FilmedStroke {
+    const found = FILMED_STROKES.find((s) => s.name === name);
+    if (found === undefined) {
+        throw new RangeError(`no filmed stroke ${name}`);
+    }
+    return found;
+}
+
+function sectionD(): void {
+    console.log(
+        "== D. Gap 0 re-measured, and the sweep (design §9): speeds in m/s, intervals in ms from the impact's start, " +
+            "the squared speed ratio (v2/w1)² and the distance ratio L2/L1 (the croqueted ball's travel to rest over " +
+            "the striker's) ==",
+    );
+    const drive = (gugan: boolean): ShotSetup =>
+        guganSetup("drive", GUGAN5.speed, 0, { world: STRIKE_WORLD, gugan, guideEffort: 0 });
+    for (const [label, gugan] of [
+        ["default mallet", false],
+        ["Gugan's mallet", true],
+    ] as const) {
+        const setup = drive(gugan);
+        const { read, figures, distance } = strikeOf(setup, STRIKE_WORLD);
+        console.log(
+            `-- D.1 the canonical drive, ${fmt(GUGAN5.speed)} m/s, gap 0, guideEffort 0, ${label} (effective mass ` +
+                `${fmt(effectiveMassOf(setup, STRIKE_WORLD) / STRIKE_WORLD.ball.mass)} ball masses) --`,
+        );
+        console.log(`  ${speedsText(read)}`);
+        for (const text of intervalTexts(read.impact)) {
+            console.log(`  interval ${text}`);
+        }
+        console.log(
+            `  (v2/w1)² ${fmt(figures.v2w1 ** 2)}, distance ratio ${fmt(distance)}; v2/U ${fmt(figures.v2U)}, ` +
+                `w1/W ${fmt(figures.w1W)}, v2/w1 ${fmt(figures.v2w1)}`,
+        );
+    }
+    console.log(
+        "-- D.2 the gap sweep, candidate a (the default mallet, no push, no jab): v2/U, w1/W, v2/w1 and the " +
+            "stroke's ratio L2/L1 at each gap (mm) --",
+    );
+    const series = [
+        { label: "drive at 3 m/s", type: "drive", speed: GUGAN5.speed },
+        { label: "AC stop at C3S's U", type: "stop-ac", speed: filmed("C3S").malletSpeed },
+        { label: "AC stop at C20S's U", type: "stop-ac", speed: filmed("C20S").malletSpeed },
+    ] as const;
+    for (const { label, type, speed } of series) {
+        console.log(`${label} (${fmt(speed)} m/s):`);
+        for (const gap of SWEEP_GAPS) {
+            const push = type === "drive" ? { guideEffort: 0 } : { jab: 0 };
+            try {
+                const setup = guganSetup(type, speed, gap, { world: STRIKE_WORLD, ...push });
+                const { read, figures, distance } = strikeOf(setup, STRIKE_WORLD);
+                console.log(
+                    `  gap ${mm(gap)} mm: v2/U ${fmt(figures.v2U)}, w1/W ${fmt(figures.w1W)}, v2/w1 ` +
+                        `${fmt(figures.v2w1)}, ratio ${fmt(distance)}${read.open ? " (OPEN)" : ""}`,
+                );
+            } catch (error) {
+                console.log(`  gap ${mm(gap)} mm: ${errorText(error)}`);
+            }
+        }
+    }
+}
+
+/** A filmed stroke's gap shifted by `delta` (m): never below 0, never within 0.1 mm of a croquet stroke's limit. */
+function shiftedGap(s: FilmedStroke, delta: number): number {
+    return Math.max(0, Math.min(s.gap + delta, CROQUET_GAP_LIMIT - 1e-4));
+}
+
+/** The filmed strokes' three figures as Table 5 gives them, and the energy kept with Gugan's effective mass. */
+function rowOf(s: FilmedStroke): ReturnType<typeof figuresOf> {
+    const k = GUGAN_EFFECTIVE_MASS;
+    const [U, W, w1, v2] = [s.malletSpeed, s.malletAfter, s.striker, s.croqueted];
+    return {
+        v2U: v2 / U,
+        w1W: w1 / W,
+        v2w1: v2 / w1,
+        WU: W / U,
+        energy: (k * W * W + w1 * w1 + v2 * v2) / (k * U * U),
+    };
+}
+
+/** The figures' keys and Gugan's means of the three the pass rests on. */
+const MEAN_KEYS = ["v2U", "w1W", "v2w1"] as const;
+
+function sectionE(): void {
+    console.log(
+        "== E. The filmed strokes (design §5.2, §5.3): each on its preset at its U and recorded gap, the preset's " +
+            "push, no jab, the default mallet; the model's figures against Table 5's row (the row's energy with " +
+            `k = ${fmt(GUGAN_EFFECTIVE_MASS)}, the model's with its own effective mass); OPEN marks a strike not ` +
+            "closed within the strike window, which no mean counts ==",
+    );
+    const world = defaultWorld();
+    const runs = filmedStrokeRuns(undefined, { world });
+    console.log("-- E.1 each stroke at its recorded gap --");
+    for (const { stroke, gap, read, figures } of runs) {
+        const row = rowOf(stroke);
+        const against = (m: number, r: number): string => `${fmt(m)} (row ${fmt(r)})`;
+        console.log(
+            `${stroke.name} (${stroke.preset}, U ${fmt(stroke.malletSpeed)} m/s, gap ${mm(gap)} mm` +
+                `${stroke.nominal ? ", nominal" : ""})${read.open ? " OPEN" : ""}: v2/U ${against(figures.v2U, row.v2U)}, ` +
+                `w1/W ${against(figures.w1W, row.w1W)}, v2/w1 ${against(figures.v2w1, row.v2w1)}, ` +
+                `W/U ${against(figures.WU, row.WU)}, energy ${against(figures.energy, row.energy)}; (v2/w1)² ` +
+                `${fmt(figures.v2w1 ** 2)} (row 16 ${stroke.squaredRatio === null ? "none" : fmt(stroke.squaredRatio)})`,
+        );
+    }
+    console.log(
+        "-- E.2 sensitivity: the nominal strokes repeated at ±0.5 mm (never below 0, never within 0.1 mm of 2 mm) --",
+    );
+    for (const delta of [-0.5e-3, 0.5e-3]) {
+        const shifted = filmedStrokeRuns((s) => (s.nominal ? shiftedGap(s, delta) : s.gap), { world });
+        for (const { stroke, gap, read, figures } of shifted.filter((r) => r.stroke.nominal)) {
+            const base = (runs.find((r) => r.stroke.name === stroke.name) as (typeof runs)[number]).figures;
+            console.log(
+                `${stroke.name} at ${mm(gap)} mm${read.open ? " OPEN" : ""}: v2/U ${fmt(figures.v2U)} ` +
+                    `(${fmt(figures.v2U - base.v2U)} from the recorded gap), w1/W ${fmt(figures.w1W)} ` +
+                    `(${fmt(figures.w1W - base.w1W)}), v2/w1 ${fmt(figures.v2w1)} (${fmt(figures.v2w1 - base.v2w1)})`,
+            );
+        }
+    }
+    console.log(
+        "-- E.3 the three means over the counted strokes (those closed within the window) against Gugan 4's, each " +
+            "pass when within his sem --",
+    );
+    const kinds = [
+        ["C3S and C20S counted", runs],
+        ["C3S and C20S left out", runs.filter((r) => r.stroke.name !== "C3S" && r.stroke.name !== "C20S")],
+    ] as const;
+    for (const [label, set] of kinds) {
+        const counted = set.filter((r) => !r.read.open);
+        const names = counted.map((r) => r.stroke.name).join(", ");
+        const means = meansOf(set);
+        const parts = MEAN_KEYS.map((key) => {
+            const { value, sem } = GUGAN_MEANS[key];
+            const diff = means[key] - value;
+            return (
+                `${key} ${fmt(means[key])} against ${fmt(value)} ± ${fmt(sem)} (${fmt(diff)}, ${fmt(diff / sem)} ` +
+                `sem): ${verdict(Math.abs(diff) <= sem)}`
+            );
+        });
+        console.log(`${label} (${counted.length} counted: ${names}): ${parts.join("; ")}`);
+    }
+}
+
+/** A Fig. 4 reading as the research agent made it (reference/sources/README.md:609-616), frames from first contact. */
+const RESEARCH_FRAMES: Readonly<Record<string, readonly [number, number, number, number, number]>> = {
+    C3S: [4.8, 5.2, 11.3, 11.0, 19.1],
+    C20S: [4.0, 5.2, 10.0, 9.8, 16.2],
+    C1D: [6.0, 6.5, 13.2, 12.8, 21.1],
+    C10S: [4.8, 6.1, 11.1, 10.9, 19.0],
+    C3D: [4.8, 7.9, 11.3, 10.8, 16.2],
+    C10D: [3.8, 6.0, 9.3, 6.3, 13.3],
+};
+
+/** The model's four times (s from the face's first contact) and whether its three bodies stay loaded together. */
+interface ModelTiming {
+    readonly firstMoves: number | null;
+    readonly firstContactEnds: number;
+    readonly leaves: number | null;
+    readonly secondTap: readonly [number, number] | null;
+    readonly together: boolean;
+}
+
+/**
+ * `setup`'s timing as Fig. 4 shows it: the second ball first displaced by VISIBLE_SHIFT, the first face interval's end,
+ * the ball–ball interval's end (the latest beginning within STRIKE_WINDOW) and any second face interval. `together`
+ * when the first face interval spans the whole ball–ball interval, so that the mallet never lets go before the ball
+ * leaves.
+ */
+function timingOf(setup: ShotSetup, world: World): ModelTiming {
+    const contact = planStroke(setup, world).contact;
+    const other = setup.croqueted ?? setup.live[0];
+    if (other === undefined) {
+        throw new RangeError(`timingOf: the ${setup.stroke.type} stroke has no second ball`);
+    }
+    const ids = BALL_IDS.filter((id) => setup.balls[id] !== undefined);
+    const second = ids.indexOf(other);
+    const home = (setup.balls[other] as BallState).position;
+    let moved: number | null = null;
+    const probe: ImpactProbe = {
+        step(s) {
+            const shift = length(horizontal(sub((s.balls[second] as BallState).position, home)));
+            if (moved === null && shift > VISIBLE_SHIFT) {
+                moved = s.t;
+            }
+        },
+    };
+    const impact = simulateImpact(contact, setup.balls, world, { probe });
+    const face: readonly ContactInterval[] = impact.timeline[faceKey(setup.striker)] ?? [];
+    const first = face[0];
+    if (first === undefined) {
+        throw new RangeError(`timingOf: the face never touched the ${setup.striker} ball`);
+    }
+    const pair = impact.timeline[ballPairKey(setup.striker, other)] ?? [];
+    const within = pair.filter((i) => i.start <= first.start + STRIKE_WINDOW);
+    const start = within[0];
+    const leaves = within.length === 0 ? null : Math.max(...within.map((i) => i.end));
+    const tap = face[1];
+    const hold = start !== undefined && leaves !== null && first.start <= start.start && first.end >= leaves;
+    return {
+        firstMoves: moved === null ? null : (moved as number) - first.start,
+        firstContactEnds: first.end - first.start,
+        leaves: leaves === null ? null : leaves - first.start,
+        secondTap: tap === undefined ? null : [tap.start - first.start, tap.end - first.start],
+        together: hold,
+    };
+}
+
+function sectionF(): void {
+    console.log(
+        "== F. The timing (design §7.1): ms from the mallet's first contact; the croqueted ball first moving (shifted " +
+            `by ${mm(VISIBLE_SHIFT)} mm), the mallet's first contact ending, the ball–ball interval's end (the ball ` +
+            "leaving), any second face interval; the model beside Fig. 4's research reading and re-reading " +
+            '(reference/sources/README.md:594-619), each ±0.5 frame on Gugan\'s own "a frame or two" ' +
+            `(one frame ${ms(VIDEO_FRAME)} ms) ==`,
+    );
+    const world = defaultWorld();
+    const frames = (f: number): string => ms(f * VIDEO_FRAME);
+    for (const name of ["C3S", "C20S", "C1D", "C10S", "C3D", "C10D"]) {
+        const stroke = filmed(name);
+        const reread = FIG4_TIMING.find((t) => t.name === name);
+        const research = RESEARCH_FRAMES[name];
+        if (reread === undefined || research === undefined) {
+            throw new RangeError(`no Fig. 4 reading of ${name}`);
+        }
+        const setup = guganSetup(stroke.preset, stroke.malletSpeed, stroke.gap, { world });
+        const model = timingOf(setup, world);
+        const opt = (t: number | null): string => (t === null ? "none" : ms(t));
+        const tap = (t: readonly [number, number] | null): string =>
+            t === null ? "none" : `[${ms(t[0])}, ${ms(t[1])}]`;
+        console.log(
+            `${name} (${stroke.preset}, U ${fmt(stroke.malletSpeed)} m/s, gap ${mm(stroke.gap)} mm)` +
+                `${model.together ? " FAILS THE CHECK: all three bodies loaded together throughout" : ""}:`,
+        );
+        console.log(
+            `  first moves: model ${opt(model.firstMoves)}, research ${frames(research[0])}, ` +
+                `re-read ${ms(reread.firstMoves)}`,
+        );
+        console.log(
+            `  first contact ends: model ${ms(model.firstContactEnds)}, research ${frames(research[1])}, ` +
+                `re-read ${ms(reread.firstContactEnds)}`,
+        );
+        console.log(
+            `  leaves: model ${opt(model.leaves)}, research ${frames(research[2])}, re-read ${ms(reread.leaves)}`,
+        );
+        const second = reread.secondTap;
+        console.log(
+            `  second face interval: model ${tap(model.secondTap)}, research [${frames(research[3])}, ` +
+                `${frames(research[4])}], re-read ${tap(second)}`,
+        );
+    }
+}
+
+function sectionG(): void {
+    console.log(
+        "== G. The convergence (design §6): each judged figure at dt/2, dt and 2·dt (dt = " +
+            `${fmt(IMPACT_DT * 1e6)} µs), its spread over its tolerance (the means' Gugan sem, the ratios' ` +
+            "Gugan 5 tolerance), pass when under a tenth ==",
+    );
+    const dts = STEP_SHARES.map((k) => k * IMPACT_DT);
+    const line = (label: string, values: readonly number[], tolerance: number): void => {
+        const spread = spreadOf(values);
+        console.log(
+            `${label}: ${values.map((v, i) => `${fmt(v)} at ${fmt((dts[i] as number) * 1e6)} µs`).join(", ")}; ` +
+                `spread ${fmt(spread)} over tolerance ${fmt(tolerance)} = ${fmt(spread / tolerance)}: ` +
+                verdict(spread < tolerance / 10),
+        );
+    };
+    console.log("-- G.1 the filmed strokes' three means, each stroke at its recorded gap --");
+    const means = dts.map((dt) => meansOf(filmedStrokeRuns(undefined, { dt })));
+    for (const key of MEAN_KEYS) {
+        line(
+            `mean ${key}`,
+            means.map((m) => m[key]),
+            GUGAN_MEANS[key].sem,
+        );
+    }
+    console.log("-- G.2 Gugan 5's drive (no push) and stop (jab 0), 3 m/s, Gugan's mallet --");
+    for (const gap of [0, 0.001]) {
+        for (const [type, tolerance] of [
+            ["drive", GUGAN5.drive.tolerance],
+            ["stop-ac", GUGAN5.stop.tolerance],
+        ] as const) {
+            line(
+                `${type} ratio at gap ${mm(gap)} mm`,
+                dts.map((dt) => guganRatio(type, gap, dt, STRIKE_WORLD)),
+                tolerance,
+            );
+        }
+    }
+}
+
+const SECTIONS: Readonly<Record<string, () => void>> = {
+    A: sectionA,
+    B: sectionB,
+    C: sectionC,
+    D: sectionD,
+    E: sectionE,
+    F: sectionF,
+    G: sectionG,
+    H: sectionH,
+};
+
+/** The sections `all` runs, in order: B, C and H only by name. Later sections (I-M) are appended here. */
+const ALL_SECTIONS: readonly string[] = ["A", "D", "E", "F", "G"];
+
 if (SECTION !== "all" && SECTIONS[SECTION] === undefined) {
     throw new Error(`SECTION must be "all" or one of ${Object.keys(SECTIONS).join(", ")}`);
 }
 if (SECTION === "all") {
-    console.log(
-        "== all: sections A, B, C and H; D-G are not run, because the fit moved to a new step (the design's " +
-            "Amendments, 2026-10-20) ==",
-    );
+    console.log(`== all: sections ${ALL_SECTIONS.join(", ")}; B, C and H only by name ==`);
 }
-for (const [name, section] of Object.entries(SECTIONS)) {
-    if (runs(name)) {
-        section();
-    }
+for (const name of SECTION === "all" ? ALL_SECTIONS : [SECTION]) {
+    (SECTIONS[name] as () => void)();
 }
