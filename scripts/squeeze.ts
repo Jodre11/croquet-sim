@@ -4,7 +4,7 @@
  * of the default world's, one moving, no head contact, no turf and no gravity. It reports the law's own contact time
  * and the contact as Gugan 4's video would time it, from the struck ball's displacement first exceeding VISIBLE_SHIFT
  * to the pair's gap first exceeding it (plan decision 6). scripts/croquetFitProbe.ts's section I judges each candidate
- * with them.
+ * with them, and its section F times the strike as the video would with `visible` and `videoIntervals`.
  */
 import type { PairLaw } from "../src/engine/impact/contactLaw";
 import { IMPACT_DT, integrate, type ImpactProbe } from "../src/engine/impact/integrate";
@@ -24,6 +24,41 @@ const START_GAP = 1e-5;
  * speed.
  */
 const FREE_CAP = 4e-3;
+
+/** True when `distance` (m), a body's displacement or two surfaces' separation, exceeds what the video resolves. */
+export function visible(distance: number): boolean {
+    return distance > VISIBLE_SHIFT;
+}
+
+/** A contact as the video sees it: its start and end (s), the end null while it is still on at the last sample. */
+export interface VideoInterval {
+    readonly start: number;
+    readonly end: number | null;
+}
+
+/**
+ * The intervals over which `samples` (in time order: each step's end t (s) and the two bodies' surface separation (m),
+ * negative while they overlap) show a contact to the video: on from the first sample whose separation is not visible,
+ * off at the next that is.
+ */
+export function videoIntervals(
+    samples: readonly { readonly t: number; readonly separation: number }[],
+): readonly VideoInterval[] {
+    const intervals: VideoInterval[] = [];
+    let start: number | null = null;
+    for (const { t, separation } of samples) {
+        if (start === null && !visible(separation)) {
+            start = t;
+        } else if (start !== null && visible(separation)) {
+            intervals.push({ start, end: t });
+            start = null;
+        }
+    }
+    if (start !== null) {
+        intervals.push({ start, end: null });
+    }
+    return intervals;
+}
 
 /**
  * A free collision of the default world's balls under `law` at `speed` (m/s), at `o.dt`'s step (default the engine's
@@ -53,11 +88,11 @@ export function freeCollision(
                 seen.closed++;
             }
             const [striker, struck] = s.balls as readonly [BallState, BallState];
-            if (seen.moved === null && length(sub(struck.position, home)) > VISIBLE_SHIFT) {
+            if (seen.moved === null && visible(length(sub(struck.position, home)))) {
                 seen.moved = s.t;
             }
             const gap = length(sub(struck.position, striker.position)) - 2 * R;
-            if (seen.moved !== null && seen.parted === null && gap > VISIBLE_SHIFT) {
+            if (seen.moved !== null && seen.parted === null && visible(gap)) {
                 seen.parted = s.t;
             }
         },
