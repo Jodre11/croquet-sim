@@ -71,7 +71,7 @@ import { CROQUET_GAP_LIMIT } from "../src/engine/shot";
 import { simulateFreeMotion } from "../src/engine/simulate";
 import { buildContact, planStroke } from "../src/engine/swing/buildContact";
 import { defaultProfile } from "../src/engine/swing/profile";
-import type { ShotSetup, SwingProfile } from "../src/engine/swing/types";
+import type { ShotSetup } from "../src/engine/swing/types";
 import { BALL_IDS, type BallId, type BallState, type World } from "../src/engine/types";
 import { defaultWorld } from "../src/engine/world";
 import { ratioTargetsReference, type RatioTargetKey } from "../src/reference/index";
@@ -91,8 +91,10 @@ import * as OpenLawn from "./openLawn";
 import { OPEN_LAWN, OPEN_START, haltedText, openWorld, opened } from "./openLawn";
 import * as RatioFit from "./ratioFit";
 import {
+    ALL_STROKES,
     BOUNDS,
     CA_STROKES,
+    GAPPED_STROKES,
     GUGAN_EFFECTIVE_MASS,
     STEP_SHARES,
     STRIKE_WINDOW,
@@ -693,7 +695,7 @@ function sweepGrips(): void {
             `${fmt(GRIP_BOUNDS[1])}] (the presets' own range), the shared candidates at today's values; ` +
             "follow-through flags at the swept points only --",
     );
-    const world = fitWorld(TODAY);
+    const world = STRIKE_WORLD;
     const grips: readonly GripCandidate[] = TARGETS.flatMap((target) =>
         (["gripTension", "bottomGrip"] as const).map((field) => ({ target, field })),
     );
@@ -1024,7 +1026,7 @@ function sectionE(): void {
             `k = ${fmt(GUGAN_EFFECTIVE_MASS)}, the model's with its own effective mass); OPEN marks a strike not ` +
             "closed within the strike window, which no mean counts ==",
     );
-    const world = defaultWorld();
+    const world = STRIKE_WORLD;
     const runs = filmedStrokeRuns(undefined, { world });
     console.log("-- E.1 each stroke at its recorded gap --");
     for (const { stroke, gap, read, figures } of runs) {
@@ -1064,8 +1066,9 @@ function sectionE(): void {
     ] as const;
     for (const [label, set] of kinds) {
         const counted = set.filter((r) => !r.read.open);
-        const names = counted.map((r) => r.stroke.name).join(", ");
-        const means = meansOf(set);
+        const named = counted.map((r) => r.stroke.name);
+        const names = named.join(", ");
+        const means = meansOf(set, named);
         const parts = MEAN_KEYS.map((key) => {
             const { value, sem } = GUGAN_MEANS[key];
             const diff = means[key] - value;
@@ -1184,7 +1187,7 @@ function sectionF(): void {
             "contact the video still sees at the " +
             "impact's end ==",
     );
-    const world = defaultWorld();
+    const world = STRIKE_WORLD;
     const frames = (f: number): string => ms(f * VIDEO_FRAME);
     const at = (t: number): string => (t === Infinity ? "on" : ms(t));
     const opt = (t: number | null): string => (t === null ? "none" : at(t));
@@ -1240,7 +1243,7 @@ function sectionG(): void {
         );
     };
     console.log("-- G.1 the filmed strokes' three means, each stroke at its recorded gap --");
-    const means = dts.map((dt) => meansOf(filmedStrokeRuns(undefined, { dt })));
+    const means = dts.map((dt) => meansOf(filmedStrokeRuns(undefined, { dt }), ALL_STROKES));
     for (const key of MEAN_KEYS) {
         line(
             `mean ${key}`,
@@ -1420,7 +1423,7 @@ function batteryOf(world: World): Battery {
             swept.map((s) => `${mm(s.gap)} mm ${fmt(s.v2U)}${s.open ? " OPEN" : ""}`).join(", "),
     };
     const gapped = runs.filter((r) => r.stroke.gap > 0);
-    const means = meansOf(gapped);
+    const means = meansOf(runs, GAPPED_STROKES);
     const parts = MEAN_KEYS.map((key) => {
         const { value, sem } = GUGAN_MEANS[key];
         return {
@@ -1811,28 +1814,12 @@ const BALL_WORLDS: readonly { readonly label: string; readonly world: World }[] 
     },
 ];
 
-// Gugan's mallet is solved per preset and world (about 11 s each) and does not depend on the gap or the jab.
-const GUGAN_MALLETS = new WeakMap<World, Map<string, SwingProfile["mallet"]>>();
-
-/** Gugan's mallet for `type` at 3 m/s on `world`, solved once. */
-function guganMallet(type: "drive" | "stop-ac", world: World): SwingProfile["mallet"] {
-    const cache = GUGAN_MALLETS.get(world) ?? new Map<string, SwingProfile["mallet"]>();
-    GUGAN_MALLETS.set(world, cache);
-    const cached = cache.get(type);
-    if (cached !== undefined) {
-        return cached;
-    }
-    const mallet = gugansMallet(type, GUGAN5.speed, world);
-    cache.set(type, mallet);
-    return mallet;
-}
-
 /** Design §7.2's stroke at `gap` (m) and `jab` (m, the stop's): guganSetup's, with the mallet solved once per world. */
 function guganPlayed(type: "drive" | "stop-ac", gap: number, jab: number, world: World): ShotSetup {
     const setup = canonicalSetup(type, {
         world,
         croquetGap: gap,
-        mallet: guganMallet(type, world),
+        mallet: gugansMallet(type, GUGAN5.speed, world),
         stroke: type === "drive" ? { guideEffort: 0 } : { jab },
     });
     return { ...setup, stroke: { ...setup.stroke, ...strokeFor(setup, GUGAN5.speed, world) } };
@@ -2038,7 +2025,7 @@ function sectionK(): void {
         "-- K.2 the film's spread across its gaps (Table 5, the ten strokes) beside the model's (section E's runs, " +
             "the default mallet, the recorded gaps; strokes whose strike did not close in its window left out) --",
     );
-    const counted = filmedStrokeRuns(undefined, { world: defaultWorld() }).filter((r) => !r.read.open);
+    const counted = filmedStrokeRuns(undefined, { world: STRIKE_WORLD }).filter((r) => !r.read.open);
     const gaps = counted.map((r) => r.gap * 1e3);
     let agree = true;
     for (const key of ["v2U", "v2w1"] as const) {
@@ -2114,7 +2101,7 @@ function sectionL(): void {
     console.log(
         "-- L.1 each filmed stroke at its recorded gap (the default mallet), against Table 5's rows 16 and 17 --",
     );
-    const world = defaultWorld();
+    const world = STRIKE_WORLD;
     for (const { stroke, gap, read, figures } of filmedStrokeRuns(undefined, { world })) {
         const setup = guganSetup(stroke.preset, stroke.malletSpeed, gap, { world });
         const distance = distanceOf(setup, simulateFreeMotion(read.impact.handover, world));
@@ -2225,9 +2212,9 @@ function sectionM(): void {
             `DEFAULT_CROQUET_GAP (${mm(DEFAULT_CROQUET_GAP)} mm), the AC stop's face–ball intervals, the drive's ` +
             "effective mass ==",
     );
-    const world = defaultWorld();
+    const world = STRIKE_WORLD;
     console.log(
-        "-- M.1 Gugan's jab (tests/engine/turfStrike.test.ts, the AC stop, the default mallet, " +
+        "-- M.1Gugan's jab (tests/engine/turfStrike.test.ts, the AC stop, the default mallet, " +
             `${fmt(GUGAN5.speed)} m/s, the default world): each depth judged as the test judges it; the band is ` +
             `[${fmt(JAB_BAND[0])}, ${fmt(JAB_BAND[1])}]·U, U and the second tap the head's speed along aim at the ` +
             "face region's first " +

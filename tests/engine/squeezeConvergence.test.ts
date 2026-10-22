@@ -1,7 +1,16 @@
 import { describe, expect, it } from "vitest";
 import { IMPACT_DT } from "../../src/engine/impact/integrate";
 import { GUGAN5, GUGAN_MEANS } from "../../scripts/filmedStrokes";
-import { STEP_SHARES, TODAY, filmedStrokeRuns, fitWorld, guganRatio, meansOf, spreadOf } from "../../scripts/ratioFit";
+import {
+    ALL_STROKES,
+    STEP_SHARES,
+    TODAY,
+    filmedStrokeRuns,
+    fitWorld,
+    guganRatio,
+    meansOf,
+    spreadOf,
+} from "../../scripts/ratioFit";
 
 const SLOW = Boolean(import.meta.env.SLOW_TESTS);
 
@@ -15,7 +24,7 @@ describe.runIf(SLOW)("the strike's step convergence (P2b.2b.2c.2b design §6)", 
     // Ten strokes' impacts at each of three steps. Each case's timeout is 4× the whole file's local time (76.4 s), as
     // its cases' own times are not printed.
     it("keeps the filmed strokes' three means, each stroke at its recorded gap", () => {
-        const runs = STEP_SHARES.map((k) => meansOf(filmedStrokeRuns(undefined, { dt: k * IMPACT_DT })));
+        const runs = STEP_SHARES.map((k) => meansOf(filmedStrokeRuns(undefined, { dt: k * IMPACT_DT }), ALL_STROKES));
         expect(spreadOf(runs.map((r) => r.v2U))).toBeLessThan(GUGAN_MEANS.v2U.sem / 10);
         expect(spreadOf(runs.map((r) => r.w1W))).toBeLessThan(GUGAN_MEANS.w1W.sem / 10);
         expect(spreadOf(runs.map((r) => r.v2w1))).toBeLessThan(GUGAN_MEANS.v2w1.sem / 10);

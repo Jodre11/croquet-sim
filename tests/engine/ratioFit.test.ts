@@ -1,21 +1,25 @@
 import { describe, expect, it } from "vitest";
-import { faceHalfHeight } from "../../src/engine/impact/shape";
 import { simulateShot } from "../../src/engine/shot";
-import { headShapeOf, stanceLean } from "../../src/engine/swing/buildContact";
 import { defaultProfile } from "../../src/engine/swing/profile";
 import type { ShotSetup } from "../../src/engine/swing/types";
 import { BALL_IDS, type BallState, type ShotResult, type World } from "../../src/engine/types";
 import { defaultWorld } from "../../src/engine/world";
 import { length, sub } from "../../src/engine/math/vec3";
+import { FILMED_STROKES } from "../../scripts/filmedStrokes";
 import { OPEN_LAWN, OPEN_START, haltedText, openWorld, opened } from "../../scripts/openLawn";
 import {
+    ALL_STROKES,
     BOUNDS,
+    GAPPED_STROKES,
     TODAY,
     effectiveMassOf,
+    filmedStrokeRuns,
     fitSetup,
     fitWorld,
     guganSetup,
     gugansMallet,
+    leanOf,
+    meansOf,
     ratioOf,
     ratiosAt,
     readOut,
@@ -30,17 +34,6 @@ import { canonicalSetup, strokeFor } from "./support/shot";
 const SLOW = Boolean(import.meta.env.SLOW_TESTS);
 
 const WORLD = defaultWorld();
-
-/** The stance's shaft lean (rad) at `setup`'s contact, with its own mallet. */
-function leanOf(setup: ShotSetup): number {
-    const { stroke, profile } = setup;
-    const stance = profile.stance[stroke.type];
-    return stanceLean(stance.handsAhead, stance.top, stroke.contact.up, {
-        ballRadius: WORLD.ball.radius,
-        headLength: profile.mallet.headLength,
-        faceHalfHeight: faceHalfHeight(headShapeOf(profile.mallet.head)),
-    });
-}
 
 /** The default world with a ball ten times as heavy. */
 function heavyBallWorld(): World {
@@ -253,7 +246,7 @@ describe("Gugan's mallet (design 'My calls', §8.1)", () => {
             const before = structuredClone(defaultProfile.mallet);
             const setup = guganSetup(type, 3, 0, { gugan: true });
             expect(Math.abs(effectiveMassOf(setup, WORLD) - 2.3 * WORLD.ball.mass)).toBeLessThanOrEqual(1e-6);
-            expect(leanOf(setup)).toBeCloseTo(leanOf(canonicalSetup(type)), 12);
+            expect(leanOf(setup, WORLD)).toBeCloseTo(leanOf(canonicalSetup(type), WORLD), 12);
             expect(defaultProfile.mallet).toEqual(before);
         }
     }, 150_000);
@@ -282,5 +275,27 @@ describe("the fit's entry points (P2b.2b.2c.2's final review)", () => {
         const p = { ...TODAY, armMass: BOUNDS.armMass[0] };
         const setup = fitSetup("drive", p, 3);
         expect(ratioOf(setup, runFit(setup, p, fitWorld(p)).motion)).not.toBe(ratiosAt(TODAY).drive);
+    });
+});
+
+describe("the read-out's tidy (P2b.2b.2c.2c design §10)", () => {
+    const I = (start: number, end: number) => ({ start, end });
+    /** A `filmedStrokeRuns` element with only the fields `meansOf` reads. */
+    const run = (name: string, v2U: number, open: boolean) =>
+        ({ stroke: { name }, read: { open }, figures: { v2U, w1W: v2U, v2w1: v2U } }) as unknown as ReturnType<
+            typeof filmedStrokeRuns
+        >[number];
+    it("flags a strike whose ball–ball contact is still open at the window's end", () => {
+        expect(readTimeOf([I(0, 8e-4)], [I(5e-4, 16e-3)]).open).toBe(true);
+    });
+    it("averages over exactly the named strokes, and throws for one not counted", () => {
+        const runs = [run("C1D", 1.1, false), run("C3D", 1.2, false), run("C3S", 9, true)];
+        expect(meansOf(runs, ["C1D", "C3D"]).v2U).toBeCloseTo(1.15, 12);
+        expect(() => meansOf(runs, ["C1D", "C3S"])).toThrow(/C3S/);
+        expect(() => meansOf(runs, ["C1D", "B4GS"])).toThrow(/B4GS/);
+    });
+    it("holds the eight gapped strokes and all ten by name", () => {
+        expect(GAPPED_STROKES).toEqual(FILMED_STROKES.filter((s) => s.gap > 0).map((s) => s.name));
+        expect(ALL_STROKES).toEqual(FILMED_STROKES.map((s) => s.name));
     });
 });
