@@ -336,8 +336,10 @@ https://worldcroquet.org/wp-content/uploads/2021/04/Laws-Rulings-Commentary-comb
   (`touchingAtStart`), and the parting is the latest of their first intervals' ends. A re-contact before the balls
   have first met, possible in a gapped stroke, also precedes their parting and is within the strike. A ball–ball
   re-touch after the first interval does not extend the strike (my call: the first parting is the one C29.11.2
-  describes), and a one-step break in the timeline counts as a parting, as the timeline counts any step out of contact
-  (intended; §8.1 pins it, and the probe reports any first ball–ball interval re-touched within 0.1 ms, to gate E).
+  describes). A break in the ball–ball timeline shorter than one frame of the film (0.125 ms, the finest record any
+  source gives of balls parting) is not a parting: the intervals either side are one for this rule (my call, after
+  the user's "report them, never flag"; a step-scale break is a numerical artefact no eye could see). The timeline
+  itself is unchanged, and every such break is reported, with its length, to gate E.
 - The 29.2.4.1 exemption filters the face contacts first, as today (`faults.ts:309`). 29.1.6.1 is then raised only if
   a non-exempt contact after the first begins at or after the parting, at that contact's start; its evidence keeps
   today's form (`contactEvidence`: every non-exempt contact counted, every face gap with its clearance) and adds
@@ -390,8 +392,9 @@ Each re-measured on the admitted laws, each to the gate:
   e 0.72 to 1e-9; the last step's `it.fails` removed.
 - **The double tap:** on constructed timelines, a re-contact before the balls part is reported and not flagged; one
   after is flagged as today; a single-ball stroke's 29.1.6.2 unchanged; a continuation stroke touching two balls
-  parts at the later first interval's end; a first ball–ball interval broken for one step counts as a parting, and a
-  tap after it is flagged; an exempt contact is filtered before the rule applies.
+  parts at the later first interval's end; a first ball–ball interval broken for one step is not a parting, and a tap
+  after the break is reported, not flagged; a break of one frame or longer is a parting, and a tap after it is
+  flagged; an exempt contact is filtered before the rule applies.
 - **Any admitted candidate** brings its own cases, including bit-identity when switched off.
 
 ### 8.2 The ratchet
@@ -501,3 +504,6 @@ T(U), `ballBallContactTime` and the default gap.
   face's q fit offered on its own trigger, so candidate h is removed; either law may land alone; `contact.json`'s face
   edits listed; §7.6's free head is a throwaway variant; §7.9 judges criteria 3–4; gate F batches the carried
   diagnostics.
+- **2026-10-22, after the review:** a ball–ball break shorter than one film frame (0.125 ms) no longer counts as the
+  balls parting (§6, §8.1). Counting a one-step numerical break as a parting would have flagged taps the user asked to
+  be "report[ed], never flag[ged]".
