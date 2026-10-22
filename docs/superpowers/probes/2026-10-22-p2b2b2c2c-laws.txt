@@ -1,0 +1,204 @@
+P2b.2b.2c.2c, the face and ball-ball contact laws: stage 1's evidence (plan Task 4; design §2, §4.1, §5, §5.3).
+Run 2026-10-22 on branch worktree-p2b2b2c2c-contact-laws. I.0 runs on the worktree (today's laws); each
+candidate runs from a throwaway copy carrying it (never committed) with TODAY_ROOT the worktree.
+Copies: laws (both re-sets), face (the face's T(U) alone), ballball (the ball-ball and obstacle times alone).
+
+######## I.0, the conversions (worktree, today's laws): env SECTION=I
+
+== I. The contact laws (P2b.2b.2c.2c design §2, §4): with no CANDIDATE, I.0's conversions on the worktree; with CANDIDATE (laws, face, ballball, laws-q, f, g) and TODAY_ROOT, that copy's tests of §4.1 with their figures: 1, C3S and C20S at gap 0 within §5.2's band of each figure; 2, v2/U across the gap within Table 5's spread; 3, the gapped strokes' means within Gugan's sem; 4, Table 1's three free collisions as the video times them; 5, Table 2's A2D face contact in the full single-ball stroke as the video times it, and the CA's single-ball strokes unchanged within their measurement; 6, every constant sourced or argued. The last step's candidates a, c and d: SECTION=I-old ==
+-- I.0 the conversions on today's laws: the free face at dt 10.0000 ns, the free collisions at 0.1000 µs, the video's threshold 0.2000 mm; "law time" the contact with the penetration δ > 0, "force-on" with the normal force > 0, the law's parameter T (contact.json's sense); the video from the struck ball's first visible move (the design's Vocabulary) --
+-- I.0.1 the face, per Table 2 column (Τh ± 0.1 ms, row 4) --
+A1D (U 0.7600 m/s): Τh 1.0000 ms; today's T(U) 1.2373 ms; the free face's law time 1.2957 ms, force-on 1.2373 ms, video 0.8441 ms, e 0.8474; faceScaleFor(Τh, U) 1.188098, implying the parameter (force-on) 1.4701 ms and the law time 1.5394 ms
+  sensitivity, NOT ADOPTED: the video from the face's arrival within 0.2000 mm of the ball (extrapolated to t = −shift/U before the first touch): today's video 1.8694 ms, scale 0.329006, implying the parameter 0.4071 ms
+A2D (U 3.2600 m/s): Τh 0.7500 ms; today's T(U) 0.8852 ms; the free face's law time 0.9376 ms, force-on 0.8852 ms, video 0.6475 ms, e 0.8145; faceScaleFor(Τh, U) 1.146019, implying the parameter (force-on) 1.0144 ms and the law time 1.0746 ms
+  sensitivity, NOT ADOPTED: the video from the face's arrival within 0.2000 mm of the ball (extrapolated to t = −shift/U before the first touch): today's video 1.0743 ms, scale 0.654126, implying the parameter 0.5790 ms
+A3D (U 5.7000 m/s): Τh 0.6000 ms; today's T(U) 0.7784 ms; the free face's law time 0.8304 ms, force-on 0.7784 ms, video 0.5983 ms, e 0.7953; faceScaleFor(Τh, U) 1.002585, implying the parameter (force-on) 0.7804 ms and the law time 0.8325 ms
+  sensitivity, NOT ADOPTED: the video from the face's arrival within 0.2000 mm of the ball (extrapolated to t = −shift/U before the first touch): today's video 0.9096 ms, scale 0.627167, implying the parameter 0.4882 ms
+A4D (U 8.5400 m/s, the fits read at the clamp's 6.0000 m/s): Τh 0.6000 ms; today's T(U) 0.7693 ms; the free face's law time 0.7669 ms, force-on 0.7149 ms, video 0.5704 ms, e 0.7806; faceScaleFor(Τh, U) 1.047888, implying the parameter (force-on) 0.8061 ms and the law time 0.8036 ms
+  sensitivity, NOT ADOPTED: the video from the face's arrival within 0.2000 mm of the ball (extrapolated to t = −shift/U before the first touch): today's video 0.8203 ms, scale 0.712711, implying the parameter 0.5483 ms
+-- I.0.2 the new face law: t0 = A2D's scale 1.146019 × today's T(3.2600) 0.8852 ms = 1.0144 ms, u0 3.2600 m/s, q -0.2300 (today's t0 0.9700 ms at u0 2.1900 m/s). It is today's T(U) × the scale at every U, so each column's video time on it is scale · videoTime(today; shift/scale) (Hertz similarity, scripts/squeeze.ts) --
+A1D (held out, U 0.7600 m/s): video 0.9648 ms against 1.0000 ± 0.1000 ms (off -0.0352 ms): pass
+A2D (the anchor, U 3.2600 m/s): video 0.7500 ms against 0.7500 ± 0.1000 ms (off 0.0000 ms): pass
+A3D (held out, U 5.7000 m/s): video 0.6935 ms against 0.6000 ± 0.1000 ms (off 0.0935 ms): pass
+A4D (held out, U 8.5400 m/s; played on the law clamped at 6.0000 m/s): video 0.6610 ms against 0.6000 ± 0.1000 ms (off 0.0610 ms): pass
+-- I.0.3 Table 2's implied restitution, (v − V)/U (rows 9, 8, 7), beside e(U), recorded only --
+A1D: Table 2 0.7368, e(U) 0.8474, the free face's 0.8474
+A2D: Table 2 0.8252, e(U) 0.8145, the free face's 0.8145
+A3D: Table 2 0.6982, e(U) 0.7953, the free face's 0.7953
+A4D: Table 2 0.7037, e(U) 0.7933 (at 6.0000 m/s), the free face's 0.7806
+  Table 2's caveat (Gugan 4, §5.2): "Even at 8000 frames per second the duration of contact is hard to measure ... its end is often uncertain to a frame or two"
+-- I.0.4 the q fit over all four columns (plan decision 10), recorded: every held-out column passes --
+A1D at 0.7600 m/s: its own parameter 1.4701 ms, the fit's 1.4912 ms
+A2D at 3.2600 m/s: its own parameter 1.0144 ms, the fit's 0.9632 ms
+A3D at 5.7000 m/s: its own parameter 0.7804 ms, the fit's 0.8145 ms
+A4D at 6.0000 m/s: its own parameter 0.8061 ms, the fit's 0.8020 ms
+  t0 0.9632 ms, u0 3.2600 m/s, q -0.3001
+-- I.0.5 the ball–ball law (Table 1's three clean strokes, e 0.72) --
+ballBallTimeFor(0.7500 ms): the parameter T (force-on) 0.9676 ms; video misses -52.5000 µs at 1.9000 m/s, 27.2000 µs at 5.5400 m/s, 52.5000 µs at 7.6400 m/s (today's 0.7500 ms)
+  1.9000 m/s: video 0.6975 ms, law time 1.0413 ms, force-on 0.9676 ms, e 0.7200
+  5.5400 m/s: video 0.7772 ms, law time 1.0413 ms, force-on 0.9675 ms, e 0.7200
+  7.6400 m/s: video 0.8025 ms, law time 1.0413 ms, force-on 0.9675 ms, e 0.7200
+the lower bound, ballBallTimeFor(0.5000 ms): the parameter T (force-on) 0.6665 ms; video misses -32.5000 µs at 1.9000 m/s, 14.9000 µs at 5.5400 m/s, 32.5000 µs at 7.6400 m/s
+the upper bound, ballBallTimeFor(0.8700 ms): the parameter T (force-on) 1.1084 ms; video misses -61.1000 µs at 1.9000 m/s, 32.6000 µs at 5.5400 m/s, 61.1000 µs at 7.6400 m/s
+  the obstacle: 0.9676 ms in [0.5798, 1.0000] ms (lower 0.8700 × the ball–ball's; upper as today, from the obstacle fuzz): inside its upper bound
+-- I.0.6 the constants: JSON fragments for reference/contact.json, full precision, each time a parameter (force-on, s) --
+BEGIN CONSTANTS
+{
+    "faceContactTimeFit": {
+        "coefficients": {
+            "t0": 0.0010144378922743106,
+            "u0": 3.26,
+            "q": -0.23
+        }
+    },
+    "ballBallContactTime": {
+        "value": 0.0009675934407722237,
+        "bounds": [
+            0.0006664528372601825,
+            0.0011083628030414332
+        ]
+    },
+    "ballObstacleContactTime": {
+        "value": 0.0009675934407722237,
+        "bounds": [
+            0.0005798139684163588,
+            0.001
+        ]
+    }
+}
+END CONSTANTS
+BEGIN OFFERED (the q fit; recorded, not offered; not adopted)
+{
+    "faceContactTimeFit": {
+        "coefficients": {
+            "t0": 0.0009631973312940829,
+            "u0": 3.26,
+            "q": -0.3001395199047728
+        }
+    }
+}
+END OFFERED
+
+######## I, candidate laws (copy laws): env SECTION=I CANDIDATE=laws TODAY_ROOT=<wt>
+
+== I. The contact laws (P2b.2b.2c.2c design §2, §4): with no CANDIDATE, I.0's conversions on the worktree; with CANDIDATE (laws, face, ballball, laws-q, f, g) and TODAY_ROOT, that copy's tests of §4.1 with their figures: 1, C3S and C20S at gap 0 within §5.2's band of each figure; 2, v2/U across the gap within Table 5's spread; 3, the gapped strokes' means within Gugan's sem; 4, Table 1's three free collisions as the video times them; 5, Table 2's A2D face contact in the full single-ball stroke as the video times it, and the CA's single-ball strokes unchanged within their measurement; 6, every constant sourced or argued. The last step's candidates a, c and d: SECTION=I-old ==
+  test 1: miss: C3S at gap 0: v2U 1.2545 (row 1.1458 ± 0.0486, off 0.1087) miss, w1W 1.9538 (row 1.7321 ± 0.0735, off 0.2217) miss, v2w1 2.4692 (row 2.2680 ± 0.0962, off 0.2011) miss; C20S at gap 0: v2U 1.2273 (row 1.0862 ± 0.0461, off 0.1411) miss, w1W 1.1437 (row 1.6111 ± 0.0684, off -0.4674) miss, v2w1 3.3407 (row 2.1724 ± 0.0922, off 1.1683) miss
+  test 2: miss: v2/U at C1D's U 2.5000 m/s against Table 5's 1.0286-1.1520: 0.0000 mm 1.2550, 0.2500 mm 1.2243, 0.5000 mm 1.1845, 1.0000 mm 1.1161, 1.9000 mm 1.0981
+  test 3: pass: the gapped strokes' means (8 counted): v2U 1.1188 (1.1000 ± 0.0200) pass, w1W 1.6609 (1.7100 ± 0.0500) pass, v2w1 2.1171 (2.0700 ± 0.0600) pass
+  test 4: pass: 1.9000 m/s: e 0.7200 (0.7200) pass, video 0.6975 ms (0.7500) pass, law time 1.0413 ms, force-on 0.9676 ms; 5.5400 m/s: e 0.7200 (0.7200) pass, video 0.7772 ms (0.7500) pass, law time 1.0413 ms, force-on 0.9675 ms; 7.6400 m/s: e 0.7200 (0.7200) pass, video 0.8025 ms (0.7500) pass, law time 1.0413 ms, force-on 0.9675 ms
+  test 5: pass: Table 2's face contact at 3.2600 m/s in the full single-ball stroke, video 0.7650 ms from the ball's first visible move against 0.7500 ± 0.1000 ms pass (not judged: section F's reading from the impact's first step 1.1600 ms; law time 1.0850 ms, force-on 1.0250 ms, today's law time 0.9450 ms; the free face's video 0.7500 ms); A1D release 1.0196 m/s (today 1.0198, the CA's 1.0400) pass, travel 0.5234 m (today 0.5231, the CA's 0.9300) pass; A2D release 4.1202 m/s (today 4.1201, the CA's 4.3100) pass, travel 8.5899 m (today 8.5883, the CA's 9.7400) pass; A3D release 6.6745 m/s (today 6.6743, the CA's 6.8600) pass, travel 21.3795 m (today 21.3780, the CA's 24.7300) pass; A4D release 10.3464 m/s (today 10.3459, the CA's 8.6200) pass, travel 33.4776 m (today 33.4880, the CA's 45.8500) pass
+  test 6: pass: faceContactTimeFit's t0 re-set on Gugan 4's Table 2, column A2D: the video's face contact of 0.7500 ms at 3.2600 m/s on the CA's single-ball drives, the film the filmed strokes come from, converted to the law's parameter by the free face (scripts/squeeze.ts's freeFace and faceScaleFor, by Hertz similarity), with u0 3.26 m/s; q stays Gugan 2000's −0.23 and e(U) is kept; and ballBallContactTime set so that the free collision (freeCollision) reads Gugan 4's Table 1 contact time of 0.75 ms on video at 1.90, 5.54 and 7.64 m/s, the least largest miss (ballBallTimeFor), its bounds Table 1's 0.50 and 0.87 ms converted alike; ballObstacleContactTime follows it by its derivation (a ball on an immovable body has the two-ball pair's natural frequency), its lower bound 0.87 × the ball–ball's. Not matched to C3S, C20S or any two-ball stroke
+  laws: miss; first failed test 1
+  the squeeze's direction, C3S and C20S at gap 0 (candidate, then the change from today's):
+    C3S: v2U 1.2545 (0.0079), w1W 1.9538 (-0.6010), v2w1 2.4692 (0.3537)
+    C20S: v2U 1.2273 (-0.0129), w1W 1.1437 (-0.3493), v2w1 3.3407 (0.4867)
+  the release by law time (design §5.3; ms from the face's first contact, 'on' still loaded at the impact's end), C3S and C20S at gap 0:
+    C3S: the face's first contact ends 1.8600, the croqueted ball leaves 1.7300, second face interval none: the face does NOT let go before the croqueted ball leaves
+    C20S: the face's first contact ends 1.8900, the croqueted ball leaves 1.5450, second face interval none: the face does NOT let go before the croqueted ball leaves
+-- I summary: laws does not pass --
+
+######## I, candidate face (copy face): env SECTION=I CANDIDATE=face TODAY_ROOT=<wt>
+
+== I. The contact laws (P2b.2b.2c.2c design §2, §4): with no CANDIDATE, I.0's conversions on the worktree; with CANDIDATE (laws, face, ballball, laws-q, f, g) and TODAY_ROOT, that copy's tests of §4.1 with their figures: 1, C3S and C20S at gap 0 within §5.2's band of each figure; 2, v2/U across the gap within Table 5's spread; 3, the gapped strokes' means within Gugan's sem; 4, Table 1's three free collisions as the video times them; 5, Table 2's A2D face contact in the full single-ball stroke as the video times it, and the CA's single-ball strokes unchanged within their measurement; 6, every constant sourced or argued. The last step's candidates a, c and d: SECTION=I-old ==
+  test 1: miss: C3S at gap 0: v2U 1.2220 (row 1.1458 ± 0.0486, off 0.0762) miss, w1W 3.3732 (row 1.7321 ± 0.0735, off 1.6410) miss, v2w1 1.7909 (row 2.2680 ± 0.0962, off -0.4771) miss; C20S at gap 0: v2U 1.2412 (row 1.0862 ± 0.0461, off 0.1550) miss, w1W 2.0352 (row 1.6111 ± 0.0684, off 0.4240) miss, v2w1 2.3873 (row 2.1724 ± 0.0922, off 0.2149) miss
+  test 2: miss: v2/U at C1D's U 2.5000 m/s against Table 5's 1.0286-1.1520: 0.0000 mm 1.2330, 0.2500 mm 1.2191, 0.5000 mm 1.1964, 1.0000 mm 1.1335, 1.9000 mm 1.0991
+  test 3: miss: the gapped strokes' means (8 counted): v2U 1.1324 (1.1000 ± 0.0200) miss, w1W 1.6976 (1.7100 ± 0.0500) pass, v2w1 2.1304 (2.0700 ± 0.0600) miss
+  test 4: miss: 1.9000 m/s: e 0.7200 (0.7200) pass, video 0.5299 ms (0.7500) miss, law time 0.8072 ms, force-on 0.7500 ms; 5.5400 m/s: e 0.7200 (0.7200) pass, video 0.5867 ms (0.7500) miss, law time 0.8071 ms, force-on 0.7499 ms; 7.6400 m/s: e 0.7200 (0.7200) pass, video 0.6066 ms (0.7500) miss, law time 0.8071 ms, force-on 0.7499 ms
+  test 5: pass: Table 2's face contact at 3.2600 m/s in the full single-ball stroke, video 0.7650 ms from the ball's first visible move against 0.7500 ± 0.1000 ms pass (not judged: section F's reading from the impact's first step 1.1600 ms; law time 1.0850 ms, force-on 1.0250 ms, today's law time 0.9450 ms; the free face's video 0.7500 ms); A1D release 1.0196 m/s (today 1.0198, the CA's 1.0400) pass, travel 0.5234 m (today 0.5231, the CA's 0.9300) pass; A2D release 4.1202 m/s (today 4.1201, the CA's 4.3100) pass, travel 8.5899 m (today 8.5883, the CA's 9.7400) pass; A3D release 6.6745 m/s (today 6.6743, the CA's 6.8600) pass, travel 21.3795 m (today 21.3780, the CA's 24.7300) pass; A4D release 10.3464 m/s (today 10.3459, the CA's 8.6200) pass, travel 33.4776 m (today 33.4880, the CA's 45.8500) pass
+  test 6: pass: faceContactTimeFit's t0 re-set on Gugan 4's Table 2, column A2D: the video's face contact of 0.7500 ms at 3.2600 m/s on the CA's single-ball drives, the film the filmed strokes come from, converted to the law's parameter by the free face (scripts/squeeze.ts's freeFace and faceScaleFor, by Hertz similarity), with u0 3.26 m/s; q stays Gugan 2000's −0.23 and e(U) is kept; the ball–ball and obstacle laws as today. Not matched to C3S, C20S or any two-ball stroke
+  face: miss; first failed test 1
+  the squeeze's direction, C3S and C20S at gap 0 (candidate, then the change from today's):
+    C3S: v2U 1.2220 (-0.0246), w1W 3.3732 (0.8184), v2w1 1.7909 (-0.3245)
+    C20S: v2U 1.2412 (0.0010), w1W 2.0352 (0.5421), v2w1 2.3873 (-0.4666)
+  the release by law time (design §5.3; ms from the face's first contact, 'on' still loaded at the impact's end), C3S and C20S at gap 0:
+    C3S: the face's first contact ends 1.7000, the croqueted ball leaves 1.5300, second face interval none: the face does NOT let go before the croqueted ball leaves
+    C20S: the face's first contact ends 1.4650, the croqueted ball leaves 1.3450, second face interval none: the face does NOT let go before the croqueted ball leaves
+-- I summary: face does not pass --
+
+######## I, candidate ballball (copy ballball): env SECTION=I CANDIDATE=ballball TODAY_ROOT=<wt>
+
+== I. The contact laws (P2b.2b.2c.2c design §2, §4): with no CANDIDATE, I.0's conversions on the worktree; with CANDIDATE (laws, face, ballball, laws-q, f, g) and TODAY_ROOT, that copy's tests of §4.1 with their figures: 1, C3S and C20S at gap 0 within §5.2's band of each figure; 2, v2/U across the gap within Table 5's spread; 3, the gapped strokes' means within Gugan's sem; 4, Table 1's three free collisions as the video times them; 5, Table 2's A2D face contact in the full single-ball stroke as the video times it, and the CA's single-ball strokes unchanged within their measurement; 6, every constant sourced or argued. The last step's candidates a, c and d: SECTION=I-old ==
+  test 1: miss: C3S at gap 0: v2U 1.2520 (row 1.1458 ± 0.0486, off 0.1062) miss, w1W 1.4152 (row 1.7321 ± 0.0735, off -0.3169) miss, v2w1 2.9808 (row 2.2680 ± 0.0962, off 0.7128) miss; C20S at gap 0: v2U 1.2054 (row 1.0862 ± 0.0461, off 0.1192) miss, w1W 1.1880 (row 1.6111 ± 0.0684, off -0.4231) miss, v2w1 3.1450 (row 2.1724 ± 0.0922, off 0.9726) miss
+  test 2: miss: v2/U at C1D's U 2.5000 m/s against Table 5's 1.0286-1.1520: 0.0000 mm 1.2464, 0.2500 mm 1.2032, 0.5000 mm 1.1555, 1.0000 mm 1.1079, 1.9000 mm 1.0983
+  test 3: pass: the gapped strokes' means (8 counted): v2U 1.1065 (1.1000 ± 0.0200) pass, w1W 1.7093 (1.7100 ± 0.0500) pass, v2w1 2.0280 (2.0700 ± 0.0600) pass
+  test 4: pass: 1.9000 m/s: e 0.7200 (0.7200) pass, video 0.6975 ms (0.7500) pass, law time 1.0413 ms, force-on 0.9676 ms; 5.5400 m/s: e 0.7200 (0.7200) pass, video 0.7772 ms (0.7500) pass, law time 1.0413 ms, force-on 0.9675 ms; 7.6400 m/s: e 0.7200 (0.7200) pass, video 0.8025 ms (0.7500) pass, law time 1.0413 ms, force-on 0.9675 ms
+  test 5: pass: Table 2's face contact at 3.2600 m/s in the full single-ball stroke, video 0.6600 ms from the ball's first visible move against 0.7500 ± 0.1000 ms pass (not judged: section F's reading from the impact's first step 1.0200 ms; law time 0.9450 ms, force-on 0.8950 ms, today's law time 0.9450 ms; the free face's video 0.6475 ms); A1D release 1.0198 m/s (today 1.0198, the CA's 1.0400) pass, travel 0.5231 m (today 0.5231, the CA's 0.9300) pass; A2D release 4.1201 m/s (today 4.1201, the CA's 4.3100) pass, travel 8.5883 m (today 8.5883, the CA's 9.7400) pass; A3D release 6.6743 m/s (today 6.6743, the CA's 6.8600) pass, travel 21.3780 m (today 21.3780, the CA's 24.7300) pass; A4D release 10.3459 m/s (today 10.3459, the CA's 8.6200) pass, travel 33.4880 m (today 33.4880, the CA's 45.8500) pass
+  test 6: pass: ballBallContactTime set so that the free collision (freeCollision) reads Gugan 4's Table 1 contact time of 0.75 ms on video at 1.90, 5.54 and 7.64 m/s, the least largest miss (ballBallTimeFor), its bounds Table 1's 0.50 and 0.87 ms converted alike; ballObstacleContactTime follows it by its derivation (a ball on an immovable body has the two-ball pair's natural frequency), its lower bound 0.87 × the ball–ball's; the face's law as today. Not matched to C3S, C20S or any two-ball stroke
+  ballball: miss; first failed test 1
+  the squeeze's direction, C3S and C20S at gap 0 (candidate, then the change from today's):
+    C3S: v2U 1.2520 (0.0054), w1W 1.4152 (-1.1395), v2w1 2.9808 (0.8654)
+    C20S: v2U 1.2054 (-0.0348), w1W 1.1880 (-0.3050), v2w1 3.1450 (0.2910)
+  the release by law time (design §5.3; ms from the face's first contact, 'on' still loaded at the impact's end), C3S and C20S at gap 0:
+    C3S: the face's first contact ends 1.7350, the croqueted ball leaves 1.6250, second face interval none: the face does NOT let go before the croqueted ball leaves
+    C20S: the face's first contact ends 1.1850, the croqueted ball leaves 1.4600, second face interval [1.2300, 2.7700]: the face lets go before the croqueted ball leaves
+-- I summary: ballball does not pass --
+
+######## E, the filmed strokes with §5.2's bands (copy laws): env SECTION=E
+
+== E. The filmed strokes (design §5.2, §5.3): each on its preset at its U and recorded gap, the preset's push, no jab, the default mallet; the model's figures against Table 5's row (the row's energy with k = 2.3000, the model's with its own effective mass); OPEN marks a strike not closed within the strike window, which no mean counts ==
+-- E.1 each stroke at its recorded gap --
+B2GS (single-ball, U 1.6800 m/s, gap 6.0000 mm): v2/U 1.0647 (row 1.0417), w1/W 1.7868 (row 1.8491), v2/w1 1.8866 (row 1.7857), W/U 0.3158 (row 0.3155), energy 0.6933 (row 0.7192); (v2/w1)² 3.5592 (row 16 3.6000)
+B1GS (single-ball, U 1.7500 m/s, gap 1.0000 mm): v2/U 1.1060 (row 1.0286), w1/W 1.7667 (row 1.7222), v2/w1 1.9880 (row 1.9355), W/U 0.3149 (row 0.3086), energy 0.7258 (row 0.6780); (v2/w1)² 3.9523 (row 16 4.3000)
+B1MS (single-ball, U 5.1000 m/s, gap 2.0000 mm): v2/U 1.0958 (row 1.0980), w1/W 1.7605 (row 1.6353), v2/w1 1.9462 (row 2.0144), W/U 0.3198 (row 0.3333), energy 0.7229 (row 0.7645); (v2/w1)² 3.7878 (row 16 4.9000)
+B2MS (single-ball, U 5.8700 m/s, gap 6.0000 mm): v2/U 1.0820 (row 1.0443), w1/W 1.7741 (row 1.7105), v2/w1 1.8984 (row 1.8862), W/U 0.3213 (row 0.3237), energy 0.7146 (row 0.7122); (v2/w1)² 3.6038 (row 16 3.6000)
+C3S (stop-ac, U 1.9200 m/s, gap 0.0000 mm): v2/U 1.2545 (row 1.1458), w1/W 1.9538 (row 1.7321), v2/w1 2.4692 (row 2.2680), W/U 0.2600 (row 0.2917), energy 0.7971 (row 0.7669); (v2/w1)² 6.0967 (row 16 6.5000)
+C10S (stop-ac, U 3.5700 m/s, gap 0.5000 mm, nominal): v2/U 1.1903 (row 1.1485), w1/W 1.3908 (row 1.7944), v2/w1 2.7318 (row 2.1354), W/U 0.3133 (row 0.2997), energy 0.7380 (row 0.7891); (v2/w1)² 7.4628 (row 16 5.2000)
+C20S (stop-ac, U 5.8000 m/s, gap 0.0000 mm): v2/U 1.2273 (row 1.0862), w1/W 1.1437 (row 1.6111), v2/w1 3.3407 (row 2.1724), W/U 0.3212 (row 0.3103), energy 0.7567 (row 0.7180); (v2/w1)² 11.1603 (row 16 5.5000)
+C1D (drive, U 2.5000 m/s, gap 1.0000 mm, nominal): v2/U 1.1161 (row 1.1520), w1/W 1.7021 (row 1.6316), v2/w1 2.0131 (row 2.3226), W/U 0.3257 (row 0.3040), energy 0.7411 (row 0.7764); (v2/w1)² 4.0526 (row 16 4.8000)
+C3D (drive, U 4.9600 m/s, gap 1.0000 mm, nominal): v2/U 1.1441 (row 1.1089), w1/W 1.5799 (row 1.9178), v2/w1 2.1991 (row 1.9643), W/U 0.3293 (row 0.2944), energy 0.7543 (row 0.7598); (v2/w1)² 4.8359 (row 16 4.2000)
+C10D (drive, U 7.0000 m/s, gap 1.0000 mm, nominal): v2/U 1.1513 (row 1.1086), w1/W 1.5265 (row 1.4828), v2/w1 2.2736 (row 2.2558), W/U 0.3317 (row 0.3314), energy 0.7568 (row 0.7492); (v2/w1)² 5.1693 (row 16 5.1000)
+-- E.2 sensitivity: the nominal strokes repeated at ±0.5 mm (never below 0, never within 0.1 mm of 2 mm) --
+C10S at 0.0000 mm: v2/U 1.2452 (0.0549 from the recorded gap), w1/W 1.4370 (0.0462), v2/w1 2.9466 (0.2148)
+C1D at 0.5000 mm: v2/U 1.1845 (0.0683 from the recorded gap), w1/W 1.4578 (-0.2444), v2/w1 2.4757 (0.4626)
+C3D at 0.5000 mm: v2/U 1.1935 (0.0493 from the recorded gap), w1/W 1.3405 (-0.2394), v2/w1 2.6454 (0.4463)
+C10D at 0.5000 mm: v2/U 1.1891 (0.0378 from the recorded gap), w1/W 1.3215 (-0.2050), v2/w1 2.6519 (0.3783)
+C10S at 1.0000 mm: v2/U 1.1312 (-0.0591 from the recorded gap), w1/W 1.6644 (0.2736), v2/w1 2.2144 (-0.5174)
+C1D at 1.5000 mm: v2/U 1.1002 (-0.0159 from the recorded gap), w1/W 1.7416 (0.0395), v2/w1 1.9314 (-0.0817)
+C3D at 1.5000 mm: v2/U 1.1096 (-0.0345 from the recorded gap), w1/W 1.6999 (0.1200), v2/w1 1.9918 (-0.2072)
+C10D at 1.5000 mm: v2/U 1.1183 (-0.0330 from the recorded gap), w1/W 1.6522 (0.1257), v2/w1 2.0561 (-0.2175)
+-- E.3 the three means over the counted strokes (those closed within the window) against Gugan 4's, each pass when within his sem --
+C3S and C20S counted (10 counted: B2GS, B1GS, B1MS, B2MS, C3S, C10S, C20S, C1D, C3D, C10D): v2U 1.1432 against 1.1000 ± 0.0200 (0.0432, 2.1614 sem): miss; w1W 1.6385 against 1.7100 ± 0.0500 (-0.0715, -1.4301 sem): miss; v2w1 2.2747 against 2.0700 ± 0.0600 (0.2047, 3.4111 sem): miss
+C3S and C20S left out (8 counted: B2GS, B1GS, B1MS, B2MS, C10S, C1D, C3D, C10D): v2U 1.1188 against 1.1000 ± 0.0200 (0.0188, 0.9402 sem): pass; w1W 1.6609 against 1.7100 ± 0.0500 (-0.0491, -0.9814 sem): pass; v2w1 2.1171 against 2.0700 ± 0.0600 (0.0471, 0.7850 sem): pass
+
+######## F, the timing (copy laws): env SECTION=F
+
+== F. The timing (design §7.1): ms from the mallet's first contact; the croqueted ball first moving (shifted by 0.2000 mm), the mallet's first contact ending, the ball–ball interval's end (the ball leaving), any second face interval; the model beside Fig. 4's research reading and re-reading (reference/sources/README.md:594-619), each ±0.5 frame on Gugan's own "a frame or two" (one frame 0.1250 ms). The model twice: "law" from the contact law's intervals, "video" as Gugan 4's video would time it, a contact on while the two bodies' surfaces are within 0.2000 mm of touching (the face's separation from the striker's ball, the balls' gap) and the times from the face's first such contact, as scripts/squeeze.ts's freeCollision times a free collision. The impact begins with the face touching, so the video's own first contact, up to 0.2000 mm earlier, is not seen: each video time is short by up to 0.2000 mm/U (0.1042 ms at C3S's U, under one frame). A second face interval counts only if it begins within the strike's window; 'on' marks a contact the video still sees at the impact's end ==
+C3S (stop-ac, U 1.9200 m/s, gap 0.0000 mm) FAILS THE CHECK: all three bodies loaded together throughout (video-timed: face still within 0.2000 mm as the ball leaves):
+  first moves: model law 0.9000, video 0.9000, research 0.6000, re-read 0.6000
+  first contact ends: model law 1.8600, video 2.2700, research 0.6500, re-read 0.6500
+  leaves: model law 1.7300, video 1.8700, research 1.4125, re-read 1.4000
+  second face interval: model law none, video none, research [1.3750, 2.3875], re-read [1.3750, 2.3875]
+C20S (stop-ac, U 5.8000 m/s, gap 0.0000 mm) FAILS THE CHECK: all three bodies loaded together throughout (video-timed: face still within 0.2000 mm as the ball leaves):
+  first moves: model law 0.6150, video 0.6150, research 0.5000, re-read 0.5000
+  first contact ends: model law 1.8900, video 2.6300, research 0.6500, re-read 0.6375
+  leaves: model law 1.5450, video 1.5850, research 1.2500, re-read 1.2500
+  second face interval: model law none, video none, research [1.2250, 2.0250], re-read [1.2250, 2.0250]
+C1D (drive, U 2.5000 m/s, gap 1.0000 mm) (video-timed: face still within 0.2000 mm as the ball leaves):
+  first moves: model law 1.2200, video 1.2200, research 0.7500, re-read 0.7375
+  first contact ends: model law 1.2800, video 3.5350, research 0.8125, re-read 0.8125
+  leaves: model law 1.8750, video 1.9600, research 1.6500, re-read 1.6500
+  second face interval: model law [1.6150, 3.1900], video none, research [1.6000, 2.6375], re-read [1.6000, 2.6375]
+C10S (stop-ac, U 3.5700 m/s, gap 0.5000 mm) FAILS THE CHECK: all three bodies loaded together throughout (video-timed: face still within 0.2000 mm as the ball leaves):
+  first moves: model law 0.9000, video 0.9000, research 0.6000, re-read 0.6000
+  first contact ends: model law 2.5900, video 3.0600, research 0.7625, re-read 0.7625
+  leaves: model law 1.6700, video 1.7400, research 1.3875, re-read 1.4000
+  second face interval: model law none, video none, research [1.3625, 2.3750], re-read [1.3625, 2.3750]
+C3D (drive, U 4.9600 m/s, gap 1.0000 mm) FAILS THE CHECK: all three bodies loaded together throughout (video-timed: face still within 0.2000 mm as the ball leaves):
+  first moves: model law 0.8850, video 0.8850, research 0.6000, re-read 0.6000
+  first contact ends: model law 2.6150, video 2.8200, research 0.9875, re-read 0.9875
+  leaves: model law 1.6650, video 1.7100, research 1.4125, re-read 1.4000
+  second face interval: model law none, video none, research [1.3500, 2.0250], re-read [1.3625, 2.0250]
+C10D (drive, U 7.0000 m/s, gap 1.0000 mm) FAILS THE CHECK: all three bodies loaded together throughout (video-timed: face still within 0.2000 mm as the ball leaves):
+  first moves: model law 0.7600, video 0.7600, research 0.4750, re-read 0.4875
+  first contact ends: model law 2.4650, video 2.6250, research 0.7500, re-read 0.7500
+  leaves: model law 1.5900, video 1.6250, research 1.1625, re-read 1.1750
+  second face interval: model law none, video none, research [0.7875, 1.6625], re-read [0.7875, 1.6625]
+
+######## The obstacle fuzz (design §2.2): its 2000 strokes (tests/engine/impact/fuzz.test.ts's obstacle fuzz,
+seed OBSTACLE_FUZZ_SEED) with each tree's own ballObstacleContactTime on the peg and every hoop drawn and its own
+ballBallContactTime (the test's fixture fixes both at 0.7 ms, so cannot check them); the deepest obstacle
+penetration against the 0.06 R bound. Throwaway script, never committed.
+
+today (the baseline tree at d854668): obstacle fuzz (2000 strokes, /tmp/claude-5268dd52-7f6c-4cc1-b707-58aa7444f84d/main-tree): ballObstacleContactTime 0.7500 ms, ball–ball 0.7500 ms; deepest obstacle penetration 1.8446 mm = 0.0401 R (stroke 482, blue@1/a) against 0.0600 R; impact caps 0
+copy laws: obstacle fuzz (2000 strokes, /tmp/claude-5268dd52-7f6c-4cc1-b707-58aa7444f84d/copies/laws): ballObstacleContactTime 0.9676 ms, ball–ball 0.9676 ms; deepest obstacle penetration 2.4262 mm = 0.0527 R (stroke 482, blue@1/a) against 0.0600 R; impact caps 0
+copy ballball: obstacle fuzz (2000 strokes, /tmp/claude-5268dd52-7f6c-4cc1-b707-58aa7444f84d/copies/ballball): ballObstacleContactTime 0.9676 ms, ball–ball 0.9676 ms; deepest obstacle penetration 2.4498 mm = 0.0533 R (stroke 482, blue@1/a) against 0.0600 R; impact caps 0

@@ -170,13 +170,21 @@ const FACE_CAP = 2e-3;
  */
 const FACE_CAP_LIMIT = 16e-3;
 
+/**
+ * Where a free face's video time starts: "moved", the struck ball's displacement first exceeding the threshold (the
+ * design's Vocabulary, as adopted); "arrival", the face first within the threshold of the ball, extrapolated back at
+ * the head's speed to t = (START_GAP − shift)/speed, before the run's start, a sensitivity only. Hertz similarity (the
+ * header) holds for both, since the approach before the contact only offsets the start.
+ */
+export type FaceStart = "moved" | "arrival";
+
 /** A free face run (freeFace) with its trace: the ball's displacement and the face's clearance (m) at each step. */
 interface FaceRun {
     readonly restitution: number;
     readonly lawTime: number;
     readonly forceTime: number;
-    /** The video time (s) at threshold `shift` (m), or null if the trace never shows the contact end. */
-    readonly videoAt: (shift: number) => number | null;
+    /** The video time (s) at threshold `shift` (m) from `start`, or null if the trace never shows the contact end. */
+    readonly videoAt: (shift: number, start?: FaceStart) => number | null;
 }
 
 /**
@@ -213,15 +221,17 @@ function playFace(speed: number, dt: number, reach: number): FaceRun {
             },
         };
         const run = integrate(setup, { dt, cap, probe });
-        const videoAt = (shift: number): number | null => {
+        const videoAt = (shift: number, start: FaceStart = "moved"): number | null => {
             const moved = trace.findIndex((p) => visible(p.moved, shift));
             if (moved < 0) {
                 return null;
             }
             const parted = trace.findIndex((p, i) => i >= moved && visible(p.clearance, shift));
-            return parted < 0
-                ? null
-                : (trace[parted] as (typeof trace)[number]).t - (trace[moved] as (typeof trace)[number]).t;
+            if (parted < 0) {
+                return null;
+            }
+            const from = start === "moved" ? (trace[moved] as (typeof trace)[number]).t : (START_GAP - shift) / speed;
+            return (trace[parted] as (typeof trace)[number]).t - from;
         };
         if (videoAt(reach) !== null) {
             return {
@@ -245,10 +255,11 @@ function playFace(speed: number, dt: number, reach: number): FaceRun {
  * a RangeError when the video never sees the contact end within FACE_CAP_LIMIT. The shaft's mass is left out because
  * the design's free head carries the head's mass alone: with it the body's centre lies above the face's axis and the
  * head turns, and at 3.26 m/s the force-on time reads 0.8969 ms against T(U)'s 0.8852 and e 0.8155 against 0.8145.
+ * `o.start` moves the video's start (FaceStart; default "moved").
  */
 export function freeFace(
     speed: number,
-    o: { readonly dt?: number; readonly shift?: number } = {},
+    o: { readonly dt?: number; readonly shift?: number; readonly start?: FaceStart } = {},
 ): Timed & { readonly clamped: boolean } {
     const shift = o.shift ?? VISIBLE_SHIFT;
     const { restitution, lawTime, forceTime, videoAt } = playFace(speed, o.dt ?? IMPACT_DT, shift);
@@ -256,7 +267,7 @@ export function freeFace(
         restitution,
         lawTime,
         forceTime,
-        videoTime: videoAt(shift) as number,
+        videoTime: videoAt(shift, o.start) as number,
         clamped: speed < FACE_SPEED_MIN || speed > FACE_SPEED_MAX,
     };
 }
@@ -273,18 +284,19 @@ const SCALE_TOLERANCE = 1e-5;
  * Every s reads the same run at its own threshold, so the face is played once; its step is not scaled with s, a
  * difference of under a step in the video time. The new law's t0 is s times today's, a parameter in T(U)'s sense: the
  * force-on time, as reference/contact.json holds it.
- * `o.shift` is the threshold (default VISIBLE_SHIFT), `o.dt` freeFace's step. Throws a RangeError naming the target
- * and the bracket's two video times when the bracket does not straddle it.
+ * `o.shift` is the threshold (default VISIBLE_SHIFT), `o.dt` freeFace's step, `o.start` the video's start (FaceStart;
+ * default "moved"). Throws a RangeError naming the target and the bracket's two video times when the bracket does not
+ * straddle it.
  */
 export function faceScaleFor(
     target: number,
     speed: number,
-    o: { readonly dt?: number; readonly shift?: number } = {},
+    o: { readonly dt?: number; readonly shift?: number; readonly start?: FaceStart } = {},
 ): number {
     const shift = o.shift ?? VISIBLE_SHIFT;
     let [lo, hi] = SCALE_BRACKET as readonly [number, number];
     const run = playFace(speed, o.dt ?? IMPACT_DT, shift / lo);
-    const video = (s: number): number => s * (run.videoAt(shift / s) as number);
+    const video = (s: number): number => s * (run.videoAt(shift / s, o.start) as number);
     const low = video(lo);
     const high = video(hi);
     if (!(low <= target && target <= high)) {
