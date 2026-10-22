@@ -17,10 +17,10 @@
  * §5.2, "My calls"): readOut takes the mallet's speed along aim U at the face's first contact, and its speed W and
  * the balls' speeds w₁ and v₂ READ_DELAY after the later of the mallet's last contact with the striker's ball and the
  * balls' last contact with each other, counting only contacts that begin within STRIKE_WINDOW of the first, so that a
- * late catch never moves the reading. And it plays a stroke with Gugan's mallet (gugansMallet): the default mallet with
- * its head's mass solved so that the swung body's effective mass at the face centre is Gugan's 2.30 ball masses, which
- * he found "by taking moments about its point of balance", on the preset's own canonical setup at the stroke's speed.
- * The default profile is never changed.
+ * double tap counts and a late catch never moves the reading. And it plays a stroke with Gugan's mallet
+ * (gugansMallet): the default mallet with its head's mass solved so that the swung body's effective mass at the face
+ * centre is Gugan's 2.30 ball masses, which he found "by taking moments about its point of balance", on the preset's
+ * own canonical setup at the stroke's speed. The default profile is never changed.
  */
 import { ballPairKey, faceKey } from "../src/engine/impact/contacts";
 import type { ImpactOptions, ImpactProbe } from "../src/engine/impact/integrate";
@@ -409,10 +409,14 @@ export function releaseSpeedFor(ballSpeed: number, p: FitParams = TODAY): number
 }
 
 /**
- * Numerical, not physical: the strike's window (s) from the face's first contact. A contact beginning after it, such
- * as the drive's late catch at about 109 ms, is not part of the strike Gugan read (design "My calls").
+ * A read-out definition, not physical: the strike's window (s) from the face's first contact, the contacts Gugan's
+ * reading counts. Gugan 4 reads W "after the double tap", so a face re-contact soon after the strike counts: B2GS's,
+ * whose striker's ball is caught again 10.8 ms in after crossing its 6 mm gap. A contact beginning after it is not part
+ * of the strike Gugan read (design "My calls"): the earliest such is the follow-through's approach at about 87 ms (C1D,
+ * the canonical drive), then the drive's late catch at about 109 ms. 15 ms is the smallest multiple of 5 ms past
+ * B2GS's tap.
  */
-export const STRIKE_WINDOW = 5e-3;
+export const STRIKE_WINDOW = 15e-3;
 
 /** Numerical, not physical: the reading's delay (s) after the strike's last contact, Gugan's "a few milliseconds". */
 export const READ_DELAY = 1e-3;

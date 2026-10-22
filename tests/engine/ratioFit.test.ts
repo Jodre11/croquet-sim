@@ -200,9 +200,15 @@ describe("the read-out (P2b.2b.2c.2b design §5.2, §8.1)", () => {
     it("ignores a contact beginning after the strike's window, such as the drive's late catch", () => {
         expect(readTimeOf([I(0, 1.5e-3), I(0.109, 0.1092)], [I(1e-5, 1.4e-3)]).time).toBeCloseTo(2.5e-3, 15);
     });
+    it("counts a face re-contact soon after the strike, such as B2GS's double tap", () => {
+        // Gugan 4 reads W "after the double tap": B2GS's face intervals and its balls' interval (ms), read 1 ms after
+        // the second face interval's end.
+        expect(readTimeOf([I(0, 1.1e-3), I(10.79e-3, 12.24e-3)], [I(3.26e-3, 4.07e-3)]).time).toBeCloseTo(13.24e-3, 15);
+    });
     it("flags a strike still open at the window's end", () => {
-        // Review focus 4.
-        expect(readTimeOf([I(0, 6e-3)], [I(1e-4, 1e-3)]).open).toBe(true);
+        // Review focus 4. P2b.2b.2c.2b: the strike window widened to 15 ms at the gate (was 5 ms); the face interval
+        // ends 1 ms after the window, as 6 ms did against 5 ms.
+        expect(readTimeOf([I(0, 16e-3)], [I(1e-4, 1e-3)]).open).toBe(true);
     });
     it("reads an impact's last step when it ends before the read time", () => {
         // Review focus 4: every figure finite, the time the last step's. A tracked impact runs on until the hands
