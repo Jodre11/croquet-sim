@@ -43,7 +43,9 @@ and v₂ are Gugan's. New here:
 1. **Housekeeping first, separately.** The npm bumps (`typescript-eslint` 8.71.2 → 8.72.0, `vite` 8.3.4 → 8.3.5,
    `typescript` 6.0.3 → 7.0.2) go in their own small PR that lands before this step's branch is rebased onto `main`.
    TypeScript 7 goes in only if it type-checks and every test passes unchanged; otherwise it is held back with the
-   reason (my call). The CI actions and runner are current.
+   reason (my call). The CI actions and runner are current. As landed (PR #34): `vite` alone; `typescript-eslint` was
+   already 8.72.0, and TypeScript 7 is held back, outside the peer ranges of `typescript-eslint` 8.72.0 (< 6.1.0) and
+   `svelte-check` 4.7.7 (^5 || ^6).
 2. **The hands stay as they are.** The user: the player "times the swing and predicts the strike. Its not purely a
    response to the sensation of impact." The model's hands are all planned (the push, the jab, the grip, the checking
    force), so the anticipation is played. Their effect on the strike is re-measured on the new laws and reported, not
