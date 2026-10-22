@@ -73,6 +73,7 @@ My calls (the user may overrule any of them):
 - **The hoops and the peg follow the ball–ball time** (§2.2), by their existing derivation.
 - **The search's candidates carry fixed constants** (§4.2), and the face's check times the full single-ball stroke
   (§4.1, test 5).
+- **The camera threshold is tested for reach, not tuned** (§7.9): ×2 and ×3 of 0.2 mm, for Gugan's "several times".
 
 ## 1. Goal and exit criteria
 
@@ -329,6 +330,10 @@ Each re-measured on the admitted laws, each to the gate:
 7. **The strike's window** (`STRIKE_WINDOW` 15 ms): re-checked against the moved taps; a test now pins its boundary
    (the last step's carried item).
 8. **The effective mass and the AC stop's re-contacts:** re-measured as the last gate's M.3 and M.4.
+9. **The camera threshold's reach:** `VISIBLE_SHIFT` is 0.2 mm, Gugan 4's resolution on paper; he writes that in
+   practice "the uncertainties of measurement prove to be several times greater than might be hoped", with no figure.
+   Both laws are re-set (§2.1, §2.2) at 0.4 and 0.6 mm in throwaway copies, and §1's criteria 2–4 re-judged on them.
+   Reported as whether the touching stops' pass holds; the adopted laws stay those set at 0.2 mm.
 
 ## 8. Testing
 
