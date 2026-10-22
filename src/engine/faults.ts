@@ -32,8 +32,8 @@
  * out slow-motion video, and C28.3.2 sets balls parting by a few millimetres below the standard. So a mallet
  * re-contact beginning before the striker's ball has parted from the croqueted ball (or, in a continuation stroke,
  * from every ball it touched) is within the strike: it is reported on `strike`, never flagged. One beginning at or
- * after the parting is flagged as before, at its start, and counts as the follow-through step of the stroke
- * (29.2.5). A ball–ball break shorter than PARTING_BREAK is no parting. With no parting to place it, every re-contact
+ * after the parting keeps today's possible fault (29.2.5: a separation seen by eye), at its start, until a later
+ * follow-through step judges such contacts (shepherding, the push). A ball–ball break shorter than PARTING_BREAK is no parting. With no parting to place it, every re-contact
  * is flagged as before.
  *
  * 29.1.13 has two clauses, reported in this order and told apart by their evidence: "fails to move or shake" (the
