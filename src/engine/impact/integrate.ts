@@ -63,11 +63,11 @@ import type { BallId, BallParams, BallState, BallStates } from "../types";
 import {
     carrySpring,
     closeFace,
+    frictionStep,
     hertzEnergy,
     hertzForce,
     hertzTangent,
     normalForce,
-    tangentialForce,
     type HertzClosure,
     type PairLaw,
 } from "./contactLaw";
@@ -454,6 +454,8 @@ interface PairState {
     spring: Vec3;
     /** The tangential stiffness ξ last carried (carrySpring); 0 while the pair is open. */
     tangent: number;
+    /** Whether the pair slid on its last closed step (frictionStep); false while it is open. */
+    slid: boolean;
     /** The contact normal (from A to B) at the pair's last closed step; ZERO until it first closes. */
     normal: Vec3;
     peak: number;
@@ -539,9 +541,10 @@ function applyPair(
     const slip = sub(u, scale(contact.normal, along));
     // ξ carried over onto the current tangent plane (and held to its force if k_t grew), then advanced by the slip.
     const carried = carrySpring(p.spring, contact.normal, p.tangent, law.tangentialStiffness);
-    const tangential = tangentialForce(law, add(carried, scale(slip, dt)), slip, normal);
+    const tangential = frictionStep(law, carried, slip, dt, normal, p.slid);
     p.spring = tangential.spring;
     p.tangent = law.tangentialStiffness;
+    p.slid = tangential.sliding;
     p.normal = contact.normal;
     const force = add(scale(contact.normal, normal), tangential.force);
     loads.forces[pair.b] = add(loads.forces[pair.b] as Vec3, force);
@@ -1026,6 +1029,7 @@ export function integrateStroke(setup: ImpactSetup, options: ImpactOptions = {},
         closure: null,
         spring: ZERO,
         tangent: 0,
+        slid: false,
         normal: ZERO,
         peak: 0,
         line: emptyTimeline(),
@@ -1147,6 +1151,7 @@ export function integrateStroke(setup: ImpactSetup, options: ImpactOptions = {},
                 p.spring = ZERO;
                 p.closure = null;
                 p.tangent = 0;
+                p.slid = false;
                 if (pair.kind === "ball-obstacle") {
                     const gap = obstacleGap(
                         (balls[pair.b] as BallState).position,

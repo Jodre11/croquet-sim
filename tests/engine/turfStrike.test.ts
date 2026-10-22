@@ -128,6 +128,11 @@ describe("Gugan's jab (P2b.2b.2b.3 design §7.3; slow)", () => {
     // every fraction of U is 0): the striker's ball leaves at 0.523·U, above the band's top of 0.463, before the head
     // reaches the turf, which predates the turf law. P2b.2b.2c (the arms' checking force) may change it; `.fails` then
     // turns red.
+    // P2b.2b.2c.2b: the croquet gap's default, 1 mm. The figures above are at gap 0. At 1 mm every jab (0–8 mm) has a
+    // second tap, the face region's second interval from 1.260–1.265 ms, at 0.4414–0.4440·U, within the band and near
+    // Gugan's 0.400U. But the head first meets the turf only from jab 2.5 mm (18.035 ms, falling to 12.530 ms at 8 mm),
+    // always after that second tap, so no jab qualifies: `.fails` now fails on the at-least-one-graze check, not on
+    // the band.
     it.runIf(SLOW).fails("puts every graze's second tap within [0.295, 0.463]·U, with at least one graze", () => {
         // Gugan 5: stop-shots with a downward jab, so that the heel's friction stops the mallet soon after impact;
         // over the seven lowest ratios the second tap's mallet speed is 0.400U, against 0.463U unrestricted, and the

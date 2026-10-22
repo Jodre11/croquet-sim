@@ -1,17 +1,26 @@
 import { describe, expect, it } from "vitest";
+import { faceHalfHeight } from "../../src/engine/impact/shape";
 import { simulateShot } from "../../src/engine/shot";
+import { headShapeOf, stanceLean } from "../../src/engine/swing/buildContact";
+import { defaultProfile } from "../../src/engine/swing/profile";
 import type { ShotSetup } from "../../src/engine/swing/types";
-import { BALL_IDS, type BallState, type ShotResult } from "../../src/engine/types";
+import { BALL_IDS, type BallState, type ShotResult, type World } from "../../src/engine/types";
 import { defaultWorld } from "../../src/engine/world";
 import { length, sub } from "../../src/engine/math/vec3";
 import { OPEN_LAWN, OPEN_START, haltedText, openWorld, opened } from "../../scripts/openLawn";
 import {
     BOUNDS,
     TODAY,
+    effectiveMassOf,
     fitSetup,
     fitWorld,
+    guganSetup,
+    gugansMallet,
     ratioOf,
     ratiosAt,
+    readOut,
+    readSamples,
+    readTimeOf,
     releaseSpeedFor,
     runFit,
     solvePair,
@@ -19,6 +28,25 @@ import {
 import { canonicalSetup, strokeFor } from "./support/shot";
 
 const SLOW = Boolean(import.meta.env.SLOW_TESTS);
+
+const WORLD = defaultWorld();
+
+/** The stance's shaft lean (rad) at `setup`'s contact, with its own mallet. */
+function leanOf(setup: ShotSetup): number {
+    const { stroke, profile } = setup;
+    const stance = profile.stance[stroke.type];
+    return stanceLean(stance.handsAhead, stance.top, stroke.contact.up, {
+        ballRadius: WORLD.ball.radius,
+        headLength: profile.mallet.headLength,
+        faceHalfHeight: faceHalfHeight(headShapeOf(profile.mallet.head)),
+    });
+}
+
+/** The default world with a ball ten times as heavy. */
+function heavyBallWorld(): World {
+    const world = defaultWorld();
+    return { ...world, ball: { ...world.ball, mass: world.ball.mass * 10 } };
+}
 
 /** A phase 2 in which no ball moves: every rest position is the setup's. */
 function stillMotion(setup: ShotSetup): ShotResult {
@@ -157,5 +185,102 @@ describe("the pair's solver (design §5.3)", () => {
         expect(r.converged).toBe(true);
         expect(r.values).toEqual([4.23, 7.15]);
         expect(r.point[0]).toBeGreaterThan(0.505);
+    });
+});
+
+describe("the read-out (P2b.2b.2c.2b design §5.2, §8.1)", () => {
+    const I = (start: number, end: number) => ({ start, end });
+    it("reads 1 ms after the later of the last face and the last ball–ball contact", () => {
+        const twoTaps = readTimeOf([I(0, 8e-4), I(1.2e-3, 2.1e-3)], [I(5e-4, 1.3e-3)]);
+        expect(twoTaps.time).toBeCloseTo(3.1e-3, 15);
+        expect(twoTaps.open).toBe(false);
+        expect(readTimeOf([I(0, 8e-4)], [I(5e-4, 1.4e-3)]).time).toBeCloseTo(2.4e-3, 15);
+        expect(readTimeOf([I(0, 8e-4)], [I(5e-4, 1.4e-3)]).open).toBe(false);
+    });
+    it("ignores a contact beginning after the strike's window, such as the drive's late catch", () => {
+        expect(readTimeOf([I(0, 1.5e-3), I(0.109, 0.1092)], [I(1e-5, 1.4e-3)]).time).toBeCloseTo(2.5e-3, 15);
+    });
+    it("counts a face re-contact soon after the strike, such as B2GS's double tap", () => {
+        // Gugan 4 reads W "after the double tap": B2GS's face intervals and its balls' interval (ms), read 1 ms after
+        // the second face interval's end.
+        expect(readTimeOf([I(0, 1.1e-3), I(10.79e-3, 12.24e-3)], [I(3.26e-3, 4.07e-3)]).time).toBeCloseTo(13.24e-3, 15);
+    });
+    it("flags a strike still open at the window's end", () => {
+        // Review focus 4. P2b.2b.2c.2b: the strike window widened to 15 ms at the gate (was 5 ms); the face interval
+        // ends 1 ms after the window, as 6 ms did against 5 ms.
+        expect(readTimeOf([I(0, 16e-3)], [I(1e-4, 1e-3)]).open).toBe(true);
+    });
+    it("reads an impact's last step when it ends before the read time", () => {
+        // Review focus 4: every figure finite, the time the last step's. A tracked impact runs on until the hands
+        // settle, long after any read time, so the branch is pinned on samples ending at 2 ms against a 3.1 ms read.
+        const samples = [0, 5e-4, 1e-3, 1.5e-3, 2e-3].map((t, i) => ({ t, head: 3 - i, w1: i, v2: 2 * i }));
+        const r = readSamples(samples, 0, 3.1e-3);
+        expect([r.U, r.W, r.w1, r.v2].every(Number.isFinite)).toBe(true);
+        expect(r.time).toBe(2e-3);
+        expect([r.U, r.W, r.w1, r.v2]).toEqual([3, -1, 4, 8]);
+    });
+    it("gives the canonical drive's speeds as the brainstorm measured them, at gap 0 and no push", () => {
+        // Design "Why this step": 3 m/s, guideEffort 0 — striker 1.618, croqueted 3.763, mallet 0.80 m/s, read as the
+        // ball leaves the face (≈1.5 ms): the first step after the last face interval ends.
+        const r = readOut(guganSetup("drive", 3, 0, { guideEffort: 0 }), WORLD);
+        const face = r.impact.timeline["face/blue"] ?? [];
+        const end = face[face.length - 1]?.end ?? Infinity;
+        const leaving = r.samples.find((s) => s.t > end);
+        expect(leaving?.w1).toBeCloseTo(1.618, 2);
+        expect(leaving?.v2).toBeCloseTo(3.763, 2);
+        expect(leaving?.head).toBeCloseTo(0.8, 1);
+        // The read-out's own, 1 ms after the last contact (2.5 ms): the croqueted ball skids on the turf with no
+        // forward roll yet, and the turf's sliding friction on it (about 3.5–3.9 N against aim, under a normal force
+        // of about 7.2–8.1 N) slows it by about 0.008 m/s; the striker's ball and the mallet barely change. The
+        // ball–ball pair now slides on to its slip's reversal (frictionStep): its tangential impulse presses the
+        // croqueted ball into the turf about 2 % harder (−0.01803 against −0.01764 N·s). It leaves 6e-5 m/s slower
+        // and the turf's larger friction takes 9e-5 m/s more by the read (v₂ 3.75479 before). The mallet leaves 5e-5
+        // m/s slower (W 0.79048 before), through the face's friction on the striker's ball, whose motion the ball–ball
+        // pair's changed.
+        expect(r.time).toBeCloseTo(2.5e-3, 12);
+        expect(r.w1).toBeCloseTo(1.6175, 4);
+        // P2b.2b.2c.2b: the step convergence fix (was 3.7548).
+        expect(r.v2).toBeCloseTo(3.7546, 4);
+        // P2b.2b.2c.2b: the step convergence fix (was 0.7905).
+        expect(r.W).toBeCloseTo(0.7904, 4);
+    });
+});
+
+describe("Gugan's mallet (design 'My calls', §8.1)", () => {
+    // About 33 s locally: each pass of each preset's solve plans the contact 62 times and the stroke's speed once.
+    it("gives an effective mass of 2.30 ball masses on each preset, the lean kept, the default untouched", () => {
+        for (const type of ["drive", "stop-ac", "single-ball"] as const) {
+            const before = structuredClone(defaultProfile.mallet);
+            const setup = guganSetup(type, 3, 0, { gugan: true });
+            expect(Math.abs(effectiveMassOf(setup, WORLD) - 2.3 * WORLD.ball.mass)).toBeLessThanOrEqual(1e-6);
+            expect(leanOf(setup)).toBeCloseTo(leanOf(canonicalSetup(type)), 12);
+            expect(defaultProfile.mallet).toEqual(before);
+        }
+    }, 150_000);
+    it("throws when the target mass lies outside the bracket", () => {
+        // Review focus 5: a world whose ball is so heavy that 2.30 m_b exceeds the heaviest head's effective mass.
+        expect(() => gugansMallet("drive", 3, heavyBallWorld())).toThrow(/drive.*outside/);
+    });
+});
+
+describe("the impact step as an option", () => {
+    it("is today's run to the bit when absent, and moves the run when given", () => {
+        const setup = fitSetup("drive", TODAY, 3);
+        const world = fitWorld(TODAY);
+        expect(ratioOf(setup, runFit(setup, TODAY, world, {}).motion)).toBe(ratiosAt(TODAY).drive);
+        expect(ratioOf(setup, runFit(setup, TODAY, world, { dt: 2.5e-6 }).motion)).not.toBe(ratiosAt(TODAY).drive);
+    });
+});
+
+describe("the fit's entry points (P2b.2b.2c.2's final review)", () => {
+    it("moves the drive's ratio when only the ball–ball contact time moves", () => {
+        const p = { ...TODAY, ballBallContactTime: BOUNDS.ballBallContactTime[0] };
+        const setup = fitSetup("drive", p, 3);
+        expect(ratioOf(setup, runFit(setup, p, fitWorld(p)).motion)).not.toBe(ratiosAt(TODAY).drive);
+    });
+    it("moves the drive's ratio when only the arm mass moves", () => {
+        const p = { ...TODAY, armMass: BOUNDS.armMass[0] };
+        const setup = fitSetup("drive", p, 3);
+        expect(ratioOf(setup, runFit(setup, p, fitWorld(p)).motion)).not.toBe(ratiosAt(TODAY).drive);
     });
 });

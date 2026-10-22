@@ -1,0 +1,701 @@
+# P2b.2b.2c.2b — The Croquet Stroke's Squeeze: the Balls' Gap, Touching Balls and the Filmed Strokes: Design
+
+**Product spec:** `2026-09-30-croquet-shot-lab-design.md` §4 (impact phase).
+**Strike and turf laws spec:** `2026-10-09-p2b2b2b2a-strike-turf-laws-design.md` (the face's Hertzian law, T(U) and
+e(U)).
+**Impact spec:** `2026-10-03-p2b1-impact-integrator-design.md` (the linear ball–ball law from a contact time).
+**Croquet-fit spec:** `2026-10-19-p2b2b2c2-croquet-fit-design.md` (the step before; its Amendments divide the fit off
+to this step).
+**Evidence:** `docs/superpowers/probes/2026-10-20-p2b2b2c2-drive-double-hit.md` (the drive's late catch).
+**Roadmap:** P2 row; "P2b.2b.2c.2 outcomes (2026-10-20)" and its "Carried open items"; "Provisional numbers".
+
+**Why this step.** The fit of P2b.2b.2c.2 did not converge. The brainstorm of 2026-10-21 found why. The model's
+croquet stroke, with the balls touching, loads the mallet and both balls together for the whole strike, and the
+croqueted ball leaves too fast. The figures are from the canonical drive at 3 m/s with no push after contact
+(`guideEffort` 0, so no late catch):
+
+- **Leaving the face** (≈1.5 ms): the striker's ball 1.618 m/s, the croqueted ball 3.763 m/s, the mallet 0.80 m/s.
+  The croqueted ball's speed over the mallet's at contact is **1.25**. Gugan 4's ten filmed two-ball strokes give
+  **1.03–1.15** (mean 1.10 ± 0.02). The striker's ball's figure is in range.
+- **The squared speed ratio as the balls leave is 5.41**; the final distance ratio is 5.01. The lawn takes off about
+  7 %: the striker's ball loses more on its landings, then less on its way from sliding to rolling. That is not the
+  lawn's pace, which P2b.2b.2c.2 ruled cancels; it is the landing and slide-to-roll share, and 7 % is larger than
+  Gugan 5's drive tolerance (±4.7 %). The film shows a share too: Table 5's squared speed ratios (row 16) run above
+  its distance ratios (row 17) on most strokes. §7.8 compares the two.
+- **Timing:**
+  - *Model:* the face–ball contact runs 0.010–1.505 ms and the ball–ball contact 0.015–1.375 ms. All three bodies are
+    loaded together.
+  - *Film (Gugan 4, Fig. 4):* the croqueted ball is first seen moving 0.5–0.6 ms after the mallet touches. The
+    mallet's first contact ends at 0.65–1.0 ms. The croqueted ball leaves at 1.2–1.4 ms. The mallet's second tap runs
+    to about 1.7–2.6 ms. These are three mostly sequential contacts.
+- **What decides it.** A standalone 1-D chain reproduces the engine: 1.60 and 3.78 m/s, against the engine's 1.62 and
+  3.76. The chain is a point-mass mallet with the face's Hertz law and the linear ball–ball law. It shows:
+  - The squeeze depends only on the ratio of the face's contact time to the ball–ball contact time.
+  - The law's shape (linear or Hertz), the head mass and the restitutions matter far less. Losing energy only in the
+    rebound makes it worse.
+  - **A gap separates the hits.** At 1 mm the croqueted ball leaves at 1.12–1.13 × U, the striker's ball at
+    1.74–1.76 × the mallet's speed after, the squared speed ratio is 4.05–4.21 and the energy kept 0.74, all in line
+    with the film. At 0.25–0.5 mm the figures are worse than touching.
+  - **A soft ball–ball surface layer does not work.** To reproduce the filmed figures it needs about 1 mm. At that
+    depth a free collision at 1.90 m/s lasts 1.2 ms even as the video would time it, against Gugan's measured 0.75 ms
+    (Table 1). It contradicts a direct measurement.
+- **The gap is real in play.** The CA's "nominally in contact" strokes were measured apart: C1D, C3D and C10D at 1 mm,
+  C10S at 0.5 mm (Gugan 4, Table 5, row 2 and note (i)). The user: "There is an eternal problem when setting up the
+  croquet shot in actually getting the ball to rest touching each other."
+- **Not explained:** the two filmed stops recorded as truly touching, C3S and C20S, still behaved sequentially.
+- **The gap matches the film without explaining it.** Across the film's gaps (0, 0.5, 1, 2 and 6 mm) v₂/U stays within
+  1.03–1.15, and the touching strokes sit inside the gapped ones' range. The model's v₂/U depends strongly and unevenly
+  on the gap: 1.25 touching, worse at 0.25–0.5 mm (the chain; unverified in the engine), about 1.12 at 1 mm. So a
+  1 mm default fixes the figures at 1 mm, not the cause. The search (§4) is aimed at the cause, and the film's
+  insensitivity to the gap is one of its tests.
+
+These were throwaway diagnostics (evidence only; nothing in the repo changed). The figures are quoted here and are
+re-measured by this step's probe (§9).
+
+**Circularity.** The user's play data are checks, never fit targets (roadmap, 2026-10-08). Nothing in this step is
+fitted. The gap's default is measured (§3). Gugan 4's filmed strokes are the impact's yardstick (§5), and Gugan 5's
+distance ratios the end-to-end check (§7.2). A candidate in the search (§4) may carry a constant only if it is sourced
+or fixed by a written argument, never by matching the filmed strokes it is judged on.
+
+**Vocabulary.** "Split", "ratio" and "cut" keep their croquet meanings only: a ratio is the croqueted ball's distance
+over the striker's ball's. Other terms:
+
+- The **gap** is the balls' separation, surface to surface, as set up.
+- The **squeeze** is the strike's stage in which the mallet, the striker's ball and the croqueted ball are all loaded
+  together.
+- U is the mallet's speed at contact and W its speed after its last contact with the striker's ball. w₁ is the
+  striker's ball's speed after the strike and v₂ the croqueted ball's (Gugan's notation).
+
+## Decisions (user, 2026-10-21)
+
+1. **Scope.** This step gets the impact right, then the end-to-end checks. The follow-through moves to the next step
+   (user: "that division suits, keep the follow-through for next step"). Until then the drive in ordinary play keeps
+   today's full push (`guideEffort` 1) and its late catch.
+2. **Find the excess before the follow-through** (user: "start by finding where the extra ratio between about 3.9 and
+   5.0 comes from, before the follow-through work"). Found: the squeeze, above.
+3. **Judge against the filmed strokes** (user: "yes, judge against the filmed strokes"). Gugan 4's Table 5 speeds as
+   the balls leave the face are the impact's yardstick. Gugan 5's distance ratios are the end-to-end check.
+4. **Like for like.** Gugan 5's strokes are played with his equipment and his balls' figure noted beside it. The
+   model's own mallet is never changed to suit a source (user: "agree", to the proposal). His drive is played with no
+   push after contact: his players were "trying not to exert any extra force on the mallet shaft".
+5. **The gap is a set-up input.** The user: "The gap will always be small < 2mm. On occassion the lawn will assist and
+   the balls will be touching." So the gap runs from 0 to under 2 mm.
+6. **The gap, plus a search for what keeps truly touching balls apart** (user: "2", choosing between "the gap only",
+   "the gap plus a further search" and "the soft layer with the free-collision check relaxed"). The soft layer is set
+   aside: it contradicts Gugan's free-collision times.
+7. **The scatter is a check.** The user: "these fractional variations in setup may account for some of the
+   unexplained variance." Whether the gap's range reproduces Gugan 5's scatter is checked, never fitted (§7.3).
+8. **The pressed-in croqueted ball is a later item.** The user described pressing the croqueted ball into the lawn,
+   "perhaps even with the foot", to keep the balls together. Nothing here measures it; it goes to the roadmap.
+
+My calls (the user may overrule any of them):
+
+- **The default gap is 1 mm** in the canonical setups and the preset digest. It is the CA's measured gap for its
+  nominally touching drives, and matches the user's account. A gap of 0 stays available. The default moves last,
+  after the search (§4), so that a candidate the gate admits can re-open it and the croquet digests move once.
+- **The engine enforces the gap's range.** The Laws ask for contact; the user's < 2 mm and the Laws' Commentaries' 2 mm
+  agree on what counts as nominally touching. So `validateSetup` accepts a croqueted ball 0 to < 2 mm from the
+  striker's and rejects anything further.
+- **The ball–ball contact time stays at Gugan's 0.75 ms** and is no longer a fit candidate. Gugan 4's Table 1
+  measures balls that started 13–33 mm apart, a free collision, which is what the law describes. Its 0.50 and 0.87 ms
+  readings are double taps by Gugan's own account.
+- **The hands' parameters are not fitted in this step:** `handCouplingPeriod`, `handCouplingDampingRatio`, `armMass`,
+  `reachSlack` and the grips. They barely touch the strike's first few milliseconds. If the end-to-end checks miss,
+  the gate (§10) brings the miss to the user. No parameter is moved to close it without a ruling.
+- **Gugan's 2.30 lb is an effective mass.** He found it "by taking moments about its point of balance", and calls it
+  "the relevant mass for the analysis". So his strokes are played with the swung body's effective mass at the face
+  centre equal to 2.30 ball masses. That is a little lighter than the model's 2.45. It is set through the shot's
+  mallet profile (`profile.mallet.headMass`, `src/engine/swing/types.ts:125`), solved per preset on that preset's
+  canonical setup at the stroke's speed, because the effective mass depends on the contact's orientation, hands and
+  arc. The stance's lean is held as it was (a supplied mallet re-leans `canonicalSetup`'s stance,
+  `tests/engine/support/shot.ts:240-246`, which the solve must undo or check). The default mallet is untouched. To
+  avoid a clash with ruling D's 0.9·m (m the head's mass there), this design writes the ball's mass m_b: Gugan's
+  figure is 2.30·m_b.
+- **Every speed is read as Gugan read his:** "a few milliseconds after impact". The reading is taken 1 ms after the
+  later of the mallet's last contact with the striker's ball and the balls' last contact with each other, counting
+  only contacts that begin within the strike's window (5 ms from first contact), so that a late catch such as the
+  drive's at 109 ms never moves it. It is reported with the time it was taken. A stroke with no second tap reads its
+  figures the same way. A stroke whose mallet contact is still open at 5 ms is flagged and reported apart; it is not
+  counted in the means.
+- **The fitter stays dormant.** `scripts/fitRatios.ts`, `solvePair` and the probe's section C are left as they are,
+  with a note, for a possible later fit of the hands' parameters (gate D lists it). Nothing in this step calls them.
+
+## 1. Goal and exit criteria
+
+The goal: the model's croquet strike shares speed between the mallet and the two balls as the filmed strokes do, with
+the result independent of the step size; then the end-to-end checks against Gugan 5.
+
+Exit criteria:
+
+1. **The gap**: a croquet stroke can be set up with the balls 0 to < 2 mm apart, default 1 mm (§3). The ratchet is
+   bit-identical at gap 0 for every existing run (§8.2) before the default moves.
+2. **The search** (§4) is run, each candidate's result recorded, and any survivor ruled on at the gate before it lands
+   in the engine.
+3. **Step convergence**: every figure §5 and §7 use converges across dt/2, dt and 2·dt (§6).
+4. **The filmed strokes** (§5): played at their recorded gaps, the means of the counted strokes' figures fall within
+   Gugan's stated uncertainty, or the miss goes to the gate.
+5. **The checks** (§7) are run and recorded:
+   - the filmed timing;
+   - Gugan 5's drive and stop across the gap's range;
+   - the scatter;
+   - the distance check;
+   - Gugan's jab and the grip-limit control run;
+   - the AC stop's face re-contact;
+   - the effective mass;
+   - the landing and slide-to-roll share.
+
+   None is gated by a figure. Each goes to the gate (§10).
+6. **Every preset's canonical setup** runs from top to finish as P2b.2b.2c.2's. No impact ends with the head
+   overlapping a ball as handed over. Each default plans 3 m/s within 2 %.
+7. **The tidy** (§11) is done, the pre-flight gate (§10) is run and ruled on, the figures are recorded (§12), and
+   `ENGINE_VERSION` goes to 0.15.0 (the gap's check in `validateSetup` is an engine change).
+
+## 2. Architecture
+
+- **The gap needs one engine change.** A `ShotSetup` places balls by position, but `validateSetup` rejects a croquet
+  stroke whose croqueted ball is more than `CONTACT_TOLERANCE` (1e-9 m) from the striker's (`src/engine/shot.ts:92-95`,
+  `src/engine/detect.ts:18`), and `simulateShot` runs it. The fit scripts dodge it by calling `simulateImpact`
+  directly; the tests don't. So the check becomes 0 ≤ gap < 2 mm (my call above), with its analytic cases (§8.1).
+  Beyond that the gap is a set-up choice:
+  - `canonicalSetup`'s croquet branch (`tests/engine/support/shot.ts:202-226`) today throws for a croquet stroke given
+    a gap. It gains a new option, `croquetGap`, range-checked; the GC stop's `targetGap` is unchanged. The comments at
+    `shot.ts:156-161` and `:204-205` and the throw at `:220-222` are reworded.
+  - The impact already accepts balls that start a gap apart with the face touching the striker's ball, as for the GC
+    stop's target.
+- **The search** (§4) runs in throwaway scripts and a probe section. A candidate reaches the engine only after the
+  gate rules it in. If one does, it lands with its own analytic cases and the ratchet (§8).
+- **The filmed strokes are sourced data.** Gugan 4's Table 5 is held as figures with their row and column quoted.
+  That means cite, don't mirror: figures and annotated quotes, never the page.
+- **The tooling** extends `scripts/ratioFit.ts` (its evaluator gains the gap, the read-out of §5.2 and the
+  effective-mass override) and `scripts/croquetFitProbe.ts`.
+
+## 3. The gap
+
+- **Range:** 0 ≤ gap < 2 mm for a croquet stroke (decision 5). The test support takes the gap as an option and throws
+  outside the range.
+- **Default: 1 mm** (my call above). It moves in its own commit, last, after the search (§4): first the option and the
+  engine's check land at default 0 with the ratchet bit-identical. The default's move is then the only change in its
+  commit, and its moved runs are listed.
+- **Geometry:** the croqueted ball lies along the line of the croquet stroke at 2R + gap from the striker's ball's
+  centre, as the GC stop's target already does (`shot.ts:225-226`). The pass roll's 20° placement keeps its angle,
+  and every other placement rule stays as it is.
+- **A gap changes nothing until contact.** With a gap the striker's ball must travel the gap before the ball–ball pair
+  closes. The re-entry guard and the ball–ball pair's closure behave as for any separated pair.
+
+## 4. The search: what keeps truly touching balls apart
+
+C3S and C20S started touching (Table 5, row 2: separation 0, without note (i)'s asterisk) and still behaved
+sequentially. Their figures:
+
+| Stroke | v₂/U | w₁/W | v₂/w₁ |
+|---|---|---|---|
+| C3S | 1.15 | 1.73 | 2.27 |
+| C20S | 1.09 | 1.61 | 2.17 |
+
+### 4.1 The tests
+
+Every candidate is judged on:
+
+1. At gap 0, C3S and C20S, each at its own U, give v₂/U, w₁/W and v₂/w₁ within the uncertainties of §5.3.
+2. **Insensitivity to the gap, as the film shows:** v₂/U across gaps 0, 0.25, 0.5, 1 and 2 mm at C1D's U stays within
+   Table 5's own spread (1.03–1.15).
+3. The gapped strokes of §5 stay within their uncertainties.
+
+A candidate that changes a law (b and e) must also pass:
+
+4. Gugan's free collisions (Table 1) keep e = 0.72 ± 0.02. Their contact time stays within one frame (0.125 ms) of
+   0.75 ms at 1.90 and 7.64 m/s, timed as the video would time it: from the croqueted ball's first visible movement,
+   and the builder fixes and records the visibility threshold. The harness plays the impact's ball–ball law alone:
+   two balls, one moving, no head contact; the plan names it. Phase 2's impulsive law keeps e = 0.72 by construction
+   and is not changed.
+5. The single-ball strokes are unchanged within their measurement: Gugan 4's Table 2 (A1D–A4D, the face's contact
+   time and restitution) and P2b.2b.2c.2's distance check.
+6. Every constant is sourced, or fixed by a written argument, never matched to C3S and C20S.
+
+### 4.2 The candidates
+
+These are the starting list. The builder may add any with a physical reason, and records each.
+
+- **a. Resolution of "touching".** Table 5 resolves separations to 0.5 mm. If C3S's and C20S's "0" may hide a gap
+  under 0.5 mm, does any gap in 0–0.5 mm reproduce them? The chain says 0.25–0.5 mm is worse than touching. It is
+  read from §9's gap sweep, run finely below 0.5 mm at C3S's and C20S's U, not as a run of its own.
+- **b. The face in a squeeze.** The face law is fitted to drop tests of a Jaques ball on wood (Gugan 2000: 0.90 ms at
+  2.78 m/s). Gugan 4's video gives the face's contact in single-ball drives as 0.75 ms at 3.26 m/s (Table 2). Gugan
+  5's mallet was "hard-faced". Does a face law consistent with the video and a hard face change the squeeze, and in
+  which direction?
+- **c. The balls resting on the turf.** The croqueted ball sits in the turf bed. Do the bed's support and friction
+  through the first 0.5 ms delay its response enough to separate the hits? The engine includes the turf; the chain
+  doesn't, yet they agree, which suggests not. Re-measure with the turf's terms reported separately.
+- **d. Off-line contact.** The face meets the striker's ball off its centre line and lifts it ("uppish"), so the
+  ball–ball contact is not collinear with the strike. Does the 3-D geometry, the striker's ball's rise and its spin
+  change the sharing? The engine is 3-D, but the canonical drive's striker's ball rose only 0.1 mm by 1.5 ms.
+- **e. Rate-dependent ball–ball dissipation.** A viscoelastic law whose loss depends on the rate, with Table 1's free
+  collisions held. The chain's rebound-only loss made it worse; this is the remaining dissipation form.
+
+### 4.3 The bound
+
+The search is one task in the plan, with a fixed list. Candidates a, c and d change no law, so they are measurements
+of today's engine (tests 1–3 only, with the turf's terms and the 3-D geometry reported). Candidates b and e get the
+whole battery. The results go to the gate (§10, section B).
+
+- **If no candidate passes**, the step carries on with the gap alone. The gate records that the 1 mm default hides a
+  known defect at gap 0, which ordinary play meets whenever "the lawn will assist", with each candidate's result. It
+  does not record the matter as settled. Whether the user accepts a croquet stroke that is right only near 1 mm is
+  put to them there.
+- **If one passes**, the user rules on whether it lands in this step, and on whether the default gap still moves.
+
+## 5. The filmed strokes
+
+### 5.1 The yardstick: Gugan 4, Table 5
+
+Ten two-ball strokes filmed at 8,000 frames a second ("averages taken a few milliseconds after impact ... their
+precision is limited to a few percent"). Per stroke, from the table:
+
+- the mallet speed U (row 1);
+- the separation in mm (row 2), with its note (i) for the strokes "nominally in contact, but ... in fact clearly
+  separated";
+- W, the mallet "after the double tap" (row 5);
+- w₁ (row 6) and v₂ (row 9).
+
+The strokes are B2GS, B1GS, B1MS and B2MS (close scatter shots, separated 6, 1, 2 and 6 mm), C3S, C10S and C20S
+(stop-shots) and C1D, C3D and C10D (drives). Gugan's summary (§9.3):
+
+- v₂/U "approximately constant at 1.10 ± 0.02 (sem)";
+- w₁/W "the mean from all ten measured values of the ratio is 1.71 ± 0.05";
+- v₂/w₁ "the mean value of the ratio, 2.07 ± 0.06".
+
+The builder fetches Gugan 4 afresh, records its URL, date and SHA-256 in `reference/sources/README.md`, and quotes
+each row used.
+
+### 5.2 How each stroke is played and read
+
+- **Each stroke on its own preset**, planned at its own U (`strokeFor`) and at its recorded gap, with the preset's own
+  push after contact and no jab (the CA's strokes record neither; the read-out's window keeps any late catch out):
+  - drives on the drive preset;
+  - stop-shots on the AC stop preset;
+  - close scatter shots on the single-ball preset, with the second ball placed at the recorded gap as the GC stop's
+    target is.
+- **Gaps:** each stroke is played at its recorded value. The "nominally in contact" strokes are rounded to 0.5 and
+  1 mm, so they are repeated at ±0.5 mm; only the recorded gap counts in the means, and the repeats are reported as
+  sensitivity. The 6 mm scatter shots are outside a croquet stroke's 2 mm range, but they are single-ball strokes into
+  a second ball, which the engine's check doesn't cover; they are two-ball collisions and count for the impact.
+- **The mallet is the model's default.** The CA's mallet is not recorded. By momentum the filmed mallets acted like
+  2.30–2.41 ball masses, against the model's 2.45. The effective mass is re-measured and recorded beside them (§7.7).
+- **The read-out** is as decided above: 1 ms after the mallet's last contact with the striker's ball ends. Per stroke
+  it gives:
+  - v₂/U;
+  - w₁/W;
+  - v₂/w₁;
+  - W/U;
+  - the energy kept, (k·W² + w₁² + v₂²)/(k·U²), with k the effective mass over m_b.
+
+### 5.3 Pass
+
+The counted strokes' means within Gugan's uncertainties: v₂/U 1.10 ± 0.02, w₁/W 1.71 ± 0.05 and v₂/w₁ 2.07 ± 0.06.
+W/U and the energy kept are recorded beside Table 5's own values, which the brainstorm's arithmetic puts at about
+0.30 and 0.75; they are not gated. Each stroke's figures are listed against its own row. Today's C3S and C20S, played
+touching, are expected to miss unless the search finds their cause. Whether the means pass with them counted is
+reported both ways.
+
+## 6. Step convergence
+
+Today the drive's ratio is 3.31, 3.48 and 3.47 at 5, 2.5 and 10 µs, with a stick/slip branch of the face–ball
+tangential law on a contact's entry step (roadmap, carried items). This step requires:
+
+- The judged figures change across dt/2, dt and 2·dt by less than a tenth of their own tolerance: §5's three means,
+  and §7.2's drive and stop ratios at the default gap. The ratios use Gugan 5's tolerances (0.02 on the drive, 0.06 on
+  the stop), and the means use Gugan's uncertainties. §7's other figures are ungated and are not run at three steps.
+  This is my call.
+- The cause of today's non-convergence is found and fixed, not hidden by a smaller default step. If the default step
+  must change, the cost is recorded (`shotMix`), and the gate rules.
+- The convergence is re-checked at the default gap, and with any candidate the gate admits.
+
+## 7. The checks (recorded, not fitted)
+
+### 7.1 The filmed timing
+
+For C3S, C20S (touching) and C1D, C10S, C3D and C10D (recorded gaps), from Gugan 4's Fig. 4:
+
+- when the croqueted ball first moves;
+- when the mallet's first contact ends;
+- when the croqueted ball leaves;
+- the mallet's second contact.
+
+The figure's readings are the research agent's, made from the image: ±0.5 frame on top of Gugan's own "a frame or
+two". So the builder re-reads Fig. 4 and records both. A stroke in which all three bodies stay loaded throughout
+fails this check even if its speeds pass.
+
+### 7.2 Gugan 5's drive and stop, across the gap
+
+- **The drive:** at 3 m/s, with no push after contact (`guideEffort` 0) and Gugan's effective mass (2.30 ball
+  masses, my call above), at gaps 0, 0.25, 0.5, 1.0, 1.5 and 1.9 mm. The ratio against 4.23 ± 0.2.
+- **The stop:** the AC stop at 3 m/s, with Gugan's jab (`stroke.jab`) and the same effective mass, at the same gaps.
+  Gugan gives no depth, so the jab is swept as the existing jab test sweeps it (0–8 mm in 0.5 mm steps,
+  `tests/engine/turfStrike.test.ts:139-140`), each depth reported. Against 7.15 ± 0.6.
+- **The balls:** Gugan's Dawson Internationals rate e = 0.772 by the maker's bounce test, against the model's
+  ball–ball 0.72 from the CA's video. The model's value stays. The runs are repeated at 0.772 and recorded beside the
+  others, never adopted.
+- **Reported:** whether each target is reachable within 0–2 mm, and where. A miss goes to the gate; it is not gated.
+
+### 7.3 The scatter
+
+The drive's ratio over the gap's range against Gugan 5's standard deviation of single strokes (0.6), and the stop's
+against "about ± 2.0". Beside it, the film's own spread in v₂/U and v₂/w₁ across its gaps (Table 5) and the model's
+across the same gaps. The model's spread comes from its sensitivity to the gap, which the film contradicts at gap 0
+unless the search finds the cause. So the user's hypothesis is judged only if the model's sensitivity agrees with the
+film's; otherwise the check is recorded as unable to test it.
+
+### 7.4 The distance check
+
+P2b.2b.2c.2's section A, re-run unchanged: the CA's single-ball strokes. The gap does not touch them, nor should any
+admitted candidate; if one does, that is a finding.
+
+### 7.5 Gugan's jab and the grip-limit control run
+
+The jab (`tests/engine/turfStrike.test.ts:131`, the AC stop) is re-run at the default gap. The grip-limit control run
+(`:90-109`) is a single-ball stroke (`:24`), which the gap can't touch; it is re-run only if a candidate that changes
+the face law is admitted. The jab stays `.fails` unless it now passes. The weak stroke stopped dead stays `it.todo`.
+Neither is changed without a ruling.
+
+### 7.6 The AC stop's face re-contact
+
+Whether the AC stop has a face-region re-contact that `impact-off-face` doesn't flag (it reports only off-face
+regions). Every face–ball interval on the AC stop's canonical run and its digest grid is listed, with its region.
+
+### 7.7 The effective mass
+
+Re-measured on the drive's canonical setup and with Gugan's effective mass, against ruling D's 0.9·m ≤ m_eff ≤ M (m
+the head's mass), and against the filmed strokes' 2.30–2.41 m_b.
+
+### 7.8 The landing and slide-to-roll share
+
+For each filmed stroke and for §7.2's drive and stop, the model's squared speed ratio as the balls leave beside its
+distance ratio, against Table 5's rows 16 and 17 for the film. The model's share (7 % on today's drive) is named at
+gate D as a possible cause of a miss, beside the hands' parameters and the stop's check. Nothing is tuned.
+
+## 8. Testing
+
+### 8.1 Analytic cases
+
+- **The gap:** a croquet setup at gap g places the balls 2R + g apart, centre to centre, along the croquet stroke's
+  line. It throws at g < 0 or g ≥ 2 mm. The default is 1 mm.
+- **The engine's check:** `validateSetup` accepts a croquet stroke at gaps 0, 1 and just under 2 mm, and rejects one
+  at 2 mm and beyond, with the gap in its message.
+- **The effective-mass override:** the solved head mass gives the swung body's effective mass at the face centre
+  within 1e-6 of 2.30·m_b on each preset, keeps the stance's lean, and leaves the default profile untouched.
+- **The read-out** (§5.2): on a constructed impact with known last contacts, the figures are read 1 ms after the
+  later of the last face contact and the last ball–ball contact. A contact beginning after the strike's window
+  doesn't move it.
+- **Step convergence** (§6) as tests on the drive and the AC stop. Slow ones go behind `SLOW_TESTS`.
+- **Any admitted candidate** brings its own analytic cases, including bit-identity when it is switched off.
+
+### 8.2 The ratchet
+
+The preset digest is a throwaway script, as in P2b.2b.2c.2: SHA-256 per run over every preset's digest grid. The plan
+recreates it, and its gap-0 baseline is taken from `main`'s head in a baseline worktree and kept in the session's temp
+directory. The preset digest, `impactDigest`, `shotMix` and `impactProbe` must be bit-identical (timing lines apart)
+in these cases:
+
+- **after the gap option and the engine's check**, at gap 0;
+- **after any step-convergence fix**, except the runs it moves, each listed;
+- **after the default gap's move to 1 mm**, except the croquet-stroke runs, each listed and counted per preset;
+- **after any admitted candidate**, except the runs it moves, each listed.
+
+### 8.3 The canonical runs
+
+Every preset's canonical setup from top to finish at the default gap, as P2b.2b.2c.2's §8.3.
+
+### 8.4 The existing tests
+
+All pass, or each change is explained in its commit. The deferred entry-point tests for `ballBallContactTime` and
+`armMass` (P2b.2b.2c.2's final review) are added.
+
+## 9. The probe
+
+`scripts/croquetFitProbe.ts` gains sections for:
+
+- §4: each candidate against §4.1's tests;
+- §5: each stroke's figures against Table 5's, and the means;
+- §6: the convergence table;
+- §7.1–§7.8.
+
+Its output is committed as a dated probe file under `docs/superpowers/probes/`. The probe also re-measures at gap 0
+the figures the step's judgements use:
+
+- the speeds as the balls leave;
+- the contact intervals;
+- the gap sweep from 0 to 1.9 mm, finely below 0.5 mm (candidate a).
+
+The 7 % share is measured by §7.8. The contact-time sweep is rationale only and is not re-run.
+
+## 10. The pre-flight gate
+
+Run once the filmed strokes and the checks are in. Each section goes to the user with pros, cons and a
+recommendation, and each ruling is recorded verbatim in the design's amendments. Sections:
+
+- **A.** The filmed strokes (§5): each stroke and the means, with C3S and C20S counted and not.
+- **B.** The search (§4): each candidate's result, and whether any lands.
+- **C.** Step convergence (§6), and any change of the default step with its cost.
+- **D.** Gugan 5's drive and stop across the gap (§7.2), at 0.72 and 0.772, with the landing and slide-to-roll share
+  (§7.8). If either misses everywhere in 0–2 mm, the named causes (the hands' parameters, the stop's check, the
+  model's landing and slide-to-roll share) and the option to accept and record go to the user here.
+- **E.** The scatter (§7.3).
+- **F.** The distance check, the jab, the control run if re-run, the AC stop's re-contact and the effective mass
+  (§7.4–§7.7).
+- **G.** The ratchet's moved runs (§8.2), and the default gap's effect on every preset.
+
+## 11. The tidy (first commit)
+
+From P2b.2b.2c.2's final review, the three fitter items (`parseCandidate`'s leniency, `fitRatios.ts`'s exit code on
+"closest", section C's "reachable" verdict across a jump) are not fixed: the fitter stays dormant (my call above).
+They are moved to the roadmap's carried items, for whichever step next runs a fit. The tidy is then a note at the top
+of `scripts/fitRatios.ts` and section C saying they are dormant and why.
+
+## 12. Recorded figures
+
+Into the roadmap's "P2b.2b.2c.2b outcomes", with the probe file:
+
+- the default gap and its source;
+- each candidate's result;
+- the per-stroke and mean figures against Table 5;
+- the timing;
+- the convergence table;
+- Gugan 5's drive and stop across the gap at both restitutions;
+- the scatter;
+- the distance check;
+- the jab and the control run;
+- the AC stop's re-contacts;
+- the effective mass;
+- the landing and slide-to-roll share against the film's;
+- the ratchet's moved runs;
+- the cost (`shotMix`).
+
+The roadmap's P2 row is updated: P2b.2b.2c.2b as delivered, a new **P2b.2b.2c.2c** for the follow-through (§13), and
+P2b.2b.2c.3 unchanged. "Provisional numbers" is updated for the ratio tolerances' outcome.
+
+## 13. Out of scope
+
+- **The follow-through: P2b.2b.2c.2c.** The four follow-throughs the user described (force the arc, push the hands
+  straight along the line, natural, cut short to a stop) become a shot's own choice. The natural push grows with the
+  swing's power. Each stroke type gets a better default follow-through. The late catch at 109 ms is a "push" in
+  Gugan's sense ("Such pushes are of course always faults", Gugan 5; Law 29.1.6), and comes out of the physics.
+  Gugan 5's "super pass-rolls" (a strong early second tap from "a lot of arm follow through") belong there too.
+- **The pressed-in croqueted ball:** a later set-up input (decision 8).
+- **A fitted parameter of any kind:** nothing in this step is fitted (Circularity).
+- **Phase 2's ball–ball collisions:** they stay impulsive.
+- **The lawn's pace:** not tuned (P2b.2b.2c.2's ruling stands).
+- **Ball-make presets:** P3's.
+- **The 0.378 m drift's origin:** carried, as before.
+
+## Amendments
+
+### The spec review (2026-10-21)
+
+A three-lens panel (subtraction, completeness, framing) reviewed the approved design; every finding was verified
+against the design and the repo before it was applied. Changes:
+
+- `validateSetup` rejects a gapped croquet stroke (`src/engine/shot.ts:92-95`), so the gap needs an engine change:
+  the check becomes 0 ≤ gap < 2 mm, and `ENGINE_VERSION` 0.15.0 is unconditional.
+- The search tests the film's insensitivity to the gap. Only candidates that change a law take the whole battery.
+  Candidate a is read from the gap sweep. A search that finds nothing is recorded at the gate as a known defect at
+  gap 0, not as settled.
+- The default gap moves last, after the search.
+- The read-out counts the balls' last contact as well as the face's, and only contacts within the strike's window.
+  The CA's strokes are played with the preset's push and no jab.
+- The effective-mass override is solved per preset with the stance's lean kept. The ball's mass is written m_b.
+- The stop's jab is swept 0–8 mm. The free-collision harness is named. The ±0.5 mm repeats are sensitivity only.
+- Convergence is required only on the judged figures.
+- The scatter check sets the film's spread across gaps beside the model's, and judges the user's hypothesis only if
+  they agree.
+- The 7 % landing and slide-to-roll share is no longer called cancelling. It is compared with the film's (§7.8) and
+  named at gate D.
+- The fitter stays dormant; its three review items move to the roadmap's carried items.
+- The grip-limit control run is re-run only if a face-law candidate is admitted. The contact-time sweep is not
+  re-run.
+- The preset digest's provenance is stated.
+
+### The pre-flight gate (2026-10-21)
+
+- **A. The filmed strokes.** The three means miss Gugan's uncertainty with C3S and C20S counted and without (v₂/U
+  1.149 and 1.125, w₁/W 1.601 and 1.495, v₂/w₁ 2.61 and 2.64, against 1.10 ± 0.02, 1.71 ± 0.05 and 2.07 ± 0.06).
+  The user: "I'd like to fix it, why does the model differ." Ruling, verbatim: "Check, then design (Recommended)":
+  "Rule A against. In this step, first do the two cheap measurement checks: time the model as the video does
+  (section F re-read at the 0.2 mm threshold), and check B2GS's read-out window. Then trace why the mallet stays on
+  through the squeeze (systematic debugging) and stop with the cause before any law changes. A physics change comes
+  as its own designed step with sourced constants."
+- **A's checks.** Timed as the video would (a contact on while the surfaces are within 0.2 mm), the model's first face
+  contact gets longer, not shorter (C3S 1.84 ms, C3D 2.38 ms, against the film's 0.65 and 0.99 ms), and no filmed
+  stroke shows a second tap within the strike: the face stays loaded through the squeeze. The cause traced: the face's
+  Hertz law (fitted to Gugan 2000's drop tests) is too compliant and too slow against the ball–ball law, so the
+  croqueted ball pushes the striker's ball back before the face's restitution is complete; the hands and the effective
+  mass are not the cause. B2GS misses only because Gugan's double tap (10.8 ms) falls after the 5 ms window. Ruling on
+  the read-out, verbatim: "Widen window, re-run (Recommended)": "Lengthen STRIKE_WINDOW so a face re-contact soon
+  after the strike counts (for example 20 ms, which still excludes the drive's late catch at about 109 ms and the
+  follow-through approaches near 79–87 ms), as Gugan reads W "after the double tap". Re-run E, F and G; B2MS (also
+  6 mm) is checked with it." The window is 15 ms, the smallest round value past B2GS's tap (10.8 ms); the earliest
+  contact it excludes is the follow-through's approach at 87.3 ms. B2MS's tap (3.3 ms) already lay inside.
+- **A, re-run.** With the strike read after Gugan's double tap, the gapped strokes' means pass (v₂/U 1.120, w₁/W
+  1.670, v₂/w₁ 2.112); all ten miss on v₂/U (1.145) and v₂/w₁ (2.186) and pass on w₁/W (1.741), the miss being C3S
+  and C20S at gap 0. Ruling, verbatim: "Accept, gap-0 to new step (Recommended)": "Accept A for this step. Record the
+  touching stops' miss as a known defect at gap 0, with its traced cause: the face law is too compliant and slow
+  against the ball–ball law. Open the face/ball–ball law step (constants from Gugan 4 Tables 1 and 2) before the
+  follow-through."
+- **B. The search.** No candidate passes; a, b, c, d and e each miss first at test 1 (C3S and C20S at gap 0). Today's
+  0.75 ms ball–ball law reads 0.53–0.61 ms timed as the video would, more than a frame short of Table 1's 0.75 ms.
+  Ruling, verbatim: "None lands; carry leads (Recommended)": "No candidate lands in this step. Record each result,
+  and the known defect at gap 0 (as ruled at A). Carry into the new face/ball–ball law step: the combined
+  face-plus-ball–ball lead, and the finding that today's ball–ball law reads 0.53–0.61 ms on video against Gugan's
+  0.75."
+- **C. Step convergence.** The cause was the friction's re-stick after a sliding step (the spring carried the last
+  step's cone, so a contact re-stuck at a slip proportional to the step); the fix re-tests on the current cone, on
+  the ball–ball and face–ball contacts, the default step unchanged, the cost unchanged; every judged figure moves by
+  under a tenth of its tolerance. Ruling, verbatim: "Accept (Recommended)": "Accept the fix and the convergence.
+  Record that the turf contacts keep the plain law (step-free here, but the same mechanism under a rising load) as a
+  carried item."
+- **D. Gugan 5's drive and stop.** At 3 m/s with Gugan's mallet: the drive 5.16, 6.10, 6.00, 4.47, 4.19 and 4.17 at
+  gaps 0, 0.25, 0.5, 1, 1.5 and 1.9 mm (within 4.23 ± 0.2 at 1.5 and 1.9 mm; 4.67, 4.30 and 4.28 at e 0.772); the
+  stop within 7.15 ± 0.6 at 1, 1.5 and 1.9 mm for jabs to 6.5 mm (and at gap 0 at e 0.772). The stop's share, the
+  distance ratio over the squared speed ratio, is +35 to +53 % at 1 mm, where the film's strokes show +2 to −29 %.
+  Ruling, verbatim: "Accept, record share (Recommended)": "Accept and record the figures. Name the stop's share as
+  the leading suspect, and re-measure it after the face/ball–ball law step, which changes the speeds the share acts
+  on. Carry it as an open item: the stop's landing and slide-to-roll after the strike."
+- **E. The scatter.** The model's sensitivity to the gap agrees with the film's (model over film spread 1.47 on
+  v₂/U and 1.80 on v₂/w₁, slopes of one sign), so the hypothesis is judged: the drive's standard deviation over the
+  gaps is 1.47 of Gugan 5's 0.6 and the stop's half-range 0.92 of his ± 2.0. Almost all of it comes from gaps under
+  0.5 mm; over 1–1.9 mm the drive's is about 0.17. Ruling, verbatim: "Record: not established (Recommended)": "Record
+  the figures and the criterion's verdict, with the judgement "consistent but not established". The spread comes from
+  the gap-0 defect's region. Re-judge after the face/ball–ball law step fixes touching balls."
+- **F. The distance check, the jab, the re-contacts and the effective mass.** The CA's single-ball strokes are
+  unchanged. Gugan's jab still fails, now because at 1 mm every depth double-taps at 0.441–0.444·U (inside his band)
+  before the head grounds, so no graze qualifies. The control run was not re-run. The AC stop's canonical run
+  double-taps (face 0.005–1.095 and 1.265–2.62 ms); 96 of the grid's 135 impacts have a face-region re-contact that
+  impact-off-face does not flag. The effective mass is 2.446 m_b by default and 2.300 with Gugan's mallet, both within
+  ruling D. Ruling, verbatim: "Accept, record jab (Recommended)": "Accept. The jab stays `.fails`, its comment
+  recording that at 1 mm the double tap gives 0.44·U inside Gugan's band. Carry "re-examine the jab check's
+  turf-graze qualifier against Gugan 5 at the CA gap" into the law step, since the face law changes the tap. Record
+  the 96 unflagged face re-contacts as correct (a face-region tap is not off-face)."
+- **G. The moved runs and the default gap.** Only croquet strokes moved: Task 5 334 preset-digest runs and 6 fuzz
+  strokes, Task 9 950 runs (every simulated croquet run); single-ball and the GC stop never. At 1 mm every canonical
+  croquet stroke but the drive double-taps as the film shows; four tests are pinned at gap 0, where their mechanisms
+  occur, and two hit counts re-baselined. The user, verbatim: "1mm seems sensible for now but, the Gap 0 may be
+  imminently resolved by the upcoming investigation. The player and indeed Gugan is always aiming for touching but
+  even then there must be some unmeasuragble gap." Ruling: the default stays 1 mm for now, with the moved runs, the
+  re-baselines and the gap-0 pins accepted; the default is revisited after the face/ball–ball law step, which also
+  tests the user's hypothesis that "touching" hides an unmeasurable gap (candidate a found 0–0.5 mm worse than
+  touching on today's laws, so the sweep is re-run on the new ones).
+- **Section A's Gugan 5 drive at the default gap.** The distance check's one croquet line, Gugan 5's drive at the
+  preset's push, moved with the default: 6.6526 yd on `main`, 6.6502 after the friction fix (gap 0), 5.3192 yd at
+  1 mm, ×0.7599 of his "about 7 yd". The gate had not shown it. Ruling, verbatim: "Record, re-check later
+  (Recommended)": "Record it in the gate's Amendments and the roadmap's outcomes, with the cause: less squeeze at
+  1 mm, so v₂/U is lower and the drive comes out shorter, consistent with the lawn running short on the single-ball
+  strokes. Re-check it after the face/ball–ball law step, beside the lawn's pace." (v₂/U is about 1.12 at 1 mm against
+  1.25 at gap 0.)
+- **The double tap's fault flag.** At 1 mm every canonical croquet stroke raises possible-fault 29.1.6.1 for the
+  double tap within the strike. The user, verbatim: "it is not a fault right, in fact, it seems to be a key
+  ingredient of the stroke. However, its interesting to know it is happening and how often and at what timings and
+  distances. I'm not sure on the exact laws here." Ruling: the flag is left as it is in this step; the law step
+  sources the Laws (29.1.6 and its Commentary) and, if they bear the user out, stops flagging a double tap within a
+  croquet stroke's strike as a fault and reports it instead (how often, its timings, the separation reached).
+
+### The plan's decisions and the execution's rulings (2026-10-22)
+
+The plan (`docs/superpowers/plans/2026-10-21-p2b2b2c2b-squeeze.md`) settled nine points this design left open, and the
+execution ruled where the plan's text did not settle a step. Each is recorded with its reason; the user's own rulings
+are the pre-flight gate's, above. The figures are in the roadmap's "P2b.2b.2c.2b outcomes (2026-10-22)".
+
+The plan's decisions:
+
+1. **The engine's check.** `CROQUET_GAP_LIMIT = 0.002` m in `src/engine/shot.ts`, and `validateSetup` rejects a
+   croquet stroke unless its gap lies below it, the gap in the message; a negative gap stays `validateImpact`'s
+   overlap check. One named constant states the user's "< 2mm" and the Laws' Commentaries' 2 mm (my call above), and
+   an overlap keeps the check that already owns it.
+2. **The set-up option.** `canonicalSetup` takes `croquetGap` (m, surface to surface) for a croquet stroke only, its
+   default `DEFAULT_CROQUET_GAP`, and throws for a gap outside [0, 2 mm), for a gap on any other stroke and, as
+   before, for `targetGap` on a croquet stroke. The range is checked on the input, not on the placed positions, so
+   that round-off in 2R + g never decides it; the pass roll keeps its 20°.
+3. **The impact step.** `strike` and `runFit` take an optional `dt`, passed to `simulateImpact`; absent, the call is
+   the old one to the bit. The convergence runs (§6) need the step as an input, and the ratchet needs the default
+   path untouched.
+4. **The read-out.** The strike's window (`STRIKE_WINDOW`, 5 ms as planned) and the reading's delay (`READ_DELAY`,
+   1 ms): only face and ball–ball intervals beginning within the window of the first face interval count; the
+   reading is 1 ms after the latest end among them; U and W are the head centre's velocity along aim, w₁ and v₂ each
+   ball's horizontal speed; a counted face interval still on at the window's end marks the stroke open. It turns
+   Gugan's "a few milliseconds after impact" (my call above) into one stated instant, reported with the stroke. The
+   window became 15 ms at the gate (below).
+5. **Gugan's mallet.** `GUGAN_EFFECTIVE_MASS = 2.3` ball masses; `gugansMallet` bisects the head's mass, 60 halvings,
+   until the swung body's effective mass at the face centre along aim equals 2.30·m_b on the preset's canonical setup
+   at the stroke's speed, checking the stance's lean rather than undoing it. The effective mass depends on the
+   contact's orientation, the hands and the arc (my call above), so it is solved on the stroke as played; a bisection
+   needs no derivative of it.
+6. **The free-collision harness.** `freeCollision` plays the impact's ball–ball law alone (two balls, one moving, no
+   head, turf or gravity), timed as a video would: from the struck ball's displacement first exceeding
+   `VISIBLE_SHIFT` to the pair's gap first exceeding it. `VISIBLE_SHIFT` is Gugan 4's stated resolution, 0.2 mm, his
+   figure in principle (he puts it "several times greater" in practice). Table 1 measures a free collision by video,
+   so the law is judged as the video saw it (§4.1, test 4).
+7. **Candidates b and e** change a law, so they ran in throwaway copies of the worktree, never committed; only their
+   figures reached the probe file. A candidate reaches the engine only after the gate admits it (§2).
+8. **Order.** The filmed strokes' machinery came before the search, because the search's test 3 is §5's gapped
+   strokes; a passing candidate would have gone to the user at once, because the default moves last so that an
+   admitted candidate can re-open it (§4.3). None passed.
+9. **The probe's sections.** A kept (the distance check, §7.4), B, C and H kept as they were or dormant; new D (gap 0
+   re-measured and the sweep), E (the filmed strokes), F (the timing), G (the convergence), I (the search), J (Gugan
+   5's drive and stop), K (the scatter), L (the share) and M (the jab, the re-contacts, the effective mass). `all`
+   runs A, D–G and I–M; B, C and H only by name, so that one run regenerates the gate's record and the dormant fitter
+   is never called.
+
+The execution's rulings, where they changed what the plan or this design said:
+
+- **The baseline tree's packages.** The baseline worktree's `node_modules` is a symlink to the worktree's instead of
+  an `npm ci` of its own: `npm --prefix … ci` failed (EUSAGE), and the package files are identical to `main`'s, so
+  the baseline ran on the same packages.
+- **Section A's baseline.** Section A was captured from `main`'s tree with the baseline, because the distance check is
+  compared against `main`'s section A and that tree stayed untouched until the end.
+- **The engine check's test.** Its rejection pattern is `within 2 mm of the striker \(gap 0\.0`, not the plan's
+  `\(gap 0\.00`, which cannot match a gap of 0.01 m; the plan's intent, the gap in the message, holds.
+- **The sourced figures' test** asserts C20S's v₂/U 1.09 and w₁/W 1.61 and both stops' v₂/w₁ (2.27, 2.17) beside
+  C3S's, because the test is named for both strokes and §4's table quotes all six.
+- **The read-out's file list.** The read-out's work also changed `scripts/croquetFitProbe.ts`, which the plan's
+  steps edit but its file list omitted.
+- **A convergence fix not found** would have sent the measured figures to the gate with no fix; one was found, so
+  the rule went unused.
+- **The read-out against the brainstorm.** The canonical drive's figures at the read time (2.5 ms: w₁ 1.6175, v₂
+  3.7548, W 0.7905) differ from the brainstorm's because they are taken later: at the face's release (1.505 ms) the
+  model gives the brainstorm's 1.618, 3.763 and 0.80 (0.790), the croqueted ball skidding in the turf meanwhile.
+  The test asserts the brainstorm's figures at the release and pins the read-out's at its own time, because the check
+  was that the read-out is not grossly wrong.
+- **Gugan's mallet's bracket** is [0.75, 2] × the default head's mass, not [0.5, 2]: below about 0.74× the box head's
+  fixed moment about the shaft exceeds the box's inertia ceiling and the engine throws. The solutions (0.934 and
+  0.907 of the default) lie well inside. The solve iterates the stroke's plan to a fixed point (at most four passes)
+  around the bisection instead of re-planning at every halving, which cost about 50 s a halving.
+- **An impact ending before the read time** cannot be produced by any speed (the swing's drive ends the impact, 140 ms
+  at 0.3 m/s), so the read-out's sample selection is a pure helper and that branch is tested on constructed samples;
+  a test through the engine that could not reach the branch would have been false-green.
+- **Section D's sweep.** "At 3 m/s and at C3S's and C20S's U on the AC stop" (§9, candidate a) is read as the drive at
+  3 m/s and the AC stop at C3S's and C20S's U, because candidate a is judged at those strokes' U; section J sweeps
+  the stop at 3 m/s across the gap.
+- **The free collision's video time.** Today's ball–ball law reads 0.53, 0.59 and 0.61 ms at 1.90, 5.54 and
+  7.64 m/s, more than a frame short of 0.75 ms. The harness test's video-time assertion is `it.fails`, with
+  `VISIBLE_SHIFT` unchanged, because the plan made a miss a finding for the gate, not a reason to change the
+  threshold; the gate carried it (B).
+- **The search's test 2** plays its 2 mm gap at 1.9 mm, because 2 mm lies outside the engine's range.
+- **The search's test 5** passes a single-ball figure within the measurement's precision of today's, or closer to
+  the measurement than today's; §4.1 gives no rule.
+- **The scatter's criterion.** The sensitivities agree when, for v₂/U and v₂/w₁, the model's spread across the strokes
+  is within 0.5–2 × the film's and the slopes on the gap share a sign; the model's scatter within 2 × Gugan 5's
+  counts as reproducing it. §7.3 names no criterion. Section K also prints its figures without B2GS, for
+  transparency only.
+- **The jab's sweep in section M.1** reads `DEFAULT_CROQUET_GAP` by name and was left so, because the default's move
+  and the gate's re-run put the gate's sweep at 1 mm.
+- **Four tests pinned at gap 0.** Their mechanisms invert at 1 mm (29.1.14 on the canonical setups; the AC stop's
+  relaxed head meeting the turf at the jab's onset; the early dip running slower along the lawn; the handover's head
+  cleared of a lifted ball, four runs), so they are pinned at `croquetGap: 0` with the 1 mm behaviour in their
+  comments, and two hit counts were re-baselined. Re-baselining to the inverted claims would have dropped those
+  mechanisms from test. The design predicted none of it; the gate accepted it (G).
+- **The window's 15 ms.** The user's ruling gave 20 ms "for example"; 15 ms is the smallest round value past B2GS's
+  tap and reads identically to 20 ms on every listed run.
+- **The steps' numbering.** The face/ball–ball law step the user opened at gate A, before the follow-through, is
+  P2b.2b.2c.2c; the follow-through, which §12 and §13 call P2b.2b.2c.2c, is now P2b.2b.2c.2d; P2b.2b.2c.3 is
+  unchanged. The roadmap numbers its steps in order. §12 and §13 are left as written.
+- **My call on the ball–ball contact time** says Table 1's 0.50 and 0.87 ms readings "are double taps by Gugan's own
+  account". That overstates the source: Gugan marks those strokes as double taps, but does not attribute the
+  readings to the double taps. The call (0.75 ms, the law's free collision) stands.

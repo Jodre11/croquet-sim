@@ -52,8 +52,8 @@ const SUNK = vec3(
 );
 
 describe("simulateImpact", () => {
-    it("is version 0.14.0", () => {
-        expect(ENGINE_VERSION).toBe("0.14.0");
+    it("is version 0.15.0", () => {
+        expect(ENGINE_VERSION).toBe("0.15.0");
     });
 
     it("starts a centre-struck ball rolling at 5/7 of its launch speed in phase 2", () => {
@@ -630,9 +630,10 @@ describe("the roll's impact (P2b.2b.2b.2b design §4.2)", () => {
     });
 
     it("latches the striker's ball's first departure, not a later one, as the hold's relaxation start", () => {
-        // Gate ruling round 13, "Relax from first departure": the canonical pass roll meets the striker's ball five
-        // times, and its departure is the end of the first face interval, to within a step; a latch that moved with
-        // each opening would end at the last.
+        // Gate ruling round 13, "Relax from first departure": the canonical pass roll meets the striker's ball twice
+        // at the 1 mm default gap (0.005–1.035 and 2.645–26.305 ms), and its
+        // departure is the end of the first face interval, to within a step; a latch that moved with each opening would
+        // end at the last.
         const setup = canonicalSetup("pass-roll", { world: WORLD });
         const result = simulateImpact(buildContact(setup, WORLD), setup.balls, WORLD);
         const intervals = result.timeline[`face/${setup.striker}`] ?? [];

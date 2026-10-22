@@ -3,7 +3,6 @@
  * rules on it, and phase 2 rolls the balls out. Phase 2 always runs: impact flags and findings are information, as
  * phase 2's jump flag is. `judgeHoopRun` stays a separate call on the phase 2 result.
  */
-import { CONTACT_TOLERANCE } from "./detect";
 import { judgeFaults, type FaultReport, type StrokeContext } from "./faults";
 import { ballPairKey } from "./impact/contacts";
 import { simulateImpact, simulateStroke } from "./impact/simulateImpact";
@@ -44,14 +43,20 @@ export interface ShotOutcome {
     readonly trajectory?: SwingTrajectory;
 }
 
+/**
+ * The widest gap (m, surface to surface) a croqueted ball may start from the striker: the Laws' Commentaries' 2 mm for
+ * nominally touching (P2b.2b.2c.2b design, "My calls").
+ */
+export const CROQUET_GAP_LIMIT = 0.002;
+
 function fail(message: string): never {
     throw new RangeError(message);
 }
 
 /**
  * Checks a setup before the swing model sees it (design §6.2): the striker present; `live` holding only present balls,
- * never the striker, no duplicates; a croquet stroke's croqueted ball present, not the striker, touching the striker
- * (within CONTACT_TOLERANCE); no croqueted ball in a single-ball stroke.
+ * never the striker, no duplicates; a croquet stroke's croqueted ball present, not the striker, within 2 mm of the
+ * striker (CROQUET_GAP_LIMIT; an overlap is validateImpact's); no croqueted ball in a single-ball stroke.
  */
 function validateSetup(setup: ShotSetup, world: World): void {
     const { balls, striker, croqueted } = setup;
@@ -90,8 +95,8 @@ function validateSetup(setup: ShotSetup, world: World): void {
         fail(`croqueted ball ${croqueted} is not in the setup`);
     }
     const gap = length(sub(other.position, strikerBall.position)) - 2 * world.ball.radius;
-    if (!(gap <= CONTACT_TOLERANCE)) {
-        fail(`croqueted ball ${croqueted} must touch the striker (gap ${gap} m)`);
+    if (!(gap < CROQUET_GAP_LIMIT)) {
+        fail(`croqueted ball ${croqueted} must lie within 2 mm of the striker (gap ${gap} m)`);
     }
 }
 
