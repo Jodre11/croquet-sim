@@ -555,7 +555,7 @@ against the design and the repo before it was applied. Changes:
 - **D. Gugan 5's drive and stop.** At 3 m/s with Gugan's mallet: the drive 5.16, 6.10, 6.00, 4.47, 4.19 and 4.17 at
   gaps 0, 0.25, 0.5, 1, 1.5 and 1.9 mm (within 4.23 ± 0.2 at 1.5 and 1.9 mm; 4.67, 4.30 and 4.28 at e 0.772); the
   stop within 7.15 ± 0.6 at 1, 1.5 and 1.9 mm for jabs to 6.5 mm (and at gap 0 at e 0.772). The stop's share, the
-  distance ratio over the squared speed ratio, is +35 to +53 % at 1 mm, where the film's strokes show −2 to −29 %.
+  distance ratio over the squared speed ratio, is +35 to +53 % at 1 mm, where the film's strokes show +2 to −29 %.
   Ruling, verbatim: "Accept, record share (Recommended)": "Accept and record the figures. Name the stop's share as
   the leading suspect, and re-measure it after the face/ball–ball law step, which changes the speeds the share acts
   on. Carry it as an open item: the stop's landing and slide-to-roll after the strike."
@@ -645,6 +645,9 @@ The plan's decisions:
 
 The execution's rulings, where they changed what the plan or this design said:
 
+- **The baseline tree's packages.** The baseline worktree's `node_modules` is a symlink to the worktree's instead of
+  an `npm ci` of its own: `npm --prefix … ci` failed (EUSAGE), and the package files are identical to `main`'s, so
+  the baseline ran on the same packages.
 - **Section A's baseline.** Section A was captured from `main`'s tree with the baseline, because the distance check is
   compared against `main`'s section A and that tree stayed untouched until the end.
 - **The engine check's test.** Its rejection pattern is `within 2 mm of the striker \(gap 0\.0`, not the plan's
