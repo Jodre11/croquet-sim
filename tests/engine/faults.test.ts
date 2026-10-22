@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { JUDGED_LAWS, judgeFaults, type FaultReport, type StrokeContext } from "../../src/engine/faults";
+import { JUDGED_LAWS, judgeFaults, PARTING_BREAK, type FaultReport, type StrokeContext } from "../../src/engine/faults";
+import { obstacleKey } from "../../src/engine/impact/contacts";
 import { vec3, ZERO } from "../../src/engine/math/vec3";
 import { IDENTITY } from "../../src/engine/impact/rigidBody";
 import type { ContactInterval, ImpactEvent, ImpactResult } from "../../src/engine/impact/types";
@@ -23,17 +24,25 @@ function impact(over: {
     peakPenetration?: Record<string, number>;
     balls?: BallStates;
     headTurfSlide?: number;
+    duration?: number;
+    /** Shorthand for a blue striker: its mallet contacts, and its pair with red (touching at the start). */
+    face?: readonly ContactInterval[];
+    pair?: readonly ContactInterval[];
 }): ImpactResult {
     const balls = over.balls ?? ALL;
+    const shorthand: Record<string, readonly ContactInterval[]> = {
+        ...(over.face === undefined ? {} : { "face/blue": over.face }),
+        ...(over.pair === undefined ? {} : { "blue/red": over.pair }),
+    };
     return {
         balls,
         head: { position: ZERO, orientation: IDENTITY, velocity: ZERO, angularVelocity: ZERO },
-        duration: 100 * T,
+        duration: over.duration ?? 100 * T,
         events: over.events ?? [],
         peakPenetration: over.peakPenetration ?? {},
         steps: 2000,
-        timeline: over.timeline ?? {},
-        touchingAtStart: over.touchingAtStart ?? [],
+        timeline: { ...(over.timeline ?? {}), ...shorthand },
+        touchingAtStart: over.touchingAtStart ?? (over.pair === undefined ? [] : ["blue/red"]),
         handover: balls,
         overlapCorrection: 0,
         ...(over.headTurfSlide === undefined ? {} : { headTurfSlide: over.headTurfSlide }),
@@ -149,9 +158,11 @@ describe("judgeFaults: one positive and one negative case per row", () => {
     });
 
     it("29.1.6.1 possible fault: two mallet contacts in a croquet stroke or a continuation while touching", () => {
+        // P2b.2b.2c.2c: the balls part at 4T, before the re-contact at 5T (was 6T: that re-contact is now a tap within
+        // the strike, reported, not flagged).
         const twice = impact({
             touchingAtStart: ["blue/red"],
-            timeline: { "face/blue": [iv(0, 2 * T, 100, 1e-4), iv(5 * T, 7 * T)], "blue/red": [iv(0, 6 * T)] },
+            timeline: { "face/blue": [iv(0, 2 * T, 100, 1e-4), iv(5 * T, 7 * T)], "blue/red": [iv(0, 4 * T)] },
             peakPenetration: { "blue/red": 2e-3 },
         });
         const report = judgeFaults(CROQUET, twice);
@@ -399,6 +410,141 @@ describe("judgeFaults: other cases", () => {
         for (const law of JUDGED_LAWS) {
             expect(lawsReference.faults[law as FaultLawKey].quote.length, law).toBeGreaterThan(0);
         }
+    });
+});
+
+describe("judgeFaults: the double tap within the strike (P2b.2b.2c.2c design §6)", () => {
+    const croquet = CROQUET;
+    const singleBall = SINGLE;
+    const continuation: StrokeContext = { ...DEAD, kind: "continuation-touching" };
+
+    /** Blue touching red, and black unless `blackTouching` is false; `hoop` is touched at the start. */
+    function threeBalls(over: {
+        red: readonly ContactInterval[];
+        black: readonly ContactInterval[];
+        face: readonly ContactInterval[];
+        hoop?: readonly ContactInterval[];
+        blackTouching?: boolean;
+    }): ImpactResult {
+        const hoopKey = obstacleKey("blue", "1/a");
+        return impact({
+            timeline: {
+                "face/blue": over.face,
+                "blue/red": over.red,
+                "blue/black": over.black,
+                ...(over.hoop === undefined ? {} : { [hoopKey]: over.hoop }),
+            },
+            touchingAtStart: [
+                "blue/red",
+                ...(over.blackTouching === false ? [] : ["blue/black"]),
+                ...(over.hoop === undefined ? [] : [hoopKey]),
+            ],
+        });
+    }
+
+    it("reports a re-contact before the balls part, and does not flag it", () => {
+        const report = judgeFaults(
+            croquet,
+            impact({ face: [iv(0, 6e-4, 100, 3e-5), iv(9e-4, 1.6e-3)], pair: [iv(1e-4, 1.4e-3)] }),
+        );
+        expect(laws(report)).not.toContain("29.1.6.1 possible-fault");
+        expect(report.strike?.parted).toBe(1.4e-3);
+        expect(report.strike?.taps.map((t) => [t.start, t.clearanceAfter])).toEqual([
+            [0, 3e-5],
+            [9e-4, undefined],
+        ]);
+    });
+    it("flags a re-contact after the balls part, as today, at its start", () => {
+        const report = judgeFaults(
+            croquet,
+            impact({ face: [iv(0, 6e-4), iv(2e-3, 2.5e-3)], pair: [iv(1e-4, 1.4e-3)] }),
+        );
+        const f = report.findings.find((x) => x.law === "29.1.6.1");
+        expect(f?.t).toBe(2e-3);
+        expect(f?.evidence.afterParting).toBe(1);
+        expect(f?.evidence.contacts).toBe(2);
+    });
+    it("flags a re-contact beginning at the parting", () => {
+        // Review focus 2: "at or after".
+        const report = judgeFaults(
+            croquet,
+            impact({ face: [iv(0, 6e-4), iv(1.4e-3, 2e-3)], pair: [iv(1e-4, 1.4e-3)] }),
+        );
+        expect(laws(report)).toContain("29.1.6.1 possible-fault");
+    });
+    it("places the parting at a break of one frame, not just under", () => {
+        // Review focus 2. A break shorter than PARTING_BREAK is no parting; the intervals either side are one. The
+        // first interval ends at 2^-14 s, a dyadic time small enough that adding a break to it and subtracting it
+        // again returns the break exactly, so the boundary is asserted without loosening a comparison.
+        const end = 2 ** -14;
+        const brk = PARTING_BREAK - 1e-9;
+        const under = [iv(1e-5, end), iv(end + brk, 1.4e-3)];
+        const at = [iv(1e-5, end), iv(end + PARTING_BREAK, 1.4e-3)];
+        expect((under[1] as ContactInterval).start - end).toBe(brk);
+        expect((at[1] as ContactInterval).start - end).toBe(PARTING_BREAK);
+        const face = [iv(0, 4e-4), iv(8e-4, 1.2e-3)];
+        const merged = judgeFaults(croquet, impact({ face, pair: under }));
+        expect(merged.strike?.parted).toBe(1.4e-3);
+        expect(merged.strike?.breaks).toEqual([brk]);
+        expect(laws(merged)).not.toContain("29.1.6.1 possible-fault");
+        expect(laws(judgeFaults(croquet, impact({ face, pair: at })))).toContain("29.1.6.1 possible-fault");
+    });
+    it("judges as today when the balls never meet", () => {
+        // Review focus 1.
+        const report = judgeFaults(croquet, impact({ face: [iv(0, 6e-4), iv(9e-4, 1.6e-3)], pair: [] }));
+        expect(report.strike).toEqual({ parted: null, taps: [], breaks: [] });
+        expect(laws(report)).toContain("29.1.6.1 possible-fault");
+    });
+    it("parts at the impact's end when the balls never separate", () => {
+        // Review focus 5: closeTimeline ends the open interval at the duration.
+        const report = judgeFaults(
+            croquet,
+            impact({ face: [iv(0, 6e-4), iv(9e-4, 1.6e-3)], pair: [iv(1e-4, 3e-3)], duration: 3e-3 }),
+        );
+        expect(report.strike?.parted).toBe(3e-3);
+        expect(laws(report)).not.toContain("29.1.6.1 possible-fault");
+    });
+    it("parts a continuation stroke at the later first interval of the balls it touched", () => {
+        // Blue touches red and black at the start; red parts at 1.0 ms, black at 1.5 ms.
+        const report = judgeFaults(
+            continuation,
+            threeBalls({ red: [iv(0, 1e-3)], black: [iv(0, 1.5e-3)], face: [iv(0, 4e-4), iv(1.2e-3, 1.4e-3)] }),
+        );
+        expect(report.strike?.parted).toBe(1.5e-3);
+        expect(laws(report)).not.toContain("29.1.6.1 possible-fault");
+    });
+    it("ignores a touching obstacle when placing the parting", () => {
+        // Review focus 3: an upright touching at the start, its interval to 5 ms, does not delay the parting.
+        const report = judgeFaults(
+            continuation,
+            threeBalls({
+                red: [iv(0, 1e-3)],
+                black: [iv(0, 1.5e-3)],
+                hoop: [iv(0, 5e-3)],
+                face: [iv(0, 4e-4), iv(2e-3, 2.4e-3)],
+            }),
+        );
+        expect(report.strike?.parted).toBe(1.5e-3);
+        expect(laws(report)).toContain("29.1.6.1 possible-fault");
+    });
+    it("filters an exempt contact before the rule applies, and leaves the single-ball stroke's report as it was", () => {
+        // Blue, touching red, roquets live black at 0.3 ms; its face contact at 0.5 ms is then exempt (29.2.4.1) and is
+        // neither a tap nor flagged, though red parts at 1.0 ms.
+        const roquet = judgeFaults(
+            { ...continuation, live: ["black"] },
+            threeBalls({
+                red: [iv(0, 1e-3)],
+                black: [iv(3e-4, 9e-4)],
+                blackTouching: false,
+                face: [iv(0, 2e-4), iv(5e-4, 7e-4)],
+            }),
+        );
+        expect(roquet.strike?.taps.map((t) => t.start)).toEqual([0]);
+        expect(laws(roquet)).not.toContain("29.1.6.1 possible-fault");
+        const single = judgeFaults(singleBall, impact({ face: [iv(0, 6e-4), iv(9e-4, 1.6e-3)], pair: [] }));
+        expect(single.strike).toBeUndefined();
+        expect("strike" in single).toBe(false);
+        expect(laws(single)).toContain("29.1.6.2 fault");
     });
 });
 

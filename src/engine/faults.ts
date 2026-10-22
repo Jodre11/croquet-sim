@@ -27,6 +27,15 @@
  * 29.1.9 ("carries force while overlapping the mallet contact") is judged at interval granularity: an obstacle
  * interval that overlaps a mallet contact counts if its `peakForce` is positive, not the force during the overlap.
  *
+ * The double tap (P2b.2b.2c.2c design §6). A croquet stroke's high-speed film shows many re-contacts that to human
+ * senses are acceptable (C29.11.1), and C29.11.2 places 29.1.6.1 "after the balls have parted contact"; C29.11.3 rules
+ * out slow-motion video, and C28.3.2 sets balls parting by a few millimetres below the standard. So a mallet
+ * re-contact beginning before the striker's ball has parted from the croqueted ball (or, in a continuation stroke,
+ * from every ball it touched) is within the strike: it is reported on `strike`, never flagged. One beginning at or
+ * after the parting is flagged as before, at its start, and counts as the follow-through step of the stroke
+ * (29.2.5). A ball–ball break shorter than PARTING_BREAK is no parting. With no parting to place it, every re-contact
+ * is flagged as before.
+ *
  * 29.1.13 has two clauses, reported in this order and told apart by their evidence: "fails to move or shake" (the
  * croqueted pair never penetrates beyond CONTACT_TOLERANCE; evidence peakPenetration), and "plays away from" (the
  * swing direction more than 90° from the line of centres: the engine's reading of C29.18.1, which sets no angular
@@ -83,10 +92,32 @@ export interface Finding {
     readonly evidence: Readonly<Record<string, number>>;
 }
 
-/** Every finding of a stroke, in the order of the design's table; the judge does not rank them. */
+/**
+ * The mallet's taps within a croquet or continuation stroke's strike (P2b.2b.2c.2c design §6). `parted` is when the
+ * striker's ball parted from the ball or balls it touched (s), or null when no such pair had an interval; `taps` are
+ * the non-exempt mallet contacts beginning before it, each with its `clearanceAfter`, and none when `parted` is null;
+ * `breaks` are the lengths (s) of the sub-frame breaks merged across in placing it.
+ */
+export interface StrikeTaps {
+    readonly parted: number | null;
+    readonly taps: readonly ContactInterval[];
+    readonly breaks: readonly number[];
+}
+
+/**
+ * Every finding of a stroke, in the order of the design's table; the judge does not rank them. `strike` is present
+ * only for a croquet stroke and a continuation stroke touching another ball.
+ */
 export interface FaultReport {
     readonly findings: readonly Finding[];
+    readonly strike?: StrikeTaps;
 }
+
+/**
+ * The shortest break in a ball–ball contact that counts as the balls parting (s): the film's frame, the finest record
+ * of balls parting. A shorter break is a step-scale artefact no eye could see.
+ */
+export const PARTING_BREAK = 1.25e-4;
 
 /** The Laws the judge reports, each quoted in reference/laws.json. */
 export const JUDGED_LAWS = [
@@ -238,6 +269,42 @@ function contactEvidence(count: number, faces: readonly ContactInterval[]): Reco
 }
 
 /**
+ * When the striker's ball and the ball or balls it touched at the start part, and the sub-frame breaks merged across.
+ * The pairs are the croqueted pair of a croquet stroke, or the striker's pairs touching at the start of a continuation
+ * stroke. Each pair's first interval is extended across every following break shorter than PARTING_BREAK, and the
+ * balls have parted when the latest such first interval ends. Null when no pair has an interval.
+ */
+function partingOf(context: StrokeContext, impact: ImpactResult): { parted: number | null; breaks: number[] } {
+    const { striker } = context;
+    const keys =
+        context.kind === "croquet"
+            ? [ballPairKey(striker, context.croqueted as BallId)]
+            : BALL_IDS.filter((id) => id !== striker && impact.balls[id] !== undefined)
+                  .map((id) => ballPairKey(striker, id))
+                  .filter((key) => impact.touchingAtStart.includes(key));
+    let parted: number | null = null;
+    const breaks: number[] = [];
+    for (const key of keys) {
+        const intervals = impact.timeline[key] ?? NONE;
+        const first = intervals[0];
+        if (first === undefined) {
+            continue;
+        }
+        let end = first.end;
+        for (const next of intervals.slice(1)) {
+            const gap = next.start - end;
+            if (gap >= PARTING_BREAK) {
+                break;
+            }
+            breaks.push(gap);
+            end = Math.max(end, next.end);
+        }
+        parted = parted === null ? end : Math.max(parted, end);
+    }
+    return { parted, breaks };
+}
+
+/**
  * Judges the mallet faults of a stroke from its impact (P2b.2a design §7). Throws a RangeError for a context that does
  * not fit the impact: a striker absent from it; a croquet stroke without a croqueted ball, or with the striker or an
  * absent ball as the croqueted one; a croqueted ball given for another kind of stroke; the striker listed as live; an
@@ -342,10 +409,28 @@ export function judgeFaults(context: StrokeContext, impact: ImpactResult): Fault
             });
         }
     }
-    // 29.1.6.1: a croquet stroke, or a continuation while touching, with two or more non-exempt mallet contacts.
-    if (kind !== "single-ball" && contacts.length >= 2) {
-        const second = contacts[1] as ContactInterval;
-        add("29.1.6.1", "possible-fault", striker, second.start, contactEvidence(contacts.length, faces));
+    // 29.1.6.1: a croquet stroke, or a continuation while touching, with two or more non-exempt mallet contacts. A
+    // re-contact that begins before the balls part is within the strike and only reported (see the file header).
+    let strike: StrikeTaps | undefined;
+    if (kind !== "single-ball") {
+        const { parted, breaks } = partingOf(context, impact);
+        strike = {
+            parted,
+            taps: parted === null ? [] : contacts.filter((f) => f.start < parted),
+            breaks,
+        };
+        if (parted === null) {
+            if (contacts.length >= 2) {
+                const second = contacts[1] as ContactInterval;
+                add("29.1.6.1", "possible-fault", striker, second.start, contactEvidence(contacts.length, faces));
+            }
+        } else {
+            const after = contacts.slice(1).filter((f) => f.start >= parted);
+            if (after.length > 0) {
+                const evidence = { ...contactEvidence(contacts.length, faces), afterParting: after.length };
+                add("29.1.6.1", "possible-fault", striker, (after[0] as ContactInterval).start, evidence);
+            }
+        }
     }
     // 29.1.5: in a stroke of Law 29.2.3, the first mallet contact is at the rim (C29.10.8: the first contact only).
     if (context.hampered || context.jumpAttempt || context.group) {
@@ -355,5 +440,5 @@ export function judgeFaults(context: StrokeContext, impact: ImpactResult): Fault
             add("29.1.5", "fault", striker, first.start);
         }
     }
-    return { findings };
+    return strike === undefined ? { findings } : { findings, strike };
 }
