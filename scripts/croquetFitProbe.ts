@@ -1101,8 +1101,9 @@ interface ModelTiming {
 /**
  * The four times from the `face` and `pair` intervals and the second ball's first visible move at `moved` (s): the
  * move, the first face interval's end, the pair interval's end (the latest beginning within STRIKE_WINDOW) and any
- * second face interval. `together` when the first face interval begins no later than the pair's and ends no earlier, so that
- * the mallet never lets go before the ball leaves. Throws a RangeError when the face has no interval.
+ * second face interval beginning within STRIKE_WINDOW (a later one is the follow-through's approach, not a tap).
+ * `together` when the first face interval begins no later than the pair's and ends no earlier, so that the mallet never
+ * lets go before the ball leaves. Throws a RangeError when the face has no interval.
  */
 function timesOf(face: readonly VideoInterval[], pair: readonly VideoInterval[], moved: number | null): ModelTiming {
     const endOf = (i: VideoInterval): number => i.end ?? Infinity;
@@ -1110,10 +1111,11 @@ function timesOf(face: readonly VideoInterval[], pair: readonly VideoInterval[],
     if (first === undefined) {
         throw new RangeError("timesOf: the face never touched the striker's ball");
     }
-    const within = pair.filter((i) => i.start <= first.start + STRIKE_WINDOW);
+    const inStrike = (i: VideoInterval): boolean => i.start <= first.start + STRIKE_WINDOW;
+    const within = pair.filter(inStrike);
     const start = within[0];
     const leaves = within.length === 0 ? null : Math.max(...within.map(endOf));
-    const tap = face[1];
+    const tap = face.slice(1).find(inStrike);
     return {
         firstMoves: moved === null ? null : moved - first.start,
         firstContactEnds: endOf(first) - first.start,
@@ -1172,13 +1174,19 @@ function sectionF(): void {
             `Gugan 4's video would time it, a contact on while the two bodies' surfaces are within ` +
             `${mm(VISIBLE_SHIFT)} mm of touching (the face's separation from the striker's ball, the balls' gap) and ` +
             `the times from the face's first such contact, as scripts/squeeze.ts's freeCollision times a free ` +
-            "collision; 'on' marks a contact the video still sees at the impact's end ==",
+            "collision. The impact begins with the face touching, so the video's own first contact, up to " +
+            `${mm(VISIBLE_SHIFT)} mm earlier, is not seen: each video time is short by up to ` +
+            `${mm(VISIBLE_SHIFT)} mm/U (${ms(VISIBLE_SHIFT / filmed("C3S").malletSpeed)} ms at C3S's U, under one ` +
+            "frame). A second face interval counts only if it begins within the strike's window; 'on' marks a " +
+            "contact the video still sees at the " +
+            "impact's end ==",
     );
     const world = defaultWorld();
     const frames = (f: number): string => ms(f * VIDEO_FRAME);
     const at = (t: number): string => (t === Infinity ? "on" : ms(t));
     const opt = (t: number | null): string => (t === null ? "none" : at(t));
     const tap = (t: readonly [number, number] | null): string => (t === null ? "none" : `[${at(t[0])}, ${at(t[1])}]`);
+    const held = ` (video-timed: face still within ${mm(VISIBLE_SHIFT)} mm as the ball leaves)`;
     for (const name of ["C3S", "C20S", "C1D", "C10S", "C3D", "C10D"]) {
         const stroke = filmed(name);
         const reread = FIG4_TIMING.find((t) => t.name === name);
@@ -1191,7 +1199,7 @@ function sectionF(): void {
         console.log(
             `${name} (${stroke.preset}, U ${fmt(stroke.malletSpeed)} m/s, gap ${mm(stroke.gap)} mm)` +
                 `${law.together ? " FAILS THE CHECK: all three bodies loaded together throughout" : ""}` +
-                `${video.together ? " (video-timed: FAILS THE CHECK)" : ""}:`,
+                `${video.together ? held : ""}:`,
         );
         console.log(
             `  first moves: model law ${opt(law.firstMoves)}, video ${opt(video.firstMoves)}, research ` +
