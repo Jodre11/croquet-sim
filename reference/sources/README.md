@@ -618,7 +618,7 @@ gridlines (x = 205.5 and 618.5 px, so 20.65 px a frame, frame 0 at 102.25 px), r
 The two agree within 0.1 frame everywhere. C1D's first heavy line ends at 6.5 frames and a light line runs on to the
 second contact at 12.8 (the caption's shadow); `FIG4_TIMING` holds 6.5 as its first contact's end.
 
-### Gugan 4, Table 1 and Table 2: the free collisions and the face (`FREE_COLLISIONS`, `SINGLE_BALL_FACE`)
+### Gugan 4, Table 1 and Table 2: the free collisions and the face (`FREE_COLLISIONS`, `TABLE2_FACE`)
 
 Table 1, "Data for ball on ball collisions from HSAVI scatter-shots, series B. N.b. (i), The half-shaded columns
 indicate double-taps, leading to low values of L2/L1 in row 3." Columns B4GS, B3GS, B7MS, B6MS, B3MS, B4MS, B5MS;
@@ -641,9 +641,26 @@ spacing (row 1) 33, 13, 13, 33, 13, 33, 33 mm:
   e = 0.72. That 0.72 is the seven-stroke mean: row 8 sums to 6.01, 6.01/7 = 0.859, and (A7), v2 = v1(1 + e)/2, gives
   e ≈ 0.717. For context only, not held: the three clean strokes' own e = 2·v2/v1 − 1 from rows 6 and 7 are 0.653,
   0.769 and 0.709, the scatter about that mean.
-- Table 2, "Data for horizontal motion of ball in single-ball drives", column A2D: row 4 "Duration of contact, Τh, ms
-  (± 0.1 ms)" 0.75; row 7 "Mallet speed before impact, U, m/s" 3.26. `SINGLE_BALL_FACE` holds them.
 - The frame rate, §2: "images taken at a rate of 8000 per second (125 microseconds/frame)". `VIDEO_FRAME` is 1/8000 s.
+
+Table 2, "Data for horizontal motion of ball in single-ball drives", re-read 2026-10-22 from a fresh fetch whose digest
+equals the one recorded above. Its columns A1D–A4D; the rows `TABLE2_FACE` holds, verbatim as printed (row 4 in ms;
+`filmedStrokes.ts` holds it in s):
+
+| Row | Heading | A1D | A2D | A3D | A4D | Field |
+|---|---|---|---|---|---|---|
+| 4 | Duration of contact, Τh, ms (± 0.1 ms) | 1.00 | 0.75 | 0.60 | 0.60 | `contactTime` |
+| 7 | Mallet speed before impact, U, m/s | 0.76 | 3.26 | 5.70 | 8.54 | `speed` |
+| 8 | Mallet speed after impact, V, m/s | 0.41 | 1.53 | 2.72 | 4.02 | `malletAfter` |
+| 9 | Ball speed after impact, v, m/s | 0.97 | 4.22 | 6.70 | 10.03 | `ballAfter` |
+
+- `SINGLE_BALL_FACE` is A2D's rows 7 and 4, the column the face's law is anchored on; A1D, A3D and A4D are held out.
+- A4D's v, §5: "the difference in ball speed v for A4D (10.03 m/s here, 8.62 m/s in TEXT) is significant"; the
+  table's 10.03 is held. Row 13, "Ratio, (v - V)/U, ( = e)", 0.74, 0.82, 0.70, 0.70, is printed, not held.
+- The caveat, §5.2, in full: "Even at 8000 frames per second the duration of contact is hard to measure because of lack
+  of a clear view at the points of contact and separation, cf. figure 1(b) . The initial contact can be identified by
+  the first slight movement of the ball, but its end is often uncertain to a frame or two". `TABLE2_CAVEAT` holds it
+  as the design quotes it, elided between its first clause and its last.
 
 ### `VISIBLE_SHIFT`: the video's visibility threshold
 

@@ -1612,7 +1612,7 @@ function freeTest(law: PairLaw): SearchTest {
             text:
                 `${fmt(c.speed)} m/s${judged ? "" : " (beside)"}: e ${fmt(r.restitution)} (${fmt(c.restitution)}) ` +
                 `${verdict(eOk)}, video ${ms(r.videoTime)} ms (${ms(c.contactTime)}) ${verdict(tOk)}, the law's own ` +
-                `${ms(r.contactTime)} ms`,
+                `${ms(r.forceTime)} ms`,
         };
     });
     return { test: 4, pass: rows.every((r) => r.pass), text: rows.map((r) => r.text).join("; ") };

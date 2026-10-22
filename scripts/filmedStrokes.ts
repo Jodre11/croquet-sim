@@ -166,12 +166,12 @@ export const GUGAN_MEANS = {
     v2w1: { value: 2.07, sem: 0.06 },
 } as const;
 
-/** One video frame in s: "images taken at a rate of 8000 per second (125 microseconds/frame)" (README line 646). */
+/** One video frame in s: "images taken at a rate of 8000 per second (125 microseconds/frame)" (README line 644). */
 export const VIDEO_FRAME = 1 / 8000;
 
 /**
  * The displacement in m at which the video first shows a body moving: Gugan 4's stated resolution, positions "to
- * about ± 0.2 mm" (README lines 648-657). His "several times greater" in practice gives no figure and is not applied.
+ * about ± 0.2 mm" (README lines 665-674). His "several times greater" in practice gives no figure and is not applied.
  */
 export const VISIBLE_SHIFT = 2e-4;
 
@@ -231,13 +231,52 @@ export const FREE_COLLISIONS: readonly {
 ];
 
 /**
- * Gugan 4, Table 2, column A2D: the face's contact in a single-ball drive as the video timed it, row 4's 0.75 ms
- * (± 0.1 ms) at row 7's U of 3.26 m/s (README line 644).
+ * Gugan 4, Table 2's four single-ball drives, A1D to A4D (README lines 646-664): the mallet's speed before impact U
+ * (row 7) in m/s, the face's contact time Τh as the video timed it (row 4, ± 0.1 ms) in s, and the speeds after, the
+ * ball's v (row 9) and the mallet's V (row 8), in m/s. A4D's v is the table's 10.03, not the TEXT file's 8.62 (§5).
  */
-export const SINGLE_BALL_FACE = { speed: 3.26, contactTime: 7.5e-4 } as const;
+export const TABLE2_FACE: readonly {
+    readonly name: "A1D" | "A2D" | "A3D" | "A4D";
+    readonly speed: number;
+    readonly contactTime: number;
+    readonly ballAfter: number;
+    readonly malletAfter: number;
+}[] = [
+    { name: "A1D", speed: 0.76, contactTime: 1e-3, ballAfter: 0.97, malletAfter: 0.41 },
+    { name: "A2D", speed: 3.26, contactTime: 7.5e-4, ballAfter: 4.22, malletAfter: 1.53 },
+    { name: "A3D", speed: 5.7, contactTime: 6e-4, ballAfter: 6.7, malletAfter: 2.72 },
+    { name: "A4D", speed: 8.54, contactTime: 6e-4, ballAfter: 10.03, malletAfter: 4.02 },
+];
+
+const A2D = TABLE2_FACE[1] as (typeof TABLE2_FACE)[number];
 
 /**
- * Gugan 5's drive and stop at "a mallet speed of about 3 m/s" (README lines 659-673): the drive's distance ratio
+ * Gugan 4, Table 2, column A2D: the face's contact in a single-ball drive as the video timed it, row 4's 0.75 ms
+ * (± 0.1 ms) at row 7's U of 3.26 m/s, the column the face's law is anchored on (README lines 646-664).
+ */
+export const SINGLE_BALL_FACE = { speed: A2D.speed, contactTime: A2D.contactTime } as const;
+
+/** Gugan 4, §5.2's caveat on Table 2's contact times (README lines 661-664), as the design quotes it. */
+export const TABLE2_CAVEAT =
+    "Even at 8000 frames per second the duration of contact is hard to measure ... its end is often uncertain to a " +
+    "frame or two";
+
+/**
+ * The relative uncertainty of each of Table 5's speeds: Gugan 4, §9.3's "within the precision of measurement of about
+ * 3% for the speeds" (README lines 587-588).
+ */
+export const SPEED_UNCERTAINTY = 0.03;
+
+/**
+ * The band (P2b.2b.2c.2c design §5.2) within which a touching stop's judged figure `value`, a ratio of two of Table 5's
+ * speeds, passes: each speed SPEED_UNCERTAINTY, combined in quadrature, value · SPEED_UNCERTAINTY · √2.
+ */
+export function touchingBand(value: number): number {
+    return value * SPEED_UNCERTAINTY * Math.SQRT2;
+}
+
+/**
+ * Gugan 5's drive and stop at "a mallet speed of about 3 m/s" (README lines 676-690): the drive's distance ratio
  * 4.23 ± 0.2 (sem), its single strokes' standard deviation 0.6; the jab stop's 7.15 ± 0.6, "the scatter is about
  * ± 2.0"; the Dawson Internationals' e = 0.772 by the maker's bounce test.
  */
