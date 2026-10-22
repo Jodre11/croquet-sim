@@ -450,8 +450,9 @@ describe("the croquet stroke's gap (P2b.2b.2c.2b design §3, §8.1)", () => {
         expect(() => simulateShot(gapped(-5e-10), WORLD)).not.toThrow();
     });
     it("plays a gapped drive end to end", () => {
-        const outcome = simulateShot(canonicalSetup("drive", { croquetGap: 0.001 }), WORLD);
+        const outcome = simulateShot(canonicalSetup("drive", { croquetGap: 0.0015 }), WORLD);
         expect(outcome.impact.touchingAtStart).not.toContain(ballPairKey("blue", "red"));
+        expect(outcome.impact.timeline[ballPairKey("blue", "red")]?.length).toBeGreaterThan(0);
     });
 });
 

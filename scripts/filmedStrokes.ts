@@ -201,8 +201,8 @@ function timing(name: string, frames: readonly [number, number, number, number, 
 }
 
 /**
- * Gugan 4, Fig. 4, this step's re-reading by pixel, each ±0.5 frame on top of Gugan's "a frame or two" (README lines
- * 609-616, beside the research reading). C1D's first contact ends where its heavy line does, 6.5 frames; Gugan saw
+ * Gugan 4, Fig. 4, the re-reading by pixel (2026-10-21), each ±0.5 frame on top of Gugan's "a frame or two" (README
+ * lines 609-616, beside the research reading). C1D's first contact ends where its heavy line does, 6.5 frames; Gugan saw
  * "no clear separation" from there to the second contact "because of shadows".
  */
 export const FIG4_TIMING: readonly FilmedTiming[] = [

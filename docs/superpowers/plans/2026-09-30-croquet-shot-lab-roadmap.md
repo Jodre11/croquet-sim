@@ -2184,24 +2184,27 @@ words, are in the design's amendments. Observations, not gates, but for the exit
     tangential magnitude; test 5 recomputes section A's shares, and Table 2's face restitution has no line of its own;
     J's e 0.772 table jumps non-monotonically (regime switches), so its reach lists read as trends; M.3 counts a run
     unflagged only if `impact-off-face` was never raised; M.4 states the ruling-D comparison implicitly; the search
-    file's lines 58 and 72 ("diff in the report") point to a report that is not kept; lines 1035, 1038 and 1169 run
-    past 120 columns (1035 and 1038 template literals, to be broken with `+`), which supersedes the reviews' item on a
-    possible long template at M.3.
+    file's lines 58 and 72 ("diff in the report") point to a report that is not kept.
   - The read-out (`scripts/ratioFit.ts`): `ReadOut.samples` keeps every step (about 28,000 in a 140 ms impact) for one
     test; no test pins the window's boundary (a start at 14.9 ms counted, at 20 ms not); candidate d's peak-force
     search shares `STRIKE_WINDOW`; `effectiveMassOf`'s error lacks its function's prefix, and `massOf` plans the
     contact twice.
-  - The tests: `ratioFit.test.ts:640-642` takes the last face interval and hard-codes "face/blue" (use the first and
-    `faceKey(setup.striker)`); its test-local `leanOf` duplicates `ratioFit.ts:402-410`; `:351-353` calls the 2 % the
-    turf's normal, where it is the ball–ball tangential impulse; the 33 s mallet test runs in the default suite (the
-    drive by default, every preset behind `SLOW_TESTS`); `shot.test.ts:452-457`'s gapped drive at 1 mm now equals the
-    default (use 1.5 mm) and asserts only that the pair is absent at the start (also a ball–ball interval); its
-    titles at :363, :607 and :642 describe gap-0 behaviour under "on the canonical setups" (qualify "balls
-    touching"); stale comments at `shot.test.ts:66` ("touching"), `:501` (the drive's hit times) and
-    `simulateImpact.test.ts:633` ("five times", now two); `turfStrike.test.ts:132`'s title is 123 columns.
-  - The sources (`scripts/filmedStrokes.ts`, `reference/sources/README.md`): "this step's re-reading" at
-    `filmedStrokes.ts:370` and README:91-95 is a process label; the Table 1 caption's quote omits note (ii) ("B7MS was
-    originally classified in error as clean"); code comments cite README line numbers, which move as it grows.
+  - The tests: `ratioFit.test.ts` (the B1 test, `timeline["face/blue"]`, line 226) takes the last face interval and
+    hard-codes "face/blue" (use the first and `faceKey(setup.striker)`); its test-local `leanOf` (line 35) duplicates
+    `leanOf` in `ratioFit.ts` (line 585); the comment at line 236 calls the 2 % the turf's normal, where it is the
+    ball–ball tangential impulse; the 33 s mallet test runs in the default suite (the drive by default, every preset
+    behind `SLOW_TESTS`); `shot.test.ts`'s titles at lines 364, 608 and 643 describe gap-0 behaviour under "on the
+    canonical setups" (qualify "balls touching"); its stale comments at line 66 ("touching") and line 501 (the
+    drive's hit times).
+  - The sources (`scripts/filmedStrokes.ts`, `reference/sources/README.md`): the Table 1 caption's quote omits note
+    (ii) ("B7MS was originally classified in error as clean"); code comments cite README line numbers, which move as
+    it grows.
+  - The fitter's read-out (`scripts/ratioFit.ts`), for P2b.2b.2c.2c: `meansOf` drops OPEN strokes per run, so the
+    convergence spread could compare different stroke sets (make the counted set explicit); `readTimeOf` judges `open`
+    on face intervals only (a ball–ball interval still on at the window's end is not flagged); the Gugan-mallet cache
+    exists twice (`ratioFit.ts` `guganStrokes`, `croquetFitProbe.ts` `GUGAN_MALLETS`/`guganPlayed`) and `leanOf` twice
+    (`ratioFit.ts`, `ratioFit.test.ts`): move the cache into `gugansMallet` and export `leanOf`; the probe mixes
+    `defaultWorld()` and `fitWorld(TODAY)` (equal in value), so identity-keyed caches solve twice.
 - **Tests:** `npm test` 1220 → 1249 passed, 1 expected fail (the free collision's video time on today's law), 7 → 10
   skipped, 1 todo; the slow suite's convergence 3 of 3 and `turfStrike` 3 passed, 1 expected fail (Gugan's jab), 1
   todo.

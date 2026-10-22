@@ -1032,10 +1032,12 @@ function sectionE(): void {
         const against = (m: number, r: number): string => `${fmt(m)} (row ${fmt(r)})`;
         console.log(
             `${stroke.name} (${stroke.preset}, U ${fmt(stroke.malletSpeed)} m/s, gap ${mm(gap)} mm` +
-                `${stroke.nominal ? ", nominal" : ""})${read.open ? " OPEN" : ""}: v2/U ${against(figures.v2U, row.v2U)}, ` +
+                `${stroke.nominal ? ", nominal" : ""})${read.open ? " OPEN" : ""}: ` +
+                `v2/U ${against(figures.v2U, row.v2U)}, ` +
                 `w1/W ${against(figures.w1W, row.w1W)}, v2/w1 ${against(figures.v2w1, row.v2w1)}, ` +
                 `W/U ${against(figures.WU, row.WU)}, energy ${against(figures.energy, row.energy)}; (v2/w1)² ` +
-                `${fmt(figures.v2w1 ** 2)} (row 16 ${stroke.squaredRatio === null ? "none" : fmt(stroke.squaredRatio)})`,
+                `${fmt(figures.v2w1 ** 2)} ` +
+                `(row 16 ${stroke.squaredRatio === null ? "none" : fmt(stroke.squaredRatio)})`,
         );
     }
     console.log(
@@ -1166,9 +1168,10 @@ function timingOf(setup: ShotSetup, world: World): { readonly law: ModelTiming; 
 
 function sectionF(): void {
     console.log(
-        "== F. The timing (design §7.1): ms from the mallet's first contact; the croqueted ball first moving (shifted " +
-            `by ${mm(VISIBLE_SHIFT)} mm), the mallet's first contact ending, the ball–ball interval's end (the ball ` +
-            "leaving), any second face interval; the model beside Fig. 4's research reading and re-reading " +
+        "== F. The timing (design §7.1): ms from the mallet's first contact; the croqueted ball first moving " +
+            `(shifted by ${mm(VISIBLE_SHIFT)} mm), the mallet's first contact ending, ` +
+            "the ball–ball interval's end (the ball leaving), any second face interval; " +
+            "the model beside Fig. 4's research reading and re-reading " +
             '(reference/sources/README.md:594-619), each ±0.5 frame on Gugan\'s own "a frame or two" ' +
             `(one frame ${ms(VIDEO_FRAME)} ms). The model twice: "law" from the contact law's intervals, "video" as ` +
             `Gugan 4's video would time it, a contact on while the two bodies' surfaces are within ` +

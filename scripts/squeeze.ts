@@ -3,7 +3,7 @@
  * plays a ball–ball law alone through `integrate(isolated(…))`, as tests/engine/impact/analytic.test.ts does: two balls
  * of the default world's, one moving, no head contact, no turf and no gravity. It reports the law's own contact time
  * and the contact as Gugan 4's video would time it, from the struck ball's displacement first exceeding VISIBLE_SHIFT
- * to the pair's gap first exceeding it (plan decision 6). scripts/croquetFitProbe.ts's section I judges each candidate
+ * to the pair's gap first exceeding it. scripts/croquetFitProbe.ts's section I judges each candidate
  * with them, and its section F times the strike as the video would with `visible` and `videoIntervals`.
  */
 import type { PairLaw } from "../src/engine/impact/contactLaw";
