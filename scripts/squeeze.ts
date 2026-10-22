@@ -10,8 +10,9 @@
  * time, the steps in which the pair is listed among the step's contacts with a positive penetration δ (the timeline's
  * interval), and the force-on time, the steps with a positive normal force; under the force clamp the force can reach
  * zero a little before δ does. A law's parameter T (lawFromContactTime's contact time, closeFace's T(U)) is its
- * force-on time; the law time exceeds it. Every video time takes an optional threshold `shift` (m), VISIBLE_SHIFT when absent, so
- * that design §7.9's 0.4 and 0.6 mm and the camera's thresholds can be passed; without it every call is as before.
+ * force-on time; the law time exceeds it. Every video time takes an optional threshold `shift` (m), VISIBLE_SHIFT
+ * when absent, so that design §7.9's 0.4 and 0.6 mm and the camera's thresholds can be passed; without it every call
+ * is as before.
  * freeFace plays the default mallet's head free onto a free default ball, the face's law alone. The face's law reads
  * T(U) from reference/contact.json at load, so its conversion cannot re-run the face at another t0; it need not.
  * Under the face's Hertz law, F = k·δ^{3/2} + c·δ^{1/2}·δ′ with k and c set at the closing speed U from T(U) and e(U),
@@ -161,9 +162,11 @@ export function freeCollision(
 const FACE_CAP = 2e-3;
 
 /**
- * Numerical, not physical: the longest free face run (s). A face contact lasts at most 1.3 ms in [FACE_SPEED_MIN,
- * FACE_SPEED_MAX]; the face's clearance must then reach the largest threshold faceScaleFor reads, VISIBLE_SHIFT/0.3 at
- * design §7.9's 0.6 mm (2 mm), at the slowest separation, about 0.4 m/s at 0.5 m/s: 2.3 ms in all.
+ * Numerical, not physical: the longest free face run (s), FACE_CAP's third doubling, a guard against a run that never
+ * releases rather than a fit. The largest need in this step is 2.3 ms (a contact of 1.3 ms at FACE_SPEED_MIN, then the
+ * clearance reaching faceScaleFor's largest threshold, 0.6 mm / 0.3 = 2 mm, at the 0.4 m/s separation of 0.5 m/s),
+ * which the second doubling, 4 ms, already covers. 16 ms leaves room for a speed below FACE_SPEED_MIN: the clearance
+ * opens at about 0.85 U, so the 2 mm threshold is reached within it down to about 0.15 m/s.
  */
 const FACE_CAP_LIMIT = 16e-3;
 
@@ -237,9 +240,9 @@ function playFace(speed: number, dt: number, reach: number): FaceRun {
  * its shaft massless) moving free (freeTracked: no hands, no gravity, no turf) at `speed` (m/s) onto a free default
  * ball touching its face, at `o.dt`'s step (default IMPACT_DT). The restitution is the ball's speed less the head's
  * after, over `speed`; the video time runs from the ball's displacement first exceeding `o.shift` (default
- * VISIBLE_SHIFT) to the face's clearance from the ball (faceClearance) first exceeding it. `clamped` is set when `speed`
- * lies outside the face law's [FACE_SPEED_MIN, FACE_SPEED_MAX], where its k and c are the nearer end's. Throws a
- * RangeError when the video never sees the contact end within FACE_CAP_LIMIT. The shaft's mass is left out because
+ * VISIBLE_SHIFT) to the face's clearance from the ball (faceClearance) first exceeding it. `clamped` is set when
+ * `speed` lies outside the face law's [FACE_SPEED_MIN, FACE_SPEED_MAX], where its k and c are the nearer end's. Throws
+ * a RangeError when the video never sees the contact end within FACE_CAP_LIMIT. The shaft's mass is left out because
  * the design's free head carries the head's mass alone: with it the body's centre lies above the face's axis and the
  * head turns, and at 3.26 m/s the force-on time reads 0.8969 ms against T(U)'s 0.8852 and e 0.8155 against 0.8145.
  */
@@ -286,8 +289,8 @@ export function faceScaleFor(
     const high = video(hi);
     if (!(low <= target && target <= high)) {
         throw new RangeError(
-            `faceScaleFor: the target ${target} s at ${speed} m/s lies outside the bracket's video times, ${low} s at ` +
-                `scale ${lo} and ${high} s at scale ${hi}`,
+            `faceScaleFor: the target ${target} s at ${speed} m/s lies outside the bracket's video times, ` +
+                `${low} s at scale ${lo} and ${high} s at scale ${hi}`,
         );
     }
     while (hi - lo > SCALE_TOLERANCE) {
@@ -307,13 +310,25 @@ const BALL_BALL_DT = 1e-7;
 /** Numerical, not physical: the ternary search's iterations, which shrink its bracket by (2/3)^60, about 3e-11. */
 const TERNARY_ITERATIONS = 60;
 
+/** The ball–ball search's bracket, as fractions of the target: design §2.2's [0.5, 1.5]. */
+const BALL_BALL_BRACKET = [0.5, 1.5] as const;
+
+/**
+ * Numerical, not physical: how near either end of its bracket, as a fraction of the bracket's width, the ball–ball
+ * search may end before it is taken to have run into that end: about the bracket left after 11 iterations. The video
+ * times are whole steps, and their plateaus can stall a search bound for an end a little short of it (0.4 % of the
+ * width for a 0.1 ms target at a 2 mm threshold and dt 1e-6 s); a best T within 1 % of an end is suspect anyway.
+ */
+const BRACKET_EDGE = 0.01;
+
 /**
  * The ball–ball law's parameter T (s; lawFromContactTime's contact time, the force-on time, as reference/contact.json
  * holds it) whose video time best matches `target` (s) on Table 1's three clean strokes
  * (FREE_COLLISIONS), P2b.2b.2c.2c design §2.2: the law lawFromContactTime(m/2, e, T, 0) at Table 1's e, the T in
  * [0.5, 1.5] × target that minimises the largest |video − target| over the three speeds, by ternary search at `o.dt`
  * (default 1e-7 s) and threshold `o.shift` (default VISIBLE_SHIFT). `misses` are the signed video − target (s) at
- * that T, in FREE_COLLISIONS' order.
+ * that T, in FREE_COLLISIONS' order. Throws a RangeError naming the target and the bracket when the search ends at
+ * either end of the bracket (within BRACKET_EDGE of its width): the best T then lies outside it.
  */
 export function ballBallTimeFor(
     target: number,
@@ -327,8 +342,9 @@ export function ballBallTimeFor(
                 freeCollision(c.speed, lawFromContactTime(mass / 2, c.restitution, T, 0), options).videoTime - target,
         );
     const worst = (T: number): number => Math.max(...missesAt(T).map((m) => Math.abs(m)));
-    let lo = 0.5 * target;
-    let hi = 1.5 * target;
+    const [first, last] = BALL_BALL_BRACKET.map((f) => f * target) as [number, number];
+    let lo = first;
+    let hi = last;
     for (let i = 0; i < TERNARY_ITERATIONS; i++) {
         const a = lo + (hi - lo) / 3;
         const b = hi - (hi - lo) / 3;
@@ -339,6 +355,13 @@ export function ballBallTimeFor(
         }
     }
     const time = (lo + hi) / 2;
+    const margin = BRACKET_EDGE * (last - first);
+    if (time - first < margin || last - time < margin) {
+        throw new RangeError(
+            `ballBallTimeFor: the best time for the target ${target} s lies outside the bracket ` +
+                `[${first}, ${last}] s: the search ended at ${time} s, at its edge`,
+        );
+    }
     return { time, misses: missesAt(time) };
 }
 
