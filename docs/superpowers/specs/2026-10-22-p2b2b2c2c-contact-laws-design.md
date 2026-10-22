@@ -74,6 +74,8 @@ My calls (the user may overrule any of them):
 - **The search's candidates carry fixed constants** (§4.2), and the face's check times the full single-ball stroke
   (§4.1, test 5).
 - **The camera threshold is tested for reach, not tuned** (§7.9): ×2 and ×3 of 0.2 mm, for Gugan's "several times".
+- **Each source is compared as its instrument saw it** (§5.3): the film through a sampled camera model, the
+  electrical-contact studies through the law times.
 
 ## 1. Goal and exit criteria
 
@@ -186,7 +188,8 @@ Ruled out by the research (2026-10-22), recorded so that it is not re-tried:
   at C3S's and C20S's U and at C1D's, as a recorded check: the film's v₂/U is insensitive to the gap (1.03–1.15 across
   0–6 mm), and the model's sensitivity is the test of the user's earlier "unmeasurable gap" hypothesis. Herrmann and
   Seitz note that "a separation of only 40 µm is sufficient for dispersion-free propagation", so the sweep includes
-  0.04 mm.
+  0.04 mm. "Touching" on the film means a gap too small for the camera to resolve, so the sweep's 0–0.5 mm is also
+  the range of gaps the film cannot tell from 0; the touching stops are reported across it beside their gap-0 result.
 - **The four tests pinned at gap 0** (`tests/engine/shot.test.ts:372`, `:617`, `:652`; `tests/engine/impact/
   handover.test.ts:300`) are re-run at the new default. If it is 0 their pins are removed; their mechanisms are
   re-checked either way and reported.
@@ -269,7 +272,19 @@ whose three bodies stay loaded throughout is reported, not failed (decision 5), 
 | Plummer, "Multiple Taps in Croquet Strokes" (2000), https://oxfordcroquet.org/tech/multiple/ | electrical contact, 5 µs a point; Jaques Eclipse ball, Permali face, carpet | "Single ball strokes and most croquet strokes showed no sign of multiple contacts"; drives 1.3–1.4 ms, stops 1.8–2.0 ms |
 | Hall, "When a Mallet Strikes a Ball" (1994), https://oxfordcroquet.org/tech/hall/ | electrical contact | ball 2 leaves "at about 1.8ms. The mallet remained in contact with ball 1 for a further period of 1.1 ms" |
 
-The probe prints the model's figures beside all four.
+The probe prints the model's figures beside all four, each seen as that source's instrument would see it (my call,
+after the user: "the sensitivity of the filming equipment and the speed of the film are all important"):
+
+- **Beside the film rows:** a camera model. Each body's position is sampled at 8,000 fps, at 16 frame phases evenly
+  spaced over one frame; a contact is seen while the gap is under `VISIBLE_SHIFT`, and a release only if the gap
+  exceeds it on at least one frame. Each tap's time is a frame count, reported as the range over the phases, at 0.2,
+  0.4 and 0.6 mm (§7.9). A release the camera cannot see is reported as such, not as no release.
+- **Beside Plummer's and Hall's rows:** the law times, unsampled; their electrical contact resolves 5 µs, and a
+  contact is on while the force is.
+
+The laws' re-set (§2) keeps the unsampled video time: over a uniformly random frame phase the mean frame count equals
+it, so sampling widens the spread (Gugan's "uncertain to a frame or two", already in the ± 0.1 ms band) and moves no
+constant.
 
 ## 6. The double tap: reported, never flagged
 
