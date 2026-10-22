@@ -32,7 +32,9 @@ from Gugan 4's Tables 1 and 2 (or a written argument), never matched to C3S, C20
 balls' separation as set up; the **squeeze** is the stage in which mallet and both balls are loaded together; U, W, w₁
 and v₂ are Gugan's. New here:
 
-- **Law time:** a contact's duration by the contact law (from first touch to the force's release).
+- **Law time:** a contact's duration in the impact's timeline, while the pair's penetration δ > 0
+  (`src/engine/impact/timeline.ts`). Under the force clamp the force can reach zero a little before δ does; where a
+  source times the force itself (§5.3), the force-on time is printed beside it.
 - **Video time:** the same contact as Gugan's 8,000 fps video would time it: a contact on while the surfaces are within
   `VISIBLE_SHIFT` (0.2 mm) of touching, timed from the first visible movement (`scripts/squeeze.ts`'s
   `freeCollision`, and the gate's section F "video" column).
@@ -127,7 +129,12 @@ The re-set:
 - **The form** stays T = t0·(U/u0)^q, with q Gugan 2000's −0.23 (his regression, matching Hertz's −0.2), and t0 set on
   A2D (3.26 m/s, the column the last step held as `SINGLE_BALL_FACE`). A1D, A3D and A4D are held out, each reported
   against the law's video time with Table 2's ± 0.1 ms. If the held-out columns miss by more than ± 0.1 ms, the gate
-  is told and offered a fit of q to all four columns (my call: anchor first, because one anchor keeps Gugan's exponent).
+  is told and offered a fit of q to all four columns, whether or not the touching stops pass (my call: anchor first,
+  because one anchor keeps Gugan's exponent). If the search runs (§4) and the gate takes the fit, the candidates run on
+  it.
+- **`contact.json`'s edits:** `faceContactTimeFit` takes u0 = 3.26 m/s and the new t0; its source becomes Gugan 4,
+  Table 2 (A2D), with the exponent from Gugan 2000, provenance "derived" (by the harness); `faceBallContactTime`'s
+  note, which places 0.8 ms "near 2.83 m/s" on today's fit, is restated on the new one.
 - **The clamp** on the face's speed range ([0.5, 6] m/s, shared with e(U)) stays as it is (my call: e(U) is measured
   only to 6 m/s). A1D is compared at its own 0.76 m/s, inside the range; A4D (8.54 m/s), like C10D (7.0 m/s), is
   played on the law clamped at 6 m/s, and its comparison says so.
@@ -145,11 +152,13 @@ Today's linear ball–ball law takes Table 1's 0.75 ms as its law time, and so r
   depends a little on speed, so the builder takes the value that minimises the largest miss across the three and
   records each.
 - e stays 0.72 (Table 1 row 8's mean). Phase 2's impulsive law is unchanged.
-- `contact.json`'s note and bounds ([0.5, 0.87] ms, the table's video readings) are re-stated as video bounds, with the
-  law time's bounds converted by the same harness.
+- `contact.json`'s `value` and `bounds` are law times, as every reader takes them (`scripts/impactProbe.ts:120-126`
+  feeds them to the engine; `tests/reference/reference.test.ts:166` derives the obstacle's lower bound from them):
+  the table's video range [0.5, 0.87] ms is converted by the same harness into `bounds`, and the video figures move to
+  the note. Its source stays Table 1, provenance "derived".
 - **The hoops and the peg follow** (my call). `ballObstacleContactTime` is derived from the ball–ball time (a ball on
   an immovable body has the two-ball pair's natural frequency; `contact.json`), and the derivation still holds, so it
-  takes the new value; `tests/engine/reference.test.ts:162-167` keeps pinning the two equal and its lower bound at
+  takes the new value; `tests/reference/reference.test.ts:162-167` keeps pinning the two equal and its lower bound at
   0.87 × the ball–ball lower bound. The new value lies inside its 1.0 ms upper bound, which rests on the obstacle
   fuzz's penetrations (under 0.06 R): the fuzz is re-run, and a penetration over the bound goes to the gate. Every hoop
   and peg run then moves, listed in the ratchet (§8.2).
@@ -192,7 +201,10 @@ Ruled out by the research (2026-10-22), recorded so that it is not re-tried:
   Seitz note that "a separation of only 40 µm is sufficient for dispersion-free propagation", so the sweep includes
   0.04 mm. "Touching" on the film means a gap too small for the camera to resolve, so the sweep's 0–0.5 mm is also
   the range of gaps the film cannot tell from 0; the touching stops are reported across it beside their gap-0 result.
-- **The four tests pinned at gap 0** (`tests/engine/shot.test.ts:372`, `:617`, `:652`; `tests/engine/impact/
+  Its runs at C1D's U are §4.1's test 2; one sweep serves both.
+- `DEFAULT_CROQUET_GAP` is test support (`tests/engine/support/shot.ts:162`), not engine code; its move bumps no version
+  of its own.
+- **The tests pinned at gap 0** (`tests/engine/shot.test.ts:372`, `:617`, `:652` and `:655`; `tests/engine/impact/
   handover.test.ts:300`) are re-run at the new default. If it is 0 their pins are removed; their mechanisms are
   re-checked either way and reported.
 
@@ -226,8 +238,8 @@ candidate keeps §2's laws and changes one thing.
   form and stays recorded as failed.
 - **g. The ball–ball spring's shape.** A Hertz law (F ∝ δ^3/2, the exponent from theory), its constant and damping set
   from Table 1's e and video time. Last, because the research rules the shape out as a cause on its own (§2.3).
-- **h. The face's exponent.** If the held-out Table 2 columns miss (§2.1), the fit of q to all four columns, run with
-  candidate f or g if either is in play.
+
+The face's exponent is not a candidate: §2.1's fit of q is offered to the gate on its own trigger.
 
 Candidates f and g carry fixed constants, never re-derived per closure from a closing speed (at gap 0 the pair starts
 touching with no closing speed). They are set as §2.2 sets the linear law: the values that minimise the largest miss of
@@ -242,7 +254,8 @@ surface layer or any hidden separation at gap 0 (anti-goal, §12).
 One task in the plan. Every candidate gets the whole battery (§4.1). §2's laws and every candidate run in throwaway
 copies and reach the engine only after stage 1 of the gate admits them (§9; as the last step's b and e). If none
 passes, the step lands §2's laws if the gate admits them, the default stays 1 mm, and the miss is recorded with each
-result.
+result. The gate may admit either of §2's laws alone (each rests on its own table); §1's criteria are then judged on
+what lands, the other law's criterion is recorded as not met, and the default moves only on the same rule (§3).
 
 ## 5. The filmed strokes
 
@@ -281,11 +294,11 @@ after the user: "the sensitivity of the filming equipment and the speed of the f
   spaced over one frame; a contact is seen while the gap is under `VISIBLE_SHIFT`, and a release only if the gap
   exceeds it on at least one frame. Each tap's time is a frame count, reported as the range over the phases, at 0.2,
   0.4 and 0.6 mm (§7.9). A release the camera cannot see is reported as such, not as no release.
-- **Beside Plummer's and Hall's rows:** the law times, unsampled; their electrical contact resolves 5 µs, and a
-  contact is on while the force is. Plummer's circuit ran at 2.65 V through 82 kΩ. Air does not break down below
+- **Beside Plummer's and Hall's rows:** the law times, unsampled, with the force-on times beside them; their
+  electrical contact resolves 5 µs, and a contact is on while the surfaces touch. Plummer's circuit ran at 2.65 V through 82 kΩ. Air does not break down below
   Paschen's minimum of about 330 V, and at 2.65 V current crosses a gap only by field emission or tunnelling, across
-  well under a micron even at a rough surface's peaks, so the circuit's threshold is touch itself (my reasoning; Hall gives no voltage). Their own departures
-  are recorded beside them instead: 0.02 mm of foil on the face and a graphite coat on Plummer's balls, a Permali face,
+  well under a micron even at a rough surface's peaks, so the circuit's threshold is touch itself (my reasoning; Hall
+  gives no voltage). Their own departures are recorded beside them instead: 0.02 mm of foil on the face and a graphite coat on Plummer's balls, a Permali face,
   and carpet.
 
 The laws' re-set (§2) keeps the unsampled video time: over a uniformly random frame phase the mean frame count equals
@@ -317,13 +330,22 @@ https://worldcroquet.org/wp-content/uploads/2021/04/Laws-Rulings-Commentary-comb
 - In a croquet stroke, or a continuation stroke with the striker's ball touching another, a mallet re-contact that
   begins before the striker's ball and the croqueted ball have parted is within the strike (my call; C29.11.2 places
   the fault "after the balls have parted contact", and every second tap in Fig. 4 begins before the balls part). It is
-  never flagged under 29.1.6.1. "Parted" is the end of the first ball–ball interval in the impact's timeline (the
-  contact law's, not the video's; the Laws judge by eye, so no threshold applies). A re-contact before the balls have
-  first met, possible in a gapped stroke, also precedes their parting and is within the strike. A ball–ball re-touch
-  after the first interval does not extend the strike (my call: the first parting is the one C29.11.2 describes).
-- Each such tap is reported on the shot's outcome: how many, each tap's start and end, and the largest face–ball
-  separation reached between taps. The builder names the field; it is a public addition, so it is documented with the
-  outcome's other fields.
+  never flagged under 29.1.6.1. "Parted" is the end of the first ball–ball interval in the impact's timeline (law
+  time, δ-based, not the video's; the Laws judge by eye, so no threshold applies). The pair is the striker's ball and
+  the croqueted ball; in a continuation stroke, each ball the striker's ball touches at the start
+  (`touchingAtStart`), and the parting is the latest of their first intervals' ends. A re-contact before the balls
+  have first met, possible in a gapped stroke, also precedes their parting and is within the strike. A ball–ball
+  re-touch after the first interval does not extend the strike (my call: the first parting is the one C29.11.2
+  describes), and a one-step break in the timeline counts as a parting, as the timeline counts any step out of contact
+  (intended; §8.1 pins it, and the probe reports any first ball–ball interval re-touched within 0.1 ms, to gate E).
+- The 29.2.4.1 exemption filters the face contacts first, as today (`faults.ts:309`). 29.1.6.1 is then raised only if
+  a non-exempt contact after the first begins at or after the parting, at that contact's start; its evidence keeps
+  today's form (`contactEvidence`: every non-exempt contact counted, every face gap with its clearance) and adds
+  the count after the parting.
+- The taps within the strike are reported on `FaultReport` (so that §8.2's "only the fault lists move" holds): how
+  many, each tap's start and end, and the largest face–ball separation between taps, which is the timeline's existing
+  `clearanceAfter` (`impact/types.ts`). The builder names the field; it is a public addition, documented with the
+  report's other fields.
 - A re-contact beginning after the balls have parted keeps today's possible-fault 29.1.6.1, unchanged, until the
   follow-through step judges such contacts (shepherding, the push, the drive's late catch at about 109 ms).
 - 29.1.6.3 (an observable prolonged contact) is unchanged.
@@ -346,15 +368,17 @@ Each re-measured on the admitted laws, each to the gate:
    against Gugan 5 at the default gap (gate F's carried item); the grip-limit control run re-run, since the face law
    changes.
 6. **The hands' effect** (decision 2): C3S, C20S and C3D played with the hands' coupling as the preset has it and with
-   the head free of the hands for the strike's first 5 ms; the difference in each judged figure and in the tap
-   timings reported, on today's laws and on the admitted ones.
+   the head free of the hands for the strike's first 5 ms (a throwaway probe variant, not engine code); the
+   difference in each judged figure and in the tap timings reported, on today's laws (the user's hypothesis was about
+   today's model) and on the admitted ones.
 7. **The strike's window** (`STRIKE_WINDOW` 15 ms): re-checked against the moved taps; a test now pins its boundary
    (the last step's carried item).
 8. **The effective mass and the AC stop's re-contacts:** re-measured as the last gate's M.3 and M.4.
 9. **The camera threshold's reach:** `VISIBLE_SHIFT` is 0.2 mm, Gugan 4's resolution on paper; he writes that in
    practice "the uncertainties of measurement prove to be several times greater than might be hoped", with no figure.
-   Both laws are re-set (§2.1, §2.2) at 0.4 and 0.6 mm in throwaway copies, and §1's criteria 2–4 re-judged on them.
-   Reported as whether the touching stops' pass holds; the adopted laws stay those set at 0.2 mm.
+   Both laws are re-set (§2.1, §2.2) at 0.4 and 0.6 mm in throwaway copies, and §1's criteria 3–4 re-judged on them
+   (criterion 2 holds there by construction). Reported as whether the touching stops' pass holds; the adopted laws
+   stay those set at 0.2 mm.
 
 ## 8. Testing
 
@@ -365,7 +389,9 @@ Each re-measured on the admitted laws, each to the gate:
 - **The ball–ball re-set law:** `freeCollision`'s video time within a frame of 0.75 ms at Table 1's three clean speeds,
   e 0.72 to 1e-9; the last step's `it.fails` removed.
 - **The double tap:** on constructed timelines, a re-contact before the balls part is reported and not flagged; one
-  after is flagged as today; a single-ball stroke's 29.1.6.2 unchanged.
+  after is flagged as today; a single-ball stroke's 29.1.6.2 unchanged; a continuation stroke touching two balls
+  parts at the later first interval's end; a first ball–ball interval broken for one step counts as a parting, and a
+  tap after it is flagged; an exempt contact is filtered before the rule applies.
 - **Any admitted candidate** brings its own cases, including bit-identity when switched off.
 
 ### 8.2 The ratchet
@@ -406,9 +432,11 @@ else in this design means stage 1's ruling.
 
 **Stage 2, the consequences** (run on the admitted laws):
 
-- **D.** The default gap (§3), the sweep and the four pinned tests. The default's commit follows this ruling.
+- **D.** The default gap (§3), the sweep and the pinned tests. The default's commit follows this ruling.
 - **E.** The double tap's reporting (§6): counts and timings over the grid; any re-contact still flagged.
-- **F.** The checks (§7), one item at a time.
+- **F.** The checks (§7). Those that carry a ruling go one at a time: §7.1's drive and stop at e 0.72, §7.4, §7.5,
+  §7.6, §7.7 and §7.9. The carried diagnostics (§7.1's 0.772 variant and jab sweep, §7.2, §7.3, §7.8) are recorded and
+  put as one batch; the user may take any of them singly.
 - **G.** The ratchet's moved runs and the convergence (§8.2, §8.3).
 
 ## 10. The tidy (first commit)
@@ -420,7 +448,8 @@ From the last step's final review and carried items:
 - `readTimeOf`: judge `open` on face and ball–ball intervals alike.
 - The Gugan-mallet cache, held twice (`ratioFit.ts` `guganStrokes`; `croquetFitProbe.ts` `GUGAN_MALLETS`/`guganPlayed`):
   move it into `gugansMallet`.
-- `leanOf`, held twice (`ratioFit.ts`, `ratioFit.test.ts`): export one.
+- `leanOf`, held twice (`ratioFit.ts`, `ratioFit.test.ts`): export one. `scripts/strokeProbe.ts`'s `leanOf` measures
+  a different lean (the head's against an aim) and stays.
 - The probe's two worlds (`defaultWorld()` and `fitWorld(TODAY)`): use one, so identity-keyed caches solve once.
 - `reference/sources/README.md`: the new sources (Cross 2017, Sutherland 1995, Hall 1994, Plummer 2000, the CA's
   "Croquet Dynamics", the WCF Laws 2021, and the physics papers cited in §2.3 and §4.2), each with URL, fetch date and
@@ -464,3 +493,11 @@ T(U), `ballBallContactTime` and the default gap.
 - The fitter, which stays dormant.
 
 ## Amendments
+
+- **2026-10-22, spec review** (subtraction and completeness lenses; folded in above): law time defined as the
+  timeline's δ-based interval; §6's parting pair for continuation strokes, the 29.1.6.1 evidence, the exemption's
+  order, the report's home (`FaultReport`) and the one-step break stated, with analytic cases; `ballBallContactTime`'s
+  bounds are law times; the reference test's path corrected; the fifth gap-0 pin (`shot.test.ts:655`) added; the
+  face's q fit offered on its own trigger, so candidate h is removed; either law may land alone; `contact.json`'s face
+  edits listed; §7.6's free head is a throwaway variant; §7.9 judges criteria 3–4; gate F batches the carried
+  diagnostics.
