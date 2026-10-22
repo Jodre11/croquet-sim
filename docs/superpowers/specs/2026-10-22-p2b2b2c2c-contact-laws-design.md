@@ -280,7 +280,11 @@ after the user: "the sensitivity of the filming equipment and the speed of the f
   exceeds it on at least one frame. Each tap's time is a frame count, reported as the range over the phases, at 0.2,
   0.4 and 0.6 mm (§7.9). A release the camera cannot see is reported as such, not as no release.
 - **Beside Plummer's and Hall's rows:** the law times, unsampled; their electrical contact resolves 5 µs, and a
-  contact is on while the force is.
+  contact is on while the force is. Plummer's circuit ran at 2.65 V through 82 kΩ. Air does not break down below
+  Paschen's minimum of about 330 V, and at 2.65 V current crosses a gap only by field emission or tunnelling, at a few
+  nanometres, so the circuit's threshold is touch itself (my reasoning; Hall gives no voltage). Their own departures
+  are recorded beside them instead: 0.02 mm of foil on the face and a graphite coat on Plummer's balls, a Permali face,
+  and carpet.
 
 The laws' re-set (§2) keeps the unsampled video time: over a uniformly random frame phase the mean frame count equals
 it, so sampling widens the spread (Gugan's "uncertain to a frame or two", already in the ± 0.1 ms band) and moves no
