@@ -1419,12 +1419,23 @@ const CONSTANTS: Readonly<Record<LawCandidate, string>> = {
         "1975, or Kuwabara and Kono's √δ form as the face uses), the spring linear (design §4.2, f): in lossy " +
         'touching chains "A quasistatic precompression appears behind the primary pulse ... This precompression is ' +
         'due entirely to dissipation and does not exist at zero viscosity" (Rosas, Romero, Nesterenko and ' +
-        "Lindenberg, PRL 98 164301 (2007)). Its fixed constants minimise the largest miss of the video time over " +
-        `Table 1's three clean strokes, e within 0.72 ± 0.02 at each. ${NOT_MATCHED}`,
+        "Lindenberg, PRL 98 164301 (2007)); and measured bead damping is not a linear dashpot (Carretero-González " +
+        'et al., PRL 102 024102 (2009): an exponent "close to α = 1.75"). F = k·δ + c·√δ·δ′, clamped at zero, for ' +
+        "the ball–ball pair only, the obstacles' law linear. k and c are fixed, set from Table 1 alone by " +
+        "freeCollision at dt 0.1 µs at 1.90, 5.54 and 7.64 m/s: e depends only on s = c·k^-3/4, and no s holds e " +
+        "within 0.72 ± 0.02 at all three (e ≤ 0.74 at 1.90 m/s needs s ≥ 0.1693, e ≥ 0.70 at 7.64 m/s s ≤ 0.1014), " +
+        "so s minimises the largest |e − 0.72| (s 0.1271) and k then the largest video miss of 0.75 ms (nested " +
+        "ternary searches, 40 steps each): k 2.04845164e6 N/m, c 6.8815255e3 N·s/m^3/2; video 0.674, 0.791 and " +
+        `0.826 ms, e 0.794, 0.685 and 0.646, outside the band. ${NOT_MATCHED}`,
     g:
-        "the laws' candidate with a Hertz ball–ball spring (F ∝ δ^3/2, the exponent from theory), its fixed constant " +
-        "and damping minimising the largest miss of the video time over Table 1's three clean strokes, e within " +
-        `0.72 ± 0.02 at each (design §4.2, g). ${NOT_MATCHED}`,
+        "the laws' candidate with a Hertz ball–ball spring (F ∝ δ^3/2, the exponent from Hertz's theory of two " +
+        "elastic spheres) and Kuwabara and Kono's damping as the face's, F = √δ·(k·δ + c·δ′), clamped at zero, for " +
+        "the ball–ball pair only, the obstacles' law linear (design §4.2, g). k and c are fixed, set from Table 1 " +
+        "alone by freeCollision at dt 0.1 µs at 1.90, 5.54 and 7.64 m/s: e depends only on s = c·k^-3/5, and no s " +
+        "holds e within 0.72 ± 0.02 at all three (e ≤ 0.74 at 1.90 m/s needs s ≥ 0.1341, e ≥ 0.70 at 7.64 m/s " +
+        "s ≤ 0.1217), so s minimises the largest |e − 0.72| (s 0.1273) and k then the largest video miss of 0.75 ms " +
+        "(nested ternary searches, 40 steps each): k 6.23108843e7 N/m^3/2, c 6.04967024e3 N·s/m^3/2; video 0.801, " +
+        `0.722 and 0.700 ms, e 0.751, 0.704 and 0.689, outside the band. ${NOT_MATCHED}`,
 };
 
 type SearchTest = CandidateResult["tests"][number];
