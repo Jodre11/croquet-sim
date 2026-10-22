@@ -33,8 +33,8 @@
  * re-contact beginning before the striker's ball has parted from the croqueted ball (or, in a continuation stroke,
  * from every ball it touched) is within the strike: it is reported on `strike`, never flagged. One beginning at or
  * after the parting keeps today's possible fault (29.2.5: a separation seen by eye), at its start, until a later
- * follow-through step judges such contacts (shepherding, the push). A ball–ball break shorter than PARTING_BREAK is no parting. With no parting to place it, every re-contact
- * is flagged as before.
+ * follow-through step judges such contacts (shepherding, the push). A ball–ball break shorter than PARTING_BREAK is no
+ * parting. With no parting to place it, every re-contact is flagged as before.
  *
  * 29.1.13 has two clauses, reported in this order and told apart by their evidence: "fails to move or shake" (the
  * croqueted pair never penetrates beyond CONTACT_TOLERANCE; evidence peakPenetration), and "plays away from" (the
