@@ -553,9 +553,11 @@ T(U), `ballBallContactTime` and the default gap.
       and §7.8's effective mass are recorded and carried as diagnostics.
     - **G, the step convergence: "Record; mark it .fails (Recommended)".** On the re-set laws the drive ratio's
       spread over dt/2, dt and 2·dt at 1 mm is 0.0204 (4.198, 4.191, 4.177) against a tenth of its 0.2 tolerance;
-      the case in `squeezeConvergence.test.ts` is marked `it.fails` and carried.
+      the case in `squeezeConvergence.test.ts` is marked `it.fails` and carried. Noted with G: the impact digest
+      plays the test world, whose ball–ball and obstacle times are fixed, so it cannot see the world-carried laws;
+      the preset digest, on the default world, carries that check.
     - **The unpredicted test changes: "Accept, carry (5) (Recommended)".** Accepted as traced re-baselines: (1) the
       pass roll's whole-roll lift cover, lost with the no-throw guard; (2) the handover's full rolls, moved from 1
       to 0.8 m/s; (3) `ratioFit`'s canonical drive at gap 0 (w1 1.618 to 1.392, v2 3.763 to 3.766, head 0.80 to
-      0.883); (4) the impact digest, blind to times the test world carries. Carried as an open defect: (5) the
+      0.883); (4) the hands test's cap, moved from 12 to 9 ms (an input). Carried as an open defect: (5) the
       0.9 m/s full-roll handover throw, which pre-dates this step.
