@@ -155,11 +155,13 @@ export const CANONICAL_STRIKER = { x: 9.6012, y: 4 } as const;
 export const GC_STOP_GAP = 0.3;
 
 /**
- * A croquet stroke's gap from the striker to the croqueted ball by default (m, surface to surface): 1 mm, as Gugan 4
- * measured the balls of its filmed croquet drives C1D, C3D and C10D (Table 5 row 2): "nominally in contact, but were
- * in fact clearly separated" (note (i)).
+ * A croquet stroke's gap from the striker to the croqueted ball by default (m, surface to surface): 0.75 mm, as
+ * P2b.2b.2c.2c's gate D ruled (design Amendments, 2026-10-23, gate stage 2). It is a deliberate fit to the touching
+ * stops' figures, not a measurement: its lead over the 1 mm that Gugan 4 measured for its filmed drives C1D, C3D and
+ * C10D (Table 5 row 2, note (i)) is within the model's step noise, and it stands in for the face's and the ball–ball
+ * contact's matched time scales, the touching stops' carried cause.
  */
-export const DEFAULT_CROQUET_GAP = 0.001;
+export const DEFAULT_CROQUET_GAP = 0.00075;
 
 /**
  * What `canonicalSetup` changes: the world (default `defaultWorld()`), fields of the stroke, fields of the preset's

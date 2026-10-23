@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { FILMED_STROKES, GUGAN_MEANS, type FilmedStroke } from "../../scripts/filmedStrokes";
+import {
+    FILMED_STROKES,
+    GUGAN_MEANS,
+    SINGLE_BALL_FACE,
+    TABLE2_FACE,
+    touchingBand,
+    type FilmedStroke,
+} from "../../scripts/filmedStrokes";
 
 describe("the filmed strokes as held (P2b.2b.2c.2b design §5.1)", () => {
     it("reproduces Gugan's three means from the ten strokes, within his stated uncertainty", () => {
@@ -29,5 +36,17 @@ describe("the filmed strokes as held (P2b.2b.2c.2b design §5.1)", () => {
         expect(c20s.croqueted / c20s.malletSpeed).toBeCloseTo(1.09, 2);
         expect(c20s.striker / c20s.malletAfter).toBeCloseTo(1.61, 2);
         expect(c20s.croqueted / c20s.striker).toBeCloseTo(2.17, 2);
+    });
+    it("holds Table 2's four columns, A2D as the anchor", () => {
+        expect(TABLE2_FACE.map((c) => [c.name, c.speed, c.contactTime])).toEqual([
+            ["A1D", 0.76, 1e-3],
+            ["A2D", 3.26, 7.5e-4],
+            ["A3D", 5.7, 6e-4],
+            ["A4D", 8.54, 6e-4],
+        ]);
+        expect(SINGLE_BALL_FACE).toEqual({ speed: 3.26, contactTime: 7.5e-4 });
+    });
+    it("gives each ratio a band of 3 % per speed in quadrature", () => {
+        expect(touchingBand(1.15)).toBeCloseTo(1.15 * 0.03 * Math.SQRT2, 15);
     });
 });

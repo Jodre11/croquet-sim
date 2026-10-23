@@ -31,20 +31,30 @@
  *   distances), each quoted from reference/sources/README.md with its line.
  * - D. gap 0 re-measured and the sweep (P2b.2b.2c.2b design §9): the canonical drive at 3 m/s with no push, on the
  *   default mallet and Gugan's: the read-out's speeds, every face and ball–ball interval (ms), the squared speed ratio
- *   and the distance ratio; then v₂/U, w₁/W, v₂/w₁ and the ratio across the gap from 0 to 1.9 mm, for the drive at 3
- *   m/s and the AC stop at C3S's and C20S's U.
- * - E. the filmed strokes (design §5.2, §5.3): each of Gugan 4's ten strokes on its preset at its U and recorded gap,
- *   its figures against its Table 5 row, the nominal strokes at ±0.5 mm, and the three means against Gugan's.
- * - F. the timing (design §7.1): the model's four times for six strokes, from the contact law's intervals and as the
- *   video would time them (VISIBLE_SHIFT), beside both Fig. 4 readings.
+ *   and the distance ratio; then (P2b.2b.2c.2c design §3) v₂/U, w₁/W, v₂/w₁ and the ratio across the gap from 0 to
+ *   1.9 mm with Herrmann and Seitz's 0.04 mm, each stroke played as section E plays it: the AC stop at C3S's and
+ *   C20S's U, judged across 0–0.5 mm against their rows by touchingBand beside their gap-0 result, and the drive at
+ *   C1D's U, v₂/U against Table 5's spread (§4.1's test 2).
+ * - E. the filmed strokes (design §5.2, §5.3): C3S and C20S at gap 0 by touchingBand; each of Gugan 4's ten strokes on
+ *   its preset at its U and recorded gap, its figures against its Table 5 row with W after the first face contact
+ *   beside W after the double tap (note (ii)) and the face intervals within the strike, the nominal strokes at ±0.5 mm,
+ *   and the three means against Gugan's
+ *   over GAPPED_STROKES and ALL_STROKES.
+ * - F. the timing (design §7.1; P2b.2b.2c.2c design §5.3): the model's four times for six strokes, from the contact
+ *   law's intervals and as the video would time them (VISIBLE_SHIFT) from first touch, beside both Fig. 4 readings;
+ *   the camera's frame counts over 16 phases at 0.2, 0.4 and 0.6 mm, each unseen release marked; the law and force-on
+ *   intervals beside Plummer's and Hall's electrical contact; and the four sources with their departures.
  * - G. the convergence (design §6): the judged figures at dt/2, dt and 2·dt, each spread over its tolerance.
- * - I. the search (design §4): what keeps truly touching balls apart. Today's ball–ball law through the free-collision
- *   harness (scripts/squeeze.ts); then each candidate's tests of §4.1 with their figures and its verdict, a, c and d on
- *   this engine: a, a gap hidden below Table 5's 0.5 mm resolution (section D's sweep); c, the bed's and the balls'
- *   impulses on the croqueted ball over the strike's first 0.5 and 1.5 ms; d, the balls' normal and the striker's
- *   ball's rise and spin at the ball–ball interval's start and peak. Candidates b and e change a law, so they run from
- *   a throwaway copy of the worktree carrying it, with CANDIDATE (b or e) and TODAY_ROOT (the worktree, whose engine
- *   is loaded beside the copy's for tests 1 and 5); they add tests 4–6.
+ * - I. the contact laws (P2b.2b.2c.2c design §2, §4), every video clock started at first touch as Gugan 4's Fig. 4
+ *   times its events (gate stage 1's ruling): with no CANDIDATE, I.0's conversions on the worktree's engine
+ *   (the face per Table 2 column through scripts/squeeze.ts's free face, the new t0 and the held-out columns, Table
+ *   2's restitution, the q fit; the ball–ball time and its bounds), ending in the constants as JSON fragments for
+ *   reference/contact.json between "BEGIN CONSTANTS" and "END CONSTANTS". With CANDIDATE (laws, face, ballball,
+ *   laws-q, f or g), run from a throwaway copy carrying it with TODAY_ROOT (the worktree, whose engine is loaded beside
+ *   the copy's), that candidate's tests 1–6 of §4.1, the squeeze's direction and the release by law time.
+ * - I-old. the last step's search: candidates a, c and d on this engine (a, a gap hidden below Table 5's 0.5 mm
+ *   resolution; c, the bed's and the balls' impulses on the croqueted ball; d, the balls' normal and the striker's
+ *   ball's rise and spin), as that step judged them.
  * - J. Gugan 5's drive and stop across the gap (design §7.2): 3 m/s with Gugan's mallet at gaps 0 to 1.9 mm; the drive
  *   (no push) against 4.23 ± 0.2, the AC stop at jabs 0-8 mm in 0.5 mm steps against 7.15 ± 0.6, on the world's
  *   ball-ball restitution and on Gugan's 0.772 (a world variant, never adopted); where each target is reachable.
@@ -56,25 +66,43 @@
  * - M. the jab, the re-contacts and the effective mass (design §7.5-§7.7): the jab test's sweep at the default croquet
  *   gap, depth by depth; every face-ball interval with its region on the AC stop's canonical run and its preset
  *   digest's grid; the drive's effective mass on its canonical setup and with Gugan's mallet.
- * `all` runs A, D-G, I and J-M; B, C and H by name only.
+ * - N. the double taps (P2b.2b.2c.2c design §6): every croquet preset's canonical run and digest grid, each run's
+ *   FaultReport.strike (taps, clearance between them, parting, merged breaks), a tally per preset, and every run still
+ *   flagged under 29.1.6.1.
+ * - O. the hands (P2b.2b.2c.2c design §7.6): C3S, C20S (gap 0) and C3D (1 mm) on each root of HANDS_ROOTS, each with
+ *   its judged figures and its face and ball–ball intervals, then each root beside its free-head copy (the head free
+ *   of the hands for the strike's first 5 ms), on today's laws and on the admitted ones.
+ * - P. the camera threshold's reach (P2b.2b.2c.2c design §7.9): criteria 3 and 4 as section E judged them on the laws
+ *   re-set at each threshold P_INPUTS names (each a section E output), whether each holds as at 0.2 mm, and the
+ *   judged figures whose verdict moved.
+ * `all` runs A, D-G, I and J-P; B, C, H and I-old by name only.
  * Run with `npx --yes tsx scripts/croquetFitProbe.ts`; environment: SECTION (a letter; default all), CANDIDATE and
- * TODAY_ROOT (section I in a copy). Not part of the test suite.
+ * TODAY_ROOT (section I in a copy), SHIFT (I.0's threshold in m, default VISIBLE_SHIFT), HANDS_ROOTS (section O,
+ * label=path comma-separated) and P_INPUTS (section P, mm=path comma-separated). Not part of the test suite.
  */
-import type { PairLaw } from "../src/engine/impact/contactLaw";
+import {
+    FACE_SPEED_MAX,
+    FACE_SPEED_MIN,
+    faceContactTimeAt,
+    faceRestitutionAt,
+    lawFromContactTime,
+    type PairLaw,
+} from "../src/engine/impact/contactLaw";
 import { ballPairKey, faceClearance, faceKey } from "../src/engine/impact/contacts";
 import { IMPACT_DT, type ContactSample, type FollowSnapshot, type ImpactProbe } from "../src/engine/impact/integrate";
 import { prepareImpact, simulateImpact, simulateStroke } from "../src/engine/impact/simulateImpact";
 import { swungBody } from "../src/engine/impact/track";
-import type { ContactState, ImpactResult } from "../src/engine/impact/types";
+import type { ContactInterval, ContactState, ImpactResult } from "../src/engine/impact/types";
 import { add, cross, dot, horizontal, length, scale, sub, vec3, type Vec3 } from "../src/engine/math/vec3";
-import { CROQUET_GAP_LIMIT } from "../src/engine/shot";
+import { judgeFaults, type StrikeTaps } from "../src/engine/faults";
+import { CROQUET_GAP_LIMIT, strokeContext } from "../src/engine/shot";
 import { simulateFreeMotion } from "../src/engine/simulate";
 import { buildContact, planStroke } from "../src/engine/swing/buildContact";
 import { defaultProfile } from "../src/engine/swing/profile";
-import type { ShotSetup, SwingProfile } from "../src/engine/swing/types";
+import { CROQUET_STROKES, type ShotSetup, type StrokeType } from "../src/engine/swing/types";
 import { BALL_IDS, type BallId, type BallState, type World } from "../src/engine/types";
 import { defaultWorld } from "../src/engine/world";
-import { ratioTargetsReference, type RatioTargetKey } from "../src/reference/index";
+import { contactReference, ratioTargetsReference, type RatioTargetKey } from "../src/reference/index";
 import { DEFAULT_CROQUET_GAP, backswingFor, canonicalSetup, regimeOf, strokeFor } from "../tests/engine/support/shot";
 import {
     FIG4_TIMING,
@@ -83,17 +111,23 @@ import {
     GUGAN5,
     GUGAN_MEANS,
     SINGLE_BALL_FACE,
+    TABLE2_CAVEAT,
+    TABLE2_FACE,
     VIDEO_FRAME,
     VISIBLE_SHIFT,
+    touchingBand,
     type FilmedStroke,
 } from "./filmedStrokes";
 import * as OpenLawn from "./openLawn";
 import { OPEN_LAWN, OPEN_START, haltedText, openWorld, opened } from "./openLawn";
 import * as RatioFit from "./ratioFit";
 import {
+    ALL_STROKES,
     BOUNDS,
     CA_STROKES,
+    GAPPED_STROKES,
     GUGAN_EFFECTIVE_MASS,
+    READ_DELAY,
     STEP_SHARES,
     STRIKE_WINDOW,
     TODAY,
@@ -108,6 +142,7 @@ import {
     meansOf,
     ratioOf,
     readOut,
+    readTimeOf,
     releaseSpeedFor,
     runFit,
     spreadOf,
@@ -116,7 +151,19 @@ import {
     type FitParams,
     type ReadOut,
 } from "./ratioFit";
-import { freeCollision, passes, videoIntervals, visible, type CandidateResult, type VideoInterval } from "./squeeze";
+import {
+    ballBallTimeFor,
+    cameraIntervals,
+    faceScaleFor,
+    freeCollision,
+    freeFace,
+    passes,
+    videoIntervals,
+    visible,
+    type CandidateResult,
+    type VideoInterval,
+    type VideoStart,
+} from "./squeeze";
 
 // The project has no Node types; this script runs under tsx and reads its environment.
 declare const process: { readonly env: Readonly<Record<string, string | undefined>> };
@@ -693,7 +740,7 @@ function sweepGrips(): void {
             `${fmt(GRIP_BOUNDS[1])}] (the presets' own range), the shared candidates at today's values; ` +
             "follow-through flags at the swept points only --",
     );
-    const world = fitWorld(TODAY);
+    const world = STRIKE_WORLD;
     const grips: readonly GripCandidate[] = TARGETS.flatMap((target) =>
         (["gripTension", "bottomGrip"] as const).map((field) => ({ target, field })),
     );
@@ -933,6 +980,18 @@ function speedsText(r: ReadOut): string {
 /** The gaps (m) the sweep covers, finely below 0.5 mm (design §9). */
 const SWEEP_GAPS = [0, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.4, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 1.9].map((g) => g * 1e-3);
 
+/**
+ * Herrmann and Seitz's gap (m): "a separation of only 40 µm is sufficient for dispersion-free propagation"
+ * (P2b.2b.2c.2c design §3).
+ */
+const HERRMANN_SEITZ_GAP = 0.04e-3;
+
+/** The widest gap (m) the film cannot tell from touching: Table 5's 0.5 mm resolution of a separation (design §3). */
+const HIDDEN_GAP_LIMIT = 0.5e-3;
+
+/** Section D's gaps (m): SWEEP_GAPS with Herrmann and Seitz's, in order (P2b.2b.2c.2c design §3). */
+const GAP_SWEEP: readonly number[] = [...SWEEP_GAPS, HERRMANN_SEITZ_GAP].sort((a, b) => a - b);
+
 /** Table 5's stroke `name`. */
 function filmed(name: string): FilmedStroke {
     const found = FILMED_STROKES.find((s) => s.name === name);
@@ -944,7 +1003,8 @@ function filmed(name: string): FilmedStroke {
 
 function sectionD(): void {
     console.log(
-        "== D. Gap 0 re-measured, and the sweep (design §9): speeds in m/s, intervals in ms from the impact's start, " +
+        "== D. Gap 0 re-measured (design §9), and the sweep (P2b.2b.2c.2c design §3): speeds in m/s, intervals in ms " +
+            "from the impact's start, " +
             "the squared speed ratio (v2/w1)² and the distance ratio L2/L1 (the croqueted ball's travel to rest over " +
             "the striker's) ==",
     );
@@ -969,29 +1029,61 @@ function sectionD(): void {
                 `w1/W ${fmt(figures.w1W)}, v2/w1 ${fmt(figures.v2w1)}`,
         );
     }
+    const spread = FILMED_STROKES.map((s) => rowOf(s).v2U);
+    const [lo, hi] = [Math.min(...spread), Math.max(...spread)];
     console.log(
-        "-- D.2 the gap sweep, candidate a (the default mallet, no push, no jab): v2/U, w1/W, v2/w1 and the " +
-            "stroke's ratio L2/L1 at each gap (mm) --",
+        "-- D.2 the gap sweep (P2b.2b.2c.2c design §3), each stroke played as section E plays it (the default " +
+            "mallet, the preset's push, no jab): v2/U, w1/W, v2/w1 and the stroke's ratio L2/L1 at each gap (mm), " +
+            `${mm(HERRMANN_SEITZ_GAP)} mm Herrmann and Seitz's "a separation of only 40 µm is sufficient for ` +
+            "dispersion-free propagation\". The touching stops (C3S's and C20S's U) across 0-" +
+            `${mm(HIDDEN_GAP_LIMIT)} mm, the gaps the film cannot tell from 0, each figure against its row ± its ` +
+            "touchingBand (§5.2: 3 % per speed in quadrature) and beside the stroke's gap-0 result; C1D's U on the " +
+            `drive is §4.1's test 2, v2/U against Table 5's spread ${fmt(lo)}-${fmt(hi)} --`,
     );
-    const series = [
-        { label: "drive at 3 m/s", type: "drive", speed: GUGAN5.speed },
-        { label: "AC stop at C3S's U", type: "stop-ac", speed: filmed("C3S").malletSpeed },
-        { label: "AC stop at C20S's U", type: "stop-ac", speed: filmed("C20S").malletSpeed },
-    ] as const;
-    for (const { label, type, speed } of series) {
-        console.log(`${label} (${fmt(speed)} m/s):`);
-        for (const gap of SWEEP_GAPS) {
-            const push = type === "drive" ? { guideEffort: 0 } : { jab: 0 };
+    for (const name of ["C3S", "C20S"]) {
+        const stroke = filmed(name);
+        console.log(`${name}'s U on the AC stop (${fmt(stroke.malletSpeed)} m/s):`);
+        let atZero: ReturnType<typeof figuresOf> | null = null;
+        for (const gap of GAP_SWEEP) {
             try {
-                const setup = guganSetup(type, speed, gap, { world: STRIKE_WORLD, ...push });
+                const setup = guganSetup("stop-ac", stroke.malletSpeed, gap, { world: STRIKE_WORLD });
                 const { read, figures, distance } = strikeOf(setup, STRIKE_WORLD);
-                console.log(
-                    `  gap ${mm(gap)} mm: v2/U ${fmt(figures.v2U)}, w1/W ${fmt(figures.w1W)}, v2/w1 ` +
-                        `${fmt(figures.v2w1)}, ratio ${fmt(distance)}${read.open ? " (OPEN)" : ""}`,
-                );
+                atZero = gap === 0 ? figures : atZero;
+                const head =
+                    `  gap ${mm(gap)} mm${read.open ? " (OPEN)" : ""}: ratio ${fmt(distance)}, W/U ` +
+                    `${fmt(figures.WU)}`;
+                if (gap > HIDDEN_GAP_LIMIT + 1e-12) {
+                    console.log(
+                        `${head}, v2/U ${fmt(figures.v2U)}, w1/W ${fmt(figures.w1W)}, v2/w1 ${fmt(figures.v2w1)}`,
+                    );
+                    continue;
+                }
+                const judged = againstBand(stroke, figures);
+                const base = atZero;
+                const moved =
+                    base === null || gap === 0
+                        ? ""
+                        : `; from gap 0: ${MEAN_KEYS.map((k) => `${k} ${fmt(figures[k] - base[k])}`).join(", ")}`;
+                console.log(`${head}; ${judged.text}: ${verdict(judged.pass && !read.open)}${moved}`);
             } catch (error) {
                 console.log(`  gap ${mm(gap)} mm: ${errorText(error)}`);
             }
+        }
+    }
+    const c1d = filmed("C1D");
+    console.log(`C1D's U on the drive (${fmt(c1d.malletSpeed)} m/s):`);
+    for (const gap of GAP_SWEEP) {
+        try {
+            const setup = guganSetup(c1d.preset, c1d.malletSpeed, gap, { world: STRIKE_WORLD });
+            const { read, figures, distance } = strikeOf(setup, STRIKE_WORLD);
+            const inSpread = figures.v2U >= lo && figures.v2U <= hi && !read.open;
+            console.log(
+                `  gap ${mm(gap)} mm${read.open ? " (OPEN)" : ""}: v2/U ${fmt(figures.v2U)} ` +
+                    `${verdict(inSpread)}, w1/W ${fmt(figures.w1W)}, v2/w1 ${fmt(figures.v2w1)}, ratio ` +
+                    `${fmt(distance)}`,
+            );
+        } catch (error) {
+            console.log(`  gap ${mm(gap)} mm: ${errorText(error)}`);
         }
     }
 }
@@ -1024,12 +1116,31 @@ function sectionE(): void {
             `k = ${fmt(GUGAN_EFFECTIVE_MASS)}, the model's with its own effective mass); OPEN marks a strike not ` +
             "closed within the strike window, which no mean counts ==",
     );
-    const world = defaultWorld();
+    const world = STRIKE_WORLD;
     const runs = filmedStrokeRuns(undefined, { world });
-    console.log("-- E.1 each stroke at its recorded gap --");
+    console.log(
+        "-- E.0 the touching stops (P2b.2b.2c.2c design §5.2): C3S and C20S at gap 0, each figure against its row ± " +
+            "its touchingBand (3 % per speed in quadrature) --",
+    );
+    for (const { stroke, read, figures } of runs.filter((r) => r.stroke.gap === 0)) {
+        const judged = againstBand(stroke, figures);
+        console.log(`${stroke.name}${read.open ? " OPEN" : ""}: ${judged.text}: ${verdict(judged.pass && !read.open)}`);
+    }
+    console.log(
+        "-- E.1 each stroke at its recorded gap; recorded, not gated: W/U and the energy beside Table 5's, and W " +
+            "after the first face contact beside W read after the strike's last contact, as Gugan 4's row 5 is " +
+            '(note (ii): "the values of final mallet speed in row 5, W, are those *after* the double tap"). The two ' +
+            "are read at different times, the first at the first face interval's end and the second " +
+            `${ms(READ_DELAY)} ms after the strike's last contact (a gapped stroke's ball–ball one included), so the ` +
+            "face intervals within the strike are counted beside them: with one, the difference is the head's motion " +
+            "between the two reads, not a double tap --",
+    );
     for (const { stroke, gap, read, figures } of runs) {
         const row = rowOf(stroke);
         const against = (m: number, r: number): string => `${fmt(m)} (row ${fmt(r)})`;
+        const faces = read.impact.timeline[faceKey(canonicalSetup(stroke.preset, { world }).striker)] ?? [];
+        const first = faces[0];
+        const before = first === undefined ? null : read.samples.find((s) => s.t >= first.end);
         console.log(
             `${stroke.name} (${stroke.preset}, U ${fmt(stroke.malletSpeed)} m/s, gap ${mm(gap)} mm` +
                 `${stroke.nominal ? ", nominal" : ""})${read.open ? " OPEN" : ""}: ` +
@@ -1037,7 +1148,10 @@ function sectionE(): void {
                 `w1/W ${against(figures.w1W, row.w1W)}, v2/w1 ${against(figures.v2w1, row.v2w1)}, ` +
                 `W/U ${against(figures.WU, row.WU)}, energy ${against(figures.energy, row.energy)}; (v2/w1)² ` +
                 `${fmt(figures.v2w1 ** 2)} ` +
-                `(row 16 ${stroke.squaredRatio === null ? "none" : fmt(stroke.squaredRatio)})`,
+                `(row 16 ${stroke.squaredRatio === null ? "none" : fmt(stroke.squaredRatio)}); W after the first ` +
+                `face contact ${before === undefined || before === null ? "none" : fmt(before.head)} m/s, after the ` +
+                `last ${fmt(read.W)} m/s (row 5 ${fmt(stroke.malletAfter)}); face intervals within the strike ` +
+                `${strikeCount(faces)}`,
         );
     }
     console.log(
@@ -1055,17 +1169,16 @@ function sectionE(): void {
         }
     }
     console.log(
-        "-- E.3 the three means over the counted strokes (those closed within the window) against Gugan 4's, each " +
-            "pass when within his sem --",
+        "-- E.3 the three means against Gugan 4's, over GAPPED_STROKES (the eight gapped) and over ALL_STROKES (all " +
+            "ten), each counting only the strokes closed within the window, each pass when within his sem --",
     );
     const kinds = [
-        ["C3S and C20S counted", runs],
-        ["C3S and C20S left out", runs.filter((r) => r.stroke.name !== "C3S" && r.stroke.name !== "C20S")],
+        ["the eight gapped strokes", GAPPED_STROKES],
+        ["all ten strokes", ALL_STROKES],
     ] as const;
     for (const [label, set] of kinds) {
-        const counted = set.filter((r) => !r.read.open);
-        const names = counted.map((r) => r.stroke.name).join(", ");
-        const means = meansOf(set);
+        const named = runs.filter((r) => set.includes(r.stroke.name) && !r.read.open).map((r) => r.stroke.name);
+        const means = meansOf(runs, named);
         const parts = MEAN_KEYS.map((key) => {
             const { value, sem } = GUGAN_MEANS[key];
             const diff = means[key] - value;
@@ -1074,7 +1187,7 @@ function sectionE(): void {
                 `sem): ${verdict(Math.abs(diff) <= sem)}`
             );
         });
-        console.log(`${label} (${counted.length} counted: ${names}): ${parts.join("; ")}`);
+        console.log(`${label} (${named.length} counted: ${named.join(", ")}): ${parts.join("; ")}`);
     }
 }
 
@@ -1127,25 +1240,68 @@ function timesOf(face: readonly VideoInterval[], pair: readonly VideoInterval[],
     };
 }
 
+/** A separation sample as videoIntervals takes it: time (s) and the two surfaces' separation (m). */
+type Seen = { readonly t: number; readonly separation: number };
+
 /**
- * `setup`'s timing as Fig. 4 shows it (timesOf), twice: from the contact law's intervals, and as the video would time
- * it, from videoIntervals over the face's separation from the striker's ball (faceClearance) and the balls' gap. Both
- * take the second ball's first move as its horizontal displacement first visible, each from its own first face contact.
+ * `setup`'s strike as section F reads it. `law` is its timing (timesOf) from the contact law's intervals; `face` and
+ * `pair` are those intervals, and `forceFace` and `forcePair` the force-on intervals (the steps with the pair's normal
+ * force positive), in s from the impact's start. `U` is the head's speed along aim at the impact's start (m/s), the
+ * closing speed the approach is extrapolated at. `fromTouch(shift)` gives the face's separation from the striker's ball
+ * (faceClearance) and the balls' gap from first touch at threshold `shift` (m), the face within `shift` of the ball,
+ * with the second ball's first visible move at VISIBLE_SHIFT, all in s from that instant.
  */
-function timingOf(setup: ShotSetup, world: World): { readonly law: ModelTiming; readonly video: ModelTiming } {
+interface TimingRun {
+    readonly law: ModelTiming;
+    readonly face: readonly ContactInterval[];
+    readonly pair: readonly ContactInterval[];
+    readonly forceFace: readonly VideoInterval[];
+    readonly forcePair: readonly VideoInterval[];
+    readonly U: number;
+    readonly fromTouch: (shift: number) => {
+        readonly face: readonly Seen[];
+        readonly pair: readonly Seen[];
+        readonly moved: number | null;
+    };
+}
+
+/**
+ * The intervals over which `on` holds, in the steps `samples` (s), timed as videoIntervals times a contact: a step
+ * whose force is on maps to a separation of 0, which no threshold resolves, and one whose force is off to Infinity.
+ */
+function onIntervals(samples: readonly { readonly t: number; readonly on: boolean }[]): readonly VideoInterval[] {
+    return videoIntervals(samples.map((s) => ({ t: s.t, separation: s.on ? 0 : Infinity })));
+}
+
+/**
+ * `setup`'s strike on `world` (TimingRun). The impact begins with the face touching the striker's ball, so the
+ * approach before it is not simulated: `fromTouch` prepends it analytically at the impact's step, the face's separation
+ * (−t)·U for t < 0 (never above the threshold, so that the first sample is first touch), the balls at rest at their
+ * starting gap and the second ball unmoved, from t = −shift/U, and so starts the video's clock at first touch, as
+ * Gugan 4's Fig. 4 times every event from the mallet's first contact (gate stage 1's ruling A1). Every sample list it
+ * returns opens in contact, as cameraIntervals requires. Throws a RangeError for a setup with no second ball, or whose
+ * planned contact has no tracked drive.
+ */
+function timingOf(setup: ShotSetup, world: World): TimingRun {
     const contact = planStroke(setup, world).contact;
     const other = setup.croqueted ?? setup.live[0];
     if (other === undefined) {
         throw new RangeError(`timingOf: the ${setup.stroke.type} stroke has no second ball`);
     }
+    if (contact.drive.kind !== "track") {
+        throw new RangeError(`timingOf: the ${setup.stroke.type} stroke's planned contact has no tracked drive`);
+    }
+    const U = dot(contact.velocity, contact.drive.arc.aim);
     const R = world.ball.radius;
     const ids = BALL_IDS.filter((id) => setup.balls[id] !== undefined);
     const striker = ids.indexOf(setup.striker);
     const second = ids.indexOf(other);
     const home = (setup.balls[other] as BallState).position;
+    const gap = length(sub(home, (setup.balls[setup.striker] as BallState).position)) - 2 * R;
+    const faceKeyOf = faceKey(setup.striker);
+    const pairKey = ballPairKey(setup.striker, other);
     let moved: number | null = null;
-    const faceSeen: { t: number; separation: number }[] = [];
-    const pairSeen: { t: number; separation: number }[] = [];
+    const steps: { t: number; face: number; pair: number; faceOn: boolean; pairOn: boolean }[] = [];
     const probe: ImpactProbe = {
         step(s) {
             const a = (s.balls[striker] as BallState).position;
@@ -1153,43 +1309,210 @@ function timingOf(setup: ShotSetup, world: World): { readonly law: ModelTiming; 
             if (moved === null && visible(length(horizontal(sub(b, home))))) {
                 moved = s.t;
             }
-            faceSeen.push({ t: s.t, separation: faceClearance(s.head, contact.head, a, R) });
-            pairSeen.push({ t: s.t, separation: length(sub(b, a)) - 2 * R });
+            const loaded = (key: string): boolean => s.contacts.some((c) => c.key === key && c.normalForce > 0);
+            steps.push({
+                t: s.t,
+                face: faceClearance(s.head, contact.head, a, R),
+                pair: length(sub(b, a)) - 2 * R,
+                faceOn: loaded(faceKeyOf),
+                pairOn: loaded(pairKey),
+            });
         },
     };
     const impact = simulateImpact(contact, setup.balls, world, { probe });
-    const law = timesOf(
-        impact.timeline[faceKey(setup.striker)] ?? [],
-        impact.timeline[ballPairKey(setup.striker, other)] ?? [],
-        moved,
-    );
-    return { law, video: timesOf(videoIntervals(faceSeen), videoIntervals(pairSeen), moved) };
+    const face = impact.timeline[faceKeyOf] ?? [];
+    const pair = impact.timeline[pairKey] ?? [];
+    const movedAt = moved as number | null;
+    const fromTouch = (shift: number): ReturnType<TimingRun["fromTouch"]> => {
+        const lead = shift / U;
+        const approach: Seen[] = [];
+        const rest: Seen[] = [];
+        for (let j = 0; j * IMPACT_DT < lead; j++) {
+            const t = j * IMPACT_DT;
+            approach.push({ t, separation: Math.min(shift, (lead - t) * U) });
+            rest.push({ t, separation: gap });
+        }
+        return {
+            face: [...approach, ...steps.map((s) => ({ t: s.t + lead, separation: s.face }))],
+            pair: [...rest, ...steps.map((s) => ({ t: s.t + lead, separation: s.pair }))],
+            moved: movedAt === null ? null : movedAt + lead,
+        };
+    };
+    return {
+        law: timesOf(face, pair, movedAt),
+        face,
+        pair,
+        forceFace: onIntervals(steps.map((s) => ({ t: s.t, on: s.faceOn }))),
+        forcePair: onIntervals(steps.map((s) => ({ t: s.t, on: s.pairOn }))),
+        U,
+        fromTouch,
+    };
 }
+
+/** The camera's thresholds (m): VISIBLE_SHIFT, Gugan 4's resolution on paper, and design §7.9's 0.4 and 0.6 mm. */
+const CAMERA_SHIFTS: readonly number[] = [VISIBLE_SHIFT, 0.4e-3, 0.6e-3];
+
+/** The camera's frame phases, evenly spaced over one frame (P2b.2b.2c.2c design §5.3). */
+const CAMERA_PHASES = 16;
+
+/** How many of `intervals` begin within STRIKE_WINDOW of the first's start. */
+function strikeCount(intervals: readonly VideoInterval[]): number {
+    const first = intervals[0];
+    return first === undefined ? 0 : intervals.filter((i) => i.start <= first.start + STRIKE_WINDOW).length;
+}
+
+/** `xs` (s) in whole frames as their range, "a" or "a–b"; "on" for a contact still on at the run's end. */
+function framesRange(xs: readonly number[]): string {
+    const frames = xs.filter((x) => x !== Infinity).map((x) => Math.round(x / VIDEO_FRAME));
+    const on = xs.length - frames.length;
+    if (frames.length === 0) {
+        return on > 0 ? "on" : "none";
+    }
+    const [lo, hi] = [Math.min(...frames), Math.max(...frames)];
+    return `${lo === hi ? `${lo}` : `${lo}–${hi}`}${on > 0 ? ` (on in ${on})` : ""}`;
+}
+
+/**
+ * The camera's reading of `run` at `shift` (m) as text (P2b.2b.2c.2c design §5.3): over CAMERA_PHASES phases, the
+ * frame counts from the face's first contact of its first contact's end, the ball leaving and any second face interval,
+ * each as its range over the phases, and beside them the unsampled video at the same threshold in frames. A phase that
+ * shows fewer face intervals within the strike than the contact law has, a release of the face the law makes, counts
+ * it as a release unseen and leaves its contacts out of the ranges, and the text says why: the clearance between the
+ * law's contacts never exceeding the threshold (so the unsampled video misses it too), or the release falling between
+ * frames. A phase that shows the balls still together where the unsampled video sees them part is counted likewise.
+ */
+function cameraText(run: TimingRun, shift: number): string {
+    const { face, pair } = run.fromTouch(shift);
+    const faceRef = videoIntervals(face, shift);
+    const unsampled = timesOf(faceRef, videoIntervals(pair, shift), null);
+    const lawCount = strikeCount(run.face);
+    const between = run.face.slice(0, lawCount - 1).map((i) => i.clearanceAfter ?? 0);
+    const why =
+        strikeCount(faceRef) < lawCount
+            ? `the clearance between the law's contacts, at most ${mm(Math.max(...between))} mm, never exceeding ` +
+              `${mm(shift)} mm`
+            : "the release falling between frames";
+    const faceCams = cameraIntervals(face, { shift, phases: CAMERA_PHASES });
+    const pairCams = cameraIntervals(pair, { shift, phases: CAMERA_PHASES });
+    const seen: ModelTiming[] = [];
+    const merged: ModelTiming[] = [];
+    const leaves: number[] = [];
+    let leavesUnseen = 0;
+    faceCams.forEach((intervals, k) => {
+        const timing = timesOf(intervals, pairCams[k] as readonly VideoInterval[], null);
+        (strikeCount(intervals) < lawCount ? merged : seen).push(timing);
+        const parts = timing.leaves !== null && timing.leaves !== Infinity;
+        if (parts) {
+            leaves.push(timing.leaves as number);
+        } else if (unsampled.leaves !== null && unsampled.leaves !== Infinity) {
+            leavesUnseen++;
+        }
+    });
+    const taps = seen.flatMap((t) => (t.secondTap === null ? [] : [t.secondTap]));
+    const tapText =
+        taps.length === 0
+            ? "none"
+            : `[${framesRange(taps.map((t) => t[0]))}, ${framesRange(taps.map((t) => t[1]))}] in ${taps.length}`;
+    const unseen =
+        merged.length === 0
+            ? ""
+            : `; a face release of the law's UNSEEN in ${merged.length} of ${CAMERA_PHASES} phases, ${why} (the ` +
+              `camera's first contact then ending at ${framesRange(merged.map((t) => t.firstContactEnds))})`;
+    const frames = (x: number | null): string =>
+        x === null ? "none" : x === Infinity ? "on" : (x / VIDEO_FRAME).toFixed(1);
+    const unsampledTap =
+        unsampled.secondTap === null
+            ? "none"
+            : `[${frames(unsampled.secondTap[0])}, ${frames(unsampled.secondTap[1])}]`;
+    return (
+        `camera at ${mm(shift)} mm: first contact ends ${framesRange(seen.map((t) => t.firstContactEnds))}, ` +
+        `leaves ${framesRange(leaves)}${leavesUnseen > 0 ? ` (the balls' parting UNSEEN in ${leavesUnseen})` : ""}, ` +
+        `second face interval ${tapText}${unseen}; the unsampled video at ${mm(shift)} mm in frames: first contact ` +
+        `ends ${frames(unsampled.firstContactEnds)}, leaves ${frames(unsampled.leaves)}, second face interval ` +
+        unsampledTap
+    );
+}
+
+/** The four sources of design §5.3's table: each one's method, its finding, and its own departures from the film. */
+const TIMING_SOURCES: readonly { readonly source: string; readonly method: string; readonly finding: string }[] = [
+    {
+        source: "Gugan 4 (2009)",
+        method: "the CA's film, 8,000 fps",
+        finding: '"all straight two-ball croquet strokes are double taps"; C3S touching shows a release',
+    },
+    {
+        source: 'CA, "Croquet Dynamics" (https://oxfordcroquet.org/tech/video/)',
+        method: "the CA team's reading of the same film",
+        finding:
+            '"cases where balls started quite close to one another did not show double taps as the mallet and ' +
+            'strikers ball were still in contact when contact was made with the second ball"',
+    },
+    {
+        source: 'Plummer, "Multiple Taps in Croquet Strokes" (2000), https://oxfordcroquet.org/tech/multiple/',
+        method:
+            "electrical contact, 5 µs a point, 2.65 V through 82 kΩ; departures: 0.02 mm of aluminium foil glued to " +
+            "a Permali face, Jaques Eclipse balls thickly sprayed with graphite, played indoors on a carpet",
+        finding:
+            '"Single ball strokes and most croquet strokes showed no sign of multiple contacts"; in-line stops 1.8 ' +
+            "(soft) and 2.0 ms (hard), in-line drives 1.4 and 1.3 ms",
+    },
+    {
+        source: 'Hall, "When a Mallet Strikes a Ball" (1994), https://oxfordcroquet.org/tech/hall/',
+        method:
+            'electrical contact, no voltage given; departures: "a few strands of copper wire were wound around the ' +
+            'ball", "a strip of aluminium foil was fixed to the ball", "Foil was also taped to the end faces of the ' +
+            'mallet", and long strokes stopped "by a cushion"',
+        finding:
+            'ball 2 leaves "at about 1.8ms. The mallet remained in contact with ball 1 for a further period of 1.1 ' +
+            'ms" (about 2.9 ms)',
+    },
+];
+
+/** Plummer's contact times by preset: STOP1 and STOP2, the in-line stops; DRIVE1 and DRIVE2, the in-line drives. */
+const PLUMMER_TIMES: Readonly<Record<"stop-ac" | "drive", string>> = {
+    "stop-ac": "Plummer's in-line stops 1.8–2.0 ms, one contact",
+    drive: "Plummer's in-line drives 1.3–1.4 ms, one contact",
+};
+
+/** Hall's touching-pair times (s): ball 2 leaving, and the mallet's contact with ball 1 ending 1.1 ms later. */
+const HALL_TIMES = { leaves: 1.8e-3, malletOn: 1.1e-3 } as const;
 
 function sectionF(): void {
     console.log(
-        "== F. The timing (design §7.1): ms from the mallet's first contact; the croqueted ball first moving " +
-            `(shifted by ${mm(VISIBLE_SHIFT)} mm), the mallet's first contact ending, ` +
+        "== F. The timing (design §7.1; P2b.2b.2c.2c design §5.3): ms from the mallet's first contact; the " +
+            `croqueted ball first moving (shifted by ${mm(VISIBLE_SHIFT)} mm), the mallet's first contact ending, ` +
             "the ball–ball interval's end (the ball leaving), any second face interval; " +
             "the model beside Fig. 4's research reading and re-reading " +
             '(reference/sources/README.md:594-619), each ±0.5 frame on Gugan\'s own "a frame or two" ' +
             `(one frame ${ms(VIDEO_FRAME)} ms). The model twice: "law" from the contact law's intervals, "video" as ` +
             `Gugan 4's video would time it, a contact on while the two bodies' surfaces are within ` +
-            `${mm(VISIBLE_SHIFT)} mm of touching (the face's separation from the striker's ball, the balls' gap) and ` +
-            `the times from the face's first such contact, as scripts/squeeze.ts's freeCollision times a free ` +
-            "collision. The impact begins with the face touching, so the video's own first contact, up to " +
-            `${mm(VISIBLE_SHIFT)} mm earlier, is not seen: each video time is short by up to ` +
-            `${mm(VISIBLE_SHIFT)} mm/U (${ms(VISIBLE_SHIFT / filmed("C3S").malletSpeed)} ms at C3S's U, under one ` +
-            "frame). A second face interval counts only if it begins within the strike's window; 'on' marks a " +
-            "contact the video still sees at the " +
-            "impact's end ==",
+            `${mm(VISIBLE_SHIFT)} mm of touching (the face's separation from the striker's ball, the balls' gap). ` +
+            "Every video clock starts at first touch, as Fig. 4 times every event from the mallet's first contact " +
+            "(gate stage 1's ruling A1): the impact begins with the face touching, so the approach before it is not " +
+            "simulated, and the video and the camera prepend it analytically, the face's separation (−t)·U for " +
+            "t < 0 (U the head's speed along aim at the impact's start), the balls at rest at their gap, from first " +
+            `touch at t = −shift/U (${ms(VISIBLE_SHIFT / filmed("C3S").malletSpeed)} ms before the impact at C3S's ` +
+            `U and ${mm(VISIBLE_SHIFT)} mm). The camera samples that run at 8,000 fps, at ${CAMERA_PHASES} frame ` +
+            "phases evenly spaced over one frame from first touch, so that every phase's first frame shows the " +
+            "contact (cameraIntervals' precondition); its times are whole frames from that first frame, each the " +
+            `range over the phases, at ${CAMERA_SHIFTS.map(mm).join(", ")} mm (design §7.9), and a release no frame ` +
+            "shows is marked UNSEEN. A second face interval counts only if it begins within the strike's window; " +
+            "'on' marks a contact still seen at the impact's end. A stroke whose three bodies stay loaded throughout " +
+            "is reported, not failed (decision 5) ==",
     );
-    const world = defaultWorld();
+    const world = STRIKE_WORLD;
     const frames = (f: number): string => ms(f * VIDEO_FRAME);
     const at = (t: number): string => (t === Infinity ? "on" : ms(t));
     const opt = (t: number | null): string => (t === null ? "none" : at(t));
     const tap = (t: readonly [number, number] | null): string => (t === null ? "none" : `[${at(t[0])}, ${at(t[1])}]`);
     const held = ` (video-timed: face still within ${mm(VISIBLE_SHIFT)} mm as the ball leaves)`;
+    const spans = (intervals: readonly VideoInterval[], from: number): string => {
+        const first = intervals[0];
+        const within = intervals.filter((i) => first !== undefined && i.start <= first.start + STRIKE_WINDOW);
+        return within.length === 0
+            ? "none"
+            : within.map((i) => `[${at(i.start - from)}, ${at((i.end ?? Infinity) - from)}]`).join(" ");
+    };
     for (const name of ["C3S", "C20S", "C1D", "C10S", "C3D", "C10D"]) {
         const stroke = filmed(name);
         const reread = FIG4_TIMING.find((t) => t.name === name);
@@ -1198,10 +1521,14 @@ function sectionF(): void {
             throw new RangeError(`no Fig. 4 reading of ${name}`);
         }
         const setup = guganSetup(stroke.preset, stroke.malletSpeed, stroke.gap, { world });
-        const { law, video } = timingOf(setup, world);
+        const run = timingOf(setup, world);
+        const { law } = run;
+        const touch = run.fromTouch(VISIBLE_SHIFT);
+        const video = timesOf(videoIntervals(touch.face), videoIntervals(touch.pair), touch.moved);
         console.log(
-            `${name} (${stroke.preset}, U ${fmt(stroke.malletSpeed)} m/s, gap ${mm(stroke.gap)} mm)` +
-                `${law.together ? " FAILS THE CHECK: all three bodies loaded together throughout" : ""}` +
+            `${name} (${stroke.preset}, U ${fmt(stroke.malletSpeed)} m/s, gap ${mm(stroke.gap)} mm; the head ` +
+                `${fmt(run.U)} m/s along aim)` +
+                `${law.together ? " REPORTED, NOT FAILED: all three bodies loaded together throughout" : ""}` +
                 `${video.together ? held : ""}:`,
         );
         console.log(
@@ -1221,6 +1548,32 @@ function sectionF(): void {
                 `[${frames(research[3])}, ` +
                 `${frames(research[4])}], re-read ${tap(reread.secondTap)}`,
         );
+        const rereadTap =
+            reread.secondTap === null
+                ? "none"
+                : `[${fmt(reread.secondTap[0] / VIDEO_FRAME)}, ${fmt(reread.secondTap[1] / VIDEO_FRAME)}]`;
+        console.log(
+            `  frames, research and re-read: first contact ends ${fmt(research[1])} and ` +
+                `${fmt(reread.firstContactEnds / VIDEO_FRAME)}, leaves ${fmt(research[2])} and ` +
+                `${fmt(reread.leaves / VIDEO_FRAME)}, second face interval [${fmt(research[3])}, ` +
+                `${fmt(research[4])}] and ${rereadTap}`,
+        );
+        for (const shift of CAMERA_SHIFTS) {
+            console.log(`  ${cameraText(run, shift)}`);
+        }
+        const from = (run.face[0] as ContactInterval).start;
+        const plummer = stroke.preset === "drive" || stroke.preset === "stop-ac" ? PLUMMER_TIMES[stroke.preset] : "";
+        console.log(
+            `  electrical contact, unsampled (ms from the face's first law contact): the face's law intervals ` +
+                `${spans(run.face, from)}, force-on ${spans(run.forceFace, from)}; the balls' law intervals ` +
+                `${spans(run.pair, from)}, force-on ${spans(run.forcePair, from)}; against ${plummer}, and Hall's ` +
+                `ball 2 leaving at about ${ms(HALL_TIMES.leaves)} ms with the mallet on a further ` +
+                `${ms(HALL_TIMES.malletOn)} ms`,
+        );
+    }
+    console.log("-- F.2 the sources (design §5.3's table), each seen by its own instrument above --");
+    for (const { source, method, finding } of TIMING_SOURCES) {
+        console.log(`${source}: ${method}; ${finding}`);
     }
 }
 
@@ -1240,7 +1593,7 @@ function sectionG(): void {
         );
     };
     console.log("-- G.1 the filmed strokes' three means, each stroke at its recorded gap --");
-    const means = dts.map((dt) => meansOf(filmedStrokeRuns(undefined, { dt })));
+    const means = dts.map((dt) => meansOf(filmedStrokeRuns(undefined, { dt }), ALL_STROKES));
     for (const key of MEAN_KEYS) {
         line(
             `mean ${key}`,
@@ -1264,28 +1617,59 @@ function sectionG(): void {
 }
 
 /**
- * The candidate section I judges, from a throwaway copy of the worktree whose `src` carries its law (design §4.3):
- * "b" or "e"; absent, the worktree's own engine and candidates a, c and d.
+ * The law candidates section I judges, each from a throwaway copy of the worktree whose `reference` or `src` carries
+ * it (P2b.2b.2c.2c design §4.3): the re-set laws together, the face's or the ball–ball's alone, the laws with the
+ * face's q fitted to all four Table 2 columns, and the search's f and g.
  */
+const LAW_CANDIDATES = ["laws", "face", "ballball", "laws-q", "f", "g"] as const;
+
+type LawCandidate = (typeof LAW_CANDIDATES)[number];
+
+/** The candidate section I judges (LAW_CANDIDATES); absent, section I runs I.0's conversions on the worktree. */
 const CANDIDATE = candidateOf(process.env.CANDIDATE);
 
-/** The CANDIDATE environment variable as a candidate's name; throws for anything but b, e or nothing. */
-function candidateOf(value: string | undefined): "b" | "e" | undefined {
-    if (value !== undefined && value !== "b" && value !== "e") {
-        throw new Error(`CANDIDATE must be "b" or "e", or absent for a, c and d (got "${value}")`);
+/** The CANDIDATE environment variable as a candidate's name; throws for anything but LAW_CANDIDATES or nothing. */
+function candidateOf(value: string | undefined): LawCandidate | undefined {
+    const known = LAW_CANDIDATES.find((c) => c === value);
+    if (value !== undefined && known === undefined) {
+        throw new Error(`CANDIDATE must be one of ${LAW_CANDIDATES.join(", ")}, or absent (got "${value}")`);
     }
-    return value;
+    return known;
 }
 
-/** Today's engine beside a candidate's: the worktree's own ratioFit and openLawn, loaded from TODAY_ROOT. */
+/**
+ * The video's threshold (m) I.0 converts both laws at: the SHIFT environment variable (m), absent VISIBLE_SHIFT, so
+ * that design §7.9's 0.4 and 0.6 mm re-sets come from the same conversions. VISIBLE_SHIFT itself never changes.
+ */
+const CONVERSION_SHIFT = shiftOf(process.env.SHIFT);
+
+/** The SHIFT environment variable as a threshold (m); throws for anything but a positive length under 1 cm. */
+function shiftOf(value: string | undefined): number {
+    if (value === undefined) {
+        return VISIBLE_SHIFT;
+    }
+    const shift = Number(value);
+    if (!(shift > 0 && shift < 1e-2)) {
+        throw new Error(`SHIFT must be a threshold in metres, positive and under 0.01 (got "${value}")`);
+    }
+    return shift;
+}
+
+/**
+ * One engine's scripts and world, all from one root: today's from TODAY_ROOT, or this copy's own. A World carries the
+ * ball–ball and obstacle contact times, so an engine must be played on its own root's defaultWorld (or a world built
+ * from it), never on another root's.
+ */
 interface TodayEngine {
     readonly fit: typeof RatioFit;
     readonly lawn: typeof OpenLawn;
+    readonly defaultWorld: typeof defaultWorld;
 }
 
 /**
  * A copy's candidate is judged against today's engine in the same run (tests 1 and 5): with CANDIDATE set, TODAY_ROOT
- * names the worktree, whose scripts (and through them its unchanged src) are loaded beside the copy's own.
+ * names the worktree, whose scripts (and through them its unchanged src) and defaultWorld are loaded beside the copy's
+ * own.
  */
 async function loadToday(): Promise<TodayEngine | null> {
     if (CANDIDATE === undefined) {
@@ -1297,7 +1681,8 @@ async function loadToday(): Promise<TodayEngine | null> {
     }
     const fit = (await import(`${root}/scripts/ratioFit.ts`)) as typeof RatioFit;
     const lawn = (await import(`${root}/scripts/openLawn.ts`)) as typeof OpenLawn;
-    return { fit, lawn };
+    const world = (await import(`${root}/src/engine/world.ts`)) as { readonly defaultWorld: typeof defaultWorld };
+    return { fit, lawn, defaultWorld: world.defaultWorld };
 }
 
 const TODAY_ENGINE = await loadToday();
@@ -1308,8 +1693,26 @@ const FREE_DT = 1e-7;
 /** Gugan's ± on Table 1's e (§4: "e = 0.72 ± 0.02"). */
 const FREE_RESTITUTION_TOLERANCE = 0.02;
 
-/** The speeds (m/s) at which test 4 judges the video's contact time (design §4.1); 5.54 m/s is printed beside them. */
-const JUDGED_FREE_SPEEDS: readonly number[] = [1.9, 7.64];
+/** The speeds (m/s) at which test 4 judges the video's contact time: all three of Table 1's (design §2.2). */
+const JUDGED_FREE_SPEEDS: readonly number[] = FREE_COLLISIONS.map((c) => c.speed);
+
+/** The last step's test 4 speeds (m/s), kept for SECTION=I-old: 5.54 m/s printed beside them, not judged. */
+const LAST_STEP_FREE_SPEEDS: readonly number[] = [1.9, 7.64];
+
+/** The free face's step (s) in I.0: the default 5 µs step quantises faceScaleFor's scale by about 0.8 %. */
+const FACE_DT = 1e-8;
+
+/**
+ * Gugan 4, Table 1 row 5's whole range of the video's ball–ball contact times (s), 0.50 to 0.87 ms over all seven
+ * strokes (reference/contact.json's ballBallContactTime note): converted into the law's bounds (design §2.2).
+ */
+const TABLE1_VIDEO_RANGE = [5e-4, 8.7e-4] as const;
+
+/**
+ * The obstacle's lower bound as a share of the ball–ball's (reference/contact.json's ballObstacleContactTime; pinned
+ * by tests/reference/reference.test.ts): a ball on an immovable body has the two-ball pair's natural frequency.
+ */
+const OBSTACLE_LOWER_SHARE = 0.87;
 
 /**
  * Test 2's gaps (m), design §4.1's 0, 0.25, 0.5, 1 and 2 mm: 2 mm lies outside a croquet stroke's range (gap < 2 mm),
@@ -1318,7 +1721,7 @@ const JUDGED_FREE_SPEEDS: readonly number[] = [1.9, 7.64];
 const INSENSITIVE_GAPS: readonly number[] = [0, 0.25e-3, 0.5e-3, 1e-3, CROQUET_GAP_LIMIT - 1e-4];
 
 /** Candidate a's gaps (m): section D's sweep from 0 to 0.5 mm, Table 5's resolution of a separation. */
-const HIDDEN_GAPS: readonly number[] = SWEEP_GAPS.filter((g) => g <= 0.5e-3 + 1e-12);
+const HIDDEN_GAPS: readonly number[] = SWEEP_GAPS.filter((g) => g <= HIDDEN_GAP_LIMIT + 1e-12);
 
 /**
  * Test 5's precisions: the speeds' "precision of measurement of about 3%" (Gugan 4, §9.3); Table 2's face contact
@@ -1331,21 +1734,59 @@ const TRAVEL_PRECISION = 2 * SPEED_PRECISION;
 /** The windows (s from the face's first contact) over which candidate c sums the impulses (design §4.2, c). */
 const TURF_WINDOWS: readonly number[] = [0.5e-3, 1.5e-3];
 
-/** Each law-changing candidate's constants and their written arguments (design §4.1, test 6). */
-const CONSTANTS: Readonly<Record<"b" | "e", string>> = {
-    b:
-        "faceContactTimeAt scaled by one factor, so that it gives Gugan 4's Table 2 (A2D) face contact of " +
-        `${ms(SINGLE_BALL_FACE.contactTime)} ms at ${fmt(SINGLE_BALL_FACE.speed)} m/s: the video's own measurement ` +
-        "of the face on the CA's single-ball strokes, the film the filmed strokes come from, where Gugan 2000's drop " +
-        "tests used a Jaques ball on unrecorded wood; its speed dependence (q) and the restitution fit are kept. Not " +
-        "matched to C3S, C20S or any two-ball stroke",
-    e:
-        "a Maxwell element for the ball–ball normal force (Maxwell 1867, Phil. Trans. R. Soc. 157, 49-88; Tschoegl, " +
-        "The Phenomenological Theory of Linear Viscoelastic Behavior, 1989): a spring k in series with a dashpot of " +
-        "relaxation time τ, F' = k·δ' − F/τ, clamped at zero, so that the damping force grows with the closing rate " +
-        "and the loss depends on the loading's rate, while every free collision keeps one e whatever its speed. Its " +
-        "two constants, k and τ, are fixed against Gugan 4's Table 1 alone: e = 0.72, and the video's contact time " +
-        "0.75 ms on the mean of 1.90 and 7.64 m/s. Not matched to C3S, C20S or any two-ball stroke",
+/** The arguments behind the re-set face law (P2b.2b.2c.2c design §2.1). */
+const FACE_ARGUMENT =
+    "faceContactTimeFit's t0 re-set on Gugan 4's Table 2, column A2D: the video's face contact of " +
+    `${ms(SINGLE_BALL_FACE.contactTime)} ms at ${fmt(SINGLE_BALL_FACE.speed)} m/s on the CA's single-ball drives, ` +
+    "the film the filmed strokes come from, converted to the law's parameter by the free face (scripts/squeeze.ts's " +
+    "freeFace and faceScaleFor, by Hertz similarity), the video's clock starting at first touch (the face within " +
+    "0.2 mm of the ball, extrapolated back at U), as Gugan 4's Fig. 4 times every event from the mallet's first " +
+    "contact; u0 3.26 m/s; q stays Gugan 2000's −0.23 and e(U) is kept";
+
+/** The arguments behind the re-set ball–ball and obstacle laws (P2b.2b.2c.2c design §2.2). */
+const BALL_BALL_ARGUMENT =
+    "ballBallContactTime set so that the free collision (freeCollision) reads Gugan 4's Table 1 contact time of " +
+    "0.75 ms on video at 1.90, 5.54 and 7.64 m/s, the clock starting at first touch (the striker's ball within " +
+    "0.2 mm of the struck ball, extrapolated back at its speed) as Fig. 4 times its events, the least largest miss " +
+    "(ballBallTimeFor), its bounds Table 1's 0.50 and 0.87 ms converted alike; ballObstacleContactTime follows it " +
+    "by its derivation (a ball on an immovable body has the two-ball pair's natural frequency), its lower bound " +
+    "0.87 × the ball–ball's";
+
+/** The tail every argument carries (design §4.1, test 6). */
+const NOT_MATCHED = "Not matched to C3S, C20S or any two-ball stroke";
+
+/** Each law candidate's constants and their written arguments (design §4.1, test 6). */
+const CONSTANTS: Readonly<Record<LawCandidate, string>> = {
+    laws: `${FACE_ARGUMENT}; and ${BALL_BALL_ARGUMENT}. ${NOT_MATCHED}`,
+    face: `${FACE_ARGUMENT}; the ball–ball and obstacle laws as today. ${NOT_MATCHED}`,
+    ballball: `${BALL_BALL_ARGUMENT}; the face's law as today. ${NOT_MATCHED}`,
+    "laws-q":
+        `the laws' candidate with the face's q and t0 fitted by least squares to all four Table 2 columns, each ` +
+        "column's video time converted to its own law time by faceScaleFor at its U and A4D placed at 6 m/s, the " +
+        `face's clamp, as the engine plays it (design §2.1); and ${BALL_BALL_ARGUMENT}. ${NOT_MATCHED}`,
+    f:
+        "the laws' candidate with a ball–ball dissipation that vanishes as the balls just touch (Kuwabara and " +
+        "Kono's √δ form as the face uses it), the spring linear (design §4.2, f): in lossy touching chains " +
+        '"A quasistatic precompression appears behind the primary pulse ... This precompression is due entirely to ' +
+        'dissipation and does not exist at zero viscosity" (Rosas, Romero, Nesterenko and Lindenberg, PRL 98 ' +
+        "164301 (2007)); and measured bead damping is not a linear dashpot (Carretero-González et al., PRL 102 " +
+        '024102 (2009): an exponent "close to α = 1.75"). F = k·δ + c·√δ·δ′, clamped at zero, for the ball–ball ' +
+        "pair only, the obstacles' law linear. k and c are fixed, set from Table 1 alone by freeCollision at dt " +
+        "0.1 µs at 1.90, 5.54 and 7.64 m/s, the video timed from first touch: e depends only on s = c·k^-3/4, and " +
+        "no s holds e within 0.72 ± 0.02 at all three (e ≤ 0.74 at 1.90 m/s needs s ≥ 0.1693, e ≥ 0.70 at " +
+        "7.64 m/s s ≤ 0.1014), so s minimises the largest |e − 0.72| (s 0.1271) and k then the largest video miss " +
+        "of 0.75 ms (nested ternary searches, 40 steps each): k 6.37965244e6 N/m, c 1.61328419e4 N·s/m^3/2; video " +
+        `0.832, 0.688 and 0.668 ms, e 0.794, 0.685 and 0.646, outside the band. ${NOT_MATCHED}`,
+    g:
+        "the laws' candidate with a Hertz ball–ball spring (F ∝ δ^3/2, the exponent from Hertz's theory of two " +
+        "elastic spheres) and Kuwabara and Kono's damping as the face's, F = √δ·(k·δ + c·δ′), clamped at zero, for " +
+        "the ball–ball pair only, the obstacles' law linear (design §4.2, g). k and c are fixed, set from Table 1 " +
+        "alone by freeCollision at dt 0.1 µs at 1.90, 5.54 and 7.64 m/s, the video timed from first touch: e " +
+        "depends only on s = c·k^-3/5, and no s holds e within 0.72 ± 0.02 at all three (e ≤ 0.74 at 1.90 m/s " +
+        "needs s ≥ 0.1341, e ≥ 0.70 at 7.64 m/s s ≤ 0.1217), so s minimises the largest |e − 0.72| (s 0.1273) and " +
+        "k then the largest video miss of 0.75 ms (nested ternary searches, 40 steps each): k 2.82204304e8 " +
+        "N/m^3/2, c 1.4973665e4 N·s/m^3/2; video 0.919, 0.636 and 0.581 ms, e 0.751, 0.704 and 0.689, outside " +
+        `the band. ${NOT_MATCHED}`,
 };
 
 type SearchTest = CandidateResult["tests"][number];
@@ -1382,6 +1823,29 @@ function againstRow(
     };
 }
 
+/**
+ * `figures`' three judged figures against `stroke`'s row, each within its touchingBand (P2b.2b.2c.2c design §5.2: 3 %
+ * per speed in quadrature, the row's own figure's band): their text with each band, and whether all pass.
+ */
+function againstBand(
+    stroke: FilmedStroke,
+    figures: ReturnType<typeof figuresOf>,
+): { readonly pass: boolean; readonly text: string } {
+    const row = rowOf(stroke);
+    const parts = MEAN_KEYS.map((key) => {
+        const band = touchingBand(row[key]);
+        const diff = figures[key] - row[key];
+        return {
+            pass: Math.abs(diff) <= band,
+            text: `${key} ${fmt(figures[key])} (row ${fmt(row[key])} ± ${fmt(band)}, off ${fmt(diff)})`,
+        };
+    });
+    return {
+        pass: parts.every((p) => p.pass),
+        text: parts.map((p) => `${p.text} ${verdict(p.pass)}`).join(", "),
+    };
+}
+
 /** The search's battery on one engine's filmed strokes (design §4.1, tests 1 and 3) and its test 2 sweep. */
 interface Battery {
     readonly runs: ReturnType<typeof filmedStrokeRuns>;
@@ -1391,14 +1855,15 @@ interface Battery {
 }
 
 /**
- * Tests 1–3 on the engine in hand (design §4.1): 1, C3S and C20S at gap 0 at their own U against their rows within
- * §5.3's uncertainties; 2, v₂/U at C1D's U on the drive preset across INSENSITIVE_GAPS within Table 5's own spread of
- * v₂/U; 3, the gapped strokes' means within Gugan's sem. Each stroke is played as section E plays it.
+ * Tests 1–3 on the engine in hand (design §4.1): 1, C3S and C20S at gap 0 at their own U against their rows by
+ * `judge` (againstBand; the last step's againstRow for SECTION=I-old); 2, v₂/U at C1D's U on the drive preset across
+ * INSENSITIVE_GAPS within Table 5's own spread of v₂/U; 3, the gapped strokes' means within Gugan's sem. Each stroke
+ * is played as section E plays it.
  */
-function batteryOf(world: World): Battery {
+function batteryOf(world: World, judge: typeof againstBand): Battery {
     const runs = filmedStrokeRuns(undefined, { world });
     const touching = runs.filter((r) => r.stroke.name === "C3S" || r.stroke.name === "C20S");
-    const rows = touching.map((r) => ({ name: r.stroke.name, ...againstRow(r.stroke, r.figures) }));
+    const rows = touching.map((r) => ({ name: r.stroke.name, ...judge(r.stroke, r.figures) }));
     const test1: SearchTest = {
         test: 1,
         pass: rows.every((r) => r.pass) && touching.every((r) => !r.read.open),
@@ -1420,7 +1885,7 @@ function batteryOf(world: World): Battery {
             swept.map((s) => `${mm(s.gap)} mm ${fmt(s.v2U)}${s.open ? " OPEN" : ""}`).join(", "),
     };
     const gapped = runs.filter((r) => r.stroke.gap > 0);
-    const means = meansOf(gapped);
+    const means = meansOf(runs, GAPPED_STROKES);
     const parts = MEAN_KEYS.map((key) => {
         const { value, sem } = GUGAN_MEANS[key];
         return {
@@ -1594,22 +2059,39 @@ function offLineText(trace: ReturnType<typeof traceOf>): string[] {
     });
 }
 
+/** A video start's words in the probe's lines. */
+const START_TEXT: Readonly<Record<VideoStart, string>> = {
+    arrival: "from first touch",
+    moved: "from the first visible move",
+};
+
+/** The other video start, printed beside the judged one. */
+const otherStart = (start: VideoStart): VideoStart => (start === "arrival" ? "moved" : "arrival");
+
 /**
  * Test 4 (design §4.1) on `law`: Table 1's free collisions (freeCollision at FREE_DT), e within ± 0.02 of Gugan's and
- * the video's contact time within a frame of 0.75 ms at JUDGED_FREE_SPEEDS; the other speeds printed beside them.
+ * the video's contact time, its clock started at `start` (first touch, as adopted; the first visible move for
+ * SECTION=I-old), within a frame of 0.75 ms at the `judged` speeds; any other speed printed beside them, and the other
+ * start's video beside each, not judged.
  */
-function freeTest(law: PairLaw): SearchTest {
+function freeTest(
+    law: PairLaw,
+    judged: readonly number[] = JUDGED_FREE_SPEEDS,
+    start: VideoStart = "arrival",
+): SearchTest {
     const rows = FREE_COLLISIONS.map((c) => {
-        const r = freeCollision(c.speed, law, { dt: FREE_DT });
-        const judged = JUDGED_FREE_SPEEDS.includes(c.speed);
+        const r = freeCollision(c.speed, law, { dt: FREE_DT, start });
+        const beside = freeCollision(c.speed, law, { dt: FREE_DT, start: otherStart(start) });
+        const counted = judged.includes(c.speed);
         const eOk = Math.abs(r.restitution - c.restitution) <= FREE_RESTITUTION_TOLERANCE;
         const tOk = Math.abs(r.videoTime - c.contactTime) <= VIDEO_FRAME;
         return {
-            pass: !judged || (eOk && tOk),
+            pass: !counted || (eOk && tOk),
             text:
-                `${fmt(c.speed)} m/s${judged ? "" : " (beside)"}: e ${fmt(r.restitution)} (${fmt(c.restitution)}) ` +
-                `${verdict(eOk)}, video ${ms(r.videoTime)} ms (${ms(c.contactTime)}) ${verdict(tOk)}, the law's own ` +
-                `${ms(r.contactTime)} ms`,
+                `${fmt(c.speed)} m/s${counted ? "" : " (beside)"}: e ${fmt(r.restitution)} (${fmt(c.restitution)}) ` +
+                `${verdict(eOk)}, video ${START_TEXT[start]} ${ms(r.videoTime)} ms (${ms(c.contactTime)}) ` +
+                `${verdict(tOk)} (not judged: ${START_TEXT[otherStart(start)]} ${ms(beside.videoTime)} ms), law ` +
+                `time ${ms(r.lawTime)} ms, force-on ${ms(r.forceTime)} ms`,
         };
     });
     return { test: 4, pass: rows.every((r) => r.pass), text: rows.map((r) => r.text).join("; ") };
@@ -1635,6 +2117,7 @@ interface SingleBallFigures {
  */
 function singleBallOf(engine: TodayEngine): SingleBallFigures {
     const { fit, lawn } = engine;
+    // The engine's own openLawn builds the world from its own root's defaultWorld (TodayEngine).
     const world = fit.fitWorld(fit.TODAY, lawn.openWorld());
     const single = (speed: number): ShotSetup => lawn.opened(fit.fitSetup("single-ball", fit.TODAY, speed, world));
     const strokes = fit.CA_STROKES.map((ca) => {
@@ -1652,11 +2135,99 @@ function singleBallOf(engine: TodayEngine): SingleBallFigures {
 }
 
 /**
- * Test 5 (design §4.1): each single-ball figure unchanged from today's within its measurement's precision, or moved
- * closer to the measurement than today's: the CA's ball speeds (SPEED_PRECISION), travels (TRAVEL_PRECISION) and
- * Table 2's face contact (FACE_PRECISION).
+ * The face's first contact with the ball in the full single-ball stroke at Table 2's A2D U on this engine, played as
+ * ratioFit's runFit plays it (the open lawn, today's hand coupling), timed four ways (s): the law time (the timeline's
+ * first face interval) and its force-on time (the steps within it with the face's normal force positive); the
+ * video's, from first touch to the face's clearance from the striker's ball (faceClearance) first exceeding
+ * VISIBLE_SHIFT after the ball has moved visibly, as freeFace times the free face on the adopted start; the same end
+ * from the ball's displacement first exceeding VISIBLE_SHIFT (the first move, not adopted); and section F's video
+ * reading (timingOf), the first of videoIntervals over the face's clearance. Null where the run never shows that
+ * event.
+ * The judged video starts where the anchor's does, at first touch (gate stage 1's ruling: as Gugan 4's Fig. 4 times
+ * every event from the mallet's first contact), so that t0's conversion and its check share one definition. The
+ * impact begins with the face already touching, so first touch is extrapolated back: the closing speed U is the rate
+ * at which the face's clearance falls over the impact's first step, and the clock starts when the clearance,
+ * extrapolated back at U from the first sample, would have been VISIBLE_SHIFT, as freeFace's arrival start is
+ * (START_GAP − shift)/U. Section F's reading starts at the impact's first step instead, about shift/U later.
  */
-function singleBallTest(candidate: SingleBallFigures, today: SingleBallFigures): SearchTest {
+function singleBallFace(): {
+    readonly law: number;
+    readonly force: number;
+    readonly closing: number;
+    readonly video: number | null;
+    readonly moved: number | null;
+    readonly sectionF: number | null;
+} {
+    const world = fitWorld(TODAY, openWorld());
+    const setup = opened(fitSetup("single-ball", TODAY, SINGLE_BALL_FACE.speed, world));
+    const plan = planStroke(setup, world);
+    const drive = plan.contact.drive;
+    if (drive.kind !== "track") {
+        throw new RangeError("singleBallFace: the single-ball stroke's planned contact has no tracked drive");
+    }
+    const coupling = {
+        ...drive.coupling,
+        period: TODAY.handCouplingPeriod,
+        dampingRatio: TODAY.handCouplingDampingRatio,
+    };
+    const contact: ContactState = { ...plan.contact, drive: { ...drive, coupling } };
+    const R = world.ball.radius;
+    const striker = BALL_IDS.filter((id) => setup.balls[id] !== undefined).indexOf(setup.striker);
+    const key = faceKey(setup.striker);
+    const seen: { t: number; position: Vec3; separation: number; touched: boolean; pressed: boolean }[] = [];
+    const probe: ImpactProbe = {
+        step(s) {
+            const a = (s.balls[striker] as BallState).position;
+            seen.push({
+                t: s.t,
+                position: a,
+                separation: faceClearance(s.head, contact.head, a, R),
+                touched: s.contacts.some((c) => c.key === key),
+                pressed: s.contacts.some((c) => c.key === key && c.normalForce > 0),
+            });
+        },
+    };
+    const impact = simulateImpact(contact, setup.balls, world, { probe });
+    const first = (impact.timeline[key] ?? [])[0];
+    const start = seen[0];
+    const next = seen[1];
+    if (first === undefined || start === undefined || next === undefined) {
+        throw new RangeError("singleBallFace: the face never touched the single-ball stroke's ball");
+    }
+    const closing = (start.separation - next.separation) / (next.t - start.t);
+    if (!(closing > 0)) {
+        throw new RangeError(`singleBallFace: the face was not closing on the ball at the impact's start (${closing})`);
+    }
+    const touch = start.t - (VISIBLE_SHIFT - start.separation) / closing;
+    const force = seen.filter((p) => p.pressed && p.t > first.start && p.t <= first.end).length * IMPACT_DT;
+    // The move is measured from the ball as the impact first holds it: the impact settles it into the turf's bed,
+    // 0.43 mm below the setup's position, which would otherwise read as a visible move at the first step.
+    const moved = seen.findIndex((p) => visible(length(sub(p.position, start.position))));
+    if (moved >= 0 && moved < seen.findIndex((p) => p.touched)) {
+        throw new RangeError("singleBallFace: the ball moved visibly before the face touched it");
+    }
+    const parted = seen.findIndex((p, i) => moved >= 0 && i >= moved && visible(p.separation));
+    const end = parted < 0 ? null : (seen[parted] as (typeof seen)[number]).t;
+    const video = end === null ? null : end - touch;
+    const fromMove = end === null ? null : end - (seen[moved] as (typeof seen)[number]).t;
+    const reading = videoIntervals(seen)[0];
+    const sectionF = reading === undefined || reading.end === null ? null : reading.end - reading.start;
+    return { law: first.end - first.start, force, closing, video, moved: fromMove, sectionF };
+}
+
+/**
+ * Test 5 (P2b.2b.2c.2c design §4.1): Table 2's face contact at A2D in the full single-ball stroke (`face`), as the
+ * video times it from first touch, within FACE_PRECISION of 0.75 ms, the first-move and section F's readings, its law
+ * and force-on times and the free face's video time from first touch (`free`) printed beside it; and the CA's
+ * single-ball strokes each unchanged from today's within its measurement's precision, or moved closer to the
+ * measurement than today's: the ball speeds (SPEED_PRECISION) and travels (TRAVEL_PRECISION).
+ */
+function singleBallTest(
+    candidate: SingleBallFigures,
+    today: SingleBallFigures,
+    face: ReturnType<typeof singleBallFace>,
+    free: number,
+): SearchTest {
     const judge = (c: number, t: number, measured: number, precision: number): boolean =>
         Math.abs(c - t) <= precision || Math.abs(c - measured) < Math.abs(t - measured);
     const rows = CA_STROKES.map((ca, i) => {
@@ -1672,20 +2243,28 @@ function singleBallTest(candidate: SingleBallFigures, today: SingleBallFigures):
                 verdict(travelOk),
         };
     });
-    const faceOk = judge(candidate.face, today.face, SINGLE_BALL_FACE.contactTime, FACE_PRECISION);
-    rows.push({
+    const faceOk = face.video !== null && Math.abs(face.video - SINGLE_BALL_FACE.contactTime) <= FACE_PRECISION;
+    const opt = (t: number | null): string => (t === null ? "none" : `${ms(t)} ms`);
+    rows.unshift({
         pass: faceOk,
         text:
-            `Table 2's face contact at ${fmt(SINGLE_BALL_FACE.speed)} m/s ${ms(candidate.face)} ms (today ` +
-            `${ms(today.face)}, the video's ${ms(SINGLE_BALL_FACE.contactTime)} ± ${ms(FACE_PRECISION)}) ` +
-            verdict(faceOk),
+            `Table 2's face contact at ${fmt(SINGLE_BALL_FACE.speed)} m/s in the full single-ball stroke, video ` +
+            `${opt(face.video)} from first touch (closing at ${fmt(face.closing)} m/s) against ` +
+            `${ms(SINGLE_BALL_FACE.contactTime)} ± ${ms(FACE_PRECISION)} ms ${verdict(faceOk)} (not judged: from ` +
+            `the ball's first visible move ${opt(face.moved)}, section F's reading from the impact's first step ` +
+            `${opt(face.sectionF)}; law time ${ms(face.law)} ms, force-on ${ms(face.force)} ms, today's law time ` +
+            `${ms(today.face)} ms; the free face's video from first touch ${ms(free)} ms)`,
     });
     return { test: 5, pass: rows.every((r) => r.pass), text: rows.map((r) => r.text).join("; ") };
 }
 
-/** C3S's and C20S's figures at gap 0 on `fit`'s engine, as section E plays them, for the squeeze's direction. */
-function touchingFigures(fit: typeof RatioFit): readonly ReturnType<typeof figuresOf>[] {
-    const world = defaultWorld();
+/**
+ * C3S's and C20S's figures at gap 0 on `engine`, as section E plays them, for the squeeze's direction: on the
+ * engine's own root's world (TodayEngine), so that today's side carries today's ball–ball time.
+ */
+function touchingFigures(engine: TodayEngine): readonly ReturnType<typeof figuresOf>[] {
+    const { fit } = engine;
+    const world = engine.defaultWorld();
     return ["C3S", "C20S"].map((name) => {
         const stroke = filmed(name);
         const setup = fit.guganSetup(stroke.preset, stroke.malletSpeed, 0, { world });
@@ -1701,15 +2280,18 @@ function report(r: CandidateResult): void {
     console.log(verdictLine(r));
 }
 
-/** Candidates a, c and d on the worktree's engine (design §4.3): tests 1–3, with c's and d's figures. */
+/**
+ * The last step's candidates a, c and d on the worktree's engine (P2b.2b.2c.2b design §4.3): tests 1–3 as that step
+ * judged them, with c's and d's figures. Their results stand in that step's probe file; SECTION=I-old re-runs them.
+ */
 function searchToday(): readonly CandidateResult[] {
     const world = defaultWorld();
     console.log(
-        `-- I.0 the harness on today's ball–ball law (prepareImpact's; dt ${fmt(FREE_DT * 1e6)} µs, the video's ` +
+        `-- I-old.0 the harness on today's ball–ball law (prepareImpact's; dt ${fmt(FREE_DT * 1e6)} µs, the video's ` +
             `threshold ${mm(VISIBLE_SHIFT)} mm, a frame ${ms(VIDEO_FRAME)} ms) --`,
     );
-    console.log(testLine(freeTest(engineBallBall(world))));
-    const battery = batteryOf(world);
+    console.log(testLine(freeTest(engineBallBall(world), LAST_STEP_FREE_SPEEDS, "moved")));
+    const battery = batteryOf(world, againstRow);
     console.log("-- I.a resolution of \"touching\": a gap hidden in Table 5's 0 (0-0.5 mm, section D's sweep) --");
     const a: CandidateResult = { name: "a", tests: [hiddenGapTest(), battery.test2, battery.test3] };
     report(a);
@@ -1737,14 +2319,284 @@ function searchToday(): readonly CandidateResult[] {
     return [a, c, d];
 }
 
+/** A Table 2 column through the free face on today's law (I.0), and its conversion. */
+interface FaceColumn {
+    readonly column: (typeof TABLE2_FACE)[number];
+    /** The speed (m/s) the face's fits are read at: the column's U, clamped to [FACE_SPEED_MIN, FACE_SPEED_MAX]. */
+    readonly played: number;
+    /** The free face, its video from first touch (the adopted start). */
+    readonly free: ReturnType<typeof freeFace>;
+    /**
+     * faceScaleFor(Τh, U) from first touch: the scale on today's T(U) whose video time is the column's Τh; null, with
+     * `error`, when none in faceScaleFor's bracket gives it (above VISIBLE_SHIFT the approach from first touch alone
+     * can outlast a slow column's Τh).
+     */
+    readonly scale: number | null;
+    readonly error: string | null;
+    /** The sensitivity, not adopted: the video from the struck ball's first visible move, and its scale. */
+    readonly moved: { readonly video: number; readonly scale: number | null; readonly error: string | null };
+}
+
 /**
- * A law-changing candidate (b or e) on this copy's engine (design §4.3): tests 1–6, test 5 and the squeeze's direction
- * against today's engine (TODAY_ENGINE) in the same run.
+ * Whether I.0 may print a conversion that has no answer and go on: only at a throwaway threshold (SHIFT set to other
+ * than VISIBLE_SHIFT), where the approach from first touch can outlast a slow column's or a bound's video time. At
+ * VISIBLE_SHIFT the constants block is what the laws are set from, so a failed conversion throws there.
  */
-function searchCandidate(name: "b" | "e", today: TodayEngine): CandidateResult {
+const LENIENT_CONVERSIONS = CONVERSION_SHIFT !== VISIBLE_SHIFT;
+
+/**
+ * faceScaleFor(Τh, U) for `column` at `start`, or its error as text. The first-move sensitivity ("moved") never
+ * throws, as before; the adopted start throws unless LENIENT_CONVERSIONS.
+ */
+function columnScale(
+    column: (typeof TABLE2_FACE)[number],
+    start: VideoStart,
+): { readonly scale: number | null; readonly error: string | null } {
+    const o = { dt: FACE_DT, shift: CONVERSION_SHIFT, start };
+    try {
+        return { scale: faceScaleFor(column.contactTime, column.speed, o), error: null };
+    } catch (error) {
+        if (start === "arrival" && !LENIENT_CONVERSIONS) {
+            throw error;
+        }
+        return { scale: null, error: errorText(error) };
+    }
+}
+
+/** `column` through the free face at FACE_DT and the threshold CONVERSION_SHIFT (FaceColumn). */
+function faceColumnOf(column: (typeof TABLE2_FACE)[number]): FaceColumn {
+    const shift = CONVERSION_SHIFT;
+    const played = Math.min(Math.max(column.speed, FACE_SPEED_MIN), FACE_SPEED_MAX);
+    const free = freeFace(column.speed, { dt: FACE_DT, shift, start: "arrival" });
+    const video = freeFace(column.speed, { dt: FACE_DT, shift, start: "moved" }).videoTime;
+    return {
+        column,
+        played,
+        free,
+        ...columnScale(column, "arrival"),
+        moved: { video, ...columnScale(column, "moved") },
+    };
+}
+
+/**
+ * Decision 10's fit (P2b.2b.2c.2c plan; design §2.1): each column's Τh converted to its own law parameter, its scale
+ * times today's T at its played speed, and log T = log t0 + q·log(played/u0) fitted by least squares over all four
+ * columns (those with a scale), A4D at the clamp's 6 m/s as the engine plays it.
+ */
+function qFitOf(columns: readonly FaceColumn[], u0: number): { readonly t0: number; readonly q: number } {
+    const scaled = columns.flatMap((c) => (c.scale === null ? [] : [{ played: c.played, scale: c.scale }]));
+    const xs = scaled.map((c) => Math.log(c.played / u0));
+    const ys = scaled.map((c) => Math.log(c.scale * faceContactTimeAt(c.played)));
+    const q = slopeOfFit(xs, ys);
+    const mean = (vs: readonly number[]): number => vs.reduce((a, b) => a + b, 0) / vs.length;
+    return { t0: Math.exp(mean(ys) - q * mean(xs)), q };
+}
+
+/** A ball–ball conversion (ballBallTimeFor) as text: the parameter and each Table 1 speed's signed miss (µs). */
+function ballBallText(label: string, found: ReturnType<typeof ballBallTimeFor>): string {
+    const misses = FREE_COLLISIONS.map((c, i) => `${fmt((found.misses[i] as number) * 1e6)} µs at ${fmt(c.speed)} m/s`);
+    return `${label}: the parameter T (force-on) ${ms(found.time)} ms; video misses ${misses.join(", ")}`;
+}
+
+/**
+ * A ball–ball conversion's first-move sensitivity line, not adopted (ballBallTimeFor at the "moved" start and the
+ * threshold CONVERSION_SHIFT).
+ */
+function ballBallMovedText(target: number): string {
+    try {
+        const found = ballBallTimeFor(target, { shift: CONVERSION_SHIFT });
+        return `  sensitivity, NOT ADOPTED: ${ballBallText("from the first visible move", found)}`;
+    } catch (error) {
+        if (!LENIENT_CONVERSIONS) {
+            throw error;
+        }
+        return `  sensitivity, NOT ADOPTED: from the first visible move: none (${errorText(error)})`;
+    }
+}
+
+/**
+ * I.0, the conversions (P2b.2b.2c.2c design §2.1, §2.2) on the worktree's engine and
+ * today's laws, every video clock started at first touch (gate stage 1's ruling, as Gugan 4's Fig. 4 times every event
+ * from the mallet's first contact): the face per Table 2 column (the free face's times, faceScaleFor's scale and the
+ * law time it implies, beside the first-move sensitivity, not adopted), the new t0 and the held-out columns' video
+ * times on it, Table 2's implied restitution, the q fit; the ball–ball time and its bounds, each beside its first-move
+ * sensitivity; then every constant as JSON fragments for reference/contact.json, to full precision, between the lines
+ * "BEGIN CONSTANTS" and "END CONSTANTS" (the q fit's between "BEGIN OFFERED" and "END OFFERED"), each a parameter in
+ * the law's sense: the force-on time (s).
+ */
+function conversions(): void {
+    const shift = CONVERSION_SHIFT;
+    const reset =
+        shift === VISIBLE_SHIFT
+            ? ""
+            : ` (SHIFT, design §7.9's camera threshold's reach: a throwaway re-set, never adopted; VISIBLE_SHIFT ` +
+              `stays ${mm(VISIBLE_SHIFT)} mm)`;
+    console.log(
+        `-- I.0 the conversions on today's laws: the free face at dt ${fmt(FACE_DT * 1e9)} ns, the free collisions ` +
+            `at ${fmt(FREE_DT * 1e6)} µs, the video's threshold ${mm(shift)} mm${reset}; "law time" the contact ` +
+            'with the penetration δ > 0, "force-on" with the normal force > 0, the law\'s parameter T ' +
+            "(contact.json's sense); the video's clock starts at first touch, the striking surface within " +
+            `${mm(shift)} mm of the struck ball extrapolated back at the closing speed (t = −shift/U before ` +
+            "the touch), as Gugan 4's Fig. 4 times every event from the mallet's first contact (gate stage 1's " +
+            "ruling); the first visible move's figures beside, NOT ADOPTED --",
+    );
+    const fit = contactReference.faceContactTimeFit;
+    const q = fit.coefficients.q as number;
+    console.log("-- I.0.1 the face, per Table 2 column (Τh ± 0.1 ms, row 4) --");
+    const columns = TABLE2_FACE.map(faceColumnOf);
+    for (const { column, played, free, scale, error, moved } of columns) {
+        const today = faceContactTimeAt(played);
+        const clamp = free.clamped ? `, the fits read at the clamp's ${fmt(FACE_SPEED_MAX)} m/s` : "";
+        const converted =
+            scale === null
+                ? `faceScaleFor(Τh, U) none (${error ?? "unknown"})`
+                : `faceScaleFor(Τh, U) ${scale.toFixed(6)}, implying the parameter (force-on) ${ms(scale * today)} ` +
+                  `ms and the law time ${ms(scale * free.lawTime)} ms`;
+        console.log(
+            `${column.name} (U ${fmt(column.speed)} m/s${clamp}): Τh ${ms(column.contactTime)} ms; today's T(U) ` +
+                `${ms(today)} ms; the free face's law time ${ms(free.lawTime)} ms, force-on ` +
+                `${ms(free.forceTime)} ms, video from first touch ${ms(free.videoTime)} ms, e ` +
+                `${fmt(free.restitution)}; ${converted}`,
+        );
+        const implied =
+            moved.scale === null
+                ? `no scale (${moved.error ?? "unknown"})`
+                : `scale ${moved.scale.toFixed(6)}, implying the parameter ${ms(moved.scale * today)} ms`;
+        console.log(
+            `  sensitivity, NOT ADOPTED: the video from the struck ball's first visible move: today's video ` +
+                `${ms(moved.video)} ms, ${implied}`,
+        );
+    }
+    const anchorColumn = columns.find((c) => c.column.name === "A2D") as FaceColumn;
+    if (anchorColumn.scale === null) {
+        throw new RangeError(
+            `I.0: the anchor A2D has no scale at ${mm(shift)} mm (${anchorColumn.error ?? "unknown"})`,
+        );
+    }
+    const anchor = { column: anchorColumn.column, scale: anchorColumn.scale };
+    const t0 = anchor.scale * faceContactTimeAt(anchor.column.speed);
+    const u0 = anchor.column.speed;
+    console.log(
+        `-- I.0.2 the new face law: t0 = A2D's scale ${anchor.scale.toFixed(6)} × today's T(${fmt(u0)}) ` +
+            `${ms(faceContactTimeAt(u0))} ms = ${ms(t0)} ms, u0 ${fmt(u0)} m/s, q ${fmt(q)} (today's t0 ` +
+            `${ms(fit.coefficients.t0 as number)} ms at u0 ${fmt(fit.coefficients.u0 as number)} m/s). It is today's ` +
+            "T(U) × the scale at every U, so each column's video time on it is scale · videoTime(today; shift/scale) " +
+            "from first touch (Hertz similarity, scripts/squeeze.ts) --",
+    );
+    const heldOut = columns.map(({ column, free }) => {
+        const scaled = shift / anchor.scale;
+        const video = anchor.scale * freeFace(column.speed, { dt: FACE_DT, shift: scaled, start: "arrival" }).videoTime;
+        const pass = Math.abs(video - column.contactTime) <= FACE_PRECISION;
+        return { column, clamped: free.clamped, video, pass };
+    });
+    for (const { column, clamped, video, pass } of heldOut) {
+        const role = column.name === "A2D" ? "the anchor" : "held out";
+        const clamp = clamped ? `; played on the law clamped at ${fmt(FACE_SPEED_MAX)} m/s` : "";
+        console.log(
+            `${column.name} (${role}, U ${fmt(column.speed)} m/s${clamp}): video ${ms(video)} ms against ` +
+                `${ms(column.contactTime)} ± ${ms(FACE_PRECISION)} ms (off ${ms(video - column.contactTime)} ms): ` +
+                verdict(pass),
+        );
+    }
+    const missed = heldOut.some((h) => h.column.name !== "A2D" && !h.pass);
+    console.log("-- I.0.3 Table 2's implied restitution, (v − V)/U (rows 9, 8, 7), beside e(U), recorded only --");
+    for (const { column, played, free } of columns) {
+        const implied = (column.ballAfter - column.malletAfter) / column.speed;
+        console.log(
+            `${column.name}: Table 2 ${fmt(implied)}, e(U) ${fmt(faceRestitutionAt(played))}` +
+                `${free.clamped ? ` (at ${fmt(FACE_SPEED_MAX)} m/s)` : ""}, the free face's ${fmt(free.restitution)}`,
+        );
+    }
+    console.log(`  Table 2's caveat (Gugan 4, §5.2): "${TABLE2_CAVEAT}"`);
+    const qFit = qFitOf(columns, u0);
+    console.log(
+        `-- I.0.4 the q fit over all four columns, ` +
+            `${missed ? "OFFERED to the gate: a held-out column misses" : "recorded: every held-out column passes"} --`,
+    );
+    for (const c of columns) {
+        const own =
+            c.scale === null
+                ? "none (no scale, left out of the fit)"
+                : `${ms(c.scale * faceContactTimeAt(c.played))} ms`;
+        const fitted = qFit.t0 * Math.pow(c.played / u0, qFit.q);
+        console.log(`${c.column.name} at ${fmt(c.played)} m/s: its own parameter ${own}, the fit's ${ms(fitted)} ms`);
+    }
+    console.log(`  t0 ${ms(qFit.t0)} ms, u0 ${fmt(u0)} m/s, q ${fmt(qFit.q)}`);
+    console.log("-- I.0.5 the ball–ball law (Table 1's three clean strokes, e 0.72), from first touch --");
+    const target = (FREE_COLLISIONS[0] as (typeof FREE_COLLISIONS)[number]).contactTime;
+    const best = ballBallTimeFor(target, { shift, start: "arrival" });
+    console.log(
+        ballBallText(`ballBallTimeFor(${ms(target)} ms)`, best) +
+            ` (today's ${ms(contactReference.ballBallContactTime.value)} ms)`,
+    );
+    const mass = defaultWorld().ball.mass;
+    for (const c of FREE_COLLISIONS) {
+        const law = lawFromContactTime(mass / 2, c.restitution, best.time, 0);
+        const r = freeCollision(c.speed, law, { dt: FREE_DT, shift, start: "arrival" });
+        const moved = freeCollision(c.speed, law, { dt: FREE_DT, shift });
+        console.log(
+            `  ${fmt(c.speed)} m/s: video from first touch ${ms(r.videoTime)} ms (from the first visible move ` +
+                `${ms(moved.videoTime)} ms, not adopted), law time ${ms(r.lawTime)} ms, force-on ` +
+                `${ms(r.forceTime)} ms, e ${fmt(r.restitution)}`,
+        );
+    }
+    console.log(ballBallMovedText(target));
+    // Above VISIBLE_SHIFT the approach from first touch alone can outlast a bound's video time at Table 1's slowest
+    // speed, so a bound may have no conversion in ballBallTimeFor's bracket: at such a throwaway threshold it is then
+    // printed and left null (LENIENT_CONVERSIONS); at VISIBLE_SHIFT it throws.
+    const bound = (t: number, label: string): number | null => {
+        try {
+            const found = ballBallTimeFor(t, { shift, start: "arrival" });
+            console.log(ballBallText(`${label}, ballBallTimeFor(${ms(t)} ms)`, found));
+            return found.time;
+        } catch (error) {
+            if (!LENIENT_CONVERSIONS) {
+                throw error;
+            }
+            console.log(`${label}, ballBallTimeFor(${ms(t)} ms): NONE, null in the constants (${errorText(error)})`);
+            return null;
+        }
+    };
+    const lower = bound(TABLE1_VIDEO_RANGE[0], "the lower bound");
+    console.log(ballBallMovedText(TABLE1_VIDEO_RANGE[0]));
+    const upper = bound(TABLE1_VIDEO_RANGE[1], "the upper bound");
+    console.log(ballBallMovedText(TABLE1_VIDEO_RANGE[1]));
+    const obstacleUpper = (contactReference.ballObstacleContactTime.bounds as readonly [number, number])[1];
+    const obstacleLower = lower === null ? null : OBSTACLE_LOWER_SHARE * lower;
+    const obstacle = { value: best.time, bounds: [obstacleLower, obstacleUpper] };
+    console.log(
+        `  the obstacle: ${ms(obstacle.value)} ms in [${obstacleLower === null ? "none" : ms(obstacleLower)}, ` +
+            `${ms(obstacleUpper)}] ms ` +
+            `(lower ${fmt(OBSTACLE_LOWER_SHARE)} × the ball–ball's; upper as today, from the obstacle fuzz): ` +
+            `${obstacle.value <= obstacleUpper ? "inside" : "OUTSIDE"} its upper bound`,
+    );
+    console.log(
+        "-- I.0.6 the constants: JSON fragments for reference/contact.json, full precision, each time a parameter " +
+            "(force-on, s) --",
+    );
+    const constants = {
+        faceContactTimeFit: { coefficients: { t0, u0, q } },
+        ballBallContactTime: { value: best.time, bounds: [lower, upper] },
+        ballObstacleContactTime: obstacle,
+    };
+    console.log("BEGIN CONSTANTS");
+    console.log(JSON.stringify(constants, null, 4));
+    console.log("END CONSTANTS");
+    console.log(`BEGIN OFFERED (the q fit; ${missed ? "offered to the gate" : "recorded, not offered"}; not adopted)`);
+    console.log(JSON.stringify({ faceContactTimeFit: { coefficients: { t0: qFit.t0, u0, q: qFit.q } } }, null, 4));
+    console.log("END OFFERED");
+}
+
+/**
+ * A law candidate on this copy's engine (P2b.2b.2c.2c design §4.1, §4.3): tests 1–6, test 1 by touchingBand, test 4 at
+ * all three speeds, test 5 on the full single-ball stroke's face as the video times it and the CA's strokes against
+ * today's engine (TODAY_ENGINE) in the same run; then the squeeze's direction and the release by law time (§5.3).
+ */
+function searchLaw(name: LawCandidate, today: TodayEngine): CandidateResult {
     const world = defaultWorld();
-    const battery = batteryOf(world);
-    const own: TodayEngine = { fit: RatioFit, lawn: OpenLawn };
+    const battery = batteryOf(world, againstBand);
+    const own: TodayEngine = { fit: RatioFit, lawn: OpenLawn, defaultWorld };
+    const free = freeFace(SINGLE_BALL_FACE.speed, { dt: FACE_DT, start: "arrival" }).videoTime;
     const result: CandidateResult = {
         name,
         tests: [
@@ -1752,13 +2604,13 @@ function searchCandidate(name: "b" | "e", today: TodayEngine): CandidateResult {
             battery.test2,
             battery.test3,
             freeTest(engineBallBall(world)),
-            singleBallTest(singleBallOf(own), singleBallOf(today)),
+            singleBallTest(singleBallOf(own), singleBallOf(today), singleBallFace(), free),
             { test: 6, pass: true, text: CONSTANTS[name] },
         ],
     };
     report(result);
-    const before = touchingFigures(today.fit);
-    const after = touchingFigures(RatioFit);
+    const before = touchingFigures(today);
+    const after = touchingFigures(own);
     console.log("  the squeeze's direction, C3S and C20S at gap 0 (candidate, then the change from today's):");
     ["C3S", "C20S"].forEach((label, i) => {
         const [c, t] = [after[i], before[i]] as [ReturnType<typeof figuresOf>, ReturnType<typeof figuresOf>];
@@ -1766,27 +2618,61 @@ function searchCandidate(name: "b" | "e", today: TodayEngine): CandidateResult {
             `    ${label}: ${MEAN_KEYS.map((key) => `${key} ${fmt(c[key])} (${fmt(c[key] - t[key])})`).join(", ")}`,
         );
     });
+    console.log(
+        "  the release by law time (design §5.3; ms from the face's first contact, 'on' still loaded at the " +
+            "impact's end), C3S and C20S at gap 0:",
+    );
+    const at = (t: number): string => (t === Infinity ? "on" : ms(t));
+    for (const label of ["C3S", "C20S"]) {
+        const stroke = filmed(label);
+        const setup = guganSetup(stroke.preset, stroke.malletSpeed, stroke.gap, { world: STRIKE_WORLD });
+        const { law } = timingOf(setup, STRIKE_WORLD);
+        const lets = law.leaves !== null && law.firstContactEnds < law.leaves;
+        const tap = law.secondTap === null ? "none" : `[${at(law.secondTap[0])}, ${at(law.secondTap[1])}]`;
+        console.log(
+            `    ${label}: the face's first contact ends ${at(law.firstContactEnds)}, the croqueted ball leaves ` +
+                `${law.leaves === null ? "never" : at(law.leaves)}, second face interval ${tap}: the face ` +
+                `${lets ? "lets go" : "does NOT let go"} before the croqueted ball leaves`,
+        );
+    }
     return result;
 }
 
 function sectionI(): void {
     console.log(
-        "== I. The search (design §4): what keeps truly touching balls apart. Each candidate's tests of §4.1 with " +
-            "their figures: 1, C3S and C20S at gap 0 within §5.3's uncertainties of their rows; 2, v2/U across " +
-            "the gap within Table 5's spread; 3, the gapped strokes' means within Gugan's sem; for a law change " +
-            "also 4, Table 1's free collisions as the video times them; 5, the single-ball strokes unchanged " +
-            "within their measurement; 6, every constant sourced or argued" +
-            (CANDIDATE === undefined
-                ? "; candidates a, c and d on the worktree's engine =="
-                : `; candidate ${CANDIDATE} on this copy's engine ==`),
+        "== I. The contact laws (P2b.2b.2c.2c design §2, §4): with no CANDIDATE, I.0's conversions on the worktree; " +
+            `with CANDIDATE (${LAW_CANDIDATES.join(", ")}) and TODAY_ROOT, that copy's tests of §4.1 with their ` +
+            "figures: 1, C3S and C20S at gap 0 within §5.2's band of each figure; 2, v2/U across the gap within " +
+            "Table 5's spread; 3, the gapped strokes' means within Gugan's sem; 4, Table 1's three free collisions " +
+            "as the video times them; 5, Table 2's A2D face contact in the full single-ball stroke as the video " +
+            "times it, and the CA's single-ball strokes unchanged within their measurement; 6, every constant " +
+            "sourced or argued. Every video clock starts at first touch, as Gugan 4's Fig. 4 times every event from " +
+            "the mallet's first contact (gate stage 1's ruling). The last step's candidates a, c and d: " +
+            "SECTION=I-old ==",
     );
-    const results =
-        CANDIDATE === undefined || TODAY_ENGINE === null ? searchToday() : [searchCandidate(CANDIDATE, TODAY_ENGINE)];
+    if (CANDIDATE === undefined || TODAY_ENGINE === null) {
+        conversions();
+        return;
+    }
+    const result = searchLaw(CANDIDATE, TODAY_ENGINE);
+    console.log(
+        passes(result)
+            ? `-- I summary: ${result.name} PASSES EVERY TEST: stop for the user --`
+            : `-- I summary: ${result.name} does not pass --`,
+    );
+}
+
+function sectionIOld(): void {
+    console.log(
+        "== I-old. The last step's search (P2b.2b.2c.2b design §4): candidates a, c and d on the worktree's engine, " +
+            "tests 1-3 as that step judged them (test 1 within the means' sem) ==",
+    );
+    const results = searchToday();
     const passing = results.filter(passes);
     console.log(
         passing.length === 0
-            ? `-- I summary: no candidate passes (${results.map((r) => r.name).join(", ")}) --`
-            : `-- I summary: ${passing.map((r) => r.name).join(", ")} PASSES EVERY TEST: stop for the user --`,
+            ? `-- I-old summary: no candidate passes (${results.map((r) => r.name).join(", ")}) --`
+            : `-- I-old summary: ${passing.map((r) => r.name).join(", ")} PASSES EVERY TEST --`,
     );
 }
 
@@ -1811,28 +2697,12 @@ const BALL_WORLDS: readonly { readonly label: string; readonly world: World }[] 
     },
 ];
 
-// Gugan's mallet is solved per preset and world (about 11 s each) and does not depend on the gap or the jab.
-const GUGAN_MALLETS = new WeakMap<World, Map<string, SwingProfile["mallet"]>>();
-
-/** Gugan's mallet for `type` at 3 m/s on `world`, solved once. */
-function guganMallet(type: "drive" | "stop-ac", world: World): SwingProfile["mallet"] {
-    const cache = GUGAN_MALLETS.get(world) ?? new Map<string, SwingProfile["mallet"]>();
-    GUGAN_MALLETS.set(world, cache);
-    const cached = cache.get(type);
-    if (cached !== undefined) {
-        return cached;
-    }
-    const mallet = gugansMallet(type, GUGAN5.speed, world);
-    cache.set(type, mallet);
-    return mallet;
-}
-
 /** Design §7.2's stroke at `gap` (m) and `jab` (m, the stop's): guganSetup's, with the mallet solved once per world. */
 function guganPlayed(type: "drive" | "stop-ac", gap: number, jab: number, world: World): ShotSetup {
     const setup = canonicalSetup(type, {
         world,
         croquetGap: gap,
-        mallet: guganMallet(type, world),
+        mallet: gugansMallet(type, GUGAN5.speed, world),
         stroke: type === "drive" ? { guideEffort: 0 } : { jab },
     });
     return { ...setup, stroke: { ...setup.stroke, ...strokeFor(setup, GUGAN5.speed, world) } };
@@ -2038,7 +2908,7 @@ function sectionK(): void {
         "-- K.2 the film's spread across its gaps (Table 5, the ten strokes) beside the model's (section E's runs, " +
             "the default mallet, the recorded gaps; strokes whose strike did not close in its window left out) --",
     );
-    const counted = filmedStrokeRuns(undefined, { world: defaultWorld() }).filter((r) => !r.read.open);
+    const counted = filmedStrokeRuns(undefined, { world: STRIKE_WORLD }).filter((r) => !r.read.open);
     const gaps = counted.map((r) => r.gap * 1e3);
     let agree = true;
     for (const key of ["v2U", "v2w1"] as const) {
@@ -2114,7 +2984,7 @@ function sectionL(): void {
     console.log(
         "-- L.1 each filmed stroke at its recorded gap (the default mallet), against Table 5's rows 16 and 17 --",
     );
-    const world = defaultWorld();
+    const world = STRIKE_WORLD;
     for (const { stroke, gap, read, figures } of filmedStrokeRuns(undefined, { world })) {
         const setup = guganSetup(stroke.preset, stroke.malletSpeed, gap, { world });
         const distance = distanceOf(setup, simulateFreeMotion(read.impact.handover, world));
@@ -2193,7 +3063,7 @@ function contactsText(contacts: readonly FaceContact[]): string {
  * beyond the stroke's reach throws, which the digest records as a rejected run.
  */
 function digestGrid(
-    type: "stop-ac",
+    type: StrokeType,
     world: World,
 ): readonly { readonly label: string; readonly build: () => ShotSetup }[] {
     const base = canonicalSetup(type, { world });
@@ -2225,7 +3095,7 @@ function sectionM(): void {
             `DEFAULT_CROQUET_GAP (${mm(DEFAULT_CROQUET_GAP)} mm), the AC stop's face–ball intervals, the drive's ` +
             "effective mass ==",
     );
-    const world = defaultWorld();
+    const world = STRIKE_WORLD;
     console.log(
         "-- M.1 Gugan's jab (tests/engine/turfStrike.test.ts, the AC stop, the default mallet, " +
             `${fmt(GUGAN5.speed)} m/s, the default world): each depth judged as the test judges it; the band is ` +
@@ -2288,7 +3158,8 @@ function sectionM(): void {
     );
     console.log(
         "-- M.2 the grip-limit control run (the test at :90-109, a single-ball stroke the gap cannot touch): not " +
-            "re-run, since no candidate that changes the face law was admitted --",
+            "re-run here; the test itself plays it on the re-set face law and passes, in the slow suite's " +
+            "turfStrike run as in the default suite --",
     );
     console.log(
         "-- M.3 the AC stop's face–ball intervals with their head region: the canonical run, then the preset " +
@@ -2352,6 +3223,404 @@ function sectionM(): void {
 /** The filmed strokes' effective mass in ball masses by momentum (design §5.2): 2.30 to 2.41. */
 const FILMED_MASS_RANGE = [2.3, 2.41] as const;
 
+/** A run's strike (FaultReport.strike) as text: its taps (ms), largest clearance between them (mm), parting, breaks. */
+function strikeText(strike: StrikeTaps): string {
+    const { taps, parted, breaks } = strike;
+    const between = taps.slice(0, -1).map((t) => t.clearanceAfter ?? 0);
+    const clearance = between.length === 0 ? "none" : `${mm(Math.max(...between))} mm`;
+    return (
+        `${taps.length} tap(s) ${taps.map((t) => `[${ms(t.start)}, ${ms(t.end)}]`).join(" ") || "none"} ms, ` +
+        `largest clearanceAfter between taps ${clearance}, parted ` +
+        `${parted === null ? "never" : `${ms(parted)} ms`}, merged breaks ` +
+        `${breaks.length === 0 ? "none" : `${breaks.map(ms).join(", ")} ms`}`
+    );
+}
+
+function sectionN(): void {
+    console.log(
+        "== N. The double taps (P2b.2b.2c.2c design §6): every croquet preset's canonical run and the preset " +
+            "digest's grid (digestGrid: 5 speeds × 5 drives × 3 heights × 3 sides, each planned at its speed) on the " +
+            "default world, each judged as simulateShot judges it (planStroke, simulateImpact, strokeContext, " +
+            "judgeFaults; the free motion after, which no fault reads, left out): FaultReport.strike's taps within " +
+            "the strike (the count, each tap's start and end in ms), the largest clearanceAfter between taps (mm), " +
+            "the balls' parting (ms) and the ball–ball breaks shorter than a frame merged across it (ms); FLAGGED " +
+            "marks a run still raising 29.1.6.1, its re-contact's start against its parting ==",
+    );
+    const world = defaultWorld();
+    const flagged: string[] = [];
+    for (const type of CROQUET_STROKES) {
+        const canonical = canonicalSetup(type, { world });
+        const runs = [{ label: `${type} canonical`, build: () => canonical }, ...digestGrid(type, world)];
+        const counts = new Map<number, number>();
+        let rejected = 0;
+        let broken = 0;
+        let longest = 0;
+        let raised = 0;
+        console.log(`-- ${type} --`);
+        for (const { label, build } of runs) {
+            try {
+                const setup = build();
+                const contact = planStroke(setup, world).contact;
+                const impact = simulateImpact(contact, setup.balls, world);
+                const faults = judgeFaults(strokeContext(setup, impact), impact);
+                const strike = faults.strike;
+                if (strike === undefined) {
+                    throw new RangeError("no strike reported for a croquet stroke");
+                }
+                counts.set(strike.taps.length, (counts.get(strike.taps.length) ?? 0) + 1);
+                broken += strike.breaks.length > 0 ? 1 : 0;
+                longest = Math.max(longest, ...strike.breaks);
+                const fault = faults.findings.find((f) => f.law === "29.1.6.1");
+                let mark = "";
+                if (fault !== undefined) {
+                    raised += 1;
+                    mark =
+                        `; FLAGGED 29.1.6.1: re-contact at ${ms(fault.t)} ms against the parting ` +
+                        `${strike.parted === null ? "never" : `${ms(strike.parted)} ms`}`;
+                    flagged.push(`${label}${mark}`);
+                }
+                console.log(`${label}: ${strikeText(strike)}${mark}`);
+            } catch (error) {
+                rejected += 1;
+                console.log(`${label}: rejected (${errorText(error)})`);
+            }
+        }
+        const tally = [...counts.entries()]
+            .sort(([a], [b]) => a - b)
+            .map(([taps, n]) => `${n} with ${taps} tap(s)`)
+            .join(", ");
+        console.log(
+            `${type} tally: ${runs.length} runs, ${rejected} rejected; ${tally || "none judged"}; ${broken} with a ` +
+                `merged break (longest ${ms(longest)} ms); ${raised} flagged under 29.1.6.1`,
+        );
+    }
+    console.log(`-- every run still flagged under 29.1.6.1 (${flagged.length}) --`);
+    for (const line of flagged) {
+        console.log(line);
+    }
+}
+
+/**
+ * The scripts section O plays a root's strokes with: those every root's ratioFit exports with the same signature,
+ * today's tree's (main, before this step's tidy) included. Its meansOf and gugansMallet differ, and section O uses
+ * neither; its readOut's `open` counts only the face intervals, so section O judges `open` itself (readTimeOf).
+ */
+type HandsFit = Pick<
+    typeof RatioFit,
+    "TODAY" | "fitWorld" | "guganSetup" | "readOut" | "figuresOf" | "effectiveMassOf"
+>;
+
+/** A root of HANDS_ROOTS: its label, its path and its own ratioFit (and through it its own src and world). */
+interface HandsRoot {
+    readonly label: string;
+    readonly root: string;
+    readonly fit: HandsFit;
+}
+
+/** `entries` ("label=value", comma-separated) as pairs; throws naming `name` for an entry without both. */
+function labelled(name: string, entries: string): readonly { readonly label: string; readonly value: string }[] {
+    return entries.split(",").map((entry) => {
+        const at = entry.indexOf("=");
+        if (at <= 0 || at === entry.length - 1) {
+            throw new Error(`${name} takes label=path entries, comma-separated (got "${entry}")`);
+        }
+        return { label: entry.slice(0, at), value: entry.slice(at + 1) };
+    });
+}
+
+/** Whether `section` runs in this invocation. */
+const running = (section: string): boolean => SECTION === section || SECTION === "all";
+
+/**
+ * Section O's roots (design §7.6): HANDS_ROOTS, `label=path` comma-separated, each root's scripts/ratioFit.ts loaded
+ * beside the worktree's own; null when section O does not run or HANDS_ROOTS is absent.
+ */
+async function loadHandsRoots(): Promise<readonly HandsRoot[] | null> {
+    const value = process.env.HANDS_ROOTS;
+    if (!running("O") || value === undefined) {
+        return null;
+    }
+    return Promise.all(
+        labelled("HANDS_ROOTS", value).map(async ({ label, value: root }) => {
+            const fit = (await import(`${root}/scripts/ratioFit.ts`)) as HandsFit;
+            return { label, root, fit };
+        }),
+    );
+}
+
+const HANDS_ROOTS = await loadHandsRoots();
+
+/** Design §7.6's strokes: C3S and C20S at their recorded gap 0, and C3D at its recorded 1 mm. */
+const HANDS_STROKES = ["C3S", "C20S", "C3D"] as const;
+
+/** One root's play of a filmed stroke: its figures, its read-out, its face and ball–ball intervals, and `open`. */
+interface HandsRun {
+    readonly figures: ReturnType<typeof figuresOf>;
+    readonly read: ReadOut;
+    readonly face: readonly ContactInterval[];
+    readonly pair: readonly ContactInterval[];
+    readonly open: boolean;
+}
+
+/**
+ * Filmed stroke `name` on `fit`'s own engine and world (fitWorld on its root's defaultWorld, as TodayEngine requires),
+ * played as section E plays it: its preset, its U and recorded gap, the preset's push, no jab, the default mallet.
+ * `open` is readTimeOf's on the face and ball–ball intervals, the same rule for every root.
+ */
+function handsRun(fit: HandsFit, name: string): HandsRun {
+    const stroke = filmed(name);
+    const world = fit.fitWorld(fit.TODAY);
+    const setup = fit.guganSetup(stroke.preset, stroke.malletSpeed, stroke.gap, { world });
+    const other = setup.croqueted;
+    if (other === undefined) {
+        throw new RangeError(`handsRun: ${name}'s stroke has no croqueted ball`);
+    }
+    const read = fit.readOut(setup, world);
+    const figures = fit.figuresOf(read, fit.effectiveMassOf(setup, world) / world.ball.mass);
+    const face = read.impact.timeline[faceKey(setup.striker)] ?? [];
+    const pair = read.impact.timeline[ballPairKey(setup.striker, other)] ?? [];
+    return { figures, read, face, pair, open: readTimeOf(face, pair).open };
+}
+
+/** The judged figures and W/U, the keys section O compares. */
+const HANDS_KEYS = [...MEAN_KEYS, "WU"] as const;
+
+/** `intervals` beginning within STRIKE_WINDOW of the first, as "[start, end]" in ms. */
+function strikeSpans(intervals: readonly ContactInterval[]): string {
+    const within = intervals.slice(0, strikeCount(intervals));
+    return within.length === 0 ? "none" : within.map((i) => `[${ms(i.start)}, ${ms(i.end)}]`).join(" ");
+}
+
+/**
+ * The change from `coupled` to `free` in the intervals beginning within STRIKE_WINDOW, each start's and end's (ms), or
+ * both counts when they differ.
+ */
+function spanChange(coupled: readonly ContactInterval[], free: readonly ContactInterval[]): string {
+    const [a, b] = [coupled.slice(0, strikeCount(coupled)), free.slice(0, strikeCount(free))];
+    if (a.length !== b.length) {
+        return `the count moved from ${a.length} to ${b.length}`;
+    }
+    return a.length === 0
+        ? "none"
+        : a
+              .map((i, k) => {
+                  const j = b[k] as ContactInterval;
+                  return `[${ms(j.start - i.start)}, ${ms(j.end - i.end)}]`;
+              })
+              .join(" ");
+}
+
+function sectionO(): void {
+    console.log(
+        "== O. The hands (design §7.6): C3S and C20S at gap 0 and C3D at 1 mm, each played as section E plays it, " +
+            "on each root of HANDS_ROOTS (label=path), each root's engine on its own root's world; a root labelled " +
+            "L-free is L's tree with the head free of the hands for the strike's first 5 ms (a throwaway copy: in " +
+            "src/engine/impact/integrate.ts the tracked drive's hand force and torque are zero while t < 5 ms). " +
+            "Per root and stroke: v2/U, w1/W, v2/w1, W/U and the energy; the speeds (m/s) and the read time; the " +
+            "face and ball–ball intervals within the strike (law time, ms from the impact's start); OPEN marks a " +
+            "strike not closed within the window (readTimeOf on both kinds of interval, for every root alike). " +
+            "Then, per L beside L-free, free less coupled: each figure, and each interval's start and end (ms) ==",
+    );
+    if (HANDS_ROOTS === null) {
+        console.log("  not run: section O needs HANDS_ROOTS (label=path, comma-separated)");
+        return;
+    }
+    const played = new Map<string, readonly HandsRun[]>();
+    for (const { label, root, fit } of HANDS_ROOTS) {
+        console.log(`-- ${label} (${root}) --`);
+        const strokeRuns = HANDS_STROKES.map((name) => handsRun(fit, name));
+        played.set(label, strokeRuns);
+        HANDS_STROKES.forEach((name, i) => {
+            const { figures, read, face, pair, open } = strokeRuns[i] as HandsRun;
+            const stroke = filmed(name);
+            console.log(
+                `${name} (${stroke.preset}, U ${fmt(stroke.malletSpeed)} m/s, gap ${mm(stroke.gap)} mm)` +
+                    `${open ? " OPEN" : ""}: v2/U ${fmt(figures.v2U)}, w1/W ${fmt(figures.w1W)}, v2/w1 ` +
+                    `${fmt(figures.v2w1)}, W/U ${fmt(figures.WU)}, energy ${fmt(figures.energy)}`,
+            );
+            console.log(`  ${speedsText({ ...read, open })}`);
+            console.log(`  face intervals ${strikeSpans(face)} ms; ball–ball intervals ${strikeSpans(pair)} ms`);
+        });
+    }
+    console.log("-- the hands' effect: free less coupled --");
+    for (const { label } of HANDS_ROOTS) {
+        const coupled = played.get(label);
+        const free = played.get(`${label}-free`);
+        if (coupled === undefined || free === undefined) {
+            continue;
+        }
+        HANDS_STROKES.forEach((name, i) => {
+            const [c, f] = [coupled[i], free[i]] as [HandsRun, HandsRun];
+            const figures = HANDS_KEYS.map((k) => `${k} ${fmt(f.figures[k] - c.figures[k])}`).join(", ");
+            console.log(
+                `${label} ${name}: ${figures}; face intervals ${spanChange(c.face, f.face)} ms, ball–ball ` +
+                    `${spanChange(c.pair, f.pair)} ms${c.open || f.open ? " (OPEN in either: not comparable)" : ""}`,
+            );
+        });
+    }
+}
+
+/** One threshold's section E output for section P: its label (mm), its path and its text. */
+interface ReachInput {
+    readonly label: string;
+    readonly path: string;
+    readonly text: string;
+}
+
+/** Reads the text file at `path` (tsx runs under Node; the project has no Node types). */
+async function readText(path: string): Promise<string> {
+    const specifier = "node:fs";
+    const fs = (await import(/* @vite-ignore */ specifier)) as {
+        readFileSync(path: string, encoding: "utf8"): string;
+    };
+    return fs.readFileSync(path, "utf8");
+}
+
+/**
+ * Section P's inputs (design §7.9): P_INPUTS, `mm=path` comma-separated, each a section E output from the tree whose
+ * laws were re-set at that threshold; null when section P does not run or P_INPUTS is absent.
+ */
+async function loadReachInputs(): Promise<readonly ReachInput[] | null> {
+    const value = process.env.P_INPUTS;
+    if (!running("P") || value === undefined) {
+        return null;
+    }
+    return Promise.all(
+        labelled("P_INPUTS", value).map(async ({ label, value: path }) => ({
+            label,
+            path,
+            text: await readText(path),
+        })),
+    );
+}
+
+const REACH_INPUTS = await loadReachInputs();
+
+/** A touching stop's E.0 line: its name, OPEN if so, the judged figures' text and the verdict. */
+const TOUCHING_LINE = /^(C3S|C20S)( OPEN)?: (.*): (pass|miss)$/;
+
+/** One judged figure in an E.0 line: its key, value and verdict. */
+const BAND_PART = /(v2U|w1W|v2w1) (-?[\d.]+) \(row [^)]*\) (pass|miss)/g;
+
+/** One mean in an E.3 line: its key, value, Gugan's value, his sem and the verdict. */
+const MEAN_PART = /(v2U|w1W|v2w1) (-?[\d.]+) against (-?[\d.]+) ± ([\d.]+) \([^)]*\): (pass|miss)/g;
+
+/** The two E.3 lines: the eight gapped strokes' means and all ten's. */
+const MEAN_SETS = ["the eight gapped strokes", "all ten strokes"] as const;
+
+/** Section E's verdicts on criteria 3 and 4 as one input carries them. */
+interface ReachVerdicts {
+    readonly touching: readonly { readonly name: string; readonly pass: boolean; readonly text: string }[];
+    readonly means: readonly { readonly set: string; readonly pass: boolean; readonly text: string }[];
+    /** Every judged figure, the touching stops' and the means', each named by its stroke or set and its key. */
+    readonly figures: readonly { readonly label: string; readonly value: string; readonly pass: boolean }[];
+}
+
+/**
+ * `input`'s E.0 and E.3 verdicts; throws naming the file when a touching stop's line or a means line is missing or
+ * lacks its three figures.
+ */
+function reachVerdictsOf(input: ReachInput): ReachVerdicts {
+    const lines = input.text.split("\n");
+    const figures: { label: string; value: string; pass: boolean }[] = [];
+    const touching = ["C3S", "C20S"].map((name) => {
+        const match = lines.map((l) => TOUCHING_LINE.exec(l)).find((m) => m !== null && m[1] === name);
+        if (match === undefined || match === null) {
+            throw new RangeError(`section P: ${input.path} has no E.0 line for ${name}`);
+        }
+        const parts = [...(match[3] as string).matchAll(BAND_PART)];
+        if (parts.length !== MEAN_KEYS.length) {
+            throw new RangeError(`section P: ${input.path}'s E.0 line for ${name} lacks its three figures`);
+        }
+        for (const p of parts) {
+            figures.push({ label: `${name} ${p[1] as string}`, value: p[2] as string, pass: p[3] === "pass" });
+        }
+        const open = match[2] !== undefined;
+        return { name, pass: match[4] === "pass" && !open, text: `${open ? "OPEN; " : ""}${match[3] as string}` };
+    });
+    const means = MEAN_SETS.map((set) => {
+        const line = lines.find((l) => l.startsWith(`${set} (`));
+        const parts = line === undefined ? [] : [...line.matchAll(MEAN_PART)];
+        if (line === undefined || parts.length !== MEAN_KEYS.length) {
+            throw new RangeError(`section P: ${input.path} has no E.3 line for ${set} with its three means`);
+        }
+        for (const p of parts) {
+            figures.push({ label: `${set} ${p[1] as string}`, value: p[2] as string, pass: p[5] === "pass" });
+        }
+        const counted = /\((\d+) counted/.exec(line)?.[1] ?? "?";
+        return {
+            set,
+            pass: parts.every((p) => p[5] === "pass"),
+            text:
+                `${counted} counted: ` +
+                parts.map((p) => `${p[1] as string} ${p[2] as string} (${p[5] as string})`).join(", "),
+        };
+    });
+    return { touching, means, figures };
+}
+
+/** The figures of `here` whose verdict differs from `base`'s, each with both values; "none" if none does. */
+function movedFigures(here: ReachVerdicts, base: ReachVerdicts): string {
+    const moved = here.figures.flatMap((f) => {
+        const b = base.figures.find((g) => g.label === f.label);
+        return b === undefined || b.pass === f.pass
+            ? []
+            : [`${f.label} ${verdict(b.pass)} to ${verdict(f.pass)} (${b.value} to ${f.value})`];
+    });
+    return moved.length === 0 ? "none" : moved.join(", ");
+}
+
+function sectionP(): void {
+    console.log(
+        "== P. The camera threshold's reach (design §7.9): VISIBLE_SHIFT is 0.2 mm, Gugan 4's resolution on paper. " +
+            "The thresholds read are exactly those P_INPUTS names (mm=path), each a section E output from a " +
+            "throwaway copy whose laws I.0 re-set at that threshold (SHIFT), the video's clock from first touch " +
+            "(gate stage 1's ruling A1); a threshold I.0 could not convert has no E run and no line here. Per " +
+            "threshold: criterion 3, C3S and C20S at gap 0 each within its touchingBand (E.0); criterion 4, " +
+            "the three means within Gugan's sem over the eight gapped strokes and over all ten (E.3). Criterion 2 " +
+            "is not re-judged here: I.0 at each threshold prints its Table 1 misses. The adopted laws stay those set " +
+            "at 0.2 mm ==",
+    );
+    if (REACH_INPUTS === null) {
+        console.log("  not run: section P needs P_INPUTS (mm=path, comma-separated, section E outputs)");
+        return;
+    }
+    const judged = REACH_INPUTS.map((input) => ({ input, verdicts: reachVerdictsOf(input) }));
+    for (const { input, verdicts } of judged) {
+        console.log(`-- ${input.label} mm (${input.path}) --`);
+        for (const t of verdicts.touching) {
+            console.log(`  criterion 3, ${t.name}: ${verdict(t.pass)}: ${t.text}`);
+        }
+        for (const m of verdicts.means) {
+            console.log(`  criterion 4, ${m.set}: ${verdict(m.pass)}: ${m.text}`);
+        }
+    }
+    const base = judged.find((j) => Math.abs(Number(j.input.label) * 1e-3 - VISIBLE_SHIFT) < 1e-12);
+    console.log(
+        "-- the reach: each threshold's verdicts beside VISIBLE_SHIFT's, and every judged figure whose verdict " +
+            "differs from 0.2 mm's --",
+    );
+    for (const { input, verdicts } of judged) {
+        const three = verdicts.touching.every((t) => t.pass);
+        const four = verdicts.means.every((m) => m.pass);
+        const same =
+            base === undefined
+                ? "no 0.2 mm input to compare"
+                : three === base.verdicts.touching.every((t) => t.pass) &&
+                    four === base.verdicts.means.every((m) => m.pass)
+                  ? "both as at 0.2 mm"
+                  : "MOVED from 0.2 mm";
+        const moved =
+            base === undefined || base.input === input
+                ? ""
+                : `; figures moved from 0.2 mm: ${movedFigures(verdicts, base.verdicts)}`;
+        console.log(
+            `${input.label} mm: criterion 3 (the touching stops) ${verdict(three)}, criterion 4 (the means) ` +
+                `${verdict(four)}; ${same}${moved}`,
+        );
+    }
+}
+
 const SECTIONS: Readonly<Record<string, () => void>> = {
     A: sectionA,
     B: sectionB,
@@ -2362,20 +3631,24 @@ const SECTIONS: Readonly<Record<string, () => void>> = {
     G: sectionG,
     H: sectionH,
     I: sectionI,
+    "I-old": sectionIOld,
     J: sectionJ,
     K: sectionK,
     L: sectionL,
     M: sectionM,
+    N: sectionN,
+    O: sectionO,
+    P: sectionP,
 };
 
-/** The sections `all` runs, in order: B, C and H only by name. */
-const ALL_SECTIONS: readonly string[] = ["A", "D", "E", "F", "G", "I", "J", "K", "L", "M"];
+/** The sections `all` runs, in order: B, C, H and I-old only by name. */
+const ALL_SECTIONS: readonly string[] = ["A", "D", "E", "F", "G", "I", "J", "K", "L", "M", "N", "O", "P"];
 
 if (SECTION !== "all" && SECTIONS[SECTION] === undefined) {
     throw new Error(`SECTION must be "all" or one of ${Object.keys(SECTIONS).join(", ")}`);
 }
 if (SECTION === "all") {
-    console.log(`== all: sections ${ALL_SECTIONS.join(", ")}; B, C and H only by name ==`);
+    console.log(`== all: sections ${ALL_SECTIONS.join(", ")}; B, C, H and I-old only by name ==`);
 }
 for (const name of SECTION === "all" ? ALL_SECTIONS : [SECTION]) {
     (SECTIONS[name] as () => void)();

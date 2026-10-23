@@ -1,21 +1,27 @@
 import { describe, expect, it } from "vitest";
-import { faceHalfHeight } from "../../src/engine/impact/shape";
 import { simulateShot } from "../../src/engine/shot";
-import { headShapeOf, stanceLean } from "../../src/engine/swing/buildContact";
 import { defaultProfile } from "../../src/engine/swing/profile";
 import type { ShotSetup } from "../../src/engine/swing/types";
 import { BALL_IDS, type BallState, type ShotResult, type World } from "../../src/engine/types";
 import { defaultWorld } from "../../src/engine/world";
 import { length, sub } from "../../src/engine/math/vec3";
+import { FILMED_STROKES } from "../../scripts/filmedStrokes";
 import { OPEN_LAWN, OPEN_START, haltedText, openWorld, opened } from "../../scripts/openLawn";
 import {
+    ALL_STROKES,
     BOUNDS,
+    GAPPED_STROKES,
+    READ_DELAY,
+    STRIKE_WINDOW,
     TODAY,
     effectiveMassOf,
+    filmedStrokeRuns,
     fitSetup,
     fitWorld,
     guganSetup,
     gugansMallet,
+    leanOf,
+    meansOf,
     ratioOf,
     ratiosAt,
     readOut,
@@ -30,17 +36,6 @@ import { canonicalSetup, strokeFor } from "./support/shot";
 const SLOW = Boolean(import.meta.env.SLOW_TESTS);
 
 const WORLD = defaultWorld();
-
-/** The stance's shaft lean (rad) at `setup`'s contact, with its own mallet. */
-function leanOf(setup: ShotSetup): number {
-    const { stroke, profile } = setup;
-    const stance = profile.stance[stroke.type];
-    return stanceLean(stance.handsAhead, stance.top, stroke.contact.up, {
-        ballRadius: WORLD.ball.radius,
-        headLength: profile.mallet.headLength,
-        faceHalfHeight: faceHalfHeight(headShapeOf(profile.mallet.head)),
-    });
-}
 
 /** The default world with a ball ten times as heavy. */
 function heavyBallWorld(): World {
@@ -219,16 +214,25 @@ describe("the read-out (P2b.2b.2c.2b design §5.2, §8.1)", () => {
         expect(r.time).toBe(2e-3);
         expect([r.U, r.W, r.w1, r.v2]).toEqual([3, -1, 4, 8]);
     });
-    it("gives the canonical drive's speeds as the brainstorm measured them, at gap 0 and no push", () => {
-        // Design "Why this step": 3 m/s, guideEffort 0 — striker 1.618, croqueted 3.763, mallet 0.80 m/s, read as the
-        // ball leaves the face (≈1.5 ms): the first step after the last face interval ends.
+    it("gives the canonical drive's speeds on the Table 1 and 2 laws, at gap 0 and no push", () => {
+        // History: the squeeze design's "Why this step" measured, at 3 m/s and guideEffort 0, striker 1.618, croqueted
+        // 3.763, mallet 0.80 m/s, read as the ball leaves the face (≈1.5 ms): the first step after the last face
+        // interval ends. P2b.2b.2c.2c: the face's
+        // T(U) re-set on Gugan 4's Table 2 (was 1.618, 3.763 and 0.8 m/s, one face interval): the quicker face lets go
+        // of the striker's ball at 0.86 ms, before the balls part at 1.135 ms, and taps it again 0.985–2.075 ms, as the
+        // film's double tap; read as the ball leaves at 2.08 ms, striker 1.2333, croqueted 3.6396, mallet 1.0011 m/s.
+        // P2b.2b.2c.2c: the ball–ball contact time set from Table 1 (was two face intervals; 1.2333, 3.6396 and 1.0011
+        // m/s): the quicker ball–ball contact parts the balls at 0.950 ms, before the face lets go at 1.045 ms, so the
+        // face meets the striker's ball once; read as the ball leaves at 1.05 ms, striker 1.3919, croqueted 3.7663,
+        // mallet 0.8827 m/s.
         const r = readOut(guganSetup("drive", 3, 0, { guideEffort: 0 }), WORLD);
         const face = r.impact.timeline["face/blue"] ?? [];
         const end = face[face.length - 1]?.end ?? Infinity;
         const leaving = r.samples.find((s) => s.t > end);
-        expect(leaving?.w1).toBeCloseTo(1.618, 2);
-        expect(leaving?.v2).toBeCloseTo(3.763, 2);
-        expect(leaving?.head).toBeCloseTo(0.8, 1);
+        expect(face).toHaveLength(1);
+        expect(leaving?.w1).toBeCloseTo(1.3919, 4);
+        expect(leaving?.v2).toBeCloseTo(3.7663, 4);
+        expect(leaving?.head).toBeCloseTo(0.8827, 4);
         // The read-out's own, 1 ms after the last contact (2.5 ms): the croqueted ball skids on the turf with no
         // forward roll yet, and the turf's sliding friction on it (about 3.5–3.9 N against aim, under a normal force
         // of about 7.2–8.1 N) slows it by about 0.008 m/s; the striker's ball and the mallet barely change. The
@@ -236,13 +240,15 @@ describe("the read-out (P2b.2b.2c.2b design §5.2, §8.1)", () => {
         // croqueted ball into the turf about 2 % harder (−0.01803 against −0.01764 N·s). It leaves 6e-5 m/s slower
         // and the turf's larger friction takes 9e-5 m/s more by the read (v₂ 3.75479 before). The mallet leaves 5e-5
         // m/s slower (W 0.79048 before), through the face's friction on the striker's ball, whose motion the ball–ball
-        // pair's changed.
-        expect(r.time).toBeCloseTo(2.5e-3, 12);
-        expect(r.w1).toBeCloseTo(1.6175, 4);
-        // P2b.2b.2c.2b: the step convergence fix (was 3.7548).
-        expect(r.v2).toBeCloseTo(3.7546, 4);
-        // P2b.2b.2c.2b: the step convergence fix (was 0.7905).
-        expect(r.W).toBeCloseTo(0.7904, 4);
+        // pair's changed. P2b.2b.2c.2c: the face's T(U) re-set (was 2.5 ms; w₁ 1.6175, v₂ 3.7546, W 0.7904): the second
+        // tap ends at 2.075 ms, so the read is at 3.075 ms; the croqueted ball, skidding, loses 0.0104 m/s to the turf
+        // by then, and the striker's ball and the mallet barely change. P2b.2b.2c.2c: the ball–ball contact time set
+        // (was 3.075 ms; w₁ 1.233, v₂ 3.6292, W 1.0012): the one face interval ends at 1.045 ms, so the read is at
+        // 2.045 ms; the croqueted ball loses 0.0082 m/s to the turf by then.
+        expect(r.time).toBeCloseTo(2.045e-3, 12);
+        expect(r.w1).toBeCloseTo(1.3913, 4);
+        expect(r.v2).toBeCloseTo(3.7581, 4);
+        expect(r.W).toBeCloseTo(0.8829, 4);
     });
 });
 
@@ -253,7 +259,7 @@ describe("Gugan's mallet (design 'My calls', §8.1)", () => {
             const before = structuredClone(defaultProfile.mallet);
             const setup = guganSetup(type, 3, 0, { gugan: true });
             expect(Math.abs(effectiveMassOf(setup, WORLD) - 2.3 * WORLD.ball.mass)).toBeLessThanOrEqual(1e-6);
-            expect(leanOf(setup)).toBeCloseTo(leanOf(canonicalSetup(type)), 12);
+            expect(leanOf(setup, WORLD)).toBeCloseTo(leanOf(canonicalSetup(type), WORLD), 12);
             expect(defaultProfile.mallet).toEqual(before);
         }
     }, 150_000);
@@ -282,5 +288,40 @@ describe("the fit's entry points (P2b.2b.2c.2's final review)", () => {
         const p = { ...TODAY, armMass: BOUNDS.armMass[0] };
         const setup = fitSetup("drive", p, 3);
         expect(ratioOf(setup, runFit(setup, p, fitWorld(p)).motion)).not.toBe(ratiosAt(TODAY).drive);
+    });
+});
+
+describe("the read-out's tidy (P2b.2b.2c.2c design §10)", () => {
+    const I = (start: number, end: number) => ({ start, end });
+    /** A `filmedStrokeRuns` element with only the fields `meansOf` reads. */
+    const run = (name: string, v2U: number, open: boolean) =>
+        ({ stroke: { name }, read: { open }, figures: { v2U, w1W: v2U, v2w1: v2U } }) as unknown as ReturnType<
+            typeof filmedStrokeRuns
+        >[number];
+    it("flags a strike whose ball–ball contact is still open at the window's end", () => {
+        expect(readTimeOf([I(0, 8e-4)], [I(5e-4, 16e-3)]).open).toBe(true);
+    });
+    it("averages over exactly the named strokes, and throws for one not counted", () => {
+        const runs = [run("C1D", 1.1, false), run("C3D", 1.2, false), run("C3S", 9, true)];
+        expect(meansOf(runs, ["C1D", "C3D"]).v2U).toBeCloseTo(1.15, 12);
+        expect(() => meansOf(runs, ["C1D", "C3S"])).toThrow(/C3S/);
+        expect(() => meansOf(runs, ["C1D", "B4GS"])).toThrow(/B4GS/);
+    });
+    it("holds the eight gapped strokes and all ten by name", () => {
+        expect(GAPPED_STROKES).toEqual(FILMED_STROKES.filter((s) => s.gap > 0).map((s) => s.name));
+        expect(ALL_STROKES).toEqual(FILMED_STROKES.map((s) => s.name));
+    });
+});
+
+describe("the strike's window (P2b.2b.2c.2c design §7.7)", () => {
+    const I = (start: number, end: number) => ({ start, end });
+    it("counts a contact beginning at the window's end, and not one beginning after it", () => {
+        const atEnd = readTimeOf([I(0, 8e-4), I(STRIKE_WINDOW, STRIKE_WINDOW + 1e-4)], []);
+        expect(atEnd.time).toBeCloseTo(STRIKE_WINDOW + 1e-4 + READ_DELAY, 15);
+        // The counted contact begins at the window's end and ends after it, so the strike is still open.
+        expect(atEnd.open).toBe(true);
+        const after = readTimeOf([I(0, 8e-4), I(STRIKE_WINDOW + 1e-9, 0.02)], []);
+        expect(after.time).toBeCloseTo(8e-4 + READ_DELAY, 15);
+        expect(after.open).toBe(false);
     });
 });

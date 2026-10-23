@@ -1,7 +1,14 @@
 /**
  * Public API of the croquet physics engine. The planner and renderer import from here only.
  */
-export { judgeFaults, type FaultReport, type Finding, type StrokeContext } from "./faults";
+export {
+    judgeFaults,
+    PARTING_BREAK,
+    type FaultReport,
+    type Finding,
+    type StrikeTaps,
+    type StrokeContext,
+} from "./faults";
 export { judgeHoopRun, type HoopRunVerdict, type HoopTarget } from "./hoopRun";
 export { simulateImpact } from "./impact/simulateImpact";
 export type {

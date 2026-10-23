@@ -225,7 +225,10 @@ describe("the face fits", () => {
     it("give Gugan's e and T at the ends of the range", () => {
         expect(faceRestitutionAt(0.5)).toBeCloseTo(0.854, 3);
         expect(faceRestitutionAt(6)).toBeCloseTo(0.793, 3);
-        expect(faceContactTimeAt(2.19)).toBeCloseTo(0.97e-3, 9);
+        // P2b.2b.2c.2c: T(U) re-anchored on Gugan 4's Table 2 A2D, 0.579 ms at 3.26 m/s, q kept (was 0.97 ms at 2.19
+        // m/s, Gugan 2000's anchor): at 2.19 m/s the new fit gives 0.6345 ms.
+        expect(faceContactTimeAt(2.19)).toBeCloseTo(6.345025e-4, 9);
+        expect(faceContactTimeAt(3.26)).toBeCloseTo(5.790225e-4, 9);
         expect(FACE_SPEED_MIN).toBe(0.5);
         expect(FACE_SPEED_MAX).toBe(6);
     });

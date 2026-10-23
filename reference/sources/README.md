@@ -618,7 +618,7 @@ gridlines (x = 205.5 and 618.5 px, so 20.65 px a frame, frame 0 at 102.25 px), r
 The two agree within 0.1 frame everywhere. C1D's first heavy line ends at 6.5 frames and a light line runs on to the
 second contact at 12.8 (the caption's shadow); `FIG4_TIMING` holds 6.5 as its first contact's end.
 
-### Gugan 4, Table 1 and Table 2: the free collisions and the face (`FREE_COLLISIONS`, `SINGLE_BALL_FACE`)
+### Gugan 4, Table 1 and Table 2: the free collisions and the face (`FREE_COLLISIONS`, `TABLE2_FACE`)
 
 Table 1, "Data for ball on ball collisions from HSAVI scatter-shots, series B. N.b. (i), The half-shaded columns
 indicate double-taps, leading to low values of L2/L1 in row 3." Columns B4GS, B3GS, B7MS, B6MS, B3MS, B4MS, B5MS;
@@ -641,9 +641,26 @@ spacing (row 1) 33, 13, 13, 33, 13, 33, 33 mm:
   e = 0.72. That 0.72 is the seven-stroke mean: row 8 sums to 6.01, 6.01/7 = 0.859, and (A7), v2 = v1(1 + e)/2, gives
   e ≈ 0.717. For context only, not held: the three clean strokes' own e = 2·v2/v1 − 1 from rows 6 and 7 are 0.653,
   0.769 and 0.709, the scatter about that mean.
-- Table 2, "Data for horizontal motion of ball in single-ball drives", column A2D: row 4 "Duration of contact, Τh, ms
-  (± 0.1 ms)" 0.75; row 7 "Mallet speed before impact, U, m/s" 3.26. `SINGLE_BALL_FACE` holds them.
 - The frame rate, §2: "images taken at a rate of 8000 per second (125 microseconds/frame)". `VIDEO_FRAME` is 1/8000 s.
+
+Table 2, "Data for horizontal motion of ball in single-ball drives", re-read 2026-10-22 from a fresh fetch whose digest
+equals the one recorded above. Its columns A1D–A4D; the rows `TABLE2_FACE` holds, verbatim as printed (row 4 in ms;
+`filmedStrokes.ts` holds it in s):
+
+| Row | Heading | A1D | A2D | A3D | A4D | Field |
+|---|---|---|---|---|---|---|
+| 4 | Duration of contact, Τh, ms (± 0.1 ms) | 1.00 | 0.75 | 0.60 | 0.60 | `contactTime` |
+| 7 | Mallet speed before impact, U, m/s | 0.76 | 3.26 | 5.70 | 8.54 | `speed` |
+| 8 | Mallet speed after impact, V, m/s | 0.41 | 1.53 | 2.72 | 4.02 | `malletAfter` |
+| 9 | Ball speed after impact, v, m/s | 0.97 | 4.22 | 6.70 | 10.03 | `ballAfter` |
+
+- `SINGLE_BALL_FACE` is A2D's rows 7 and 4, the column the face's law is anchored on; A1D, A3D and A4D are held out.
+- A4D's v, §5: "the difference in ball speed v for A4D (10.03 m/s here, 8.62 m/s in TEXT) is significant"; the
+  table's 10.03 is held. Row 13, "Ratio, (v - V)/U, ( = e)", 0.74, 0.82, 0.70, 0.70, is printed, not held.
+- The caveat, §5.2, in full: "Even at 8000 frames per second the duration of contact is hard to measure because of lack
+  of a clear view at the points of contact and separation, cf. figure 1(b) . The initial contact can be identified by
+  the first slight movement of the ball, but its end is often uncertain to a frame or two". `TABLE2_CAVEAT` holds it
+  as the design quotes it, elided between its first clause and its last.
 
 ### `VISIBLE_SHIFT`: the video's visibility threshold
 
@@ -671,3 +688,63 @@ applied: it gives no figure.
 - The balls: "The balls were Dawson 'Internationals' ... the makers report that under the standard bounce test '…
   International balls rebound … 35½" – 36" …' (Bryan Dawson, private communication) corresponding to a CoR, e = 0 .772
   ± 0.003" (the space in "0 .772" is the page's).
+
+## P2b.2b.2c.2c: the contact laws (design §2, §4, §5.3, §6)
+
+The sources behind the face's and the ball–ball contact laws, the search's candidates and the release check. Fetched
+2026-10-22, each twice, with `curl -sSLk --compressed`; nothing fetched is committed. An Oxford Croquet page's raw
+bytes differ between fetches only in its view counter (for Cross: "Views: 207" then "Views: 208"), so its digest is of
+the page with the counter line removed (`grep -vE ">(Views|Hits): [0-9]+<" page.html | shasum -a 256`); the two
+fetches then agree. The Laws PDF is hashed raw; its two fetches agree.
+
+| Short name | Work | URL | SHA-256 |
+|---|---|---|---|
+| Cross 2017 | Cross, "Physics of croquet", *European Journal of Physics* 38(1):014001 (2017; online 2016-10-25), doi 10.1088/0143-0807/38/1/014001 (the CA's copy) | https://oxfordcroquet.org/tech/cross1/ | `9b16082ef872f501a5bf8b7e77b82e6022319a80592a922d152977fb6255220d` (counter line removed) |
+| Sutherland 1995 | Sutherland, "Croquet Mechanics - A Numerical Analysis" (a 1995 report of computer modelling; the CA's copy, listed January 2021) | https://oxfordcroquet.org/tech/sutherland/ | `ec037ecf5c80e0fd527888c3ebfc65f2033b181585d1d92dcdfce271bab2c596` (counter line removed) |
+| Hall 1994 | Stan Hall, "When a Mallet Strikes a Ball" (1994) | https://oxfordcroquet.org/tech/hall/ | `fc29166ad675c241fce8ecc3ec75f91beb81da42687496a56a4f2c91ec1cddd0` (counter line removed) |
+| Plummer 2000 | Plummer, "Multiple Taps in Croquet Strokes - Electrical Conduction Tests" (2000) | https://oxfordcroquet.org/tech/multiple/ | `146921583e445265336b70e03645d63aadc860659440a9248d7de4a74276980d` (counter line removed) |
+| CA, Croquet Dynamics | the CA's "Croquet Dynamics", the CA team's reading of the film | https://oxfordcroquet.org/tech/video/ | `e1d46aa5b8c62cc57e06d5e731a1d0fb66181624dc5b63bdd4ffc1688f5680f1` (counter line removed) |
+| WCF Laws 2021 | World Croquet Federation, Laws of Association Croquet, 7th edition (February 2021), with the Official Rulings and Commentary (April 2021) | https://worldcroquet.org/wp-content/uploads/2021/04/Laws-Rulings-Commentary-combined-published-master-.pdf | `88aa26095b31cf1ce4da724d8c9bbcdfb0861c8c17a0980bf9d1301f266dab04` (raw) |
+
+Sutherland 1995's URL is not recorded in the design or the 2026-10-21 probes. It was found on the CA's technical index,
+https://oxfordcroquet.org/tech/, whose row "Croquet Mechanics - A Numerical Analysis" links `sutherland/`.
+
+### What each source gives the model
+
+- **Cross 2017** (§2.3): "there are effectively two separate collisions when k1 is significantly larger than k2"; the
+  three collisions otherwise "merge into one long collision, in which case the distribution of energy between the two
+  balls and the mallet depends on their relative stiffness." k1 is the face's stiffness and k2 the ball–ball's. His
+  values are assumed, not measured, and are not used.
+- **Sutherland 1995** (§2.3 context, not quoted by the design): "figures of contact times produced by the model are in
+  reasonable agreement with measurements made by Prof." (the sentence continues on the page); the mallet–ball impact
+  is "an extremely short impact time - a couple of milliseconds". Read for the contact times' order only.
+- **CA, Croquet Dynamics** (§5.3): "cases where balls started quite close to one another did not show double taps as
+  the mallet and strikers ball were still in contact when contact was made with the second ball."
+- **Plummer 2000** (§5.3): "Single ball strokes and most croquet strokes showed no sign of multiple contacts but
+  roll-shots indicated multiple contacts were taking place under the experimental conditions."; "2.65 volts was
+  applied to the face of the mallet through an 82K Ohm resistor from a low impedance source (NiCad batteries)." The
+  design's drive (1.3–1.4 ms) and stop (1.8–2.0 ms) contact times are the design's reading of the page, not re-checked
+  here.
+- **Hall 1994** (§5.3): "The time at which ball 2 moved away from ball 1 was fairly constant at about 1.8ms. The mallet
+  remained in contact with ball 1 for a further period of 1.1 ms on average."; "The contact time between mallet and
+  striker's ball exceeded the contact time between the balls for all except take-off strokes, the excess time being
+  about 1.1ms."
+- **WCF Laws 2021** (§6), not read again here; the design's quotes of Law 29.2.5 and the commentary at C29.11.1–C29.11.3
+  and C28.3.2 stand as quoted in §6.
+
+### The physics papers (not fetched; quoted from the 2026-10-22 research)
+
+Each is cited by what the design takes from it. DOIs are those Crossref returns for the citation on 2026-10-22.
+
+| Work | DOI | Used for |
+|---|---|---|
+| Jia, Mason and Erdmann, "Multiple impacts: A state transition diagram approach", *Int. J. Robotics Research* 32:84–114 (2013) | 10.1177/0278364912461539 | §2.3: the outcome "depends on the stiffness ratio k2/k1 but not on individual values of k1 and k2 ... It depends on the mass ratio m2/m1"; citing Brogliato (1999, pp. 306–307) |
+| Brogliato, *Nonsmooth Mechanics*, 2nd ed., Springer (1999) | not confirmed | §2.3: the source Jia et al. cite, pp. 306–307; not read |
+| Donahue, Hrenya, Zelinskaya and Nakagawa, "Newton's cradle undone: Experiments and collision models for the normal collision of three solid spheres", *Phys. Fluids* 20:113301 (2008) | 10.1063/1.3020444 | §2.3 (abstract only): a striker on a touching doublet differs qualitatively from a slightly separated one; "a three-body (soft-sphere) treatment is essential." |
+| Hinch and Saint-Jean, "The fragmentation of a line of balls by an impact", *Proc. R. Soc. A* 455:3201–3220 (1999) | 10.1098/rspa.1999.0447 | §2.3: "all the contacts are lost" under a linear law as under Hertz |
+| Herrmann and Seitz, "How does the ball-chain work?", *Am. J. Phys.* 50:977–981 (1982) | 10.1119/1.12936 | §2.3: the law's shape does not decide whether contacts open |
+| Schwager and Pöschel, "Coefficient of restitution and linear–dashpot model revisited", *Granular Matter* 9:465–469 (2007) | 10.1007/s10035-007-0065-z | §2.3: the pulling dashpot, which both laws clamp at zero force |
+| Hunt and Crossley, "Coefficient of Restitution Interpreted as Damping in Vibroimpact", *J. Appl. Mech.* 42:440–445 (1975) | 10.1115/1.3423596 | §4.2 candidate f: a dissipation that vanishes as the balls just touch |
+| Kuwabara and Kono, "Restitution Coefficient in a Collision between Two Spheres", *Jpn. J. Appl. Phys.* 26:1230 (1987) | 10.1143/jjap.26.1230 | §4.2 candidate f: the √δ damping form the face already uses |
+| Rosas, Romero, Nesterenko and Lindenberg, "Observation of Two-Wave Structure in Strongly Nonlinear Dissipative Granular Chains", *Phys. Rev. Lett.* 98:164301 (2007) | 10.1103/physrevlett.98.164301 | §4.2 candidate f: "A quasistatic precompression appears behind the primary pulse ... This precompression is due entirely to dissipation and does not exist at zero viscosity" |
+| Carretero-González, Khatri, Porter, Kevrekidis and Daraio, "Dissipative Solitary Waves in Granular Crystals", *Phys. Rev. Lett.* 102:024102 (2009) | 10.1103/physrevlett.102.024102 | §4.2 candidate f: measured bead damping is not a linear dashpot, an exponent "close to α = 1.75" |

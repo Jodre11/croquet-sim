@@ -70,7 +70,9 @@ describe("the integrator's timeline", () => {
         // 2 mm leaves the first face contact released before the wall closes. P2b.2b.2b.2a: Hertzian face (was face
         // [55, 680) µs and [1945, 2575) µs, wall [1140, 1930) µs between them, clearance after the first 0.950 mm):
         // face [55, 1095), [1980, 3065) and [3490, 4985) µs, wall [1320, 2115) and [2765, 3560) µs, clearance after
-        // the first 0.598 mm.
+        // the first 0.598 mm. P2b.2b.2c.2c: the face's T(U) re-set on Gugan 4's Table 2 (was the Hertzian face's
+        // above): face [55, 735) and [1955, 2615) µs, wall [1160, 1945) and [2570, 3355) µs, clearance after the first
+        // 0.927 mm.
         const wall: ImpactObstacle = {
             id: "wall",
             centre: vec3(R + 2e-3 + 10, 0, 0),
@@ -96,14 +98,19 @@ describe("the integrator's timeline", () => {
         );
         const faces = run.timeline["face/blue"] ?? [];
         // P2b.2b.2b.2a: Hertzian face (was 2): the longer face contact brings the head onto blue while blue is still
-        // on the wall, and blue, squeezed between them, leaves the wall again into a third tap.
-        expect(faces).toHaveLength(3);
-        const [first, second] = faces as [ContactInterval, ContactInterval, ContactInterval];
+        // on the wall, and blue, squeezed between them, leaves the wall again into a third tap. P2b.2b.2c.2c: the
+        // face's contact time re-set, 0.648 ms at 2 m/s against Gugan 2000's 0.99 ms (was 3): the first tap releases
+        // at 735 µs, not 1095 µs, and the second at 2615 µs, as blue meets the wall again at 2570 µs. Blue leaves the
+        // wall at 3355 µs back towards the head, and the run ends at 3605 µs with the two closing (impact-head-
+        // approaching), before a third tap.
+        expect(faces).toHaveLength(2);
+        const [first, second] = faces as [ContactInterval, ContactInterval];
         // The face plane reaches the ball during step 10 (gap / speed = 10.1 steps): the pair is closed from step 11.
         expect(first.start).toBe(11 * IMPACT_DT);
         // Clamped law: the force releases with δ = c·e·v/k still positive, which then closes at e·v: c/k later. The
         // Hertzian face's force √δ·(k·δ + c·δ′) releases at the same δ (P2b.2b.2b.2a), with the closure's k and c and
         // T the fit's at its closing speed. P2b.2b.2b.2a: Hertzian face (was 4.73 µs off): 4.18 µs off at 2 m/s.
+        // P2b.2b.2c.2c: the face's T(U) re-set (was 4.18 µs off): 2.99 µs off.
         const touch = probe.snapshots.flatMap((s) => s.contacts).find((c) => c.key === "face/blue");
         const speed = touch?.closingSpeed as number;
         const closure = closeFace(law, speed);

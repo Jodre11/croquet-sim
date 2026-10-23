@@ -237,7 +237,13 @@ describe("simulateShot", () => {
     // the striker's ball three times (0.0–1.4, 7.3–8.8 and 25.0–26.7 ms), and the ball rises at most 3.74 mm above R
     // at 26.0 ms. P2b.2b.2b.2b: continuous α (was 3.74 mm at 26.0 ms): 3.67 mm at 25.6 ms, the third interval
     // 24.7–26.4 ms. P2b.2b.2b.2b: posture-holding push (was 3.67 mm at 25.6 ms): 3.72 mm at 25.7 ms, the third interval
-    // 24.9–26.5 ms.
+    // 24.9–26.5 ms. P2b.2b.2c.2c: the face's re-set law (gate stage 2 to rule; was 3.72 mm at 25.7 ms): the quicker
+    // face lets go at 0.64 ms, before the balls part (0.57–1.37 ms), and taps the striker's ball four times (0.01–0.64,
+    // 1.94–2.85, 6.06–7.14 and 17.02–18.21 ms); it leaves the turf at 10.20 ms (turf-lift) and rises to 5.237 mm above
+    // R at 37.92 ms, past exit criterion 6's R + 5 mm. The bound is kept; the case fails until the gate rules.
+    // P2b.2b.2c.2c: the ball–ball contact time set from Table 1 (was it.fails, 5.237 mm at 37.92 ms): the balls part at
+    // 1.16 ms, not 1.37 ms, the face's taps 0.01–0.64, 1.57–2.50, 6.29–7.40 and 18.37–19.55 ms, and the striker's ball
+    // rises at most 3.938 mm above R at 30.01 ms.
     it("runs the half-roll canonical setup with no entry jump and no ball above R + 5 mm", () => {
         lowFlight("half-roll");
     });

@@ -424,7 +424,7 @@ export const READ_DELAY = 1e-3;
 /**
  * The read time (s): READ_DELAY after the latest end among the `face` and `ballBall` intervals that begin within
  * STRIKE_WINDOW of the first face interval's start; `open` when such a face interval has not ended by the window's
- * end. Throws a RangeError when the face never touched the ball.
+ * end, or such a face or ball–ball interval has not. Throws a RangeError when the face never touched the ball.
  */
 export function readTimeOf(
     face: readonly Pick<ContactInterval, "start" | "end">[],
@@ -438,7 +438,7 @@ export function readTimeOf(
     const within = (i: Pick<ContactInterval, "start" | "end">): boolean => i.start <= closes;
     const counted = [...face.filter(within), ...ballBall.filter(within)];
     const last = Math.max(...counted.map((i) => i.end));
-    return { time: last + READ_DELAY, open: face.filter(within).some((i) => i.end > closes) };
+    return { time: last + READ_DELAY, open: counted.some((i) => i.end > closes) };
 }
 
 /**
@@ -582,7 +582,7 @@ const HEAD_BISECTIONS = 60;
 const LEAN_TOLERANCE = 1e-12;
 
 /** The stance's shaft lean (rad) at `setup`'s contact with its own mallet, on a ball of `world`'s radius. */
-function leanOf(setup: ShotSetup, world: World): number {
+export function leanOf(setup: ShotSetup, world: World): number {
     const { stroke, profile } = setup;
     const stance = profile.stance[stroke.type];
     return stanceLean(stance.handsAhead, stance.top, stroke.contact.up, {
@@ -610,9 +610,25 @@ const HEAD_PASSES = 4;
  * the stroke inside every halving would cost about 50 s a preset. canonicalSetup re-leans the stance for the mallet;
  * this checks that the lean is the default's, and does not undo it. Throws a RangeError naming the preset and both
  * ends' effective masses when the target lies outside them (the first pass's, on the default mallet's stroke), never
- * returning an end; one when the passes end without a repeat; and one when the lean moved.
+ * returning an end; one when the passes end without a repeat; and one when the lean moved. Each (world, type, speed) is
+ * solved once (about 11 s a solve), and the same mallet is returned thereafter.
  */
 export function gugansMallet(type: StrokeType, speed: number, world: World = defaultWorld()): SwingProfile["mallet"] {
+    const cache = guganMallets.get(world) ?? new Map<string, SwingProfile["mallet"]>();
+    guganMallets.set(world, cache);
+    const key = `${type}/${speed}`;
+    const cached = cache.get(key);
+    if (cached !== undefined) {
+        return cached;
+    }
+    const mallet = solveGugansMallet(type, speed, world);
+    cache.set(key, mallet);
+    return mallet;
+}
+
+const guganMallets = new WeakMap<World, Map<string, SwingProfile["mallet"]>>();
+
+function solveGugansMallet(type: StrokeType, speed: number, world: World): SwingProfile["mallet"] {
     const base = defaultProfile.mallet;
     const setupWith = (headMass: number): ShotSetup => canonicalSetup(type, { world, mallet: { ...base, headMass } });
     const target = GUGAN_EFFECTIVE_MASS * world.ball.mass;
@@ -722,15 +738,30 @@ export function spreadOf(xs: readonly number[]): number {
     return Math.max(...xs) - Math.min(...xs);
 }
 
+/** The ten filmed strokes' names. */
+export const ALL_STROKES: readonly string[] = FILMED_STROKES.map((s) => s.name);
+
+/** The eight filmed strokes with a gap, the ones whose strike has a face-to-ball interval to read. */
+export const GAPPED_STROKES: readonly string[] = FILMED_STROKES.filter((s) => s.gap > 0).map((s) => s.name);
+
 /**
- * The mean of v₂/U, w₁/W and v₂/w₁ over `runs`' counted strokes, those whose strike closed within its window. Throws a
- * RangeError when none did.
+ * The mean of v₂/U, w₁/W and v₂/w₁ over exactly the strokes `names`. Throws a RangeError naming any of them that is
+ * absent from `runs` or whose strike did not close within its window, and when `names` is empty.
  */
-export function meansOf(runs: ReturnType<typeof filmedStrokeRuns>): { v2U: number; w1W: number; v2w1: number } {
-    const counted = runs.filter((r) => !r.read.open);
-    if (counted.length === 0) {
-        throw new RangeError("meansOf: no filmed stroke closed within the strike's window");
+export function meansOf(
+    runs: ReturnType<typeof filmedStrokeRuns>,
+    names: readonly string[],
+): { v2U: number; w1W: number; v2w1: number } {
+    if (names.length === 0) {
+        throw new RangeError("meansOf: no filmed stroke named");
     }
+    const counted = names.map((name) => {
+        const found = runs.find((r) => r.stroke.name === name);
+        if (found === undefined || found.read.open) {
+            throw new RangeError(`meansOf: ${name} is ${found === undefined ? "absent" : "open"}, so not counted`);
+        }
+        return found;
+    });
     const mean = (f: (r: (typeof counted)[number]) => number): number =>
         counted.reduce((sum, r) => sum + f(r), 0) / counted.length;
     return {

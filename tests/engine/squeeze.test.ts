@@ -1,8 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { lawFromContactTime } from "../../src/engine/impact/contactLaw";
+import {
+    closeFace,
+    faceContactTimeAt,
+    faceRestitutionAt,
+    lawFromContactTime,
+    lnRestitution,
+} from "../../src/engine/impact/contactLaw";
 import { defaultWorld } from "../../src/engine/world";
-import { VIDEO_FRAME } from "../../scripts/filmedStrokes";
-import { freeCollision } from "../../scripts/squeeze";
+import { FREE_COLLISIONS, VIDEO_FRAME } from "../../scripts/filmedStrokes";
+import { ballBallTimeFor, cameraIntervals, faceScaleFor, freeCollision, freeFace } from "../../scripts/squeeze";
 
 const WORLD = defaultWorld();
 
@@ -14,20 +20,161 @@ describe("the free-collision harness (P2b.2b.2c.2b design §4.1 test 4)", () => 
             expect(Math.abs(freeCollision(speed, today, { dt: 1e-7 }).restitution - 0.72)).toBeLessThanOrEqual(0.02);
         }
     });
-    // A finding for the gate, kept failing until the law changes: today's law, whose own contact lasts 0.75 ms, is
-    // timed by the video at 0.53 ms at 1.90 m/s and 0.61 ms at 7.64 m/s (dt 1e-7 s), more than a frame short of
-    // Table 1's 0.75 ms. The struck ball has moved VISIBLE_SHIFT only about 0.4 ms in at 1.90 m/s, and the pair's gap
-    // reaches it about 0.2 ms after the release; the faster stroke crosses both sooner. VISIBLE_SHIFT stays Gugan's.
-    it.fails("plays today's ball–ball law to Gugan's Table 1's 0.75 ms within a frame, as the video times it", () => {
-        for (const speed of [1.9, 7.64]) {
-            expect(Math.abs(freeCollision(speed, today, { dt: 1e-7 }).videoTime - 7.5e-4)).toBeLessThanOrEqual(
-                VIDEO_FRAME,
-            );
+    // P2b.2b.2c.2c: the ball–ball contact time set from Table 1 (was it.fails: the old law, its parameter 0.75 ms, read
+    // 0.53–0.61 ms on video from the struck ball's first visible move). The video's clock now starts at first touch, as
+    // Gugan 4's Fig. 4 times every event from the first contact (gate stage 1's ruling), and the law's parameter,
+    // 0.551 ms, is ballBallTimeFor's least largest miss: 0.844, 0.679 and 0.656 ms at 1.90, 5.54 and 7.64 m/s, each
+    // within a frame. VISIBLE_SHIFT stays Gugan's. e is held twice: the law's own, from its k and c, is Table 1's 0.72
+    // to 1e-9 (the clamped law's restitution is exact); the harness's, measured at dt 1e-7 s, carries the step's error
+    // (up to 3.2e-5 at these speeds, 4e-6 at dt 1e-8 s), so it is held to 1e-4.
+    it("plays the landed ball–ball law to Gugan's Table 1's 0.75 ms within a frame, as the video times it", () => {
+        const massEff = WORLD.ball.mass / 2;
+        const zeta = today.damping / (2 * Math.sqrt(today.stiffness * massEff));
+        expect(Math.abs(Math.exp(lnRestitution(zeta)) - 0.72)).toBeLessThanOrEqual(1e-9);
+        for (const { speed, restitution, contactTime } of FREE_COLLISIONS) {
+            const r = freeCollision(speed, today, { dt: 1e-7, start: "arrival" });
+            expect(Math.abs(r.videoTime - contactTime)).toBeLessThanOrEqual(VIDEO_FRAME);
+            expect(Math.abs(r.restitution - restitution)).toBeLessThanOrEqual(1e-4);
         }
     });
     it("reports the law's own contact time beside the video's", () => {
         // The pair's closed interval, as analytic.test.ts counts it, within one step of 1e-7 s.
         const law = lawFromContactTime(WORLD.ball.mass / 2, 0.72, 7.5e-4, 0);
-        expect(Math.abs(freeCollision(1.9, law, { dt: 1e-7 }).contactTime - 7.5e-4)).toBeLessThanOrEqual(1e-7);
+        expect(Math.abs(freeCollision(1.9, law, { dt: 1e-7 }).forceTime - 7.5e-4)).toBeLessThanOrEqual(1e-7);
+    });
+});
+
+describe("the conversion harnesses (P2b.2b.2c.2c design §2, §5.3)", () => {
+    const today = lawFromContactTime(WORLD.ball.mass / 2, 0.72, WORLD.ballBallContactTime, 0);
+    it("times today's law's force for its contact time, the penetration a little longer", () => {
+        // The law's parameter T (lawFromContactTime) is the force-on duration: the clamp releases the force while the
+        // penetration is still positive, and δ then closes at the separating speed, so the law time exceeds T.
+        const r = freeCollision(1.9, today, { dt: 1e-7 });
+        expect(Math.abs(r.forceTime - WORLD.ballBallContactTime)).toBeLessThanOrEqual(2e-7);
+        expect(r.forceTime).toBeLessThan(r.lawTime);
+    });
+    it("is today's to the bit with no shift given, and shorter on video with a larger one", () => {
+        // P2b.2b.2c.2c: on the law before conversion, its parameter Table 1's 0.75 ms (was WORLD's law): this tests the
+        // harness's shift option, not the landed law. On the landed 0.551 ms law, from the first visible move, a 0.4 mm
+        // threshold reads longer (0.3928 ms) than 0.2 mm (0.3833 ms): the larger shift delays the gap's reaching it
+        // more than the struck ball's first visible move.
+        const before = lawFromContactTime(WORLD.ball.mass / 2, 0.72, 7.5e-4, 0);
+        expect(freeCollision(1.9, before, { dt: 1e-7 })).toEqual(freeCollision(1.9, before, { dt: 1e-7, shift: 2e-4 }));
+        expect(freeCollision(1.9, before, { dt: 1e-7, shift: 4e-4 }).videoTime).toBeLessThan(
+            freeCollision(1.9, before, { dt: 1e-7 }).videoTime,
+        );
+    });
+    it("is today's to the bit with no start given", () => {
+        expect(freeCollision(1.9, today, { dt: 1e-7 })).toEqual(
+            freeCollision(1.9, today, { dt: 1e-7, start: "moved" }),
+        );
+    });
+    it("times from first touch longer than from the first move, by shift/v and the struck ball's lag", () => {
+        // The arrival start is (START_GAP − shift)/v and the first move's is the contact's start, START_GAP/v, plus the
+        // lag before the struck ball has moved VISIBLE_SHIFT; the end is the same. So the difference is shift/v plus
+        // that lag, and the ball moves visibly while the force is on, so the lag lies within the force-on time.
+        for (const speed of [1.9, 5.54, 7.64]) {
+            const moved = freeCollision(speed, today, { dt: 1e-7 });
+            const touch = freeCollision(speed, today, { dt: 1e-7, start: "arrival" });
+            const lag = touch.videoTime - moved.videoTime - 2e-4 / speed;
+            expect(lag).toBeGreaterThan(0);
+            expect(lag).toBeLessThan(moved.forceTime);
+            expect(touch.restitution).toBe(moved.restitution);
+        }
+    });
+    it("plays the face law alone to its own T(U) and e(U)", () => {
+        // A free head on a free ball is the law's central collision, whose force-on time and restitution are T(U) and
+        // e(U) (contactLaw.test.ts's free case), to the step and the clamp's restitution check. The clamp releases the
+        // force with δ = c·e·v/k still positive, which then closes c/k later, so the law time is T(U) + c/k
+        // (timeline.test.ts's identity); c/k is the same at any reduced mass, as k and c both scale with it.
+        const r = freeFace(3.26, { dt: 1e-8 });
+        const closure = closeFace({ mass: WORLD.ball.mass, friction: 0 }, 3.26);
+        expect(Math.abs(r.forceTime - faceContactTimeAt(3.26)) / faceContactTimeAt(3.26)).toBeLessThan(1e-3);
+        expect(
+            Math.abs(r.lawTime - (faceContactTimeAt(3.26) + closure.damping / closure.stiffness)),
+        ).toBeLessThanOrEqual(2e-8);
+        expect(Math.abs(r.restitution - faceRestitutionAt(3.26))).toBeLessThan(1e-4);
+        expect(r.clamped).toBe(false);
+    });
+    it("reports the clamp", () => {
+        // A4D's 8.54 m/s lies above the clamp's 6 m/s; A1D's 0.76 m/s within it.
+        expect(freeFace(0.76, { dt: 1e-8 }).clamped).toBe(false);
+        expect(freeFace(8.54, { dt: 1e-8 }).clamped).toBe(true);
+    });
+    it("finds the face's scale by Hertz similarity: scale 1 reproduces today's video time", () => {
+        const today = freeFace(3.26, { dt: 1e-8 }).videoTime;
+        expect(Math.abs(faceScaleFor(today, 3.26, { dt: 1e-8 }) - 1)).toBeLessThan(1e-3);
+    });
+    it("finds the face's scale from first touch: scale 1 reproduces today's video time on that start", () => {
+        const today = freeFace(3.26, { dt: 1e-8, start: "arrival" }).videoTime;
+        expect(Math.abs(faceScaleFor(today, 3.26, { dt: 1e-8, start: "arrival" }) - 1)).toBeLessThan(1e-3);
+    });
+    it("throws when the target lies outside the bracket", () => {
+        // A 1 µs video time needs a scale below the search's bracket.
+        expect(() => faceScaleFor(1e-6, 3.26)).toThrow(/outside/);
+    });
+    // The search plays 360 free collisions at 1e-7 s, about 19 s alone and up to 45 s in the full suite: the timeout
+    // is 4× the latter.
+    it("finds a ball–ball time whose video time is within a frame of 0.75 ms at all three speeds", () => {
+        const { time, misses } = ballBallTimeFor(7.5e-4);
+        expect(misses.every((m) => Math.abs(m) <= VIDEO_FRAME)).toBe(true);
+        // Gate A's trace put it near 0.93 ms; the bracket is wide, so this only guards a gross error.
+        expect(time).toBeGreaterThan(7.5e-4);
+        expect(time).toBeLessThan(1.2e-3);
+    }, 180_000);
+    it("finds a ball–ball time from first touch within a frame of 0.75 ms at all three speeds", () => {
+        // From first touch the video reads longer (by shift/v and the struck ball's lag), so the law is shorter: about
+        // 0.55 ms, misses about ±94 µs at dt 1e-7 s. The bounds only guard a gross error.
+        const { time, misses } = ballBallTimeFor(7.5e-4, { start: "arrival" });
+        expect(misses.every((m) => Math.abs(m) <= VIDEO_FRAME)).toBe(true);
+        expect(time).toBeGreaterThan(3.75e-4);
+        expect(time).toBeLessThan(7.5e-4);
+    }, 180_000);
+    it("throws when the ball–ball search runs into an end of its bracket", () => {
+        // At a 2 mm threshold the video cannot time a contact as short as 0.1 ms: the separating gap alone takes about
+        // 0.24 ms longer than the struck ball's move to reach it at 1.90 m/s, so the search runs to its lower end. A
+        // coarse step (1e-6 s) keeps the test fast; its plateaus stall the search 0.4 % of the bracket short of the
+        // end.
+        expect(() => ballBallTimeFor(1e-4, { dt: 1e-6, shift: 2e-3 })).toThrow(/outside the bracket/);
+    });
+    it("samples the camera at 16 phases, a release unseen when the gap never shows on a frame", () => {
+        // The gap shows for 1 µs, from just after t = 0 to 1 µs, and the phases' frame times fall at 0 and then every
+        // VIDEO_FRAME / 16 (7.8 µs): no frame's first sample at or after it is the separated one, so every phase sees
+        // one unbroken contact.
+        const blink = [0, 1e-6, 2e-6, 2e-4].map((t, i) => ({ t, separation: i === 1 ? 3e-4 : 0 }));
+        expect(cameraIntervals(blink).length).toBe(16);
+        expect(cameraIntervals(blink).every((p) => p.length === 1)).toBe(true);
+    });
+    // Samples every 1 µs to 0.6 ms, touching except over [first, last] µs, where the gap shows. The gap opens after
+    // every phase's first two frames, so each phase has seen the contact before it.
+    const parting = (first: number, last: number) =>
+        Array.from({ length: 601 }, (_, i) => ({ t: i * 1e-6, separation: i >= first && i <= last ? 3e-4 : 0 }));
+    it("sees a release of half a frame on some phases and not others", () => {
+        // The gap shows over [300, 362] µs, half a frame. A phase sees it when one of its frames, 250 + k·7.8125 µs on
+        // the third, falls in (299, 362]: k 7 to 14, 8 phases of 16. The others see one unbroken contact.
+        const phases = cameraIntervals(parting(300, 362));
+        expect(phases.filter((p) => p.length === 2).length).toBe(8);
+        expect(phases.filter((p) => p.length === 1).length).toBe(8);
+    });
+    it("sees a release longer than a frame on every phase", () => {
+        // The gap shows over [300, 450] µs, longer than VIDEO_FRAME: every phase has a frame within it.
+        expect(cameraIntervals(parting(300, 450)).every((p) => p.length === 2)).toBe(true);
+    });
+});
+
+describe("the landed laws (P2b.2b.2c.2c design §2, §8.1)", () => {
+    // Today's e(3.26 m/s), captured before the face's contact time was re-set: e(U) is kept to the bit.
+    const E_TODAY_3_26 = 0.8145357485731356;
+
+    it("plays the landed face law alone to Table 2's A2D within its ± 0.1 ms, as the video times it", () => {
+        // Checks the similarity argument that set t0: on the landed law the free face reads 0.75 ms at VISIBLE_SHIFT,
+        // the video's clock starting at first touch. 2e-6 s is the harness's own agreement (dt 1e-8 s and the
+        // bisection); ± 0.1 ms is Table 2's.
+        const video = freeFace(3.26, { dt: 1e-8, start: "arrival" }).videoTime;
+        expect(Math.abs(video - 7.5e-4)).toBeLessThanOrEqual(1e-4);
+        expect(Math.abs(video - 7.5e-4)).toBeLessThanOrEqual(2e-6);
+    });
+    it("keeps e(U) to the bit", () => {
+        expect(faceRestitutionAt(3.26)).toBe(E_TODAY_3_26);
     });
 });
