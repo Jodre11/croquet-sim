@@ -2438,6 +2438,8 @@ rulings, in the user's words, are in the design's amendments. "Old → new" thro
 - **Reference data sourced in P2b** — coaching ratios, mallet values, stance and drive defaults, face-material
   friction/restitution, turf compliance.
 - **The balls' spin, shown in P4** (user, 2026-10-23: "not something you could see" on a real lawn) — a marking on
-  each ball (a cross reads under any spin from above; a circumference line hides some axes), its orientation
+  each ball (a cross reads under any spin from above; a circumference line hides some axes; the user's two-tone
+  ball, hemispheres in slightly different shades, keeps the ball's colour but, like the line, hides spin about the
+  axis through the two hemispheres' centres), its orientation
   integrated by the renderer from the engine's angular velocity, so the skid before a roll, a roll's turnover and
   spin about the vertical axis become visible. The engine already carries the spin; no physics change is needed.
