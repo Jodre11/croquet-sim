@@ -2376,7 +2376,9 @@ rulings, in the user's words, are in the design's amendments. "Old → new" thro
     test, not to fit:
     - the full roll is too close to the half roll and should lie nearer the pass roll: ratios 1.86 (full), 2.20
       (half) and 0.90 (pass); `swingProbe`'s 2–4 m/s sweep gives 1.86–2.19 (full), 2.02–2.28 (half) and 0.61–0.98
-      (pass); the full and pass rolls' pushes are still the profile's prototypes, a known miss;
+      (pass); the full and pass rolls' pushes are still the profile's prototypes, a known miss. The pass roll's
+      profile played dead straight (croqueted ball on the aim line) gives ratio 1.07, a full roll's figure: the user
+      suggests it "might be a convincing full roll", so the full roll may want the pass roll's stronger push;
     - the pass roll splits too much: with the canonical set-up's croqueted ball 20° off aim, the croqueted ball leaves
       19.0° to one side and the striker's ball 9.7° to the other, a split of 28.7°; at 10° off aim, 9.5° and 5.0°
       (14.5°, ratio 0.94). The split follows the set-up's angle; whether the striker's ball's share of it is right is
