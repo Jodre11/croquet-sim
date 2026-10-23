@@ -295,11 +295,11 @@ after the user: "the sensitivity of the filming equipment and the speed of the f
   exceeds it on at least one frame. Each tap's time is a frame count, reported as the range over the phases, at 0.2,
   0.4 and 0.6 mm (§7.9). A release the camera cannot see is reported as such, not as no release.
 - **Beside Plummer's and Hall's rows:** the law times, unsampled, with the force-on times beside them; their
-  electrical contact resolves 5 µs, and a contact is on while the surfaces touch. Plummer's circuit ran at 2.65 V through 82 kΩ. Air does not break down below
-  Paschen's minimum of about 330 V, and at 2.65 V current crosses a gap only by field emission or tunnelling, across
-  well under a micron even at a rough surface's peaks, so the circuit's threshold is touch itself (my reasoning; Hall
-  gives no voltage). Their own departures are recorded beside them instead: 0.02 mm of foil on the face and a graphite coat on Plummer's balls, a Permali face,
-  and carpet.
+  electrical contact resolves 5 µs, and a contact is on while the surfaces touch. Plummer's circuit ran at 2.65 V
+  through 82 kΩ. Air does not break down below Paschen's minimum of about 330 V, and at 2.65 V current crosses a gap
+  only by field emission or tunnelling, across well under a micron even at a rough surface's peaks, so the circuit's
+  threshold is touch itself (my reasoning; Hall gives no voltage). Their own departures are recorded beside them
+  instead: 0.02 mm of foil on the face and a graphite coat on Plummer's balls, a Permali face, and carpet.
 
 The laws' re-set (§2) keeps the unsampled video time: over a uniformly random frame phase the mean frame count equals
 it, so sampling widens the spread (Gugan's "uncertain to a frame or two", already in the ± 0.1 ms band) and moves no
@@ -561,3 +561,38 @@ T(U), `ballBallContactTime` and the default gap.
       to 0.8 m/s; (3) `ratioFit`'s canonical drive at gap 0 (w1 1.618 to 1.392, v2 3.763 to 3.766, head 0.80 to
       0.883); (4) the hands test's cap, moved from 12 to 9 ms (an input). Carried as an open defect: (5) the
       0.9 m/s full-roll handover throw, which pre-dates this step.
+- **2026-10-23, the plan's decisions** (made while planning,
+  `docs/superpowers/plans/2026-10-22-p2b2b2c2c-contact-laws.md`; folded in here with their reasons):
+    1. The preset digest prints two SHA-256s per run, `phys` (the outcome with its faults left out) and `faults` (the
+       report alone), both keeping the sign of zero, so that §8.2's "only the fault lists move" is checked run by run.
+    2. The harnesses return `lawTime` (δ > 0) and `forceTime` (normal force > 0) in place of one contact time,
+       because the force clamp parts the two and the law's parameter is the force-on time (A1's correction above).
+    3. `visible`, `videoIntervals`, `freeCollision` and `freeFace` take an optional threshold `shift`, default
+       `VISIBLE_SHIFT`, so that §7.9's thresholds and the camera's three are read while every default call stays as
+       it was to the bit.
+    4. The face is converted by Hertz similarity, videoTime(s·T; shift) = s · videoTime(T; shift/s), with
+       `faceScaleFor` bisecting s on [0.3, 3], because the engine reads T(U) from `contact.json` at load and the
+       harness cannot re-run the face at another t0.
+    5. The ball–ball time is converted directly, by a ternary search on T over [0.5, 1.5] × the target at dt 1e-7 s
+       for the least largest video miss across Table 1's three speeds, because that law is built from its contact
+       time; its bounds convert by the same call.
+    6. The touching stops' band is the figure × 0.03 × √2, because each judged figure is one speed over another, each
+       uncertain by 3 %, combined in quadrature (§5.2).
+    7. The laws and the candidates ran in throwaway copies (`laws`, `face`, `ballball`, then `f` and `g`), never
+       committed, so that nothing reached the engine before stage 1 admitted it and either law could be judged alone
+       (§4.3).
+    8. `FaultReport` gains `strike` (`StrikeTaps`: the parting, the taps before it and the sub-frame breaks merged
+       across), present only for a croquet stroke or a continuation stroke touching another ball, so that a
+       single-ball run's report stays byte-identical; `PARTING_BREAK` is one film frame, 0.125 ms (§6).
+    9. With no parting (the balls never meet in the impact), 29.1.6.1 is judged as before, because without a parting
+       the Laws give the strike no end to place a re-contact against.
+    10. The q fit (each Table 2 column converted at its own U, then log T fitted over all four, A4D at the clamp's
+        6 m/s) is printed, and run as a copy only if a held-out column misses and the gate takes it; it was offered
+        and not taken (A2).
+    11. The hands' effect is measured in throwaway free-head copies, the tracked drive's hand force and torque zero
+        for the strike's first 5 ms, because §7.6 asks for the comparison without an engine change.
+    12. The probe's sections: A, D–G, I and J–M kept or re-pointed, N, O and P new; `all` runs A, D–G and I–P, and B,
+        C and H run only by name, so that each gate stage's record is one run.
+
+  The search's f and g constants are recorded in `scripts/croquetFitProbe.ts` (`CONSTANTS`, their f and g entries)
+  and in the laws probe; the search script that found them was throwaway and was not kept.

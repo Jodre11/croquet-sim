@@ -1548,10 +1548,15 @@ function sectionF(): void {
                 `[${frames(research[3])}, ` +
                 `${frames(research[4])}], re-read ${tap(reread.secondTap)}`,
         );
+        const rereadTap =
+            reread.secondTap === null
+                ? "none"
+                : `[${fmt(reread.secondTap[0] / VIDEO_FRAME)}, ${fmt(reread.secondTap[1] / VIDEO_FRAME)}]`;
         console.log(
             `  frames, research and re-read: first contact ends ${fmt(research[1])} and ` +
                 `${fmt(reread.firstContactEnds / VIDEO_FRAME)}, leaves ${fmt(research[2])} and ` +
-                `${fmt(reread.leaves / VIDEO_FRAME)}, second face interval [${fmt(research[3])}, ${fmt(research[4])}]`,
+                `${fmt(reread.leaves / VIDEO_FRAME)}, second face interval [${fmt(research[3])}, ` +
+                `${fmt(research[4])}] and ${rereadTap}`,
         );
         for (const shift of CAMERA_SHIFTS) {
             console.log(`  ${cameraText(run, shift)}`);
@@ -3153,7 +3158,8 @@ function sectionM(): void {
     );
     console.log(
         "-- M.2 the grip-limit control run (the test at :90-109, a single-ball stroke the gap cannot touch): not " +
-            "re-run, since no candidate that changes the face law was admitted --",
+            "re-run here; the test itself plays it on the re-set face law and passes, in the slow suite's " +
+            "turfStrike run as in the default suite --",
     );
     console.log(
         "-- M.3 the AC stop's face–ball intervals with their head region: the canonical run, then the preset " +

@@ -392,8 +392,8 @@ export function ballBallTimeFor(
  * each showing the first sample at or after it, run through videoIntervals at `o.shift` (default VISIBLE_SHIFT). The
  * intervals are in s, at the frames' times, one list per phase in phase order. Frames begin at t = 0, so `samples` must
  * open at t = 0 in contact, or before it with the approach (videoIntervals' precondition, for every phase): a phase
- * whose first frame already shows the gap after the contact reports no release. scripts/croquetFitProbe.ts's section F
- * starts its samples at first touch, the approach prepended, so that every phase's first frame shows the face's contact.
+ * whose first frame already shows the gap after the contact reports no release. Starting the samples at first touch,
+ * the approach prepended, makes every phase's first frame show the contact.
  */
 export function cameraIntervals(
     samples: readonly { readonly t: number; readonly separation: number }[],
