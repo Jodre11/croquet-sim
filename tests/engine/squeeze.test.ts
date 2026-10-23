@@ -149,3 +149,20 @@ describe("the conversion harnesses (P2b.2b.2c.2c design §2, §5.3)", () => {
         expect(cameraIntervals(parting(300, 450)).every((p) => p.length === 2)).toBe(true);
     });
 });
+
+describe("the landed laws (P2b.2b.2c.2c design §2, §8.1)", () => {
+    // Today's e(3.26 m/s), captured before the face's contact time was re-set: e(U) is kept to the bit.
+    const E_TODAY_3_26 = 0.8145357485731356;
+
+    it("plays the landed face law alone to Table 2's A2D within its ± 0.1 ms, as the video times it", () => {
+        // Checks the similarity argument that set t0: on the landed law the free face reads 0.75 ms at VISIBLE_SHIFT,
+        // the video's clock starting at first touch. 2e-6 s is the harness's own agreement (dt 1e-8 s and the
+        // bisection); ± 0.1 ms is Table 2's.
+        const video = freeFace(3.26, { dt: 1e-8, start: "arrival" }).videoTime;
+        expect(Math.abs(video - 7.5e-4)).toBeLessThanOrEqual(1e-4);
+        expect(Math.abs(video - 7.5e-4)).toBeLessThanOrEqual(2e-6);
+    });
+    it("keeps e(U) to the bit", () => {
+        expect(faceRestitutionAt(3.26)).toBe(E_TODAY_3_26);
+    });
+});

@@ -623,7 +623,9 @@ describe("the tracked end rule", () => {
         // P2b.2b.2b.2a: Hertzian face (was five face–blue intervals, the second from 1.1 ms, the last a maintained push
         // until the face, pitching up with the gravity-free swing, left blue: impact-off-face at 74 ms; the impact
         // ended at 120.5 ms): three face–blue intervals, from 0.005, 18.65 and 44.29 ms, no event, and the impact
-        // ends at 115.66 ms.
+        // ends at 115.66 ms. P2b.2b.2c.2c: the face's T(U) re-set (was three intervals and no event): seventeen
+        // face–blue intervals, from 0.005, 5.51 and 10.13 ms on, every 4–6 ms, until the face, pitching up, leaves blue
+        // (impact-off-face at 74.56 ms); the impact ends at 121.11 ms.
         expect((run.timeline["face/blue"] ?? []).length).toBeGreaterThanOrEqual(2);
         const kinds = run.events.map((e) => e.kind);
         expect(kinds).not.toContain("impact-head-approaching");
@@ -631,10 +633,15 @@ describe("the tracked end rule", () => {
     });
 
     it("keeps running while the head closes on a ball, and flags it if the cap comes first", () => {
-        // At 12 ms the head, slowed below blue by the strike, is closing on it again. P2b.2b.2b.2a: Hertzian face (was
+        // At the cap the head, slowed below blue by a tap, is closing on it again. P2b.2b.2b.2a: Hertzian face (was
         // 2.5 ms, closing 2.34–3.17 ms): the face's longer contact holds blue through its transfer to red, so the old
-        // re-catch at 1.1 ms is now part of the first interval, and the head next closes 9.27–19.31 ms.
-        const { run } = strikeRun([freeBall("blue", BALL), freeBall("red", RED)], 12e-3);
+        // re-catch at 1.1 ms is now part of the first interval, and the head next closes 9.27–19.31 ms. P2b.2b.2c.2c:
+        // the face's T(U) re-set (was a cap at 12 ms, inside 9.27–19.31 ms): the shorter face contact brings back a
+        // series of short taps, face–blue [0.005, 1.880), [5.510, 6.695) and [10.125, 11.395) ms, the head closing
+        // (headClosing) over 3.66–6.08, 8.38–10.73 and 12.99–15.28 ms. At 12 ms blue is pulling away after the third
+        // tap; at 9 ms the head, slowed below blue by the second, is closing on it again. The cap moves to 9 ms, an
+        // input change that keeps the test's cover of the cap and the head closing; the expectation is unchanged.
+        const { run } = strikeRun([freeBall("blue", BALL), freeBall("red", RED)], 9e-3);
         expect(run.events.map((e) => e.kind)).toEqual(["impact-cap", "impact-head-approaching"]);
     });
 });

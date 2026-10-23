@@ -286,13 +286,7 @@ describe("handover of a ball sunk under the head, on whole rolls", () => {
     // rim pressing it down, the 2 m/s pass roll 0.25 ms after its last face interval. The handover lifts the ball by
     // that depth, so the head's overlap after the lift (515 to 577 µm) is cleared by the lift, not thrown.
     const world = defaultWorld();
-    it.each([
-        ["full-roll", 1, -1, -0.01],
-        ["full-roll", 1, -1, 0],
-        ["full-roll", 1, -1, 0.01],
-        ["pass-roll", 2, 1, 0],
-    ] as const)("hands over the %s at %s m/s, drive %s, side %s, with the head cleared of a lifted ball", (...run) => {
-        const [type, speed, drive, side] = run;
+    const sunkRun = (type: "full-roll" | "pass-roll", speed: number, drive: number, side: number) => {
         // P2b.2b.2b.2c: on the legacy round head; the default box clears the turf (gate).
         // P2b.2b.2c.2b: the croquet gap's default, 1 mm; pinned at gap 0, where the sunk ball's lift was measured: at
         // 1 mm the face meets the striker's ball again 4.2 ms in (full roll) and 3.7 ms in (pass roll), after the
@@ -301,7 +295,28 @@ describe("handover of a ball sunk under the head, on whole rolls", () => {
         const up = base.stroke.contact.up + (type === "full-roll" ? 0.003 : -0.003);
         const stroke = { ...base.stroke, drive, contact: { up, side } };
         const setup = { ...base, stroke: { ...stroke, backswing: backswingFor({ ...base, stroke }, speed, world) } };
-        const outcome = simulateShot(setup, world);
-        expect(outcome.impact.overlapCorrection).toBeGreaterThan(5e-4);
+        return simulateShot(setup, world);
+    };
+    // P2b.2b.2c.2c: the face's re-set law (was 1 m/s; gate stage 2 to rule). At 1 m/s the full roll no longer ends
+    // with the ball sunk under the head: the face leaves blue (impact-off-face at 231.5–236.1 ms), the run ends at
+    // 376.5–378.9 ms before the 450 ms cap, blue 394–396 µm deep, inside its static sink, and overlapCorrection is 0.
+    // A bounded search of the fixture's inputs (11 runs, legacy mallet, gap 0) found the scenario at 0.75 m/s: the run
+    // reaches the 450 ms cap with the head approaching and the rim pressing blue 497–520 µm deep, and the handover's
+    // lift clears 516.6–538.5 µm. The fixture's speed moves there; the expectation is unchanged.
+    it.each([
+        ["full-roll", 0.75, -1, -0.01],
+        ["full-roll", 0.75, -1, 0],
+        ["full-roll", 0.75, -1, 0.01],
+    ] as const)("hands over the %s at %s m/s, drive %s, side %s, with the head cleared of a lifted ball", (...run) => {
+        const [type, speed, drive, side] = run;
+        expect(sunkRun(type, speed, drive, side).impact.overlapCorrection).toBeGreaterThan(5e-4);
+    });
+    // P2b.2b.2c.2c: the face's re-set law (was overlapCorrection over 5e-4; gate stage 2 to rule). The pass roll no
+    // longer ends with the ball sunk under the head: at 2 m/s nine face intervals, the last 135.1–136.4 ms, and blue
+    // 3.21 mm airborne at the impact's end (156.3 ms). The bounded search found no pass roll that does (0.5, 1, 1.25,
+    // 1.5 and 1.75 m/s, side 0: overlapCorrection 0). The run stays as a guard that the handover does not throw; the
+    // pass roll's whole-run lift cover is lost, and the lift keeps its unit cover above.
+    it("hands over the pass-roll at 2 m/s, drive 1, side 0, without a correction", () => {
+        expect(sunkRun("pass-roll", 2, 1, 0).impact.overlapCorrection).toBe(0);
     });
 });

@@ -149,12 +149,10 @@ describe("impact reference data", () => {
         const t = contactReference.faceContactTimeFit;
         const { t0, u0, q } = t.coefficients as { t0: number; u0: number; q: number };
         const duration = (u: number): number => t0 * Math.pow(u / u0, q);
-        // T falls from 0.97 ms at 2.19 m/s to 0.79 ms at 5.50 m/s; spec §3.3's extrapolations at 0.5 and 6 m/s.
-        expect(duration(2.19)).toBeCloseTo(0.97e-3, 8);
-        // The fit gives 0.785 ms at 5.50 m/s; the table's 0.79 is rounded to 0.01 ms.
-        expect(Math.abs(duration(5.5) * 1e3 - 0.79)).toBeLessThan(0.01);
-        expect(duration(0.5) * 1e3).toBeCloseTo(1.36, 2);
-        expect(duration(6) * 1e3).toBeCloseTo(0.77, 2);
+        // P2b.2b.2c.2c: T(U) re-anchored on Gugan 4's Table 2 A2D, its video time from first touch converted by the
+        // free face, q kept (was 0.97 ms at 2.19 m/s, u0 2.19 m/s).
+        expect(t.coefficients).toEqual({ t0: 0.0005790224714766786, u0: 3.26, q: -0.23 });
+        expect(duration(3.26) / 0.0005790224714766786 - 1).toBeCloseTo(0, 6);
     });
 });
 
