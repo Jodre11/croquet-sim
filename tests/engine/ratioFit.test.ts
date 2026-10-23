@@ -218,14 +218,18 @@ describe("the read-out (P2b.2b.2c.2b design §5.2, §8.1)", () => {
         // T(U) re-set on Gugan 4's Table 2 (was 1.618, 3.763 and 0.8 m/s, one face interval): the quicker face lets go
         // of the striker's ball at 0.86 ms, before the balls part at 1.135 ms, and taps it again 0.985–2.075 ms, as the
         // film's double tap; read as the ball leaves at 2.08 ms, striker 1.2333, croqueted 3.6396, mallet 1.0011 m/s.
+        // P2b.2b.2c.2c: the ball–ball contact time set from Table 1 (was two face intervals; 1.2333, 3.6396 and 1.0011
+        // m/s): the quicker ball–ball contact parts the balls at 0.950 ms, before the face lets go at 1.045 ms, so the
+        // face meets the striker's ball once; read as the ball leaves at 1.05 ms, striker 1.3919, croqueted 3.7663,
+        // mallet 0.8827 m/s.
         const r = readOut(guganSetup("drive", 3, 0, { guideEffort: 0 }), WORLD);
         const face = r.impact.timeline["face/blue"] ?? [];
         const end = face[face.length - 1]?.end ?? Infinity;
         const leaving = r.samples.find((s) => s.t > end);
-        expect(face).toHaveLength(2);
-        expect(leaving?.w1).toBeCloseTo(1.2333, 4);
-        expect(leaving?.v2).toBeCloseTo(3.6396, 4);
-        expect(leaving?.head).toBeCloseTo(1.0011, 4);
+        expect(face).toHaveLength(1);
+        expect(leaving?.w1).toBeCloseTo(1.3919, 4);
+        expect(leaving?.v2).toBeCloseTo(3.7663, 4);
+        expect(leaving?.head).toBeCloseTo(0.8827, 4);
         // The read-out's own, 1 ms after the last contact (2.5 ms): the croqueted ball skids on the turf with no
         // forward roll yet, and the turf's sliding friction on it (about 3.5–3.9 N against aim, under a normal force
         // of about 7.2–8.1 N) slows it by about 0.008 m/s; the striker's ball and the mallet barely change. The
@@ -235,11 +239,13 @@ describe("the read-out (P2b.2b.2c.2b design §5.2, §8.1)", () => {
         // m/s slower (W 0.79048 before), through the face's friction on the striker's ball, whose motion the ball–ball
         // pair's changed. P2b.2b.2c.2c: the face's T(U) re-set (was 2.5 ms; w₁ 1.6175, v₂ 3.7546, W 0.7904): the second
         // tap ends at 2.075 ms, so the read is at 3.075 ms; the croqueted ball, skidding, loses 0.0104 m/s to the turf
-        // by then, and the striker's ball and the mallet barely change.
-        expect(r.time).toBeCloseTo(3.075e-3, 12);
-        expect(r.w1).toBeCloseTo(1.233, 4);
-        expect(r.v2).toBeCloseTo(3.6292, 4);
-        expect(r.W).toBeCloseTo(1.0012, 4);
+        // by then, and the striker's ball and the mallet barely change. P2b.2b.2c.2c: the ball–ball contact time set
+        // (was 3.075 ms; w₁ 1.233, v₂ 3.6292, W 1.0012): the one face interval ends at 1.045 ms, so the read is at
+        // 2.045 ms; the croqueted ball loses 0.0082 m/s to the turf by then.
+        expect(r.time).toBeCloseTo(2.045e-3, 12);
+        expect(r.w1).toBeCloseTo(1.3913, 4);
+        expect(r.v2).toBeCloseTo(3.7581, 4);
+        expect(r.W).toBeCloseTo(0.8829, 4);
     });
 });
 

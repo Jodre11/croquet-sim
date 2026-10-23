@@ -156,6 +156,17 @@ describe("impact reference data", () => {
     });
 });
 
+describe("ball–ball reference data", () => {
+    it("sets the ball–ball contact time and its bounds from Table 1, converted to the law's parameter", () => {
+        // P2b.2b.2c.2c: Table 1's video times 0.75 ms and [0.50, 0.87] ms converted by ballBallTimeFor, the video's
+        // clock from first touch (was 0.75 ms in [0.5, 0.87] ms, the video times taken as the law's).
+        const T = contactReference.ballBallContactTime;
+        expect(T.value).toBe(0.000550952396967293);
+        expect(T.bounds).toEqual([0.000318661108380713, 0.0006624524619049279]);
+        expect(T.provenance).toBe("derived");
+    });
+});
+
 describe("obstacle and fault reference data", () => {
     it("derives the obstacle contact time from the ball–ball one, within the Hertzian lower bound", () => {
         const T = contactReference.ballObstacleContactTime;

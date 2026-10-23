@@ -4,9 +4,10 @@ import {
     faceContactTimeAt,
     faceRestitutionAt,
     lawFromContactTime,
+    lnRestitution,
 } from "../../src/engine/impact/contactLaw";
 import { defaultWorld } from "../../src/engine/world";
-import { VIDEO_FRAME } from "../../scripts/filmedStrokes";
+import { FREE_COLLISIONS, VIDEO_FRAME } from "../../scripts/filmedStrokes";
 import { ballBallTimeFor, cameraIntervals, faceScaleFor, freeCollision, freeFace } from "../../scripts/squeeze";
 
 const WORLD = defaultWorld();
@@ -19,15 +20,21 @@ describe("the free-collision harness (P2b.2b.2c.2b design §4.1 test 4)", () => 
             expect(Math.abs(freeCollision(speed, today, { dt: 1e-7 }).restitution - 0.72)).toBeLessThanOrEqual(0.02);
         }
     });
-    // A finding for the gate, kept failing until the law changes: today's law, whose own contact lasts 0.75 ms, is
-    // timed by the video at 0.53 ms at 1.90 m/s and 0.61 ms at 7.64 m/s (dt 1e-7 s), more than a frame short of
-    // Table 1's 0.75 ms. The struck ball has moved VISIBLE_SHIFT only about 0.4 ms in at 1.90 m/s, and the pair's gap
-    // reaches it about 0.2 ms after the release; the faster stroke crosses both sooner. VISIBLE_SHIFT stays Gugan's.
-    it.fails("plays today's ball–ball law to Gugan's Table 1's 0.75 ms within a frame, as the video times it", () => {
-        for (const speed of [1.9, 7.64]) {
-            expect(Math.abs(freeCollision(speed, today, { dt: 1e-7 }).videoTime - 7.5e-4)).toBeLessThanOrEqual(
-                VIDEO_FRAME,
-            );
+    // P2b.2b.2c.2c: the ball–ball contact time set from Table 1 (was it.fails: the old law, its parameter 0.75 ms, read
+    // 0.53–0.61 ms on video from the struck ball's first visible move). The video's clock now starts at first touch, as
+    // Gugan 4's Fig. 4 times every event from the first contact (gate stage 1's ruling), and the law's parameter,
+    // 0.551 ms, is ballBallTimeFor's least largest miss: 0.844, 0.679 and 0.656 ms at 1.90, 5.54 and 7.64 m/s, each
+    // within a frame. VISIBLE_SHIFT stays Gugan's. e is held twice: the law's own, from its k and c, is Table 1's 0.72
+    // to 1e-9 (the clamped law's restitution is exact); the harness's, measured at dt 1e-7 s, carries the step's error
+    // (up to 3.2e-5 at these speeds, 4e-6 at dt 1e-8 s), so it is held to 1e-4.
+    it("plays the landed ball–ball law to Gugan's Table 1's 0.75 ms within a frame, as the video times it", () => {
+        const massEff = WORLD.ball.mass / 2;
+        const zeta = today.damping / (2 * Math.sqrt(today.stiffness * massEff));
+        expect(Math.abs(Math.exp(lnRestitution(zeta)) - 0.72)).toBeLessThanOrEqual(1e-9);
+        for (const { speed, restitution, contactTime } of FREE_COLLISIONS) {
+            const r = freeCollision(speed, today, { dt: 1e-7, start: "arrival" });
+            expect(Math.abs(r.videoTime - contactTime)).toBeLessThanOrEqual(VIDEO_FRAME);
+            expect(Math.abs(r.restitution - restitution)).toBeLessThanOrEqual(1e-4);
         }
     });
     it("reports the law's own contact time beside the video's", () => {
@@ -47,9 +54,14 @@ describe("the conversion harnesses (P2b.2b.2c.2c design §2, §5.3)", () => {
         expect(r.forceTime).toBeLessThan(r.lawTime);
     });
     it("is today's to the bit with no shift given, and shorter on video with a larger one", () => {
-        expect(freeCollision(1.9, today, { dt: 1e-7 })).toEqual(freeCollision(1.9, today, { dt: 1e-7, shift: 2e-4 }));
-        expect(freeCollision(1.9, today, { dt: 1e-7, shift: 4e-4 }).videoTime).toBeLessThan(
-            freeCollision(1.9, today, { dt: 1e-7 }).videoTime,
+        // P2b.2b.2c.2c: on the law before conversion, its parameter Table 1's 0.75 ms (was WORLD's law): this tests the
+        // harness's shift option, not the landed law. On the landed 0.551 ms law, from the first visible move, a 0.4 mm
+        // threshold reads longer (0.3928 ms) than 0.2 mm (0.3833 ms): the larger shift delays the gap's reaching it
+        // more than the struck ball's first visible move.
+        const before = lawFromContactTime(WORLD.ball.mass / 2, 0.72, 7.5e-4, 0);
+        expect(freeCollision(1.9, before, { dt: 1e-7 })).toEqual(freeCollision(1.9, before, { dt: 1e-7, shift: 2e-4 }));
+        expect(freeCollision(1.9, before, { dt: 1e-7, shift: 4e-4 }).videoTime).toBeLessThan(
+            freeCollision(1.9, before, { dt: 1e-7 }).videoTime,
         );
     });
     it("is today's to the bit with no start given", () => {

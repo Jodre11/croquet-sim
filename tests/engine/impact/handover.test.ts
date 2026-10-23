@@ -302,11 +302,14 @@ describe("handover of a ball sunk under the head, on whole rolls", () => {
     // 376.5–378.9 ms before the 450 ms cap, blue 394–396 µm deep, inside its static sink, and overlapCorrection is 0.
     // A bounded search of the fixture's inputs (11 runs, legacy mallet, gap 0) found the scenario at 0.75 m/s: the run
     // reaches the 450 ms cap with the head approaching and the rim pressing blue 497–520 µm deep, and the handover's
-    // lift clears 516.6–538.5 µm. The fixture's speed moves there; the expectation is unchanged.
+    // lift clears 516.6–538.5 µm. The fixture's speed moves there; the expectation is unchanged. P2b.2b.2c.2c: the
+    // ball–ball contact time set from Table 1 (was 0.75 m/s): at 0.75 m/s the lift still happens but clears only
+    // 473.5–484.8 µm. A second bounded search (8 runs, 0.6–0.9 m/s) found 0.8 m/s: the run reaches the 450 ms cap with
+    // the head approaching, blue 549–552 µm deep, and the lift clears 532.5–538.7 µm. The expectation is unchanged.
     it.each([
-        ["full-roll", 0.75, -1, -0.01],
-        ["full-roll", 0.75, -1, 0],
-        ["full-roll", 0.75, -1, 0.01],
+        ["full-roll", 0.8, -1, -0.01],
+        ["full-roll", 0.8, -1, 0],
+        ["full-roll", 0.8, -1, 0.01],
     ] as const)("hands over the %s at %s m/s, drive %s, side %s, with the head cleared of a lifted ball", (...run) => {
         const [type, speed, drive, side] = run;
         expect(sunkRun(type, speed, drive, side).impact.overlapCorrection).toBeGreaterThan(5e-4);
