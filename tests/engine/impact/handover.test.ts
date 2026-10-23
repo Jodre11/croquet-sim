@@ -284,7 +284,10 @@ describe("handover of a ball sunk under the head, on whole rolls", () => {
     // Gate ruling 2026-10-12 ("Option 1 alone"). Four preset-sweep runs end with the striker's ball 534 to 723 µm
     // deep in the turf, past its 437 µm static sink, under the head: the 1 m/s full roll at the 450 ms cap with the
     // rim pressing it down, the 2 m/s pass roll 0.25 ms after its last face interval. The handover lifts the ball by
-    // that depth, so the head's overlap after the lift (515 to 577 µm) is cleared by the lift, not thrown.
+    // that depth, so the head's overlap after the lift (515 to 577 µm) is cleared by the lift, not thrown. Those were
+    // the fixtures until P2b.2b.2c.2c. Now the full rolls at 0.8 m/s end at the 450 ms cap with the ball 549 to 552 µm
+    // deep and the lift clearing 532.5 to 538.7 µm; the 2 m/s pass roll no longer sinks the ball and is kept as a
+    // guard that the handover does not throw (see each case below).
     const world = defaultWorld();
     const sunkRun = (type: "full-roll" | "pass-roll", speed: number, drive: number, side: number) => {
         // P2b.2b.2b.2c: on the legacy round head; the default box clears the turf (gate).

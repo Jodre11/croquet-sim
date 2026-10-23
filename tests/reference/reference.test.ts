@@ -153,6 +153,9 @@ describe("impact reference data", () => {
         // free face, q kept (was 0.97 ms at 2.19 m/s, u0 2.19 m/s).
         expect(t.coefficients).toEqual({ t0: 0.0005790224714766786, u0: 3.26, q: -0.23 });
         expect(duration(3.26) / 0.0005790224714766786 - 1).toBeCloseTo(0, 6);
+        // The fit's ends over the clamp's range, as its note states (was 1.36 ms at 0.5 m/s and 0.77 ms at 6 m/s).
+        expect(duration(0.5) * 1e3).toBeCloseTo(0.891, 3);
+        expect(duration(6) * 1e3).toBeCloseTo(0.503, 3);
     });
 });
 

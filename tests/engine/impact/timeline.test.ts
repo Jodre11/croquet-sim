@@ -104,7 +104,7 @@ describe("the integrator's timeline", () => {
         // wall at 3355 µs back towards the head, and the run ends at 3605 µs with the two closing (impact-head-
         // approaching), before a third tap.
         expect(faces).toHaveLength(2);
-        const [first, second] = faces as [ContactInterval, ContactInterval, ContactInterval];
+        const [first, second] = faces as [ContactInterval, ContactInterval];
         // The face plane reaches the ball during step 10 (gap / speed = 10.1 steps): the pair is closed from step 11.
         expect(first.start).toBe(11 * IMPACT_DT);
         // Clamped law: the force releases with δ = c·e·v/k still positive, which then closes at e·v: c/k later. The

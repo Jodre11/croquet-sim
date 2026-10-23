@@ -212,9 +212,10 @@ describe("the read-out (P2b.2b.2c.2b design §5.2, §8.1)", () => {
         expect(r.time).toBe(2e-3);
         expect([r.U, r.W, r.w1, r.v2]).toEqual([3, -1, 4, 8]);
     });
-    it("gives the canonical drive's speeds as the brainstorm measured them, at gap 0 and no push", () => {
-        // Design "Why this step": 3 m/s, guideEffort 0 — striker 1.618, croqueted 3.763, mallet 0.80 m/s, read as the
-        // ball leaves the face (≈1.5 ms): the first step after the last face interval ends. P2b.2b.2c.2c: the face's
+    it("gives the canonical drive's speeds on the Table 1 and 2 laws, at gap 0 and no push", () => {
+        // History: the squeeze design's "Why this step" measured, at 3 m/s and guideEffort 0, striker 1.618, croqueted
+        // 3.763, mallet 0.80 m/s, read as the ball leaves the face (≈1.5 ms): the first step after the last face
+        // interval ends. P2b.2b.2c.2c: the face's
         // T(U) re-set on Gugan 4's Table 2 (was 1.618, 3.763 and 0.8 m/s, one face interval): the quicker face lets go
         // of the striker's ball at 0.86 ms, before the balls part at 1.135 ms, and taps it again 0.985–2.075 ms, as the
         // film's double tap; read as the ball leaves at 2.08 ms, striker 1.2333, croqueted 3.6396, mallet 1.0011 m/s.
