@@ -29,17 +29,21 @@ describe.runIf(SLOW)("the strike's step convergence (P2b.2b.2c.2b design §6)", 
         expect(spreadOf(runs.map((r) => r.w1W))).toBeLessThan(GUGAN_MEANS.w1W.sem / 10);
         expect(spreadOf(runs.map((r) => r.v2w1))).toBeLessThan(GUGAN_MEANS.v2w1.sem / 10);
     }, 320_000);
-    // Gap 0 is today's default and 1 mm the default this step moves to, so both are covered. The stop is checked at
-    // jab 0 only: the jab sweep is ungated (design §6, "§7's other figures"). Each case: two mallet solves and six
+    // Gap 0 and 1 mm are covered: 1 mm was the gap the convergence was measured at on the re-set laws, before the
+    // croquet gap's default moved to 0.75 mm (P2b.2b.2c.2c), which no case here covers. The stop is checked at jab 0
+    // only: the jab sweep is ungated (design §6, "§7's other figures"). Each stroke's case: one mallet solve and three
     // strokes played to rest.
-    const keepsGugan5 = (gap: number): void => {
-        const drive = STEP_SHARES.map((k) => guganRatio("drive", gap, k * IMPACT_DT, WORLD));
-        const stop = STEP_SHARES.map((k) => guganRatio("stop-ac", gap, k * IMPACT_DT, WORLD));
-        expect(spreadOf(drive)).toBeLessThan(GUGAN5.drive.tolerance / 10);
-        expect(spreadOf(stop)).toBeLessThan(GUGAN5.stop.tolerance / 10);
+    const keepsGugan5 = (type: "drive" | "stop-ac", gap: number): void => {
+        const ratios = STEP_SHARES.map((k) => guganRatio(type, gap, k * IMPACT_DT, WORLD));
+        const tolerance = type === "drive" ? GUGAN5.drive.tolerance : GUGAN5.stop.tolerance;
+        expect(spreadOf(ratios)).toBeLessThan(tolerance / 10);
     };
-    it("keeps Gugan 5's drive and stop ratios at gap 0 m", () => keepsGugan5(0), 320_000);
+    it("keeps Gugan 5's drive and stop ratios at gap 0 m", () => {
+        keepsGugan5("drive", 0);
+        keepsGugan5("stop-ac", 0);
+    }, 320_000);
+    it("keeps Gugan 5's stop ratio at gap 0.001 m", () => keepsGugan5("stop-ac", 0.001), 320_000);
     // P2b.2b.2c.2c: on the re-set laws the drive ratio's spread over dt/2, dt and 2·dt at 1 mm is 0.0204 (4.198, 4.191,
     // 4.177), just over a tenth of its 0.2 tolerance; gate stage 2 ruled it recorded and carried (2026-10-23).
-    it.fails("keeps Gugan 5's drive and stop ratios at gap 0.001 m", () => keepsGugan5(0.001), 320_000);
+    it.fails("keeps Gugan 5's drive ratio at gap 0.001 m", () => keepsGugan5("drive", 0.001), 320_000);
 });

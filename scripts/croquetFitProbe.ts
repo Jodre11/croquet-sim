@@ -981,8 +981,8 @@ function speedsText(r: ReadOut): string {
 const SWEEP_GAPS = [0, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.4, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 1.9].map((g) => g * 1e-3);
 
 /**
- * Herrmann and Seitz's gap (m): "a separation of only 40 µm is sufficient for dispersion-free propagation" (P2b.2b.2c.2c
- * design §3).
+ * Herrmann and Seitz's gap (m): "a separation of only 40 µm is sufficient for dispersion-free propagation"
+ * (P2b.2b.2c.2c design §3).
  */
 const HERRMANN_SEITZ_GAP = 0.04e-3;
 
@@ -2415,7 +2415,7 @@ function ballBallMovedText(target: number): string {
 }
 
 /**
- * I.0, the conversions (P2b.2b.2c.2c design §2.1, §2.2; plan decisions 4, 5 and 10) on the worktree's engine and
+ * I.0, the conversions (P2b.2b.2c.2c design §2.1, §2.2) on the worktree's engine and
  * today's laws, every video clock started at first touch (gate stage 1's ruling, as Gugan 4's Fig. 4 times every event
  * from the mallet's first contact): the face per Table 2 column (the free face's times, faceScaleFor's scale and the
  * law time it implies, beside the first-move sensitivity, not adopted), the new t0 and the held-out columns' video
@@ -2510,7 +2510,7 @@ function conversions(): void {
     console.log(`  Table 2's caveat (Gugan 4, §5.2): "${TABLE2_CAVEAT}"`);
     const qFit = qFitOf(columns, u0);
     console.log(
-        `-- I.0.4 the q fit over all four columns (plan decision 10), ` +
+        `-- I.0.4 the q fit over all four columns, ` +
             `${missed ? "OFFERED to the gate: a held-out column misses" : "recorded: every held-out column passes"} --`,
     );
     for (const c of columns) {

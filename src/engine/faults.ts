@@ -96,7 +96,7 @@ export interface Finding {
  * The mallet's taps within a croquet or continuation stroke's strike (P2b.2b.2c.2c design §6). `parted` is when the
  * striker's ball parted from the ball or balls it touched (s), or null when no such pair had an interval; `taps` are
  * the non-exempt mallet contacts beginning before it, each with its `clearanceAfter`, and none when `parted` is null;
- * `breaks` are the lengths (s) of the sub-frame breaks merged across in placing it.
+ * `breaks` are the lengths (s) of the sub-frame breaks merged across in placing it, across every pair, in pair order.
  */
 export interface StrikeTaps {
     readonly parted: number | null;
@@ -118,6 +118,13 @@ export interface FaultReport {
  * of balls parting. A shorter break is a step-scale artefact no eye could see.
  */
 export const PARTING_BREAK = 1.25e-4;
+
+/**
+ * The gap compared with PARTING_BREAK. Interval times are steps × dt, so a break of exactly one frame can come out an
+ * ulp or two short (25 steps of 5 µs from 33 steps, for one); the relative margin of 1e-9 absorbs that rounding and
+ * stays far inside a step, so a break even 1e-9 s short of a frame is still no parting.
+ */
+const PARTING_MIN_GAP = PARTING_BREAK * (1 - 1e-9);
 
 /** The Laws the judge reports, each quoted in reference/laws.json. */
 export const JUDGED_LAWS = [
@@ -293,7 +300,7 @@ function partingOf(context: StrokeContext, impact: ImpactResult): { parted: numb
         let end = first.end;
         for (const next of intervals.slice(1)) {
             const gap = next.start - end;
-            if (gap >= PARTING_BREAK) {
+            if (gap >= PARTING_MIN_GAP) {
                 break;
             }
             breaks.push(gap);

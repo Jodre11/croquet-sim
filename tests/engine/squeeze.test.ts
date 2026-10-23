@@ -97,7 +97,7 @@ describe("the conversion harnesses (P2b.2b.2c.2c design §2, §5.3)", () => {
         expect(r.clamped).toBe(false);
     });
     it("reports the clamp", () => {
-        // Review focus 4.
+        // A4D's 8.54 m/s lies above the clamp's 6 m/s; A1D's 0.76 m/s within it.
         expect(freeFace(0.76, { dt: 1e-8 }).clamped).toBe(false);
         expect(freeFace(8.54, { dt: 1e-8 }).clamped).toBe(true);
     });
@@ -110,7 +110,7 @@ describe("the conversion harnesses (P2b.2b.2c.2c design §2, §5.3)", () => {
         expect(Math.abs(faceScaleFor(today, 3.26, { dt: 1e-8, start: "arrival" }) - 1)).toBeLessThan(1e-3);
     });
     it("throws when the target lies outside the bracket", () => {
-        // Review focus 4.
+        // A 1 µs video time needs a scale below the search's bracket.
         expect(() => faceScaleFor(1e-6, 3.26)).toThrow(/outside/);
     });
     // The search plays 360 free collisions at 1e-7 s, about 19 s alone and up to 45 s in the full suite: the timeout

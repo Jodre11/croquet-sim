@@ -152,7 +152,11 @@ describe("impact reference data", () => {
         // P2b.2b.2c.2c: T(U) re-anchored on Gugan 4's Table 2 A2D, its video time from first touch converted by the
         // free face, q kept (was 0.97 ms at 2.19 m/s, u0 2.19 m/s).
         expect(t.coefficients).toEqual({ t0: 0.0005790224714766786, u0: 3.26, q: -0.23 });
-        expect(duration(3.26) / 0.0005790224714766786 - 1).toBeCloseTo(0, 6);
+        // T at A2D's U is the harness's scale factor for A2D, 0.654126 (six figures, as the note gives it), times the
+        // old law's T(3.26) (Gugan 2000: 0.97 ms at 2.19 m/s, q −0.23), to 1e-6 relative. The law played alone is held
+        // to this T to 1e-3 relative, at dt 10 ns, in tests/engine/squeeze.test.ts.
+        const oldLaw = 0.97e-3 * Math.pow(3.26 / 2.19, -0.23);
+        expect(Math.abs((0.654126 * oldLaw) / duration(3.26) - 1)).toBeLessThan(1e-6);
         // The fit's ends over the clamp's range, as its note states (was 1.36 ms at 0.5 m/s and 0.77 ms at 6 m/s).
         expect(duration(0.5) * 1e3).toBeCloseTo(0.891, 3);
         expect(duration(6) * 1e3).toBeCloseTo(0.503, 3);

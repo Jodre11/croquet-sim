@@ -64,9 +64,9 @@ export interface VideoInterval {
 /**
  * The intervals over which `samples` (in time order: each step's end t (s) and the two bodies' surface separation (m),
  * negative while they overlap) show a contact to the video: on from the first sample whose separation is not visible
- * at `shift`, off at the next that is. A release is seen only after a contact: `samples` must open in contact, or begin
- * before it, with the bodies' approach. A list that begins after its contact, the bodies already apart, shows no release
- * (and a later contact as the first).
+ * at `shift`, off at the next that is. A release is seen only after a contact: `samples` must open in contact, or
+ * begin before it, with the bodies' approach. A list that begins after its contact, the bodies already apart, shows no
+ * release (and a later contact as the first).
  */
 export function videoIntervals(
     samples: readonly { readonly t: number; readonly separation: number }[],
