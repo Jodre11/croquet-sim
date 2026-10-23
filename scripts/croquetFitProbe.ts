@@ -37,7 +37,8 @@
  *   C1D's U, v₂/U against Table 5's spread (§4.1's test 2).
  * - E. the filmed strokes (design §5.2, §5.3): C3S and C20S at gap 0 by touchingBand; each of Gugan 4's ten strokes on
  *   its preset at its U and recorded gap, its figures against its Table 5 row with W after the first face contact
- *   beside W after the double tap (note (ii)), the nominal strokes at ±0.5 mm, and the three means against Gugan's
+ *   beside W after the double tap (note (ii)) and the face intervals within the strike, the nominal strokes at ±0.5 mm,
+ *   and the three means against Gugan's
  *   over GAPPED_STROKES and ALL_STROKES.
  * - F. the timing (design §7.1; P2b.2b.2c.2c design §5.3): the model's four times for six strokes, from the contact
  *   law's intervals and as the video would time them (VISIBLE_SHIFT) from first touch, beside both Fig. 4 readings;
@@ -68,9 +69,15 @@
  * - N. the double taps (P2b.2b.2c.2c design §6): every croquet preset's canonical run and digest grid, each run's
  *   FaultReport.strike (taps, clearance between them, parting, merged breaks), a tally per preset, and every run still
  *   flagged under 29.1.6.1.
- * `all` runs A, D-G, I and J-N; B, C, H and I-old by name only.
+ * - O. the hands (P2b.2b.2c.2c design §7.6): C3S, C20S (gap 0) and C3D (1 mm) on each root of HANDS_ROOTS, each with
+ *   its judged figures and its face and ball–ball intervals, then each root beside its free-head copy (the head free
+ *   of the hands for the strike's first 5 ms), on today's laws and on the admitted ones.
+ * - P. the camera threshold's reach (P2b.2b.2c.2c design §7.9): criteria 3 and 4 as section E judged them on the laws
+ *   re-set at 0.2, 0.4 and 0.6 mm (P_INPUTS, each a section E output), and whether each holds as at 0.2 mm.
+ * `all` runs A, D-G, I and J-P; B, C, H and I-old by name only.
  * Run with `npx --yes tsx scripts/croquetFitProbe.ts`; environment: SECTION (a letter; default all), CANDIDATE and
- * TODAY_ROOT (section I in a copy). Not part of the test suite.
+ * TODAY_ROOT (section I in a copy), SHIFT (I.0's threshold in m, default VISIBLE_SHIFT), HANDS_ROOTS (section O,
+ * label=path comma-separated) and P_INPUTS (section P, mm=path comma-separated). Not part of the test suite.
  */
 import {
     FACE_SPEED_MAX,
@@ -119,6 +126,7 @@ import {
     CA_STROKES,
     GAPPED_STROKES,
     GUGAN_EFFECTIVE_MASS,
+    READ_DELAY,
     STEP_SHARES,
     STRIKE_WINDOW,
     TODAY,
@@ -133,6 +141,7 @@ import {
     meansOf,
     ratioOf,
     readOut,
+    readTimeOf,
     releaseSpeedFor,
     runFit,
     spreadOf,
@@ -1119,12 +1128,17 @@ function sectionE(): void {
     console.log(
         "-- E.1 each stroke at its recorded gap; recorded, not gated: W/U and the energy beside Table 5's, and W " +
             "after the first face contact beside W read after the strike's last contact, as Gugan 4's row 5 is " +
-            '(note (ii): "the values of final mallet speed in row 5, W, are those *after* the double tap") --',
+            '(note (ii): "the values of final mallet speed in row 5, W, are those *after* the double tap"). The two ' +
+            "are read at different times, the first at the first face interval's end and the second " +
+            `${ms(READ_DELAY)} ms after the strike's last contact (a gapped stroke's ball–ball one included), so the ` +
+            "face intervals within the strike are counted beside them: with one, the difference is the head's motion " +
+            "between the two reads, not a double tap --",
     );
     for (const { stroke, gap, read, figures } of runs) {
         const row = rowOf(stroke);
         const against = (m: number, r: number): string => `${fmt(m)} (row ${fmt(r)})`;
-        const first = (read.impact.timeline[faceKey(canonicalSetup(stroke.preset, { world }).striker)] ?? [])[0];
+        const faces = read.impact.timeline[faceKey(canonicalSetup(stroke.preset, { world }).striker)] ?? [];
+        const first = faces[0];
         const before = first === undefined ? null : read.samples.find((s) => s.t >= first.end);
         console.log(
             `${stroke.name} (${stroke.preset}, U ${fmt(stroke.malletSpeed)} m/s, gap ${mm(gap)} mm` +
@@ -1135,7 +1149,8 @@ function sectionE(): void {
                 `${fmt(figures.v2w1 ** 2)} ` +
                 `(row 16 ${stroke.squaredRatio === null ? "none" : fmt(stroke.squaredRatio)}); W after the first ` +
                 `face contact ${before === undefined || before === null ? "none" : fmt(before.head)} m/s, after the ` +
-                `last ${fmt(read.W)} m/s (row 5 ${fmt(stroke.malletAfter)})`,
+                `last ${fmt(read.W)} m/s (row 5 ${fmt(stroke.malletAfter)}); face intervals within the strike ` +
+                `${strikeCount(faces)}`,
         );
     }
     console.log(
@@ -1319,7 +1334,7 @@ function timingOf(setup: ShotSetup, world: World): TimingRun {
         return {
             face: [...approach, ...steps.map((s) => ({ t: s.t + lead, separation: s.face }))],
             pair: [...rest, ...steps.map((s) => ({ t: s.t + lead, separation: s.pair }))],
-            moved: movedAt === null ? null : movedAt + VISIBLE_SHIFT / U,
+            moved: movedAt === null ? null : movedAt + lead,
         };
     };
     return {
@@ -1614,6 +1629,24 @@ function candidateOf(value: string | undefined): LawCandidate | undefined {
         throw new Error(`CANDIDATE must be one of ${LAW_CANDIDATES.join(", ")}, or absent (got "${value}")`);
     }
     return known;
+}
+
+/**
+ * The video's threshold (m) I.0 converts both laws at: the SHIFT environment variable (m), absent VISIBLE_SHIFT, so
+ * that design §7.9's 0.4 and 0.6 mm re-sets come from the same conversions. VISIBLE_SHIFT itself never changes.
+ */
+const CONVERSION_SHIFT = shiftOf(process.env.SHIFT);
+
+/** The SHIFT environment variable as a threshold (m); throws for anything but a positive length under 1 cm. */
+function shiftOf(value: string | undefined): number {
+    if (value === undefined) {
+        return VISIBLE_SHIFT;
+    }
+    const shift = Number(value);
+    if (!(shift > 0 && shift < 1e-2)) {
+        throw new Error(`SHIFT must be a threshold in metres, positive and under 0.01 (got "${value}")`);
+    }
+    return shift;
 }
 
 /**
@@ -2287,34 +2320,54 @@ interface FaceColumn {
     readonly played: number;
     /** The free face, its video from first touch (the adopted start). */
     readonly free: ReturnType<typeof freeFace>;
-    /** faceScaleFor(Τh, U) from first touch: the scale on today's T(U) whose video time is the column's Τh. */
-    readonly scale: number;
+    /**
+     * faceScaleFor(Τh, U) from first touch: the scale on today's T(U) whose video time is the column's Τh; null, with
+     * `error`, when none in faceScaleFor's bracket gives it (above VISIBLE_SHIFT the approach from first touch alone
+     * can outlast a slow column's Τh).
+     */
+    readonly scale: number | null;
+    readonly error: string | null;
     /** The sensitivity, not adopted: the video from the struck ball's first visible move, and its scale. */
     readonly moved: { readonly video: number; readonly scale: number | null; readonly error: string | null };
 }
 
-/** `column` through the free face at FACE_DT (FaceColumn). */
-function faceColumnOf(column: (typeof TABLE2_FACE)[number]): FaceColumn {
-    const played = Math.min(Math.max(column.speed, FACE_SPEED_MIN), FACE_SPEED_MAX);
-    const free = freeFace(column.speed, { dt: FACE_DT, start: "arrival" });
-    const scale = faceScaleFor(column.contactTime, column.speed, { dt: FACE_DT, start: "arrival" });
-    const video = freeFace(column.speed, { dt: FACE_DT, start: "moved" }).videoTime;
+/** faceScaleFor(Τh, U) for `column` at `start`, or its error as text. */
+function columnScale(
+    column: (typeof TABLE2_FACE)[number],
+    start: VideoStart,
+): { readonly scale: number | null; readonly error: string | null } {
+    const o = { dt: FACE_DT, shift: CONVERSION_SHIFT, start };
     try {
-        const movedScale = faceScaleFor(column.contactTime, column.speed, { dt: FACE_DT, start: "moved" });
-        return { column, played, free, scale, moved: { video, scale: movedScale, error: null } };
+        return { scale: faceScaleFor(column.contactTime, column.speed, o), error: null };
     } catch (error) {
-        return { column, played, free, scale, moved: { video, scale: null, error: errorText(error) } };
+        return { scale: null, error: errorText(error) };
     }
+}
+
+/** `column` through the free face at FACE_DT and the threshold CONVERSION_SHIFT (FaceColumn). */
+function faceColumnOf(column: (typeof TABLE2_FACE)[number]): FaceColumn {
+    const shift = CONVERSION_SHIFT;
+    const played = Math.min(Math.max(column.speed, FACE_SPEED_MIN), FACE_SPEED_MAX);
+    const free = freeFace(column.speed, { dt: FACE_DT, shift, start: "arrival" });
+    const video = freeFace(column.speed, { dt: FACE_DT, shift, start: "moved" }).videoTime;
+    return {
+        column,
+        played,
+        free,
+        ...columnScale(column, "arrival"),
+        moved: { video, ...columnScale(column, "moved") },
+    };
 }
 
 /**
  * Decision 10's fit (P2b.2b.2c.2c plan; design §2.1): each column's Τh converted to its own law parameter, its scale
  * times today's T at its played speed, and log T = log t0 + q·log(played/u0) fitted by least squares over all four
- * columns, A4D at the clamp's 6 m/s as the engine plays it.
+ * columns (those with a scale), A4D at the clamp's 6 m/s as the engine plays it.
  */
 function qFitOf(columns: readonly FaceColumn[], u0: number): { readonly t0: number; readonly q: number } {
-    const xs = columns.map((c) => Math.log(c.played / u0));
-    const ys = columns.map((c) => Math.log(c.scale * faceContactTimeAt(c.played)));
+    const scaled = columns.flatMap((c) => (c.scale === null ? [] : [{ played: c.played, scale: c.scale }]));
+    const xs = scaled.map((c) => Math.log(c.played / u0));
+    const ys = scaled.map((c) => Math.log(c.scale * faceContactTimeAt(c.played)));
     const q = slopeOfFit(xs, ys);
     const mean = (vs: readonly number[]): number => vs.reduce((a, b) => a + b, 0) / vs.length;
     return { t0: Math.exp(mean(ys) - q * mean(xs)), q };
@@ -2326,9 +2379,17 @@ function ballBallText(label: string, found: ReturnType<typeof ballBallTimeFor>):
     return `${label}: the parameter T (force-on) ${ms(found.time)} ms; video misses ${misses.join(", ")}`;
 }
 
-/** A ball–ball conversion's first-move sensitivity line, not adopted (ballBallTimeFor at the "moved" start). */
+/**
+ * A ball–ball conversion's first-move sensitivity line, not adopted (ballBallTimeFor at the "moved" start and the
+ * threshold CONVERSION_SHIFT).
+ */
 function ballBallMovedText(target: number): string {
-    return `  sensitivity, NOT ADOPTED: ${ballBallText("from the first visible move", ballBallTimeFor(target))}`;
+    try {
+        const found = ballBallTimeFor(target, { shift: CONVERSION_SHIFT });
+        return `  sensitivity, NOT ADOPTED: ${ballBallText("from the first visible move", found)}`;
+    } catch (error) {
+        return `  sensitivity, NOT ADOPTED: from the first visible move: none (${errorText(error)})`;
+    }
 }
 
 /**
@@ -2342,12 +2403,18 @@ function ballBallMovedText(target: number): string {
  * the law's sense: the force-on time (s).
  */
 function conversions(): void {
+    const shift = CONVERSION_SHIFT;
+    const reset =
+        shift === VISIBLE_SHIFT
+            ? ""
+            : ` (SHIFT, design §7.9's camera threshold's reach: a throwaway re-set, never adopted; VISIBLE_SHIFT ` +
+              `stays ${mm(VISIBLE_SHIFT)} mm)`;
     console.log(
         `-- I.0 the conversions on today's laws: the free face at dt ${fmt(FACE_DT * 1e9)} ns, the free collisions ` +
-            `at ${fmt(FREE_DT * 1e6)} µs, the video's threshold ${mm(VISIBLE_SHIFT)} mm; "law time" the contact ` +
+            `at ${fmt(FREE_DT * 1e6)} µs, the video's threshold ${mm(shift)} mm${reset}; "law time" the contact ` +
             'with the penetration δ > 0, "force-on" with the normal force > 0, the law\'s parameter T ' +
             "(contact.json's sense); the video's clock starts at first touch, the striking surface within " +
-            `${mm(VISIBLE_SHIFT)} mm of the struck ball extrapolated back at the closing speed (t = −shift/U before ` +
+            `${mm(shift)} mm of the struck ball extrapolated back at the closing speed (t = −shift/U before ` +
             "the touch), as Gugan 4's Fig. 4 times every event from the mallet's first contact (gate stage 1's " +
             "ruling); the first visible move's figures beside, NOT ADOPTED --",
     );
@@ -2355,15 +2422,19 @@ function conversions(): void {
     const q = fit.coefficients.q as number;
     console.log("-- I.0.1 the face, per Table 2 column (Τh ± 0.1 ms, row 4) --");
     const columns = TABLE2_FACE.map(faceColumnOf);
-    for (const { column, played, free, scale, moved } of columns) {
+    for (const { column, played, free, scale, error, moved } of columns) {
         const today = faceContactTimeAt(played);
         const clamp = free.clamped ? `, the fits read at the clamp's ${fmt(FACE_SPEED_MAX)} m/s` : "";
+        const converted =
+            scale === null
+                ? `faceScaleFor(Τh, U) none (${error ?? "unknown"})`
+                : `faceScaleFor(Τh, U) ${scale.toFixed(6)}, implying the parameter (force-on) ${ms(scale * today)} ` +
+                  `ms and the law time ${ms(scale * free.lawTime)} ms`;
         console.log(
             `${column.name} (U ${fmt(column.speed)} m/s${clamp}): Τh ${ms(column.contactTime)} ms; today's T(U) ` +
                 `${ms(today)} ms; the free face's law time ${ms(free.lawTime)} ms, force-on ` +
                 `${ms(free.forceTime)} ms, video from first touch ${ms(free.videoTime)} ms, e ` +
-                `${fmt(free.restitution)}; faceScaleFor(Τh, U) ${scale.toFixed(6)}, implying the parameter ` +
-                `(force-on) ${ms(scale * today)} ms and the law time ${ms(scale * free.lawTime)} ms`,
+                `${fmt(free.restitution)}; ${converted}`,
         );
         const implied =
             moved.scale === null
@@ -2374,7 +2445,13 @@ function conversions(): void {
                 `${ms(moved.video)} ms, ${implied}`,
         );
     }
-    const anchor = columns.find((c) => c.column.name === "A2D") as FaceColumn;
+    const anchorColumn = columns.find((c) => c.column.name === "A2D") as FaceColumn;
+    if (anchorColumn.scale === null) {
+        throw new RangeError(
+            `I.0: the anchor A2D has no scale at ${mm(shift)} mm (${anchorColumn.error ?? "unknown"})`,
+        );
+    }
+    const anchor = { column: anchorColumn.column, scale: anchorColumn.scale };
     const t0 = anchor.scale * faceContactTimeAt(anchor.column.speed);
     const u0 = anchor.column.speed;
     console.log(
@@ -2385,8 +2462,8 @@ function conversions(): void {
             "from first touch (Hertz similarity, scripts/squeeze.ts) --",
     );
     const heldOut = columns.map(({ column, free }) => {
-        const shift = VISIBLE_SHIFT / anchor.scale;
-        const video = anchor.scale * freeFace(column.speed, { dt: FACE_DT, shift, start: "arrival" }).videoTime;
+        const scaled = shift / anchor.scale;
+        const video = anchor.scale * freeFace(column.speed, { dt: FACE_DT, shift: scaled, start: "arrival" }).videoTime;
         const pass = Math.abs(video - column.contactTime) <= FACE_PRECISION;
         return { column, clamped: free.clamped, video, pass };
     });
@@ -2415,16 +2492,17 @@ function conversions(): void {
             `${missed ? "OFFERED to the gate: a held-out column misses" : "recorded: every held-out column passes"} --`,
     );
     for (const c of columns) {
-        const own = c.scale * faceContactTimeAt(c.played);
+        const own =
+            c.scale === null
+                ? "none (no scale, left out of the fit)"
+                : `${ms(c.scale * faceContactTimeAt(c.played))} ms`;
         const fitted = qFit.t0 * Math.pow(c.played / u0, qFit.q);
-        console.log(
-            `${c.column.name} at ${fmt(c.played)} m/s: its own parameter ${ms(own)} ms, the fit's ${ms(fitted)} ms`,
-        );
+        console.log(`${c.column.name} at ${fmt(c.played)} m/s: its own parameter ${own}, the fit's ${ms(fitted)} ms`);
     }
     console.log(`  t0 ${ms(qFit.t0)} ms, u0 ${fmt(u0)} m/s, q ${fmt(qFit.q)}`);
     console.log("-- I.0.5 the ball–ball law (Table 1's three clean strokes, e 0.72), from first touch --");
     const target = (FREE_COLLISIONS[0] as (typeof FREE_COLLISIONS)[number]).contactTime;
-    const best = ballBallTimeFor(target, { start: "arrival" });
+    const best = ballBallTimeFor(target, { shift, start: "arrival" });
     console.log(
         ballBallText(`ballBallTimeFor(${ms(target)} ms)`, best) +
             ` (today's ${ms(contactReference.ballBallContactTime.value)} ms)`,
@@ -2432,8 +2510,8 @@ function conversions(): void {
     const mass = defaultWorld().ball.mass;
     for (const c of FREE_COLLISIONS) {
         const law = lawFromContactTime(mass / 2, c.restitution, best.time, 0);
-        const r = freeCollision(c.speed, law, { dt: FREE_DT, start: "arrival" });
-        const moved = freeCollision(c.speed, law, { dt: FREE_DT });
+        const r = freeCollision(c.speed, law, { dt: FREE_DT, shift, start: "arrival" });
+        const moved = freeCollision(c.speed, law, { dt: FREE_DT, shift });
         console.log(
             `  ${fmt(c.speed)} m/s: video from first touch ${ms(r.videoTime)} ms (from the first visible move ` +
                 `${ms(moved.videoTime)} ms, not adopted), law time ${ms(r.lawTime)} ms, force-on ` +
@@ -2441,18 +2519,28 @@ function conversions(): void {
         );
     }
     console.log(ballBallMovedText(target));
-    const [lower, upper] = TABLE1_VIDEO_RANGE.map((t) => ballBallTimeFor(t, { start: "arrival" })) as [
-        typeof best,
-        typeof best,
-    ];
-    console.log(ballBallText(`the lower bound, ballBallTimeFor(${ms(TABLE1_VIDEO_RANGE[0])} ms)`, lower));
+    // Above VISIBLE_SHIFT the approach from first touch alone can outlast a bound's video time at Table 1's slowest
+    // speed, so a bound may have no conversion in ballBallTimeFor's bracket: it is then printed and left null.
+    const bound = (t: number, label: string): number | null => {
+        try {
+            const found = ballBallTimeFor(t, { shift, start: "arrival" });
+            console.log(ballBallText(`${label}, ballBallTimeFor(${ms(t)} ms)`, found));
+            return found.time;
+        } catch (error) {
+            console.log(`${label}, ballBallTimeFor(${ms(t)} ms): NONE, null in the constants (${errorText(error)})`);
+            return null;
+        }
+    };
+    const lower = bound(TABLE1_VIDEO_RANGE[0], "the lower bound");
     console.log(ballBallMovedText(TABLE1_VIDEO_RANGE[0]));
-    console.log(ballBallText(`the upper bound, ballBallTimeFor(${ms(TABLE1_VIDEO_RANGE[1])} ms)`, upper));
+    const upper = bound(TABLE1_VIDEO_RANGE[1], "the upper bound");
     console.log(ballBallMovedText(TABLE1_VIDEO_RANGE[1]));
     const obstacleUpper = (contactReference.ballObstacleContactTime.bounds as readonly [number, number])[1];
-    const obstacle = { value: best.time, bounds: [OBSTACLE_LOWER_SHARE * lower.time, obstacleUpper] };
+    const obstacleLower = lower === null ? null : OBSTACLE_LOWER_SHARE * lower;
+    const obstacle = { value: best.time, bounds: [obstacleLower, obstacleUpper] };
     console.log(
-        `  the obstacle: ${ms(obstacle.value)} ms in [${ms(obstacle.bounds[0] as number)}, ${ms(obstacleUpper)}] ms ` +
+        `  the obstacle: ${ms(obstacle.value)} ms in [${obstacleLower === null ? "none" : ms(obstacleLower)}, ` +
+            `${ms(obstacleUpper)}] ms ` +
             `(lower ${fmt(OBSTACLE_LOWER_SHARE)} × the ball–ball's; upper as today, from the obstacle fuzz): ` +
             `${obstacle.value <= obstacleUpper ? "inside" : "OUTSIDE"} its upper bound`,
     );
@@ -2462,7 +2550,7 @@ function conversions(): void {
     );
     const constants = {
         faceContactTimeFit: { coefficients: { t0, u0, q } },
-        ballBallContactTime: { value: best.time, bounds: [lower.time, upper.time] },
+        ballBallContactTime: { value: best.time, bounds: [lower, upper] },
         ballObstacleContactTime: obstacle,
     };
     console.log("BEGIN CONSTANTS");
@@ -3185,6 +3273,289 @@ function sectionN(): void {
     }
 }
 
+/**
+ * The scripts section O plays a root's strokes with: those every root's ratioFit exports with the same signature,
+ * today's tree's (main, before this step's tidy) included. Its meansOf and gugansMallet differ, and section O uses
+ * neither; its readOut's `open` counts only the face intervals, so section O judges `open` itself (readTimeOf).
+ */
+type HandsFit = Pick<
+    typeof RatioFit,
+    "TODAY" | "fitWorld" | "guganSetup" | "readOut" | "figuresOf" | "effectiveMassOf"
+>;
+
+/** A root of HANDS_ROOTS: its label, its path and its own ratioFit (and through it its own src and world). */
+interface HandsRoot {
+    readonly label: string;
+    readonly root: string;
+    readonly fit: HandsFit;
+}
+
+/** `entries` ("label=value", comma-separated) as pairs; throws naming `name` for an entry without both. */
+function labelled(name: string, entries: string): readonly { readonly label: string; readonly value: string }[] {
+    return entries.split(",").map((entry) => {
+        const at = entry.indexOf("=");
+        if (at <= 0 || at === entry.length - 1) {
+            throw new Error(`${name} takes label=path entries, comma-separated (got "${entry}")`);
+        }
+        return { label: entry.slice(0, at), value: entry.slice(at + 1) };
+    });
+}
+
+/** Whether `section` runs in this invocation. */
+const running = (section: string): boolean => SECTION === section || SECTION === "all";
+
+/**
+ * Section O's roots (design §7.6): HANDS_ROOTS, `label=path` comma-separated, each root's scripts/ratioFit.ts loaded
+ * beside the worktree's own; null when section O does not run or HANDS_ROOTS is absent.
+ */
+async function loadHandsRoots(): Promise<readonly HandsRoot[] | null> {
+    const value = process.env.HANDS_ROOTS;
+    if (!running("O") || value === undefined) {
+        return null;
+    }
+    return Promise.all(
+        labelled("HANDS_ROOTS", value).map(async ({ label, value: root }) => {
+            const fit = (await import(`${root}/scripts/ratioFit.ts`)) as HandsFit;
+            return { label, root, fit };
+        }),
+    );
+}
+
+const HANDS_ROOTS = await loadHandsRoots();
+
+/** Design §7.6's strokes: C3S and C20S at their recorded gap 0, and C3D at its recorded 1 mm. */
+const HANDS_STROKES = ["C3S", "C20S", "C3D"] as const;
+
+/** One root's play of a filmed stroke: its figures, its read-out, its face and ball–ball intervals, and `open`. */
+interface HandsRun {
+    readonly figures: ReturnType<typeof figuresOf>;
+    readonly read: ReadOut;
+    readonly face: readonly ContactInterval[];
+    readonly pair: readonly ContactInterval[];
+    readonly open: boolean;
+}
+
+/**
+ * Filmed stroke `name` on `fit`'s own engine and world (fitWorld on its root's defaultWorld, as TodayEngine requires),
+ * played as section E plays it: its preset, its U and recorded gap, the preset's push, no jab, the default mallet.
+ * `open` is readTimeOf's on the face and ball–ball intervals, the same rule for every root.
+ */
+function handsRun(fit: HandsFit, name: string): HandsRun {
+    const stroke = filmed(name);
+    const world = fit.fitWorld(fit.TODAY);
+    const setup = fit.guganSetup(stroke.preset, stroke.malletSpeed, stroke.gap, { world });
+    const other = setup.croqueted;
+    if (other === undefined) {
+        throw new RangeError(`handsRun: ${name}'s stroke has no croqueted ball`);
+    }
+    const read = fit.readOut(setup, world);
+    const figures = fit.figuresOf(read, fit.effectiveMassOf(setup, world) / world.ball.mass);
+    const face = read.impact.timeline[faceKey(setup.striker)] ?? [];
+    const pair = read.impact.timeline[ballPairKey(setup.striker, other)] ?? [];
+    return { figures, read, face, pair, open: readTimeOf(face, pair).open };
+}
+
+/** The judged figures and W/U, the keys section O compares. */
+const HANDS_KEYS = [...MEAN_KEYS, "WU"] as const;
+
+/** `intervals` beginning within STRIKE_WINDOW of the first, as "[start, end]" in ms. */
+function strikeSpans(intervals: readonly ContactInterval[]): string {
+    const within = intervals.slice(0, strikeCount(intervals));
+    return within.length === 0 ? "none" : within.map((i) => `[${ms(i.start)}, ${ms(i.end)}]`).join(" ");
+}
+
+/**
+ * The change from `coupled` to `free` in the intervals beginning within STRIKE_WINDOW, each start's and end's (ms), or
+ * both counts when they differ.
+ */
+function spanChange(coupled: readonly ContactInterval[], free: readonly ContactInterval[]): string {
+    const [a, b] = [coupled.slice(0, strikeCount(coupled)), free.slice(0, strikeCount(free))];
+    if (a.length !== b.length) {
+        return `the count moved from ${a.length} to ${b.length}`;
+    }
+    return a.length === 0
+        ? "none"
+        : a
+              .map((i, k) => {
+                  const j = b[k] as ContactInterval;
+                  return `[${ms(j.start - i.start)}, ${ms(j.end - i.end)}]`;
+              })
+              .join(" ");
+}
+
+function sectionO(): void {
+    console.log(
+        "== O. The hands (design §7.6): C3S and C20S at gap 0 and C3D at 1 mm, each played as section E plays it, " +
+            "on each root of HANDS_ROOTS (label=path), each root's engine on its own root's world; a root labelled " +
+            "L-free is L's tree with the head free of the hands for the strike's first 5 ms (a throwaway copy: in " +
+            "src/engine/impact/integrate.ts the tracked drive's hand force and torque are zero while t < 5 ms). " +
+            "Per root and stroke: v2/U, w1/W, v2/w1, W/U and the energy; the speeds (m/s) and the read time; the " +
+            "face and ball–ball intervals within the strike (law time, ms from the impact's start); OPEN marks a " +
+            "strike not closed within the window (readTimeOf on both kinds of interval, for every root alike). " +
+            "Then, per L beside L-free, free less coupled: each figure, and each interval's start and end (ms) ==",
+    );
+    if (HANDS_ROOTS === null) {
+        console.log("  not run: section O needs HANDS_ROOTS (label=path, comma-separated)");
+        return;
+    }
+    const played = new Map<string, readonly HandsRun[]>();
+    for (const { label, root, fit } of HANDS_ROOTS) {
+        console.log(`-- ${label} (${root}) --`);
+        const strokeRuns = HANDS_STROKES.map((name) => handsRun(fit, name));
+        played.set(label, strokeRuns);
+        HANDS_STROKES.forEach((name, i) => {
+            const { figures, read, face, pair, open } = strokeRuns[i] as HandsRun;
+            const stroke = filmed(name);
+            console.log(
+                `${name} (${stroke.preset}, U ${fmt(stroke.malletSpeed)} m/s, gap ${mm(stroke.gap)} mm)` +
+                    `${open ? " OPEN" : ""}: v2/U ${fmt(figures.v2U)}, w1/W ${fmt(figures.w1W)}, v2/w1 ` +
+                    `${fmt(figures.v2w1)}, W/U ${fmt(figures.WU)}, energy ${fmt(figures.energy)}`,
+            );
+            console.log(`  ${speedsText({ ...read, open })}`);
+            console.log(`  face intervals ${strikeSpans(face)} ms; ball–ball intervals ${strikeSpans(pair)} ms`);
+        });
+    }
+    console.log("-- the hands' effect: free less coupled --");
+    for (const { label } of HANDS_ROOTS) {
+        const coupled = played.get(label);
+        const free = played.get(`${label}-free`);
+        if (coupled === undefined || free === undefined) {
+            continue;
+        }
+        HANDS_STROKES.forEach((name, i) => {
+            const [c, f] = [coupled[i], free[i]] as [HandsRun, HandsRun];
+            const figures = HANDS_KEYS.map((k) => `${k} ${fmt(f.figures[k] - c.figures[k])}`).join(", ");
+            console.log(
+                `${label} ${name}: ${figures}; face intervals ${spanChange(c.face, f.face)} ms, ball–ball ` +
+                    `${spanChange(c.pair, f.pair)} ms${c.open || f.open ? " (OPEN in either: not comparable)" : ""}`,
+            );
+        });
+    }
+}
+
+/** One threshold's section E output for section P: its label (mm), its path and its text. */
+interface ReachInput {
+    readonly label: string;
+    readonly path: string;
+    readonly text: string;
+}
+
+/** Reads the text file at `path` (tsx runs under Node; the project has no Node types). */
+async function readText(path: string): Promise<string> {
+    const specifier = "node:fs";
+    const fs = (await import(/* @vite-ignore */ specifier)) as {
+        readFileSync(path: string, encoding: "utf8"): string;
+    };
+    return fs.readFileSync(path, "utf8");
+}
+
+/**
+ * Section P's inputs (design §7.9): P_INPUTS, `mm=path` comma-separated, each a section E output from the tree whose
+ * laws were re-set at that threshold; null when section P does not run or P_INPUTS is absent.
+ */
+async function loadReachInputs(): Promise<readonly ReachInput[] | null> {
+    const value = process.env.P_INPUTS;
+    if (!running("P") || value === undefined) {
+        return null;
+    }
+    return Promise.all(
+        labelled("P_INPUTS", value).map(async ({ label, value: path }) => ({
+            label,
+            path,
+            text: await readText(path),
+        })),
+    );
+}
+
+const REACH_INPUTS = await loadReachInputs();
+
+/** A touching stop's E.0 line: its name, OPEN if so, the judged figures' text and the verdict. */
+const TOUCHING_LINE = /^(C3S|C20S)( OPEN)?: (.*): (pass|miss)$/;
+
+/** One mean in an E.3 line: its key, value, Gugan's value, his sem and the verdict. */
+const MEAN_PART = /(v2U|w1W|v2w1) (-?[\d.]+) against (-?[\d.]+) ± ([\d.]+) \([^)]*\): (pass|miss)/g;
+
+/** The two E.3 lines: the eight gapped strokes' means and all ten's. */
+const MEAN_SETS = ["the eight gapped strokes", "all ten strokes"] as const;
+
+/** Section E's verdicts on criteria 3 and 4 as one input carries them. */
+interface ReachVerdicts {
+    readonly touching: readonly { readonly name: string; readonly pass: boolean; readonly text: string }[];
+    readonly means: readonly { readonly set: string; readonly pass: boolean; readonly text: string }[];
+}
+
+/** `input`'s E.0 and E.3 verdicts; throws naming the file when a touching stop's line or a means line is missing. */
+function reachVerdictsOf(input: ReachInput): ReachVerdicts {
+    const lines = input.text.split("\n");
+    const touching = ["C3S", "C20S"].map((name) => {
+        const match = lines.map((l) => TOUCHING_LINE.exec(l)).find((m) => m !== null && m[1] === name);
+        if (match === undefined || match === null) {
+            throw new RangeError(`section P: ${input.path} has no E.0 line for ${name}`);
+        }
+        const open = match[2] !== undefined;
+        return { name, pass: match[4] === "pass" && !open, text: `${open ? "OPEN; " : ""}${match[3] as string}` };
+    });
+    const means = MEAN_SETS.map((set) => {
+        const line = lines.find((l) => l.startsWith(`${set} (`));
+        const parts = line === undefined ? [] : [...line.matchAll(MEAN_PART)];
+        if (line === undefined || parts.length !== MEAN_KEYS.length) {
+            throw new RangeError(`section P: ${input.path} has no E.3 line for ${set} with its three means`);
+        }
+        const counted = /\((\d+) counted/.exec(line)?.[1] ?? "?";
+        return {
+            set,
+            pass: parts.every((p) => p[5] === "pass"),
+            text:
+                `${counted} counted: ` +
+                parts.map((p) => `${p[1] as string} ${p[2] as string} (${p[5] as string})`).join(", "),
+        };
+    });
+    return { touching, means };
+}
+
+function sectionP(): void {
+    console.log(
+        "== P. The camera threshold's reach (design §7.9): VISIBLE_SHIFT is 0.2 mm, Gugan 4's resolution on paper; " +
+            "both laws re-set at 0.4 and 0.6 mm by I.0 (SHIFT) in throwaway copies, the video's clock from first " +
+            "touch (gate stage 1's ruling A1), and section E run from each. Per threshold (P_INPUTS, mm=path, each a " +
+            "section E output): criterion 3, C3S and C20S at gap 0 each within its touchingBand (E.0); criterion 4, " +
+            "the three means within Gugan's sem over the eight gapped strokes and over all ten (E.3). Criterion 2 " +
+            "is not re-judged here: I.0 at each threshold prints its Table 1 misses. The adopted laws stay those set " +
+            "at 0.2 mm ==",
+    );
+    if (REACH_INPUTS === null) {
+        console.log("  not run: section P needs P_INPUTS (mm=path, comma-separated, section E outputs)");
+        return;
+    }
+    const judged = REACH_INPUTS.map((input) => ({ input, verdicts: reachVerdictsOf(input) }));
+    for (const { input, verdicts } of judged) {
+        console.log(`-- ${input.label} mm (${input.path}) --`);
+        for (const t of verdicts.touching) {
+            console.log(`  criterion 3, ${t.name}: ${verdict(t.pass)}: ${t.text}`);
+        }
+        for (const m of verdicts.means) {
+            console.log(`  criterion 4, ${m.set}: ${verdict(m.pass)}: ${m.text}`);
+        }
+    }
+    const base = judged.find((j) => Math.abs(Number(j.input.label) * 1e-3 - VISIBLE_SHIFT) < 1e-12);
+    console.log("-- the reach: each threshold's verdicts beside VISIBLE_SHIFT's --");
+    for (const { input, verdicts } of judged) {
+        const three = verdicts.touching.every((t) => t.pass);
+        const four = verdicts.means.every((m) => m.pass);
+        const same =
+            base === undefined
+                ? "no 0.2 mm input to compare"
+                : three === base.verdicts.touching.every((t) => t.pass) &&
+                    four === base.verdicts.means.every((m) => m.pass)
+                  ? "both as at 0.2 mm"
+                  : "MOVED from 0.2 mm";
+        console.log(
+            `${input.label} mm: criterion 3 (the touching stops) ${verdict(three)}, criterion 4 (the means) ` +
+                `${verdict(four)}; ${same}`,
+        );
+    }
+}
+
 const SECTIONS: Readonly<Record<string, () => void>> = {
     A: sectionA,
     B: sectionB,
@@ -3201,10 +3572,12 @@ const SECTIONS: Readonly<Record<string, () => void>> = {
     L: sectionL,
     M: sectionM,
     N: sectionN,
+    O: sectionO,
+    P: sectionP,
 };
 
 /** The sections `all` runs, in order: B, C, H and I-old only by name. */
-const ALL_SECTIONS: readonly string[] = ["A", "D", "E", "F", "G", "I", "J", "K", "L", "M", "N"];
+const ALL_SECTIONS: readonly string[] = ["A", "D", "E", "F", "G", "I", "J", "K", "L", "M", "N", "O", "P"];
 
 if (SECTION !== "all" && SECTIONS[SECTION] === undefined) {
     throw new Error(`SECTION must be "all" or one of ${Object.keys(SECTIONS).join(", ")}`);

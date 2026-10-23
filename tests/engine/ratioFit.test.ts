@@ -316,10 +316,12 @@ describe("the read-out's tidy (P2b.2b.2c.2c design §10)", () => {
 describe("the strike's window (P2b.2b.2c.2c design §7.7)", () => {
     const I = (start: number, end: number) => ({ start, end });
     it("counts a contact beginning at the window's end, and not one beginning after it", () => {
-        expect(readTimeOf([I(0, 8e-4), I(STRIKE_WINDOW, STRIKE_WINDOW + 1e-4)], []).time).toBeCloseTo(
-            STRIKE_WINDOW + 1e-4 + READ_DELAY,
-            15,
-        );
-        expect(readTimeOf([I(0, 8e-4), I(STRIKE_WINDOW + 1e-9, 0.02)], []).time).toBeCloseTo(8e-4 + READ_DELAY, 15);
+        const atEnd = readTimeOf([I(0, 8e-4), I(STRIKE_WINDOW, STRIKE_WINDOW + 1e-4)], []);
+        expect(atEnd.time).toBeCloseTo(STRIKE_WINDOW + 1e-4 + READ_DELAY, 15);
+        // The counted contact begins at the window's end and ends after it, so the strike is still open.
+        expect(atEnd.open).toBe(true);
+        const after = readTimeOf([I(0, 8e-4), I(STRIKE_WINDOW + 1e-9, 0.02)], []);
+        expect(after.time).toBeCloseTo(8e-4 + READ_DELAY, 15);
+        expect(after.open).toBe(false);
     });
 });
