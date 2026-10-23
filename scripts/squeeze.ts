@@ -12,7 +12,8 @@
  * zero a little before δ does. A law's parameter T (lawFromContactTime's contact time, closeFace's T(U)) is its
  * force-on time; the law time exceeds it. Every video time takes an optional threshold `shift` (m), VISIBLE_SHIFT
  * when absent, so that design §7.9's 0.4 and 0.6 mm and the camera's thresholds can be passed; without it every call
- * is as before.
+ * is as before. Likewise an optional `start` (VideoStart) starts the video at first touch, the start the laws'
+ * conversions adopt, instead of the struck ball's first visible move.
  * freeFace plays the default mallet's head free onto a free default ball, the face's law alone. The face's law reads
  * T(U) from reference/contact.json at load, so its conversion cannot re-run the face at another t0; it need not.
  * Under the face's Hertz law, F = k·δ^{3/2} + c·δ^{1/2}·δ′ with k and c set at the closing speed U from T(U) and e(U),
@@ -98,15 +99,27 @@ export interface Timed {
 }
 
 /**
+ * Where a harness's video time starts. "arrival": the striking surface (the face, or the striker's ball) first within
+ * the threshold of the struck ball, extrapolated back at the closing speed to t = (START_GAP − shift)/speed, before
+ * the run's start; the clock starts at first touch, as Gugan 4's Fig. 4 times every event from the mallet's first
+ * contact, and this is the adopted start for the laws' conversions (gate stage 1's ruling). "moved": the struck ball's
+ * displacement first exceeding the threshold, the default, kept so that every existing call reads as before. Hertz
+ * similarity (the header) holds for both, since the approach before the contact only offsets the start.
+ */
+export type VideoStart = "moved" | "arrival";
+
+/**
  * A free collision of the default world's balls under `law` at `speed` (m/s), at `o.dt`'s step (default the engine's
  * IMPACT_DT): the restitution (the balls' separating speed over `speed` at the end), the law and force-on times, and
  * the video's (from the struck ball's displacement first exceeding `o.shift`, default VISIBLE_SHIFT, to the pair's gap
- * first exceeding it). Throws a RangeError when the video never sees the contact end within FREE_CAP.
+ * first exceeding it). `o.start` "arrival" starts the video instead when the striker's surface comes within the
+ * threshold of the struck ball's, extrapolated back at `speed` to t = (START_GAP − shift)/speed (VideoStart; default
+ * "moved"). Throws a RangeError when the video never sees the contact end within FREE_CAP.
  */
 export function freeCollision(
     speed: number,
     law: PairLaw,
-    o: { readonly dt?: number; readonly shift?: number } = {},
+    o: { readonly dt?: number; readonly shift?: number; readonly start?: VideoStart } = {},
 ): Timed {
     const world = defaultWorld();
     const R = world.ball.radius;
@@ -150,11 +163,12 @@ export function freeCollision(
         throw new RangeError(`freeCollision: at ${speed} m/s the video never saw the contact end within ${FREE_CAP} s`);
     }
     const separating = (run.balls.red?.velocity.x as number) - (run.balls.blue?.velocity.x as number);
+    const from = o.start === "arrival" ? (START_GAP - shift) / speed : seen.moved;
     return {
         restitution: separating / speed,
         lawTime: seen.touching * dt,
         forceTime: seen.closed * dt,
-        videoTime: seen.parted - seen.moved,
+        videoTime: seen.parted - from,
     };
 }
 
@@ -170,21 +184,13 @@ const FACE_CAP = 2e-3;
  */
 const FACE_CAP_LIMIT = 16e-3;
 
-/**
- * Where a free face's video time starts: "moved", the struck ball's displacement first exceeding the threshold (the
- * design's Vocabulary, as adopted); "arrival", the face first within the threshold of the ball, extrapolated back at
- * the head's speed to t = (START_GAP − shift)/speed, before the run's start, a sensitivity only. Hertz similarity (the
- * header) holds for both, since the approach before the contact only offsets the start.
- */
-export type FaceStart = "moved" | "arrival";
-
 /** A free face run (freeFace) with its trace: the ball's displacement and the face's clearance (m) at each step. */
 interface FaceRun {
     readonly restitution: number;
     readonly lawTime: number;
     readonly forceTime: number;
     /** The video time (s) at threshold `shift` (m) from `start`, or null if the trace never shows the contact end. */
-    readonly videoAt: (shift: number, start?: FaceStart) => number | null;
+    readonly videoAt: (shift: number, start?: VideoStart) => number | null;
 }
 
 /**
@@ -221,7 +227,7 @@ function playFace(speed: number, dt: number, reach: number): FaceRun {
             },
         };
         const run = integrate(setup, { dt, cap, probe });
-        const videoAt = (shift: number, start: FaceStart = "moved"): number | null => {
+        const videoAt = (shift: number, start: VideoStart = "moved"): number | null => {
             const moved = trace.findIndex((p) => visible(p.moved, shift));
             if (moved < 0) {
                 return null;
@@ -255,11 +261,11 @@ function playFace(speed: number, dt: number, reach: number): FaceRun {
  * a RangeError when the video never sees the contact end within FACE_CAP_LIMIT. The shaft's mass is left out because
  * the design's free head carries the head's mass alone: with it the body's centre lies above the face's axis and the
  * head turns, and at 3.26 m/s the force-on time reads 0.8969 ms against T(U)'s 0.8852 and e 0.8155 against 0.8145.
- * `o.start` moves the video's start (FaceStart; default "moved").
+ * `o.start` moves the video's start (VideoStart; default "moved").
  */
 export function freeFace(
     speed: number,
-    o: { readonly dt?: number; readonly shift?: number; readonly start?: FaceStart } = {},
+    o: { readonly dt?: number; readonly shift?: number; readonly start?: VideoStart } = {},
 ): Timed & { readonly clamped: boolean } {
     const shift = o.shift ?? VISIBLE_SHIFT;
     const { restitution, lawTime, forceTime, videoAt } = playFace(speed, o.dt ?? IMPACT_DT, shift);
@@ -284,14 +290,14 @@ const SCALE_TOLERANCE = 1e-5;
  * Every s reads the same run at its own threshold, so the face is played once; its step is not scaled with s, a
  * difference of under a step in the video time. The new law's t0 is s times today's, a parameter in T(U)'s sense: the
  * force-on time, as reference/contact.json holds it.
- * `o.shift` is the threshold (default VISIBLE_SHIFT), `o.dt` freeFace's step, `o.start` the video's start (FaceStart;
+ * `o.shift` is the threshold (default VISIBLE_SHIFT), `o.dt` freeFace's step, `o.start` the video's start (VideoStart;
  * default "moved"). Throws a RangeError naming the target and the bracket's two video times when the bracket does not
  * straddle it.
  */
 export function faceScaleFor(
     target: number,
     speed: number,
-    o: { readonly dt?: number; readonly shift?: number; readonly start?: FaceStart } = {},
+    o: { readonly dt?: number; readonly shift?: number; readonly start?: VideoStart } = {},
 ): number {
     const shift = o.shift ?? VISIBLE_SHIFT;
     let [lo, hi] = SCALE_BRACKET as readonly [number, number];
@@ -338,13 +344,14 @@ const BRACKET_EDGE = 0.01;
  * holds it) whose video time best matches `target` (s) on Table 1's three clean strokes
  * (FREE_COLLISIONS), P2b.2b.2c.2c design §2.2: the law lawFromContactTime(m/2, e, T, 0) at Table 1's e, the T in
  * [0.5, 1.5] × target that minimises the largest |video − target| over the three speeds, by ternary search at `o.dt`
- * (default 1e-7 s) and threshold `o.shift` (default VISIBLE_SHIFT). `misses` are the signed video − target (s) at
- * that T, in FREE_COLLISIONS' order. Throws a RangeError naming the target and the bracket when the search ends at
- * either end of the bracket (within BRACKET_EDGE of its width): the best T then lies outside it.
+ * (default 1e-7 s), threshold `o.shift` (default VISIBLE_SHIFT) and video start `o.start` (VideoStart; default
+ * "moved"). `misses` are the signed video − target (s) at that T, in FREE_COLLISIONS' order. Throws a RangeError naming
+ * the target and the bracket when the search ends at either end of the bracket (within BRACKET_EDGE of its width): the
+ * best T then lies outside it.
  */
 export function ballBallTimeFor(
     target: number,
-    o: { readonly dt?: number; readonly shift?: number } = {},
+    o: { readonly dt?: number; readonly shift?: number; readonly start?: VideoStart } = {},
 ): { readonly time: number; readonly misses: readonly number[] } {
     const mass = defaultWorld().ball.mass;
     const options = { ...o, dt: o.dt ?? BALL_BALL_DT };

@@ -52,6 +52,24 @@ describe("the conversion harnesses (P2b.2b.2c.2c design §2, §5.3)", () => {
             freeCollision(1.9, today, { dt: 1e-7 }).videoTime,
         );
     });
+    it("is today's to the bit with no start given", () => {
+        expect(freeCollision(1.9, today, { dt: 1e-7 })).toEqual(
+            freeCollision(1.9, today, { dt: 1e-7, start: "moved" }),
+        );
+    });
+    it("times from first touch longer than from the first move, by shift/v and the struck ball's lag", () => {
+        // The arrival start is (START_GAP − shift)/v and the first move's is the contact's start, START_GAP/v, plus the
+        // lag before the struck ball has moved VISIBLE_SHIFT; the end is the same. So the difference is shift/v plus
+        // that lag, and the ball moves visibly while the force is on, so the lag lies within the force-on time.
+        for (const speed of [1.9, 5.54, 7.64]) {
+            const moved = freeCollision(speed, today, { dt: 1e-7 });
+            const touch = freeCollision(speed, today, { dt: 1e-7, start: "arrival" });
+            const lag = touch.videoTime - moved.videoTime - 2e-4 / speed;
+            expect(lag).toBeGreaterThan(0);
+            expect(lag).toBeLessThan(moved.forceTime);
+            expect(touch.restitution).toBe(moved.restitution);
+        }
+    });
     it("plays the face law alone to its own T(U) and e(U)", () => {
         // A free head on a free ball is the law's central collision, whose force-on time and restitution are T(U) and
         // e(U) (contactLaw.test.ts's free case), to the step and the clamp's restitution check. The clamp releases the
@@ -75,6 +93,10 @@ describe("the conversion harnesses (P2b.2b.2c.2c design §2, §5.3)", () => {
         const today = freeFace(3.26, { dt: 1e-8 }).videoTime;
         expect(Math.abs(faceScaleFor(today, 3.26, { dt: 1e-8 }) - 1)).toBeLessThan(1e-3);
     });
+    it("finds the face's scale from first touch: scale 1 reproduces today's video time on that start", () => {
+        const today = freeFace(3.26, { dt: 1e-8, start: "arrival" }).videoTime;
+        expect(Math.abs(faceScaleFor(today, 3.26, { dt: 1e-8, start: "arrival" }) - 1)).toBeLessThan(1e-3);
+    });
     it("throws when the target lies outside the bracket", () => {
         // Review focus 4.
         expect(() => faceScaleFor(1e-6, 3.26)).toThrow(/outside/);
@@ -87,6 +109,14 @@ describe("the conversion harnesses (P2b.2b.2c.2c design §2, §5.3)", () => {
         // Gate A's trace put it near 0.93 ms; the bracket is wide, so this only guards a gross error.
         expect(time).toBeGreaterThan(7.5e-4);
         expect(time).toBeLessThan(1.2e-3);
+    }, 180_000);
+    it("finds a ball–ball time from first touch within a frame of 0.75 ms at all three speeds", () => {
+        // From first touch the video reads longer (by shift/v and the struck ball's lag), so the law is shorter: about
+        // 0.55 ms, misses about ±94 µs at dt 1e-7 s. The bounds only guard a gross error.
+        const { time, misses } = ballBallTimeFor(7.5e-4, { start: "arrival" });
+        expect(misses.every((m) => Math.abs(m) <= VIDEO_FRAME)).toBe(true);
+        expect(time).toBeGreaterThan(3.75e-4);
+        expect(time).toBeLessThan(7.5e-4);
     }, 180_000);
     it("throws when the ball–ball search runs into an end of its bracket", () => {
         // At a 2 mm threshold the video cannot time a contact as short as 0.1 ms: the separating gap alone takes about
