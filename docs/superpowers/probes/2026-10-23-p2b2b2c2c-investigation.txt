@@ -1,0 +1,208 @@
+P2b.2b.2c.2c investigation: why v2/U at gap 0 exceeds the film (gate stage 1, 2026-10-23)
+
+What was asked. At gate stage 1 the user ruled "Pause for an investigation" on question B (the touching stops, C3S and
+C20S): before anything lands, find why the model's v2/U at gap 0 exceeds Gugan 4's film for every law tried. The
+investigation was evidence only (systematic debugging, phase 1): no engine edit, no fix. It used throwaway scripts and
+throwaway copies of the tree, never committed, at these paths (<temp> =
+/tmp/claude-5268dd52-7f6c-4cc1-b707-58aa7444f84d): <temp>/scripts/invE1.mts (bare chain, E1 and E3),
+<temp>/scripts/invE2.mts (full strokes with impulses, E2, E3, E4), <temp>/scripts/invE5.mts (bare-chain sweep of the
+ball-ball law, extra); the admitted laws are the copy <temp>/copies/laws-t (face t0 0.579 ms, ball-ball 0.551 ms), and
+E4 used <temp>/copies/inv-free-head (laws-t with the hands decoupled: drive and headTorque ZERO for t < 5e-3 s;
+contactAt is 0 for these presets and every strike contact ends by 2.8 ms, so the window covers them). The worktree was
+at d0520b4 (today's laws: face t0 as committed, ball-ball 0.75 ms). Laws in the tables: "admitted" = laws-t; "today" =
+the committed laws.
+
+Gugan 4, Table 5, for reference: C3S v2/U 1.146, w1/U 0.505, W/U 0.292; C20S v2/U 1.086, w1/U 0.500, W/U 0.310.
+
+E1. The bare 1-D chain (free head, shaft massless, no hands, gravity, turf, spin or friction)
+
+Head = the stop-ac preset's planned head, 1.000 kg (2.2046 ball masses). Engine face law (Hertz, k and c set at the
+closing speed) and the engine's ball-ball law (linear, e 0.72, T from the tree's world), friction 0. Times in ms from
+the impact's start; "face" and "ball-ball" are the steps with positive normal force.
+
+Columns: laws; U (m/s); gap; v2/U; w1/U; W/U; face intervals; ball-ball intervals
+admitted; 1.92; 0; 1.2145; 0.4850; 0.2291; [0.010, 1.020]; [0.015, 0.950]
+admitted; 1.92; 0.25 mm; 1.1493; 0.4243; 0.2862; [0.010, 1.575]; [0.400, 1.000]
+admitted; 1.92; 1 mm; 1.0825; 0.4992; 0.2826; [0.010, 0.660] [1.915, 2.810]; [0.735, 1.285]
+admitted; 5.80; 0; 1.1872; 0.3490; 0.3032; [0.005, 1.000]; [0.010, 0.840]
+admitted; 5.80; 0.25 mm; 1.1554; 0.3860; 0.3008; [0.005, 1.395]; [0.225, 0.860]
+admitted; 5.80; 1 mm; 1.0737; 0.4997; 0.2863; [0.005, 0.545] [0.915, 1.610]; [0.380, 0.935]
+admitted; 2.50; 0; 1.2120; 0.4489; 0.2466; [0.005, 0.985]; [0.010, 0.920]
+admitted; 2.50; 1 mm; 1.0785; 0.5014; 0.2834; [0.005, 0.620] [1.540, 2.385]; [0.620, 1.170]
+today; 1.92; 0; 1.2059; 0.5606; 0.1987; [0.010, 1.495]; [0.015, 1.370]
+today; 1.92; 0.25 mm; 1.1786; 0.4694; 0.2525; [0.010, 1.850]; [0.520, 1.405]
+today; 1.92; 1 mm; 1.0837; 0.4982; 0.2824; [0.010, 1.025] [1.815, 3.185]; [0.900, 1.650]
+today; 5.80; 0; 1.1980; 0.4119; 0.2697; [0.005, 1.315]; [0.010, 1.205]
+today; 5.80; 0.25 mm; 1.1818; 0.3935; 0.2854; [0.005, 1.570]; [0.300, 1.220]
+today; 5.80; 1 mm; 1.1130; 0.4529; 0.2897; [0.005, 2.090]; [0.490, 1.280]
+today; 2.50; 0; 1.2085; 0.5226; 0.2147; [0.005, 1.435]; [0.010, 1.330]
+today; 2.50; 1 mm; 1.0840; 0.4952; 0.2837; [0.005, 1.000] [1.490, 2.785]; [0.770, 1.525]
+
+Momentum is conserved to 1e-4 in every run. The bare chain alone gives v2/U 1.19-1.21 at gap 0 and 1.07-1.11 at 1 mm,
+on both sets of laws: the gap sensitivity is present with no hands, turf, gravity, shaft or friction. At gap 0 the face
+and ball-ball contacts overlap almost entirely (both closed for about 1 ms); at 1 mm they are sequential.
+
+With the head's mass set to an effective mass (admitted laws; "face law at" = the reduced mass the face law is built on;
+the engine builds it on the bare head's):
+
+Columns: U (m/s); M (ball masses); face law at; gap; v2/U; w1/U; W/U
+1.92; 2.5113 (model's C3S); bare head; 0; 1.2782; 0.5408; 0.2757
+1.92; 2.5113; M; 0; 1.2777; 0.5307; 0.2799
+1.92; 2.5113; bare head; 1 mm; 1.1274; 0.5750; 0.3221
+5.80; 2.5113 (model's C20S); bare head; 0; 1.2508; 0.4020; 0.3419
+5.80; 2.5113; M; 0; 1.2476; 0.3974; 0.3449
+5.80; 2.5113; bare head; 1 mm; 1.1211; 0.5696; 0.3268
+2.50; 2.4461 (model's C1D); bare head; 0; 1.2633; 0.4913; 0.2827
+2.50; 2.4461; bare head; 1 mm; 1.1146; 0.5617; 0.3147
+1.92; 2.30 (Gugan's); bare head; 0; 1.2354; 0.5028; 0.2443
+1.92; 2.30; bare head; 1 mm; 1.0965; 0.5235; 0.2957
+5.80; 2.30 (Gugan's); bare head; 0; 1.2081; 0.3651; 0.3160
+5.80; 2.30; bare head; 1 mm; 1.0898; 0.5229; 0.2989
+
+The face law's reduced mass (bare head or M) moves v2/U by at most 0.003.
+
+E2. The full strokes (admitted laws; section E's play: guganSetup on the preset, push, no jab)
+
+Read-out figures (readOut, figuresOf; k = 2.5113):
+
+Columns: stroke; gap; v2/U; w1/U; W/U; w1/W; v2/w1; read at (ms)
+C3S; 0; 1.2574; 0.5113; 0.2589; 1.9750; 2.4592; 2.065
+C3S; 1 mm; 1.1101; 0.5373; 0.3130; 1.7164; 2.0660; 3.790
+C20S; 0; 1.2305; 0.3708; 0.3223; 1.1505; 3.3185; 2.090
+C20S; 1 mm; 1.1099; 0.5337; 0.3067; 1.7404; 2.0796; 2.625
+
+Contacts (ms from the face's first start, which is 0.005 ms into the impact):
+
+Columns: stroke; gap; face; ball-ball
+C3S; 0; [0.000, 1.060]; [0.005, 0.985]
+C3S; 1 mm; [0.000, 0.685] [1.840, 2.785]; [0.710, 1.305]
+C20S; 0; [0.000, 1.085]; [0.005, 0.880]
+C20S; 1 mm; [0.000, 0.585] [0.890, 1.620]; [0.370, 0.965]
+
+Impulses along aim, in units of m.U, summed from the face's first start to the read time (face on the striker's ball,
+ball-ball on the croqueted ball, hands and turf on the head, turf on each ball), with the croqueted ball's dv/U:
+
+Columns: stroke; gap; face->ball 1; ball-ball; hands->head; turf->head; turf->ball 1; turf->ball 2; ball 2 dv/U
+C3S; 0; 1.7695; 1.2586; -0.0293; 0; -0.0009; -0.0042; 1.2543
+C3S; 1 mm; 1.6518; 1.1150; -0.0583; 0; -0.0008; -0.0076; 1.1074
+C20S; 0; 1.5992; 1.2292; -0.0320; 0; -0.0001; -0.0017; 1.2275
+C20S; 1 mm; 1.6419; 1.1095; -0.0404; 0; -0.0001; -0.0023; 1.1072
+
+When the impulse is delivered:
+
+- Gap 0: the whole ball-ball impulse (1.2586 / 1.2292) is delivered within the first, single face contact; by the face's
+  first end it is complete. Nothing arrives later: no second tap, no sustained push.
+- 1 mm, C3S: the first face contact (to 0.685 ms) gives ball 1 1.2983; the ball-ball contact then passes 1.1150 to
+  ball 2. The second face contact (1.84-2.79 ms) adds 0.35 to ball 1 only.
+- 1 mm, C20S: the ball-ball contact starts during the first face contact (0.455 by its end) and ends at 0.965 ms with
+  1.1095.
+- v2 = (ball-ball + turf on ball 2) / m: 1.2586 - 0.0042 = 1.2544 against dv/U 1.2543 (C3S, gap 0); the decomposition
+  closes to 1e-4 in all four runs.
+- The hands pull back on the head throughout (-0.02 to -0.06 m.U to the read time): less at gap 0 than at 1 mm, and they
+  cannot be the gap-0 run's source of extra ball-ball impulse. The turf's share is under 0.008 m.U.
+
+The extra 0.13-0.15 m.U of ball-ball impulse at gap 0 comes during the first, overlapping face and ball-ball contact,
+the same window and size as in the bare chain.
+
+E3. Effective striking mass
+
+Columns: stroke; M_eff (kg); ball masses; head (kg); shaft (kg); swung body (kg)
+C3S (stop-ac, 1.92); 1.1391; 2.5113; 1.000; 0.325; 2.125
+C20S (stop-ac, 5.80); 1.1391; 2.5113; 1.000; 0.325; 2.125
+C1D (drive, 2.50); 1.1095; 2.4461; 1.000; 0.325; 2.125
+Gugan's mallet; ; 2.30; ; ;
+
+1-D estimates of v2/U at gap 0, with e_face(U) (0.8289 at 1.92, 0.7946 at 5.80, 0.8221 at 2.50) and e_bb 0.72:
+
+Columns: U; M; sequential (face then ball-ball, no re-contact); two balls lumped as 2m; engine chain (E1); stroke (E2)
+1.92; 2.5113; 1.1249; 1.0181; 1.2782; 1.2574
+5.80; 2.5113; 1.1038; 0.9990; 1.2508; 1.2305
+2.50; 2.4461; 1.1123; 1.0025; 1.2633; (1.256 per brief)
+1.92; 2.30; 1.0962; 0.9782; 1.2354;
+5.80; 2.30; 1.0757; 0.9599; 1.2081;
+
+The full stroke sits 0.02 below the bare chain at the same M_eff (the hands' and turf's small negative impulses, and the
+shaft's off-axis mass). The model's M_eff exceeds Gugan's by 0.21 ball masses, worth about +0.04 in v2/U through the
+chain (1.2782 -> 1.2354 at 1.92 m/s). Even at Gugan's 2.30 the chain gives 1.235 and 1.208 against the film's 1.146 and
+1.086. The engine's gap-0 chain exceeds both rigid 1-D limits, the sequential one by 0.15 and the lumped one by 0.26.
+
+E4. Hands decoupled for t < 5 ms (inv-free-head)
+
+Columns: stroke; gap; v2/U coupled; v2/U free; w1/U free; W/U free
+C3S; 0; 1.2574; 1.2600; 0.5126; 0.2555
+C3S; 1 mm; 1.1101; 1.1126; 0.5399; 0.3072
+C20S; 0; 1.2305; 1.2333; 0.3728; 0.3259
+C20S; 1 mm; 1.1099; 1.1107; 0.5382; 0.3116
+
+Freeing the head raises v2/U by 0.001-0.003 at both gaps. Gap 0 does not drop towards the film's. The contact intervals
+are unchanged to within one step. In the free copy, the probe's hand.force still reports the force the hands would have
+applied; the force applied to the head is zero.
+
+E5 (extra, to name the mechanism). The bare chain with the ball-ball law's T and e varied
+
+Admitted face law, bare head, friction 0. "Energy" is the kinetic energy kept, (M.W^2 + m.w1^2 + m.v2^2)/(M.U^2).
+
+Columns: U; T_bb (ms); e_bb; gap 0: v2/U, w1/U, W/U, energy; gap 1 mm: v2/U, energy
+1.92; 0.05; 0.72; 0.9726, 0.9708, 0.1185, 0.871; 1.0825, 0.724
+1.92; 0.15; 0.72; 0.9852, 0.9615, 0.1170, 0.873; 1.0822, 0.724
+1.92; 0.30; 0.72; 1.0717, 0.8615, 0.1231, 0.873; 1.0828, 0.725
+1.92; 0.551; 0.72; 1.2145, 0.4850, 0.2291, 0.828; 1.0825, 0.724
+1.92; 0.75; 0.72; 1.1927, 0.3210, 0.3134, 0.790; 1.0824, 0.724
+1.92; 1.5; 0.72; 1.1244, 0.4528, 0.2846, 0.747; 1.0822, 0.724
+1.92; 3.0; 0.72; 1.0996, 0.4831, 0.2821, 0.734; 1.0821, 0.724
+1.92; 0.551; 1.0; 1.3219, 0.4460, 0.1981, 0.922; 1.2582, 0.886
+1.92; 0.551; 0.4; 1.0752, 0.5966, 0.2417, 0.744; 0.8810, 0.601
+5.80; 0.05; 0.72; 0.9576, 0.9545, 0.1327, 0.847; 1.0025, 0.759
+5.80; 0.30; 0.72; 1.1391, 0.7179, 0.1577, 0.847; 1.1046, 0.738
+5.80; 0.551; 0.72; 1.1872, 0.3490, 0.3032, 0.787; 1.0737, 0.718
+5.80; 0.75; 0.72; 1.1436, 0.4055, 0.2973, 0.756; 1.0691, 0.716
+5.80; 1.5; 0.72; 1.0930, 0.4790, 0.2870, 0.728; 1.0647, 0.713
+5.80; 3.0; 0.72; 1.0750, 0.4986, 0.2862, 0.719; 1.0630, 0.712
+
+At gap 0, v2/U depends on the ratio of the ball-ball law's time to the face's (T_face(U) 0.654 ms at 1.92 m/s and
+0.507 ms at 5.80 m/s on the admitted laws):
+
+- Ball-ball much stiffer than the face (T_bb <= 0.15 ms). The pair behaves as one 2m body and both balls leave together,
+  v2/U about 0.97 (the lumped limit).
+- Ball-ball much softer (T_bb >= 3 ms). The motion becomes sequential, v2/U -> 1.08-1.10, the 1 mm value.
+- Ball-ball time near the face's (0.5-0.75 ms, where both admitted and today's laws sit). v2/U peaks at 1.19-1.21 for
+  the bare head. The chain keeps 0.79-0.83 of the energy against 0.72 sequentially: with the two springs matched, the
+  head's momentum passes through ball 1 into ball 2 coherently, as in a cradle, and the head is left slower (W/U 0.23
+  against 0.28).
+
+At 1 mm, v2/U does not depend on T_bb at all at 1.92 m/s. The film's 1.146 and 1.086 fall on this curve only away from
+the matched band.
+
+Conclusion
+
+The evidence points to the gap-0 contact chain itself: the overlapping face law and ball-ball law acting together. The
+hands, the turf, gravity, the shaft and friction are not the source. The evidence for this is strong:
+
+- the bare 1-D chain on the engine's own two laws reproduces the gap-0 excess and its fall with gap (1.21 at gap 0, 1.15
+  at 0.25 mm, 1.08 at 1 mm, on both sets of laws);
+- at the model's effective mass the bare chain sits within 0.02 of the full stroke (1.278 against 1.257; 1.251 against
+  1.230);
+- the full stroke's extra ball-ball impulse at gap 0 (+0.13 to +0.14 m.U over 1 mm) arrives entirely within the single,
+  overlapping first face contact;
+- decoupling the hands changes v2/U by under 0.003.
+
+The mechanism: at gap 0 the face's Hertz contact and the linear ball-ball contact are loaded at the same time. Their
+time scales are close (T_bb 0.55 ms against T_face 0.51-0.65 ms; today's 0.75 against 0.78-1.0), so the three-body
+compression releases with the head's momentum passed forward into ball 2. This transfer exceeds both rigid 1-D limits
+(sequential 1.10-1.12, lumped 1.00-1.02) and dissipates less than the sequential collisions do. Scaling both laws' times
+together (today's against admitted) leaves it unchanged, which is why no re-set of t0 alone moves it.
+
+The model's effective mass, 2.51 ball masses against Gugan's 2.30, adds a minor +0.04. Even at 2.30 the chain gives
+1.235 and 1.208.
+
+What could not be determined:
+
+- whether the real touching pair's contact (Hertzian and non-linear, with its own rate-dependent loss) would give the
+  same matched transfer. The engine's ball-ball law is linear; no Hertzian ball-ball variant was built, which would need
+  an engine edit;
+- whether the face law's k and c, set from the closing speed on a single ball's reduced mass, are right when the face
+  drives two touching balls. Swapping the reduced mass between the bare head and M_eff moved v2/U by 0.003; a reduced
+  mass on 2m was not tried;
+- how far the result hangs on the restitution the ball-ball law has in a chain. Its e is fixed for a free pair, yet in
+  the chain the linear dashpot keeps more energy;
+- whether Gugan's gap-0 strokes were truly touching (he does not mark C3S and C20S nominal).

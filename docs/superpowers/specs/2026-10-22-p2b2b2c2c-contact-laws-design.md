@@ -507,3 +507,26 @@ T(U), `ballBallContactTime` and the default gap.
 - **2026-10-22, after the review:** a ball–ball break shorter than one film frame (0.125 ms) no longer counts as the
   balls parting (§6, §8.1). Counting a one-step numerical break as a parting would have flagged taps the user asked to
   be "report[ed], never flag[ged]".
+- **2026-10-23, gate stage 1** (rulings verbatim as the option chosen; figures in
+  `docs/superpowers/probes/2026-10-22-p2b2b2c2c-laws.txt` and
+  `docs/superpowers/probes/2026-10-23-p2b2b2c2c-investigation.txt`):
+    - **A1, the conversion convention: "From first touch (Recommended)".** Gugan 4's Fig. 4 times every event from the
+      mallet's first contact, so the video clock starts at first touch: the surfaces within `VISIBLE_SHIFT`,
+      extrapolated back at the closing speed. This amends the meaning of "video time" and supersedes the Vocabulary's
+      "timed from the first visible movement". The Vocabulary's law time point is also corrected: a law's parameter T
+      (`contact.json`'s times, `lawFromContactTime`, `closeFace`) is the force-on duration; δ > 0 lasts longer under
+      the clamp. Both laws were re-converted and the copies rebuilt before admission was ruled on.
+    - **A2, the face's q: "Keep q −0.23 (Recommended)".** The face's t0 is 0.579 ms at u0 3.26 m/s. A1D's +0.42 ms
+      held-out miss is recorded as a threshold effect (0.76 m/s); the q fit (+0.12, the wrong sign for Hertz) is not
+      taken.
+    - **A3, admission: "Both laws (Recommended)".** Face t0 0.579 ms at u0 3.26 m/s, q −0.23; `ballBallContactTime`
+      0.551 ms, its bounds [0.319, 0.662] ms; the obstacle follows. Figures that went with it: Table 1 within a frame;
+      Table 2's A2D 0.761 ms in the full stroke; obstacle fuzz 0.030 R; the gapped v2/w1 mean 1.987 missing its
+      sem.
+    - **B, the touching stops: "Pause for an investigation".** C3S and C20S still miss at gap 0 on every law, so
+      nothing landed until the cause was found.
+    - **After the investigation: "Record and land (Recommended)".** Root cause: matched face and ball–ball time scales
+      at gap 0 give a three-body push; hands, turf and effective mass are ruled out, and the bare chain alone gives
+      v2/U 1.21. Gate C is settled: no search candidate lands (f and g's figures are recorded in the laws probe). The
+      default gap stays 1 mm. The touching stops are carried with the mechanism, and Hall's 1.8 ms touching-pair
+      contact as the lead. A law soft at first touch and stiff later would sit close to §12's surface-layer anti-goal.
