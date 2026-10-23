@@ -73,7 +73,8 @@
  *   its judged figures and its face and ball–ball intervals, then each root beside its free-head copy (the head free
  *   of the hands for the strike's first 5 ms), on today's laws and on the admitted ones.
  * - P. the camera threshold's reach (P2b.2b.2c.2c design §7.9): criteria 3 and 4 as section E judged them on the laws
- *   re-set at 0.2, 0.4 and 0.6 mm (P_INPUTS, each a section E output), and whether each holds as at 0.2 mm.
+ *   re-set at each threshold P_INPUTS names (each a section E output), whether each holds as at 0.2 mm, and the
+ *   judged figures whose verdict moved.
  * `all` runs A, D-G, I and J-P; B, C, H and I-old by name only.
  * Run with `npx --yes tsx scripts/croquetFitProbe.ts`; environment: SECTION (a letter; default all), CANDIDATE and
  * TODAY_ROOT (section I in a copy), SHIFT (I.0's threshold in m, default VISIBLE_SHIFT), HANDS_ROOTS (section O,
@@ -2331,7 +2332,17 @@ interface FaceColumn {
     readonly moved: { readonly video: number; readonly scale: number | null; readonly error: string | null };
 }
 
-/** faceScaleFor(Τh, U) for `column` at `start`, or its error as text. */
+/**
+ * Whether I.0 may print a conversion that has no answer and go on: only at a throwaway threshold (SHIFT set to other
+ * than VISIBLE_SHIFT), where the approach from first touch can outlast a slow column's or a bound's video time. At
+ * VISIBLE_SHIFT the constants block is what the laws are set from, so a failed conversion throws there.
+ */
+const LENIENT_CONVERSIONS = CONVERSION_SHIFT !== VISIBLE_SHIFT;
+
+/**
+ * faceScaleFor(Τh, U) for `column` at `start`, or its error as text. The first-move sensitivity ("moved") never
+ * throws, as before; the adopted start throws unless LENIENT_CONVERSIONS.
+ */
 function columnScale(
     column: (typeof TABLE2_FACE)[number],
     start: VideoStart,
@@ -2340,6 +2351,9 @@ function columnScale(
     try {
         return { scale: faceScaleFor(column.contactTime, column.speed, o), error: null };
     } catch (error) {
+        if (start === "arrival" && !LENIENT_CONVERSIONS) {
+            throw error;
+        }
         return { scale: null, error: errorText(error) };
     }
 }
@@ -2388,6 +2402,9 @@ function ballBallMovedText(target: number): string {
         const found = ballBallTimeFor(target, { shift: CONVERSION_SHIFT });
         return `  sensitivity, NOT ADOPTED: ${ballBallText("from the first visible move", found)}`;
     } catch (error) {
+        if (!LENIENT_CONVERSIONS) {
+            throw error;
+        }
         return `  sensitivity, NOT ADOPTED: from the first visible move: none (${errorText(error)})`;
     }
 }
@@ -2520,13 +2537,17 @@ function conversions(): void {
     }
     console.log(ballBallMovedText(target));
     // Above VISIBLE_SHIFT the approach from first touch alone can outlast a bound's video time at Table 1's slowest
-    // speed, so a bound may have no conversion in ballBallTimeFor's bracket: it is then printed and left null.
+    // speed, so a bound may have no conversion in ballBallTimeFor's bracket: at such a throwaway threshold it is then
+    // printed and left null (LENIENT_CONVERSIONS); at VISIBLE_SHIFT it throws.
     const bound = (t: number, label: string): number | null => {
         try {
             const found = ballBallTimeFor(t, { shift, start: "arrival" });
             console.log(ballBallText(`${label}, ballBallTimeFor(${ms(t)} ms)`, found));
             return found.time;
         } catch (error) {
+            if (!LENIENT_CONVERSIONS) {
+                throw error;
+            }
             console.log(`${label}, ballBallTimeFor(${ms(t)} ms): NONE, null in the constants (${errorText(error)})`);
             return null;
         }
@@ -3472,6 +3493,9 @@ const REACH_INPUTS = await loadReachInputs();
 /** A touching stop's E.0 line: its name, OPEN if so, the judged figures' text and the verdict. */
 const TOUCHING_LINE = /^(C3S|C20S)( OPEN)?: (.*): (pass|miss)$/;
 
+/** One judged figure in an E.0 line: its key, value and verdict. */
+const BAND_PART = /(v2U|w1W|v2w1) (-?[\d.]+) \(row [^)]*\) (pass|miss)/g;
+
 /** One mean in an E.3 line: its key, value, Gugan's value, his sem and the verdict. */
 const MEAN_PART = /(v2U|w1W|v2w1) (-?[\d.]+) against (-?[\d.]+) ± ([\d.]+) \([^)]*\): (pass|miss)/g;
 
@@ -3482,15 +3506,28 @@ const MEAN_SETS = ["the eight gapped strokes", "all ten strokes"] as const;
 interface ReachVerdicts {
     readonly touching: readonly { readonly name: string; readonly pass: boolean; readonly text: string }[];
     readonly means: readonly { readonly set: string; readonly pass: boolean; readonly text: string }[];
+    /** Every judged figure, the touching stops' and the means', each named by its stroke or set and its key. */
+    readonly figures: readonly { readonly label: string; readonly value: string; readonly pass: boolean }[];
 }
 
-/** `input`'s E.0 and E.3 verdicts; throws naming the file when a touching stop's line or a means line is missing. */
+/**
+ * `input`'s E.0 and E.3 verdicts; throws naming the file when a touching stop's line or a means line is missing or
+ * lacks its three figures.
+ */
 function reachVerdictsOf(input: ReachInput): ReachVerdicts {
     const lines = input.text.split("\n");
+    const figures: { label: string; value: string; pass: boolean }[] = [];
     const touching = ["C3S", "C20S"].map((name) => {
         const match = lines.map((l) => TOUCHING_LINE.exec(l)).find((m) => m !== null && m[1] === name);
         if (match === undefined || match === null) {
             throw new RangeError(`section P: ${input.path} has no E.0 line for ${name}`);
+        }
+        const parts = [...(match[3] as string).matchAll(BAND_PART)];
+        if (parts.length !== MEAN_KEYS.length) {
+            throw new RangeError(`section P: ${input.path}'s E.0 line for ${name} lacks its three figures`);
+        }
+        for (const p of parts) {
+            figures.push({ label: `${name} ${p[1] as string}`, value: p[2] as string, pass: p[3] === "pass" });
         }
         const open = match[2] !== undefined;
         return { name, pass: match[4] === "pass" && !open, text: `${open ? "OPEN; " : ""}${match[3] as string}` };
@@ -3501,6 +3538,9 @@ function reachVerdictsOf(input: ReachInput): ReachVerdicts {
         if (line === undefined || parts.length !== MEAN_KEYS.length) {
             throw new RangeError(`section P: ${input.path} has no E.3 line for ${set} with its three means`);
         }
+        for (const p of parts) {
+            figures.push({ label: `${set} ${p[1] as string}`, value: p[2] as string, pass: p[5] === "pass" });
+        }
         const counted = /\((\d+) counted/.exec(line)?.[1] ?? "?";
         return {
             set,
@@ -3510,15 +3550,27 @@ function reachVerdictsOf(input: ReachInput): ReachVerdicts {
                 parts.map((p) => `${p[1] as string} ${p[2] as string} (${p[5] as string})`).join(", "),
         };
     });
-    return { touching, means };
+    return { touching, means, figures };
+}
+
+/** The figures of `here` whose verdict differs from `base`'s, each with both values; "none" if none does. */
+function movedFigures(here: ReachVerdicts, base: ReachVerdicts): string {
+    const moved = here.figures.flatMap((f) => {
+        const b = base.figures.find((g) => g.label === f.label);
+        return b === undefined || b.pass === f.pass
+            ? []
+            : [`${f.label} ${verdict(b.pass)} to ${verdict(f.pass)} (${b.value} to ${f.value})`];
+    });
+    return moved.length === 0 ? "none" : moved.join(", ");
 }
 
 function sectionP(): void {
     console.log(
-        "== P. The camera threshold's reach (design §7.9): VISIBLE_SHIFT is 0.2 mm, Gugan 4's resolution on paper; " +
-            "both laws re-set at 0.4 and 0.6 mm by I.0 (SHIFT) in throwaway copies, the video's clock from first " +
-            "touch (gate stage 1's ruling A1), and section E run from each. Per threshold (P_INPUTS, mm=path, each a " +
-            "section E output): criterion 3, C3S and C20S at gap 0 each within its touchingBand (E.0); criterion 4, " +
+        "== P. The camera threshold's reach (design §7.9): VISIBLE_SHIFT is 0.2 mm, Gugan 4's resolution on paper. " +
+            "The thresholds read are exactly those P_INPUTS names (mm=path), each a section E output from a " +
+            "throwaway copy whose laws I.0 re-set at that threshold (SHIFT), the video's clock from first touch " +
+            "(gate stage 1's ruling A1); a threshold I.0 could not convert has no E run and no line here. Per " +
+            "threshold: criterion 3, C3S and C20S at gap 0 each within its touchingBand (E.0); criterion 4, " +
             "the three means within Gugan's sem over the eight gapped strokes and over all ten (E.3). Criterion 2 " +
             "is not re-judged here: I.0 at each threshold prints its Table 1 misses. The adopted laws stay those set " +
             "at 0.2 mm ==",
@@ -3538,7 +3590,10 @@ function sectionP(): void {
         }
     }
     const base = judged.find((j) => Math.abs(Number(j.input.label) * 1e-3 - VISIBLE_SHIFT) < 1e-12);
-    console.log("-- the reach: each threshold's verdicts beside VISIBLE_SHIFT's --");
+    console.log(
+        "-- the reach: each threshold's verdicts beside VISIBLE_SHIFT's, and every judged figure whose verdict " +
+            "differs from 0.2 mm's --",
+    );
     for (const { input, verdicts } of judged) {
         const three = verdicts.touching.every((t) => t.pass);
         const four = verdicts.means.every((m) => m.pass);
@@ -3549,9 +3604,13 @@ function sectionP(): void {
                     four === base.verdicts.means.every((m) => m.pass)
                   ? "both as at 0.2 mm"
                   : "MOVED from 0.2 mm";
+        const moved =
+            base === undefined || base.input === input
+                ? ""
+                : `; figures moved from 0.2 mm: ${movedFigures(verdicts, base.verdicts)}`;
         console.log(
             `${input.label} mm: criterion 3 (the touching stops) ${verdict(three)}, criterion 4 (the means) ` +
-                `${verdict(four)}; ${same}`,
+                `${verdict(four)}; ${same}${moved}`,
         );
     }
 }
