@@ -2372,6 +2372,15 @@ rulings, in the user's words, are in the design's amendments. "Old → new" thro
     reduced mass) hold when the face drives two touching balls, and whether Gugan's gap-0 strokes were truly touching.
   - For P2b.2b.2c.2d: the face's re-contacts after the balls part (shepherding, the push, the drive's late catch),
     still possible fault 29.1.6.1 (922 of 950 grid runs at 0.75 mm); the user's braking stop.
+  - The user's hypotheses on the rolls (2026-10-23, from a top-down replay of the canonical strokes at 3 m/s), to
+    test, not to fit:
+    - the full roll is too close to the half roll and should lie nearer the pass roll: ratios 1.86 (full), 2.20
+      (half) and 0.90 (pass); `swingProbe`'s 2–4 m/s sweep gives 1.86–2.19 (full), 2.02–2.28 (half) and 0.61–0.98
+      (pass); the full and pass rolls' pushes are still the profile's prototypes, a known miss;
+    - the pass roll splits too much: with the canonical set-up's croqueted ball 20° off aim, the croqueted ball leaves
+      19.0° to one side and the striker's ball 9.7° to the other, a split of 28.7°; at 10° off aim, 9.5° and 5.0°
+      (14.5°, ratio 0.94). The split follows the set-up's angle; whether the striker's ball's share of it is right is
+      the open question.
   - Gugan's jab check (`it.runIf(SLOW).fails`): its figure is now in Gugan's band, but its turf-graze qualifier fails
     (the head grounds only after the second tap); the qualifier re-examined in P2b.2b.2c.2d.
   - The 0.9 m/s full-roll handover throw (the legacy mallet, gap 0, side 0; overlap 0.676 mm against 0.673 mm
