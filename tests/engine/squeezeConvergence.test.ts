@@ -11,6 +11,7 @@ import {
     meansOf,
     spreadOf,
 } from "../../scripts/ratioFit";
+import { DEFAULT_CROQUET_GAP } from "./support/shot";
 
 const SLOW = Boolean(import.meta.env.SLOW_TESTS);
 
@@ -29,10 +30,9 @@ describe.runIf(SLOW)("the strike's step convergence (P2b.2b.2c.2b design §6)", 
         expect(spreadOf(runs.map((r) => r.w1W))).toBeLessThan(GUGAN_MEANS.w1W.sem / 10);
         expect(spreadOf(runs.map((r) => r.v2w1))).toBeLessThan(GUGAN_MEANS.v2w1.sem / 10);
     }, 320_000);
-    // Gap 0 and 1 mm are covered: 1 mm was the gap the convergence was measured at on the re-set laws, before the
-    // croquet gap's default moved to 0.75 mm (P2b.2b.2c.2c), which no case here covers. The stop is checked at jab 0
-    // only: the jab sweep is ungated (design §6, "§7's other figures"). Each stroke's case: one mallet solve and three
-    // strokes played to rest.
+    // Gap 0, the croquet gap's default (0.75 mm since P2b.2b.2c.2c) and 1 mm, the gap the convergence was first
+    // measured at on the re-set laws, are covered. The stop is checked at jab 0 only: the jab sweep is ungated (design
+    // §6, "§7's other figures"). Each stroke's case: one mallet solve and three strokes played to rest.
     const keepsGugan5 = (type: "drive" | "stop-ac", gap: number): void => {
         const ratios = STEP_SHARES.map((k) => guganRatio(type, gap, k * IMPACT_DT, WORLD));
         const tolerance = type === "drive" ? GUGAN5.drive.tolerance : GUGAN5.stop.tolerance;
@@ -41,6 +41,12 @@ describe.runIf(SLOW)("the strike's step convergence (P2b.2b.2c.2b design §6)", 
     it("keeps Gugan 5's drive and stop ratios at gap 0 m", () => {
         keepsGugan5("drive", 0);
         keepsGugan5("stop-ac", 0);
+    }, 320_000);
+    // At 0.75 mm the drive's spread is 0.0057 (4.2930, 4.2946, 4.2988) and the stop's 0.0183 (6.5046, 6.5007,
+    // 6.4862), each well inside a tenth of its tolerance (2026-10-23).
+    it("keeps Gugan 5's drive and stop ratios at the default gap", () => {
+        keepsGugan5("drive", DEFAULT_CROQUET_GAP);
+        keepsGugan5("stop-ac", DEFAULT_CROQUET_GAP);
     }, 320_000);
     it("keeps Gugan 5's stop ratio at gap 0.001 m", () => keepsGugan5("stop-ac", 0.001), 320_000);
     // P2b.2b.2c.2c: on the re-set laws the drive ratio's spread over dt/2, dt and 2·dt at 1 mm is 0.0204 (4.198, 4.191,

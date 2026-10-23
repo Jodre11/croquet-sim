@@ -2345,7 +2345,8 @@ rulings, in the user's words, are in the design's amendments. "Old → new" thro
   0.016 and 0.033 of Gugan's sem); Gugan 5's drive at gap 0 6.4783, 6.4824, 6.4944 and the stop 7.7486, 7.7608,
   7.7877 (0.080 and 0.065 of their tolerances); at 1 mm the stop passes (0.066) and the drive misses, 4.1978, 4.1911,
   4.1773, a spread of 0.0204 against 0.0200 (0.102 of its tolerance), marked `it.fails` in
-  `squeezeConvergence.test.ts`.
+  `squeezeConvergence.test.ts`; at the 0.75 mm default both pass, the drive 4.2930, 4.2946, 4.2988 (spread 0.0057)
+  and the stop 6.5046, 6.5007, 6.4862 (0.0183), now a passing case.
 - **Every preset's canonical setup** runs from top to finish, each default planning 3.0000 m/s; the late re-hit sweep
   ends no run with the head overlapping a ball as handed over.
 - **The pre-flight gate's rulings** (2026-10-22 and 23, verbatim in the design's amendments):
@@ -2375,7 +2376,8 @@ rulings, in the user's words, are in the design's amendments. "Old → new" thro
     (the head grounds only after the second tap); the qualifier re-examined in P2b.2b.2c.2d.
   - The 0.9 m/s full-roll handover throw (the legacy mallet, gap 0, side 0; overlap 0.676 mm against 0.673 mm
     clearable), which pre-dates this step (0.8525 against 0.8466 mm on the old laws): an open defect.
-  - The step convergence at 1 mm: the drive's ratio spread 0.0204 against 0.0200, marked `it.fails`.
+  - The step convergence at 1 mm: the drive's ratio spread 0.0204 against 0.0200, marked `it.fails` (the 0.75 mm
+    default passes, 0.0057).
   - The lawn's pace: the single-ball strokes' lawn shares ×0.56–×0.88 and Gugan 5's drive 5.13 yd against about
     seven, recorded beside it, not tuned.
   - The effective mass: the default mallet's 2.446 ball masses, outside the filmed strokes' 2.30–2.41; the
@@ -2386,9 +2388,9 @@ rulings, in the user's words, are in the design's amendments. "Old → new" thro
     disagree) and §7.1's 0.772 variant, carried as diagnostics.
   - Table 2's A1D, 0.42 ms over its held-out band on the first-touch clock, ruled a threshold effect; the camera
     threshold's reach ends near 0.2 mm (Table 1 unconvertible at 0.6 mm).
-- **Tests:** `npm test` 1249 → 1283 passed, 1 → 0 expected fail (the free collision now passing), 10 skipped, 1 todo;
-  the slow suite's convergence 3 → 2 passed and 1 expected fail (the drive at 1 mm), `turfStrike` 3 passed, 1
-  expected fail (Gugan's jab), 1 todo.
+- **Tests:** `npm test` 1249 → 1290 passed, 1 → 0 expected fail (the free collision now passing), 10 → 12 skipped, 1
+  todo; the slow suite's convergence 3 → 4 passed and 1 expected fail (the drive at 1 mm; the 0.75 mm default now
+  covered), `turfStrike` 3 passed, 1 expected fail (Gugan's jab), 1 todo.
 - **Public:** `FaultReport.strike` (`StrikeTaps`: the balls' parting, the taps within the strike with their
   clearances, the sub-frame breaks merged across), a new exported type; `reference/laws.json` quotes 29.2.5,
   C29.11.1–3 and C28.3.2.

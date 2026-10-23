@@ -555,7 +555,9 @@ T(U), `ballBallContactTime` and the default gap.
       spread over dt/2, dt and 2·dt at 1 mm is 0.0204 (4.198, 4.191, 4.177) against a tenth of its 0.2 tolerance;
       the case in `squeezeConvergence.test.ts` is marked `it.fails` and carried. Noted with G: the impact digest
       plays the test world, whose ball–ball and obstacle times are fixed, so it cannot see the world-carried laws;
-      the preset digest, on the default world, carries that check.
+      the preset digest, on the default world, carries that check. After the default's move, at the user's ruling
+      ("yes, as recommended"), a passing case covers the 0.75 mm default: the drive's spread 0.0057 (4.2930, 4.2946,
+      4.2988) and the stop's 0.0183 (6.5046, 6.5007, 6.4862), each well inside a tenth of its tolerance.
     - **The unpredicted test changes: "Accept, carry (5) (Recommended)".** Accepted as traced re-baselines: (1) the
       pass roll's whole-roll lift cover, lost with the no-throw guard; (2) the handover's full rolls, moved from 1
       to 0.8 m/s; (3) `ratioFit`'s canonical drive at gap 0 (w1 1.618 to 1.392, v2 3.763 to 3.766, head 0.80 to
