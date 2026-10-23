@@ -11,6 +11,8 @@ import {
     ALL_STROKES,
     BOUNDS,
     GAPPED_STROKES,
+    READ_DELAY,
+    STRIKE_WINDOW,
     TODAY,
     effectiveMassOf,
     filmedStrokeRuns,
@@ -308,5 +310,16 @@ describe("the read-out's tidy (P2b.2b.2c.2c design §10)", () => {
     it("holds the eight gapped strokes and all ten by name", () => {
         expect(GAPPED_STROKES).toEqual(FILMED_STROKES.filter((s) => s.gap > 0).map((s) => s.name));
         expect(ALL_STROKES).toEqual(FILMED_STROKES.map((s) => s.name));
+    });
+});
+
+describe("the strike's window (P2b.2b.2c.2c design §7.7)", () => {
+    const I = (start: number, end: number) => ({ start, end });
+    it("counts a contact beginning at the window's end, and not one beginning after it", () => {
+        expect(readTimeOf([I(0, 8e-4), I(STRIKE_WINDOW, STRIKE_WINDOW + 1e-4)], []).time).toBeCloseTo(
+            STRIKE_WINDOW + 1e-4 + READ_DELAY,
+            15,
+        );
+        expect(readTimeOf([I(0, 8e-4), I(STRIKE_WINDOW + 1e-9, 0.02)], []).time).toBeCloseTo(8e-4 + READ_DELAY, 15);
     });
 });

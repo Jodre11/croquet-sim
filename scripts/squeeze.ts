@@ -64,7 +64,9 @@ export interface VideoInterval {
 /**
  * The intervals over which `samples` (in time order: each step's end t (s) and the two bodies' surface separation (m),
  * negative while they overlap) show a contact to the video: on from the first sample whose separation is not visible
- * at `shift`, off at the next that is.
+ * at `shift`, off at the next that is. A release is seen only after a contact: `samples` must open in contact, or begin
+ * before it, with the bodies' approach. A list that begins after its contact, the bodies already apart, shows no release
+ * (and a later contact as the first).
  */
 export function videoIntervals(
     samples: readonly { readonly t: number; readonly separation: number }[],
@@ -388,7 +390,10 @@ export function ballBallTimeFor(
  * `samples` (as videoIntervals takes them, s and m) as the 8,000 fps camera sees them (P2b.2b.2c.2c design §5.3): for
  * each phase k of `o.phases` (default 16), frames at the times (n + k/phases) · VIDEO_FRAME up to the last sample's,
  * each showing the first sample at or after it, run through videoIntervals at `o.shift` (default VISIBLE_SHIFT). The
- * intervals are in s, at the frames' times, one list per phase in phase order.
+ * intervals are in s, at the frames' times, one list per phase in phase order. Frames begin at t = 0, so `samples` must
+ * open at t = 0 in contact, or before it with the approach (videoIntervals' precondition, for every phase): a phase
+ * whose first frame already shows the gap after the contact reports no release. scripts/croquetFitProbe.ts's section F
+ * starts its samples at first touch, the approach prepended, so that every phase's first frame shows the face's contact.
  */
 export function cameraIntervals(
     samples: readonly { readonly t: number; readonly separation: number }[],
