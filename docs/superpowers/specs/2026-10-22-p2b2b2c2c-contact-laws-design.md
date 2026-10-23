@@ -530,3 +530,32 @@ T(U), `ballBallContactTime` and the default gap.
       v2/U 1.21. Gate C is settled: no search candidate lands (f and g's figures are recorded in the laws probe). The
       default gap stays 1 mm. The touching stops are carried with the mechanism, and Hall's 1.8 ms touching-pair
       contact as the lead. A law soft at first touch and stiff later would sit close to §12's surface-layer anti-goal.
+- **2026-10-23, gate stage 2** (rulings verbatim as the option chosen; figures in
+  `docs/superpowers/probes/2026-10-23-p2b2b2c2c-gate.txt`):
+    - **D, the default gap: "Move to 0.75 mm", then, after a side agent's note that its lead was within step noise,
+      "Keep 0.75 mm".** A deliberate fit to the touching stops' own figures, not a measured gap: its margin over 1 mm
+      is within the model's numerical noise (1 mm's C20S v2/w1 miss is 0.0006, below the step noise of about 0.002),
+      and spec §12's anti-goal is set aside by the user's ruling. It is still a stand-in for the time-scale cause.
+      `DEFAULT_CROQUET_GAP` moves to 0.75 mm in the next commit; the five gap-0 pins keep `croquetGap: 0`.
+    - **E, the double tap: "Record and carry (Recommended)".** Taps within the strike are reported, never flagged;
+      re-contacts after the parting are flagged as today and carried to P2b.2b.2c.2d. N at 0.75 mm: 137 runs with a
+      second tap within the strike, and 922 of 950 flagged after the parting.
+    - **F §7.1: "Record (Recommended)".**
+    - **F §7.4: "Record (Recommended)".**
+    - **F §7.5: "Record, carry the qualifier (Recommended)".** The jab check's figure is now inside Gugan's band, but
+      its turf-graze qualifier fails; the test stays `.fails` and the qualifier is carried to P2b.2b.2c.2d.
+    - **F §7.6: "Record (Recommended)".** The hands' effect is negligible (under 0.005 in v2/U).
+    - **F §7.7: "Keep 15 ms (Recommended)".**
+    - **F §7.9: "Record (Recommended)".** The conclusions hold for any threshold up to 0.4 mm. §7.9's "criterion 2
+      holds there by construction" is corrected: on the first-touch clock Table 1 cannot be reproduced within a frame
+      at 0.4 mm, nor at all at 0.6 mm.
+    - **F, the batch: "Record all (Recommended)".** §7.1's 0.772 variant, §7.2's share, §7.3's scatter (untested)
+      and §7.8's effective mass are recorded and carried as diagnostics.
+    - **G, the step convergence: "Record; mark it .fails (Recommended)".** On the re-set laws the drive ratio's
+      spread over dt/2, dt and 2·dt at 1 mm is 0.0204 (4.198, 4.191, 4.177) against a tenth of its 0.2 tolerance;
+      the case in `squeezeConvergence.test.ts` is marked `it.fails` and carried.
+    - **The unpredicted test changes: "Accept, carry (5) (Recommended)".** Accepted as traced re-baselines: (1) the
+      pass roll's whole-roll lift cover, lost with the no-throw guard; (2) the handover's full rolls, moved from 1
+      to 0.8 m/s; (3) `ratioFit`'s canonical drive at gap 0 (w1 1.618 to 1.392, v2 3.763 to 3.766, head 0.80 to
+      0.883); (4) the impact digest, blind to times the test world carries. Carried as an open defect: (5) the
+      0.9 m/s full-roll handover throw, which pre-dates this step.

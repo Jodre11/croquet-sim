@@ -32,14 +32,14 @@ describe.runIf(SLOW)("the strike's step convergence (P2b.2b.2c.2b design §6)", 
     // Gap 0 is today's default and 1 mm the default this step moves to, so both are covered. The stop is checked at
     // jab 0 only: the jab sweep is ungated (design §6, "§7's other figures"). Each case: two mallet solves and six
     // strokes played to rest.
-    it.each([0, 0.001])(
-        "keeps Gugan 5's drive and stop ratios at gap %s m",
-        (gap) => {
-            const drive = STEP_SHARES.map((k) => guganRatio("drive", gap, k * IMPACT_DT, WORLD));
-            const stop = STEP_SHARES.map((k) => guganRatio("stop-ac", gap, k * IMPACT_DT, WORLD));
-            expect(spreadOf(drive)).toBeLessThan(GUGAN5.drive.tolerance / 10);
-            expect(spreadOf(stop)).toBeLessThan(GUGAN5.stop.tolerance / 10);
-        },
-        320_000,
-    );
+    const keepsGugan5 = (gap: number): void => {
+        const drive = STEP_SHARES.map((k) => guganRatio("drive", gap, k * IMPACT_DT, WORLD));
+        const stop = STEP_SHARES.map((k) => guganRatio("stop-ac", gap, k * IMPACT_DT, WORLD));
+        expect(spreadOf(drive)).toBeLessThan(GUGAN5.drive.tolerance / 10);
+        expect(spreadOf(stop)).toBeLessThan(GUGAN5.stop.tolerance / 10);
+    };
+    it("keeps Gugan 5's drive and stop ratios at gap 0 m", () => keepsGugan5(0), 320_000);
+    // P2b.2b.2c.2c: on the re-set laws the drive ratio's spread over dt/2, dt and 2·dt at 1 mm is 0.0204 (4.198, 4.191,
+    // 4.177), just over a tenth of its 0.2 tolerance; gate stage 2 ruled it recorded and carried (2026-10-23).
+    it.fails("keeps Gugan 5's drive and stop ratios at gap 0.001 m", () => keepsGugan5(0.001), 320_000);
 });
