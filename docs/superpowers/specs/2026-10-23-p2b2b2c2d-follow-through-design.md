@@ -477,3 +477,43 @@ The plan's task order within §9's sequence; the pulse's θ and ω integration t
 `stroke.window`; how a stroke with no face contact is reported if no outcome exists for it; how `checkShare` extends
 to an early brake; how the probe solves for the contact speed; where the striker's ball's velocity at a re-contact is
 read; the probes' layout and their section letters; the tests' names and files.
+
+## Amendments
+
+- **2026-10-24, gate stage 1** (rulings verbatim as the option chosen; figures in
+  `docs/superpowers/probes/2026-10-24-p2b2b2c2d-stage1.txt` and
+  `docs/superpowers/probes/2026-10-24-p2b2b2c2d-gate1.txt`):
+    - **Q1, the smooth pulse and gravity: "Accept all (Recommended)".** Plan decisions 1–3 accepted as landed, with
+      the moves the ratchet surfaced: the GC stop's follow-through grip-limit flag gone (hand peak 434.3 N to 30.3 N);
+      the check's never-past-rest residual (−9.67e-10 rad/s); the planner's croquet dip (§4.2), so the AC stop's dip
+      30 ms early no longer grounds the head (along the lawn early 1.34586 against 1.34934 m/s on time); an opt-in
+      hands advance now reversing the head within the window (planned ω −0.0817 against 3.5968 rad/s); a check's hold
+      stepping ω to 0 at its start; and 3 m/s at the ball unreachable under an early brake without intensity.
+    - **Q2, the routes: "Record as a finding (Recommended)".** On time on the old defaults the magnitude reaches the
+      drive's and the AC stop's ratio almost only through re-contacts after the parting (route 3); the contact speed,
+      point and lean (route 1) do not move, and the taps' impulses (route 2) within 0.03 N·s. The rolls barely move;
+      5 of 15 preset-window rows are monotonic. Carried as an open item; no change in this step.
+    - **Q2b, the stance: "Stop to −6°, drive as is (Recommended)".** The AC stop's stance becomes a calibrated default
+      at a lean of −6° (Gugan 5's stop 7.157 on its own grips, against 7.15 ± 0.6); the drive keeps 0° (4.295, already
+      nearest 4.23). Stage 2's candidates are found at the stop's −6°. The user's order holds at the nearest-target
+      leans (stop −6°, drive 0°, rolls +24° to +34°). This is calibration against Gugan 5, stated as such.
+    - **Q3, the planned brake: "Accept, trace the 3.6e-7 (Recommended)".** The under-hit emerges and the no-strike
+      reporting stands. Of exit criterion 5's 26 violations, the 2 real ones (0.23 % and 0.40 %, weakest and sharpest
+      brake, −7.5 against −5 ms) are recorded as physics; the uniform 3.584e-7 m/s step between onsets 0 and +2.5 ms
+      is traced before stage 2.
+    - **The early dip on croquet strokes: "Keep it planned (Recommended)".** §4.2's call stands: a dip begun before
+      contact on a croquet stroke is planned into the swing; a mistimed early dip shows in the speed, not by grounding;
+      the single-ball graze is unchanged. The user's 2026-10-17 ordering (early slower along the lawn) holds, with no
+      turf strike.
+    - **Q4, the drive's late catch: "Not physical; grid only (Recommended)".** The bottom hand's guide pushing 31 N at
+      92 ms, re-accelerating the head into the rolling ball at 96.4 ms (+49 %), is not how a drive is played. Stage 2
+      shows the `guideEffort` 0.25 grid only (the largest whose canonical drive has no re-contact after the parting);
+      a decay of the guide after contact is an open item, pending a source or a fuller account.
+    - **Q5a, `MERGE_SEPARATION`: "2 mm"** (1 mm was recommended).
+    - **Q5a′, contacts straddling the parting: "Join the strike (Recommended)".** A face contact whose separation from
+      the previous one is below `MERGE_SEPARATION` joins that contact's group; a group that began before the parting
+      is the strike, its contacts reported among the taps and never judged as a re-contact. This supersedes the
+      grouping built in the step's re-contact commit (a fresh group at the parting). The rolls' micro-hits after the
+      parting (0.01–0.5 mm apart) therefore join the strike, as decision 10's "part of the same contact" reads.
+    - **Q5b, `EFFECT_SPEED`: "10 % (Recommended)".**
+    - **Q5c, `EFFECT_ANGLE`: "2° (Recommended)".**

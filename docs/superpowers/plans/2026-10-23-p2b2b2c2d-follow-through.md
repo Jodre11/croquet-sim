@@ -1209,6 +1209,13 @@ Spec §7, §9 step 5 (the findings); exit criterion 6.
 - Test: `tests/reference/reference.test.ts`, `tests/engine/faults.test.ts`, and any test pinning a 29.1.6.1 finding on
   a simulated croquet run
 
+Gate 1 (spec Amendments, 2026-10-24) ruled `MERGE_SEPARATION` 2 mm, `EFFECT_SPEED` 10 %, `EFFECT_ANGLE` 2°, and that
+a contact within `MERGE_SEPARATION` of the previous one joins its group, a group begun before the parting being the
+strike (its contacts reported among `taps`, never a re-contact). `groupReContacts` changes to that grouping here,
+with tests: a post-parting contact within the separation of a pre-parting tap is a tap; one past it is a re-contact.
+Before Task 11 the controller traces section B.2's uniform 3.584e-7 m/s step between onsets 0 and +2.5 ms and records
+the cause in the gate file.
+
 - [ ] **Step 1: Write the failing tests**
   - `reference.test.ts` pins the three ruled values, and drops the placeholder assertion.
   - In `faults.test.ts`, constructed intervals sit on both sides of each threshold, 1 % inside and outside each.

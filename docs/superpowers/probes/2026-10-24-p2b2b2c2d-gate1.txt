@@ -1,0 +1,294 @@
+== gate 1, stage 1: the mechanisms (P2b.2b.2c.2d design §10; plan Task 9). Evidence only: no ruling is made here ==
+== sources: stage1 = docs/superpowers/probes/2026-10-24-p2b2b2c2d-stage1.txt (line numbers as "stage1:N"); the ratchet
+   and rulings from the SDD ledger (.superpowers/sdd/2026-10-23-p2b2b2c2d-follow-through/progress.md, "Rn"); the reach
+   table from that directory's task-8-report.md. Units: m/s, mm, ms, degrees, N, N·s; "ratio" is Gugan's L2/L1 ==
+== the plan's gate questions: 1 the smooth pulse and gravity (section 1); 2 the routes (section A); 2b the stance
+   (section S); 3 the planned brake (section B); 4 the drive's late catch (section C, S.2); 5 the three thresholds
+   (section D) ==
+
+== 1. The ratchet (spec §9), per task, against the baseline worktree at main (e4eb8df) or the previous task ==
+-- counts --
+Task 1 (the tidy): presetDigest (1582 lines), impactDigest, impactProbe, shotMix all identical (shotMix's timing
+  lines dropped, R3).
+Task 2 (the smooth pulse): impactDigest, impactProbe, shotMix identical; presetDigest 977 of 1582 lines moved (phys),
+  none at drive 0. Per preset: single-ball 108, drive 108, stop-ac 109, stop-gc 109, half/full/pass roll 181 each of
+  226. Canonicals moved: stop-ac, stop-gc, half, full and pass roll; single-ball and drive canonical unchanged.
+  Suite: 1296 passed, 1 expected fail, 12 skipped, 1 todo.
+Task 3 (gravity through the pulse, decision 12): impactDigest, impactProbe, shotMix identical; presetDigest 544 moved
+  (phys): the carry presets (the rolls) 0 of 226 each, the swing presets (single-ball, drive, stop-ac, stop-gc) 136 of
+  226 each, drive 0 included (108 lines). Canonicals moved: single-ball, drive, stop-ac, stop-gc. SLOW suite: 1308
+  passed, 3 expected fail, 2 skipped, 1 todo.
+Task 4 (stroke.window): all identical to Task 3.
+Task 5 (the coupled dip): presetDigest, impactDigest, impactProbe, shotMix identical; swingProbe (against Task 4's, R12)
+  "arc" rows identical, 6 "dip" rows moved (stop-ac dip -50 to -5 ms, a croquet dip under way at contact), e.g.
+  -30 ms ratio 4.94 -> 5.13, -10 ms 5.81 -> 5.95.
+Task 6 (the no-strike outcome): all identical; no run gained impact-no-strike.
+Task 7 (re-contacts judged, placeholders 0): phys 0 moved (impulse and velocities stripped); faults 950 moved, croquet
+  only (drive 136, stop-ac 136, half/full/pass roll 226 each; single-ball and stop-gc 0). The findings of all 1356
+  croquet runs identical to Task 6: 922 flagged 29.1.6.1 (stage1:1038, "922 flagged at every threshold 0 (922 at Task
+  1)").
+-- moved and re-baselined tests the controller ruled on and sent to this gate --
+R5 (Task 2): followThrough.test.ts:136, the GC stop's follow-grip-limit flag is no longer raised: peak |top| 434.3 N
+  -> 30.3 N. The box's step in α at the window's end loaded the firm grip; the smooth pulse ends at α 0.
+  Re-baselined to []. Risk: a grip-limit finding the gate wanted is hidden.
+R6 (Task 2): hands.test.ts:211, "never past rest": lowest -9.67e-10 rad/s (was +1.13e-8). The bound became a named
+  integrator-residual tolerance (about 1e-8 rad/s); drift re-baselined 2.06e-4 (was 2.5e-4). Risk: a real overshoot
+  below 1e-8 rad/s passes. (Task 3's minor: the head now ends at about 0.0166 rad/s, residual 8.9e-7 unexplained,
+  the comment stale.)
+R8 then R14 (Tasks 2, 5): shot.test.ts:649, the AC stop's early dip (arc 0, dip -0.03, jab 4 mm, gap 0). At Task 2
+  the user's 2026-10-17 ordering "early is slower along the lawn" flipped (early 1.35046 against on time 1.34911 m/s;
+  was 1.34257 against 1.34340) and was kept as it.fails. At Task 5 the planner includes the croquet dip (spec §4.2),
+  raising the pivot by 15.000 mm, so the early dip no longer grounds the head (approach 14.5473 mm at contact); the
+  ordering holds again (early 1.34586 against on time 1.34934 m/s, vertical 0.2142 against 0.0751 m/s) and is a plain
+  test. Consequence: on a croquet stroke, timing.dip alone can no longer mistime a dip into the turf.
+R11 (Task 3): advance.test.ts, "slows the head's turn while the hands speed up": an on-time advance now reverses the
+  head within 10 ms (planned ω at the ramp's end -0.0817 against 3.5968 rad/s, was bit-equal; head pitch rate -2.037
+  against 1.643 rad/s). Predicted by spec §3.1 (the pivot's acceleration inside freeAlpha through the pulse).
+  Re-baselined to level < rising. timing.advance is opt-in; no preset uses it.
+Gate note (Task 3): a check's hold (integrate.ts:1341) sets ω to 0 against a planned ω that is gravity's share at
+  holdFrom, so a full check no longer meets the hold continuously.
+R25 (Task 8): 3 m/s contact speed on the AC stop under an early brake is out of reach by the backswing alone. At the
+  body's θ_max (0.4779 m, 3.0966 m/s planned), window ×1, no intensity, the contact speed (m/s) is:
+     drive \ onset   -20 ms   -10 ms   -5 ms   -2.5 ms   0 (on time)
+     -0.25           2.2841   2.3606   2.7362  2.9867    3.0889
+     -0.5            1.6569   1.7692   2.4553  2.8661    3.0889
+     -1              1.0378   1.5288   2.3236  2.7638    3.0889
+  so 3 m/s is unreachable at every onset of -2.5 ms or earlier, at every drive. strokeForContact solves it through
+  the intensity (regime 2) in B.1, S and guganSetup.contactSpeed; each row prints its regime. At intensity 1 the same
+  backswing gives 5.28 to 9.13 m/s. Finding: a drive -1 brake 10 ms early halves the stop's contact speed at the body
+  limit (1.53 m/s). Risk: B.1 and S rows at intensity > 0 mix the brake's effect with the intensity's.
+-- other rulings with a bearing on the gate (ledger) --
+R13: at arc -0.01 the early brake pitches the head (θ 0.05186 against 0.06986 rad; lowest point 16.128 against
+  14.613 mm), so route 1's contact-point change is the brake's pitch, as spec §4.2 leaves it.
+R15: swingApproach(contact) on a croquet stroke with a dip under way reads higher than plan.approach; documented, not
+  fixed; no grid or canonical run hits it.
+R16: a ball-less whiff to the cap also emits impact-no-strike.
+R20: the first non-exempt face contact is never a re-contact, even if it starts after the parting.
+R23: merging runs only among contacts at or after the parting; a post-parting contact never joins a pre-parting group.
+R24: the taps' shares sum to 1 + v2/w1, not 1, on a croquet stroke (the face's impulse also carries the croqueted
+  ball's momentum); the sanity check uses that.
+
+== A. The follow-through grid (spec §3.4): every croquet preset, 3 m/s planned, ON_TIME, default gap, magnitude -1 to
+   +1 by window ×0.5, ×1, ×2 (stage1:2-100) ==
+-- the ratio against the magnitude (-1, -0.5, 0, +0.5, +1), least-squares rate per unit (stage1:78-93) --
+  drive     ×0.5  3.5158 2.8102 2.4348 2.0983 1.9263  monotonic      rate -0.7782
+  drive     ×1    3.8697 3.4235 2.4348 2.0933 1.9073  monotonic      rate -1.0510
+  drive     ×2    3.7861 3.7867 2.4348 2.0988 1.9002  NOT monotonic  rate -1.0920
+  stop-ac   ×0.5  5.6361 5.4908 2.5071 1.5298 1.0221  monotonic      rate -2.6378
+  stop-ac   ×1    5.4118 5.3810 2.5071 1.5627 1.0165  monotonic      rate -2.5218
+  stop-ac   ×2    5.3654 5.3566 2.5071 1.5400 1.4574  monotonic      rate -2.3265
+  half-roll ×0.5  2.2003 2.1923 2.1855 2.2300 2.2064  NOT monotonic  rate +0.0100
+  half-roll ×1    2.1889 2.1866 2.2137 2.2330 2.2009  NOT monotonic  rate +0.0141
+  half-roll ×2    2.1892 2.2086 2.1852 2.1751 2.1175  NOT monotonic  rate -0.0354
+  full-roll ×0.5  2.0746 2.0609 2.1102 2.2018 2.0366  NOT monotonic  rate +0.0130
+  full-roll ×1    2.0771 2.0605 2.1316 2.1704 1.8561  NOT monotonic  rate -0.0664
+  full-roll ×2    2.0776 2.0877 2.1415 1.9413 1.5119  NOT monotonic  rate -0.2555
+  pass-roll ×0.5  1.2519 1.6670 1.9942 1.5499 1.0655  NOT monotonic  rate -0.0980
+  pass-roll ×1    1.5900 1.9078 1.9841 1.2240 0.8763  NOT monotonic  rate -0.4222
+  pass-roll ×2    1.6480 1.8800 2.4222 1.1564 0.9532  NOT monotonic  rate -0.4226
+  "A tally: 75 runs, 0 rejected, 0 with no strike; 5 of 15 preset-window rows monotonic in the magnitude" (stage1:100)
+-- how the 10 non-monotonic rows fail --
+  drive ×2: one reversal of +0.0006 between -1 and -0.5 (3.7861, 3.7867); neither run has a re-contact after the
+    parting, so the brake side is flat; monotonic from -0.5 on.
+  half roll, all windows: the ratio wanders within 2.12-2.23 (spans 0.045, 0.046, 0.091) with no consistent sign; the
+    rates are +0.010, +0.014 and -0.035 per unit, about 1 % of the ratio across the whole range.
+  full roll: rises to a peak at +0.5 (×0.5, ×1) or 0 (×2), then falls; the fall at +1 grows with the window (2.04,
+    1.86, 1.51).
+  pass roll: peaks at magnitude 0 in all three windows (1.99, 1.98, 2.42) and falls on both sides, to 0.88-1.07 at +1
+    and 1.25-1.65 at -1.
+-- the routes (spec §3.4), read from stage1:3-77 --
+  Route 1, before contact: at ON_TIME no preset's contact speed, contact point or lean moves with the magnitude
+    (drive 3.0000 m/s, up -0.0033 mm, lean -0.0010°; stop-ac 2.9927 m/s, up -20.0033 mm, lean -4.0010°; half
+    2.9405, full 2.9690, pass 2.9589 m/s). Route 1 carries nothing at ON_TIME.
+  Route 2, within the strike: the drive and AC stop tap twice (second tap at 1.010-1.045 ms). The tap impulses move
+    little: drive first tap 1.7619-1.7667 N·s (share 2.32-2.41), second 0.4856-0.5158 N·s (share 0.66-0.68); stop-ac
+    first 1.7698-1.7726 N·s (share 2.36-2.46), second 0.4697-0.5000 N·s (share 0.65-0.67). The rolls tap once (half
+    1.6226, full 1.4901, pass 1.4563 N·s, fixed across the grid); their share falls as the magnitude rises (half ×0.5
+    2.51 -> 2.25, pass ×0.5 2.46 -> 1.84) because w1 rises.
+  Route 3, after the parting, carries the drive's and the stop's change:
+    drive ×1: -1 none (ratio 3.87); -0.5 at 120.4 ms (+28.1 % speed) and 129.9 ms; 0 at 96.4 ms (+49.3 %); +0.5 at
+      82.7 ms (+53.7 %); +1 at 72.7 ms (+58.0 %, ratio 1.91). Separations 12.5-19.8 mm.
+    stop-ac ×1: -1 and -0.5 none (ratio 5.41, 5.38); 0 at 63.9 ms (+30.1 %, ratio 2.51); +0.5 at 36.5 ms (+58.6 %);
+      +1 at 27.5 ms (+59.4 %) and 51.0 ms (+30.8 %), ratio 1.02. Separations 3.5-9.7 mm.
+    The rolls: a train of micro re-contacts from 0.16 ms (half), 0.47 ms (full) and 1.46 ms (pass) after the
+      parting, separations 0.01-0.5 mm. The first two barely depend on the magnitude (half: +35.6 % then +13.7 to
+      +17.6 %; full: +18.8 to +19.0 % then +22.6 to +23.7 %). The magnitude adds later ones: full roll ×2 has 3 at -1
+      and 11 at +0.5 and +1 (1-5 % each). The pass roll's first two change the striker's ball's direction by 28.5-30.9°
+      and 5.5-12.3° (stage1:63-77). At magnitude <= 0 the pass roll also has late catches at 36-124 ms with
+      separations of 2.6-25.8 mm and +13.8 to +74.4 %.
+-- sanity (R24), stage1:94-99 --
+  drive canonical: Σ share 2.9910 over 2 taps, 1 + v2/w1 2.9784: within 1 %. stop-ac: 3.0801 against 3.0720: within.
+  half roll 2.2602 against 2.7849, full roll 2.2757 against 2.7918, pass roll 1.7430 against 2.2869: NOT within 1 %.
+  On the rolls, part of w1 arrives through the micro re-contacts after the parting, which the taps' sum leaves out.
+
+== B. The brake sweep (spec §4.3): the AC stop's canonical setup, default mallet, gap 0.75 mm, jab 0 and 2.5 mm, onset
+   timing.arc -20 to +5 ms, magnitude -0.25 to -1, window ×0.5, ×1, ×2 (stage1:101-659) ==
+"B tally: B.1 264 runs, 0 unreachable or rejected, 0 with no strike; B.2 264 runs, 0 rejected, 0 with no strike, 26
+  violation(s) of exit criterion 5, 26 above 1e-9 m/s" (stage1:659)
+-- B.2, the under-hit: contact speed (m/s) at a fixed backswing 0.4486 m, regime 1, planned 3.0000 m/s; jab 0
+   (stage1:368-499); jab 2.5 mm within 0.013 m/s of it (stage1:500-631) --
+                     onset  -20     -15     -10     -7.5    -5      -2.5    0 and later
+  ×0.5  -0.25               2.2633  2.2807  2.3513  2.3763  2.3709  2.6833  2.9927
+        -1                  1.3162  1.5006  1.7899  1.9949  2.1989  2.5826  2.9927
+  ×1    -0.25               2.2129  2.2265  2.2891  2.4091  2.6522  2.8943  2.9927
+        -1                  0.9735  1.1354  1.4372  1.8031  2.2314  2.6708  2.9927
+  ×2    -0.25               2.2091  2.3467  2.6701  2.8039  2.9102  2.9789  2.9927
+        -1                  0.2572  0.7550  1.6420  2.1385  2.5570  2.8826  2.9927
+  The under-hit emerges: the contact speed falls as the onset moves earlier and the brake strengthens, to 0.26 m/s
+  (×2, -1, -20 ms). A sharp brake bites sooner (at -5 ms, -1: 2.20 m/s at ×0.5 against 2.56 at ×2); a long one
+  removes more by -20 ms (1.32 against 0.26 m/s). On time (onset 0) the contact speed is 2.9927 m/s at every
+  magnitude. The ratio at a fixed backswing reaches 6.99 (jab 0) and 7.21 (jab 2.5 mm), both at ×1, -1, -5 ms.
+-- B.2, the second tap moves past the parting --
+  With an early brake the head meets the ball once before the parting; what was the second tap now comes just after
+  the parting and is judged a re-contact: e.g. stage1:368, contact 2.2633 m/s, 1 tap, re-contact 0.085 ms after the
+  parting, separation 0.1621 mm, speed +151.4 %. B.2 has 1 tap wherever the brake starts early enough (×0.5: every
+  onset to -2.5 ms; ×1 and ×2: to between -2.5 and -12.5 ms, the weaker brakes switching earlier), 2 on time and
+  after.
+-- B.1, at 3 m/s contact speed (strokeForContact; regime 2 in all 264 runs) --
+  The contact speed is held at 3.0000 m/s by raising the intensity; the planned speed then rises with the onset's
+  lead and the strength, to 6.52 m/s (×2, -1, -20 ms; stage1:103-366). Every B.1 run taps twice but one (jab 2.5 mm,
+  ×0.5, -1, -2.5 ms). The ratio: 2.05-2.85 at -0.25 with onset <= -10 ms (each has a late re-contact at 59-89 ms);
+  4.75-6.45 at -0.75 and -1 with onset <= 0 (jab 0; peak 6.4518 at ×2, -1, -7.5 ms); 4.86-5.70 at onset 0; 4.88-4.89
+  at +2.5 and +5 ms. Peak at jab 2.5 mm: 6.6877 (×1, -1, -5 ms). This is the default mallet, not Gugan's; S is the
+  like for like with Gugan 5.
+  The head's speed at the parting is 1.29-1.43 m/s in every B.1 run, whatever the onset or strength: the brake does
+  not bring the head to rest by the parting.
+-- no strike --
+  None in either half. The deepest brakes (×2, -0.75 and -1, onsets -20 and -17.5 ms, both jabs: 8 runs) are creep
+  contacts (spec §4.1): the head meets the ball at 0.25-0.80 m/s, 38-115 ms late, with no tap and the balls never
+  parted; ratios 28.4-42.4 (e.g. stage1:489, "contact 0.2572 m/s ... at 115.3900 ms; taps none; ... head at the
+  parting never parted"). The no-strike outcome itself is pinned by Task 6's unit test (stop-ac, arc -0.06, hands 0,
+  dip 0), not exercised by this sweep.
+-- grounding against the second tap --
+  No run grounds the head before the second tap (0 "before it" lines in B). B.1: after it at 34-131 ms in the -0.25
+  and -0.5 rows with early onsets, and at 17-22 ms in every jab 2.5 mm run with onset >= 0 (the coupled jab grounds
+  just after the strike); never in the -0.75 and -1 rows at jab 0. B.2: the same, and "with no second tap" (27-160 ms)
+  wherever the brake left one tap.
+-- exit criterion 5 (contact speed non-increasing as the onset moves earlier and the magnitude strengthens) --
+  26 violations, all along the onset, none along the magnitude (stage1:632-658):
+  24 at the onset 0 / +2.5 ms pair, in every jab, window and magnitude: on time is above +2.5 ms by 3.584e-7 m/s
+    (relative 1.2e-7). The figure is the same whatever the brake's strength, so it does not come from the brake;
+    the probe does not trace its source.
+  2 at ×0.5, -0.25, between -7.5 and -5 ms: 2.3763 above 2.3709 m/s (by 5.442e-3 m/s, 0.23 %, jab 0; stage1:633) and
+    2.3891 above 2.3796 m/s (by 9.424e-3 m/s, 0.40 %, jab 2.5 mm; stage1:646). The sharpest, weakest brake: a small
+    reversal in the contact speed as its onset passes about -5 ms, where the B.2 tap count changes too.
+  Verdict as written: not met (26 strict violations). With a tolerance of 1e-6 m/s it fails on 2 pairs only, both
+  under 1 % in the speed.
+
+== C. The drive's late catch (spec §6): the canonical drive, default mallet, 3 m/s planned, at its own guideEffort 1
+   and at 0; samples every 1 ms from first contact (stage1:660-785) ==
+"own guideEffort: ... face contacts after it at 1.0050 ms, 96.3900 ms ...; re-contacts after the parting 96.3900 ms;
+  impact ends at 142.3000 ms" / "guideEffort 0: ... face contacts after it at 1.0050 ms ...; re-contacts after the
+  parting none; impact ends at 85.5050 ms" (stage1:661-662)
+-- t (ms): [guideEffort 1] F_bottom (N), head (m/s), ball (m/s) | [guideEffort 0] head (m/s), ball (m/s) --
+     1   47.84  1.4044  0.5607 | 1.3979  0.5606
+     2   61.36  0.9598  1.6827 | 0.9473  1.6683
+     5   61.71  0.9994  1.6822 | 0.9476  1.6679   (the force's peak, 61.71 N at 4-5 ms)
+    20   56.86  1.1941  1.6661 | 0.9452  1.6546
+    49   45.42  1.5080  1.5085 | 0.9323  1.4957   (the head overtakes the ball)
+    92   31.31  1.8141  1.2593 | impact ended at 85.5 ms (head 0.9023, ball 1.3004 at 85 ms)
+    93   20.18  1.8170  1.2538 |   (the force steps down 11 N between 92 and 93 ms)
+    96   20.94  1.8250  1.2403 |
+    97   26.38  1.6589  1.7044 |   (the catch at 96.39 ms: the double-hit probe's §3a had 96.4 ms)
+    98   27.33  1.6176  1.8229 |
+   120   21.90  1.6942  1.5509 |
+-- reading --
+  At guideEffort 1 the bottom hand pushes the head along aim through the whole follow-through: 47.8 N at 1 ms,
+  61.7 N at its peak (4-5 ms), falling about linearly to 31.3 N at 92 ms and still 21.9 N at 120 ms. It does not decay
+  to zero. Under it the head re-accelerates from 0.96 m/s (2 ms) to 1.825 m/s (96 ms), about 9.1 m/s² on average,
+  while the striker's ball slows from 1.68 to 1.24 m/s on the lawn. The head overtakes the ball's speed at about
+  49 ms, closes about 16 mm (stage1:10, separation 16.0220 mm) and catches it at 96.39 ms: the ball goes from 1.24
+  to 1.82 m/s and settles at 1.55 m/s (+49.3 % speed, stage1:10). At guideEffort 0 the head stays at 0.95-0.90 m/s,
+  never catches the ball, and the impact ends at 85.5 ms. The late catch is the guide's push, not gravity or the
+  pendulum.
+
+== D. The re-contacts' spread (spec §7): every face gap after the first contact, and each after-parting interval's
+   effect alone, every threshold 0 (stage1:786-1038) ==
+-- quantiles, the 950-run grid (950 judged of 1130, 180 rejected beyond reach; 5200 gaps, 5063 at or after the parting,
+   122 negative clearanceAfter counted as 0; stage1:968-973) --
+                                     min     10 %    25 %    50 %     75 %     90 %     max
+  separation, every gap (mm)         0.0000  0.0082  0.0385  0.1307   0.3315   2.4363   34.0963
+  separation, after the parting (mm) 0.0000  0.0079  0.0358  0.1417   0.3381   2.6969   34.0963
+  gap duration, every gap (ms)       0.0500  0.6150  1.3500  2.8800   8.6250   31.5450  222.0200
+  speed effect alone (|%|)           0.0005  1.4148  2.9515  10.8720  29.1725  61.7810  201.5017
+  angle effect alone (°)             0.0000  0.0008  0.0155  0.2796   1.7171   5.1472   35.7666
+-- quantiles, section A's grid (75 played; 263 gaps, 233 after the parting, 14 negative; stage1:1003-1008) --
+  separation, every gap (mm)         0.0000  0.0222  0.0476  0.1281   0.3108   5.6233   25.7644
+  separation, after the parting (mm) 0.0000  0.0166  0.0453  0.1651   0.3200   6.3325   25.7644
+  gap duration, every gap (ms)       0.2250  0.3800  0.8200  1.9350   7.3750   34.5950  118.7000
+  speed effect alone (|%|)           0.0003  1.4881  2.9167  15.4162  29.3489  35.6449  74.3905
+  angle effect alone (°)             0.0000  0.0000  0.0002  0.0019   0.4192   11.1281  30.8575
+-- what kind of re-contact sits where (sections A, B, C, S) --
+  Micro-hits: the rolls' trains, 0.00-0.5 mm, 0.16-84 ms after the parting, 0.5-36 % each; the pass roll's first two
+    turn the striker's ball 28-31° and 5-12°.
+  The double tap past the parting: the AC stop at Gugan's mallet in S (stage1:1043-1071) and the early-braked stop in
+    B.2: 0.13-0.16 mm, 0.005-0.09 ms after the parting, +92 to +173 % speed, under 0.03°.
+  Late catches: the drive's guide (11.7-19.8 mm, 70-131 ms in A and to 198 ms in S.2, +12 to +69 %) and the stop's
+    pushed follow-through (2.9-9.7 mm, 25-64 ms, +29 to +72 %), both under 0.03° in direction.
+-- the what-if table: flagged runs per preset, drive/stop-ac/half-roll/full-roll/pass-roll; a re-contact is flagged if
+   its effect passes EFFECT_SPEED or EFFECT_ANGLE (stage1:974-1002, 1009-1037) --
+  The 950-run grid. All thresholds 0: 127/117/226/226/226 = 922. The grid tested: MERGE_SEPARATION 0, 0.1, 0.25,
+  0.5, 1, 2 mm; EFFECT_SPEED 0, 1, 2, 5, 10 %; EFFECT_ANGLE 0, 1, 2, 5°. Every cell is 922 except these:
+    EFFECT_ANGLE 1°, EFFECT_SPEED 10 %, MERGE 0.1-2 mm:  127/117/226/217/226 = 913
+    EFFECT_ANGLE 2°, EFFECT_SPEED 10 %, MERGE 0.1-2 mm:  125/117/226/217/226 = 911
+    EFFECT_ANGLE 5°, EFFECT_SPEED 10 %, MERGE 0.1-2 mm:  125/117/226/199/226 = 893
+  At MERGE_SEPARATION 0 every cell is 922. Within 0.1-2 mm the merge distance changes nothing. EFFECT_ANGLE 0 flags
+  every re-contact that turns the ball at all, so its table is 922 throughout. Section A's grid: 12/9/15/15/15 = 66 in
+  every cell.
+  Shape: the table's largest thresholds sit inside the spread, not beyond it: EFFECT_SPEED 10 % is below the speed
+  effect's median (10.9 %), EFFECT_ANGLE 5° below the angle effect's 90 % (5.1°), MERGE_SEPARATION 2 mm below the
+  separation's 90 % (2.4-2.7 mm). Most of the grid's re-contacts pass any tested threshold. The cells where the
+  counts would fall (EFFECT_SPEED above 10 %, EFFECT_ANGLE above 5°, MERGE_SEPARATION above 2 mm) were not tabulated.
+
+== S. The stance sweep (spec §3.5): the AC stop and the drive as Gugan 5's strokes (Gugan's mallet, gap 0.75 mm, 3 m/s
+   contact speed, the drive at guideEffort 0, the stop at jab 0, ON_TIME), leans -8° to +4° (stage1:1039-1118) ==
+-- ratios by lean (* within the band: stop 6.55-7.75, drive 4.03-4.43); TL = turf-limited, not played --
+  lean (°)              -8    -7    -6     -5     -4     -3     -2     -1     0      +1     +2     +3     +4
+  stop, own grips       TL    TL    7.157* 6.507  6.397  5.832  5.570  5.521  5.427  5.335  5.247  5.169  4.874
+  stop, drive's grips   TL    TL    7.350* 6.690* 6.591* 6.197  5.744  5.689  5.594  5.501  5.411  5.333  5.028
+  drive, own grips      TL    TL    TL     TL     TL     4.556  4.487  4.434  4.295* 4.165* 4.040* 3.885  3.755
+  drive, stop's grips   TL    TL    TL     TL     TL     4.745  4.573  4.457  4.373* 4.230* 4.094* 3.938  3.816
+  The stop at up -25 mm: -7° 7.192* (own grips), 7.278* (drive's); -8° turf-limited (2.84 mm in) (stage1:1054-1055,
+  1071-1072).
+-- per stroke and grip set: the lean nearest the target, the rate per degree (stage1:1056, 1073, 1088, 1103) --
+  stop, own grips:     -6° ratio 7.1566 (target 7.15); rate -0.1941 per degree over 11 playable leans
+  stop, drive's grips: -6° ratio 7.3500;               rate -0.2011 per degree over 11
+  drive, own grips:     0° ratio 4.2947 (target 4.23); rate -0.1182 per degree over 8
+  drive, stop's grips: +1° ratio 4.2299;               rate -0.1299 per degree over 8
+-- the lean's effect apart from the grips' --
+  Across the playable leans the lean moves the stop's ratio by 2.28 (7.16 at -6° to 4.87 at +4°) and the drive's by
+  0.80 (4.56 at -3° to 3.75 at +4°). Swapping the grips at a fixed lean raises the stop by +0.15 to +0.37 (+0.37 at
+  -3°, +0.15 to +0.19 elsewhere) and the drive by +0.02 to +0.19. At lean 0° and equal grips the stop still sits 1.05
+  to 1.30 above the drive (5.43 against 4.37 at the stop's grips; 5.59 against 4.29 at the drive's), so the lean and
+  the grips do not account for the whole of the stop-drive difference.
+-- the turf's limit --
+  stop: -8° and -7° turf-limited (7.79 and 2.23 mm in the turf); -6° plays (clear 3.35 mm at contact) but the head
+    touches the turf at 7.72 ms (least clearance -3.59 mm over the strike window); -5° touches at 13.12 ms. At up
+    -25 mm, -7° plays (touches at 7.11 ms) and -8° is limited.
+  drive: -8° to -4° turf-limited (27.6 to 5.4 mm in the turf). At -3° and -2° the head touches the turf at 5.0 ms and
+    meets the ball late (first touch 95.2 and 70.8 ms, lean at touch -2.47° and -1.94°; stage1:1080-1081), so those
+    two rows are turf-first strokes.
+-- each S stroke's re-contacts --
+  The stop at Gugan's mallet taps once; its second contact, 0.005-0.06 ms after the parting, is judged a re-contact
+  (separation 0.131-0.149 mm, speed +92 to +173 %, larger as the lean goes forward). The drive taps twice, with no
+  re-contact, at every played lean.
+-- the user's order (the stop furthest back, the drive next, forward through the rolls) --
+  Nearest-target leans: stop -6° (both grip sets), drive 0° (own grips) or +1° (the stop's), rolls +24°, +31°, +34°
+  (Gugan's measured leans, held out, not swept). Taken at the nearest-target lean, the order holds: stop < drive <
+  rolls. The stop's -6° is at the turf's limit and grounds within the strike window. The drive cannot be played
+  behind -3°.
+-- S.2, the canonical drive (guideEffort 1, default mallet, 3 m/s planned) across the leans (stage1:1104-1117) --
+  "8 of 8 played leans with a re-contact after the parting" (stage1:1118); -8° to -4° turf-limited.
+  lean (°)   first touch (ms)  contact (m/s)  the late catch (ms after first touch)  speed effect  ratio
+   -3        117.65            2.4783          80.06 (a)                                +61.2 %       2.1373
+   -2         72.92            2.9011         103.03                                    +28.7 %       2.7423
+   -1          0.005           2.9995         103.70                                    +38.1 %       2.7400
+    0          0.005           3.0000          96.39                                    +49.3 %       2.4348
+   +1          0.005           2.9995          91.14                                    +56.6 %       2.2493
+   +2          0.005           2.9982          86.77                                    +62.3 %       2.2678
+   +3          0.005           2.9959          86.91                                    +65.5 %       2.1518
+   +4          0.005           2.9927          83.06                                    +68.8 %       2.1127
+  (a) -3° also has its second tap past the parting (1.17 ms after first touch, +167.1 %); its first touch is late,
+  as at -2°. S.2 does not print the turf; in S the same two leans meet the turf at 5.0 ms, before the ball.
+  No lean removes the late catch. From -1° forward it comes earlier (103.7 to 83.1 ms; +3° is 0.1 ms later than +2°)
+  and adds more speed (+38.1 to +68.8 %).
