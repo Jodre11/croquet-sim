@@ -41,6 +41,7 @@ import {
     STROKE_TYPES,
     type MalletHeadProfile,
     type ShotSetup,
+    type StrokeTiming,
     type StrokeType,
     type SwingProfile,
     type SwingShape,
@@ -350,7 +351,8 @@ describe("buildContact, step by step", () => {
     it("starts the impact at the earliest early action, the head on its downswing, and at contact on time", () => {
         const profile = testProfile({ shape: { pendulumShare: 0.7 } });
         const onTime = buildContact(shot({}, profile), WORLD);
-        const early = buildContact(shot({ timing: { arc: -0.01, hands: 0.004, dip: -0.02 } }, profile), WORLD);
+        // The dip is timed from the pulse: 10 ms before a pulse 10 ms early, so 20 ms before contact.
+        const early = buildContact(shot({ timing: { arc: -0.01, hands: 0.004, dip: -0.01 } }, profile), WORLD);
         const arc = arcOf(early);
         expect(arc.contactAt).toBe(0.02);
         expect(arc.arcStart).toBeCloseTo(0.01, 15);
@@ -362,7 +364,7 @@ describe("buildContact, step by step", () => {
         const depthless = buildContact(shot({ timing: { arc: 0, hands: 0, dip: -0.02 } }, profile), WORLD);
         const track = prepareTrack(depthless.drive as TrackDrive, depthless.head, WORLD.gravity);
         expect(dist(headOnPath(track, depthless.head, 0.02).position, onTime.position)).toBeLessThan(1e-12);
-        const late = buildContact(shot({ timing: { arc: 0.01, hands: 0.01, dip: 0.01 } }, profile), WORLD);
+        const late = buildContact(shot({ timing: { arc: 0.01, hands: 0.01, dip: 0 } }, profile), WORLD);
         expect(arcOf(late).contactAt).toBe(0);
         // The longest lead is allowed.
         const longest = buildContact(shot({ timing: { arc: -MAX_LEAD, hands: 0, dip: 0 } }, profile), WORLD);
@@ -465,7 +467,8 @@ describe("swingApproach", () => {
         const shape = { pendulumShare: 0.7 };
         const acting = testProfile({ drive: { speedGain: 0.4, handGain: 0.2, handDrop: 0.004 }, shape });
         const plain = testProfile({ drive: { speedGain: 0.4, handGain: 0.2 }, shape });
-        const timing = { arc: -0.03, hands: -0.02, dip: -0.04 };
+        // The dip is timed from the pulse: 10 ms before a pulse 30 ms early, so 40 ms before contact.
+        const timing = { arc: -0.03, hands: -0.02, dip: -0.01 };
         const a = swingApproach(buildContact(shot({ drive: -1, timing }, acting), WORLD));
         const b = swingApproach(buildContact(shot({}, plain), WORLD));
         expect(a).toEqual(b);
@@ -1306,5 +1309,61 @@ describe("sharpness: stroke.window (P2b.2b.2c.2d design §3.2)", () => {
     it("leaves a shot without a window as it was", () => {
         const c = buildContact(shot({ drive: 0.5 }), WORLD);
         expect("holdWindow" in (c.drive as TrackDrive).arc).toBe(false);
+    });
+});
+
+/** The head at rest in `setup`'s contact pose on WORLD. */
+function poseAt(setup: ShotSetup) {
+    const pose = contactPose(setup, WORLD);
+    const still = vec3(0, 0, 0);
+    return { position: pose.headCentre, orientation: pose.orientation, velocity: still, angularVelocity: still };
+}
+
+/** The single-ball graze's approach, printed on the commit before the dip was coupled to the pulse. */
+const GRAZE_APPROACH = { clearance: -0.003712074755199358, before: 0.04402490881455079 };
+
+describe("the dip coupled to the pulse (P2b.2b.2c.2d design §4.2)", () => {
+    const stop = (timing: StrokeTiming) => canonicalSetup("stop-ac", { stroke: { timing } });
+    it("starts the dip with the pulse, offset by timing.dip", () => {
+        const c = buildContact(stop({ arc: -0.01, hands: 0, dip: 0 }), WORLD);
+        const arc = (c.drive as TrackDrive).arc;
+        expect(arc.dip.start).toBe(arc.arcStart);
+        const late = (buildContact(stop({ arc: -0.01, hands: 0, dip: 0.004 }), WORLD).drive as TrackDrive).arc;
+        expect(late.dip.start).toBeCloseTo(late.arcStart + 0.004, 15);
+    });
+    it("leads by the coupled dip", () => {
+        // Review focus 3: arc −10 ms, dip −20 ms from it, so the dip starts 30 ms early, at t = 0.
+        const arc = (buildContact(stop({ arc: -0.01, hands: 0, dip: -0.02 }), WORLD).drive as TrackDrive).arc;
+        expect(arc.contactAt).toBeCloseTo(0.03, 15);
+        expect(arc.dip.start).toBe(0);
+    });
+    it("rejects a coupled dip past MAX_LEAD", () => {
+        expect(() => buildContact(stop({ arc: -0.1, hands: 0, dip: -0.06 }), WORLD)).toThrow(/dip.*0\.16/);
+    });
+    it("meets the ball at the shot's contact with the dip under way on a croquet stroke", () => {
+        // The AC stop's 11 mm dip begun 10 ms before contact, the brake on time: the planner raises the downswing by
+        // the dip's travel, so the head's lowest point at contact is the pose's, CANONICAL_CLEARANCE["stop-ac"].
+        const setup = stop({ arc: 0, hands: 0, dip: -0.01 });
+        const c = buildContact(setup, WORLD);
+        const track = prepareTrack(c.drive as TrackDrive, c.head, WORLD.gravity);
+        const atContact = headOnPath(track, c.head, (c.drive as TrackDrive).arc.contactAt);
+        expect(headLowestPoint(atContact, c.head)).toBeCloseTo(headLowestPoint(poseAt(setup), c.head), 9);
+    });
+    it("lowers the raised hands onto the pose's at contact when the brake is early too", () => {
+        // The brake 10 ms early turns the head before contact, and the head's pitch there is left to it: the contact
+        // point moves only by the brake's effect on the head's speed and pitch (design §4.2). The hands land on the
+        // pose: the dip, begun with the brake, lowers the raised pivot by its travel by contact.
+        const setup = stop({ arc: -0.01, hands: 0, dip: 0 });
+        const c = buildContact(setup, WORLD);
+        const track = prepareTrack(c.drive as TrackDrive, c.head, WORLD.gravity);
+        const hands = handsAt(track, (c.drive as TrackDrive).arc.contactAt).position;
+        expect(dist(hands, contactPose(setup, WORLD).pivot)).toBeLessThan(1e-12);
+    });
+    it("leaves the single-ball graze unplanned, as before", () => {
+        // turfStrike.test.ts's GRAZE: a dip 5 ms before contact on a single-ball stroke, which the planner ignores.
+        const graze = canonicalSetup("single-ball", {
+            stroke: { contact: { up: 0.01, side: 0 }, jab: 0.001, timing: { arc: 0, hands: 0, dip: -0.005 } },
+        });
+        expect(swingApproach(buildContact(graze, WORLD))).toEqual(GRAZE_APPROACH);
     });
 });

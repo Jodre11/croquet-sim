@@ -156,10 +156,15 @@ export interface SwingProfile {
     readonly shape: Readonly<Record<StrokeType, SwingShape>>;
 }
 
-/** When each action begins, s from contact: negative early, positive late, 0 on time (design §5.2 step 8). */
+/**
+ * When each action begins, s from contact: negative early, positive late, 0 on time (design §5.2 step 8). The dip is
+ * the exception: it is timed from the pendulum's pulse, so it begins arc + dip s from contact, 0 coupled to the pulse
+ * (P2b.2b.2c.2d design §4.2).
+ */
 export interface StrokeTiming {
     readonly arc: number;
     readonly hands: number;
+    /** The dip's start, s from the pendulum's pulse (`arc`): negative before it, 0 coupled to it. */
     readonly dip: number;
     /**
      * Swing mode only (P2b.2b.2c.1 design §6): when the hands' advance begins, their push forward along aim over the

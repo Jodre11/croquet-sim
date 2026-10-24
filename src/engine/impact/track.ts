@@ -580,6 +580,14 @@ function lowering(depth: number, duration: number, a: number, e: number): Loweri
 }
 
 /**
+ * The dip's travel (m, downward) at time `e` (s) from its start: the rest-to-rest lowering by `depth` over `duration`,
+ * its acceleration 4·depth/duration² as prepareTrack's (P2b.2b.2c.2d design §4.2).
+ */
+export function dipTravel(depth: number, duration: number, e: number): number {
+    return lowering(depth, duration, (4 * depth) / (duration * duration), e).z;
+}
+
+/**
  * The planned pivot at time t: before the hands' window (the downswing, or P₀ + V₀·t), then the minimum-jerk pulse of
  * mean A over the window T, s = τ/T: P_h + V_h·τ + A·T²·(s³ − s⁴/2), V_h + A·T·(3s² − 2s³), 6·A·s(1 − s); then
  * P_e + V_e·u (no reach, no dip).

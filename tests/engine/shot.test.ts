@@ -22,7 +22,7 @@ import { STROKE_TYPES, type ShotSetup } from "../../src/engine/swing/types";
 import type { BallId, BallState, Hoop, World } from "../../src/engine/types";
 import { defaultWorld, hoopHalfSpan, hoopLateral } from "../../src/engine/world";
 import { TEST_GRIP_LIMIT, recorder } from "./support/impact";
-import { CANONICAL_STRIKER, GC_STOP_GAP, backswingFor, canonicalSetup } from "./support/shot";
+import { CANONICAL_CLEARANCE, CANONICAL_STRIKER, GC_STOP_GAP, backswingFor, canonicalSetup } from "./support/shot";
 import { POSITION_SLACK, boundaryJumps } from "./support/trajectory";
 
 const WORLD = defaultWorld();
@@ -655,28 +655,35 @@ describe("the mechanisms (design §8.1), on the canonical setups", () => {
     // at 1 mm both runs double-tap the striker's ball (on time 0.005–1.095 and 1.265–2.620 ms, early 30.355–31.450
     // and 31.635–32.985 ms), and along the lawn the early one leaves faster, 1.5050 against 1.4661 m/s.
     const onTimeDip = () => simulateShot(canonicalSetup("stop-ac", { croquetGap: 0, stroke: { jab: J_EARLY } })).impact;
-    const earlyDip = () =>
+    const earlyOutcome = () =>
         simulateShot(
             canonicalSetup("stop-ac", {
                 croquetGap: 0,
                 stroke: { jab: J_EARLY, timing: { arc: 0, hands: 0, dip: -0.03 } },
             }),
-        ).impact;
+        );
+    const earlyDip = () => earlyOutcome().impact;
 
-    it("a dip 30 ms early meets the lawn before the ball", () => {
-        const early = earlyDip();
-        const dug = early.timeline["head/turf"]?.[0] as ContactInterval;
-        expect(dug).toBeDefined();
-        expect(dug.start).toBeLessThan((hits(early)[0] as ContactInterval).start);
+    it("a dip 30 ms early on a croquet stroke is planned into the downswing", () => {
+        // P2b.2b.2c.2d: the planner includes a croquet stroke's dip (was: the head on the turf before the ball): the
+        // pivot raised 15.000 mm, approach 14.5473 mm at contact. The deliberate graze remains a single-ball play
+        // (turfStrike.test.ts).
+        const early = earlyOutcome();
+        expect(early.impact.timeline["head/turf"]).toBeUndefined();
+        expect(early.approach.clearance).toBeCloseTo(CANONICAL_CLEARANCE["stop-ac"], 6);
+        expect(early.approach.before).toBe(0);
     });
 
-    it.fails("a dip 30 ms early sends the striker's ball slower along the lawn", () => {
+    it("a dip 30 ms early sends the striker's ball slower along the lawn", () => {
         // Along the lawn (user ruling 2026-10-17): full speed is not slower, because the heel's touch also lifts the
         // ball (vertical 0.238 m/s against 0.059 on time), which the full speed counts as faster (1.5721 against
         // 1.5677 m/s).
         // P2b.2b.2c.2d: the minimum-jerk pulse (was 1.34257 against 1.34340 m/s): early 1.35046 against 1.34911 m/s,
         // faster. The check's deceleration now builds from zero at contact, so less of it acts in the ball contact;
         // the early run's larger gain is untraced. The user's ruling of 2026-10-17 goes back to the gate.
+        // P2b.2b.2c.2d: the planner includes a croquet stroke's dip (was it.fails, early 1.35046 against 1.34911 m/s):
+        // early 1.34586 against 1.34934 m/s, with no turf strike; the vertical 0.2142 against 0.0751 m/s; the cause of
+        // the ordering is untraced, and the user's ruling of 2026-10-17 goes back to the gate.
         const along = (impact: ImpactResult): number => {
             const { x, y } = (impact.handover.blue as BallState).velocity;
             return Math.hypot(x, y);
