@@ -8,6 +8,7 @@ import {
     downswingAt,
     handsAt,
     headOnPath,
+    pathAt,
     pendulumOf,
     pitchAxis,
     prepareTrack,
@@ -18,6 +19,8 @@ import type { ContactState, Downswing, StrokeMode, TrackDrive } from "../../../s
 import { add, cross, dot, horizontal, length, scale, sub, vec3, type Vec3 } from "../../../src/engine/math/vec3";
 import {
     MAX_LEAD,
+    MAX_WINDOW,
+    MIN_WINDOW,
     START_GAP,
     TURF_MARGIN,
     arcArrival,
@@ -1260,5 +1263,48 @@ describe("the stance's geometry (P2b.2b.2b.1 design §3.2, §3.3)", () => {
                 }
             }
         }
+    });
+});
+
+describe("sharpness: stroke.window (P2b.2b.2c.2d design §3.2)", () => {
+    const prep = (c: ContactState) => prepareTrack(c.drive as TrackDrive, c.head, WORLD.gravity);
+    it("sets both pulses' duration, keeping their change", () => {
+        const c = buildContact(shot({ drive: 0.5, window: 0.004 }), WORLD);
+        const arc = (c.drive as TrackDrive).arc;
+        const base = (buildContact(shot({ drive: 0.5 }), WORLD).drive as TrackDrive).arc;
+        expect(arc.window).toBe(0.004);
+        expect(arc.handWindow).toBe(0.004);
+        expect(arc.alpha * arc.window).toBeCloseTo(base.alpha * base.window, 12);
+    });
+    it("keeps the hands' change too", () => {
+        const c = buildContact(shot({ drive: 0.5, window: 0.004 }), WORLD);
+        const arc = (c.drive as TrackDrive).arc;
+        const base = (buildContact(shot({ drive: 0.5 }), WORLD).drive as TrackDrive).arc;
+        const change = length(scale(arc.pivotAcceleration, arc.handWindow));
+        expect(change).toBeCloseTo(length(scale(base.pivotAcceleration, base.handWindow)), 12);
+    });
+    it("keeps carry mode's hold at the preset's window", () => {
+        const c = buildContact(canonicalSetup("full-roll", { stroke: { window: 0.01 } }), WORLD);
+        expect((c.drive as TrackDrive).arc.holdWindow).toBe(defaultProfile.drive["full-roll"].window);
+    });
+    it("checks stroke.window's bounds", () => {
+        for (const ok of [MIN_WINDOW, MAX_WINDOW]) {
+            expect(() => buildContact(shot({ window: ok }), WORLD)).not.toThrow();
+        }
+        for (const bad of [MIN_WINDOW * (1 - 1e-9), MAX_WINDOW * (1 + 1e-9), 0, -0.01, NaN]) {
+            expect(() => buildContact(shot({ window: bad }), WORLD)).toThrow(/stroke\.window/);
+        }
+    });
+    it("shapes nothing at drive 0", () => {
+        // No change to deliver, so the window cannot matter. Not to the bit: the hands' window's end re-bases
+        // P_e + V_e·u at a different time, which rounds differently.
+        const a = buildContact(shot({ drive: 0 }), WORLD);
+        const b = buildContact(shot({ drive: 0, window: 0.02 }), WORLD);
+        const d = sub(pathAt(prep(b), 0.03).socket, pathAt(prep(a), 0.03).socket);
+        expect(length(d)).toBeLessThan(1e-12);
+    });
+    it("leaves a shot without a window as it was", () => {
+        const c = buildContact(shot({ drive: 0.5 }), WORLD);
+        expect("holdWindow" in (c.drive as TrackDrive).arc).toBe(false);
     });
 });

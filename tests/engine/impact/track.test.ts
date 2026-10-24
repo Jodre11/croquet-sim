@@ -614,6 +614,22 @@ describe("the hands' arc after contact (P2b.2b.2b.2b design §4.1)", () => {
                 6,
             );
         });
+        it("runs carry mode's hold over holdWindow when given, the window otherwise", () => {
+            // The hold's ω = ω_e·(1 − 3x² + 2x³), x = u/W: at u = T, rest for W = T, half of ω_e for W = 2T, and at
+            // u = 2T rest for W = 2T.
+            const end = carryArc.arcStart + T;
+            const rate = (arc: SwingArc, t: number) => {
+                const track = prepareTrack(trackDrive(arc), TEST_HEAD, 0);
+                return [dot(pathAt(track, t).angularVelocity, track.axis), track.omegaEnd] as const;
+            };
+            const [plain] = rate(carryArc, end + T);
+            expect(Math.abs(plain)).toBeLessThan(1e-12);
+            const long: SwingArc = { ...carryArc, holdWindow: 2 * T };
+            const [half, omegaEnd] = rate(long, end + T);
+            expect(half).toBeCloseTo(0.5 * omegaEnd, 12);
+            const [rest] = rate(long, end + 2 * T);
+            expect(Math.abs(rest)).toBeLessThan(1e-12);
+        });
     });
 
     describe("gravity through the pulse (P2b.2b.2c.2d design §3.1)", () => {

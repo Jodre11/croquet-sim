@@ -214,6 +214,9 @@ function validateTrack(drive: TrackDrive): void {
     positive(arc.radius, "arc.radius");
     positive(arc.window, "arc.window");
     positive(arc.handWindow, "arc.handWindow");
+    if (arc.holdWindow !== undefined) {
+        positive(arc.holdWindow, "arc.holdWindow");
+    }
     positive(arc.dip.duration, "arc.dip.duration");
     notBefore(arc.arcStart, "arc.arcStart");
     notBefore(arc.handStart, "arc.handStart");

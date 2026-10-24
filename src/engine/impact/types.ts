@@ -159,6 +159,8 @@ export interface SwingArc {
     /** When the pendulum's window begins (s from t = 0), and its length (s). */
     readonly arcStart: number;
     readonly window: number;
+    /** Carry mode's hold after the pulse (s); absent: `window`. Set when a shot's window differs from the preset's. */
+    readonly holdWindow?: number;
     readonly dip: Dip;
     /** The planned contact (s from t = 0), from which the cap and the reach count. */
     readonly contactAt: number;

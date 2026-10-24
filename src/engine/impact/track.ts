@@ -1018,7 +1018,7 @@ function pendulumAt(track: PreparedTrack, t: number): Swing {
     // the cubic with ω(0) = ω_e, ω′(0) = 0, ω(W) = ω′(W) = 0, whose travel ∫ω = ω_e·W/2 is the linear fall's, so the
     // seams' times, θ and ω there are the linear fall's:
     // ω = ω_e·(1 − 3x² + 2x³), α = 6·ω_e/W·(x² − x), θ = θ_e + W·ω_e·(x − x³ + x⁴/2).
-    const W = arc.window;
+    const W = arc.holdWindow ?? arc.window;
     const u = Math.min(t - tw, W);
     const x = u / W;
     const we = track.omegaEnd;
