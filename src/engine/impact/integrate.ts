@@ -1284,6 +1284,10 @@ export function integrateStroke(setup: ImpactSetup, options: ImpactOptions = {},
         }
         if (now >= cap) {
             events.push({ kind: "impact-cap", t: now });
+            // A brake begun early can stop the head short of every ball: the cap then ends a stroke that never touched.
+            if (plan.kind === "track" && !struck) {
+                events.push({ kind: "impact-no-strike", t: now });
+            }
             break;
         }
     }

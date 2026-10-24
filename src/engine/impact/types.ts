@@ -359,7 +359,10 @@ export interface ContactState extends HeadState {
  *   judged;
  * - `turf-yield`: a column of the head's turf first yielded (P2b.2b.2b.3 design §4.2); recorded, not judged;
  * - `impact-head-stopped`: the head came to rest in the turf before any face contact (P2b.2b.2b.3 design §4.6): the
- *   impact ends there and hands the balls over as they lie.
+ *   impact ends there and hands the balls over as they lie;
+ * - `impact-no-strike`: a tracked drive's impact reached its cap with no face–ball contact on any ball, as when a brake
+ *   begun well before contact stops the head short of the ball (P2b.2b.2c.2d design §4.1); it follows `impact-cap`,
+ *   and the balls are handed over as they lie.
  */
 export type ImpactEvent =
     | { readonly kind: "turf-lift"; readonly t: number; readonly ball: BallId }
@@ -371,7 +374,8 @@ export type ImpactEvent =
     | { readonly kind: "impact-turf-pit"; readonly t: number; readonly ball: BallId }
     | { readonly kind: "grip-limit"; readonly t: number; readonly hand: HandName }
     | { readonly kind: "turf-yield"; readonly t: number }
-    | { readonly kind: "impact-head-stopped"; readonly t: number };
+    | { readonly kind: "impact-head-stopped"; readonly t: number }
+    | { readonly kind: "impact-no-strike"; readonly t: number };
 
 /**
  * One contact interval of a pair (P2b.2a design §5): [start, end) in s from the impact's start, whole steps, and the

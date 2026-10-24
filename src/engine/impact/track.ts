@@ -1112,7 +1112,10 @@ export function inCheck(track: PreparedTrack, t: number): boolean {
  * The share of a check's planned deceleration the hands apply to a head pitching at `rate` (rad/s) about n, the path
  * at `planned` (design §3.3): all of it at or above the path's rate, none at or below rest, and rate/planned between
  * them. A head the strike has slowed then keeps its fraction of the path's rate, so it comes to rest when the path
- * does (a full check's window's end) and never passes rest.
+ * does (a full check's window's end) and never passes rest. The same holds for a brake begun before contact, whose
+ * window can outlast the path's rest: once the path's rate is negative (past rest) a head still moving forward gets
+ * share 1, and a head at rest or moving back gets 0, so the hands never drive it past rest. Before the grips relax
+ * at the planned contact they are firm and follow the path, as the player's planned brake does.
  */
 function checkShare(rate: number, planned: number): number {
     if (rate <= 0) {

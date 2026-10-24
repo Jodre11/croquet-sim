@@ -252,7 +252,8 @@ describe("a tracked head with no ball", () => {
     it("runs a whiff to TRACK_IMPACT_CAP after the planned contact", () => {
         for (const contactAt of [0, 0.02]) {
             const { run } = tracking({ ...COAST, contactAt }, { coupling: TEST_COUPLING });
-            expect(run.events.map((e) => e.kind)).toEqual(["impact-cap"]);
+            // P2b.2b.2c.2d: a stroke that reaches the cap with no face contact is reported (was ["impact-cap"]).
+            expect(run.events.map((e) => e.kind)).toEqual(["impact-cap", "impact-no-strike"]);
             expect(run.duration).toBeGreaterThanOrEqual(contactAt + TRACK_IMPACT_CAP);
             expect(run.duration).toBeLessThan(contactAt + TRACK_IMPACT_CAP + 2 * IMPACT_DT);
         }
@@ -458,6 +459,30 @@ describe("the bottom hand's rate guide", () => {
         expect(dist(back.feedForward, rest.feedForward)).toBeLessThan(1e-9);
         const push = dot(sub(back.bottom, rest.bottom), forwardOf(behind, arc.aim));
         expect(push).toBeCloseTo(track.bottom.damping * 0.2 * planned * lever, 6);
+    });
+
+    it("inside a check past the path's rest, gives a forward-moving head share 1 and a stopped one 0", () => {
+        // An early brake's window can outlast the path's rest (design §4.1): the planned rate is then negative. A head
+        // still pitching forward gets the whole of the planned deceleration, however fast; a head at rest or pitching
+        // back gets none, so the hands never drive it past rest.
+        // The path rests at 5 ms (3 rad/s at −600 rad/s²) and runs on to 10 ms; 7.5 ms is −1.5 rad/s.
+        const arc = still({ omega0: 3, alpha: -600 });
+        const t = 0.0075;
+        const track = prepare(arc, TEST_COUPLING, TEST_HANDS);
+        expect(dot(pathAt(track, t).angularVelocity, track.axis)).toBeLessThan(0);
+        const at = (rate: number): HandLoad =>
+            handLoad(
+                track,
+                spun(track, t, rate - dot(pathAt(track, t).angularVelocity, track.axis)),
+                TEST_HEAD,
+                t,
+                newGripState(),
+                IMPACT_DT,
+            );
+        const [forward, faster, rest, back] = [at(0.5), at(2), at(0), at(-0.5)];
+        expect(dist(forward.feedForward, faster.feedForward)).toBeLessThan(1e-9);
+        expect(dist(rest.feedForward, back.feedForward)).toBeLessThan(1e-9);
+        expect(dist(forward.feedForward, rest.feedForward)).toBeGreaterThan(1);
     });
 
     it("scales the push by guideEffort outside a check and after the release, and leaves a check in full", () => {

@@ -4,10 +4,13 @@ import {
     FOLLOW_CAP,
     FOLLOW_SAMPLE,
     HEAD_DEEP_LIMIT,
+    IMPACT_DT,
     type FollowThrough,
+    type ImpactProbe,
     type StrokeState,
 } from "../../../src/engine/impact/integrate";
-import { headLowestPoint } from "../../../src/engine/impact/contacts";
+import { faceKey, headLowestPoint } from "../../../src/engine/impact/contacts";
+import { simulateShot } from "../../../src/engine/shot";
 import { simulateImpact, simulateStroke } from "../../../src/engine/impact/simulateImpact";
 import { HAND_COUPLING, handsAt, pitchAxis, prepareTrack, type Push } from "../../../src/engine/impact/track";
 import type { ContactState, TrackDrive } from "../../../src/engine/impact/types";
@@ -230,5 +233,55 @@ describe("the follow-through (design §4)", () => {
         const samples = [{ t: 0, force: contact.velocity }];
         const forced: ContactState = { ...contact, drive: { kind: "force", samples } };
         expect(() => simulateStroke(forced, { blue: ballAt(5, 3) }, WORLD)).toThrow(/tracked drive/);
+    });
+});
+
+describe("the planned brake (P2b.2b.2c.2d design §4.1)", () => {
+    const DEFAULT = defaultWorld();
+    /** The AC stop at drive −1 with its brake begun `early` s before the planned contact. */
+    const braked = (early: number): ShotSetup =>
+        canonicalSetup("stop-ac", { stroke: { timing: { arc: 0 - early, hands: 0, dip: 0 } } });
+    const leadOf = (s: ShotSetup): number => (buildContact(s, DEFAULT).drive as TrackDrive).arc.contactAt;
+
+    /** The striker's first face–ball interval's start (s) and the head's speed along aim there (m/s). */
+    function firstFace(setup: ShotSetup): { readonly t: number; readonly speed: number } {
+        const contact = buildContact(setup, DEFAULT);
+        const { aim } = (contact.drive as TrackDrive).arc;
+        const speeds: number[] = [dot(contact.velocity, aim)];
+        const probe: ImpactProbe = {
+            step: (s) => {
+                speeds.push(dot(s.head.velocity, aim));
+            },
+        };
+        const impact = simulateImpact(contact, setup.balls, DEFAULT, { probe });
+        const first = (impact.timeline[faceKey(setup.striker)] ?? [])[0];
+        expect(first).toBeDefined();
+        const start = (first as { readonly start: number }).start;
+        return { t: start, speed: speeds[Math.round(start / IMPACT_DT)] as number };
+    }
+
+    it("plays a brake begun before contact end to end, meeting the ball slower and later", () => {
+        // The AC stop at drive −1, its brake 10 ms early: the head arrives below its planned speed (the under-hit
+        // emerges; it is not modelled).
+        const setup = braked(0.01);
+        const on = canonicalSetup("stop-ac");
+        expect(firstFace(setup).speed).toBeLessThan(firstFace(on).speed);
+        expect(firstFace(setup).t - leadOf(setup)).toBeGreaterThan(firstFace(on).t - leadOf(on));
+    });
+
+    it("relaxes the grips at the planned contact, not the meeting", () => {
+        const c = buildContact(braked(0.01), DEFAULT);
+        expect((c.drive as TrackDrive).coupling.relaxAt).toBe((c.drive as TrackDrive).arc.contactAt);
+    });
+
+    it("a brake that leaves no face contact ends at the cap, reported", { timeout: 30_000 }, () => {
+        // Drive −1 begun 60 ms early stops the head short of the ball (traced: no face interval, the impact runs to
+        // the cap, about 6 s locally), so the cap reports the stroke as `impact-no-strike`. The fault judge reads a
+        // stroke with no face contact as an empty strike, and the state stays finite.
+        const out = simulateShot(braked(0.06), DEFAULT);
+        expect(out.impact.events.map((e) => e.kind)).toContain("impact-no-strike");
+        expect(out.impact.timeline[faceKey("blue")] ?? []).toEqual([]);
+        expect(out.faults.strike).toMatchObject({ parted: null, taps: [], breaks: [] });
+        expect(Number.isFinite(out.impact.head.position.z)).toBe(true);
     });
 });
