@@ -92,6 +92,15 @@ the **squeeze**, the **tap** and the **double tap** as there. New here:
     small separations is one continuing contact; a distinct second hit after a real separation is possible fault
     29.1.6.1 only if it materially changes the striker's ball's speed or direction. Both thresholds are ruled at the
     gate from the measured spread.
+11. **Where the ball is met on the arc is swept before any default moves** (user, 2026-10-24, after planning; §3.5).
+    The user: "The prime factor which a player varies when they decide the type of shot is foot position relative to
+    the ball, [that] is always key, before any consideration of follow through. Obviously, this moves the nadir/apex
+    of the arc backwards or forwards relative to the ball", with the order "stops furthest back, drives, default
+    adjusted accordingly, then "feet" moving forward according to the roll". Ruled: "Fold into gate 1": the stance
+    sweep runs at the gate's stage 1, which rules whether the stance becomes a calibrated default.
+12. **Gravity acts through the pulse on every swing stroke** (user, 2026-10-24, "A: every stroke"): drive 0 included,
+    so single-ball and drive runs move, in their own commit and counted (§3.1, §9 step 2). This replaces the first
+    reading of §6 and §9, under which drive 0 stayed bit-identical; the two could not both hold.
 
 My calls (the user may overrule any of them):
 
@@ -127,7 +136,8 @@ Exit criteria:
    the peak acceleration and jerk as the closed form gives; gravity acting through an early pulse.
 3. **Sharpness as an input** (§3.2): `stroke.window`, validated; absent, the preset's; its analytic cases.
 4. **The routes** (§3.4): the follow-through grid run on every croquet preset at both gate stages, the ratio's change
-   recorded with each route's share; monotonicity in the magnitude judged and taken to the gate, not failed.
+   recorded with each route's share; monotonicity in the magnitude judged and taken to the gate, not failed. The stance
+   sweep (§3.5) run at stage 1 and ruled.
 5. **The planned brake** (§4): a brake begun before contact plays end to end; the dip coupled to it; a brake that
    leaves no face contact reported as such, never a throw; on the brake sweep the contact speed non-increasing as the
    onset moves earlier or the brake strengthens.
@@ -233,6 +243,43 @@ beside the user's experience that it does.
 magnitude −1, −0.5, 0, +0.5 and +1 by window ×0.5, ×1 and ×2. Stage 1 plays it at `ON_TIME` on the old defaults;
 stage 2 plays it again at each preset's new defaults (`DEFAULT_TIMING`, §6). The AC stop's onset axis is §4.3's.
 
+### 3.5 Where the ball is met on the arc: the stance sweep
+
+Decision 11. The stance's input, the top hand's distance ahead of the ball's centre at contact (`handsAhead`), sets the
+shaft's lean at contact, and in swing mode the pendulum swings about the top hand, so θ_c = −lean is where on the arc
+the ball is met: the AC stop 4° past the arc's lowest point, on the up; the single-ball stroke, the drive and the GC
+stop at it; the rolls 24°, 31° and 34° before it (Gugan's measured face angles; in carry mode the hands' own arc has its
+lowest point halfway through the push). No step has varied it on the calibration strokes: P2b.2b.2c.2's fit moved the
+grips and the hand coupling only, and `gugansMallet` (`scripts/ratioFit.ts:669`) throws if the lean moves. The feet
+are still not modelled (§12); the hands' offset stands in for them. In the presets the lean moves with the grips (the
+AC stop's hands relaxed at 0.1, the drive's firm), so the drive-to-stop rise in ratio (4.29 to 6.50, Gugan 5's strokes
+at 0.75 mm, the last step's gate D) cannot be read as the lean's alone.
+
+**The turf's limit** (a static pose on the default mallet, 2026-10-24): each degree of backward lean lowers the head's
+heel about 5.6 mm, the head turning about the face's contact. At the AC stop's contact (`up` −0.02 m) the head's lowest
+point at contact clears the turf by 14.55 mm at −4°, 3.35 mm at −6° and is 7.79 mm in it at −8°, so the lean stops at
+about −6.5°; holding the head as high as its face allows reaches about −8°. The arc's lowest point is not the bound: the
+shaft is upright there and the head level, 30 mm or more clear.
+
+**The sweep**, at stage 1 (§10), before any default moves: the AC stop and the drive played as Gugan 5's strokes
+(Gugan's mallet, the default gap, 3 m/s contact speed, the drive at `guideEffort` 0, the stop at jab 0), on time and
+at each preset's own `drive`, over leans −8° to +4° in 1° steps, each lean set through `handsAhead` at the preset's top
+hand and contact. A lean whose head lies in the turf at contact is printed as turf-limited, not played. The AC stop is
+also played at `up` −0.025 m (the head held high) for the leans past −6°. Each stroke is played at its own grips and at
+the other's (`bottom`, `gripTension`, `bottomGrip`), to part the lean's effect from the grips'. Recorded per run: the
+ratio against its band, (v₂/w₁)², the contact and planned speeds, the contact point and lean at first touch, the head's
+least clearance from the turf over the strike, the taps, the re-contacts after the parting (§7) and any turf contact.
+The canonical drive (its own `guideEffort`) is also played across the leans, recording whether and when its late catch
+comes (beside §6's diagnosis).
+
+**The ruling.** Stage 1 rules whether the stance becomes a calibrated default for the AC stop, the drive, both or
+neither. If it does, stage 2's candidates (§6) are found at the ruled stance, the AC stop's brake calibrated there. A
+moved stance is a default like the others: counted in ratchet step 6, its argument and the ruling in `profile.ts`'s
+comment. The two strokes are Gugan 5's calibration targets, so choosing their stance against his ratios is calibration,
+stated as such. The rolls keep Gugan's measured leans and stay held-out. The user's order (the stop furthest back, the
+drive next, forward through the rolls) is a hypothesis: the record says whether the drive's best lean falls between the
+stop's and the rolls', never tuned to.
+
 ## 4. The planned brake (the stop)
 
 ### 4.1 Before contact
@@ -287,7 +334,7 @@ Deferred to P2b.2b.2c.3 by decision 9. The roadmap's P2 row records the move.
 
 ## 6. Better defaults
 
-Stage 2 of the gate (§10) rules each, on the mechanisms stage 1 accepted:
+Stage 2 of the gate (§10) rules each, on the mechanisms stage 1 accepted, at the stance stage 1 ruled (§3.5):
 
 - **Where the defaults live** (my call): the onset is a new per-type planner default, `DEFAULT_TIMING` in `profile.ts`
   beside `DEFAULT_DRIVE` (every type `ON_TIME` but those this section moves), exported as `DEFAULT_DRIVE` is and read
@@ -317,8 +364,8 @@ Stage 2 of the gate (§10) rules each, on the mechanisms stage 1 accepted:
   and pass rolls. The default stays unchanged unless the gate rules otherwise; such a ruling states the variant's
   provenance and that the full roll then stops being held-out.
 - **Pass roll**: unchanged but for the smooth pulse.
-- **GC stop and single-ball**: unchanged but for the smooth pulse (single-ball's default drive 0 makes it
-  bit-identical).
+- **GC stop and single-ball**: unchanged but for the smooth pulse and gravity through it (decision 12: at drive 0 the
+  pulse's shape changes nothing, gravity moves them).
 
 Each default's argument and source sits in `profile.ts`'s comments, as the presets' do now.
 
@@ -381,21 +428,23 @@ Against a baseline worktree at `main` (installed with `npm ci`, never a symlinke
 (`phys`, `faults`), `impactDigest`, `impactProbe` and `shotMix`, after each commit:
 
 1. The tidy: all bit-identical.
-2. The smooth pulse with gravity: moved runs counted per preset; single-ball and drive at drive 0 bit-identical
-   (α = 0).
+2. The smooth pulse, then gravity, as two commits (decision 12): the pulse's shape alone leaves every run at drive 0
+   bit-identical (its end states are the box's); gravity then moves every swing-mode run, drive 0 included, counted
+   per preset, and leaves every carry-mode run bit-identical.
 3. `stroke.window` absent: bit-identical to step 2.
 4. The coupled dip, the lead and the planner's dip: bit-identical on every run whose dip starts at or after contact
    with `timing.arc` 0, and on the rewritten callers; croquet runs with a dip under way at contact counted.
 5. The re-contact judging: `phys` bit-identical; `faults` moved, counted per preset.
-6. Each default (§6), alone: its moved canonical and grid runs counted.
+6. Each default (§6), alone, a ruled stance (§3.5) among them: its moved canonical and grid runs counted.
 
 Any change outside its step's expected set stops the step and goes to the gate with a trace.
 
 ## 10. The pre-flight gate
 
 **Stage 1, the mechanisms**, before any default moves: the smooth pulse's ratchet; the follow-through grid at
-`ON_TIME` on the old defaults (§3.4); the brake sweep (§4.3); the drive's diagnosis (§6); and the re-contacts' spread
-and the three thresholds (§7). The user rules on each, one question at a time with a recommendation.
+`ON_TIME` on the old defaults (§3.4); the stance sweep and whether the stance becomes a default (§3.5); the brake sweep
+(§4.3); the drive's diagnosis (§6); and the re-contacts' spread and the three thresholds (§7). The user rules on each,
+one question at a time with a recommendation.
 
 **Stage 2, the defaults and checks**: §6's candidates, the follow-through grid at the new defaults, and §8's checks,
 ruled likewise. The rulings, verbatim, go in the design's Amendments.
@@ -409,8 +458,9 @@ provisional numbers table gains the smooth pulse's form, the three re-contact th
 
 ## 12. Non-goals and anti-goals
 
-Non-goals: an articulated body; the natural push's growth with power and a recruitment law for the push (P2b.2b.2c.3);
-29.1.6.3; the head swept against hoops and the peg (P2b.2b.3); the touching stops at gap 0 (carried); the lawn's pace.
+Non-goals: an articulated body, the feet among it (§3.5 sweeps the hands' offset in their place); the natural push's
+growth with power and a recruitment law for the push (P2b.2b.2c.3); 29.1.6.3; the head swept against hoops and the
+peg (P2b.2b.3); the touching stops at gap 0 (carried); the lawn's pace.
 
 Anti-goals (a failure even if it works):
 

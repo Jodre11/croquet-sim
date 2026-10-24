@@ -43,7 +43,8 @@ re-contacts after the parting judged by their effect, and better-grounded defaul
 new dependencies. `npx --yes tsx` runs the scripts.
 
 **Spec:** `docs/superpowers/specs/2026-10-23-p2b2b2c2d-follow-through-design.md`. Read all of it, especially
-"Decisions", "My calls", §3, §4, §6, §7, §9 and §10. It is this plan's only source of decisions; do not re-open them.
+"Decisions" (11 and 12 were added after planning), "My calls", §3 (§3.5 the stance sweep), §4, §6, §7, §9 and §10.
+It is this plan's only source of decisions; do not re-open them.
 Also read:
 
 - **The previous plan:** `docs/superpowers/plans/2026-10-22-p2b2b2c2c-contact-laws.md`, for the conventions kept here
@@ -56,7 +57,8 @@ Also read:
 
 **Decisions made while planning.** Task 16 folds each into the spec's Amendments.
 
-1. **Gravity cannot leave drive 0 bit-identical, so the smooth pulse and gravity are two commits.**
+1. **Gravity cannot leave drive 0 bit-identical, so the smooth pulse and gravity are two commits.** Ruled by the user,
+   2026-10-24 ("A: every stroke"), and recorded as the spec's decision 12, with §6 and §9 step 2 amended.
    - Today the pendulum's window runs on the constant α alone, gravity dropped, even at drive 0 (α = 0;
      `track.ts:938-944`). Once gravity acts through the window (spec §3.1), every swing-mode run moves, drive 0
      included. Spec §9 step 2's "single-ball and drive at drive 0 bit-identical" and §6's "single-ball's default drive 0
@@ -197,6 +199,7 @@ Also read:
     | B | The brake sweep (§4.3) | 8 |
     | C | The drive's late catch, diagnosed (§6) | 8 |
     | D | The re-contacts' spread over the 950-run grid and A's grid (§7) | 8, 10 |
+    | S | The stance sweep: the AC stop and the drive over leans −8° to +4° (§3.5) | 8 |
     | E | The AC stop's calibration at 3 m/s contact speed (§6) | 11 |
     | F | The drive's `guideEffort` candidates (§6) | 11 |
     | G | The full roll's hypothesis variant (§6, §8.2) | 11 |
@@ -209,7 +212,19 @@ Also read:
     | N | Step convergence (§8.7) | 14 |
     | O | Criterion 9: every preset's canonical setup top to finish | 14 |
 
-    `all` runs A–D before Task 11 and A–O after.
+    `all` runs A–D and S before Task 11, and every section after.
+14. **The stance in the harness** (spec §3.5, decision 11).
+    - `guganSetup`'s options gain:
+      - `lean?: number`, the shaft's lean at contact (rad, forward positive), set as the stance's `handsAhead` by
+        `handsAheadFor(lean, stance.top, up, geometry)` with the setup's own mallet and ball;
+      - `up?: number`, the contact's `up` (m);
+      - `grips?: StrokeType`, whose stance's `bottom`, `gripTension` and `bottomGrip` replace the preset's.
+    - The overrides apply after the mallet: Gugan's mallet stays the one solved at the preset's own stance (a player
+      changes stance, not mallet), so `gugansMallet` and its lean check are unchanged. `lean` is applied last, after
+      `up` and `grips`.
+    - `scripts/followThrough.ts` exports `turfLimited(setup, world): number`, the head's lowest point at contact (m,
+      negative in the turf), by `headLowestPoint` on `contactPose`'s head. Section S prints a lean with a negative
+      value as turf-limited and does not play it.
 
 ## Global Constraints
 
@@ -1009,18 +1024,20 @@ Message: `Report each re-contact after the parting with its effect`.
 ---
 ### Task 8: The harness and stage 1's probe sections
 
-Spec §3.4, §4.3, §6 (the drive's diagnosis), §7 (the spread), §10 stage 1; exit criteria 4, 5 (the sweep); plan
-decision 13.
+Spec §3.4, §3.5, §4.3, §6 (the drive's diagnosis), §7 (the spread), §10 stage 1; exit criteria 4, 5 (the sweep);
+plan decisions 13 and 14.
 
 **Files:**
 - Create: `scripts/followThrough.ts`, `scripts/followThroughProbe.ts`, `tests/engine/followThroughHarness.test.ts`
-- Modify: `scripts/ratioFit.ts` (`digestGrid` moved in), `scripts/croquetFitProbe.ts` (imports it)
+- Modify: `scripts/ratioFit.ts` (`digestGrid` moved in; `guganSetup`'s `lean`, `up` and `grips`),
+  `scripts/croquetFitProbe.ts` (imports `digestGrid`)
 - Create: `docs/superpowers/probes/<date>-p2b2b2c2d-stage1.txt`
 
 **Interfaces:**
 - Produces, from `scripts/followThrough.ts`: `FirstTouch`, `Routes`, `firstTouch`, `routesOf`,
-  `backswingForContact` (plan decision 13).
-- From `scripts/ratioFit.ts`: `digestGrid(type, world)`, as it was.
+  `backswingForContact` (plan decision 13), `turfLimited` (plan decision 14).
+- From `scripts/ratioFit.ts`: `digestGrid(type, world)`, as it was; `guganSetup`'s options `lean?: number`,
+  `up?: number`, `grips?: StrokeType` (plan decision 14).
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -1048,15 +1065,37 @@ describe("the follow-through harness (P2b.2b.2c.2d design §3.4)", () => {
     it("throws for a contact speed beyond the bracket, naming both ends", () => {
         expect(() => backswingForContact(canonicalSetup("stop-ac"), 40, WORLD)).toThrow(/m\/s.*m\/s/);
     });
+    it("sets the stance's lean, contact and grips on Gugan's stroke", () => {
+        const lean = (-6 * Math.PI) / 180;
+        const setup = guganSetup("stop-ac", 3, 0.75e-3, { world: WORLD, lean, up: -0.025, grips: "drive" });
+        expect(Math.abs(leanOf(setup, WORLD) - lean)).toBeLessThanOrEqual(1e-12);
+        expect(setup.stroke.contact.up).toBe(-0.025);
+        const drive = setup.profile.stance.drive;
+        expect(setup.profile.stance["stop-ac"]).toMatchObject({
+            bottom: drive.bottom,
+            gripTension: drive.gripTension,
+            bottomGrip: drive.bottomGrip,
+        });
+    });
+    it("reads the turf's limit on the lean as the static pose gives it", () => {
+        // The default mallet's AC stop at up −0.02 m (2026-10-24 pose check): 3.35 mm clear at −6°, 7.79 mm in the
+        // turf at −8°.
+        const at = (deg: number) =>
+            turfLimited(guganSetup("stop-ac", 3, 0.75e-3, { world: WORLD, lean: (deg * Math.PI) / 180 }), WORLD);
+        expect(at(-6)).toBeCloseTo(3.35e-3, 4);
+        expect(at(-8)).toBeCloseTo(-7.79e-3, 4);
+    });
 });
 ```
+
+The second stance test runs on the default mallet (no `gugan`), the mallet the pose check used.
 
 `NO_STRIKE` is the timing Task 6's no-strike test settled on. `routesOf` is exercised by section A's run and Task 9's
 review; its taps' shares on the canonical drive must sum to within 1 % of 1 (a sanity line printed by section A).
 
 - [ ] **Step 2: Run to verify they fail** — `npx vitest run tests/engine/followThroughHarness.test.ts`; FAIL.
 
-- [ ] **Step 3: Implement the harness, move `digestGrid`, write sections A–D**
+- [ ] **Step 3: Implement the harness, move `digestGrid`, write sections A–D and S**
 
 - **A** (spec §3.4).
   - Every croquet preset at 3 m/s (the planned speed, `backswingFor`), magnitude −1, −0.5, 0, +0.5, +1, window ×0.5,
@@ -1088,6 +1127,23 @@ review; its taps' shares on the canonical drive must sum to within 1 % of 1 (a s
     effects.
   - Print a what-if table: the count flagged per preset for MERGE_SEPARATION ∈ {0, 0.1, 0.25, 0.5, 1, 2} mm by
     EFFECT_SPEED ∈ {0, 1, 2, 5, 10} % with EFFECT_ANGLE ∈ {0, 1, 2, 5} °, using `groupReContacts`.
+- **S** (spec §3.5).
+  - The AC stop and the drive as Gugan 5's strokes: `guganSetup` with `gugan: true`, the default gap, `contactSpeed`
+    3 m/s by `backswingForContact`, the drive at `guideEffort` 0, the stop at jab 0, `ON_TIME`, each preset's own
+    `drive`.
+  - Leans −8° to +4° in 1° steps at the preset's `up`; the AC stop again at `up` −0.025 m for −7° and −8°. Each at the
+    stroke's own grips and at the other's (`grips`).
+  - A lean with `turfLimited` < 0 prints "turf-limited" with the figure in mm and is not played.
+  - Per run: the ratio against its band (drive 4.23 ± 0.2, stop 7.15 ± 0.6, `*` within), (v₂/w₁)², the contact and
+    planned speeds, `firstTouch`'s up and lean, the head's least clearance from the turf over the strike window (from
+    the impact probe's samples), the taps, the re-contacts after the parting with their effects, and whether the head
+    touched the turf.
+  - Per stroke and grip set: the lean with the ratio nearest its target, and the ratio's rate per degree over the
+    playable leans.
+  - A second block: the canonical drive (its own `guideEffort`, default mallet, 3 m/s planned) across the same leans,
+    with each re-contact after the parting's start and effect (the late catch).
+  - This section's `guganSetup` call needs `contactSpeed`, which Task 11 adds; add it here instead (Task 11's
+    interface, unchanged), with Task 11's test moved forward with it.
 - Every section's header names the spec section, its inputs and its units, as `croquetFitProbe.ts`'s do.
 
 - [ ] **Step 4: Tests and checks** — the harness tests PASS; the four checks pass. `croquetFitProbe`'s
@@ -1116,12 +1172,18 @@ Spec §10 stage 1. **Stop for the user.**
   - section A's monotonicity and rates per preset, with the routes' shares;
   - section B's under-hit, its no-strike runs, its grounding, and exit criterion 5's verdict;
   - section C's trace and its reading;
-  - section D's quantiles and what-if table.
+  - section D's quantiles and what-if table;
+  - section S's ratios by lean and grip set, the turf-limited leans, the rates per degree, and the canonical drive's
+    late catch by lean.
 
 - [ ] **Step 2: Put each question to the user, one at a time**, with options, pros, cons and a recommendation:
   1. The smooth pulse and gravity: accepted as landed (plan decisions 1–3, their counts)?
   2. The routes: what section A says about how the follow-through reaches the balls, and whether a preset whose ratio
      barely moves is a finding about the model (spec §3.4).
+  2b. The stance (spec §3.5): the lean's effect apart from the grips'; whether the user's order (stop furthest back,
+     then the drive, forward through the rolls) shows; and whether the AC stop's, the drive's, both or neither's stance
+     becomes a calibrated default, and at which lean. Asked before the brake, since stage 2's candidates are found at
+     the ruled stance.
   3. The planned brake: does the under-hit emerge; is the no-strike reporting adequate?
   4. The drive's late catch: is the guide's re-acceleration physical (section C)? Which candidates go to stage 2: the
      `guideEffort` grid, a guide decay (an engine change, argued from the account or a source), or both?
@@ -1130,6 +1192,9 @@ Spec §10 stage 1. **Stop for the user.**
 
 - [ ] **Step 3: Record each ruling verbatim** in the spec's Amendments, and commit the spec and `gate1.txt`. Message:
 `Record the follow-through gate's first stage`.
+
+If the gate rules a stance in, sections E and F (Task 11) and B's rerun play the AC stop and the drive at it (through
+`guganSetup`'s `lean`, and for the canonical drive the stance itself), and Task 13 lands it first.
 
 If the gate rules a guide decay in, write its task (engine change, tests, ratchet) into this plan before Task 11, and
 commit the amended plan with the spec.
@@ -1168,8 +1233,8 @@ Spec §6; plan decision 12.
 
 **Files:**
 - Modify: `scripts/followThroughProbe.ts` (sections E, F, G), `scripts/ratioFit.ts` (`guganSetup` gains
-  `timing?: StrokeTiming`, `drive?: number` and `contactSpeed?: boolean`; with `contactSpeed` it solves the backswing
-  by `backswingForContact`)
+  `timing?: StrokeTiming` and `drive?: number`; `contactSpeed?: boolean`, solving the backswing by
+  `backswingForContact`, landed in Task 8 for section S)
 - Create: `docs/superpowers/probes/<date>-p2b2b2c2d-candidates.txt`
 
 - [ ] **Step 1: Sections**
@@ -1190,7 +1255,8 @@ Spec §6; plan decision 12.
   coaching's about 1. Print the variant's provenance (the roadmap's carried item) in the header.
 
 - [ ] **Step 2: A test** in `tests/engine/followThroughHarness.test.ts`: `guganSetup` with `contactSpeed: true` and the
-  candidate's timing puts `firstTouch`'s contact speed at 3 m/s ± 1e-6.
+  candidate's timing puts `firstTouch`'s contact speed at 3 m/s ± 1e-6 (Task 8 pins it on time; this pins it under
+  the candidate's early pulse).
 
 - [ ] **Step 3: Run** `SECTION=E`, `F` and `G` into the candidates file (the controller, in the background). Run the
   four checks.
@@ -1229,6 +1295,10 @@ Spec §6, §9 step 6.
 
 Land each ruled default as its own sub-step, with its own ratchet run and count before the next:
 
+- [ ] **Step 0: The ruled stance**, if Task 9 ruled one: the preset's `stanceFromLean` lean (and `up`, if ruled) in
+  `profile.ts`, its comment giving section S's figures and the ruling. Test: the preset's `leanOf` at its canonical
+  setup is the ruled lean within 1e-12 rad; the canonical setup runs top to finish. Ratchet: only that preset's runs
+  move, counted. Message: `Set the <type>'s stance where the gate ruled`.
 - [ ] **Step 1: `DEFAULT_TIMING`** with every type `ON_TIME`, and `canonicalSetup` reading it. Test: `DEFAULT_TIMING`
   has every stroke type, each a valid timing, and is `ON_TIME` everywhere. Ratchet: bit-identical.
 - [ ] **Step 2: The AC stop's onset and strength.** Test: the canonical AC stop's Gugan 5 stop at 3 m/s contact speed
@@ -1303,7 +1373,7 @@ Spec §11; exit criterion 10.
 
 **Files:**
 - Modify: `src/engine/simulate.ts:77` (`"0.17.0"`), `tests/engine/simulate.test.ts` (if it pins the version), the
-  roadmap, the spec (Amendments: plan decisions 1–13 folded in)
+  roadmap, the spec (Amendments: plan decisions 1–14 folded in)
 
 - [ ] **Step 1: The version.** A test pins `ENGINE_VERSION` `"0.17.0"` (extend the existing one). Set it. Run the
   four checks.
