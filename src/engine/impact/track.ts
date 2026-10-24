@@ -2,17 +2,19 @@
  * The tracked drive's path (P2b.2b.1 design §3.1, §3.2), as two arcs. The pendulum: the mallet swings about the top
  * hand (the pivot) in a vertical plane, the shaft at arc angle θ. The hands' path through space: the pivot moves in
  * that plane, ends after its reach, and dips. Before contact the path follows the downswing when the arc has one
- * (P2b.2b.2a design §3.5); otherwise each arc runs at its initial rate until its window. Each changes rate
- * constantly through its window. After its window the pendulum swings freely (swing mode) or slows to a held slope
- * (carry mode). The dip lowers the pivot from rest to rest. In carry mode after contact the pivot travels the hands'
- * arc and stops at the push length (P2b.2b.2b.2b design §4.1), and the hands flex to an intended path that starts from
- * the actual grips, then swing the mallet through the pendulum phase (carryLoad; P2b.2b.2b.2b design §3, §4). Through
- * the push they also push along aim against the balls' resistance, at the muscles' pace and capped (pushIntent; gate
- * ruling 2026-10-11). From the flex's start each hand and arm is Dong et al. 2013's x_h 5-DOF hand–arm chain, its flex
- * driving the chain's forearm (gate round 3 ruling, 2026-10-11). The model's elements map to the engine's as: M0 the
- * forearm, M1 the hand (palm–hand dorsum), M2 the fingers, each a point mass (ArmChain); M3 and M4, the skin on the
- * handle, rigid at the grip in the swung body (carryBody); K1, C1 `wrist` (M0–M1), K2, C2 `knuckle` (M1–M2), K3, C3
- * `palm` (M1–grip), K4, C4 `finger` (M2–grip); K0, C0 (M0 to the body) the arm's flex.
+ * (P2b.2b.2a design §3.5); otherwise each arc runs at its initial rate until its window. Through its window each
+ * changes rate by its mean rate times the window, delivered as a minimum-jerk pulse that starts and ends at zero
+ * acceleration (Flash and Hogan 1985; P2b.2b.2c.2d design §3.1). After its window the pendulum swings freely (swing
+ * mode) or slows to a held slope (carry mode). The dip lowers the pivot from rest to rest. In carry mode after contact
+ * the pivot travels the hands' arc and stops at the push length (P2b.2b.2b.2b design §4.1), and the hands flex to an
+ * intended path that starts from the actual grips, then swing the mallet through the pendulum phase (carryLoad;
+ * P2b.2b.2b.2b design §3, §4). Through the push they also push along aim against the balls' resistance, at the
+ * muscles' pace and capped (pushIntent; gate ruling 2026-10-11). From the flex's start each hand and arm is Dong et
+ * al. 2013's x_h 5-DOF hand–arm chain, its flex driving the chain's forearm (gate round 3 ruling, 2026-10-11). The
+ * model's elements map to the engine's as: M0 the forearm, M1 the hand (palm–hand dorsum), M2 the fingers, each a
+ * point mass (ArmChain); M3 and M4, the skin on the handle, rigid at the grip in the swung body (carryBody); K1, C1
+ * `wrist` (M0–M1), K2, C2 `knuckle` (M1–M2), K3, C3 `palm` (M1–grip), K4, C4 `finger` (M2–grip); K0, C0 (M0 to the
+ * body) the arm's flex.
  * Everything is continuous in position and velocity.
  *
  * Frames. n = aim × ẑ is the pitch axis: a positive rotation about it tilts aim upward. The head is rigid on the shaft,
@@ -574,7 +576,8 @@ function lowering(depth: number, duration: number, a: number, e: number): Loweri
 }
 
 /**
- * The planned pivot at time t: before the hands' window (the downswing, or P₀ + V₀·t), then P_h + V_h·τ + ½·A·τ², then
+ * The planned pivot at time t: before the hands' window (the downswing, or P₀ + V₀·t), then the minimum-jerk pulse of
+ * mean A over the window T, s = τ/T: P_h + V_h·τ + A·T²·(s³ − s⁴/2), V_h + A·T·(3s² − 2s³), 6·A·s(1 − s); then
  * P_e + V_e·u (no reach, no dip).
  */
 function planPivot(track: PreparedTrack, t: number): Motion {
@@ -583,14 +586,17 @@ function planPivot(track: PreparedTrack, t: number): Motion {
         return beforeHands(arc, t);
     }
     if (t <= arc.handStart + arc.handWindow) {
+        // As the pendulum's pulse: s clamped to 1 keeps every factor of A non-negative, so A = 0 gives the box's bits.
+        const T = arc.handWindow;
         const tau = t - arc.handStart;
+        const s = Math.min(tau / T, 1);
         return {
             P: add(
                 add(track.pivotHand, scale(track.pivotVelocityHand, tau)),
-                scale(arc.pivotAcceleration, 0.5 * tau * tau),
+                scale(arc.pivotAcceleration, T * T * (s * s * s * (1 - 0.5 * s))),
             ),
-            V: add(track.pivotVelocityHand, scale(arc.pivotAcceleration, tau)),
-            A: arc.pivotAcceleration,
+            V: add(track.pivotVelocityHand, scale(arc.pivotAcceleration, T * (s * s * (3 - 2 * s)))),
+            A: scale(arc.pivotAcceleration, 6 * (s * (1 - s))),
         };
     }
     const u = t - (arc.handStart + arc.handWindow);
@@ -936,32 +942,33 @@ function pendulumAt(track: PreparedTrack, t: number): Swing {
     }
     const tw = arc.arcStart + arc.window;
     if (t <= tw) {
+        // The minimum-jerk pulse (P2b.2b.2c.2d design §3.1): α = 6·ᾱ·s(1 − s), s = τ/T, so ω and θ end where the
+        // box's constant ᾱ would put them. s is clamped to 1 so that every factor of ᾱ stays non-negative: at ᾱ = ±0
+        // each term is then the box's signed zero, and the path is the box's to the bit.
+        const T = arc.window;
         const tau = t - arc.arcStart;
+        const s = Math.min(tau / T, 1);
         return {
-            theta: track.thetaArc + track.omegaArc * tau + 0.5 * arc.alpha * tau * tau,
-            omega: track.omegaArc + arc.alpha * tau,
-            alpha: arc.alpha,
+            theta: track.thetaArc + track.omegaArc * tau + arc.alpha * T * T * (s * s * s * (1 - 0.5 * s)),
+            omega: track.omegaArc + arc.alpha * T * (s * s * (3 - 2 * s)),
+            alpha: 6 * arc.alpha * (s * (1 - s)),
         };
     }
     if (arc.mode === "carry") {
         // The slope is held: over one more window W the rate falls from ω_e to rest, then θ holds. Its α runs on from
-        // the window's α₀ to 0 with no step (gate round 5 ruling, 2026-10-12): with x = u/W, ω is the quartic with
-        // ω(0) = ω_e, ω′(0) = α₀, ω(W) = ω′(W) = 0 and the linear fall's travel ∫ω = ω_e·W/2, so the seams' times, θ
-        // and ω there are the linear fall's:
-        // ω = ω_e·(1 − 3x² + 2x³) + α₀·W·(x − 9x²/2 + 6x³ − 5x⁴/2),
-        // α = 6·ω_e/W·(x² − x) + α₀·(1 − 9x + 18x² − 10x³),
-        // θ = θ_e + W·[ω_e·(x − x³ + x⁴/2) + α₀·W·(x²/2 − 3x³/2 + 3x⁴/2 − x⁵/2)].
+        // the pulse's end, α = 0, with no step (gate round 5 ruling, 2026-10-12; P2b.2b.2c.2d design §3.1): with
+        // x = u/W, ω is the cubic with ω(0) = ω_e, ω′(0) = 0, ω(W) = ω′(W) = 0, whose travel ∫ω = ω_e·W/2 is the
+        // linear fall's, so the seams' times, θ and ω there are the linear fall's:
+        // ω = ω_e·(1 − 3x² + 2x³), α = 6·ω_e/W·(x² − x), θ = θ_e + W·ω_e·(x − x³ + x⁴/2).
         const W = arc.window;
         const u = Math.min(t - tw, W);
         const x = u / W;
         const we = track.omegaEnd;
-        const a0 = arc.alpha;
         const fall = x * (1 + x * x * (x * 0.5 - 1));
-        const turn = x * x * (0.5 + x * (-1.5 + x * (1.5 - x * 0.5)));
         return {
-            theta: track.thetaEnd + W * (we * fall + a0 * W * turn),
-            omega: we * (1 + x * x * (2 * x - 3)) + a0 * W * x * (1 + x * (-4.5 + x * (6 - x * 2.5))),
-            alpha: u < W ? ((6 * we) / W) * x * (x - 1) + a0 * (1 + x * (-9 + x * (18 - x * 10))) : 0,
+            theta: track.thetaEnd + W * (we * fall),
+            omega: we * (1 + x * x * (2 * x - 3)),
+            alpha: u < W ? ((6 * we) / W) * x * (x - 1) : 0,
         };
     }
     // Swing mode: the free pendulum, interpolated in its table and clamped to its last sample beyond it.

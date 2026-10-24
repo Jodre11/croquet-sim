@@ -230,10 +230,15 @@ describe("a tracked head with no ball", () => {
         };
         const start = headOnPath(slowed, TEST_HEAD, 0);
         integrate(isolated({ start, drive: track, gravity: STANDARD_GRAVITY }), { probe, cap: check.window });
-        // Pre-flight measured a drift of 2.5e-4 in the share and a last (and lowest) rate of 1.13e-8 rad/s, from
-        // 1.875 rad/s; the planned deceleration alone left it at −0.832 rad/s, past rest.
+        // From 1.875 rad/s; the planned deceleration alone left it at −0.832 rad/s, past rest. P2b.2b.2c.2d: the
+        // minimum-jerk pulse's α falls to 0 at the window's end, removing semi-implicit Euler's O(dt·a) lag there, and
+        // the head ends at a second-order residual of the other sign: a drift of 2.06e-4 in the share and a last (and
+        // lowest) rate of −9.67e-10 rad/s (was 2.5e-4 and +1.13e-8, the lag leaving it short of rest).
+        // Numerical, not physical: the integrator's residual allowed below rest, ten times the measured one and
+        // eight orders of magnitude below the start's 1.875 rad/s, so a braking past rest still fails.
+        const RESIDUAL = 1e-8;
         expect(drift).toBeLessThan(5e-4);
-        expect(lowest).toBeGreaterThanOrEqual(0);
+        expect(lowest).toBeGreaterThanOrEqual(0 - RESIDUAL);
         expect(Math.abs(last)).toBeLessThan(3e-8);
     });
 

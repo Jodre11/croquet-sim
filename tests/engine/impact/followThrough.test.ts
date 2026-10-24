@@ -133,10 +133,22 @@ describe("the follow-through (design §4)", () => {
         }
     });
 
-    it("flags the default grip limit reached in the GC stop's hold (P2b.2b.2b.3 design §5)", () => {
-        // At F_max = 435 N (Young et al. 2009) a hand saturates while the firm grip holds the GC stop's mallet.
+    it("holds the GC stop's mallet within the default grip limit (P2b.2b.2b.3 design §5)", () => {
+        // P2b.2b.2c.2d: the minimum-jerk pulse (was ["follow-grip-limit"], hold peak |top| 434.3 N → 30.3 N; |bottom|
+        // 435 N → 17.3 N, against F_max = 435 N, Young et al. 2009). The pulse ends at α = 0, so the head reaches the
+        // hold at rest with the hands, where the box's α stepped from −360 rad/s² to 0 and the grip had to stop it.
         const world = defaultWorld();
         const { follow } = stroke(canonicalSetup("stop-gc", { world }), world);
+        expect(follow.flags).toEqual([]);
+    });
+
+    it("flags a grip limit reached in the GC stop's follow-through (P2b.2b.2b.3 design §5)", () => {
+        // The default limit is no longer reached (above), so the flag's path is pinned with the profile's limit
+        // lowered to 20 N, below the follow-through's peak hand force of 30.3 N.
+        const world = defaultWorld();
+        const setup = canonicalSetup("stop-gc", { world });
+        const limited = { ...setup, profile: { ...setup.profile, body: { ...setup.profile.body, gripLimit: 20 } } };
+        const { follow } = stroke(limited, world);
         expect(follow.flags).toEqual(["follow-grip-limit"]);
     });
 

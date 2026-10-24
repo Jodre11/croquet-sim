@@ -748,3 +748,23 @@ Each is cited by what the design takes from it. DOIs are those Crossref returns 
 | Kuwabara and Kono, "Restitution Coefficient in a Collision between Two Spheres", *Jpn. J. Appl. Phys.* 26:1230 (1987) | 10.1143/jjap.26.1230 | §4.2 candidate f: the √δ damping form the face already uses |
 | Rosas, Romero, Nesterenko and Lindenberg, "Observation of Two-Wave Structure in Strongly Nonlinear Dissipative Granular Chains", *Phys. Rev. Lett.* 98:164301 (2007) | 10.1103/physrevlett.98.164301 | §4.2 candidate f: "A quasistatic precompression appears behind the primary pulse ... This precompression is due entirely to dissipation and does not exist at zero viscosity" |
 | Carretero-González, Khatri, Porter, Kevrekidis and Daraio, "Dissipative Solitary Waves in Granular Crystals", *Phys. Rev. Lett.* 102:024102 (2009) | 10.1103/physrevlett.102.024102 | §4.2 candidate f: measured bead damping is not a linear dashpot, an exponent "close to α = 1.75" |
+
+## P2b.2b.2c.2d: the follow-through (design §3.1)
+
+The source behind the follow-through's pulse shape (`track.ts`, `pendulumAt` and `planPivot`).
+
+### The minimum-jerk model (not fetched)
+
+On 2026-10-24 every copy tried was behind a bot check, so nothing was fetched or hashed: the journal's PDF
+(https://www.jneurosci.org/content/5/7/1688.full.pdf, a Cloudflare challenge), and Europe PMC's and PMC's copies of
+PMC6565116 (a challenge page each). The DOI and the bibliographic details are those Crossref returns on 2026-10-24.
+Nothing is quoted from the paper.
+
+| Work | DOI | Used for |
+|---|---|---|
+| Flash and Hogan, "The coordination of arm movements: an experimentally confirmed mathematical model", *J. Neurosci.* 5(7):1688–1703 (1985) | 10.1523/jneurosci.05-07-01688.1985 | §3.1: voluntary movement as the smoothest one, minimising the integral of the squared jerk |
+
+What the model takes from it is the principle only. The pulse's profile is the design's: a change of velocity Δv over T
+with zero acceleration at both ends, a(s) = 6·Δv/T·s(1 − s), s = (t − start)/T, so that v rises as Δv·(3s² − 2s³), its
+peak 1.5·Δv/T and its jerk ±6·Δv/T² at the ends. It is not the paper's point-to-point position profile and is not
+checked against the paper.

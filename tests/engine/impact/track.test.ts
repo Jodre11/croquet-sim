@@ -111,27 +111,28 @@ function dipAt(arc: SwingArc, t: number): { readonly z: number; readonly v: numb
 /** The closed forms of design §3.2 for a carry-mode arc before its contact, with Math.* (the engine: sinCos). */
 function closedForm(arc: SwingArc, t: number) {
     const p = phases(t, arc.arcStart, arc.window);
-    // The held slope (gate round 5 ruling): x = u/W, ω = ω_e·(1 − 3x² + 2x³) + α₀·W·(x − 9x²/2 + 6x³ − 5x⁴/2).
+    // P2b.2b.2c.2d: each window is the minimum-jerk pulse of the box's mean rate, s = τ/W: ω = ω₀ + α·W·(3s² − 2s³),
+    // θ gains α·W²·(s³ − s⁴/2) (was the box, ω₀ + α·τ and ½·α·τ²). The held slope (gate round 5 ruling) starts from
+    // the pulse's α = 0: x = u/W, ω = ω_e·(1 − 3x² + 2x³) (was plus α₀·W·(x − 9x²/2 + 6x³ − 5x⁴/2)).
     const W = arc.window;
+    const s = p.into / W;
     const omegaEnd = arc.omega0 + arc.alpha * W;
     const u = Math.min(p.after, W);
     const x = u / W;
     const omega =
-        p.after > 0
-            ? omegaEnd * (1 - 3 * x ** 2 + 2 * x ** 3) + arc.alpha * W * (x - 4.5 * x ** 2 + 6 * x ** 3 - 2.5 * x ** 4)
-            : arc.omega0 + arc.alpha * p.into;
-    const held =
-        W *
-        (omegaEnd * (x - x ** 3 + 0.5 * x ** 4) +
-            arc.alpha * W * (0.5 * x ** 2 - 1.5 * x ** 3 + 1.5 * x ** 4 - 0.5 * x ** 5));
-    const theta = arc.theta0 + arc.omega0 * (p.before + p.into) + 0.5 * arc.alpha * p.into * p.into + held;
+        p.after > 0 ? omegaEnd * (1 - 3 * x ** 2 + 2 * x ** 3) : arc.omega0 + arc.alpha * W * (3 * s ** 2 - 2 * s ** 3);
+    const held = W * omegaEnd * (x - x ** 3 + 0.5 * x ** 4);
+    const theta = arc.theta0 + arc.omega0 * (p.before + p.into) + arc.alpha * W * W * (s ** 3 - 0.5 * s ** 4) + held;
     const h = phases(t, arc.handStart, arc.handWindow);
+    const Wh = arc.handWindow;
+    const sh = h.into / Wh;
     const A = arc.pivotAcceleration;
-    const V = add(arc.pivotVelocity, scale(A, h.into));
+    // P2b.2b.2c.2d: the hands' pulse likewise (was V₀ + A·τ and ½·A·τ²).
+    const V = add(arc.pivotVelocity, scale(A, Wh * (3 * sh ** 2 - 2 * sh ** 3)));
     const dip = dipAt(arc, t);
     const P = add(
-        add(add(arc.pivot, scale(arc.pivotVelocity, h.before + h.into)), scale(A, 0.5 * h.into * h.into)),
-        add(scale(add(arc.pivotVelocity, scale(A, arc.handWindow)), h.after), vec3(0, 0, -dip.z)),
+        add(add(arc.pivot, scale(arc.pivotVelocity, h.before + h.into)), scale(A, Wh * Wh * (sh ** 3 - 0.5 * sh ** 4))),
+        add(scale(add(arc.pivotVelocity, scale(A, Wh)), h.after), vec3(0, 0, -dip.z)),
     );
     const radial = sub(scale(arc.aim, Math.sin(theta)), vec3(0, 0, Math.cos(theta)));
     const tangent = add(scale(arc.aim, Math.cos(theta)), vec3(0, 0, Math.sin(theta)));
@@ -209,10 +210,13 @@ describe("the swing path", () => {
         expect(pathAt(track, 0.009).dipAcceleration.z).toBeCloseTo(-a, 9);
         expect(pathAt(track, 0.018).dipAcceleration.z).toBeCloseTo(a, 9);
         expect(pathAt(track, 0.009).pendulumAcceleration).toBe(0);
-        expect(pathAt(track, 0.012).pendulumAcceleration).toBe(TIMED.alpha);
-        // The held slope's α at x = u/W = 0.5: −6ω_e/W·x(1 − x) + α₀·(1 − 9x + 18x² − 10x³) = −1.5·ω_e/W − α₀/4.
+        // P2b.2b.2c.2d: the minimum-jerk pulse's α = 6·α·s(1 − s) at s = 2 ms/30 ms = 1/15 (was the box's α, 4).
+        const s = 1 / 15;
+        expect(pathAt(track, 0.012).pendulumAcceleration).toBeCloseTo(6 * TIMED.alpha * s * (1 - s), 12);
+        // The held slope's α at x = u/W = 0.5: −6ω_e/W·x(1 − x) = −1.5·ω_e/W. P2b.2b.2c.2d: the hold starts from the
+        // pulse's α = 0 (was −1.5·ω_e/W − α₀/4).
         const omegaEnd = TIMED.omega0 + TIMED.alpha * 0.03;
-        expect(pathAt(track, 0.055).pendulumAcceleration).toBeCloseTo((-1.5 * omegaEnd) / 0.03 - TIMED.alpha / 4, 9);
+        expect(pathAt(track, 0.055).pendulumAcceleration).toBeCloseTo((-1.5 * omegaEnd) / 0.03, 9);
     });
 
     it("holds the head's tilt while the hands alone move: a straight line at a constant orientation", () => {
@@ -247,9 +251,8 @@ describe("the swing path", () => {
             const w = dot(pathAt(prepare({ ...checked, mode }), ROLL.window).angularVelocity, N);
             expect(Math.abs(w), mode).toBeLessThan(1e-12);
         }
-        // Carry mode's held slope takes α from the check's α₀ back to 0 over one more window (continuous α, gate round
-        // 5 ruling), so the rate swings briefly past rest within it; from its end, 0.06 s, the head is held at rest
-        // where the check left it, the slope's net travel ω_e·W/2 being 0.
+        // Carry mode's held slope starts from the pulse's α = 0 (P2b.2b.2c.2d design §3.1) and, ω_e being 0, stays at
+        // rest; from its end, 0.06 s, the head is held where the check left it, the slope's net travel ω_e·W/2 being 0.
         const carry = prepare(checked);
         for (const t of [0.065, 0.12]) {
             expect(Math.abs(dot(pathAt(carry, t).angularVelocity, N)), `at ${t}`).toBeLessThan(1e-12);
@@ -266,9 +269,10 @@ describe("the swing path", () => {
     });
 
     it("plans the held slope with a continuous α and a finite jerk (gate round 5 ruling, 2026-10-12)", () => {
-        // The held slope runs from the window's end, α the window's α₀, to rest one window W later, α 0. At both
-        // seams α must not step, and across the slope its rate of change stays within the profile's own bound,
-        // |j| ≤ 6·|ω_e|/W² + 9·|α₀|/W (ω_e the rate at the window's end). Both rolls: α₀ > 0 and a check, α₀ < 0.
+        // The held slope runs from the window's end, α the pulse's 0 (P2b.2b.2c.2d design §3.1), to rest one window W
+        // later, α 0. At both seams α must not step, and across the pulse's end and the slope its rate of change stays
+        // within |j| ≤ 6·|ω_e|/W² + 9·|α₀|/W (ω_e the rate at the window's end), which bounds both the slope's own jerk
+        // and the pulse's, 6·|α₀|/W at its end. Both rolls: α₀ > 0 and a check, α₀ < 0.
         for (const arc of [TIMED, { ...TIMED, alpha: -(TIMED.omega0 / TIMED.window) }]) {
             const path = prepare(arc);
             const w = arc.window;
@@ -527,6 +531,60 @@ describe("the hands' arc after contact (P2b.2b.2b.2b design §4.1)", () => {
         const swing = prepareTrack(trackDrive({ ...ARC, mode: "swing" }), TEST_HEAD, STANDARD_GRAVITY);
         expect(swing.push).toBeNull();
         expect(swing.reach).not.toBeNull();
+    });
+
+    describe("the smooth pulse (P2b.2b.2c.2d design §3.1)", () => {
+        // Contact moved to 0.03 s so that the hands' window [0.01, 0.02] lies wholly before it, where the planned
+        // pivot is read directly (carry mode's push starts at contact); the pendulum's window is [0, 0.01].
+        const carryArc: SwingArc = {
+            ...ARC,
+            alpha: 40,
+            pivotAcceleration: vec3(0, 3, 0),
+            contactAt: 0.03,
+            handStart: 0.03 - 2 * ARC.window,
+        };
+        const T = carryArc.window;
+        const at = (track: PreparedTrack, s: number) => pathAt(track, carryArc.arcStart + s * T);
+        it("keeps the box's change over the window, the pulse's mean rate", () => {
+            const track = prepareTrack(trackDrive(carryArc), TEST_HEAD, 0);
+            const w = (s: number) => dot(at(track, s).angularVelocity, track.axis);
+            expect(w(1) - w(0)).toBeCloseTo(carryArc.alpha * T, 12);
+            expect(track.thetaEnd).toBe(track.thetaArc + track.omegaArc * T + 0.5 * carryArc.alpha * T * T);
+        });
+        it("starts and ends at zero acceleration, peaking at 1.5 times the mean", () => {
+            const track = prepareTrack(trackDrive(carryArc), TEST_HEAD, 0);
+            expect(at(track, 1e-9).pendulumAcceleration).toBeCloseTo(0, 6);
+            expect(at(track, 1).pendulumAcceleration).toBeCloseTo(0, 9);
+            expect(at(track, 0.5).pendulumAcceleration).toBeCloseTo(1.5 * carryArc.alpha, 9);
+        });
+        it("has the jerk ±6·Δω/T² at the window's ends", () => {
+            // dα/dτ = 6·mean/T·(1 − 2s): a finite difference over 1e-7 s at each end.
+            const track = prepareTrack(trackDrive(carryArc), TEST_HEAD, 0);
+            const h = 1e-7 / T;
+            const jerk = (s: number) =>
+                (at(track, s + h).pendulumAcceleration - at(track, s).pendulumAcceleration) / 1e-7;
+            expect(jerk(0)).toBeCloseTo((6 * carryArc.alpha) / T, 0);
+            expect(jerk(1 - h)).toBeCloseTo((-6 * carryArc.alpha) / T, 0);
+        });
+        it("shapes the hands' push the same way", () => {
+            // A quarter into the window the box has given A·T/4; the minimum-jerk profile A·T·(3/16 − 2/64) =
+            // 0.15625·A·T.
+            const track = prepareTrack(trackDrive(carryArc), TEST_HEAD, 0);
+            const v = (t: number) => handsAt(track, t).velocity;
+            const gained = sub(v(carryArc.handStart + T / 4), v(carryArc.handStart));
+            expect(length(gained)).toBeCloseTo(0.15625 * length(carryArc.pivotAcceleration) * T, 12);
+        });
+        it("starts carry mode's hold from rest acceleration, continuous at the window's end", () => {
+            // 1 ps on: the hold's own jerk, −6·ω_e/W² ≈ −2.4e4 rad/s³ here, moves α by only ~2.4e-8 rad/s², where a
+            // hold begun at the box's α₀ would step by the full 40 rad/s². 1 ns cannot work: that jerk alone moves α
+            // by 2.4e-5 there, past toBeCloseTo(…, 6)'s 5e-7.
+            const track = prepareTrack(trackDrive(carryArc), TEST_HEAD, 0);
+            const end = carryArc.arcStart + T;
+            expect(pathAt(track, end + 1e-12).pendulumAcceleration).toBeCloseTo(
+                pathAt(track, end).pendulumAcceleration,
+                6,
+            );
+        });
     });
 });
 

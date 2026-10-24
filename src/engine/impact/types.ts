@@ -128,14 +128,18 @@ export interface Downswing {
  * The path the hands drive the mallet along (design §3.1), as two arcs: the pendulum, the mallet swinging about the
  * top hand (the pivot) in a vertical plane; and the hands' path through space, the pivot moving in that plane (leaning,
  * pushing forward, the body's weight) and dipping. Each runs at its initial rate until its window and changes rate
- * constantly through it; what follows depends on the mode (design §3.2). The dip lowers the pivot on top.
+ * through it by its mean rate times the window, as a minimum-jerk pulse, 6·mean·s(1 − s) at s of the window
+ * (P2b.2b.2c.2d design §3.1); what follows depends on the mode (design §3.2). The dip lowers the pivot on top.
  */
 export interface SwingArc {
     /** The top hand at t = 0, world frame. */
     readonly pivot: Vec3;
     /** Until the hands' window, in the swing plane (no component along the pitch axis aim × ẑ). */
     readonly pivotVelocity: Vec3;
-    /** During the hands' window, in the swing plane. */
+    /**
+     * The hands' pulse's mean acceleration over their window, Δv/T, in the swing plane: delivered as a minimum-jerk
+     * profile, zero at the window's ends and 1.5 times this at its middle.
+     */
     readonly pivotAcceleration: Vec3;
     /** When the hands' window begins (s from t = 0), and its length (s). */
     readonly handStart: number;
@@ -146,7 +150,10 @@ export interface SwingArc {
     readonly radius: number;
     /** Arc angle at t = 0 (rad), from the lowest point, positive forward. */
     readonly theta0: number;
-    /** The pendulum's rate until its window (rad/s), and its acceleration during it (rad/s²). */
+    /**
+     * The pendulum's rate until its window (rad/s), and its pulse's mean acceleration over the window, Δω/T (rad/s²):
+     * delivered as a minimum-jerk profile, zero at the window's ends and 1.5 times this at its middle.
+     */
     readonly omega0: number;
     readonly alpha: number;
     /** When the pendulum's window begins (s from t = 0), and its length (s). */
