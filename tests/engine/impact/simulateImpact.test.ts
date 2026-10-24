@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { CONTACT_TOLERANCE } from "../../../src/engine/detect";
-import { add, length, sub, vec3, type Vec3 } from "../../../src/engine/math/vec3";
+import { add, dot, length, sub, vec3, type Vec3 } from "../../../src/engine/math/vec3";
 import { stateAtTime } from "../../../src/engine/sample";
 import { simulateShot } from "../../../src/engine/shot";
 import { ENGINE_VERSION, simulateFreeMotion } from "../../../src/engine/simulate";
@@ -655,6 +655,41 @@ describe("the roll's impact (P2b.2b.2b.2b design §4.2)", () => {
         const outcome = simulateShot(setup, WORLD, { trajectory: true });
         expect(outcome.impact.events.map((e) => e.kind)).not.toContain("impact-cap");
         expect(Number.isFinite(outcome.impact.duration)).toBe(true);
+    });
+
+    it("gives the striker's face intervals the impulse that sets its ball moving", () => {
+        // A single-ball stroke: the face's impulse along aim, summed over the striker's face intervals, against
+        // m_ball × its handover velocity along aim. Within 2 %: the turf over the 10 ms impact accounts for the rest
+        // (measured 0.055 %). On a croquet stroke no such equality holds: the croqueted ball takes most of the face's
+        // impulse (the canonical drive's sums to 2.3745 N·s along aim against 0.5871 N·s for the striker's ball).
+        const setup = canonicalSetup("single-ball", { world: WORLD });
+        const contact = buildContact(setup, WORLD);
+        const { aim } = (contact.drive as TrackDrive).arc;
+        const result = simulateImpact(contact, setup.balls, WORLD);
+        const faces = result.timeline[`face/${setup.striker}`] ?? [];
+        const impulse = faces.reduce((sum, f) => sum + dot(f.impulse ?? vec3(0, 0, 0), aim), 0);
+        const momentum = WORLD.ball.mass * dot((result.handover[setup.striker] as BallState).velocity, aim);
+        expect(faces.length).toBeGreaterThan(0);
+        expect(Math.abs(impulse - momentum) / momentum).toBeLessThan(0.02);
+    });
+
+    it("gives a drive's face interval after the parting the impulse that changes its ball's velocity", () => {
+        // After the parting only the face and the turf act on the striker's ball, so the interval's impulse along aim
+        // is m_ball × (after − before) along aim but for the turf's share over the interval's 0.8 ms; measured
+        // 0.61291 N·s each, agreeing to 2e-16. The 0.1 % allowed is the rolling ball's turf resistance over 0.8 ms,
+        // a bound, not a measured share.
+        const setup = canonicalSetup("drive", { world: WORLD });
+        const contact = buildContact(setup, WORLD);
+        const { aim } = (contact.drive as TrackDrive).arc;
+        const result = simulateImpact(contact, setup.balls, WORLD);
+        const parted = (result.timeline[`${setup.striker}/red`]?.[0] as { end: number }).end;
+        const after = (result.timeline[`face/${setup.striker}`] ?? []).filter((f) => f.start >= parted);
+        expect(after).toHaveLength(1);
+        const face = after[0] as (typeof after)[number];
+        const velocities = face.velocities as { before: Vec3; after: Vec3 };
+        const impulse = dot(face.impulse ?? vec3(0, 0, 0), aim);
+        const change = WORLD.ball.mass * dot(sub(velocities.after, velocities.before), aim);
+        expect(Math.abs(impulse - change) / change).toBeLessThan(1e-3);
     });
 
     it("mirrors a canonical roll exactly", () => {

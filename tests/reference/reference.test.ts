@@ -188,6 +188,17 @@ describe("obstacle and fault reference data", () => {
         }
         expect(Object.keys(lawsReference.faults)).toEqual([...FAULT_LAW_KEYS]);
     });
+
+    it("loads 29.2.5's re-contact thresholds, each a placeholder at 0", () => {
+        const { mergeSeparation, effectSpeed, effectAngle } = lawsReference.reContactThresholds;
+        expect([mergeSeparation.unit, effectSpeed.unit, effectAngle.unit]).toEqual(["m", "1", "°"]);
+        for (const threshold of [mergeSeparation, effectSpeed, effectAngle]) {
+            expect(threshold.value).toBe(0);
+            expect(threshold.note).toContain("Placeholder");
+            expect(threshold.provisional).toBe("placeholder");
+            expect(threshold.provenance).toBe("derived");
+        }
+    });
 });
 
 describe("swing, coupling and head–turf reference data", () => {

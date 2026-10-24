@@ -281,7 +281,8 @@ describe("the planned brake (P2b.2b.2c.2d design §4.1)", () => {
         const out = simulateShot(braked(0.06), DEFAULT);
         expect(out.impact.events.map((e) => e.kind)).toContain("impact-no-strike");
         expect(out.impact.timeline[faceKey("blue")] ?? []).toEqual([]);
-        expect(out.faults.strike).toMatchObject({ parted: null, taps: [], breaks: [] });
+        expect(out.faults.strike).toEqual({ parted: null, taps: [], breaks: [], recontacts: [] });
+        expect(out.faults.findings.map((f) => f.law)).not.toContain("29.1.6.1");
         expect(Number.isFinite(out.impact.head.position.z)).toBe(true);
     });
 });

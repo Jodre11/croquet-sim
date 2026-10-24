@@ -20,7 +20,8 @@ Every physical constant the app uses lives here, one JSON file per topic, and ev
   quotes the extracted passages; the originals are cited, not mirrored.
 - **Offset rule** (laws.json): a quote plus `"ballRadii"` and `"uprightRadii"` coefficients (see below).
 - **Fault law** (laws.json): a quote keyed by its Law number (`"29.1.8"`) or Glossary entry (`"groupOfBalls"`), the
-  text the fault judge (`src/engine/faults.ts`) applies.
+  text the fault judge (`src/engine/faults.ts`) applies. `"29.2.5"` also carries `"thresholds"`, the values the judge
+  applies to a re-contact after the parting (`mergeSeparation`, `effectSpeed`, `effectAngle`).
 
 `bounds` are the plausible range: the Laws' tolerance for specified equipment, or the spread in the literature
 for measured quantities. `provenance: "analogue"` means the figure comes from a comparable domain and is

@@ -92,7 +92,15 @@ import {
 } from "./contacts";
 import { HEAD_REST_SPEED, headTurfLoad, newHeadTurfBed, type HeadTurfBed, type HeadTurfLoad } from "./headTurf";
 import { angularAcceleration, integrateOrientation, rotate, rotateInverse } from "./rigidBody";
-import { closeTimeline, emptyTimeline, inGap, noteClearance, recordStep, type PairTimeline } from "./timeline";
+import {
+    closeTimeline,
+    emptyTimeline,
+    inGap,
+    noteClearance,
+    recordStep,
+    type FaceStep,
+    type PairTimeline,
+} from "./timeline";
 import {
     bedEnergy,
     bedLoad,
@@ -605,7 +613,8 @@ function noteEntry(jumps: EntryJumps, depth: number, closing: number, dt: number
 
 /**
  * Records one step of a face–ball pair per head region (design §4.5): in contact on `region` with normal force
- * `force`, and out of contact on every other; nothing for a pair without regions.
+ * `force`, and out of contact on every other, each with the face's record of the step `face`; nothing for a pair
+ * without regions.
  */
 function recordRegions(
     lines: readonly PairTimeline[] | null,
@@ -613,13 +622,14 @@ function recordRegions(
     region: HeadRegion | null,
     force: number,
     t: number,
+    face: FaceStep | undefined,
 ): void {
     if (lines === null) {
         return;
     }
     for (let i = 0; i < names.length; i++) {
         const on = names[i] === region;
-        recordStep(lines[i] as PairTimeline, on, on ? force : 0, t);
+        recordStep(lines[i] as PairTimeline, on, on ? force : 0, t, face);
     }
 }
 
@@ -890,7 +900,8 @@ function finish(
     }
     const timeline: Record<string, readonly ContactInterval[]> = {};
     for (const p of pairs) {
-        const intervals = closeTimeline(p.line, duration);
+        const end = p.pair.kind === "face-ball" ? (balls[p.pair.b] as BallState).velocity : undefined;
+        const intervals = closeTimeline(p.line, duration, end);
         if (intervals.length > 0) {
             timeline[p.pair.key] = intervals;
         }
@@ -921,8 +932,9 @@ function finish(
         if (lines === null) {
             continue;
         }
+        const end = (balls[p.pair.b] as BallState).velocity;
         for (let i = 0; i < names.length; i++) {
-            const intervals = closeTimeline(lines[i] as PairTimeline, duration);
+            const intervals = closeTimeline(lines[i] as PairTimeline, duration, end);
             if (intervals.length > 0) {
                 headRegions[`${p.pair.key}#${names[i] as HeadRegion}`] = intervals;
             }
@@ -1164,10 +1176,13 @@ export function integrateStroke(setup: ImpactSetup, options: ImpactOptions = {},
                     offFace[pair.b] = true;
                     events.push({ kind: "impact-off-face", t, ball: ids[pair.b] as BallId });
                 }
-                recordStep(p.line, contact === OFF_FACE, 0, t);
-                recordRegions(p.regions, names, null, 0, t);
+                const ball = balls[pair.b] as BallState;
+                // A rim step adds no impulse; a step out of contact gives the closing interval its end velocity.
+                const face = pair.kind === "face-ball" ? { impulse: ZERO, velocity: ball.velocity } : undefined;
+                recordStep(p.line, contact === OFF_FACE, 0, t, face);
+                recordRegions(p.regions, names, null, 0, t, face);
                 if (pair.kind === "face-ball" && contact === null && inGap(p.line)) {
-                    noteClearance(p.line, faceClearance(state, head, (balls[pair.b] as BallState).position, R));
+                    noteClearance(p.line, faceClearance(state, head, ball.position, R));
                 }
                 continue;
             }
@@ -1189,9 +1204,18 @@ export function integrateStroke(setup: ImpactSetup, options: ImpactOptions = {},
                 events.push({ kind: "impact-off-face", t, ball: ids[pair.b] as BallId });
             }
             p.peak = Math.max(p.peak, contact.depth);
+            const prior = loads.forces[pair.b] as Vec3;
             const force = applyPair(p, setup.face, contact, state, balls, dt, loads, options.probe ? samples : null);
-            recordStep(p.line, true, force, t);
-            recordRegions(p.regions, names, hit === null ? null : hit.region, force, t);
+            // The face's impulse on the ball this step: the change applyPair made to the ball's force, times dt.
+            const face =
+                pair.kind === "face-ball"
+                    ? {
+                          impulse: scale(sub(loads.forces[pair.b] as Vec3, prior), dt),
+                          velocity: (balls[pair.b] as BallState).velocity,
+                      }
+                    : undefined;
+            recordStep(p.line, true, force, t, face);
+            recordRegions(p.regions, names, hit === null ? null : hit.region, force, t, face);
         }
         // The balls' resistance along aim, which the hands sense at the muscles' pace and their push intent reads from
         // the next step (gate ruling 2026-10-11 and its amendment).

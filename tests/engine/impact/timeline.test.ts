@@ -55,6 +55,29 @@ describe("the timeline recorder", () => {
         ]);
         expect(inGap(emptyTimeline())).toBe(false);
     });
+
+    it("sums a face interval's impulse and keeps the ball's velocities at its ends", () => {
+        const line = emptyTimeline();
+        const v = (x: number) => vec3(x, 0, 0);
+        recordStep(line, true, 10, 0, { impulse: v(1e-3), velocity: v(0) });
+        recordStep(line, true, 12, 5e-6, { impulse: v(2e-3), velocity: v(0.5) });
+        recordStep(line, false, 0, 1e-5, { impulse: v(0), velocity: v(1.1) });
+        expect(line.intervals[0]).toMatchObject({ impulse: v(3e-3), velocities: { before: v(0), after: v(1.1) } });
+    });
+
+    it("closes an open interval's velocities at the impact's end", () => {
+        // Review focus 4.
+        const line = emptyTimeline();
+        recordStep(line, true, 10, 0, { impulse: vec3(1e-3, 0, 0), velocity: vec3(0, 0, 0) });
+        expect(closeTimeline(line, 2e-3, vec3(2, 0, 0))[0]?.velocities?.after).toEqual(vec3(2, 0, 0));
+    });
+
+    it("leaves a pair recorded without the face's record as it was", () => {
+        const line = emptyTimeline();
+        recordStep(line, true, 10, 0);
+        recordStep(line, false, 0, 1e-5);
+        expect(line.intervals[0]).toEqual({ start: 0, end: 1e-5, peakForce: 10 });
+    });
 });
 
 describe("the integrator's timeline", () => {

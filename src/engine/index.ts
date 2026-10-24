@@ -2,10 +2,16 @@
  * Public API of the croquet physics engine. The planner and renderer import from here only.
  */
 export {
+    EFFECT_ANGLE,
+    EFFECT_SPEED,
+    groupReContacts,
     judgeFaults,
+    MERGE_SEPARATION,
     PARTING_BREAK,
     type FaultReport,
     type Finding,
+    type ReContact,
+    type ReContactThresholds,
     type StrikeTaps,
     type StrokeContext,
 } from "./faults";

@@ -380,13 +380,18 @@ export type ImpactEvent =
 /**
  * One contact interval of a pair (P2b.2a design §5): [start, end) in s from the impact's start, whole steps, and the
  * largest normal force (N) in it (0 at a force table's face rim, or for a pair overlapping but released). For a
- * face–ball pair, `clearanceAfter` (m) is the largest separation from the face in the gap before the next interval.
+ * face–ball pair, `clearanceAfter` (m) is the largest separation from the face in the gap before the next interval;
+ * `impulse` (N·s, world) is the face's impulse on the ball over the interval, a rim step adding none; and `velocities`
+ * (m/s, world) are the ball's velocity at the interval's first step and at its end, or at the impact's end for one
+ * still open then (P2b.2b.2c.2d design §7). Other pairs' intervals carry neither.
  */
 export interface ContactInterval {
     readonly start: number;
     readonly end: number;
     readonly peakForce: number;
     readonly clearanceAfter?: number;
+    readonly impulse?: Vec3;
+    readonly velocities?: { readonly before: Vec3; readonly after: Vec3 };
 }
 
 /** What the integrator returns: the bodies at the end of the impact and what happened on the way. */

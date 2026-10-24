@@ -99,7 +99,33 @@
         "quote": "A multiple contact between the mallet and the striker’s ball is a fault under Law 29.1.6.1 only if the striker or a referee or other person asked to adjudicate the stroke, aided by nothing more than spectacles or contact lenses, sees a separation between mallet and ball followed by a second contact between them.",
         "source": "World Croquet Federation, The Laws of Association Croquet, 7th Edition (February 2021), with Official Rulings and Commentary (current as at April 2021), Law 29.2.5; https://worldcroquet.org/wp-content/uploads/2021/04/Laws-Rulings-Commentary-combined-published-master-.pdf",
         "provenance": "direct",
-        "note": "Makes 29.1.6.1 a possible fault; the finding carries each gap's duration and clearance."
+        "note": "Makes 29.1.6.1 a possible fault; the finding carries each gap's duration and clearance. After the balls have parted (C29.11.2 and C28.3.2, quoted under 29.1.6.1), a re-contact is judged by its effect. Law 29.2.7 lets a related fault be \"deduced from observation of the trajectories and speeds of the balls involved compared to what would occur in a lawful stroke of the same type\". The user's reading (P2b.2b.2c.2d design, decision 10): in practice the allowance is \"much more generous\", the fault is \"the sort of second hit that changes the momentum or direction of the ball\", and \"a long succession of micro hits with small separation would be viewed as all part of the same contact\". So face contacts after the parting separated by less than `thresholds.mergeSeparation` are one continuing contact, and a re-contact is 29.1.6.1 only if it changes the striker's ball's speed by at least `thresholds.effectSpeed` (a fraction) or its horizontal direction by at least `thresholds.effectAngle`.",
+        "thresholds": {
+            "mergeSeparation": {
+                "value": 0,
+                "unit": "m",
+                "source": "Placeholder rule: P2b.2b.2c.2d design §7 (docs/superpowers/specs/2026-10-23-p2b2b2c2d-follow-through-design.md), to be ruled at the gate's stage 1 from the spread of separations over the 950-run grid and the follow-through grid",
+                "provenance": "derived",
+                "provisional": "placeholder",
+                "note": "Placeholder until the gate's stage 1 rules it (spec §7). The separation (the gap's largest clearance from the face) below which consecutive face contacts after the parting are one continuing contact. At 0 no contact merges."
+            },
+            "effectSpeed": {
+                "value": 0,
+                "unit": "1",
+                "source": "Placeholder rule: P2b.2b.2c.2d design §7 (docs/superpowers/specs/2026-10-23-p2b2b2c2d-follow-through-design.md), to be ruled at the gate's stage 1 from the spread of effects over the 950-run grid and the follow-through grid",
+                "provenance": "derived",
+                "provisional": "placeholder",
+                "note": "Placeholder until the gate's stage 1 rules it (spec §7). The change a re-contact makes to the striker's ball's speed, as a fraction of its speed before, at or beyond which it is possible fault 29.1.6.1. At 0, every re-contact after the parting is flagged, as before."
+            },
+            "effectAngle": {
+                "value": 0,
+                "unit": "°",
+                "source": "Placeholder rule: P2b.2b.2c.2d design §7 (docs/superpowers/specs/2026-10-23-p2b2b2c2d-follow-through-design.md), to be ruled at the gate's stage 1 from the spread of effects over the 950-run grid and the follow-through grid",
+                "provenance": "derived",
+                "provisional": "placeholder",
+                "note": "Placeholder until the gate's stage 1 rules it (spec §7). The change a re-contact makes to the striker's ball's horizontal direction (degrees) at or beyond which it is possible fault 29.1.6.1. At 0, every re-contact after the parting is flagged, as before."
+            }
+        }
     },
     "29.2.6": {
         "quote": "The mallet remaining in contact with the striker’s ball for an observable period is a fault under Law 29.1.6.3 if the prolonged contact is visible or audible to the striker or a referee or other person asked to adjudicate the stroke, aided by nothing more than spectacles, contact lenses or hearing aids.",
