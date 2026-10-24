@@ -276,19 +276,26 @@ function contactEvidence(count: number, faces: readonly ContactInterval[]): Reco
 }
 
 /**
+ * The pairs the striker's ball touched at the start: the croqueted pair of a croquet stroke (its ball is defined,
+ * since `validate` has checked it), or the striker's pairs touching at the start of a continuation stroke.
+ */
+function touchedPairKeys(context: StrokeContext, impact: ImpactResult): string[] {
+    const { striker } = context;
+    if (context.kind === "croquet") {
+        return [ballPairKey(striker, context.croqueted as BallId)];
+    }
+    return BALL_IDS.filter((id) => id !== striker && impact.balls[id] !== undefined)
+        .map((id) => ballPairKey(striker, id))
+        .filter((key) => impact.touchingAtStart.includes(key));
+}
+
+/**
  * When the striker's ball and the ball or balls it touched at the start part, and the sub-frame breaks merged across.
- * The pairs are the croqueted pair of a croquet stroke, or the striker's pairs touching at the start of a continuation
- * stroke. Each pair's first interval is extended across every following break shorter than PARTING_BREAK, and the
+ * Each touched pair's first interval is extended across every following break shorter than PARTING_BREAK, and the
  * balls have parted when the latest such first interval ends. Null when no pair has an interval.
  */
 function partingOf(context: StrokeContext, impact: ImpactResult): { parted: number | null; breaks: number[] } {
-    const { striker } = context;
-    const keys =
-        context.kind === "croquet"
-            ? [ballPairKey(striker, context.croqueted as BallId)]
-            : BALL_IDS.filter((id) => id !== striker && impact.balls[id] !== undefined)
-                  .map((id) => ballPairKey(striker, id))
-                  .filter((key) => impact.touchingAtStart.includes(key));
+    const keys = touchedPairKeys(context, impact);
     let parted: number | null = null;
     const breaks: number[] = [];
     for (const key of keys) {
@@ -426,17 +433,14 @@ export function judgeFaults(context: StrokeContext, impact: ImpactResult): Fault
             taps: parted === null ? [] : contacts.filter((f) => f.start < parted),
             breaks,
         };
-        if (parted === null) {
-            if (contacts.length >= 2) {
-                const second = contacts[1] as ContactInterval;
-                add("29.1.6.1", "possible-fault", striker, second.start, contactEvidence(contacts.length, faces));
+        // Unparted, every contact after the first faults; parted, only those from the parting on.
+        const faulting = parted === null ? contacts.slice(1) : contacts.slice(1).filter((f) => f.start >= parted);
+        if (faulting.length > 0) {
+            const evidence = contactEvidence(contacts.length, faces);
+            if (parted !== null) {
+                evidence.afterParting = faulting.length;
             }
-        } else {
-            const after = contacts.slice(1).filter((f) => f.start >= parted);
-            if (after.length > 0) {
-                const evidence = { ...contactEvidence(contacts.length, faces), afterParting: after.length };
-                add("29.1.6.1", "possible-fault", striker, (after[0] as ContactInterval).start, evidence);
-            }
+            add("29.1.6.1", "possible-fault", striker, (faulting[0] as ContactInterval).start, evidence);
         }
     }
     // 29.1.5: in a stroke of Law 29.2.3, the first mallet contact is at the rim (C29.10.8: the first contact only).
