@@ -20,7 +20,8 @@
  * double tap counts and a late catch never moves the reading. And it plays a stroke with Gugan's mallet
  * (gugansMallet): the default mallet with its head's mass solved so that the swung body's effective mass at the face
  * centre is Gugan's 2.30 ball masses, which he found "by taking moments about its point of balance", on the preset's
- * own canonical setup at the stroke's speed. The default profile is never changed.
+ * own canonical setup at the stroke's speed. The default profile is never changed. It also holds the preset digest's
+ * grid (digestGrid), which scripts/croquetFitProbe.ts and scripts/followThroughProbe.ts both play.
  */
 import { ballPairKey, faceKey } from "../src/engine/impact/contacts";
 import type { ImpactOptions, ImpactProbe } from "../src/engine/impact/integrate";
@@ -30,15 +31,16 @@ import { effectiveMass, swungBody } from "../src/engine/impact/track";
 import type { ContactInterval, ContactState, ImpactResult } from "../src/engine/impact/types";
 import { dot, horizontal, length, sub, type Vec3 } from "../src/engine/math/vec3";
 import { simulateFreeMotion } from "../src/engine/simulate";
-import { headShapeOf, planStroke, stanceLean } from "../src/engine/swing/buildContact";
+import { handsAheadFor, headShapeOf, planStroke, stanceLean } from "../src/engine/swing/buildContact";
 import { defaultProfile } from "../src/engine/swing/profile";
 import { CROQUET_STROKES, type ShotSetup, type StrokeType, type SwingProfile } from "../src/engine/swing/types";
 import { BALL_IDS, type BallState, type ShotResult, type World } from "../src/engine/types";
 import { defaultWorld } from "../src/engine/world";
 import { contactReference, ratioTargetsReference, type RatioTargetKey } from "../src/reference/index";
-import { canonicalSetup, strokeFor } from "../tests/engine/support/shot";
+import { backswingFor, canonicalSetup, strokeFor } from "../tests/engine/support/shot";
 import { CEILING } from "./effortFit";
 import { FILMED_STROKES, GUGAN5, type FilmedStroke } from "./filmedStrokes";
+import { strokeForContact } from "./followThrough";
 import { openWorld, opened } from "./openLawn";
 
 /** The five shared candidates (design §5.2): one value each. */
@@ -675,7 +677,12 @@ function solveGugansMallet(type: StrokeType, speed: number, world: World): Swing
 /**
  * `type`'s canonical setup on `world` (default `defaultWorld()`) at `gap` (m): the croqueted ball's gap for a croquet
  * stroke, else the target's (`targetGap`, default `gap`), with Gugan's mallet (gugansMallet) when `gugan` is true, the
- * stroke's `guideEffort` and `jab` where given, and strokeFor's stroke for `speed` (m/s).
+ * stroke's `guideEffort` and `jab` where given, and the stroke for `speed` (m/s): strokeFor's planned speed, or with
+ * `contactSpeed` the stroke whose head meets the ball at it (strokeForContact). The stance (P2b.2b.2c.2d design
+ * §3.5) applies after the mallet, so Gugan's mallet stays the one solved at the preset's own stance: `up` (m) the
+ * contact's height; `grips` the stroke type whose stance's bottom hand, grip tension and bottom grip replace the
+ * preset's; then, last, `lean` (rad, forward positive) the shaft's lean at contact, set as the stance's handsAhead
+ * (handsAheadFor) at the preset's top hand and the contact, with the setup's own mallet and ball.
  */
 export function guganSetup(
     type: StrokeType,
@@ -687,6 +694,10 @@ export function guganSetup(
         readonly guideEffort?: number;
         readonly jab?: number;
         readonly targetGap?: number;
+        readonly lean?: number;
+        readonly up?: number;
+        readonly grips?: StrokeType;
+        readonly contactSpeed?: boolean;
     } = {},
 ): ShotSetup {
     const world = o.world ?? defaultWorld();
@@ -694,16 +705,81 @@ export function guganSetup(
     const gaps = croquet
         ? { croquetGap: gap, ...(o.targetGap === undefined ? {} : { targetGap: o.targetGap }) }
         : { targetGap: o.targetGap ?? gap };
-    const setup = canonicalSetup(type, {
+    const setup = stanced(
+        canonicalSetup(type, {
+            world,
+            ...gaps,
+            ...(o.gugan === true ? { mallet: gugansMallet(type, speed, world) } : {}),
+            stroke: {
+                ...(o.guideEffort === undefined ? {} : { guideEffort: o.guideEffort }),
+                ...(o.jab === undefined ? {} : { jab: o.jab }),
+            },
+        }),
+        o,
         world,
-        ...gaps,
-        ...(o.gugan === true ? { mallet: gugansMallet(type, speed, world) } : {}),
-        stroke: {
-            ...(o.guideEffort === undefined ? {} : { guideEffort: o.guideEffort }),
-            ...(o.jab === undefined ? {} : { jab: o.jab }),
-        },
-    });
+    );
+    if (o.contactSpeed === true) {
+        return { ...setup, stroke: { ...setup.stroke, ...strokeForContact(setup, speed, world) } };
+    }
     return atSpeed(setup, speed, world);
+}
+
+/** `setup` with guganSetup's stance options applied in its order: `up`, then `grips`, then `lean`. */
+function stanced(
+    setup: ShotSetup,
+    o: { readonly lean?: number; readonly up?: number; readonly grips?: StrokeType },
+    world: World,
+): ShotSetup {
+    const { type } = setup.stroke;
+    const stroke =
+        o.up === undefined ? setup.stroke : { ...setup.stroke, contact: { ...setup.stroke.contact, up: o.up } };
+    let stance = setup.profile.stance[type];
+    if (o.grips !== undefined) {
+        const { bottom, gripTension, bottomGrip } = setup.profile.stance[o.grips];
+        stance = { ...stance, bottom, gripTension, bottomGrip };
+    }
+    if (o.lean !== undefined) {
+        const { mallet } = setup.profile;
+        const handsAhead = handsAheadFor(o.lean, stance.top, stroke.contact.up, {
+            ballRadius: world.ball.radius,
+            headLength: mallet.headLength,
+            faceHalfHeight: faceHalfHeight(headShapeOf(mallet.head)),
+        });
+        stance = { ...stance, handsAhead };
+    }
+    return { ...setup, stroke, profile: { ...setup.profile, stance: { ...setup.profile.stance, [type]: stance } } };
+}
+
+/**
+ * The preset digest's grid for a preset (scripts of the ratchet, swingProbe's grid): 5 speeds × 5 drives × 3 heights ×
+ * 3 sides, each stroke planned at its speed on the preset's canonical setup. A run's setup is built on demand: a speed
+ * beyond the stroke's reach throws, which the digest records as a rejected run.
+ */
+export function digestGrid(
+    type: StrokeType,
+    world: World,
+): readonly { readonly label: string; readonly build: () => ShotSetup }[] {
+    const base = canonicalSetup(type, { world });
+    const up0 = base.stroke.contact.up;
+    const grid: { label: string; build: () => ShotSetup }[] = [];
+    for (const speed of [1, 2, 3, 4, 6]) {
+        for (const drive of [-1, -0.5, 0, 0.5, 1]) {
+            for (const up of [up0 - 0.003, up0, up0 + 0.003]) {
+                for (const side of [-0.01, 0, 0.01]) {
+                    const stroke = { ...base.stroke, drive, contact: { up, side } };
+                    const setup = { ...base, stroke };
+                    grid.push({
+                        label: `${type} ${speed} m/s drive ${drive} up ${up} side ${side}`,
+                        build: () => ({
+                            ...setup,
+                            stroke: { ...stroke, backswing: backswingFor(setup, speed, world) },
+                        }),
+                    });
+                }
+            }
+        }
+    }
+    return grid;
 }
 
 /**

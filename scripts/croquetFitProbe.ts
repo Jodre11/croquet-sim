@@ -99,7 +99,7 @@ import { CROQUET_GAP_LIMIT, strokeContext } from "../src/engine/shot";
 import { simulateFreeMotion } from "../src/engine/simulate";
 import { buildContact, planStroke } from "../src/engine/swing/buildContact";
 import { defaultProfile } from "../src/engine/swing/profile";
-import { CROQUET_STROKES, type ShotSetup, type StrokeType } from "../src/engine/swing/types";
+import { CROQUET_STROKES, type ShotSetup } from "../src/engine/swing/types";
 import { BALL_IDS, type BallId, type BallState, type World } from "../src/engine/types";
 import { defaultWorld } from "../src/engine/world";
 import { contactReference, ratioTargetsReference, type RatioTargetKey } from "../src/reference/index";
@@ -131,6 +131,7 @@ import {
     STEP_SHARES,
     STRIKE_WINDOW,
     TODAY,
+    digestGrid,
     effectiveMassOf,
     figuresOf,
     filmedStrokeRuns,
@@ -3055,38 +3056,6 @@ function contactsText(contacts: readonly FaceContact[]): string {
     return contacts.length === 0
         ? "no face–ball interval"
         : contacts.map((c) => `[${ms(c.start)}, ${ms(c.end)}] ms ${c.regions.join("+") || "no region"}`).join("; ");
-}
-
-/**
- * The preset digest's grid for a preset (scripts of the ratchet, swingProbe's grid): 5 speeds × 5 drives × 3 heights ×
- * 3 sides, each stroke planned at its speed on the preset's canonical setup. A run's setup is built on demand: a speed
- * beyond the stroke's reach throws, which the digest records as a rejected run.
- */
-function digestGrid(
-    type: StrokeType,
-    world: World,
-): readonly { readonly label: string; readonly build: () => ShotSetup }[] {
-    const base = canonicalSetup(type, { world });
-    const up0 = base.stroke.contact.up;
-    const grid: { label: string; build: () => ShotSetup }[] = [];
-    for (const speed of [1, 2, 3, 4, 6]) {
-        for (const drive of [-1, -0.5, 0, 0.5, 1]) {
-            for (const up of [up0 - 0.003, up0, up0 + 0.003]) {
-                for (const side of [-0.01, 0, 0.01]) {
-                    const stroke = { ...base.stroke, drive, contact: { up, side } };
-                    const setup = { ...base, stroke };
-                    grid.push({
-                        label: `${type} ${speed} m/s drive ${drive} up ${up} side ${side}`,
-                        build: () => ({
-                            ...setup,
-                            stroke: { ...stroke, backswing: backswingFor(setup, speed, world) },
-                        }),
-                    });
-                }
-            }
-        }
-    }
-    return grid;
 }
 
 function sectionM(): void {
