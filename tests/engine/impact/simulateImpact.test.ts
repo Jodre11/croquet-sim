@@ -16,7 +16,7 @@ import {
     validateImpact,
     type SinkSolver,
 } from "../../../src/engine/impact/simulateImpact";
-import { prepareTrack, type Push } from "../../../src/engine/impact/track";
+import { prepareTrack, type PreparedTrack, type Push } from "../../../src/engine/impact/track";
 import { bedLawOf, staticSink } from "../../../src/engine/impact/turfBed";
 import type { BoxShape } from "../../../src/engine/impact/shape";
 import type { ContactState, Coupling, Hands, StrokeMode, SwingArc, TrackDrive } from "../../../src/engine/impact/types";
@@ -28,6 +28,7 @@ import {
     TEST_HEAD,
     TEST_RHO,
     drive,
+    integratePulse,
     levelArc,
     mirrorBall,
     mirrorContact,
@@ -484,8 +485,12 @@ describe("simulateImpact with a tracked drive", () => {
     it("prepares the path once, and passes a force table through unchanged", () => {
         const setup = prepareImpact(tracked, { blue: BLUE }, WORLD);
         expect(setup.drive.kind).toBe("track");
-        // θ_a + ω₀·w + ½·α·w² with θ_a = 0 and α = 0 is exactly ω₀·w (prototype: equal to the last bit).
-        expect(setup.drive.kind === "track" && setup.drive.thetaEnd).toBe(ARC.omega0 * ARC.window);
+        // P2b.2b.2c.2d: gravity through the pulse (was exactly ω₀·w, θ_a + ω₀·w + ½·α·w² with θ_a = 0 and α = 0): the
+        // swing's window's end is the free pendulum's over it, as the hand integration has it, short of ω₀·w as
+        // gravity turns the head back once θ > 0.
+        const track = setup.drive as PreparedTrack;
+        expect(track.thetaEnd).toBeCloseTo(integratePulse(track, 1e-7).theta, 6);
+        expect(track.thetaEnd).toBeLessThan(ARC.omega0 * ARC.window);
         const forced = strike(BLUE.position);
         expect(prepareImpact(forced, { blue: BLUE }, WORLD).drive).toBe(forced.drive);
     });

@@ -2,7 +2,7 @@
  * Test-only mallet, face and impact helpers. Plausible but deliberately NOT sourced (as fixtures.ts), so expectations
  * do not move when reference data does. src/ must never import this file.
  */
-import { ZERO, add, cross, length, lengthSq, scale, sub, vec3, type Vec3 } from "../../../src/engine/math/vec3";
+import { ZERO, add, cross, dot, length, lengthSq, scale, sub, vec3, type Vec3 } from "../../../src/engine/math/vec3";
 import { lawFromContactTime } from "../../../src/engine/impact/contactLaw";
 import type { ImpactBall, ImpactProbe, ImpactSetup, ImpactSnapshot } from "../../../src/engine/impact/integrate";
 import {
@@ -15,7 +15,15 @@ import {
     type Quaternion,
 } from "../../../src/engine/impact/rigidBody";
 import { validateImpact } from "../../../src/engine/impact/simulateImpact";
-import { headOnPath, malletBody, prepareTrack, swingOrientation } from "../../../src/engine/impact/track";
+import {
+    headOnPath,
+    malletBody,
+    pathAt,
+    prepareTrack,
+    swingOrientation,
+    type FreePendulum,
+    type PreparedTrack,
+} from "../../../src/engine/impact/track";
 import { BED_CELL } from "../../../src/engine/impact/turfBed";
 import type {
     BedLaw,
@@ -195,6 +203,46 @@ export function levelArc(centre: Vec3, o: Partial<SwingArc> = {}): SwingArc {
         handArcLow: 0.5,
         ...o,
     };
+}
+
+/**
+ * A swing-mode track's θ and ω at its pendulum's window's end by RK4 at step `h` (s) of
+ * θ̈ = (−W·sin θ − M·d·(A·t̂))/I_P + 6·ᾱ·s(1 − s) from thetaArc and omegaArc (P2b.2b.2c.2d design §3.1): the hand
+ * integration of gravity through the pulse. A, the pivot's acceleration with the dip, is pathAt's socket acceleration
+ * less the pendulum's own terms, r·α·t̂ − r·ω²·r̂, at the path's θ, ω and α; t̂ in θ̈ is then the integrated θ's.
+ */
+export function integratePulse(track: PreparedTrack, h: number): { readonly theta: number; readonly omega: number } {
+    const free = track.free as FreePendulum;
+    const { aim, radius, arcStart, window, alpha } = track.arc;
+    const up = vec3(0, 0, 1);
+    const tangent = (th: number) => add(scale(aim, Math.cos(th)), scale(up, Math.sin(th)));
+    const radial = (th: number) => sub(scale(aim, Math.sin(th)), scale(up, Math.cos(th)));
+    const pivotAcceleration = (t: number): Vec3 => {
+        const p = pathAt(track, t);
+        const w = dot(p.angularVelocity, track.axis);
+        return add(
+            sub(p.socketAcceleration, scale(tangent(p.theta), radius * p.pendulumAcceleration)),
+            scale(radial(p.theta), radius * w * w),
+        );
+    };
+    const accel = (th: number, t: number): number => {
+        const s = (t - arcStart) / window;
+        const along = dot(pivotAcceleration(t), tangent(th));
+        return (-free.weight * Math.sin(th) - free.inertial * along) / free.inertia + 6 * alpha * s * (1 - s);
+    };
+    let theta = track.thetaArc;
+    let omega = track.omegaArc;
+    const n = Math.round(window / h);
+    for (let i = 0; i < n; i++) {
+        const t = arcStart + i * h;
+        const k1 = [omega, accel(theta, t)] as const;
+        const k2 = [omega + (h / 2) * k1[1], accel(theta + (h / 2) * k1[0], t + h / 2)] as const;
+        const k3 = [omega + (h / 2) * k2[1], accel(theta + (h / 2) * k2[0], t + h / 2)] as const;
+        const k4 = [omega + h * k3[1], accel(theta + h * k3[0], t + h)] as const;
+        theta += (h / 6) * (k1[0] + 2 * k2[0] + 2 * k3[0] + k4[0]);
+        omega += (h / 6) * (k1[1] + 2 * k2[1] + 2 * k3[1] + k4[1]);
+    }
+    return { theta, omega };
 }
 
 /** A tracked contact state: `head` on `drive`'s path at time `t` (s), with the test face. */

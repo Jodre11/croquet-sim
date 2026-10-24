@@ -28,10 +28,22 @@ import {
     type Reach,
 } from "../../../src/engine/impact/track";
 import { validateImpact } from "../../../src/engine/impact/simulateImpact";
-import type { Downswing, Hands, SwingArc } from "../../../src/engine/impact/types";
-import { STANDARD_GRAVITY } from "../../../src/engine/world";
+import type { Downswing, Hands, SwingArc, TrackDrive } from "../../../src/engine/impact/types";
+import { buildContact } from "../../../src/engine/swing/buildContact";
+import { STANDARD_GRAVITY, defaultWorld } from "../../../src/engine/world";
 import { testWorld } from "../support/fixtures";
-import { NO_DIP, TEST_COUPLING, TEST_HANDS, TEST_HEAD, levelArc, onArc, socketAt, trackDrive } from "../support/impact";
+import { canonicalSetup } from "../support/shot";
+import {
+    NO_DIP,
+    TEST_COUPLING,
+    TEST_HANDS,
+    TEST_HEAD,
+    integratePulse,
+    levelArc,
+    onArc,
+    socketAt,
+    trackDrive,
+} from "../support/impact";
 
 const AIM = vec3(0.6, 0.8, 0);
 const N = pitchAxis(AIM);
@@ -247,10 +259,18 @@ describe("the swing path", () => {
     it("brings a full check to rest at its window's end; carry mode holds it there", () => {
         const still = vec3(0, 0, 0);
         const checked = { ...ROLL, omega0: 3.5, pivotVelocity: still, pivotAcceleration: still, alpha: -3.5 / 0.03 };
-        for (const mode of ["swing", "carry"] as const) {
-            const w = dot(pathAt(prepare({ ...checked, mode }), ROLL.window).angularVelocity, N);
-            expect(Math.abs(w), mode).toBeLessThan(1e-12);
-        }
+        const carried = dot(pathAt(prepare(checked), ROLL.window).angularVelocity, N);
+        expect(Math.abs(carried)).toBeLessThan(1e-12);
+        // P2b.2b.2c.2d: gravity through the pulse (was swing mode at rest too, |ω| < 1e-12). Swing mode's pendulum, at
+        // θ₀ = −0.6 rad, gains gravity's share over the window, about W·sin 0.6/I_P·0.03 ≈ 0.19 rad/s (the hand
+        // integration's); without gravity, the pivot still, the table's check brings it to rest to O(FREE_STEP).
+        const swing = { ...checked, mode: "swing" as const };
+        const track = prepare(swing);
+        const w = dot(pathAt(track, ROLL.window).angularVelocity, N);
+        expect(w).toBeCloseTo(integratePulse(track, 1e-7).omega, 4);
+        expect(w).toBeGreaterThan(0.18);
+        const weightless = prepareTrack(trackDrive(swing), TEST_HEAD, 0);
+        expect(Math.abs(dot(pathAt(weightless, ROLL.window).angularVelocity, N))).toBeLessThan(1e-6);
         // Carry mode's held slope starts from the pulse's α = 0 (P2b.2b.2c.2d design §3.1) and, ω_e being 0, stays at
         // rest; from its end, 0.06 s, the head is held where the check left it, the slope's net travel ω_e·W/2 being 0.
         const carry = prepare(checked);
@@ -323,16 +343,21 @@ describe("the swing path", () => {
     it("tabulates a free pendulum in swing mode only", () => {
         expect(track.free).toBeNull();
         const free = prepare({ ...TIMED, mode: "swing" }).free;
-        expect(free?.tw).toBe(TIMED.arcStart + TIMED.window);
-        expect(free?.theta).toHaveLength(Math.round(FREE_SPAN / FREE_STEP) + 1);
+        // P2b.2b.2c.2d: gravity through the pulse (was from the window's end, FREE_SPAN / FREE_STEP + 1 samples). From
+        // the window's start: through the window with one sample to spare, then FREE_SPAN.
+        expect(free?.tw).toBe(TIMED.arcStart);
+        expect(free?.theta).toHaveLength(Math.ceil(TIMED.window / FREE_STEP) + Math.round(FREE_SPAN / FREE_STEP) + 2);
     });
 
-    it("skips the free table on request: the same path to the window's end, a throw past it", () => {
+    it("tabulates through the pulse only on request: the same path to the window's end, a throw past it", () => {
         const arc: SwingArc = { ...TIMED, mode: "swing" };
         const drive = trackDrive(arc, TEST_COUPLING, TEST_HANDS);
         const full = prepareTrack(drive, TEST_HEAD, STANDARD_GRAVITY);
         const bare = prepareTrack(drive, TEST_HEAD, STANDARD_GRAVITY, false);
-        expect(bare.free).toBeNull();
+        const [bareFree, fullFree] = [bare.free as FreePendulum, full.free as FreePendulum];
+        expect(bareFree.theta).toHaveLength(Math.ceil(arc.window / FREE_STEP) + 2);
+        expect(bareFree.theta).toEqual(fullFree.theta.slice(0, bareFree.theta.length));
+        expect(bareFree.omega).toEqual(fullFree.omega.slice(0, bareFree.omega.length));
         expect({ ...bare, free: full.free }).toEqual(full);
         const tw = arc.arcStart + arc.window;
         for (const t of [-0.01, 0, arc.arcStart, 0.02, tw]) {
@@ -398,7 +423,9 @@ describe("the free pendulum", () => {
             const p = pathAt(track, t);
             const forward = rotate(p.orientation, vec3(1, 0, 0));
             const theta = Math.atan2(forward.z, forward.x);
-            worst = Math.max(worst, Math.abs(theta - theta0 * Math.cos(rate * (t - tw))));
+            // P2b.2b.2c.2d: gravity through the pulse (was released at the window's end, cos(Ω·(t − tw))): gravity
+            // acts through the window, so the release is its start.
+            worst = Math.max(worst, Math.abs(theta - theta0 * Math.cos(rate * (t - arc.arcStart))));
         }
         // Two known errors bound it: semi-implicit Euler's half-step phase lead, Ω·FREE_STEP/2 ≈ 8.6e-6 of θ₀, and the
         // small-angle solution's frequency shift, θ₀²/16 of Ω, ≈ 5.3e-6 of θ₀ over the 0.25 s sampled. They partly
@@ -409,8 +436,9 @@ describe("the free pendulum", () => {
     it("holds θ and ω at the table's last sample beyond it", () => {
         const track = prepare(levelArc(CENTRE, { theta0: 0.3 }), ARMED);
         const free = track.free as FreePendulum;
-        const late = pathAt(track, free.tw + FREE_SPAN + 0.01);
-        const later = pathAt(track, free.tw + FREE_SPAN + 0.1);
+        const end = free.tw + (free.theta.length - 1) * FREE_STEP;
+        const late = pathAt(track, end + 0.01);
+        const later = pathAt(track, end + 0.1);
         expect(later.orientation).toEqual(late.orientation);
         expect(later.angularVelocity).toEqual(late.angularVelocity);
         expect(dot(late.angularVelocity, track.axis)).toBeCloseTo(free.omega[free.omega.length - 1] as number, 15);
@@ -533,16 +561,17 @@ describe("the hands' arc after contact (P2b.2b.2b.2b design §4.1)", () => {
         expect(swing.reach).not.toBeNull();
     });
 
+    // Contact moved to 0.03 s so that the hands' window [0.01, 0.02] lies wholly before it, where the planned pivot is
+    // read directly (carry mode's push starts at contact); the pendulum's window is [0, 0.01].
+    const carryArc: SwingArc = {
+        ...ARC,
+        alpha: 40,
+        pivotAcceleration: vec3(0, 3, 0),
+        contactAt: 0.03,
+        handStart: 0.03 - 2 * ARC.window,
+    };
+
     describe("the smooth pulse (P2b.2b.2c.2d design §3.1)", () => {
-        // Contact moved to 0.03 s so that the hands' window [0.01, 0.02] lies wholly before it, where the planned
-        // pivot is read directly (carry mode's push starts at contact); the pendulum's window is [0, 0.01].
-        const carryArc: SwingArc = {
-            ...ARC,
-            alpha: 40,
-            pivotAcceleration: vec3(0, 3, 0),
-            contactAt: 0.03,
-            handStart: 0.03 - 2 * ARC.window,
-        };
         const T = carryArc.window;
         const at = (track: PreparedTrack, s: number) => pathAt(track, carryArc.arcStart + s * T);
         it("keeps the box's change over the window, the pulse's mean rate", () => {
@@ -584,6 +613,58 @@ describe("the hands' arc after contact (P2b.2b.2b.2b design §4.1)", () => {
                 pathAt(track, end).pendulumAcceleration,
                 6,
             );
+        });
+    });
+
+    describe("gravity through the pulse (P2b.2b.2c.2d design §3.1)", () => {
+        // The carry's arc in swing mode with no reach, released at θ₀ = −0.6 rad so that gravity's share over the
+        // window (about 6 rad/s², 0.06 rad/s of ω) is far past the tolerances below, and with the hands' pulse along
+        // aim over the pendulum's window, so that the pivot's inertial term acts within it too.
+        const swingArc: SwingArc = {
+            ...carryArc,
+            mode: "swing",
+            handReach: 0,
+            theta0: -0.6,
+            handStart: 0,
+            pivotAcceleration: vec3(3, 0, 0),
+        };
+        const WORLD = defaultWorld();
+
+        it("adds gravity's share to the pulse in swing mode, against a hand integration", () => {
+            // RK4 at 1e-7 s of θ̈ = (−W·sin θ − M·d·(A·t̂))/I_P + 6·alpha·s(1 − s) over the window, from thetaArc and
+            // omegaArc; the table's semi-implicit Euler at FREE_STEP agrees to O(FREE_STEP).
+            const track = prepareTrack(trackDrive(swingArc), TEST_HEAD, STANDARD_GRAVITY);
+            const hand = integratePulse(track, 1e-7);
+            expect(track.omegaEnd).toBeCloseTo(hand.omega, 4);
+            expect(track.thetaEnd).toBeCloseTo(hand.theta, 6);
+        });
+        it("drops the player's effort from an early pulse's start, never gravity", () => {
+            // A brake begun 10 ms before contact at intensity 0 on the GC stop (no dip, so the dip's coupling leaves
+            // the case alone): before the pulse the downswing table, from it the free pendulum plus the pulse; θ is
+            // continuous at arcStart.
+            const early = { arc: -0.01, hands: 0, dip: 0 };
+            const c = buildContact(canonicalSetup("stop-gc", { stroke: { timing: early } }), WORLD);
+            const track = prepareTrack(c.drive as TrackDrive, c.head, WORLD.gravity);
+            const { arcStart } = track.arc;
+            // θ moves by ω·1 ns ≈ 3.6e-9 rad there, so a bare equality at precision 9 cannot hold; against the
+            // first-order prediction a seam's jump past 5e-10 rad still shows.
+            const p = pathAt(track, arcStart);
+            const w = dot(p.angularVelocity, track.axis);
+            expect(pathAt(track, arcStart + 1e-9).theta).toBeCloseTo(p.theta + 1e-9 * w, 9);
+            expect(track.free?.tw).toBe(arcStart);
+        });
+        it("is continuous in θ, ω and the socket at the window's end", () => {
+            const track = prepareTrack(trackDrive(swingArc), TEST_HEAD, STANDARD_GRAVITY);
+            const end = swingArc.arcStart + swingArc.window;
+            const [a, b] = [pathAt(track, end - 1e-9), pathAt(track, end + 1e-9)];
+            expect(b.theta).toBeCloseTo(a.theta, 8);
+            expect(dot(b.angularVelocity, track.axis)).toBeCloseTo(dot(a.angularVelocity, track.axis), 6);
+            expect(length(sub(b.socket, a.socket))).toBeLessThan(1e-8);
+        });
+        it("leaves carry mode's window as the pulse alone", () => {
+            const g = prepareTrack(trackDrive({ ...ARC, alpha: 5 }), TEST_HEAD, STANDARD_GRAVITY);
+            const z = prepareTrack(trackDrive({ ...ARC, alpha: 5 }), TEST_HEAD, 0);
+            expect(g.thetaEnd).toBe(z.thetaEnd);
         });
     });
 });
@@ -799,7 +880,10 @@ describe("the downswing (P2b.2b.2a design §3.5)", () => {
         const tau = 0.01 - LEAD + FALL;
         expect(track.thetaArc).toBeCloseTo(TOP + 0.5 * alpha * tau * tau, 9);
         expect(track.omegaArc).toBeCloseTo(alpha * tau, 9);
-        expect(track.omegaEnd).toBeCloseTo(alpha * tau - 50 * 0.01, 9);
+        // P2b.2b.2c.2d: gravity through the pulse (was alpha·tau − 50·0.01, the pulse alone): the window's end adds
+        // the free pendulum's share over it, as the hand integration has it.
+        expect(track.omegaEnd).toBeCloseTo(integratePulse(track, 1e-7).omega, 4);
+        expect(track.omegaEnd - (alpha * tau - 50 * 0.01)).toBeGreaterThan(0.01);
     });
 
     it("moves the hands with the pendulum in swing mode, arriving level at V_c = 2·across·ω₀/span", () => {
@@ -864,8 +948,8 @@ describe("the downswing (P2b.2b.2a design §3.5)", () => {
     });
 
     it("tabulates the free pendulum for the longest stroke: past contact at 0.15 s by 0.6 s, and to 1.15 s", () => {
-        // The longest lead-in puts contact 0.15 s after t = 0. The table, which starts at the pendulum's window's end,
-        // must then reach at least 0.6 s past contact (t = 0.75 s) and, as FREE_SPAN's design bound has it, the
+        // The longest lead-in puts contact 0.15 s after t = 0. The table, which starts where the pendulum's window
+        // does, must then reach at least 0.6 s past contact (t = 0.75 s) and, as FREE_SPAN's design bound has it, the
         // longest lead plus the 1 s follow-through cap from t = 0 (1.15 s).
         const lead = 0.15;
         const track = prepare(levelArc(vec3(1, 2, 0.05), { contactAt: lead }));

@@ -55,6 +55,7 @@ import {
     TEST_PUSH_FORCE,
     TEST_PUSH_RESPONSE_TIME,
     freeBall,
+    integratePulse,
     isolated,
     levelArc,
     recorder,
@@ -239,7 +240,13 @@ describe("a tracked head with no ball", () => {
         const RESIDUAL = 1e-8;
         expect(drift).toBeLessThan(5e-4);
         expect(lowest).toBeGreaterThanOrEqual(0 - RESIDUAL);
-        expect(Math.abs(last)).toBeLessThan(3e-8);
+        // P2b.2b.2c.2d: gravity through the pulse (was |last| < 3e-8, at rest with a path the check had brought to
+        // rest). Gravity acts through the check, θ₀ = −0.3 rad, so the path ends the window at gravity's share,
+        // 0.0331 rad/s, the hand integration's; the head keeps half the path's rate there, 0.016562 rad/s, 8.9e-7 from
+        // half of it (three times that allowed), and never passes rest.
+        const plannedEnd = dot(pathAt(track, check.window).angularVelocity, track.axis);
+        expect(plannedEnd).toBeCloseTo(integratePulse(track, 1e-7).omega, 4);
+        expect(Math.abs(last - plannedEnd / 2)).toBeLessThan(3e-6);
     });
 
     it("runs a whiff to TRACK_IMPACT_CAP after the planned contact", () => {

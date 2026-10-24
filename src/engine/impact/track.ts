@@ -101,10 +101,10 @@ export const HAND_CHAIN: HandChain = {
 export const FREE_STEP = 5e-6;
 
 /**
- * Span (s) of the free pendulum's table from the pendulum's window's end (design §3.2). Numerical: a tracked stroke
- * runs at most MAX_LEAD (0.15 s, the longest lead-in) plus FOLLOW_CAP (1 s, the follow-through's cap after contact)
- * from t = 0, and the table starts at the window's end, so 1.2 s covers every stroke with a 50 ms guard (P2b.2b.2a
- * design §4.4). simulateImpact is public and accepts any contactAt or cap: beyond the table θ and ω hold.
+ * Span (s) of the free pendulum's table past the pendulum's window (design §3.2). Numerical: a tracked stroke runs at
+ * most MAX_LEAD (0.15 s, the longest lead-in) plus FOLLOW_CAP (1 s, the follow-through's cap after contact) from
+ * t = 0, and the table runs through the window first, so 1.2 s past it covers every stroke with a 50 ms guard
+ * (P2b.2b.2a design §4.4). simulateImpact is public and accepts any contactAt or cap: beyond the table θ and ω hold.
  */
 export const FREE_SPAN = 1.2;
 
@@ -332,9 +332,11 @@ export interface Push {
 }
 
 /**
- * The free pendulum after the pendulum's window (swing mode, design §3.2): θ and ω tabulated every FREE_STEP from
- * `tw`, of I_P·θ̈ = −W·sin θ − M·d·(A·t̂). `weight` is W, m·g·ℓ_h with the shaft's term (pendulumOf; N·m),
- * `inertial` M·d (kg·m) and `inertia` I_P (kg·m²).
+ * Swing mode's free pendulum from the pendulum's window's start (design §3.2; P2b.2b.2c.2d design §3.1): θ and ω
+ * tabulated every FREE_STEP from `tw`, arcStart, of I_P·θ̈ = −W·sin θ − M·d·(A·t̂), plus the pulse's I_P·6·ᾱ·s(1 − s)
+ * within the window, so that gravity acts through it. `weight` is W, m·g·ℓ_h with the shaft's term (pendulumOf; N·m),
+ * `inertial` M·d (kg·m) and `inertia` I_P (kg·m²). `pulseOnly` marks a table that runs through the window only;
+ * `held`, a pendulum held at θ (rad) from `from` (s; holdPendulum), null otherwise.
  */
 export interface FreePendulum {
     readonly tw: number;
@@ -343,6 +345,8 @@ export interface FreePendulum {
     readonly weight: number;
     readonly inertial: number;
     readonly inertia: number;
+    readonly pulseOnly: boolean;
+    readonly held: { readonly from: number; readonly theta: number } | null;
 }
 
 /**
@@ -814,34 +818,69 @@ function advanceOf(arc: SwingArc, given: NonNullable<SwingArc["advance"]>): Adva
     return { start, speed, accel, ramp, cruise, decel: (speed * speed) / ease, end: cruise + ease / speed };
 }
 
-/** Tabulates swing mode's free pendulum from the window's end by semi-implicit Euler every FREE_STEP (design §3.2). */
-function computeFree(track: PreparedTrack, head: MalletHead, gravity: number): FreePendulum {
+/** The pendulum's minimum-jerk pulse at time t within its window, 6·ᾱ·s(1 − s), s = τ/T (P2b.2b.2c.2d design §3.1). */
+function pulseAlpha(arc: SwingArc, t: number): number {
+    const s = (t - arc.arcStart) / arc.window;
+    return 6 * arc.alpha * (s * (1 - s));
+}
+
+/**
+ * Tabulates swing mode's free pendulum by semi-implicit Euler every FREE_STEP from the window's start, at θ and ω
+ * there (design §3.2; P2b.2b.2c.2d design §3.1): through the window with the pulse added to gravity's term (only for a
+ * pulse, so that at drive 0 it is the bare free pendulum's), then FREE_SPAN on, unless `pulseOnly`. The player's effort
+ * ends where the pulse starts.
+ */
+function computeFree(track: PreparedTrack, head: MalletHead, gravity: number, pulseOnly: boolean): FreePendulum {
     const { arc, body } = track;
     const theta: number[] = [];
     const omega: number[] = [];
     const free: FreePendulum = {
-        tw: arc.arcStart + arc.window,
+        tw: arc.arcStart,
         theta,
         omega,
         ...pendulumOf(head, body, arc.radius, gravity),
+        pulseOnly,
+        held: null,
     };
-    let th = track.thetaEnd;
-    let om = track.omegaEnd;
-    const n = Math.round(FREE_SPAN / FREE_STEP);
+    const end = arc.arcStart + arc.window;
+    const pulsed = arc.alpha !== 0;
+    let th = track.thetaArc;
+    let om = track.omegaArc;
+    // One sample past the window's end, so that a read up to it interpolates inside the table, never at its clamp: a
+    // table through the pulse alone then reads there as the full table does, to the bit.
+    const through = Math.ceil(arc.window / FREE_STEP) + 1;
+    const n = pulseOnly ? through : through + Math.round(FREE_SPAN / FREE_STEP);
     for (let i = 0; i <= n; i++) {
         theta.push(th);
         omega.push(om);
-        om += freeAlpha(track, free, th, free.tw + i * FREE_STEP) * FREE_STEP;
+        const t = free.tw + i * FREE_STEP;
+        const a = freeAlpha(track, free, th, t);
+        om += (pulsed && t < end ? a + pulseAlpha(arc, t) : a) * FREE_STEP;
         th += om * FREE_STEP;
     }
     return free;
 }
 
+/** θ and ω interpolated in `free`'s table at t (s, from its start on), clamped to its last sample beyond it. */
+function tableAt(free: FreePendulum, t: number): { readonly theta: number; readonly omega: number } {
+    const x = (t - free.tw) / FREE_STEP;
+    const last = free.theta.length - 1;
+    const i = Math.min(Math.floor(x), last - 1);
+    const f = Math.min(x - i, 1);
+    const th0 = free.theta[i] as number;
+    const om0 = free.omega[i] as number;
+    return {
+        theta: th0 + f * ((free.theta[i + 1] as number) - th0),
+        omega: om0 + f * ((free.omega[i + 1] as number) - om0),
+    };
+}
+
 /**
  * Prepares `drive` for `head` under `gravity` (design §3.2, §3.3): the windows' end states; in swing mode the reach
- * and the free pendulum's table; in carry mode the push (P2b.2b.2b.2b design §4.1); the swung body and the gains.
- * Without `withFree` the table is skipped: a
- * caller that reads the path only up to the pendulum's window's end saves its cost, and a read past it throws.
+ * and the free pendulum's table from the window's start, its θ and ω at the window's end being the table's
+ * (P2b.2b.2c.2d design §3.1); in carry mode the push (P2b.2b.2b.2b design §4.1); the swung body and the gains. Without
+ * `withFree` the table runs through the pulse only: a caller that reads the path only up to the pendulum's window's
+ * end saves its cost, and a read past it throws.
  */
 export function prepareTrack(drive: TrackDrive, head: MalletHead, gravity: number, withFree = true): PreparedTrack {
     const { arc, coupling, hands } = drive;
@@ -890,7 +929,10 @@ export function prepareTrack(drive: TrackDrive, head: MalletHead, gravity: numbe
     // never the reach's distance on top (P2b.2b.2c.1 design, Amendments).
     const reach = plain.advance === null ? computeReach(plain) : restingReach(plain);
     const reached: PreparedTrack = { ...plain, reach };
-    return withFree ? { ...reached, free: computeFree(reached, head, gravity) } : reached;
+    // Gravity acts through the pulse (P2b.2b.2c.2d design §3.1), so the window's end is the table's, not the box's.
+    const free = computeFree(reached, head, gravity, !withFree);
+    const end = tableAt(free, arc.arcStart + w);
+    return { ...reached, free, thetaEnd: end.theta, omegaEnd: end.omega };
 }
 
 /**
@@ -926,12 +968,16 @@ export interface PathPoint {
     readonly theta: number;
 }
 
-/** Swing mode's free pendulum table; throws if prepareTrack skipped it, rather than read a table that is not there. */
-function freeOf(track: PreparedTrack): FreePendulum {
-    if (track.free === null) {
+/**
+ * Swing mode's free pendulum table; past the window (`past`), throws if prepareTrack tabulated it through the pulse
+ * only, rather than read a table that is not there.
+ */
+function freeOf(track: PreparedTrack, past: boolean): FreePendulum {
+    const { free } = track;
+    if (free === null || (past && free.pulseOnly)) {
         throw new Error("the free pendulum's table was read, but prepareTrack skipped it (withFree false)");
     }
-    return track.free;
+    return free;
 }
 
 /** The pendulum's θ, ω and α at time t (design §3.2). */
@@ -941,10 +987,23 @@ function pendulumAt(track: PreparedTrack, t: number): Swing {
         return beforeWindow(arc, t);
     }
     const tw = arc.arcStart + arc.window;
+    if (arc.mode === "swing") {
+        // Gravity acts through the pulse (P2b.2b.2c.2d design §3.1): the table, from the window's start, its α the free
+        // pendulum's plus the pulse's within the window; held from a stop's hold on.
+        const free = freeOf(track, t > tw);
+        const { held } = free;
+        if (held !== null && t > tw && t >= held.from) {
+            return { theta: held.theta, omega: 0, alpha: 0 };
+        }
+        const { theta, omega } = tableAt(free, t);
+        const a = freeAlpha(track, free, theta, t);
+        return { theta, omega, alpha: arc.alpha !== 0 && t < tw ? a + pulseAlpha(arc, t) : a };
+    }
     if (t <= tw) {
-        // The minimum-jerk pulse (P2b.2b.2c.2d design §3.1): α = 6·ᾱ·s(1 − s), s = τ/T, so ω and θ end where the
-        // box's constant ᾱ would put them. s is clamped to 1 so that every factor of ᾱ stays non-negative: at ᾱ = ±0
-        // each term is then the box's signed zero, and the path is the box's to the bit.
+        // Carry mode's arc is kinematic, gravity never in its plan: the minimum-jerk pulse alone (P2b.2b.2c.2d design
+        // §3.1), α = 6·ᾱ·s(1 − s), s = τ/T, so ω and θ end where the box's constant ᾱ would put them. s is clamped to 1
+        // so that every factor of ᾱ stays non-negative: at ᾱ = ±0 each term is then the box's signed zero, and the path
+        // is the box's to the bit.
         const T = arc.window;
         const tau = t - arc.arcStart;
         const s = Math.min(tau / T, 1);
@@ -954,36 +1013,20 @@ function pendulumAt(track: PreparedTrack, t: number): Swing {
             alpha: 6 * arc.alpha * (s * (1 - s)),
         };
     }
-    if (arc.mode === "carry") {
-        // The slope is held: over one more window W the rate falls from ω_e to rest, then θ holds. Its α runs on from
-        // the pulse's end, α = 0, with no step (gate round 5 ruling, 2026-10-12; P2b.2b.2c.2d design §3.1): with
-        // x = u/W, ω is the cubic with ω(0) = ω_e, ω′(0) = 0, ω(W) = ω′(W) = 0, whose travel ∫ω = ω_e·W/2 is the
-        // linear fall's, so the seams' times, θ and ω there are the linear fall's:
-        // ω = ω_e·(1 − 3x² + 2x³), α = 6·ω_e/W·(x² − x), θ = θ_e + W·ω_e·(x − x³ + x⁴/2).
-        const W = arc.window;
-        const u = Math.min(t - tw, W);
-        const x = u / W;
-        const we = track.omegaEnd;
-        const fall = x * (1 + x * x * (x * 0.5 - 1));
-        return {
-            theta: track.thetaEnd + W * (we * fall),
-            omega: we * (1 + x * x * (2 * x - 3)),
-            alpha: u < W ? ((6 * we) / W) * x * (x - 1) : 0,
-        };
-    }
-    // Swing mode: the free pendulum, interpolated in its table and clamped to its last sample beyond it.
-    const free = freeOf(track);
-    const x = (t - free.tw) / FREE_STEP;
-    const last = free.theta.length - 1;
-    const i = Math.min(Math.floor(x), last - 1);
-    const f = Math.min(x - i, 1);
-    const th0 = free.theta[i] as number;
-    const om0 = free.omega[i] as number;
-    const theta = th0 + f * ((free.theta[i + 1] as number) - th0);
+    // The slope is held: over one more window W the rate falls from ω_e to rest, then θ holds. Its α runs on from the
+    // pulse's end, α = 0, with no step (gate round 5 ruling, 2026-10-12; P2b.2b.2c.2d design §3.1): with x = u/W, ω is
+    // the cubic with ω(0) = ω_e, ω′(0) = 0, ω(W) = ω′(W) = 0, whose travel ∫ω = ω_e·W/2 is the linear fall's, so the
+    // seams' times, θ and ω there are the linear fall's:
+    // ω = ω_e·(1 − 3x² + 2x³), α = 6·ω_e/W·(x² − x), θ = θ_e + W·ω_e·(x − x³ + x⁴/2).
+    const W = arc.window;
+    const u = Math.min(t - tw, W);
+    const x = u / W;
+    const we = track.omegaEnd;
+    const fall = x * (1 + x * x * (x * 0.5 - 1));
     return {
-        theta,
-        omega: om0 + f * ((free.omega[i + 1] as number) - om0),
-        alpha: freeAlpha(track, free, theta, t),
+        theta: track.thetaEnd + W * (we * fall),
+        omega: we * (1 + x * x * (2 * x - 3)),
+        alpha: u < W ? ((6 * we) / W) * x * (x - 1) : 0,
     };
 }
 
@@ -991,20 +1034,17 @@ function pendulumAt(track: PreparedTrack, t: number): Swing {
  * `track` in swing mode with its pendulum held from time `from` (s, at or after the pendulum's window) on: θ fixed at
  * its value there, ω = α = 0. A stop's follow-through (P2b.2b.2a design §4.2), a user decision (2026-10-07): after
  * the check the mallet stays still relative to the hands, as Riches has the stop, "NO FOLLOW-THROUGH at all, or as
- * little as possible", rather than the free pendulum swinging back. Only times from `from` on may be read from it.
+ * little as possible", rather than the free pendulum swinging back. Before `from` it reads as `track`.
  */
 export function holdPendulum(track: PreparedTrack, from: number): PreparedTrack {
-    const free = freeOf(track);
+    const free = freeOf(track, true);
     const { theta } = pendulumAt(track, from);
-    return {
-        ...track,
-        free: { tw: from, theta: [theta, theta], omega: [0, 0], weight: 0, inertial: 0, inertia: free.inertia },
-    };
+    return { ...track, free: { ...free, held: { from, theta } } };
 }
 
 /**
  * The path at time t (design §3.2): the pendulum's θ, ω and α, and the pivot with the reach and the dip, carried to
- * the socket and the head's orientation. Evaluates sinCos(θ) and sinCos(θ/2) (in swing mode after the window,
+ * the socket and the head's orientation. Evaluates sinCos(θ) and sinCos(θ/2) (in swing mode from the window's start,
  * freeAlpha evaluates sinCos(θ) and the pivot once more).
  */
 export function pathAt(track: PreparedTrack, t: number): PathPoint {
