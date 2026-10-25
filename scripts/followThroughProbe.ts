@@ -104,7 +104,7 @@ function reContactText(r: ReContact): string {
     return (
         `[${ms(r.start)}, ${ms(r.end)}] ms (${r.intervals} interval(s), ${ms(r.afterParting)} ms after the parting, ` +
         `separation ${mm(r.separation)} mm, speed ${pct(r.speedChange)} %, direction ${fmt(r.angleChange)}°, ` +
-        `${r.fault ? "possible 29.1.6.1 at the placeholders" : "below the thresholds"})`
+        `${r.fault ? "possible 29.1.6.1 at the ruled thresholds" : "below the thresholds"})`
     );
 }
 

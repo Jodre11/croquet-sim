@@ -517,3 +517,9 @@ read; the probes' layout and their section letters; the tests' names and files.
       parting (0.01–0.5 mm apart) therefore join the strike, as decision 10's "part of the same contact" reads.
     - **Q5b, `EFFECT_SPEED`: "10 % (Recommended)".**
     - **Q5c, `EFFECT_ANGLE`: "2° (Recommended)".**
+    - **2026-10-25, the joining re-checked: "Keep 2 mm, relabel (Recommended)".** Q5a′ stands as built. The research
+      (`reference/sources/README.md`, "The re-contact rule re-checked") found no Law, ruling or referee guidance that
+      joins contacts by distance or judges a croquet stroke's re-contact by its effect, so `reference/laws.json` now
+      marks the effect test as the user's reading, not the Law; the B.2 catch-up at onset −20 ms (0.16 mm and
+      0.085 ms after the parting, +151 % speed) is Gugan 5's lawful double tap. Open item: the joining has no time
+      cap, so a long chain under 2 mm after the parting (C29.11.2's shepherding) would join the strike unjudged.

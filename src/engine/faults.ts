@@ -40,12 +40,13 @@
  * a related fault be deduced from the balls' trajectories and speeds against a lawful stroke's. The user reads the
  * allowance as much more generous (design decision 10): the fault is a second hit that changes the ball's momentum or
  * direction, and a long succession of micro-hits with small separation is one contact. So the non-exempt mallet
- * contacts beginning at or after the parting, other than the first contact of all, are grouped: one joins the one
- * before it when the separation between them (the earlier one's `clearanceAfter`, 0 when none was noted or below 0)
- * is below MERGE_SEPARATION, and none joins a contact that began before the parting. Each group is a re-contact,
- * reported on `strike` with its separation, gap, time after the parting, summed impulse and effect: the change to the
- * striker's ball's speed (a fraction) and horizontal direction (degrees) from the group's first velocity to its last.
- * It is possible fault 29.1.6.1 only if its effect reaches EFFECT_SPEED or EFFECT_ANGLE.
+ * contacts are grouped from the first: one joins the one before it when the separation between them (the earlier
+ * one's `clearanceAfter`, 0 when none was noted or below 0) is below MERGE_SEPARATION. A group begun before the parting
+ * is the strike, its contacts reported among the taps however long after the parting the chain runs (the gate's
+ * ruling, 2026-10-24). Each later group, other than the first contact's, is a re-contact, reported on `strike` with
+ * its separation, gap, time after the parting, summed impulse and effect: the change to the striker's ball's speed (a
+ * fraction) and horizontal direction (degrees) from the group's first velocity to its last. It is possible fault
+ * 29.1.6.1 only if its effect reaches EFFECT_SPEED or EFFECT_ANGLE.
  *
  * 29.1.13 has two clauses, reported in this order and told apart by their evidence: "fails to move or shake" (the
  * croqueted pair never penetrates beyond CONTACT_TOLERANCE; evidence peakPenetration), and "plays away from" (the
@@ -107,7 +108,8 @@ export interface Finding {
 /**
  * The mallet's taps within a croquet or continuation stroke's strike (P2b.2b.2c.2c design §6). `parted` is when the
  * striker's ball parted from the ball or balls it touched (s), or null when no such pair had an interval; `taps` are
- * the non-exempt mallet contacts beginning before it, each with its `clearanceAfter`, and none when `parted` is null;
+ * the non-exempt mallet contacts of the strike, each with its `clearanceAfter`: those beginning before the parting and
+ * any after it within MERGE_SEPARATION of one of them (P2b.2b.2c.2d design §7), and none when `parted` is null;
  * `breaks` are the lengths (s) of the sub-frame breaks merged across in placing it, across every pair, in pair order;
  * `recontacts` are the re-contacts from the parting on (P2b.2b.2c.2d design §7), none when `parted` is null.
  */
@@ -169,20 +171,20 @@ export const PARTING_BREAK = 1.25e-4;
 const PARTING_MIN_GAP = PARTING_BREAK * (1 - 1e-9);
 
 /**
- * The separation (m) below which consecutive mallet contacts are one continuing contact (reference/laws.json, 29.2.5).
- * Placeholder until the gate's stage 1 rules it (spec §7): at 0 no contact merges.
+ * The separation (m) below which consecutive mallet contacts are one continuing contact (reference/laws.json, 29.2.5):
+ * 2 mm, ruled at the gate's stage 1 from the spread of separations (spec §7).
  */
 export const MERGE_SEPARATION = lawsReference.reContactThresholds.mergeSeparation.value;
 
 /**
  * The change in the striker's ball's speed, as a fraction, at which a re-contact is possible fault 29.1.6.1
- * (reference/laws.json, 29.2.5). Placeholder until the gate's stage 1 rules it (spec §7): at 0 every re-contact is.
+ * (reference/laws.json, 29.2.5): 10 %, ruled at the gate's stage 1 from the spread of effects (spec §7).
  */
 export const EFFECT_SPEED = lawsReference.reContactThresholds.effectSpeed.value;
 
 /**
  * The change in the striker's ball's horizontal direction (degrees) at which a re-contact is possible fault 29.1.6.1
- * (reference/laws.json, 29.2.5). Placeholder until the gate's stage 1 rules it (spec §7): at 0 every re-contact is.
+ * (reference/laws.json, 29.2.5): 2°, ruled at the gate's stage 1 from the spread of effects (spec §7).
  */
 export const EFFECT_ANGLE = lawsReference.reContactThresholds.effectAngle.value;
 
@@ -415,63 +417,90 @@ interface ReContactGroup {
 }
 
 /**
- * The re-contacts among mallet contacts `faces`, in order, from the parting `parted` (s) on, judged by `thresholds`
- * (P2b.2b.2c.2d design §7; see the file header). Only contacts beginning at or after `parted` are grouped: a contact
- * joins the group before it when the separation between them (see separationBefore) is below
- * `thresholds.mergeSeparation`, and the first such contact starts a group of its own, whatever the gap before it, so
- * none is absorbed into a contact that began before the parting. Each group is a re-contact, its `separation` the
- * gap's before its first contact. The first contact of all is the strike itself, never a re-contact, even when it
- * begins after the parting, as 29.1.6.1 judges only the contacts after the first. Without the face's record (a
- * hand-built timeline), a group's effect is that of one from rest: a fault under any threshold. The judge calls it
- * with the non-exempt contacts and the laws' thresholds; it is exported for tests and probes that try other thresholds.
+ * Mallet contacts `faces`, in order, grouped around the parting `parted` (s) (P2b.2b.2c.2d design §7 and its
+ * Amendments; see the file header). A contact joins the previous contact's group when the separation between them (see
+ * separationBefore) is below `thresholds.mergeSeparation`, and otherwise starts a group of its own. A group begun
+ * before the parting is the strike: its contacts, any after the parting among them, are the `taps`. A later group is a
+ * re-contact, judged by `thresholds`, except the first contact's: the stroke's strike itself, neither a tap nor a
+ * re-contact when it begins after the parting, as 29.1.6.1 judges only the contacts after the first.
+ */
+function groupContacts(
+    faces: readonly ContactInterval[],
+    parted: number,
+    thresholds: ReContactThresholds,
+): { readonly taps: ContactInterval[]; readonly recontacts: ReContact[] } {
+    const taps: ContactInterval[] = [];
+    const groups: ReContactGroup[] = [];
+    // The group the contact in hand joins: the strike's, the first contact's begun after the parting, or a re-contact.
+    let current: "strike" | "first" | ReContactGroup = "first";
+    for (let i = 0; i < faces.length; i++) {
+        const face = faces[i] as ContactInterval;
+        const separation = i === 0 ? 0 : separationBefore(faces, i);
+        if (i === 0 || separation >= thresholds.mergeSeparation) {
+            if (face.start < parted) {
+                current = "strike";
+            } else if (i === 0) {
+                current = "first";
+            } else {
+                current = { previous: faces[i - 1] as ContactInterval, separation, items: [] };
+                groups.push(current);
+            }
+        }
+        if (current === "strike") {
+            taps.push(face);
+        } else if (current !== "first") {
+            current.items.push(face);
+        }
+    }
+    return { taps, recontacts: groups.map((group) => judgeReContact(group, parted, thresholds)) };
+}
+
+/**
+ * The re-contacts among mallet contacts `faces` from the parting `parted` (s) on, judged by `thresholds`, as
+ * groupContacts groups them: a contact within `thresholds.mergeSeparation` of a tap is the strike's, not a
+ * re-contact. Without the face's record (a hand-built timeline), a group's effect is that of one from rest: a fault
+ * under any threshold. The judge applies the laws' thresholds to the non-exempt contacts; this is exported for tests
+ * and probes that try other thresholds.
  */
 export function groupReContacts(
     faces: readonly ContactInterval[],
     parted: number,
     thresholds: ReContactThresholds,
 ): ReContact[] {
-    const groups: ReContactGroup[] = [];
-    for (let i = 1; i < faces.length; i++) {
-        const face = faces[i] as ContactInterval;
-        if (face.start < parted) {
-            continue;
-        }
-        const separation = separationBefore(faces, i);
-        const last = groups[groups.length - 1];
-        if (last !== undefined && separation < thresholds.mergeSeparation) {
-            last.items.push(face);
-        } else {
-            groups.push({ previous: faces[i - 1] as ContactInterval, separation, items: [face] });
+    return groupContacts(faces, parted, thresholds).recontacts;
+}
+
+/** Re-contact `group` after the parting `parted` (s), its effect judged by `thresholds`. */
+function judgeReContact(
+    { previous, separation, items }: ReContactGroup,
+    parted: number,
+    thresholds: ReContactThresholds,
+): ReContact {
+    const first = items[0] as ContactInterval;
+    const final = items[items.length - 1] as ContactInterval;
+    let impulse: Vec3 | null = null;
+    for (const f of items) {
+        if (f.impulse !== undefined) {
+            impulse = impulse === null ? f.impulse : add(impulse, f.impulse);
         }
     }
-    return groups.map(({ previous, separation, items }) => {
-        const first = items[0] as ContactInterval;
-        const final = items[items.length - 1] as ContactInterval;
-        let impulse: Vec3 | null = null;
-        for (const f of items) {
-            if (f.impulse !== undefined) {
-                impulse = impulse === null ? f.impulse : add(impulse, f.impulse);
-            }
-        }
-        const before = first.velocities?.before;
-        const after = final.velocities?.after;
-        const effect =
-            before === undefined || after === undefined
-                ? { speedChange: Infinity, angleChange: 0 }
-                : effectOf(before, after);
-        return {
-            start: first.start,
-            end: final.end,
-            intervals: items.length,
-            separation,
-            gap: first.start - previous.end,
-            afterParting: first.start - parted,
-            impulse: impulse ?? ZERO,
-            ...effect,
-            fault:
-                Math.abs(effect.speedChange) >= thresholds.effectSpeed || effect.angleChange >= thresholds.effectAngle,
-        };
-    });
+    const before = first.velocities?.before;
+    const after = final.velocities?.after;
+    const effect =
+        before === undefined || after === undefined
+            ? { speedChange: Infinity, angleChange: 0 }
+            : effectOf(before, after);
+    return {
+        start: first.start,
+        end: final.end,
+        intervals: items.length,
+        separation,
+        gap: first.start - previous.end,
+        afterParting: first.start - parted,
+        impulse: impulse ?? ZERO,
+        ...effect,
+        fault: Math.abs(effect.speedChange) >= thresholds.effectSpeed || effect.angleChange >= thresholds.effectAngle,
+    };
 }
 
 /**
@@ -580,18 +609,14 @@ export function judgeFaults(context: StrokeContext, impact: ImpactResult): Fault
         }
     }
     // 29.1.6.1: a croquet stroke, or a continuation while touching, with two or more non-exempt mallet contacts. A
-    // re-contact that begins before the balls part is within the strike and only reported; one from the parting on
-    // is judged by its effect (see the file header).
+    // re-contact that begins before the balls part, or within MERGE_SEPARATION of one that did, is within the strike
+    // and only reported; any other from the parting on is judged by its effect (see the file header).
     let strike: StrikeTaps | undefined;
     if (kind !== "single-ball") {
         const { parted, breaks } = partingOf(context, impact);
-        const recontacts = parted === null ? [] : groupReContacts(contacts, parted, THRESHOLDS);
-        strike = {
-            parted,
-            taps: parted === null ? [] : contacts.filter((f) => f.start < parted),
-            breaks,
-            recontacts,
-        };
+        const { taps, recontacts } =
+            parted === null ? { taps: [], recontacts: [] } : groupContacts(contacts, parted, THRESHOLDS);
+        strike = { parted, taps, breaks, recontacts };
         // Unparted, every contact after the first faults; parted, only the re-contacts whose effect reaches a
         // threshold, at the first one's start, with their count.
         const faulting = parted === null ? contacts.slice(1) : recontacts.filter((r) => r.fault);
