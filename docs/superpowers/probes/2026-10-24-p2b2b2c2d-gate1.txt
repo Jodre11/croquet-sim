@@ -292,3 +292,19 @@ R24: the taps' shares sum to 1 + v2/w1, not 1, on a croquet stroke (the face's i
   as at -2°. S.2 does not print the turf; in S the same two leans meet the turf at 5.0 ms, before the ball.
   No lean removes the late catch. From -1° forward it comes earlier (103.7 to 83.1 ms; +3° is 0.1 ms later than +2°)
   and adds more speed (+38.1 to +68.8 %).
+
+== Addendum (2026-10-25): the trace of B.2's uniform 3.584e-7 m/s step (gate 1 Q3), before stage 2 ==
+  The step between brake onset 0 and +2.5 ms is the hands' check regime switching on, not the brake. In swing mode the
+  hands brake a check (ᾱ < 0) from contact through the pendulum's window (track.ts handLoad: checking = after the
+  grips relax, swing mode and inside the window). At onset 0 the window opens at the impact's first step (t = 0), so
+  the step before first touch (t = 0.005 ms) is already in the check regime; at +2.5 ms it opens after first touch.
+  Inside the regime the hands' feed-forward is split between the grips and the guide is held to the path's rate, even
+  with the check's share at 1, so the head's speed along aim at first touch differs.
+  - Independent of the brake's strength: the split does not scale with ᾱ, and the pulse is near zero at its start.
+  - Absent at magnitude 0: there is no check (ᾱ = 0).
+  Evidence (AC stop, jab 0, window ×1, the B.2 fixed backswing, on BASE fd789d6):
+  - on time minus +2.5 ms is 3.5844e-7 m/s at magnitude -1 and -0.25, and 0 at magnitude 0; +2.5 minus +5 ms is 0.
+  - with the check regime forced off, the step is 0.
+  - the check's share is 1 at t = 0 and at 0.005 ms.
+  Reading for exit criterion 5: the 24 violations at the onset 0 / +2.5 ms pair are this switch-on timing (relative
+  1.2e-7). The remaining 2 (0.23 %, 0.40 %) stand as recorded under Q3.
