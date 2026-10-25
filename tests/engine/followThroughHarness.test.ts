@@ -20,6 +20,9 @@ const WORLD = defaultWorld();
 /** A brake begun 60 ms early on the AC stop: the head stops short of the ball, so no face contact (traced). */
 const NO_STRIKE: StrokeTiming = { arc: -0.06, hands: 0, dip: 0 };
 
+/** A brake begun 10 ms before contact, the dip coupled: an early pulse of stage 2's AC stop sweep. */
+const EARLY_BRAKE: StrokeTiming = { arc: -0.01, hands: 0, dip: 0 };
+
 describe("the follow-through harness (P2b.2b.2c.2d design §3.4)", () => {
     it("reads the first touch at the planned speed when nothing acts early", () => {
         // The drive at drive 0, on time: no pulse before contact, so the head meets the ball within a step's travel
@@ -89,6 +92,28 @@ describe("the follow-through harness (P2b.2b.2c.2d design §3.4)", () => {
         // strokeForContact's second regime, the intensity. About 8 s locally.
         const setup = guganSetup("stop-ac", 3, 0.75e-3, { world: WORLD, contactSpeed: true });
         expect(Math.abs((firstTouch(setup, WORLD)?.contactSpeed ?? NaN) - 3)).toBeLessThanOrEqual(1e-6);
+    });
+    it("solves Gugan's stroke for its contact speed under an early brake", { timeout: 120_000 }, () => {
+        // The AC stop's stage 2 setup (Gugan's mallet, the stance at −6° on its own grips) under a brake begun
+        // before contact: the pulse takes speed before the ball, so the stroke is solved for the speed at the ball,
+        // not the planned one, and the planned speed lies above it. About 18 s locally, Gugan's mallet's solve
+        // included.
+        const lean = (-6 * Math.PI) / 180;
+        const setup = guganSetup("stop-ac", 3, 0.75e-3, {
+            world: WORLD,
+            gugan: true,
+            jab: 0,
+            lean,
+            grips: "stop-ac",
+            timing: EARLY_BRAKE,
+            drive: -1,
+            contactSpeed: true,
+        });
+        expect(setup.stroke.timing).toEqual(EARLY_BRAKE);
+        expect(setup.stroke.drive).toBe(-1);
+        const touch = firstTouch(setup, WORLD);
+        expect(Math.abs((touch?.contactSpeed ?? NaN) - 3)).toBeLessThanOrEqual(1e-6);
+        expect(touch?.plannedSpeed).toBeGreaterThan(3);
     });
     it("shares the canonical drive's strike among its taps", () => {
         // Every tap's impulse along aim over m_ball·w₁. The face's impulse on the striker's ball also carries the

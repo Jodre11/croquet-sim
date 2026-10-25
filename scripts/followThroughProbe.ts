@@ -18,9 +18,18 @@
  *   count flagged per preset for each set of thresholds (groupReContacts).
  * - S. the stance sweep (§3.5): the AC stop and the drive as Gugan 5's strokes across leans −8° to +4°, at their own
  *   grips and at the other's, each turf-limited lean printed and not played; then the canonical drive across the leans.
- * Every section ends with a line "<letter> tally: ...". `all` runs A, B, C, D and S.
- * Run with `npx --yes tsx scripts/followThroughProbe.ts`; environment: SECTION (a letter or `all`; default all) and
- * B_SMOKE (any value: section B on jab 0, window ×1, magnitude −1 and onsets −20, −10, 0 and +5 ms only, a smoke run).
+ * Stage 2's candidates (§6):
+ * - E. the AC stop as Gugan 5's stroke (Gugan's mallet, the default gap, jab 0, 3 m/s contact speed) at its calibrated
+ *   stance, lean −6° on its own grips, over section B's onsets and magnitudes at the preset's window: its ratio against
+ *   7.15 ± 0.6; the candidates, the latest passing onset before contact and the latest of all, each with its strength.
+ * - F. the canonical drive at guideEffort 1, 0.75, 0.5, 0.25 and 0, judged at the ruled thresholds; the candidate, the
+ *   largest with no re-contact after the parting; Gugan 5's drive at guideEffort 0 beside it.
+ * - G. the full roll's variant (the pass roll's speedGain, handGain, window and handWindow) beside the default full
+ *   roll and the half and pass rolls, at 2, 3 and 4 m/s planned, against coaching's about 1.
+ * Every section ends with a line "<letter> tally: ...". `all` runs A, B, C, D, S, E, F and G.
+ * Run with `npx --yes tsx scripts/followThroughProbe.ts`; environment: SECTION (a letter or `all`; default all),
+ * B_SMOKE (any value: section B on jab 0, window ×1, magnitude −1 and onsets −20, −10, 0 and +5 ms only, a smoke run)
+ * and E_SMOKE (any value: section E on magnitude −1 and onsets −10 and 0 ms only).
  * Not part of the test suite.
  */
 import { faceKey, HEAD_TURF_KEY } from "../src/engine/impact/contacts";
@@ -39,7 +48,7 @@ import { defaultProfile } from "../src/engine/swing/profile";
 import { CROQUET_STROKES, type ShotSetup, type StrokeType } from "../src/engine/swing/types";
 import { defaultWorld } from "../src/engine/world";
 import { ratioTargetsReference } from "../src/reference/index";
-import { DEFAULT_CROQUET_GAP, backswingFor, canonicalSetup, regimeOf } from "../tests/engine/support/shot";
+import { DEFAULT_CROQUET_GAP, backswingFor, canonicalSetup, regimeOf, strokeFor } from "../tests/engine/support/shot";
 import {
     backswingBracket,
     playRoutes,
@@ -847,15 +856,270 @@ function sectionS(): void {
     );
 }
 
+/**
+ * The AC stop's stance at stage 2 (rad): a lean of −6° on the stop's own grips, where Gugan 5's stop lies nearest
+ * 7.15 (a calibration against Gugan 5).
+ */
+const STOP_LEAN = (-6 * Math.PI) / 180;
+
+/** Section E's smoke run (E_SMOKE): magnitude −1 and onsets −10 and 0 ms only. */
+const E_SMOKE = process.env.E_SMOKE !== undefined;
+
+/** One braked AC stop of section E: its onset (s), magnitude and ratio, for the candidates. */
+interface StopCell {
+    readonly onset: number;
+    readonly magnitude: number;
+    readonly ratio: number;
+}
+
+/**
+ * The AC stop as Gugan 5's stroke at stage 2's stance: Gugan's mallet, the default gap, jab 0, the lean STOP_LEAN on
+ * its own grips, the brake at `onset` (s, the dip coupled, the hands on time) and `magnitude`, the stroke solved for
+ * SPEED at the ball (strokeForContact).
+ */
+function stopSetup(onset: number, magnitude: number): ShotSetup {
+    return guganSetup("stop-ac", SPEED, DEFAULT_CROQUET_GAP, {
+        world: WORLD,
+        gugan: true,
+        jab: 0,
+        lean: STOP_LEAN,
+        grips: "stop-ac",
+        timing: { arc: onset, hands: 0, dip: 0 },
+        drive: magnitude,
+        contactSpeed: true,
+    });
+}
+
+/**
+ * The candidate among `cells` at their latest onset: the magnitude whose ratio lies nearest `target`, the least
+ * arbitrary pick, with every passing magnitude at that onset listed beside it; "none" when `cells` is empty.
+ */
+function candidateText(cells: readonly StopCell[], target: number): string {
+    if (cells.length === 0) {
+        return "none";
+    }
+    const onset = Math.max(...cells.map((c) => c.onset));
+    const at = cells.filter((c) => c.onset === onset);
+    const best = at.reduce((a, b) => (Math.abs(b.ratio - target) < Math.abs(a.ratio - target) ? b : a));
+    const all = at.map((c) => `${c.magnitude} (${fmt(c.ratio)})`).join(", ");
+    return (
+        `onset ${ms(onset)} ms, strength (magnitude) ${best.magnitude}, ratio ${fmt(best.ratio)}; passing at ` +
+        `that onset: ${all}`
+    );
+}
+
+function sectionE(): void {
+    const target = ratioTargetsReference["stop-ac"].ratio;
+    const [lo, hi] = target.bounds as readonly [number, number];
+    const onsets = E_SMOKE ? [-0.01, 0] : ONSETS;
+    const magnitudes = E_SMOKE ? [-1] : BRAKES;
+    console.log(
+        "== E. The AC stop's candidates (P2b.2b.2c.2d design §6): Gugan 5's stop on the default world with Gugan's " +
+            `mallet (guganSetup), the default gap (${mm(DEFAULT_CROQUET_GAP)} mm), jab 0, at the stance gate 1 ` +
+            `ruled (lean ${deg(STOP_LEAN)}° on the AC stop's own grips), ${fmt(SPEED)} m/s contact speed ` +
+            "(strokeForContact), the preset's window; the brake's onset timing.arc −20 to +5 ms in 2.5 ms steps " +
+            `(the dip coupled, the hands on time) by magnitude ${BRAKES.join(", ")}; onset 0 at magnitude −1 is the ` +
+            "stance alone (the preset's own drive, on time). " +
+            `${E_SMOKE ? "E_SMOKE: magnitude −1, onsets −10 and 0 ms only. " : ""}` +
+            `Per run: the stroke and its regime, the ratio against ${fmt(target.value)} (band ${fmt(lo)} to ` +
+            `${fmt(hi)}, * within), the contact and planned speeds (m/s) and the routes. The candidates: (a) the ` +
+            'latest passing onset before contact, (b) the latest passing onset of all (the user: "as soon as ' +
+            'contact is complete"), each with its strength (magnitude) and ratio ==',
+    );
+    const passing: StopCell[] = [];
+    let cells = 0;
+    let unreachable = 0;
+    let unstruck = 0;
+    for (const magnitude of magnitudes) {
+        for (const onset of onsets) {
+            cells += 1;
+            const label = `stop-ac lean ${deg(STOP_LEAN)}° magnitude ${magnitude} onset ${ms(onset)} ms`;
+            let setup: ShotSetup;
+            try {
+                setup = stopSetup(onset, magnitude);
+            } catch (error) {
+                unreachable += 1;
+                console.log(`${label}: unreachable (${errorText(error)})`);
+                continue;
+            }
+            const played = play(label, () => setup);
+            if ("error" in played) {
+                unreachable += 1;
+                console.log(`${label}: rejected (${played.error})`);
+                continue;
+            }
+            const { run } = played;
+            if (run.routes.touch === null) {
+                unstruck += 1;
+            } else if (run.routes.ratio >= lo && run.routes.ratio <= hi) {
+                passing.push({ onset, magnitude, ratio: run.routes.ratio });
+            }
+            console.log(`${label}: ${strokeText(setup)}; ${stanceText(run, "stop-ac")}`);
+        }
+    }
+    console.log(`-- the passing pairs (${passing.length}), onset (ms) and magnitude --`);
+    for (const c of passing) {
+        console.log(`onset ${ms(c.onset)} ms magnitude ${c.magnitude}: ratio ${fmt(c.ratio)}`);
+    }
+    const early = candidateText(
+        passing.filter((c) => c.onset < 0),
+        target.value,
+    );
+    const latest = candidateText(passing, target.value);
+    console.log(`candidate (a), the latest passing onset before contact: ${early}`);
+    console.log(`candidate (b), the latest passing onset of all: ${latest}`);
+    console.log(
+        `E tally: ${cells} runs at lean ${deg(STOP_LEAN)}° on own grips with Gugan's mallet, ${unreachable} ` +
+            `unreachable or rejected, ${unstruck} with no strike, ${passing.length} passing; (a) ${early}; ` +
+            `(b) ${latest}`,
+    );
+}
+
+/**
+ * Section F's guideEfforts: the 0.25 grid, from the preset's own down. No decay of the guide after contact is played:
+ * none has a source or an account yet.
+ */
+const GUIDE_EFFORTS = [1, 0.75, 0.5, 0.25, 0] as const;
+
+function sectionF(): void {
+    const target = ratioTargetsReference.drive.ratio;
+    console.log(
+        "== F. The drive's guideEffort candidates (P2b.2b.2c.2d design §6, gate 1 Q4: the 0.25 grid only): the " +
+            `canonical drive on the default world (the default mallet, ${fmt(SPEED)} m/s planned, the default ` +
+            `gap, ON_TIME) at guideEffort ${GUIDE_EFFORTS.join(", ")}, each judged as simulateShot judges it at the ` +
+            "ruled thresholds (§7): its routes, each re-contact after the parting with its effect and class, and " +
+            "the possible faults raised. The candidate: the largest guideEffort with no re-contact after the " +
+            "parting. Beside it, Gugan 5's drive at guideEffort 0, unchanged (its calibration: Gugan's mallet, " +
+            `the default gap, ${fmt(SPEED)} m/s contact speed by strokeForContact, lean as the preset's), against ` +
+            `${fmt(target.value)} ==`,
+    );
+    const clean: number[] = [];
+    let rejected = 0;
+    for (const guideEffort of GUIDE_EFFORTS) {
+        const label = `drive guideEffort ${guideEffort}`;
+        const played = play(label, () => canonicalSetup("drive", { world: WORLD, stroke: { guideEffort } }));
+        if ("error" in played) {
+            rejected += 1;
+            console.log(`${label}: rejected (${played.error})`);
+            continue;
+        }
+        const { run } = played;
+        const { recontacts } = run.routes;
+        if (run.routes.touch !== null && recontacts.length === 0) {
+            clean.push(guideEffort);
+        }
+        const laws = run.faults.findings.map((f) => `${f.law} (${f.tier}) at ${ms(f.t)} ms`).join(", ");
+        console.log(
+            `${label}: ${recontacts.length === 0 ? "no" : recontacts.length} re-contact(s) after the parting, ` +
+                `${recontacts.filter((r) => r.fault).length} past the ruled thresholds; findings ` +
+                `${laws || "none"}; ${routesText(run)}`,
+        );
+    }
+    const candidate = clean.length === 0 ? "none" : `guideEffort ${Math.max(...clean)}`;
+    console.log(`candidate: ${candidate} (the largest with no re-contact after the parting)`);
+    let gugan = "rejected";
+    const label = "Gugan 5's drive guideEffort 0";
+    try {
+        const setup = guganSetup("drive", SPEED, DEFAULT_CROQUET_GAP, {
+            world: WORLD,
+            gugan: true,
+            guideEffort: 0,
+            contactSpeed: true,
+        });
+        const run = playRoutes(setup, WORLD);
+        gugan = `ratio ${fmt(run.routes.ratio)}`;
+        console.log(`${label}: ${strokeText(setup)}; ${stanceText(run, "drive")}`);
+    } catch (error) {
+        console.log(`${label}: rejected (${errorText(error)})`);
+    }
+    console.log(
+        `F tally: ${GUIDE_EFFORTS.length} canonical drives, ${rejected} rejected, with no re-contact after the ` +
+            `parting at guideEffort ${clean.join(", ") || "none"}; candidate ${candidate}; Gugan 5's drive at ` +
+            `guideEffort 0 ${gugan}`,
+    );
+}
+
+/** Section G's planned speeds (m/s). */
+const ROLL_SPEEDS = [2, 3, 4] as const;
+
+/**
+ * The full roll's variant (design §6): the pass roll's speedGain, handGain, window and handWindow on the full roll's
+ * drive. The design's "window" is the shot's sharpness, which sets both pulses, so both windows are the pass roll's.
+ */
+const VARIANT = (() => {
+    const { speedGain, handGain, window, handWindow } = defaultProfile.drive["pass-roll"];
+    return { speedGain, handGain, window, handWindow };
+})();
+
+/** Coaching's full roll ratio (the roadmap's CA "Project Croquet Dynamics" band, 1.0–1.2): about 1. */
+const FULL_ROLL_BAND: readonly [number, number] = [1, 1.2];
+
+/** Section G's rows: each roll, the full roll twice (the default and the variant). */
+const G_ROWS = [
+    { label: "half roll", type: "half-roll", drive: {} },
+    { label: "full roll (default)", type: "full-roll", drive: {} },
+    { label: "full roll (variant)", type: "full-roll", drive: VARIANT },
+    { label: "pass roll", type: "pass-roll", drive: {} },
+] as const;
+
+function sectionG(): void {
+    const own = defaultProfile.drive["full-roll"];
+    console.log(
+        "== G. The full roll's hypothesis variant (P2b.2b.2c.2d design §6, §8.2; recorded, never fitted): the " +
+            "variant is the full roll with the pass roll's speedGain " +
+            `${fmt(VARIANT.speedGain)}, handGain ${fmt(VARIANT.handGain)}, window ${ms(VARIANT.window)} ms and ` +
+            `handWindow ${ms(VARIANT.handWindow)} ms (the full roll's own ${fmt(own.speedGain)}, ` +
+            `${fmt(own.handGain)}, ${ms(own.window)} ms and ${ms(own.handWindow)} ms), its own stance and ` +
+            "reach. Provenance (the roadmap's carried open item, " +
+            "the user's 2026-10-23 hypothesis): the pass roll's profile played dead straight gave ratio 1.07, a full " +
+            "roll's figure, so the full roll \"may want the pass roll's stronger push\"; an observed ratio, so " +
+            "adopting it would select a held-out stroke by its ratio. Each roll's canonical setup on the default " +
+            `world at ${ROLL_SPEEDS.join(", ")} m/s planned (strokeFor), ON_TIME, the default gap: its ratio and ` +
+            `routes, against coaching's about 1 (the CA's full roll ${fmt(FULL_ROLL_BAND[0])}–` +
+            `${fmt(FULL_ROLL_BAND[1])}) ==`,
+    );
+    const table: string[] = [];
+    let runs = 0;
+    let rejected = 0;
+    for (const row of G_ROWS) {
+        const ratios: string[] = [];
+        for (const speed of ROLL_SPEEDS) {
+            runs += 1;
+            const label = `${row.label} ${fmt(speed)} m/s`;
+            const played = play(label, () => {
+                const base = canonicalSetup(row.type, { world: WORLD, drive: row.drive });
+                return { ...base, stroke: { ...base.stroke, ...strokeFor(base, speed, WORLD) } };
+            });
+            if ("error" in played) {
+                rejected += 1;
+                ratios.push("rejected");
+                console.log(`${label}: rejected (${played.error})`);
+                continue;
+            }
+            ratios.push(fmt(played.run.routes.ratio));
+            console.log(`${label}: ${strokeText(played.run.setup)}; ${routesText(played.run)}`);
+        }
+        table.push(`${row.label} ${ratios.join(", ")}`);
+    }
+    console.log(`-- the ratio at ${ROLL_SPEEDS.join(", ")} m/s, against coaching's about 1 --`);
+    for (const line of table) {
+        console.log(line);
+    }
+    console.log(`G tally: ${runs} runs, ${rejected} rejected; ${table.join("; ")}`);
+}
+
 const SECTIONS: Readonly<Record<string, () => void>> = {
     A: sectionA,
     B: sectionB,
     C: sectionC,
     D: sectionD,
     S: sectionS,
+    E: sectionE,
+    F: sectionF,
+    G: sectionG,
 };
 
-const ALL_SECTIONS: readonly string[] = ["A", "B", "C", "D", "S"];
+const ALL_SECTIONS: readonly string[] = ["A", "B", "C", "D", "S", "E", "F", "G"];
 
 if (SECTION !== "all" && SECTIONS[SECTION] === undefined) {
     throw new Error(`SECTION must be "all" or one of ${Object.keys(SECTIONS).join(", ")}`);

@@ -33,7 +33,13 @@ import { dot, horizontal, length, sub, type Vec3 } from "../src/engine/math/vec3
 import { simulateFreeMotion } from "../src/engine/simulate";
 import { handsAheadFor, headShapeOf, planStroke, stanceLean } from "../src/engine/swing/buildContact";
 import { defaultProfile } from "../src/engine/swing/profile";
-import { CROQUET_STROKES, type ShotSetup, type StrokeType, type SwingProfile } from "../src/engine/swing/types";
+import {
+    CROQUET_STROKES,
+    type ShotSetup,
+    type StrokeTiming,
+    type StrokeType,
+    type SwingProfile,
+} from "../src/engine/swing/types";
 import { BALL_IDS, type BallState, type ShotResult, type World } from "../src/engine/types";
 import { defaultWorld } from "../src/engine/world";
 import { contactReference, ratioTargetsReference, type RatioTargetKey } from "../src/reference/index";
@@ -677,8 +683,10 @@ function solveGugansMallet(type: StrokeType, speed: number, world: World): Swing
 /**
  * `type`'s canonical setup on `world` (default `defaultWorld()`) at `gap` (m): the croqueted ball's gap for a croquet
  * stroke, else the target's (`targetGap`, default `gap`), with Gugan's mallet (gugansMallet) when `gugan` is true, the
- * stroke's `guideEffort` and `jab` where given, and the stroke for `speed` (m/s): strokeFor's planned speed, or with
- * `contactSpeed` the stroke whose head meets the ball at it (strokeForContact). The stance (P2b.2b.2c.2d design
+ * stroke's `guideEffort`, `jab`, `timing` and `drive` (the magnitude) where given, and the stroke for `speed` (m/s):
+ * strokeFor's planned speed, or with `contactSpeed` the stroke whose head meets the ball at it (strokeForContact), so
+ * that a pulse begun before contact is met at the ball. Gugan's mallet is solved on the preset's own stroke, its
+ * timing and drive the canonical ones, as it is at the preset's own stance. The stance (P2b.2b.2c.2d design
  * §3.5) applies after the mallet, so Gugan's mallet stays the one solved at the preset's own stance: `up` (m) the
  * contact's height; `grips` the stroke type whose stance's bottom hand, grip tension and bottom grip replace the
  * preset's; then, last, `lean` (rad, forward positive) the shaft's lean at contact, set as the stance's handsAhead
@@ -698,6 +706,8 @@ export function guganSetup(
         readonly up?: number;
         readonly grips?: StrokeType;
         readonly contactSpeed?: boolean;
+        readonly timing?: StrokeTiming;
+        readonly drive?: number;
     } = {},
 ): ShotSetup {
     const world = o.world ?? defaultWorld();
@@ -713,6 +723,8 @@ export function guganSetup(
             stroke: {
                 ...(o.guideEffort === undefined ? {} : { guideEffort: o.guideEffort }),
                 ...(o.jab === undefined ? {} : { jab: o.jab }),
+                ...(o.timing === undefined ? {} : { timing: o.timing }),
+                ...(o.drive === undefined ? {} : { drive: o.drive }),
             },
         }),
         o,
