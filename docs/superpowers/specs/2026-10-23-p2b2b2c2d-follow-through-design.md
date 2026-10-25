@@ -570,3 +570,39 @@ read; the probes' layout and their section letters; the tests' names and files.
       solved at the previous −4° stance (head 0.9065 kg); solved at −6° (head 0.8914 kg) the same stance gives 7.339.
       The stop's calibration against Gugan 5 therefore moves with the stance, and the slow test holds 6.66 at −5° and
       −22.5 mm.
+- **Gate 2b (2026-10-25): the checks** (rulings verbatim as the option chosen; figures in
+  `docs/superpowers/probes/2026-10-25-p2b2b2c2d-checks.txt`, sections A and H–O, with swingProbe's late re-hit):
+    - **A, the follow-through grid at the new defaults: "Accept, record (Recommended)".** No default changes. Of 75
+      runs, 6 of 15 preset-window rows are monotonic in the magnitude (5 at stage 1); the rolls' flat, non-monotonic
+      response and the taps' shares' sum missing 1 + v₂/w₁ by more than 1 % on the rolls are recorded.
+    - **H, Gugan 5's drive and stop: "Accept (Recommended)".** Both calibration targets lie in their bands: the drive
+      4.2947, the stop 6.6610 at jab 0, rising to 7.2213 at 6.5 mm. The stop's distance from 7.15 is the cost of the
+      no-damage stance; a jab's dig into the turf is a recorded consequence.
+    - **I, the user's roll hypotheses: "Record, carry to 2c.3 (Recommended)".** At 2, 2.5, 3, 3.5 and 4 m/s the full
+      roll gives 2.05, 2.08, 1.86, 1.82 and 1.86, and section G's variant 1.18, 1.11, 1.13, 1.18 and 1.22, support
+      for the user's hypothesis; the pass roll 0.61 to 0.96, and 1.03 played dead straight. At 10° and 20° off aim
+      the split at rest is 14.4° and 28.6°, the striker's ball's share of it 0.34. Nothing changes.
+    - **J, Gugan's jab qualifier: "Keep .fails, record (Recommended)".** On the coupled dip none of the 17 jab depths
+      qualifies: the second tap comes at about 1.05 ms and the head grounds after it, at 16.5 ms with no jab and
+      10.8 ms at 8 mm, going `impact-head-deep` from 2 mm. The test keeps `.fails` and the qualifier stays open.
+    - **K, super pass-rolls: "Record, carry to 2c.3 (Recommended)".** A partial emergence: at magnitude +1 and
+      MIN_WINDOW the second tap comes 2.33 ms after the first (2.59 ms canonical) with 0.29 of its impulse (0.21),
+      the ratio 1.08 (0.88), and no re-contact after the parting. Carried to P2b.2b.2c.3's recruitment law.
+    - **L, the push's cap: "Record, carry to 2c.3 (Recommended)".** No roll's push intent reaches `pushForce`
+      92.2 N: the peaks are 16.7, 15.8 and 25.8 N (half, full and pass), acting for 66 to 83 ms. The headroom is
+      carried to the recruitment law.
+    - **M, the strike's window: "Keep 15 ms, record (Recommended)".** Asked twice: the first wording wrongly said
+      that contacts after the window are judged as re-contacts; `STRIKE_WINDOW` (`scripts/ratioFit.ts`) only sets
+      when the ratio is read. Re-asked with the correction, the user gave the same answer. On section A's grid 9
+      runs have a contact straddling the window's end and 42 one beginning beyond it (the earliest at 15.025 ms, a
+      pass roll); section B's sweeps have none straddling.
+    - **N, step convergence: "Record as converged (Recommended)".** The canonical AC stop gives 5.7349, 5.7352 and
+      5.6551 at dt/2, dt and 2·dt, a miss at 0.1334 of the tolerance, but dt/2 and dt agree to 0.0003. The 2·dt
+      run's later turf touch (17.04 against 16.48 ms) coincides with the departure; that is a correlation, not
+      traced as the cause. No step digs or yields the soil. The drive at 1 mm, 0.1012, is the known `.fails`; 8 of
+      the 10 rows pass.
+    - **O, every preset top to finish: "Carry to 2c.3 (Recommended)".** All 7 canonical setups lie within ±2 % of
+      3 m/s at the planned speed (no default has an early pulse), with no findings. The late re-hit: no canonical
+      run crosses a ball, the sweeps' crossings graze by at most 0.105 mm, and none overlaps a ball at the impact's
+      end. The full and pass rolls' canonical follow-throughs raise `follow-turf-yield` and `follow-head-deep`; the
+      no-damage rule is applied to the rolls' follow-through in P2b.2b.2c.3.
