@@ -20,7 +20,8 @@
  *   the grips are the prototype's calibration (proto-two-hands, aeadd4c).
  * - Drive: the prototype's calibration (aeadd4c), compared with the coaching ratios only as observations (design §9);
  *   the AC stop's dip depth is a user decision (2026-10-05). Every preset's guideEffort is 1, the full restoration of
- *   the arc's speed a full shot aims at; a softer shot uses less, a very soft one none (user's account, 2026-10-06).
+ *   the arc's speed a full shot aims at, except the drive's 0.75; a softer shot uses less, a very soft one none
+ *   (user's account, 2026-10-06).
  *   P2b.2b.2 sets the per-type defaults; the P4 planner chooses it per shot.
  * - Shape (P2b.2b.2a design §5.3): reference/swing.json, sourced or labelled placeholders, its defaults fitted by
  *   scripts/fitStrokeShape.ts. The rolls read the hands' tempo, frozen at engine 0.12.0's fit (P2b.2b.2c.1 design
@@ -134,7 +135,10 @@ const DRIVE: Readonly<Record<StrokeType, SwingDrive>> = {
         handArcLow: 0.5,
     },
     // As single-ball over a 5 ms window: the follow-through rises and dies by itself, and the head catches the
-    // striker's ball again (prototype).
+    // striker's ball again (prototype). User decision 2026-10-25: the guide's effort 0.75, the largest on a 0.25 grid
+    // after which nothing re-contacts the ball once it has parted. At 1 the head returns to it 96.4 ms after contact
+    // (+49 % on its speed, a possible 29.1.6.1) and the ratio is 2.435; at 0.75 it is 3.753 (Gugan 5's drive, at 0,
+    // 4.295).
     drive: {
         mode: "swing",
         speedGain: 0.2,
@@ -144,7 +148,7 @@ const DRIVE: Readonly<Record<StrokeType, SwingDrive>> = {
         handDrop: 0,
         dropTime: 0.01,
         handReach: 0,
-        guideEffort: 1,
+        guideEffort: 0.75,
         pendulumAt: 0.8,
         pendulumEffort: 0,
         handArcRadius: 1.5,

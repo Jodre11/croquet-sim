@@ -397,6 +397,13 @@ describe("simulateShot", () => {
         expect(simulateShot(setup).faults.findings.map((f) => f.law)).not.toContain("29.1.14");
     });
 
+    it("raises no 29.1.6.1 on the canonical drive: its follow-through does not catch the ball again", () => {
+        // At the guide's full effort the head returns to the striker's ball 96.4 ms after contact (+49 % on its speed,
+        // a possible 29.1.6.1); at 0.75 nothing re-contacts it after the parting.
+        const outcome = simulateShot(canonicalSetup("drive"));
+        expect(outcome.faults.findings.map((f) => f.law)).not.toContain("29.1.6.1");
+    });
+
     it("ends a gentle tap before the cap", () => {
         // Review focus 1. Prototype: a 0.1 m/s tap ends at 10 ms, the pendulum's window.
         const kinds = simulateShot(
