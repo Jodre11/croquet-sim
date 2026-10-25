@@ -32,8 +32,10 @@ const at = (x: number, y: number): BallState => ({ position: vec3(x, y, R), velo
 
 /**
  * The jabs (m) at which the canonical AC stop's box grounds its heel (P2b.2b.2b.3 design §6.1, §7.5): the shallowest
- * on time whose head meets the turf after the ball, and the shallowest whose dip 30 ms early meets it before the ball
+ * on time whose head meets the turf after the ball, and the shallowest whose dip 30 ms early met it before the ball
  * (plan Task 6 Step 5, 2026-10-16). They close the mallet's ruling B follow-up: the canonical AC stop clears the turf.
+ * P2b.2b.2c.2d: the planner includes a croquet stroke's dip (was: J_EARLY's early dip met the turf before the ball),
+ * so J_EARLY's early dip no longer meets the turf at all (gate 1, "Keep it planned (Recommended)").
  */
 const J_ON = 0.002;
 const J_EARLY = 0.004;
@@ -703,12 +705,10 @@ describe("the mechanisms (design §8.1), on the canonical setups", () => {
         // Along the lawn (user ruling 2026-10-17): full speed is not slower, because the heel's touch also lifts the
         // ball (vertical 0.238 m/s against 0.059 on time), which the full speed counts as faster (1.5721 against
         // 1.5677 m/s).
-        // P2b.2b.2c.2d: the minimum-jerk pulse (was 1.34257 against 1.34340 m/s): early 1.35046 against 1.34911 m/s,
-        // faster. The check's deceleration now builds from zero at contact, so less of it acts in the ball contact;
-        // the early run's larger gain is untraced. The user's ruling of 2026-10-17 goes back to the gate.
-        // P2b.2b.2c.2d: the planner includes a croquet stroke's dip (was it.fails, early 1.35046 against 1.34911 m/s):
-        // early 1.34586 against 1.34934 m/s, with no turf strike; the vertical 0.2142 against 0.0751 m/s; the cause of
-        // the ordering is untraced, and the user's ruling of 2026-10-17 goes back to the gate.
+        // P2b.2b.2c.2d: the minimum-jerk pulse and the planner including a croquet stroke's dip (was 1.34257 against
+        // 1.34340 m/s, slower): early 1.34586 against 1.34934 m/s, slower, with no turf strike; the vertical 0.2142
+        // against 0.0751 m/s; the cause of the ordering is untraced. Gate 1 ruled "Keep it planned (Recommended)": a
+        // mistimed early dip on a croquet stroke shows in the speed, not by grounding.
         const along = (impact: ImpactResult): number => {
             const { x, y } = (impact.handover.blue as BallState).velocity;
             return Math.hypot(x, y);

@@ -983,7 +983,10 @@ export interface PathPoint {
 function freeOf(track: PreparedTrack, past: boolean): FreePendulum {
     const { free } = track;
     if (free === null || (past && free.pulseOnly)) {
-        throw new Error("the free pendulum's table was read, but prepareTrack skipped it (withFree false)");
+        throw new Error(
+            "the free pendulum's table was read past the window's end, but prepareTrack tabulated it through the pulse " +
+                "only (withFree false) or not at all (carry mode)",
+        );
     }
     return free;
 }

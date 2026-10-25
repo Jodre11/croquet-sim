@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ZERO, vec3 } from "../../../src/engine/math/vec3";
+import { ZERO, vec3, type Vec3 } from "../../../src/engine/math/vec3";
 import { closeFace, faceContactTimeAt, lawFromContactTime } from "../../../src/engine/impact/contactLaw";
 import { faceClearance } from "../../../src/engine/impact/contacts";
 import { IMPACT_DT, integrate, type ImpactObstacle, type ImpactSnapshot } from "../../../src/engine/impact/integrate";
@@ -7,10 +7,12 @@ import { IDENTITY } from "../../../src/engine/impact/rigidBody";
 import { closeTimeline, emptyTimeline, inGap, noteClearance, recordStep } from "../../../src/engine/impact/timeline";
 import { staticSink } from "../../../src/engine/impact/turfBed";
 import type { ContactInterval, HeadState } from "../../../src/engine/impact/types";
+import { simulateShot } from "../../../src/engine/shot";
 import type { BallState } from "../../../src/engine/types";
 import { STANDARD_GRAVITY } from "../../../src/engine/world";
 import { TEST_BALL } from "../support/fixtures";
 import { TEST_HEAD, TEST_RHO, faceLaw, freeBall, isolated, recorder, testBed } from "../support/impact";
+import { canonicalSetup } from "../support/shot";
 
 const R = TEST_BALL.radius;
 const M = TEST_BALL.mass;
@@ -213,5 +215,32 @@ describe("the integrator's timeline", () => {
             { cap: 1e-5 },
         );
         expect(run.touchingAtStart).toEqual(["blue/red", "blue@post"]);
+    });
+
+    it("records every face interval's clearance after, impulse and velocities on the canonical croquet strokes", () => {
+        // R27 (P2b.2b.2c.2d final review): the fault judge reads an absent clearance as 0, which merges, and an absent
+        // record as no impulse from rest; only hand-built timelines may lack them. The last interval has no gap after.
+        let gaps = 0;
+        for (const type of ["drive", "stop-ac", "pass-roll"] as const) {
+            const { timeline } = simulateShot(canonicalSetup(type)).impact;
+            const faces = Object.entries(timeline).filter(([key]) => key.startsWith("face/"));
+            expect(faces.length, type).toBeGreaterThan(0);
+            for (const [key, intervals] of faces) {
+                intervals.forEach((interval, i) => {
+                    const name = `${type} ${key} [${i}]`;
+                    if (i < intervals.length - 1) {
+                        expect(Number.isFinite(interval.clearanceAfter), name).toBe(true);
+                        gaps++;
+                    }
+                    const { impulse, velocities } = interval;
+                    for (const v of [impulse, velocities?.before, velocities?.after]) {
+                        expect(v, name).toBeDefined();
+                        const { x, y, z } = v as Vec3;
+                        expect([x, y, z].every(Number.isFinite), name).toBe(true);
+                    }
+                });
+            }
+        }
+        expect(gaps).toBeGreaterThan(0);
     });
 });

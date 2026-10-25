@@ -209,9 +209,9 @@ describe("a tracked head with no ball", () => {
         }
     });
 
-    it("checks a head the strike has slowed to rest with the path, at the window's end and never past it", () => {
+    it("checks a head the strike has slowed at half the path's rate to the window's end, never past rest", () => {
         // User decision (2026-10-06): a check brakes the head to rest, not past it. A head pitching at half the path's
-        // rate from contact gets half the planned deceleration, so it keeps half the path's rate and rests with it.
+        // rate from contact gets half the planned deceleration, so it keeps half the path's rate through the window.
         const check: SwingArc = { ...COAST, alpha: -COAST.omega0 / COAST.window };
         const track = prepare(check, TEST_COUPLING, ARMED);
         const slowed = prepare({ ...check, omega0: check.omega0 / 2, alpha: 0 }, TEST_COUPLING, ARMED);
@@ -232,11 +232,11 @@ describe("a tracked head with no ball", () => {
         const start = headOnPath(slowed, TEST_HEAD, 0);
         integrate(isolated({ start, drive: track, gravity: STANDARD_GRAVITY }), { probe, cap: check.window });
         // From 1.875 rad/s; the planned deceleration alone left it at −0.832 rad/s, past rest. P2b.2b.2c.2d: the
-        // minimum-jerk pulse's α falls to 0 at the window's end, removing semi-implicit Euler's O(dt·a) lag there, and
-        // the head ends at a second-order residual of the other sign: a drift of 2.06e-4 in the share and a last (and
-        // lowest) rate of −9.67e-10 rad/s (was 2.5e-4 and +1.13e-8, the lag leaving it short of rest).
-        // Numerical, not physical: the integrator's residual allowed below rest, ten times the measured one and
-        // eight orders of magnitude below the start's 1.875 rad/s, so a braking past rest still fails.
+        // minimum-jerk pulse and gravity through it (was a drift of 2.5e-4 in the share and a last rate of +1.13e-8
+        // rad/s, the lag leaving it short of rest): a drift of 1.37e-5, and the head never nearer rest than 0.016555
+        // rad/s, its lowest rate, just before the window's end.
+        // Numerical, not physical: an allowance below rest for the integrator's residual, from when the head ended at
+        // rest; eight orders of magnitude below the start's 1.875 rad/s, so a braking past rest still fails.
         const RESIDUAL = 1e-8;
         expect(drift).toBeLessThan(5e-4);
         expect(lowest).toBeGreaterThanOrEqual(0 - RESIDUAL);

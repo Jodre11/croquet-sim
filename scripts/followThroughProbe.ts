@@ -15,7 +15,8 @@
  *   along aim and the striker's ball's speed every 1 ms from first contact to 120 ms, at its own guideEffort and at 0.
  * - D. the re-contacts' spread (§7): every face gap after the first contact over the 950-run grid and section A's grid,
  *   its separation, duration and side of the parting, each after-parting interval's effect alone; quantiles; and the
- *   count flagged per preset for each set of thresholds (groupReContacts).
+ *   count flagged per preset for each set of thresholds (groupReContacts), by the ball's velocity change over the
+ *   group's span (the judge's) and, beside it, by the face's impulse alone (final review I-1, Ruling R46).
  * - S. the stance sweep (§3.5): the AC stop and the drive as Gugan 5's strokes across leans −8° to +4°, at their own
  *   grips and at the other's, each turf-limited lean printed and not played; then the canonical drive across the leans.
  * Stage 2's candidates (§6):
@@ -41,7 +42,8 @@
  * Run with `npx --yes tsx scripts/followThroughProbe.ts`; environment: SECTION (a letter, a comma-separated list of
  * letters, run in that order, or `all`; default all),
  * B_SMOKE (any value: section B on jab 0, window ×1, magnitude −1 and onsets −20, −10, 0 and +5 ms only, a smoke run)
- * and E_SMOKE (any value: section E on magnitude −1 and onsets −10 and 0 ms only).
+ * E_SMOKE (any value: section E on magnitude −1 and onsets −10 and 0 ms only) and D_SMOKE (any value: section D on
+ * every croquet preset's canonical run only, without the digest grid and section A's grid).
  * Not part of the test suite.
  */
 import { faceKey, HEAD_TURF_KEY } from "../src/engine/impact/contacts";
@@ -49,13 +51,17 @@ import { IMPACT_DT } from "../src/engine/impact/integrate";
 import { simulateImpact } from "../src/engine/impact/simulateImpact";
 import type { ContactInterval, ImpactResult } from "../src/engine/impact/types";
 import {
+    EFFECT_ANGLE,
+    EFFECT_SPEED,
+    MERGE_SEPARATION,
     groupReContacts,
     judgeFaults,
     type FaultReport,
     type ReContact,
     type ReContactThresholds,
 } from "../src/engine/faults";
-import { vec3, type Vec3 } from "../src/engine/math/vec3";
+import { atan2 } from "../src/engine/math/elementary";
+import { add, cross, dot, horizontal, length, scale, vec3, type Vec3 } from "../src/engine/math/vec3";
 import { simulateShot, strokeContext } from "../src/engine/shot";
 import { simulateFreeMotion } from "../src/engine/simulate";
 import { MIN_WINDOW, planStroke, plannedSpeed } from "../src/engine/swing/buildContact";
@@ -620,6 +626,125 @@ function flagged(run: Judged, thresholds: ReContactThresholds): boolean {
     return groupReContacts(run.faces, run.parted, thresholds).some((r) => r.fault);
 }
 
+/** The ruled thresholds (reference/laws.json, 29.2.5), which judgeFaults applies. */
+const RULED: ReContactThresholds = {
+    mergeSeparation: MERGE_SEPARATION,
+    effectSpeed: EFFECT_SPEED,
+    effectAngle: EFFECT_ANGLE,
+};
+
+/** The default world's ball's mass (kg), by which the mallet-alone measure turns the face's impulse into Δv. */
+const BALL_MASS = WORLD.ball.mass;
+
+/** A re-contact's effect: the speed's change as a fraction and the change in horizontal direction (degrees). */
+interface Effect {
+    readonly speedChange: number;
+    readonly angleChange: number;
+}
+
+/**
+ * The effect from velocity `before` to `after` (m/s), as faults.ts's effectOf measures it: restated here, so that the
+ * second measure leaves the engine's judge unchanged (Ruling R46).
+ */
+function effectBetween(before: Vec3, after: Vec3): Effect {
+    const from = length(before);
+    const speedChange = from === 0 ? Infinity : (length(after) - from) / from;
+    const a = horizontal(before);
+    const b = horizontal(after);
+    if (length(a) === 0 || length(b) === 0) {
+        return { speedChange, angleChange: 0 };
+    }
+    return { speedChange, angleChange: (atan2(Math.abs(cross(a, b).z), dot(a, b)) * 180) / Math.PI };
+}
+
+/**
+ * Re-contact `r` among `faces` by the mallet-alone measure (final review I-1, Ruling R46): the striker's ball's velocity
+ * after is its velocity before plus the face's impulse over the group over BALL_MASS, so the turf's and the other
+ * balls' forces over the group's span are left out; `fault` as judgeFaults decides it under `thresholds`. Without the
+ * face's record, from rest, as the judge reads it.
+ */
+function malletAlone(
+    faces: readonly ContactInterval[],
+    r: ReContact,
+    thresholds: ReContactThresholds,
+): Effect & { readonly fault: boolean } {
+    const before = faces.find((f) => f.start === r.start)?.velocities?.before;
+    if (before === undefined) {
+        return { speedChange: Infinity, angleChange: 0, fault: true };
+    }
+    const effect = effectBetween(before, add(before, scale(r.impulse, 1 / BALL_MASS)));
+    const fault =
+        Math.abs(effect.speedChange) >= thresholds.effectSpeed || effect.angleChange >= thresholds.effectAngle;
+    return { ...effect, fault };
+}
+
+/** Whether a judged run raises 29.1.6.1 under `thresholds` by the mallet-alone measure; otherwise as flagged. */
+function flaggedAlone(run: Judged, thresholds: ReContactThresholds): boolean {
+    if (run.parted === null) {
+        return run.faces.length >= 2;
+    }
+    const { faces, parted } = run;
+    return groupReContacts(faces, parted, thresholds).some((r) => malletAlone(faces, r, thresholds).fault);
+}
+
+/**
+ * The two effect measures compared at the ruled thresholds (final review I-1): the count flagged per preset by each,
+ * the runs whose verdicts differ, and the largest differences in a re-contact's speed fraction and angle between them.
+ */
+function measuresText(name: string, runs: readonly Judged[]): string {
+    const span = CROQUET_STROKES.map((type) => runs.filter((r) => r.type === type && flagged(r, RULED)).length);
+    const alone = CROQUET_STROKES.map((type) => runs.filter((r) => r.type === type && flaggedAlone(r, RULED)).length);
+    const differ = runs.filter((r) => flagged(r, RULED) !== flaggedAlone(r, RULED));
+    const total = (xs: readonly number[]): number => xs.reduce((a, b) => a + b, 0);
+    const byType = (type: StrokeType): number => differ.filter((r) => r.type === type).length;
+    return (
+        `-- ${name}: the two effect measures at the ruled thresholds (${mm(RULED.mergeSeparation)} mm, ` +
+        `${pct(RULED.effectSpeed)} %, ${fmt(RULED.effectAngle)}°) --\n` +
+        `flagged by the ball's velocity change over the group's span (judgeFaults): ${span.join("/")} ` +
+        `(${total(span)})\n` +
+        `flagged by the face's impulse alone over the ball's mass: ${alone.join("/")} (${total(alone)})\n` +
+        `runs whose verdicts differ: ${differ.length} (${CROQUET_STROKES.map(byType).join("/")})\n` +
+        `re-contacts at the ruled thresholds: ${deltaText(runs, RULED)}\n` +
+        `each after-parting interval alone (every threshold 0): ${deltaText(runs, ALONE)}`
+    );
+}
+
+/**
+ * The re-contacts of `runs` grouped by `thresholds`, compared by the two measures: how many have a finite speed
+ * fraction under both, and the largest |Δ speed fraction| (with where it falls) and |Δ angle| between the measures.
+ */
+function deltaText(runs: readonly Judged[], thresholds: ReContactThresholds): string {
+    let compared = 0;
+    let largestSpeed = 0;
+    let largestAngle = 0;
+    let where = "none";
+    for (const run of runs) {
+        if (run.parted === null) {
+            continue;
+        }
+        for (const r of groupReContacts(run.faces, run.parted, thresholds)) {
+            const m = malletAlone(run.faces, r, thresholds);
+            if (!Number.isFinite(r.speedChange) || !Number.isFinite(m.speedChange)) {
+                continue;
+            }
+            compared += 1;
+            const d = Math.abs(m.speedChange - r.speedChange);
+            if (d > largestSpeed) {
+                largestSpeed = d;
+                where =
+                    `${run.type}, ${ms(r.afterParting)} ms after the parting, ${r.intervals} intervals over ` +
+                    `${ms(r.end - r.start)} ms: ${pct(r.speedChange)} % over the span, ${pct(m.speedChange)} % by ` +
+                    "the impulse";
+            }
+            largestAngle = Math.max(largestAngle, Math.abs(m.angleChange - r.angleChange));
+        }
+    }
+    return (
+        `${compared} compared, the largest |Δ speed fraction| ${pct(largestSpeed)} % (${where}), ` +
+        `the largest |Δ angle| ${fmt(largestAngle)}°`
+    );
+}
+
 /**
  * A grid's spread and what-if table (design §7); the count flagged at every threshold 0. Like flagged, it reads every
  * face interval rather than the non-exempt ones judgeFaults groups, which agree on these grids (see flagged).
@@ -676,24 +801,40 @@ function spreadOf(name: string, runs: readonly Judged[]): number {
             "MERGE_SEPARATION (rows, mm) and EFFECT_SPEED (columns, %), one table per EFFECT_ANGLE (°) --",
     );
     let placeholders = 0;
+    let cellsDiffering = 0;
     for (const angle of ANGLES) {
         console.log(`EFFECT_ANGLE ${fmt(angle)}°: columns EFFECT_SPEED ${SPEEDS.map(pct).join(", ")} %`);
         for (const merge of MERGES) {
+            const aloneCells: string[] = [];
             const cells = SPEEDS.map((speed) => {
                 const thresholds = { mergeSeparation: merge, effectSpeed: speed, effectAngle: angle };
                 const counts = CROQUET_STROKES.map(
                     (type) => runs.filter((r) => r.type === type && flagged(r, thresholds)).length,
                 );
+                const alone = CROQUET_STROKES.map(
+                    (type) => runs.filter((r) => r.type === type && flaggedAlone(r, thresholds)).length,
+                ).join("/");
+                aloneCells.push(alone);
                 if (merge === 0 && speed === 0 && angle === 0) {
                     placeholders = counts.reduce((a, b) => a + b, 0);
                 }
+                cellsDiffering += alone === counts.join("/") ? 0 : 1;
                 return counts.join("/");
             });
             console.log(`  MERGE_SEPARATION ${mm(merge)} mm: ${cells.join(" | ")}`);
+            console.log(`    by the face's impulse alone: ${aloneCells.join(" | ")}`);
         }
     }
+    console.log(
+        `${cellsDiffering} of ${ANGLES.length * MERGES.length * SPEEDS.length} what-if cells differ between the ` +
+            "two effect measures",
+    );
+    console.log(measuresText(name, runs));
     return placeholders;
 }
+
+/** Section D's smoke run (D_SMOKE): every croquet preset's canonical run only. */
+const D_SMOKE = process.env.D_SMOKE !== undefined;
 
 function sectionD(): void {
     console.log(
@@ -706,13 +847,16 @@ function sectionD(): void {
             "threshold 0: the striker's ball's speed change, |%|, and direction change, °); quantiles; then the " +
             "what-if table (groupReContacts at each threshold set) ==",
     );
+    if (D_SMOKE) {
+        console.log("D_SMOKE: every croquet preset's canonical run only; no digest grid, no section A grid");
+    }
     const grid: Judged[] = [];
     let total = 0;
     let rejected = 0;
     for (const type of CROQUET_STROKES) {
         const runs = [
             { label: `${type} canonical`, build: () => canonicalSetup(type, { world: WORLD }) },
-            ...digestGrid(type, WORLD),
+            ...(D_SMOKE ? [] : digestGrid(type, WORLD)),
         ];
         for (const { label, build } of runs) {
             total += 1;
@@ -728,7 +872,7 @@ function sectionD(): void {
     }
     console.log(`the grid: ${total} runs, ${rejected} rejected, ${grid.length} judged (the 950-run grid)`);
     const followed: Judged[] = [];
-    for (const { type, played } of followGrid()) {
+    for (const { type, played } of D_SMOKE ? [] : followGrid()) {
         if ("run" in played) {
             const { run } = played;
             followed.push(judgedOf(type, run.setup, run.impact, run.faults));

@@ -363,8 +363,12 @@ describe("the swing path", () => {
         for (const t of [-0.01, 0, arc.arcStart, 0.02, tw]) {
             expect(pathAt(bare, t), `t ${t}`).toEqual(pathAt(full, t));
         }
-        expect(() => pathAt(bare, tw + 1e-6)).toThrow(/prepareTrack skipped it/);
-        expect(() => holdPendulum(bare, tw)).toThrow(/prepareTrack skipped it/);
+        expect(() => pathAt(bare, tw + 1e-6)).toThrow(
+            /past the window's end, but prepareTrack tabulated it through the pulse/,
+        );
+        expect(() => holdPendulum(bare, tw)).toThrow(
+            /past the window's end, but prepareTrack tabulated it through the pulse/,
+        );
     });
 
     it("gives each grip its gains: firm, the top hand's γ_T and the bottom hand's g_B", () => {
