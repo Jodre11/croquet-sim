@@ -293,13 +293,15 @@ export interface ImpactSnapshot {
     /**
      * A tracked drive's F, its feed-forward parts and each hand's force (P2b.2b.1 design §3.7); absent otherwise. In
      * carry mode once the flex has taken hold, also each hand–arm chain's masses after the step (gate round 3 ruling,
-     * 2026-10-11; the bottom's null once it has let go).
+     * 2026-10-11; the bottom's null once it has let go). Through a carry's push, also the push intent within the
+     * feed-forward (HandLoad's `intent`), absent where it is nil.
      */
     readonly hand?: {
         readonly force: Vec3;
         readonly feedForward: Vec3;
         readonly top: Vec3;
         readonly bottom: Vec3;
+        readonly intent?: Vec3;
         readonly chains?: { readonly top: ArmChainState | null; readonly bottom: ArmChainState | null };
     };
     /** The turf's total force on the head (zero while the pair is open); absent without the head–turf pair. */
@@ -1284,6 +1286,7 @@ export function integrateStroke(setup: ImpactSetup, options: ImpactOptions = {},
                                         feedForward: hand.feedForward,
                                         top: hand.top,
                                         bottom: hand.bottom,
+                                        ...(hand.intent === undefined ? {} : { intent: hand.intent }),
                                         ...chainsOf(grip),
                                     },
                                 }),

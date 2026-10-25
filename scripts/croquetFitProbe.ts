@@ -97,7 +97,7 @@ import { add, cross, dot, horizontal, length, scale, sub, vec3, type Vec3 } from
 import { judgeFaults, type StrikeTaps } from "../src/engine/faults";
 import { CROQUET_GAP_LIMIT, strokeContext } from "../src/engine/shot";
 import { simulateFreeMotion } from "../src/engine/simulate";
-import { buildContact, planStroke } from "../src/engine/swing/buildContact";
+import { planStroke } from "../src/engine/swing/buildContact";
 import { defaultProfile } from "../src/engine/swing/profile";
 import { CROQUET_STROKES, type ShotSetup } from "../src/engine/swing/types";
 import { BALL_IDS, type BallId, type BallState, type World } from "../src/engine/types";
@@ -127,6 +127,8 @@ import {
     CA_STROKES,
     GAPPED_STROKES,
     GUGAN_EFFECTIVE_MASS,
+    JAB_BAND,
+    JAB_DEPTHS,
     READ_DELAY,
     STEP_SHARES,
     STRIKE_WINDOW,
@@ -140,6 +142,7 @@ import {
     guganRatio,
     guganSetup,
     gugansMallet,
+    jabCheck,
     meansOf,
     ratioOf,
     readOut,
@@ -2680,9 +2683,6 @@ function sectionIOld(): void {
 /** The gaps (m) of design §7.2: 0, 0.25, 0.5, 1.0, 1.5 and 1.9 mm. */
 const GUGAN_GAPS = [0, 0.25, 0.5, 1, 1.5, 1.9].map((g) => g * 1e-3);
 
-/** The AC stop's jab depths (m) of design §7.2, as the jab test sweeps them: 0 to 8 mm in 0.5 mm steps. */
-const JAB_DEPTHS = Array.from({ length: 17 }, (_, k) => k * 0.0005);
-
 /**
  * The world as played (the ball–ball restitution from the CA's video) and a variant with Gugan 5's Dawson
  * Internationals' restitution, for the checks to repeat on. The variant is never adopted.
@@ -3023,9 +3023,6 @@ function sectionL(): void {
     }
 }
 
-/** The jab test's band for the second tap's mallet speed over U (tests/engine/turfStrike.test.ts). */
-const JAB_BAND = [0.295, 0.463] as const;
-
 /** One face–ball contact of a run: its interval (s) and the head regions that touched during it. */
 interface FaceContact {
     readonly start: number;
@@ -3072,59 +3069,9 @@ function sectionM(): void {
             "face region's first " +
             "and second intervals' starts --",
     );
-    const fractions: number[] = [];
-    for (const jab of JAB_DEPTHS) {
-        const base = canonicalSetup("stop-ac", { world, croquetGap: DEFAULT_CROQUET_GAP, stroke: { jab } });
-        const setup = { ...base, stroke: { ...base.stroke, backswing: backswingFor(base, GUGAN5.speed, world) } };
-        const contact = buildContact(setup, world);
-        if (contact.drive.kind !== "track") {
-            throw new RangeError("the AC stop's contact has no tracked drive");
-        }
-        const { aim } = contact.drive.arc;
-        const speeds: number[] = [dot(contact.velocity, aim)];
-        const probe: ImpactProbe = {
-            step: (s) => {
-                speeds.push(dot(s.head.velocity, aim));
-            },
-        };
-        const impact = simulateImpact(contact, setup.balls, world, { probe });
-        const speed = (t: number): number => speeds[Math.round(t / IMPACT_DT)] as number;
-        const face = impact.headRegions?.[`${faceKey(setup.striker)}#face`] ?? [];
-        const first = face[0];
-        if (first === undefined) {
-            console.log(`jab ${mm(jab)} mm: no face-region interval (skipped by the test)`);
-            continue;
-        }
-        const second = face[1];
-        const grounds = impact.timeline["head/turf"]?.[0]?.start;
-        const qualifies =
-            grounds !== undefined && grounds >= first.start && (second === undefined || grounds < second.start);
-        const deep = impact.events.some((e) => e.kind === "impact-head-deep");
-        const fraction = (second === undefined ? 0 : speed(second.start)) / speed(first.start);
-        const counted = qualifies && !deep;
-        if (counted) {
-            fractions.push(fraction);
-        }
-        const tap =
-            second === undefined ? "none (counts 0)" : `${fmt(speed(second.start))} m/s at ${ms(second.start)} ms`;
-        const ground = grounds === undefined ? "never" : `${ms(grounds)} ms`;
-        const inBand = fraction >= JAB_BAND[0] && fraction <= JAB_BAND[1];
-        console.log(
-            `jab ${mm(jab)} mm: ${face.length} face-region interval(s), U ${fmt(speed(first.start))} m/s at ` +
-                `${ms(first.start)} ms, second tap ${tap}, head/turf grounds ${ground}, fraction ${fmt(fraction)}; ` +
-                `${qualifies ? "qualifies" : "does not qualify"}${deep ? ", impact-head-deep" : ""}: ` +
-                `${counted ? `counted, ${verdict(inBand)}` : "not counted"}`,
-        );
+    for (const line of jabCheck(world).lines) {
+        console.log(line);
     }
-    const allInBand = fractions.every((f) => f >= JAB_BAND[0] && f <= JAB_BAND[1]);
-    const testPasses = fractions.length > 0 && allInBand;
-    console.log(
-        `jab test: ${fractions.length} counted depth(s)` +
-            (fractions.length === 0
-                ? ""
-                : `, fractions ${fmt(Math.min(...fractions))} to ${fmt(Math.max(...fractions))}`) +
-            `; the assertions ${testPasses ? "now PASS (.fails would turn red)" : "still fail (as .fails expects)"}`,
-    );
     console.log(
         "-- M.2 the grip-limit control run (the test at :90-109, a single-ball stroke the gap cannot touch): not " +
             "re-run here; the test itself plays it on the re-set face law and passes, in the slow suite's " +

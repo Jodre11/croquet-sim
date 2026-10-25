@@ -75,8 +75,9 @@ export interface Routes {
 /**
  * One impact step as the harness records it, at its end t (s): the head centre's speed along aim (m/s), the head's
  * lowest point above the turf (m, negative in it), the striker's and the second ball's horizontal speeds w₁ and v₂
- * (m/s), the striker's ball's speed along aim (m/s), and the bottom hand's force on the head along aim (N; NaN where
- * the step carries no hand record).
+ * (m/s), the striker's ball's speed along aim (m/s), the bottom hand's force on the head along aim (N; NaN where
+ * the step carries no hand record), and carry mode's push intent's magnitude (N; 0 where it is nil, NaN where the step
+ * carries no hand record).
  */
 export interface RouteSample {
     readonly t: number;
@@ -86,6 +87,7 @@ export interface RouteSample {
     readonly v2: number;
     readonly ball: number;
     readonly bottom: number;
+    readonly intent: number;
 }
 
 /**
@@ -102,6 +104,14 @@ export interface RouteRun {
     readonly samples: readonly RouteSample[];
     readonly aim: Vec3;
     readonly read: { readonly w1: number; readonly v2: number; readonly time: number; readonly open: boolean } | null;
+}
+
+/** A step's push intent's magnitude (N): 0 where it is nil, NaN where the step carries no hand record. */
+function intentOf(s: ImpactSnapshot): number {
+    if (s.hand === undefined) {
+        return NaN;
+    }
+    return s.hand.intent === undefined ? 0 : length(s.hand.intent);
 }
 
 /** Thrown by firstTouch's probe to end an impact once the first touch is read; never escapes this file. */
@@ -349,6 +359,7 @@ export function playRoutes(setup: ShotSetup, world: World): RouteRun {
                 v2: other < 0 ? 0 : speedOf(s.balls[other]),
                 ball: dot(ball.velocity, aim),
                 bottom: s.hand === undefined ? NaN : dot(s.hand.bottom, aim),
+                intent: intentOf(s),
             });
         },
     };

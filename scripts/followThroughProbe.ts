@@ -26,13 +26,26 @@
  *   largest with no re-contact after the parting; Gugan 5's drive at guideEffort 0 beside it.
  * - G. the full roll's variant (the pass roll's speedGain, handGain, window and handWindow) beside the default full
  *   roll and the half and pass rolls, at 2, 3 and 4 m/s planned, against coaching's about 1.
- * Every section ends with a line "<letter> tally: ...". `all` runs A, B, C, D, S, E, F and G.
- * Run with `npx --yes tsx scripts/followThroughProbe.ts`; environment: SECTION (a letter or `all`; default all),
+ * Stage 2's checks (§8, exit criterion 9), on the moved defaults:
+ * - H. Gugan 5's drive and stop (Gugan's mallet, the default gap, 3 m/s contact speed), the stop over jabs 0–6.5 mm,
+ *   each against its band.
+ * - I. the user's roll hypotheses: the rolls' ratios at 2–4 m/s planned with and without section G's variant; the pass
+ *   roll dead straight and at 10° and 20° off aim, its split and the striker's ball's share of it.
+ * - J. Gugan's jab qualifier on the coupled dip, as croquetFitProbe.ts's section M.1 judges it (jabCheck).
+ * - K. the pass roll at magnitude +1 and window MIN_WINDOW: its taps and its re-contacts' judgement.
+ * - L. each roll's push intent against pushForce: when it acts, when it reaches the cap and for how long.
+ * - M. the latest face–ball contact's end over sections A and B against STRIKE_WINDOW, and the runs beyond it.
+ * - N. step convergence (dt/2, dt, 2·dt) on the moved AC stop and drive, as croquetFitProbe.ts's section G.
+ * - O. every preset's canonical setup top to finish: its speed against 3 m/s ± 2 % and the outcome's flags.
+ * Every section ends with a line "<letter> tally: ...". `all` runs A, B, C, D, S, E, F, G and H to O.
+ * Run with `npx --yes tsx scripts/followThroughProbe.ts`; environment: SECTION (a letter, a comma-separated list of
+ * letters, run in that order, or `all`; default all),
  * B_SMOKE (any value: section B on jab 0, window ×1, magnitude −1 and onsets −20, −10, 0 and +5 ms only, a smoke run)
  * and E_SMOKE (any value: section E on magnitude −1 and onsets −10 and 0 ms only).
  * Not part of the test suite.
  */
 import { faceKey, HEAD_TURF_KEY } from "../src/engine/impact/contacts";
+import { IMPACT_DT } from "../src/engine/impact/integrate";
 import { simulateImpact } from "../src/engine/impact/simulateImpact";
 import type { ContactInterval, ImpactResult } from "../src/engine/impact/types";
 import {
@@ -42,22 +55,40 @@ import {
     type ReContact,
     type ReContactThresholds,
 } from "../src/engine/faults";
-import { strokeContext } from "../src/engine/shot";
-import { planStroke, plannedSpeed } from "../src/engine/swing/buildContact";
-import { defaultProfile } from "../src/engine/swing/profile";
-import { CROQUET_STROKES, type ShotSetup, type StrokeType } from "../src/engine/swing/types";
+import { vec3, type Vec3 } from "../src/engine/math/vec3";
+import { simulateShot, strokeContext } from "../src/engine/shot";
+import { simulateFreeMotion } from "../src/engine/simulate";
+import { MIN_WINDOW, planStroke, plannedSpeed } from "../src/engine/swing/buildContact";
+import { DEFAULT_DRIVE, DEFAULT_TIMING, defaultProfile } from "../src/engine/swing/profile";
+import { CROQUET_STROKES, STROKE_TYPES, type ShotSetup, type StrokeType } from "../src/engine/swing/types";
+import type { BallId, BallState } from "../src/engine/types";
 import { defaultWorld } from "../src/engine/world";
 import { ratioTargetsReference } from "../src/reference/index";
 import { DEFAULT_CROQUET_GAP, backswingFor, canonicalSetup, regimeOf, strokeFor } from "../tests/engine/support/shot";
+import { GUGAN5 } from "./filmedStrokes";
 import {
     backswingBracket,
+    firstTouch,
     playRoutes,
     strokeForContact,
     turfLimited,
     type RouteRun,
     type RouteSample,
 } from "./followThrough";
-import { STRIKE_WINDOW, digestGrid, guganSetup } from "./ratioFit";
+import {
+    JAB_DEPTHS,
+    STEP_SHARES,
+    STRIKE_WINDOW,
+    TODAY,
+    digestGrid,
+    guganSetup,
+    guganStroke,
+    jabCheck,
+    leanOf,
+    ratioOf,
+    runFit,
+    spreadOf as rangeOf,
+} from "./ratioFit";
 
 // The project has no Node types; this script runs under tsx and reads its environment.
 declare const process: { readonly env: Readonly<Record<string, string | undefined>> };
@@ -324,6 +355,19 @@ function brakeSetup(c: BrakeCell): ShotSetup {
     );
 }
 
+/** Section B.1's setup for `cell`: brakeSetup's, its stroke solved for SPEED at the ball (strokeForContact). */
+function brakeAtContact(cell: BrakeCell): ShotSetup {
+    const base = brakeSetup(cell);
+    return { ...base, stroke: { ...base.stroke, ...strokeForContact(base, SPEED, WORLD) } };
+}
+
+/** Section B.2's setup for `cell`: brakeSetup's at the backswing of the on-time stroke for SPEED planned. */
+function brakeAtBackswing(cell: BrakeCell): ShotSetup {
+    const base = brakeSetup(cell);
+    const onTime = canonicalSetup("stop-ac", { world: WORLD, stroke: { jab: cell.jab } });
+    return { ...base, stroke: { ...base.stroke, backswing: backswingFor(onTime, SPEED, WORLD) } };
+}
+
 /** The sample of `samples` at or after `t` (s), else the last. */
 function sampleAt(samples: readonly RouteSample[], t: number): RouteSample | undefined {
     return samples.find((s) => s.t >= t) ?? samples[samples.length - 1];
@@ -375,8 +419,7 @@ function sectionB(): void {
         const label = cellLabel(cell);
         let setup: ShotSetup;
         try {
-            const base = brakeSetup(cell);
-            setup = { ...base, stroke: { ...base.stroke, ...strokeForContact(base, SPEED, WORLD) } };
+            setup = brakeAtContact(cell);
         } catch (error) {
             unreachable += 1;
             console.log(`${label}: unreachable (${errorText(error)})`);
@@ -401,11 +444,7 @@ function sectionB(): void {
     let rejected2 = 0;
     for (const cell of cells) {
         const label = cellLabel(cell);
-        const played = play(label, () => {
-            const base = brakeSetup(cell);
-            const onTime = canonicalSetup("stop-ac", { world: WORLD, stroke: { jab: cell.jab } });
-            return { ...base, stroke: { ...base.stroke, backswing: backswingFor(onTime, SPEED, WORLD) } };
-        });
+        const played = play(label, () => brakeAtBackswing(cell));
         if ("error" in played) {
             rejected2 += 1;
             console.log(`${label}: rejected (${played.error})`);
@@ -1078,12 +1117,26 @@ function sectionG(): void {
             `routes, against coaching's about 1 (the CA's full roll ${fmt(FULL_ROLL_BAND[0])}–` +
             `${fmt(FULL_ROLL_BAND[1])}) ==`,
     );
+    const { table, runs, rejected } = rollTable(ROLL_SPEEDS);
+    console.log(`G tally: ${runs} runs, ${rejected} rejected; ${table.join("; ")}`);
+}
+
+/**
+ * Each of G_ROWS' canonical setups at each of `speeds` (m/s planned, strokeFor), ON_TIME, the default gap: every run
+ * printed with its stroke and routes, then the ratio table against coaching's about 1, which is returned with the
+ * counts.
+ */
+function rollTable(speeds: readonly number[]): {
+    readonly table: readonly string[];
+    readonly runs: number;
+    readonly rejected: number;
+} {
     const table: string[] = [];
     let runs = 0;
     let rejected = 0;
     for (const row of G_ROWS) {
         const ratios: string[] = [];
-        for (const speed of ROLL_SPEEDS) {
+        for (const speed of speeds) {
             runs += 1;
             const label = `${row.label} ${fmt(speed)} m/s`;
             const played = play(label, () => {
@@ -1101,11 +1154,611 @@ function sectionG(): void {
         }
         table.push(`${row.label} ${ratios.join(", ")}`);
     }
-    console.log(`-- the ratio at ${ROLL_SPEEDS.join(", ")} m/s, against coaching's about 1 --`);
+    console.log(`-- the ratio at ${speeds.join(", ")} m/s, against coaching's about 1 --`);
     for (const line of table) {
         console.log(line);
     }
-    console.log(`G tally: ${runs} runs, ${rejected} rejected; ${table.join("; ")}`);
+    return { table, runs, rejected };
+}
+
+/** A ratio of Gugan 5's `type` stroke against its band (ratioTargetsReference). */
+function inBand(type: "drive" | "stop-ac", ratio: number): boolean {
+    const [lo, hi] = ratioTargetsReference[type].ratio.bounds as readonly [number, number];
+    return ratio >= lo && ratio <= hi;
+}
+
+/** Section H's AC stop jabs (m): 0 to 6.5 mm in 0.5 mm steps, built from whole steps. */
+const H_JABS: readonly number[] = Array.from({ length: 14 }, (_, k) => k * 0.0005);
+
+const guganChecks = new Map<string, ShotSetup>();
+
+/**
+ * Gugan 5's stroke as the checks play it (design §8.1): `type`'s canonical setup with Gugan's mallet (guganSetup), the
+ * default gap, the drive at guideEffort 0 or the stop at `jab` (m), the preset's own stance, drive and timing, its
+ * stroke solved for SPEED at the ball (strokeForContact). Built once per invocation, for sections H and N.
+ */
+function guganCheck(type: "drive" | "stop-ac", jab = 0): ShotSetup {
+    const key = `${type}/${jab}`;
+    const cached = guganChecks.get(key);
+    if (cached !== undefined) {
+        return cached;
+    }
+    const setup = guganSetup(type, SPEED, DEFAULT_CROQUET_GAP, {
+        world: WORLD,
+        gugan: true,
+        ...(type === "drive" ? { guideEffort: 0 } : { jab }),
+        contactSpeed: true,
+    });
+    guganChecks.set(key, setup);
+    return setup;
+}
+
+function sectionH(): void {
+    const drive = ratioTargetsReference.drive.ratio;
+    const stop = ratioTargetsReference["stop-ac"].ratio;
+    const band = (r: typeof drive): string => (r.bounds as readonly number[]).map(fmt).join(" to ");
+    console.log(
+        "== H. Gugan 5's drive and stop on the moved defaults (P2b.2b.2c.2d design §8.1): each preset's canonical " +
+            "setup on the default world with Gugan's mallet (guganSetup), the default gap " +
+            `(${mm(DEFAULT_CROQUET_GAP)} mm), ${fmt(SPEED)} m/s contact speed (strokeForContact), the preset's own ` +
+            "stance (the AC stop's lean " +
+            `${deg(leanOf(canonicalSetup("stop-ac", { world: WORLD }), WORLD))}°), drive and timing; the drive at ` +
+            `guideEffort 0, against ${fmt(drive.value)} (band ${band(drive)}); the stop over jabs ` +
+            `${H_JABS.map(mm).join(", ")} mm, against ${fmt(stop.value)} (band ${band(stop)}). Per run: the stroke ` +
+            "and its regime, then section S's record (* within the band) ==",
+    );
+    const rows = [
+        { type: "drive" as const, jab: 0, label: "Gugan 5's drive guideEffort 0" },
+        ...H_JABS.map((jab) => ({ type: "stop-ac" as const, jab, label: `Gugan 5's stop jab ${mm(jab)} mm` })),
+    ];
+    let played = 0;
+    let rejected = 0;
+    const within: string[] = [];
+    const outside: string[] = [];
+    for (const { type, jab, label } of rows) {
+        try {
+            const setup = guganCheck(type, jab);
+            const run = playRoutes(setup, WORLD);
+            played += 1;
+            const short = type === "drive" ? "drive" : `stop jab ${mm(jab)} mm`;
+            (inBand(type, run.routes.ratio) ? within : outside).push(`${short} ${fmt(run.routes.ratio)}`);
+            console.log(`${label}: ${strokeText(setup)}; ${stanceText(run, type)}`);
+        } catch (error) {
+            rejected += 1;
+            console.log(`${label}: rejected (${errorText(error)})`);
+        }
+    }
+    console.log(
+        `H tally: ${played} played, ${rejected} rejected; within the band: ${within.join(", ") || "none"}; outside: ` +
+            `${outside.join(", ") || "none"}`,
+    );
+}
+
+/** Section I.1's planned speeds (m/s): swingProbe's 2–4 m/s sweep. */
+const I_SPEEDS = [2, 2.5, 3, 3.5, 4] as const;
+
+/** Section I's angles (°) of the pass roll's croqueted ball off aim, to the left: dead straight, 10° and 20°. */
+const OFF_AIMS = [0, 10, 20] as const;
+
+/**
+ * The pass roll's canonical setup with its croqueted ball `degrees` (°) to the left of aim, at the default gap from
+ * the striker's ball, placed as canonicalSetup places it (20° there).
+ */
+function passRollOffAim(degrees: number): ShotSetup {
+    const base = canonicalSetup("pass-roll", { world: WORLD });
+    const id = base.croqueted as BallId;
+    const { position } = base.balls[base.striker] as BallState;
+    const reach = 2 * WORLD.ball.radius + DEFAULT_CROQUET_GAP;
+    const line = base.stroke.aim + (degrees * Math.PI) / 180;
+    const placed = vec3(position.x + reach * Math.cos(line), position.y + reach * Math.sin(line), position.z);
+    return { ...base, balls: { ...base.balls, [id]: { ...(base.balls[id] as BallState), position: placed } } };
+}
+
+/** The signed angle (°) of the horizontal direction (dx, dy) from `aim` (rad), positive to the left. */
+function offAim(aim: number, dx: number, dy: number): number {
+    const ax = Math.cos(aim);
+    const ay = Math.sin(aim);
+    return (Math.atan2(ax * dy - ay * dx, ax * dx + ay * dy) * 180) / Math.PI;
+}
+
+/**
+ * Both balls' angles (°, left positive) off aim, the split between them (°) and the striker's ball's share of it, with
+ * the croqueted ball `off` (°) off aim; the share "n/a" for a straight set-up.
+ */
+function splitText(off: number, croqueted: number, striker: number): string {
+    const split = croqueted - striker;
+    const share = off === 0 ? "n/a" : fmt((0 - striker) / split);
+    return `croqueted ${fmt(croqueted)}°, striker's ${fmt(striker)}°, split ${fmt(split)}°, striker's share ${share}`;
+}
+
+function sectionI(): void {
+    console.log(
+        "== I. The user's roll hypotheses (P2b.2b.2c.2d design §8.2, the roadmap's carried open items; recorded, " +
+            "never fitted) on the default world, ON_TIME, the default gap. I.1: the full roll's ratio against the " +
+            `half and pass rolls' at ${I_SPEEDS.join(", ")} m/s planned (strokeFor), with and without section G's ` +
+            `variant (the pass roll's speedGain ${fmt(VARIANT.speedGain)}, handGain ${fmt(VARIANT.handGain)}, ` +
+            `window ${ms(VARIANT.window)} ms and handWindow ${ms(VARIANT.handWindow)} ms), against coaching's ` +
+            `full roll ${fmt(FULL_ROLL_BAND[0])}–${fmt(FULL_ROLL_BAND[1])}. I.2 and I.3: the pass roll's canonical ` +
+            `setup (its default backswing, ${fmt(SPEED)} m/s planned) with its croqueted ball ` +
+            `${OFF_AIMS.join("°, ")}° to the left of aim (20° the canonical set-up): the ratio; each ball's angle ` +
+            "off aim (°, left positive) as it leaves (the handover's velocity) and at rest (start to rest); the " +
+            "split, the croqueted ball's angle less the striker's (°); and the striker's ball's share of it ==",
+    );
+    console.log(`-- I.1 the rolls' ratios at ${I_SPEEDS.join(", ")} m/s planned --`);
+    const { table, runs, rejected } = rollTable(I_SPEEDS);
+    console.log("-- I.2 the pass roll dead straight, and I.3 at 10° and 20° off aim --");
+    const splits: string[] = [];
+    for (const off of OFF_AIMS) {
+        const label = `pass roll croqueted ball ${off}° off aim`;
+        const played = play(label, () => passRollOffAim(off));
+        if ("error" in played) {
+            splits.push(`${off}° rejected`);
+            console.log(`${label}: rejected (${played.error})`);
+            continue;
+        }
+        const { run } = played;
+        const { setup } = run;
+        const aim = setup.stroke.aim;
+        const ids = [setup.croqueted as BallId, setup.striker] as const;
+        const motion = simulateFreeMotion(run.impact.handover, WORLD);
+        const leaves = ids.map((id) => {
+            const v = (run.impact.handover[id] as BallState).velocity;
+            return offAim(aim, v.x, v.y);
+        });
+        const rests = ids.map((id) => {
+            const from = (setup.balls[id] as BallState).position;
+            const to = motion.rest[id] as Vec3;
+            return offAim(aim, to.x - from.x, to.y - from.y);
+        });
+        const [leftC, leftS] = leaves as [number, number];
+        const [restC, restS] = rests as [number, number];
+        splits.push(`${off}° ratio ${fmt(run.routes.ratio)}, split at rest ${fmt(restC - restS)}°`);
+        console.log(
+            `${label}: ratio ${fmt(run.routes.ratio)}; leaving: ${splitText(off, leftC, leftS)}; at rest: ` +
+                `${splitText(off, restC, restS)}; ${routesText(run)}`,
+        );
+    }
+    console.log(`I tally: I.1 ${runs} runs, ${rejected} rejected, ${table.join("; ")}; I.2–I.3 ${splits.join("; ")}`);
+}
+
+function sectionJ(): void {
+    const setup = canonicalSetup("stop-ac", { world: WORLD });
+    const timing = DEFAULT_TIMING["stop-ac"];
+    console.log(
+        "== J. Gugan's jab qualifier on the coupled dip (P2b.2b.2c.2d design §8.3; tests/engine/turfStrike.test.ts, " +
+            "it.runIf(SLOW).fails), judged as croquetFitProbe.ts's section M.1 judges it (jabCheck): the AC stop's " +
+            `canonical setup on the default world, the default mallet, the default gap (${mm(DEFAULT_CROQUET_GAP)} ` +
+            `mm), lean ${deg(leanOf(setup, WORLD))}°, magnitude ${setup.stroke.drive}, timing arc ` +
+            `${ms(timing.arc)} ms, hands ${ms(timing.hands)} ms, dip ${ms(timing.dip)} ms (the dip starts with the ` +
+            `brake's pulse), planned at ${fmt(GUGAN5.speed)} m/s (backswingFor), jabs ` +
+            `${mm(JAB_DEPTHS[0] as number)} to ${mm(JAB_DEPTHS[JAB_DEPTHS.length - 1] as number)} mm in ` +
+            `${mm((JAB_DEPTHS[1] as number) - (JAB_DEPTHS[0] as number))} mm steps. Does the head ground ` +
+            "before the second tap? The controller then runs `env SLOW_TESTS=1 npx vitest run " +
+            "tests/engine/turfStrike.test.ts`; `.fails` is removed only if the assertions now pass ==",
+    );
+    const { lines, counted, passes } = jabCheck(WORLD);
+    for (const line of lines) {
+        console.log(line);
+    }
+    console.log(
+        `J tally: ${counted} of ${JAB_DEPTHS.length} depths counted; the test's assertions ` +
+            `${passes ? "now pass (remove .fails once the slow test confirms)" : "still fail (.fails stays)"}`,
+    );
+}
+
+/** The routes' taps as section K's record: the second tap's start after the first, its impulse and share. */
+function secondTapText(run: RouteRun): string {
+    const [first, second] = run.routes.taps;
+    if (first === undefined) {
+        return "no tap";
+    }
+    if (second === undefined) {
+        return `one tap (share ${fmt(first.share)}), no second tap`;
+    }
+    return (
+        `${run.routes.taps.length} taps; the second ${ms(second.start - first.start)} ms after the first, impulse ` +
+        `${fmt(second.impulse)} N·s, share ${fmt(second.share)} against the first's ${fmt(first.share)} ` +
+        `(${fmt(second.impulse / first.impulse)} of its impulse)`
+    );
+}
+
+function sectionK(): void {
+    const own = defaultProfile.drive["pass-roll"];
+    console.log(
+        '== K. Super pass-rolls (P2b.2b.2c.2d design §8.4; Gugan 5: a strong early second tap from "a lot of arm ' +
+            "follow through\"; a check that must emerge, never built): the pass roll's canonical setup on the " +
+            `default world at ${fmt(SPEED)} m/s planned (backswingFor), ON_TIME, the default gap, at magnitude +1 ` +
+            `and window MIN_WINDOW (${ms(MIN_WINDOW)} ms, both pulses), beside the canonical pass roll (magnitude ` +
+            `${DEFAULT_DRIVE["pass-roll"]}, its window ${ms(own.window)} ms and handWindow ${ms(own.handWindow)} ` +
+            "ms). Per run: the routes (section A's: each tap's start, impulse and share, each re-contact after the " +
+            "parting with §7's judgement), and the second tap's timing and strength against the first ==",
+    );
+    const rows = [
+        { label: "pass roll canonical", stroke: {} },
+        { label: "pass roll magnitude +1 window MIN_WINDOW", stroke: { drive: 1, window: MIN_WINDOW } },
+    ];
+    const notes: string[] = [];
+    for (const { label, stroke } of rows) {
+        const played = play(label, () => {
+            const base = canonicalSetup("pass-roll", { world: WORLD, stroke });
+            return { ...base, stroke: { ...base.stroke, backswing: backswingFor(base, SPEED, WORLD) } };
+        });
+        if ("error" in played) {
+            notes.push(`${label} rejected`);
+            console.log(`${label}: rejected (${played.error})`);
+            continue;
+        }
+        const { run } = played;
+        const { recontacts } = run.routes;
+        const faults = recontacts.filter((r) => r.fault).length;
+        notes.push(
+            `${label}: ${run.routes.taps.length} tap(s), ${recontacts.length} re-contact(s) after the parting, ` +
+                `${faults} past the ruled thresholds; ${secondTapText(run)}`,
+        );
+        console.log(`${label}: ${secondTapText(run)}; ${routesText(run)}`);
+    }
+    console.log(`K tally: ${notes.join("; ")}`);
+}
+
+/** Section L's rolls. */
+const ROLLS = ["half-roll", "full-roll", "pass-roll"] as const;
+
+/**
+ * Numerical, not physical: the share of pushForce within which section L counts the push intent at its cap. The
+ * intent is min(R̃, F_push) along the unit aim, so at the cap its length is F_push to round-off.
+ */
+const CAP_SHARE = 1e-9;
+
+function sectionL(): void {
+    console.log(
+        "== L. The push's cap (P2b.2b.2c.2d design §8.5): each roll's canonical setup on the default world (its " +
+            `default backswing, ${fmt(SPEED)} m/s planned, ON_TIME, the default gap), the push intent's magnitude ` +
+            "read from the impact probe's step sample (HandLoad's intent, a probe-only field): when it first and " +
+            "last acts and for how long (ms from first touch), its peak (N) and when, and whether it reaches " +
+            "pushForce (N), when, and for how long ==",
+    );
+    const notes: string[] = [];
+    for (const type of ROLLS) {
+        const setup = canonicalSetup(type, { world: WORLD });
+        const cap = setup.profile.body.pushForce;
+        const run = playRoutes(setup, WORLD);
+        const touch = run.routes.touch;
+        if (touch === null) {
+            notes.push(`${type} no strike`);
+            console.log(`${type}: no strike`);
+            continue;
+        }
+        let active = 0;
+        let capped = 0;
+        let firstActive: number | null = null;
+        let lastActive: number | null = null;
+        let firstCap: number | null = null;
+        let lastCap: number | null = null;
+        let peak = 0;
+        let peakAt: number | null = null;
+        // Each sample closes a step that began at the previous sample's time (the first at the impact's start, 0).
+        let previous = 0;
+        for (const s of run.samples) {
+            const dt = s.t - previous;
+            previous = s.t;
+            if (s.intent > 0) {
+                active += dt;
+                firstActive ??= s.t;
+                lastActive = s.t;
+            }
+            if (s.intent >= cap * (1 - CAP_SHARE)) {
+                capped += dt;
+                firstCap ??= s.t;
+                lastCap = s.t;
+            }
+            if (s.intent > peak) {
+                peak = s.intent;
+                peakAt = s.t;
+            }
+        }
+        const from = (t: number | null): string => (t === null ? "never" : `${ms(t - touch.t)} ms`);
+        const reaches =
+            firstCap === null
+                ? "never reaches pushForce"
+                : `reaches pushForce from ${from(firstCap)} to ${from(lastCap)}, ${ms(capped)} ms in all`;
+        notes.push(`${type} ${firstCap === null ? "never reaches pushForce" : `at pushForce ${ms(capped)} ms`}`);
+        console.log(
+            `${type} (${setup.profile.drive[type].mode} mode, pushForce ${fmt(cap)} N): the intent acts from ` +
+                `${from(firstActive)} to ${from(lastActive)}, ${ms(active)} ms in all; peak ${fmt(peak)} N at ` +
+                `${from(peakAt)}; ${reaches}`,
+        );
+    }
+    console.log(`L tally: ${notes.join("; ")}`);
+}
+
+/** One run's face–ball contacts on the striker's ball against STRIKE_WINDOW (s from its first face contact's start). */
+interface WindowRecord {
+    readonly label: string;
+    /** The latest end of any face contact. */
+    readonly latest: number;
+    /** The latest end of the contacts that begin within the window, the strike as Gugan's read counts it. */
+    readonly read: number;
+    /** The contacts that begin within the window and end beyond it. */
+    readonly straddling: number;
+    /** The contacts that begin beyond the window, and the earliest such start (null with none). */
+    readonly late: number;
+    readonly lateStart: number | null;
+}
+
+/** `faces`' WindowRecord, or null with no face contact. */
+function windowOf(label: string, faces: readonly ContactInterval[]): WindowRecord | null {
+    const first = faces[0];
+    if (first === undefined) {
+        return null;
+    }
+    const from = (t: number): number => t - first.start;
+    const within = faces.filter((f) => from(f.start) <= STRIKE_WINDOW);
+    const beyond = faces.filter((f) => from(f.start) > STRIKE_WINDOW);
+    return {
+        label,
+        latest: Math.max(...faces.map((f) => from(f.end))),
+        read: Math.max(...within.map((f) => from(f.end))),
+        straddling: within.filter((f) => from(f.end) > STRIKE_WINDOW).length,
+        late: beyond.length,
+        lateStart: beyond.length === 0 ? null : Math.min(...beyond.map((f) => from(f.start))),
+    };
+}
+
+/** A set of section M's records, summarised against STRIKE_WINDOW and printed with each run beyond it. */
+function windowSummary(set: {
+    readonly name: string;
+    readonly records: readonly WindowRecord[];
+    readonly unstruck: number;
+    readonly rejected: number;
+}): string {
+    const { name, records, unstruck, rejected } = set;
+    const beyond = records.filter((r) => r.straddling > 0 || r.late > 0);
+    for (const r of beyond) {
+        console.log(
+            `${r.label}: latest face contact end ${ms(r.latest)} ms; the read's latest end ${ms(r.read)} ms; ` +
+                `${r.straddling} contact(s) straddling the window, ${r.late} beginning beyond it` +
+                `${r.lateStart === null ? "" : `, the first at ${ms(r.lateStart)} ms`}`,
+        );
+    }
+    const maxOf = (f: (r: WindowRecord) => number): string => {
+        if (records.length === 0) {
+            return "none";
+        }
+        const top = records.reduce((a, b) => (f(b) > f(a) ? b : a));
+        return `${ms(f(top))} ms (${top.label})`;
+    };
+    const lates = records.filter((r) => r.lateStart !== null);
+    const first = lates.reduce<WindowRecord | null>(
+        (a, b) => (a === null || (b.lateStart as number) < (a.lateStart as number) ? b : a),
+        null,
+    );
+    const earliest = first === null ? "none" : `${ms(first.lateStart as number)} ms (${first.label})`;
+    const summary =
+        `${name}: ${records.length} struck, ${unstruck} with no strike, ${rejected} rejected; the latest face ` +
+        `contact end ${maxOf((r) => r.latest)}; the read's latest end ${maxOf((r) => r.read)}; ` +
+        `${records.filter((r) => r.straddling > 0).length} run(s) with a contact straddling the window, ` +
+        `${lates.length} with a contact beginning beyond it, the earliest at ${earliest}`;
+    console.log(summary);
+    return summary;
+}
+
+function sectionM(): void {
+    console.log(
+        "== M. The strike's window (P2b.2b.2c.2d design §8.6): STRIKE_WINDOW " +
+            `${ms(STRIKE_WINDOW)} ms from the first face contact, re-checked against the face–ball contacts on the ` +
+            "striker's ball over section A's grid (stage 2, the moved defaults) and section B's brake sweep (B.1 " +
+            "and B.2, on the moved AC stop), each judged as simulateShot judges it: per set, the latest face " +
+            "contact's end, the read's latest end (the contacts beginning within the window), the runs with a " +
+            "contact straddling the window's end, and those with one beginning beyond it (outside the read), each " +
+            `such run listed (ms from first contact)${B_SMOKE ? "; B_SMOKE: section B's smoke cells only" : ""} ==`,
+    );
+    const grid: WindowRecord[] = [];
+    let gridUnstruck = 0;
+    let gridRejected = 0;
+    for (const { played } of followGrid()) {
+        if ("error" in played) {
+            gridRejected += 1;
+            continue;
+        }
+        const { run } = played;
+        const record = windowOf(played.label, run.impact.timeline[faceKey(run.setup.striker)] ?? []);
+        if (record === null) {
+            gridUnstruck += 1;
+        } else {
+            grid.push(record);
+        }
+    }
+    console.log("-- M.1 section A's grid --");
+    const summaries = [
+        windowSummary({
+            name: "section A's grid",
+            records: grid,
+            unstruck: gridUnstruck,
+            rejected: gridRejected,
+        }),
+    ];
+    for (const [tag, name, build] of [
+        ["B.1", `section B.1 (${fmt(SPEED)} m/s contact speed)`, brakeAtContact],
+        ["B.2", "section B.2 (a fixed backswing)", brakeAtBackswing],
+    ] as const) {
+        const records: WindowRecord[] = [];
+        let unstruck = 0;
+        let rejected = 0;
+        for (const cell of brakeCells()) {
+            const label = `${tag} ${cellLabel(cell)}`;
+            try {
+                const setup = build(cell);
+                const { impact } = judgedImpact(setup);
+                const record = windowOf(label, impact.timeline[faceKey(setup.striker)] ?? []);
+                if (record === null) {
+                    unstruck += 1;
+                } else {
+                    records.push(record);
+                }
+            } catch (error) {
+                rejected += 1;
+                console.log(`${label}: rejected (${errorText(error)})`);
+            }
+        }
+        console.log(`-- M.${summaries.length + 1} ${name} --`);
+        summaries.push(
+            windowSummary({
+                name,
+                records,
+                unstruck,
+                rejected,
+            }),
+        );
+    }
+    console.log(`M tally: ${summaries.join("; ")}`);
+}
+
+function sectionN(): void {
+    const dts = STEP_SHARES.map((k) => k * IMPACT_DT);
+    console.log(
+        "== N. Step convergence on the moved AC stop and drive (P2b.2b.2c.2d design §8.7, exit criterion 9; as " +
+            `croquetFitProbe.ts's section G): each run at dt/2, dt and 2·dt (dt = ${fmt(IMPACT_DT * 1e6)} µs, ` +
+            "runFit at today's coupling), its ratio's spread over Gugan 5's tolerance (the drive's " +
+            `${fmt(GUGAN5.drive.tolerance)}, the stop's ${fmt(GUGAN5.stop.tolerance)}), pass when under a tenth, ` +
+            "the re-contacts after the parting at each step, judged at the ruled thresholds, and at each step " +
+            "whether the head grounds (the head–turf pair's first closing, turf-yield and impact-head-deep, ms from " +
+            "the first face contact). N.1: guganRatio's drive and stop (squeezeConvergence.test.ts's setups: " +
+            "Gugan's mallet, 3 m/s planned, the drive at guideEffort 0, the stop at jab 0, the preset's stance) at " +
+            `gaps ${N_GAPS.map(mm).join(", ")} mm. N.2: Gugan 5's drive ` +
+            "and stop (section H's: Gugan's mallet, the default gap, 3 m/s contact speed, the drive at guideEffort " +
+            "0, the stop at jab 0, its lean the moved stance's), then the canonical drive (its moved guideEffort " +
+            `${fmt(defaultProfile.drive.drive.guideEffort)}) and AC stop (the default mallet, ${fmt(SPEED)} m/s ` +
+            "planned) ==",
+    );
+    const rows = [
+        { label: "Gugan 5's drive", build: () => guganCheck("drive"), tolerance: GUGAN5.drive.tolerance },
+        { label: "Gugan 5's stop", build: () => guganCheck("stop-ac", 0), tolerance: GUGAN5.stop.tolerance },
+        {
+            label: "canonical drive",
+            build: () => canonicalSetup("drive", { world: WORLD }),
+            tolerance: GUGAN5.drive.tolerance,
+        },
+        {
+            label: "canonical AC stop",
+            build: () => canonicalSetup("stop-ac", { world: WORLD }),
+            tolerance: GUGAN5.stop.tolerance,
+        },
+    ];
+    // N.1: the setups tests/engine/squeezeConvergence.test.ts plays through guganRatio (guganStroke: Gugan's mallet,
+    // 3 m/s planned, the drive at guideEffort 0, the stop at jab 0), at each of N_GAPS; runFit with TODAY at each step
+    // is guganRatio's own computation, kept here so that the step's impact is read for its grounding too.
+    const guganRows = N_GAPS.flatMap((gap) =>
+        (["drive", "stop-ac"] as const).map((type) => ({
+            label: `N.1 guganRatio's ${type} at gap ${mm(gap)} mm`,
+            build: () => guganStroke(type, gap, WORLD),
+            tolerance: type === "drive" ? GUGAN5.drive.tolerance : GUGAN5.stop.tolerance,
+        })),
+    );
+    const notes: string[] = [];
+    for (const { label, build, tolerance } of [...guganRows, ...rows.map((r) => ({ ...r, label: `N.2 ${r.label}` }))]) {
+        try {
+            const setup = build();
+            const runs = dts.map((dt) => {
+                const { impact, motion } = runFit(setup, TODAY, WORLD, { dt });
+                const recontacts = judgeFaults(strokeContext(setup, impact), impact).strike?.recontacts ?? [];
+                return { ratio: ratioOf(setup, motion), recontacts, grounding: groundingText(setup, impact) };
+            });
+            const ratios = runs.map((r) => r.ratio);
+            const spread = rangeOf(ratios);
+            const ok = spread < tolerance / 10;
+            const counts = runs.map((r) => `${r.recontacts.length} (${r.recontacts.filter((c) => c.fault).length})`);
+            const steps = ratios.map((v, i) => `${fmt(v)} at ${fmt((dts[i] as number) * 1e6)} µs`);
+            const grounds = runs.map((r, i) => `at ${fmt((dts[i] as number) * 1e6)} µs ${r.grounding}`);
+            notes.push(`${label} ${fmt(spread / tolerance)} ${ok ? "pass" : "miss"}`);
+            console.log(
+                `${label}: ratio ${steps.join(", ")}; ` +
+                    `spread ${fmt(spread)} over tolerance ${fmt(tolerance)} = ${fmt(spread / tolerance)}: ` +
+                    `${ok ? "pass" : "miss"}; re-contacts after the parting (past the thresholds) ` +
+                    `${counts.join(", ")}; ` +
+                    `grounding ${grounds.join("; ")}`,
+            );
+        } catch (error) {
+            notes.push(`${label} rejected`);
+            console.log(`${label}: rejected (${errorText(error)})`);
+        }
+    }
+    console.log(`N tally: ${notes.join("; ")}`);
+}
+
+/** Section N.1's croquet gaps (m): touching, the default and squeezeConvergence.test.ts's 1 mm. */
+const N_GAPS = [0, DEFAULT_CROQUET_GAP, 0.001] as const;
+
+/**
+ * Whether `impact`'s head grounds, as text (ms from the first face contact on the striker's ball): the head–turf
+ * pair's first closing, and each turf-yield and impact-head-deep event; "never" when the pair never closes.
+ */
+function groundingText(setup: ShotSetup, impact: ImpactResult): string {
+    const first = impact.timeline[faceKey(setup.striker)]?.[0]?.start ?? 0;
+    const turf = impact.timeline[HEAD_TURF_KEY]?.[0]?.start;
+    if (turf === undefined) {
+        return "never";
+    }
+    const events = impact.events
+        .filter((e) => e.kind === "turf-yield" || e.kind === "impact-head-deep")
+        .map((e) => `${e.kind} ${ms(e.t - first)} ms`);
+    return `head on the turf from ${ms(turf - first)} ms, ${events.join(", ") || "no turf-yield or impact-head-deep"}`;
+}
+
+/** Exit criterion 9's share about SPEED within which each default's speed must lie. */
+const SPEED_SHARE = 0.02;
+
+function sectionO(): void {
+    console.log(
+        "== O. Every preset's canonical setup top to finish (P2b.2b.2c.2d exit criterion 9): simulateShot with the " +
+            "trajectory on the default world, the default gap, each preset's defaults (DEFAULT_DRIVE, " +
+            `DEFAULT_TIMING, its default backswing): its speed against ${fmt(SPEED)} m/s ± ${pct(SPEED_SHARE)} %, ` +
+            "the planned speed, or for a default with an early pulse (timing.arc or timing.hands below 0) the " +
+            "contact speed with the planned speed beside it; the outcome's flags (the impact's events, the " +
+            "follow-through's flags and the fault judge's findings); and the croquet ratio. The late re-hit is " +
+            "swingProbe's: `env SECTION=rehit npx --yes tsx scripts/swingProbe.ts` (no run may end with the head " +
+            "overlapping a ball as handed over), run beside this probe ==",
+    );
+    let within = 0;
+    let early = 0;
+    let rejected = 0;
+    const notes: string[] = [];
+    for (const type of STROKE_TYPES) {
+        try {
+            const setup = canonicalSetup(type, { world: WORLD });
+            const timing = setup.stroke.timing;
+            const pulsed = timing.arc < 0 || timing.hands < 0;
+            early += pulsed ? 1 : 0;
+            const outcome = simulateShot(setup, WORLD, { trajectory: true });
+            const planned = outcome.contactSpeed;
+            const contact = firstTouch(setup, WORLD)?.contactSpeed ?? 0;
+            const judged = pulsed ? contact : planned;
+            const ok = Math.abs(judged / SPEED - 1) <= SPEED_SHARE;
+            within += ok ? 1 : 0;
+            const events = outcome.impact.events.map((e) => `${e.kind} at ${ms(e.t)} ms`).join(", ") || "none";
+            const follow = outcome.trajectory?.flags.join(", ") || "none";
+            const findings = outcome.faults.findings.map((f) => `${f.law} (${f.tier})`).join(", ") || "none";
+            const ratio = setup.croqueted === undefined ? "" : `; ratio ${fmt(ratioOf(setup, outcome.motion))}`;
+            const speed = pulsed
+                ? `contact speed ${fmt(contact)} m/s (planned ${fmt(planned)})`
+                : `planned speed ${fmt(planned)} m/s (contact ${fmt(contact)}; no early pulse)`;
+            notes.push(`${type} ${ok ? "within" : "OUTSIDE"}`);
+            console.log(
+                `${type}: timing arc ${ms(timing.arc)} ms, hands ${ms(timing.hands)} ms, dip ${ms(timing.dip)} ms, ` +
+                    `magnitude ${setup.stroke.drive}; ${speed}: ${ok ? "within" : "OUTSIDE"} ±${pct(SPEED_SHARE)} %; ` +
+                    `impact events ${events}; follow-through flags ${follow}; findings ${findings}${ratio}`,
+            );
+        } catch (error) {
+            rejected += 1;
+            notes.push(`${type} rejected`);
+            console.log(`${type}: rejected (${errorText(error)})`);
+        }
+    }
+    const basis = early === 0 ? "every default judged at the planned speed" : "those judged at the contact speed";
+    console.log(
+        `O tally: ${STROKE_TYPES.length} presets, ${rejected} rejected, ${within} within ±${pct(SPEED_SHARE)} %, ` +
+            `${early} with an early pulse (${basis}); ` +
+            `${notes.join(", ")}; the late re-hit: swingProbe's rehit section`,
+    );
 }
 
 const SECTIONS: Readonly<Record<string, () => void>> = {
@@ -1117,16 +1770,43 @@ const SECTIONS: Readonly<Record<string, () => void>> = {
     E: sectionE,
     F: sectionF,
     G: sectionG,
+    H: sectionH,
+    I: sectionI,
+    J: sectionJ,
+    K: sectionK,
+    L: sectionL,
+    M: sectionM,
+    N: sectionN,
+    O: sectionO,
 };
 
-const ALL_SECTIONS: readonly string[] = ["A", "B", "C", "D", "S", "E", "F", "G"];
+const ALL_SECTIONS: readonly string[] = [
+    "A",
+    "B",
+    "C",
+    "D",
+    "S",
+    "E",
+    "F",
+    "G",
+    "H",
+    "I",
+    "J",
+    "K",
+    "L",
+    "M",
+    "N",
+    "O",
+];
 
-if (SECTION !== "all" && SECTIONS[SECTION] === undefined) {
-    throw new Error(`SECTION must be "all" or one of ${Object.keys(SECTIONS).join(", ")}`);
+const chosen = SECTION === "all" ? ALL_SECTIONS : SECTION.split(",");
+const unknown = chosen.filter((name) => SECTIONS[name] === undefined);
+if (unknown.length > 0) {
+    throw new Error(`SECTION must be "all" or a comma-separated list of ${Object.keys(SECTIONS).join(", ")}`);
 }
-if (SECTION === "all") {
-    console.log(`== all: sections ${ALL_SECTIONS.join(", ")} ==`);
+if (chosen.length > 1) {
+    console.log(`== ${SECTION === "all" ? "all: " : ""}sections ${chosen.join(", ")} ==`);
 }
-for (const name of SECTION === "all" ? ALL_SECTIONS : [SECTION]) {
+for (const name of chosen) {
     (SECTIONS[name] as () => void)();
 }

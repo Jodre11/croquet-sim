@@ -1418,6 +1418,11 @@ export interface HandLoad {
     readonly bottom: Vec3;
     /** The first hand whose force reached the grip's limit in this step, the top if both did; null if neither. */
     readonly saturated: HandName | null;
+    /**
+     * Carry mode's push intent P in this step (pushIntent), already within `feedForward`; absent where it is nil. For
+     * the impact's probe only: nothing in the engine reads it.
+     */
+    readonly intent?: Vec3;
 }
 
 /** θ_err = 2·sign(w)·vec(target ⊗ q̄), w the product's scalar part: the rotation taking q to `target` (world frame). */
@@ -1798,7 +1803,7 @@ export function handLoad(
     const contactPitch = grip.contactPitch ?? pitchNow;
     grip.contactPitch = contactPitch;
     if (carry) {
-        return carryLoad(track, state, t, grip, path, {
+        const carried = carryLoad(track, state, t, grip, path, {
             top: add(topShare, dip),
             bottom: bottomShare,
             whole: fed,
@@ -1818,6 +1823,7 @@ export function handLoad(
                 cross(w, cross(w, bottomLever)),
             ),
         });
+        return intent === null ? carried : { ...carried, intent };
     }
     // Release by reach (swing mode): the bottom hand opens for good once the shaft has turned through the slack since
     // relaxAt.
