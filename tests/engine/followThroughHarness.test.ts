@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import { IMPACT_DT } from "../../src/engine/impact/integrate";
 import { length } from "../../src/engine/math/vec3";
 import { simulateShot } from "../../src/engine/shot";
+import { DEFAULT_DRIVE, DEFAULT_TIMING } from "../../src/engine/swing/profile";
+import { ratioTargetsReference } from "../../src/reference/index";
 import { buildContact } from "../../src/engine/swing/buildContact";
 import type { StrokeTiming } from "../../src/engine/swing/types";
 import { defaultWorld } from "../../src/engine/world";
@@ -14,9 +16,10 @@ import {
     turfLimited,
 } from "../../scripts/followThrough";
 import { guganSetup, leanOf } from "../../scripts/ratioFit";
-import { canonicalSetup } from "./support/shot";
+import { DEFAULT_CROQUET_GAP, canonicalSetup } from "./support/shot";
 
 const WORLD = defaultWorld();
+const SLOW = Boolean(import.meta.env.SLOW_TESTS);
 
 /** A brake begun 60 ms early on the AC stop: the head stops short of the ball, so no face contact (traced). */
 const NO_STRIKE: StrokeTiming = { arc: -0.06, hands: 0, dip: 0 };
@@ -123,6 +126,31 @@ describe("the follow-through harness (P2b.2b.2c.2d design §3.4)", () => {
         expect(Math.abs((touch?.contactSpeed ?? NaN) - 3)).toBeLessThanOrEqual(1e-6);
         expect(touch?.plannedSpeed).toBeGreaterThan(3);
     });
+    // A slow test: Gugan's mallet is solved and the stroke bisected for its contact speed. About 18.6 s locally.
+    it.runIf(SLOW)(
+        "keeps the canonical AC stop's Gugan 5 stop within the band at 3 m/s contact speed",
+        { timeout: 80_000 },
+        () => {
+            // The stop at the canonical stance (lean 6° back) and timing (on time, so the brake acts with the strike),
+            // on Gugan's mallet and the AC stop's own grips, at the croquet gap Gugan measured: the ratio of the
+            // croqueted ball's travel to the striker's must stay within the mean's standard error of his 7.15, which
+            // the stance was set to match.
+            const target = ratioTargetsReference["stop-ac"].ratio;
+            const canonical = canonicalSetup("stop-ac", { world: WORLD });
+            const setup = guganSetup("stop-ac", 3, DEFAULT_CROQUET_GAP, {
+                world: WORLD,
+                gugan: true,
+                jab: 0,
+                lean: leanOf(canonical, WORLD),
+                grips: "stop-ac",
+                timing: DEFAULT_TIMING["stop-ac"],
+                drive: DEFAULT_DRIVE["stop-ac"],
+                contactSpeed: true,
+            });
+            const { routes } = playRoutes(setup, WORLD);
+            expect(Math.abs(routes.ratio - target.value)).toBeLessThanOrEqual(0.6);
+        },
+    );
     it("shares the canonical drive's strike among its taps", () => {
         // Every tap's impulse along aim over m_ball·w₁. The face's impulse on the striker's ball also carries the
         // croqueted ball's momentum through the balls' contact, so over the taps it is m_ball·(w₁ + v₂): the shares
