@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { IMPACT_DT } from "../../src/engine/impact/integrate";
 import { length } from "../../src/engine/math/vec3";
+import { simulateShot } from "../../src/engine/shot";
 import { buildContact } from "../../src/engine/swing/buildContact";
 import type { StrokeTiming } from "../../src/engine/swing/types";
 import { defaultWorld } from "../../src/engine/world";
@@ -65,6 +66,13 @@ describe("the follow-through harness (P2b.2b.2c.2d design §3.4)", () => {
     });
     it("throws for a contact speed beyond the bracket, naming both ends", () => {
         expect(() => backswingForContact(canonicalSetup("stop-ac"), 40, WORLD)).toThrow(/m\/s.*m\/s/);
+    });
+    it("sets the AC stop's canonical stance at a 6° backward lean and plays it top to finish", () => {
+        const setup = canonicalSetup("stop-ac");
+        expect(Math.abs(leanOf(setup, WORLD) - (-6 * Math.PI) / 180)).toBeLessThanOrEqual(1e-12);
+        const outcome = simulateShot(setup, defaultWorld());
+        expect(outcome.motion.aborted).toBe(false);
+        expect(outcome.impact.duration).toBeGreaterThan(0);
     });
     it("sets the stance's lean, contact and grips on Gugan's stroke", () => {
         const lean = (-6 * Math.PI) / 180;

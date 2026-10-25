@@ -315,7 +315,8 @@ export const CANONICAL_CLEARANCE: Readonly<Record<StrokeType, number>> = {
     drive: 17.0259e-3,
     // P2b.2b.2b.2c: the mallet (was 8.3872e-3): the head's back corner, lowest under the backward lean, rises by
     // (ρ − h_z)·cos α − (L − e − L₀)·|sin α| − e·(1 − cos α), L₀ the old 228.6 mm head.
-    "stop-ac": 14.5473e-3,
+    // P2b.2b.2c.2d: the stance's lean, 6° back (was 4°, 14.5473e-3): the back corner, pitched further, lies lower.
+    "stop-ac": 3.35242e-3,
     // P2b.2b.2b.2c: the mallet (was 7.5009e-3).
     "stop-gc": 17.0259e-3,
     // P2b.2b.2b.2c: the mallet (was 29.5203e-3, 36.6544e-3 and 39.7589e-3): the face's rounded lower edge,

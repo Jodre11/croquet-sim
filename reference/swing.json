@@ -179,18 +179,18 @@
             "provenance": "direct"
         },
         "defaultBackswing": {
-            "value": 0.44859926531543737,
+            "value": 0.44859900452640067,
             "unit": "m",
-            "source": "scripts/fitStrokeShape.ts: P2b.2b.2a design §5.3 and §6.2 (docs/superpowers/specs/2026-10-06-p2b2b2a-stroke-shape-design.md)",
+            "source": "a 60-halving bisection of the planned speed at intensity 0 (backswingFor in tests/engine/support/shot.ts), P2b.2b.2a design §5.3 and §6.2 (docs/superpowers/specs/2026-10-06-p2b2b2a-stroke-shape-design.md)",
             "provenance": "derived",
-            "note": "Design §5.3: h0 = 0.4486 m, the backswing that gives 3 m/s at intensity 0."
+            "note": "Design §5.3: h0 = 0.4486 m, the backswing that gives 3 m/s at intensity 0. Refitted at the stop's 6° backward lean (0.44859926531543737 m at 4°), by the same 60-halving bisection of the planned speed (the test support's backswingFor), which reproduces the 4° value to the bit."
         },
         "defaultSpeed": {
-            "value": 3.0000000000000004,
+            "value": 3,
             "unit": "m/s",
             "source": "scripts/fitStrokeShape.ts: P2b.2b.2a design §5.3 and §6.2 (docs/superpowers/specs/2026-10-06-p2b2b2a-stroke-shape-design.md)",
             "provenance": "derived",
-            "note": "The planned contact speed at the default backswing and intensity."
+            "note": "The planned contact speed at the default backswing and intensity (3.0000000000000004 at the 4° lean)."
         }
     },
     "stop-gc": {

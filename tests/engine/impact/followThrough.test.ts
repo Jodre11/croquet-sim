@@ -121,13 +121,16 @@ describe("the follow-through (design §4)", () => {
     it("holds a stop's mallet still after the check, so it settles on the firm grip", () => {
         // User decision 2026-10-07 (Riches: the stop has "NO FOLLOW-THROUGH"): from the check's window's end, or the
         // impact's end if later, the pendulum is held and the hands grip firmly. The canonical GC stop's head still
-        // sinks at 7.2e-3 m/s at the impact's end; the AC stop's impact ends 11.6 ms after the window. Each settles
-        // below FINISH_SPEED relative to the hands within the firm grip's period: 88 ms and 32 ms after the hold.
+        // sinks at 7.2e-3 m/s at the impact's end; the AC stop's impact ends 10 ms after the window (11.6 ms at its 4°
+        // lean). Each settles below FINISH_SPEED relative to the hands within the firm grip's period: 88 ms and 81 ms
+        // after the hold (32 ms for the AC stop at 4°, the head then clear of the turf).
         // The hands at TEST_GRIP_LIMIT, so that the hold alone is pinned; the default limit's case follows.
         const world = defaultWorld();
         for (const type of ["stop-gc", "stop-ac"] as const) {
             const { contact, follow } = stroke(unlimited(canonicalSetup(type, { world })), world);
-            expect(follow.flags, type).toEqual([]);
+            // P2b.2b.2c.2d: the AC stop's 6° lean grounds its head in the strike, so its follow-through yields the
+            // turf and runs deep (was []).
+            expect(follow.flags, type).toEqual(type === "stop-ac" ? ["follow-turf-yield", "follow-head-deep"] : []);
             expect(follow.finish, type).toBeGreaterThan(follow.impactEnd);
             expect(follow.finish - follow.impactEnd, type).toBeLessThan(1.5 * HAND_COUPLING.period);
             const plan = prepareTrack(contact.drive as TrackDrive, contact.head, world.gravity);
