@@ -523,3 +523,24 @@ read; the probes' layout and their section letters; the tests' names and files.
       marks the effect test as the user's reading, not the Law; the B.2 catch-up at onset −20 ms (0.16 mm and
       0.085 ms after the parting, +151 % speed) is Gugan 5's lawful double tap. Open item: the joining has no time
       cap, so a long chain under 2 mm after the parting (C29.11.2's shepherding) would join the strike unjudged.
+- **2026-10-25, gate stage 2a: the defaults** (rulings verbatim as the option chosen; figures in
+  `docs/superpowers/probes/2026-10-25-p2b2b2c2d-candidates.txt`, sections E, F and G):
+    - **Q1, the AC stop's brake: "Stance only".** The user: "the players has to mentally initiate before the strike
+      but this is more cognitive than active". The AC stop's default is the −6° stance with the brake on time (onset
+      0, the preset's own strength): Gugan 5's stop 7.157. No early brake. Section E's before-contact candidate
+      (−2.5 ms, every strength passing, 7.197 to 7.547) is recorded, not adopted; its candidate after contact
+      (+2.5 and +5 ms, 6.599 and 6.589) is the same at every strength, because the brake begins after the strike.
+    - **Q2, the drive: "0.75 (Recommended)".** The drive's default `guideEffort` goes from 1 to 0.75, the largest on
+      the 0.25 grid whose canonical drive has no re-contact after the parting (§6; the ratio 2.435 to 3.753). Gugan
+      5's drive keeps `guideEffort` 0 (4.295), so the drive's calibration is unchanged.
+    - **Q3, the full roll: "Keep, revisit at 2c.3 (Recommended)".** The full roll stays unchanged and held-out. The
+      variant (the pass roll's `speedGain`, `handGain`, `window` and `handWindow`, its own stance and reach) gives
+      1.177, 1.134 and 1.216 at 2, 3 and 4 m/s, against the default's 2.051, 1.856 and 1.859 and coaching's about
+      1. This is recorded as support for the user's hypothesis, to be tested again once P2b.2b.2c.3's push grows
+      with the swing's power.
+    - **Q4, the other presets: "Confirm, carry to 2c.3 (Recommended)".** The half roll, the pass roll, the GC stop and
+      single-ball stay unchanged but for the smooth pulse (and gravity through it for the swing strokes). The pass
+      roll at 2 m/s re-contacts the ball 132 ms after the parting (+57.6 %, possible 29.1.6.1), recorded as a finding.
+      The user's account, carried to P2b.2b.2c.3 as a hypothesis: "on a soft shot, no follow through force is
+      applied. So I think that avoids the second contact. Whereas on a harder shot, you swing through naturally. On
+      a very hard shot, you might apply a lot of extra follow through."
