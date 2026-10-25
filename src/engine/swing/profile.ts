@@ -314,3 +314,18 @@ export const DEFAULT_DRIVE: Readonly<Record<StrokeType, number>> = {
 
 /** Every action on time. */
 export const ON_TIME: StrokeTiming = { arc: 0, hands: 0, dip: 0 };
+
+/**
+ * The planner's default timing per stroke type: every type on time. The AC stop's brake is on time too, the player
+ * having "to mentally initiate before the strike but this is more cognitive than active" (user decision 2026-10-25),
+ * so no stroke brakes, dips or releases early by default.
+ */
+export const DEFAULT_TIMING: Readonly<Record<StrokeType, StrokeTiming>> = {
+    "single-ball": ON_TIME,
+    drive: ON_TIME,
+    "stop-ac": ON_TIME,
+    "stop-gc": ON_TIME,
+    "half-roll": ON_TIME,
+    "full-roll": ON_TIME,
+    "pass-roll": ON_TIME,
+};

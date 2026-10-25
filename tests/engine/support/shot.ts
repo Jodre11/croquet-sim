@@ -7,7 +7,7 @@ import { vec3 } from "../../../src/engine/math/vec3";
 import { CROQUET_GAP_LIMIT } from "../../../src/engine/shot";
 import { handsAheadFor, headShapeOf, plannedSpeed, stanceLean } from "../../../src/engine/swing/buildContact";
 import { MAX_BACK_ANGLE } from "../../../src/engine/swing/downswing";
-import { DEFAULT_DRIVE, ON_TIME, defaultProfile } from "../../../src/engine/swing/profile";
+import { DEFAULT_DRIVE, DEFAULT_TIMING, defaultProfile } from "../../../src/engine/swing/profile";
 import {
     CROQUET_STROKES,
     STROKE_TYPES,
@@ -287,7 +287,7 @@ export function canonicalSetup(type: StrokeType, over: CanonicalOptions = {}): S
             backswing: swingReference[type].defaultBackswing.value,
             drive: DEFAULT_DRIVE[type],
             contact: { up: canonicalUp(type), side: 0 },
-            timing: ON_TIME,
+            timing: DEFAULT_TIMING[type],
             ...over.stroke,
         },
         live,
