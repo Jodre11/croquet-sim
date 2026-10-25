@@ -544,3 +544,29 @@ read; the probes' layout and their section letters; the tests' names and files.
       The user's account, carried to P2b.2b.2c.3 as a hypothesis: "on a soft shot, no follow through force is
       applied. So I think that avoids the second contact. Whereas on a harder shot, you swing through naturally. On
       a very hard shot, you might apply a lot of extra follow through."
+- **2026-10-25, the AC stop's stance re-ruled** (figures in
+  `docs/superpowers/probes/2026-10-25-p2b2b2c2d-stance-turf.txt`):
+    - **The rule.** The user: "it is okay for the mallet to rub on the lawn and disturb the grass. It should not
+      damage the turf". The default stroke therefore raises no `impact-head-deep` and the soil does not yield
+      (`turf-yield`). This supersedes Q1's −6° stance, which went 3.6 mm deep and yielded the soil.
+    - **The ruling: "−5°, head 5 mm up".** The user chose lean −5° with the contact 5 mm lower (`up` −0.025 m, was
+      −0.020 m with −6°). −5° at −25 mm raises no head-deep and no yield on Gugan's mallet and on the default mallet
+      (Gugan 5's stop 6.7395, 1 mm step spread 0.0110), but its contact lies 0.6 mm from the edge of the face's flat
+      (±25.575 mm), so the digest grid's row 3 mm lower falls off the face. −4° at −25 mm never touches the turf but
+      its ratio, 6.5359, falls just below the band; −6° at −25 mm and −7° at −25 mm still go deep. The −30 mm heights
+      are rejected: the contact falls off the face's flat.
+    - **The face-edge correction: "22.5 mm below centre (Recommended)".** The AC stop's stance is lean −5° at `up`
+      −0.0225 m, 3 mm clear of the flat's edge, so every grid row is played. Measured (round 3, candidate R7): Gugan 5's
+      stop 6.6610 on Gugan's mallet solved at the stance and 6.5753 by section S's method (band 6.55–7.75); no
+      head-deep and no yield on either mallet, the depth margin 1.309 mm and 1.101 mm; the head touches the turf
+      from about 16.5–17.4 ms, after the 15 ms strike window, at 29–48 N; the 1 mm step spread 0.0083 passes. It sits
+      closer to the band's floor than −5° at −25 mm (6.5753 against 6.6462 by section S's method). The row 3 mm above
+      the contact (−19.5 mm) yields the soil and goes 2.3 mm deep.
+    - **The user's account, carried as a hypothesis to a later phase:** "during contact the player would let the
+      plane of the mallet flatten out parallel to the lawn. I'm assuming this would mitigate damage and increase
+      friction". The engine has no flattening, and the model may not react on the player's behalf, so nothing here
+      adopts it.
+    - **Gugan's calibration mallet is solved at the preset's own stance.** Section S's 7.157 at −6° used the mallet
+      solved at the previous −4° stance (head 0.9065 kg); solved at −6° (head 0.8914 kg) the same stance gives 7.339.
+      The stop's calibration against Gugan 5 therefore moves with the stance, and the slow test holds 6.66 at −5° and
+      −22.5 mm.

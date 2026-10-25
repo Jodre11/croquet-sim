@@ -9,21 +9,13 @@ import {
     type ImpactSnapshot,
 } from "../../src/engine/impact/integrate";
 import { IDENTITY, rotate } from "../../src/engine/impact/rigidBody";
-import { faceHalfHeight } from "../../src/engine/impact/shape";
 import { simulateImpact, simulateStroke } from "../../src/engine/impact/simulateImpact";
 import { GRIP_LIMIT, effectiveMass, swungBody } from "../../src/engine/impact/track";
 import type { ContactInterval, FlexHold, HeadState, ImpactResult, TrackDrive } from "../../src/engine/impact/types";
 import { ZERO, add, cross, dot, horizontal, length, scale, sub, vec3, type Vec3 } from "../../src/engine/math/vec3";
 import { simulateShot, strokeContext, type ShotOutcome } from "../../src/engine/shot";
 import { simulateFreeMotion } from "../../src/engine/simulate";
-import {
-    MAX_LEAD,
-    buildContact,
-    handsAheadFor,
-    headShapeOf,
-    planStroke,
-    swingApproach,
-} from "../../src/engine/swing/buildContact";
+import { MAX_LEAD, buildContact, planStroke, swingApproach } from "../../src/engine/swing/buildContact";
 import { defaultProfile } from "../../src/engine/swing/profile";
 import type { SwingTrajectory } from "../../src/engine/swing/trajectory";
 import { STROKE_TYPES, type ShotSetup } from "../../src/engine/swing/types";
@@ -341,14 +333,7 @@ describe("simulateShot", () => {
         // `driveEnd`), so holdFrom = max(window end, impactEnd) is the impact's end unless the impact caps.
         expect(jumps).toHaveLength(type === "stop-ac" || type === "stop-gc" ? 4 : 3);
         for (const jump of jumps) {
-            // P2b.2b.2c.2d: the AC stop's impact-end seam, and the hold's (the same pair here), jumps about 1.19e-6 m
-            // (was 2.69e-7 m at the 4° lean, where the head stays clear of the turf). At 6° the head is in the turf
-            // until 19.695 ms and rises at 0.74 m/s at the impact's end (20 ms), the turf's push easing inside the
-            // follow-through's 1 ms sample spacing; the trapezoid rule this check uses cannot follow that, and the
-            // velocity jump (0.132 m/s) stays within its bound (0.185 m/s). Every other seam holds at 1e-6.
-            const turfSeam = type === "stop-ac" && (jump.name === "impact end" || jump.name === "hold");
-            const slack = turfSeam ? 1.25e-6 : POSITION_SLACK;
-            expect(jump.position, jump.name).toBeLessThanOrEqual(slack);
+            expect(jump.position, jump.name).toBeLessThanOrEqual(POSITION_SLACK);
             expect(jump.velocity, jump.name).toBeLessThanOrEqual(jump.bound);
         }
     };
@@ -395,6 +380,17 @@ describe("simulateShot", () => {
         expect(dug).toHaveLength(1);
         expect(dug[0]).toMatchObject({ tier: "possible-fault", ball: "blue" });
         expect(simulateShot(setup).faults.findings.map((f) => f.law)).not.toContain("29.1.14");
+    });
+
+    it("does not damage the turf in the canonical AC stop, in its impact or its follow-through", () => {
+        // User decision 2026-10-25: the stroke may rub the lawn and disturb the grass but must not damage the turf, so
+        // neither the impact nor the follow-through raises head-deep or turf-yield. At 6° and 20 mm below the face's
+        // centre the head went 3.6 mm deep and yielded the soil.
+        const outcome = simulateShot(canonicalSetup("stop-ac"), undefined, { trajectory: true });
+        expect(outcome.impact.events.map((e) => e.kind)).toEqual(["turf-lift"]);
+        const flags = (outcome.trajectory as SwingTrajectory).flags;
+        expect(flags).not.toContain("follow-turf-yield");
+        expect(flags).not.toContain("follow-head-deep");
     });
 
     it("raises no 29.1.6.1 on the canonical drive: its follow-through does not catch the ball again", () => {
@@ -647,11 +643,14 @@ describe("the mechanisms (design §8.1), on the canonical setups", () => {
         expect(dug).toBeDefined();
         expect(dug.start).toBeGreaterThanOrEqual((hits(impact)[0] as ContactInterval).end);
         expect(turf).toBeGreaterThan(0);
-        // P2b.2b.2c.2d: the stop's 6° lean (was 4°; events ["turf-lift"]) lowers the back corner, so on this setup (gap
-        // 0, jab 2 mm; the canonical stroke's head meets the turf at 7.64 ms) the head meets the turf at 6.79 ms and
-        // digs to impact-head-deep at 8.71 ms: the striker's and the struck ball's lifts, then the turf's yield and the
-        // depth limit.
-        expect(impact.events.map((e) => e.kind)).toEqual(["turf-lift", "turf-lift", "turf-yield", "impact-head-deep"]);
+        // P2b.2b.2c.2d: the canonical stance, 5° back at 22.5 mm below the face's centre (was 4° at 20 mm, events
+        // ["turf-lift"]): with this deliberate 2 mm jab the head yields the turf at 15.46 ms and reaches the depth
+        // limit at 16.57 ms. The user's rule that the stroke must not damage the turf applies to the default stroke
+        // (the next test); a jab with the dip uses the ground to slow the mallet, so its dig is a recorded consequence.
+        expect(impact.events.map((e) => e.kind)).toEqual(["turf-lift", "turf-yield", "impact-head-deep"]);
+        const times = impact.events.map((e) => ("t" in e ? e.t : NaN));
+        expect(times[1]).toBeCloseTo(0.01546, 5);
+        expect(times[2]).toBeCloseTo(0.01657, 5);
     });
 
     // Spec exit criterion 2 (P2b.2b.2b.2b). On the bed (P2b.2b.2b.2a) the canonical pass roll's follow-through kept its
@@ -745,23 +744,17 @@ describe("the mechanisms (design §8.1), on the canonical setups", () => {
 
 describe("the head's turf contact after the strike (P2b.2b.2b.3; user ruling 2026-10-16)", () => {
     it("hands a stop whose head rests on the turf over to the follow-through, not to the cap", () => {
-        // The preset stop-ac 2 m/s, drive 0, up 3 mm above canonical (−0.017), side 0. After the check its relaxed
+        // The preset stop-ac 2 m/s, drive 0, at the canonical contact (−0.0225 m), side 0. After the check its relaxed
         // hands follow the pendulum, which drags the head back and forth on the turf, carrying its weight about 0.5 mm
         // deep; the pair held the impact open to TRACK_IMPACT_CAP (impact-cap at 450 ms). Once the ball has gone and
         // the drive is done, the follow-through takes the head's turf contact over: the impact ends by itself (now at
-        // 262 ms, on its other terms) and the follow-through's head is in the turf.
-        // P2b.2b.2c.2d: the case pins the stance it was written for, 4° back. At the canonical 6° the head grounds
-        // within the strike and leaves the turf again (the impact ends by itself at 175 ms, the head 15.67 mm clear),
-        // so nothing rests on the turf after the check and the case would no longer exercise the hand-over.
-        const lean = (-4 * Math.PI) / 180;
-        const m = defaultProfile.mallet;
-        const handsAhead = handsAheadFor(lean, defaultProfile.stance["stop-ac"].top, -0.02, {
-            ballRadius: R,
-            headLength: m.headLength,
-            faceHalfHeight: faceHalfHeight(headShapeOf(m.head)),
-        });
-        const base = canonicalSetup("stop-ac", { world: WORLD, stance: { handsAhead } });
-        const preset = { ...base.stroke, drive: 0, contact: { up: base.stroke.contact.up + 0.003, side: 0 } };
+        // 209 ms, on its other terms; was 262 ms) and the follow-through's head is in the turf.
+        // P2b.2b.2c.2d: the canonical stance is 5° back at 22.5 mm below the face's centre (was 4° at 20 mm), and the
+        // case strikes at that canonical contact (was 3 mm above the canonical one, −0.017 m). 3 mm above it, at
+        // −0.0195 m, the head yields the soil and goes 2.1 mm deep (turf-yield, impact-head-deep). At the canonical
+        // contact the head rests on the turf from 17.9 ms to 178 ms at up to 21 N.
+        const base = canonicalSetup("stop-ac", { world: WORLD });
+        const preset = { ...base.stroke, drive: 0 };
         const setup = { ...base, stroke: preset };
         const shot = { ...setup, stroke: { ...preset, backswing: backswingFor(setup, 2, WORLD) } };
         const { impact, contact, trajectory } = simulateShot(shot, WORLD, { trajectory: true });

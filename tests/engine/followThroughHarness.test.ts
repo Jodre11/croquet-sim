@@ -70,9 +70,11 @@ describe("the follow-through harness (P2b.2b.2c.2d design §3.4)", () => {
     it("throws for a contact speed beyond the bracket, naming both ends", () => {
         expect(() => backswingForContact(canonicalSetup("stop-ac"), 40, WORLD)).toThrow(/m\/s.*m\/s/);
     });
-    it("sets the AC stop's canonical stance at a 6° backward lean and plays it top to finish", () => {
+    it("sets the AC stop's canonical stance at 5° back, 22.5 mm below the face's centre, and plays it", () => {
+        // P2b.2b.2c.2d: the stance (was 6° at 20 mm).
         const setup = canonicalSetup("stop-ac");
-        expect(Math.abs(leanOf(setup, WORLD) - (-6 * Math.PI) / 180)).toBeLessThanOrEqual(1e-12);
+        expect(Math.abs(leanOf(setup, WORLD) - (-5 * Math.PI) / 180)).toBeLessThanOrEqual(1e-12);
+        expect(setup.stroke.contact.up).toBe(-0.0225);
         const outcome = simulateShot(setup, defaultWorld());
         expect(outcome.motion.aborted).toBe(false);
         expect(outcome.impact.duration).toBeGreaterThan(0);
@@ -91,9 +93,12 @@ describe("the follow-through harness (P2b.2b.2c.2d design §3.4)", () => {
     });
     it("reads the turf's limit on the lean as the static pose gives it", () => {
         // The default mallet's AC stop at up −0.02 m (2026-10-24 pose check): 3.35 mm clear at −6°, 7.79 mm in the
-        // turf at −8°.
+        // turf at −8°. P2b.2b.2c.2d: the height is given, the canonical stop's now −0.0225 m (was −0.02 m).
         const at = (deg: number) =>
-            turfLimited(guganSetup("stop-ac", 3, 0.75e-3, { world: WORLD, lean: (deg * Math.PI) / 180 }), WORLD);
+            turfLimited(
+                guganSetup("stop-ac", 3, 0.75e-3, { world: WORLD, up: -0.02, lean: (deg * Math.PI) / 180 }),
+                WORLD,
+            );
         expect(at(-6)).toBeCloseTo(3.35e-3, 4);
         expect(at(-8)).toBeCloseTo(-7.79e-3, 4);
     });
@@ -131,10 +136,11 @@ describe("the follow-through harness (P2b.2b.2c.2d design §3.4)", () => {
         "keeps the canonical AC stop's Gugan 5 stop within the band at 3 m/s contact speed",
         { timeout: 80_000 },
         () => {
-            // The stop at the canonical stance (lean 6° back) and timing (on time, so the brake acts with the strike),
-            // on Gugan's mallet and the AC stop's own grips, at the croquet gap Gugan measured: the ratio of the
-            // croqueted ball's travel to the striker's must stay within the mean's standard error of his 7.15, which
-            // the stance was set to match.
+            // The stop at the canonical stance (lean 5° back, 22.5 mm below the face's centre) and timing (on time, so
+            // the brake acts with the strike), on Gugan's mallet solved at that stance and the AC stop's own grips, at
+            // the croquet gap Gugan measured: the ratio of the croqueted ball's travel to the striker's must stay
+            // within the mean's standard error of his 7.15. The stance was set so that the head does not damage the
+            // turf (6.66 here; 7.34 at 6° and 20 mm, which dug 3.6 mm deep), not to match the ratio.
             const target = ratioTargetsReference["stop-ac"].ratio;
             const canonical = canonicalSetup("stop-ac", { world: WORLD });
             const setup = guganSetup("stop-ac", 3, DEFAULT_CROQUET_GAP, {
@@ -142,6 +148,7 @@ describe("the follow-through harness (P2b.2b.2c.2d design §3.4)", () => {
                 gugan: true,
                 jab: 0,
                 lean: leanOf(canonical, WORLD),
+                up: canonical.stroke.contact.up,
                 grips: "stop-ac",
                 timing: DEFAULT_TIMING["stop-ac"],
                 drive: DEFAULT_DRIVE["stop-ac"],

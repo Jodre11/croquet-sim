@@ -549,8 +549,8 @@ const CANONICAL_APPROACH: Readonly<Record<StrokeType, number>> = {
     "single-ball": 6.2186e-3,
     drive: 6.2186e-3,
     // P2b.2b.2b.2c: the mallet (was 6.8318e-3).
-    // P2b.2b.2c.2d: the stance's lean, 6° back (was 11.1829e-3): the back corner, pitched further, lies lower.
-    "stop-ac": 2.1277e-3,
+    // P2b.2b.2c.2d: the stance, 5° back at 22.5 mm below the face's centre (was 11.1829e-3 at 4° and 20 mm).
+    "stop-ac": 9.27283e-3,
     // P2b.2b.2b.2c: the mallet (was 0.1189e-3).
     "stop-gc": 6.2186e-3,
     // P2b.2b.2b.2c: the mallet: CANONICAL_CLEARANCE's (was 29.5203e-3, 36.6544e-3 and 39.7589e-3).
@@ -564,7 +564,7 @@ const DEFAULT_LEAN: Readonly<Record<StrokeType, number>> = {
     "single-ball": 0,
     drive: 0,
     // P2b.2b.2c.2d: the stance's lean (was -4).
-    "stop-ac": -6,
+    "stop-ac": -5,
     "stop-gc": 0,
     "half-roll": 24,
     "full-roll": 31,
@@ -608,12 +608,12 @@ describe("the default profile's canonical setups", () => {
         }
     });
 
-    it("rises 6° into the AC stop, the face tilted up as much", () => {
+    it("rises 5° into the AC stop, the face tilted up as much", () => {
         // P2b.2b.2c.2d: the stance's lean (was 4°).
         const world = defaultWorld();
         const c = buildContact(canonicalSetup("stop-ac", { world }), world);
-        expect(arcOf(c).theta0).toBeCloseTo(6 * DEG, 15);
-        expect(rotate(c.orientation, vec3(1, 0, 0)).z).toBeCloseTo(Math.sin(6 * DEG), 12);
+        expect(arcOf(c).theta0).toBeCloseTo(5 * DEG, 15);
+        expect(rotate(c.orientation, vec3(1, 0, 0)).z).toBeCloseTo(Math.sin(5 * DEG), 12);
         expect(c.velocity.z).toBeGreaterThan(0);
     });
 

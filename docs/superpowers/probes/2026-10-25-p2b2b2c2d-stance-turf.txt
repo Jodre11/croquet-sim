@@ -1,0 +1,228 @@
+== The AC stop's candidate stances against the turf (P2b.2b.2c.2d). Evidence only: no ruling is made here ==
+== HEAD b21f3d1, 2026-10-25. The worktree also held uncommitted edits to scripts/ and to src/engine/impact/
+   (integrate.ts, track.ts); the engine edits only add a probe field (the hands' push intent), which nothing in the
+   engine reads. Script /tmp/claude-24ab43be-03a6-40ed-9263-62eff82123c9/scripts/stanceTurf.mts, not committed, SHA-256
+   6f526721875046617a8c7fc29940e8df96929eb48619d5e1f7daaa5dad1d653d (current). Earlier revisions: round 1 ran on
+   0ea03f655c1308ee299999d7cc9b9e9b258c20dfa4cb7a7a26fa0d2bacde430f and round 2 on
+   73a091f744c980792a8a3d8ac4111f71d0a0e093f50727cd92f6953022ab4027. Since round 1 the script has gained ROUND=2
+   and ROUND=3, a mallet-solve guard, a print of each a1 head mass, a world argument to the mallet solve, grid rows
+   (`rowUp`) in (b), and labels with up to 0.1 mm; round 1's physics path is otherwise unchanged. Commands:
+   round 1  env ROOT=/Users/jodre11/Repos/croquet-sim/.claude/worktrees/p2b2b2c2d-follow-through npx --yes tsx \
+              /tmp/claude-24ab43be-03a6-40ed-9263-62eff82123c9/scripts/stanceTurf.mts
+   round 2  the same, with ROUND=2 added to the env
+   round 3  the same, with ROUND=3 added to the env. Round 3 ran on a different tree: HEAD d628ffc, with uncommitted
+            edits by another agent that set the stop-ac default to -5°/-25 mm (profile.ts, canonicalUp, swing.json's
+            backswing). See Round 3's header ==
+== The criterion (user ruling): the stroke may rub the lawn and disturb the grass but must not damage the turf. No
+   impact-head-deep, so the head's lowest point stays within HEAD_DEEP_LIMIT (2.000 mm) below the turf plane.
+   turf-yield (soil yield) is reported alongside. Band 6.55 to 7.75 (7.15 ± 0.6); IMPACT_DT 5 µs ==
+== Candidates: lean (degrees, forward positive) / up (mm). C1 -6°/-20 (the current default), C2 -5°/-20,
+   C3 -6°/-25, C4 -7°/-25. Each stance is set the way profile.ts's stanceFromLean sets it: handsAhead from
+   handsAheadFor(lean, top, up), the stance's top hand kept, on the setup's own mallet and ball, with the contact at
+   `up`. In (a) this is done in the script the way guganSetup's `stanced` does it, and in (c) through guganSetup's
+   `lean` and `up` options. In (b) it goes through canonicalSetup's `stance.handsAhead` and `stroke.contact.up`
+   (default mallet, default ball) ==
+
+== (a) Gugan 5's stop on defaultWorld: canonicalSetup("stop-ac") with a Gugan mallet, DEFAULT_CROQUET_GAP 0.75 mm,
+   jab 0, the stop's own grips, ON_TIME and the preset's drive. The candidate's stance is applied after the mallet.
+   The stroke is solved for 3 m/s at the ball (strokeForContact); turfLimited is checked first, then playRoutes.
+   Gugan's mallet is the default mallet with its head mass solved so that the effective mass is 2.30 ball masses.
+   The script copies ratioFit's solveGugansMallet, the same bisection and passes, so that the stance can be chosen
+   at which the mass is solved. Three ways:
+   a0  the mallet solved at HEAD's preset stance (-6°/-20), as guganSetup does at HEAD; earlier (a), unchanged
+   a1  "canonical": the mallet solved at the candidate's own stance, as Task 14's section H and 690c42e's test do
+   a2  "S-method": the mallet solved at the preset stance section S ran under (-4°/-20, before e9f8e02)
+   Head mass (kg): gugansMallet at HEAD 0.8913709049348292; the copy at -6°/-20 gives 0.8913709049348292, identical
+   to the bit; at -4°/-20 0.9065402372137191; default mallet 1. Column meanings: clear0 is the head's lowest point
+   at the static contact pose. touch is when the head/turf pair first closes. least is the head's lowest point over
+   every impact step. end is the same at the impact's last step (negative means in the turf). Times in ms from the
+   impact's start; clearances in mm ==
+  case          ratio   band  clear0  touch    turf-lift     yield    deep     least @ ms          end     peak N
+  a0 C1 -6°/-20 7.3386  yes   3.352    7.735   0.505 blue     9.210    9.750   -3.570 @ 12.895     0.425   417.0
+  a0 C2 -5°/-20 6.6868  yes   8.945   13.090   0.615 blue    15.280   no       -1.998 @ 17.475     4.316   208.6
+  a0 C3 -6°/-25 7.4921  yes   8.325   12.605   0.505 blue    14.675   15.915   -2.179 @ 17.220    -1.384   208.3
+  a0 C4 -7°/-25 7.2756  yes   2.735    7.070   0.435 blue     8.735    9.315   -3.778 @ 12.765     0.238   403.8
+  a1 C1 -6°/-20 7.3386  yes   3.352    7.735   0.505 blue     9.210    9.750   -3.570 @ 12.895     0.425   417.0
+  a1 C2 -5°/-20 6.5901  yes   8.945   13.100   0.615 blue    15.270   17.345   -2.002 @ 17.480     4.348   207.8
+  a1 C3 -6°/-25 7.4921  yes   8.325   12.605   0.505 blue    14.675   15.915   -2.179 @ 17.220    -1.384   208.3
+  a1 C4 -7°/-25 7.3190  yes   2.735    7.050   0.435 blue     8.735    9.310   -3.763 @ 12.725     0.283   411.7
+  a2 C1 -6°/-20 7.1566  yes   3.352    7.720   0.505 blue     9.215    9.750   -3.592 @ 12.925     0.378   420.5
+  a2 C2 -5°/-20 6.5070  no    8.945   13.115   0.615 blue    15.260   17.235   -2.007 @ 17.485     4.322   206.9
+  a2 C3 -6°/-25 7.3059  yes   8.325   12.625   0.500 blue    14.655   15.910   -2.184 @ 17.235    -1.396   206.0
+  a2 C4 -7°/-25 7.1919  yes   2.735    7.110   0.430 blue     8.740    9.320   -3.805 @ 12.830     0.164   396.2
+  Every case is played (none turf-limited or rejected) with 3.0000 m/s at first touch and backswing 0.4486 m. No
+  other impact events. The impact lasts 20.000 ms (C1, C4), 42.5 to 42.9 ms (C2) and 20.245 ms (C3). C3 ends with
+  the head 1.38 to 1.40 mm in the turf.
+  The hypothesis holds. a2 reproduces section S's recorded figures: C1 7.1566 (S: 7.1566), C2 6.5070 (S: 6.507),
+  C4 7.1919, touching at 7.110 ms (S: 7.192, touching at 7.11 ms). a1 at C1 reproduces section H's 7.3386. For C1
+  and C3, a1 equals a0 to the bit: the solved mass depends on the lean and not on `up`, so the solve at -6°/-25
+  gives -6°/-20's mallet (inferred from identical intensities and ratios; the mass itself was not printed for C3).
+  For C2, a0 is a hybrid: the mallet comes from -6° and the stance from -5°. It is the only (a) case free of
+  impact-head-deep, at -1.998 mm. Solved at its own stance (a1), C2 goes 2.002 mm deep at 17.345 ms. In section S's
+  method (a2), C2's ratio of 6.5070 falls below the band.
+
+== (b) The canonical stop on the default mallet: canonicalSetup("stop-ac") on defaultWorld with the candidate's
+   stance, at 3 m/s planned (backswingFor). v@def is the planned speed at the default backswing, 0.4486 m from
+   reference/swing.json. It is 3.0000 m/s for every candidate, so backswingFor returns that same backswing. The
+   events are from simulateShot(trajectory: true) and match playRoutes' events exactly. least and end come from
+   playRoutes' steps. clr@touch: the lowest point at the step nearest the first face touch (0.005 ms for each
+   candidate). Units as in (a) ==
+  cand          v@def   clear0  clr@touch  turf-lift   yield    deep     least @ ms          end     peak N
+  C1 -6°/-20    3.0000  3.352   3.352      0.490 blue   9.285    9.710   -3.689 @ 12.975     0.244   445.1
+  C2 -5°/-20    3.0000  8.945   8.944      0.595 blue  15.265   16.580   -2.082 @ 17.450     4.264   222.2
+  C3 -6°/-25    3.0000  8.325   8.324      0.490 blue  14.765   15.730   -2.243 @ 17.240    -1.452   216.7
+  C4 -7°/-25    3.0000  2.735   2.734      0.425 blue   8.850    9.330   -3.890 @ 12.915     0.212   418.6
+  The follow-through's flags: C1 [follow-turf-yield, follow-head-deep]; C2 []; C3 []; C4 [follow-turf-yield,
+  follow-head-deep]. The head/turf intervals: C1 7.640-19.695, C2 13.030-22.205, C3 12.630-20.245, C4 7.150-19.975 ms.
+  No other impact events. In C2 and C3 the head goes deep within the impact, not in the follow-through, so their
+  follow-through flags are empty.
+
+== (c) Step convergence: Gugan 5's stop ratio at gap 1 mm, as squeezeConvergence.test.ts's keepsGugan5 plays it.
+   guganSetup("stop-ac", GUGAN5.speed 3, 0.001) on fitWorld(TODAY), Gugan's mallet, jab 0, planned speed (as
+   guganStroke, not contactSpeed), the candidate's lean and up, then runFit(TODAY) at dt/2, dt and 2·dt (STEP_SHARES).
+   Passes if the spread (spreadOf) < tolerance/10 = 0.0600. pen: the head/turf pair's peak penetration (mm). As in
+   the test, Gugan's mallet is solved at the preset's stance (-6°/-20, a0's mallet), not at the candidate's. Times
+   in ms ==
+  cand          ratio dt/2  ratio dt  ratio 2dt  spread  verdict  yield (dt/2, dt, 2dt)      deep (dt/2, dt, 2dt)
+  C1 -6°/-20    7.2276      7.1886    7.1257     0.1019  fail     9.190, 9.185, 9.180        9.730, 9.725, 9.720
+  C2 -5°/-20    6.6255      6.6191    6.6106     0.0149  pass     15.273, 15.270, 15.260     no, no, no
+  C3 -6°/-25    7.3070      7.2973    7.2718     0.0352  pass     14.620, 14.615, 14.600     15.843, 15.835, 15.820
+  C4 -7°/-25    7.1576      7.1328    7.0972     0.0604  fail     8.710, 8.710, 8.710        9.290, 9.290, 9.290
+  pen (dt/2, dt, 2dt): C1 3.483, 3.486, 3.494; C2 1.905, 1.908, 1.915; C3 2.089, 2.093, 2.100; C4 3.675, 3.679, 3.687.
+  C1 reproduces the recorded failing spread, 0.1019.
+
+== Summary (ratio in (a) as a1 canonical / a2 S-method; deep and yield as (a1, a2) / (b); spread from (c)) ==
+  cand          ratio a1 / a2         deep (a1,a2) / (b)   yield (a1,a2) / (b)   least a1 / (b) mm   1 mm spread
+  C1 -6°/-20    7.3386 / 7.1566 yes   yes, yes / yes       yes, yes / yes        -3.570 / -3.689     0.1019 fail
+  C2 -5°/-20    6.5901 / 6.5070 no    yes, yes / yes       yes, yes / yes        -2.002 / -2.082     0.0149 pass
+  C3 -6°/-25    7.4921 / 7.3059 yes   yes, yes / yes       yes, yes / yes        -2.179 / -2.243     0.0352 pass
+  C4 -7°/-25    7.3190 / 7.1919 yes   yes, yes / yes       yes, yes / yes        -3.763 / -3.890     0.0604 fail
+  (The band column applies to a2; every a1 ratio lies within the band.)
+  Every candidate raises impact-head-deep in (a1), (a2) and (b), and every candidate yields the soil in each.
+  - C2 (-5°/-20 mm) raises none only in a0, where -6°'s mallet meets -5°'s stance, at -1.998 mm, and in (c), whose
+    mallet is likewise -6°'s. Solved at its own stance (a1), it goes 2.002 mm deep at 17.345 ms, with a ratio of
+    6.5901, 0.040 above the floor. Under section S's method (a2) its ratio of 6.5070 lies below the band. In (b) it
+    goes 2.082 mm deep at 16.580 ms. Its depth sits within 0.08 mm of the limit in every measurement.
+  - C3 (-6°/-25 mm) has ratios of 7.4921 (a1) and 7.3059 (a2) and passes (c) with 0.0352. It goes about 2.2 mm deep
+    everywhere and ends the impact with the head in the turf.
+  - C1 and C4 ground early (7.0 to 7.7 ms), peak at 396 to 445 N, go 3.6 to 3.9 mm deep and fail (c).
+  - The hypothesis is confirmed. Section S's 7.157 is the -6° stance on a mallet solved at the old -4° stance
+    (0.9065 kg head), and a2 reproduces it to 4 decimals. Section H's and 690c42e's 7.3386 is the mallet solved at
+    -6° (0.8914 kg), which a1 reproduces.
+
+==== Round 2 ====
+== Round 2 repeats (a), (b) and (c), with (a) as a1 (canonical: the mallet solved at the candidate's own stance) and
+   a2 (section S's method: the mallet solved at the old -4°/-20 stance). Unlike round 1, (c) solves the mallet at the
+   candidate's own stance, so that it matches a1. The solve runs on fitWorld(TODAY), and the setup is built as
+   guganStroke builds it (gap 1 mm, jab 0, planned speed via strokeFor). C1 is played in (c) as a control; with its
+   own stance being the preset's, it must reproduce round 1's 0.1019, and it does. Candidates: R1 -4°/-20,
+   R2 -4°/-25, R3 -4°/-30, R4 -5°/-25, R5 -5°/-30 and R6 -6°/-30, with C2 -5°/-20 again for comparison. Units and
+   columns as in round 1. margin = 2.000 mm + least clearance: the distance from the deepest point to
+   HEAD_DEEP_LIMIT, positive inside it. Run with ROUND=2 at script SHA-256
+   73a091f744c980792a8a3d8ac4111f71d0a0e093f50727cd92f6953022ab4027 ==
+== Up -30 mm cannot be played. R3, R5 and R6 are rejected in every measurement (in a1, already at the mallet's solve):
+   "the contact lies off the face: (-0.03, 0) m from its centre, beyond its flat ±0.025575 m up and ±0.025575 m
+   across". The face's flat ends 25.575 mm below its centre. -25 mm is the lowest of the asked heights that the engine
+   accepts. Nothing was done to work around this ==
+
+== (a) Gugan 5's stop. a1 head mass (kg): C2 and R4 (-5°) 0.8990821234879819; R1 and R2 (-4°) 0.9065402372137191,
+   which is also a2's mallet ==
+  case          ratio   band  clear0  touch    turf-lift     yield    deep     least @ ms          end     peak N
+  a1 C2 -5°/-20 6.5901  yes   8.945   13.100   0.615 blue    15.270   17.345   -2.002 @ 17.480     4.348   207.8
+  a1 R1 -4°/-20 6.3970  no   14.547   never    0.730 blue    no       no        1.901 @ 20.000     1.901     0.0
+  a1 R2 -4°/-25 6.5359  no   19.535   never    0.730 blue    no       no        7.182 @ 20.000     7.182     0.0
+  a1 R4 -5°/-25 6.7395  yes  13.926   39.320   0.615 blue    no       no       -0.442 @ 42.440    -0.442    16.1
+  a2 C2 -5°/-20 6.5070  no    8.945   13.115   0.615 blue    15.260   17.235   -2.007 @ 17.485     4.322   206.9
+  a2 R1 -4°/-20 6.3970  no   14.547   never    0.730 blue    no       no        1.901 @ 20.000     1.901     0.0
+  a2 R2 -4°/-25 6.5359  no   19.535   never    0.730 blue    no       no        7.182 @ 20.000     7.182     0.0
+  a2 R4 -5°/-25 6.6462  yes  13.926   39.135   0.615 blue    no       no       -0.504 @ 42.905    -0.504    17.1
+  At -4° a1 and a2 are the same run, since the candidate's own mallet is the -4° mallet. R1's 6.3970 reproduces
+  section S's -4° figure (6.397). Every case meets the ball at 3.0000 m/s with backswing 0.4486 m. R4's head touches
+  the turf only after the strike (from 39.1 to 39.3 ms) and ends the impact 0.44 to 0.50 mm in it. No other impact
+  events.
+
+== (b) the canonical stop, default mallet, 3 m/s planned (backswingFor; v@def 3.0000 for every candidate, so the
+   backswing is 0.4486 m) ==
+  cand          clear0  clr@touch  turf-lift   yield    deep     least @ ms          end     peak N  follow flags
+  C2 -5°/-20    8.945   8.944      0.595 blue  15.265   16.580   -2.082 @ 17.450     4.264   222.2   []
+  R1 -4°/-20   14.547  14.546      0.710 blue  no       no        1.732 @ 20.000     1.732     0.0   []
+  R2 -4°/-25   19.535  19.534      0.710 blue  no       no        6.761 @ 20.000     6.761     0.0   []
+  R4 -5°/-25   13.926  13.925      0.595 blue  no       no       -0.674 @ 42.905    -0.674    29.2   []
+  R4's head/turf interval runs from 37.915 to 42.905 ms. The events match simulateShot's exactly.
+
+== (c) Gugan 5's stop ratio at gap 1 mm, at dt/2, dt and 2·dt, with the mallet solved at the candidate's own stance.
+   Times in ms ==
+  cand          ratio dt/2  ratio dt  ratio 2dt  spread  verdict  yield (dt/2, dt, 2dt)    deep (dt/2, dt, 2dt)
+  C1 -6°/-20    7.2276      7.1886    7.1257     0.1019  fail     9.190, 9.185, 9.180      9.730, 9.725, 9.720
+  C2 -5°/-20    6.5370      6.5317    6.5240     0.0129  pass     15.268, 15.265, 15.260   no, 17.390, 17.280
+  R1 -4°/-20    6.3516      6.3519    6.3439     0.0080  pass     no                       no
+  R2 -4°/-25    6.5169      6.5261    6.5226     0.0092  pass     no                       no
+  R4 -5°/-25    6.6694      6.6759    6.6649     0.0110  pass     no                       no
+  pen (mm, dt/2, dt, 2dt): C1 3.483, 3.486, 3.494; C2 1.920, 1.923, 1.929; R4 0.237, 0.227, 0.271; R1 and R2 none.
+  On its own mallet C2 goes deep at dt and 2·dt but not at dt/2: the event depends on the step. (Round 1's (c), on
+  the -6° mallet, gave C2 no impact-head-deep at any step.)
+
+== Round 2 summary (deep and yield as a1, a2 / (b); margin to the 2 mm limit in mm; spread from (c), own mallet) ==
+  cand        ratio a1 / a2 (band)       deep a1,a2/(b)  yield a1,a2/(b)  margin a1 / (b)   1 mm spread
+  C2 -5°/-20  6.5901 yes / 6.5070 no     yes,yes / yes   yes,yes / yes    -0.002 / -0.082   0.0129 pass (deep at dt)
+  R1 -4°/-20  6.3970 no  / 6.3970 no     no,no / no      no,no / no        3.901 / 3.732    0.0080 pass
+  R2 -4°/-25  6.5359 no  / 6.5359 no     no,no / no      no,no / no        9.182 / 8.761    0.0092 pass
+  R3 -4°/-30  rejected: the contact lies off the face
+  R4 -5°/-25  6.7395 yes / 6.6462 yes    no,no / no      no,no / no        1.558 / 1.326    0.0110 pass
+  R5 -5°/-30  rejected: the contact lies off the face
+  R6 -6°/-30  rejected: the contact lies off the face
+  R4 (-5°/-25 mm) is the one candidate across both rounds with no impact-head-deep and no turf-yield in a1, a2, (b)
+  and (c), its ratio in band on both mallets (6.7395 a1, 6.6462 a2), and its spread passing. It touches the turf
+  only late (37.9 to 39.3 ms, peak 16 to 29 N) and ends the impact 0.44 to 0.67 mm in it. R1 and R2 never touch the
+  turf, but their ratios fall below the band on every mallet.
+
+==== Round 3 ====
+== R7 (-5°/-22.5 mm, the user's candidate) is measured as in the Round 2 rerun: a1, a2, (b), and (c) on the
+   own-stance mallet. R4 is replayed beside it. Also measured: R7's grid rows at up0 ± 3 mm on (b), R7-3 (contact at
+   -19.5 mm) and R7+3 (contact at -25.5 mm). As in the digest grid, each row keeps R7's hands and moves only the
+   contact. Run with ROUND=3 at script SHA-256 6f526721875046617a8c7fc29940e8df96929eb48619d5e1f7daaa5dad1d653d ==
+== The tree: HEAD d628ffc, with another agent's uncommitted edits making -5°/-25 mm the stop-ac default:
+   profile.ts, canonicalUp -0.025 and swing.json's defaultBackswing 0.4485991348057018 m. The script sets the stance,
+   the contact and the mallet explicitly, so these edits reach the results only through the default backswing, which
+   strokeForContact and backswingFor replace in any case. The check: R4 reproduces round 2 to every printed figure in
+   a1, a2, (b) and (c) (a1 intensity 3.6912e-4 against 3.6914e-4). The line "gugansMallet at HEAD" now reads
+   0.8990821234879819 kg, the -5° mallet, because the preset's stance moved; the -6° copy still gives 0.8913709 ==
+
+== (a) Gugan 5's stop. Head mass (kg): a1 0.8990821234879819 (-5°, R4 and R7 alike); a2 0.9065402372137191 ==
+  case             ratio   band  clear0  touch    turf-lift     yield    deep     least @ ms          end     peak N
+  a1 R4 -5°/-25.0  6.7395  yes  13.926   39.320   0.615 blue    no       no       -0.442 @ 42.440    -0.442    16.1
+  a1 R7 -5°/-22.5  6.6610  yes  11.435   17.400   0.615 blue    no       no       -0.691 @ 24.380    -0.182    29.1
+  a2 R4 -5°/-25.0  6.6462  yes  13.926   39.135   0.615 blue    no       no       -0.504 @ 42.905    -0.504    17.1
+  a2 R7 -5°/-22.5  6.5753  yes  11.435   17.365   0.615 blue    no       no       -0.693 @ 24.340    -0.183    29.3
+  R7's head touches the turf from 17.4 ms, after the strike, and stays on it until the impact ends (17.400-42.950 ms
+  in a1, 17.365-42.860 ms in a2). It ends 0.18 mm in the turf. Every case meets the ball at 3.0000 m/s with backswing
+  0.4486 m. No other impact events.
+
+== (b) the canonical stop, default mallet, 3 m/s planned (backswingFor; v@def 3.0000, backswing 0.4486 m) ==
+  cand               clear0  turf-lift   yield    deep     least @ ms         end     peak N  other events     flags
+  R4 -5°/-25.0       13.926  0.595 blue  no       no       -0.674 @ 42.905   -0.674    29.2   none             []
+  R7 -5°/-22.5       11.435  0.595 blue  no       no       -0.899 @ 20.245   -0.899    48.1   none             []
+  R7-3 row -19.5      8.346  0.590 blue  14.225   15.240   -2.307 @ 16.865    5.446   252.0   none             []
+  R7+3 row -25.5     14.524  0.605 blue  no       no       -0.146 @ 42.970   -0.146     3.3   off-face 0.120   []
+  head/turf (ms): R4 37.915-42.905; R7 16.485-20.245; R7-3 12.400-21.190; R7+3 41.910-42.970. Each row's clearance at
+  first touch is its clear0 less 0.001 mm. The events match simulateShot's exactly.
+  Neither grid row is rejected on the face: -25.5 mm lies inside the flat's ±25.575 mm. R7+3 does raise
+  impact-off-face at 0.120 ms: in the strike the ball touches the head off its face region. R7-3 yields the soil
+  and goes 2.307 mm deep (margin -0.307 mm).
+
+== (c) Gugan 5's stop ratio at gap 1 mm, at dt/2, dt and 2·dt, own-stance mallet (fitWorld(TODAY); C1 control
+   0.1019 reproduced) ==
+  cand             ratio dt/2  ratio dt  ratio 2dt  spread  verdict  yield  deep  pen (mm, dt/2, dt, 2dt)
+  R4 -5°/-25.0     6.6694      6.6759    6.6649     0.0110  pass     no     no    0.237, 0.227, 0.271
+  R7 -5°/-22.5     6.5973      6.6028    6.5945     0.0083  pass     no     no    0.679, 0.679, 0.684
+
+== Round 3 summary (margin to the 2 mm limit in mm; spread from (c), own mallet) ==
+  cand        ratio a1 / a2 (band)     deep a1,a2/(b)  yield a1,a2/(b)  least a1 / (b) mm  margin a1 / (b)  spread
+  R4 -5°/-25  6.7395 yes / 6.6462 yes  no,no / no      no,no / no       -0.442 / -0.674    1.558 / 1.326    0.0110 pass
+  R7 -5°/-22.5 6.6610 yes / 6.5753 yes no,no / no      no,no / no       -0.691 / -0.899    1.309 / 1.101    0.0083 pass
+  R7's grid rows on (b): -19.5 mm deep at 15.240 ms and yields at 14.225 ms (least -2.307, margin -0.307);
+  -25.5 mm clean (least -0.146, margin 1.854) but raises impact-off-face at 0.120 ms.
+  R7 is clean everywhere and in band on both mallets, but closer to the floor than R4 (a2 6.5753, 0.025 above it).
+  It touches the turf earlier than R4 (16.5 to 17.4 ms against 37.9 to 39.3 ms) and harder (29 to 48 N against 16 to
+  29 N). On the default mallet, moving the contact 3 mm nearer the face's centre (-19.5 mm) at R7's hands, which
+  lowers the head, goes past the depth limit.

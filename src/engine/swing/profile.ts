@@ -272,14 +272,18 @@ export const defaultProfile: SwingProfile = {
         "single-ball": stanceFromLean(0, 0, { top: 0.805, bottom: 0.7, gripTension: 1, bottomGrip: 0.1 }),
         // As single-ball, the bottom hand a little lower and firmer, still only a guide (prototype).
         drive: stanceFromLean(0, 0, { top: 0.805, bottom: 0.6, gripTension: 1, bottomGrip: 0.25 }),
-        // Feet set back, the ball met on the up: the shaft leans back 6°, so the strike rises 6° and the face tilts up
-        // 6°, beyond the feasibility spike's 3–5° tilt (a 5° lean left the head only 4.03 mm clear at contact). User
-        // decision 2026-10-24: the lean that matches Gugan 5's stop (ratio 7.15) at his strokes' own grips, 7.157 at
-        // −6° against 6.397 at −4° (the ratio falls 0.19 per degree of forward lean). −7° and behind drive the head
-        // into the turf. The cost is that at −6° (3.35 mm clear at contact) the head grounds within the strike on the
-        // canonical setup, yielding the turf and passing the depth limit. Both grips relax at contact (prototype).
-        // The lean is defined at its canonical contact, 20 mm below the face's centre.
-        "stop-ac": stanceFromLean(-6 * DEG, -0.02, { top: 0.805, bottom: 0.45, gripTension: 0.1, bottomGrip: 0.1 }),
+        // Feet set back, the ball met on the up: the shaft leans back 5°, so the strike rises 5° and the face tilts up
+        // 5°, within the feasibility spike's 3–5° tilt. User decision 2026-10-25: the stroke may rub the lawn and
+        // disturb the grass but must not damage the turf, so the head must not pass the depth limit (impact-head-deep)
+        // nor yield the soil (turf-yield). This stance does neither, on Gugan's mallet and the default one: the head
+        // touches the turf only after the 15 ms strike window, from about 16.5 ms at 29–48 N and at most 0.9 mm in, and
+        // Gugan 5's stop (ratio 7.15, band 6.55–7.75) comes to 6.66. −6° at 20 mm below the face's centre went 3.6 mm
+        // deep and yielded the soil, at a ratio of 7.34; −4° at 25 mm never touches the turf but its ratio, 6.54, falls
+        // just below the band; −5° at 25 mm (6.74) strikes 0.6 mm from the edge of the face's flat (±25.575 mm), so a
+        // contact only 1 mm lower than the canonical one is off the face. The contact, 22.5 mm below the face's centre,
+        // keeps 3 mm clear of that edge. Both grips relax at contact (prototype). The lean is defined at its canonical
+        // contact.
+        "stop-ac": stanceFromLean(-5 * DEG, -0.0225, { top: 0.805, bottom: 0.45, gripTension: 0.1, bottomGrip: 0.1 }),
         // The lower hand low and firm, checking the swing through its lever just after contact (prototype).
         "stop-gc": stanceFromLean(0, 0, { top: 0.805, bottom: 0.45, gripTension: 1, bottomGrip: 1 }),
         // Riches: "Stand further forward over the balls, with your front toe level with the back of your striker's
