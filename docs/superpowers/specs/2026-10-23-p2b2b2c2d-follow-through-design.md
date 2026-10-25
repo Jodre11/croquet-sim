@@ -480,6 +480,65 @@ read; the probes' layout and their section letters; the tests' names and files.
 
 ## Amendments
 
+- **2026-10-23, the plan's decisions** (made while planning; "Decisions made while planning" in
+  `docs/superpowers/plans/2026-10-23-p2b2b2c2d-follow-through.md`; folded in at the step's close, 2026-10-25). Each was
+  built as stated unless a later amendment below says otherwise:
+    1. **The smooth pulse and gravity as two commits.** Gravity through the window moves every swing-mode run, drive 0
+       included, so §9 step 2's drive-0 bit-identity and "gravity always acts" could not both hold; ruled by the user
+       as decision 12. The pulse's shape alone kept every run at drive 0 bit-identical.
+    2. **The arc keeps its fields.** `SwingArc.alpha` and `pivotAcceleration` stay the box's mean rates, Δω/T and Δv/T,
+       so their signs, the check and the finish read as before. Within the window the rate is mean·6s(1 − s), whose end
+       states are the box's to the bit (∫₀¹6s(1 − s) ds = 1); carry mode's hold starts from α₀ = 0.
+    3. **Gravity through the pulse in swing mode only.** Carry mode's arc is kinematic and gravity never enters its
+       plan. Swing mode's free table starts at the pulse's start, θ̈ being gravity's term plus the pulse's inside the
+       window and gravity's alone after it, by the same semi-implicit Euler; the player's effort ends at the pulse's
+       start.
+    4. **The bounds on `stroke.window`:** `MIN_WINDOW` 1 ms (200 impact steps resolve the pulse's peak and jerk) and
+       `MAX_WINDOW` 0.1 s (a pulse and carry mode's hold after it, from an onset up to `MAX_LEAD` early, end inside the
+       impact's cap: 0.15 + 2 × 0.1 < 0.45 s), both numerical, not physical. A shot's window sets both pulses; carry
+       mode's hold keeps the preset's window (`SwingArc.holdWindow`).
+    5. **The dip coupled to the pulse:** the dip starts at `lead + timing.arc + timing.dip`; the lead is the largest of
+       0, −arc, −hands, −(arc + dip), −advance and the turf margin. Existing callers with an arc offset on a stroke with
+       a dip were rewritten as dip′ = dip − arc, keeping their dip's absolute time.
+    6. **The planner's dip on croquet strokes:** a croquet stroke's dip under way at the planned contact raises the
+       planned downswing, the hands' arc and the turf scan by its travel by then, and the dip lowers them onto the pose.
+       The pose and its turf check are unchanged; single-ball strokes, and dips starting at or after contact, take the
+       old path, by a branch, never an added zero.
+    7. **No strike:** an impact that reaches its cap with no face–ball interval on any ball pushes `impact-no-strike`
+       after `impact-cap`; a head stopped in the turf keeps `impact-head-stopped` alone; nothing throws.
+    8. **`checkShare` under an early brake:** it already holds the brake to rest (share 0 once the head's rate is not
+       forward, whatever the planned rate), so no code changed; a test pins it.
+    9. **The face–ball interval's record:** each face–ball `ContactInterval` gains `impulse` (N·s, world) and
+       `velocities` (the ball's at the interval's first step and at its end); a rim step adds no impulse, and other
+       pairs' intervals carry neither. The ratchet's digests strip both fields to compare `phys`.
+    10. **The re-contact report:** `StrikeTaps.recontacts`, each `ReContact` with its start, end, interval count,
+        separation, gap, time after the parting, impulse, speed change, angle change and fault; a fault when
+        |speed change| ≥ `EFFECT_SPEED` or angle change ≥ `EFFECT_ANGLE`, and 29.1.6.1 raised at the first faulting
+        re-contact. The first non-exempt face contact's group is never a re-contact. The grouping as built here was
+        superseded by gate 1's Q5a′ below.
+    11. **Placeholders reproducing the old flags:** all three thresholds 0 until gate 1, so the re-contact commit moved
+        no finding (922 of 950 grid runs flagged before and after); the ruled values landed in their own commit.
+    12. **Gate stage 2 sits twice:** 2a rules §6's candidates and the defaults land; §8's checks, the follow-through
+        grid at the new defaults and criterion 9 then run, and 2b rules them. A check failing at 2b may send a default
+        back to 2a.
+    13. **The harness and the probe:** `scripts/followThrough.ts` (`firstTouch`, `routesOf`, `backswingForContact`)
+        and `scripts/followThroughProbe.ts` (sections A–D and S at stage 1, E–G at stage 2a, H–O at stage 2b);
+        `digestGrid` moved unchanged to `scripts/ratioFit.ts`. As built, a tap's share is its impulse along aim over
+        m·w₁, so on a croquet stroke the taps' shares sum to 1 + v₂/w₁, not 1, the face's impulse also carrying the
+        croqueted ball's momentum; and since 3 m/s at the ball under an early brake is out of the backswing's reach
+        (the body's limit), `strokeForContact` solves it through the intensity, each row printing its regime.
+    14. **The stance in the harness:** `guganSetup` gains `lean`, `up` and `grips`, applied after the mallet, so
+        Gugan's mallet stays the one solved at the preset's own stance (a player changes stance, not mallet), and
+        `turfLimited` marks a lean whose head lies in the turf at contact. A moved preset stance therefore moves the
+        calibration mallet (the stance re-ruled, below).
+    - **As built, departing from the plan's Task 13:**
+        - (a) the plan had every type `ON_TIME` but the ruled AC stop, and a Step 2 "Plan the AC stop's brake before
+          contact"; under gate 2a's Q1, "Stance only", every type is `ON_TIME` and Step 2 landed only its slow test;
+        - (b) the stance landed twice: −6° at −20 mm (e9f8e02), then −5° at −22.5 mm (964e87e) after the user's
+          no-damage rule;
+        - (c) Step 4 (the full roll's push) was skipped (gate 2a Q3);
+        - (d) Task 14 was committed in two parts, its code and then its output, so that the checks ran on the
+          re-ruled stance.
 - **2026-10-24, gate stage 1** (rulings verbatim as the option chosen; figures in
   `docs/superpowers/probes/2026-10-24-p2b2b2c2d-stage1.txt` and
   `docs/superpowers/probes/2026-10-24-p2b2b2c2d-gate1.txt`):
@@ -549,12 +608,16 @@ read; the probes' layout and their section letters; the tests' names and files.
     - **The rule.** The user: "it is okay for the mallet to rub on the lawn and disturb the grass. It should not
       damage the turf". The default stroke therefore raises no `impact-head-deep` and the soil does not yield
       (`turf-yield`). This supersedes Q1's −6° stance, which went 3.6 mm deep and yielded the soil.
-    - **The ruling: "−5°, head 5 mm up".** The user chose lean −5° with the contact 5 mm lower (`up` −0.025 m, was
-      −0.020 m with −6°). −5° at −25 mm raises no head-deep and no yield on Gugan's mallet and on the default mallet
-      (Gugan 5's stop 6.7395, 1 mm step spread 0.0110), but its contact lies 0.6 mm from the edge of the face's flat
-      (±25.575 mm), so the digest grid's row 3 mm lower falls off the face. −4° at −25 mm never touches the turf but
-      its ratio, 6.5359, falls just below the band; −6° at −25 mm and −7° at −25 mm still go deep. The −30 mm heights
-      are rejected: the contact falls off the face's flat.
+    - **The search: "Find a no-damage stance (Recommended)".** The nearby stances were measured for their turf flags
+      and ratio, the user to choose among them.
+    - **The ruling: "−5°, head 5 mm up (Recommended)".** The user chose lean −5° with the contact 5 mm lower (`up`
+      −0.025 m, was −0.020 m with −6°). −5° at −25 mm raises no head-deep and no yield on Gugan's mallet and on the
+      default mallet (Gugan 5's stop 6.7395, 1 mm step spread 0.0110), but its contact lies 0.6 mm from the edge of the
+      face's flat (±25.575 mm), so the digest grid's row 3 mm lower falls off the face. −4° at −25 mm never touches the
+      turf but its ratio, 6.5359, falls just below the band; −6° at −25 mm and −7° at −25 mm still go deep. The −30 mm
+      heights are rejected: the contact falls off the face's flat.
+    - **The face's edge: "Measure −5° at 22.5 mm".** Asked whether so low a strike is real play, the user had −5° at
+      `up` −0.0225 m measured before choosing.
     - **The face-edge correction: "22.5 mm below centre (Recommended)".** The AC stop's stance is lean −5° at `up`
       −0.0225 m, 3 mm clear of the flat's edge, so every grid row is played. Measured (round 3, candidate R7): Gugan 5's
       stop 6.6610 on Gugan's mallet solved at the stance and 6.5753 by section S's method (band 6.55–7.75); no
