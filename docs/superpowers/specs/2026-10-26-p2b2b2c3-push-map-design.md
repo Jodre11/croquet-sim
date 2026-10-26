@@ -239,6 +239,10 @@ each commit.
   impulse (the integral of the hands' push intent; the design's call for the follow-through axis), the least-effort path
   drawn on them, and the two effort percentages along range. Static images or a
   page in the records; the builder's choice of form.
+- **A side-on stroke plot** (user, 2026-10-26: "it would be very useful"), a throwaway validation aid ahead of the
+  roadmap's side-on stroke view: for each text book set-up and each default shown at the gate, the mallet's head and
+  shaft drawn side-on through the swing and the impact, with the balls, from `SwingTrajectory` and the impact's states.
+  Static frames or an animation; the builder's choice. Not product code.
 - The roadmap's "P2b.2b.2c.3 outcomes" with the figures, the gate's rulings verbatim, and the carried open items.
 
 ## 10. The pre-flight gate
