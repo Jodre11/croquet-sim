@@ -237,7 +237,7 @@ source of decisions; do not re-open them. Also read:
   all pass. The baseline is 1358 passed, 13 skipped, 1 todo.
 - **Worktree.**
   - All work happens in `/Users/jodre11/Repos/croquet-sim/.claude/worktrees/p2b2b2c3-push-map`, on branch
-    `worktree-p2b2b2c3-push-map` (or the name the user gives it), based on `main` at 6c45bcd.
+    `worktree-p2b2b2c3-push-map` (kept, user 2026-10-26), based on `main` at 6c45bcd. 3a's PR opens from it.
   - The designs and this plan are its first commits; the engine there is main's.
   - Run `npm ci` before anything; never symlink `node_modules`.
 
