@@ -73,13 +73,14 @@ unified-shot-model goal (every shot type from its inputs alone, nothing scripted
 
 ## 1. Goal and exit criteria
 
-1. `StrokeMode` is gone from the engine's types and code; no physics path branches on a stroke type or a mode. Whether
-   a stroke is a croquet stroke is read from the setup (a croqueted ball given), not from its type (`shot.ts`'s
-   validation and fault context, `buildContact.ts`'s dip raise; the design's call).
-2. The set-up inputs (§2) are fields of `ShotSetup.stroke`, each optional with the type's text book default, validated
-   with a named error.
-3. Every preset at its current values (before the drive's and stops' grips move) is bit-identical, or its departure is
-   measured per run, listed and ruled at the gate (decision 4).
+1. `StrokeMode` is gone from the engine's types and code; no physics path branches on a stroke type or a mode. The dip
+   raise (`buildContact.ts`, today `CROQUET_STROKES.includes(type)`) reads whether a croqueted ball is given. `shot.ts`'s
+   validation (a croqueted ball exactly when the type is a croquet stroke) and the fault context stay keyed on the type:
+   they classify the stroke under the Laws, not its physics (spec review).
+2. The set-up inputs (§2) are fields of `ShotSetup.stroke`, each optional, validated with a named error; absent, the
+   type's text book default and today's path.
+3. Every preset at its current values (before the drive's grip moves) is bit-identical, or its departure is measured
+   per run, listed and ruled at the gate (decision 4).
 4. The drive's grip moves to Riches's (decision 3) as its own commit, every moved run counted, and the drive's
    re-contact-free guide re-checked and, if broken, re-tuned, ruled. The AC stop's Gugan 5 stop (band 6.55–7.75) and
    no-damage stance are re-checked after §4.1.
@@ -88,25 +89,30 @@ unified-shot-model goal (every shot type from its inputs alone, nothing scripted
 6. Every preset's canonical setup runs from top to finish, each default planning 3 m/s within ±2 %; no run of the late
    re-hit sweep ends with the head overlapping a ball as handed over.
 7. The ratchet (§6) and the pre-flight gate (§7) are run and ruled; the figures recorded in the roadmap's
-   "P2b.2b.2c.3a outcomes"; `ENGINE_VERSION` 0.18.0 as the branch's last step.
+   "P2b.2b.2c.3a outcomes"; `ENGINE_VERSION` 0.18.0 as the branch's last step. 3a is its own branch and PR, merged
+   before P2b.2b.2c.3b starts (3b then sets 0.19.0).
+8. **The public types** (`engine/index.ts` exports `StrokeMode`, `SwingArc`, `SwingDrive`, `SwingShape`): `StrokeMode`
+   and the `mode` fields of `SwingArc` and `SwingDrive` are removed; the fields documented "carry only" or "swing only"
+   (`holdWindow`, `pendulumAt`, `pendulumEffort`, `handArcRadius`, `handArcLow`, `advance`, `guideEffort`) apply to
+   every stroke, their docs rewritten; a hand-built arc is valid on any stroke with no mode. The tests and scripts that
+   build arcs or profiles with a mode migrate in the same commits.
 
 ## 2. The set-up inputs
 
 | The user's | The engine today | After this step |
 |---|---|---|
-| 1. Grip | `profile.stance[type]`: `top`, `bottom`, `gripTension`, `bottomGrip` | per-shot `stroke.grip` (the four), default the type's |
-| 1. Lean | follows from `handsAhead` and the grips at the shot's `contact.up` (`stanceLean`) | per-shot `stroke.lean`, default the type's; `handsAhead` follows |
-| 2. Feet | none as such (see §3) | per-shot `stroke.feet` (§3), default the type's |
+| 1. Grip | `profile.stance[type]`: `top`, `bottom`, `gripTension`, `bottomGrip` | per-shot `stroke.grip` (the four, each overridable alone), default the type's |
+| 1. Lean | follows from `handsAhead` and the grips at the shot's `contact.up` (`stanceLean`) | per-shot `stroke.lean` (at most 45°, the on-point limit); given, it sets `handsAhead` (`handsAheadFor`); absent, today's path |
+| 2. Feet | `handArcLow` × the push length, from the hands at contact | per-shot `stroke.feet` (§3); given, it places the hands' arc; absent, today's `handArcLow` path |
 | 3a. Strike | `backswing`, `intensity`, `timing` | unchanged, on every stroke |
 | 3b. Push through | the rolls' push intent, hands' arc and hold; the swing strokes' advance (`timing.advance`) and reach; `handReach` and `handGain` on every stroke (0 on the swing presets) | one mechanism on every stroke (the design's call): the hands' travel along aim with the push intent behind it; the advance is merged into it, not kept beside it |
 | 3c. After first contact | `drive`, `window`, `guideEffort`, `pendulumAt`, `pendulumEffort` | unchanged in meaning, on every stroke |
 
 The names are the design's proposal; the builder may refine them.
 
-**The lean is held, not `handsAhead`** (the design's call, from account 1: "it is the lean that changes"). Today a shot
-whose `contact.up` differs from its preset's keeps `handsAhead` and its lean moves; after this step it keeps the lean
-and `handsAhead` moves. Every run that moves by it (the contact-height sweeps, the AC stop's grid about −22.5 mm), and
-any departure of the lean → `handsAhead` → lean round trip from the bit, is listed for the gate (decision 4).
+**Given or absent** (spec review): a set-up input given on a shot takes effect; absent, the type's default runs through
+today's code path, so no default changes meaning. A shot whose `contact.up` differs from its preset's and gives no lean
+keeps `handsAhead`, as today; one that gives a lean keeps it. No sweep moves by this.
 
 ## 3. The feet (to be verified)
 
@@ -117,15 +123,16 @@ still descending, level or rising when it meets the ball. Carry mode's hands' ar
 circle about a standing player's shoulder height, lowest a fraction of the push ahead of contact) is that already, for
 the rolls alone. The proposal: `stroke.feet` is where the hands' arc bottoms out, measured along aim from the striker's
 ball (the user: "Feet position relative to the strikers ball"; the design's call), on every stroke, held fixed when the
-push length or the lean changes, with each type's default reproducing its present path. The builder verifies the
-reading first and brings it to the gate's stage 1 if it fails.
+push length or the lean changes. Absent, today's `handArcLow` path runs unchanged (spec review), so the defaults are
+bit-exact and the feet need no default expressed from the ball. `stroke.feet` supersedes `handArcLow` on a shot that
+gives it; `handArcLow` and `handArcRadius` stay in `SwingDrive` as the defaults' path. The builder verifies the reading
+at the gate's stage 1.
 
 Caveats from the builder check (checked against the code): today the arc's low point is `handArcLow` × the push length,
 measured from the hands' planned position at contact, not from the ball (`track.ts`, `arcArrival` in
-`buildContact.ts`), so a default expressed from the ball is feet − `handsAhead` and may not be bit-exact (listed,
-decision 4); before contact only the arc's slope at contact is matched, through a Hermite tangent that scales with the
-hands' backswing travel and is zero when the top hand is still; and the swing strokes' hands rest after contact or
-advance level, so the feet change nothing on a swing preset at its defaults and act only once the push moves the hands.
+`buildContact.ts`); before contact only the arc's slope at contact is matched, through a Hermite tangent that scales
+with the hands' backswing travel and is zero when the top hand is still; and the swing strokes' hands rest after
+contact or advance level, so the feet change nothing on a swing stroke until the push moves the hands.
 
 ## 4. The mode's branches, and what governs each
 
@@ -141,7 +148,7 @@ must reproduce today's behaviour at the type's defaults (decision 4).
 | A slid grip anchor's decay (`track.ts`) | swing only | none | every stroke |
 | `handTempo` required (`shapeOf`, `validate`) | none | required | §4.1 |
 | `validateDownswing`, the arc's mode check (`simulateImpact.ts`) | swing table | carry closed form | §4.1; the mode check goes |
-| Backswing limit | the body's θ_max | horizontal | the body's θ_max on every stroke, the rolls' backswings checked against it |
+| Backswing limit | the body's θ_max | horizontal | the body's θ_max on every stroke, the rolls' backswings checked against it (it also sets P2b.2b.2c.3b's 100 % stroke effort) |
 | The swung body after contact (`track.ts`) | the arm mass rigid at the top grip | each hand's Dong et al. chain with the arm's flex | one hand model on every stroke; which one, and whether the rigid arm mass is its limit, is the builder's to resolve and the gate's to rule |
 | The push through | none | the push intent along aim to `pushForce`, the hold | 3b, zero on today's swing strokes |
 | After the pulse | free pendulum | held slope, then the pendulum phase | 3c |
@@ -163,6 +170,15 @@ pendulum; a roll's spread, firm grip holds the slope as today's closed form does
 the grip, not a mode in disguise; a blend weight or a switch whose only sensible values are the old two modes would be
 (§8). The builder works out the couple's law, sources its bound or labels it, and lists every departure for the gate.
 
+**The planned slope** (spec review): every stroke plans a slope path through the downswing, and the couple acts on the
+error from it. A swing preset's default plan is its own free pendulum's path (today's table), so its tracking error is
+zero and the couple, whatever the grip, does nothing at its defaults: the GC stop's firm, split grip included, which
+departs only where a shot plans a slope other than its free swing. A roll's default plan is today's hands-led
+prescription (θ = θ_top + span·σ² on its tempo). The plan's parametrisation is the builder's, under one constraint: it
+is continuous, both of today's paths are points in it, and a player can plan in between; a choice between the two
+alone would be a mode in disguise. The swing presets gain whatever tempo the plan needs, derived from their own free
+swing, not fitted.
+
 **Refits allowed** (the design's call, resolving the builder check's conflict with §8): where the one law moves a
 preset's planned contact speed, its default backswing is refitted to plan 3 m/s again, as P2b.2b.2c.2d refitted the
 AC stop's. The rolls' and the swing strokes' `handTempo` and the body's effort are reconciled under §4.1; each refit
@@ -182,14 +198,16 @@ ratio less than with the hands together.
 ## 6. The ratchet
 
 As P2b.2b.2c.2d's: a baseline worktree at the branch's base (installed with `npm ci`, never a symlinked
-`node_modules`), the preset digest (`phys` and `faults`), `impactDigest`, `impactProbe`, `shotMix`. Each mode branch
-removed is its own commit, bit-identical or its moved runs counted per preset and listed; the grips' move last. The
+`node_modules`), the preset digest (`phys` and `faults`), `impactDigest`, `impactProbe`, `shotMix`. One commit per
+mechanism, not per row of §4's table (the downswing lead, the pulse, `handTempo` and `validateDownswing` are one law,
+§4.1), each bit-identical or its moved runs counted per preset and listed; the drive's grip move last. The
 implementers stage and stop; the controller runs the digests, probes and slow tests before each commit.
 
 ## 7. The pre-flight gate
 
-Stage 1 after the feet's verification (§3) and the first branch removed: the reading, the approach for the hand model.
-Stage 2 at the end: every departure from bit-identity, the grips' move, the cross-mode cases. One question at a time,
+Stage 1 after the feet's verification (§3) and the first mechanism unified: the reading, the approach for the hand
+model and the planned slope.
+Stage 2 at the end: every departure from bit-identity, the drive's grip move, the cross-mode cases. One question at a time,
 with options and a recommendation.
 
 ## 8. Non-goals and anti-goals

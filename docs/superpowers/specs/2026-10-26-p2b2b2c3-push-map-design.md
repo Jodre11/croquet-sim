@@ -73,7 +73,8 @@ stronger push.
    the stroke's (the planned contact speed as a percentage of the most the body can give that type, its backswing at
    the body's limit and intensity 1; "Speed as % of max (Recommended)", so the backswing and the intensity count
    together) and the push's peak (the hands' push intent's peak as a percentage of `body.pushForce`, 92.2 N).
-7. **Each roll type keeps its own stance** ("Own stance per type (Recommended)"): three maps, each under its own type's
+7. *(Superseded by A1: the preset is the text book starting point, and the lean and the feet are swept, §3.2.)*
+   **Each roll type keeps its own stance** ("Own stance per type (Recommended)"): three maps, each under its own type's
    preset stance and shape (the leans 24°, 31° and 34° from Gugan 4 Table 6, Riches's hand positions, the preset's
    `speedGain` and `handGain`), untouched by this step. A plan counts only in its own type's band.
 5. **The default is the least-effort plan** ("if there are choices of combination the lowest mean would probably be
@@ -89,14 +90,15 @@ The step is done when:
 
 1. the push map (§3) is computed for the half, full and pass rolls over the range and lawn grids, recorded, and plotted
    (§9);
-2. the defaults per roll type, range and lawn speed (§5) are picked by decision 5 and readable by the engine's callers;
+2. the defaults per roll type, range and lawn speed (§5) are picked by decision 5 and recorded as a reference table;
 3. the checks of §6 are run, recorded and ruled at the gate;
 4. the half roll's canonical setup stays within 1.4–2.5, every roll's canonical setup within ±2 % of its own planned
    contact speed (§5), and every swing preset's within ±2 % of 3 m/s;
 5. no run of any preset's late re-hit sweep ends with the head overlapping a ball as handed over;
 6. the ratchet (§8) and the pre-flight gate (§10) are run and ruled;
-7. the figures are recorded in the roadmap's "P2b.2b.2c.3 outcomes", and `ENGINE_VERSION` moves to 0.18.0 if any default
-   changes, as the branch's last step.
+7. the figures are recorded in the roadmap's "P2b.2b.2c.3b outcomes", and `ENGINE_VERSION` moves to 0.19.0 (after
+   P2b.2b.2c.3a's 0.18.0) if any default changes, as the branch's last step. 3b is its own branch and PR, started
+   after 3a merges.
 
 ## 2. The outcome regions
 
@@ -119,10 +121,12 @@ A plan is **admissible** only if it is believable (§4). Regions are drawn from 
 
 ### 3.1 The plan space
 
-A roll is played in carry mode. The plan is the shot's own inputs, all already in `ShotSetup.stroke` (no new engine
-input is planned; §12 if the builder finds one is needed):
+The plan is the shot's own inputs in `ShotSetup.stroke`, as P2b.2b.2c.3a leaves them (no mode; the set-up inputs
+`grip`, `lean` and `feet` on every stroke). No further engine input is planned; §12 if the builder finds one is needed.
 
-- **how hard:** `backswing` and `intensity` (the carry mode's hands' tempo, `handTempo`, slow at 0 to fast at 1);
+- **the set-up:** `lean` and `feet` (3a), at each type's text book values in the main grid, swept in a slice (§3.2);
+  the grip at the type's;
+- **how hard:** `backswing` and `intensity` (as 3a's strike defines them);
 - **how much follow-through:** `drive` (0 natural … +1 pushed through) and `handReach` (the push's length);
 - **how sharp:** `window` (the pulse's duration, `MIN_WINDOW` 1 ms to `MAX_WINDOW` 0.1 s; shorter is a higher peak
   acceleration);
@@ -131,7 +135,8 @@ input is planned; §12 if the builder finds one is needed):
   the split at rest (the angle between the two balls' paths) is recorded beside it, and account 7's test reads the
   split at rest (the design's call).
 
-Each grid point fixes the follow-through (drive, handReach, window, onset) and solves how hard (backswing, then
+Each grid point fixes the set-up and the follow-through (drive, handReach, window; onset 0 outside §3.4) and solves how
+hard (backswing, then
 intensity once the backswing reaches the body's limit, matching P2b.2b.2c.1's rule that speeds beyond the gravity-only
 default are reached by intensity) so that the striker's ball comes to rest at the grid's range. The solved plan's
 ratio, effort and believability are recorded.
@@ -140,13 +145,15 @@ ratio, effort and believability are recorded.
 
 - **Range:** the striker's ball's distance to rest. From short rolls to a full court length, 32 m; the builder sets the
   spacing (at least six ranges, denser where regions change).
-- **Lawn speed:** 6, 8, 10, 12 and 14 s, `reference/lawn.json`'s sourced span, 10 s the normal lawn. The design's guess,
+- **Lawn speed:** 6, 10 and 14 s first, `reference/lawn.json`'s sourced span and its normal lawn. The design's guess,
   to be measured: once both balls roll, the lawn slows them alike, so the ratio depends little on lawn speed and the
-  lawn mainly moves which range needs which power. If that holds at 10 s and at the ends, the builder may thin the
-  middle lawns.
+  lawn mainly moves which range needs which power. 8 and 12 s are added only if the guess fails (spec review).
 - **Split** (pass roll): at least 0°, 10°, 20° and 30°.
 - **Follow-through:** drive, handReach and window over their valid ranges, coarse first and refined where a region's
-  edge or the least-effort plan lies.
+  edge or the least-effort plan lies. Onset fixed at 0 (on time) outside §3.4's sweep.
+- **The set-up slice** (A1, staged by the spec review): the main grid runs at each type's text book lean and feet; one
+  coarse lean × feet slice at the anchor's range on a 10 s lawn shows whether in-between set-ups move the regions.
+  The gate rules whether to widen it; the full envelope stays the eventual aim (A1).
 - Measured on an open lawn (`scripts/openLawn.ts`, generalised to a lawn speed) so that no run leaves the court.
 
 ### 3.3 The anchor
@@ -173,21 +180,27 @@ A plan is admissible when its run:
 - keeps the head behind the striker's ball: never overtaking it and dropping into its path (the roadmap's
   P2b.2b.2c.3 entry; the on-point test of P2b.2b.2b.2b: the head's centre behind the ball's along aim, every face
   contact no higher than R·sin 45° above the ball's centre, the lean at most 45°);
-- does not exceed the grip limit, and needs intensity ≤ 1 and the backswing within the body's limit.
+- never saturates either hand's grip (since P2b.2b.2b.3 a saturated grip slides its anchor and raises no finding; a
+  slid anchor means the mallet slipped in the hands), and needs intensity ≤ 1 and the backswing within the body's
+  limit θ_max (P2b.2b.2c.3a; it also sets 100 % stroke effort).
 
 A push intent that saturates at `pushForce` is admissible at 100 % push effort; how often defaults saturate is recorded
 (carried item L).
 
 ## 5. The defaults
 
-For each roll type, range and lawn speed in the grids, the default plan is the admissible plan in that type's region
-with the lowest mean of its two effort percentages (decision 5); ties go to the plan nearer the half roll's anchor in
-follow-through. The table of defaults is reference data, its provenance the map's run (derived), with its script and
-commands recorded. For the rolls it replaces `DRIVE[type]`'s follow-through and `DEFAULT_DRIVE` (the design's call);
-the swing strokes' entries are untouched. How callers read it (a lookup by type, range and lawn speed, interpolated or
-nearest) is the builder's (§12). Each roll's canonical setup takes the whole default plan (how hard and the
-follow-through) at the range its current canonical reaches on a 10 s lawn, so the canonical runs a plan the map ran
-(the design's call); its planned contact speed follows from that plan.
+For each roll type, range and lawn speed in the grids (and, for the pass roll, each split: the split is the player's
+outcome choice, not effort, so the pass roll's defaults are keyed by it too), the default plan is the admissible plan
+in that type's region with the lowest mean of its two effort percentages (decision 5); ties go to the plan nearer the
+half roll's anchor in follow-through. The table of defaults is reference data, its provenance the map's run (derived),
+with its script and commands recorded. No engine lookup by range is built (spec review): no engine input takes a
+target range, and the planner or UI that would read one is later work.
+
+The profile's per-type values (`DRIVE[type]`'s follow-through, `DEFAULT_DRIVE`, the text book lean and feet) change
+only to the canonical range's default: each roll's canonical setup takes the whole default plan (how hard and the
+follow-through) at the range its current canonical reaches on a 10 s lawn (the pass roll at its canonical split), so
+the canonical runs a plan the map ran (the design's call); its planned contact speed follows from that plan. The swing
+strokes' entries are untouched.
 
 A range at which a type's region is empty has no default; the gap is recorded and ruled, not filled.
 
@@ -273,7 +286,7 @@ figures. One question at a time, with options and a recommendation.
 - The grids' spacing and the refinement scheme; thinning the lawns if §3.2's guess holds.
 - The solve for how hard (§3.1): the method, its tolerance on range, and how it treats a plan whose range is
   unreachable.
-- The form of the defaults' lookup and where the table lives.
+- Where the defaults' table lives.
 - The plots' form.
 - Whether the map runs within the project's time budget; if a full grid is too slow, a coarser grid with the reasons
   recorded.
@@ -298,7 +311,8 @@ Consequences:
   each type keeps only its "text book" defaults, its results at them bit-identical. **P2b.2b.2c.3b, this design**,
   follows on it.
 - Decision 7 is superseded: each type's preset is its text book example, the map's starting point, not a fixed stance.
-  The map sweeps the lean and the feet as dimensions beside the follow-through, so the regions show which combinations,
+  The map sweeps the lean and the feet as dimensions beside the follow-through (staged at the spec review: a slice at
+  the anchor first, widened at the gate's ruling, §3.2), so the regions show which combinations,
   in-between leans included, make each roll at each range.
 - The text book validation stays: each type's text book set-up must land in its band (the half roll's, decision 2, the
   first).
