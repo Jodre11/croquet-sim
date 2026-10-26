@@ -2650,3 +2650,15 @@ words, and the plan's decisions are in the design's amendments. "Old → new" th
   movement.") — the mallet (head and shaft, no body) drawn side-on through the whole swing and the impact with the
   balls, from the engine's `SwingTrajectory` and the impact's states; first a validation view for the user, then a
   training aid showing how a change of set-up within the envelope changes the contact.
+- **The special shots, together, after the unified set-up** (user, 2026-10-26) — set-up cases the same inputs (grip,
+  lean, feet, strike, push through, after first contact) should produce, nothing scripted:
+  - the jump shot: "the ball is intentionally played downward into the ground with enough force for the elastic force
+    of the lawn to make the ball jump forward. Here the hands are together but they often move somewhat down the
+    mallet with the feet further forward"; it relies on the turf's rebound;
+  - the glancing shot near a hoop (name not yet found): "the mallet is driven towards the ground and glances the
+    striker's ball. Sort of cutting it forwards. This is only useful when the striker's ball is very close to the hoop
+    and it needs to be played towards the hoop without forming a push shot." Candidates to check, none confirmed: the
+    stab shot (Croquet England's video, a hampered-backswing alternative to the jump and hammer shots), and the crush
+    and hampered-hoop material (Oxford Croquet, "Crush Shots"; Croquet England, "Close hampered hoop shots");
+  - a further type the user has yet to recall (possibly the hammer shot);
+  - other special shots likewise.
