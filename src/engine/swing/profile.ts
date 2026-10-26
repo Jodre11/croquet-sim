@@ -20,7 +20,8 @@
  *   the grips are the prototype's calibration (proto-two-hands, aeadd4c).
  * - Drive: the prototype's calibration (aeadd4c), compared with the coaching ratios only as observations (design §9);
  *   the AC stop's dip depth is a user decision (2026-10-05). Every preset's guideEffort is 1, the full restoration of
- *   the arc's speed a full shot aims at; a softer shot uses less, a very soft one none (user's account, 2026-10-06).
+ *   the arc's speed a full shot aims at, except the drive's 0.75; a softer shot uses less, a very soft one none
+ *   (user's account, 2026-10-06).
  *   P2b.2b.2 sets the per-type defaults; the P4 planner chooses it per shot.
  * - Shape (P2b.2b.2a design §5.3): reference/swing.json, sourced or labelled placeholders, its defaults fitted by
  *   scripts/fitStrokeShape.ts. The rolls read the hands' tempo, frozen at engine 0.12.0's fit (P2b.2b.2c.1 design
@@ -134,7 +135,10 @@ const DRIVE: Readonly<Record<StrokeType, SwingDrive>> = {
         handArcLow: 0.5,
     },
     // As single-ball over a 5 ms window: the follow-through rises and dies by itself, and the head catches the
-    // striker's ball again (prototype).
+    // striker's ball again (prototype). User decision 2026-10-25: the guide's effort 0.75, the largest on a 0.25 grid
+    // after which nothing re-contacts the ball once it has parted. At 1 the head returns to it 96.4 ms after contact
+    // (+49 % on its speed, a possible 29.1.6.1) and the ratio is 2.435; at 0.75 it is 3.753 (Gugan 5's drive, at 0,
+    // 4.295).
     drive: {
         mode: "swing",
         speedGain: 0.2,
@@ -144,7 +148,7 @@ const DRIVE: Readonly<Record<StrokeType, SwingDrive>> = {
         handDrop: 0,
         dropTime: 0.01,
         handReach: 0,
-        guideEffort: 1,
+        guideEffort: 0.75,
         pendulumAt: 0.8,
         pendulumEffort: 0,
         handArcRadius: 1.5,
@@ -268,11 +272,18 @@ export const defaultProfile: SwingProfile = {
         "single-ball": stanceFromLean(0, 0, { top: 0.805, bottom: 0.7, gripTension: 1, bottomGrip: 0.1 }),
         // As single-ball, the bottom hand a little lower and firmer, still only a guide (prototype).
         drive: stanceFromLean(0, 0, { top: 0.805, bottom: 0.6, gripTension: 1, bottomGrip: 0.25 }),
-        // Feet set back, the ball met on the up: the shaft leans back 4°, so the strike rises 4° and the face tilts up
-        // 4°, within the feasibility spike's 3–5° tilt (a 5° lean leaves the head only 4.03 mm clear at contact). Both
-        // grips relax at contact (prototype). The lean is defined at its canonical contact, 20 mm below the face's
-        // centre.
-        "stop-ac": stanceFromLean(-4 * DEG, -0.02, { top: 0.805, bottom: 0.45, gripTension: 0.1, bottomGrip: 0.1 }),
+        // Feet set back, the ball met on the up: the shaft leans back 5°, so the strike rises 5° and the face tilts up
+        // 5°, within the feasibility spike's 3–5° tilt. User decision 2026-10-25: the stroke may rub the lawn and
+        // disturb the grass but must not damage the turf, so the head must not pass the depth limit (impact-head-deep)
+        // nor yield the soil (turf-yield). This stance does neither, on Gugan's mallet and the default one: the head
+        // touches the turf only after the 15 ms strike window, from about 16.5 ms at 29–48 N and at most 0.9 mm in, and
+        // Gugan 5's stop (ratio 7.15, band 6.55–7.75) comes to 6.66. −6° at 20 mm below the face's centre went 3.6 mm
+        // deep and yielded the soil, at a ratio of 7.34; −4° at 25 mm never touches the turf but its ratio, 6.54, falls
+        // just below the band; −5° at 25 mm (6.74) strikes 0.6 mm from the edge of the face's flat (±25.575 mm), so a
+        // contact only 1 mm lower than the canonical one is off the face. The contact, 22.5 mm below the face's centre,
+        // keeps 3 mm clear of that edge. Both grips relax at contact (prototype). The lean is defined at its canonical
+        // contact.
+        "stop-ac": stanceFromLean(-5 * DEG, -0.0225, { top: 0.805, bottom: 0.45, gripTension: 0.1, bottomGrip: 0.1 }),
         // The lower hand low and firm, checking the swing through its lever just after contact (prototype).
         "stop-gc": stanceFromLean(0, 0, { top: 0.805, bottom: 0.45, gripTension: 1, bottomGrip: 1 }),
         // Riches: "Stand further forward over the balls, with your front toe level with the back of your striker's
@@ -311,3 +322,18 @@ export const DEFAULT_DRIVE: Readonly<Record<StrokeType, number>> = {
 
 /** Every action on time. */
 export const ON_TIME: StrokeTiming = { arc: 0, hands: 0, dip: 0 };
+
+/**
+ * The planner's default timing per stroke type: every type on time. The AC stop's brake is on time too, the player
+ * having "to mentally initiate before the strike but this is more cognitive than active" (user decision 2026-10-25),
+ * so no stroke brakes, dips or releases early by default.
+ */
+export const DEFAULT_TIMING: Readonly<Record<StrokeType, StrokeTiming>> = {
+    "single-ball": ON_TIME,
+    drive: ON_TIME,
+    "stop-ac": ON_TIME,
+    "stop-gc": ON_TIME,
+    "half-roll": ON_TIME,
+    "full-roll": ON_TIME,
+    "pass-roll": ON_TIME,
+};

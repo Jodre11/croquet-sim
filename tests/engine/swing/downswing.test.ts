@@ -364,4 +364,13 @@ describe("scanDownswing (design §3.5)", () => {
         const { downswing } = planDownswing(input());
         expect(scanDownswing(downswing, TEST_HEAD, AIM, RADIUS).grounded).toBeNull();
     });
+
+    it("lowers each sample by the dip's travel (P2b.2b.2c.2d design §4.2)", () => {
+        // A constant 1 mm lowering moves every sample down alike, so the least clearance falls by it, at the same time.
+        const { downswing } = planDownswing(input({ pivot }));
+        const plain = scanDownswing(downswing, TEST_HEAD, AIM, RADIUS);
+        const lowered = scanDownswing(downswing, TEST_HEAD, AIM, RADIUS, () => 0.001);
+        expect(lowered.clearance).toBe(plain.clearance - 0.001);
+        expect(lowered.before).toBe(plain.before);
+    });
 });

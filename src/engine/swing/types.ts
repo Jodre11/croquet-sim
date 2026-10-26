@@ -156,10 +156,15 @@ export interface SwingProfile {
     readonly shape: Readonly<Record<StrokeType, SwingShape>>;
 }
 
-/** When each action begins, s from contact: negative early, positive late, 0 on time (design §5.2 step 8). */
+/**
+ * When each action begins, s from contact: negative early, positive late, 0 on time (design §5.2 step 8). The dip is
+ * the exception: it is timed from the pendulum's pulse, so it begins arc + dip s from contact, 0 coupled to the pulse
+ * (P2b.2b.2c.2d design §4.2).
+ */
 export interface StrokeTiming {
     readonly arc: number;
     readonly hands: number;
+    /** The dip's start, s from the pendulum's pulse (`arc`): negative before it, 0 coupled to it. */
     readonly dip: number;
     /**
      * Swing mode only (P2b.2b.2c.1 design §6): when the hands' advance begins, their push forward along aim over the
@@ -181,8 +186,21 @@ export interface ShotSetup {
         readonly backswing: number;
         /** Effort and tempo, one control in [0, 1] (P2b.2b.2a design §3.1); absent: 0. */
         readonly intensity?: number;
-        /** −1 check … 0 coast … +1 push. */
+        /**
+         * −1 stopped short (the brake) … 0 natural … +1 pushed through, scaling both follow-through pulses. The push
+         * goes where the preset puts it: on a swing stroke the pendulum's (force the arc), on a roll the hands' and the
+         * push's reach (push the hands along the line). The four follow-throughs are named by it: the brake (a
+         * negative drive), the natural (0), the pushed arc (positive on a swing stroke) and the pushed hands
+         * (positive on a roll). The engine reads the number only.
+         */
         readonly drive: number;
+        /**
+         * The duration (s) of both follow-through pulses, the pendulum's and the hands' (P2b.2b.2c.2d design §3.2);
+         * absent: the preset's `window`. Within [MIN_WINDOW, MAX_WINDOW]. Shorter is sharper: the same change in rate
+         * over a shorter time, a higher peak acceleration and jerk. Carry mode's hold after the pulse keeps the
+         * preset's `window`.
+         */
+        readonly window?: number;
         /** The ball's centre from the face's centre (m): `up` along its upward axis, `side` to the left of aim. */
         readonly contact: { readonly up: number; readonly side: number };
         readonly timing: StrokeTiming;

@@ -748,3 +748,65 @@ Each is cited by what the design takes from it. DOIs are those Crossref returns 
 | Kuwabara and Kono, "Restitution Coefficient in a Collision between Two Spheres", *Jpn. J. Appl. Phys.* 26:1230 (1987) | 10.1143/jjap.26.1230 | §4.2 candidate f: the √δ damping form the face already uses |
 | Rosas, Romero, Nesterenko and Lindenberg, "Observation of Two-Wave Structure in Strongly Nonlinear Dissipative Granular Chains", *Phys. Rev. Lett.* 98:164301 (2007) | 10.1103/physrevlett.98.164301 | §4.2 candidate f: "A quasistatic precompression appears behind the primary pulse ... This precompression is due entirely to dissipation and does not exist at zero viscosity" |
 | Carretero-González, Khatri, Porter, Kevrekidis and Daraio, "Dissipative Solitary Waves in Granular Crystals", *Phys. Rev. Lett.* 102:024102 (2009) | 10.1103/physrevlett.102.024102 | §4.2 candidate f: measured bead damping is not a linear dashpot, an exponent "close to α = 1.75" |
+
+## P2b.2b.2c.2d: the follow-through (design §3.1)
+
+The source behind the follow-through's pulse shape (`track.ts`, `pendulumAt` and `planPivot`).
+
+### The minimum-jerk model (not fetched)
+
+On 2026-10-24 every copy tried was behind a bot check, so nothing was fetched or hashed: the journal's PDF
+(https://www.jneurosci.org/content/5/7/1688.full.pdf, a Cloudflare challenge), and Europe PMC's and PMC's copies of
+PMC6565116 (a challenge page each). The DOI and the bibliographic details are those Crossref returns on 2026-10-24.
+Nothing is quoted from the paper.
+
+| Work | DOI | Used for |
+|---|---|---|
+| Flash and Hogan, "The coordination of arm movements: an experimentally confirmed mathematical model", *J. Neurosci.* 5(7):1688–1703 (1985) | 10.1523/jneurosci.05-07-01688.1985 | §3.1: voluntary movement as the smoothest one, minimising the integral of the squared jerk |
+
+What the model takes from it is the principle only. The pulse's profile is the design's: a change of velocity Δv over T
+with zero acceleration at both ends, a(s) = 6·Δv/T·s(1 − s), s = (t − start)/T, so that v rises as Δv·(3s² − 2s³), its
+peak 1.5·Δv/T and its jerk ±6·Δv/T² at the ends. It is not the paper's point-to-point position profile and is not
+checked against the paper.
+
+### The re-contact rule re-checked (2026-10-25; `reference/laws.json`, 29.2.5)
+
+The sources behind 29.2.5's note: the Law's test, and the readings that support judging a re-contact after the parting
+by its effect (the user's reading, design decision 10; kept by the user's ruling "Keep 2 mm, relabel" on 2026-10-25).
+Fetched 2026-10-25, the Oxford pages with `curl -k` from oxfordcroquet.com, whose pages carry a banner naming the
+oxfordcroquet.org location; nothing fetched is committed. The Oxford pages are hashed with their counter line removed
+(`grep -vE ">(Views|Hits): [0-9]+<" page.html | shasum -a 256`), the Laws PDF raw. The digests are of the files as
+fetched that day and were not reproduced by a second fetch. Hall 1994's and Gugan 5's differ from those recorded
+above, taken from the .org host (Gugan's copy here reads "Updated 18.iii.25"); every quotation below was checked
+against these files.
+
+| Short name | Work | URL | SHA-256 |
+|---|---|---|---|
+| WCF Laws 2021 | as above | https://worldcroquet.org/wp-content/uploads/2021/04/Laws-Rulings-Commentary-combined-published-master-.pdf | `88aa26095b31cf1ce4da724d8c9bbcdfb0861c8c17a0980bf9d1301f266dab04` (raw; equals the digest recorded above) |
+| Vincent 2023 | Ian Vincent, "Notes For Referees", Association Croquet World Championship 2023 (July 2023; page updated 14.v.25) | https://oxfordcroquet.com/ref/ref-notes/ (now https://oxfordcroquet.org/ref/ref-notes/) | `53d054b428bbb85062284467260ace95c3cead269f33fe92be9fa7766753705a` (counter line removed) |
+| Hall 1994 | Stan Hall, "When a Mallet Strikes a Ball" (page updated 28.iii.25) | https://oxfordcroquet.com/tech/hall/ (now https://oxfordcroquet.org/tech/hall/) | `b685ae3ef61fb53ea4cac4b2acbd2676759b1c16a67337279f390b4ad7ec1b57` (counter line removed) |
+| Gugan 5 | Don Gugan, "Croquet Drives, Pass-Rolls Stop-Shots and Scatter-Shots" (page updated 18.iii.25) | https://oxfordcroquet.com/tech/gugan5/ (now https://oxfordcroquet.org/tech/gugan5/) | `c90770de4810efb9f81d48d65d3b9d97d675d37fbcba3ab3c5e82ebb5a0a64c9` (counter line removed) |
+
+- **WCF Laws 2021**, Law 29.2.5: a fault "only if ... [the adjudicator] sees a separation between mallet and ball
+  followed by a second contact between them": a visual test, with no timing, gap or effect. Law 29.2.7's "deduced
+  from observation of the trajectories and speeds of the balls involved compared to what would occur in a lawful
+  stroke of the same type" limits 29.1.7. C29.4: "Two faults – those covered by Laws 29.1.6.2 and 29.1.7 – can be
+  deduced to have occurred on the basis of how the ball(s) involved travel as a result of the stroke". C29.11.5 extends
+  the test "on the basis of the movement of the balls" to 29.1.6.2 only. So no Law or commentary gives an effect test
+  for 29.1.6.1. C29.11.1, on multiple and prolonged contacts: "These are amalgamated partly in recognition of the
+  difficulty in distinguishing between them." C29.11.4 (29.1.6.3): a contact "materially longer than the contact that
+  necessarily occurs in a stroke of the same type". C29.12.1's "2mm" is a ball–ball gap in scatter shots, not a
+  mallet separation, and is not cited for `mergeSeparation`.
+- **Vincent 2023**, para 53: "It is not acceptable to say that more than one hit may have occurred on the basis of the
+  stroke’s sound or the striker’s action. In practice, this means that only a gross mis-playing of the stroke can be
+  judged to be a fault." Referee guidance for one championship, not a ruling; it supports a generous standard, not an
+  effect test.
+- **Hall 1994**: "three separate contacts of 1ms each with a gap of 1/10ms between them. The distinction between the
+  contacts could not be detected by the unaided senses. A double tap became audible with an interval of 6ms between
+  contacts." A scale in time, not distance; the open item of a time cap on the joining cites it.
+- **Gugan 5**: the third of the three phases every stroke shows is "a double-tap by the mallet as it catches up with
+  the striker's ball and delivers to it a further impulse"; "for straight croquet drives the inevitable conclusion
+  from the physics of the stroke is that 90% of the energy and distance of the striker's ball comes from the
+  double-tap I3"; a "further and often extended contact" much later is "better described as a push. Such pushes are of
+  course always faults". The near-instant catch-up the model makes (gate 1, B.2, onset −20 ms: 0.16 mm and 0.085 ms
+  after the parting, +151 % speed) is this lawful double tap.

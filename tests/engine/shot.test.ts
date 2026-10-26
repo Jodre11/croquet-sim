@@ -22,7 +22,7 @@ import { STROKE_TYPES, type ShotSetup } from "../../src/engine/swing/types";
 import type { BallId, BallState, Hoop, World } from "../../src/engine/types";
 import { defaultWorld, hoopHalfSpan, hoopLateral } from "../../src/engine/world";
 import { TEST_GRIP_LIMIT, recorder } from "./support/impact";
-import { CANONICAL_STRIKER, GC_STOP_GAP, backswingFor, canonicalSetup } from "./support/shot";
+import { CANONICAL_CLEARANCE, CANONICAL_STRIKER, GC_STOP_GAP, backswingFor, canonicalSetup } from "./support/shot";
 import { POSITION_SLACK, boundaryJumps } from "./support/trajectory";
 
 const WORLD = defaultWorld();
@@ -32,8 +32,10 @@ const at = (x: number, y: number): BallState => ({ position: vec3(x, y, R), velo
 
 /**
  * The jabs (m) at which the canonical AC stop's box grounds its heel (P2b.2b.2b.3 design §6.1, §7.5): the shallowest
- * on time whose head meets the turf after the ball, and the shallowest whose dip 30 ms early meets it before the ball
+ * on time whose head meets the turf after the ball, and the shallowest whose dip 30 ms early met it before the ball
  * (plan Task 6 Step 5, 2026-10-16). They close the mallet's ruling B follow-up: the canonical AC stop clears the turf.
+ * P2b.2b.2c.2d: the planner includes a croquet stroke's dip (was: J_EARLY's early dip met the turf before the ball),
+ * so J_EARLY's early dip no longer meets the turf at all (gate 1, "Keep it planned (Recommended)").
  */
 const J_ON = 0.002;
 const J_EARLY = 0.004;
@@ -382,6 +384,24 @@ describe("simulateShot", () => {
         expect(simulateShot(setup).faults.findings.map((f) => f.law)).not.toContain("29.1.14");
     });
 
+    it("does not damage the turf in the canonical AC stop, in its impact or its follow-through", () => {
+        // User decision 2026-10-25: the stroke may rub the lawn and disturb the grass but must not damage the turf, so
+        // neither the impact nor the follow-through raises head-deep or turf-yield. At 6° and 20 mm below the face's
+        // centre the head went 3.6 mm deep and yielded the soil.
+        const outcome = simulateShot(canonicalSetup("stop-ac"), undefined, { trajectory: true });
+        expect(outcome.impact.events.map((e) => e.kind)).toEqual(["turf-lift"]);
+        const flags = (outcome.trajectory as SwingTrajectory).flags;
+        expect(flags).not.toContain("follow-turf-yield");
+        expect(flags).not.toContain("follow-head-deep");
+    });
+
+    it("raises no 29.1.6.1 on the canonical drive: its follow-through does not catch the ball again", () => {
+        // At the guide's full effort the head returns to the striker's ball 96.4 ms after contact (+49 % on its speed,
+        // a possible 29.1.6.1); at 0.75 nothing re-contacts it after the parting.
+        const outcome = simulateShot(canonicalSetup("drive"));
+        expect(outcome.faults.findings.map((f) => f.law)).not.toContain("29.1.6.1");
+    });
+
     it("ends a gentle tap before the cap", () => {
         // Review focus 1. Prototype: a 0.1 m/s tap ends at 10 ms, the pendulum's window.
         const kinds = simulateShot(
@@ -625,7 +645,14 @@ describe("the mechanisms (design §8.1), on the canonical setups", () => {
         expect(dug).toBeDefined();
         expect(dug.start).toBeGreaterThanOrEqual((hits(impact)[0] as ContactInterval).end);
         expect(turf).toBeGreaterThan(0);
-        expect(impact.events.map((e) => e.kind)).toEqual(["turf-lift"]);
+        // P2b.2b.2c.2d: the canonical stance, 5° back at 22.5 mm below the face's centre (was 4° at 20 mm, events
+        // ["turf-lift"]): with this deliberate 2 mm jab the head yields the turf at 15.46 ms and reaches the depth
+        // limit at 16.57 ms. The user's rule that the stroke must not damage the turf applies to the default stroke
+        // (the next test); a jab with the dip uses the ground to slow the mallet, so its dig is a recorded consequence.
+        expect(impact.events.map((e) => e.kind)).toEqual(["turf-lift", "turf-yield", "impact-head-deep"]);
+        const times = impact.events.map((e) => ("t" in e ? e.t : NaN));
+        expect(times[1]).toBeCloseTo(0.01546, 5);
+        expect(times[2]).toBeCloseTo(0.01657, 5);
     });
 
     // Spec exit criterion 2 (P2b.2b.2b.2b). On the bed (P2b.2b.2b.2a) the canonical pass roll's follow-through kept its
@@ -646,31 +673,47 @@ describe("the mechanisms (design §8.1), on the canonical setups", () => {
         expect(strikerSpeed(punched)).toBeGreaterThan(strikerSpeed(coasted));
     });
 
-    it("a dip 30 ms early meets the lawn before the ball and sends the striker's ball slower along the lawn", () => {
-        // Prototype: the impact starts 30 ms before contact; the head on the turf from 20.72 ms, the ball struck from
-        // 31.05 ms; the striker's ball at 1.214 m/s against 1.380 on time.
-        // P2b.2b.2b.3: the turf strike, on the default box through the jab (was on the legacy round head): the head
-        // on the turf from 28.55 ms, 0.73 mm deep, the ball struck from 30.36 ms; the striker's ball at 1.5540 m/s
-        // against 1.5666 on time.
-        // P2b.2b.2c.2b: the croquet gap's default, 1 mm; pinned at gap 0, where the early dip's slowing was measured:
-        // at 1 mm both runs double-tap the striker's ball (on time 0.005–1.095 and 1.265–2.620 ms, early 30.355–31.450
-        // and 31.635–32.985 ms), and along the lawn the early one leaves faster, 1.5050 against 1.4661 m/s.
-        const onTime = simulateShot(canonicalSetup("stop-ac", { croquetGap: 0, stroke: { jab: J_EARLY } })).impact;
-        const timing = { arc: 0, hands: 0, dip: -0.03 };
-        const early = simulateShot(
-            canonicalSetup("stop-ac", { croquetGap: 0, stroke: { jab: J_EARLY, timing } }),
-        ).impact;
-        const dug = early.timeline["head/turf"]?.[0] as ContactInterval;
-        expect(dug).toBeDefined();
-        expect(dug.start).toBeLessThan((hits(early)[0] as ContactInterval).start);
+    // Prototype: the impact starts 30 ms before contact; the head on the turf from 20.72 ms, the ball struck from
+    // 31.05 ms; the striker's ball at 1.214 m/s against 1.380 on time.
+    // P2b.2b.2b.3: the turf strike, on the default box through the jab (was on the legacy round head): the head
+    // on the turf from 28.55 ms, 0.73 mm deep, the ball struck from 30.36 ms; the striker's ball at 1.5540 m/s
+    // against 1.5666 on time.
+    // P2b.2b.2c.2b: the croquet gap's default, 1 mm; pinned at gap 0, where the early dip's slowing was measured:
+    // at 1 mm both runs double-tap the striker's ball (on time 0.005–1.095 and 1.265–2.620 ms, early 30.355–31.450
+    // and 31.635–32.985 ms), and along the lawn the early one leaves faster, 1.5050 against 1.4661 m/s.
+    const onTimeDip = () => simulateShot(canonicalSetup("stop-ac", { croquetGap: 0, stroke: { jab: J_EARLY } })).impact;
+    const earlyOutcome = () =>
+        simulateShot(
+            canonicalSetup("stop-ac", {
+                croquetGap: 0,
+                stroke: { jab: J_EARLY, timing: { arc: 0, hands: 0, dip: -0.03 } },
+            }),
+        );
+    const earlyDip = () => earlyOutcome().impact;
+
+    it("a dip 30 ms early on a croquet stroke is planned into the downswing", () => {
+        // P2b.2b.2c.2d: the planner includes a croquet stroke's dip (was: the head on the turf before the ball): the
+        // pivot raised 15.000 mm, approach 14.5473 mm at contact. The deliberate graze remains a single-ball play
+        // (turfStrike.test.ts).
+        const early = earlyOutcome();
+        expect(early.impact.timeline["head/turf"]).toBeUndefined();
+        expect(early.approach.clearance).toBeCloseTo(CANONICAL_CLEARANCE["stop-ac"], 6);
+        expect(early.approach.before).toBe(0);
+    });
+
+    it("a dip 30 ms early sends the striker's ball slower along the lawn", () => {
         // Along the lawn (user ruling 2026-10-17): full speed is not slower, because the heel's touch also lifts the
         // ball (vertical 0.238 m/s against 0.059 on time), which the full speed counts as faster (1.5721 against
         // 1.5677 m/s).
+        // P2b.2b.2c.2d: the minimum-jerk pulse and the planner including a croquet stroke's dip (was 1.34257 against
+        // 1.34340 m/s, slower): early 1.34586 against 1.34934 m/s, slower, with no turf strike; the vertical 0.2142
+        // against 0.0751 m/s; the cause of the ordering is untraced. Gate 1 ruled "Keep it planned (Recommended)": a
+        // mistimed early dip on a croquet stroke shows in the speed, not by grounding.
         const along = (impact: ImpactResult): number => {
             const { x, y } = (impact.handover.blue as BallState).velocity;
             return Math.hypot(x, y);
         };
-        expect(along(early)).toBeLessThan(along(onTime));
+        expect(along(earlyDip())).toBeLessThan(along(onTimeDip()));
     });
 
     it.each(["single-ball", "half-roll"] as const)(
@@ -701,13 +744,17 @@ describe("the mechanisms (design §8.1), on the canonical setups", () => {
 
 describe("the head's turf contact after the strike (P2b.2b.2b.3; user ruling 2026-10-16)", () => {
     it("hands a stop whose head rests on the turf over to the follow-through, not to the cap", () => {
-        // The preset stop-ac 2 m/s, drive 0, up 3 mm above canonical (−0.017), side 0. After the check its relaxed
+        // The preset stop-ac 2 m/s, drive 0, at the canonical contact (−0.0225 m), side 0. After the check its relaxed
         // hands follow the pendulum, which drags the head back and forth on the turf, carrying its weight about 0.5 mm
         // deep; the pair held the impact open to TRACK_IMPACT_CAP (impact-cap at 450 ms). Once the ball has gone and
         // the drive is done, the follow-through takes the head's turf contact over: the impact ends by itself (now at
-        // 262 ms, on its other terms) and the follow-through's head is in the turf.
+        // 209 ms, on its other terms; was 262 ms) and the follow-through's head is in the turf.
+        // P2b.2b.2c.2d: the canonical stance is 5° back at 22.5 mm below the face's centre (was 4° at 20 mm), and the
+        // case strikes at that canonical contact (was 3 mm above the canonical one, −0.017 m). 3 mm above it, at
+        // −0.0195 m, the head yields the soil and goes 2.1 mm deep (turf-yield, impact-head-deep). At the canonical
+        // contact the head rests on the turf from 17.9 ms to 178 ms at up to 21 N.
         const base = canonicalSetup("stop-ac", { world: WORLD });
-        const preset = { ...base.stroke, drive: 0, contact: { up: base.stroke.contact.up + 0.003, side: 0 } };
+        const preset = { ...base.stroke, drive: 0 };
         const setup = { ...base, stroke: preset };
         const shot = { ...setup, stroke: { ...preset, backswing: backswingFor(setup, 2, WORLD) } };
         const { impact, contact, trajectory } = simulateShot(shot, WORLD, { trajectory: true });

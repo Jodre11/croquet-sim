@@ -31,10 +31,22 @@
  * senses are acceptable (C29.11.1), and C29.11.2 places 29.1.6.1 "after the balls have parted contact"; C29.11.3 rules
  * out slow-motion video, and C28.3.2 sets balls parting by a few millimetres below the standard. So a mallet
  * re-contact beginning before the striker's ball has parted from the croqueted ball (or, in a continuation stroke,
- * from every ball it touched) is within the strike: it is reported on `strike`, never flagged. One beginning at or
- * after the parting keeps today's possible fault (29.2.5: a separation seen by eye), at its start, until a later
- * follow-through step judges such contacts (shepherding, the push). A ball–ball break shorter than PARTING_BREAK is no
- * parting. With no parting to place it, every re-contact is flagged as before.
+ * from every ball it touched) is within the strike: it is reported on `strike`, never flagged. A ball–ball break
+ * shorter than PARTING_BREAK is no parting. With no parting to place it, every re-contact is flagged as before.
+ *
+ * Re-contacts after the parting (P2b.2b.2c.2d design §7). Law 29.2.5 makes 29.1.6.1 a fault only if a separation seen
+ * by eye is followed by a second contact; C29.11.2 applies a laxer standard to croquet strokes, aimed at shepherding
+ * after the balls have parted; C28.3.2 sets balls parting by a few millimetres below the standard; and Law 29.2.7 lets
+ * a related fault be deduced from the balls' trajectories and speeds against a lawful stroke's. The user reads the
+ * allowance as much more generous (design decision 10): the fault is a second hit that changes the ball's momentum or
+ * direction, and a long succession of micro-hits with small separation is one contact. So the non-exempt mallet
+ * contacts are grouped from the first: one joins the one before it when the separation between them (the earlier
+ * one's `clearanceAfter`, 0 when none was noted or below 0) is below MERGE_SEPARATION. A group begun before the parting
+ * is the strike, its contacts reported among the taps however long after the parting the chain runs (the gate's
+ * ruling, 2026-10-24). Each later group, other than the first contact's, is a re-contact, reported on `strike` with
+ * its separation, gap, time after the parting, summed impulse and effect: the change to the striker's ball's speed (a
+ * fraction) and horizontal direction (degrees) from the group's first velocity to its last. It is possible fault
+ * 29.1.6.1 only if its effect reaches EFFECT_SPEED or EFFECT_ANGLE.
  *
  * 29.1.13 has two clauses, reported in this order and told apart by their evidence: "fails to move or shake" (the
  * croqueted pair never penetrates beyond CONTACT_TOLERANCE; evidence peakPenetration), and "plays away from" (the
@@ -45,11 +57,12 @@
  * effect on later strokes (C29.19.5), which the head's turf, discarded with the stroke, does not keep. It is found
  * when the head–turf pair has an interval in a stroke of Law 29.2.3; no damage threshold is invented.
  */
+import { lawsReference } from "../reference/index";
 import { CONTACT_TOLERANCE } from "./detect";
 import { ballPairKey, faceKey, HEAD_TURF_KEY, obstacleKey } from "./impact/contacts";
 import type { ContactInterval, ImpactResult } from "./impact/types";
 import { atan2 } from "./math/elementary";
-import { cross, dot, length, type Vec3 } from "./math/vec3";
+import { add, cross, dot, horizontal, length, ZERO, type Vec3 } from "./math/vec3";
 import { BALL_IDS, type BallId } from "./types";
 
 /** What the judge needs to know about the stroke beyond the impact (P2b.2a design §3). */
@@ -95,13 +108,44 @@ export interface Finding {
 /**
  * The mallet's taps within a croquet or continuation stroke's strike (P2b.2b.2c.2c design §6). `parted` is when the
  * striker's ball parted from the ball or balls it touched (s), or null when no such pair had an interval; `taps` are
- * the non-exempt mallet contacts beginning before it, each with its `clearanceAfter`, and none when `parted` is null;
- * `breaks` are the lengths (s) of the sub-frame breaks merged across in placing it, across every pair, in pair order.
+ * the non-exempt mallet contacts of the strike, each with its `clearanceAfter`: those beginning before the parting and
+ * any after it within MERGE_SEPARATION of one of them (P2b.2b.2c.2d design §7), and none when `parted` is null;
+ * `breaks` are the lengths (s) of the sub-frame breaks merged across in placing it, across every pair, in pair order;
+ * `recontacts` are the re-contacts from the parting on (P2b.2b.2c.2d design §7), none when `parted` is null.
  */
 export interface StrikeTaps {
     readonly parted: number | null;
     readonly taps: readonly ContactInterval[];
     readonly breaks: readonly number[];
+    readonly recontacts: readonly ReContact[];
+}
+
+/**
+ * One re-contact after the parting (P2b.2b.2c.2d design §7): a group of `intervals` consecutive mallet contacts merged
+ * across separations below MERGE_SEPARATION, over [start, end) (s). `separation` (m) is the clearance before it, `gap`
+ * (s) its start less the previous contact's end, and `afterParting` (s) its start less the parting. `impulse` (N·s) is
+ * the face's, summed over the group. `speedChange` is the change in the striker's ball's speed over the group as a
+ * fraction of its speed before (+Infinity from rest), and `angleChange` the unsigned change in its horizontal direction
+ * (degrees; 0 when either horizontal speed is 0). `fault`: the effect reaches EFFECT_SPEED or EFFECT_ANGLE.
+ */
+export interface ReContact {
+    readonly start: number;
+    readonly end: number;
+    readonly intervals: number;
+    readonly separation: number;
+    readonly gap: number;
+    readonly afterParting: number;
+    readonly impulse: Vec3;
+    readonly speedChange: number;
+    readonly angleChange: number;
+    readonly fault: boolean;
+}
+
+/** The thresholds a re-contact is judged by: MERGE_SEPARATION (m), EFFECT_SPEED (a fraction), EFFECT_ANGLE (°). */
+export interface ReContactThresholds {
+    readonly mergeSeparation: number;
+    readonly effectSpeed: number;
+    readonly effectAngle: number;
 }
 
 /**
@@ -125,6 +169,30 @@ export const PARTING_BREAK = 1.25e-4;
  * stays far inside a step, so a break even 1e-9 s short of a frame is still no parting.
  */
 const PARTING_MIN_GAP = PARTING_BREAK * (1 - 1e-9);
+
+/**
+ * The separation (m) below which consecutive mallet contacts are one continuing contact (reference/laws.json, 29.2.5):
+ * 2 mm, ruled at the gate's stage 1 from the spread of separations (spec §7).
+ */
+export const MERGE_SEPARATION = lawsReference.reContactThresholds.mergeSeparation.value;
+
+/**
+ * The change in the striker's ball's speed, as a fraction, at which a re-contact is possible fault 29.1.6.1
+ * (reference/laws.json, 29.2.5): 10 %, ruled at the gate's stage 1 from the spread of effects (spec §7).
+ */
+export const EFFECT_SPEED = lawsReference.reContactThresholds.effectSpeed.value;
+
+/**
+ * The change in the striker's ball's horizontal direction (degrees) at which a re-contact is possible fault 29.1.6.1
+ * (reference/laws.json, 29.2.5): 2°, ruled at the gate's stage 1 from the spread of effects (spec §7).
+ */
+export const EFFECT_ANGLE = lawsReference.reContactThresholds.effectAngle.value;
+
+const THRESHOLDS: ReContactThresholds = {
+    mergeSeparation: MERGE_SEPARATION,
+    effectSpeed: EFFECT_SPEED,
+    effectAngle: EFFECT_ANGLE,
+};
 
 /** The Laws the judge reports, each quoted in reference/laws.json. */
 export const JUDGED_LAWS = [
@@ -276,19 +344,26 @@ function contactEvidence(count: number, faces: readonly ContactInterval[]): Reco
 }
 
 /**
+ * The pairs the striker's ball touched at the start: the croqueted pair of a croquet stroke (its ball is defined,
+ * since `validate` has checked it), or the striker's pairs touching at the start of a continuation stroke.
+ */
+function touchedPairKeys(context: StrokeContext, impact: ImpactResult): string[] {
+    const { striker } = context;
+    if (context.kind === "croquet") {
+        return [ballPairKey(striker, context.croqueted as BallId)];
+    }
+    return BALL_IDS.filter((id) => id !== striker && impact.balls[id] !== undefined)
+        .map((id) => ballPairKey(striker, id))
+        .filter((key) => impact.touchingAtStart.includes(key));
+}
+
+/**
  * When the striker's ball and the ball or balls it touched at the start part, and the sub-frame breaks merged across.
- * The pairs are the croqueted pair of a croquet stroke, or the striker's pairs touching at the start of a continuation
- * stroke. Each pair's first interval is extended across every following break shorter than PARTING_BREAK, and the
+ * Each touched pair's first interval is extended across every following break shorter than PARTING_BREAK, and the
  * balls have parted when the latest such first interval ends. Null when no pair has an interval.
  */
 function partingOf(context: StrokeContext, impact: ImpactResult): { parted: number | null; breaks: number[] } {
-    const { striker } = context;
-    const keys =
-        context.kind === "croquet"
-            ? [ballPairKey(striker, context.croqueted as BallId)]
-            : BALL_IDS.filter((id) => id !== striker && impact.balls[id] !== undefined)
-                  .map((id) => ballPairKey(striker, id))
-                  .filter((key) => impact.touchingAtStart.includes(key));
+    const keys = touchedPairKeys(context, impact);
     let parted: number | null = null;
     const breaks: number[] = [];
     for (const key of keys) {
@@ -309,6 +384,123 @@ function partingOf(context: StrokeContext, impact: ImpactResult): { parted: numb
         parted = parted === null ? end : Math.max(parted, end);
     }
     return { parted, breaks };
+}
+
+/**
+ * A re-contact's effect on the striker's ball from velocity `before` to `after` (m/s): the speed's change as a fraction
+ * (+Infinity from rest) and the unsigned change in horizontal direction (degrees; 0 when either horizontal speed is 0).
+ */
+function effectOf(before: Vec3, after: Vec3): { readonly speedChange: number; readonly angleChange: number } {
+    const from = length(before);
+    const speedChange = from === 0 ? Infinity : (length(after) - from) / from;
+    const a = horizontal(before);
+    const b = horizontal(after);
+    if (length(a) === 0 || length(b) === 0) {
+        return { speedChange, angleChange: 0 };
+    }
+    return { speedChange, angleChange: (atan2(Math.abs(cross(a, b).z), dot(a, b)) * 180) / Math.PI };
+}
+
+/**
+ * The separation (m) before mallet contact `i` of `faces`: the earlier contact's `clearanceAfter`, 0 when absent. A
+ * plane clearance below 0 is a ball beside the face, past its edge, not one closer to it, so it counts as 0.
+ */
+function separationBefore(faces: readonly ContactInterval[], i: number): number {
+    return Math.max(0, (faces[i - 1] as ContactInterval).clearanceAfter ?? 0);
+}
+
+/** A re-contact being gathered: the contact before it, the separation after that one, and its contacts. */
+interface ReContactGroup {
+    readonly previous: ContactInterval;
+    readonly separation: number;
+    readonly items: ContactInterval[];
+}
+
+/**
+ * Mallet contacts `faces`, in order, grouped around the parting `parted` (s) (P2b.2b.2c.2d design §7 and its
+ * Amendments; see the file header). A contact joins the previous contact's group when the separation between them (see
+ * separationBefore) is below `thresholds.mergeSeparation`, and otherwise starts a group of its own. A group begun
+ * before the parting is the strike: its contacts, any after the parting among them, are the `taps`. A later group is a
+ * re-contact, judged by `thresholds`, except the first contact's: the stroke's strike itself, neither a tap nor a
+ * re-contact when it begins after the parting, as 29.1.6.1 judges only the contacts after the first.
+ */
+function groupContacts(
+    faces: readonly ContactInterval[],
+    parted: number,
+    thresholds: ReContactThresholds,
+): { readonly taps: ContactInterval[]; readonly recontacts: ReContact[] } {
+    const taps: ContactInterval[] = [];
+    const groups: ReContactGroup[] = [];
+    // The group the contact in hand joins: the strike's, the first contact's begun after the parting, or a re-contact.
+    let current: "strike" | "first" | ReContactGroup = "first";
+    for (let i = 0; i < faces.length; i++) {
+        const face = faces[i] as ContactInterval;
+        const separation = i === 0 ? 0 : separationBefore(faces, i);
+        if (i === 0 || separation >= thresholds.mergeSeparation) {
+            if (face.start < parted) {
+                current = "strike";
+            } else if (i === 0) {
+                current = "first";
+            } else {
+                current = { previous: faces[i - 1] as ContactInterval, separation, items: [] };
+                groups.push(current);
+            }
+        }
+        if (current === "strike") {
+            taps.push(face);
+        } else if (current !== "first") {
+            current.items.push(face);
+        }
+    }
+    return { taps, recontacts: groups.map((group) => judgeReContact(group, parted, thresholds)) };
+}
+
+/**
+ * The re-contacts among mallet contacts `faces` from the parting `parted` (s) on, judged by `thresholds`, as
+ * groupContacts groups them: a contact within `thresholds.mergeSeparation` of a tap is the strike's, not a
+ * re-contact. Without the face's record (a hand-built timeline), a group's effect is that of one from rest: a fault
+ * under any threshold. The judge applies the laws' thresholds to the non-exempt contacts; this is exported for tests
+ * and probes that try other thresholds.
+ */
+export function groupReContacts(
+    faces: readonly ContactInterval[],
+    parted: number,
+    thresholds: ReContactThresholds,
+): ReContact[] {
+    return groupContacts(faces, parted, thresholds).recontacts;
+}
+
+/** Re-contact `group` after the parting `parted` (s), its effect judged by `thresholds`. */
+function judgeReContact(
+    { previous, separation, items }: ReContactGroup,
+    parted: number,
+    thresholds: ReContactThresholds,
+): ReContact {
+    const first = items[0] as ContactInterval;
+    const final = items[items.length - 1] as ContactInterval;
+    let impulse: Vec3 | null = null;
+    for (const f of items) {
+        if (f.impulse !== undefined) {
+            impulse = impulse === null ? f.impulse : add(impulse, f.impulse);
+        }
+    }
+    const before = first.velocities?.before;
+    const after = final.velocities?.after;
+    const effect =
+        before === undefined || after === undefined
+            ? { speedChange: Infinity, angleChange: 0 }
+            : effectOf(before, after);
+    return {
+        start: first.start,
+        end: final.end,
+        intervals: items.length,
+        separation,
+        gap: first.start - previous.end,
+        afterParting: first.start - parted,
+        impulse: impulse ?? ZERO,
+        ...effect,
+        fault: Math.abs(effect.speedChange) >= thresholds.effectSpeed || effect.angleChange >= thresholds.effectAngle,
+    };
 }
 
 /**
@@ -417,26 +609,24 @@ export function judgeFaults(context: StrokeContext, impact: ImpactResult): Fault
         }
     }
     // 29.1.6.1: a croquet stroke, or a continuation while touching, with two or more non-exempt mallet contacts. A
-    // re-contact that begins before the balls part is within the strike and only reported (see the file header).
+    // re-contact that begins before the balls part, or within MERGE_SEPARATION of one that did, is within the strike
+    // and only reported; any other from the parting on is judged by its effect (see the file header).
     let strike: StrikeTaps | undefined;
     if (kind !== "single-ball") {
         const { parted, breaks } = partingOf(context, impact);
-        strike = {
-            parted,
-            taps: parted === null ? [] : contacts.filter((f) => f.start < parted),
-            breaks,
-        };
-        if (parted === null) {
-            if (contacts.length >= 2) {
-                const second = contacts[1] as ContactInterval;
-                add("29.1.6.1", "possible-fault", striker, second.start, contactEvidence(contacts.length, faces));
+        const { taps, recontacts } =
+            parted === null ? { taps: [], recontacts: [] } : groupContacts(contacts, parted, THRESHOLDS);
+        strike = { parted, taps, breaks, recontacts };
+        // Unparted, every contact after the first faults; parted, only the re-contacts whose effect reaches a
+        // threshold, at the first one's start, with their count.
+        const faulting = parted === null ? contacts.slice(1) : recontacts.filter((r) => r.fault);
+        const first = faulting[0];
+        if (first !== undefined) {
+            const evidence = contactEvidence(contacts.length, faces);
+            if (parted !== null) {
+                evidence.afterParting = faulting.length;
             }
-        } else {
-            const after = contacts.slice(1).filter((f) => f.start >= parted);
-            if (after.length > 0) {
-                const evidence = { ...contactEvidence(contacts.length, faces), afterParting: after.length };
-                add("29.1.6.1", "possible-fault", striker, (after[0] as ContactInterval).start, evidence);
-            }
+            add("29.1.6.1", "possible-fault", striker, first.start, evidence);
         }
     }
     // 29.1.5: in a stroke of Law 29.2.3, the first mallet contact is at the rim (C29.10.8: the first contact only).

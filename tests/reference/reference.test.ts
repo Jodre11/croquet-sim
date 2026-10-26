@@ -188,6 +188,20 @@ describe("obstacle and fault reference data", () => {
         }
         expect(Object.keys(lawsReference.faults)).toEqual([...FAULT_LAW_KEYS]);
     });
+
+    it("loads 29.2.5's re-contact thresholds as the gate ruled them: 2 mm, 10 % and 2°", () => {
+        // Ruled at the gate's stage 1 (2026-10-24) from the spread of separations and effects, so no longer
+        // placeholders.
+        const { mergeSeparation, effectSpeed, effectAngle } = lawsReference.reContactThresholds;
+        expect([mergeSeparation.unit, effectSpeed.unit, effectAngle.unit]).toEqual(["m", "1", "°"]);
+        expect([mergeSeparation.value, effectSpeed.value, effectAngle.value]).toEqual([0.002, 0.1, 2]);
+        for (const threshold of [mergeSeparation, effectSpeed, effectAngle]) {
+            expect(threshold.note).toContain("2026-10-24");
+            expect(threshold.note).not.toContain("Placeholder");
+            expect(threshold.provisional).toBeUndefined();
+            expect(threshold.provenance).toBe("derived");
+        }
+    });
 });
 
 describe("swing, coupling and head–turf reference data", () => {

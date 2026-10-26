@@ -145,19 +145,20 @@ describe("the hands' advance (design §6, §8.1.5)", () => {
         }
     });
     it("slows the head's turn while the hands speed up: its pitch rate at the ramp's end is lower", () => {
-        // On time the ramp runs from contact for V/a, at 3 m/s and a = 300 m/s² the 10 ms of the pendulum's window,
-        // whose α law prescribes θ, so the plan cannot show it: the planned ω there is bit-equal with and without the
-        // advance (only because the two coincide: a gentler body's ramp outlasts the window). The slowing reaches the
-        // head through swing mode's hand load, which pushes the top of the shaft forward along aim.
+        // On time the ramp runs from contact for V/a, at 3 m/s and a = 300 m/s² the 10 ms of the pendulum's window.
+        // P2b.2b.2c.2d: gravity through the pulse (was bit-equal): planned ω at the ramp's end −0.0817 against
+        // 3.5968 rad/s; the window now carries the free pendulum's pivot term, so the plan shows the advance's
+        // slowing. The slowing reaches the head through swing mode's hand load, which pushes the top of the shaft
+        // forward along aim.
         const RAMP_END = advanceOf(level()).ramp;
         const at = (setup: ShotSetup): number =>
             (pitchRates(setup).find(({ t }) => t >= RAMP_END) as { rate: number }).rate;
-        expect(plannedOmega(level(), RAMP_END)).toBe(plannedOmega(rising(), RAMP_END));
+        expect(plannedOmega(level(), RAMP_END)).toBeLessThan(plannedOmega(rising(), RAMP_END));
         expect(at(level())).toBeLessThan(at(rising()));
     });
     it("slows the planned turn while late hands speed up: the planned ω at their ramp's end is lower", () => {
-        // The plan's own ω, for a late advance. On time the ramp coincides with the pendulum's window, whose α law
-        // prescribes θ, so the plan cannot see it (the test above). A late advance's ramp lies wholly in the free
+        // The plan's own ω, for a late advance. On time the ramp coincides with the pendulum's window, which the free
+        // table now also carries (the test above). A late advance's ramp lies wholly past the window in the free
         // table, which integrates the hands' acceleration through freeAlpha. 0.05 s after contact is after the window's
         // end (W = 0.01 s) and well before the no-advance finish (about 0.498 s); its ramp lasts V/a, 0.01 s at 3 m/s.
         const late = level(0.05);

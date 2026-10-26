@@ -118,8 +118,10 @@ describe("the shaft's weight (P2b.2b.2b.2c design §4.3)", () => {
 
     it("leaves a held mallet still under gravity: the integrator puts the shaft's weight at its centre", () => {
         // As above, through the integrator: the feed-forward's torque cancels the shaft's weight's only if the loads
-        // put it at the shaft's centre.
-        const arc = levelArc(CENTRE, { theta0: 0.3 });
+        // put it at the shaft's centre. P2b.2b.2c.2d: gravity through the pulse (was the window from t = 0, which held
+        // θ then): gravity now swings the pendulum through its window, so the window starts after the run, where the
+        // path before it holds θ₀ still.
+        const arc = levelArc(CENTRE, { theta0: 0.3, arcStart: 1 });
         const track = prepareTrack(trackDrive(arc, { period: 0.04, dampingRatio: 0.7, relaxAt: 1 }), SHAFTED, g);
         const start = headOnPath(track, SHAFTED, 0);
         const run = integrate(isolated({ head: SHAFTED, start, drive: track, gravity: g }), { cap: 0.01 });

@@ -242,9 +242,16 @@ export interface DownswingScan {
 /**
  * Scans the downswing `down` of `head` swung on `aim` about a top hand `radius` from its socket (design §3.5): the
  * head at every sample (downswingSamples), placed on the path as headOnPath places it, its lowest point against the
- * turf plane.
+ * turf plane, less `lowering`'s z (m) at the sample, u s from contact (u ≤ 0), if given: a dip under way before
+ * contact (P2b.2b.2c.2d design §4.2).
  */
-export function scanDownswing(down: Downswing, head: MalletHead, aim: Vec3, radius: number): DownswingScan {
+export function scanDownswing(
+    down: Downswing,
+    head: MalletHead,
+    aim: Vec3,
+    radius: number,
+    lowering?: (u: number) => number,
+): DownswingScan {
     let clearance = Infinity;
     let before = 0;
     let grounded: number | null = null;
@@ -257,7 +264,8 @@ export function scanDownswing(down: Downswing, head: MalletHead, aim: Vec3, radi
         const socket = add(hands.P, scale(sub(scale(aim, s), scale(UP, c)), radius));
         const orientation = swingOrientation(aim, swing.theta);
         const position = sub(socket, rotate(orientation, head.socket));
-        const z = headLowestPoint({ position, orientation, velocity: ZERO, angularVelocity: ZERO }, head);
+        const lowest = headLowestPoint({ position, orientation, velocity: ZERO, angularVelocity: ZERO }, head);
+        const z = lowering === undefined ? lowest : lowest - lowering(t);
         if (z < clearance) {
             clearance = z;
             before = 0 - t;

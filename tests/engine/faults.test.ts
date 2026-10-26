@@ -1,8 +1,18 @@
 import { describe, expect, it } from "vitest";
-import { JUDGED_LAWS, judgeFaults, PARTING_BREAK, type FaultReport, type StrokeContext } from "../../src/engine/faults";
+import {
+    EFFECT_ANGLE,
+    EFFECT_SPEED,
+    groupReContacts,
+    JUDGED_LAWS,
+    judgeFaults,
+    MERGE_SEPARATION,
+    PARTING_BREAK,
+    type FaultReport,
+    type StrokeContext,
+} from "../../src/engine/faults";
 import { obstacleKey } from "../../src/engine/impact/contacts";
 import { IMPACT_DT } from "../../src/engine/impact/integrate";
-import { vec3, ZERO } from "../../src/engine/math/vec3";
+import { vec3, ZERO, type Vec3 } from "../../src/engine/math/vec3";
 import { IDENTITY } from "../../src/engine/impact/rigidBody";
 import type { ContactInterval, ImpactEvent, ImpactResult } from "../../src/engine/impact/types";
 import type { BallStates } from "../../src/engine/types";
@@ -11,10 +21,28 @@ import { ballAt } from "./support/fixtures";
 
 /** A time unit for hand-built timelines (s). */
 const T = 1e-4;
+/**
+ * A separation (m) an eye could see, well past MERGE_SEPARATION: a hand-built contact followed by a re-contact that
+ * must stay one of its own carries it, since a gap with no clearance noted is separation 0 and joins the contact
+ * before.
+ */
+const SEEN = 5e-3;
 const ALL: BallStates = { blue: ballAt(5, 5), red: ballAt(6, 5), black: ballAt(7, 5), yellow: ballAt(8, 5) };
 
 function iv(start: number, end: number, peakForce = 100, clearanceAfter?: number): ContactInterval {
     return clearanceAfter === undefined ? { start, end, peakForce } : { start, end, peakForce, clearanceAfter };
+}
+
+/** A face interval with the face's record: its impulse (N·s) and the ball's velocities (m/s) at its ends. */
+function ivr(
+    start: number,
+    end: number,
+    impulse: Vec3,
+    before: Vec3,
+    after: Vec3,
+    clearanceAfter?: number,
+): ContactInterval {
+    return { ...iv(start, end, 100, clearanceAfter), impulse, velocities: { before, after } };
 }
 
 /** A hand-built impact: the given timeline, touching pairs, events and penetrations; all four balls present. */
@@ -161,14 +189,16 @@ describe("judgeFaults: one positive and one negative case per row", () => {
     it("29.1.6.1 possible fault: two mallet contacts in a croquet stroke or a continuation while touching", () => {
         // P2b.2b.2c.2c: the balls part at 4T, before the re-contact at 5T (was 6T: that re-contact is now a tap within
         // the strike, reported, not flagged).
+        // P2b.2b.2c.2d: the clearance is SEEN, past MERGE_SEPARATION, so the re-contact is no part of the strike (was
+        // 1e-4, 0.1 mm, under which it now joins the strike).
         const twice = impact({
             touchingAtStart: ["blue/red"],
-            timeline: { "face/blue": [iv(0, 2 * T, 100, 1e-4), iv(5 * T, 7 * T)], "blue/red": [iv(0, 4 * T)] },
+            timeline: { "face/blue": [iv(0, 2 * T, 100, SEEN), iv(5 * T, 7 * T)], "blue/red": [iv(0, 4 * T)] },
             peakPenetration: { "blue/red": 2e-3 },
         });
         const report = judgeFaults(CROQUET, twice);
         expect(laws(report)).toEqual(["29.1.6.1 possible-fault"]);
-        expect(report.findings[0]?.evidence).toMatchObject({ contacts: 2, clearance1: 1e-4 });
+        expect(report.findings[0]?.evidence).toMatchObject({ contacts: 2, clearance1: SEEN });
         expect(laws(judgeFaults({ ...DEAD, kind: "continuation-touching" }, twice))).toEqual([
             "29.1.6.1 possible-fault",
         ]);
@@ -371,9 +401,14 @@ describe("judgeFaults: 29.1.7 and the roquet exemption", () => {
 
 describe("judgeFaults: other cases", () => {
     it("never makes a croquet-stroke re-contact a fault", () => {
+        // P2b.2b.2c.2d: the 3T tap is followed by a SEEN separation, so the 6T contact is a re-contact, not the
+        // strike's (was no clearance noted, separation 0, under which it now joins the strike).
         const twice = impact({
             touchingAtStart: ["blue/red"],
-            timeline: { "face/blue": [iv(0, 2 * T), iv(3 * T, 4 * T), iv(6 * T, 7 * T)], "blue/red": [iv(0, 5 * T)] },
+            timeline: {
+                "face/blue": [iv(0, 2 * T), iv(3 * T, 4 * T, 100, SEEN), iv(6 * T, 7 * T)],
+                "blue/red": [iv(0, 5 * T)],
+            },
             peakPenetration: { "blue/red": 2e-3 },
             events: [{ kind: "impact-head-approaching", t: 100 * T, ball: "blue" }],
         });
@@ -414,34 +449,38 @@ describe("judgeFaults: other cases", () => {
     });
 });
 
+const CONTINUATION: StrokeContext = { ...DEAD, kind: "continuation-touching" };
+
+/** Blue touching red, and black unless `blackTouching` is false; `hoop` is touched at the start. */
+function threeBalls(over: {
+    red: readonly ContactInterval[];
+    black: readonly ContactInterval[];
+    face: readonly ContactInterval[];
+    hoop?: readonly ContactInterval[];
+    blackTouching?: boolean;
+}): ImpactResult {
+    const hoopKey = obstacleKey("blue", "1/a");
+    return impact({
+        timeline: {
+            "face/blue": over.face,
+            "blue/red": over.red,
+            "blue/black": over.black,
+            ...(over.hoop === undefined ? {} : { [hoopKey]: over.hoop }),
+        },
+        touchingAtStart: [
+            "blue/red",
+            ...(over.blackTouching === false ? [] : ["blue/black"]),
+            ...(over.hoop === undefined ? [] : [hoopKey]),
+        ],
+    });
+}
+
 describe("judgeFaults: the double tap within the strike (P2b.2b.2c.2c design §6)", () => {
+    // P2b.2b.2c.2d: each contact followed by a re-contact meant to be judged after the parting carries a SEEN
+    // clearance (was none noted: separation 0, under MERGE_SEPARATION, so the re-contact would join the strike).
     const croquet = CROQUET;
     const singleBall = SINGLE;
-    const continuation: StrokeContext = { ...DEAD, kind: "continuation-touching" };
-
-    /** Blue touching red, and black unless `blackTouching` is false; `hoop` is touched at the start. */
-    function threeBalls(over: {
-        red: readonly ContactInterval[];
-        black: readonly ContactInterval[];
-        face: readonly ContactInterval[];
-        hoop?: readonly ContactInterval[];
-        blackTouching?: boolean;
-    }): ImpactResult {
-        const hoopKey = obstacleKey("blue", "1/a");
-        return impact({
-            timeline: {
-                "face/blue": over.face,
-                "blue/red": over.red,
-                "blue/black": over.black,
-                ...(over.hoop === undefined ? {} : { [hoopKey]: over.hoop }),
-            },
-            touchingAtStart: [
-                "blue/red",
-                ...(over.blackTouching === false ? [] : ["blue/black"]),
-                ...(over.hoop === undefined ? [] : [hoopKey]),
-            ],
-        });
-    }
+    const continuation = CONTINUATION;
 
     it("reports a re-contact before the balls part, and does not flag it", () => {
         const report = judgeFaults(
@@ -458,7 +497,7 @@ describe("judgeFaults: the double tap within the strike (P2b.2b.2c.2c design §6
     it("flags a re-contact after the balls part, as today, at its start", () => {
         const report = judgeFaults(
             croquet,
-            impact({ face: [iv(0, 6e-4), iv(2e-3, 2.5e-3)], pair: [iv(1e-4, 1.4e-3)] }),
+            impact({ face: [iv(0, 6e-4, 100, SEEN), iv(2e-3, 2.5e-3)], pair: [iv(1e-4, 1.4e-3)] }),
         );
         const f = report.findings.find((x) => x.law === "29.1.6.1");
         expect(f?.t).toBe(2e-3);
@@ -469,7 +508,7 @@ describe("judgeFaults: the double tap within the strike (P2b.2b.2c.2c design §6
         // The design's boundary is "at or after" the parting.
         const report = judgeFaults(
             croquet,
-            impact({ face: [iv(0, 6e-4), iv(1.4e-3, 2e-3)], pair: [iv(1e-4, 1.4e-3)] }),
+            impact({ face: [iv(0, 6e-4, 100, SEEN), iv(1.4e-3, 2e-3)], pair: [iv(1e-4, 1.4e-3)] }),
         );
         expect(laws(report)).toContain("29.1.6.1 possible-fault");
     });
@@ -483,7 +522,7 @@ describe("judgeFaults: the double tap within the strike (P2b.2b.2c.2c design §6
         const at = [iv(1e-5, end), iv(end + PARTING_BREAK, 1.4e-3)];
         expect((under[1] as ContactInterval).start - end).toBe(brk);
         expect((at[1] as ContactInterval).start - end).toBe(PARTING_BREAK);
-        const face = [iv(0, 4e-4), iv(8e-4, 1.2e-3)];
+        const face = [iv(0, 4e-4, 100, SEEN), iv(8e-4, 1.2e-3)];
         const merged = judgeFaults(croquet, impact({ face, pair: under }));
         expect(merged.strike?.parted).toBe(1.4e-3);
         expect(merged.strike?.breaks).toEqual([brk]);
@@ -496,7 +535,7 @@ describe("judgeFaults: the double tap within the strike (P2b.2b.2c.2c design §6
         const frame = 25;
         expect(frame * IMPACT_DT).toBe(PARTING_BREAK);
         const pair = [iv(IMPACT_DT, n * IMPACT_DT), iv((n + frame) * IMPACT_DT, (n + frame + 100) * IMPACT_DT)];
-        const face = [iv(0, 2e-5), iv((n + frame + 1) * IMPACT_DT, (n + frame + 20) * IMPACT_DT)];
+        const face = [iv(0, 2e-5, 100, SEEN), iv((n + frame + 1) * IMPACT_DT, (n + frame + 20) * IMPACT_DT)];
         const report = judgeFaults(croquet, impact({ face, pair }));
         expect(report.strike?.parted).toBe(n * IMPACT_DT);
         expect(report.strike?.breaks).toEqual([]);
@@ -505,7 +544,7 @@ describe("judgeFaults: the double tap within the strike (P2b.2b.2c.2c design §6
     it("judges as today when the balls never meet", () => {
         // With no interval there is no parting, so the rule falls back to flagging every second contact.
         const report = judgeFaults(croquet, impact({ face: [iv(0, 6e-4), iv(9e-4, 1.6e-3)], pair: [] }));
-        expect(report.strike).toEqual({ parted: null, taps: [], breaks: [] });
+        expect(report.strike).toEqual({ parted: null, taps: [], breaks: [], recontacts: [] });
         expect(laws(report)).toContain("29.1.6.1 possible-fault");
     });
     it("parts at the impact's end when the balls never separate", () => {
@@ -535,7 +574,7 @@ describe("judgeFaults: the double tap within the strike (P2b.2b.2c.2c design §6
                 red: [iv(0, 1e-3)],
                 black: [iv(0, 1.5e-3)],
                 hoop: [iv(0, 5e-3)],
-                face: [iv(0, 4e-4), iv(2e-3, 2.4e-3)],
+                face: [iv(0, 4e-4, 100, SEEN), iv(2e-3, 2.4e-3)],
             }),
         );
         expect(report.strike?.parted).toBe(1.5e-3);
@@ -575,6 +614,264 @@ describe("judgeFaults: the double tap within the strike (P2b.2b.2c.2c design §6
         expect(single.strike).toBeUndefined();
         expect("strike" in single).toBe(false);
         expect(laws(single)).toContain("29.1.6.2 fault");
+    });
+});
+
+describe("judgeFaults: re-contacts after the parting (P2b.2b.2c.2d design §7)", () => {
+    const croquet = CROQUET;
+    const continuation = CONTINUATION;
+    /** One degree (rad): the second re-contact turns the ball 1° from +y towards +x. */
+    const deg = Math.PI / 180;
+    const faces3 = [
+        ivr(0, 6e-4, vec3(0, 0.4, 0), vec3(0, 0, 0), vec3(0, 2, 0), 1e-3),
+        ivr(2e-3, 2.1e-3, vec3(0, 0.0128, 0), vec3(0, 2, 0), vec3(0, 2.03, 0), 5e-5),
+        ivr(2.2e-3, 2.3e-3, vec3(0.0144, 0, 0), vec3(0, 2.03, 0), vec3(2.06 * Math.sin(deg), 2.06 * Math.cos(deg), 0)),
+    ];
+
+    it("reports each re-contact after the parting with its effect", () => {
+        const report = judgeFaults(
+            croquet,
+            impact({
+                pair: [iv(1e-4, 1.4e-3)],
+                face: [
+                    ivr(0, 6e-4, vec3(0, 0.4, 0), vec3(0, 0, 0), vec3(0, 2.5, 0), SEEN),
+                    ivr(2e-3, 2.4e-3, vec3(0, 0.02, 0), vec3(0, 2.5, 0), vec3(0, 2.6, 0.0)),
+                ],
+            }),
+        );
+        const [r] = report.strike?.recontacts ?? [];
+        expect(r?.afterParting).toBeCloseTo(6e-4, 15);
+        expect(r?.speedChange).toBeCloseTo(0.04, 12);
+        expect(r?.angleChange).toBe(0);
+        // P2b.2b.2c.2d: 4 % and 0° are under EFFECT_SPEED 10 % and EFFECT_ANGLE 2° (was true, at the placeholders 0).
+        expect(r?.fault).toBe(false);
+        expect(laws(report)).not.toContain("29.1.6.1 possible-fault");
+    });
+    it("flags a re-contact without the face's record, from rest, with the finding's evidence", () => {
+        // Without velocities a re-contact's effect is one from rest, a fault under any threshold.
+        // P2b.2b.2c.2d: the strike's contact carries a SEEN clearance, now in the evidence as clearance1 (was none
+        // noted, which under MERGE_SEPARATION would join the re-contact to the strike).
+        const before = { face: [iv(0, 6e-4, 100, SEEN), iv(2e-3, 2.5e-3)], pair: [iv(1e-4, 1.4e-3)] };
+        const f = judgeFaults(croquet, impact(before)).findings.find((x) => x.law === "29.1.6.1");
+        expect(f).toEqual({
+            law: "29.1.6.1",
+            tier: "possible-fault",
+            ball: "blue",
+            t: 2e-3,
+            evidence: { contacts: 2, gap1: 2e-3 - 6e-4, clearance1: SEEN, afterParting: 1 },
+        });
+    });
+    it("treats a gap with no clearance as separation 0, so the contact after it joins the one before", () => {
+        // P2b.2b.2c.2d: separation 0 is under MERGE_SEPARATION, so the 2 ms contact joins the strike's group, a tap
+        // (was a re-contact of separation 0, at the placeholder MERGE_SEPARATION 0).
+        const report = judgeFaults(
+            croquet,
+            impact({ face: [iv(0, 6e-4), iv(2e-3, 2.5e-3)], pair: [iv(1e-4, 1.4e-3)] }),
+        );
+        expect(report.strike?.taps.map((t) => t.start)).toEqual([0, 2e-3]);
+        expect(report.strike?.recontacts).toEqual([]);
+    });
+    it("flags a re-contact that sets a still ball moving", () => {
+        const report = judgeFaults(
+            croquet,
+            impact({
+                pair: [iv(1e-4, 1.4e-3)],
+                face: [iv(0, 6e-4, 100, SEEN), ivr(2e-3, 2.4e-3, vec3(0, 0.01, 0), vec3(0, 0, 0), vec3(0, 0.2, 0))],
+            }),
+        );
+        expect(report.strike?.recontacts[0]?.speedChange).toBe(Infinity);
+        expect(report.strike?.recontacts[0]?.fault).toBe(true);
+    });
+    it("keeps the no-parting rule", () => {
+        const report = judgeFaults(croquet, impact({ face: [iv(0, 6e-4), iv(9e-4, 1.6e-3)], pair: [] }));
+        expect(report.strike?.recontacts).toEqual([]);
+        expect(laws(report)).toContain("29.1.6.1 possible-fault");
+    });
+    it("judges a continuation stroke's re-contacts after its parting", () => {
+        // P2b.2b.2c.2d: a SEEN clearance before the re-contact (was none noted, which now joins it to the strike).
+        const report = judgeFaults(
+            continuation,
+            threeBalls({
+                red: [iv(0, 1e-3)],
+                black: [iv(0, 1.5e-3)],
+                face: [iv(0, 4e-4, 100, SEEN), iv(2e-3, 2.4e-3)],
+            }),
+        );
+        expect(report.strike?.recontacts.map((r) => r.start)).toEqual([2e-3]);
+    });
+    it("drops an exempt contact before grouping", () => {
+        // As the double tap's exempt case: blue roquets live black at 0.3 ms, so its 0.5 ms contact is exempt. The
+        // hoop hit at 1.5 ms, an object hit after the roquet, ends the exemption (Law 29.2.4), so the 2.0 ms contact is
+        // not exempt; the hoop's interval overlaps no face interval, so it raises no 29.1.8 or 29.1.9.
+        // P2b.2b.2c.2d: a SEEN clearance after the 0.2 ms contact (was none noted, which now joins the 2.0 ms contact
+        // to the strike).
+        const report = judgeFaults(
+            { ...continuation, live: ["black"] },
+            threeBalls({
+                red: [iv(0, 1e-3)],
+                black: [iv(3e-4, 9e-4)],
+                hoop: [iv(1.5e-3, 1.6e-3)],
+                blackTouching: false,
+                face: [iv(0, 2e-4, 100, SEEN), iv(5e-4, 7e-4), iv(2e-3, 2.2e-3)],
+            }),
+        );
+        expect(report.strike?.recontacts.map((r) => r.start)).toEqual([2e-3]);
+        // Measured from the 0.2 ms contact's end: the exempt 0.5 ms one, dropped, would give 2e-3 − 7e-4.
+        expect(report.strike?.recontacts[0]?.gap).toBe(2e-3 - 2e-4);
+    });
+    it("counts a gap whose clearance is below 0 as separation 0", () => {
+        // A plane clearance below 0 is the ball beside the face, past its edge: separation 0, not a closer ball.
+        // P2b.2b.2c.2d: separation 0 is under MERGE_SEPARATION, so the two contacts after the parting are one
+        // re-contact of two intervals, after the strike's SEEN clearance (was [[2e-3, 1, 0], [2.3e-3, 1, 0]], two
+        // re-contacts at the placeholder MERGE_SEPARATION 0, the strike's clearance not noted).
+        const report = judgeFaults(
+            croquet,
+            impact({
+                pair: [iv(1e-4, 1.4e-3)],
+                face: [iv(0, 6e-4, 100, SEEN), iv(2e-3, 2.1e-3, 100, -1e-4), iv(2.3e-3, 2.4e-3)],
+            }),
+        );
+        expect(report.strike?.recontacts.map((r) => [r.start, r.intervals, r.separation])).toEqual([[2e-3, 2, SEEN]]);
+    });
+    it("absorbs a contact after the parting into a tap before it, within the merge separation", () => {
+        // The 1.5 ms contact follows the 1.2 ms one, before the parting at 1.4 ms, across 0.05 mm, under the merge
+        // separation; it joins that tap's group, the strike's, so it is no re-contact.
+        // P2b.2b.2c.2d: contacts straddling the parting join the strike (was [[1.5e-3, 1, 5e-5]], a re-contact).
+        const faces = [iv(0, 6e-4), iv(1.2e-3, 1.3e-3, 100, 5e-5), iv(1.5e-3, 1.6e-3)];
+        const groups = groupReContacts(faces, 1.4e-3, { mergeSeparation: 1e-4, effectSpeed: 0.05, effectAngle: 5 });
+        expect(groups).toEqual([]);
+    });
+    it("never counts the first contact as a re-contact, even after the parting", () => {
+        // As today's rule, which judges only the contacts after the first: a lone contact beginning after the balls
+        // part is the stroke's strike, not a second hit.
+        const report = judgeFaults(croquet, impact({ face: [iv(2e-3, 2.5e-3)], pair: [iv(1e-4, 1.4e-3)] }));
+        expect(report.strike?.recontacts).toEqual([]);
+        expect(laws(report)).not.toContain("29.1.6.1 possible-fault");
+    });
+    it("groups micro-hits under the merge separation and judges the group's summed effect", () => {
+        // The grouping with a nonzero threshold, through the seam the judge passes the laws' thresholds to. The two
+        // contacts after the parting, 0.05 mm apart, are one re-contact; together they add 3 % to the ball's speed and
+        // turn it 1°, inside 5 % and 5°.
+        const groups = groupReContacts(faces3, 1.4e-3, { mergeSeparation: 1e-4, effectSpeed: 0.05, effectAngle: 5 });
+        expect(groups).toHaveLength(1);
+        expect(groups[0]?.intervals).toBe(2);
+        expect(groups[0]?.separation).toBe(1e-3);
+        expect(groups[0]?.speedChange).toBeCloseTo(0.03, 12);
+        expect(groups[0]?.angleChange).toBeCloseTo(1, 9);
+        expect(groups[0]?.impulse).toEqual(vec3(0.0144, 0.0128, 0));
+        expect(groups[0]?.fault).toBe(false);
+    });
+});
+
+describe("judgeFaults: the ruled re-contact thresholds (P2b.2b.2c.2d design §7, the gate's stage 1)", () => {
+    const croquet = CROQUET;
+    /** The balls part at 1.4 ms. */
+    const pair = [iv(1e-4, 1.4e-3)];
+    const below = MERGE_SEPARATION * 0.99;
+    const above = MERGE_SEPARATION * 1.01;
+    const deg = Math.PI / 180;
+    /** The strike, then a re-contact at 2 ms taking the ball from `before` to `after` (m/s). */
+    const struck = (before: Vec3, after: Vec3) =>
+        judgeFaults(
+            croquet,
+            impact({
+                pair,
+                face: [
+                    ivr(0, 6e-4, vec3(0, 0.4, 0), vec3(0, 0, 0), before, SEEN),
+                    ivr(2e-3, 2.4e-3, vec3(0, 0.01, 0), before, after),
+                ],
+            }),
+        );
+    const flagged = (report: FaultReport) => laws(report).includes("29.1.6.1 possible-fault");
+
+    it("pins the ruled values", () => {
+        expect([MERGE_SEPARATION, EFFECT_SPEED, EFFECT_ANGLE]).toEqual([0.002, 0.1, 2]);
+    });
+    it("merges re-contacts after the parting 1 % under MERGE_SEPARATION, and not at or 1 % over it", () => {
+        const groups = (separation: number) =>
+            judgeFaults(
+                croquet,
+                impact({ pair, face: [iv(0, 6e-4, 100, SEEN), iv(2e-3, 2.1e-3, 100, separation), iv(2.3e-3, 2.4e-3)] }),
+            ).strike?.recontacts.map((r) => [r.start, r.intervals]);
+        expect(groups(below)).toEqual([[2e-3, 2]]);
+        expect(groups(MERGE_SEPARATION)).toEqual([
+            [2e-3, 1],
+            [2.3e-3, 1],
+        ]);
+        expect(groups(above)).toEqual([
+            [2e-3, 1],
+            [2.3e-3, 1],
+        ]);
+    });
+    it("makes a contact after the parting a tap 1 % within MERGE_SEPARATION of a tap, a re-contact past it", () => {
+        // The 1.5 ms contact follows the 1.2 ms tap, before the parting at 1.4 ms. Within the separation it joins the
+        // tap's group, which began before the parting, so it is part of the strike: a tap, never judged. At or past
+        // the separation it starts a group of its own after the parting: a re-contact, judged (from rest without the
+        // face's record, so a fault).
+        const report = (separation: number) =>
+            judgeFaults(
+                croquet,
+                impact({
+                    pair,
+                    face: [iv(0, 6e-4, 100, SEEN), iv(1.2e-3, 1.3e-3, 100, separation), iv(1.5e-3, 1.6e-3)],
+                }),
+            );
+        const within = report(below);
+        expect(within.strike?.taps.map((t) => t.start)).toEqual([0, 1.2e-3, 1.5e-3]);
+        expect(within.strike?.recontacts).toEqual([]);
+        expect(flagged(within)).toBe(false);
+        for (const separation of [MERGE_SEPARATION, above]) {
+            const past = report(separation);
+            expect(past.strike?.taps.map((t) => t.start)).toEqual([0, 1.2e-3]);
+            expect(past.strike?.recontacts.map((r) => [r.start, r.separation])).toEqual([[1.5e-3, separation]]);
+            expect(flagged(past)).toBe(true);
+        }
+    });
+    it("keeps a chain of contacts begun before the parting in the strike, however long after it runs", () => {
+        // Each link within the separation of the one before: the whole chain is the strike's, reported among the taps;
+        // the contact past the separation after it is the one re-contact.
+        const report = judgeFaults(
+            croquet,
+            impact({
+                pair,
+                face: [
+                    iv(0, 6e-4, 100, below),
+                    iv(1e-3, 1.5e-3, 100, below),
+                    iv(1.8e-3, 2e-3, 100, above),
+                    iv(3e-3, 3.2e-3),
+                ],
+            }),
+        );
+        expect(report.strike?.taps.map((t) => t.start)).toEqual([0, 1e-3, 1.8e-3]);
+        expect(report.strike?.recontacts.map((r) => [r.start, r.intervals])).toEqual([[3e-3, 1]]);
+    });
+    it("never makes the first contact's group a tap or a re-contact when it begins after the parting", () => {
+        // The first contact of all is the stroke's strike (29.1.6.1 judges the contacts after the first); a contact
+        // within the separation of it joins it.
+        const report = judgeFaults(croquet, impact({ pair, face: [iv(2e-3, 2.2e-3, 100, below), iv(2.4e-3, 2.5e-3)] }));
+        expect(report.strike?.taps).toEqual([]);
+        expect(report.strike?.recontacts).toEqual([]);
+        expect(flagged(report)).toBe(false);
+    });
+    it("flags a re-contact changing the speed by EFFECT_SPEED or 1 % over it, not 1 % under", () => {
+        // From 5 m/s: (5.5 − 5) / 5 is 0.1 exactly in binary arithmetic, so the boundary itself is asserted.
+        const along = (speed: number) => vec3(0, speed, 0);
+        expect(struck(along(5), along(5.5)).strike?.recontacts[0]?.speedChange).toBe(EFFECT_SPEED);
+        expect(flagged(struck(along(5), along(5 * (1 + EFFECT_SPEED * 0.99))))).toBe(false);
+        expect(flagged(struck(along(5), along(5.5)))).toBe(true);
+        expect(flagged(struck(along(5), along(5 * (1 + EFFECT_SPEED * 1.01))))).toBe(true);
+        // A slowing counts as a speeding: the change is unsigned.
+        expect(flagged(struck(along(5), along(5 * (1 - EFFECT_SPEED * 0.99))))).toBe(false);
+        expect(flagged(struck(along(5), along(5 * (1 - EFFECT_SPEED * 1.01))))).toBe(true);
+    });
+    it("flags a re-contact turning the ball 1 % over EFFECT_ANGLE, not 1 % under", () => {
+        // The speed kept at 2 m/s, so only the direction can reach a threshold. The boundary itself is not asserted:
+        // a turn of exactly 2° does not survive sin, cos and atan2 to the last bit.
+        const turned = (angle: number) => vec3(2 * Math.sin(angle * deg), 2 * Math.cos(angle * deg), 0);
+        const under = struck(vec3(0, 2, 0), turned(EFFECT_ANGLE * 0.99));
+        expect(under.strike?.recontacts[0]?.angleChange).toBeCloseTo(EFFECT_ANGLE * 0.99, 9);
+        expect(flagged(under)).toBe(false);
+        expect(flagged(struck(vec3(0, 2, 0), turned(EFFECT_ANGLE * 1.01)))).toBe(true);
     });
 });
 

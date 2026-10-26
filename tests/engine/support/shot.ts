@@ -7,7 +7,7 @@ import { vec3 } from "../../../src/engine/math/vec3";
 import { CROQUET_GAP_LIMIT } from "../../../src/engine/shot";
 import { handsAheadFor, headShapeOf, plannedSpeed, stanceLean } from "../../../src/engine/swing/buildContact";
 import { MAX_BACK_ANGLE } from "../../../src/engine/swing/downswing";
-import { DEFAULT_DRIVE, ON_TIME, defaultProfile } from "../../../src/engine/swing/profile";
+import { DEFAULT_DRIVE, DEFAULT_TIMING, defaultProfile } from "../../../src/engine/swing/profile";
 import {
     CROQUET_STROKES,
     STROKE_TYPES,
@@ -191,9 +191,9 @@ export interface CanonicalOptions {
     readonly body?: Partial<SwingProfile["body"]>;
 }
 
-/** A preset's canonical contact height `up` (m): the AC stop's −0.020 m, 0 otherwise. */
+/** A preset's canonical contact height `up` (m): the AC stop's −0.0225 m, 0 otherwise. */
 function canonicalUp(type: StrokeType): number {
-    return type === "stop-ac" ? -0.02 : 0;
+    return type === "stop-ac" ? -0.0225 : 0;
 }
 
 /**
@@ -213,7 +213,7 @@ export const LEGACY_MALLET: SwingProfile["mallet"] = {
 /**
  * A preset's canonical setup (design §5.5): the striker at CANONICAL_STRIKER, aim +y, the default backswing
  * (reference/swing.json: 3 m/s planned at intensity 0, exit criterion 5), no intensity, the preset's default
- * drive, every action on time, the preset's reach, `side` 0, `up` 0 except the AC stop's −0.020 m. A croquet stroke's
+ * drive, every action on time, the preset's reach, `side` 0, `up` 0 except the AC stop's −0.0225 m. A croquet stroke's
  * croqueted ball lies `croquetGap` (default DEFAULT_CROQUET_GAP, 0 ≤ gap < CROQUET_GAP_LIMIT) from the striker ahead
  * along aim, 20° to the left of it for the pass roll, and `live` is empty. A single-ball stroke's target, red, sits on
  * the aim line `targetGap` ahead (the GC stop's GC_STOP_GAP by default), and `live` holds every other ball: the
@@ -287,7 +287,7 @@ export function canonicalSetup(type: StrokeType, over: CanonicalOptions = {}): S
             backswing: swingReference[type].defaultBackswing.value,
             drive: DEFAULT_DRIVE[type],
             contact: { up: canonicalUp(type), side: 0 },
-            timing: ON_TIME,
+            timing: DEFAULT_TIMING[type],
             ...over.stroke,
         },
         live,
@@ -315,7 +315,9 @@ export const CANONICAL_CLEARANCE: Readonly<Record<StrokeType, number>> = {
     drive: 17.0259e-3,
     // P2b.2b.2b.2c: the mallet (was 8.3872e-3): the head's back corner, lowest under the backward lean, rises by
     // (ρ − h_z)·cos α − (L − e − L₀)·|sin α| − e·(1 − cos α), L₀ the old 228.6 mm head.
-    "stop-ac": 14.5473e-3,
+    // P2b.2b.2c.2d: the stance, 5° back at 22.5 mm below the face's centre (was 14.5473e-3 at 4° and 20 mm): the back
+    // corner, pitched further, lies lower, and the ball met lower on the face lifts the head.
+    "stop-ac": 11.4352e-3,
     // P2b.2b.2b.2c: the mallet (was 7.5009e-3).
     "stop-gc": 17.0259e-3,
     // P2b.2b.2b.2c: the mallet (was 29.5203e-3, 36.6544e-3 and 39.7589e-3): the face's rounded lower edge,

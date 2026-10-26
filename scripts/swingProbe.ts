@@ -1021,7 +1021,11 @@ function timings(): void {
     for (const type of ["stop-ac", "full-roll"] as const) {
         for (const action of ["arc", "hands", "dip"] as const) {
             for (const offset of [-50, -40, -30, -20, -10, -5, 0, 5, 10, 20]) {
-                const timing = { ...ON_TIME, [action]: offset / 1000 };
+                // The dip is timed from the pulse: an early or late pulse alone keeps the dip on time at contact.
+                const kept = action === "arc" && offset !== 0 && defaultProfile.drive[type].handDrop > 0;
+                const timing = kept
+                    ? { ...ON_TIME, arc: offset / 1000, dip: (0 - offset) / 1000 }
+                    : { ...ON_TIME, [action]: offset / 1000 };
                 console.log(timedLine(`${type} ${action} ${offset} ms`, canonical(type, { timing })));
             }
         }

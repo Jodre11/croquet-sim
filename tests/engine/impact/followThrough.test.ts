@@ -4,10 +4,13 @@ import {
     FOLLOW_CAP,
     FOLLOW_SAMPLE,
     HEAD_DEEP_LIMIT,
+    IMPACT_DT,
     type FollowThrough,
+    type ImpactProbe,
     type StrokeState,
 } from "../../../src/engine/impact/integrate";
-import { headLowestPoint } from "../../../src/engine/impact/contacts";
+import { faceKey, headLowestPoint } from "../../../src/engine/impact/contacts";
+import { simulateShot } from "../../../src/engine/shot";
 import { simulateImpact, simulateStroke } from "../../../src/engine/impact/simulateImpact";
 import { HAND_COUPLING, handsAt, pitchAxis, prepareTrack, type Push } from "../../../src/engine/impact/track";
 import type { ContactState, TrackDrive } from "../../../src/engine/impact/types";
@@ -118,8 +121,10 @@ describe("the follow-through (design §4)", () => {
     it("holds a stop's mallet still after the check, so it settles on the firm grip", () => {
         // User decision 2026-10-07 (Riches: the stop has "NO FOLLOW-THROUGH"): from the check's window's end, or the
         // impact's end if later, the pendulum is held and the hands grip firmly. The canonical GC stop's head still
-        // sinks at 7.2e-3 m/s at the impact's end; the AC stop's impact ends 11.6 ms after the window. Each settles
-        // below FINISH_SPEED relative to the hands within the firm grip's period: 88 ms and 32 ms after the hold.
+        // sinks at 7.2e-3 m/s at the impact's end; the AC stop's impact ends 10.2 ms after the window. Each settles
+        // below FINISH_SPEED relative to the hands within the firm grip's period: 88 ms and 21.9 ms after the hold.
+        // P2b.2b.2c.2d: the AC stop's figures at its 5° lean and 22.5 mm contact, the head resting on the turf from
+        // 16.5 ms (was 11.6 ms and 32 ms at 4° and 20 mm, where the head stayed clear).
         // The hands at TEST_GRIP_LIMIT, so that the hold alone is pinned; the default limit's case follows.
         const world = defaultWorld();
         for (const type of ["stop-gc", "stop-ac"] as const) {
@@ -133,10 +138,22 @@ describe("the follow-through (design §4)", () => {
         }
     });
 
-    it("flags the default grip limit reached in the GC stop's hold (P2b.2b.2b.3 design §5)", () => {
-        // At F_max = 435 N (Young et al. 2009) a hand saturates while the firm grip holds the GC stop's mallet.
+    it("holds the GC stop's mallet within the default grip limit (P2b.2b.2b.3 design §5)", () => {
+        // P2b.2b.2c.2d: the minimum-jerk pulse (was ["follow-grip-limit"], hold peak |top| 434.3 N → 30.3 N; |bottom|
+        // 435 N → 17.3 N, against F_max = 435 N, Young et al. 2009). The pulse ends at α = 0, so the head reaches the
+        // hold at rest with the hands, where the box's α stepped from −360 rad/s² to 0 and the grip had to stop it.
         const world = defaultWorld();
         const { follow } = stroke(canonicalSetup("stop-gc", { world }), world);
+        expect(follow.flags).toEqual([]);
+    });
+
+    it("flags a grip limit reached in the GC stop's follow-through (P2b.2b.2b.3 design §5)", () => {
+        // The default limit is no longer reached (above), so the flag's path is pinned with the profile's limit
+        // lowered to 20 N, below the follow-through's peak hand force of 30.3 N.
+        const world = defaultWorld();
+        const setup = canonicalSetup("stop-gc", { world });
+        const limited = { ...setup, profile: { ...setup.profile, body: { ...setup.profile.body, gripLimit: 20 } } };
+        const { follow } = stroke(limited, world);
         expect(follow.flags).toEqual(["follow-grip-limit"]);
     });
 
@@ -218,5 +235,56 @@ describe("the follow-through (design §4)", () => {
         const samples = [{ t: 0, force: contact.velocity }];
         const forced: ContactState = { ...contact, drive: { kind: "force", samples } };
         expect(() => simulateStroke(forced, { blue: ballAt(5, 3) }, WORLD)).toThrow(/tracked drive/);
+    });
+});
+
+describe("the planned brake (P2b.2b.2c.2d design §4.1)", () => {
+    const DEFAULT = defaultWorld();
+    /** The AC stop at drive −1 with its brake begun `early` s before the planned contact. */
+    const braked = (early: number): ShotSetup =>
+        canonicalSetup("stop-ac", { stroke: { timing: { arc: 0 - early, hands: 0, dip: 0 } } });
+    const leadOf = (s: ShotSetup): number => (buildContact(s, DEFAULT).drive as TrackDrive).arc.contactAt;
+
+    /** The striker's first face–ball interval's start (s) and the head's speed along aim there (m/s). */
+    function firstFace(setup: ShotSetup): { readonly t: number; readonly speed: number } {
+        const contact = buildContact(setup, DEFAULT);
+        const { aim } = (contact.drive as TrackDrive).arc;
+        const speeds: number[] = [dot(contact.velocity, aim)];
+        const probe: ImpactProbe = {
+            step: (s) => {
+                speeds.push(dot(s.head.velocity, aim));
+            },
+        };
+        const impact = simulateImpact(contact, setup.balls, DEFAULT, { probe });
+        const first = (impact.timeline[faceKey(setup.striker)] ?? [])[0];
+        expect(first).toBeDefined();
+        const start = (first as { readonly start: number }).start;
+        return { t: start, speed: speeds[Math.round(start / IMPACT_DT)] as number };
+    }
+
+    it("plays a brake begun before contact end to end, meeting the ball slower and later", () => {
+        // The AC stop at drive −1, its brake 10 ms early: the head arrives below its planned speed (the under-hit
+        // emerges; it is not modelled).
+        const setup = braked(0.01);
+        const on = canonicalSetup("stop-ac");
+        expect(firstFace(setup).speed).toBeLessThan(firstFace(on).speed);
+        expect(firstFace(setup).t - leadOf(setup)).toBeGreaterThan(firstFace(on).t - leadOf(on));
+    });
+
+    it("relaxes the grips at the planned contact, not the meeting", () => {
+        const c = buildContact(braked(0.01), DEFAULT);
+        expect((c.drive as TrackDrive).coupling.relaxAt).toBe((c.drive as TrackDrive).arc.contactAt);
+    });
+
+    it("a brake that leaves no face contact ends at the cap, reported", { timeout: 30_000 }, () => {
+        // Drive −1 begun 60 ms early stops the head short of the ball (traced: no face interval, the impact runs to
+        // the cap, about 6 s locally), so the cap reports the stroke as `impact-no-strike`. The fault judge reads a
+        // stroke with no face contact as an empty strike, and the state stays finite.
+        const out = simulateShot(braked(0.06), DEFAULT);
+        expect(out.impact.events.map((e) => e.kind)).toContain("impact-no-strike");
+        expect(out.impact.timeline[faceKey("blue")] ?? []).toEqual([]);
+        expect(out.faults.strike).toEqual({ parted: null, taps: [], breaks: [], recontacts: [] });
+        expect(out.faults.findings.map((f) => f.law)).not.toContain("29.1.6.1");
+        expect(Number.isFinite(out.impact.head.position.z)).toBe(true);
     });
 });

@@ -131,12 +131,34 @@ function readFaultLaws(section: unknown): Readonly<Record<FaultLawKey, Reference
     >;
 }
 
-/** Laws expressed as signed-offset thresholds, and the quoted Laws of the fault judge. */
+/** The thresholds the fault judge applies to a re-contact after the parting (laws.json, 29.2.5's `thresholds`). */
+export interface ReContactThresholdsReference {
+    readonly mergeSeparation: ReferenceValue;
+    readonly effectSpeed: ReferenceValue;
+    readonly effectAngle: ReferenceValue;
+}
+
+function readReContactThresholds(section: unknown): ReContactThresholdsReference {
+    const law = has(section, "29.2.5") ? (section as Record<string, unknown>)["29.2.5"] : undefined;
+    const thresholds = has(law, "thresholds") ? (law as Record<string, unknown>)["thresholds"] : undefined;
+    const path = "laws.29.2.5.thresholds";
+    return {
+        mergeSeparation: readValue(thresholds, "mergeSeparation", path),
+        effectSpeed: readValue(thresholds, "effectSpeed", path),
+        effectAngle: readValue(thresholds, "effectAngle", path),
+    };
+}
+
+/**
+ * Laws expressed as signed-offset thresholds, the quoted Laws of the fault judge, and the re-contact thresholds it
+ * applies under 29.2.5 (P2b.2b.2c.2d design §7).
+ */
 export const lawsReference = {
     outOfCourt: readOffsetRule(lawsJson, "outOfCourt", "laws"),
     hoopRunStart: readOffsetRule(lawsJson, "hoopRunStart", "laws"),
     hoopRunComplete: readOffsetRule(lawsJson, "hoopRunComplete", "laws"),
     faults: readFaultLaws(lawsJson),
+    reContactThresholds: readReContactThresholds(lawsJson),
 } as const;
 
 /** Lawn-speed definition and typical value. */

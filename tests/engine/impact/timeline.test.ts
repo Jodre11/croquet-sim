@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ZERO, vec3 } from "../../../src/engine/math/vec3";
+import { ZERO, vec3, type Vec3 } from "../../../src/engine/math/vec3";
 import { closeFace, faceContactTimeAt, lawFromContactTime } from "../../../src/engine/impact/contactLaw";
 import { faceClearance } from "../../../src/engine/impact/contacts";
 import { IMPACT_DT, integrate, type ImpactObstacle, type ImpactSnapshot } from "../../../src/engine/impact/integrate";
@@ -7,10 +7,12 @@ import { IDENTITY } from "../../../src/engine/impact/rigidBody";
 import { closeTimeline, emptyTimeline, inGap, noteClearance, recordStep } from "../../../src/engine/impact/timeline";
 import { staticSink } from "../../../src/engine/impact/turfBed";
 import type { ContactInterval, HeadState } from "../../../src/engine/impact/types";
+import { simulateShot } from "../../../src/engine/shot";
 import type { BallState } from "../../../src/engine/types";
 import { STANDARD_GRAVITY } from "../../../src/engine/world";
 import { TEST_BALL } from "../support/fixtures";
 import { TEST_HEAD, TEST_RHO, faceLaw, freeBall, isolated, recorder, testBed } from "../support/impact";
+import { canonicalSetup } from "../support/shot";
 
 const R = TEST_BALL.radius;
 const M = TEST_BALL.mass;
@@ -54,6 +56,29 @@ describe("the timeline recorder", () => {
             { start: 2e-5, end: 3e-5, peakForce: 1 },
         ]);
         expect(inGap(emptyTimeline())).toBe(false);
+    });
+
+    it("sums a face interval's impulse and keeps the ball's velocities at its ends", () => {
+        const line = emptyTimeline();
+        const v = (x: number) => vec3(x, 0, 0);
+        recordStep(line, true, 10, 0, { impulse: v(1e-3), velocity: v(0) });
+        recordStep(line, true, 12, 5e-6, { impulse: v(2e-3), velocity: v(0.5) });
+        recordStep(line, false, 0, 1e-5, { impulse: v(0), velocity: v(1.1) });
+        expect(line.intervals[0]).toMatchObject({ impulse: v(3e-3), velocities: { before: v(0), after: v(1.1) } });
+    });
+
+    it("closes an open interval's velocities at the impact's end", () => {
+        // Review focus 4.
+        const line = emptyTimeline();
+        recordStep(line, true, 10, 0, { impulse: vec3(1e-3, 0, 0), velocity: vec3(0, 0, 0) });
+        expect(closeTimeline(line, 2e-3, vec3(2, 0, 0))[0]?.velocities?.after).toEqual(vec3(2, 0, 0));
+    });
+
+    it("leaves a pair recorded without the face's record as it was", () => {
+        const line = emptyTimeline();
+        recordStep(line, true, 10, 0);
+        recordStep(line, false, 0, 1e-5);
+        expect(line.intervals[0]).toEqual({ start: 0, end: 1e-5, peakForce: 10 });
     });
 });
 
@@ -190,5 +215,32 @@ describe("the integrator's timeline", () => {
             { cap: 1e-5 },
         );
         expect(run.touchingAtStart).toEqual(["blue/red", "blue@post"]);
+    });
+
+    it("records every face interval's clearance after, impulse and velocities on the canonical croquet strokes", () => {
+        // R27 (P2b.2b.2c.2d final review): the fault judge reads an absent clearance as 0, which merges, and an absent
+        // record as no impulse from rest; only hand-built timelines may lack them. The last interval has no gap after.
+        let gaps = 0;
+        for (const type of ["drive", "stop-ac", "pass-roll"] as const) {
+            const { timeline } = simulateShot(canonicalSetup(type)).impact;
+            const faces = Object.entries(timeline).filter(([key]) => key.startsWith("face/"));
+            expect(faces.length, type).toBeGreaterThan(0);
+            for (const [key, intervals] of faces) {
+                intervals.forEach((interval, i) => {
+                    const name = `${type} ${key} [${i}]`;
+                    if (i < intervals.length - 1) {
+                        expect(Number.isFinite(interval.clearanceAfter), name).toBe(true);
+                        gaps++;
+                    }
+                    const { impulse, velocities } = interval;
+                    for (const v of [impulse, velocities?.before, velocities?.after]) {
+                        expect(v, name).toBeDefined();
+                        const { x, y, z } = v as Vec3;
+                        expect([x, y, z].every(Number.isFinite), name).toBe(true);
+                    }
+                });
+            }
+        }
+        expect(gaps).toBeGreaterThan(0);
     });
 });

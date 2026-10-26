@@ -22,6 +22,7 @@ import { boxInertia, rotate, solidCylinderInertia, type Quaternion } from "../im
 import { faceHalfHeight, type HeadShape } from "../impact/shape";
 import {
     HAND_COUPLING,
+    dipTravel,
     headOnPath,
     pendulumOf,
     pitchAxis,
@@ -35,14 +36,15 @@ import { atan2, sinCos } from "../math/elementary";
 import { add, cross, dot, length, scale, sub, vec3, type Vec3 } from "../math/vec3";
 import type { BallState, World } from "../types";
 import { planDownswing, scanDownswing, type DownswingInput, type PlannedDownswing } from "./downswing";
-import type {
-    MalletHeadProfile,
-    ShotSetup,
-    SwingDrive,
-    SwingEffort,
-    SwingProfile,
-    SwingShape,
-    SwingStance,
+import {
+    CROQUET_STROKES,
+    type MalletHeadProfile,
+    type ShotSetup,
+    type SwingDrive,
+    type SwingEffort,
+    type SwingProfile,
+    type SwingShape,
+    type SwingStance,
 } from "./types";
 
 /**
@@ -63,6 +65,18 @@ export const MAX_LEAD = 0.15;
  * physical: 5 ms of open steps before the head–turf pair closes.
  */
 export const TURF_MARGIN = 0.005;
+
+/**
+ * The shortest follow-through pulse a shot may set (s). Numerical, not physical: 200 impact steps resolve a pulse's
+ * peak and jerk.
+ */
+export const MIN_WINDOW = 1e-3;
+
+/**
+ * The longest follow-through pulse a shot may set (s). Numerical, not physical: a pulse and carry mode's hold of one
+ * more window after it, from an onset up to MAX_LEAD early, end well inside the impact's cap (0.15 + 2 × 0.1 < 0.45 s).
+ */
+export const MAX_WINDOW = 0.1;
 
 /** The engine's face: wood (reference/mallet.json); its restitution and contact time are contact.json's fits. */
 const WOOD: FaceMaterial = { friction: malletReference.faceFriction.value };
@@ -307,6 +321,12 @@ function validate(setup: ShotSetup, ballRadius: number): void {
         fail(`profile.stance.${type}.bottom must lie in (0, top) = (0, ${top}) m (got ${bottom})`);
     }
     positive(stroke.backswing, "stroke.backswing");
+    if (stroke.window !== undefined) {
+        finiteNumber(stroke.window, "stroke.window");
+        if (!(stroke.window >= MIN_WINDOW && stroke.window <= MAX_WINDOW)) {
+            fail(`stroke.window must lie in [${MIN_WINDOW}, ${MAX_WINDOW}] s (got ${stroke.window})`);
+        }
+    }
     if (stroke.intensity !== undefined) {
         unit(stroke.intensity, "stroke.intensity");
     }
@@ -646,6 +666,7 @@ export interface StrokePlan {
  * - backswing ≤ 0; an intensity outside [0, 1]; |drive| > 1; the contact off the face (a box's: off its flat part);
  *   handsAhead outside (−D, A) for the stroke's top hand and contact (P2b.2b.2b.1 design §3.4: at A the shaft lies
  *   flat, at −D the hands leave the stance's branch);
+ * - a stroke.window non-finite or outside [MIN_WINDOW, MAX_WINDOW] (P2b.2b.2c.2d design §3.2);
  * - window, handWindow or dropTime ≤ 0; speedGain < 0; gripTension or bottomGrip outside (0, 1]; handDrop < 0; the
  *   preset's or the shot's handReach < 0; the preset's or the shot's guideEffort outside [0, 1];
  *   armMass < 0; reachSlack < 0; a backswingLimit non-finite or outside (0, π/2]; the body's effort torque τ_0 < 0
@@ -674,10 +695,19 @@ export function planStroke(setup: ShotSetup, world: World): StrokePlan {
     const { stroke, profile } = setup;
     const { type, timing } = stroke;
     const push = profile.drive[type];
+    // The dip is timed from the pendulum's pulse (P2b.2b.2c.2d design §4.2): it starts arc + dip s from contact.
+    const dipFrom = timing.arc + timing.dip;
     // Step 4's lead: the earliest action's, none on time.
-    const given = Math.max(0, 0 - timing.arc, 0 - timing.hands, 0 - timing.dip);
+    const given = Math.max(0, 0 - timing.arc, 0 - timing.hands, 0 - dipFrom);
     const actions = timing.advance === undefined ? given : Math.max(given, 0 - timing.advance);
     if (actions > MAX_LEAD) {
+        const advance = timing.advance === undefined ? 0 : 0 - timing.advance;
+        if (0 - dipFrom > Math.max(0 - timing.arc, 0 - timing.hands, advance)) {
+            fail(
+                `the dip, timed ${timing.dip} s from the pendulum's pulse, starts more than ${MAX_LEAD} s early ` +
+                    `(${actions} s before contact)`,
+            );
+        }
         fail(`an action is timed more than ${MAX_LEAD} s early (${actions} s before contact)`);
     }
     const pose = contactPose(setup, world);
@@ -691,9 +721,20 @@ export function planStroke(setup: ShotSetup, world: World): StrokePlan {
         fail(`the head is in the turf at contact: its lowest point is ${0 - atContact} m below it`);
     }
     const hands = handsOf(setup);
-    const planned = downswingOf(setup, pose, hands, world.gravity);
+    // A croquet stroke's dip under way at contact is part of the stroke as rehearsed (P2b.2b.2c.2d design §4.2): the
+    // downswing, the hands' arc and the scan are planned its travel by contact, z_c, higher, and the dip lowers them
+    // onto the pose. A single-ball stroke's dip before contact is left unplanned, so a deliberate graze keeps its
+    // meaning.
+    const depth = push.handDrop + (stroke.jab ?? 0);
+    const raise = CROQUET_STROKES.includes(type) ? dipTravel(depth, push.dropTime, 0 - dipFrom) : 0;
+    const lift = vec3(0, 0, raise);
+    const planPose = raise > 0 ? { ...pose, pivot: add(pivot, lift), headCentre: add(headCentre, lift) } : pose;
+    const planned = downswingOf(setup, planPose, hands, world.gravity);
     const contactSpeed = poseSpeed(pose, planned);
-    const scan = scanDownswing(planned.downswing, head, aim, radius);
+    const scan =
+        raise > 0
+            ? scanDownswing(planned.downswing, head, aim, radius, (u) => dipTravel(depth, push.dropTime, u - dipFrom))
+            : scanDownswing(planned.downswing, head, aim, radius);
     // Step 4's lead: the earliest action's, or TURF_MARGIN before the downswing first meets the turf if earlier.
     const turf = scan.grounded === null ? 0 : TURF_MARGIN - scan.grounded;
     if (turf > MAX_LEAD) {
@@ -705,21 +746,26 @@ export function planStroke(setup: ShotSetup, world: World): StrokePlan {
     const lead = Math.max(actions, turf);
     const { omega: omega0, handsVelocity } = planned;
     const lever = length(cross(pitchAxis(aim), sub(headCentre, pivot)));
+    // A shot's window sets both pulses; the change in each is kept, so only the rate moves. Absent, the preset's own.
+    const window = stroke.window ?? push.window;
+    const handWindow = stroke.window ?? push.handWindow;
     // Steps 3 and 4, the arc expressed from the start, L before contact.
     const arc: SwingArc = {
-        pivot: sub(pivot, scale(handsVelocity, lead)),
+        pivot: sub(planPose.pivot, scale(handsVelocity, lead)),
         pivotVelocity: handsVelocity,
-        pivotAcceleration: scale(aim, (stroke.drive * push.handGain * contactSpeed) / push.handWindow),
+        pivotAcceleration: scale(aim, (stroke.drive * push.handGain * contactSpeed) / handWindow),
         handStart: lead + timing.hands,
-        handWindow: push.handWindow,
+        handWindow,
         aim,
         radius,
         theta0: pose.thetaContact - omega0 * lead,
         omega0,
-        alpha: (stroke.drive * push.speedGain * contactSpeed) / (lever * push.window),
+        alpha: (stroke.drive * push.speedGain * contactSpeed) / (lever * window),
         arcStart: lead + timing.arc,
-        window: push.window,
-        dip: { start: lead + timing.dip, duration: push.dropTime, depth: push.handDrop + (stroke.jab ?? 0) },
+        window,
+        // Carry mode's hold keeps the preset's length: the shot's sharpness is the pulse's alone.
+        ...(stroke.window === undefined ? {} : { holdWindow: push.window }),
+        dip: { start: lead + dipFrom, duration: push.dropTime, depth },
         contactAt: lead,
         mode: push.mode,
         handReach: stroke.handReach ?? push.handReach,
@@ -782,7 +828,9 @@ export function plannedSpeed(setup: ShotSetup, world: World): number {
 
 /**
  * How close a tracked contact state's downswing comes to the turf before the planned contact (design §3.5): the
- * scan planStroke makes. Throws for a contact state with no downswing.
+ * scan planStroke makes. Throws for a contact state with no downswing. On a croquet stroke whose dip is under way at
+ * contact it scans the raised downswing without the dip's lowering, so it reads higher than the planner's approach;
+ * `plan.approach` is the figure for such a stroke (P2b.2b.2c.2d design §4.2).
  */
 export function swingApproach(contact: ContactState): SwingApproach {
     const arc = contact.drive.kind === "track" ? contact.drive.arc : undefined;

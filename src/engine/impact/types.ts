@@ -128,14 +128,18 @@ export interface Downswing {
  * The path the hands drive the mallet along (design §3.1), as two arcs: the pendulum, the mallet swinging about the
  * top hand (the pivot) in a vertical plane; and the hands' path through space, the pivot moving in that plane (leaning,
  * pushing forward, the body's weight) and dipping. Each runs at its initial rate until its window and changes rate
- * constantly through it; what follows depends on the mode (design §3.2). The dip lowers the pivot on top.
+ * through it by its mean rate times the window, as a minimum-jerk pulse, 6·mean·s(1 − s) at s of the window
+ * (P2b.2b.2c.2d design §3.1); what follows depends on the mode (design §3.2). The dip lowers the pivot on top.
  */
 export interface SwingArc {
     /** The top hand at t = 0, world frame. */
     readonly pivot: Vec3;
     /** Until the hands' window, in the swing plane (no component along the pitch axis aim × ẑ). */
     readonly pivotVelocity: Vec3;
-    /** During the hands' window, in the swing plane. */
+    /**
+     * The hands' pulse's mean acceleration over their window, Δv/T, in the swing plane: delivered as a minimum-jerk
+     * profile, zero at the window's ends and 1.5 times this at its middle.
+     */
     readonly pivotAcceleration: Vec3;
     /** When the hands' window begins (s from t = 0), and its length (s). */
     readonly handStart: number;
@@ -146,12 +150,17 @@ export interface SwingArc {
     readonly radius: number;
     /** Arc angle at t = 0 (rad), from the lowest point, positive forward. */
     readonly theta0: number;
-    /** The pendulum's rate until its window (rad/s), and its acceleration during it (rad/s²). */
+    /**
+     * The pendulum's rate until its window (rad/s), and its pulse's mean acceleration over the window, Δω/T (rad/s²):
+     * delivered as a minimum-jerk profile, zero at the window's ends and 1.5 times this at its middle.
+     */
     readonly omega0: number;
     readonly alpha: number;
     /** When the pendulum's window begins (s from t = 0), and its length (s). */
     readonly arcStart: number;
     readonly window: number;
+    /** Carry mode's hold after the pulse (s); absent: `window`. Set when a shot's window differs from the preset's. */
+    readonly holdWindow?: number;
     readonly dip: Dip;
     /** The planned contact (s from t = 0), from which the cap and the reach count. */
     readonly contactAt: number;
@@ -350,7 +359,10 @@ export interface ContactState extends HeadState {
  *   judged;
  * - `turf-yield`: a column of the head's turf first yielded (P2b.2b.2b.3 design §4.2); recorded, not judged;
  * - `impact-head-stopped`: the head came to rest in the turf before any face contact (P2b.2b.2b.3 design §4.6): the
- *   impact ends there and hands the balls over as they lie.
+ *   impact ends there and hands the balls over as they lie;
+ * - `impact-no-strike`: a tracked drive's impact reached its cap with no face–ball contact on any ball, as when a brake
+ *   begun well before contact stops the head short of the ball (P2b.2b.2c.2d design §4.1); it follows `impact-cap`,
+ *   and the balls are handed over as they lie.
  */
 export type ImpactEvent =
     | { readonly kind: "turf-lift"; readonly t: number; readonly ball: BallId }
@@ -362,18 +374,24 @@ export type ImpactEvent =
     | { readonly kind: "impact-turf-pit"; readonly t: number; readonly ball: BallId }
     | { readonly kind: "grip-limit"; readonly t: number; readonly hand: HandName }
     | { readonly kind: "turf-yield"; readonly t: number }
-    | { readonly kind: "impact-head-stopped"; readonly t: number };
+    | { readonly kind: "impact-head-stopped"; readonly t: number }
+    | { readonly kind: "impact-no-strike"; readonly t: number };
 
 /**
  * One contact interval of a pair (P2b.2a design §5): [start, end) in s from the impact's start, whole steps, and the
  * largest normal force (N) in it (0 at a force table's face rim, or for a pair overlapping but released). For a
- * face–ball pair, `clearanceAfter` (m) is the largest separation from the face in the gap before the next interval.
+ * face–ball pair, `clearanceAfter` (m) is the largest separation from the face in the gap before the next interval;
+ * `impulse` (N·s, world) is the face's impulse on the ball over the interval, a rim step adding none; and `velocities`
+ * (m/s, world) are the ball's velocity at the interval's first step and at its end, or at the impact's end for one
+ * still open then (P2b.2b.2c.2d design §7). Other pairs' intervals carry neither.
  */
 export interface ContactInterval {
     readonly start: number;
     readonly end: number;
     readonly peakForce: number;
     readonly clearanceAfter?: number;
+    readonly impulse?: Vec3;
+    readonly velocities?: { readonly before: Vec3; readonly after: Vec3 };
 }
 
 /** What the integrator returns: the bodies at the end of the impact and what happened on the way. */

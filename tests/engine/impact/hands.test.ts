@@ -55,6 +55,7 @@ import {
     TEST_PUSH_FORCE,
     TEST_PUSH_RESPONSE_TIME,
     freeBall,
+    integratePulse,
     isolated,
     levelArc,
     recorder,
@@ -208,9 +209,9 @@ describe("a tracked head with no ball", () => {
         }
     });
 
-    it("checks a head the strike has slowed to rest with the path, at the window's end and never past it", () => {
+    it("checks a head the strike has slowed at half the path's rate to the window's end, never past rest", () => {
         // User decision (2026-10-06): a check brakes the head to rest, not past it. A head pitching at half the path's
-        // rate from contact gets half the planned deceleration, so it keeps half the path's rate and rests with it.
+        // rate from contact gets half the planned deceleration, so it keeps half the path's rate through the window.
         const check: SwingArc = { ...COAST, alpha: -COAST.omega0 / COAST.window };
         const track = prepare(check, TEST_COUPLING, ARMED);
         const slowed = prepare({ ...check, omega0: check.omega0 / 2, alpha: 0 }, TEST_COUPLING, ARMED);
@@ -230,17 +231,29 @@ describe("a tracked head with no ball", () => {
         };
         const start = headOnPath(slowed, TEST_HEAD, 0);
         integrate(isolated({ start, drive: track, gravity: STANDARD_GRAVITY }), { probe, cap: check.window });
-        // Pre-flight measured a drift of 2.5e-4 in the share and a last (and lowest) rate of 1.13e-8 rad/s, from
-        // 1.875 rad/s; the planned deceleration alone left it at −0.832 rad/s, past rest.
+        // From 1.875 rad/s; the planned deceleration alone left it at −0.832 rad/s, past rest. P2b.2b.2c.2d: the
+        // minimum-jerk pulse and gravity through it (was a drift of 2.5e-4 in the share and a last rate of +1.13e-8
+        // rad/s, the lag leaving it short of rest): a drift of 1.37e-5, and the head never nearer rest than 0.016555
+        // rad/s, its lowest rate, just before the window's end.
+        // Numerical, not physical: an allowance below rest for the integrator's residual, from when the head ended at
+        // rest; eight orders of magnitude below the start's 1.875 rad/s, so a braking past rest still fails.
+        const RESIDUAL = 1e-8;
         expect(drift).toBeLessThan(5e-4);
-        expect(lowest).toBeGreaterThanOrEqual(0);
-        expect(Math.abs(last)).toBeLessThan(3e-8);
+        expect(lowest).toBeGreaterThanOrEqual(0 - RESIDUAL);
+        // P2b.2b.2c.2d: gravity through the pulse (was |last| < 3e-8, at rest with a path the check had brought to
+        // rest). Gravity acts through the check, θ₀ = −0.3 rad, so the path ends the window at gravity's share,
+        // 0.0331 rad/s, the hand integration's; the head keeps half the path's rate there, 0.016562 rad/s, 8.9e-7 from
+        // half of it (three times that allowed), and never passes rest.
+        const plannedEnd = dot(pathAt(track, check.window).angularVelocity, track.axis);
+        expect(plannedEnd).toBeCloseTo(integratePulse(track, 1e-7).omega, 4);
+        expect(Math.abs(last - plannedEnd / 2)).toBeLessThan(3e-6);
     });
 
     it("runs a whiff to TRACK_IMPACT_CAP after the planned contact", () => {
         for (const contactAt of [0, 0.02]) {
             const { run } = tracking({ ...COAST, contactAt }, { coupling: TEST_COUPLING });
-            expect(run.events.map((e) => e.kind)).toEqual(["impact-cap"]);
+            // P2b.2b.2c.2d: a stroke that reaches the cap with no face contact is reported (was ["impact-cap"]).
+            expect(run.events.map((e) => e.kind)).toEqual(["impact-cap", "impact-no-strike"]);
             expect(run.duration).toBeGreaterThanOrEqual(contactAt + TRACK_IMPACT_CAP);
             expect(run.duration).toBeLessThan(contactAt + TRACK_IMPACT_CAP + 2 * IMPACT_DT);
         }
@@ -446,6 +459,30 @@ describe("the bottom hand's rate guide", () => {
         expect(dist(back.feedForward, rest.feedForward)).toBeLessThan(1e-9);
         const push = dot(sub(back.bottom, rest.bottom), forwardOf(behind, arc.aim));
         expect(push).toBeCloseTo(track.bottom.damping * 0.2 * planned * lever, 6);
+    });
+
+    it("inside a check past the path's rest, gives a forward-moving head share 1 and a stopped one 0", () => {
+        // An early brake's window can outlast the path's rest (design §4.1): the planned rate is then negative. A head
+        // still pitching forward gets the whole of the planned deceleration, however fast; a head at rest or pitching
+        // back gets none, so the hands never drive it past rest.
+        // The path rests at 5 ms (3 rad/s at −600 rad/s²) and runs on to 10 ms; 7.5 ms is −1.5 rad/s.
+        const arc = still({ omega0: 3, alpha: -600 });
+        const t = 0.0075;
+        const track = prepare(arc, TEST_COUPLING, TEST_HANDS);
+        expect(dot(pathAt(track, t).angularVelocity, track.axis)).toBeLessThan(0);
+        const at = (rate: number): HandLoad =>
+            handLoad(
+                track,
+                spun(track, t, rate - dot(pathAt(track, t).angularVelocity, track.axis)),
+                TEST_HEAD,
+                t,
+                newGripState(),
+                IMPACT_DT,
+            );
+        const [forward, faster, rest, back] = [at(0.5), at(2), at(0), at(-0.5)];
+        expect(dist(forward.feedForward, faster.feedForward)).toBeLessThan(1e-9);
+        expect(dist(rest.feedForward, back.feedForward)).toBeLessThan(1e-9);
+        expect(dist(forward.feedForward, rest.feedForward)).toBeGreaterThan(1);
     });
 
     it("scales the push by guideEffort outside a check and after the release, and leaves a check in full", () => {
