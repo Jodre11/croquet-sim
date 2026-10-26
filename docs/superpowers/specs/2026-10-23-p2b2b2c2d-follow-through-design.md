@@ -669,3 +669,16 @@ read; the probes' layout and their section letters; the tests' names and files.
       run crosses a ball, the sweeps' crossings graze by at most 0.105 mm, and none overlaps a ball at the impact's
       end. The full and pass rolls' canonical follow-throughs raise `follow-turf-yield` and `follow-head-deep`; the
       no-damage rule is applied to the rolls' follow-through in P2b.2b.2c.3.
+- **2026-10-26, the final review's I-1: the re-contact's effect measure** (rulings verbatim as the option chosen;
+  figures in section D of `scripts/followThroughProbe.ts`):
+    - **The finding.** `judgeReContact` takes a re-contact's effect as the striker's ball's velocity change over the
+      merged group's whole span, gaps included, so turf drag (and any ball–ball re-collision) between micro-hits
+      counts as the mallet's effect. Probe D compared a second measure, the face's summed impulse ÷ the ball's mass,
+      at the ruled thresholds (2 mm, 10 %, 2°) on the 950-run grid: flagged 108, 75, 80, 21 and 139 (423) by the span
+      across drive, stop-ac, half-roll, full-roll and pass-roll, against 110, 75, 80, 63 and 141 (469) by the
+      impulse; 46 verdicts differ (2, 0, 0, 42, 2) and 45 of 120 what-if cells. The impulse reading ignores the turf
+      and the croqueted ball reacting the face's push away, so it overstates (largest: a pass roll, 9 intervals over
+      218.7 ms, 12.9 % over the span against 1647 % by the impulse).
+    - **The ruling: "Keep span measure (Recommended)".** Ship 0.17.0 as is (423 flagged). The turf-drag contamination
+      is an open item carried to P2b.2b.2c.3 with the rolls' follow-through work; a contact-only measure (the velocity
+      change summed over the face intervals alone, gaps excluded) is the unmeasured candidate.

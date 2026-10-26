@@ -2557,6 +2557,13 @@ words, and the plan's decisions are in the design's amendments. "Old → new" th
   - The joining has no time cap: a long chain of contacts each under 2 mm apart after the parting (C29.11.2's
     shepherding) would join the strike unjudged. The sources' scales are times (Hall 1994: a double tap audible at
     6 ms; C29.11.4's "materially longer" contact).
+  - A re-contact's effect (`judgeReContact`) is the striker's ball's velocity change over the merged group's whole
+    span, gaps included, so turf drag (and any ball–ball re-collision) between micro-hits counts as the mallet's
+    effect. Shipped as is (user, "Keep span measure (Recommended)"): 423 flagged of 950 grid runs against 469 by the
+    face's summed impulse ÷ mass, 46 verdicts differing (42 on the full roll), though the impulse reading ignores the
+    turf and the croqueted ball's reaction and so overstates. A contact-only measure, the velocity change summed over
+    the face intervals alone with the gaps excluded, is the unmeasured candidate; carried to P2b.2b.2c.3 with the
+    rolls' follow-through work.
   - For P2b.2b.2c.3, the push's growth with power and its recruitment law: the full-roll variant (1.18, 1.11, 1.13,
     1.18 and 1.22 at 2–4 m/s) as support for the user's hypothesis; the user's soft-shot account, "on a soft shot, no
     follow through force is applied. So I think that avoids the second contact" (quoted in full in the design's
