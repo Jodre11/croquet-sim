@@ -1,4 +1,6 @@
-# P2b.2b.2c.3 — The Rolls' Push Map: Design
+# P2b.2b.2c.3b — The Rolls' Push Map: Design
+
+Follows P2b.2b.2c.3a, the unified set-up (`specs/2026-10-26-p2b2b2c3a-unified-setup-design.md`; amendment A1).
 
 Brainstormed 2026-10-26 from the roadmap's P2b.2b.2c.3 entry and "P2b.2b.2c.2d outcomes (2026-10-25)", "Carried open
 items". Every statement attributed to the user is theirs, from the brainstorm; everything else is marked as the design's
