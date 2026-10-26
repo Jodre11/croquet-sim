@@ -90,7 +90,8 @@ The step is done when:
 
 1. the push map (§3) is computed for the half, full and pass rolls over the range and lawn grids, recorded, and plotted
    (§9);
-2. the defaults per roll type, range and lawn speed (§5) are picked by decision 5 and recorded as a reference table;
+2. the defaults per roll type, range and lawn speed (§5) are picked by decision 5 and recorded as a reference table,
+   beside the envelope record (§3.5);
 3. the checks of §6 are run, recorded and ruled at the gate;
 4. the half roll's canonical setup stays within 1.4–2.5, every roll's canonical setup within ±2 % of its own planned
    contact speed (§5), and every swing preset's within ±2 % of 3 m/s;
@@ -124,8 +125,7 @@ A plan is **admissible** only if it is believable (§4). Regions are drawn from 
 The plan is the shot's own inputs in `ShotSetup.stroke`, as P2b.2b.2c.3a leaves them (no mode; the set-up inputs
 `grip`, `lean` and `feet` on every stroke). No further engine input is planned; §12 if the builder finds one is needed.
 
-- **the set-up:** `lean` and `feet` (3a), at each type's text book values in the main grid, swept in a slice (§3.2);
-  the grip at the type's;
+- **the set-up:** `lean` and `feet` (3a), swept at every range (§3.2); the grip at the type's;
 - **how hard:** `backswing` and `intensity` (as 3a's strike defines them);
 - **how much follow-through:** `drive` (0 natural … +1 pushed through) and `handReach` (the push's length);
 - **how sharp:** `window` (the pulse's duration, `MIN_WINDOW` 1 ms to `MAX_WINDOW` 0.1 s; shorter is a higher peak
@@ -151,9 +151,11 @@ ratio, effort and believability are recorded.
 - **Split** (pass roll): at least 0°, 10°, 20° and 30°.
 - **Follow-through:** drive, handReach and window over their valid ranges, coarse first and refined where a region's
   edge or the least-effort plan lies. Onset fixed at 0 (on time) outside §3.4's sweep.
-- **The set-up slice** (A1, staged by the spec review): the main grid runs at each type's text book lean and feet; one
-  coarse lean × feet slice at the anchor's range on a 10 s lawn shows whether in-between set-ups move the regions.
-  The gate rules whether to widen it; the full envelope stays the eventual aim (A1).
+- **The set-up** (A1; the user, 2026-10-26, overriding the spec review's staging): the lean and the feet are swept at
+  every range, coarse first and refined where a region's edge lies. The user expects most combinations to fail: "many
+  combinations either mishit the ball, drive the mallet into the lawn, or [need the] superhuman to achieve anything.
+  So that run should reveal … the shape of the envelope … And we should record that so that further testing doesn't
+  waste its time." So the sweep is also the envelope's first survey (§3.5).
 - Measured on an open lawn (`scripts/openLawn.ts`, generalised to a lawn speed) so that no run leaves the court.
 
 ### 3.3 The anchor
@@ -170,6 +172,18 @@ at the splits of §3.2, measures whether a plan sending the striker's ball "mult
 exists and is admissible. Lawful only if the mallet does not separate visibly from the ball and then change it
 (`reference/laws.json` 29.2.5: contacts within `MERGE_SEPARATION` 2 mm join one contact; a later re-contact is possible
 29.1.6.1 from 10 % or 2°); a separated catch-up is Gugan 5's push, "always faults", and excluded by §4.
+
+### 3.5 The envelope record
+
+Every plan the sweep tries is recorded with its outcome, and every excluded plan with the first reason it fails, in
+classes the user named: **mishit** (off the face, or the ball met beyond the on-point limit), **damages the turf**
+(`impact-head-deep`, `turf-yield`, `follow-turf-yield`, `follow-head-deep`, or the head in the turf at contact),
+**superhuman** (intensity above 1, the backswing beyond θ_max, a saturated grip), and **unlawful** (possible
+29.1.6.1, the head overtaking the ball). The record is kept as reference data beside the defaults (derived; its script,
+commands and SHA-256 recorded), in a form later steps can query by set-up and follow-through, so further testing skips
+combinations already shown to fail. A set-up that fails for the same reason at every range is marked as outside the
+envelope outright, and refinement skips it. The record summarises the envelope's shape per roll type and lawn: which
+lean and feet combinations are viable at which ranges, and which reason bounds each edge.
 
 ## 4. Believability (admissibility)
 
@@ -311,8 +325,8 @@ Consequences:
   each type keeps only its "text book" defaults, its results at them bit-identical. **P2b.2b.2c.3b, this design**,
   follows on it.
 - Decision 7 is superseded: each type's preset is its text book example, the map's starting point, not a fixed stance.
-  The map sweeps the lean and the feet as dimensions beside the follow-through (staged at the spec review: a slice at
-  the anchor first, widened at the gate's ruling, §3.2), so the regions show which combinations,
+  The map sweeps the lean and the feet as dimensions beside the follow-through, at every range (the spec review's
+  staging overridden by the user, §3.2), so the regions show which combinations,
   in-between leans included, make each roll at each range.
 - The text book validation stays: each type's text book set-up must land in its band (the half roll's, decision 2, the
   first).
