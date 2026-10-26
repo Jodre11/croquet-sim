@@ -271,4 +271,28 @@ figures. One question at a time, with options and a recommendation.
 
 ## Amendments
 
-(none yet)
+**A1 (user, 2026-10-26, after the builder check): the set-up space; the step splits.** The user: "When a player sets up
+a shot they do a number of things in a rough order. … 1. Hand Position on the mallet, effecting the angle of attack of
+the mallet face. 2. Feet position relative to the strikers ball, affecting where in the arc contact will be made. 3a.
+Power and acceleration of the strike. 3b. Magnitude and acceleration of the push through. 3c. Magnitude and
+(de/ac)celeration after initial contact. I feel like these all apply to every shot and the relative set up of these
+define what the shot type is." Then: "a stance is really a definition of how the mallet is held which affects the
+'lean', in practice different players do this in different ways but it is the lean that changes"; "depending on the
+situation, sometimes some value in between would be selected"; "same is true for foot position, the defaults for a
+'text book' example of that shot change. We still need to validate our model against the text book but, eventually,
+all the above need to be an envelope of valid combinations. I suspect many combinations may achieve the same outcome
+once variable push acceleration is in the mix."
+
+Consequences:
+- P2b.2b.2c.3 splits. **P2b.2b.2c.3a, the unified set-up** (its own design, first): the lean, the feet (where on the
+  arc contact falls) and the push through become per-shot inputs on every stroke, and the swing/carry mode split goes;
+  each type keeps only its "text book" defaults, its results at them bit-identical. **P2b.2b.2c.3b, this design**,
+  follows on it.
+- Decision 7 is superseded: each type's preset is its text book example, the map's starting point, not a fixed stance.
+  The map sweeps the lean and the feet as dimensions beside the follow-through, so the regions show which combinations,
+  in-between leans included, make each roll at each range.
+- The text book validation stays: each type's text book set-up must land in its band (the half roll's, decision 2, the
+  first).
+- The full envelope of valid combinations over every input is the eventual aim; this step maps the slice the rolls
+  need. Many combinations may reach one outcome; the default among them stays the least-effort one (decision 5), and
+  the map records how many admissible plans share each outcome.
