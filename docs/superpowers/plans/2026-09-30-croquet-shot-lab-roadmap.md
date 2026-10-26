@@ -2643,3 +2643,10 @@ words, and the plan's decisions are in the design's amendments. "Old → new" th
   axis through the two hemispheres' centres), its orientation
   integrated by the renderer from the engine's angular velocity, so the skid before a roll, a roll's turnover and
   spin about the vertical axis become visible. The engine already carries the spin; no physics change is needed.
+- **The side-on stroke view, after the envelope is known** (user, 2026-10-26: "whenever we demonstrate a shot, I would
+  like to have a side-on rendering of the stroke. This doesn't have to be held by real hands, but the mallet should be
+  rendered swinging through the air as it hits the balls. This would allow me … initially to validate the strokes and
+  then later it would be an excellent training aid for learning how changing the envelope affects the contact
+  movement.") — the mallet (head and shaft, no body) drawn side-on through the whole swing and the impact with the
+  balls, from the engine's `SwingTrajectory` and the impact's states; first a validation view for the user, then a
+  training aid showing how a change of set-up within the envelope changes the contact.
