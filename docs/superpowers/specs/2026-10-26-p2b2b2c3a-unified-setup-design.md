@@ -48,6 +48,9 @@ unified-shot-model goal (every shot type from its inputs alone, nothing scripted
    often move somewhat down the mallet with the feet further forward and this creates the angle of attack but without
    the hands having to come down the mallet so enough force can be applied but the hit is more like … a half roll but
    hard and without any push."
+9. **The AC stop varies.** "some players when playing the stop shot, the AC stop shot, do put the bottom hand down a
+   bit to allow them to jab or to reduce the follow through of the swing at the same time as using the Gugan's jab to
+   stop the ball, the mallet on the ground. Once again it varies."
 
 ## Decisions (user, 2026-10-26)
 
@@ -55,13 +58,16 @@ unified-shot-model goal (every shot type from its inputs alone, nothing scripted
    the lean, the feet, the strike, the push through and what follows first contact.
 2. **No mode.** `StrokeMode` and every branch on it go; how far the mallet swings from the hands or is carried by them
    follows from the set-up.
-3. **Text book defaults from Riches** (Gugan 4 Table 6 for the rolls' leans, as now). The drive and the AC stop take
-   Riches's "both hands at the top of the handle" (stop shot; `reference/sources/README.md`), the bottom hand just
-   below the top, in this step ("Move in 3a (Recommended)"): under §4.1 a split grip would fight the pendulum, so
-   hands-together is what keeps them near today's free swing (account 7). The GC stop keeps its half-roll grip without
-   the lean, top hand at the top and bottom hand at the middle (account 8), as it is now. Single-ball is unchanged. The
-   half, full and pass rolls keep their current Riches grips. What the move breaks (the AC stop's Gugan 5 band and
-   no-damage stance, the drive's `guideEffort` 0.75) is re-checked and re-tuned in this step, each ruled at the gate.
+3. **Text book defaults from Riches** (Gugan 4 Table 6 for the rolls' leans, as now). The drive takes Riches's
+   "both hands at the top of the handle" (stop shot; `reference/sources/README.md`), the bottom hand just below the
+   top, in this step ("Move in 3a (Recommended)"): under §4.1 a split grip would fight the pendulum, so hands-together
+   is what keeps it near today's free swing (account 7). The AC stop keeps its lowered, loose grip as the jab variant
+   (account 9; "Go with 1 as recommended but keep a memory of it because it may prove useful to vary that bottom hand
+   in the AC stop depending on the outcomes"): it fits Gugan 5's jab stop, and its grips (0.1 / 0.1) are too loose to
+   fight the pendulum. P2b.2b.2c.3b plays a hands-together AC stop beside it. The GC stop keeps its half-roll grip
+   without the lean, top hand at the top and bottom hand at the middle (account 8), as it is now. Single-ball is
+   unchanged. The half, full and pass rolls keep their current Riches grips. What the drive's move breaks (its
+   `guideEffort` 0.75, ruled re-contact-free) is re-checked and re-tuned in this step, ruled at the gate.
 4. **Near-identical, ruled at the gate.** Where the unified model cannot reproduce a preset to the bit, the change is
    measured, listed per run and ruled.
 
@@ -74,9 +80,9 @@ unified-shot-model goal (every shot type from its inputs alone, nothing scripted
    with a named error.
 3. Every preset at its current values (before the drive's and stops' grips move) is bit-identical, or its departure is
    measured per run, listed and ruled at the gate (decision 4).
-4. The drive's and the AC stop's grips move to Riches's (decision 3) as their own commit, every moved run counted, and
-   the AC stop's Gugan 5 stop (band 6.55–7.75), its no-damage stance and the drive's re-contact-free guide re-checked
-   and, where broken, re-tuned, each ruled.
+4. The drive's grip moves to Riches's (decision 3) as its own commit, every moved run counted, and the drive's
+   re-contact-free guide re-checked and, if broken, re-tuned, ruled. The AC stop's Gugan 5 stop (band 6.55–7.75) and
+   no-damage stance are re-checked after §4.1.
 5. The cross-mode inputs work: a stop or drive with a push through, a roll braked after first contact, each played end
    to end with no guard hit, as analytic or constructed cases.
 6. Every preset's canonical setup runs from top to finish, each default planning 3 m/s within ±2 %; no run of the late
@@ -164,10 +170,10 @@ and each reconciled value is recorded with its old and new figure. No other defa
 
 ## 5. Text book defaults
 
-Each type's present values become its defaults, but for the drive's and the AC stop's grips (decision 3). The grips
-in the engine's shaft frame (0.914 m, from the socket): the top hand at 0.805 m; the bottom hand just below it on the
-drive and the AC stop (a hand's width, the builder's figure, cited or labelled), against 0.60 (drive) and 0.45 (AC
-stop) today; the GC stop and single-ball unchanged (0.805 / 0.45, 0.805 / 0.70); the rolls unchanged (half 0.805 /
+Each type's present values become its defaults, but for the drive's grip (decision 3). The grips in the engine's
+shaft frame (0.914 m, from the socket): the top hand at 0.805 m; the bottom hand just below it on the drive (a hand's
+width, the builder's figure, cited or labelled), against 0.60 today; the AC stop, the GC stop and single-ball unchanged
+(0.805 / 0.45, 0.805 / 0.45, 0.805 / 0.70); the rolls unchanged (half 0.805 /
 0.42, full 0.61 / 0.30, pass 0.45 / 0.09). The user's account (3, 8) is carried beside Riches as a hypothesis.
 
 A later check, recorded for P2b.2b.2c.3b or after (account 7): a drive or stop played with the split grip varies its
