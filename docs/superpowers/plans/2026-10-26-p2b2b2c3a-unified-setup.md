@@ -105,9 +105,8 @@ source of decisions; do not re-open them. Also read:
    Tasks 7 and 8 implement the ruling. Task 6 Step 1 first writes the ruled note into this plan as decisions 11 and
    on. A ruling that changes Task 3 sends it back before Task 6.
 6. **Task 4's note answers spec §4's after-contact rows and §9's open items.**
-   - **The swung body:** the Dong et al. chains on every stroke, the rigid arm mass on every stroke, or another option
-     with a physical basis. For each option it predicts which presets move, how and why, and whether the rigid arm
-     mass is a limit of the chain.
+   - **The swung body:** the Dong et al. chains on every stroke (spec amendment A1, ruled while planning). The note
+     predicts how the swing presets move and why, and how the swing law's grips (γ_T, g_B) act through the chains.
    - **One control law after contact:** how the swing law (the grip-scaled share, the damper, the rate guide with
      `guideEffort`, the check's share) and the carry law (the flex to the intended path, the posture hold relaxing
      from the first departure, the push intent, the pendulum phase) become one. Each of its terms is governed by an
@@ -206,7 +205,8 @@ source of decisions; do not re-open them. Also read:
   - A re-baselined figure gets "P2b.2b.2c.3a: <the change> (was <old>)", and the commit message gives old and new.
   - No test is loosened to pass.
 - **Circularity.** The rolls are held out: never tuned to a ratio. The AC stop and the drive are calibration targets
-  against Gugan 5 only. Refits are the backswings to 3 m/s alone (spec §4.1), each recorded old and new. No other
+  against Gugan 5 only. Refits are the backswings to 3 m/s (spec §4.1) and, under spec amendment A1, the AC stop's
+  and the drive's own grip or `guideEffort` where stage 2 rules a retune; each is recorded old and new. No other
   default moves except the drive's grip, `slopeHold` (new) and what a gate rules.
 - **Kept as they are.** The face, ball–ball and turf laws, the mallet, the lawn's pace, the hands' constants,
   `pushForce`, `handAcceleration`, the rolls' and stops' grips and leans, and the jump shot's turf rebound (spec §8).
@@ -780,7 +780,7 @@ Spec §7 stage 2.
 - [ ] **Step 1:** Put each to the user one at a time, with options and a recommendation:
   1. every departure from bit-identity (Task 11 Step 3);
   2. the drive's grip and its `guideEffort` (section D);
-  3. the AC stop's band and stance;
+  3. the AC stop's band and stance, with a retune of its own grip if it has left the band (spec amendment A1);
   4. the cross-mode cases;
   5. each refit.
 - [ ] **Step 2:** Land any re-tune the gate rules, each as its own commit with its moved runs counted.

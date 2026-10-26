@@ -233,4 +233,9 @@ with options and a recommendation.
 
 ## Amendments
 
-(none yet)
+**A1 — the hand model and the calibration (user, 2026-10-26, while planning).** One hand model after contact cannot
+keep both the swing strokes and the rolls bit-identical. Asked which constraint gives way, the user chose "Chains +
+allow retune": the Dong et al. chains become the hand model on every stroke (§4, "The swung body after contact"). If
+the AC stop leaves Gugan 5's band (6.55–7.75) or the drive's re-contact-free `guideEffort` breaks, stage 2 may retune
+that preset's own grip or `guideEffort`, against Gugan 5 only. This amends §4.1's "No other default moves" for those
+two presets alone; every retune is recorded with its old and new figures. The rolls stay held out.
