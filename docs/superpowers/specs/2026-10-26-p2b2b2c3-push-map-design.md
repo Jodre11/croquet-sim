@@ -222,6 +222,9 @@ Nothing here is solved for; each is measured on the map and ruled at the gate.
 - **K:** §3.4.
 - **L, the headroom:** the defaults' push percentages, and how many saturate.
 - **O:** closed by decision 6; the canonical full and pass rolls' digging re-measured on their new defaults.
+- **The AC stop's two grips** (P2b.2b.2c.3a, decision 3): its default, lowered and loose jab variant played beside a
+  hands-together AC stop (Riches's text book), Gugan 5's stop and the turf's damage recorded for each, for the user's
+  ruling on which the bottom hand's height should be by outcome.
 - **The effect measure:** the contact-only candidate (the striker's ball's velocity change summed over the face
   intervals alone, the gaps excluded) measured beside the shipped span measure on the map's runs, the verdicts that
   differ counted per type, and ruled at the gate. The shipped measure stays unless the gate rules otherwise.
