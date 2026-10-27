@@ -35,7 +35,6 @@ import {
     type HandLoad,
     type PreparedTrack,
     type Push,
-    type SwungBody,
 } from "../../../src/engine/impact/track";
 import { exp } from "../../../src/engine/math/elementary";
 import { flexGains } from "../../../src/engine/impact/flex";
@@ -198,35 +197,35 @@ describe("a tracked head with no ball", () => {
 
     it("converges on a full check as the step shrinks: the residual is the integrator's", () => {
         const check: SwingArc = { ...COAST, alpha: -COAST.omega0 / COAST.window };
-        // Before contact over 60 ms, and from contact in swing mode through the check's window. Drafting measured
-        // ratios of 0.504 and 0.500: semi-implicit Euler's O(dt·a) lag.
-        for (const o of [
-            { coupling: BEFORE, cap: 0.06 },
-            { coupling: TEST_COUPLING, cap: COAST.window },
-        ]) {
-            const coarse = tracking(check, { ...o, dt: 1e-5 });
-            const fine = tracking(check, { ...o, dt: 5e-6 });
-            expect(fine.socket).toBeLessThan(0.6 * coarse.socket);
-            expect(fine.angle).toBeLessThan(0.6 * coarse.angle);
-        }
+        // Before contact over 60 ms. Drafting measured a ratio of 0.504: semi-implicit Euler's O(dt·a) lag.
+        const o = { coupling: BEFORE, cap: 0.06 };
+        const coarse = tracking(check, { ...o, dt: 1e-5 });
+        const fine = tracking(check, { ...o, dt: 5e-6 });
+        expect(fine.socket).toBeLessThan(0.6 * coarse.socket);
+        expect(fine.angle).toBeLessThan(0.6 * coarse.angle);
+        // P2b.2b.2c.3a: one law after contact (was the same path errors from contact through the check's window, ratio
+        // 0.500, the swing law's damper holding the head to the path): from contact the hands flex through their
+        // chains, which hold the head off the path by the flex's own compliance, not the integrator's error. So the
+        // run itself converges instead: its head at the window's end moves by half as much again at each halving
+        // (4.31e-7 m, then 2.14e-7 m: a ratio of 0.497).
+        const after = (dt: number) => tracking(check, { coupling: TEST_COUPLING, cap: COAST.window, dt }).run.head;
+        const [a, b, c] = [after(1e-5), after(5e-6), after(2.5e-6)];
+        expect(dist(b.position, c.position)).toBeLessThan(0.6 * dist(a.position, b.position));
     });
 
-    it("checks a head the strike has slowed at half the path's rate to the window's end, never past rest", () => {
+    it("checks a head the strike has slowed through the window's end, never past rest", () => {
         // User decision (2026-10-06): a check brakes the head to rest, not past it. A head pitching at half the path's
-        // rate from contact gets half the planned deceleration, so it keeps half the path's rate through the window.
+        // rate from contact gets half the planned deceleration.
         const check: SwingArc = { ...COAST, alpha: -COAST.omega0 / COAST.window };
         const track = prepare(check, TEST_COUPLING, ARMED);
         const slowed = prepare({ ...check, omega0: check.omega0 / 2, alpha: 0 }, TEST_COUPLING, ARMED);
-        let drift = 0;
         let lowest = Infinity;
         let last = Infinity;
+        let rose = false;
         const probe: ImpactProbe = {
             step(s) {
                 const rate = dot(s.head.angularVelocity, track.axis);
-                const planned = dot(pathAt(track, s.t).angularVelocity, track.axis);
-                if (planned > 0.1 * check.omega0) {
-                    drift = Math.max(drift, Math.abs(rate / planned - 0.5));
-                }
+                rose = rose || rate > last;
                 lowest = Math.min(lowest, rate);
                 last = rate;
             },
@@ -240,15 +239,21 @@ describe("a tracked head with no ball", () => {
         // Numerical, not physical: an allowance below rest for the integrator's residual, from when the head ended at
         // rest; eight orders of magnitude below the start's 1.875 rad/s, so a braking past rest still fails.
         const RESIDUAL = 1e-8;
-        expect(drift).toBeLessThan(5e-4);
         expect(lowest).toBeGreaterThanOrEqual(0 - RESIDUAL);
         // P2b.2b.2c.2d: gravity through the pulse (was |last| < 3e-8, at rest with a path the check had brought to
         // rest). Gravity acts through the check, θ₀ = −0.3 rad, so the path ends the window at gravity's share,
-        // 0.0331 rad/s, the hand integration's; the head keeps half the path's rate there, 0.016562 rad/s, 8.9e-7 from
-        // half of it (three times that allowed), and never passes rest.
+        // 0.0331 rad/s, the hand integration's.
         const plannedEnd = dot(pathAt(track, check.window).angularVelocity, track.axis);
         expect(plannedEnd).toBeCloseTo(integratePulse(track, 1e-7).omega, 4);
-        expect(Math.abs(last - plannedEnd / 2)).toBeLessThan(3e-6);
+        // P2b.2b.2c.3a: one law after contact (was a drift of 1.37e-5 from half the path's rate, under 5e-4, and a last
+        // rate within 3e-6 of half the path's, 0.016562 rad/s). The hands now feed the check's share through their
+        // hand–arm chains, whose masses ride on the wrist's and palm's springs (periods of about 30 ms and 10 ms): the
+        // brake reaches the head late in a 10 ms pulse, so the head keeps 1.72 rad/s at mid-window (half the path's
+        // would be 0.95) and ends at 0.3710 rad/s, slowing all the way and never past rest. The share itself is pinned
+        // on the feed-forward ("the check's share", below).
+        expect(rose).toBe(false);
+        expect(last).toBeCloseTo(0.371, 3);
+        expect(last).toBeLessThan(0.25 * check.omega0);
     });
 
     it("runs a whiff to TRACK_IMPACT_CAP after the planned contact", () => {
@@ -306,27 +311,25 @@ describe("the hands along the shaft", () => {
         expect(sideways).toBeLessThan(1e-12);
     });
 
-    it("let a relaxed top hand sink the head at (1 − γ_T)·m·g/c(γ_T), with no turf", () => {
-        // Swing mode from contact, a still level path: the top hand carries γ_T of the weight and damps the rest.
-        const track = prepare(still(), TEST_COUPLING, { ...ARMED, gripTension: 0.1 });
-        const c = track.top.damping;
-        const terminal = ((1 - 0.1) * TEST_HEAD.mass * STANDARD_GRAVITY) / c;
-        let worst = 0;
-        let spin = 0;
-        const probe: ImpactProbe = {
-            step(s) {
-                const expected = -terminal * (1 - Math.exp((-c * s.t) / track.body.mass));
-                worst = Math.max(worst, Math.abs(s.head.velocity.z - expected));
-                spin = Math.max(spin, length(s.head.angularVelocity));
-            },
+    it("let a loose top hand feed γ_T of the head's weight, and the head sink on the flex, with no turf", () => {
+        // A still level path from contact, the shaft vertical: F_ff is the head's weight along the shaft, all of it the
+        // top hand's share. P2b.2b.2c.3a: one law after contact (was the swing law's sink at (1 − γ_T)·m·g/c(γ_T), the
+        // top hand carrying γ_T of the weight and its damper c(γ_T) the rest at a terminal rate). The top hand's chain
+        // is now fed γ_T × its share and takes hold in equilibrium, so at the first step the loose hand holds up a
+        // tenth of the weight and the firm hand all of it; the rest of the loose head's weight sinks it onto both
+        // hands' flex, which holds it 17.5 mm down after 0.5 s, while the firm head stays on the path exactly.
+        const weight = vec3(0, 0, TEST_HEAD.mass * STANDARD_GRAVITY);
+        const loose = prepare(still(), TEST_COUPLING, { ...ARMED, gripTension: 0.1 });
+        const firm = prepare(still(), TEST_COUPLING, ARMED);
+        expect(dist(loadOnPath(loose, 0).top, scale(weight, 0.1))).toBeLessThan(1e-9);
+        expect(dist(loadOnPath(firm, 0).top, weight)).toBeLessThan(1e-9);
+        const sink = (track: PreparedTrack): number => {
+            const start = headOnPath(track, TEST_HEAD, 0);
+            const run = integrate(isolated({ start, drive: track, gravity: STANDARD_GRAVITY }), { cap: 0.5 });
+            return start.position.z - run.head.position.z;
         };
-        const start = headOnPath(track, TEST_HEAD, 0);
-        const run = integrate(isolated({ start, drive: track, gravity: STANDARD_GRAVITY }), { probe });
-        // Semi-implicit Euler's error on v' = −(c/M)·v − (1 − γ_T)·m·g/M peaks near (c·dt/M)/2·e⁻¹ of the terminal
-        // rate, 6.4e-5 here; drafting measured 6.4e-5. The bound is about 3× that analytic estimate.
-        expect(worst).toBeLessThan(2e-4 * terminal);
-        expect(run.head.velocity.z).toBeCloseTo(-terminal, 5);
-        expect(spin).toBe(0);
+        expect(sink(loose)).toBeCloseTo(0.0175, 4);
+        expect(sink(firm)).toBe(0);
     });
 });
 
@@ -371,20 +374,6 @@ describe("the feed-forward split", () => {
         }
     });
 
-    it("feeds the top hand the whole F_s in swing mode outside a check", () => {
-        const arc: SwingArc = { ...TIMED, mode: "swing", slopeHold: 0 };
-        const t = 0.009;
-        const track = prepare(arc, TEST_COUPLING, ARMED);
-        const { force } = rigidWrench(track, t);
-        const dip = dipForce(track, t);
-        for (const gripTension of [0.1, 1]) {
-            const load = loadOnPath(prepare(arc, TEST_COUPLING, { ...ARMED, gripTension }), t);
-            const expected = add(scale(sub(force, dip), gripTension), dip);
-            expect(dist(load.top, expected), `γ_T ${gripTension}`).toBeLessThan(1e-9);
-            expect(length(load.bottom), `γ_T ${gripTension}`).toBeLessThan(1e-9);
-        }
-    });
-
     it("splits F_s over both hands inside a check, the top hand's share scaled by γ_T", () => {
         const arc: SwingArc = { ...TIMED, mode: "swing", slopeHold: 0, alpha: -4 };
         const t = 0.012;
@@ -405,30 +394,19 @@ function forwardOf(head: HeadState, aim: Vec3): Vec3 {
     return scale(raw, 1 / length(raw));
 }
 
-describe("the bottom hand's rate guide", () => {
-    const lever = 0.8 - TEST_HANDS.bottom;
-
+// P2b.2b.2c.3a: one law after contact (was "the bottom hand's rate guide"). The swing law's rate guide is gone: its
+// tests "never pulls outside a check" and the guide's parts of "acts both ways inside a check" and "returns one past
+// rest" went with it, and "scales the push by guideEffort" is "scales the bottom hand's flex by guideEffort" below.
+// The check's share, which now acts on every stroke, keeps its tests here.
+describe("the check's share (design §3.3)", () => {
     /** A head on the path at t, its pitch rate `extra` faster than the path's. */
     function spun(track: PreparedTrack, t: number, extra: number): HeadState {
         const head = headOnPath(track, TEST_HEAD, t);
         return { ...head, angularVelocity: add(head.angularVelocity, scale(track.axis, extra)) };
     }
 
-    it("never pulls outside a check, and is zero while the shaft turns at least as fast as the path", () => {
-        const track = prepare(still(), TEST_COUPLING, TEST_HANDS);
-        const t = 0.02;
-        for (const extra of [0, 0.5]) {
-            const load = handLoad(track, spun(track, t, extra), TEST_HEAD, t, newGripState(), IMPACT_DT);
-            expect(length(load.bottom), `extra ${extra}`).toBe(0);
-        }
-        const lagging = spun(track, t, -0.5);
-        const load = handLoad(track, lagging, TEST_HEAD, t, newGripState(), IMPACT_DT);
-        const e = forwardOf(lagging, track.arc.aim);
-        expect(dot(load.bottom, e)).toBeCloseTo(track.bottom.damping * 0.5 * lever, 9);
-        expect(length(sub(load.bottom, scale(e, dot(load.bottom, e))))).toBeLessThan(1e-12);
-    });
-
-    it("acts both ways inside a check and carries g_B·F_B", () => {
+    it("carries g_B·F_B inside a check", () => {
+        // The bottom hand's chain takes hold in equilibrium under g_B × its share, so the first step's force is it.
         const arc = still({ omega0: 3, alpha: -300 });
         const t = 0.005;
         const track = prepare(arc, TEST_COUPLING, TEST_HANDS);
@@ -436,13 +414,9 @@ describe("the bottom hand's rate guide", () => {
         const on = loadOnPath(track, t);
         expect(length(on.bottom)).toBeGreaterThan(1);
         expect(dist(loadOnPath(light, t).bottom, scale(on.bottom, 0.25))).toBeLessThan(1e-9);
-        const leading = spun(track, t, 0.5);
-        const fast = handLoad(track, leading, TEST_HEAD, t, newGripState(), IMPACT_DT);
-        const e = forwardOf(leading, arc.aim);
-        expect(dot(sub(fast.bottom, on.bottom), e)).toBeCloseTo(-track.bottom.damping * 0.5 * lever, 6);
     });
 
-    it("inside a check gives a slowed head its share of the planned deceleration, and returns one past rest", () => {
+    it("inside a check gives a slowed head its share of the planned deceleration, and one past rest none", () => {
         // User decision (2026-10-06): a check brakes the head to rest, not past it (design §3.3).
         const arc = still({ omega0: 3, alpha: -300 });
         const t = 0.005;
@@ -451,16 +425,14 @@ describe("the bottom hand's rate guide", () => {
         const at = (share: number): HandLoad =>
             handLoad(track, spun(track, t, (share - 1) * planned), TEST_HEAD, t, newGripState(), IMPACT_DT);
         const [rest, half, full] = [at(0), at(0.5), at(1)];
-        // Between rest and the path's rate the deceleration is in proportion and the guide neither pushes nor pulls.
+        // Between rest and the path's rate the deceleration is in proportion, and with it each hand's feed.
         expect(length(sub(full.feedForward, rest.feedForward))).toBeGreaterThan(1);
         expect(dist(half.feedForward, scale(add(rest.feedForward, full.feedForward), 0.5))).toBeLessThan(1e-9);
         expect(dist(half.bottom, scale(add(rest.bottom, full.bottom), 0.5))).toBeLessThan(1e-9);
-        // Past rest none of it, and the guide returns the head towards rest.
+        // Past rest none of it.
         const behind = spun(track, t, -1.2 * planned);
         const back = handLoad(track, behind, TEST_HEAD, t, newGripState(), IMPACT_DT);
         expect(dist(back.feedForward, rest.feedForward)).toBeLessThan(1e-9);
-        const push = dot(sub(back.bottom, rest.bottom), forwardOf(behind, arc.aim));
-        expect(push).toBeCloseTo(track.bottom.damping * 0.2 * planned * lever, 6);
     });
 
     it("inside a check past the path's rest, gives a forward-moving head share 1 and a stopped one 0", () => {
@@ -485,50 +457,6 @@ describe("the bottom hand's rate guide", () => {
         expect(dist(forward.feedForward, faster.feedForward)).toBeLessThan(1e-9);
         expect(dist(rest.feedForward, back.feedForward)).toBeLessThan(1e-9);
         expect(dist(forward.feedForward, rest.feedForward)).toBeGreaterThan(1);
-    });
-
-    it("scales the push by guideEffort outside a check and after the release, and leaves a check in full", () => {
-        const withEffort = (guideEffort: number): Hands => ({ ...TEST_HANDS, guideEffort });
-        const t = 0.02;
-        const guided = (guideEffort: number): Vec3 => {
-            const track = prepare(still(), TEST_COUPLING, withEffort(guideEffort));
-            return handLoad(track, spun(track, t, -0.5), TEST_HEAD, t, newGripState(), IMPACT_DT).bottom;
-        };
-        expect(length(guided(1))).toBeGreaterThan(0);
-        expect(length(guided(0))).toBe(0);
-        expect(dist(guided(0.5), scale(guided(1), 0.5))).toBeLessThan(1e-12);
-        const released = (guideEffort: number): Vec3 => {
-            const track = prepare(still(), TEST_COUPLING, withEffort(guideEffort));
-            const head = headOnPath(track, TEST_HEAD, t);
-            const slow = { ...head, velocity: sub(head.velocity, vec3(0.5, 0, 0)) };
-            const open: GripState = {
-                contactPitch: 0,
-                releasedAt: 1e-3,
-                releaseDelta: 0.08,
-                flex: null,
-                topStiffness: 0,
-                bottomStiffness: 0,
-                vertical: false,
-                rising: false,
-                resistance: 0,
-                topChain: null,
-                bottomChain: null,
-                departedAt: null,
-                topOffset: null,
-                bottomOffset: null,
-            };
-            return handLoad(track, slow, TEST_HEAD, t, open, IMPACT_DT).bottom;
-        };
-        expect(length(released(1))).toBeGreaterThan(0);
-        expect(length(released(0))).toBe(0);
-        expect(dist(released(0.5), scale(released(1), 0.5))).toBeLessThan(1e-12);
-        const check = still({ omega0: 3, alpha: -300 });
-        const checked = (guideEffort: number): Vec3 => {
-            const track = prepare(check, TEST_COUPLING, withEffort(guideEffort));
-            return handLoad(track, spun(track, 0.005, 0.5), TEST_HEAD, 0.005, newGripState(), IMPACT_DT).bottom;
-        };
-        expect(length(checked(1))).toBeGreaterThan(1);
-        expect(checked(0)).toEqual(checked(1));
     });
 });
 
@@ -567,35 +495,6 @@ describe("release by reach", () => {
         handLoad(track, turned(turn), TEST_HEAD, 2e-3, grip, 1e-3);
         expect(grip.releasedAt).toBe(2e-3);
         expect(grip.releaseDelta).toBeCloseTo(turn, 12);
-    });
-
-    it("then pushes only forward along e on its velocity lag, with no feed-forward and no couple", () => {
-        const grip: GripState = {
-            contactPitch: 0,
-            releasedAt: 1e-3,
-            releaseDelta: 0.08,
-            flex: null,
-            topStiffness: 0,
-            bottomStiffness: 0,
-            vertical: false,
-            rising: false,
-            resistance: 0,
-            topChain: null,
-            bottomChain: null,
-            departedAt: null,
-            topOffset: null,
-            bottomOffset: null,
-        };
-        const turn = 0.08;
-        const e = forwardOf(turned(turn), track.arc.aim);
-        const resting = handLoad(track, turned(turn), TEST_HEAD, 2e-3, grip, IMPACT_DT);
-        expect(length(resting.bottom)).toBe(0);
-        expect(dot(resting.torque, rotate(turned(turn).orientation, UP))).toBeCloseTo(0, 12);
-        const pushing = handLoad(track, turned(turn, scale(e, -0.5)), TEST_HEAD, 2e-3, grip, IMPACT_DT);
-        expect(dot(pushing.bottom, e)).toBeCloseTo(track.bottom.damping * 0.5, 9);
-        expect(length(sub(pushing.bottom, scale(e, dot(pushing.bottom, e))))).toBeLessThan(1e-12);
-        const ahead = handLoad(track, turned(turn, scale(e, 0.5)), TEST_HEAD, 2e-3, grip, IMPACT_DT);
-        expect(length(ahead.bottom)).toBe(0);
     });
 
     it("records the release in the run, and none for a force table or a shaft that never turns", () => {
@@ -680,7 +579,11 @@ describe("the tracked end rule", () => {
         // (headClosing) over 3.66–6.08, 8.38–10.73 and 12.99–15.28 ms. At 12 ms blue is pulling away after the third
         // tap; at 9 ms the head, slowed below blue by the second, is closing on it again. The cap moves to 9 ms, an
         // input change that keeps the test's cover of the cap and the head closing; the expectation is unchanged.
-        const { run } = strikeRun([freeBall("blue", BALL), freeBall("red", RED)], 9e-3);
+        // P2b.2b.2c.3a: one law after contact (was a cap at 9 ms, inside the third of a series of taps): the swing
+        // law's damper no longer holds the head to the path; the hands' flex lets it slow below blue after the first
+        // tap, face–blue [0.005, 1.875) ms, and it closes on blue again from 33.5 ms, within LOOK_AHEAD of it, until a
+        // second tap at [55.315, 56.510) ms. The cap moves to 40 ms, an input change; the expectation is unchanged.
+        const { run } = strikeRun([freeBall("blue", BALL), freeBall("red", RED)], 40e-3);
         expect(run.events.map((e) => e.kind)).toEqual(["impact-cap", "impact-head-approaching"]);
     });
 });
@@ -956,8 +859,10 @@ describe("the push intent (P2b.2b.2b.2b gate ruling 2026-10-11)", () => {
         );
     });
 
-    it("is never read in swing mode", () => {
+    it("is never read without a push", () => {
+        // P2b.2b.2c.3a A2 item 5: keyed on the push, not the mode (was "is never read in swing mode").
         const track = prepareAt(still({ omega0: 3 }), STANDARD_GRAVITY);
+        expect(track.push).toBeNull();
         const t = 0.002;
         const on = headOnPath(track, TEST_HEAD, t);
         expect(handLoad(track, on, TEST_HEAD, t, resisted(500), IMPACT_DT)).toEqual(
@@ -1326,7 +1231,7 @@ describe("the hand–arm chain (P2b.2b.2b.2b gate round 3 ruling, 2026-10-11)", 
         expect(grip.topChain).not.toBeNull();
         expect(swungOf(track, grip)).toBe(track.released);
         const skin = TEST_CHAIN.palmSkinMass + TEST_CHAIN.fingerSkinMass;
-        expect((track.released as SwungBody).mass).toBeCloseTo(TEST_HEAD.mass + skin, 12);
+        expect(track.released.mass).toBeCloseTo(TEST_HEAD.mass + skin, 12);
         expect(track.body.mass).toBeCloseTo(TEST_HEAD.mass + 2 * skin, 12);
         const s = shaftOf(on);
         const e = sub(arc.aim, scale(s, dot(arc.aim, s)));
@@ -1350,23 +1255,18 @@ describe("the hand–arm chain (P2b.2b.2b.2b gate round 3 ruling, 2026-10-11)", 
         expect(carried).toBe(0);
     });
 
-    it("is never read in swing mode", () => {
+    it("holds a swing arc through the chains too", () => {
+        // P2b.2b.2c.3a A2 item 4: the chains on every stroke (was "is never read in swing mode": a swing arc had no
+        // released body, and a grip holding chains gave the same load as one without, the chains untouched). A swing
+        // arc's contact step takes hold of both chains, and its released body is the top hand's skin alone.
         const track = prepareAt(still({ omega0: 3 }), STANDARD_GRAVITY);
-        expect(track.released).toBeNull();
+        const skin = TEST_CHAIN.palmSkinMass + TEST_CHAIN.fingerSkinMass;
+        expect(track.released.mass).toBeCloseTo(TEST_HEAD.mass + skin, 12);
+        const grip = newGripState();
         const t = 0.002;
-        const on = headOnPath(track, TEST_HEAD, t);
-        const mass = (x: number): ChainMass => ({
-            position: vec3(x, 2, 3),
-            velocity: vec3(4, x, 6),
-            force: vec3(7, 8, x),
-        });
-        const arm = (): ArmChain => ({ forearm: mass(1), hand: mass(2), fingers: mass(3), preload: vec3(0.1, 0, 0) });
-        const held: GripState = { ...newGripState(), topChain: arm(), bottomChain: arm() };
-        expect(handLoad(track, on, TEST_HEAD, t, held, IMPACT_DT)).toEqual(
-            handLoad(track, on, TEST_HEAD, t, newGripState(), IMPACT_DT),
-        );
-        expect(held.topChain).toEqual(arm());
-        expect(held.bottomChain).toEqual(arm());
+        handLoad(track, headOnPath(track, TEST_HEAD, t), TEST_HEAD, t, grip, IMPACT_DT);
+        expect(grip.topChain).not.toBeNull();
+        expect(grip.bottomChain).not.toBeNull();
     });
 
     it("holds the mallet through the palm and the fingers in a carry run: the chain law at every step", () => {
@@ -1439,7 +1339,7 @@ describe("the pendulum phase (P2b.2b.2b.2b design §4.2, §4.3, §7.1)", () => {
     function energy(track: PreparedTrack, s: ImpactSnapshot, topStart: Vec3): number {
         const { head } = s;
         const c = FREE.chain;
-        const body = track.released as SwungBody;
+        const body = track.released;
         const shaft = rotate(head.orientation, UP_AXIS);
         const top = add(head.position, scale(shaft, TEST_HEAD.socket.z + track.arc.radius));
         const arm = (s.hand as NonNullable<ImpactSnapshot["hand"]>).chains?.top as ArmChainState;
@@ -1589,5 +1489,132 @@ describe("the pendulum phase (P2b.2b.2b.2b design §4.2, §4.3, §7.1)", () => {
             true,
         );
         expect((follow as NonNullable<typeof follow>).flags).toContain("follow-cap");
+    });
+});
+
+describe("one law after contact (P2b.2b.2c.3a A2 item 5)", () => {
+    /** A plausible, unsourced posture-holding impedance, well apart from TEST_FLEX's rhythmic values. */
+    const HELD: Hands = { ...TEST_HANDS, flex: { ...TEST_FLEX, hold: { stiffness: 900, damping: 25 } } };
+
+    /** One handLoad step on `arc` at t, the head on the path, with `grip` (a fresh one by default). */
+    function stepOn(arc: SwingArc, hands: Hands, t: number, grip: GripState = newGripState()): HandLoad {
+        const track = prepare(arc, TEST_COUPLING, hands);
+        return handLoad(track, headOnPath(track, TEST_HEAD, t), TEST_HEAD, t, grip, IMPACT_DT);
+    }
+
+    it("feeds each hand its grip times its moment share, the dip in full", () => {
+        // A2 item 4: the top hand's chain is fed γ_T × its share plus F_d, the bottom's g_B × its share. The chains
+        // take hold in equilibrium under their feeds (holdChain), so the first step's grip forces are the feeds.
+        const arc: SwingArc = { ...TIMED, mode: "swing", slopeHold: 0 };
+        const t = 0.009;
+        const dip = dipForce(prepare(arc), t);
+        const firm = stepOn(arc, TEST_HANDS, t);
+        // The swing law fed the bottom hand nothing outside a check; its share here is 11.4 N.
+        expect(length(firm.bottom)).toBeGreaterThan(1);
+        for (const gripTension of [0.1, 1]) {
+            const load = stepOn(arc, { ...TEST_HANDS, gripTension }, t);
+            const expected = scale(sub(firm.top, dip), gripTension);
+            expect(dist(sub(load.top, dip), expected), `γ_T ${gripTension}`).toBeLessThan(1e-9);
+        }
+        for (const bottomGrip of [0.25, 1]) {
+            const load = stepOn(arc, { ...TEST_HANDS, bottomGrip }, t);
+            expect(dist(load.bottom, scale(firm.bottom, bottomGrip)), `g_B ${bottomGrip}`).toBeLessThan(1e-9);
+        }
+    });
+
+    it("scales the bottom hand's flex by guideEffort outside a check, and leaves a check in full", () => {
+        // A2 item 5: the bottom hand flexes at gripGains(·, g_B·e), e = guideEffort outside a check and 1 inside one.
+        const bottomStiffness = (arc: SwingArc, guideEffort: number, t: number): number => {
+            const grip = newGripState();
+            stepOn(arc, { ...TEST_HANDS, guideEffort }, t, grip);
+            return grip.bottomStiffness;
+        };
+        const full = bottomStiffness(still(), 1, 0.02);
+        expect(full).toBeGreaterThan(0);
+        expect(Math.abs(bottomStiffness(still(), 0.5, 0.02) / full - 0.5)).toBeLessThan(1e-12);
+        expect(bottomStiffness(still(), 0, 0.02)).toBe(0);
+        const check = still({ omega0: 3, alpha: -300 });
+        expect(bottomStiffness(check, 0, 0.005)).toBe(bottomStiffness(check, 1, 0.005));
+    });
+
+    it("holds the posture only with a push", () => {
+        // A2 item 5: the posture hold, from the first departure, acts only through a push. With none the weight is 0,
+        // so the departure changes nothing; with one, held (no departure) and relaxed (long departed) differ.
+        const topStiffness = (arc: SwingArc, departedAt: number | null): number => {
+            const grip = { ...newGripState(), departedAt };
+            stepOn(arc, HELD, 0.002, grip);
+            return grip.topStiffness;
+        };
+        const swing = still({ omega0: 3 });
+        expect(prepare(swing).push).toBeNull();
+        expect(topStiffness(swing, null)).toBe(topStiffness(swing, -1e9));
+        const carry = still({ mode: "carry", handReach: 0.1, pendulumAt: 1 });
+        expect(prepare(carry).push).not.toBeNull();
+        expect(topStiffness(carry, null)).not.toBe(topStiffness(carry, -1e9));
+    });
+
+    it("lets go of the chains at a stop's hold", () => {
+        // A2 item 7: a stop's hold is the firm grip, not the chains, so the gripped step drops both.
+        const track = prepare(still({ omega0: 3, alpha: -300 }));
+        const t = 0.02;
+        const mass = (x: number): ChainMass => ({ position: vec3(x, 2, 3), velocity: vec3(4, x, 6), force: ZERO });
+        const arm = (): ArmChain => ({ forearm: mass(1), hand: mass(2), fingers: mass(3), preload: ZERO });
+        const grip: GripState = { ...newGripState(), topChain: arm(), bottomChain: arm() };
+        handLoad(track, headOnPath(track, TEST_HEAD, t), TEST_HEAD, t, grip, IMPACT_DT, true);
+        expect(grip.topChain).toBeNull();
+        expect(grip.bottomChain).toBeNull();
+    });
+
+    it("records a ball's first departure only with a push", () => {
+        // A2 item 5: the first-departure latch feeds the posture hold, which acts only with a push, so a swing arc
+        // striking a free ball (gravity off) records none. The carry's case is the latch's own test above.
+        const ball = vec3(0, 0, 1);
+        const begin = vec3(ball.x - R - 1e-6 - TEST_HEAD.length / 2, 0, ball.z);
+        const swing = prepareTrack(
+            trackDrive(levelArc(begin, { omega0: 3 / (0.8 + TEST_HEAD.socket.z) }), TEST_COUPLING, HELD),
+            TEST_HEAD,
+            0,
+        );
+        const run = integrate(
+            isolated({ start: headOnPath(swing, TEST_HEAD, 0), drive: swing, balls: [freeBall("blue", ball)] }),
+            { cap: 0.03 },
+        );
+        expect(run.timeline["face/blue"] ?? []).not.toHaveLength(0);
+        expect(run.departure).toBeUndefined();
+    });
+});
+
+describe("the bottom hand's opening (P2b.2b.2c.3a A2 item 6)", () => {
+    const lever = 0.8 - TEST_HANDS.bottom;
+
+    /** The test head on `track` turned rigidly about its still pivot through `turn`, at rest. */
+    function turned(track: PreparedTrack, turn: number): HeadState {
+        const orientation = swingOrientation(track.arc.aim, turn);
+        const s = rotate(orientation, UP);
+        const position = sub(track.arc.pivot, scale(s, track.arc.radius + TEST_HEAD.socket.z));
+        return { position, orientation, velocity: ZERO, angularVelocity: ZERO };
+    }
+
+    it("never opens on a shaft turning back through the slack", () => {
+        // A2 item 6: the reach is signed: a shaft turning back drives into the bottom hand's palm, which stays shut.
+        const track = prepare(still(), TEST_COUPLING, TEST_HANDS);
+        const grip = newGripState();
+        handLoad(track, turned(track, 0), TEST_HEAD, 0, grip, 1e-3);
+        handLoad(track, turned(track, (0 - (TEST_HANDS.reachSlack + 1e-3)) / lever), TEST_HEAD, 1e-3, grip, 1e-3);
+        expect(grip.releasedAt).toBeNull();
+    });
+
+    it("then pushes forward along e with pendulumEffort·F_pendulum until vertical", () => {
+        // A2 item 6: once open, on every stroke, the bottom hand pushes along e with pendulumEffort × F_pendulum until
+        // the shaft passes vertical. The head leans 0.08 rad back, short of vertical.
+        const opened = (pendulumEffort: number, vertical = false): Vec3 => {
+            const track = prepare(still({ pendulumEffort }), TEST_COUPLING, TEST_HANDS);
+            const grip: GripState = { ...newGripState(), contactPitch: 0, releasedAt: 1e-3, vertical };
+            return handLoad(track, turned(track, -0.08), TEST_HEAD, 2e-3, grip, IMPACT_DT).bottom;
+        };
+        const e = forwardOf(turned(prepare(still()), -0.08), vec3(1, 0, 0));
+        expect(dist(opened(0.5), scale(e, 0.5 * TEST_PENDULUM_FORCE))).toBeLessThan(1e-9);
+        expect(length(opened(0))).toBe(0);
+        expect(length(opened(0.5, true))).toBe(0);
     });
 });

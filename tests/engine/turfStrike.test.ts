@@ -21,7 +21,8 @@ const SLOW = Boolean(import.meta.env.SLOW_TESTS);
  * (docs/superpowers/probes/2026-10-16-p2b2b2b3-regimes.txt): the first candidate of each grid that qualifies.
  */
 const GRAZE = { type: "single-ball", speed: 3, up: 0.01, dip: -0.005, jab: 0.001 } as const;
-const BITING = { type: "single-ball", speed: 4, up: 0.01, dip: -0.02, jab: 0.005 } as const;
+// P2b.2b.2c.3a: the swung body on every stroke (was a 5 mm jab): see the biting test.
+const BITING = { type: "single-ball", speed: 4, up: 0.01, dip: -0.02, jab: 0.008 } as const;
 const FOLLOW = { type: "half-roll", speed: 4 } as const;
 
 /** A preset's canonical setup at `speed` (m/s), its dip `dip` s from contact and deepened by `jab` (m). */
@@ -98,6 +99,12 @@ describe("the three regimes (P2b.2b.2b.3 design §7.4)", () => {
         // grip-limit), so this shows the jab's load and the turf's coinciding, not the turf saturating it alone.
         // P2b.2b.2c.1: the default body's θ_max (64.9°, knee height) reaches only 3.10 m/s by gravity alone, so this
         // 4 m/s stroke, found before the body had a limit, keeps the shaft's old horizontal bound.
+        // P2b.2b.2c.3a: the swung body on every stroke (was the 5 mm jab above). The body before contact is now the
+        // head with the hands' skin, the 0.8 kg arm mass at the top grip gone, so the 5 mm jab's top hand peaks at
+        // 334 N, under the limit: head/turf 5.25–24.87 and 44.47–47.58 ms, turf-yield@10.24, no impact-head-deep and no
+        // grip-limit. The jab moves to 8 mm, an input change that keeps the test's cover: head/turf 5.25–24.87,
+        // 24.90–25.31 and 42.51–49.18 ms, turf-yield@10.24; the top hand held at 435 N from 37.61 to 47.61 ms, the head
+        // re-entering the turf at 42.51 ms; the face at 68.12 ms. The expectation is unchanged.
         const { impact, tops } = along(
             shot(BITING.type, BITING.speed, timed(BITING.up, BITING.dip, BITING.jab), {
                 backswingLimit: MAX_BACK_ANGLE,

@@ -367,22 +367,26 @@ describe("the swing path", () => {
         expect(() => pathAt(bare, tw + 1e-6)).toThrow(
             /past the window's end, but prepareTrack tabulated it through the pulse/,
         );
-        expect(() => holdPendulum(bare, tw)).toThrow(
-            /past the window's end, but prepareTrack tabulated it through the pulse/,
-        );
+        // P2b.2b.2c.3a: the hold on the track (was a throw: the hold lived on the free table and read it past the
+        // window). A hold from the window's end reads the table only there, and holds θ past it without the table.
+        const held = holdPendulum(bare, tw);
+        expect(pathAt(held, tw + 0.01).theta).toBe(pathAt(full, tw).theta);
     });
 
     it("gives each grip its gains: firm, the top hand's γ_T and the bottom hand's g_B", () => {
-        // Swing mode, whose swung body carries the arm mass; a carry's is the head with the hands' skin at the grips,
-        // its hand–arm chains replacing the arm mass (P2b.2b.2b.2b gate round 3 ruling, 2026-10-11).
+        // A carry's swung body is the head with the hands' skin at the grips, its hand–arm chains replacing the arm
+        // mass (P2b.2b.2b.2b gate round 3 ruling, 2026-10-11). P2b.2b.2c.3a: the swung body on every stroke (was a
+        // swing arc's head and 0.8 kg arm mass, M = 1.8 kg): the swing arc's body is the carry's too, the head and
+        // both hands' skin, M = 1 + 2·0.03 kg; the skin on the shaft's axis leaves I_z the head's.
         const hands: Hands = { ...ARMED, gripTension: 0.1, bottomGrip: 0.25 };
         const t = prepare({ ...TIMED, mode: "swing", slopeHold: 0 }, hands);
         const carried = prepare(TIMED, hands);
         expect(carried.body).toEqual(carryBody(TEST_HEAD, hands.chain, TIMED.radius, hands.bottom));
         expect(carried.released).toEqual(carryBody(TEST_HEAD, hands.chain, TIMED.radius, null));
+        expect(t.body).toEqual(carried.body);
         const rate = (2 * Math.PI) / TEST_COUPLING.period;
         const zeta = TEST_COUPLING.dampingRatio;
-        const M = 1.8;
+        const M = TEST_HEAD.mass + 2 * (hands.chain.palmSkinMass + hands.chain.fingerSkinMass);
         const Iz = TEST_HEAD.inertia.z;
         for (const [gains, g] of [
             [t.firm, 1],
@@ -417,7 +421,9 @@ describe("the free pendulum", () => {
         const theta0 = 0.01;
         const arc = levelArc(CENTRE, { theta0 });
         const track = prepare(arc, ARMED);
-        const body = swungBody(TEST_HEAD, ARMED, arc.radius);
+        // P2b.2b.2c.3a: the swung body on every stroke (was swungBody, the head and ARMED's arm mass): the head and
+        // both hands' skin (carryBody).
+        const body = track.body;
         const lh = TEST_HEAD.socket.z + arc.radius;
         const d = lh - body.offset;
         const rate = Math.sqrt((TEST_HEAD.mass * STANDARD_GRAVITY * lh) / (body.inertia.y + body.mass * d * d));
@@ -1111,5 +1117,37 @@ describe("the slope after contact follows λ (P2b.2b.2c.3a design §4.1, decisio
         }
         expect(held.free).toBeNull();
         expect(blend.free).not.toBeNull();
+    });
+});
+
+describe("the swung body on every stroke (P2b.2b.2c.3a A2 item 4)", () => {
+    it("holds a swing arc's mallet by both hands' skin, and by the top's alone once released", () => {
+        // A2 item 4: the hand–arm chains hold every stroke, so a swing arc's body is the carry's, the arm mass gone.
+        const arc: SwingArc = { ...TIMED, mode: "swing", slopeHold: 0 };
+        const track = prepare(arc, ARMED);
+        expect(track.body).toEqual(carryBody(TEST_HEAD, ARMED.chain, arc.radius, ARMED.bottom));
+        expect(track.released).toEqual(carryBody(TEST_HEAD, ARMED.chain, arc.radius, null));
+    });
+
+    it("holds a checked stroke on its held path at λ = 1", () => {
+        // A2 item 7: the hold lives on the track, not on the free table, so a check on a fully held slope (which has
+        // no table) holds its held path's θ from the window's end on.
+        const track = prepare(levelArc(vec3(0, 0, 1), { slopeHold: 1, omega0: 3, alpha: -300 }));
+        const from = track.arc.arcStart + track.arc.window;
+        expect(() => holdPendulum(track, from)).not.toThrow();
+        const held = holdPendulum(track, from);
+        const theta = pathAt(track, from).theta;
+        expect(pathAt(held, from + 0.01).theta).toBe(theta);
+        expect(pathAt(held, from + 0.05).theta).toBe(theta);
+    });
+
+    it("holds a free table's pendulum where it was", () => {
+        // At λ = 0 the hold returns the table's θ where it starts, as the free table's own hold did.
+        const track = prepare(levelArc(vec3(0, 0, 1), { slopeHold: 0, omega0: 3, alpha: -300 }));
+        const from = track.arc.arcStart + track.arc.window;
+        const held = holdPendulum(track, from);
+        const theta = pathAt(track, from).theta;
+        expect(pathAt(held, from + 0.01).theta).toBe(theta);
+        expect(pathAt(held, from + 0.05).theta).toBe(theta);
     });
 });

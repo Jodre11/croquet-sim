@@ -74,16 +74,20 @@ describe("the mallet's body (P2b.2b.2b.2c design §4.2)", () => {
     });
 
     it("swings freely about the top hand at 2π·√(I_P/W), within 0.1 %", () => {
-        // No arm mass and a still top hand: swing mode's free pendulum from 0.02 rad at rest. I_P and W come from the
-        // parts by the parallel-axis rule, apart from malletBody: the head at ℓ_h below the hand, the rod's centre at
+        // A still top hand: the free pendulum from 0.02 rad at rest. I_P and W come from the parts by the
+        // parallel-axis rule, apart from malletBody: the head at ℓ_h below the hand, the rod's centre at
         // ℓ_h − h_z − ℓ/2. The table spans 1.2 s, so the first zero crossing gives a quarter period. At r = 0.3 m the
         // top hand lies below the shaft's mid-point, and the shaft's weight term opposes the head's (review focus 5).
+        // P2b.2b.2c.3a: the swung body on every stroke, each hand's skin s at its grip (was the mallet alone): the top
+        // hand's skin sits on the pivot and adds nothing to I_P, the bottom's adds s·(r − b)², and neither adds weight.
+        const skin = TEST_CHAIN.palmSkinMass + TEST_CHAIN.fingerSkinMass;
         for (const r of [0.8, 0.3]) {
             const arc = levelArc(CENTRE, { radius: r, theta0: 0.02, window: 1e-4, handWindow: 1e-4 });
             const free = prepareTrack(trackDrive(arc), SHAFTED, g).free as FreePendulum;
             const lh = TEST_RHO + r;
             const below = lh - RISE;
-            const inertia = TEST_BOX.inertia.y + lh * lh + 0.3 * (0.81 / 12 + below * below);
+            const lever = r - TEST_HANDS.bottom;
+            const inertia = TEST_BOX.inertia.y + lh * lh + 0.3 * (0.81 / 12 + below * below) + skin * lever * lever;
             const weight = g * lh + 0.3 * g * below;
             expect(free.inertia).toBeCloseTo(inertia, 12);
             expect(free.weight).toBeCloseTo(weight, 12);

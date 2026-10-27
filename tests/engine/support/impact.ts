@@ -377,12 +377,17 @@ export function isolated(overrides: Partial<ImpactSetup> = {}): ImpactSetup {
 
 /**
  * An isolated, tracked set-up whose hands apply nothing (P2b.2b.2b.2c design §7.1), so that `head` moves freely from
- * `centre`, level, at `velocity`: gravity off, a still level arc, a coupling of damping ratio 0 relaxed at t = 0 and
- * no arm mass. After relaxAt every hand force, feed-forward and twist is then exactly zero. Its face–ball pairs meet
- * the whole head (headBallContact), as a tracked drive's do.
+ * `centre`, level, at `velocity`: gravity off, a still level arc, and a coupling of no stiffness (an infinite period)
+ * and damping ratio 0 that never relaxes. The firm grip then applies only the feed-forward, exactly zero on a still
+ * path with no gravity, with every hand force and twist exactly zero, and no hand–arm chain ever takes hold. The
+ * hands' skin has no mass, so the swung body is the mallet alone. P2b.2b.2c.3a: the chains on every stroke (was relaxed
+ * at t = 0 with the test hands, whose swung body in swing mode was the head: the swing law's damper of ratio 0 applied
+ * nothing; the flex and the chains now act from relaxAt, and every swung body carries the hands' skin). Its face–ball
+ * pairs meet the whole head (headBallContact), as a tracked drive's do.
  */
 export function freeTracked(head: MalletHead, centre: Vec3, velocity: Vec3, balls: readonly ImpactBall[]): ImpactSetup {
-    const drive = trackDrive(levelArc(centre), { period: 0.04, dampingRatio: 0, relaxAt: 0 });
+    const skinless: Hands = { ...TEST_HANDS, chain: { ...TEST_CHAIN, palmSkinMass: 0, fingerSkinMass: 0 } };
+    const drive = trackDrive(levelArc(centre), { period: Infinity, dampingRatio: 0, relaxAt: Infinity }, skinless);
     return isolated({
         head,
         start: { position: centre, orientation: IDENTITY, velocity, angularVelocity: ZERO },

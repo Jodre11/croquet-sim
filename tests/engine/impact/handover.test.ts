@@ -285,9 +285,10 @@ describe("handover of a ball sunk under the head, on whole rolls", () => {
     // deep in the turf, past its 437 µm static sink, under the head: the 1 m/s full roll at the 450 ms cap with the
     // rim pressing it down, the 2 m/s pass roll 0.25 ms after its last face interval. The handover lifts the ball by
     // that depth, so the head's overlap after the lift (515 to 577 µm) is cleared by the lift, not thrown. Those were
-    // the fixtures until P2b.2b.2c.2c. Now the full rolls at 0.8 m/s end at the 450 ms cap with the ball 549 to 552 µm
-    // deep and the lift clearing 532.5 to 538.7 µm; the 2 m/s pass roll no longer sinks the ball and is kept as a
-    // guard that the handover does not throw (see each case below).
+    // the fixtures until P2b.2b.2c.2c. Now the full rolls at 0.85 m/s end at the 450 ms cap with the lift clearing
+    // 558.5 to 561.2 µm (P2b.2b.2c.3a; at 0.8 m/s the ball was 549 to 552 µm deep and the lift cleared 532.5 to 538.7
+    // µm); the 2 m/s pass roll no longer sinks the ball and is kept as a guard that the handover does not throw (see
+    // each case below).
     const world = defaultWorld();
     const sunkRun = (type: "full-roll" | "pass-roll", speed: number, drive: number, side: number) => {
         // P2b.2b.2b.2c: on the legacy round head; the default box clears the turf (gate).
@@ -310,10 +311,16 @@ describe("handover of a ball sunk under the head, on whole rolls", () => {
     // ball–ball contact time set from Table 1 (was 0.75 m/s): at 0.75 m/s the lift still happens but clears only
     // 473.5–484.8 µm. A second bounded search (8 runs, 0.6–0.9 m/s) found 0.8 m/s: the run reaches the 450 ms cap with
     // the head approaching, blue 549–552 µm deep, and the lift clears 532.5–538.7 µm. The expectation is unchanged.
+    // P2b.2b.2c.3a: one law after contact (was 0.8 m/s). A roll at drive −1 brakes (α < 0), and the check's share now
+    // acts on every stroke, a roll's included (plan decision 16): at 0.8 m/s the run still reaches the 450 ms cap with
+    // the head approaching, but the lift clears only 468.0–483.1 µm. A third bounded search (0.7, 0.75, 0.85 and
+    // 0.9 m/s, every side) found 0.85 m/s: the cap with the head approaching, and the lift clears 558.5–561.2 µm (0.7
+    // m/s clears 498.8–507.6 µm, 0.75 m/s 443.1–454.7 µm; at 0.9 m/s side −0.01 the handover throws its sideways
+    // overlap error, as it did before this change). The expectation is unchanged.
     it.each([
-        ["full-roll", 0.8, -1, -0.01],
-        ["full-roll", 0.8, -1, 0],
-        ["full-roll", 0.8, -1, 0.01],
+        ["full-roll", 0.85, -1, -0.01],
+        ["full-roll", 0.85, -1, 0],
+        ["full-roll", 0.85, -1, 0.01],
     ] as const)("hands over the %s at %s m/s, drive %s, side %s, with the head cleared of a lifted ball", (...run) => {
         const [type, speed, drive, side] = run;
         expect(sunkRun(type, speed, drive, side).impact.overlapCorrection).toBeGreaterThan(5e-4);

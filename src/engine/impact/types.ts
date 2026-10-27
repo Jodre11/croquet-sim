@@ -254,15 +254,14 @@ export type HandName = "top" | "bottom";
  * Two hands on the rigid, massless shaft, which is the head's up axis through the socket (design §3.1): the top hand at
  * the arc radius, the bottom hand `bottom` from the socket (m, in (0, radius)). From `relaxAt` on the top hand grips
  * with γ_T = `gripTension` and the bottom hand with g_B = `bottomGrip`, both in (0, 1]. The player's arm mass
- * `armMass` (kg) rides rigidly at the top grip in swing mode; carry mode replaces it by each hand's and arm's own chain
- * of masses (`chain`; gate round 3 ruling). In swing mode the bottom hand opens once the shaft has turned through
- * `reachSlack` (m of hand travel); in carry mode at the pendulum phase's start. `guideEffort` (in [0, 1]) scales the
- * bottom hand's push after contact in swing mode (the rate guide outside a check, and the push after the release): 1
- * restores the planned arc's speed, 0 is no extra push; a check's guide acts in full (design §3.3; the player's
- * choice, user's account, 2026-10-06). In carry mode from contact each hand flexes by `flex`, the hands' push intent
- * through the push follows the balls' resistance with time constant `pushResponseTime` up to `pushForce`, and the
- * bottom hand's push in the pendulum phase is at most `pendulumForce` (P2b.2b.2b.2b design §3, §4.2; gate ruling
- * 2026-10-11).
+ * `armMass` (kg) rides rigidly at the top grip in the downswing's plan; after contact each hand's and arm's own chain
+ * of masses (`chain`; gate round 3 ruling) holds the mallet. The bottom hand opens at the earlier of the shaft turned
+ * forward through `reachSlack` (m of hand travel) and a push's pendulum phase (P2b.2b.2c.3a A2 item 6). From contact
+ * each hand flexes by `flex`, its feed and flex scaled by its grip; `guideEffort` (in [0, 1]) scales the bottom
+ * hand's flex outside a check: 1 holds the planned arc, 0 leaves that hand its feed alone; a check brakes in full
+ * (design §3.3; the player's choice, user's account, 2026-10-06; A2 item 5). The hands' push intent through a push
+ * follows the balls' resistance with time constant `pushResponseTime` up to `pushForce`, and the bottom hand's push
+ * once open is at most `pendulumForce` (P2b.2b.2b.2b design §3, §4.2; gate ruling 2026-10-11).
  */
 export interface Hands {
     readonly bottom: number;
@@ -271,7 +270,7 @@ export interface Hands {
     readonly armMass: number;
     readonly reachSlack: number;
     readonly guideEffort: number;
-    /** Carry mode from contact (P2b.2b.2b.2b design §3.1): each hand's flex. */
+    /** From contact (P2b.2b.2b.2b design §3.1): each hand's flex. */
     readonly flex: FlexLaw;
     /**
      * F_pendulum (N, design §4.2): the largest forward push the bottom hand gives perpendicular to the shaft in the
@@ -279,7 +278,7 @@ export interface Hands {
      */
     readonly pendulumForce: number;
     /**
-     * F_push (N): carry mode's push intent cap (gate ruling 2026-10-11). Through the push the hands push along aim
+     * F_push (N): the push intent's cap (gate ruling 2026-10-11). Through the push the hands push along aim
      * with the balls' resistance as they sense it, up to this.
      */
     readonly pushForce: number;
@@ -288,12 +287,12 @@ export interface Hands {
      * 2026-10-11): the muscles' voluntary force rise.
      */
     readonly pushResponseTime: number;
-    /** Carry mode (gate round 3 ruling, 2026-10-11): each hand and arm, the hand–arm impedance model's chain. */
+    /** From contact (gate round 3 ruling, 2026-10-11): each hand and arm, the hand–arm impedance model's chain. */
     readonly chain: HandChain;
     /**
      * F_max (N, P2b.2b.2b.3 design §5): each hand's force on the mallet is clipped to this magnitude. Where the hand
-     * holds a position spring its anchor slides at the limit; the slid offset persists in carry mode and relaxes in
-     * swing mode under the limit (GripState).
+     * holds a position spring its anchor slides at the limit; the slid offset persists through the flex and relaxes
+     * on the firm grip under the limit (GripState).
      */
     readonly gripLimit: number;
 }
@@ -434,15 +433,15 @@ export interface ImpactRun {
     /** Keys of the ball–ball and ball–obstacle pairs touching (within CONTACT_TOLERANCE) at t = 0, in pair order. */
     readonly touchingAtStart: readonly string[];
     /**
-     * A tracked drive's bottom hand opening (P2b.2b.1 design §3.3): by reach in swing mode, at the pendulum phase's
-     * start in carry mode (P2b.2b.2b.2b design §4.2): when (s), and the shaft's turn since relaxAt (contact) then
-     * (rad). Absent if it never opened, and for a force table.
+     * A tracked drive's bottom hand opening (P2b.2b.1 design §3.3): at the earlier of the forward reach and a push's
+     * pendulum phase (P2b.2b.2b.2b design §4.2; P2b.2b.2c.3a A2 item 6): when (s), and the shaft's turn since relaxAt
+     * (contact) then (rad). Absent if it never opened, and for a force table.
      */
     readonly release?: { readonly t: number; readonly deltaTheta: number };
     /**
-     * Carry mode's first departure of a ball from the face (s; gate round 13 ruling, "Relax from first departure",
+     * A push's first departure of a ball from the face (s; gate round 13 ruling, "Relax from first departure",
      * 2026-10-12), from which the arms' hold relaxes. The impact does not know which ball is the striker's, so it is
-     * any ball's; in a roll the face meets only the striker's. Absent if no ball left the face, and in swing mode.
+     * any ball's; in a roll the face meets only the striker's. Absent if no ball left the face, and with no push.
      */
     readonly departure?: number;
     /**

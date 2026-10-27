@@ -132,7 +132,12 @@ describe("the follow-through harness (P2b.2b.2c.2d design §3.4)", () => {
         expect(touch?.plannedSpeed).toBeGreaterThan(3);
     });
     // A slow test: Gugan's mallet is solved and the stroke bisected for its contact speed. About 18.6 s locally.
-    it.runIf(SLOW)(
+    // P2b.2b.2c.3a: until stage 2's A1 retune of the AC stop's grip (user ruling, "mark them, retune at stage 2").
+    // One law after contact: the AC stop's loose hands (γ_T = g_B = 0.1) now feed a tenth of their moment shares
+    // through their hand–arm chains and flex at k·0.1 and c·√0.1, where the swing law's top damper held the head. The
+    // brake reaches the head late and the head sinks into the turf, so the ratio falls to 6.3545 against 7.15 ± 0.6
+    // (was 6.66).
+    it.runIf(SLOW).fails(
         "keeps the canonical AC stop's Gugan 5 stop within the band at 3 m/s contact speed",
         { timeout: 80_000 },
         () => {

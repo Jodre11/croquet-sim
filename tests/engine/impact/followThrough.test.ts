@@ -5,6 +5,7 @@ import {
     FOLLOW_SAMPLE,
     HEAD_DEEP_LIMIT,
     IMPACT_DT,
+    finishKind,
     type FollowThrough,
     type ImpactProbe,
     type StrokeState,
@@ -17,7 +18,7 @@ import type { ContactState, TrackDrive } from "../../../src/engine/impact/types"
 import { dot, length, sub } from "../../../src/engine/math/vec3";
 import { buildContact } from "../../../src/engine/swing/buildContact";
 import { ON_TIME } from "../../../src/engine/swing/profile";
-import type { ShotSetup, SwingProfile } from "../../../src/engine/swing/types";
+import type { ShotSetup, StrokeType, SwingProfile } from "../../../src/engine/swing/types";
 import type { World } from "../../../src/engine/types";
 import { defaultWorld } from "../../../src/engine/world";
 import { ballAt, testWorld } from "../support/fixtures";
@@ -126,10 +127,18 @@ describe("the follow-through (design §4)", () => {
         // P2b.2b.2c.2d: the AC stop's figures at its 5° lean and 22.5 mm contact, the head resting on the turf from
         // 16.5 ms (was 11.6 ms and 32 ms at 4° and 20 mm, where the head stayed clear).
         // The hands at TEST_GRIP_LIMIT, so that the hold alone is pinned; the default limit's case follows.
+        // P2b.2b.2c.3a: one law after contact (was no flag on either stop, the GC stop finishing 84 ms after its
+        // impact's end and the AC stop 21.9 ms). The GC stop now meets the hold with its head moving on at 0.742 m/s
+        // along aim (the check reaches it late through the chains) and finishes 43.3 ms after its impact's end. The
+        // AC stop's loose hands (γ_T = g_B = 0.1) now feed a tenth of the head's weight and flex at a tenth of the
+        // gain, so its head sinks into the turf, 0.514 m/s down at the impact's end (turf-yield at 19.41 ms,
+        // impact-head-deep at 19.95 ms), and on into the follow-through (follow-turf-yield and follow-head-deep),
+        // which finishes 68.0 ms after the impact's end. For the gate (stage 2).
         const world = defaultWorld();
+        const flags = { "stop-gc": [], "stop-ac": ["follow-turf-yield", "follow-head-deep"] } as const;
         for (const type of ["stop-gc", "stop-ac"] as const) {
             const { contact, follow } = stroke(unlimited(canonicalSetup(type, { world })), world);
-            expect(follow.flags, type).toEqual([]);
+            expect(follow.flags, type).toEqual(flags[type]);
             expect(follow.finish, type).toBeGreaterThan(follow.impactEnd);
             expect(follow.finish - follow.impactEnd, type).toBeLessThan(1.5 * HAND_COUPLING.period);
             const plan = prepareTrack(contact.drive as TrackDrive, contact.head, world.gravity);
@@ -238,6 +247,44 @@ describe("the follow-through (design §4)", () => {
     });
 });
 
+describe("the finish from the inputs (P2b.2b.2c.3a A2 item 7)", () => {
+    const DEFAULT = defaultWorld();
+    /** The prepared plan of `setup` on the default world, its table through the pulse only: no read goes past it. */
+    const planOf = (setup: ShotSetup) => {
+        const contact = buildContact(setup, DEFAULT);
+        return prepareTrack(contact.drive as TrackDrive, contact.head, DEFAULT.gravity, false);
+    };
+
+    it("names each preset's finish by its inputs, not its type", () => {
+        // A brake (α < 0) takes the check's hold; else a push the carried finish; else the free swing. The stops brake
+        // at their canonical drive, the rolls push, and single-ball and the drive do neither.
+        const expected: Readonly<Record<StrokeType, string>> = {
+            "single-ball": "swing",
+            drive: "swing",
+            "stop-ac": "check",
+            "stop-gc": "check",
+            "half-roll": "carry",
+            "full-roll": "carry",
+            "pass-roll": "carry",
+        };
+        for (const [type, kind] of Object.entries(expected) as [StrokeType, string][]) {
+            expect(finishKind(planOf(canonicalSetup(type))), type).toBe(kind);
+        }
+        expect(finishKind(planOf(canonicalSetup("half-roll", { stroke: { drive: -1 } })))).toBe("check");
+    });
+
+    it("finishes a braked held stroke with the check's hold", () => {
+        // The half roll at drive −1 brakes on a held slope (λ = 1) with a push: the check's hold waits for the push's
+        // end, and holds the held path, which has no free table.
+        const setup = canonicalSetup("half-roll", { stroke: { drive: -1 } });
+        const push = planOf(setup).push as Push;
+        expect(push.end).not.toBeNull();
+        const { follow } = stroke(setup, DEFAULT);
+        expect(follow.flags).not.toContain("follow-cap");
+        expect(follow.finish).toBeGreaterThanOrEqual(push.end as number);
+    });
+});
+
 describe("the planned brake (P2b.2b.2c.2d design §4.1)", () => {
     const DEFAULT = defaultWorld();
     /** The AC stop at drive −1 with its brake begun `early` s before the planned contact. */
@@ -276,12 +323,14 @@ describe("the planned brake (P2b.2b.2c.2d design §4.1)", () => {
         expect((c.drive as TrackDrive).coupling.relaxAt).toBe((c.drive as TrackDrive).arc.contactAt);
     });
 
-    it("a brake that leaves no face contact ends at the cap, reported", { timeout: 30_000 }, () => {
-        // Drive −1 begun 60 ms early stops the head short of the ball (traced: no face interval, the impact runs to
-        // the cap, about 6 s locally), so the cap reports the stroke as `impact-no-strike`. The fault judge reads a
-        // stroke with no face contact as an empty strike, and the state stays finite.
+    it("a brake that leaves no face contact ends, reported", { timeout: 30_000 }, () => {
+        // Drive −1 begun 60 ms early stops the head short of the ball (traced: no face interval). The fault judge reads
+        // a stroke with no face contact as an empty strike, and the state stays finite. P2b.2b.2c.3a: one law after
+        // contact (was the cap at 0.51 s reporting it as `impact-no-strike`, the swing law's hands keeping the head
+        // moving): the hands' flex lets the stopped head come to rest in the turf, 30.06 mm up, so the impact ends at
+        // 321.6 ms reported as `impact-head-stopped` (P2b.2b.2b.3 design §4.6), before the cap.
         const out = simulateShot(braked(0.06), DEFAULT);
-        expect(out.impact.events.map((e) => e.kind)).toContain("impact-no-strike");
+        expect(out.impact.events.map((e) => e.kind)).toContain("impact-head-stopped");
         expect(out.impact.timeline[faceKey("blue")] ?? []).toEqual([]);
         expect(out.faults.strike).toEqual({ parted: null, taps: [], breaks: [], recontacts: [] });
         expect(out.faults.findings.map((f) => f.law)).not.toContain("29.1.6.1");
