@@ -770,3 +770,14 @@ pass-roll: reachSlack 30.0000 mm, r − b 360.0000 mm
   6 m/s drive 1 up 0.003 side 0: release at 41.5000 ms, travel -83.9657 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 24.0000 ms
   6 m/s drive 1 up 0.003 side 0.01: release at 41.5000 ms, travel -83.9499 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 24.0000 ms
 R tally: roll runs crossing the slack before their pendulum phase, as track.ts signs the travel and by its size: half-roll 0 of 226 signed, 152 by size (0 rejected, 0 unreleased, 0 with the impact starting before contact; largest |travel| at release 1.2290 of the slack); full-roll 0 of 226 signed, 226 by size (0 rejected, 0 unreleased, 0 with the impact starting before contact; largest |travel| at release 2.7280 of the slack); pass-roll 0 of 226 signed, 226 by size (0 rejected, 0 unreleased, 0 with the impact starting before contact; largest |travel| at release 3.7178 of the slack)
+
+== Gate stage 1 (user, 2026-10-27): rulings, verbatim in the spec's Amendments A2 ==
+1. Feet: zero offset; stroke.feet is the arc's lowest point along aim from the striker's ball (section F).
+2. Planned slope: accept as built; slope and hands' progress blend; ends run today's code (section P).
+3. Couple: the plan decides, the grip bounds; C = min(γ_T, g_B)·F_max·(r − b), firmness a placeholder (section P:
+   drive at λ 1 with hands together 7.0384 N·m against C 9.7875 N·m).
+4. Swung body: chains on every stroke; grip scales its hand's share and flex gains (k·γ, c·√γ).
+5. Control law: the rolls' law as base, grips and guideEffort as multipliers held at 1 on the rolls.
+6. Opening: the earlier of the signed reach and the pendulum phase; none at push length 0 (section R: 0 of 678 signed).
+7. Finish: brake → check's hold on the firm grip, kept on the track; push → carried; neither → free swing.
+8. Push through: one push on every stroke, the advance merged into its pace; none at length 0.

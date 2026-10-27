@@ -239,3 +239,33 @@ allow retune": the Dong et al. chains become the hand model on every stroke (§4
 the AC stop leaves Gugan 5's band (6.55–7.75) or the drive's re-contact-free `guideEffort` breaks, stage 2 may retune
 that preset's own grip or `guideEffort`, against Gugan 5 only. This amends §4.1's "No other default moves" for those
 two presets alone; every retune is recorded with its old and new figures. The rolls stay held out.
+
+**A2 — gate stage 1 (user, 2026-10-27).** The figures are in `probes/2026-10-27-p2b2b2c3a-stage1.txt` (sections F, P,
+R) and the hand model's note in `probes/2026-10-27-p2b2b2c3a-hand-model.md`. Each ruling as chosen:
+1. **The feet** (§3 confirmed on all four claims). The user: "the bottom of the swing is generally a little bit in
+   front of where the tip of the feet … it varies per player … the name is good because it's what the player would
+   think about, but it also has a variable relationship to the bottom of the arc. But that doesn't mean that we should
+   model that. What we want to move is the bottom of the arc. We could just assume a fixed offset or just a zero
+   offset." Chosen: "Zero offset". `stroke.feet` is the hands' arc's lowest point along aim from the striker's ball;
+   the toe's varying offset behind it is documented, not modelled.
+2. **The planned slope.** "Accept as built": `slopeHold` λ in [0, 1]; between the ends both the slope's progress and
+   the hands' progress blend (the builder's refinement of the plan's decision 1, so that the hands and the planned
+   speed are continuous at λ → 1); the ends run today's code; a null `handTempo` takes the free swing's own fall.
+3. **The couple's bound.** First "Accept" C = min(γ_T, g_B)·F_max·(r − b), the firmness factor a placeholder; re-asked
+   after the user's note that "the grip barely limits the new slope plan"; chosen "A: plan decides, grip bounds". This
+   amends §4.1's "the grip decides how far the hands hold the slope": the plan (λ) decides and the grip bounds it,
+   since hands together can hold a slope (the drive's grip gives C = 9.8 N·m against 7.0 N·m for a held drive).
+   Recorded for P2b.2b.2c.3b: the couple's share of C as a cost on the stroke's effort or a bound of the envelope.
+4. **The swung body.** "Share and flex gains": the chains and `carryBody` on every stroke; each hand fed γ × its moment
+   share, its flex gains k·γ and c·√γ; the chain's own weight and m·a fed in full; the chain's elements unchanged.
+5. **One control law.** "A: rolls' law as base": the carry law is the base; γ_T, g_B and `guideEffort` are multipliers
+   the rolls hold at 1; the check's share, the twist share and the slid anchor's decay act on every stroke; the
+   posture hold, the push intent and its sensing, and the pendulum phase act only with a push.
+6. **The bottom hand's opening.** "A: signed reach or phase": the earlier of the forward reach (signed, as today) and
+   the push's pendulum phase; a push of length 0 has no pendulum phase.
+7. **The finish.** "Accept the note's A/A": a brake (α < 0) takes the check's hold, which waits for the push's end;
+   otherwise a push the carried finish; otherwise the free swing. The hold stays on the firm grip, the chains letting
+   go; it is kept on the track, not the free table, so a check on a held slope (λ = 1) holds the held path.
+8. **The push through.** "A: one push": on every stroke, its pace the plan's travel plus any advance, on the hands'
+   arc, capped at the push length, none at length 0; the reach and the separate advance go; a stop may push. The ease
+   at a push's end is deferred to P2b.2b.2c.3b.
