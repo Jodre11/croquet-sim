@@ -22,7 +22,7 @@
  * - mass: the strike's effective mass at the face centre along aim (design §3.4) against its closed form, which
  *   carries the shaft (P2b.2b.2b.2c design §4.4);
  * - tracking: the head's largest distance from the path with no ball and no turf, per phase: firm before contact,
- *   carry up to the reach's end, inside a check, and swing mode after contact outside a check (the residual);
+ *   carry up to the reach's end, inside a check, and the swing after contact outside a check (the residual);
  * - cost: the tracked canonical impacts against P2b.2a's force-table strokes (the force tables' Jaques round head,
  *   plan decision 8): simulateImpact's whole time, its fixed preparation (prepareTrack) and its integration's µs/step
  *   (the rest over its steps); and the WAKE_MARGIN reach filter's headroom over a long impact (a gentle AC stop, its
@@ -841,7 +841,7 @@ function tracking(): void {
             if (inCheck(track, t)) {
                 return "check";
             }
-            if (arc.mode === "swing") {
+            if (track.push === null) {
                 return "swing";
             }
             return t <= (track.push?.end ?? Infinity) ? "carry" : "after the push";

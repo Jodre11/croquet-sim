@@ -15,7 +15,7 @@ import {
     swungBody,
 } from "../../../src/engine/impact/track";
 import { bedLawOf, staticSink } from "../../../src/engine/impact/turfBed";
-import type { ContactState, Downswing, StrokeMode, TrackDrive } from "../../../src/engine/impact/types";
+import type { ContactState, Downswing, TrackDrive } from "../../../src/engine/impact/types";
 import { add, cross, dot, horizontal, length, scale, sub, vec3, type Vec3 } from "../../../src/engine/math/vec3";
 import {
     MAX_LEAD,
@@ -220,14 +220,15 @@ describe("buildContact, step by step", () => {
         }
     });
 
-    it("copies the mode and the reach, the hands and the body, and grips with HAND_COUPLING", () => {
+    it("copies the reach, the hands and the body, and grips with HAND_COUPLING", () => {
         const profile = testProfile({
             stance: { top: 0.7, bottom: 0.3, gripTension: 0.6, bottomGrip: 0.25 },
-            drive: { mode: "carry", handReach: 0.2, guideEffort: 0.4 },
+            drive: { handReach: 0.2, guideEffort: 0.4 },
+            shape: { slopeHold: 1 },
             body: { armMass: 0.8, reachSlack: 0.02 },
         });
         const drive = buildContact(shot({}, profile), WORLD).drive as TrackDrive;
-        expect([drive.arc.mode, drive.arc.handReach]).toEqual(["carry", 0.2]);
+        expect([drive.arc.slopeHold, drive.arc.handReach]).toEqual([1, 0.2]);
         expect(drive.hands).toEqual({
             bottom: 0.3,
             gripTension: 0.6,
@@ -268,7 +269,8 @@ describe("buildContact, step by step", () => {
         };
         const chain = { ...TEST_CHAIN, forearmMass: 0.4, palmStiffness: 5e4, fingerDamping: 80 };
         const profile = testProfile({
-            drive: { mode: "carry", handReach: 0.2, pendulumAt: 0.7, pendulumEffort: 0.2, handArcRadius: 1.2 },
+            drive: { handReach: 0.2, pendulumAt: 0.7, pendulumEffort: 0.2, handArcRadius: 1.2 },
+            shape: { slopeHold: 1 },
             body: { flex, pendulumForce: 25, pushForce: 120, pushResponseTime: 0.05, chain },
         });
         const preset = (buildContact(shot({}, profile), WORLD).drive as TrackDrive).arc;
@@ -734,8 +736,8 @@ describe("defaultProfile", () => {
     });
 
     it("swings the single-ball stroke, the drive and the stops, and carries the rolls to their reach", () => {
-        const modes = STROKE_TYPES.map((type) => defaultProfile.drive[type].mode);
-        expect(modes).toEqual(["swing", "swing", "swing", "swing", "carry", "carry", "carry"]);
+        const holds = STROKE_TYPES.map((type) => defaultProfile.shape[type].slopeHold);
+        expect(holds).toEqual([0, 0, 0, 0, 1, 1, 1]);
         const reaches = STROKE_TYPES.map((type) => defaultProfile.drive[type].handReach);
         expect(reaches).toEqual([0, 0, 0, 0, 0.15, 0.3, 0.3]);
         expect(defaultProfile.drive["stop-ac"].handDrop).toBe(0.011);
@@ -798,11 +800,6 @@ describe("buildContact rejections", () => {
         ["a stroke type missing from the stance", shot({ type: "drive" }, missing("stance")), /stance has no entry/],
         ["a stroke type missing from the drive", shot({ type: "drive" }, missing("drive")), /drive has no entry/],
         ["a stroke type missing from the shape", shot({ type: "drive" }, missing("shape")), /shape has no entry/],
-        [
-            "a mode other than swing or carry",
-            shot({}, testProfile({ drive: { mode: "chip" as StrokeMode } })),
-            /mode must be "swing" or "carry"/,
-        ],
         ["a non-finite number", shot({ aim: NaN }), /stroke\.aim must be finite/],
         ["a non-finite timing", shot({ timing: { arc: NaN, hands: 0, dip: 0 } }), /stroke\.timing\.arc must be finite/],
         ["a non-finite shot's reach", shot({ handReach: NaN }), /stroke\.handReach must be finite/],
@@ -1124,7 +1121,7 @@ describe("the lead (design §3.5)", () => {
         // A 5 mm backswing pitches the head's rear rim down more than it raises the head: met 10 mm above the face
         // centre, the top is about 3.4 mm in the turf. Carried in 50 ms, the lead is TURF_MARGIN before the release,
         // where the head is held at the top.
-        const quick = testProfile({ drive: { mode: "carry" }, shape: { handTempo: { slow: 0.1, fast: 0.05 } } });
+        const quick = testProfile({ shape: { slopeHold: 1, handTempo: { slow: 0.1, fast: 0.05 } } });
         const setup = shot({ backswing: 0.005, intensity: 1, contact: { up: 0.01, side: 0 } }, quick);
         expect(() => buildContact(setup, WORLD)).toThrow(/the head is in the turf 0\.055 s before contact/);
         // Met at the face centre, the same downswing stays clear and starts on time.
@@ -1338,7 +1335,7 @@ describe("sharpness: stroke.window (P2b.2b.2c.2d design §3.2)", () => {
         const change = length(scale(arc.pivotAcceleration, arc.handWindow));
         expect(change).toBeCloseTo(length(scale(base.pivotAcceleration, base.handWindow)), 12);
     });
-    it("keeps carry mode's hold at the preset's window", () => {
+    it("keeps the hold at the preset's window", () => {
         const c = buildContact(canonicalSetup("full-roll", { stroke: { window: 0.01 } }), WORLD);
         expect((c.drive as TrackDrive).arc.holdWindow).toBe(defaultProfile.drive["full-roll"].window);
     });

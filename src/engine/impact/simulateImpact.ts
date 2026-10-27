@@ -195,8 +195,8 @@ function validateDownswing(down: Downswing, n: Vec3): void {
 
 /**
  * Checks a tracked drive (P2b.2b.1 design §3.6), in this order: every vector and angle finite; a positive radius,
- * windows and dip duration; non-negative start times, contact time and dip start; a non-negative dip depth; a mode of
- * "swing" or "carry"; a non-negative reach; aim a horizontal unit vector within UNIT_TOLERANCE; a positive period, a
+ * windows and dip duration; non-negative start times, contact time and dip start; a non-negative dip depth; a
+ * non-negative reach; aim a horizontal unit vector within UNIT_TOLERANCE; a positive period, a
  * non-negative damping ratio and relaxation time; the bottom hand between the socket and the top hand, both grips in
  * (0, 1], a non-negative arm mass and reach slack, a guide effort in [0, 1]; a pendulumAt, pendulumEffort, handArcLow
  * and slopeHold in [0, 1]; a handArcRadius above the reach; a flex whose values (its hold's too, if any) are
@@ -227,9 +227,6 @@ function validateTrack(drive: TrackDrive): void {
     notBefore(arc.contactAt, "arc.contactAt");
     notBefore(arc.dip.start, "arc.dip.start");
     friction(arc.dip.depth, "arc.dip.depth");
-    if (arc.mode !== "swing" && arc.mode !== "carry") {
-        fail(`arc.mode must be "swing" or "carry" (got ${arc.mode})`);
-    }
     friction(arc.handReach, "arc.handReach");
     const { aim } = arc;
     if (!(Math.abs(aim.z) <= UNIT_TOLERANCE && Math.abs(dot(aim, aim) - 1) <= UNIT_TOLERANCE)) {
@@ -260,8 +257,8 @@ function validateTrack(drive: TrackDrive): void {
         }
     }
     finiteNumber(arc.handArcRadius, "arc.handArcRadius");
-    // Checked in swing mode too, where the arc is never read: a drive that fails it fails either way. Changing that
-    // would be a behaviour change and needs its own ruling.
+    // Checked for a push of no length too, where the arc is never read: a drive that fails it fails either way.
+    // Changing that would be a behaviour change and needs its own ruling.
     if (!(arc.handArcRadius > arc.handReach)) {
         fail(`arc.handArcRadius must exceed arc.handReach (got ${arc.handArcRadius} and ${arc.handReach})`);
     }
@@ -454,16 +451,16 @@ export function validateImpact(
 /**
  * Solves every law and places each ball at its static sink on the bed (turfBed.ts staticSink, at its own position),
  * where a fresh bed's cells carry exactly its weight; each ball's entry carries its bed's law. A tracked drive is
- * prepared once (prepareTrack): its windows' end states, its reach, its swung body and, in swing mode, its free
- * pendulum's table. Touching balls stay touching: their sinks differ only with their offsets on the lattice, by up to
- * about 8 µm on the default lawn, so they part by at most Δz²/(4R), about 3e-10 m. Input must have passed
- * validateImpact. A ball touching an obstacle, which validateImpact accepts within CONTACT_TOLERANCE, is moved
- * horizontally outward until its penetration is at most zero (at most CONTACT_TOLERANCE): a closed pair from t = 0
- * would hold the impact open against turf friction and fake a crush on a legal stroke (P2b.2a design §4). Correcting
- * for one obstacle can push the ball back into another, so the ordered pass over the obstacles repeats until a pass
- * moves nothing, at most PLACEMENT_PASSES times; a ball clear after the first pass is not moved again. Throws an Error
- * if the last pass still moved a ball, i.e. the placement did not settle. A ball's sink comes from `sink`
- * (validateImpact's solver, so that it is solved once).
+ * prepared once (prepareTrack): its windows' end states, its reach, its swung body and, wherever the slope is not fully
+ * held (λ < 1), its free pendulum's table. Touching balls stay touching: their sinks differ only with their offsets
+ * on the lattice, by up to about 8 µm on the default lawn, so they part by at most Δz²/(4R), about 3e-10 m. Input
+ * must have passed validateImpact. A ball touching an obstacle, which validateImpact accepts within
+ * CONTACT_TOLERANCE, is moved horizontally outward until its penetration is at most zero (at most CONTACT_TOLERANCE):
+ * a closed pair from t = 0 would hold the impact open against turf friction and fake a crush on a legal stroke
+ * (P2b.2a design §4). Correcting for one obstacle can push the ball back into another, so the ordered pass over the
+ * obstacles repeats until a pass moves nothing, at most PLACEMENT_PASSES times; a ball clear after the first pass is
+ * not moved again. Throws an Error if the last pass still moved a ball, i.e. the placement did not settle. A ball's
+ * sink comes from `sink` (validateImpact's solver, so that it is solved once).
  */
 export function prepareImpact(
     contact: ContactState,

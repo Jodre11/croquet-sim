@@ -123,7 +123,7 @@ const WINDOW_SHARES = [0.5, 1, 2] as const;
 const MAGNITUDES = [-1, -0.5, 0, 0.5, 1] as const;
 
 /**
- * `setup` with its pulses' window at `share` of the preset's: at 1 the preset's own (no shot window, so carry mode's
+ * `setup` with its pulses' window at `share` of the preset's: at 1 the preset's own (no shot window, so the hold's
  * handWindow stays its own), else the shot's window, which sets both pulses.
  */
 function windowed(setup: ShotSetup, share: number): ShotSetup {
@@ -1607,8 +1607,8 @@ function sectionL(): void {
                 : `reaches pushForce from ${from(firstCap)} to ${from(lastCap)}, ${ms(capped)} ms in all`;
         notes.push(`${type} ${firstCap === null ? "never reaches pushForce" : `at pushForce ${ms(capped)} ms`}`);
         console.log(
-            `${type} (${setup.profile.drive[type].mode} mode, pushForce ${fmt(cap)} N): the intent acts from ` +
-                `${from(firstActive)} to ${from(lastActive)}, ${ms(active)} ms in all; peak ${fmt(peak)} N at ` +
+            `${type} (slope hold ${setup.profile.shape[type].slopeHold}, pushForce ${fmt(cap)} N): the intent acts ` +
+                `from ${from(firstActive)} to ${from(lastActive)}, ${ms(active)} ms in all; peak ${fmt(peak)} N at ` +
                 `${from(peakAt)}; ${reaches}`,
         );
     }

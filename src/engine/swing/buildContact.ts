@@ -9,7 +9,7 @@
  *    planned contact speed;
  * 3. the arcs' changes, against the planned speed: α = drive·speedGain·(speed/ℓ)/window, ℓ the pivot's distance from
  *    the head's centre, and A = drive·handGain·speed·aim/handWindow; the dip, handDrop deepened by the shot's jab,
- *    over dropTime; the mode, the ground depth and the reach (the shot's, else the preset's); the coupling
+ *    over dropTime; the ground depth and the reach (the shot's, else the preset's); the coupling
  *    HAND_COUPLING; the hands the stance's, with the profile's body;
  * 4. the lead L, the earliest action's, or TURF_MARGIN before the downswing first meets the turf if that is earlier
  *    (P2b.2b.2a design §3.5): the impact starts L before contact, on the downswing, so a fat stroke's turf strike is
@@ -73,7 +73,7 @@ export const TURF_MARGIN = 0.005;
 export const MIN_WINDOW = 1e-3;
 
 /**
- * The longest follow-through pulse a shot may set (s). Numerical, not physical: a pulse and carry mode's hold of one
+ * The longest follow-through pulse a shot may set (s). Numerical, not physical: a pulse and the hold of one
  * more window after it, from an onset up to MAX_LEAD early, end well inside the impact's cap (0.15 + 2 × 0.1 < 0.45 s).
  */
 export const MAX_WINDOW = 0.1;
@@ -84,8 +84,8 @@ const WOOD: FaceMaterial = { friction: malletReference.faceFriction.value };
 /** A stance's numbers, each checked finite by name (a missing one included). */
 const STANCE_NUMBERS: readonly (keyof SwingStance)[] = ["handsAhead", "top", "bottom", "gripTension", "bottomGrip"];
 
-/** A drive entry's numbers (all but its mode), each checked finite by name. */
-const DRIVE_NUMBERS: readonly Exclude<keyof SwingDrive, "mode">[] = [
+/** A drive entry's numbers, each checked finite by name. */
+const DRIVE_NUMBERS: readonly (keyof SwingDrive)[] = [
     "speedGain",
     "window",
     "handGain",
@@ -235,9 +235,6 @@ function validate(setup: ShotSetup, ballRadius: number): void {
     }
     if (!shape) {
         fail(`profile.shape has no entry for ${type}`);
-    }
-    if (push.mode !== "swing" && push.mode !== "carry") {
-        fail(`profile.drive.${type}.mode must be "swing" or "carry" (got ${String(push.mode)})`);
     }
     finiteNumber(stroke.aim, "stroke.aim");
     finiteNumber(stroke.backswing, "stroke.backswing");
@@ -671,7 +668,6 @@ export interface StrokePlan {
  * Plans `setup` on `world` (P2b.2b.1 design §5.2; P2b.2b.2a design §3): the contact state, from one scan of the
  * downswing the approach, and the planned contact speed. Throws a RangeError naming the check for:
  * - a striker absent from the setup, or a stroke type missing from the profile's stance, drive or shape;
- * - a mode other than "swing" or "carry";
  * - a non-finite number, or a non-positive mallet dimension or mass, or a negative shaft mass; a box head's edge
  *   radius outside [0, min(h_y, h_z, L/2)) or its moment about the shaft outside the realisable (P2b.2b.2b.2c design
  *   §5.1);
@@ -776,11 +772,10 @@ export function planStroke(setup: ShotSetup, world: World): StrokePlan {
         alpha: (stroke.drive * push.speedGain * contactSpeed) / (lever * window),
         arcStart: lead + timing.arc,
         window,
-        // Carry mode's hold keeps the preset's length: the shot's sharpness is the pulse's alone.
+        // The hold keeps the preset's length: the shot's sharpness is the pulse's alone.
         ...(stroke.window === undefined ? {} : { holdWindow: push.window }),
         dip: { start: lead + dipFrom, duration: push.dropTime, depth },
         contactAt: lead,
-        mode: push.mode,
         slopeHold: profile.shape[type].slopeHold,
         handReach: stroke.handReach ?? push.handReach,
         pendulumAt: stroke.pendulumAt ?? push.pendulumAt,

@@ -7,7 +7,7 @@
  *   the arm's flex and pendulum push (P2b.2b.2b.2b), the push intent's cap and response time, each hand's
  *   hand–arm chain (its gate rulings) and the grip's limit (Young et al. 2009; P2b.2b.2b.3), measured; the
  *   backswing's limit θ_max from reference/swing.json (`body`), a placeholder from the user's account of the stance;
- *   and swing mode's effort, the linear torque–velocity law's τ_0 and ω_max from reference/swing.json (`body`),
+ *   and the swing's effort, the linear torque–velocity law's τ_0 and ω_max from reference/swing.json (`body`),
  *   fitted by scripts/fitStrokeShape.ts to the 9.0 m/s ceiling with κ = ⅔, placeholders (P2b.2b.2c.1 design §4.3,
  *   §4.4); and the hands' peak acceleration along aim from reference/swing.json (`body`), a calibration placeholder,
  *   a body property the player never sets (P2b.2b.2c.1 design, Amendments).
@@ -115,7 +115,6 @@ const DRIVE: Readonly<Record<StrokeType, SwingDrive>> = {
     // Swing: the top hand still (no hand share), the pendulum's light push over 10 ms, then its free swing; no
     // dip, no reach (prototype).
     "single-ball": {
-        mode: "swing",
         speedGain: 0.2,
         window: 0.01,
         handGain: 0,
@@ -135,7 +134,6 @@ const DRIVE: Readonly<Record<StrokeType, SwingDrive>> = {
     // (+49 % on its speed, a possible 29.1.6.1) and the ratio is 2.435; at 0.75 it is 3.753 (Gugan 5's drive, at 0,
     // 4.295).
     drive: {
-        mode: "swing",
         speedGain: 0.2,
         window: 0.005,
         handGain: 0,
@@ -158,7 +156,6 @@ const DRIVE: Readonly<Record<StrokeType, SwingDrive>> = {
     // pre-flight confirms the value. The hands do not travel, so no reach. P2b.2b.2b.2c: on the box the head clears
     // the turf at contact (14.55 mm; gate ruling B); the figures above are the round head's.
     "stop-ac": {
-        mode: "swing",
         speedGain: 1,
         window: 0.01,
         handGain: 0,
@@ -175,7 +172,6 @@ const DRIVE: Readonly<Record<StrokeType, SwingDrive>> = {
     // Swing, checked through the firm, low bottom hand's lever: a hard, level shot with no follow-through; no dip
     // (prototype). A single-ball stroke, the striker's ball crossing a gap to the target (design §5.4).
     "stop-gc": {
-        mode: "swing",
         speedGain: 1,
         window: 0.01,
         handGain: 0,
@@ -193,7 +189,6 @@ const DRIVE: Readonly<Record<StrokeType, SwingDrive>> = {
     // "the mallet head following through the ball and onto the ground"): the hands' speed from the downswing
     // (P2b.2b.2a design §3.3), a light pendulum push, the push 0.15 m (prototype).
     "half-roll": {
-        mode: "carry",
         speedGain: 0.1,
         window: 0.02,
         handGain: 0,
@@ -210,7 +205,6 @@ const DRIVE: Readonly<Record<StrokeType, SwingDrive>> = {
     // Carry: the hands' speed from the downswing (P2b.2b.2a design §3.3) and still accelerating, the push 0.30 m
     // (prototype). A known miss in this phase (design §10).
     "full-roll": {
-        mode: "carry",
         speedGain: 0.1,
         window: 0.03,
         handGain: 0.1,
@@ -228,7 +222,6 @@ const DRIVE: Readonly<Record<StrokeType, SwingDrive>> = {
     // the hands' speed from the downswing (P2b.2b.2a design §3.3) and handGain 0.1. The push 0.30 m; 0.2 m traps
     // the striker's ball against the face (prototype). A known miss in this phase (design §10).
     "pass-roll": {
-        mode: "carry",
         speedGain: 0.5,
         window: 0.015,
         handGain: 0.1,

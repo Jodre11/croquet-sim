@@ -65,13 +65,13 @@ export interface TestProfileOptions {
  * A profile with the test head (1 kg, 0.23 m long, 0.064 m across, on a 0.9 m shaft) and no arm mass, so that the
  * swung body is the head, as TEST_HANDS has it. Every stroke type has the same stance: level (lean 0, the top hand over
  * the socket at contact), the hands 0.8 m and 0.4 m from the socket, firm grips. Every type has the same drive: a
- * swing-mode coast with no dip or reach, a full guide, a pendulum phase at 0.8 of the push with no effort and a 1.5 m
+ * coast with no dip or reach, a full guide, a pendulum phase at 0.8 of the push with no effort and a 1.5 m
  * hands' arc lowest halfway; the body has TEST_FLEX, TEST_PENDULUM_FORCE, TEST_PUSH_FORCE, TEST_PUSH_RESPONSE_TIME,
  * TEST_CHAIN, TEST_GRIP_LIMIT, no backswing limit short of MAX_BACK_ANGLE, no effort (τ_0 = 0, ω_max = 1 rad/s), so
- * a swing-mode stroke falls by gravity alone, and the default's 300 m/s² hands' peak acceleration. Every type has the
- * same shape: the pendulum alone (share 1), a 0.4 s hands' tempo halving at intensity 1, and the slope held (λ = 1)
- * on a carry drive, free (λ = 0) otherwise (plan decision 7). Throws if the stance gives
- * both a `lean` and `handsAhead`.
+ * a stroke falls by gravity alone, and the default's 300 m/s² hands' peak acceleration. Every type has the same
+ * shape: the pendulum alone (share 1), a 0.4 s hands' tempo halving at intensity 1, and the slope free (λ = 0). A test
+ * that wants the slope held gives the shape `slopeHold: 1`. Throws if the stance gives both a `lean` and
+ * `handsAhead`.
  */
 export function testProfile(o: TestProfileOptions = {}): SwingProfile {
     const mallet: SwingProfile["mallet"] = {
@@ -101,7 +101,6 @@ export function testProfile(o: TestProfileOptions = {}): SwingProfile {
         ...given,
     };
     const drive: SwingDrive = {
-        mode: "swing",
         speedGain: 0.2,
         window: 0.01,
         handGain: 0,
@@ -120,8 +119,7 @@ export function testProfile(o: TestProfileOptions = {}): SwingProfile {
         pendulumShare: 1,
         handAngle: 0.5,
         handTempo: { slow: 0.4, fast: 0.2 },
-        // Until the mode goes (plan decision 7), the planned slope follows the drive: held for a carry, free otherwise.
-        slopeHold: drive.mode === "carry" ? 1 : 0,
+        slopeHold: 0,
         ...o.shape,
     };
     const every = <T>(entry: T): Record<StrokeType, T> =>
@@ -334,11 +332,11 @@ const SOLVED = new Map<string, number>();
 
 /**
  * The backswing (m) at which `setup`'s planned contact speed is `speed` (P2b.2b.2a design §5.3): bisection over (0,
- * the MAX_BACK_ANGLE bound] at the setup's intensity, or 0 where it gives none, 60 halvings; in swing mode a midpoint
- * beyond the body's θ_max counts as reaching the speed, and the reach is the speed at θ_max. Memoised on what the
- * planned speed depends on: the type, the intensity, the contact's height (under fixed hands the lean follows it,
- * P2b.2b.2b.1 design §3.3), the profile's entries for the type, the speed, gravity and the ball's radius. It is not
- * memoised on the drive, the contact's side, the timing or the balls. Throws a RangeError for a speed beyond the
+ * the MAX_BACK_ANGLE bound] at the setup's intensity, or 0 where it gives none, 60 halvings; on a slope not fully held
+ * a midpoint beyond the body's θ_max counts as reaching the speed, and the reach is the speed at θ_max. Memoised on
+ * what the planned speed depends on: the type, the intensity, the contact's height (under fixed hands the lean follows
+ * it, P2b.2b.2b.1 design §3.3), the profile's entries for the type, the speed, gravity and the ball's radius. It is
+ * not memoised on the drive, the contact's side, the timing or the balls. Throws a RangeError for a speed beyond the
  * bound's reach. Test support only.
  */
 export function backswingFor(setup: ShotSetup, speed: number, world: World = defaultWorld()): number {
@@ -353,7 +351,6 @@ export function backswingFor(setup: ShotSetup, speed: number, world: World = def
         profile.mallet,
         profile.body,
         stance,
-        profile.drive[type].mode,
         shape,
         speed,
         world.gravity,
@@ -386,7 +383,7 @@ export function backswingFor(setup: ShotSetup, speed: number, world: World = def
             throw error;
         }
     };
-    const reach = profile.drive[type].mode === "swing" ? Math.min(hi, reachOf(profile.body.backswingLimit)) : hi;
+    const reach = shape.slopeHold < 1 ? Math.min(hi, reachOf(profile.body.backswingLimit)) : hi;
     if (at(reach) < speed) {
         throw new RangeError(
             `backswingFor: ${speed} m/s is beyond the ${type} stroke's reach (${at(reach)} m/s at ${reach} m)`,
@@ -410,8 +407,8 @@ const INTENSITY_BISECTIONS = 60;
 
 /**
  * The stroke inputs that plan `setup`'s contact speed `speed`, the default stroke fixing the backswing (P2b.2b.2c.1
- * design, Amendments). A setup that gives an intensity, or a carry-mode one, takes backswingFor's backswing at
- * it. Otherwise, in swing mode, from the preset's defaultBackswing h_0 (reference/swing.json):
+ * design, Amendments). A setup that gives an intensity, or a held-slope one, takes backswingFor's backswing at
+ * it. Otherwise, on a slope not fully held, from the preset's defaultBackswing h_0 (reference/swing.json):
  * 1. speed ≤ U(0) at h_0: the backswing solved at intensity 0 (backswingFor), no intensity given;
  * 2. U(0) < speed ≤ U(1) at h_0: h_0 and the intensity solved by bisection over [0, 1] (U rises with i, design §4.2),
  *    the least found that reaches the speed;
@@ -426,7 +423,7 @@ export function strokeFor(
 ): { backswing: number; intensity?: number } {
     const { stroke, profile } = setup;
     const { type } = stroke;
-    if (stroke.intensity !== undefined || profile.drive[type].mode !== "swing") {
+    if (stroke.intensity !== undefined || profile.shape[type].slopeHold === 1) {
         return { backswing: backswingFor(setup, speed, world) };
     }
     const backswing = swingReference[type].defaultBackswing.value;

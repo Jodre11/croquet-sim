@@ -76,7 +76,7 @@ export interface Routes {
  * One impact step as the harness records it, at its end t (s): the head centre's speed along aim (m/s), the head's
  * lowest point above the turf (m, negative in it), the striker's and the second ball's horizontal speeds w₁ and v₂
  * (m/s), the striker's ball's speed along aim (m/s), the bottom hand's force on the head along aim (N; NaN where
- * the step carries no hand record), and carry mode's push intent's magnitude (N; 0 where it is nil, NaN where the step
+ * the step carries no hand record), and the push intent's magnitude (N; 0 where it is nil, NaN where the step
  * carries no hand record).
  */
 export interface RouteSample {
@@ -196,8 +196,8 @@ export function firstTouch(setup: ShotSetup, world: World): FirstTouch | null {
 
 /**
  * backswingFor's bracket on `setup`'s backswing (m) on `world`, to the bit, so that both solve over the same
- * backswings: `top` the MAX_BACK_ANGLE bound, and `reach` the most the body reaches, the bound at its θ_max in swing
- * mode and `top` otherwise.
+ * backswings: `top` the MAX_BACK_ANGLE bound, and `reach` the most the body reaches, the bound at its θ_max on a
+ * slope not fully held and `top` otherwise.
  */
 export function backswingBracket(setup: ShotSetup, world: World): { readonly top: number; readonly reach: number } {
     const { stroke, profile } = setup;
@@ -214,7 +214,7 @@ export function backswingBracket(setup: ShotSetup, world: World): { readonly top
     const reachOf = (angle: number): number =>
         shape.pendulumShare > 0 ? ((lever * (Math.cos(lean) - Math.cos(angle))) / shape.pendulumShare) * (1 - 1e-9) : 2;
     const top = reachOf(MAX_BACK_ANGLE);
-    const reach = profile.drive[type].mode === "swing" ? Math.min(top, reachOf(profile.body.backswingLimit)) : top;
+    const reach = shape.slopeHold < 1 ? Math.min(top, reachOf(profile.body.backswingLimit)) : top;
     return { top, reach };
 }
 
@@ -225,9 +225,9 @@ const CONTACT_BISECTIONS = 50;
  * The backswing (m) at which `setup`'s contact speed (firstTouch) is `speed` (m/s) on `world`: bisection over the
  * bracket backswingFor (tests/engine/support/shot.ts) uses, (0, the MAX_BACK_ANGLE bound], at the setup's intensity,
  * CONTACT_BISECTIONS halvings, the least found that reaches the speed. A backswing whose head never meets the ball
- * reaches 0 m/s, as the head at rest does at backswing 0; in swing mode a midpoint beyond the body's θ_max counts as
- * reaching the speed, and the bracket's top is the speed at θ_max. Throws a RangeError naming both ends' contact
- * speeds when `speed` lies outside them, never returning an end, and planStroke's other checks.
+ * reaches 0 m/s, as the head at rest does at backswing 0; on a slope not fully held a midpoint beyond the body's θ_max
+ * counts as reaching the speed, and the bracket's top is the speed at θ_max. Throws a RangeError naming both ends'
+ * contact speeds when `speed` lies outside them, never returning an end, and planStroke's other checks.
  */
 export function backswingForContact(setup: ShotSetup, speed: number, world: World): number {
     const { stroke } = setup;
@@ -273,7 +273,8 @@ const INTENSITY_BISECTIONS = 60;
  * The stroke inputs whose contact speed (firstTouch) is `speed` (m/s) on `world`: strokeFor's regimes
  * (tests/engine/support/shot.ts) with the contact speed in place of the planned one, so that a player who plans a
  * brake before contact swings for the speed they want at the ball (P2b.2b.2c.2d design §6). A setup that gives an
- * intensity, or a carry-mode one, takes backswingForContact's backswing at it. Otherwise, in swing mode, from the
+ * intensity, or a held-slope one, takes backswingForContact's backswing at it. Otherwise, on a slope not fully held,
+ * from the
  * preset's defaultBackswing h_0: the backswing at intensity 0 when `speed` is within h_0's reach there; h_0 and the
  * intensity solved by bisection over [0, 1] (INTENSITY_BISECTIONS halvings, the least found that reaches the speed)
  * when it is within h_0's reach at intensity 1; else intensity 1 and the backswing solved at it. Throws
@@ -286,7 +287,7 @@ export function strokeForContact(
 ): { readonly backswing: number; readonly intensity?: number } {
     const { stroke, profile } = setup;
     const { type } = stroke;
-    if (stroke.intensity !== undefined || profile.drive[type].mode !== "swing") {
+    if (stroke.intensity !== undefined || profile.shape[type].slopeHold === 1) {
         return { backswing: backswingForContact(setup, speed, world) };
     }
     const backswing = swingReference[type].defaultBackswing.value;

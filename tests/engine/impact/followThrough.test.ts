@@ -54,7 +54,7 @@ function shot(stroke: Partial<ShotSetup["stroke"]> = {}, profile: SwingProfile =
  * A carry with moving hands: half the backswing from the hands, a 0.15 m reach; 0.25 m back, about 3.45 m/s
  * (plannedSpeed): the pendulum's about 2.31 m/s plus the hands' about 1.14 m/s.
  */
-const CARRY = testProfile({ drive: { mode: "carry", handReach: 0.15 }, shape: { pendulumShare: 0.5 } });
+const CARRY = testProfile({ drive: { handReach: 0.15 }, shape: { pendulumShare: 0.5, slopeHold: 1 } });
 
 function stroke(setup: ShotSetup, world: World = WORLD, dt?: number) {
     const contact = buildContact(setup, world);
@@ -179,8 +179,8 @@ describe("the follow-through (design §4)", () => {
         // pendulum phase never starts and the carry never finishes. The hands' arc must exceed the push
         // (P2b.2b.2b.2b), so its radius is 11 m, as levelArc's.
         const endless = testProfile({
-            drive: { mode: "carry", handReach: 10, handArcRadius: 11 },
-            shape: { pendulumShare: 0.5 },
+            drive: { handReach: 10, handArcRadius: 11 },
+            shape: { pendulumShare: 0.5, slopeHold: 1 },
         });
         // P2b.2b.2b.3: the turf strike (was ["follow-cap"]): the endless carry's head drags on the turf for the
         // follow-through's second, its columns yield and it sinks past HEAD_DEEP_LIMIT, so follow-turf-yield and
@@ -215,8 +215,8 @@ describe("the follow-through (design §4)", () => {
         // the compliant hands hold the head well above that path, but a planned dig far outside play presses it past
         // 2 × HEAD_DEEP_LIMIT (P2b.2b.2b.2b: the carry's descent, which this test drove, is gone with groundDepth).
         const deep = testProfile({
-            drive: { mode: "carry", handReach: 0.15, handDrop: 0.2, dropTime: 0.05 },
-            shape: { pendulumShare: 0.5 },
+            drive: { handReach: 0.15, handDrop: 0.2, dropTime: 0.05 },
+            shape: { pendulumShare: 0.5, slopeHold: 1 },
         });
         const late = { arc: 0, hands: 0, dip: 0.1 };
         const { contact, result, follow } = stroke(shot({ backswing: 0.25, timing: late }, deep));

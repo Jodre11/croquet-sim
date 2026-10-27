@@ -1,10 +1,10 @@
 /**
- * The swing-mode effort law's fit and checks (P2b.2b.2c.1 design §4.3, §4.4, §8.1.3 and its Amendments), shared by
+ * The swing effort law's fit and checks (P2b.2b.2c.1 design §4.3, §4.4, §8.1.3 and its Amendments), shared by
  * scripts/fitStrokeShape.ts and the effort tests, so the fit's solver and the tests agree by construction. Every
  * figure is the engine's own planned contact speed: each swing preset's canonical contact pose (canonicalSetup) and
  * hands, its downswing planned under the effort law and the speed read off the pose (poseSpeed), as
  * fitStrokeShape.ts's cases have always been built. `profile` defaults to `defaultProfile`; the presets are its own
- * swing-mode stroke types.
+ * strokes whose slope is not fully held.
  */
 import type { Hands } from "../src/engine/impact/types";
 import { contactPose, downswingInput, poseSpeed, type ContactPose } from "../src/engine/swing/buildContact";
@@ -20,9 +20,9 @@ import { canonicalSetup } from "../tests/engine/support/shot";
  */
 export const CEILING = 9.0;
 
-/** The default profile's swing-mode stroke types, in the presets' order. */
+/** The default profile's swing stroke types (the slope not fully held), in the presets' order. */
 export const SWING_PRESETS: readonly StrokeType[] = STROKE_TYPES.filter(
-    (type) => defaultProfile.drive[type].mode === "swing",
+    (type) => defaultProfile.shape[type].slopeHold < 1,
 );
 
 /** Numerical, not physical: the effort's bisections stop when the bracket is this close to its upper end, relative. */
@@ -50,8 +50,8 @@ interface Case {
 const CASES = new WeakMap<SwingProfile, Map<StrokeType, Case>>();
 
 function caseOf(type: StrokeType, profile: SwingProfile): Case {
-    if (profile.drive[type].mode !== "swing") {
-        throw new Error(`effortFit: ${type} is not a swing-mode stroke`);
+    if (profile.shape[type].slopeHold === 1) {
+        throw new Error(`effortFit: ${type} holds its slope, so the effort does not act`);
     }
     let cases = CASES.get(profile);
     if (cases === undefined) {

@@ -119,8 +119,8 @@ const FEET_NOTE = [
     "   and holding the feet fixed under a lean change means recomputing handArcLow; with handReach 0 it is moot.",
     "4. CONFIRMED: the still-hand presets' feet change nothing, on the printed rows. Their handReach is 0 and",
     "   handGain 0, so the arc's low point lies at the hands (lowPoint = handsAt), the arrival is 0 for every",
-    "   handArcLow, and the arrival is passed to the downswing only for the rolls (`push.mode` carry; buildContact.ts",
-    "   downswingOf). Nothing changes until the push moves the hands.",
+    "   handArcLow, and the arrival is passed to the downswing for every stroke (arcArrival, 0 with no push;",
+    "   buildContact.ts downswingOf). Nothing changes until the push moves the hands.",
     "",
 ].join("\n");
 

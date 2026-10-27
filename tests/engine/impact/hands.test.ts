@@ -104,7 +104,6 @@ const COAST: SwingArc = {
     window: 0.01,
     dip: NO_DIP,
     contactAt: 0,
-    mode: "swing",
     slopeHold: 0,
     handReach: 10,
     pendulumAt: 0.8,
@@ -114,8 +113,8 @@ const COAST: SwingArc = {
 };
 
 /**
- * A power roll in carry mode, each action timed: the pendulum's window from 10 ms, the hands' from 20 ms, a dip. Its
- * hands arrive on their 11 m arc, lowest 5 m on, descending at its slope −5/√(11² − 5²) (P2b.2b.2b.2b design §4.1).
+ * A power roll with the slope held, each action timed: the pendulum's window from 10 ms, the hands' from 20 ms, a dip.
+ * Its hands arrive on their 11 m arc, lowest 5 m on, descending at its slope −5/√(11² − 5²) (P2b.2b.2b.2b design §4.1).
  */
 const TIMED: SwingArc = {
     ...COAST,
@@ -129,7 +128,6 @@ const TIMED: SwingArc = {
     arcStart: 0.01,
     window: 0.03,
     dip: { start: 0.005, duration: 0.02, depth: 0.01 },
-    mode: "carry",
     slopeHold: 1,
 };
 
@@ -375,7 +373,7 @@ describe("the feed-forward split", () => {
     });
 
     it("splits F_s over both hands inside a check, the top hand's share scaled by γ_T", () => {
-        const arc: SwingArc = { ...TIMED, mode: "swing", slopeHold: 0, alpha: -4 };
+        const arc: SwingArc = { ...TIMED, slopeHold: 0, alpha: -4 };
         const t = 0.012;
         const track = prepare(arc, TEST_COUPLING, ARMED);
         const firm = loadOnPath(track, t);
@@ -594,8 +592,7 @@ describe("the tracked end rule", () => {
 
 describe("the flex (P2b.2b.2b.2b design §3.1, §7.1)", () => {
     /** A still carry in a vertical swing plane: the hands never travel, so no pendulum phase. */
-    const STILL = (o: Partial<SwingArc> = {}): SwingArc =>
-        still({ mode: "carry", handReach: 0.1, pendulumAt: 1, ...o });
+    const STILL = (o: Partial<SwingArc> = {}): SwingArc => still({ slopeHold: 1, handReach: 0.1, pendulumAt: 1, ...o });
     const prepareAt = (arc: SwingArc, gravity: number, hands: Hands = TEST_HANDS): PreparedTrack =>
         prepareTrack(trackDrive(arc, TEST_COUPLING, hands), TEST_HEAD, gravity);
 
@@ -761,11 +758,11 @@ describe("the flex (P2b.2b.2b.2b design §3.1, §7.1)", () => {
         it("latches the first departure: the first step the face–ball pair opens with the ball separating", () => {
             // A held 3 m/s carry into a free ball (gravity off): the run's departure is the end of the face's first
             // interval on the ball, to within a step, and it stays there through any later taps. A run that strikes no
-            // ball never departs; swing mode never records one.
+            // ball never departs; a stroke with no push never records one.
             const ball = vec3(0, 0, 1);
             const begin = vec3(ball.x - R - 1e-6 - TEST_HEAD.length / 2, 0, ball.z);
             const omega0 = 3 / (0.8 + TEST_HEAD.socket.z);
-            const arc = levelArc(begin, { mode: "carry", handReach: 0.1, pendulumAt: 1, omega0 });
+            const arc = levelArc(begin, { slopeHold: 1, handReach: 0.1, pendulumAt: 1, omega0 });
             const track = prepareAt(arc, 0, HELD);
             const head = headOnPath(track, TEST_HEAD, 0);
             const run = integrate(isolated({ start: head, drive: track, balls: [freeBall("blue", ball)] }), {
@@ -805,7 +802,7 @@ describe("the flex (P2b.2b.2b.2b design §3.1, §7.1)", () => {
 describe("the push intent (P2b.2b.2b.2b gate ruling 2026-10-11)", () => {
     /** A still carry in a vertical swing plane: the hands never travel, so the push never ends. */
     const PUSHING = (o: Partial<SwingArc> = {}): SwingArc =>
-        still({ mode: "carry", handReach: 0.1, pendulumAt: 1, ...o });
+        still({ slopeHold: 1, handReach: 0.1, pendulumAt: 1, ...o });
     const prepareAt = (arc: SwingArc, gravity: number): PreparedTrack =>
         prepareTrack(trackDrive(arc, TEST_COUPLING, TEST_HANDS), TEST_HEAD, gravity);
     /** A fresh grip state holding the balls' resistance `R` (N) from the last step. */
@@ -945,7 +942,7 @@ describe("the push intent (P2b.2b.2b.2b gate ruling 2026-10-11)", () => {
         const ball = vec3(0, 0, 1);
         const start = vec3(ball.x - R - 1e-6 - TEST_HEAD.length / 2, 0, ball.z);
         const omega0 = 3 / (0.8 + TEST_HEAD.socket.z);
-        const arc = levelArc(start, { mode: "carry", handReach: 0.1, pendulumAt: 1, omega0 });
+        const arc = levelArc(start, { slopeHold: 1, handReach: 0.1, pendulumAt: 1, omega0 });
         const track = prepareAt(arc, 0);
         const probe = recorder();
         const head = headOnPath(track, TEST_HEAD, 0);
@@ -967,7 +964,7 @@ describe("the push intent (P2b.2b.2b.2b gate ruling 2026-10-11)", () => {
         const ball = vec3(0, 0, 1);
         const begin = vec3(ball.x - R - 1e-6 - TEST_HEAD.length / 2, 0, ball.z);
         const omega0 = 3 / (0.8 + TEST_HEAD.socket.z);
-        const track = prepareAt(levelArc(begin, { mode: "carry", handReach: 0.1, pendulumAt: 1, omega0 }), 0);
+        const track = prepareAt(levelArc(begin, { slopeHold: 1, handReach: 0.1, pendulumAt: 1, omega0 }), 0);
         expect((track.push as Push).pendulum).toBeNull();
         const response = pushResponse(TEST_HANDS, IMPACT_DT);
         const aim = track.arc.aim;
@@ -1022,7 +1019,7 @@ describe("the push intent (P2b.2b.2b.2b gate ruling 2026-10-11)", () => {
     it("takes no resistance from the turf", () => {
         // A carry head pressed 1 mm into the turf and sliding forward: the turf's friction pushes it back along aim,
         // yet the hands match a replay whose R stays 0.
-        const arc = levelArc(vec3(0, 0, TEST_RHO - 1e-3), { mode: "carry", handReach: 0.1, pendulumAt: 1 });
+        const arc = levelArc(vec3(0, 0, TEST_RHO - 1e-3), { slopeHold: 1, handReach: 0.1, pendulumAt: 1 });
         const track = prepareAt(arc, STANDARD_GRAVITY);
         const turf = testHeadTurf();
         const on = headOnPath(track, TEST_HEAD, 0);
@@ -1041,7 +1038,7 @@ describe("the push intent (P2b.2b.2b.2b gate ruling 2026-10-11)", () => {
 describe("the hand–arm chain (P2b.2b.2b.2b gate round 3 ruling, 2026-10-11)", () => {
     /** A still carry in a vertical swing plane: the hands never travel, so no pendulum phase. */
     const HOLDING = (o: Partial<SwingArc> = {}): SwingArc =>
-        still({ mode: "carry", handReach: 0.1, pendulumAt: 1, ...o });
+        still({ slopeHold: 1, handReach: 0.1, pendulumAt: 1, ...o });
     const prepareAt = (arc: SwingArc, gravity: number, hands: Hands = TEST_HANDS): PreparedTrack =>
         prepareTrack(trackDrive(arc, TEST_COUPLING, hands), TEST_HEAD, gravity);
     const shaftOf = (head: HeadState): Vec3 => rotate(head.orientation, UP);
@@ -1283,7 +1280,7 @@ describe("the hand–arm chain (P2b.2b.2b.2b gate round 3 ruling, 2026-10-11)", 
         const ball = vec3(0, 0, 1);
         const begin = vec3(ball.x - R - 1e-6 - TEST_HEAD.length / 2, 0, ball.z);
         const omega0 = 3 / (0.8 + TEST_HEAD.socket.z);
-        const track = prepareAt(levelArc(begin, { mode: "carry", handReach: 0.1, pendulumAt: 1, omega0 }), 0);
+        const track = prepareAt(levelArc(begin, { slopeHold: 1, handReach: 0.1, pendulumAt: 1, omega0 }), 0);
         const a = TEST_HEAD.socket.z + track.arc.radius;
         const probe = recorder();
         const head = headOnPath(track, TEST_HEAD, 0);
@@ -1333,7 +1330,7 @@ describe("the pendulum phase (P2b.2b.2b.2b design §4.2, §4.3, §7.1)", () => {
     };
     /** Leaning 0.5 rad, still, the pendulum phase from contact (pendulumAt 0 on still hands). */
     const SWUNG = (effort: number): SwingArc =>
-        still({ mode: "carry", radius: 0.5, theta0: -0.5, handReach: 0.1, pendulumAt: 0, pendulumEffort: effort });
+        still({ slopeHold: 1, radius: 0.5, theta0: -0.5, handReach: 0.1, pendulumAt: 0, pendulumEffort: effort });
     const prepared = (effort: number, gravity = STANDARD_GRAVITY): PreparedTrack =>
         prepareTrack(trackDrive(SWUNG(effort), TEST_COUPLING, FREE), TEST_HEAD, gravity);
     const UP_AXIS = vec3(0, 0, 1);
@@ -1487,7 +1484,7 @@ describe("the pendulum phase (P2b.2b.2b.2b design §4.2, §4.3, §7.1)", () => {
 
     it("caps a carry whose hands never reach the pendulum point", () => {
         // Review focus 2: still hands and pendulumAt 1 never start the pendulum phase, so the follow-through runs on.
-        const arc = still({ mode: "carry", radius: 0.5, theta0: -0.5, handReach: 0.1, pendulumAt: 1 });
+        const arc = still({ slopeHold: 1, radius: 0.5, theta0: -0.5, handReach: 0.1, pendulumAt: 1 });
         const track = prepareTrack(trackDrive(arc, TEST_COUPLING, FREE), TEST_HEAD, STANDARD_GRAVITY);
         expect((track.push as Push).pendulum).toBeNull();
         const start = headOnPath(track, TEST_HEAD, 0);
@@ -1513,7 +1510,7 @@ describe("one law after contact (P2b.2b.2c.3a A2 item 5)", () => {
     it("feeds each hand its grip times its moment share, the dip in full", () => {
         // A2 item 4: the top hand's chain is fed γ_T × its share plus F_d, the bottom's g_B × its share. The chains
         // take hold in equilibrium under their feeds (holdChain), so the first step's grip forces are the feeds.
-        const arc: SwingArc = { ...TIMED, mode: "swing", slopeHold: 0 };
+        const arc: SwingArc = { ...TIMED, slopeHold: 0 };
         const t = 0.009;
         const dip = dipForce(prepare(arc), t);
         const firm = stepOn(arc, TEST_HANDS, t);
@@ -1558,7 +1555,7 @@ describe("one law after contact (P2b.2b.2c.3a A2 item 5)", () => {
         const swing = still({ omega0: 3, handReach: 0 });
         expect(prepare(swing).push).toBeNull();
         expect(topStiffness(swing, null)).toBe(topStiffness(swing, -1e9));
-        const carry = still({ mode: "carry", handReach: 0.1, pendulumAt: 1 });
+        const carry = still({ slopeHold: 1, handReach: 0.1, pendulumAt: 1 });
         expect(prepare(carry).push).not.toBeNull();
         expect(topStiffness(carry, null)).not.toBe(topStiffness(carry, -1e9));
     });

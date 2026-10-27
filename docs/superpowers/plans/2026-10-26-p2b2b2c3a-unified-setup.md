@@ -922,7 +922,8 @@ Spec §1 criteria 1 and 8; decision 7.
 - The docs of `holdWindow`, `pendulumAt`, `pendulumEffort`, `handArcRadius`, `handArcLow`, `advance` (if it survives
   Task 8) and `guideEffort` apply to every stroke.
 - Spec criterion 1 requires that no comment or name in `src/engine` says "swing mode" or "carry mode". Check with
-  `grep -rn -i -E "(swing|carry)[- ]mode|carry only|swing only" src/engine`, which must print nothing.
+  `grep -rn -i -E "\b(swing|carry)[- ]mode\b|\b(carry|swing) only\b" src/engine`, which must print nothing. The
+  word boundaries keep "swing model" and "downswing only" out (Task 9's finding).
 
 - [ ] **Step 4: Tests, checks and the ratchet.** Expected: bit-identical to Task 8's.
 

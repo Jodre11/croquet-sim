@@ -103,8 +103,8 @@ export function boundaryJumps(trajectory: SwingTrajectory, drive: TrackDrive): B
     if (end + 1 < samples.length) {
         jumps.push(jumpAt(samples, "impact end", end, "after"));
     }
-    // integrate.ts's continueStroke: a check (swing mode, α < 0) holds from max(the window's end, the impact's end).
-    if (arc.mode === "swing" && arc.alpha < 0) {
+    // integrate.ts's continueStroke: a check (α < 0) holds from max(the window's end, the impact's end).
+    if (arc.alpha < 0) {
         const hold = lastAtOrBefore(samples, Math.max(arc.arcStart + arc.window - arc.contactAt, trajectory.impactEnd));
         if (hold + 1 < samples.length) {
             jumps.push(jumpAt(samples, "hold", hold, "after"));

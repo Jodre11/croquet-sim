@@ -143,7 +143,7 @@ describe("the hands' limit (P2b.2b.2b.3 design §5)", () => {
         // A still carry under gravity: each hand's chain carries its share of the head's weight and its own skin,
         // about 5 N for the top hand, against a 2 N limit. The hand transmits 2 N; its hold slides until the palm
         // and fingers carry exactly that, so recomputing the chain at the slid anchor gives the same force.
-        const arc = levelArc(vec3(0, 0, 1), { mode: "carry", handReach: 0.1, pendulumAt: 1 });
+        const arc = levelArc(vec3(0, 0, 1), { slopeHold: 1, handReach: 0.1, pendulumAt: 1 });
         const hands = { ...TEST_HANDS, gripLimit: 2 };
         const coupling: Coupling = { period: 0.04, dampingRatio: 0.7, relaxAt: 0 };
         const track = prepareTrack(trackDrive(arc, coupling, hands), TEST_HEAD, STANDARD_GRAVITY);
@@ -164,9 +164,9 @@ describe("the arms' checking force (P2b.2b.2c.2 design §4, §8.1)", () => {
     const TAU = 20.7 / 744;
     const LIMIT = 50;
 
-    /** `running(LIMIT)` with the arms' hold set to `hold`, in `mode`. */
-    function withHold(hold: FlexHold | null, mode: "swing" | "carry" = "swing"): PreparedTrack {
-        const carry = mode === "carry" ? { mode, handReach: 0.1, pendulumAt: 1, contactAt: 0 } : {};
+    /** `running(LIMIT)` with the arms' hold set to `hold`, and with `carries` a held slope and a 0.1 m push. */
+    function withHold(hold: FlexHold | null, carries = false): PreparedTrack {
+        const carry = carries ? { slopeHold: 1, handReach: 0.1, pendulumAt: 1, contactAt: 0 } : {};
         const arc = levelArc(vec3(0, 0, 1), { ...RUNNING, ...carry });
         const hands = { ...TEST_HANDS, gripLimit: LIMIT, flex: { ...TEST_HANDS.flex, hold } };
         return prepareTrack(trackDrive(arc, FIRM, hands), TEST_HEAD, 0);
@@ -314,8 +314,8 @@ describe("the arms' checking force (P2b.2b.2c.2 design §4, §8.1)", () => {
     });
     it("returns a slid anchor on a held stroke too", () => {
         // A carry arc (slopeHold 1) with no downswing: its anchor, once slid, decays at τ_arm under the limit as the
-        // swung case's does. It replaces the test that carry mode keeps its offset.
-        const carry = withHold(HOLD, "carry");
+        // swung case's does. It replaces the test that a held slope keeps its offset.
+        const carry = withHold(HOLD, true);
         expect(carry.arc.slopeHold).toBe(1);
         const { grip, held } = slide(carry);
         const before = grip.topOffset as Vec3;

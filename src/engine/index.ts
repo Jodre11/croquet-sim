@@ -17,16 +17,7 @@ export {
 } from "./faults";
 export { judgeHoopRun, type HoopRunVerdict, type HoopTarget } from "./hoopRun";
 export { simulateImpact } from "./impact/simulateImpact";
-export type {
-    ContactState,
-    Coupling,
-    Drive,
-    Hands,
-    ImpactEvent,
-    ImpactResult,
-    StrokeMode,
-    SwingArc,
-} from "./impact/types";
+export type { ContactState, Coupling, Drive, Hands, ImpactEvent, ImpactResult, SwingArc } from "./impact/types";
 export { vec3, type Vec3 } from "./math/vec3";
 export { stateAtTime } from "./sample";
 export { simulateShot, type ShotOptions, type ShotOutcome } from "./shot";

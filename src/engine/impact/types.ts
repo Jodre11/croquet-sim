@@ -80,12 +80,6 @@ export interface DriveSample {
     readonly force: Vec3;
 }
 
-/**
- * How the hands carry the mallet after contact (P2b.2b.1 design §3.3): a swing (single-ball, drive, stops) or a carry
- * (rolls).
- */
-export type StrokeMode = "swing" | "carry";
-
 /** The hands' dip (design §3.2): the pivot lowers by `depth` (m) over `duration` (s) from `start`, rest to rest. */
 export interface Dip {
     /** When it begins, s from t = 0. */
@@ -143,7 +137,7 @@ export interface Downswing {
  * top hand (the pivot) in a vertical plane; and the hands' path through space, the pivot moving in that plane (leaning,
  * pushing forward, the body's weight) and dipping. Each runs at its initial rate until its window and changes rate
  * through it by its mean rate times the window, as a minimum-jerk pulse, 6·mean·s(1 − s) at s of the window
- * (P2b.2b.2c.2d design §3.1); what follows depends on the mode (design §3.2). The dip lowers the pivot on top.
+ * (P2b.2b.2c.2d design §3.1); what follows is the same for every stroke (design §3.2). The dip lowers the pivot on top.
  */
 export interface SwingArc {
     /** The top hand at t = 0, world frame. */
@@ -173,12 +167,11 @@ export interface SwingArc {
     /** When the pendulum's window begins (s from t = 0), and its length (s). */
     readonly arcStart: number;
     readonly window: number;
-    /** Carry mode's hold after the pulse (s); absent: `window`. Set when a shot's window differs from the preset's. */
+    /** The hold after the pulse (s); absent: `window`. Set when a shot's window differs from the preset's. */
     readonly holdWindow?: number;
     readonly dip: Dip;
     /** The planned contact (s from t = 0), from which the cap and the reach count. */
     readonly contactAt: number;
-    readonly mode: StrokeMode;
     /**
      * λ in [0, 1] (P2b.2b.2c.3a design §4.1): how far the hands hold the slope in the pendulum's pulse and after it.
      * The pendulum is the free one at 0, the kinematic pulse and hold at 1, and θ, ω and α blend linearly between.

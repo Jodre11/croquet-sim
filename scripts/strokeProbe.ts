@@ -11,9 +11,10 @@
  *   point of impact, P2b.2b.2b.1);
  * - fat: the canonical single-ball stroke met higher on the face (the head lower), 2 to 7 mm: the lead, the dig, and
  *   the planned against the real speed at the first face–ball contact;
- * - cost: per preset, planStroke (in swing mode the downswing's table and scan; it skips the free table),
- *   prepareTrack alone (with the free table in swing mode only), simulateImpact's whole time and its integration's
- *   µs/step (its time less prepareTrack's, over its steps), and the follow-through's steps and µs/step;
+ * - cost: per preset, planStroke (on a free slope the downswing's table and scan; it skips the free table),
+ *   prepareTrack alone (with the free table wherever the slope is not fully held), simulateImpact's whole time and
+ *   its integration's µs/step (its time less prepareTrack's, over its steps), and the follow-through's steps and
+ *   µs/step;
  * - faults: per canonical setup, the striker's face intervals and the fault judge's findings (law, tier, ball and the
  *   contacts count);
  * - pit: per roll's canonical setup at 2 and 3 m/s, the striker's ball in its pit against Gugan's held-out figures
