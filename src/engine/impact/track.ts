@@ -1,14 +1,15 @@
 /**
  * The tracked drive's path (P2b.2b.1 design §3.1, §3.2), as two arcs. The pendulum: the mallet swings about the top
  * hand (the pivot) in a vertical plane, the shaft at arc angle θ. The hands' path through space: the pivot moves in
- * that plane, ends after its reach, and dips. Before contact the path follows the downswing when the arc has one
- * (P2b.2b.2a design §3.5); otherwise each arc runs at its initial rate until its window. Through its window each
- * changes rate by its mean rate times the window, delivered as a minimum-jerk pulse that starts and ends at zero
- * acceleration (Flash and Hogan 1985; P2b.2b.2c.2d design §3.1). After its window the pendulum swings freely, slows
- * to a held slope, or blends the two by λ (P2b.2b.2c.3a design §4.1). The dip lowers the pivot from rest to rest. With
- * a push, after contact the pivot travels the hands' arc and stops at the push length (P2b.2b.2b.2b design §4.1). On
- * every stroke after contact the hands flex to an intended path that starts from the actual grips (carryLoad;
- * P2b.2b.2b.2b design §3, §4; P2b.2b.2c.3a A2 item 5), and with a push swing the mallet through the pendulum phase.
+ * that plane, without a push rests along aim from contact, and dips. Before contact the path follows the downswing
+ * when the arc has one (P2b.2b.2a design §3.5); otherwise each arc runs at its initial rate until its window. Through
+ * its window each changes rate by its mean rate times the window, delivered as a minimum-jerk pulse that starts and
+ * ends at zero acceleration (Flash and Hogan 1985; P2b.2b.2c.2d design §3.1). After its window the pendulum swings
+ * freely, slows to a held slope, or blends the two by λ (P2b.2b.2c.3a design §4.1). The dip lowers the pivot from rest
+ * to rest. With a push, after contact the pivot travels the hands' arc at the plan's pace plus any advance's and stops
+ * at the push length (P2b.2b.2b.2b design §4.1; P2b.2b.2c.3a A2 item 8). On every stroke after contact the hands
+ * flex to an intended path that starts from the actual grips (carryLoad; P2b.2b.2b.2b design §3, §4; P2b.2b.2c.3a A2
+ * item 5), and with a push swing the mallet through the pendulum phase.
  * Through the push they also push along aim against the balls' resistance, at the muscles' pace and capped
  * (pushIntent; gate ruling 2026-10-11). From the flex's start each hand and arm is Dong et al. 2013's x_h 5-DOF
  * hand–arm chain, its flex driving the chain's forearm (gate round 3 ruling, 2026-10-11). The
@@ -110,8 +111,8 @@ export const FREE_STEP = 5e-6;
 export const FREE_SPAN = 1.2;
 
 /**
- * How long after contactAt (s) the hands' path may take to travel 0.8·handReach before the reach is taken not to bind
- * (design §3.2). A modelling bound, not physical: past it the impact has long ended.
+ * How long after contactAt (s) the push may take to travel its length or reach its pendulum phase before it is taken
+ * never to (design §3.2). A modelling bound, not physical: past it the impact has long ended.
  */
 const REACH_SEARCH = 0.5;
 
@@ -283,9 +284,9 @@ function handGains(coupling: Coupling, grip: number, body: SwungBody): HandGains
 }
 
 /**
- * The hands' reach (design §3.2): the planned pivot until it has travelled 0.8·handReach along aim from contactAt, at
- * t1 (where it is at p1, with speed v1 along aim); then its along-aim component decelerates at `decel` to rest at
- * tStop and stays there.
+ * The hands' reach (design §3.2): the planned pivot until t1 (where it is at p1, with speed v1 along aim); then its
+ * along-aim component decelerates at `decel` to rest at tStop and stays there. Without a push the reach rests from
+ * contactAt (restingReach); a reach forward is the push's (P2b.2b.2c.3a A2 item 8).
  */
 export interface Reach {
     readonly t1: number;
@@ -317,11 +318,12 @@ export interface Advance {
 }
 
 /**
- * Carry mode's push (P2b.2b.2b.2b design §4.1, §4.2): from `start` (contactAt), the planned pivot at `origin`, the
- * intended path travels along aim at the plan's pace on the hands' arc. It reaches pendulumAt·handReach at
- * `pendulum` and the push length handReach at `end`, where it stops at once (s from t = 0; null where the plan does
- * not travel that far within REACH_SEARCH). `low` is s_low = handArcLow·handReach (m) and `level` √(ρ_h² − s_low²)
- * (m), the arc's centre's height above the hands at contact.
+ * The hands' push through (P2b.2b.2b.2b design §4.1, §4.2; P2b.2b.2c.3a A2 item 8), on every stroke with a handReach
+ * above 0: from `start` (contactAt), the planned pivot at `origin`, the intended path travels along aim at the plan's
+ * pace plus any `advance`'s on the hands' arc. It reaches pendulumAt·handReach at `pendulum` and the push length
+ * handReach at `end`, where it stops at once (s from t = 0; null where the hands do not travel that far within
+ * REACH_SEARCH). `low` is s_low = handArcLow·handReach (m) and `level` √(ρ_h² − s_low²) (m), the arc's centre's height
+ * above the hands at contact.
  */
 export interface Push {
     readonly start: number;
@@ -330,6 +332,8 @@ export interface Push {
     readonly pendulum: number | null;
     readonly low: number;
     readonly level: number;
+    /** The hands' advance (P2b.2b.2c.1 design §6), its travel added to the plan's; null without one. */
+    readonly advance: Advance | null;
 }
 
 /**
@@ -374,12 +378,10 @@ export interface PreparedTrack {
     readonly pivotVelocityEnd: Vec3;
     /** The dip's acceleration, 4·depth/duration² (m/s²). */
     readonly dipAccel: number;
-    /** Null where the reach does not bind. */
+    /** The resting reach where there is no push (restingReach, a handReach of 0); null with a push. */
     readonly reach: Reach | null;
-    /** Carry mode's push (P2b.2b.2b.2b design §4.1); null in swing mode. In carry mode `reach` is null. */
+    /** The push (P2b.2b.2c.3a A2 item 8): non-null exactly where handReach > 0. */
     readonly push: Push | null;
-    /** Swing mode's advance (P2b.2b.2c.1 design §6); null without one, and in carry mode. */
-    readonly advance: Advance | null;
     /** The free pendulum; null on a fully held slope (λ = 1), or where prepareTrack skipped it. */
     readonly free: FreePendulum | null;
     /**
@@ -662,31 +664,21 @@ export function advanceTravel(
 }
 
 /**
- * The pivot at time t: in carry mode after contactAt on the hands' arc (carryPivot); otherwise with the reach, without
- * the dip, and after the advance's start with its travel along aim, planned so that the free table includes it.
+ * The pivot at time t, without the dip, planned so that the free table includes it: with a push after contactAt on
+ * the hands' arc (carryPivot), and before it from an earlier advance's start the plan with the advance's travel on
+ * that arc (earlyAdvance); without one, with the resting reach: after t1 the along-aim component eases to rest, and
+ * any other component in the swing plane runs on as planned, so V stays continuous.
  */
 function pivotAt(track: PreparedTrack, t: number): Motion {
-    const reached = reachedPivot(track, t);
-    const { advance } = track;
-    if (advance === null || !(t > advance.start)) {
-        return reached;
-    }
-    const { aim } = track.arc;
-    const { a, v, acc } = advanceTravel(advance, t);
-    return { P: add(reached.P, scale(aim, a)), V: add(reached.V, scale(aim, v)), A: add(reached.A, scale(aim, acc)) };
-}
-
-/**
- * The pivot at time t without the advance: in carry mode after contactAt on the hands' arc (carryPivot); otherwise
- * with the reach, without the dip. After t1 the along-aim component eases to rest; any other component in the swing
- * plane runs on as planned, so V stays continuous.
- */
-function reachedPivot(track: PreparedTrack, t: number): Motion {
     const { push } = track;
     if (push !== null && t > push.start) {
         return carryPivot(track, push, t);
     }
     const plan = planPivot(track, t);
+    if (push !== null) {
+        const { advance } = push;
+        return advance !== null && t > advance.start ? earlyAdvance(track, push, advance, plan, t) : plan;
+    }
     const { reach } = track;
     if (reach === null || t <= reach.t1) {
         return plan;
@@ -725,52 +717,22 @@ function restingReach(track: PreparedTrack): Reach {
 }
 
 /**
- * The reach (design §3.2): where the planned pivot has travelled 0.8·handReach along aim from contactAt (by bisection;
- * the swing model's paths travel monotonically), and the ease to rest over the last 0.2·handReach. A handReach of 0
- * rests the along-aim motion from contactAt. Null if the plan does not travel that far within REACH_SEARCH.
+ * When the push has travelled `distance` (m) along aim from the planned pivot at contactAt (P2b.2b.2b.2b design §4.1,
+ * §4.2): the plan's travel plus any `advance`'s (P2b.2b.2c.3a A2 item 8), by bisection (the plans and the advance
+ * travel monotonically); contactAt for a distance of 0 or less; null if the hands do not travel that far within
+ * REACH_SEARCH.
  */
-function computeReach(track: PreparedTrack): Reach | null {
-    const { aim, contactAt, handReach } = track.arc;
-    if (!(handReach > 0)) {
-        return restingReach(track);
-    }
-    const p0 = planPivot(track, contactAt).P;
-    const start = 0.8 * handReach;
-    const along = (t: number): number => dot(sub(planPivot(track, t).P, p0), aim);
-    let lo = contactAt;
-    let hi = contactAt + REACH_SEARCH;
-    if (along(hi) < start) {
-        return null;
-    }
-    for (let i = 0; i < REACH_BISECTIONS; i++) {
-        const mid = (lo + hi) / 2;
-        if (along(mid) < start) {
-            lo = mid;
-        } else {
-            hi = mid;
-        }
-    }
-    const at = planPivot(track, hi);
-    const v1 = Math.max(0, dot(at.V, aim));
-    if (!(v1 > 0)) {
-        return { t1: hi, p1: at.P, v1: 0, decel: 0, tStop: hi };
-    }
-    const ease = 0.4 * handReach;
-    return { t1: hi, p1: at.P, v1, decel: (v1 * v1) / ease, tStop: hi + ease / v1 };
-}
-
-/**
- * When the planned pivot has travelled `distance` (m) along aim from contactAt (P2b.2b.2b.2b design §4.1, §4.2): by
- * bisection, as computeReach (the plans travel monotonically); contactAt for a distance of 0 or less; null if the plan
- * does not travel that far within REACH_SEARCH.
- */
-function travelTime(track: PreparedTrack, distance: number): number | null {
+function travelTime(track: PreparedTrack, distance: number, advance: Advance | null): number | null {
     const { aim, contactAt } = track.arc;
     if (!(distance > 0)) {
         return contactAt;
     }
     const p0 = planPivot(track, contactAt).P;
-    const along = (t: number): number => dot(sub(planPivot(track, t).P, p0), aim);
+    // Without an advance the plan's travel alone, so a roll keeps its bits: no zero term added.
+    const along =
+        advance === null
+            ? (t: number): number => dot(sub(planPivot(track, t).P, p0), aim)
+            : (t: number): number => dot(sub(planPivot(track, t).P, p0), aim) + advanceTravel(advance, t).a;
     let lo = contactAt;
     let hi = contactAt + REACH_SEARCH;
     if (along(hi) < distance) {
@@ -787,43 +749,86 @@ function travelTime(track: PreparedTrack, distance: number): number | null {
     return hi;
 }
 
-/** Carry mode's push for `track` (design §4.1, §4.2). */
+/** The push for `track` (design §4.1, §4.2; P2b.2b.2c.3a A2 item 8), its advance from the arc's. */
 function computePush(track: PreparedTrack): Push {
     const { arc } = track;
     const low = arc.handArcLow * arc.handReach;
+    const advance = arc.advance === undefined ? null : advanceOf(arc, arc.advance);
     return {
         start: arc.contactAt,
         origin: planPivot(track, arc.contactAt).P,
-        end: travelTime(track, arc.handReach),
-        pendulum: travelTime(track, arc.pendulumAt * arc.handReach),
+        end: travelTime(track, arc.handReach, advance),
+        pendulum: travelTime(track, arc.pendulumAt * arc.handReach, advance),
         low,
         level: Math.sqrt(arc.handArcRadius * arc.handArcRadius - low * low),
+        advance,
     };
 }
 
 /**
- * Carry mode's planned pivot after contactAt (design §4.1): s(t), the plan's travel along aim from the push's origin,
- * until the push's end, then the push length at rest; its height on the hands' arc, z(s) = level − √(ρ_h² −
- * (s − s_low)²) above the origin, with ż = z′·ṡ and z̈ = z″·ṡ² + z′·s̈, z′ = u/√(ρ_h² − u²) and z″ = ρ_h²/(ρ_h² −
- * u²)^{3/2}, u = s − s_low. A plan that runs past the push length without a found end (beyond REACH_SEARCH) also
- * rests there.
+ * The height on the push's arc of hands `s` (m) along aim from its origin, moving at ṡ = `ds` and s̈ = `dds`:
+ * z(s) = level − √(ρ_h² − (s − s_low)²) above the origin, with ż = z′·ṡ and z̈ = z″·ṡ² + z′·s̈, z′ = u/√(ρ_h² − u²) and
+ * z″ = ρ_h²/(ρ_h² − u²)^{3/2}, u = s − s_low.
  */
-function carryPivot(track: PreparedTrack, push: Push, t: number): Motion {
-    const { aim, handReach, handArcRadius } = track.arc;
-    const plan = planPivot(track, t);
-    const raw = dot(sub(plan.P, push.origin), aim);
-    const stopped = (push.end !== null && t >= push.end) || raw >= handReach;
-    const s = stopped ? handReach : raw;
-    const ds = stopped ? 0 : dot(plan.V, aim);
-    const dds = stopped ? 0 : dot(plan.A, aim);
+function arcHeight(
+    track: PreparedTrack,
+    push: Push,
+    s: number,
+    ds: number,
+    dds: number,
+): { readonly z: number; readonly v: number; readonly a: number } {
+    const { handArcRadius } = track.arc;
     const u = s - push.low;
     const root = Math.sqrt(handArcRadius * handArcRadius - u * u);
     const slope = u / root;
     const curve = (handArcRadius * handArcRadius) / (root * root * root);
+    return { z: push.level - root, v: slope * ds, a: curve * ds * ds + slope * dds };
+}
+
+/**
+ * The push's planned pivot after contactAt (design §4.1; P2b.2b.2c.3a A2 item 8): s(t), the plan's travel along aim
+ * from the push's origin plus any advance's, until the push's end, then the push length at rest; its height on the
+ * hands' arc (arcHeight). Hands that run past the push length without a found end (beyond REACH_SEARCH) also rest
+ * there.
+ */
+function carryPivot(track: PreparedTrack, push: Push, t: number): Motion {
+    const { aim, handReach } = track.arc;
+    const plan = planPivot(track, t);
+    let raw = dot(sub(plan.P, push.origin), aim);
+    let pace = dot(plan.V, aim);
+    let surge = dot(plan.A, aim);
+    // Without an advance the plan's pace alone, so a roll keeps its bits: no zero term added.
+    if (push.advance !== null) {
+        const { a, v, acc } = advanceTravel(push.advance, t);
+        raw += a;
+        pace += v;
+        surge += acc;
+    }
+    const stopped = (push.end !== null && t >= push.end) || raw >= handReach;
+    const s = stopped ? handReach : raw;
+    const ds = stopped ? 0 : pace;
+    const dds = stopped ? 0 : surge;
+    const height = arcHeight(track, push, s, ds, dds);
     return {
-        P: add(add(push.origin, scale(aim, s)), vec3(0, 0, push.level - root)),
-        V: add(scale(aim, ds), vec3(0, 0, slope * ds)),
-        A: add(scale(aim, dds), vec3(0, 0, curve * ds * ds + slope * dds)),
+        P: add(add(push.origin, scale(aim, s)), vec3(0, 0, height.z)),
+        V: add(scale(aim, ds), vec3(0, 0, height.v)),
+        A: add(scale(aim, dds), vec3(0, 0, height.a)),
+    };
+}
+
+/**
+ * The planned pivot `plan` at time t before contactAt, from the start of an advance timed earlier: the advance's travel
+ * a along aim on the push's arc, so that the hands reach contact a along it, where the push's own path (carryPivot)
+ * takes them on from: their place does not step there.
+ */
+function earlyAdvance(track: PreparedTrack, push: Push, advance: Advance, plan: Motion, t: number): Motion {
+    const { aim } = track.arc;
+    const { a, v, acc } = advanceTravel(advance, t);
+    const height = arcHeight(track, push, a, v, acc);
+    return {
+        P: add(add(plan.P, scale(aim, a)), vec3(0, 0, height.z)),
+        V: add(add(plan.V, scale(aim, v)), vec3(0, 0, height.v)),
+        A: add(add(plan.A, scale(aim, acc)), vec3(0, 0, height.a)),
     };
 }
 
@@ -900,11 +905,11 @@ function tableAt(free: FreePendulum, t: number): { readonly theta: number; reado
 }
 
 /**
- * Prepares `drive` for `head` under `gravity` (design §3.2, §3.3): the windows' end states; in swing mode the reach,
- * in carry mode the push (P2b.2b.2b.2b design §4.1); wherever the slope is not fully held (λ < 1, P2b.2b.2c.3a design
- * §4.1) the free pendulum's table from the window's start, its θ and ω at the window's end being the table's
- * (P2b.2b.2c.2d design §3.1); the swung body and the gains. Without
- * `withFree` the table runs through the pulse only: a caller that reads the path only up to the pendulum's window's
+ * Prepares `drive` for `head` under `gravity` (design §3.2, §3.3): the windows' end states; with a handReach above 0
+ * the push (P2b.2b.2b.2b design §4.1; P2b.2b.2c.3a A2 item 8), else the resting reach; wherever the slope is not
+ * fully held (λ < 1, P2b.2b.2c.3a design §4.1) the free pendulum's table from the window's start, its θ and ω at the
+ * window's end being the table's (P2b.2b.2c.2d design §3.1); the swung body and the gains. Without `withFree` the
+ * table runs through the pulse only: a caller that reads the path only up to the pendulum's window's
  * end saves its cost, and a read past it throws.
  */
 export function prepareTrack(drive: TrackDrive, head: MalletHead, gravity: number, withFree = true): PreparedTrack {
@@ -917,9 +922,6 @@ export function prepareTrack(drive: TrackDrive, head: MalletHead, gravity: numbe
     // A2 item 4), which replace the arm mass riding rigidly at the top grip: the swung body is the head with the hands'
     // skin at the grips. The downswing still plans on the arm mass (swungBody, downswingInput).
     const body = carryBody(head, hands.chain, arc.radius, hands.bottom);
-    // Until the push runs on every stroke (P2b.2b.2c.3a decision 16), the mode alone chooses the push against the reach
-    // and the advance.
-    const carry = arc.mode === "carry";
     const plain: PreparedTrack = {
         kind: "track",
         arc,
@@ -938,7 +940,6 @@ export function prepareTrack(drive: TrackDrive, head: MalletHead, gravity: numbe
         dipAccel: (4 * arc.dip.depth) / (arc.dip.duration * arc.dip.duration),
         reach: null,
         push: null,
-        advance: carry || arc.advance === undefined ? null : advanceOf(arc, arc.advance),
         free: null,
         held: null,
         body,
@@ -951,15 +952,10 @@ export function prepareTrack(drive: TrackDrive, head: MalletHead, gravity: numbe
         top: handGains(coupling, hands.gripTension, body),
         bottom: handGains(coupling, hands.bottomGrip, body),
     };
-    let reached: PreparedTrack;
-    if (carry) {
-        reached = { ...plain, push: computePush(plain) };
-    } else {
-        // An advance alone carries the hands handReach, so the planned pivot's own reach rests from contact: one
-        // budget, never the reach's distance on top (P2b.2b.2c.1 design, Amendments).
-        const reach = plain.advance === null ? computeReach(plain) : restingReach(plain);
-        reached = { ...plain, reach };
-    }
+    // Hands that reach forward push through, at the plan's pace plus any advance's (P2b.2b.2c.3a A2 item 8); a push of
+    // length 0 is none, and the planned pivot rests along aim from contact.
+    const reached: PreparedTrack =
+        arc.handReach > 0 ? { ...plain, push: computePush(plain) } : { ...plain, reach: restingReach(plain) };
     // A fully held slope (λ = 1) has no free pendulum to tabulate (P2b.2b.2c.3a design §4.1).
     if (!(arc.slopeHold < 1)) {
         return reached;

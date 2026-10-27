@@ -362,7 +362,8 @@ export interface FollowThrough {
     readonly finish: number;
     readonly flags: readonly FollowFlag[];
     /**
-     * The hands' advance (P2b.2b.2c.1 design §6): its start and end, where the hands come to rest. Present only when
+     * The push's advance (P2b.2b.2c.1 design §6; P2b.2b.2c.3a A2 item 8): its start and end, where its own travel
+     * ends. Present only when
      * it started before the finish, so every run without one keeps its shape to the bit.
      */
     readonly advanced?: { readonly start: number; readonly end: number };
@@ -396,20 +397,15 @@ export function finishKind(plan: PreparedTrack): FinishKind {
 
 /**
  * True once the head in `state` at time t has reached its finish (P2b.2b.2a design §4.2): a swing at the pendulum's
- * apex, its pitch rate about n at or below zero, outside its advance (before its start or from its end, so it cannot
- * fire while the hands still travel); a check at rest relative to the hands once any push has ended (a push whose plan
+ * apex, its pitch rate about n at or below zero (a swing has no push, so its hands never travel; P2b.2b.2c.3a A2 item
+ * 8); a check at rest relative to the hands once any push has ended (a push whose plan
  * never reaches its length never ends, and runs to the cap); a carry at the first apex after its pendulum phase
  * starts, its pitch rate at or below zero once it has been positive (`grip.rising`; P2b.2b.2b.2b design §4.3).
  */
 function finished(kind: FinishKind, plan: PreparedTrack, state: HeadState, t: number, grip: GripState): boolean {
     switch (kind) {
-        case "swing": {
-            const pushed = plan.advance;
-            if (pushed !== null && t >= pushed.start && t < pushed.end) {
-                return false;
-            }
+        case "swing":
             return dot(state.angularVelocity, plan.axis) <= 0;
-        }
         case "check": {
             // Moving hands carry a held head with them, at rest relative to them at once: wait for the push's end.
             const { push } = plan;
@@ -1305,7 +1301,7 @@ export function integrateStroke(setup: ImpactSetup, options: ImpactOptions = {},
 
         quiet = hardClosed ? 0 : quiet + 1;
         const settled = struck && now >= driveEnd && quiet >= RELEASE_STEPS && !turfMoving;
-        // Carry waits for the pendulum phase (§4.2): trackEnd is not enough, as the end test runs at t + dt.
+        // A push waits for the pendulum phase (§4.2): trackEnd is not enough, as the end test runs at t + dt.
         const waiting =
             plan.kind === "track" && plan.push !== null && plan.push.pendulum !== null && grip.releasedAt === null;
         if (settled && !waiting && (plan.kind === "force" || !stillReaching(state, head, balls, R, plan, now))) {
@@ -1454,7 +1450,7 @@ function continueStroke(
     if ((trace[trace.length - 1] as StrokeState).t !== end) {
         trace.push({ t: end, head: state });
     }
-    const pushed = plan.advance;
+    const pushed = plan.push === null ? null : plan.push.advance;
     if (pushed !== null && pushed.start < end) {
         const advanced = { start: pushed.start, end: pushed.end };
         return { samples: trace, impactEnd: first * dt, finish: end, flags, advanced };

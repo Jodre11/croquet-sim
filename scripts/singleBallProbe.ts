@@ -14,7 +14,7 @@
  *   turf long after the face lets it go), its skid and travel, the face's contact time, the head's highest point over
  *   the advance, the follow-through's finish and flags, the level stroke's hands' advance (the body's peak
  *   acceleration a, V, W = V/a, the ramp's, cruise's and rest's distances) and the planned hands' travel along aim
- *   from contact to rest (at most handReach, the advance replacing the pivot's own reach);
+ *   from contact to rest (at most handReach, the advance's travel and the plan's sharing one push);
  * - E. the mistimed advance: the single-ball stroke at 3 m/s with handReach 0.3 m, the advance from 0.02 s early to
  *   0.32 s late and none, then `drive` from 0 to 1 with no advance: the face's contact time, the head's highest point
  *   after contact, whether the advance started before the finish, and the fault judge's findings;
@@ -537,11 +537,11 @@ function sectionD(): void {
  * The level stroke's hands' advance on its prepared track: the body's peak acceleration a, V, W = V/a, and the
  * advance's travel along aim at the ramp's end, over the cruise to 0.8·D and at rest; then the planned hands' travel
  * along aim from contact (handsAt, 1 ms steps): at the advance's rest, the most to the finish and at the finish,
- * against handReach, which the advance alone carries. None without an advance.
+ * against handReach, at which the push stops them. None without an advance.
  */
 function advanceLines(r: Run): string[] {
     const track = prepareTrack(r.plan.contact.drive as TrackDrive, r.plan.contact.head, WORLD.gravity);
-    const a = track.advance;
+    const a = track.push === null ? null : track.push.advance;
     if (a === null) {
         return [];
     }

@@ -18,9 +18,16 @@ import { TEST_HANDS, TEST_HEAD, levelArc, trackDrive } from "../support/impact";
 /** A firm grip held to its path before relaxAt, with no damping, so that each hand's force is its spring's alone. */
 const FIRM: Coupling = { period: 0.04, dampingRatio: 0, relaxAt: 10 };
 
-/** A level path whose pivot runs along aim at 1 m/s, gravity off: the hands' feed-forward is then zero. */
+/**
+ * A level path whose pivot runs along aim at 1 m/s, gravity off: the hands' feed-forward is then zero. P2b.2b.2c.3a: a
+ * push wherever handReach > 0 (A2 item 8), on the hands' arc, so the path has none and its contact comes with the
+ * grip's relaxing, at FIRM's relaxAt (was the fixture's 10 m reach from contact at 0, which never bound in swing mode):
+ * before contact the planned pivot runs on, as it did.
+ */
+const RUNNING = { pivotVelocity: vec3(1, 0, 0), handReach: 0, contactAt: FIRM.relaxAt };
+
 function running(limit: number, coupling: Coupling = FIRM): PreparedTrack {
-    const arc = levelArc(vec3(0, 0, 1), { pivotVelocity: vec3(1, 0, 0) });
+    const arc = levelArc(vec3(0, 0, 1), RUNNING);
     return prepareTrack(trackDrive(arc, coupling, { ...TEST_HANDS, gripLimit: limit }), TEST_HEAD, 0);
 }
 
@@ -159,8 +166,8 @@ describe("the arms' checking force (P2b.2b.2c.2 design §4, §8.1)", () => {
 
     /** `running(LIMIT)` with the arms' hold set to `hold`, in `mode`. */
     function withHold(hold: FlexHold | null, mode: "swing" | "carry" = "swing"): PreparedTrack {
-        const carry = mode === "carry" ? { mode, handReach: 0.1, pendulumAt: 1 } : {};
-        const arc = levelArc(vec3(0, 0, 1), { pivotVelocity: vec3(1, 0, 0), ...carry });
+        const carry = mode === "carry" ? { mode, handReach: 0.1, pendulumAt: 1, contactAt: 0 } : {};
+        const arc = levelArc(vec3(0, 0, 1), { ...RUNNING, ...carry });
         const hands = { ...TEST_HANDS, gripLimit: LIMIT, flex: { ...TEST_HANDS.flex, hold } };
         return prepareTrack(trackDrive(arc, FIRM, hands), TEST_HEAD, 0);
     }

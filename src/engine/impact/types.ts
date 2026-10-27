@@ -187,14 +187,14 @@ export interface SwingArc {
     /** How far the hands' path travels along aim after contactAt (m). */
     readonly handReach: number;
     /**
-     * Carry only (P2b.2b.2b.2b design §4.2): the pendulum phase starts once the intended path has travelled
-     * `pendulumAt` (in [0, 1]) of the push length `handReach`; the bottom hand then pushes with `pendulumEffort` (in
-     * [0, 1]) of the hands' pendulumForce until the shaft passes vertical.
+     * With a push, a handReach above 0 (P2b.2b.2b.2b design §4.2; P2b.2b.2c.3a A2 item 8): the pendulum phase starts
+     * once the intended path has travelled `pendulumAt` (in [0, 1]) of the push length `handReach`; the bottom hand
+     * then pushes with `pendulumEffort` (in [0, 1]) of the hands' pendulumForce until the shaft passes vertical.
      */
     readonly pendulumAt: number;
     readonly pendulumEffort: number;
     /**
-     * Carry only (design §4.1): the hands' arc, a circle of radius `handArcRadius` (m, above the push length) in the
+     * With a push (design §4.1): the hands' arc, a circle of radius `handArcRadius` (m, above the push length) in the
      * swing plane, lowest `handArcLow` (in [0, 1]) of the push length ahead of the hands at contact.
      */
     readonly handArcRadius: number;
@@ -208,9 +208,10 @@ export interface SwingArc {
      */
     readonly downswing?: Downswing;
     /**
-     * Swing only (P2b.2b.2c.1 design §6): the hands' advance, their push forward along aim over `handReach` from
-     * `start` (s from t = 0), ramping up to `speed` (m/s), the head's planned speed along aim at contact, at the body's
-     * peak acceleration `accel` (m/s², a body property), so over speed/accel. Absent: no advance.
+     * The hands' advance (P2b.2b.2c.1 design §6), its travel along aim added to the push's over `handReach`
+     * (P2b.2b.2c.3a A2 item 8) from `start` (s from t = 0), ramping up to `speed` (m/s), the head's planned speed along
+     * aim at contact, at the body's peak acceleration `accel` (m/s², a body property), so over speed/accel. Absent: no
+     * advance.
      * `planStroke` validates it (checkAdvance); a hand-built arc's advance is not checked.
      */
     readonly advance?: { readonly start: number; readonly speed: number; readonly accel: number };

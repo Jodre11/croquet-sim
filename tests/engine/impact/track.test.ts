@@ -25,7 +25,6 @@ import {
     type PathPoint,
     type PreparedTrack,
     type Push,
-    type Reach,
 } from "../../../src/engine/impact/track";
 import { validateImpact } from "../../../src/engine/impact/simulateImpact";
 import type { Downswing, Hands, SwingArc, TrackDrive } from "../../../src/engine/impact/types";
@@ -460,26 +459,27 @@ describe("the hands' reach", () => {
     const CENTRE = vec3(0, 0, 1);
     const pivotAt = (track: PreparedTrack, t: number) => pivotOf(pathAt(track, t), track.arc.radius);
 
-    it("stops the pivot's along-aim motion handReach from contactAt, at rest from t_s, the rest running on", () => {
-        // Swing mode, so no descent; the vertical part of the pivot's velocity is off aim and runs on.
+    it("pushes the pivot handReach along aim from contactAt on the hands' arc, at rest from the push's end", () => {
+        // P2b.2b.2c.3a: the reach forward is the push's (A2 item 8) (was the reach's ease to rest from t1 =
+        // contactAt + 0.04 s, at rest from t_s = t1 + 0.02 s, the vertical speed 0.3 m/s running on): the plan's 2 m/s
+        // along aim carries the hands 0.1 m by contactAt + 0.05 s, where they stop at once. The path is the hands' arc,
+        // lowest halfway along the push, so they are back at their height at contact there, and nothing runs on.
         const arc = levelArc(CENTRE, { pivotVelocity: vec3(2, 0, 0.3), handReach: 0.1, contactAt: 0.01 });
         const track = prepare(arc);
-        const reach = track.reach as Reach;
+        expect(track.reach).toBeNull();
+        const push = track.push as Push;
         const from = pivotAt(track, arc.contactAt).P;
-        expect(reach.t1).toBeCloseTo(arc.contactAt + 0.04, 12);
-        expect(reach.tStop).toBeCloseTo(reach.t1 + (0.4 * 0.1) / 2, 12);
-        for (const t of [reach.tStop, reach.tStop + 0.02, 0.2]) {
+        expect(push.end as number).toBeCloseTo(arc.contactAt + 0.05, 12);
+        for (const t of [push.end as number, (push.end as number) + 0.02, 0.2]) {
             const p = pivotAt(track, t);
             expect(p.P.x - from.x, `travel at ${t}`).toBeCloseTo(0.1, 12);
+            expect(p.P.z - from.z, `height at ${t}`).toBeCloseTo(0, 12);
             expect(p.V.x, `along-aim speed at ${t}`).toBeCloseTo(0, 12);
-            expect(p.V.z, `vertical speed at ${t}`).toBeCloseTo(0.3, 12);
+            expect(p.V.z, `vertical speed at ${t}`).toBeCloseTo(0, 12);
         }
-        for (const t of [reach.t1, reach.tStop]) {
-            const before = pivotAt(track, t);
-            const after = pivotAt(track, t + 1e-12);
-            expect(dist(before.P, after.P), `position at ${t}`).toBeLessThan(1e-11);
-            expect(dist(before.V, after.V), `velocity at ${t}`).toBeLessThan(1e-9);
-        }
+        const before = pivotAt(track, arc.contactAt);
+        const after = pivotAt(track, arc.contactAt + 1e-12);
+        expect(dist(before.P, after.P), "position at contact").toBeLessThan(1e-11);
     });
 
     it("rests the along-aim motion from contactAt with a reach of 0", () => {
@@ -492,12 +492,19 @@ describe("the hands' reach", () => {
         expect(pivotAt(track, 0.01).V.x).toBe(2);
     });
 
-    it("does not bind if the plan does not travel 0.8·handReach within 0.5 s of contactAt", () => {
+    it("never ends the push, or starts its pendulum phase, if the plan does not travel that far within 0.5 s", () => {
+        // P2b.2b.2c.3a: the reach forward is the push's (A2 item 8) (was the reach not binding below 0.8·handReach in
+        // 0.5 s, and binding from t1 = 0.08/0.17 s above it): 0.15 m/s travels 0.075 m in 0.5 s, short of the
+        // pendulum phase's 0.8·0.1 m, so neither is found and the hands run on along aim at the plan's pace; 0.17 m/s
+        // reaches the pendulum phase at 0.08/0.17 s and falls short of the push's end.
         const slow = prepare(levelArc(CENTRE, { pivotVelocity: vec3(0.15, 0, 0), handReach: 0.1 }));
-        expect(slow.reach).toBeNull();
+        const slowPush = slow.push as Push;
+        expect([slowPush.end, slowPush.pendulum]).toEqual([null, null]);
         expect(pivotAt(slow, 0.2).V.x).toBe(0.15);
         const brisk = prepare(levelArc(CENTRE, { pivotVelocity: vec3(0.17, 0, 0), handReach: 0.1 }));
-        expect(brisk.reach?.t1).toBeCloseTo(0.08 / 0.17, 12);
+        const briskPush = brisk.push as Push;
+        expect(briskPush.end).toBeNull();
+        expect(briskPush.pendulum as number).toBeCloseTo(0.08 / 0.17, 12);
     });
 });
 
@@ -551,13 +558,17 @@ describe("the hands' arc after contact (P2b.2b.2b.2b design §4.1)", () => {
         expect(length(sub(before.velocity, after.velocity))).toBeLessThan(1e-6);
     });
 
-    it("starts the pendulum phase at contact for a push of length 0", () => {
-        // Review focus 1: the arc's low point is at contact, so the hands arrive level and rest there.
+    it("builds no push at length 0: the hands rest along aim from contact", () => {
+        // Review focus 1. P2b.2b.2c.3a: a push of length 0 is none (A2 item 8) (was a push ending, and its pendulum
+        // phase starting, at contact, the hands at rest there): the resting reach stops the plan's along-aim motion at
+        // contact, and its descent off aim runs on.
         const none = prepareTrack(trackDrive({ ...ARC, handReach: 0 }), TEST_HEAD, STANDARD_GRAVITY);
-        const nonePush = none.push as Push;
-        expect([nonePush.end, nonePush.pendulum]).toEqual([0, 0]);
-        expect(handsAt(none, 0.1).velocity).toEqual(vec3(0, 0, 0));
-        expect(Number.isFinite(handsAt(none, 0.1).position.z)).toBe(true);
+        expect(none.push).toBeNull();
+        expect(none.reach).not.toBeNull();
+        const hands = handsAt(none, 0.1);
+        expect(dot(hands.velocity, AIM)).toBe(0);
+        expect(dot(sub(hands.position, start), AIM)).toBeCloseTo(0, 15);
+        expect(Number.isFinite(hands.position.z)).toBe(true);
     });
 
     it("never starts the push's end or the pendulum phase for hands that never travel", () => {
@@ -566,10 +577,12 @@ describe("the hands' arc after contact (P2b.2b.2b.2b design §4.1)", () => {
         expect([never.end, never.pendulum]).toEqual([null, null]);
     });
 
-    it("leaves swing mode's path as it was: a reach and no push", () => {
+    it("builds the same push whatever the slope's hold, and no reach", () => {
+        // P2b.2b.2c.3a: a push wherever handReach > 0 (A2 item 8) (was a swing arc's reach and no push). The push
+        // reads only the planned pivot, which the slope's hold does not move.
         const swing = prepareTrack(trackDrive({ ...ARC, mode: "swing", slopeHold: 0 }), TEST_HEAD, STANDARD_GRAVITY);
-        expect(swing.push).toBeNull();
-        expect(swing.reach).not.toBeNull();
+        expect(swing.push).toEqual(push);
+        expect(swing.reach).toBeNull();
     });
 
     // Contact moved to 0.03 s so that the hands' window [0.01, 0.02] lies wholly before it, where the planned pivot is

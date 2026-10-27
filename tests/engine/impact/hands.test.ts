@@ -519,9 +519,13 @@ describe("the tracked end rule", () => {
     const START = vec3(BALL.x - R - 1e-6 - TEST_HEAD.length / 2, 0, BALL.z);
     const RED = vec3(BALL.x + 2 * R, 0, BALL.z);
 
-    /** A level 3 m/s swing (gravity off) into the balls, its face 1 µm short of the ball at BALL. */
+    /**
+     * A level 3 m/s swing (gravity off) into the balls, its face 1 µm short of the ball at BALL. P2b.2b.2c.3a: a push
+     * wherever handReach > 0 (A2 item 8), so the swing has a handReach of 0 (was the fixture's 10 m reach, which never
+     * bound in swing mode); its hands are still, so the path is the same.
+     */
     function strikeRun(balls: ImpactBall[], cap?: number) {
-        const arc = levelArc(START, { omega0: 3 / (0.8 + TEST_HEAD.socket.z) });
+        const arc = levelArc(START, { omega0: 3 / (0.8 + TEST_HEAD.socket.z), handReach: 0 });
         const track = prepareTrack(trackDrive(arc), TEST_HEAD, 0);
         const probe = recorder();
         const setup = isolated({ start: headOnPath(track, TEST_HEAD, 0), drive: track, balls });
@@ -773,7 +777,9 @@ describe("the flex (P2b.2b.2b.2b design §3.1, §7.1)", () => {
             expect(Math.abs((run.departure as number) - first.end)).toBeLessThanOrEqual(IMPACT_DT * 1.000001);
             const missed = integrate(isolated({ start: headOnPath(track, TEST_HEAD, 0), drive: track }), { cap: 0.03 });
             expect(missed.departure).toBeUndefined();
-            const swing = prepareAt(levelArc(begin, { omega0 }), 0, HELD);
+            // P2b.2b.2c.3a: a push wherever handReach > 0 (A2 item 8), so the arc without one has a handReach of 0 (was
+            // the fixture's 10 m reach, which never bound in swing mode).
+            const swing = prepareAt(levelArc(begin, { omega0, handReach: 0 }), 0, HELD);
             const swung = integrate(
                 isolated({ start: headOnPath(swing, TEST_HEAD, 0), drive: swing, balls: [freeBall("blue", ball)] }),
                 { cap: 0.03 },
@@ -861,7 +867,9 @@ describe("the push intent (P2b.2b.2b.2b gate ruling 2026-10-11)", () => {
 
     it("is never read without a push", () => {
         // P2b.2b.2c.3a A2 item 5: keyed on the push, not the mode (was "is never read in swing mode").
-        const track = prepareAt(still({ omega0: 3 }), STANDARD_GRAVITY);
+        // P2b.2b.2c.3a: a push wherever handReach > 0 (A2 item 8), so the arc without one has a handReach of 0 (was
+        // the fixture's 10 m reach, which never bound in swing mode).
+        const track = prepareAt(still({ omega0: 3, handReach: 0 }), STANDARD_GRAVITY);
         expect(track.push).toBeNull();
         const t = 0.002;
         const on = headOnPath(track, TEST_HEAD, t);
@@ -1545,7 +1553,9 @@ describe("one law after contact (P2b.2b.2c.3a A2 item 5)", () => {
             stepOn(arc, HELD, 0.002, grip);
             return grip.topStiffness;
         };
-        const swing = still({ omega0: 3 });
+        // P2b.2b.2c.3a: a push wherever handReach > 0 (A2 item 8), so the arc without one has a handReach of 0 (was
+        // the fixture's 10 m reach, which never bound in swing mode).
+        const swing = still({ omega0: 3, handReach: 0 });
         expect(prepare(swing).push).toBeNull();
         expect(topStiffness(swing, null)).toBe(topStiffness(swing, -1e9));
         const carry = still({ mode: "carry", handReach: 0.1, pendulumAt: 1 });
@@ -1568,10 +1578,12 @@ describe("one law after contact (P2b.2b.2c.3a A2 item 5)", () => {
     it("records a ball's first departure only with a push", () => {
         // A2 item 5: the first-departure latch feeds the posture hold, which acts only with a push, so a swing arc
         // striking a free ball (gravity off) records none. The carry's case is the latch's own test above.
+        // P2b.2b.2c.3a: a push wherever handReach > 0 (A2 item 8), so the arc without one has a handReach of 0 (was
+        // the fixture's 10 m reach, which never bound in swing mode).
         const ball = vec3(0, 0, 1);
         const begin = vec3(ball.x - R - 1e-6 - TEST_HEAD.length / 2, 0, ball.z);
         const swing = prepareTrack(
-            trackDrive(levelArc(begin, { omega0: 3 / (0.8 + TEST_HEAD.socket.z) }), TEST_COUPLING, HELD),
+            trackDrive(levelArc(begin, { omega0: 3 / (0.8 + TEST_HEAD.socket.z), handReach: 0 }), TEST_COUPLING, HELD),
             TEST_HEAD,
             0,
         );

@@ -170,8 +170,8 @@ export interface StrokeTiming {
     /** The dip's start, s from the pendulum's pulse (`arc`): negative before it, 0 coupled to it. */
     readonly dip: number;
     /**
-     * Swing mode only (P2b.2b.2c.1 design §6): when the hands' advance begins, their push forward along aim over the
-     * stroke's handReach; absent: no advance.
+     * When the hands' advance begins (P2b.2b.2c.1 design §6), its travel added to the push's over the stroke's
+     * handReach (P2b.2b.2c.3a A2 item 8); absent: no advance.
      */
     readonly advance?: number;
 }
