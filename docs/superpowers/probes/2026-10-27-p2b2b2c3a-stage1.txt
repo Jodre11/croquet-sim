@@ -1,0 +1,67 @@
+Stage 1 note: design §3's reading of the feet, claim by claim.
+1. CONFIRMED: on a still top hand the feet and the lean are inseparable. The four still-hand presets
+   (single-ball, drive, stop-ac, stop-gc: handGain 0, handReach 0) have attack = -lean to the printed precision
+   (stop-ac: lean -5 deg, attack +5.0000 deg; the other three 0 and 0), and handArcLow moves nothing in the
+   printed rows: the shaft's angle at contact is both.
+2. CONFIRMED: they separate once the hands move. On the rolls, with the lean held, the attack moves by about
+   0.85 deg per 0.25 of handArcLow on the half roll, 2.6 deg on the full roll and 2.5 deg on the pass roll; the
+   attack is also not -lean (the half roll: lean 24 deg, attack -9.7 to -13.1 deg), the hands' own velocity
+   carrying it. Mechanism, read from the code: the arc's slope at contact (arrival) sets the downswing's vertical
+   Hermite end slope, 2*|horizontal travel|*arrival (downswing.ts), which is zero for a still top hand.
+3. CONFIRMED: the low point is measured from the hands, not the ball. The rows show lowPoint - handsAt =
+   handArcLow*handReach for each roll (track.ts computePush: low = handArcLow*handReach from the push's origin,
+   the hands at contact). The hands lie ahead of the ball by 169.4 mm (half roll), 169.7 mm (full roll) and
+   113.6 mm (pass roll), so the half roll's own low point is 244.4 mm from the ball, not 75 mm. That the
+   hands' distance moves with the lean is read from the code, not these rows (none varies the lean):
+   contactPose takes the lean from the stance's handsAhead through stanceLean, and handsAheadFor inverts it
+   (buildContact.ts). So a stroke.feet given from the ball converts to handArcLow = (feet - handsAt)/handReach,
+   and holding the feet fixed under a lean change means recomputing handArcLow; with handReach 0 it is moot.
+4. CONFIRMED: the still-hand presets' feet change nothing, on the printed rows. Their handReach is 0 and
+   handGain 0, so the arc's low point lies at the hands (lowPoint = handsAt), the arrival is 0 for every
+   handArcLow, and the arrival is passed to the downswing only for the rolls (`push.mode` carry; buildContact.ts
+   downswingOf). Nothing changes until the push moves the hands.
+
+== F. the feet's reading (design §3): mm from the striker's ball along aim; degrees ==
+single-ball (own handArcLow): hands at -185.7385 mm, low point -185.7385 mm, arrival 0.0000, attack 0.0000°, lean 0.0000°
+  single-ball handArcLow 0: hands at -185.7385 mm, low point -185.7385 mm, arrival 0.0000, attack 0.0000°, lean 0.0000°
+  single-ball handArcLow 0.25: hands at -185.7385 mm, low point -185.7385 mm, arrival 0.0000, attack 0.0000°, lean 0.0000°
+  single-ball handArcLow 0.5: hands at -185.7385 mm, low point -185.7385 mm, arrival 0.0000, attack 0.0000°, lean 0.0000°
+  single-ball handArcLow 0.75: hands at -185.7385 mm, low point -185.7385 mm, arrival 0.0000, attack 0.0000°, lean 0.0000°
+  single-ball handArcLow 1: hands at -185.7385 mm, low point -185.7385 mm, arrival 0.0000, attack 0.0000°, lean 0.0000°
+drive (own handArcLow): hands at -185.7385 mm, low point -185.7385 mm, arrival 0.0000, attack 0.0000°, lean 0.0000°
+  drive handArcLow 0: hands at -185.7385 mm, low point -185.7385 mm, arrival 0.0000, attack 0.0000°, lean 0.0000°
+  drive handArcLow 0.25: hands at -185.7385 mm, low point -185.7385 mm, arrival 0.0000, attack 0.0000°, lean 0.0000°
+  drive handArcLow 0.5: hands at -185.7385 mm, low point -185.7385 mm, arrival 0.0000, attack 0.0000°, lean 0.0000°
+  drive handArcLow 0.75: hands at -185.7385 mm, low point -185.7385 mm, arrival 0.0000, attack 0.0000°, lean 0.0000°
+  drive handArcLow 1: hands at -185.7385 mm, low point -185.7385 mm, arrival 0.0000, attack 0.0000°, lean 0.0000°
+stop-ac (own handArcLow): hands at -259.6436 mm, low point -259.6436 mm, arrival 0.0000, attack 5.0000°, lean -5.0000°
+  stop-ac handArcLow 0: hands at -259.6436 mm, low point -259.6436 mm, arrival 0.0000, attack 5.0000°, lean -5.0000°
+  stop-ac handArcLow 0.25: hands at -259.6436 mm, low point -259.6436 mm, arrival 0.0000, attack 5.0000°, lean -5.0000°
+  stop-ac handArcLow 0.5: hands at -259.6436 mm, low point -259.6436 mm, arrival 0.0000, attack 5.0000°, lean -5.0000°
+  stop-ac handArcLow 0.75: hands at -259.6436 mm, low point -259.6436 mm, arrival 0.0000, attack 5.0000°, lean -5.0000°
+  stop-ac handArcLow 1: hands at -259.6436 mm, low point -259.6436 mm, arrival 0.0000, attack 5.0000°, lean -5.0000°
+stop-gc (own handArcLow): hands at -185.7385 mm, low point -185.7385 mm, arrival 0.0000, attack 0.0000°, lean 0.0000°
+  stop-gc handArcLow 0: hands at -185.7385 mm, low point -185.7385 mm, arrival 0.0000, attack 0.0000°, lean 0.0000°
+  stop-gc handArcLow 0.25: hands at -185.7385 mm, low point -185.7385 mm, arrival 0.0000, attack 0.0000°, lean 0.0000°
+  stop-gc handArcLow 0.5: hands at -185.7385 mm, low point -185.7385 mm, arrival 0.0000, attack 0.0000°, lean 0.0000°
+  stop-gc handArcLow 0.75: hands at -185.7385 mm, low point -185.7385 mm, arrival 0.0000, attack 0.0000°, lean 0.0000°
+  stop-gc handArcLow 1: hands at -185.7385 mm, low point -185.7385 mm, arrival 0.0000, attack 0.0000°, lean 0.0000°
+half-roll (own handArcLow): hands at 169.3649 mm, low point 244.3649 mm, arrival -0.0501, attack -11.4283°, lean 24.0000°
+  half-roll handArcLow 0: hands at 169.3649 mm, low point 169.3649 mm, arrival 0.0000, attack -9.7235°, lean 24.0000°
+  half-roll handArcLow 0.25: hands at 169.3649 mm, low point 206.8649 mm, arrival -0.0250, attack -10.5775°, lean 24.0000°
+  half-roll handArcLow 0.5: hands at 169.3649 mm, low point 244.3649 mm, arrival -0.0501, attack -11.4283°, lean 24.0000°
+  half-roll handArcLow 0.75: hands at 169.3649 mm, low point 281.8649 mm, arrival -0.0752, attack -12.2773°, lean 24.0000°
+  half-roll handArcLow 1: hands at 169.3649 mm, low point 319.3649 mm, arrival -0.1005, attack -13.1256°, lean 24.0000°
+full-roll (own handArcLow): hands at 169.6815 mm, low point 319.6815 mm, arrival -0.1005, attack -8.2467°, lean 31.0000°
+  full-roll handArcLow 0: hands at 169.6815 mm, low point 169.6815 mm, arrival 0.0000, attack -3.0541°, lean 31.0000°
+  full-roll handArcLow 0.25: hands at 169.6815 mm, low point 244.6815 mm, arrival -0.0501, attack -5.6523°, lean 31.0000°
+  full-roll handArcLow 0.5: hands at 169.6815 mm, low point 319.6815 mm, arrival -0.1005, attack -8.2467°, lean 31.0000°
+  full-roll handArcLow 0.75: hands at 169.6815 mm, low point 394.6815 mm, arrival -0.1517, attack -10.8464°, lean 31.0000°
+  full-roll handArcLow 1: hands at 169.6815 mm, low point 469.6815 mm, arrival -0.2041, attack -13.4607°, lean 31.0000°
+pass-roll (own handArcLow): hands at 113.6315 mm, low point 263.6315 mm, arrival -0.1005, attack -9.4919°, lean 34.0000°
+  pass-roll handArcLow 0: hands at 113.6315 mm, low point 113.6315 mm, arrival 0.0000, attack -4.4812°, lean 34.0000°
+  pass-roll handArcLow 0.25: hands at 113.6315 mm, low point 188.6315 mm, arrival -0.0501, attack -6.9905°, lean 34.0000°
+  pass-roll handArcLow 0.5: hands at 113.6315 mm, low point 263.6315 mm, arrival -0.1005, attack -9.4919°, lean 34.0000°
+  pass-roll handArcLow 0.75: hands at 113.6315 mm, low point 338.6315 mm, arrival -0.1517, attack -11.9947°, lean 34.0000°
+  pass-roll handArcLow 1: hands at 113.6315 mm, low point 413.6315 mm, arrival -0.2041, attack -14.5086°, lean 34.0000°
+F tally: 7 presets, 0 runs rejected; the attack moves with handArcLow on 3 of 7
