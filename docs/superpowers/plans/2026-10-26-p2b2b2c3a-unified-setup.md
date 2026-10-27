@@ -152,6 +152,92 @@ source of decisions; do not re-open them. Also read:
 
     Criterion 6 reuses `followThroughProbe` section O and `swingProbe`'s rehit section.
 
+**Decisions from gate stage 1** (spec amendment A2, 2026-10-27). Items 1–3 ratify decisions 1, 2, 4 and 8's feet as
+built or planned; none sends Task 3 back. Items 4–8 become decisions 11–15. Task 7 builds 11–14, Task 8 builds 15.
+Figures cited as `track.ts:<n>` are at 6bf5df1.
+
+11. **The swung body: the chains on every stroke** (A2 item 4).
+    - `prepareTrack` builds `body = carryBody(head, hands.chain, arc.radius, hands.bottom)` and
+      `released = carryBody(head, hands.chain, arc.radius, null)` on every stroke. `PreparedTrack.released` becomes
+      `SwungBody` (never null). `swungBody` and the arm mass stay for the downswing's plan (`downswingInput`).
+    - Each hand's chain is fed its grip times its moment share: the top γ_T × its share plus F_d, the bottom g_B × its
+      share. `chainFed` still adds the chain's own m·a and weight in full.
+    - Each hand's flex gains scale with its grip, as `handGains` scales the coupling: k(γ) = γ·k, c(γ) = √γ·c. A new
+      export in `flex.ts`:
+      ```ts
+      /** `gains` for a grip γ in (0, 1]: k·γ and c·√γ (P2b.2b.2c.3a A2 item 4). */
+      export function gripGains(gains: FlexGains, grip: number): FlexGains;
+      ```
+    - The chain's elements (K1–K4, C1–C4, the masses) are unchanged. The rolls' grips are 1, and × 1 and √1 are exact,
+      so the rolls keep their bits.
+12. **One control law after contact: the carry law as the base** (A2 item 5). `handLoad` drops its swing branch
+    (`track.ts:1887-1926`); `carryLoad` runs on every stroke from relaxAt.
+    - **The top hand** feeds γ_T × its share plus F_d through its chain, flexed at `gripGains(·, γ_T)`. Once the
+      bottom hand has opened, it feeds γ_T × the whole F_ff (`scale(whole, γ_T)`, so the rolls' `whole` keeps its
+      bits).
+    - **The bottom hand** feeds g_B × its share, flexed to its turning target at `gripGains(·, g_B·e)`, where e is
+      `guideEffort` outside a check and 1 inside one. The rolls' `guideEffort` is 1.
+    - **The check's share** (`checkShare`) acts on any stroke with α < 0: `checking` drops `!carry`.
+    - **The twist** is g_B × the twist share plus the bottom's twist damper, as `carryLoad` has it, on every stroke.
+    - **Only with a push** (`track.push !== null`):
+      - the posture hold: `holdWeight` is read only then, and the hold weight is 0 otherwise (`flexGains`' rhythmic
+        gains, no added term);
+      - the push intent (`pushIntent`) and the sensed resistance (`ballsOnHead`, `senseResistance`);
+      - the first-departure latch (`grip.departedAt`, `ImpactRun.departure`);
+      - the pendulum phase (`releasing`).
+    - **The chains** step on every stroke (`integrate.ts` drops the `carry` guards on `advanceChains`); the probe's
+      snapshots carry `chains` on every stroke.
+    - **Removed:** the top hand's damper c(γ_T) after contact, the one-sided rate guide, the swing law's
+      `guideEffort` × max(0, c_B × lag) push after opening, and the `!carry` guard on the check.
+13. **The bottom hand opens at the earlier of the signed reach and the pendulum phase** (A2 item 6).
+    - The test moves to the top of `handLoad`'s contact branch, before the body is chosen: once
+      (r − b)·(π − π_c) > `reachSlack` (signed, as `track.ts:1890`) or `releasing(track, t)`, set `grip.releasedAt`
+      and `releaseDelta` once.
+    - `handLoad` then takes its body from `swungOf(track, grip)` in every branch, so the integrator and `handLoad`
+      agree on a reach opening too. The rolls open at the same step as today, so they keep their bits (0 of 678 cross
+      the signed slack, section R).
+    - After opening, on every stroke, the bottom hand pushes along e with `pendulumEffort` × F_pendulum until the shaft
+      is vertical (`track.ts:1683`), and the `rising` and `vertical` latches run. Every preset's `pendulumEffort` is
+      0.
+    - A push of length 0 has no pendulum phase: Task 8 (decision 15).
+14. **The finish from the inputs** (A2 item 7).
+    - `finishKind` becomes an export keyed on the inputs, with no mode read:
+      ```ts
+      /** The finish of `plan` (P2b.2b.2c.3a A2 item 7): a brake (α < 0) a check, else a push a carry, else a swing. */
+      export function finishKind(plan: PreparedTrack): FinishKind;
+      ```
+    - A check finishes once the push has ended (no push, or t ≥ `push.end`) and the head is at rest relative to the
+      hands. A push whose plan never reaches the push length (`push.end` null) never ends, and the run reaches
+      `follow-cap`, flagged and listed.
+    - The hold stays on the firm grip (handLoad's `gripped`), and the chains let go at it: the gripped branch sets
+      `grip.topChain` and `grip.bottomChain` to null.
+    - `held` moves from `FreePendulum` to `PreparedTrack` (`held: { from: number; theta: number } | null`).
+      `pendulumAt` returns it, for t past the window and at or after `from`, before its λ branches. `freePath` drops
+      its own `held` read, and `holdPendulum(track, from)` works at any λ and reads θ from `pendulumAt`. For λ < 1 it
+      returns the same {θ_hold, 0, 0} as the table did: bit-identical.
+15. **One push on every stroke, the advance merged into it** (A2 item 8).
+    - `prepareTrack` builds `push = computePush(track)` wherever `arc.handReach > 0`, and `null` at 0. With no push,
+      `reach` is `restingReach` (today's path for a handReach of 0); with one, `reach` is null.
+    - `computeReach` goes. `PreparedTrack.advance` goes, and `Push` gains `advance: Advance | null`
+      (`advanceOf(arc, arc.advance)`, unchanged in shape).
+    - The push's along-aim travel is the plan's travel plus the advance's (`advanceTravel`) where there is one, on the
+      hands' arc, capped at the push length, where it stops at once.
+    - `travelTime` (so `push.end` and `push.pendulum`) and `carryPivot` count both. With no advance they keep today's
+      arithmetic (branch, no added zero).
+    - `pivotAt` is `reachedPivot`: no separate advance.
+    - `checkAdvance` drops its mode and check rules, so a stop may push, and keeps the handReach, speed and ramp
+      checks.
+    - The swing finish's advance guard goes: a stroke with a push never finishes as a swing.
+    - `FollowThrough.advanced` reads `plan.push?.advance`.
+    - Deferred to P2b.2b.2c.3b: the ease at a push's end (A2 item 8), and the couple's share of C as an effort or
+      envelope cost (A2 item 3).
+16. **Departures the note did not predict.** The preset digest plays every roll at drives −1 and −0.5, where α < 0.
+    Under decisions 12 and 14 those runs take the check's share inside the window and the check's hold after it, so
+    they move: the note's "rolls identical" holds only for α ≥ 0. They are counted in Task 7 and ruled at stage 2.
+    - **Until Task 8**, `prepareTrack` still chooses the push against the reach and the advance by `arc.mode`. It is
+      the last `arc.mode` read in `track.ts`, and Task 8 removes it.
+    - **After Task 7**, `integrate.ts` reads no mode.
+
 ## Global Constraints
 
 - **Formatting.**
@@ -280,6 +366,8 @@ The spec implies each input below, but no task's listed tests exercise it. The o
 | `src/engine/swing/downswing.ts`, `tests/engine/swing/downswing.test.ts`, `tests/engine/swing/backswingLimit.test.ts`, `tests/engine/swing/effort.test.ts` | The planned slope, the couple (Task 3) |
 | `src/engine/impact/track.ts`, `tests/engine/impact/track.test.ts`, `tests/engine/impact/hands.test.ts` | The paths by λ (Task 3); the hand model (Task 7); the push (Task 8) |
 | `src/engine/impact/integrate.ts`, `tests/engine/impact/followThrough.test.ts` | The finish and the latches (Task 7) |
+| `src/engine/impact/flex.ts`, `tests/engine/impact/flex.test.ts` | `gripGains` (Task 7) |
+| `tests/engine/impact/advance.test.ts` | The push on every stroke (Task 8) |
 | `src/engine/swing/buildContact.ts`, `tests/engine/swing/buildContact.test.ts` | Validation, the dip raise, the jab (Tasks 3, 6, 9, 10) |
 | `src/engine/swing/types.ts`, `src/engine/impact/types.ts`, `src/engine/index.ts`, `tests/engine/index.test.ts` | The inputs, `slopeHold`, `StrokeMode` removed (Tasks 3, 9, 10) |
 | `src/engine/impact/simulateImpact.ts`, `tests/engine/impact/simulateImpact.test.ts` | `validateDownswing`, `slopeHold`, the mode check (Tasks 3, 9) |
@@ -602,48 +690,208 @@ Message: `Let every stroke jab, slide its grip back, and raise its dip by the cr
 ---
 ### Task 7: The hand model
 
-Spec §4's after-contact rows; decisions 6, 11 on.
+Spec §4's after-contact rows, amendment A2 items 4–7; decisions 11–14, 16.
 
-**Files:** `src/engine/impact/track.ts` (`prepareTrack`, `handLoad`, `carryLoad`, `releasing`),
-`src/engine/impact/integrate.ts` (`finishKind`, `finished`, the latches, `continueStroke`), their tests and the
-migrated callers, as decisions 11 on name them.
+**Files:**
+- Modify: `src/engine/impact/track.ts` (`PreparedTrack.released`, `PreparedTrack.held`, `FreePendulum.held`,
+  `prepareTrack`, `pendulumAt`, `freePath`, `holdPendulum`, `handLoad`, `carryLoad`, `holdWeight`, the docs that say
+  "carry mode" or "swing mode" for what now acts on every stroke), `src/engine/impact/flex.ts` (`gripGains`),
+  `src/engine/impact/integrate.ts` (`finishKind`, `finished`, the departure latch, `ballsOnHead`, the chains' steps,
+  `continueStroke`)
+- Test: `tests/engine/impact/flex.test.ts`, `tests/engine/impact/track.test.ts`, `tests/engine/impact/hands.test.ts`,
+  `tests/engine/impact/followThrough.test.ts`
+- Migrate: every test or script that reads `track.released` as nullable or `free.held`
+  (`grep -rn -E "\.released\b|\.held\b" tests scripts`)
 
-**Interfaces:** as decisions 11 on name them. Fixed whatever the ruling:
-- no `arc.mode` read in `track.ts` or `integrate.ts` after this task;
-- `finishKind(plan)` keys on `arc.alpha < 0` (a brake), the push and neither;
-- `ImpactRun.departure` is recorded on any stroke with a push.
+**Interfaces:**
+- `gripGains(gains: FlexGains, grip: number): FlexGains` (decision 11).
+- `finishKind(plan: PreparedTrack): FinishKind`, exported with `type FinishKind = "swing" | "check" | "carry"`
+  (decision 14).
+- `PreparedTrack.released: SwungBody`; `PreparedTrack.held: { readonly from: number; readonly theta: number } | null`;
+  `FreePendulum` loses `held`.
+- No `arc.mode` read in `integrate.ts`. In `track.ts` only `prepareTrack`'s choice of the push against the reach and
+  the advance (decision 16).
 
-- [ ] **Step 1: Write the failing tests** that decisions 11 on name. Whatever the ruling, they include:
-  - `it("finishes a braked held stroke with the check's hold")`: the half roll at drive −1 plays to a finish of kind
-    check, with no throw and no `follow-cap`;
-  - `it("finishes a pushed swing stroke as a carry")`: the single-ball stroke with a push through finishes at its
-    first apex after rising.
-- [ ] **Step 2: Run them; expected FAIL.**
-- [ ] **Step 3: Implement the ruled law.**
-- [ ] **Step 4: Tests, checks and the ratchet.** Expected: the departures the ruling predicted, counted per preset
-  in `<temp>/after/task7-moved.txt`; nothing else moves.
-- [ ] **Step 5: Commit** with a message naming the ruled hand model.
+- [ ] **Step 1: Write the failing tests**
+
+In `tests/engine/impact/flex.test.ts`:
+- `it("scales a hand's flex by its grip: k·γ and c·√γ")`: `gripGains({ stiffness: 200, damping: 10 }, 0.25)` is
+  `{ stiffness: 50, damping: 5 }` to 1e-12. At grip 1 each field is `toBe` the input's.
+
+In `tests/engine/impact/track.test.ts`, `describe("the swung body on every stroke (P2b.2b.2c.3a A2 item 4)")`:
+- `it("holds a swing arc's mallet by both hands' skin, and by the top's alone once released")`: `prepareTrack` of a
+  hand-built arc with `mode: "swing"` and `slopeHold: 0` gives `body` equal to
+  `carryBody(TEST_HEAD, hands.chain, arc.radius, hands.bottom)`, and `released` equal to
+  `carryBody(TEST_HEAD, hands.chain, arc.radius, null)`.
+- `it("holds a checked stroke on its held path at λ = 1")`: a still arc with `slopeHold: 1` and α −300.
+  - `holdPendulum(track, from)`, with `from` the window's end, does not throw.
+  - `pathAt(held, from + 0.01).theta` and `pathAt(held, from + 0.05).theta` are each `toBe`
+    `pathAt(track, from).theta`.
+- `it("holds a free table's pendulum where it was")`: the same at `slopeHold: 0`, where each is `toBe` the table's θ
+  at `from`.
+
+In `tests/engine/impact/hands.test.ts`, `describe("one law after contact (P2b.2b.2c.3a A2 item 5)")`. Each test runs
+one `handLoad` step after relaxAt, with the head on the path and `newGripState()`, unless it says otherwise:
+- `it("feeds each hand its grip times its moment share, the dip in full")`: the swing arc `TIMED` with `slopeHold: 0`
+  at t = 0.009 against the same with both grips 1.
+  - For γ_T in {0.1, 1}: `sub(load.top, dip)` is within 1e-9 of γ_T × `sub(firm.top, dip)`.
+  - For g_B in {0.25, 1}: `load.bottom` is within 1e-9 of g_B × `firm.bottom`.
+  - The chains take hold in equilibrium (`holdChain`), so the first step's grip forces are the feeds.
+- `it("scales the bottom hand's flex by guideEffort outside a check, and leaves a check in full")`:
+  - On `still()`: `grip.bottomStiffness` at `guideEffort` 0.5 is 0.5 × its value at 1, to 1e-12 relative, and 0 at
+    `guideEffort` 0.
+  - On `still({ omega0: 3, alpha: -300 })` at t = 0.005: `grip.bottomStiffness` at 0 is `toBe` its value at 1.
+- `it("holds the posture only with a push")`:
+  - On a swing arc (no push), `grip.topStiffness` with `departedAt` null is `toBe` its value with `departedAt` −1e9.
+  - On a carry arc with a push, the two differ.
+- `it("lets go of the chains at a stop's hold")`: a `handLoad` step with `gripped` true on a grip that holds both
+  chains leaves `grip.topChain` and `grip.bottomChain` null.
+- `it("records a ball's first departure only with a push")`: `integrate` of a swing arc striking a ball has no
+  `departure`. The existing carry test keeps its one.
+
+In `tests/engine/impact/hands.test.ts`, `describe("the bottom hand's opening (P2b.2b.2c.3a A2 item 6)")`:
+- `it("never opens on a shaft turning back through the slack")`: as "release by reach"'s first test, turned through
+  −(reachSlack + 1e-3)/lever. `grip.releasedAt` stays null.
+- `it("then pushes forward along e with pendulumEffort·F_pendulum until vertical")`: an opened grip
+  (`releasedAt` 1e-3, `bottomChain` null) on a swing arc.
+  - At `pendulumEffort` 0.5, `load.bottom` is within 1e-9 of 0.5·`pendulumForce`·e.
+  - At `pendulumEffort` 0 its length is 0.
+  - Past vertical (`grip.vertical` true) its length is 0.
+
+In `tests/engine/impact/followThrough.test.ts`, `describe("the finish from the inputs (P2b.2b.2c.3a A2 item 7)")`:
+- `it("names each preset's finish by its inputs, not its type")`: `finishKind` of each canonical plan.
+  - "swing" for single-ball and the drive; "check" for both stops; "carry" for the three rolls at their canonical
+    drive.
+  - "check" for the half roll at drive −1.
+- `it("finishes a braked held stroke with the check's hold")`: the half roll at drive −1, through `simulateStroke`, has
+  no throw, no `follow-cap`, and `follow.finish` at or after its `push.end`.
+
+- [ ] **Step 2: Run to verify they fail**
+
+Run: `npx vitest run tests/engine/impact/flex.test.ts tests/engine/impact/track.test.ts` and
+`npx vitest run tests/engine/impact/hands.test.ts tests/engine/impact/followThrough.test.ts`
+Expected: FAIL (no `gripGains`, no `finishKind` export, the swing law still runs).
+
+- [ ] **Step 3: Implement decisions 11–14**
+
+As the decisions state. Keep every roll's arithmetic: multiply by a grip or `guideEffort` rather than branch on 1, and
+add no zero terms (Global Constraints).
+
+- [ ] **Step 4: Rewrite the swing law's tests**
+
+Each test below asserts a term decision 12 removes. Rewrite it against the unified law, or delete it where a Step 1
+test replaces it, and say which in the commit message:
+- `hands.test.ts`, "the feed-forward split": "feeds the top hand the whole F_s in swing mode outside a check" (replaced
+  by the feed test) and "splits F_s over both hands inside a check" (kept, on the unified law).
+- "the bottom hand's rate guide": every test. The check's share assertions on `feedForward` stay. The guide's
+  assertions on `bottom` go, and "scales the push by guideEffort" is replaced by Step 1's test.
+- "release by reach": "then pushes only forward along e on its velocity lag" (replaced).
+- "let a relaxed top hand sink the head at (1 − γ_T)·m·g/c(γ_T)" (the top damper goes): trace, then rewrite it as
+  the loose hand's feed, γ_T × its share of the weight.
+- The push intent's and the chain's "is never read in swing mode": the first becomes "is never read without a push";
+  the second, "holds a swing arc through the chains too", where `grip.topChain` is non-null after a contact step.
+- `track.test.ts`: `released` expected null on a swing arc.
+
+Any other failure: trace the mechanism, then re-baseline with "P2b.2b.2c.3a: <the change> (was <old>)".
+
+- [ ] **Step 5: Tests, checks and the ratchet (in the background)**
+
+Run the four checks. Rerun the ratchet into `<temp>/after/*-task7.txt` (`DROP=slopeHold`). Expected:
+- **Preset digest:**
+  - every single-ball, drive, AC stop and GC stop line moves;
+  - every roll line at drives 0, 0.5 and 1 is bit-identical;
+  - every roll line at drives −0.5 and −1 moves (decision 16);
+  - any new `throws`, or a roll at α ≥ 0 that moves, stops the task.
+- **`impactDigest` and `impactProbe`:** identical where they play force tables. A moved line is traced to decision
+  11–14 or stops the task.
+- **`shotMix`:** moves where it plays a swing preset or a braked roll.
+
+Count the moved lines per preset and drive, with each preset's ratio and finish time at canonical old and new, in
+`<temp>/after/task7-moved.txt`. The controller runs `SLOW_TESTS`.
+
+- [ ] **Step 6: Commit**
+
+Message: `Hold every stroke through the hand–arm chains under one law after contact`, with the moved counts and each
+rewritten test's old and new figure.
 
 ---
 ### Task 8: The push through on every stroke
 
-Spec §2 (3b), §3 (the hands after contact), §4 (the push, the hands after contact); decisions 6, 11 on.
+Spec §2 (3b), §3 (the hands after contact), §4 (the push, the hands after contact), amendment A2 item 8;
+decision 15.
 
-**Files:** `src/engine/impact/track.ts` (`computePush`, `computeReach`, `advanceOf`, `pivotAt`, `reachedPivot`),
-`src/engine/swing/buildContact.ts` (`checkAdvance`), their tests and callers, as decisions 11 on name them.
+**Files:**
+- Modify: `src/engine/impact/track.ts` (`Push`, `PreparedTrack.advance`, `PreparedTrack.reach`'s doc, `prepareTrack`,
+  `computePush`, `computeReach` removed, `travelTime`, `carryPivot`, `pivotAt`, `reachedPivot`),
+  `src/engine/impact/integrate.ts` (`finished`'s advance guard, `FollowThrough.advanced`),
+  `src/engine/swing/buildContact.ts` (`checkAdvance`, `planStroke`'s doc)
+- Test: `tests/engine/impact/advance.test.ts`, `tests/engine/impact/track.test.ts` (the reach's tests),
+  `tests/engine/impact/followThrough.test.ts`
+- Migrate: `scripts/singleBallProbe.ts` (`track.advance`), and every other reader of `track.advance` or `track.reach`
 
-**Interfaces:** as decisions 11 on name them. Fixed: `PreparedTrack.push` is built on every stroke with a push length
-above 0, and the advance no longer runs beside it.
+**Interfaces:**
+- `Push` gains `readonly advance: Advance | null`. `PreparedTrack.advance` is removed.
+- `PreparedTrack.push` is non-null exactly where `arc.handReach > 0`. `PreparedTrack.reach` is `restingReach` where
+  the push is null, and null otherwise.
+- After this task, no `arc.mode` read in `track.ts` or `integrate.ts`.
 
-- [ ] **Step 1: Write the failing tests** that decisions 11 on name. They include spec criterion 5's push cases:
-  - `it("plays a stop with a push through end to end")`: the AC stop (drive −1) with `handReach` 0.15 and the
-    ruled way to move its hands, through `simulateShot`, gives no `impact-cap`, no `follow-cap` and finite states;
-  - the same for the drive at drive 0.
-- [ ] **Step 2: Run them; expected FAIL.**
-- [ ] **Step 3: Implement the ruled mechanism.**
-- [ ] **Step 4: Tests, checks and the ratchet.** Expected: the presets bit-identical to Task 7's, since a push length
-  of 0 keeps the hands at rest along aim. Runs with an advance or a swing preset's push move, listed.
-- [ ] **Step 5: Commit**: `Push through on every stroke, the advance merged into the push`.
+- [ ] **Step 1: Write the failing tests**
+
+In `tests/engine/impact/advance.test.ts`, `describe("the push on every stroke (P2b.2b.2c.3a A2 item 8)")`:
+- `it("pushes still hands with an advance along the hands' arc")`: single-ball with `handReach` 0.3 and
+  `timing.advance` 0.
+  - `track.push` and `track.push.advance` are non-null.
+  - At `push.end`, the hands have travelled 0.3 along aim from contact, to 1e-9.
+  - Their height above the push's origin is `push.level − √(ρ_h² − (0.3 − push.low)²)`, to 1e-12.
+- `it("builds no push at length 0, the hands resting along aim")`:
+  - The canonical single-ball and the half roll with `handReach` 0 have `track.push` null.
+  - Their hands' along-aim travel from contact is 0 at contact + 0.1 s.
+  - The half roll's run has no pendulum phase: `release`, if present, has `deltaTheta` past the signed slack.
+- `it("plays a stop with a push through end to end")` (criterion 5): the AC stop at drive −1 with `handReach` 0.15
+  and `timing.advance` 0, through `simulateShot`.
+  - No `impact-cap`, no `follow-cap`, and finite states.
+  - `finishKind` is "check", and `follow.finish` is at or after `push.end`.
+- `it("plays a drive with a push through end to end")` (criterion 5): the drive at drive 0 with `handReach` 0.15 and
+  `timing.advance` 0. No `impact-cap`, no `follow-cap`, and `finishKind` "carry".
+- `it("finishes a pushed swing stroke as a carry")`: single-ball with `handReach` 0.3 and `timing.advance` 0.
+  - Its follow-through's pitch rate about n is positive at some sample after `release.t`.
+  - It is at or below 0 at the finish.
+  - It has no `follow-cap`.
+- `it("merges an advance into a roll's push")`: the half roll with `timing.advance` 0 against without.
+  - `push.end` is earlier with the advance.
+  - The hands' along-aim travel never exceeds `handReach` + 1e-12, sampled every 1 ms to contact + 2 s.
+
+- [ ] **Step 2: Run to verify they fail**
+
+Run: `npx vitest run tests/engine/impact/advance.test.ts`
+Expected: FAIL (no push on a swing stroke; the advance is rejected on a roll and a check).
+
+- [ ] **Step 3: Implement decision 15**
+
+Remove the last `arc.mode` read in `track.ts` (decision 16).
+
+- [ ] **Step 4: Rewrite the advance's and the reach's tests**
+
+- `advance.test.ts`, "rejects carry mode, a check, no travel and a non-finite timing": now "rejects no travel and a
+  non-finite timing". The roll's and the GC stop's advance plan.
+- The advance's other tests now run on the push, on the hands' arc, with the push intent, the posture hold and the
+  pendulum phase acting on it. Trace each moved figure ("flattens the head's rise", "resumes the arc", "carries the
+  hands handReach in all"). Re-baseline it with "P2b.2b.2c.3a: the advance on the push's arc (was <old>)", or
+  rewrite it where its claim no longer holds, and say which in the commit message.
+- `track.test.ts`'s reach tests (`computeReach`'s t1, its null where the plan falls short, a swing arc's reach): they
+  become the push's on the same arcs, or go where Step 1 covers them.
+
+- [ ] **Step 5: Tests, checks and the ratchet (in the background)**
+
+Expected:
+- **Preset digest:** bit-identical to Task 7's. No digest run sets an advance, the swing presets' `handReach` is 0
+  (`restingReach`, as `computeReach` gave it), and the rolls' push is unchanged.
+- **`impactDigest`, `impactProbe` and `shotMix`:** identical to Task 7's.
+- A moved line is traced, or it stops the task.
+
+- [ ] **Step 6: Commit**
+
+Message: `Push through on every stroke, the advance merged into the push`.
 
 ---
 ### Task 9: `StrokeMode` removed
