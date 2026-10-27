@@ -87,3 +87,686 @@ pass-roll: λ 1, D_f 0.5069 s, T 0.4890 s, couple peak 1.9224e+0 N·m at 0.0000 
   drive λ 1: planned speed 3.7189, fall 0.4890 s, couple peak 7.0384e+0 N·m at 0.0000 ms, within C 22.2938 N·m
 drive λ 1, bottom 0.715 m: couple peak 7.0384e+0 N·m at 0.0000 ms, within C 9.7875 N·m
 P tally: 7 presets, 0 past C at their own λ; the drive at λ 1 with its hands together needs 7.0384 N·m at 0.0000 ms against C 9.7875 N·m
+== R. reach slack against the pendulum phase's start (decision 6): mm of hand travel, ms ==
+half-roll: reachSlack 30.0000 mm, r − b 385.0000 mm
+  canonical: release at 66.3450 ms, travel -34.5846 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 59.0000 ms
+  1 m/s drive -1 up -0.003 side -0.01: release at 215.6700 ms, travel -16.0495 mm against 30.0000 mm, no early crossing
+  1 m/s drive -1 up -0.003 side 0: release at 215.6700 ms, travel -16.1071 mm against 30.0000 mm, no early crossing
+  1 m/s drive -1 up -0.003 side 0.01: release at 215.6700 ms, travel -16.0456 mm against 30.0000 mm, no early crossing
+  1 m/s drive -1 up 0 side -0.01: release at 215.3900 ms, travel -15.9979 mm against 30.0000 mm, no early crossing
+  1 m/s drive -1 up 0 side 0: release at 215.3900 ms, travel -16.0632 mm against 30.0000 mm, no early crossing
+  1 m/s drive -1 up 0 side 0.01: release at 215.3900 ms, travel -15.9935 mm against 30.0000 mm, no early crossing
+  1 m/s drive -1 up 0.003 side -0.01: release at 215.1100 ms, travel -15.9469 mm against 30.0000 mm, no early crossing
+  1 m/s drive -1 up 0.003 side 0: release at 215.1100 ms, travel -15.9914 mm against 30.0000 mm, no early crossing
+  1 m/s drive -1 up 0.003 side 0.01: release at 215.1100 ms, travel -15.9422 mm against 30.0000 mm, no early crossing
+  1 m/s drive -0.5 up -0.003 side -0.01: release at 215.6700 ms, travel -15.5893 mm against 30.0000 mm, no early crossing
+  1 m/s drive -0.5 up -0.003 side 0: release at 215.6700 ms, travel -15.6453 mm against 30.0000 mm, no early crossing
+  1 m/s drive -0.5 up -0.003 side 0.01: release at 215.6700 ms, travel -15.5850 mm against 30.0000 mm, no early crossing
+  1 m/s drive -0.5 up 0 side -0.01: release at 215.3900 ms, travel -15.5359 mm against 30.0000 mm, no early crossing
+  1 m/s drive -0.5 up 0 side 0: release at 215.3900 ms, travel -15.5994 mm against 30.0000 mm, no early crossing
+  1 m/s drive -0.5 up 0 side 0.01: release at 215.3900 ms, travel -15.5310 mm against 30.0000 mm, no early crossing
+  1 m/s drive -0.5 up 0.003 side -0.01: release at 215.1100 ms, travel -15.4834 mm against 30.0000 mm, no early crossing
+  1 m/s drive -0.5 up 0.003 side 0: release at 215.1100 ms, travel -15.5286 mm against 30.0000 mm, no early crossing
+  1 m/s drive -0.5 up 0.003 side 0.01: release at 215.1100 ms, travel -15.4783 mm against 30.0000 mm, no early crossing
+  1 m/s drive 0 up -0.003 side -0.01: release at 215.6700 ms, travel -15.1037 mm against 30.0000 mm, no early crossing
+  1 m/s drive 0 up -0.003 side 0: release at 215.6700 ms, travel -15.1584 mm against 30.0000 mm, no early crossing
+  1 m/s drive 0 up -0.003 side 0.01: release at 215.6700 ms, travel -15.0991 mm against 30.0000 mm, no early crossing
+  1 m/s drive 0 up 0 side -0.01: release at 215.3900 ms, travel -15.0482 mm against 30.0000 mm, no early crossing
+  1 m/s drive 0 up 0 side 0: release at 215.3900 ms, travel -15.1055 mm against 30.0000 mm, no early crossing
+  1 m/s drive 0 up 0 side 0.01: release at 215.3900 ms, travel -15.0439 mm against 30.0000 mm, no early crossing
+  1 m/s drive 0 up 0.003 side -0.01: release at 215.1100 ms, travel -14.9939 mm against 30.0000 mm, no early crossing
+  1 m/s drive 0 up 0.003 side 0: release at 215.1100 ms, travel -15.0411 mm against 30.0000 mm, no early crossing
+  1 m/s drive 0 up 0.003 side 0.01: release at 215.1100 ms, travel -14.9901 mm against 30.0000 mm, no early crossing
+  1 m/s drive 0.5 up -0.003 side -0.01: release at 215.6700 ms, travel -14.5939 mm against 30.0000 mm, no early crossing
+  1 m/s drive 0.5 up -0.003 side 0: release at 215.6700 ms, travel -14.6482 mm against 30.0000 mm, no early crossing
+  1 m/s drive 0.5 up -0.003 side 0.01: release at 215.6700 ms, travel -14.5907 mm against 30.0000 mm, no early crossing
+  1 m/s drive 0.5 up 0 side -0.01: release at 215.3900 ms, travel -14.5372 mm against 30.0000 mm, no early crossing
+  1 m/s drive 0.5 up 0 side 0: release at 215.3900 ms, travel -14.5934 mm against 30.0000 mm, no early crossing
+  1 m/s drive 0.5 up 0 side 0.01: release at 215.3900 ms, travel -14.5342 mm against 30.0000 mm, no early crossing
+  1 m/s drive 0.5 up 0.003 side -0.01: release at 215.1100 ms, travel -14.4813 mm against 30.0000 mm, no early crossing
+  1 m/s drive 0.5 up 0.003 side 0: release at 215.1100 ms, travel -14.5352 mm against 30.0000 mm, no early crossing
+  1 m/s drive 0.5 up 0.003 side 0.01: release at 215.1100 ms, travel -14.4782 mm against 30.0000 mm, no early crossing
+  1 m/s drive 1 up -0.003 side -0.01: release at 215.6700 ms, travel -15.5879 mm against 30.0000 mm, no early crossing
+  1 m/s drive 1 up -0.003 side 0: release at 215.6700 ms, travel -15.6378 mm against 30.0000 mm, no early crossing
+  1 m/s drive 1 up -0.003 side 0.01: release at 215.6700 ms, travel -15.5843 mm against 30.0000 mm, no early crossing
+  1 m/s drive 1 up 0 side -0.01: release at 215.3900 ms, travel -15.5261 mm against 30.0000 mm, no early crossing
+  1 m/s drive 1 up 0 side 0: release at 215.3900 ms, travel -15.5720 mm against 30.0000 mm, no early crossing
+  1 m/s drive 1 up 0 side 0.01: release at 215.3900 ms, travel -15.5165 mm against 30.0000 mm, no early crossing
+  1 m/s drive 1 up 0.003 side -0.01: release at 215.1100 ms, travel -15.4533 mm against 30.0000 mm, no early crossing
+  1 m/s drive 1 up 0.003 side 0: release at 215.1100 ms, travel -15.5020 mm against 30.0000 mm, no early crossing
+  1 m/s drive 1 up 0.003 side 0.01: release at 215.1100 ms, travel -15.4497 mm against 30.0000 mm, no early crossing
+  2 m/s drive -1 up -0.003 side -0.01: release at 103.0450 ms, travel -33.1000 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 87.0000 ms
+  2 m/s drive -1 up -0.003 side 0: release at 103.0450 ms, travel -33.2188 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 87.0000 ms
+  2 m/s drive -1 up -0.003 side 0.01: release at 103.0450 ms, travel -33.1015 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 87.0000 ms
+  2 m/s drive -1 up 0 side -0.01: release at 102.9400 ms, travel -32.9893 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 87.0000 ms
+  2 m/s drive -1 up 0 side 0: release at 102.9400 ms, travel -33.0794 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 87.0000 ms
+  2 m/s drive -1 up 0 side 0.01: release at 102.9400 ms, travel -32.9857 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 87.0000 ms
+  2 m/s drive -1 up 0.003 side -0.01: release at 102.8300 ms, travel -32.8526 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 88.0000 ms
+  2 m/s drive -1 up 0.003 side 0: release at 102.8300 ms, travel -32.9586 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 88.0000 ms
+  2 m/s drive -1 up 0.003 side 0.01: release at 102.8300 ms, travel -32.8597 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 88.0000 ms
+  2 m/s drive -0.5 up -0.003 side -0.01: release at 103.0450 ms, travel -32.2033 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 91.0000 ms
+  2 m/s drive -0.5 up -0.003 side 0: release at 103.0450 ms, travel -32.3231 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 90.0000 ms
+  2 m/s drive -0.5 up -0.003 side 0.01: release at 103.0450 ms, travel -32.2051 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 91.0000 ms
+  2 m/s drive -0.5 up 0 side -0.01: release at 102.9400 ms, travel -32.0908 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 91.0000 ms
+  2 m/s drive -0.5 up 0 side 0: release at 102.9400 ms, travel -32.1836 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 91.0000 ms
+  2 m/s drive -0.5 up 0 side 0.01: release at 102.9400 ms, travel -32.0884 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 91.0000 ms
+  2 m/s drive -0.5 up 0.003 side -0.01: release at 102.8300 ms, travel -31.9534 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 92.0000 ms
+  2 m/s drive -0.5 up 0.003 side 0: release at 102.8300 ms, travel -32.0612 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 92.0000 ms
+  2 m/s drive -0.5 up 0.003 side 0.01: release at 102.8300 ms, travel -31.9567 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 92.0000 ms
+  2 m/s drive 0 up -0.003 side -0.01: release at 103.0450 ms, travel -31.2654 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 96.0000 ms
+  2 m/s drive 0 up -0.003 side 0: release at 103.0450 ms, travel -31.3866 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 95.0000 ms
+  2 m/s drive 0 up -0.003 side 0.01: release at 103.0450 ms, travel -31.2682 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 96.0000 ms
+  2 m/s drive 0 up 0 side -0.01: release at 102.9400 ms, travel -31.1514 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 96.0000 ms
+  2 m/s drive 0 up 0 side 0: release at 102.9400 ms, travel -31.2467 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 96.0000 ms
+  2 m/s drive 0 up 0 side 0.01: release at 102.9400 ms, travel -31.1501 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 96.0000 ms
+  2 m/s drive 0 up 0.003 side -0.01: release at 102.8300 ms, travel -31.0143 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 97.0000 ms
+  2 m/s drive 0 up 0.003 side 0: release at 102.8300 ms, travel -31.1236 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 96.0000 ms
+  2 m/s drive 0 up 0.003 side 0.01: release at 102.8300 ms, travel -31.0184 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 97.0000 ms
+  2 m/s drive 0.5 up -0.003 side -0.01: release at 103.0450 ms, travel -32.1781 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 92.0000 ms
+  2 m/s drive 0.5 up -0.003 side 0: release at 103.0450 ms, travel -32.2968 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 91.0000 ms
+  2 m/s drive 0.5 up -0.003 side 0.01: release at 103.0450 ms, travel -32.1822 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 92.0000 ms
+  2 m/s drive 0.5 up 0 side -0.01: release at 102.9400 ms, travel -32.0472 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 92.0000 ms
+  2 m/s drive 0.5 up 0 side 0: release at 102.9400 ms, travel -32.1403 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 92.0000 ms
+  2 m/s drive 0.5 up 0 side 0.01: release at 102.9400 ms, travel -32.0469 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 92.0000 ms
+  2 m/s drive 0.5 up 0.003 side -0.01: release at 102.8300 ms, travel -31.8937 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 93.0000 ms
+  2 m/s drive 0.5 up 0.003 side 0: release at 102.8300 ms, travel -32.0008 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 92.0000 ms
+  2 m/s drive 0.5 up 0.003 side 0.01: release at 102.8300 ms, travel -31.8989 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 93.0000 ms
+  2 m/s drive 1 up -0.003 side -0.01: release at 103.0450 ms, travel -31.6010 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 94.0000 ms
+  2 m/s drive 1 up -0.003 side 0: release at 103.0450 ms, travel -31.7433 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 94.0000 ms
+  2 m/s drive 1 up -0.003 side 0.01: release at 103.0450 ms, travel -31.6060 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 94.0000 ms
+  2 m/s drive 1 up 0 side -0.01: release at 102.9400 ms, travel -31.4613 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 95.0000 ms
+  2 m/s drive 1 up 0 side 0: release at 102.9400 ms, travel -31.5939 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 94.0000 ms
+  2 m/s drive 1 up 0 side 0.01: release at 102.9400 ms, travel -31.4635 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 95.0000 ms
+  2 m/s drive 1 up 0.003 side -0.01: release at 102.8300 ms, travel -31.3087 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 96.0000 ms
+  2 m/s drive 1 up 0.003 side 0: release at 102.8300 ms, travel -31.4419 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 95.0000 ms
+  2 m/s drive 1 up 0.003 side 0.01: release at 102.8300 ms, travel -31.3142 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 96.0000 ms
+  3 m/s drive -1 up -0.003 side -0.01: release at 66.4050 ms, travel -36.7476 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 55.0000 ms
+  3 m/s drive -1 up -0.003 side 0: release at 66.4050 ms, travel -36.8710 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 54.0000 ms
+  3 m/s drive -1 up -0.003 side 0.01: release at 66.4050 ms, travel -36.7474 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 55.0000 ms
+  3 m/s drive -1 up 0 side -0.01: release at 66.3450 ms, travel -36.5770 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 55.0000 ms
+  3 m/s drive -1 up 0 side 0: release at 66.3450 ms, travel -36.6957 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 55.0000 ms
+  3 m/s drive -1 up 0 side 0.01: release at 66.3450 ms, travel -36.5759 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 55.0000 ms
+  3 m/s drive -1 up 0.003 side -0.01: release at 66.2850 ms, travel -36.4220 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 55.0000 ms
+  3 m/s drive -1 up 0.003 side 0: release at 66.2850 ms, travel -36.5148 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 55.0000 ms
+  3 m/s drive -1 up 0.003 side 0.01: release at 66.2850 ms, travel -36.4000 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 55.0000 ms
+  3 m/s drive -0.5 up -0.003 side -0.01: release at 66.4050 ms, travel -35.4890 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 57.0000 ms
+  3 m/s drive -0.5 up -0.003 side 0: release at 66.4050 ms, travel -35.6136 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 56.0000 ms
+  3 m/s drive -0.5 up -0.003 side 0.01: release at 66.4050 ms, travel -35.4889 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 57.0000 ms
+  3 m/s drive -0.5 up 0 side -0.01: release at 66.3450 ms, travel -35.3189 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 57.0000 ms
+  3 m/s drive -0.5 up 0 side 0: release at 66.3450 ms, travel -35.4389 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 57.0000 ms
+  3 m/s drive -0.5 up 0 side 0.01: release at 66.3450 ms, travel -35.3179 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 57.0000 ms
+  3 m/s drive -0.5 up 0.003 side -0.01: release at 66.2850 ms, travel -35.1673 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 57.0000 ms
+  3 m/s drive -0.5 up 0.003 side 0: release at 66.2850 ms, travel -35.2587 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 57.0000 ms
+  3 m/s drive -0.5 up 0.003 side 0.01: release at 66.2850 ms, travel -35.1463 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 57.0000 ms
+  3 m/s drive 0 up -0.003 side -0.01: release at 66.4050 ms, travel -35.3994 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 57.0000 ms
+  3 m/s drive 0 up -0.003 side 0: release at 66.4050 ms, travel -35.5200 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 57.0000 ms
+  3 m/s drive 0 up -0.003 side 0.01: release at 66.4050 ms, travel -35.3991 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 57.0000 ms
+  3 m/s drive 0 up 0 side -0.01: release at 66.3450 ms, travel -35.2174 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 57.0000 ms
+  3 m/s drive 0 up 0 side 0: release at 66.3450 ms, travel -35.3348 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 57.0000 ms
+  3 m/s drive 0 up 0 side 0.01: release at 66.3450 ms, travel -35.2164 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 57.0000 ms
+  3 m/s drive 0 up 0.003 side -0.01: release at 66.2850 ms, travel -35.0654 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 57.0000 ms
+  3 m/s drive 0 up 0.003 side 0: release at 66.2850 ms, travel -35.1426 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 57.0000 ms
+  3 m/s drive 0 up 0.003 side 0.01: release at 66.2850 ms, travel -35.0445 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 57.0000 ms
+  3 m/s drive 0.5 up -0.003 side -0.01: release at 66.4050 ms, travel -34.4974 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 58.0000 ms
+  3 m/s drive 0.5 up -0.003 side 0: release at 66.4050 ms, travel -34.6409 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 58.0000 ms
+  3 m/s drive 0.5 up -0.003 side 0.01: release at 66.4050 ms, travel -34.4971 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 58.0000 ms
+  3 m/s drive 0.5 up 0 side -0.01: release at 66.3450 ms, travel -34.3141 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 59.0000 ms
+  3 m/s drive 0.5 up 0 side 0: release at 66.3450 ms, travel -34.4559 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 58.0000 ms
+  3 m/s drive 0.5 up 0 side 0.01: release at 66.3450 ms, travel -34.3100 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 59.0000 ms
+  3 m/s drive 0.5 up 0.003 side -0.01: release at 66.2850 ms, travel -34.1939 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 59.0000 ms
+  3 m/s drive 0.5 up 0.003 side 0: release at 66.2850 ms, travel -34.2578 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 59.0000 ms
+  3 m/s drive 0.5 up 0.003 side 0.01: release at 66.2850 ms, travel -34.1853 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 59.0000 ms
+  3 m/s drive 1 up -0.003 side -0.01: release at 66.4050 ms, travel -34.6586 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 58.0000 ms
+  3 m/s drive 1 up -0.003 side 0: release at 66.4050 ms, travel -34.7827 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 58.0000 ms
+  3 m/s drive 1 up -0.003 side 0.01: release at 66.4050 ms, travel -34.6587 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 58.0000 ms
+  3 m/s drive 1 up 0 side -0.01: release at 66.3450 ms, travel -34.4654 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 59.0000 ms
+  3 m/s drive 1 up 0 side 0: release at 66.3450 ms, travel -34.5846 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 59.0000 ms
+  3 m/s drive 1 up 0 side 0.01: release at 66.3450 ms, travel -34.4612 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 59.0000 ms
+  3 m/s drive 1 up 0.003 side -0.01: release at 66.2850 ms, travel -34.3007 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 59.0000 ms
+  3 m/s drive 1 up 0.003 side 0: release at 66.2850 ms, travel -34.3745 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 59.0000 ms
+  3 m/s drive 1 up 0.003 side 0.01: release at 66.2850 ms, travel -34.2806 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 59.0000 ms
+  4 m/s drive -1 up -0.003 side -0.01: release at 48.5000 ms, travel -35.3824 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 43.0000 ms
+  4 m/s drive -1 up -0.003 side 0: release at 48.5000 ms, travel -35.5470 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 43.0000 ms
+  4 m/s drive -1 up -0.003 side 0.01: release at 48.5000 ms, travel -35.3888 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 43.0000 ms
+  4 m/s drive -1 up 0 side -0.01: release at 48.4600 ms, travel -35.1664 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 44.0000 ms
+  4 m/s drive -1 up 0 side 0: release at 48.4600 ms, travel -35.3031 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 44.0000 ms
+  4 m/s drive -1 up 0 side 0.01: release at 48.4600 ms, travel -35.1720 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 44.0000 ms
+  4 m/s drive -1 up 0.003 side -0.01: release at 48.4250 ms, travel -34.9471 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 44.0000 ms
+  4 m/s drive -1 up 0.003 side 0: release at 48.4250 ms, travel -35.1017 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 44.0000 ms
+  4 m/s drive -1 up 0.003 side 0.01: release at 48.4250 ms, travel -34.9522 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 44.0000 ms
+  4 m/s drive -0.5 up -0.003 side -0.01: release at 48.5000 ms, travel -34.1115 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 45.0000 ms
+  4 m/s drive -0.5 up -0.003 side 0: release at 48.5000 ms, travel -34.2397 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 45.0000 ms
+  4 m/s drive -0.5 up -0.003 side 0.01: release at 48.5000 ms, travel -34.1269 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 45.0000 ms
+  4 m/s drive -0.5 up 0 side -0.01: release at 48.4600 ms, travel -33.8943 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 45.0000 ms
+  4 m/s drive -0.5 up 0 side 0: release at 48.4600 ms, travel -33.9727 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 45.0000 ms
+  4 m/s drive -0.5 up 0 side 0.01: release at 48.4600 ms, travel -33.9039 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 45.0000 ms
+  4 m/s drive -0.5 up 0.003 side -0.01: release at 48.4250 ms, travel -33.6707 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 45.0000 ms
+  4 m/s drive -0.5 up 0.003 side 0: release at 48.4250 ms, travel -33.7772 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 45.0000 ms
+  4 m/s drive -0.5 up 0.003 side 0.01: release at 48.4250 ms, travel -33.6814 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 45.0000 ms
+  4 m/s drive 0 up -0.003 side -0.01: release at 48.5000 ms, travel -33.0226 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 46.0000 ms
+  4 m/s drive 0 up -0.003 side 0: release at 48.5000 ms, travel -32.9487 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 46.0000 ms
+  4 m/s drive 0 up -0.003 side 0.01: release at 48.5000 ms, travel -33.0665 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 46.0000 ms
+  4 m/s drive 0 up 0 side -0.01: release at 48.4600 ms, travel -32.8164 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 46.0000 ms
+  4 m/s drive 0 up 0 side 0: release at 48.4600 ms, travel -32.6732 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 46.0000 ms
+  4 m/s drive 0 up 0 side 0.01: release at 48.4600 ms, travel -32.8432 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 46.0000 ms
+  4 m/s drive 0 up 0.003 side -0.01: release at 48.4250 ms, travel -32.5883 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 46.0000 ms
+  4 m/s drive 0 up 0.003 side 0: release at 48.4250 ms, travel -32.4605 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 47.0000 ms
+  4 m/s drive 0 up 0.003 side 0.01: release at 48.4250 ms, travel -32.6151 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 46.0000 ms
+  4 m/s drive 0.5 up -0.003 side -0.01: release at 48.5000 ms, travel -32.0209 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 47.0000 ms
+  4 m/s drive 0.5 up -0.003 side 0: release at 48.5000 ms, travel -32.1798 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 47.0000 ms
+  4 m/s drive 0.5 up -0.003 side 0.01: release at 48.5000 ms, travel -32.0282 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 47.0000 ms
+  4 m/s drive 0.5 up 0 side -0.01: release at 48.4600 ms, travel -31.7830 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 47.0000 ms
+  4 m/s drive 0.5 up 0 side 0: release at 48.4600 ms, travel -31.9168 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 47.0000 ms
+  4 m/s drive 0.5 up 0 side 0.01: release at 48.4600 ms, travel -31.7925 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 47.0000 ms
+  4 m/s drive 0.5 up 0.003 side -0.01: release at 48.4250 ms, travel -31.5434 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 48.0000 ms
+  4 m/s drive 0.5 up 0.003 side 0: release at 48.4250 ms, travel -31.6940 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 47.0000 ms
+  4 m/s drive 0.5 up 0.003 side 0.01: release at 48.4250 ms, travel -31.5485 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 48.0000 ms
+  4 m/s drive 1 up -0.003 side -0.01: release at 48.5000 ms, travel -31.1655 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 48.0000 ms
+  4 m/s drive 1 up -0.003 side 0: release at 48.5000 ms, travel -31.2847 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 48.0000 ms
+  4 m/s drive 1 up -0.003 side 0.01: release at 48.5000 ms, travel -31.1775 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 48.0000 ms
+  4 m/s drive 1 up 0 side -0.01: release at 48.4600 ms, travel -30.9236 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 48.0000 ms
+  4 m/s drive 1 up 0 side 0: release at 48.4600 ms, travel -30.9769 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 48.0000 ms
+  4 m/s drive 1 up 0 side 0.01: release at 48.4600 ms, travel -30.9373 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 48.0000 ms
+  4 m/s drive 1 up 0.003 side -0.01: release at 48.4250 ms, travel -30.6742 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 48.0000 ms
+  4 m/s drive 1 up 0.003 side 0: release at 48.4250 ms, travel -30.7646 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 48.0000 ms
+  4 m/s drive 1 up 0.003 side 0.01: release at 48.4250 ms, travel -30.6853 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 48.0000 ms
+  6 m/s drive -1 up -0.003 side -0.01: release at 31.1000 ms, travel -32.5249 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 29.0000 ms
+  6 m/s drive -1 up -0.003 side 0: release at 31.1000 ms, travel -32.6482 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 29.0000 ms
+  6 m/s drive -1 up -0.003 side 0.01: release at 31.1000 ms, travel -32.5054 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 29.0000 ms
+  6 m/s drive -1 up 0 side -0.01: release at 31.0800 ms, travel -32.2967 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 29.0000 ms
+  6 m/s drive -1 up 0 side 0: release at 31.0800 ms, travel -32.4388 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 29.0000 ms
+  6 m/s drive -1 up 0 side 0.01: release at 31.0800 ms, travel -32.3169 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 29.0000 ms
+  6 m/s drive -1 up 0.003 side -0.01: release at 31.0600 ms, travel -32.0694 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 30.0000 ms
+  6 m/s drive -1 up 0.003 side 0: release at 31.0600 ms, travel -32.1921 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 30.0000 ms
+  6 m/s drive -1 up 0.003 side 0.01: release at 31.0600 ms, travel -32.0276 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 30.0000 ms
+  6 m/s drive -0.5 up -0.003 side -0.01: release at 31.1000 ms, travel -30.4454 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 31.0000 ms
+  6 m/s drive -0.5 up -0.003 side 0: release at 31.1000 ms, travel -30.5770 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 31.0000 ms
+  6 m/s drive -0.5 up -0.003 side 0.01: release at 31.1000 ms, travel -30.4304 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 31.0000 ms
+  6 m/s drive -0.5 up 0 side -0.01: release at 31.0800 ms, travel -30.2142 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 31.0000 ms
+  6 m/s drive -0.5 up 0 side 0: release at 31.0800 ms, travel -30.3651 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 31.0000 ms
+  6 m/s drive -0.5 up 0 side 0.01: release at 31.0800 ms, travel -30.2359 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 31.0000 ms
+  6 m/s drive -0.5 up 0.003 side -0.01: release at 31.0600 ms, travel -29.9859 mm against 30.0000 mm, no early crossing
+  6 m/s drive -0.5 up 0.003 side 0: release at 31.0600 ms, travel -30.1171 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 31.0000 ms
+  6 m/s drive -0.5 up 0.003 side 0.01: release at 31.0600 ms, travel -29.9497 mm against 30.0000 mm, no early crossing
+  6 m/s drive 0 up -0.003 side -0.01: release at 31.1000 ms, travel -28.8550 mm against 30.0000 mm, no early crossing
+  6 m/s drive 0 up -0.003 side 0: release at 31.1000 ms, travel -28.9789 mm against 30.0000 mm, no early crossing
+  6 m/s drive 0 up -0.003 side 0.01: release at 31.1000 ms, travel -28.8373 mm against 30.0000 mm, no early crossing
+  6 m/s drive 0 up 0 side -0.01: release at 31.0800 ms, travel -28.6206 mm against 30.0000 mm, no early crossing
+  6 m/s drive 0 up 0 side 0: release at 31.0800 ms, travel -28.7661 mm against 30.0000 mm, no early crossing
+  6 m/s drive 0 up 0 side 0.01: release at 31.0800 ms, travel -28.6419 mm against 30.0000 mm, no early crossing
+  6 m/s drive 0 up 0.003 side -0.01: release at 31.0600 ms, travel -28.3920 mm against 30.0000 mm, no early crossing
+  6 m/s drive 0 up 0.003 side 0: release at 31.0600 ms, travel -28.5169 mm against 30.0000 mm, no early crossing
+  6 m/s drive 0 up 0.003 side 0.01: release at 31.0600 ms, travel -28.3499 mm against 30.0000 mm, no early crossing
+  6 m/s drive 0.5 up -0.003 side -0.01: release at 31.1000 ms, travel -27.3278 mm against 30.0000 mm, no early crossing
+  6 m/s drive 0.5 up -0.003 side 0: release at 31.1000 ms, travel -27.4468 mm against 30.0000 mm, no early crossing
+  6 m/s drive 0.5 up -0.003 side 0.01: release at 31.1000 ms, travel -27.3061 mm against 30.0000 mm, no early crossing
+  6 m/s drive 0.5 up 0 side -0.01: release at 31.0800 ms, travel -27.0851 mm against 30.0000 mm, no early crossing
+  6 m/s drive 0.5 up 0 side 0: release at 31.0800 ms, travel -27.2288 mm against 30.0000 mm, no early crossing
+  6 m/s drive 0.5 up 0 side 0.01: release at 31.0800 ms, travel -27.1090 mm against 30.0000 mm, no early crossing
+  6 m/s drive 0.5 up 0.003 side -0.01: release at 31.0600 ms, travel -26.8494 mm against 30.0000 mm, no early crossing
+  6 m/s drive 0.5 up 0.003 side 0: release at 31.0600 ms, travel -26.9748 mm against 30.0000 mm, no early crossing
+  6 m/s drive 0.5 up 0.003 side 0.01: release at 31.0600 ms, travel -26.8090 mm against 30.0000 mm, no early crossing
+  6 m/s drive 1 up -0.003 side -0.01: release at 31.1000 ms, travel -25.7512 mm against 30.0000 mm, no early crossing
+  6 m/s drive 1 up -0.003 side 0: release at 31.1000 ms, travel -25.8717 mm against 30.0000 mm, no early crossing
+  6 m/s drive 1 up -0.003 side 0.01: release at 31.1000 ms, travel -25.7318 mm against 30.0000 mm, no early crossing
+  6 m/s drive 1 up 0 side -0.01: release at 31.0800 ms, travel -25.4982 mm against 30.0000 mm, no early crossing
+  6 m/s drive 1 up 0 side 0: release at 31.0800 ms, travel -25.6416 mm against 30.0000 mm, no early crossing
+  6 m/s drive 1 up 0 side 0.01: release at 31.0800 ms, travel -25.5159 mm against 30.0000 mm, no early crossing
+  6 m/s drive 1 up 0.003 side -0.01: release at 31.0600 ms, travel -25.2500 mm against 30.0000 mm, no early crossing
+  6 m/s drive 1 up 0.003 side 0: release at 31.0600 ms, travel -25.3788 mm against 30.0000 mm, no early crossing
+  6 m/s drive 1 up 0.003 side 0.01: release at 31.0600 ms, travel -25.2159 mm against 30.0000 mm, no early crossing
+full-roll: reachSlack 30.0000 mm, r − b 310.0000 mm
+  canonical: release at 81.3600 ms, travel -59.3527 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 40.0000 ms
+  1 m/s drive -1 up -0.003 side -0.01: release at 299.5050 ms, travel -51.5691 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 143.0000 ms
+  1 m/s drive -1 up -0.003 side 0: release at 299.5050 ms, travel -51.5075 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 143.0000 ms
+  1 m/s drive -1 up -0.003 side 0.01: release at 299.5050 ms, travel -50.2395 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 145.0000 ms
+  1 m/s drive -1 up 0 side -0.01: release at 299.3450 ms, travel -51.0921 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 144.0000 ms
+  1 m/s drive -1 up 0 side 0: release at 299.3450 ms, travel -52.2897 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 143.0000 ms
+  1 m/s drive -1 up 0 side 0.01: release at 299.3450 ms, travel -52.4440 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 143.0000 ms
+  1 m/s drive -1 up 0.003 side -0.01: release at 299.1900 ms, travel -52.0186 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 144.0000 ms
+  1 m/s drive -1 up 0.003 side 0: release at 299.1900 ms, travel -51.7977 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 144.0000 ms
+  1 m/s drive -1 up 0.003 side 0.01: release at 299.1900 ms, travel -52.0873 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 144.0000 ms
+  1 m/s drive -0.5 up -0.003 side -0.01: release at 282.6950 ms, travel -54.0519 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 130.0000 ms
+  1 m/s drive -0.5 up -0.003 side 0: release at 282.6950 ms, travel -54.0866 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 130.0000 ms
+  1 m/s drive -0.5 up -0.003 side 0.01: release at 282.6950 ms, travel -54.0726 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 130.0000 ms
+  1 m/s drive -0.5 up 0 side -0.01: release at 282.5550 ms, travel -55.0283 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 130.0000 ms
+  1 m/s drive -0.5 up 0 side 0: release at 282.5550 ms, travel -55.0533 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 130.0000 ms
+  1 m/s drive -0.5 up 0 side 0.01: release at 282.5550 ms, travel -55.0189 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 130.0000 ms
+  1 m/s drive -0.5 up 0.003 side -0.01: release at 282.4150 ms, travel -55.8628 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 130.0000 ms
+  1 m/s drive -0.5 up 0.003 side 0: release at 282.4150 ms, travel -55.8439 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 130.0000 ms
+  1 m/s drive -0.5 up 0.003 side 0.01: release at 282.4150 ms, travel -55.8329 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 130.0000 ms
+  1 m/s drive 0 up -0.003 side -0.01: release at 267.7650 ms, travel -55.4341 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 120.0000 ms
+  1 m/s drive 0 up -0.003 side 0: release at 267.7650 ms, travel -55.4800 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 120.0000 ms
+  1 m/s drive 0 up -0.003 side 0.01: release at 267.7650 ms, travel -55.4427 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 120.0000 ms
+  1 m/s drive 0 up 0 side -0.01: release at 267.6400 ms, travel -56.6634 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 120.0000 ms
+  1 m/s drive 0 up 0 side 0: release at 267.6400 ms, travel -56.7006 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 120.0000 ms
+  1 m/s drive 0 up 0 side 0.01: release at 267.6400 ms, travel -56.6830 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 120.0000 ms
+  1 m/s drive 0 up 0.003 side -0.01: release at 267.5150 ms, travel -57.7285 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 120.0000 ms
+  1 m/s drive 0 up 0.003 side 0: release at 267.5150 ms, travel -57.7669 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 120.0000 ms
+  1 m/s drive 0 up 0.003 side 0.01: release at 267.5150 ms, travel -57.7427 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 120.0000 ms
+  1 m/s drive 0.5 up -0.003 side -0.01: release at 254.4100 ms, travel -56.4453 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 113.0000 ms
+  1 m/s drive 0.5 up -0.003 side 0: release at 254.4100 ms, travel -56.5046 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 113.0000 ms
+  1 m/s drive 0.5 up -0.003 side 0.01: release at 254.4100 ms, travel -56.4557 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 113.0000 ms
+  1 m/s drive 0.5 up 0 side -0.01: release at 254.2950 ms, travel -57.7065 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 113.0000 ms
+  1 m/s drive 0.5 up 0 side 0: release at 254.2950 ms, travel -57.7620 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 113.0000 ms
+  1 m/s drive 0.5 up 0 side 0.01: release at 254.2950 ms, travel -57.7102 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 113.0000 ms
+  1 m/s drive 0.5 up 0.003 side -0.01: release at 254.1850 ms, travel -58.8008 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 113.0000 ms
+  1 m/s drive 0.5 up 0.003 side 0: release at 254.1850 ms, travel -58.8715 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 113.0000 ms
+  1 m/s drive 0.5 up 0.003 side 0.01: release at 254.1850 ms, travel -58.8044 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 113.0000 ms
+  1 m/s drive 1 up -0.003 side -0.01: release at 242.3950 ms, travel -57.0216 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 106.0000 ms
+  1 m/s drive 1 up -0.003 side 0: release at 242.3950 ms, travel -57.1473 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 106.0000 ms
+  1 m/s drive 1 up -0.003 side 0.01: release at 242.3950 ms, travel -57.0397 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 106.0000 ms
+  1 m/s drive 1 up 0 side -0.01: release at 242.2900 ms, travel -58.3306 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 106.0000 ms
+  1 m/s drive 1 up 0 side 0: release at 242.2900 ms, travel -58.4499 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 106.0000 ms
+  1 m/s drive 1 up 0 side 0.01: release at 242.2900 ms, travel -58.3271 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 106.0000 ms
+  1 m/s drive 1 up 0.003 side -0.01: release at 242.1900 ms, travel -59.4953 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 106.0000 ms
+  1 m/s drive 1 up 0.003 side 0: release at 242.1900 ms, travel -59.6189 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 106.0000 ms
+  1 m/s drive 1 up 0.003 side 0.01: release at 242.1900 ms, travel -59.4561 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 106.0000 ms
+  2 m/s drive -1 up -0.003 side -0.01: release at 148.3100 ms, travel -54.7906 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 53.0000 ms
+  2 m/s drive -1 up -0.003 side 0: release at 148.3100 ms, travel -54.6056 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 53.0000 ms
+  2 m/s drive -1 up -0.003 side 0.01: release at 148.3100 ms, travel -54.7858 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 53.0000 ms
+  2 m/s drive -1 up 0 side -0.01: release at 148.2350 ms, travel -54.7248 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 53.0000 ms
+  2 m/s drive -1 up 0 side 0: release at 148.2350 ms, travel -54.8491 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 53.0000 ms
+  2 m/s drive -1 up 0 side 0.01: release at 148.2350 ms, travel -54.7280 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 53.0000 ms
+  2 m/s drive -1 up 0.003 side -0.01: release at 148.1650 ms, travel -55.1090 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 53.0000 ms
+  2 m/s drive -1 up 0.003 side 0: release at 148.1650 ms, travel -54.8456 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 53.0000 ms
+  2 m/s drive -1 up 0.003 side 0.01: release at 148.1650 ms, travel -54.7701 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 53.0000 ms
+  2 m/s drive -0.5 up -0.003 side -0.01: release at 140.4600 ms, travel -56.7860 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 55.0000 ms
+  2 m/s drive -0.5 up -0.003 side 0: release at 140.4600 ms, travel -56.2271 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 55.0000 ms
+  2 m/s drive -0.5 up -0.003 side 0.01: release at 140.4600 ms, travel -56.5502 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 55.0000 ms
+  2 m/s drive -0.5 up 0 side -0.01: release at 140.3950 ms, travel -57.0439 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 56.0000 ms
+  2 m/s drive -0.5 up 0 side 0: release at 140.3950 ms, travel -56.3981 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 55.0000 ms
+  2 m/s drive -0.5 up 0 side 0.01: release at 140.3950 ms, travel -57.0380 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 56.0000 ms
+  2 m/s drive -0.5 up 0.003 side -0.01: release at 140.3300 ms, travel -57.3133 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 56.0000 ms
+  2 m/s drive -0.5 up 0.003 side 0: release at 140.3300 ms, travel -56.4956 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 56.0000 ms
+  2 m/s drive -0.5 up 0.003 side 0.01: release at 140.3300 ms, travel -57.2936 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 56.0000 ms
+  2 m/s drive 0 up -0.003 side -0.01: release at 133.4800 ms, travel -58.6809 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 57.0000 ms
+  2 m/s drive 0 up -0.003 side 0: release at 133.4800 ms, travel -58.6606 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 57.0000 ms
+  2 m/s drive 0 up -0.003 side 0.01: release at 133.4800 ms, travel -58.6678 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 57.0000 ms
+  2 m/s drive 0 up 0 side -0.01: release at 133.4250 ms, travel -59.0388 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 57.0000 ms
+  2 m/s drive 0 up 0 side 0: release at 133.4250 ms, travel -59.0699 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 57.0000 ms
+  2 m/s drive 0 up 0 side 0.01: release at 133.4250 ms, travel -59.0261 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 57.0000 ms
+  2 m/s drive 0 up 0.003 side -0.01: release at 133.3650 ms, travel -59.2489 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 57.0000 ms
+  2 m/s drive 0 up 0.003 side 0: release at 133.3650 ms, travel -59.2414 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 57.0000 ms
+  2 m/s drive 0 up 0.003 side 0.01: release at 133.3650 ms, travel -59.2426 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 58.0000 ms
+  2 m/s drive 0.5 up -0.003 side -0.01: release at 127.2400 ms, travel -60.6766 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 58.0000 ms
+  2 m/s drive 0.5 up -0.003 side 0: release at 127.2400 ms, travel -60.7285 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 58.0000 ms
+  2 m/s drive 0.5 up -0.003 side 0.01: release at 127.2400 ms, travel -60.6876 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 58.0000 ms
+  2 m/s drive 0.5 up 0 side -0.01: release at 127.1850 ms, travel -60.9467 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 58.0000 ms
+  2 m/s drive 0.5 up 0 side 0: release at 127.1850 ms, travel -61.0311 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 58.0000 ms
+  2 m/s drive 0.5 up 0 side 0.01: release at 127.1850 ms, travel -60.9499 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 58.0000 ms
+  2 m/s drive 0.5 up 0.003 side -0.01: release at 127.1350 ms, travel -60.9170 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 58.0000 ms
+  2 m/s drive 0.5 up 0.003 side 0: release at 127.1350 ms, travel -61.0599 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 58.0000 ms
+  2 m/s drive 0.5 up 0.003 side 0.01: release at 127.1350 ms, travel -61.0261 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 58.0000 ms
+  2 m/s drive 1 up -0.003 side -0.01: release at 121.6200 ms, travel -60.2443 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 58.0000 ms
+  2 m/s drive 1 up -0.003 side 0: release at 121.6200 ms, travel -60.2368 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 58.0000 ms
+  2 m/s drive 1 up -0.003 side 0.01: release at 121.6200 ms, travel -60.3132 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 58.0000 ms
+  2 m/s drive 1 up 0 side -0.01: release at 121.5750 ms, travel -60.3199 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 58.0000 ms
+  2 m/s drive 1 up 0 side 0: release at 121.5750 ms, travel -60.4828 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 58.0000 ms
+  2 m/s drive 1 up 0 side 0.01: release at 121.5750 ms, travel -60.3047 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 58.0000 ms
+  2 m/s drive 1 up 0.003 side -0.01: release at 121.5250 ms, travel -60.8785 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 58.0000 ms
+  2 m/s drive 1 up 0.003 side 0: release at 121.5250 ms, travel -61.0275 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 58.0000 ms
+  2 m/s drive 1 up 0.003 side 0.01: release at 121.5250 ms, travel -60.9725 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 58.0000 ms
+  3 m/s drive -1 up -0.003 side -0.01: release at 97.9550 ms, travel -67.2209 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 36.0000 ms
+  3 m/s drive -1 up -0.003 side 0: release at 97.9550 ms, travel -67.4203 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 36.0000 ms
+  3 m/s drive -1 up -0.003 side 0.01: release at 97.9550 ms, travel -67.2131 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 36.0000 ms
+  3 m/s drive -1 up 0 side -0.01: release at 97.9100 ms, travel -67.1177 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 36.0000 ms
+  3 m/s drive -1 up 0 side 0: release at 97.9100 ms, travel -67.3149 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 36.0000 ms
+  3 m/s drive -1 up 0 side 0.01: release at 97.9100 ms, travel -67.1178 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 36.0000 ms
+  3 m/s drive -1 up 0.003 side -0.01: release at 97.8650 ms, travel -66.9748 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 36.0000 ms
+  3 m/s drive -1 up 0.003 side 0: release at 97.8650 ms, travel -67.1837 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 36.0000 ms
+  3 m/s drive -1 up 0.003 side 0.01: release at 97.8650 ms, travel -66.9771 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 36.0000 ms
+  3 m/s drive -0.5 up -0.003 side -0.01: release at 93.0850 ms, travel -63.9952 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 37.0000 ms
+  3 m/s drive -0.5 up -0.003 side 0: release at 93.0850 ms, travel -64.1903 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 37.0000 ms
+  3 m/s drive -0.5 up -0.003 side 0.01: release at 93.0850 ms, travel -63.9875 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 37.0000 ms
+  3 m/s drive -0.5 up 0 side -0.01: release at 93.0450 ms, travel -63.8816 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 37.0000 ms
+  3 m/s drive -0.5 up 0 side 0: release at 93.0450 ms, travel -64.0741 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 37.0000 ms
+  3 m/s drive -0.5 up 0 side 0.01: release at 93.0450 ms, travel -63.8818 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 37.0000 ms
+  3 m/s drive -0.5 up 0.003 side -0.01: release at 93.0050 ms, travel -63.7309 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 37.0000 ms
+  3 m/s drive -0.5 up 0.003 side 0: release at 93.0050 ms, travel -63.9336 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 37.0000 ms
+  3 m/s drive -0.5 up 0.003 side 0.01: release at 93.0050 ms, travel -63.7337 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 37.0000 ms
+  3 m/s drive 0 up -0.003 side -0.01: release at 88.7500 ms, travel -61.9827 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 38.0000 ms
+  3 m/s drive 0 up -0.003 side 0: release at 88.7500 ms, travel -61.9576 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 38.0000 ms
+  3 m/s drive 0 up -0.003 side 0.01: release at 88.7500 ms, travel -61.9915 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 38.0000 ms
+  3 m/s drive 0 up 0 side -0.01: release at 88.7150 ms, travel -61.9873 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 38.0000 ms
+  3 m/s drive 0 up 0 side 0: release at 88.7150 ms, travel -62.1458 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 38.0000 ms
+  3 m/s drive 0 up 0 side 0.01: release at 88.7150 ms, travel -61.9911 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 38.0000 ms
+  3 m/s drive 0 up 0.003 side -0.01: release at 88.6800 ms, travel -61.8272 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 38.0000 ms
+  3 m/s drive 0 up 0.003 side 0: release at 88.6800 ms, travel -62.0036 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 38.0000 ms
+  3 m/s drive 0 up 0.003 side 0.01: release at 88.6800 ms, travel -61.8301 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 38.0000 ms
+  3 m/s drive 0.5 up -0.003 side -0.01: release at 84.8750 ms, travel -60.4558 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 39.0000 ms
+  3 m/s drive 0.5 up -0.003 side 0: release at 84.8750 ms, travel -60.6314 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 39.0000 ms
+  3 m/s drive 0.5 up -0.003 side 0.01: release at 84.8750 ms, travel -60.4444 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 39.0000 ms
+  3 m/s drive 0.5 up 0 side -0.01: release at 84.8450 ms, travel -60.5574 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 39.0000 ms
+  3 m/s drive 0.5 up 0 side 0: release at 84.8450 ms, travel -60.6798 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 39.0000 ms
+  3 m/s drive 0.5 up 0 side 0.01: release at 84.8450 ms, travel -60.5639 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 39.0000 ms
+  3 m/s drive 0.5 up 0.003 side -0.01: release at 84.8100 ms, travel -60.3972 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 39.0000 ms
+  3 m/s drive 0.5 up 0.003 side 0: release at 84.8100 ms, travel -60.5583 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 39.0000 ms
+  3 m/s drive 0.5 up 0.003 side 0.01: release at 84.8100 ms, travel -60.4027 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 39.0000 ms
+  3 m/s drive 1 up -0.003 side -0.01: release at 81.3850 ms, travel -59.4527 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 40.0000 ms
+  3 m/s drive 1 up -0.003 side 0: release at 81.3850 ms, travel -59.6153 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 39.0000 ms
+  3 m/s drive 1 up -0.003 side 0.01: release at 81.3850 ms, travel -59.4408 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 40.0000 ms
+  3 m/s drive 1 up 0 side -0.01: release at 81.3600 ms, travel -59.1915 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 40.0000 ms
+  3 m/s drive 1 up 0 side 0: release at 81.3600 ms, travel -59.3527 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 40.0000 ms
+  3 m/s drive 1 up 0 side 0.01: release at 81.3600 ms, travel -59.1833 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 40.0000 ms
+  3 m/s drive 1 up 0.003 side -0.01: release at 81.3300 ms, travel -59.1636 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 40.0000 ms
+  3 m/s drive 1 up 0.003 side 0: release at 81.3300 ms, travel -59.2672 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 40.0000 ms
+  3 m/s drive 1 up 0.003 side 0.01: release at 81.3300 ms, travel -59.1670 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 40.0000 ms
+  4 m/s drive -1 up -0.003 side -0.01: release at 72.8050 ms, travel -74.5514 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 27.0000 ms
+  4 m/s drive -1 up -0.003 side 0: release at 72.8050 ms, travel -74.6882 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 27.0000 ms
+  4 m/s drive -1 up -0.003 side 0.01: release at 72.8050 ms, travel -74.5381 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 27.0000 ms
+  4 m/s drive -1 up 0 side -0.01: release at 72.7700 ms, travel -74.5415 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 27.0000 ms
+  4 m/s drive -1 up 0 side 0: release at 72.7700 ms, travel -74.7412 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 27.0000 ms
+  4 m/s drive -1 up 0 side 0.01: release at 72.7700 ms, travel -74.5319 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 27.0000 ms
+  4 m/s drive -1 up 0.003 side -0.01: release at 72.7400 ms, travel -74.4902 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 27.0000 ms
+  4 m/s drive -1 up 0.003 side 0: release at 72.7400 ms, travel -74.7037 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 27.0000 ms
+  4 m/s drive -1 up 0.003 side 0.01: release at 72.7400 ms, travel -74.4819 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 27.0000 ms
+  4 m/s drive -0.5 up -0.003 side -0.01: release at 69.4150 ms, travel -70.3436 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 28.0000 ms
+  4 m/s drive -0.5 up -0.003 side 0: release at 69.4150 ms, travel -70.5288 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 27.0000 ms
+  4 m/s drive -0.5 up -0.003 side 0.01: release at 69.4150 ms, travel -70.3436 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 28.0000 ms
+  4 m/s drive -0.5 up 0 side -0.01: release at 69.3900 ms, travel -70.2354 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 28.0000 ms
+  4 m/s drive -0.5 up 0 side 0: release at 69.3900 ms, travel -70.4429 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 28.0000 ms
+  4 m/s drive -0.5 up 0 side 0.01: release at 69.3900 ms, travel -70.2330 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 28.0000 ms
+  4 m/s drive -0.5 up 0.003 side -0.01: release at 69.3600 ms, travel -70.1283 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 28.0000 ms
+  4 m/s drive -0.5 up 0.003 side 0: release at 69.3600 ms, travel -70.3477 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 28.0000 ms
+  4 m/s drive -0.5 up 0.003 side 0.01: release at 69.3600 ms, travel -70.1255 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 28.0000 ms
+  4 m/s drive 0 up -0.003 side -0.01: release at 66.4050 ms, travel -66.8159 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 28.0000 ms
+  4 m/s drive 0 up -0.003 side 0: release at 66.4050 ms, travel -66.9819 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 28.0000 ms
+  4 m/s drive 0 up -0.003 side 0.01: release at 66.4050 ms, travel -66.8166 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 28.0000 ms
+  4 m/s drive 0 up 0 side -0.01: release at 66.3800 ms, travel -66.7057 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 28.0000 ms
+  4 m/s drive 0 up 0 side 0: release at 66.3800 ms, travel -66.8974 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 28.0000 ms
+  4 m/s drive 0 up 0 side 0.01: release at 66.3800 ms, travel -66.6981 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 28.0000 ms
+  4 m/s drive 0 up 0.003 side -0.01: release at 66.3550 ms, travel -66.5945 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 28.0000 ms
+  4 m/s drive 0 up 0.003 side 0: release at 66.3550 ms, travel -66.7884 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 28.0000 ms
+  4 m/s drive 0 up 0.003 side 0.01: release at 66.3550 ms, travel -66.5899 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 28.0000 ms
+  4 m/s drive 0.5 up -0.003 side -0.01: release at 63.7100 ms, travel -63.8971 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 28.0000 ms
+  4 m/s drive 0.5 up -0.003 side 0: release at 63.7100 ms, travel -64.0401 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 28.0000 ms
+  4 m/s drive 0.5 up -0.003 side 0.01: release at 63.7100 ms, travel -63.8904 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 28.0000 ms
+  4 m/s drive 0.5 up 0 side -0.01: release at 63.6900 ms, travel -63.7937 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 28.0000 ms
+  4 m/s drive 0.5 up 0 side 0: release at 63.6900 ms, travel -63.9707 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 28.0000 ms
+  4 m/s drive 0.5 up 0 side 0.01: release at 63.6900 ms, travel -63.7907 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 28.0000 ms
+  4 m/s drive 0.5 up 0.003 side -0.01: release at 63.6650 ms, travel -63.6970 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 28.0000 ms
+  4 m/s drive 0.5 up 0.003 side 0: release at 63.6650 ms, travel -63.8713 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 28.0000 ms
+  4 m/s drive 0.5 up 0.003 side 0.01: release at 63.6650 ms, travel -63.6895 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 28.0000 ms
+  4 m/s drive 1 up -0.003 side -0.01: release at 61.2850 ms, travel -61.3805 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 28.0000 ms
+  4 m/s drive 1 up -0.003 side 0: release at 61.2850 ms, travel -61.5258 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 28.0000 ms
+  4 m/s drive 1 up -0.003 side 0.01: release at 61.2850 ms, travel -61.3799 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 28.0000 ms
+  4 m/s drive 1 up 0 side -0.01: release at 61.2650 ms, travel -61.2404 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 28.0000 ms
+  4 m/s drive 1 up 0 side 0: release at 61.2650 ms, travel -61.4086 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 28.0000 ms
+  4 m/s drive 1 up 0 side 0.01: release at 61.2650 ms, travel -61.2384 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 28.0000 ms
+  4 m/s drive 1 up 0.003 side -0.01: release at 61.2400 ms, travel -61.0722 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 28.0000 ms
+  4 m/s drive 1 up 0.003 side 0: release at 61.2400 ms, travel -61.2250 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 28.0000 ms
+  4 m/s drive 1 up 0.003 side 0.01: release at 61.2400 ms, travel -61.0635 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 28.0000 ms
+  6 m/s drive -1 up -0.003 side -0.01: release at 47.6950 ms, travel -81.5773 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 18.0000 ms
+  6 m/s drive -1 up -0.003 side 0: release at 47.6950 ms, travel -81.8388 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 18.0000 ms
+  6 m/s drive -1 up -0.003 side 0.01: release at 47.6950 ms, travel -81.5679 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 18.0000 ms
+  6 m/s drive -1 up 0 side -0.01: release at 47.6750 ms, travel -81.4094 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 18.0000 ms
+  6 m/s drive -1 up 0 side 0: release at 47.6750 ms, travel -81.6726 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 18.0000 ms
+  6 m/s drive -1 up 0 side 0.01: release at 47.6750 ms, travel -81.3847 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 18.0000 ms
+  6 m/s drive -1 up 0.003 side -0.01: release at 47.6600 ms, travel -81.2395 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 18.0000 ms
+  6 m/s drive -1 up 0.003 side 0: release at 47.6600 ms, travel -81.5007 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 18.0000 ms
+  6 m/s drive -1 up 0.003 side 0.01: release at 47.6600 ms, travel -81.2156 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 18.0000 ms
+  6 m/s drive -0.5 up -0.003 side -0.01: release at 45.7850 ms, travel -75.3001 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 18.0000 ms
+  6 m/s drive -0.5 up -0.003 side 0: release at 45.7850 ms, travel -75.5453 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 18.0000 ms
+  6 m/s drive -0.5 up -0.003 side 0.01: release at 45.7850 ms, travel -75.2836 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 18.0000 ms
+  6 m/s drive -0.5 up 0 side -0.01: release at 45.7700 ms, travel -75.1256 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 18.0000 ms
+  6 m/s drive -0.5 up 0 side 0: release at 45.7700 ms, travel -75.3874 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 18.0000 ms
+  6 m/s drive -0.5 up 0 side 0.01: release at 45.7700 ms, travel -75.1018 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 18.0000 ms
+  6 m/s drive -0.5 up 0.003 side -0.01: release at 45.7550 ms, travel -74.9518 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 18.0000 ms
+  6 m/s drive -0.5 up 0.003 side 0: release at 45.7550 ms, travel -75.2006 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 18.0000 ms
+  6 m/s drive -0.5 up 0.003 side 0.01: release at 45.7550 ms, travel -74.9299 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 18.0000 ms
+  6 m/s drive 0 up -0.003 side -0.01: release at 44.0900 ms, travel -70.2081 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 18.0000 ms
+  6 m/s drive 0 up -0.003 side 0: release at 44.0900 ms, travel -70.4385 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 18.0000 ms
+  6 m/s drive 0 up -0.003 side 0.01: release at 44.0900 ms, travel -70.1904 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 18.0000 ms
+  6 m/s drive 0 up 0 side -0.01: release at 44.0750 ms, travel -70.0218 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 18.0000 ms
+  6 m/s drive 0 up 0 side 0: release at 44.0750 ms, travel -70.2664 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 18.0000 ms
+  6 m/s drive 0 up 0 side 0.01: release at 44.0750 ms, travel -70.0146 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 18.0000 ms
+  6 m/s drive 0 up 0.003 side -0.01: release at 44.0600 ms, travel -69.9196 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 18.0000 ms
+  6 m/s drive 0 up 0.003 side 0: release at 44.0600 ms, travel -70.1131 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 18.0000 ms
+  6 m/s drive 0 up 0.003 side 0.01: release at 44.0600 ms, travel -69.8988 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 18.0000 ms
+  6 m/s drive 0.5 up -0.003 side -0.01: release at 42.5700 ms, travel -66.5071 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 18.0000 ms
+  6 m/s drive 0.5 up -0.003 side 0: release at 42.5700 ms, travel -66.7093 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 18.0000 ms
+  6 m/s drive 0.5 up -0.003 side 0.01: release at 42.5700 ms, travel -66.4928 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 18.0000 ms
+  6 m/s drive 0.5 up 0 side -0.01: release at 42.5600 ms, travel -66.3061 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 18.0000 ms
+  6 m/s drive 0.5 up 0 side 0: release at 42.5600 ms, travel -66.5167 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 18.0000 ms
+  6 m/s drive 0.5 up 0 side 0.01: release at 42.5600 ms, travel -66.2873 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 18.0000 ms
+  6 m/s drive 0.5 up 0.003 side -0.01: release at 42.5450 ms, travel -66.1416 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 18.0000 ms
+  6 m/s drive 0.5 up 0.003 side 0: release at 42.5450 ms, travel -66.3123 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 18.0000 ms
+  6 m/s drive 0.5 up 0.003 side 0.01: release at 42.5450 ms, travel -66.1196 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 18.0000 ms
+  6 m/s drive 1 up -0.003 side -0.01: release at 41.2050 ms, travel -63.5598 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 18.0000 ms
+  6 m/s drive 1 up -0.003 side 0: release at 41.2050 ms, travel -63.7475 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 18.0000 ms
+  6 m/s drive 1 up -0.003 side 0.01: release at 41.2050 ms, travel -63.5490 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 18.0000 ms
+  6 m/s drive 1 up 0 side -0.01: release at 41.1900 ms, travel -63.3555 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 18.0000 ms
+  6 m/s drive 1 up 0 side 0: release at 41.1900 ms, travel -63.5549 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 18.0000 ms
+  6 m/s drive 1 up 0 side 0.01: release at 41.1900 ms, travel -63.3403 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 18.0000 ms
+  6 m/s drive 1 up 0.003 side -0.01: release at 41.1800 ms, travel -63.1606 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 18.0000 ms
+  6 m/s drive 1 up 0.003 side 0: release at 41.1800 ms, travel -63.3560 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 18.0000 ms
+  6 m/s drive 1 up 0.003 side 0.01: release at 41.1800 ms, travel -63.1392 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 18.0000 ms
+pass-roll: reachSlack 30.0000 mm, r − b 360.0000 mm
+  canonical: release at 83.1050 ms, travel -96.9895 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 36.0000 ms
+  1 m/s drive -1 up -0.003 side -0.01: release at 314.2300 ms, travel -61.2346 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 112.0000 ms
+  1 m/s drive -1 up -0.003 side 0: release at 314.2300 ms, travel -61.9954 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 113.0000 ms
+  1 m/s drive -1 up -0.003 side 0.01: release at 314.2300 ms, travel -62.4748 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 113.0000 ms
+  1 m/s drive -1 up 0 side -0.01: release at 313.9450 ms, travel -64.3525 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 113.0000 ms
+  1 m/s drive -1 up 0 side 0: release at 313.9450 ms, travel -65.1367 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 113.0000 ms
+  1 m/s drive -1 up 0 side 0.01: release at 313.9450 ms, travel -65.5624 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 113.0000 ms
+  1 m/s drive -1 up 0.003 side -0.01: release at 313.6600 ms, travel -67.2718 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 112.0000 ms
+  1 m/s drive -1 up 0.003 side 0: release at 313.6600 ms, travel -68.0341 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 112.0000 ms
+  1 m/s drive -1 up 0.003 side 0.01: release at 313.6600 ms, travel -68.4222 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 113.0000 ms
+  1 m/s drive -0.5 up -0.003 side -0.01: release at 295.3300 ms, travel -62.2050 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 103.0000 ms
+  1 m/s drive -0.5 up -0.003 side 0: release at 295.3300 ms, travel -62.9980 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 104.0000 ms
+  1 m/s drive -0.5 up -0.003 side 0.01: release at 295.3300 ms, travel -63.4688 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 104.0000 ms
+  1 m/s drive -0.5 up 0 side -0.01: release at 295.0800 ms, travel -65.5266 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 104.0000 ms
+  1 m/s drive -0.5 up 0 side 0: release at 295.0800 ms, travel -66.2873 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 105.0000 ms
+  1 m/s drive -0.5 up 0 side 0.01: release at 295.0800 ms, travel -66.7364 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 105.0000 ms
+  1 m/s drive -0.5 up 0.003 side -0.01: release at 294.8250 ms, travel -68.5493 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 105.0000 ms
+  1 m/s drive -0.5 up 0.003 side 0: release at 294.8250 ms, travel -69.2806 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 105.0000 ms
+  1 m/s drive -0.5 up 0.003 side 0.01: release at 294.8250 ms, travel -69.7039 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 105.0000 ms
+  1 m/s drive 0 up -0.003 side -0.01: release at 278.6200 ms, travel -62.8905 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 97.0000 ms
+  1 m/s drive 0 up -0.003 side 0: release at 278.6200 ms, travel -63.7018 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 96.0000 ms
+  1 m/s drive 0 up -0.003 side 0.01: release at 278.6200 ms, travel -64.1616 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 96.0000 ms
+  1 m/s drive 0 up 0 side -0.01: release at 278.4000 ms, travel -66.3365 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 97.0000 ms
+  1 m/s drive 0 up 0 side 0: release at 278.4000 ms, travel -67.1837 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 97.0000 ms
+  1 m/s drive 0 up 0 side 0.01: release at 278.4000 ms, travel -67.5888 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 97.0000 ms
+  1 m/s drive 0 up 0.003 side -0.01: release at 278.1750 ms, travel -69.5533 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 97.0000 ms
+  1 m/s drive 0 up 0.003 side 0: release at 278.1750 ms, travel -70.3765 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 97.0000 ms
+  1 m/s drive 0 up 0.003 side 0.01: release at 278.1750 ms, travel -70.7797 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 97.0000 ms
+  1 m/s drive 0.5 up -0.003 side -0.01: release at 263.7500 ms, travel -62.5309 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 93.0000 ms
+  1 m/s drive 0.5 up -0.003 side 0: release at 263.7500 ms, travel -63.3401 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 93.0000 ms
+  1 m/s drive 0.5 up -0.003 side 0.01: release at 263.7500 ms, travel -63.8048 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 94.0000 ms
+  1 m/s drive 0.5 up 0 side -0.01: release at 263.5500 ms, travel -65.6252 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 94.0000 ms
+  1 m/s drive 0.5 up 0 side 0: release at 263.5500 ms, travel -66.4669 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 94.0000 ms
+  1 m/s drive 0.5 up 0 side 0.01: release at 263.5500 ms, travel -66.8200 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 94.0000 ms
+  1 m/s drive 0.5 up 0.003 side -0.01: release at 263.3500 ms, travel -68.3418 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 94.0000 ms
+  1 m/s drive 0.5 up 0.003 side 0: release at 263.3500 ms, travel -69.1691 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 94.0000 ms
+  1 m/s drive 0.5 up 0.003 side 0.01: release at 263.3500 ms, travel -69.5295 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 94.0000 ms
+  1 m/s drive 1 up -0.003 side -0.01: release at 250.4200 ms, travel -58.5180 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 72.0000 ms
+  1 m/s drive 1 up -0.003 side 0: release at 250.4200 ms, travel -59.2767 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 71.0000 ms
+  1 m/s drive 1 up -0.003 side 0.01: release at 250.4200 ms, travel -59.5539 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 72.0000 ms
+  1 m/s drive 1 up 0 side -0.01: release at 250.2400 ms, travel -60.4648 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 72.0000 ms
+  1 m/s drive 1 up 0 side 0: release at 250.2400 ms, travel -61.2117 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 72.0000 ms
+  1 m/s drive 1 up 0 side 0.01: release at 250.2400 ms, travel -61.4554 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 72.0000 ms
+  1 m/s drive 1 up 0.003 side -0.01: release at 250.0600 ms, travel -62.2515 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 73.0000 ms
+  1 m/s drive 1 up 0.003 side 0: release at 250.0600 ms, travel -62.9956 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 72.0000 ms
+  1 m/s drive 1 up 0.003 side 0.01: release at 250.0600 ms, travel -63.2933 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 73.0000 ms
+  2 m/s drive -1 up -0.003 side -0.01: release at 155.5400 ms, travel -65.2162 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 35.0000 ms
+  2 m/s drive -1 up -0.003 side 0: release at 155.5400 ms, travel -64.9771 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 35.0000 ms
+  2 m/s drive -1 up -0.003 side 0.01: release at 155.5400 ms, travel -65.0277 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 35.0000 ms
+  2 m/s drive -1 up 0 side -0.01: release at 155.4150 ms, travel -64.8352 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 36.0000 ms
+  2 m/s drive -1 up 0 side 0: release at 155.4150 ms, travel -65.0059 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 35.0000 ms
+  2 m/s drive -1 up 0 side 0.01: release at 155.4150 ms, travel -64.9546 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 35.0000 ms
+  2 m/s drive -1 up 0.003 side -0.01: release at 155.2850 ms, travel -64.8196 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 36.0000 ms
+  2 m/s drive -1 up 0.003 side 0: release at 155.2850 ms, travel -65.1272 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 36.0000 ms
+  2 m/s drive -1 up 0.003 side 0.01: release at 155.2850 ms, travel -65.0778 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 36.0000 ms
+  2 m/s drive -0.5 up -0.003 side -0.01: release at 146.4750 ms, travel -67.8558 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 45.0000 ms
+  2 m/s drive -0.5 up -0.003 side 0: release at 146.4750 ms, travel -68.2532 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 45.0000 ms
+  2 m/s drive -0.5 up -0.003 side 0.01: release at 146.4750 ms, travel -68.2771 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 45.0000 ms
+  2 m/s drive -0.5 up 0 side -0.01: release at 146.3650 ms, travel -68.2164 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 46.0000 ms
+  2 m/s drive -0.5 up 0 side 0: release at 146.3650 ms, travel -68.5710 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 45.0000 ms
+  2 m/s drive -0.5 up 0 side 0.01: release at 146.3650 ms, travel -68.4075 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 45.0000 ms
+  2 m/s drive -0.5 up 0.003 side -0.01: release at 146.2550 ms, travel -68.7196 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 46.0000 ms
+  2 m/s drive -0.5 up 0.003 side 0: release at 146.2550 ms, travel -69.0493 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 46.0000 ms
+  2 m/s drive -0.5 up 0.003 side 0.01: release at 146.2550 ms, travel -68.9033 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 46.0000 ms
+  2 m/s drive 0 up -0.003 side -0.01: release at 138.4600 ms, travel -70.0653 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 51.0000 ms
+  2 m/s drive 0 up -0.003 side 0: release at 138.4600 ms, travel -70.4288 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 51.0000 ms
+  2 m/s drive 0 up -0.003 side 0.01: release at 138.4600 ms, travel -70.5161 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 51.0000 ms
+  2 m/s drive 0 up 0 side -0.01: release at 138.3600 ms, travel -70.9258 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 51.0000 ms
+  2 m/s drive 0 up 0 side 0: release at 138.3600 ms, travel -71.2222 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 51.0000 ms
+  2 m/s drive 0 up 0 side 0.01: release at 138.3600 ms, travel -71.2675 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 51.0000 ms
+  2 m/s drive 0 up 0.003 side -0.01: release at 138.2600 ms, travel -71.5781 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 52.0000 ms
+  2 m/s drive 0 up 0.003 side 0: release at 138.2600 ms, travel -71.8415 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 52.0000 ms
+  2 m/s drive 0 up 0.003 side 0.01: release at 138.2600 ms, travel -71.8736 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 52.0000 ms
+  2 m/s drive 0.5 up -0.003 side -0.01: release at 131.3150 ms, travel -69.1222 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 48.0000 ms
+  2 m/s drive 0.5 up -0.003 side 0: release at 131.3150 ms, travel -69.7495 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 47.0000 ms
+  2 m/s drive 0.5 up -0.003 side 0.01: release at 131.3150 ms, travel -69.8956 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 48.0000 ms
+  2 m/s drive 0.5 up 0 side -0.01: release at 131.2250 ms, travel -69.7634 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 48.0000 ms
+  2 m/s drive 0.5 up 0 side 0: release at 131.2250 ms, travel -70.2611 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 48.0000 ms
+  2 m/s drive 0.5 up 0 side 0.01: release at 131.2250 ms, travel -70.3610 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 48.0000 ms
+  2 m/s drive 0.5 up 0.003 side -0.01: release at 131.1400 ms, travel -70.1077 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 48.0000 ms
+  2 m/s drive 0.5 up 0.003 side 0: release at 131.1400 ms, travel -70.7195 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 48.0000 ms
+  2 m/s drive 0.5 up 0.003 side 0.01: release at 131.1400 ms, travel -70.6684 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 48.0000 ms
+  2 m/s drive 1 up -0.003 side -0.01: release at 124.9100 ms, travel -72.3518 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 44.0000 ms
+  2 m/s drive 1 up -0.003 side 0: release at 124.9100 ms, travel -72.6985 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 44.0000 ms
+  2 m/s drive 1 up -0.003 side 0.01: release at 124.9100 ms, travel -72.3338 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 44.0000 ms
+  2 m/s drive 1 up 0 side -0.01: release at 124.8300 ms, travel -72.2608 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 44.0000 ms
+  2 m/s drive 1 up 0 side 0: release at 124.8300 ms, travel -72.6185 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 44.0000 ms
+  2 m/s drive 1 up 0 side 0.01: release at 124.8300 ms, travel -72.2864 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 44.0000 ms
+  2 m/s drive 1 up 0.003 side -0.01: release at 124.7500 ms, travel -72.2061 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 44.0000 ms
+  2 m/s drive 1 up 0.003 side 0: release at 124.7500 ms, travel -72.5455 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 44.0000 ms
+  2 m/s drive 1 up 0.003 side 0.01: release at 124.7500 ms, travel -72.2153 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 44.0000 ms
+  3 m/s drive -1 up -0.003 side -0.01: release at 102.7700 ms, travel -76.1702 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 24.0000 ms
+  3 m/s drive -1 up -0.003 side 0: release at 102.7700 ms, travel -76.5208 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 24.0000 ms
+  3 m/s drive -1 up -0.003 side 0.01: release at 102.7700 ms, travel -76.4199 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 24.0000 ms
+  3 m/s drive -1 up 0 side -0.01: release at 102.6950 ms, travel -75.6864 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 24.0000 ms
+  3 m/s drive -1 up 0 side 0: release at 102.6950 ms, travel -76.0286 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 24.0000 ms
+  3 m/s drive -1 up 0 side 0.01: release at 102.6950 ms, travel -75.9149 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 24.0000 ms
+  3 m/s drive -1 up 0.003 side -0.01: release at 102.6200 ms, travel -75.1250 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 24.0000 ms
+  3 m/s drive -1 up 0.003 side 0: release at 102.6200 ms, travel -75.5041 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 24.0000 ms
+  3 m/s drive -1 up 0.003 side 0.01: release at 102.6200 ms, travel -75.3624 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 24.0000 ms
+  3 m/s drive -0.5 up -0.003 side -0.01: release at 96.9700 ms, travel -71.9308 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 28.0000 ms
+  3 m/s drive -0.5 up -0.003 side 0: release at 96.9700 ms, travel -72.3296 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 28.0000 ms
+  3 m/s drive -0.5 up -0.003 side 0.01: release at 96.9700 ms, travel -72.0685 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 28.0000 ms
+  3 m/s drive -0.5 up 0 side -0.01: release at 96.9050 ms, travel -71.5429 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 28.0000 ms
+  3 m/s drive -0.5 up 0 side 0: release at 96.9050 ms, travel -71.9097 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 28.0000 ms
+  3 m/s drive -0.5 up 0 side 0.01: release at 96.9050 ms, travel -71.6257 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 28.0000 ms
+  3 m/s drive -0.5 up 0.003 side -0.01: release at 96.8350 ms, travel -71.0270 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 28.0000 ms
+  3 m/s drive -0.5 up 0.003 side 0: release at 96.8350 ms, travel -71.4443 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 28.0000 ms
+  3 m/s drive -0.5 up 0.003 side 0.01: release at 96.8350 ms, travel -71.1265 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 28.0000 ms
+  3 m/s drive 0 up -0.003 side -0.01: release at 91.8350 ms, travel -70.8142 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 35.0000 ms
+  3 m/s drive 0 up -0.003 side 0: release at 91.8350 ms, travel -71.0743 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 34.0000 ms
+  3 m/s drive 0 up -0.003 side 0.01: release at 91.8350 ms, travel -70.8922 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 35.0000 ms
+  3 m/s drive 0 up 0 side -0.01: release at 91.7750 ms, travel -70.7263 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 35.0000 ms
+  3 m/s drive 0 up 0 side 0: release at 91.7750 ms, travel -70.9213 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 35.0000 ms
+  3 m/s drive 0 up 0 side 0.01: release at 91.7750 ms, travel -70.8349 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 35.0000 ms
+  3 m/s drive 0 up 0.003 side -0.01: release at 91.7150 ms, travel -70.6427 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 35.0000 ms
+  3 m/s drive 0 up 0.003 side 0: release at 91.7150 ms, travel -70.7652 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 35.0000 ms
+  3 m/s drive 0 up 0.003 side 0.01: release at 91.7150 ms, travel -70.5788 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 35.0000 ms
+  3 m/s drive 0.5 up -0.003 side -0.01: release at 87.2600 ms, travel -77.4511 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 37.0000 ms
+  3 m/s drive 0.5 up -0.003 side 0: release at 87.2600 ms, travel -77.6661 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 37.0000 ms
+  3 m/s drive 0.5 up -0.003 side 0.01: release at 87.2600 ms, travel -77.3769 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 37.0000 ms
+  3 m/s drive 0.5 up 0 side -0.01: release at 87.2050 ms, travel -77.2152 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 37.0000 ms
+  3 m/s drive 0.5 up 0 side 0: release at 87.2050 ms, travel -77.3441 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 37.0000 ms
+  3 m/s drive 0.5 up 0 side 0.01: release at 87.2050 ms, travel -77.0714 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 37.0000 ms
+  3 m/s drive 0.5 up 0.003 side -0.01: release at 87.1500 ms, travel -76.8309 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 37.0000 ms
+  3 m/s drive 0.5 up 0.003 side 0: release at 87.1500 ms, travel -77.0579 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 37.0000 ms
+  3 m/s drive 0.5 up 0.003 side 0.01: release at 87.1500 ms, travel -76.7529 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 37.0000 ms
+  3 m/s drive 1 up -0.003 side -0.01: release at 83.1500 ms, travel -96.8937 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 36.0000 ms
+  3 m/s drive 1 up -0.003 side 0: release at 83.1500 ms, travel -97.3181 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 36.0000 ms
+  3 m/s drive 1 up -0.003 side 0.01: release at 83.1500 ms, travel -97.1120 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 36.0000 ms
+  3 m/s drive 1 up 0 side -0.01: release at 83.1050 ms, travel -96.5426 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 36.0000 ms
+  3 m/s drive 1 up 0 side 0: release at 83.1050 ms, travel -96.9895 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 36.0000 ms
+  3 m/s drive 1 up 0 side 0.01: release at 83.1050 ms, travel -96.7482 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 36.0000 ms
+  3 m/s drive 1 up 0.003 side -0.01: release at 83.0550 ms, travel -96.0796 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 36.0000 ms
+  3 m/s drive 1 up 0.003 side 0: release at 83.0550 ms, travel -96.6167 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 36.0000 ms
+  3 m/s drive 1 up 0.003 side 0.01: release at 83.0550 ms, travel -96.3297 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 36.0000 ms
+  4 m/s drive -1 up -0.003 side -0.01: release at 76.4600 ms, travel -92.4044 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 20.0000 ms
+  4 m/s drive -1 up -0.003 side 0: release at 76.4600 ms, travel -92.9445 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 20.0000 ms
+  4 m/s drive -1 up -0.003 side 0.01: release at 76.4600 ms, travel -92.7979 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 20.0000 ms
+  4 m/s drive -1 up 0 side -0.01: release at 76.4100 ms, travel -91.8102 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 20.0000 ms
+  4 m/s drive -1 up 0 side 0: release at 76.4100 ms, travel -92.3686 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 20.0000 ms
+  4 m/s drive -1 up 0 side 0.01: release at 76.4100 ms, travel -92.2913 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 20.0000 ms
+  4 m/s drive -1 up 0.003 side -0.01: release at 76.3600 ms, travel -91.2387 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 20.0000 ms
+  4 m/s drive -1 up 0.003 side 0: release at 76.3600 ms, travel -91.7980 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 20.0000 ms
+  4 m/s drive -1 up 0.003 side 0.01: release at 76.3600 ms, travel -91.6516 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 20.0000 ms
+  4 m/s drive -0.5 up -0.003 side -0.01: release at 72.2800 ms, travel -85.8279 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 22.0000 ms
+  4 m/s drive -0.5 up -0.003 side 0: release at 72.2800 ms, travel -86.2965 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 22.0000 ms
+  4 m/s drive -0.5 up -0.003 side 0.01: release at 72.2800 ms, travel -86.1098 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 22.0000 ms
+  4 m/s drive -0.5 up 0 side -0.01: release at 72.2350 ms, travel -85.2350 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 22.0000 ms
+  4 m/s drive -0.5 up 0 side 0: release at 72.2350 ms, travel -85.7430 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 22.0000 ms
+  4 m/s drive -0.5 up 0 side 0.01: release at 72.2350 ms, travel -85.5703 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 22.0000 ms
+  4 m/s drive -0.5 up 0.003 side -0.01: release at 72.1900 ms, travel -84.7106 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 22.0000 ms
+  4 m/s drive -0.5 up 0.003 side 0: release at 72.1900 ms, travel -85.1800 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 22.0000 ms
+  4 m/s drive -0.5 up 0.003 side 0.01: release at 72.1900 ms, travel -84.9805 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 22.0000 ms
+  4 m/s drive 0 up -0.003 side -0.01: release at 68.5800 ms, travel -77.5248 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 26.0000 ms
+  4 m/s drive 0 up -0.003 side 0: release at 68.5800 ms, travel -78.0159 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 26.0000 ms
+  4 m/s drive 0 up -0.003 side 0.01: release at 68.5800 ms, travel -77.7888 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 26.0000 ms
+  4 m/s drive 0 up 0 side -0.01: release at 68.5400 ms, travel -76.9797 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 27.0000 ms
+  4 m/s drive 0 up 0 side 0: release at 68.5400 ms, travel -77.4982 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 27.0000 ms
+  4 m/s drive 0 up 0 side 0.01: release at 68.5400 ms, travel -77.2578 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 27.0000 ms
+  4 m/s drive 0 up 0.003 side -0.01: release at 68.5000 ms, travel -76.4637 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 27.0000 ms
+  4 m/s drive 0 up 0.003 side 0: release at 68.5000 ms, travel -76.9712 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 27.0000 ms
+  4 m/s drive 0 up 0.003 side 0.01: release at 68.5000 ms, travel -76.6604 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 27.0000 ms
+  4 m/s drive 0.5 up -0.003 side -0.01: release at 65.2800 ms, travel -85.1476 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 30.0000 ms
+  4 m/s drive 0.5 up -0.003 side 0: release at 65.2800 ms, travel -85.4213 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 30.0000 ms
+  4 m/s drive 0.5 up -0.003 side 0.01: release at 65.2800 ms, travel -85.2401 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 30.0000 ms
+  4 m/s drive 0.5 up 0 side -0.01: release at 65.2400 ms, travel -84.6699 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 31.0000 ms
+  4 m/s drive 0.5 up 0 side 0: release at 65.2400 ms, travel -85.0160 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 31.0000 ms
+  4 m/s drive 0.5 up 0 side 0.01: release at 65.2400 ms, travel -84.7426 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 31.0000 ms
+  4 m/s drive 0.5 up 0.003 side -0.01: release at 65.2050 ms, travel -84.1733 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 31.0000 ms
+  4 m/s drive 0.5 up 0.003 side 0: release at 65.2050 ms, travel -84.5563 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 31.0000 ms
+  4 m/s drive 0.5 up 0.003 side 0.01: release at 65.2050 ms, travel -84.2847 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 31.0000 ms
+  4 m/s drive 1 up -0.003 side -0.01: release at 62.3150 ms, travel -102.7681 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 31.0000 ms
+  4 m/s drive 1 up -0.003 side 0: release at 62.3150 ms, travel -103.3629 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 31.0000 ms
+  4 m/s drive 1 up -0.003 side 0.01: release at 62.3150 ms, travel -103.2075 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 31.0000 ms
+  4 m/s drive 1 up 0 side -0.01: release at 62.2800 ms, travel -102.1744 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 31.0000 ms
+  4 m/s drive 1 up 0 side 0: release at 62.2800 ms, travel -102.8350 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 31.0000 ms
+  4 m/s drive 1 up 0 side 0.01: release at 62.2800 ms, travel -102.6414 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 31.0000 ms
+  4 m/s drive 1 up 0.003 side -0.01: release at 62.2500 ms, travel -101.5885 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 31.0000 ms
+  4 m/s drive 1 up 0.003 side 0: release at 62.2500 ms, travel -102.3160 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 31.0000 ms
+  4 m/s drive 1 up 0.003 side 0.01: release at 62.2500 ms, travel -102.1671 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 31.0000 ms
+  6 m/s drive -1 up -0.003 side -0.01: release at 50.2550 ms, travel -110.7356 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 15.0000 ms
+  6 m/s drive -1 up -0.003 side 0: release at 50.2550 ms, travel -111.5352 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 15.0000 ms
+  6 m/s drive -1 up -0.003 side 0.01: release at 50.2550 ms, travel -111.3932 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 15.0000 ms
+  6 m/s drive -1 up 0 side -0.01: release at 50.2250 ms, travel -110.0337 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 15.0000 ms
+  6 m/s drive -1 up 0 side 0: release at 50.2250 ms, travel -110.8266 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 15.0000 ms
+  6 m/s drive -1 up 0 side 0.01: release at 50.2250 ms, travel -110.7281 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 15.0000 ms
+  6 m/s drive -1 up 0.003 side -0.01: release at 50.1950 ms, travel -109.3456 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 15.0000 ms
+  6 m/s drive -1 up 0.003 side 0: release at 50.1950 ms, travel -110.1039 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 15.0000 ms
+  6 m/s drive -1 up 0.003 side 0.01: release at 50.1950 ms, travel -110.0139 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 15.0000 ms
+  6 m/s drive -0.5 up -0.003 side -0.01: release at 47.6800 ms, travel -97.5777 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 16.0000 ms
+  6 m/s drive -0.5 up -0.003 side 0: release at 47.6800 ms, travel -98.3020 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 16.0000 ms
+  6 m/s drive -0.5 up -0.003 side 0.01: release at 47.6800 ms, travel -98.1736 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 16.0000 ms
+  6 m/s drive -0.5 up 0 side -0.01: release at 47.6550 ms, travel -96.8529 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 16.0000 ms
+  6 m/s drive -0.5 up 0 side 0: release at 47.6550 ms, travel -97.5595 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 16.0000 ms
+  6 m/s drive -0.5 up 0 side 0.01: release at 47.6550 ms, travel -97.4327 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 16.0000 ms
+  6 m/s drive -0.5 up 0.003 side -0.01: release at 47.6300 ms, travel -96.1543 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 16.0000 ms
+  6 m/s drive -0.5 up 0.003 side 0: release at 47.6300 ms, travel -96.8257 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 16.0000 ms
+  6 m/s drive -0.5 up 0.003 side 0.01: release at 47.6300 ms, travel -96.6904 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 16.0000 ms
+  6 m/s drive 0 up -0.003 side -0.01: release at 45.4000 ms, travel -84.3399 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 18.0000 ms
+  6 m/s drive 0 up -0.003 side 0: release at 45.4000 ms, travel -85.0223 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 17.0000 ms
+  6 m/s drive 0 up -0.003 side 0.01: release at 45.4000 ms, travel -84.8441 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 17.0000 ms
+  6 m/s drive 0 up 0 side -0.01: release at 45.3800 ms, travel -83.6145 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 18.0000 ms
+  6 m/s drive 0 up 0 side 0: release at 45.3800 ms, travel -84.2754 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 18.0000 ms
+  6 m/s drive 0 up 0 side 0.01: release at 45.3800 ms, travel -84.1093 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 18.0000 ms
+  6 m/s drive 0 up 0.003 side -0.01: release at 45.3550 ms, travel -82.8746 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 18.0000 ms
+  6 m/s drive 0 up 0.003 side 0: release at 45.3550 ms, travel -83.5027 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 18.0000 ms
+  6 m/s drive 0 up 0.003 side 0.01: release at 45.3550 ms, travel -83.3413 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 18.0000 ms
+  6 m/s drive 0.5 up -0.003 side -0.01: release at 43.3650 ms, travel -82.9885 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 20.0000 ms
+  6 m/s drive 0.5 up -0.003 side 0: release at 43.3650 ms, travel -83.5362 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 20.0000 ms
+  6 m/s drive 0.5 up -0.003 side 0.01: release at 43.3650 ms, travel -83.5223 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 20.0000 ms
+  6 m/s drive 0.5 up 0 side -0.01: release at 43.3450 ms, travel -82.3605 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 20.0000 ms
+  6 m/s drive 0.5 up 0 side 0: release at 43.3450 ms, travel -82.9352 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 20.0000 ms
+  6 m/s drive 0.5 up 0 side 0.01: release at 43.3450 ms, travel -82.8989 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 20.0000 ms
+  6 m/s drive 0.5 up 0.003 side -0.01: release at 43.3250 ms, travel -81.7730 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 21.0000 ms
+  6 m/s drive 0.5 up 0.003 side 0: release at 43.3250 ms, travel -82.3192 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 20.0000 ms
+  6 m/s drive 0.5 up 0.003 side 0.01: release at 43.3250 ms, travel -82.2536 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 20.0000 ms
+  6 m/s drive 1 up -0.003 side -0.01: release at 41.5400 ms, travel -84.2908 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 23.0000 ms
+  6 m/s drive 1 up -0.003 side 0: release at 41.5400 ms, travel -85.0490 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 23.0000 ms
+  6 m/s drive 1 up -0.003 side 0.01: release at 41.5400 ms, travel -85.1385 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 23.0000 ms
+  6 m/s drive 1 up 0 side -0.01: release at 41.5200 ms, travel -83.9177 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 23.0000 ms
+  6 m/s drive 1 up 0 side 0: release at 41.5200 ms, travel -84.5954 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 23.0000 ms
+  6 m/s drive 1 up 0 side 0.01: release at 41.5200 ms, travel -84.6780 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 23.0000 ms
+  6 m/s drive 1 up 0.003 side -0.01: release at 41.5000 ms, travel -83.3280 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 24.0000 ms
+  6 m/s drive 1 up 0.003 side 0: release at 41.5000 ms, travel -83.9657 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 24.0000 ms
+  6 m/s drive 1 up 0.003 side 0.01: release at 41.5000 ms, travel -83.9499 mm against 30.0000 mm, no early crossing; |travel| exceeds it from 24.0000 ms
+R tally: roll runs crossing the slack before their pendulum phase, as track.ts signs the travel and by its size: half-roll 0 of 226 signed, 152 by size (0 rejected, 0 unreleased, 0 with the impact starting before contact; largest |travel| at release 1.2290 of the slack); full-roll 0 of 226 signed, 226 by size (0 rejected, 0 unreleased, 0 with the impact starting before contact; largest |travel| at release 2.7280 of the slack); pass-roll 0 of 226 signed, 226 by size (0 rejected, 0 unreleased, 0 with the impact starting before contact; largest |travel| at release 3.7178 of the slack)

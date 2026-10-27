@@ -8,14 +8,21 @@
  *   one), the hands' tempo T, the couple's peak and its time against the grip's C; for the half roll and the drive
  *   the planned speed at λ = 0, 0.25, 0.5, 0.75 and 1; and the drive held at λ = 1 with its hands together (bottom
  *   at 0.715 m), Review Focus 3's figure. Plans past C are read with the bound lifted, and flagged.
+ * - R. the bottom hand's reach slack (decision 6's opening rule): for every roll run in the preset digest's grid (the
+ *   canonical setup, then 5 speeds x 5 drives x 3 heights x 3 sides), the shaft's pitch turn since contact times
+ *   (r − b) at the pendulum phase's start (impact.release) against reachSlack, and the first time before it that the
+ *   turn, read from the trajectory's head orientations, exceeded the slack.
  * Every section ends with a line "<letter> tally: ...". `all` runs every section.
  * Run with `env SECTION=F npx --yes tsx scripts/setupProbe.ts`; environment: SECTION (a letter, a comma-separated
- * list of letters, run in that order, or `all`; default all).
+ * list of letters, run in that order, or `all`; default all); for R, R_TYPES (a comma-separated subset of the rolls)
+ * and R_SPEEDS (a comma-separated subset of the grid's speeds, m/s) shorten the grid.
  * Not part of the test suite.
  */
+import { rotate, type Quaternion } from "../src/engine/impact/rigidBody";
 import { pitchAxis } from "../src/engine/impact/track";
 import { atan2 } from "../src/engine/math/elementary";
-import { add, cross, dot, scale, sub, type Vec3 } from "../src/engine/math/vec3";
+import { add, cross, dot, scale, sub, vec3, type Vec3 } from "../src/engine/math/vec3";
+import { simulateShot } from "../src/engine/shot";
 import { arcArrival, contactPose, downswingInputOf, planStroke, poseSpeed } from "../src/engine/swing/buildContact";
 import {
     planDownswing,
@@ -23,10 +30,10 @@ import {
     type DownswingInput,
     type PlannedDownswing,
 } from "../src/engine/swing/downswing";
-import { STROKE_TYPES, type ShotSetup } from "../src/engine/swing/types";
+import { STROKE_TYPES, type ShotSetup, type StrokeType } from "../src/engine/swing/types";
 import type { BallState, World } from "../src/engine/types";
 import { defaultWorld } from "../src/engine/world";
-import { canonicalSetup } from "../tests/engine/support/shot";
+import { backswingFor, canonicalSetup } from "../tests/engine/support/shot";
 
 /** The feet's reading of one set-up (design §3). */
 export interface FeetReading {
@@ -222,12 +229,157 @@ function sectionP(): void {
     );
 }
 
+/** The rolls section R reads: the strokes whose hands carry the head and open at the pendulum phase. */
+const ROLLS: readonly StrokeType[] = ["half-roll", "full-roll", "pass-roll"];
+
+/** The preset digest's grid: the backswing speeds (m/s), the drives and the sides (m); the heights are up0 ± 3 mm. */
+const GRID_SPEEDS: readonly number[] = [1, 2, 3, 4, 6];
+const GRID_DRIVES: readonly number[] = [-1, -0.5, 0, 0.5, 1];
+const GRID_SIDES: readonly number[] = [-0.01, 0, 0.01];
+
+/** One sample of a trajectory as section R reads it: its time (s from contact) and the head's orientation. */
+export interface TurnSample {
+    readonly t: number;
+    readonly orientation: Quaternion;
+}
+
+/**
+ * The first sample before `before` (s from contact) at which the hands' travel (r − b)·(pitch − the first sample's
+ * pitch, the pitch since contact (relaxAt): pass samples from contact on), the quantity track.ts tests against reachSlack, exceeds `slack` (m); null if none does. With `absolute`
+ * the travel's size is tested, either way round. The pitch is the shaft's arc angle atan2(−s·aim, s_z), s the head's
+ * up axis.
+ */
+export function firstSlackCrossing(
+    samples: readonly TurnSample[],
+    aim: Vec3,
+    spread: number,
+    slack: number,
+    before: number,
+    absolute: boolean,
+): number | null {
+    const pitchOf = (q: Quaternion): number => {
+        const shaft = rotate(q, vec3(0, 0, 1));
+        return atan2(0 - dot(shaft, aim), shaft.z);
+    };
+    const first = samples[0];
+    if (first === undefined) {
+        return null;
+    }
+    const contactPitch = pitchOf(first.orientation);
+    for (const sample of samples) {
+        if (sample.t >= before) {
+            return null;
+        }
+        const travel = spread * (pitchOf(sample.orientation) - contactPitch);
+        if ((absolute ? Math.abs(travel) : travel) > slack) {
+            return sample.t;
+        }
+    }
+    return null;
+}
+
+/** R. The bottom hand's reach slack against the pendulum phase's start, on every roll run of the digest's grid. */
+function sectionR(): void {
+    const world = defaultWorld();
+    const types = (process.env.R_TYPES?.split(",") ?? ROLLS) as readonly StrokeType[];
+    const unknownRolls = types.filter((type) => !ROLLS.includes(type));
+    if (unknownRolls.length > 0) {
+        throw new Error(
+            `R_TYPES must be a comma-separated list of ${ROLLS.join(", ")}; got ${unknownRolls.join(", ")}`,
+        );
+    }
+    const speeds = process.env.R_SPEEDS?.split(",").map(Number) ?? GRID_SPEEDS;
+    if (speeds.some((speed) => !(Number.isFinite(speed) && speed > 0))) {
+        throw new Error("R_SPEEDS must be a comma-separated list of finite positive speeds (m/s)");
+    }
+    console.log("== R. reach slack against the pendulum phase's start (decision 6): mm of hand travel, ms ==");
+    const tallies: string[] = [];
+    for (const type of types) {
+        const base = canonicalSetup(type, { world });
+        const slack = base.profile.body.reachSlack;
+        const spread = downswingInputOf(base, world).grip.spread;
+        const { aim } = contactPose(base, world);
+        console.log(`${type}: reachSlack ${mm(slack)} mm, r − b ${mm(spread)} mm`);
+        let runs = 0;
+        let rejected = 0;
+        let unreleased = 0;
+        let crossing = 0;
+        let crossingAbs = 0;
+        let led = 0;
+        let largest = 0;
+        const play = (label: string, setup: ShotSetup): void => {
+            runs++;
+            try {
+                const outcome = simulateShot(setup, world, { trajectory: true });
+                const { release } = outcome.impact;
+                const { trajectory } = outcome;
+                if (release === undefined || trajectory === undefined) {
+                    unreleased++;
+                    console.log(`  ${label}: no release`);
+                    return;
+                }
+                // The trajectory runs in s from contact, the impact's release in s from the impact's start.
+                const at = release.t + trajectory.impactStart;
+                const travel = spread * release.deltaTheta;
+                largest = Math.max(largest, Math.abs(travel) / slack);
+                if (trajectory.impactStart < 0) {
+                    led++;
+                }
+                // The engine takes its reference pitch at the first step at or after contact (relaxAt, t >= 0).
+                const fromContact = trajectory.samples.filter((sample) => sample.t >= 0);
+                const early = firstSlackCrossing(fromContact, aim, spread, slack, at, false);
+                const earlyAbs = firstSlackCrossing(fromContact, aim, spread, slack, at, true);
+                if (early !== null) {
+                    crossing++;
+                }
+                if (earlyAbs !== null) {
+                    crossingAbs++;
+                }
+                console.log(
+                    `  ${label}: release at ${fmt(at * 1e3)} ms, travel ${mm(travel)} mm against ${mm(slack)} mm` +
+                        (early === null ? ", no early crossing" : `, CROSSES the slack at ${fmt(early * 1e3)} ms`) +
+                        (earlyAbs === null ? "" : `; |travel| exceeds it from ${fmt(earlyAbs * 1e3)} ms`),
+                );
+            } catch (error) {
+                rejected++;
+                console.log(`  ${label}: rejected (${(error as Error).message})`);
+            }
+        };
+        play("canonical", base);
+        const up0 = base.stroke.contact.up;
+        for (const speed of speeds) {
+            for (const drive of GRID_DRIVES) {
+                for (const up of [up0 - 0.003, up0, up0 + 0.003]) {
+                    for (const side of GRID_SIDES) {
+                        const stroke = { ...base.stroke, drive, contact: { up, side } };
+                        const setup = { ...base, stroke };
+                        const backswing = backswingFor(setup, speed, world);
+                        play(`${speed} m/s drive ${drive} up ${up} side ${side}`, {
+                            ...setup,
+                            stroke: { ...stroke, backswing },
+                        });
+                    }
+                }
+            }
+        }
+        tallies.push(
+            `${type} ${crossing} of ${runs} signed, ${crossingAbs} by size (${rejected} rejected, ${unreleased} ` +
+                `unreleased, ${led} with the impact starting before contact; largest |travel| at release ${fmt(largest)} of the slack)`,
+        );
+    }
+    console.log(
+        `R tally: roll runs crossing the slack before their pendulum phase, as track.ts signs the travel and by its ` +
+            `size: ${tallies.join("; ")}`,
+    );
+}
+
 const SECTIONS: Readonly<Record<string, () => void>> = {
     F: sectionF,
     P: sectionP,
+    R: sectionR,
 };
 
-const ALL_SECTIONS: readonly string[] = ["F", "P"];
+const ALL_SECTIONS: readonly string[] = ["F", "P", "R"];
 
 if (process.argv[1]?.endsWith("setupProbe.ts")) {
     const chosen = SECTION === "all" ? ALL_SECTIONS : SECTION.split(",");
