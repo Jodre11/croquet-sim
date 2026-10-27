@@ -219,6 +219,25 @@ export interface ShotSetup {
          * handDrop, on the dip's own timing, to ground the head deliberately; absent: 0.
          */
         readonly jab?: number;
+        /**
+         * The shot's grip (P2b.2b.2c.3a design §2): each of the stance's top, bottom, gripTension and bottomGrip
+         * given here replaces the preset's alone; absent: the preset's.
+         */
+        readonly grip?: Partial<Omit<SwingStance, "handsAhead">>;
+        /**
+         * The shaft's lean at contact (rad, forward positive, at most π/4, the on-point limit; design §2): given, it
+         * places the top hand (handsAheadFor at the shot's top and contact); absent: the preset's handsAhead, which a
+         * shot moving its top hand or its contact keeps.
+         */
+        readonly lean?: number;
+        /**
+         * The feet (m; design §3, A2 item 1): the hands' arc's lowest point along aim from the striker's ball's centre.
+         * The toe's offset behind that point varies by player and is taken as zero, not modelled. Absent: the arc is
+         * lowest the preset's handArcLow of the push ahead of the hands at contact.
+         */
+        readonly feet?: number;
+        /** The planned slope λ in [0, 1] (design §4.1); absent: the preset's shape's. */
+        readonly slopeHold?: number;
     };
     readonly live: readonly BallId[];
     readonly continuation: boolean;

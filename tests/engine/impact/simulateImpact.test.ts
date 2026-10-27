@@ -565,6 +565,13 @@ describe("simulateImpact with a tracked drive", () => {
             withArc({ handReach: 2, handArcRadius: 2 }),
             /arc\.handArcRadius must exceed arc\.handReach/,
         ],
+        ["a non-finite lowPoint", withArc({ lowPoint: Number.NaN }), /arc\.lowPoint must be finite/],
+        ["a lowPoint at the arc's radius", withArc({ lowPoint: 11 }), /arc\.lowPoint must lie in/],
+        [
+            "a lowPoint that leaves the push's end off the arc",
+            withArc({ handReach: 2, lowPoint: 2 - 11 }),
+            /arc\.lowPoint must lie in/,
+        ],
         [
             "a flex with no stiffness",
             withHands({ flex: { ...TEST_FLEX, stiffness: 0 } }),

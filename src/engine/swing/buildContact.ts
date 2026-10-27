@@ -84,6 +84,15 @@ const WOOD: FaceMaterial = { friction: malletReference.faceFriction.value };
 /** A stance's numbers, each checked finite by name (a missing one included). */
 const STANCE_NUMBERS: readonly (keyof SwingStance)[] = ["handsAhead", "top", "bottom", "gripTension", "bottomGrip"];
 
+/** A stance's grip: its values a shot may give one by one (P2b.2b.2c.3a design §2). */
+type Grip = Omit<SwingStance, "handsAhead">;
+
+/** The grip's values, each a shot's checked finite by name where given. */
+const GRIP_NUMBERS: readonly (keyof Grip)[] = ["top", "bottom", "gripTension", "bottomGrip"];
+
+/** The on-point limit (rad): the most a shot's lean may pitch the shaft forward (P2b.2b.2c.3a design §2). */
+const MAX_LEAN = Math.PI / 4;
+
 /** A drive entry's numbers, each checked finite by name. */
 const DRIVE_NUMBERS: readonly (keyof SwingDrive)[] = [
     "speedGain",
@@ -217,6 +226,39 @@ function headInertia(mallet: SwingProfile["mallet"]): Vec3 {
     );
 }
 
+/** The grip of `setup` (P2b.2b.2c.3a design §2): each value the shot gives, else the preset's. */
+function gripOf(setup: ShotSetup): Grip {
+    const { stroke, profile } = setup;
+    const stance = profile.stance[stroke.type];
+    const { grip } = stroke;
+    if (grip === undefined) {
+        return stance;
+    }
+    return {
+        top: grip.top ?? stance.top,
+        bottom: grip.bottom ?? stance.bottom,
+        gripTension: grip.gripTension ?? stance.gripTension,
+        bottomGrip: grip.bottomGrip ?? stance.bottomGrip,
+    };
+}
+
+/**
+ * The stance of `setup` on `geometry` (P2b.2b.2c.3a design §2): the shot's grip (gripOf), and a shot's lean placing
+ * the top hand, handsAheadFor at the shot's top and contact. Without a lean the preset's handsAhead stands, whatever
+ * the top hand or the contact.
+ */
+function stanceOf(setup: ShotSetup, geometry: StanceGeometry): SwingStance {
+    const { stroke, profile } = setup;
+    const preset = profile.stance[stroke.type];
+    if (stroke.grip === undefined && stroke.lean === undefined) {
+        return preset;
+    }
+    const { top, bottom, gripTension, bottomGrip } = gripOf(setup);
+    const handsAhead =
+        stroke.lean === undefined ? preset.handsAhead : handsAheadFor(stroke.lean, top, stroke.contact.up, geometry);
+    return { handsAhead, top, bottom, gripTension, bottomGrip };
+}
+
 /** Checks `setup` on a world whose ball has radius `ballRadius` (see planStroke). */
 function validate(setup: ShotSetup, ballRadius: number): void {
     const { stroke, profile } = setup;
@@ -254,6 +296,9 @@ function validate(setup: ShotSetup, ballRadius: number): void {
         ["stroke.pendulumAt", stroke.pendulumAt],
         ["stroke.pendulumEffort", stroke.pendulumEffort],
         ["stroke.jab", stroke.jab],
+        ["stroke.lean", stroke.lean],
+        ["stroke.feet", stroke.feet],
+        ["stroke.slopeHold", stroke.slopeHold],
     ] as const) {
         if (value !== undefined) {
             finiteNumber(value, name);
@@ -262,6 +307,16 @@ function validate(setup: ShotSetup, ballRadius: number): void {
     for (const key of STANCE_NUMBERS) {
         finiteNumber(stance[key], `profile.stance.${type}.${key}`);
     }
+    const given = stroke.grip;
+    for (const key of GRIP_NUMBERS) {
+        const value = given?.[key];
+        if (value !== undefined) {
+            finiteNumber(value, `stroke.grip.${key}`);
+        }
+    }
+    // Each grip value is named where it came from, the shot's or the preset's.
+    const gripName = (key: keyof Grip): string =>
+        given?.[key] === undefined ? `profile.stance.${type}.${key}` : `stroke.grip.${key}`;
     for (const key of DRIVE_NUMBERS) {
         finiteNumber(push[key], `profile.drive.${type}.${key}`);
     }
@@ -306,16 +361,20 @@ function validate(setup: ShotSetup, ballRadius: number): void {
     finiteNumber(body.armMass, "profile.body.armMass");
     finiteNumber(body.reachSlack, "profile.body.reachSlack");
 
-    const { handsAhead, top, bottom, gripTension, bottomGrip } = stance;
-    positive(top, `profile.stance.${type}.top`);
+    const { top, bottom, gripTension, bottomGrip } = gripOf(setup);
+    positive(top, gripName("top"));
     if (top > mallet.shaftLength) {
         fail(
-            `the top hand is off the shaft: profile.stance.${type}.top is ${top} m, beyond shaftLength ` +
+            `the top hand is off the shaft: ${gripName("top")} is ${top} m, beyond shaftLength ` +
                 `${mallet.shaftLength} m`,
         );
     }
     if (!(bottom > 0 && bottom < top)) {
-        fail(`profile.stance.${type}.bottom must lie in (0, top) = (0, ${top}) m (got ${bottom})`);
+        // A shot that moves only its top hand to or below the preset's bottom one is named by its top hand.
+        if (given?.bottom === undefined && given?.top !== undefined && bottom > 0) {
+            fail(`stroke.grip.top must lie above the bottom hand, ${gripName("bottom")} = ${bottom} m (got ${top})`);
+        }
+        fail(`${gripName("bottom")} must lie in (0, top) = (0, ${top}) m (got ${bottom})`);
     }
     positive(stroke.backswing, "stroke.backswing");
     if (stroke.window !== undefined) {
@@ -349,11 +408,29 @@ function validate(setup: ShotSetup, ballRadius: number): void {
         }
     }
     // A > 0 rests on the contact lying on the face, checked just above (P2b.2b.2b.1 design §3.4).
-    const [a, b] = stanceArms(top, up, { ballRadius, headLength: mallet.headLength, faceHalfHeight: rho });
+    const geometry = { ballRadius, headLength: mallet.headLength, faceHalfHeight: rho };
+    const [a, b] = stanceArms(top, up, geometry);
+    const { lean } = stroke;
+    if (lean !== undefined) {
+        if (!(lean <= MAX_LEAN)) {
+            fail(`stroke.lean must be at most π/4 rad, the on-point limit (got ${lean})`);
+        }
+        // X = A·sin α − B·cos α rises with the lean only while A·cos α + B·sin α > 0, i.e. for α > −atan2(A, B):
+        // below it stanceLean would read the placed hands back as another lean.
+        const lowest = 0 - atan2(a, b);
+        if (!(lean > lowest)) {
+            fail(
+                `stroke.lean must exceed ${lowest} rad for its top hand and the contact's up (got ${lean}): ` +
+                    "there the hands leave the stance's branch",
+            );
+        }
+    }
+    const { handsAhead } = stanceOf(setup, geometry);
     const d = Math.sqrt(a * a + b * b);
     if (!(handsAhead > 0 - d && handsAhead < a)) {
+        const name = lean === undefined ? `profile.stance.${type}.handsAhead` : "stroke.lean's handsAhead";
         fail(
-            `profile.stance.${type}.handsAhead must lie in (−D, A) = (${0 - d}, ${a}) m for its top hand and the ` +
+            `${name} must lie in (−D, A) = (${0 - d}, ${a}) m for its top hand and the ` +
                 `contact's up (got ${handsAhead}): at A the shaft lies flat, at −D the hands leave the stance's branch`,
         );
     }
@@ -361,8 +438,8 @@ function validate(setup: ShotSetup, ballRadius: number): void {
     positive(push.handWindow, `profile.drive.${type}.handWindow`);
     positive(push.dropTime, `profile.drive.${type}.dropTime`);
     nonNegative(push.speedGain, `profile.drive.${type}.speedGain`);
-    grip(gripTension, `profile.stance.${type}.gripTension`);
-    grip(bottomGrip, `profile.stance.${type}.bottomGrip`);
+    grip(gripTension, gripName("gripTension"));
+    grip(bottomGrip, gripName("bottomGrip"));
     nonNegative(push.handDrop, `profile.drive.${type}.handDrop`);
     nonNegative(push.handReach, `profile.drive.${type}.handReach`);
     if (stroke.handReach !== undefined) {
@@ -432,12 +509,16 @@ function validate(setup: ShotSetup, ballRadius: number): void {
     }
     finiteNumber(shape.slopeHold, `${where}.slopeHold`);
     unit(shape.slopeHold, `${where}.slopeHold`);
+    if (stroke.slopeHold !== undefined) {
+        unit(stroke.slopeHold, "stroke.slopeHold");
+    }
+    const slopeHold = stroke.slopeHold ?? shape.slopeHold;
     // P2b.2b.2c.3a design §4.1: a plan short of a full hold, or one whose tempo is the free swing's own fall, needs the
     // free swing.
-    if ((shape.slopeHold < 1 || shape.handTempo === null) && !(shape.pendulumShare > 0)) {
+    if ((slopeHold < 1 || shape.handTempo === null) && !(shape.pendulumShare > 0)) {
         fail(
             `${where}.pendulumShare must be positive where the downswing needs its free swing (slopeHold ` +
-                `${shape.slopeHold}, handTempo ${shape.handTempo === null ? "null" : "given"}; got 0)`,
+                `${slopeHold}, handTempo ${shape.handTempo === null ? "null" : "given"}; got 0)`,
         );
     }
     if (shape.handTempo !== null) {
@@ -445,10 +526,13 @@ function validate(setup: ShotSetup, ballRadius: number): void {
     }
 }
 
-/** The hands of `setup`'s stance with its profile's body, and the shot's guide effort, else the preset's. */
+/**
+ * The hands of `setup`'s stance (stanceOf) with its profile's body, and the shot's guide effort, else the preset's. The
+ * hands read only the grip, which no lean moves.
+ */
 function handsOf(setup: ShotSetup): Hands {
     const { stroke, profile } = setup;
-    const stance = profile.stance[stroke.type];
+    const stance = gripOf(setup);
     return {
         bottom: stance.bottom,
         gripTension: stance.gripTension,
@@ -466,28 +550,59 @@ function handsOf(setup: ShotSetup): Hands {
 }
 
 /**
- * The downswing's choices of a checked `setup`: the shape's planned slope, the shot's intensity, else 0 (gravity alone,
- * no preset carrying a default intensity; P2b.2b.2c.1 design, Amendments), and the hands' arc's slope at contact on
- * every stroke (arcArrival, 0 with no push).
+ * The hands' arc's lowest point s_low (m along aim from the hands at contact) that a checked `setup`'s feet set at
+ * `pose` (P2b.2b.2c.3a design §3, A2 item 1): feet − x_c, x_c = aim·(P_c − ball) the top hand at contact along aim from
+ * the striker's ball's centre. Undefined where the shot gives no feet. Throws a RangeError naming `stroke.feet` unless
+ * s_low lies in (handReach − handArcRadius, handArcRadius), where the arc is defined from contact to the push's end.
  */
-function choiceOf(setup: ShotSetup): StrokeChoice {
+function lowPointOf(setup: ShotSetup, pose: ContactPose): number | undefined {
+    const { stroke, profile } = setup;
+    if (stroke.feet === undefined) {
+        return undefined;
+    }
+    const push = profile.drive[stroke.type];
+    const striker = setup.balls[setup.striker] as BallState;
+    const low = stroke.feet - dot(sub(pose.pivot, striker.position), pose.aim);
+    const reach = stroke.handReach ?? push.handReach;
+    const radius = push.handArcRadius;
+    if (!(low > reach - radius && low < radius)) {
+        fail(
+            `stroke.feet puts the hands' arc's lowest point ${low} m ahead of the hands at contact, which must ` +
+                `lie in (handReach − handArcRadius, handArcRadius) = (${reach - radius}, ${radius}) m for the arc ` +
+                "to span the push",
+        );
+    }
+    return low;
+}
+
+/**
+ * The downswing's choices of a checked `setup` posed at `pose`: the shot's planned slope, else the shape's; the shot's
+ * intensity, else 0 (gravity alone, no preset carrying a default intensity; P2b.2b.2c.1 design, Amendments); and the
+ * hands' arc's slope at contact on every stroke (arcArrival, 0 with no push and no feet), its lowest point the feet's
+ * (lowPointOf), else handArcLow of the push.
+ */
+function choiceOf(setup: ShotSetup, pose: ContactPose): StrokeChoice {
     const { stroke, profile } = setup;
     const shape = profile.shape[stroke.type];
     const push = profile.drive[stroke.type];
+    const low = lowPointOf(setup, pose);
     return {
         shape,
-        slopeHold: shape.slopeHold,
+        slopeHold: stroke.slopeHold ?? shape.slopeHold,
         backswing: stroke.backswing,
         backswingLimit: profile.body.backswingLimit,
         effort: profile.body.effort,
         intensity: stroke.intensity ?? 0,
-        arrival: arcArrival(push.handArcRadius, push.handArcLow * (stroke.handReach ?? push.handReach)),
+        arrival:
+            low === undefined
+                ? arcArrival(push.handArcRadius, push.handArcLow * (stroke.handReach ?? push.handReach))
+                : arcArrival(push.handArcRadius, low),
     };
 }
 
 /** The downswing of a checked `setup` posed at `pose` (choiceOf). */
 function downswingOf(setup: ShotSetup, pose: ContactPose, hands: Hands, gravity: number): PlannedDownswing {
-    return planDownswing(downswingInput(pose, hands, choiceOf(setup), gravity));
+    return planDownswing(downswingInput(pose, hands, choiceOf(setup, pose), gravity));
 }
 
 /**
@@ -495,7 +610,8 @@ function downswingOf(setup: ShotSetup, pose: ContactPose, hands: Hands, gravity:
  * what planStroke plans from where no dip is under way at contact. For probes and tests of the planned slope.
  */
 export function downswingInputOf(setup: ShotSetup, world: World): DownswingInput {
-    return downswingInput(contactPose(setup, world), handsOf(setup), choiceOf(setup), world.gravity);
+    const pose = contactPose(setup, world);
+    return downswingInput(pose, handsOf(setup), choiceOf(setup, pose), world.gravity);
 }
 
 /** A stroke's pose at contact (design §5.2 steps 1–5, 10). */
@@ -516,18 +632,20 @@ export interface ContactPose {
  * The contact pose of `setup` on `world` (design §5.2): the arc radius r = top (step 1), θ_c = −lean, the lean from
  * the top hand's position (step 2; P2b.2b.2b.1 design §3.2), the head pitched rigidly with the shaft (step 3), its
  * face START_GAP short of the sunk striker at (up, side) (step 4), the pivot r up the shaft from the socket (step 5),
- * and the head a solid of the profile's mallet (step 10). Takes the setup as checked (planStroke).
+ * and the head a solid of the profile's mallet (step 10). The top hand and its position are the shot's stance
+ * (stanceOf: its grip and lean, else the preset's). Takes the setup as checked (planStroke).
  */
 export function contactPose(setup: ShotSetup, world: World): ContactPose {
     const { stroke, profile } = setup;
     const striker = setup.balls[setup.striker] as BallState;
-    const { handsAhead, top } = profile.stance[stroke.type];
     const { mallet } = profile;
     const shape = headShapeOf(mallet.head);
     const rho = faceHalfHeight(shape);
     const { up, side } = stroke.contact;
     const R = world.ball.radius;
-    const lean = stanceLean(handsAhead, top, up, { ballRadius: R, headLength: mallet.headLength, faceHalfHeight: rho });
+    const geometry = { ballRadius: R, headLength: mallet.headLength, faceHalfHeight: rho };
+    const { handsAhead, top } = stanceOf(setup, geometry);
+    const lean = stanceLean(handsAhead, top, up, geometry);
     const surface = world.lawn.surfaceAt(striker.position);
     const sunk =
         R - staticSink(striker.position.x, striker.position.y, R, world.ball.mass * world.gravity, bedLawOf(surface));
@@ -671,12 +789,18 @@ export interface StrokePlan {
  * - a non-finite number, or a non-positive mallet dimension or mass, or a negative shaft mass; a box head's edge
  *   radius outside [0, min(h_y, h_z, L/2)) or its moment about the shaft outside the realisable (P2b.2b.2b.2c design
  *   §5.1);
- * - top ≤ 0, or top > shaftLength; bottom outside (0, top);
+ * - top ≤ 0, or top > shaftLength; bottom outside (0, top); each named `stroke.grip.<key>` where the shot gives it
+ *   (P2b.2b.2c.3a design §2), a top moved alone to or below the preset's bottom named `stroke.grip.top`;
  * - backswing ≤ 0; an intensity outside [0, 1]; |drive| > 1; the contact off the face (a box's: off its flat part);
  *   handsAhead outside (−D, A) for the stroke's top hand and contact (P2b.2b.2b.1 design §3.4: at A the shaft lies
  *   flat, at −D the hands leave the stance's branch);
+ * - a stroke.lean, stroke.feet or stroke.slopeHold non-finite, or a stroke.grip value non-finite, named by its key
+ *   (P2b.2b.2c.3a design §2); a stroke.lean above π/4 (the on-point limit), or at or below −atan2(A, B), where the
+ *   hands it places leave the stance's branch; a stroke.slopeHold outside [0, 1]; feet whose arc's lowest point s_low
+ *   = feet − x_c lies outside (handReach − handArcRadius, handArcRadius) (design §3, A2 item 1);
  * - a stroke.window non-finite or outside [MIN_WINDOW, MAX_WINDOW] (P2b.2b.2c.2d design §3.2);
- * - window, handWindow or dropTime ≤ 0; speedGain < 0; gripTension or bottomGrip outside (0, 1]; handDrop < 0; the
+ * - window, handWindow or dropTime ≤ 0; speedGain < 0; the preset's or the shot's gripTension or bottomGrip outside
+ *   (0, 1]; handDrop < 0; the
  *   preset's or the shot's handReach < 0; the preset's or the shot's guideEffort outside [0, 1];
  *   armMass < 0; reachSlack < 0; a backswingLimit non-finite or outside (0, π/2]; the body's effort torque τ_0 < 0
  *   or its speed ω_max ≤ 0 (P2b.2b.2c.1 design §4.4); the body's hands' peak acceleration not positive; the preset's
@@ -758,6 +882,7 @@ export function planStroke(setup: ShotSetup, world: World): StrokePlan {
     // A shot's window sets both pulses; the change in each is kept, so only the rate moves. Absent, the preset's own.
     const window = stroke.window ?? push.window;
     const handWindow = stroke.window ?? push.handWindow;
+    const low = lowPointOf(setup, pose);
     // Steps 3 and 4, the arc expressed from the start, L before contact.
     const arc: SwingArc = {
         pivot: sub(planPose.pivot, scale(handsVelocity, lead)),
@@ -776,12 +901,13 @@ export function planStroke(setup: ShotSetup, world: World): StrokePlan {
         ...(stroke.window === undefined ? {} : { holdWindow: push.window }),
         dip: { start: lead + dipFrom, duration: push.dropTime, depth },
         contactAt: lead,
-        slopeHold: profile.shape[type].slopeHold,
+        slopeHold: stroke.slopeHold ?? profile.shape[type].slopeHold,
         handReach: stroke.handReach ?? push.handReach,
         pendulumAt: stroke.pendulumAt ?? push.pendulumAt,
         pendulumEffort: stroke.pendulumEffort ?? push.pendulumEffort,
         handArcRadius: push.handArcRadius,
         handArcLow: push.handArcLow,
+        ...(low === undefined ? {} : { lowPoint: low }),
         downswing: planned.downswing,
         ...(timing.advance === undefined
             ? {}

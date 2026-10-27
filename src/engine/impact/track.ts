@@ -322,8 +322,8 @@ export interface Advance {
  * above 0: from `start` (contactAt), the planned pivot at `origin`, the intended path travels along aim at the plan's
  * pace plus any `advance`'s on the hands' arc. It reaches pendulumAt·handReach at `pendulum` and the push length
  * handReach at `end`, where it stops at once (s from t = 0; null where the hands do not travel that far within
- * REACH_SEARCH). `low` is s_low = handArcLow·handReach (m) and `level` √(ρ_h² − s_low²) (m), the arc's centre's height
- * above the hands at contact.
+ * REACH_SEARCH). `low` is s_low (m), the arc's lowPoint else handArcLow·handReach, and `level` √(ρ_h² − s_low²) (m),
+ * the arc's centre's height above the hands at contact.
  */
 export interface Push {
     readonly start: number;
@@ -752,7 +752,8 @@ function travelTime(track: PreparedTrack, distance: number, advance: Advance | n
 /** The push for `track` (design §4.1, §4.2; P2b.2b.2c.3a A2 item 8), its advance from the arc's. */
 function computePush(track: PreparedTrack): Push {
     const { arc } = track;
-    const low = arc.handArcLow * arc.handReach;
+    // A shot's feet place the low point directly; without them, today's fraction of the push.
+    const low = arc.lowPoint ?? arc.handArcLow * arc.handReach;
     const advance = arc.advance === undefined ? null : advanceOf(arc, arc.advance);
     return {
         start: arc.contactAt,

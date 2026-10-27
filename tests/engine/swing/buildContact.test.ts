@@ -27,6 +27,7 @@ import {
     buildContact,
     contactPose,
     downswingInput,
+    downswingInputOf,
     handsAheadFor,
     planStroke,
     plannedSpeed,
@@ -1414,5 +1415,152 @@ describe("the dip coupled to the pulse (P2b.2b.2c.2d design §4.2)", () => {
             stroke: { contact: { up: 0.01, side: 0 }, jab: 0.001, timing: { arc: 0, hands: 0, dip: -0.005 } },
         });
         expect(swingApproach(buildContact(graze, WORLD))).toEqual(GRAZE_APPROACH);
+    });
+});
+
+describe("the per-shot set-up (P2b.2b.2c.3a design §2)", () => {
+    const world = defaultWorld();
+    type Stroke = ShotSetup["stroke"];
+    const withStroke = (setup: ShotSetup, stroke: Partial<Stroke>): ShotSetup => ({
+        ...setup,
+        stroke: { ...setup.stroke, ...stroke },
+    });
+    const driveOf = (setup: ShotSetup): TrackDrive => planStroke(setup, world).contact.drive as TrackDrive;
+    /** x_c (m): the top hand at contact along aim from the striker's ball's centre (design §3). */
+    const handsAlong = (setup: ShotSetup): number => {
+        const pose = contactPose(setup, world);
+        return dot(sub(pose.pivot, (setup.balls[setup.striker] as BallState).position), pose.aim);
+    };
+
+    it.each(STROKE_TYPES)("changes nothing on the %s when no input is given", (type) => {
+        const setup = canonicalSetup(type);
+        expect(planStroke(withStroke(setup, {}), world)).toEqual(planStroke(setup, world));
+        // An empty grip overrides nothing: every value is the preset's.
+        expect(planStroke(withStroke(setup, { grip: {} }), world)).toEqual(planStroke(setup, world));
+    });
+
+    it("overrides one grip value alone", () => {
+        const setup = canonicalSetup("half-roll");
+        const stance = setup.profile.stance["half-roll"];
+        const { hands, arc } = driveOf(withStroke(setup, { grip: { bottomGrip: 0.5 } }));
+        expect(hands.bottomGrip).toBe(0.5);
+        expect([arc.radius, hands.bottom, hands.gripTension]).toEqual([stance.top, stance.bottom, stance.gripTension]);
+    });
+
+    it("sets the lean through handsAhead", () => {
+        // handsAheadFor and stanceLean share one operation order (stanceArms), so the lean reads back to rounding.
+        const pose = contactPose(withStroke(canonicalSetup("drive"), { lean: 0.3 }), world);
+        expect(Math.abs(pose.thetaContact + 0.3)).toBeLessThan(1e-12);
+    });
+
+    it("keeps handsAhead when the top hand moves without a lean", () => {
+        // Design §2, "given or absent": with no lean the top hand stays where the preset puts it, so the lean follows
+        // the new top through stanceLean rather than the preset's lean being held.
+        const setup = canonicalSetup("drive");
+        const moved = withStroke(setup, { grip: { top: 0.7 } });
+        expect(handsAlong(moved)).toBeCloseTo(handsAlong(setup), 12);
+        expect(contactPose(moved, world).radius).toBe(0.7);
+    });
+
+    it("places the hands' arc from the ball", () => {
+        // A2 item 1: the feet are the arc's lowest point along aim from the ball's centre, so feet at the canonical
+        // x_c + handArcLow·handReach (0.5 × 0.15 m) put s_low where the preset's path does.
+        const setup = canonicalSetup("half-roll");
+        const xc = handsAlong(setup);
+        const placed = withStroke(setup, { feet: xc + 0.075 });
+        expect(downswingInputOf(placed, world).arrival).toBeCloseTo(downswingInputOf(setup, world).arrival, 12);
+        const plain = driveOf(setup).arc;
+        const arc = driveOf(placed).arc;
+        expect(Math.abs((arc.lowPoint as number) - 0.075)).toBeLessThan(1e-12);
+        expect(Math.abs(arc.theta0 - plain.theta0)).toBeLessThan(1e-12);
+        const moved = withStroke(setup, { feet: xc + 0.075 + 0.05 });
+        const further = driveOf(moved).arc;
+        expect(Math.abs((further.lowPoint as number) - 0.125)).toBeLessThan(1e-12);
+        // The push reads the low point the feet set, not handArcLow's.
+        const { contact } = planStroke(moved, world);
+        const track = prepareTrack(contact.drive as TrackDrive, contact.head, world.gravity);
+        expect(track.push?.low).toBe(further.lowPoint);
+    });
+
+    it("plans a single shot's slope", () => {
+        const { arc } = driveOf(withStroke(canonicalSetup("drive"), { slopeHold: 0.5 }));
+        expect(arc.slopeHold).toBe(0.5);
+    });
+
+    it("rejects a slope plan outside [0, 1], naming stroke.slopeHold", () => {
+        const setup = canonicalSetup("drive");
+        for (const slopeHold of [-0.1, 1.5, Number.NaN]) {
+            expect(() => planStroke(withStroke(setup, { slopeHold }), world), `${slopeHold}`).toThrow(
+                /stroke\.slopeHold must/,
+            );
+        }
+    });
+
+    it("accepts a lean of π/4 and rejects one past it or non-finite, naming stroke.lean (Review Focus 1)", () => {
+        const setup = canonicalSetup("pass-roll");
+        expect(() => plannedSpeed(withStroke(setup, { lean: Math.PI / 4 }), world)).not.toThrow();
+        for (const lean of [(Math.PI / 4) * (1 + 1e-9), Number.NaN, Infinity, -Infinity]) {
+            expect(() => planStroke(withStroke(setup, { lean }), world), `${lean}`).toThrow(RangeError);
+            expect(() => planStroke(withStroke(setup, { lean }), world), `${lean}`).toThrow(/stroke\.lean/);
+        }
+    });
+
+    it("rejects a lean whose hands leave the stance's branch, naming stroke.lean (Review Focus 1)", () => {
+        // X = A·sin α − B·cos α rises with α only while A·cos α + B·sin α > 0, so for α ≤ −atan2(A, B) stanceLean
+        // would read the derived X back as another lean. The single-ball's A ≈ 0.84 m and B ≈ 0.16 m put that edge
+        // near −79°.
+        const setup = canonicalSetup("single-ball");
+        expect(() => planStroke(withStroke(setup, { lean: -1.45 }), world)).toThrow(/stroke\.lean/);
+        expect(() => planStroke(withStroke(setup, { lean: -1.3 }), world)).not.toThrow(/stroke\.lean/);
+    });
+
+    it("rejects a grip that breaks the shaft's order, naming the grip's value (Review Focus 2)", () => {
+        const setup = canonicalSetup("half-roll");
+        const { top } = setup.profile.stance["half-roll"];
+        const { shaftLength } = setup.profile.mallet;
+        const cases: readonly [Stroke["grip"], RegExp][] = [
+            [{ bottom: top }, /stroke\.grip\.bottom must lie in/],
+            [{ bottom: top + 0.01 }, /stroke\.grip\.bottom must lie in/],
+            [{ bottom: 0 }, /stroke\.grip\.bottom must lie in/],
+            [{ top: shaftLength + 0.01 }, /stroke\.grip\.top is .* beyond shaftLength/],
+            [{ top: 0 }, /stroke\.grip\.top must be positive/],
+            [{ gripTension: 0 }, /stroke\.grip\.gripTension must lie in \(0, 1\]/],
+            [{ gripTension: 1.01 }, /stroke\.grip\.gripTension must lie in \(0, 1\]/],
+            [{ bottomGrip: 0 }, /stroke\.grip\.bottomGrip must lie in \(0, 1\]/],
+            [{ bottomGrip: 1.01 }, /stroke\.grip\.bottomGrip must lie in \(0, 1\]/],
+            [{ top: Number.NaN }, /stroke\.grip\.top must be finite/],
+        ];
+        for (const [grip, message] of cases) {
+            expect(() => planStroke(withStroke(setup, { grip }), world), JSON.stringify(grip)).toThrow(RangeError);
+            expect(() => planStroke(withStroke(setup, { grip }), world), JSON.stringify(grip)).toThrow(message);
+        }
+    });
+
+    it("rejects feet that put the arc's lowest point out of reach, naming stroke.feet (Review Focus 4)", () => {
+        const setup = canonicalSetup("half-roll");
+        const { handArcRadius, handReach } = setup.profile.drive["half-roll"];
+        const xc = handsAlong(setup);
+        // |s_low| ≥ ρ_h leaves the arc undefined at contact; s_low ≤ handReach − ρ_h at the push's end.
+        for (const feet of [xc + handArcRadius, xc - handArcRadius, xc + handReach - handArcRadius, Number.NaN]) {
+            expect(() => planStroke(withStroke(setup, { feet }), world), `${feet}`).toThrow(RangeError);
+            expect(() => planStroke(withStroke(setup, { feet }), world), `${feet}`).toThrow(/stroke\.feet/);
+        }
+    });
+
+    it("leaves a stroke with no push and still hands as it was, whatever the feet (Review Focus 4)", () => {
+        // The single-ball's top hand is still (pendulumShare 1), so the arc's slope at contact meets a zero hands'
+        // travel in the downswing's tangent, and with a handReach of 0 there is no push to read the low point.
+        const setup = canonicalSetup("single-ball");
+        const plain = planStroke(setup, world);
+        for (const feet of [handsAlong(setup) + 0.3, handsAlong(setup) - 0.3]) {
+            const placed = planStroke(withStroke(setup, { feet }), world);
+            const { lowPoint, ...arc } = (placed.contact.drive as TrackDrive).arc;
+            expect(lowPoint).toBeDefined();
+            expect(arc).toEqual((plain.contact.drive as TrackDrive).arc);
+            expect({ ...placed, contact: { ...placed.contact, drive: null } }).toEqual({
+                ...plain,
+                contact: { ...plain.contact, drive: null },
+            });
+        }
     });
 });

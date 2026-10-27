@@ -199,7 +199,8 @@ function validateDownswing(down: Downswing, n: Vec3): void {
  * non-negative reach; aim a horizontal unit vector within UNIT_TOLERANCE; a positive period, a
  * non-negative damping ratio and relaxation time; the bottom hand between the socket and the top hand, both grips in
  * (0, 1], a non-negative arm mass and reach slack, a guide effort in [0, 1]; a pendulumAt, pendulumEffort, handArcLow
- * and slopeHold in [0, 1]; a handArcRadius above the reach; a flex whose values (its hold's too, if any) are
+ * and slopeHold in [0, 1]; a handArcRadius above the reach; a lowPoint, if given, finite and within
+ * (handReach − handArcRadius, handArcRadius); a flex whose values (its hold's too, if any) are
  * positive, its damping ratio at most 1; a positive pendulumForce (P2b.2b.2b.2b design §6), pushForce,
  * pushResponseTime, a positive gripLimit (P2b.2b.2b.3 design §5) and every hand–arm chain value (its gate rulings,
  * 2026-10-11); the pivot's
@@ -261,6 +262,16 @@ function validateTrack(drive: TrackDrive): void {
     // Changing that would be a behaviour change and needs its own ruling.
     if (!(arc.handArcRadius > arc.handReach)) {
         fail(`arc.handArcRadius must exceed arc.handReach (got ${arc.handArcRadius} and ${arc.handReach})`);
+    }
+    if (arc.lowPoint !== undefined) {
+        finiteNumber(arc.lowPoint, "arc.lowPoint");
+        // The push reads the arc from contact (s = 0) to its length (s = handReach), at s − lowPoint.
+        if (!(arc.lowPoint > arc.handReach - arc.handArcRadius && arc.lowPoint < arc.handArcRadius)) {
+            fail(
+                "arc.lowPoint must lie in (handReach − handArcRadius, handArcRadius) = " +
+                    `(${arc.handReach - arc.handArcRadius}, ${arc.handArcRadius}) m (got ${arc.lowPoint})`,
+            );
+        }
     }
     const { hold, ...flexValues } = hands.flex;
     const held = hold === null ? [] : Object.entries(hold).map(([key, value]) => [`hold.${key}`, value] as const);

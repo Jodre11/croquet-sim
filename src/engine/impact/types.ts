@@ -193,6 +193,12 @@ export interface SwingArc {
     readonly handArcRadius: number;
     readonly handArcLow: number;
     /**
+     * Where the hands' arc is lowest, s_low (m along aim from the hands at contact; P2b.2b.2c.3a design §3), set from a
+     * shot's feet. Within (handReach − handArcRadius, handArcRadius), so the arc is defined over the whole push.
+     * Absent: handArcLow·handReach.
+     */
+    readonly lowPoint?: number;
+    /**
      * The downswing before contactAt (P2b.2b.2a design §3.5): before each window begins, and before contactAt, the
      * pendulum and the hands follow it. Absent, the path coasts at ω₀ and V₀ (P2b.2b.1). The table's end state must
      * equal the arc's contact state: θ at t = 0 equals theta0 + omega0·contactAt and ω equals omega0, and the hands
