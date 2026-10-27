@@ -555,6 +555,8 @@ describe("simulateImpact with a tracked drive", () => {
         ["a pendulumAt above 1", withArc({ pendulumAt: 1.5 }), /arc\.pendulumAt must lie in \[0, 1\]/],
         ["a negative pendulumEffort", withArc({ pendulumEffort: -1 }), /arc\.pendulumEffort must lie in \[0, 1\]/],
         ["a handArcLow above 1", withArc({ handArcLow: 1.5 }), /arc\.handArcLow must lie in \[0, 1\]/],
+        ["a slopeHold above 1", withArc({ slopeHold: 1 + 1e-9 }), /arc\.slopeHold must lie in \[0, 1\]/],
+        ["a non-finite slopeHold", withArc({ slopeHold: Number.NaN }), /arc\.slopeHold must be finite/],
         [
             "an arc no longer than the push",
             withArc({ mode: "carry", handReach: 2, handArcRadius: 2 }),

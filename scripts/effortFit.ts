@@ -94,8 +94,8 @@ function plan(
 ): PlannedDownswing {
     const c = caseOf(type, profile);
     const choice = {
-        mode: "swing" as const,
         shape: profile.shape[type],
+        slopeHold: profile.shape[type].slopeHold,
         backswing,
         backswingLimit: profile.body.backswingLimit,
         effort,

@@ -106,6 +106,7 @@ const COAST: SwingArc = {
     dip: NO_DIP,
     contactAt: 0,
     mode: "swing",
+    slopeHold: 0,
     handReach: 10,
     pendulumAt: 0.8,
     pendulumEffort: 0,
@@ -130,6 +131,7 @@ const TIMED: SwingArc = {
     window: 0.03,
     dip: { start: 0.005, duration: 0.02, depth: 0.01 },
     mode: "carry",
+    slopeHold: 1,
 };
 
 const prepare = (arc: SwingArc, coupling: Coupling = TEST_COUPLING, hands: Hands = TEST_HANDS): PreparedTrack =>
@@ -370,7 +372,7 @@ describe("the feed-forward split", () => {
     });
 
     it("feeds the top hand the whole F_s in swing mode outside a check", () => {
-        const arc: SwingArc = { ...TIMED, mode: "swing" };
+        const arc: SwingArc = { ...TIMED, mode: "swing", slopeHold: 0 };
         const t = 0.009;
         const track = prepare(arc, TEST_COUPLING, ARMED);
         const { force } = rigidWrench(track, t);
@@ -384,7 +386,7 @@ describe("the feed-forward split", () => {
     });
 
     it("splits F_s over both hands inside a check, the top hand's share scaled by γ_T", () => {
-        const arc: SwingArc = { ...TIMED, mode: "swing", alpha: -4 };
+        const arc: SwingArc = { ...TIMED, mode: "swing", slopeHold: 0, alpha: -4 };
         const t = 0.012;
         const track = prepare(arc, TEST_COUPLING, ARMED);
         const firm = loadOnPath(track, t);

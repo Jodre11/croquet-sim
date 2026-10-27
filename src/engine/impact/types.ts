@@ -97,9 +97,12 @@ export interface Dip {
 /**
  * The contact-free downswing (P2b.2b.2a design §3), in s from the planned contact: from the release t_r < 0, the
  * pendulum and the hands at rest at the backswing's top, to contact. The hands' path is P(σ) = P_b + Δ_h·σ² +
- * Δ_z·(3σ² − 2σ³) + T·(σ³ − σ²), σ from 0 at the top to 1 at contact. Swing mode tabulates θ, ω and α every
- * FREE_STEP from the release, its last sample at contact, with σ = (θ − θ_top)/span; carry mode is closed-form,
- * σ = (t − t_r)/tempo and θ = θ_top + span·σ².
+ * Δ_z·(3σ² − 2σ³) + T·(σ³ − σ²), σ from 0 at the top to 1 at contact. The planned slope (P2b.2b.2c.3a design §4.1)
+ * takes one of two representations:
+ * - a table of θ, ω and α every FREE_STEP from the release, its last sample at contact (`tempo` null). The free
+ *   swing's (λ = 0) leads the hands by the slope, σ = (θ − θ_top)/span; a blend's (0 < λ < 1) carries the hands'
+ *   own progress in `handsProgress`;
+ * - the closed form of the held slope (λ = 1, `tempo` given): σ = (t − t_r)/tempo and θ = θ_top + span·σ².
  */
 export interface Downswing {
     /** t_r (s from contact, negative). */
@@ -112,16 +115,27 @@ export interface Downswing {
     readonly across: Vec3;
     readonly drop: Vec3;
     /**
-     * Carry mode's Hermite end term T (m, vertical; P2b.2b.2b.2b design §4.1): the hands' path gains T·(σ³ − σ²), so
-     * its slope at contact is 2·Δ_h + T and it arrives on the hands' arc. ZERO in swing mode, whose hands arrive level.
+     * The Hermite end term T (m, vertical; P2b.2b.2b.2b design §4.1): the hands' path gains T·(σ³ − σ²), so its slope
+     * at contact is 2·Δ_h + T and it arrives on the hands' arc. Zero where the hands arrive level; a table adds the
+     * term only where it is non-zero.
      */
     readonly tangent: Vec3;
-    /** Carry mode's hands' tempo T_h (s), with release = −tempo; null in swing mode. */
+    /** The held slope's hands' tempo T_h (s), with release = −tempo; null for a table. */
     readonly tempo: number | null;
-    /** Swing mode's table (rad, rad/s, rad/s²); empty in carry mode. */
+    /** The table (rad, rad/s, rad/s²); empty for the closed form. */
     readonly theta: readonly number[];
     readonly omega: readonly number[];
     readonly alpha: readonly number[];
+    /**
+     * A blended plan's hands (P2b.2b.2c.3a design §4.1, refined at Task 3): their progress σ_h = (1 − λ)·σ_f + λ·u at
+     * each of the table's samples, with its rate (1/s) and acceleration (1/s²), so that the hands, like the slope,
+     * run continuously between the free swing's lead and the held slope's tempo. Absent on the free swing's table.
+     */
+    readonly handsProgress?: {
+        readonly sigma: readonly number[];
+        readonly rate: readonly number[];
+        readonly accel: readonly number[];
+    };
 }
 
 /**
@@ -165,6 +179,11 @@ export interface SwingArc {
     /** The planned contact (s from t = 0), from which the cap and the reach count. */
     readonly contactAt: number;
     readonly mode: StrokeMode;
+    /**
+     * λ in [0, 1] (P2b.2b.2c.3a design §4.1): how far the hands hold the slope in the pendulum's pulse and after it.
+     * The pendulum is the free one at 0, the kinematic pulse and hold at 1, and θ, ω and α blend linearly between.
+     */
+    readonly slopeHold: number;
     /** How far the hands' path travels along aim after contactAt (m). */
     readonly handReach: number;
     /**

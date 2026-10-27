@@ -381,7 +381,7 @@ export interface PreparedTrack {
     readonly push: Push | null;
     /** Swing mode's advance (P2b.2b.2c.1 design §6); null without one, and in carry mode. */
     readonly advance: Advance | null;
-    /** Swing mode's free pendulum; null in carry mode, or in swing mode where prepareTrack skipped it. */
+    /** The free pendulum; null on a fully held slope (λ = 1), or where prepareTrack skipped it. */
     readonly free: FreePendulum | null;
     /** The swung body; in carry mode with both hands' skin (carryBody). */
     readonly body: SwungBody;
@@ -452,7 +452,7 @@ export function pendulumOf(head: MalletHead, body: SwungBody, radius: number, gr
     return { weight: head.mass * gravity * lh + rod * gravity * below, inertial, inertia };
 }
 
-/** How many samples the downswing's scan visits (P2b.2b.2a design §3.4): its table's, or carry mode's like it. */
+/** How many samples the downswing's scan visits (P2b.2b.2a design §3.4): its table's, or the closed form's like it. */
 export function downswingSamples(down: Downswing): number {
     if (down.tempo === null) {
         return down.theta.length;
@@ -467,7 +467,7 @@ export function downswingTime(down: Downswing, k: number): number {
 
 /**
  * The downswing's pendulum at time t (s from contact, at most 0; P2b.2b.2a design §3.3, §3.4): held at the top before
- * the release; in carry mode θ = θ_top + span·σ²; in swing mode its table, interpolated linearly.
+ * the release; for the closed form θ = θ_top + span·σ²; otherwise its table, interpolated linearly.
  */
 export function downswingAt(down: Downswing, t: number): Swing {
     if (t < down.release) {
@@ -482,31 +482,36 @@ export function downswingAt(down: Downswing, t: number): Swing {
             alpha: (2 * down.span) / (T * T),
         };
     }
+    const lerp = tableLerp(down, t);
+    return { theta: lerp(down.theta), omega: lerp(down.omega), alpha: lerp(down.alpha) };
+}
+
+/**
+ * A reader of a column of `down`'s table at time t (s from contact, at or after the release), interpolated linearly
+ * between its samples; at contact and after, the last sample.
+ */
+function tableLerp(down: Downswing, t: number): (values: readonly number[]) => number {
     const n = down.theta.length;
     if (t >= 0) {
-        // Contact exactly: σ is then exactly 1 and the hands arrive level.
+        // Contact exactly: σ is then exactly 1 and the hands arrive on their path's end.
         const last = n - 1;
-        return {
-            theta: down.theta[last] as number,
-            omega: down.omega[last] as number,
-            alpha: down.alpha[last] as number,
-        };
+        return (values) => values[last] as number;
     }
     const i = Math.max(0, Math.min(Math.floor((t - down.release) / FREE_STEP), n - 2));
     const t0 = down.release + i * FREE_STEP;
     const t1 = i + 1 === n - 1 ? 0 : down.release + (i + 1) * FREE_STEP;
     const f = Math.min(Math.max((t - t0) / (t1 - t0), 0), 1);
-    const lerp = (values: readonly number[]): number => {
+    return (values) => {
         const a = values[i] as number;
         return a + f * ((values[i + 1] as number) - a);
     };
-    return { theta: lerp(down.theta), omega: lerp(down.omega), alpha: lerp(down.alpha) };
 }
 
 /**
  * The downswing's hands at time t (s from contact; P2b.2b.2a design §3.3), the pendulum at `swing`: P(σ) and its
- * derivatives, σ led by the pendulum in swing mode (σ = (θ − θ_top)/span) and by time in carry mode. At rest at the
- * top before the release.
+ * derivatives. σ is led by time on the closed form, by the table's own hands' progress on a blend
+ * (P2b.2b.2c.3a design §4.1), and otherwise by the pendulum, σ = (θ − θ_top)/span. At rest at the top before the
+ * release.
  */
 export function downswingHands(down: Downswing, t: number, swing: Swing): Motion {
     if (t < down.release) {
@@ -515,10 +520,16 @@ export function downswingHands(down: Downswing, t: number, swing: Swing): Motion
     let sigma: number;
     let rate: number;
     let accel: number;
+    const progress = down.handsProgress;
     if (down.tempo !== null) {
         sigma = Math.min(t - down.release, down.tempo) / down.tempo;
         rate = 1 / down.tempo;
         accel = 0;
+    } else if (progress !== undefined) {
+        const lerp = tableLerp(down, t);
+        sigma = lerp(progress.sigma);
+        rate = lerp(progress.rate);
+        accel = lerp(progress.accel);
     } else {
         sigma = (swing.theta - down.thetaTop) / down.span;
         rate = swing.omega / down.span;
@@ -528,17 +539,18 @@ export function downswingHands(down: Downswing, t: number, swing: Swing): Motion
     const bend = add(scale(down.across, 2), scale(down.drop, 6 - 12 * sigma));
     const rise = (3 - 2 * sigma) * sigma * sigma;
     const P = add(add(down.handsTop, scale(down.across, sigma * sigma)), scale(down.drop, rise));
-    if (down.tempo === null) {
+    // A table adds the Hermite term only where it is non-zero, so that a level arrival keeps today's bits.
+    if (down.tempo === null && down.tangent.z === 0) {
         return { P, V: scale(slope, rate), A: add(scale(bend, rate * rate), scale(slope, accel)) };
     }
-    // Carry mode (P2b.2b.2b.2b design §4.1): the Hermite term T·(σ³ − σ²) brings the hands onto the arc.
+    // The Hermite term T·(σ³ − σ²) brings the hands onto the arc (P2b.2b.2b.2b design §4.1).
     const T = down.tangent;
-    const carrySlope = add(slope, scale(T, 3 * sigma * sigma - 2 * sigma));
-    const carryBend = add(bend, scale(T, 6 * sigma - 2));
+    const arcSlope = add(slope, scale(T, 3 * sigma * sigma - 2 * sigma));
+    const arcBend = add(bend, scale(T, 6 * sigma - 2));
     return {
         P: add(P, scale(T, sigma * sigma * sigma - sigma * sigma)),
-        V: scale(carrySlope, rate),
-        A: add(scale(carryBend, rate * rate), scale(carrySlope, accel)),
+        V: scale(arcSlope, rate),
+        A: add(scale(arcBend, rate * rate), scale(arcSlope, accel)),
     };
 }
 
@@ -884,9 +896,10 @@ function tableAt(free: FreePendulum, t: number): { readonly theta: number; reado
 }
 
 /**
- * Prepares `drive` for `head` under `gravity` (design §3.2, §3.3): the windows' end states; in swing mode the reach
- * and the free pendulum's table from the window's start, its θ and ω at the window's end being the table's
- * (P2b.2b.2c.2d design §3.1); in carry mode the push (P2b.2b.2b.2b design §4.1); the swung body and the gains. Without
+ * Prepares `drive` for `head` under `gravity` (design §3.2, §3.3): the windows' end states; in swing mode the reach,
+ * in carry mode the push (P2b.2b.2b.2b design §4.1); wherever the slope is not fully held (λ < 1, P2b.2b.2c.3a design
+ * §4.1) the free pendulum's table from the window's start, its θ and ω at the window's end being the table's
+ * (P2b.2b.2c.2d design §3.1); the swung body and the gains. Without
  * `withFree` the table runs through the pulse only: a caller that reads the path only up to the pendulum's window's
  * end saves its cost, and a read past it throws.
  */
@@ -930,13 +943,19 @@ export function prepareTrack(drive: TrackDrive, head: MalletHead, gravity: numbe
         top: handGains(coupling, hands.gripTension, body),
         bottom: handGains(coupling, hands.bottomGrip, body),
     };
+    let reached: PreparedTrack;
     if (carry) {
-        return { ...plain, push: computePush(plain) };
+        reached = { ...plain, push: computePush(plain) };
+    } else {
+        // An advance alone carries the hands handReach, so the planned pivot's own reach rests from contact: one
+        // budget, never the reach's distance on top (P2b.2b.2c.1 design, Amendments).
+        const reach = plain.advance === null ? computeReach(plain) : restingReach(plain);
+        reached = { ...plain, reach };
     }
-    // An advance alone carries the hands handReach, so the planned pivot's own reach rests from contact: one budget,
-    // never the reach's distance on top (P2b.2b.2c.1 design, Amendments).
-    const reach = plain.advance === null ? computeReach(plain) : restingReach(plain);
-    const reached: PreparedTrack = { ...plain, reach };
+    // A fully held slope (λ = 1) has no free pendulum to tabulate (P2b.2b.2c.3a design §4.1).
+    if (!(arc.slopeHold < 1)) {
+        return reached;
+    }
     // Gravity acts through the pulse (P2b.2b.2c.2d design §3.1), so the window's end is the table's, not the box's.
     const free = computeFree(reached, head, gravity, !withFree);
     const end = tableAt(free, arc.arcStart + w);
@@ -977,41 +996,78 @@ export interface PathPoint {
 }
 
 /**
- * Swing mode's free pendulum table; past the window (`past`), throws if prepareTrack tabulated it through the pulse
- * only, rather than read a table that is not there.
+ * The free pendulum's table, tabulated wherever λ < 1; past the window (`past`), throws if prepareTrack tabulated it
+ * through the pulse only, rather than read a table that is not there.
  */
 function freeOf(track: PreparedTrack, past: boolean): FreePendulum {
     const { free } = track;
     if (free === null || (past && free.pulseOnly)) {
         throw new Error(
-            "the free pendulum's table was read past the window's end, but prepareTrack tabulated it through the pulse " +
-                "only (withFree false) or not at all (carry mode)",
+            "the free pendulum's table was read past the window's end, but prepareTrack tabulated it through the " +
+                "pulse only (withFree false) or not at all (a fully held slope)",
         );
     }
     return free;
 }
 
-/** The pendulum's θ, ω and α at time t (design §3.2). */
+/**
+ * The pendulum's θ, ω and α at time t (design §3.2; P2b.2b.2c.3a design §4.1): from the window's start the free
+ * pendulum at λ = 0, the kinematic pulse and hold at λ = 1, and between them θ = (1 − λ)·θ_free + λ·θ_held, ω and α
+ * likewise. A stop's hold (holdPendulum) holds the whole pendulum.
+ */
 function pendulumAt(track: PreparedTrack, t: number): Swing {
     const { arc } = track;
     if (t <= arc.arcStart) {
         return beforeWindow(arc, t);
     }
     const tw = arc.arcStart + arc.window;
-    if (arc.mode === "swing") {
-        // Gravity acts through the pulse (P2b.2b.2c.2d design §3.1): the table, from the window's start, its α the free
-        // pendulum's plus the pulse's within the window; held from a stop's hold on.
-        const free = freeOf(track, t > tw);
-        const { held } = free;
-        if (held !== null && t > tw && t >= held.from) {
-            return { theta: held.theta, omega: 0, alpha: 0 };
-        }
-        const { theta, omega } = tableAt(free, t);
-        const a = freeAlpha(track, free, theta, t);
-        return { theta, omega, alpha: arc.alpha !== 0 && t < tw ? a + pulseAlpha(arc, t) : a };
+    const lambda = arc.slopeHold;
+    if (lambda === 0) {
+        return freePath(track, t, tw);
     }
+    if (lambda === 1) {
+        return heldPath(track, t, tw, track.thetaEnd, track.omegaEnd);
+    }
+    const { held } = freeOf(track, t > tw);
+    if (held !== null && t > tw && t >= held.from) {
+        return { theta: held.theta, omega: 0, alpha: 0 };
+    }
+    const free = freePath(track, t, tw);
+    // The held part runs from the box's end state, as it does alone, not from the free table's.
+    const w = arc.window;
+    const thetaEnd = track.thetaArc + track.omegaArc * w + 0.5 * arc.alpha * w * w;
+    const kinematic = heldPath(track, t, tw, thetaEnd, track.omegaArc + arc.alpha * w);
+    const keep = 1 - lambda;
+    return {
+        theta: keep * free.theta + lambda * kinematic.theta,
+        omega: keep * free.omega + lambda * kinematic.omega,
+        alpha: keep * free.alpha + lambda * kinematic.alpha,
+    };
+}
+
+/** The free pendulum at time t, after the window's start; `tw` is the window's end. */
+function freePath(track: PreparedTrack, t: number, tw: number): Swing {
+    const { arc } = track;
+    // Gravity acts through the pulse (P2b.2b.2c.2d design §3.1): the table, from the window's start, its α the free
+    // pendulum's plus the pulse's within the window; held from a stop's hold on.
+    const free = freeOf(track, t > tw);
+    const { held } = free;
+    if (held !== null && t > tw && t >= held.from) {
+        return { theta: held.theta, omega: 0, alpha: 0 };
+    }
+    const { theta, omega } = tableAt(free, t);
+    const a = freeAlpha(track, free, theta, t);
+    return { theta, omega, alpha: arc.alpha !== 0 && t < tw ? a + pulseAlpha(arc, t) : a };
+}
+
+/**
+ * The held slope's kinematic pendulum at time t, after the window's start: its pulse, then the hold from θ and ω at
+ * the window's end, `thetaEnd` and `omegaEnd`; `tw` is the window's end.
+ */
+function heldPath(track: PreparedTrack, t: number, tw: number, thetaEnd: number, omegaEnd: number): Swing {
+    const { arc } = track;
     if (t <= tw) {
-        // Carry mode's arc is kinematic, gravity never in its plan: the minimum-jerk pulse alone (P2b.2b.2c.2d design
+        // The held arc is kinematic, gravity never in its plan: the minimum-jerk pulse alone (P2b.2b.2c.2d design
         // §3.1), α = 6·ᾱ·s(1 − s), s = τ/T, so ω and θ end where the box's constant ᾱ would put them. s is clamped to 1
         // so that every factor of ᾱ stays non-negative: at ᾱ = ±0 each term is then the box's signed zero, and the path
         // is the box's to the bit.
@@ -1032,18 +1088,18 @@ function pendulumAt(track: PreparedTrack, t: number): Swing {
     const W = arc.holdWindow ?? arc.window;
     const u = Math.min(t - tw, W);
     const x = u / W;
-    const we = track.omegaEnd;
+    const we = omegaEnd;
     const fall = x * (1 + x * x * (x * 0.5 - 1));
     return {
-        theta: track.thetaEnd + W * (we * fall),
+        theta: thetaEnd + W * (we * fall),
         omega: we * (1 + x * x * (2 * x - 3)),
         alpha: u < W ? ((6 * we) / W) * x * (x - 1) : 0,
     };
 }
 
 /**
- * `track` in swing mode with its pendulum held from time `from` (s, at or after the pendulum's window) on: θ fixed at
- * its value there, ω = α = 0. A stop's follow-through (P2b.2b.2a design §4.2), a user decision (2026-10-07): after
+ * `track`, wherever λ < 1, with its pendulum held from time `from` (s, at or after the pendulum's window) on: θ fixed
+ * at its value there, ω = α = 0. A stop's follow-through (P2b.2b.2a design §4.2), a user decision (2026-10-07): after
  * the check the mallet stays still relative to the hands, as Riches has the stop, "NO FOLLOW-THROUGH at all, or as
  * little as possible", rather than the free pendulum swinging back. Before `from` it reads as `track`.
  */

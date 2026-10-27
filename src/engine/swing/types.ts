@@ -81,16 +81,19 @@ export interface SwingDrive {
 /**
  * How a stroke type's whole stroke is shaped (P2b.2b.2a design §3, §5.1). `pendulumShare` (in [0, 1]) of the
  * backswing's height comes from the pendulum and the rest from the hands, which start back and up along `handAngle`
- * (rad above horizontal; read only when the share is below 1). Carry mode reads `handTempo`: the hands' downswing lasts
- * from `slow` (s, intensity 0) to `fast` (s, intensity 1); null where a swing preset has none, its downswing being the
- * body's effort, and a carry stroke fails without one. Swing mode's effort is the body's (`SwingProfile.body.effort`,
- * P2b.2b.2c.1 design §4.4). A shot that gives no intensity swings at 0, by gravity alone: no preset carries a default
- * intensity (P2b.2b.2c.1 design, Amendments).
+ * (rad above horizontal; read only when the share is below 1). `slopeHold` λ (in [0, 1]; P2b.2b.2c.3a design §4.1) is
+ * how far the hands hold the shaft's slope against its free swing on the way down: 0 lets the pendulum swing under
+ * gravity and the body's effort (`SwingProfile.body.effort`, P2b.2b.2c.1 design §4.4), 1 holds the hands-led slope
+ * θ = θ_top + span·σ², and between them the plan blends the two. `handTempo` is the hands' downswing time, from `slow`
+ * (s, intensity 0) to `fast` (s, intensity 1); null takes the stroke's own free swing's fall, derived, not fitted. A
+ * shot that gives no intensity swings at 0, by gravity alone: no preset carries a default intensity (P2b.2b.2c.1
+ * design, Amendments).
  */
 export interface SwingShape {
     readonly pendulumShare: number;
     readonly handAngle: number;
     readonly handTempo: { readonly slow: number; readonly fast: number } | null;
+    readonly slopeHold: number;
 }
 
 /**

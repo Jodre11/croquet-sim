@@ -35,10 +35,8 @@ import {
     swingReference,
     type StrokeShapeReference,
 } from "../../reference/index";
-import { ReferenceDataError } from "../../reference/schema";
 import { faceHalfHeight } from "../impact/shape";
 import { ARM_FLEX, GRIP_LIMIT, HAND_CHAIN, PENDULUM_FORCE, PUSH_FORCE, PUSH_RESPONSE_TIME } from "../impact/track";
-import type { StrokeMode } from "../impact/types";
 import { handsAheadFor, headShapeOf } from "./buildContact";
 import {
     STROKE_TYPES,
@@ -93,16 +91,13 @@ function stanceFromLean(lean: number, up: number, hands: Omit<SwingStance, "hand
 }
 
 /**
- * The shape of stroke type `type` driven in `mode`, from its reference/swing.json entry `ref` (design §5.3). A carry
- * preset reads the hands' tempo, and throws a ReferenceDataError naming the type and the keys when `ref` lacks it; a
- * swing preset takes it from `ref` or null, its effort being the body's, shared by every swing preset. A swing
- * preset's retired effort keys (torqueMax, tempoSlow, tempoFast) and any preset's retired defaultIntensity are rejected
- * by readShape when swing.json loads.
+ * The shape of stroke type `type` from its reference/swing.json entry `ref` (design §5.3), all but its planned slope
+ * (SLOPE_HOLD). The hands' tempo is `ref`'s or null, which takes the stroke's own free swing's fall (P2b.2b.2c.3a
+ * design §4.1); a stroke that needs a tempo it cannot derive is rejected by planStroke. A swing preset's retired effort
+ * keys (torqueMax, tempoSlow, tempoFast) and any preset's retired defaultIntensity are rejected by readShape when
+ * swing.json loads.
  */
-export function shapeOf(type: StrokeType, mode: StrokeMode, ref: StrokeShapeReference): SwingShape {
-    if (mode === "carry" && ref.handTempo === null) {
-        throw new ReferenceDataError(`swing.${type}`, "a carry-mode preset needs handTempoSlow and handTempoFast");
-    }
+export function shapeOf(type: StrokeType, ref: StrokeShapeReference): Omit<SwingShape, "slopeHold"> {
     return {
         pendulumShare: ref.pendulumShare.value,
         handAngle: ref.handAngle.value,
@@ -249,6 +244,20 @@ const DRIVE: Readonly<Record<StrokeType, SwingDrive>> = {
     },
 };
 
+/**
+ * The planned slope λ per stroke type (P2b.2b.2c.3a design §4.1): the swing presets' hands let the shaft swing (0), the
+ * rolls' hold its slope (1), each today's downswing to the bit.
+ */
+export const SLOPE_HOLD: Readonly<Record<StrokeType, number>> = {
+    "single-ball": 0,
+    drive: 0,
+    "stop-ac": 0,
+    "stop-gc": 0,
+    "half-roll": 1,
+    "full-roll": 1,
+    "pass-roll": 1,
+};
+
 /** The default profile (design §5.4). Provisional throughout. */
 export const defaultProfile: SwingProfile = {
     mallet: MALLET,
@@ -305,7 +314,7 @@ export const defaultProfile: SwingProfile = {
     },
     drive: DRIVE,
     shape: Object.fromEntries(
-        STROKE_TYPES.map((type) => [type, shapeOf(type, DRIVE[type].mode, swingReference[type])]),
+        STROKE_TYPES.map((type) => [type, { ...shapeOf(type, swingReference[type]), slopeHold: SLOPE_HOLD[type] }]),
     ) as Record<StrokeType, SwingShape>,
 };
 

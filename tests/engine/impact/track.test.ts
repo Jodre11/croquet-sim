@@ -76,6 +76,7 @@ const ROLL: SwingArc = {
     dip: NO_DIP,
     contactAt: 1,
     mode: "carry",
+    slopeHold: 1,
     handReach: 10,
     pendulumAt: 0.8,
     pendulumEffort: 0,
@@ -264,7 +265,7 @@ describe("the swing path", () => {
         // P2b.2b.2c.2d: gravity through the pulse (was swing mode at rest too, |ω| < 1e-12). Swing mode's pendulum, at
         // θ₀ = −0.6 rad, gains gravity's share over the window, about W·sin 0.6/I_P·0.03 ≈ 0.19 rad/s (the hand
         // integration's); without gravity, the pivot still, the table's check brings it to rest to O(FREE_STEP).
-        const swing = { ...checked, mode: "swing" as const };
+        const swing = { ...checked, mode: "swing" as const, slopeHold: 0 };
         const track = prepare(swing);
         const w = dot(pathAt(track, ROLL.window).angularVelocity, N);
         expect(w).toBeCloseTo(integratePulse(track, 1e-7).omega, 4);
@@ -340,9 +341,9 @@ describe("the swing path", () => {
         }
     });
 
-    it("tabulates a free pendulum in swing mode only", () => {
+    it("tabulates a free pendulum wherever λ < 1", () => {
         expect(track.free).toBeNull();
-        const free = prepare({ ...TIMED, mode: "swing" }).free;
+        const free = prepare({ ...TIMED, mode: "swing", slopeHold: 0 }).free;
         // P2b.2b.2c.2d: gravity through the pulse (was from the window's end, FREE_SPAN / FREE_STEP + 1 samples). From
         // the window's start: through the window with one sample to spare, then FREE_SPAN.
         expect(free?.tw).toBe(TIMED.arcStart);
@@ -350,7 +351,7 @@ describe("the swing path", () => {
     });
 
     it("tabulates through the pulse only on request: the same path to the window's end, a throw past it", () => {
-        const arc: SwingArc = { ...TIMED, mode: "swing" };
+        const arc: SwingArc = { ...TIMED, mode: "swing", slopeHold: 0 };
         const drive = trackDrive(arc, TEST_COUPLING, TEST_HANDS);
         const full = prepareTrack(drive, TEST_HEAD, STANDARD_GRAVITY);
         const bare = prepareTrack(drive, TEST_HEAD, STANDARD_GRAVITY, false);
@@ -375,7 +376,7 @@ describe("the swing path", () => {
         // Swing mode, whose swung body carries the arm mass; a carry's is the head with the hands' skin at the grips,
         // its hand–arm chains replacing the arm mass (P2b.2b.2b.2b gate round 3 ruling, 2026-10-11).
         const hands: Hands = { ...ARMED, gripTension: 0.1, bottomGrip: 0.25 };
-        const t = prepare({ ...TIMED, mode: "swing" }, hands);
+        const t = prepare({ ...TIMED, mode: "swing", slopeHold: 0 }, hands);
         const carried = prepare(TIMED, hands);
         expect(carried.body).toEqual(carryBody(TEST_HEAD, hands.chain, TIMED.radius, hands.bottom));
         expect(carried.released).toEqual(carryBody(TEST_HEAD, hands.chain, TIMED.radius, null));
@@ -560,7 +561,7 @@ describe("the hands' arc after contact (P2b.2b.2b.2b design §4.1)", () => {
     });
 
     it("leaves swing mode's path as it was: a reach and no push", () => {
-        const swing = prepareTrack(trackDrive({ ...ARC, mode: "swing" }), TEST_HEAD, STANDARD_GRAVITY);
+        const swing = prepareTrack(trackDrive({ ...ARC, mode: "swing", slopeHold: 0 }), TEST_HEAD, STANDARD_GRAVITY);
         expect(swing.push).toBeNull();
         expect(swing.reach).not.toBeNull();
     });
@@ -643,6 +644,7 @@ describe("the hands' arc after contact (P2b.2b.2b.2b design §4.1)", () => {
         const swingArc: SwingArc = {
             ...carryArc,
             mode: "swing",
+            slopeHold: 0,
             handReach: 0,
             theta0: -0.6,
             handStart: 0,
@@ -1014,11 +1016,29 @@ describe("the downswing (P2b.2b.2a design §3.5)", () => {
     it("rejects a malformed downswing", () => {
         const good = downswingArc();
         const down = good.downswing as Downswing;
+        // P2b.2b.2c.3a: checked by representation, a tempo meaning the closed form (was: by the arc's mode, the
+        // messages "tabulated in swing mode" and "closed-form in carry mode").
+        const n = down.theta.length;
+        const progress = { sigma: [...down.theta], rate: [...down.omega], accel: [...down.alpha] };
         const bad: readonly [string, Downswing, RegExp][] = [
             ["a release at or after contact", { ...down, release: 0 }, /release must be negative/],
-            ["a table of one sample", { ...down, theta: [0], omega: [0], alpha: [0] }, /tabulated in swing mode/],
+            [
+                "a table of one sample",
+                { ...down, theta: [0], omega: [0], alpha: [0] },
+                /without a tempo must be tabulated/,
+            ],
             ["a table that stops short of contact", { ...down, release: -1 }, /must end at contact/],
-            ["a tempo in swing mode", { ...down, tempo: 0.05 }, /tabulated in swing mode/],
+            ["a tempo with a table", { ...down, tempo: 0.05 }, /with a tempo must be closed-form/],
+            [
+                "a hands' progress shorter than the table",
+                { ...down, handsProgress: { ...progress, rate: progress.rate.slice(1) } },
+                new RegExp(`handsProgress\\.rate must have the table's ${n} samples`),
+            ],
+            [
+                "a non-finite hands' progress",
+                { ...down, handsProgress: { ...progress, sigma: [Number.NaN, ...progress.sigma.slice(1)] } },
+                /handsProgress\.sigma\[0\] must be finite/,
+            ],
         ];
         // The head is placed on the good arc: a malformed table must fail validation, not the placement.
         const placed = onArc(trackDrive(good));
@@ -1026,9 +1046,14 @@ describe("the downswing (P2b.2b.2a design §3.5)", () => {
             const contact = { ...placed, drive: trackDrive({ ...good, downswing }) };
             expect(() => validateImpact(contact, {}, testWorld()), name).toThrow(pattern);
         }
-        const carry: SwingArc = { ...good, mode: "carry", downswing: { ...down, tempo: 0.3, release: -0.2 } };
+        const carry: SwingArc = {
+            ...good,
+            mode: "carry",
+            slopeHold: 1,
+            downswing: { ...down, tempo: 0.3, release: -0.2 },
+        };
         const carried = { ...placed, drive: trackDrive(carry) };
-        expect(() => validateImpact(carried, {}, testWorld())).toThrow(/closed-form in carry mode/);
+        expect(() => validateImpact(carried, {}, testWorld())).toThrow(/with a tempo must be closed-form/);
     });
 
     it("bounds the table's last full step to within FREE_STEP before contact, with a rounding margin", () => {
@@ -1068,5 +1093,23 @@ describe("the downswing (P2b.2b.2a design §3.5)", () => {
         // These contacts are not placed to start a real impact, so validateImpact ends on its later turf check:
         // reaching it, as the good arc does, means the downswing passed.
         expect(() => validateImpact(contact, {}, testWorld())).toThrow(/head penetrates the turf/);
+    });
+});
+
+describe("the slope after contact follows λ (P2b.2b.2c.3a design §4.1, decision 4)", () => {
+    it("blends the free and held paths", () => {
+        // TIMED's pendulum window ends at 40 ms. Past it the free pendulum and the held slope's hold each run on their
+        // own; at λ = 0.5 the path's θ is their mean, the free table being tabulated whenever λ < 1.
+        const at = (slopeHold: number) => prepare({ ...TIMED, slopeHold });
+        const free = at(0);
+        const blend = at(0.5);
+        const held = at(1);
+        const end = TIMED.arcStart + TIMED.window;
+        for (const t of [end + 0.005, end + 0.02, end + 0.05]) {
+            const expected = 0.5 * pathAt(free, t).theta + 0.5 * pathAt(held, t).theta;
+            expect(Math.abs(pathAt(blend, t).theta - expected), `t ${t}`).toBeLessThanOrEqual(1e-12);
+        }
+        expect(held.free).toBeNull();
+        expect(blend.free).not.toBeNull();
     });
 });

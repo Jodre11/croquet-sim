@@ -4,6 +4,10 @@
  * - F. the feet's reading (§3): for every preset's canonical setup, where the hands are at contact along aim from the
  *   striker's ball, where the hands' arc bottoms out, the arc's slope at contact, the head's attack angle and the
  *   shaft's lean; then the same at handArcLow 0, 0.25, 0.5, 0.75 and 1 with the lean held.
+ * - P. the planned slope (§4.1): for every preset's canonical setup its λ, the free swing's fall D_f (where it has
+ *   one), the hands' tempo T, the couple's peak and its time against the grip's C; for the half roll and the drive
+ *   the planned speed at λ = 0, 0.25, 0.5, 0.75 and 1; and the drive held at λ = 1 with its hands together (bottom
+ *   at 0.715 m), Review Focus 3's figure. Plans past C are read with the bound lifted, and flagged.
  * Every section ends with a line "<letter> tally: ...". `all` runs every section.
  * Run with `env SECTION=F npx --yes tsx scripts/setupProbe.ts`; environment: SECTION (a letter, a comma-separated
  * list of letters, run in that order, or `all`; default all).
@@ -12,7 +16,13 @@
 import { pitchAxis } from "../src/engine/impact/track";
 import { atan2 } from "../src/engine/math/elementary";
 import { add, cross, dot, scale, sub, type Vec3 } from "../src/engine/math/vec3";
-import { arcArrival, contactPose, planStroke } from "../src/engine/swing/buildContact";
+import { arcArrival, contactPose, downswingInputOf, planStroke, poseSpeed } from "../src/engine/swing/buildContact";
+import {
+    planDownswing,
+    requiredCouple,
+    type DownswingInput,
+    type PlannedDownswing,
+} from "../src/engine/swing/downswing";
 import { STROKE_TYPES, type ShotSetup } from "../src/engine/swing/types";
 import type { BallState, World } from "../src/engine/types";
 import { defaultWorld } from "../src/engine/world";
@@ -54,7 +64,7 @@ export function feetReading(setup: ShotSetup, world: World): FeetReading {
     return {
         handsAt,
         lowPoint: handsAt + push.handArcLow * reach,
-        arrival: arcArrival(push.handArcRadius, push.handArcLow, reach),
+        arrival: arcArrival(push.handArcRadius, push.handArcLow * reach),
         attack: atan2(velocity.z, dot(velocity, pose.aim)),
         lean: 0 - pose.thetaContact,
     };
@@ -148,11 +158,76 @@ function sectionF(): void {
     );
 }
 
+/** The planned slopes section P reads the half roll and the drive at. */
+const SLOPE_HOLDS: readonly number[] = [0, 0.25, 0.5, 0.75, 1];
+
+/** `input` planned at λ = `slopeHold` with the couple's bound lifted, so that a plan past C still reads. */
+function unbounded(input: DownswingInput, slopeHold: number): PlannedDownswing {
+    return planDownswing({ ...input, slopeHold, couple: Infinity });
+}
+
+function coupleLine(input: DownswingInput, planned: PlannedDownswing): string {
+    const { peak, at } = requiredCouple(input, planned.downswing);
+    const verdict = peak <= input.couple ? "within" : "EXCEEDS";
+    // The free swing's couple is a residual of its table, so its peak is printed to its own scale.
+    return `couple peak ${peak.toExponential(4)} N·m at ${fmt(at * 1e3)} ms, ${verdict} C ${fmt(input.couple)} N·m`;
+}
+
+/** P. The planned slope (design §4.1): each preset's plan, its couple against C, and the speed across λ. */
+function sectionP(): void {
+    const world = defaultWorld();
+    console.log("== P. the planned slope (design §4.1): s, N·m, ms from contact, m/s ==");
+    let exceeded = 0;
+    for (const type of STROKE_TYPES) {
+        const setup = canonicalSetup(type);
+        const input = downswingInputOf(setup, world);
+        const { slopeHold } = input;
+        const { handTempo, pendulumShare } = input.shape;
+        const fall = pendulumShare > 0 ? 0 - unbounded(input, 0).downswing.release : null;
+        const tempo = handTempo === null ? fall : handTempo.slow + input.intensity * (handTempo.fast - handTempo.slow);
+        const planned = unbounded(input, slopeHold);
+        if (requiredCouple(input, planned.downswing).peak > input.couple) {
+            exceeded++;
+        }
+        const { top, bottom, limit, spread } = input.grip;
+        const falls = fall === null ? "none" : `${fmt(fall)} s`;
+        const tempos = tempo === null ? "none" : `${fmt(tempo)} s${handTempo === null ? " (derived)" : ""}`;
+        const speed = fmt(poseSpeed(contactPose(setup, world), planned));
+        console.log(
+            `${type}: λ ${slopeHold}, D_f ${falls}, T ${tempos}, ${coupleLine(input, planned)} (γ_T ${top}, ` +
+                `g_B ${bottom}, F_max ${limit} N, r − b ${fmt(spread)} m), planned speed ${speed}`,
+        );
+    }
+    for (const type of ["half-roll", "drive"] as const) {
+        const setup = canonicalSetup(type);
+        const input = downswingInputOf(setup, world);
+        const pose = contactPose(setup, world);
+        for (const slopeHold of SLOPE_HOLDS) {
+            const planned = unbounded(input, slopeHold);
+            console.log(
+                `  ${type} λ ${slopeHold}: planned speed ${fmt(poseSpeed(pose, planned))}, fall ` +
+                    `${fmt(0 - planned.downswing.release)} s, ${coupleLine(input, planned)}`,
+            );
+        }
+    }
+    // Review Focus 3: the drive's hands together, the bottom hand at 0.715 m (before Task 12 moves it), held.
+    const together = canonicalSetup("drive", { stance: { bottom: 0.715 } });
+    const held = downswingInputOf(together, world);
+    const drive = unbounded(held, 1);
+    const { peak, at } = requiredCouple(held, drive.downswing);
+    console.log(`drive λ 1, bottom 0.715 m: ${coupleLine(held, drive)}`);
+    console.log(
+        `P tally: ${STROKE_TYPES.length} presets, ${exceeded} past C at their own λ; the drive at λ 1 with its hands ` +
+            `together needs ${fmt(peak)} N·m at ${fmt(at * 1e3)} ms against C ${fmt(held.couple)} N·m`,
+    );
+}
+
 const SECTIONS: Readonly<Record<string, () => void>> = {
     F: sectionF,
+    P: sectionP,
 };
 
-const ALL_SECTIONS: readonly string[] = ["F"];
+const ALL_SECTIONS: readonly string[] = ["F", "P"];
 
 if (process.argv[1]?.endsWith("setupProbe.ts")) {
     const chosen = SECTION === "all" ? ALL_SECTIONS : SECTION.split(",");

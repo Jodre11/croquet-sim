@@ -172,7 +172,8 @@ export function trackDrive(arc: SwingArc, coupling: Coupling = TEST_COUPLING, ha
  * A still, level swing-mode arc whose test head on the path at t = 0 has its centre at `centre`: aim +x, radius 0.8,
  * θ₀, ω₀ and α 0, both windows 0.01 s from t = 0, no dip, contact at t = 0, a reach of 10 m (it never binds), a hands'
  * arc of radius 11 m (above the reach), lowest halfway, a pendulum phase at 0.8 of the push with no effort, and no
- * ground depth. `o` overrides any field; the pivot follows an overridden aim, radius or θ₀ unless `o` sets it.
+ * ground depth; the slope held (λ = 1) where `o` makes it a carry, free (λ = 0) otherwise. `o` overrides any field;
+ * the pivot follows an overridden aim, radius or θ₀ unless `o` sets it.
  */
 export function levelArc(centre: Vec3, o: Partial<SwingArc> = {}): SwingArc {
     const aim = o.aim ?? vec3(1, 0, 0);
@@ -196,6 +197,8 @@ export function levelArc(centre: Vec3, o: Partial<SwingArc> = {}): SwingArc {
         dip: NO_DIP,
         contactAt: 0,
         mode: "swing",
+        // Until the mode goes (plan decision 7), a carry arc holds its slope and a swing arc lets it swing.
+        slopeHold: o.mode === "carry" ? 1 : 0,
         handReach: 10,
         pendulumAt: 0.8,
         pendulumEffort: 0,

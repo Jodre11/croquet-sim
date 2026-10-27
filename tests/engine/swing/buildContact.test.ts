@@ -35,7 +35,7 @@ import {
     swingApproach,
 } from "../../../src/engine/swing/buildContact";
 import { MAX_BACK_ANGLE, planDownswing, scanDownswing } from "../../../src/engine/swing/downswing";
-import { ON_TIME, defaultProfile, shapeOf } from "../../../src/engine/swing/profile";
+import { ON_TIME, SLOPE_HOLD, defaultProfile, shapeOf } from "../../../src/engine/swing/profile";
 import {
     CROQUET_STROKES,
     STROKE_TYPES,
@@ -50,7 +50,6 @@ import {
 import type { BallState } from "../../../src/engine/types";
 import { defaultWorld } from "../../../src/engine/world";
 import { contactReference, malletReference, swingBodyReference, swingReference } from "../../../src/reference/index";
-import { ReferenceDataError } from "../../../src/reference/schema";
 import { TEST_BALL, ballAt, testWorld } from "../support/fixtures";
 import {
     TEST_CHAIN,
@@ -669,13 +668,14 @@ describe("the default profile's canonical setups", () => {
             // 1 ns after contact the slope has turned with the arc, by about ṡ·1e-9/ρ_h ≈ 1.2e-9.
             const v = after.velocity;
             const slope = v.z / Math.hypot(v.x, v.y);
-            expect(slope, type).toBeCloseTo(arcArrival(arc.handArcRadius, arc.handArcLow, arc.handReach), 8);
+            expect(slope, type).toBeCloseTo(arcArrival(arc.handArcRadius, arc.handArcLow * arc.handReach), 8);
         }
     });
 
     it("gives the arc's slope at contact: level for no push, −s_low/√(ρ² − s_low²) otherwise", () => {
-        expect(arcArrival(1.5, 0.5, 0)).toBe(0);
-        expect(arcArrival(1.5, 0.5, 0.3)).toBeCloseTo(-0.15 / Math.sqrt(1.5 * 1.5 - 0.15 * 0.15), 15);
+        // P2b.2b.2c.3a: the low point s_low = handArcLow·push is the caller's (was arcArrival(ρ, handArcLow, push)).
+        expect(arcArrival(1.5, 0.5 * 0)).toBe(0);
+        expect(arcArrival(1.5, 0.5 * 0.3)).toBeCloseTo(-0.15 / Math.sqrt(1.5 * 1.5 - 0.15 * 0.15), 15);
     });
 });
 
@@ -756,20 +756,23 @@ describe("defaultProfile", () => {
         expect(STROKE_TYPES.slice(0, 4).map((type) => defaultProfile.shape[type].pendulumShare)).toEqual([1, 1, 1, 1]);
     });
 
-    it("rejects a carry preset with no hands' tempo, and gives a swing preset without one none", () => {
-        // The swing presets' effort is the body's, shared by every swing preset, and their hands' tempo is null.
+    it("takes any preset's hands' tempo or none, a missing one the free swing's own fall", () => {
+        // P2b.2b.2c.3a design §4.1: handTempo is optional on every stroke (was: a carry preset without one threw a
+        // ReferenceDataError naming handTempoSlow); planStroke rejects only a plan that cannot derive it.
         const drive = swingReference.drive;
         const roll = swingReference["full-roll"];
-        expect(() => shapeOf("full-roll", "carry", { ...roll, handTempo: null })).toThrow(ReferenceDataError);
-        expect(() => shapeOf("full-roll", "carry", { ...roll, handTempo: null })).toThrow(
-            /swing\.full-roll.*handTempoSlow/,
-        );
-        expect(shapeOf("drive", "swing", { ...drive, handTempo: null }).handTempo).toBeNull();
+        expect(shapeOf("full-roll", { ...roll, handTempo: null }).handTempo).toBeNull();
+        expect(shapeOf("drive", { ...drive, handTempo: null }).handTempo).toBeNull();
         const tempo = roll.handTempo as NonNullable<typeof roll.handTempo>;
-        expect(shapeOf("drive", "swing", { ...drive, handTempo: tempo }).handTempo).toEqual({
+        expect(shapeOf("drive", { ...drive, handTempo: tempo }).handTempo).toEqual({
             slow: tempo.slow.value,
             fast: tempo.fast.value,
         });
+    });
+
+    it("lets the swing presets' slope swing and holds the rolls' (P2b.2b.2c.3a design §4.1)", () => {
+        expect(STROKE_TYPES.map((type) => defaultProfile.shape[type].slopeHold)).toEqual([0, 0, 0, 0, 1, 1, 1]);
+        expect(STROKE_TYPES.map((type) => SLOPE_HOLD[type])).toEqual([0, 0, 0, 0, 1, 1, 1]);
     });
 });
 
@@ -926,9 +929,24 @@ describe("buildContact rejections", () => {
             /handAngle must lie in \(0, 90°\)/,
         ],
         [
-            "a share of 0 in swing mode",
+            "a share of 0 on a free swing",
             shot({}, testProfile({ shape: { pendulumShare: 0 } })),
-            /pendulumShare must be positive in swing mode/,
+            /pendulumShare must be positive where the downswing needs its free swing/,
+        ],
+        [
+            "a share of 0 on a held slope with no hands' tempo to hold it on",
+            shot({}, testProfile({ shape: { pendulumShare: 0, slopeHold: 1, handTempo: null } })),
+            /pendulumShare must be positive where the downswing needs its free swing/,
+        ],
+        [
+            "a planned slope above 1",
+            shot({}, testProfile({ shape: { slopeHold: 1 + 1e-9 } })),
+            /profile\.shape\.single-ball\.slopeHold must lie in \[0, 1\]/,
+        ],
+        [
+            "a non-finite planned slope",
+            shot({}, testProfile({ shape: { slopeHold: NaN } })),
+            /profile\.shape\.single-ball\.slopeHold must be finite/,
         ],
         [
             "a negative effort torque",
@@ -941,13 +959,9 @@ describe("buildContact rejections", () => {
             /profile\.body\.effort\.speed must be finite/,
         ],
         [
-            "a carry stroke with no hands' tempo",
-            shot({}, testProfile({ drive: { mode: "carry" }, shape: { handTempo: null } })),
-            /profile\.shape\.single-ball\.handTempo is required in carry mode/,
-        ],
-        [
-            "a carry's fast hands' tempo slower than the slow",
-            shot({}, testProfile({ drive: { mode: "carry" }, shape: { handTempo: { slow: 0.2, fast: 0.3 } } })),
+            // P2b.2b.2c.3a: a given tempo is checked on every stroke (was: only on a carry, which also required one).
+            "a fast hands' tempo slower than the slow",
+            shot({}, testProfile({ shape: { handTempo: { slow: 0.2, fast: 0.3 } } })),
             /handTempo\.fast must not exceed .*handTempo\.slow/,
         ],
         ["a backswing beyond the shaft horizontal", shot({ backswing: 2 }), /beyond/],
@@ -1001,10 +1015,11 @@ describe("contactPose (design §5.2 steps 1–5, 10)", () => {
             pendulumShare: 1,
             handAngle: 0.5,
             handTempo: { slow: 0.4, fast: 0.2 },
+            slopeHold: 0,
         };
         const choice = {
-            mode: "swing" as const,
             shape,
+            slopeHold: 0,
             backswing: 0.3,
             backswingLimit: MAX_BACK_ANGLE,
             effort: { torque: 0, speed: 1 },
@@ -1014,6 +1029,10 @@ describe("contactPose (design §5.2 steps 1–5, 10)", () => {
         const input = downswingInput(pose, hands, choice, 9.8);
         expect(input.lever).toBe(RHO + TOP);
         expect(input.pendulum).toEqual(pendulumOf(pose.head, swungBody(pose.head, hands, TOP), TOP, 9.8));
+        // P2b.2b.2c.3a design §4.1: C = min(γ_T, g_B)·F_max·(r − b), the grip's couple from the hands and the pose.
+        const spread = TOP - hands.bottom;
+        expect(input.grip).toEqual({ top: 1, bottom: 1, limit: hands.gripLimit, spread });
+        expect(input.couple).toBe(hands.gripLimit * spread);
         const planned = planDownswing(input);
         // The hands still: the head swings at ω₀·ℓ_h.
         expect(poseSpeed(pose, planned)).toBeCloseTo(planned.omega * (RHO + TOP), 12);

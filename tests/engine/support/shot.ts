@@ -69,7 +69,8 @@ export interface TestProfileOptions {
  * hands' arc lowest halfway; the body has TEST_FLEX, TEST_PENDULUM_FORCE, TEST_PUSH_FORCE, TEST_PUSH_RESPONSE_TIME,
  * TEST_CHAIN, TEST_GRIP_LIMIT, no backswing limit short of MAX_BACK_ANGLE, no effort (τ_0 = 0, ω_max = 1 rad/s), so
  * a swing-mode stroke falls by gravity alone, and the default's 300 m/s² hands' peak acceleration. Every type has the
- * same shape: the pendulum alone (share 1) and a 0.4 s hands' tempo halving at intensity 1. Throws if the stance gives
+ * same shape: the pendulum alone (share 1), a 0.4 s hands' tempo halving at intensity 1, and the slope held (λ = 1)
+ * on a carry drive, free (λ = 0) otherwise (plan decision 7). Throws if the stance gives
  * both a `lean` and `handsAhead`.
  */
 export function testProfile(o: TestProfileOptions = {}): SwingProfile {
@@ -119,6 +120,8 @@ export function testProfile(o: TestProfileOptions = {}): SwingProfile {
         pendulumShare: 1,
         handAngle: 0.5,
         handTempo: { slow: 0.4, fast: 0.2 },
+        // Until the mode goes (plan decision 7), the planned slope follows the drive: held for a carry, free otherwise.
+        slopeHold: drive.mode === "carry" ? 1 : 0,
         ...o.shape,
     };
     const every = <T>(entry: T): Record<StrokeType, T> =>

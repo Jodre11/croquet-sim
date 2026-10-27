@@ -20,6 +20,8 @@ Stage 1 note: design §3's reading of the feet, claim by claim.
    handGain 0, so the arc's low point lies at the hands (lowPoint = handsAt), the arrival is 0 for every
    handArcLow, and the arrival is passed to the downswing only for the rolls (`push.mode` carry; buildContact.ts
    downswingOf). Nothing changes until the push moves the hands.
+   Since Task 3 (2026-10-27): the arrival is computed on every stroke; it is 0 on the still-hand presets, so the
+   claim stands.
 
 == F. the feet's reading (design §3): mm from the striker's ball along aim; degrees ==
 single-ball (own handArcLow): hands at -185.7385 mm, low point -185.7385 mm, arrival 0.0000, attack 0.0000°, lean 0.0000°
@@ -65,3 +67,23 @@ pass-roll (own handArcLow): hands at 113.6315 mm, low point 263.6315 mm, arrival
   pass-roll handArcLow 0.75: hands at 113.6315 mm, low point 338.6315 mm, arrival -0.1517, attack -11.9947°, lean 34.0000°
   pass-roll handArcLow 1: hands at 113.6315 mm, low point 413.6315 mm, arrival -0.2041, attack -14.5086°, lean 34.0000°
 F tally: 7 presets, 0 runs rejected; the attack moves with handArcLow on 3 of 7
+== P. the planned slope (design §4.1): s, N·m, ms from contact, m/s ==
+single-ball: λ 0, D_f 0.4890 s, T 0.4890 s (derived), couple peak 8.8818e-16 N·m at -390.0723 ms, within C 4.5675 N·m (γ_T 1, g_B 0.1, F_max 435 N, r − b 0.1050 m), planned speed 3.0000
+drive: λ 0, D_f 0.4890 s, T 0.4890 s (derived), couple peak 8.8818e-16 N·m at -390.0723 ms, within C 22.2938 N·m (γ_T 1, g_B 0.25, F_max 435 N, r − b 0.2050 m), planned speed 3.0000
+stop-ac: λ 0, D_f 0.5135 s, T 0.5135 s (derived), couple peak 8.8818e-16 N·m at -410.6542 ms, within C 15.4425 N·m (γ_T 0.1, g_B 0.1, F_max 435 N, r − b 0.3550 m), planned speed 3.0000
+stop-gc: λ 0, D_f 0.4890 s, T 0.4890 s (derived), couple peak 8.8818e-16 N·m at -390.0723 ms, within C 154.4250 N·m (γ_T 1, g_B 1, F_max 435 N, r − b 0.3550 m), planned speed 3.0000
+half-roll: λ 1, D_f 0.5129 s, T 0.4890 s, couple peak 2.3133e+0 N·m at -488.9673 ms, within C 167.4750 N·m (γ_T 1, g_B 1, F_max 435 N, r − b 0.3850 m), planned speed 3.0000
+full-roll: λ 1, D_f 0.5433 s, T 0.4890 s, couple peak 2.8940e+0 N·m at -488.9673 ms, within C 134.8500 N·m (γ_T 1, g_B 1, F_max 435 N, r − b 0.3100 m), planned speed 3.0000
+pass-roll: λ 1, D_f 0.5069 s, T 0.4890 s, couple peak 1.9224e+0 N·m at 0.0000 ms, within C 156.6000 N·m (γ_T 1, g_B 1, F_max 435 N, r − b 0.3600 m), planned speed 3.0000
+  half-roll λ 0: planned speed 3.1009, fall 0.5129 s, couple peak 2.6645e-15 N·m at -411.8651 ms, within C 167.4750 N·m
+  half-roll λ 0.25: planned speed 3.0757, fall 0.5069 s, couple peak 5.9523e-1 N·m at -506.9131 ms, within C 167.4750 N·m
+  half-roll λ 0.5: planned speed 3.0505, fall 0.5009 s, couple peak 9.4351e-1 N·m at -445.5412 ms, within C 167.4750 N·m
+  half-roll λ 0.75: planned speed 3.0252, fall 0.4949 s, couple peak 1.2999e+0 N·m at -451.4592 ms, within C 167.4750 N·m
+  half-roll λ 1: planned speed 3.0000, fall 0.4890 s, couple peak 2.3133e+0 N·m at -488.9673 ms, within C 167.4750 N·m
+  drive λ 0: planned speed 3.0000, fall 0.4890 s, couple peak 8.8818e-16 N·m at -390.0723 ms, within C 22.2938 N·m
+  drive λ 0.25: planned speed 3.1797, fall 0.4890 s, couple peak 1.7596e+0 N·m at 0.0000 ms, within C 22.2938 N·m
+  drive λ 0.5: planned speed 3.3594, fall 0.4890 s, couple peak 3.5192e+0 N·m at 0.0000 ms, within C 22.2938 N·m
+  drive λ 0.75: planned speed 3.5392, fall 0.4890 s, couple peak 5.2788e+0 N·m at 0.0000 ms, within C 22.2938 N·m
+  drive λ 1: planned speed 3.7189, fall 0.4890 s, couple peak 7.0384e+0 N·m at 0.0000 ms, within C 22.2938 N·m
+drive λ 1, bottom 0.715 m: couple peak 7.0384e+0 N·m at 0.0000 ms, within C 9.7875 N·m
+P tally: 7 presets, 0 past C at their own λ; the drive at λ 1 with its hands together needs 7.0384 N·m at 0.0000 ms against C 9.7875 N·m
