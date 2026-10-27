@@ -250,22 +250,6 @@ describe("the arms' checking force (P2b.2b.2c.2 design §4, §8.1)", () => {
     }
 
     /**
-     * Carry mode before relaxAt, its hands `track`'s, run as `slide`: the top hand's offset once it has slid. It is the
-     * branch the swing-mode decay acts in, so it is where carry mode must keep its offset.
-     */
-    function carryOffsetBeforeEasing(track: PreparedTrack): Vec3 | null {
-        return slide(withHold(track.hands.flex.hold, "carry")).grip.topOffset;
-    }
-
-    /** The same carry, then a step of 1 ms under the limit: the top hand's offset after it. */
-    function carryOffsetAfterEasing(track: PreparedTrack): Vec3 | null {
-        const carry = withHold(track.hands.flex.hold, "carry");
-        const { grip, held } = slide(carry);
-        expect(handLoad(carry, halved(carry, grip, held), TEST_HEAD, 0.02, grip, 1e-3).saturated).toBeNull();
-        return grip.topOffset;
-    }
-
-    /**
      * Slide for 21 ms, relax for 20 steps of 1 ms with the head kept at half the stretch from the recovering anchor,
      * then hold the head still while the path runs on: each step at which the top hand saturates again, its force and
      * its spring's stored energy.
@@ -321,9 +305,20 @@ describe("the arms' checking force (P2b.2b.2c.2 design §4, §8.1)", () => {
         const { before, after } = underLimitStep(withHold(HOLD), 1e-3, "bottom");
         expect(length(after)).toBeCloseTo(length(before) * Math.exp(-1e-3 / TAU), 12);
     });
-    it("keeps a carry hand's slid offset: carry mode's chain already holds the arm", () => {
-        // §8.1.5, constraint 4: the existing carry case, then an under-limit step, its offset unchanged.
-        expect(carryOffsetAfterEasing(withHold(HOLD))).toEqual(carryOffsetBeforeEasing(withHold(HOLD)));
+    it("returns a slid anchor on a held stroke too", () => {
+        // A carry arc (slopeHold 1) with no downswing: its anchor, once slid, decays at τ_arm under the limit as the
+        // swung case's does. It replaces the test that carry mode keeps its offset.
+        const carry = withHold(HOLD, "carry");
+        expect(carry.arc.slopeHold).toBe(1);
+        const { grip, held } = slide(carry);
+        const before = grip.topOffset as Vec3;
+        const dt = 1e-3;
+        expect(handLoad(carry, halved(carry, grip, held), TEST_HEAD, 0.02, grip, dt).saturated).toBeNull();
+        const after = grip.topOffset as Vec3;
+        for (const k of ["x", "y", "z"] as const) {
+            expect(after[k]).toBeCloseTo(before[k] * Math.exp(-dt / TAU), 12);
+        }
+        expect(length(after)).toBeLessThan(length(before));
     });
     it("keeps the offset finite at a long step, and as it was without a hold", () => {
         // A step far longer than τ_arm must shrink the offset by exp(−dt/τ), never overshoot to null or NaN.

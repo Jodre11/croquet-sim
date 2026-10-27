@@ -1844,9 +1844,9 @@ export function handLoad(
         }
         // The arm returns a slid anchor under its limit (P2b.2b.2c.2 design §4.1): after this step's force, so a decay
         // never tips a hand over F_max within its own step, and exact for any dt. A hand at its limit slides instead.
-        // Carry mode keeps its offset, its chain already holding the arm; with no hold every offset is kept as it was.
+        // A held stroke's anchor returns too, as a swung one's does; with no hold every offset is kept as it was.
         const arm = hands.flex.hold;
-        if (spring && !carry && arm !== null) {
+        if (spring && arm !== null) {
             const decay = exp(0 - dt / (arm.damping / arm.stiffness));
             if (topHeld === null && grip.topOffset !== null) {
                 grip.topOffset = scale(grip.topOffset, decay);

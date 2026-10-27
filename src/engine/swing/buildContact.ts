@@ -38,7 +38,6 @@ import { add, cross, dot, length, scale, sub, vec3, type Vec3 } from "../math/ve
 import type { BallState, World } from "../types";
 import { planDownswing, scanDownswing, type DownswingInput, type PlannedDownswing } from "./downswing";
 import {
-    CROQUET_STROKES,
     type MalletHeadProfile,
     type ShotSetup,
     type SwingDrive,
@@ -387,9 +386,6 @@ function validate(setup: ShotSetup, ballRadius: number): void {
     }
     if (stroke.jab !== undefined) {
         nonNegative(stroke.jab, "stroke.jab");
-        if (push.mode === "carry" && stroke.jab !== 0) {
-            fail(`stroke.jab must be 0 in carry mode, where the hands lead on their own arc (got ${stroke.jab})`);
-        }
     }
     const pushLength = stroke.handReach ?? push.handReach;
     // Checked on every stroke: every downswing reads the arc's slope at contact (arcArrival).
@@ -694,8 +690,8 @@ export interface StrokePlan {
  *   armMass < 0; reachSlack < 0; a backswingLimit non-finite or outside (0, π/2]; the body's effort torque τ_0 < 0
  *   or its speed ω_max ≤ 0 (P2b.2b.2c.1 design §4.4); the body's hands' peak acceleration not positive; the preset's
  *   or the shot's pendulumAt or pendulumEffort outside [0, 1]; handArcLow outside [0, 1]; a jab negative or
- *   non-finite, or non-zero in carry mode (P2b.2b.2b.3 design §6.1); handArcRadius not above the push length; a flex
- *   value not positive, or a flex damping ratio above 1; pendulumForce not positive (P2b.2b.2b.2b design §6);
+ *   non-finite (P2b.2b.2b.3 design §6.1); handArcRadius not above the push length; a flex value not positive, or a
+ *   flex damping ratio above 1; pendulumForce not positive (P2b.2b.2b.2b design §6);
  *   pushForce, pushResponseTime, gripLimit or a hand–arm chain value not positive (its gate rulings, 2026-10-11;
  *   P2b.2b.2b.3 design §5);
  * - pendulumShare outside [0, 1]; handAngle outside (0, 90°) when pendulumShare < 1 (neither read
@@ -748,7 +744,7 @@ export function planStroke(setup: ShotSetup, world: World): StrokePlan {
     // onto the pose. A single-ball stroke's dip before contact is left unplanned, so a deliberate graze keeps its
     // meaning.
     const depth = push.handDrop + (stroke.jab ?? 0);
-    const raise = CROQUET_STROKES.includes(type) ? dipTravel(depth, push.dropTime, 0 - dipFrom) : 0;
+    const raise = setup.croqueted !== undefined ? dipTravel(depth, push.dropTime, 0 - dipFrom) : 0;
     const lift = vec3(0, 0, raise);
     const planPose = raise > 0 ? { ...pose, pivot: add(pivot, lift), headCentre: add(headCentre, lift) } : pose;
     const planned = downswingOf(setup, planPose, hands, world.gravity);

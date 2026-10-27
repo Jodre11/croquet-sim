@@ -34,6 +34,7 @@ import {
     stanceLean,
     swingApproach,
 } from "../../../src/engine/swing/buildContact";
+import { simulateShot } from "../../../src/engine/shot";
 import { MAX_BACK_ANGLE, planDownswing, scanDownswing } from "../../../src/engine/swing/downswing";
 import { ON_TIME, SLOPE_HOLD, defaultProfile, shapeOf } from "../../../src/engine/swing/profile";
 import {
@@ -1207,7 +1208,7 @@ describe("the jab (P2b.2b.2b.3 design §6.1)", () => {
         expect(planStroke({ ...setup, stroke: { ...setup.stroke, jab: 0 } }, world)).toEqual(planStroke(setup, world));
     });
 
-    it("rejects a negative, non-finite or carry-mode jab, and accepts a carry stroke's jab of 0", () => {
+    it("rejects a negative or non-finite jab, and accepts a carry stroke's jab of 0", () => {
         const ac = canonicalSetup("stop-ac");
         for (const jab of [-0.001, Number.NaN, Infinity]) {
             expect(() => planStroke({ ...ac, stroke: { ...ac.stroke, jab } }, world), `${jab}`).toThrow(
@@ -1215,10 +1216,38 @@ describe("the jab (P2b.2b.2b.3 design §6.1)", () => {
             );
         }
         const roll = canonicalSetup("full-roll");
-        expect(() => planStroke({ ...roll, stroke: { ...roll.stroke, jab: 0.001 } }, world)).toThrow(
-            /stroke\.jab must be 0 in carry mode/,
-        );
         expect(planStroke({ ...roll, stroke: { ...roll.stroke, jab: 0 } }, world)).toEqual(planStroke(roll, world));
+    });
+
+    it("accepts a jab on a held slope", () => {
+        const roll = canonicalSetup("half-roll");
+        const plain = planStroke(roll, world).contact.drive as TrackDrive;
+        const jabbed = planStroke({ ...roll, stroke: { ...roll.stroke, jab: 0.002 } }, world).contact
+            .drive as TrackDrive;
+        expect(plain.arc.slopeHold).toBe(1);
+        // The jab's 0.002 m is what the dip gains over the same shot without one.
+        expect(Math.abs(jabbed.arc.dip.depth - (plain.arc.dip.depth + 0.002))).toBeLessThan(1e-15);
+    });
+});
+
+describe("the dip's raise follows the croqueted ball (P2b.2b.2c.3a Review Focus 5)", () => {
+    const world = defaultWorld();
+
+    it("raises the dip by whether a croqueted ball is given", () => {
+        const given = canonicalSetup("stop-ac");
+        const bare: ShotSetup = { ...given };
+        delete (bare as { croqueted?: unknown }).croqueted;
+        expect(given.croqueted).toBeDefined();
+        const withDip = (setup: ShotSetup, dip: number): ShotSetup => ({
+            ...setup,
+            stroke: { ...setup.stroke, timing: { ...setup.stroke.timing, dip } },
+        });
+        const downswingOf = (setup: ShotSetup) => (planStroke(setup, world).contact.drive as TrackDrive).arc.downswing;
+        // No croqueted ball: no raise, so the dip's timing leaves the downswing alone.
+        expect(downswingOf(withDip(bare, -0.01))).toEqual(downswingOf(withDip(bare, 0)));
+        // A croqueted ball: today's raise, which a dip timed early changes.
+        expect(downswingOf(withDip(given, -0.01))).not.toEqual(downswingOf(withDip(given, 0)));
+        expect(() => simulateShot(bare, world)).toThrow(/needs a croqueted ball/);
     });
 });
 
