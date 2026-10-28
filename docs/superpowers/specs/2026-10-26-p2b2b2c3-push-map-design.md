@@ -249,9 +249,9 @@ Nothing here is solved for; each is measured on the map and ruled at the gate.
 - **K:** §3.4.
 - **L, the headroom:** the defaults' push percentages, and how many saturate.
 - **O:** closed by decision 6; the canonical full and pass rolls' digging re-measured on their new defaults.
-- **The AC stop's two grips** (P2b.2b.2c.3a, decision 3): its default, lowered and loose jab variant played beside a
-  hands-together AC stop (Riches's text book), Gugan 5's stop and the turf's damage recorded for each, for the user's
-  ruling on which the bottom hand's height should be by outcome.
+- *(Moved to P2b.2b.2c.3c by A2, item 3.)* **The AC stop's two grips** (P2b.2b.2c.3a, decision 3): its default,
+  lowered and loose jab variant played beside a hands-together AC stop (Riches's text book), Gugan 5's stop and the
+  turf's damage recorded for each, for the user's ruling on which the bottom hand's height should be by outcome.
 - **The effect measure:** the contact-only candidate (the striker's ball's velocity change summed over the face
   intervals alone, the gaps excluded) measured beside the shipped span measure on the map's runs, the verdicts that
   differ counted per type, and ruled at the gate. The shipped measure stays unless the gate rules otherwise.
@@ -333,3 +333,51 @@ Consequences:
 - The full envelope of valid combinations over every input is the eventual aim; this step maps the slice the rolls
   need. Many combinations may reach one outcome; the default among them stays the least-effort one (decision 5), and
   the map records how many admissible plans share each outcome.
+
+**A2 (user, 2026-10-28, after P2b.2b.2c.3a merged): 3a's outcomes, the edgy band, and the carried items' split.** 3a's
+figures and rulings are in the roadmap's "P2b.2b.2c.3a outcomes (2026-10-28)" and its design's amendments A1–A3
+(`ENGINE_VERSION` 0.18.0). The housekeeping shipped first as its own PR (`svelte` 5.57.3, `typescript-eslint` 8.72.1;
+`vite` already current); 3b's branch starts from main after it.
+
+1. **The plan space after 3a** (§3.1). The stroke's inputs are as §3.1 lists them, with two of 3a's held at the
+   type's, not swept (the design's call): `slopeHold` λ (1 on every roll, `SLOPE_HOLD`; the full roll at λ 0.5 left
+   the face late at 3a's section X, an envelope case, item 3) and `advance` (absent; 3a merged it into the push, so
+   `handReach` alone sets the push's length). The grip stays the type's (the rolls unchanged by 3a). The couple a held
+   plan needs is bounded by C = min(γ_T, g_B)·F_max·(r − b) (`gripCouple`); a plan past it is superhuman (§3.5).
+2. **The edgy band** (user: "we could visualize the dimensions in some space … and then show which part, which area
+   of the envelope is viable, which is a bit edgy, and which is unplayable"; chosen "Include, grid margin"). Every
+   plan the map tries is graded in one of three bands:
+   - **unplayable:** excluded, with its first reason (§3.5's classes);
+   - **edgy:** admissible, but a neighbouring grid point one step away along any swept execution dimension (the lean,
+     the feet, `drive`, `handReach`, `window`; on the pass roll the split; on §3.4's sweep `timing.hands`) is
+     unplayable. The user's account of the edge: "if you play a shot on the edge of the envelope and you erroneously
+     apply or go do something slightly erroneous, you'll push your shot out of the envelope and fault in some way,
+     either missing the ball or damaging the lawn";
+   - **viable:** admissible with every such neighbour admissible.
+
+   The margin is one step of the coarse grid in each dimension, its size recorded, so refinement does not narrow it
+   (the design's call); how hard (backswing, intensity) is solved, not swept, so it carries no margin. A plan whose
+   only failing neighbour leaves the type's region but stays admissible is viable: the edge is the envelope's, not
+   the region's. §3.5's record carries each plan's band; §5's default stays the least-effort admissible plan
+   (decision 5), its band recorded, and where it is edgy the least-effort viable plan is recorded beside it for the
+   gate's ruling. §9's plots shade the three bands over the swept dimensions, sliced at fixed range and lawn.
+3. **3a's carried items, split** (chosen "Rolls in 3b, swing to 3c"). 3b keeps §11's rule that the swing strokes'
+   digests stay bit-identical, so it takes only the items that touch the rolls or the map:
+   - the envelope cases (3a A3 items 9, 15, 16): the full roll at λ 0.5 leaving the face late, the pass roll's braked
+     impact-off-face (20 runs at drive −1, 8 at −0.5), the pushed, braked AC stop's turf damage and the AC stop's
+     hit-through damage, entered in §3.5's record as measured, unplayable points (the AC stop's as seeds for a later
+     swing map, not swept here);
+   - the couple's share of C (3a A2 item 3), recorded per plan beside §5's two effort percentages; whether it joins
+     their mean is ruled at the gate (decision 5 unchanged until then);
+   - the ease at a push's end (3a A2 item 8), designed and measured on the rolls, the only presets with a push;
+   - retiring `armMass` from `ratioFit`'s fitted dimensions and the profile (inert since 3a, so bit-identical);
+   - the late re-hit measured on the integrated follow-through beside the planned path's measure (criterion 5).
+
+   **P2b.2b.2c.3c, the swing strokes' hold and grips**, a new step after 3b, takes the rest: the GC stop's head at
+   0.742 m/s at the impact's end; a bounded roll damper on the hold; a softer hold onset (the settle's `it.fails`);
+   the AC stop's two-branch step flip at the default gap; the user's jab hypotheses (the weak lower grip lets the
+   mallet die on rebound; a lower bottom hand gives the leverage to stop it, and whether min(γ_T, g_B) underrates that
+   lever); and §7's AC stop's two grips, now its default hands together (1/0.1/0.717) beside the jab's per-shot grip
+   (0.45, 0.1/0.1).
+4. **The ratchet** (§8): the baseline worktree at 3b's base on main; the preset digest drops no keys (3a's `slopeHold`
+   and `mode` drop no longer needed).
