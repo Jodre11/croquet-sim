@@ -142,7 +142,7 @@ export const TEST_CHAIN: HandChain = {
 };
 
 /**
- * Two firm hands with no arm mass, so a swing-mode swung body is the head and head-only closed forms hold (a carry's
+ * Two firm hands with no arm mass, so a swing's swung body is the head and head-only closed forms hold (a carry's
  * also carries the chains' skin); a full guide.
  */
 export const TEST_HANDS: Hands = {
@@ -169,10 +169,12 @@ export function trackDrive(arc: SwingArc, coupling: Coupling = TEST_COUPLING, ha
 }
 
 /**
- * A still, level swing-mode arc whose test head on the path at t = 0 has its centre at `centre`: aim +x, radius 0.8,
- * θ₀, ω₀ and α 0, both windows 0.01 s from t = 0, no dip, contact at t = 0, a reach of 10 m (it never binds), a hands'
- * arc of radius 11 m (above the reach), lowest halfway, a pendulum phase at 0.8 of the push with no effort, and no
- * ground depth. `o` overrides any field; the pivot follows an overridden aim, radius or θ₀ unless `o` sets it.
+ * A still, level arc whose test head on the path at t = 0 has its centre at `centre`: aim +x, radius 0.8, θ₀, ω₀ and
+ * α 0, both windows 0.01 s from t = 0, no dip, contact at t = 0, no push (P2b.2b.2c.3a A2 item 8: a push wherever
+ * handReach > 0, whose posture hold, push intent and departure latch then act; a test that wants them gives a
+ * handReach), a hands' arc of radius 11 m (above any push a test gives), lowest halfway, a pendulum phase at 0.8 of
+ * the push with no effort, and no ground depth; the slope free (λ = 0). `o` overrides any field; the pivot follows an
+ * overridden aim, radius or θ₀ unless `o` sets it.
  */
 export function levelArc(centre: Vec3, o: Partial<SwingArc> = {}): SwingArc {
     const aim = o.aim ?? vec3(1, 0, 0);
@@ -195,8 +197,8 @@ export function levelArc(centre: Vec3, o: Partial<SwingArc> = {}): SwingArc {
         window: 0.01,
         dip: NO_DIP,
         contactAt: 0,
-        mode: "swing",
-        handReach: 10,
+        slopeHold: 0,
+        handReach: 0,
         pendulumAt: 0.8,
         pendulumEffort: 0,
         handArcRadius: 11,
@@ -206,7 +208,7 @@ export function levelArc(centre: Vec3, o: Partial<SwingArc> = {}): SwingArc {
 }
 
 /**
- * A swing-mode track's θ and ω at its pendulum's window's end by RK4 at step `h` (s) of
+ * A free-slope track's θ and ω at its pendulum's window's end by RK4 at step `h` (s) of
  * θ̈ = (−W·sin θ − M·d·(A·t̂))/I_P + 6·ᾱ·s(1 − s) from thetaArc and omegaArc (P2b.2b.2c.2d design §3.1): the hand
  * integration of gravity through the pulse. A, the pivot's acceleration with the dip, is pathAt's socket acceleration
  * less the pendulum's own terms, r·α·t̂ − r·ω²·r̂, at the path's θ, ω and α; t̂ in θ̈ is then the integrated θ's.
@@ -374,12 +376,17 @@ export function isolated(overrides: Partial<ImpactSetup> = {}): ImpactSetup {
 
 /**
  * An isolated, tracked set-up whose hands apply nothing (P2b.2b.2b.2c design §7.1), so that `head` moves freely from
- * `centre`, level, at `velocity`: gravity off, a still level arc, a coupling of damping ratio 0 relaxed at t = 0 and
- * no arm mass. After relaxAt every hand force, feed-forward and twist is then exactly zero. Its face–ball pairs meet
- * the whole head (headBallContact), as a tracked drive's do.
+ * `centre`, level, at `velocity`: gravity off, a still level arc, and a coupling of no stiffness (an infinite period)
+ * and damping ratio 0 that never relaxes. The firm grip then applies only the feed-forward, exactly zero on a still
+ * path with no gravity, with every hand force and twist exactly zero, and no hand–arm chain ever takes hold. The
+ * hands' skin has no mass, so the swung body is the mallet alone. P2b.2b.2c.3a: the chains on every stroke (was relaxed
+ * at t = 0 with the test hands, whose swung body in a swing was the head: the swing law's damper of ratio 0 applied
+ * nothing; the flex and the chains now act from relaxAt, and every swung body carries the hands' skin). Its face–ball
+ * pairs meet the whole head (headBallContact), as a tracked drive's do.
  */
 export function freeTracked(head: MalletHead, centre: Vec3, velocity: Vec3, balls: readonly ImpactBall[]): ImpactSetup {
-    const drive = trackDrive(levelArc(centre), { period: 0.04, dampingRatio: 0, relaxAt: 0 });
+    const skinless: Hands = { ...TEST_HANDS, chain: { ...TEST_CHAIN, palmSkinMass: 0, fingerSkinMass: 0 } };
+    const drive = trackDrive(levelArc(centre), { period: Infinity, dampingRatio: 0, relaxAt: Infinity }, skinless);
     return isolated({
         head,
         start: { position: centre, orientation: IDENTITY, velocity, angularVelocity: ZERO },

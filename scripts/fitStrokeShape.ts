@@ -122,7 +122,7 @@ console.error(`drive κ·ω_max ${kappa * effort.speed} rad/s against ω at cont
 for (const type of SWING_REFERENCE_TYPES) {
     const given = out[type] as Record<string, unknown>;
     out[type] = Object.fromEntries(Object.entries(given).filter(([key]) => !RETIRED.includes(key)));
-    if (defaultProfile.drive[type].mode === "carry") {
+    if (defaultProfile.shape[type].slopeHold === 1) {
         for (const key of ["handTempoSlow", "handTempoFast", "defaultBackswing"]) {
             const item = given[key] as { note?: string };
             if (!(item.note ?? "").endsWith(FROZEN)) {

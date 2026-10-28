@@ -24,16 +24,19 @@ const RADIUS = 0.8;
 /** The test head on a 0.8 m arc with no arm mass: the swung body is the head. */
 const PENDULUM = pendulumOf(TEST_HEAD, swungBody(TEST_HEAD, TEST_HANDS, RADIUS), RADIUS, STANDARD_GRAVITY);
 
-/** A swing-mode downswing of the test head from a 0.3 m backswing to a level contact (θ_c = 0), hands still. */
+/** A free swing (λ = 0) of the test head from a 0.3 m backswing to a level contact (θ_c = 0), hands still. */
 function input(intensity: number, effort: SwingEffort): DownswingInput {
     return {
-        mode: "swing",
+        slopeHold: 0,
+        // A free swing asks nothing of the grip's couple (P2b.2b.2c.3a design §4.1).
+        couple: 0,
+        grip: { top: 1, bottom: 1, limit: TEST_HANDS.gripLimit, spread: 0 },
         aim: vec3(1, 0, 0),
         thetaContact: 0,
         pivot: vec3(0, 0, 0.9),
         lever: TEST_HEAD.socket.z + RADIUS,
         pendulum: PENDULUM,
-        shape: { pendulumShare: 1, handAngle: 0.5, handTempo: null },
+        shape: { pendulumShare: 1, handAngle: 0.5, handTempo: null, slopeHold: 0 },
         backswing: 0.3,
         backswingLimit: MAX_BACK_ANGLE,
         effort,

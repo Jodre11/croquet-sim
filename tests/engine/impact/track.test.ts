@@ -25,7 +25,6 @@ import {
     type PathPoint,
     type PreparedTrack,
     type Push,
-    type Reach,
 } from "../../../src/engine/impact/track";
 import { validateImpact } from "../../../src/engine/impact/simulateImpact";
 import type { Downswing, Hands, SwingArc, TrackDrive } from "../../../src/engine/impact/types";
@@ -56,7 +55,7 @@ const conj = (q: Quaternion): Quaternion => ({ w: q.w, x: -q.x, y: -q.y, z: -q.z
 const dist = (a: Vec3, b: Vec3): number => length(sub(a, b));
 
 /**
- * A power roll's path in carry mode: both arcs speeding up from t = 0, the face pitched 0.6 rad down. Its contact is
+ * A power roll's path, the slope held: both arcs speeding up from t = 0, the face pitched 0.6 rad down. Its contact is
  * at 1 s, after every time read here, so the hands' arc after contact (P2b.2b.2b.2b design §4.1; its own describe)
  * leaves the windows and the dip on their closed forms.
  */
@@ -75,7 +74,7 @@ const ROLL: SwingArc = {
     window: 0.03,
     dip: NO_DIP,
     contactAt: 1,
-    mode: "carry",
+    slopeHold: 1,
     handReach: 10,
     pendulumAt: 0.8,
     pendulumEffort: 0,
@@ -120,7 +119,7 @@ function dipAt(arc: SwingArc, t: number): { readonly z: number; readonly v: numb
     return { z: D, v: 0 };
 }
 
-/** The closed forms of design §3.2 for a carry-mode arc before its contact, with Math.* (the engine: sinCos). */
+/** The closed forms of design §3.2 for a held-slope arc before its contact, with Math.* (the engine: sinCos). */
 function closedForm(arc: SwingArc, t: number) {
     const p = phases(t, arc.arcStart, arc.window);
     // P2b.2b.2c.2d: each window is the minimum-jerk pulse of the box's mean rate, s = τ/W: ω = ω₀ + α·W·(3s² − 2s³),
@@ -256,22 +255,22 @@ describe("the swing path", () => {
         }
     });
 
-    it("brings a full check to rest at its window's end; carry mode holds it there", () => {
+    it("brings a full check to rest at its window's end; a held slope holds it there", () => {
         const still = vec3(0, 0, 0);
         const checked = { ...ROLL, omega0: 3.5, pivotVelocity: still, pivotAcceleration: still, alpha: -3.5 / 0.03 };
         const carried = dot(pathAt(prepare(checked), ROLL.window).angularVelocity, N);
         expect(Math.abs(carried)).toBeLessThan(1e-12);
-        // P2b.2b.2c.2d: gravity through the pulse (was swing mode at rest too, |ω| < 1e-12). Swing mode's pendulum, at
-        // θ₀ = −0.6 rad, gains gravity's share over the window, about W·sin 0.6/I_P·0.03 ≈ 0.19 rad/s (the hand
+        // P2b.2b.2c.2d: gravity through the pulse (was swing mode at rest too, |ω| < 1e-12). A free slope's pendulum,
+        // at θ₀ = −0.6 rad, gains gravity's share over the window, about W·sin 0.6/I_P·0.03 ≈ 0.19 rad/s (the hand
         // integration's); without gravity, the pivot still, the table's check brings it to rest to O(FREE_STEP).
-        const swing = { ...checked, mode: "swing" as const };
+        const swing = { ...checked, slopeHold: 0 };
         const track = prepare(swing);
         const w = dot(pathAt(track, ROLL.window).angularVelocity, N);
         expect(w).toBeCloseTo(integratePulse(track, 1e-7).omega, 4);
         expect(w).toBeGreaterThan(0.18);
         const weightless = prepareTrack(trackDrive(swing), TEST_HEAD, 0);
         expect(Math.abs(dot(pathAt(weightless, ROLL.window).angularVelocity, N))).toBeLessThan(1e-6);
-        // Carry mode's held slope starts from the pulse's α = 0 (P2b.2b.2c.2d design §3.1) and, ω_e being 0, stays at
+        // A held slope starts from the pulse's α = 0 (P2b.2b.2c.2d design §3.1) and, ω_e being 0, stays at
         // rest; from its end, 0.06 s, the head is held where the check left it, the slope's net travel ω_e·W/2 being 0.
         const carry = prepare(checked);
         for (const t of [0.065, 0.12]) {
@@ -281,7 +280,7 @@ describe("the swing path", () => {
         expect(dist(pathAt(carry, 0.065).socket, pathAt(carry, 0.12).socket)).toBeLessThan(1e-12);
     });
 
-    it("holds θ in carry mode after the second window", () => {
+    it("holds θ on a held slope after the second window", () => {
         const held = pathAt(track, TIMED.arcStart + 2 * TIMED.window).orientation;
         for (const t of [0.075, 0.1, 0.2]) {
             expect(pathAt(track, t).orientation, `at ${t}`).toEqual(held);
@@ -340,9 +339,9 @@ describe("the swing path", () => {
         }
     });
 
-    it("tabulates a free pendulum in swing mode only", () => {
+    it("tabulates a free pendulum wherever λ < 1", () => {
         expect(track.free).toBeNull();
-        const free = prepare({ ...TIMED, mode: "swing" }).free;
+        const free = prepare({ ...TIMED, slopeHold: 0 }).free;
         // P2b.2b.2c.2d: gravity through the pulse (was from the window's end, FREE_SPAN / FREE_STEP + 1 samples). From
         // the window's start: through the window with one sample to spare, then FREE_SPAN.
         expect(free?.tw).toBe(TIMED.arcStart);
@@ -350,7 +349,7 @@ describe("the swing path", () => {
     });
 
     it("tabulates through the pulse only on request: the same path to the window's end, a throw past it", () => {
-        const arc: SwingArc = { ...TIMED, mode: "swing" };
+        const arc: SwingArc = { ...TIMED, slopeHold: 0 };
         const drive = trackDrive(arc, TEST_COUPLING, TEST_HANDS);
         const full = prepareTrack(drive, TEST_HEAD, STANDARD_GRAVITY);
         const bare = prepareTrack(drive, TEST_HEAD, STANDARD_GRAVITY, false);
@@ -366,22 +365,26 @@ describe("the swing path", () => {
         expect(() => pathAt(bare, tw + 1e-6)).toThrow(
             /past the window's end, but prepareTrack tabulated it through the pulse/,
         );
-        expect(() => holdPendulum(bare, tw)).toThrow(
-            /past the window's end, but prepareTrack tabulated it through the pulse/,
-        );
+        // P2b.2b.2c.3a: the hold on the track (was a throw: the hold lived on the free table and read it past the
+        // window). A hold from the window's end reads the table only there, and holds θ past it without the table.
+        const held = holdPendulum(bare, tw);
+        expect(pathAt(held, tw + 0.01).theta).toBe(pathAt(full, tw).theta);
     });
 
     it("gives each grip its gains: firm, the top hand's γ_T and the bottom hand's g_B", () => {
-        // Swing mode, whose swung body carries the arm mass; a carry's is the head with the hands' skin at the grips,
-        // its hand–arm chains replacing the arm mass (P2b.2b.2b.2b gate round 3 ruling, 2026-10-11).
+        // A carry's swung body is the head with the hands' skin at the grips, its hand–arm chains replacing the arm
+        // mass (P2b.2b.2b.2b gate round 3 ruling, 2026-10-11). P2b.2b.2c.3a: the swung body on every stroke (was a
+        // swing arc's head and 0.8 kg arm mass, M = 1.8 kg): the swing arc's body is the carry's too, the head and
+        // both hands' skin, M = 1 + 2·0.03 kg; the skin on the shaft's axis leaves I_z the head's.
         const hands: Hands = { ...ARMED, gripTension: 0.1, bottomGrip: 0.25 };
-        const t = prepare({ ...TIMED, mode: "swing" }, hands);
+        const t = prepare({ ...TIMED, slopeHold: 0 }, hands);
         const carried = prepare(TIMED, hands);
         expect(carried.body).toEqual(carryBody(TEST_HEAD, hands.chain, TIMED.radius, hands.bottom));
         expect(carried.released).toEqual(carryBody(TEST_HEAD, hands.chain, TIMED.radius, null));
+        expect(t.body).toEqual(carried.body);
         const rate = (2 * Math.PI) / TEST_COUPLING.period;
         const zeta = TEST_COUPLING.dampingRatio;
-        const M = 1.8;
+        const M = TEST_HEAD.mass + 2 * (hands.chain.palmSkinMass + hands.chain.fingerSkinMass);
         const Iz = TEST_HEAD.inertia.z;
         for (const [gains, g] of [
             [t.firm, 1],
@@ -416,7 +419,9 @@ describe("the free pendulum", () => {
         const theta0 = 0.01;
         const arc = levelArc(CENTRE, { theta0 });
         const track = prepare(arc, ARMED);
-        const body = swungBody(TEST_HEAD, ARMED, arc.radius);
+        // P2b.2b.2c.3a: the swung body on every stroke (was swungBody, the head and ARMED's arm mass): the head and
+        // both hands' skin (carryBody).
+        const body = track.body;
         const lh = TEST_HEAD.socket.z + arc.radius;
         const d = lh - body.offset;
         const rate = Math.sqrt((TEST_HEAD.mass * STANDARD_GRAVITY * lh) / (body.inertia.y + body.mass * d * d));
@@ -453,26 +458,27 @@ describe("the hands' reach", () => {
     const CENTRE = vec3(0, 0, 1);
     const pivotAt = (track: PreparedTrack, t: number) => pivotOf(pathAt(track, t), track.arc.radius);
 
-    it("stops the pivot's along-aim motion handReach from contactAt, at rest from t_s, the rest running on", () => {
-        // Swing mode, so no descent; the vertical part of the pivot's velocity is off aim and runs on.
+    it("pushes the pivot handReach along aim from contactAt on the hands' arc, at rest from the push's end", () => {
+        // P2b.2b.2c.3a: the reach forward is the push's (A2 item 8) (was the reach's ease to rest from t1 =
+        // contactAt + 0.04 s, at rest from t_s = t1 + 0.02 s, the vertical speed 0.3 m/s running on): the plan's 2 m/s
+        // along aim carries the hands 0.1 m by contactAt + 0.05 s, where they stop at once. The path is the hands' arc,
+        // lowest halfway along the push, so they are back at their height at contact there, and nothing runs on.
         const arc = levelArc(CENTRE, { pivotVelocity: vec3(2, 0, 0.3), handReach: 0.1, contactAt: 0.01 });
         const track = prepare(arc);
-        const reach = track.reach as Reach;
+        expect(track.reach).toBeNull();
+        const push = track.push as Push;
         const from = pivotAt(track, arc.contactAt).P;
-        expect(reach.t1).toBeCloseTo(arc.contactAt + 0.04, 12);
-        expect(reach.tStop).toBeCloseTo(reach.t1 + (0.4 * 0.1) / 2, 12);
-        for (const t of [reach.tStop, reach.tStop + 0.02, 0.2]) {
+        expect(push.end as number).toBeCloseTo(arc.contactAt + 0.05, 12);
+        for (const t of [push.end as number, (push.end as number) + 0.02, 0.2]) {
             const p = pivotAt(track, t);
             expect(p.P.x - from.x, `travel at ${t}`).toBeCloseTo(0.1, 12);
+            expect(p.P.z - from.z, `height at ${t}`).toBeCloseTo(0, 12);
             expect(p.V.x, `along-aim speed at ${t}`).toBeCloseTo(0, 12);
-            expect(p.V.z, `vertical speed at ${t}`).toBeCloseTo(0.3, 12);
+            expect(p.V.z, `vertical speed at ${t}`).toBeCloseTo(0, 12);
         }
-        for (const t of [reach.t1, reach.tStop]) {
-            const before = pivotAt(track, t);
-            const after = pivotAt(track, t + 1e-12);
-            expect(dist(before.P, after.P), `position at ${t}`).toBeLessThan(1e-11);
-            expect(dist(before.V, after.V), `velocity at ${t}`).toBeLessThan(1e-9);
-        }
+        const before = pivotAt(track, arc.contactAt);
+        const after = pivotAt(track, arc.contactAt + 1e-12);
+        expect(dist(before.P, after.P), "position at contact").toBeLessThan(1e-11);
     });
 
     it("rests the along-aim motion from contactAt with a reach of 0", () => {
@@ -485,12 +491,19 @@ describe("the hands' reach", () => {
         expect(pivotAt(track, 0.01).V.x).toBe(2);
     });
 
-    it("does not bind if the plan does not travel 0.8·handReach within 0.5 s of contactAt", () => {
+    it("never ends the push, or starts its pendulum phase, if the plan does not travel that far within 0.5 s", () => {
+        // P2b.2b.2c.3a: the reach forward is the push's (A2 item 8) (was the reach not binding below 0.8·handReach in
+        // 0.5 s, and binding from t1 = 0.08/0.17 s above it): 0.15 m/s travels 0.075 m in 0.5 s, short of the
+        // pendulum phase's 0.8·0.1 m, so neither is found and the hands run on along aim at the plan's pace; 0.17 m/s
+        // reaches the pendulum phase at 0.08/0.17 s and falls short of the push's end.
         const slow = prepare(levelArc(CENTRE, { pivotVelocity: vec3(0.15, 0, 0), handReach: 0.1 }));
-        expect(slow.reach).toBeNull();
+        const slowPush = slow.push as Push;
+        expect([slowPush.end, slowPush.pendulum]).toEqual([null, null]);
         expect(pivotAt(slow, 0.2).V.x).toBe(0.15);
         const brisk = prepare(levelArc(CENTRE, { pivotVelocity: vec3(0.17, 0, 0), handReach: 0.1 }));
-        expect(brisk.reach?.t1).toBeCloseTo(0.08 / 0.17, 12);
+        const briskPush = brisk.push as Push;
+        expect(briskPush.end).toBeNull();
+        expect(briskPush.pendulum as number).toBeCloseTo(0.08 / 0.17, 12);
     });
 });
 
@@ -499,7 +512,7 @@ describe("the hands' arc after contact (P2b.2b.2b.2b design §4.1)", () => {
     /** A carry from contact at 2 m/s along aim, the hands arriving on a 1.5 m arc lowest halfway along a 0.3 m push. */
     const arrival = -0.15 / Math.sqrt(1.5 * 1.5 - 0.15 * 0.15);
     const ARC = levelArc(vec3(0, 0, 0.5), {
-        mode: "carry",
+        slopeHold: 1,
         pivotVelocity: vec3(2, 0, 2 * arrival),
         handReach: 0.3,
         handArcRadius: 1.5,
@@ -510,7 +523,7 @@ describe("the hands' arc after contact (P2b.2b.2b.2b design §4.1)", () => {
     const push = track.push as Push;
     const start = handsAt(track, 0).position;
 
-    it("has no reach in carry mode, and times the push and the pendulum phase along aim", () => {
+    it("has no reach on a held slope, and times the push and the pendulum phase along aim", () => {
         expect(track.reach).toBeNull();
         expect(push.end as number).toBeCloseTo(0.3 / 2, 12);
         expect(push.pendulum as number).toBeCloseTo(0.24 / 2, 12);
@@ -544,13 +557,17 @@ describe("the hands' arc after contact (P2b.2b.2b.2b design §4.1)", () => {
         expect(length(sub(before.velocity, after.velocity))).toBeLessThan(1e-6);
     });
 
-    it("starts the pendulum phase at contact for a push of length 0", () => {
-        // Review focus 1: the arc's low point is at contact, so the hands arrive level and rest there.
+    it("builds no push at length 0: the hands rest along aim from contact", () => {
+        // Review focus 1. P2b.2b.2c.3a: a push of length 0 is none (A2 item 8) (was a push ending, and its pendulum
+        // phase starting, at contact, the hands at rest there): the resting reach stops the plan's along-aim motion at
+        // contact, and its descent off aim runs on.
         const none = prepareTrack(trackDrive({ ...ARC, handReach: 0 }), TEST_HEAD, STANDARD_GRAVITY);
-        const nonePush = none.push as Push;
-        expect([nonePush.end, nonePush.pendulum]).toEqual([0, 0]);
-        expect(handsAt(none, 0.1).velocity).toEqual(vec3(0, 0, 0));
-        expect(Number.isFinite(handsAt(none, 0.1).position.z)).toBe(true);
+        expect(none.push).toBeNull();
+        expect(none.reach).not.toBeNull();
+        const hands = handsAt(none, 0.1);
+        expect(dot(hands.velocity, AIM)).toBe(0);
+        expect(dot(sub(hands.position, start), AIM)).toBeCloseTo(0, 15);
+        expect(Number.isFinite(hands.position.z)).toBe(true);
     });
 
     it("never starts the push's end or the pendulum phase for hands that never travel", () => {
@@ -559,14 +576,16 @@ describe("the hands' arc after contact (P2b.2b.2b.2b design §4.1)", () => {
         expect([never.end, never.pendulum]).toEqual([null, null]);
     });
 
-    it("leaves swing mode's path as it was: a reach and no push", () => {
-        const swing = prepareTrack(trackDrive({ ...ARC, mode: "swing" }), TEST_HEAD, STANDARD_GRAVITY);
-        expect(swing.push).toBeNull();
-        expect(swing.reach).not.toBeNull();
+    it("builds the same push whatever the slope's hold, and no reach", () => {
+        // P2b.2b.2c.3a: a push wherever handReach > 0 (A2 item 8) (was a swing arc's reach and no push). The push
+        // reads only the planned pivot, which the slope's hold does not move.
+        const swing = prepareTrack(trackDrive({ ...ARC, slopeHold: 0 }), TEST_HEAD, STANDARD_GRAVITY);
+        expect(swing.push).toEqual(push);
+        expect(swing.reach).toBeNull();
     });
 
     // Contact moved to 0.03 s so that the hands' window [0.01, 0.02] lies wholly before it, where the planned pivot is
-    // read directly (carry mode's push starts at contact); the pendulum's window is [0, 0.01].
+    // read directly (the push starts at contact); the pendulum's window is [0, 0.01].
     const carryArc: SwingArc = {
         ...ARC,
         alpha: 40,
@@ -607,7 +626,7 @@ describe("the hands' arc after contact (P2b.2b.2b.2b design §4.1)", () => {
             const gained = sub(v(carryArc.handStart + T / 4), v(carryArc.handStart));
             expect(length(gained)).toBeCloseTo(0.15625 * length(carryArc.pivotAcceleration) * T, 12);
         });
-        it("starts carry mode's hold from rest acceleration, continuous at the window's end", () => {
+        it("starts the held slope's hold from rest acceleration, continuous at the window's end", () => {
             // 1 ps on: the hold's own jerk, −6·ω_e/W² ≈ −2.4e4 rad/s³ here, moves α by only ~2.4e-8 rad/s², where a
             // hold begun at the box's α₀ would step by the full 40 rad/s². 1 ns cannot work: that jerk alone moves α
             // by 2.4e-5 there, past toBeCloseTo(…, 6)'s 5e-7.
@@ -618,7 +637,7 @@ describe("the hands' arc after contact (P2b.2b.2b.2b design §4.1)", () => {
                 6,
             );
         });
-        it("runs carry mode's hold over holdWindow when given, the window otherwise", () => {
+        it("runs the hold over holdWindow when given, the window otherwise", () => {
             // The hold's ω = ω_e·(1 − 3x² + 2x³), x = u/W: at u = T, rest for W = T, half of ω_e for W = 2T, and at
             // u = 2T rest for W = 2T.
             const end = carryArc.arcStart + T;
@@ -637,12 +656,12 @@ describe("the hands' arc after contact (P2b.2b.2b.2b design §4.1)", () => {
     });
 
     describe("gravity through the pulse (P2b.2b.2c.2d design §3.1)", () => {
-        // The carry's arc in swing mode with no reach, released at θ₀ = −0.6 rad so that gravity's share over the
+        // The carry's arc on a free slope with no reach, released at θ₀ = −0.6 rad so that gravity's share over the
         // window (about 6 rad/s², 0.06 rad/s of ω) is far past the tolerances below, and with the hands' pulse along
         // aim over the pendulum's window, so that the pivot's inertial term acts within it too.
         const swingArc: SwingArc = {
             ...carryArc,
-            mode: "swing",
+            slopeHold: 0,
             handReach: 0,
             theta0: -0.6,
             handStart: 0,
@@ -650,7 +669,7 @@ describe("the hands' arc after contact (P2b.2b.2b.2b design §4.1)", () => {
         };
         const WORLD = defaultWorld();
 
-        it("adds gravity's share to the pulse in swing mode, against a hand integration", () => {
+        it("adds gravity's share to the pulse on a free slope, against a hand integration", () => {
             // RK4 at 1e-7 s of θ̈ = (−W·sin θ − M·d·(A·t̂))/I_P + 6·alpha·s(1 − s) over the window, from thetaArc and
             // omegaArc; the table's semi-implicit Euler at FREE_STEP agrees to O(FREE_STEP).
             const track = prepareTrack(trackDrive(swingArc), TEST_HEAD, STANDARD_GRAVITY);
@@ -681,7 +700,7 @@ describe("the hands' arc after contact (P2b.2b.2b.2b design §4.1)", () => {
             expect(dot(b.angularVelocity, track.axis)).toBeCloseTo(dot(a.angularVelocity, track.axis), 6);
             expect(length(sub(b.socket, a.socket))).toBeLessThan(1e-8);
         });
-        it("leaves carry mode's window as the pulse alone", () => {
+        it("leaves the hold's window as the pulse alone", () => {
             const g = prepareTrack(trackDrive({ ...ARC, alpha: 5 }), TEST_HEAD, STANDARD_GRAVITY);
             const z = prepareTrack(trackDrive({ ...ARC, alpha: 5 }), TEST_HEAD, 0);
             expect(g.thetaEnd).toBe(z.thetaEnd);
@@ -761,7 +780,7 @@ describe("the effective mass at the face centre", () => {
 });
 
 /**
- * A swing-mode downswing of constant α from rest at θ_top to θ_c over T (s): θ = θ_top + ½·α·τ², τ from the release
+ * A tabulated downswing of constant α from rest at θ_top to θ_c over T (s): θ = θ_top + ½·α·τ², τ from the release
  * −T, tabulated every FREE_STEP with its last sample at contact. The hands end at `pivot`, from `pivot` − across −
  * drop.
  */
@@ -906,7 +925,7 @@ describe("the downswing (P2b.2b.2a design §3.5)", () => {
         expect(track.omegaEnd - (alpha * tau - 50 * 0.01)).toBeGreaterThan(0.01);
     });
 
-    it("moves the hands with the pendulum in swing mode, arriving level at V_c = 2·across·ω₀/span", () => {
+    it("moves the hands with the pendulum on a free slope, arriving level at V_c = 2·across·ω₀/span", () => {
         const across = vec3(0.05, 0, 0);
         const drop = vec3(0, 0, -0.02);
         const arc = downswingArc({}, across, drop);
@@ -925,7 +944,7 @@ describe("the downswing (P2b.2b.2a design §3.5)", () => {
         expect(half.P.z - down.handsTop.z).toBeCloseTo(-0.01, 9);
     });
 
-    it("evaluates carry mode in closed form: σ = (t − t_r)/T_h, θ = θ_top + span·σ²", () => {
+    it("evaluates a held slope in closed form: σ = (t − t_r)/T_h, θ = θ_top + span·σ²", () => {
         const across = vec3(0.1, 0, 0);
         const drop = vec3(0, 0, -0.03);
         const down: Downswing = {
@@ -979,19 +998,31 @@ describe("the downswing (P2b.2b.2a design §3.5)", () => {
         expect(reaches).toBeGreaterThanOrEqual(lead + 1);
     });
 
-    it.each(["swing", "carry"] as const)("starts an early hands window from the downswing's hands, %s mode", (mode) => {
+    it.each(["table", "closed form"] as const)("starts an early hands window from the downswing, %s", (form) => {
         // An early window replaces the hands' path from where the downswing has them, as an early pendulum window
         // replaces the pendulum's dynamics: pivotHand and pivotVelocityHand are the downswing's there, not P₀ + V₀·t
         // and V₀, and the window's end carries on from them.
         const across = vec3(0.05, 0, 0);
         const drop = vec3(0, 0, -0.02);
         const early = 0.01;
-        const base = downswingArc({ mode, handStart: early, pivotAcceleration: vec3(5, 0, 0) }, across, drop);
+        const base = downswingArc(
+            { slopeHold: form === "table" ? 0 : 1, handStart: early, pivotAcceleration: vec3(5, 0, 0) },
+            across,
+            drop,
+        );
         const swingDown = base.downswing as Downswing;
         const downswing: Downswing =
-            mode === "swing"
+            form === "table"
                 ? swingDown
-                : { ...swingDown, release: -FALL, span: CONTACT - TOP, tempo: FALL, theta: [], omega: [], alpha: [] };
+                : {
+                      ...swingDown,
+                      release: -FALL,
+                      span: CONTACT - TOP,
+                      tempo: FALL,
+                      theta: [],
+                      omega: [],
+                      alpha: [],
+                  };
         const arc: SwingArc = { ...base, downswing };
         const track = prepare(arc);
         const u = early - LEAD;
@@ -1014,11 +1045,29 @@ describe("the downswing (P2b.2b.2a design §3.5)", () => {
     it("rejects a malformed downswing", () => {
         const good = downswingArc();
         const down = good.downswing as Downswing;
+        // P2b.2b.2c.3a: checked by representation, a tempo meaning the closed form (was: by a stroke field, the
+        // messages "tabulated" and "closed-form").
+        const n = down.theta.length;
+        const progress = { sigma: [...down.theta], rate: [...down.omega], accel: [...down.alpha] };
         const bad: readonly [string, Downswing, RegExp][] = [
             ["a release at or after contact", { ...down, release: 0 }, /release must be negative/],
-            ["a table of one sample", { ...down, theta: [0], omega: [0], alpha: [0] }, /tabulated in swing mode/],
+            [
+                "a table of one sample",
+                { ...down, theta: [0], omega: [0], alpha: [0] },
+                /without a tempo must be tabulated/,
+            ],
             ["a table that stops short of contact", { ...down, release: -1 }, /must end at contact/],
-            ["a tempo in swing mode", { ...down, tempo: 0.05 }, /tabulated in swing mode/],
+            ["a tempo with a table", { ...down, tempo: 0.05 }, /with a tempo must be closed-form/],
+            [
+                "a hands' progress shorter than the table",
+                { ...down, handsProgress: { ...progress, rate: progress.rate.slice(1) } },
+                new RegExp(`handsProgress\\.rate must have the table's ${n} samples`),
+            ],
+            [
+                "a non-finite hands' progress",
+                { ...down, handsProgress: { ...progress, sigma: [Number.NaN, ...progress.sigma.slice(1)] } },
+                /handsProgress\.sigma\[0\] must be finite/,
+            ],
         ];
         // The head is placed on the good arc: a malformed table must fail validation, not the placement.
         const placed = onArc(trackDrive(good));
@@ -1026,9 +1075,13 @@ describe("the downswing (P2b.2b.2a design §3.5)", () => {
             const contact = { ...placed, drive: trackDrive({ ...good, downswing }) };
             expect(() => validateImpact(contact, {}, testWorld()), name).toThrow(pattern);
         }
-        const carry: SwingArc = { ...good, mode: "carry", downswing: { ...down, tempo: 0.3, release: -0.2 } };
+        const carry: SwingArc = {
+            ...good,
+            slopeHold: 1,
+            downswing: { ...down, tempo: 0.3, release: -0.2 },
+        };
         const carried = { ...placed, drive: trackDrive(carry) };
-        expect(() => validateImpact(carried, {}, testWorld())).toThrow(/closed-form in carry mode/);
+        expect(() => validateImpact(carried, {}, testWorld())).toThrow(/with a tempo must be closed-form/);
     });
 
     it("bounds the table's last full step to within FREE_STEP before contact, with a rounding margin", () => {
@@ -1068,5 +1121,55 @@ describe("the downswing (P2b.2b.2a design §3.5)", () => {
         // These contacts are not placed to start a real impact, so validateImpact ends on its later turf check:
         // reaching it, as the good arc does, means the downswing passed.
         expect(() => validateImpact(contact, {}, testWorld())).toThrow(/head penetrates the turf/);
+    });
+});
+
+describe("the slope after contact follows λ (P2b.2b.2c.3a design §4.1, decision 4)", () => {
+    it("blends the free and held paths", () => {
+        // TIMED's pendulum window ends at 40 ms. Past it the free pendulum and the held slope's hold each run on their
+        // own; at λ = 0.5 the path's θ is their mean, the free table being tabulated whenever λ < 1.
+        const at = (slopeHold: number) => prepare({ ...TIMED, slopeHold });
+        const free = at(0);
+        const blend = at(0.5);
+        const held = at(1);
+        const end = TIMED.arcStart + TIMED.window;
+        for (const t of [end + 0.005, end + 0.02, end + 0.05]) {
+            const expected = 0.5 * pathAt(free, t).theta + 0.5 * pathAt(held, t).theta;
+            expect(Math.abs(pathAt(blend, t).theta - expected), `t ${t}`).toBeLessThanOrEqual(1e-12);
+        }
+        expect(held.free).toBeNull();
+        expect(blend.free).not.toBeNull();
+    });
+});
+
+describe("the swung body on every stroke (P2b.2b.2c.3a A2 item 4)", () => {
+    it("holds a swing arc's mallet by both hands' skin, and by the top's alone once released", () => {
+        // A2 item 4: the hand–arm chains hold every stroke, so a swing arc's body is the carry's, the arm mass gone.
+        const arc: SwingArc = { ...TIMED, slopeHold: 0 };
+        const track = prepare(arc, ARMED);
+        expect(track.body).toEqual(carryBody(TEST_HEAD, ARMED.chain, arc.radius, ARMED.bottom));
+        expect(track.released).toEqual(carryBody(TEST_HEAD, ARMED.chain, arc.radius, null));
+    });
+
+    it("holds a checked stroke on its held path at λ = 1", () => {
+        // A2 item 7: the hold lives on the track, not on the free table, so a check on a fully held slope (which has
+        // no table) holds its held path's θ from the window's end on.
+        const track = prepare(levelArc(vec3(0, 0, 1), { slopeHold: 1, omega0: 3, alpha: -300 }));
+        const from = track.arc.arcStart + track.arc.window;
+        expect(() => holdPendulum(track, from)).not.toThrow();
+        const held = holdPendulum(track, from);
+        const theta = pathAt(track, from).theta;
+        expect(pathAt(held, from + 0.01).theta).toBe(theta);
+        expect(pathAt(held, from + 0.05).theta).toBe(theta);
+    });
+
+    it("holds a free table's pendulum where it was", () => {
+        // At λ = 0 the hold returns the table's θ where it starts, as the free table's own hold did.
+        const track = prepare(levelArc(vec3(0, 0, 1), { slopeHold: 0, omega0: 3, alpha: -300 }));
+        const from = track.arc.arcStart + track.arc.window;
+        const held = holdPendulum(track, from);
+        const theta = pathAt(track, from).theta;
+        expect(pathAt(held, from + 0.01).theta).toBe(theta);
+        expect(pathAt(held, from + 0.05).theta).toBe(theta);
     });
 });

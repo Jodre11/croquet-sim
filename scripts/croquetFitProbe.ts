@@ -9,7 +9,7 @@
  *   A1D marked a very short stroke; then Gugan 5's drive on the drive preset at its target's speed on the open lawn:
  *   the croqueted ball's travel in yards against about seven.
  * - B. the drift (design §4.3): the single-ball, drive, AC stop and GC stop presets' canonical setups and the preset
- *   digest's grid on the default world (the swing-mode presets: a check's hold follows any run planned with α < 0),
+ *   digest's grid on the default world (the swing presets: a check's hold follows any run planned with α < 0),
  *   each played by planStroke and simulateStroke with a follow probe: each hand's peak and final slid |offset|,
  *   the peak's time, each hand's peak |force| over the follow-through and the follow-grip-limit flag; then, per
  *   preset, the run with the largest peak and the count of runs with an offset set.
@@ -320,7 +320,8 @@ function sectionB(): void {
             "the peak's time (ms from t = 0), each hand's peak |force| (N) over it, and the follow-grip-limit flag ==",
     );
     // A check's hold, where an anchor slides, follows any run planned with α < 0, not the stops alone: a single-ball
-    // stroke at drive −1 is planned as a check and holds. The rolls are carry mode, which keeps its offset.
+    // stroke at drive −1 is planned as a check and holds. The rolls hold their slope and push, which keeps their
+    // offset.
     for (const type of ["single-ball", "drive", "stop-ac", "stop-gc"] as const) {
         const base = canonicalSetup(type, { world: DRIFT_WORLD });
         let largest: { label: string; peak: number } | null = null;

@@ -225,14 +225,21 @@ describe("the read-out (P2b.2b.2c.2b design §5.2, §8.1)", () => {
         // m/s): the quicker ball–ball contact parts the balls at 0.950 ms, before the face lets go at 1.045 ms, so the
         // face meets the striker's ball once; read as the ball leaves at 1.05 ms, striker 1.3919, croqueted 3.7663,
         // mallet 0.8827 m/s.
+        // P2b.2b.2c.3a: the swung body and one law after contact (was the face letting go at 1.045 ms; striker 1.3919,
+        // croqueted 3.7663, mallet 0.8827 m/s): the head carries the hands' skin, not the arm mass, and from contact
+        // the hands flex through their chains where the swing law's damper dragged the top grip. The face lets go at
+        // 1.050 ms; read as the ball leaves at 1.055 ms, striker 1.3928, croqueted 3.7644, mallet 0.8876 m/s.
+        // P2b.2b.2c.3a: the drive's hands together (was 0.6; the face letting go at 1.050 ms, striker 1.3928, croqueted
+        // 3.7644, mallet 0.8876 m/s): the bottom hand a hand's breadth below the top. The face lets go at 1.045 ms;
+        // read as the ball leaves at 1.05 ms, striker 1.3904, croqueted 3.7630, mallet 0.8831 m/s.
         const r = readOut(guganSetup("drive", 3, 0, { guideEffort: 0 }), WORLD);
         const face = r.impact.timeline["face/blue"] ?? [];
         const end = face[face.length - 1]?.end ?? Infinity;
         const leaving = r.samples.find((s) => s.t > end);
         expect(face).toHaveLength(1);
-        expect(leaving?.w1).toBeCloseTo(1.3919, 4);
-        expect(leaving?.v2).toBeCloseTo(3.7663, 4);
-        expect(leaving?.head).toBeCloseTo(0.8827, 4);
+        expect(leaving?.w1).toBeCloseTo(1.3904, 4);
+        expect(leaving?.v2).toBeCloseTo(3.763, 4);
+        expect(leaving?.head).toBeCloseTo(0.8831, 4);
         // The read-out's own, 1 ms after the last contact (2.5 ms): the croqueted ball skids on the turf with no
         // forward roll yet, and the turf's sliding friction on it (about 3.5–3.9 N against aim, under a normal force
         // of about 7.2–8.1 N) slows it by about 0.008 m/s; the striker's ball and the mallet barely change. The
@@ -244,11 +251,15 @@ describe("the read-out (P2b.2b.2c.2b design §5.2, §8.1)", () => {
         // tap ends at 2.075 ms, so the read is at 3.075 ms; the croqueted ball, skidding, loses 0.0104 m/s to the turf
         // by then, and the striker's ball and the mallet barely change. P2b.2b.2c.2c: the ball–ball contact time set
         // (was 3.075 ms; w₁ 1.233, v₂ 3.6292, W 1.0012): the one face interval ends at 1.045 ms, so the read is at
-        // 2.045 ms; the croqueted ball loses 0.0082 m/s to the turf by then.
+        // 2.045 ms; the croqueted ball loses 0.0082 m/s to the turf by then. P2b.2b.2c.3a: the swung body and one law
+        // after contact (was 2.045 ms; w₁ 1.3913, v₂ 3.7581, W 0.8829): the face lets go at 1.050 ms, so the read is at
+        // 2.050 ms; w₁ 1.3917, v₂ 3.7565, and the mallet, no longer dragged by the swing law's damper, 0.8978 m/s.
+        // P2b.2b.2c.3a: the drive's hands together (was 2.050 ms; w₁ 1.3917, v₂ 3.7565, W 0.8978): the face lets go at
+        // 1.045 ms, so the read is at 2.045 ms; w₁ 1.3895, v₂ 3.7550, W 0.8853 m/s.
         expect(r.time).toBeCloseTo(2.045e-3, 12);
-        expect(r.w1).toBeCloseTo(1.3913, 4);
-        expect(r.v2).toBeCloseTo(3.7581, 4);
-        expect(r.W).toBeCloseTo(0.8829, 4);
+        expect(r.w1).toBeCloseTo(1.3895, 4);
+        expect(r.v2).toBeCloseTo(3.755, 4);
+        expect(r.W).toBeCloseTo(0.8853, 4);
     });
 });
 
@@ -284,10 +295,15 @@ describe("the fit's entry points (P2b.2b.2c.2's final review)", () => {
         const setup = fitSetup("drive", p, 3);
         expect(ratioOf(setup, runFit(setup, p, fitWorld(p)).motion)).not.toBe(ratiosAt(TODAY).drive);
     });
-    it("moves the drive's ratio when only the arm mass moves", () => {
+    it("leaves the drive's ratio unchanged when only the arm mass moves", () => {
+        // P2b.2b.2c.3a A2 item 4: the swung body on every stroke (was "moves the drive's ratio when only the arm mass
+        // moves"). The arm mass rode rigidly at the top grip in the swing law's body; every stroke's body is now the
+        // head with the hands' skin, and the downswing's plan, the arm mass's only reader, is unchanged by a point mass
+        // at its pivot. The drive's ratio at armMass 0 is 3.924316421868235 to the bit, as at 0.8 kg: the fit's arm
+        // mass no longer reaches the run.
         const p = { ...TODAY, armMass: BOUNDS.armMass[0] };
         const setup = fitSetup("drive", p, 3);
-        expect(ratioOf(setup, runFit(setup, p, fitWorld(p)).motion)).not.toBe(ratiosAt(TODAY).drive);
+        expect(ratioOf(setup, runFit(setup, p, fitWorld(p)).motion)).toBe(ratiosAt(TODAY).drive);
     });
 });
 

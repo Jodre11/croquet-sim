@@ -19,7 +19,7 @@ import {
 import { prepareTrack, type PreparedTrack, type Push } from "../../../src/engine/impact/track";
 import { bedLawOf, staticSink } from "../../../src/engine/impact/turfBed";
 import type { BoxShape } from "../../../src/engine/impact/shape";
-import type { ContactState, Coupling, Hands, StrokeMode, SwingArc, TrackDrive } from "../../../src/engine/impact/types";
+import type { ContactState, Coupling, Hands, SwingArc, TrackDrive } from "../../../src/engine/impact/types";
 import { TEST_BALL, ballAt, hoopWithUprightAt, testWorld } from "../support/fixtures";
 import {
     TEST_BOX,
@@ -53,8 +53,8 @@ const SUNK = vec3(
 );
 
 describe("simulateImpact", () => {
-    it("is version 0.17.0", () => {
-        expect(ENGINE_VERSION).toBe("0.17.0");
+    it("is version 0.18.0", () => {
+        expect(ENGINE_VERSION).toBe("0.18.0");
     });
 
     it("starts a centre-struck ball rolling at 5/7 of its launch speed in phase 2", () => {
@@ -495,6 +495,14 @@ describe("simulateImpact with a tracked drive", () => {
         expect(prepareImpact(forced, { blue: BLUE }, WORLD).drive).toBe(forced.drive);
     });
 
+    it("accepts a hand-built arc with no mode on any slope", () => {
+        // A stroke has no mode: an arc at λ = 0.5 with none simulates, and the arc type carries no `mode` field.
+        const half: ContactState = withArc({ slopeHold: 0.5 });
+        // @ts-expect-error SwingArc has no `mode`
+        expect(ARC.mode).toBeUndefined();
+        expect(() => simulateImpact(half, { blue: BLUE }, WORLD)).not.toThrow();
+    });
+
     it("accepts pivot motion out of the swing plane by rounding only (1e-12 of its size)", () => {
         const rounded = withArc({ pivotVelocity: vec3(1, 1e-13, 0) });
         expect(() => validateImpact(rounded, { blue: BLUE }, WORLD)).not.toThrow();
@@ -527,11 +535,6 @@ describe("simulateImpact with a tracked drive", () => {
         ["a dip starting before t = 0", withArc({ dip: { ...ARC.dip, start: -0.01 } }), /arc\.dip\.start must be/],
         ["a dip of no duration", withArc({ dip: { ...ARC.dip, duration: 0 } }), /arc\.dip\.duration must be/],
         ["a negative dip depth", withArc({ dip: { ...ARC.dip, depth: -0.001 } }), /arc\.dip\.depth must be/],
-        [
-            "an unknown mode",
-            withArc({ mode: "glide" as unknown as StrokeMode }),
-            /arc\.mode must be "swing" or "carry"/,
-        ],
         ["a negative reach", withArc({ handReach: -0.01 }), /arc\.handReach must be non-negative/],
         ["an aim that is not unit", withArc({ aim: vec3(1.1, 0, 0) }), /arc\.aim must be a horizontal unit vector/],
         ["an aim that is not horizontal", withArc({ aim: vec3(0.8, 0, 0.6) }), /arc\.aim must be a horizontal/],
@@ -555,10 +558,19 @@ describe("simulateImpact with a tracked drive", () => {
         ["a pendulumAt above 1", withArc({ pendulumAt: 1.5 }), /arc\.pendulumAt must lie in \[0, 1\]/],
         ["a negative pendulumEffort", withArc({ pendulumEffort: -1 }), /arc\.pendulumEffort must lie in \[0, 1\]/],
         ["a handArcLow above 1", withArc({ handArcLow: 1.5 }), /arc\.handArcLow must lie in \[0, 1\]/],
+        ["a slopeHold above 1", withArc({ slopeHold: 1 + 1e-9 }), /arc\.slopeHold must lie in \[0, 1\]/],
+        ["a non-finite slopeHold", withArc({ slopeHold: Number.NaN }), /arc\.slopeHold must be finite/],
         [
             "an arc no longer than the push",
-            withArc({ mode: "carry", handReach: 2, handArcRadius: 2 }),
+            withArc({ handReach: 2, handArcRadius: 2 }),
             /arc\.handArcRadius must exceed arc\.handReach/,
+        ],
+        ["a non-finite lowPoint", withArc({ lowPoint: Number.NaN }), /arc\.lowPoint must be finite/],
+        ["a lowPoint at the arc's radius", withArc({ lowPoint: 11 }), /arc\.lowPoint must lie in/],
+        [
+            "a lowPoint that leaves the push's end off the arc",
+            withArc({ handReach: 2, lowPoint: 2 - 11 }),
+            /arc\.lowPoint must lie in/,
         ],
         [
             "a flex with no stiffness",

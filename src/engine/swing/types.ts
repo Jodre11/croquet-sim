@@ -11,7 +11,7 @@
  * The product spec's grip style, weighting and face material have no engine reader yet.
  */
 import type { HoopTarget } from "../hoopRun";
-import type { FlexLaw, HandChain, StrokeMode } from "../impact/types";
+import type { FlexLaw, HandChain } from "../impact/types";
 import type { BallId, BallStates } from "../types";
 
 /** The strokes the swing model plays. */
@@ -50,18 +50,17 @@ export interface SwingStance {
 
 /**
  * The swing's shape (design §5.2 step 7), its changes measured against the planned contact speed (P2b.2b.2a design
- * §3.4). The mode (§3.3). The pendulum: over `window` (s) at full `drive` its contribution changes by `speedGain`
+ * §3.4). The pendulum: over `window` (s) at full `drive` its contribution changes by `speedGain`
  * times that speed. The hands: from their speed at contact (P2b.2b.2a design §3.3), changing by `handGain` times the
  * head's speed over `handWindow` (s) at full `drive`. The dip: whatever `drive`, the hands lower by `handDrop` (m)
  * over `dropTime` (s), rest to rest. The reach: the hands' path travels `handReach` (m) along aim after contact, the
- * default for the shot's own. In swing mode the bottom hand's push after contact is `guideEffort` (in [0, 1]) of a
- * full restoration of the arc's speed, the default for the shot's own. In carry mode `handReach` is the push's
- * length. The pendulum phase starts at `pendulumAt` of it, its effort `pendulumEffort`, and the hands travel their
- * arc, `handArcRadius` and `handArcLow` (P2b.2b.2b.2b design §4, §6). Swing mode carries these four and never reads
- * them.
+ * default for the shot's own. The bottom hand's push after contact is `guideEffort` (in [0, 1]) of a full
+ * restoration of the arc's speed, the default for the shot's own. `handReach` is the push's length. The pendulum
+ * phase starts at `pendulumAt` of it, its effort `pendulumEffort`, and the hands travel their arc, `handArcRadius`
+ * and `handArcLow` (P2b.2b.2b.2b design §4, §6). Every stroke carries all of these; a push of no length ignores the
+ * four that shape it.
  */
 export interface SwingDrive {
-    readonly mode: StrokeMode;
     readonly speedGain: number;
     readonly window: number;
     readonly handGain: number;
@@ -70,10 +69,10 @@ export interface SwingDrive {
     readonly dropTime: number;
     readonly handReach: number;
     readonly guideEffort: number;
-    /** Carry mode's pendulum phase (P2b.2b.2b.2b design §4.2): its start, a fraction of the push, and its effort. */
+    /** The pendulum phase (P2b.2b.2b.2b design §4.2): its start, a fraction of the push, and its effort. */
     readonly pendulumAt: number;
     readonly pendulumEffort: number;
-    /** Carry mode's hands' arc (design §4.1, §6): its radius (m) and where it is lowest, a fraction of the push. */
+    /** The hands' arc (design §4.1, §6): its radius (m) and where it is lowest, a fraction of the push. */
     readonly handArcRadius: number;
     readonly handArcLow: number;
 }
@@ -81,20 +80,23 @@ export interface SwingDrive {
 /**
  * How a stroke type's whole stroke is shaped (P2b.2b.2a design §3, §5.1). `pendulumShare` (in [0, 1]) of the
  * backswing's height comes from the pendulum and the rest from the hands, which start back and up along `handAngle`
- * (rad above horizontal; read only when the share is below 1). Carry mode reads `handTempo`: the hands' downswing lasts
- * from `slow` (s, intensity 0) to `fast` (s, intensity 1); null where a swing preset has none, its downswing being the
- * body's effort, and a carry stroke fails without one. Swing mode's effort is the body's (`SwingProfile.body.effort`,
- * P2b.2b.2c.1 design §4.4). A shot that gives no intensity swings at 0, by gravity alone: no preset carries a default
- * intensity (P2b.2b.2c.1 design, Amendments).
+ * (rad above horizontal; read only when the share is below 1). `slopeHold` λ (in [0, 1]; P2b.2b.2c.3a design §4.1) is
+ * how far the hands hold the shaft's slope against its free swing on the way down: 0 lets the pendulum swing under
+ * gravity and the body's effort (`SwingProfile.body.effort`, P2b.2b.2c.1 design §4.4), 1 holds the hands-led slope
+ * θ = θ_top + span·σ², and between them the plan blends the two. `handTempo` is the hands' downswing time, from `slow`
+ * (s, intensity 0) to `fast` (s, intensity 1); null takes the stroke's own free swing's fall, derived, not fitted. A
+ * shot that gives no intensity swings at 0, by gravity alone: no preset carries a default intensity (P2b.2b.2c.1
+ * design, Amendments).
  */
 export interface SwingShape {
     readonly pendulumShare: number;
     readonly handAngle: number;
     readonly handTempo: { readonly slow: number; readonly fast: number } | null;
+    readonly slopeHold: number;
 }
 
 /**
- * The player's effort in swing mode (P2b.2b.2c.1 design §4.4), a torque–velocity law linear in ω, a simplification of
+ * The player's swing effort (P2b.2b.2c.1 design §4.4), a torque–velocity law linear in ω, a simplification of
  * Hill's hyperbolic force–velocity relation (Hill 1938): at intensity i the player's torque on the shaft is
  * i·`torque`·max(0, 1 − ω/`speed`), `torque` τ_0 (N·m, ≥ 0) the isometric torque and `speed` ω_max (rad/s, > 0) the
  * shaft's angular speed at which the player can add no more.
@@ -133,8 +135,8 @@ export interface SwingProfile {
      * The player's body: the arm mass at the top grip (kg), the reach slack (m), the arm's flex, pendulum push and push
      * (the push intent's cap, N, and its response time constant, s), each hand's and arm's hand–arm chain, and the
      * grip's limit (N; P2b.2b.2b.3 design §5), the backswing's limit θ_max (rad from vertical, in (0, π/2]): the
-     * shaft's greatest angle at the top of a swing-mode backswing, where it meets the groin (P2b.2b.2c.1 design §5),
-     * the player's effort in swing mode, shared by every swing preset (P2b.2b.2c.1 design §4.4), and the hands' peak
+     * shaft's greatest angle at the top of a backswing, where it meets the groin (P2b.2b.2c.1 design §5),
+     * the player's swing effort, shared by every preset (P2b.2b.2c.1 design §4.4), and the hands' peak
      * acceleration along aim (m/s², > 0), the advance's ramp W = V/a at the head's planned speed V along aim, a body
      * property the player never sets.
      */
@@ -167,8 +169,8 @@ export interface StrokeTiming {
     /** The dip's start, s from the pendulum's pulse (`arc`): negative before it, 0 coupled to it. */
     readonly dip: number;
     /**
-     * Swing mode only (P2b.2b.2c.1 design §6): when the hands' advance begins, their push forward along aim over the
-     * stroke's handReach; absent: no advance.
+     * When the hands' advance begins (P2b.2b.2c.1 design §6), its travel added to the push's over the stroke's
+     * handReach (P2b.2b.2c.3a A2 item 8); absent: no advance.
      */
     readonly advance?: number;
 }
@@ -197,7 +199,7 @@ export interface ShotSetup {
         /**
          * The duration (s) of both follow-through pulses, the pendulum's and the hands' (P2b.2b.2c.2d design §3.2);
          * absent: the preset's `window`. Within [MIN_WINDOW, MAX_WINDOW]. Shorter is sharper: the same change in rate
-         * over a shorter time, a higher peak acceleration and jerk. Carry mode's hold after the pulse keeps the
+         * over a shorter time, a higher peak acceleration and jerk. The hold after the pulse keeps the
          * preset's `window`.
          */
         readonly window?: number;
@@ -208,15 +210,34 @@ export interface ShotSetup {
         readonly handReach?: number;
         /** The bottom hand's push after contact, in [0, 1]; absent: the preset's `guideEffort`. */
         readonly guideEffort?: number;
-        /** Carry mode: the pendulum phase's start, a fraction of the push in [0, 1]; absent: the preset's. */
+        /** The pendulum phase's start, a fraction of the push in [0, 1]; absent: the preset's. */
         readonly pendulumAt?: number;
-        /** Carry mode: the bottom hand's push in the pendulum phase, in [0, 1]; absent: the preset's. */
+        /** The bottom hand's push in the pendulum phase, in [0, 1]; absent: the preset's. */
         readonly pendulumEffort?: number;
         /**
          * The jab (m, ≥ 0; P2b.2b.2b.3 design §6.1): the hands' planned dip deepens by it on top of the preset's
-         * handDrop, on the dip's own timing, to ground the head deliberately. Swing mode only; absent: 0.
+         * handDrop, on the dip's own timing, to ground the head deliberately; absent: 0.
          */
         readonly jab?: number;
+        /**
+         * The shot's grip (P2b.2b.2c.3a design §2): each of the stance's top, bottom, gripTension and bottomGrip
+         * given here replaces the preset's alone; absent: the preset's.
+         */
+        readonly grip?: Partial<Omit<SwingStance, "handsAhead">>;
+        /**
+         * The shaft's lean at contact (rad, forward positive, at most π/4, the on-point limit; design §2): given, it
+         * places the top hand (handsAheadFor at the shot's top and contact); absent: the preset's handsAhead, which a
+         * shot moving its top hand or its contact keeps.
+         */
+        readonly lean?: number;
+        /**
+         * The feet (m; design §3, A2 item 1): the hands' arc's lowest point along aim from the striker's ball's centre.
+         * The toe's offset behind that point varies by player and is taken as zero, not modelled. Absent: the arc is
+         * lowest the preset's handArcLow of the push ahead of the hands at contact.
+         */
+        readonly feet?: number;
+        /** The planned slope λ in [0, 1] (design §4.1); absent: the preset's shape's. */
+        readonly slopeHold?: number;
     };
     readonly live: readonly BallId[];
     readonly continuation: boolean;

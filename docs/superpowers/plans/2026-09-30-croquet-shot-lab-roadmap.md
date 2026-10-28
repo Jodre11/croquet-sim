@@ -2598,13 +2598,129 @@ words, and the plan's decisions are in the design's amendments. "Old → new" th
   `ReContactThresholds` types, `groupReContacts`, `MERGE_SEPARATION`, `EFFECT_SPEED` and `EFFECT_ANGLE`, exported;
   `reference/laws.json` 29.2.5 gains `thresholds` and its note marks the effect test as the user's reading.
 
+## P2b.2b.2c.3a outcomes (2026-10-28)
+
+Measured by `scripts/setupProbe.ts` (sections F, P and R at the gate's stage 1, X and D at stage 2), the follow-through
+probe's section O, `swingProbe.ts`'s late re-hit and throwaway screens of the AC stop's grip, against the throwaway
+preset digest (`phys` and `faults` per run, the keys `slopeHold` and `mode` dropped), `impactDigest`, `shotMix` and
+`impactProbe` taken on a baseline worktree at 6c45bcd before any change. The records: stage 1's
+`docs/superpowers/probes/2026-10-27-p2b2b2c3a-stage1.txt`, the hand model's note `…/2026-10-27-p2b2b2c3a-hand-model.md`
+and the checks `…/2026-10-28-p2b2b2c3a-checks.txt` (section X, section O, the departures per task and the late
+re-hit). The rulings, in the user's words, are in the design's amendments A1–A3; the plan's decisions 1–16 are its
+own, each ratified there. "Old → new" throughout.
+
+- **One set-up, no mode** (design §2, §4): `StrokeMode`, `SwingDrive.mode` and every branch on them are gone. A
+  stroke is set by its inputs alone, each optional per shot with the preset's as its default: `stroke.grip` (top,
+  bottom, `gripTension`, `bottomGrip`), `stroke.lean` (rad, forward positive, at most π/4), `stroke.feet` (m along aim
+  from the striker's ball to the hands' arc's lowest point; the toe's offset behind it taken as zero, A2 item 1) and
+  `stroke.slopeHold`.
+- **The planned slope** (design §4.1; A2 items 2–3): `slopeHold` λ in [0, 1], 0 on single-ball, the drive and both
+  stops, 1 on the rolls (`SLOPE_HOLD`), each today's downswing to the bit; between them the slope and the hands'
+  progress both blend. A null `handTempo` takes the stroke's own free swing's fall. Along a held plan the couple the
+  hands need is bounded by C = min(γ_T, g_B)·F_max·(r − b) (`gripCouple`): the plan decides, the grip bounds it.
+  Section P: no preset past C at its own λ; the drive at λ 1, hands together, needs 7.04 N·m against C 9.79 N·m.
+- **One hand model after contact** (A1; A2 items 4–7): the Dong et al. chains and `carryBody` on every stroke, each
+  hand fed its grip times its moment share and flexed at k·γ, c·√γ (`gripGains`); the carry law the base, γ_T, g_B
+  and `guideEffort` its multipliers, the rolls at 1. The check's share, the twist and the slid anchor's decay act on
+  every stroke; the posture hold, the push intent and the pendulum phase only with a push. The bottom hand opens at
+  the earlier of the signed reach and the pendulum phase (section R: 0 of 678 roll runs cross the signed slack
+  first). The finish follows the inputs: a brake the check's hold, else a push the carried finish, else the free
+  swing. The swing law's top damper, one-sided rate guide and push after opening are gone, and with them the arm
+  mass after contact (`ratioFit`'s `armMass` now inert, the drive's ratio 3.924316421868235 at 0 and 0.8 kg).
+- **One push** (A2 item 8): every stroke pushes through on its hands' arc, capped at the push length, none at
+  length 0; the advance merged into it, so a stop may push.
+- **The gripped hold** (A3 item 3): a check's held head has its own pitch spring and damper, sized from
+  `track.firm`'s 0.08 s period at ζ 0.7, independent of the hand spacing, its couple bounded by C. Before it, the
+  drive's 0.088 m spacing left a pitch mode of ~0.9 s at ζ ~0.08, and 18 of 27 braked drives at −1 and −0.5 reached
+  the follow-through's cap; after, 8 of 27 at −0.5 (a ~1 cm/s sway across the aim), accepted. The AC stop's finish
+  88.275 → 114.250 ms, the GC stop's 55.045 → 27.295 ms. A check's follow-through records a sample after its first
+  held step (the seam check).
+- **The grips** (design §5; A3 items 1, 7, 8): `HAND_BREADTH` 3.46 in (87.9 mm), the men's 50th percentile of ANSUR
+  II as the NCSU Ergonomics Center tabulates it (`reference/sources/README.md`).
+  - The drive: the bottom hand 0.6 → 0.805 − `HAND_BREADTH` (0.717 m), hands together; `guideEffort` 0.75 → 1, as on
+    every preset (section D: no `guideEffort` on the 0.25 grid re-contacts after the parting, the ratio 3.925292 to
+    3.925309 across it). The canonical drive 3.7526 → 3.9253, its follow-through's turf flags gone.
+  - The AC stop (A1's retune, against Gugan 5 only): bottom 0.45 → 0.717 m, γ_T 0.1 → 1, g_B 0.1 kept; lean −5° and
+    contact −22.5 mm kept. Gugan 5's stop 6.6610 → 6.6029 at the 0.75 mm gap, 7.6089 at gap 0 (band 6.55–7.75); the
+    canonical 5.7352 → 5.0401; no turf damage in the impact or the follow-through (the canonical raises
+    `follow-grip-limit`, accepted as physical). The search found the bottom hand sets the ratio (about 5.8 at 0.45 m,
+    6.0 at 0.55 m, 6.6–6.7 from 0.6 m) and γ_T the damage (every γ_T of 0.25 or below damaged the turf in some run).
+    The jab (bottom 0.45, grips 0.1/0.1) is a shot's grip, not the default.
+  - Single-ball, the GC stop and the rolls unchanged.
+- **The cross-mode cases** (criterion 5, section X at HEAD): the AC stop braked at −1 and pushed through 0.15 m
+  (ratio 4.9672), the drive pushed (3.5898), the half roll braked at −1 (2.2122) and the full roll at λ 0.5 (2.0191)
+  play with no guard hit, no throw and no cap. The full roll at λ 0.5 leaves the face at 66.86 ms and yields the turf
+  in its follow-through; the pushed AC stop, at its retuned grip, meets the grip limit at 6.20 ms and yields the turf
+  at 22.44 ms (A3 items 9 and 15: both 3b envelope cases).
+- **Section O** (criterion 6, at HEAD): every preset's canonical within 3 m/s ± 2 %, so no refit; the drive 3.9253
+  (`turf-lift` at 5.66 ms, no follow-through flag), the AC stop 5.0401 (`follow-grip-limit`), the GC stop's
+  `grip-limit` at 8.26 ms, the rolls unchanged (the full and pass rolls' follow-through turf flags carried).
+- **The late re-hit** (criterion 6, at HEAD): no run overlaps a ball or crosses an obstacle at the impact's end.
+  Runs crossing a ball later, of 225, against P2b.2b.2c.2d: single-ball 9 (9), drive 117 (1), AC stop 38 (26), GC stop
+  27 (36), half roll 16 (0), full roll 6 (0), pass roll 41 (52); the canonical drive crosses blue 112.5 ms after
+  contact, 0.037 mm deep, where the integrated run has no re-contact. Hoop 1's shaft–crown graze 0.045 → 0.166 mm.
+- **The departures** (criterion 3; per task in the checks file, the final ratchet HEAD against main at 6c45bcd):
+  - `impactDigest` identical after every task; `impactProbe` and `shotMix` identical but for their timing lines;
+  - the preset digest (1582 runs; `slopeHold` and `mode` dropped): `phys` moved in 814 runs, every played run of the
+    four swing presets (136 each: 27 at each of five drives and the canonical) and the rolls' 270 at drives −1 and
+    −0.5; the rolls at drives 0, 0.5 and 1 and their canonicals bit-identical; `faults` moved in 569 (the drive's and
+    the AC stop's 136, the GC stop's 27 at drive +1, the rolls' 270); no throw new or gone (the swing presets' 360 runs
+    at 4 and 6 m/s throw in both, beyond the stroke's reach);
+  - by field, main against HEAD (`departures.mts`): the drive's ratio up 0.08–1.69 over the sweep (the canonical
+    3.7526 → 3.9253), its impact-off-face, turf-lift and possible 29.1.6.1 findings gone; the AC stop's canonical
+    5.7352 → 5.0401 with `follow-grip-limit`, its braked sweep (drives −1 and −0.5) losing `impact-head-deep` in 9
+    and `turf-yield` in 6 runs each but gaining `follow-turf-yield` in 6 and `follow-head-deep` in 3, its hit-through
+    sweep (drives +0.5 and +1) gaining `turf-yield` in 18 and 15 of 27 runs, `impact-head-deep` in 16 and 18 and
+    `grip-limit` in 18 and 27 (A3 item 16: outside the envelope); single-ball and the GC stop moving in finish only
+    (the GC stop at +1 gaining `grip-limit` and losing its 29.1.6.2 fault in 9 runs); the braked rolls finishing up to
+    708 ms sooner, losing almost all follow-through turf damage and caps and gaining `follow-grip-limit` (A3 item 10).
+- **Cost** (machine-dependent; `shotMix`, alone, main then HEAD): the engine's time per shot p50 3.905 → 3.959 ms, p99
+  49.955 → 50.392, p99.9 75.217 → 76.167, max 88.768 → 112.331 (one croquet shot); the solver's p99 4.863 → 5.686.
+  Unchanged within noise but for the one slowest shot.
+- **The gate's rulings** (2026-10-27 and 28, verbatim in the design's amendments):
+  - stage 1 (A2): the feet "Zero offset"; the slope "Accept as built"; the couple "A: plan decides, grip bounds"; the
+    body "Share and flex gains"; the law "A: rolls' law as base"; the opening "A: signed reach or phase"; the finish
+    "Accept the note's A/A"; the push "A: one push";
+  - stage 2 (A3): 1a "Accept both"; 1b "Trace first", then "Fix the hold now", "Scale the slack", "Bound it, then
+    re-count", "Keep bound, accept 8"; 1c "Accept, retire in 3b"; 1d "Accept, close it"; 1e "Accept, note the gap"; 2
+    "Accept grip, set 1"; 3 "Search its grip", "Land 0.25/0.1/0.6" (superseded), then "1/0.1/0.717"; 4 "Accept all
+    four"; the braked rolls "Accept"; the AC seam "Re-measure after retune", "Trace it first", "Sample first held
+    step"; the follow-grip-limit "Accept, add 3b item"; the hold's settle "Mark it it.fails"; `backswingForContact`
+    "Fix it in this commit"; section X after the retune "Accept, 3b envelope", each "(Recommended)"; the AC stop's
+    hit-through sweep runs, in the user's words "outside the envelope" (A3 item 16).
+- **Carried open items:**
+  - Closed: the stiff-grip fat stroke (P2b.2b.2a's open defect, guarded since P2b.2b.2c.1 and reproducing with the
+    grip limit lifted to 1e9 N): on the swung body it plays finite through the impact, removed with the swing law's
+    body rather than fixed directly (A3 item 5). The drive's step convergence at 1 mm now passes (0.0188 against
+    0.02). Gugan 5's stop band passes at the AC stop's own grip.
+  - For P2b.2b.2c.3b (A3): the GC stop's head at 0.742 m/s at the impact's end (A1 allows no GC retune); retire
+    `armMass` from `ratioFit` and the profile; a bounded roll damper on the hold; the late re-hit measured on the
+    integrated follow-through; the full roll at λ 0.5 off the face late, the pass roll's braked impact-off-face
+    (20 runs at drive −1, 8 at −0.5), the pushed, braked AC stop's turf damage and the AC stop's hit-through damage as
+    envelope cases, the faults past the envelope's edge; the AC stop's two-branch step flip at the default gap
+    (spread 0.6150, `it.fails`; the band passes on the high branch); the user's hypotheses, on the jab, that the weak
+    lower grip lets the mallet die on rebound and that a lower bottom hand gives the leverage to stop it (does
+    min(γ_T, g_B) in `gripCouple` underrate the lever?); a softer hold onset (the hold's settle 136.6 ms against
+    120 ms, `it.fails`); the couple's share of C as an effort cost (A2 item 3); the ease at a push's end (A2 item 8).
+  - The drive's `guideEffort` is near-inert at the hands together (ratio within 2e-5 over 0–1); its cause untraced.
+  - Deferred minors: `backswingFor`'s bracket reads the preset's `slopeHold`, not the shot's; `requiredCouple`
+    roughly doubles a roll plan's per-sample work; the probe's copy of `effectOf`; `hands.test`'s loose lower bound.
+  - From P2b.2b.2c.2d, unchanged: the routes, the guide's sustained push after contact (now at 1 on the drive), the
+    re-contact's measure and joining, the push's growth with power and its recruitment law, Gugan's jab qualifier,
+    the touching stops, the lawn's pace.
+- **Tests:** `npm test` 1357 → 1419 passed, 0 → 1 expected fail (the hold's settle), 13 → 14 skipped, 1 todo; the slow
+  suite 1366 → 1429 passed, 2 → 3 expected fail (the hold's settle, the AC stop's convergence at the default gap,
+  Gugan's jab qualifier; the drive's at 1 mm now passes), 2 skipped, 1 todo.
+- **Public:** `ShotSetup.stroke` gains `grip`, `lean`, `feet` and `slopeHold`; `SwingShape.slopeHold`; `SLOPE_HOLD`
+  and `HAND_BREADTH` (`swing/profile.ts`); `StrokeMode` and `SwingDrive.mode` removed; `ENGINE_VERSION` 0.18.0.
+
 ## Provisional numbers — where each is confirmed
 
 | Spec number | Confirmed in | How |
 |---|---|---|
 | Safari / iPadOS 16+ floor, last two majors of Chrome/Edge/Firefox | P1 Task 1 | Explicit Vite `build.target`; revisited in P4 when Playwright WebKit runs |
 | 1 mm cross-engine rest-position agreement | P1 (design), P5 (test) | P1 restricts engine code to IEEE-exact operations (`+ − × ÷ √`), enforced by lint, which should make results bit-identical across engines; P5's cross-engine test measures it |
-| The stroke ratios' tolerances: Gugan 5's stated uncertainty, the drive 4.23 ± 0.2 and the AC stop 7.15 ± 0.6 at 3 m/s (P2b.2b.2c.2, `reference/swing.json` `ratioTargets`; they replace the provisional ±15 %) | P2b.2b.2c.2b (checked, not fitted); P2b.2b.2c.2c and P2b.2b.2c.2d (re-measured) | The tolerances stand. P2b.2b.2c.2b set the fit aside (nothing fitted) and played Gugan 5's strokes like for like (3 m/s, his effective mass 2.30 ball masses, the drive with no push): the drive within 4.23 ± 0.2 at gaps 1.5 and 1.9 mm (4.19, 4.17), 4.47 at the 1 mm default and 5.16 touching; the AC stop within 7.15 ± 0.6 at 1, 1.5 and 1.9 mm for jabs to 6.5 mm (7.03 at 1 mm, jab 0), 6.07 touching. Re-measured on P2b.2b.2c.2c's face and ball–ball laws (gate section J and gate D's clarification): the drive within 4.23 ± 0.2 at 0.75, 1, 1.5 and 1.9 mm (4.29, 4.19, 4.18, 4.16), 6.48 touching; the AC stop at jab 0 within 7.15 ± 0.6 at 0.5, 1.5 and 1.9 mm (7.22, 7.08, 7.00), 6.48 at 1 mm (within from a jab of 1.5 mm), 6.50 at the 0.75 mm default (within from a jab of 1.0 mm), 7.76 touching. The stop's landing and slide-to-roll share is still its leading suspect (+32 to +45 % over the jab at 1 mm). Re-measured on P2b.2b.2c.2d's defaults (gate 2b H), at 0.75 mm: the drive 4.2947 (`guideEffort` 0); the AC stop at its no-damage stance (lean −5°, 22.5 mm below the face's centre) 6.6610 at jab 0, rising to 7.1502 at 4 mm and 7.2213 at 6.5 mm |
+| The stroke ratios' tolerances: Gugan 5's stated uncertainty, the drive 4.23 ± 0.2 and the AC stop 7.15 ± 0.6 at 3 m/s (P2b.2b.2c.2, `reference/swing.json` `ratioTargets`; they replace the provisional ±15 %) | P2b.2b.2c.2b (checked, not fitted); P2b.2b.2c.2c and P2b.2b.2c.2d (re-measured) | The tolerances stand. P2b.2b.2c.2b set the fit aside (nothing fitted) and played Gugan 5's strokes like for like (3 m/s, his effective mass 2.30 ball masses, the drive with no push): the drive within 4.23 ± 0.2 at gaps 1.5 and 1.9 mm (4.19, 4.17), 4.47 at the 1 mm default and 5.16 touching; the AC stop within 7.15 ± 0.6 at 1, 1.5 and 1.9 mm for jabs to 6.5 mm (7.03 at 1 mm, jab 0), 6.07 touching. Re-measured on P2b.2b.2c.2c's face and ball–ball laws (gate section J and gate D's clarification): the drive within 4.23 ± 0.2 at 0.75, 1, 1.5 and 1.9 mm (4.29, 4.19, 4.18, 4.16), 6.48 touching; the AC stop at jab 0 within 7.15 ± 0.6 at 0.5, 1.5 and 1.9 mm (7.22, 7.08, 7.00), 6.48 at 1 mm (within from a jab of 1.5 mm), 6.50 at the 0.75 mm default (within from a jab of 1.0 mm), 7.76 touching. The stop's landing and slide-to-roll share is still its leading suspect (+32 to +45 % over the jab at 1 mm). Re-measured on P2b.2b.2c.2d's defaults (gate 2b H), at 0.75 mm: the drive 4.2947 (`guideEffort` 0); the AC stop at its no-damage stance (lean −5°, 22.5 mm below the face's centre) 6.6610 at jab 0, rising to 7.1502 at 4 mm and 7.2213 at 6.5 mm. Re-measured on P2b.2b.2c.3a's unified set-up (gate stage 2): the drive at the hands together 4.2617 at 0.75 mm (`guideEffort` 0); the AC stop, its grip retuned under amendment A1 (hands together, γ_T 1, g_B 0.1), 6.6029 at 0.75 mm and 7.6089 at gap 0, on the step-sensitive high branch at 0.75 mm |
 | The croquet stroke's default gap, 0.75 mm (P2b.2b.2c.2c, `DEFAULT_CROQUET_GAP`, gate D: "Move to 0.75 mm", then "Keep 0.75 mm"; was 1 mm, P2b.2b.2c.2b, the CA's measured gap for its nominally touching strokes, Gugan 4, Table 5, row 2 and note (i)) | Open (P2b.2b.2c.2c's carried touching stops) | A deliberate fit to the touching stops' own figures, not a measured gap: in the sweep 0.75 mm passes 5 of the 7 judged figures against 1 mm's 4, a margin within the model's step noise (1 mm's C20S v₂/w₁ miss 0.0006 against a step spread of about 0.002), and Gugan 5's stop at 0.75 mm passes only from a jab of 1.0 mm, by 0.0025, within its step spread of 0.039. It stands in for the matched time scales' cause until the touching stops are fixed |
 | The strike's read-out window, `STRIKE_WINDOW` 15 ms (P2b.2b.2c.2b, `scripts/ratioFit.ts`; a read-out definition, not physical: the smallest round value past B2GS's double tap at 10.8 ms, excluding a follow-through's approach at 87.3 ms and the drive's late catch at about 109 ms) | P2b.2b.2c.2c and P2b.2b.2c.2d (each re-checked) | Kept at 15 ms on P2b.2b.2c.2c's moved taps (gate F, §7.7: "Keep 15 ms (Recommended)"), and a test now pins its boundary. Re-checked on P2b.2b.2c.2d's moved defaults and kept (gate 2b M: "Keep 15 ms, record (Recommended)"): on the follow-through grid 9 runs have a contact straddling the window's end and 42 one beginning beyond it (the earliest at 15.025 ms, a pass roll), the brake sweeps none straddling; the AC stop's ruled stance touches the turf from about 16.5 ms, after it. The window sets only when the ratio is read; the re-contact judging does not use it |
 | The face's contact time T(U) = t0 · (U/u0)^q, t0 0.579 ms at u0 3.26 m/s, q −0.23 (P2b.2b.2c.2c, `reference/contact.json` `faceContactTimeFit`; Gugan 4, Table 2, A2D's 0.75 ms on video converted to the law's force-on parameter by Hertz similarity, the clock from first touch; the exponent Gugan 2000's) | Open | Held out: A3D 0.622 and A4D 0.555 ms against 0.60 ± 0.1 pass; A1D 1.421 ms against 1.00 misses, recorded as a threshold effect at 0.76 m/s; a q fit over all four columns gives +0.12, the wrong sign for Hertz, and was not taken (gate A2). A better-resolved measurement of the face's contact time on a croquet ball, slow strokes especially |
@@ -2615,8 +2731,9 @@ words, and the plan's decisions are in the design's amendments. "Old → new" th
 | The re-contact's speed effect, `EFFECT_SPEED` 10 % (P2b.2b.2c.2d, `reference/laws.json` 29.2.5 `thresholds.effectSpeed`; ruled by the user at gate 1, Q5b "10 % (Recommended)", from the spread: 1.41, 10.87 and 61.78 % at 10, 50 and 90 % on the 950-run grid) | Open | The user's reading, not the Law's: 29.2.5's test is visual, and no Law or commentary gives an effect test for 29.1.6.1 (C29.4, C29.11.5). With it the grid's 29.1.6.1 runs fall 922 → 433 at the ruling and 423 on the moved defaults. A ruling or referees' practice on what change to the ball makes a re-contact a fault |
 | The re-contact's direction effect, `EFFECT_ANGLE` 2° (P2b.2b.2c.2d, `reference/laws.json` 29.2.5 `thresholds.effectAngle`; ruled by the user at gate 1, Q5c "2° (Recommended)", from the spread: 0.0008°, 0.2796° and 5.1472° at 10, 50 and 90 % on the 950-run grid) | Open | As `EFFECT_SPEED`, the user's reading. The pass roll's first micro-hits turn the ball 28–31° and 5–12° but join the strike (gate 1 Q5a′); the double tap past the parting and the late catches stay under 0.03° |
 | The planner's default timing per stroke type, `DEFAULT_TIMING`: every type `ON_TIME` (P2b.2b.2c.2d, `swing/profile.ts`; gate 2a Q1, "Stance only": the AC stop's brake on time, the player's early initiation "more cognitive than active") | P4 (the planner chooses per shot) | An early brake on the AC stop (section E: −2.5 ms passes at every strength, 7.197 to 7.547) is recorded, not adopted. A player's measured brake onset |
-| The AC stop's stance, lean −5° at `up` −0.0225 m, its default backswing refitted to 0.4485991348057018 m (P2b.2b.2c.2d, `swing/profile.ts`; was −4° at −0.020 m; the user's rule, 2026-10-25, "it is okay for the mallet to rub on the lawn and disturb the grass. It should not damage the turf", then "22.5 mm below centre (Recommended)") | Open (a calibration against Gugan 5, stated as such) | Gugan 5's stop 6.6610 (band 6.55–7.75), 0.49 below 7.15, the no-damage stance's cost; no `impact-head-deep` or `turf-yield` on Gugan's or the default mallet, the head touching the turf from about 16.5 ms, after the strike window, at 29–48 N. Gate 1's −6° (7.157 on the mallet solved at −4°) went 3.6 mm deep and was superseded. The feet are not modelled; the hands' offset stands in for them. A measured stop stance, or the user's flattening hypothesis modelled |
-| The drive's bottom-hand guide, `guideEffort` 0.75 (P2b.2b.2c.2d, `swing/profile.ts`; was 1; gate 2a Q2, "0.75 (Recommended)": the largest on a 0.25 grid whose canonical drive has no re-contact after the parting) | Open | The canonical drive's ratio 2.435 → 3.753, its late catch at 96.4 ms (+49 %) gone; Gugan 5's drive keeps 0 (4.2947), so the calibration is unchanged. A decay of the guide after contact, argued from a source or a fuller account, is the open item |
+| The AC stop's stance, lean −5° at `up` −0.0225 m, its default backswing refitted to 0.4485991348057018 m (P2b.2b.2c.2d, `swing/profile.ts`; was −4° at −0.020 m; the user's rule, 2026-10-25, "it is okay for the mallet to rub on the lawn and disturb the grass. It should not damage the turf", then "22.5 mm below centre (Recommended)") | Open (a calibration against Gugan 5, stated as such) | Gugan 5's stop 6.6610 (band 6.55–7.75), 0.49 below 7.15, the no-damage stance's cost; no `impact-head-deep` or `turf-yield` on Gugan's or the default mallet, the head touching the turf from about 16.5 ms, after the strike window, at 29–48 N. Gate 1's −6° (7.157 on the mallet solved at −4°) went 3.6 mm deep and was superseded. The feet are not modelled; the hands' offset stands in for them. P2b.2b.2c.3a: the feet are an input (`stroke.feet`), and the stop's grip retuned under amendment A1 to the hands together (bottom 0.45 → 0.717 m, γ_T 0.1 → 1, g_B 0.1), the stance kept: Gugan 5's stop 6.6029, no turf damage in the impact or the follow-through. A measured stop stance, or the user's flattening hypothesis modelled |
+| The drive's bottom-hand guide, `guideEffort` 1 (P2b.2b.2c.3a, `swing/profile.ts`; gate stage 2 ruling 2, "Accept grip, set 1 (Recommended)", as on every preset; was 0.75, P2b.2b.2c.2d gate 2a Q2, the largest on a 0.25 grid whose canonical drive had no re-contact after the parting) | Open | With the hands together no `guideEffort` on the grid re-contacts after the parting (setupProbe section D), and the canonical drive's ratio is 3.9253 at every one; the near-inertness is untraced. Gugan 5's drive keeps 0, so the calibration is unchanged. A decay of the guide after contact, argued from a source or a fuller account, is the open item |
+| A hand's breadth, `HAND_BREADTH` 3.46 in, 87.9 mm (P2b.2b.2c.3a, `swing/profile.ts`; the men's 50th percentile of ANSUR II, Gordon et al. 2014, as the NCSU Ergonomics Center tabulates it, `reference/sources/README.md`; user ruling 2026-10-28) | P3 (proposed; the player's body) | The breadth across the palm, read as the span one hand takes on the shaft: an assumption. It sets the drive's and the AC stop's bottom hand, 0.805 − `HAND_BREADTH`. Entered by the player, or measured on a grip |
 | ±5 % / ±2 % calibration round trip | P3 | Round-trip test |
 | ≤ 2,000-character links | P4 | Measured on worst-case setup plus profile |
 | ≤ 200 ms simulation, ≤ 250 KB gzipped | P5 | Throttled CI measurement and bundle report |
@@ -2643,3 +2760,22 @@ words, and the plan's decisions are in the design's amendments. "Old → new" th
   axis through the two hemispheres' centres), its orientation
   integrated by the renderer from the engine's angular velocity, so the skid before a roll, a roll's turnover and
   spin about the vertical axis become visible. The engine already carries the spin; no physics change is needed.
+- **The side-on stroke view, after the envelope is known** (user, 2026-10-26: "whenever we demonstrate a shot, I would
+  like to have a side-on rendering of the stroke. This doesn't have to be held by real hands, but the mallet should be
+  rendered swinging through the air as it hits the balls. This would allow me … initially to validate the strokes and
+  then later it would be an excellent training aid for learning how changing the envelope affects the contact
+  movement.") — the mallet (head and shaft, no body) drawn side-on through the whole swing and the impact with the
+  balls, from the engine's `SwingTrajectory` and the impact's states; first a validation view for the user, then a
+  training aid showing how a change of set-up within the envelope changes the contact.
+- **The special shots, together, after the unified set-up** (user, 2026-10-26) — set-up cases the same inputs (grip,
+  lean, feet, strike, push through, after first contact) should produce, nothing scripted:
+  - the jump shot: "the ball is intentionally played downward into the ground with enough force for the elastic force
+    of the lawn to make the ball jump forward. Here the hands are together but they often move somewhat down the
+    mallet with the feet further forward"; it relies on the turf's rebound;
+  - the glancing shot near a hoop (name not yet found): "the mallet is driven towards the ground and glances the
+    striker's ball. Sort of cutting it forwards. This is only useful when the striker's ball is very close to the hoop
+    and it needs to be played towards the hoop without forming a push shot." Candidates to check, none confirmed: the
+    stab shot (Croquet England's video, a hampered-backswing alternative to the jump and hammer shots), and the crush
+    and hampered-hoop material (Oxford Croquet, "Crush Shots"; Croquet England, "Close hampered hoop shots");
+  - a further type the user has yet to recall (possibly the hammer shot);
+  - other special shots likewise.

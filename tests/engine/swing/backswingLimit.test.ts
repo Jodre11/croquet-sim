@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { pendulumOf, swungBody } from "../../../src/engine/impact/track";
 import { planStroke } from "../../../src/engine/swing/buildContact";
-import { MAX_BACK_ANGLE, planDownswing, type DownswingInput } from "../../../src/engine/swing/downswing";
+import { planDownswing, type DownswingInput } from "../../../src/engine/swing/downswing";
 import { ON_TIME, defaultProfile } from "../../../src/engine/swing/profile";
 import type { ShotSetup, SwingProfile } from "../../../src/engine/swing/types";
 import { STANDARD_GRAVITY } from "../../../src/engine/world";
@@ -25,7 +25,10 @@ const LEVER = RHO + TOP;
 function input(top: number, o: Partial<DownswingInput>): DownswingInput {
     const pendulum = pendulumOf(TEST_HEAD, swungBody(TEST_HEAD, TEST_HANDS, top), top, STANDARD_GRAVITY);
     return {
-        mode: "swing",
+        slopeHold: 0,
+        // A free swing asks nothing of the grip's couple (P2b.2b.2c.3a design §4.1).
+        couple: 0,
+        grip: { top: 1, bottom: 1, limit: TEST_HANDS.gripLimit, spread: 0 },
         aim: { x: 1, y: 0, z: 0 },
         thetaContact: THETA_C,
         pivot: { x: 0, y: 0, z: 0.9 },
@@ -35,6 +38,7 @@ function input(top: number, o: Partial<DownswingInput>): DownswingInput {
             pendulumShare: SHARE,
             handAngle: 0.5,
             handTempo: { slow: 0.4, fast: 0.2 },
+            slopeHold: 0,
         },
         backswing: 0.3,
         backswingLimit: LIMIT,
@@ -48,7 +52,6 @@ function input(top: number, o: Partial<DownswingInput>): DownswingInput {
 /** The backswing (m) that takes the shaft of lever `lever` to `angle` from vertical. */
 const heightAt = (lever: number, angle: number): number => (lever * (Math.cos(THETA_C) - Math.cos(angle))) / SHARE;
 const plan = (h: number) => planDownswing(input(TOP, { backswing: h }));
-const planCarry = (h: number) => planDownswing(input(TOP, { backswing: h, mode: "carry" }));
 const hAt = (angle: number): number => heightAt(LEVER, angle);
 
 /** The head centre's height at the planned top above its height at contact, for the backswing at the limit. */
@@ -92,12 +95,6 @@ describe("the backswing's limit (design §5, §8.1.4)", () => {
         expect(riseAtLimit(LONG_TOP)).toBeGreaterThan(riseAtLimit(TOP));
         // The plan sits 1e-9 (relative) inside the limit, so the figure agrees to 8 places, not 12.
         expect(riseAtLimit(TOP)).toBeCloseTo((LEVER * (Math.cos(THETA_C) - Math.cos(LIMIT))) / SHARE, 8);
-    });
-
-    it("keeps carry mode's limit at MAX_BACK_ANGLE", () => {
-        // Beyond the body's 60° but inside horizontal: carry mode plans it.
-        expect(() => planCarry(hAt(MAX_BACK_ANGLE) * (1 - 1e-9))).not.toThrow();
-        expect(() => planCarry(hAt(MAX_BACK_ANGLE) * (1 + 1e-9))).toThrow(/beyond/);
     });
 
     it("rejects a backswing limit outside (0, π/2]", () => {

@@ -39,7 +39,6 @@ import type {
     ImpactResult,
     ImpactRun,
     MalletHead,
-    StrokeMode,
     TrackDrive,
 } from "./types";
 
@@ -132,12 +131,13 @@ function validateForce(drive: ForceDrive): void {
 
 /**
  * Checks a tracked drive's downswing (P2b.2b.2a design §3): a negative release; a finite top, a non-negative span;
- * finite hands, Δ_h in the swing plane, Δ_z vertical and the Hermite term T vertical (P2b.2b.2b.2b design §4.1); in
- * carry mode a positive tempo with release = −tempo and no table; in swing mode T zero, no tempo, a positive span and
- * a finite table of θ, ω and α of one length, at least 2, whose samples every FREE_STEP from the release end at
- * contact.
+ * finite hands, Δ_h in the swing plane, Δ_z vertical and the Hermite term T vertical (P2b.2b.2b.2b design §4.1). Then
+ * by its representation (P2b.2b.2c.3a design §4.1): with a tempo, the closed form, a positive tempo with release =
+ * −tempo and no table; without one, a positive span and a finite table of θ, ω and α of one length, at least 2, whose
+ * samples every FREE_STEP from the release end at contact, and the hands' progress, if given, finite and of the
+ * table's length.
  */
-function validateDownswing(down: Downswing, mode: StrokeMode, n: Vec3): void {
+function validateDownswing(down: Downswing, n: Vec3): void {
     finiteNumber(down.release, "arc.downswing.release");
     if (!(down.release < 0)) {
         fail(`arc.downswing.release must be negative (got ${down.release})`);
@@ -158,30 +158,33 @@ function validateDownswing(down: Downswing, mode: StrokeMode, n: Vec3): void {
     if (!(down.tangent.x === 0 && down.tangent.y === 0)) {
         fail("arc.downswing.tangent must be vertical");
     }
-    if (mode === "carry") {
-        const { tempo } = down;
-        if (tempo === null || !(tempo > 0) || down.release !== 0 - tempo || down.theta.length > 0) {
-            fail("arc.downswing must be closed-form in carry mode: a positive tempo, release = −tempo, no table");
+    const { tempo, handsProgress } = down;
+    if (tempo !== null) {
+        if (!(tempo > 0) || down.release !== 0 - tempo || down.theta.length > 0 || handsProgress !== undefined) {
+            fail("arc.downswing with a tempo must be closed-form: a positive tempo, release = −tempo, no table");
         }
         return;
     }
-    if (down.tangent.z !== 0) {
-        fail("arc.downswing.tangent must be zero in swing mode");
-    }
     const count = down.theta.length;
-    if (
-        down.tempo !== null ||
-        !(down.span > 0) ||
-        count < 2 ||
-        down.omega.length !== count ||
-        down.alpha.length !== count
-    ) {
-        fail("arc.downswing must be tabulated in swing mode: no tempo, a positive span, θ, ω and α of one length ≥ 2");
+    if (!(down.span > 0) || count < 2 || down.omega.length !== count || down.alpha.length !== count) {
+        fail("arc.downswing without a tempo must be tabulated: a positive span, θ, ω and α of one length ≥ 2");
     }
     for (let i = 0; i < count; i++) {
         finiteNumber(down.theta[i] as number, `arc.downswing.theta[${i}]`);
         finiteNumber(down.omega[i] as number, `arc.downswing.omega[${i}]`);
         finiteNumber(down.alpha[i] as number, `arc.downswing.alpha[${i}]`);
+    }
+    if (handsProgress !== undefined) {
+        for (const [key, values] of Object.entries(handsProgress)) {
+            if (values.length !== count) {
+                fail(
+                    `arc.downswing.handsProgress.${key} must have the table's ${count} samples (got ${values.length})`,
+                );
+            }
+            for (let i = 0; i < count; i++) {
+                finiteNumber(values[i] as number, `arc.downswing.handsProgress.${key}[${i}]`);
+            }
+        }
     }
     // The last full step lies within one FREE_STEP before contact, give or take END_TOLERANCE of a step.
     const last = down.release + (count - 2) * FREE_STEP;
@@ -192,13 +195,15 @@ function validateDownswing(down: Downswing, mode: StrokeMode, n: Vec3): void {
 
 /**
  * Checks a tracked drive (P2b.2b.1 design §3.6), in this order: every vector and angle finite; a positive radius,
- * windows and dip duration; non-negative start times, contact time and dip start; a non-negative dip depth; a mode of
- * "swing" or "carry"; a non-negative reach; aim a horizontal unit vector within UNIT_TOLERANCE; a positive period, a
+ * windows and dip duration; non-negative start times, contact time and dip start; a non-negative dip depth; a
+ * non-negative reach; aim a horizontal unit vector within UNIT_TOLERANCE; a positive period, a
  * non-negative damping ratio and relaxation time; the bottom hand between the socket and the top hand, both grips in
- * (0, 1], a non-negative arm mass and reach slack, a guide effort in [0, 1]; a pendulumAt, pendulumEffort and
- * handArcLow in [0, 1]; a handArcRadius above the reach; a flex whose values (its hold's too, if any) are positive, its
- * damping ratio at most 1; a positive pendulumForce (P2b.2b.2b.2b design §6), pushForce, pushResponseTime, a positive
- * gripLimit (P2b.2b.2b.3 design §5) and every hand–arm chain value (its gate rulings, 2026-10-11); the pivot's
+ * (0, 1], a non-negative arm mass and reach slack, a guide effort in [0, 1]; a pendulumAt, pendulumEffort, handArcLow
+ * and slopeHold in [0, 1]; a handArcRadius above the reach; a lowPoint, if given, finite and within
+ * (handReach − handArcRadius, handArcRadius); a flex whose values (its hold's too, if any) are
+ * positive, its damping ratio at most 1; a positive pendulumForce (P2b.2b.2b.2b design §6), pushForce,
+ * pushResponseTime, a positive gripLimit (P2b.2b.2b.3 design §5) and every hand–arm chain value (its gate rulings,
+ * 2026-10-11); the pivot's
  * velocity and acceleration in the swing plane, their component along the pitch axis within UNIT_TOLERANCE of their
  * size; and a downswing, if given, well formed (validateDownswing). The head need not start on the path.
  */
@@ -223,9 +228,6 @@ function validateTrack(drive: TrackDrive): void {
     notBefore(arc.contactAt, "arc.contactAt");
     notBefore(arc.dip.start, "arc.dip.start");
     friction(arc.dip.depth, "arc.dip.depth");
-    if (arc.mode !== "swing" && arc.mode !== "carry") {
-        fail(`arc.mode must be "swing" or "carry" (got ${arc.mode})`);
-    }
     friction(arc.handReach, "arc.handReach");
     const { aim } = arc;
     if (!(Math.abs(aim.z) <= UNIT_TOLERANCE && Math.abs(dot(aim, aim) - 1) <= UNIT_TOLERANCE)) {
@@ -248,6 +250,7 @@ function validateTrack(drive: TrackDrive): void {
         ["arc.pendulumAt", arc.pendulumAt],
         ["arc.pendulumEffort", arc.pendulumEffort],
         ["arc.handArcLow", arc.handArcLow],
+        ["arc.slopeHold", arc.slopeHold],
     ] as const) {
         finiteNumber(value, name);
         if (!(value >= 0 && value <= 1)) {
@@ -255,10 +258,20 @@ function validateTrack(drive: TrackDrive): void {
         }
     }
     finiteNumber(arc.handArcRadius, "arc.handArcRadius");
-    // Checked in swing mode too, where the arc is never read: a drive that fails it fails either way. Changing that
-    // would be a behaviour change and needs its own ruling.
+    // Checked for a push of no length too, where the arc is never read: a drive that fails it fails either way.
+    // Changing that would be a behaviour change and needs its own ruling.
     if (!(arc.handArcRadius > arc.handReach)) {
         fail(`arc.handArcRadius must exceed arc.handReach (got ${arc.handArcRadius} and ${arc.handReach})`);
+    }
+    if (arc.lowPoint !== undefined) {
+        finiteNumber(arc.lowPoint, "arc.lowPoint");
+        // The push reads the arc from contact (s = 0) to its length (s = handReach), at s − lowPoint.
+        if (!(arc.lowPoint > arc.handReach - arc.handArcRadius && arc.lowPoint < arc.handArcRadius)) {
+            fail(
+                "arc.lowPoint must lie in (handReach − handArcRadius, handArcRadius) = " +
+                    `(${arc.handReach - arc.handArcRadius}, ${arc.handArcRadius}) m (got ${arc.lowPoint})`,
+            );
+        }
     }
     const { hold, ...flexValues } = hands.flex;
     const held = hold === null ? [] : Object.entries(hold).map(([key, value]) => [`hold.${key}`, value] as const);
@@ -289,7 +302,7 @@ function validateTrack(drive: TrackDrive): void {
         fail("arc.pivotAcceleration must lie in the swing plane");
     }
     if (arc.downswing !== undefined) {
-        validateDownswing(arc.downswing, arc.mode, n);
+        validateDownswing(arc.downswing, n);
     }
 }
 
@@ -449,16 +462,16 @@ export function validateImpact(
 /**
  * Solves every law and places each ball at its static sink on the bed (turfBed.ts staticSink, at its own position),
  * where a fresh bed's cells carry exactly its weight; each ball's entry carries its bed's law. A tracked drive is
- * prepared once (prepareTrack): its windows' end states, its reach, its swung body and, in swing mode, its free
- * pendulum's table. Touching balls stay touching: their sinks differ only with their offsets on the lattice, by up to
- * about 8 µm on the default lawn, so they part by at most Δz²/(4R), about 3e-10 m. Input must have passed
- * validateImpact. A ball touching an obstacle, which validateImpact accepts within CONTACT_TOLERANCE, is moved
- * horizontally outward until its penetration is at most zero (at most CONTACT_TOLERANCE): a closed pair from t = 0
- * would hold the impact open against turf friction and fake a crush on a legal stroke (P2b.2a design §4). Correcting
- * for one obstacle can push the ball back into another, so the ordered pass over the obstacles repeats until a pass
- * moves nothing, at most PLACEMENT_PASSES times; a ball clear after the first pass is not moved again. Throws an Error
- * if the last pass still moved a ball, i.e. the placement did not settle. A ball's sink comes from `sink`
- * (validateImpact's solver, so that it is solved once).
+ * prepared once (prepareTrack): its windows' end states, its reach, its swung body and, wherever the slope is not fully
+ * held (λ < 1), its free pendulum's table. Touching balls stay touching: their sinks differ only with their offsets
+ * on the lattice, by up to about 8 µm on the default lawn, so they part by at most Δz²/(4R), about 3e-10 m. Input
+ * must have passed validateImpact. A ball touching an obstacle, which validateImpact accepts within
+ * CONTACT_TOLERANCE, is moved horizontally outward until its penetration is at most zero (at most CONTACT_TOLERANCE):
+ * a closed pair from t = 0 would hold the impact open against turf friction and fake a crush on a legal stroke
+ * (P2b.2a design §4). Correcting for one obstacle can push the ball back into another, so the ordered pass over the
+ * obstacles repeats until a pass moves nothing, at most PLACEMENT_PASSES times; a ball clear after the first pass is
+ * not moved again. Throws an Error if the last pass still moved a ball, i.e. the placement did not settle. A ball's
+ * sink comes from `sink` (validateImpact's solver, so that it is solved once).
  */
 export function prepareImpact(
     contact: ContactState,

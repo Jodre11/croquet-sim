@@ -1,6 +1,6 @@
 /**
- * The hands' flex (P2b.2b.2b.2b design §3.1): from contact on, in carry mode, each hand applies its feed-forward plus a
- * three-dimensional spring-damper to its point on the intended path. Its stiffness rises linearly with the force the
+ * The hands' flex (P2b.2b.2b.2b design §3.1): from contact on, on every stroke, each hand applies its feed-forward plus
+ * a three-dimensional spring-damper to its point on the intended path. Its stiffness rises linearly with the force the
  * arm applies voluntarily (Perreault, Kirsch and Crago 2004), driven by the feed-forward and never by the spring's own
  * force, so it has no feedback loop. Its damping holds a constant damping ratio on the arm's endpoint mass (Perreault
  * 2004; Fortineau et al. 2023). The numbers are reference/contact.json's arm values. Through the push the arm holds its
@@ -35,6 +35,14 @@ export function flexGains(law: FlexLaw, force: number, hold = 0): FlexGains {
         stiffness: stiffness + (heldStiffness - stiffness) * weight,
         damping: damping + (law.hold.damping - damping) * weight,
     };
+}
+
+/**
+ * `gains` for a grip γ in (0, 1]: k·γ and c·√γ (P2b.2b.2c.3a A2 item 4), as the firm grip's coupling scales with its
+ * grip (handGains), so a loose hand both pulls and damps less. At γ = 1 each gain keeps its bits.
+ */
+export function gripGains(gains: FlexGains, grip: number): FlexGains {
+    return { stiffness: gains.stiffness * grip, damping: gains.damping * Math.sqrt(grip) };
 }
 
 /**

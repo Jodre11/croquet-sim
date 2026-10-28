@@ -26,8 +26,8 @@ const finiteBall: BallState = { position: vec3(1, 1, 0.0635), velocity: vec3(0, 
 /**
  * The roadmap's carried defect: buildContact.test.ts's fat stroke with the drive's coupling period at 0.01 s.
  * P2b.2b.2b.3's grip limit (testProfile's 100000 N) bounds it, so the setup lifts the limit to 1e9 to expose the stiff
- * grip's blow-up: the head's position and orientation go NaN at about t = 0.00025 s in the integrator, while the
- * returned result stays finite.
+ * grip's blow-up: the head's position and orientation went NaN at about t = 0.00025 s in the integrator, while the
+ * returned result stayed finite.
  */
 function stiffFat() {
     const contact = buildContact(
@@ -63,10 +63,28 @@ function stiffFat() {
 }
 
 describe("the finite-state guard (design §3)", () => {
-    it("throws a RangeError naming the step on the stiff-grip fat stroke", () => {
-        const fat = stiffFat();
-        expect(() => simulateImpact(fat, { blue: BLUE }, WORLD)).toThrow(RangeError);
-        expect(() => simulateImpact(fat, { blue: BLUE }, WORLD)).toThrow(
+    it("plays the stiff-grip fat stroke finite", () => {
+        // P2b.2b.2c.3a: the swung body on every stroke (was a RangeError, the head non-finite at step 50, 65.8 ms
+        // before contact). The blow-up was the firm grip's, before contact, on the swing law's swung body with the arm
+        // mass rigid at the top grip; the law before contact is unchanged, and on the hands' skin (carryBody) the same
+        // 0.01 s coupling stays finite through the impact (turf-yield, impact-head-deep, turf-lift).
+        expect(() => simulateImpact(stiffFat(), { blue: BLUE }, WORLD)).not.toThrow();
+    });
+    it("throws a RangeError naming the step on a head gone non-finite in the impact", () => {
+        // In place of the fat stroke above: a broken advance overflows the hands' path inside the impact. P2b.2b.2c.3a:
+        // the advance on the push (was from the planned contact, which the push's cap at handReach now tames: traced,
+        // its travel passes 0.3 m 4.1e-25 s after its start, before the first step, so the path stops there before
+        // its 1e300 m/s² is read). From 0.05 s after contact its start falls on a step (traced: the push ends one float
+        // later), where the path reads that acceleration; the push's pendulum phase starts there too, and the impact
+        // waits for the pendulum phase, so the overflow falls inside it.
+        const world = defaultWorld();
+        const setup = canonicalSetup("single-ball", { world, stroke: { handReach: 0.3 } });
+        const contact = buildContact(setup, world);
+        const drive = contact.drive as TrackDrive;
+        const advance = { start: drive.arc.contactAt + 0.05, speed: 1e300, accel: 1e300 };
+        const broken = { ...contact, drive: { ...drive, arc: { ...drive.arc, advance } } };
+        expect(() => simulateImpact(broken, setup.balls, world)).toThrow(RangeError);
+        expect(() => simulateImpact(broken, setup.balls, world)).toThrow(
             /went non-finite .* s from contact, at step \d+ \(impact\)/,
         );
     });
@@ -78,14 +96,17 @@ describe("the finite-state guard (design §3)", () => {
     it("catches a head gone non-finite in the follow-through at the next step", () => {
         // A hand-built arc bypasses planStroke's check of the advance. The hands' 1e300 m/s² from 0.05 s after contact,
         // after the impact's end, overflows the free pendulum's table there, so the head goes non-finite in the
-        // follow-through. (A NaN speed would not: it leaves the hands' velocity and acceleration finite, and after
-        // contact swing mode's hands read only those.)
+        // follow-through. (A NaN speed was not enough under the swing law: it left the hands' velocity and
+        // acceleration finite, and after contact that law's hands read only those.) P2b.2b.2c.3a: the advance on the
+        // push (was the arc as planned): the push brings its pendulum phase to the advance's start, and the impact
+        // waits for it, so the overflow fell inside the impact (the case above). A pendulum phase from contact
+        // (pendulumAt 0) lets the impact end first, as it did.
         const world = defaultWorld();
         const setup = canonicalSetup("single-ball", { world, stroke: { handReach: 0.3 } });
         const contact = buildContact(setup, world);
         const drive = contact.drive as TrackDrive;
         const advance = { start: drive.arc.contactAt + 0.05, speed: 1e300, accel: 1e300 };
-        const broken = { ...contact, drive: { ...drive, arc: { ...drive.arc, advance } } };
+        const broken = { ...contact, drive: { ...drive, arc: { ...drive.arc, advance, pendulumAt: 0 } } };
         expect(() => simulateStroke(broken, setup.balls, world)).toThrow(RangeError);
         expect(() => simulateStroke(broken, setup.balls, world)).toThrow(/at step \d+ \(follow-through\)/);
     });

@@ -1,0 +1,335 @@
+# P2b.2b.2c.3b — The Rolls' Push Map: Design
+
+Follows P2b.2b.2c.3a, the unified set-up (`specs/2026-10-26-p2b2b2c3a-unified-setup-design.md`; amendment A1).
+
+Brainstormed 2026-10-26 from the roadmap's P2b.2b.2c.3 entry and "P2b.2b.2c.2d outcomes (2026-10-25)", "Carried open
+items". Every statement attributed to the user is theirs, from the brainstorm; everything else is marked as the design's
+call or left to the builder (§12). The user's quotes were dictated; transcription slips are corrected ("exhilaration"
+→ acceleration, "Ray" and "role" → roll, "past role" → pass roll, "bulls" → balls, "stikers" → striker's) and one
+missing verb is bracketed.
+
+## Intent
+
+A roll is not one stroke with one push. The user, a high-handicap player: "What we're assessing is the amount of
+follow-through and the rate of acceleration of the follow-through that gives the desired outcome for that stroke type.
+Then picking that as a default for the roll at certain ranges. So what I'm interested in is how that profile changes at
+different ranges. … anchor on a half roll. Then sort of plot out what is required to get the extra levels of power. I'm
+sure the lawn has an effect here too. And that is also a variable."
+
+So this step builds **the push map**: for each roll type, at each range and lawn speed, which plans (how hard the
+stroke, how much follow-through, how sharp its acceleration) land the balls in that roll's outcome, and what each costs
+the player in effort. The defaults per range are picked from it. The roadmap's "natural push's growth with the swing's
+power" is the map's least-effort path across range; the "sourced recruitment law" is the check on that path's form.
+
+## Scope (user, 2026-10-26: "That split works, go with it")
+
+In: the push's growth with power, its law, and the rolls' held-out validation; the carried roll items I (the full-roll
+variant), K (the super pass roll's partial emergence), L (the push's headroom), O (the rolls' follow-through digs), and
+the effect measure's turf drag (the contact-only candidate).
+
+Out, to later steps: the GC stop's distances, crush calibration, 29.1.6.3, pull, stop-shot lift. Out of this PR: the
+housekeeping (`typescript-eslint` 8.72.0, `vite` 8.3.5) ships as its own PR first (user: "Separate PR first");
+TypeScript 7 waits for `typescript-eslint`'s support (user: "we can wait").
+
+## The user's account (hypotheses, not facts)
+
+1. **Two parts.** "the initial downward hit into the ground is quite hard, especially if you want to play a firm
+   stroke. Once you get the ball rolling, it's more about a controlled follow-through."
+2. **Momentum, not strength.** "if you really push hard and accelerate, it's quite possible to push both balls off the
+   lawn. However, it's also easy to underplay it, so it's more about getting the right level of momentum. And if you can
+   do that smoothly so you keep behind the ball, that's useful."
+3. **The hard opening hit.** "If you are too hard on this hit with a weak follow through the croqueted ball get more
+   power and you don't have time to apply the same to striker's ball putting you close to a half roll."
+4. **Planned, not reactive.** "On a strong or fast push I'm not cognitively able to adapt to the behaviour of the ball.
+   The movement is pre-planned based on the desired outcome. On a softer shot, I suppose there is more time, more feel."
+5. **The pass roll accelerates.** "if I want to pass, I want an accelerating push. If it is a hard pass I need to
+   'punch' through to get the acceleration."
+6. **The super pass roll.** "I suspect I would [strike] soft, to impart less to the croqueted ball, then, once the split
+   is initiated and the path unoccluded, inject an accelerated follow-through into the stroke."
+7. **Soft pass rolls need a wider split.** "For softer pass rolls a wider split may be necessary so that there is
+   enough angle for the croqueted ball to get out of the way in time."
+8. **The push grows with intended power.** "The push increases with the intended power. I'm not good enough at the shot
+   to judge this perfectly from experience. A better reference or a degree of fitting would benefit us here."
+9. **Roll types are categories.** "a full roll and indeed a pass roll are a broad category of outcomes where the balls
+   finish up at certain ratios."
+
+Carried from P2b.2b.2c.2d: "on a soft shot, no follow through force is applied … on a harder shot, you swing through
+naturally. On a very hard shot, you might apply a lot of extra follow through"; the full roll may want the pass roll's
+stronger push.
+
+## Decisions (user, 2026-10-26)
+
+1. **The push is a plan, fixed before the stroke.** Nothing in the engine reacts to the impact on the player's behalf
+   (account 4; consistent with the flattening hypothesis's ruling). Feel on soft strokes (closed-loop correction) is a
+   future item, not this step.
+2. **Anchor on the half roll** ("Anchor on half roll (Recommended)"). The half roll's existing default plan sits inside
+   its band without ever having been fitted (2.20 at 3 m/s; 2.02–2.28 over 2–4 m/s against the CA's 1.4–2.5) and is the
+   map's origin. The half roll must stay in band at its canonical setup: the guard that the new work breaks nothing that
+   already works.
+3. **Roll types are outcome regions, not target points** (account 9). A plan belongs to a roll type's region at a range
+   if its balls finish within that type's ratio band (§2). The full and pass rolls' plans are therefore *chosen from*
+   their regions; their ratios are no longer held out. What stays a genuine test is in §6.
+4. **Effort is shown as two percentages** ("both numbers as percentages of max would help me to imagine feasibility"):
+   the stroke's (the planned contact speed as a percentage of the most the body can give that type, its backswing at
+   the body's limit and intensity 1; "Speed as % of max (Recommended)", so the backswing and the intensity count
+   together) and the push's peak (the hands' push intent's peak as a percentage of `body.pushForce`, 92.2 N).
+7. *(Superseded by A1: the preset is the text book starting point, and the lean and the feet are swept, §3.2.)*
+   **Each roll type keeps its own stance** ("Own stance per type (Recommended)"): three maps, each under its own type's
+   preset stance and shape (the leans 24°, 31° and 34° from Gugan 4 Table 6, Riches's hand positions, the preset's
+   `speedGain` and `handGain`), untouched by this step. A plan counts only in its own type's band.
+5. **The default is the least-effort plan** ("if there are choices of combination the lowest mean would probably be
+   favoured"): within a region at a range, the plan with the lowest mean of the two percentages.
+6. **The no-damage rule applies to the rolls** ("Exclude them, the no-damage rule applies to rolls too"; the AC stop's
+   rule, 2026-10-25: "it is okay for the mallet to rub on the lawn and disturb the grass. It should not damage the
+   turf"). A plan that raises `impact-head-deep`, `turf-yield`, `follow-turf-yield` or `follow-head-deep` is excluded
+   from every region. This closes carried item O by construction: no default may dig.
+
+## 1. Goal and exit criteria
+
+The step is done when:
+
+1. the push map (§3) is computed for the half, full and pass rolls over the range and lawn grids, recorded, and plotted
+   (§9);
+2. the defaults per roll type, range and lawn speed (§5) are picked by decision 5 and recorded as a reference table,
+   beside the envelope record (§3.5);
+3. the checks of §6 are run, recorded and ruled at the gate;
+4. the half roll's canonical setup stays within 1.4–2.5, every roll's canonical setup within ±2 % of its own planned
+   contact speed (§5), and every swing preset's within ±2 % of 3 m/s;
+5. no run of any preset's late re-hit sweep ends with the head overlapping a ball as handed over;
+6. the ratchet (§8) and the pre-flight gate (§10) are run and ruled;
+7. the figures are recorded in the roadmap's "P2b.2b.2c.3b outcomes", and `ENGINE_VERSION` moves to 0.19.0 (after
+   P2b.2b.2c.3a's 0.18.0) if any default changes, as the branch's last step. 3b is its own branch and PR, started
+   after 3a merges.
+
+## 2. The outcome regions
+
+Ratio = the croqueted ball's distance to rest ÷ the striker's ball's, as everywhere in the project. The bands, the
+CA's ("P2b.2 decisions (2026-10-04)"):
+
+| Region | Ratio |
+|---|---|
+| half roll | 1.4–2.5 |
+| full roll | 1.0–1.2 |
+| pass roll | below 1 (the CA's 0.9–1.2 straddles 1; Gugan 5's theory about 0.83) |
+
+The pass roll is a split shot: played straight, the striker's ball cannot pass the croqueted ball and the ratio floors
+at 1 ("P2b.2 decisions"; the canonical pass roll played dead straight gives about 1.03–1.07). So the pass roll's map
+carries the split angle as a further dimension (account 7).
+
+A plan is **admissible** only if it is believable (§4). Regions are drawn from admissible plans alone.
+
+## 3. The push map
+
+### 3.1 The plan space
+
+The plan is the shot's own inputs in `ShotSetup.stroke`, as P2b.2b.2c.3a leaves them (no mode; the set-up inputs
+`grip`, `lean` and `feet` on every stroke). No further engine input is planned; §12 if the builder finds one is needed.
+
+- **the set-up:** `lean` and `feet` (3a), swept at every range (§3.2); the grip at the type's;
+- **how hard:** `backswing` and `intensity` (as 3a's strike defines them);
+- **how much follow-through:** `drive` (0 natural … +1 pushed through) and `handReach` (the push's length);
+- **how sharp:** `window` (the pulse's duration, `MIN_WINDOW` 1 ms to `MAX_WINDOW` 0.1 s; shorter is a higher peak
+  acceleration);
+- **when:** `timing.hands` (the hands' onset; positive is late), used for the super pass roll (§3.4);
+- **the split** (pass roll only): set as the croqueted ball's offset from a fixed aim, as P2b.2b.2c.2d's checks set it;
+  the split at rest (the angle between the two balls' paths) is recorded beside it, and account 7's test reads the
+  split at rest (the design's call).
+
+Each grid point fixes the set-up and the follow-through (drive, handReach, window; onset 0 outside §3.4) and solves how
+hard (backswing, then
+intensity once the backswing reaches the body's limit, matching P2b.2b.2c.1's rule that speeds beyond the gravity-only
+default are reached by intensity) so that the striker's ball comes to rest at the grid's range. The solved plan's
+ratio, effort and believability are recorded.
+
+### 3.2 The grids (the design's call)
+
+- **Range:** the striker's ball's distance to rest. From short rolls to a full court length, 32 m; the builder sets the
+  spacing (at least six ranges, denser where regions change).
+- **Lawn speed:** 6, 10 and 14 s first, `reference/lawn.json`'s sourced span and its normal lawn. The design's guess,
+  to be measured: once both balls roll, the lawn slows them alike, so the ratio depends little on lawn speed and the
+  lawn mainly moves which range needs which power. 8 and 12 s are added only if the guess fails (spec review).
+- **Split** (pass roll): at least 0°, 10°, 20° and 30°.
+- **Follow-through:** drive, handReach and window over their valid ranges, coarse first and refined where a region's
+  edge or the least-effort plan lies. Onset fixed at 0 (on time) outside §3.4's sweep.
+- **The set-up** (A1; the user, 2026-10-26, overriding the spec review's staging): the lean and the feet are swept at
+  every range, coarse first and refined where a region's edge lies. The user expects most combinations to fail: "many
+  combinations either mishit the ball, drive the mallet into the lawn, or [need the] superhuman to achieve anything.
+  So that run should reveal … the shape of the envelope … And we should record that so that further testing doesn't
+  waste its time." So the sweep is also the envelope's first survey (§3.5).
+- Measured on an open lawn (`scripts/openLawn.ts`, generalised to a lawn speed) so that no run leaves the court.
+
+### 3.3 The anchor
+
+The half roll's current default plan (`profile.ts`: drive 1, window 0.02 s, handReach 0.15 m, at its canonical 3 m/s)
+is the map's origin: the half roll's map is computed first, and its default plan must lie in the half-roll region at its
+own range. If it does not, the step stops at the gate.
+
+### 3.4 The super pass roll (carried item K)
+
+Account 6 as a plan: a soft strike, then the hands' accelerating push, late (`timing.hands` > 0) and sharp (small
+`window`), while the mallet stays with the striker's ball. A targeted sweep of onset × window on the pass roll's map,
+at the splits of §3.2, measures whether a plan sending the striker's ball "multiples further" (ratio well below 1)
+exists and is admissible. Lawful only if the mallet does not separate visibly from the ball and then change it
+(`reference/laws.json` 29.2.5: contacts within `MERGE_SEPARATION` 2 mm join one contact; a later re-contact is possible
+29.1.6.1 from 10 % or 2°); a separated catch-up is Gugan 5's push, "always faults", and excluded by §4.
+
+### 3.5 The envelope record
+
+Every plan the sweep tries is recorded with its outcome, and every excluded plan with the first reason it fails, in
+classes the user named: **mishit** (off the face, or the ball met beyond the on-point limit), **damages the turf**
+(`impact-head-deep`, `turf-yield`, `follow-turf-yield`, `follow-head-deep`, or the head in the turf at contact),
+**superhuman** (intensity above 1, the backswing beyond θ_max, a saturated grip), and **unlawful** (possible
+29.1.6.1, the head overtaking the ball). The record is kept as reference data beside the defaults (derived; its script,
+commands and SHA-256 recorded), in a form later steps can query by set-up and follow-through, so further testing skips
+combinations already shown to fail. A set-up that fails for the same reason at every range is marked as outside the
+envelope outright, and refinement skips it. The record summarises the envelope's shape per roll type and lawn: which
+lean and feet combinations are viable at which ranges, and which reason bounds each edge.
+
+## 4. Believability (admissibility)
+
+A plan is admissible when its run:
+
+- raises no `impact-head-deep`, `turf-yield`, `follow-turf-yield` or `follow-head-deep` (decision 6);
+- raises no possible 29.1.6.1 (a re-contact after the parting at or above `EFFECT_SPEED` or `EFFECT_ANGLE`);
+- keeps the head behind the striker's ball: never overtaking it and dropping into its path (the roadmap's
+  P2b.2b.2c.3 entry; the on-point test of P2b.2b.2b.2b: the head's centre behind the ball's along aim, every face
+  contact no higher than R·sin 45° above the ball's centre, the lean at most 45°);
+- never saturates either hand's grip (since P2b.2b.2b.3 a saturated grip slides its anchor and raises no finding; a
+  slid anchor means the mallet slipped in the hands), and needs intensity ≤ 1 and the backswing within the body's
+  limit θ_max (P2b.2b.2c.3a; it also sets 100 % stroke effort).
+
+A push intent that saturates at `pushForce` is admissible at 100 % push effort; how often defaults saturate is recorded
+(carried item L).
+
+## 5. The defaults
+
+For each roll type, range and lawn speed in the grids (and, for the pass roll, each split: the split is the player's
+outcome choice, not effort, so the pass roll's defaults are keyed by it too), the default plan is the admissible plan
+in that type's region with the lowest mean of its two effort percentages (decision 5); ties go to the plan nearer the
+half roll's anchor in follow-through. The table of defaults is reference data, its provenance the map's run (derived),
+with its script and commands recorded. No engine lookup by range is built (spec review): no engine input takes a
+target range, and the planner or UI that would read one is later work.
+
+The profile's per-type values (`DRIVE[type]`'s follow-through, `DEFAULT_DRIVE`, the text book lean and feet) change
+only to the canonical range's default: each roll's canonical setup takes the whole default plan (how hard and the
+follow-through) at the range its current canonical reaches on a 10 s lawn (the pass roll at its canonical split), so
+the canonical runs a plan the map ran (the design's call); its planned contact speed follows from that plan. The swing
+strokes' entries are untouched.
+
+A range at which a type's region is empty has no default; the gap is recorded and ruled, not filled.
+
+## 6. What stays a test
+
+Nothing here is solved for; each is measured on the map and ruled at the gate.
+
+1. **The half roll in band** at its canonical setup and its anchor plan in its region (decision 2).
+2. **The ratio is ordered in the follow-through.** Within each type's map, at a fixed range and lawn, the ratio does
+   not rise as drive rises with the window, `handReach` and onset held fixed (measured per slice; the design's call);
+   across the three maps the defaults keep the half → full → pass order at each range (the roadmap's stop → pass-roll
+   ordering, extended).
+3. **Each region exists and is admissible** at the ranges a player uses it.
+4. **The least-effort path's form.** Along range, each type's default follow-through should grow smoothly with
+   power (account 8), its effort percentages rising monotonically. Its form is compared with impulse-variability
+   scaling (Schmidt, Zelaznik, Hawkins, Frank and Quinn 1979, "Motor-output variability: A theory for the accuracy of
+   rapid motor acts", Psychological Review 86: a rapid act's force-time profile keeps its shape and is scaled), read
+   and cited before it is used, under the project's citation rule (URL, date, SHA-256, annotated quotes only), and
+   with the CA's measured roll contact times, 30–58 ms. A miss is recorded, not fitted away.
+5. **The user's expectations:**
+   - account 3: a hard opening strike with a weak follow-through lands in, or towards, the half-roll region;
+   - account 7: a soft, straight pass roll cannot reach the pass-roll region, and widening the split frees it;
+   - account 2: a hard, accelerating push can drive both balls past a full court length;
+   - account 5: the pass roll's least-effort plan accelerates through contact, sharper at longer ranges.
+6. **The effort percentages are believable** for a club player at the ranges they play (recorded for the user's
+   judgement; the user: "both numbers … would help me to imagine feasibility").
+
+## 7. The carried items
+
+- **I, the full-roll variant:** recorded against the full-roll region and its default (the variant 1.11–1.22 at 2–4 m/s
+  against the default's 1.82–2.08).
+- **K:** §3.4.
+- **L, the headroom:** the defaults' push percentages, and how many saturate.
+- **O:** closed by decision 6; the canonical full and pass rolls' digging re-measured on their new defaults.
+- **The AC stop's two grips** (P2b.2b.2c.3a, decision 3): its default, lowered and loose jab variant played beside a
+  hands-together AC stop (Riches's text book), Gugan 5's stop and the turf's damage recorded for each, for the user's
+  ruling on which the bottom hand's height should be by outcome.
+- **The effect measure:** the contact-only candidate (the striker's ball's velocity change summed over the face
+  intervals alone, the gaps excluded) measured beside the shipped span measure on the map's runs, the verdicts that
+  differ counted per type, and ruled at the gate. The shipped measure stays unless the gate rules otherwise.
+
+## 8. The ratchet
+
+As P2b.2b.2c.2d's: a baseline worktree at the branch's base (installed with `npm ci`, never a symlinked
+`node_modules`), the preset digest (`phys` and `faults` per run), `impactDigest`, `impactProbe` and `shotMix`. Every
+commit before a default changes is bit-identical; each default's change is counted per preset, every moved run listed.
+The implementers stage and stop; the controller runs the digests, probes and slow tests and confirms the ratchet before
+each commit.
+
+## 9. Records
+
+- The map's raw output and its reading in `docs/superpowers/probes/`, each with its script's SHA-256 and commands.
+- **Plots** (account: "plot out what is required"): per roll type and lawn speed, the regions over range × the push's
+  impulse (the integral of the hands' push intent; the design's call for the follow-through axis), the least-effort path
+  drawn on them, and the two effort percentages along range. Static images or a
+  page in the records; the builder's choice of form.
+- **A side-on stroke plot** (user, 2026-10-26: "it would be very useful"), a throwaway validation aid ahead of the
+  roadmap's side-on stroke view: for each text book set-up and each default shown at the gate, the mallet's head and
+  shaft drawn side-on through the swing and the impact, with the balls, from `SwingTrajectory` and the impact's states.
+  Static frames or an animation; the builder's choice. Not product code.
+- The roadmap's "P2b.2b.2c.3 outcomes" with the figures, the gate's rulings verbatim, and the carried open items.
+
+## 10. The pre-flight gate
+
+Two stages, as P2b.2b.2c.2d's. Stage 1 after the half roll's map: the anchor (§3.3), its region and the lawn's effect
+(§3.2's guess). Stage 2 after the full and pass rolls' maps and the defaults: §6's tests, §7's items, the effort
+figures. One question at a time, with options and a recommendation.
+
+## 11. Non-goals and anti-goals
+
+- Not fitting any ratio. A region is a band a plan lands in; the defaults are chosen within it by effort, never tuned
+  to a target ratio.
+- No reactive control: nothing in the engine adjusts the push during the stroke (decision 1).
+- No default that damages the turf (decision 6), breaks the Laws or lets the head overtake the ball.
+- No change to the swing strokes (single-ball, drive, the stops); their digests stay bit-identical.
+- The later step's items (§Scope) and the deferred minors from P2b.2b.2c.2d's final review (M-2..M-6) and its other open
+  items stay carried unless the builder finds one blocks this work.
+- Anti-goal: a map whose regions exist only at efforts no player could produce. That is a finding for the gate, not
+  something to hide by moving the limits.
+
+## 12. What's left to the builder
+
+- The grids' spacing and the refinement scheme; thinning the lawns if §3.2's guess holds.
+- The solve for how hard (§3.1): the method, its tolerance on range, and how it treats a plan whose range is
+  unreachable.
+- Where the defaults' table lives.
+- The plots' form.
+- Whether the map runs within the project's time budget; if a full grid is too slow, a coarser grid with the reasons
+  recorded.
+
+## Amendments
+
+**A1 (user, 2026-10-26, after the builder check): the set-up space; the step splits.** The user: "When a player sets up
+a shot they do a number of things in a rough order. … 1. Hand Position on the mallet, effecting the angle of attack of
+the mallet face. 2. Feet position relative to the strikers ball, affecting where in the arc contact will be made. 3a.
+Power and acceleration of the strike. 3b. Magnitude and acceleration of the push through. 3c. Magnitude and
+(de/ac)celeration after initial contact. I feel like these all apply to every shot and the relative set up of these
+define what the shot type is." Then: "a stance is really a definition of how the mallet is held which affects the
+'lean', in practice different players do this in different ways but it is the lean that changes"; "depending on the
+situation, sometimes some value in between would be selected"; "same is true for foot position, the defaults for a
+'text book' example of that shot change. We still need to validate our model against the text book but, eventually,
+all the above need to be an envelope of valid combinations. I suspect many combinations may achieve the same outcome
+once variable push acceleration is in the mix."
+
+Consequences:
+- P2b.2b.2c.3 splits. **P2b.2b.2c.3a, the unified set-up** (its own design, first): the lean, the feet (where on the
+  arc contact falls) and the push through become per-shot inputs on every stroke, and the swing/carry mode split goes;
+  each type keeps only its "text book" defaults, its results at them bit-identical. **P2b.2b.2c.3b, this design**,
+  follows on it.
+- Decision 7 is superseded: each type's preset is its text book example, the map's starting point, not a fixed stance.
+  The map sweeps the lean and the feet as dimensions beside the follow-through, at every range (the spec review's
+  staging overridden by the user, §3.2), so the regions show which combinations,
+  in-between leans included, make each roll at each range.
+- The text book validation stays: each type's text book set-up must land in its band (the half roll's, decision 2, the
+  first).
+- The full envelope of valid combinations over every input is the eventual aim; this step maps the slice the rolls
+  need. Many combinations may reach one outcome; the default among them stays the least-effort one (decision 5), and
+  the map records how many admissible plans share each outcome.

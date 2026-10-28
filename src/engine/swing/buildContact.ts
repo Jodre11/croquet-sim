@@ -4,11 +4,12 @@
  * 1. the contact pose (contactPose): the arc radius r = top, θ_c = −lean, the lean from the top hand's position
  *    (stanceLean, P2b.2b.2b.1 design §3.2), the head pitched rigidly with the shaft, its face START_GAP short of the
  *    sunk striker at (up, side), the pivot r up the shaft;
- * 2. the downswing (downswing.ts) from the backswing's top, in swing mode under the body's effort law (P2b.2b.2c.1
- *    design §4.4): ω₀ and the hands' V_c at contact, and from them the planned contact speed;
+ * 2. the downswing (downswing.ts) from the backswing's top, its slope planned by `slopeHold` under the body's effort
+ *    law (P2b.2b.2c.1 design §4.4; P2b.2b.2c.3a design §4.1): ω₀ and the hands' V_c at contact, and from them the
+ *    planned contact speed;
  * 3. the arcs' changes, against the planned speed: α = drive·speedGain·(speed/ℓ)/window, ℓ the pivot's distance from
  *    the head's centre, and A = drive·handGain·speed·aim/handWindow; the dip, handDrop deepened by the shot's jab,
- *    over dropTime; the mode, the ground depth and the reach (the shot's, else the preset's); the coupling
+ *    over dropTime; the ground depth and the reach (the shot's, else the preset's); the coupling
  *    HAND_COUPLING; the hands the stance's, with the profile's body;
  * 4. the lead L, the earliest action's, or TURF_MARGIN before the downswing first meets the turf if that is earlier
  *    (P2b.2b.2a design §3.5): the impact starts L before contact, on the downswing, so a fat stroke's turf strike is
@@ -23,6 +24,7 @@ import { faceHalfHeight, type HeadShape } from "../impact/shape";
 import {
     HAND_COUPLING,
     dipTravel,
+    gripCouple,
     headOnPath,
     pendulumOf,
     pitchAxis,
@@ -31,13 +33,12 @@ import {
     swungBody,
 } from "../impact/track";
 import { bedLawOf, staticSink } from "../impact/turfBed";
-import type { ContactState, FaceMaterial, Hands, MalletHead, StrokeMode, SwingArc, TrackDrive } from "../impact/types";
+import type { ContactState, FaceMaterial, Hands, MalletHead, SwingArc, TrackDrive } from "../impact/types";
 import { atan2, sinCos } from "../math/elementary";
 import { add, cross, dot, length, scale, sub, vec3, type Vec3 } from "../math/vec3";
 import type { BallState, World } from "../types";
 import { planDownswing, scanDownswing, type DownswingInput, type PlannedDownswing } from "./downswing";
 import {
-    CROQUET_STROKES,
     type MalletHeadProfile,
     type ShotSetup,
     type SwingDrive,
@@ -73,7 +74,7 @@ export const TURF_MARGIN = 0.005;
 export const MIN_WINDOW = 1e-3;
 
 /**
- * The longest follow-through pulse a shot may set (s). Numerical, not physical: a pulse and carry mode's hold of one
+ * The longest follow-through pulse a shot may set (s). Numerical, not physical: a pulse and the hold of one
  * more window after it, from an onset up to MAX_LEAD early, end well inside the impact's cap (0.15 + 2 × 0.1 < 0.45 s).
  */
 export const MAX_WINDOW = 0.1;
@@ -84,8 +85,17 @@ const WOOD: FaceMaterial = { friction: malletReference.faceFriction.value };
 /** A stance's numbers, each checked finite by name (a missing one included). */
 const STANCE_NUMBERS: readonly (keyof SwingStance)[] = ["handsAhead", "top", "bottom", "gripTension", "bottomGrip"];
 
-/** A drive entry's numbers (all but its mode), each checked finite by name. */
-const DRIVE_NUMBERS: readonly Exclude<keyof SwingDrive, "mode">[] = [
+/** A stance's grip: its values a shot may give one by one (P2b.2b.2c.3a design §2). */
+type Grip = Omit<SwingStance, "handsAhead">;
+
+/** The grip's values, each a shot's checked finite by name where given. */
+const GRIP_NUMBERS: readonly (keyof Grip)[] = ["top", "bottom", "gripTension", "bottomGrip"];
+
+/** The on-point limit (rad): the most a shot's lean may pitch the shaft forward (P2b.2b.2c.3a design §2). */
+const MAX_LEAN = Math.PI / 4;
+
+/** A drive entry's numbers, each checked finite by name. */
+const DRIVE_NUMBERS: readonly (keyof SwingDrive)[] = [
     "speedGain",
     "window",
     "handGain",
@@ -217,6 +227,39 @@ function headInertia(mallet: SwingProfile["mallet"]): Vec3 {
     );
 }
 
+/** The grip of `setup` (P2b.2b.2c.3a design §2): each value the shot gives, else the preset's. */
+function gripOf(setup: ShotSetup): Grip {
+    const { stroke, profile } = setup;
+    const stance = profile.stance[stroke.type];
+    const { grip } = stroke;
+    if (grip === undefined) {
+        return stance;
+    }
+    return {
+        top: grip.top ?? stance.top,
+        bottom: grip.bottom ?? stance.bottom,
+        gripTension: grip.gripTension ?? stance.gripTension,
+        bottomGrip: grip.bottomGrip ?? stance.bottomGrip,
+    };
+}
+
+/**
+ * The stance of `setup` on `geometry` (P2b.2b.2c.3a design §2): the shot's grip (gripOf), and a shot's lean placing
+ * the top hand, handsAheadFor at the shot's top and contact. Without a lean the preset's handsAhead stands, whatever
+ * the top hand or the contact.
+ */
+function stanceOf(setup: ShotSetup, geometry: StanceGeometry): SwingStance {
+    const { stroke, profile } = setup;
+    const preset = profile.stance[stroke.type];
+    if (stroke.grip === undefined && stroke.lean === undefined) {
+        return preset;
+    }
+    const { top, bottom, gripTension, bottomGrip } = gripOf(setup);
+    const handsAhead =
+        stroke.lean === undefined ? preset.handsAhead : handsAheadFor(stroke.lean, top, stroke.contact.up, geometry);
+    return { handsAhead, top, bottom, gripTension, bottomGrip };
+}
+
 /** Checks `setup` on a world whose ball has radius `ballRadius` (see planStroke). */
 function validate(setup: ShotSetup, ballRadius: number): void {
     const { stroke, profile } = setup;
@@ -236,9 +279,6 @@ function validate(setup: ShotSetup, ballRadius: number): void {
     if (!shape) {
         fail(`profile.shape has no entry for ${type}`);
     }
-    if (push.mode !== "swing" && push.mode !== "carry") {
-        fail(`profile.drive.${type}.mode must be "swing" or "carry" (got ${String(push.mode)})`);
-    }
     finiteNumber(stroke.aim, "stroke.aim");
     finiteNumber(stroke.backswing, "stroke.backswing");
     finiteNumber(stroke.drive, "stroke.drive");
@@ -257,6 +297,9 @@ function validate(setup: ShotSetup, ballRadius: number): void {
         ["stroke.pendulumAt", stroke.pendulumAt],
         ["stroke.pendulumEffort", stroke.pendulumEffort],
         ["stroke.jab", stroke.jab],
+        ["stroke.lean", stroke.lean],
+        ["stroke.feet", stroke.feet],
+        ["stroke.slopeHold", stroke.slopeHold],
     ] as const) {
         if (value !== undefined) {
             finiteNumber(value, name);
@@ -265,6 +308,16 @@ function validate(setup: ShotSetup, ballRadius: number): void {
     for (const key of STANCE_NUMBERS) {
         finiteNumber(stance[key], `profile.stance.${type}.${key}`);
     }
+    const given = stroke.grip;
+    for (const key of GRIP_NUMBERS) {
+        const value = given?.[key];
+        if (value !== undefined) {
+            finiteNumber(value, `stroke.grip.${key}`);
+        }
+    }
+    // Each grip value is named where it came from, the shot's or the preset's.
+    const gripName = (key: keyof Grip): string =>
+        given?.[key] === undefined ? `profile.stance.${type}.${key}` : `stroke.grip.${key}`;
     for (const key of DRIVE_NUMBERS) {
         finiteNumber(push[key], `profile.drive.${type}.${key}`);
     }
@@ -309,16 +362,20 @@ function validate(setup: ShotSetup, ballRadius: number): void {
     finiteNumber(body.armMass, "profile.body.armMass");
     finiteNumber(body.reachSlack, "profile.body.reachSlack");
 
-    const { handsAhead, top, bottom, gripTension, bottomGrip } = stance;
-    positive(top, `profile.stance.${type}.top`);
+    const { top, bottom, gripTension, bottomGrip } = gripOf(setup);
+    positive(top, gripName("top"));
     if (top > mallet.shaftLength) {
         fail(
-            `the top hand is off the shaft: profile.stance.${type}.top is ${top} m, beyond shaftLength ` +
+            `the top hand is off the shaft: ${gripName("top")} is ${top} m, beyond shaftLength ` +
                 `${mallet.shaftLength} m`,
         );
     }
     if (!(bottom > 0 && bottom < top)) {
-        fail(`profile.stance.${type}.bottom must lie in (0, top) = (0, ${top}) m (got ${bottom})`);
+        // A shot that moves only its top hand to or below the preset's bottom one is named by its top hand.
+        if (given?.bottom === undefined && given?.top !== undefined && bottom > 0) {
+            fail(`stroke.grip.top must lie above the bottom hand, ${gripName("bottom")} = ${bottom} m (got ${top})`);
+        }
+        fail(`${gripName("bottom")} must lie in (0, top) = (0, ${top}) m (got ${bottom})`);
     }
     positive(stroke.backswing, "stroke.backswing");
     if (stroke.window !== undefined) {
@@ -352,11 +409,29 @@ function validate(setup: ShotSetup, ballRadius: number): void {
         }
     }
     // A > 0 rests on the contact lying on the face, checked just above (P2b.2b.2b.1 design §3.4).
-    const [a, b] = stanceArms(top, up, { ballRadius, headLength: mallet.headLength, faceHalfHeight: rho });
+    const geometry = { ballRadius, headLength: mallet.headLength, faceHalfHeight: rho };
+    const [a, b] = stanceArms(top, up, geometry);
+    const { lean } = stroke;
+    if (lean !== undefined) {
+        if (!(lean <= MAX_LEAN)) {
+            fail(`stroke.lean must be at most π/4 rad, the on-point limit (got ${lean})`);
+        }
+        // X = A·sin α − B·cos α rises with the lean only while A·cos α + B·sin α > 0, i.e. for α > −atan2(A, B):
+        // below it stanceLean would read the placed hands back as another lean.
+        const lowest = 0 - atan2(a, b);
+        if (!(lean > lowest)) {
+            fail(
+                `stroke.lean must exceed ${lowest} rad for its top hand and the contact's up (got ${lean}): ` +
+                    "there the hands leave the stance's branch",
+            );
+        }
+    }
+    const { handsAhead } = stanceOf(setup, geometry);
     const d = Math.sqrt(a * a + b * b);
     if (!(handsAhead > 0 - d && handsAhead < a)) {
+        const name = lean === undefined ? `profile.stance.${type}.handsAhead` : "stroke.lean's handsAhead";
         fail(
-            `profile.stance.${type}.handsAhead must lie in (−D, A) = (${0 - d}, ${a}) m for its top hand and the ` +
+            `${name} must lie in (−D, A) = (${0 - d}, ${a}) m for its top hand and the ` +
                 `contact's up (got ${handsAhead}): at A the shaft lies flat, at −D the hands leave the stance's branch`,
         );
     }
@@ -364,8 +439,8 @@ function validate(setup: ShotSetup, ballRadius: number): void {
     positive(push.handWindow, `profile.drive.${type}.handWindow`);
     positive(push.dropTime, `profile.drive.${type}.dropTime`);
     nonNegative(push.speedGain, `profile.drive.${type}.speedGain`);
-    grip(gripTension, `profile.stance.${type}.gripTension`);
-    grip(bottomGrip, `profile.stance.${type}.bottomGrip`);
+    grip(gripTension, gripName("gripTension"));
+    grip(bottomGrip, gripName("bottomGrip"));
     nonNegative(push.handDrop, `profile.drive.${type}.handDrop`);
     nonNegative(push.handReach, `profile.drive.${type}.handReach`);
     if (stroke.handReach !== undefined) {
@@ -386,13 +461,9 @@ function validate(setup: ShotSetup, ballRadius: number): void {
     }
     if (stroke.jab !== undefined) {
         nonNegative(stroke.jab, "stroke.jab");
-        if (push.mode === "carry" && stroke.jab !== 0) {
-            fail(`stroke.jab must be 0 in carry mode, where the hands lead on their own arc (got ${stroke.jab})`);
-        }
     }
     const pushLength = stroke.handReach ?? push.handReach;
-    // Checked in swing mode too, where the arc is never read: a profile that fails it fails either way. Changing that
-    // would be a behaviour change and needs its own ruling.
+    // Checked on every stroke: every downswing reads the arc's slope at contact (arcArrival).
     if (!(push.handArcRadius > pushLength)) {
         fail(
             `profile.drive.${type}.handArcRadius must exceed the push length ${pushLength} m, so that the hands' arc ` +
@@ -437,22 +508,32 @@ function validate(setup: ShotSetup, ballRadius: number): void {
     if (shape.pendulumShare < 1 && !(shape.handAngle > 0 && shape.handAngle < Math.PI / 2)) {
         fail(`${where}.handAngle must lie in (0, 90°) when pendulumShare < 1 (got ${shape.handAngle} rad)`);
     }
-    if (push.mode === "swing") {
-        if (!(shape.pendulumShare > 0)) {
-            fail(`${where}.pendulumShare must be positive in swing mode, where the pendulum leads (got 0)`);
-        }
-    } else {
-        if (shape.handTempo === null) {
-            fail(`${where}.handTempo is required in carry mode`);
-        }
+    finiteNumber(shape.slopeHold, `${where}.slopeHold`);
+    unit(shape.slopeHold, `${where}.slopeHold`);
+    if (stroke.slopeHold !== undefined) {
+        unit(stroke.slopeHold, "stroke.slopeHold");
+    }
+    const slopeHold = stroke.slopeHold ?? shape.slopeHold;
+    // P2b.2b.2c.3a design §4.1: a plan short of a full hold, or one whose tempo is the free swing's own fall, needs the
+    // free swing.
+    if ((slopeHold < 1 || shape.handTempo === null) && !(shape.pendulumShare > 0)) {
+        fail(
+            `${where}.pendulumShare must be positive where the downswing needs its free swing (slopeHold ` +
+                `${slopeHold}, handTempo ${shape.handTempo === null ? "null" : "given"}; got 0)`,
+        );
+    }
+    if (shape.handTempo !== null) {
         tempos(shape.handTempo.slow, shape.handTempo.fast, `${where}.handTempo.slow`, `${where}.handTempo.fast`);
     }
 }
 
-/** The hands of `setup`'s stance with its profile's body, and the shot's guide effort, else the preset's. */
+/**
+ * The hands of `setup`'s stance (stanceOf) with its profile's body, and the shot's guide effort, else the preset's. The
+ * hands read only the grip, which no lean moves.
+ */
 function handsOf(setup: ShotSetup): Hands {
     const { stroke, profile } = setup;
-    const stance = profile.stance[stroke.type];
+    const stance = gripOf(setup);
     return {
         bottom: stance.bottom,
         gripTension: stance.gripTension,
@@ -470,26 +551,68 @@ function handsOf(setup: ShotSetup): Hands {
 }
 
 /**
- * The downswing of a checked `setup` posed at `pose`, at the shot's intensity, else 0: gravity alone, no preset
- * carrying a default intensity (P2b.2b.2c.1 design, Amendments).
+ * The hands' arc's lowest point s_low (m along aim from the hands at contact) that a checked `setup`'s feet set at
+ * `pose` (P2b.2b.2c.3a design §3, A2 item 1): feet − x_c, x_c = aim·(P_c − ball) the top hand at contact along aim from
+ * the striker's ball's centre. Undefined where the shot gives no feet. Throws a RangeError naming `stroke.feet` unless
+ * s_low lies in (handReach − handArcRadius, handArcRadius), where the arc is defined from contact to the push's end.
  */
-function downswingOf(setup: ShotSetup, pose: ContactPose, hands: Hands, gravity: number): PlannedDownswing {
+function lowPointOf(setup: ShotSetup, pose: ContactPose): number | undefined {
+    const { stroke, profile } = setup;
+    if (stroke.feet === undefined) {
+        return undefined;
+    }
+    const push = profile.drive[stroke.type];
+    const striker = setup.balls[setup.striker] as BallState;
+    const low = stroke.feet - dot(sub(pose.pivot, striker.position), pose.aim);
+    const reach = stroke.handReach ?? push.handReach;
+    const radius = push.handArcRadius;
+    if (!(low > reach - radius && low < radius)) {
+        fail(
+            `stroke.feet puts the hands' arc's lowest point ${low} m ahead of the hands at contact, which must ` +
+                `lie in (handReach − handArcRadius, handArcRadius) = (${reach - radius}, ${radius}) m for the arc ` +
+                "to span the push",
+        );
+    }
+    return low;
+}
+
+/**
+ * The downswing's choices of a checked `setup` posed at `pose`: the shot's planned slope, else the shape's; the shot's
+ * intensity, else 0 (gravity alone, no preset carrying a default intensity; P2b.2b.2c.1 design, Amendments); and the
+ * hands' arc's slope at contact on every stroke (arcArrival, 0 with no push and no feet), its lowest point the feet's
+ * (lowPointOf), else handArcLow of the push.
+ */
+function choiceOf(setup: ShotSetup, pose: ContactPose): StrokeChoice {
     const { stroke, profile } = setup;
     const shape = profile.shape[stroke.type];
     const push = profile.drive[stroke.type];
-    const choice: StrokeChoice = {
-        mode: push.mode,
+    const low = lowPointOf(setup, pose);
+    return {
         shape,
+        slopeHold: stroke.slopeHold ?? shape.slopeHold,
         backswing: stroke.backswing,
         backswingLimit: profile.body.backswingLimit,
         effort: profile.body.effort,
         intensity: stroke.intensity ?? 0,
         arrival:
-            push.mode === "carry"
-                ? arcArrival(push.handArcRadius, push.handArcLow, stroke.handReach ?? push.handReach)
-                : 0,
+            low === undefined
+                ? arcArrival(push.handArcRadius, push.handArcLow * (stroke.handReach ?? push.handReach))
+                : arcArrival(push.handArcRadius, low),
     };
-    return planDownswing(downswingInput(pose, hands, choice, gravity));
+}
+
+/** The downswing of a checked `setup` posed at `pose` (choiceOf). */
+function downswingOf(setup: ShotSetup, pose: ContactPose, hands: Hands, gravity: number): PlannedDownswing {
+    return planDownswing(downswingInput(pose, hands, choiceOf(setup, pose), gravity));
+}
+
+/**
+ * The downswing's input of a checked `setup` on `world` at its contact pose (contactPose), before any dip's raise:
+ * what planStroke plans from where no dip is under way at contact. For probes and tests of the planned slope.
+ */
+export function downswingInputOf(setup: ShotSetup, world: World): DownswingInput {
+    const pose = contactPose(setup, world);
+    return downswingInput(pose, handsOf(setup), choiceOf(setup, pose), world.gravity);
 }
 
 /** A stroke's pose at contact (design §5.2 steps 1–5, 10). */
@@ -510,18 +633,20 @@ export interface ContactPose {
  * The contact pose of `setup` on `world` (design §5.2): the arc radius r = top (step 1), θ_c = −lean, the lean from
  * the top hand's position (step 2; P2b.2b.2b.1 design §3.2), the head pitched rigidly with the shaft (step 3), its
  * face START_GAP short of the sunk striker at (up, side) (step 4), the pivot r up the shaft from the socket (step 5),
- * and the head a solid of the profile's mallet (step 10). Takes the setup as checked (planStroke).
+ * and the head a solid of the profile's mallet (step 10). The top hand and its position are the shot's stance
+ * (stanceOf: its grip and lean, else the preset's). Takes the setup as checked (planStroke).
  */
 export function contactPose(setup: ShotSetup, world: World): ContactPose {
     const { stroke, profile } = setup;
     const striker = setup.balls[setup.striker] as BallState;
-    const { handsAhead, top } = profile.stance[stroke.type];
     const { mallet } = profile;
     const shape = headShapeOf(mallet.head);
     const rho = faceHalfHeight(shape);
     const { up, side } = stroke.contact;
     const R = world.ball.radius;
-    const lean = stanceLean(handsAhead, top, up, { ballRadius: R, headLength: mallet.headLength, faceHalfHeight: rho });
+    const geometry = { ballRadius: R, headLength: mallet.headLength, faceHalfHeight: rho };
+    const { handsAhead, top } = stanceOf(setup, geometry);
+    const lean = stanceLean(handsAhead, top, up, geometry);
     const surface = world.lawn.surfaceAt(striker.position);
     const sunk =
         R - staticSink(striker.position.x, striker.position.y, R, world.ball.mass * world.gravity, bedLawOf(surface));
@@ -552,38 +677,45 @@ export function contactPose(setup: ShotSetup, world: World): ContactPose {
 }
 
 /**
- * The stroke's choices the downswing needs (design §3): its mode and shape, the backswing (m), the body's limit and
- * effort, the intensity and, in carry mode, the hands' arc's slope at contact (arcArrival).
+ * The stroke's choices the downswing needs (design §3): its shape and planned slope λ (P2b.2b.2c.3a design §4.1), the
+ * backswing (m), the body's limit and effort, the intensity and the hands' arc's slope at contact (arcArrival).
  */
 export interface StrokeChoice {
-    readonly mode: StrokeMode;
     readonly shape: SwingShape;
+    readonly slopeHold: number;
     readonly backswing: number;
-    /** θ_max (rad from vertical), the body's limit on a swing-mode backswing. */
+    /** θ_max (rad from vertical), the body's limit on every backswing. */
     readonly backswingLimit: number;
-    /** The player's effort in swing mode (P2b.2b.2c.1 design §4.4). */
+    /** The player's effort (P2b.2b.2c.1 design §4.4). */
     readonly effort: SwingEffort;
     readonly intensity: number;
     readonly arrival: number;
 }
 
 /**
- * The hands' arc's slope dz/ds at contact (P2b.2b.2b.2b design §4.1): the arc of radius `radius` (m) is lowest
- * `low`·`push` ahead of the hands, so at contact it descends at −s_low/√(ρ_h² − s_low²). 0 (level) for no push.
+ * The hands' arc's slope dz/ds at contact (P2b.2b.2b.2b design §4.1): the arc of radius `radius` (m) is lowest `low`
+ * = s_low (m) ahead of the hands, so at contact it descends at −s_low/√(ρ_h² − s_low²). 0 (level) for no push.
  */
-export function arcArrival(radius: number, low: number, push: number): number {
-    const s = low * push;
-    return (0 - s) / Math.sqrt(radius * radius - s * s);
+export function arcArrival(radius: number, low: number): number {
+    return (0 - low) / Math.sqrt(radius * radius - low * low);
 }
 
 /**
  * The downswing's input for `pose` and `choice` (design §3.1): the pendulum of the swung body (the mallet, malletBody,
- * and `hands`' arm mass at the top grip) under `gravity`, ℓ_h = ρ + r.
+ * and `hands`' arm mass at the top grip) under `gravity`, ℓ_h = ρ + r; and the grip's couple (gripCouple).
  */
 export function downswingInput(pose: ContactPose, hands: Hands, choice: StrokeChoice, gravity: number): DownswingInput {
     const body = swungBody(pose.head, hands, pose.radius);
+    const grip = {
+        top: hands.gripTension,
+        bottom: hands.bottomGrip,
+        limit: hands.gripLimit,
+        spread: pose.radius - hands.bottom,
+    };
     return {
-        mode: choice.mode,
+        slopeHold: choice.slopeHold,
+        couple: gripCouple(hands, pose.radius),
+        grip,
         aim: pose.aim,
         thetaContact: pose.thetaContact,
         pivot: pose.pivot,
@@ -611,19 +743,14 @@ function alongAim(pose: ContactPose, planned: PlannedDownswing): number {
 }
 
 /**
- * Checks `arc`'s `advance`, at the head's planned speed V along aim and the body's peak acceleration a: swing mode
- * only, no check (α < 0), a positive handReach, a positive V (at 0 the cruise would never end; below it the hands
- * would ramp backwards), and a ramp's travel V·W/2 = V²/(2a) (W = V/a) under 0.8·handReach, so that the hands cruise
- * before they ease to rest. planStroke calls it; a hand-built arc is not checked.
+ * Checks `arc`'s `advance`, at the head's planned speed V along aim and the body's peak acceleration a: a positive
+ * handReach (the advance rides the push, which a handReach of 0 does not have), a positive V (at 0 the cruise would
+ * never end; below it the hands would ramp backwards), and a ramp's travel V·W/2 = V²/(2a) (W = V/a) under
+ * 0.8·handReach, so that the hands cruise before they ease to rest. Any stroke may advance, a stop's check included
+ * (P2b.2b.2c.3a A2 item 8). planStroke calls it; a hand-built arc is not checked.
  */
 export function checkAdvance(arc: SwingArc, advance: NonNullable<SwingArc["advance"]>): void {
     const { speed, accel } = advance;
-    if (arc.mode !== "swing") {
-        fail("stroke.timing.advance needs swing mode: carry mode's hands push on their own arc");
-    }
-    if (arc.alpha < 0) {
-        fail("the advance cannot follow a check: the check holds the pendulum to rest relative to the hands");
-    }
     if (!(arc.handReach > 0)) {
         fail(`the advance travels the stroke's handReach, which must be positive (got ${arc.handReach})`);
     }
@@ -658,34 +785,39 @@ export interface StrokePlan {
  * Plans `setup` on `world` (P2b.2b.1 design §5.2; P2b.2b.2a design §3): the contact state, from one scan of the
  * downswing the approach, and the planned contact speed. Throws a RangeError naming the check for:
  * - a striker absent from the setup, or a stroke type missing from the profile's stance, drive or shape;
- * - a mode other than "swing" or "carry";
  * - a non-finite number, or a non-positive mallet dimension or mass, or a negative shaft mass; a box head's edge
  *   radius outside [0, min(h_y, h_z, L/2)) or its moment about the shaft outside the realisable (P2b.2b.2b.2c design
  *   §5.1);
- * - top ≤ 0, or top > shaftLength; bottom outside (0, top);
+ * - top ≤ 0, or top > shaftLength; bottom outside (0, top); each named `stroke.grip.<key>` where the shot gives it
+ *   (P2b.2b.2c.3a design §2), a top moved alone to or below the preset's bottom named `stroke.grip.top`;
  * - backswing ≤ 0; an intensity outside [0, 1]; |drive| > 1; the contact off the face (a box's: off its flat part);
  *   handsAhead outside (−D, A) for the stroke's top hand and contact (P2b.2b.2b.1 design §3.4: at A the shaft lies
  *   flat, at −D the hands leave the stance's branch);
+ * - a stroke.lean, stroke.feet or stroke.slopeHold non-finite, or a stroke.grip value non-finite, named by its key
+ *   (P2b.2b.2c.3a design §2); a stroke.lean above π/4 (the on-point limit), or at or below −atan2(A, B), where the
+ *   hands it places leave the stance's branch; a stroke.slopeHold outside [0, 1]; feet whose arc's lowest point s_low
+ *   = feet − x_c lies outside (handReach − handArcRadius, handArcRadius) (design §3, A2 item 1);
  * - a stroke.window non-finite or outside [MIN_WINDOW, MAX_WINDOW] (P2b.2b.2c.2d design §3.2);
- * - window, handWindow or dropTime ≤ 0; speedGain < 0; gripTension or bottomGrip outside (0, 1]; handDrop < 0; the
+ * - window, handWindow or dropTime ≤ 0; speedGain < 0; the preset's or the shot's gripTension or bottomGrip outside
+ *   (0, 1]; handDrop < 0; the
  *   preset's or the shot's handReach < 0; the preset's or the shot's guideEffort outside [0, 1];
  *   armMass < 0; reachSlack < 0; a backswingLimit non-finite or outside (0, π/2]; the body's effort torque τ_0 < 0
  *   or its speed ω_max ≤ 0 (P2b.2b.2c.1 design §4.4); the body's hands' peak acceleration not positive; the preset's
  *   or the shot's pendulumAt or pendulumEffort outside [0, 1]; handArcLow outside [0, 1]; a jab negative or
- *   non-finite, or non-zero in carry mode (P2b.2b.2b.3 design §6.1); handArcRadius not above the push length; a flex
- *   value not positive, or a flex damping ratio above 1; pendulumForce not positive (P2b.2b.2b.2b design §6);
+ *   non-finite (P2b.2b.2b.3 design §6.1); handArcRadius not above the push length; a flex value not positive, or a
+ *   flex damping ratio above 1; pendulumForce not positive (P2b.2b.2b.2b design §6);
  *   pushForce, pushResponseTime, gripLimit or a hand–arm chain value not positive (its gate rulings, 2026-10-11;
  *   P2b.2b.2b.3 design §5);
  * - pendulumShare outside [0, 1]; handAngle outside (0, 90°) when pendulumShare < 1 (neither read
- *   nor checked otherwise); in swing mode a pendulumShare of 0; in carry mode a null hands' tempo, or one ≤ 0 or
- *   with fast > slow;
- * - the downswing's (downswing.ts): a backswing beyond the body's limit θ_max (swing mode) or MAX_BACK_ANGLE (carry
- *   mode), a non-positive effective inertia, a stall or a fall beyond MAX_FALL;
+ *   nor checked otherwise); a slopeHold outside [0, 1]; a pendulumShare of 0 where the downswing needs its free swing
+ *   (slopeHold < 1, or a null hands' tempo); a hands' tempo, where given, ≤ 0 or with fast > slow;
+ * - the downswing's (downswing.ts): a backswing beyond the body's limit θ_max, a non-positive effective inertia, a
+ *   stall or a fall beyond MAX_FALL, or a planned slope the grip's couple cannot hold;
  * - an action timed more than MAX_LEAD early (the advance's among them), or a downswing meeting the turf more than
  *   MAX_LEAD − TURF_MARGIN before contact;
- * - an advance (P2b.2b.2c.1 design §6.2) in carry mode, on a check (α < 0), with a handReach ≤ 0, with V ≤ 0, or
- *   with its ramp's travel V·W/2 at or above 0.8·handReach (V the head's planned speed along aim at contact, W = V/a
- *   the ramp's duration at the body's hands' peak acceleration a);
+ * - an advance (P2b.2b.2c.1 design §6.2; P2b.2b.2c.3a A2 item 8) with a handReach ≤ 0, with V ≤ 0, or with its
+ *   ramp's travel V·W/2 at or above 0.8·handReach (V the head's planned speed along aim at contact, W = V/a the
+ *   ramp's duration at the body's hands' peak acceleration a);
  * - the head's lowest point below the turf at contact, or where the impact starts.
  * A downswing that meets the turf before the ball is not rejected: the impact starts before it and simulates it
  * (design §3.5).
@@ -726,7 +858,7 @@ export function planStroke(setup: ShotSetup, world: World): StrokePlan {
     // onto the pose. A single-ball stroke's dip before contact is left unplanned, so a deliberate graze keeps its
     // meaning.
     const depth = push.handDrop + (stroke.jab ?? 0);
-    const raise = CROQUET_STROKES.includes(type) ? dipTravel(depth, push.dropTime, 0 - dipFrom) : 0;
+    const raise = setup.croqueted !== undefined ? dipTravel(depth, push.dropTime, 0 - dipFrom) : 0;
     const lift = vec3(0, 0, raise);
     const planPose = raise > 0 ? { ...pose, pivot: add(pivot, lift), headCentre: add(headCentre, lift) } : pose;
     const planned = downswingOf(setup, planPose, hands, world.gravity);
@@ -749,6 +881,7 @@ export function planStroke(setup: ShotSetup, world: World): StrokePlan {
     // A shot's window sets both pulses; the change in each is kept, so only the rate moves. Absent, the preset's own.
     const window = stroke.window ?? push.window;
     const handWindow = stroke.window ?? push.handWindow;
+    const low = lowPointOf(setup, pose);
     // Steps 3 and 4, the arc expressed from the start, L before contact.
     const arc: SwingArc = {
         pivot: sub(planPose.pivot, scale(handsVelocity, lead)),
@@ -763,16 +896,17 @@ export function planStroke(setup: ShotSetup, world: World): StrokePlan {
         alpha: (stroke.drive * push.speedGain * contactSpeed) / (lever * window),
         arcStart: lead + timing.arc,
         window,
-        // Carry mode's hold keeps the preset's length: the shot's sharpness is the pulse's alone.
+        // The hold keeps the preset's length: the shot's sharpness is the pulse's alone.
         ...(stroke.window === undefined ? {} : { holdWindow: push.window }),
         dip: { start: lead + dipFrom, duration: push.dropTime, depth },
         contactAt: lead,
-        mode: push.mode,
+        slopeHold: stroke.slopeHold ?? profile.shape[type].slopeHold,
         handReach: stroke.handReach ?? push.handReach,
         pendulumAt: stroke.pendulumAt ?? push.pendulumAt,
         pendulumEffort: stroke.pendulumEffort ?? push.pendulumEffort,
         handArcRadius: push.handArcRadius,
         handArcLow: push.handArcLow,
+        ...(low === undefined ? {} : { lowPoint: low }),
         downswing: planned.downswing,
         ...(timing.advance === undefined
             ? {}

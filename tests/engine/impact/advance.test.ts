@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { FollowSnapshot, ImpactSnapshot } from "../../../src/engine/impact/integrate";
+import { finishKind, type FollowSnapshot, type ImpactSnapshot } from "../../../src/engine/impact/integrate";
 import { simulateStroke } from "../../../src/engine/impact/simulateImpact";
 import {
     advanceTravel,
@@ -8,7 +8,11 @@ import {
     pitchAxis,
     prepareTrack,
     type Advance,
+    type PreparedTrack,
+    type Push,
 } from "../../../src/engine/impact/track";
+import { simulateShot } from "../../../src/engine/shot";
+import type { SwingTrajectory } from "../../../src/engine/swing/trajectory";
 import type { SwingArc, TrackDrive } from "../../../src/engine/impact/types";
 import { dot, sub } from "../../../src/engine/math/vec3";
 import { MAX_LEAD, checkAdvance, planStroke, type StrokePlan } from "../../../src/engine/swing/buildContact";
@@ -73,10 +77,10 @@ const run = (setup: ShotSetup) => {
     return { result, follow };
 };
 
-/** The prepared track's advance (null without one). */
+/** The prepared track's push's advance (null without one). */
 function advanceOf(setup: ShotSetup): Advance {
     const { contact } = plan(setup);
-    return prepareTrack(contact.drive as TrackDrive, contact.head, WORLD.gravity).advance as Advance;
+    return (prepareTrack(contact.drive as TrackDrive, contact.head, WORLD.gravity).push as Push).advance as Advance;
 }
 
 /** The planned ω (rad/s) at time t, about the pitch axis. */
@@ -148,8 +152,9 @@ describe("the hands' advance (design §6, §8.1.5)", () => {
         // On time the ramp runs from contact for V/a, at 3 m/s and a = 300 m/s² the 10 ms of the pendulum's window.
         // P2b.2b.2c.2d: gravity through the pulse (was bit-equal): planned ω at the ramp's end −0.0817 against
         // 3.5968 rad/s; the window now carries the free pendulum's pivot term, so the plan shows the advance's
-        // slowing. The slowing reaches the head through swing mode's hand load, which pushes the top of the shaft
-        // forward along aim.
+        // slowing. P2b.2b.2c.3a: the advance on the push's arc (was −0.0817): −0.0889 against 3.5968 rad/s, the arc's
+        // descent adding to the hands' acceleration along the pendulum's tangent. The slowing reaches the head through
+        // the hands' load after contact, which pushes the top of the shaft forward along the push.
         const RAMP_END = advanceOf(level()).ramp;
         const at = (setup: ShotSetup): number =>
             (pitchRates(setup).find(({ t }) => t >= RAMP_END) as { rate: number }).rate;
@@ -160,7 +165,8 @@ describe("the hands' advance (design §6, §8.1.5)", () => {
         // The plan's own ω, for a late advance. On time the ramp coincides with the pendulum's window, which the free
         // table now also carries (the test above). A late advance's ramp lies wholly past the window in the free
         // table, which integrates the hands' acceleration through freeAlpha. 0.05 s after contact is after the window's
-        // end (W = 0.01 s) and well before the no-advance finish (about 0.498 s); its ramp lasts V/a, 0.01 s at 3 m/s.
+        // end (W = 0.01 s) and well before the no-advance finish (P2b.2b.2c.3a: a push that never travels, finishing
+        // as a carry (was about 0.498 s): about 0.454 s); its ramp lasts V/a, 0.01 s at 3 m/s.
         const late = level(0.05);
         const RAMP_END = advanceOf(late).ramp;
         expect(RAMP_END).toBeGreaterThan(arc().contactAt + 2 * arc().window);
@@ -179,11 +185,11 @@ describe("the hands' advance (design §6, §8.1.5)", () => {
         expect(pitchRates(level()).some(({ t, rate }) => t > end && rate > 0)).toBe(true);
         expect(follow.finish).toBeGreaterThan(end);
     });
-    it("carries the hands handReach in all from contact, the advance replacing the pivot's own reach", () => {
-        // One budget: the advance replaces the planned pivot's own reach. A pushed single-ball stroke whose planned
-        // pivot travels on along aim after contact (handGain 1 at drive +1), so that the plan's own reach binds:
-        // without an advance the reach carries the hands handReach; with one, the advance alone does, never the reach's
-        // distance on top.
+    it("carries the hands handReach in all from contact, the advance and the plan sharing one push", () => {
+        // One budget. P2b.2b.2c.3a: the advance on the push (was the advance replacing the planned pivot's own reach):
+        // the push's travel is the plan's plus the advance's, capped at handReach. A pushed single-ball stroke whose
+        // planned pivot travels on along aim after contact (handGain 1 at drive +1): without an advance the plan's
+        // travel carries the hands handReach; with one, both together do, never one's distance on top of the other's.
         const pushed = (timing: Partial<StrokeTiming>): ShotSetup => {
             const setup = canonicalSetup("single-ball", {
                 stroke: { drive: 1, handReach: 0.3, timing: { ...ON_TIME, ...timing } },
@@ -212,9 +218,11 @@ describe("the hands' advance (design §6, §8.1.5)", () => {
         expect(withAdvance.last).toBeCloseTo(0.3, 9);
     });
 
-    it("rejects carry mode, a check, no travel and a non-finite timing", () => {
-        expect(() => plan(stroke({ handReach: 0.3 }, { advance: 0 }, "half-roll"))).toThrow(/advance .* swing mode/);
-        expect(() => plan(stroke({ handReach: 0.3 }, { advance: 0 }, "stop-gc"))).toThrow(/advance .* check/);
+    it("rejects no travel and a non-finite timing", () => {
+        // P2b.2b.2c.3a: the advance rides the push on every stroke (A2 item 8), so a roll and a stop's check may
+        // advance (was rejecting carry mode and a check).
+        expect(() => plan(stroke({ handReach: 0.3 }, { advance: 0 }, "half-roll"))).not.toThrow();
+        expect(() => plan(stroke({ handReach: 0.3 }, { advance: 0 }, "stop-gc"))).not.toThrow();
         expect(() => plan(stroke({ handReach: 0 }, { advance: 0 }))).toThrow(/advance .* handReach/);
         expect(() => plan(stroke({ handReach: 0.3 }, { advance: Number.NaN }))).toThrow(/advance must be finite/);
     });
@@ -240,12 +248,112 @@ describe("the hands' advance (design §6, §8.1.5)", () => {
         expect(() => plan(level(-(MAX_LEAD + 0.001)))).toThrow(/more than .* early/);
         const late = run(stroke({ handReach: 0.3 }, { advance: 0.9 }));
         const none = run(rising());
-        // The late moment must lie after the no-advance run's finish (about 0.498 s after contact, at t = 0.4982 s,
-        // the lead being 0): +0.9 s does.
+        // The late moment must lie after the no-advance run's finish (P2b.2b.2c.3a: a push that never travels,
+        // finishing as a carry (was about 0.498 s after contact, at t = 0.4982 s): t = 0.4543 s, the lead being 0):
+        // +0.9 s does. Before its start the advance's travel is +0, so the push's path is the no-advance run's.
         const start = (arcOf(plan(stroke({ handReach: 0.3 }, { advance: 0.9 }))).advance as { start: number }).start;
         expect(start).toBeGreaterThan(none.follow.finish);
         expect(late.follow.advanced).toBeUndefined();
         expect(late.result).toEqual(none.result);
         expect(late.follow).toEqual(none.follow);
+    });
+});
+
+describe("the push on every stroke (P2b.2b.2c.3a A2 item 8)", () => {
+    /** The prepared track of `setup`, with its free table. */
+    const trackOf = (setup: ShotSetup): PreparedTrack => {
+        const { contact } = plan(setup);
+        return prepareTrack(contact.drive as TrackDrive, contact.head, WORLD.gravity);
+    };
+    /** The planned hands' travel along aim (m) from where they are at contact, at time t. */
+    const alongFrom = (track: PreparedTrack, t: number): number =>
+        dot(sub(handsAt(track, t).position, handsAt(track, track.arc.contactAt).position), track.arc.aim);
+
+    it("pushes still hands with an advance along the hands' arc", () => {
+        // The single-ball stroke's hands are still (handGain 0), so the advance alone carries them handReach, and the
+        // push's arc sets their height there: level − √(ρ_h² − (handReach − s_low)²) above the push's origin.
+        const track = trackOf(stroke({ handReach: 0.3 }, { advance: 0 }));
+        expect(track.push).not.toBeNull();
+        const push = track.push as Push;
+        expect(push.advance).not.toBeNull();
+        const end = push.end as number;
+        expect(alongFrom(track, end)).toBeCloseTo(0.3, 9);
+        const rho = track.arc.handArcRadius;
+        const height = push.level - Math.sqrt(rho * rho - (0.3 - push.low) * (0.3 - push.low));
+        expect(handsAt(track, end).position.z - push.origin.z).toBeCloseTo(height, 12);
+    });
+
+    it("builds no push at length 0, the hands resting along aim", () => {
+        const single = canonicalSetup("single-ball");
+        const roll = stroke({ handReach: 0 }, {}, "half-roll");
+        for (const setup of [single, roll]) {
+            const track = trackOf(setup);
+            expect(track.push, setup.stroke.type).toBeNull();
+            expect(alongFrom(track, track.arc.contactAt + 0.1), setup.stroke.type).toBeCloseTo(0, 12);
+        }
+        // A push of length 0 has no pendulum phase (A2 item 6): the bottom hand opens only at the signed reach, so a
+        // release, where the impact has one, has the shaft turned forward through the slack.
+        const { result } = run(roll);
+        const { hands, arc } = plan(roll).contact.drive as TrackDrive;
+        if (result.release !== undefined) {
+            expect((arc.radius - hands.bottom) * result.release.deltaTheta).toBeGreaterThan(hands.reachSlack);
+        }
+    });
+
+    it("plays a stop with a push through end to end", () => {
+        // Criterion 5: the brake holds the pendulum relative to the hands, the push carries the held mallet on, and the
+        // check finishes once the push has ended.
+        const setup = stroke({ drive: -1, handReach: 0.15 }, { advance: 0 }, "stop-ac");
+        const out = simulateShot(setup, WORLD, { trajectory: true });
+        const trajectory = out.trajectory as SwingTrajectory;
+        expect(out.impact.events.map((e) => e.kind)).not.toContain("impact-cap");
+        expect(trajectory.flags).not.toContain("follow-cap");
+        expect(Number.isFinite(out.impact.head.position.z)).toBe(true);
+        expect(trajectory.samples.every((s) => Number.isFinite(s.head.z))).toBe(true);
+        const track = prepareTrack(out.contact.drive as TrackDrive, out.contact.head, WORLD.gravity);
+        expect(finishKind(track)).toBe("check");
+        const push = track.push as Push;
+        expect(push.end).not.toBeNull();
+        expect(trajectory.finish).toBeGreaterThanOrEqual((push.end as number) - track.arc.contactAt);
+    });
+
+    it("plays a drive with a push through end to end", () => {
+        // Criterion 5: the free pendulum about hands that travel the push, its table including their motion.
+        const setup = stroke({ drive: 0, handReach: 0.15 }, { advance: 0 }, "drive");
+        const out = simulateShot(setup, WORLD, { trajectory: true });
+        const trajectory = out.trajectory as SwingTrajectory;
+        expect(out.impact.events.map((e) => e.kind)).not.toContain("impact-cap");
+        expect(trajectory.flags).not.toContain("follow-cap");
+        const track = prepareTrack(out.contact.drive as TrackDrive, out.contact.head, WORLD.gravity);
+        expect(finishKind(track)).toBe("carry");
+    });
+
+    it("finishes a pushed swing stroke as a carry", () => {
+        // A push takes the carried finish (A2 item 7): the first apex once the head has risen after the bottom hand
+        // opens, never the swing's first apex.
+        const setup = stroke({ handReach: 0.3 }, { advance: 0 });
+        expect(finishKind(trackOf(setup))).toBe("carry");
+        const { result, follow } = run(setup);
+        const release = result.release as { t: number };
+        expect(result.release).toBeDefined();
+        const rates = pitchRates(setup);
+        expect(rates.some(({ t, rate }) => t > release.t && rate > 0)).toBe(true);
+        expect((rates[rates.length - 1] as { rate: number }).rate).toBeLessThanOrEqual(0);
+        expect(follow.flags).not.toContain("follow-cap");
+    });
+
+    it("merges an advance into a roll's push", () => {
+        // The advance adds its travel to the plan's, so the push reaches its length sooner, and the cap stops the hands
+        // there. Numerical, not physical: the cap sets the travel to handReach exactly, so only rounding is allowed.
+        const TOLERANCE = 1e-12;
+        const without = trackOf(stroke({}, {}, "half-roll"));
+        const withAdvance = trackOf(stroke({}, { advance: 0 }, "half-roll"));
+        const reach = withAdvance.arc.handReach;
+        expect((withAdvance.push as Push).end as number).toBeLessThan((without.push as Push).end as number);
+        let most = 0;
+        for (let k = 0; k <= 2000; k++) {
+            most = Math.max(most, alongFrom(withAdvance, withAdvance.arc.contactAt + k * 1e-3));
+        }
+        expect(most).toBeLessThanOrEqual(reach + TOLERANCE);
     });
 });

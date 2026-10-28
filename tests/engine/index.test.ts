@@ -13,7 +13,6 @@ type Exported = [
     engine.SwingStance,
     engine.SwingDrive,
     engine.StrokeType,
-    engine.StrokeMode,
     engine.ShotOutcome,
     engine.SwingApproach,
     engine.ContactState,
@@ -67,9 +66,19 @@ describe("engine public API", () => {
         expect(engine.CROQUET_STROKES).toEqual(["drive", "stop-ac", "half-roll", "full-roll", "pass-roll"]);
         expect(engine.ON_TIME).toEqual({ arc: 0, hands: 0, dip: 0 });
         expect(engine.defaultProfile.mallet.headMass).toBeGreaterThan(0);
-        expect(engine.ENGINE_VERSION).toBe("0.17.0");
+        expect(engine.ENGINE_VERSION).toBe("0.18.0");
         const types: Exported | null = null;
         expect(types).toBeNull();
+    });
+
+    it("has no stroke mode: no StrokeMode, and no mode on SwingArc or SwingDrive (P2b.2b.2c.3a)", () => {
+        expect("StrokeMode" in engine).toBe(false);
+        // The type checker rejects each line if the field returns; Vitest does not check types.
+        // @ts-expect-error SwingArc has no `mode`
+        const arcMode: engine.SwingArc["mode"] | undefined = undefined;
+        // @ts-expect-error SwingDrive has no `mode`
+        const driveMode: engine.SwingDrive["mode"] | undefined = undefined;
+        expect([arcMode, driveMode]).toEqual([undefined, undefined]);
     });
 
     it("simulates a whole single-ball shot on the default world", () => {

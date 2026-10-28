@@ -1,16 +1,18 @@
 /**
  * The tracked drive's path (P2b.2b.1 design §3.1, §3.2), as two arcs. The pendulum: the mallet swings about the top
  * hand (the pivot) in a vertical plane, the shaft at arc angle θ. The hands' path through space: the pivot moves in
- * that plane, ends after its reach, and dips. Before contact the path follows the downswing when the arc has one
- * (P2b.2b.2a design §3.5); otherwise each arc runs at its initial rate until its window. Through its window each
- * changes rate by its mean rate times the window, delivered as a minimum-jerk pulse that starts and ends at zero
- * acceleration (Flash and Hogan 1985; P2b.2b.2c.2d design §3.1). After its window the pendulum swings freely (swing
- * mode) or slows to a held slope (carry mode). The dip lowers the pivot from rest to rest. In carry mode after contact
- * the pivot travels the hands' arc and stops at the push length (P2b.2b.2b.2b design §4.1), and the hands flex to an
- * intended path that starts from the actual grips, then swing the mallet through the pendulum phase (carryLoad;
- * P2b.2b.2b.2b design §3, §4). Through the push they also push along aim against the balls' resistance, at the
- * muscles' pace and capped (pushIntent; gate ruling 2026-10-11). From the flex's start each hand and arm is Dong et
- * al. 2013's x_h 5-DOF hand–arm chain, its flex driving the chain's forearm (gate round 3 ruling, 2026-10-11). The
+ * that plane, without a push rests along aim from contact, and dips. Before contact the path follows the downswing
+ * when the arc has one (P2b.2b.2a design §3.5); otherwise each arc runs at its initial rate until its window. Through
+ * its window each changes rate by its mean rate times the window, delivered as a minimum-jerk pulse that starts and
+ * ends at zero acceleration (Flash and Hogan 1985; P2b.2b.2c.2d design §3.1). After its window the pendulum swings
+ * freely, slows to a held slope, or blends the two by λ (P2b.2b.2c.3a design §4.1). The dip lowers the pivot from rest
+ * to rest. With a push, after contact the pivot travels the hands' arc at the plan's pace plus any advance's and stops
+ * at the push length (P2b.2b.2b.2b design §4.1; P2b.2b.2c.3a A2 item 8). On every stroke after contact the hands
+ * flex to an intended path that starts from the actual grips (carryLoad; P2b.2b.2b.2b design §3, §4; P2b.2b.2c.3a A2
+ * item 5), and with a push swing the mallet through the pendulum phase.
+ * Through the push they also push along aim against the balls' resistance, at the muscles' pace and capped
+ * (pushIntent; gate ruling 2026-10-11). From the flex's start each hand and arm is Dong et al. 2013's x_h 5-DOF
+ * hand–arm chain, its flex driving the chain's forearm (gate round 3 ruling, 2026-10-11). The
  * model's elements map to the engine's as: M0 the forearm, M1 the hand (palm–hand dorsum), M2 the fingers, each a
  * point mass (ArmChain); M3 and M4, the skin on the handle, rigid at the grip in the swung body (carryBody); K1, C1
  * `wrist` (M0–M1), K2, C2 `knuckle` (M1–M2), K3, C3 `palm` (M1–grip), K4, C4 `finger` (M2–grip); K0, C0 (M0 to the
@@ -19,14 +21,14 @@
  *
  * Frames. n = aim × ẑ is the pitch axis: a positive rotation about it tilts aim upward. The head is rigid on the shaft,
  * its up axis s: at arc angle θ its orientation is rot(n, θ) ⊗ q_aim, q_aim turning body x to aim, and the socket's
- * target is P + r·(sin θ·aim − cos θ·ẑ). The head and the arm mass at the top grip move as one swung body (design
- * §3.3); in carry mode the head and the hands' skin on the handle. Exact operations only (sinCos and atan2 from
- * elementary.ts), like the rest of the engine.
+ * target is P + r·(sin θ·aim − cos θ·ẑ). The head and the hands' skin on the handle move as one swung body (design
+ * §3.3; carryBody); the downswing's plan keeps the arm mass at the top grip (swungBody). Exact operations only (sinCos
+ * and atan2 from elementary.ts), like the rest of the engine.
  */
 import { contactReference } from "../../reference/index";
 import { atan2, exp, sinCos } from "../math/elementary";
 import { ZERO, add, cross, dot, length, scale, sub, vec3, type Vec3 } from "../math/vec3";
-import { flexForce, flexGains } from "./flex";
+import { flexForce, flexGains, gripGains } from "./flex";
 import { multiply, rotate, rotateInverse, type Quaternion } from "./rigidBody";
 import type {
     Coupling,
@@ -65,7 +67,7 @@ export const ARM_FLEX: FlexLaw = {
 /** F_pendulum (N, design §4.2): the bottom hand's largest push in the pendulum phase (reference/contact.json). */
 export const PENDULUM_FORCE = contactReference.pendulumForce.value;
 
-/** F_push (N, gate ruling 2026-10-11): the cap on the hands' push intent in carry mode (reference/contact.json). */
+/** F_push (N, gate ruling 2026-10-11): the cap on the hands' push intent through a push (reference/contact.json). */
 export const PUSH_FORCE = contactReference.pushForce.value;
 
 /** τ_push (s, gate ruling amendment 2026-10-11): the push intent's response time constant (reference/contact.json). */
@@ -75,7 +77,7 @@ export const PUSH_RESPONSE_TIME = contactReference.pushResponseTime.value;
 export const GRIP_LIMIT = contactReference.gripLimit.value;
 
 /**
- * Each hand and arm in carry mode (gate round 3 ruling, 2026-10-11): Dong et al. 2013's x_h 5-DOF hand–arm model
+ * Each hand and arm on every stroke (gate round 3 ruling, 2026-10-11): Dong et al. 2013's x_h 5-DOF hand–arm model
  * (reference/contact.json), less its boundary to the body (K0, C0), whose place the arm's flex takes.
  */
 export const HAND_CHAIN: HandChain = {
@@ -109,8 +111,8 @@ export const FREE_STEP = 5e-6;
 export const FREE_SPAN = 1.2;
 
 /**
- * How long after contactAt (s) the hands' path may take to travel 0.8·handReach before the reach is taken not to bind
- * (design §3.2). A modelling bound, not physical: past it the impact has long ended.
+ * How long after contactAt (s) the push may take to travel its length or reach its pendulum phase before it is taken
+ * never to (design §3.2). A modelling bound, not physical: past it the impact has long ended.
  */
 const REACH_SEARCH = 0.5;
 
@@ -218,12 +220,12 @@ export function swungBody(head: MalletHead, hands: Hands, radius: number): Swung
 }
 
 /**
- * Carry mode's swung body (gate round 3 ruling, 2026-10-11): `head` with each holding hand's skin on the handle,
- * M3 + M4 of `chain`, rigid at its grip: the top grip `radius` from the socket and, unless `bottom` is null, the bottom
- * grip `bottom` from it. M = m + Σ s, δ = Σ s·z/M and I' = (I_x + e, I_y + e, I_z), e = m·δ² + Σ s·(z − δ)², z each
- * grip's height above the head's centre. The skin's weight is the hand's to carry (carryLoad), so the body has inertia
- * from it and no weight. Built on the mallet (malletBody) when the shaft has mass (P2b.2b.2b.2c design §4.2); with
- * none, on the head alone, with no added zero terms.
+ * The swung body (gate round 3 ruling, 2026-10-11; P2b.2b.2c.3a A2 item 4): `head` with each holding hand's skin on
+ * the handle, M3 + M4 of `chain`, rigid at its grip: the top grip `radius` from the socket and, unless `bottom` is
+ * null, the bottom grip `bottom` from it. M = m + Σ s, δ = Σ s·z/M and I' = (I_x + e, I_y + e, I_z),
+ * e = m·δ² + Σ s·(z − δ)², z each grip's height above the head's centre. The skin's weight is the hand's to carry
+ * (carryLoad), so the body has inertia from it and no weight. Built on the mallet (malletBody) when the shaft has mass
+ * (P2b.2b.2b.2c design §4.2); with none, on the head alone, with no added zero terms.
  */
 export function carryBody(head: MalletHead, chain: HandChain, radius: number, bottom: number | null): SwungBody {
     const skin = chain.palmSkinMass + chain.fingerSkinMass;
@@ -282,9 +284,30 @@ function handGains(coupling: Coupling, grip: number, body: SwungBody): HandGains
 }
 
 /**
- * The hands' reach (design §3.2): the planned pivot until it has travelled 0.8·handReach along aim from contactAt, at
- * t1 (where it is at p1, with speed v1 along aim); then its along-aim component decelerates at `decel` to rest at
- * tStop and stays there.
+ * The grip's couple C = min(γ_T, g_B)·F_max·(r − b) (N·m; P2b.2b.2c.3a design §4.1, Amendments item 3): `hands`' grip
+ * limit F_max (Young et al. 2009) across their spread r − b, the top grip `radius` from the socket. The firmness factor
+ * min(γ_T, g_B) is a placeholder: the weaker hand bounds the couple.
+ */
+export function gripCouple(hands: Hands, radius: number): number {
+    return Math.min(hands.gripTension, hands.bottomGrip) * hands.gripLimit * (radius - hands.bottom);
+}
+
+/**
+ * A stop's hold's pitch gains about n (P2b.2b.2c.3a gate stage 2, the hold's pitch impedance), for a swung body of
+ * pitch inertia `inertia` (kg·m²) about the top hand: K_p = I_P·(2π/T)² and C_p = 2ζ·√(K_p·I_P) (N·m/rad,
+ * N·m·s/rad), the firm grip's period T and damping ratio ζ (HAND_COUPLING) applied to the pitch, as handGains applies
+ * them to the twist.
+ */
+function holdPitchGains(coupling: Coupling, inertia: number): { readonly stiffness: number; readonly damping: number } {
+    const rate = (2 * Math.PI) / coupling.period;
+    const stiffness = inertia * rate * rate;
+    return { stiffness, damping: 2 * coupling.dampingRatio * Math.sqrt(stiffness * inertia) };
+}
+
+/**
+ * The hands' reach (design §3.2): the planned pivot until t1 (where it is at p1, with speed v1 along aim); then its
+ * along-aim component decelerates at `decel` to rest at tStop and stays there. Without a push the reach rests from
+ * contactAt (restingReach); a reach forward is the push's (P2b.2b.2c.3a A2 item 8).
  */
 export interface Reach {
     readonly t1: number;
@@ -316,11 +339,12 @@ export interface Advance {
 }
 
 /**
- * Carry mode's push (P2b.2b.2b.2b design §4.1, §4.2): from `start` (contactAt), the planned pivot at `origin`, the
- * intended path travels along aim at the plan's pace on the hands' arc. It reaches pendulumAt·handReach at
- * `pendulum` and the push length handReach at `end`, where it stops at once (s from t = 0; null where the plan does
- * not travel that far within REACH_SEARCH). `low` is s_low = handArcLow·handReach (m) and `level` √(ρ_h² − s_low²)
- * (m), the arc's centre's height above the hands at contact.
+ * The hands' push through (P2b.2b.2b.2b design §4.1, §4.2; P2b.2b.2c.3a A2 item 8), on every stroke with a handReach
+ * above 0: from `start` (contactAt), the planned pivot at `origin`, the intended path travels along aim at the plan's
+ * pace plus any `advance`'s on the hands' arc. It reaches pendulumAt·handReach at `pendulum` and the push length
+ * handReach at `end`, where it stops at once (s from t = 0; null where the hands do not travel that far within
+ * REACH_SEARCH). `low` is s_low (m), the arc's lowPoint else handArcLow·handReach, and `level` √(ρ_h² − s_low²) (m),
+ * the arc's centre's height above the hands at contact.
  */
 export interface Push {
     readonly start: number;
@@ -329,14 +353,15 @@ export interface Push {
     readonly pendulum: number | null;
     readonly low: number;
     readonly level: number;
+    /** The hands' advance (P2b.2b.2c.1 design §6), its travel added to the plan's; null without one. */
+    readonly advance: Advance | null;
 }
 
 /**
- * Swing mode's free pendulum from the pendulum's window's start (design §3.2; P2b.2b.2c.2d design §3.1): θ and ω
+ * The free pendulum from the pendulum's window's start (design §3.2; P2b.2b.2c.2d design §3.1): θ and ω
  * tabulated every FREE_STEP from `tw`, arcStart, of I_P·θ̈ = −W·sin θ − M·d·(A·t̂), plus the pulse's I_P·6·ᾱ·s(1 − s)
  * within the window, so that gravity acts through it. `weight` is W, m·g·ℓ_h with the shaft's term (pendulumOf; N·m),
- * `inertial` M·d (kg·m) and `inertia` I_P (kg·m²). `pulseOnly` marks a table that runs through the window only;
- * `held`, a pendulum held at θ (rad) from `from` (s; holdPendulum), null otherwise.
+ * `inertial` M·d (kg·m) and `inertia` I_P (kg·m²). `pulseOnly` marks a table that runs through the window only.
  */
 export interface FreePendulum {
     readonly tw: number;
@@ -346,7 +371,6 @@ export interface FreePendulum {
     readonly inertial: number;
     readonly inertia: number;
     readonly pulseOnly: boolean;
-    readonly held: { readonly from: number; readonly theta: number } | null;
 }
 
 /**
@@ -375,18 +399,22 @@ export interface PreparedTrack {
     readonly pivotVelocityEnd: Vec3;
     /** The dip's acceleration, 4·depth/duration² (m/s²). */
     readonly dipAccel: number;
-    /** Null where the reach does not bind. */
+    /** The resting reach where there is no push (restingReach, a handReach of 0); null with a push. */
     readonly reach: Reach | null;
-    /** Carry mode's push (P2b.2b.2b.2b design §4.1); null in swing mode. In carry mode `reach` is null. */
+    /** The push (P2b.2b.2c.3a A2 item 8): non-null exactly where handReach > 0. */
     readonly push: Push | null;
-    /** Swing mode's advance (P2b.2b.2c.1 design §6); null without one, and in carry mode. */
-    readonly advance: Advance | null;
-    /** Swing mode's free pendulum; null in carry mode, or in swing mode where prepareTrack skipped it. */
+    /** The free pendulum; null on a fully held slope (λ = 1), or where prepareTrack skipped it. */
     readonly free: FreePendulum | null;
-    /** The swung body; in carry mode with both hands' skin (carryBody). */
+    /**
+     * A stop's hold (holdPendulum): the pendulum held at θ (rad) from `from` (s) on; null otherwise. It lives on the
+     * track, not the free table, so a check on a fully held slope, which has no table, holds too (P2b.2b.2c.3a A2
+     * item 7).
+     */
+    readonly held: { readonly from: number; readonly theta: number } | null;
+    /** The swung body: the mallet with both hands' skin at their grips (carryBody; P2b.2b.2c.3a A2 item 4). */
     readonly body: SwungBody;
-    /** Carry mode's swung body once the bottom hand has let go, with the top hand's skin alone; null in swing mode. */
-    readonly released: SwungBody | null;
+    /** The swung body once the bottom hand has let go, with the top hand's skin alone. */
+    readonly released: SwungBody;
     /** The head's weight m·g (N). */
     readonly headWeight: number;
     /**
@@ -395,7 +423,7 @@ export interface PreparedTrack {
      */
     readonly shaftWeight: number;
     readonly shaftRise: number;
-    /** g (m/s²), for the weights of carry mode's hand–arm chains (gate round 3 ruling, 2026-10-11). */
+    /** g (m/s²), for the weights of the hand–arm chains (gate round 3 ruling, 2026-10-11). */
     readonly gravity: number;
     /** Gains of a firm grip (g = 1, both hands before relaxAt), the top hand's (γ_T) and the bottom hand's (g_B). */
     readonly firm: HandGains;
@@ -452,7 +480,7 @@ export function pendulumOf(head: MalletHead, body: SwungBody, radius: number, gr
     return { weight: head.mass * gravity * lh + rod * gravity * below, inertial, inertia };
 }
 
-/** How many samples the downswing's scan visits (P2b.2b.2a design §3.4): its table's, or carry mode's like it. */
+/** How many samples the downswing's scan visits (P2b.2b.2a design §3.4): its table's, or the closed form's like it. */
 export function downswingSamples(down: Downswing): number {
     if (down.tempo === null) {
         return down.theta.length;
@@ -467,7 +495,7 @@ export function downswingTime(down: Downswing, k: number): number {
 
 /**
  * The downswing's pendulum at time t (s from contact, at most 0; P2b.2b.2a design §3.3, §3.4): held at the top before
- * the release; in carry mode θ = θ_top + span·σ²; in swing mode its table, interpolated linearly.
+ * the release; for the closed form θ = θ_top + span·σ²; otherwise its table, interpolated linearly.
  */
 export function downswingAt(down: Downswing, t: number): Swing {
     if (t < down.release) {
@@ -482,31 +510,36 @@ export function downswingAt(down: Downswing, t: number): Swing {
             alpha: (2 * down.span) / (T * T),
         };
     }
+    const lerp = tableLerp(down, t);
+    return { theta: lerp(down.theta), omega: lerp(down.omega), alpha: lerp(down.alpha) };
+}
+
+/**
+ * A reader of a column of `down`'s table at time t (s from contact, at or after the release), interpolated linearly
+ * between its samples; at contact and after, the last sample.
+ */
+function tableLerp(down: Downswing, t: number): (values: readonly number[]) => number {
     const n = down.theta.length;
     if (t >= 0) {
-        // Contact exactly: σ is then exactly 1 and the hands arrive level.
+        // Contact exactly: σ is then exactly 1 and the hands arrive on their path's end.
         const last = n - 1;
-        return {
-            theta: down.theta[last] as number,
-            omega: down.omega[last] as number,
-            alpha: down.alpha[last] as number,
-        };
+        return (values) => values[last] as number;
     }
     const i = Math.max(0, Math.min(Math.floor((t - down.release) / FREE_STEP), n - 2));
     const t0 = down.release + i * FREE_STEP;
     const t1 = i + 1 === n - 1 ? 0 : down.release + (i + 1) * FREE_STEP;
     const f = Math.min(Math.max((t - t0) / (t1 - t0), 0), 1);
-    const lerp = (values: readonly number[]): number => {
+    return (values) => {
         const a = values[i] as number;
         return a + f * ((values[i + 1] as number) - a);
     };
-    return { theta: lerp(down.theta), omega: lerp(down.omega), alpha: lerp(down.alpha) };
 }
 
 /**
  * The downswing's hands at time t (s from contact; P2b.2b.2a design §3.3), the pendulum at `swing`: P(σ) and its
- * derivatives, σ led by the pendulum in swing mode (σ = (θ − θ_top)/span) and by time in carry mode. At rest at the
- * top before the release.
+ * derivatives. σ is led by time on the closed form, by the table's own hands' progress on a blend
+ * (P2b.2b.2c.3a design §4.1), and otherwise by the pendulum, σ = (θ − θ_top)/span. At rest at the top before the
+ * release.
  */
 export function downswingHands(down: Downswing, t: number, swing: Swing): Motion {
     if (t < down.release) {
@@ -515,10 +548,16 @@ export function downswingHands(down: Downswing, t: number, swing: Swing): Motion
     let sigma: number;
     let rate: number;
     let accel: number;
+    const progress = down.handsProgress;
     if (down.tempo !== null) {
         sigma = Math.min(t - down.release, down.tempo) / down.tempo;
         rate = 1 / down.tempo;
         accel = 0;
+    } else if (progress !== undefined) {
+        const lerp = tableLerp(down, t);
+        sigma = lerp(progress.sigma);
+        rate = lerp(progress.rate);
+        accel = lerp(progress.accel);
     } else {
         sigma = (swing.theta - down.thetaTop) / down.span;
         rate = swing.omega / down.span;
@@ -528,17 +567,18 @@ export function downswingHands(down: Downswing, t: number, swing: Swing): Motion
     const bend = add(scale(down.across, 2), scale(down.drop, 6 - 12 * sigma));
     const rise = (3 - 2 * sigma) * sigma * sigma;
     const P = add(add(down.handsTop, scale(down.across, sigma * sigma)), scale(down.drop, rise));
-    if (down.tempo === null) {
+    // A table adds the Hermite term only where it is non-zero, so that a level arrival keeps today's bits.
+    if (down.tempo === null && down.tangent.z === 0) {
         return { P, V: scale(slope, rate), A: add(scale(bend, rate * rate), scale(slope, accel)) };
     }
-    // Carry mode (P2b.2b.2b.2b design §4.1): the Hermite term T·(σ³ − σ²) brings the hands onto the arc.
+    // The Hermite term T·(σ³ − σ²) brings the hands onto the arc (P2b.2b.2b.2b design §4.1).
     const T = down.tangent;
-    const carrySlope = add(slope, scale(T, 3 * sigma * sigma - 2 * sigma));
-    const carryBend = add(bend, scale(T, 6 * sigma - 2));
+    const arcSlope = add(slope, scale(T, 3 * sigma * sigma - 2 * sigma));
+    const arcBend = add(bend, scale(T, 6 * sigma - 2));
     return {
         P: add(P, scale(T, sigma * sigma * sigma - sigma * sigma)),
-        V: scale(carrySlope, rate),
-        A: add(scale(carryBend, rate * rate), scale(carrySlope, accel)),
+        V: scale(arcSlope, rate),
+        A: add(scale(arcBend, rate * rate), scale(arcSlope, accel)),
     };
 }
 
@@ -645,31 +685,21 @@ export function advanceTravel(
 }
 
 /**
- * The pivot at time t: in carry mode after contactAt on the hands' arc (carryPivot); otherwise with the reach, without
- * the dip, and after the advance's start with its travel along aim, planned so that the free table includes it.
+ * The pivot at time t, without the dip, planned so that the free table includes it: with a push after contactAt on
+ * the hands' arc (carryPivot), and before it from an earlier advance's start the plan with the advance's travel on
+ * that arc (earlyAdvance); without one, with the resting reach: after t1 the along-aim component eases to rest, and
+ * any other component in the swing plane runs on as planned, so V stays continuous.
  */
 function pivotAt(track: PreparedTrack, t: number): Motion {
-    const reached = reachedPivot(track, t);
-    const { advance } = track;
-    if (advance === null || !(t > advance.start)) {
-        return reached;
-    }
-    const { aim } = track.arc;
-    const { a, v, acc } = advanceTravel(advance, t);
-    return { P: add(reached.P, scale(aim, a)), V: add(reached.V, scale(aim, v)), A: add(reached.A, scale(aim, acc)) };
-}
-
-/**
- * The pivot at time t without the advance: in carry mode after contactAt on the hands' arc (carryPivot); otherwise
- * with the reach, without the dip. After t1 the along-aim component eases to rest; any other component in the swing
- * plane runs on as planned, so V stays continuous.
- */
-function reachedPivot(track: PreparedTrack, t: number): Motion {
     const { push } = track;
     if (push !== null && t > push.start) {
         return carryPivot(track, push, t);
     }
     const plan = planPivot(track, t);
+    if (push !== null) {
+        const { advance } = push;
+        return advance !== null && t > advance.start ? earlyAdvance(track, push, advance, plan, t) : plan;
+    }
     const { reach } = track;
     if (reach === null || t <= reach.t1) {
         return plan;
@@ -708,52 +738,22 @@ function restingReach(track: PreparedTrack): Reach {
 }
 
 /**
- * The reach (design §3.2): where the planned pivot has travelled 0.8·handReach along aim from contactAt (by bisection;
- * the swing model's paths travel monotonically), and the ease to rest over the last 0.2·handReach. A handReach of 0
- * rests the along-aim motion from contactAt. Null if the plan does not travel that far within REACH_SEARCH.
+ * When the push has travelled `distance` (m) along aim from the planned pivot at contactAt (P2b.2b.2b.2b design §4.1,
+ * §4.2): the plan's travel plus any `advance`'s (P2b.2b.2c.3a A2 item 8), by bisection (the plans and the advance
+ * travel monotonically); contactAt for a distance of 0 or less; null if the hands do not travel that far within
+ * REACH_SEARCH.
  */
-function computeReach(track: PreparedTrack): Reach | null {
-    const { aim, contactAt, handReach } = track.arc;
-    if (!(handReach > 0)) {
-        return restingReach(track);
-    }
-    const p0 = planPivot(track, contactAt).P;
-    const start = 0.8 * handReach;
-    const along = (t: number): number => dot(sub(planPivot(track, t).P, p0), aim);
-    let lo = contactAt;
-    let hi = contactAt + REACH_SEARCH;
-    if (along(hi) < start) {
-        return null;
-    }
-    for (let i = 0; i < REACH_BISECTIONS; i++) {
-        const mid = (lo + hi) / 2;
-        if (along(mid) < start) {
-            lo = mid;
-        } else {
-            hi = mid;
-        }
-    }
-    const at = planPivot(track, hi);
-    const v1 = Math.max(0, dot(at.V, aim));
-    if (!(v1 > 0)) {
-        return { t1: hi, p1: at.P, v1: 0, decel: 0, tStop: hi };
-    }
-    const ease = 0.4 * handReach;
-    return { t1: hi, p1: at.P, v1, decel: (v1 * v1) / ease, tStop: hi + ease / v1 };
-}
-
-/**
- * When the planned pivot has travelled `distance` (m) along aim from contactAt (P2b.2b.2b.2b design §4.1, §4.2): by
- * bisection, as computeReach (the plans travel monotonically); contactAt for a distance of 0 or less; null if the plan
- * does not travel that far within REACH_SEARCH.
- */
-function travelTime(track: PreparedTrack, distance: number): number | null {
+function travelTime(track: PreparedTrack, distance: number, advance: Advance | null): number | null {
     const { aim, contactAt } = track.arc;
     if (!(distance > 0)) {
         return contactAt;
     }
     const p0 = planPivot(track, contactAt).P;
-    const along = (t: number): number => dot(sub(planPivot(track, t).P, p0), aim);
+    // Without an advance the plan's travel alone, so a roll keeps its bits: no zero term added.
+    const along =
+        advance === null
+            ? (t: number): number => dot(sub(planPivot(track, t).P, p0), aim)
+            : (t: number): number => dot(sub(planPivot(track, t).P, p0), aim) + advanceTravel(advance, t).a;
     let lo = contactAt;
     let hi = contactAt + REACH_SEARCH;
     if (along(hi) < distance) {
@@ -770,43 +770,87 @@ function travelTime(track: PreparedTrack, distance: number): number | null {
     return hi;
 }
 
-/** Carry mode's push for `track` (design §4.1, §4.2). */
+/** The push for `track` (design §4.1, §4.2; P2b.2b.2c.3a A2 item 8), its advance from the arc's. */
 function computePush(track: PreparedTrack): Push {
     const { arc } = track;
-    const low = arc.handArcLow * arc.handReach;
+    // A shot's feet place the low point directly; without them, today's fraction of the push.
+    const low = arc.lowPoint ?? arc.handArcLow * arc.handReach;
+    const advance = arc.advance === undefined ? null : advanceOf(arc, arc.advance);
     return {
         start: arc.contactAt,
         origin: planPivot(track, arc.contactAt).P,
-        end: travelTime(track, arc.handReach),
-        pendulum: travelTime(track, arc.pendulumAt * arc.handReach),
+        end: travelTime(track, arc.handReach, advance),
+        pendulum: travelTime(track, arc.pendulumAt * arc.handReach, advance),
         low,
         level: Math.sqrt(arc.handArcRadius * arc.handArcRadius - low * low),
+        advance,
     };
 }
 
 /**
- * Carry mode's planned pivot after contactAt (design §4.1): s(t), the plan's travel along aim from the push's origin,
- * until the push's end, then the push length at rest; its height on the hands' arc, z(s) = level − √(ρ_h² −
- * (s − s_low)²) above the origin, with ż = z′·ṡ and z̈ = z″·ṡ² + z′·s̈, z′ = u/√(ρ_h² − u²) and z″ = ρ_h²/(ρ_h² −
- * u²)^{3/2}, u = s − s_low. A plan that runs past the push length without a found end (beyond REACH_SEARCH) also
- * rests there.
+ * The height on the push's arc of hands `s` (m) along aim from its origin, moving at ṡ = `ds` and s̈ = `dds`:
+ * z(s) = level − √(ρ_h² − (s − s_low)²) above the origin, with ż = z′·ṡ and z̈ = z″·ṡ² + z′·s̈, z′ = u/√(ρ_h² − u²) and
+ * z″ = ρ_h²/(ρ_h² − u²)^{3/2}, u = s − s_low.
  */
-function carryPivot(track: PreparedTrack, push: Push, t: number): Motion {
-    const { aim, handReach, handArcRadius } = track.arc;
-    const plan = planPivot(track, t);
-    const raw = dot(sub(plan.P, push.origin), aim);
-    const stopped = (push.end !== null && t >= push.end) || raw >= handReach;
-    const s = stopped ? handReach : raw;
-    const ds = stopped ? 0 : dot(plan.V, aim);
-    const dds = stopped ? 0 : dot(plan.A, aim);
+function arcHeight(
+    track: PreparedTrack,
+    push: Push,
+    s: number,
+    ds: number,
+    dds: number,
+): { readonly z: number; readonly v: number; readonly a: number } {
+    const { handArcRadius } = track.arc;
     const u = s - push.low;
     const root = Math.sqrt(handArcRadius * handArcRadius - u * u);
     const slope = u / root;
     const curve = (handArcRadius * handArcRadius) / (root * root * root);
+    return { z: push.level - root, v: slope * ds, a: curve * ds * ds + slope * dds };
+}
+
+/**
+ * The push's planned pivot after contactAt (design §4.1; P2b.2b.2c.3a A2 item 8): s(t), the plan's travel along aim
+ * from the push's origin plus any advance's, until the push's end, then the push length at rest; its height on the
+ * hands' arc (arcHeight). Hands that run past the push length without a found end (beyond REACH_SEARCH) also rest
+ * there.
+ */
+function carryPivot(track: PreparedTrack, push: Push, t: number): Motion {
+    const { aim, handReach } = track.arc;
+    const plan = planPivot(track, t);
+    let raw = dot(sub(plan.P, push.origin), aim);
+    let pace = dot(plan.V, aim);
+    let surge = dot(plan.A, aim);
+    // Without an advance the plan's pace alone, so a roll keeps its bits: no zero term added.
+    if (push.advance !== null) {
+        const { a, v, acc } = advanceTravel(push.advance, t);
+        raw += a;
+        pace += v;
+        surge += acc;
+    }
+    const stopped = (push.end !== null && t >= push.end) || raw >= handReach;
+    const s = stopped ? handReach : raw;
+    const ds = stopped ? 0 : pace;
+    const dds = stopped ? 0 : surge;
+    const height = arcHeight(track, push, s, ds, dds);
     return {
-        P: add(add(push.origin, scale(aim, s)), vec3(0, 0, push.level - root)),
-        V: add(scale(aim, ds), vec3(0, 0, slope * ds)),
-        A: add(scale(aim, dds), vec3(0, 0, curve * ds * ds + slope * dds)),
+        P: add(add(push.origin, scale(aim, s)), vec3(0, 0, height.z)),
+        V: add(scale(aim, ds), vec3(0, 0, height.v)),
+        A: add(scale(aim, dds), vec3(0, 0, height.a)),
+    };
+}
+
+/**
+ * The planned pivot `plan` at time t before contactAt, from the start of an advance timed earlier: the advance's travel
+ * a along aim on the push's arc, so that the hands reach contact a along it, where the push's own path (carryPivot)
+ * takes them on from: their place does not step there.
+ */
+function earlyAdvance(track: PreparedTrack, push: Push, advance: Advance, plan: Motion, t: number): Motion {
+    const { aim } = track.arc;
+    const { a, v, acc } = advanceTravel(advance, t);
+    const height = arcHeight(track, push, a, v, acc);
+    return {
+        P: add(add(plan.P, scale(aim, a)), vec3(0, 0, height.z)),
+        V: add(add(plan.V, scale(aim, v)), vec3(0, 0, height.v)),
+        A: add(add(plan.A, scale(aim, acc)), vec3(0, 0, height.a)),
     };
 }
 
@@ -833,7 +877,7 @@ function pulseAlpha(arc: SwingArc, t: number): number {
 }
 
 /**
- * Tabulates swing mode's free pendulum by semi-implicit Euler every FREE_STEP from the window's start, at θ and ω
+ * Tabulates the free pendulum by semi-implicit Euler every FREE_STEP from the window's start, at θ and ω
  * there (design §3.2; P2b.2b.2c.2d design §3.1): through the window with the pulse added to gravity's term (only for a
  * pulse, so that at drive 0 it is the bare free pendulum's), then FREE_SPAN on, unless `pulseOnly`. The player's effort
  * ends where the pulse starts.
@@ -848,7 +892,6 @@ function computeFree(track: PreparedTrack, head: MalletHead, gravity: number, pu
         omega,
         ...pendulumOf(head, body, arc.radius, gravity),
         pulseOnly,
-        held: null,
     };
     const end = arc.arcStart + arc.window;
     const pulsed = arc.alpha !== 0;
@@ -884,10 +927,11 @@ function tableAt(free: FreePendulum, t: number): { readonly theta: number; reado
 }
 
 /**
- * Prepares `drive` for `head` under `gravity` (design §3.2, §3.3): the windows' end states; in swing mode the reach
- * and the free pendulum's table from the window's start, its θ and ω at the window's end being the table's
- * (P2b.2b.2c.2d design §3.1); in carry mode the push (P2b.2b.2b.2b design §4.1); the swung body and the gains. Without
- * `withFree` the table runs through the pulse only: a caller that reads the path only up to the pendulum's window's
+ * Prepares `drive` for `head` under `gravity` (design §3.2, §3.3): the windows' end states; with a handReach above 0
+ * the push (P2b.2b.2b.2b design §4.1; P2b.2b.2c.3a A2 item 8), else the resting reach; wherever the slope is not
+ * fully held (λ < 1, P2b.2b.2c.3a design §4.1) the free pendulum's table from the window's start, its θ and ω at the
+ * window's end being the table's (P2b.2b.2c.2d design §3.1); the swung body and the gains. Without `withFree` the
+ * table runs through the pulse only: a caller that reads the path only up to the pendulum's window's
  * end saves its cost, and a read past it throws.
  */
 export function prepareTrack(drive: TrackDrive, head: MalletHead, gravity: number, withFree = true): PreparedTrack {
@@ -896,10 +940,10 @@ export function prepareTrack(drive: TrackDrive, head: MalletHead, gravity: numbe
     const wh = arc.handWindow;
     const atArc = beforeWindow(arc, arc.arcStart);
     const atHands = beforeHands(arc, arc.handStart);
-    // Carry mode's hands hold the mallet through their hand–arm chains (gate round 3 ruling, 2026-10-11), which replace
-    // the arm mass riding rigidly at the top grip: its swung body is the head with the hands' skin at the grips.
-    const carry = arc.mode === "carry";
-    const body = carry ? carryBody(head, hands.chain, arc.radius, hands.bottom) : swungBody(head, hands, arc.radius);
+    // Every stroke's hands hold the mallet through their hand–arm chains (gate round 3 ruling, 2026-10-11; P2b.2b.2c.3a
+    // A2 item 4), which replace the arm mass riding rigidly at the top grip: the swung body is the head with the hands'
+    // skin at the grips. The downswing still plans on the arm mass (swungBody, downswingInput).
+    const body = carryBody(head, hands.chain, arc.radius, hands.bottom);
     const plain: PreparedTrack = {
         kind: "track",
         arc,
@@ -918,10 +962,10 @@ export function prepareTrack(drive: TrackDrive, head: MalletHead, gravity: numbe
         dipAccel: (4 * arc.dip.depth) / (arc.dip.duration * arc.dip.duration),
         reach: null,
         push: null,
-        advance: carry || arc.advance === undefined ? null : advanceOf(arc, arc.advance),
         free: null,
+        held: null,
         body,
-        released: carry ? carryBody(head, hands.chain, arc.radius, null) : null,
+        released: carryBody(head, hands.chain, arc.radius, null),
         headWeight: head.mass * gravity,
         shaftWeight: head.shaft.mass * gravity,
         shaftRise: head.socket.z + head.shaft.length / 2,
@@ -930,13 +974,14 @@ export function prepareTrack(drive: TrackDrive, head: MalletHead, gravity: numbe
         top: handGains(coupling, hands.gripTension, body),
         bottom: handGains(coupling, hands.bottomGrip, body),
     };
-    if (carry) {
-        return { ...plain, push: computePush(plain) };
+    // Hands that reach forward push through, at the plan's pace plus any advance's (P2b.2b.2c.3a A2 item 8); a push of
+    // length 0 is none, and the planned pivot rests along aim from contact.
+    const reached: PreparedTrack =
+        arc.handReach > 0 ? { ...plain, push: computePush(plain) } : { ...plain, reach: restingReach(plain) };
+    // A fully held slope (λ = 1) has no free pendulum to tabulate (P2b.2b.2c.3a design §4.1).
+    if (!(arc.slopeHold < 1)) {
+        return reached;
     }
-    // An advance alone carries the hands handReach, so the planned pivot's own reach rests from contact: one budget,
-    // never the reach's distance on top (P2b.2b.2c.1 design, Amendments).
-    const reach = plain.advance === null ? computeReach(plain) : restingReach(plain);
-    const reached: PreparedTrack = { ...plain, reach };
     // Gravity acts through the pulse (P2b.2b.2c.2d design §3.1), so the window's end is the table's, not the box's.
     const free = computeFree(reached, head, gravity, !withFree);
     const end = tableAt(free, arc.arcStart + w);
@@ -977,41 +1022,73 @@ export interface PathPoint {
 }
 
 /**
- * Swing mode's free pendulum table; past the window (`past`), throws if prepareTrack tabulated it through the pulse
- * only, rather than read a table that is not there.
+ * The free pendulum's table, tabulated wherever λ < 1; past the window (`past`), throws if prepareTrack tabulated it
+ * through the pulse only, rather than read a table that is not there.
  */
 function freeOf(track: PreparedTrack, past: boolean): FreePendulum {
     const { free } = track;
     if (free === null || (past && free.pulseOnly)) {
         throw new Error(
-            "the free pendulum's table was read past the window's end, but prepareTrack tabulated it through the pulse " +
-                "only (withFree false) or not at all (carry mode)",
+            "the free pendulum's table was read past the window's end, but prepareTrack tabulated it through the " +
+                "pulse only (withFree false) or not at all (a fully held slope)",
         );
     }
     return free;
 }
 
-/** The pendulum's θ, ω and α at time t (design §3.2). */
+/**
+ * The pendulum's θ, ω and α at time t (design §3.2; P2b.2b.2c.3a design §4.1): from the window's start the free
+ * pendulum at λ = 0, the kinematic pulse and hold at λ = 1, and between them θ = (1 − λ)·θ_free + λ·θ_held, ω and α
+ * likewise. A stop's hold (holdPendulum) holds the whole pendulum at any λ, past the window and from its start on.
+ */
 function pendulumAt(track: PreparedTrack, t: number): Swing {
-    const { arc } = track;
+    const { arc, held } = track;
     if (t <= arc.arcStart) {
         return beforeWindow(arc, t);
     }
     const tw = arc.arcStart + arc.window;
-    if (arc.mode === "swing") {
-        // Gravity acts through the pulse (P2b.2b.2c.2d design §3.1): the table, from the window's start, its α the free
-        // pendulum's plus the pulse's within the window; held from a stop's hold on.
-        const free = freeOf(track, t > tw);
-        const { held } = free;
-        if (held !== null && t > tw && t >= held.from) {
-            return { theta: held.theta, omega: 0, alpha: 0 };
-        }
-        const { theta, omega } = tableAt(free, t);
-        const a = freeAlpha(track, free, theta, t);
-        return { theta, omega, alpha: arc.alpha !== 0 && t < tw ? a + pulseAlpha(arc, t) : a };
+    if (held !== null && t > tw && t >= held.from) {
+        return { theta: held.theta, omega: 0, alpha: 0 };
     }
+    const lambda = arc.slopeHold;
+    if (lambda === 0) {
+        return freePath(track, t, tw);
+    }
+    if (lambda === 1) {
+        return heldPath(track, t, tw, track.thetaEnd, track.omegaEnd);
+    }
+    const free = freePath(track, t, tw);
+    // The held part runs from the box's end state, as it does alone, not from the free table's.
+    const w = arc.window;
+    const thetaEnd = track.thetaArc + track.omegaArc * w + 0.5 * arc.alpha * w * w;
+    const kinematic = heldPath(track, t, tw, thetaEnd, track.omegaArc + arc.alpha * w);
+    const keep = 1 - lambda;
+    return {
+        theta: keep * free.theta + lambda * kinematic.theta,
+        omega: keep * free.omega + lambda * kinematic.omega,
+        alpha: keep * free.alpha + lambda * kinematic.alpha,
+    };
+}
+
+/** The free pendulum at time t, after the window's start; `tw` is the window's end. */
+function freePath(track: PreparedTrack, t: number, tw: number): Swing {
+    const { arc } = track;
+    // Gravity acts through the pulse (P2b.2b.2c.2d design §3.1): the table, from the window's start, its α the free
+    // pendulum's plus the pulse's within the window.
+    const free = freeOf(track, t > tw);
+    const { theta, omega } = tableAt(free, t);
+    const a = freeAlpha(track, free, theta, t);
+    return { theta, omega, alpha: arc.alpha !== 0 && t < tw ? a + pulseAlpha(arc, t) : a };
+}
+
+/**
+ * The held slope's kinematic pendulum at time t, after the window's start: its pulse, then the hold from θ and ω at
+ * the window's end, `thetaEnd` and `omegaEnd`; `tw` is the window's end.
+ */
+function heldPath(track: PreparedTrack, t: number, tw: number, thetaEnd: number, omegaEnd: number): Swing {
+    const { arc } = track;
     if (t <= tw) {
-        // Carry mode's arc is kinematic, gravity never in its plan: the minimum-jerk pulse alone (P2b.2b.2c.2d design
+        // The held arc is kinematic, gravity never in its plan: the minimum-jerk pulse alone (P2b.2b.2c.2d design
         // §3.1), α = 6·ᾱ·s(1 − s), s = τ/T, so ω and θ end where the box's constant ᾱ would put them. s is clamped to 1
         // so that every factor of ᾱ stays non-negative: at ᾱ = ±0 each term is then the box's signed zero, and the path
         // is the box's to the bit.
@@ -1032,30 +1109,30 @@ function pendulumAt(track: PreparedTrack, t: number): Swing {
     const W = arc.holdWindow ?? arc.window;
     const u = Math.min(t - tw, W);
     const x = u / W;
-    const we = track.omegaEnd;
+    const we = omegaEnd;
     const fall = x * (1 + x * x * (x * 0.5 - 1));
     return {
-        theta: track.thetaEnd + W * (we * fall),
+        theta: thetaEnd + W * (we * fall),
         omega: we * (1 + x * x * (2 * x - 3)),
         alpha: u < W ? ((6 * we) / W) * x * (x - 1) : 0,
     };
 }
 
 /**
- * `track` in swing mode with its pendulum held from time `from` (s, at or after the pendulum's window) on: θ fixed at
- * its value there, ω = α = 0. A stop's follow-through (P2b.2b.2a design §4.2), a user decision (2026-10-07): after
- * the check the mallet stays still relative to the hands, as Riches has the stop, "NO FOLLOW-THROUGH at all, or as
- * little as possible", rather than the free pendulum swinging back. Before `from` it reads as `track`.
+ * `track` with its pendulum held from time `from` (s, at or after the pendulum's window) on, at any λ: θ fixed at its
+ * value there, ω = α = 0. A stop's follow-through (P2b.2b.2a design §4.2), a user decision (2026-10-07): after the
+ * check the mallet stays still relative to the hands, as Riches has the stop, "NO FOLLOW-THROUGH at all, or as little
+ * as possible", rather than the free pendulum swinging back. Before `from` it reads as `track`. On a fully held slope
+ * (λ = 1) θ is the held path's (P2b.2b.2c.3a A2 item 7).
  */
 export function holdPendulum(track: PreparedTrack, from: number): PreparedTrack {
-    const free = freeOf(track, true);
     const { theta } = pendulumAt(track, from);
-    return { ...track, free: { ...free, held: { from, theta } } };
+    return { ...track, held: { from, theta } };
 }
 
 /**
  * The path at time t (design §3.2): the pendulum's θ, ω and α, and the pivot with the reach and the dip, carried to
- * the socket and the head's orientation. Evaluates sinCos(θ) and sinCos(θ/2) (in swing mode from the window's start,
+ * the socket and the head's orientation. Evaluates sinCos(θ) and sinCos(θ/2) (on a free table from the window's start,
  * freeAlpha evaluates sinCos(θ) and the pivot once more).
  */
 export function pathAt(track: PreparedTrack, t: number): PathPoint {
@@ -1131,7 +1208,7 @@ function checkShare(rate: number, planned: number): number {
 }
 
 /**
- * Where carry mode's flex took hold (P2b.2b.2b.2b design §4.1): the top and bottom grips there, the planned pivot and
+ * Where the flex took hold (P2b.2b.2b.2b design §4.1): the top and bottom grips there, the planned pivot and
  * the planned pitch θ there, and the shaft's actual pitch. The intended path runs from the actual grips.
  */
 export interface FlexStart {
@@ -1143,20 +1220,20 @@ export interface FlexStart {
 }
 
 /**
- * One integrate run's grip state (design §3.3): the shaft's arc angle at relaxAt, and when the bottom hand opened (by
- * reach in swing mode; at the pendulum phase's start in carry mode) and the shaft's turn since relaxAt then. In carry
- * mode also where the flex took hold, each hand's last stiffness (N/m; the bottom hand's 0 once it has let go),
- * whether the shaft has passed vertical in the pendulum phase (the bottom hand is then off the mallet) and whether
- * the head has pitched forward in it (the next apex is the finish; P2b.2b.2b.2b design §4.2, §4.3), and the hands'
- * sensed resistance R̃ (N): the balls' resistance R = max(0, −aim·F_balls), F_balls their total force on the head,
- * followed through a first-order lag (senseResistance), which the integrator updates in carry mode after each step's
- * contacts and the push intent reads (gate ruling 2026-10-11 and its amendment). In carry mode from where the flex
- * takes hold, each hand's hand–arm chain (gate round 3 ruling, 2026-10-11): null before then, and the bottom hand's
- * null once it has let go. In carry mode also when a ball first departed from the face (s; gate round 13 ruling,
- * "Relax from first departure", 2026-10-12), which the integrator latches once, null until then; the arms' hold
- * relaxes from it (holdWeight). Each hand's slid offset (m, in the head's frame; P2b.2b.2b.3 design §5): null until
- * the hand first saturates, then how far its anchor on the shaft has slid; it persists in carry mode and, under the
- * limit, relaxes in swing mode at the arm's rate (P2b.2b.2c.2 design §4.1).
+ * One integrate run's grip state (design §3.3): the shaft's arc angle at relaxAt, and when the bottom hand opened (at
+ * the earlier of the forward reach and the pendulum phase's start; P2b.2b.2c.3a A2 item 6) and the shaft's turn since
+ * relaxAt then. Also where the flex took hold, each hand's last stiffness (N/m; the bottom hand's 0 once it has let
+ * go), whether the shaft has passed vertical once the bottom hand has opened (it is then off the mallet) and whether
+ * the head has pitched forward since (the next apex is a carry's finish; P2b.2b.2b.2b design §4.2, §4.3), and the
+ * hands' sensed resistance R̃ (N): the balls' resistance R = max(0, −aim·F_balls), F_balls their total force on the
+ * head, followed through a first-order lag (senseResistance), which the integrator updates with a push after each
+ * step's contacts and the push intent reads (gate ruling 2026-10-11 and its amendment). From where the flex takes
+ * hold, each hand's hand–arm chain (gate round 3 ruling, 2026-10-11): null before then, the bottom hand's null once it
+ * has let go, and both null from a stop's hold. With a push also when a ball first departed from the face (s; gate
+ * round 13 ruling, "Relax from first departure", 2026-10-12), which the integrator latches once, null until then; the
+ * arms' hold relaxes from it (holdWeight). Each hand's slid offset (m, in the head's frame; P2b.2b.2b.3 design §5):
+ * null until the hand first saturates, then how far its anchor on the shaft has slid; it persists through the flex
+ * and, under the limit, relaxes on the firm grip at the arm's rate (P2b.2b.2c.2 design §4.1).
  * Mutable; handLoad updates it, and the integrator moves the chains' masses each step (advanceChains).
  */
 export interface GripState {
@@ -1199,13 +1276,12 @@ export function newGripState(): GripState {
 }
 
 /**
- * The swung body `track` steps with `grip`: carry mode's released body once the bottom hand has let go. It keys on
- * grip.releasedAt where handLoad keys on releasing(track, t); the two agree at every step, because carryLoad sets
- * releasedAt in the handLoad call of the first step in the pendulum phase, before that step's advance reads this, and
- * the integrator's t only grows.
+ * The swung body `track` steps with `grip`: the released body once the bottom hand has let go. handLoad sets
+ * releasedAt before it chooses its own body by this, in the step the hand opens, so the integrator's advance and
+ * handLoad agree at every step, whichever cause opened it (P2b.2b.2c.3a A2 item 6).
  */
 export function swungOf(track: PreparedTrack, grip: GripState): SwungBody {
-    return track.released !== null && grip.releasedAt !== null ? track.released : track.body;
+    return grip.releasedAt !== null ? track.released : track.body;
 }
 
 /** A chain mass's position and velocity (world frame). */
@@ -1222,7 +1298,7 @@ export interface ChainMass {
 }
 
 /**
- * One hand's hand–arm chain in carry mode (gate round 3 ruling, 2026-10-11), Dong et al. 2013's x_h 5-DOF model:
+ * One hand's hand–arm chain (gate round 3 ruling, 2026-10-11), Dong et al. 2013's x_h 5-DOF model:
  * - `forearm` is the model's M0, the wrist and forearm, which the arm's flex drives in the model's K0, C0's place;
  * - `hand` is M1, the palm–hand dorsum, joined to M0 by K1, C1 and to the grip by the palm's K3, C3;
  * - `fingers` is M2, joined to M1 by K2, C2 and to the grip by the fingers' K4, C4;
@@ -1372,14 +1448,14 @@ export function senseResistance(sensed: number, resistance: number, response: nu
     return sensed + (resistance - sensed) * response;
 }
 
-/** True from carry mode's pendulum phase's start at time t (P2b.2b.2b.2b design §4.2); never in swing mode. */
+/** True from the push's pendulum phase's start at time t (P2b.2b.2b.2b design §4.2); never without a push. */
 function releasing(track: PreparedTrack, t: number): boolean {
     const { push } = track;
     return push !== null && push.pendulum !== null && t >= push.pendulum;
 }
 
 /**
- * The weight in [0, 1] with which carry mode's arms hold their posture at time t (gate round 11 ruling, "Posture
+ * The weight in [0, 1] with which a push's arms hold their posture at time t (gate round 11 ruling, "Posture
  * holding in the push", 2026-10-12): 1 until a ball first departs from the face at t_d (grip.departedAt; gate round 13
  * ruling, "Relax from first departure"), then exp(−(t − t_d)/τ_push), the arms relaxing to their rhythmic flex at the
  * muscles' pace (the same first-order force rise as the push intent's). The flex takes hold at contact with no offset
@@ -1396,7 +1472,7 @@ function holdWeight(track: PreparedTrack, t: number, grip: GripState): number {
 }
 
 /**
- * Carry mode's push intent at time t (gate ruling 2026-10-11 and its amendment): through the push, until the pendulum
+ * The push intent at time t (gate ruling 2026-10-11 and its amendment): through the push, until the pendulum
  * phase starts, the hands push along aim with the balls' resistance as they sense it (R̃, lagged at the muscles'
  * pace), up to the arm's push: P = min(R̃, F_push)·aim. Null where it is nil: no resistance, or in the pendulum phase.
  */
@@ -1422,7 +1498,7 @@ export interface HandLoad {
     /** The first hand whose force reached the grip's limit in this step, the top if both did; null if neither. */
     readonly saturated: HandName | null;
     /**
-     * Carry mode's push intent P in this step (pushIntent), already within `feedForward`; absent where it is nil. For
+     * The push intent P in this step (pushIntent), already within `feedForward`; absent where it is nil. For
      * the impact's probe only: nothing in the engine reads it.
      */
     readonly intent?: Vec3;
@@ -1475,10 +1551,13 @@ function slid(offset: Vec3 | null, slide: Vec3, q: Quaternion): Vec3 {
 
 /** What carryLoad needs from handLoad's step: the feed-forward's shares, the shaft and the grips' arms. */
 interface CarryStep {
-    /** The top hand's share with the dip, the bottom hand's, and the whole F_ff (N). */
+    /** The top hand's share without the dip, the dip's F_d, the bottom hand's share, and the whole F_ff (N). */
     readonly top: Vec3;
+    readonly dip: Vec3;
     readonly bottom: Vec3;
     readonly whole: Vec3;
+    /** True inside a check (inCheck), where the bottom hand flexes in full whatever its guideEffort. */
+    readonly checking: boolean;
     /** The feed-forward's twist about the shaft (N·m). */
     readonly twist: number;
     /** The shaft's pitch (rad) and its pitch rate about n (rad/s). */
@@ -1495,18 +1574,20 @@ interface CarryStep {
 }
 
 /**
- * Carry mode's hands from contact (P2b.2b.2b.2b design §3.1, §4): each hand's feed-forward plus its flex to its point
- * on the intended path. The path runs from the actual grips where the flex took hold (`grip.flex`), moved by the
- * planned pivot since then; the bottom grip also turns with the planned pitch. Once the intended path has travelled
- * pendulumAt of the push the pendulum phase starts: the top hand alone feeds the whole F_ff and flexes, and the bottom
- * hand lets go and pushes forward along e with pendulumEffort·pendulumForce until the shaft passes vertical, then is
- * off the mallet; no twist acts. Each holding hand's flex drives its hand–arm chain's forearm, not the grip, and the
+ * Every stroke's hands from contact (P2b.2b.2b.2b design §3.1, §4; P2b.2b.2c.3a A2 item 5): each hand's feed-forward
+ * plus its flex to its point on the intended path. The path runs from the actual grips where the flex took hold
+ * (`grip.flex`), moved by the planned pivot since then; the bottom grip also turns with the planned pitch. Each grip
+ * scales its hand: the top hand feeds γ_T times its share plus the dip's F_d, the bottom hand g_B times its share, and
+ * each hand's flex gains are k·γ and c·√γ (gripGains), the bottom hand's at g_B·guideEffort outside a check and g_B
+ * inside one. Once the bottom hand has opened (handLoad) the top hand alone feeds γ_T times the whole F_ff and flexes,
+ * and the bottom hand pushes forward along e with pendulumEffort·pendulumForce until the shaft passes vertical, then
+ * is off the mallet; no twist acts. Each holding hand's flex drives its hand–arm chain's forearm, not the grip, and the
  * chain holds the grip through the palm and the fingers (chainForces; gate round 3 ruling, 2026-10-11); the bottom
- * hand's chain leaves with it. Through the push each arm holds its posture: its flex takes the arm's posture-holding
+ * hand's chain leaves with it. Through a push each arm holds its posture: its flex takes the arm's posture-holding
  * impedance, relaxing to the rhythmic flex from a ball's first departure from the face (holdWeight; gate rounds 11
- * and 13, "Posture holding in the push" and "Relax from first departure", 2026-10-12). Updates `grip`: where the
- * flex took hold, the chains, the hands' stiffnesses, the release (the pendulum phase's start), and the vertical and
- * rising latches.
+ * and 13, "Posture holding in the push" and "Relax from first departure", 2026-10-12); with no push the flex is the
+ * rhythmic one throughout. Updates `grip`: where the flex took hold, the chains, the hands' stiffnesses, and the
+ * vertical and rising latches.
  */
 function carryLoad(
     track: PreparedTrack,
@@ -1534,8 +1615,11 @@ function carryLoad(
         bottom,
         saturated,
     });
-    const pendulum = releasing(track, t);
-    const topFed = pendulum ? step.whole : step.top;
+    const opened = grip.releasedAt !== null;
+    // Each hand's grip scales its feed (A2 item 4): a multiplier, so the rolls' grips of 1 keep their bits.
+    const topGrip = hands.gripTension;
+    const topFed = opened ? scale(step.whole, topGrip) : add(scale(step.top, topGrip), step.dip);
+    const bottomFed = scale(step.bottom, hands.bottomGrip);
     const { chain, flex } = hands;
     const g = track.gravity;
     const bottomVelocity = add(state.velocity, cross(state.angularVelocity, step.bottomArm));
@@ -1546,16 +1630,17 @@ function carryLoad(
     const bottomAnchor = grip.bottomOffset === null ? bottomAt : add(bottomAt, rotate(q, grip.bottomOffset));
     if (grip.topChain === null) {
         grip.topChain = holdChain(chain, topAnchor, topVelocity, topFed, step.topAcceleration, g);
-        if (!pendulum) {
-            grip.bottomChain = holdChain(chain, bottomAnchor, bottomVelocity, step.bottom, step.bottomAcceleration, g);
+        if (!opened) {
+            grip.bottomChain = holdChain(chain, bottomAnchor, bottomVelocity, bottomFed, step.bottomAcceleration, g);
         }
     }
-    // Each arm's flex drives its chain's forearm, feeding it its share and the chain's own m·a and weight; its
-    // stiffness follows that whole feed-forward. Through the push the arms hold their posture (holdWeight).
-    const hold = holdWeight(track, t, grip);
+    // Each arm's flex drives its chain's forearm, feeding it its share and the chain's own m·a and weight in full, so
+    // a loose hand does not hang on the mallet; its stiffness follows that whole feed-forward, scaled by its grip.
+    // Through a push the arms hold their posture (holdWeight); with none the weight is 0, the rhythmic flex.
+    const hold = track.push === null ? 0 : holdWeight(track, t, grip);
     const topArm = grip.topChain;
     const topArmFed = chainFed(chain, topFed, step.topAcceleration, g);
-    const topGains = flexGains(flex, length(topArmFed), hold);
+    const topGains = gripGains(flexGains(flex, length(topArmFed), hold), topGrip);
     grip.topStiffness = topGains.stiffness;
     const topDrive = flexForce(
         topArmFed,
@@ -1578,7 +1663,7 @@ function carryLoad(
         top = chainForces(chain, topArm, add(topAt, rotate(q, grip.topOffset)), topVelocity, topDrive, g);
         saturated = "top";
     }
-    if (!pendulum) {
+    if (!opened) {
         // The bottom grip's intended point turns with the planned pitch about the intended top grip:
         // x̂_B = x_B(0) + ΔP + (r − b)·(radial(θ̂) − radial(θ̂₀)), θ̂ = pitch₀ + θ − θ₀.
         const lever = arc.radius - hands.bottom;
@@ -1591,8 +1676,11 @@ function carryLoad(
         const turning = lever * dot(path.angularVelocity, track.axis);
         const bottomTargetVelocity = add(planned.velocity, scale(tangent, turning));
         const bottomArm = grip.bottomChain as ArmChain;
-        const bottomArmFed = chainFed(chain, step.bottom, step.bottomAcceleration, g);
-        const bottomGains = flexGains(flex, length(bottomArmFed), hold);
+        const bottomArmFed = chainFed(chain, bottomFed, step.bottomAcceleration, g);
+        // The player's effort on the bottom hand's guide (design §3.3) scales its flex outside a check; a check
+        // brakes in full (A2 item 5).
+        const effort = step.checking ? 1 : hands.guideEffort;
+        const bottomGains = gripGains(flexGains(flex, length(bottomArmFed), hold), hands.bottomGrip * effort);
         grip.bottomStiffness = bottomGains.stiffness;
         const bottomDrive = flexForce(
             bottomArmFed,
@@ -1610,11 +1698,7 @@ function carryLoad(
             saturated = saturated ?? "bottom";
         }
         const twist = hands.bottomGrip * step.twist + track.bottom.twistDamping * dot(step.spinLag, step.s);
-        return load(top, bottom, twist, add(step.top, step.bottom), saturated);
-    }
-    if (grip.releasedAt === null) {
-        grip.releasedAt = t;
-        grip.releaseDelta = step.pitch - (grip.contactPitch as number);
+        return load(top, bottom, twist, add(topFed, bottomFed), saturated);
     }
     grip.bottomStiffness = 0;
     grip.bottomChain = null;
@@ -1630,27 +1714,46 @@ function carryLoad(
 }
 
 /**
+ * Opens `grip`'s bottom hand for good at time t, once, at the earlier of the forward reach and a push's pendulum phase
+ * (P2b.2b.2c.3a A2 item 6), recording when and the shaft's turn since relaxAt; returns the shaft's pitch π(s) for the
+ * shaft `s`. The reach is signed, the shaft turned forward through the slack, (r − b)·(π − π_c) > reachSlack: a shaft
+ * turning back drives into the bottom hand's palm and never opens it.
+ */
+function openBottom(track: PreparedTrack, grip: GripState, s: Vec3, t: number): number {
+    const { arc, hands } = track;
+    const pitch = shaftPitch(s, arc.aim);
+    const contactPitch = grip.contactPitch ?? pitch;
+    grip.contactPitch = contactPitch;
+    if (grip.releasedAt === null) {
+        const reached = (arc.radius - hands.bottom) * (pitch - contactPitch) > hands.reachSlack;
+        if (reached || releasing(track, t)) {
+            grip.releasedAt = t;
+            grip.releaseDelta = pitch - contactPitch;
+        }
+    }
+    return pitch;
+}
+
+/**
  * The hands' load on the head in `state` at time t (design §3.3), updating `grip`. The feed-forward is the wrench
  * that makes the path's rigid motion exact for the swung body: F_ff = M·a_c + m·g·ẑ + m_s·g·ẑ and, about its centre,
  * τ_ff = I'·α_path + ω_path × (I'·ω_path) + r_h × m·g·ẑ + r_s × m_s·g·ẑ, r_s the shaft's centre from the swung body's
  * (P2b.2b.2b.2c design §4.3). From relaxAt the dip's part F_d = M·a_d is set aside and
  * the rest, F_s, split over the hands so that their moments give τ_ff: the top hand F_∥ + F_T⊥, the bottom hand F_B
  * and the couple τ_ff·s. Before relaxAt both hands grip firmly with springs and dampers; on a downswing, dampers and
- * feed-forward only, with no position spring (P2b.2b.2a user decision 2026-10-07). From it they track the
- * path's velocity only: the top hand γ_T times its share (the whole F_s in swing mode outside a check) plus F_d, and
- * its damper; the bottom hand a one-sided rate guide (with g_B·F_B inside a check), until it opens once the shaft has
- * turned through the reach slack. In carry mode from relaxAt both hands flex instead, then the pendulum phase
- * (carryLoad; P2b.2b.2b.2b design §3, §4); through the push F_ff gains the push intent before it is shared
- * (pushIntent; gate ruling 2026-10-11), and each hand holds the mallet through its hand–arm chain (gate round 3
- * ruling), the swung body losing the bottom hand's skin at the pendulum phase's start. In swing mode the guide
- * outside a check and the push after the release are scaled by `guideEffort`; a check acts in full. A check in swing
- * mode brakes the head to rest, not past it: the hands apply the head's share of the planned deceleration
- * (checkShare), and the guide steers its pitch rate into [0, ω_path]. With `gripped`, the hands grip firmly with
- * springs and dampers at any t, as before relaxAt but with no downswing gate: a stop's follow-through (P2b.2b.2a
- * design §4.2). Each hand's force is held to the grip's limit F_max (P2b.2b.2b.3 design §5): a position spring's
- * anchor slides at it, by an offset kept in `grip` in the head's frame; a damper alone is capped. Under its limit in
- * swing mode a slid anchor returns towards the hands' planned path at the arm's rate τ_arm = c_hold/k_hold, over the
- * step `dt` (P2b.2b.2c.2 design §4.1), the force reaching the head only through the grip.
+ * feed-forward only, with no position spring (P2b.2b.2a user decision 2026-10-07). From it, on every stroke, both
+ * hands flex through their hand–arm chains, each scaled by its grip (carryLoad; P2b.2b.2b.2b design §3, §4; gate
+ * round 3 ruling; P2b.2b.2c.3a A2 item 5). The bottom hand opens at the earlier of the forward reach, the shaft turned
+ * forward through the reach slack since relaxAt, and a push's pendulum phase (A2 item 6); the swung body then loses its
+ * skin (swungOf). Through a push F_ff gains the push intent before it is shared (pushIntent; gate ruling 2026-10-11).
+ * A check brakes the head to rest, not past it: the hands apply the head's share of the planned deceleration
+ * (checkShare). With `gripped`, the hands grip firmly with springs and dampers at any t, as before relaxAt but with no
+ * downswing gate, and the chains let go: a stop's follow-through (P2b.2b.2a design §4.2; A2 item 7), with its own
+ * pitch spring and damper (holdPitchGains; P2b.2b.2c.3a gate stage 2), held to the grip's couple (gripCouple). Each
+ * hand's force is held to the grip's limit F_max (P2b.2b.2b.3 design §5): a position spring's anchor slides at it, by
+ * an offset kept in `grip` in the head's frame; a damper alone is capped. Under its limit on the firm grip a slid
+ * anchor returns towards the hands' planned path at the arm's rate τ_arm = c_hold/k_hold, over the step `dt`
+ * (P2b.2b.2c.2 design §4.1), the force reaching the head only through the grip.
  */
 export function handLoad(
     track: PreparedTrack,
@@ -1668,11 +1771,12 @@ export function handLoad(
     const s = rotate(q, UP);
     const rho = head.socket.z;
     const contact = !gripped && t >= track.coupling.relaxAt;
-    const carry = arc.mode === "carry";
-    // Carry mode's swung body loses the bottom hand's skin when it lets go, at the pendulum phase's start (swungOf).
-    const body = track.released !== null && contact && releasing(track, t) ? track.released : track.body;
-    // A check in swing mode after contact brakes the head to rest, not past it: the pitch rates about n.
-    const checking = contact && !carry && inCheck(track, t);
+    // The bottom hand opens before the body is chosen, so this step and the integrator's advance agree (swungOf). The
+    // shaft's pitch is read only after contact.
+    const pitchNow = contact ? openBottom(track, grip, s, t) : 0;
+    const body = swungOf(track, grip);
+    // A check after contact brakes the head to rest, not past it: the pitch rates about n.
+    const checking = contact && inCheck(track, t);
     const rate = dot(state.angularVelocity, track.axis);
     const planned = dot(w, track.axis);
     const share = checking ? checkShare(rate, planned) : 1;
@@ -1702,9 +1806,9 @@ export function handLoad(
         tau = add(tau, cross(scale(s, track.shaftRise - body.offset), shaftWeight));
     }
     const dip = contact ? scale(path.dipAcceleration, body.mass) : ZERO;
-    // Carry mode's push intent joins F_ff before the sharing, so both hands' shares and stiffnesses carry it. Swing
-    // mode never reads it.
-    const intent = contact && carry ? pushIntent(track, t, grip) : null;
+    // The push intent joins F_ff before the sharing, so both hands' shares and stiffnesses carry it. A stroke with no
+    // push never reads it (A2 item 5).
+    const intent = contact && track.push !== null ? pushIntent(track, t, grip) : null;
     const fed = intent === null ? feedForward : add(feedForward, intent);
     const shared = sub(fed, dip);
     const along = scale(s, dot(shared, s));
@@ -1740,6 +1844,11 @@ export function handLoad(
     });
 
     if (!contact) {
+        if (gripped) {
+            // A stop's hold is the firm grip, not the chains: they let go at it (A2 item 7).
+            grip.topChain = null;
+            grip.bottomChain = null;
+        }
         const g = track.firm;
         const limit = hands.gripLimit;
         // The gaps to the path, less each hand's slid offset once it has saturated (design §5), the offset held in
@@ -1788,9 +1897,9 @@ export function handLoad(
         }
         // The arm returns a slid anchor under its limit (P2b.2b.2c.2 design §4.1): after this step's force, so a decay
         // never tips a hand over F_max within its own step, and exact for any dt. A hand at its limit slides instead.
-        // Carry mode keeps its offset, its chain already holding the arm; with no hold every offset is kept as it was.
+        // A held stroke's anchor returns too, as a swung one's does; with no hold every offset is kept as it was.
         const arm = hands.flex.hold;
-        if (spring && !carry && arm !== null) {
+        if (spring && arm !== null) {
             const decay = exp(0 - dt / (arm.damping / arm.stiffness));
             if (topHeld === null && grip.topOffset !== null) {
                 grip.topOffset = scale(grip.topOffset, decay);
@@ -1799,73 +1908,54 @@ export function handLoad(
                 grip.bottomOffset = scale(grip.bottomOffset, decay);
             }
         }
-        return load(top, bottom, twist, add(topShare, bottomShare), saturated);
+        const firm = load(top, bottom, twist, add(topShare, bottomShare), saturated);
+        if (!gripped) {
+            return firm;
+        }
+        // A stop's hold has its own pitch spring and damper (P2b.2b.2c.3a gate stage 2, the hold's pitch impedance).
+        // The grip springs alone resist pitch only through their lever r − b: with the drive's hands one hand breadth
+        // apart (88 mm) the held head swung about them at a 0.9 s period and a damping ratio near 0.08. This couple
+        // gives the hold the firm grip's period and damping ratio in pitch at any spacing, added to the springs, which
+        // still place the grips: their pitch share is not separable from that. It acts on the pitch error from the
+        // held path (holdPendulum's θ, the planned pivot's ω = 0), as the twist term acts about the shaft, and is
+        // sized on I_P about the top hand (pendulumOf), the pivot the held θ is measured about, for the body now
+        // held (swungOf). Its magnitude, spring and damper together, is held to the grip's couple (gripCouple;
+        // Amendments item 3, ruling 2026-10-28): the most a grip of this firmness and spread can apply, so hands one
+        // breadth apart hold the pitch weakly, as they must. The twist couple is not bounded.
+        const pitchGains = holdPitchGains(track.coupling, body.inertia.y + body.mass * a * a);
+        const bound = gripCouple(hands, arc.radius);
+        const pitch = Math.max(
+            -bound,
+            Math.min(
+                bound,
+                pitchGains.stiffness * dot(rotationError(path.orientation, q), track.axis) +
+                    pitchGains.damping * dot(spinLag, track.axis),
+            ),
+        );
+        return { ...firm, torque: add(firm.torque, scale(track.axis, pitch)) };
     }
 
-    const pitchNow = shaftPitch(s, arc.aim);
-    const contactPitch = grip.contactPitch ?? pitchNow;
-    grip.contactPitch = contactPitch;
-    if (carry) {
-        const carried = carryLoad(track, state, t, grip, path, {
-            top: add(topShare, dip),
-            bottom: bottomShare,
-            whole: fed,
-            twist: twistShare,
-            pitch: pitchNow,
-            rate,
-            topArm,
-            bottomArm,
-            spinLag,
-            s,
-            topAcceleration: add(
-                add(socketAcceleration, cross(angularAcceleration, topLever)),
-                cross(w, cross(w, topLever)),
-            ),
-            bottomAcceleration: add(
-                add(socketAcceleration, cross(angularAcceleration, bottomLever)),
-                cross(w, cross(w, bottomLever)),
-            ),
-        });
-        return intent === null ? carried : { ...carried, intent };
-    }
-    // Release by reach (swing mode): the bottom hand opens for good once the shaft has turned through the slack since
-    // relaxAt.
-    const lever = arc.radius - hands.bottom;
-    if (grip.releasedAt === null && lever * (pitchNow - contactPitch) > hands.reachSlack) {
-        grip.releasedAt = t;
-        grip.releaseDelta = pitchNow - contactPitch;
-    }
-    // The player's effort on swing mode's push after contact (design §3.3): 1 restores the planned arc's speed.
-    const effort = hands.guideEffort;
-    const topFed = add(scale(checking ? topShare : shared, hands.gripTension), dip);
-    let top = add(topFed, scale(topLag, track.top.damping));
-    let saturated: HandName | null = null;
-    const topHeld = heldTo(top, hands.gripLimit);
-    if (topHeld !== null) {
-        top = topHeld;
-        saturated = "top";
-    }
-    const g = track.bottom;
-    const e = forwardOf(arc.aim, s);
-    if (grip.releasedAt !== null) {
-        const pushed = scale(e, effort * Math.max(0, g.damping * dot(bottomLag, e)));
-        const pushedHeld = heldTo(pushed, hands.gripLimit);
-        return load(top, pushedHeld ?? pushed, 0, topFed, pushedHeld === null ? saturated : (saturated ?? "bottom"));
-    }
-    const bottomFed = checking ? scale(bottomShare, hands.bottomGrip) : ZERO;
-    const twist = (checking ? hands.bottomGrip * twistShare : 0) + g.twistDamping * dot(spinLag, s);
-    // Swing mode: a rate guide along e on the pitch rate's lag, never pulling outside a check. Inside one its target is
-    // the head's own rate held within [0, ω_path]: it brakes a head ahead of the path, returns one past rest towards
-    // rest, and leaves one between them to its share of the planned deceleration.
-    const held = Math.min(Math.max(rate, 0), Math.max(planned, 0));
-    const guide = g.damping * (checking ? held - rate : dot(spinLag, track.axis)) * lever;
-    const bottom = add(bottomFed, scale(e, checking ? guide : effort * Math.max(0, guide)));
-    const bottomHeld = heldTo(bottom, hands.gripLimit);
-    return load(
-        top,
-        bottomHeld ?? bottom,
-        twist,
-        add(topFed, bottomFed),
-        bottomHeld === null ? saturated : (saturated ?? "bottom"),
-    );
+    const carried = carryLoad(track, state, t, grip, path, {
+        top: topShare,
+        dip,
+        bottom: bottomShare,
+        whole: fed,
+        checking,
+        twist: twistShare,
+        pitch: pitchNow,
+        rate,
+        topArm,
+        bottomArm,
+        spinLag,
+        s,
+        topAcceleration: add(
+            add(socketAcceleration, cross(angularAcceleration, topLever)),
+            cross(w, cross(w, topLever)),
+        ),
+        bottomAcceleration: add(
+            add(socketAcceleration, cross(angularAcceleration, bottomLever)),
+            cross(w, cross(w, bottomLever)),
+        ),
+    });
+    return intent === null ? carried : { ...carried, intent };
 }

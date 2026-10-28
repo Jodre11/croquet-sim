@@ -80,12 +80,6 @@ export interface DriveSample {
     readonly force: Vec3;
 }
 
-/**
- * How the hands carry the mallet after contact (P2b.2b.1 design §3.3): a swing (single-ball, drive, stops) or a carry
- * (rolls).
- */
-export type StrokeMode = "swing" | "carry";
-
 /** The hands' dip (design §3.2): the pivot lowers by `depth` (m) over `duration` (s) from `start`, rest to rest. */
 export interface Dip {
     /** When it begins, s from t = 0. */
@@ -97,9 +91,12 @@ export interface Dip {
 /**
  * The contact-free downswing (P2b.2b.2a design §3), in s from the planned contact: from the release t_r < 0, the
  * pendulum and the hands at rest at the backswing's top, to contact. The hands' path is P(σ) = P_b + Δ_h·σ² +
- * Δ_z·(3σ² − 2σ³) + T·(σ³ − σ²), σ from 0 at the top to 1 at contact. Swing mode tabulates θ, ω and α every
- * FREE_STEP from the release, its last sample at contact, with σ = (θ − θ_top)/span; carry mode is closed-form,
- * σ = (t − t_r)/tempo and θ = θ_top + span·σ².
+ * Δ_z·(3σ² − 2σ³) + T·(σ³ − σ²), σ from 0 at the top to 1 at contact. The planned slope (P2b.2b.2c.3a design §4.1)
+ * takes one of two representations:
+ * - a table of θ, ω and α every FREE_STEP from the release, its last sample at contact (`tempo` null). The free
+ *   swing's (λ = 0) leads the hands by the slope, σ = (θ − θ_top)/span; a blend's (0 < λ < 1) carries the hands'
+ *   own progress in `handsProgress`;
+ * - the closed form of the held slope (λ = 1, `tempo` given): σ = (t − t_r)/tempo and θ = θ_top + span·σ².
  */
 export interface Downswing {
     /** t_r (s from contact, negative). */
@@ -112,16 +109,27 @@ export interface Downswing {
     readonly across: Vec3;
     readonly drop: Vec3;
     /**
-     * Carry mode's Hermite end term T (m, vertical; P2b.2b.2b.2b design §4.1): the hands' path gains T·(σ³ − σ²), so
-     * its slope at contact is 2·Δ_h + T and it arrives on the hands' arc. ZERO in swing mode, whose hands arrive level.
+     * The Hermite end term T (m, vertical; P2b.2b.2b.2b design §4.1): the hands' path gains T·(σ³ − σ²), so its slope
+     * at contact is 2·Δ_h + T and it arrives on the hands' arc. Zero where the hands arrive level; a table adds the
+     * term only where it is non-zero.
      */
     readonly tangent: Vec3;
-    /** Carry mode's hands' tempo T_h (s), with release = −tempo; null in swing mode. */
+    /** The held slope's hands' tempo T_h (s), with release = −tempo; null for a table. */
     readonly tempo: number | null;
-    /** Swing mode's table (rad, rad/s, rad/s²); empty in carry mode. */
+    /** The table (rad, rad/s, rad/s²); empty for the closed form. */
     readonly theta: readonly number[];
     readonly omega: readonly number[];
     readonly alpha: readonly number[];
+    /**
+     * A blended plan's hands (P2b.2b.2c.3a design §4.1, refined at Task 3): their progress σ_h = (1 − λ)·σ_f + λ·u at
+     * each of the table's samples, with its rate (1/s) and acceleration (1/s²), so that the hands, like the slope,
+     * run continuously between the free swing's lead and the held slope's tempo. Absent on the free swing's table.
+     */
+    readonly handsProgress?: {
+        readonly sigma: readonly number[];
+        readonly rate: readonly number[];
+        readonly accel: readonly number[];
+    };
 }
 
 /**
@@ -129,7 +137,7 @@ export interface Downswing {
  * top hand (the pivot) in a vertical plane; and the hands' path through space, the pivot moving in that plane (leaning,
  * pushing forward, the body's weight) and dipping. Each runs at its initial rate until its window and changes rate
  * through it by its mean rate times the window, as a minimum-jerk pulse, 6·mean·s(1 − s) at s of the window
- * (P2b.2b.2c.2d design §3.1); what follows depends on the mode (design §3.2). The dip lowers the pivot on top.
+ * (P2b.2b.2c.2d design §3.1); what follows is the same for every stroke (design §3.2). The dip lowers the pivot on top.
  */
 export interface SwingArc {
     /** The top hand at t = 0, world frame. */
@@ -159,27 +167,37 @@ export interface SwingArc {
     /** When the pendulum's window begins (s from t = 0), and its length (s). */
     readonly arcStart: number;
     readonly window: number;
-    /** Carry mode's hold after the pulse (s); absent: `window`. Set when a shot's window differs from the preset's. */
+    /** The hold after the pulse (s); absent: `window`. Set when a shot's window differs from the preset's. */
     readonly holdWindow?: number;
     readonly dip: Dip;
     /** The planned contact (s from t = 0), from which the cap and the reach count. */
     readonly contactAt: number;
-    readonly mode: StrokeMode;
+    /**
+     * λ in [0, 1] (P2b.2b.2c.3a design §4.1): how far the hands hold the slope in the pendulum's pulse and after it.
+     * The pendulum is the free one at 0, the kinematic pulse and hold at 1, and θ, ω and α blend linearly between.
+     */
+    readonly slopeHold: number;
     /** How far the hands' path travels along aim after contactAt (m). */
     readonly handReach: number;
     /**
-     * Carry only (P2b.2b.2b.2b design §4.2): the pendulum phase starts once the intended path has travelled
-     * `pendulumAt` (in [0, 1]) of the push length `handReach`; the bottom hand then pushes with `pendulumEffort` (in
-     * [0, 1]) of the hands' pendulumForce until the shaft passes vertical.
+     * With a push, a handReach above 0 (P2b.2b.2b.2b design §4.2; P2b.2b.2c.3a A2 item 8): the pendulum phase starts
+     * once the intended path has travelled `pendulumAt` (in [0, 1]) of the push length `handReach`; the bottom hand
+     * then pushes with `pendulumEffort` (in [0, 1]) of the hands' pendulumForce until the shaft passes vertical.
      */
     readonly pendulumAt: number;
     readonly pendulumEffort: number;
     /**
-     * Carry only (design §4.1): the hands' arc, a circle of radius `handArcRadius` (m, above the push length) in the
+     * With a push (design §4.1): the hands' arc, a circle of radius `handArcRadius` (m, above the push length) in the
      * swing plane, lowest `handArcLow` (in [0, 1]) of the push length ahead of the hands at contact.
      */
     readonly handArcRadius: number;
     readonly handArcLow: number;
+    /**
+     * Where the hands' arc is lowest, s_low (m along aim from the hands at contact; P2b.2b.2c.3a design §3), set from a
+     * shot's feet. Within (handReach − handArcRadius, handArcRadius), so the arc is defined over the whole push.
+     * Absent: handArcLow·handReach.
+     */
+    readonly lowPoint?: number;
     /**
      * The downswing before contactAt (P2b.2b.2a design §3.5): before each window begins, and before contactAt, the
      * pendulum and the hands follow it. Absent, the path coasts at ω₀ and V₀ (P2b.2b.1). The table's end state must
@@ -189,9 +207,10 @@ export interface SwingArc {
      */
     readonly downswing?: Downswing;
     /**
-     * Swing only (P2b.2b.2c.1 design §6): the hands' advance, their push forward along aim over `handReach` from
-     * `start` (s from t = 0), ramping up to `speed` (m/s), the head's planned speed along aim at contact, at the body's
-     * peak acceleration `accel` (m/s², a body property), so over speed/accel. Absent: no advance.
+     * The hands' advance (P2b.2b.2c.1 design §6), its travel along aim added to the push's over `handReach`
+     * (P2b.2b.2c.3a A2 item 8) from `start` (s from t = 0), ramping up to `speed` (m/s), the head's planned speed along
+     * aim at contact, at the body's peak acceleration `accel` (m/s², a body property), so over speed/accel. Absent: no
+     * advance.
      * `planStroke` validates it (checkAdvance); a hand-built arc's advance is not checked.
      */
     readonly advance?: { readonly start: number; readonly speed: number; readonly accel: number };
@@ -235,15 +254,14 @@ export type HandName = "top" | "bottom";
  * Two hands on the rigid, massless shaft, which is the head's up axis through the socket (design §3.1): the top hand at
  * the arc radius, the bottom hand `bottom` from the socket (m, in (0, radius)). From `relaxAt` on the top hand grips
  * with γ_T = `gripTension` and the bottom hand with g_B = `bottomGrip`, both in (0, 1]. The player's arm mass
- * `armMass` (kg) rides rigidly at the top grip in swing mode; carry mode replaces it by each hand's and arm's own chain
- * of masses (`chain`; gate round 3 ruling). In swing mode the bottom hand opens once the shaft has turned through
- * `reachSlack` (m of hand travel); in carry mode at the pendulum phase's start. `guideEffort` (in [0, 1]) scales the
- * bottom hand's push after contact in swing mode (the rate guide outside a check, and the push after the release): 1
- * restores the planned arc's speed, 0 is no extra push; a check's guide acts in full (design §3.3; the player's
- * choice, user's account, 2026-10-06). In carry mode from contact each hand flexes by `flex`, the hands' push intent
- * through the push follows the balls' resistance with time constant `pushResponseTime` up to `pushForce`, and the
- * bottom hand's push in the pendulum phase is at most `pendulumForce` (P2b.2b.2b.2b design §3, §4.2; gate ruling
- * 2026-10-11).
+ * `armMass` (kg) rides rigidly at the top grip in the downswing's plan; after contact each hand's and arm's own chain
+ * of masses (`chain`; gate round 3 ruling) holds the mallet. The bottom hand opens at the earlier of the shaft turned
+ * forward through `reachSlack` (m of hand travel) and a push's pendulum phase (P2b.2b.2c.3a A2 item 6). From contact
+ * each hand flexes by `flex`, its feed and flex scaled by its grip; `guideEffort` (in [0, 1]) scales the bottom
+ * hand's flex outside a check: 1 holds the planned arc, 0 leaves that hand its feed alone; a check brakes in full
+ * (design §3.3; the player's choice, user's account, 2026-10-06; A2 item 5). The hands' push intent through a push
+ * follows the balls' resistance with time constant `pushResponseTime` up to `pushForce`, and the bottom hand's push
+ * once open is at most `pendulumForce` (P2b.2b.2b.2b design §3, §4.2; gate ruling 2026-10-11).
  */
 export interface Hands {
     readonly bottom: number;
@@ -252,7 +270,7 @@ export interface Hands {
     readonly armMass: number;
     readonly reachSlack: number;
     readonly guideEffort: number;
-    /** Carry mode from contact (P2b.2b.2b.2b design §3.1): each hand's flex. */
+    /** From contact (P2b.2b.2b.2b design §3.1): each hand's flex. */
     readonly flex: FlexLaw;
     /**
      * F_pendulum (N, design §4.2): the largest forward push the bottom hand gives perpendicular to the shaft in the
@@ -260,7 +278,7 @@ export interface Hands {
      */
     readonly pendulumForce: number;
     /**
-     * F_push (N): carry mode's push intent cap (gate ruling 2026-10-11). Through the push the hands push along aim
+     * F_push (N): the push intent's cap (gate ruling 2026-10-11). Through the push the hands push along aim
      * with the balls' resistance as they sense it, up to this.
      */
     readonly pushForce: number;
@@ -269,12 +287,12 @@ export interface Hands {
      * 2026-10-11): the muscles' voluntary force rise.
      */
     readonly pushResponseTime: number;
-    /** Carry mode (gate round 3 ruling, 2026-10-11): each hand and arm, the hand–arm impedance model's chain. */
+    /** From contact (gate round 3 ruling, 2026-10-11): each hand and arm, the hand–arm impedance model's chain. */
     readonly chain: HandChain;
     /**
      * F_max (N, P2b.2b.2b.3 design §5): each hand's force on the mallet is clipped to this magnitude. Where the hand
-     * holds a position spring its anchor slides at the limit; the slid offset persists in carry mode and relaxes in
-     * swing mode under the limit (GripState).
+     * holds a position spring its anchor slides at the limit; the slid offset persists through the flex and relaxes
+     * on the firm grip under the limit (GripState).
      */
     readonly gripLimit: number;
 }
@@ -415,15 +433,15 @@ export interface ImpactRun {
     /** Keys of the ball–ball and ball–obstacle pairs touching (within CONTACT_TOLERANCE) at t = 0, in pair order. */
     readonly touchingAtStart: readonly string[];
     /**
-     * A tracked drive's bottom hand opening (P2b.2b.1 design §3.3): by reach in swing mode, at the pendulum phase's
-     * start in carry mode (P2b.2b.2b.2b design §4.2): when (s), and the shaft's turn since relaxAt (contact) then
-     * (rad). Absent if it never opened, and for a force table.
+     * A tracked drive's bottom hand opening (P2b.2b.1 design §3.3): at the earlier of the forward reach and a push's
+     * pendulum phase (P2b.2b.2b.2b design §4.2; P2b.2b.2c.3a A2 item 6): when (s), and the shaft's turn since relaxAt
+     * (contact) then (rad). Absent if it never opened, and for a force table.
      */
     readonly release?: { readonly t: number; readonly deltaTheta: number };
     /**
-     * Carry mode's first departure of a ball from the face (s; gate round 13 ruling, "Relax from first departure",
+     * A push's first departure of a ball from the face (s; gate round 13 ruling, "Relax from first departure",
      * 2026-10-12), from which the arms' hold relaxes. The impact does not know which ball is the striker's, so it is
-     * any ball's; in a roll the face meets only the striker's. Absent if no ball left the face, and in swing mode.
+     * any ball's; in a roll the face meets only the striker's. Absent if no ball left the face, and with no push.
      */
     readonly departure?: number;
     /**

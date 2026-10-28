@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { flexForce, flexGains } from "../../../src/engine/impact/flex";
+import { flexForce, flexGains, gripGains } from "../../../src/engine/impact/flex";
 import type { FlexLaw } from "../../../src/engine/impact/types";
 import { vec3 } from "../../../src/engine/math/vec3";
 
@@ -45,5 +45,17 @@ describe("the flex law (P2b.2b.2b.2b design §3.1)", () => {
         const large = flexForce(fed, gains, vec3(0.01, 0, 0), vec3(0, 0, 0));
         expect(large.x).toBeCloseTo(10 * small.x, 12);
         expect(large.z).toBe(small.z);
+    });
+
+    it("scales a hand's flex by its grip: k·γ and c·√γ", () => {
+        // P2b.2b.2c.3a A2 item 4: a grip scales its hand's flex as handGains scales the firm coupling, so a quarter
+        // grip pulls a quarter as hard and damps half as hard; a full grip keeps the gains' bits, so the rolls do.
+        const quarter = gripGains({ stiffness: 200, damping: 10 }, 0.25);
+        expect(quarter.stiffness).toBeCloseTo(50, 12);
+        expect(quarter.damping).toBeCloseTo(5, 12);
+        const gains = flexGains(LAW, 7.3);
+        const full = gripGains(gains, 1);
+        expect(full.stiffness).toBe(gains.stiffness);
+        expect(full.damping).toBe(gains.damping);
     });
 });

@@ -18,9 +18,16 @@ import { TEST_HANDS, TEST_HEAD, levelArc, trackDrive } from "../support/impact";
 /** A firm grip held to its path before relaxAt, with no damping, so that each hand's force is its spring's alone. */
 const FIRM: Coupling = { period: 0.04, dampingRatio: 0, relaxAt: 10 };
 
-/** A level path whose pivot runs along aim at 1 m/s, gravity off: the hands' feed-forward is then zero. */
+/**
+ * A level path whose pivot runs along aim at 1 m/s, gravity off: the hands' feed-forward is then zero. P2b.2b.2c.3a: a
+ * push wherever handReach > 0 (A2 item 8), on the hands' arc, so the path has none and its contact comes with the
+ * grip's relaxing, at FIRM's relaxAt (was the fixture's 10 m reach from contact at 0, which never bound in swing mode):
+ * before contact the planned pivot runs on, as it did.
+ */
+const RUNNING = { pivotVelocity: vec3(1, 0, 0), handReach: 0, contactAt: FIRM.relaxAt };
+
 function running(limit: number, coupling: Coupling = FIRM): PreparedTrack {
-    const arc = levelArc(vec3(0, 0, 1), { pivotVelocity: vec3(1, 0, 0) });
+    const arc = levelArc(vec3(0, 0, 1), RUNNING);
     return prepareTrack(trackDrive(arc, coupling, { ...TEST_HANDS, gripLimit: limit }), TEST_HEAD, 0);
 }
 
@@ -136,7 +143,7 @@ describe("the hands' limit (P2b.2b.2b.3 design §5)", () => {
         // A still carry under gravity: each hand's chain carries its share of the head's weight and its own skin,
         // about 5 N for the top hand, against a 2 N limit. The hand transmits 2 N; its hold slides until the palm
         // and fingers carry exactly that, so recomputing the chain at the slid anchor gives the same force.
-        const arc = levelArc(vec3(0, 0, 1), { mode: "carry", handReach: 0.1, pendulumAt: 1 });
+        const arc = levelArc(vec3(0, 0, 1), { slopeHold: 1, handReach: 0.1, pendulumAt: 1 });
         const hands = { ...TEST_HANDS, gripLimit: 2 };
         const coupling: Coupling = { period: 0.04, dampingRatio: 0.7, relaxAt: 0 };
         const track = prepareTrack(trackDrive(arc, coupling, hands), TEST_HEAD, STANDARD_GRAVITY);
@@ -157,10 +164,10 @@ describe("the arms' checking force (P2b.2b.2c.2 design §4, §8.1)", () => {
     const TAU = 20.7 / 744;
     const LIMIT = 50;
 
-    /** `running(LIMIT)` with the arms' hold set to `hold`, in `mode`. */
-    function withHold(hold: FlexHold | null, mode: "swing" | "carry" = "swing"): PreparedTrack {
-        const carry = mode === "carry" ? { mode, handReach: 0.1, pendulumAt: 1 } : {};
-        const arc = levelArc(vec3(0, 0, 1), { pivotVelocity: vec3(1, 0, 0), ...carry });
+    /** `running(LIMIT)` with the arms' hold set to `hold`, and with `carries` a held slope and a 0.1 m push. */
+    function withHold(hold: FlexHold | null, carries = false): PreparedTrack {
+        const carry = carries ? { slopeHold: 1, handReach: 0.1, pendulumAt: 1, contactAt: 0 } : {};
+        const arc = levelArc(vec3(0, 0, 1), { ...RUNNING, ...carry });
         const hands = { ...TEST_HANDS, gripLimit: LIMIT, flex: { ...TEST_HANDS.flex, hold } };
         return prepareTrack(trackDrive(arc, FIRM, hands), TEST_HEAD, 0);
     }
@@ -250,22 +257,6 @@ describe("the arms' checking force (P2b.2b.2c.2 design §4, §8.1)", () => {
     }
 
     /**
-     * Carry mode before relaxAt, its hands `track`'s, run as `slide`: the top hand's offset once it has slid. It is the
-     * branch the swing-mode decay acts in, so it is where carry mode must keep its offset.
-     */
-    function carryOffsetBeforeEasing(track: PreparedTrack): Vec3 | null {
-        return slide(withHold(track.hands.flex.hold, "carry")).grip.topOffset;
-    }
-
-    /** The same carry, then a step of 1 ms under the limit: the top hand's offset after it. */
-    function carryOffsetAfterEasing(track: PreparedTrack): Vec3 | null {
-        const carry = withHold(track.hands.flex.hold, "carry");
-        const { grip, held } = slide(carry);
-        expect(handLoad(carry, halved(carry, grip, held), TEST_HEAD, 0.02, grip, 1e-3).saturated).toBeNull();
-        return grip.topOffset;
-    }
-
-    /**
      * Slide for 21 ms, relax for 20 steps of 1 ms with the head kept at half the stretch from the recovering anchor,
      * then hold the head still while the path runs on: each step at which the top hand saturates again, its force and
      * its spring's stored energy.
@@ -321,9 +312,20 @@ describe("the arms' checking force (P2b.2b.2c.2 design §4, §8.1)", () => {
         const { before, after } = underLimitStep(withHold(HOLD), 1e-3, "bottom");
         expect(length(after)).toBeCloseTo(length(before) * Math.exp(-1e-3 / TAU), 12);
     });
-    it("keeps a carry hand's slid offset: carry mode's chain already holds the arm", () => {
-        // §8.1.5, constraint 4: the existing carry case, then an under-limit step, its offset unchanged.
-        expect(carryOffsetAfterEasing(withHold(HOLD))).toEqual(carryOffsetBeforeEasing(withHold(HOLD)));
+    it("returns a slid anchor on a held stroke too", () => {
+        // A carry arc (slopeHold 1) with no downswing: its anchor, once slid, decays at τ_arm under the limit as the
+        // swung case's does. It replaces the test that a held slope keeps its offset.
+        const carry = withHold(HOLD, true);
+        expect(carry.arc.slopeHold).toBe(1);
+        const { grip, held } = slide(carry);
+        const before = grip.topOffset as Vec3;
+        const dt = 1e-3;
+        expect(handLoad(carry, halved(carry, grip, held), TEST_HEAD, 0.02, grip, dt).saturated).toBeNull();
+        const after = grip.topOffset as Vec3;
+        for (const k of ["x", "y", "z"] as const) {
+            expect(after[k]).toBeCloseTo(before[k] * Math.exp(-dt / TAU), 12);
+        }
+        expect(length(after)).toBeLessThan(length(before));
     });
     it("keeps the offset finite at a long step, and as it was without a hold", () => {
         // A step far longer than τ_arm must shrink the offset by exp(−dt/τ), never overshoot to null or NaN.

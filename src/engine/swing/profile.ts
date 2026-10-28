@@ -7,7 +7,7 @@
  *   the arm's flex and pendulum push (P2b.2b.2b.2b), the push intent's cap and response time, each hand's
  *   hand–arm chain (its gate rulings) and the grip's limit (Young et al. 2009; P2b.2b.2b.3), measured; the
  *   backswing's limit θ_max from reference/swing.json (`body`), a placeholder from the user's account of the stance;
- *   and swing mode's effort, the linear torque–velocity law's τ_0 and ω_max from reference/swing.json (`body`),
+ *   and the swing's effort, the linear torque–velocity law's τ_0 and ω_max from reference/swing.json (`body`),
  *   fitted by scripts/fitStrokeShape.ts to the 9.0 m/s ceiling with κ = ⅔, placeholders (P2b.2b.2c.1 design §4.3,
  *   §4.4); and the hands' peak acceleration along aim from reference/swing.json (`body`), a calibration placeholder,
  *   a body property the player never sets (P2b.2b.2c.1 design, Amendments).
@@ -35,10 +35,8 @@ import {
     swingReference,
     type StrokeShapeReference,
 } from "../../reference/index";
-import { ReferenceDataError } from "../../reference/schema";
 import { faceHalfHeight } from "../impact/shape";
 import { ARM_FLEX, GRIP_LIMIT, HAND_CHAIN, PENDULUM_FORCE, PUSH_FORCE, PUSH_RESPONSE_TIME } from "../impact/track";
-import type { StrokeMode } from "../impact/types";
 import { handsAheadFor, headShapeOf } from "./buildContact";
 import {
     STROKE_TYPES,
@@ -51,6 +49,14 @@ import {
 } from "./types";
 
 const DEG = Math.PI / 180;
+
+/**
+ * A hand's breadth (m): the men's 50th percentile, 3.46 in, of the 2012 US Army anthropometric survey (ANSUR II,
+ * Gordon et al. 2014) as the NCSU Ergonomics Center tabulates it (reference/sources/README.md, P2b.2b.2c.3a; user
+ * ruling 2026-10-28). It is the breadth across the palm, read here as the span one hand takes on the shaft: an
+ * assumption.
+ */
+export const HAND_BREADTH = 3.46 * 0.0254;
 
 /**
  * The default mallet (P2b.2b.2b.2c design §5.3): the Pidcock 2000 11", a wooden body with brass blocks at its ends and
@@ -93,16 +99,13 @@ function stanceFromLean(lean: number, up: number, hands: Omit<SwingStance, "hand
 }
 
 /**
- * The shape of stroke type `type` driven in `mode`, from its reference/swing.json entry `ref` (design §5.3). A carry
- * preset reads the hands' tempo, and throws a ReferenceDataError naming the type and the keys when `ref` lacks it; a
- * swing preset takes it from `ref` or null, its effort being the body's, shared by every swing preset. A swing
- * preset's retired effort keys (torqueMax, tempoSlow, tempoFast) and any preset's retired defaultIntensity are rejected
- * by readShape when swing.json loads.
+ * The shape of stroke type `type` from its reference/swing.json entry `ref` (design §5.3), all but its planned slope
+ * (SLOPE_HOLD). The hands' tempo is `ref`'s or null, which takes the stroke's own free swing's fall (P2b.2b.2c.3a
+ * design §4.1); a stroke that needs a tempo it cannot derive is rejected by planStroke. A swing preset's retired effort
+ * keys (torqueMax, tempoSlow, tempoFast) and any preset's retired defaultIntensity are rejected by readShape when
+ * swing.json loads.
  */
-export function shapeOf(type: StrokeType, mode: StrokeMode, ref: StrokeShapeReference): SwingShape {
-    if (mode === "carry" && ref.handTempo === null) {
-        throw new ReferenceDataError(`swing.${type}`, "a carry-mode preset needs handTempoSlow and handTempoFast");
-    }
+export function shapeOf(type: StrokeType, ref: StrokeShapeReference): Omit<SwingShape, "slopeHold"> {
     return {
         pendulumShare: ref.pendulumShare.value,
         handAngle: ref.handAngle.value,
@@ -120,7 +123,6 @@ const DRIVE: Readonly<Record<StrokeType, SwingDrive>> = {
     // Swing: the top hand still (no hand share), the pendulum's light push over 10 ms, then its free swing; no
     // dip, no reach (prototype).
     "single-ball": {
-        mode: "swing",
         speedGain: 0.2,
         window: 0.01,
         handGain: 0,
@@ -134,13 +136,14 @@ const DRIVE: Readonly<Record<StrokeType, SwingDrive>> = {
         handArcRadius: 1.5,
         handArcLow: 0.5,
     },
-    // As single-ball over a 5 ms window: the follow-through rises and dies by itself, and the head catches the
-    // striker's ball again (prototype). User decision 2026-10-25: the guide's effort 0.75, the largest on a 0.25 grid
-    // after which nothing re-contacts the ball once it has parted. At 1 the head returns to it 96.4 ms after contact
-    // (+49 % on its speed, a possible 29.1.6.1) and the ratio is 2.435; at 0.75 it is 3.753 (Gugan 5's drive, at 0,
-    // 4.295).
+    // As single-ball over a 5 ms window: the follow-through rises and dies by itself (prototype). The guide's effort
+    // is 1, as on every preset (gate stage 2 ruling 2026-10-28, "Accept grip, set 1"; was 0.75). User decision
+    // 2026-10-25 had set 0.75, the largest on a 0.25 grid after which nothing re-contacts the ball once it has parted:
+    // at the old grip (bottom hand 0.6 m) and before P2b.2b.2c.3a's hand law, at 1 the head returned to it 96.4 ms
+    // after contact (+49 % on its speed, a possible 29.1.6.1) and the ratio was 2.435; at 0.75 it was 3.753 (Gugan 5's
+    // drive, at 0, 4.295). With the hands together (setupProbe section D) no guideEffort on the grid re-contacts the
+    // ball after the parting, and the ratio is 3.9253 at every one (3.925292 at 0 to 3.925309 at 0.75 and 1).
     drive: {
-        mode: "swing",
         speedGain: 0.2,
         window: 0.005,
         handGain: 0,
@@ -148,7 +151,7 @@ const DRIVE: Readonly<Record<StrokeType, SwingDrive>> = {
         handDrop: 0,
         dropTime: 0.01,
         handReach: 0,
-        guideEffort: 0.75,
+        guideEffort: 1,
         pendulumAt: 0.8,
         pendulumEffort: 0,
         handArcRadius: 1.5,
@@ -163,7 +166,6 @@ const DRIVE: Readonly<Record<StrokeType, SwingDrive>> = {
     // pre-flight confirms the value. The hands do not travel, so no reach. P2b.2b.2b.2c: on the box the head clears
     // the turf at contact (14.55 mm; gate ruling B); the figures above are the round head's.
     "stop-ac": {
-        mode: "swing",
         speedGain: 1,
         window: 0.01,
         handGain: 0,
@@ -180,7 +182,6 @@ const DRIVE: Readonly<Record<StrokeType, SwingDrive>> = {
     // Swing, checked through the firm, low bottom hand's lever: a hard, level shot with no follow-through; no dip
     // (prototype). A single-ball stroke, the striker's ball crossing a gap to the target (design §5.4).
     "stop-gc": {
-        mode: "swing",
         speedGain: 1,
         window: 0.01,
         handGain: 0,
@@ -198,7 +199,6 @@ const DRIVE: Readonly<Record<StrokeType, SwingDrive>> = {
     // "the mallet head following through the ball and onto the ground"): the hands' speed from the downswing
     // (P2b.2b.2a design §3.3), a light pendulum push, the push 0.15 m (prototype).
     "half-roll": {
-        mode: "carry",
         speedGain: 0.1,
         window: 0.02,
         handGain: 0,
@@ -215,7 +215,6 @@ const DRIVE: Readonly<Record<StrokeType, SwingDrive>> = {
     // Carry: the hands' speed from the downswing (P2b.2b.2a design §3.3) and still accelerating, the push 0.30 m
     // (prototype). A known miss in this phase (design §10).
     "full-roll": {
-        mode: "carry",
         speedGain: 0.1,
         window: 0.03,
         handGain: 0.1,
@@ -233,7 +232,6 @@ const DRIVE: Readonly<Record<StrokeType, SwingDrive>> = {
     // the hands' speed from the downswing (P2b.2b.2a design §3.3) and handGain 0.1. The push 0.30 m; 0.2 m traps
     // the striker's ball against the face (prototype). A known miss in this phase (design §10).
     "pass-roll": {
-        mode: "carry",
         speedGain: 0.5,
         window: 0.015,
         handGain: 0.1,
@@ -247,6 +245,20 @@ const DRIVE: Readonly<Record<StrokeType, SwingDrive>> = {
         handArcRadius: 1.5,
         handArcLow: 0.5,
     },
+};
+
+/**
+ * The planned slope λ per stroke type (P2b.2b.2c.3a design §4.1): the swing presets' hands let the shaft swing (0), the
+ * rolls' hold its slope (1), each today's downswing to the bit.
+ */
+export const SLOPE_HOLD: Readonly<Record<StrokeType, number>> = {
+    "single-ball": 0,
+    drive: 0,
+    "stop-ac": 0,
+    "stop-gc": 0,
+    "half-roll": 1,
+    "full-roll": 1,
+    "pass-roll": 1,
 };
 
 /** The default profile (design §5.4). Provisional throughout. */
@@ -270,8 +282,16 @@ export const defaultProfile: SwingProfile = {
         // has the hands "slightly forward of the mallet head" until the instant of contact; at contact the model's are
         // over the socket (lean 0).
         "single-ball": stanceFromLean(0, 0, { top: 0.805, bottom: 0.7, gripTension: 1, bottomGrip: 0.1 }),
-        // As single-ball, the bottom hand a little lower and firmer, still only a guide (prototype).
-        drive: stanceFromLean(0, 0, { top: 0.805, bottom: 0.6, gripTension: 1, bottomGrip: 0.25 }),
+        // The hands together at the top of the handle, the bottom hand a hand's breadth (HAND_BREADTH) below the top,
+        // firmer than single-ball's but still only a guide (P2b.2b.2c.3a design decision 3, §5; was 0.6, a third of the
+        // way down). Riches, of the stop-shot: "With both hands at the top of the handle, they use the wrists to swing
+        // the mallet fairly loosely from the hands." The user's account (2026-10-26): "for a drive and stop, both hands
+        // would be together at the top of the shaft" ("together in that they are touching or close to touching but
+        // they both grip the shaft independently, one hand above the other"); and, of the split grip, "that's
+        // something we intentionally have to coach new players not to do as it really affects their ability to vary
+        // their ratios. They imagine that holding the mallet is like holding a sledgehammer, which is not the case.
+        // It's very much about using the natural pendulum swing." The grips are the prototype's.
+        drive: stanceFromLean(0, 0, { top: 0.805, bottom: 0.805 - HAND_BREADTH, gripTension: 1, bottomGrip: 0.25 }),
         // Feet set back, the ball met on the up: the shaft leans back 5°, so the strike rises 5° and the face tilts up
         // 5°, within the feasibility spike's 3–5° tilt. User decision 2026-10-25: the stroke may rub the lawn and
         // disturb the grass but must not damage the turf, so the head must not pass the depth limit (impact-head-deep)
@@ -281,9 +301,29 @@ export const defaultProfile: SwingProfile = {
         // deep and yielded the soil, at a ratio of 7.34; −4° at 25 mm never touches the turf but its ratio, 6.54, falls
         // just below the band; −5° at 25 mm (6.74) strikes 0.6 mm from the edge of the face's flat (±25.575 mm), so a
         // contact only 1 mm lower than the canonical one is off the face. The contact, 22.5 mm below the face's centre,
-        // keeps 3 mm clear of that edge. Both grips relax at contact (prototype). The lean is defined at its canonical
-        // contact.
-        "stop-ac": stanceFromLean(-5 * DEG, -0.0225, { top: 0.805, bottom: 0.45, gripTension: 0.1, bottomGrip: 0.1 }),
+        // keeps 3 mm clear of that edge. The lean is defined at its canonical contact.
+        // The grip: P2b.2b.2c.3a gate stage 2's retune (user rulings 2026-10-28, design amendment A1), the stop's own
+        // grip only, against Gugan 5: the hands together at the top of the handle, as Riches has the stop-shot and the
+        // user's account 3 the drive and the stop (above), the same hands as the drive's, the top hand firm (γ_T 1)
+        // and the bottom hand loose (g_B 0.1). Was the prototype's bottom hand at 0.45 m and both grips at 0.1. The
+        // jab variant, the bottom hand lowered (the user's account 9: "some players ... do put the bottom hand down a
+        // bit to allow them to jab"), is now a shot's grip (stroke.grip), not the default. One law after contact, the
+        // old grip's head sank into the turf: Gugan 5's stop came to 6.3545 at the default croquet gap (0.75 mm) and
+        // 7.7325 at gap 0, each yielding the soil and passing the depth limit in its impact and its follow-through,
+        // and the canonical stop's ratio was 4.9912. At this grip Gugan 5's stop is 6.6029 at 0.75 mm and 7.6089 at
+        // gap 0 (band 6.55–7.75), and the canonical stop's ratio 5.0401; neither run, at either gap, yields the turf
+        // or passes the depth limit, in the impact or the follow-through, the head only rubbing the lawn. In the
+        // stage 2 search the top hand's tension decided the damage: every grip with γ_T at 0.25 or below damaged the
+        // turf in at least one run, and only γ_T 1 (or 0.5 with the hands together and a firmer bottom hand) stayed
+        // clean. The bottom hand's position, not the grips, sets the ratio: about 5.8 at 0.45 m, 6.0 at 0.55 m and
+        // 6.6–6.7 from 0.6 m up, at 0.75 mm. The 0.75 mm band's pass sits on the stop's step-sensitive high branch
+        // (squeezeConvergence.test.ts).
+        "stop-ac": stanceFromLean(-5 * DEG, -0.0225, {
+            top: 0.805,
+            bottom: 0.805 - HAND_BREADTH,
+            gripTension: 1,
+            bottomGrip: 0.1,
+        }),
         // The lower hand low and firm, checking the swing through its lever just after contact (prototype).
         "stop-gc": stanceFromLean(0, 0, { top: 0.805, bottom: 0.45, gripTension: 1, bottomGrip: 1 }),
         // Riches: "Stand further forward over the balls, with your front toe level with the back of your striker's
@@ -305,7 +345,7 @@ export const defaultProfile: SwingProfile = {
     },
     drive: DRIVE,
     shape: Object.fromEntries(
-        STROKE_TYPES.map((type) => [type, shapeOf(type, DRIVE[type].mode, swingReference[type])]),
+        STROKE_TYPES.map((type) => [type, { ...shapeOf(type, swingReference[type]), slopeHold: SLOPE_HOLD[type] }]),
     ) as Record<StrokeType, SwingShape>,
 };
 
