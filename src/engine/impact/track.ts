@@ -284,6 +284,27 @@ function handGains(coupling: Coupling, grip: number, body: SwungBody): HandGains
 }
 
 /**
+ * The grip's couple C = min(γ_T, g_B)·F_max·(r − b) (N·m; P2b.2b.2c.3a design §4.1, Amendments item 3): `hands`' grip
+ * limit F_max (Young et al. 2009) across their spread r − b, the top grip `radius` from the socket. The firmness factor
+ * min(γ_T, g_B) is a placeholder: the weaker hand bounds the couple.
+ */
+export function gripCouple(hands: Hands, radius: number): number {
+    return Math.min(hands.gripTension, hands.bottomGrip) * hands.gripLimit * (radius - hands.bottom);
+}
+
+/**
+ * A stop's hold's pitch gains about n (P2b.2b.2c.3a gate stage 2, the hold's pitch impedance), for a swung body of
+ * pitch inertia `inertia` (kg·m²) about the top hand: K_p = I_P·(2π/T)² and C_p = 2ζ·√(K_p·I_P) (N·m/rad,
+ * N·m·s/rad), the firm grip's period T and damping ratio ζ (HAND_COUPLING) applied to the pitch, as handGains applies
+ * them to the twist.
+ */
+function holdPitchGains(coupling: Coupling, inertia: number): { readonly stiffness: number; readonly damping: number } {
+    const rate = (2 * Math.PI) / coupling.period;
+    const stiffness = inertia * rate * rate;
+    return { stiffness, damping: 2 * coupling.dampingRatio * Math.sqrt(stiffness * inertia) };
+}
+
+/**
  * The hands' reach (design §3.2): the planned pivot until t1 (where it is at p1, with speed v1 along aim); then its
  * along-aim component decelerates at `decel` to rest at tStop and stays there. Without a push the reach rests from
  * contactAt (restingReach); a reach forward is the push's (P2b.2b.2c.3a A2 item 8).
@@ -1727,11 +1748,12 @@ function openBottom(track: PreparedTrack, grip: GripState, s: Vec3, t: number): 
  * skin (swungOf). Through a push F_ff gains the push intent before it is shared (pushIntent; gate ruling 2026-10-11).
  * A check brakes the head to rest, not past it: the hands apply the head's share of the planned deceleration
  * (checkShare). With `gripped`, the hands grip firmly with springs and dampers at any t, as before relaxAt but with no
- * downswing gate, and the chains let go: a stop's follow-through (P2b.2b.2a design §4.2; A2 item 7). Each hand's force
- * is held to the grip's limit F_max (P2b.2b.2b.3 design §5): a position spring's anchor slides at it, by an offset
- * kept in `grip` in the head's frame; a damper alone is capped. Under its limit on the firm grip a slid anchor returns
- * towards the hands' planned path at the arm's rate τ_arm = c_hold/k_hold, over the step `dt` (P2b.2b.2c.2 design
- * §4.1), the force reaching the head only through the grip.
+ * downswing gate, and the chains let go: a stop's follow-through (P2b.2b.2a design §4.2; A2 item 7), with its own
+ * pitch spring and damper (holdPitchGains; P2b.2b.2c.3a gate stage 2), held to the grip's couple (gripCouple). Each
+ * hand's force is held to the grip's limit F_max (P2b.2b.2b.3 design §5): a position spring's anchor slides at it, by
+ * an offset kept in `grip` in the head's frame; a damper alone is capped. Under its limit on the firm grip a slid
+ * anchor returns towards the hands' planned path at the arm's rate τ_arm = c_hold/k_hold, over the step `dt`
+ * (P2b.2b.2c.2 design §4.1), the force reaching the head only through the grip.
  */
 export function handLoad(
     track: PreparedTrack,
@@ -1886,7 +1908,31 @@ export function handLoad(
                 grip.bottomOffset = scale(grip.bottomOffset, decay);
             }
         }
-        return load(top, bottom, twist, add(topShare, bottomShare), saturated);
+        const firm = load(top, bottom, twist, add(topShare, bottomShare), saturated);
+        if (!gripped) {
+            return firm;
+        }
+        // A stop's hold has its own pitch spring and damper (P2b.2b.2c.3a gate stage 2, the hold's pitch impedance).
+        // The grip springs alone resist pitch only through their lever r − b: with the drive's hands one hand breadth
+        // apart (88 mm) the held head swung about them at a 0.9 s period and a damping ratio near 0.08. This couple
+        // gives the hold the firm grip's period and damping ratio in pitch at any spacing, added to the springs, which
+        // still place the grips: their pitch share is not separable from that. It acts on the pitch error from the
+        // held path (holdPendulum's θ, the planned pivot's ω = 0), as the twist term acts about the shaft, and is
+        // sized on I_P about the top hand (pendulumOf), the pivot the held θ is measured about, for the body now
+        // held (swungOf). Its magnitude, spring and damper together, is held to the grip's couple (gripCouple;
+        // Amendments item 3, ruling 2026-10-28): the most a grip of this firmness and spread can apply, so hands one
+        // breadth apart hold the pitch weakly, as they must. The twist couple is not bounded.
+        const pitchGains = holdPitchGains(track.coupling, body.inertia.y + body.mass * a * a);
+        const bound = gripCouple(hands, arc.radius);
+        const pitch = Math.max(
+            -bound,
+            Math.min(
+                bound,
+                pitchGains.stiffness * dot(rotationError(path.orientation, q), track.axis) +
+                    pitchGains.damping * dot(spinLag, track.axis),
+            ),
+        );
+        return { ...firm, torque: add(firm.torque, scale(track.axis, pitch)) };
     }
 
     const carried = carryLoad(track, state, t, grip, path, {

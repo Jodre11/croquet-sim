@@ -23,7 +23,7 @@ import type { BallId, BallState, Hoop, World } from "../../src/engine/types";
 import { defaultWorld, hoopHalfSpan, hoopLateral } from "../../src/engine/world";
 import { TEST_GRIP_LIMIT, recorder } from "./support/impact";
 import { CANONICAL_CLEARANCE, CANONICAL_STRIKER, GC_STOP_GAP, backswingFor, canonicalSetup } from "./support/shot";
-import { POSITION_SLACK, boundaryJumps } from "./support/trajectory";
+import { boundaryJumps } from "./support/trajectory";
 
 const WORLD = defaultWorld();
 const R = WORLD.ball.radius;
@@ -335,7 +335,12 @@ describe("simulateShot", () => {
         // `driveEnd`), so holdFrom = max(window end, impactEnd) is the impact's end unless the impact caps.
         expect(jumps).toHaveLength(type === "stop-ac" || type === "stop-gc" ? 4 : 3);
         for (const jump of jumps) {
-            expect(jump.position, jump.name).toBeLessThanOrEqual(POSITION_SLACK);
+            // P2b.2b.2c.3a gate stage 2: the hold's pitch impedance (was a fixed 1e-6 m): the position's slack scales
+            // with the acceleration's change across the pair, as the velocity's bound scales with the acceleration
+            // (positionBound; the trapezoid's error is O(Δa·Δt²)). The stops' holds now decelerate the head sharply
+            // from the first held step: the GC stop's seam 3.12e-6 m against 4.52e-6 m, the AC stop's 9.33e-7 m against
+            // 1.05e-5 m.
+            expect(jump.position, jump.name).toBeLessThanOrEqual(jump.positionBound);
             expect(jump.velocity, jump.name).toBeLessThanOrEqual(jump.bound);
         }
     };

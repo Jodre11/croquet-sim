@@ -23,7 +23,7 @@ import type { World } from "../../../src/engine/types";
 import { defaultWorld } from "../../../src/engine/world";
 import { ballAt, testWorld } from "../support/fixtures";
 import { TEST_GRIP_LIMIT } from "../support/impact";
-import { canonicalSetup, testProfile } from "../support/shot";
+import { backswingFor, canonicalSetup, testProfile } from "../support/shot";
 
 const WORLD = testWorld();
 
@@ -134,6 +134,8 @@ describe("the follow-through (design §4)", () => {
         // gain, so its head sinks into the turf, 0.514 m/s down at the impact's end (turf-yield at 19.41 ms,
         // impact-head-deep at 19.95 ms), and on into the follow-through (follow-turf-yield and follow-head-deep),
         // which finishes 68.0 ms after the impact's end. For the gate (stage 2).
+        // P2b.2b.2c.3a gate stage 2: the hold's pitch impedance (was 43.3 ms and 68.0 ms): the GC stop finishes 16.3
+        // ms after its impact's end and the AC stop 94.0 ms.
         const world = defaultWorld();
         const flags = { "stop-gc": [], "stop-ac": ["follow-turf-yield", "follow-head-deep"] } as const;
         for (const type of ["stop-gc", "stop-ac"] as const) {
@@ -159,6 +161,9 @@ describe("the follow-through (design §4)", () => {
     it("flags a grip limit reached in the GC stop's follow-through (P2b.2b.2b.3 design §5)", () => {
         // The default limit is no longer reached (above), so the flag's path is pinned with the profile's limit
         // lowered to 20 N, below the follow-through's peak hand force of 30.3 N.
+        // P2b.2b.2c.3a gate stage 2: the hold's pitch impedance (was a finish at 368 ms on a swing's apex, the head
+        // still swinging at up to 0.51 m/s). The hold's pitch couple, bounded by the 20 N grip's couple (7.1 N·m),
+        // settles the head: it finishes at 420 ms, flags unchanged.
         const world = defaultWorld();
         const setup = canonicalSetup("stop-gc", { world });
         const limited = { ...setup, profile: { ...setup.profile, body: { ...setup.profile.body, gripLimit: 20 } } };
@@ -282,6 +287,29 @@ describe("the finish from the inputs (P2b.2b.2c.3a A2 item 7)", () => {
         const { follow } = stroke(setup, DEFAULT);
         expect(follow.flags).not.toContain("follow-cap");
         expect(follow.finish).toBeGreaterThanOrEqual(push.end as number);
+    });
+
+    it("settles a braked drive on the hold, its hands one hand breadth apart, well before the cap", () => {
+        // P2b.2b.2c.3a gate stage 2: the hold's pitch impedance. The drive's hands, 88 mm apart, gave the hold's two
+        // grip springs so short a lever that the head swung in pitch about them, ±7 cm with a 0.9 s period and a
+        // damping ratio near 0.08, and this off-centre run met the cap mid-swing at 0.42 m/s. The hold's own pitch
+        // spring and damper, bounded by the grip's couple (0.25 × 435 N × 0.0879 m = 9.56 N·m), settle it: it finishes
+        // at 658 ms, below FINISH_SPEED, and with no swing just before it. Accepted for the gate: 8 of the drive's 27
+        // runs at drive −0.5 still cap on a slow sideways sway about the aim (a roll damper is recorded for 3b).
+        const setup = canonicalSetup("drive", { world: DEFAULT, stroke: { drive: -1 } });
+        const offCentre = { ...setup.stroke, contact: { up: setup.stroke.contact.up, side: 0.01 } };
+        const aimed = { ...setup, stroke: offCentre };
+        const braked = { ...aimed, stroke: { ...offCentre, backswing: backswingFor(aimed, 2, DEFAULT) } };
+        const { contact, follow } = stroke(braked, DEFAULT);
+        expect(follow.flags).not.toContain("follow-cap");
+        expect(follow.finish).toBeLessThan((contact.drive as TrackDrive).arc.contactAt + FOLLOW_CAP);
+        const plan = prepareTrack(contact.drive as TrackDrive, contact.head, DEFAULT.gravity);
+        const relative = (s: StrokeState): number => length(sub(s.head.velocity, handsAt(plan, s.t).velocity));
+        expect(relative(last(follow))).toBeLessThan(FINISH_SPEED);
+        // A swing's apex passes FINISH_SPEED for an instant; a settled head stays near it for the samples before.
+        for (const s of follow.samples.filter((x) => x.t >= follow.finish - 0.02)) {
+            expect(relative(s), `t ${s.t}`).toBeLessThan(10 * FINISH_SPEED);
+        }
     });
 });
 

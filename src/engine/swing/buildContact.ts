@@ -24,6 +24,7 @@ import { faceHalfHeight, type HeadShape } from "../impact/shape";
 import {
     HAND_COUPLING,
     dipTravel,
+    gripCouple,
     headOnPath,
     pendulumOf,
     pitchAxis,
@@ -701,9 +702,7 @@ export function arcArrival(radius: number, low: number): number {
 
 /**
  * The downswing's input for `pose` and `choice` (design §3.1): the pendulum of the swung body (the mallet, malletBody,
- * and `hands`' arm mass at the top grip) under `gravity`, ℓ_h = ρ + r; and the grip's couple C = min(γ_T, g_B)·F_max·
- * (r − b) (P2b.2b.2c.3a design §4.1), F_max the hands' `gripLimit` (Young et al. 2009) and r − b their spread. The
- * firmness factor min(γ_T, g_B) is a placeholder: the weaker hand bounds the couple.
+ * and `hands`' arm mass at the top grip) under `gravity`, ℓ_h = ρ + r; and the grip's couple (gripCouple).
  */
 export function downswingInput(pose: ContactPose, hands: Hands, choice: StrokeChoice, gravity: number): DownswingInput {
     const body = swungBody(pose.head, hands, pose.radius);
@@ -715,7 +714,7 @@ export function downswingInput(pose: ContactPose, hands: Hands, choice: StrokeCh
     };
     return {
         slopeHold: choice.slopeHold,
-        couple: Math.min(grip.top, grip.bottom) * grip.limit * grip.spread,
+        couple: gripCouple(hands, pose.radius),
         grip,
         aim: pose.aim,
         thetaContact: pose.thetaContact,
