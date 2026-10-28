@@ -269,3 +269,71 @@ R) and the hand model's note in `probes/2026-10-27-p2b2b2c3a-hand-model.md`. Eac
 8. **The push through.** "A: one push": on every stroke, its pace the plan's travel plus any advance, on the hands'
    arc, capped at the push length, none at length 0; the reach and the separate advance go; a stop may push. The ease
    at a push's end is deferred to P2b.2b.2c.3b.
+
+**A3 — gate stage 2 (user, 2026-10-28).** Each ruling as chosen, in the order put:
+1. **A hand's width** (§5, §9; before Task 12). The men's 50th percentile hand breadth, 3.46 in (87.9 mm), from the
+   NCSU Ergonomics Center's summary of ANSUR II (cited in `reference/sources/README.md`); the women's 3.07 in rejected,
+   the table giving no pooled figure. The drive's bottom hand is at 0.805 − `HAND_BREADTH` = 0.717 m.
+2. **Single-ball and the GC stop's departures** (1a). "Accept both (Recommended)": accepted as the unified model's. The
+   GC stop's head still moving at 0.742 m/s at the impact's end is recorded for P2b.2b.2c.3b (A1 allows no GC retune).
+3. **The braked drives' follow-cap** (1b). First "Trace first (Recommended)". The trace found the check's gripped hold
+   stiff and damped in pitch in proportion to the hand spacing, so the drive's 0.088 m spacing left a pitch mode of
+   ~0.9 s at ζ ~0.08 that the finish test caught only at an apex. Then "Fix the hold now (Recommended)": the gripped
+   hold gets its own pitch spring and damper, independent of the hand spacing, sized from `track.firm`'s 0.08 s period
+   at ζ 0.7; its own commit, every check's follow-through re-measured and the moved runs counted. On the fix:
+   - the seam check, "Scale the slack (Recommended)": exit criterion 3's seam position slack scales with the after-side
+     change in acceleration, as the velocity bound does;
+   - the couple, "Bound it, then re-count (Recommended)": the hold's pitch couple is bounded by
+     C = min(γ_T, g_B)·F_max·(r − b), A2's bound (`gripCouple`, shared with the downswing); the GC stop's creep at a
+     20 N grip limit accepted as an artificial-limit case;
+   - the re-count, "Keep bound, accept 8 (Recommended)": 8 of 27 braked drives at drive −0.5 still reach the
+     follow-through's cap, on a ~1 cm/s sway across the aim; the impact and the ratio are untouched.
+4. **`ratioFit`'s inert `armMass`** (1c). "Accept, retire in 3b (Recommended)".
+5. **The stiff-grip fat stroke** (1d). "Accept, close it (Recommended)": the stroke is finite; Task 14 closes the
+   roadmap's carried defect, removed with the old swing law rather than fixed directly.
+6. **The late re-hit crossings and hoop 1's graze** (1e). "Accept, note the gap (Recommended)": accepted as
+   measurements, criterion 6 met. The planned path's measure disagrees with the integrated run on the canonical drive
+   (a crossing 112.6 ms after contact on the one, none on the other); recorded.
+7. **The drive's grip** (2). "Accept grip, set 1 (Recommended)": the grip and its figures accepted (canonical ratio
+   3.9253, the follow-through's turf flags gone, turf lift at 5.66 ms); `guideEffort` 0.75 → 1, as on every preset,
+   its basis (the largest re-contact-free value) no longer selecting it; its own commit, the moved runs counted.
+8. **The AC stop's grip** (3, A1's retune). First "Search its grip (Recommended)": the AC stop's own γ_T, g_B and bottom
+   hand searched against Gugan 5's band, no turf damage and a convergence spread under 0.06, lean and contact kept. No
+   grip met all three: the bottom hand sets the ratio, and at the default gap the second tap's stick or slide takes one
+   of two branches ~0.6 apart by time step. Then "Land 0.25/0.1/0.6 (Recommended)", superseded before it landed: its
+   premise of no damage held at the impact only, and its follow-through damaged the turf. Final, "1/0.1/0.717
+   (Recommended)": γ_T 1, g_B 0.1, the bottom hand at 0.805 − `HAND_BREADTH`, hands together as the drive (Riches and
+   account 3). Gugan 5 gives 6.6029 at the 0.75 mm gap and 7.6089 at gap 0, the canonical 5.0401, no turf damage. The
+   band test and the 1 mm convergence case lose `it.fails`; the default gap's convergence keeps it. The jab (account 9;
+   bottom hand 0.45, grips 0.1/0.1) stays a per-shot grip.
+9. **The cross-mode cases** (4). "Accept all four (Recommended)": criterion 5 met, section X rerun after the hold fix
+   with the same flags and events. No refits to rule (section O, 7 of 7 within ±2 %).
+10. **Decision 16's braked rolls.** "Accept (Recommended)": against the baseline only drives −1 and −0.5 move; they
+    finish 60–700 ms sooner, lose almost all follow-through turf damage and caps, and gain follow-grip-limit.
+11. **The AC stop's seam allowance** (11 times its jump after the hold fix). "Re-measure after retune (Recommended)".
+    At 1/0.1/0.717 the jump exceeded its bound, so "Trace it first (Recommended)": no state discontinuity; the jump is
+    the 1 ms trapezoid across the hold's onset, the head entering the hold at −1.45 rad/s in pitch with the couple at
+    its bound on 72 % of steps. Then "Sample first held step (Recommended)": a check's follow-through records one
+    sample after its first held step.
+12. **The AC stop's follow-grip-limit.** "Accept, add 3b item (Recommended)". The user: "There is a physical limit to
+    how quickly the hands can stop the mallet when you're playing a stop shot. And that's why it's beneficial to have
+    the lower hand a bit lower so you get more leverage. It's also why Gugan's jab in the AC stop shot offers useful
+    assistance worth the finesse."
+13. **The hold's settle time** (136.6 ms against 1.5 T, 120 ms). "Mark it it.fails (Recommended)": the bound kept, the
+    test citing the hold's inherited pitch rate.
+14. **`backswingForContact`'s low end.** "Fix it in this commit (Recommended)": it throws when the target is below the
+    speed at zero backswing, with a test.
+
+Recorded for P2b.2b.2c.3b:
+- the GC stop's head at 0.742 m/s at the impact's end;
+- retire `armMass` from `ratioFit`'s fitted dimensions and the profile;
+- a bounded roll damper on the hold;
+- measure the late re-hit on the integrated follow-through;
+- the full roll at λ 0.5 leaving the face late, and the pass roll's braked impact-off-face (20 runs at drive −1, 8 at
+  −0.5), as envelope cases;
+- trace the AC stop's two-branch step flip at the default gap (the band passes on the high branch);
+- the user's hypotheses, tested on the jab: that the weak lower grip lets the mallet die on rebound (the screen shows
+  g_B barely moving the ratio or the damage at 0.717); and that a lower bottom hand gives the leverage to stop the
+  mallet, and whether min(γ_T, g_B) in `gripCouple` underrates that lever;
+- soften the hold's onset, seating the held path at the head's pitch and rate (the settle time's fix);
+- the couple's share of C as an effort cost (A2, item 3).
