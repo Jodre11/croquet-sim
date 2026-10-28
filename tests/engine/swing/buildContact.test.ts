@@ -742,8 +742,9 @@ describe("defaultProfile", () => {
         const reaches = STROKE_TYPES.map((type) => defaultProfile.drive[type].handReach);
         expect(reaches).toEqual([0, 0, 0, 0, 0.15, 0.3, 0.3]);
         expect(defaultProfile.drive["stop-ac"].handDrop).toBe(0.011);
-        // P2b.2b.2c.2d: the drive's guide effort 0.75, the largest that leaves no re-contact after the parting (was 1).
-        expect(STROKE_TYPES.map((type) => defaultProfile.drive[type].guideEffort)).toEqual([1, 0.75, 1, 1, 1, 1, 1]);
+        // P2b.2b.2c.3a gate stage 2: the drive's guide effort 1, as on every preset (was 0.75, set by P2b.2b.2c.2d as
+        // the largest that left no re-contact after the parting; with the hands together none on the grid does).
+        expect(STROKE_TYPES.map((type) => defaultProfile.drive[type].guideEffort)).toEqual([1, 1, 1, 1, 1, 1, 1]);
     });
 
     it("holds each preset's hands where design §5 puts them, the drive's together at the top", () => {

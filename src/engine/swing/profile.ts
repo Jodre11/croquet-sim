@@ -136,13 +136,13 @@ const DRIVE: Readonly<Record<StrokeType, SwingDrive>> = {
         handArcRadius: 1.5,
         handArcLow: 0.5,
     },
-    // As single-ball over a 5 ms window: the follow-through rises and dies by itself, and the head catches the
-    // striker's ball again (prototype). User decision 2026-10-25: the guide's effort 0.75, the largest on a 0.25 grid
-    // after which nothing re-contacts the ball once it has parted. At the old grip (bottom hand 0.6 m) and before
-    // P2b.2b.2c.3a's hand law, at 1 the head returned to it 96.4 ms after contact (+49 % on its speed, a possible
-    // 29.1.6.1) and the ratio was 2.435; at 0.75 it was 3.753 (Gugan 5's drive, at 0, 4.295). With the hands together
-    // (setupProbe section D) no guideEffort on the grid re-contacts the ball after the parting, and the ratio is
-    // 3.9253 at every one (3.925292 at 0 to 3.925309 at 0.75 and 1).
+    // As single-ball over a 5 ms window: the follow-through rises and dies by itself (prototype). The guide's effort
+    // is 1, as on every preset (gate stage 2 ruling 2026-10-28, "Accept grip, set 1"; was 0.75). User decision
+    // 2026-10-25 had set 0.75, the largest on a 0.25 grid after which nothing re-contacts the ball once it has parted:
+    // at the old grip (bottom hand 0.6 m) and before P2b.2b.2c.3a's hand law, at 1 the head returned to it 96.4 ms
+    // after contact (+49 % on its speed, a possible 29.1.6.1) and the ratio was 2.435; at 0.75 it was 3.753 (Gugan 5's
+    // drive, at 0, 4.295). With the hands together (setupProbe section D) no guideEffort on the grid re-contacts the
+    // ball after the parting, and the ratio is 3.9253 at every one (3.925292 at 0 to 3.925309 at 0.75 and 1).
     drive: {
         speedGain: 0.2,
         window: 0.005,
@@ -151,7 +151,7 @@ const DRIVE: Readonly<Record<StrokeType, SwingDrive>> = {
         handDrop: 0,
         dropTime: 0.01,
         handReach: 0,
-        guideEffort: 0.75,
+        guideEffort: 1,
         pendulumAt: 0.8,
         pendulumEffort: 0,
         handArcRadius: 1.5,

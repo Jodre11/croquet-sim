@@ -74,7 +74,8 @@ describe("the drive's grip (P2b.2b.2c.3a decision 3)", () => {
 
     it("leaves the drive at its own guideEffort with no re-contact after the parting", () => {
         const setup = canonicalSetup("drive", { world });
-        expect(setup.profile.drive.drive.guideEffort).toBe(0.75);
+        // P2b.2b.2c.3a gate stage 2: guideEffort 1 (was 0.75).
+        expect(setup.profile.drive.drive.guideEffort).toBe(1);
         expect(playRoutes(setup, world).routes.recontacts).toEqual([]);
     });
 });
