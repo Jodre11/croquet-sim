@@ -355,7 +355,8 @@ export interface StrokeState {
 export interface FollowThrough {
     /**
      * The head every FOLLOW_SAMPLE from t = 0, at the first step at or after the downswing's release when that falls
-     * after t = 0 (a lead longer than the downswing), and at the impact's end and at the finish.
+     * after t = 0 (a lead longer than the downswing), at the impact's end, after a stop's first held step, and at the
+     * finish.
      */
     readonly samples: readonly StrokeState[];
     readonly impactEnd: number;
@@ -1349,7 +1350,8 @@ export function integrate(setup: ImpactSetup, options: ImpactOptions = {}): Impa
  * fresh timeline, so the run's timeline is never touched. A stop holds its pendulum from the check's window's end (or
  * the impact's end, if later), and the hands grip the head firmly from then on (holdPendulum, handLoad's `gripped`).
  * Appends to `trace` the head at the impact's end, every FOLLOW_SAMPLE, at the first step at or after the release
- * (releaseTime) if it falls here, and at the finish: the stroke type's, or FOLLOW_CAP after contact with `follow-cap`.
+ * (releaseTime) if it falls here, after a stop's first held step, and at the finish: the stroke type's, or FOLLOW_CAP
+ * after contact with `follow-cap`.
  * Flags `follow-head-deep` once, as the impact flags `impact-head-deep`, and `follow-turf-yield` once, as it raises
  * `turf-yield`.
  */
@@ -1390,6 +1392,7 @@ function continueStroke(
     let state = start;
     let steps = first;
     let deep = false;
+    let held = false;
     for (;;) {
         const t = steps * dt;
         if (finished(kind, plan, state, t, grip)) {
@@ -1442,7 +1445,13 @@ function continueStroke(
             deep = true;
             flags.push("follow-head-deep");
         }
-        if (steps % every === 0 || (t < releaseAt && releaseAt <= steps * dt)) {
+        // The first held step's sample is for exit criterion 3's seam check (P2b.2b.2c.3a gate stage 2 ruling
+        // 2026-10-28): a pair spanning one step, where a 1 ms pair across the hold's onset reads the trapezoid's error.
+        const firstHeld = !held && t >= holdFrom;
+        if (firstHeld) {
+            held = true;
+        }
+        if (steps % every === 0 || (t < releaseAt && releaseAt <= steps * dt) || firstHeld) {
             trace.push({ t: steps * dt, head: state });
         }
     }

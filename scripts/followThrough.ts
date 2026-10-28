@@ -227,7 +227,8 @@ const CONTACT_BISECTIONS = 50;
  * CONTACT_BISECTIONS halvings, the least found that reaches the speed. A backswing whose head never meets the ball
  * reaches 0 m/s, as the head at rest does at backswing 0; on a slope not fully held a midpoint beyond the body's θ_max
  * counts as reaching the speed, and the bracket's top is the speed at θ_max. Throws a RangeError naming both ends'
- * contact speeds when `speed` lies outside them, never returning an end, and planStroke's other checks.
+ * contact speeds when `speed` lies outside them, never returning an end; one naming the speed as the backswing goes
+ * to 0 when every halving reaches `speed`; and planStroke's other checks.
  */
 export function backswingForContact(setup: ShotSetup, speed: number, world: World): number {
     const { stroke } = setup;
@@ -262,6 +263,13 @@ export function backswingForContact(setup: ShotSetup, speed: number, world: Worl
     }
     if (hi === top) {
         throw new RangeError(`backswingForContact: no backswing below ${top} m reached ${speed} m/s`);
+    }
+    // A stroke whose hands alone meet the ball at speed (a firm grip at full intensity) never falls below it.
+    if (lo === 0) {
+        throw new RangeError(
+            `backswingForContact: ${speed} m/s lies below the ${type} stroke's contact speeds, ${at(hi)} m/s ` +
+                `as the backswing goes to 0 (${hi} m)`,
+        );
     }
     return hi;
 }

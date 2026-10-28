@@ -38,6 +38,8 @@ describe.runIf(SLOW)("the strike's step convergence (P2b.2b.2c.2b design §6)", 
         const tolerance = type === "drive" ? GUGAN5.drive.tolerance : GUGAN5.stop.tolerance;
         expect(spreadOf(ratios)).toBeLessThan(tolerance / 10);
     };
+    // P2b.2b.2c.3a gate stage 2: the AC stop's grip retune (was the stop at 7.7201, 7.7325 and 7.7591, a spread of
+    // 0.0390): with the hands together (γ_T 1, g_B 0.1), 7.5963, 7.6089 and 7.6381, a spread of 0.0419.
     it("keeps Gugan 5's drive and stop ratios at gap 0 m", () => {
         keepsGugan5("drive", 0);
         keepsGugan5("stop-ac", 0);
@@ -55,6 +57,11 @@ describe.runIf(SLOW)("the strike's step convergence (P2b.2b.2c.2b design §6)", 
     // contactLaw.ts frictionStep): stuck at dt/2 and dt, sliding then re-sticking at 2·dt. Blue leaves the tap at
     // 0.200, 0.200 and 0.120 m/s upward (was 0.078 at every step). The impact now ends just after the drive's end at
     // 20 ms with blue still in that hop, so it is handed over mid-flight at a phase that depends on the step.
+    // P2b.2b.2c.3a gate stage 2: the AC stop's grip retune (was 5.8265, 5.8241 and 6.3426, a spread of 0.5185): with
+    // the hands together (γ_T 1, g_B 0.1), 5.9661, 5.9660 and 6.5810, a spread of 0.6150. The ratio takes one of two
+    // branches about 0.6 apart, and which one moves with the step: dt/2 and dt on the low branch, 2·dt on the high
+    // one. No grip in the stage 2 search (γ_T and g_B in 0.1–1, the bottom hand at 0.45–0.717 m) removed the flip at
+    // this gap, so it stays marked: a P2b.2b.2c.3b item (gate stage 2 ruling 2026-10-28).
     it.fails(
         "keeps Gugan 5's stop ratio at the default gap",
         () => keepsGugan5("stop-ac", DEFAULT_CROQUET_GAP),
@@ -64,7 +71,9 @@ describe.runIf(SLOW)("the strike's step convergence (P2b.2b.2c.2b design §6)", 
     // The stop's ratio at dt/2, dt and 2·dt is 5.5834, 6.1119 and 5.5824, a spread of 0.5295 against 0.06 (was 6.5973,
     // 6.6028 and 6.5945, 0.0083): as at the default gap, with the sliding second tap at dt here, blue leaving it
     // falling where the other steps leave it rising, and the impact handing blue over mid-hop at 20 ms.
-    it.fails("keeps Gugan 5's stop ratio at gap 0.001 m", () => keepsGugan5("stop-ac", 0.001), 320_000);
+    // P2b.2b.2c.3a gate stage 2: the AC stop's grip retune (was it.fails at a spread of 0.5295): with the hands
+    // together (γ_T 1, g_B 0.1), 5.7820, 5.7859 and 5.7864, a spread of 0.0044, every step on the low branch.
+    it("keeps Gugan 5's stop ratio at gap 0.001 m", () => keepsGugan5("stop-ac", 0.001), 320_000);
     // P2b.2b.2c.2c: on the re-set laws the drive ratio's spread over dt/2, dt and 2·dt at 1 mm is 0.0204 (4.198, 4.191,
     // 4.177), just over a tenth of its 0.2 tolerance; gate stage 2 ruled it recorded and carried (2026-10-23).
     // P2b.2b.2c.3a: one law after contact (was it.fails): 4.1494, 4.1425 and 4.1306, a spread of 0.0188 against 0.02,

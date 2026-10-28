@@ -751,17 +751,19 @@ describe("defaultProfile", () => {
         // The men's 50th-percentile hand breadth, 3.46 in (reference/sources/README.md, P2b.2b.2c.3a).
         expect(HAND_BREADTH).toBeCloseTo(0.087884, 12);
         const hands = STROKE_TYPES.map((type) => [defaultProfile.stance[type].top, defaultProfile.stance[type].bottom]);
-        // P2b.2b.2c.3a: the drive's hands together (was 0.6).
+        // P2b.2b.2c.3a: the drive's hands together (was 0.6). P2b.2b.2c.3a gate stage 2: the AC stop's grip retune
+        // (was 0.45): the AC stop's hands together too.
         expect(hands).toEqual([
             [0.805, 0.7],
             [0.805, 0.805 - HAND_BREADTH],
-            [0.805, 0.45],
+            [0.805, 0.805 - HAND_BREADTH],
             [0.805, 0.45],
             [0.805, 0.42],
             [0.61, 0.3],
             [0.45, 0.09],
         ]);
         expect(defaultProfile.stance.drive).toMatchObject({ gripTension: 1, bottomGrip: 0.25 });
+        expect(defaultProfile.stance["stop-ac"]).toMatchObject({ gripTension: 1, bottomGrip: 0.1 });
     });
 
     it("takes each stroke type's shape from swing.json, the swing presets' pendulum alone", () => {

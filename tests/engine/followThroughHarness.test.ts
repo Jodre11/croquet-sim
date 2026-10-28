@@ -24,6 +24,12 @@ const SLOW = Boolean(import.meta.env.SLOW_TESTS);
 /** A brake begun 60 ms early on the AC stop: the head stops short of the ball, so no face contact (traced). */
 const NO_STRIKE: StrokeTiming = { arc: -0.06, hands: 0, dip: 0 };
 
+/**
+ * The AC stop's jab variant as a shot's grip (the user's account 9): the bottom hand lowered to 0.45 m, both grips
+ * relaxed to 0.1, the AC stop's default grip until P2b.2b.2c.3a gate stage 2.
+ */
+const JAB_GRIP = { bottom: 0.45, gripTension: 0.1, bottomGrip: 0.1 } as const;
+
 /** A brake begun 10 ms before contact, the dip coupled: an early pulse of stage 2's AC stop sweep. */
 const EARLY_BRAKE: StrokeTiming = { arc: -0.01, hands: 0, dip: 0 };
 
@@ -43,7 +49,10 @@ describe("the follow-through harness (P2b.2b.2c.2d design §3.4)", () => {
     });
     it("returns null for a stroke with no face contact", { timeout: 30_000 }, () => {
         // The impact runs to its cap (about 6 s locally) with the head short of the ball.
-        const setup = canonicalSetup("stop-ac", { stroke: { timing: NO_STRIKE } });
+        // P2b.2b.2c.3a gate stage 2: the AC stop's grip retune (was the default grip): the stroke takes the jab
+        // variant's grip. At the hands together and the firm top hand the brake never stops the head short: begun 60,
+        // 80, 100, 120 or 150 ms (MAX_LEAD) early, the head meets the ball at 2.54–2.67 m/s.
+        const setup = canonicalSetup("stop-ac", { stroke: { timing: NO_STRIKE, grip: JAB_GRIP } });
         expect(firstTouch(setup, WORLD)).toBeNull();
     });
     it("solves the stroke for a contact speed under an early brake", { timeout: 40_000 }, () => {
@@ -60,8 +69,10 @@ describe("the follow-through harness (P2b.2b.2c.2d design §3.4)", () => {
     });
     it("solves the backswing for a contact speed at the stroke's own intensity", { timeout: 20_000 }, () => {
         // About 4.5 s locally.
+        // P2b.2b.2c.3a gate stage 2: the AC stop's grip retune (was the default grip): the stroke takes the jab
+        // variant's grip: at the hands together no backswing gives 3 m/s (the case below).
         const timing = { arc: -0.01, hands: 0, dip: 0 };
-        const setup = canonicalSetup("stop-ac", { stroke: { timing, intensity: 1 } });
+        const setup = canonicalSetup("stop-ac", { stroke: { timing, intensity: 1, grip: JAB_GRIP } });
         const backswing = backswingForContact(setup, 3, WORLD);
         const touch = firstTouch({ ...setup, stroke: { ...setup.stroke, backswing } }, WORLD);
         expect(touch?.contactSpeed).toBeCloseTo(3, 6);
@@ -69,6 +80,14 @@ describe("the follow-through harness (P2b.2b.2c.2d design §3.4)", () => {
     });
     it("throws for a contact speed beyond the bracket, naming both ends", () => {
         expect(() => backswingForContact(canonicalSetup("stop-ac"), 40, WORLD)).toThrow(/m\/s.*m\/s/);
+    });
+    it("throws for a contact speed below the stroke's speed at no backswing, naming that speed", () => {
+        // P2b.2b.2c.3a gate stage 2 (ruling 2026-10-28): at the hands together and the firm top hand full intensity
+        // alone meets the ball at 3.19 m/s as the backswing goes to 0, so no backswing gives 3 m/s (was a backswing of
+        // 7.4e-16 m, returned without throwing).
+        const timing = { arc: -0.01, hands: 0, dip: 0 };
+        const setup = canonicalSetup("stop-ac", { stroke: { timing, intensity: 1 } });
+        expect(() => backswingForContact(setup, 3, WORLD)).toThrow(/3 m\/s lies below .* 3\.1\d* m\/s/);
     });
     it("sets the AC stop's canonical stance at 5° back, 22.5 mm below the face's centre, and plays it", () => {
         // P2b.2b.2c.2d: the stance (was 6° at 20 mm).
@@ -132,12 +151,13 @@ describe("the follow-through harness (P2b.2b.2c.2d design §3.4)", () => {
         expect(touch?.plannedSpeed).toBeGreaterThan(3);
     });
     // A slow test: Gugan's mallet is solved and the stroke bisected for its contact speed. About 18.6 s locally.
-    // P2b.2b.2c.3a: until stage 2's A1 retune of the AC stop's grip (user ruling, "mark them, retune at stage 2").
-    // One law after contact: the AC stop's loose hands (γ_T = g_B = 0.1) now feed a tenth of their moment shares
-    // through their hand–arm chains and flex at k·0.1 and c·√0.1, where the swing law's top damper held the head. The
-    // brake reaches the head late and the head sinks into the turf, so the ratio falls to 6.3545 against 7.15 ± 0.6
-    // (was 6.66).
-    it.runIf(SLOW).fails(
+    // P2b.2b.2c.3a: one law after contact, the AC stop's loose hands (γ_T = g_B = 0.1) fed a tenth of their moment
+    // shares through their hand–arm chains and flexed at k·0.1 and c·√0.1, where the swing law's top damper held the
+    // head; the brake reached the head late and the head sank into the turf, so the ratio fell to 6.3545 against
+    // 7.15 ± 0.6 (was 6.66). P2b.2b.2c.3a gate stage 2: the AC stop's grip retune (was it.fails at 6.3545): 6.6029 with
+    // the hands together (γ_T 1, g_B 0.1), the head clear of the turf through the impact and only rubbing it in the
+    // follow-through. The pass sits on the stop's step-sensitive high branch (squeezeConvergence.test.ts).
+    it.runIf(SLOW)(
         "keeps the canonical AC stop's Gugan 5 stop within the band at 3 m/s contact speed",
         { timeout: 80_000 },
         () => {

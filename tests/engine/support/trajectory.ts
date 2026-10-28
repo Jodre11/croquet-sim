@@ -112,7 +112,9 @@ function lastAtOrBefore(samples: readonly StrokeSample[], t: number): number {
  * where the impact starts before it, the pair spanning it); the impact's
  * start (the downswing's last sample against the integrator's first; none when the impact starts before the
  * release); the impact's end (the impact loop's last state against the follow-through's first sample); and, for a
- * stop, the hold's start, max(the check's window's end, the impact's end), the pair spanning the first held step. The
+ * stop, the hold's start, max(the check's window's end, the impact's end): the last sample at or before it against
+ * the one continueStroke takes after the first held step, a pair spanning that step alone when the hold starts at a
+ * sample (P2b.2b.2c.3a gate stage 2 ruling 2026-10-28; was the FOLLOW_SAMPLE pair across it). The
  * acceleration bound comes from the downswing's side at the impact's start, and elsewhere from the side away from
  * the impact: the downswing after the release, the follow-through after the impact's end and the hold. A boundary at
  * the last sample (a follow-through finished where the impact ended) has no pair and no jump.

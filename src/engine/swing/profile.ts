@@ -301,9 +301,29 @@ export const defaultProfile: SwingProfile = {
         // deep and yielded the soil, at a ratio of 7.34; −4° at 25 mm never touches the turf but its ratio, 6.54, falls
         // just below the band; −5° at 25 mm (6.74) strikes 0.6 mm from the edge of the face's flat (±25.575 mm), so a
         // contact only 1 mm lower than the canonical one is off the face. The contact, 22.5 mm below the face's centre,
-        // keeps 3 mm clear of that edge. Both grips relax at contact (prototype). The lean is defined at its canonical
-        // contact.
-        "stop-ac": stanceFromLean(-5 * DEG, -0.0225, { top: 0.805, bottom: 0.45, gripTension: 0.1, bottomGrip: 0.1 }),
+        // keeps 3 mm clear of that edge. The lean is defined at its canonical contact.
+        // The grip: P2b.2b.2c.3a gate stage 2's retune (user rulings 2026-10-28, design amendment A1), the stop's own
+        // grip only, against Gugan 5: the hands together at the top of the handle, as Riches has the stop-shot and the
+        // user's account 3 the drive and the stop (above), the same hands as the drive's, the top hand firm (γ_T 1)
+        // and the bottom hand loose (g_B 0.1). Was the prototype's bottom hand at 0.45 m and both grips at 0.1. The
+        // jab variant, the bottom hand lowered (the user's account 9: "some players ... do put the bottom hand down a
+        // bit to allow them to jab"), is now a shot's grip (stroke.grip), not the default. One law after contact, the
+        // old grip's head sank into the turf: Gugan 5's stop came to 6.3545 at the default croquet gap (0.75 mm) and
+        // 7.7325 at gap 0, each yielding the soil and passing the depth limit in its impact and its follow-through,
+        // and the canonical stop's ratio was 4.9912. At this grip Gugan 5's stop is 6.6029 at 0.75 mm and 7.6089 at
+        // gap 0 (band 6.55–7.75), and the canonical stop's ratio 5.0401; neither run, at either gap, yields the turf
+        // or passes the depth limit, in the impact or the follow-through, the head only rubbing the lawn. In the
+        // stage 2 search the top hand's tension decided the damage: every grip with γ_T at 0.25 or below damaged the
+        // turf in at least one run, and only γ_T 1 (or 0.5 with the hands together and a firmer bottom hand) stayed
+        // clean. The bottom hand's position, not the grips, sets the ratio: about 5.8 at 0.45 m, 6.0 at 0.55 m and
+        // 6.6–6.7 from 0.6 m up, at 0.75 mm. The 0.75 mm band's pass sits on the stop's step-sensitive high branch
+        // (squeezeConvergence.test.ts).
+        "stop-ac": stanceFromLean(-5 * DEG, -0.0225, {
+            top: 0.805,
+            bottom: 0.805 - HAND_BREADTH,
+            gripTension: 1,
+            bottomGrip: 0.1,
+        }),
         // The lower hand low and firm, checking the swing through its lever just after contact (prototype).
         "stop-gc": stanceFromLean(0, 0, { top: 0.805, bottom: 0.45, gripTension: 1, bottomGrip: 1 }),
         // Riches: "Stand further forward over the balls, with your front toe level with the back of your striker's

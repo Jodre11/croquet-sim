@@ -40,6 +40,12 @@ const at = (x: number, y: number): BallState => ({ position: vec3(x, y, R), velo
 const J_ON = 0.002;
 const J_EARLY = 0.004;
 
+/**
+ * The AC stop's jab variant as a shot's grip (the user's account 9): the bottom hand lowered to 0.45 m, both grips
+ * relaxed to 0.1, the AC stop's default grip until P2b.2b.2c.3a gate stage 2.
+ */
+const JAB_GRIP = { bottom: 0.45, gripTension: 0.1, bottomGrip: 0.1 } as const;
+
 /** A hand-built impact for strokeContext: only the pairs touching at the start matter. */
 function started(touchingAtStart: readonly string[]): ImpactResult {
     return {
@@ -340,6 +346,11 @@ describe("simulateShot", () => {
             // (positionBound; the trapezoid's error is O(Δa·Δt²)). The stops' holds now decelerate the head sharply
             // from the first held step: the GC stop's seam 3.12e-6 m against 4.52e-6 m, the AC stop's 9.33e-7 m against
             // 1.05e-5 m.
+            // P2b.2b.2c.3a gate stage 2 (ruling 2026-10-28): the first held step's sample (was the 1 ms pair across the
+            // hold's onset, whose trapezoid error at the AC stop's hands together was 1.853e-5 m against 1.304e-5 m).
+            // A stop's impact-end and hold pair now spans that one step: the GC stop's 2.48e-10 m against 1.000e-6 m
+            // (velocity 9.92e-5 against 5.89e-4 m/s), the AC stop's 8.98e-10 m against 1.001e-6 m (velocity 3.60e-4
+            // against 1.71e-3 m/s).
             expect(jump.position, jump.name).toBeLessThanOrEqual(jump.positionBound);
             expect(jump.velocity, jump.name).toBeLessThanOrEqual(jump.bound);
         }
@@ -382,7 +393,10 @@ describe("simulateShot", () => {
         // P2b.2b.2c.2b: the croquet gap's default, 1 mm; pinned at gap 0, where the head's dig was measured: at 1 mm
         // the face double-taps the striker's ball (0.005–1.095 and 1.265–2.620 ms) and the head never meets the turf
         // by the impact's end at 20.000 ms, so no 29.1.14.
-        const setup = canonicalSetup("stop-ac", { croquetGap: 0, stroke: { jab: J_ON } });
+        // P2b.2b.2c.3a gate stage 2: the AC stop's grip retune (was the default grip): the stroke takes the jab
+        // variant's grip. At the hands together and the firm top hand the 2 mm jab never meets the turf in the impact,
+        // so no 29.1.14 at the default grip.
+        const setup = canonicalSetup("stop-ac", { croquetGap: 0, stroke: { jab: J_ON, grip: JAB_GRIP } });
         const dug = simulateShot({ ...setup, hampered: true }).faults.findings.filter((f) => f.law === "29.1.14");
         expect(dug).toHaveLength(1);
         expect(dug[0]).toMatchObject({ tier: "possible-fault", ball: "blue" });
@@ -399,10 +413,17 @@ describe("simulateShot", () => {
         // turf at the impact's end, yielding it at 19.41 ms and passing the depth limit at 19.95 ms, and on into the
         // follow-through. This departs from the user's decision of 2026-10-25: for the gate (stage 2, where amendment
         // A1 allows the AC stop's grip a retune). Pinned as it now stands, so that the retune shows.
+        // P2b.2b.2c.3a gate stage 2: the AC stop's grip retune (was impact events ["turf-lift", "turf-yield",
+        // "impact-head-deep"] and follow-through flags ["follow-turf-yield", "follow-head-deep"]): with the hands
+        // together (γ_T 1, g_B 0.1) the impact only lifts the turf (0.595 ms), the head never meeting it, and the
+        // follow-through rubs it from about 178 ms, 0.19 mm in, without yielding it: the user's decision holds again.
+        // The firm top hand's hold now reaches the default grip limit (follow-grip-limit), which is not turf damage.
+        // Accepted as it stands (gate stage 2 ruling 2026-10-28): the hands are at their physical limit with one hand's
+        // breadth of lever. The user's hypothesis that more leverage would keep them inside it is a P2b.2b.2c.3b item.
         const outcome = simulateShot(canonicalSetup("stop-ac"), undefined, { trajectory: true });
-        expect(outcome.impact.events.map((e) => e.kind)).toEqual(["turf-lift", "turf-yield", "impact-head-deep"]);
+        expect(outcome.impact.events.map((e) => e.kind)).toEqual(["turf-lift"]);
         const flags = (outcome.trajectory as SwingTrajectory).flags;
-        expect(flags).toEqual(["follow-turf-yield", "follow-head-deep"]);
+        expect(flags).toEqual(["follow-grip-limit"]);
     });
 
     it("raises no 29.1.6.1 on the canonical drive: its follow-through does not catch the ball again", () => {
@@ -666,7 +687,11 @@ describe("the mechanisms (design §8.1), on the canonical setups", () => {
         // P2b.2b.2c.2b: the croquet gap's default, 1 mm; pinned at gap 0, where the turf's braking was measured: at
         // 1 mm the face double-taps the striker's ball (0.005–1.095 and 1.265–2.620 ms), the head never meets the
         // turf by the impact's end at 20.000 ms, and the striker's ball leaves at 1.4863 m/s.
-        const { impact, turf } = braking(canonicalSetup("stop-ac", { croquetGap: 0, stroke: { jab: J_ON } }));
+        // P2b.2b.2c.3a gate stage 2: the AC stop's grip retune (was the default grip): the stroke takes the jab
+        // variant's grip. At the hands together and the firm top hand the 2 mm jab never meets the turf in the impact
+        // (events ["turf-lift"] alone), so the default grip no longer shows the turf's braking.
+        const jabbed = canonicalSetup("stop-ac", { croquetGap: 0, stroke: { jab: J_ON, grip: JAB_GRIP } });
+        const { impact, turf } = braking(jabbed);
         const dug = impact.timeline["head/turf"]?.[0] as ContactInterval;
         expect(dug).toBeDefined();
         expect(dug.start).toBeGreaterThanOrEqual((hits(impact)[0] as ContactInterval).end);
@@ -678,6 +703,7 @@ describe("the mechanisms (design §8.1), on the canonical setups", () => {
         // P2b.2b.2c.3a: one law after contact (was the yield at 15.46 ms and the depth limit at 16.57 ms): the loose
         // hands' flex replaces the swing law's damper, and the head, on the turf from 16.47 ms, yields it at 17.49 ms
         // and reaches the depth limit at 17.92 ms.
+        // P2b.2b.2c.3a gate stage 2: the jab variant's grip gives these figures unchanged.
         expect(impact.events.map((e) => e.kind)).toEqual(["turf-lift", "turf-yield", "impact-head-deep"]);
         const times = impact.events.map((e) => ("t" in e ? e.t : NaN));
         expect(times[1]).toBeCloseTo(0.01749, 5);
@@ -798,6 +824,10 @@ describe("the head's turf contact after the strike (P2b.2b.2b.3; user ruling 202
         // pitch rate is already at or below zero there, so the follow-through finishes at once: this setup no longer
         // reaches the turf's handover to the follow-through. Unpredicted, for the gate (stage 2's AC stop, amendment
         // A1).
+        // P2b.2b.2c.3a gate stage 2: the AC stop's grip retune (was on the turf 18.17–24.44 ms, turf-yield at 18.92 ms,
+        // the impact ending at 46.1 ms): with the hands together (γ_T 1, g_B 0.1) the head is on the turf 18.92–26.95
+        // ms and yields it at 21.26 ms, and the impact ends by itself at 52.4 ms with the follow-through finishing at
+        // once. The retune does not restore the turf's handover to the follow-through.
         const stroke = trajectory as SwingTrajectory;
         const turf = impact.timeline["head/turf"] ?? [];
         expect(turf).toHaveLength(1);
