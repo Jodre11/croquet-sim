@@ -51,6 +51,14 @@ import {
 const DEG = Math.PI / 180;
 
 /**
+ * A hand's breadth (m): the men's 50th percentile, 3.46 in, of the 2012 US Army anthropometric survey (ANSUR II,
+ * Gordon et al. 2014) as the NCSU Ergonomics Center tabulates it (reference/sources/README.md, P2b.2b.2c.3a; user
+ * ruling 2026-10-28). It is the breadth across the palm, read here as the span one hand takes on the shaft: an
+ * assumption.
+ */
+export const HAND_BREADTH = 3.46 * 0.0254;
+
+/**
  * The default mallet (P2b.2b.2b.2c design §5.3): the Pidcock 2000 11", a wooden body with brass blocks at its ends and
  * composite faces, as a rounded box with its measured moment about the shaft (reference/mallet.json). Placeholders
  * (design §6): the edge radius, 3 mm, unsourced; the head's mass, the face and the shaft's length, the market's typical
@@ -130,9 +138,11 @@ const DRIVE: Readonly<Record<StrokeType, SwingDrive>> = {
     },
     // As single-ball over a 5 ms window: the follow-through rises and dies by itself, and the head catches the
     // striker's ball again (prototype). User decision 2026-10-25: the guide's effort 0.75, the largest on a 0.25 grid
-    // after which nothing re-contacts the ball once it has parted. At 1 the head returns to it 96.4 ms after contact
-    // (+49 % on its speed, a possible 29.1.6.1) and the ratio is 2.435; at 0.75 it is 3.753 (Gugan 5's drive, at 0,
-    // 4.295).
+    // after which nothing re-contacts the ball once it has parted. At the old grip (bottom hand 0.6 m) and before
+    // P2b.2b.2c.3a's hand law, at 1 the head returned to it 96.4 ms after contact (+49 % on its speed, a possible
+    // 29.1.6.1) and the ratio was 2.435; at 0.75 it was 3.753 (Gugan 5's drive, at 0, 4.295). With the hands together
+    // (setupProbe section D) no guideEffort on the grid re-contacts the ball after the parting, and the ratio is
+    // 3.9253 at every one (3.925292 at 0 to 3.925309 at 0.75 and 1).
     drive: {
         speedGain: 0.2,
         window: 0.005,
@@ -272,8 +282,16 @@ export const defaultProfile: SwingProfile = {
         // has the hands "slightly forward of the mallet head" until the instant of contact; at contact the model's are
         // over the socket (lean 0).
         "single-ball": stanceFromLean(0, 0, { top: 0.805, bottom: 0.7, gripTension: 1, bottomGrip: 0.1 }),
-        // As single-ball, the bottom hand a little lower and firmer, still only a guide (prototype).
-        drive: stanceFromLean(0, 0, { top: 0.805, bottom: 0.6, gripTension: 1, bottomGrip: 0.25 }),
+        // The hands together at the top of the handle, the bottom hand a hand's breadth (HAND_BREADTH) below the top,
+        // firmer than single-ball's but still only a guide (P2b.2b.2c.3a design decision 3, §5; was 0.6, a third of the
+        // way down). Riches, of the stop-shot: "With both hands at the top of the handle, they use the wrists to swing
+        // the mallet fairly loosely from the hands." The user's account (2026-10-26): "for a drive and stop, both hands
+        // would be together at the top of the shaft" ("together in that they are touching or close to touching but
+        // they both grip the shaft independently, one hand above the other"); and, of the split grip, "that's
+        // something we intentionally have to coach new players not to do as it really affects their ability to vary
+        // their ratios. They imagine that holding the mallet is like holding a sledgehammer, which is not the case.
+        // It's very much about using the natural pendulum swing." The grips are the prototype's.
+        drive: stanceFromLean(0, 0, { top: 0.805, bottom: 0.805 - HAND_BREADTH, gripTension: 1, bottomGrip: 0.25 }),
         // Feet set back, the ball met on the up: the shaft leans back 5°, so the strike rises 5° and the face tilts up
         // 5°, within the feasibility spike's 3–5° tilt. User decision 2026-10-25: the stroke may rub the lawn and
         // disturb the grass but must not damage the turf, so the head must not pass the depth limit (impact-head-deep)

@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { CROSS_MODE_CASES, feetReading } from "../../scripts/setupProbe";
+import { playRoutes } from "../../scripts/followThrough";
+import { CROSS_MODE_CASES, DRIVE_GRIP_CASES, feetReading } from "../../scripts/setupProbe";
 import { simulateShot, type ShotOutcome } from "../../src/engine/shot";
+import { HAND_BREADTH } from "../../src/engine/swing/profile";
 import { defaultWorld } from "../../src/engine/world";
 import { canonicalSetup } from "./support/shot";
 
@@ -55,5 +57,24 @@ describe("the cross-mode cases (P2b.2b.2c.3a criterion 5)", () => {
             expect(trajectory?.flags, label).toBeDefined();
             expect(trajectory?.flags, label).not.toContain("follow-cap");
         }
+    });
+});
+
+describe("the drive's grip (P2b.2b.2c.3a decision 3)", () => {
+    const world = defaultWorld();
+
+    it("replays the drive's guideEffort grid on its moved grip", () => {
+        const setups = DRIVE_GRIP_CASES.map(({ setup }) => setup(world));
+        expect(setups.map((s) => s.stroke.guideEffort)).toEqual([0, 0.25, 0.5, 0.75, 1]);
+        for (const s of setups) {
+            expect(s.stroke.type).toBe("drive");
+            expect(s.profile.stance.drive.bottom).toBe(0.805 - HAND_BREADTH);
+        }
+    });
+
+    it("leaves the drive at its own guideEffort with no re-contact after the parting", () => {
+        const setup = canonicalSetup("drive", { world });
+        expect(setup.profile.drive.drive.guideEffort).toBe(0.75);
+        expect(playRoutes(setup, world).routes.recontacts).toEqual([]);
     });
 });

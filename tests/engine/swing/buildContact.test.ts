@@ -37,7 +37,7 @@ import {
 } from "../../../src/engine/swing/buildContact";
 import { simulateShot } from "../../../src/engine/shot";
 import { MAX_BACK_ANGLE, planDownswing, scanDownswing } from "../../../src/engine/swing/downswing";
-import { ON_TIME, SLOPE_HOLD, defaultProfile, shapeOf } from "../../../src/engine/swing/profile";
+import { HAND_BREADTH, ON_TIME, SLOPE_HOLD, defaultProfile, shapeOf } from "../../../src/engine/swing/profile";
 import {
     CROQUET_STROKES,
     STROKE_TYPES,
@@ -744,6 +744,23 @@ describe("defaultProfile", () => {
         expect(defaultProfile.drive["stop-ac"].handDrop).toBe(0.011);
         // P2b.2b.2c.2d: the drive's guide effort 0.75, the largest that leaves no re-contact after the parting (was 1).
         expect(STROKE_TYPES.map((type) => defaultProfile.drive[type].guideEffort)).toEqual([1, 0.75, 1, 1, 1, 1, 1]);
+    });
+
+    it("holds each preset's hands where design §5 puts them, the drive's together at the top", () => {
+        // The men's 50th-percentile hand breadth, 3.46 in (reference/sources/README.md, P2b.2b.2c.3a).
+        expect(HAND_BREADTH).toBeCloseTo(0.087884, 12);
+        const hands = STROKE_TYPES.map((type) => [defaultProfile.stance[type].top, defaultProfile.stance[type].bottom]);
+        // P2b.2b.2c.3a: the drive's hands together (was 0.6).
+        expect(hands).toEqual([
+            [0.805, 0.7],
+            [0.805, 0.805 - HAND_BREADTH],
+            [0.805, 0.45],
+            [0.805, 0.45],
+            [0.805, 0.42],
+            [0.61, 0.3],
+            [0.45, 0.09],
+        ]);
+        expect(defaultProfile.stance.drive).toMatchObject({ gripTension: 1, bottomGrip: 0.25 });
     });
 
     it("takes each stroke type's shape from swing.json, the swing presets' pendulum alone", () => {

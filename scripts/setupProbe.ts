@@ -15,6 +15,9 @@
  * - X. criterion 5's cross-mode cases (CROSS_MODE_CASES) end to end through simulateShot: the AC stop and the drive
  *   each with a push through, the half roll braked at drive −1 and the full roll at λ = 0.5; each one's impact events,
  *   follow-through flags, fault findings, finish and ratio.
+ * - D. the drive's grip (decision 3): the canonical drive at its moved grip at guideEffort 0, 0.25, 0.5, 0.75 and 1
+ *   (DRIVE_GRIP_CASES), each re-contact after the parting with its time and speed change, and the ratio; and the AC
+ *   stop's Gugan 5 stop (GUGAN_STOP_CASE), its ratio against the band and any impact-head-deep or turf-yield.
  * Every section ends with a line "<letter> tally: ...". `all` runs every section.
  * Run with `env SECTION=F npx --yes tsx scripts/setupProbe.ts`; environment: SECTION (a letter, a comma-separated
  * list of letters, run in that order, or `all`; default all); for R, R_TYPES (a comma-separated subset of the rolls)
@@ -35,12 +38,15 @@ import {
     type DownswingInput,
     type PlannedDownswing,
 } from "../src/engine/swing/downswing";
-import { ON_TIME } from "../src/engine/swing/profile";
+import { DEFAULT_DRIVE, DEFAULT_TIMING, ON_TIME } from "../src/engine/swing/profile";
 import { STROKE_TYPES, type ShotSetup, type StrokeType } from "../src/engine/swing/types";
 import type { BallState, World } from "../src/engine/types";
 import { defaultWorld } from "../src/engine/world";
-import { backswingFor, canonicalSetup } from "../tests/engine/support/shot";
-import { ratioOf } from "./ratioFit";
+import type { ReContact } from "../src/engine/faults";
+import { ratioTargetsReference } from "../src/reference/index";
+import { backswingFor, canonicalSetup, DEFAULT_CROQUET_GAP } from "../tests/engine/support/shot";
+import { playRoutes } from "./followThrough";
+import { guganSetup, leanOf, ratioOf } from "./ratioFit";
 
 /** The feet's reading of one set-up (design §3). */
 export interface FeetReading {
@@ -453,14 +459,109 @@ function sectionX(): void {
     );
 }
 
+/** The drive's guideEfforts section D replays at its moved grip: profile.ts's 0.25 grid. */
+const GUIDE_EFFORTS: readonly number[] = [0, 0.25, 0.5, 0.75, 1];
+
+/** Task 12's drive grid (design decision 3): the canonical drive at each of GUIDE_EFFORTS, on its own stance. */
+export const DRIVE_GRIP_CASES: readonly CrossModeCase[] = GUIDE_EFFORTS.map((guideEffort) => ({
+    label: `drive guideEffort ${guideEffort}`,
+    setup: (world: World) => canonicalSetup("drive", { world, stroke: { guideEffort } }),
+}));
+
+/**
+ * The AC stop's Gugan 5 stop as the band test plays it: the canonical stance, timing and drive on Gugan's mallet and
+ * the AC stop's own grips, at the default croquet gap, the stroke solved for 3 m/s at the ball.
+ */
+export const GUGAN_STOP_CASE: CrossModeCase = {
+    label: "Gugan 5's stop",
+    setup: (world) => {
+        const canonical = canonicalSetup("stop-ac", { world });
+        return guganSetup("stop-ac", 3, DEFAULT_CROQUET_GAP, {
+            world,
+            gugan: true,
+            jab: 0,
+            lean: leanOf(canonical, world),
+            up: canonical.stroke.contact.up,
+            grips: "stop-ac",
+            timing: DEFAULT_TIMING["stop-ac"],
+            drive: DEFAULT_DRIVE["stop-ac"],
+            contactSpeed: true,
+        });
+    },
+};
+
+/** A re-contact after the parting as section D reads it: from first contact and from the parting (ms), speed (%). */
+function reContactLine(r: ReContact, first: number): string {
+    return (
+        `${fmt((r.start - first) * 1e3)} ms after first contact (${fmt(r.afterParting * 1e3)} ms after the parting), ` +
+        `speed ${fmt(r.speedChange * 100)} %${r.fault ? ", a possible 29.1.6.1" : ""}`
+    );
+}
+
+/** D. The drive's guideEffort grid at its moved grip, and the AC stop's Gugan 5 stop beside it (reported only). */
+function sectionD(): void {
+    const world = defaultWorld();
+    const stance = canonicalSetup("drive", { world }).profile.stance.drive;
+    const [lo, hi] = ratioTargetsReference["stop-ac"].ratio.bounds as readonly [number, number];
+    console.log(
+        `== D. the drive's grip (decision 3): top ${fmt(stance.top)} m, bottom ${fmt(stance.bottom)} m; the ` +
+            "canonical drive on the default world at each guideEffort, its re-contacts after the parting and ratio; " +
+            `then Gugan 5's stop (band ${fmt(lo)}–${fmt(hi)}) ==`,
+    );
+    const clean: number[] = [];
+    let rejected = 0;
+    DRIVE_GRIP_CASES.forEach(({ label, setup }, i) => {
+        try {
+            const { routes, faults } = playRoutes(setup(world), world);
+            const { touch, recontacts } = routes;
+            if (touch === null) {
+                console.log(`${label}: no strike`);
+                return;
+            }
+            if (recontacts.length === 0) {
+                clean.push(GUIDE_EFFORTS[i] as number);
+            }
+            const after = recontacts.map((r) => reContactLine(r, touch.t)).join("; ") || "none";
+            const findings = faults.findings.map((f) => `${f.law} (${f.tier})`).join(", ") || "none";
+            console.log(
+                // The ratio to 10 places, so that a guideEffort that moves it at all shows.
+                `${label}: re-contacts after the parting ${after}; findings ${findings}; ratio ` +
+                    `${routes.ratio.toFixed(10)}`,
+            );
+        } catch (error) {
+            rejected++;
+            console.log(`${label}: rejected (${(error as Error).message})`);
+        }
+    });
+    let stop = "rejected";
+    try {
+        const { routes, impact } = playRoutes(GUGAN_STOP_CASE.setup(world), world);
+        const damage = impact.events
+            .filter((e) => e.kind === "impact-head-deep" || e.kind === "turf-yield")
+            .map((e) => `${e.kind} at ${fmt(e.t * 1e3)} ms`);
+        const band = routes.ratio >= lo && routes.ratio <= hi ? "within" : "OUTSIDE";
+        const damaged = damage.join(", ") || "no impact-head-deep or turf-yield";
+        stop = `ratio ${fmt(routes.ratio)}, ${band} the band, ${damaged}`;
+        console.log(`${GUGAN_STOP_CASE.label}: ${stop}`);
+    } catch (error) {
+        console.log(`${GUGAN_STOP_CASE.label}: rejected (${(error as Error).message})`);
+    }
+    const largest = clean.length === 0 ? "none" : fmt(Math.max(...clean));
+    console.log(
+        `D tally: ${DRIVE_GRIP_CASES.length} drives, ${rejected} rejected, no re-contact after the parting at ` +
+            `guideEffort ${clean.join(", ") || "none"} (largest ${largest}); Gugan 5's stop ${stop}`,
+    );
+}
+
 const SECTIONS: Readonly<Record<string, () => void>> = {
     F: sectionF,
     P: sectionP,
     R: sectionR,
     X: sectionX,
+    D: sectionD,
 };
 
-const ALL_SECTIONS: readonly string[] = ["F", "P", "R", "X"];
+const ALL_SECTIONS: readonly string[] = ["F", "P", "R", "X", "D"];
 
 if (process.argv[1]?.endsWith("setupProbe.ts")) {
     const chosen = SECTION === "all" ? ALL_SECTIONS : SECTION.split(",");

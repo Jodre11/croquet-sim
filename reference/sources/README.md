@@ -810,3 +810,29 @@ against these files.
   double-tap I3"; a "further and often extended contact" much later is "better described as a push. Such pushes are of
   course always faults". The near-instant catch-up the model makes (gate 1, B.2, onset −20 ms: 0.16 mm and 0.085 ms
   after the parting, +151 % speed) is this lawful double tap.
+
+## P2b.2b.2c.3a: the unified set-up
+
+The source behind the drive's grip (design decision 3, §5; `profile.ts`, `HAND_BREADTH`): the drive's bottom hand
+sits a hand's breadth below its top hand, after Riches's "With both hands at the top of the handle" (stop-shot, above)
+and the user's account 3 (both hands "touching or close to touching", "one hand above the other").
+
+### The hand breadth (2026-10-28)
+
+Fetched 2026-10-28 with `curl -sSL`; the digest is of the raw PDF as fetched that day; nothing fetched is committed.
+The user ruled the figure on 2026-10-28: the men's 50th percentile. The women's 50th percentile was rejected, and the
+table gives no pooled figure.
+
+| Short name | Work | URL | SHA-256 |
+|---|---|---|---|
+| NCSU anthropometry | The Ergonomics Center (NC State University), "Anthropometric Data for U.S. Adults (all dimensions in inches)", © 11/2024, a one-page summary of Gordon et al. 2014 (ANSUR II) | https://ergocenter.ncsu.edu/wp-content/uploads/sites/358/2026/02/01-Anthropometry-Summary-Tables.pdf | `a1ea470e6d67d5870a1b35da9fdf4a7d60f1982ee0b187827b1b3a7a3f820ee6` (raw) |
+
+- **NCSU anthropometry**, row 29: "Hand breadth 3.19 3.46 3.78 0.17 2.83 3.07 3.35 0.15", the men's 5th, 50th and
+  95th percentiles and SD, then the women's, in inches. The model takes the men's 50th percentile, 3.46 in = 87.9 mm
+  (0.087884 m). The table gives no definition of the measurement beyond its name and a numbered figure; the model
+  reads it as the breadth across the palm and takes that as the span one hand takes on the shaft, an assumption: a
+  hand wrapped round the shaft may take more or less of it than the flat palm's breadth, and the user's "close to
+  touching" allows a gap the model does not add.
+- Its references line: "Gordon, Claire C. et. al (2014). 2012 Anthropometric Survey of U.S. Army Personnel: Methods
+  and Summary Statistics." The population is US Army personnel, not croquet players; the figure stands for a typical
+  adult hand, not a measured player's.
