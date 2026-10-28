@@ -335,7 +335,8 @@ const SOLVED = new Map<string, number>();
  * the MAX_BACK_ANGLE bound] at the setup's intensity, or 0 where it gives none, 60 halvings; on a slope not fully held
  * a midpoint beyond the body's θ_max counts as reaching the speed, and the reach is the speed at θ_max. Memoised on
  * what the planned speed depends on: the type, the intensity, the contact's height (under fixed hands the lean follows
- * it, P2b.2b.2b.1 design §3.3), the profile's entries for the type, the speed, gravity and the ball's radius. It is
+ * it, P2b.2b.2b.1 design §3.3), the per-shot grip, lean, feet, slopeHold and handReach (P2b.2b.2c.3a), the profile's
+ * entries for the type, the speed, gravity and the ball's radius. It is
  * not memoised on the drive, the contact's side, the timing or the balls. Throws a RangeError for a speed beyond the
  * bound's reach. Test support only.
  */
@@ -348,6 +349,11 @@ export function backswingFor(setup: ShotSetup, speed: number, world: World = def
         type,
         stroke.intensity ?? null,
         stroke.contact.up,
+        stroke.grip ?? null,
+        stroke.lean ?? null,
+        stroke.feet ?? null,
+        stroke.slopeHold ?? null,
+        stroke.handReach ?? null,
         profile.mallet,
         profile.body,
         stance,
