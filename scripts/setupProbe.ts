@@ -12,14 +12,19 @@
  *   canonical setup, then 5 speeds x 5 drives x 3 heights x 3 sides), the shaft's pitch turn since contact times
  *   (r − b) at the pendulum phase's start (impact.release) against reachSlack, and the first time before it that the
  *   turn, read from the trajectory's head orientations, exceeded the slack.
+ * - X. criterion 5's cross-mode cases (CROSS_MODE_CASES) end to end through simulateShot: the AC stop and the drive
+ *   each with a push through, the half roll braked at drive −1 and the full roll at λ = 0.5; each one's impact events,
+ *   follow-through flags, fault findings, finish and ratio.
  * Every section ends with a line "<letter> tally: ...". `all` runs every section.
  * Run with `env SECTION=F npx --yes tsx scripts/setupProbe.ts`; environment: SECTION (a letter, a comma-separated
  * list of letters, run in that order, or `all`; default all); for R, R_TYPES (a comma-separated subset of the rolls)
  * and R_SPEEDS (a comma-separated subset of the grid's speeds, m/s) shorten the grid.
  * Not part of the test suite.
  */
+import { finishKind } from "../src/engine/impact/integrate";
 import { rotate, type Quaternion } from "../src/engine/impact/rigidBody";
-import { pitchAxis } from "../src/engine/impact/track";
+import { pitchAxis, prepareTrack } from "../src/engine/impact/track";
+import type { TrackDrive } from "../src/engine/impact/types";
 import { atan2 } from "../src/engine/math/elementary";
 import { add, cross, dot, scale, sub, vec3, type Vec3 } from "../src/engine/math/vec3";
 import { simulateShot } from "../src/engine/shot";
@@ -30,10 +35,12 @@ import {
     type DownswingInput,
     type PlannedDownswing,
 } from "../src/engine/swing/downswing";
+import { ON_TIME } from "../src/engine/swing/profile";
 import { STROKE_TYPES, type ShotSetup, type StrokeType } from "../src/engine/swing/types";
 import type { BallState, World } from "../src/engine/types";
 import { defaultWorld } from "../src/engine/world";
 import { backswingFor, canonicalSetup } from "../tests/engine/support/shot";
+import { ratioOf } from "./ratioFit";
 
 /** The feet's reading of one set-up (design §3). */
 export interface FeetReading {
@@ -373,13 +380,87 @@ function sectionR(): void {
     );
 }
 
+/** One of criterion 5's cross-mode cases (design §1): its label and its setup on `world`. */
+export interface CrossModeCase {
+    readonly label: string;
+    readonly setup: (world: World) => ShotSetup;
+}
+
+/** `type`'s canonical setup with `stroke` over its stroke, its backswing planning 3 m/s on `world`. */
+function atThree(type: StrokeType, stroke: Partial<ShotSetup["stroke"]>, world: World): ShotSetup {
+    const setup = canonicalSetup(type, { world, stroke });
+    return { ...setup, stroke: { ...setup.stroke, backswing: backswingFor(setup, 3, world) } };
+}
+
+/**
+ * Criterion 5's cross-mode cases (design §1): the AC stop and the drive each with a push through (Task 8's form:
+ * handReach 0.15, the advance at contact), the half roll braked at drive −1 and the full roll at λ = 0.5, each planning
+ * 3 m/s.
+ */
+export const CROSS_MODE_CASES: readonly CrossModeCase[] = [
+    {
+        label: "stop-ac drive -1, handReach 0.15, advance 0",
+        setup: (world) => atThree("stop-ac", { drive: -1, handReach: 0.15, timing: { ...ON_TIME, advance: 0 } }, world),
+    },
+    {
+        label: "drive drive 0, handReach 0.15, advance 0",
+        setup: (world) => atThree("drive", { drive: 0, handReach: 0.15, timing: { ...ON_TIME, advance: 0 } }, world),
+    },
+    { label: "half-roll drive -1", setup: (world) => atThree("half-roll", { drive: -1 }, world) },
+    { label: "full-roll λ 0.5", setup: (world) => atThree("full-roll", { slopeHold: 0.5 }, world) },
+];
+
+/** X. Criterion 5's cross-mode cases end to end through simulateShot: events, flags, finish and ratio. */
+function sectionX(): void {
+    const world = defaultWorld();
+    console.log(
+        "== X. the cross-mode cases (criterion 5): simulateShot with the trajectory on the default world, each " +
+            "planning 3 m/s; ms from the impact's start for events, from contact for the finish ==",
+    );
+    let rejected = 0;
+    let impactCaps = 0;
+    let followCaps = 0;
+    for (const { label, setup: setupOf } of CROSS_MODE_CASES) {
+        try {
+            const setup = setupOf(world);
+            const outcome = simulateShot(setup, world, { trajectory: true });
+            const { impact, trajectory } = outcome;
+            if (trajectory === undefined) {
+                throw new Error("simulateShot returned no trajectory");
+            }
+            impactCaps += impact.events.some((e) => e.kind === "impact-cap") ? 1 : 0;
+            followCaps += trajectory.flags.includes("follow-cap") ? 1 : 0;
+            const events = impact.events.map((e) => `${e.kind} at ${fmt(e.t * 1e3)} ms`).join(", ") || "none";
+            const follow = trajectory.flags.join(", ") || "none";
+            const findings = outcome.faults.findings.map((f) => `${f.law} (${f.tier})`).join(", ") || "none";
+            const kind = finishKind(
+                prepareTrack(outcome.contact.drive as TrackDrive, outcome.contact.head, world.gravity),
+            );
+            const ratio = setup.croqueted === undefined ? "none" : fmt(ratioOf(setup, outcome.motion));
+            console.log(
+                `${label}: planned speed ${fmt(outcome.contactSpeed)} m/s; impact events ${events}; follow-through ` +
+                    `flags ${follow}; findings ${findings}; finish ${kind} at ${fmt(trajectory.finish * 1e3)} ms; ` +
+                    `ratio ${ratio}`,
+            );
+        } catch (error) {
+            rejected++;
+            console.log(`${label}: rejected (${(error as Error).message})`);
+        }
+    }
+    console.log(
+        `X tally: ${CROSS_MODE_CASES.length} cases, ${rejected} rejected, ${impactCaps} with impact-cap, ` +
+            `${followCaps} with follow-cap`,
+    );
+}
+
 const SECTIONS: Readonly<Record<string, () => void>> = {
     F: sectionF,
     P: sectionP,
     R: sectionR,
+    X: sectionX,
 };
 
-const ALL_SECTIONS: readonly string[] = ["F", "P", "R"];
+const ALL_SECTIONS: readonly string[] = ["F", "P", "R", "X"];
 
 if (process.argv[1]?.endsWith("setupProbe.ts")) {
     const chosen = SECTION === "all" ? ALL_SECTIONS : SECTION.split(",");

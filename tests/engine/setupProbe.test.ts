@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { feetReading } from "../../scripts/setupProbe";
+import { CROSS_MODE_CASES, feetReading } from "../../scripts/setupProbe";
+import { simulateShot, type ShotOutcome } from "../../src/engine/shot";
 import { defaultWorld } from "../../src/engine/world";
 import { canonicalSetup } from "./support/shot";
 
@@ -33,5 +34,26 @@ describe("the feet's reading (P2b.2b.2c.3a design §3)", () => {
         expect(Math.abs(a.attack - b.attack)).toBeGreaterThan(1e-6);
         expect(Math.abs(b.attack - c.attack)).toBeGreaterThan(1e-6);
         expect(Math.abs(a.attack - c.attack)).toBeGreaterThan(1e-6);
+    });
+});
+
+describe("the cross-mode cases (P2b.2b.2c.3a criterion 5)", () => {
+    const world = defaultWorld();
+
+    it("plays the cross-mode cases with no guard hit", { timeout: 120_000 }, () => {
+        expect(CROSS_MODE_CASES).toHaveLength(4);
+        for (const { label, setup } of CROSS_MODE_CASES) {
+            let outcome: ShotOutcome | undefined;
+            expect(() => {
+                outcome = simulateShot(setup(world), world, { trajectory: true });
+            }, label).not.toThrow();
+            const { impact, trajectory } = outcome as ShotOutcome;
+            expect(
+                impact.events.map((e) => e.kind),
+                label,
+            ).not.toContain("impact-cap");
+            expect(trajectory?.flags, label).toBeDefined();
+            expect(trajectory?.flags, label).not.toContain("follow-cap");
+        }
     });
 });
