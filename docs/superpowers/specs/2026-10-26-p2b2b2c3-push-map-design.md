@@ -178,8 +178,9 @@ exists and is admissible. Lawful only if the mallet does not separate visibly fr
 Every plan the sweep tries is recorded with its outcome, and every excluded plan with the first reason it fails, in
 classes the user named: **mishit** (off the face, or the ball met beyond the on-point limit), **damages the turf**
 (`impact-head-deep`, `turf-yield`, `follow-turf-yield`, `follow-head-deep`, or the head in the turf at contact),
-**superhuman** (intensity above 1, the backswing beyond θ_max, a saturated grip), and **unlawful** (possible
-29.1.6.1, the head overtaking the ball). The record is kept as reference data beside the defaults (derived; its script,
+**superhuman** (intensity above 1, the backswing beyond θ_max, a saturated grip, the couple past C: A2 item 1),
+**unlawful** (possible 29.1.6.1, the head overtaking the ball), and **unreachable** (A2 item 2: the range not reached,
+or the plan rejected by the engine). The record is kept as reference data beside the defaults (derived; its script,
 commands and SHA-256 recorded), in a form later steps can query by set-up and follow-through, so further testing skips
 combinations already shown to fail. A set-up that fails for the same reason at every range is marked as outside the
 envelope outright, and refinement skips it. The record summarises the envelope's shape per roll type and lawn: which
@@ -196,7 +197,8 @@ A plan is admissible when its run:
   contact no higher than R·sin 45° above the ball's centre, the lean at most 45°);
 - never saturates either hand's grip (since P2b.2b.2b.3 a saturated grip slides its anchor and raises no finding; a
   slid anchor means the mallet slipped in the hands), and needs intensity ≤ 1 and the backswing within the body's
-  limit θ_max (P2b.2b.2c.3a; it also sets 100 % stroke effort).
+  limit θ_max (P2b.2b.2c.3a; it also sets 100 % stroke effort);
+- holds its planned slope within the grip's couple C (`gripCouple`; A2 item 1).
 
 A push intent that saturates at `pushForce` is admissible at 100 % push effort; how often defaults saturate is recorded
 (carried item L).
@@ -275,7 +277,7 @@ each commit.
   roadmap's side-on stroke view: for each text book set-up and each default shown at the gate, the mallet's head and
   shaft drawn side-on through the swing and the impact, with the balls, from `SwingTrajectory` and the impact's states.
   Static frames or an animation; the builder's choice. Not product code.
-- The roadmap's "P2b.2b.2c.3 outcomes" with the figures, the gate's rulings verbatim, and the carried open items.
+- The roadmap's "P2b.2b.2c.3b outcomes" with the figures, the gate's rulings verbatim, and the carried open items.
 
 ## 10. The pre-flight gate
 
@@ -339,11 +341,12 @@ figures and rulings are in the roadmap's "P2b.2b.2c.3a outcomes (2026-10-28)" an
 (`ENGINE_VERSION` 0.18.0). The housekeeping shipped first as its own PR (`svelte` 5.57.3, `typescript-eslint` 8.72.1;
 `vite` already current); 3b's branch starts from main after it.
 
-1. **The plan space after 3a** (§3.1). The stroke's inputs are as §3.1 lists them, with two of 3a's held at the
-   type's, not swept (the design's call): `slopeHold` λ (1 on every roll, `SLOPE_HOLD`; the full roll at λ 0.5 left
-   the face late at 3a's section X, an envelope case, item 3) and `advance` (absent; 3a merged it into the push, so
-   `handReach` alone sets the push's length). The grip stays the type's (the rolls unchanged by 3a). The couple a held
-   plan needs is bounded by C = min(γ_T, g_B)·F_max·(r − b) (`gripCouple`); a plan past it is superhuman (§3.5).
+1. **The plan space after 3a** (§3.1). The swept inputs are §3.1's; every other input of `ShotSetup.stroke` is held at
+   the type's (the design's call): the grip (the rolls unchanged by 3a), `slopeHold` λ (1 on every roll,
+   `SLOPE_HOLD`), `guideEffort`, `pendulumAt`, `pendulumEffort`, `jab`, `contact`, `timing.arc`, `timing.dip` and
+   `timing.advance` (absent, so `handReach` alone sets the push's length). The couple a held plan needs is bounded by
+   C = min(γ_T, g_B)·F_max·(r − b) (`gripCouple`); a plan past it is superhuman (§3.5, §4; the engine's `RangeError`
+   from the downswing's plan is recorded as that class). Its share of C is `requiredCouple`'s peak over C.
 2. **The edgy band** (user: "we could visualize the dimensions in some space … and then show which part, which area
    of the envelope is viable, which is a bit edgy, and which is unplayable"; chosen "Include, grid margin"). Every
    plan the map tries is graded in one of three bands:
@@ -355,29 +358,45 @@ figures and rulings are in the roadmap's "P2b.2b.2c.3a outcomes (2026-10-28)" an
      either missing the ball or damaging the lawn";
    - **viable:** admissible with every such neighbour admissible.
 
-   The margin is one step of the coarse grid in each dimension, its size recorded, so refinement does not narrow it
-   (the design's call); how hard (backswing, intensity) is solved, not swept, so it carries no margin. A plan whose
-   only failing neighbour leaves the type's region but stays admissible is viable: the edge is the envelope's, not
-   the region's. §3.5's record carries each plan's band; §5's default stays the least-effort admissible plan
-   (decision 5), its band recorded, and where it is edgy the least-effort viable plan is recorded beside it for the
-   gate's ruling. §9's plots shade the three bands over the swept dimensions, sliced at fixed range and lawn.
-3. **3a's carried items, split** (chosen "Rolls in 3b, swing to 3c"). 3b keeps §11's rule that the swing strokes'
-   digests stay bit-identical, so it takes only the items that touch the rolls or the map:
-   - the envelope cases (3a A3 items 9, 15, 16): the full roll at λ 0.5 leaving the face late, the pass roll's braked
-     impact-off-face (20 runs at drive −1, 8 at −0.5), the pushed, braked AC stop's turf damage and the AC stop's
-     hit-through damage, entered in §3.5's record as measured, unplayable points (the AC stop's as seeds for a later
-     swing map, not swept here);
+   The rules (the design's calls):
+   - A neighbour is the grid's own point at the same range and lawn, its how hard solved as every grid point's is
+     (§3.1), so grading needs no runs beyond the grid's. How hard is solved, not swept, and carries no margin.
+   - Bands are graded on the coarse grid, its step in each dimension recorded in physical units; a refined point
+     takes the band of the coarse cell it lies in, so refinement neither narrows the margin nor adds neighbour runs.
+   - At an input's own bound (`drive` ±1, `handReach` 0, `MIN_WINDOW`, `MAX_WINDOW`) a neighbour past it does not
+     exist and is skipped; past the lean's 45° it is unplayable (mishit). The lean, feet and split grids extend one
+     coarse step beyond the span the builder grades, so every graded point has its neighbours.
+   - A neighbour whose range cannot be reached, or whose plan the engine rejects (a stall, `MAX_FALL`, the couple
+     past C), is unplayable, in §3.5's **unreachable** class (new) or its superhuman class.
+   - A plan whose only failing neighbour leaves the type's region but stays admissible is viable: the edge is the
+     envelope's, not the region's.
+
+   §3.5's record carries each plan's band. §5's default stays the least-effort admissible plan (decision 5), its band
+   recorded; where it is edgy, the least-effort viable plan is recorded beside it for the gate's ruling. §9's plots
+   shade the bands on their regions; the full grading is queried from §3.5's record.
+3. **3a's carried items, split** (chosen "Rolls in 3b, swing to 3c"). 3b keeps §8's bit-identical commits and §11's
+   untouched swing strokes, and is a measuring step, so it takes only the items the map needs and that move nothing:
    - the couple's share of C (3a A2 item 3), recorded per plan beside §5's two effort percentages; whether it joins
      their mean is ruled at the gate (decision 5 unchanged until then);
-   - the ease at a push's end (3a A2 item 8), designed and measured on the rolls, the only presets with a push;
-   - retiring `armMass` from `ratioFit`'s fitted dimensions and the profile (inert since 3a, so bit-identical);
-   - the late re-hit measured on the integrated follow-through beside the planned path's measure (criterion 5).
+   - the pass roll's braked impact-off-face (3a: 20 runs at drive −1, 8 at −0.5): whether the map's own pass-roll runs
+     at those drives reproduce it, recorded.
 
-   **P2b.2b.2c.3c, the swing strokes' hold and grips**, a new step after 3b, takes the rest: the GC stop's head at
-   0.742 m/s at the impact's end; a bounded roll damper on the hold; a softer hold onset (the settle's `it.fails`);
-   the AC stop's two-branch step flip at the default gap; the user's jab hypotheses (the weak lower grip lets the
-   mallet die on rebound; a lower bottom hand gives the leverage to stop it, and whether min(γ_T, g_B) underrates that
-   lever); and §7's AC stop's two grips, now its default hands together (1/0.1/0.717) beside the jab's per-shot grip
-   (0.45, 0.1/0.1).
+   **P2b.2b.2c.3c, the swing strokes' hold and grips**, a new step after 3b, takes the rest:
+   - the GC stop's head at 0.742 m/s at the impact's end;
+   - a bounded roll damper on the hold, and a softer hold onset (the settle's `it.fails`);
+   - the AC stop's two-branch step flip at the default gap;
+   - the user's jab hypotheses (the weak lower grip lets the mallet die on rebound; a lower bottom hand gives the
+     leverage to stop it, and whether min(γ_T, g_B) underrates that lever), and §7's AC stop's two grips, now its
+     default hands together (1/0.1/0.717) beside the jab's per-shot grip (0.45, 0.1/0.1);
+   - the ease at a push's end (3a A2 item 8; it moves every roll: user, at this design's review, "Move to 3c"), the
+     rolls' defaults re-checked on it;
+   - retiring `armMass`: inert only in `ratioFit`'s ratio, it is still the top grip's point mass in the swung body the
+     downswing plans with (`track.ts`, `swungBody`), so it moves the planned strokes and `requiredCouple`;
+   - the late re-hit measured on the integrated follow-through, where it disagrees with the planned path on the
+     canonical drive (3a A3 item 6); 3b's criterion 5 stays judged on the planned path, as shipped;
+   - the envelope cases off the map's space: the full roll at λ 0.5 leaving the face late (λ is held at 1 here), and
+     the AC stop's pushed, braked and hit-through turf damage (3a A3 items 9, 15, 16), as seeds of a swing map.
+
+   3b's outcomes record this split in the roadmap and move 3a's carried list to 3c's items.
 4. **The ratchet** (§8): the baseline worktree at 3b's base on main; the preset digest drops no keys (3a's `slopeHold`
    and `mode` drop no longer needed).
