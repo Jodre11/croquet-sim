@@ -323,14 +323,27 @@ R) and the hand model's note in `probes/2026-10-27-p2b2b2c3a-hand-model.md`. Eac
     test citing the hold's inherited pitch rate.
 14. **`backswingForContact`'s low end.** "Fix it in this commit (Recommended)": it throws when the target is below the
     speed at zero backswing, with a test.
+15. **Section X after the AC stop's retune** (Task 14). The pushed, braked AC stop (drive −1, push 0.15 m) now raises
+    `grip-limit` at 6.20 ms and `turf-yield` at 22.44 ms, with `follow-grip-limit`, finishing at 478.7 ms (at item 9,
+    `turf-lift` only, 162.9 ms). "Accept, 3b envelope (Recommended)": criterion 5 met, its turf damage a P2b.2b.2c.3b
+    envelope case.
+16. **The AC stop's hit-through sweep runs** (Task 14, main against HEAD). At drives +0.5 and +1 the retuned stop
+    raises `turf-yield` in 18 and 15 of 27 played runs, `impact-head-deep` in 16 and 18 and `grip-limit` in 18 and 27
+    (before the retune 9 and 11 yielded; on main none). The user: "they are the shots that are probably going to be
+    outside the envelope. And if you play a shot on the edge of the envelope and you erroneously apply or go do
+    something slightly erroneous, you'll push your shot out of the envelope and fault in some way, either missing the
+    ball or damaging the lawn." And: "some of these cases are ridiculous and way outside the envelope and would never
+    be even be close to being attempted". Accepted; recorded as P2b.2b.2c.3b envelope cases, the digest's grid a
+    regression net, not a set of playable strokes.
 
 Recorded for P2b.2b.2c.3b:
 - the GC stop's head at 0.742 m/s at the impact's end;
 - retire `armMass` from `ratioFit`'s fitted dimensions and the profile;
 - a bounded roll damper on the hold;
 - measure the late re-hit on the integrated follow-through;
-- the full roll at λ 0.5 leaving the face late, and the pass roll's braked impact-off-face (20 runs at drive −1, 8 at
-  −0.5), as envelope cases;
+- the full roll at λ 0.5 leaving the face late, the pass roll's braked impact-off-face (20 runs at drive −1, 8 at
+  −0.5), the pushed, braked AC stop's turf damage (item 15) and the AC stop's hit-through damage (item 16), as
+  envelope cases, the faults a stroke meets past the envelope's edge;
 - trace the AC stop's two-branch step flip at the default gap (the band passes on the high branch);
 - the user's hypotheses, tested on the jab: that the weak lower grip lets the mallet die on rebound (the screen shows
   g_B barely moving the ratio or the damage at 0.717); and that a lower bottom hand gives the leverage to stop the
