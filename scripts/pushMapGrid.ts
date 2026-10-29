@@ -5,7 +5,9 @@
  * (readAt); every graded plan is banded viable, edgy or unplayable by its neighbours (grade, bands); the default per
  * range, lawn and split is the least-effort admissible plan in the type's region (pickDefault); and the record's rows
  * are written per plan, range and lawn (envelopeRows). The shards' JSON lines are written by shardLine, read back on a
- * resume by doneIndices and merged by mergeLines. Not part of the engine.
+ * resume by doneIndices and merged by mergeLines. Stage 1's tallies (plan Task 6) are lawnSpreads, regionCounts,
+ * classCounts, nonMonotoneCount, excludedSetUps, and cellReads with offGridBand (an off-grid plan's band, for the
+ * anchor). Not part of the engine.
  */
 import { MAX_WINDOW, MIN_WINDOW } from "../src/engine/swing/buildContact";
 import { textBook, type MapClass, type MapPlan, type MapSample, type RollType } from "./pushMapRun";
@@ -800,4 +802,325 @@ export function readsOf(
 /** `reads` as JSON (NaN kept as a string), for `<dir>/<type>.reads.json`. */
 export function readsJson(reads: Reads): string {
     return JSON.stringify(Object.fromEntries(reads), keepNumbers);
+}
+
+/** readsJson's text read back (NaN and ±Infinity restored). */
+export function parseReads(text: string): Reads {
+    return new Map(Object.entries(JSON.parse(text, reviveNumbers) as Record<string, SweepRead>));
+}
+
+/** A value's `q` quantile (0–1) by the nearest rank; NaN for no values. */
+export function quantile(values: readonly number[], q: number): number {
+    const sorted = [...values].sort((a, b) => a - b);
+    return sorted[Math.min(sorted.length - 1, Math.max(0, Math.ceil(q * sorted.length) - 1))] ?? NaN;
+}
+
+/** §3.5's classes in decision 5's order. */
+export const MAP_CLASSES: readonly MapClass[] = ["unreachable", "superhuman", "mishit", "turf", "unlawful"];
+
+/**
+ * The lawn's effect (design §3.2's guess; plan Task 6): per plan and grid range, the ratio's spread across the grid's
+ * lawns, (max − min) / mean, where the ratio is finite on every lawn; with `admissibleOnly`, only where the read is
+ * admissible on every lawn too. One entry per such plan and range.
+ */
+export function lawnSpreads(
+    grid: MapGrid,
+    plans: readonly MapPlan[],
+    reads: Reads,
+    admissibleOnly: boolean,
+): { readonly range: number; readonly spread: number }[] {
+    const spreads: { range: number; spread: number }[] = [];
+    for (const plan of plans) {
+        for (const range of grid.ranges) {
+            const lawnReads = grid.lawns.map((lawn) => reads.get(planKey(plan, range, lawn)));
+            const ratios: number[] = [];
+            for (const r of lawnReads) {
+                if (r !== undefined && Number.isFinite(r.ratio) && (!admissibleOnly || r.klass === null)) {
+                    ratios.push(r.ratio);
+                }
+            }
+            if (ratios.length !== grid.lawns.length || ratios.length === 0) {
+                continue;
+            }
+            const mean = ratios.reduce((a, b) => a + b, 0) / ratios.length;
+            spreads.push({ range, spread: (Math.max(...ratios) - Math.min(...ratios)) / mean });
+        }
+    }
+    return spreads;
+}
+
+/** A spread list's summary: its count, median, 95th percentile (nearest rank), maximum, and the count above `limit`. */
+export function spreadSummary(
+    spreads: readonly number[],
+    limit: number,
+): {
+    readonly count: number;
+    readonly median: number;
+    readonly p95: number;
+    readonly max: number;
+    readonly above: number;
+} {
+    return {
+        count: spreads.length,
+        median: quantile(spreads, 0.5),
+        p95: quantile(spreads, 0.95),
+        max: spreads.length === 0 ? NaN : Math.max(...spreads),
+        above: spreads.filter((s) => s > limit).length,
+    };
+}
+
+/** One range and lawn's count of the type's region's admissible graded plans, by band (A1; plan Task 6). */
+export interface RegionCount {
+    readonly range: number;
+    readonly lawn: number;
+    readonly viable: number;
+    readonly edgy: number;
+    /** Admissible in the region but left unbanded (grade's: a neighbour unread). */
+    readonly unbanded: number;
+}
+
+/**
+ * Per grid range and lawn, how many graded plans are admissible with their ratio in `type`'s region (inRegion), by
+ * band (A1: how many plans share each outcome).
+ */
+export function regionCounts(
+    type: RollType,
+    grid: MapGrid,
+    reads: Reads,
+    banded: ReadonlyMap<string, Band>,
+): RegionCount[] {
+    const graded = plansOf(type, grid).filter((p) => isGraded(p, grid));
+    const counts: RegionCount[] = [];
+    for (const range of grid.ranges) {
+        for (const lawn of grid.lawns) {
+            let viable = 0;
+            let edgy = 0;
+            let unbanded = 0;
+            for (const plan of graded) {
+                const key = planKey(plan, range, lawn);
+                const read = reads.get(key);
+                if (read === undefined || read.klass !== null || !inRegion(type, read.ratio)) {
+                    continue;
+                }
+                const band = banded.get(key);
+                if (band === "viable") {
+                    viable++;
+                } else if (band === "edgy") {
+                    edgy++;
+                } else {
+                    unbanded++;
+                }
+            }
+            counts.push({ range, lawn, viable, edgy, unbanded });
+        }
+    }
+    return counts;
+}
+
+/** One range and lawn's reads by class (plan Task 6): `admissible` has none; `unread` has no read. */
+export interface ClassCount {
+    readonly range: number;
+    readonly lawn: number;
+    readonly counts: Readonly<Record<MapClass | "admissible" | "unread", number>>;
+}
+
+/** Per grid range and lawn, every plan's read (graded and beyond) counted by its class (§3.5), admissible or unread. */
+export function classCounts(grid: MapGrid, plans: readonly MapPlan[], reads: Reads): ClassCount[] {
+    const out: ClassCount[] = [];
+    for (const range of grid.ranges) {
+        for (const lawn of grid.lawns) {
+            const counts: Record<MapClass | "admissible" | "unread", number> = {
+                unreachable: 0,
+                superhuman: 0,
+                mishit: 0,
+                turf: 0,
+                unlawful: 0,
+                admissible: 0,
+                unread: 0,
+            };
+            for (const plan of plans) {
+                const read = reads.get(planKey(plan, range, lawn));
+                counts[read === undefined ? "unread" : (read.klass ?? "admissible")]++;
+            }
+            out.push({ range, lawn, counts });
+        }
+    }
+    return out;
+}
+
+/** The plans whose sweep is not monotone in p (decision 2), from their reads at the grid's ranges and lawns. */
+export function nonMonotoneCount(grid: MapGrid, plans: readonly MapPlan[], reads: Reads): number {
+    return plans.filter((plan) =>
+        grid.ranges.some((range) =>
+            grid.lawns.some((lawn) => reads.get(planKey(plan, range, lawn))?.monotone === false),
+        ),
+    ).length;
+}
+
+/** A set-up (A1): the lean (rad), the feet (m) and the split (rad). */
+export interface SetUp {
+    readonly lean: number;
+    readonly feet: number;
+    readonly split: number;
+}
+
+/**
+ * A set-up with no admissible read: its class where every read is present and shares one; "mixed" where every read is
+ * present but the classes differ; "incomplete" where any read is missing (none read included). Its read and unread
+ * counts.
+ */
+export interface Excluded {
+    readonly setUp: SetUp;
+    readonly klass: MapClass | "mixed" | "incomplete";
+    readonly reads: number;
+    readonly unread: number;
+}
+
+/**
+ * The set-ups with no admissible read at any range, follow-through or lawn (design §3.5), in plansOf's order. Those
+ * whose every read is present and has the one class are outside the envelope outright (§3.5: "fails for the same
+ * reason at every range"); with every read present but the classes differing, "mixed"; with any read missing, so that
+ * an admissible read cannot be ruled out, "incomplete".
+ */
+export function excludedSetUps(grid: MapGrid, plans: readonly MapPlan[], reads: Reads): Excluded[] {
+    interface Tally {
+        readonly setUp: SetUp;
+        readonly classes: Set<MapClass>;
+        reads: number;
+        unread: number;
+        admissible: boolean;
+    }
+    const bySetUp = new Map<string, Tally>();
+    for (const plan of plans) {
+        const key = JSON.stringify([plan.lean, plan.feet, plan.split]);
+        let entry = bySetUp.get(key);
+        if (entry === undefined) {
+            entry = {
+                setUp: { lean: plan.lean, feet: plan.feet, split: plan.split },
+                classes: new Set(),
+                reads: 0,
+                unread: 0,
+                admissible: false,
+            };
+            bySetUp.set(key, entry);
+        }
+        for (const range of grid.ranges) {
+            for (const lawn of grid.lawns) {
+                const read = reads.get(planKey(plan, range, lawn));
+                if (read === undefined) {
+                    entry.unread++;
+                    continue;
+                }
+                entry.reads++;
+                if (read.klass === null) {
+                    entry.admissible = true;
+                } else {
+                    entry.classes.add(read.klass);
+                }
+            }
+        }
+    }
+    const out: Excluded[] = [];
+    for (const { setUp, classes, reads: count, unread, admissible } of bySetUp.values()) {
+        if (admissible) {
+            continue;
+        }
+        const [only] = classes;
+        let klass: Excluded["klass"] = "mixed";
+        if (unread > 0) {
+            klass = "incomplete";
+        } else if (classes.size === 1 && only !== undefined) {
+            klass = only;
+        }
+        out.push({ setUp, klass, reads: count, unread });
+    }
+    return out;
+}
+
+/** A band's severity, for the worst of several. */
+const SEVERITY: Readonly<Record<Band, number>> = { viable: 0, edgy: 1, unplayable: 2 };
+
+/**
+ * The grid plans at the corners of the coarse cell `plan` lies in (A2 item 2: a point off the grid takes its cell's
+ * band): per swept dimension, `plan`'s value where it is on the axis (graded or beyond), else the two axis values
+ * either side of it. Null where a value lies outside its axis, or where the hands' onset is not 0, the grid's only
+ * onset (decision 7).
+ */
+export function cellCorners(plan: MapPlan, grid: MapGrid): MapPlan[] | null {
+    if (plan.onset !== 0) {
+        return null;
+    }
+    let corners: MapPlan[] = [plan];
+    for (const d of DIMENSIONS) {
+        const axis = valuesOf(grid[d]);
+        const value = plan[d];
+        if (axis.includes(value)) {
+            continue;
+        }
+        const above = axis.findIndex((v) => v > value);
+        if (above <= 0) {
+            return null;
+        }
+        const pair = [axis[above - 1] as number, axis[above] as number];
+        corners = corners.flatMap((c) => pair.map((v) => ({ ...c, [d]: v })));
+    }
+    return corners;
+}
+
+/** A corner of cellReads's cell: its plan, its read and its band at the range and lawn (undefined where none). */
+export interface Corner {
+    readonly plan: MapPlan;
+    readonly read: SweepRead | undefined;
+    readonly band: Band | undefined;
+}
+
+/**
+ * The corners of the coarse cell of `plan`, which may lie off the grid, at `range` (m) and `lawn` (s), which may lie
+ * off the grid too (plan Task 6's anchor): every grid plan's sweep in `samples` is read at that range and lawn
+ * (readsOf) and graded there (grade), and each corner (cellCorners) is returned with its read and band. Null where
+ * cellCorners finds no cell.
+ */
+export function cellReads(
+    type: RollType,
+    grid: MapGrid,
+    samples: ReadonlyMap<number, readonly SweepSample[]>,
+    plan: MapPlan,
+    at: { readonly range: number; readonly lawn: number },
+): readonly Corner[] | null {
+    const cell = cellCorners(plan, grid);
+    if (cell === null) {
+        return null;
+    }
+    const local: MapGrid = { ...grid, ranges: [at.range], lawns: [at.lawn] };
+    const { reads } = readsOf(local, plansOf(type, local), samples);
+    const { banded } = grade(type, local, reads);
+    return cell.map((c) => {
+        const key = planKey(c, at.range, at.lawn);
+        return { plan: c, read: reads.get(key), band: banded.get(key) };
+    });
+}
+
+/**
+ * The band of a plan off the grid (plan Task 6's anchor; A2 item 2): unplayable where its own play or read has a class
+ * (`classed`); else the worst band of its cell's `corners` (cellReads), an unplayable corner counting as a failing
+ * neighbour, so edgy. Null where it is admissible and its cell is missing (null) or a corner is unbanded.
+ */
+export function offGridBand(classed: boolean, corners: readonly Corner[] | null): Band | null {
+    if (classed) {
+        return "unplayable";
+    }
+    if (corners === null) {
+        return null;
+    }
+    let band: Band = "viable";
+    for (const c of corners) {
+        if (c.band === undefined) {
+            return null;
+        }
+        const capped = c.band === "unplayable" ? "edgy" : c.band;
+        if (SEVERITY[capped] > SEVERITY[band]) {
+            band = capped;
+        }
+    }
+    return band;
 }

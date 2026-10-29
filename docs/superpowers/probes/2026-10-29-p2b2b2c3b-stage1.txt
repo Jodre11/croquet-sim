@@ -1,0 +1,103 @@
+== stage1. Plan Task 6: the half-roll's map, 1260 plans, 1260 sweeps from 8 shard files in /tmp/claude-9ac5334a-b67e-4d3b-af3b-5ce3d59b809f/map/half-roll; ranges 2.00 m, 2.97 m, 4.42 m, 6.56 m, 9.75 m, 14.49 m, 21.53 m, 32.00 m; lawns 6, 10, 14 s ==
+plans missing: 0; engine errors outside the samples: 0 plans, in the samples: 10 samples; torn lines: 0; duplicate lines: 0
+reads: 30232; left unread (an engine error decides them): 8; graded reads left unbanded (a neighbour unread): 6
+-- the anchor (design §3.3): today's half-roll default, the text book --
+plan: lean 24.0°, feet 0.244 m, drive 1, handReach 0.15 m, window 20 ms; canonical power p 0.4173 (backswing 0.4255284852454616 m)
+played at that power on the 10 s lawn: range 1.676 m (the canonical's), admissible, ratio 2.199, in 1.4–2.5: yes
+the canonical's range lies below the grid's least, 2 m: no grid read holds it, so the anchor and its cell are read at it from their sweeps (readAt)
+read from its sweep at the grid's 10 powers: admissible, ratio 2.179, stroke 22.3 %, push 18.0 %, couple share 0.015, p 0.415
+the read's ratio in the half roll's region 1.4–2.5: yes
+band: edgy; the worst corner of its coarse cell, an unplayable corner counting as edgy (A2 item 2)
+its cell's 2 corners, graded at 1.676 m on the 10 s lawn from the merged sweeps:
+  lean 24.0°, feet 0.244 m, drive 1, handReach 0.1 m, window 20 ms: edgy, admissible, ratio 2.189, stroke 22.4 %, push 18.0 %, couple share 0.015, p 0.416
+  lean 24.0°, feet 0.244 m, drive 1, handReach 0.2 m, window 20 ms: unplayable, unlawful (29.1.6.1), ratio 1.400, stroke 17.5 %, push 14.2 %, couple share 0.010, p 0.318
+-- the region (A1): admissible graded plans with the ratio in 1.4–2.5, by band --
+2.00 m: 6 s viable 0, edgy 66; 10 s viable 12, edgy 143, unbanded 2; 14 s viable 34, edgy 145, unbanded 2
+2.97 m: 6 s viable 0, edgy 52; 10 s viable 3, edgy 113; 14 s viable 18, edgy 139, unbanded 2
+4.42 m: 6 s viable 1, edgy 39; 10 s viable 0, edgy 65; 14 s viable 7, edgy 130
+6.56 m: 6 s viable 2, edgy 39; 10 s viable 0, edgy 33; 14 s viable 0, edgy 73
+9.75 m: 6 s viable 0, edgy 13; 10 s viable 0, edgy 3; 14 s viable 0, edgy 22
+14.49 m: 6 s viable 0, edgy 0; 10 s viable 0, edgy 0; 14 s viable 0, edgy 8
+21.53 m: 6 s viable 0, edgy 0; 10 s viable 0, edgy 0; 14 s viable 0, edgy 5
+32.00 m: 6 s viable 0, edgy 0; 10 s viable 0, edgy 0; 14 s viable 0, edgy 0
+-- the classes (§3.5): every plan's read, graded and beyond, per range and lawn --
+2.00 m, 6 s: admissible 182, unreachable 0, superhuman 561, mishit 32, turf 416, unlawful 69, unread 0
+2.00 m, 10 s: admissible 386, unreachable 0, superhuman 308, mishit 83, turf 295, unlawful 187, unread 1
+2.00 m, 14 s: admissible 433, unreachable 0, superhuman 211, mishit 118, turf 163, unlawful 331, unread 4
+2.97 m, 6 s: admissible 155, unreachable 0, superhuman 689, mishit 39, turf 327, unlawful 50, unread 0
+2.97 m, 10 s: admissible 268, unreachable 0, superhuman 468, mishit 34, turf 404, unlawful 86, unread 0
+2.97 m, 14 s: admissible 406, unreachable 0, superhuman 280, mishit 72, turf 268, unlawful 231, unread 3
+4.42 m, 6 s: admissible 204, unreachable 0, superhuman 747, mishit 41, turf 217, unlawful 51, unread 0
+4.42 m, 10 s: admissible 184, unreachable 0, superhuman 562, mishit 34, turf 412, unlawful 68, unread 0
+4.42 m, 14 s: admissible 310, unreachable 0, superhuman 418, mishit 43, turf 378, unlawful 111, unread 0
+6.56 m, 6 s: admissible 168, unreachable 0, superhuman 891, mishit 48, turf 107, unlawful 46, unread 0
+6.56 m, 10 s: admissible 156, unreachable 0, superhuman 671, mishit 38, turf 349, unlawful 46, unread 0
+6.56 m, 14 s: admissible 213, unreachable 0, superhuman 526, mishit 24, turf 417, unlawful 80, unread 0
+9.75 m, 6 s: admissible 99, unreachable 0, superhuman 1060, mishit 44, turf 17, unlawful 40, unread 0
+9.75 m, 10 s: admissible 200, unreachable 0, superhuman 765, mishit 36, turf 210, unlawful 49, unread 0
+9.75 m, 14 s: admissible 158, unreachable 0, superhuman 618, mishit 28, turf 400, unlawful 56, unread 0
+14.49 m, 6 s: admissible 0, unreachable 0, superhuman 1251, mishit 8, turf 0, unlawful 1, unread 0
+14.49 m, 10 s: admissible 213, unreachable 0, superhuman 840, mishit 51, turf 111, unlawful 45, unread 0
+14.49 m, 14 s: admissible 169, unreachable 0, superhuman 722, mishit 27, turf 290, unlawful 52, unread 0
+21.53 m, 6 s: admissible 0, unreachable 0, superhuman 1260, mishit 0, turf 0, unlawful 0, unread 0
+21.53 m, 10 s: admissible 100, unreachable 0, superhuman 1059, mishit 44, turf 17, unlawful 40, unread 0
+21.53 m, 14 s: admissible 217, unreachable 0, superhuman 838, mishit 38, turf 116, unlawful 51, unread 0
+32.00 m, 6 s: admissible 0, unreachable 0, superhuman 1260, mishit 0, turf 0, unlawful 0, unread 0
+32.00 m, 10 s: admissible 0, unreachable 0, superhuman 1187, mishit 26, turf 7, unlawful 40, unread 0
+32.00 m, 14 s: admissible 100, unreachable 0, superhuman 1059, mishit 40, turf 17, unlawful 44, unread 0
+-- the lawn's effect (§3.2's guess): per plan and range, the ratio's spread across the lawns, (max − min) / mean --
+of 10080 plan-ranges (1260 per range):
+every read with a ratio on each lawn: 5676 plan-ranges, median 10.47 %, 95th percentile 57.06 %, max 119.97 %, 5520 above 2 %
+admissible on each lawn: 515 plan-ranges, median 7.14 %, 95th percentile 31.31 %, max 48.35 %, 478 above 2 %
+  2.00 m, admissible: 159 plan-ranges, median 8.74 %, 95th percentile 33.51 %, max 46.75 %, 137 above 2 %
+  2.97 m, admissible: 129 plan-ranges, median 7.29 %, 95th percentile 36.14 %, max 48.35 %, 119 above 2 %
+  4.42 m, admissible: 124 plan-ranges, median 7.93 %, 95th percentile 33.63 %, max 45.33 %, 120 above 2 %
+  6.56 m, admissible: 78 plan-ranges, median 5.67 %, 95th percentile 12.82 %, max 32.38 %, 77 above 2 %
+  9.75 m, admissible: 25 plan-ranges, median 4.84 %, 95th percentile 9.59 %, max 10.42 %, 25 above 2 %
+  14.49 m, admissible: 0 plan-ranges, median NaN %, 95th percentile NaN %, max NaN %, 0 above 2 %
+  21.53 m, admissible: 0 plan-ranges, median NaN %, 95th percentile NaN %, max NaN %, 0 above 2 %
+  32.00 m, admissible: 0 plan-ranges, median NaN %, 95th percentile NaN %, max NaN %, 0 above 2 %
+-- the least-effort plan per range and lawn (pickDefault: the region's least mean effort) --
+2.00 m, 6 s: lean 18.0°, feet 0.294 m, drive 0, handReach 0 m, window 40 ms; edgy; admissible, ratio 2.403, stroke 34.0 %, push 0.0 %, couple share 0.041, p 0.649
+  least-effort viable: none
+2.00 m, 10 s: lean 18.0°, feet 0.194 m, drive 1, handReach 0 m, window 20 ms; edgy; admissible, ratio 2.335, stroke 21.9 %, push 0.0 %, couple share 0.017, p 0.394
+  least-effort viable: lean 18.0°, feet 0.244 m, drive 1, handReach 0 m, window 20 ms; admissible, ratio 2.356, stroke 21.9 %, push 0.0 %, couple share 0.017, p 0.395
+2.00 m, 14 s: lean 18.0°, feet 0.244 m, drive 1, handReach 0 m, window 20 ms; viable; admissible, ratio 2.328, stroke 15.5 %, push 0.0 %, couple share 0.009, p 0.270
+2.97 m, 6 s: lean 18.0°, feet 0.294 m, drive 0, handReach 0 m, window 20 ms; edgy; admissible, ratio 2.459, stroke 42.0 %, push 0.0 %, couple share 0.058, p 0.823
+  least-effort viable: none
+2.97 m, 10 s: lean 18.0°, feet 0.294 m, drive 1, handReach 0 m, window 10 ms; edgy; admissible, ratio 2.472, stroke 27.5 %, push 0.0 %, couple share 0.027, p 0.510
+  least-effort viable: lean 18.0°, feet 0.194 m, drive 0.5, handReach 0 m, window 10 ms; admissible, ratio 2.439, stroke 27.6 %, push 0.0 %, couple share 0.030, p 0.511
+2.97 m, 14 s: lean 18.0°, feet 0.244 m, drive 1, handReach 0 m, window 20 ms; viable; admissible, ratio 2.330, stroke 19.6 %, push 0.0 %, couple share 0.012, p 0.348
+4.42 m, 6 s: lean 24.0°, feet 0.294 m, drive 0, handReach 0 m, window 10 ms; edgy; admissible, ratio 2.181, stroke 56.6 %, push 0.0 %, couple share 0.068, p 1.230
+  least-effort viable: lean 24.0°, feet 0.194 m, drive 0.5, handReach 0 m, window 10 ms; admissible, ratio 2.325, stroke 59.1 %, push 0.0 %, couple share 0.088, p 1.300
+4.42 m, 10 s: lean 24.0°, feet 0.294 m, drive 0, handReach 0 m, window 10 ms; edgy; admissible, ratio 2.338, stroke 38.2 %, push 0.0 %, couple share 0.045, p 0.744
+  least-effort viable: none
+4.42 m, 14 s: lean 18.0°, feet 0.194 m, drive 1, handReach 0 m, window 20 ms; edgy; admissible, ratio 2.351, stroke 24.0 %, push 0.0 %, couple share 0.022, p 0.438
+  least-effort viable: lean 18.0°, feet 0.244 m, drive 1, handReach 0 m, window 10 ms; admissible, ratio 2.425, stroke 24.3 %, push 0.0 %, couple share 0.021, p 0.444
+6.56 m, 6 s: lean 24.0°, feet 0.294 m, drive 0, handReach 0 m, window 20 ms; edgy; admissible, ratio 2.306, stroke 70.3 %, push 0.0 %, couple share 0.133, p 1.555
+  least-effort viable: lean 24.0°, feet 0.294 m, drive 0.5, handReach 0 m, window 10 ms; admissible, ratio 2.449, stroke 72.2 %, push 0.0 %, couple share 0.135, p 1.583
+6.56 m, 10 s: lean 24.0°, feet 0.294 m, drive 0.5, handReach 0 m, window 10 ms; edgy; admissible, ratio 2.461, stroke 47.8 %, push 0.0 %, couple share 0.065, p 0.952
+  least-effort viable: none
+6.56 m, 14 s: lean 18.0°, feet 0.194 m, drive 1, handReach 0 m, window 10 ms; edgy; admissible, ratio 2.494, stroke 30.3 %, push 0.0 %, couple share 0.036, p 0.570
+  least-effort viable: none
+9.75 m, 6 s: lean 24.0°, feet 0.244 m, drive 0, handReach 0 m, window 10 ms; edgy; admissible, ratio 2.434, stroke 88.4 %, push 0.0 %, couple share 0.161, p 1.826
+  least-effort viable: none
+9.75 m, 10 s: lean 18.0°, feet 0.194 m, drive 1, handReach 0.2 m, window 40 ms; edgy; admissible, ratio 2.169, stroke 47.3 %, push 43.4 %, couple share 0.075, p 0.941
+  least-effort viable: none
+9.75 m, 14 s: lean 24.0°, feet 0.294 m, drive 1, handReach 0 m, window 10 ms; edgy; admissible, ratio 2.486, stroke 42.9 %, push 0.0 %, couple share 0.055, p 0.846
+  least-effort viable: none
+14.49 m, 6 s: none in the region
+14.49 m, 10 s: none in the region
+14.49 m, 14 s: lean 18.0°, feet 0.194 m, drive 1, handReach 0.2 m, window 40 ms; edgy; admissible, ratio 2.028, stroke 41.0 %, push 37.3 %, couple share 0.061, p 0.800
+  least-effort viable: none
+21.53 m, 6 s: none in the region
+21.53 m, 10 s: none in the region
+21.53 m, 14 s: lean 18.0°, feet 0.244 m, drive 1, handReach 0.3 m, window 40 ms; edgy; admissible, ratio 2.302, stroke 52.9 %, push 49.3 %, couple share 0.067, p 1.100
+  least-effort viable: none
+32.00 m, 6 s: none in the region
+32.00 m, 10 s: none in the region
+32.00 m, 14 s: none in the region
+-- non-monotone sweeps (decision 2): 113 of 1260 --
+-- outside the envelope outright (§3.5: every read present, the one class): 0 set-ups --
+-- no admissible read, every read present, classes mixed: 0 set-ups --
+-- no admissible read, but some reads missing (incomplete, not outright): 0 set-ups --

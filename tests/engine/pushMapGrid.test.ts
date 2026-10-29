@@ -2,17 +2,29 @@ import { describe, expect, it } from "vitest";
 import {
     BEYOND_P_MAX,
     bands,
+    cellCorners,
+    cellReads,
+    classCounts,
     doneIndices,
     envelopeRows,
+    excludedSetUps,
     grade,
     gridFor,
+    lawnSpreads,
     mergeLines,
+    nonMonotoneCount,
+    offGridBand,
+    parseReads,
     pickDefault,
     planKey,
     plansOf,
+    quantile,
     readAt,
+    readsJson,
     readsOf,
+    regionCounts,
     shardLine,
+    spreadSummary,
     type Axis,
     type Band,
     type MapGrid,
@@ -366,5 +378,205 @@ describe("the push map's grid, sweep, bands and record (P2b.2b.2c.3b plan Task 4
         expect(reads.has(planKey(plans[5] as MapPlan, 10, LAWN))).toBe(false);
         expect(noRead).toBe(1);
         expect(() => mergeLines(plans.slice(1), lines)).toThrow(/not this grid's plan/);
+    });
+});
+
+describe("the half roll's stage-1 tallies (P2b.2b.2c.3b plan Task 6)", () => {
+    /** smallGrid on three lawns, each lawn's read built by `at`. */
+    function threeLawns(at: (p: MapPlan, lawn: number) => SweepRead): { grid: MapGrid; reads: Map<string, SweepRead> } {
+        const grid: MapGrid = { ...smallGrid(), lawns: [6, 10, 14] };
+        const reads = new Map<string, SweepRead>();
+        for (const p of plansOf("half-roll", grid)) {
+            for (const lawn of grid.lawns) {
+                reads.set(planKey(p, 10, lawn), at(p, lawn));
+            }
+        }
+        return { grid, reads };
+    }
+
+    it("reads the reads file back as merge wrote it, NaN kept", () => {
+        const one = planKey(plan(26 * DEG, 1), 10, LAWN);
+        const reads = new Map([[one, read("mishit", NaN, NaN, "impact-off-face")]]);
+        const back = parseReads(readsJson(reads));
+        expect([...back.keys()]).toEqual([one]);
+        expect(back.get(one)?.klass).toBe("mishit");
+        expect(Number.isNaN(back.get(one)?.ratio)).toBe(true);
+    });
+
+    it("measures the lawn's effect as the ratio's spread across the lawns, (max − min) / mean", () => {
+        // Ratios 1.9, 2.0, 2.1 on the 6, 10 and 14 s lawns: (2.1 − 1.9) / 2 = 10 %. The drive-0 plans read 2 on every
+        // lawn (no spread); the 20° drive-0 plan is turf on the 14 s lawn, so it drops out when admissible alone count.
+        const { grid, reads } = threeLawns((p, lawn) => {
+            const turf = p.lean === 20 * DEG && p.drive === 0 && lawn === 14;
+            return read(turf ? "turf" : null, p.drive === 1 ? 1.9 + (lawn - 6) * 0.025 : 2);
+        });
+        const plans = plansOf("half-roll", grid);
+        const all = lawnSpreads(grid, plans, reads, false);
+        expect(all).toHaveLength(9);
+        const admissible = lawnSpreads(grid, plans, reads, true);
+        expect(admissible).toHaveLength(8);
+        const spreads = all.map((s) => s.spread);
+        expect(Math.max(...spreads)).toBeCloseTo(0.1, 12);
+        const summary = spreadSummary(spreads, 0.02);
+        expect(summary.count).toBe(9);
+        expect(summary.median).toBe(0);
+        expect(summary.max).toBeCloseTo(0.1, 12);
+        expect(summary.above).toBe(3);
+        // A ratio missing on one lawn leaves that plan and range out.
+        reads.set(planKey(plan(26 * DEG, 0.5), 10, 6), read("unreachable", NaN));
+        expect(lawnSpreads(grid, plans, reads, false)).toHaveLength(8);
+    });
+
+    it("takes the nearest-rank quantile", () => {
+        expect(quantile([5, 1, 4, 2, 3], 0.5)).toBe(3);
+        expect(quantile([1, 2, 3, 4, 5, 6, 7, 8, 9, 10], 0.95)).toBe(10);
+        expect(Number.isNaN(quantile([], 0.5))).toBe(true);
+    });
+
+    it("counts the region's admissible graded plans by band, and every read by class", () => {
+        const grid = smallGrid();
+        const reads = new Map<string, SweepRead>();
+        for (const p of plansOf("half-roll", grid)) {
+            // The 20° drive-0 corner is turf; the 32° drive-1 plan is admissible at a pass roll's 0.8, out of region.
+            const corner = p.lean === 20 * DEG && p.drive === 0;
+            reads.set(
+                planKey(p, 10, LAWN),
+                read(corner ? "turf" : null, p.lean === 32 * DEG && p.drive === 1 ? 0.8 : 2),
+            );
+        }
+        reads.delete(planKey(plan(32 * DEG, 0), 10, LAWN));
+        const banded = bands("half-roll", grid, reads);
+        // In the region: 20°/0.5 edgy beside the corner; 20°/1, 26°/0.5, 26°/1 viable; 26°/0 and 32°/0.5 unbanded
+        // (their neighbour 32°/0 unread). 32°/1 is viable but out of the region.
+        expect(regionCounts("half-roll", grid, reads, banded)).toEqual([
+            { range: 10, lawn: LAWN, viable: 3, edgy: 1, unbanded: 2 },
+        ]);
+        const [classes] = classCounts(grid, plansOf("half-roll", grid), reads);
+        expect(classes?.counts).toEqual({
+            unreachable: 0,
+            superhuman: 0,
+            mishit: 0,
+            turf: 1,
+            unlawful: 0,
+            admissible: 7,
+            unread: 1,
+        });
+    });
+
+    it("counts the plans whose sweep is not monotone on some lawn", () => {
+        const { grid, reads } = threeLawns((p, lawn) => ({
+            ...read(null),
+            monotone: !(p.drive === 0.5 && lawn === 14),
+        }));
+        expect(nonMonotoneCount(grid, plansOf("half-roll", grid), reads)).toBe(3);
+    });
+
+    it("finds the set-ups with no admissible read, outright where every read shares its class", () => {
+        const grid: MapGrid = { ...smallGrid(), feet: { graded: [0.05, 0.1], beyond: [] } };
+        const reads = new Map<string, SweepRead>();
+        for (const p of plansOf("half-roll", grid)) {
+            let klass: MapClass | null = null;
+            if (p.lean === 20 * DEG) {
+                klass = "turf";
+            } else if (p.lean === 32 * DEG && p.feet === 0.05) {
+                klass = p.drive === 1 ? "superhuman" : "mishit";
+            }
+            reads.set(planKey(p, 10, LAWN), read(klass));
+        }
+        const plans = plansOf("half-roll", grid);
+        expect(excludedSetUps(grid, plans, reads)).toEqual([
+            { setUp: { lean: 20 * DEG, feet: 0.05, split: 0 }, klass: "turf", reads: 3, unread: 0 },
+            { setUp: { lean: 20 * DEG, feet: 0.1, split: 0 }, klass: "turf", reads: 3, unread: 0 },
+            { setUp: { lean: 32 * DEG, feet: 0.05, split: 0 }, klass: "mixed", reads: 3, unread: 0 },
+        ]);
+        // One turf read unread: the rest are turf, but the missing one might be admissible, so not outright.
+        reads.delete(planKey(plan(20 * DEG, 0.5, { feet: 0.05 }), 10, LAWN));
+        // Every read of the 32°, 0.1 m set-up unread (admissible ones before): no admissible read is known.
+        for (const drive of [0, 0.5, 1]) {
+            reads.delete(planKey(plan(32 * DEG, drive), 10, LAWN));
+        }
+        expect(excludedSetUps(grid, plans, reads)).toEqual([
+            { setUp: { lean: 20 * DEG, feet: 0.05, split: 0 }, klass: "incomplete", reads: 2, unread: 1 },
+            { setUp: { lean: 20 * DEG, feet: 0.1, split: 0 }, klass: "turf", reads: 3, unread: 0 },
+            { setUp: { lean: 32 * DEG, feet: 0.05, split: 0 }, klass: "mixed", reads: 3, unread: 0 },
+            { setUp: { lean: 32 * DEG, feet: 0.1, split: 0 }, klass: "incomplete", reads: 0, unread: 3 },
+        ]);
+    });
+
+    it("summarises an empty spread list as none, its figures NaN", () => {
+        const summary = spreadSummary([], 0.02);
+        expect(summary.count).toBe(0);
+        expect(summary.above).toBe(0);
+        expect([summary.median, summary.p95, summary.max].every(Number.isNaN)).toBe(true);
+    });
+
+    it("finds an off-grid plan's coarse cell, and none outside the axes", () => {
+        const grid: MapGrid = { ...smallGrid(), handReach: { graded: [0.1, 0.2], beyond: [] } };
+        const corners = cellCorners(plan(26 * DEG, 0.75, { handReach: 0.15 }), grid);
+        expect(corners).toEqual([
+            plan(26 * DEG, 0.5, { handReach: 0.1 }),
+            plan(26 * DEG, 0.5, { handReach: 0.2 }),
+            plan(26 * DEG, 1, { handReach: 0.1 }),
+            plan(26 * DEG, 1, { handReach: 0.2 }),
+        ]);
+        expect(cellCorners(plan(26 * DEG, 1, { handReach: 0.1 }), grid)).toEqual([
+            plan(26 * DEG, 1, { handReach: 0.1 }),
+        ]);
+        expect(cellCorners(plan(26 * DEG, 1, { handReach: 0.25 }), grid)).toBeNull();
+        // The grid's hands are on time: a late onset has no cell.
+        expect(cellCorners(plan(26 * DEG, 1, { handReach: 0.1, onset: 0.01 }), grid)).toBeNull();
+    });
+
+    /**
+     * A 3 × 2 lean × handReach grid (handReach 0.1 and 0.2 m) at drive 1, whose every sweep reaches 1 m at p 0.5 and
+     * 3 m at p 1, the p-1 sample of `turf` (lean, handReach) pairs turf; and the anchor-like plan at handReach 0.15 m,
+     * between the 26° plans.
+     */
+    function cellCase(turf: readonly (readonly [number, number])[]): {
+        grid: MapGrid;
+        plans: readonly MapPlan[];
+        samples: Map<number, readonly MapSample[]>;
+        anchor: MapPlan;
+    } {
+        const grid: MapGrid = { ...smallGrid(), drive: ONE(1), handReach: { graded: [0.1, 0.2], beyond: [] } };
+        const plans = plansOf("half-roll", grid);
+        const samples = new Map<number, readonly MapSample[]>();
+        plans.forEach((p, i) => {
+            const failing = turf.some(([lean, reach]) => p.lean === lean && p.handReach === reach);
+            samples.set(i, [sample(0.5, 1), sample(1, 3, failing ? "turf" : null)]);
+        });
+        return { grid, plans, samples, anchor: plan(26 * DEG, 1, { handReach: 0.15 }) };
+    }
+
+    it("bands an off-grid plan at an off-grid range by its cell's worst corner, read from the sweeps", () => {
+        // Read at 1.5 m, below the grid's range 10 m, every plan is admissible but 32°/0.2, turf at p 1: so 26°/0.2,
+        // its neighbour, is edgy, and so is the anchor's cell.
+        const { grid, plans, samples, anchor } = cellCase([[32 * DEG, 0.2]]);
+        const corners = cellReads("half-roll", grid, samples, anchor, { range: 1.5, lawn: LAWN });
+        expect(corners?.map((c) => [c.plan.handReach, c.band])).toEqual([
+            [0.1, "viable"],
+            [0.2, "edgy"],
+        ]);
+        expect(corners?.[0]?.read?.power).toBeCloseTo(0.625, 12);
+        expect(offGridBand(false, corners)).toBe("edgy");
+        // A corner left without a read leaves the anchor unbanded; a cell off the axes too.
+        const lost = new Map(samples);
+        lost.delete(plans.findIndex((p) => p.lean === 26 * DEG && p.handReach === 0.1));
+        expect(offGridBand(false, cellReads("half-roll", grid, lost, anchor, { range: 1.5, lawn: LAWN }))).toBeNull();
+        const outside = { ...anchor, handReach: 0.25 };
+        expect(cellReads("half-roll", grid, samples, outside, { range: 1.5, lawn: LAWN })).toBeNull();
+        expect(offGridBand(false, null)).toBeNull();
+    });
+
+    it("bands an admissible anchor beside an unplayable corner edgy, and a classed anchor unplayable", () => {
+        // The 26°/0.2 corner is itself turf: to the admissible anchor it is a failing neighbour, so edgy, not
+        // unplayable.
+        const { grid, samples, anchor } = cellCase([[26 * DEG, 0.2]]);
+        const corners = cellReads("half-roll", grid, samples, anchor, { range: 1.5, lawn: LAWN });
+        expect(corners?.map((c) => c.band)).toEqual(["edgy", "unplayable"]);
+        expect(offGridBand(false, corners)).toBe("edgy");
+        // The anchor's own play or read classed: unplayable, whatever its cell, even with none.
+        expect(offGridBand(true, corners)).toBe("unplayable");
+        expect(offGridBand(true, null)).toBe("unplayable");
     });
 });

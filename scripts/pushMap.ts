@@ -17,30 +17,57 @@
  * - cost: plan Task 5, the map's time: with PART=j/J, the j-th of J parts of COST_PLANS pass-roll plans drawn evenly
  *   is played at the grid's powers, each sample's seconds appended to `<IN>/cost-<j>of<J>.jsonl`; without PART, those
  *   files are tallied: the mean and 95th percentile per sample and each type's projected CPU hours on today's grid.
- * Run with `env SECTION=lawn npx --yes tsx scripts/pushMap.ts`; environment: SECTION (a section's name); for run, TYPE
- * (a roll), SHARD (k/N, default 0/1) and OUT (a file); for merge, TYPE and IN (a directory); for cost, IN and PART.
- * Not part of the test suite.
+ * - stage1: plan Task 6, the half roll's map, from IN's half-roll shard files merged as merge merges them, and read at
+ *   the grid's ranges and lawns (readsOf). The anchor (design §3.3) is today's default (textBook). It is played at the
+ *   canonical power on the 10 s lawn, which gives the canonical's range, and then read at that range from its own
+ *   sweep at the grid's powers: it lies off the grid (handReach 0.15 m, and a range below the grid's least). Its band
+ *   is offGridBand's: unplayable if its play or read has a class, else its coarse cell's worst corner graded at that
+ *   range from the merged sweeps (cellReads), an unplayable corner counting as edgy. Then: the region's admissible
+ *   plans per range and lawn by band; the classes per range and lawn; the lawn's effect on the ratio; the least-effort
+ *   plan per range and lawn; the non-monotone sweeps; and the set-ups with no admissible read, outside the envelope
+ *   outright (§3.5), mixed or incomplete. It plays the anchor's 11 samples itself.
+ * Run with `env SECTION=lawn npx --yes tsx scripts/pushMap.ts`. The environment: SECTION names the section; run takes
+ * TYPE (a roll), SHARD (k/N, default 0/1) and OUT (a file); merge takes TYPE and IN (a directory); cost takes IN and
+ * PART; stage1 takes IN. Not part of the test suite.
  */
 import { simulateImpact } from "../src/engine/impact/simulateImpact";
 import { length, sub } from "../src/engine/math/vec3";
 import { planStroke } from "../src/engine/swing/buildContact";
 import type { ShotSetup } from "../src/engine/swing/types";
 import { BALL_IDS, type BallState, type BallStates } from "../src/engine/types";
+import { swingReference } from "../src/reference/index";
 import { canonicalSetup } from "../tests/engine/support/shot";
 import { openWorld, opened } from "./openLawn";
 import {
+    MAP_CLASSES,
+    cellReads,
+    classCounts,
     doneIndices,
+    excludedSetUps,
     grade,
     gridFor,
+    inRegion,
+    lawnSpreads,
     mergeLines,
+    nonMonotoneCount,
+    offGridBand,
+    pickDefault,
+    planKey,
     plansOf,
+    quantile,
+    readAt,
     readsJson,
     readsOf,
+    regionCounts,
     sampleErrors,
     shardLine,
+    spreadSummary,
+    type MapGrid,
+    type Merged,
+    type SweepRead,
     type SweepSample,
 } from "./pushMapGrid";
-import { ROLL_TYPES, playSample, type RollType } from "./pushMapRun";
+import { ROLL_TYPES, bodyBackswing, mapSetup, playSample, textBook, type MapPlan, type RollType } from "./pushMapRun";
 
 declare const process: {
     readonly env: Readonly<Record<string, string | undefined>>;
@@ -220,12 +247,13 @@ async function sectionRun(): Promise<void> {
  */
 const LISTED = 40;
 
-async function sectionMerge(): Promise<void> {
-    const type = rollType();
-    const dir = required("IN");
-    const fs = await files();
-    const grid = gridFor(type);
-    const plans = plansOf(type, grid);
+/** Exactly `type`'s shard files in `dir` (shardName's pattern) merged against the grid's `plans`, and their count. */
+function mergeShards(
+    fs: Files,
+    type: RollType,
+    dir: string,
+    plans: readonly MapPlan[],
+): { readonly merged: Merged; readonly shards: number } {
     const shards = fs
         .readdirSync(dir)
         .filter((name) => isShardOf(type, name))
@@ -234,8 +262,17 @@ async function sectionMerge(): Promise<void> {
     for (const name of shards) {
         lines.push(...fs.readFileSync(`${dir}/${name}`, "utf8").split("\n"));
     }
-    const merged = mergeLines(plans, lines);
-    console.log(`== merge. Plan decision 9: ${type}, ${shards.length} shard files, ${plans.length} plans ==`);
+    return { merged: mergeLines(plans, lines), shards: shards.length };
+}
+
+async function sectionMerge(): Promise<void> {
+    const type = rollType();
+    const dir = required("IN");
+    const fs = await files();
+    const grid = gridFor(type);
+    const plans = plansOf(type, grid);
+    const { merged, shards } = mergeShards(fs, type, dir, plans);
+    console.log(`== merge. Plan decision 9: ${type}, ${shards} shard files, ${plans.length} plans ==`);
     console.log(`swept: ${merged.samples.size}`);
     const { missing } = merged;
     const shown = missing.slice(0, LISTED).join(", ") + (missing.length > LISTED ? ", …" : "");
@@ -273,12 +310,6 @@ const COST_PLANS = 20;
 /** The plan indices the cost section times: COST_PLANS drawn evenly from `count` plans. */
 function costIndices(count: number): number[] {
     return Array.from({ length: COST_PLANS }, (_, i) => Math.floor((i * count) / COST_PLANS));
-}
-
-/** A value's `q` quantile (0–1) by the nearest rank. */
-function quantile(values: readonly number[], q: number): number {
-    const sorted = [...values].sort((a, b) => a - b);
-    return sorted[Math.min(sorted.length - 1, Math.max(0, Math.ceil(q * sorted.length) - 1))] ?? NaN;
 }
 
 async function sectionCost(): Promise<void> {
@@ -347,11 +378,242 @@ async function sectionCost(): Promise<void> {
     console.log(`whole map: ${total.toFixed(1)} CPU h at the mean`);
 }
 
+/** The lawn the anchor is read on (s): the normal lawn, the canonical's (design §3.3; plan Task 6). */
+const ANCHOR_LAWN = 10;
+
+/** Numerical, not physical: the lawn's effect counted above a 2 % spread in the ratio (plan Task 6's threshold). */
+const LAWN_SPREAD_LIMIT = 0.02;
+
+const DEG = Math.PI / 180;
+
+/** A plan's inputs for the output: degrees, m, 1, m, ms. */
+function planText(plan: MapPlan): string {
+    return (
+        `lean ${(plan.lean / DEG).toFixed(1)}°, feet ${plan.feet.toFixed(3)} m, drive ${plan.drive}, ` +
+        `handReach ${plan.handReach} m, window ${(plan.window * 1000).toFixed(0)} ms` +
+        (plan.split === 0 ? "" : `, split ${(plan.split / DEG).toFixed(0)}°`)
+    );
+}
+
+/** A read's class, ratio, efforts (%) and couple share for the output. */
+function readText(read: SweepRead | undefined): string {
+    if (read === undefined) {
+        return "no read";
+    }
+    const klass = read.klass === null ? "admissible" : `${read.klass} (${read.reason ?? ""})`;
+    return (
+        `${klass}, ratio ${read.ratio.toFixed(3)}, stroke ${read.strokeEffort.toFixed(1)} %, push ` +
+        `${read.pushEffort.toFixed(1)} %, couple share ${read.coupleShare.toFixed(3)}, p ${read.power.toFixed(3)}`
+    );
+}
+
+/** The anchor (design §3.3; plan Task 6): today's half-roll default, read at the canonical's range on the 10 s lawn. */
+function printAnchor(grid: MapGrid, samples: ReadonlyMap<number, readonly SweepSample[]>): void {
+    const type: RollType = "half-roll";
+    const anchor = textBook(type);
+    const world = openWorld(ANCHOR_LAWN);
+    const backswing = swingReference[type].defaultBackswing.value;
+    const power = backswing / bodyBackswing(mapSetup(type, anchor, 1), world);
+    console.log("-- the anchor (design §3.3): today's half-roll default, the text book --");
+    console.log(`plan: ${planText(anchor)}; canonical power p ${power.toFixed(4)} (backswing ${backswing} m)`);
+    let exact: SweepSample;
+    try {
+        exact = playSample(type, anchor, power, [ANCHOR_LAWN]);
+    } catch (error) {
+        exact = { power, engineError: error instanceof Error ? error.message : String(error) };
+    }
+    if ("engineError" in exact) {
+        console.log(`played at that power: the engine threw (${exact.engineError}); no range, so no read or band`);
+        return;
+    }
+    const lawnRead = exact.byLawn[ANCHOR_LAWN];
+    const range = lawnRead?.range ?? NaN;
+    const ratio = lawnRead?.ratio ?? NaN;
+    const exactClass = `${exact.klass ?? "admissible"}${exact.reason === null ? "" : ` (${exact.reason})`}`;
+    if (!Number.isFinite(range)) {
+        console.log(
+            `played at that power on the ${ANCHOR_LAWN} s lawn: ${exactClass}; the range was not reached, so the ` +
+                "anchor has no read at it and no cell band",
+        );
+        return;
+    }
+    console.log(
+        `played at that power on the ${ANCHOR_LAWN} s lawn: range ${range.toFixed(3)} m (the canonical's), ` +
+            `${exactClass}, ratio ${ratio.toFixed(3)}, in 1.4–2.5: ${inRegion(type, ratio) ? "yes" : "no"}`,
+    );
+    const least = grid.ranges[0] ?? NaN;
+    if (range < least) {
+        console.log(
+            `the canonical's range lies below the grid's least, ${least} m: no grid read holds it, so the anchor and ` +
+                "its cell are read at it from their sweeps (readAt)",
+        );
+    }
+    const sweep: SweepSample[] = grid.powers.map((p) => {
+        try {
+            return playSample(type, anchor, p, [ANCHOR_LAWN]);
+        } catch (error) {
+            return { power: p, engineError: error instanceof Error ? error.message : String(error) };
+        }
+    });
+    const read = readAt(sweep, range, ANCHOR_LAWN);
+    console.log(
+        `read from its sweep at the grid's ${grid.powers.length} powers: ` +
+            `${read === null ? "no read (an engine error decides it)" : readText(read)}`,
+    );
+    console.log(
+        `the read's ratio in the half roll's region 1.4–2.5: ` +
+            `${read !== null && inRegion(type, read.ratio) ? "yes" : "no"}`,
+    );
+    const classed = exact.klass !== null || (read !== null && read.klass !== null);
+    const corners = cellReads(type, grid, samples, anchor, { range, lawn: ANCHOR_LAWN });
+    // An engine error deciding the read leaves no evidence either way, as a missing read does on the grid.
+    const band = read === null && !classed ? null : offGridBand(classed, corners);
+    let why: string;
+    if (classed) {
+        why = "its play or its read has a class";
+    } else if (read === null) {
+        why = "its sweep has no read at the range (an engine error decides it)";
+    } else if (corners === null) {
+        why = "its cell lies outside the grid's axes (or its onset is not 0), so no corner bands it";
+    } else if (band === null) {
+        why = "a corner of its cell is unbanded";
+    } else {
+        why = "the worst corner of its coarse cell, an unplayable corner counting as edgy (A2 item 2)";
+    }
+    console.log(`band: ${band ?? "none"}; ${why}`);
+    if (corners !== null) {
+        console.log(
+            `its cell's ${corners.length} corners, graded at ${range.toFixed(3)} m on the ${ANCHOR_LAWN} s lawn from ` +
+                "the merged sweeps:",
+        );
+        for (const corner of corners) {
+            console.log(`  ${planText(corner.plan)}: ${corner.band ?? "unbanded"}, ${readText(corner.read)}`);
+        }
+    }
+}
+
+/** A spread summary's line: count, median, 95th percentile and maximum (%), and the count above LAWN_SPREAD_LIMIT. */
+function spreadText(spreads: readonly number[]): string {
+    const s = spreadSummary(spreads, LAWN_SPREAD_LIMIT);
+    const pc = (x: number): string => `${(x * 100).toFixed(2)} %`;
+    return (
+        `${s.count} plan-ranges, median ${pc(s.median)}, 95th percentile ${pc(s.p95)}, max ${pc(s.max)}, ` +
+        `${s.above} above ${LAWN_SPREAD_LIMIT * 100} %`
+    );
+}
+
+async function sectionStage1(): Promise<void> {
+    const type: RollType = "half-roll";
+    const dir = required("IN");
+    const fs = await files();
+    const grid = gridFor(type);
+    const plans = plansOf(type, grid);
+    const { merged, shards } = mergeShards(fs, type, dir, plans);
+    const { reads, noRead } = readsOf(grid, plans, merged.samples);
+    const { banded, unbanded } = grade(type, grid, reads);
+    const inSamples = [...sampleErrors(merged.samples).values()].reduce((a, b) => a + b, 0);
+    const metres = (r: number): string => `${r.toFixed(2)} m`;
+    console.log(
+        `== stage1. Plan Task 6: the ${type}'s map, ${plans.length} plans, ${merged.samples.size} sweeps from ` +
+            `${shards} shard files in ${dir}; ranges ${grid.ranges.map(metres).join(", ")}; lawns ` +
+            `${grid.lawns.join(", ")} s ==`,
+    );
+    console.log(
+        `plans missing: ${merged.missing.length}; engine errors outside the samples: ${merged.engineErrors.size} ` +
+            `plans, in the samples: ${inSamples} samples; torn lines: ${merged.torn}; duplicate lines: ` +
+            `${merged.duplicates}`,
+    );
+    console.log(
+        `reads: ${reads.size}; left unread (an engine error decides them): ${noRead}; graded reads left unbanded ` +
+            `(a neighbour unread): ${unbanded}`,
+    );
+    printAnchor(grid, merged.samples);
+
+    console.log("-- the region (A1): admissible graded plans with the ratio in 1.4–2.5, by band --");
+    const region = regionCounts(type, grid, reads, banded);
+    for (const range of grid.ranges) {
+        const cells = region
+            .filter((c) => c.range === range)
+            .map(
+                (c) =>
+                    `${c.lawn} s viable ${c.viable}, edgy ${c.edgy}${c.unbanded > 0 ? `, unbanded ${c.unbanded}` : ""}`,
+            );
+        console.log(`${metres(range)}: ${cells.join("; ")}`);
+    }
+
+    console.log("-- the classes (§3.5): every plan's read, graded and beyond, per range and lawn --");
+    for (const c of classCounts(grid, plans, reads)) {
+        const parts = ["admissible", ...MAP_CLASSES, "unread"] as const;
+        console.log(`${metres(c.range)}, ${c.lawn} s: ${parts.map((k) => `${k} ${c.counts[k]}`).join(", ")}`);
+    }
+
+    console.log(
+        "-- the lawn's effect (§3.2's guess): per plan and range, the ratio's spread across the lawns, " +
+            "(max − min) / mean --",
+    );
+    const all = lawnSpreads(grid, plans, reads, false);
+    const admissible = lawnSpreads(grid, plans, reads, true);
+    console.log(`of ${plans.length * grid.ranges.length} plan-ranges (${plans.length} per range):`);
+    console.log(`every read with a ratio on each lawn: ${spreadText(all.map((s) => s.spread))}`);
+    console.log(`admissible on each lawn: ${spreadText(admissible.map((s) => s.spread))}`);
+    for (const range of grid.ranges) {
+        const here = admissible.filter((s) => s.range === range).map((s) => s.spread);
+        console.log(`  ${metres(range)}, admissible: ${spreadText(here)}`);
+    }
+
+    console.log("-- the least-effort plan per range and lawn (pickDefault: the region's least mean effort) --");
+    for (const range of grid.ranges) {
+        for (const lawn of grid.lawns) {
+            const { plan, viable } = pickDefault(type, reads, banded, { range, lawn, split: 0 });
+            if (plan === null) {
+                console.log(`${metres(range)}, ${lawn} s: none in the region`);
+                continue;
+            }
+            const key = planKey(plan, range, lawn);
+            console.log(
+                `${metres(range)}, ${lawn} s: ${planText(plan)}; ${banded.get(key)}; ${readText(reads.get(key))}`,
+            );
+            if (viable !== null && viable !== plan) {
+                const vkey = planKey(viable, range, lawn);
+                console.log(`  least-effort viable: ${planText(viable)}; ${readText(reads.get(vkey))}`);
+            } else if (viable === null) {
+                console.log("  least-effort viable: none");
+            }
+        }
+    }
+
+    console.log(`-- non-monotone sweeps (decision 2): ${nonMonotoneCount(grid, plans, reads)} of ${plans.length} --`);
+
+    const excluded = excludedSetUps(grid, plans, reads);
+    const outright = excluded.filter((e) => e.klass !== "mixed" && e.klass !== "incomplete");
+    const mixed = excluded.filter((e) => e.klass === "mixed");
+    const incomplete = excluded.filter((e) => e.klass === "incomplete");
+    const setUpText = (e: (typeof excluded)[number]): string => {
+        const beyond = !grid.lean.graded.includes(e.setUp.lean) || !grid.feet.graded.includes(e.setUp.feet);
+        return (
+            `lean ${(e.setUp.lean / DEG).toFixed(1)}°, feet ${e.setUp.feet.toFixed(3)} m` +
+            `${beyond ? " (beyond)" : ""}: ${e.klass}, ${e.reads} reads, ${e.unread} unread`
+        );
+    };
+    const groups = [
+        ["outside the envelope outright (§3.5: every read present, the one class)", outright],
+        ["no admissible read, every read present, classes mixed", mixed],
+        ["no admissible read, but some reads missing (incomplete, not outright)", incomplete],
+    ] as const;
+    for (const [title, list] of groups) {
+        console.log(`-- ${title}: ${list.length} set-ups --`);
+        for (const e of list) {
+            console.log(`  ${setUpText(e)}`);
+        }
+    }
+}
+
 const SECTIONS: Readonly<Record<string, () => void | Promise<void>>> = {
     lawn: sectionLawn,
     run: sectionRun,
     merge: sectionMerge,
     cost: sectionCost,
+    stage1: sectionStage1,
 };
 
 if (process.argv[1]?.endsWith("pushMap.ts")) {
