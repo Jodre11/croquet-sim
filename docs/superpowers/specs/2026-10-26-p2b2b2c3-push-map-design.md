@@ -400,3 +400,44 @@ figures and rulings are in the roadmap's "P2b.2b.2c.3a outcomes (2026-10-28)" an
    3b's outcomes record this split in the roadmap and move 3a's carried list to 3c's items.
 4. **The ratchet** (§8): the baseline worktree at 3b's base on main; the preset digest drops no keys (3a's `slopeHold`
    and `mode` drop no longer needed).
+
+**A3 (user, 2026-10-29, gate stage 1, on `docs/superpowers/probes/2026-10-29-p2b2b2c3b-stage1.txt`): the half roll's
+map ruled; the build's readings.** The rulings, each the option the user chose:
+
+1. **The anchor** ("Accept, edgy"). Today's half-roll default plays admissibly at its canonical 1.676 m on the 10 s
+   lawn, ratio 2.199, inside 1.4–2.5; §3.3's test passes. Its band is edgy: its coarse cell's `handReach` 0.2 m
+   corner is unlawful (29.1.6.1), the 0.1 m corner admissible. The canonical's range lies below the range grid's
+   least, 2 m, and the anchor's `handReach` 0.15 m between the grid's values, so the anchor and its cell are read at
+   that range from their own sweeps; an off-grid plan that is itself admissible takes its cell's worst corner, an
+   unplayable corner counting as edgy.
+2. **The lawns** ("Keep 6, 10, 14 s"). The lawn moves the ratio far more than §3.2 guessed: over the plans admissible
+   on all three lawns the ratio's spread (max − min over mean) has median 7.1 %, 95th percentile 31 %, maximum 48 %,
+   93 % of them above 2 %. The defaults stay keyed per lawn, nothing interpolated between lawns; the spread is a
+   finding of the map.
+3. **The half roll's region and least-effort path** ("Accept as found"). The least-effort plan up to 6.56 m has
+   `handReach` 0 (no push: push effort 0 %) and is mostly edgy; viable plans are scarce, and the region thins by
+   9.75 m and is empty from 14.5 m on the 6 and 10 s lawns. The default is the least-effort plan, edgy allowed, its
+   viable runner-up recorded beside it (A2 item 2); the push-free path and the empty long ranges are checked at gate
+   stage 2 against the full and pass rolls.
+4. **The time budget** ("Accept the overrun"). Plan Task 5 took all three of decision 7's cuts (`window` 0.01, 0.02
+   and 0.04 s; the lean's and the feet's graded k to ±1, beyond ±2; ten powers), and the map still projects at about
+   65 CPU h, about 8 h wall on 8 shards against §12's 6 h. The full and pass rolls run on the thinned grid as is; no
+   fourth cut.
+
+The build's readings (the design's calls, made in plan Tasks 3–6 and recorded here):
+- `mapSetup` and `maxPower` take an optional `CanonicalOptions` for the profile and stance only (a world or stroke in
+  it throws). `maxPower` bisects [0, 1] when p = 1 fails (below 1 the couple need not rise with p) and is NaN when
+  nothing plans; a NaN effort is never the default.
+- The impact's own errors are the engine's, never a class: kept per sample, a bracket that holds one has no read, and
+  a plan with an unread neighbour is left unbanded; the merge and stage reports count them (stage 1: 10 samples, all
+  the handover's overlap rule, 8 of 30240 reads unread, 6 unbanded).
+- A plan takes a beyond value in at most one dimension (a beyond value is only ever a neighbour).
+- The pass roll's split 0° takes its +10° plan's read as its −10° neighbour (the stroke is mirror-symmetric in split).
+- A grid end that is not an input's own bound (`handReach` 0.3 m, the thinned `window`'s 0.01 and 0.04 s) skips its
+  neighbour and is flagged in the record's `edge` column.
+- A range past the sweep's top played sample takes the first classed sample's class above it, else superhuman ("range
+  beyond p_max": p = 2 is the body's limit at full intensity); unreachable is kept for a range below the least power's
+  and for planStroke's other rejections.
+- The default's tie-break is the half roll's anchor in follow-through (§5), on every type.
+- The record carries each read's first reason, the split at rest and the edge flags; its header row has no `#`, the
+  provenance lines above it do.
