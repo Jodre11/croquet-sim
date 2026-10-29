@@ -1,0 +1,32 @@
+P2b.2b.2c.3b plan Task 5: the push map's cost and the grid's spacing.
+Command: env SECTION=cost PART=j/8 IN=<temp>/cost npx --yes tsx scripts/pushMap.ts (j = 0…7, in parallel), then
+env SECTION=cost IN=<temp>/cost npx --yes tsx scripts/pushMap.ts. Machine: 10 cores, so 8 shards (cores − 2).
+Budget: the whole coarse map in at most 6 h wall on 8 shards, 48 CPU h.
+
+== The measurement (on the provisional grid: 15 powers) ==
+20 pass-roll plans drawn evenly, 300 samples (each its impact once and its 3 lawns, decision 3's shared impact),
+0 engine errors.
+seconds per sample: mean 2.872, 95th percentile 20.857, max 31.014
+The samples are bimodal: planStroke's rejections take microseconds, ordinary plays about 0.3–2.6 s, and samples whose
+follow-through runs to its cap about 17–31 s. The capped samples dominate the mean.
+
+== Projections at the mean ==
+Provisional grid (decision 7 as planned):
+  half-roll: 4500 plans, 67500 samples, 53.9 CPU h
+  full-roll: 4500 plans, 67500 samples, 53.9 CPU h
+  pass-roll: 20500 plans, 307500 samples, 245.3 CPU h
+  whole map: 353.1 CPU h, 44 h wall on 8 shards. Over budget: thin by decision 7's order.
+Cut 1, window to 0.01, 0.02 and 0.04 s (5 → 3 values): 17700 plans in all, about 212 CPU h. Still over.
+Cut 2, the lean's and the feet's k = 2 (graded k = 0, ±1; beyond ±2): 8100 plans in all, about 97 CPU h. Still over.
+Cut 3, the power samples to 10 (0.1, 0.2, 0.35, 0.5, 0.65, 0.8, 1, 1.25, 1.5, 2):
+  half-roll: 1260 plans, 12600 samples, 10.1 CPU h
+  full-roll: 1260 plans, 12600 samples, 10.1 CPU h
+  pass-roll: 5580 plans, 55800 samples, 44.5 CPU h
+  whole map: 64.6 CPU h, about 8.1 h wall on 8 shards.
+
+== Outcome ==
+Every cut decision 7 allows is taken, and the whole map still projects at about 8.1 h wall, 1.35 times the budget.
+No further cut is in decision 7's list, so the excess goes to gate stage 1 (Task 7) for a ruling. The half roll's map
+(Task 6), which the gate needs, projects at about 1.3 h wall and runs now. The k = 2 refinement is not added (the
+budget is not under a quarter).
+The thinned window's ends (0.01 and 0.04 s) are grid edges, not the input's bounds: plans there carry the edge flag.

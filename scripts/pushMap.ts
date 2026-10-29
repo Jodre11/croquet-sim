@@ -14,8 +14,11 @@
  *   missing plan indices, the engine's errors (outside and inside the samples), the reads an engine error leaves out
  *   and the graded reads left unbanded for an unread neighbour are reported apart; each plan's reads at the grid's
  *   ranges and lawns (readsOf) are written to `<IN>/<TYPE>.reads.json`.
+ * - cost: plan Task 5, the map's time: with PART=j/J, the j-th of J parts of COST_PLANS pass-roll plans drawn evenly
+ *   is played at the grid's powers, each sample's seconds appended to `<IN>/cost-<j>of<J>.jsonl`; without PART, those
+ *   files are tallied: the mean and 95th percentile per sample and each type's projected CPU hours on today's grid.
  * Run with `env SECTION=lawn npx --yes tsx scripts/pushMap.ts`; environment: SECTION (a section's name); for run, TYPE
- * (a roll), SHARD (k/N, default 0/1) and OUT (a file); for merge, TYPE and IN (a directory).
+ * (a roll), SHARD (k/N, default 0/1) and OUT (a file); for merge, TYPE and IN (a directory); for cost, IN and PART.
  * Not part of the test suite.
  */
 import { simulateImpact } from "../src/engine/impact/simulateImpact";
@@ -264,10 +267,91 @@ async function sectionMerge(): Promise<void> {
     console.log(`written: ${path}`);
 }
 
+/** Numerical, not physical: how many pass-roll plans the cost section times (plan Task 5). */
+const COST_PLANS = 20;
+
+/** The plan indices the cost section times: COST_PLANS drawn evenly from `count` plans. */
+function costIndices(count: number): number[] {
+    return Array.from({ length: COST_PLANS }, (_, i) => Math.floor((i * count) / COST_PLANS));
+}
+
+/** A value's `q` quantile (0–1) by the nearest rank. */
+function quantile(values: readonly number[], q: number): number {
+    const sorted = [...values].sort((a, b) => a - b);
+    return sorted[Math.min(sorted.length - 1, Math.max(0, Math.ceil(q * sorted.length) - 1))] ?? NaN;
+}
+
+async function sectionCost(): Promise<void> {
+    const fs = await files();
+    const dir = required("IN");
+    const passGrid = gridFor("pass-roll");
+    const passPlans = plansOf("pass-roll", passGrid);
+    if (process.env.PART !== undefined) {
+        const match = /^(\d+)\/(\d+)$/.exec(process.env.PART);
+        const j = Number(match?.[1]);
+        const parts = Number(match?.[2]);
+        if (match === null || !(parts > 0) || !(j < parts)) {
+            throw new Error(`PART must be j/J with 0 ≤ j < J, not ${process.env.PART}`);
+        }
+        const indices = costIndices(passPlans.length).filter((_, i) => i % parts === j);
+        for (const index of indices) {
+            const plan = passPlans[index] as (typeof passPlans)[number];
+            for (const power of passGrid.powers) {
+                const start = performance.now();
+                let error = "";
+                try {
+                    playSample("pass-roll", plan, power, passGrid.lawns);
+                } catch (thrown) {
+                    error = thrown instanceof Error ? thrown.message : String(thrown);
+                }
+                const seconds = (performance.now() - start) / 1000;
+                fs.appendFileSync(
+                    `${dir}/cost-${j}of${parts}.jsonl`,
+                    `${JSON.stringify({ index, power, seconds, error })}\n`,
+                );
+            }
+            console.log(`plan ${index} timed`);
+        }
+        return;
+    }
+    const times: number[] = [];
+    let errors = 0;
+    for (const name of fs.readdirSync(dir).filter((n) => /^cost-\d+of\d+\.jsonl$/.test(n))) {
+        for (const line of fs.readFileSync(`${dir}/${name}`, "utf8").split("\n")) {
+            if (line === "") {
+                continue;
+            }
+            const row = JSON.parse(line) as { seconds: number; error: string };
+            times.push(row.seconds);
+            errors += row.error === "" ? 0 : 1;
+        }
+    }
+    const mean = times.reduce((a, b) => a + b, 0) / times.length;
+    console.log(
+        `== cost. Plan Task 5: ${COST_PLANS} pass-roll plans drawn evenly, ${times.length} samples (each its impact ` +
+            `once and its ${passGrid.lawns.length} lawns, decision 3's shared impact), ${errors} engine errors ==`,
+    );
+    console.log(
+        `seconds per sample: mean ${mean.toFixed(3)}, 95th percentile ${quantile(times, 0.95).toFixed(3)}, ` +
+            `max ${Math.max(...times).toFixed(3)}`,
+    );
+    let total = 0;
+    for (const type of ROLL_TYPES) {
+        const grid = gridFor(type);
+        const plans = plansOf(type, grid).length;
+        const samples = plans * grid.powers.length;
+        const hours = (samples * mean) / 3600;
+        total += hours;
+        console.log(`${type}: ${plans} plans, ${samples} samples, ${hours.toFixed(1)} CPU h`);
+    }
+    console.log(`whole map: ${total.toFixed(1)} CPU h at the mean`);
+}
+
 const SECTIONS: Readonly<Record<string, () => void | Promise<void>>> = {
     lawn: sectionLawn,
     run: sectionRun,
     merge: sectionMerge,
+    cost: sectionCost,
 };
 
 if (process.argv[1]?.endsWith("pushMap.ts")) {

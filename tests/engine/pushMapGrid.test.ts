@@ -310,7 +310,10 @@ describe("the push map's grid, sweep, bands and record (P2b.2b.2c.3b plan Task 4
     });
 
     it("counts each type's plans, none with two beyond values", () => {
-        const counts = { "half-roll": 4500, "full-roll": 4500, "pass-roll": 20500 } as const;
+        // Task 5's thinned grid: 3 leans × 3 feet × 5 drives × 4 hand reaches × 3 windows = 540 graded, plus 360
+        // with a beyond lean and 360 with beyond feet; the pass roll's 4 splits give 2160 + 1440 + 1440, plus 540 at
+        // the beyond split.
+        const counts = { "half-roll": 1260, "full-roll": 1260, "pass-roll": 5580 } as const;
         for (const type of ["half-roll", "full-roll", "pass-roll"] as const) {
             const grid = gridFor(type);
             const plans = plansOf(type, grid);

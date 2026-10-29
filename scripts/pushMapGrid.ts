@@ -39,18 +39,18 @@ const FEET_STEP = 0.05;
 
 /**
  * Numerical, not physical: the graded steps either side of the text book's lean and feet (decision 7); one more is
- * beyond, run only as a neighbour (A2 item 2).
+ * beyond, run only as a neighbour (A2 item 2). 1, not decision 7's 2: Task 5's second cut under the time budget.
  */
-const GRADED_STEPS = 2;
+const GRADED_STEPS = 1;
 
 /**
  * Numerical, not physical: the follow-through's coarse grids (decision 7), drive (1) over its whole span −1…1,
- * handReach (m) from its bound 0 to 0.3 m, inside handArcRadius, and window (s), doubling from 5 ms to 80 ms inside
- * MIN_WINDOW…MAX_WINDOW. None has a beyond.
+ * handReach (m) from its bound 0 to 0.3 m, inside handArcRadius, and window (s), doubling from 10 ms to 40 ms inside
+ * MIN_WINDOW…MAX_WINDOW (Task 5's first cut under the time budget drops 5 ms and 80 ms). None has a beyond.
  */
 const DRIVES = [-1, -0.5, 0, 0.5, 1];
 const HAND_REACHES = [0, 0.1, 0.2, 0.3];
-const WINDOWS = [0.005, 0.01, 0.02, 0.04, 0.08];
+const WINDOWS = [0.01, 0.02, 0.04];
 
 /** The pass roll's split (decision 7; design §3.2's least set): 0°, 10°, 20° and 30° graded, 40° beyond. */
 const PASS_SPLITS: Axis = { graded: [0, 10 * DEG, 20 * DEG, 30 * DEG], beyond: [40 * DEG] };
@@ -68,9 +68,9 @@ const LAWNS = [6, 10, 14];
 
 /**
  * Numerical, not physical: the power samples of every sweep (decision 2), denser near p = 1 where the backswing meets
- * the body's limit and the intensity takes over. Provisional: Task 5 sets them under the time budget (at least 10).
+ * the body's limit and the intensity takes over. Ten, decision 7's least: Task 5's third cut under the time budget.
  */
-const POWERS = [0.1, 0.2, 0.35, 0.5, 0.65, 0.8, 0.9, 0.95, 1, 1.05, 1.1, 1.25, 1.5, 1.75, 2];
+const POWERS = [0.1, 0.2, 0.35, 0.5, 0.65, 0.8, 1, 1.25, 1.5, 2];
 
 /** The type's text book ± k·step for k = −GRADED_STEPS … GRADED_STEPS graded, and ±(GRADED_STEPS + 1) beyond. */
 function around(centre: number, step: number): Axis {
