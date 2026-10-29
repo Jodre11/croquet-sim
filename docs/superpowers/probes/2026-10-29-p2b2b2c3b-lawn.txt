@@ -1,0 +1,5 @@
+== lawn. Plan decision 3: for each roll's canonical setup on the open lawn, the largest change (m/s) in any handed-over ball's velocity between the 6 s and 14 s lawns' impacts and the 10 s lawn's ==
+half-roll: 0.000e+0 m/s
+full-roll: 0.000e+0 m/s
+pass-roll: 0.000e+0 m/s
+lawn tally: shared impact (every shift below 1e-9 m/s)

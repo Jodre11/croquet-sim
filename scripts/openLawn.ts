@@ -22,11 +22,11 @@ export const OPEN_LAWN = 200;
 export const OPEN_START = vec3(OPEN_LAWN / 2, 50, 0);
 
 /**
- * J's open world: defaultWorld(10)'s gravity, ball, materials and surface, no hoops, on a uniform lawn
- * OPEN_LAWN square. Its peg stays at the court's centre, far off J's lines.
+ * J's open world: defaultWorld(lawnSpeed)'s gravity, ball, materials and surface (lawnSpeed in s, default 10), no
+ * hoops, on a uniform lawn OPEN_LAWN square. Its peg stays at the court's centre, far off J's lines.
  */
-export function openWorld(): World {
-    const court = defaultWorld(10);
+export function openWorld(lawnSpeed = 10): World {
+    const court = defaultWorld(lawnSpeed);
     const surface = court.lawn.surfaceAt(vec3(court.lawn.width / 2, court.lawn.length / 2, 0));
     return { ...court, hoops: [], lawn: uniformLawn(OPEN_LAWN, OPEN_LAWN, surface) };
 }
