@@ -1,0 +1,795 @@
+== summary. Plan Task 8: the full-roll's map, 5040 plans, 5040 sweeps from 8 shard files in /tmp/claude-9ac5334a-b67e-4d3b-af3b-5ce3d59b809f/map/full-roll; ranges 2.00 m, 2.97 m, 4.42 m, 6.56 m, 9.75 m, 14.49 m, 21.53 m, 32.00 m; lawns 6, 10, 14 s ==
+plans missing: 0; engine errors outside the samples: 0 plans, in the samples: 87 samples; torn lines: 0; duplicate lines: 0
+reads: 120757; left unread (an engine error decides them): 203; graded reads left unbanded (a neighbour unread): 15
+-- the text book (A1's validation; §3.3's anchor is the half roll's): today's full roll default, read at its canonical range on the 10 s lawn --
+plan: lean 31.0°, feet 0.320 m, drive 1, handReach 0.3 m, window 30 ms, speedGain 0.1; canonical power p 0.1535 (backswing 0.42429585363805394 m)
+played at that power on the 10 s lawn: range 1.655 m (the canonical's), turf (follow-turf-yield), ratio 1.843, in 1.0–1.2: no
+the canonical's range lies below the grid's least, 2 m: no grid read holds it, so the text book and its cell are read at it from their sweeps (readAt)
+read from its sweep at the grid's 10 powers: mishit (impact-off-face), ratio 1.954, stroke 7.6 %, push 16.6 %, couple share 0.028, p 0.148
+the read's ratio in the full roll's region 1.0–1.2: no
+band: unplayable; its play or its read has a class
+A1's text-book validation (the text book must land in its region, A1's band): played, admissible no, turf (follow-turf-yield), ratio in 1.0–1.2 no; read, admissible no, mishit, ratio in 1.0–1.2 no; lands in its region (A1's band), admissible: no
+its cell's 2 corners, graded at 1.655 m on the 10 s lawn from the merged sweeps:
+  lean 31.0°, feet 0.320 m, drive 1, handReach 0.3 m, window 20 ms, speedGain 0.1: unplayable, mishit (impact-off-face), ratio 2.109, stroke 8.0 %, push 17.5 %, couple share 0.029, p 0.156
+  lean 31.0°, feet 0.320 m, drive 1, handReach 0.3 m, window 40 ms, speedGain 0.1: unplayable, mishit (impact-off-face), ratio 1.872, stroke 7.4 %, push 16.3 %, couple share 0.028, p 0.146
+-- the region (A1): admissible graded plans with the ratio in 1.0–1.2, by band --
+2.00 m: 6 s viable 0, edgy 0; 10 s viable 0, edgy 0; 14 s viable 0, edgy 2
+2.97 m: 6 s viable 0, edgy 0; 10 s viable 0, edgy 0; 14 s viable 0, edgy 0
+4.42 m: 6 s viable 0, edgy 0; 10 s viable 0, edgy 0; 14 s viable 0, edgy 0
+6.56 m: 6 s viable 0, edgy 0; 10 s viable 0, edgy 0; 14 s viable 0, edgy 0
+9.75 m: 6 s viable 0, edgy 0; 10 s viable 0, edgy 0; 14 s viable 0, edgy 0
+14.49 m: 6 s viable 0, edgy 0; 10 s viable 0, edgy 0; 14 s viable 0, edgy 0
+21.53 m: 6 s viable 0, edgy 0; 10 s viable 0, edgy 0; 14 s viable 0, edgy 0
+32.00 m: 6 s viable 0, edgy 0; 10 s viable 0, edgy 0; 14 s viable 0, edgy 0
+-- the classes (§3.5): every plan's read, graded and beyond, per range and lawn --
+2.00 m, 6 s: admissible 440, unreachable 0, superhuman 2380, mishit 563, turf 1572, unlawful 85, unread 0
+2.00 m, 10 s: admissible 606, unreachable 267, superhuman 1866, mishit 796, turf 1341, unlawful 128, unread 36
+2.00 m, 14 s: admissible 537, unreachable 1335, superhuman 1260, mishit 858, turf 900, unlawful 77, unread 73
+2.97 m, 6 s: admissible 386, unreachable 0, superhuman 2683, mishit 510, turf 1434, unlawful 27, unread 0
+2.97 m, 10 s: admissible 580, unreachable 20, superhuman 2119, mishit 636, turf 1527, unlawful 133, unread 25
+2.97 m, 14 s: admissible 614, unreachable 544, superhuman 1724, mishit 788, turf 1220, unlawful 111, unread 39
+4.42 m, 6 s: admissible 405, unreachable 0, superhuman 2995, mishit 564, turf 1067, unlawful 9, unread 0
+4.42 m, 10 s: admissible 426, unreachable 0, superhuman 2415, mishit 553, turf 1589, unlawful 57, unread 0
+4.42 m, 14 s: admissible 585, unreachable 100, superhuman 2050, mishit 656, turf 1495, unlawful 128, unread 26
+6.56 m, 6 s: admissible 305, unreachable 0, superhuman 3348, mishit 541, turf 846, unlawful 0, unread 0
+6.56 m, 10 s: admissible 381, unreachable 0, superhuman 2702, mishit 590, turf 1342, unlawful 25, unread 0
+6.56 m, 14 s: admissible 474, unreachable 0, superhuman 2266, mishit 596, turf 1594, unlawful 106, unread 4
+9.75 m, 6 s: admissible 0, unreachable 0, superhuman 4077, mishit 379, turf 584, unlawful 0, unread 0
+9.75 m, 10 s: admissible 409, unreachable 0, superhuman 2956, mishit 554, turf 1112, unlawful 9, unread 0
+9.75 m, 14 s: admissible 413, unreachable 0, superhuman 2537, mishit 509, turf 1540, unlawful 41, unread 0
+14.49 m, 6 s: admissible 0, unreachable 0, superhuman 4884, mishit 156, turf 0, unlawful 0, unread 0
+14.49 m, 10 s: admissible 293, unreachable 0, superhuman 3435, mishit 516, turf 796, unlawful 0, unread 0
+14.49 m, 14 s: admissible 368, unreachable 0, superhuman 2785, mishit 610, turf 1261, unlawful 16, unread 0
+21.53 m, 6 s: admissible 0, unreachable 0, superhuman 5040, mishit 0, turf 0, unlawful 0, unread 0
+21.53 m, 10 s: admissible 0, unreachable 0, superhuman 4207, mishit 332, turf 501, unlawful 0, unread 0
+21.53 m, 14 s: admissible 290, unreachable 0, superhuman 3345, mishit 539, turf 866, unlawful 0, unread 0
+32.00 m, 6 s: admissible 0, unreachable 0, superhuman 5040, mishit 0, turf 0, unlawful 0, unread 0
+32.00 m, 10 s: admissible 0, unreachable 0, superhuman 4966, mishit 74, turf 0, unlawful 0, unread 0
+32.00 m, 14 s: admissible 0, unreachable 0, superhuman 4023, mishit 446, turf 571, unlawful 0, unread 0
+-- the lawn's effect (§3.2's guess): per plan and range, the ratio's spread across the lawns, (max − min) / mean --
+of 40320 plan-ranges (5040 per range):
+every read with a ratio on each lawn: 36669 plan-ranges, median 11.90 %, 95th percentile 70.78 %, max 299.32 %, 36402 above 2 %
+admissible on each lawn: 1257 plan-ranges, median 7.94 %, 95th percentile 21.96 %, max 70.84 %, 1217 above 2 %
+  2.00 m, admissible: 324 plan-ranges, median 13.04 %, 95th percentile 23.07 %, max 39.22 %, 316 above 2 %
+  2.97 m, admissible: 362 plan-ranges, median 7.99 %, 95th percentile 22.37 %, max 42.04 %, 343 above 2 %
+  4.42 m, admissible: 330 plan-ranges, median 6.76 %, 95th percentile 18.45 %, max 70.84 %, 321 above 2 %
+  6.56 m, admissible: 241 plan-ranges, median 5.42 %, 95th percentile 13.60 %, max 21.40 %, 237 above 2 %
+  9.75 m, admissible: 0 plan-ranges, median NaN %, 95th percentile NaN %, max NaN %, 0 above 2 %
+  14.49 m, admissible: 0 plan-ranges, median NaN %, 95th percentile NaN %, max NaN %, 0 above 2 %
+  21.53 m, admissible: 0 plan-ranges, median NaN %, 95th percentile NaN %, max NaN %, 0 above 2 %
+  32.00 m, admissible: 0 plan-ranges, median NaN %, 95th percentile NaN %, max NaN %, 0 above 2 %
+-- the least-effort plan per range and lawn (pickDefault: the region's least mean effort) --
+2.00 m, 6 s: none in the region
+2.00 m, 10 s: none in the region
+2.00 m, 14 s: lean 37.0°, feet 0.270 m, drive -1, handReach 0.1 m, window 10 ms, speedGain 1; edgy; admissible, ratio 1.154, stroke 5.7 %, push 13.5 %, couple share 0.032, p 0.113
+  least-effort viable: none
+2.97 m, 6 s: none in the region
+2.97 m, 10 s: none in the region
+2.97 m, 14 s: none in the region
+4.42 m, 6 s: none in the region
+4.42 m, 10 s: none in the region
+4.42 m, 14 s: none in the region
+6.56 m, 6 s: none in the region
+6.56 m, 10 s: none in the region
+6.56 m, 14 s: none in the region
+9.75 m, 6 s: none in the region
+9.75 m, 10 s: none in the region
+9.75 m, 14 s: none in the region
+14.49 m, 6 s: none in the region
+14.49 m, 10 s: none in the region
+14.49 m, 14 s: none in the region
+21.53 m, 6 s: none in the region
+21.53 m, 10 s: none in the region
+21.53 m, 14 s: none in the region
+32.00 m, 6 s: none in the region
+32.00 m, 10 s: none in the region
+32.00 m, 14 s: none in the region
+-- non-monotone sweeps (decision 2): 327 of 5040 --
+-- outside the envelope outright (§3.5: every read present, the one class): 0 set-ups --
+-- no admissible read, every read present, classes mixed: 0 set-ups --
+-- no admissible read, but some reads missing (incomplete, not outright): 0 set-ups --
+== summary. Plan Task 8: the pass-roll's map, 5580 plans, 5580 sweeps from 8 shard files in /tmp/claude-9ac5334a-b67e-4d3b-af3b-5ce3d59b809f/map/pass-roll; ranges 2.00 m, 2.97 m, 4.42 m, 6.56 m, 9.75 m, 14.49 m, 21.53 m, 32.00 m; lawns 6, 10, 14 s; splits 0°, 10°, 20°, 30° graded ==
+plans missing: 0; engine errors outside the samples: 0 plans, in the samples: 92 samples; torn lines: 0; duplicate lines: 0
+reads: 133877; left unread (an engine error decides them): 43; graded reads left unbanded (a neighbour unread): 14
+-- the text book (A1's validation; §3.3's anchor is the half roll's): today's pass roll default, read at its canonical range on the 10 s lawn --
+plan: lean 34.0°, feet 0.264 m, drive 1, handReach 0.3 m, window 15 ms, speedGain 0.5, split 20°; canonical power p 0.3362 (backswing 0.4342737510610276 m)
+played at that power on the 10 s lawn: range 2.973 m (the canonical's), turf (follow-turf-yield), ratio 0.874, below 1: yes
+the canonical's range lies between the grid's ranges: no grid read holds it, so the text book and its cell are read at it from their sweeps (readAt)
+read from its sweep at the grid's 10 powers: mishit (impact-off-face), ratio 0.891, stroke 17.1 %, push 27.9 %, couple share 0.012, p 0.335
+the read's ratio in the pass roll's region below 1: yes
+band: unplayable; its play or its read has a class
+A1's text-book validation (the text book must land in its region, A1's band): played, admissible no, turf (follow-turf-yield), ratio below 1 yes; read, admissible no, mishit, ratio below 1 yes; lands in its region (A1's band), admissible: no
+its cell's 2 corners, graded at 2.973 m on the 10 s lawn from the merged sweeps:
+  lean 34.0°, feet 0.264 m, drive 1, handReach 0.3 m, window 10 ms, speedGain 0.5, split 20°: unplayable, turf (follow-turf-yield), ratio 0.996, stroke 18.3 %, push 29.2 %, couple share 0.013, p 0.359
+  lean 34.0°, feet 0.264 m, drive 1, handReach 0.3 m, window 20 ms, speedGain 0.5, split 20°: unplayable, mishit (impact-off-face), ratio 0.874, stroke 16.8 %, push 28.3 %, couple share 0.012, p 0.329
+-- every split together (the least-effort plans and the set-ups are per split, below), then each graded split (plan Task 8) --
+-- the region (A1): admissible graded plans with the ratio below 1, by band --
+2.00 m: 6 s viable 0, edgy 4; 10 s viable 0, edgy 16; 14 s viable 3, edgy 32
+2.97 m: 6 s viable 0, edgy 1; 10 s viable 0, edgy 7; 14 s viable 1, edgy 18
+4.42 m: 6 s viable 0, edgy 0; 10 s viable 0, edgy 2; 14 s viable 0, edgy 7
+6.56 m: 6 s viable 0, edgy 0; 10 s viable 0, edgy 1; 14 s viable 0, edgy 3
+9.75 m: 6 s viable 0, edgy 0; 10 s viable 0, edgy 0; 14 s viable 0, edgy 2
+14.49 m: 6 s viable 0, edgy 0; 10 s viable 0, edgy 0; 14 s viable 0, edgy 1
+21.53 m: 6 s viable 0, edgy 0; 10 s viable 0, edgy 0; 14 s viable 0, edgy 0
+32.00 m: 6 s viable 0, edgy 0; 10 s viable 0, edgy 0; 14 s viable 0, edgy 0
+-- the classes (§3.5): every plan's read, graded and beyond, per range and lawn --
+2.00 m, 6 s: admissible 547, unreachable 0, superhuman 2365, mishit 1330, turf 1284, unlawful 54, unread 0
+2.00 m, 10 s: admissible 793, unreachable 0, superhuman 1780, mishit 1683, turf 1198, unlawful 121, unread 5
+2.00 m, 14 s: admissible 967, unreachable 183, superhuman 1420, mishit 1910, turf 835, unlawful 236, unread 29
+2.97 m, 6 s: admissible 341, unreachable 0, superhuman 3015, mishit 1176, turf 1024, unlawful 24, unread 0
+2.97 m, 10 s: admissible 701, unreachable 0, superhuman 2059, mishit 1546, turf 1189, unlawful 85, unread 0
+2.97 m, 14 s: admissible 850, unreachable 6, superhuman 1666, mishit 1817, turf 1063, unlawful 170, unread 8
+4.42 m, 6 s: admissible 94, unreachable 0, superhuman 3976, mishit 998, turf 502, unlawful 10, unread 0
+4.42 m, 10 s: admissible 531, unreachable 0, superhuman 2399, mishit 1347, turf 1251, unlawful 52, unread 0
+4.42 m, 14 s: admissible 752, unreachable 0, superhuman 1929, mishit 1646, turf 1158, unlawful 94, unread 1
+6.56 m, 6 s: admissible 4, unreachable 0, superhuman 4703, mishit 790, turf 76, unlawful 7, unread 0
+6.56 m, 10 s: admissible 414, unreachable 0, superhuman 2896, mishit 1196, turf 1060, unlawful 14, unread 0
+6.56 m, 14 s: admissible 599, unreachable 0, superhuman 2213, mishit 1456, turf 1237, unlawful 75, unread 0
+9.75 m, 6 s: admissible 0, unreachable 0, superhuman 4858, mishit 720, turf 2, unlawful 0, unread 0
+9.75 m, 10 s: admissible 106, unreachable 0, superhuman 3977, mishit 1017, turf 470, unlawful 10, unread 0
+9.75 m, 14 s: admissible 488, unreachable 0, superhuman 2614, mishit 1254, turf 1199, unlawful 25, unread 0
+14.49 m, 6 s: admissible 0, unreachable 0, superhuman 4860, mishit 720, turf 0, unlawful 0, unread 0
+14.49 m, 10 s: admissible 4, unreachable 0, superhuman 4661, mishit 807, turf 96, unlawful 12, unread 0
+14.49 m, 14 s: admissible 154, unreachable 0, superhuman 3368, mishit 1150, turf 897, unlawful 11, unread 0
+21.53 m, 6 s: admissible 0, unreachable 0, superhuman 4860, mishit 720, turf 0, unlawful 0, unread 0
+21.53 m, 10 s: admissible 0, unreachable 0, superhuman 4857, mishit 721, turf 2, unlawful 0, unread 0
+21.53 m, 14 s: admissible 46, unreachable 0, superhuman 4383, mishit 927, turf 214, unlawful 10, unread 0
+32.00 m, 6 s: admissible 0, unreachable 0, superhuman 4860, mishit 720, turf 0, unlawful 0, unread 0
+32.00 m, 10 s: admissible 0, unreachable 0, superhuman 4860, mishit 720, turf 0, unlawful 0, unread 0
+32.00 m, 14 s: admissible 0, unreachable 0, superhuman 4831, mishit 740, turf 9, unlawful 0, unread 0
+-- the lawn's effect (§3.2's guess): per plan and range, the ratio's spread across the lawns, (max − min) / mean --
+of 44640 plan-ranges (5580 per range):
+every read with a ratio on each lawn: 27249 plan-ranges, median 20.83 %, 95th percentile 76.69 %, max 227.84 %, 26825 above 2 %
+admissible on each lawn: 781 plan-ranges, median 7.72 %, 95th percentile 31.07 %, max 110.24 %, 729 above 2 %
+  2.00 m, admissible: 467 plan-ranges, median 9.09 %, 95th percentile 32.56 %, max 76.93 %, 456 above 2 %
+  2.97 m, admissible: 267 plan-ranges, median 6.17 %, 95th percentile 24.34 %, max 110.24 %, 228 above 2 %
+  4.42 m, admissible: 47 plan-ranges, median 7.27 %, 95th percentile 54.58 %, max 91.17 %, 45 above 2 %
+  6.56 m, admissible: 0 plan-ranges, median NaN %, 95th percentile NaN %, max NaN %, 0 above 2 %
+  9.75 m, admissible: 0 plan-ranges, median NaN %, 95th percentile NaN %, max NaN %, 0 above 2 %
+  14.49 m, admissible: 0 plan-ranges, median NaN %, 95th percentile NaN %, max NaN %, 0 above 2 %
+  21.53 m, admissible: 0 plan-ranges, median NaN %, 95th percentile NaN %, max NaN %, 0 above 2 %
+  32.00 m, admissible: 0 plan-ranges, median NaN %, 95th percentile NaN %, max NaN %, 0 above 2 %
+-- non-monotone sweeps (decision 2): 809 of 5580 --
+-- the region (A1): admissible graded plans with the ratio below 1, by band, split 0° --
+2.00 m: 6 s viable 0, edgy 0; 10 s viable 0, edgy 0; 14 s viable 0, edgy 0
+2.97 m: 6 s viable 0, edgy 0; 10 s viable 0, edgy 0; 14 s viable 0, edgy 0
+4.42 m: 6 s viable 0, edgy 0; 10 s viable 0, edgy 0; 14 s viable 0, edgy 0
+6.56 m: 6 s viable 0, edgy 0; 10 s viable 0, edgy 0; 14 s viable 0, edgy 0
+9.75 m: 6 s viable 0, edgy 0; 10 s viable 0, edgy 0; 14 s viable 0, edgy 0
+14.49 m: 6 s viable 0, edgy 0; 10 s viable 0, edgy 0; 14 s viable 0, edgy 0
+21.53 m: 6 s viable 0, edgy 0; 10 s viable 0, edgy 0; 14 s viable 0, edgy 0
+32.00 m: 6 s viable 0, edgy 0; 10 s viable 0, edgy 0; 14 s viable 0, edgy 0
+-- the classes (§3.5): every plan's read, graded and beyond, per range and lawn, split 0° --
+2.00 m, 6 s: admissible 135, unreachable 0, superhuman 526, mishit 299, turf 272, unlawful 28, unread 0
+2.00 m, 10 s: admissible 196, unreachable 0, superhuman 391, mishit 335, turf 287, unlawful 49, unread 2
+2.00 m, 14 s: admissible 230, unreachable 10, superhuman 327, mishit 409, turf 182, unlawful 92, unread 10
+2.97 m, 6 s: admissible 66, unreachable 0, superhuman 696, mishit 288, turf 202, unlawful 8, unread 0
+2.97 m, 10 s: admissible 169, unreachable 0, superhuman 462, mishit 318, turf 274, unlawful 37, unread 0
+2.97 m, 14 s: admissible 213, unreachable 0, superhuman 369, mishit 365, turf 237, unlawful 72, unread 4
+4.42 m, 6 s: admissible 4, unreachable 0, superhuman 966, mishit 243, turf 47, unlawful 0, unread 0
+4.42 m, 10 s: admissible 128, unreachable 0, superhuman 528, mishit 303, turf 273, unlawful 28, unread 0
+4.42 m, 14 s: admissible 182, unreachable 0, superhuman 429, mishit 342, turf 269, unlawful 37, unread 1
+6.56 m, 6 s: admissible 0, unreachable 0, superhuman 1071, mishit 183, turf 6, unlawful 0, unread 0
+6.56 m, 10 s: admissible 92, unreachable 0, superhuman 666, mishit 291, turf 206, unlawful 5, unread 0
+6.56 m, 14 s: admissible 138, unreachable 0, superhuman 503, mishit 307, turf 278, unlawful 34, unread 0
+9.75 m, 6 s: admissible 0, unreachable 0, superhuman 1080, mishit 180, turf 0, unlawful 0, unread 0
+9.75 m, 10 s: admissible 4, unreachable 0, superhuman 955, mishit 240, turf 61, unlawful 0, unread 0
+9.75 m, 14 s: admissible 125, unreachable 0, superhuman 589, mishit 289, turf 244, unlawful 13, unread 0
+14.49 m, 6 s: admissible 0, unreachable 0, superhuman 1080, mishit 180, turf 0, unlawful 0, unread 0
+14.49 m, 10 s: admissible 0, unreachable 0, superhuman 1071, mishit 186, turf 3, unlawful 0, unread 0
+14.49 m, 14 s: admissible 6, unreachable 0, superhuman 808, mishit 281, turf 164, unlawful 1, unread 0
+21.53 m, 6 s: admissible 0, unreachable 0, superhuman 1080, mishit 180, turf 0, unlawful 0, unread 0
+21.53 m, 10 s: admissible 0, unreachable 0, superhuman 1080, mishit 180, turf 0, unlawful 0, unread 0
+21.53 m, 14 s: admissible 0, unreachable 0, superhuman 1024, mishit 216, turf 20, unlawful 0, unread 0
+32.00 m, 6 s: admissible 0, unreachable 0, superhuman 1080, mishit 180, turf 0, unlawful 0, unread 0
+32.00 m, 10 s: admissible 0, unreachable 0, superhuman 1080, mishit 180, turf 0, unlawful 0, unread 0
+32.00 m, 14 s: admissible 0, unreachable 0, superhuman 1079, mishit 181, turf 0, unlawful 0, unread 0
+-- the lawn's effect (§3.2's guess): per plan and range, the ratio's spread across the lawns, (max − min) / mean, split 0° --
+of 10080 plan-ranges (1260 per range):
+every read with a ratio on each lawn: 5602 plan-ranges, median 27.23 %, 95th percentile 82.75 %, max 195.14 %, 5515 above 2 %
+admissible on each lawn: 157 plan-ranges, median 5.78 %, 95th percentile 30.56 %, max 60.89 %, 142 above 2 %
+  2.00 m, admissible: 104 plan-ranges, median 6.79 %, 95th percentile 31.87 %, max 60.89 %, 104 above 2 %
+  2.97 m, admissible: 53 plan-ranges, median 4.18 %, 95th percentile 28.88 %, max 30.56 %, 38 above 2 %
+  4.42 m, admissible: 0 plan-ranges, median NaN %, 95th percentile NaN %, max NaN %, 0 above 2 %
+  6.56 m, admissible: 0 plan-ranges, median NaN %, 95th percentile NaN %, max NaN %, 0 above 2 %
+  9.75 m, admissible: 0 plan-ranges, median NaN %, 95th percentile NaN %, max NaN %, 0 above 2 %
+  14.49 m, admissible: 0 plan-ranges, median NaN %, 95th percentile NaN %, max NaN %, 0 above 2 %
+  21.53 m, admissible: 0 plan-ranges, median NaN %, 95th percentile NaN %, max NaN %, 0 above 2 %
+  32.00 m, admissible: 0 plan-ranges, median NaN %, 95th percentile NaN %, max NaN %, 0 above 2 %
+-- the least-effort plan per range and lawn (pickDefault: the region's least mean effort), split 0° --
+2.00 m, 6 s: none in the region
+2.00 m, 10 s: none in the region
+2.00 m, 14 s: none in the region
+2.97 m, 6 s: none in the region
+2.97 m, 10 s: none in the region
+2.97 m, 14 s: none in the region
+4.42 m, 6 s: none in the region
+4.42 m, 10 s: none in the region
+4.42 m, 14 s: none in the region
+6.56 m, 6 s: none in the region
+6.56 m, 10 s: none in the region
+6.56 m, 14 s: none in the region
+9.75 m, 6 s: none in the region
+9.75 m, 10 s: none in the region
+9.75 m, 14 s: none in the region
+14.49 m, 6 s: none in the region
+14.49 m, 10 s: none in the region
+14.49 m, 14 s: none in the region
+21.53 m, 6 s: none in the region
+21.53 m, 10 s: none in the region
+21.53 m, 14 s: none in the region
+32.00 m, 6 s: none in the region
+32.00 m, 10 s: none in the region
+32.00 m, 14 s: none in the region
+-- non-monotone sweeps (decision 2), split 0°: 234 of 1260 --
+-- outside the envelope outright (§3.5: every read present, the one class), split 0°: 3 set-ups --
+  lean 46.0°, feet 0.214 m (beyond): mishit, 1440 reads, 0 unread
+  lean 46.0°, feet 0.264 m (beyond): mishit, 1440 reads, 0 unread
+  lean 46.0°, feet 0.314 m (beyond): mishit, 1440 reads, 0 unread
+-- no admissible read, every read present, classes mixed, split 0°: 0 set-ups --
+-- no admissible read, but some reads missing (incomplete, not outright), split 0°: 0 set-ups --
+-- the region (A1): admissible graded plans with the ratio below 1, by band, split 10° --
+2.00 m: 6 s viable 0, edgy 1; 10 s viable 0, edgy 3; 14 s viable 0, edgy 10
+2.97 m: 6 s viable 0, edgy 0; 10 s viable 0, edgy 1; 14 s viable 0, edgy 6
+4.42 m: 6 s viable 0, edgy 0; 10 s viable 0, edgy 1; 14 s viable 0, edgy 1
+6.56 m: 6 s viable 0, edgy 0; 10 s viable 0, edgy 0; 14 s viable 0, edgy 1
+9.75 m: 6 s viable 0, edgy 0; 10 s viable 0, edgy 0; 14 s viable 0, edgy 0
+14.49 m: 6 s viable 0, edgy 0; 10 s viable 0, edgy 0; 14 s viable 0, edgy 0
+21.53 m: 6 s viable 0, edgy 0; 10 s viable 0, edgy 0; 14 s viable 0, edgy 0
+32.00 m: 6 s viable 0, edgy 0; 10 s viable 0, edgy 0; 14 s viable 0, edgy 0
+-- the classes (§3.5): every plan's read, graded and beyond, per range and lawn, split 10° --
+2.00 m, 6 s: admissible 118, unreachable 0, superhuman 530, mishit 286, turf 309, unlawful 17, unread 0
+2.00 m, 10 s: admissible 180, unreachable 0, superhuman 415, mishit 340, turf 290, unlawful 35, unread 0
+2.00 m, 14 s: admissible 205, unreachable 76, superhuman 327, mishit 387, turf 195, unlawful 58, unread 12
+2.97 m, 6 s: admissible 54, unreachable 0, superhuman 706, mishit 280, turf 216, unlawful 4, unread 0
+2.97 m, 10 s: admissible 164, unreachable 0, superhuman 454, mishit 316, turf 298, unlawful 28, unread 0
+2.97 m, 14 s: admissible 187, unreachable 2, superhuman 392, mishit 370, turf 262, unlawful 47, unread 0
+4.42 m, 6 s: admissible 4, unreachable 0, superhuman 955, mishit 230, turf 71, unlawful 0, unread 0
+4.42 m, 10 s: admissible 118, unreachable 0, superhuman 536, mishit 287, turf 303, unlawful 16, unread 0
+4.42 m, 14 s: admissible 176, unreachable 0, superhuman 435, mishit 327, turf 291, unlawful 31, unread 0
+6.56 m, 6 s: admissible 0, unreachable 0, superhuman 1064, mishit 190, turf 6, unlawful 0, unread 0
+6.56 m, 10 s: admissible 88, unreachable 0, superhuman 653, mishit 282, turf 233, unlawful 4, unread 0
+6.56 m, 14 s: admissible 134, unreachable 0, superhuman 494, mishit 303, turf 304, unlawful 25, unread 0
+9.75 m, 6 s: admissible 0, unreachable 0, superhuman 1080, mishit 180, turf 0, unlawful 0, unread 0
+9.75 m, 10 s: admissible 4, unreachable 0, superhuman 957, mishit 239, turf 60, unlawful 0, unread 0
+9.75 m, 14 s: admissible 108, unreachable 0, superhuman 581, mishit 283, turf 281, unlawful 7, unread 0
+14.49 m, 6 s: admissible 0, unreachable 0, superhuman 1080, mishit 180, turf 0, unlawful 0, unread 0
+14.49 m, 10 s: admissible 0, unreachable 0, superhuman 1057, mishit 196, turf 7, unlawful 0, unread 0
+14.49 m, 14 s: admissible 4, unreachable 0, superhuman 793, mishit 263, turf 200, unlawful 0, unread 0
+21.53 m, 6 s: admissible 0, unreachable 0, superhuman 1080, mishit 180, turf 0, unlawful 0, unread 0
+21.53 m, 10 s: admissible 0, unreachable 0, superhuman 1079, mishit 181, turf 0, unlawful 0, unread 0
+21.53 m, 14 s: admissible 0, unreachable 0, superhuman 1019, mishit 218, turf 23, unlawful 0, unread 0
+32.00 m, 6 s: admissible 0, unreachable 0, superhuman 1080, mishit 180, turf 0, unlawful 0, unread 0
+32.00 m, 10 s: admissible 0, unreachable 0, superhuman 1080, mishit 180, turf 0, unlawful 0, unread 0
+32.00 m, 14 s: admissible 0, unreachable 0, superhuman 1077, mishit 183, turf 0, unlawful 0, unread 0
+-- the lawn's effect (§3.2's guess): per plan and range, the ratio's spread across the lawns, (max − min) / mean, split 10° --
+of 10080 plan-ranges (1260 per range):
+every read with a ratio on each lawn: 5760 plan-ranges, median 26.25 %, 95th percentile 85.78 %, max 178.33 %, 5702 above 2 %
+admissible on each lawn: 140 plan-ranges, median 5.88 %, 95th percentile 32.66 %, max 71.17 %, 129 above 2 %
+  2.00 m, admissible: 95 plan-ranges, median 7.44 %, 95th percentile 42.06 %, max 71.17 %, 94 above 2 %
+  2.97 m, admissible: 45 plan-ranges, median 3.31 %, 95th percentile 10.05 %, max 24.34 %, 35 above 2 %
+  4.42 m, admissible: 0 plan-ranges, median NaN %, 95th percentile NaN %, max NaN %, 0 above 2 %
+  6.56 m, admissible: 0 plan-ranges, median NaN %, 95th percentile NaN %, max NaN %, 0 above 2 %
+  9.75 m, admissible: 0 plan-ranges, median NaN %, 95th percentile NaN %, max NaN %, 0 above 2 %
+  14.49 m, admissible: 0 plan-ranges, median NaN %, 95th percentile NaN %, max NaN %, 0 above 2 %
+  21.53 m, admissible: 0 plan-ranges, median NaN %, 95th percentile NaN %, max NaN %, 0 above 2 %
+  32.00 m, admissible: 0 plan-ranges, median NaN %, 95th percentile NaN %, max NaN %, 0 above 2 %
+-- the least-effort plan per range and lawn (pickDefault: the region's least mean effort), split 10° --
+2.00 m, 6 s: lean 28.0°, feet 0.214 m, drive 1, handReach 0.1 m, window 20 ms, speedGain 0.5, split 10°; edgy; admissible, ratio 0.764, stroke 15.4 %, push 28.7 %, couple share 0.014, p 0.299
+  least-effort viable: none
+2.00 m, 10 s: lean 28.0°, feet 0.214 m, drive 1, handReach 0.1 m, window 20 ms, speedGain 0.5, split 10°; edgy; admissible, ratio 0.775, stroke 10.0 %, push 18.9 %, couple share 0.009, p 0.192
+  least-effort viable: none
+2.00 m, 14 s: lean 28.0°, feet 0.314 m, drive -1, handReach 0.3 m, window 20 ms, speedGain 0.5, split 10°; edgy; admissible, ratio 0.662, stroke 6.3 %, push 9.1 %, couple share 0.010, p 0.121
+  least-effort viable: none
+2.97 m, 6 s: none in the region
+2.97 m, 10 s: lean 28.0°, feet 0.214 m, drive 1, handReach 0.1 m, window 20 ms, speedGain 0.5, split 10°; edgy; admissible, ratio 0.781, stroke 12.3 %, push 23.2 %, couple share 0.011, p 0.239
+  least-effort viable: none
+2.97 m, 14 s: lean 28.0°, feet 0.314 m, drive -1, handReach 0.3 m, window 20 ms, speedGain 0.5, split 10°; edgy; admissible, ratio 0.839, stroke 9.2 %, push 12.9 %, couple share 0.008, p 0.177
+  least-effort viable: none
+4.42 m, 6 s: none in the region
+4.42 m, 10 s: lean 28.0°, feet 0.214 m, drive 1, handReach 0.1 m, window 20 ms, speedGain 0.5, split 10°; edgy; admissible, ratio 0.835, stroke 15.7 %, push 29.3 %, couple share 0.015, p 0.306
+  least-effort viable: none
+4.42 m, 14 s: lean 28.0°, feet 0.214 m, drive 1, handReach 0.1 m, window 20 ms, speedGain 0.5, split 10°; edgy; admissible, ratio 0.790, stroke 11.2 %, push 21.1 %, couple share 0.010, p 0.216
+  least-effort viable: none
+6.56 m, 6 s: none in the region
+6.56 m, 10 s: none in the region
+6.56 m, 14 s: lean 28.0°, feet 0.214 m, drive 1, handReach 0.1 m, window 20 ms, speedGain 0.5, split 10°; edgy; admissible, ratio 0.833, stroke 14.0 %, push 26.1 %, couple share 0.013, p 0.271
+  least-effort viable: none
+9.75 m, 6 s: none in the region
+9.75 m, 10 s: none in the region
+9.75 m, 14 s: none in the region
+14.49 m, 6 s: none in the region
+14.49 m, 10 s: none in the region
+14.49 m, 14 s: none in the region
+21.53 m, 6 s: none in the region
+21.53 m, 10 s: none in the region
+21.53 m, 14 s: none in the region
+32.00 m, 6 s: none in the region
+32.00 m, 10 s: none in the region
+32.00 m, 14 s: none in the region
+-- non-monotone sweeps (decision 2), split 10°: 222 of 1260 --
+-- outside the envelope outright (§3.5: every read present, the one class), split 10°: 3 set-ups --
+  lean 46.0°, feet 0.214 m, split 10° (beyond): mishit, 1440 reads, 0 unread
+  lean 46.0°, feet 0.264 m, split 10° (beyond): mishit, 1440 reads, 0 unread
+  lean 46.0°, feet 0.314 m, split 10° (beyond): mishit, 1440 reads, 0 unread
+-- no admissible read, every read present, classes mixed, split 10°: 0 set-ups --
+-- no admissible read, but some reads missing (incomplete, not outright), split 10°: 0 set-ups --
+-- the region (A1): admissible graded plans with the ratio below 1, by band, split 20° --
+2.00 m: 6 s viable 0, edgy 0; 10 s viable 0, edgy 2; 14 s viable 0, edgy 6
+2.97 m: 6 s viable 0, edgy 0; 10 s viable 0, edgy 0; 14 s viable 0, edgy 2
+4.42 m: 6 s viable 0, edgy 0; 10 s viable 0, edgy 0; 14 s viable 0, edgy 0
+6.56 m: 6 s viable 0, edgy 0; 10 s viable 0, edgy 0; 14 s viable 0, edgy 0
+9.75 m: 6 s viable 0, edgy 0; 10 s viable 0, edgy 0; 14 s viable 0, edgy 0
+14.49 m: 6 s viable 0, edgy 0; 10 s viable 0, edgy 0; 14 s viable 0, edgy 0
+21.53 m: 6 s viable 0, edgy 0; 10 s viable 0, edgy 0; 14 s viable 0, edgy 0
+32.00 m: 6 s viable 0, edgy 0; 10 s viable 0, edgy 0; 14 s viable 0, edgy 0
+-- the classes (§3.5): every plan's read, graded and beyond, per range and lawn, split 20° --
+2.00 m, 6 s: admissible 107, unreachable 0, superhuman 548, mishit 327, turf 277, unlawful 1, unread 0
+2.00 m, 10 s: admissible 167, unreachable 0, superhuman 417, mishit 382, turf 280, unlawful 11, unread 3
+2.00 m, 14 s: admissible 212, unreachable 61, superhuman 326, mishit 413, turf 204, unlawful 40, unread 4
+2.97 m, 6 s: admissible 71, unreachable 0, superhuman 673, mishit 284, turf 232, unlawful 0, unread 0
+2.97 m, 10 s: admissible 144, unreachable 0, superhuman 475, mishit 364, turf 273, unlawful 4, unread 0
+2.97 m, 14 s: admissible 173, unreachable 4, superhuman 401, mishit 396, turf 261, unlawful 22, unread 3
+4.42 m, 6 s: admissible 17, unreachable 0, superhuman 890, mishit 237, turf 116, unlawful 0, unread 0
+4.42 m, 10 s: admissible 102, unreachable 0, superhuman 558, mishit 329, turf 270, unlawful 1, unread 0
+4.42 m, 14 s: admissible 160, unreachable 0, superhuman 452, mishit 385, turf 257, unlawful 6, unread 0
+6.56 m, 6 s: admissible 2, unreachable 0, superhuman 1056, mishit 193, turf 9, unlawful 0, unread 0
+6.56 m, 10 s: admissible 79, unreachable 0, superhuman 653, mishit 291, turf 237, unlawful 0, unread 0
+6.56 m, 14 s: admissible 124, unreachable 0, superhuman 506, mishit 349, turf 279, unlawful 2, unread 0
+9.75 m, 6 s: admissible 0, unreachable 0, superhuman 1080, mishit 180, turf 0, unlawful 0, unread 0
+9.75 m, 10 s: admissible 17, unreachable 0, superhuman 922, mishit 242, turf 79, unlawful 0, unread 0
+9.75 m, 14 s: admissible 97, unreachable 0, superhuman 589, mishit 304, turf 270, unlawful 0, unread 0
+14.49 m, 6 s: admissible 0, unreachable 0, superhuman 1080, mishit 180, turf 0, unlawful 0, unread 0
+14.49 m, 10 s: admissible 2, unreachable 0, superhuman 1054, mishit 195, turf 9, unlawful 0, unread 0
+14.49 m, 14 s: admissible 14, unreachable 0, superhuman 760, mishit 284, turf 202, unlawful 0, unread 0
+21.53 m, 6 s: admissible 0, unreachable 0, superhuman 1080, mishit 180, turf 0, unlawful 0, unread 0
+21.53 m, 10 s: admissible 0, unreachable 0, superhuman 1080, mishit 180, turf 0, unlawful 0, unread 0
+21.53 m, 14 s: admissible 5, unreachable 0, superhuman 1012, mishit 221, turf 22, unlawful 0, unread 0
+32.00 m, 6 s: admissible 0, unreachable 0, superhuman 1080, mishit 180, turf 0, unlawful 0, unread 0
+32.00 m, 10 s: admissible 0, unreachable 0, superhuman 1080, mishit 180, turf 0, unlawful 0, unread 0
+32.00 m, 14 s: admissible 0, unreachable 0, superhuman 1074, mishit 185, turf 1, unlawful 0, unread 0
+-- the lawn's effect (§3.2's guess): per plan and range, the ratio's spread across the lawns, (max − min) / mean, split 20° --
+of 10080 plan-ranges (1260 per range):
+every read with a ratio on each lawn: 5736 plan-ranges, median 21.35 %, 95th percentile 78.96 %, max 195.00 %, 5672 above 2 %
+admissible on each lawn: 173 plan-ranges, median 9.65 %, 95th percentile 39.66 %, max 110.24 %, 162 above 2 %
+  2.00 m, admissible: 98 plan-ranges, median 11.71 %, 95th percentile 38.97 %, max 76.93 %, 92 above 2 %
+  2.97 m, admissible: 65 plan-ranges, median 8.43 %, 95th percentile 22.77 %, max 110.24 %, 60 above 2 %
+  4.42 m, admissible: 10 plan-ranges, median 7.28 %, 95th percentile 91.17 %, max 91.17 %, 10 above 2 %
+  6.56 m, admissible: 0 plan-ranges, median NaN %, 95th percentile NaN %, max NaN %, 0 above 2 %
+  9.75 m, admissible: 0 plan-ranges, median NaN %, 95th percentile NaN %, max NaN %, 0 above 2 %
+  14.49 m, admissible: 0 plan-ranges, median NaN %, 95th percentile NaN %, max NaN %, 0 above 2 %
+  21.53 m, admissible: 0 plan-ranges, median NaN %, 95th percentile NaN %, max NaN %, 0 above 2 %
+  32.00 m, admissible: 0 plan-ranges, median NaN %, 95th percentile NaN %, max NaN %, 0 above 2 %
+-- the least-effort plan per range and lawn (pickDefault: the region's least mean effort), split 20° --
+2.00 m, 6 s: none in the region
+2.00 m, 10 s: lean 28.0°, feet 0.314 m, drive -1, handReach 0.2 m, window 40 ms, speedGain 0.5, split 20°; edgy; admissible, ratio 0.964, stroke 11.6 %, push 17.9 %, couple share 0.009, p 0.225
+  least-effort viable: none
+2.00 m, 14 s: lean 28.0°, feet 0.214 m, drive -1, handReach 0.1 m, window 20 ms, speedGain 0.5, split 20°; edgy; admissible, ratio 0.905, stroke 8.1 %, push 10.9 %, couple share 0.010, p 0.156
+  least-effort viable: none
+2.97 m, 6 s: none in the region
+2.97 m, 10 s: none in the region
+2.97 m, 14 s: lean 28.0°, feet 0.314 m, drive -1, handReach 0.2 m, window 40 ms, speedGain 0.5, split 20°; edgy; admissible, ratio 0.942, stroke 10.4 %, push 16.3 %, couple share 0.007, p 0.201
+  least-effort viable: none
+4.42 m, 6 s: none in the region
+4.42 m, 10 s: none in the region
+4.42 m, 14 s: none in the region
+6.56 m, 6 s: none in the region
+6.56 m, 10 s: none in the region
+6.56 m, 14 s: none in the region
+9.75 m, 6 s: none in the region
+9.75 m, 10 s: none in the region
+9.75 m, 14 s: none in the region
+14.49 m, 6 s: none in the region
+14.49 m, 10 s: none in the region
+14.49 m, 14 s: none in the region
+21.53 m, 6 s: none in the region
+21.53 m, 10 s: none in the region
+21.53 m, 14 s: none in the region
+32.00 m, 6 s: none in the region
+32.00 m, 10 s: none in the region
+32.00 m, 14 s: none in the region
+-- non-monotone sweeps (decision 2), split 20°: 195 of 1260 --
+-- outside the envelope outright (§3.5: every read present, the one class), split 20°: 3 set-ups --
+  lean 46.0°, feet 0.214 m, split 20° (beyond): mishit, 1440 reads, 0 unread
+  lean 46.0°, feet 0.264 m, split 20° (beyond): mishit, 1440 reads, 0 unread
+  lean 46.0°, feet 0.314 m, split 20° (beyond): mishit, 1440 reads, 0 unread
+-- no admissible read, every read present, classes mixed, split 20°: 0 set-ups --
+-- no admissible read, but some reads missing (incomplete, not outright), split 20°: 0 set-ups --
+-- the region (A1): admissible graded plans with the ratio below 1, by band, split 30° --
+2.00 m: 6 s viable 0, edgy 3; 10 s viable 0, edgy 11; 14 s viable 3, edgy 16
+2.97 m: 6 s viable 0, edgy 1; 10 s viable 0, edgy 6; 14 s viable 1, edgy 10
+4.42 m: 6 s viable 0, edgy 0; 10 s viable 0, edgy 1; 14 s viable 0, edgy 6
+6.56 m: 6 s viable 0, edgy 0; 10 s viable 0, edgy 1; 14 s viable 0, edgy 2
+9.75 m: 6 s viable 0, edgy 0; 10 s viable 0, edgy 0; 14 s viable 0, edgy 2
+14.49 m: 6 s viable 0, edgy 0; 10 s viable 0, edgy 0; 14 s viable 0, edgy 1
+21.53 m: 6 s viable 0, edgy 0; 10 s viable 0, edgy 0; 14 s viable 0, edgy 0
+32.00 m: 6 s viable 0, edgy 0; 10 s viable 0, edgy 0; 14 s viable 0, edgy 0
+-- the classes (§3.5): every plan's read, graded and beyond, per range and lawn, split 30° --
+2.00 m, 6 s: admissible 114, unreachable 0, superhuman 526, mishit 336, turf 281, unlawful 3, unread 0
+2.00 m, 10 s: admissible 159, unreachable 0, superhuman 388, mishit 467, turf 234, unlawful 12, unread 0
+2.00 m, 14 s: admissible 214, unreachable 36, superhuman 298, mishit 510, turf 170, unlawful 29, unread 3
+2.97 m, 6 s: admissible 103, unreachable 0, superhuman 643, mishit 272, turf 242, unlawful 0, unread 0
+2.97 m, 10 s: admissible 150, unreachable 0, superhuman 461, mishit 426, turf 218, unlawful 5, unread 0
+2.97 m, 14 s: admissible 184, unreachable 0, superhuman 344, mishit 512, turf 201, unlawful 18, unread 1
+4.42 m, 6 s: admissible 29, unreachable 0, superhuman 809, mishit 245, turf 177, unlawful 0, unread 0
+4.42 m, 10 s: admissible 113, unreachable 0, superhuman 537, mishit 336, turf 271, unlawful 3, unread 0
+4.42 m, 14 s: admissible 153, unreachable 0, superhuman 421, mishit 456, turf 224, unlawful 6, unread 0
+6.56 m, 6 s: admissible 2, unreachable 0, superhuman 1034, mishit 207, turf 17, unlawful 0, unread 0
+6.56 m, 10 s: admissible 109, unreachable 0, superhuman 631, mishit 276, turf 244, unlawful 0, unread 0
+6.56 m, 14 s: admissible 129, unreachable 0, superhuman 492, mishit 383, turf 253, unlawful 3, unread 0
+9.75 m, 6 s: admissible 0, unreachable 0, superhuman 1078, mishit 180, turf 2, unlawful 0, unread 0
+9.75 m, 10 s: admissible 29, unreachable 0, superhuman 805, mishit 252, turf 174, unlawful 0, unread 0
+9.75 m, 14 s: admissible 107, unreachable 0, superhuman 577, mishit 310, turf 263, unlawful 3, unread 0
+14.49 m, 6 s: admissible 0, unreachable 0, superhuman 1080, mishit 180, turf 0, unlawful 0, unread 0
+14.49 m, 10 s: admissible 2, unreachable 0, superhuman 1033, mishit 207, turf 18, unlawful 0, unread 0
+14.49 m, 14 s: admissible 80, unreachable 0, superhuman 685, mishit 274, turf 221, unlawful 0, unread 0
+21.53 m, 6 s: admissible 0, unreachable 0, superhuman 1080, mishit 180, turf 0, unlawful 0, unread 0
+21.53 m, 10 s: admissible 0, unreachable 0, superhuman 1078, mishit 180, turf 2, unlawful 0, unread 0
+21.53 m, 14 s: admissible 31, unreachable 0, superhuman 909, mishit 239, turf 81, unlawful 0, unread 0
+32.00 m, 6 s: admissible 0, unreachable 0, superhuman 1080, mishit 180, turf 0, unlawful 0, unread 0
+32.00 m, 10 s: admissible 0, unreachable 0, superhuman 1080, mishit 180, turf 0, unlawful 0, unread 0
+32.00 m, 14 s: admissible 0, unreachable 0, superhuman 1063, mishit 190, turf 7, unlawful 0, unread 0
+-- the lawn's effect (§3.2's guess): per plan and range, the ratio's spread across the lawns, (max − min) / mean, split 30° --
+of 10080 plan-ranges (1260 per range):
+every read with a ratio on each lawn: 6528 plan-ranges, median 16.49 %, 95th percentile 65.38 %, max 227.84 %, 6363 above 2 %
+admissible on each lawn: 197 plan-ranges, median 9.18 %, 95th percentile 26.83 %, max 94.76 %, 191 above 2 %
+  2.00 m, admissible: 102 plan-ranges, median 9.33 %, 95th percentile 26.13 %, max 53.32 %, 102 above 2 %
+  2.97 m, admissible: 78 plan-ranges, median 7.83 %, 95th percentile 26.43 %, max 94.76 %, 72 above 2 %
+  4.42 m, admissible: 17 plan-ranges, median 14.62 %, 95th percentile 85.48 %, max 85.48 %, 17 above 2 %
+  6.56 m, admissible: 0 plan-ranges, median NaN %, 95th percentile NaN %, max NaN %, 0 above 2 %
+  9.75 m, admissible: 0 plan-ranges, median NaN %, 95th percentile NaN %, max NaN %, 0 above 2 %
+  14.49 m, admissible: 0 plan-ranges, median NaN %, 95th percentile NaN %, max NaN %, 0 above 2 %
+  21.53 m, admissible: 0 plan-ranges, median NaN %, 95th percentile NaN %, max NaN %, 0 above 2 %
+  32.00 m, admissible: 0 plan-ranges, median NaN %, 95th percentile NaN %, max NaN %, 0 above 2 %
+-- the least-effort plan per range and lawn (pickDefault: the region's least mean effort), split 30° --
+2.00 m, 6 s: lean 34.0°, feet 0.214 m, drive 1, handReach 0 m, window 20 ms, speedGain 0.5, split 30°; edgy; admissible, ratio 0.904, stroke 23.8 %, push 0.0 %, couple share 0.024, p 0.471
+  least-effort viable: none
+2.00 m, 10 s: lean 28.0°, feet 0.214 m, drive 1, handReach 0 m, window 40 ms, speedGain 0.5, split 30°; edgy; admissible, ratio 0.891, stroke 12.1 %, push 0.0 %, couple share 0.011, p 0.235
+  least-effort viable: none
+2.00 m, 14 s: lean 28.0°, feet 0.214 m, drive 1, handReach 0 m, window 40 ms, speedGain 0.5, split 30°; edgy; admissible, ratio 0.878, stroke 8.8 %, push 0.0 %, couple share 0.010, p 0.169
+  least-effort viable: lean 28.0°, feet 0.264 m, drive 1, handReach 0 m, window 20 ms, speedGain 0.5, split 30°; admissible, ratio 0.953, stroke 9.1 %, push 0.0 %, couple share 0.009, p 0.175
+2.97 m, 6 s: lean 28.0°, feet 0.214 m, drive 1, handReach 0.2 m, window 40 ms, speedGain 0.5, split 30°; edgy; admissible, ratio 0.801, stroke 21.3 %, push 39.8 %, couple share 0.024, p 0.417
+  least-effort viable: none
+2.97 m, 10 s: lean 28.0°, feet 0.214 m, drive 1, handReach 0 m, window 40 ms, speedGain 0.5, split 30°; edgy; admissible, ratio 0.926, stroke 15.2 %, push 0.0 %, couple share 0.014, p 0.295
+  least-effort viable: none
+2.97 m, 14 s: lean 28.0°, feet 0.214 m, drive 1, handReach 0 m, window 40 ms, speedGain 0.5, split 30°; edgy; admissible, ratio 0.910, stroke 11.1 %, push 0.0 %, couple share 0.010, p 0.214
+  least-effort viable: lean 28.0°, feet 0.264 m, drive 1, handReach 0 m, window 20 ms, speedGain 0.5, split 30°; admissible, ratio 0.976, stroke 11.3 %, push 0.0 %, couple share 0.009, p 0.218
+4.42 m, 6 s: none in the region
+4.42 m, 10 s: lean 28.0°, feet 0.214 m, drive 1, handReach 0.1 m, window 20 ms, speedGain 0.5, split 30°; edgy; admissible, ratio 0.645, stroke 15.3 %, push 28.2 %, couple share 0.014, p 0.298
+  least-effort viable: none
+4.42 m, 14 s: lean 28.0°, feet 0.214 m, drive 1, handReach 0 m, window 40 ms, speedGain 0.5, split 30°; edgy; admissible, ratio 0.941, stroke 13.7 %, push 0.0 %, couple share 0.012, p 0.265
+  least-effort viable: none
+6.56 m, 6 s: none in the region
+6.56 m, 10 s: lean 28.0°, feet 0.214 m, drive 1, handReach 0.2 m, window 40 ms, speedGain 0.5, split 30°; edgy; admissible, ratio 0.780, stroke 21.0 %, push 39.4 %, couple share 0.023, p 0.410
+  least-effort viable: none
+6.56 m, 14 s: lean 28.0°, feet 0.214 m, drive 1, handReach 0 m, window 40 ms, speedGain 0.5, split 30°; edgy; admissible, ratio 0.988, stroke 17.5 %, push 0.0 %, couple share 0.017, p 0.340
+  least-effort viable: none
+9.75 m, 6 s: none in the region
+9.75 m, 10 s: none in the region
+9.75 m, 14 s: lean 28.0°, feet 0.214 m, drive 1, handReach 0.1 m, window 20 ms, speedGain 0.5, split 30°; edgy; admissible, ratio 0.671, stroke 17.4 %, push 31.8 %, couple share 0.017, p 0.339
+  least-effort viable: none
+14.49 m, 6 s: none in the region
+14.49 m, 10 s: none in the region
+14.49 m, 14 s: lean 28.0°, feet 0.214 m, drive 1, handReach 0.2 m, window 40 ms, speedGain 0.5, split 30°; edgy; admissible, ratio 0.816, stroke 23.7 %, push 43.2 %, couple share 0.029, p 0.465
+  least-effort viable: none
+21.53 m, 6 s: none in the region
+21.53 m, 10 s: none in the region
+21.53 m, 14 s: none in the region
+32.00 m, 6 s: none in the region
+32.00 m, 10 s: none in the region
+32.00 m, 14 s: none in the region
+-- non-monotone sweeps (decision 2), split 30°: 129 of 1260 --
+-- outside the envelope outright (§3.5: every read present, the one class), split 30°: 3 set-ups --
+  lean 46.0°, feet 0.214 m, split 30° (beyond): mishit, 1440 reads, 0 unread
+  lean 46.0°, feet 0.264 m, split 30° (beyond): mishit, 1440 reads, 0 unread
+  lean 46.0°, feet 0.314 m, split 30° (beyond): mishit, 1440 reads, 0 unread
+-- no admissible read, every read present, classes mixed, split 30°: 0 set-ups --
+-- no admissible read, but some reads missing (incomplete, not outright), split 30°: 0 set-ups --
+== super. Plan decision 12 (design §3.4): the pass roll's text book (lean 34.0°, feet 0.264 m), drive 1, handReach 0.3 m; onsets 0 ms, 5 ms, 10 ms, 20 ms, 40 ms; windows 2 ms, 5 ms, 10 ms, 20 ms; splits 0°, 10°, 20°, 30°; 80 plans × 10 powers on lawns 6, 10, 14 s; 4 shard files in /tmp/claude-9ac5334a-b67e-4d3b-af3b-5ce3d59b809f/map/super ==
+plans missing: 0; engine errors outside the samples: 0 plans, in the samples: 0 samples; torn lines: 0; duplicate lines: 0
+-- per split and lawn: the least ratio found (any class), and the least admissible, below 0.5 ("multiples further") or not --
+split 0°, 6 s: least 1.008: lean 34.0°, feet 0.264 m, drive 1, handReach 0.3 m, window 20 ms, speedGain 0.5, onset 20 ms
+  p 0.350, range 1.426 m, ratio 1.008, turf (follow-turf-yield); 29.2.5: parted at 1.105 ms; 2 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.218 mm); no re-contact after the parting
+  least admissible: none; below 0.5 admissibly: no
+split 0°, 10 s: least 1.010: lean 34.0°, feet 0.264 m, drive 1, handReach 0.3 m, window 20 ms, speedGain 0.5, onset 0 ms
+  p 0.350, range 3.126 m, ratio 1.010, turf (follow-turf-yield); 29.2.5: parted at 1.105 ms; 2 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.218 mm); no re-contact after the parting
+  least admissible: none; below 0.5 admissibly: no
+split 0°, 14 s: least 1.072: lean 34.0°, feet 0.264 m, drive 1, handReach 0.3 m, window 20 ms, speedGain 0.5, onset 0 ms
+  p 0.350, range 5.414 m, ratio 1.072, turf (follow-turf-yield); 29.2.5: parted at 1.105 ms; 2 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.218 mm); no re-contact after the parting
+  least admissible: none; below 0.5 admissibly: no
+split 10°, 6 s: least 0.527: lean 34.0°, feet 0.264 m, drive 1, handReach 0.3 m, window 20 ms, speedGain 0.5, split 10°, onset 0 ms
+  p 0.200, range 0.940 m, ratio 0.527, unlawful (29.1.6.1); 29.2.5: parted at 1.315 ms; 4 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.295 mm); 1 re-contacts, not joined: separation 16.977 mm, fault
+  least admissible: none; below 0.5 admissibly: no
+split 10°, 10 s: least 0.653: lean 34.0°, feet 0.264 m, drive 1, handReach 0.3 m, window 20 ms, speedGain 0.5, split 10°, onset 0 ms
+  p 0.200, range 1.627 m, ratio 0.653, unlawful (29.1.6.1); 29.2.5: parted at 1.315 ms; 4 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.295 mm); 1 re-contacts, not joined: separation 16.977 mm, fault
+  least admissible: none; below 0.5 admissibly: no
+split 10°, 14 s: least 0.721: lean 34.0°, feet 0.264 m, drive 1, handReach 0.3 m, window 20 ms, speedGain 0.5, split 10°, onset 0 ms
+  p 0.200, range 2.658 m, ratio 0.721, unlawful (29.1.6.1); 29.2.5: parted at 1.315 ms; 4 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.295 mm); 1 re-contacts, not joined: separation 16.977 mm, fault
+  least admissible: none; below 0.5 admissibly: no
+split 20°, 6 s: least 0.753: lean 34.0°, feet 0.264 m, drive 1, handReach 0.3 m, window 20 ms, speedGain 0.5, split 20°, onset 0 ms
+  p 0.350, range 1.650 m, ratio 0.753, turf (follow-turf-yield); 29.2.5: parted at 1.120 ms; 2 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.309 mm); no re-contact after the parting
+  least admissible: none; below 0.5 admissibly: no
+split 20°, 10 s: least 0.857: lean 34.0°, feet 0.264 m, drive 1, handReach 0.3 m, window 20 ms, speedGain 0.5, split 20°, onset 0 ms
+  p 0.350, range 3.280 m, ratio 0.857, turf (follow-turf-yield); 29.2.5: parted at 1.120 ms; 2 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.309 mm); no re-contact after the parting
+  least admissible: none; below 0.5 admissibly: no
+split 20°, 14 s: least 0.902: lean 34.0°, feet 0.264 m, drive 1, handReach 0.3 m, window 20 ms, speedGain 0.5, split 20°, onset 0 ms
+  p 0.350, range 5.724 m, ratio 0.902, turf (follow-turf-yield); 29.2.5: parted at 1.120 ms; 2 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.309 mm); no re-contact after the parting
+  least admissible: none; below 0.5 admissibly: no
+split 30°, 6 s: least 0.655: lean 34.0°, feet 0.264 m, drive 1, handReach 0.3 m, window 20 ms, speedGain 0.5, split 30°, onset 5 ms
+  p 0.350, range 1.613 m, ratio 0.655, turf (follow-turf-yield); 29.2.5: parted at 1.140 ms; 4 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.582 mm); no re-contact after the parting
+  least admissible: none; below 0.5 admissibly: no
+split 30°, 10 s: least 0.745: lean 34.0°, feet 0.264 m, drive 1, handReach 0.3 m, window 20 ms, speedGain 0.5, split 30°, onset 0 ms
+  p 0.350, range 3.207 m, ratio 0.745, turf (follow-turf-yield); 29.2.5: parted at 1.140 ms; 4 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.582 mm); no re-contact after the parting
+  least admissible: none; below 0.5 admissibly: no
+split 30°, 14 s: least 0.784: lean 34.0°, feet 0.264 m, drive 1, handReach 0.3 m, window 20 ms, speedGain 0.5, split 30°, onset 0 ms
+  p 0.350, range 5.600 m, ratio 0.784, turf (follow-turf-yield); 29.2.5: parted at 1.140 ms; 4 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.582 mm); no re-contact after the parting
+  least admissible: none; below 0.5 admissibly: no
+-- the excluded plans (a sample with a class): each plan's samples by class; in full, with their figures on the 10 s lawn and 29.2.5's reading (the separation before each later mallet contact, and whether it joined within MERGE_SEPARATION), the unlawful samples and any played sample with a re-contact; the other classes as counts --
+plan 0: lean 34.0°, feet 0.264 m, drive 1, handReach 0.3 m, window 2 ms, speedGain 0.5, onset 0 ms; superhuman 8, mishit 2
+  p 0.100, range 0.318 m, ratio 1.269, mishit (impact-off-face); 29.2.5: parted at 1.750 ms; 5 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.343 mm); 1 re-contacts, not joined: separation 6.916 mm, fault
+  p 0.200, range 0.657 m, ratio 1.703, mishit (impact-off-face); 29.2.5: parted at 1.310 ms; 2 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.279 mm); 2 re-contacts, not joined: separation 12.609 mm, fault; separation 2.381 mm, fault
+plan 1: lean 34.0°, feet 0.264 m, drive 1, handReach 0.3 m, window 5 ms, speedGain 0.5, onset 0 ms; superhuman 8, mishit 2
+  p 0.100, range 0.320 m, ratio 1.257, mishit (impact-off-face); 29.2.5: parted at 1.750 ms; 3 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.345 mm); 1 re-contacts, not joined: separation 9.011 mm, fault
+  p 0.200, range 0.670 m, ratio 1.669, mishit (impact-off-face); 29.2.5: parted at 1.310 ms; 2 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.280 mm); 1 re-contacts, not joined: separation 15.696 mm, fault
+plan 2: lean 34.0°, feet 0.264 m, drive 1, handReach 0.3 m, window 10 ms, speedGain 0.5, onset 0 ms; superhuman 7, mishit 2, turf 1
+  p 0.100, range 0.325 m, ratio 1.251, mishit (impact-off-face); 29.2.5: parted at 1.750 ms; 3 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.345 mm); 1 re-contacts, not joined: separation 10.461 mm, fault
+  p 0.200, range 0.672 m, ratio 1.701, mishit (impact-off-face); 29.2.5: parted at 1.310 ms; 3 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.280 mm); 2 re-contacts, not joined: separation 18.819 mm, fault; separation 2.718 mm, fault
+plan 3: lean 34.0°, feet 0.264 m, drive 1, handReach 0.3 m, window 20 ms, speedGain 0.5, onset 0 ms; superhuman 6, mishit 2, turf 2
+  p 0.100, range 0.326 m, ratio 1.245, mishit (impact-off-face); 29.2.5: parted at 1.750 ms; 5 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.345 mm); 1 re-contacts, not joined: separation 9.316 mm, fault
+  p 0.200, range 0.715 m, ratio 1.581, mishit (impact-off-face); 29.2.5: parted at 1.310 ms; 3 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.280 mm); 1 re-contacts, not joined: separation 15.515 mm, fault
+plan 4: lean 34.0°, feet 0.264 m, drive 1, handReach 0.3 m, window 2 ms, speedGain 0.5, onset 5 ms; superhuman 7, mishit 2, turf 1
+  p 0.100, range 0.320 m, ratio 1.258, mishit (impact-off-face); 29.2.5: parted at 1.750 ms; 5 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.343 mm); 1 re-contacts, not joined: separation 5.622 mm, fault
+  p 0.200, range 0.608 m, ratio 1.833, mishit (impact-off-face); 29.2.5: parted at 1.310 ms; 2 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.280 mm); 1 re-contacts, not joined: separation 11.361 mm, fault
+plan 5: lean 34.0°, feet 0.264 m, drive 1, handReach 0.3 m, window 5 ms, speedGain 0.5, onset 5 ms; superhuman 8, mishit 2
+  p 0.100, range 0.321 m, ratio 1.255, mishit (impact-off-face); 29.2.5: parted at 1.750 ms; 3 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.345 mm); 1 re-contacts, not joined: separation 7.827 mm, no fault
+  p 0.200, range 0.691 m, ratio 1.639, mishit (impact-off-face); 29.2.5: parted at 1.310 ms; 2 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.280 mm); 1 re-contacts, not joined: separation 13.985 mm, no fault
+plan 6: lean 34.0°, feet 0.264 m, drive 1, handReach 0.3 m, window 10 ms, speedGain 0.5, onset 5 ms; superhuman 7, mishit 2, turf 1
+  p 0.100, range 0.324 m, ratio 1.251, mishit (impact-off-face); 29.2.5: parted at 1.750 ms; 4 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.345 mm); 1 re-contacts, not joined: separation 9.262 mm, fault
+  p 0.200, range 0.675 m, ratio 1.690, mishit (impact-off-face); 29.2.5: parted at 1.310 ms; 3 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.280 mm); 2 re-contacts, not joined: separation 16.900 mm, fault; separation 2.482 mm, fault
+plan 7: lean 34.0°, feet 0.264 m, drive 1, handReach 0.3 m, window 20 ms, speedGain 0.5, onset 5 ms; superhuman 6, mishit 2, turf 2
+  p 0.100, range 0.327 m, ratio 1.245, mishit (impact-off-face); 29.2.5: parted at 1.750 ms; 5 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.345 mm); 1 re-contacts, not joined: separation 8.482 mm, fault
+  p 0.200, range 0.693 m, ratio 1.631, mishit (impact-off-face); 29.2.5: parted at 1.310 ms; 4 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.280 mm); 1 re-contacts, not joined: separation 14.377 mm, fault
+plan 8: lean 34.0°, feet 0.264 m, drive 1, handReach 0.3 m, window 2 ms, speedGain 0.5, onset 10 ms; superhuman 7, mishit 2, turf 1
+  p 0.100, range 0.318 m, ratio 1.265, mishit (impact-off-face); 29.2.5: parted at 1.750 ms; 5 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.343 mm); 1 re-contacts, not joined: separation 6.432 mm, no fault
+  p 0.200, range 0.549 m, ratio 2.027, mishit (impact-off-face); 29.2.5: parted at 1.310 ms; 2 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.280 mm); 1 re-contacts, not joined: separation 10.191 mm, fault
+plan 9: lean 34.0°, feet 0.264 m, drive 1, handReach 0.3 m, window 5 ms, speedGain 0.5, onset 10 ms; superhuman 8, mishit 2
+  p 0.100, range 0.320 m, ratio 1.257, mishit (impact-off-face); 29.2.5: parted at 1.750 ms; 4 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.345 mm); 1 re-contacts, not joined: separation 6.845 mm, no fault
+  p 0.200, range 0.641 m, ratio 1.755, mishit (impact-off-face); 29.2.5: parted at 1.310 ms; 2 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.280 mm); 1 re-contacts, not joined: separation 12.759 mm, no fault
+plan 10: lean 34.0°, feet 0.264 m, drive 1, handReach 0.3 m, window 10 ms, speedGain 0.5, onset 10 ms; superhuman 7, mishit 2, turf 1
+  p 0.100, range 0.323 m, ratio 1.247, mishit (impact-off-face); 29.2.5: parted at 1.750 ms; 4 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.345 mm); 1 re-contacts, not joined: separation 8.271 mm, no fault
+  p 0.200, range 0.652 m, ratio 1.745, mishit (impact-off-face); 29.2.5: parted at 1.310 ms; 3 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.280 mm); 2 re-contacts, not joined: separation 15.062 mm, fault; separation 2.264 mm, fault
+plan 11: lean 34.0°, feet 0.264 m, drive 1, handReach 0.3 m, window 20 ms, speedGain 0.5, onset 10 ms; superhuman 6, mishit 2, turf 2
+  p 0.100, range 0.326 m, ratio 1.242, mishit (impact-off-face); 29.2.5: parted at 1.750 ms; 5 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.345 mm); 1 re-contacts, not joined: separation 7.533 mm, fault
+  p 0.200, range 0.627 m, ratio 1.799, mishit (impact-off-face); 29.2.5: parted at 1.310 ms; 4 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.280 mm); 1 re-contacts, not joined: separation 13.152 mm, fault
+plan 12: lean 34.0°, feet 0.264 m, drive 1, handReach 0.3 m, window 2 ms, speedGain 0.5, onset 20 ms; superhuman 7, mishit 2, turf 1
+  p 0.100, range 0.317 m, ratio 1.273, mishit (impact-off-face); 29.2.5: parted at 1.750 ms; 5 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.343 mm); 1 re-contacts, not joined: separation 6.441 mm, fault
+  p 0.200, range 0.578 m, ratio 1.953, mishit (impact-off-face); 29.2.5: parted at 1.310 ms; 2 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.280 mm); 2 re-contacts, not joined: separation 9.100 mm, fault; separation 2.990 mm, fault
+plan 13: lean 34.0°, feet 0.264 m, drive 1, handReach 0.3 m, window 5 ms, speedGain 0.5, onset 20 ms; superhuman 8, mishit 2
+  p 0.100, range 0.324 m, ratio 1.238, mishit (impact-off-face); 29.2.5: parted at 1.750 ms; 3 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.345 mm); 1 re-contacts, not joined: separation 5.915 mm, no fault
+  p 0.200, range 0.539 m, ratio 2.065, mishit (impact-off-face); 29.2.5: parted at 1.310 ms; 2 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.280 mm); 1 re-contacts, not joined: separation 11.230 mm, fault
+plan 14: lean 34.0°, feet 0.264 m, drive 1, handReach 0.3 m, window 10 ms, speedGain 0.5, onset 20 ms; superhuman 7, mishit 2, turf 1
+  p 0.100, range 0.326 m, ratio 1.233, mishit (impact-off-face); 29.2.5: parted at 1.750 ms; 4 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.345 mm); 1 re-contacts, not joined: separation 7.698 mm, no fault
+  p 0.200, range 0.662 m, ratio 1.703, mishit (impact-off-face); 29.2.5: parted at 1.310 ms; 3 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.280 mm); 1 re-contacts, not joined: separation 13.360 mm, fault
+plan 15: lean 34.0°, feet 0.264 m, drive 1, handReach 0.3 m, window 20 ms, speedGain 0.5, onset 20 ms; superhuman 6, mishit 2, turf 2
+  p 0.100, range 0.328 m, ratio 1.233, mishit (impact-off-face); 29.2.5: parted at 1.750 ms; 5 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.345 mm); 1 re-contacts, not joined: separation 6.586 mm, fault
+  p 0.200, range 0.640 m, ratio 1.776, mishit (impact-off-face); 29.2.5: parted at 1.310 ms; 4 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.280 mm); 1 re-contacts, not joined: separation 11.474 mm, fault
+plan 16: lean 34.0°, feet 0.264 m, drive 1, handReach 0.3 m, window 2 ms, speedGain 0.5, onset 40 ms; superhuman 7, mishit 2, turf 1
+  p 0.100, range 0.314 m, ratio 1.292, mishit (impact-off-face); 29.2.5: parted at 1.750 ms; 5 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.343 mm); 1 re-contacts, not joined: separation 7.868 mm, fault
+  p 0.200, range 0.600 m, ratio 1.882, mishit (impact-off-face); 29.2.5: parted at 1.310 ms; 2 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.280 mm); 2 re-contacts, not joined: separation 12.612 mm, fault; separation 2.557 mm, fault
+plan 17: lean 34.0°, feet 0.264 m, drive 1, handReach 0.3 m, window 5 ms, speedGain 0.5, onset 40 ms; superhuman 8, mishit 2
+  p 0.100, range 0.318 m, ratio 1.274, mishit (impact-off-face); 29.2.5: parted at 1.750 ms; 3 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.345 mm); 1 re-contacts, not joined: separation 7.354 mm, no fault
+  p 0.200, range 0.596 m, ratio 1.893, mishit (impact-off-face); 29.2.5: parted at 1.310 ms; 2 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.280 mm); 1 re-contacts, not joined: separation 14.797 mm, fault
+plan 18: lean 34.0°, feet 0.264 m, drive 1, handReach 0.3 m, window 10 ms, speedGain 0.5, onset 40 ms; superhuman 7, mishit 2, turf 1
+  p 0.100, range 0.320 m, ratio 1.270, mishit (impact-off-face); 29.2.5: parted at 1.750 ms; 4 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.345 mm); 1 re-contacts, not joined: separation 9.023 mm, no fault
+  p 0.200, range 0.714 m, ratio 1.599, mishit (impact-off-face); 29.2.5: parted at 1.310 ms; 3 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.280 mm); 2 re-contacts, not joined: separation 16.290 mm, fault; separation 2.231 mm, fault
+plan 19: lean 34.0°, feet 0.264 m, drive 1, handReach 0.3 m, window 20 ms, speedGain 0.5, onset 40 ms; superhuman 6, mishit 2, turf 2
+  p 0.100, range 0.325 m, ratio 1.251, mishit (impact-off-face); 29.2.5: parted at 1.750 ms; 5 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.345 mm); 1 re-contacts, not joined: separation 7.428 mm, fault
+  p 0.200, range 0.713 m, ratio 1.587, mishit (impact-off-face); 29.2.5: parted at 1.310 ms; 4 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.280 mm); 1 re-contacts, not joined: separation 13.539 mm, fault
+plan 20: lean 34.0°, feet 0.264 m, drive 1, handReach 0.3 m, window 2 ms, speedGain 0.5, split 10°, onset 0 ms; superhuman 8, mishit 2
+  p 0.100, range 0.317 m, ratio 1.250, mishit (impact-off-face); 29.2.5: parted at 1.760 ms; 4 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.354 mm); 1 re-contacts, not joined: separation 6.581 mm, fault
+  p 0.200, range 1.016 m, ratio 1.098, mishit (impact-off-face); 29.2.5: parted at 1.315 ms; 2 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.294 mm); 1 re-contacts, not joined: separation 13.209 mm, no fault
+plan 21: lean 34.0°, feet 0.264 m, drive 1, handReach 0.3 m, window 5 ms, speedGain 0.5, split 10°, onset 0 ms; superhuman 8, mishit 2
+  p 0.100, range 0.321 m, ratio 1.233, mishit (impact-off-face); 29.2.5: parted at 1.760 ms; 3 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.356 mm); 1 re-contacts, not joined: separation 8.813 mm, fault
+  p 0.200, range 1.004 m, ratio 1.114, mishit (impact-off-face); 29.2.5: parted at 1.315 ms; 2 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.295 mm); 2 re-contacts, not joined: separation 16.543 mm, fault; separation 2.374 mm, fault
+plan 22: lean 34.0°, feet 0.264 m, drive 1, handReach 0.3 m, window 10 ms, speedGain 0.5, split 10°, onset 0 ms; superhuman 7, mishit 2, turf 1
+  p 0.100, range 0.325 m, ratio 1.223, mishit (impact-off-face); 29.2.5: parted at 1.760 ms; 3 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.356 mm); 1 re-contacts, not joined: separation 10.472 mm, fault
+  p 0.200, range 1.152 m, ratio 0.949, mishit (impact-off-face); 29.2.5: parted at 1.315 ms; 3 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.295 mm); 2 re-contacts, not joined: separation 18.285 mm, fault; separation 2.697 mm, no fault
+plan 23: lean 34.0°, feet 0.264 m, drive 1, handReach 0.3 m, window 20 ms, speedGain 0.5, split 10°, onset 0 ms; superhuman 6, mishit 1, turf 2, unlawful 1
+  p 0.100, range 0.326 m, ratio 1.220, mishit (impact-off-face); 29.2.5: parted at 1.760 ms; 5 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.356 mm); 1 re-contacts, not joined: separation 9.381 mm, fault
+  p 0.200, range 1.627 m, ratio 0.653, unlawful (29.1.6.1); 29.2.5: parted at 1.315 ms; 4 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.295 mm); 1 re-contacts, not joined: separation 16.977 mm, fault
+plan 24: lean 34.0°, feet 0.264 m, drive 1, handReach 0.3 m, window 2 ms, speedGain 0.5, split 10°, onset 5 ms; superhuman 7, mishit 2, turf 1
+  p 0.100, range 0.318 m, ratio 1.239, mishit (impact-off-face); 29.2.5: parted at 1.760 ms; 5 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.354 mm); 1 re-contacts, not joined: separation 5.921 mm, fault
+  p 0.200, range 0.895 m, ratio 1.241, mishit (impact-off-face); 29.2.5: parted at 1.315 ms; 2 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.295 mm); 1 re-contacts, not joined: separation 11.921 mm, no fault
+plan 25: lean 34.0°, feet 0.264 m, drive 1, handReach 0.3 m, window 5 ms, speedGain 0.5, split 10°, onset 5 ms; superhuman 7, mishit 2, turf 1
+  p 0.100, range 0.321 m, ratio 1.231, mishit (impact-off-face); 29.2.5: parted at 1.760 ms; 3 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.356 mm); 1 re-contacts, not joined: separation 7.849 mm, fault
+  p 0.200, range 0.908 m, ratio 1.226, mishit (impact-off-face); 29.2.5: parted at 1.315 ms; 2 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.295 mm); 2 re-contacts, not joined: separation 14.890 mm, fault; separation 2.222 mm, fault
+plan 26: lean 34.0°, feet 0.264 m, drive 1, handReach 0.3 m, window 10 ms, speedGain 0.5, split 10°, onset 5 ms; superhuman 7, mishit 2, turf 1
+  p 0.100, range 0.323 m, ratio 1.226, mishit (impact-off-face); 29.2.5: parted at 1.760 ms; 3 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.356 mm); 1 re-contacts, not joined: separation 9.246 mm, fault
+  p 0.200, range 0.848 m, ratio 1.313, mishit (impact-off-face); 29.2.5: parted at 1.315 ms; 3 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.295 mm); 2 re-contacts, not joined: separation 16.647 mm, fault; separation 2.301 mm, fault
+plan 27: lean 34.0°, feet 0.264 m, drive 1, handReach 0.3 m, window 20 ms, speedGain 0.5, split 10°, onset 5 ms; superhuman 6, mishit 2, turf 2
+  p 0.100, range 0.325 m, ratio 1.223, mishit (impact-off-face); 29.2.5: parted at 1.760 ms; 5 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.356 mm); 1 re-contacts, not joined: separation 8.550 mm, fault
+  p 0.200, range 1.101 m, ratio 1.028, mishit (impact-off-face); 29.2.5: parted at 1.315 ms; 4 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.295 mm); 1 re-contacts, not joined: separation 15.645 mm, no fault
+plan 28: lean 34.0°, feet 0.264 m, drive 1, handReach 0.3 m, window 2 ms, speedGain 0.5, split 10°, onset 10 ms; superhuman 7, mishit 2, turf 1
+  p 0.100, range 0.317 m, ratio 1.245, mishit (impact-off-face); 29.2.5: parted at 1.760 ms; 5 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.354 mm); 1 re-contacts, not joined: separation 6.757 mm, fault
+  p 0.200, range 0.868 m, ratio 1.277, mishit (impact-off-face); 29.2.5: parted at 1.315 ms; 2 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.295 mm); 1 re-contacts, not joined: separation 10.359 mm, no fault
+plan 29: lean 34.0°, feet 0.264 m, drive 1, handReach 0.3 m, window 5 ms, speedGain 0.5, split 10°, onset 10 ms; superhuman 7, mishit 2, turf 1
+  p 0.100, range 0.324 m, ratio 1.209, mishit (impact-off-face); 29.2.5: parted at 1.760 ms; 4 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.356 mm); 1 re-contacts, not joined: separation 6.496 mm, fault
+  p 0.200, range 0.807 m, ratio 1.371, mishit (impact-off-face); 29.2.5: parted at 1.315 ms; 2 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.295 mm); 2 re-contacts, not joined: separation 13.096 mm, fault; separation 2.016 mm, fault
+plan 30: lean 34.0°, feet 0.264 m, drive 1, handReach 0.3 m, window 10 ms, speedGain 0.5, split 10°, onset 10 ms; superhuman 7, mishit 2, turf 1
+  p 0.100, range 0.323 m, ratio 1.222, mishit (impact-off-face); 29.2.5: parted at 1.760 ms; 4 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.356 mm); 1 re-contacts, not joined: separation 8.280 mm, fault
+  p 0.200, range 0.721 m, ratio 1.546, mishit (impact-off-face); 29.2.5: parted at 1.315 ms; 3 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.295 mm); 2 re-contacts, not joined: separation 14.611 mm, fault; separation 2.039 mm, fault
+plan 31: lean 34.0°, feet 0.264 m, drive 1, handReach 0.3 m, window 20 ms, speedGain 0.5, split 10°, onset 10 ms; superhuman 6, mishit 2, turf 2
+  p 0.100, range 0.326 m, ratio 1.215, mishit (impact-off-face); 29.2.5: parted at 1.760 ms; 5 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.356 mm); 1 re-contacts, not joined: separation 7.601 mm, fault
+  p 0.200, range 1.013 m, ratio 1.078, mishit (impact-off-face); 29.2.5: parted at 1.315 ms; 4 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.295 mm); 1 re-contacts, not joined: separation 14.367 mm, fault
+plan 32: lean 34.0°, feet 0.264 m, drive 1, handReach 0.3 m, window 2 ms, speedGain 0.5, split 10°, onset 20 ms; superhuman 7, mishit 2, turf 1
+  p 0.100, range 0.316 m, ratio 1.251, mishit (impact-off-face); 29.2.5: parted at 1.760 ms; 5 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.354 mm); 1 re-contacts, not joined: separation 6.653 mm, fault
+  p 0.200, range 0.878 m, ratio 1.262, mishit (impact-off-face); 29.2.5: parted at 1.315 ms; 2 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.295 mm); 1 re-contacts, not joined: separation 9.450 mm, no fault
+plan 33: lean 34.0°, feet 0.264 m, drive 1, handReach 0.3 m, window 5 ms, speedGain 0.5, split 10°, onset 20 ms; superhuman 7, mishit 2, turf 1
+  p 0.100, range 0.323 m, ratio 1.216, mishit (impact-off-face); 29.2.5: parted at 1.760 ms; 3 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.356 mm); 1 re-contacts, not joined: separation 6.108 mm, fault
+  p 0.200, range 0.895 m, ratio 1.242, mishit (impact-off-face); 29.2.5: parted at 1.315 ms; 2 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.295 mm); 1 re-contacts, not joined: separation 10.976 mm, no fault
+plan 34: lean 34.0°, feet 0.264 m, drive 1, handReach 0.3 m, window 10 ms, speedGain 0.5, split 10°, onset 20 ms; superhuman 7, mishit 2, turf 1
+  p 0.100, range 0.321 m, ratio 1.231, mishit (impact-off-face); 29.2.5: parted at 1.760 ms; 4 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.356 mm); 1 re-contacts, not joined: separation 7.690 mm, fault
+  p 0.200, range 0.712 m, ratio 1.555, mishit (impact-off-face); 29.2.5: parted at 1.315 ms; 3 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.295 mm); 1 re-contacts, not joined: separation 13.340 mm, fault
+plan 35: lean 34.0°, feet 0.264 m, drive 1, handReach 0.3 m, window 20 ms, speedGain 0.5, split 10°, onset 20 ms; superhuman 6, mishit 2, turf 2
+  p 0.100, range 0.328 m, ratio 1.206, mishit (impact-off-face); 29.2.5: parted at 1.760 ms; 5 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.356 mm); 1 re-contacts, not joined: separation 6.645 mm, fault
+  p 0.200, range 0.900 m, ratio 1.215, mishit (impact-off-face); 29.2.5: parted at 1.315 ms; 4 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.295 mm); 1 re-contacts, not joined: separation 12.498 mm, fault
+plan 36: lean 34.0°, feet 0.264 m, drive 1, handReach 0.3 m, window 2 ms, speedGain 0.5, split 10°, onset 40 ms; superhuman 7, mishit 2, turf 1
+  p 0.100, range 0.313 m, ratio 1.270, mishit (impact-off-face); 29.2.5: parted at 1.760 ms; 5 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.354 mm); 1 re-contacts, not joined: separation 8.079 mm, fault
+  p 0.200, range 0.942 m, ratio 1.183, mishit (impact-off-face); 29.2.5: parted at 1.315 ms; 2 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.295 mm); 1 re-contacts, not joined: separation 13.019 mm, no fault
+plan 37: lean 34.0°, feet 0.264 m, drive 1, handReach 0.3 m, window 5 ms, speedGain 0.5, split 10°, onset 40 ms; superhuman 7, mishit 2, turf 1
+  p 0.100, range 0.317 m, ratio 1.251, mishit (impact-off-face); 29.2.5: parted at 1.760 ms; 3 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.356 mm); 1 re-contacts, not joined: separation 7.548 mm, fault
+  p 0.200, range 0.942 m, ratio 1.185, mishit (impact-off-face); 29.2.5: parted at 1.315 ms; 2 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.295 mm); 1 re-contacts, not joined: separation 14.480 mm, no fault
+plan 38: lean 34.0°, feet 0.264 m, drive 1, handReach 0.3 m, window 10 ms, speedGain 0.5, split 10°, onset 40 ms; superhuman 7, mishit 2, turf 1
+  p 0.100, range 0.320 m, ratio 1.242, mishit (impact-off-face); 29.2.5: parted at 1.760 ms; 4 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.356 mm); 1 re-contacts, not joined: separation 9.013 mm, fault
+  p 0.200, range 0.974 m, ratio 1.152, mishit (impact-off-face); 29.2.5: parted at 1.315 ms; 3 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.295 mm); 2 re-contacts, not joined: separation 15.953 mm, fault; separation 2.265 mm, fault
+plan 39: lean 34.0°, feet 0.264 m, drive 1, handReach 0.3 m, window 20 ms, speedGain 0.5, split 10°, onset 40 ms; superhuman 6, mishit 2, turf 2
+  p 0.100, range 0.325 m, ratio 1.224, mishit (impact-off-face); 29.2.5: parted at 1.760 ms; 5 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.356 mm); 1 re-contacts, not joined: separation 7.497 mm, fault
+  p 0.200, range 0.959 m, ratio 1.148, mishit (impact-off-face); 29.2.5: parted at 1.315 ms; 4 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.295 mm); 1 re-contacts, not joined: separation 14.319 mm, fault
+plan 40: lean 34.0°, feet 0.264 m, drive 1, handReach 0.3 m, window 2 ms, speedGain 0.5, split 20°, onset 0 ms; superhuman 8, mishit 2
+  p 0.100, range 0.318 m, ratio 1.166, mishit (impact-off-face); 29.2.5: parted at 1.800 ms; 5 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.388 mm); 1 re-contacts, not joined: separation 8.172 mm, fault
+  p 0.200, range 0.703 m, ratio 1.452, mishit (impact-off-face); 29.2.5: parted at 1.335 ms; 2 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.344 mm); 1 re-contacts, not joined: separation 12.737 mm, fault
+plan 41: lean 34.0°, feet 0.264 m, drive 1, handReach 0.3 m, window 5 ms, speedGain 0.5, split 20°, onset 0 ms; superhuman 8, mishit 2
+  p 0.100, range 0.316 m, ratio 1.157, mishit (impact-off-face); 29.2.5: parted at 1.800 ms; 4 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.391 mm); 1 re-contacts, not joined: separation 7.421 mm, fault
+  p 0.200, range 0.733 m, ratio 1.384, mishit (impact-off-face); 29.2.5: parted at 1.335 ms; 2 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.346 mm); 1 re-contacts, not joined: separation 15.724 mm, fault
+plan 42: lean 34.0°, feet 0.264 m, drive 1, handReach 0.3 m, window 10 ms, speedGain 0.5, split 20°, onset 0 ms; superhuman 7, mishit 2, turf 1
+  p 0.100, range 0.325 m, ratio 1.135, mishit (impact-off-face); 29.2.5: parted at 1.800 ms; 3 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.391 mm); 1 re-contacts, not joined: separation 10.690 mm, fault
+  p 0.200, range 0.947 m, ratio 1.090, mishit (impact-off-face); 29.2.5: parted at 1.335 ms; 2 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.346 mm); 2 re-contacts, not joined: separation 18.676 mm, fault; separation 2.737 mm, fault
+plan 43: lean 34.0°, feet 0.264 m, drive 1, handReach 0.3 m, window 20 ms, speedGain 0.5, split 20°, onset 0 ms; superhuman 6, mishit 2, turf 2
+  p 0.100, range 0.329 m, ratio 1.124, mishit (impact-off-face); 29.2.5: parted at 1.800 ms; 4 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.391 mm); 1 re-contacts, not joined: separation 9.698 mm, fault
+  p 0.200, range 1.055 m, ratio 0.980, mishit (impact-off-face); 29.2.5: parted at 1.335 ms; 3 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.346 mm); 1 re-contacts, not joined: separation 16.635 mm, no fault
+plan 44: lean 34.0°, feet 0.264 m, drive 1, handReach 0.3 m, window 2 ms, speedGain 0.5, split 20°, onset 5 ms; superhuman 7, mishit 2, turf 1
+  p 0.100, range 0.316 m, ratio 1.164, mishit (impact-off-face); 29.2.5: parted at 1.800 ms; 5 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.389 mm); 1 re-contacts, not joined: separation 7.006 mm, fault
+  p 0.200, range 0.906 m, ratio 1.127, mishit (impact-off-face); 29.2.5: parted at 1.335 ms; 2 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.345 mm); 1 re-contacts, not joined: separation 11.614 mm, no fault
+plan 45: lean 34.0°, feet 0.264 m, drive 1, handReach 0.3 m, window 5 ms, speedGain 0.5, split 20°, onset 5 ms; superhuman 8, mishit 2
+  p 0.100, range 0.320 m, ratio 1.143, mishit (impact-off-face); 29.2.5: parted at 1.800 ms; 4 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.391 mm); 1 re-contacts, not joined: separation 6.954 mm, fault
+  p 0.200, range 0.730 m, ratio 1.408, mishit (impact-off-face); 29.2.5: parted at 1.335 ms; 2 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.346 mm); 1 re-contacts, not joined: separation 14.433 mm, fault
+plan 46: lean 34.0°, feet 0.264 m, drive 1, handReach 0.3 m, window 10 ms, speedGain 0.5, split 20°, onset 5 ms; superhuman 7, mishit 2, turf 1
+  p 0.100, range 0.324 m, ratio 1.136, mishit (impact-off-face); 29.2.5: parted at 1.800 ms; 3 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.391 mm); 1 re-contacts, not joined: separation 9.629 mm, fault
+  p 0.200, range 0.848 m, ratio 1.208, mishit (impact-off-face); 29.2.5: parted at 1.335 ms; 3 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.346 mm); 2 re-contacts, not joined: separation 17.011 mm, fault; separation 2.525 mm, fault
+plan 47: lean 34.0°, feet 0.264 m, drive 1, handReach 0.3 m, window 20 ms, speedGain 0.5, split 20°, onset 5 ms; superhuman 6, mishit 2, turf 2
+  p 0.100, range 0.328 m, ratio 1.129, mishit (impact-off-face); 29.2.5: parted at 1.800 ms; 4 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.391 mm); 1 re-contacts, not joined: separation 8.934 mm, fault
+  p 0.200, range 1.090 m, ratio 0.954, mishit (impact-off-face); 29.2.5: parted at 1.335 ms; 4 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.346 mm); 1 re-contacts, not joined: separation 15.400 mm, no fault
+plan 48: lean 34.0°, feet 0.264 m, drive 1, handReach 0.3 m, window 2 ms, speedGain 0.5, split 20°, onset 10 ms; superhuman 7, mishit 2, turf 1
+  p 0.100, range 0.315 m, ratio 1.171, mishit (impact-off-face); 29.2.5: parted at 1.800 ms; 5 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.389 mm); 1 re-contacts, not joined: separation 7.390 mm, fault
+  p 0.200, range 0.898 m, ratio 1.137, mishit (impact-off-face); 29.2.5: parted at 1.335 ms; 2 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.345 mm); 1 re-contacts, not joined: separation 10.453 mm, no fault
+plan 49: lean 34.0°, feet 0.264 m, drive 1, handReach 0.3 m, window 5 ms, speedGain 0.5, split 20°, onset 10 ms; superhuman 8, mishit 2
+  p 0.100, range 0.322 m, ratio 1.135, mishit (impact-off-face); 29.2.5: parted at 1.800 ms; 3 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.391 mm); 1 re-contacts, not joined: separation 6.805 mm, fault
+  p 0.200, range 0.700 m, ratio 1.455, mishit (impact-off-face); 29.2.5: parted at 1.335 ms; 2 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.346 mm); 1 re-contacts, not joined: separation 12.468 mm, fault
+plan 50: lean 34.0°, feet 0.264 m, drive 1, handReach 0.3 m, window 10 ms, speedGain 0.5, split 20°, onset 10 ms; superhuman 7, mishit 2, turf 1
+  p 0.100, range 0.322 m, ratio 1.139, mishit (impact-off-face); 29.2.5: parted at 1.800 ms; 3 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.391 mm); 1 re-contacts, not joined: separation 8.722 mm, fault
+  p 0.200, range 0.702 m, ratio 1.466, mishit (impact-off-face); 29.2.5: parted at 1.335 ms; 3 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.346 mm); 2 re-contacts, not joined: separation 15.055 mm, fault; separation 2.226 mm, fault
+plan 51: lean 34.0°, feet 0.264 m, drive 1, handReach 0.3 m, window 20 ms, speedGain 0.5, split 20°, onset 10 ms; superhuman 6, mishit 2, turf 2
+  p 0.100, range 0.326 m, ratio 1.124, mishit (impact-off-face); 29.2.5: parted at 1.800 ms; 4 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.391 mm); 1 re-contacts, not joined: separation 8.009 mm, fault
+  p 0.200, range 0.656 m, ratio 1.550, mishit (impact-off-face); 29.2.5: parted at 1.335 ms; 4 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.346 mm); 1 re-contacts, not joined: separation 14.040 mm, fault
+plan 52: lean 34.0°, feet 0.264 m, drive 1, handReach 0.3 m, window 2 ms, speedGain 0.5, split 20°, onset 20 ms; superhuman 7, mishit 2, turf 1
+  p 0.100, range 0.314 m, ratio 1.176, mishit (impact-off-face); 29.2.5: parted at 1.800 ms; 5 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.389 mm); 1 re-contacts, not joined: separation 6.597 mm, fault
+  p 0.200, range 0.899 m, ratio 1.135, mishit (impact-off-face); 29.2.5: parted at 1.335 ms; 2 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.345 mm); 1 re-contacts, not joined: separation 10.207 mm, no fault
+plan 53: lean 34.0°, feet 0.264 m, drive 1, handReach 0.3 m, window 5 ms, speedGain 0.5, split 20°, onset 20 ms; superhuman 8, mishit 2
+  p 0.100, range 0.321 m, ratio 1.140, mishit (impact-off-face); 29.2.5: parted at 1.800 ms; 3 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.391 mm); 1 re-contacts, not joined: separation 6.582 mm, fault
+  p 0.200, range 0.786 m, ratio 1.291, mishit (impact-off-face); 29.2.5: parted at 1.335 ms; 2 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.346 mm); 1 re-contacts, not joined: separation 11.226 mm, fault
+plan 54: lean 34.0°, feet 0.264 m, drive 1, handReach 0.3 m, window 10 ms, speedGain 0.5, split 20°, onset 20 ms; superhuman 7, mishit 2, turf 1
+  p 0.100, range 0.320 m, ratio 1.146, mishit (impact-off-face); 29.2.5: parted at 1.800 ms; 3 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.391 mm); 1 re-contacts, not joined: separation 7.757 mm, fault
+  p 0.200, range 0.719 m, ratio 1.414, mishit (impact-off-face); 29.2.5: parted at 1.335 ms; 3 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.346 mm); 2 re-contacts, not joined: separation 14.125 mm, fault; separation 2.065 mm, fault
+plan 55: lean 34.0°, feet 0.264 m, drive 1, handReach 0.3 m, window 20 ms, speedGain 0.5, split 20°, onset 20 ms; superhuman 6, mishit 2, turf 2
+  p 0.100, range 0.330 m, ratio 1.110, mishit (impact-off-face); 29.2.5: parted at 1.800 ms; 4 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.391 mm); 1 re-contacts, not joined: separation 7.104 mm, fault
+  p 0.200, range 0.797 m, ratio 1.283, mishit (impact-off-face); 29.2.5: parted at 1.335 ms; 4 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.346 mm); 1 re-contacts, not joined: separation 12.488 mm, fault
+plan 56: lean 34.0°, feet 0.264 m, drive 1, handReach 0.3 m, window 2 ms, speedGain 0.5, split 20°, onset 40 ms; superhuman 7, mishit 2, turf 1
+  p 0.100, range 0.312 m, ratio 1.187, mishit (impact-off-face); 29.2.5: parted at 1.800 ms; 5 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.389 mm); 1 re-contacts, not joined: separation 8.031 mm, fault
+  p 0.200, range 0.985 m, ratio 1.044, mishit (impact-off-face); 29.2.5: parted at 1.335 ms; 2 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.345 mm); 1 re-contacts, not joined: separation 13.764 mm, no fault
+plan 57: lean 34.0°, feet 0.264 m, drive 1, handReach 0.3 m, window 5 ms, speedGain 0.5, split 20°, onset 40 ms; superhuman 8, mishit 2
+  p 0.100, range 0.317 m, ratio 1.166, mishit (impact-off-face); 29.2.5: parted at 1.800 ms; 3 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.391 mm); 1 re-contacts, not joined: separation 8.025 mm, fault
+  p 0.200, range 0.882 m, ratio 1.159, mishit (impact-off-face); 29.2.5: parted at 1.335 ms; 2 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.346 mm); 1 re-contacts, not joined: separation 14.769 mm, fault
+plan 58: lean 34.0°, feet 0.264 m, drive 1, handReach 0.3 m, window 10 ms, speedGain 0.5, split 20°, onset 40 ms; superhuman 7, mishit 2, turf 1
+  p 0.100, range 0.321 m, ratio 1.150, mishit (impact-off-face); 29.2.5: parted at 1.800 ms; 3 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.391 mm); 1 re-contacts, not joined: separation 9.074 mm, fault
+  p 0.200, range 0.830 m, ratio 1.240, mishit (impact-off-face); 29.2.5: parted at 1.335 ms; 3 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.346 mm); 2 re-contacts, not joined: separation 16.784 mm, fault; separation 2.334 mm, fault
+plan 59: lean 34.0°, feet 0.264 m, drive 1, handReach 0.3 m, window 20 ms, speedGain 0.5, split 20°, onset 40 ms; superhuman 6, mishit 2, turf 2
+  p 0.100, range 0.326 m, ratio 1.136, mishit (impact-off-face); 29.2.5: parted at 1.800 ms; 4 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.391 mm); 1 re-contacts, not joined: separation 8.001 mm, fault
+  p 0.200, range 0.904 m, ratio 1.138, mishit (impact-off-face); 29.2.5: parted at 1.335 ms; 4 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.346 mm); 1 re-contacts, not joined: separation 14.454 mm, fault
+plan 60: lean 34.0°, feet 0.264 m, drive 1, handReach 0.3 m, window 2 ms, speedGain 0.5, split 30°, onset 0 ms; superhuman 8, mishit 2
+  p 0.100, range 0.317 m, ratio 1.032, mishit (impact-off-face); 29.2.5: parted at 1.870 ms; 5 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.465 mm); 1 re-contacts, not joined: separation 9.050 mm, fault
+  p 0.200, range 0.637 m, ratio 1.367, mishit (impact-off-face); 29.2.5: parted at 1.370 ms; 3 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.502 mm); 1 re-contacts, not joined: separation 13.584 mm, fault
+  p 2.000, range 36.571 m, ratio 1.883, superhuman (grip-limit); 29.2.5: parted at 0.830 ms; 0 later contacts joined within MERGE_SEPARATION 2.000 mm; 1 re-contacts, not joined: separation 2.028 mm, fault
+plan 61: lean 34.0°, feet 0.264 m, drive 1, handReach 0.3 m, window 5 ms, speedGain 0.5, split 30°, onset 0 ms; superhuman 8, mishit 2
+  p 0.100, range 0.318 m, ratio 1.021, mishit (impact-off-face); 29.2.5: parted at 1.870 ms; 5 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.476 mm); 1 re-contacts, not joined: separation 9.538 mm, fault
+  p 0.200, range 0.695 m, ratio 1.254, mishit (impact-off-face); 29.2.5: parted at 1.370 ms; 3 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.517 mm); 1 re-contacts, not joined: separation 16.002 mm, fault
+  p 2.000, range 36.040 m, ratio 1.911, superhuman (grip-limit); 29.2.5: parted at 0.830 ms; 0 later contacts joined within MERGE_SEPARATION 2.000 mm; 1 re-contacts, not joined: separation 2.027 mm, fault
+plan 62: lean 34.0°, feet 0.264 m, drive 1, handReach 0.3 m, window 10 ms, speedGain 0.5, split 30°, onset 0 ms; superhuman 8, mishit 2
+  p 0.100, range 0.318 m, ratio 1.018, mishit (impact-off-face); 29.2.5: parted at 1.870 ms; 4 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.479 mm); 1 re-contacts, not joined: separation 10.038 mm, fault
+  p 0.200, range 0.804 m, ratio 1.093, mishit (impact-off-face); 29.2.5: parted at 1.370 ms; 3 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.521 mm); 2 re-contacts, not joined: separation 18.895 mm, fault; separation 2.386 mm, fault
+  p 2.000, range 35.656 m, ratio 1.932, superhuman (grip-limit); 29.2.5: parted at 0.830 ms; 0 later contacts joined within MERGE_SEPARATION 2.000 mm; 1 re-contacts, not joined: separation 2.027 mm, fault
+plan 63: lean 34.0°, feet 0.264 m, drive 1, handReach 0.3 m, window 20 ms, speedGain 0.5, split 30°, onset 0 ms; superhuman 6, mishit 2, turf 2
+  p 0.100, range 0.329 m, ratio 0.993, mishit (impact-off-face); 29.2.5: parted at 1.870 ms; 4 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.480 mm); 1 re-contacts, not joined: separation 10.232 mm, fault
+  p 0.200, range 0.789 m, ratio 1.116, mishit (impact-off-face); 29.2.5: parted at 1.370 ms; 4 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.522 mm); 1 re-contacts, not joined: separation 17.567 mm, fault
+  p 2.000, range 35.209 m, ratio 1.956, superhuman (grip-limit); 29.2.5: parted at 0.830 ms; 0 later contacts joined within MERGE_SEPARATION 2.000 mm; 1 re-contacts, not joined: separation 2.027 mm, fault
+plan 64: lean 34.0°, feet 0.264 m, drive 1, handReach 0.3 m, window 2 ms, speedGain 0.5, split 30°, onset 5 ms; superhuman 7, mishit 2, turf 1
+  p 0.100, range 0.315 m, ratio 1.031, mishit (impact-off-face); 29.2.5: parted at 1.870 ms; 5 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.467 mm); 1 re-contacts, not joined: separation 7.882 mm, fault
+  p 0.200, range 0.601 m, ratio 1.442, mishit (impact-off-face); 29.2.5: parted at 1.370 ms; 3 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.505 mm); 1 re-contacts, not joined: separation 11.898 mm, fault
+  p 2.000, range 36.496 m, ratio 1.887, superhuman (grip-limit); 29.2.5: parted at 0.830 ms; 0 later contacts joined within MERGE_SEPARATION 2.000 mm; 1 re-contacts, not joined: separation 2.029 mm, fault
+plan 65: lean 34.0°, feet 0.264 m, drive 1, handReach 0.3 m, window 5 ms, speedGain 0.5, split 30°, onset 5 ms; superhuman 8, mishit 2
+  p 0.100, range 0.318 m, ratio 1.017, mishit (impact-off-face); 29.2.5: parted at 1.870 ms; 5 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.477 mm); 1 re-contacts, not joined: separation 8.282 mm, fault
+  p 0.200, range 0.637 m, ratio 1.362, mishit (impact-off-face); 29.2.5: parted at 1.370 ms; 3 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.518 mm); 1 re-contacts, not joined: separation 13.667 mm, fault
+  p 2.000, range 36.074 m, ratio 1.909, superhuman (grip-limit); 29.2.5: parted at 0.830 ms; 0 later contacts joined within MERGE_SEPARATION 2.000 mm; 1 re-contacts, not joined: separation 2.027 mm, fault
+plan 66: lean 34.0°, feet 0.264 m, drive 1, handReach 0.3 m, window 10 ms, speedGain 0.5, split 30°, onset 5 ms; superhuman 7, mishit 2, turf 1
+  p 0.100, range 0.318 m, ratio 1.016, mishit (impact-off-face); 29.2.5: parted at 1.870 ms; 4 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.479 mm); 1 re-contacts, not joined: separation 8.630 mm, fault
+  p 0.200, range 0.681 m, ratio 1.297, mishit (impact-off-face); 29.2.5: parted at 1.370 ms; 3 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.521 mm); 2 re-contacts, not joined: separation 17.321 mm, fault; separation 2.354 mm, fault
+  p 2.000, range 35.705 m, ratio 1.929, superhuman (grip-limit); 29.2.5: parted at 0.830 ms; 0 later contacts joined within MERGE_SEPARATION 2.000 mm; 1 re-contacts, not joined: separation 2.027 mm, fault
+plan 67: lean 34.0°, feet 0.264 m, drive 1, handReach 0.3 m, window 20 ms, speedGain 0.5, split 30°, onset 5 ms; superhuman 6, mishit 2, turf 2
+  p 0.100, range 0.322 m, ratio 1.007, mishit (impact-off-face); 29.2.5: parted at 1.870 ms; 5 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.480 mm); 1 re-contacts, not joined: separation 9.428 mm, fault
+  p 0.200, range 0.801 m, ratio 1.099, mishit (impact-off-face); 29.2.5: parted at 1.370 ms; 4 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.522 mm); 1 re-contacts, not joined: separation 16.278 mm, fault
+  p 2.000, range 34.871 m, ratio 1.975, superhuman (grip-limit); 29.2.5: parted at 0.830 ms; 0 later contacts joined within MERGE_SEPARATION 2.000 mm; 1 re-contacts, not joined: separation 2.027 mm, fault
+plan 68: lean 34.0°, feet 0.264 m, drive 1, handReach 0.3 m, window 2 ms, speedGain 0.5, split 30°, onset 10 ms; superhuman 7, mishit 2, turf 1
+  p 0.100, range 0.312 m, ratio 1.036, mishit (impact-off-face); 29.2.5: parted at 1.870 ms; 4 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.467 mm); 1 re-contacts, not joined: separation 4.610 mm, fault
+  p 0.200, range 0.783 m, ratio 1.118, mishit (impact-off-face); 29.2.5: parted at 1.370 ms; 3 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.505 mm); 1 re-contacts, not joined: separation 11.121 mm, fault
+  p 2.000, range 36.530 m, ratio 1.886, superhuman (grip-limit); 29.2.5: parted at 0.830 ms; 0 later contacts joined within MERGE_SEPARATION 2.000 mm; 1 re-contacts, not joined: separation 2.029 mm, fault
+plan 69: lean 34.0°, feet 0.264 m, drive 1, handReach 0.3 m, window 5 ms, speedGain 0.5, split 30°, onset 10 ms; superhuman 8, mishit 2
+  p 0.100, range 0.319 m, ratio 1.012, mishit (impact-off-face); 29.2.5: parted at 1.870 ms; 6 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.477 mm); 1 re-contacts, not joined: separation 7.579 mm, fault
+  p 0.200, range 0.673 m, ratio 1.308, mishit (impact-off-face); 29.2.5: parted at 1.370 ms; 3 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.518 mm); 1 re-contacts, not joined: separation 12.861 mm, fault
+  p 2.000, range 36.095 m, ratio 1.908, superhuman (grip-limit); 29.2.5: parted at 0.830 ms; 0 later contacts joined within MERGE_SEPARATION 2.000 mm; 1 re-contacts, not joined: separation 2.027 mm, fault
+plan 70: lean 34.0°, feet 0.264 m, drive 1, handReach 0.3 m, window 10 ms, speedGain 0.5, split 30°, onset 10 ms; superhuman 7, mishit 2, turf 1
+  p 0.100, range 0.320 m, ratio 1.006, mishit (impact-off-face); 29.2.5: parted at 1.870 ms; 4 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.479 mm); 1 re-contacts, not joined: separation 8.167 mm, fault
+  p 0.200, range 0.688 m, ratio 1.284, mishit (impact-off-face); 29.2.5: parted at 1.370 ms; 3 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.521 mm); 2 re-contacts, not joined: separation 15.603 mm, fault; separation 2.270 mm, fault
+  p 2.000, range 35.694 m, ratio 1.929, superhuman (grip-limit); 29.2.5: parted at 0.830 ms; 0 later contacts joined within MERGE_SEPARATION 2.000 mm; 1 re-contacts, not joined: separation 2.027 mm, fault
+plan 71: lean 34.0°, feet 0.264 m, drive 1, handReach 0.3 m, window 20 ms, speedGain 0.5, split 30°, onset 10 ms; superhuman 6, mishit 2, turf 2
+  p 0.100, range 0.323 m, ratio 1.002, mishit (impact-off-face); 29.2.5: parted at 1.870 ms; 5 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.480 mm); 1 re-contacts, not joined: separation 8.480 mm, fault
+  p 0.200, range 0.741 m, ratio 1.183, mishit (impact-off-face); 29.2.5: parted at 1.370 ms; 4 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.522 mm); 1 re-contacts, not joined: separation 14.885 mm, fault
+  p 2.000, range 34.785 m, ratio 1.980, superhuman (grip-limit); 29.2.5: parted at 0.830 ms; 0 later contacts joined within MERGE_SEPARATION 2.000 mm; 1 re-contacts, not joined: separation 2.027 mm, fault
+plan 72: lean 34.0°, feet 0.264 m, drive 1, handReach 0.3 m, window 2 ms, speedGain 0.5, split 30°, onset 20 ms; superhuman 7, mishit 2, turf 1
+  p 0.100, range 0.312 m, ratio 1.042, mishit (impact-off-face); 29.2.5: parted at 1.870 ms; 4 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.467 mm); 1 re-contacts, not joined: separation 4.997 mm, fault
+  p 0.200, range 0.590 m, ratio 1.480, mishit (impact-off-face); 29.2.5: parted at 1.370 ms; 4 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.505 mm); 1 re-contacts, not joined: separation 9.468 mm, fault
+  p 2.000, range 36.525 m, ratio 1.886, superhuman (grip-limit); 29.2.5: parted at 0.830 ms; 0 later contacts joined within MERGE_SEPARATION 2.000 mm; 1 re-contacts, not joined: separation 2.029 mm, fault
+plan 73: lean 34.0°, feet 0.264 m, drive 1, handReach 0.3 m, window 5 ms, speedGain 0.5, split 30°, onset 20 ms; superhuman 8, mishit 2
+  p 0.100, range 0.316 m, ratio 1.019, mishit (impact-off-face); 29.2.5: parted at 1.870 ms; 5 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.477 mm); 1 re-contacts, not joined: separation 4.979 mm, fault
+  p 0.200, range 0.576 m, ratio 1.503, mishit (impact-off-face); 29.2.5: parted at 1.370 ms; 3 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.518 mm); 1 re-contacts, not joined: separation 11.365 mm, fault
+  p 2.000, range 36.100 m, ratio 1.908, superhuman (grip-limit); 29.2.5: parted at 0.830 ms; 0 later contacts joined within MERGE_SEPARATION 2.000 mm; 1 re-contacts, not joined: separation 2.027 mm, fault
+plan 74: lean 34.0°, feet 0.264 m, drive 1, handReach 0.3 m, window 10 ms, speedGain 0.5, split 30°, onset 20 ms; superhuman 7, mishit 2, turf 1
+  p 0.100, range 0.321 m, ratio 1.007, mishit (impact-off-face); 29.2.5: parted at 1.870 ms; 4 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.479 mm); 1 re-contacts, not joined: separation 8.048 mm, fault
+  p 0.200, range 0.678 m, ratio 1.303, mishit (impact-off-face); 29.2.5: parted at 1.370 ms; 3 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.521 mm); 1 re-contacts, not joined: separation 13.121 mm, fault
+  p 2.000, range 35.687 m, ratio 1.930, superhuman (grip-limit); 29.2.5: parted at 0.830 ms; 0 later contacts joined within MERGE_SEPARATION 2.000 mm; 1 re-contacts, not joined: separation 2.027 mm, fault
+plan 75: lean 34.0°, feet 0.264 m, drive 1, handReach 0.3 m, window 20 ms, speedGain 0.5, split 30°, onset 20 ms; superhuman 6, mishit 2, turf 2
+  p 0.100, range 0.326 m, ratio 0.991, mishit (impact-off-face); 29.2.5: parted at 1.870 ms; 5 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.480 mm); 1 re-contacts, not joined: separation 7.564 mm, fault
+  p 0.200, range 0.662 m, ratio 1.321, mishit (impact-off-face); 29.2.5: parted at 1.370 ms; 4 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.522 mm); 1 re-contacts, not joined: separation 12.991 mm, fault
+  p 2.000, range 34.785 m, ratio 1.980, superhuman (grip-limit); 29.2.5: parted at 0.830 ms; 0 later contacts joined within MERGE_SEPARATION 2.000 mm; 1 re-contacts, not joined: separation 2.027 mm, fault
+plan 76: lean 34.0°, feet 0.264 m, drive 1, handReach 0.3 m, window 2 ms, speedGain 0.5, split 30°, onset 40 ms; superhuman 7, mishit 2, turf 1
+  p 0.100, range 0.311 m, ratio 1.050, mishit (impact-off-face); 29.2.5: parted at 1.870 ms; 4 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.467 mm); 1 re-contacts, not joined: separation 6.464 mm, fault
+  p 0.200, range 0.601 m, ratio 1.457, mishit (impact-off-face); 29.2.5: parted at 1.370 ms; 4 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.505 mm); 1 re-contacts, not joined: separation 13.028 mm, fault
+  p 2.000, range 36.527 m, ratio 1.886, superhuman (grip-limit); 29.2.5: parted at 0.830 ms; 0 later contacts joined within MERGE_SEPARATION 2.000 mm; 1 re-contacts, not joined: separation 2.029 mm, fault
+plan 77: lean 34.0°, feet 0.264 m, drive 1, handReach 0.3 m, window 5 ms, speedGain 0.5, split 30°, onset 40 ms; superhuman 8, mishit 2
+  p 0.100, range 0.315 m, ratio 1.029, mishit (impact-off-face); 29.2.5: parted at 1.870 ms; 5 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.477 mm); 1 re-contacts, not joined: separation 6.654 mm, fault
+  p 0.200, range 0.622 m, ratio 1.412, mishit (impact-off-face); 29.2.5: parted at 1.370 ms; 3 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.518 mm); 1 re-contacts, not joined: separation 14.921 mm, fault
+  p 2.000, range 36.103 m, ratio 1.908, superhuman (grip-limit); 29.2.5: parted at 0.830 ms; 0 later contacts joined within MERGE_SEPARATION 2.000 mm; 1 re-contacts, not joined: separation 2.027 mm, fault
+plan 78: lean 34.0°, feet 0.264 m, drive 1, handReach 0.3 m, window 10 ms, speedGain 0.5, split 30°, onset 40 ms; superhuman 7, mishit 2, turf 1
+  p 0.100, range 0.320 m, ratio 1.020, mishit (impact-off-face); 29.2.5: parted at 1.870 ms; 4 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.479 mm); 1 re-contacts, not joined: separation 9.385 mm, fault
+  p 0.200, range 0.696 m, ratio 1.277, mishit (impact-off-face); 29.2.5: parted at 1.370 ms; 3 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.521 mm); 1 re-contacts, not joined: separation 16.132 mm, fault
+  p 2.000, range 35.694 m, ratio 1.930, superhuman (grip-limit); 29.2.5: parted at 0.830 ms; 0 later contacts joined within MERGE_SEPARATION 2.000 mm; 1 re-contacts, not joined: separation 2.027 mm, fault
+plan 79: lean 34.0°, feet 0.264 m, drive 1, handReach 0.3 m, window 20 ms, speedGain 0.5, split 30°, onset 40 ms; superhuman 6, mishit 2, turf 2
+  p 0.100, range 0.324 m, ratio 1.007, mishit (impact-off-face); 29.2.5: parted at 1.870 ms; 5 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.480 mm); 1 re-contacts, not joined: separation 8.538 mm, fault
+  p 0.200, range 0.686 m, ratio 1.279, mishit (impact-off-face); 29.2.5: parted at 1.370 ms; 4 later contacts joined within MERGE_SEPARATION 2.000 mm (largest separation 0.522 mm); 1 re-contacts, not joined: separation 14.975 mm, fault
+  p 2.000, range 34.785 m, ratio 1.980, superhuman (grip-limit); 29.2.5: parted at 0.830 ms; 0 later contacts joined within MERGE_SEPARATION 2.000 mm; 1 re-contacts, not joined: separation 2.027 mm, fault
+excluded plans: 80 of 80 swept
+== the controller's note: the full roll's reads by speedGain (A4), from full-roll.reads.json with jq ==
+admissible reads (class null), their least ratio, and reads with the ratio at most 1.2 by class:
+speedGain 0.1: admissible 2704, least ratio 1.409; ratio <= 1.2: admissible 0, turf 3, mishit 11
+speedGain 0.25: admissible 2091, least ratio 1.384; ratio <= 1.2: admissible 0, turf 65, mishit 189
+speedGain 0.5: admissible 1579, least ratio 1.014; ratio <= 1.2: admissible 10, turf 439, mishit 333
+speedGain 1: admissible 1138, least ratio 1.008; ratio <= 1.2: admissible 14, turf 650, mishit 280
+(counts over every read, graded and beyond, all ranges and lawns)

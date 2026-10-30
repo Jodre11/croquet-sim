@@ -7,7 +7,8 @@
  * are written per plan, range and lawn (envelopeRows). The shards' JSON lines are written by shardLine, read back on a
  * resume by doneIndices and merged by mergeLines. Stage 1's tallies (plan Task 6) are lawnSpreads, regionCounts,
  * classCounts, nonMonotoneCount, excludedSetUps, and cellReads with offGridBand (an off-grid plan's band, for the
- * anchor). Not part of the engine.
+ * anchor and the text books), with regionSpan and regionPhrase for the output. The super pass roll's (plan Task 8,
+ * decision 12) are superPlans, strikeReading (29.2.5's reading of a strike) and superLeast. Not part of the engine.
  */
 import { MAX_WINDOW, MIN_WINDOW } from "../src/engine/swing/buildContact";
 import { textBook, type MapClass, type MapPlan, type MapSample, type RollType } from "./pushMapRun";
@@ -20,7 +21,7 @@ export interface Axis {
     readonly beyond: readonly number[];
 }
 
-/** A type's grid (decision 7): the plan's axes (rad, m, 1, m, s, rad), the ranges (m), lawns (s) and powers. */
+/** A type's grid (decision 7, A4): the plan's axes (rad, m, 1, m, s, rad, 1), the ranges (m), lawns (s) and powers. */
 export interface MapGrid {
     readonly lean: Axis;
     readonly feet: Axis;
@@ -28,6 +29,7 @@ export interface MapGrid {
     readonly handReach: Axis;
     readonly window: Axis;
     readonly split: Axis;
+    readonly speedGain: Axis;
     readonly ranges: readonly number[];
     readonly lawns: readonly number[];
     readonly powers: readonly number[];
@@ -58,6 +60,13 @@ const WINDOWS = [0.01, 0.02, 0.04];
 const PASS_SPLITS: Axis = { graded: [0, 10 * DEG, 20 * DEG, 30 * DEG], beyond: [40 * DEG] };
 
 /**
+ * The full roll's pendulum push gains (1; A4): its preset's 0.1, the variant's 0.5 that put it in its region in
+ * P2b.2b.2c.2d's checks (I.1), and 0.25 and 1 either side. Numerical, not physical: a coarse, roughly doubling grid. 0.1
+ * is the least, so the plans swept before A4 keep their indices.
+ */
+const FULL_SPEED_GAINS = [0.1, 0.25, 0.5, 1];
+
+/**
  * The range grid (m; decision 7, design §3.2): from 2 m to a court's length, 32 m, even in log range. Numerical, not
  * physical: RANGE_COUNT, eight ranges, above the design's least six.
  */
@@ -86,7 +95,8 @@ function around(centre: number, step: number): Axis {
 
 /**
  * `type`'s grid (decision 7): the lean and the feet around the type's text book (textBook), the follow-through's
- * grids, the split on the pass roll (0 elsewhere), the ranges, the lawns and the power samples.
+ * grids, the split on the pass roll (0 elsewhere), the speedGain on the full roll (the preset's elsewhere; A4), the
+ * ranges, the lawns and the power samples.
  */
 export function gridFor(type: RollType): MapGrid {
     const book = textBook(type);
@@ -101,14 +111,19 @@ export function gridFor(type: RollType): MapGrid {
         handReach: { graded: HAND_REACHES, beyond: [] },
         window: { graded: WINDOWS, beyond: [] },
         split: type === "pass-roll" ? PASS_SPLITS : { graded: [0], beyond: [] },
+        speedGain:
+            type === "full-roll" ? { graded: FULL_SPEED_GAINS, beyond: [] } : { graded: [book.speedGain], beyond: [] },
         ranges,
         lawns: LAWNS,
         powers: POWERS,
     };
 }
 
-/** The plan's swept dimensions, in plansOf's order (outermost first). */
-const DIMENSIONS = ["split", "lean", "feet", "drive", "handReach", "window"] as const;
+/**
+ * The plan's swept dimensions, in plansOf's order (outermost first). speedGain is outermost (A4), so a grid at one
+ * speedGain orders its plans as before it was swept.
+ */
+const DIMENSIONS = ["speedGain", "split", "lean", "feet", "drive", "handReach", "window"] as const;
 
 /** One of the plan's swept dimensions. */
 export type Dimension = (typeof DIMENSIONS)[number];
@@ -130,7 +145,8 @@ export function plansOf(_type: RollType, grid: MapGrid): readonly MapPlan[] {
     const chosen: number[] = [];
     const visit = (depth: number, outside: number): void => {
         if (depth === DIMENSIONS.length) {
-            const [split, lean, feet, drive, handReach, window] = chosen as [
+            const [speedGain, split, lean, feet, drive, handReach, window] = chosen as [
+                number,
                 number,
                 number,
                 number,
@@ -138,7 +154,7 @@ export function plansOf(_type: RollType, grid: MapGrid): readonly MapPlan[] {
                 number,
                 number,
             ];
-            plans.push({ lean, feet, drive, handReach, window, onset: 0, split });
+            plans.push({ lean, feet, drive, handReach, window, onset: 0, split, speedGain });
             return;
         }
         for (const v of values[depth] as readonly number[]) {
@@ -315,6 +331,7 @@ export function planKey(plan: MapPlan, range: number, lawn: number): string {
         plan.window,
         plan.onset,
         plan.split,
+        plan.speedGain,
         range,
         lawn,
     ]);
@@ -322,7 +339,7 @@ export function planKey(plan: MapPlan, range: number, lawn: number): string {
 
 /** A key's plan, range and lawn (planKey's inverse). */
 function unkey(key: string): { readonly plan: MapPlan; readonly range: number; readonly lawn: number } {
-    const [lean, feet, drive, handReach, window, onset, split, range, lawn] = JSON.parse(key) as number[];
+    const [lean, feet, drive, handReach, window, onset, split, speedGain, range, lawn] = JSON.parse(key) as number[];
     const plan: MapPlan = {
         lean: lean as number,
         feet: feet as number,
@@ -331,6 +348,7 @@ function unkey(key: string): { readonly plan: MapPlan; readonly range: number; r
         window: window as number,
         onset: onset as number,
         split: split as number,
+        speedGain: speedGain as number,
     };
     return { plan, range: range as number, lawn: lawn as number };
 }
@@ -342,15 +360,18 @@ export type Reads = ReadonlyMap<string, SweepRead>;
 const LEAN_LIMIT = Math.PI / 4;
 
 /**
- * The swept dimensions a neighbour steps along (A2 item 2): the lean, the feet, drive, handReach and window, and on
- * the pass roll the split.
+ * The swept dimensions a neighbour steps along (A2 item 2, A4): the lean, the feet, drive, handReach and window, on
+ * the pass roll the split and on the full roll the speedGain.
  */
 function neighbourDimensions(type: RollType): readonly Dimension[] {
-    return type === "pass-roll" ? DIMENSIONS : DIMENSIONS.filter((d) => d !== "split");
+    return DIMENSIONS.filter(
+        (d) => (d !== "split" || type === "pass-roll") && (d !== "speedGain" || type === "full-roll"),
+    );
 }
 
-/** The inputs' own bounds (A2 item 2), below and above; a neighbour past one does not exist. */
+/** The inputs' own bounds (A2 item 2, A4), below and above; a neighbour past one does not exist. */
 const BOUNDS: Readonly<Partial<Record<Dimension, readonly [number, number]>>> = {
+    speedGain: [0, Infinity],
     drive: [-1, 1],
     handReach: [0, Infinity],
     window: [MIN_WINDOW, MAX_WINDOW],
@@ -395,8 +416,8 @@ export interface Grading {
  * the envelope's, not the region's). The edges' rules:
  * - past an input's own bound (drive ±1, handReach 0, MIN_WINDOW, MAX_WINDOW) the neighbour does not exist: skipped;
  * - the split is mirror-symmetric, so split 0°'s −10° neighbour is the +10° plan, read;
- * - past the grid's own last value where that is not an input's bound (handReach 0.3 m, the window's 5 ms and 80 ms)
- *   the neighbour is skipped, and the plan flagged in `edges` with that dimension.
+ * - past the grid's own last value where that is not an input's bound (handReach 0.3 m, the window's 5 ms and 80 ms,
+ *   the full roll's speedGain 0.1 and 1) the neighbour is skipped, and the plan flagged in `edges` with that dimension.
  * A plan with no read is not banded; nor is one with a neighbour that exists but has no read, counted in `unbanded`.
  */
 export function grade(type: RollType, grid: MapGrid, reads: Reads): Grading {
@@ -484,24 +505,38 @@ export function inRegion(type: RollType, ratio: number): boolean {
     return ratio >= least && (openAbove ? ratio < most : ratio <= most);
 }
 
+/** `type`'s region as text (design §2): "1.4–2.5", "1.0–1.2", or "below 1" for the pass roll's open band. */
+export function regionSpan(type: RollType): string {
+    const { least, most, openAbove } = REGIONS[type];
+    return openAbove && least === 0 ? `below ${most}` : `${least.toFixed(1)}–${most.toFixed(1)}`;
+}
+
+/** The phrase "the ratio …" takes for `type`'s region: "in 1.4–2.5", "in 1.0–1.2", "below 1". */
+export function regionPhrase(type: RollType): string {
+    const { least, openAbove } = REGIONS[type];
+    return openAbove && least === 0 ? regionSpan(type) : `in ${regionSpan(type)}`;
+}
+
 /** Decision 5's effort: the mean of the stroke's and the push's percentages. */
 function effortOf(read: SweepRead): number {
     return (read.strokeEffort + read.pushEffort) / 2;
 }
 
-/** The follow-through grid's spans (m, s), the tie-break's scales (plan Task 4). */
+/** The follow-through grid's spans (m, s, 1), the tie-break's scales (plan Task 4, A4). */
 const HAND_REACH_SPAN = Math.max(...HAND_REACHES);
 const WINDOW_SPAN = Math.max(...WINDOWS);
+const SPEED_GAIN_SPAN = Math.max(...FULL_SPEED_GAINS);
 
 /**
- * The tie-break's distance from the half roll's anchor in follow-through (design §5; plan Task 4): Euclidean over
- * (drive, handReach / HAND_REACH_SPAN, window / WINDOW_SPAN).
+ * The tie-break's distance from the half roll's anchor in follow-through (design §5; plan Task 4, A4): Euclidean over
+ * (drive, handReach / HAND_REACH_SPAN, window / WINDOW_SPAN, speedGain / SPEED_GAIN_SPAN).
  */
 function anchorDistance(plan: MapPlan, anchor: MapPlan): number {
     return Math.hypot(
         plan.drive - anchor.drive,
         (plan.handReach - anchor.handReach) / HAND_REACH_SPAN,
         (plan.window - anchor.window) / WINDOW_SPAN,
+        (plan.speedGain - anchor.speedGain) / SPEED_GAIN_SPAN,
     );
 }
 
@@ -568,7 +603,7 @@ function field(text: string): string {
     return /[",\r\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
 }
 
-/** The record's columns (decision 10), in SI: rad, m, 1, m, s, s, rad; m, s; %, %, 1, N·s, rad. */
+/** The record's columns (decision 10, A4), in SI: rad, m, 1, m, s, s, rad, 1; m, s; %, %, 1, N·s, rad. */
 const COLUMNS = [
     "type",
     "lean",
@@ -578,6 +613,7 @@ const COLUMNS = [
     "window",
     "onset",
     "split",
+    "speedGain",
     "range",
     "lawn",
     "band",
@@ -621,6 +657,7 @@ export function envelopeRows(type: RollType, grid: MapGrid, reads: Reads, banded
                     String(plan.window),
                     String(plan.onset),
                     String(plan.split),
+                    String(plan.speedGain),
                     String(range),
                     String(lawn),
                     banded.get(key) ?? "",
@@ -1123,4 +1160,137 @@ export function offGridBand(classed: boolean, corners: readonly Corner[] | null)
         }
     }
     return band;
+}
+
+/**
+ * The super pass roll's sweep (plan decision 12; design §3.4): the hands' onset `timing.hands` (s; positive is late)
+ * and the pulse's `window` (s), with `drive` 1 and `handReach` 0.3 m, the pushed-through, longest push of the grid.
+ * Numerical, not physical: the decision's grid, from on time to 40 ms late and from 2 ms to 20 ms sharp.
+ */
+export const SUPER_ONSETS: readonly number[] = [0, 0.005, 0.01, 0.02, 0.04];
+/** The pulse's windows (s), decision 12's: all inside MIN_WINDOW…MAX_WINDOW, sharper than the map's 10 ms least. */
+export const SUPER_WINDOWS: readonly number[] = [0.002, 0.005, 0.01, 0.02];
+/** `drive` (1): pushed through, the input's own bound (decision 12). */
+const SUPER_DRIVE = 1;
+/** `handReach` (m): the map grid's longest push, 0.3 m (decision 12). */
+const SUPER_HAND_REACH = 0.3;
+
+/**
+ * Numerical, not physical: "multiples further" (design §3.4; plan Task 8 Step 2) read as the striker's ball going at
+ * least twice as far as the croqueted ball, a ratio below 0.5.
+ */
+export const MULTIPLES_RATIO = 0.5;
+
+/**
+ * The super pass roll's plans (plan decision 12): `book`'s set-up (the pass roll's text book's lean and feet), drive 1,
+ * handReach 0.3 m, at each of `splits` (rad) × SUPER_ONSETS × SUPER_WINDOWS, in that order (split outermost): the
+ * index is the super shard's key.
+ */
+export function superPlans(book: MapPlan, splits: readonly number[]): readonly MapPlan[] {
+    const plans: MapPlan[] = [];
+    for (const split of splits) {
+        for (const onset of SUPER_ONSETS) {
+            for (const window of SUPER_WINDOWS) {
+                plans.push({
+                    lean: book.lean,
+                    feet: book.feet,
+                    drive: SUPER_DRIVE,
+                    handReach: SUPER_HAND_REACH,
+                    window,
+                    onset,
+                    split,
+                    speedGain: book.speedGain,
+                });
+            }
+        }
+    }
+    return plans;
+}
+
+/**
+ * One mallet contact after the stroke's first, as 29.2.5 reads it (`reference/laws.json`; faults.ts's groupContacts):
+ * the separation before it (m, the earlier contact's clearance, 0 when none or below 0), and its kind: `joined`, within
+ * MERGE_SEPARATION of the contact before it, so one continuing contact with the strike; `before-parting`, apart but
+ * begun before the balls parted, so within the strike; `recontact`, a separate contact after the parting, judged by
+ * its effect (`fault`).
+ */
+export interface LaterContact {
+    readonly separation: number;
+    readonly kind: "joined" | "before-parting" | "recontact";
+    readonly fault: boolean;
+}
+
+/** 29.2.5's reading of a sample's strike: when the balls parted (s; null if never) and the later contacts in order. */
+export interface StrikeReading {
+    readonly parted: number | null;
+    readonly later: readonly LaterContact[];
+}
+
+/** What strikeReading reads of the judge's strike (faults.ts's StrikeTaps), narrowed for synthetic tests. */
+export interface StrikeShape {
+    readonly parted: number | null;
+    readonly taps: readonly { readonly clearanceAfter?: number }[];
+    readonly recontacts: readonly { readonly separation: number; readonly fault: boolean }[];
+}
+
+/**
+ * 29.2.5's reading of the judge's `strike` (plan Task 8 Step 2): each tap after the first, its separation from the tap
+ * before it, joined where below `mergeSeparation` and otherwise begun before the parting (the judge's grouping); then
+ * each re-contact, with its separation and its verdict. Null where the judge has no strike (an unplayed sample). Where
+ * the balls never parted the judge groups nothing (every contact after the first faults), so `later` is empty.
+ */
+export function strikeReading(strike: StrikeShape | null, mergeSeparation: number): StrikeReading | null {
+    if (strike === null) {
+        return null;
+    }
+    const later: LaterContact[] = [];
+    for (let i = 1; i < strike.taps.length; i++) {
+        const separation = Math.max(0, (strike.taps[i - 1] as StrikeShape["taps"][number]).clearanceAfter ?? 0);
+        later.push({ separation, kind: separation < mergeSeparation ? "joined" : "before-parting", fault: false });
+    }
+    for (const r of strike.recontacts) {
+        later.push({ separation: r.separation, kind: "recontact", fault: r.fault });
+    }
+    return { parted: strike.parted, later };
+}
+
+/** A super sweep's sample with its plan, for superLeast. */
+export interface PlannedSample {
+    readonly plan: MapPlan;
+    readonly sample: SweepSample;
+}
+
+/** superLeast's pick: the plan, its sample and the sample's ratio on the lawn. */
+export interface LeastRatio {
+    readonly plan: MapPlan;
+    readonly sample: MapSample;
+    readonly ratio: number;
+}
+
+/**
+ * The least ratio on `lawn` (s) among `samples` (plan Task 8 Step 2), of any class, and the least among the admissible
+ * ones; each null where no sample has a finite ratio there. An engine error's sample has none. Ties keep the first.
+ */
+export function superLeast(
+    samples: readonly PlannedSample[],
+    lawn: number,
+): { readonly least: LeastRatio | null; readonly admissible: LeastRatio | null } {
+    let least: LeastRatio | null = null;
+    let admissible: LeastRatio | null = null;
+    for (const { plan, sample } of samples) {
+        if (isEngineError(sample)) {
+            continue;
+        }
+        const ratio = sample.byLawn[lawn]?.ratio ?? NaN;
+        if (!Number.isFinite(ratio)) {
+            continue;
+        }
+        if (least === null || ratio < least.ratio) {
+            least = { plan, sample, ratio };
+        }
+        if (sample.klass === null && (admissible === null || ratio < admissible.ratio)) {
+            admissible = { plan, sample, ratio };
+        }
+    }
+    return { least, admissible };
 }

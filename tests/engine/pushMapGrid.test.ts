@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
+import { EFFECT_ANGLE, EFFECT_SPEED, MERGE_SEPARATION, groupReContacts } from "../../src/engine/faults";
+import type { ContactInterval } from "../../src/engine/impact/types";
+import { MAX_WINDOW, MIN_WINDOW } from "../../src/engine/swing/buildContact";
 import {
     BEYOND_P_MAX,
+    MULTIPLES_RATIO,
+    SUPER_ONSETS,
+    SUPER_WINDOWS,
     bands,
     cellCorners,
     cellReads,
@@ -23,14 +29,19 @@ import {
     readsJson,
     readsOf,
     regionCounts,
+    regionPhrase,
+    regionSpan,
     shardLine,
     spreadSummary,
+    strikeReading,
+    superLeast,
+    superPlans,
     type Axis,
     type Band,
     type MapGrid,
     type SweepRead,
 } from "../../scripts/pushMapGrid";
-import type { MapClass, MapPlan, MapSample } from "../../scripts/pushMapRun";
+import { textBook, type MapClass, type MapPlan, type MapSample } from "../../scripts/pushMapRun";
 
 const DEG = Math.PI / 180;
 const LAWN = 10;
@@ -78,6 +89,7 @@ function smallGrid(leanBeyond: readonly number[] = []): MapGrid {
         handReach: ONE(0.15),
         window: ONE(0.02),
         split: ONE(0),
+        speedGain: ONE(0.1),
         ranges: [10],
         lawns: [LAWN],
         powers: [0.5, 1],
@@ -85,7 +97,7 @@ function smallGrid(leanBeyond: readonly number[] = []): MapGrid {
 }
 
 function plan(lean: number, drive: number, over: Partial<MapPlan> = {}): MapPlan {
-    return { lean, feet: 0.1, drive, handReach: 0.15, window: 0.02, onset: 0, split: 0, ...over };
+    return { lean, feet: 0.1, drive, handReach: 0.15, window: 0.02, onset: 0, split: 0, speedGain: 0.1, ...over };
 }
 
 describe("the push map's grid, sweep, bands and record (P2b.2b.2c.3b plan Task 4)", () => {
@@ -312,11 +324,11 @@ describe("the push map's grid, sweep, bands and record (P2b.2b.2c.3b plan Task 4
         const rows = envelopeRows("half-roll", grid, reads, bands("half-roll", grid, reads));
         expect(rows).toHaveLength(2);
         expect(rows[0]).toBe(
-            "type,lean,feet,drive,handReach,window,onset,split,range,lawn,band,edge,class,reason,ratio,strokeEffort," +
+            "type,lean,feet,drive,handReach,window,onset,split,speedGain,range,lawn,band,edge,class,reason,ratio,strokeEffort," +
                 "pushEffort,coupleShare,pushImpulse,splitAtRest,power,monotone",
         );
         expect(rows[1]).toBe(
-            `half-roll,${26 * DEG},0.1,0.5,0.15,0.02,0,0,10,10,unplayable,feet;handReach;window,mishit,` +
+            `half-roll,${26 * DEG},0.1,0.5,0.15,0.02,0,0,0.1,10,10,unplayable,feet;handReach;window,mishit,` +
                 `"off point: the lean 0.9 rad, ""high""",,,,0,0,0,1,1`,
         );
     });
@@ -324,16 +336,46 @@ describe("the push map's grid, sweep, bands and record (P2b.2b.2c.3b plan Task 4
     it("counts each type's plans, none with two beyond values", () => {
         // Task 5's thinned grid: 3 leans × 3 feet × 5 drives × 4 hand reaches × 3 windows = 540 graded, plus 360
         // with a beyond lean and 360 with beyond feet; the pass roll's 4 splits give 2160 + 1440 + 1440, plus 540 at
-        // the beyond split.
-        const counts = { "half-roll": 1260, "full-roll": 1260, "pass-roll": 5580 } as const;
+        // the beyond split. A4: the full roll's 4 speedGains give 4 × 1260.
+        const counts = { "half-roll": 1260, "full-roll": 5040, "pass-roll": 5580 } as const;
         for (const type of ["half-roll", "full-roll", "pass-roll"] as const) {
             const grid = gridFor(type);
             const plans = plansOf(type, grid);
             expect(plans).toHaveLength(counts[type]);
-            const dims = ["split", "lean", "feet", "drive", "handReach", "window"] as const;
+            const dims = ["speedGain", "split", "lean", "feet", "drive", "handReach", "window"] as const;
             const outside = (p: MapPlan): number => dims.filter((d) => grid[d].beyond.includes(p[d])).length;
             expect(plans.every((p) => outside(p) <= 1)).toBe(true);
         }
+    });
+
+    it("keeps the full roll's plans at its preset speedGain at their indices before A4, the preset's elsewhere", () => {
+        const full = plansOf("full-roll", gridFor("full-roll"));
+        const book = textBook("full-roll");
+        expect(full.slice(0, 1260).every((p) => p.speedGain === book.speedGain)).toBe(true);
+        expect(new Set(full.map((p) => p.speedGain))).toEqual(new Set([0.1, 0.25, 0.5, 1]));
+        for (const type of ["half-roll", "pass-roll"] as const) {
+            const speedGain = textBook(type).speedGain;
+            expect(plansOf(type, gridFor(type)).every((p) => p.speedGain === speedGain)).toBe(true);
+        }
+    });
+
+    it("bands along speedGain where the grid sweeps it, and flags its last value as an edge (A4)", () => {
+        const grid: MapGrid = { ...smallGrid(), speedGain: { graded: [0.1, 0.25, 0.5], beyond: [] } };
+        const reads = new Map<string, SweepRead>();
+        for (const p of plansOf("full-roll", grid)) {
+            const failing = p.speedGain === 0.5 && p.lean === 26 * DEG && p.drive === 0.5;
+            reads.set(planKey(p, 10, LAWN), read(failing ? "turf" : null));
+        }
+        const at = (speedGain: number, lean = 26 * DEG): string => planKey(plan(lean, 0.5, { speedGain }), 10, LAWN);
+        const { banded, edges } = grade("full-roll", grid, reads);
+        // Only speedGain steps from 0.25 to the turf plan at 0.5; the half roll does not step speedGain.
+        expect(banded.get(at(0.25))).toBe("edgy");
+        expect(banded.get(at(0.1))).toBe("viable");
+        expect(banded.get(at(0.25, 20 * DEG))).toBe("viable");
+        expect(bands("half-roll", grid, reads).get(at(0.25))).toBe("viable");
+        expect(edges.get(at(0.1))).toContain("speedGain");
+        expect(edges.get(at(0.5))).toContain("speedGain");
+        expect(edges.get(at(0.25))).not.toContain("speedGain");
     });
 
     it("resumes a shard from its whole lines only: a torn line's plan is played again", () => {
@@ -578,5 +620,136 @@ describe("the half roll's stage-1 tallies (P2b.2b.2c.3b plan Task 6)", () => {
         // The anchor's own play or read classed: unplayable, whatever its cell, even with none.
         expect(offGridBand(true, corners)).toBe("unplayable");
         expect(offGridBand(true, null)).toBe("unplayable");
+    });
+});
+
+describe("the regions as text (plan Task 8's summary)", () => {
+    it("spells each type's band as design §2 gives it, the pass roll's open above", () => {
+        expect(regionSpan("half-roll")).toBe("1.4–2.5");
+        expect(regionSpan("full-roll")).toBe("1.0–1.2");
+        expect(regionSpan("pass-roll")).toBe("below 1");
+        // The half roll's phrase is the stage-1 probe's text exactly ("in 1.4–2.5"), so stage1 is reproduced.
+        expect(regionPhrase("half-roll")).toBe("in 1.4–2.5");
+        expect(regionPhrase("full-roll")).toBe("in 1.0–1.2");
+        expect(regionPhrase("pass-roll")).toBe("below 1");
+    });
+});
+
+describe("the super pass roll (plan decision 12)", () => {
+    const book = plan(30 * DEG, 0, { feet: 0.2, handReach: 0.05, window: 0.03, split: 20 * DEG });
+    const splits = [0, 10 * DEG, 20 * DEG, 30 * DEG];
+
+    it("crosses each split with every onset and window at the book's set-up, drive 1 and handReach 0.3 m", () => {
+        const plans = superPlans(book, splits);
+        expect(plans).toHaveLength(splits.length * SUPER_ONSETS.length * SUPER_WINDOWS.length);
+        expect(plans).toHaveLength(80);
+        for (const p of plans) {
+            expect([p.lean, p.feet, p.drive, p.handReach]).toEqual([30 * DEG, 0.2, 1, 0.3]);
+        }
+        // The split outermost, then the onset, then the window: the index is the shard's key.
+        expect(plans[0]).toEqual({ ...book, drive: 1, handReach: 0.3, window: 0.002, onset: 0, split: 0 });
+        expect(plans[1]?.window).toBe(0.005);
+        expect(plans[SUPER_WINDOWS.length]?.onset).toBe(0.005);
+        expect(plans[SUPER_WINDOWS.length * SUPER_ONSETS.length]?.split).toBe(10 * DEG);
+        expect(new Set(plans.map((p) => JSON.stringify(p))).size).toBe(plans.length);
+    });
+
+    it("reads 29.2.5 from a strike: taps joined below the merge separation, apart ones before the parting", () => {
+        const merge = 0.002;
+        const reading = strikeReading(
+            {
+                parted: 0.001,
+                taps: [{ clearanceAfter: 0.0005 }, { clearanceAfter: -0.001 }, { clearanceAfter: 0.003 }, {}],
+                recontacts: [
+                    { separation: 0.004, fault: true },
+                    { separation: 0.0025, fault: false },
+                ],
+            },
+            merge,
+        );
+        // Tap 1's gap is 0.5 mm (joined); tap 2's a negative clearance, counted 0 (joined); tap 3's 3 mm, at or past
+        // the merge separation, so it began a group of its own before the parting.
+        expect(reading).toEqual({
+            parted: 0.001,
+            later: [
+                { separation: 0.0005, kind: "joined", fault: false },
+                { separation: 0, kind: "joined", fault: false },
+                { separation: 0.003, kind: "before-parting", fault: false },
+                { separation: 0.004, kind: "recontact", fault: true },
+                { separation: 0.0025, kind: "recontact", fault: false },
+            ],
+        });
+        expect(strikeReading({ parted: 0.001, taps: [{ clearanceAfter: 0.002 }, {}], recontacts: [] }, merge)).toEqual({
+            parted: 0.001,
+            later: [{ separation: 0.002, kind: "before-parting", fault: false }],
+        });
+    });
+
+    it("agrees with the judge's grouping (groupReContacts) on each re-contact's separation", () => {
+        const m = MERGE_SEPARATION;
+        const parted = 0.001;
+        // f1 follows f0 at 0.25·M: joined. f2 follows f1 at 1.5·M but begins before the parting: the strike's, apart.
+        // f3 follows f2 at 0.5·M after the parting: joined to the strike. f4 follows f3 at 2·M after the parting: a
+        // re-contact, with no velocities recorded, so judged from rest (a fault).
+        const faces: ContactInterval[] = [
+            { start: 0, end: 0.0005, peakForce: 1, clearanceAfter: 0.25 * m },
+            { start: 0.0006, end: 0.0008, peakForce: 1, clearanceAfter: 1.5 * m },
+            { start: 0.0009, end: 0.0011, peakForce: 1, clearanceAfter: 0.5 * m },
+            { start: 0.0012, end: 0.0013, peakForce: 1, clearanceAfter: 2 * m },
+            { start: 0.002, end: 0.0021, peakForce: 1 },
+        ];
+        const thresholds = { mergeSeparation: m, effectSpeed: EFFECT_SPEED, effectAngle: EFFECT_ANGLE };
+        const recontacts = groupReContacts(faces, parted, thresholds);
+        expect(recontacts.map((r) => r.separation)).toEqual([2 * m]);
+        // The judge's taps are the contacts before the re-contact: f0–f3.
+        const reading = strikeReading({ parted, taps: faces.slice(0, 4), recontacts }, m);
+        expect(reading?.later.map((c) => c.kind)).toEqual(["joined", "before-parting", "joined", "recontact"]);
+        expect(reading?.later.map((c) => c.separation)).toEqual([0.25 * m, 1.5 * m, 0.5 * m, 2 * m]);
+        expect(reading?.later.filter((c) => c.kind === "recontact").map((c) => [c.separation, c.fault])).toEqual(
+            recontacts.map((r) => [r.separation, r.fault]),
+        );
+    });
+
+    it("pins decision 12's onsets and windows, each window inside MIN_WINDOW…MAX_WINDOW", () => {
+        expect(SUPER_ONSETS).toEqual([0, 0.005, 0.01, 0.02, 0.04]);
+        expect(SUPER_WINDOWS).toEqual([0.002, 0.005, 0.01, 0.02]);
+        for (const w of SUPER_WINDOWS) {
+            expect(w).toBeGreaterThanOrEqual(MIN_WINDOW);
+            expect(w).toBeLessThanOrEqual(MAX_WINDOW);
+        }
+    });
+
+    it("reads no strike as null, and an unparted strike with no later contact grouped", () => {
+        expect(strikeReading(null, 0.002)).toBeNull();
+        expect(strikeReading({ parted: null, taps: [], recontacts: [] }, 0.002)).toEqual({ parted: null, later: [] });
+        expect(strikeReading({ parted: 0.001, taps: [{}], recontacts: [] }, 0.002)).toEqual({
+            parted: 0.001,
+            later: [],
+        });
+    });
+
+    it("finds the least ratio of any class and the least admissible, skipping engine errors and NaN", () => {
+        const a = plan(30 * DEG, 1, { onset: 0 });
+        const b = plan(30 * DEG, 1, { onset: 0.01 });
+        const least = superLeast(
+            [
+                { plan: a, sample: sample(0.5, 3, null, 0.9) },
+                { plan: a, sample: sample(1, 6, "unlawful", 0.4) },
+                { plan: b, sample: sample(0.5, 3, null, 0.45) },
+                { plan: b, sample: sample(0.8, 4, null, NaN) },
+                { plan: b, sample: { power: 1, engineError: "boom" } },
+            ],
+            LAWN,
+        );
+        expect(least.least?.ratio).toBe(0.4);
+        expect(least.least?.plan).toBe(a);
+        expect(least.least?.sample.klass).toBe("unlawful");
+        expect(least.admissible?.ratio).toBe(0.45);
+        expect(least.admissible?.plan).toBe(b);
+        expect((least.admissible?.ratio ?? 1) < MULTIPLES_RATIO).toBe(true);
+        // Another lawn has no read: neither is found.
+        expect(superLeast([{ plan: a, sample: sample(0.5, 3) }], 6)).toEqual({ least: null, admissible: null });
+        // Only classed samples: a least, but no admissible one.
+        expect(superLeast([{ plan: a, sample: sample(0.5, 3, "turf", 0.7) }], LAWN).admissible).toBeNull();
     });
 });

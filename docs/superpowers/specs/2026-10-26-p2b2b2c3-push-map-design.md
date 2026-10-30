@@ -441,3 +441,49 @@ The build's readings (the design's calls, made in plan Tasks 3–6 and recorded 
 - The default's tie-break is the half roll's anchor in follow-through (§5), on every type.
 - The record carries each read's first reason, the split at rest and the edge flags; its header row has no `#`, the
   provenance lines above it do.
+
+### A4. The full roll's pendulum push is swept (user, 2026-10-29)
+
+The full roll's map came back with its region empty: at every range and lawn, no admissible plan has its ratio in
+1.0–1.2. Up to 14.5 m there are 115 to 194 admissible plans per range and lawn, but every one sends the croqueted ball
+well over 1.2 times the striker's distance. Today's full roll default is turf at its canonical range when played, with
+ratio 1.843, and its read is a mishit with ratio 1.954. Decision 7 held each type's `speedGain` and `handGain` at its
+preset, so the map never tried the push that put the full roll in band before. That push is P2b.2b.2c.2d's checks,
+I.1: the full roll with the pass roll's pendulum push (`speedGain` 0.5 over 15 ms, `handGain` 0.1), with ratios
+1.11–1.22 at 2–4 m/s. The full roll's preset has `speedGain` 0.1, and drive's span −1…1 only scales it, so a push
+that strong lay outside the grid. The user's account of the stroke ("the same as the half roll, but you give it some
+follow through and a smooth, maybe slightly accelerating push") is that push.
+
+Ruling ("Sweep speedGain too"):
+1. The full roll's grid gains `speedGain` as an axis: 0.1 (the preset), 0.25, 0.5 (I.1's variant) and 1, graded, none
+   beyond. It is a neighbour dimension on the full roll only. Its bound is 0, so 0.1 and 1 are grid edges, flagged as
+   such. `handGain` stays at the preset's 0.1, which is the variant's too. The `window` axis already sets the hands'
+   window with the pendulum's.
+2. The half and pass rolls keep their preset `speedGain` (0.1 and 0.5) as a single value, so their plans and bands are
+   unchanged. The axis is outermost in the plan order, so the full roll's 1260 plans swept before A4 keep their
+   indices and only the 3780 new ones are played. The shard lines from before A4 gain the preset's `speedGain`, which
+   is what they played. The half roll's re-merge after that reproduces its stage-1 tallies exactly.
+3. The record gains a `speedGain` column, and the default's tie-break gains `speedGain` over its span, 1.
+4. This supersedes decision 7's "the preset's `speedGain`" for the full roll only. The pass roll's map uses the push
+   that is already its preset, so it has not been shown to share the full roll's gap. If its region also comes back
+   empty or thin, the same axis is the remedy, ruled at gate 2.
+
+### A5. What "multiples further" means on the pass roll (user, 2026-10-30)
+
+The super tally (§3.4) read "multiples further" as a ratio below `MULTIPLES_RATIO` 0.5. The user's calibration:
+
+1. **The take-off is not a pass roll.** When the croqueted ball is to go nowhere and the striker's ball a long way, the
+   player plays a take-off; its ratio near 0 comes from a thin contact at a wide split, not from the roll.
+2. **The pass roll is the hard case.** It sends the croqueted ball some distance, such as halfway, and the striker's
+   ball all the way: a ratio near 0.5 is a very difficult shot. "Getting the striker ball to go anywhere near twice as
+   far as the croquet ball would be a very impressive shot."
+3. **The super test, read so.** §3.4 asks whether the late, sharp push lowers the pass roll's ratio admissibly below
+   what the map's plans reach at the same split and lawn. A ratio of 0.5 is the shot's exceptional end, not the bar
+   it must clear; `MULTIPLES_RATIO` stays as the report's marker for that end, and the threshold itself is for gate 2.
+
+The super tally's finding, recorded for gate 2: none of its 80 plans plays admissibly on any lawn at any split. The
+least ratios, of any class, are 1.008–1.072 at 0°, 0.527–0.721 at 10°, 0.753–0.902 at 20° and 0.655–0.784 at 30°.
+The 0.527 play is unlawful (29.1.6.1: a re-contact 17 mm after parting), and the rest are turf, mishits off the face
+with re-contacts at p 0.1–0.2, and superhuman reads at higher powers. Why the follow-through yields the turf (the
+planned path, the hands' guiding, or the yield threshold against "rub, not damage") is not settled by the map; the
+side-on swing viewer, the phase after 3b, is to show it.

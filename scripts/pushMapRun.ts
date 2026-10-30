@@ -7,7 +7,7 @@
  * and read on every lawn from one impact on the 10 s open lawn (decision 3, settled by Task 2 as a shared impact).
  * Not part of the engine.
  */
-import { EFFECT_ANGLE, EFFECT_SPEED, judgeFaults, type FaultReport } from "../src/engine/faults";
+import { EFFECT_ANGLE, EFFECT_SPEED, judgeFaults, type FaultReport, type StrikeTaps } from "../src/engine/faults";
 import { faceKey, headBallContact } from "../src/engine/impact/contacts";
 import type { ImpactProbe, ImpactSnapshot } from "../src/engine/impact/integrate";
 import { rotate } from "../src/engine/impact/rigidBody";
@@ -44,7 +44,7 @@ import { feetReading } from "./setupProbe";
 export const ROLL_TYPES = ["half-roll", "full-roll", "pass-roll"] as const;
 export type RollType = (typeof ROLL_TYPES)[number];
 
-/** One plan (spec §3.1): rad, m, 1, m, s, s, rad. */
+/** One plan (spec §3.1, A4): rad, m, 1, m, s, s, rad, 1. */
 export interface MapPlan {
     readonly lean: number;
     readonly feet: number;
@@ -53,6 +53,8 @@ export interface MapPlan {
     readonly window: number;
     readonly onset: number;
     readonly split: number;
+    /** The pendulum's push gain, profile.drive[type].speedGain (A4): swept on the full roll, else the preset's. */
+    readonly speedGain: number;
 }
 
 /** §3.5's classes (A2 item 2 adds unreachable), in decision 5's order. */
@@ -132,13 +134,15 @@ export function textBook(type: RollType): MapPlan {
         window: push.window,
         onset: DEFAULT_TIMING[type].hands,
         split: type === "pass-roll" ? (20 * Math.PI) / 180 : 0,
+        speedGain: push.speedGain,
     };
 }
 
 /**
  * `type`'s canonical setup with `over` (canonicalSetup), playing `plan` at power `power`, on the open lawn (decisions 1
  * and 6): the croqueted ball `split` to the left of aim at 2R + the croquet gap from the striker, as canonicalSetup
- * places the pass roll's at 20°; the plan's lean, feet, drive, handReach, window and the hands' onset; the backswing
+ * places the pass roll's at 20°; the plan's lean, feet, drive, handReach, window, the hands' onset and the profile's
+ * speedGain for `type` (A4); the backswing
  * p·h_body for p ≤ 1, else h_body and the intensity p − 1 (bodyBackswing). `over` is for tests of another profile:
  * its profile and stance fields only (stance, drive, shape, mallet, body, croquetGap). The map's world is the open
  * lawn and its stroke the plan's, so an `over` giving `world` or `stroke` throws an Error.
@@ -155,6 +159,10 @@ export function mapSetup(type: RollType, plan: MapPlan, power: number, over: Can
     const { x, y } = CANONICAL_STRIKER;
     const placed: ShotSetup = {
         ...base,
+        profile: {
+            ...base.profile,
+            drive: { ...base.profile.drive, [type]: { ...base.profile.drive[type], speedGain: plan.speedGain } },
+        },
         balls: {
             ...base.balls,
             [croqueted]: {
@@ -525,8 +533,22 @@ function splitAtRestOf(a: Vec3, b: Vec3): number {
  * impact or the free motion is the engine's, not the plan's, and propagates (the shard runner reports it).
  */
 export function playSample(type: RollType, plan: MapPlan, power: number, lawns: readonly number[]): MapSample {
+    return playJudged(type, plan, power, lawns).sample;
+}
+
+/**
+ * playSample's sample with the judge's strike beside it (plan Task 8's super pass roll reads 29.2.5 from it): the
+ * parting, the taps and the re-contacts (judgeFaults's `strike`), null where the sample was not played (a power above
+ * 2, a planStroke rejection) or the judge gives none. The sample is playSample's exactly.
+ */
+export function playJudged(
+    type: RollType,
+    plan: MapPlan,
+    power: number,
+    lawns: readonly number[],
+): { readonly sample: MapSample; readonly strike: StrikeTaps | null } {
     if (power > POWER_LIMIT) {
-        return unplayed(power, lawns, "superhuman", `intensity ${power - 1} above 1`);
+        return { sample: unplayed(power, lawns, "superhuman", `intensity ${power - 1} above 1`), strike: null };
     }
     const setup = mapSetup(type, plan, power);
     let stroke: StrokePlan;
@@ -534,13 +556,16 @@ export function playSample(type: RollType, plan: MapPlan, power: number, lawns: 
         stroke = planStroke(setup, IMPACT_WORLD);
     } catch (error) {
         if (error instanceof RangeError) {
-            return unplayed(power, lawns, rejectedClass(error.message), error.message);
+            return { sample: unplayed(power, lawns, rejectedClass(error.message), error.message), strike: null };
         }
         throw error;
     }
     const { drive } = stroke.contact;
     if (drive.kind !== "track") {
-        return unplayed(power, lawns, "unreachable", "the planned contact has no tracked drive");
+        return {
+            sample: unplayed(power, lawns, "unreachable", "the planned contact has no tracked drive"),
+            strike: null,
+        };
     }
     const ids = BALL_IDS.filter((id) => setup.balls[id] !== undefined);
     const striker = ids.indexOf(setup.striker);
@@ -588,7 +613,7 @@ export function playSample(type: RollType, plan: MapPlan, power: number, lawns: 
         velocities,
     };
     const faces = impact.timeline[faceKey(setup.striker)] ?? [];
-    return {
+    const sample: MapSample = {
         power,
         klass,
         reason,
@@ -600,4 +625,5 @@ export function playSample(type: RollType, plan: MapPlan, power: number, lawns: 
         effectVerdicts: { shipped, contactOnly: contactOnlyFault(faults, faces, trace, shipped) },
         followCap: run.follow.flags.includes("follow-cap"),
     };
+    return { sample, strike: faults.strike ?? null };
 }
