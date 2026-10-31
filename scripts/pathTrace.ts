@@ -18,7 +18,7 @@ import { handsAt, headOnPath, prepareTrack } from "../src/engine/impact/track";
 import type { HeadState, MalletHead } from "../src/engine/impact/types";
 import { add, dot, scale, sub, vec3, type Vec3 } from "../src/engine/math/vec3";
 import { planStroke } from "../src/engine/swing/buildContact";
-import { type BallState } from "../src/engine/types";
+import { BALL_IDS, type BallState } from "../src/engine/types";
 import { openWorld } from "./openLawn";
 import { mapSetup, textBook, type MapPlan, type RollType } from "./pushMapRun";
 
@@ -97,6 +97,10 @@ interface Trace {
     readonly planned: readonly Instant[];
     readonly actual: readonly Instant[];
     readonly balls: readonly (readonly Vec3[])[];
+    /** The times (s) of the balls' samples. */
+    readonly ballTimes: readonly number[];
+    /** The striker's ball's index. */
+    readonly striker: number;
     readonly contactAt: number;
     readonly impactEnd: number;
     readonly finish: number;
@@ -139,6 +143,7 @@ function trace(c: TraceCase): Trace {
     const side = Math.sign(dot(rotate(stroke.contact.orientation, vec3(1, 0, 0)), arc.aim)) || 1;
     let actual: Instant[] = [];
     let balls: Vec3[][] = [];
+    let ballTimes: number[] = [];
     let kept = 0 - Infinity;
     const keep = (t: number, state: HeadState): void => {
         if (t - kept >= KEEP) {
@@ -150,12 +155,14 @@ function trace(c: TraceCase): Trace {
         // A new pass: the trace keeps the last pass alone.
         actual = [];
         balls = [];
+        ballTimes = [];
         kept = 0 - Infinity;
         return {
             step(s: ImpactSnapshot) {
                 const before = kept;
                 keep(s.t, s.head);
                 if (kept !== before) {
+                    ballTimes.push(s.t);
                     s.balls.forEach((b: BallState, i: number) => {
                         (balls[i] ??= []).push(b.position);
                     });
@@ -187,6 +194,8 @@ function trace(c: TraceCase): Trace {
         planned: handsPlanned,
         actual,
         balls,
+        ballTimes,
+        striker: BALL_IDS.filter((id) => setup.balls[id] !== undefined).indexOf(setup.striker),
         contactAt: arc.contactAt,
         impactEnd: run.follow.impactEnd,
         finish,
@@ -228,7 +237,8 @@ function svgOf(c: TraceCase, tr: Trace, R: number): string {
     const W = 1000;
     const pad = 50;
     const x0 = -0.6;
-    const x1 = 0.8;
+    const ballReach = tr.balls.flatMap((track) => track.map((p) => side2d(p, tr)[0]));
+    const x1 = Math.max(0.8, Math.ceil((Math.max(...ballReach) + 2 * R) * 10) / 10);
     const z0 = -0.03;
     const z1 = 0.95;
     const k = (W - 2 * pad) / (x1 - x0);
@@ -260,13 +270,34 @@ function svgOf(c: TraceCase, tr: Trace, R: number): string {
             `flags: ${tr.flags.join(", ") || "none"}</text>`,
         `<line x1="${sx(x0)}" y1="${f(sz(0))}" x2="${sx(x1)}" y2="${f(sz(0))}" stroke="#2a7d2a" stroke-width="2"/>`,
     );
-    for (const track of tr.balls) {
-        const p = track[0];
-        if (p !== undefined) {
+    // Each ball: its start, a ghost every 20 ms of the impact, its centre's path, and where it is as the impact ends.
+    const BALL_INKS = ["#6b3fa0", "#d07a00"];
+    tr.balls.forEach((track, b) => {
+        const ink = BALL_INKS[b % BALL_INKS.length] as string;
+        const circle = (p: Vec3, style: string): string => {
             const [x, z] = side2d(p, tr);
-            parts.push(`<circle cx="${f(sx(x))}" cy="${f(sz(z))}" r="${f(R * k)}" fill="none" stroke="#999"/>`);
+            return `<circle cx="${f(sx(x))}" cy="${f(sz(z))}" r="${f(R * k)}" ${style}/>`;
+        };
+        let ghost = tr.ballTimes[0] ?? 0;
+        track.forEach((p, i) => {
+            const t = tr.ballTimes[i] ?? 0;
+            if (i === 0) {
+                parts.push(circle(p, `fill="none" stroke="#999"`));
+            } else if (t - ghost >= 0.02 - 1e-9) {
+                ghost = t;
+                parts.push(circle(p, `fill="none" stroke="${ink}" stroke-opacity="0.35"`));
+            }
+        });
+        const centre = track
+            .map((p) => side2d(p, tr))
+            .map(([x, z]) => `${f(sx(x))},${f(sz(z))}`)
+            .join(" ");
+        parts.push(`<polyline points="${centre}" fill="none" stroke="${ink}" stroke-width="1"/>`);
+        const last = track[track.length - 1];
+        if (last !== undefined && track.length > 1) {
+            parts.push(circle(last, `fill="none" stroke="${ink}" stroke-width="1.5"`));
         }
-    }
+    });
     const window = tr.planned.filter((i) => i.t >= tr.contactAt - 0.1);
     parts.push(
         `<polyline points="${pts(window, (i) => i.hand)}" fill="none" stroke="#1f5fbf" stroke-width="2" ` +
@@ -301,6 +332,23 @@ function svgOf(c: TraceCase, tr: Trace, R: number): string {
             `ticks = shaft</text>`,
         `<text x="${W - pad - 330}" y="${pad + 38}" fill="#c0392b">leading face: planned dashed, actual solid; ` +
             `ticks = face</text>`,
+        ...tr.balls.map((track, b) => {
+            const name = b === tr.striker ? "striker's ball" : "croqueted ball";
+            const a = track[track.length - 2];
+            const z = track[track.length - 1];
+            const dt = (tr.ballTimes[track.length - 1] ?? 0) - (tr.ballTimes[track.length - 2] ?? 0);
+            if (a === undefined || z === undefined || dt <= 0) {
+                return "";
+            }
+            const [ax, az] = side2d(a, tr);
+            const [zx, zz] = side2d(z, tr);
+            const [sx0] = side2d(track[0] as Vec3, tr);
+            return (
+                `<text x="${W - pad - 330}" y="${pad + 56 + 18 * b}" fill="${BALL_INKS[b % BALL_INKS.length]}">` +
+                `${name}: ghosts every 20 ms; at impact end ${f((zx - sx0) * 1000, 0)} mm on, ` +
+                `${f((zx - ax) / dt, 2)} m/s along, ${f((zz - az) / dt, 2)} m/s up</text>`
+            );
+        }),
         `<text x="${pad}" y="${f(top - 20)}" font-weight="bold">the head's lowest point (mm above the turf) against ` +
             `time from first contact (ms)</text>`,
         `<rect x="${pad}" y="${f(ly(0))}" width="${W - 2 * pad}" height="${f(ly(lMin) - ly(0))}" fill="#e8f3e8"/>`,
