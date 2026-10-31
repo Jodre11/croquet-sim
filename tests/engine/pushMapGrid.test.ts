@@ -4,6 +4,7 @@ import type { ContactInterval } from "../../src/engine/impact/types";
 import { MAX_WINDOW, MIN_WINDOW } from "../../src/engine/swing/buildContact";
 import {
     BEYOND_P_MAX,
+    MAP_CLASSES,
     MULTIPLES_RATIO,
     SUPER_ONSETS,
     SUPER_WINDOWS,
@@ -59,6 +60,7 @@ function sample(power: number, range: number, klass: MapClass | null = null, rat
         pushImpulse: power,
         effectVerdicts: { shipped: false, contactOnly: false },
         followCap: false,
+        passes: 1,
     };
 }
 
@@ -499,10 +501,15 @@ describe("the half roll's stage-1 tallies (P2b.2b.2c.3b plan Task 6)", () => {
             superhuman: 0,
             mishit: 0,
             turf: 1,
+            unpractised: 0,
             unlawful: 0,
             admissible: 7,
             unread: 1,
         });
+    });
+
+    it("lists unpractised after turf among the classes (P2b.2b.2c.3b.1 design §4 item 3)", () => {
+        expect(MAP_CLASSES).toEqual(["unreachable", "superhuman", "mishit", "turf", "unpractised", "unlawful"]);
     });
 
     it("counts the plans whose sweep is not monotone on some lawn", () => {

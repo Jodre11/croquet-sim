@@ -5,15 +5,17 @@
  * split; how hard is one number, the power p in [0, 2]: the backswing p·h_body up to the body's limit, then the
  * intensity p − 1 at it. Each sample is classified by the first of §3.5's classes that applies, in decision 5's order,
  * and read on every lawn from one impact on the 10 s open lawn (decision 3, settled by Task 2 as a shared impact).
- * Not part of the engine.
+ * Every sample is played as a practised stroke (P2b.2b.2c.3b.1 design §4, §6; plan
+ * `docs/superpowers/plans/2026-10-31-p2b2b2c3b1-level-head.md`, Task 7): it reads its last pass, records its passes,
+ * and a push still out of the band after practice is `unpractised`. Not part of the engine.
  */
 import { EFFECT_ANGLE, EFFECT_SPEED, judgeFaults, type FaultReport, type StrikeTaps } from "../src/engine/faults";
-import { offPointReason, onPoint, type OnPoint, type OnPointStep } from "../src/engine/impact/band";
+import { offPointReason, type OnPoint } from "../src/engine/impact/band";
 import { faceKey } from "../src/engine/impact/contacts";
-import type { ImpactProbe } from "../src/engine/impact/integrate";
+import type { FollowThrough, ImpactProbe } from "../src/engine/impact/integrate";
+import { practiseStroke } from "../src/engine/impact/practice";
 import { faceHalfHeight } from "../src/engine/impact/shape";
-import { simulateStroke } from "../src/engine/impact/simulateImpact";
-import type { ContactInterval } from "../src/engine/impact/types";
+import type { ContactInterval, ImpactResult } from "../src/engine/impact/types";
 import { atan2 } from "../src/engine/math/elementary";
 import { ZERO, add, cross, dot, horizontal, length, sub, vec3, type Vec3 } from "../src/engine/math/vec3";
 import { strokeContext } from "../src/engine/shot";
@@ -57,8 +59,11 @@ export interface MapPlan {
     readonly speedGain: number;
 }
 
-/** §3.5's classes (A2 item 2 adds unreachable), in decision 5's order. */
-export type MapClass = "unreachable" | "superhuman" | "mishit" | "turf" | "unlawful";
+/**
+ * §3.5's classes (A2 item 2 adds unreachable), in decision 5's order; `unpractised` (P2b.2b.2c.3b.1 design §4 item 3)
+ * is a push still out of the band after practice, kept apart from mishit and turf, where either would otherwise read.
+ */
+export type MapClass = "unreachable" | "superhuman" | "mishit" | "turf" | "unpractised" | "unlawful";
 
 /** One lawn's reading of a sample. */
 export interface LawnRead {
@@ -85,6 +90,8 @@ export interface MapSample {
     readonly pushImpulse: number;
     readonly effectVerdicts: { readonly shipped: boolean; readonly contactOnly: boolean };
     readonly followCap: boolean;
+    /** The practice passes played (P2b.2b.2c.3b.1 design §4, §6): 1 to PRACTICE_PASSES; 0 where unplayed. */
+    readonly passes: number;
 }
 
 /** The lawn the impact is played on (s): decision 3's shared impact, the normal lawn. */
@@ -365,13 +372,34 @@ function unplayed(power: number, lawns: readonly number[], klass: MapClass, reas
         pushImpulse: NaN,
         effectVerdicts: { shipped: false, contactOnly: false },
         followCap: false,
+        passes: 0,
     };
 }
 
-/** The first of decision 5's classes after the run that applies, with its reason, or none. */
-function runClass(
+/**
+ * The first of decision 5's classes after the run that applies, with its reason, or none; where that is mishit or turf
+ * and practice reported `miss` (a push still out of the band after its passes, P2b.2b.2c.3b.1 design §4 item 3), it is
+ * `unpractised` with the practice's miss as its reason. `miss` is null for a stroke in the band or without a push.
+ * Exported for its unit test.
+ */
+export function runClass(
     setup: ShotSetup,
-    run: ReturnType<typeof simulateStroke>,
+    run: { readonly result: ImpactResult; readonly follow: FollowThrough },
+    faults: FaultReport,
+    point: OnPoint,
+    miss: string | null,
+): { readonly klass: MapClass | null; readonly reason: string | null } {
+    const own = ownClass(setup, run, faults, point);
+    if (miss !== null && (own.klass === "mishit" || own.klass === "turf")) {
+        return { klass: "unpractised", reason: miss };
+    }
+    return own;
+}
+
+/** runClass before practice's reading: decision 5's first class after the run that applies, or none. */
+function ownClass(
+    setup: ShotSetup,
+    run: { readonly result: ImpactResult; readonly follow: FollowThrough },
     faults: FaultReport,
     point: OnPoint,
 ): { readonly klass: MapClass | null; readonly reason: string | null } {
@@ -464,10 +492,11 @@ function splitAtRestOf(a: Vec3, b: Vec3): number {
 }
 
 /**
- * `plan` of `type` played once at power `power` (decision 4): mapSetup, planStroke, simulateStroke with a probe (the
- * push intent's peak and impulse, onPoint's inputs and the striker's ball's velocity per step) on the 10 s open lawn,
+ * `plan` of `type` played at power `power` (decision 4): mapSetup, planStroke, then practiseStroke (P2b.2b.2c.3b.1
+ * design §4) with a probe per pass (the push intent's peak and impulse and the striker's ball's velocity per step,
+ * reset at each pass so the sample reads the last) on the 10 s open lawn, the on-point read practice's own,
  * strokeContext and judgeFaults as simulateShot runs them, then simulateFreeMotion from the one handover on each of
- * `lawns` (s). Classified by decision 5. Never throws for the plan's own failure: a power above 2 is superhuman
+ * `lawns` (s). Classified by decision 5, with runClass's `unpractised` where a push's practice ends out of the band. Never throws for the plan's own failure: a power above 2 is superhuman
  * (intensity above 1); a planStroke rejection is classed by rejectedClass with the engine's message. An error of the
  * impact or the free motion is the engine's, not the plan's, and propagates (the shard runner reports it).
  */
@@ -508,30 +537,36 @@ export function playJudged(
     }
     const ids = BALL_IDS.filter((id) => setup.balls[id] !== undefined);
     const striker = ids.indexOf(setup.striker);
-    const steps: OnPointStep[] = [];
-    const times: number[] = [];
-    const velocities: Vec3[] = [];
+    let times: number[] = [];
+    let velocities: Vec3[] = [];
     let peak = 0;
     let impulse = 0;
     // Each step closes at s.t, having begun at the previous step's end (the first at the impact's start, 0).
     let previous = 0;
-    const probe: ImpactProbe = {
-        step(s) {
-            const intent = s.hand?.intent === undefined ? 0 : length(s.hand.intent);
-            peak = Math.max(peak, intent);
-            impulse += intent * (s.t - previous);
-            previous = s.t;
-            times.push(s.t);
-            velocities.push((s.balls[striker] as BallState).velocity);
-            steps.push({ head: s.head, balls: s.balls, contacts: s.contacts });
-        },
+    const probeFor = (): ImpactProbe => {
+        // A new pass: the sample reads the last pass alone.
+        times = [];
+        velocities = [];
+        peak = 0;
+        impulse = 0;
+        previous = 0;
+        return {
+            step(s) {
+                const intent = s.hand?.intent === undefined ? 0 : length(s.hand.intent);
+                peak = Math.max(peak, intent);
+                impulse += intent * (s.t - previous);
+                previous = s.t;
+                times.push(s.t);
+                velocities.push((s.balls[striker] as BallState).velocity);
+            },
+        };
     };
-    const run = simulateStroke(stroke.contact, setup.balls, IMPACT_WORLD, { probe });
+    const run = practiseStroke(stroke.contact, setup.balls, IMPACT_WORLD, setup.striker, probeFor);
     const impact = run.result;
     const faults = judgeFaults(strokeContext(setup, impact), impact);
-    const radius = IMPACT_WORLD.ball.radius;
-    const point = onPoint(steps, striker, setup.striker, stroke.contact.head, drive.arc.aim, radius);
-    const { klass, reason } = runClass(setup, run, faults, point);
+    // A stroke without a push is not practised (design §4; the plan's Global Constraints): its class is today's.
+    const miss = drive.arc.handReach > 0 ? run.miss : null;
+    const { klass, reason } = runClass(setup, run, faults, run.point, miss);
     const croqueted = setup.croqueted as BallId;
     const byLawn: Record<number, LawnRead> = {};
     for (const lawn of lawns) {
@@ -563,6 +598,7 @@ export function playJudged(
         pushImpulse: impulse,
         effectVerdicts: { shipped, contactOnly: contactOnlyFault(faults, faces, trace, shipped) },
         followCap: run.follow.flags.includes("follow-cap"),
+        passes: run.passes,
     };
     return { sample, strike: faults.strike ?? null };
 }

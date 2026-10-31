@@ -852,8 +852,15 @@ export function quantile(values: readonly number[], q: number): number {
     return sorted[Math.min(sorted.length - 1, Math.max(0, Math.ceil(q * sorted.length) - 1))] ?? NaN;
 }
 
-/** §3.5's classes in decision 5's order. */
-export const MAP_CLASSES: readonly MapClass[] = ["unreachable", "superhuman", "mishit", "turf", "unlawful"];
+/** §3.5's classes in decision 5's order, `unpractised` after turf (P2b.2b.2c.3b.1 design §4 item 3, §6). */
+export const MAP_CLASSES: readonly MapClass[] = [
+    "unreachable",
+    "superhuman",
+    "mishit",
+    "turf",
+    "unpractised",
+    "unlawful",
+];
 
 /**
  * The lawn's effect (design §3.2's guess; plan Task 6): per plan and grid range, the ratio's spread across the grid's
@@ -971,6 +978,7 @@ export function classCounts(grid: MapGrid, plans: readonly MapPlan[], reads: Rea
                 superhuman: 0,
                 mishit: 0,
                 turf: 0,
+                unpractised: 0,
                 unlawful: 0,
                 admissible: 0,
                 unread: 0,

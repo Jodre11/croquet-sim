@@ -795,13 +795,16 @@ function strikeText(reading: StrikeReading | null): string {
     return `${parted}; ${parts.join("; ")}`;
 }
 
-/** A sample's figures on `lawn` for the output: power, range (m), ratio, class (reason). */
+/**
+ * A sample's figures on `lawn` for the output: power, range (m), ratio, class (reason) and its practice passes
+ * (P2b.2b.2c.3b.1 design §6).
+ */
 function superSampleText(sample: MapSample, lawn: number): string {
     const read = sample.byLawn[lawn];
     const klass = sample.klass === null ? "admissible" : `${sample.klass} (${sample.reason ?? ""})`;
     return (
         `p ${sample.power.toFixed(3)}, range ${(read?.range ?? NaN).toFixed(3)} m, ratio ` +
-        `${(read?.ratio ?? NaN).toFixed(3)}, ${klass}`
+        `${(read?.ratio ?? NaN).toFixed(3)}, ${klass}, passes ${sample.passes}`
     );
 }
 

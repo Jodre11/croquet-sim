@@ -1,8 +1,15 @@
 import { describe, expect, it } from "vitest";
 import { openWorld, opened } from "../../scripts/openLawn";
-import { bodyBackswing, mapSetup, maxPower, playSample, textBook } from "../../scripts/pushMapRun";
+import { bodyBackswing, mapSetup, maxPower, playSample, runClass, textBook } from "../../scripts/pushMapRun";
 import { ratioOf } from "../../scripts/ratioFit";
+import type { FaultReport } from "../../src/engine/faults";
+import type { OnPoint } from "../../src/engine/impact/band";
+import { faceKey } from "../../src/engine/impact/contacts";
+import type { FollowFlag, FollowThrough } from "../../src/engine/impact/integrate";
+import { PRACTICE_PASSES } from "../../src/engine/impact/practice";
 import { faceHalfHeight } from "../../src/engine/impact/shape";
+import type { ImpactEvent, ImpactResult } from "../../src/engine/impact/types";
+import type { BallId } from "../../src/engine/types";
 import { simulateShot } from "../../src/engine/shot";
 import { headShapeOf, plannedSpeed, stanceLean } from "../../src/engine/swing/buildContact";
 import { defaultProfile } from "../../src/engine/swing/profile";
@@ -65,6 +72,8 @@ describe("one plan's run (P2b.2b.2c.3b plan Task 3)", () => {
         // The rolls hold the slope (λ 1), so the hands supply a couple, within C at the canonical.
         expect(sample.coupleShare).toBeGreaterThan(0);
         expect(sample.coupleShare).toBeLessThanOrEqual(1);
+        // In the band on its first pass (P2b.2b.2c.3b.1 design §4).
+        expect(sample.passes).toBe(1);
     });
 
     it("records a plan the engine rejects as unreachable, keeping the engine's message (Review Focus 1)", () => {
@@ -117,17 +126,20 @@ describe("one plan's run (P2b.2b.2c.3b plan Task 3)", () => {
         expect(sample.reason).toContain("on-point limit");
     });
 
-    it("grades the full roll's text book at its canonical power as a mishit: it meets the ball off the face", () => {
+    it("grades the full roll's text book at its canonical power as unpractised: practice ends off point", () => {
         // Measured while building Task 3: the canonical full roll's follow-through raised follow-turf-yield, which
         // decision 5 lists under turf, and nothing earlier in the order applied. P2b.2b.2c.3b.1 design §2, §5 (was
         // turf, follow-turf-yield): the arms' full hold and the bottom hand kept on change the contact, and the head
-        // now meets the ball off its face (impact-off-face, a mishit; ratio 2.07 on the 10 s lawn). Expected before
-        // practice exists: the practice strokes (P2b.2b.2c.3b.1 plan Task 6) are what bring strokes into the band.
+        // then met the ball off its face (impact-off-face, a mishit; ratio 2.07 on the 10 s lawn). P2b.2b.2c.3b.1
+        // plan Task 7: played through practice, its three passes end off point (the lean about 49°, past the 45°
+        // limit; ratio 3.70 on the 10 s lawn), so it reads unpractised. A known gap, for the plan's Task 8 and the
+        // user; this pins what the engine does, not what the spec's acceptance asks.
         const base = mapSetup("full-roll", textBook("full-roll"), 1);
         const p = swingReference["full-roll"].defaultBackswing.value / bodyBackswing(base, WORLD);
         const sample = playSample("full-roll", textBook("full-roll"), p, [10]);
-        expect(sample.klass).toBe("mishit");
-        expect(sample.reason).toBe("impact-off-face");
+        expect(sample.klass).toBe("unpractised");
+        expect(sample.reason).toMatch(/^off point: /);
+        expect(sample.passes).toBe(PRACTICE_PASSES);
     });
 
     it("grades the full roll's text book at p = 1.5 as superhuman: a hand reaches its grip's limit", () => {
@@ -135,5 +147,52 @@ describe("one plan's run (P2b.2b.2c.3b plan Task 3)", () => {
         const sample = playSample("full-roll", textBook("full-roll"), 1.5, [10]);
         expect(sample.klass).toBe("superhuman");
         expect(sample.reason).toBe("grip-limit");
+    });
+});
+
+/** A stub practised run reading only `events`, `flags` and the striker's first face contact at 10 ms. */
+function stubRun(
+    striker: BallId,
+    events: readonly ImpactEvent[],
+    flags: readonly FollowFlag[] = [],
+): { readonly result: ImpactResult; readonly follow: FollowThrough } {
+    const face = { start: 0.01, end: 0.011, peakForce: 1 };
+    const result = { events, timeline: { [faceKey(striker)]: [face] } } as unknown as ImpactResult;
+    return { result, follow: { flags } as unknown as FollowThrough };
+}
+
+describe("the push map practises (P2b.2b.2c.3b.1 plan Task 7)", () => {
+    const setup = mapSetup("half-roll", textBook("half-roll"), 0.5);
+    const ON: OnPoint = { behind: 0.01, height: 0, lean: 0, holds: true };
+    const OFF: OnPoint = { behind: -0.01, height: 0, lean: 0, holds: false };
+    const NONE: FaultReport = { findings: [] };
+
+    it("classes a practised stroke with a miss and a turf read as unpractised, the miss its reason", () => {
+        const turf = stubRun(setup.striker, [{ kind: "turf-yield", t: 0 }]);
+        expect(runClass(setup, turf, NONE, ON, "turf-yield")).toEqual({ klass: "unpractised", reason: "turf-yield" });
+        // In the band, or without a push (no miss), the turf read stands.
+        expect(runClass(setup, turf, NONE, ON, null)).toEqual({ klass: "turf", reason: "turf-yield" });
+    });
+
+    it("classes a practised stroke with a miss and a mishit read as unpractised", () => {
+        const miss = "off point: lean";
+        expect(runClass(setup, stubRun(setup.striker, []), NONE, OFF, miss)).toEqual({
+            klass: "unpractised",
+            reason: miss,
+        });
+    });
+
+    it("keeps a class practice cannot fix: superhuman and unlawful are not unpractised", () => {
+        const grip = stubRun(setup.striker, [{ kind: "grip-limit", t: 0, hand: "top" }]);
+        expect(runClass(setup, grip, NONE, ON, "turf-yield").klass).toBe("superhuman");
+        const unlawful = { findings: [{ law: "29.1.6.1" }] } as unknown as FaultReport;
+        expect(runClass(setup, stubRun(setup.striker, []), unlawful, ON, "turf-yield").klass).toBe("unlawful");
+    });
+
+    it("records the passes of a played sample, and none of an unplayed one", () => {
+        const played = playSample("half-roll", textBook("half-roll"), 0.5, [10]);
+        expect(played.passes).toBeGreaterThanOrEqual(1);
+        expect(played.passes).toBeLessThanOrEqual(PRACTICE_PASSES);
+        expect(playSample("half-roll", { ...textBook("half-roll"), feet: 2 }, 0.5, [10]).passes).toBe(0);
     });
 });

@@ -5,12 +5,15 @@
  * hand's planned path dotted and its actual path solid, the leading face's planned path dashed and its actual path
  * solid, ticks every 10 ms along the shaft and along the face) and of the head's lowest point (mm) against time, and a
  * table every 5 ms. A first slice of the side-on viewer; diagnostic, not part of the engine or the test suite.
+ * Each run is played as a practised stroke (P2b.2b.2c.3b.1 design §4, §6): the trace is its last pass, the planned
+ * path that pass's (its lift included), and the table's header gives the passes and practice's miss. Its outputs are
+ * suffixed `-practised`, beside the first trace.
  * Run with `npx --yes tsx scripts/pathTrace.ts`; environment: OUT (a directory, default docs/superpowers/probes).
  */
 import { headLowestPoint } from "../src/engine/impact/contacts";
 import type { FollowSnapshot, ImpactProbe, ImpactSnapshot } from "../src/engine/impact/integrate";
+import { PRACTICE_PASSES, practiseStroke } from "../src/engine/impact/practice";
 import { rotate } from "../src/engine/impact/rigidBody";
-import { simulateStroke } from "../src/engine/impact/simulateImpact";
 import { handsAt, headOnPath, prepareTrack } from "../src/engine/impact/track";
 import type { HeadState, MalletHead } from "../src/engine/impact/types";
 import { add, dot, scale, sub, vec3, type Vec3 } from "../src/engine/math/vec3";
@@ -102,6 +105,9 @@ interface Trace {
     readonly aim: Vec3;
     readonly flags: readonly string[];
     readonly yields: readonly number[];
+    /** The practice passes played and the last pass's miss (null in the band). */
+    readonly passes: number;
+    readonly miss: string | null;
 }
 
 /** The head's instant: the top hand `radius` up the shaft from the socket, and the face on the aim's side. */
@@ -120,7 +126,7 @@ function instantOf(t: number, state: HeadState, head: MalletHead, radius: number
     };
 }
 
-/** Plays `c` once on the 10 s open lawn and traces it. */
+/** Plays `c` as a practised stroke on the 10 s open lawn and traces its last pass. */
 function trace(c: TraceCase): Trace {
     const setup = mapSetup(c.type, c.plan, c.power);
     const stroke = planStroke(setup, WORLD);
@@ -128,12 +134,11 @@ function trace(c: TraceCase): Trace {
     if (drive.kind !== "track") {
         throw new Error(`${c.file}: no tracked drive`);
     }
-    const track = prepareTrack(drive, head, WORLD.gravity);
     const { arc } = drive;
     const radius = arc.radius;
     const side = Math.sign(dot(rotate(stroke.contact.orientation, vec3(1, 0, 0)), arc.aim)) || 1;
-    const actual: Instant[] = [];
-    const balls: Vec3[][] = [];
+    let actual: Instant[] = [];
+    let balls: Vec3[][] = [];
     let kept = 0 - Infinity;
     const keep = (t: number, state: HeadState): void => {
         if (t - kept >= KEEP) {
@@ -141,21 +146,30 @@ function trace(c: TraceCase): Trace {
             actual.push(instantOf(t, state, head, radius, side));
         }
     };
-    const probe: ImpactProbe = {
-        step(s: ImpactSnapshot) {
-            const before = kept;
-            keep(s.t, s.head);
-            if (kept !== before) {
-                s.balls.forEach((b: BallState, i: number) => {
-                    (balls[i] ??= []).push(b.position);
-                });
-            }
-        },
-        follow(s: FollowSnapshot) {
-            keep(s.t, s.head);
-        },
+    const probeFor = (): ImpactProbe => {
+        // A new pass: the trace keeps the last pass alone.
+        actual = [];
+        balls = [];
+        kept = 0 - Infinity;
+        return {
+            step(s: ImpactSnapshot) {
+                const before = kept;
+                keep(s.t, s.head);
+                if (kept !== before) {
+                    s.balls.forEach((b: BallState, i: number) => {
+                        (balls[i] ??= []).push(b.position);
+                    });
+                }
+            },
+            follow(s: FollowSnapshot) {
+                keep(s.t, s.head);
+            },
+        };
     };
-    const run = simulateStroke(stroke.contact, setup.balls, WORLD, { probe });
+    const run = practiseStroke(stroke.contact, setup.balls, WORLD, setup.striker, probeFor);
+    // The planned path is the last pass's: the arc with the lift it played.
+    const played = run.lift === null ? drive : { ...drive, arc: { ...arc, lift: run.lift } };
+    const track = prepareTrack(played, head, WORLD.gravity);
     const finish = run.follow.finish;
     const planned: Instant[] = [];
     const start = arc.contactAt - 0.1;
@@ -181,6 +195,8 @@ function trace(c: TraceCase): Trace {
         aim: arc.aim,
         flags: run.follow.flags,
         yields: run.result.events.filter((e) => e.kind === "turf-yield").map((e) => e.t),
+        passes: run.passes,
+        miss: run.miss,
     };
 }
 
@@ -325,6 +341,8 @@ function svgOf(c: TraceCase, tr: Trace, R: number): string {
 function tableOf(c: TraceCase, tr: Trace): string {
     const lines = [
         `== ${c.name} ==`,
+        `practised: ${tr.passes} pass${tr.passes === 1 ? "" : "es"} of ${PRACTICE_PASSES}; ` +
+            `${tr.miss === null ? "in the band" : `out of the band: ${tr.miss}`}`,
         `first contact ${f(tr.firstFace * 1000, 2)} ms (planned ${f(tr.contactAt * 1000, 2)} ms), impact ends ` +
             `${f((tr.impactEnd - tr.firstFace) * 1000, 1)} ms after it, finish ${f((tr.finish - tr.firstFace) * 1000, 1)}` +
             ` ms; flags: ${tr.flags.join(", ") || "none"}; impact turf-yield at ` +
@@ -360,9 +378,9 @@ const fs = await files();
 const tables: string[] = [];
 for (const c of CASES) {
     const tr = trace(c);
-    fs.writeFileSync(`${OUT}/2026-10-31-path-trace-${c.file}.svg`, svgOf(c, tr, WORLD.ball.radius));
+    fs.writeFileSync(`${OUT}/2026-10-31-path-trace-${c.file}-practised.svg`, svgOf(c, tr, WORLD.ball.radius));
     tables.push(tableOf(c, tr));
 }
 const text = tables.join("\n\n");
-fs.writeFileSync(`${OUT}/2026-10-31-path-trace.txt`, `${text}\n`);
+fs.writeFileSync(`${OUT}/2026-10-31-path-trace-practised.txt`, `${text}\n`);
 console.log(text);
