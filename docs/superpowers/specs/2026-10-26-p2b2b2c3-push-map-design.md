@@ -517,6 +517,8 @@ The ruling:
    as they go. Only on a slow push is there time to adjust; on a harder shot the player plays through what was planned.
    So the plan sets the hand's whole path, its travel along aim from the push length and its dip and rise, as the
    path that keeps the head level against the load the player expects, the head tilting back and recovering.
+   That expectation includes some flex in contact, more on a harder shot: the planned path anticipates it, so the
+   head played through the flex stays in the band, rather than the plan being a rigid path the flex then bends away.
    Corrections from what the player feels arrive only after a reaction delay, so they shape slow pushes alone. Level
    is the head's lowest point at first contact (an assumption). Holding it beyond a player's strength reads
    superhuman. (Supersedes an earlier reading of this item, in which the plan set only the travel along aim and the
