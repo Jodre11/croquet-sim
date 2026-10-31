@@ -47,7 +47,13 @@ After this phase, 3b re-runs its maps (Tasks 6–8) on the new engine and resume
 | The arms' hold relaxes from the first departure (`holdWeight`; gate round 13 ruling, 2026-10-12) | full weight through the push and the finish |
 | The bottom hand opens at the earlier of the forward reach and the pendulum phase (`openBottom`, `releasing`), the top hand then guiding alone and the bottom pushing with `pendulumEffort` until vertical | the bottom hand stays on through the push and the finish (user, 2026-10-31); neither opens it |
 | The push intent ends at the pendulum phase (`pushIntent`) | unchanged: `pendulumAt` still ends the push's force there |
-| The planned slope (`slopeHold`, the free and held pendulum) | unchanged through the push; held at its push-end value through the finish (§5) |
+| The planned slope after contact (`slopeHold`, the free and held pendulum) | the lean at first contact, held constant through the push and the finish (below) |
+
+**Who plans what** (user, 2026-10-31). The player plans the top hand's path; practice refines it (§4). The bottom hand
+tries to keep a consistent lean, and flexes naturally under the load as it does. The lean's variation in contact comes
+from those mechanics: it is planned for, through the top hand's path, but it is not the player's goal. So the planned
+slope after first contact is the contact's lean, constant, and the bottom hand holds it through its flex law; the drift
+is what the engine's flex makes of it.
 
 So on a push `pendulumAt` keeps one meaning (where the push's force ends) and `pendulumEffort` has no effect; both keep
 their meaning on a stroke without a push. The user's note for the swing strokes (3c), recorded here: in a drive with
@@ -114,8 +120,8 @@ never adds to the push while a ball is on the face. On today's full roll the han
 From there the hands do not stop. They carry on along the hands' arc (the circle of `handArcRadius` whose low point the
 feet set), forward and up past its low point, from the pivot's planned velocity along aim at the finish's start (the
 plan's pace and any advance's together), and ease to rest at the advance's deceleration V²/(0.4·handReach)
-(P2b.2b.2c.1 §6), about a further fifth of the push. The planned slope holds at its value at the finish's start, so
-the head trails the rising hands and rises with them. The finish takes the plan's own pace: `drive` acts as today, in
+(P2b.2b.2c.1 §6), about a further fifth of the push. The planned lean stays the contact's (§2), so the head trails the
+rising hands and rises with them. The finish takes the plan's own pace: `drive` acts as today, in
 contact only, and the flick (an accelerating finish) waits for the side-on viewer phase (user, 2026-10-31).
 
 A carry ends when the hands are at rest and the head is at rest relative to them (`FINISH_SPEED`), as a check does
