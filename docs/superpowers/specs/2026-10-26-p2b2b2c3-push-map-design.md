@@ -526,3 +526,7 @@ The ruling:
    level is a band, not a line: no new constant, since the band is set by the face's own reach about the ball's
    contact (during contact the existing impact-off-face read is that test). The hands correct the head's drift back
    into the band; they do not hold it rigidly.
+7. **The finish is one arc (user, 2026-10-31).** A flick is not a second finish: it is the same continuation of the
+   head's arc once contact ends, accelerating. So there is no new input. The finish carries the head on along its arc,
+   and how hard it accelerates there comes from the existing after-first-contact input (accelerate or brake); a flick
+   is that arc at the accelerating end.
