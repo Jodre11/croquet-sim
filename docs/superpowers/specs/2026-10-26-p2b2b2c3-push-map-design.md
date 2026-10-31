@@ -487,3 +487,29 @@ The 0.527 play is unlawful (29.1.6.1: a re-contact 17 mm after parting), and the
 with re-contacts at p 0.1–0.2, and superhuman reads at higher powers. Why the follow-through yields the turf (the
 planned path, the hands' guiding, or the yield threshold against "rub, not damage") is not settled by the map; the
 side-on swing viewer, the phase after 3b, is to show it.
+
+### A6. The head travels parallel to the turf (gate 2, user, 2026-10-31)
+
+Gate 2 asked why the rolls' follow-throughs yield the turf. The user's reading was that the mallet head's path must be
+wrong, and a side-on trace (`scripts/pathTrace.ts`; `docs/superpowers/probes/2026-10-31-path-trace*`) tested it on
+today's full roll, an in-band full roll at speedGain 0.5 and today's pass roll:
+
+1. **The planned path stays clear of the turf.** Its lowest point after contact is 30.9 mm, 10.4 mm and 31.2 mm.
+2. **The played head leaves it.** Through the impact the head lags and the shaft tilts back (31° to 43.5° on the full
+   roll, against the plan's 29°), and the head rises, to 115 mm on the full roll. The hands stop at once at the push
+   length and the arms' hold relaxes from the first departure, so the mallet then swings through vertical as a free
+   pendulum and yields the turf at the bottom of that swing: −3.4 mm at 350 ms, −1.5 mm at 252 ms and −3.8 mm at
+   374 ms after first contact. None of the three yields the turf during the impact.
+
+The ruling:
+
+1. **The player's intent is the head, not the hand.** The head travels on a path parallel to the turf, through the
+   contact and the push alike. The top hand moves however keeping it there needs: a shallow, possibly flattened arc
+   whose travel along aim is the push's length, and whose dip and rise come from the shaft's flex and the head's angle
+   as the player adjusts.
+2. **The hand eases out and keeps its hold.** It no longer stops at once at the push length, and its hold no longer
+   relaxes once the balls have gone.
+3. **This changes every stroke with a push**, so the maps of Tasks 6–8 are re-run once the change is in; the gate's
+   other items wait for those maps. How the intent is realised (what height counts as level, which of the hand's arc
+   and the head's angle is planned and which follows, and how the hold's effort counts against the superhuman class)
+   is settled one question at a time and recorded here.
