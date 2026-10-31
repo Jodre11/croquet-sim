@@ -530,3 +530,9 @@ The ruling:
    head's arc once contact ends, accelerating. So there is no new input. The finish carries the head on along its arc,
    and how hard it accelerates there comes from the existing after-first-contact input (accelerate or brake); a flick
    is that arc at the accelerating end.
+
+What A6 supersedes in the engine, as built (`src/engine/impact/track.ts`): the push's pendulum phase (P2b.2b.2b.2b
+design §4.2), from pendulumAt·handReach on, in which the push intent is nil and the mallet swings free; the arms' hold
+relaxing from the first departure (gate round 13 ruling, "Relax from first departure", 2026-10-12; `holdWeight`); and
+the hands stopping at once at the push length (`carryPivot`). Each is a ruling of an earlier phase, so the change is an
+engine phase of its own, specified and planned before the maps are re-run.
