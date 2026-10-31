@@ -123,13 +123,16 @@ the flick deferred that case is gone, and the push's end keeps the finish in the
 
 From there the hands do not stop. They carry on along the hands' arc (the circle of `handArcRadius` whose low point the
 feet set), forward and up past its low point, from the pivot's planned velocity along aim at the finish's start (the
-plan's pace and any advance's together), and ease to rest at the advance's deceleration V²/(0.4·handReach)
-(P2b.2b.2c.1 §6), about a further fifth of the push. The planned lean stays the contact's (§2), so the head trails the
+plan's pace and any advance's together), and ease to rest over a further full push length, at the
+deceleration V²/(2·handReach) (user, 2026-10-31; the full roll brakes at about 1.5 g over 0.2 s). The advance's ease,
+V²/(0.4·handReach) over a fifth of the push, was tried first: it braked the full roll from 3 m/s in 40 ms, about
+7.7 g, and left the head wobbling on the arms by about 50 mm, still moving at the follow cap. The planned lean stays the contact's (§2), so the head trails the
 rising hands and rises with them. The finish takes the plan's own pace: `drive` acts as today, in
 contact only, and the flick (an accelerating finish) waits for the side-on viewer phase (user, 2026-10-31).
 
-A carry ends when the hands are at rest and the head is at rest relative to them (`FINISH_SPEED`), as a check does
-today; otherwise at the follow cap. The ease's travel, at most 0.2·`handReach`, stays far inside the arc's reach
+A carry's follow-through ends when the hands come to rest (user, 2026-10-31): any motion of the head on the arms after
+that is not followed. A check keeps its rule, the head at rest relative to the hands (`FINISH_SPEED`), from the hands'
+rest. The ease's travel, `handReach`, stays far inside the arc's reach
 (s_low + ρ_h, 1.65 m at the presets), so the arc's height is always defined.
 
 ## 6. Versions and records
@@ -152,7 +155,8 @@ today; otherwise at the follow cap. The ease's travel, at most 0.2·`handReach`,
    aim never steps.
 5. On a push the hold weight stays 1 through the push and the finish, and the bottom hand never opens, on a stroke
    whose ball departs.
-6. The hands come to rest 0.2·`handReach` past `handReach`, from the push's end pace eased at V²/(0.4·handReach).
+6. The hands come to rest `handReach` past `handReach`, from the push's end pace eased at V²/(2·handReach), and a
+   carry's follow-through ends there.
 7. A stroke still out of the band after three passes reads `unpractised`.
 8. Strokes without a push (the stops and drives) play bit for bit as today.
 

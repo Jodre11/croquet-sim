@@ -23,7 +23,7 @@ band. The push map plays every sample through it and gains the `unpractised` cla
 - Every change applies only where `track.push !== null` (`handReach` > 0). Strokes without a push play bit for bit as
   today.
 - No input is added or removed; no flex law, contact law, turf law or lawn changes.
-- `PRACTICE_PASSES` = 3. The finish's ease is V²/(0.4·`handReach`), V the pivot's pace along aim at the push's end.
+- `PRACTICE_PASSES` = 3. The finish's ease is V²/(2·`handReach`), over a further push length, V the pivot's pace along aim at the push's end.
 - `ENGINE_VERSION` becomes "0.19.0" (`src/engine/simulate.ts:77`).
 - Style: 4-space indent, 120 columns, the repo's doc-comment density (every exported symbol documented, citing the
   spec section); Prettier and `npm run check` clean.
@@ -102,14 +102,14 @@ Each line's test is in the owning task below.
 - Test: `tests/engine/impact/track.test.ts`, `tests/engine/impact/followThrough.test.ts`
 
 **Interfaces:**
-- Produces: `Push` gains `finishSpeed: number` (V, m/s along aim at `end`), `finishDecel: number` (V²/(0.4·handReach))
+- Produces: `Push` gains `finishSpeed: number` (V, m/s along aim at `end`), `finishDecel: number` (V²/(2·handReach))
   and `rest: number | null` (s, `end + V/decel`; null when `end` is null). `carryPivot` past `end`:
   s = handReach + V·u − ½·decel·u² until `rest`, then handReach + V²/(2·decel), on `arcHeight`'s circle.
-  `finished` for a "carry": t ≥ `push.rest` and the head at rest relative to the hands (`FINISH_SPEED`); a push with
+  `finished` for a "carry": t ≥ `push.rest` (spec §5: the follow-through ends at the hands' rest); a push with
   `rest` null runs to the cap.
 
 - [ ] **Step 1: Write the failing tests.** In `track.test.ts`: `"the hands carry on up the arc past the push"` — on
-  today's full-roll track, `handsAt` along aim at `rest` is handReach + 0.2·handReach to 1e-9; its velocity along
+  today's full-roll track, `handsAt` along aim at `rest` is 2·handReach to 1e-9; its velocity along
   aim is continuous at `end` (left and right limits within 1e-9) and 0 from `rest`; its height past `end` rises
   (z increasing between `end` and `rest`). Review Focus 5: the same continuity on a push with an advance. Review
   Focus 2: a push whose plan never reaches `handReach` has `rest` null and `handsAt` finite to the cap.
