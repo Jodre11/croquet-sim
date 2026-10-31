@@ -520,3 +520,9 @@ The ruling:
 5. **The finish (user, 2026-10-31).** Once the push is done the stroke may finish with a flick, or with the head
    carrying on along its arc, especially in the push shot. Either way the head leaves the turf rather than swinging
    down into it.
+6. **Level within bounds (user, 2026-10-31).** The hand's dip and rise is tied to any change in the mallet's lean, and to
+   the player it all happens in a flash. The path is never perfect: it wanders within bounds, and the bound is what
+   keeps the face in contact with the ball, or, once the ball has gone, on the path that would keep that contact. So
+   level is a band, not a line: no new constant, since the band is set by the face's own reach about the ball's
+   contact (during contact the existing impact-off-face read is that test). The hands correct the head's drift back
+   into the band; they do not hold it rigidly.
