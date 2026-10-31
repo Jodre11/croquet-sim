@@ -16,7 +16,7 @@ import { simulateImpact, simulateStroke } from "../../../src/engine/impact/simul
 import { HAND_COUPLING, handsAt, pitchAxis, prepareTrack, type Push } from "../../../src/engine/impact/track";
 import type { ContactState, TrackDrive } from "../../../src/engine/impact/types";
 import { dot, length, sub } from "../../../src/engine/math/vec3";
-import { buildContact } from "../../../src/engine/swing/buildContact";
+import { buildContact, planStroke } from "../../../src/engine/swing/buildContact";
 import { ON_TIME } from "../../../src/engine/swing/profile";
 import type { ShotSetup, StrokeType, SwingProfile } from "../../../src/engine/swing/types";
 import type { World } from "../../../src/engine/types";
@@ -24,6 +24,8 @@ import { defaultWorld } from "../../../src/engine/world";
 import { ballAt, testWorld } from "../support/fixtures";
 import { TEST_GRIP_LIMIT } from "../support/impact";
 import { backswingFor, canonicalSetup, testProfile } from "../support/shot";
+import { openWorld } from "../../../scripts/openLawn";
+import { mapSetup, textBook } from "../../../scripts/pushMapRun";
 
 const WORLD = testWorld();
 
@@ -177,12 +179,28 @@ describe("the follow-through (design §4)", () => {
         expect(follow.flags).toEqual(["follow-grip-limit"]);
     });
 
-    it("finishes a carry at its first apex after the pendulum phase starts", () => {
+    it("finishes a carry when its hands come to rest", () => {
+        // P2b.2b.2c.3b.1 design §5 (was at the first apex after the pendulum phase starts, which needed the bottom
+        // hand open; a push's never opens now, design §2): the first step at or after push.rest.
         const { contact, follow } = stroke(shot({ backswing: 0.25 }, CARRY));
         const push = prepareTrack(contact.drive as TrackDrive, contact.head, WORLD.gravity).push as Push;
-        expect(push.pendulum).not.toBeNull();
-        expect(follow.finish).toBeGreaterThan(push.pendulum as number);
+        expect(push.rest).not.toBeNull();
+        expect(follow.finish).toBeGreaterThanOrEqual(push.rest as number);
+        expect(follow.finish).toBeLessThan((push.rest as number) + IMPACT_DT + 1e-12);
         expect(follow.flags).not.toContain("follow-cap");
+    });
+
+    it("a carry ends with its hands at rest", () => {
+        // P2b.2b.2c.3b.1 plan Task 3: today's full roll (the push map's text book at power 0.1535, as
+        // scripts/pathTrace.ts builds it) on the 10 s open lawn.
+        const lawn = openWorld(10);
+        const setup = mapSetup("full-roll", textBook("full-roll"), 0.1535);
+        const planned = planStroke(setup, lawn);
+        const push = prepareTrack(planned.contact.drive as TrackDrive, planned.contact.head, lawn.gravity).push as Push;
+        const { follow } = simulateStroke(planned.contact, setup.balls, lawn);
+        expect(push.rest).not.toBeNull();
+        expect(follow.flags).not.toContain("follow-cap");
+        expect(follow.finish).toBeGreaterThanOrEqual(push.rest as number);
     });
 
     it("caps a carry whose hands never stop", () => {
@@ -285,14 +303,16 @@ describe("the finish from the inputs (P2b.2b.2c.3a A2 item 7)", () => {
     });
 
     it("finishes a braked held stroke with the check's hold", () => {
-        // The half roll at drive −1 brakes on a held slope (λ = 1) with a push: the check's hold waits for the push's
-        // end, and holds the held path, which has no free table.
+        // The half roll at drive −1 brakes on a held slope (λ = 1) with a push: the check's hold waits for the hands'
+        // rest (P2b.2b.2c.3b.1 design §5, review focus 3; was the push's end), and holds the held path, which has no
+        // free table.
         const setup = canonicalSetup("half-roll", { stroke: { drive: -1 } });
         const push = planOf(setup).push as Push;
-        expect(push.end).not.toBeNull();
+        expect(finishKind(planOf(setup))).toBe("check");
+        expect(push.rest).not.toBeNull();
         const { follow } = stroke(setup, DEFAULT);
         expect(follow.flags).not.toContain("follow-cap");
-        expect(follow.finish).toBeGreaterThanOrEqual(push.end as number);
+        expect(follow.finish).toBeGreaterThanOrEqual(push.rest as number);
     });
 
     it("settles a braked drive on the hold, its hands one hand breadth apart, well before the cap", () => {

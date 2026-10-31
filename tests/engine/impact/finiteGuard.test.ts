@@ -94,19 +94,20 @@ describe("the finite-state guard (design §3)", () => {
         expect(() => assertFinite(finiteHead, [finiteBall], ["blue"], 0.001, 3, "impact")).not.toThrow();
     });
     it("catches a head gone non-finite in the follow-through at the next step", () => {
-        // A hand-built arc bypasses planStroke's check of the advance. The hands' 1e300 m/s² from 0.05 s after contact,
-        // after the impact's end, overflows the free pendulum's table there, so the head goes non-finite in the
-        // follow-through. (A NaN speed was not enough under the swing law: it left the hands' velocity and
-        // acceleration finite, and after contact that law's hands read only those.) P2b.2b.2c.3a: the advance on the
-        // push (was the arc as planned): the push brings its pendulum phase to the advance's start, and the impact
-        // waits for it, so the overflow fell inside the impact (the case above). A pendulum phase from contact
-        // (pendulumAt 0) lets the impact end first, as it did.
+        // A hand-built arc: the canonical half roll's, its hands' arc narrowed to 0.2 m with its low point 0.06 m
+        // ahead. P2b.2b.2c.3b.1 design §5: the finish carries the hands on a further push length, to 0.3 m along aim,
+        // past the circle's reach s_low + ρ_h = 0.26 m, where its height is not a number. They pass it in the
+        // follow-through, after the impact's end, so the head goes non-finite there. (Was an advance of 1e300 m/s²
+        // overflowing the free pendulum's table after the impact's end, on a 0.3 m push from a pendulum phase at
+        // contact; a carry now ends at its hands' rest, which that advance brings at once after its start, before any
+        // follow-through step reads the overflow.)
         const world = defaultWorld();
-        const setup = canonicalSetup("single-ball", { world, stroke: { handReach: 0.3 } });
+        const setup = canonicalSetup("half-roll", { world });
         const contact = buildContact(setup, world);
         const drive = contact.drive as TrackDrive;
-        const advance = { start: drive.arc.contactAt + 0.05, speed: 1e300, accel: 1e300 };
-        const broken = { ...contact, drive: { ...drive, arc: { ...drive.arc, advance, pendulumAt: 0 } } };
+        const arc = { ...drive.arc, handArcRadius: 0.2, lowPoint: 0.06 };
+        expect(2 * arc.handReach).toBeGreaterThan(arc.lowPoint + arc.handArcRadius);
+        const broken = { ...contact, drive: { ...drive, arc } };
         expect(() => simulateStroke(broken, setup.balls, world)).toThrow(RangeError);
         expect(() => simulateStroke(broken, setup.balls, world)).toThrow(/at step \d+ \(follow-through\)/);
     });

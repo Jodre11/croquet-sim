@@ -634,7 +634,9 @@ describe("simulateImpact with a tracked drive", () => {
 });
 
 describe("the roll's impact (P2b.2b.2b.2b design §4.2)", () => {
-    it("never ends before the pendulum phase starts, and records its start as the release", () => {
+    it("never ends before the pendulum phase starts, and records no release", () => {
+        // P2b.2b.2c.3b.1 design §2 (was the release recorded at the pendulum phase's start, where the bottom hand
+        // opened): a push's bottom hand never opens, and the impact still waits for the pendulum phase.
         for (const pendulumAt of [0.5, 1]) {
             const setup = canonicalSetup("full-roll", { world: WORLD, stroke: { pendulumAt } });
             const contact = buildContact(setup, WORLD);
@@ -642,7 +644,7 @@ describe("the roll's impact (P2b.2b.2b.2b design §4.2)", () => {
             const pendulum = (track.push as Push).pendulum as number;
             const result = simulateImpact(contact, setup.balls, WORLD);
             expect(result.duration, `pendulumAt ${pendulumAt}`).toBeGreaterThanOrEqual(pendulum);
-            expect(result.release?.t, `pendulumAt ${pendulumAt}`).toBeCloseTo(pendulum, 4);
+            expect(result.release, `pendulumAt ${pendulumAt}`).toBeUndefined();
         }
     });
 

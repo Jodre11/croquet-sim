@@ -177,12 +177,17 @@ export interface SwingArc {
      * The pendulum is the free one at 0, the kinematic pulse and hold at 1, and θ, ω and α blend linearly between.
      */
     readonly slopeHold: number;
-    /** How far the hands' path travels along aim after contactAt (m). */
+    /**
+     * The push length (m): how far the hands' path travels along aim after contactAt before the finish begins, where
+     * the hands carry on up their arc and ease to rest a further push length on (P2b.2b.2c.3b.1 design §5).
+     */
     readonly handReach: number;
     /**
      * With a push, a handReach above 0 (P2b.2b.2b.2b design §4.2; P2b.2b.2c.3a A2 item 8): the pendulum phase starts
-     * once the intended path has travelled `pendulumAt` (in [0, 1]) of the push length `handReach`; the bottom hand
-     * then pushes with `pendulumEffort` (in [0, 1]) of the hands' pendulumForce until the shaft passes vertical.
+     * once the intended path has travelled `pendulumAt` (in [0, 1]) of the push length `handReach`, and the push's
+     * force ends there. `pendulumEffort` (in [0, 1]) is the share of the hands' pendulumForce with which an opened
+     * bottom hand pushes until the shaft passes vertical; a push's bottom hand never opens, so on a push it has no
+     * effect (P2b.2b.2c.3b.1 design §2).
      */
     readonly pendulumAt: number;
     readonly pendulumEffort: number;
@@ -255,8 +260,9 @@ export type HandName = "top" | "bottom";
  * the arc radius, the bottom hand `bottom` from the socket (m, in (0, radius)). From `relaxAt` on the top hand grips
  * with γ_T = `gripTension` and the bottom hand with g_B = `bottomGrip`, both in (0, 1]. The player's arm mass
  * `armMass` (kg) rides rigidly at the top grip in the downswing's plan; after contact each hand's and arm's own chain
- * of masses (`chain`; gate round 3 ruling) holds the mallet. The bottom hand opens at the earlier of the shaft turned
- * forward through `reachSlack` (m of hand travel) and a push's pendulum phase (P2b.2b.2c.3a A2 item 6). From contact
+ * of masses (`chain`; gate round 3 ruling) holds the mallet. On a stroke without a push the bottom hand opens once the
+ * shaft has turned forward through `reachSlack` (m of hand travel; P2b.2b.2c.3a A2 item 6); on a push it never opens
+ * (P2b.2b.2c.3b.1 design §2). From contact
  * each hand flexes by `flex`, its feed and flex scaled by its grip; `guideEffort` (in [0, 1]) scales the bottom
  * hand's flex outside a check: 1 holds the planned arc, 0 leaves that hand its feed alone; a check brakes in full
  * (design §3.3; the player's choice, user's account, 2026-10-06; A2 item 5). The hands' push intent through a push
@@ -433,15 +439,16 @@ export interface ImpactRun {
     /** Keys of the ball–ball and ball–obstacle pairs touching (within CONTACT_TOLERANCE) at t = 0, in pair order. */
     readonly touchingAtStart: readonly string[];
     /**
-     * A tracked drive's bottom hand opening (P2b.2b.1 design §3.3): at the earlier of the forward reach and a push's
-     * pendulum phase (P2b.2b.2b.2b design §4.2; P2b.2b.2c.3a A2 item 6): when (s), and the shaft's turn since relaxAt
-     * (contact) then (rad). Absent if it never opened, and for a force table.
+     * A tracked drive's bottom hand opening (P2b.2b.1 design §3.3): at the forward reach (P2b.2b.2c.3a A2 item 6): when
+     * (s), and the shaft's turn since relaxAt (contact) then (rad). Absent if it never opened, as on every push
+     * (P2b.2b.2c.3b.1 design §2), and for a force table.
      */
     readonly release?: { readonly t: number; readonly deltaTheta: number };
     /**
      * A push's first departure of a ball from the face (s; gate round 13 ruling, "Relax from first departure",
-     * 2026-10-12), from which the arms' hold relaxes. The impact does not know which ball is the striker's, so it is
-     * any ball's; in a roll the face meets only the striker's. Absent if no ball left the face, and with no push.
+     * 2026-10-12); the arms' hold no longer relaxes from it (P2b.2b.2c.3b.1 design §2). The impact does not know which
+     * ball is the striker's, so it is any ball's; in a roll the face meets only the striker's. Absent if no ball left
+     * the face, and with no push.
      */
     readonly departure?: number;
     /**

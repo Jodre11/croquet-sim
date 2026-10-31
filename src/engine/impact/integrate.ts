@@ -128,6 +128,7 @@ import {
     type GripState,
     type HandLoad,
     type PreparedTrack,
+    type Push,
     type SwungBody,
 } from "./track";
 import type {
@@ -294,7 +295,8 @@ export interface ImpactSnapshot {
      * A tracked drive's F, its feed-forward parts and each hand's force (P2b.2b.1 design §3.7); absent otherwise. Once
      * the flex has taken hold, until a stop's hold, also each hand–arm chain's masses after the step (gate round 3
      * ruling, 2026-10-11; the bottom's null once it has let go). Through a push, also the push intent within the
-     * feed-forward (HandLoad's `intent`), absent where it is nil.
+     * feed-forward (HandLoad's `intent`), absent where it is nil. From contact, also the arms' hold weight in the
+     * step (HandLoad's `hold`; P2b.2b.2c.3b.1 design §2).
      */
     readonly hand?: {
         readonly force: Vec3;
@@ -302,6 +304,7 @@ export interface ImpactSnapshot {
         readonly top: Vec3;
         readonly bottom: Vec3;
         readonly intent?: Vec3;
+        readonly hold?: number;
         readonly chains?: { readonly top: ArmChainState | null; readonly bottom: ArmChainState | null };
     };
     /** The turf's total force on the head (zero while the pair is open); absent without the head–turf pair. */
@@ -311,6 +314,8 @@ export interface ImpactSnapshot {
 /**
  * A follow-through step's end state (t is its end), with the hands' feed-forward and each hand's force applied during
  * it, and each hand's slid offset after the step's hands (m, in the head's frame; null until the hand first saturates).
+ * Also, as the impact's snapshot reports them, the arms' hold weight in the step where the hands flex (HandLoad's
+ * `hold`) and the hand–arm chains after it until a stop's hold (P2b.2b.2c.3b.1 design §2).
  */
 export interface FollowSnapshot {
     readonly t: number;
@@ -319,6 +324,8 @@ export interface FollowSnapshot {
     readonly top: Vec3;
     readonly bottom: Vec3;
     readonly offsets: { readonly top: Vec3 | null; readonly bottom: Vec3 | null };
+    readonly hold?: number;
+    readonly chains?: NonNullable<ImpactSnapshot["hand"]>["chains"];
 }
 
 /**
@@ -399,24 +406,27 @@ export function finishKind(plan: PreparedTrack): FinishKind {
 /**
  * True once the head in `state` at time t has reached its finish (P2b.2b.2a design §4.2): a swing at the pendulum's
  * apex, its pitch rate about n at or below zero (a swing has no push, so its hands never travel; P2b.2b.2c.3a A2 item
- * 8); a check at rest relative to the hands once any push has ended (a push whose plan
- * never reaches its length never ends, and runs to the cap); a carry at the first apex after its pendulum phase
- * starts, its pitch rate at or below zero once it has been positive (`grip.rising`; P2b.2b.2b.2b design §4.3).
+ * 8); a check at rest relative to the hands once any push's hands have come to rest (push.rest; P2b.2b.2c.3b.1
+ * design §5); a carry when its hands come to rest (design §5, superseding the first apex after the pendulum phase,
+ * P2b.2b.2b.2b design §4.3). A push whose plan never reaches its length never finishes, and runs to the cap.
  */
-function finished(kind: FinishKind, plan: PreparedTrack, state: HeadState, t: number, grip: GripState): boolean {
+function finished(kind: FinishKind, plan: PreparedTrack, state: HeadState, t: number): boolean {
     switch (kind) {
         case "swing":
             return dot(state.angularVelocity, plan.axis) <= 0;
         case "check": {
-            // Moving hands carry a held head with them, at rest relative to them at once: wait for the push's end.
+            // Moving hands carry a held head with them, at rest relative to them at once: wait for the hands' rest.
             const { push } = plan;
-            if (push !== null && (push.end === null || t < push.end)) {
+            if (push !== null && (push.rest === null || t < push.rest)) {
                 return false;
             }
             return length(sub(state.velocity, handsAt(plan, t).velocity)) < FINISH_SPEED;
         }
-        case "carry":
-            return grip.rising && dot(state.angularVelocity, plan.axis) <= 0;
+        case "carry": {
+            // A carry always has a push (finishKind); one whose hands never reach its length never rests.
+            const rest = (plan.push as Push).rest;
+            return rest !== null && t >= rest;
+        }
     }
 }
 
@@ -1292,6 +1302,7 @@ export function integrateStroke(setup: ImpactSetup, options: ImpactOptions = {},
                                         top: hand.top,
                                         bottom: hand.bottom,
                                         ...(hand.intent === undefined ? {} : { intent: hand.intent }),
+                                        ...(hand.hold === undefined ? {} : { hold: hand.hold }),
                                         ...chainsOf(grip),
                                     },
                                 }),
@@ -1302,9 +1313,11 @@ export function integrateStroke(setup: ImpactSetup, options: ImpactOptions = {},
 
         quiet = hardClosed ? 0 : quiet + 1;
         const settled = struck && now >= driveEnd && quiet >= RELEASE_STEPS && !turfMoving;
-        // A push waits for the pendulum phase (§4.2): trackEnd is not enough, as the end test runs at t + dt.
+        // A push waits for the pendulum phase (§4.2): trackEnd is not enough, as the end test runs at t + dt. It waits
+        // for this step's hands to have reached it, not for the bottom hand's opening, which no push has
+        // (P2b.2b.2c.3b.1 design §2): that step was the opening's on a push the reach had not opened earlier.
         const waiting =
-            plan.kind === "track" && plan.push !== null && plan.push.pendulum !== null && grip.releasedAt === null;
+            plan.kind === "track" && plan.push !== null && plan.push.pendulum !== null && t < plan.push.pendulum;
         if (settled && !waiting && (plan.kind === "force" || !stillReaching(state, head, balls, R, plan, now))) {
             break;
         }
@@ -1395,7 +1408,7 @@ function continueStroke(
     let held = false;
     for (;;) {
         const t = steps * dt;
-        if (finished(kind, plan, state, t, grip)) {
+        if (finished(kind, plan, state, t)) {
             break;
         }
         if (t >= cap) {
@@ -1440,6 +1453,8 @@ function continueStroke(
             top: hand.top,
             bottom: hand.bottom,
             offsets: { top: grip.topOffset, bottom: grip.bottomOffset },
+            ...(hand.hold === undefined ? {} : { hold: hand.hold }),
+            ...chainsOf(grip),
         });
         if (ground !== null && !deep && headLowestPoint(state, head) < 0 - HEAD_DEEP_LIMIT) {
             deep = true;

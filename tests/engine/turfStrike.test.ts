@@ -117,15 +117,18 @@ describe("the three regimes (P2b.2b.2b.3 design §7.4)", () => {
 });
 
 describe("the follow-through's flags (P2b.2b.2b.3 design §4.6)", () => {
-    it("flags follow-turf-yield when a roll's follow-through yields the turf (design §4.6)", () => {
+    it("no longer yields the turf in a roll's follow-through (design §4.6; P2b.2b.2c.3b.1 design §1)", () => {
         // The probe: half-roll at 4 m/s, the first roll of its search to yield (2 and 3 m/s do not); the impact
-        // never grounds the head (lowest 38.6 mm), the follow-through ploughs it in and runs to its cap: flags
-        // follow-turf-yield, follow-head-deep, follow-cap.
+        // never grounds the head (lowest 38.6 mm). It flagged follow-turf-yield, follow-head-deep and follow-cap, the
+        // follow-through ploughing the head in. P2b.2b.2c.3b.1 design §2, §5: the arms' full hold, the bottom hand
+        // kept on and the hands carrying on up their arc lift the follow-through off the turf, so it yields nothing
+        // and ends at the hands' rest; no canonical roll from 2 to 6 m/s yields there now. The flag's path keeps its
+        // cover in followThrough.test.ts ("caps a carry whose hands never stop", the endless 10 m push).
         const setup = shot(FOLLOW.type, FOLLOW.speed);
         expect(along(setup).impact.timeline["head/turf"] ?? []).toHaveLength(0);
         const outcome = simulateShot(setup, WORLD, { trajectory: true });
         const flags = (outcome.trajectory as SwingTrajectory).flags;
-        expect(flags).toEqual(["follow-turf-yield", "follow-head-deep", "follow-cap"]);
+        expect(flags).toEqual([]);
     });
 });
 

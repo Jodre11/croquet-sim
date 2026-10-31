@@ -117,14 +117,17 @@ describe("one plan's run (P2b.2b.2c.3b plan Task 3)", () => {
         expect(sample.reason).toContain("on-point limit");
     });
 
-    it("grades the full roll's text book at its canonical power as turf: its follow-through yields the turf", () => {
-        // Measured while building Task 3: the canonical full roll's follow-through raises follow-turf-yield, which
-        // decision 5 lists under turf, and nothing earlier in the order applies.
+    it("grades the full roll's text book at its canonical power as a mishit: it meets the ball off the face", () => {
+        // Measured while building Task 3: the canonical full roll's follow-through raised follow-turf-yield, which
+        // decision 5 lists under turf, and nothing earlier in the order applied. P2b.2b.2c.3b.1 design §2, §5 (was
+        // turf, follow-turf-yield): the arms' full hold and the bottom hand kept on change the contact, and the head
+        // now meets the ball off its face (impact-off-face, a mishit; ratio 2.07 on the 10 s lawn). Expected before
+        // practice exists: the practice strokes (P2b.2b.2c.3b.1 plan Task 6) are what bring strokes into the band.
         const base = mapSetup("full-roll", textBook("full-roll"), 1);
         const p = swingReference["full-roll"].defaultBackswing.value / bodyBackswing(base, WORLD);
         const sample = playSample("full-roll", textBook("full-roll"), p, [10]);
-        expect(sample.klass).toBe("turf");
-        expect(sample.reason).toBe("follow-turf-yield");
+        expect(sample.klass).toBe("mishit");
+        expect(sample.reason).toBe("impact-off-face");
     });
 
     it("grades the full roll's text book at p = 1.5 as superhuman: a hand reaches its grip's limit", () => {

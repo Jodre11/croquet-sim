@@ -28,7 +28,10 @@ import {
 } from "../../../src/engine/impact/track";
 import { validateImpact } from "../../../src/engine/impact/simulateImpact";
 import type { Downswing, Hands, SwingArc, TrackDrive } from "../../../src/engine/impact/types";
-import { buildContact } from "../../../src/engine/swing/buildContact";
+import { FOLLOW_CAP } from "../../../src/engine/impact/integrate";
+import { buildContact, planStroke } from "../../../src/engine/swing/buildContact";
+import { openWorld } from "../../../scripts/openLawn";
+import { mapSetup, textBook } from "../../../scripts/pushMapRun";
 import { STANDARD_GRAVITY, defaultWorld } from "../../../src/engine/world";
 import { testWorld } from "../support/fixtures";
 import { canonicalSetup } from "../support/shot";
@@ -458,21 +461,29 @@ describe("the hands' reach", () => {
     const CENTRE = vec3(0, 0, 1);
     const pivotAt = (track: PreparedTrack, t: number) => pivotOf(pathAt(track, t), track.arc.radius);
 
-    it("pushes the pivot handReach along aim from contactAt on the hands' arc, at rest from the push's end", () => {
+    it("pushes the pivot handReach along aim from contactAt on the hands' arc, at rest a push length further", () => {
         // P2b.2b.2c.3a: the reach forward is the push's (A2 item 8) (was the reach's ease to rest from t1 =
         // contactAt + 0.04 s, at rest from t_s = t1 + 0.02 s, the vertical speed 0.3 m/s running on): the plan's 2 m/s
-        // along aim carries the hands 0.1 m by contactAt + 0.05 s, where they stop at once. The path is the hands' arc,
-        // lowest halfway along the push, so they are back at their height at contact there, and nothing runs on.
+        // along aim carries the hands 0.1 m by contactAt + 0.05 s. The path is the hands' arc, lowest halfway along
+        // the push, so they are back at their height at contact there. P2b.2b.2c.3b.1 design §5 (was a stop at once
+        // at the push's end): the finish eases them from 2 m/s to rest over a further 0.1 m, by end + 0.1 s, rising up
+        // the arc past its low point.
         const arc = levelArc(CENTRE, { pivotVelocity: vec3(2, 0, 0.3), handReach: 0.1, contactAt: 0.01 });
         const track = prepare(arc);
         expect(track.reach).toBeNull();
         const push = track.push as Push;
         const from = pivotAt(track, arc.contactAt).P;
-        expect(push.end as number).toBeCloseTo(arc.contactAt + 0.05, 12);
-        for (const t of [push.end as number, (push.end as number) + 0.02, 0.2]) {
+        const end = push.end as number;
+        expect(end).toBeCloseTo(arc.contactAt + 0.05, 12);
+        expect(push.rest as number).toBeCloseTo(end + 0.1, 9);
+        const atEnd = pivotAt(track, end);
+        expect(atEnd.P.x - from.x, "travel at the push's end").toBeCloseTo(0.1, 12);
+        expect(atEnd.P.z - from.z, "height at the push's end").toBeCloseTo(0, 12);
+        expect(atEnd.V.x, "along-aim speed at the push's end").toBeCloseTo(2, 9);
+        for (const t of [push.rest as number, (push.rest as number) + 0.02, 0.3]) {
             const p = pivotAt(track, t);
-            expect(p.P.x - from.x, `travel at ${t}`).toBeCloseTo(0.1, 12);
-            expect(p.P.z - from.z, `height at ${t}`).toBeCloseTo(0, 12);
+            expect(p.P.x - from.x, `travel at ${t}`).toBeCloseTo(0.2, 9);
+            expect(p.P.z - from.z, `height at ${t}`).toBeGreaterThan(0);
             expect(p.V.x, `along-aim speed at ${t}`).toBeCloseTo(0, 12);
             expect(p.V.z, `vertical speed at ${t}`).toBeCloseTo(0, 12);
         }
@@ -542,11 +553,14 @@ describe("the hands' arc after contact (P2b.2b.2b.2b design §4.1)", () => {
         expect(handsAt(track, push.end as number).position.z).toBeCloseTo(start.z, 12);
     });
 
-    it("stops the intended path at once at the push length: no brake, no descent", () => {
-        for (const t of [push.end as number, 0.2, 0.5]) {
+    it("eases the intended path to rest a further push length past its end", () => {
+        // P2b.2b.2c.3b.1 design §5 (was a stop at once at the push length): from 2 m/s at V²/(2·0.3) to rest at
+        // end + 0.3 s, 0.6 m along aim, and still from there.
+        expect(push.rest as number).toBeCloseTo((push.end as number) + 0.3, 9);
+        for (const t of [push.rest as number, 0.5, 0.8]) {
             const hands = handsAt(track, t);
             expect(hands.velocity).toEqual(vec3(0, 0, 0));
-            expect(dot(sub(hands.position, start), AIM)).toBeCloseTo(0.3, 12);
+            expect(dot(sub(hands.position, start), AIM)).toBeCloseTo(0.6, 9);
         }
     });
 
@@ -1171,5 +1185,74 @@ describe("the swung body on every stroke (P2b.2b.2c.3a A2 item 4)", () => {
         const theta = pathAt(track, from).theta;
         expect(pathAt(held, from + 0.01).theta).toBe(theta);
         expect(pathAt(held, from + 0.05).theta).toBe(theta);
+    });
+});
+
+describe("the finish (P2b.2b.2c.3b.1 design §5)", () => {
+    /** The hands' along-aim position (from the push's origin) and speed on `track` at t. */
+    const along = (track: PreparedTrack, t: number): { readonly s: number; readonly v: number } => {
+        const hands = handsAt(track, t);
+        const { aim } = track.arc;
+        return { s: dot(sub(hands.position, (track.push as Push).origin), aim), v: dot(hands.velocity, aim) };
+    };
+
+    /** The along-aim speed's left and right limits at t agree within 1e-9. */
+    const continuousAt = (track: PreparedTrack, t: number): void => {
+        expect(Math.abs(along(track, t - 1e-12).v - along(track, t).v)).toBeLessThan(1e-9);
+    };
+
+    it("the hands carry on up the arc past the push", () => {
+        // Today's full roll (the push map's text book at power 0.1535, as scripts/pathTrace.ts builds it).
+        const lawn = openWorld(10);
+        const { contact } = planStroke(mapSetup("full-roll", textBook("full-roll"), 0.1535), lawn);
+        const track = prepareTrack(contact.drive as TrackDrive, contact.head, lawn.gravity);
+        const push = track.push as Push;
+        const { handReach } = track.arc;
+        const end = push.end as number;
+        const rest = push.rest as number;
+        expect(push.finishSpeed).toBeGreaterThan(0);
+        expect(Math.abs(along(track, rest).s - 2 * handReach)).toBeLessThan(1e-9);
+        expect(Math.abs(along(track, end).v - push.finishSpeed)).toBeLessThan(1e-9);
+        continuousAt(track, end);
+        for (const t of [rest, rest + 0.1, rest + 0.5]) {
+            expect(along(track, t).v, `at ${t}`).toBe(0);
+        }
+        let previous = handsAt(track, end).position.z;
+        for (let i = 1; i <= 20; i++) {
+            const z = handsAt(track, end + ((rest - end) * i) / 20).position.z;
+            expect(z, `step ${i}`).toBeGreaterThan(previous);
+            previous = z;
+        }
+    });
+
+    it("starts the finish from the plan's pace and the advance's together (review focus 5)", () => {
+        // An advance easing to rest at handReach on its own, the plan adding 0.5 m/s: the push's end comes before
+        // the advance's, and the finish takes on the total pace there with no step.
+        const arc = levelArc(vec3(0, 0, 1), {
+            pivotVelocity: vec3(0.5, 0, 0),
+            handReach: 0.1,
+            advance: { start: 0, speed: 1, accel: 50 },
+        });
+        const track = prepareTrack(trackDrive(arc), TEST_HEAD, STANDARD_GRAVITY);
+        const push = track.push as Push;
+        const end = push.end as number;
+        expect(push.advance).not.toBeNull();
+        expect(push.finishSpeed).toBeGreaterThan(0.5);
+        expect(Math.abs(along(track, end).v - push.finishSpeed)).toBeLessThan(1e-9);
+        continuousAt(track, end);
+        expect(Math.abs(along(track, push.rest as number).s - 0.2)).toBeLessThan(1e-9);
+    });
+
+    it("never starts a finish on a push that never reaches its length (review focus 2)", () => {
+        // 0.15 m/s travels 0.075 m within REACH_SEARCH, short of the 0.1 m push: no end and no rest, and the hands
+        // run on, finite, to the follow-through's cap.
+        const track = prepare(levelArc(vec3(0, 0, 1), { pivotVelocity: vec3(0.15, 0, 0), handReach: 0.1 }));
+        const push = track.push as Push;
+        expect([push.end, push.rest, push.finishSpeed, push.finishDecel]).toEqual([null, null, 0, 0]);
+        for (let t = 0; t <= FOLLOW_CAP; t += 0.05) {
+            const hands = handsAt(track, t);
+            const values = [hands.position, hands.velocity].flatMap((v) => [v.x, v.y, v.z]);
+            expect(values.every(Number.isFinite), `at ${t}`).toBe(true);
+        }
     });
 });

@@ -6,6 +6,7 @@ import {
     LOOK_AHEAD,
     RELEASE_STEPS,
     TRACK_IMPACT_CAP,
+    finishKind,
     integrate,
     integrateStroke,
     type ImpactBall,
@@ -39,7 +40,12 @@ import {
 import { exp } from "../../../src/engine/math/elementary";
 import { flexGains } from "../../../src/engine/impact/flex";
 import type { Coupling, HandChain, Hands, HeadState, SwingArc } from "../../../src/engine/impact/types";
+import { simulateStroke } from "../../../src/engine/impact/simulateImpact";
+import { planStroke } from "../../../src/engine/swing/buildContact";
+import type { BallState, BallStates } from "../../../src/engine/types";
 import { STANDARD_GRAVITY } from "../../../src/engine/world";
+import { openWorld } from "../../../scripts/openLawn";
+import { mapSetup, textBook } from "../../../scripts/pushMapRun";
 import { contactReference } from "../../../src/reference/index";
 import { TEST_BALL } from "../support/fixtures";
 import {
@@ -700,10 +706,10 @@ describe("the flex (P2b.2b.2b.2b design §3.1, §7.1)", () => {
             expect(flexGains(TEST_FLEX, force, 1)).toEqual(flexGains(TEST_FLEX, force));
         });
 
-        it("holds until the ball's first departure, then relaxes to the rhythmic flex at the muscles' pace", () => {
-            // Gate round 13 ruling, "Relax from first departure" (2026-10-12): from t_d, the first step the face–ball
-            // pair is open with the ball separating, the hold's weight is exp(−(t − t_d)/τ_push), so k is continuous at
-            // t_d and returns to the rhythmic value. Until a departure the arms hold, the pendulum phase included.
+        it("holds through the push and its pendulum phase, whether or not a ball departs", () => {
+            // P2b.2b.2c.3b.1 design §2 (was gate round 13's "Relax from first departure", 2026-10-12: from t_d the
+            // weight fell as exp(−(t − t_d)/τ_push)): a push's arms hold at full weight to the end, so the hold adds
+            // (k_hold − k₀) to the rhythmic k₀ + κ·|F_ff| at every t, the departure latched but no longer read.
             // Hands travelling along aim reach the pendulum phase partway through a 5 cm push.
             const arc = STILL({
                 theta0: -0.3,
@@ -726,32 +732,19 @@ describe("the flex (P2b.2b.2b.2b design §3.1, §7.1)", () => {
                 handLoad(track, headOnPath(track, TEST_HEAD, t), TEST_HEAD, t, grip, IMPACT_DT);
                 return grip.topStiffness;
             };
-            const excess = (t: number, departedAt: number | null = departed): number =>
+            const excess = (t: number, departedAt: number | null): number =>
                 topStiffness(held, t, departedAt) - topStiffness(plain, t, departedAt);
             const full = (HELD.flex.hold as NonNullable<typeof HELD.flex.hold>).stiffness - TEST_FLEX.stiffness;
-            // The flex's force on the forearm is continuous across t_d. The flex takes hold at 1 ms; from then the
-            // forearm stays where it was while its intended point moves on, so the spring carries an offset, and a step
-            // in k at t_d would step the force by Δk times that offset.
-            const hold0 = { ...newGripState(), departedAt: departed };
-            handLoad(held, headOnPath(held, TEST_HEAD, 0.001), TEST_HEAD, 0.001, hold0, IMPACT_DT);
-            const forearmForce = (t: number): Vec3 => {
-                const grip = structuredClone(hold0);
-                handLoad(held, headOnPath(held, TEST_HEAD, t), TEST_HEAD, t, grip, IMPACT_DT);
-                return (grip.topChain as ArmChain).forearm.force;
-            };
-            const before = forearmForce(departed - 1e-9);
-            expect(dist(forearmForce(departed + 1e-9), before)).toBeLessThan(1e-6 * (1 + length(before)));
-            for (const t of [0.001, departed / 2, departed - 1e-9]) {
-                expect(excess(t), `held at ${t}`).toBeCloseTo(full, 9);
-            }
-            expect(Math.abs(excess(departed + 1e-9) - full)).toBeLessThan(1e-4 * full);
-            for (const n of [1, 2, 10]) {
-                const t = departed + n * tau;
-                expect(excess(t), `${n} τ`).toBeCloseTo(full * Math.exp(-n), 6);
-            }
-            // With no departure the arms still hold, through the pendulum phase too.
-            for (const t of [pendulum + tau, pendulum + 10 * tau]) {
-                expect(excess(t, null), `no departure, ${t}`).toBeCloseTo(full, 9);
+            for (const t of [
+                0.001,
+                departed / 2,
+                departed + 1e-9,
+                departed + tau,
+                departed + 10 * tau,
+                pendulum + tau,
+            ]) {
+                expect(excess(t, departed), `departed, at ${t}`).toBeCloseTo(full, 9);
+                expect(excess(t, null), `no departure, at ${t}`).toBeCloseTo(full, 9);
             }
         });
 
@@ -785,14 +778,15 @@ describe("the flex (P2b.2b.2b.2b design §3.1, §7.1)", () => {
         });
     });
 
-    it("pushes no harder along aim than its springs and dampers once the push has stopped: no brake", () => {
-        // Design §7.1: the intended path stops at once, so past the push's end and the pendulum's held slope the
-        // planned acceleration is zero and the feed-forward has no deceleration term along aim.
+    it("pushes no harder along aim than its springs and dampers once the hands have come to rest: no brake", () => {
+        // Design §7.1, P2b.2b.2c.3b.1 design §5 (was once the push had stopped at its end, at once): past the hands'
+        // rest, 0.1 s after the push's end at 1 m/s, and the pendulum's held slope, the planned acceleration is zero
+        // and the feed-forward has no deceleration term along aim.
         const arc = STILL({ pivotVelocity: vec3(1, 0, 0), handReach: 0.05, window: 0.005, handWindow: 0.005 });
         const track = prepareAt(arc, 0);
-        const end = (track.push as Push).end as number;
+        const rest = (track.push as Push).rest as number;
         const grip = newGripState();
-        for (const t of [end + 0.02, end + 0.05]) {
+        for (const t of [rest + 0.02, rest + 0.05]) {
             const load = handLoad(track, headOnPath(track, TEST_HEAD, t), TEST_HEAD, t, grip, IMPACT_DT);
             expect(Math.abs(dot(load.feedForward, arc.aim))).toBeLessThan(1e-9);
         }
@@ -1208,11 +1202,11 @@ describe("the hand–arm chain (P2b.2b.2b.2b gate round 3 ruling, 2026-10-11)", 
         expect(Math.max(highest - initial, initial - lowest)).toBeLessThan(1e-2 * initial);
     });
 
-    it("drops the bottom hand's chain and skin in the pendulum phase: its push acts at the grip", () => {
-        // Hands travelling along aim reach half the 5 cm push at 25 ms, the shaft leaning back 0.3 rad (short of
-        // vertical, so the bottom hand pushes). Before it both chains hold the mallet; from it the bottom hand's chain
-        // leaves the model, the swung body keeps only the top hand's skin, and the bottom push along e is applied
-        // directly.
+    it("keeps the bottom hand's chain and skin through a push's pendulum phase", () => {
+        // P2b.2b.2c.3b.1 design §2 (was: from the pendulum phase the bottom hand's chain left the model, the swung
+        // body kept only the top hand's skin, and the bottom push along e acted at the grip): a push's bottom hand
+        // never opens. Hands travelling along aim reach half the 5 cm push at 25 ms, the shaft leaning back 0.3 rad;
+        // past it both chains still hold the mallet and the swung body keeps both skins.
         const arc = HOLDING({
             theta0: -0.3,
             pivotVelocity: vec3(1, 0, 0),
@@ -1226,22 +1220,15 @@ describe("the hand–arm chain (P2b.2b.2b.2b gate round 3 ruling, 2026-10-11)", 
         const pendulum = (track.push as Push).pendulum as number;
         const grip = newGripState();
         handLoad(track, headOnPath(track, TEST_HEAD, 0), TEST_HEAD, 0, grip, IMPACT_DT);
+        const t = pendulum + 1e-3;
+        handLoad(track, headOnPath(track, TEST_HEAD, t), TEST_HEAD, t, grip, IMPACT_DT);
+        expect(grip.releasedAt).toBeNull();
         expect(grip.topChain).not.toBeNull();
         expect(grip.bottomChain).not.toBeNull();
         expect(swungOf(track, grip)).toBe(track.body);
-        const t = pendulum + 1e-3;
-        const on = headOnPath(track, TEST_HEAD, t);
-        const load = handLoad(track, on, TEST_HEAD, t, grip, IMPACT_DT);
-        expect(grip.bottomChain).toBeNull();
-        expect(grip.topChain).not.toBeNull();
-        expect(swungOf(track, grip)).toBe(track.released);
         const skin = TEST_CHAIN.palmSkinMass + TEST_CHAIN.fingerSkinMass;
-        expect(track.released.mass).toBeCloseTo(TEST_HEAD.mass + skin, 12);
         expect(track.body.mass).toBeCloseTo(TEST_HEAD.mass + 2 * skin, 12);
-        const s = shaftOf(on);
-        const e = sub(arc.aim, scale(s, dot(arc.aim, s)));
-        expect(dist(load.bottom, scale(e, TEST_PENDULUM_FORCE / length(e)))).toBeLessThan(1e-9);
-        // Integrated: once released, no step carries a bottom chain.
+        // Integrated: every step past the pendulum phase's start still carries a bottom chain.
         let after = 0;
         let carried = 0;
         const probe: ImpactProbe = {
@@ -1257,7 +1244,7 @@ describe("the hand–arm chain (P2b.2b.2b.2b gate round 3 ruling, 2026-10-11)", 
         const start = headOnPath(track, TEST_HEAD, 0);
         integrate(isolated({ start, drive: track, gravity: STANDARD_GRAVITY }), { probe, cap: pendulum + 0.01 });
         expect(after).toBeGreaterThan(0);
-        expect(carried).toBe(0);
+        expect(carried).toBe(after);
     });
 
     it("holds a swing arc through the chains too", () => {
@@ -1383,23 +1370,57 @@ describe("the pendulum phase (P2b.2b.2b.2b design §4.2, §4.3, §7.1)", () => {
         return add(start.position, scale(rotate(start.orientation, UP_AXIS), TEST_HEAD.socket.z + track.arc.radius));
     };
 
-    it("at effort 0 is a free pendulum about the top hand: an undamped flex conserves the energy", () => {
-        // The run is 140,000 steps, so the probe keeps running extremes rather than every snapshot.
-        const track = prepared(0);
+    /**
+     * P2b.2b.2c.3b.1 design §2: a push's bottom hand never opens, so its pendulumEffort has no effect. The bottom hand
+     * opens only at the forward reach on a stroke without a push: here SWUNG's lean without a push (handReach 0), the
+     * reach slack 0, so that the shaft's first forward turn opens it.
+     */
+    const OPENING: Hands = { ...FREE, reachSlack: 0 };
+    const opening = (effort: number, hands: Hands = OPENING): PreparedTrack =>
+        prepareTrack(
+            trackDrive(
+                still({ slopeHold: 1, radius: 0.5, theta0: -0.5, handReach: 0, pendulumEffort: effort }),
+                TEST_COUPLING,
+                hands,
+            ),
+            TEST_HEAD,
+            STANDARD_GRAVITY,
+        );
+    /** The head on `track`'s path at t = 0, turning forward about the top grip at 0.5 rad/s: the reach opens it. */
+    const nudged = (track: PreparedTrack): HeadState => {
+        const on = headOnPath(track, TEST_HEAD, 0);
+        const spin = scale(track.axis, 0.5);
+        return { ...on, velocity: cross(spin, sub(on.position, topAtStart(track))), angularVelocity: spin };
+    };
+    /** True once the bottom hand has let go in the snapshot `s`: its chain has left the model. */
+    const isOpen = (s: ImpactSnapshot): boolean => s.hand?.chains?.bottom === null;
+
+    it("at effort 0 is a free pendulum about the top hand once the reach opens: an undamped flex conserves it", () => {
+        // P2b.2b.2c.3b.1 design §2 (was a push opened at its pendulum phase from contact, pendulumAt 0; a push's bottom
+        // hand never opens now): without a push the reach opens it at the first forward turn, and from there the head
+        // swings freely about the top hand. The run is 140,000 steps, so the probe keeps running extremes rather than
+        // every snapshot.
+        const track = opening(0);
+        expect(track.push).toBeNull();
         const topStart = topAtStart(track);
         let lowest = Infinity;
         let highest = 0 - Infinity;
         let pitch = 0 - Infinity;
+        let opened = 0;
         const probe: ImpactProbe = {
             step(s) {
+                if (!isOpen(s)) {
+                    return;
+                }
+                opened++;
                 const e = energy(track, s, topStart);
                 lowest = Math.min(lowest, e);
                 highest = Math.max(highest, e);
                 pitch = Math.max(pitch, 0 - leanOf(s.head));
             },
         };
-        const start = headOnPath(track, TEST_HEAD, 0);
-        integrate(isolated({ start, drive: track, gravity: STANDARD_GRAVITY }), { probe, cap: 0.7 });
+        integrate(isolated({ start: nudged(track), drive: track, gravity: STANDARD_GRAVITY }), { probe, cap: 0.7 });
+        expect(opened).toBeGreaterThan(0);
         // The swing's potential range, m·g·ℓ_h·(1 − cos 0.5) with ℓ_h = ρ + r = 0.532 m, sets the scale;
         // semi-implicit Euler's error is O(dt) of it.
         const range = TEST_HEAD.mass * STANDARD_GRAVITY * 0.532 * (1 - Math.cos(0.5));
@@ -1407,22 +1428,28 @@ describe("the pendulum phase (P2b.2b.2b.2b design §4.2, §4.3, §7.1)", () => {
         expect(pitch).toBeGreaterThan(0.4);
     });
 
-    it("pushes the bottom grip up to vertical and not after, adding F_pendulum's work within 1 %", () => {
-        // Review focus 3 at full effort. The work is F_pendulum·(e·v_B)·dt summed from the kinematics, not from the
-        // reported force, up to the first step past vertical.
-        const track = prepared(1);
+    it("once open, pushes the bottom grip up to vertical and not after, adding F_pendulum's work within 1 %", () => {
+        // Review focus 3 at full effort, on a stroke without a push (P2b.2b.2c.3b.1 design §2; was a push opened at its
+        // pendulum phase). The work is F_pendulum·(e·v_B)·dt summed from the kinematics, not from the reported force,
+        // from the opening up to the first step past vertical.
+        const track = opening(1);
         const topStart = topAtStart(track);
         const aim = track.arc.aim;
         let work = 0;
-        let previous = 0;
+        let previous = NaN;
         let before = NaN;
         let atVertical = NaN;
         let past = false;
         let pushedAfter = 0;
         const probe: ImpactProbe = {
             step(s) {
+                if (!isOpen(s)) {
+                    return;
+                }
                 if (Number.isNaN(before)) {
                     before = energy(track, s, topStart);
+                    previous = s.t;
+                    return;
                 }
                 if (past) {
                     pushedAfter = Math.max(pushedAfter, length((s.hand as NonNullable<ImpactSnapshot["hand"]>).bottom));
@@ -1441,24 +1468,23 @@ describe("the pendulum phase (P2b.2b.2b.2b design §4.2, §4.3, §7.1)", () => {
                 atVertical = energy(track, s, topStart);
             },
         };
-        const start = headOnPath(track, TEST_HEAD, 0);
-        integrate(isolated({ start, drive: track, gravity: STANDARD_GRAVITY }), { probe, cap: 0.7 });
+        integrate(isolated({ start: nudged(track), drive: track, gravity: STANDARD_GRAVITY }), { probe, cap: 0.7 });
         expect(past).toBe(true);
         expect(Math.abs((atVertical - before) / work - 1)).toBeLessThan(0.01);
         // One step past vertical the latch is set; every later step's bottom hand is off the mallet.
         expect(pushedAfter).toBe(0);
     });
 
-    it("finishes at the swing's first apex after it starts, past vertical, never at the cap", () => {
-        // With TEST_FLEX's damping (ζ 0.3), not FREE's: the undamped flex is far from leaving the pivot be. It rings
-        // the head's fast pitch mode (the head turning about its own centre against the soft top spring), which
-        // reverses the pitch rate about 20 ms in, at θ −0.457, and would fire the finish there. Damped, the rate stays
-        // positive to the swing's top.
-        const damped: Hands = { ...TEST_HANDS, bottom: 0.25 };
-        const track = prepareTrack(trackDrive(SWUNG(0), TEST_COUPLING, damped), TEST_HEAD, STANDARD_GRAVITY);
-        const start = headOnPath(track, TEST_HEAD, 0);
+    it("finishes a swing at its first apex once the reach opens, past vertical, never at the cap", () => {
+        // P2b.2b.2c.3b.1 design §5 (was a carry's finish at the first apex after its pendulum phase; a carry now
+        // ends at its hands' rest, and these still hands never travel): without a push the stroke is a swing, which
+        // finishes at its apex. With TEST_FLEX's damping (ζ 0.3), not FREE's: the undamped flex rings the head's fast
+        // pitch mode (the head turning about its own centre against the soft top spring), which reverses the pitch
+        // rate early and would fire the finish there. Damped, the rate stays positive to the swing's top.
+        const track = opening(0, { ...TEST_HANDS, bottom: 0.25, reachSlack: 0 });
+        expect(finishKind(track)).toBe("swing");
         const { follow } = integrateStroke(
-            isolated({ start, drive: track, gravity: STANDARD_GRAVITY }),
+            isolated({ start: nudged(track), drive: track, gravity: STANDARD_GRAVITY }),
             { cap: 0.01 },
             true,
         );
@@ -1466,7 +1492,7 @@ describe("the pendulum phase (P2b.2b.2b.2b design §4.2, §4.3, §7.1)", () => {
         expect(done.flags).not.toContain("follow-cap");
         expect(done.finish).toBeLessThan(FOLLOW_CAP);
         const last = done.samples[done.samples.length - 1] as StrokeState;
-        // Released at rest 0.5 rad back, it tops out near 0.5 rad forward (the flex barely moves the pivot).
+        // Released 0.5 rad back, it tops out past 0.4 rad forward (the flex barely moves the pivot).
         expect(-leanOf(last.head)).toBeGreaterThan(0.4);
     });
 
@@ -1543,11 +1569,12 @@ describe("one law after contact (P2b.2b.2c.3a A2 item 5)", () => {
     });
 
     it("holds the posture only with a push", () => {
-        // A2 item 5: the posture hold, from the first departure, acts only through a push. With none the weight is 0,
-        // so the departure changes nothing; with one, held (no departure) and relaxed (long departed) differ.
-        const topStiffness = (arc: SwingArc, departedAt: number | null): number => {
+        // A2 item 5: the posture hold acts only through a push. With none the weight is 0, so the departure changes
+        // nothing; with one the arms hold at full weight whatever the departure (P2b.2b.2c.3b.1 design §2; was held
+        // and relaxed, long departed, differing), the hold adding k_hold − k₀ to the rhythmic flex.
+        const topStiffness = (arc: SwingArc, departedAt: number | null, hands: Hands = HELD): number => {
             const grip = { ...newGripState(), departedAt };
-            stepOn(arc, HELD, 0.002, grip);
+            stepOn(arc, hands, 0.002, grip);
             return grip.topStiffness;
         };
         // P2b.2b.2c.3a: a push wherever handReach > 0 (A2 item 8), so the arc without one has a handReach of 0 (was
@@ -1557,7 +1584,10 @@ describe("one law after contact (P2b.2b.2c.3a A2 item 5)", () => {
         expect(topStiffness(swing, null)).toBe(topStiffness(swing, -1e9));
         const carry = still({ slopeHold: 1, handReach: 0.1, pendulumAt: 1 });
         expect(prepare(carry).push).not.toBeNull();
-        expect(topStiffness(carry, null)).not.toBe(topStiffness(carry, -1e9));
+        expect(topStiffness(carry, null)).toBe(topStiffness(carry, -1e9));
+        const full = (HELD.flex.hold as NonNullable<typeof HELD.flex.hold>).stiffness - TEST_FLEX.stiffness;
+        expect(topStiffness(carry, -1e9) - topStiffness(carry, -1e9, TEST_HANDS)).toBeCloseTo(full, 9);
+        expect(topStiffness(swing, -1e9) - topStiffness(swing, -1e9, TEST_HANDS)).toBeCloseTo(0, 9);
     });
 
     it("lets go of the chains at a stop's hold", () => {
@@ -1625,5 +1655,76 @@ describe("the bottom hand's opening (P2b.2b.2c.3a A2 item 6)", () => {
         expect(dist(opened(0.5), scale(e, 0.5 * TEST_PENDULUM_FORCE))).toBeLessThan(1e-9);
         expect(length(opened(0))).toBe(0);
         expect(length(opened(0.5, true))).toBe(0);
+    });
+});
+
+describe("the level head's hold (P2b.2b.2c.3b.1 design §2; push-map spec A6)", () => {
+    /** Today's full roll on the 10 s open lawn, as scripts/pathTrace.ts builds it: the text book at power 0.1535. */
+    const FULL_ROLL = mapSetup("full-roll", textBook("full-roll"), 0.1535);
+    const LAWN = openWorld(10);
+
+    /** Every hold weight the probe reports from contact, impact and follow-through, and the bottom hand's chains. */
+    function heldThrough(balls: BallStates): {
+        readonly holds: readonly number[];
+        readonly opened: number;
+        readonly departed: boolean;
+        readonly follows: number;
+    } {
+        const stroke = planStroke(FULL_ROLL, LAWN);
+        const holds: number[] = [];
+        let opened = 0;
+        let follows = 0;
+        const probe: ImpactProbe = {
+            step(s) {
+                if (s.hand?.hold !== undefined) {
+                    holds.push(s.hand.hold);
+                    if (s.hand.chains?.bottom === null) {
+                        opened++;
+                    }
+                }
+            },
+            follow(s) {
+                follows++;
+                if (s.hold !== undefined) {
+                    holds.push(s.hold);
+                }
+                if (s.chains?.bottom === null) {
+                    opened++;
+                }
+            },
+        };
+        const run = simulateStroke(stroke.contact, balls, LAWN, { probe });
+        return { holds, opened, departed: run.result.departure !== undefined, follows };
+    }
+
+    it("a push's hold never relaxes and its bottom hand never opens", () => {
+        const { holds, opened, departed, follows } = heldThrough(FULL_ROLL.balls);
+        // A ball departs, so today's rule relaxed the hold from there and opened the bottom hand at the pendulum.
+        expect(departed).toBe(true);
+        expect(follows).toBeGreaterThan(0);
+        expect(holds.length).toBeGreaterThan(follows);
+        expect(holds.every((w) => w === 1)).toBe(true);
+        expect(opened).toBe(0);
+    });
+
+    it("holds the same on a push that strikes nothing (review focus 1)", () => {
+        // Every ball moved 2 m across the aim, off the head's path.
+        const drive = planStroke(FULL_ROLL, LAWN).contact.drive;
+        if (drive.kind !== "track") {
+            throw new Error("the full roll plans a tracked drive");
+        }
+        const { aim } = drive.arc;
+        const across = vec3(0 - 2 * aim.y, 2 * aim.x, 0);
+        const aside: BallStates = Object.fromEntries(
+            Object.entries(FULL_ROLL.balls).map(([id, b]) => [
+                id,
+                { ...(b as BallState), position: add((b as BallState).position, across) },
+            ]),
+        );
+        const { holds, opened, departed } = heldThrough(aside);
+        expect(departed).toBe(false);
+        expect(holds.length).toBeGreaterThan(0);
+        expect(holds.every((w) => w === 1)).toBe(true);
+        expect(opened).toBe(0);
     });
 });
