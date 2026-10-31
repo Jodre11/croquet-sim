@@ -132,8 +132,13 @@ contact only, and the flick (an accelerating finish) waits for the side-on viewe
 
 A carry's follow-through ends when the hands come to rest (user, 2026-10-31): any motion of the head on the arms after
 that is not followed. A check keeps its rule, the head at rest relative to the hands (`FINISH_SPEED`), from the hands'
-rest. The ease's travel, `handReach`, stays far inside the arc's reach
-(s_low + ρ_h, 1.65 m at the presets), so the arc's height is always defined.
+rest. The ease's travel, `handReach`, stays far inside the arc's reach at the presets (s_low + ρ_h, 1.65 m); the
+planner rejects feet or arcs that would leave it, 2·handReach − ρ_h < s_low < ρ_h, so the arc's height is always
+defined.
+
+The follow cap is a safety net and must not cut a planned finish short (review, 2026-10-31; an assumption): on a push
+it counts from the push's end, so the follow-through stops at the push's end plus `FOLLOW_CAP`. A finish slower than
+that (a pace below about 0.6 m/s at a push length of 0.3 m) still caps, and the cap is recorded.
 
 ## 6. Versions and records
 
