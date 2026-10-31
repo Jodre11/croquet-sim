@@ -61,9 +61,10 @@ describe("practice strokes (P2b.2b.2c.3b.1 design §4)", () => {
         expect(plain.from).toBe(from);
         expect(plain.step).toBe(step);
         expectValues(plain, [0, 0.5 * mm, 2 * mm, 3 * mm]);
-        // Over the finish (from the push's end on) only a drop is corrected: a rise leaves the lift as it was.
+        // Over the finish (from the push's end on) the push's correction is carried and only a further drop is
+        // corrected: e(T) = 0.5 mm halfway between the second and third samples, so e becomes 0.5 mm + min(e, 0).
         const mixed = [0, -1 * mm, 2 * mm, -3 * mm, 1 * mm];
-        expectValues(nextLift(null, mixed, from, step, 0.002, end), [0, 0.5 * mm, 0, 3 * mm, 0]);
+        expectValues(nextLift(null, mixed, from, step, 0.002, end), [0, 0.5 * mm, -0.5 * mm, 2.5 * mm, -0.5 * mm]);
         // A push whose finish never starts (end null) corrects the whole error.
         expectValues(nextLift(null, mixed, from, step, 0.002, null), [0, 0.5 * mm, -2 * mm, 3 * mm, -1 * mm]);
         // The ramp is the minimum-jerk one: at a quarter of a 4 ms window w = 10s³ − 15s⁴ + 6s⁵ at s = ¼.
@@ -86,6 +87,23 @@ describe("practice strokes (P2b.2b.2c.3b.1 design §4)", () => {
         // liftAt reads a sample's time to within rounding, so the values carry the last bits of that read.
         expect(liftAt(shorter, from + 0.003)).toEqual({ z: shorter.values[1], v: 0, a: 0 });
         expect(liftAt(next, from + 0.01)).toEqual({ z: next.values[3], v: 0, a: 0 });
+    });
+
+    it("the lift is continuous across the push's end", () => {
+        // e > 0 at T (design §4 item 2, amended 2026-10-31): a sample just before T takes −w·e, one just after it
+        // −w·(max(e(T), 0) + min(e, 0)); with e(T) → e there both agree, where min(e, 0) alone would step to 0.
+        const from = 0.2;
+        const step = 0.001;
+        const mm = 0.001;
+        const error = [0, 1 * mm, 3 * mm, 2 * mm];
+        const at = from + 2 * step;
+        const before = nextLift(null, error, from, step, 0.002, at + 1e-12);
+        const after = nextLift(null, error, from, step, 0.002, at - 1e-12);
+        const z = (lift: Lift): number => lift.values[2] as number;
+        expect(z(before)).toBeLessThan(-2.9 * mm);
+        expect(Math.abs(z(before) - z(after))).toBeLessThan(1e-11);
+        // A later sample of the finish with e ≥ 0 keeps the carried correction alone.
+        expect(Math.abs((after.values[3] as number) - z(after))).toBeLessThan(1e-11);
     });
 
     it("an unconverged stroke reports its miss", () => {

@@ -41,11 +41,13 @@ function ramp(s: number): number {
 
 /**
  * The next pass's lift (design §4, item 2): at each sample t_i = from + i·step of `error` (e_k, m, the head's lowest
- * point above h₀), δz_{k+1} = δz_k − w·e_k before `pushEnd` and δz_k − w·min(e_k, 0) from it on, since the finish is
- * meant to rise; w the minimum-jerk ramp from 0 to 1 over `window` (s) from `from`, the planned contact. δz_k is
- * `previous` read at t_i (0 where null; past its last sample its held value). The result has `error`'s samples:
- * past them it holds its last value (liftAt). A `pushEnd` of null, a push whose finish never starts, corrects the
- * whole error. Exported for its unit test.
+ * point above h₀), δz_{k+1} = δz_k − w·e_k before `pushEnd` (T). Over the finish, t ≥ T, the push's correction is
+ * carried through and only a further drop is corrected, since the finish is meant to rise: e_k(t) is replaced by
+ * max(e_k(T), 0) + min(e_k(t), 0), e_k(T) linear between the samples about T, so the lift is continuous at T (design
+ * §4 item 2, as amended 2026-10-31). w is the minimum-jerk ramp from 0 to 1 over `window` (s) from `from`, the planned
+ * contact. δz_k is `previous` read at t_i (0 where null; past its last sample its held value). The result has
+ * `error`'s samples: past them it holds its last value (liftAt). A `pushEnd` of null, a push whose finish never
+ * starts, corrects the whole error. Exported for its unit test.
  */
 export function nextLift(
     previous: Lift | null,
@@ -55,13 +57,31 @@ export function nextLift(
     window: number,
     pushEnd: number | null,
 ): Lift {
+    const carried = pushEnd === null ? 0 : Math.max(errorAt(error, (pushEnd - from) / step), 0);
     const values = error.map((e, i) => {
         const t = from + i * step;
         const before = previous === null ? 0 : liftAt(previous, t).z;
-        const corrected = pushEnd !== null && t >= pushEnd ? Math.min(e, 0) : e;
+        const corrected = pushEnd !== null && t >= pushEnd ? carried + Math.min(e, 0) : e;
         return before - ramp((t - from) / window) * corrected;
     });
     return { from, step, values };
+}
+
+/** `error` at the fractional sample index x, linear between samples, its first or last value outside them. */
+function errorAt(error: readonly number[], x: number): number {
+    const last = error.length - 1;
+    if (last < 0) {
+        return 0;
+    }
+    if (x <= 0) {
+        return error[0] as number;
+    }
+    if (x >= last) {
+        return error[last] as number;
+    }
+    const i = Math.floor(x);
+    const e0 = error[i] as number;
+    return e0 + ((error[i + 1] as number) - e0) * (x - i);
 }
 
 /** A pass's collected head: (t, lowest point) on every impact step and follow-through step, in time order. */
