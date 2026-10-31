@@ -7,8 +7,6 @@
  * table every 5 ms. A first slice of the side-on viewer; diagnostic, not part of the engine or the test suite.
  * Run with `npx --yes tsx scripts/pathTrace.ts`; environment: OUT (a directory, default docs/superpowers/probes).
  */
-import { writeFileSync } from "node:fs";
-import { join } from "node:path";
 import { headLowestPoint } from "../src/engine/impact/contacts";
 import type { FollowSnapshot, ImpactProbe, ImpactSnapshot } from "../src/engine/impact/integrate";
 import { rotate } from "../src/engine/impact/rigidBody";
@@ -20,6 +18,18 @@ import { planStroke } from "../src/engine/swing/buildContact";
 import { type BallState } from "../src/engine/types";
 import { openWorld } from "./openLawn";
 import { mapSetup, textBook, type MapPlan, type RollType } from "./pushMapRun";
+
+declare const process: { readonly env: Readonly<Record<string, string | undefined>> };
+
+/** The file system call the trace uses (tsx runs under Node; the project has no Node types). */
+interface Files {
+    writeFileSync(path: string, data: string): void;
+}
+
+async function files(): Promise<Files> {
+    const specifier = "node:fs";
+    return (await import(/* @vite-ignore */ specifier)) as Files;
+}
 
 const WORLD = openWorld(10);
 const OUT = process.env.OUT ?? "docs/superpowers/probes";
@@ -346,12 +356,13 @@ function tableOf(c: TraceCase, tr: Trace): string {
     return lines.join("\n");
 }
 
+const fs = await files();
 const tables: string[] = [];
 for (const c of CASES) {
     const tr = trace(c);
-    writeFileSync(join(OUT, `2026-10-31-path-trace-${c.file}.svg`), svgOf(c, tr, WORLD.ball.radius));
+    fs.writeFileSync(`${OUT}/2026-10-31-path-trace-${c.file}.svg`, svgOf(c, tr, WORLD.ball.radius));
     tables.push(tableOf(c, tr));
 }
 const text = tables.join("\n\n");
-writeFileSync(join(OUT, "2026-10-31-path-trace.txt"), `${text}\n`);
+fs.writeFileSync(`${OUT}/2026-10-31-path-trace.txt`, `${text}\n`);
 console.log(text);
