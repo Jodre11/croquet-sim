@@ -47,13 +47,21 @@ After this phase, 3b re-runs its maps (Tasks 6–8) on the new engine and resume
 | The arms' hold relaxes from the first departure (`holdWeight`; gate round 13 ruling, 2026-10-12) | full weight through the push and the finish |
 | The bottom hand opens at the earlier of the forward reach and the pendulum phase (`openBottom`, `releasing`), the top hand then guiding alone and the bottom pushing with `pendulumEffort` until vertical | the bottom hand stays on through the push and the finish (user, 2026-10-31); neither opens it |
 | The push intent ends at the pendulum phase (`pushIntent`) | unchanged: `pendulumAt` still ends the push's force there |
-| The planned slope after contact (`slopeHold`, the free and held pendulum) | the lean at first contact, held constant through the push and the finish (below) |
+| The planned slope after contact (`slopeHold`, the free and held pendulum) | unchanged: at the rolls' and the map's λ = 1 it already holds the lean (below) |
 
 **Who plans what** (user, 2026-10-31). The player plans the top hand's path; practice refines it (§4). The bottom hand
 tries to keep a consistent lean, and flexes naturally under the load as it does. The lean's variation in contact comes
-from those mechanics: it is planned for, through the top hand's path, but it is not the player's goal. So the planned
-slope after first contact is the contact's lean, constant, and the bottom hand holds it through its flex law; the drift
-is what the engine's flex makes of it.
+from those mechanics: it is planned for, through the top hand's path, but it is not the player's goal. The bottom hand holds the
+planned slope through its flex law, and the drift is what the engine's flex makes of it.
+
+The consistent lean is the held slope the plan already has at λ = 1, the rolls' and the push map's value: the swing's
+pulse eases its rotation to rest over the stroke's `window` from contact, and the lean then holds through the push and
+the finish. A first build held the lean at its value at contact exactly (ω = 0 from contact on). That stopped the
+mallet's rotation in a single step at contact (0.48, 1.49 and 0.87 rad/s on the full, half and pass rolls), braking
+the pendulum during the impact; it lifted the full and half rolls' striker's ball past the R + 5 mm exit criterion
+and halved the pass roll's striker's speed. It was dropped (2026-10-31, an assumption: the step is an artefact of the
+literal reading, not the player's intent). A push hand-built with λ below 1 keeps its blend, as `slopeHold` is the
+user's input.
 
 So on a push `pendulumAt` keeps one meaning (where the push's force ends) and `pendulumEffort` has no effect; both keep
 their meaning on a stroke without a push. The user's note for the swing strokes (3c), recorded here: in a drive with
@@ -126,7 +134,7 @@ feet set), forward and up past its low point, from the pivot's planned velocity 
 plan's pace and any advance's together), and ease to rest over a further full push length, at the
 deceleration V²/(2·handReach) (user, 2026-10-31; the full roll brakes at about 1.5 g over 0.2 s). The advance's ease,
 V²/(0.4·handReach) over a fifth of the push, was tried first: it braked the full roll from 3 m/s in 40 ms, about
-7.7 g, and left the head wobbling on the arms by about 50 mm, still moving at the follow cap. The planned lean stays the contact's (§2), so the head trails the
+7.7 g, and left the head wobbling on the arms by about 50 mm, still moving at the follow cap. The planned lean holds (§2), so the head trails the
 rising hands and rises with them. The finish takes the plan's own pace: `drive` acts as today, in
 contact only, and the flick (an accelerating finish) waits for the side-on viewer phase (user, 2026-10-31).
 

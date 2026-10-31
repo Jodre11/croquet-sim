@@ -72,7 +72,10 @@ Each line's test is in the owning task below.
   rule in this task, each change named in the commit message.
 - [ ] **Step 5: Commit** `src/engine/impact/track.ts` and the touched tests.
 
-### Task 2: The contact's lean held after contact
+### Task 2: The contact's lean held after contact — DROPPED (2026-10-31)
+
+Dropped after its build: holding θ(contactAt) exactly stepped the mallet's rotation to 0 at contact (spec §2). The
+rolls' λ = 1 slope already holds the lean once the pulse eases; nothing is built. The steps below are kept as written.
 
 **Files:**
 - Modify: `src/engine/impact/track.ts` (`pendulumAt` ~1044, `prepareTrack` ~937)
