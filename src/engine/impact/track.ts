@@ -29,6 +29,7 @@ import { contactReference } from "../../reference/index";
 import { atan2, exp, sinCos } from "../math/elementary";
 import { ZERO, add, cross, dot, length, scale, sub, vec3, type Vec3 } from "../math/vec3";
 import { flexForce, flexGains, gripGains } from "./flex";
+import { liftAt, type Lowering } from "./lift";
 import { multiply, rotate, rotateInverse, type Quaternion } from "./rigidBody";
 import type {
     Coupling,
@@ -462,13 +463,6 @@ export interface Motion {
     readonly A: Vec3;
 }
 
-/** A rest-to-rest lowering (m, m/s, m/s², all downward). */
-interface Lowering {
-    readonly z: number;
-    readonly v: number;
-    readonly a: number;
-}
-
 /** The pendulum's θ (rad), ω (rad/s) and α (rad/s²). */
 export interface Swing {
     readonly theta: number;
@@ -712,9 +706,26 @@ export function advanceTravel(
  * The pivot at time t, without the dip, planned so that the free table includes it: with a push after contactAt on
  * the hands' arc (carryPivot), and before it from an earlier advance's start the plan with the advance's travel on
  * that arc (earlyAdvance); without one, with the resting reach: after t1 the along-aim component eases to rest, and
- * any other component in the swing plane runs on as planned, so V stays continuous.
+ * any other component in the swing plane runs on as planned, so V stays continuous. With a push and a lift, the lift
+ * is added to P, V and A's vertical components (P2b.2b.2c.3b.1 design §4, "The plan carries it"), so the free table
+ * and the hands' feed-forward include it.
  */
 function pivotAt(track: PreparedTrack, t: number): Motion {
+    const planned = plannedPivot(track, t);
+    const { lift } = track.arc;
+    if (track.push === null || lift === undefined) {
+        return planned;
+    }
+    const { z, v, a } = liftAt(lift, t);
+    return {
+        P: add(planned.P, vec3(0, 0, z)),
+        V: add(planned.V, vec3(0, 0, v)),
+        A: add(planned.A, vec3(0, 0, a)),
+    };
+}
+
+/** The pivot at time t without the dip or the lift (pivotAt). */
+function plannedPivot(track: PreparedTrack, t: number): Motion {
     const { push } = track;
     if (push !== null && t > push.start) {
         return carryPivot(track, push, t);

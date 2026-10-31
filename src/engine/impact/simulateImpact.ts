@@ -38,6 +38,7 @@ import type {
     HeadTurfLaw,
     ImpactResult,
     ImpactRun,
+    Lift,
     MalletHead,
     TrackDrive,
 } from "./types";
@@ -209,6 +210,16 @@ function validateDownswing(down: Downswing, n: Vec3): void {
  * velocity and acceleration in the swing plane, their component along the pitch axis within UNIT_TOLERANCE of their
  * size; and a downswing, if given, well formed (validateDownswing). The head need not start on the path.
  */
+/** Checks a lift (P2b.2b.2c.3b.1 design §4): a finite start, a positive step, and at least one value, all finite. */
+function validateLift(lift: Lift): void {
+    finiteNumber(lift.from, "arc.lift.from");
+    positive(lift.step, "arc.lift.step");
+    if (lift.values.length === 0) {
+        fail("arc.lift.values must not be empty");
+    }
+    lift.values.forEach((value, i) => finiteNumber(value, `arc.lift.values[${i}]`));
+}
+
 function validateTrack(drive: TrackDrive): void {
     const { arc, coupling, hands } = drive;
     finite(arc.pivot, "arc.pivot");
@@ -267,6 +278,9 @@ function validateTrack(drive: TrackDrive): void {
     }
     if (arc.lowPoint !== undefined) {
         finiteNumber(arc.lowPoint, "arc.lowPoint");
+    }
+    if (arc.lift !== undefined) {
+        validateLift(arc.lift);
     }
     // The push and its finish read the arc from contact (s = 0) to the hands' rest (s = 2·handReach; P2b.2b.2c.3b.1
     // design §5), at s − s_low: the finish's travel must stay on the arc. s_low is lowPoint, else handArcLow·handReach.

@@ -220,6 +220,21 @@ export interface SwingArc {
      * `planStroke` validates it (checkAdvance); a hand-built arc's advance is not checked.
      */
     readonly advance?: { readonly start: number; readonly speed: number; readonly accel: number };
+    /**
+     * With a push, the practised lift on the planned pivot (P2b.2b.2c.3b.1 design §4): a vertical offset added to the
+     * pivot's position, velocity and acceleration (lift.ts liftAt). Ignored without a push. Absent: no lift.
+     */
+    readonly lift?: Lift;
+}
+
+/**
+ * A lift (m, upward) sampled at `from + i·step` (s from t = 0) for each value i (P2b.2b.2c.3b.1 design §4, "The plan
+ * carries it"). Validation requires finite values, a positive step and at least one value.
+ */
+export interface Lift {
+    readonly from: number;
+    readonly step: number;
+    readonly values: readonly number[];
 }
 
 /**
