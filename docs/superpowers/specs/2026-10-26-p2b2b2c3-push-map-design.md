@@ -513,3 +513,10 @@ The ruling:
    other items wait for those maps. How the intent is realised (what height counts as level, which of the hand's arc
    and the head's angle is planned and which follows, and how the hold's effort counts against the superhuman class)
    is settled one question at a time and recorded here.
+4. **What is planned (user, 2026-10-31; the recommendation, not objected to).** The plan sets only the hand's travel
+   along aim, from the push length. The head's angle follows from the balls' load and the grip, and the hand's height
+   from keeping the head level, so the hand dips as the head tilts back and rises as the player recovers. Level is the
+   head's lowest point at first contact (an assumption). Holding it beyond a player's strength reads superhuman.
+5. **The finish (user, 2026-10-31).** Once the push is done the stroke may finish with a flick, or with the head
+   carrying on along its arc, especially in the push shot. Either way the head leaves the turf rather than swinging
+   down into it.
