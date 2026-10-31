@@ -513,10 +513,14 @@ The ruling:
    other items wait for those maps. How the intent is realised (what height counts as level, which of the hand's arc
    and the head's angle is planned and which follows, and how the hold's effort counts against the superhuman class)
    is settled one question at a time and recorded here.
-4. **What is planned (user, 2026-10-31; the recommendation, not objected to).** The plan sets only the hand's travel
-   along aim, from the push length. The head's angle follows from the balls' load and the grip, and the hand's height
-   from keeping the head level, so the hand dips as the head tilts back and rises as the player recovers. Level is the
-   head's lowest point at first contact (an assumption). Holding it beyond a player's strength reads superhuman.
+4. **What is planned (user, 2026-10-31).** Most of it is planned: the strokes are too quick for the player to adjust
+   as they go. Only on a slow push is there time to adjust; on a harder shot the player plays through what was planned.
+   So the plan sets the hand's whole path, its travel along aim from the push length and its dip and rise, as the
+   path that keeps the head level against the load the player expects, the head tilting back and recovering.
+   Corrections from what the player feels arrive only after a reaction delay, so they shape slow pushes alone. Level
+   is the head's lowest point at first contact (an assumption). Holding it beyond a player's strength reads
+   superhuman. (Supersedes an earlier reading of this item, in which the plan set only the travel along aim and the
+   hand's height followed by feedback.)
 5. **The finish (user, 2026-10-31).** Once the push is done the stroke may finish with a flick, or with the head
    carrying on along its arc, especially in the push shot. Either way the head leaves the turf rather than swinging
    down into it.
@@ -524,8 +528,8 @@ The ruling:
    the player it all happens in a flash. The path is never perfect: it wanders within bounds, and the bound is what
    keeps the face in contact with the ball, or, once the ball has gone, on the path that would keep that contact. So
    level is a band, not a line: no new constant, since the band is set by the face's own reach about the ball's
-   contact (during contact the existing impact-off-face read is that test). The hands correct the head's drift back
-   into the band; they do not hold it rigidly.
+   contact (during contact the existing impact-off-face read is that test). The planned path aims to keep the head in
+   the band; the hands do not hold it rigidly, and correct its drift only after the reaction delay of item 4.
 7. **The finish is one arc (user, 2026-10-31).** A flick is not a second finish: it is the same continuation of the
    head's arc once contact ends, accelerating. So there is no new input. The finish carries the head on along its arc,
    and how hard it accelerates there comes from the existing after-first-contact input (accelerate or brake); a flick
