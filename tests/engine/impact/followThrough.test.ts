@@ -203,12 +203,30 @@ describe("the follow-through (design §4)", () => {
         expect(follow.finish).toBeGreaterThanOrEqual(push.rest as number);
     });
 
+    it("lets a slow finish reach its rest: the cap counts from the push's end (P2b.2b.2c.3b.1 design §5)", () => {
+        // The full roll at a quarter of its canonical power, its finish's rest more than FOLLOW_CAP after contact but
+        // within it of the push's end: the cap is a safety net and must not cut a planned finish short.
+        const lawn = openWorld(10);
+        const setup = mapSetup("full-roll", textBook("full-roll"), 0.1535 / 4);
+        const planned = planStroke(setup, lawn);
+        const contactAt = (planned.contact.drive as TrackDrive).arc.contactAt;
+        const push = prepareTrack(planned.contact.drive as TrackDrive, planned.contact.head, lawn.gravity).push as Push;
+        expect(push.end).not.toBeNull();
+        expect(push.rest as number).toBeGreaterThan(contactAt + FOLLOW_CAP);
+        expect(push.rest as number).toBeLessThan((push.end as number) + FOLLOW_CAP);
+        const { follow } = simulateStroke(planned.contact, setup.balls, lawn);
+        expect(follow.flags).not.toContain("follow-cap");
+        expect(follow.finish).toBeGreaterThanOrEqual(push.rest as number);
+        expect(follow.finish).toBeLessThan((push.rest as number) + IMPACT_DT + 1e-12);
+    });
+
     it("caps a carry whose hands never stop", () => {
         // Review focus 5: a 10 m push reaches its pendulum point (8 m) only after REACH_SEARCH (0.5 s), so the
-        // pendulum phase never starts and the carry never finishes. The hands' arc must exceed the push
-        // (P2b.2b.2b.2b), so its radius is 11 m, as levelArc's.
+        // pendulum phase never starts and the carry never finishes. The hands' arc must reach the finish's rest,
+        // 2·handReach on, from its low point (P2b.2b.2c.3b.1 design §5), so its radius is 21 m, above 2·handReach
+        // whatever handArcLow (was 11 m, as levelArc's, when the arc had only to exceed the push; P2b.2b.2b.2b).
         const endless = testProfile({
-            drive: { handReach: 10, handArcRadius: 11 },
+            drive: { handReach: 10, handArcRadius: 21 },
             shape: { pendulumShare: 0.5, slopeHold: 1 },
         });
         // P2b.2b.2b.3: the turf strike (was ["follow-cap"]): the endless carry's head drags on the turf for the

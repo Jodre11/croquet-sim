@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { IMPACT_DT, type ImpactProbe } from "../../src/engine/impact/integrate";
-import { simulateImpact } from "../../src/engine/impact/simulateImpact";
+import { simulateImpact, simulateStroke } from "../../src/engine/impact/simulateImpact";
 import type { TrackDrive } from "../../src/engine/impact/types";
 import { GRIP_LIMIT } from "../../src/engine/impact/track";
 import { dot, length } from "../../src/engine/math/vec3";
@@ -24,6 +24,9 @@ const GRAZE = { type: "single-ball", speed: 3, up: 0.01, dip: -0.005, jab: 0.001
 // P2b.2b.2c.3a: the swung body on every stroke (was a 5 mm jab): see the biting test.
 const BITING = { type: "single-ball", speed: 4, up: 0.01, dip: -0.02, jab: 0.008 } as const;
 const FOLLOW = { type: "half-roll", speed: 4 } as const;
+/** The dug push's arc (m) and its low point (push lengths along aim from the hands at contact). */
+const DIP_RADIUS = 0.4;
+const DIP_AHEAD = 1.9;
 
 /** A preset's canonical setup at `speed` (m/s), its dip `dip` s from contact and deepened by `jab` (m). */
 function shot(
@@ -122,13 +125,28 @@ describe("the follow-through's flags (P2b.2b.2b.3 design §4.6)", () => {
         // never grounds the head (lowest 38.6 mm). It flagged follow-turf-yield, follow-head-deep and follow-cap, the
         // follow-through ploughing the head in. P2b.2b.2c.3b.1 design §2, §5: the arms' full hold, the bottom hand
         // kept on and the hands carrying on up their arc lift the follow-through off the turf, so it yields nothing
-        // and ends at the hands' rest; no canonical roll from 2 to 6 m/s yields there now. The flag's path keeps its
-        // cover in followThrough.test.ts ("caps a carry whose hands never stop", the endless 10 m push).
+        // and ends at the hands' rest; no canonical roll from 2 to 6 m/s yields there now. The flag keeps its direct
+        // cover in the next test, and in followThrough.test.ts ("caps a carry whose hands never stop").
         const setup = shot(FOLLOW.type, FOLLOW.speed);
         expect(along(setup).impact.timeline["head/turf"] ?? []).toHaveLength(0);
         const outcome = simulateShot(setup, WORLD, { trajectory: true });
         const flags = (outcome.trajectory as SwingTrajectory).flags;
         expect(flags).toEqual([]);
+    });
+
+    it("yields the turf in the follow-through of a push whose hands' arc dips through the finish", () => {
+        // The flag's direct cover (design §4.6). A hand-built arc, valid (P2b.2b.2c.3b.1 design §5: its low point
+        // within (2·handReach − ρ_h, ρ_h)): the canonical half roll's at 4 m/s, its arc narrowed to DIP_RADIUS with
+        // its low point DIP_AHEAD push lengths along aim, near the finish's rest. The hands then descend through the
+        // push and the finish, some 0.12 m by their rest, and press the head into the turf once the impact has ended.
+        const setup = shot(FOLLOW.type, FOLLOW.speed);
+        const contact = buildContact(setup, WORLD);
+        const drive = contact.drive as TrackDrive;
+        const arc = { ...drive.arc, lowPoint: DIP_AHEAD * drive.arc.handReach, handArcRadius: DIP_RADIUS };
+        const { result, follow } = simulateStroke({ ...contact, drive: { ...drive, arc } }, setup.balls, WORLD);
+        expect(result.events.map((e) => e.kind)).not.toContain("turf-yield");
+        // Measured while building it: the head digs past HEAD_DEEP_LIMIT too, and the finish still ends at rest.
+        expect(follow.flags).toEqual(["follow-turf-yield", "follow-head-deep"]);
     });
 });
 

@@ -1560,8 +1560,15 @@ describe("the per-shot set-up (P2b.2b.2c.3a design §2)", () => {
         const setup = canonicalSetup("half-roll");
         const { handArcRadius, handReach } = setup.profile.drive["half-roll"];
         const xc = handsAlong(setup);
-        // |s_low| ≥ ρ_h leaves the arc undefined at contact; s_low ≤ handReach − ρ_h at the push's end.
-        for (const feet of [xc + handArcRadius, xc - handArcRadius, xc + handReach - handArcRadius, Number.NaN]) {
+        // |s_low| ≥ ρ_h leaves the arc undefined at contact; s_low ≤ handReach − ρ_h at the push's end, and s_low ≤
+        // 2·handReach − ρ_h at the finish's rest (P2b.2b.2c.3b.1 design §5).
+        for (const feet of [
+            xc + handArcRadius,
+            xc - handArcRadius,
+            xc + handReach - handArcRadius,
+            xc + 2 * handReach - handArcRadius,
+            Number.NaN,
+        ]) {
             expect(() => planStroke(withStroke(setup, { feet }), world), `${feet}`).toThrow(RangeError);
             expect(() => planStroke(withStroke(setup, { feet }), world), `${feet}`).toThrow(/stroke\.feet/);
         }

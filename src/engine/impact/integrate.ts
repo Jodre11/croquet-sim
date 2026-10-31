@@ -52,10 +52,11 @@
  *
  * With a follow-through (integrateStroke, P2b.2b.2a design §4.1) a tracked drive's loop continues once the impact has
  * ended, the balls removed: the hands and the head–turf pair act on the head until the stroke type's finish, or
- * FOLLOW_CAP after contact. Once the ball has been struck and the drive is done the head's turf contact is the
- * follow-through's to carry, on the same bed (user ruling 2026-10-16), so it does not hold the impact open. The
- * impact's result is fixed before it starts. A hand first reaching its grip's limit raises `grip-limit` in the impact
- * and `follow-grip-limit` in the follow-through (P2b.2b.2b.3 design §5).
+ * FOLLOW_CAP after the push's end (contact without a push, or for a push that finds no end). Once the ball has been
+ * struck and the drive is done the head's turf contact is the follow-through's to carry, on the same bed (user ruling
+ * 2026-10-16), so it does not hold the impact open. The impact's result is fixed before it starts. A hand first
+ * reaching its grip's limit raises `grip-limit` in the impact and `follow-grip-limit` in the follow-through
+ * (P2b.2b.2b.3 design §5).
  */
 import { contactReference } from "../../reference/index";
 import { ZERO, add, cross, dot, horizontal, length, scale, sub, vec3, type Vec3 } from "../math/vec3";
@@ -198,8 +199,10 @@ export const ENTRY_SLACK = 1e-6;
 export const LOOK_AHEAD = 0.03;
 
 /**
- * How long after the planned contact (s) the follow-through may run before it ends with `follow-cap` (P2b.2b.2a
- * design §4.2). A modelling bound, not physical: a stroke's finish comes well within a second.
+ * How long after the push's end (s; the planned contact without a push, or for a push that finds no end) the
+ * follow-through may run before it ends with `follow-cap` (P2b.2b.2a design §4.2; P2b.2b.2c.3b.1 design §5). A
+ * modelling bound, not physical: a safety net that must not cut a planned finish short, counted from where the finish
+ * starts; a finish slower than that still caps, and is flagged.
  */
 export const FOLLOW_CAP = 1;
 
@@ -1164,7 +1167,8 @@ export function integrateStroke(setup: ImpactSetup, options: ImpactOptions = {},
                 // departure", 2026-10-12): the first step a face–ball pair closed at the last step is open, with the
                 // ball's material at the last contact point moving away from the head's along the last normal. The
                 // impact does not know which ball is the striker's, so any ball's counts; in a roll the face meets
-                // only the striker's. The arms' hold relaxes from it.
+                // only the striker's. It is reported only: the arms' hold no longer relaxes from it (P2b.2b.2c.3b.1
+                // design §2).
                 if (pushed && grip.departedAt === null && pair.kind === "face-ball" && p.closure !== null) {
                     const sb = balls[pair.b] as BallState;
                     const point = sub(sb.position, scale(p.normal, R));
@@ -1364,7 +1368,7 @@ export function integrate(setup: ImpactSetup, options: ImpactOptions = {}): Impa
  * the impact's end, if later), and the hands grip the head firmly from then on (holdPendulum, handLoad's `gripped`).
  * Appends to `trace` the head at the impact's end, every FOLLOW_SAMPLE, at the first step at or after the release
  * (releaseTime) if it falls here, after a stop's first held step, and at the finish: the stroke type's, or FOLLOW_CAP
- * after contact with `follow-cap`.
+ * after the push's end (contact without one) with `follow-cap`.
  * Flags `follow-head-deep` once, as the impact flags `impact-head-deep`, and `follow-turf-yield` once, as it raises
  * `turf-yield`.
  */
@@ -1391,7 +1395,10 @@ function continueStroke(
     // check's window's end, or the impact's end if later, the pendulum is held and the hands grip the head firmly.
     const holdFrom = kind === "check" ? Math.max(plan.arc.arcStart + plan.arc.window, first * dt) : Infinity;
     const path = kind === "check" ? holdPendulum(plan, holdFrom) : plan;
-    const cap = plan.arc.contactAt + FOLLOW_CAP;
+    // The cap counts from the push's end, where the finish starts (P2b.2b.2c.3b.1 design §5), so that it never cuts
+    // a planned finish short; from contact without a push, or for one that finds no end.
+    const capFrom = plan.push !== null && plan.push.end !== null ? plan.push.end : plan.arc.contactAt;
+    const cap = capFrom + FOLLOW_CAP;
     const releaseAt = releaseTime(plan);
     const headWeight = vec3(0, 0, 0 - head.mass * setup.gravity);
     const shaft = shaftWeightOf(head, setup.gravity);

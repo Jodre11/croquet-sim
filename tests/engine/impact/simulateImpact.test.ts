@@ -510,6 +510,14 @@ describe("simulateImpact with a tracked drive", () => {
         expect(() => validateImpact(beyond, { blue: BLUE }, WORLD)).toThrow(/arc\.pivotVelocity must lie in/);
     });
 
+    it("accepts a low point just inside the finish's bound (P2b.2b.2c.3b.1 design §5)", () => {
+        // 2·handReach − ρ_h: −7 m for a 2 m push, 1 m for a 6 m one, on the 11 m arc.
+        const inside = withArc({ handReach: 2, lowPoint: 2 * 2 - 11 + 1e-9 });
+        expect(() => validateImpact(inside, { blue: BLUE }, WORLD)).not.toThrow();
+        const defaulted = withArc({ handReach: 6, handArcLow: (1 + 1e-9) / 6 });
+        expect(() => validateImpact(defaulted, { blue: BLUE }, WORLD)).not.toThrow();
+    });
+
     const rejections: readonly [string, ContactState, RegExp][] = [
         ["a non-finite pivot", withArc({ pivot: vec3(NaN, 0, 1) }), /arc\.pivot must be finite/],
         [
@@ -571,6 +579,19 @@ describe("simulateImpact with a tracked drive", () => {
             "a lowPoint that leaves the push's end off the arc",
             withArc({ handReach: 2, lowPoint: 2 - 11 }),
             /arc\.lowPoint must lie in/,
+        ],
+        [
+            // P2b.2b.2c.3b.1 design §5: the finish carries the hands to rest 2·handReach on, so the bound is
+            // 2·handReach − ρ_h = −7 m here; the push's end alone (handReach − ρ_h = −9 m) once admitted it.
+            "a lowPoint at the bound that leaves the finish's rest off the arc",
+            withArc({ handReach: 2, lowPoint: 2 * 2 - 11 }),
+            /arc\.lowPoint must lie in \(2·handReach − handArcRadius, handArcRadius\)/,
+        ],
+        [
+            // s_low = handArcLow·handReach = 0 against a bound of 2·6 − 11 = 1 m.
+            "a handArcLow whose low point leaves the finish's rest off the arc",
+            withArc({ handReach: 6, handArcLow: 0 }),
+            /arc\.handArcLow·handReach must lie in \(2·handReach − handArcRadius, handArcRadius\)/,
         ],
         [
             "a flex with no stiffness",

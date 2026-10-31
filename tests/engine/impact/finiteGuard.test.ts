@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { assertFinite } from "../../../src/engine/impact/integrate";
-import { simulateImpact, simulateStroke } from "../../../src/engine/impact/simulateImpact";
+import { simulateImpact, simulateStroke, validateImpact } from "../../../src/engine/impact/simulateImpact";
 import type { HeadState, TrackDrive } from "../../../src/engine/impact/types";
 import { vec3 } from "../../../src/engine/math/vec3";
 import { simulateShot } from "../../../src/engine/shot";
@@ -94,22 +94,39 @@ describe("the finite-state guard (design §3)", () => {
         expect(() => assertFinite(finiteHead, [finiteBall], ["blue"], 0.001, 3, "impact")).not.toThrow();
     });
     it("catches a head gone non-finite in the follow-through at the next step", () => {
-        // A hand-built arc: the canonical half roll's, its hands' arc narrowed to 0.2 m with its low point 0.06 m
-        // ahead. P2b.2b.2c.3b.1 design §5: the finish carries the hands on a further push length, to 0.3 m along aim,
-        // past the circle's reach s_low + ρ_h = 0.26 m, where its height is not a number. They pass it in the
-        // follow-through, after the impact's end, so the head goes non-finite there. (Was an advance of 1e300 m/s²
-        // overflowing the free pendulum's table after the impact's end, on a 0.3 m push from a pendulum phase at
-        // contact; a carry now ends at its hands' rest, which that advance brings at once after its start, before any
-        // follow-through step reads the overflow.)
+        // A hand-built advance bypasses planStroke's check of it: the canonical half roll's arc, valid (its low point
+        // within 2·handReach − ρ_h of the arc, P2b.2b.2c.3b.1 design §5), with a backward advance of −1e300 m/s from
+        // 0.2 s after contact. Its travel keeps the hands short of the push length within REACH_SEARCH, so the push
+        // finds no end and no pendulum phase: the impact ends on its own and the follow-through runs on, reading the
+        // advance's travel unclamped, until the overflow puts the hands off the arc and the head goes non-finite.
+        // (Was the arc narrowed to 0.2 m with its low point 0.06 m ahead, the finish carrying the hands past the
+        // circle's reach; the validator now rejects that arc. Before that, an advance of 1e300 m/s² from a pendulum
+        // phase at contact, which a carry ending at its hands' rest outran.)
+        const world = defaultWorld();
+        const setup = canonicalSetup("half-roll", { world });
+        const contact = buildContact(setup, world);
+        const drive = contact.drive as TrackDrive;
+        const advance = { start: drive.arc.contactAt + 0.2, speed: -1e300, accel: -1e300 };
+        const broken = { ...contact, drive: { ...drive, arc: { ...drive.arc, advance } } };
+        expect(() => validateImpact(broken, setup.balls, world)).not.toThrow();
+        expect(() => simulateStroke(broken, setup.balls, world)).toThrow(RangeError);
+        expect(() => simulateStroke(broken, setup.balls, world)).toThrow(/at step \d+ \(follow-through\)/);
+    });
+    it("rejects the narrowed arc whose finish would leave it (P2b.2b.2c.3b.1 design §5)", () => {
+        // The arc this file's follow-through case was once built on: the canonical half roll's (handReach 0.15 m)
+        // narrowed to 0.2 m with its low point 0.06 m ahead. Its push's end lies on the arc (0.15 − 0.06 < 0.2), but
+        // its finish's rest does not (0.3 − 0.06 > 0.2), so the validator refuses it before any step.
         const world = defaultWorld();
         const setup = canonicalSetup("half-roll", { world });
         const contact = buildContact(setup, world);
         const drive = contact.drive as TrackDrive;
         const arc = { ...drive.arc, handArcRadius: 0.2, lowPoint: 0.06 };
-        expect(2 * arc.handReach).toBeGreaterThan(arc.lowPoint + arc.handArcRadius);
-        const broken = { ...contact, drive: { ...drive, arc } };
-        expect(() => simulateStroke(broken, setup.balls, world)).toThrow(RangeError);
-        expect(() => simulateStroke(broken, setup.balls, world)).toThrow(/at step \d+ \(follow-through\)/);
+        expect(arc.handReach).toBe(0.15);
+        const narrowed = { ...contact, drive: { ...drive, arc } };
+        expect(() => validateImpact(narrowed, setup.balls, world)).toThrow(RangeError);
+        expect(() => validateImpact(narrowed, setup.balls, world)).toThrow(
+            /arc\.lowPoint must lie in \(2·handReach − handArcRadius, handArcRadius\)/,
+        );
     });
     it("names the ball whose state went non-finite", () => {
         const spun = { ...finiteBall, angularVelocity: vec3(0, Number.NaN, 0) };

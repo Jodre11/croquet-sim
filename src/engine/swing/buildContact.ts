@@ -554,7 +554,8 @@ function handsOf(setup: ShotSetup): Hands {
  * The hands' arc's lowest point s_low (m along aim from the hands at contact) that a checked `setup`'s feet set at
  * `pose` (P2b.2b.2c.3a design §3, A2 item 1): feet − x_c, x_c = aim·(P_c − ball) the top hand at contact along aim from
  * the striker's ball's centre. Undefined where the shot gives no feet. Throws a RangeError naming `stroke.feet` unless
- * s_low lies in (handReach − handArcRadius, handArcRadius), where the arc is defined from contact to the push's end.
+ * s_low lies in (2·handReach − handArcRadius, handArcRadius), where the arc is defined from contact through the push
+ * and its finish to the hands' rest, 2·handReach on (P2b.2b.2c.3b.1 design §5).
  */
 function lowPointOf(setup: ShotSetup, pose: ContactPose): number | undefined {
     const { stroke, profile } = setup;
@@ -566,11 +567,11 @@ function lowPointOf(setup: ShotSetup, pose: ContactPose): number | undefined {
     const low = stroke.feet - dot(sub(pose.pivot, striker.position), pose.aim);
     const reach = stroke.handReach ?? push.handReach;
     const radius = push.handArcRadius;
-    if (!(low > reach - radius && low < radius)) {
+    if (!(low > 2 * reach - radius && low < radius)) {
         fail(
             `stroke.feet puts the hands' arc's lowest point ${low} m ahead of the hands at contact, which must ` +
-                `lie in (handReach − handArcRadius, handArcRadius) = (${reach - radius}, ${radius}) m for the arc ` +
-                "to span the push",
+                `lie in (2·handReach − handArcRadius, handArcRadius) = (${2 * reach - radius}, ${radius}) m for ` +
+                "the arc to span the push and its finish",
         );
     }
     return low;
@@ -796,7 +797,7 @@ export interface StrokePlan {
  * - a stroke.lean, stroke.feet or stroke.slopeHold non-finite, or a stroke.grip value non-finite, named by its key
  *   (P2b.2b.2c.3a design §2); a stroke.lean above π/4 (the on-point limit), or at or below −atan2(A, B), where the
  *   hands it places leave the stance's branch; a stroke.slopeHold outside [0, 1]; feet whose arc's lowest point s_low
- *   = feet − x_c lies outside (handReach − handArcRadius, handArcRadius) (design §3, A2 item 1);
+ *   = feet − x_c lies outside (2·handReach − handArcRadius, handArcRadius) (design §3, A2 item 1; P2b.2b.2c.3b.1 §5);
  * - a stroke.window non-finite or outside [MIN_WINDOW, MAX_WINDOW] (P2b.2b.2c.2d design §3.2);
  * - window, handWindow or dropTime ≤ 0; speedGain < 0; the preset's or the shot's gripTension or bottomGrip outside
  *   (0, 1]; handDrop < 0; the

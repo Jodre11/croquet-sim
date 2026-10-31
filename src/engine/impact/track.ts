@@ -104,11 +104,12 @@ export const FREE_STEP = 5e-6;
 
 /**
  * Span (s) of the free pendulum's table past the pendulum's window (design §3.2). Numerical: a tracked stroke runs at
- * most MAX_LEAD (0.15 s, the longest lead-in) plus FOLLOW_CAP (1 s, the follow-through's cap after contact) from
- * t = 0, and the table runs through the window first, so 1.2 s past it covers every stroke with a 50 ms guard
+ * most MAX_LEAD (0.15 s, the longest lead-in) plus REACH_SEARCH (0.5 s, the latest push's end) plus FOLLOW_CAP (1 s,
+ * the follow-through's cap after the push's end; P2b.2b.2c.3b.1 design §5) from t = 0, and the table runs through the
+ * window first, so 1.7 s past it covers every stroke with a 50 ms guard
  * (P2b.2b.2a design §4.4). simulateImpact is public and accepts any contactAt or cap: beyond the table θ and ω hold.
  */
-export const FREE_SPAN = 1.2;
+export const FREE_SPAN = 1.7;
 
 /**
  * How long after contactAt (s) the push may take to travel its length or reach its pendulum phase before it is taken
@@ -120,10 +121,11 @@ const REACH_SEARCH = 0.5;
 const REACH_BISECTIONS = 80;
 
 /**
- * The pace along aim (m/s) at the push's end below which the finish starts at rest (P2b.2b.2c.3b.1 design §5).
- * Numerical, not physical: an advance whose own ease ends at handReach reaches it at rest only to rounding, the
- * bisection's end landing where the ease's travel rounds to handReach with a pace of order 1e-8 m/s, which would
- * otherwise put the rest V/finishDecel = 2·handReach/V some 1e6 s away.
+ * The pace along aim (m/s) at the push's end below which the finish has no length: the hands are at rest there, and
+ * `rest` is the push's end (P2b.2b.2c.3b.1 design §5). A numerical floor, not physical, for a zero pace seen through
+ * rounding only: an advance whose own ease ends at handReach reaches it at rest only to rounding, the bisection's end
+ * landing where the ease's travel rounds to handReach with a pace of order 1e-8 m/s, which would otherwise put the
+ * rest V/finishDecel = 2·handReach/V some 6e7 s away at a handReach of 0.3 m. Every planned pace is far above it.
  */
 const FINISH_REST_PACE = 1e-6;
 
@@ -884,8 +886,9 @@ function carryPivot(track: PreparedTrack, push: Push, t: number): Motion {
         ds = moving ? V - d * u : 0;
         dds = moving ? 0 - d : 0;
     } else {
+        // Before the end, or with none found, the hands never overshoot the push length: s = min(a, handReach).
         const { a, v, acc } = pushTravel(track, push.origin, push.advance, t);
-        const stopped = push.end === null && a >= handReach;
+        const stopped = a >= handReach;
         s = stopped ? handReach : a;
         ds = stopped ? 0 : v;
         dds = stopped ? 0 : acc;
@@ -1290,7 +1293,7 @@ export interface FlexStart {
  * and its amendment). From where the flex takes hold, each hand's hand–arm chain (gate round 3 ruling, 2026-10-11):
  * null before then, the bottom hand's null once it has let go, and both null from a stop's hold. With a push also when
  * a ball first departed from the face (s; gate round 13 ruling, "Relax from first departure", 2026-10-12), which the
- * integrator latches once, null until then, and reports; the arms' hold no longer relaxes from it (holdWeight;
+ * integrator latches once, null until then, and reports; the arms' hold no longer relaxes from it (carryLoad;
  * P2b.2b.2c.3b.1 design §2). Each hand's slid offset (m, in the head's frame; P2b.2b.2b.3 design §5): null until the
  * hand first saturates, then how far its anchor on the shaft has slid; it persists through the flex and, under the
  * limit, relaxes on the firm grip at the arm's rate (P2b.2b.2c.2 design §4.1).
@@ -1507,18 +1510,6 @@ export function senseResistance(sensed: number, resistance: number, response: nu
 }
 
 /**
- * The weight in [0, 1] with which a push's arms hold their posture at time t (gate round 11 ruling, "Posture
- * holding in the push", 2026-10-12): 1 at every t, through the push and the finish, whether or not a ball departs
- * (P2b.2b.2c.3b.1 design §2; push-map spec A6, 2026-10-31: the hand keeps its hold). This supersedes gate round 13's
- * ruling ("Relax from first departure", 2026-10-12), under which the weight fell as exp(−(t − t_d)/τ_push) from a
- * ball's first departure at t_d; grip.departedAt is still latched and reported, but the hold no longer reads it.
- * Read only with a push: without one the flex is the rhythmic one (carryLoad).
- */
-function holdWeight(_track: PreparedTrack, _t: number, _grip: GripState): number {
-    return 1;
-}
-
-/**
  * The push intent at time t (gate ruling 2026-10-11 and its amendment): through the push, until the pendulum
  * phase starts, the hands push along aim with the balls' resistance as they sense it (R̃, lagged at the muscles'
  * pace), up to the arm's push: P = min(R̃, F_push)·aim. Null where it is nil: no resistance, or in the pendulum phase.
@@ -1550,7 +1541,7 @@ export interface HandLoad {
      */
     readonly intent?: Vec3;
     /**
-     * The weight in [0, 1] with which the arms held their posture in this step (holdWeight; 0 without a push), where
+     * The weight in [0, 1] with which the arms held their posture in this step (1 with a push, 0 without), where
      * the hands flex from contact (carryLoad); absent otherwise. For the probes only (P2b.2b.2c.3b.1 design §2):
      * nothing in the engine reads it.
      */
@@ -1637,7 +1628,7 @@ interface CarryStep {
  * hand's flex drives its hand–arm chain's forearm, not the grip, and the chain holds the grip through the palm and the
  * fingers (chainForces; gate round 3 ruling, 2026-10-11); the bottom hand's chain leaves with it. Through a push each
  * arm holds its posture: its flex takes the arm's posture-holding impedance in full through the push and the finish
- * (holdWeight; gate round 11, "Posture holding in the push", 2026-10-12; P2b.2b.2c.3b.1 design §2, superseding round
+ * (gate round 11, "Posture holding in the push", 2026-10-12; P2b.2b.2c.3b.1 design §2, superseding round
  * 13's relax from first departure); with no push the flex is the rhythmic one throughout. Updates `grip`: where the
  * flex took hold, the chains, the hands' stiffnesses, and the vertical latch.
  */
@@ -1659,8 +1650,10 @@ function carryLoad(
     const from = grip.flex;
     const moved = sub(planned.position, from.pivot);
     const topVelocity = add(state.velocity, cross(state.angularVelocity, step.topArm));
-    // Through a push the arms hold their posture (holdWeight); with none the weight is 0, the rhythmic flex.
-    const hold = track.push === null ? 0 : holdWeight(track, t, grip);
+    // Through a push the arms hold their posture in full, through the push and the finish (gate round 11, "Posture
+    // holding in the push", 2026-10-12; P2b.2b.2c.3b.1 design §2; push-map spec A6, superseding gate round 13's relax
+    // from first departure, which grip.departedAt still records); with none the weight is 0, the rhythmic flex.
+    const hold = track.push === null ? 0 : 1;
     const load = (top: Vec3, bottom: Vec3, twist: number, fed: Vec3, saturated: HandName | null): HandLoad => ({
         force: add(top, bottom),
         feedForward: fed,

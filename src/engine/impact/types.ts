@@ -199,7 +199,8 @@ export interface SwingArc {
     readonly handArcLow: number;
     /**
      * Where the hands' arc is lowest, s_low (m along aim from the hands at contact; P2b.2b.2c.3a design §3), set from a
-     * shot's feet. Within (handReach − handArcRadius, handArcRadius), so the arc is defined over the whole push.
+     * shot's feet. Within (2·handReach − handArcRadius, handArcRadius), so the arc is defined over the whole push and
+     * its finish to the hands' rest, 2·handReach on (P2b.2b.2c.3b.1 design §5).
      * Absent: handArcLow·handReach.
      */
     readonly lowPoint?: number;
