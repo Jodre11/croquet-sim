@@ -542,3 +542,7 @@ design §4.2), from pendulumAt·handReach on, in which the push intent is nil an
 relaxing from the first departure (gate round 13 ruling, "Relax from first departure", 2026-10-12; `holdWeight`); and
 the hands stopping at once at the push length (`carryPivot`). Each is a ruling of an earlier phase, so the change is an
 engine phase of its own, specified and planned before the maps are re-run.
+
+The sequence (user, 2026-10-31): 3b pauses at gate 2. The level head is specified, planned and built as its own phase,
+P2b.2b.2c.3c (on this branch, an assumption), the full and pass roll maps (Tasks 7 and 8) are re-run on it, and gate 2
+then resumes.
