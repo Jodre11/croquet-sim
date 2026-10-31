@@ -544,5 +544,5 @@ the hands stopping at once at the push length (`carryPivot`). Each is a ruling o
 engine phase of its own, specified and planned before the maps are re-run.
 
 The sequence (user, 2026-10-31): 3b pauses at gate 2. The level head is specified, planned and built as its own phase,
-P2b.2b.2c.3c (on this branch, an assumption), the full and pass roll maps (Tasks 7 and 8) are re-run on it, and gate 2
-then resumes.
+P2b.2b.2c.3c (on this branch, an assumption), the maps of Tasks 6–8 are re-run on it (the half roll has a push too),
+and gate 2 then resumes.
