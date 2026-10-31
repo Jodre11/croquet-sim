@@ -207,8 +207,9 @@ rolls' λ = 1 slope already holds the lean once the pulse eases; nothing is buil
     its result equals `simulateStroke`'s on the same inputs.
   - `"the lift follows the update rule"`: with a stub run (export an internal `nextLift(previous, error, from, step,
     window, pushEnd)` for the test), e = [0, −1, −2, −3] mm at step 0.001 from contactAt with the push's end after
-    the second sample and window 0.002 → δz = −w·e before the push's end and −w·min(e, 0) after; w the minimum-jerk
-    ramp; held past the last sample.
+    the second sample and window 0.002 → δz = −w·e before the push's end and −w·(max(e(T), 0) + min(e, 0)) after,
+    T the push's end (spec §4 item 2 as amended); w the minimum-jerk ramp; held past the last sample. Added after
+    review: `"the lift is continuous across the push's end"` (e > 0 at T: δz just before and after T agree).
   - `"an unconverged stroke reports its miss"`: a contact built to dig (today's full roll with the lift capped to
     zero through a test seam, or a lean that grounds the follow-through) → passes 3, miss non-null.
 - [ ] **Step 2: Run** `npx vitest run tests/engine/impact/practice.test.ts` — FAIL.

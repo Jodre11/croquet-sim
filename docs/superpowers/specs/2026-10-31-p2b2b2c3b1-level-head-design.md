@@ -96,8 +96,12 @@ compute budget, not a ruling on what a practised player is (user, 2026-10-31).
 
 1. Pass 1 plays the plan with δz ≡ 0, the full hold, the bottom hand on and the finish (§2, §5).
 2. After pass k, if the stroke is in the band, it is the result. Otherwise the lift is updated by
-   δz_{k+1}(t) = δz_k(t) − w(t)·e_k(t), and the shot is played again. Over the finish only a drop is corrected: there
-   e_k is replaced by min(e_k, 0), since the finish is meant to rise.
+   δz_{k+1}(t) = δz_k(t) − w(t)·e_k(t), and the shot is played again. Over the finish the push's correction is
+   carried through and only a drop is corrected on top, since the finish is meant to rise (user, 2026-10-31): there
+   e_k(t) is replaced by max(e_k(T), 0) + min(e_k(t), 0), T the push's end. This equals e_k(T) at T, so δz stays
+   continuous across the push's end. As first written (min(e_k, 0) alone) it dropped the push's lowering at T in one
+   sample: the pivot's feed-forward reached about 1e5 m/s², the grip slipped on pass 2, and the full and pass roll
+   text books diverged; carried through, the full roll's second pass halved its rise.
 3. A stroke still out of the band after the last pass reads a class of its own, `unpractised`, kept apart from turf and
    mishit (user, 2026-10-31), so gate 2 sees whether the cap binds. Its record keeps what its last pass read.
 
