@@ -72,7 +72,8 @@ The band is not a new constant. A played stroke is in the band when it reads non
 - an `impact-off-face` flag;
 - off point: the push map's on-point test (exit criterion 4: the head's centre behind the ball's, every face contact
   point at most R·sin 45° above the ball's centre, the lean at most 45°);
-- the impact's `turf-yield` or `impact-head-deep`, or the follow-through's `follow-turf-yield` or `follow-head-deep`.
+- the impact's `turf-yield` or `impact-head-deep`, or the follow-through's `follow-turf-yield` or `follow-head-deep`;
+- `impact-mallet-grounded` at or before the face's first contact with the striker's ball (the push map's turf class).
 
 A plan the planner rejects before play (the head in the turf at contact, a lean past the limit) is not practised: there
 is nothing to practise.
@@ -92,8 +93,9 @@ compute budget, not a ruling on what a practised player is (user, 2026-10-31).
 3. A stroke still out of the band after the last pass reads a class of its own, `unpractised`, kept apart from turf and
    mishit (user, 2026-10-31), so gate 2 sees whether the cap binds. Its record keeps what its last pass read.
 
-**The window and its edges.** The lift applies from first contact to the end of the follow-through. w(t) is the
-minimum-jerk ramp from 0 to 1 over the stroke's own `window` from first contact, so the lift starts with P, V and A all
+**The window and its edges.** The lift applies from the planned contact (`contactAt`, which the plan knows; first
+contact fell within 0.01 ms of it on A6's cases) to the end of the follow-through, and e is measured on the same clock.
+w(t) is the minimum-jerk ramp from 0 to 1 over the stroke's own `window` from `contactAt`, so the lift starts with P, V and A all
 zero and the pivot's motion stays continuous at contact (e is 0 there but its slope is not). Past pass k's last sample
 δz holds its last value, since the follow-through's length differs between passes.
 
@@ -113,9 +115,11 @@ the `unpractised` count. Practice is deterministic, so a later phase that pre-ca
 
 ## 5. The finish
 
-The finish starts at the later of the push's end (the hands at `handReach` along aim) and the impact's end, so it
-never adds to the push while a ball is on the face. On today's full roll the hands reach the push length at about
-102 ms and the impact ends at 118 ms.
+The finish starts at the push's end, the hands at `handReach` along aim, which the plan knows before the stroke is
+played. A ball may still be on the face then (on today's full roll the hands reach the push length at about 102 ms and
+the impact ends at 118 ms), but the finish only eases the hands from the plan's own pace, so it never adds to the push.
+(The review proposed the later of the push's end and the impact's end, against a finish that could accelerate; with
+the flick deferred that case is gone, and the push's end keeps the finish in the plan.)
 
 From there the hands do not stop. They carry on along the hands' arc (the circle of `handArcRadius` whose low point the
 feet set), forward and up past its low point, from the pivot's planned velocity along aim at the finish's start (the
@@ -132,24 +136,25 @@ today; otherwise at the follow cap. The ease's travel, at most 0.2·`handReach`,
 
 - `ENGINE_VERSION` moves to the next minor: every stroke with a push plays differently.
 - `scripts/pathTrace.ts` is re-run, as it is, on A6's three cases, and the result kept beside the first trace.
-- The push map's records gain each read's passes and the `unpractised` class; their schema version moves with them.
+- The push map's records gain each read's passes and the `unpractised` class.
+- **Acceptance**, before the maps are re-run: today's full roll at its canonical power and the full roll at
+  speedGain 0.5 (A6's cases) practise into the band within three passes, and after the push's end their heads' lowest
+  points stay at or above h₀. If either does not, the phase stops and the trace goes to the user: nothing is tuned to
+  make it pass.
 
 ## 7. Tests
 
 1. A stroke in the band after pass 1 reports one pass and a lift of zero, and runs `simulateStroke` once.
-2. Today's full roll at its canonical power and the full roll at speedGain 0.5 (A6's cases) practise into the band,
-   with no turf class and no mishit, within three passes.
-3. The lift update follows §4's rule on a stroke built to miss: δz₂ = −w·e₁, with only the drops corrected over the
+2. The lift update follows §4's rule on a stroke built to miss: δz₂ = −w·e₁, with only the drops corrected over the
    finish, and δz₂ held past pass 1's last sample.
-4. The pivot's position and velocity are continuous at first contact and at the finish's start on a practised stroke.
-5. The finish rises: on today's full roll, after the finish's start the head's lowest point stays above h₀, and the
-   hands' speed along aim never steps.
-6. On a push the hold weight stays 1 through the push and the finish, and the bottom hand never opens, on a stroke
+3. The pivot's position and velocity are continuous at first contact and at the finish's start on a practised stroke.
+4. The finish rises: the planned pivot past the push's end climbs the hands' arc, and the hands' planned speed along
+   aim never steps.
+5. On a push the hold weight stays 1 through the push and the finish, and the bottom hand never opens, on a stroke
    whose ball departs.
-7. The finish starts no earlier than the impact's end, and the hands come to rest within 0.2·`handReach` past
-   `handReach`.
-8. A stroke still out of the band after three passes reads `unpractised`.
-9. Strokes without a push (the stops and drives) play bit for bit as today.
+6. The hands come to rest 0.2·`handReach` past `handReach`, from the push's end pace eased at V²/(0.4·handReach).
+7. A stroke still out of the band after three passes reads `unpractised`.
+8. Strokes without a push (the stops and drives) play bit for bit as today.
 
 ## 8. Known risks for gate 2
 
