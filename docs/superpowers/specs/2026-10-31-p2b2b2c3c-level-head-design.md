@@ -68,6 +68,10 @@ sample step (`FOLLOW_SAMPLE`); e at contact is 0 by definition, so the lift star
 hands' feed-forward includes the lift's acceleration. The lift is part of the plan: `handsAt`, `headOnPath` and
 `pathAt` show the practised path.
 
+The flex that practice anticipates is the engine's own: the user takes it to depend only on the impact's power and the
+grip's elasticity (2026-10-31), which is what the arm's flex law (`FlexLaw`, its stiffness rising with the force) and
+the grip's coupling already model. No flex law is added or changed.
+
 Practice is deterministic: the same shot practises to the same lift. Effort that practice asks beyond a player's
 strength already reads as the existing grip-limit and superhuman classes.
 
