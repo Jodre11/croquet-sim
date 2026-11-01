@@ -242,7 +242,7 @@ function sectionP(): void {
     );
 }
 
-/** The rolls section R reads: the strokes whose hands carry the head and open at the pendulum phase. */
+/** The rolls section R reads: the strokes whose hands push the head and release it at the push's end. */
 const ROLLS: readonly StrokeType[] = ["half-roll", "full-roll", "pass-roll"];
 
 /** The preset digest's grid: the backswing speeds (m/s), the drives and the sides (m); the heights are up0 ± 3 mm. */

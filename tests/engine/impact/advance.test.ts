@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { IMPACT_DT, finishKind, type FollowSnapshot, type ImpactSnapshot } from "../../../src/engine/impact/integrate";
+import { finishKind, type FollowSnapshot, type ImpactSnapshot } from "../../../src/engine/impact/integrate";
 import { simulateStroke } from "../../../src/engine/impact/simulateImpact";
 import {
     advanceTravel,
@@ -11,6 +11,7 @@ import {
     type PreparedTrack,
     handsApex,
     type Push,
+    releaseOf,
 } from "../../../src/engine/impact/track";
 import { simulateShot } from "../../../src/engine/shot";
 import type { SwingTrajectory } from "../../../src/engine/swing/trajectory";
@@ -180,19 +181,18 @@ describe("the hands' advance (design §6, §8.1.5)", () => {
         const end = (follow.advanced as { end: number }).end;
         expect(rise(level(), end)).toBeLessThan(rise(rising(), end));
     });
-    it("finishes once the hands come to rest", () => {
-        // P2b.2b.2c.3b.1 design §5 (was: the arc resumed once the hands came to rest, and the carry finished at a
-        // later apex): a carry ends at its hands' rest. These hands' plan is still, so the advance's own ease brings
-        // them to rest at handReach, the push's end; the pace there is rounding (FINISH_REST_PACE), so the finish
-        // starts and ends at once.
+    it("swings on past the hands' rest to the mallet's apex", () => {
+        // Shapes design §2 (was P2b.2b.2c.3b.1 design §5's finish at the hands' rest, 0.125 s): these hands' plan is
+        // still, so the advance's own ease brings them to rest at handReach, the push's end; the mallet, released
+        // there, swings on to its apex (0.668 s), never to the cap.
         const { follow } = run(level());
         const end = (follow.advanced as { end: number }).end;
         const { contact } = plan(level());
         const track = prepareTrack(contact.drive as TrackDrive, contact.head, WORLD.gravity);
         const rest = handsApex(track.push as Push) as number;
         expect(Math.abs(rest - end)).toBeLessThan(1e-6);
-        expect(follow.finish).toBeGreaterThanOrEqual(rest);
-        expect(follow.finish).toBeLessThan(rest + IMPACT_DT + 1e-12);
+        expect(follow.finish).toBeGreaterThan(rest + 1e-3);
+        expect(follow.flags).not.toContain("follow-cap");
     });
     it("carries the hands handReach in all from contact, the advance and the plan sharing one push", () => {
         // One budget. P2b.2b.2c.3a: the advance on the push (was the advance replacing the planned pivot's own reach):
@@ -347,21 +347,20 @@ describe("the push on every stroke (P2b.2b.2c.3a A2 item 8)", () => {
         expect(out.impact.events.map((e) => e.kind)).not.toContain("impact-cap");
         expect(trajectory.flags).not.toContain("follow-cap");
         const track = prepareTrack(out.contact.drive as TrackDrive, out.contact.head, WORLD.gravity);
-        expect(finishKind(track)).toBe("carry");
+        expect(finishKind(track)).toBe("swing");
     });
 
-    it("finishes a pushed swing stroke as a carry", () => {
-        // A push takes the carried finish (A2 item 7), never the swing's first apex. P2b.2b.2c.3b.1 design §2, §5 (was
-        // the first apex once the head had risen after the bottom hand opened): the bottom hand never opens, and the
-        // carry ends at the first step at or after its hands' rest.
+    it("finishes a pushed swing stroke at the mallet's apex after the push's end", () => {
+        // Shapes design §2 (was P2b.2b.2c.3b.1 design §5's carry, ending at the first step at or after its hands'
+        // rest): a push releases the mallet at its end, and the swing ends at the mallet's apex after it.
         const setup = stroke({ handReach: 0.3 }, { advance: 0 });
         const track = trackOf(setup);
-        expect(finishKind(track)).toBe("carry");
-        const rest = handsApex(track.push as Push) as number;
+        expect(finishKind(track)).toBe("swing");
+        const release = releaseOf(track) as number;
+        expect(release).toBe((track.push as Push).end);
         const { result, follow } = run(setup);
         expect(result.release).toBeUndefined();
-        expect(follow.finish).toBeGreaterThanOrEqual(rest);
-        expect(follow.finish).toBeLessThan(rest + IMPACT_DT + 1e-12);
+        expect(follow.finish).toBeGreaterThan(release);
         expect(follow.flags).not.toContain("follow-cap");
     });
 

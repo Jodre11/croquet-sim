@@ -1377,8 +1377,10 @@ describe("the pendulum phase (P2b.2b.2b.2b design §4.2, §4.3, §7.1)", () => {
      * reach slack 0, so that the shaft's first forward turn opens it.
      */
     const OPENING: Hands = { ...FREE, reachSlack: 0 };
-    const opening = (effort: number, hands: Hands = OPENING): PreparedTrack =>
-        prepareTrack(
+    // Shapes design §2: the held slope now releases into the finish's free swing, whose planned motion the hands feed
+    // forward into the head. These tests need a still plan, so they drop the finish and keep the hold.
+    const opening = (effort: number, hands: Hands = OPENING): PreparedTrack => ({
+        ...prepareTrack(
             trackDrive(
                 still({ slopeHold: 1, radius: 0.5, theta0: -0.5, handReach: 0, pendulumEffort: effort }),
                 TEST_COUPLING,
@@ -1386,7 +1388,9 @@ describe("the pendulum phase (P2b.2b.2b.2b design §4.2, §4.3, §7.1)", () => {
             ),
             TEST_HEAD,
             STANDARD_GRAVITY,
-        );
+        ),
+        finish: null,
+    });
     /** The head on `track`'s path at t = 0, turning forward about the top grip at 0.5 rad/s: the reach opens it. */
     const nudged = (track: PreparedTrack): HeadState => {
         const on = headOnPath(track, TEST_HEAD, 0);

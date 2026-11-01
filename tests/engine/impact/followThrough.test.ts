@@ -13,7 +13,15 @@ import {
 import { faceKey, headLowestPoint } from "../../../src/engine/impact/contacts";
 import { simulateShot } from "../../../src/engine/shot";
 import { simulateImpact, simulateStroke } from "../../../src/engine/impact/simulateImpact";
-import { HAND_COUPLING, handsApex, handsAt, pitchAxis, prepareTrack, type Push } from "../../../src/engine/impact/track";
+import {
+    HAND_COUPLING,
+    handsApex,
+    handsAt,
+    pitchAxis,
+    prepareTrack,
+    type Push,
+    releaseOf,
+} from "../../../src/engine/impact/track";
 import type { ContactState, TrackDrive } from "../../../src/engine/impact/types";
 import { dot, length, sub } from "../../../src/engine/math/vec3";
 import { buildContact, planStroke } from "../../../src/engine/swing/buildContact";
@@ -26,6 +34,7 @@ import { TEST_GRIP_LIMIT } from "../support/impact";
 import { backswingFor, canonicalSetup, testProfile } from "../support/shot";
 import { openWorld } from "../../../scripts/openLawn";
 import { mapSetup, textBook } from "../../../scripts/pushMapRun";
+import NO_PUSH_BASELINE from "./fixtures/noPushBaseline.json";
 
 const WORLD = testWorld();
 
@@ -179,14 +188,15 @@ describe("the follow-through (design §4)", () => {
         expect(follow.flags).toEqual(["follow-grip-limit"]);
     });
 
-    it("finishes a carry when its hands come to rest", () => {
-        // P2b.2b.2c.3b.1 design §5 (was at the first apex after the pendulum phase starts, which needed the bottom
-        // hand open; a push's never opens now, design §2): the first step at or after push.rest.
+    it("finishes a pushed stroke at the mallet's apex after the push's end", () => {
+        // Shapes design §2 (was P2b.2b.2c.3b.1 design §5's first step at or after the hands' rest): released at the
+        // push's end, the mallet rises and tops out at 0.315 s, before its hands' apex (0.684 s), and the swing ends
+        // there.
         const { contact, follow } = stroke(shot({ backswing: 0.25 }, CARRY));
         const push = prepareTrack(contact.drive as TrackDrive, contact.head, WORLD.gravity).push as Push;
-        expect(handsApex(push)).not.toBeNull();
-        expect(follow.finish).toBeGreaterThanOrEqual(handsApex(push) as number);
-        expect(follow.finish).toBeLessThan((handsApex(push) as number) + IMPACT_DT + 1e-12);
+        expect(follow.finish).toBeGreaterThan(push.end as number);
+        expect(follow.finish).toBeLessThan(handsApex(push) as number);
+        expect(rateOf(contact, last(follow))).toBeLessThanOrEqual(0);
         expect(follow.flags).not.toContain("follow-cap");
     });
 
@@ -215,8 +225,10 @@ describe("the follow-through (design §4)", () => {
         expect(handsApex(push) as number).toBeLessThan((push.end as number) + FOLLOW_CAP);
         const { follow } = simulateStroke(planned.contact, setup.balls, lawn);
         expect(follow.flags).not.toContain("follow-cap");
-        expect(follow.finish).toBeGreaterThanOrEqual(handsApex(push) as number);
-        expect(follow.finish).toBeLessThan((handsApex(push) as number) + IMPACT_DT + 1e-12);
+        // Shapes design §2 (was within a step of the hands' apex): the mallet swings on past it, to its own apex at
+        // 1.22 s.
+        expect(follow.finish).toBeGreaterThan(handsApex(push) as number);
+        expect(rateOf(planned.contact, last(follow))).toBeLessThanOrEqual(0);
     });
 
     it("caps a carry whose hands never stop", () => {
@@ -302,16 +314,16 @@ describe("the finish from the inputs (P2b.2b.2c.3a A2 item 7)", () => {
     };
 
     it("names each preset's finish by its inputs, not its type", () => {
-        // A brake (α < 0) takes the check's hold; else a push the carried finish; else the free swing. The stops brake
+        // A brake (α < 0) takes the check's hold; else the swing (shapes design §2: a push no longer has its own). The stops brake
         // at their canonical drive, the rolls push, and single-ball and the drive do neither.
         const expected: Readonly<Record<StrokeType, string>> = {
             "single-ball": "swing",
             drive: "swing",
             "stop-ac": "check",
             "stop-gc": "check",
-            "half-roll": "carry",
-            "full-roll": "carry",
-            "pass-roll": "carry",
+            "half-roll": "swing",
+            "full-roll": "swing",
+            "pass-roll": "swing",
         };
         for (const [type, kind] of Object.entries(expected) as [StrokeType, string][]) {
             expect(finishKind(planOf(canonicalSetup(type))), type).toBe(kind);
@@ -415,5 +427,74 @@ describe("the planned brake (P2b.2b.2c.2d design §4.1)", () => {
         expect(out.faults.strike).toEqual({ parted: null, taps: [], breaks: [], recontacts: [] });
         expect(out.faults.findings.map((f) => f.law)).not.toContain("29.1.6.1");
         expect(Number.isFinite(out.impact.head.position.z)).toBe(true);
+    });
+});
+
+describe("the mallet's release and the finish's end (shapes design §2)", () => {
+    const DEFAULT = defaultWorld();
+    /** `type`'s preset on the default world, as the baseline was captured: the finish, its head, the balls. */
+    const played = (type: StrokeType) => {
+        const setup = canonicalSetup(type, { world: DEFAULT });
+        const contact = buildContact(setup, DEFAULT);
+        const { result, follow } = simulateStroke(contact, setup.balls, DEFAULT);
+        return { finish: follow.finish, head: last(follow).head, balls: result.balls };
+    };
+
+    it.each(["drive", "single-ball", "stop-ac"] as const)("leaves %s, with no push, bit-identical", (type) => {
+        // Captured before the release was added (shapes plan Task 2 Step 1); a JSON round trip is exact for doubles.
+        expect(JSON.parse(JSON.stringify(played(type)))).toEqual(NO_PUSH_BASELINE[type]);
+    });
+
+    it("swings a held roll on past its push's end to the mallet's apex", () => {
+        const lawn = openWorld(10);
+        const setup = mapSetup("full-roll", textBook("full-roll"), 0.1535);
+        const planned = planStroke(setup, lawn);
+        const push = prepareTrack(planned.contact.drive as TrackDrive, planned.contact.head, lawn.gravity).push as Push;
+        const { follow } = simulateStroke(planned.contact, setup.balls, lawn);
+        const end = push.end as number;
+        expect(follow.finish).toBeGreaterThan(end + 1e-3);
+        const after = follow.samples.filter((s) => s.t > end);
+        expect(after.some((s) => rateOf(planned.contact, s) > 0)).toBe(true);
+        expect(rateOf(planned.contact, last(follow))).toBeLessThanOrEqual(0);
+        expect(follow.flags).not.toContain("follow-cap");
+    });
+
+    it("releases a held slope with no push where its held path comes to rest", () => {
+        const setup = canonicalSetup("drive", { world: DEFAULT, stroke: { slopeHold: 1 } });
+        const contact = buildContact(setup, DEFAULT);
+        const track = prepareTrack(contact.drive as TrackDrive, contact.head, DEFAULT.gravity);
+        const { arc } = track;
+        expect(track.push).toBeNull();
+        const release = arc.arcStart + arc.window + (arc.holdWindow ?? arc.window);
+        expect(releaseOf(track)).toBe(release);
+        expect(track.finish?.tw).toBe(release);
+    });
+
+    it("runs a push whose end is never found to the cap without throwing", () => {
+        // The full roll at an eighth of its canonical power: its push never reaches its length (measured while
+        // building the shapes plan), so there is no release and no hands' apex.
+        const lawn = openWorld(10);
+        const setup = mapSetup("full-roll", textBook("full-roll"), 0.1535 / 8);
+        const planned = planStroke(setup, lawn);
+        const track = prepareTrack(planned.contact.drive as TrackDrive, planned.contact.head, lawn.gravity);
+        expect((track.push as Push).end).toBeNull();
+        expect(releaseOf(track)).toBeNull();
+        const { follow } = simulateStroke(planned.contact, setup.balls, lawn);
+        expect(follow.flags).toContain("follow-cap");
+    });
+
+    it("waits for a pushed check's hands' apex before it rests", () => {
+        // A stop's hands plan no pace of their own, so the push is the advance's: it ends, its hands' apex with it,
+        // at 45 ms.
+        const timing = { ...ON_TIME, advance: 0 };
+        const setup = canonicalSetup("stop-ac", { world: DEFAULT, stroke: { handReach: 0.1, timing } });
+        const contact = buildContact(setup, DEFAULT);
+        const track = prepareTrack(contact.drive as TrackDrive, contact.head, DEFAULT.gravity);
+        expect(finishKind(track)).toBe("check");
+        const apex = handsApex(track.push as Push) as number;
+        expect(apex).toBeGreaterThan(0);
+        const { follow } = simulateStroke(contact, setup.balls, DEFAULT);
+        expect(follow.finish).toBeGreaterThanOrEqual(apex);
+        expect(follow.flags).not.toContain("follow-cap");
     });
 });

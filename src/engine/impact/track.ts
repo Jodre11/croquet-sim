@@ -444,6 +444,11 @@ export interface PreparedTrack {
     /** The free pendulum; null on a fully held slope (λ = 1), or where prepareTrack skipped it. */
     readonly free: FreePendulum | null;
     /**
+     * The finish's free pendulum (shapes design §2): from the slope's release (releaseOf) on, the shaft swings free
+     * about the top hand, its table seeded with the planned θ and ω there; null where nothing is released.
+     */
+    readonly finish: FreePendulum | null;
+    /**
      * A stop's hold (holdPendulum): the pendulum held at θ (rad) from `from` (s) on; null otherwise. It lives on the
      * track, not the free table, so a check on a fully held slope, which has no table, holds too (P2b.2b.2c.3a A2
      * item 7).
@@ -1120,6 +1125,7 @@ export function prepareTrack(drive: TrackDrive, head: MalletHead, gravity: numbe
         reach: null,
         push: null,
         free: null,
+        finish: null,
         held: null,
         body,
         released: carryBody(head, hands.chain, arc.radius, null),
@@ -1136,13 +1142,71 @@ export function prepareTrack(drive: TrackDrive, head: MalletHead, gravity: numbe
     const reached: PreparedTrack =
         arc.handReach > 0 ? { ...plain, push: computePush(plain) } : { ...plain, reach: restingReach(plain) };
     // A fully held slope (λ = 1) has no free pendulum to tabulate (P2b.2b.2c.3a design §4.1).
-    if (!(arc.slopeHold < 1)) {
-        return reached;
+    let free: PreparedTrack = reached;
+    if (arc.slopeHold < 1) {
+        // Gravity acts through the pulse (P2b.2b.2c.2d design §3.1), so the window's end is the table's, not the box's.
+        const table = computeFree(reached, head, gravity, !withFree);
+        const end = tableAt(table, arc.arcStart + w);
+        free = { ...reached, free: table, thetaEnd: end.theta, omegaEnd: end.omega };
     }
-    // Gravity acts through the pulse (P2b.2b.2c.2d design §3.1), so the window's end is the table's, not the box's.
-    const free = computeFree(reached, head, gravity, !withFree);
-    const end = tableAt(free, arc.arcStart + w);
-    return { ...reached, free, thetaEnd: end.theta, omegaEnd: end.omega };
+    // The finish (shapes design §2): from the release the shaft swings free. Without withFree the callers read only
+    // the push and the path up to the window's end, so no finish is tabulated.
+    const release = releaseOf(free);
+    if (release === null || !withFree) {
+        return free;
+    }
+    const seed = pendulumAt(free, release);
+    return { ...free, finish: tabulate(free, head, gravity, release, seed.theta, seed.omega) };
+}
+
+/**
+ * When `track`'s slope hold releases into the finish's free swing (shapes design §2): at the push's end where there
+ * is a push (null where it has none); else, wherever the slope is held (λ > 0), where the held path's rate has fallen
+ * to rest, arcStart + window + holdWindow; else null, a free swing with nothing to release.
+ */
+export function releaseOf(track: PreparedTrack): number | null {
+    const { arc, push } = track;
+    if (push !== null) {
+        return push.end;
+    }
+    if (arc.slopeHold > 0) {
+        return arc.arcStart + arc.window + (arc.holdWindow ?? arc.window);
+    }
+    return null;
+}
+
+/**
+ * The finish's free pendulum (shapes design §2): `track`'s free pendulum from `from` at θ and ω, by semi-implicit Euler
+ * every FREE_STEP for FREE_SPAN, with no pulse: the player's effort has ended. Its α is freeAlpha's, the hands'
+ * planned acceleration (the hands' finish) included.
+ */
+function tabulate(
+    track: PreparedTrack,
+    head: MalletHead,
+    gravity: number,
+    from: number,
+    theta0: number,
+    omega0: number,
+): FreePendulum {
+    const theta: number[] = [];
+    const omega: number[] = [];
+    const finish: FreePendulum = {
+        tw: from,
+        theta,
+        omega,
+        ...pendulumOf(head, track.body, track.arc.radius, gravity),
+        pulseOnly: false,
+    };
+    let th = theta0;
+    let om = omega0;
+    const n = Math.round(FREE_SPAN / FREE_STEP);
+    for (let i = 0; i <= n; i++) {
+        theta.push(th);
+        omega.push(om);
+        om += freeAlpha(track, finish, th, from + i * FREE_STEP) * FREE_STEP;
+        th += om * FREE_STEP;
+    }
+    return finish;
 }
 
 /**
@@ -1206,6 +1270,12 @@ function pendulumAt(track: PreparedTrack, t: number): Swing {
     const tw = arc.arcStart + arc.window;
     if (held !== null && t > tw && t >= held.from) {
         return { theta: held.theta, omega: 0, alpha: 0 };
+    }
+    // From the release the finish's free swing (shapes design §2); before it, as planned.
+    const { finish } = track;
+    if (finish !== null && t >= finish.tw) {
+        const { theta, omega } = tableAt(finish, t);
+        return { theta, omega, alpha: freeAlpha(track, finish, theta, t) };
     }
     const lambda = arc.slopeHold;
     if (lambda === 0) {

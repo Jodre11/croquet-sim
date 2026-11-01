@@ -119,6 +119,7 @@ import {
     handsApex,
     handsAt,
     holdPendulum,
+    releaseOf,
     newGripState,
     pathAt,
     pushResponse,
@@ -130,7 +131,6 @@ import {
     type GripState,
     type HandLoad,
     type PreparedTrack,
-    type Push,
     type SwungBody,
 } from "./track";
 import type {
@@ -396,43 +396,54 @@ function releaseTime(plan: PreparedTrack): number {
     return down === undefined ? 0 - Infinity : plan.arc.contactAt + down.release;
 }
 
-/** A stroke's finish (P2b.2b.2a design §4.2; P2b.2b.2c.3a A2 item 7). */
-export type FinishKind = "swing" | "check" | "carry";
+/** A stroke's finish (P2b.2b.2a design §4.2; P2b.2b.2c.3a A2 item 7; shapes design §2, which removed "carry"). */
+export type FinishKind = "swing" | "check";
 
-/** The finish of `plan` (P2b.2b.2c.3a A2 item 7): a brake (α < 0) a check, else a push a carry, else a swing. */
+/** The finish of `plan` (P2b.2b.2c.3a A2 item 7; shapes design §2): a brake (α < 0) a check, else a swing. */
 export function finishKind(plan: PreparedTrack): FinishKind {
-    if (plan.arc.alpha < 0) {
-        return "check";
-    }
-    return plan.push !== null ? "carry" : "swing";
+    return plan.arc.alpha < 0 ? "check" : "swing";
+}
+
+/** A swing's finish watch (shapes design §2): whether its pitch rate has risen above 0 since the release. */
+interface SwingWatch {
+    risen: boolean;
 }
 
 /**
- * True once the head in `state` at time t has reached its finish (P2b.2b.2a design §4.2): a swing at the pendulum's
- * apex, its pitch rate about n at or below zero (a swing has no push, so its hands never travel; P2b.2b.2c.3a A2 item
- * 8); a check at rest relative to the hands once any push's hands have come to rest (push.rest; P2b.2b.2c.3b.1
- * design §5); a carry when its hands come to rest (design §5, superseding the first apex after the pendulum phase,
- * P2b.2b.2b.2b design §4.3). A push whose plan never reaches its length never finishes, and runs to the cap.
+ * True once the head in `state` at time t has reached its finish (P2b.2b.2a design §4.2; shapes design §2).
+ * - A swing with nothing released (no push, λ = 0): at the pendulum's apex, its pitch rate about n at or below zero.
+ * - A swing released at releaseOf: at the mallet's apex after it, the first step whose rate, having risen above 0
+ *   since the release (`watch`), is back at or below 0; if it never rises, once the hands are at their apex (the
+ *   push's handsApex, or the release itself without a push).
+ * - A push whose plan never reaches its length has no release and never finishes: it runs to the cap.
+ * - A check: at rest relative to the hands once any push's hands are at their apex.
  */
-function finished(kind: FinishKind, plan: PreparedTrack, state: HeadState, t: number): boolean {
-    switch (kind) {
-        case "swing":
-            return dot(state.angularVelocity, plan.axis) <= 0;
-        case "check": {
-            // Moving hands carry a held head with them, at rest relative to them at once: wait for the hands' rest.
-            const { push } = plan;
-            const apex = push === null ? null : handsApex(push);
-            if (push !== null && (apex === null || t < apex)) {
-                return false;
-            }
-            return length(sub(state.velocity, handsAt(plan, t).velocity)) < FINISH_SPEED;
+function finished(kind: FinishKind, plan: PreparedTrack, state: HeadState, t: number, watch: SwingWatch): boolean {
+    const { push } = plan;
+    if (kind === "check") {
+        // Moving hands carry a held head with them, at rest relative to them at once: wait for the hands' apex.
+        const apex = push === null ? null : handsApex(push);
+        if (push !== null && (apex === null || t < apex)) {
+            return false;
         }
-        case "carry": {
-            // A carry always has a push (finishKind); one whose hands never reach its length never rests.
-            const apex = handsApex(plan.push as Push);
-            return apex !== null && t >= apex;
-        }
+        return length(sub(state.velocity, handsAt(plan, t).velocity)) < FINISH_SPEED;
     }
+    const rate = dot(state.angularVelocity, plan.axis);
+    const release = releaseOf(plan);
+    if (release === null) {
+        return push === null && rate <= 0;
+    }
+    if (t < release) {
+        return false;
+    }
+    if (rate > 0) {
+        watch.risen = true;
+        return false;
+    }
+    if (watch.risen) {
+        return true;
+    }
+    return t >= (push === null ? release : (handsApex(push) as number));
 }
 
 /**
@@ -1415,9 +1426,10 @@ function continueStroke(
     let steps = first;
     let deep = false;
     let held = false;
+    const watch: SwingWatch = { risen: false };
     for (;;) {
         const t = steps * dt;
-        if (finished(kind, plan, state, t)) {
+        if (finished(kind, plan, state, t, watch)) {
             break;
         }
         if (t >= cap) {
