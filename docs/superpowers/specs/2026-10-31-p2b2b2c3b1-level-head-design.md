@@ -233,4 +233,6 @@ ratioFit fits its period and damping to the drive's and the AC stop's ratios, so
 **Ruling 6** (user, 2026-11-01). The push's length and its acceleration are what tell the rolls apart: pass roll, full
 roll and so on. A half roll is generally a drive with lean. Today's half-roll preset carries a push (`handReach`
 0.15 m, `speedGain` 0.1 over 20 ms, src/engine/swing/profile.ts), against the full and pass rolls' 0.3 m at speedGain
-0.1 over 30 ms and 0.5 over 15 ms; whether its text book drops the push is open.
+0.1 over 30 ms and 0.5 over 15 ms. The user (same day): a half roll may or may not have a little push, and 0.15 m is
+too much. Assumption: its text book becomes a drive with lean (`handReach` 0); a short push stays a valid variant
+within the half roll's region, its length a later envelope input.
