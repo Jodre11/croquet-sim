@@ -300,6 +300,7 @@ function validate(setup: ShotSetup, ballRadius: number): void {
         ["stroke.lean", stroke.lean],
         ["stroke.feet", stroke.feet],
         ["stroke.slopeHold", stroke.slopeHold],
+        ["stroke.slopeCarry", stroke.slopeCarry],
     ] as const) {
         if (value !== undefined) {
             finiteNumber(value, name);
@@ -512,6 +513,11 @@ function validate(setup: ShotSetup, ballRadius: number): void {
     unit(shape.slopeHold, `${where}.slopeHold`);
     if (stroke.slopeHold !== undefined) {
         unit(stroke.slopeHold, "stroke.slopeHold");
+    }
+    finiteNumber(shape.slopeCarry, `${where}.slopeCarry`);
+    unit(shape.slopeCarry, `${where}.slopeCarry`);
+    if (stroke.slopeCarry !== undefined) {
+        unit(stroke.slopeCarry, "stroke.slopeCarry");
     }
     const slopeHold = stroke.slopeHold ?? shape.slopeHold;
     // P2b.2b.2c.3a design §4.1: a plan short of a full hold, or one whose tempo is the free swing's own fall, needs the
@@ -795,10 +801,10 @@ export interface StrokePlan {
  * - backswing ≤ 0; an intensity outside [0, 1]; |drive| > 1; the contact off the face (a box's: off its flat part);
  *   handsAhead outside (−D, A) for the stroke's top hand and contact (P2b.2b.2b.1 design §3.4: at A the shaft lies
  *   flat, at −D the hands leave the stance's branch);
- * - a stroke.lean, stroke.feet or stroke.slopeHold non-finite, or a stroke.grip value non-finite, named by its key
- *   (P2b.2b.2c.3a design §2); a stroke.lean above π/4 (the on-point limit), or at or below −atan2(A, B), where the
- *   hands it places leave the stance's branch; a stroke.slopeHold outside [0, 1]; feet whose arc's lowest point s_low
- *   = feet − x_c lies outside (2·handReach − handArcRadius, handArcRadius) (design §3, A2 item 1; P2b.2b.2c.3b.1 §5);
+ * - a stroke.lean, stroke.feet, stroke.slopeHold or stroke.slopeCarry non-finite, or a stroke.grip value non-finite,
+ *   named by its key (P2b.2b.2c.3a design §2); a stroke.lean above π/4 (the on-point limit), or at or below
+ *   −atan2(A, B), where the hands it places leave the stance's branch; a stroke.slopeHold or stroke.slopeCarry outside
+ *   [0, 1] (shapes design §8, ruling 12); feet whose arc's lowest point s_low = feet − x_c lies outside (2·handReach − handArcRadius, handArcRadius) (design §3, A2 item 1; P2b.2b.2c.3b.1 §5);
  * - a stroke.window non-finite or outside [MIN_WINDOW, MAX_WINDOW] (P2b.2b.2c.2d design §3.2);
  * - window, handWindow or dropTime ≤ 0; speedGain < 0; the preset's or the shot's gripTension or bottomGrip outside
  *   (0, 1]; handDrop < 0; the
@@ -811,8 +817,8 @@ export interface StrokePlan {
  *   pushForce, pushResponseTime, gripLimit or a hand–arm chain value not positive (its gate rulings, 2026-10-11;
  *   P2b.2b.2b.3 design §5);
  * - pendulumShare outside [0, 1]; handAngle outside (0, 90°) when pendulumShare < 1 (neither read
- *   nor checked otherwise); a slopeHold outside [0, 1]; a pendulumShare of 0 where the downswing needs its free swing
- *   (slopeHold < 1, or a null hands' tempo); a hands' tempo, where given, ≤ 0 or with fast > slow;
+ *   nor checked otherwise); a slopeHold or slopeCarry outside [0, 1]; a pendulumShare of 0 where the downswing needs
+ *   its free swing (slopeHold < 1, or a null hands' tempo); a hands' tempo, where given, ≤ 0 or with fast > slow;
  * - the downswing's (downswing.ts): a backswing beyond the body's limit θ_max, a non-positive effective inertia, a
  *   stall or a fall beyond MAX_FALL, or a planned slope the grip's couple cannot hold;
  * - an action timed more than MAX_LEAD early (the advance's among them), or a downswing meeting the turf more than
@@ -903,6 +909,7 @@ export function planStroke(setup: ShotSetup, world: World): StrokePlan {
         dip: { start: lead + dipFrom, duration: push.dropTime, depth },
         contactAt: lead,
         slopeHold: stroke.slopeHold ?? profile.shape[type].slopeHold,
+        slopeCarry: stroke.slopeCarry ?? profile.shape[type].slopeCarry,
         handReach: stroke.handReach ?? push.handReach,
         pendulumAt: stroke.pendulumAt ?? push.pendulumAt,
         pendulumEffort: stroke.pendulumEffort ?? push.pendulumEffort,

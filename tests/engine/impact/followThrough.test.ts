@@ -17,6 +17,7 @@ import {
     HAND_COUPLING,
     handsApex,
     handsAt,
+    pathAt,
     pitchAxis,
     prepareTrack,
     type Push,
@@ -333,6 +334,15 @@ describe("the finish from the inputs (P2b.2b.2c.3a A2 item 7)", () => {
         expect(finishKind(planOf(canonicalSetup("half-roll", { stroke: { drive: -1 } })))).toBe("check");
     });
 
+    it("gives the half roll a minimal push (shapes design §8, ruling 11)", () => {
+        const plan = planOf(canonicalSetup("half-roll"));
+        const push = plan.push as Push;
+        expect(push).not.toBeNull();
+        expect(push.end).not.toBeNull();
+        const travel = dot(sub(handsAt(plan, push.end as number).position, push.origin), plan.arc.aim);
+        expect(travel).toBeCloseTo(0.05, 9);
+    });
+
     it("finishes a braked held stroke with the check's hold", () => {
         // The half roll at drive −1 brakes on a held slope (λ = 1) with a push: the check's hold waits for the hands'
         // rest (P2b.2b.2c.3b.1 design §5, review focus 3; was the push's end), and holds the held path, which has no
@@ -498,5 +508,77 @@ describe("the mallet's release and the finish's end (shapes design §2)", () => 
         const { follow } = simulateStroke(contact, setup.balls, DEFAULT);
         expect(follow.finish).toBeGreaterThanOrEqual(apex);
         expect(follow.flags).not.toContain("follow-cap");
+    });
+});
+
+describe("the hands guide the mallet on (shapes design §8, ruling 12)", () => {
+    const DEFAULT = defaultWorld();
+    const trackOf = (slopeCarry?: number) => {
+        const stroke = slopeCarry === undefined ? {} : { slopeCarry };
+        const contact = buildContact(canonicalSetup("half-roll", { world: DEFAULT, stroke }), DEFAULT);
+        return prepareTrack(contact.drive as TrackDrive, contact.head, DEFAULT.gravity);
+    };
+    /** The hands' finish angle φ (rad) at time t, from their travel along aim: s = s_low + ρ_h·sin φ. */
+    const phiAt = (track: ReturnType<typeof trackOf>, t: number): number => {
+        const push = track.push as Push;
+        const s = dot(sub(handsAt(track, t).position, push.origin), track.arc.aim);
+        return Math.asin((s - push.low) / track.arc.handArcRadius);
+    };
+
+    it("releases at the push's end at slopeCarry 0, as before the guidance", () => {
+        const track = trackOf(0);
+        const push = track.push as Push;
+        expect(push.end).not.toBeNull();
+        expect(push.release).toBe(push.end);
+        expect(releaseOf(track)).toBe(push.end);
+        expect(track.finish?.tw).toBe(push.end);
+    });
+
+    it("carries the mallet at its held pitch to the hands' apex by default", () => {
+        const track = trackOf();
+        const push = track.push as Push;
+        const end = push.end as number;
+        const apex = handsApex(push) as number;
+        expect(apex).toBeGreaterThan(end);
+        expect(releaseOf(track)).toBe(apex);
+        expect(track.finish?.tw).toBe(apex);
+        // Until the release the path is the held plan's; the finish's free swing takes over only from it.
+        const held = { ...track, finish: null };
+        for (let t = end; t < apex; t += 1e-3) {
+            expect(pathAt(track, t).theta, `t ${t}`).toBe(pathAt(held, t).theta);
+        }
+    });
+
+    it("releases half way along the hands' finish at slopeCarry 0.5", () => {
+        const track = trackOf(0.5);
+        const push = track.push as Push;
+        const finish = push.finish as NonNullable<Push["finish"]>;
+        const release = push.release as number;
+        expect(release).toBeGreaterThan(push.end as number);
+        expect(release).toBeLessThan(finish.apex);
+        const half = (finish.phi[0] as number) + 0.5 * (finish.phiApex - (finish.phi[0] as number));
+        expect(Math.abs(phiAt(track, release) - half)).toBeLessThanOrEqual(1e-6);
+    });
+
+    it.each([
+        ["above 1", 1 + 1e-9, /stroke\.slopeCarry must lie in \[0, 1\]/],
+        ["below 0", -1e-9, /stroke\.slopeCarry must lie in \[0, 1\]/],
+        ["not finite", Number.NaN, /stroke\.slopeCarry must be finite/],
+    ])("rejects a slopeCarry %s", (_, slopeCarry, message) => {
+        expect(() => trackOf(slopeCarry)).toThrow(message);
+    });
+
+    it("rejects a preset's slopeCarry outside [0, 1], naming its shape", () => {
+        const setup = canonicalSetup("half-roll", { world: DEFAULT, shape: { slopeCarry: 1.5 } });
+        expect(() => buildContact(setup, DEFAULT)).toThrow(
+            /profile\.shape\.half-roll\.slopeCarry must lie in \[0, 1\]/,
+        );
+    });
+
+    it("plays the canonical half roll with no 29.1.6.1 re-contact", () => {
+        // Released at the push's end its head swung down under the hands and hit the striker's ball again 112 ms
+        // after the balls parted (design §8, ruling 12); guided to the hands' apex it stays clear.
+        const out = simulateShot(canonicalSetup("half-roll", { world: DEFAULT }), DEFAULT);
+        expect(out.faults.findings.map((f) => f.law)).not.toContain("29.1.6.1");
     });
 });

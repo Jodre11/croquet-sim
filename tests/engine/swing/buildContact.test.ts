@@ -740,7 +740,8 @@ describe("defaultProfile", () => {
         const holds = STROKE_TYPES.map((type) => defaultProfile.shape[type].slopeHold);
         expect(holds).toEqual([0, 0, 0, 0, 1, 1, 1]);
         const reaches = STROKE_TYPES.map((type) => defaultProfile.drive[type].handReach);
-        expect(reaches).toEqual([0, 0, 0, 0, 0.15, 0.3, 0.3]);
+        // Shapes design §8, ruling 11: the half roll's minimal push (was 0.15).
+        expect(reaches).toEqual([0, 0, 0, 0, 0.05, 0.3, 0.3]);
         expect(defaultProfile.drive["stop-ac"].handDrop).toBe(0.011);
         // P2b.2b.2c.3a gate stage 2: the drive's guide effort 1, as on every preset (was 0.75, set by P2b.2b.2c.2d as
         // the largest that left no re-contact after the parting; with the hands together none on the grid does).
@@ -1035,6 +1036,7 @@ describe("contactPose (design §5.2 steps 1–5, 10)", () => {
             handAngle: 0.5,
             handTempo: { slow: 0.4, fast: 0.2 },
             slopeHold: 0,
+            slopeCarry: 0,
         };
         const choice = {
             shape,
@@ -1484,18 +1486,19 @@ describe("the per-shot set-up (P2b.2b.2c.3a design §2)", () => {
 
     it("places the hands' arc from the ball", () => {
         // A2 item 1: the feet are the arc's lowest point along aim from the ball's centre, so feet at the canonical
-        // x_c + handArcLow·handReach (0.5 × 0.15 m) put s_low where the preset's path does.
+        // x_c + handArcLow·handReach (0.5 × 0.05 m; shapes design §8, was 0.5 × 0.15 m) put s_low where the preset's
+        // path does.
         const setup = canonicalSetup("half-roll");
         const xc = handsAlong(setup);
-        const placed = withStroke(setup, { feet: xc + 0.075 });
+        const placed = withStroke(setup, { feet: xc + 0.025 });
         expect(downswingInputOf(placed, world).arrival).toBeCloseTo(downswingInputOf(setup, world).arrival, 12);
         const plain = driveOf(setup).arc;
         const arc = driveOf(placed).arc;
-        expect(Math.abs((arc.lowPoint as number) - 0.075)).toBeLessThan(1e-12);
+        expect(Math.abs((arc.lowPoint as number) - 0.025)).toBeLessThan(1e-12);
         expect(Math.abs(arc.theta0 - plain.theta0)).toBeLessThan(1e-12);
-        const moved = withStroke(setup, { feet: xc + 0.075 + 0.05 });
+        const moved = withStroke(setup, { feet: xc + 0.025 + 0.05 });
         const further = driveOf(moved).arc;
-        expect(Math.abs((further.lowPoint as number) - 0.125)).toBeLessThan(1e-12);
+        expect(Math.abs((further.lowPoint as number) - 0.075)).toBeLessThan(1e-12);
         // The push reads the low point the feet set, not handArcLow's.
         const { contact } = planStroke(moved, world);
         const track = prepareTrack(contact.drive as TrackDrive, contact.head, world.gravity);

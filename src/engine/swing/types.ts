@@ -86,13 +86,16 @@ export interface SwingDrive {
  * θ = θ_top + span·σ², and between them the plan blends the two. `handTempo` is the hands' downswing time, from `slow`
  * (s, intensity 0) to `fast` (s, intensity 1); null takes the stroke's own free swing's fall, derived, not fitted. A
  * shot that gives no intensity swings at 0, by gravity alone: no preset carries a default intensity (P2b.2b.2c.1
- * design, Amendments).
+ * design, Amendments). `slopeCarry` (in [0, 1]; shapes design §8, ruling 12) is the share of the hands' finish, in arc
+ * travel from the push's end to their apex, through which the hands go on holding the slope and the shaft's pitch
+ * before the mallet swings free: 0 releases at the push's end, 1 at the hands' apex.
  */
 export interface SwingShape {
     readonly pendulumShare: number;
     readonly handAngle: number;
     readonly handTempo: { readonly slow: number; readonly fast: number } | null;
     readonly slopeHold: number;
+    readonly slopeCarry: number;
 }
 
 /**
@@ -238,6 +241,8 @@ export interface ShotSetup {
         readonly feet?: number;
         /** The planned slope λ in [0, 1] (design §4.1); absent: the preset's shape's. */
         readonly slopeHold?: number;
+        /** The hands' guidance after the push in [0, 1] (shapes design §8, ruling 12); absent: the preset's shape's. */
+        readonly slopeCarry?: number;
     };
     readonly live: readonly BallId[];
     readonly continuation: boolean;

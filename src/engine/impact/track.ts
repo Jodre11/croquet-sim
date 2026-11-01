@@ -384,6 +384,11 @@ export interface Push {
     readonly finishSpeed: number;
     /** The hands' finish from `end` (shapes design §2); null exactly when `end` is null, a push whose finish never starts. */
     readonly finish: HandsFinish | null;
+    /**
+     * When the hands let the mallet swing free (s; shapes design §8, ruling 12): the first time their finish reaches
+     * φ_r + slopeCarry·(φ_apex − φ_r), `end` at slopeCarry 0 and the apex at 1; null exactly when `end` is null.
+     */
+    readonly release: number | null;
 }
 
 /**
@@ -855,7 +860,31 @@ function computePush(track: PreparedTrack): Push {
         advance,
         finishSpeed,
         finish,
+        release: finish === null ? end : carriedTo(finish, arc.slopeCarry),
     };
+}
+
+/**
+ * When `finish` reaches φ_r + carry·(φ_apex − φ_r) (s; shapes design §8, ruling 12), on handsFinishAt's linear reading
+ * of the table: its start at carry 0 and its apex at carry 1, exactly.
+ */
+function carriedTo(finish: HandsFinish, carry: number): number {
+    if (carry === 0 || finish.apex === finish.from) {
+        return finish.from;
+    }
+    if (carry === 1) {
+        return finish.apex;
+    }
+    const target = (finish.phi[0] as number) + carry * (finish.phiApex - (finish.phi[0] as number));
+    for (let i = 0; i + 1 < finish.phi.length; i++) {
+        const p0 = finish.phi[i] as number;
+        const p1 = finish.phi[i + 1] as number;
+        if (p1 >= target) {
+            const f = p1 > p0 ? (target - p0) / (p1 - p0) : 0;
+            return Math.min(finish.from + (i + f) * FREE_STEP, finish.apex);
+        }
+    }
+    return finish.apex;
 }
 
 /**
@@ -1170,14 +1199,15 @@ export function prepareTrack(drive: TrackDrive, head: MalletHead, gravity: numbe
 }
 
 /**
- * When `track`'s slope hold releases into the finish's free swing (shapes design §2): at the push's end where there
- * is a push (null where it has none); else, wherever the slope is held (λ > 0), where the held path's rate has fallen
- * to rest, arcStart + window + holdWindow; else null, a free swing with nothing to release.
+ * When `track`'s slope hold releases into the finish's free swing (shapes design §2): where there is a push, once the
+ * hands have guided the mallet slopeCarry of the way along their finish (push.release; shapes design §8, ruling 12),
+ * null where the push has no end; else, wherever the slope is held (λ > 0), where the held path's rate has fallen to
+ * rest, arcStart + window + holdWindow; else null, a free swing with nothing to release.
  */
 export function releaseOf(track: PreparedTrack): number | null {
     const { arc, push } = track;
     if (push !== null) {
-        return push.end;
+        return push.release;
     }
     if (arc.slopeHold > 0) {
         return arc.arcStart + arc.window + (arc.holdWindow ?? arc.window);
@@ -1798,12 +1828,13 @@ interface CarryStep {
  * e the pitch error from the head to the path and ė its rate's lag, the gains holdPitchGains's for the swung body's
  * I_P about the top hand, M_p held to the grip's couple (gripCouple). The balls' impulse at the face turns the shaft
  * back about the top hand, and without this nothing but the grips' spread resists it (the 2026-11-01 diagnosis).
- * Zero with no push, inside a check and after the push's end.
+ * It runs on while the hands guide the mallet after the push, to the release (shapes design §8, ruling 12). Zero with
+ * no push, inside a check and after the release.
  */
 function pushPitch(track: PreparedTrack, state: HeadState, t: number, path: PathPoint, step: CarryStep): number {
     const { push } = track;
     // A check brakes the pitch to rest (checkShare), and the hold would drive it on along the unbraked path.
-    if (push === null || step.checking || (push.end !== null && t > push.end)) {
+    if (push === null || step.checking || (push.release !== null && t > push.release)) {
         return 0;
     }
     return heldPitch(

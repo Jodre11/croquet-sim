@@ -113,6 +113,7 @@ const COAST: SwingArc = {
     dip: NO_DIP,
     contactAt: 0,
     slopeHold: 0,
+    slopeCarry: 0,
     handReach: 10,
     pendulumAt: 0.8,
     pendulumEffort: 0,

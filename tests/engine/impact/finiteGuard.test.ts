@@ -115,9 +115,10 @@ describe("the finite-state guard (design §3)", () => {
     it("rejects the narrowed arc whose finish would leave it (P2b.2b.2c.3b.1 design §5)", () => {
         // The arc this file's follow-through case was once built on: the canonical half roll's (handReach 0.15 m)
         // narrowed to 0.2 m with its low point 0.06 m ahead. Its push's end lies on the arc (0.15 − 0.06 < 0.2), but
-        // its finish's rest does not (0.3 − 0.06 > 0.2), so the validator refuses it before any step.
+        // its finish's rest does not (0.3 − 0.06 > 0.2), so the validator refuses it before any step. Shapes design §8:
+        // the shot's own reach keeps 0.15 m, now the half roll's preset pushes only 0.05 m.
         const world = defaultWorld();
-        const setup = canonicalSetup("half-roll", { world });
+        const setup = canonicalSetup("half-roll", { world, stroke: { handReach: 0.15 } });
         const contact = buildContact(setup, world);
         const drive = contact.drive as TrackDrive;
         const arc = { ...drive.arc, handArcRadius: 0.2, lowPoint: 0.06 };

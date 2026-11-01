@@ -36,7 +36,7 @@ describe("one plan's run (P2b.2b.2c.3b plan Task 3)", () => {
             faceHalfHeight: faceHalfHeight(headShapeOf(mallet.head)),
         });
         expect(Math.abs(plan.lean - lean)).toBeLessThanOrEqual(1e-12);
-        expect([plan.drive, plan.handReach, plan.window, plan.onset, plan.split]).toEqual([1, 0.15, 0.02, 0, 0]);
+        expect([plan.drive, plan.handReach, plan.window, plan.onset, plan.split]).toEqual([1, 0.05, 0.02, 0, 0]);
         expect(textBook("pass-roll").split).toBe((20 * Math.PI) / 180);
     });
 
@@ -136,13 +136,15 @@ describe("one plan's run (P2b.2b.2c.3b plan Task 3)", () => {
         // user; this pins what the engine does, not what the spec's acceptance asks.
         // Shapes plan Task 5: the push's pitch hold (was unpractised, off point). Held at its planned pitch through the
         // push, the lean no longer runs away: practice lands it in two passes, unflagged, at ratio 1.11 on the 10 s lawn.
+        // Shapes design §8, ruling 12: the hands guide the mallet to their apex (was ratio 1.112). Carried at its held
+        // pitch, the face stays on the striker's ball to 192 ms rather than 102 ms, and the ratio rises to 1.211.
         const base = mapSetup("full-roll", textBook("full-roll"), 1);
         const p = swingReference["full-roll"].defaultBackswing.value / bodyBackswing(base, WORLD);
         const sample = playSample("full-roll", textBook("full-roll"), p, [10]);
         expect(sample.klass).toBeNull();
         expect(sample.reason).toBeNull();
         expect(sample.passes).toBe(2);
-        expect(sample.byLawn[10]?.ratio).toBeCloseTo(1.112, 3);
+        expect(sample.byLawn[10]?.ratio).toBeCloseTo(1.211, 3);
     });
 
     it("grades the full roll's text book at p = 1.5 as unreachable: its hands' finish passes the arc's top", () => {

@@ -79,6 +79,7 @@ const ROLL: SwingArc = {
     dip: NO_DIP,
     contactAt: 1,
     slopeHold: 1,
+    slopeCarry: 0,
     handReach: 10,
     pendulumAt: 0.8,
     pendulumEffort: 0,

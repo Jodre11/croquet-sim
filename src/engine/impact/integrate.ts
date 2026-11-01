@@ -52,8 +52,8 @@
  *
  * With a follow-through (integrateStroke, P2b.2b.2a design §4.1) a tracked drive's loop continues once the impact has
  * ended, the balls removed: the hands and the head–turf pair act on the head until the stroke type's finish, or
- * FOLLOW_CAP after the push's end (contact without a push, or for a push that finds no end). Once the ball has been
- * struck and the drive is done the head's turf contact is the follow-through's to carry, on the same bed (user ruling
+ * FOLLOW_CAP after the push's release (the planned contact without a push, or for a push that finds no end). Once the
+ * ball has been struck and the drive is done the head's turf contact is the follow-through's to carry, on the same bed (user ruling
  * 2026-10-16), so it does not hold the impact open. The impact's result is fixed before it starts. A hand first
  * reaching its grip's limit raises `grip-limit` in the impact and `follow-grip-limit` in the follow-through
  * (P2b.2b.2b.3 design §5).
@@ -200,8 +200,8 @@ export const ENTRY_SLACK = 1e-6;
 export const LOOK_AHEAD = 0.03;
 
 /**
- * How long after the push's end (s; the planned contact without a push, or for a push that finds no end) the
- * follow-through may run before it ends with `follow-cap` (P2b.2b.2a design §4.2; P2b.2b.2c.3b.1 design §5). A
+ * How long after the push's release (s; shapes design §8, ruling 12; the planned contact without a push, or for a
+ * push that finds no end) the follow-through may run before it ends with `follow-cap` (P2b.2b.2a design §4.2; P2b.2b.2c.3b.1 design §5). A
  * modelling bound, not physical: a safety net that must not cut a planned finish short, counted from where the finish
  * starts; a finish slower than that still caps, and is flagged.
  */
@@ -1415,9 +1415,9 @@ function continueStroke(
     // check's window's end, or the impact's end if later, the pendulum is held and the hands grip the head firmly.
     const holdFrom = kind === "check" ? Math.max(plan.arc.arcStart + plan.arc.window, first * dt) : Infinity;
     const path = kind === "check" ? holdPendulum(plan, holdFrom) : plan;
-    // The cap counts from the push's end, where the finish starts (P2b.2b.2c.3b.1 design §5), so that it never cuts
-    // a planned finish short; from contact without a push, or for one that finds no end.
-    const capFrom = plan.push !== null && plan.push.end !== null ? plan.push.end : plan.arc.contactAt;
+    // The cap counts from the push's release, where the finish starts (P2b.2b.2c.3b.1 design §5; shapes design §8,
+    // ruling 12), so that it never cuts a planned finish short; from contact without a push, or for one with no end.
+    const capFrom = plan.push !== null && plan.push.release !== null ? plan.push.release : plan.arc.contactAt;
     const cap = capFrom + FOLLOW_CAP;
     const releaseAt = releaseTime(plan);
     const headWeight = vec3(0, 0, 0 - head.mass * setup.gravity);

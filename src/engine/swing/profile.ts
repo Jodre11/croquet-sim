@@ -105,7 +105,7 @@ function stanceFromLean(lean: number, up: number, hands: Omit<SwingStance, "hand
  * keys (torqueMax, tempoSlow, tempoFast) and any preset's retired defaultIntensity are rejected by readShape when
  * swing.json loads.
  */
-export function shapeOf(type: StrokeType, ref: StrokeShapeReference): Omit<SwingShape, "slopeHold"> {
+export function shapeOf(type: StrokeType, ref: StrokeShapeReference): Omit<SwingShape, "slopeHold" | "slopeCarry"> {
     return {
         pendulumShare: ref.pendulumShare.value,
         handAngle: ref.handAngle.value,
@@ -197,7 +197,9 @@ const DRIVE: Readonly<Record<StrokeType, SwingDrive>> = {
     },
     // Carry (Riches: the slope "MAINTAINED throughout the swing", both hands moving "FORWARD at the SAME RATE",
     // "the mallet head following through the ball and onto the ground"): the hands' speed from the downswing
-    // (P2b.2b.2a design §3.3), a light pendulum push, the push 0.15 m (prototype).
+    // (P2b.2b.2a design §3.3), a light pendulum push. The push is minimal, 0.05 m (shapes design §8, ruling 11: "the
+    // bottom hand always pushes through the contact"; was 0.15 m, the prototype's, which B1 ruling 6 found too much).
+    // Its length is an assumption until the envelope phase tunes it (B1 ruling 4).
     "half-roll": {
         speedGain: 0.1,
         window: 0.02,
@@ -205,7 +207,7 @@ const DRIVE: Readonly<Record<StrokeType, SwingDrive>> = {
         handWindow: 0.02,
         handDrop: 0,
         dropTime: 0.01,
-        handReach: 0.15,
+        handReach: 0.05,
         guideEffort: 1,
         pendulumAt: 0.8,
         pendulumEffort: 0,
@@ -260,6 +262,13 @@ export const SLOPE_HOLD: Readonly<Record<StrokeType, number>> = {
     "full-roll": 1,
     "pass-roll": 1,
 };
+
+/**
+ * The hands' guidance after the push (shapes design §8, ruling 12): one value on every preset, the model being one shot
+ * model, not one per stroke type. At 1 the hands carry the mallet at its lean to their apex. An assumption until the
+ * envelope phase tunes it per shot with push length; a stroke with no push has nothing for it to act on.
+ */
+export const SLOPE_CARRY = 1;
 
 /** The default profile (design §5.4). Provisional throughout. */
 export const defaultProfile: SwingProfile = {
@@ -345,7 +354,10 @@ export const defaultProfile: SwingProfile = {
     },
     drive: DRIVE,
     shape: Object.fromEntries(
-        STROKE_TYPES.map((type) => [type, { ...shapeOf(type, swingReference[type]), slopeHold: SLOPE_HOLD[type] }]),
+        STROKE_TYPES.map((type) => [
+            type,
+            { ...shapeOf(type, swingReference[type]), slopeHold: SLOPE_HOLD[type], slopeCarry: SLOPE_CARRY },
+        ]),
     ) as Record<StrokeType, SwingShape>,
 };
 

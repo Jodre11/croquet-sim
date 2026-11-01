@@ -336,7 +336,12 @@ describe("handover of a ball sunk under the head, on whole rolls", () => {
     // 3.21 mm airborne at the impact's end (156.3 ms). The bounded search found no pass roll that does (0.5, 1, 1.25,
     // 1.5 and 1.75 m/s, side 0: overlapCorrection 0). The run stays as a guard that the handover does not throw; the
     // pass roll's whole-run lift cover is lost, and the lift keeps its unit cover above.
-    it("hands over the pass-roll at 2 m/s, drive 1, side 0, without a correction", () => {
-        expect(sunkRun("pass-roll", 2, 1, 0).impact.overlapCorrection).toBe(0);
+    // Shapes design §8, ruling 12: the hands guide the mallet to their apex (was overlapCorrection 0). Carried on at
+    // its held pitch, the head ends the run pressing blue 197 µm, inside its 437 µm static sink, and the handover
+    // clears it: still the guard that the handover does not throw, now with a small correction.
+    it("hands over the pass-roll at 2 m/s, drive 1, side 0, with at most a small correction", () => {
+        const correction = sunkRun("pass-roll", 2, 1, 0).impact.overlapCorrection;
+        expect(correction).toBeGreaterThanOrEqual(0);
+        expect(correction).toBeLessThan(3e-4);
     });
 });
