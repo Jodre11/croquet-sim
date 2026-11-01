@@ -236,3 +236,10 @@ roll and so on. A half roll is generally a drive with lean. Today's half-roll pr
 0.1 over 30 ms and 0.5 over 15 ms. The user (same day): a half roll may or may not have a little push, and 0.15 m is
 too much. Assumption: its text book becomes a drive with lean (`handReach` 0); a short push stays a valid variant
 within the half roll's region, its length a later envelope input.
+
+**Ruling 7** (user, 2026-11-01), settling the first open point above. How far the hands carry the pendulum on varies
+with the shot's power. On a soft shot, from about 6 inches to 6 m, the hands only guide the mallet and let it swing
+through; the range between those ends comes from the backswing alone. Beyond about 6 m the player adds to the swing and
+assists the mallet through it. So the finish is one pendulum, the arms and mallet swinging on together under gravity,
+with the hands guiding; the assist is an added-effort input that is zero by default (ruling 3) and is tuned with the
+envelope (ruling 4). The 6 m changeover is the user's estimate and is not encoded as a threshold.
