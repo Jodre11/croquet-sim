@@ -9,20 +9,29 @@
  * path that pass's (its lift included), and the table's header gives the passes and practice's miss. Its outputs are
  * suffixed `-practised`, beside the first trace.
  * Run with `npx --yes tsx scripts/pathTrace.ts`; environment: OUT (a directory, default docs/superpowers/probes).
+ * Shapes plan Task 4: `--diagnose` traces the full and pass roll text books alone, every millisecond through the push,
+ * with each step's bottom hand off its path, the feed-forward and the rest of the hands' force (flex and chain), each
+ * hand's force, the bottom hand's moment about the top grip and the balls' resistance on the face, and writes the table
+ * alone (no SVG). `--unpractised` plays the first pass only, the plan as given.
  */
-import { headLowestPoint } from "../src/engine/impact/contacts";
+import { faceKey, headLowestPoint } from "../src/engine/impact/contacts";
 import type { FollowSnapshot, ImpactProbe, ImpactSnapshot } from "../src/engine/impact/integrate";
 import { PRACTICE_PASSES, practiseStroke } from "../src/engine/impact/practice";
 import { rotate } from "../src/engine/impact/rigidBody";
-import { handsAt, headOnPath, prepareTrack } from "../src/engine/impact/track";
+import { simulateStroke } from "../src/engine/impact/simulateImpact";
+import { handsAt, headOnPath, pitchAxis, prepareTrack } from "../src/engine/impact/track";
 import type { HeadState, MalletHead } from "../src/engine/impact/types";
-import { add, dot, scale, sub, vec3, type Vec3 } from "../src/engine/math/vec3";
+import { add, cross, dot, scale, sub, vec3, type Vec3 } from "../src/engine/math/vec3";
 import { planStroke } from "../src/engine/swing/buildContact";
 import { BALL_IDS, type BallState } from "../src/engine/types";
 import { openWorld } from "./openLawn";
 import { mapSetup, textBook, type MapPlan, type RollType } from "./pushMapRun";
 
-declare const process: { readonly env: Readonly<Record<string, string | undefined>> };
+declare const process: {
+    readonly env: Readonly<Record<string, string | undefined>>;
+    readonly argv: readonly string[];
+    exit(code: number): never;
+};
 
 /** The file system call the trace uses (tsx runs under Node; the project has no Node types). */
 interface Files {
@@ -39,6 +48,10 @@ const OUT = process.env.OUT ?? "docs/superpowers/probes";
 const DEG = 180 / Math.PI;
 /** How often the trace keeps a step (s): the integrator's steps are far finer than a plot needs. */
 const KEEP = 0.00025;
+const DIAGNOSE = process.argv.includes("--diagnose");
+const UNPRACTISED = process.argv.includes("--unpractised");
+/** The cases `--diagnose` traces: the text books. */
+const DIAGNOSED = new Set(["full-roll-textbook", "pass-roll-textbook"]);
 
 /** One run to trace: its name, type, plan and power. */
 interface TraceCase {
@@ -82,10 +95,34 @@ const CASES: readonly TraceCase[] = [
     },
 ];
 
+/**
+ * One step's hands and balls (`--diagnose`; N, and N·m for `lever`): the feed-forward, the rest of the hands' force
+ * (the flex's and the chains'), each hand's force, the bottom hand's moment about the top grip (positive turning the
+ * shaft forward) and the balls' resistance, the face–ball pairs' normal force.
+ */
+interface Diagnosis {
+    readonly feedForward: Vec3;
+    readonly rest: Vec3;
+    readonly top: Vec3;
+    readonly bottom: Vec3;
+    readonly lever: number;
+    readonly balls: number;
+}
+
+/** What a step reports of its hands' forces. */
+interface HandForces {
+    readonly feedForward: Vec3;
+    readonly top: Vec3;
+    readonly bottom: Vec3;
+}
+
 /** A traced instant: the planned and the actual top hand, leading face centre and normal, shaft and lowest point. */
 interface Instant {
     readonly t: number;
     readonly hand: Vec3;
+    /** The bottom hand's grip. */
+    readonly grip: Vec3;
+    readonly diagnosis?: Diagnosis;
     readonly face: Vec3;
     readonly normal: Vec3;
     readonly shaft: Vec3;
@@ -112,10 +149,22 @@ interface Trace {
     /** The practice passes played and the last pass's miss (null in the band). */
     readonly passes: number;
     readonly miss: string | null;
+    /** The push's end (s), null where it has none. */
+    readonly pushEnd: number | null;
 }
 
-/** The head's instant: the top hand `radius` up the shaft from the socket, and the face on the aim's side. */
-function instantOf(t: number, state: HeadState, head: MalletHead, radius: number, side: number): Instant {
+/**
+ * The head's instant: the top hand `radius` and the bottom hand `bottom` up the shaft from the socket, and the face on
+ * the aim's side.
+ */
+function instantOf(
+    t: number,
+    state: HeadState,
+    head: MalletHead,
+    radius: number,
+    bottom: number,
+    side: number,
+): Instant {
     const q = state.orientation;
     const shaft = rotate(q, vec3(0, 0, 1));
     const socket = add(state.position, rotate(q, head.socket));
@@ -123,6 +172,7 @@ function instantOf(t: number, state: HeadState, head: MalletHead, radius: number
     return {
         t,
         hand: add(socket, scale(shaft, radius)),
+        grip: add(socket, scale(shaft, bottom)),
         face: add(state.position, scale(normal, head.length / 2)),
         normal,
         shaft,
@@ -130,7 +180,22 @@ function instantOf(t: number, state: HeadState, head: MalletHead, radius: number
     };
 }
 
-/** Plays `c` as a practised stroke on the 10 s open lawn and traces its last pass. */
+/** The step's Diagnosis from its hands' forces and the balls' resistance; `instant` gives the grips. */
+function diagnosisOf(instant: Instant, hands: HandForces, axis: Vec3, balls: number): Diagnosis {
+    return {
+        feedForward: hands.feedForward,
+        rest: sub(add(hands.top, hands.bottom), hands.feedForward),
+        top: hands.top,
+        bottom: hands.bottom,
+        lever: dot(cross(sub(instant.grip, instant.hand), hands.bottom), axis),
+        balls,
+    };
+}
+
+/**
+ * Plays `c` on the 10 s open lawn and traces it: as a practised stroke, its last pass, or with `--unpractised` its
+ * first pass alone.
+ */
 function trace(c: TraceCase): Trace {
     const setup = mapSetup(c.type, c.plan, c.power);
     const stroke = planStroke(setup, WORLD);
@@ -140,15 +205,23 @@ function trace(c: TraceCase): Trace {
     }
     const { arc } = drive;
     const radius = arc.radius;
+    const bottom = drive.hands.bottom;
+    const axis = pitchAxis(arc.aim);
+    const faceKeys = new Set(BALL_IDS.map(faceKey));
     const side = Math.sign(dot(rotate(stroke.contact.orientation, vec3(1, 0, 0)), arc.aim)) || 1;
     let actual: Instant[] = [];
     let balls: Vec3[][] = [];
     let ballTimes: number[] = [];
     let kept = 0 - Infinity;
-    const keep = (t: number, state: HeadState): void => {
+    const keep = (t: number, state: HeadState, hands?: HandForces, balls = 0): void => {
         if (t - kept >= KEEP) {
             kept = t;
-            actual.push(instantOf(t, state, head, radius, side));
+            const instant = instantOf(t, state, head, radius, bottom, side);
+            actual.push(
+                DIAGNOSE && hands !== undefined
+                    ? { ...instant, diagnosis: diagnosisOf(instant, hands, axis, balls) }
+                    : instant,
+            );
         }
     };
     const probeFor = (): ImpactProbe => {
@@ -160,7 +233,10 @@ function trace(c: TraceCase): Trace {
         return {
             step(s: ImpactSnapshot) {
                 const before = kept;
-                keep(s.t, s.head);
+                const resistance = s.contacts
+                    .filter((k) => faceKeys.has(k.key))
+                    .reduce((sum, k) => sum + k.normalForce, 0);
+                keep(s.t, s.head, s.hand, resistance);
                 if (kept !== before) {
                     ballTimes.push(s.t);
                     s.balls.forEach((b: BallState, i: number) => {
@@ -169,11 +245,18 @@ function trace(c: TraceCase): Trace {
                 }
             },
             follow(s: FollowSnapshot) {
-                keep(s.t, s.head);
+                keep(s.t, s.head, s);
             },
         };
     };
-    const run = practiseStroke(stroke.contact, setup.balls, WORLD, setup.striker, probeFor);
+    const run = UNPRACTISED
+        ? {
+              ...simulateStroke(stroke.contact, setup.balls, WORLD, { probe: probeFor() }),
+              passes: 1,
+              miss: "unpractised: the first pass alone",
+              lift: null,
+          }
+        : practiseStroke(stroke.contact, setup.balls, WORLD, setup.striker, probeFor);
     // The planned path is the last pass's: the arc with the lift it played.
     const played = run.lift === null ? drive : { ...drive, arc: { ...arc, lift: run.lift } };
     const track = prepareTrack(played, head, WORLD.gravity);
@@ -182,7 +265,7 @@ function trace(c: TraceCase): Trace {
     const start = arc.contactAt - 0.1;
     for (let t = start; t <= finish + 1e-12; t += KEEP) {
         try {
-            planned.push(instantOf(t, headOnPath(track, head, t), head, radius, side));
+            planned.push(instantOf(t, headOnPath(track, head, t), head, radius, bottom, side));
         } catch {
             // The prepared path is not defined before the downswing's release or the impact's start on every plan.
         }
@@ -206,6 +289,7 @@ function trace(c: TraceCase): Trace {
         yields: run.result.events.filter((e) => e.kind === "turf-yield").map((e) => e.t),
         passes: run.passes,
         miss: run.miss,
+        pushEnd: track.push?.end ?? null,
     };
 }
 
@@ -422,8 +506,66 @@ function tableOf(c: TraceCase, tr: Trace): string {
     return lines.join("\n");
 }
 
+/** A vector's parts along aim and up, as `along, up`. */
+function parts(v: Vec3, aim: Vec3): string {
+    return `${f(dot(v, aim)).padStart(6)}, ${f(v.z).padStart(6)}`;
+}
+
+/**
+ * The `--diagnose` table: every millisecond from 5 ms before first contact to 10 ms past the push's end (or 150 ms
+ * after first contact without one), then every 10 ms to the finish.
+ */
+function diagnosisTable(c: TraceCase, tr: Trace): string {
+    const lines = [
+        `== ${c.name} ==`,
+        `${tr.passes} pass${tr.passes === 1 ? "" : "es"}; ${tr.miss ?? "in the band"}; first contact ` +
+            `${f(tr.firstFace * 1000, 2)} ms, push ends ` +
+            `${tr.pushEnd === null ? "never" : `${f((tr.pushEnd - tr.firstFace) * 1000, 1)} ms after it`}, impact ` +
+            `ends ${f((tr.impactEnd - tr.firstFace) * 1000, 1)} ms, finish ${f((tr.finish - tr.firstFace) * 1000, 1)} ms`,
+        "ms | lean ° plan / played | top off mm (along, up) | bottom off mm (along, up) | feed-forward N | " +
+            "rest N | top N | bottom N | lever N·m | balls N",
+    ];
+    const dense = (tr.pushEnd ?? tr.firstFace + 0.14) + 0.01;
+    const lean = (i: Instant): number => Math.atan2(dot(i.shaft, tr.aim), i.shaft.z) * DEG;
+    for (let ms = -5; ms <= (tr.finish - tr.firstFace) * 1000; ) {
+        const t = tr.firstFace + ms / 1000;
+        const a = at(tr.actual, t);
+        const p = at(tr.planned, t);
+        if (a?.diagnosis !== undefined && p !== undefined && Math.abs(a.t - t) <= 0.0005) {
+            const d = a.diagnosis;
+            const top = sub(a.hand, p.hand);
+            const grip = sub(a.grip, p.grip);
+            lines.push(
+                [
+                    f(ms, 0).padStart(4),
+                    `${f(lean(p)).padStart(5)} / ${f(lean(a)).padStart(5)}`,
+                    `${f(dot(top, tr.aim) * 1000).padStart(6)}, ${f(top.z * 1000).padStart(6)}`,
+                    `${f(dot(grip, tr.aim) * 1000).padStart(6)}, ${f(grip.z * 1000).padStart(6)}`,
+                    parts(d.feedForward, tr.aim),
+                    parts(d.rest, tr.aim),
+                    parts(d.top, tr.aim),
+                    parts(d.bottom, tr.aim),
+                    f(d.lever, 2).padStart(6),
+                    f(d.balls).padStart(7),
+                ].join(" | "),
+            );
+        }
+        ms += t < dense ? 1 : 10;
+    }
+    return lines.join("\n");
+}
+
 const fs = await files();
 const tables: string[] = [];
+if (DIAGNOSE) {
+    for (const c of CASES.filter((k) => DIAGNOSED.has(k.file))) {
+        tables.push(diagnosisTable(c, trace(c)));
+    }
+    const text = tables.join("\n\n");
+    fs.writeFileSync(`${OUT}/path-trace-diagnosis-${UNPRACTISED ? "unpractised" : "practised"}.txt`, `${text}\n`);
+    console.log(text);
+    process.exit(0);
+}
 for (const c of CASES) {
     const tr = trace(c);
     fs.writeFileSync(`${OUT}/2026-10-31-path-trace-${c.file}-practised.svg`, svgOf(c, tr, WORLD.ball.radius));
