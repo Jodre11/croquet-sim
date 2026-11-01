@@ -248,4 +248,8 @@ envelope (ruling 4). The 6 m changeover is the user's estimate and is not encode
 the bottom hand ("that's my intention anyway": a player's intent, held as a hypothesis). Today every roll's bottom
 hand is firm (g_B 1) and its top hand drifts up to 48 mm off its path, so the target is a smaller top-hand drift with
 the bottom hand near its path, not a change of the hands' coupling (HAND_COUPLING), whose fit to the drive's and the
-AC stop's ratios stands.
+AC stop's ratios stands. On a drive the user cannot say: "it all happens so quickly", and only video would show
+whether it flexes. They hold that there must be some physical rebound there: the ball takes the head's momentum in
+under a millisecond while the hands carry on. Assumption: the drive is left as it is in this work; the CA's 8,000
+frame/s film (Gugan 4, https://oxfordcroquet.org/tech/gugan4/, and the CA's Croquet Dynamics,
+https://oxfordcroquet.org/tech/video/) is the evidence to check it against, as a later item.
