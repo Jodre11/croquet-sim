@@ -416,11 +416,11 @@ interface SwingWatch {
 /**
  * True once the head in `state` at time t has reached its finish (P2b.2b.2a design §4.2; shapes design §2).
  * - A swing with nothing released (no push, λ = 0): at the pendulum's apex, its pitch rate about n at or below zero.
- * - A swing released at releaseOf: at the mallet's apex after it, the first step whose rate, having risen above 0
- *   since the release (`watch`), is back at or below 0. A rise counts only while the rate gains: a rate carried
- *   positive through the release and dying away is not the swing's. If it never rises, once the hands are at their
- *   apex (the push's handsApex, or the release itself without a push).
- * - A push whose plan never reaches its length has no release and never finishes: it runs to the cap.
+ * - A push: once the bottom hand holds its carry at rest (push.freed; shapes design §8, ruling 14). A push whose plan
+ *   never reaches its length has no release and never finishes: it runs to the cap.
+ * - A swing released at releaseOf with no push: at the mallet's apex after it, the first step whose rate, having risen
+ *   above 0 since the release (`watch`), is back at or below 0. A rise counts only while the rate gains: a rate
+ *   carried positive through the release and dying away is not the swing's. If it never rises, at the release.
  * - A check: at rest relative to the hands once any push's hands are at their apex.
  */
 function finished(kind: FinishKind, plan: PreparedTrack, state: HeadState, t: number, watch: SwingWatch): boolean {
@@ -438,6 +438,9 @@ function finished(kind: FinishKind, plan: PreparedTrack, state: HeadState, t: nu
     if (release === null) {
         return push === null && rate <= 0;
     }
+    if (push !== null) {
+        return t >= (push.freed as number);
+    }
     if (t < release) {
         return false;
     }
@@ -450,7 +453,7 @@ function finished(kind: FinishKind, plan: PreparedTrack, state: HeadState, t: nu
     if (watch.risen) {
         return true;
     }
-    return t >= (push === null ? release : (handsApex(push) as number));
+    return true;
 }
 
 /**

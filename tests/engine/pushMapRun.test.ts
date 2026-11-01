@@ -36,7 +36,7 @@ describe("one plan's run (P2b.2b.2c.3b plan Task 3)", () => {
             faceHalfHeight: faceHalfHeight(headShapeOf(mallet.head)),
         });
         expect(Math.abs(plan.lean - lean)).toBeLessThanOrEqual(1e-12);
-        expect([plan.drive, plan.handReach, plan.window, plan.onset, plan.split]).toEqual([1, 0.05, 0.02, 0, 0]);
+        expect([plan.drive, plan.handReach, plan.window, plan.onset, plan.split]).toEqual([1, 0.025, 0.02, 0, 0]);
         expect(textBook("pass-roll").split).toBe((20 * Math.PI) / 180);
     });
 
@@ -126,7 +126,7 @@ describe("one plan's run (P2b.2b.2c.3b plan Task 3)", () => {
         expect(sample.reason).toContain("on-point limit");
     });
 
-    it("grades the full roll's text book at its canonical power as played: practice lands it in two passes", () => {
+    it("grades the full roll's text book at its canonical power as played: practice lands it in three passes", () => {
         // Measured while building Task 3: the canonical full roll's follow-through raised follow-turf-yield, which
         // decision 5 lists under turf, and nothing earlier in the order applied. P2b.2b.2c.3b.1 design §2, §5 (was
         // turf, follow-turf-yield): the arms' full hold and the bottom hand kept on change the contact, and the head
@@ -138,23 +138,25 @@ describe("one plan's run (P2b.2b.2c.3b plan Task 3)", () => {
         // push, the lean no longer runs away: practice lands it in two passes, unflagged, at ratio 1.11 on the 10 s lawn.
         // Shapes design §8, ruling 12: the hands guide the mallet to their apex (was ratio 1.112). Carried at its held
         // pitch, the face stays on the striker's ball to 192 ms rather than 102 ms, and the ratio rises to 1.211.
-        // Ruling 13: let go from the push's end over the hands' rise, the ratio is 1.215.
+        // Ruling 13: let go from the push's end over the hands' rise, the ratio is 1.215. Ruling 14: the top hand
+        // stops, and with the full roll's muted follow-through (0 s) the bottom hand brakes the head's turn to rest
+        // over HAND_EASE and holds it. Practice lands it in three passes (was two), unflagged, and the ratio rises to
+        // 1.567, the striker's ball carried less far.
         const base = mapSetup("full-roll", textBook("full-roll"), 1);
         const p = swingReference["full-roll"].defaultBackswing.value / bodyBackswing(base, WORLD);
         const sample = playSample("full-roll", textBook("full-roll"), p, [10]);
         expect(sample.klass).toBeNull();
         expect(sample.reason).toBeNull();
-        expect(sample.passes).toBe(2);
-        expect(sample.byLawn[10]?.ratio).toBeCloseTo(1.215, 3);
+        expect(sample.passes).toBe(3);
+        expect(sample.byLawn[10]?.ratio).toBeCloseTo(1.567, 3);
     });
 
-    it("grades the full roll's text book at p = 1.5 as unreachable: its hands' finish passes the arc's top", () => {
-        // Shapes design §2 (was superhuman, the impact raising grip-limit, first in decision 5's order): at p = 1.5
-        // (h_body and intensity 0.5) the push ends so fast that the hands' finish would swing past the quarter turn
-        // of their 1.5 m arc, which planning now refuses before the impact is played.
+    it("grades the full roll's text book at p = 1.5 as superhuman: a hand reaches its grip's limit", () => {
+        // Shapes design §8, ruling 14 (was unreachable, §2's hands' finish swinging past the quarter turn of their
+        // 1.5 m arc): the top hand now stops within V·HAND_EASE/2 of the push's end, well short of it, so the impact
+        // is played, and at p = 1.5 (h_body and intensity 0.5) a hand reaches its grip's limit, as before §2.
         const sample = playSample("full-roll", textBook("full-roll"), 1.5, [10]);
-        expect(sample.klass).toBe("unreachable");
-        expect(sample.reason).toMatch(/past the top of the hands' arc/);
+        expect(sample.klass).toBe("superhuman");
     });
 });
 

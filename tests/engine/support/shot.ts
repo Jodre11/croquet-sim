@@ -120,7 +120,7 @@ export function testProfile(o: TestProfileOptions = {}): SwingProfile {
         handAngle: 0.5,
         handTempo: { slow: 0.4, fast: 0.2 },
         slopeHold: 0,
-        slopeCarry: 0,
+        followThrough: 0,
         ...o.shape,
     };
     const every = <T>(entry: T): Record<StrokeType, T> =>
@@ -326,7 +326,8 @@ export const CANONICAL_CLEARANCE: Readonly<Record<StrokeType, number>> = {
     // h₀ + (R + START_GAP)·sin α + e·sin α − (h_z − e)·cos α − e.
     "half-roll": 39.1827e-3,
     "full-roll": 45.9355e-3,
-    "pass-roll": 48.8202e-3,
+    // Shapes design §8, ruling 14's approval: the pass roll's lean 32° (was 48.8202e-3 at 34°).
+    "pass-roll": 46.8985e-3,
 };
 
 const SOLVED = new Map<string, number>();

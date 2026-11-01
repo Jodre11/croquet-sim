@@ -272,7 +272,7 @@
             "note": "Half handTempoSlow, so intensity 1 doubles the speed (design §6.2). Frozen at engine 0.12.0's fit (P2b.2b.2c.1 design §4.4)."
         },
         "defaultBackswing": {
-            "value": 0.4272934622507629,
+            "value": 0.42770749444701456,
             "unit": "m",
             "source": "a 60-halving bisection of the planned speed at intensity 0 (backswingFor in tests/engine/support/shot.ts), P2b.2b.2a design §5.3 and §6.2 (docs/superpowers/specs/2026-10-06-p2b2b2a-stroke-shape-design.md)",
             "provenance": "derived",
@@ -392,9 +392,9 @@
             "note": "Half handTempoSlow, so intensity 1 doubles the speed (design §6.2). Frozen at engine 0.12.0's fit (P2b.2b.2c.1 design §4.4)."
         },
         "defaultBackswing": {
-            "value": 0.4342737510610276,
+            "value": 0.431265115325888,
             "unit": "m",
-            "source": "scripts/fitStrokeShape.ts: P2b.2b.2a design §5.3 and §6.2 (docs/superpowers/specs/2026-10-06-p2b2b2a-stroke-shape-design.md)",
+            "source": "a 60-halving bisection of the planned speed at intensity 0 (backswingFor in tests/engine/support/shot.ts), P2b.2b.2a design §5.3 and §6.2 (docs/superpowers/specs/2026-10-06-p2b2b2a-stroke-shape-design.md)",
             "provenance": "derived",
             "note": "Design §5.3: h0 = 0.4343 m, the backswing that gives 3 m/s at intensity 0. Frozen at engine 0.12.0's fit (P2b.2b.2c.1 design §4.4)."
         },

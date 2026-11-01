@@ -382,35 +382,40 @@ export interface Push {
      * design §5); 0 when `end` is null, and below FINISH_REST_PACE, rounding.
      */
     readonly finishSpeed: number;
-    /** The hands' finish from `end` (shapes design §2); null exactly when `end` is null, a push whose finish never starts. */
+    /** The hands' finish from `end` (shapes design §8, ruling 14); null exactly when `end` is null. */
     readonly finish: HandsFinish | null;
     /**
-     * When the hands let the mallet swing free (s; shapes design §8, ruling 12): the first time their finish reaches
-     * φ_r + slopeCarry·(φ_apex − φ_r), `end` at slopeCarry 0 and the apex at 1; null exactly when `end` is null.
+     * When the bottom hand starts to bring the shaft's turn to rest (s; shapes design §8, ruling 14): followThrough
+     * after the top hand has stopped (the finish's apex); null exactly when `end` is null.
      */
     readonly release: number | null;
+    /** When the turn is at rest and the hands hold the mallet (s): HAND_EASE after `release`; null with `end`. */
+    readonly freed: number | null;
 }
 
 /**
- * The hands' finish (shapes design §2): a point pendulum on the hands' arc from the push's end, φ̈ = −(g/ρ_h)·sin φ
- * with sin φ = (s − s_low)/ρ_h, from φ_r at the push length and φ̇_r = V/(ρ_h·cos φ_r), V the push's finishSpeed. φ
- * and φ̇ are tabulated every FREE_STEP from `from` (semi-implicit Euler) up to the sample past `apex`, the time φ̇
- * falls to 0 (linearly interpolated), from which the hands hold at `phiApex`: `from` itself when V is 0.
+ * The time (s) over which a hand eases (shapes design §8, ruling 14): the top hand's stop from the push's pace to
+ * rest, and the bottom hand's let-go at the carry's end. An assumption until the envelope phase tunes it.
+ */
+export const HAND_EASE = 0.1;
+
+/**
+ * The hands' finish (shapes design §8, ruling 14, superseding §2's point pendulum): the top hand stops pushing. From
+ * the push's end `from` its pace along aim falls from `pace` (the push's finishSpeed, V) to rest on a minimum-jerk
+ * ease over HAND_EASE, travelling V·HAND_EASE/2 on the hands' arc, and it holds from `apex`: `from` itself when V is 0.
  */
 export interface HandsFinish {
     readonly from: number;
-    readonly phi: readonly number[];
-    readonly rate: readonly number[];
+    readonly pace: number;
     readonly apex: number;
-    readonly phiApex: number;
 }
 
-/** When `push`'s hands reach their finish's apex and hold (s; shapes design §2); null when the push has no end. */
+/** When `push`'s top hand has stopped and holds (s; shapes design §8, ruling 14); null when the push has no end. */
 export function handsApex(push: Push): number | null {
     return push.finish?.apex ?? null;
 }
 
-/** A share of the let-go and its first and second time derivatives (/s, /s²). */
+/** A share of the bottom hand's brake and its first and second time derivatives (/s, /s²). */
 export interface LetGo {
     readonly share: number;
     readonly rate: number;
@@ -418,18 +423,18 @@ export interface LetGo {
 }
 
 /**
- * The share of `push`'s slope and pitch holds let go at time t (shapes design §8, ruling 13): 0 to the release, then a
- * minimum-jerk ramp, g = u³(10 − 15u + 6u²) with u the time's share from the release to the hands' apex, so the
- * mallet arcs on from the held path into its free swing with θ, ω and α unbroken, and 1 after the apex. Where the
- * release is the apex (slopeCarry 1) the ramp has no length and the holds let go at once; with no release, 0 always.
+ * The share of `push`'s slope and pitch holds let go at time t (shapes design §8, rulings 13 and 14): 0 to the
+ * release, then a minimum-jerk ramp, g = u³(10 − 15u + 6u²) with u the time's share from the release to `freed`, so
+ * the shaft's turn comes to rest with θ, ω and α unbroken, and 1 from `freed`. With a
+ * followThrough of 0 the ramp has no length and the holds let go at once; with no release, 0 always.
  */
 export function letGo(push: Push, t: number): LetGo {
-    const { release, finish } = push;
-    if (release === null || finish === null || t <= release) {
+    const { release, freed } = push;
+    if (release === null || freed === null || t <= release) {
         return { share: 0, rate: 0, accel: 0 };
     }
-    const span = finish.apex - release;
-    if (t >= finish.apex) {
+    const span = freed - release;
+    if (t >= freed) {
         return { share: 1, rate: 0, accel: 0 };
     }
     const u = (t - release) / span;
@@ -877,10 +882,12 @@ function computePush(track: PreparedTrack): Push {
     const advance = arc.advance === undefined ? null : advanceOf(arc, arc.advance);
     const origin = planPivot(track, arc.contactAt).P;
     const end = travelTime(track, arc.handReach, advance);
-    // The finish (shapes design §2): from the pace at the push's end, the hands swing on up their arc under gravity.
+    // The finish (shapes design §8, ruling 14): from the pace at the push's end the top hand stops, and the bottom
+    // hand carries the head on for followThrough before it lets go.
     const pace = end === null ? 0 : pushTravel(track, origin, advance, end).v;
     const finishSpeed = pace < FINISH_REST_PACE ? 0 : pace;
     const finish = end === null ? null : handsFinishOf(track, low, end, finishSpeed);
+    const release = finish === null ? null : finish.apex + arc.followThrough;
     return {
         start: arc.contactAt,
         origin,
@@ -891,103 +898,78 @@ function computePush(track: PreparedTrack): Push {
         advance,
         finishSpeed,
         finish,
-        release: finish === null ? end : carriedTo(finish, arc.slopeCarry),
+        release,
+        freed: release === null ? null : release + HAND_EASE,
     };
 }
 
 /**
- * When `finish` reaches φ_r + carry·(φ_apex − φ_r) (s; shapes design §8, ruling 12), on handsFinishAt's linear reading
- * of the table: its start at carry 0 and its apex at carry 1, exactly.
- */
-function carriedTo(finish: HandsFinish, carry: number): number {
-    if (carry === 0 || finish.apex === finish.from) {
-        return finish.from;
-    }
-    if (carry === 1) {
-        return finish.apex;
-    }
-    const target = (finish.phi[0] as number) + carry * (finish.phiApex - (finish.phi[0] as number));
-    for (let i = 0; i + 1 < finish.phi.length; i++) {
-        const p0 = finish.phi[i] as number;
-        const p1 = finish.phi[i + 1] as number;
-        if (p1 >= target) {
-            const f = p1 > p0 ? (target - p0) / (p1 - p0) : 0;
-            return Math.min(finish.from + (i + f) * FREE_STEP, finish.apex);
-        }
-    }
-    return finish.apex;
-}
-
-/**
- * The hands' finish (HandsFinish; shapes design §2) of `track`'s push from `from`, its arc lowest `low` (m) along aim
- * from the push's origin, at along-aim pace V (m/s). Throws where the swing would carry the hands to or past the
- * arc's quarter turn, cos φ_r − ρ_h·φ̇_r²/(2g) ≤ 0, where s(φ) has no inverse. Tabulates for FREE_SPAN at most; a
- * swing still rising there holds where the table ends.
+ * The hands' finish (HandsFinish; shapes design §8, ruling 14) of `track`'s push from `from`, its arc lowest `low` (m)
+ * along aim from the push's origin, at along-aim pace V (m/s). Throws where the top hand's stop would carry it to or
+ * past the arc's quarter turn, s − s_low ≥ ρ_h, where the arc's height has no value.
  */
 function handsFinishOf(track: PreparedTrack, low: number, from: number, V: number): HandsFinish {
     const { handArcRadius: rho, handReach } = track.arc;
-    const g = track.gravity;
-    // φ_r = asin(u/ρ_h), u the push length past the arc's low point, through the exact atan2.
-    const u = handReach - low;
-    const cos0 = Math.sqrt(rho * rho - u * u) / rho;
-    const phi0 = atan2(u / rho, cos0);
-    const rate0 = V / (rho * cos0);
-    // Without gravity nothing turns the swing back, and it would coast through the quarter turn: a weightless world
-    // (a test's) holds the hands at the push's end.
-    if (!(g > 0)) {
-        return { from, phi: [phi0], rate: [0], apex: from, phiApex: phi0 };
-    }
-    if (!(cos0 - (rho * rate0 * rate0) / (2 * g) > 0)) {
+    if (!(handReach + 0.5 * V * HAND_EASE - low < rho)) {
         throw new RangeError(
             `the hands' finish from ${V} m/s would carry them past the top of the hands' arc ` +
-                `(handArcRadius ${rho} m): its apex lies at or beyond a quarter turn`,
+                `(handArcRadius ${rho} m): their stop lies at or beyond a quarter turn`,
         );
     }
-    const phi: number[] = [phi0];
-    const rate: number[] = [rate0];
-    if (!(rate0 > 0)) {
-        return { from, phi, rate, apex: from, phiApex: phi0 };
-    }
-    const n = Math.round(FREE_SPAN / FREE_STEP);
-    let p = phi0;
-    let w = rate0;
-    for (let i = 1; i <= n; i++) {
-        const next = w - (g / rho) * sinCos(p)[0] * FREE_STEP;
-        if (!(next > 0)) {
-            // φ̇ crosses 0 within this step: the apex where its linear fall does, φ rising by the area under it, and the
-            // last sample the apex's, so a read before the apex never runs back down the arc.
-            const f = w / (w - next);
-            const phiApex = p + 0.5 * w * f * FREE_STEP;
-            phi.push(phiApex);
-            rate.push(0);
-            return { from, phi, rate, apex: from + (i - 1 + f) * FREE_STEP, phiApex };
-        }
-        w = next;
-        p += w * FREE_STEP;
-        phi.push(p);
-        rate.push(w);
-    }
-    return { from, phi, rate, apex: from + n * FREE_STEP, phiApex: p };
+    return { from, pace: V, apex: V > 0 ? from + HAND_EASE : from };
 }
 
-/** φ, φ̇ and φ̈ of the hands' finish `finish` at time t, at or after its start, holding from its apex (shapes design §2). */
+/**
+ * The top hand's travel along aim past the push length (m), its pace and its acceleration at time t, at or after the
+ * finish's start: V·T·(x − G(x)), V·(1 − g(x)) and −V·g′(x)/T, x = τ/T, T = HAND_EASE, g the minimum-jerk ramp
+ * x³(10 − 15x + 6x²) and G = ∫g = x⁴(5/2 − 3x + x²); from the apex at rest, V·T/2 on.
+ */
 function handsFinishAt(
-    track: PreparedTrack,
     finish: HandsFinish,
     t: number,
-): { readonly phi: number; readonly rate: number; readonly accel: number } {
+): { readonly s: number; readonly ds: number; readonly dds: number } {
+    const V = finish.pace;
     if (t >= finish.apex) {
-        return { phi: finish.phiApex, rate: 0, accel: 0 };
+        return { s: 0.5 * V * HAND_EASE, ds: 0, dds: 0 };
     }
-    const x = (t - finish.from) / FREE_STEP;
-    const last = finish.phi.length - 1;
-    const i = Math.min(Math.floor(x), last - 1);
-    const f = Math.min(x - i, 1);
-    const p0 = finish.phi[i] as number;
-    const w0 = finish.rate[i] as number;
-    const phi = p0 + f * ((finish.phi[i + 1] as number) - p0);
-    const rate = w0 + f * ((finish.rate[i + 1] as number) - w0);
-    return { phi, rate, accel: 0 - (track.gravity / track.arc.handArcRadius) * sinCos(phi)[0] };
+    const T = HAND_EASE;
+    const x = (t - finish.from) / T;
+    const v = 1 - x;
+    const g = x * x * x * (10 + x * (6 * x - 15));
+    const G = x * x * x * x * (2.5 + x * (x - 3));
+    return { s: V * T * (x - G), ds: V * (1 - g), dds: (0 - V * 30 * x * x * v * v) / T };
+}
+
+/**
+ * The bottom hand's carry (shapes design §8, ruling 14): the shaft's extra turn about the top hand (rad) at time t,
+ * with its rate and acceleration, r the pendulum's radius and V the push's pace. As the top hand stops the head keeps
+ * the pace, c = (V·τ − Δs)/r with Δs the top hand's travel past the push length (handsFinishAt), so ċ = (V − ṡ)/r;
+ * then ċ = V/r for followThrough; then from the release the bottom hand brings the turn to rest over HAND_EASE,
+ * ċ = V·(1 − g)/r (letGo), and holds it: a turn of V·(HAND_EASE + followThrough)/r in all. 0 before the finish's
+ * start and with no finish.
+ */
+function carryAt(track: PreparedTrack, t: number): Swing {
+    const { push } = track;
+    const finish = push?.finish ?? null;
+    if (push === null || finish === null || push.release === null || !(t > finish.from)) {
+        return { theta: 0, omega: 0, alpha: 0 };
+    }
+    const r = track.arc.radius;
+    const V = finish.pace;
+    if (t <= finish.apex) {
+        const { s, ds, dds } = handsFinishAt(finish, t);
+        return { theta: (V * (t - finish.from) - s) / r, omega: (V - ds) / r, alpha: (0 - dds) / r };
+    }
+    const T = HAND_EASE;
+    const carried = V * (0.5 * (finish.apex - finish.from) + (Math.min(t, push.release) - finish.apex));
+    if (t <= push.release) {
+        return { theta: carried / r, omega: V / r, alpha: 0 };
+    }
+    // The brake's travel V·T·(u − G(u)), G = ∫g = u⁴(5/2 − 3u + u²), as the top hand's stop (handsFinishAt).
+    const u = Math.min((t - push.release) / T, 1);
+    const g = letGo(push, t);
+    const braked = V * T * (u - u * u * u * u * (2.5 + u * (u - 3)));
+    return { theta: (carried + braked) / r, omega: (V * (1 - g.share)) / r, alpha: (0 - V * g.rate) / r };
 }
 
 /**
@@ -1035,9 +1017,8 @@ function arcHeight(
 
 /**
  * The push's planned pivot after contactAt (design §4.1; P2b.2b.2c.3a A2 item 8): s(t), the plan's travel along aim
- * from the push's origin plus any advance's, until the push's end; from there the hands' finish (shapes design §2),
- * s = s_low + ρ_h·sin φ on the pendulum's φ(t), holding from its apex; its height on the hands' arc (arcHeight), so
- * the finish carries the hands on forward and up past the arc's low point. Hands that run past the push length
+ * from the push's origin plus any advance's, until the push's end; from there the top hand's stop (shapes design §8,
+ * ruling 14), holding from its apex; its height on the hands' arc (arcHeight). Hands that run past the push length
  * without a found end (beyond REACH_SEARCH) rest there: no finish starts.
  */
 function carryPivot(track: PreparedTrack, push: Push, t: number): Motion {
@@ -1046,14 +1027,11 @@ function carryPivot(track: PreparedTrack, push: Push, t: number): Motion {
     let ds: number;
     let dds: number;
     if (push.finish !== null && t >= push.finish.from) {
-        // The hands' finish on the arc (shapes design §2): s = s_low + ρ_h·sin φ, ṡ = ρ_h·cos φ·φ̇,
-        // s̈ = ρ_h·(cos φ·φ̈ − sin φ·φ̇²).
-        const rho = track.arc.handArcRadius;
-        const { phi, rate, accel } = handsFinishAt(track, push.finish, t);
-        const [sin, cos] = sinCos(phi);
-        s = push.low + rho * sin;
-        ds = rho * cos * rate;
-        dds = rho * (cos * accel - sin * rate * rate);
+        // The top hand's stop on the arc (shapes design §8, ruling 14).
+        const stop = handsFinishAt(push.finish, t);
+        s = handReach + stop.s;
+        ds = stop.ds;
+        dds = stop.dds;
     } else {
         // Before the end, or with none found, the hands never overshoot the push length: s = min(a, handReach).
         const { a, v, acc } = pushTravel(track, push.origin, push.advance, t);
@@ -1220,9 +1198,10 @@ export function prepareTrack(drive: TrackDrive, head: MalletHead, gravity: numbe
         free = { ...reached, free: table, thetaEnd: end.theta, omegaEnd: end.omega };
     }
     // The finish (shapes design §2): from the release the shaft swings free. Without withFree the callers read only
-    // the push and the path up to the window's end, so no finish is tabulated.
+    // the push and the path up to the window's end, so no finish is tabulated. A push's mallet is carried and then
+    // held, never freed (shapes design §8, ruling 14).
     const release = releaseOf(free);
-    if (release === null || !withFree) {
+    if (release === null || !withFree || reached.push !== null) {
         return free;
     }
     const seed = pendulumAt(free, release);
@@ -1230,9 +1209,9 @@ export function prepareTrack(drive: TrackDrive, head: MalletHead, gravity: numbe
 }
 
 /**
- * When `track`'s slope hold releases into the finish's free swing (shapes design §2): where there is a push, once the
- * hands have guided the mallet slopeCarry of the way along their finish (push.release; shapes design §8, ruling 12),
- * null where the push has no end; else, wherever the slope is held (λ > 0), where the held path's rate has fallen to
+ * When `track`'s slope hold releases (shapes design §2): where there is a push, when the bottom hand starts to bring
+ * its carry to rest (push.release; shapes design §8, ruling 14), the mallet held rather than freed from there, null
+ * where the push has no end; else, wherever the slope is held (λ > 0), where the held path's rate has fallen to
  * rest, arcStart + window + holdWindow; else null, a free swing with nothing to release.
  */
 export function releaseOf(track: PreparedTrack): number | null {
@@ -1342,27 +1321,29 @@ function pendulumAt(track: PreparedTrack, t: number): Swing {
     if (held !== null && t > tw && t >= held.from) {
         return { theta: held.theta, omega: 0, alpha: 0 };
     }
-    // From the release the finish's free swing (shapes design §2), let go into from the held path over the hands' rise
-    // to their apex (ruling 13); before it, as planned.
-    const { finish, push } = track;
+    // From the release the finish's free swing (shapes design §2), on a stroke with no push; before it, and throughout
+    // a push, as planned and carried by the bottom hand (ruling 14).
+    const { finish } = track;
     if (finish !== null && t >= finish.tw) {
         const { theta, omega } = tableAt(finish, t);
-        const alpha = freeAlpha(track, finish, theta, t);
-        const g = push === null ? null : letGo(push, t);
-        if (g === null || g.share === 1) {
-            return { theta, omega, alpha };
-        }
-        // θ = θ_h + g·(θ_f − θ_h), differentiated twice; the free swing is seeded from the held one at the release.
-        const held = plannedPendulum(track, t, tw);
-        const d = theta - held.theta;
-        const dw = omega - held.omega;
-        return {
-            theta: held.theta + g.share * d,
-            omega: held.omega + g.share * dw + g.rate * d,
-            alpha: held.alpha + g.share * (alpha - held.alpha) + 2 * g.rate * dw + g.accel * d,
-        };
+        return { theta, omega, alpha: freeAlpha(track, finish, theta, t) };
     }
-    return plannedPendulum(track, t, tw);
+    return carriedPendulum(track, t, tw);
+}
+
+/** The planned pendulum at time t with the bottom hand's carry after the push (carryAt) added. */
+function carriedPendulum(track: PreparedTrack, t: number, tw: number): Swing {
+    const planned = plannedPendulum(track, t, tw);
+    const finish = track.push?.finish ?? null;
+    if (finish === null || !(t > finish.from)) {
+        return planned;
+    }
+    const carry = carryAt(track, t);
+    return {
+        theta: planned.theta + carry.theta,
+        omega: planned.omega + carry.omega,
+        alpha: planned.alpha + carry.alpha,
+    };
 }
 
 /** The pendulum as planned at time t, after the window's start, with no finish: free, held or the blend of the two. */
@@ -1879,8 +1860,8 @@ interface CarryStep {
  * e the pitch error from the head to the path and ė its rate's lag, the gains holdPitchGains's for the swung body's
  * I_P about the top hand, M_p held to the grip's couple (gripCouple). The balls' impulse at the face turns the shaft
  * back about the top hand, and without this nothing but the grips' spread resists it (the 2026-11-01 diagnosis).
- * It runs on while the hands guide the mallet after the push, to the release (shapes design §8, ruling 12), and fades
- * with the let-go from there to the hands' apex (letGo; ruling 13). Zero with no push, inside a check and once let go.
+ * It runs on through the bottom hand's carry and the hold that follows it (shapes design §8, ruling 14). Zero with no
+ * push and inside a check.
  */
 function pushPitch(track: PreparedTrack, state: HeadState, t: number, path: PathPoint, step: CarryStep): number {
     const { push } = track;
@@ -1888,19 +1869,12 @@ function pushPitch(track: PreparedTrack, state: HeadState, t: number, path: Path
     if (push === null || step.checking) {
         return 0;
     }
-    const kept = 1 - letGo(push, t).share;
-    if (kept === 0) {
-        return 0;
-    }
-    return (
-        kept *
-        heldPitch(
-            track.coupling,
-            step.pitchInertia,
-            dot(rotationError(path.orientation, state.orientation), track.axis),
-            dot(step.spinLag, track.axis),
-            gripCouple(track.hands, track.arc.radius),
-        )
+    return heldPitch(
+        track.coupling,
+        step.pitchInertia,
+        dot(rotationError(path.orientation, state.orientation), track.axis),
+        dot(step.spinLag, track.axis),
+        gripCouple(track.hands, track.arc.radius),
     );
 }
 

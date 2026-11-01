@@ -53,8 +53,8 @@ const SUNK = vec3(
 );
 
 describe("simulateImpact", () => {
-    it("is version 0.22.0", () => {
-        expect(ENGINE_VERSION).toBe("0.22.0");
+    it("is version 0.23.0", () => {
+        expect(ENGINE_VERSION).toBe("0.23.0");
     });
 
     it("starts a centre-struck ball rolling at 5/7 of its launch speed in phase 2", () => {
@@ -568,8 +568,8 @@ describe("simulateImpact with a tracked drive", () => {
         ["a handArcLow above 1", withArc({ handArcLow: 1.5 }), /arc\.handArcLow must lie in \[0, 1\]/],
         ["a slopeHold above 1", withArc({ slopeHold: 1 + 1e-9 }), /arc\.slopeHold must lie in \[0, 1\]/],
         ["a non-finite slopeHold", withArc({ slopeHold: Number.NaN }), /arc\.slopeHold must be finite/],
-        ["a negative slopeCarry", withArc({ slopeCarry: -1e-9 }), /arc\.slopeCarry must lie in \[0, 1\]/],
-        ["a non-finite slopeCarry", withArc({ slopeCarry: Number.NaN }), /arc\.slopeCarry must be finite/],
+        ["a negative followThrough", withArc({ followThrough: -1e-9 }), /arc\.followThrough must be at least 0/],
+        ["a non-finite followThrough", withArc({ followThrough: Number.NaN }), /arc\.followThrough must be finite/],
         [
             "an arc no longer than the push",
             withArc({ handReach: 2, handArcRadius: 2 }),

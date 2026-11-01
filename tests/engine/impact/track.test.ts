@@ -24,6 +24,7 @@ import {
     type FreePendulum,
     type PathPoint,
     type PreparedTrack,
+    HAND_EASE,
     handsApex,
     type Push,
 } from "../../../src/engine/impact/track";
@@ -79,7 +80,7 @@ const ROLL: SwingArc = {
     dip: NO_DIP,
     contactAt: 1,
     slopeHold: 1,
-    slopeCarry: 0,
+    followThrough: 0,
     handReach: 10,
     pendulumAt: 0.8,
     pendulumEffort: 0,
@@ -99,17 +100,12 @@ const prepare = (arc: SwingArc, hands: Hands = TEST_HANDS): PreparedTrack =>
     prepareTrack(trackDrive(arc, TEST_COUPLING, hands), TEST_HEAD, STANDARD_GRAVITY);
 
 /**
- * The hands' finish's apex on `track`'s push from energy (shapes design §2): travel along aim from the push's origin,
- * s_low + ρ_h·sin φ_a, with cos φ_a = cos φ_r − (ρ_h·φ̇_r)²/(2g·ρ_h), φ̇_r = V/(ρ_h·cos φ_r).
+ * Where the top hand stops on `track`'s push (shapes design §8, ruling 14): travel along aim from the push's origin,
+ * the push length plus V·HAND_EASE/2, V the push's pace at its end.
  */
 function apexTravel(track: PreparedTrack): number {
     const push = track.push as Push;
-    const rho = track.arc.handArcRadius;
-    const u = track.arc.handReach - push.low;
-    const cos0 = Math.sqrt(rho * rho - u * u) / rho;
-    const tangential = push.finishSpeed / cos0;
-    const cosA = cos0 - (tangential * tangential) / (2 * track.gravity * rho);
-    return push.low + rho * Math.sqrt(1 - cosA * cosA);
+    return track.arc.handReach + 0.5 * push.finishSpeed * HAND_EASE;
 }
 
 /** Time before, into and after a window starting at `start` lasting `window`. */
@@ -1206,7 +1202,7 @@ describe("the swung body on every stroke (P2b.2b.2c.3a A2 item 4)", () => {
     });
 });
 
-describe("the hands' finish (shapes design §2)", () => {
+describe("the hands' finish (shapes design §8, ruling 14)", () => {
     /** The hands' along-aim position (from the push's origin) and speed on `track` at t. */
     const along = (track: PreparedTrack, t: number): { readonly s: number; readonly v: number } => {
         const hands = handsAt(track, t);
@@ -1278,38 +1274,23 @@ describe("the hands' finish (shapes design §2)", () => {
     const pushed = (handReach: number, o: Partial<SwingArc> = {}): PreparedTrack =>
         prepare(levelArc(vec3(0, 0, 1), { pivotVelocity: vec3(2, 0, 0), handReach, handArcRadius: 1.5, ...o }));
 
-    it("conserves the point pendulum's energy from the push's end to its apex", () => {
+    it("stops the top hand from the push's pace to rest over HAND_EASE (ruling 14)", () => {
         const track = pushed(0.3);
         const push = track.push as Push;
-        const rho = track.arc.handArcRadius;
-        const g = track.gravity;
         const end = push.end as number;
-        const apex = handsApex(push) as number;
-        // Per unit mass: ½v² + g·z on the arc, z measured from its low point.
-        const energy = (t: number): number => {
-            const hands = handsAt(track, t);
-            const u = dot(sub(hands.position, push.origin), track.arc.aim) - push.low;
-            const v = length(hands.velocity);
-            return 0.5 * v * v + g * (rho - Math.sqrt(rho * rho - u * u));
-        };
-        const start = energy(end);
-        // Semi-implicit Euler's energy error is bounded at about ω·FREE_STEP of the energy, ω = √(g/ρ_h).
-        for (let i = 1; i < 20; i++) {
-            const t = end + ((apex - end) * i) / 20;
-            expect(Math.abs(energy(t) - start) / start, `at ${t}`).toBeLessThan(1e-4);
+        expect(handsApex(push)).toBe(end + HAND_EASE);
+        let previous = along(track, end).v;
+        for (let i = 1; i <= 20; i++) {
+            const v = along(track, end + (HAND_EASE * i) / 20).v;
+            expect(v, `step ${i}`).toBeLessThanOrEqual(previous);
+            previous = v;
         }
-    });
-
-    it("leaves less arc travel after a longer push at the same pace", () => {
-        // Ruling 9: the push's end sits further up the arc, so the same pace swings it through a smaller angle.
-        const short = (pushed(0.2).push as Push).finish as NonNullable<Push["finish"]>;
-        const long = (pushed(0.3).push as Push).finish as NonNullable<Push["finish"]>;
-        expect(long.phiApex - (long.phi[0] as number)).toBeLessThan(short.phiApex - (short.phi[0] as number));
+        expect(Math.abs(along(track, end + HAND_EASE).s - apexTravel(track))).toBeLessThan(1e-12);
     });
 
     it("fails a finish that would carry the hands past the arc's quarter turn", () => {
-        // 3 m/s rises (3)²/2g ≈ 0.46 m, past a 0.3 m arc's quarter turn.
-        expect(() => pushed(0.1, { pivotVelocity: vec3(3, 0, 0), handArcRadius: 0.3 })).toThrow(
+        // 3 m/s stops 0.15 m on, 0.2 m past the low point, past a 0.18 m arc's quarter turn.
+        expect(() => pushed(0.1, { pivotVelocity: vec3(3, 0, 0), handArcRadius: 0.18 })).toThrow(
             "past the top of the hands' arc",
         );
     });

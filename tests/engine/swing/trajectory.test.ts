@@ -135,7 +135,9 @@ describe("strokeTrajectory (design §4.3)", () => {
         const roll = traced.contact.drive as TrackDrive;
         const first = late.samples[0] as StrokeSample;
         expect(late.release).toBeGreaterThan(late.impactStart);
-        expect(late.flags).not.toContain("follow-cap");
+        // Shapes design §8, ruling 14 (was no follow-cap): the top hand stopping from this mistimed roll's 11.3 m/s
+        // over HAND_EASE turns the mallet over the top, so its follow-through runs to the cap. The finish is not this
+        // test's subject.
         expect(first.t).toBe(late.impactStart);
         expect(length(first.velocity)).toBe(0);
         expect(length(sub(first.top, (roll.arc.downswing as Downswing).handsTop))).toBeLessThan(1e-9);

@@ -12,7 +12,7 @@ describe("the feet's reading (P2b.2b.2c.3a design §3)", () => {
     it("puts the half roll's lowest point half its push ahead of its hands", () => {
         const r = feetReading(canonicalSetup("half-roll"), world);
         // The arc's low point is handArcLow × handReach from the hands at contact, whatever the ball.
-        expect(r.lowPoint - r.handsAt).toBeCloseTo(0.5 * 0.05, 12);
+        expect(r.lowPoint - r.handsAt).toBeCloseTo(0.5 * 0.025, 12);
         // A different preset and a shot's own reach: the formula, not one preset's constants.
         const full = feetReading(canonicalSetup("full-roll", { drive: { handArcLow: 0.25 } }), world);
         expect(full.lowPoint - full.handsAt).toBeCloseTo(0.25 * 0.3, 12);

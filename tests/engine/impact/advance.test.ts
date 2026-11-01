@@ -9,6 +9,7 @@ import {
     prepareTrack,
     type Advance,
     type PreparedTrack,
+    HAND_EASE,
     handsApex,
     type Push,
     releaseOf,
@@ -211,23 +212,22 @@ describe("the hands' advance (design §6, §8.1.5)", () => {
         const travel = (setup: ShotSetup): { most: number; last: number; atEnd: number; apex: number } => {
             const { contact } = plan(setup);
             const track = prepareTrack(contact.drive as TrackDrive, contact.head, WORLD.gravity);
-            const { aim, contactAt, handArcRadius } = track.arc;
+            const { aim, contactAt, handReach } = track.arc;
             const push = track.push as Push;
-            const finish = push.finish as NonNullable<Push["finish"]>;
             const from = handsAt(track, contactAt).position;
             const along = (t: number): number => dot(sub(handsAt(track, t).position, from), aim);
             let most = 0;
             for (let k = 0; k <= 2000; k++) {
                 most = Math.max(most, along(contactAt + k * 1e-3));
             }
-            const apex = push.low + handArcRadius * Math.sin(finish.phiApex);
+            const apex = handReach + 0.5 * push.finishSpeed * HAND_EASE;
             return { most, last: along(contactAt + 2), atEnd: along(push.end as number), apex };
         };
         // Numerical, not physical: the advance's closed form reaches handReach to rounding.
         const TOLERANCE = 1e-12;
-        // Shapes design §2 (was the hands stopping at handReach, then P2b.2b.2c.3b.1 design §5's ease to rest at
-        // 2·handReach): the push carries them handReach, both sharing it, then the hands' finish swings them on to
-        // its apex, where they hold.
+        // Shapes design §8, ruling 14 (was the hands stopping at handReach, then P2b.2b.2c.3b.1 design §5's ease to
+        // rest at 2·handReach, then §2's point pendulum): the push carries them handReach, both sharing it, then the
+        // top hand eases to rest, where it holds.
         const without = travel(pushed({}));
         expect(without.atEnd).toBeCloseTo(0.3, 9);
         expect(without.last).toBeCloseTo(without.apex, 5);
@@ -352,27 +352,30 @@ describe("the push on every stroke (P2b.2b.2c.3a A2 item 8)", () => {
 
     it("finishes a pushed swing stroke at the mallet's apex after the push's end", () => {
         // Shapes design §2 (was P2b.2b.2c.3b.1 design §5's carry, ending at the first step at or after its hands'
-        // rest): a push releases the mallet at its end, and the swing ends at the mallet's apex after it.
+        // rest): the swing ends at the mallet's apex after the release. Ruling 14 (was the push's end): once the top
+        // hand stops the bottom hand carries the head on for followThrough, then brakes the turn to rest over
+        // HAND_EASE and holds it, where the swing ends.
         const setup = stroke({ handReach: 0.3 }, { advance: 0 });
         const track = trackOf(setup);
         expect(finishKind(track)).toBe("swing");
+        const push = track.push as Push;
         const release = releaseOf(track) as number;
-        expect(release).toBe((track.push as Push).end);
+        expect(release).toBe((handsApex(push) as number) + track.arc.followThrough);
+        expect(push.freed).toBe(release + HAND_EASE);
         const { result, follow } = run(setup);
         expect(result.release).toBeUndefined();
-        expect(follow.finish).toBeGreaterThan(release);
+        expect(follow.finish).toBeGreaterThanOrEqual(push.freed as number);
         expect(follow.flags).not.toContain("follow-cap");
     });
 
     it("merges an advance into a roll's push", () => {
-        // The advance adds its travel to the plan's, so the push reaches its length sooner. Shapes design §2 (was the
-        // cap stopping the hands at handReach, then P2b.2b.2c.3b.1 design §5's ease to rest at 2·handReach): the
-        // hands' finish swings them on to its apex, and no further, to the table's interpolation.
+        // The advance adds its travel to the plan's, so the push reaches its length sooner. Shapes design §8, ruling 14
+        // (was the cap stopping the hands at handReach, then P2b.2b.2c.3b.1 design §5's ease to rest at 2·handReach,
+        // then §2's point pendulum): the top hand eases to rest, and no further.
         const without = trackOf(stroke({}, {}, "half-roll"));
         const withAdvance = trackOf(stroke({}, { advance: 0 }, "half-roll"));
         const push = withAdvance.push as Push;
-        const finish = push.finish as NonNullable<Push["finish"]>;
-        const apex = push.low + withAdvance.arc.handArcRadius * Math.sin(finish.phiApex);
+        const apex = withAdvance.arc.handReach + 0.5 * push.finishSpeed * HAND_EASE;
         expect(push.end as number).toBeLessThan((without.push as Push).end as number);
         let most = 0;
         for (let k = 0; k <= 2000; k++) {

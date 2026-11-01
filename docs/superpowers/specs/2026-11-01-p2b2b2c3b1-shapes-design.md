@@ -241,3 +241,38 @@ finish (and with it ruling 9's emergent follow-through) and ruling 12's slopeCar
 - **Removed.** §2's point-pendulum hands' finish, its apex and its quarter-turn check, and slopeCarry (ruling 12).
 - **Check.** No 29.1.6.1 finding on the half and full rolls. The traces show the head's speed unbroken through the
   push's end, and finishes of a plausible height. The user judges them by eye.
+
+**Ruling 14 approved, with two changes (user, 2026-11-01).** "We have the right idea now. The shapes look generally
+right. Less push on the half roll, follow through tailored to the range."
+- **The half roll's push** halves, handReach 0.05 → 0.025 m (an assumption, as ruling 11's was).
+- **The follow-through scales with the range.** `followThrough` becomes the bottom hand's carry time (s) at the push's
+  pace, not a fixed turn: the shaft's turn about the top hand is then about V·followThrough/r (r the shaft's radius),
+  so a faster push, which sends the balls further, turns it further. One default on every preset, 0.2 s (an
+  assumption), with a stroke override; the envelope phase tunes it per shot.
+- **The let-go.** The free swing is seeded where the bottom hand lets go, from the carried θ and ω, so the follow-through
+  sets how high the mallet finishes. Ruling 13's fade runs over the last HAND_EASE (0.1 s, the top hand's arrestTime
+  too) of the carry, or the whole carry where it is shorter. With followThrough 0 the mallet swings free at the push's
+  end.
+
+**Ruling 14 as built, the bottom hand brings the head to rest (user, 2026-11-01).** The user, on the round-2 traces:
+the pass roll's unplayability is "perhaps related to excessive lean", so its angle should be "similar, fractionally
+increased from the full roll but with relatively extra follow through timed to the end of contact"; and "the full roll
+follow through should be muted, even at long range". A mallet let go free swings on by about V²/2g however short the
+carry, so its degree cannot be set and the full roll cannot be muted. So the carry ends held, not free (an
+assumption, for the user's check).
+- **The carry.** Once the top hand has stopped (its apex, HAND_EASE after the push's end), the bottom hand turns the
+  shaft on at the push's pace V for `followThrough`, then brings the turn to rest over HAND_EASE on a minimum-jerk ease
+  and holds it. The shaft's turn about the top hand is V·(HAND_EASE + followThrough)/r in all; θ, ω and α run on
+  unbroken through the push's end, the top hand's stop, the brake and the hold. A push's mallet is never freed: no
+  finish is tabulated for it, and the pitch hold runs throughout. The swing ends when the turn is held at rest
+  (push.freed). A stroke with no push is unchanged.
+- **Per-preset follow-through** (FOLLOW_THROUGH, s; assumptions): 0.2 on every stroke but the full roll's 0 (muted) and
+  the pass roll's 0.3 (relatively further).
+- **The pass roll's lean** is 32°, the table's lowest and a degree past the full roll's, a hypothesis from the user's
+  view; its default backswing is re-bisected, 0.4313.
+- **Results** (the four traces, 10 s lawn). Half roll: ratio 1.041, valid, the finish's lean −17.8° (was −40.5°). Full
+  roll: ratio 1.567, valid (was 1.260, unpractised), practised in three passes, the finish's lean 0.7°: muted, but the
+  striker's ball now goes less far. Pass roll: still unlawful, 29.1.6.1 at 85 ms, inside the push (it ends at 104 ms):
+  the strike holds four contacts, the last 60 ms after the third, whatever the carry (0 to 0.3 s), so the fault is the
+  push's, not the follow-through's. The full roll at p = 1.5 now reads superhuman: its top hand stops well short of
+  the hands' arc's quarter turn, so the impact is played, and a hand reaches its grip's limit. Engine 0.23.0.

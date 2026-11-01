@@ -38,6 +38,7 @@ import {
     type PreparedTrack,
     handsApex,
     type Push,
+    holdPendulum,
 } from "../../../src/engine/impact/track";
 import { exp } from "../../../src/engine/math/elementary";
 import { flexGains } from "../../../src/engine/impact/flex";
@@ -113,7 +114,7 @@ const COAST: SwingArc = {
     dip: NO_DIP,
     contactAt: 0,
     slopeHold: 0,
-    slopeCarry: 0,
+    followThrough: 0,
     handReach: 10,
     pendulumAt: 0.8,
     pendulumEffort: 0,
@@ -815,9 +816,11 @@ describe("the flex (P2b.2b.2b.2b design §3.1, §7.1)", () => {
     it("pushes no harder along aim than its springs and dampers once the hands have come to rest: no brake", () => {
         // Design §7.1, P2b.2b.2c.3b.1 design §5 (was once the push had stopped at its end, at once): past the hands'
         // rest, 0.1 s after the push's end at 1 m/s, and the pendulum's held slope, the planned acceleration is zero
-        // and the feed-forward has no deceleration term along aim.
+        // and the feed-forward has no deceleration term along aim. The mallet is held from the push's end, so that its
+        // turn after the top hand stops (shapes design §8, ruling 14), which the hands rightly feed, stays out of it.
         const arc = STILL({ pivotVelocity: vec3(1, 0, 0), handReach: 0.05, window: 0.005, handWindow: 0.005 });
-        const track = prepareAt(arc, 0);
+        const free = prepareAt(arc, 0);
+        const track = holdPendulum(free, (free.push as Push).end as number);
         const rest = handsApex(track.push as Push) as number;
         const grip = newGripState();
         for (const t of [rest + 0.02, rest + 0.05]) {

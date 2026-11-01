@@ -200,7 +200,7 @@ function validateDownswing(down: Downswing, n: Vec3): void {
  * non-negative reach; aim a horizontal unit vector within UNIT_TOLERANCE; a positive period, a
  * non-negative damping ratio and relaxation time; the bottom hand between the socket and the top hand, both grips in
  * (0, 1], a non-negative arm mass and reach slack, a guide effort in [0, 1]; a pendulumAt, pendulumEffort,
- * handArcLow, slopeHold and slopeCarry in [0, 1]; a handArcRadius above the reach; a lowPoint, if given, finite; the
+ * handArcLow and slopeHold in [0, 1]; a followThrough of at least 0; a handArcRadius above the reach; a lowPoint, if given, finite; the
  * arc's low point s_low (lowPoint, else handArcLow·handReach) within (2·handReach − handArcRadius, handArcRadius), so that the arc is defined
  * through the push and its finish to the hands' rest (P2b.2b.2c.3b.1 design §5); a flex whose values (its hold's too,
  * if any) are
@@ -264,12 +264,15 @@ function validateTrack(drive: TrackDrive): void {
         ["arc.pendulumEffort", arc.pendulumEffort],
         ["arc.handArcLow", arc.handArcLow],
         ["arc.slopeHold", arc.slopeHold],
-        ["arc.slopeCarry", arc.slopeCarry],
     ] as const) {
         finiteNumber(value, name);
         if (!(value >= 0 && value <= 1)) {
             fail(`${name} must lie in [0, 1] (got ${value})`);
         }
+    }
+    finiteNumber(arc.followThrough, "arc.followThrough");
+    if (!(arc.followThrough >= 0)) {
+        fail(`arc.followThrough must be at least 0 (got ${arc.followThrough})`);
     }
     finiteNumber(arc.handArcRadius, "arc.handArcRadius");
     // Checked for a push of no length too, where the arc is never read: a drive that fails it fails either way.

@@ -16,6 +16,7 @@ import { simulateImpact, simulateStroke } from "../../../src/engine/impact/simul
 import {
     HAND_COUPLING,
     handsApex,
+    HAND_EASE,
     handsAt,
     letGo,
     pathAt,
@@ -190,14 +191,14 @@ describe("the follow-through (design §4)", () => {
         expect(follow.flags).toEqual(["follow-grip-limit"]);
     });
 
-    it("finishes a pushed stroke at the mallet's apex after the push's end", () => {
-        // Shapes design §2 (was P2b.2b.2c.3b.1 design §5's first step at or after the hands' rest). Snapped free at the
-        // push's end, the mallet topped out at 0.315 s, before its hands' apex (0.684 s); let go over the hands' rise
-        // (ruling 13), it arcs on and tops out after their apex, at 0.927 s, and the swing ends there.
+    it("finishes a pushed stroke once the bottom hand holds its carry at rest", () => {
+        // Shapes design §8, ruling 14 (was the mallet's apex after its let-go, 0.927 s, ruling 13): the bottom hand
+        // brakes the carry to rest and holds it, and the swing ends at the first step from there.
         const { contact, follow } = stroke(shot({ backswing: 0.25 }, CARRY));
         const push = prepareTrack(contact.drive as TrackDrive, contact.head, WORLD.gravity).push as Push;
         expect(follow.finish).toBeGreaterThan(handsApex(push) as number);
-        expect(rateOf(contact, last(follow))).toBeLessThanOrEqual(0);
+        expect(follow.finish).toBeGreaterThanOrEqual(push.freed as number);
+        expect(follow.finish - (push.freed as number)).toBeLessThan(1e-3);
         expect(follow.flags).not.toContain("follow-cap");
     });
 
@@ -226,10 +227,10 @@ describe("the follow-through (design §4)", () => {
         expect(handsApex(push) as number).toBeLessThan((push.end as number) + FOLLOW_CAP);
         const { follow } = simulateStroke(planned.contact, setup.balls, lawn);
         expect(follow.flags).not.toContain("follow-cap");
-        // Shapes design §2 (was within a step of the hands' apex): the mallet swings on past it, to its own apex at
-        // 1.22 s.
+        // Shapes design §8, ruling 14 (was the mallet's own apex at 1.22 s, swinging free past its hands' apex): the
+        // bottom hand holds the carry at rest from push.freed, where the swing ends.
         expect(follow.finish).toBeGreaterThan(handsApex(push) as number);
-        expect(rateOf(planned.contact, last(follow))).toBeLessThanOrEqual(0);
+        expect(follow.finish).toBeGreaterThanOrEqual(push.freed as number);
     });
 
     it("caps a carry whose hands never stop", () => {
@@ -334,13 +335,13 @@ describe("the finish from the inputs (P2b.2b.2c.3a A2 item 7)", () => {
         expect(finishKind(planOf(canonicalSetup("half-roll", { stroke: { drive: -1 } })))).toBe("check");
     });
 
-    it("gives the half roll a minimal push (shapes design §8, ruling 11)", () => {
+    it("gives the half roll a minimal push (shapes design §8, rulings 11 and 14: 0.025 m, was 0.05 m)", () => {
         const plan = planOf(canonicalSetup("half-roll"));
         const push = plan.push as Push;
         expect(push).not.toBeNull();
         expect(push.end).not.toBeNull();
         const travel = dot(sub(handsAt(plan, push.end as number).position, push.origin), plan.arc.aim);
-        expect(travel).toBeCloseTo(0.05, 9);
+        expect(travel).toBeCloseTo(0.025, 9);
     });
 
     it("finishes a braked held stroke with the check's hold", () => {
@@ -511,101 +512,82 @@ describe("the mallet's release and the finish's end (shapes design §2)", () => 
     });
 });
 
-describe("the hands guide the mallet on and let it go (shapes design §8, rulings 12 and 13)", () => {
+describe("the top hand stops and the bottom hand carries the head on (shapes design §8, rulings 13 and 14)", () => {
     const DEFAULT = defaultWorld();
-    const trackOf = (slopeCarry?: number) => {
-        const stroke = slopeCarry === undefined ? {} : { slopeCarry };
+    const trackOf = (followThrough?: number) => {
+        const stroke = followThrough === undefined ? {} : { followThrough };
         const contact = buildContact(canonicalSetup("half-roll", { world: DEFAULT, stroke }), DEFAULT);
         return prepareTrack(contact.drive as TrackDrive, contact.head, DEFAULT.gravity);
     };
-    /** The hands' finish angle φ (rad) at time t, from their travel along aim: s = s_low + ρ_h·sin φ. */
-    const phiAt = (track: ReturnType<typeof trackOf>, t: number): number => {
-        const push = track.push as Push;
-        const s = dot(sub(handsAt(track, t).position, push.origin), track.arc.aim);
-        return Math.asin((s - push.low) / track.arc.handArcRadius);
-    };
+    const rateAt = (track: ReturnType<typeof trackOf>, t: number): number =>
+        dot(pathAt(track, t).angularVelocity, track.axis);
 
-    it("releases at the push's end at slopeCarry 0", () => {
+    it("brakes the turn from the top hand's stop at followThrough 0, never freeing the mallet", () => {
         const track = trackOf(0);
         const push = track.push as Push;
+        const apex = handsApex(push) as number;
         expect(push.end).not.toBeNull();
-        expect(push.release).toBe(push.end);
-        expect(releaseOf(track)).toBe(push.end);
-        expect(track.finish?.tw).toBe(push.end);
+        expect([push.release, push.freed, releaseOf(track)]).toEqual([apex, apex + HAND_EASE, apex]);
+        expect(track.finish).toBeNull();
     });
 
-    it("carries the mallet at its held pitch to the hands' apex at slopeCarry 1", () => {
-        const track = trackOf(1);
+    it("brakes the carry to rest over HAND_EASE once it has run followThrough past the top hand's stop", () => {
+        const track = trackOf(0.35);
         const push = track.push as Push;
-        const end = push.end as number;
         const apex = handsApex(push) as number;
-        expect(apex).toBeGreaterThan(end);
-        expect(releaseOf(track)).toBe(apex);
-        expect(track.finish?.tw).toBe(apex);
-        // Until the release the path is the held plan's; the finish's free swing takes over only from it.
-        const held = { ...track, finish: null };
-        for (let t = end; t < apex; t += 1e-3) {
-            expect(pathAt(track, t).theta, `t ${t}`).toBe(pathAt(held, t).theta);
-        }
+        expect(push.release).toBe(apex + 0.35);
+        expect(push.freed).toBe(apex + 0.35 + HAND_EASE);
+        expect(letGo(push, push.release as number).share).toBe(0);
+        expect(letGo(push, push.freed as number).share).toBe(1);
+        // Held from there: the shaft's turn stays at rest.
+        expect(Math.abs(rateAt(track, (push.freed as number) + 0.05))).toBeLessThan(1e-9);
     });
 
-    it("lets go from the push's end by default, the mallet arcing on unbroken to its free swing (ruling 13)", () => {
-        const track = trackOf();
+    it("turns the shaft at the push's pace once the top hand has stopped", () => {
+        // c = (V·τ − Δs)/r: as the top hand stops, the pace passes to the shaft's turn, ċ = V/r once it is still; the
+        // held slope's own rate has fallen to rest by then.
+        const track = trackOf(0.35);
         const push = track.push as Push;
-        const release = push.release as number;
-        const apex = handsApex(push) as number;
-        expect(release).toBe(push.end);
-        expect(letGo(push, release).share).toBe(0);
-        expect(letGo(push, apex).share).toBe(1);
-        expect(letGo(push, 0.5 * (release + apex)).share).toBeCloseTo(0.5, 12);
-        // θ and ω run on across both seams: across 2h each changes as its rate says, where a step would not. α runs on
-        // across the release too; at the apex the hands' own deceleration ends in a step (§2), which the free swing
-        // feels, so α is not asked to there.
+        const stopped = (handsApex(push) as number) + 0.01;
+        expect(stopped).toBeLessThan(push.release as number);
+        expect(Math.abs(rateAt(track, stopped) - push.finishSpeed / track.arc.radius)).toBeLessThan(1e-9);
+    });
+
+    it("carries the mallet on unbroken through the push's end, the top hand's stop, the brake and the hold", () => {
+        const track = trackOf(0.35);
+        const push = track.push as Push;
+        // θ, ω and α run on across each seam: across 2h each changes as its rate says, where a step would not.
         const h = 1e-7;
-        for (const seam of [release, apex]) {
+        const seams = [push.end, handsApex(push), push.release, push.freed] as number[];
+        for (const seam of seams) {
             const before = pathAt(track, seam - h);
             const after = pathAt(track, seam + h);
             const omega = dot(before.angularVelocity, track.axis);
             expect(Math.abs(after.theta - before.theta - 2 * h * omega), `θ at ${seam}`).toBeLessThan(1e-9);
             const rate = dot(sub(after.angularVelocity, before.angularVelocity), track.axis);
             expect(Math.abs(rate - 2 * h * before.pendulumAcceleration), `ω at ${seam}`).toBeLessThan(1e-6);
+            const step = after.pendulumAcceleration - before.pendulumAcceleration;
+            expect(Math.abs(step), `α at ${seam}`).toBeLessThan(1e-2);
         }
-        const step = pathAt(track, release + h).pendulumAcceleration - pathAt(track, release - h).pendulumAcceleration;
-        expect(Math.abs(step)).toBeLessThan(1e-2);
-        // Past the apex the path is the finish's free swing alone.
-        const free = pathAt(track, apex + 0.01);
-        expect(free.theta).not.toBe(pathAt({ ...track, finish: null }, apex + 0.01).theta);
-    });
-
-    it("releases half way along the hands' finish at slopeCarry 0.5", () => {
-        const track = trackOf(0.5);
-        const push = track.push as Push;
-        const finish = push.finish as NonNullable<Push["finish"]>;
-        const release = push.release as number;
-        expect(release).toBeGreaterThan(push.end as number);
-        expect(release).toBeLessThan(finish.apex);
-        const half = (finish.phi[0] as number) + 0.5 * (finish.phiApex - (finish.phi[0] as number));
-        expect(Math.abs(phiAt(track, release) - half)).toBeLessThanOrEqual(1e-6);
     });
 
     it.each([
-        ["above 1", 1 + 1e-9, /stroke\.slopeCarry must lie in \[0, 1\]/],
-        ["below 0", -1e-9, /stroke\.slopeCarry must lie in \[0, 1\]/],
-        ["not finite", Number.NaN, /stroke\.slopeCarry must be finite/],
-    ])("rejects a slopeCarry %s", (_, slopeCarry, message) => {
-        expect(() => trackOf(slopeCarry)).toThrow(message);
+        ["below 0", -1e-9, /stroke\.followThrough must be non-negative/],
+        ["not finite", Number.NaN, /stroke\.followThrough must be finite/],
+    ])("rejects a followThrough %s", (_, followThrough, message) => {
+        expect(() => trackOf(followThrough)).toThrow(message);
     });
 
-    it("rejects a preset's slopeCarry outside [0, 1], naming its shape", () => {
-        const setup = canonicalSetup("half-roll", { world: DEFAULT, shape: { slopeCarry: 1.5 } });
+    it("rejects a negative preset followThrough, naming its shape", () => {
+        const setup = canonicalSetup("half-roll", { world: DEFAULT, shape: { followThrough: -0.1 } });
         expect(() => buildContact(setup, DEFAULT)).toThrow(
-            /profile\.shape\.half-roll\.slopeCarry must lie in \[0, 1\]/,
+            /profile\.shape\.half-roll\.followThrough must be non-negative/,
         );
     });
 
     it("plays the canonical half roll with no 29.1.6.1 re-contact", () => {
         // Released at the push's end its head swung down under the hands and hit the striker's ball again 112 ms
-        // after the balls parted (design §8, ruling 12); guided to the hands' apex it stays clear.
+        // after the balls parted (design §8, ruling 12); carried on by the bottom hand it stays clear.
         const out = simulateShot(canonicalSetup("half-roll", { world: DEFAULT }), DEFAULT);
         expect(out.faults.findings.map((f) => f.law)).not.toContain("29.1.6.1");
     });

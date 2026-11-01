@@ -105,7 +105,7 @@ function stanceFromLean(lean: number, up: number, hands: Omit<SwingStance, "hand
  * keys (torqueMax, tempoSlow, tempoFast) and any preset's retired defaultIntensity are rejected by readShape when
  * swing.json loads.
  */
-export function shapeOf(type: StrokeType, ref: StrokeShapeReference): Omit<SwingShape, "slopeHold" | "slopeCarry"> {
+export function shapeOf(type: StrokeType, ref: StrokeShapeReference): Omit<SwingShape, "slopeHold" | "followThrough"> {
     return {
         pendulumShare: ref.pendulumShare.value,
         handAngle: ref.handAngle.value,
@@ -197,9 +197,10 @@ const DRIVE: Readonly<Record<StrokeType, SwingDrive>> = {
     },
     // Carry (Riches: the slope "MAINTAINED throughout the swing", both hands moving "FORWARD at the SAME RATE",
     // "the mallet head following through the ball and onto the ground"): the hands' speed from the downswing
-    // (P2b.2b.2a design §3.3), a light pendulum push. The push is minimal, 0.05 m (shapes design §8, ruling 11: "the
-    // bottom hand always pushes through the contact"; was 0.15 m, the prototype's, which B1 ruling 6 found too much).
-    // Its length is an assumption until the envelope phase tunes it (B1 ruling 4).
+    // (P2b.2b.2a design §3.3), a light pendulum push. The push is minimal, 0.025 m (shapes design §8, ruling 11: "the
+    // bottom hand always pushes through the contact"; was 0.15 m, the prototype's, which B1 ruling 6 found too much,
+    // then 0.05 m, which ruling 14's approval halved). Its length is an assumption until the envelope phase tunes it
+    // (B1 ruling 4).
     "half-roll": {
         speedGain: 0.1,
         window: 0.02,
@@ -207,7 +208,7 @@ const DRIVE: Readonly<Record<StrokeType, SwingDrive>> = {
         handWindow: 0.02,
         handDrop: 0,
         dropTime: 0.01,
-        handReach: 0.05,
+        handReach: 0.025,
         guideEffort: 1,
         pendulumAt: 0.8,
         pendulumEffort: 0,
@@ -264,12 +265,21 @@ export const SLOPE_HOLD: Readonly<Record<StrokeType, number>> = {
 };
 
 /**
- * The hands' guidance after the push (shapes design §8, ruling 12): one value on every preset, the model being one shot
- * model, not one per stroke type. At 0 the hands start to let go at the push's end, about as the striker's ball leaves
- * (ruling 10), and the mallet arcs on into its free swing by their apex (ruling 13). An assumption until the envelope
- * phase tunes it per shot with push length; a stroke with no push has nothing for it to act on.
+ * The bottom hand's carry after the push (s; shapes design §8, ruling 14), the same mechanism on every preset, the
+ * model being one shot model. Carried at the push's pace, the shaft turns further on a faster push, so the
+ * follow-through grows with the range. The user (2026-11-01): the full roll's is muted, "even at long range", and the
+ * pass roll's text book carries on relatively further, from the end of its contact. The values are assumptions until
+ * the envelope phase tunes them per shot; a stroke with no push has nothing for them to act on.
  */
-export const SLOPE_CARRY = 0;
+export const FOLLOW_THROUGH: Readonly<Record<StrokeType, number>> = {
+    "single-ball": 0.2,
+    drive: 0.2,
+    "stop-ac": 0.2,
+    "stop-gc": 0.2,
+    "half-roll": 0.2,
+    "full-roll": 0,
+    "pass-roll": 0.3,
+};
 
 /** The default profile (design §5.4). Provisional throughout. */
 export const defaultProfile: SwingProfile = {
@@ -350,14 +360,19 @@ export const defaultProfile: SwingProfile = {
         "full-roll": stanceFromLean(31 * DEG, 0, { top: 0.61, bottom: 0.3, gripTension: 1, bottomGrip: 1 }),
         // Riches: "The bottom hand should be placed at the very bottom of the mallet shaft for this shot", the handle
         // sloping "at least as much as for a full roll" (48° until P2b.2b.2b.1), a cue superseded by Gugan 4 Table 6:
-        // 36°, 34° and 32° (C3P, C10P, C25P), mean 34°.
-        "pass-roll": stanceFromLean(34 * DEG, 0, { top: 0.45, bottom: 0.09, gripTension: 1, bottomGrip: 1 }),
+        // 36°, 34° and 32° (C3P, C10P, C25P), mean 34°. 32°, the table's lowest, a degree past the full roll's: the
+        // user's view (2026-11-01) that the mean's lean plays the pass roll too far into the ground, a hypothesis.
+        "pass-roll": stanceFromLean(32 * DEG, 0, { top: 0.45, bottom: 0.09, gripTension: 1, bottomGrip: 1 }),
     },
     drive: DRIVE,
     shape: Object.fromEntries(
         STROKE_TYPES.map((type) => [
             type,
-            { ...shapeOf(type, swingReference[type]), slopeHold: SLOPE_HOLD[type], slopeCarry: SLOPE_CARRY },
+            {
+                ...shapeOf(type, swingReference[type]),
+                slopeHold: SLOPE_HOLD[type],
+                followThrough: FOLLOW_THROUGH[type],
+            },
         ]),
     ) as Record<StrokeType, SwingShape>,
 };
