@@ -557,7 +557,7 @@ function diagnosisTable(c: TraceCase, tr: Trace): string {
     ];
     const dense = (tr.pushEnd ?? tr.firstFace + 0.14) + 0.01;
     const lean = (i: Instant): number => Math.atan2(dot(i.shaft, tr.aim), i.shaft.z) * DEG;
-    for (let ms = -5; ms <= (tr.finish - tr.firstFace) * 1000; ) {
+    for (let ms = -5; ms <= (tr.finish - tr.firstFace) * 1000;) {
         const t = tr.firstFace + ms / 1000;
         const a = at(tr.actual, t);
         const p = at(tr.planned, t);
@@ -592,7 +592,10 @@ if (DIAGNOSE) {
         tables.push(diagnosisTable(c, trace(c)));
     }
     const text = tables.join("\n\n");
-    fs.writeFileSync(`${OUT}/path-trace-diagnosis-${UNPRACTISED ? "unpractised" : "practised"}${INSTANT_PUSH ? "-instant-push" : ""}${NO_BALLS ? "-no-balls" : ""}.txt`, `${text}\n`);
+    fs.writeFileSync(
+        `${OUT}/path-trace-diagnosis-${UNPRACTISED ? "unpractised" : "practised"}${INSTANT_PUSH ? "-instant-push" : ""}${NO_BALLS ? "-no-balls" : ""}.txt`,
+        `${text}\n`,
+    );
     console.log(text);
     process.exit(0);
 }
