@@ -200,3 +200,19 @@ hands do not let go: they carry the mallet on along their arc at its lean, and t
 
 Assumption: "guide" is a held slope, the shaft's pitch held as through the push, rather than a weaker hold. It is the
 smallest change that matches "maintain the arc swing", and the user's eye on the trace judges it.
+
+**Ruling 13, the let-go continues the path (user, gate 2).** Carried to the hands' apex, the mallet came to rest with
+them, then fell back and swung through under them: a stop and a restart. The user: "the let go should be a smooth
+continuation of the path", "with the mallet arcing".
+
+- **The let-go is a fade, not a switch.** From the release to the hands' apex the slope hold and Task 5's pitch hold
+  are let go on a minimum-jerk share g = u³(10 − 15u + 6u²), u the time's share of that span: θ = θ_held + g·(θ_free −
+  θ_held), the free swing seeded from the held one at the release, and the pitch hold's moment scaled by 1 − g. θ, ω
+  and α run on across the release; θ and ω across the apex, where the hands' own deceleration ends in a step (§2) that
+  the free swing feels in α. At slopeCarry 1 the span is nil and ruling 12's behaviour stands.
+- **slopeCarry's default becomes 0** on every preset: the let-go starts at the push's end, about as the striker's ball
+  last leaves (ruling 10). With the fade, the half and full rolls play with no 29.1.6.1 finding at every slopeCarry in
+  {0, 0.25, 0.5, 0.75, 1}, unpractised. The pass roll re-hits at every value, as it did before (ruling 12's traces).
+- **What moves.** Every pushed stroke's finish: the mallet arcs on past the hands' apex. The full roll's ratio is now
+  1.215 (ruling 12: 1.211).
+- **The trace** outlines the striker's ball where it last leaves the face.

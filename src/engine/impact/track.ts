@@ -410,6 +410,37 @@ export function handsApex(push: Push): number | null {
     return push.finish?.apex ?? null;
 }
 
+/** A share of the let-go and its first and second time derivatives (/s, /s²). */
+export interface LetGo {
+    readonly share: number;
+    readonly rate: number;
+    readonly accel: number;
+}
+
+/**
+ * The share of `push`'s slope and pitch holds let go at time t (shapes design §8, ruling 13): 0 to the release, then a
+ * minimum-jerk ramp, g = u³(10 − 15u + 6u²) with u the time's share from the release to the hands' apex, so the
+ * mallet arcs on from the held path into its free swing with θ, ω and α unbroken, and 1 after the apex. Where the
+ * release is the apex (slopeCarry 1) the ramp has no length and the holds let go at once; with no release, 0 always.
+ */
+export function letGo(push: Push, t: number): LetGo {
+    const { release, finish } = push;
+    if (release === null || finish === null || t <= release) {
+        return { share: 0, rate: 0, accel: 0 };
+    }
+    const span = finish.apex - release;
+    if (t >= finish.apex) {
+        return { share: 1, rate: 0, accel: 0 };
+    }
+    const u = (t - release) / span;
+    const v = 1 - u;
+    return {
+        share: u * u * u * (10 + u * (6 * u - 15)),
+        rate: (30 * u * u * v * v) / span,
+        accel: (60 * u * v * (1 - 2 * u)) / (span * span),
+    };
+}
+
 /**
  * The free pendulum from the pendulum's window's start (design §3.2; P2b.2b.2c.2d design §3.1): θ and ω
  * tabulated every FREE_STEP from `tw`, arcStart, of I_P·θ̈ = −W·sin θ − M·d·(A·t̂), plus the pulse's I_P·6·ᾱ·s(1 − s)
@@ -1311,12 +1342,32 @@ function pendulumAt(track: PreparedTrack, t: number): Swing {
     if (held !== null && t > tw && t >= held.from) {
         return { theta: held.theta, omega: 0, alpha: 0 };
     }
-    // From the release the finish's free swing (shapes design §2); before it, as planned.
-    const { finish } = track;
+    // From the release the finish's free swing (shapes design §2), let go into from the held path over the hands' rise
+    // to their apex (ruling 13); before it, as planned.
+    const { finish, push } = track;
     if (finish !== null && t >= finish.tw) {
         const { theta, omega } = tableAt(finish, t);
-        return { theta, omega, alpha: freeAlpha(track, finish, theta, t) };
+        const alpha = freeAlpha(track, finish, theta, t);
+        const g = push === null ? null : letGo(push, t);
+        if (g === null || g.share === 1) {
+            return { theta, omega, alpha };
+        }
+        // θ = θ_h + g·(θ_f − θ_h), differentiated twice; the free swing is seeded from the held one at the release.
+        const held = plannedPendulum(track, t, tw);
+        const d = theta - held.theta;
+        const dw = omega - held.omega;
+        return {
+            theta: held.theta + g.share * d,
+            omega: held.omega + g.share * dw + g.rate * d,
+            alpha: held.alpha + g.share * (alpha - held.alpha) + 2 * g.rate * dw + g.accel * d,
+        };
     }
+    return plannedPendulum(track, t, tw);
+}
+
+/** The pendulum as planned at time t, after the window's start, with no finish: free, held or the blend of the two. */
+function plannedPendulum(track: PreparedTrack, t: number, tw: number): Swing {
+    const { arc } = track;
     const lambda = arc.slopeHold;
     if (lambda === 0) {
         return freePath(track, t, tw);
@@ -1828,21 +1879,28 @@ interface CarryStep {
  * e the pitch error from the head to the path and ė its rate's lag, the gains holdPitchGains's for the swung body's
  * I_P about the top hand, M_p held to the grip's couple (gripCouple). The balls' impulse at the face turns the shaft
  * back about the top hand, and without this nothing but the grips' spread resists it (the 2026-11-01 diagnosis).
- * It runs on while the hands guide the mallet after the push, to the release (shapes design §8, ruling 12). Zero with
- * no push, inside a check and after the release.
+ * It runs on while the hands guide the mallet after the push, to the release (shapes design §8, ruling 12), and fades
+ * with the let-go from there to the hands' apex (letGo; ruling 13). Zero with no push, inside a check and once let go.
  */
 function pushPitch(track: PreparedTrack, state: HeadState, t: number, path: PathPoint, step: CarryStep): number {
     const { push } = track;
     // A check brakes the pitch to rest (checkShare), and the hold would drive it on along the unbraked path.
-    if (push === null || step.checking || (push.release !== null && t > push.release)) {
+    if (push === null || step.checking) {
         return 0;
     }
-    return heldPitch(
-        track.coupling,
-        step.pitchInertia,
-        dot(rotationError(path.orientation, state.orientation), track.axis),
-        dot(step.spinLag, track.axis),
-        gripCouple(track.hands, track.arc.radius),
+    const kept = 1 - letGo(push, t).share;
+    if (kept === 0) {
+        return 0;
+    }
+    return (
+        kept *
+        heldPitch(
+            track.coupling,
+            step.pitchInertia,
+            dot(rotationError(path.orientation, state.orientation), track.axis),
+            dot(step.spinLag, track.axis),
+            gripCouple(track.hands, track.arc.radius),
+        )
     );
 }
 

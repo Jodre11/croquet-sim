@@ -17,6 +17,7 @@ import {
     HAND_COUPLING,
     handsApex,
     handsAt,
+    letGo,
     pathAt,
     pitchAxis,
     prepareTrack,
@@ -190,13 +191,12 @@ describe("the follow-through (design §4)", () => {
     });
 
     it("finishes a pushed stroke at the mallet's apex after the push's end", () => {
-        // Shapes design §2 (was P2b.2b.2c.3b.1 design §5's first step at or after the hands' rest): released at the
-        // push's end, the mallet rises and tops out at 0.315 s, before its hands' apex (0.684 s), and the swing ends
-        // there.
+        // Shapes design §2 (was P2b.2b.2c.3b.1 design §5's first step at or after the hands' rest). Snapped free at the
+        // push's end, the mallet topped out at 0.315 s, before its hands' apex (0.684 s); let go over the hands' rise
+        // (ruling 13), it arcs on and tops out after their apex, at 0.927 s, and the swing ends there.
         const { contact, follow } = stroke(shot({ backswing: 0.25 }, CARRY));
         const push = prepareTrack(contact.drive as TrackDrive, contact.head, WORLD.gravity).push as Push;
-        expect(follow.finish).toBeGreaterThan(push.end as number);
-        expect(follow.finish).toBeLessThan(handsApex(push) as number);
+        expect(follow.finish).toBeGreaterThan(handsApex(push) as number);
         expect(rateOf(contact, last(follow))).toBeLessThanOrEqual(0);
         expect(follow.flags).not.toContain("follow-cap");
     });
@@ -511,7 +511,7 @@ describe("the mallet's release and the finish's end (shapes design §2)", () => 
     });
 });
 
-describe("the hands guide the mallet on (shapes design §8, ruling 12)", () => {
+describe("the hands guide the mallet on and let it go (shapes design §8, rulings 12 and 13)", () => {
     const DEFAULT = defaultWorld();
     const trackOf = (slopeCarry?: number) => {
         const stroke = slopeCarry === undefined ? {} : { slopeCarry };
@@ -525,7 +525,7 @@ describe("the hands guide the mallet on (shapes design §8, ruling 12)", () => {
         return Math.asin((s - push.low) / track.arc.handArcRadius);
     };
 
-    it("releases at the push's end at slopeCarry 0, as before the guidance", () => {
+    it("releases at the push's end at slopeCarry 0", () => {
         const track = trackOf(0);
         const push = track.push as Push;
         expect(push.end).not.toBeNull();
@@ -534,8 +534,8 @@ describe("the hands guide the mallet on (shapes design §8, ruling 12)", () => {
         expect(track.finish?.tw).toBe(push.end);
     });
 
-    it("carries the mallet at its held pitch to the hands' apex by default", () => {
-        const track = trackOf();
+    it("carries the mallet at its held pitch to the hands' apex at slopeCarry 1", () => {
+        const track = trackOf(1);
         const push = track.push as Push;
         const end = push.end as number;
         const apex = handsApex(push) as number;
@@ -547,6 +547,34 @@ describe("the hands guide the mallet on (shapes design §8, ruling 12)", () => {
         for (let t = end; t < apex; t += 1e-3) {
             expect(pathAt(track, t).theta, `t ${t}`).toBe(pathAt(held, t).theta);
         }
+    });
+
+    it("lets go from the push's end by default, the mallet arcing on unbroken to its free swing (ruling 13)", () => {
+        const track = trackOf();
+        const push = track.push as Push;
+        const release = push.release as number;
+        const apex = handsApex(push) as number;
+        expect(release).toBe(push.end);
+        expect(letGo(push, release).share).toBe(0);
+        expect(letGo(push, apex).share).toBe(1);
+        expect(letGo(push, 0.5 * (release + apex)).share).toBeCloseTo(0.5, 12);
+        // θ and ω run on across both seams: across 2h each changes as its rate says, where a step would not. α runs on
+        // across the release too; at the apex the hands' own deceleration ends in a step (§2), which the free swing
+        // feels, so α is not asked to there.
+        const h = 1e-7;
+        for (const seam of [release, apex]) {
+            const before = pathAt(track, seam - h);
+            const after = pathAt(track, seam + h);
+            const omega = dot(before.angularVelocity, track.axis);
+            expect(Math.abs(after.theta - before.theta - 2 * h * omega), `θ at ${seam}`).toBeLessThan(1e-9);
+            const rate = dot(sub(after.angularVelocity, before.angularVelocity), track.axis);
+            expect(Math.abs(rate - 2 * h * before.pendulumAcceleration), `ω at ${seam}`).toBeLessThan(1e-6);
+        }
+        const step = pathAt(track, release + h).pendulumAcceleration - pathAt(track, release - h).pendulumAcceleration;
+        expect(Math.abs(step)).toBeLessThan(1e-2);
+        // Past the apex the path is the finish's free swing alone.
+        const free = pathAt(track, apex + 0.01);
+        expect(free.theta).not.toBe(pathAt({ ...track, finish: null }, apex + 0.01).theta);
     });
 
     it("releases half way along the hands' finish at slopeCarry 0.5", () => {

@@ -265,10 +265,11 @@ export const SLOPE_HOLD: Readonly<Record<StrokeType, number>> = {
 
 /**
  * The hands' guidance after the push (shapes design §8, ruling 12): one value on every preset, the model being one shot
- * model, not one per stroke type. At 1 the hands carry the mallet at its lean to their apex. An assumption until the
- * envelope phase tunes it per shot with push length; a stroke with no push has nothing for it to act on.
+ * model, not one per stroke type. At 0 the hands start to let go at the push's end, about as the striker's ball leaves
+ * (ruling 10), and the mallet arcs on into its free swing by their apex (ruling 13). An assumption until the envelope
+ * phase tunes it per shot with push length; a stroke with no push has nothing for it to act on.
  */
-export const SLOPE_CARRY = 1;
+export const SLOPE_CARRY = 0;
 
 /** The default profile (design §5.4). Provisional throughout. */
 export const defaultProfile: SwingProfile = {

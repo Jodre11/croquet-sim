@@ -486,6 +486,19 @@ function svgOf(c: TraceCase, tr: Trace, R: number, reads: readonly string[]): st
         if (last !== undefined && track.length > 1) {
             parts.push(circle(last, `fill="none" stroke="${ink}" stroke-width="1.5"`));
         }
+        // The striker's ball where it last leaves the face (the user, 2026-11-01), at the sample nearest that time.
+        if (b === tr.striker) {
+            let near = 0;
+            tr.ballTimes.forEach((t, i) => {
+                if (Math.abs(t - tr.lastDeparture) < Math.abs((tr.ballTimes[near] ?? 0) - tr.lastDeparture)) {
+                    near = i;
+                }
+            });
+            const leaving = track[Math.min(near, track.length - 1)];
+            if (leaving !== undefined) {
+                parts.push(circle(leaving, `fill="none" stroke="#000" stroke-width="1.5" stroke-dasharray="4 3"`));
+            }
+        }
     });
     const window = tr.planned.filter((i) => i.t >= tr.contactAt - 0.1);
     parts.push(
@@ -531,10 +544,15 @@ function svgOf(c: TraceCase, tr: Trace, R: number, reads: readonly string[]): st
             const [ax, az] = side2d(a, tr);
             const [zx, zz] = side2d(z, tr);
             const [sx0] = side2d(track[0] as Vec3, tr);
+            const leaving =
+                b === tr.striker
+                    ? `; dashed black where it last leaves the face, ` +
+                      `${f((tr.lastDeparture - tr.firstFace) * 1000, 1)} ms`
+                    : "";
             return (
                 `<text x="${pad}" y="${key + 36 + 18 * b}" fill="${BALL_INKS[b % BALL_INKS.length]}">` +
                 `${name}: ghosts every 20 ms; at impact end ${f((zx - sx0) * 1000, 0)} mm on, ` +
-                `${f((zx - ax) / dt, 2)} m/s along, ${f((zz - az) / dt, 2)} m/s up</text>`
+                `${f((zx - ax) / dt, 2)} m/s along, ${f((zz - az) / dt, 2)} m/s up${leaving}</text>`
             );
         }),
         `<text x="${pad}" y="${f(top - 20)}" font-weight="bold">the head's lowest point (mm above the turf) against ` +
