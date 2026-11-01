@@ -9,6 +9,7 @@ import {
     prepareTrack,
     type Advance,
     type PreparedTrack,
+    handsApex,
     type Push,
 } from "../../../src/engine/impact/track";
 import { simulateShot } from "../../../src/engine/shot";
@@ -188,7 +189,7 @@ describe("the hands' advance (design §6, §8.1.5)", () => {
         const end = (follow.advanced as { end: number }).end;
         const { contact } = plan(level());
         const track = prepareTrack(contact.drive as TrackDrive, contact.head, WORLD.gravity);
-        const rest = (track.push as Push).rest as number;
+        const rest = handsApex(track.push as Push) as number;
         expect(Math.abs(rest - end)).toBeLessThan(1e-6);
         expect(follow.finish).toBeGreaterThanOrEqual(rest);
         expect(follow.finish).toBeLessThan(rest + IMPACT_DT + 1e-12);
@@ -201,31 +202,40 @@ describe("the hands' advance (design §6, §8.1.5)", () => {
         const pushed = (timing: Partial<StrokeTiming>): ShotSetup => {
             const setup = canonicalSetup("single-ball", {
                 stroke: { drive: 1, handReach: 0.3, timing: { ...ON_TIME, ...timing } },
-                drive: { handGain: 1 },
+                // Shapes design §2: on a 5 m arc (was the preset's 1.5 m), so that the hands' 6 m/s finish stays below
+                // its quarter turn.
+                drive: { handGain: 1, handArcRadius: 5 },
             });
             return { ...setup, stroke: { ...setup.stroke, backswing: backswingFor(setup, 3, WORLD) } };
         };
-        const travel = (setup: ShotSetup): { most: number; last: number } => {
+        const travel = (setup: ShotSetup): { most: number; last: number; atEnd: number; apex: number } => {
             const { contact } = plan(setup);
             const track = prepareTrack(contact.drive as TrackDrive, contact.head, WORLD.gravity);
-            const { aim, contactAt } = track.arc;
+            const { aim, contactAt, handArcRadius } = track.arc;
+            const push = track.push as Push;
+            const finish = push.finish as NonNullable<Push["finish"]>;
             const from = handsAt(track, contactAt).position;
             const along = (t: number): number => dot(sub(handsAt(track, t).position, from), aim);
             let most = 0;
             for (let k = 0; k <= 2000; k++) {
                 most = Math.max(most, along(contactAt + k * 1e-3));
             }
-            return { most, last: along(contactAt + 2) };
+            const apex = push.low + handArcRadius * Math.sin(finish.phiApex);
+            return { most, last: along(contactAt + 2), atEnd: along(push.end as number), apex };
         };
         // Numerical, not physical: the advance's closed form reaches handReach to rounding.
         const TOLERANCE = 1e-12;
-        // P2b.2b.2c.3b.1 design §5 (was the hands stopping at handReach): the finish eases them to rest a further
-        // handReach on, 2·handReach from contact in all.
+        // Shapes design §2 (was the hands stopping at handReach, then P2b.2b.2c.3b.1 design §5's ease to rest at
+        // 2·handReach): the push carries them handReach, both sharing it, then the hands' finish swings them on to
+        // its apex, where they hold.
         const without = travel(pushed({}));
-        expect(without.last).toBeCloseTo(0.6, 9);
+        expect(without.atEnd).toBeCloseTo(0.3, 9);
+        expect(without.last).toBeCloseTo(without.apex, 5);
         const withAdvance = travel(pushed({ advance: 0 }));
-        expect(withAdvance.most).toBeLessThanOrEqual(0.6 + TOLERANCE);
-        expect(withAdvance.last).toBeCloseTo(0.6, 9);
+        expect(withAdvance.atEnd).toBeLessThanOrEqual(0.3 + TOLERANCE);
+        expect(withAdvance.atEnd).toBeCloseTo(0.3, 9);
+        expect(withAdvance.most).toBeLessThanOrEqual(withAdvance.apex + 1e-5);
+        expect(withAdvance.last).toBeCloseTo(withAdvance.apex, 5);
     });
 
     it("rejects no travel and a non-finite timing", () => {
@@ -347,7 +357,7 @@ describe("the push on every stroke (P2b.2b.2c.3a A2 item 8)", () => {
         const setup = stroke({ handReach: 0.3 }, { advance: 0 });
         const track = trackOf(setup);
         expect(finishKind(track)).toBe("carry");
-        const rest = (track.push as Push).rest as number;
+        const rest = handsApex(track.push as Push) as number;
         const { result, follow } = run(setup);
         expect(result.release).toBeUndefined();
         expect(follow.finish).toBeGreaterThanOrEqual(rest);
@@ -356,18 +366,19 @@ describe("the push on every stroke (P2b.2b.2c.3a A2 item 8)", () => {
     });
 
     it("merges an advance into a roll's push", () => {
-        // The advance adds its travel to the plan's, so the push reaches its length sooner. P2b.2b.2c.3b.1 design §5
-        // (was the cap stopping the hands at handReach): the finish eases them to rest a further handReach on, and no
-        // further. Numerical, not physical: the rest sets the travel to 2·handReach, so only rounding is allowed.
-        const TOLERANCE = 1e-12;
+        // The advance adds its travel to the plan's, so the push reaches its length sooner. Shapes design §2 (was the
+        // cap stopping the hands at handReach, then P2b.2b.2c.3b.1 design §5's ease to rest at 2·handReach): the
+        // hands' finish swings them on to its apex, and no further, to the table's interpolation.
         const without = trackOf(stroke({}, {}, "half-roll"));
         const withAdvance = trackOf(stroke({}, { advance: 0 }, "half-roll"));
-        const reach = withAdvance.arc.handReach;
-        expect((withAdvance.push as Push).end as number).toBeLessThan((without.push as Push).end as number);
+        const push = withAdvance.push as Push;
+        const finish = push.finish as NonNullable<Push["finish"]>;
+        const apex = push.low + withAdvance.arc.handArcRadius * Math.sin(finish.phiApex);
+        expect(push.end as number).toBeLessThan((without.push as Push).end as number);
         let most = 0;
         for (let k = 0; k <= 2000; k++) {
             most = Math.max(most, alongFrom(withAdvance, withAdvance.arc.contactAt + k * 1e-3));
         }
-        expect(most).toBeLessThanOrEqual(2 * reach + TOLERANCE);
+        expect(most).toBeLessThanOrEqual(apex + 1e-5);
     });
 });

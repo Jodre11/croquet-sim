@@ -35,6 +35,7 @@ import {
     type GripState,
     type HandLoad,
     type PreparedTrack,
+    handsApex,
     type Push,
 } from "../../../src/engine/impact/track";
 import { exp } from "../../../src/engine/math/elementary";
@@ -784,7 +785,7 @@ describe("the flex (P2b.2b.2b.2b design §3.1, §7.1)", () => {
         // and the feed-forward has no deceleration term along aim.
         const arc = STILL({ pivotVelocity: vec3(1, 0, 0), handReach: 0.05, window: 0.005, handWindow: 0.005 });
         const track = prepareAt(arc, 0);
-        const rest = (track.push as Push).rest as number;
+        const rest = handsApex(track.push as Push) as number;
         const grip = newGripState();
         for (const t of [rest + 0.02, rest + 0.05]) {
             const load = handLoad(track, headOnPath(track, TEST_HEAD, t), TEST_HEAD, t, grip, IMPACT_DT);

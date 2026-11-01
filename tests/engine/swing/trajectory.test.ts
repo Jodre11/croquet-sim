@@ -126,6 +126,9 @@ describe("strokeTrajectory (design §4.3)", () => {
             world: WORLD,
             shape: { handTempo: { slow: 0.13, fast: 0.065 } },
             stroke: { timing: { arc: -0.1455, hands: 0, dip: 0 } },
+            // Shapes design §2: on a 15 m arc (was the preset's 1.5 m), so that this mistimed roll's 11.3 m/s hands'
+            // finish stays below its quarter turn.
+            drive: { handArcRadius: 15 },
         });
         const traced = simulateShot(shot, WORLD, { trajectory: true });
         const late = traced.trajectory as SwingTrajectory;

@@ -83,10 +83,10 @@ describe("the finite-state guard (design §3)", () => {
         const drive = contact.drive as TrackDrive;
         const advance = { start: drive.arc.contactAt + 0.05, speed: 1e300, accel: 1e300 };
         const broken = { ...contact, drive: { ...drive, arc: { ...drive.arc, advance } } };
+        // Shapes design §2: the broken advance ends the push at 1e300 m/s, and the hands' finish now refuses that pace
+        // when the track is prepared, before any step; the guard's own naming is pinned on assertFinite below.
         expect(() => simulateImpact(broken, setup.balls, world)).toThrow(RangeError);
-        expect(() => simulateImpact(broken, setup.balls, world)).toThrow(
-            /went non-finite .* s from contact, at step \d+ \(impact\)/,
-        );
+        expect(() => simulateImpact(broken, setup.balls, world)).toThrow(/past the top of the hands' arc/);
     });
     it("names a NaN velocity's step and phase, and passes a finite state", () => {
         expect(() => assertFinite(nanHead, [], [], 0.001, 3, "impact")).toThrow(/head state .* at step 3 \(impact\)/);

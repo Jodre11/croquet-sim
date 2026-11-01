@@ -13,7 +13,7 @@ import {
 import { faceKey, headLowestPoint } from "../../../src/engine/impact/contacts";
 import { simulateShot } from "../../../src/engine/shot";
 import { simulateImpact, simulateStroke } from "../../../src/engine/impact/simulateImpact";
-import { HAND_COUPLING, handsAt, pitchAxis, prepareTrack, type Push } from "../../../src/engine/impact/track";
+import { HAND_COUPLING, handsApex, handsAt, pitchAxis, prepareTrack, type Push } from "../../../src/engine/impact/track";
 import type { ContactState, TrackDrive } from "../../../src/engine/impact/types";
 import { dot, length, sub } from "../../../src/engine/math/vec3";
 import { buildContact, planStroke } from "../../../src/engine/swing/buildContact";
@@ -184,9 +184,9 @@ describe("the follow-through (design §4)", () => {
         // hand open; a push's never opens now, design §2): the first step at or after push.rest.
         const { contact, follow } = stroke(shot({ backswing: 0.25 }, CARRY));
         const push = prepareTrack(contact.drive as TrackDrive, contact.head, WORLD.gravity).push as Push;
-        expect(push.rest).not.toBeNull();
-        expect(follow.finish).toBeGreaterThanOrEqual(push.rest as number);
-        expect(follow.finish).toBeLessThan((push.rest as number) + IMPACT_DT + 1e-12);
+        expect(handsApex(push)).not.toBeNull();
+        expect(follow.finish).toBeGreaterThanOrEqual(handsApex(push) as number);
+        expect(follow.finish).toBeLessThan((handsApex(push) as number) + IMPACT_DT + 1e-12);
         expect(follow.flags).not.toContain("follow-cap");
     });
 
@@ -198,26 +198,25 @@ describe("the follow-through (design §4)", () => {
         const planned = planStroke(setup, lawn);
         const push = prepareTrack(planned.contact.drive as TrackDrive, planned.contact.head, lawn.gravity).push as Push;
         const { follow } = simulateStroke(planned.contact, setup.balls, lawn);
-        expect(push.rest).not.toBeNull();
+        expect(handsApex(push)).not.toBeNull();
         expect(follow.flags).not.toContain("follow-cap");
-        expect(follow.finish).toBeGreaterThanOrEqual(push.rest as number);
+        expect(follow.finish).toBeGreaterThanOrEqual(handsApex(push) as number);
     });
 
-    it("lets a slow finish reach its rest: the cap counts from the push's end (P2b.2b.2c.3b.1 design §5)", () => {
-        // The full roll at a quarter of its canonical power, its finish's rest more than FOLLOW_CAP after contact but
-        // within it of the push's end: the cap is a safety net and must not cut a planned finish short.
+    it("lets a slow push's finish reach its hands' apex within the cap from the push's end", () => {
+        // The full roll at a quarter of its canonical power: a late push's end (0.40 s) and a slow finish. Shapes
+        // design §2: its hands' apex is now 0.83 s after contact (was P2b.2b.2c.3b.1 design §5's rest beyond
+        // FOLLOW_CAP), so the cap's count from the push's end is no longer exercised here; it must still not bind.
         const lawn = openWorld(10);
         const setup = mapSetup("full-roll", textBook("full-roll"), 0.1535 / 4);
         const planned = planStroke(setup, lawn);
-        const contactAt = (planned.contact.drive as TrackDrive).arc.contactAt;
         const push = prepareTrack(planned.contact.drive as TrackDrive, planned.contact.head, lawn.gravity).push as Push;
         expect(push.end).not.toBeNull();
-        expect(push.rest as number).toBeGreaterThan(contactAt + FOLLOW_CAP);
-        expect(push.rest as number).toBeLessThan((push.end as number) + FOLLOW_CAP);
+        expect(handsApex(push) as number).toBeLessThan((push.end as number) + FOLLOW_CAP);
         const { follow } = simulateStroke(planned.contact, setup.balls, lawn);
         expect(follow.flags).not.toContain("follow-cap");
-        expect(follow.finish).toBeGreaterThanOrEqual(push.rest as number);
-        expect(follow.finish).toBeLessThan((push.rest as number) + IMPACT_DT + 1e-12);
+        expect(follow.finish).toBeGreaterThanOrEqual(handsApex(push) as number);
+        expect(follow.finish).toBeLessThan((handsApex(push) as number) + IMPACT_DT + 1e-12);
     });
 
     it("caps a carry whose hands never stop", () => {
@@ -327,10 +326,10 @@ describe("the finish from the inputs (P2b.2b.2c.3a A2 item 7)", () => {
         const setup = canonicalSetup("half-roll", { stroke: { drive: -1 } });
         const push = planOf(setup).push as Push;
         expect(finishKind(planOf(setup))).toBe("check");
-        expect(push.rest).not.toBeNull();
+        expect(handsApex(push)).not.toBeNull();
         const { follow } = stroke(setup, DEFAULT);
         expect(follow.flags).not.toContain("follow-cap");
-        expect(follow.finish).toBeGreaterThanOrEqual(push.rest as number);
+        expect(follow.finish).toBeGreaterThanOrEqual(handsApex(push) as number);
     });
 
     it("settles a braked drive on the hold, its hands one hand breadth apart, well before the cap", () => {

@@ -116,6 +116,7 @@ import {
 import {
     advanceChains,
     handLoad,
+    handsApex,
     handsAt,
     holdPendulum,
     newGripState,
@@ -420,15 +421,16 @@ function finished(kind: FinishKind, plan: PreparedTrack, state: HeadState, t: nu
         case "check": {
             // Moving hands carry a held head with them, at rest relative to them at once: wait for the hands' rest.
             const { push } = plan;
-            if (push !== null && (push.rest === null || t < push.rest)) {
+            const apex = push === null ? null : handsApex(push);
+            if (push !== null && (apex === null || t < apex)) {
                 return false;
             }
             return length(sub(state.velocity, handsAt(plan, t).velocity)) < FINISH_SPEED;
         }
         case "carry": {
             // A carry always has a push (finishKind); one whose hands never reach its length never rests.
-            const rest = (plan.push as Push).rest;
-            return rest !== null && t >= rest;
+            const apex = handsApex(plan.push as Push);
+            return apex !== null && t >= apex;
         }
     }
 }

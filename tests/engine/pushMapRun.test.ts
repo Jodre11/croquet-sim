@@ -142,11 +142,13 @@ describe("one plan's run (P2b.2b.2c.3b plan Task 3)", () => {
         expect(sample.passes).toBe(PRACTICE_PASSES);
     });
 
-    it("grades the full roll's text book at p = 1.5 as superhuman: a hand reaches its grip's limit", () => {
-        // At p = 1.5 (h_body and intensity 0.5) the impact raises grip-limit, first in decision 5's order.
+    it("grades the full roll's text book at p = 1.5 as unreachable: its hands' finish passes the arc's top", () => {
+        // Shapes design §2 (was superhuman, the impact raising grip-limit, first in decision 5's order): at p = 1.5
+        // (h_body and intensity 0.5) the push ends so fast that the hands' finish would swing past the quarter turn
+        // of their 1.5 m arc, which planning now refuses before the impact is played.
         const sample = playSample("full-roll", textBook("full-roll"), 1.5, [10]);
-        expect(sample.klass).toBe("superhuman");
-        expect(sample.reason).toBe("grip-limit");
+        expect(sample.klass).toBe("unreachable");
+        expect(sample.reason).toMatch(/past the top of the hands' arc/);
     });
 });
 

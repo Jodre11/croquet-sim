@@ -122,11 +122,10 @@ const REACH_SEARCH = 0.5;
 const REACH_BISECTIONS = 80;
 
 /**
- * The pace along aim (m/s) at the push's end below which the finish has no length: the hands are at rest there, and
- * `rest` is the push's end (P2b.2b.2c.3b.1 design §5). A numerical floor, not physical, for a zero pace seen through
- * rounding only: an advance whose own ease ends at handReach reaches it at rest only to rounding, the bisection's end
- * landing where the ease's travel rounds to handReach with a pace of order 1e-8 m/s, which would otherwise put the
- * rest V/finishDecel = 2·handReach/V some 6e7 s away at a handReach of 0.3 m. Every planned pace is far above it.
+ * The pace along aim (m/s) at the push's end below which the finish has no length: the hands are at their apex there
+ * (shapes design §2). A numerical floor, not physical, for a zero pace seen through rounding only: an advance whose
+ * own ease ends at handReach reaches it at rest only to rounding, the bisection's end landing where the ease's travel
+ * rounds to handReach with a pace of order 1e-8 m/s. Every planned pace is far above it.
  */
 const FINISH_REST_PACE = 1e-6;
 
@@ -354,9 +353,10 @@ export interface Advance {
  * above 0: from `start` (contactAt), the planned pivot at `origin`, the intended path travels along aim at the plan's
  * pace plus any `advance`'s on the hands' arc. It reaches pendulumAt·handReach at `pendulum` and the push length
  * handReach at `end`, where the finish begins (s from t = 0; null where the hands do not travel that far within
- * REACH_SEARCH): the hands carry on up the arc from `finishSpeed` and ease to rest at `finishDecel` by `rest`
- * (P2b.2b.2c.3b.1 design §5). `low` is s_low (m), the arc's lowPoint else handArcLow·handReach, and `level`
- * √(ρ_h² − s_low²) (m), the arc's centre's height above the hands at contact.
+ * REACH_SEARCH): the hands carry on up the arc from `finishSpeed` as a point pendulum under gravity to their apex,
+ * and hold there (`finish`; shapes design §2, superseding P2b.2b.2c.3b.1 design §5's ease to rest). `low` is s_low
+ * (m), the arc's lowPoint else handArcLow·handReach, and `level` √(ρ_h² − s_low²) (m), the arc's centre's height above
+ * the hands at contact.
  */
 export interface Push {
     readonly start: number;
@@ -372,14 +372,27 @@ export interface Push {
      * design §5); 0 when `end` is null, and below FINISH_REST_PACE, rounding.
      */
     readonly finishSpeed: number;
-    /** The finish's ease, V²/(2·handReach) (m/s²; design §5): to rest over a further push length; 0 when V is 0. */
-    readonly finishDecel: number;
-    /**
-     * When the hands come to rest, end + V/finishDecel (s), 2·handReach along aim from the push's origin (design §5),
-     * where a carry's follow-through ends: `end` itself when V is 0; null when `end` is null, a push whose finish
-     * never starts.
-     */
-    readonly rest: number | null;
+    /** The hands' finish from `end` (shapes design §2); null exactly when `end` is null, a push whose finish never starts. */
+    readonly finish: HandsFinish | null;
+}
+
+/**
+ * The hands' finish (shapes design §2): a point pendulum on the hands' arc from the push's end, φ̈ = −(g/ρ_h)·sin φ
+ * with sin φ = (s − s_low)/ρ_h, from φ_r at the push length and φ̇_r = V/(ρ_h·cos φ_r), V the push's finishSpeed. φ
+ * and φ̇ are tabulated every FREE_STEP from `from` (semi-implicit Euler) up to the sample past `apex`, the time φ̇
+ * falls to 0 (linearly interpolated), from which the hands hold at `phiApex`: `from` itself when V is 0.
+ */
+export interface HandsFinish {
+    readonly from: number;
+    readonly phi: readonly number[];
+    readonly rate: readonly number[];
+    readonly apex: number;
+    readonly phiApex: number;
+}
+
+/** When `push`'s hands reach their finish's apex and hold (s; shapes design §2); null when the push has no end. */
+export function handsApex(push: Push): number | null {
+    return push.finish?.apex ?? null;
 }
 
 /**
@@ -813,11 +826,10 @@ function computePush(track: PreparedTrack): Push {
     const advance = arc.advance === undefined ? null : advanceOf(arc, arc.advance);
     const origin = planPivot(track, arc.contactAt).P;
     const end = travelTime(track, arc.handReach, advance);
-    // The finish (P2b.2b.2c.3b.1 design §5): from the pace at the push's end, eased to rest over a further push length.
+    // The finish (shapes design §2): from the pace at the push's end, the hands swing on up their arc under gravity.
     const pace = end === null ? 0 : pushTravel(track, origin, advance, end).v;
     const finishSpeed = pace < FINISH_REST_PACE ? 0 : pace;
-    const finishDecel = finishSpeed > 0 ? (finishSpeed * finishSpeed) / (2 * arc.handReach) : 0;
-    const rest = end === null ? null : finishSpeed > 0 ? end + finishSpeed / finishDecel : end;
+    const finish = end === null ? null : handsFinishOf(track, low, end, finishSpeed);
     return {
         start: arc.contactAt,
         origin,
@@ -827,9 +839,80 @@ function computePush(track: PreparedTrack): Push {
         level: Math.sqrt(arc.handArcRadius * arc.handArcRadius - low * low),
         advance,
         finishSpeed,
-        finishDecel,
-        rest,
+        finish,
     };
+}
+
+/**
+ * The hands' finish (HandsFinish; shapes design §2) of `track`'s push from `from`, its arc lowest `low` (m) along aim
+ * from the push's origin, at along-aim pace V (m/s). Throws where the swing would carry the hands to or past the
+ * arc's quarter turn, cos φ_r − ρ_h·φ̇_r²/(2g) ≤ 0, where s(φ) has no inverse. Tabulates for FREE_SPAN at most; a
+ * swing still rising there holds where the table ends.
+ */
+function handsFinishOf(track: PreparedTrack, low: number, from: number, V: number): HandsFinish {
+    const { handArcRadius: rho, handReach } = track.arc;
+    const g = track.gravity;
+    // φ_r = asin(u/ρ_h), u the push length past the arc's low point, through the exact atan2.
+    const u = handReach - low;
+    const cos0 = Math.sqrt(rho * rho - u * u) / rho;
+    const phi0 = atan2(u / rho, cos0);
+    const rate0 = V / (rho * cos0);
+    // Without gravity nothing turns the swing back, and it would coast through the quarter turn: a weightless world
+    // (a test's) holds the hands at the push's end.
+    if (!(g > 0)) {
+        return { from, phi: [phi0], rate: [0], apex: from, phiApex: phi0 };
+    }
+    if (!(cos0 - (rho * rate0 * rate0) / (2 * g) > 0)) {
+        throw new RangeError(
+            `the hands' finish from ${V} m/s would carry them past the top of the hands' arc ` +
+                `(handArcRadius ${rho} m): its apex lies at or beyond a quarter turn`,
+        );
+    }
+    const phi: number[] = [phi0];
+    const rate: number[] = [rate0];
+    if (!(rate0 > 0)) {
+        return { from, phi, rate, apex: from, phiApex: phi0 };
+    }
+    const n = Math.round(FREE_SPAN / FREE_STEP);
+    let p = phi0;
+    let w = rate0;
+    for (let i = 1; i <= n; i++) {
+        const next = w - (g / rho) * sinCos(p)[0] * FREE_STEP;
+        if (!(next > 0)) {
+            // φ̇ crosses 0 within this step: the apex where its linear fall does, φ rising by the area under it, and the
+            // last sample the apex's, so a read before the apex never runs back down the arc.
+            const f = w / (w - next);
+            const phiApex = p + 0.5 * w * f * FREE_STEP;
+            phi.push(phiApex);
+            rate.push(0);
+            return { from, phi, rate, apex: from + (i - 1 + f) * FREE_STEP, phiApex };
+        }
+        w = next;
+        p += w * FREE_STEP;
+        phi.push(p);
+        rate.push(w);
+    }
+    return { from, phi, rate, apex: from + n * FREE_STEP, phiApex: p };
+}
+
+/** φ, φ̇ and φ̈ of the hands' finish `finish` at time t, at or after its start, holding from its apex (shapes design §2). */
+function handsFinishAt(
+    track: PreparedTrack,
+    finish: HandsFinish,
+    t: number,
+): { readonly phi: number; readonly rate: number; readonly accel: number } {
+    if (t >= finish.apex) {
+        return { phi: finish.phiApex, rate: 0, accel: 0 };
+    }
+    const x = (t - finish.from) / FREE_STEP;
+    const last = finish.phi.length - 1;
+    const i = Math.min(Math.floor(x), last - 1);
+    const f = Math.min(x - i, 1);
+    const p0 = finish.phi[i] as number;
+    const w0 = finish.rate[i] as number;
+    const phi = p0 + f * ((finish.phi[i + 1] as number) - p0);
+    const rate = w0 + f * ((finish.rate[i + 1] as number) - w0);
+    return { phi, rate, accel: 0 - (track.gravity / track.arc.handArcRadius) * sinCos(phi)[0] };
 }
 
 /**
@@ -877,25 +960,25 @@ function arcHeight(
 
 /**
  * The push's planned pivot after contactAt (design §4.1; P2b.2b.2c.3a A2 item 8): s(t), the plan's travel along aim
- * from the push's origin plus any advance's, until the push's end; from there the finish (P2b.2b.2c.3b.1 design §5),
- * s = handReach + V·u − ½·d·u², u = t − end, V and d the push's finishSpeed and finishDecel, until `rest`, then
- * handReach + V²/(2·d) at rest; its height on the hands' arc (arcHeight), so the finish carries the hands on forward
- * and up past the arc's low point. Hands that run past the push length without a found end (beyond REACH_SEARCH)
- * rest there: no finish starts.
+ * from the push's origin plus any advance's, until the push's end; from there the hands' finish (shapes design §2),
+ * s = s_low + ρ_h·sin φ on the pendulum's φ(t), holding from its apex; its height on the hands' arc (arcHeight), so
+ * the finish carries the hands on forward and up past the arc's low point. Hands that run past the push length
+ * without a found end (beyond REACH_SEARCH) rest there: no finish starts.
  */
 function carryPivot(track: PreparedTrack, push: Push, t: number): Motion {
     const { aim, handReach } = track.arc;
     let s: number;
     let ds: number;
     let dds: number;
-    if (push.end !== null && t >= push.end) {
-        const V = push.finishSpeed;
-        const d = push.finishDecel;
-        const u = Math.min(t, push.rest as number) - push.end;
-        const moving = t < (push.rest as number);
-        s = handReach + V * u - 0.5 * d * u * u;
-        ds = moving ? V - d * u : 0;
-        dds = moving ? 0 - d : 0;
+    if (push.finish !== null && t >= push.finish.from) {
+        // The hands' finish on the arc (shapes design §2): s = s_low + ρ_h·sin φ, ṡ = ρ_h·cos φ·φ̇,
+        // s̈ = ρ_h·(cos φ·φ̈ − sin φ·φ̇²).
+        const rho = track.arc.handArcRadius;
+        const { phi, rate, accel } = handsFinishAt(track, push.finish, t);
+        const [sin, cos] = sinCos(phi);
+        s = push.low + rho * sin;
+        ds = rho * cos * rate;
+        dds = rho * (cos * accel - sin * rate * rate);
     } else {
         // Before the end, or with none found, the hands never overshoot the push length: s = min(a, handReach).
         const { a, v, acc } = pushTravel(track, push.origin, push.advance, t);
