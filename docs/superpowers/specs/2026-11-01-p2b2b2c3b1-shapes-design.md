@@ -143,8 +143,8 @@ standing rule asks, and only what it finds behind GA ships as its own small PR b
 
 ## 8. Amendment C1 (user, 2026-11-01)
 
-Two rulings from the user while the plan ran. They amend §3 and frame §2's release, and the user's eye on the traces
-judges them.
+Three rulings from the user while the plan ran. They amend §3, frame §2's release and extend its hold, and the user's
+eye on the traces judges them.
 
 **Ruling 10, the release against the striker's ball.** "Generally the finish starts as the striker's ball is leaving
 the mallet for the last time", but "this is not a 100% rule" and it "varies between full and pass rolls": "in the pass
@@ -163,5 +163,33 @@ arc swing" and "the push on the half roll is minimal". This supersedes §3: the 
 pendulumShare, slope hold and spread grip) with a minimal push. handReach is 0.05 m, an assumption, since B1 ruling 4
 makes push length an envelope input; it replaces 0.15 m, which ruling 6 found too much. Its trace is judged by eye.
 
-Task 5's pitch hold stands, and so does its open question: whether the hands' remaining drift under the balls (35–50 mm
-back, 45–75 mm up) is accepted or traced to what should answer the balls' upward push.
+Task 5's pitch hold stands. The hands' remaining drift under the balls (35–50 mm back, 45–75 mm up) is accepted as
+realistic (user, 2026-11-01).
+
+**Ruling 12, the hands guide the mallet on after a short push (draft, for the user's approval).** With the 0.05 m push
+the half roll faults: at the push's end the slope releases and the mallet swings free about the top hand. Leaning
+forward, its head swings down under the hands, overtakes the striker's ball and hits it again 112 ms after the balls
+part (9.5 mm apart, the ball's speed +39%; law 29.1.6.1, three re-contacts in all). The user: "in the half roll the top
+hand is close to stationary, so minimal push makes sense", the bottom hand pushing through the contact "to maintain
+the arc swing", and "there may be a dip and rise in the top hand, like in longer pushes". So after a short push the
+hands do not let go: they carry the mallet on along their arc at its lean, and the mallet swings free only later.
+
+- **The input.** `slopeCarry` ∈ [0, 1], a shape input beside slopeHold: the share of the hands' finish (§2), in arc
+  travel from the push's end (φ_r) to the hands' apex (φ_apex), through which the slope hold and Task 5's pitch hold
+  stay on. The release (§2) moves to the first time the hands' arc reaches φ_r + slopeCarry·(φ_apex − φ_r). At 0 it
+  is the push's end, as now; at 1 the mallet is carried to the hands' apex and swings free from rest relative to them.
+- **Between the push's end and the release** the planned path is the held slope carried by the hands' finish: the
+  hands on their arc, so the top hand dips to the arc's low point and rises after it, and the shaft at its held pitch.
+  From the release, §2's finish runs unchanged: the free pendulum seeded from the planned θ and ω there, its end at the
+  mallet's apex.
+- **Defaults.** The half roll 1; the full and pass rolls 0, unchanged (ruling 10: their release is their push's end;
+  the pass roll's early release is its flick). Every no-push stroke ignores it. Both are assumptions until the envelope
+  phase tunes it with push length (B1 ruling 4).
+- **Not scripted.** The input sets only how long the hands guide; whether the head stays clear of the ball follows from
+  the hands' finish, which slows as the arc rises, against the ball's own run.
+- **Check.** The half roll's text book at canonical power plays with no 29.1.6.1 finding, unpractised and practised,
+  and its trace shows the top hand's dip and rise. If carrying to the apex still re-hits, that is reported, not tuned
+  away.
+
+Assumption: "guide" is a held slope, the shaft's pitch held as through the push, rather than a weaker hold. It is the
+smallest change that matches "maintain the arc swing", and the user's eye on the trace judges it.
