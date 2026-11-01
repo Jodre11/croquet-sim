@@ -1,13 +1,13 @@
 /**
  * Path trace (P2b.2b.2c.3b gate stage 2, the user's question 2026-10-31: "the path of the mallet head must be wrong"):
- * three roll runs replayed side on, the planned path (the track's pathAt and handsAt) against the integrated head, from
+ * runs replayed side on (shapes plan Task 6: the drive and the three rolls' text books at canonical power), the planned path (the track's pathAt and handsAt) against the integrated head, from
  * the downswing's last 100 ms to the follow-through's finish. Per run: an SVG of the side view at true scale (the top
  * hand's planned path dotted and its actual path solid, the leading face's planned path dashed and its actual path
  * solid, ticks every 10 ms along the shaft and along the face) and of the head's lowest point (mm) against time, and a
  * table every 5 ms. A first slice of the side-on viewer; diagnostic, not part of the engine or the test suite.
- * Each run is played as a practised stroke (P2b.2b.2c.3b.1 design §4, §6): the trace is its last pass, the planned
- * path that pass's (its lift included), and the table's header gives the passes and practice's miss. Its outputs are
- * suffixed `-practised`, beside the first trace.
+ * Each roll is played as a practised stroke (P2b.2b.2c.3b.1 design §4, §6): the trace is its last pass, the planned
+ * path that pass's (its lift included), and the table's header gives the passes and practice's miss; the drive, with
+ * no push, plays once. Each legend gives readsOf's reads, and the views reach the finish.
  * Run with `npx --yes tsx scripts/pathTrace.ts`; environment: OUT (a directory, default docs/superpowers/probes).
  * Shapes plan Task 4: `--diagnose` traces the full and pass roll text books alone, every millisecond through the push,
  * with each step's bottom hand off its path, the feed-forward and the rest of the hands' force (flex and chain), each
@@ -19,14 +19,18 @@ import type { FollowSnapshot, ImpactProbe, ImpactSnapshot } from "../src/engine/
 import { PRACTICE_PASSES, practiseStroke } from "../src/engine/impact/practice";
 import { rotate } from "../src/engine/impact/rigidBody";
 import { simulateStroke } from "../src/engine/impact/simulateImpact";
-import { handsAt, headOnPath, pitchAxis, prepareTrack } from "../src/engine/impact/track";
+import { handsAt, headOnPath, pitchAxis, prepareTrack, releaseOf } from "../src/engine/impact/track";
 import type { HeadState, MalletHead } from "../src/engine/impact/types";
 import { add, cross, dot, scale, sub, vec3, type Vec3 } from "../src/engine/math/vec3";
 import { planStroke } from "../src/engine/swing/buildContact";
 import { BALL_IDS, type BallId, type BallState } from "../src/engine/types";
 import type { ShotSetup } from "../src/engine/swing/types";
+import { simulateShot } from "../src/engine/shot";
+import { swingReference } from "../src/reference/index";
+import { canonicalSetup } from "../tests/engine/support/shot";
 import { openWorld } from "./openLawn";
-import { mapSetup, textBook, type MapPlan, type RollType } from "./pushMapRun";
+import { bodyBackswing, mapSetup, playSample, textBook, type MapPlan, type RollType } from "./pushMapRun";
+import { travelOf } from "./ratioFit";
 
 declare const process: {
     readonly env: Readonly<Record<string, string | undefined>>;
@@ -73,49 +77,38 @@ function outOfReach(setup: ShotSetup, aim: Vec3): ShotSetup["balls"] {
     }
     return moved as ShotSetup["balls"];
 }
-/** The cases `--diagnose` traces: the text books. */
-const DIAGNOSED = new Set(["full-roll-textbook", "pass-roll-textbook"]);
+/** The cases `--diagnose` traces: the full and pass rolls' text books. */
+const DIAGNOSED = new Set(["full-roll", "pass-roll"]);
 
-/** One run to trace: its name, type, plan and power. */
+/**
+ * One run to trace (shapes plan Task 6): its name and file, its setup, whether it is practised (a roll, which pushes)
+ * and, for a roll, its type, text book and canonical power, from which its ratio is read as the push map plays it.
+ */
 interface TraceCase {
     readonly name: string;
     readonly file: string;
-    readonly type: RollType;
-    readonly plan: MapPlan;
-    readonly power: number;
+    readonly setup: ShotSetup;
+    readonly roll: { readonly type: RollType; readonly plan: MapPlan; readonly power: number } | null;
+}
+
+/** `type`'s text book at its canonical power: the power at which its backswing is the type's defaultBackswing. */
+function rollCase(type: RollType): TraceCase {
+    const plan = textBook(type);
+    const power = swingReference[type].defaultBackswing.value / bodyBackswing(mapSetup(type, plan, 1), WORLD);
+    const over = INSTANT_PUSH ? { body: { pushForce: 1e6, pushResponseTime: 1e-9 } } : {};
+    return {
+        name: `the ${type.replace("-", " ")}'s text book at its canonical power (${power.toFixed(4)})`,
+        file: type,
+        setup: mapSetup(type, plan, power, over),
+        roll: { type, plan, power },
+    };
 }
 
 const CASES: readonly TraceCase[] = [
-    {
-        name: "today's full roll at its canonical power (played: turf, ratio 1.843)",
-        file: "full-roll-textbook",
-        type: "full-roll",
-        plan: textBook("full-roll"),
-        power: 0.1535,
-    },
-    {
-        name: "an in-band full roll at speedGain 0.5, 4.42 m on the 10 s lawn (read: turf, ratio 1.195)",
-        file: "full-roll-speedgain-0.5",
-        type: "full-roll",
-        plan: {
-            lean: 0.3316125578789226,
-            feet: 0.2696814700042282,
-            drive: 1,
-            handReach: 0.2,
-            window: 0.04,
-            onset: 0,
-            split: 0,
-            speedGain: 0.5,
-        },
-        power: 0.13729876976198027,
-    },
-    {
-        name: "today's pass roll at its canonical power (played: turf, ratio 0.874)",
-        file: "pass-roll-textbook",
-        type: "pass-roll",
-        plan: textBook("pass-roll"),
-        power: 0.3362,
-    },
+    { name: "the drive at its canonical backswing", file: "drive", setup: canonicalSetup("drive"), roll: null },
+    rollCase("half-roll"),
+    rollCase("full-roll"),
+    rollCase("pass-roll"),
 ];
 
 /**
@@ -174,6 +167,12 @@ interface Trace {
     readonly miss: string | null;
     /** The push's end (s), null where it has none. */
     readonly pushEnd: number | null;
+    /** The slope's release into the finish's free swing (s; releaseOf), null where there is none. */
+    readonly release: number | null;
+    /** The end of the striker's ball's last face interval (s): its last departure from the mallet. */
+    readonly lastDeparture: number;
+    /** The hands' planned travel from the release to the finish (m), along aim and up; null without a release. */
+    readonly handsAfterRelease: readonly [number, number] | null;
 }
 
 /**
@@ -220,12 +219,7 @@ function diagnosisOf(instant: Instant, hands: HandForces, axis: Vec3, balls: num
  * first pass alone.
  */
 function trace(c: TraceCase): Trace {
-    const setup = mapSetup(
-        c.type,
-        c.plan,
-        c.power,
-        INSTANT_PUSH ? { body: { pushForce: 1e6, pushResponseTime: 1e-9 } } : {},
-    );
+    const { setup } = c;
     const stroke = planStroke(setup, WORLD);
     const { drive, head } = stroke.contact;
     if (drive.kind !== "track") {
@@ -277,16 +271,17 @@ function trace(c: TraceCase): Trace {
             },
         };
     };
-    const run = UNPRACTISED
-        ? {
-              ...simulateStroke(stroke.contact, NO_BALLS ? outOfReach(setup, arc.aim) : setup.balls, WORLD, {
-                  probe: probeFor(),
-              }),
-              passes: 1,
-              miss: "unpractised: the first pass alone",
-              lift: null,
-          }
-        : practiseStroke(stroke.contact, setup.balls, WORLD, setup.striker, probeFor);
+    const run =
+        UNPRACTISED || c.roll === null
+            ? {
+                  ...simulateStroke(stroke.contact, NO_BALLS ? outOfReach(setup, arc.aim) : setup.balls, WORLD, {
+                      probe: probeFor(),
+                  }),
+                  passes: 1,
+                  miss: c.roll === null ? "unpractised: no push to practise" : "unpractised: the first pass alone",
+                  lift: null,
+              }
+            : practiseStroke(stroke.contact, setup.balls, WORLD, setup.striker, probeFor);
     // The planned path is the last pass's: the arc with the lift it played.
     const played = run.lift === null ? drive : { ...drive, arc: { ...arc, lift: run.lift } };
     const track = prepareTrack(played, head, WORLD.gravity);
@@ -303,6 +298,14 @@ function trace(c: TraceCase): Trace {
     const handsPlanned = planned.map((p) => ({ ...p, hand: handsAt(track, p.t).position }));
     const striker = (setup.balls[setup.striker] as BallState).position;
     const faces = run.result.timeline[`face/${setup.striker}`] ?? [];
+    const release = releaseOf(track);
+    const handsAfterRelease =
+        release === null
+            ? null
+            : ([
+                  dot(sub(handsAt(track, finish).position, handsAt(track, release).position), arc.aim),
+                  handsAt(track, finish).position.z - handsAt(track, release).position.z,
+              ] as const);
     return {
         planned: handsPlanned,
         actual,
@@ -320,6 +323,9 @@ function trace(c: TraceCase): Trace {
         passes: run.passes,
         miss: run.miss,
         pushEnd: track.push?.end ?? null,
+        release,
+        lastDeparture: faces[faces.length - 1]?.end ?? arc.contactAt,
+        handsAfterRelease,
     };
 }
 
@@ -346,19 +352,84 @@ function at(list: readonly Instant[], t: number): Instant | undefined {
 
 const f = (x: number, d = 1): string => x.toFixed(d);
 
+/** The shaft's lean (° from vertical, forward along aim positive). */
+const leanOf = (i: Instant, aim: Vec3): number => Math.atan2(dot(i.shaft, aim), i.shaft.z) * DEG;
+
+/**
+ * The legend's reads (shapes plan Task 6): the balls' distances to rest on the 10 s lawn and the ratio (a roll's as
+ * the push map plays it, practised; the drive's unpractised), the played lean's range, the top hand's largest offset
+ * from its plan, the hands' travel after the release, the shaft's lean at the mallet's apex (the finish) and the
+ * release against the striker's ball's last departure (design §8, ruling 10).
+ */
+function readsOf(c: TraceCase, tr: Trace): readonly string[] {
+    let distances: string;
+    if (c.roll === null) {
+        const striker = travelOf(c.setup, simulateShot(c.setup, WORLD).motion, c.setup.striker);
+        distances = `striker's ball ${f(striker, 2)} m to rest on the 10 s lawn`;
+    } else {
+        const sample = playSample(c.roll.type, c.roll.plan, c.roll.power, [10]);
+        const read = sample.byLawn[10];
+        const range = read?.range ?? NaN;
+        const ratio = read?.ratio ?? NaN;
+        distances =
+            `to rest on the 10 s lawn: croqueted ${f(range * ratio, 2)} m, striker's ${f(range, 2)} m, ` +
+            `ratio ${f(ratio, 3)}; push map: ${sample.klass === null ? "valid" : `${sample.klass} (${sample.reason})`}`;
+    }
+    const after = tr.actual.filter((i) => i.t >= tr.firstFace);
+    const leans = after.map((i) => leanOf(i, tr.aim));
+    let worst = { off: 0, along: 0, up: 0, t: tr.firstFace };
+    for (const a of after) {
+        const p = at(tr.planned, a.t);
+        if (p !== undefined && Math.abs(p.t - a.t) <= 0.001) {
+            const off = sub(a.hand, p.hand);
+            const size = Math.hypot(dot(off, tr.aim), off.z);
+            if (size > worst.off) {
+                worst = { off: size, along: dot(off, tr.aim), up: off.z, t: a.t };
+            }
+        }
+    }
+    const ms = (t: number): string => f((t - tr.firstFace) * 1000, 1);
+    const end = after[after.length - 1];
+    return [
+        distances,
+        `played lean ${f(Math.min(...leans))}° to ${f(Math.max(...leans))}° from first contact to the finish`,
+        `top hand's largest offset ${f(worst.off * 1000, 0)} mm (${f(worst.along * 1000, 0)} along, ` +
+            `${f(worst.up * 1000, 0)} up) at ${ms(worst.t)} ms`,
+        tr.release === null || tr.handsAfterRelease === null
+            ? "no release: the hands' travel after it is nil"
+            : `hands after the release: ${f(tr.handsAfterRelease[0] * 1000, 0)} mm along, ` +
+              `${f(tr.handsAfterRelease[1] * 1000, 0)} mm up`,
+        `shaft lean at the mallet's apex (finish, ${ms(tr.finish)} ms) ${end === undefined ? "n/a" : f(leanOf(end, tr.aim))}°`,
+        tr.release === null
+            ? `no release; the striker's ball last leaves the face at ${ms(tr.lastDeparture)} ms`
+            : `release ${ms(tr.release)} ms, the striker's ball last leaves the face at ${ms(tr.lastDeparture)} ms ` +
+              `(release ${f((tr.release - tr.lastDeparture) * 1000, 1)} ms after it)` +
+              (tr.pushEnd === null ? "" : `; push ends ${ms(tr.pushEnd)} ms`),
+    ];
+}
+
 /** The run's SVG: the side view at true scale, then the lowest point (mm) against time from first contact (ms). */
-function svgOf(c: TraceCase, tr: Trace, R: number): string {
+function svgOf(c: TraceCase, tr: Trace, R: number, reads: readonly string[]): string {
     const W = 1000;
     const pad = 50;
-    const x0 = -0.6;
+    // The view reaches every traced point to the finish (the user, 2026-11-01: the plots cropped it).
+    const traced = [...tr.planned, ...tr.actual].flatMap((i) => [side2d(i.hand, tr), side2d(i.face, tr)]);
     const ballReach = tr.balls.flatMap((track) => track.map((p) => side2d(p, tr)[0]));
-    const x1 = Math.max(0.8, Math.ceil((Math.max(...ballReach) + 2 * R) * 10) / 10);
+    const x0 = Math.min(-0.6, Math.floor((Math.min(...traced.map(([x]) => x)) - 0.05) * 10) / 10);
+    const x1 = Math.max(
+        0.8,
+        Math.ceil((Math.max(...ballReach) + 2 * R) * 10) / 10,
+        Math.ceil((Math.max(...traced.map(([x]) => x)) + 0.05) * 10) / 10,
+    );
     const z0 = -0.03;
-    const z1 = 0.95;
+    const z1 = Math.max(0.95, Math.ceil((Math.max(...traced.map(([, z]) => z)) + 0.05) * 10) / 10);
     const k = (W - 2 * pad) / (x1 - x0);
     const sideH = (z1 - z0) * k;
+    // The reads, then the key (two inks and a line per ball), sit above the side view.
+    const key = 60 + 18 * reads.length;
+    const head = key + 18 * (2 + tr.balls.length);
     const sx = (x: number): number => pad + (x - x0) * k;
-    const sz = (z: number): number => pad + (z1 - z) * k;
+    const sz = (z: number): number => head + (z1 - z) * k;
     const pts = (list: readonly Instant[], pick: (i: Instant) => Vec3): string =>
         list
             .map((i) => side2d(pick(i), tr))
@@ -366,13 +437,16 @@ function svgOf(c: TraceCase, tr: Trace, R: number): string {
             .map(([x, z]) => `${f(sx(x))},${f(sz(z))}`)
             .join(" ");
     const parts: string[] = [];
-    const top = pad + sideH + 70;
+    const top = head + sideH + 70;
     const plotH = 300;
     const tFrom = -40;
     const tTo = (tr.finish - tr.firstFace) * 1000;
+    // Ticks along the paths and the time axis's labels thin out on a long finish.
+    const tick = tTo > 400 ? 50 : 10;
+    const label = tTo > 400 ? 100 : 20;
     const lowValues = [...tr.planned, ...tr.actual].map((i) => i.low * 1000);
     const lMin = Math.min(-5, ...lowValues);
-    const lMax = Math.ceil(Math.min(200, Math.max(10, ...lowValues)) / 10) * 10;
+    const lMax = Math.ceil(Math.max(10, ...lowValues) / 20) * 20;
     const tx = (ms: number): number => pad + ((ms - tFrom) / (tTo - tFrom)) * (W - 2 * pad);
     const ly = (mm: number): number => top + ((lMax - Math.min(lMax, mm)) / (lMax - lMin)) * plotH;
     const H = top + plotH + 60;
@@ -382,6 +456,7 @@ function svgOf(c: TraceCase, tr: Trace, R: number): string {
         `<text x="${pad}" y="24" font-size="15" font-weight="bold">${c.name}</text>`,
         `<text x="${pad}" y="42" fill="#555">side on, true scale; x along aim from the striker's ball, ` +
             `flags: ${tr.flags.join(", ") || "none"}</text>`,
+        ...reads.map((r, i) => `<text x="${pad}" y="${60 + 18 * i}" fill="#333">${r}</text>`),
         `<line x1="${sx(x0)}" y1="${f(sz(0))}" x2="${sx(x1)}" y2="${f(sz(0))}" stroke="#2a7d2a" stroke-width="2"/>`,
     );
     // Each ball: its start, a ghost every 20 ms of the impact, its centre's path, and where it is as the impact ends.
@@ -421,7 +496,7 @@ function svgOf(c: TraceCase, tr: Trace, R: number): string {
             `stroke-dasharray="6 4"/>`,
         `<polyline points="${pts(tr.actual, (i) => i.face)}" fill="none" stroke="#c0392b" stroke-width="1.2"/>`,
     );
-    for (let ms = -100; ms <= tTo; ms += 10) {
+    for (let ms = -100; ms <= tTo; ms += tick) {
         const i = at(tr.actual, tr.firstFace + ms / 1000) ?? at(window, tr.firstFace + ms / 1000);
         if (i === undefined || Math.abs(i.t - (tr.firstFace + ms / 1000)) > 0.002) {
             continue;
@@ -442,9 +517,8 @@ function svgOf(c: TraceCase, tr: Trace, R: number): string {
         );
     }
     parts.push(
-        `<text x="${W - pad - 330}" y="${pad + 20}" fill="#1f5fbf">top hand: planned dotted, actual solid; ` +
-            `ticks = shaft</text>`,
-        `<text x="${W - pad - 330}" y="${pad + 38}" fill="#c0392b">leading face: planned dashed, actual solid; ` +
+        `<text x="${pad}" y="${key}" fill="#1f5fbf">top hand: planned dotted, actual solid; ` + `ticks = shaft</text>`,
+        `<text x="${pad}" y="${key + 18}" fill="#c0392b">leading face: planned dashed, actual solid; ` +
             `ticks = face</text>`,
         ...tr.balls.map((track, b) => {
             const name = b === tr.striker ? "striker's ball" : "croqueted ball";
@@ -458,7 +532,7 @@ function svgOf(c: TraceCase, tr: Trace, R: number): string {
             const [zx, zz] = side2d(z, tr);
             const [sx0] = side2d(track[0] as Vec3, tr);
             return (
-                `<text x="${W - pad - 330}" y="${pad + 56 + 18 * b}" fill="${BALL_INKS[b % BALL_INKS.length]}">` +
+                `<text x="${pad}" y="${key + 36 + 18 * b}" fill="${BALL_INKS[b % BALL_INKS.length]}">` +
                 `${name}: ghosts every 20 ms; at impact end ${f((zx - sx0) * 1000, 0)} mm on, ` +
                 `${f((zx - ax) / dt, 2)} m/s along, ${f((zz - az) / dt, 2)} m/s up</text>`
             );
@@ -468,10 +542,11 @@ function svgOf(c: TraceCase, tr: Trace, R: number): string {
         `<rect x="${pad}" y="${f(ly(0))}" width="${W - 2 * pad}" height="${f(ly(lMin) - ly(0))}" fill="#e8f3e8"/>`,
         `<line x1="${pad}" y1="${f(ly(0))}" x2="${W - pad}" y2="${f(ly(0))}" stroke="#2a7d2a" stroke-width="1.5"/>`,
     );
-    for (let mm = Math.ceil(lMin / 20) * 20; mm <= lMax; mm += 20) {
+    const rung = lMax > 200 ? 100 : 20;
+    for (let mm = Math.ceil(lMin / rung) * rung; mm <= lMax; mm += rung) {
         parts.push(`<text x="${pad - 8}" y="${f(ly(mm) + 4)}" text-anchor="end" fill="#555">${mm}</text>`);
     }
-    for (let ms = Math.ceil(tFrom / 20) * 20; ms <= tTo; ms += 20) {
+    for (let ms = Math.ceil(tFrom / label) * label; ms <= tTo; ms += label) {
         parts.push(
             `<line x1="${f(tx(ms))}" y1="${f(top)}" x2="${f(tx(ms))}" y2="${f(top + plotH)}" stroke="#eee"/>`,
             `<text x="${f(tx(ms))}" y="${f(top + plotH + 18)}" text-anchor="middle" fill="#555">${ms}</text>`,
@@ -499,10 +574,11 @@ function svgOf(c: TraceCase, tr: Trace, R: number): string {
     return parts.join("\n");
 }
 
-/** The run's table every 5 ms from 20 ms before first contact. */
-function tableOf(c: TraceCase, tr: Trace): string {
+/** The run's legend's reads, then its table every 5 ms from 20 ms before first contact. */
+function tableOf(c: TraceCase, tr: Trace, reads: readonly string[]): string {
     const lines = [
         `== ${c.name} ==`,
+        ...reads,
         `practised: ${tr.passes} pass${tr.passes === 1 ? "" : "es"} of ${PRACTICE_PASSES}; ` +
             `${tr.miss === null ? "in the band" : `out of the band: ${tr.miss}`}`,
         `first contact ${f(tr.firstFace * 1000, 2)} ms (planned ${f(tr.contactAt * 1000, 2)} ms), impact ends ` +
@@ -601,9 +677,10 @@ if (DIAGNOSE) {
 }
 for (const c of CASES) {
     const tr = trace(c);
-    fs.writeFileSync(`${OUT}/2026-10-31-path-trace-${c.file}-practised.svg`, svgOf(c, tr, WORLD.ball.radius));
-    tables.push(tableOf(c, tr));
+    const reads = readsOf(c, tr);
+    fs.writeFileSync(`${OUT}/2026-11-01-path-trace-${c.file}.svg`, svgOf(c, tr, WORLD.ball.radius, reads));
+    tables.push(tableOf(c, tr, reads));
 }
 const text = tables.join("\n\n");
-fs.writeFileSync(`${OUT}/2026-10-31-path-trace-practised.txt`, `${text}\n`);
+fs.writeFileSync(`${OUT}/2026-11-01-path-trace-shapes.txt`, `${text}\n`);
 console.log(text);
