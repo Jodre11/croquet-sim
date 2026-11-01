@@ -229,3 +229,8 @@ on side-on traces of the three rolls and a plain drive. Practice (§4) stays in 
 **Open for design.** How the hands keep the finish going (the hands carrying on along their arc under gravity alone,
 or the arms and mallet swinging on as one pendulum), and what reduces the flex. If it is the hands' coupling, note that
 ratioFit fits its period and damping to the drive's and the AC stop's ratios, so changing it moves those fits.
+
+**Ruling 6** (user, 2026-11-01). The push's length and its acceleration are what tell the rolls apart: pass roll, full
+roll and so on. A half roll is generally a drive with lean. Today's half-roll preset carries a push (`handReach`
+0.15 m, `speedGain` 0.1 over 20 ms, src/engine/swing/profile.ts), against the full and pass rolls' 0.3 m at speedGain
+0.1 over 30 ms and 0.5 over 15 ms; whether its text book drops the push is open.
