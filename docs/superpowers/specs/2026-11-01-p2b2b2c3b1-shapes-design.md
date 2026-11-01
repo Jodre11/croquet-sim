@@ -140,3 +140,46 @@ standing rule asks, and only what it finds behind GA ships as its own small PR b
 - The half roll's ratio moves with its lost push and its new shape, and may leave its band. It is read, not gated, in
   this phase.
 - The diagnosis may find the runaway lies in practice itself, which would reopen the parent's §4.
+
+## 8. Amendment C1 (user, 2026-11-01)
+
+Two rulings from the user while the plan ran. They amend §2 and §3, and the user's eye on the traces judges them.
+
+**Ruling 10, the release follows the striker's ball.** "Generally the finish starts as the striker's ball is leaving
+the mallet for the last time. In a slower push the player can judge it." The release (§2) becomes the earlier of:
+- the push's planned end, as now; and
+- t_d + τ_sense, where t_d is the end of the striker's ball's last contact with the face and τ_sense is the player's
+  prepared response to feeling it go.
+
+Neither case is scripted; which one rules emerges from the push's pace:
+- in a slow push the ball leaves well before the hands reach handReach, the player feels it and eases off, and the
+  finish starts at t_d + τ_sense;
+- in a fast push the push ends before the player can feel the ball go, and the release stays at the push's planned end.
+
+Without a push nothing changes: the release is still the held path's rest, or contact.
+
+τ_sense is a new body input beside pushResponseTime, which is a force rise and has no sensing delay in it (its note).
+Value 0.1 s, lower bound 0.07 s: Forgaard, Franks, Bennett, Maslovat and Chua, "Mechanical perturbations can elicit
+triggered reactions in the absence of a startle response", Exp Brain Res (2018), DOI 10.1007/s00221-017-5134-x. In a
+prepared simple-reaction task against a wrist perturbation, two thirds of responses began within 100 ms and the
+earliest at about 70 ms. Assumptions:
+- an unloading at the face is felt as fast as their perturbation;
+- EMG onset stands in for the release, since the release eases the push rather than starting a new force.
+
+The upper bound and the reference entry (URL, date, SHA-256, quotes) are sourced when the input lands.
+
+Consequences for §2:
+- t_d is known only in play. The finish table is seeded at the release from the planned θ, ω and the hands' state then,
+  so with a push it is built in the integrator at the release, not in prepareTrack. Its equations, its end and the
+  check's rule are unchanged.
+- The hands' release speed V becomes the plan's along-aim pace at the release, not Push.finishSpeed.
+- Practice plays each pass with its own release, and so learns with it.
+- With no balls, t_d never comes and the release is the push's end, as now.
+
+**Ruling 11, the half roll keeps a minimal push.** "The bottom hand always pushes through the contact to maintain the
+arc swing" and "the push on the half roll is minimal". This supersedes §3: the half roll keeps its roll mechanics (its
+pendulumShare, slope hold and spread grip) with a minimal push. handReach is 0.05 m, an assumption, since B1 ruling 4
+makes push length an envelope input; it replaces 0.15 m, which ruling 6 found too much. Its trace is judged by eye.
+
+Task 5's pitch hold stands, and so does its open question: whether the hands' remaining drift under the balls (35–50 mm
+back, 45–75 mm up) is accepted or traced to what should answer the balls' upward push.
