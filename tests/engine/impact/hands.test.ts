@@ -23,6 +23,7 @@ import {
     handLoad,
     headOnPath,
     newGripState,
+    heldPitch,
     pathAt,
     prepareTrack,
     pushResponse,
@@ -657,7 +658,8 @@ describe("the flex (P2b.2b.2b.2b design §3.1, §7.1)", () => {
         // No gravity and a still path: F_ff is zero. A turn δθ about the head's centre, too sudden for the chains to
         // follow, moves each grip r·δθ against its palm's and fingers' springs and costs a moment (K3 + K4)·r² δθ
         // about the pitch axis (gate round 3: the hand–arm chain; was the flex's k₀·r² before the hand masses).
-        const track = prepareAt(STILL({ theta0: -0.5 }), 0);
+        // Shapes plan Task 5: with no push, so the push's pitch hold (holdPitchGains) leaves the grips' moment alone.
+        const track = prepareAt(STILL({ theta0: -0.5, handReach: 0 }), 0);
         const grip = newGripState();
         const on = headOnPath(track, TEST_HEAD, 0);
         handLoad(track, on, TEST_HEAD, 0, grip, IMPACT_DT);
@@ -669,6 +671,36 @@ describe("the flex (P2b.2b.2b.2b design §3.1, §7.1)", () => {
         const grips = TEST_CHAIN.palmStiffness + TEST_CHAIN.fingerStiffness;
         const expected = 0 - grips * (rTop * rTop + rBottom * rBottom) * turn;
         expect(Math.abs(dot(load.torque, track.axis) / expected - 1)).toBeLessThan(0.01);
+    });
+
+    it("stiffens the shaft's pitch through a push (shapes plan Task 5)", () => {
+        // The same sudden turn on a carry with and without a push. The push's other loads differ too, so the hold is
+        // read as the extra stiffness against the turn, which is heldPitch's spring. Without a push nothing is added
+        // (above). The bound is heldPitch's own (below).
+        const pitchAbout = (handReach: number, turn: number): number => {
+            const track = prepareAt(STILL({ theta0: -0.5, handReach }), 0);
+            const grip = newGripState();
+            const on = headOnPath(track, TEST_HEAD, 0);
+            handLoad(track, on, TEST_HEAD, 0, grip, IMPACT_DT);
+            const turned = { ...on, orientation: multiply(axisAngle(track.axis, turn), on.orientation) };
+            return dot(handLoad(track, turned, TEST_HEAD, 0, grip, IMPACT_DT).torque, track.axis);
+        };
+        const step = 1e-6;
+        const extra = (turn: number): number =>
+            (pitchAbout(0.1, turn + step) -
+                pitchAbout(0.1, turn) -
+                (pitchAbout(0, turn + step) - pitchAbout(0, turn))) /
+            step;
+        expect(0 - extra(1e-5)).toBeGreaterThan(0);
+    });
+
+    it("holds heldPitch's couple to ±bound, linear within it", () => {
+        const coupling = prepareAt(STILL(), 0).coupling;
+        const linear = heldPitch(coupling, 0.2, 0.01, 0.3, Infinity);
+        expect(heldPitch(coupling, 0.2, 0.02, 0.6, Infinity)).toBeCloseTo(2 * linear, 9);
+        expect(heldPitch(coupling, 0.2, 0.01, 0.3, linear / 2)).toBeCloseTo(linear / 2, 12);
+        expect(heldPitch(coupling, 0.2, -0.01, -0.3, linear / 2)).toBeCloseTo(0 - linear / 2, 12);
+        expect(heldPitch(coupling, 0.2, 0, 0, 1)).toBe(0);
     });
 
     it("has no runaway: a head held off its intended point by d or 10·d feels exactly ten times the spring", () => {

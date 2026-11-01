@@ -317,13 +317,19 @@ describe("handover of a ball sunk under the head, on whole rolls", () => {
     // 0.9 m/s, every side) found 0.85 m/s: the cap with the head approaching, and the lift clears 558.5–561.2 µm (0.7
     // m/s clears 498.8–507.6 µm, 0.75 m/s 443.1–454.7 µm; at 0.9 m/s side −0.01 the handover throws its sideways
     // overlap error, as it did before this change). The expectation is unchanged.
+    // Shapes plan Task 5: the push's pitch hold (was 0.85 m/s, over 5e-4). Held at its planned pitch, no full roll at
+    // drive −1 sinks the ball past its static sink now: a fourth bounded search (0.7–2.0 m/s, 11 speeds, every side)
+    // found overlapCorrection 0 to 0.9 m/s and at 2 m/s, and 207.6–362.5 µm from 1 to 1.5 m/s, the largest at
+    // 1.5 m/s (329.1–362.5 µm). The fixture moves there and its bound to 3e-4: it still covers the handover clearing
+    // the head after a lift in a whole run, but the ball is no longer sunk past its 437 µm static sink, a cover lost as
+    // the pass roll's was (below); the lift keeps its unit cover above.
     it.each([
-        ["full-roll", 0.85, -1, -0.01],
-        ["full-roll", 0.85, -1, 0],
-        ["full-roll", 0.85, -1, 0.01],
+        ["full-roll", 1.5, -1, -0.01],
+        ["full-roll", 1.5, -1, 0],
+        ["full-roll", 1.5, -1, 0.01],
     ] as const)("hands over the %s at %s m/s, drive %s, side %s, with the head cleared of a lifted ball", (...run) => {
         const [type, speed, drive, side] = run;
-        expect(sunkRun(type, speed, drive, side).impact.overlapCorrection).toBeGreaterThan(5e-4);
+        expect(sunkRun(type, speed, drive, side).impact.overlapCorrection).toBeGreaterThan(3e-4);
     });
     // P2b.2b.2c.2c: the face's re-set law (was overlapCorrection over 5e-4; gate stage 2 to rule). The pass roll no
     // longer ends with the ball sunk under the head: at 2 m/s nine face intervals, the last 135.1–136.4 ms, and blue

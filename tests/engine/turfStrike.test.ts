@@ -144,7 +144,11 @@ describe("the follow-through's flags (P2b.2b.2b.3 design §4.6)", () => {
         const drive = contact.drive as TrackDrive;
         const arc = { ...drive.arc, lowPoint: DIP_AHEAD * drive.arc.handReach, handArcRadius: DIP_RADIUS };
         const { result, follow } = simulateStroke({ ...contact, drive: { ...drive, arc } }, setup.balls, WORLD);
-        expect(result.events.map((e) => e.kind)).not.toContain("turf-yield");
+        // Shapes plan Task 5: the push's pitch hold (was no turf-yield in the impact). Held at its planned pitch, the head
+        // follows the planned dip and first yields at 73.1 ms, 1 ms before the impact's end at 74.1 ms; it yields again
+        // in the follow-through, which its own flag records. Low points from 1.7 to 2.0 push lengths all yield inside
+        // the impact (the dip is part of trackEnd), and 2.1 carries the hands past their arc's quarter turn.
+        expect(result.events.map((e) => e.kind)).toContain("turf-yield");
         // Measured while building it: the head digs past HEAD_DEEP_LIMIT too, and the finish still ends at rest.
         expect(follow.flags).toEqual(["follow-turf-yield", "follow-head-deep"]);
     });

@@ -126,7 +126,7 @@ describe("one plan's run (P2b.2b.2c.3b plan Task 3)", () => {
         expect(sample.reason).toContain("on-point limit");
     });
 
-    it("grades the full roll's text book at its canonical power as unpractised: practice ends off point", () => {
+    it("grades the full roll's text book at its canonical power as played: practice lands it in two passes", () => {
         // Measured while building Task 3: the canonical full roll's follow-through raised follow-turf-yield, which
         // decision 5 lists under turf, and nothing earlier in the order applied. P2b.2b.2c.3b.1 design §2, §5 (was
         // turf, follow-turf-yield): the arms' full hold and the bottom hand kept on change the contact, and the head
@@ -134,12 +134,15 @@ describe("one plan's run (P2b.2b.2c.3b plan Task 3)", () => {
         // plan Task 7: played through practice, its three passes end off point (the lean about 49°, past the 45°
         // limit; ratio 3.70 on the 10 s lawn), so it reads unpractised. A known gap, for the plan's Task 8 and the
         // user; this pins what the engine does, not what the spec's acceptance asks.
+        // Shapes plan Task 5: the push's pitch hold (was unpractised, off point). Held at its planned pitch through the
+        // push, the lean no longer runs away: practice lands it in two passes, unflagged, at ratio 1.11 on the 10 s lawn.
         const base = mapSetup("full-roll", textBook("full-roll"), 1);
         const p = swingReference["full-roll"].defaultBackswing.value / bodyBackswing(base, WORLD);
         const sample = playSample("full-roll", textBook("full-roll"), p, [10]);
-        expect(sample.klass).toBe("unpractised");
-        expect(sample.reason).toMatch(/^off point: /);
-        expect(sample.passes).toBe(PRACTICE_PASSES);
+        expect(sample.klass).toBeNull();
+        expect(sample.reason).toBeNull();
+        expect(sample.passes).toBe(2);
+        expect(sample.byLawn[10]?.ratio).toBeCloseTo(1.112, 3);
     });
 
     it("grades the full roll's text book at p = 1.5 as unreachable: its hands' finish passes the arc's top", () => {

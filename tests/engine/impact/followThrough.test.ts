@@ -243,8 +243,10 @@ describe("the follow-through (design §4)", () => {
         // P2b.2b.2b.3: the turf strike (was ["follow-cap"]): the endless carry's head drags on the turf for the
         // follow-through's second, its columns yield and it sinks past HEAD_DEEP_LIMIT, so follow-turf-yield and
         // follow-head-deep are flagged before the cap. Unpredicted, for the gate.
+        // Shapes plan Task 5: the push's pitch hold (was follow-head-deep too). Held at its planned pitch through the
+        // endless push, the dragging head still yields the turf but no longer sinks past HEAD_DEEP_LIMIT.
         const { contact, follow } = stroke(shot({ backswing: 0.25 }, endless));
-        expect(follow.flags).toEqual(["follow-turf-yield", "follow-head-deep", "follow-cap"]);
+        expect(follow.flags).toEqual(["follow-turf-yield", "follow-cap"]);
         const contactAt = (contact.drive as TrackDrive).arc.contactAt;
         expect(follow.finish).toBeGreaterThanOrEqual(contactAt + FOLLOW_CAP);
         expect(follow.finish).toBeLessThan(contactAt + FOLLOW_CAP + 1e-5);

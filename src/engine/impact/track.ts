@@ -315,6 +315,16 @@ function holdPitchGains(coupling: Coupling, inertia: number): { readonly stiffne
 }
 
 /**
+ * The hands' pitch hold about n (N·m; a stop's hold, and the push's from shapes plan Task 5): holdPitchGains' spring
+ * on the pitch `error` (rad) and damper on the pitch rate's `lag` (rad/s), for pitch inertia `inertia` about the top
+ * hand, held to ±`bound` (gripCouple).
+ */
+export function heldPitch(coupling: Coupling, inertia: number, error: number, lag: number, bound: number): number {
+    const gains = holdPitchGains(coupling, inertia);
+    return Math.max(0 - bound, Math.min(bound, gains.stiffness * error + gains.damping * lag));
+}
+
+/**
  * The hands' reach (design §3.2): the planned pivot until t1 (where it is at p1, with speed v1 along aim); then its
  * along-aim component decelerates at `decel` to rest at tStop and stays there. Without a push the reach rests from
  * contactAt (restingReach); a reach forward is the push's (P2b.2b.2c.3a A2 item 8).
@@ -1768,6 +1778,8 @@ interface CarryStep {
     readonly checking: boolean;
     /** The feed-forward's twist about the shaft (N·m). */
     readonly twist: number;
+    /** I_P, the swung body's pitch inertia about the top hand (kg·m²), for the push's pitch hold (pushPitch). */
+    readonly pitchInertia: number;
     /** The shaft's pitch (rad). */
     readonly pitch: number;
     readonly topArm: Vec3;
@@ -1778,6 +1790,29 @@ interface CarryStep {
     /** The top and bottom grips' accelerations on the path (m/s²), which the chains' feed-forward carries. */
     readonly topAcceleration: Vec3;
     readonly bottomAcceleration: Vec3;
+}
+
+/**
+ * The push's pitch hold (shapes plan Task 5, amended at gate 1): while a push runs (to its end, or throughout if its end
+ * is never found) the hands hold the shaft's pitch as a stop's hold does, M_p = K_p·e + C_p·ė about the pitch axis n,
+ * e the pitch error from the head to the path and ė its rate's lag, the gains holdPitchGains's for the swung body's
+ * I_P about the top hand, M_p held to the grip's couple (gripCouple). The balls' impulse at the face turns the shaft
+ * back about the top hand, and without this nothing but the grips' spread resists it (the 2026-11-01 diagnosis).
+ * Zero with no push, inside a check and after the push's end.
+ */
+function pushPitch(track: PreparedTrack, state: HeadState, t: number, path: PathPoint, step: CarryStep): number {
+    const { push } = track;
+    // A check brakes the pitch to rest (checkShare), and the hold would drive it on along the unbraked path.
+    if (push === null || step.checking || (push.end !== null && t > push.end)) {
+        return 0;
+    }
+    return heldPitch(
+        track.coupling,
+        step.pitchInertia,
+        dot(rotationError(path.orientation, state.orientation), track.axis),
+        dot(step.spinLag, track.axis),
+        gripCouple(track.hands, track.arc.radius),
+    );
 }
 
 /**
@@ -1818,10 +1853,11 @@ function carryLoad(
     // holding in the push", 2026-10-12; P2b.2b.2c.3b.1 design §2; push-map spec A6, superseding gate round 13's relax
     // from first departure, which grip.departedAt still records); with none the weight is 0, the rhythmic flex.
     const hold = track.push === null ? 0 : 1;
+    const held = scale(track.axis, pushPitch(track, state, t, path, step));
     const load = (top: Vec3, bottom: Vec3, twist: number, fed: Vec3, saturated: HandName | null): HandLoad => ({
         force: add(top, bottom),
         feedForward: fed,
-        torque: add(add(cross(step.topArm, top), cross(step.bottomArm, bottom)), scale(step.s, twist)),
+        torque: add(add(add(cross(step.topArm, top), cross(step.bottomArm, bottom)), scale(step.s, twist)), held),
         top,
         bottom,
         saturated,
@@ -2133,15 +2169,12 @@ export function handLoad(
         // held (swungOf). Its magnitude, spring and damper together, is held to the grip's couple (gripCouple;
         // Amendments item 3, ruling 2026-10-28): the most a grip of this firmness and spread can apply, so hands one
         // breadth apart hold the pitch weakly, as they must. The twist couple is not bounded.
-        const pitchGains = holdPitchGains(track.coupling, body.inertia.y + body.mass * a * a);
-        const bound = gripCouple(hands, arc.radius);
-        const pitch = Math.max(
-            -bound,
-            Math.min(
-                bound,
-                pitchGains.stiffness * dot(rotationError(path.orientation, q), track.axis) +
-                    pitchGains.damping * dot(spinLag, track.axis),
-            ),
+        const pitch = heldPitch(
+            track.coupling,
+            body.inertia.y + body.mass * a * a,
+            dot(rotationError(path.orientation, q), track.axis),
+            dot(spinLag, track.axis),
+            gripCouple(hands, arc.radius),
         );
         return { ...firm, torque: add(firm.torque, scale(track.axis, pitch)) };
     }
@@ -2153,6 +2186,7 @@ export function handLoad(
         whole: fed,
         checking,
         twist: twistShare,
+        pitchInertia: body.inertia.y + body.mass * a * a,
         pitch: pitchNow,
         topArm,
         bottomArm,

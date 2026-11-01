@@ -404,17 +404,22 @@ export function finishKind(plan: PreparedTrack): FinishKind {
     return plan.arc.alpha < 0 ? "check" : "swing";
 }
 
-/** A swing's finish watch (shapes design §2): whether its pitch rate has risen above 0 since the release. */
+/**
+ * A swing's finish watch (shapes design §2): whether its pitch rate has risen above 0, gaining, since the release, and
+ * the rate at the last step read.
+ */
 interface SwingWatch {
     risen: boolean;
+    last: number | null;
 }
 
 /**
  * True once the head in `state` at time t has reached its finish (P2b.2b.2a design §4.2; shapes design §2).
  * - A swing with nothing released (no push, λ = 0): at the pendulum's apex, its pitch rate about n at or below zero.
  * - A swing released at releaseOf: at the mallet's apex after it, the first step whose rate, having risen above 0
- *   since the release (`watch`), is back at or below 0; if it never rises, once the hands are at their apex (the
- *   push's handsApex, or the release itself without a push).
+ *   since the release (`watch`), is back at or below 0. A rise counts only while the rate gains: a rate carried
+ *   positive through the release and dying away is not the swing's. If it never rises, once the hands are at their
+ *   apex (the push's handsApex, or the release itself without a push).
  * - A push whose plan never reaches its length has no release and never finishes: it runs to the cap.
  * - A check: at rest relative to the hands once any push's hands are at their apex.
  */
@@ -436,8 +441,10 @@ function finished(kind: FinishKind, plan: PreparedTrack, state: HeadState, t: nu
     if (t < release) {
         return false;
     }
+    const gaining = watch.last !== null && rate > watch.last;
+    watch.last = rate;
     if (rate > 0) {
-        watch.risen = true;
+        watch.risen ||= gaining;
         return false;
     }
     if (watch.risen) {
@@ -1426,7 +1433,7 @@ function continueStroke(
     let steps = first;
     let deep = false;
     let held = false;
-    const watch: SwingWatch = { risen: false };
+    const watch: SwingWatch = { risen: false, last: null };
     for (;;) {
         const t = steps * dt;
         if (finished(kind, plan, state, t, watch)) {
