@@ -216,3 +216,28 @@ continuation of the path", "with the mallet arcing".
 - **What moves.** Every pushed stroke's finish: the mallet arcs on past the hands' apex. The full roll's ratio is now
   1.215 (ruling 12: 1.211).
 - **The trace** outlines the striker's ball where it last leaves the face.
+
+**Ruling 14, the top hand stops and the bottom hand carries the stroke on (draft, for the user's approval).** With
+ruling 13 the mallet arcs on, but too far: the top hand rises freely on §2's point pendulum (0.67–0.94 m on, 0.17–0.47
+m up) and the head ends 1.2 m up, past the hands. The user: "in practice, the top hand stops pushing and the bottom
+hand continues the stroke", by an amount that "varies depending on the degree of follow through" needed. So the
+follow-through is the player's intent per shot, not an outcome of the hands' free rise. This supersedes §2's hands'
+finish (and with it ruling 9's emergent follow-through) and ruling 12's slopeCarry.
+
+- **The top hand stops.** From the push's end its pace along its arc falls from V to rest on a minimum-jerk ease over
+  `arrestTime`, travelling V·arrestTime/2. It then holds. Assumption: arrestTime 0.1 s on every preset, 0.1 m of travel
+  at 2 m/s, until the envelope phase tunes it.
+- **The bottom hand carries the head on.** As the top hand slows, the shaft turns about it so that the head keeps the
+  push's pace along its path: the pace passes from the hands' travel to the shaft's turn, and the head's speed runs on
+  unbroken through the push's end. The bottom hand drives this turn through `followThrough`, the shaft's turn about the
+  top hand after the push's end (rad), a new shape input with a stroke override, like slopeCarry.
+- **Then the mallet swings free,** let go over ruling 13's minimum-jerk fade, here over the last part of the bottom
+  hand's turn rather than the hands' rise. The free swing about the now still top hand rises by about (pace)²/2g:
+  0.2 m at 2 m/s.
+- **One default for every stroke.** followThrough's default is one value on every preset, an assumption (0.5 rad, about
+  30°) until the envelope phase tunes it per shot. It is not a per-type switch. A stroke with no push (the drive) has
+  no top-hand push to stop and is unchanged, bit for bit. A check keeps its hold, its top hand stopping the same way,
+  with no bottom-hand carry.
+- **Removed.** §2's point-pendulum hands' finish, its apex and its quarter-turn check, and slopeCarry (ruling 12).
+- **Check.** No 29.1.6.1 finding on the half and full rolls. The traces show the head's speed unbroken through the
+  push's end, and finishes of a plausible height. The user judges them by eye.
