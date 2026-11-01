@@ -243,3 +243,9 @@ through; the range between those ends comes from the backswing alone. Beyond abo
 assists the mallet through it. So the finish is one pendulum, the arms and mallet swinging on together under gravity,
 with the hands guiding; the assist is an added-effort input that is zero by default (ruling 3) and is tuned with the
 envelope (ruling 4). The 6 m changeover is the user's estimate and is not encoded as a threshold.
+
+**Ruling 8** (user, 2026-11-01), settling the second open point. The flex is subtle, and the top hand gives it, not
+the bottom hand ("that's my intention anyway": a player's intent, held as a hypothesis). Today every roll's bottom
+hand is firm (g_B 1) and its top hand drifts up to 48 mm off its path, so the target is a smaller top-hand drift with
+the bottom hand near its path, not a change of the hands' coupling (HAND_COUPLING), whose fit to the drive's and the
+AC stop's ratios stands.
