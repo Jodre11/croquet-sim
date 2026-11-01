@@ -182,9 +182,16 @@ hands do not let go: they carry the mallet on along their arc at its lean, and t
   hands on their arc, so the top hand dips to the arc's low point and rises after it, and the shaft at its held pitch.
   From the release, §2's finish runs unchanged: the free pendulum seeded from the planned θ and ω there, its end at the
   mallet's apex.
-- **Defaults.** The half roll 1; the full and pass rolls 0, unchanged (ruling 10: their release is their push's end;
-  the pass roll's early release is its flick). Every no-push stroke ignores it. Both are assumptions until the envelope
-  phase tunes it with push length (B1 ruling 4).
+- **One default for every stroke.** The model is one shot model, not one per stroke type (user, 2026-11-01: "we are
+  working toward a unified shot model, not separate models per shot type"). So slopeCarry's default is 1 on every
+  preset: after any push the hands guide the mallet on to their apex. What differs between strokes comes from the
+  other inputs: a long, fast push leaves the hands high on their arc with little travel left (ruling 9), a short one
+  leaves most of it. A stroke with no push has no hands' finish, so slopeCarry acts on nothing there. The value is an
+  assumption until the envelope phase tunes it per shot with push length (B1 ruling 4). It is not a per-type switch.
+- **What moves.** The full and pass rolls' release moves from their push's end to their hands' apex, so their finishes
+  and practice may move too. They are re-pinned with reasons and judged on Task 6's traces. Ruling 10 still holds as
+  intent: a pass roll's early release, its flick, is ruling 9's assist and the envelope's to tune, so it is not modelled
+  here.
 - **Not scripted.** The input sets only how long the hands guide; whether the head stays clear of the ball follows from
   the hands' finish, which slows as the arc rises, against the ball's own run.
 - **Check.** The half roll's text book at canonical power plays with no 29.1.6.1 finding, unpractised and practised,
