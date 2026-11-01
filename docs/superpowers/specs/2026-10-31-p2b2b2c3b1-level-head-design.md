@@ -199,3 +199,33 @@ that (a pace below about 0.6 m/s at a push length of 0.3 m) still caps, and the 
 - Where practice lives: a wrapper around `simulateStroke`, or inside it. Its public result reports the passes either
   way.
 - The names of new fields and constants, beyond `PRACTICE_PASSES` and `unpractised`.
+
+## 11. Amendment B1: shapes first (user, 2026-11-01)
+
+**Where it stood.** The acceptance trace failed (5d1977e; the balls drawn in c501f8f). The full and pass roll text
+books stayed out of the band after three passes; on the full roll the lean ran from 31° to 55° and the head rose to
+118 mm in the finish, a second hump in its path. Only the full roll at speedGain 0.5 held its ratio (1.05–1.19 from
+×0.6 to ×1.2 its power) with the croqueted ball's travel rising smoothly with effort.
+
+**Sequence.** No envelope or push-map compute until the basic shapes are right (user: "let's get the shapes right
+first"). §6's acceptance and the push map's Tasks 6–8 re-run are set aside. The shapes are judged by the user, by eye,
+on side-on traces of the three rolls and a plain drive. Practice (§4) stays in the engine.
+
+**Rulings.**
+
+1. *Contact and push.* The face on a line parallel to the turf that keeps it on the ball is the right shape. Practice
+   strokes to achieve it are acceptable.
+2. *One stroke.* A drive is a push of zero length: every stroke finishes the same way, from the push's end.
+3. *The finish.* The arc continues and the head swings through, kept up by the hands. The harder the swing, the more
+   natural follow-through; on a soft shot it may be gravity alone. This supersedes §5's ease to rest over a further
+   handReach. The default carries no added effort.
+4. *Effort, later.* How much push, how much follow-through beyond the natural and how sharply it accelerates are inputs
+   to tune per shot type against its outcome, in the envelope phase (e.g. more to make the ball run further; a
+   full-length top-spin approach to a hoop exaggerates it until the mallet swings up over the head). Their range follows
+   the shot's length, from 6 inches to 30 yards.
+5. *Flex.* Real, and greater the harder the shot (A6 item 3), but today's is exaggerated: on the full roll the top hand
+   runs up to 48 mm off its path. It is to be reduced.
+
+**Open for design.** How the hands keep the finish going (the hands carrying on along their arc under gravity alone,
+or the arms and mallet swinging on as one pendulum), and what reduces the flex. If it is the hands' coupling, note that
+ratioFit fits its period and damping to the drive's and the AC stop's ratios, so changing it moves those fits.
