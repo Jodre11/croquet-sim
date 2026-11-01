@@ -23,7 +23,8 @@ import { handsAt, headOnPath, pitchAxis, prepareTrack } from "../src/engine/impa
 import type { HeadState, MalletHead } from "../src/engine/impact/types";
 import { add, cross, dot, scale, sub, vec3, type Vec3 } from "../src/engine/math/vec3";
 import { planStroke } from "../src/engine/swing/buildContact";
-import { BALL_IDS, type BallState } from "../src/engine/types";
+import { BALL_IDS, type BallId, type BallState } from "../src/engine/types";
+import type { ShotSetup } from "../src/engine/swing/types";
 import { openWorld } from "./openLawn";
 import { mapSetup, textBook, type MapPlan, type RollType } from "./pushMapRun";
 
@@ -50,6 +51,28 @@ const DEG = 180 / Math.PI;
 const KEEP = 0.00025;
 const DIAGNOSE = process.argv.includes("--diagnose");
 const UNPRACTISED = process.argv.includes("--unpractised");
+/**
+ * `--instant-push`, a diagnostic only (gate 1's check): the push intent with no rise and no cap, τ_push 1 ns and
+ * F_push 1 MN, so the hands meet the balls' resistance along aim one step after it acts.
+ */
+const INSTANT_PUSH = process.argv.includes("--instant-push");
+/**
+ * `--no-balls`, a diagnostic only, with `--unpractised`: the stroke planned at the balls, then played with every ball
+ * 3 m on along aim, so the head swings the same plan through empty air above the turf.
+ */
+const NO_BALLS = process.argv.includes("--no-balls");
+
+/** `setup`'s balls, each moved 3 m along `aim`. */
+function outOfReach(setup: ShotSetup, aim: Vec3): ShotSetup["balls"] {
+    const moved: Partial<Record<BallId, BallState>> = {};
+    for (const id of BALL_IDS) {
+        const ball = setup.balls[id];
+        if (ball !== undefined) {
+            moved[id] = { ...ball, position: add(ball.position, scale(aim, 3)) };
+        }
+    }
+    return moved as ShotSetup["balls"];
+}
 /** The cases `--diagnose` traces: the text books. */
 const DIAGNOSED = new Set(["full-roll-textbook", "pass-roll-textbook"]);
 
@@ -197,7 +220,12 @@ function diagnosisOf(instant: Instant, hands: HandForces, axis: Vec3, balls: num
  * first pass alone.
  */
 function trace(c: TraceCase): Trace {
-    const setup = mapSetup(c.type, c.plan, c.power);
+    const setup = mapSetup(
+        c.type,
+        c.plan,
+        c.power,
+        INSTANT_PUSH ? { body: { pushForce: 1e6, pushResponseTime: 1e-9 } } : {},
+    );
     const stroke = planStroke(setup, WORLD);
     const { drive, head } = stroke.contact;
     if (drive.kind !== "track") {
@@ -251,7 +279,9 @@ function trace(c: TraceCase): Trace {
     };
     const run = UNPRACTISED
         ? {
-              ...simulateStroke(stroke.contact, setup.balls, WORLD, { probe: probeFor() }),
+              ...simulateStroke(stroke.contact, NO_BALLS ? outOfReach(setup, arc.aim) : setup.balls, WORLD, {
+                  probe: probeFor(),
+              }),
               passes: 1,
               miss: "unpractised: the first pass alone",
               lift: null,
@@ -562,7 +592,7 @@ if (DIAGNOSE) {
         tables.push(diagnosisTable(c, trace(c)));
     }
     const text = tables.join("\n\n");
-    fs.writeFileSync(`${OUT}/path-trace-diagnosis-${UNPRACTISED ? "unpractised" : "practised"}.txt`, `${text}\n`);
+    fs.writeFileSync(`${OUT}/path-trace-diagnosis-${UNPRACTISED ? "unpractised" : "practised"}${INSTANT_PUSH ? "-instant-push" : ""}${NO_BALLS ? "-no-balls" : ""}.txt`, `${text}\n`);
     console.log(text);
     process.exit(0);
 }
