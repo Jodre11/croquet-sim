@@ -255,3 +255,9 @@ depending on the shot's strength. That is the shape the hands' coupling already 
 the spring-damper grip brings it back to the hands). Assumption: the drive is left as it is in this work; the CA's 8,000
 frame/s film (Gugan 4, https://oxfordcroquet.org/tech/gugan4/, and the CA's Croquet Dynamics,
 https://oxfordcroquet.org/tech/video/) is the evidence to check it against, as a later item.
+
+**Ruling 9** (user, 2026-11-01). A long push interrupts the swing, so the follow-through after it is more a practised
+motion and tends to be reduced, unless the player deliberately restores or exaggerates it: what the user calls the
+flick. Assumption: the reduction is not scripted; it comes from the state the push leaves the hands and head in
+(slower, lower, the pendulum's swing spent), from which the one-pendulum finish (ruling 7) runs on. The flick is ruling
+7's assist input applied after a push, zero by default and tuned with the envelope.
