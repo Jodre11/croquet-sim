@@ -276,3 +276,38 @@ assumption, for the user's check).
   the strike holds four contacts, the last 60 ms after the third, whatever the carry (0 to 0.3 s), so the fault is the
   push's, not the follow-through's. The full roll at p = 1.5 now reads superhuman: its top hand stops well short of
   the hands' arc's quarter turn, so the impact is played, and a hand reaches its grip's limit. Engine 0.23.0.
+
+**Ruling 15, the hands' hold sets the ratio through contact (user, 2026-11-01).** The user asked for the full and pass
+rolls' follow-through to be fitted to their target ratios, and noted the half roll's striker's ball "is getting too
+much". Measured on the canonical text books (10 s lawn):
+- The follow-through moves no ratio: on every roll the striker's ball has left the face before the top hand stops
+  and the carry begins (full and pass rolls identical from 0 to 0.6 s).
+- The half roll's ratio is set by the push's pitch hold (Task 5): 2.18 with no push, about 1.0–1.06 with any push
+  from 10 to 100 mm, about 2.2 with the same pushes and no pitch hold. The bottom hand's carry has no effect. With the
+  grip's couple scaled to 10 % the ratio is 2.00, at 25 % 1.22.
+- The full roll's ratio falls as the hold weakens (1.57 at full, 1.39 at half, off the face at a quarter); without
+  the hold its lean runs away (3.72, off point). The pass roll re-hits at every strength but a quarter (grip limit).
+
+The user chose option 1: **how firmly the hands hold the shaft's lean through contact is a per-stroke input**,
+`holdFirmness` ∈ [0, 1], a shape input with a stroke override like slopeHold. It scales the grip's couple that bounds
+the push's pitch hold (gripCouple): 1 as today, 0 no hold. It acts only with a push. The half roll's is fitted to its
+ratio; the full and pass rolls' push (its length and pace) is then fitted to theirs. Targets (assumptions, from §2's
+bands): half roll 2.0, full roll 1.1, pass roll 0.83 (Gugan 5's theory, inside the CA's "below 1").
+
+The user asked whether it must also vary with the shot's power. The grip's couple is fixed while the balls' twist on
+the shaft grows with power, so a fixed firmness holds relatively harder on a soft shot: the ratio is measured across
+power at the fitted firmness and reported, not yet tuned (the envelope phase may make firmness a per-shot intent).
+
+**Ruling 15 as built (user, 2026-11-01: "players do anticipate this resistance").** The hold scales with the planned
+contact speed: the arc's share is min(1, holdFirmness·v/HOLD_SPEED), HOLD_SPEED the presets' canonical 3 m/s, so a
+shape's firmness is stated at 3 m/s and a softer shot is held less hard. Fits and measurements, 10 s lawn:
+- **Half roll:** firmness 0.1 (bisected; 0.1002 gives 1.9995), ratio 2.000, the striker's ball 1.84 m (was 3.50 m).
+  Across power at that firmness: 1.99 at half the canonical power, 1.94 at ¾, 2.06 at 1¼; at 1½ the head re-hits the
+  striker's ball (29.1.6.1, ratio 1.21). So with the anticipated hold the ratio holds across most of the range.
+- **Full roll:** no lever reaches 1.1. Push length 0.2–0.4 m at firmness 1 or 0.6 gives 1.36–1.40 (0.5 m digs,
+  follow-turf-yield); firmness 0.5 gives 1.39, a quarter goes off the face. Its firmness stays 1, ratio 1.567.
+- **Pass roll:** no lever lands it. Push length 0.1–0.4 m at firmness 1 or 0.5 gives 0.35–0.50, each superhuman
+  (grip limit) or unlawful (29.1.6.1); firmness 0.5 and 1 play identically, the hold below its bound. Firmness 1.
+- Re-pins: the canonical half roll pins its ratio, 2.0; the turf-strike flag cover keeps the grip's whole couple;
+  the whole-roll handover's lift bound moves to 1.5e-4 (the full roll at 1.5 m/s now holds at half the couple).
+  Engine 0.24.0.

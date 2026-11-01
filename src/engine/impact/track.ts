@@ -423,10 +423,9 @@ export interface LetGo {
 }
 
 /**
- * The share of `push`'s slope and pitch holds let go at time t (shapes design §8, rulings 13 and 14): 0 to the
- * release, then a minimum-jerk ramp, g = u³(10 − 15u + 6u²) with u the time's share from the release to `freed`, so
- * the shaft's turn comes to rest with θ, ω and α unbroken, and 1 from `freed`. With a
- * followThrough of 0 the ramp has no length and the holds let go at once; with no release, 0 always.
+ * The share of the bottom hand's carry braked at time t (shapes design §8, rulings 13 and 14): 0 to the release,
+ * then a minimum-jerk ramp, g = u³(10 − 15u + 6u²) with u the time's share from the release to `freed`, so the
+ * shaft's turn comes to rest with θ, ω and α unbroken, and 1 from `freed`; with no release, 0 always.
  */
 export function letGo(push: Push, t: number): LetGo {
     const { release, freed } = push;
@@ -883,7 +882,7 @@ function computePush(track: PreparedTrack): Push {
     const origin = planPivot(track, arc.contactAt).P;
     const end = travelTime(track, arc.handReach, advance);
     // The finish (shapes design §8, ruling 14): from the pace at the push's end the top hand stops, and the bottom
-    // hand carries the head on for followThrough before it lets go.
+    // hand carries the head on for followThrough before it brings the turn to rest.
     const pace = end === null ? 0 : pushTravel(track, origin, advance, end).v;
     const finishSpeed = pace < FINISH_REST_PACE ? 0 : pace;
     const finish = end === null ? null : handsFinishOf(track, low, end, finishSpeed);
@@ -1858,7 +1857,8 @@ interface CarryStep {
  * The push's pitch hold (shapes plan Task 5, amended at gate 1): while a push runs (to its end, or throughout if its end
  * is never found) the hands hold the shaft's pitch as a stop's hold does, M_p = K_p·e + C_p·ė about the pitch axis n,
  * e the pitch error from the head to the path and ė its rate's lag, the gains holdPitchGains's for the swung body's
- * I_P about the top hand, M_p held to the grip's couple (gripCouple). The balls' impulse at the face turns the shaft
+ * I_P about the top hand, M_p held to the arc's holdFirmness share of the grip's couple (gripCouple; shapes design §8,
+ * ruling 15). The balls' impulse at the face turns the shaft
  * back about the top hand, and without this nothing but the grips' spread resists it (the 2026-11-01 diagnosis).
  * It runs on through the bottom hand's carry and the hold that follows it (shapes design §8, ruling 14). Zero with no
  * push and inside a check.
@@ -1874,7 +1874,7 @@ function pushPitch(track: PreparedTrack, state: HeadState, t: number, path: Path
         step.pitchInertia,
         dot(rotationError(path.orientation, state.orientation), track.axis),
         dot(step.spinLag, track.axis),
-        gripCouple(track.hands, track.arc.radius),
+        track.arc.holdFirmness * gripCouple(track.hands, track.arc.radius),
     );
 }
 

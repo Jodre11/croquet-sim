@@ -151,6 +151,16 @@ describe("one plan's run (P2b.2b.2c.3b plan Task 3)", () => {
         expect(sample.byLawn[10]?.ratio).toBeCloseTo(1.567, 3);
     });
 
+    it("plays the half roll's text book at its canonical power at its fitted ratio, 2.0", () => {
+        // Shapes design §8, ruling 15: the half roll's hold firmness, 0.1, is bisected to ratio 2.0 (was 1.041 at the
+        // grip's whole couple, the striker's ball driven on too far).
+        const base = mapSetup("half-roll", textBook("half-roll"), 1);
+        const p = swingReference["half-roll"].defaultBackswing.value / bodyBackswing(base, WORLD);
+        const sample = playSample("half-roll", textBook("half-roll"), p, [10]);
+        expect(sample.klass).toBeNull();
+        expect(sample.byLawn[10]?.ratio).toBeCloseTo(2.0, 2);
+    });
+
     it("grades the full roll's text book at p = 1.5 as superhuman: a hand reaches its grip's limit", () => {
         // Shapes design §8, ruling 14 (was unreachable, §2's hands' finish swinging past the quarter turn of their
         // 1.5 m arc): the top hand now stops within V·HAND_EASE/2 of the push's end, well short of it, so the impact

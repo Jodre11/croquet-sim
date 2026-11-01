@@ -139,8 +139,9 @@ describe("the follow-through's flags (P2b.2b.2b.3 design §4.6)", () => {
         // within (2·handReach − ρ_h, ρ_h)): the canonical half roll's at 4 m/s, its arc narrowed to DIP_RADIUS with
         // its low point DIP_AHEAD push lengths along aim, near the finish's rest. The hands then descend through the
         // push and the finish, some 0.12 m by their rest, and press the head into the turf once the impact has ended.
-        // Shapes design §8: the shot's own reach keeps 0.15 m, now the half roll's preset pushes only 0.05 m.
-        const setup = shot(FOLLOW.type, FOLLOW.speed, { handReach: 0.15 });
+        // Shapes design §8: the shot's own reach keeps 0.15 m, now the half roll's preset pushes only 0.05 m; and its
+        // hold stays the grip's whole couple (ruling 15), now the half roll's preset holds at 0.1.
+        const setup = shot(FOLLOW.type, FOLLOW.speed, { handReach: 0.15, holdFirmness: 1 });
         const contact = buildContact(setup, WORLD);
         const drive = contact.drive as TrackDrive;
         const arc = { ...drive.arc, lowPoint: DIP_AHEAD * drive.arc.handReach, handArcRadius: DIP_RADIUS };

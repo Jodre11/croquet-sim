@@ -105,7 +105,10 @@ function stanceFromLean(lean: number, up: number, hands: Omit<SwingStance, "hand
  * keys (torqueMax, tempoSlow, tempoFast) and any preset's retired defaultIntensity are rejected by readShape when
  * swing.json loads.
  */
-export function shapeOf(type: StrokeType, ref: StrokeShapeReference): Omit<SwingShape, "slopeHold" | "followThrough"> {
+export function shapeOf(
+    type: StrokeType,
+    ref: StrokeShapeReference,
+): Omit<SwingShape, "slopeHold" | "followThrough" | "holdFirmness"> {
     return {
         pendulumShare: ref.pendulumShare.value,
         handAngle: ref.handAngle.value,
@@ -281,6 +284,24 @@ export const FOLLOW_THROUGH: Readonly<Record<StrokeType, number>> = {
     "pass-roll": 0.3,
 };
 
+/**
+ * How firmly the hands hold the shaft's lean through a push (shapes design §8, ruling 15): the share of the grip's
+ * couple bounding the push's pitch hold. It sets how far the head drives the striker's ball on through contact, so
+ * the ratio, and is fitted per preset to its type's target ratio at canonical power; 1 where nothing is fitted. The
+ * half roll's 0.1 is bisected to ratio 2.0 on the 10 s lawn (1.9995 at 0.1002); neither firmness nor push length
+ * lands the full roll's or pass roll's target, so theirs stay 1 (2026-11-01). A stroke with no push has nothing for it
+ * to act on.
+ */
+export const HOLD_FIRMNESS: Readonly<Record<StrokeType, number>> = {
+    "single-ball": 1,
+    drive: 1,
+    "stop-ac": 1,
+    "stop-gc": 1,
+    "half-roll": 0.1,
+    "full-roll": 1,
+    "pass-roll": 1,
+};
+
 /** The default profile (design §5.4). Provisional throughout. */
 export const defaultProfile: SwingProfile = {
     mallet: MALLET,
@@ -372,6 +393,7 @@ export const defaultProfile: SwingProfile = {
                 ...shapeOf(type, swingReference[type]),
                 slopeHold: SLOPE_HOLD[type],
                 followThrough: FOLLOW_THROUGH[type],
+                holdFirmness: HOLD_FIRMNESS[type],
             },
         ]),
     ) as Record<StrokeType, SwingShape>,

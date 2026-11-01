@@ -121,6 +121,7 @@ export function testProfile(o: TestProfileOptions = {}): SwingProfile {
         handTempo: { slow: 0.4, fast: 0.2 },
         slopeHold: 0,
         followThrough: 0,
+        holdFirmness: 1,
         ...o.shape,
     };
     const every = <T>(entry: T): Record<StrokeType, T> =>

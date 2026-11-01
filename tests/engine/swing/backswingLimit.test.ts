@@ -40,6 +40,7 @@ function input(top: number, o: Partial<DownswingInput>): DownswingInput {
             handTempo: { slow: 0.4, fast: 0.2 },
             slopeHold: 0,
             followThrough: 0,
+            holdFirmness: 1,
         },
         backswing: 0.3,
         backswingLimit: LIMIT,

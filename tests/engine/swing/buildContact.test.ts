@@ -1039,6 +1039,7 @@ describe("contactPose (design §5.2 steps 1–5, 10)", () => {
             handTempo: { slow: 0.4, fast: 0.2 },
             slopeHold: 0,
             followThrough: 0,
+            holdFirmness: 1,
         };
         const choice = {
             shape,

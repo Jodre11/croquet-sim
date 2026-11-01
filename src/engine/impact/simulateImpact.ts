@@ -264,6 +264,7 @@ function validateTrack(drive: TrackDrive): void {
         ["arc.pendulumEffort", arc.pendulumEffort],
         ["arc.handArcLow", arc.handArcLow],
         ["arc.slopeHold", arc.slopeHold],
+        ["arc.holdFirmness", arc.holdFirmness],
     ] as const) {
         finiteNumber(value, name);
         if (!(value >= 0 && value <= 1)) {

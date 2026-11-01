@@ -113,6 +113,13 @@ const DRIVE_NUMBERS: readonly (keyof SwingDrive)[] = [
 /** A shape's scalar numbers always read, each checked finite by name (handAngle only when read: design §3.2). */
 const SHAPE_NUMBERS: readonly "pendulumShare"[] = ["pendulumShare"];
 
+/**
+ * The contact speed (m/s) at which a shape's holdFirmness is stated (shapes design §8, ruling 15): the presets'
+ * canonical 3 m/s. Players anticipate the balls' resistance, so the hold's share of the grip's couple scales with the
+ * planned contact speed over this, at most the whole couple.
+ */
+export const HOLD_SPEED = 3;
+
 function fail(message: string): never {
     throw new RangeError(message);
 }
@@ -301,6 +308,7 @@ function validate(setup: ShotSetup, ballRadius: number): void {
         ["stroke.feet", stroke.feet],
         ["stroke.slopeHold", stroke.slopeHold],
         ["stroke.followThrough", stroke.followThrough],
+        ["stroke.holdFirmness", stroke.holdFirmness],
     ] as const) {
         if (value !== undefined) {
             finiteNumber(value, name);
@@ -518,6 +526,11 @@ function validate(setup: ShotSetup, ballRadius: number): void {
     nonNegative(shape.followThrough, `${where}.followThrough`);
     if (stroke.followThrough !== undefined) {
         nonNegative(stroke.followThrough, "stroke.followThrough");
+    }
+    finiteNumber(shape.holdFirmness, `${where}.holdFirmness`);
+    unit(shape.holdFirmness, `${where}.holdFirmness`);
+    if (stroke.holdFirmness !== undefined) {
+        unit(stroke.holdFirmness, "stroke.holdFirmness");
     }
     const slopeHold = stroke.slopeHold ?? shape.slopeHold;
     // P2b.2b.2c.3a design §4.1: a plan short of a full hold, or one whose tempo is the free swing's own fall, needs the
@@ -910,6 +923,11 @@ export function planStroke(setup: ShotSetup, world: World): StrokePlan {
         contactAt: lead,
         slopeHold: stroke.slopeHold ?? profile.shape[type].slopeHold,
         followThrough: stroke.followThrough ?? profile.shape[type].followThrough,
+        // Ruling 15: the hands anticipate the balls' resistance, which grows with the contact speed (user, 2026-11-01).
+        holdFirmness: Math.min(
+            1,
+            ((stroke.holdFirmness ?? profile.shape[type].holdFirmness) * contactSpeed) / HOLD_SPEED,
+        ),
         handReach: stroke.handReach ?? push.handReach,
         pendulumAt: stroke.pendulumAt ?? push.pendulumAt,
         pendulumEffort: stroke.pendulumEffort ?? push.pendulumEffort,

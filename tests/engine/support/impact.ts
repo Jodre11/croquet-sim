@@ -199,6 +199,7 @@ export function levelArc(centre: Vec3, o: Partial<SwingArc> = {}): SwingArc {
         contactAt: 0,
         slopeHold: 0,
         followThrough: 0,
+        holdFirmness: 1,
         handReach: 0,
         pendulumAt: 0.8,
         pendulumEffort: 0,

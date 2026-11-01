@@ -179,9 +179,15 @@ export interface SwingArc {
     readonly slopeHold: number;
     /**
      * At least 0 (s; shapes design §8, ruling 14): how long the bottom hand carries the head on at the push's pace
-     * after the push's end, the top hand stopping, before the mallet swings free; read only with a push.
+     * once the top hand has stopped, before it brings the turn to rest and holds it; read only with a push.
      */
     readonly followThrough: number;
+    /**
+     * In [0, 1] (shapes design §8, ruling 15): the share of the grip's couple bounding the push's pitch hold, how
+     * firmly the hands hold the shaft's lean through the push (planStroke scales the shape's by the anticipated
+     * resistance, HOLD_SPEED); read only with a push.
+     */
+    readonly holdFirmness: number;
     /**
      * The push length (m): how far the hands' path travels along aim after contactAt before the finish begins, where
      * the hands carry on up their arc and ease to rest a further push length on (P2b.2b.2c.3b.1 design §5).

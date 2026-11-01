@@ -81,6 +81,7 @@ const ROLL: SwingArc = {
     contactAt: 1,
     slopeHold: 1,
     followThrough: 0,
+    holdFirmness: 1,
     handReach: 10,
     pendulumAt: 0.8,
     pendulumEffort: 0,

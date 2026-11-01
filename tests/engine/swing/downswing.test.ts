@@ -47,6 +47,7 @@ function shape(o: Partial<SwingShape> = {}): SwingShape {
         handTempo: { slow: 0.4, fast: 0.2 },
         slopeHold: 0,
         followThrough: 0,
+        holdFirmness: 1,
         ...o,
     };
 }

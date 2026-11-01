@@ -115,6 +115,7 @@ const COAST: SwingArc = {
     contactAt: 0,
     slopeHold: 0,
     followThrough: 0,
+    holdFirmness: 1,
     handReach: 10,
     pendulumAt: 0.8,
     pendulumEffort: 0,

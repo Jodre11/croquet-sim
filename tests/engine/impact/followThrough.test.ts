@@ -27,7 +27,7 @@ import {
 } from "../../../src/engine/impact/track";
 import type { ContactState, TrackDrive } from "../../../src/engine/impact/types";
 import { dot, length, sub } from "../../../src/engine/math/vec3";
-import { buildContact, planStroke } from "../../../src/engine/swing/buildContact";
+import { buildContact, HOLD_SPEED, planStroke } from "../../../src/engine/swing/buildContact";
 import { ON_TIME } from "../../../src/engine/swing/profile";
 import type { ShotSetup, StrokeType, SwingProfile } from "../../../src/engine/swing/types";
 import type { World } from "../../../src/engine/types";
@@ -590,5 +590,48 @@ describe("the top hand stops and the bottom hand carries the head on (shapes des
         // after the balls parted (design §8, ruling 12); carried on by the bottom hand it stays clear.
         const out = simulateShot(canonicalSetup("half-roll", { world: DEFAULT }), DEFAULT);
         expect(out.faults.findings.map((f) => f.law)).not.toContain("29.1.6.1");
+    });
+});
+
+describe("the hands' hold on the shaft's lean through a push (shapes design §8, ruling 15)", () => {
+    const DEFAULT = defaultWorld();
+    const planOf = (holdFirmness?: number, backswing?: number) => {
+        const stroke = {
+            ...(holdFirmness === undefined ? {} : { holdFirmness }),
+            ...(backswing === undefined ? {} : { backswing }),
+        };
+        return planStroke(canonicalSetup("half-roll", { world: DEFAULT, stroke }), DEFAULT);
+    };
+    const arcOf = (plan: ReturnType<typeof planOf>) => (plan.contact.drive as TrackDrive).arc;
+
+    it("scales the shape's firmness by the planned contact speed over HOLD_SPEED, the anticipated resistance", () => {
+        const plan = planOf(0.4);
+        expect(arcOf(plan).holdFirmness).toBeCloseTo((0.4 * plan.contactSpeed) / HOLD_SPEED, 12);
+    });
+
+    it("holds a softer shot less firmly at the same firmness", () => {
+        const soft = planOf(0.4, 0.2);
+        const canonical = planOf(0.4);
+        expect(soft.contactSpeed).toBeLessThan(canonical.contactSpeed);
+        expect(arcOf(soft).holdFirmness).toBeLessThan(arcOf(canonical).holdFirmness);
+    });
+
+    it("never holds past the grip's whole couple", () => {
+        expect(arcOf(planOf(1, 0.6)).holdFirmness).toBe(1);
+    });
+
+    it.each([
+        ["below 0", -1e-9, /stroke\.holdFirmness must lie in \[0, 1\]/],
+        ["above 1", 1 + 1e-9, /stroke\.holdFirmness must lie in \[0, 1\]/],
+        ["not finite", Number.NaN, /stroke\.holdFirmness must be finite/],
+    ])("rejects a holdFirmness %s", (_, holdFirmness, message) => {
+        expect(() => planOf(holdFirmness)).toThrow(message);
+    });
+
+    it("rejects a preset holdFirmness above 1, naming its shape", () => {
+        const setup = canonicalSetup("half-roll", { world: DEFAULT, shape: { holdFirmness: 1.5 } });
+        expect(() => buildContact(setup, DEFAULT)).toThrow(
+            /profile\.shape\.half-roll\.holdFirmness must lie in \[0, 1\]/,
+        );
     });
 });
