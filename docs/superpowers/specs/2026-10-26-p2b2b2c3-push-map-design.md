@@ -548,59 +548,86 @@ P2b.2b.2c.3b.1 (3c being the swing strokes' hold and grips, A2; on this branch, 
 `2026-10-31-p2b2b2c3b1-level-head-design.md`), the maps of Tasks 6–8 are re-run on it (the half roll has a push too),
 and gate 2 then resumes.
 
-### A7. The envelope covers every shot (user, 2026-11-02)
+### A7. The envelope covers every shot (user, 2026-11-02; spec review applied)
 
-The user: "Now that we now have a unified shot model we need to do the envelope for all the types of shot, including
-the drive and the AC stop." Asked whether the shots must work "from a fast lawn tap all the way up to a slow full lawn",
-the answer was yes: every fit so far (shapes design §8, rulings 14–19) was made at one power, about 3 m/s at contact,
-on the 10 s lawn.
+The user: "Now that we now have a unified shot model we need to do the envelope for all the types of shot including the
+drive and the AC stop." Asked whether the shots must work "from a fast lawn tap all the way up to a slow full lawn", the
+answer was yes: every fit so far (shapes design §8, rulings 14–19) was made at one power, about 3 m/s at contact, on
+the 10 s lawn. Then: "Ultimately, then, the player will be able to achieve the range of ratios across any shot to
+anywhere on the lawn. And we'll have the types of shot, but they're all variations on a different way to hold the mallet
+and do the stroke using a unified shot model"; "Ultimately we need to be able to do somewhere between a half roll and a
+full roll or somewhere between a drive and a half roll or all the other inbetweens."
 
-1. **Every stroke type** (the design's call on "all the types of shot": the seven `STROKE_TYPES`). The map runs for
-   the drive, the AC stop, the half, full and pass rolls, the single-ball stroke and the GC stop, each from its text
-   book set-up (shapes design §8) as its origin, as the half roll's anchor was (§3.3). A3–A6's readings and the
-   graded bands (A2 item 2) apply to every type unchanged.
-2. **One continuum, the types named on it** (user, 2026-11-02: "Ultimately, then, the player will be able to achieve
-   the range of ratios across any shot to anywhere on the lawn. And we'll have the types of shot, but they're all
-   variations on a different way to hold the mallet and do the stroke using a unified shot model"; "Ultimately we need
-   to be able to do somewhere between a half roll and a full roll or somewhere between a drive and a half roll or all
-   the other inbetweens"). The map's outcome is the pair (range, ratio) over the whole plan space, not a region per
-   type. Every admissible plan counts wherever its ratio falls, whichever type's text book it was swept from: a plan
-   swept from the half roll's that lands at 1.3 is an in-between shot, not a failed half roll. The bands are labels
-   drawn over the continuum: the rolls' (§2), the drive's 3.0–4.0 and the AC stop's 4.1–6.2 (the CA's, recorded in
-   `reference/swing.json`'s `ratioTargets` beside Gugan 5's targets for his mallet). The gaps between them (1.2–1.4,
-   2.5–3.0, 4.0–4.1) are outcomes like any other. The envelope answers, at each range and lawn: which ratios are
-   reachable admissibly, and by which plans. The single-ball stroke and the GC stop have no croqueted ball, so no
-   ratio: their envelope is the admissible plans at each range. The GC stop's own distances stay out of scope
-   (§Scope).
-   - **The defaults** (§5), extended: at each range and lawn, the least-effort admissible plan (decision 5) for each
-     ratio bin across the whole span reached (the builder sets the bins, finer than the narrowest gap, 0.1). A named
-     type's default is the least-effort plan among the bins inside its band; the single-ball stroke's and the GC stop's
-     the least-effort admissible plan at the range.
-   - **The hold between the types** (the design's call). How the mallet is held (the hands' places on the handle and
-     their grips) is the starting type's, as A2 item 1 holds it; the lean and the feet are swept. If a ratio between
-     two neighbouring bands is reachable from neither type's text book at some range, the hold between theirs is the
-     missing input: the gap is recorded, and whether to sweep the hands' places between the two types is ruled at the
-     gate.
-3. **The range reaches down to a tap** (§3.2). From a tap of 0.25 m to a full court length, 32 m (the design's call
-   for the least range; the builder sets the spacing, denser at the short end where a tap's few millimetres of
-   backswing make the solve for how hard coarse). The lawns stay 6, 10 and 14 s (A3 item 2), so the grid's corners
-   are the user's two: a tap on the fast lawn and a full court length on the slow one.
-4. **The plan space** (§3.1, A2 item 1) is the same on every type: the lean, the feet, `drive`, `handReach` and
-   `window` swept, how hard solved, everything else held at the type's. The AC stop's `jab` is held at the type's (at
-   3 m/s it moved no ratio, shapes design §8); the full roll's `speedGain` axis (A4) stays the full roll's alone.
-5. **Superseded:** §11's "no change to the swing strokes; their digests stay bit-identical" and A2 item 3's swing map
-   seed. The swing strokes are mapped like the rolls, and the ratchet (§8) holds them bit-identical until a default
-   changes, as it holds the rolls. §5's canonical-range rule extends to them: a type's profile values change only to
-   its default at the range its canonical reaches on the 10 s lawn. A2 item 3's "the AC stop's two-branch step flip at
-   the default gap" is closed by shapes ruling 19 (its spread now 0.0217 against 0.06).
-6. **First, the ratio's jumpiness** (the design's call). Neighbouring follow-through settings on the full and pass
-   rolls give ratios up to 0.3 apart (shapes design §8, rulings 16–17; the practice passes suspected, the cause not
-   found). The graded bands read a plan's neighbours, so noise of that size would draw false edges. Its cause is found,
-   and fixed or bounded, before the map is run; if it is bounded rather than fixed, the bound is recorded beside every
-   band and ruled at the gate.
-7. **The time budget** (§12, A3 item 4). The three rolls projected at about 65 CPU h on the thinned grid; four more
-   types and the short ranges about double it. The builder thins as A3 item 4 did, records the cuts, and asks before a
-   cut that drops a type, a lawn or the tap's end of the range.
-8. **The sequence.** The shapes phase (P2b.2b.2c.3b.1) closes at its gate 2 and merges first. The maps of Tasks 6–8
-   are then re-run on every type, the plan amended for the four new types, and this design's gate 2 resumes on all
-   seven. The side-on swing viewer stays the phase after.
+1. **The types.** The map runs for the drive, the AC stop, the half, full and pass rolls and the single-ball stroke,
+   each from its text book set-up (shapes design §8). The GC stop is left out (an assumption, the spec review's
+   recommendation, unanswered): its outcome is the target ball reached across a gap, which the map does not measure,
+   and its distances are out of scope (§Scope).
+2. **One continuum, the types named on it.** The map's outcome is the pair (range, ratio) over the whole plan space,
+   not a region per type. Every admissible plan counts wherever its ratio falls, whichever type's text book it was
+   swept from: a plan swept from the half roll's that lands at 1.3 is an in-between shot, not a failed half roll. The
+   bands are labels drawn over the continuum: the rolls' (§2), the drive's 3.0–4.0 and the AC stop's 4.1–6.2 (the
+   CA's, given in the notes of `reference/swing.json`'s `ratioTargets` beside Gugan 5's targets for his mallet). The
+   gaps between them (1.2–1.4, 2.5–3.0, 4.0–4.1) are outcomes like any other. At each range and lawn the envelope
+   answers which ratios are reachable admissibly, and by which plans. The single-ball stroke has no croqueted ball: its
+   envelope is the admissible plans at each range.
+3. **The player's inputs** (user, 2026-11-02): "The player adjusts the hand position (lean), the foot position (arc
+   bottom relative to ball), the swing power or effort, the push length, the punch/acceleration or flick." They replace
+   §3.1's list and A2 item 1's:
+   - the lean (`lean`) and the feet (`feet`), swept;
+   - the swing's power or effort: how hard (`backswing`, `intensity`), solved for the range as §3.1 solves it, and the
+     hands' assist on the swing, which the shapes design (§1, level-head B1 ruling 7) left to this phase. Without it a
+     long range is reached by backswing and intensity alone and reads superhuman, an artefact rather than an edge (an
+     assumption, the spec review's recommendation, unanswered);
+   - the push length (`handReach`), swept;
+   - the punch, acceleration or flick: `drive` and `window` through contact, swept, and the flick once contact ends
+     (level-head B1 ruling 9, left to this phase by the shapes design §1), built with the assist.
+   How the mallet is held on the handle (the hands' places and grips) is the type's: the type is that hold. Every
+   swept input runs its full span on every type, so a stop with a push, or one hit through, is an in-between shot;
+   each type's text book values lie on its grid. The full roll's `speedGain` axis (A4) stays the full roll's alone;
+   the AC stop's `jab` is held at the type's (at 3 m/s it moved no ratio, shapes design §8).
+4. **The hold's firmness is the model's, not the player's** (user, 2026-11-02: "The model should find the hold
+   firmness that works but this is not chosen by the player, it is anticipated sub conciously based on the other
+   inputs"). For each plan the model finds the firmness (`holdFirmness`, [0, 1]; shapes ruling 15) the player would
+   anticipate: the least at which the plan plays admissibly (the design's call: the least grip that works). A plan no
+   firmness makes admissible fails, with the first reason of its play at full firmness. At each text book the found
+   firmness is recorded beside the fitted one (the half roll's 0.1). `followThrough`'s carry (shapes ruling 14) is
+   held at the type's until the flick is built, then is the flick's.
+5. **The range.** The striker's ball's distance to rest, from a tap of 0.25 m to a full court length, 32 m (the
+   design's call for the least range); the builder sets the spacing, denser at the short end, and adds powers below
+   `POWERS`'s 0.1 (`scripts/pushMapGrid.ts`) to reach it. The lawns stay 6, 10 and 14 s (A3 item 2), so the grid's
+   corners are the user's: a tap on the fast lawn and a full court length on the slow one. A cell in which either ball
+   would pass a court length is recorded as off the court and not solved (at the stop's 5.9 a 32 m striker's ball
+   would send the croqueted ball about 190 m).
+6. **The split** (§3.2), re-based on shapes ruling 17, where the pass roll's ratio moves almost wholly within 0–10°: at
+   least 0°, 2°, 4°, 6°, 8°, 10°, 20° and 30°. It is a swept input from the pass roll's text book, and the pass roll's
+   defaults stay keyed by it (§5).
+7. **The text books stay; the map records** (an assumption, the spec review's recommendation, unanswered). No type's
+   profile values change from the map: each keeps the shapes phase's fit (half roll 2.0, full roll 1.161, pass roll
+   0.859, drive 3.925, AC stop 5.86). §5's canonical-range rule and its profile changes are superseded, and §11's
+   untouched swing strokes holds for every type's text book. Each band's least-effort plan per range and lawn
+   (decision 5) is recorded as reference data with the text book it was swept from; the in-between ratios are read
+   from §3.5's record and §9's plots over (range, ratio), at a bin width set at read-out and no finer than item 9's
+   bound. No table per bin is built.
+8. **Restated.** A6 items 4–7 (the planned hand path and the free finish) are replaced by the shapes phase as built
+   (ruling 14: the top hand stops, the bottom hand carries, the mallet is never let go). A2 item 2's last rule reads
+   "edges are the envelope's alone": no plan's band depends on a region. A3's tie-break is the plan nearer its own
+   text book in follow-through. A4 item 2's "the pass roll's preset `speedGain` 0.5" is now 0.1 (shapes ruling 17).
+   §3.3's anchor is every type's: each text book lands in its band at its canonical setup (the drive 3.925, the AC
+   stop 5.86, the half roll 2.0 today), and the step stops at the gate if one does not.
+9. **The ratio's jumpiness.** Neighbouring follow-through settings on the full and pass rolls give ratios up to 0.3
+   apart (shapes rulings 16–17; the practice passes suspected). The graded bands read a plan's neighbours, so the
+   bound on neighbouring settings, and the practice passes' share of it, is measured before the map and recorded
+   beside every band. Its cause is a carried item unless the bound exceeds the grid's step, when it is found first.
+10. **Exit criteria and the gate** (§1, §6, §10), restated. Criterion 1: the map over the six types. Criterion 4: each
+    text book within its band and within ±2 % of its planned contact speed. Criterion 7: `ENGINE_VERSION` moves to the
+    next minor after 0.28.0 with the assist and the flick. §6 item 2 keeps its within-type slice test; the ordering
+    across maps is superseded (on one continuum it holds by construction), and item 3 reads "which ratios each range
+    reaches". Gate stage 1 is each text book alone swept over range and lawn (none of the other axes), with item 9's
+    bound and the found firmness at the text books; stage 2 is the full map.
+11. **The time budget** (§12, A3 item 4). The three rolls projected at about 65 CPU h on the thinned grid; three more
+    types, the short ranges and the firmness solve (a bisection per plan) multiply it several times. The builder
+    thins as A3 item 4 did, records the cuts, and asks before a cut that drops a type, a lawn or the tap's end of the
+    range.
+12. **The sequence.** The shapes phase (P2b.2b.2c.3b.1) closes at its gate 2 and merges first. The assist, the flick
+    and the found firmness are then specified, planned and built as their own phase, the maps' plan is amended for the
+    new types and inputs, and gate stage 1 runs before the full map. The side-on swing viewer stays the phase after.
