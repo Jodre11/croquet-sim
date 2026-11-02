@@ -559,9 +559,9 @@ and do the stroke using a unified shot model"; "Ultimately we need to be able to
 full roll or somewhere between a drive and a half roll or all the other inbetweens."
 
 1. **The types.** The map runs for the drive, the AC stop, the half, full and pass rolls and the single-ball stroke,
-   each from its text book set-up (shapes design §8). The GC stop is left out (an assumption, the spec review's
-   recommendation, unanswered): its outcome is the target ball reached across a gap, which the map does not measure,
-   and its distances are out of scope (§Scope).
+   each from its text book set-up (shapes design §8). The GC stop is left out (user, 2026-11-02: "Single ball in. GC
+   Stop is similar to a rush anyway"): its outcome is the target ball reached across a gap, which the map does not
+   measure, and its distances are out of scope (§Scope).
 2. **One continuum, the types named on it.** The map's outcome is the pair (range, ratio) over the whole plan space,
    not a region per type. Every admissible plan counts wherever its ratio falls, whichever type's text book it was
    swept from: a plan swept from the half roll's that lands at 1.3 is an in-between shot, not a failed half roll. The
@@ -576,8 +576,8 @@ full roll or somewhere between a drive and a half roll or all the other inbetwee
    - the lean (`lean`) and the feet (`feet`), swept;
    - the swing's power or effort: how hard (`backswing`, `intensity`), solved for the range as §3.1 solves it, and the
      hands' assist on the swing, which the shapes design (§1, level-head B1 ruling 7) left to this phase. Without it a
-     long range is reached by backswing and intensity alone and reads superhuman, an artefact rather than an edge (an
-     assumption, the spec review's recommendation, unanswered);
+     long range is reached by backswing and intensity alone and reads superhuman, an artefact rather than an edge
+     (user, 2026-11-02: "Build the assist first");
    - the push length (`handReach`), swept;
    - the punch, acceleration or flick: `drive` and `window` through contact, swept, and the flick once contact ends
      (level-head B1 ruling 9, left to this phase by the shapes design §1), built with the assist.
@@ -601,9 +601,12 @@ full roll or somewhere between a drive and a half roll or all the other inbetwee
 6. **The split** (§3.2), re-based on shapes ruling 17, where the pass roll's ratio moves almost wholly within 0–10°: at
    least 0°, 2°, 4°, 6°, 8°, 10°, 20° and 30°. It is a swept input from the pass roll's text book, and the pass roll's
    defaults stay keyed by it (§5).
-7. **The text books stay; the map records** (an assumption, the spec review's recommendation, unanswered). No type's
-   profile values change from the map: each keeps the shapes phase's fit (half roll 2.0, full roll 1.161, pass roll
-   0.859, drive 3.925, AC stop 5.86). §5's canonical-range rule and its profile changes are superseded, and §11's
+7. **The map records; the text books are revisited on what it finds** (user, 2026-11-02: "Record and revisit, based
+   on what we find, we might find low effort options that get us close to Gugan"). No type's profile values change
+   from the map itself: each keeps the shapes phase's fit (half roll 2.0, full roll 1.161, pass roll 0.859, drive
+   3.925, AC stop 5.86). At gate stage 2 each text book is set beside the map's least-effort plans near its targets
+   (Gugan's where he measured one: the drive's 4.23, the AC stop's 7.15, the pass roll's 0.83) and the user rules
+   whether to move it; a moved text book is a change of its own, with its version. §5's canonical-range rule and its profile changes are superseded, and §11's
    untouched swing strokes holds for every type's text book. Each band's least-effort plan per range and lawn
    (decision 5) is recorded as reference data with the text book it was swept from; the in-between ratios are read
    from §3.5's record and §9's plots over (range, ratio), at a bin width set at read-out and no finer than item 9's
