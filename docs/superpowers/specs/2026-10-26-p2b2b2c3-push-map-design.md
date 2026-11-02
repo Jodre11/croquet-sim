@@ -547,3 +547,43 @@ The sequence (user, 2026-10-31): 3b pauses at gate 2. The level head is specifie
 P2b.2b.2c.3b.1 (3c being the swing strokes' hold and grips, A2; on this branch, an assumption;
 `2026-10-31-p2b2b2c3b1-level-head-design.md`), the maps of Tasks 6–8 are re-run on it (the half roll has a push too),
 and gate 2 then resumes.
+
+### A7. The envelope covers every shot (user, 2026-11-02)
+
+The user: "Now that we now have a unified shot model we need to do the envelope for all the types of shot, including
+the drive and the AC stop." Asked whether the shots must work "from a fast lawn tap all the way up to a slow full lawn",
+the answer was yes: every fit so far (shapes design §8, rulings 14–19) was made at one power, about 3 m/s at contact,
+on the 10 s lawn.
+
+1. **Every stroke type** (the design's call on "all the types of shot": the seven `STROKE_TYPES`). The map runs for
+   the drive, the AC stop, the half, full and pass rolls, the single-ball stroke and the GC stop, each from its text
+   book set-up (shapes design §8) as its origin, as the half roll's anchor was (§3.3). A3–A6's readings and the
+   graded bands (A2 item 2) apply to every type unchanged.
+2. **The regions** (§2), extended. The croquet strokes' regions are the CA's bands, as the rolls' are: the drive
+   3.0–4.0 and the AC stop 4.1–6.2 (both recorded in `reference/swing.json`'s `ratioTargets`, beside Gugan 5's targets
+   for his mallet). The single-ball stroke and the GC stop have no croqueted ball, so no ratio region: their envelope is
+   the admissible plans at each range, and their default the least-effort admissible plan (decision 5). The GC stop's
+   own distances stay out of scope (§Scope).
+3. **The range reaches down to a tap** (§3.2). From a tap of 0.25 m to a full court length, 32 m (the design's call
+   for the least range; the builder sets the spacing, denser at the short end where a tap's few millimetres of
+   backswing make the solve for how hard coarse). The lawns stay 6, 10 and 14 s (A3 item 2), so the grid's corners
+   are the user's two: a tap on the fast lawn and a full court length on the slow one.
+4. **The plan space** (§3.1, A2 item 1) is the same on every type: the lean, the feet, `drive`, `handReach` and
+   `window` swept, how hard solved, everything else held at the type's. The AC stop's `jab` is held at the type's (at
+   3 m/s it moved no ratio, shapes design §8); the full roll's `speedGain` axis (A4) stays the full roll's alone.
+5. **Superseded:** §11's "no change to the swing strokes; their digests stay bit-identical" and A2 item 3's swing map
+   seed. The swing strokes are mapped like the rolls, and the ratchet (§8) holds them bit-identical until a default
+   changes, as it holds the rolls. §5's canonical-range rule extends to them: a type's profile values change only to
+   its default at the range its canonical reaches on the 10 s lawn. A2 item 3's "the AC stop's two-branch step flip at
+   the default gap" is closed by shapes ruling 19 (its spread now 0.0217 against 0.06).
+6. **First, the ratio's jumpiness** (the design's call). Neighbouring follow-through settings on the full and pass
+   rolls give ratios up to 0.3 apart (shapes design §8, rulings 16–17; the practice passes suspected, the cause not
+   found). The graded bands read a plan's neighbours, so noise of that size would draw false edges. Its cause is found,
+   and fixed or bounded, before the map is run; if it is bounded rather than fixed, the bound is recorded beside every
+   band and ruled at the gate.
+7. **The time budget** (§12, A3 item 4). The three rolls projected at about 65 CPU h on the thinned grid; four more
+   types and the short ranges about double it. The builder thins as A3 item 4 did, records the cuts, and asks before a
+   cut that drops a type, a lawn or the tap's end of the range.
+8. **The sequence.** The shapes phase (P2b.2b.2c.3b.1) closes at its gate 2 and merges first. The maps of Tasks 6–8
+   are then re-run on every type, the plan amended for the four new types, and this design's gate 2 resumes on all
+   seven. The side-on swing viewer stays the phase after.
