@@ -559,11 +559,28 @@ on the 10 s lawn.
    the drive, the AC stop, the half, full and pass rolls, the single-ball stroke and the GC stop, each from its text
    book set-up (shapes design §8) as its origin, as the half roll's anchor was (§3.3). A3–A6's readings and the
    graded bands (A2 item 2) apply to every type unchanged.
-2. **The regions** (§2), extended. The croquet strokes' regions are the CA's bands, as the rolls' are: the drive
-   3.0–4.0 and the AC stop 4.1–6.2 (both recorded in `reference/swing.json`'s `ratioTargets`, beside Gugan 5's targets
-   for his mallet). The single-ball stroke and the GC stop have no croqueted ball, so no ratio region: their envelope is
-   the admissible plans at each range, and their default the least-effort admissible plan (decision 5). The GC stop's
-   own distances stay out of scope (§Scope).
+2. **One continuum, the types named on it** (user, 2026-11-02: "Ultimately, then, the player will be able to achieve
+   the range of ratios across any shot to anywhere on the lawn. And we'll have the types of shot, but they're all
+   variations on a different way to hold the mallet and do the stroke using a unified shot model"; "Ultimately we need
+   to be able to do somewhere between a half roll and a full roll or somewhere between a drive and a half roll or all
+   the other inbetweens"). The map's outcome is the pair (range, ratio) over the whole plan space, not a region per
+   type. Every admissible plan counts wherever its ratio falls, whichever type's text book it was swept from: a plan
+   swept from the half roll's that lands at 1.3 is an in-between shot, not a failed half roll. The bands are labels
+   drawn over the continuum: the rolls' (§2), the drive's 3.0–4.0 and the AC stop's 4.1–6.2 (the CA's, recorded in
+   `reference/swing.json`'s `ratioTargets` beside Gugan 5's targets for his mallet). The gaps between them (1.2–1.4,
+   2.5–3.0, 4.0–4.1) are outcomes like any other. The envelope answers, at each range and lawn: which ratios are
+   reachable admissibly, and by which plans. The single-ball stroke and the GC stop have no croqueted ball, so no
+   ratio: their envelope is the admissible plans at each range. The GC stop's own distances stay out of scope
+   (§Scope).
+   - **The defaults** (§5), extended: at each range and lawn, the least-effort admissible plan (decision 5) for each
+     ratio bin across the whole span reached (the builder sets the bins, finer than the narrowest gap, 0.1). A named
+     type's default is the least-effort plan among the bins inside its band; the single-ball stroke's and the GC stop's
+     the least-effort admissible plan at the range.
+   - **The hold between the types** (the design's call). How the mallet is held (the hands' places on the handle and
+     their grips) is the starting type's, as A2 item 1 holds it; the lean and the feet are swept. If a ratio between
+     two neighbouring bands is reachable from neither type's text book at some range, the hold between theirs is the
+     missing input: the gap is recorded, and whether to sweep the hands' places between the two types is ruled at the
+     gate.
 3. **The range reaches down to a tap** (§3.2). From a tap of 0.25 m to a full court length, 32 m (the design's call
    for the least range; the builder sets the spacing, denser at the short end where a tap's few millimetres of
    backswing make the solve for how hard coarse). The lawns stay 6, 10 and 14 s (A3 item 2), so the grid's corners
