@@ -141,14 +141,15 @@ describe("one plan's run (P2b.2b.2c.3b plan Task 3)", () => {
         // Ruling 13: let go from the push's end over the hands' rise, the ratio is 1.215. Ruling 14: the top hand
         // stops, and with the full roll's muted follow-through (0 s) the bottom hand brakes the head's turn to rest
         // over HAND_EASE and holds it. Practice lands it in three passes (was two), unflagged, and the ratio rises to
-        // 1.567, the striker's ball carried less far.
+        // 1.567, the striker's ball carried less far. Ruling 16: the push's acceleration fitted, its default drive 0.25
+        // over 80 ms pulses (DEFAULT_WINDOW), the ratio falls to 1.161, inside the band 1.0–1.2.
         const base = mapSetup("full-roll", textBook("full-roll"), 1);
         const p = swingReference["full-roll"].defaultBackswing.value / bodyBackswing(base, WORLD);
         const sample = playSample("full-roll", textBook("full-roll"), p, [10]);
         expect(sample.klass).toBeNull();
         expect(sample.reason).toBeNull();
         expect(sample.passes).toBe(3);
-        expect(sample.byLawn[10]?.ratio).toBeCloseTo(1.567, 3);
+        expect(sample.byLawn[10]?.ratio).toBeCloseTo(1.161, 3);
     });
 
     it("plays the half roll's text book at its canonical power at its fitted ratio, 2.0", () => {

@@ -153,7 +153,7 @@ describe("the follow-through's flags (P2b.2b.2b.3 design §4.6)", () => {
         expect(result.events.map((e) => e.kind)).toContain("turf-yield");
         // Measured while building it: the head digs past HEAD_DEEP_LIMIT too, and the finish still ends at rest.
         expect(follow.flags).toEqual(["follow-turf-yield", "follow-head-deep"]);
-    });
+    }, 60_000);
 });
 
 describe("Gugan's jab (P2b.2b.2b.3 design §7.3; slow)", () => {

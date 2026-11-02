@@ -311,3 +311,16 @@ shape's firmness is stated at 3 m/s and a softer shot is held less hard. Fits an
 - Re-pins: the canonical half roll pins its ratio, 2.0; the turf-strike flag cover keeps the grip's whole couple;
   the whole-roll handover's lift bound moves to 1.5e-4 (the full roll at 1.5 m/s now holds at half the couple).
   Engine 0.24.0.
+
+**Ruling 16, the push's acceleration fitted (user, 2026-11-02: "Fit it now", then "Apply the fit").** The push's
+acceleration is set by the shot's `drive` (how hard each pulse changes the rate) and `window` (the pulses' duration;
+shorter is sharper), with the preset's `speedGain`. Swept at canonical power on the 10 s lawn:
+- **Full roll:** every setting lawful; the ratio 1.16–1.60, varying by up to 0.3 between neighbouring settings (not
+  understood; the practice passes are a suspect). No setting reached 1.1. The fit: drive 0.25 over 80 ms pulses,
+  held for the preset's 30 ms (`DEFAULT_WINDOW`, the planner's default `window`, beside `DEFAULT_DRIVE`), ratio 1.161
+  in three passes, inside the band 1.0–1.2. Lengthening the preset's own window instead lengthens the hold with the
+  pulses, and nothing then enters the band (best 1.21).
+- **Pass roll:** acceleration is the wrong lever. With none (drive 0, or speedGain 0) the ratio is 0.54 and every
+  increase lowers it, to 0.22; no setting is lawful (off the face at short windows, the grip's limit at longer, two
+  re-hits). Its miss lies in its set-up (lean, push length, contact), not its acceleration; unchanged.
+- Engine 0.25.0.

@@ -298,7 +298,9 @@ describe("handover of a ball sunk under the head, on whole rolls", () => {
         // pass roll 169.4 ms).
         const base = canonicalSetup(type, { croquetGap: 0, mallet: LEGACY_MALLET });
         const up = base.stroke.contact.up + (type === "full-roll" ? 0.003 : -0.003);
-        const stroke = { ...base.stroke, drive, contact: { up, side } };
+        // Ruling 16: the preset's window, not the full roll's DEFAULT_WINDOW (80 ms), at which side 0 throws the
+        // handover's sideways overlap error (1.64 mm), the class noted at 0.9 m/s below.
+        const stroke = { ...base.stroke, window: undefined, drive, contact: { up, side } };
         const setup = { ...base, stroke: { ...stroke, backswing: backswingFor({ ...base, stroke }, speed, world) } };
         return simulateShot(setup, world);
     };

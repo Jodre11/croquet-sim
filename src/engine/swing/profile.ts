@@ -219,7 +219,7 @@ const DRIVE: Readonly<Record<StrokeType, SwingDrive>> = {
         handArcLow: 0.5,
     },
     // Carry: the hands' speed from the downswing (P2b.2b.2a design §3.3) and still accelerating, the push 0.30 m
-    // (prototype). A known miss in this phase (design §10).
+    // (prototype). The shot's default drive and window (DEFAULT_DRIVE, DEFAULT_WINDOW) shape its push.
     "full-roll": {
         speedGain: 0.1,
         window: 0.03,
@@ -406,8 +406,18 @@ export const DEFAULT_DRIVE: Readonly<Record<StrokeType, number>> = {
     "stop-ac": -1,
     "stop-gc": -1,
     "half-roll": 1,
-    "full-roll": 1,
+    "full-roll": 0.25,
     "pass-roll": 1,
+};
+
+/**
+ * The planner's default `window` per stroke type (s); absent: the preset's. The full roll's 80 ms pulses, held for the
+ * preset's 30 ms, with its default drive 0.25 are the push acceleration's fit to the ratio (shapes design §8, ruling
+ * 16): 1.16 at canonical power, inside the band 1.0–1.2. No drive, window or speedGain on the sweep reached 1.1, and
+ * the ratio varies by up to 0.3 between neighbouring settings, so the fit is fragile until that is understood.
+ */
+export const DEFAULT_WINDOW: Readonly<Partial<Record<StrokeType, number>>> = {
+    "full-roll": 0.08,
 };
 
 /** Every action on time. */

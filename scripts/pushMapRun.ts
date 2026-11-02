@@ -29,7 +29,7 @@ import {
     type StrokePlan,
 } from "../src/engine/swing/buildContact";
 import { requiredCouple } from "../src/engine/swing/downswing";
-import { DEFAULT_DRIVE, DEFAULT_TIMING, defaultProfile } from "../src/engine/swing/profile";
+import { DEFAULT_DRIVE, DEFAULT_TIMING, DEFAULT_WINDOW, defaultProfile } from "../src/engine/swing/profile";
 import type { ShotSetup } from "../src/engine/swing/types";
 import { BALL_IDS, type BallId, type BallState, type World } from "../src/engine/types";
 import {
@@ -120,7 +120,7 @@ const STEP_SLACK = 1e-9;
 
 /**
  * The text book's plan of `type` (decision 8; spec §3.1): the preset's lean at its canonical contact (stanceLean), its
- * feet as feetReading reads the canonical setup on the open lawn, its default drive, handReach and window, the hands
+ * feet as feetReading reads the canonical setup on the open lawn, its default drive and window, its handReach, the hands
  * on time and, on the pass roll, canonicalSetup's 20° split.
  */
 export function textBook(type: RollType): MapPlan {
@@ -138,7 +138,7 @@ export function textBook(type: RollType): MapPlan {
         feet: feetReading(setup, IMPACT_WORLD).lowPoint,
         drive: DEFAULT_DRIVE[type],
         handReach: push.handReach,
-        window: push.window,
+        window: DEFAULT_WINDOW[type] ?? push.window,
         onset: DEFAULT_TIMING[type].hands,
         split: type === "pass-roll" ? (20 * Math.PI) / 180 : 0,
         speedGain: push.speedGain,
