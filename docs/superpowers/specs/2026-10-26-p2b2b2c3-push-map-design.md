@@ -630,7 +630,13 @@ full roll or somewhere between a drive and a half roll or all the other inbetwee
 11. **The time budget** (§12, A3 item 4). The three rolls projected at about 65 CPU h on the thinned grid; three more
     types, the short ranges and the firmness solve (a bisection per plan) multiply it several times. The builder
     thins as A3 item 4 did, records the cuts, and asks before a cut that drops a type, a lawn or the tap's end of the
-    range.
+    range. The map runs on GitHub Actions (user, 2026-11-02: "Yes, add it"): the repository is public, so standard
+    hosted runners are free and unmetered, 4 vCPUs each, 20 jobs at once on the Free plan, each job at most 6 h and a
+    matrix at most 256 jobs (GitHub's Actions limits, https://docs.github.com/en/actions/reference/limits, read
+    2026-11-02). A manually dispatched workflow runs the map's shards as a matrix, each shard sized to finish inside
+    6 h, uploads each shard's output as an artifact, and a last job merges them into §3.5's record; the record keeps
+    the run's URL and commit. Every figure the map is compared against (the ratchet's baselines, gate stage 1's
+    text books) is run on the same runners, never compared across machines.
 12. **The sequence.** The shapes phase (P2b.2b.2c.3b.1) closes at its gate 2 and merges first. The assist, the flick
     and the found firmness are then specified, planned and built as their own phase, the maps' plan is amended for the
     new types and inputs, and gate stage 1 runs before the full map. The side-on swing viewer stays the phase after.
