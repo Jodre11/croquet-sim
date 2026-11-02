@@ -162,15 +162,16 @@ describe("one plan's run (P2b.2b.2c.3b plan Task 3)", () => {
         expect(sample.byLawn[10]?.ratio).toBeCloseTo(2.0, 2);
     });
 
-    it("plays the pass roll's text book at its canonical power lawfully, at its fitted ratio, 0.814", () => {
+    it("plays the pass roll's text book at its canonical power lawfully, at its fitted ratio, 0.859", () => {
         // Shapes design §8, ruling 17: a full roll with a 4° split, its 32° lean and a subtly punchier push (drive 0.5
-        // over 60 ms pulses); was its own 15 ms punch at a 20° split, unlawful (29.1.6.1) at ratio 0.418.
+        // over 60 ms pulses); was its own 15 ms punch at a 20° split, unlawful (29.1.6.1) at ratio 0.418. Ruling 18:
+        // its follow-through 0.1 s keeps the head off the turf (was 0.3 s: ratio 0.814 in two passes).
         const base = mapSetup("pass-roll", textBook("pass-roll"), 1);
         const p = swingReference["pass-roll"].defaultBackswing.value / bodyBackswing(base, WORLD);
         const sample = playSample("pass-roll", textBook("pass-roll"), p, [10]);
         expect(sample.klass).toBeNull();
-        expect(sample.passes).toBe(2);
-        expect(sample.byLawn[10]?.ratio).toBeCloseTo(0.814, 3);
+        expect(sample.passes).toBe(3);
+        expect(sample.byLawn[10]?.ratio).toBeCloseTo(0.859, 3);
     });
 
     it("grades the full roll's text book at p = 1.5 as superhuman: a hand reaches its grip's limit", () => {

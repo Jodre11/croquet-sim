@@ -272,7 +272,9 @@ export const SLOPE_HOLD: Readonly<Record<StrokeType, number>> = {
  * model being one shot model. Carried at the push's pace, the shaft turns further on a faster push, so the
  * follow-through grows with the range. The user (2026-11-01): the full roll's is muted, "even at long range", and the
  * pass roll's text book carries on relatively further, from the end of its contact. The values are assumptions until
- * the envelope phase tunes them per shot; a stroke with no push has nothing for them to act on.
+ * the envelope phase tunes them per shot; a stroke with no push has nothing for them to act on. The pass roll's 0.1 s
+ * (ruling 18; was 0.3 s) keeps its head off the turf: from 0.15 s the carry swings the shaft through vertical with the
+ * hands at their lowest and the head meets the turf (1.44 mm in at 259 ms).
  */
 export const FOLLOW_THROUGH: Readonly<Record<StrokeType, number>> = {
     "single-ball": 0.2,
@@ -281,7 +283,7 @@ export const FOLLOW_THROUGH: Readonly<Record<StrokeType, number>> = {
     "stop-gc": 0.2,
     "half-roll": 0.2,
     "full-roll": 0,
-    "pass-roll": 0.3,
+    "pass-roll": 0.1,
 };
 
 /**

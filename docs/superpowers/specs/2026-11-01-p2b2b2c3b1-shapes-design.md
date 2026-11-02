@@ -341,3 +341,19 @@ lawn:
   0.25 over 80 ms) and the canonical split 4° (`PASS_SPLIT`; was 20°). Ratio 0.814, lawful in two passes, against
   Gugan 5's 0.83. Its follow-through stays 0.3 s and its hold firmness 1. Its default backswing is refitted to 3 m/s
   for the new grips (0.42943 m; was 0.43127). Engine 0.26.0.
+
+**Ruling 18, the pass roll keeps off the turf (user, 2026-11-02: "it would be better if the pass roll had no turf
+contact").** At its 0.3 s follow-through the bottom hand's carry swung the shaft through vertical with the hands at their
+lowest, and the head met the turf (1.44 mm in at 259 ms, no flag). The carry from 0.15 s on does this; 0.1 and 0.12 s
+keep the head 18.65 mm clear, and the play then differs through the impact too (the ratio 0.859 in three passes, the
+striker's ball 6.57 m; was 0.814 in two). The pass roll's follow-through is 0.1 s (was 0.3 s), still more than the
+full roll's 0, and clear of the edge between 0.12 and 0.15 s. Engine 0.27.0.
+
+The user added that a little turf contact is acceptable on the AC stop. Measured at 3 m/s on the default world: the
+croqueted ball goes 5.1 m whatever the stance, and the ratio (5.04 canonical; Gugan 5's 7.15 ± 0.6) moves only with how
+far the striker's ball goes, set in the double tap's first milliseconds. Lean −3° to −6° and contact 17.5–25 mm below
+the face's centre give 4.82–5.17, with −6° at 22.5 mm on a second branch, 5.86 (the head 0.29 mm clear through the
+impact, 0.93 mm into the turf in the follow-through); −7° gives 5.87–6.25 but yields the turf in the impact, and from
+−7° at 20 mm the head starts in the turf. The jab (0–8 mm) moves no ratio: the head reaches the turf after the striker's
+ball has left. Gugan's mallet at the canonical stance gives 6.60 (followThroughHarness.test.ts), so the gap may be the
+default mallet's, not the stance's. For the user.
