@@ -327,7 +327,8 @@ export const CANONICAL_CLEARANCE: Readonly<Record<StrokeType, number>> = {
     // (ρ − h_z)·cos α − (L − e − L₀)·|sin α| − e·(1 − cos α), L₀ the old 228.6 mm head.
     // P2b.2b.2c.2d: the stance, 5° back at 22.5 mm below the face's centre (was 14.5473e-3 at 4° and 20 mm): the back
     // corner, pitched further, lies lower, and the ball met lower on the face lifts the head.
-    "stop-ac": 11.4352e-3,
+    // Shapes design §8, ruling 19: the stance 6° back (was 11.4352e-3 at 5°).
+    "stop-ac": 5.8387e-3,
     // P2b.2b.2b.2c: the mallet (was 7.5009e-3).
     "stop-gc": 17.0259e-3,
     // P2b.2b.2b.2c: the mallet (was 29.5203e-3, 36.6544e-3 and 39.7589e-3): the face's rounded lower edge,

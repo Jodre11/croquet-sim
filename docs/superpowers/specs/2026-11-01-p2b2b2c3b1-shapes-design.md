@@ -357,3 +357,19 @@ impact, 0.93 mm into the turf in the follow-through); −7° gives 5.87–6.25 b
 −7° at 20 mm the head starts in the turf. The jab (0–8 mm) moves no ratio: the head reaches the turf after the striker's
 ball has left. Gugan's mallet at the canonical stance gives 6.60 (followThroughHarness.test.ts), so the gap may be the
 default mallet's, not the stance's. For the user.
+
+**Ruling 19, the AC stop leans 6° back (user, 2026-11-02: "Lean it to −6°").** Gugan's mallet is the default one with
+its head's mass solved for his effective mass, 2.30 ball masses: 0.899 kg for the stop, against the default's 1.000 kg.
+At the 5° stance the lighter head alone took the canonical stop from 5.04 to 5.97, and solving the stroke for 3 m/s at
+contact (2.992 m/s planned) took it to 6.60, a 0.4 % rise in speed moving the ratio by 0.64. The default mallet is
+kept: one 0.899 kg head for every shot sends the drive to 4.54 (CA 3.0–4.0, Gugan 4.03–4.43) and the half roll to 2.17
+(2.0), and every fit so far was made on the default mallet. The stance is 6° back at the same contact, 22.5 mm below
+the face's centre (was 5°): the canonical stop's ratio is 5.86 (was 5.04), the striker's ball 0.87 m and the
+croqueted ball 5.13 m, the head 0.29 mm clear through the impact and at most 0.93 mm into the turf in the follow-through,
+neither yielding the soil nor passing the depth limit. 5.86 lies on the stop's second branch: 2.5 mm above or below the
+contact the ratio falls to 5.07 or 5.16, so the stance is fragile in its contact height. On Gugan's mallet, though, the
+step no longer flips the branch: Gugan 5's stop is 6.9323, 6.9430 and 6.9540 at dt/2, dt and 2·dt at 0.75 mm (was
+5.9661, 5.9660 and 6.5810, the marked P2b.2b.2c.3b item), inside his band and within a tenth of its tolerance, so
+squeezeConvergence.test.ts's stop case at the default gap passes and is no longer marked. The default backswing is refitted
+for 3 m/s (0.44859900452640067 m) and the canonical clearance, approach and no-push baseline are re-recorded. Engine
+0.28.0.

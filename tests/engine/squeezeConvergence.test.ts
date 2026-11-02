@@ -40,6 +40,7 @@ describe.runIf(SLOW)("the strike's step convergence (P2b.2b.2c.2b design §6)", 
     };
     // P2b.2b.2c.3a gate stage 2: the AC stop's grip retune (was the stop at 7.7201, 7.7325 and 7.7591, a spread of
     // 0.0390): with the hands together (γ_T 1, g_B 0.1), 7.5963, 7.6089 and 7.6381, a spread of 0.0419.
+    // Shapes design §8, ruling 19: the stance 6° back, 7.3244, 7.3331 and 7.3629, a spread of 0.0385.
     it("keeps Gugan 5's drive and stop ratios at gap 0 m", () => {
         keepsGugan5("drive", 0);
         keepsGugan5("stop-ac", 0);
@@ -62,17 +63,16 @@ describe.runIf(SLOW)("the strike's step convergence (P2b.2b.2c.2b design §6)", 
     // branches about 0.6 apart, and which one moves with the step: dt/2 and dt on the low branch, 2·dt on the high
     // one. No grip in the stage 2 search (γ_T and g_B in 0.1–1, the bottom hand at 0.45–0.717 m) removed the flip at
     // this gap, so it stays marked: a P2b.2b.2c.3b item (gate stage 2 ruling 2026-10-28).
-    it.fails(
-        "keeps Gugan 5's stop ratio at the default gap",
-        () => keepsGugan5("stop-ac", DEFAULT_CROQUET_GAP),
-        320_000,
-    );
+    // Shapes design §8, ruling 19: the stance 6° back (was it.fails at a spread of 0.6150): 6.9323, 6.9430 and 6.9540,
+    // a spread of 0.0217, every step on one branch.
+    it("keeps Gugan 5's stop ratio at the default gap", () => keepsGugan5("stop-ac", DEFAULT_CROQUET_GAP), 320_000);
     // P2b.2b.2c.3a: until stage 2's A1 retune of the AC stop's grip (user ruling, "mark them, retune at stage 2").
     // The stop's ratio at dt/2, dt and 2·dt is 5.5834, 6.1119 and 5.5824, a spread of 0.5295 against 0.06 (was 6.5973,
     // 6.6028 and 6.5945, 0.0083): as at the default gap, with the sliding second tap at dt here, blue leaving it
     // falling where the other steps leave it rising, and the impact handing blue over mid-hop at 20 ms.
     // P2b.2b.2c.3a gate stage 2: the AC stop's grip retune (was it.fails at a spread of 0.5295): with the hands
     // together (γ_T 1, g_B 0.1), 5.7820, 5.7859 and 5.7864, a spread of 0.0044, every step on the low branch.
+    // Shapes design §8, ruling 19: the stance 6° back, 6.7381, 6.7311 and 6.7058, a spread of 0.0323.
     it("keeps Gugan 5's stop ratio at gap 0.001 m", () => keepsGugan5("stop-ac", 0.001), 320_000);
     // P2b.2b.2c.2c: on the re-set laws the drive ratio's spread over dt/2, dt and 2·dt at 1 mm is 0.0204 (4.198, 4.191,
     // 4.177), just over a tenth of its 0.2 tolerance; gate stage 2 ruled it recorded and carried (2026-10-23).

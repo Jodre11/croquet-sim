@@ -84,16 +84,17 @@ describe("the follow-through harness (P2b.2b.2c.2d design §3.4)", () => {
     it("throws for a contact speed below the stroke's speed at no backswing, naming that speed", () => {
         // P2b.2b.2c.3a gate stage 2 (ruling 2026-10-28): at the hands together and the firm top hand full intensity
         // alone meets the ball at 3.19 m/s as the backswing goes to 0, so no backswing gives 3 m/s (was a backswing of
-        // 7.4e-16 m, returned without throwing).
+        // 7.4e-16 m, returned without throwing). Shapes design §8, ruling 19: at the stance 6° back, 3.55 m/s (was
+        // 3.19 m/s at 5°).
         // Its bracket plays whole strokes: 6.6 s alone, 15.9 s beside the slow suite (2026-10-28), past the 15 s default.
         const timing = { arc: -0.01, hands: 0, dip: 0 };
         const setup = canonicalSetup("stop-ac", { stroke: { timing, intensity: 1 } });
-        expect(() => backswingForContact(setup, 3, WORLD)).toThrow(/3 m\/s lies below .* 3\.1\d* m\/s/);
+        expect(() => backswingForContact(setup, 3, WORLD)).toThrow(/3 m\/s lies below .* 3\.5\d* m\/s/);
     }, 120_000);
-    it("sets the AC stop's canonical stance at 5° back, 22.5 mm below the face's centre, and plays it", () => {
+    it("sets the AC stop's canonical stance at 6° back, 22.5 mm below the face's centre, and plays it", () => {
         // P2b.2b.2c.2d: the stance (was 6° at 20 mm).
         const setup = canonicalSetup("stop-ac");
-        expect(Math.abs(leanOf(setup, WORLD) - (-5 * Math.PI) / 180)).toBeLessThanOrEqual(1e-12);
+        expect(Math.abs(leanOf(setup, WORLD) - (-6 * Math.PI) / 180)).toBeLessThanOrEqual(1e-12);
         expect(setup.stroke.contact.up).toBe(-0.0225);
         const outcome = simulateShot(setup, defaultWorld());
         expect(outcome.motion.aborted).toBe(false);
@@ -158,11 +159,12 @@ describe("the follow-through harness (P2b.2b.2c.2d design §3.4)", () => {
     // 7.15 ± 0.6 (was 6.66). P2b.2b.2c.3a gate stage 2: the AC stop's grip retune (was it.fails at 6.3545): 6.6029 with
     // the hands together (γ_T 1, g_B 0.1), the head clear of the turf through the impact and only rubbing it in the
     // follow-through. The pass sits on the stop's step-sensitive high branch (squeezeConvergence.test.ts).
+    // Shapes design §8, ruling 19: the stance 6° back (was 6.6029 at 5°), 6.913, a branch the step no longer flips.
     it.runIf(SLOW)(
         "keeps the canonical AC stop's Gugan 5 stop within the band at 3 m/s contact speed",
         { timeout: 80_000 },
         () => {
-            // The stop at the canonical stance (lean 5° back, 22.5 mm below the face's centre) and timing (on time, so
+            // The stop at the canonical stance (lean 6° back, 22.5 mm below the face's centre) and timing (on time, so
             // the brake acts with the strike), on Gugan's mallet solved at that stance and the AC stop's own grips, at
             // the croquet gap Gugan measured: the ratio of the croqueted ball's travel to the striker's must stay
             // within the mean's standard error of his 7.15. The stance was set so that the head does not damage the

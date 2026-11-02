@@ -455,6 +455,7 @@ describe("the mallet's release and the finish's end (shapes design §2)", () => 
 
     it.each(["drive", "single-ball", "stop-ac"] as const)("leaves %s, with no push, bit-identical", (type) => {
         // Captured before the release was added (shapes plan Task 2 Step 1); a JSON round trip is exact for doubles.
+        // Shapes design §8, ruling 19: stop-ac re-captured at its 6° stance.
         expect(JSON.parse(JSON.stringify(played(type)))).toEqual(NO_PUSH_BASELINE[type]);
     });
 

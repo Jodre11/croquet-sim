@@ -707,10 +707,13 @@ describe("the mechanisms (design §8.1), on the canonical setups", () => {
         // hands' flex replaces the swing law's damper, and the head, on the turf from 16.47 ms, yields it at 17.49 ms
         // and reaches the depth limit at 17.92 ms.
         // P2b.2b.2c.3a gate stage 2: the jab variant's grip gives these figures unchanged.
-        expect(impact.events.map((e) => e.kind)).toEqual(["turf-lift", "turf-yield", "impact-head-deep"]);
+        // Shapes design §8, ruling 19: the stance 6° back (was the yield at 17.49 ms and the depth limit at 17.92 ms):
+        // the head, lower behind, lifts off the turf twice before the dig, meets it from 12.79 ms, yields it at
+        // 13.89 ms and reaches the depth limit at 14.25 ms.
+        expect(impact.events.map((e) => e.kind)).toEqual(["turf-lift", "turf-lift", "turf-yield", "impact-head-deep"]);
         const times = impact.events.map((e) => ("t" in e ? e.t : NaN));
-        expect(times[1]).toBeCloseTo(0.01749, 5);
-        expect(times[2]).toBeCloseTo(0.01792, 5);
+        expect(times[2]).toBeCloseTo(0.013885, 5);
+        expect(times[3]).toBeCloseTo(0.01425, 5);
     });
 
     // Spec exit criterion 2 (P2b.2b.2b.2b). On the bed (P2b.2b.2b.2a) the canonical pass roll's follow-through kept its

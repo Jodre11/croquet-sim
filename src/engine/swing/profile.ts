@@ -361,7 +361,15 @@ export const defaultProfile: SwingProfile = {
         // clean. The bottom hand's position, not the grips, sets the ratio: about 5.8 at 0.45 m, 6.0 at 0.55 m and
         // 6.6–6.7 from 0.6 m up, at 0.75 mm. The 0.75 mm band's pass sits on the stop's step-sensitive high branch
         // (squeezeConvergence.test.ts).
-        "stop-ac": stanceFromLean(-5 * DEG, -0.0225, {
+        // Shapes design §8, ruling 19 (was −5°): the lean 6° back at the same contact, for Gugan 5's ratio on the
+        // default mallet. At −5° the canonical stop's ratio was 5.04, against Gugan's 6.60 on his mallet, whose head
+        // is 0.899 kg against the default's 1.000 kg: the head's mass alone took the ratio from 5.04 to 5.97. At −6°
+        // the canonical stop's ratio is 5.86; the head clears the turf through the impact (0.29 mm at its lowest)
+        // and rubs it at most 0.93 mm in the follow-through, neither yielding the soil nor passing the depth limit.
+        // The user accepts a little turf contact in the stop. 5.86 lies on a second branch: 2.5 mm above or below
+        // the contact the ratio is 5.07 or 5.16. On Gugan's mallet the step no longer flips the branch: at 0.75 mm
+        // the stop is 6.9323, 6.9430 and 6.9540 at dt/2, dt and 2·dt (was 5.9661, 5.9660 and 6.5810).
+        "stop-ac": stanceFromLean(-6 * DEG, -0.0225, {
             top: 0.805,
             bottom: 0.805 - HAND_BREADTH,
             gripTension: 1,
