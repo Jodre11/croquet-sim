@@ -72,6 +72,7 @@ import {
     CANONICAL_CLEARANCE,
     DEFAULT_CROQUET_GAP,
     GC_STOP_GAP,
+    PASS_SPLIT,
     TEST_BOX_HEAD,
     backswingFor,
     canonicalSetup,
@@ -635,13 +636,13 @@ describe("the default profile's canonical setups", () => {
         expect(() => canonicalSetup("stop-ac", { world, targetGap: 0.1 })).toThrow(/no targetGap/);
     });
 
-    it("places the croqueted ball 2R + croquetGap along the stroke's line, the pass roll's 20° kept", () => {
+    it("places the croqueted ball 2R + croquetGap along the stroke's line, the pass roll's PASS_SPLIT kept", () => {
         const radius = defaultWorld().ball.radius;
         for (const type of CROQUET_STROKES) {
             const s = canonicalSetup(type, { croquetGap: 0.0015 });
             const d = sub((s.balls.red as BallState).position, (s.balls.blue as BallState).position);
             expect(length(d)).toBeCloseTo(2 * radius + 0.0015, 12);
-            const line = Math.PI / 2 + (type === "pass-roll" ? (20 * Math.PI) / 180 : 0);
+            const line = Math.PI / 2 + (type === "pass-roll" ? (PASS_SPLIT * Math.PI) / 180 : 0);
             expect(Math.atan2(d.y, d.x)).toBeCloseTo(line, 12);
         }
     });
@@ -755,7 +756,8 @@ describe("defaultProfile", () => {
         expect(HAND_BREADTH).toBeCloseTo(0.087884, 12);
         const hands = STROKE_TYPES.map((type) => [defaultProfile.stance[type].top, defaultProfile.stance[type].bottom]);
         // P2b.2b.2c.3a: the drive's hands together (was 0.6). P2b.2b.2c.3a gate stage 2: the AC stop's grip retune
-        // (was 0.45): the AC stop's hands together too.
+        // (was 0.45): the AC stop's hands together too. Shapes design §8, ruling 17: the pass roll takes the full roll's
+        // grips (was 0.45, 0.09).
         expect(hands).toEqual([
             [0.805, 0.7],
             [0.805, 0.805 - HAND_BREADTH],
@@ -763,7 +765,7 @@ describe("defaultProfile", () => {
             [0.805, 0.45],
             [0.805, 0.42],
             [0.61, 0.3],
-            [0.45, 0.09],
+            [0.61, 0.3],
         ]);
         expect(defaultProfile.stance.drive).toMatchObject({ gripTension: 1, bottomGrip: 0.25 });
         expect(defaultProfile.stance["stop-ac"]).toMatchObject({ gripTension: 1, bottomGrip: 0.1 });

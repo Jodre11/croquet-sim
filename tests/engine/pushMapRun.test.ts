@@ -14,7 +14,7 @@ import { simulateShot } from "../../src/engine/shot";
 import { headShapeOf, plannedSpeed, stanceLean } from "../../src/engine/swing/buildContact";
 import { defaultProfile } from "../../src/engine/swing/profile";
 import { swingReference } from "../../src/reference/index";
-import { canonicalSetup } from "./support/shot";
+import { PASS_SPLIT, canonicalSetup } from "./support/shot";
 
 const DEG = Math.PI / 180;
 const WORLD = openWorld();
@@ -37,7 +37,7 @@ describe("one plan's run (P2b.2b.2c.3b plan Task 3)", () => {
         });
         expect(Math.abs(plan.lean - lean)).toBeLessThanOrEqual(1e-12);
         expect([plan.drive, plan.handReach, plan.window, plan.onset, plan.split]).toEqual([1, 0.025, 0.02, 0, 0]);
-        expect(textBook("pass-roll").split).toBe((20 * Math.PI) / 180);
+        expect(textBook("pass-roll").split).toBe((PASS_SPLIT * Math.PI) / 180);
     });
 
     it("ties the power to today's canonical: the default backswing plans 3 m/s", () => {
@@ -160,6 +160,17 @@ describe("one plan's run (P2b.2b.2c.3b plan Task 3)", () => {
         const sample = playSample("half-roll", textBook("half-roll"), p, [10]);
         expect(sample.klass).toBeNull();
         expect(sample.byLawn[10]?.ratio).toBeCloseTo(2.0, 2);
+    });
+
+    it("plays the pass roll's text book at its canonical power lawfully, at its fitted ratio, 0.814", () => {
+        // Shapes design §8, ruling 17: a full roll with a 4° split, its 32° lean and a subtly punchier push (drive 0.5
+        // over 60 ms pulses); was its own 15 ms punch at a 20° split, unlawful (29.1.6.1) at ratio 0.418.
+        const base = mapSetup("pass-roll", textBook("pass-roll"), 1);
+        const p = swingReference["pass-roll"].defaultBackswing.value / bodyBackswing(base, WORLD);
+        const sample = playSample("pass-roll", textBook("pass-roll"), p, [10]);
+        expect(sample.klass).toBeNull();
+        expect(sample.passes).toBe(2);
+        expect(sample.byLawn[10]?.ratio).toBeCloseTo(0.814, 3);
     });
 
     it("grades the full roll's text book at p = 1.5 as superhuman: a hand reaches its grip's limit", () => {

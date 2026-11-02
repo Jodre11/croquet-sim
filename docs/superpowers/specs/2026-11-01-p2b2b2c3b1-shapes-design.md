@@ -324,3 +324,20 @@ shorter is sharper), with the preset's `speedGain`. Swept at canonical power on 
   increase lowers it, to 0.22; no setting is lawful (off the face at short windows, the grip's limit at longer, two
   re-hits). Its miss lies in its set-up (lean, push length, contact), not its acceleration; unchanged.
 - Engine 0.25.0.
+
+**Ruling 17, the pass roll is a full roll with a slight split (user, 2026-11-02).** The user: think of the pass roll
+"as a full roll with a slight split and a bit more follow through or flick and a slightly increased lean"; the extra
+acceleration is subtle, "the difference between a fist and an extended finger". Measured at canonical power, 10 s
+lawn:
+- The pass roll's own set-up has no lawful fit: its lean (26–38°), push length (0.1–0.3 m) and drive (0, 1) at its
+  20° split are lawful only at 26° with drive 1 (ratio 0.49–0.50); 38° reaches 0.82 (drive 1, 0.3 m) but past the
+  grip's limit.
+- The split dominates the ratio: the full roll's push gives 1.20–1.43 straight, 0.90–0.96 at 3°, 0.66–0.88 at 6°,
+  0.45–0.54 at 10°, all lawful at its lean; 34° goes off the face.
+- Follow-through after the striker's ball leaves cannot move the ratio (ruling 15), so the "flick" is the push's
+  acceleration through contact.
+- The fit: the full roll's push preset and grips (top 0.61 m, bottom 0.3 m; was 0.45, 0.09 and speedGain 0.5 over
+  15 ms), the pass roll's 32° stance, drive 0.5 over 60 ms pulses (`DEFAULT_DRIVE`, `DEFAULT_WINDOW`; the full roll's
+  0.25 over 80 ms) and the canonical split 4° (`PASS_SPLIT`; was 20°). Ratio 0.814, lawful in two passes, against
+  Gugan 5's 0.83. Its follow-through stays 0.3 s and its hold firmness 1. Its default backswing is refitted to 3 m/s
+  for the new grips (0.42943 m; was 0.43127). Engine 0.26.0.

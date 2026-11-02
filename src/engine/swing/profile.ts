@@ -234,14 +234,14 @@ const DRIVE: Readonly<Record<StrokeType, SwingDrive>> = {
         handArcRadius: 1.5,
         handArcLow: 0.5,
     },
-    // Carry, the bottom hand punching in contact: the pendulum's speedGain 0.5 over 15 ms from contact on top of
-    // the hands' speed from the downswing (P2b.2b.2a design §3.3) and handGain 0.1. The push 0.30 m; 0.2 m traps
-    // the striker's ball against the face (prototype). A known miss in this phase (design §10).
+    // The full roll's push (shapes design §8, ruling 17: a pass roll is a full roll with a slight split, a little more
+    // lean and a subtly punchier push, set by its DEFAULT_DRIVE and DEFAULT_WINDOW). Was its own punch, speedGain 0.5
+    // over 15 ms, which no lean, push length or acceleration made lawful at its 20° split.
     "pass-roll": {
-        speedGain: 0.5,
-        window: 0.015,
+        speedGain: 0.1,
+        window: 0.03,
         handGain: 0.1,
-        handWindow: 0.015,
+        handWindow: 0.03,
         handDrop: 0,
         dropTime: 0.01,
         handReach: 0.3,
@@ -383,7 +383,9 @@ export const defaultProfile: SwingProfile = {
         // sloping "at least as much as for a full roll" (48° until P2b.2b.2b.1), a cue superseded by Gugan 4 Table 6:
         // 36°, 34° and 32° (C3P, C10P, C25P), mean 34°. 32°, the table's lowest, a degree past the full roll's: the
         // user's view (2026-11-01) that the mean's lean plays the pass roll too far into the ground, a hypothesis.
-        "pass-roll": stanceFromLean(32 * DEG, 0, { top: 0.45, bottom: 0.09, gripTension: 1, bottomGrip: 1 }),
+        // Ruling 17: the full roll's grips (was top 0.45, bottom 0.09, the bottom hand at the shaft's foot), the pass
+        // roll being a full roll with a little more lean.
+        "pass-roll": stanceFromLean(32 * DEG, 0, { top: 0.61, bottom: 0.3, gripTension: 1, bottomGrip: 1 }),
     },
     drive: DRIVE,
     shape: Object.fromEntries(
@@ -407,17 +409,20 @@ export const DEFAULT_DRIVE: Readonly<Record<StrokeType, number>> = {
     "stop-gc": -1,
     "half-roll": 1,
     "full-roll": 0.25,
-    "pass-roll": 1,
+    "pass-roll": 0.5,
 };
 
 /**
  * The planner's default `window` per stroke type (s); absent: the preset's. The full roll's 80 ms pulses, held for the
  * preset's 30 ms, with its default drive 0.25 are the push acceleration's fit to the ratio (shapes design §8, ruling
  * 16): 1.16 at canonical power, inside the band 1.0–1.2. No drive, window or speedGain on the sweep reached 1.1, and
- * the ratio varies by up to 0.3 between neighbouring settings, so the fit is fragile until that is understood.
+ * the ratio varies by up to 0.3 between neighbouring settings, so the fit is fragile until that is understood. The pass
+ * roll's 60 ms pulses with its default drive 0.5, a subtly punchier push than the full roll's, at its 4° split are its
+ * fit (ruling 17): 0.81 at canonical power, against Gugan 5's 0.83.
  */
 export const DEFAULT_WINDOW: Readonly<Partial<Record<StrokeType, number>>> = {
     "full-roll": 0.08,
+    "pass-roll": 0.06,
 };
 
 /** Every action on time. */

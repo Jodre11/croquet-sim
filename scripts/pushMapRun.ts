@@ -35,6 +35,7 @@ import { BALL_IDS, type BallId, type BallState, type World } from "../src/engine
 import {
     CANONICAL_STRIKER,
     DEFAULT_CROQUET_GAP,
+    PASS_SPLIT,
     canonicalSetup,
     type CanonicalOptions,
 } from "../tests/engine/support/shot";
@@ -121,7 +122,7 @@ const STEP_SLACK = 1e-9;
 /**
  * The text book's plan of `type` (decision 8; spec §3.1): the preset's lean at its canonical contact (stanceLean), its
  * feet as feetReading reads the canonical setup on the open lawn, its default drive and window, its handReach, the hands
- * on time and, on the pass roll, canonicalSetup's 20° split.
+ * on time and, on the pass roll, canonicalSetup's split, PASS_SPLIT.
  */
 export function textBook(type: RollType): MapPlan {
     const setup = opened(canonicalSetup(type));
@@ -140,7 +141,7 @@ export function textBook(type: RollType): MapPlan {
         handReach: push.handReach,
         window: DEFAULT_WINDOW[type] ?? push.window,
         onset: DEFAULT_TIMING[type].hands,
-        split: type === "pass-roll" ? (20 * Math.PI) / 180 : 0,
+        split: type === "pass-roll" ? (PASS_SPLIT * Math.PI) / 180 : 0,
         speedGain: push.speedGain,
     };
 }
@@ -148,7 +149,7 @@ export function textBook(type: RollType): MapPlan {
 /**
  * `type`'s canonical setup with `over` (canonicalSetup), playing `plan` at power `power`, on the open lawn (decisions 1
  * and 6): the croqueted ball `split` to the left of aim at 2R + the croquet gap from the striker, as canonicalSetup
- * places the pass roll's at 20°; the plan's lean, feet, drive, handReach, window, the hands' onset and the profile's
+ * places the pass roll's at PASS_SPLIT; the plan's lean, feet, drive, handReach, window, the hands' onset and the profile's
  * speedGain for `type` (A4); the backswing
  * p·h_body for p ≤ 1, else h_body and the intensity p − 1 (bodyBackswing). `over` is for tests of another profile:
  * its profile and stance fields only (stance, drive, shape, mallet, body, croquetGap). The map's world is the open

@@ -214,11 +214,17 @@ export const LEGACY_MALLET: SwingProfile["mallet"] = {
 };
 
 /**
+ * The canonical pass roll's croqueted ball off aim, to the left (°): a full roll's slight split (shapes design §8,
+ * ruling 17; was 20°).
+ */
+export const PASS_SPLIT = 4;
+
+/**
  * A preset's canonical setup (design §5.5): the striker at CANONICAL_STRIKER, aim +y, the default backswing
  * (reference/swing.json: 3 m/s planned at intensity 0, exit criterion 5), no intensity, the preset's default
  * drive, every action on time, the preset's reach, `side` 0, `up` 0 except the AC stop's −0.0225 m. A croquet stroke's
  * croqueted ball lies `croquetGap` (default DEFAULT_CROQUET_GAP, 0 ≤ gap < CROQUET_GAP_LIMIT) from the striker ahead
- * along aim, 20° to the left of it for the pass roll, and `live` is empty. A single-ball stroke's target, red, sits on
+ * along aim, PASS_SPLIT to the left of it for the pass roll, and `live` is empty. A single-ball stroke's target, red, sits on
  * the aim line `targetGap` ahead (the GC stop's GC_STOP_GAP by default), and `live` holds every other ball: the
  * target, if any. No other balls. Throws an `Error` prefixed `canonicalSetup:` for `croquetGap` outside its range, for
  * `croquetGap` on a single-ball stroke, and for `targetGap` on a croquet stroke.
@@ -245,7 +251,7 @@ export function canonicalSetup(type: StrokeType, over: CanonicalOptions = {}): S
         if (!(croquetGap >= 0 && croquetGap < CROQUET_GAP_LIMIT)) {
             throw new Error(`canonicalSetup: croquetGap ${croquetGap} m is outside [0, ${CROQUET_GAP_LIMIT})`);
         }
-        const line = aim + (type === "pass-roll" ? (20 * Math.PI) / 180 : 0);
+        const line = aim + (type === "pass-roll" ? (PASS_SPLIT * Math.PI) / 180 : 0);
         const reach = 2 * R + croquetGap;
         balls.red = at(x + reach * Math.cos(line), y + reach * Math.sin(line));
     } else if (over.croquetGap !== undefined) {
