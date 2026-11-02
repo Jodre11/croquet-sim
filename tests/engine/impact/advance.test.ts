@@ -238,7 +238,8 @@ describe("the hands' advance (design §6, §8.1.5)", () => {
         expect(withAdvance.last).toBeCloseTo(withAdvance.apex, 5);
     });
 
-    it("rejects no travel and a non-finite timing", () => {
+    it("rejects no travel and a non-finite timing", { timeout: 60_000 }, () => {
+        // Plans a roll and a check: 7.5 s and past 15 s on GitHub's runners beside the slow suite (2026-11-02).
         // P2b.2b.2c.3a: the advance rides the push on every stroke (A2 item 8), so a roll and a stop's check may
         // advance (was rejecting carry mode and a check).
         expect(() => plan(stroke({ handReach: 0.3 }, { advance: 0 }, "half-roll"))).not.toThrow();

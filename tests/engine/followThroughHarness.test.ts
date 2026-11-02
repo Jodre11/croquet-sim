@@ -67,8 +67,8 @@ describe("the follow-through harness (P2b.2b.2c.2d design §3.4)", () => {
         expect(touch?.contactSpeed).toBeCloseTo(3, 6);
         expect(touch?.plannedSpeed).toBeGreaterThan(3);
     });
-    it("solves the backswing for a contact speed at the stroke's own intensity", { timeout: 20_000 }, () => {
-        // About 4.5 s locally.
+    it("solves the backswing for a contact speed at the stroke's own intensity", { timeout: 120_000 }, () => {
+        // About 4.5 s locally; 13.8 s and past 20 s on GitHub's runners beside the slow suite (2026-11-02).
         // P2b.2b.2c.3a gate stage 2: the AC stop's grip retune (was the default grip): the stroke takes the jab
         // variant's grip: at the hands together no backswing gives 3 m/s (the case below).
         const timing = { arc: -0.01, hands: 0, dip: 0 };
