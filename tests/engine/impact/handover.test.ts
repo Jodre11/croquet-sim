@@ -298,7 +298,9 @@ describe("handover of a ball sunk under the head, on whole rolls", () => {
         // pass roll 169.4 ms).
         const base = canonicalSetup(type, { croquetGap: 0, mallet: LEGACY_MALLET });
         const up = base.stroke.contact.up + (type === "full-roll" ? 0.003 : -0.003);
-        const stroke = { ...base.stroke, drive, contact: { up, side } };
+        // Ruling 16: the preset's window, not the full roll's DEFAULT_WINDOW (80 ms), at which side 0 throws the
+        // handover's sideways overlap error (1.64 mm), the class noted at 0.9 m/s below.
+        const stroke = { ...base.stroke, window: undefined, drive, contact: { up, side } };
         const setup = { ...base, stroke: { ...stroke, backswing: backswingFor({ ...base, stroke }, speed, world) } };
         return simulateShot(setup, world);
     };
@@ -317,20 +319,33 @@ describe("handover of a ball sunk under the head, on whole rolls", () => {
     // 0.9 m/s, every side) found 0.85 m/s: the cap with the head approaching, and the lift clears 558.5–561.2 µm (0.7
     // m/s clears 498.8–507.6 µm, 0.75 m/s 443.1–454.7 µm; at 0.9 m/s side −0.01 the handover throws its sideways
     // overlap error, as it did before this change). The expectation is unchanged.
+    // Shapes plan Task 5: the push's pitch hold (was 0.85 m/s, over 5e-4). Held at its planned pitch, no full roll at
+    // drive −1 sinks the ball past its static sink now: a fourth bounded search (0.7–2.0 m/s, 11 speeds, every side)
+    // found overlapCorrection 0 to 0.9 m/s and at 2 m/s, and 207.6–362.5 µm from 1 to 1.5 m/s, the largest at
+    // 1.5 m/s (329.1–362.5 µm). The fixture moves there and its bound to 3e-4: it still covers the handover clearing
+    // the head after a lift in a whole run, but the ball is no longer sunk past its 437 µm static sink, a cover lost as
+    // the pass roll's was (below); the lift keeps its unit cover above. Shapes design §8, ruling 15 (was over 3e-4):
+    // the hands anticipate the balls' resistance, so at 1.5 m/s the full roll holds at half the grip's couple, and the
+    // lift clears 191.4–233.6 µm; the bound moves to 1.5e-4, still a lift in a whole run.
     it.each([
-        ["full-roll", 0.85, -1, -0.01],
-        ["full-roll", 0.85, -1, 0],
-        ["full-roll", 0.85, -1, 0.01],
+        ["full-roll", 1.5, -1, -0.01],
+        ["full-roll", 1.5, -1, 0],
+        ["full-roll", 1.5, -1, 0.01],
     ] as const)("hands over the %s at %s m/s, drive %s, side %s, with the head cleared of a lifted ball", (...run) => {
         const [type, speed, drive, side] = run;
-        expect(sunkRun(type, speed, drive, side).impact.overlapCorrection).toBeGreaterThan(5e-4);
+        expect(sunkRun(type, speed, drive, side).impact.overlapCorrection).toBeGreaterThan(1.5e-4);
     });
     // P2b.2b.2c.2c: the face's re-set law (was overlapCorrection over 5e-4; gate stage 2 to rule). The pass roll no
     // longer ends with the ball sunk under the head: at 2 m/s nine face intervals, the last 135.1–136.4 ms, and blue
     // 3.21 mm airborne at the impact's end (156.3 ms). The bounded search found no pass roll that does (0.5, 1, 1.25,
     // 1.5 and 1.75 m/s, side 0: overlapCorrection 0). The run stays as a guard that the handover does not throw; the
     // pass roll's whole-run lift cover is lost, and the lift keeps its unit cover above.
-    it("hands over the pass-roll at 2 m/s, drive 1, side 0, without a correction", () => {
-        expect(sunkRun("pass-roll", 2, 1, 0).impact.overlapCorrection).toBe(0);
+    // Shapes design §8, ruling 12: the hands guide the mallet to their apex (was overlapCorrection 0). Carried on at
+    // its held pitch, the head ends the run pressing blue 197 µm, inside its 437 µm static sink, and the handover
+    // clears it: still the guard that the handover does not throw, now with a small correction.
+    it("hands over the pass-roll at 2 m/s, drive 1, side 0, with at most a small correction", () => {
+        const correction = sunkRun("pass-roll", 2, 1, 0).impact.overlapCorrection;
+        expect(correction).toBeGreaterThanOrEqual(0);
+        expect(correction).toBeLessThan(3e-4);
     });
 });

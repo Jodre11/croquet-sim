@@ -9,7 +9,10 @@ import {
     prepareTrack,
     type Advance,
     type PreparedTrack,
+    HAND_EASE,
+    handsApex,
     type Push,
+    releaseOf,
 } from "../../../src/engine/impact/track";
 import { simulateShot } from "../../../src/engine/shot";
 import type { SwingTrajectory } from "../../../src/engine/swing/trajectory";
@@ -179,11 +182,18 @@ describe("the hands' advance (design §6, §8.1.5)", () => {
         const end = (follow.advanced as { end: number }).end;
         expect(rise(level(), end)).toBeLessThan(rise(rising(), end));
     });
-    it("resumes the arc once the hands come to rest, and finishes after them", () => {
+    it("swings on past the hands' rest to the mallet's apex", () => {
+        // Shapes design §2 (was P2b.2b.2c.3b.1 design §5's finish at the hands' rest, 0.125 s): these hands' plan is
+        // still, so the advance's own ease brings them to rest at handReach, the push's end; the mallet, released
+        // there, swings on to its apex (0.668 s), never to the cap.
         const { follow } = run(level());
         const end = (follow.advanced as { end: number }).end;
-        expect(pitchRates(level()).some(({ t, rate }) => t > end && rate > 0)).toBe(true);
-        expect(follow.finish).toBeGreaterThan(end);
+        const { contact } = plan(level());
+        const track = prepareTrack(contact.drive as TrackDrive, contact.head, WORLD.gravity);
+        const rest = handsApex(track.push as Push) as number;
+        expect(Math.abs(rest - end)).toBeLessThan(1e-6);
+        expect(follow.finish).toBeGreaterThan(rest + 1e-3);
+        expect(follow.flags).not.toContain("follow-cap");
     });
     it("carries the hands handReach in all from contact, the advance and the plan sharing one push", () => {
         // One budget. P2b.2b.2c.3a: the advance on the push (was the advance replacing the planned pivot's own reach):
@@ -193,32 +203,43 @@ describe("the hands' advance (design §6, §8.1.5)", () => {
         const pushed = (timing: Partial<StrokeTiming>): ShotSetup => {
             const setup = canonicalSetup("single-ball", {
                 stroke: { drive: 1, handReach: 0.3, timing: { ...ON_TIME, ...timing } },
-                drive: { handGain: 1 },
+                // Shapes design §2: on a 5 m arc (was the preset's 1.5 m), so that the hands' 6 m/s finish stays below
+                // its quarter turn.
+                drive: { handGain: 1, handArcRadius: 5 },
             });
             return { ...setup, stroke: { ...setup.stroke, backswing: backswingFor(setup, 3, WORLD) } };
         };
-        const travel = (setup: ShotSetup): { most: number; last: number } => {
+        const travel = (setup: ShotSetup): { most: number; last: number; atEnd: number; apex: number } => {
             const { contact } = plan(setup);
             const track = prepareTrack(contact.drive as TrackDrive, contact.head, WORLD.gravity);
-            const { aim, contactAt } = track.arc;
+            const { aim, contactAt, handReach } = track.arc;
+            const push = track.push as Push;
             const from = handsAt(track, contactAt).position;
             const along = (t: number): number => dot(sub(handsAt(track, t).position, from), aim);
             let most = 0;
             for (let k = 0; k <= 2000; k++) {
                 most = Math.max(most, along(contactAt + k * 1e-3));
             }
-            return { most, last: along(contactAt + 2) };
+            const apex = handReach + 0.5 * push.finishSpeed * HAND_EASE;
+            return { most, last: along(contactAt + 2), atEnd: along(push.end as number), apex };
         };
         // Numerical, not physical: the advance's closed form reaches handReach to rounding.
         const TOLERANCE = 1e-12;
+        // Shapes design §8, ruling 14 (was the hands stopping at handReach, then P2b.2b.2c.3b.1 design §5's ease to
+        // rest at 2·handReach, then §2's point pendulum): the push carries them handReach, both sharing it, then the
+        // top hand eases to rest, where it holds.
         const without = travel(pushed({}));
-        expect(without.last).toBeCloseTo(0.3, 9);
+        expect(without.atEnd).toBeCloseTo(0.3, 9);
+        expect(without.last).toBeCloseTo(without.apex, 5);
         const withAdvance = travel(pushed({ advance: 0 }));
-        expect(withAdvance.most).toBeLessThanOrEqual(0.3 + TOLERANCE);
-        expect(withAdvance.last).toBeCloseTo(0.3, 9);
+        expect(withAdvance.atEnd).toBeLessThanOrEqual(0.3 + TOLERANCE);
+        expect(withAdvance.atEnd).toBeCloseTo(0.3, 9);
+        expect(withAdvance.most).toBeLessThanOrEqual(withAdvance.apex + 1e-5);
+        expect(withAdvance.last).toBeCloseTo(withAdvance.apex, 5);
     });
 
-    it("rejects no travel and a non-finite timing", () => {
+    it("rejects no travel and a non-finite timing", { timeout: 60_000 }, () => {
+        // Plans a roll and a check: 7.5 s and past 15 s on GitHub's runners beside the slow suite (2026-11-02).
         // P2b.2b.2c.3a: the advance rides the push on every stroke (A2 item 8), so a roll and a stop's check may
         // advance (was rejecting carry mode and a check).
         expect(() => plan(stroke({ handReach: 0.3 }, { advance: 0 }, "half-roll"))).not.toThrow();
@@ -246,12 +267,14 @@ describe("the hands' advance (design §6, §8.1.5)", () => {
         // Review focus 1. The arcs differ in the advance, so the runs are compared, not the contact states.
         expect(arcOf(plan(level(-0.02))).contactAt).toBeCloseTo(0.02, 15);
         expect(() => plan(level(-(MAX_LEAD + 0.001)))).toThrow(/more than .* early/);
-        const late = run(stroke({ handReach: 0.3 }, { advance: 0.9 }));
+        const late = run(stroke({ handReach: 0.3 }, { advance: 1.1 }));
         const none = run(rising());
-        // The late moment must lie after the no-advance run's finish (P2b.2b.2c.3a: a push that never travels,
-        // finishing as a carry (was about 0.498 s after contact, at t = 0.4982 s): t = 0.4543 s, the lead being 0):
-        // +0.9 s does. Before its start the advance's travel is +0, so the push's path is the no-advance run's.
-        const start = (arcOf(plan(stroke({ handReach: 0.3 }, { advance: 0.9 }))).advance as { start: number }).start;
+        // The late moment must lie after the no-advance run's finish (P2b.2b.2c.3b.1 design §5: a push that never
+        // travels never reaches its length, so its carry never rests and runs to the follow-through's cap,
+        // contactAt + FOLLOW_CAP (was its first apex, t = 0.4543 s, under +0.9 s); P2b.2b.2c.3a: was about 0.498 s
+        // after contact, at t = 0.4982 s): +1.1 s does. Before its start the advance's travel is +0, so the push's path
+        // is the no-advance run's.
+        const start = (arcOf(plan(stroke({ handReach: 0.3 }, { advance: 1.1 }))).advance as { start: number }).start;
         expect(start).toBeGreaterThan(none.follow.finish);
         expect(late.follow.advanced).toBeUndefined();
         expect(late.result).toEqual(none.result);
@@ -325,35 +348,40 @@ describe("the push on every stroke (P2b.2b.2c.3a A2 item 8)", () => {
         expect(out.impact.events.map((e) => e.kind)).not.toContain("impact-cap");
         expect(trajectory.flags).not.toContain("follow-cap");
         const track = prepareTrack(out.contact.drive as TrackDrive, out.contact.head, WORLD.gravity);
-        expect(finishKind(track)).toBe("carry");
+        expect(finishKind(track)).toBe("swing");
     });
 
-    it("finishes a pushed swing stroke as a carry", () => {
-        // A push takes the carried finish (A2 item 7): the first apex once the head has risen after the bottom hand
-        // opens, never the swing's first apex.
+    it("finishes a pushed swing stroke at the mallet's apex after the push's end", () => {
+        // Shapes design §2 (was P2b.2b.2c.3b.1 design §5's carry, ending at the first step at or after its hands'
+        // rest): the swing ends at the mallet's apex after the release. Ruling 14 (was the push's end): once the top
+        // hand stops the bottom hand carries the head on for followThrough, then brakes the turn to rest over
+        // HAND_EASE and holds it, where the swing ends.
         const setup = stroke({ handReach: 0.3 }, { advance: 0 });
-        expect(finishKind(trackOf(setup))).toBe("carry");
+        const track = trackOf(setup);
+        expect(finishKind(track)).toBe("swing");
+        const push = track.push as Push;
+        const release = releaseOf(track) as number;
+        expect(release).toBe((handsApex(push) as number) + track.arc.followThrough);
+        expect(push.freed).toBe(release + HAND_EASE);
         const { result, follow } = run(setup);
-        const release = result.release as { t: number };
-        expect(result.release).toBeDefined();
-        const rates = pitchRates(setup);
-        expect(rates.some(({ t, rate }) => t > release.t && rate > 0)).toBe(true);
-        expect((rates[rates.length - 1] as { rate: number }).rate).toBeLessThanOrEqual(0);
+        expect(result.release).toBeUndefined();
+        expect(follow.finish).toBeGreaterThanOrEqual(push.freed as number);
         expect(follow.flags).not.toContain("follow-cap");
     });
 
     it("merges an advance into a roll's push", () => {
-        // The advance adds its travel to the plan's, so the push reaches its length sooner, and the cap stops the hands
-        // there. Numerical, not physical: the cap sets the travel to handReach exactly, so only rounding is allowed.
-        const TOLERANCE = 1e-12;
+        // The advance adds its travel to the plan's, so the push reaches its length sooner. Shapes design §8, ruling 14
+        // (was the cap stopping the hands at handReach, then P2b.2b.2c.3b.1 design §5's ease to rest at 2·handReach,
+        // then §2's point pendulum): the top hand eases to rest, and no further.
         const without = trackOf(stroke({}, {}, "half-roll"));
         const withAdvance = trackOf(stroke({}, { advance: 0 }, "half-roll"));
-        const reach = withAdvance.arc.handReach;
-        expect((withAdvance.push as Push).end as number).toBeLessThan((without.push as Push).end as number);
+        const push = withAdvance.push as Push;
+        const apex = withAdvance.arc.handReach + 0.5 * push.finishSpeed * HAND_EASE;
+        expect(push.end as number).toBeLessThan((without.push as Push).end as number);
         let most = 0;
         for (let k = 0; k <= 2000; k++) {
             most = Math.max(most, alongFrom(withAdvance, withAdvance.arc.contactAt + k * 1e-3));
         }
-        expect(most).toBeLessThanOrEqual(reach + TOLERANCE);
+        expect(most).toBeLessThanOrEqual(apex + 1e-5);
     });
 });

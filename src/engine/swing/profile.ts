@@ -105,7 +105,10 @@ function stanceFromLean(lean: number, up: number, hands: Omit<SwingStance, "hand
  * keys (torqueMax, tempoSlow, tempoFast) and any preset's retired defaultIntensity are rejected by readShape when
  * swing.json loads.
  */
-export function shapeOf(type: StrokeType, ref: StrokeShapeReference): Omit<SwingShape, "slopeHold"> {
+export function shapeOf(
+    type: StrokeType,
+    ref: StrokeShapeReference,
+): Omit<SwingShape, "slopeHold" | "followThrough" | "holdFirmness"> {
     return {
         pendulumShare: ref.pendulumShare.value,
         handAngle: ref.handAngle.value,
@@ -197,7 +200,10 @@ const DRIVE: Readonly<Record<StrokeType, SwingDrive>> = {
     },
     // Carry (Riches: the slope "MAINTAINED throughout the swing", both hands moving "FORWARD at the SAME RATE",
     // "the mallet head following through the ball and onto the ground"): the hands' speed from the downswing
-    // (P2b.2b.2a design §3.3), a light pendulum push, the push 0.15 m (prototype).
+    // (P2b.2b.2a design §3.3), a light pendulum push. The push is minimal, 0.025 m (shapes design §8, ruling 11: "the
+    // bottom hand always pushes through the contact"; was 0.15 m, the prototype's, which B1 ruling 6 found too much,
+    // then 0.05 m, which ruling 14's approval halved). Its length is an assumption until the envelope phase tunes it
+    // (B1 ruling 4).
     "half-roll": {
         speedGain: 0.1,
         window: 0.02,
@@ -205,7 +211,7 @@ const DRIVE: Readonly<Record<StrokeType, SwingDrive>> = {
         handWindow: 0.02,
         handDrop: 0,
         dropTime: 0.01,
-        handReach: 0.15,
+        handReach: 0.025,
         guideEffort: 1,
         pendulumAt: 0.8,
         pendulumEffort: 0,
@@ -213,7 +219,7 @@ const DRIVE: Readonly<Record<StrokeType, SwingDrive>> = {
         handArcLow: 0.5,
     },
     // Carry: the hands' speed from the downswing (P2b.2b.2a design §3.3) and still accelerating, the push 0.30 m
-    // (prototype). A known miss in this phase (design §10).
+    // (prototype). The shot's default drive and window (DEFAULT_DRIVE, DEFAULT_WINDOW) shape its push.
     "full-roll": {
         speedGain: 0.1,
         window: 0.03,
@@ -228,14 +234,14 @@ const DRIVE: Readonly<Record<StrokeType, SwingDrive>> = {
         handArcRadius: 1.5,
         handArcLow: 0.5,
     },
-    // Carry, the bottom hand punching in contact: the pendulum's speedGain 0.5 over 15 ms from contact on top of
-    // the hands' speed from the downswing (P2b.2b.2a design §3.3) and handGain 0.1. The push 0.30 m; 0.2 m traps
-    // the striker's ball against the face (prototype). A known miss in this phase (design §10).
+    // The full roll's push (shapes design §8, ruling 17: a pass roll is a full roll with a slight split, a little more
+    // lean and a subtly punchier push, set by its DEFAULT_DRIVE and DEFAULT_WINDOW). Was its own punch, speedGain 0.5
+    // over 15 ms, which no lean, push length or acceleration made lawful at its 20° split.
     "pass-roll": {
-        speedGain: 0.5,
-        window: 0.015,
+        speedGain: 0.1,
+        window: 0.03,
         handGain: 0.1,
-        handWindow: 0.015,
+        handWindow: 0.03,
         handDrop: 0,
         dropTime: 0.01,
         handReach: 0.3,
@@ -257,6 +263,43 @@ export const SLOPE_HOLD: Readonly<Record<StrokeType, number>> = {
     "stop-ac": 0,
     "stop-gc": 0,
     "half-roll": 1,
+    "full-roll": 1,
+    "pass-roll": 1,
+};
+
+/**
+ * The bottom hand's carry after the push (s; shapes design §8, ruling 14), the same mechanism on every preset, the
+ * model being one shot model. Carried at the push's pace, the shaft turns further on a faster push, so the
+ * follow-through grows with the range. The user (2026-11-01): the full roll's is muted, "even at long range", and the
+ * pass roll's text book carries on relatively further, from the end of its contact. The values are assumptions until
+ * the envelope phase tunes them per shot; a stroke with no push has nothing for them to act on. The pass roll's 0.1 s
+ * (ruling 18; was 0.3 s) keeps its head off the turf: from 0.15 s the carry swings the shaft through vertical with the
+ * hands at their lowest and the head meets the turf (1.44 mm in at 259 ms).
+ */
+export const FOLLOW_THROUGH: Readonly<Record<StrokeType, number>> = {
+    "single-ball": 0.2,
+    drive: 0.2,
+    "stop-ac": 0.2,
+    "stop-gc": 0.2,
+    "half-roll": 0.2,
+    "full-roll": 0,
+    "pass-roll": 0.1,
+};
+
+/**
+ * How firmly the hands hold the shaft's lean through a push (shapes design §8, ruling 15): the share of the grip's
+ * couple bounding the push's pitch hold. It sets how far the head drives the striker's ball on through contact, so
+ * the ratio, and is fitted per preset to its type's target ratio at canonical power; 1 where nothing is fitted. The
+ * half roll's 0.1 is bisected to ratio 2.0 on the 10 s lawn (1.9995 at 0.1002); neither firmness nor push length
+ * lands the full roll's or pass roll's target, so theirs stay 1 (2026-11-01). A stroke with no push has nothing for it
+ * to act on.
+ */
+export const HOLD_FIRMNESS: Readonly<Record<StrokeType, number>> = {
+    "single-ball": 1,
+    drive: 1,
+    "stop-ac": 1,
+    "stop-gc": 1,
+    "half-roll": 0.1,
     "full-roll": 1,
     "pass-roll": 1,
 };
@@ -318,7 +361,15 @@ export const defaultProfile: SwingProfile = {
         // clean. The bottom hand's position, not the grips, sets the ratio: about 5.8 at 0.45 m, 6.0 at 0.55 m and
         // 6.6–6.7 from 0.6 m up, at 0.75 mm. The 0.75 mm band's pass sits on the stop's step-sensitive high branch
         // (squeezeConvergence.test.ts).
-        "stop-ac": stanceFromLean(-5 * DEG, -0.0225, {
+        // Shapes design §8, ruling 19 (was −5°): the lean 6° back at the same contact, for Gugan 5's ratio on the
+        // default mallet. At −5° the canonical stop's ratio was 5.04, against Gugan's 6.60 on his mallet, whose head
+        // is 0.899 kg against the default's 1.000 kg: the head's mass alone took the ratio from 5.04 to 5.97. At −6°
+        // the canonical stop's ratio is 5.86; the head clears the turf through the impact (0.29 mm at its lowest)
+        // and rubs it at most 0.93 mm in the follow-through, neither yielding the soil nor passing the depth limit.
+        // The user accepts a little turf contact in the stop. 5.86 lies on a second branch: 2.5 mm above or below
+        // the contact the ratio is 5.07 or 5.16. On Gugan's mallet the step no longer flips the branch: at 0.75 mm
+        // the stop is 6.9323, 6.9430 and 6.9540 at dt/2, dt and 2·dt (was 5.9661, 5.9660 and 6.5810).
+        "stop-ac": stanceFromLean(-6 * DEG, -0.0225, {
             top: 0.805,
             bottom: 0.805 - HAND_BREADTH,
             gripTension: 1,
@@ -340,12 +391,23 @@ export const defaultProfile: SwingProfile = {
         "full-roll": stanceFromLean(31 * DEG, 0, { top: 0.61, bottom: 0.3, gripTension: 1, bottomGrip: 1 }),
         // Riches: "The bottom hand should be placed at the very bottom of the mallet shaft for this shot", the handle
         // sloping "at least as much as for a full roll" (48° until P2b.2b.2b.1), a cue superseded by Gugan 4 Table 6:
-        // 36°, 34° and 32° (C3P, C10P, C25P), mean 34°.
-        "pass-roll": stanceFromLean(34 * DEG, 0, { top: 0.45, bottom: 0.09, gripTension: 1, bottomGrip: 1 }),
+        // 36°, 34° and 32° (C3P, C10P, C25P), mean 34°. 32°, the table's lowest, a degree past the full roll's: the
+        // user's view (2026-11-01) that the mean's lean plays the pass roll too far into the ground, a hypothesis.
+        // Ruling 17: the full roll's grips (was top 0.45, bottom 0.09, the bottom hand at the shaft's foot), the pass
+        // roll being a full roll with a little more lean.
+        "pass-roll": stanceFromLean(32 * DEG, 0, { top: 0.61, bottom: 0.3, gripTension: 1, bottomGrip: 1 }),
     },
     drive: DRIVE,
     shape: Object.fromEntries(
-        STROKE_TYPES.map((type) => [type, { ...shapeOf(type, swingReference[type]), slopeHold: SLOPE_HOLD[type] }]),
+        STROKE_TYPES.map((type) => [
+            type,
+            {
+                ...shapeOf(type, swingReference[type]),
+                slopeHold: SLOPE_HOLD[type],
+                followThrough: FOLLOW_THROUGH[type],
+                holdFirmness: HOLD_FIRMNESS[type],
+            },
+        ]),
     ) as Record<StrokeType, SwingShape>,
 };
 
@@ -356,8 +418,21 @@ export const DEFAULT_DRIVE: Readonly<Record<StrokeType, number>> = {
     "stop-ac": -1,
     "stop-gc": -1,
     "half-roll": 1,
-    "full-roll": 1,
-    "pass-roll": 1,
+    "full-roll": 0.25,
+    "pass-roll": 0.5,
+};
+
+/**
+ * The planner's default `window` per stroke type (s); absent: the preset's. The full roll's 80 ms pulses, held for the
+ * preset's 30 ms, with its default drive 0.25 are the push acceleration's fit to the ratio (shapes design §8, ruling
+ * 16): 1.16 at canonical power, inside the band 1.0–1.2. No drive, window or speedGain on the sweep reached 1.1, and
+ * the ratio varies by up to 0.3 between neighbouring settings, so the fit is fragile until that is understood. The pass
+ * roll's 60 ms pulses with its default drive 0.5, a subtly punchier push than the full roll's, at its 4° split are its
+ * fit (ruling 17): 0.81 at canonical power, against Gugan 5's 0.83.
+ */
+export const DEFAULT_WINDOW: Readonly<Partial<Record<StrokeType, number>>> = {
+    "full-roll": 0.08,
+    "pass-roll": 0.06,
 };
 
 /** Every action on time. */

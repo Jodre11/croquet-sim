@@ -86,13 +86,18 @@ export interface SwingDrive {
  * θ = θ_top + span·σ², and between them the plan blends the two. `handTempo` is the hands' downswing time, from `slow`
  * (s, intensity 0) to `fast` (s, intensity 1); null takes the stroke's own free swing's fall, derived, not fitted. A
  * shot that gives no intensity swings at 0, by gravity alone: no preset carries a default intensity (P2b.2b.2c.1
- * design, Amendments).
+ * design, Amendments). `followThrough` (s, at least 0; shapes design §8, ruling 14) is how long the bottom hand carries
+ * the head on at the push's pace once the top hand stops, before it brings the turn to rest and holds it.
+ * `holdFirmness` ([0, 1]; ruling 15) is how firmly the hands hold the shaft's lean through a push: the share of the
+ * grip's couple that bounds the push's pitch hold, 1 the grip's whole couple and 0 no hold.
  */
 export interface SwingShape {
     readonly pendulumShare: number;
     readonly handAngle: number;
     readonly handTempo: { readonly slow: number; readonly fast: number } | null;
     readonly slopeHold: number;
+    readonly followThrough: number;
+    readonly holdFirmness: number;
 }
 
 /**
@@ -238,6 +243,10 @@ export interface ShotSetup {
         readonly feet?: number;
         /** The planned slope λ in [0, 1] (design §4.1); absent: the preset's shape's. */
         readonly slopeHold?: number;
+        /** The bottom hand's carry after the push (s, at least 0; shapes design §8, ruling 14); absent: the preset's. */
+        readonly followThrough?: number;
+        /** The hands' hold on the shaft's lean through a push, in [0, 1] (ruling 15); absent: the preset's. */
+        readonly holdFirmness?: number;
     };
     readonly live: readonly BallId[];
     readonly continuation: boolean;

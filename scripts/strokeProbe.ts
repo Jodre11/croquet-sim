@@ -37,8 +37,8 @@
  * Run with `npx --yes tsx scripts/strokeProbe.ts`; environment: SECTION (one of the names above; default all), REPEAT
  * (timed runs per stroke, default 20). Not part of the test suite; its output goes into the roadmap's outcomes.
  */
+import { leanOf, onPoint } from "../src/engine/impact/band";
 import { faceContactTimeAt, faceRestitutionAt } from "../src/engine/impact/contactLaw";
-import { headBallContact } from "../src/engine/impact/contacts";
 import {
     IMPACT_DT,
     integrate,
@@ -50,7 +50,7 @@ import { IDENTITY, rotate } from "../src/engine/impact/rigidBody";
 import { simulateImpact, simulateStroke } from "../src/engine/impact/simulateImpact";
 import { prepareTrack, type Push } from "../src/engine/impact/track";
 import { bedLawOf, bedLoad, bedRelax, newBallBed, staticSink } from "../src/engine/impact/turfBed";
-import type { Downswing, HeadState, ImpactResult, MalletHead, TrackDrive } from "../src/engine/impact/types";
+import type { Downswing, HeadState, ImpactResult, TrackDrive } from "../src/engine/impact/types";
 import { ZERO, add, dot, horizontal, length, scale, sub, vec3, type Vec3 } from "../src/engine/math/vec3";
 import { simulateShot, type ShotOutcome } from "../src/engine/shot";
 import { contactPose, planStroke } from "../src/engine/swing/buildContact";
@@ -277,52 +277,8 @@ const most = (xs: readonly number[]): number => xs.reduce((a, b) => Math.max(a, 
 /** The turf's whole force on the ball in a bed sample: the resultant along its normal and the friction spring's. */
 const turfForce = (c: ContactSample): Vec3 => add(scale(c.normal, c.normalForce), c.tangentialForce);
 
-/** A head's lean about the pitch axis (rad, positive with the shaft leaning forward along `aim`), as the stance's. */
-function leanOf(head: HeadState, aim: Vec3): number {
-    const shaft = rotate(head.orientation, vec3(0, 0, 1));
-    return Math.atan2(dot(shaft, aim), shaft.z);
-}
-
-/** Exit criterion 4 (P2b.2b.2b.2b design §1): the head on point behind the striker's ball through the contact. */
-interface OnPoint {
-    /** The least distance (m) of the head's centre behind the ball's centre along aim. */
-    readonly behind: number;
-    /** The highest face contact point (m) above the ball's centre. */
-    readonly height: number;
-    /** The largest lean (rad). */
-    readonly lean: number;
-    readonly holds: boolean;
-}
-
 /** R·sin 45°: the face meeting the ball no higher than a 45° lean puts it. */
 const ON_POINT_HEIGHT = WORLD.ball.radius * Math.SQRT1_2;
-
-/**
- * The head on point (exit criterion 4) over `steps`, from the first step with the face–striker pair closed to the
- * last: the head's centre behind the ball's centre along aim, every face contact point at most R·sin 45° above the
- * ball's centre, and the lean at most 45°. `striker` is the striker's index among the snapshots' balls, `id` its id.
- */
-function onPoint(steps: readonly ImpactSnapshot[], striker: number, id: BallId, head: MalletHead, aim: Vec3): OnPoint {
-    const key = `face/${id}`;
-    const touching = steps.map((s) => s.contacts.some((c) => c.key === key && c.normalForce > 0));
-    const first = touching.indexOf(true);
-    const last = touching.lastIndexOf(true);
-    let behind = Infinity;
-    let height = 0 - Infinity;
-    let lean = 0 - Infinity;
-    for (let i = Math.max(first, 0); first >= 0 && i <= last; i++) {
-        const s = steps[i] as ImpactSnapshot;
-        const ball = s.balls[striker] as BallState;
-        behind = Math.min(behind, dot(sub(ball.position, s.head.position), aim));
-        lean = Math.max(lean, leanOf(s.head, aim));
-        const hit = headBallContact(s.head, head, ball.position, WORLD.ball.radius);
-        if (hit !== null) {
-            height = Math.max(height, hit.point.z - ball.position.z);
-        }
-    }
-    const holds = behind > 0 && height <= ON_POINT_HEIGHT && lean <= Math.PI / 4;
-    return { behind, height, lean, holds };
-}
 
 const deg = (a: number): string => fmt((a * 180) / Math.PI, 2);
 
@@ -482,7 +438,7 @@ function asPlayed(): void {
             const track = prepareTrack(drive, head, WORLD.gravity);
             const push = track.push as Push;
             const label = `${type.padEnd(11)} ${fmt(speed, 1)} m/s`;
-            const point = onPoint(steps, striker, setup.striker, head, aim);
+            const point = onPoint(steps, striker, setup.striker, head, aim, WORLD.ball.radius);
             console.log(
                 `${label} ON POINT ${point.holds ? "holds" : "FAILS"}: the head's centre ${mm(point.behind)} mm ` +
                     `behind the ball's centre at least; the face's contacts ${mm(point.height)} mm above it at ` +
@@ -589,7 +545,14 @@ function onPointSweep(): void {
                         }
                         const { plan, steps, striker } = recorded(setup);
                         const drive = plan.contact.drive as TrackDrive;
-                        const point = onPoint(steps, striker, setup.striker, plan.contact.head, drive.arc.aim);
+                        const point = onPoint(
+                            steps,
+                            striker,
+                            setup.striker,
+                            plan.contact.head,
+                            drive.arc.aim,
+                            WORLD.ball.radius,
+                        );
                         runs++;
                         if (!point.holds) {
                             failed.push(

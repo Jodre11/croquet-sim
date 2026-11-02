@@ -72,6 +72,7 @@ import {
     CANONICAL_CLEARANCE,
     DEFAULT_CROQUET_GAP,
     GC_STOP_GAP,
+    PASS_SPLIT,
     TEST_BOX_HEAD,
     backswingFor,
     canonicalSetup,
@@ -553,25 +554,28 @@ const CANONICAL_APPROACH: Readonly<Record<StrokeType, number>> = {
     drive: 6.2186e-3,
     // P2b.2b.2b.2c: the mallet (was 6.8318e-3).
     // P2b.2b.2c.2d: the stance, 5° back at 22.5 mm below the face's centre (was 11.1829e-3 at 4° and 20 mm).
-    "stop-ac": 9.27283e-3,
+    // Shapes design §8, ruling 19: the stance 6° back (was 9.27283e-3 at 5°).
+    "stop-ac": 4.614e-3,
     // P2b.2b.2b.2c: the mallet (was 0.1189e-3).
     "stop-gc": 6.2186e-3,
     // P2b.2b.2b.2c: the mallet: CANONICAL_CLEARANCE's (was 29.5203e-3, 36.6544e-3 and 39.7589e-3).
     "half-roll": 39.1827e-3,
     "full-roll": 45.9355e-3,
-    "pass-roll": 48.8202e-3,
+    // Shapes design §8, ruling 14's approval: the pass roll's lean 32° (was 48.8202e-3 at 34°).
+    "pass-roll": 46.8985e-3,
 };
 
 /** Each preset's default lean in degrees (P2b.2b.2b.1 design §4): the swing presets' unchanged, the rolls' Gugan's. */
 const DEFAULT_LEAN: Readonly<Record<StrokeType, number>> = {
     "single-ball": 0,
     drive: 0,
-    // P2b.2b.2c.2d: the stance's lean (was -4).
-    "stop-ac": -5,
+    // P2b.2b.2c.2d: the stance's lean (was -4). Shapes design §8, ruling 19: -6 (was -5).
+    "stop-ac": -6,
     "stop-gc": 0,
     "half-roll": 24,
     "full-roll": 31,
-    "pass-roll": 34,
+    // Shapes design §8, ruling 14's approval: Gugan's lowest, 32° (was 34°, his mean).
+    "pass-roll": 32,
 };
 
 describe("the default profile's canonical setups", () => {
@@ -611,12 +615,12 @@ describe("the default profile's canonical setups", () => {
         }
     });
 
-    it("rises 5° into the AC stop, the face tilted up as much", () => {
-        // P2b.2b.2c.2d: the stance's lean (was 4°).
+    it("rises 6° into the AC stop, the face tilted up as much", () => {
+        // P2b.2b.2c.2d: the stance's lean (was 4°). Shapes design §8, ruling 19: 6° (was 5°).
         const world = defaultWorld();
         const c = buildContact(canonicalSetup("stop-ac", { world }), world);
-        expect(arcOf(c).theta0).toBeCloseTo(5 * DEG, 15);
-        expect(rotate(c.orientation, vec3(1, 0, 0)).z).toBeCloseTo(Math.sin(5 * DEG), 12);
+        expect(arcOf(c).theta0).toBeCloseTo(6 * DEG, 15);
+        expect(rotate(c.orientation, vec3(1, 0, 0)).z).toBeCloseTo(Math.sin(6 * DEG), 12);
         expect(c.velocity.z).toBeGreaterThan(0);
     });
 
@@ -633,13 +637,13 @@ describe("the default profile's canonical setups", () => {
         expect(() => canonicalSetup("stop-ac", { world, targetGap: 0.1 })).toThrow(/no targetGap/);
     });
 
-    it("places the croqueted ball 2R + croquetGap along the stroke's line, the pass roll's 20° kept", () => {
+    it("places the croqueted ball 2R + croquetGap along the stroke's line, the pass roll's PASS_SPLIT kept", () => {
         const radius = defaultWorld().ball.radius;
         for (const type of CROQUET_STROKES) {
             const s = canonicalSetup(type, { croquetGap: 0.0015 });
             const d = sub((s.balls.red as BallState).position, (s.balls.blue as BallState).position);
             expect(length(d)).toBeCloseTo(2 * radius + 0.0015, 12);
-            const line = Math.PI / 2 + (type === "pass-roll" ? (20 * Math.PI) / 180 : 0);
+            const line = Math.PI / 2 + (type === "pass-roll" ? (PASS_SPLIT * Math.PI) / 180 : 0);
             expect(Math.atan2(d.y, d.x)).toBeCloseTo(line, 12);
         }
     });
@@ -740,7 +744,8 @@ describe("defaultProfile", () => {
         const holds = STROKE_TYPES.map((type) => defaultProfile.shape[type].slopeHold);
         expect(holds).toEqual([0, 0, 0, 0, 1, 1, 1]);
         const reaches = STROKE_TYPES.map((type) => defaultProfile.drive[type].handReach);
-        expect(reaches).toEqual([0, 0, 0, 0, 0.15, 0.3, 0.3]);
+        // Shapes design §8, rulings 11 and 14: the half roll's minimal push (was 0.15, then 0.05).
+        expect(reaches).toEqual([0, 0, 0, 0, 0.025, 0.3, 0.3]);
         expect(defaultProfile.drive["stop-ac"].handDrop).toBe(0.011);
         // P2b.2b.2c.3a gate stage 2: the drive's guide effort 1, as on every preset (was 0.75, set by P2b.2b.2c.2d as
         // the largest that left no re-contact after the parting; with the hands together none on the grid does).
@@ -752,7 +757,8 @@ describe("defaultProfile", () => {
         expect(HAND_BREADTH).toBeCloseTo(0.087884, 12);
         const hands = STROKE_TYPES.map((type) => [defaultProfile.stance[type].top, defaultProfile.stance[type].bottom]);
         // P2b.2b.2c.3a: the drive's hands together (was 0.6). P2b.2b.2c.3a gate stage 2: the AC stop's grip retune
-        // (was 0.45): the AC stop's hands together too.
+        // (was 0.45): the AC stop's hands together too. Shapes design §8, ruling 17: the pass roll takes the full roll's
+        // grips (was 0.45, 0.09).
         expect(hands).toEqual([
             [0.805, 0.7],
             [0.805, 0.805 - HAND_BREADTH],
@@ -760,7 +766,7 @@ describe("defaultProfile", () => {
             [0.805, 0.45],
             [0.805, 0.42],
             [0.61, 0.3],
-            [0.45, 0.09],
+            [0.61, 0.3],
         ]);
         expect(defaultProfile.stance.drive).toMatchObject({ gripTension: 1, bottomGrip: 0.25 });
         expect(defaultProfile.stance["stop-ac"]).toMatchObject({ gripTension: 1, bottomGrip: 0.1 });
@@ -1035,6 +1041,8 @@ describe("contactPose (design §5.2 steps 1–5, 10)", () => {
             handAngle: 0.5,
             handTempo: { slow: 0.4, fast: 0.2 },
             slopeHold: 0,
+            followThrough: 0,
+            holdFirmness: 1,
         };
         const choice = {
             shape,
@@ -1484,18 +1492,19 @@ describe("the per-shot set-up (P2b.2b.2c.3a design §2)", () => {
 
     it("places the hands' arc from the ball", () => {
         // A2 item 1: the feet are the arc's lowest point along aim from the ball's centre, so feet at the canonical
-        // x_c + handArcLow·handReach (0.5 × 0.15 m) put s_low where the preset's path does.
+        // x_c + handArcLow·handReach (0.5 × 0.025 m; shapes design §8, was 0.5 × 0.15 m, then 0.5 × 0.05 m) put s_low
+        // where the preset's path does.
         const setup = canonicalSetup("half-roll");
         const xc = handsAlong(setup);
-        const placed = withStroke(setup, { feet: xc + 0.075 });
+        const placed = withStroke(setup, { feet: xc + 0.0125 });
         expect(downswingInputOf(placed, world).arrival).toBeCloseTo(downswingInputOf(setup, world).arrival, 12);
         const plain = driveOf(setup).arc;
         const arc = driveOf(placed).arc;
-        expect(Math.abs((arc.lowPoint as number) - 0.075)).toBeLessThan(1e-12);
+        expect(Math.abs((arc.lowPoint as number) - 0.0125)).toBeLessThan(1e-12);
         expect(Math.abs(arc.theta0 - plain.theta0)).toBeLessThan(1e-12);
-        const moved = withStroke(setup, { feet: xc + 0.075 + 0.05 });
+        const moved = withStroke(setup, { feet: xc + 0.0125 + 0.05 });
         const further = driveOf(moved).arc;
-        expect(Math.abs((further.lowPoint as number) - 0.125)).toBeLessThan(1e-12);
+        expect(Math.abs((further.lowPoint as number) - 0.0625)).toBeLessThan(1e-12);
         // The push reads the low point the feet set, not handArcLow's.
         const { contact } = planStroke(moved, world);
         const track = prepareTrack(contact.drive as TrackDrive, contact.head, world.gravity);
@@ -1560,7 +1569,9 @@ describe("the per-shot set-up (P2b.2b.2c.3a design §2)", () => {
         const setup = canonicalSetup("half-roll");
         const { handArcRadius, handReach } = setup.profile.drive["half-roll"];
         const xc = handsAlong(setup);
-        // |s_low| ≥ ρ_h leaves the arc undefined at contact; s_low ≤ handReach − ρ_h at the push's end.
+        // |s_low| ≥ ρ_h leaves the arc undefined at contact, and s_low ≤ handReach − ρ_h at the push's end. Shapes
+        // design §2 (was also s_low ≤ 2·handReach − ρ_h, at P2b.2b.2c.3b.1 design §5's rest): the hands' finish is
+        // checked against the quarter turn once the push is planned, not here.
         for (const feet of [xc + handArcRadius, xc - handArcRadius, xc + handReach - handArcRadius, Number.NaN]) {
             expect(() => planStroke(withStroke(setup, { feet }), world), `${feet}`).toThrow(RangeError);
             expect(() => planStroke(withStroke(setup, { feet }), world), `${feet}`).toThrow(/stroke\.feet/);

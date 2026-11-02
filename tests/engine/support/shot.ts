@@ -7,7 +7,7 @@ import { vec3 } from "../../../src/engine/math/vec3";
 import { CROQUET_GAP_LIMIT } from "../../../src/engine/shot";
 import { handsAheadFor, headShapeOf, plannedSpeed, stanceLean } from "../../../src/engine/swing/buildContact";
 import { MAX_BACK_ANGLE } from "../../../src/engine/swing/downswing";
-import { DEFAULT_DRIVE, DEFAULT_TIMING, defaultProfile } from "../../../src/engine/swing/profile";
+import { DEFAULT_DRIVE, DEFAULT_TIMING, DEFAULT_WINDOW, defaultProfile } from "../../../src/engine/swing/profile";
 import {
     CROQUET_STROKES,
     STROKE_TYPES,
@@ -120,6 +120,8 @@ export function testProfile(o: TestProfileOptions = {}): SwingProfile {
         handAngle: 0.5,
         handTempo: { slow: 0.4, fast: 0.2 },
         slopeHold: 0,
+        followThrough: 0,
+        holdFirmness: 1,
         ...o.shape,
     };
     const every = <T>(entry: T): Record<StrokeType, T> =>
@@ -212,11 +214,17 @@ export const LEGACY_MALLET: SwingProfile["mallet"] = {
 };
 
 /**
+ * The canonical pass roll's croqueted ball off aim, to the left (°): a full roll's slight split (shapes design §8,
+ * ruling 17; was 20°).
+ */
+export const PASS_SPLIT = 4;
+
+/**
  * A preset's canonical setup (design §5.5): the striker at CANONICAL_STRIKER, aim +y, the default backswing
  * (reference/swing.json: 3 m/s planned at intensity 0, exit criterion 5), no intensity, the preset's default
  * drive, every action on time, the preset's reach, `side` 0, `up` 0 except the AC stop's −0.0225 m. A croquet stroke's
  * croqueted ball lies `croquetGap` (default DEFAULT_CROQUET_GAP, 0 ≤ gap < CROQUET_GAP_LIMIT) from the striker ahead
- * along aim, 20° to the left of it for the pass roll, and `live` is empty. A single-ball stroke's target, red, sits on
+ * along aim, PASS_SPLIT to the left of it for the pass roll, and `live` is empty. A single-ball stroke's target, red, sits on
  * the aim line `targetGap` ahead (the GC stop's GC_STOP_GAP by default), and `live` holds every other ball: the
  * target, if any. No other balls. Throws an `Error` prefixed `canonicalSetup:` for `croquetGap` outside its range, for
  * `croquetGap` on a single-ball stroke, and for `targetGap` on a croquet stroke.
@@ -243,7 +251,7 @@ export function canonicalSetup(type: StrokeType, over: CanonicalOptions = {}): S
         if (!(croquetGap >= 0 && croquetGap < CROQUET_GAP_LIMIT)) {
             throw new Error(`canonicalSetup: croquetGap ${croquetGap} m is outside [0, ${CROQUET_GAP_LIMIT})`);
         }
-        const line = aim + (type === "pass-roll" ? (20 * Math.PI) / 180 : 0);
+        const line = aim + (type === "pass-roll" ? (PASS_SPLIT * Math.PI) / 180 : 0);
         const reach = 2 * R + croquetGap;
         balls.red = at(x + reach * Math.cos(line), y + reach * Math.sin(line));
     } else if (over.croquetGap !== undefined) {
@@ -287,6 +295,7 @@ export function canonicalSetup(type: StrokeType, over: CanonicalOptions = {}): S
             aim,
             backswing: swingReference[type].defaultBackswing.value,
             drive: DEFAULT_DRIVE[type],
+            ...(DEFAULT_WINDOW[type] === undefined ? {} : { window: DEFAULT_WINDOW[type] }),
             contact: { up: canonicalUp(type), side: 0 },
             timing: DEFAULT_TIMING[type],
             ...over.stroke,
@@ -318,14 +327,16 @@ export const CANONICAL_CLEARANCE: Readonly<Record<StrokeType, number>> = {
     // (ρ − h_z)·cos α − (L − e − L₀)·|sin α| − e·(1 − cos α), L₀ the old 228.6 mm head.
     // P2b.2b.2c.2d: the stance, 5° back at 22.5 mm below the face's centre (was 14.5473e-3 at 4° and 20 mm): the back
     // corner, pitched further, lies lower, and the ball met lower on the face lifts the head.
-    "stop-ac": 11.4352e-3,
+    // Shapes design §8, ruling 19: the stance 6° back (was 11.4352e-3 at 5°).
+    "stop-ac": 5.8387e-3,
     // P2b.2b.2b.2c: the mallet (was 7.5009e-3).
     "stop-gc": 17.0259e-3,
     // P2b.2b.2b.2c: the mallet (was 29.5203e-3, 36.6544e-3 and 39.7589e-3): the face's rounded lower edge,
     // h₀ + (R + START_GAP)·sin α + e·sin α − (h_z − e)·cos α − e.
     "half-roll": 39.1827e-3,
     "full-roll": 45.9355e-3,
-    "pass-roll": 48.8202e-3,
+    // Shapes design §8, ruling 14's approval: the pass roll's lean 32° (was 48.8202e-3 at 34°).
+    "pass-roll": 46.8985e-3,
 };
 
 const SOLVED = new Map<string, number>();

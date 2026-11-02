@@ -113,6 +113,13 @@ const DRIVE_NUMBERS: readonly (keyof SwingDrive)[] = [
 /** A shape's scalar numbers always read, each checked finite by name (handAngle only when read: design §3.2). */
 const SHAPE_NUMBERS: readonly "pendulumShare"[] = ["pendulumShare"];
 
+/**
+ * The contact speed (m/s) at which a shape's holdFirmness is stated (shapes design §8, ruling 15): the presets'
+ * canonical 3 m/s. Players anticipate the balls' resistance, so the hold's share of the grip's couple scales with the
+ * planned contact speed over this, at most the whole couple.
+ */
+export const HOLD_SPEED = 3;
+
 function fail(message: string): never {
     throw new RangeError(message);
 }
@@ -300,6 +307,8 @@ function validate(setup: ShotSetup, ballRadius: number): void {
         ["stroke.lean", stroke.lean],
         ["stroke.feet", stroke.feet],
         ["stroke.slopeHold", stroke.slopeHold],
+        ["stroke.followThrough", stroke.followThrough],
+        ["stroke.holdFirmness", stroke.holdFirmness],
     ] as const) {
         if (value !== undefined) {
             finiteNumber(value, name);
@@ -513,6 +522,16 @@ function validate(setup: ShotSetup, ballRadius: number): void {
     if (stroke.slopeHold !== undefined) {
         unit(stroke.slopeHold, "stroke.slopeHold");
     }
+    finiteNumber(shape.followThrough, `${where}.followThrough`);
+    nonNegative(shape.followThrough, `${where}.followThrough`);
+    if (stroke.followThrough !== undefined) {
+        nonNegative(stroke.followThrough, "stroke.followThrough");
+    }
+    finiteNumber(shape.holdFirmness, `${where}.holdFirmness`);
+    unit(shape.holdFirmness, `${where}.holdFirmness`);
+    if (stroke.holdFirmness !== undefined) {
+        unit(stroke.holdFirmness, "stroke.holdFirmness");
+    }
     const slopeHold = stroke.slopeHold ?? shape.slopeHold;
     // P2b.2b.2c.3a design §4.1: a plan short of a full hold, or one whose tempo is the free swing's own fall, needs the
     // free swing.
@@ -554,7 +573,9 @@ function handsOf(setup: ShotSetup): Hands {
  * The hands' arc's lowest point s_low (m along aim from the hands at contact) that a checked `setup`'s feet set at
  * `pose` (P2b.2b.2c.3a design §3, A2 item 1): feet − x_c, x_c = aim·(P_c − ball) the top hand at contact along aim from
  * the striker's ball's centre. Undefined where the shot gives no feet. Throws a RangeError naming `stroke.feet` unless
- * s_low lies in (handReach − handArcRadius, handArcRadius), where the arc is defined from contact to the push's end.
+ * s_low lies in (handReach − handArcRadius, handArcRadius), where the arc is defined from contact to the push's end;
+ * whether the hands' finish stays below the arc's quarter turn is known only once the push is planned, and
+ * prepareTrack checks it (shapes design §2).
  */
 function lowPointOf(setup: ShotSetup, pose: ContactPose): number | undefined {
     const { stroke, profile } = setup;
@@ -569,8 +590,8 @@ function lowPointOf(setup: ShotSetup, pose: ContactPose): number | undefined {
     if (!(low > reach - radius && low < radius)) {
         fail(
             `stroke.feet puts the hands' arc's lowest point ${low} m ahead of the hands at contact, which must ` +
-                `lie in (handReach − handArcRadius, handArcRadius) = (${reach - radius}, ${radius}) m for the arc ` +
-                "to span the push",
+                `lie in (handReach − handArcRadius, handArcRadius) = (${reach - radius}, ${radius}) m for ` +
+                "the arc to span the push",
         );
     }
     return low;
@@ -793,10 +814,10 @@ export interface StrokePlan {
  * - backswing ≤ 0; an intensity outside [0, 1]; |drive| > 1; the contact off the face (a box's: off its flat part);
  *   handsAhead outside (−D, A) for the stroke's top hand and contact (P2b.2b.2b.1 design §3.4: at A the shaft lies
  *   flat, at −D the hands leave the stance's branch);
- * - a stroke.lean, stroke.feet or stroke.slopeHold non-finite, or a stroke.grip value non-finite, named by its key
- *   (P2b.2b.2c.3a design §2); a stroke.lean above π/4 (the on-point limit), or at or below −atan2(A, B), where the
- *   hands it places leave the stance's branch; a stroke.slopeHold outside [0, 1]; feet whose arc's lowest point s_low
- *   = feet − x_c lies outside (handReach − handArcRadius, handArcRadius) (design §3, A2 item 1);
+ * - a stroke.lean, stroke.feet, stroke.slopeHold or stroke.followThrough non-finite, or a stroke.grip value non-finite,
+ *   named by its key (P2b.2b.2c.3a design §2); a stroke.lean above π/4 (the on-point limit), or at or below
+ *   −atan2(A, B), where the hands it places leave the stance's branch; a stroke.slopeHold outside [0, 1]; a
+ *   stroke.followThrough negative (shapes design §8, ruling 14); feet whose arc's lowest point s_low = feet − x_c lies outside (2·handReach − handArcRadius, handArcRadius) (design §3, A2 item 1; P2b.2b.2c.3b.1 §5);
  * - a stroke.window non-finite or outside [MIN_WINDOW, MAX_WINDOW] (P2b.2b.2c.2d design §3.2);
  * - window, handWindow or dropTime ≤ 0; speedGain < 0; the preset's or the shot's gripTension or bottomGrip outside
  *   (0, 1]; handDrop < 0; the
@@ -809,8 +830,8 @@ export interface StrokePlan {
  *   pushForce, pushResponseTime, gripLimit or a hand–arm chain value not positive (its gate rulings, 2026-10-11;
  *   P2b.2b.2b.3 design §5);
  * - pendulumShare outside [0, 1]; handAngle outside (0, 90°) when pendulumShare < 1 (neither read
- *   nor checked otherwise); a slopeHold outside [0, 1]; a pendulumShare of 0 where the downswing needs its free swing
- *   (slopeHold < 1, or a null hands' tempo); a hands' tempo, where given, ≤ 0 or with fast > slow;
+ *   nor checked otherwise); a slopeHold outside [0, 1]; a followThrough negative; a pendulumShare of 0 where the downswing needs
+ *   its free swing (slopeHold < 1, or a null hands' tempo); a hands' tempo, where given, ≤ 0 or with fast > slow;
  * - the downswing's (downswing.ts): a backswing beyond the body's limit θ_max, a non-positive effective inertia, a
  *   stall or a fall beyond MAX_FALL, or a planned slope the grip's couple cannot hold;
  * - an action timed more than MAX_LEAD early (the advance's among them), or a downswing meeting the turf more than
@@ -901,6 +922,12 @@ export function planStroke(setup: ShotSetup, world: World): StrokePlan {
         dip: { start: lead + dipFrom, duration: push.dropTime, depth },
         contactAt: lead,
         slopeHold: stroke.slopeHold ?? profile.shape[type].slopeHold,
+        followThrough: stroke.followThrough ?? profile.shape[type].followThrough,
+        // Ruling 15: the hands anticipate the balls' resistance, which grows with the contact speed (user, 2026-11-01).
+        holdFirmness: Math.min(
+            1,
+            ((stroke.holdFirmness ?? profile.shape[type].holdFirmness) * contactSpeed) / HOLD_SPEED,
+        ),
         handReach: stroke.handReach ?? push.handReach,
         pendulumAt: stroke.pendulumAt ?? push.pendulumAt,
         pendulumEffort: stroke.pendulumEffort ?? push.pendulumEffort,

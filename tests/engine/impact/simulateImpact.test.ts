@@ -53,8 +53,8 @@ const SUNK = vec3(
 );
 
 describe("simulateImpact", () => {
-    it("is version 0.18.0", () => {
-        expect(ENGINE_VERSION).toBe("0.18.0");
+    it("is version 0.28.0", () => {
+        expect(ENGINE_VERSION).toBe("0.28.0");
     });
 
     it("starts a centre-struck ball rolling at 5/7 of its launch speed in phase 2", () => {
@@ -510,6 +510,14 @@ describe("simulateImpact with a tracked drive", () => {
         expect(() => validateImpact(beyond, { blue: BLUE }, WORLD)).toThrow(/arc\.pivotVelocity must lie in/);
     });
 
+    it("accepts a low point just inside the finish's bound (P2b.2b.2c.3b.1 design §5)", () => {
+        // 2·handReach − ρ_h: −7 m for a 2 m push, 1 m for a 6 m one, on the 11 m arc.
+        const inside = withArc({ handReach: 2, lowPoint: 2 * 2 - 11 + 1e-9 });
+        expect(() => validateImpact(inside, { blue: BLUE }, WORLD)).not.toThrow();
+        const defaulted = withArc({ handReach: 6, handArcLow: (1 + 1e-9) / 6 });
+        expect(() => validateImpact(defaulted, { blue: BLUE }, WORLD)).not.toThrow();
+    });
+
     const rejections: readonly [string, ContactState, RegExp][] = [
         ["a non-finite pivot", withArc({ pivot: vec3(NaN, 0, 1) }), /arc\.pivot must be finite/],
         [
@@ -560,6 +568,8 @@ describe("simulateImpact with a tracked drive", () => {
         ["a handArcLow above 1", withArc({ handArcLow: 1.5 }), /arc\.handArcLow must lie in \[0, 1\]/],
         ["a slopeHold above 1", withArc({ slopeHold: 1 + 1e-9 }), /arc\.slopeHold must lie in \[0, 1\]/],
         ["a non-finite slopeHold", withArc({ slopeHold: Number.NaN }), /arc\.slopeHold must be finite/],
+        ["a negative followThrough", withArc({ followThrough: -1e-9 }), /arc\.followThrough must be at least 0/],
+        ["a non-finite followThrough", withArc({ followThrough: Number.NaN }), /arc\.followThrough must be finite/],
         [
             "an arc no longer than the push",
             withArc({ handReach: 2, handArcRadius: 2 }),
@@ -571,6 +581,19 @@ describe("simulateImpact with a tracked drive", () => {
             "a lowPoint that leaves the push's end off the arc",
             withArc({ handReach: 2, lowPoint: 2 - 11 }),
             /arc\.lowPoint must lie in/,
+        ],
+        [
+            // P2b.2b.2c.3b.1 design §5: the finish carries the hands to rest 2·handReach on, so the bound is
+            // 2·handReach − ρ_h = −7 m here; the push's end alone (handReach − ρ_h = −9 m) once admitted it.
+            "a lowPoint at the bound that leaves the finish's rest off the arc",
+            withArc({ handReach: 2, lowPoint: 2 * 2 - 11 }),
+            /arc\.lowPoint must lie in \(2·handReach − handArcRadius, handArcRadius\)/,
+        ],
+        [
+            // s_low = handArcLow·handReach = 0 against a bound of 2·6 − 11 = 1 m.
+            "a handArcLow whose low point leaves the finish's rest off the arc",
+            withArc({ handReach: 6, handArcLow: 0 }),
+            /arc\.handArcLow·handReach must lie in \(2·handReach − handArcRadius, handArcRadius\)/,
         ],
         [
             "a flex with no stiffness",
@@ -634,7 +657,9 @@ describe("simulateImpact with a tracked drive", () => {
 });
 
 describe("the roll's impact (P2b.2b.2b.2b design §4.2)", () => {
-    it("never ends before the pendulum phase starts, and records its start as the release", () => {
+    it("never ends before the pendulum phase starts, and records no release", () => {
+        // P2b.2b.2c.3b.1 design §2 (was the release recorded at the pendulum phase's start, where the bottom hand
+        // opened): a push's bottom hand never opens, and the impact still waits for the pendulum phase.
         for (const pendulumAt of [0.5, 1]) {
             const setup = canonicalSetup("full-roll", { world: WORLD, stroke: { pendulumAt } });
             const contact = buildContact(setup, WORLD);
@@ -642,7 +667,7 @@ describe("the roll's impact (P2b.2b.2b.2b design §4.2)", () => {
             const pendulum = (track.push as Push).pendulum as number;
             const result = simulateImpact(contact, setup.balls, WORLD);
             expect(result.duration, `pendulumAt ${pendulumAt}`).toBeGreaterThanOrEqual(pendulum);
-            expect(result.release?.t, `pendulumAt ${pendulumAt}`).toBeCloseTo(pendulum, 4);
+            expect(result.release, `pendulumAt ${pendulumAt}`).toBeUndefined();
         }
     });
 

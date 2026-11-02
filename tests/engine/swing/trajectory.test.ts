@@ -126,13 +126,18 @@ describe("strokeTrajectory (design §4.3)", () => {
             world: WORLD,
             shape: { handTempo: { slow: 0.13, fast: 0.065 } },
             stroke: { timing: { arc: -0.1455, hands: 0, dip: 0 } },
+            // Shapes design §2: on a 15 m arc (was the preset's 1.5 m), so that this mistimed roll's 11.3 m/s hands'
+            // finish stays below its quarter turn.
+            drive: { handArcRadius: 15 },
         });
         const traced = simulateShot(shot, WORLD, { trajectory: true });
         const late = traced.trajectory as SwingTrajectory;
         const roll = traced.contact.drive as TrackDrive;
         const first = late.samples[0] as StrokeSample;
         expect(late.release).toBeGreaterThan(late.impactStart);
-        expect(late.flags).not.toContain("follow-cap");
+        // Shapes design §8, ruling 14 (was no follow-cap): the top hand stopping from this mistimed roll's 11.3 m/s
+        // over HAND_EASE turns the mallet over the top, so its follow-through runs to the cap. The finish is not this
+        // test's subject.
         expect(first.t).toBe(late.impactStart);
         expect(length(first.velocity)).toBe(0);
         expect(length(sub(first.top, (roll.arc.downswing as Downswing).handsTop))).toBeLessThan(1e-9);

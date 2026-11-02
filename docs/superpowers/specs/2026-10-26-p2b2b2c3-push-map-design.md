@@ -178,8 +178,9 @@ exists and is admissible. Lawful only if the mallet does not separate visibly fr
 Every plan the sweep tries is recorded with its outcome, and every excluded plan with the first reason it fails, in
 classes the user named: **mishit** (off the face, or the ball met beyond the on-point limit), **damages the turf**
 (`impact-head-deep`, `turf-yield`, `follow-turf-yield`, `follow-head-deep`, or the head in the turf at contact),
-**superhuman** (intensity above 1, the backswing beyond θ_max, a saturated grip), and **unlawful** (possible
-29.1.6.1, the head overtaking the ball). The record is kept as reference data beside the defaults (derived; its script,
+**superhuman** (intensity above 1, the backswing beyond θ_max, a saturated grip, the couple past C: A2 item 1),
+**unlawful** (possible 29.1.6.1, the head overtaking the ball), and **unreachable** (A2 item 2: the range not reached,
+or the plan rejected by the engine). The record is kept as reference data beside the defaults (derived; its script,
 commands and SHA-256 recorded), in a form later steps can query by set-up and follow-through, so further testing skips
 combinations already shown to fail. A set-up that fails for the same reason at every range is marked as outside the
 envelope outright, and refinement skips it. The record summarises the envelope's shape per roll type and lawn: which
@@ -196,7 +197,8 @@ A plan is admissible when its run:
   contact no higher than R·sin 45° above the ball's centre, the lean at most 45°);
 - never saturates either hand's grip (since P2b.2b.2b.3 a saturated grip slides its anchor and raises no finding; a
   slid anchor means the mallet slipped in the hands), and needs intensity ≤ 1 and the backswing within the body's
-  limit θ_max (P2b.2b.2c.3a; it also sets 100 % stroke effort).
+  limit θ_max (P2b.2b.2c.3a; it also sets 100 % stroke effort);
+- holds its planned slope within the grip's couple C (`gripCouple`; A2 item 1).
 
 A push intent that saturates at `pushForce` is admissible at 100 % push effort; how often defaults saturate is recorded
 (carried item L).
@@ -249,9 +251,9 @@ Nothing here is solved for; each is measured on the map and ruled at the gate.
 - **K:** §3.4.
 - **L, the headroom:** the defaults' push percentages, and how many saturate.
 - **O:** closed by decision 6; the canonical full and pass rolls' digging re-measured on their new defaults.
-- **The AC stop's two grips** (P2b.2b.2c.3a, decision 3): its default, lowered and loose jab variant played beside a
-  hands-together AC stop (Riches's text book), Gugan 5's stop and the turf's damage recorded for each, for the user's
-  ruling on which the bottom hand's height should be by outcome.
+- *(Moved to P2b.2b.2c.3c by A2, item 3.)* **The AC stop's two grips** (P2b.2b.2c.3a, decision 3): its default,
+  lowered and loose jab variant played beside a hands-together AC stop (Riches's text book), Gugan 5's stop and the
+  turf's damage recorded for each, for the user's ruling on which the bottom hand's height should be by outcome.
 - **The effect measure:** the contact-only candidate (the striker's ball's velocity change summed over the face
   intervals alone, the gaps excluded) measured beside the shipped span measure on the map's runs, the verdicts that
   differ counted per type, and ruled at the gate. The shipped measure stays unless the gate rules otherwise.
@@ -275,7 +277,7 @@ each commit.
   roadmap's side-on stroke view: for each text book set-up and each default shown at the gate, the mallet's head and
   shaft drawn side-on through the swing and the impact, with the balls, from `SwingTrajectory` and the impact's states.
   Static frames or an animation; the builder's choice. Not product code.
-- The roadmap's "P2b.2b.2c.3 outcomes" with the figures, the gate's rulings verbatim, and the carried open items.
+- The roadmap's "P2b.2b.2c.3b outcomes" with the figures, the gate's rulings verbatim, and the carried open items.
 
 ## 10. The pre-flight gate
 
@@ -333,3 +335,308 @@ Consequences:
 - The full envelope of valid combinations over every input is the eventual aim; this step maps the slice the rolls
   need. Many combinations may reach one outcome; the default among them stays the least-effort one (decision 5), and
   the map records how many admissible plans share each outcome.
+
+**A2 (user, 2026-10-28, after P2b.2b.2c.3a merged): 3a's outcomes, the edgy band, and the carried items' split.** 3a's
+figures and rulings are in the roadmap's "P2b.2b.2c.3a outcomes (2026-10-28)" and its design's amendments A1–A3
+(`ENGINE_VERSION` 0.18.0). The housekeeping shipped first as its own PR (`svelte` 5.57.3, `typescript-eslint` 8.72.1;
+`vite` already current); 3b's branch starts from main after it.
+
+1. **The plan space after 3a** (§3.1). The swept inputs are §3.1's; every other input of `ShotSetup.stroke` is held at
+   the type's (the design's call): the grip (the rolls unchanged by 3a), `slopeHold` λ (1 on every roll,
+   `SLOPE_HOLD`), `guideEffort`, `pendulumAt`, `pendulumEffort`, `jab`, `contact`, `timing.arc`, `timing.dip` and
+   `timing.advance` (absent, so `handReach` alone sets the push's length). The couple a held plan needs is bounded by
+   C = min(γ_T, g_B)·F_max·(r − b) (`gripCouple`); a plan past it is superhuman (§3.5, §4; the engine's `RangeError`
+   from the downswing's plan is recorded as that class). Its share of C is `requiredCouple`'s peak over C.
+2. **The edgy band** (user: "we could visualize the dimensions in some space … and then show which part, which area
+   of the envelope is viable, which is a bit edgy, and which is unplayable"; chosen "Include, grid margin"). Every
+   plan the map tries is graded in one of three bands:
+   - **unplayable:** excluded, with its first reason (§3.5's classes);
+   - **edgy:** admissible, but a neighbouring grid point one step away along any swept execution dimension (the lean,
+     the feet, `drive`, `handReach`, `window`; on the pass roll the split; on §3.4's sweep `timing.hands`) is
+     unplayable. The user's account of the edge: "if you play a shot on the edge of the envelope and you erroneously
+     apply or go do something slightly erroneous, you'll push your shot out of the envelope and fault in some way,
+     either missing the ball or damaging the lawn";
+   - **viable:** admissible with every such neighbour admissible.
+
+   The rules (the design's calls):
+   - A neighbour is the grid's own point at the same range and lawn, its how hard solved as every grid point's is
+     (§3.1), so grading needs no runs beyond the grid's. How hard is solved, not swept, and carries no margin.
+   - Bands are graded on the coarse grid, its step in each dimension recorded in physical units; a refined point
+     takes the band of the coarse cell it lies in, so refinement neither narrows the margin nor adds neighbour runs.
+   - At an input's own bound (`drive` ±1, `handReach` 0, `MIN_WINDOW`, `MAX_WINDOW`) a neighbour past it does not
+     exist and is skipped; past the lean's 45° it is unplayable (mishit). The lean, feet and split grids extend one
+     coarse step beyond the span the builder grades, so every graded point has its neighbours.
+   - A neighbour whose range cannot be reached, or whose plan the engine rejects (a stall, `MAX_FALL`, the couple
+     past C), is unplayable, in §3.5's **unreachable** class (new) or its superhuman class.
+   - A plan whose only failing neighbour leaves the type's region but stays admissible is viable: the edge is the
+     envelope's, not the region's.
+
+   §3.5's record carries each plan's band. §5's default stays the least-effort admissible plan (decision 5), its band
+   recorded; where it is edgy, the least-effort viable plan is recorded beside it for the gate's ruling. §9's plots
+   shade the bands on their regions; the full grading is queried from §3.5's record.
+3. **3a's carried items, split** (chosen "Rolls in 3b, swing to 3c"). 3b keeps §8's bit-identical commits and §11's
+   untouched swing strokes, and is a measuring step, so it takes only the items the map needs and that move nothing:
+   - the couple's share of C (3a A2 item 3), recorded per plan beside §5's two effort percentages; whether it joins
+     their mean is ruled at the gate (decision 5 unchanged until then);
+   - the pass roll's braked impact-off-face (3a: 20 runs at drive −1, 8 at −0.5): whether the map's own pass-roll runs
+     at those drives reproduce it, recorded.
+
+   **P2b.2b.2c.3c, the swing strokes' hold and grips**, a new step after 3b, takes the rest:
+   - the GC stop's head at 0.742 m/s at the impact's end;
+   - a bounded roll damper on the hold, and a softer hold onset (the settle's `it.fails`);
+   - the AC stop's two-branch step flip at the default gap;
+   - the user's jab hypotheses (the weak lower grip lets the mallet die on rebound; a lower bottom hand gives the
+     leverage to stop it, and whether min(γ_T, g_B) underrates that lever), and §7's AC stop's two grips, now its
+     default hands together (1/0.1/0.717) beside the jab's per-shot grip (0.45, 0.1/0.1);
+   - the ease at a push's end (3a A2 item 8; it moves every roll: user, at this design's review, "Move to 3c"), the
+     rolls' defaults re-checked on it;
+   - retiring `armMass`: inert only in `ratioFit`'s ratio, it is still the top grip's point mass in the swung body the
+     downswing plans with (`track.ts`, `swungBody`), so it moves the planned strokes and `requiredCouple`;
+   - the late re-hit measured on the integrated follow-through, where it disagrees with the planned path on the
+     canonical drive (3a A3 item 6); 3b's criterion 5 stays judged on the planned path, as shipped;
+   - the envelope cases off the map's space: the full roll at λ 0.5 leaving the face late (λ is held at 1 here), and
+     the AC stop's pushed, braked and hit-through turf damage (3a A3 items 9, 15, 16), as seeds of a swing map.
+
+   3b's outcomes record this split in the roadmap and move 3a's carried list to 3c's items.
+4. **The ratchet** (§8): the baseline worktree at 3b's base on main; the preset digest drops no keys (3a's `slopeHold`
+   and `mode` drop no longer needed).
+
+**A3 (user, 2026-10-29, gate stage 1, on `docs/superpowers/probes/2026-10-29-p2b2b2c3b-stage1.txt`): the half roll's
+map ruled; the build's readings.** The rulings, each the option the user chose:
+
+1. **The anchor** ("Accept, edgy"). Today's half-roll default plays admissibly at its canonical 1.676 m on the 10 s
+   lawn, ratio 2.199, inside 1.4–2.5; §3.3's test passes. Its band is edgy: its coarse cell's `handReach` 0.2 m
+   corner is unlawful (29.1.6.1), the 0.1 m corner admissible. The canonical's range lies below the range grid's
+   least, 2 m, and the anchor's `handReach` 0.15 m between the grid's values, so the anchor and its cell are read at
+   that range from their own sweeps; an off-grid plan that is itself admissible takes its cell's worst corner, an
+   unplayable corner counting as edgy.
+2. **The lawns** ("Keep 6, 10, 14 s"). The lawn moves the ratio far more than §3.2 guessed: over the plans admissible
+   on all three lawns the ratio's spread (max − min over mean) has median 7.1 %, 95th percentile 31 %, maximum 48 %,
+   93 % of them above 2 %. The defaults stay keyed per lawn, nothing interpolated between lawns; the spread is a
+   finding of the map.
+3. **The half roll's region and least-effort path** ("Accept as found"). The least-effort plan up to 6.56 m has
+   `handReach` 0 (no push: push effort 0 %) and is mostly edgy; viable plans are scarce, and the region thins by
+   9.75 m and is empty from 14.5 m on the 6 and 10 s lawns. The default is the least-effort plan, edgy allowed, its
+   viable runner-up recorded beside it (A2 item 2); the push-free path and the empty long ranges are checked at gate
+   stage 2 against the full and pass rolls.
+4. **The time budget** ("Accept the overrun"). Plan Task 5 took all three of decision 7's cuts (`window` 0.01, 0.02
+   and 0.04 s; the lean's and the feet's graded k to ±1, beyond ±2; ten powers), and the map still projects at about
+   65 CPU h, about 8 h wall on 8 shards against §12's 6 h. The full and pass rolls run on the thinned grid as is; no
+   fourth cut.
+
+The build's readings (the design's calls, made in plan Tasks 3–6 and recorded here):
+- `mapSetup` and `maxPower` take an optional `CanonicalOptions` for the profile and stance only (a world or stroke in
+  it throws). `maxPower` bisects [0, 1] when p = 1 fails (below 1 the couple need not rise with p) and is NaN when
+  nothing plans; a NaN effort is never the default.
+- The impact's own errors are the engine's, never a class: kept per sample, a bracket that holds one has no read, and
+  a plan with an unread neighbour is left unbanded; the merge and stage reports count them (stage 1: 10 samples, all
+  the handover's overlap rule, 8 of 30240 reads unread, 6 unbanded).
+- A plan takes a beyond value in at most one dimension (a beyond value is only ever a neighbour).
+- The pass roll's split 0° takes its +10° plan's read as its −10° neighbour (the stroke is mirror-symmetric in split).
+- A grid end that is not an input's own bound (`handReach` 0.3 m, the thinned `window`'s 0.01 and 0.04 s) skips its
+  neighbour and is flagged in the record's `edge` column.
+- A range past the sweep's top played sample takes the first classed sample's class above it, else superhuman ("range
+  beyond p_max": p = 2 is the body's limit at full intensity); unreachable is kept for a range below the least power's
+  and for planStroke's other rejections.
+- The default's tie-break is the half roll's anchor in follow-through (§5), on every type.
+- The record carries each read's first reason, the split at rest and the edge flags; its header row has no `#`, the
+  provenance lines above it do.
+
+### A4. The full roll's pendulum push is swept (user, 2026-10-29)
+
+The full roll's map came back with its region empty: at every range and lawn, no admissible plan has its ratio in
+1.0–1.2. Up to 14.5 m there are 115 to 194 admissible plans per range and lawn, but every one sends the croqueted ball
+well over 1.2 times the striker's distance. Today's full roll default is turf at its canonical range when played, with
+ratio 1.843, and its read is a mishit with ratio 1.954. Decision 7 held each type's `speedGain` and `handGain` at its
+preset, so the map never tried the push that put the full roll in band before. That push is P2b.2b.2c.2d's checks,
+I.1: the full roll with the pass roll's pendulum push (`speedGain` 0.5 over 15 ms, `handGain` 0.1), with ratios
+1.11–1.22 at 2–4 m/s. The full roll's preset has `speedGain` 0.1, and drive's span −1…1 only scales it, so a push
+that strong lay outside the grid. The user's account of the stroke ("the same as the half roll, but you give it some
+follow through and a smooth, maybe slightly accelerating push") is that push.
+
+Ruling ("Sweep speedGain too"):
+1. The full roll's grid gains `speedGain` as an axis: 0.1 (the preset), 0.25, 0.5 (I.1's variant) and 1, graded, none
+   beyond. It is a neighbour dimension on the full roll only. Its bound is 0, so 0.1 and 1 are grid edges, flagged as
+   such. `handGain` stays at the preset's 0.1, which is the variant's too. The `window` axis already sets the hands'
+   window with the pendulum's.
+2. The half and pass rolls keep their preset `speedGain` (0.1 and 0.5) as a single value, so their plans and bands are
+   unchanged. The axis is outermost in the plan order, so the full roll's 1260 plans swept before A4 keep their
+   indices and only the 3780 new ones are played. The shard lines from before A4 gain the preset's `speedGain`, which
+   is what they played. The half roll's re-merge after that reproduces its stage-1 tallies exactly.
+3. The record gains a `speedGain` column, and the default's tie-break gains `speedGain` over its span, 1.
+4. This supersedes decision 7's "the preset's `speedGain`" for the full roll only. The pass roll's map uses the push
+   that is already its preset, so it has not been shown to share the full roll's gap. If its region also comes back
+   empty or thin, the same axis is the remedy, ruled at gate 2.
+
+### A5. What "multiples further" means on the pass roll (user, 2026-10-30)
+
+The super tally (§3.4) read "multiples further" as a ratio below `MULTIPLES_RATIO` 0.5. The user's calibration:
+
+1. **The take-off is not a pass roll.** When the croqueted ball is to go nowhere and the striker's ball a long way, the
+   player plays a take-off; its ratio near 0 comes from a thin contact at a wide split, not from the roll.
+2. **The pass roll is the hard case.** It sends the croqueted ball some distance, such as halfway, and the striker's
+   ball all the way: a ratio near 0.5 is a very difficult shot. "Getting the striker ball to go anywhere near twice as
+   far as the croquet ball would be a very impressive shot."
+3. **The super test, read so.** §3.4 asks whether the late, sharp push lowers the pass roll's ratio admissibly below
+   what the map's plans reach at the same split and lawn. A ratio of 0.5 is the shot's exceptional end, not the bar
+   it must clear; `MULTIPLES_RATIO` stays as the report's marker for that end, and the threshold itself is for gate 2.
+
+The super tally's finding, recorded for gate 2: none of its 80 plans plays admissibly on any lawn at any split. The
+least ratios, of any class, are 1.008–1.072 at 0°, 0.527–0.721 at 10°, 0.753–0.902 at 20° and 0.655–0.784 at 30°.
+The 0.527 play is unlawful (29.1.6.1: a re-contact 17 mm after parting), and the rest are turf, mishits off the face
+with re-contacts at p 0.1–0.2, and superhuman reads at higher powers. Why the follow-through yields the turf (the
+planned path, the hands' guiding, or the yield threshold against "rub, not damage") is not settled by the map; the
+side-on swing viewer, the phase after 3b, is to show it.
+
+### A6. The head travels parallel to the turf (gate 2, user, 2026-10-31)
+
+Gate 2 asked why the rolls' follow-throughs yield the turf. The user's reading was that the mallet head's path must be
+wrong, and a side-on trace (`scripts/pathTrace.ts`; `docs/superpowers/probes/2026-10-31-path-trace*`) tested it on
+today's full roll, an in-band full roll at speedGain 0.5 and today's pass roll:
+
+1. **The planned path stays clear of the turf.** Its lowest point after contact is 30.9 mm, 10.4 mm and 31.2 mm.
+2. **The played head leaves it.** Through the impact the head lags and the shaft tilts back (31° to 43.5° on the full
+   roll, against the plan's 29°), and the head rises, to 115 mm on the full roll. The hands stop at once at the push
+   length and the arms' hold relaxes from the first departure, so the mallet then swings through vertical as a free
+   pendulum and yields the turf at the bottom of that swing: −3.4 mm at 350 ms, −1.5 mm at 252 ms and −3.8 mm at
+   374 ms after first contact. None of the three yields the turf during the impact.
+
+The ruling:
+
+1. **The player's intent is the head, not the hand.** The head travels on a path parallel to the turf, through the
+   contact and the push alike. The top hand moves however keeping it there needs: a shallow, possibly flattened arc
+   whose travel along aim is the push's length, and whose dip and rise come from the shaft's flex and the head's angle
+   as the player adjusts.
+2. **The hand eases out and keeps its hold.** It no longer stops at once at the push length, and its hold no longer
+   relaxes once the balls have gone.
+3. **This changes every stroke with a push**, so the maps of Tasks 6–8 are re-run once the change is in; the gate's
+   other items wait for those maps. How the intent is realised (what height counts as level, which of the hand's arc
+   and the head's angle is planned and which follows, and how the hold's effort counts against the superhuman class)
+   is settled one question at a time and recorded here.
+4. **What is planned (user, 2026-10-31).** Most of it is planned: the strokes are too quick for the player to adjust
+   as they go. Only on a slow push is there time to adjust; on a harder shot the player plays through what was planned.
+   So the plan sets the hand's whole path, its travel along aim from the push length and its dip and rise, as the
+   path that keeps the head level against the load the player expects, the head tilting back and recovering.
+   That expectation includes some flex in contact, more on a harder shot: the planned path anticipates it, so the
+   head played through the flex stays in the band, rather than the plan being a rigid path the flex then bends away.
+   Corrections from what the player feels arrive only after a reaction delay, so they shape slow pushes alone. Level
+   is the head's lowest point at first contact (an assumption). Holding it beyond a player's strength reads
+   superhuman. (Supersedes an earlier reading of this item, in which the plan set only the travel along aim and the
+   hand's height followed by feedback.)
+5. **The finish (user, 2026-10-31).** Once the push is done the stroke may finish with a flick, or with the head
+   carrying on along its arc, especially in the push shot. Either way the head leaves the turf rather than swinging
+   down into it.
+6. **Level within bounds (user, 2026-10-31).** The hand's dip and rise is tied to any change in the mallet's lean, and to
+   the player it all happens in a flash. The path is never perfect: it wanders within bounds, and the bound is what
+   keeps the face in contact with the ball, or, once the ball has gone, on the path that would keep that contact. So
+   level is a band, not a line: no new constant, since the band is set by the face's own reach about the ball's
+   contact (during contact the existing impact-off-face read is that test). The planned path aims to keep the head in
+   the band; the hands do not hold it rigidly, and correct its drift only after the reaction delay of item 4.
+7. **The finish is one arc (user, 2026-10-31).** A flick is not a second finish: it is the same continuation of the
+   head's arc once contact ends, accelerating. So there is no new input. The finish carries the head on along its arc,
+   and how hard it accelerates there comes from the existing after-first-contact input (accelerate or brake); a flick
+   is that arc at the accelerating end.
+
+What A6 supersedes in the engine, as built (`src/engine/impact/track.ts`): the push's pendulum phase (P2b.2b.2b.2b
+design §4.2), from pendulumAt·handReach on, in which the push intent is nil and the mallet swings free; the arms' hold
+relaxing from the first departure (gate round 13 ruling, "Relax from first departure", 2026-10-12; `holdWeight`); and
+the hands stopping at once at the push length (`carryPivot`). Each is a ruling of an earlier phase, so the change is an
+engine phase of its own, specified and planned before the maps are re-run.
+
+The sequence (user, 2026-10-31): 3b pauses at gate 2. The level head is specified, planned and built as its own phase,
+P2b.2b.2c.3b.1 (3c being the swing strokes' hold and grips, A2; on this branch, an assumption;
+`2026-10-31-p2b2b2c3b1-level-head-design.md`), the maps of Tasks 6–8 are re-run on it (the half roll has a push too),
+and gate 2 then resumes.
+
+### A7. The envelope covers every shot (user, 2026-11-02; spec review applied)
+
+The user: "Now that we now have a unified shot model we need to do the envelope for all the types of shot including the
+drive and the AC stop." Asked whether the shots must work "from a fast lawn tap all the way up to a slow full lawn", the
+answer was yes: every fit so far (shapes design §8, rulings 14–19) was made at one power, about 3 m/s at contact, on
+the 10 s lawn. Then: "Ultimately, then, the player will be able to achieve the range of ratios across any shot to
+anywhere on the lawn. And we'll have the types of shot, but they're all variations on a different way to hold the mallet
+and do the stroke using a unified shot model"; "Ultimately we need to be able to do somewhere between a half roll and a
+full roll or somewhere between a drive and a half roll or all the other inbetweens."
+
+1. **The types.** The map runs for the drive, the AC stop, the half, full and pass rolls and the single-ball stroke,
+   each from its text book set-up (shapes design §8). The GC stop is left out (user, 2026-11-02: "Single ball in. GC
+   Stop is similar to a rush anyway"): its outcome is the target ball reached across a gap, which the map does not
+   measure, and its distances are out of scope (§Scope).
+2. **One continuum, the types named on it.** The map's outcome is the pair (range, ratio) over the whole plan space,
+   not a region per type. Every admissible plan counts wherever its ratio falls, whichever type's text book it was
+   swept from: a plan swept from the half roll's that lands at 1.3 is an in-between shot, not a failed half roll. The
+   bands are labels drawn over the continuum: the rolls' (§2), the drive's 3.0–4.0 and the AC stop's 4.1–6.2 (the
+   CA's, given in the notes of `reference/swing.json`'s `ratioTargets` beside Gugan 5's targets for his mallet). The
+   gaps between them (1.2–1.4, 2.5–3.0, 4.0–4.1) are outcomes like any other. At each range and lawn the envelope
+   answers which ratios are reachable admissibly, and by which plans. The single-ball stroke has no croqueted ball: its
+   envelope is the admissible plans at each range.
+3. **The player's inputs** (user, 2026-11-02): "The player adjusts the hand position (lean), the foot position (arc
+   bottom relative to ball), the swing power or effort, the push length, the punch/acceleration or flick." They replace
+   §3.1's list and A2 item 1's:
+   - the lean (`lean`) and the feet (`feet`), swept;
+   - the swing's power or effort: how hard (`backswing`, `intensity`), solved for the range as §3.1 solves it, and the
+     hands' assist on the swing, which the shapes design (§1, level-head B1 ruling 7) left to this phase. Without it a
+     long range is reached by backswing and intensity alone and reads superhuman, an artefact rather than an edge
+     (user, 2026-11-02: "Build the assist first");
+   - the push length (`handReach`), swept;
+   - the punch, acceleration or flick: `drive` and `window` through contact, swept, and the flick once contact ends
+     (level-head B1 ruling 9, left to this phase by the shapes design §1), built with the assist.
+   How the mallet is held on the handle (the hands' places and grips) is the type's: the type is that hold. Every
+   swept input runs its full span on every type, so a stop with a push, or one hit through, is an in-between shot;
+   each type's text book values lie on its grid. The full roll's `speedGain` axis (A4) stays the full roll's alone;
+   the AC stop's `jab` is held at the type's (at 3 m/s it moved no ratio, shapes design §8).
+4. **The hold's firmness is the model's, not the player's** (user, 2026-11-02: "The model should find the hold
+   firmness that works but this is not chosen by the player, it is anticipated sub conciously based on the other
+   inputs"). For each plan the model finds the firmness (`holdFirmness`, [0, 1]; shapes ruling 15) the player would
+   anticipate: the least at which the plan plays admissibly (the design's call: the least grip that works). A plan no
+   firmness makes admissible fails, with the first reason of its play at full firmness. At each text book the found
+   firmness is recorded beside the fitted one (the half roll's 0.1). `followThrough`'s carry (shapes ruling 14) is
+   held at the type's until the flick is built, then is the flick's.
+5. **The range.** The striker's ball's distance to rest, from a tap of 0.25 m to a full court length, 32 m (the
+   design's call for the least range); the builder sets the spacing, denser at the short end, and adds powers below
+   `POWERS`'s 0.1 (`scripts/pushMapGrid.ts`) to reach it. The lawns stay 6, 10 and 14 s (A3 item 2), so the grid's
+   corners are the user's: a tap on the fast lawn and a full court length on the slow one. A cell in which either ball
+   would pass a court length is recorded as off the court and not solved (at the stop's 5.9 a 32 m striker's ball
+   would send the croqueted ball about 190 m).
+6. **The split** (§3.2), re-based on shapes ruling 17, where the pass roll's ratio moves almost wholly within 0–10°: at
+   least 0°, 2°, 4°, 6°, 8°, 10°, 20° and 30°. It is a swept input from the pass roll's text book, and the pass roll's
+   defaults stay keyed by it (§5).
+7. **The map records; the text books are revisited on what it finds** (user, 2026-11-02: "Record and revisit, based
+   on what we find, we might find low effort options that get us close to Gugan"). No type's profile values change
+   from the map itself: each keeps the shapes phase's fit (half roll 2.0, full roll 1.161, pass roll 0.859, drive
+   3.925, AC stop 5.86). At gate stage 2 each text book is set beside the map's least-effort plans near its targets
+   (Gugan's where he measured one: the drive's 4.23, the AC stop's 7.15, the pass roll's 0.83) and the user rules
+   whether to move it; a moved text book is a change of its own, with its version. §5's canonical-range rule and its profile changes are superseded, and §11's
+   untouched swing strokes holds for every type's text book. Each band's least-effort plan per range and lawn
+   (decision 5) is recorded as reference data with the text book it was swept from; the in-between ratios are read
+   from §3.5's record and §9's plots over (range, ratio), at a bin width set at read-out and no finer than item 9's
+   bound. No table per bin is built.
+8. **Restated.** A6 items 4–7 (the planned hand path and the free finish) are replaced by the shapes phase as built
+   (ruling 14: the top hand stops, the bottom hand carries, the mallet is never let go). A2 item 2's last rule reads
+   "edges are the envelope's alone": no plan's band depends on a region. A3's tie-break is the plan nearer its own
+   text book in follow-through. A4 item 2's "the pass roll's preset `speedGain` 0.5" is now 0.1 (shapes ruling 17).
+   §3.3's anchor is every type's: each text book lands in its band at its canonical setup (the drive 3.925, the AC
+   stop 5.86, the half roll 2.0 today), and the step stops at the gate if one does not.
+9. **The ratio's jumpiness.** Neighbouring follow-through settings on the full and pass rolls give ratios up to 0.3
+   apart (shapes rulings 16–17; the practice passes suspected). The graded bands read a plan's neighbours, so the
+   bound on neighbouring settings, and the practice passes' share of it, is measured before the map and recorded
+   beside every band. Its cause is a carried item unless the bound exceeds the grid's step, when it is found first.
+10. **Exit criteria and the gate** (§1, §6, §10), restated. Criterion 1: the map over the six types. Criterion 4: each
+    text book within its band and within ±2 % of its planned contact speed. Criterion 7: `ENGINE_VERSION` moves to the
+    next minor after 0.28.0 with the assist and the flick. §6 item 2 keeps its within-type slice test; the ordering
+    across maps is superseded (on one continuum it holds by construction), and item 3 reads "which ratios each range
+    reaches". Gate stage 1 is each text book alone swept over range and lawn (none of the other axes), with item 9's
+    bound and the found firmness at the text books; stage 2 is the full map.
+11. **The time budget** (§12, A3 item 4). The three rolls projected at about 65 CPU h on the thinned grid; three more
+    types, the short ranges and the firmness solve (a bisection per plan) multiply it several times. The builder
+    thins as A3 item 4 did, records the cuts, and asks before a cut that drops a type, a lawn or the tap's end of the
+    range. The map runs on GitHub Actions (user, 2026-11-02: "Yes, add it"): the repository is public, so standard
+    hosted runners are free and unmetered, 4 vCPUs each, 20 jobs at once on the Free plan, each job at most 6 h and a
+    matrix at most 256 jobs (GitHub's Actions limits, https://docs.github.com/en/actions/reference/limits, read
+    2026-11-02). A manually dispatched workflow runs the map's shards as a matrix, each shard sized to finish inside
+    6 h, uploads each shard's output as an artifact, and a last job merges them into §3.5's record; the record keeps
+    the run's URL and commit. Every figure the map is compared against (the ratchet's baselines, gate stage 1's
+    text books) is run on the same runners, never compared across machines.
+12. **The sequence.** The shapes phase (P2b.2b.2c.3b.1) closes at its gate 2 and merges first. The assist, the flick
+    and the found firmness are then specified, planned and built as their own phase, the maps' plan is amended for the
+    new types and inputs, and gate stage 1 runs before the full map. The side-on swing viewer stays the phase after.

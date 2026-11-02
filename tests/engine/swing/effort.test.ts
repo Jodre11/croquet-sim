@@ -36,7 +36,7 @@ function input(intensity: number, effort: SwingEffort): DownswingInput {
         pivot: vec3(0, 0, 0.9),
         lever: TEST_HEAD.socket.z + RADIUS,
         pendulum: PENDULUM,
-        shape: { pendulumShare: 1, handAngle: 0.5, handTempo: null, slopeHold: 0 },
+        shape: { pendulumShare: 1, handAngle: 0.5, handTempo: null, slopeHold: 0, followThrough: 0, holdFirmness: 1 },
         backswing: 0.3,
         backswingLimit: MAX_BACK_ANGLE,
         effort,

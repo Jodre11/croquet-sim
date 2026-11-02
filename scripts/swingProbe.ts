@@ -844,7 +844,7 @@ function tracking(): void {
             if (track.push === null) {
                 return "swing";
             }
-            return t <= (track.push?.end ?? Infinity) ? "carry" : "after the push";
+            return t <= (track.push?.end ?? Infinity) ? "push" : "after the push";
         };
         const worst = new Map<string, { socket: number; angle: number }>();
         integrate(setup, {
