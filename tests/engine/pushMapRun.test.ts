@@ -1,6 +1,7 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { findFirmness } from "../../scripts/firmness";
 import { openWorld, opened } from "../../scripts/openLawn";
+import { MAP_LAWNS } from "../../scripts/pushMap";
 import { bodyBackswing, mapSetup, maxPower, playSample, runClass, textBook } from "../../scripts/pushMapRun";
 import { ratioOf } from "../../scripts/ratioFit";
 import type { FaultReport } from "../../src/engine/faults";
@@ -12,10 +13,17 @@ import { faceHalfHeight } from "../../src/engine/impact/shape";
 import type { ImpactEvent, ImpactResult } from "../../src/engine/impact/types";
 import type { BallId } from "../../src/engine/types";
 import { simulateShot } from "../../src/engine/shot";
+import { simulateFreeMotion } from "../../src/engine/simulate";
 import { headShapeOf, plannedSpeed, stanceLean } from "../../src/engine/swing/buildContact";
 import { defaultProfile } from "../../src/engine/swing/profile";
 import { swingReference } from "../../src/reference/index";
 import { PASS_SPLIT, canonicalSetup } from "./support/shot";
+
+// A spy that plays through, so the free motion's runs can be counted (Task B2).
+vi.mock("../../src/engine/simulate", async (importOriginal) => {
+    const actual = await importOriginal<typeof import("../../src/engine/simulate")>();
+    return { ...actual, simulateFreeMotion: vi.fn(actual.simulateFreeMotion) };
+});
 
 const DEG = Math.PI / 180;
 const WORLD = openWorld();
@@ -236,6 +244,38 @@ describe("the map's found firmness (firmness design §5, A7 item 4)", () => {
         expect(sample.firmness).toBeNull();
         expect(sample.sigma).toBeNull();
     });
+});
+
+describe("the free motion once per sample (plan Amendment B, Task B2; B-d6)", () => {
+    it(
+        "plays the full roll's found-hold sample at p = 1 as before, rolling the balls once per lawn",
+        { timeout: 120_000 },
+        () => {
+            // Pinned before B2 from the search that rolled the balls on every lawn at each of its nine plays.
+            vi.mocked(simulateFreeMotion).mockClear();
+            const sample = playSample("full-roll", textBook("full-roll"), 1, MAP_LAWNS);
+            expect(vi.mocked(simulateFreeMotion).mock.calls.length).toBe(MAP_LAWNS.length);
+            expect(sample).toEqual({
+                power: 1,
+                klass: null,
+                reason: null,
+                byLawn: {
+                    6: { range: 4.000547519754512, ratio: 1.2175649233545072, splitAtRest: 2.4865592150875944e-14 },
+                    10: { range: 8.559654548923966, ratio: 1.3305209305408505, splitAtRest: 2.988384442521598e-14 },
+                    14: { range: 15.39831509267816, ratio: 1.3745406046094966, splitAtRest: 3.070663486314841e-14 },
+                },
+                strokeEffort: 37.67372104345212,
+                pushEffort: 42.35021223503435,
+                coupleShare: 0.027972110053537814,
+                pushImpulse: 2.1380725870668282,
+                effectVerdicts: { shipped: false, contactOnly: false },
+                followCap: false,
+                passes: 3,
+                firmness: 0.29861664015148576,
+                sigma: 0.3375,
+            });
+        },
+    );
 });
 
 /** A stub practised run reading only `events`, `flags` and the striker's first face contact at 10 ms. */

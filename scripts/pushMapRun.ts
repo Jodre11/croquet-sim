@@ -600,30 +600,62 @@ export function playJudged(
         };
     }
     if (hold === "preset") {
-        const { sample, strike } = judgedPlay(type, plan, power, lawns, setup, stroke);
+        const { sample, strike, handover } = judgedPlay(type, plan, power, setup, stroke);
         const firmness = setup.stroke.holdFirmness ?? setup.profile.shape[type].holdFirmness;
-        return { sample: { ...sample, firmness, sigma: drive.arc.holdFirmness }, strike };
+        const byLawn = lawnReads(setup, handover, lawns);
+        return { sample: { ...sample, byLawn, firmness, sigma: drive.arc.holdFirmness }, strike };
     }
-    // The hold acts after planning, so the planner's rejection, checked above, does not depend on it (design §5).
+    // The hold acts after planning, so the planner's rejection, checked above, does not depend on it (design §5). The
+    // class needs no free motion, so the search plays none and the kept play's handover alone rolls (plan B-d6).
     const { found, played } = searchFirmness(setup, IMPACT_WORLD, (held) => {
-        const judged = judgedPlay(type, plan, power, lawns, held, planStroke(held, IMPACT_WORLD));
+        const judged = judgedPlay(type, plan, power, held, planStroke(held, IMPACT_WORLD));
         return { klass: judged.sample.klass, reason: judged.sample.reason, judged };
     });
+    const byLawn = lawnReads(setup, played.judged.handover, lawns);
     return {
-        sample: { ...played.judged.sample, firmness: found.firmness, sigma: found.sigma },
+        sample: { ...played.judged.sample, byLawn, firmness: found.firmness, sigma: found.sigma },
         strike: played.judged.strike,
     };
 }
 
-/** playJudged's play of `setup`, planned as `stroke` with a tracked drive, without the hold's record. */
+/**
+ * Each lawn's read of the free motion from `handover` (s; IMPACT_LAWN on IMPACT_WORLD). The hold changes only the
+ * stroke, so any of a search's setups gives the balls and ids it reads.
+ */
+function lawnReads(
+    setup: ShotSetup,
+    handover: ImpactResult["handover"],
+    lawns: readonly number[],
+): Record<number, LawnRead> {
+    const { croqueted } = setup;
+    const byLawn: Record<number, LawnRead> = {};
+    for (const lawn of lawns) {
+        const motion = simulateFreeMotion(handover, lawn === IMPACT_LAWN ? IMPACT_WORLD : openWorld(lawn));
+        const range = travelOf(setup, motion, setup.striker);
+        const from = (id: BallId): Vec3 => sub(motion.rest[id] as Vec3, (setup.balls[id] as BallState).position);
+        // The single-ball stroke has no croqueted ball: its range alone (plan B-d2).
+        const other = croqueted === undefined ? NaN : travelOf(setup, motion, croqueted);
+        byLawn[lawn] = {
+            range,
+            ratio: range > 0 ? other / range : NaN,
+            splitAtRest: croqueted === undefined ? NaN : splitAtRestOf(from(setup.striker), from(croqueted)),
+        };
+    }
+    return byLawn;
+}
+
+/** playJudged's play of `setup`, planned as `stroke` with a tracked drive, without the lawns' reads or the hold's. */
 function judgedPlay(
     type: MapType,
     plan: MapPlan,
     power: number,
-    lawns: readonly number[],
     setup: ShotSetup,
     stroke: StrokePlan,
-): { readonly sample: Omit<MapSample, "firmness" | "sigma">; readonly strike: StrikeTaps | null } {
+): {
+    readonly sample: Omit<MapSample, "byLawn" | "firmness" | "sigma">;
+    readonly strike: StrikeTaps | null;
+    readonly handover: ImpactResult["handover"];
+} {
     const drive = stroke.contact.drive as TrackDrive;
     const ids = BALL_IDS.filter((id) => setup.balls[id] !== undefined);
     const striker = ids.indexOf(setup.striker);
@@ -657,20 +689,6 @@ function judgedPlay(
     // A stroke without a push is not practised (design §4; the plan's Global Constraints): its class is today's.
     const miss = drive.arc.handReach > 0 ? run.miss : null;
     const { klass, reason } = runClass(setup, run, faults, run.point, miss);
-    const { croqueted } = setup;
-    const byLawn: Record<number, LawnRead> = {};
-    for (const lawn of lawns) {
-        const motion = simulateFreeMotion(impact.handover, lawn === IMPACT_LAWN ? IMPACT_WORLD : openWorld(lawn));
-        const range = travelOf(setup, motion, setup.striker);
-        const from = (id: BallId): Vec3 => sub(motion.rest[id] as Vec3, (setup.balls[id] as BallState).position);
-        // The single-ball stroke has no croqueted ball: its range alone (plan B-d2).
-        const other = croqueted === undefined ? NaN : travelOf(setup, motion, croqueted);
-        byLawn[lawn] = {
-            range,
-            ratio: range > 0 ? other / range : NaN,
-            splitAtRest: croqueted === undefined ? NaN : splitAtRestOf(from(setup.striker), from(croqueted)),
-        };
-    }
     const shipped = faults.findings.some((f) => f.law === "29.1.6.1");
     const trace: VelocityTrace = {
         initial: (setup.balls[setup.striker] as BallState).velocity,
@@ -678,11 +696,10 @@ function judgedPlay(
         velocities,
     };
     const faces = impact.timeline[faceKey(setup.striker)] ?? [];
-    const sample: Omit<MapSample, "firmness" | "sigma"> = {
+    const sample: Omit<MapSample, "byLawn" | "firmness" | "sigma"> = {
         power,
         klass,
         reason,
-        byLawn,
         strokeEffort: strokeEffortOf(type, plan, setup),
         pushEffort: (100 * peak) / setup.profile.body.pushForce,
         coupleShare: coupleShareOf(setup, stroke),
@@ -691,5 +708,5 @@ function judgedPlay(
         followCap: run.follow.flags.includes("follow-cap"),
         passes: run.passes,
     };
-    return { sample, strike: faults.strike ?? null };
+    return { sample, strike: faults.strike ?? null, handover: impact.handover };
 }
