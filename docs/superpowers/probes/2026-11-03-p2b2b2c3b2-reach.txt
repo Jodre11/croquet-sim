@@ -1,0 +1,64 @@
+== P2b.2b.2c.3b.2 design §2: what limits a long shot, engine 0.28.0 (9750712), 2026-11-03 ==
+Each type's canonical setup (tests/engine/support/shot.ts canonicalSetup) on the open lawn (scripts/openLawn.ts),
+played at power p as the push map plays it (scripts/pushMapRun.ts mapSetup): the backswing p·h_body up to the body's
+limit (bodyBackswing), then intensity p − 1 at it. Scratch probes, not committed.
+
+-- 1. contact speed and the first grip-limit (simulateShot, 10 s lawn, no practice) --
+drive p 0.6 bs 0.288 v 2.40: grip none; face 0.0–2.0 ms
+drive p 0.8 bs 0.384 v 2.78: grip none; face 0.0–1.9 ms; turf-lift
+drive p 1 bs 0.480 v 3.10: grip none; face 0.0–1.8 ms; turf-lift
+drive p 1.5 bs 0.480 v 7.24: grip none; face 0.0–1.4 ms; turf-lift
+drive p 2 bs 0.480 v 9.00: grip none; face 0.0–1.4 ms; turf-lift
+stop-ac p 0.6 bs 0.285 v 2.39: grip none; face 0.0–2.1 ms; turf-lift
+stop-ac p 0.8 bs 0.380 v 2.76: grip none; face 0.0–2.0 ms; turf-lift
+stop-ac p 1 bs 0.475 v 3.09: grip none; face 0.0–1.9 ms; turf-lift
+stop-ac p 1.5 bs 0.475 v 7.44: grip top at 5.6 ms; face 0.0–1.5 ms; turf-lift,grip-limit
+stop-ac p 2 bs 0.475 v 9.23: grip top at 4.8 ms; face 0.0–1.4 ms; turf-lift,grip-limit
+half-roll p 0.6 bs 0.612 v 4.16: grip none; face 0.0–99.0 ms; turf-lift
+half-roll p 0.8 bs 0.816 v 5.41: grip none; face 0.0–80.8 ms; turf-lift
+half-roll p 1 bs 1.020 v 6.64: grip bottom at 32.5 ms; face 0.0–98.3 ms; turf-lift,grip-limit,impact-off-face
+half-roll p 1.5 bs 1.020 v 8.85: grip bottom at 30.4 ms; face 0.0–69.1 ms; turf-lift,grip-limit,impact-off-face
+half-roll p 2 bs 1.020 v 13.28: grip bottom at 28.5 ms; face 0.0–24.5 ms; turf-lift,grip-limit
+full-roll p 0.6 bs 1.659 v 11.56: grip none; face 0.0–18.5 ms; turf-lift,impact-off-face
+full-roll p 0.8 bs 2.212 v 15.35: grip bottom at 0.3 ms; face 0.0–15.1 ms; grip-limit,turf-lift,impact-off-face
+full-roll p 1 bs 2.765 v 19.13: grip bottom at 0.3 ms; face 0.0–12.6 ms; grip-limit,turf-lift,impact-off-face
+full-roll p 1.5 bs 2.765 v 25.50: grip bottom at 0.2 ms; face 0.0–7.1 ms; grip-limit,turf-lift
+full-roll p 2: the hands' finish from 35.29 m/s would carry them past the top of the hands' arc (handArcRadius 1.5 m)
+pass-roll p 0.6 bs 1.083 v 7.45: grip none; face 0.0–36.2 ms; turf-lift,impact-off-face
+pass-roll p 0.8 bs 1.444 v 9.87: grip none; face 0.0–32.1 ms; turf-lift,impact-off-face
+pass-roll p 1 bs 1.805 v 12.28: grip none; face 0.0–20.0 ms; turf-lift,impact-off-face
+pass-roll p 1.5 bs 1.805 v 16.38: grip bottom at 0.3 ms; face 0.0–13.9 ms; grip-limit,turf-lift,impact-off-face
+pass-roll p 2 bs 1.805 v 24.57: grip bottom at 0.2 ms; face 0.0–7.1 ms; grip-limit,turf-lift
+
+-- 2. the rolls' text books played as the map plays them (playSample: practised, judged; striker's range, ratio) --
+half-roll p 0.5: admissible | 6s 1.02 m r2.11 | 10s 2.44 m r2.03 | 14s 4.57 m r2.01
+half-roll p 1: superhuman grip-limit | 6s 5.34 m r1.40 | 10s 12.94 m r1.34 | 14s 24.34 m r1.32
+half-roll p 1.5: superhuman grip-limit | 6s 7.92 m r1.66 | 10s 15.87 m r1.92 | 14s 27.80 m r2.03
+half-roll p 2: superhuman grip-limit | 6s 11.26 m r2.61 | 10s 27.68 m r2.45 | 14s 52.32 m r2.39
+full-roll p 0.5: unpractised impact-off-face | 6s 7.12 m r1.86 | 10s 14.00 m r2.19 | 14s 24.30 m r2.33
+full-roll p 1: superhuman grip-limit | 6s 14.51 m r3.49 | 10s 29.94 m r3.87 | 14s 53.09 m r2.84
+full-roll p 1.5: superhuman grip-limit | 6s 23.11 m r3.88 | 10s 43.35 m r3.48 | 14s 73.71 m r2.05
+pass-roll p 0.5: superhuman grip-limit | 6s 8.34 m r0.69 | 10s 15.87 m r0.82 | 14s 27.16 m r0.88
+pass-roll p 1: superhuman grip-limit | 6s 9.80 m r2.12 | 10s 17.87 m r2.68 | 14s 29.97 m r2.95
+pass-roll p 2: superhuman grip-limit | 6s 20.93 m r3.93 | 10s 39.16 m r3.86 | 14s 66.51 m r2.27
+
+-- 3. the hold's firmness at speed (simulateShot, 10 s lawn, stroke.holdFirmness) --
+half-roll p 0.8 v 5.41: firmness 0, 0.25, 0.5, 1: no grip limit; no fault
+half-roll p 1 v 6.64: firmness 0 and 0.25: grip-limit, bottom, 32.5 and 33.1 ms; 0.5 and 1: no grip limit
+full-roll p 0.4 v 7.75: firmness 0: clean; 0.25, 0.5, 1: impact-off-face
+full-roll p 0.6 v 11.56: firmness 0: clean; 0.25, 0.5, 1: impact-off-face
+pass-roll p 0.6 v 7.45: firmness 0: clean; 0.25, 0.5, 1: impact-off-face
+
+-- 4. within a knee-height backswing (0.47 m), by intensity (simulateShot per lawn, unpractised; striker/croqueted m) --
+drive i 0 v 3.07: 6s 0.6/2.2 | 10s 1.3/5.1 | 14s 2.4/9.3 [turf-lift]
+drive i 0.5 v 7.20: 6s 2.7/12.7 | 10s 6.1/29.2 | 14s 11.3/53.9 [turf-lift]
+drive i 1 v 8.96: 6s 4.1/19.8 | 10s 9.3/45.5 | 14s 17.0/84.1 [turf-lift]
+half-roll i 0 v 3.27: 6s 0.9/1.9 | 10s 2.1/4.3 | 14s 4.0/7.9 [turf-lift]
+half-roll i 0.5 v 4.36: 6s 2.8/3.4 | 10s 6.6/7.7 | 14s 12.2/14.2 [turf-lift]
+half-roll i 1 v 6.54: 6s 5.3/7.3 | 10s 10.6/16.9 | 14s 18.5/31.3 [turf-lift,grip-limit]
+full-roll i 0 v 3.32: 6s 1.5/1.6 | 10s 3.2/3.7 | 14s 5.6/6.9 [turf-lift,impact-off-face]
+full-roll i 0.5 v 4.43: 6s 2.1/3.0 | 10s 4.8/6.7 | 14s 8.9/12.3 [turf-lift,impact-off-face]
+full-roll i 1 v 6.64: 6s 3.9/6.4 | 10s 9.0/14.8 | 14s 16.7/27.3 [turf-lift,impact-off-face]
+pass-roll i 0 v 3.28: 6s 1.5/1.6 | 10s 3.0/3.6 | 14s 5.4/6.6 [turf-lift,impact-off-face]
+pass-roll i 0.5 v 4.37: 6s 2.4/2.8 | 10s 5.2/6.4 | 14s 9.4/11.8 [turf-lift,impact-off-face]
+pass-roll i 1 v 6.56: 6s 4.3/6.2 | 10s 9.9/14.2 | 14s 18.2/26.2 [turf-lift,impact-off-face]

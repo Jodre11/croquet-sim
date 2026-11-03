@@ -574,10 +574,8 @@ full roll or somewhere between a drive and a half roll or all the other inbetwee
    bottom relative to ball), the swing power or effort, the push length, the punch/acceleration or flick." They replace
    §3.1's list and A2 item 1's:
    - the lean (`lean`) and the feet (`feet`), swept;
-   - the swing's power or effort: how hard (`backswing`, `intensity`), solved for the range as §3.1 solves it, and the
-     hands' assist on the swing, which the shapes design (§1, level-head B1 ruling 7) left to this phase. Without it a
-     long range is reached by backswing and intensity alone and reads superhuman, an artefact rather than an edge
-     (user, 2026-11-02: "Build the assist first");
+   - the swing's power or effort: how hard (`backswing`, `intensity`), solved for the range as §3.1 solves it, within
+     the body's limit on every type, a hands-led stroke's pace from the arms' assist (item 14);
    - the push length (`handReach`), swept;
    - the punch or acceleration: `drive` and `window` through contact, swept. The flick is not built (item 13).
    How the mallet is held on the handle (the hands' places and grips) is the type's: the type is that hold. Every
@@ -622,7 +620,7 @@ full roll or somewhere between a drive and a half roll or all the other inbetwee
    beside every band. Its cause is a carried item unless the bound exceeds the grid's step, when it is found first.
 10. **Exit criteria and the gate** (§1, §6, §10), restated. Criterion 1: the map over the six types. Criterion 4: each
     text book within its band and within ±2 % of its planned contact speed. Criterion 7: `ENGINE_VERSION` moves to the
-    next minor after 0.28.0 with the assist. §6 item 2 keeps its within-type slice test; the ordering
+    next minor after 0.28.0 with the body's limit, the assist and the found firmness (item 14). §6 item 2 keeps its within-type slice test; the ordering
     across maps is superseded (on one continuum it holds by construction), and item 3 reads "which ratios each range
     reaches". Gate stage 1 is each text book alone swept over range and lawn (none of the other axes), with item 9's
     bound and the found firmness at the text books; stage 2 is the full map.
@@ -636,14 +634,24 @@ full roll or somewhere between a drive and a half roll or all the other inbetwee
     6 h, uploads each shard's output as an artifact, and a last job merges them into §3.5's record; the record keeps
     the run's URL and commit. Every figure the map is compared against (the ratchet's baselines, gate stage 1's
     text books) is run on the same runners, never compared across machines.
-12. **The sequence.** The shapes phase (P2b.2b.2c.3b.1) closes at its gate 2 and merges first. The assist and the
-    found firmness are then specified, planned and built as their own phase, the maps' plan is amended for the new
+12. **The sequence.** The shapes phase (P2b.2b.2c.3b.1) closes at its gate 2 and merges first. The body's limit
+    on the backswing, the assist and the found firmness (item 14) are then specified, planned and built as their own phase
+    (`2026-11-03-p2b2b2c3b2-firmness-design.md`), the maps' plan is amended for the new
     types and inputs, and gate stage 1 runs before the full map. The side-on swing viewer stays the phase after.
 13. **No flick** (user, 2026-11-03, on whether the flick is still needed now the shapes are right: "It is simply the
     amount or arcing acceleration as the ball leaves contact"). Once the ball has left the face the head cannot change
     its speed or the ratio, so a flick reaches no range and no ratio that the stroke before it does not. What reaches
-    a longer range is the swing's speed (backswing, effort and the assist) and the punch while the ball is still on
+    a longer range is the swing's speed (backswing and effort) and the punch while the ball is still on
     the face (`drive`, `window`). The finish the flick would shape is ruling 14's, the head carried on along its arc
     and clear of the turf, already every stroke's. Its one bearing on the outcome is a follow-through that meets the
     ball again, a fault, and that is `followThrough`'s carry, held at the type's. So the flick is not built, and the
     level-head B1 ruling 9's flick, which the shapes design §1 left to this phase, is closed.
+14. **The body's limit, and the assist from the arms' strength** (user, 2026-11-03). A probe on engine 0.28.0
+    (`docs/superpowers/probes/2026-11-03-p2b2b2c3b2-reach.txt`) found the rolls' power unphysical: h_body divides by
+    pendulumShare, so the full roll's is 2.77 m, 19 m/s at power 1. The phase adds a body limit on the backswing's
+    height on every type (0.48 m, θ_max's own knee-height figure), so that power, and the superhuman class, mean the
+    same on every type. Within it the rolls meet the ball at about 6.6 m/s at most, their fast tempo a placeholder, and
+    the full roll's croqueted ball runs about 15 m on the 10 s lawn; asked with those figures, the user chose to build
+    the assist (a rescope that would have dropped it rested on the drive's speed alone). The assist is the arms'
+    strength driving a hands-led downswing, a force–velocity law in place of `handTempo.fast`; ruling 7's assist in
+    the finish moves neither ball (item 13) and is not built.
