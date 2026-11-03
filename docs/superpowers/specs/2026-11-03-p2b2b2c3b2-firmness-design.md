@@ -1,6 +1,6 @@
 # P2b.2b.2c.3b.2 the body's backswing, the arms' assist and the found firmness: design
 
-Status: reviewed (three-lens panel, 2026-11-03), for planning.
+Status: built (engine 0.29.0, 2026-11-03); reviewed (three-lens panel, 2026-11-03). See Amendments.
 
 Parent: docs/superpowers/specs/2026-10-26-p2b2b2c3-push-map-design.md, amendment A7 (items 3, 4, 10, 12; item 14
 added with this design). This is A7 item 12's phase: the assist and the found firmness, with a body limit on the
@@ -143,3 +143,18 @@ Housekeeping first, as its own small PR: `npm outdated` (2026-11-03) finds svelt
   least, refined.
 - A grip-limit 0.2 ms into contact may be the impact's momentary load rather than a slipping hand. It still reads
   superhuman; the map's gate stage 1 looks at how much of the envelope it decides.
+
+## Amendments (as built, 2026-11-03)
+
+1. **headRiseLimit's provenance** is "derived", not "user": the reference schema allows only direct, analogue and
+   derived. The note records the user's ruling.
+2. **The assist's figures:** F_0 = 241.2 N and v_max = 12.19 m/s, fitted by `scripts/assistFit.ts` on the weakest held
+   roll (the full roll) at its top, meeting 9 m/s at intensity 1. Under the shared pair the half roll reaches 11.7 m/s
+   at intensity 1 and trips the grip limit at map power ≥ 1.5 at every firmness (probe part 5).
+3. **The search is split out** as `searchSigma(sigmaMax, play)`, so its grid and halvings are tested on a synthetic
+   play; `findFirmness(setup, world)` keeps the planned signature. playJudged's classification without its probes is
+   `playedClass` in `scripts/pushMapRun.ts`.
+4. **The map does not store the firmness yet.** Gate 1 found that a firm hold on a slow full or pass roll (map power
+   0.5 to 0.9, firmness from about 0.18) throws in the handover: the head overlaps the croqueted ball by 1.5 to 2.5 mm
+   sideways, where the rule clears at most 1 mm. That is an engine defect, not a class, and findFirmness propagates
+   it, so wiring it into playSample waits on the fix.
