@@ -367,7 +367,7 @@ function readsOf(c: TraceCase, tr: Trace): readonly string[] {
         const striker = travelOf(c.setup, simulateShot(c.setup, WORLD).motion, c.setup.striker);
         distances = `striker's ball ${f(striker, 2)} m to rest on the 10 s lawn`;
     } else {
-        const sample = playSample(c.roll.type, c.roll.plan, c.roll.power, [10]);
+        const sample = playSample(c.roll.type, c.roll.plan, c.roll.power, [10], "preset");
         const read = sample.byLawn[10];
         const range = read?.range ?? NaN;
         const ratio = read?.ratio ?? NaN;

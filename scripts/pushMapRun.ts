@@ -15,7 +15,7 @@ import { faceKey } from "../src/engine/impact/contacts";
 import type { FollowThrough, ImpactProbe } from "../src/engine/impact/integrate";
 import { practiseStroke } from "../src/engine/impact/practice";
 import { faceHalfHeight } from "../src/engine/impact/shape";
-import type { ContactInterval, ImpactResult } from "../src/engine/impact/types";
+import type { ContactInterval, ImpactResult, TrackDrive } from "../src/engine/impact/types";
 import { atan2 } from "../src/engine/math/elementary";
 import { ZERO, add, cross, dot, horizontal, length, sub, vec3, type Vec3 } from "../src/engine/math/vec3";
 import { strokeContext } from "../src/engine/shot";
@@ -40,6 +40,7 @@ import {
     canonicalSetup,
     type CanonicalOptions,
 } from "../tests/engine/support/shot";
+import { searchFirmness } from "./firmness";
 import { openWorld, opened } from "./openLawn";
 import { travelOf } from "./ratioFit";
 import { feetReading } from "./setupProbe";
@@ -94,7 +95,21 @@ export interface MapSample {
     readonly followCap: boolean;
     /** The practice passes played (P2b.2b.2c.3b.1 design §4, §6): 1 to PRACTICE_PASSES; 0 where unplayed. */
     readonly passes: number;
+    /**
+     * The hold firmness played (firmness design §5): with the found hold, the least at which the plan plays admissibly
+     * (findFirmness), null where none does (the sample is then its play at σ_max); with the preset hold, the preset's.
+     * Null where unplayed.
+     */
+    readonly firmness: number | null;
+    /** The hold's share σ of the grip's couple beside `firmness`, a diagnostic; null where `firmness` is. */
+    readonly sigma: number | null;
 }
+
+/**
+ * The hold a sample plays at: the firmness the player would anticipate (A7 item 4; the map's), or the preset's (the
+ * text books as fitted, shapes design §8, ruling 15).
+ */
+export type MapHold = "found" | "preset";
 
 /** The lawn the impact is played on (s): decision 3's shared impact, the normal lawn. */
 const IMPACT_LAWN = 10;
@@ -385,6 +400,8 @@ function unplayed(power: number, lawns: readonly number[], klass: MapClass, reas
         effectVerdicts: { shipped: false, contactOnly: false },
         followCap: false,
         passes: 0,
+        firmness: null,
+        sigma: null,
     };
 }
 
@@ -531,20 +548,28 @@ export function playedClass(
  * (intensity above 1); a planStroke rejection is classed by rejectedClass with the engine's message. An error of the
  * impact or the free motion is the engine's, not the plan's, and propagates (the shard runner reports it).
  */
-export function playSample(type: RollType, plan: MapPlan, power: number, lawns: readonly number[]): MapSample {
-    return playJudged(type, plan, power, lawns).sample;
+export function playSample(
+    type: RollType,
+    plan: MapPlan,
+    power: number,
+    lawns: readonly number[],
+    hold: MapHold = "found",
+): MapSample {
+    return playJudged(type, plan, power, lawns, hold).sample;
 }
 
 /**
  * playSample's sample with the judge's strike beside it (plan Task 8's super pass roll reads 29.2.5 from it): the
  * parting, the taps and the re-contacts (judgeFaults's `strike`), null where the sample was not played (a power above
- * 2, a planStroke rejection) or the judge gives none. The sample is playSample's exactly.
+ * 2, a planStroke rejection) or the judge gives none. The sample is playSample's exactly. With `hold` "found" the
+ * sample is played in searchFirmness, at the least admissible σ, else at σ_max (A7 item 4), up to 16 practised plays.
  */
 export function playJudged(
     type: RollType,
     plan: MapPlan,
     power: number,
     lawns: readonly number[],
+    hold: MapHold = "found",
 ): { readonly sample: MapSample; readonly strike: StrikeTaps | null } {
     if (power > POWER_LIMIT) {
         return { sample: unplayed(power, lawns, "superhuman", `intensity ${power - 1} above 1`), strike: null };
@@ -566,6 +591,32 @@ export function playJudged(
             strike: null,
         };
     }
+    if (hold === "preset") {
+        const { sample, strike } = judgedPlay(type, plan, power, lawns, setup, stroke);
+        const firmness = setup.stroke.holdFirmness ?? setup.profile.shape[type].holdFirmness;
+        return { sample: { ...sample, firmness, sigma: drive.arc.holdFirmness }, strike };
+    }
+    // The hold acts after planning, so the planner's rejection, checked above, does not depend on it (design §5).
+    const { found, played } = searchFirmness(setup, IMPACT_WORLD, (held) => {
+        const judged = judgedPlay(type, plan, power, lawns, held, planStroke(held, IMPACT_WORLD));
+        return { klass: judged.sample.klass, reason: judged.sample.reason, judged };
+    });
+    return {
+        sample: { ...played.judged.sample, firmness: found.firmness, sigma: found.sigma },
+        strike: played.judged.strike,
+    };
+}
+
+/** playJudged's play of `setup`, planned as `stroke` with a tracked drive, without the hold's record. */
+function judgedPlay(
+    type: RollType,
+    plan: MapPlan,
+    power: number,
+    lawns: readonly number[],
+    setup: ShotSetup,
+    stroke: StrokePlan,
+): { readonly sample: Omit<MapSample, "firmness" | "sigma">; readonly strike: StrikeTaps | null } {
+    const drive = stroke.contact.drive as TrackDrive;
     const ids = BALL_IDS.filter((id) => setup.balls[id] !== undefined);
     const striker = ids.indexOf(setup.striker);
     let times: number[] = [];
@@ -618,7 +669,7 @@ export function playJudged(
         velocities,
     };
     const faces = impact.timeline[faceKey(setup.striker)] ?? [];
-    const sample: MapSample = {
+    const sample: Omit<MapSample, "firmness" | "sigma"> = {
         power,
         klass,
         reason,

@@ -61,6 +61,8 @@ function sample(power: number, range: number, klass: MapClass | null = null, rat
         effectVerdicts: { shipped: false, contactOnly: false },
         followCap: false,
         passes: 1,
+        firmness: 0,
+        sigma: 0,
     };
 }
 

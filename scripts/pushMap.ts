@@ -452,7 +452,8 @@ function typeName(type: RollType): string {
 }
 
 /**
- * `type`'s text book (textBook, today's default) played at its canonical power on the 10 s lawn, which gives the
+ * `type`'s text book (textBook, today's default, at its preset's hold as fitted) played at its canonical power on the
+ * 10 s lawn, which gives the
  * canonical's range, and read at that range from its own sweep at the grid's powers, its band by A3 item 1's off-grid
  * rule (offGridBand over cellReads). On the half roll it is the anchor (design §3.3; plan Task 6); on the full and pass
  * rolls it is A1's text-book validation (each type's text book must land in its band), §3.3's anchor being the half
@@ -472,7 +473,7 @@ function printTextBook(type: RollType, grid: MapGrid, samples: ReadonlyMap<numbe
     console.log(`plan: ${planText(anchor)}; canonical power p ${power.toFixed(4)} (backswing ${backswing} m)`);
     let exact: SweepSample;
     try {
-        exact = playSample(type, anchor, power, [ANCHOR_LAWN]);
+        exact = playSample(type, anchor, power, [ANCHOR_LAWN], "preset");
     } catch (error) {
         exact = { power, engineError: error instanceof Error ? error.message : String(error) };
     }
@@ -509,7 +510,7 @@ function printTextBook(type: RollType, grid: MapGrid, samples: ReadonlyMap<numbe
     }
     const sweep: SweepSample[] = grid.powers.map((p) => {
         try {
-            return playSample(type, anchor, p, [ANCHOR_LAWN]);
+            return playSample(type, anchor, p, [ANCHOR_LAWN], "preset");
         } catch (error) {
             return { power: p, engineError: error instanceof Error ? error.message : String(error) };
         }
