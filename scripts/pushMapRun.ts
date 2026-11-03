@@ -504,6 +504,25 @@ function splitAtRestOf(a: Vec3, b: Vec3): number {
 }
 
 /**
+ * The class and reason of `setup` played on `world` as playJudged plays it, without its probes or lawn reads (firmness
+ * design §5): planStroke, practiseStroke, strokeContext, judgeFaults and runClass; a contact with no tracked drive is
+ * unreachable. A planning RangeError propagates, for the caller to class (rejectedClass).
+ */
+export function playedClass(
+    setup: ShotSetup,
+    world: World,
+): { readonly klass: MapClass | null; readonly reason: string | null } {
+    const { contact } = planStroke(setup, world);
+    const { drive } = contact;
+    if (drive.kind !== "track") {
+        return { klass: "unreachable", reason: "the planned contact has no tracked drive" };
+    }
+    const run = practiseStroke(contact, setup.balls, world, setup.striker);
+    const faults = judgeFaults(strokeContext(setup, run.result), run.result);
+    return runClass(setup, run, faults, run.point, drive.arc.handReach > 0 ? run.miss : null);
+}
+
+/**
  * `plan` of `type` played at power `power` (decision 4): mapSetup, planStroke, then practiseStroke (P2b.2b.2c.3b.1
  * design §4) with a probe per pass (the push intent's peak and impulse and the striker's ball's velocity per step,
  * reset at each pass so the sample reads the last) on the 10 s open lawn, the on-point read practice's own,
