@@ -98,6 +98,7 @@ function plan(
         slopeHold: profile.shape[type].slopeHold,
         backswing,
         backswingLimit: profile.body.backswingLimit,
+        headRiseLimit: profile.body.headRiseLimit,
         effort,
         intensity,
         arrival: 0,

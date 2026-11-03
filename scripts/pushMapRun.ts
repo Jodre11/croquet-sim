@@ -32,6 +32,7 @@ import { requiredCouple } from "../src/engine/swing/downswing";
 import { DEFAULT_DRIVE, DEFAULT_TIMING, DEFAULT_WINDOW, defaultProfile } from "../src/engine/swing/profile";
 import type { ShotSetup } from "../src/engine/swing/types";
 import { BALL_IDS, type BallId, type BallState, type World } from "../src/engine/types";
+import { swingReference } from "../src/reference/index";
 import {
     CANONICAL_STRIKER,
     DEFAULT_CROQUET_GAP,
@@ -217,12 +218,22 @@ export function bodyBackswing(setup: ShotSetup, world: World): number {
             headLength: profile.mallet.headLength,
             faceHalfHeight: rho,
         });
+    const rise = profile.body.headRiseLimit * (1 - BODY_MARGIN);
     if (!(shape.pendulumShare > 0)) {
-        return 2;
+        return Math.min(2, rise);
     }
-    return (
-        ((lever * (Math.cos(lean) - Math.cos(profile.body.backswingLimit))) / shape.pendulumShare) * (1 - BODY_MARGIN)
+    return Math.min(
+        ((lever * (Math.cos(lean) - Math.cos(profile.body.backswingLimit))) / shape.pendulumShare) * (1 - BODY_MARGIN),
+        rise,
     );
+}
+
+/**
+ * The power at which `type`'s text book plays its preset's defaultBackswing on `world` (decision 1: p ≤ 1 is
+ * p·h_body): the canonical stroke's backswing, whatever h_body the body's limits give (firmness design §3).
+ */
+export function canonicalPower(type: RollType, world: World): number {
+    return swingReference[type].defaultBackswing.value / bodyBackswing(mapSetup(type, textBook(type), 1), world);
 }
 
 /** Whether `setup` plans on `world`: plannedSpeed returns a finite speed rather than a RangeError. */
@@ -347,7 +358,7 @@ function rejectedClass(message: string): MapClass {
     if (message.includes("on-point limit")) {
         return "mishit";
     }
-    if (message.includes("θ_max") || message.includes("the grip cannot hold")) {
+    if (message.includes("beyond the body's") || message.includes("the grip cannot hold")) {
         return "superhuman";
     }
     if (message.includes("the head is in the turf")) {

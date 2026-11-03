@@ -140,7 +140,8 @@ export interface SwingProfile {
      * The player's body: the arm mass at the top grip (kg), the reach slack (m), the arm's flex, pendulum push and push
      * (the push intent's cap, N, and its response time constant, s), each hand's and arm's hand–arm chain, and the
      * grip's limit (N; P2b.2b.2b.3 design §5), the backswing's limit θ_max (rad from vertical, in (0, π/2]): the
-     * shaft's greatest angle at the top of a backswing, where it meets the groin (P2b.2b.2c.1 design §5),
+     * shaft's greatest angle at the top of a backswing, where it meets the groin (P2b.2b.2c.1 design §5), the head's
+     * greatest rise (m, > 0) above its contact height at the top of any backswing (firmness design §3),
      * the player's swing effort, shared by every preset (P2b.2b.2c.1 design §4.4), and the hands' peak
      * acceleration along aim (m/s², > 0), the advance's ramp W = V/a at the head's planned speed V along aim, a body
      * property the player never sets.
@@ -155,6 +156,7 @@ export interface SwingProfile {
         readonly chain: HandChain;
         readonly gripLimit: number;
         readonly backswingLimit: number;
+        readonly headRiseLimit: number;
         readonly effort: SwingEffort;
         readonly handAcceleration: number;
     };

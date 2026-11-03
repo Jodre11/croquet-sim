@@ -9,6 +9,14 @@
             "provisional": "placeholder",
             "note": "The shaft's greatest angle from vertical at the top of the backswing, at knee height: the angle at which the default mallet's head rises 0.48 m above its contact height (\"about knee height\", design §5.2), acos(cos θ_c − 0.48·s/ℓ) on the single-ball preset's canonical contact (θ_c = 0.0000°, s = 1, ℓ = 0.833575 m), 64.9021°. Bounds: 64° to 90°, the shaft horizontal."
         },
+        "headRiseLimit": {
+            "value": 0.48,
+            "unit": "m",
+            "source": "The user's ruling (2026-11-03: \"Keep the 0.48 m limit\"), P2b.2b.2c.3b.2 design §3 (docs/superpowers/specs/2026-11-03-p2b2b2c3b2-firmness-design.md)",
+            "provenance": "derived",
+            "provisional": "placeholder",
+            "note": "The greatest height the head centre is lifted above its contact height at the top of any backswing, whatever share the hands give: θ_max's own knee-height figure (\"about knee height\", P2b.2b.2c.1 design §5.2), applied to the head's rise on every type so that the body's limit means the same on each."
+        },
         "effortTorque": {
             "value": 68.5268520116806,
             "unit": "N·m",

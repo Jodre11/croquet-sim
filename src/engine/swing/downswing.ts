@@ -78,6 +78,8 @@ export interface DownswingInput {
     readonly backswing: number;
     /** θ_max (rad from vertical, in (0, MAX_BACK_ANGLE]): the body's limit on every backswing. */
     readonly backswingLimit: number;
+    /** The head's greatest rise (m, > 0) at the top of any backswing, whatever the hands' share (firmness design §3). */
+    readonly headRiseLimit: number;
     /** The player's effort (the body's τ_0 and ω_max), on every stroke. */
     readonly effort: SwingEffort;
     readonly intensity: number;
@@ -148,13 +150,20 @@ export function requiredCouple(input: DownswingInput, down: Downswing): { readon
 
 /**
  * Plans the downswing of `input` (design §3.2–§3.4; P2b.2b.2c.3a design §4.1). Throws a RangeError for a backswing
- * beyond the body's limit θ_max; a plan that needs the free swing (λ < 1, or a null tempo) whose pendulum does not
+ * that lifts the head beyond headRiseLimit (checked first; firmness design §3), or that takes the shaft beyond the
+ * body's limit θ_max; a plan that needs the free swing (λ < 1, or a null tempo) whose pendulum does not
  * swing (pendulumShare 0); a non-positive effective inertia, a stall (ω falling to zero or below before θ_c), or a fall
  * beyond MAX_FALL; and, for λ > 0, a couple the grip cannot hold. Every other input is taken as checked (buildContact).
  */
 export function planDownswing(input: DownswingInput): PlannedDownswing {
     const { aim, thetaContact, pivot, lever, shape, backswing, intensity, slopeHold: lambda } = input;
     const share = shape.pendulumShare;
+    if (backswing > input.headRiseLimit) {
+        fail(
+            `the backswing lifts the head beyond the body's limit on its rise, headRiseLimit = ` +
+                `${input.headRiseLimit} m: a ${backswing} m backswing`,
+        );
+    }
     const [, cosContact] = sinCos(thetaContact);
     const c = cosContact - (share * backswing) / lever;
     const limit = input.backswingLimit;

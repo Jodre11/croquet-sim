@@ -292,6 +292,13 @@ describe("swing reference (P2b.2b.2a design §6.1)", () => {
         expect(high).toBeLessThanOrEqual(Math.PI / 2);
     });
 
+    it("loads the head's rise limit, the user's 0.48 m placeholder (firmness design §3)", () => {
+        const rise = swingBodyReference.headRiseLimit;
+        expect(rise.unit).toBe("m");
+        expect(rise.value).toBe(0.48);
+        expect(rise.provisional).toBe("placeholder");
+    });
+
     it("loads the body's effort: the fit's τ_0 ≥ 0 and ω_max > 0, and κ in (0, 1), all placeholders", () => {
         // P2b.2b.2c.1 design §4.4: τ_0 and ω_max are derived by scripts/fitStrokeShape.ts from κ and the ceiling.
         const { effortTorque, effortSpeed, effortShare } = swingBodyReference;

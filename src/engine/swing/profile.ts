@@ -317,6 +317,7 @@ export const defaultProfile: SwingProfile = {
         chain: HAND_CHAIN,
         gripLimit: GRIP_LIMIT,
         backswingLimit: swingBodyReference.backswingLimit.value,
+        headRiseLimit: swingBodyReference.headRiseLimit.value,
         effort: { torque: swingBodyReference.effortTorque.value, speed: swingBodyReference.effortSpeed.value },
         handAcceleration: swingBodyReference.handAcceleration.value,
     },

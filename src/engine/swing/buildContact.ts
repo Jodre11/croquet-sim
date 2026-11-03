@@ -507,6 +507,8 @@ function validate(setup: ShotSetup, ballRadius: number): void {
     if (!(body.backswingLimit > 0 && body.backswingLimit <= Math.PI / 2)) {
         fail(`profile.body.backswingLimit must lie in (0, π/2] (got ${body.backswingLimit})`);
     }
+    finiteNumber(body.headRiseLimit, "profile.body.headRiseLimit");
+    positive(body.headRiseLimit, "profile.body.headRiseLimit");
     finiteNumber(body.effort.torque, "profile.body.effort.torque");
     nonNegative(body.effort.torque, "profile.body.effort.torque");
     finiteNumber(body.effort.speed, "profile.body.effort.speed");
@@ -613,6 +615,7 @@ function choiceOf(setup: ShotSetup, pose: ContactPose): StrokeChoice {
         slopeHold: stroke.slopeHold ?? shape.slopeHold,
         backswing: stroke.backswing,
         backswingLimit: profile.body.backswingLimit,
+        headRiseLimit: profile.body.headRiseLimit,
         effort: profile.body.effort,
         intensity: stroke.intensity ?? 0,
         arrival:
@@ -707,6 +710,8 @@ export interface StrokeChoice {
     readonly backswing: number;
     /** θ_max (rad from vertical), the body's limit on every backswing. */
     readonly backswingLimit: number;
+    /** The head's greatest rise (m) at the top of any backswing (firmness design §3). */
+    readonly headRiseLimit: number;
     /** The player's effort (P2b.2b.2c.1 design §4.4). */
     readonly effort: SwingEffort;
     readonly intensity: number;
@@ -745,6 +750,7 @@ export function downswingInput(pose: ContactPose, hands: Hands, choice: StrokeCh
         shape: choice.shape,
         backswing: choice.backswing,
         backswingLimit: choice.backswingLimit,
+        headRiseLimit: choice.headRiseLimit,
         effort: choice.effort,
         intensity: choice.intensity,
         arrival: choice.arrival,

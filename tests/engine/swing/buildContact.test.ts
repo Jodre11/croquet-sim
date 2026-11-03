@@ -735,6 +735,7 @@ describe("defaultProfile", () => {
             },
             gripLimit: GRIP_LIMIT,
             backswingLimit: swingBodyReference.backswingLimit.value,
+            headRiseLimit: swingBodyReference.headRiseLimit.value,
             effort: { torque: swingBodyReference.effortTorque.value, speed: swingBodyReference.effortSpeed.value },
             handAcceleration: swingBodyReference.handAcceleration.value,
         });
@@ -1049,6 +1050,7 @@ describe("contactPose (design §5.2 steps 1–5, 10)", () => {
             slopeHold: 0,
             backswing: 0.3,
             backswingLimit: MAX_BACK_ANGLE,
+            headRiseLimit: 2,
             effort: { torque: 0, speed: 1 },
             intensity: 0,
             arrival: 0,

@@ -24,6 +24,8 @@ const GRAZE = { type: "single-ball", speed: 3, up: 0.01, dip: -0.005, jab: 0.001
 // P2b.2b.2c.3a: the swung body on every stroke (was a 5 mm jab): see the biting test.
 const BITING = { type: "single-ball", speed: 4, up: 0.01, dip: -0.02, jab: 0.008 } as const;
 const FOLLOW = { type: "half-roll", speed: 4 } as const;
+/** 4 m/s with no intensity needs a backswing past the head's 0.48 m rise limit (firmness design §3): lifted. */
+const LIFTED = { headRiseLimit: 2 } as const;
 /** The dug push's arc (m) and its low point (push lengths along aim from the hands at contact). */
 const DIP_RADIUS = 0.4;
 const DIP_AHEAD = 1.9;
@@ -111,6 +113,8 @@ describe("the three regimes (P2b.2b.2b.3 design §7.4)", () => {
         const { impact, tops } = along(
             shot(BITING.type, BITING.speed, timed(BITING.up, BITING.dip, BITING.jab), {
                 backswingLimit: MAX_BACK_ANGLE,
+                // 4 m/s needs a backswing past the head's 0.48 m rise limit (firmness design §3), lifted as θ_max is.
+                headRiseLimit: 2,
             }),
         );
         const turf = impact.timeline["head/turf"] ?? [];
@@ -127,7 +131,7 @@ describe("the follow-through's flags (P2b.2b.2b.3 design §4.6)", () => {
         // kept on and the hands carrying on up their arc lift the follow-through off the turf, so it yields nothing
         // and ends at the hands' rest; no canonical roll from 2 to 6 m/s yields there now. The flag keeps its direct
         // cover in the next test, and in followThrough.test.ts ("caps a carry whose hands never stop").
-        const setup = shot(FOLLOW.type, FOLLOW.speed);
+        const setup = shot(FOLLOW.type, FOLLOW.speed, {}, LIFTED);
         expect(along(setup).impact.timeline["head/turf"] ?? []).toHaveLength(0);
         const outcome = simulateShot(setup, WORLD, { trajectory: true });
         const flags = (outcome.trajectory as SwingTrajectory).flags;
@@ -141,7 +145,7 @@ describe("the follow-through's flags (P2b.2b.2b.3 design §4.6)", () => {
         // push and the finish, some 0.12 m by their rest, and press the head into the turf once the impact has ended.
         // Shapes design §8: the shot's own reach keeps 0.15 m, now the half roll's preset pushes only 0.05 m; and its
         // hold stays the grip's whole couple (ruling 15), now the half roll's preset holds at 0.1.
-        const setup = shot(FOLLOW.type, FOLLOW.speed, { handReach: 0.15, holdFirmness: 1 });
+        const setup = shot(FOLLOW.type, FOLLOW.speed, { handReach: 0.15, holdFirmness: 1 }, LIFTED);
         const contact = buildContact(setup, WORLD);
         const drive = contact.drive as TrackDrive;
         const arc = { ...drive.arc, lowPoint: DIP_AHEAD * drive.arc.handReach, handArcRadius: DIP_RADIUS };

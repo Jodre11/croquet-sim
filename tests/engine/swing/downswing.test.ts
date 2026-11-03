@@ -75,6 +75,7 @@ function input(o: Partial<DownswingInput> = {}): DownswingInput {
         shape: shape(),
         backswing: 0.3,
         backswingLimit: MAX_BACK_ANGLE,
+        headRiseLimit: 2,
         effort: { torque: 0, speed: 1 },
         intensity: 0,
         arrival: 0,
@@ -406,6 +407,25 @@ describe("the planned slope (P2b.2b.2c.3a design §4.1)", () => {
         const limited = { ...held, backswingLimit: 0.5 };
         expect(() => planDownswing(input({ ...limited, backswing: 0.3 }))).toThrow(/body's backswing limit θ_max/);
         expect(() => planDownswing(input({ ...limited, backswing: 0.1 }))).not.toThrow();
+    });
+
+    it("holds the head's rise to the body's limit on every share, before θ_max (firmness design §3)", () => {
+        // Review Focus 3: a held, hands-led backswing (share 0.1) at the limit plans and a hair above throws; so does a
+        // free swing (share 1) with θ_max at MAX_BACK_ANGLE, and the head's rise is checked first even where θ_max
+        // would also throw.
+        const rise = 0.3;
+        const led = { ...held, shape: shape({ pendulumShare: 0.1 }), headRiseLimit: rise };
+        expect(() => planDownswing(input({ ...led, backswing: rise }))).not.toThrow();
+        expect(() => planDownswing(input({ ...led, backswing: rise * (1 + 1e-9) }))).toThrow(
+            /beyond the body's limit on its rise/,
+        );
+        expect(() => planDownswing(input({ headRiseLimit: rise, backswing: rise }))).not.toThrow();
+        expect(() => planDownswing(input({ headRiseLimit: rise, backswing: rise * (1 + 1e-9) }))).toThrow(
+            /beyond the body's limit on its rise/,
+        );
+        expect(() => planDownswing(input({ headRiseLimit: 0.1, backswingLimit: 0.5, backswing: 0.3 }))).toThrow(
+            /on its rise/,
+        );
     });
 
     it("holds the drive's slope with its hands together within the grip's couple", () => {

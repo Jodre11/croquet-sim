@@ -44,6 +44,7 @@ function input(top: number, o: Partial<DownswingInput>): DownswingInput {
         },
         backswing: 0.3,
         backswingLimit: LIMIT,
+        headRiseLimit: 2,
         effort: { torque: 0, speed: 1 },
         intensity: 0,
         arrival: 0,
@@ -104,6 +105,17 @@ describe("the backswing's limit (design §5, §8.1.4)", () => {
             expect(() => planStroke(shot(withLimit(bad)), WORLD)).toThrow(/profile\.body\.backswingLimit/);
         }
         expect(() => planStroke(shot(withLimit(Math.PI / 2)), WORLD)).not.toThrow();
+    });
+
+    it("rejects a non-finite or non-positive head-rise limit (firmness design §3)", () => {
+        for (const bad of [0, -0.1, Number.NaN, Infinity]) {
+            const profile = testProfile({ body: { headRiseLimit: bad } });
+            expect(() => planStroke(shot(profile), WORLD), `${bad}`).toThrow(/profile\.body\.headRiseLimit/);
+        }
+    });
+
+    it("gives the default player's head-rise limit as θ_max's knee-height figure, 0.48 m", () => {
+        expect(defaultProfile.body.headRiseLimit).toBe(KNEE_RISE);
     });
 
     it("finds the knee-height θ_max where the default mallet's head rises 0.48 m", () => {

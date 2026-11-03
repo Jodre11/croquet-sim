@@ -6,12 +6,18 @@ import type { ContactState, Lift, SwingArc, TrackDrive } from "../../../src/engi
 import type { World } from "../../../src/engine/types";
 import { planStroke } from "../../../src/engine/swing/buildContact";
 import { openWorld } from "../../../scripts/openLawn";
-import { mapSetup, textBook } from "../../../scripts/pushMapRun";
+import { canonicalPower, mapSetup, textBook } from "../../../scripts/pushMapRun";
 
-/** Today's full roll (the push map's text book at power 0.1535, as scripts/pathTrace.ts builds it). */
+/** Today's full roll (the push map's text book at its canonical power, as scripts/pathTrace.ts builds it). */
 function fullRoll(): { readonly contact: ContactState; readonly lawn: World } {
     const lawn = openWorld(10);
-    return { contact: planStroke(mapSetup("full-roll", textBook("full-roll"), 0.1535), lawn).contact, lawn };
+    return {
+        contact: planStroke(
+            mapSetup("full-roll", textBook("full-roll"), canonicalPower("full-roll", openWorld(10))),
+            lawn,
+        ).contact,
+        lawn,
+    };
 }
 
 /** The full roll's contact with its arc replaced. */

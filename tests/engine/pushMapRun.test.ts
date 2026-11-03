@@ -53,6 +53,15 @@ describe("one plan's run (P2b.2b.2c.3b plan Task 3)", () => {
         }
     });
 
+    it("holds h_body to the head's rise limit, the rolls at it (firmness design §3)", () => {
+        const limit = defaultProfile.body.headRiseLimit;
+        for (const type of ["half-roll", "full-roll", "pass-roll"] as const) {
+            const h = bodyBackswing(mapSetup(type, textBook(type), 1), WORLD);
+            expect(h).toBeLessThan(limit);
+            expect(Math.abs(h - limit) / limit).toBeLessThanOrEqual(1e-8);
+        }
+    });
+
     it("plays the text book at the canonical power as the canonical half roll plays", () => {
         const p = canonicalPower();
         const sample = playSample("half-roll", textBook("half-roll"), p, [10]);
@@ -87,7 +96,8 @@ describe("one plan's run (P2b.2b.2c.3b plan Task 3)", () => {
         // A bottom grip of 0.1 shrinks C = min(γ_T, g_B)·F_max·(r − b) tenfold, from 167.5 to 16.7 N·m. The text
         // book's held slope needs a peak couple of about 12.2 N·m at p = 1 and 29.4 N·m at p = 2 (measured while
         // building this test), so p = 1 plans and p = 2 throws the downswing's RangeError. The plan's g_B 0.01 makes
-        // C 1.67 N·m, past which p = 1 also fails (the next test).
+        // C 1.67 N·m, past which p = 1 also fails (the next test). Those couples were measured on h_body's 1.02 m;
+        // under the head's 0.48 m rise limit (firmness design §3) the bisection still lands in (1, 2).
         const over = { stance: { bottomGrip: 0.1 } };
         const plan = textBook("half-roll");
         const most = maxPower("half-roll", plan, WORLD, over);
@@ -174,11 +184,12 @@ describe("one plan's run (P2b.2b.2c.3b plan Task 3)", () => {
         expect(sample.byLawn[10]?.ratio).toBeCloseTo(0.859, 3);
     });
 
-    it("grades the full roll's text book at p = 1.5 as superhuman: a hand reaches its grip's limit", () => {
+    it("grades the full roll's text book at p = 2 as superhuman: a hand reaches its grip's limit", () => {
         // Shapes design §8, ruling 14 (was unreachable, §2's hands' finish swinging past the quarter turn of their
         // 1.5 m arc): the top hand now stops within V·HAND_EASE/2 of the push's end, well short of it, so the impact
-        // is played, and at p = 1.5 (h_body and intensity 0.5) a hand reaches its grip's limit, as before §2.
-        const sample = playSample("full-roll", textBook("full-roll"), 1.5, [10]);
+        // is played. Firmness design §3: h_body is now the head's 0.48 m rise (was 2.77 m), so at p = 1.5 (intensity 0.5)
+        // the head slides off the face (unpractised) and at p = 2 (intensity 1) a hand reaches its grip's limit.
+        const sample = playSample("full-roll", textBook("full-roll"), 2, [10]);
         expect(sample.klass).toBe("superhuman");
     });
 });
