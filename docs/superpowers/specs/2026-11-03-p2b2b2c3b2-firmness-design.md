@@ -158,3 +158,17 @@ Housekeeping first, as its own small PR: `npm outdated` (2026-11-03) finds svelt
    0.5 to 0.9, firmness from about 0.18) throws in the handover: the head overlaps the croqueted ball by 1.5 to 2.5 mm
    sideways, where the rule clears at most 1 mm. That is an engine defect, not a class, and findFirmness propagates
    it, so wiring it into playSample waits on the fix.
+5. **The handover's head on the ball, fixed (engine 0.29.1).** Amendment 4's ball is the striker's, not the croqueted
+   one. Traced at power 0.8 (firmness 0.2375), the slow full roll held firm leaves the face (`impact-off-face`), the head
+   rides up over the striker's ball, its bottom pressing the ball 2.35 mm into the turf, and carries it until
+   TRACK_IMPACT_CAP (450 ms), the contact still closed. All five throwing cases (full roll 0.5, 0.6, 0.8, 0.9; pass roll
+   0.5) end so, with `impact-cap` and `impact-turf-pit`. The head-clearance rule is for the lift's artefact of an impact
+   that ended (P2b.2b.2b.2b design §5: "the impact must not end there"); a capped impact did not end, and the overlap is
+   its live contact. The handover now hands such a ball over where it lifted it, the head's overlap left, when the rule
+   cannot clear it after a capped impact; an impact that ended still throws, and a capped one still has what the rule
+   can clear cleared. Those holds now read `unpractised` (`impact-off-face`), as their neighbours do; the push's held
+   lean and the follow-through are not at fault. With it the map stores the firmness: `playSample`/`playJudged` play
+   each sample in `searchFirmness` (the search keeping its play, so a sample costs no play beyond the search's, at most
+   16), `MapSample` carries `firmness` and `sigma` (null where none admits, the sample then its play at σ_max, or
+   unplayed), and `hold: "preset"` plays the preset's hold for the fitted text books (the map's text-book read, the
+   path traces and their tests).
