@@ -33,7 +33,7 @@ import type { Downswing, Hands, SwingArc, TrackDrive } from "../../../src/engine
 import { FOLLOW_CAP } from "../../../src/engine/impact/integrate";
 import { buildContact, planStroke } from "../../../src/engine/swing/buildContact";
 import { openWorld } from "../../../scripts/openLawn";
-import { mapSetup, textBook } from "../../../scripts/pushMapRun";
+import { canonicalPower, mapSetup, textBook } from "../../../scripts/pushMapRun";
 import { STANDARD_GRAVITY, defaultWorld } from "../../../src/engine/world";
 import { testWorld } from "../support/fixtures";
 import { canonicalSetup } from "../support/shot";
@@ -1217,9 +1217,12 @@ describe("the hands' finish (shapes design §8, ruling 14)", () => {
     };
 
     it("the hands carry on up the arc past the push", () => {
-        // Today's full roll (the push map's text book at power 0.1535, as scripts/pathTrace.ts builds it).
+        // Today's full roll (the push map's text book at its canonical power, as scripts/pathTrace.ts builds it).
         const lawn = openWorld(10);
-        const { contact } = planStroke(mapSetup("full-roll", textBook("full-roll"), 0.1535), lawn);
+        const { contact } = planStroke(
+            mapSetup("full-roll", textBook("full-roll"), canonicalPower("full-roll", lawn)),
+            lawn,
+        );
         const track = prepareTrack(contact.drive as TrackDrive, contact.head, lawn.gravity);
         // Shapes design §2 (was P2b.2b.2c.3b.1 design §5's ease to rest 2·handReach along aim): to the pendulum's apex.
         const push = track.push as Push;

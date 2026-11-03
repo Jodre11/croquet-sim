@@ -48,7 +48,7 @@ import { planStroke } from "../../../src/engine/swing/buildContact";
 import type { BallState, BallStates } from "../../../src/engine/types";
 import { STANDARD_GRAVITY } from "../../../src/engine/world";
 import { openWorld } from "../../../scripts/openLawn";
-import { mapSetup, textBook } from "../../../scripts/pushMapRun";
+import { canonicalPower, mapSetup, textBook } from "../../../scripts/pushMapRun";
 import { contactReference } from "../../../src/reference/index";
 import { TEST_BALL } from "../support/fixtures";
 import {
@@ -1701,8 +1701,8 @@ describe("the bottom hand's opening (P2b.2b.2c.3a A2 item 6)", () => {
 });
 
 describe("the level head's hold (P2b.2b.2c.3b.1 design §2; push-map spec A6)", () => {
-    /** Today's full roll on the 10 s open lawn, as scripts/pathTrace.ts builds it: the text book at power 0.1535. */
-    const FULL_ROLL = mapSetup("full-roll", textBook("full-roll"), 0.1535);
+    /** Today's full roll on the 10 s open lawn, as scripts/pathTrace.ts builds it: the text book at its canonical power. */
+    const FULL_ROLL = mapSetup("full-roll", textBook("full-roll"), canonicalPower("full-roll", openWorld(10)));
     const LAWN = openWorld(10);
 
     /** Every hold weight the probe reports from contact, impact and follow-through, and the bottom hand's chains. */

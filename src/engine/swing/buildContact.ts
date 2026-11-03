@@ -42,6 +42,7 @@ import {
     type MalletHeadProfile,
     type ShotSetup,
     type SwingDrive,
+    type SwingAssist,
     type SwingEffort,
     type SwingProfile,
     type SwingShape,
@@ -151,15 +152,6 @@ function grip(value: number, name: string): void {
 function unit(value: number, name: string): void {
     if (!(value >= 0 && value <= 1)) {
         fail(`${name} must lie in [0, 1] (got ${value})`);
-    }
-}
-
-/** A tempo pair: both positive, the fast no slower than the slow. */
-function tempos(slow: number, fast: number, slowName: string, fastName: string): void {
-    positive(slow, slowName);
-    positive(fast, fastName);
-    if (fast > slow) {
-        fail(`${fastName} must not exceed ${slowName} (got ${fast} > ${slow})`);
     }
 }
 
@@ -339,7 +331,6 @@ function validate(setup: ShotSetup, ballRadius: number): void {
     }
     if (shape.handTempo !== null) {
         finiteNumber(shape.handTempo.slow, `${where}.handTempo.slow`);
-        finiteNumber(shape.handTempo.fast, `${where}.handTempo.fast`);
     }
     const { mallet, body } = profile;
     for (const key of ["headMass", "headLength", "shaftLength"] as const) {
@@ -507,10 +498,16 @@ function validate(setup: ShotSetup, ballRadius: number): void {
     if (!(body.backswingLimit > 0 && body.backswingLimit <= Math.PI / 2)) {
         fail(`profile.body.backswingLimit must lie in (0, π/2] (got ${body.backswingLimit})`);
     }
+    finiteNumber(body.headRiseLimit, "profile.body.headRiseLimit");
+    positive(body.headRiseLimit, "profile.body.headRiseLimit");
     finiteNumber(body.effort.torque, "profile.body.effort.torque");
     nonNegative(body.effort.torque, "profile.body.effort.torque");
     finiteNumber(body.effort.speed, "profile.body.effort.speed");
     positive(body.effort.speed, "profile.body.effort.speed");
+    finiteNumber(body.assist.force, "profile.body.assist.force");
+    nonNegative(body.assist.force, "profile.body.assist.force");
+    finiteNumber(body.assist.speed, "profile.body.assist.speed");
+    positive(body.assist.speed, "profile.body.assist.speed");
     finiteNumber(body.handAcceleration, "profile.body.handAcceleration");
     positive(body.handAcceleration, "profile.body.handAcceleration");
     unit(shape.pendulumShare, `${where}.pendulumShare`);
@@ -542,7 +539,7 @@ function validate(setup: ShotSetup, ballRadius: number): void {
         );
     }
     if (shape.handTempo !== null) {
-        tempos(shape.handTempo.slow, shape.handTempo.fast, `${where}.handTempo.slow`, `${where}.handTempo.fast`);
+        positive(shape.handTempo.slow, `${where}.handTempo.slow`);
     }
 }
 
@@ -613,7 +610,9 @@ function choiceOf(setup: ShotSetup, pose: ContactPose): StrokeChoice {
         slopeHold: stroke.slopeHold ?? shape.slopeHold,
         backswing: stroke.backswing,
         backswingLimit: profile.body.backswingLimit,
+        headRiseLimit: profile.body.headRiseLimit,
         effort: profile.body.effort,
+        assist: profile.body.assist,
         intensity: stroke.intensity ?? 0,
         arrival:
             low === undefined
@@ -707,8 +706,12 @@ export interface StrokeChoice {
     readonly backswing: number;
     /** θ_max (rad from vertical), the body's limit on every backswing. */
     readonly backswingLimit: number;
+    /** The head's greatest rise (m) at the top of any backswing (firmness design §3). */
+    readonly headRiseLimit: number;
     /** The player's effort (P2b.2b.2c.1 design §4.4). */
     readonly effort: SwingEffort;
+    /** The arms' assist on a hands-led downswing (firmness design §4). */
+    readonly assist: SwingAssist;
     readonly intensity: number;
     readonly arrival: number;
 }
@@ -745,7 +748,10 @@ export function downswingInput(pose: ContactPose, hands: Hands, choice: StrokeCh
         shape: choice.shape,
         backswing: choice.backswing,
         backswingLimit: choice.backswingLimit,
+        headRiseLimit: choice.headRiseLimit,
         effort: choice.effort,
+        assist: choice.assist,
+        swungMass: body.mass,
         intensity: choice.intensity,
         arrival: choice.arrival,
     };

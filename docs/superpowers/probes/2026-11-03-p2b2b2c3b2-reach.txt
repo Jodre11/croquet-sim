@@ -62,3 +62,27 @@ full-roll i 1 v 6.64: 6s 3.9/6.4 | 10s 9.0/14.8 | 14s 16.7/27.3 [turf-lift,impac
 pass-roll i 0 v 3.28: 6s 1.5/1.6 | 10s 3.0/3.6 | 14s 5.4/6.6 [turf-lift,impact-off-face]
 pass-roll i 0.5 v 4.37: 6s 2.4/2.8 | 10s 5.2/6.4 | 14s 9.4/11.8 [turf-lift,impact-off-face]
 pass-roll i 1 v 6.56: 6s 4.3/6.2 | 10s 9.9/14.2 | 14s 18.2/26.2 [turf-lift,impact-off-face]
+
+-- 5. Gate 1: within headRiseLimit 0.48 m, with the arms' assist (playJudged, map power, the preset's holdFirmness
+   set to 0, 0.25, 0.5, 1; striker/croqueted m at firmness 0), branch 56b8ae8, 2026-11-03 --
+assist: F_0 241.23 N, v_max 12.19 m/s (assistFit: the full roll, the weakest, at its top meets 9 m/s at intensity 1)
+half-roll p 0.5 v 1.76: 6s 0.2/0.6 | 10s 0.6/1.3 | 14s 1.0/2.4; f0, 0.25, 0.5, 1 admissible
+half-roll p 1 v 3.33: 6s 0.9/1.9 | 10s 2.0/4.4 | 14s 3.7/8.1; f0, 0.25, 0.5, 1 admissible
+half-roll p 1.5 v 9.50: 6s 5.5/15.1 | 10s 12.9/35.0 | 14s 24.0/64.8; f0, 0.25, 0.5, 1 superhuman (grip-limit)
+half-roll p 2 v 11.68: 6s 8.0/22.9 | 10s 18.6/52.9 | 14s 34.5/97.8; f0, 0.25, 0.5, 1 superhuman (grip-limit)
+full-roll p 0.5 v 1.70: 6s 0.3/0.7 | 10s 0.3/1.2 | 14s 0.5/2.0; f0 unpractised (impact-off-face); f0.25 admissible;
+    f0.5, 1 ENGINE ERROR (handover: the head overlaps ball blue by 1.47 and 1.49 mm, sideways; clears at most 1 mm)
+full-roll p 1 v 3.39: 6s 0.3/1.7 | 10s 0.5/3.9 | 14s 0.8/7.1; f0 unpractised (off point, 0.121 m behind);
+    f0.25 unpractised (impact-off-face); f0.5, 1 admissible
+full-roll p 1.5 v 7.57: 6s 3.6/8.2 | 10s 7.1/18.9 | 14s 12.4/34.9; f0 admissible; f0.25, 0.5, 1 superhuman (grip-limit)
+full-roll p 2 v 9.00: 6s 4.9/11.5 | 10s 9.5/26.5 | 14s 16.5/48.9; f0 admissible; f0.25, 0.5, 1 superhuman (grip-limit)
+pass-roll p 0.5 v 1.69: 6s 0.2/0.6 | 10s 0.3/1.2 | 14s 0.4/1.9; f0 unpractised (impact-off-face); f0.25 admissible;
+    f0.5, 1 ENGINE ERROR (handover: the head overlaps ball blue by 2.06 mm, sideways; clears at most 1 mm)
+pass-roll p 1 v 3.35: 6s 0.5/1.6 | 10s 1.0/3.7 | 14s 1.6/6.8; f0 unpractised (off point, 0.130 m behind);
+    f0.25 unpractised (impact-off-face); f0.5, 1 admissible
+pass-roll p 1.5 v 7.74: 6s 3.3/8.3 | 10s 6.7/19.3 | 14s 11.9/35.7; f0 admissible; f0.25, 0.5, 1 superhuman (grip-limit)
+pass-roll p 2 v 9.25: 6s 4.8/11.8 | 10s 9.5/27.3 | 14s 16.5/50.7; f0 admissible; f0.25, 0.5, 1 superhuman (grip-limit)
+Reading: firmness decides admissibility within the limit, but two ways. Slow (p ≤ 1) the full and pass rolls need a
+hold (0.25 to 0.5) to stay on the face; fast (p ≥ 1.5) any hold trips the grip limit and only firmness 0 is
+admissible. The half roll is superhuman at p ≥ 1.5 at every firmness. A firm hold on a slow full or pass roll throws
+in the handover: an engine error, not a class.

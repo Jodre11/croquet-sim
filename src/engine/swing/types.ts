@@ -83,8 +83,9 @@ export interface SwingDrive {
  * (rad above horizontal; read only when the share is below 1). `slopeHold` λ (in [0, 1]; P2b.2b.2c.3a design §4.1) is
  * how far the hands hold the shaft's slope against its free swing on the way down: 0 lets the pendulum swing under
  * gravity and the body's effort (`SwingProfile.body.effort`, P2b.2b.2c.1 design §4.4), 1 holds the hands-led slope
- * θ = θ_top + span·σ², and between them the plan blends the two. `handTempo` is the hands' downswing time, from `slow`
- * (s, intensity 0) to `fast` (s, intensity 1); null takes the stroke's own free swing's fall, derived, not fitted. A
+ * θ = θ_top + span·σ², and between them the plan blends the two. `handTempo.slow` is the hands' downswing time
+ * (s) at intensity 0, which the arms' assist shortens above it (`SwingProfile.body.assist`; firmness design §4);
+ * null takes the stroke's own free swing's fall, derived, not fitted. A
  * shot that gives no intensity swings at 0, by gravity alone: no preset carries a default intensity (P2b.2b.2c.1
  * design, Amendments). `followThrough` (s, at least 0; shapes design §8, ruling 14) is how long the bottom hand carries
  * the head on at the push's pace once the top hand stops, before it brings the turn to rest and holds it.
@@ -94,7 +95,7 @@ export interface SwingDrive {
 export interface SwingShape {
     readonly pendulumShare: number;
     readonly handAngle: number;
-    readonly handTempo: { readonly slow: number; readonly fast: number } | null;
+    readonly handTempo: { readonly slow: number } | null;
     readonly slopeHold: number;
     readonly followThrough: number;
     readonly holdFirmness: number;
@@ -108,6 +109,17 @@ export interface SwingShape {
  */
 export interface SwingEffort {
     readonly torque: number;
+    readonly speed: number;
+}
+
+/**
+ * The arms' assist on a hands-led downswing (firmness design §4), a force–velocity law linear in the hands' speed v,
+ * as the shaft's effort is: at intensity i the arms push the hands along their path with i·`force`·max(0, 1 −
+ * v/`speed`), `force` F_0 (N, ≥ 0) the arms' isometric swing force and `speed` v_max (m/s, > 0) the hands' speed at
+ * which they can add no more.
+ */
+export interface SwingAssist {
+    readonly force: number;
     readonly speed: number;
 }
 
@@ -140,8 +152,10 @@ export interface SwingProfile {
      * The player's body: the arm mass at the top grip (kg), the reach slack (m), the arm's flex, pendulum push and push
      * (the push intent's cap, N, and its response time constant, s), each hand's and arm's hand–arm chain, and the
      * grip's limit (N; P2b.2b.2b.3 design §5), the backswing's limit θ_max (rad from vertical, in (0, π/2]): the
-     * shaft's greatest angle at the top of a backswing, where it meets the groin (P2b.2b.2c.1 design §5),
-     * the player's swing effort, shared by every preset (P2b.2b.2c.1 design §4.4), and the hands' peak
+     * shaft's greatest angle at the top of a backswing, where it meets the groin (P2b.2b.2c.1 design §5), the head's
+     * greatest rise (m, > 0) above its contact height at the top of any backswing (firmness design §3),
+     * the player's swing effort, shared by every preset (P2b.2b.2c.1 design §4.4), the arms' assist on a hands-led
+     * downswing (firmness design §4), and the hands' peak
      * acceleration along aim (m/s², > 0), the advance's ramp W = V/a at the head's planned speed V along aim, a body
      * property the player never sets.
      */
@@ -155,7 +169,9 @@ export interface SwingProfile {
         readonly chain: HandChain;
         readonly gripLimit: number;
         readonly backswingLimit: number;
+        readonly headRiseLimit: number;
         readonly effort: SwingEffort;
+        readonly assist: SwingAssist;
         readonly handAcceleration: number;
     };
     readonly stance: Readonly<Record<StrokeType, SwingStance>>;

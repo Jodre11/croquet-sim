@@ -9,6 +9,14 @@
             "provisional": "placeholder",
             "note": "The shaft's greatest angle from vertical at the top of the backswing, at knee height: the angle at which the default mallet's head rises 0.48 m above its contact height (\"about knee height\", design §5.2), acos(cos θ_c − 0.48·s/ℓ) on the single-ball preset's canonical contact (θ_c = 0.0000°, s = 1, ℓ = 0.833575 m), 64.9021°. Bounds: 64° to 90°, the shaft horizontal."
         },
+        "headRiseLimit": {
+            "value": 0.48,
+            "unit": "m",
+            "source": "The user's ruling (2026-11-03: \"Keep the 0.48 m limit\"), P2b.2b.2c.3b.2 design §3 (docs/superpowers/specs/2026-11-03-p2b2b2c3b2-firmness-design.md)",
+            "provenance": "derived",
+            "provisional": "placeholder",
+            "note": "The greatest height the head centre is lifted above its contact height at the top of any backswing, whatever share the hands give: θ_max's own knee-height figure (\"about knee height\", P2b.2b.2c.1 design §5.2), applied to the head's rise on every type so that the body's limit means the same on each."
+        },
         "effortTorque": {
             "value": 68.5268520116806,
             "unit": "N·m",
@@ -41,6 +49,22 @@
             "provenance": "derived",
             "provisional": "placeholder",
             "note": "The hands' peak acceleration along aim a: the advance's ramp lasts W = V/a at the head's planned speed V along aim. 300 m/s² keeps the 10 ms ramp the advance had at 3 m/s. No source: a calibration value awaiting data on players' hands."
+        },
+        "assistForce": {
+            "value": 241.23494353292455,
+            "unit": "N",
+            "source": "scripts/assistFit.ts: P2b.2b.2c.3b.2 design §4 (docs/superpowers/specs/2026-11-03-p2b2b2c3b2-firmness-design.md)",
+            "provenance": "derived",
+            "provisional": "placeholder",
+            "note": "The arms' isometric swing force F_0 along the hands' path (firmness design §4). The weakest held roll, the full-roll, from its body-limited top (headRiseLimit, 0.48 m) at intensity 1 meets the ball at the ceiling 9 m/s (effortFit's, P2b.2b.2c.1 design §4.3) with its hands at κ·v_max at contact, κ = 0.6666666666666666 (effortShare), as τ_0 and ω_max were fitted on single-ball. No published figure fits a two-handed croquet swing; a labelled placeholder."
+        },
+        "assistSpeed": {
+            "value": 12.185611634153776,
+            "unit": "m/s",
+            "source": "scripts/assistFit.ts: P2b.2b.2c.3b.2 design §4 (docs/superpowers/specs/2026-11-03-p2b2b2c3b2-firmness-design.md)",
+            "provenance": "derived",
+            "provisional": "placeholder",
+            "note": "The hands' speed v_max at which the arms add no more (firmness design §4). The weakest held roll, the full-roll, from its body-limited top (headRiseLimit, 0.48 m) at intensity 1 meets the ball at the ceiling 9 m/s (effortFit's, P2b.2b.2c.1 design §4.3) with its hands at κ·v_max at contact, κ = 0.6666666666666666 (effortShare), as τ_0 and ω_max were fitted on single-ball. No published figure fits a two-handed croquet swing; a labelled placeholder."
         }
     },
     "ratioTargets": {
@@ -263,14 +287,6 @@
             "provisional": "placeholder",
             "note": "Placeholder (plan, \"Decisions made while planning\"): no roll tempo was sourced, so the single-ball stroke's gravity-only fall time from its h0. Frozen at engine 0.12.0's fit (P2b.2b.2c.1 design §4.4)."
         },
-        "handTempoFast": {
-            "value": 0.24448362844450092,
-            "unit": "s",
-            "source": "scripts/fitStrokeShape.ts: P2b.2b.2a design §5.3 and §6.2 (docs/superpowers/specs/2026-10-06-p2b2b2a-stroke-shape-design.md)",
-            "provenance": "derived",
-            "provisional": "placeholder",
-            "note": "Half handTempoSlow, so intensity 1 doubles the speed (design §6.2). Frozen at engine 0.12.0's fit (P2b.2b.2c.1 design §4.4)."
-        },
         "defaultBackswing": {
             "value": 0.42770749444701456,
             "unit": "m",
@@ -323,14 +339,6 @@
             "provisional": "placeholder",
             "note": "Placeholder (plan, \"Decisions made while planning\"): no roll tempo was sourced, so the single-ball stroke's gravity-only fall time from its h0. Frozen at engine 0.12.0's fit (P2b.2b.2c.1 design §4.4)."
         },
-        "handTempoFast": {
-            "value": 0.24448362844450092,
-            "unit": "s",
-            "source": "scripts/fitStrokeShape.ts: P2b.2b.2a design §5.3 and §6.2 (docs/superpowers/specs/2026-10-06-p2b2b2a-stroke-shape-design.md)",
-            "provenance": "derived",
-            "provisional": "placeholder",
-            "note": "Half handTempoSlow, so intensity 1 doubles the speed (design §6.2). Frozen at engine 0.12.0's fit (P2b.2b.2c.1 design §4.4)."
-        },
         "defaultBackswing": {
             "value": 0.42429585363805394,
             "unit": "m",
@@ -382,14 +390,6 @@
             "provenance": "derived",
             "provisional": "placeholder",
             "note": "Placeholder (plan, \"Decisions made while planning\"): no roll tempo was sourced, so the single-ball stroke's gravity-only fall time from its h0. Frozen at engine 0.12.0's fit (P2b.2b.2c.1 design §4.4)."
-        },
-        "handTempoFast": {
-            "value": 0.24448362844450092,
-            "unit": "s",
-            "source": "scripts/fitStrokeShape.ts: P2b.2b.2a design §5.3 and §6.2 (docs/superpowers/specs/2026-10-06-p2b2b2a-stroke-shape-design.md)",
-            "provenance": "derived",
-            "provisional": "placeholder",
-            "note": "Half handTempoSlow, so intensity 1 doubles the speed (design §6.2). Frozen at engine 0.12.0's fit (P2b.2b.2c.1 design §4.4)."
         },
         "defaultBackswing": {
             "value": 0.4294336556882098,

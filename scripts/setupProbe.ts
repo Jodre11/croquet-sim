@@ -204,7 +204,8 @@ function sectionP(): void {
         const { slopeHold } = input;
         const { handTempo, pendulumShare } = input.shape;
         const fall = pendulumShare > 0 ? 0 - unbounded(input, 0).downswing.release : null;
-        const tempo = handTempo === null ? fall : handTempo.slow + input.intensity * (handTempo.fast - handTempo.slow);
+        // The canonical setups give no intensity, so the arms add nothing: the tempo is the slow one (firmness design §4).
+        const tempo = handTempo === null ? fall : handTempo.slow;
         const planned = unbounded(input, slopeHold);
         if (requiredCouple(input, planned.downswing).peak > input.couple) {
             exceeded++;

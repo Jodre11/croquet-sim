@@ -39,7 +39,7 @@ import {
 import type { Downswing, MalletHead } from "../impact/types";
 import { atan2, sinCos } from "../math/elementary";
 import { ZERO, add, dot, scale, sub, vec3, type Vec3 } from "../math/vec3";
-import type { SwingEffort, SwingShape } from "./types";
+import type { SwingAssist, SwingEffort, SwingShape } from "./types";
 
 /**
  * The furthest the shaft may be taken back (rad from vertical): horizontal. A modelling bound (design §3.2), the
@@ -78,8 +78,14 @@ export interface DownswingInput {
     readonly backswing: number;
     /** θ_max (rad from vertical, in (0, MAX_BACK_ANGLE]): the body's limit on every backswing. */
     readonly backswingLimit: number;
+    /** The head's greatest rise (m, > 0) at the top of any backswing, whatever the hands' share (firmness design §3). */
+    readonly headRiseLimit: number;
     /** The player's effort (the body's τ_0 and ω_max), on every stroke. */
     readonly effort: SwingEffort;
+    /** The arms' assist (the body's F_0 and v_max), read only where the hands lead on their tempo (firmness design §4). */
+    readonly assist: SwingAssist;
+    /** M (kg), the swung body's mass: the head, the shaft and the arm mass at the top grip. */
+    readonly swungMass: number;
     readonly intensity: number;
     /** The hands' arc's slope dz/ds at contact (≤ 0; P2b.2b.2b.2b design §4.1); 0 arrives level. */
     readonly arrival: number;
@@ -120,6 +126,44 @@ export function effortTorque(effort: SwingEffort, intensity: number, omega: numb
     return intensity * effort.torque * (1 - omega / effort.speed);
 }
 
+/** Numerical, not physical: assistTempo's halvings of its bracket, to a double's resolution on a tempo of about 1 s. */
+const ASSIST_BISECTIONS = 60;
+
+/**
+ * T(i) (s), the hands' tempo at which the arms supply the faster swing's extra force (firmness design §4): the root of
+ * M·2·d·(1/T² − 1/T_s²) = i·F_0·max(0, 1 − 2·d/(T·v_max)) on [2·d/v_max, T_s], d = `travel` |Δ_h| (m) the hands'
+ * travel along aim, T_s = `slow` (s) and M = `mass` (kg). `slow` exactly at intensity 0, with no force, with no hands'
+ * travel (the pendulum's whole share: the arms move nothing), or where the
+ * hands already reach v_max at `slow`, so that the gravity-paced plan keeps its bits. The bisection keeps the upper end,
+ * where the arms supply no more than their force.
+ */
+export function assistTempo(
+    assist: SwingAssist,
+    intensity: number,
+    slow: number,
+    travel: number,
+    mass: number,
+): number {
+    const { force, speed } = assist;
+    if (!(intensity > 0 && force > 0 && travel > 0 && (2 * travel) / slow < speed)) {
+        return slow;
+    }
+    const residual = (T: number): number =>
+        mass * 2 * travel * (1 / (T * T) - 1 / (slow * slow)) -
+        intensity * force * Math.max(0, 1 - (2 * travel) / (T * speed));
+    let lo = (2 * travel) / speed;
+    let hi = slow;
+    for (let k = 0; k < ASSIST_BISECTIONS; k++) {
+        const mid = 0.5 * (lo + hi);
+        if (residual(mid) > 0) {
+            lo = mid;
+        } else {
+            hi = mid;
+        }
+    }
+    return hi;
+}
+
 /**
  * The couple τ_c = I_P·α + W·sin θ + M·d·(A·t̂) − τ_p(ω) (N·m) the hands must supply along `down`, planned for `input`
  * (P2b.2b.2c.3a design §4.1): its largest magnitude over the downswing's samples (downswingSamples) and its time (s
@@ -148,13 +192,20 @@ export function requiredCouple(input: DownswingInput, down: Downswing): { readon
 
 /**
  * Plans the downswing of `input` (design §3.2–§3.4; P2b.2b.2c.3a design §4.1). Throws a RangeError for a backswing
- * beyond the body's limit θ_max; a plan that needs the free swing (λ < 1, or a null tempo) whose pendulum does not
+ * that lifts the head beyond headRiseLimit (checked first; firmness design §3), or that takes the shaft beyond the
+ * body's limit θ_max; a plan that needs the free swing (λ < 1, or a null tempo) whose pendulum does not
  * swing (pendulumShare 0); a non-positive effective inertia, a stall (ω falling to zero or below before θ_c), or a fall
  * beyond MAX_FALL; and, for λ > 0, a couple the grip cannot hold. Every other input is taken as checked (buildContact).
  */
 export function planDownswing(input: DownswingInput): PlannedDownswing {
     const { aim, thetaContact, pivot, lever, shape, backswing, intensity, slopeHold: lambda } = input;
     const share = shape.pendulumShare;
+    if (backswing > input.headRiseLimit) {
+        fail(
+            `the backswing lifts the head beyond the body's limit on its rise, headRiseLimit = ` +
+                `${input.headRiseLimit} m: a ${backswing} m backswing`,
+        );
+    }
     const [, cosContact] = sinCos(thetaContact);
     const c = cosContact - (share * backswing) / lever;
     const limit = input.backswingLimit;
@@ -179,12 +230,13 @@ export function planDownswing(input: DownswingInput): PlannedDownswing {
     const handsTop = sub(sub(pivot, across), drop);
     // P2b.2b.2b.2b design §4.1: the vertical Hermite's end slope dP_z/dσ = 2·|Δ_h|·arrival, so that the hands'
     // velocity at contact runs along the arc's tangent.
-    const rise = 2 * Math.sqrt(dot(across, across)) * input.arrival;
+    const travel = Math.sqrt(dot(across, across));
+    const rise = 2 * travel * input.arrival;
     const top: Top = { thetaTop, span, handsTop, across, drop };
     const { handTempo } = shape;
     if (lambda === 1 && handTempo !== null) {
-        const { slow, fast } = handTempo;
-        return held(input, top, vec3(0, 0, rise), slow + intensity * (fast - slow));
+        const tempo = assistTempo(input.assist, intensity, handTempo.slow, travel, input.swungMass);
+        return held(input, top, vec3(0, 0, rise), tempo);
     }
     if (!(span > 0)) {
         fail(
@@ -198,7 +250,8 @@ export function planDownswing(input: DownswingInput): PlannedDownswing {
         return free;
     }
     const fall = 0 - free.downswing.release;
-    const tempo = handTempo === null ? fall : handTempo.slow + intensity * (handTempo.fast - handTempo.slow);
+    const tempo =
+        handTempo === null ? fall : assistTempo(input.assist, intensity, handTempo.slow, travel, input.swungMass);
     if (lambda === 1) {
         return held(input, top, vec3(0, 0, rise), tempo);
     }

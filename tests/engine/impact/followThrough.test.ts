@@ -36,7 +36,7 @@ import { ballAt, testWorld } from "../support/fixtures";
 import { TEST_GRIP_LIMIT } from "../support/impact";
 import { backswingFor, canonicalSetup, testProfile } from "../support/shot";
 import { openWorld } from "../../../scripts/openLawn";
-import { mapSetup, textBook } from "../../../scripts/pushMapRun";
+import { canonicalPower, mapSetup, textBook } from "../../../scripts/pushMapRun";
 import NO_PUSH_BASELINE from "./fixtures/noPushBaseline.json";
 
 const WORLD = testWorld();
@@ -203,10 +203,10 @@ describe("the follow-through (design §4)", () => {
     });
 
     it("a carry ends with its hands at rest", () => {
-        // P2b.2b.2c.3b.1 plan Task 3: today's full roll (the push map's text book at power 0.1535, as
+        // P2b.2b.2c.3b.1 plan Task 3: today's full roll (the push map's text book at its canonical power, as
         // scripts/pathTrace.ts builds it) on the 10 s open lawn.
         const lawn = openWorld(10);
-        const setup = mapSetup("full-roll", textBook("full-roll"), 0.1535);
+        const setup = mapSetup("full-roll", textBook("full-roll"), canonicalPower("full-roll", lawn));
         const planned = planStroke(setup, lawn);
         const push = prepareTrack(planned.contact.drive as TrackDrive, planned.contact.head, lawn.gravity).push as Push;
         const { follow } = simulateStroke(planned.contact, setup.balls, lawn);
@@ -220,7 +220,7 @@ describe("the follow-through (design §4)", () => {
         // design §2: its hands' apex is now 0.83 s after contact (was P2b.2b.2c.3b.1 design §5's rest beyond
         // FOLLOW_CAP), so the cap's count from the push's end is no longer exercised here; it must still not bind.
         const lawn = openWorld(10);
-        const setup = mapSetup("full-roll", textBook("full-roll"), 0.1535 / 4);
+        const setup = mapSetup("full-roll", textBook("full-roll"), canonicalPower("full-roll", lawn) / 4);
         const planned = planStroke(setup, lawn);
         const push = prepareTrack(planned.contact.drive as TrackDrive, planned.contact.head, lawn.gravity).push as Push;
         expect(push.end).not.toBeNull();
@@ -461,7 +461,7 @@ describe("the mallet's release and the finish's end (shapes design §2)", () => 
 
     it("swings a held roll on past its push's end to the mallet's apex", () => {
         const lawn = openWorld(10);
-        const setup = mapSetup("full-roll", textBook("full-roll"), 0.1535);
+        const setup = mapSetup("full-roll", textBook("full-roll"), canonicalPower("full-roll", lawn));
         const planned = planStroke(setup, lawn);
         const push = prepareTrack(planned.contact.drive as TrackDrive, planned.contact.head, lawn.gravity).push as Push;
         const { follow } = simulateStroke(planned.contact, setup.balls, lawn);
@@ -488,7 +488,7 @@ describe("the mallet's release and the finish's end (shapes design §2)", () => 
         // The full roll at an eighth of its canonical power: its push never reaches its length (measured while
         // building the shapes plan), so there is no release and no hands' apex.
         const lawn = openWorld(10);
-        const setup = mapSetup("full-roll", textBook("full-roll"), 0.1535 / 8);
+        const setup = mapSetup("full-roll", textBook("full-roll"), canonicalPower("full-roll", lawn) / 8);
         const planned = planStroke(setup, lawn);
         const track = prepareTrack(planned.contact.drive as TrackDrive, planned.contact.head, lawn.gravity);
         expect((track.push as Push).end).toBeNull();
@@ -618,7 +618,8 @@ describe("the hands' hold on the shaft's lean through a push (shapes design §8,
     });
 
     it("never holds past the grip's whole couple", () => {
-        expect(arcOf(planOf(1, 0.6)).holdFirmness).toBe(1);
+        // 0.47 m, inside the head's 0.48 m rise limit (firmness design §3; was 0.6 m), still plans above HOLD_SPEED.
+        expect(arcOf(planOf(1, 0.47)).holdFirmness).toBe(1);
     });
 
     it.each([

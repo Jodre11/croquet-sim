@@ -118,7 +118,7 @@ export function testProfile(o: TestProfileOptions = {}): SwingProfile {
     const shape: SwingShape = {
         pendulumShare: 1,
         handAngle: 0.5,
-        handTempo: { slow: 0.4, fast: 0.2 },
+        handTempo: { slow: 0.4 },
         slopeHold: 0,
         followThrough: 0,
         holdFirmness: 1,
@@ -138,7 +138,10 @@ export function testProfile(o: TestProfileOptions = {}): SwingProfile {
             chain: TEST_CHAIN,
             gripLimit: TEST_GRIP_LIMIT,
             backswingLimit: MAX_BACK_ANGLE,
+            // As θ_max is MAX_BACK_ANGLE: no limit in practice (firmness design §3).
+            headRiseLimit: 2,
             effort: { torque: 0, speed: 1 },
+            assist: { force: 0, speed: 1 },
             handAcceleration: 300,
             ...o.body,
         },
@@ -388,19 +391,22 @@ export function backswingFor(setup: ShotSetup, speed: number, world: World = def
         shape.pendulumShare > 0 ? ((lever * (Math.cos(lean) - Math.cos(angle))) / shape.pendulumShare) * (1 - 1e-9) : 2;
     let hi = reachOf(MAX_BACK_ANGLE);
     // The bracket stays at MAX_BACK_ANGLE, so a bisection that converges inside the body's limit takes the steps it
-    // always did, to the bit. A midpoint beyond the limit (the planner's RangeError naming θ_max) counts as reaching
-    // the speed.
+    // always did, to the bit. A midpoint beyond the body's limits (the planner's RangeError naming θ_max or the head's
+    // rise, both "beyond the body's") counts as reaching the speed.
     const at = (backswing: number): number => {
         try {
             return plannedSpeed({ ...setup, stroke: { ...stroke, backswing } }, world);
         } catch (error) {
-            if (error instanceof RangeError && error.message.includes("θ_max")) {
+            if (error instanceof RangeError && error.message.includes("beyond the body's")) {
                 return Infinity;
             }
             throw error;
         }
     };
-    const reach = shape.slopeHold < 1 ? Math.min(hi, reachOf(profile.body.backswingLimit)) : hi;
+    const reach = Math.min(
+        shape.slopeHold < 1 ? Math.min(hi, reachOf(profile.body.backswingLimit)) : hi,
+        profile.body.headRiseLimit * (1 - 1e-9),
+    );
     if (at(reach) < speed) {
         throw new RangeError(
             `backswingFor: ${speed} m/s is beyond the ${type} stroke's reach (${at(reach)} m/s at ${reach} m)`,

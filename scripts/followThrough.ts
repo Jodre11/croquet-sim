@@ -214,7 +214,10 @@ export function backswingBracket(setup: ShotSetup, world: World): { readonly top
     const reachOf = (angle: number): number =>
         shape.pendulumShare > 0 ? ((lever * (Math.cos(lean) - Math.cos(angle))) / shape.pendulumShare) * (1 - 1e-9) : 2;
     const top = reachOf(MAX_BACK_ANGLE);
-    const reach = shape.slopeHold < 1 ? Math.min(top, reachOf(profile.body.backswingLimit)) : top;
+    const reach = Math.min(
+        shape.slopeHold < 1 ? Math.min(top, reachOf(profile.body.backswingLimit)) : top,
+        profile.body.headRiseLimit * (1 - 1e-9),
+    );
     return { top, reach };
 }
 
@@ -238,7 +241,7 @@ export function backswingForContact(setup: ShotSetup, speed: number, world: Worl
         try {
             return firstTouch({ ...setup, stroke: { ...stroke, backswing } }, world)?.contactSpeed ?? 0;
         } catch (error) {
-            if (error instanceof RangeError && error.message.includes("θ_max")) {
+            if (error instanceof RangeError && error.message.includes("beyond the body's")) {
                 return Infinity;
             }
             throw error;
