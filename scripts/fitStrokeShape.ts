@@ -11,7 +11,7 @@
  * 3. every swing preset's defaultBackswing h_0 and defaultSpeed kept as they are (the default stroke fixes the
  *    backswing, a stroke's intensity reaching the speeds from U(0) to U(1) at h_0), and U(0) and U(1) at h_0 reported.
  * The swing presets' retired effort pulse (torqueMax, tempoSlow, tempoFast) and every preset's retired defaultIntensity
- * are dropped. The carry presets are frozen at engine 0.12.0's fit (design §4.4): their handTempoSlow, handTempoFast
+ * are dropped. The carry presets are frozen at engine 0.12.0's fit (design §4.4): their handTempoSlow
  * and defaultBackswing keep their values, their notes saying so; nothing else of theirs is touched.
  * Never fitted to a ratio or to the user's play data. Prints reference/swing.json with its derived entries replaced to
  * stdout and a summary to stderr. Run with `npx --yes tsx scripts/fitStrokeShape.ts > <file>`,
@@ -123,7 +123,7 @@ for (const type of SWING_REFERENCE_TYPES) {
     const given = out[type] as Record<string, unknown>;
     out[type] = Object.fromEntries(Object.entries(given).filter(([key]) => !RETIRED.includes(key)));
     if (defaultProfile.shape[type].slopeHold === 1) {
-        for (const key of ["handTempoSlow", "handTempoFast", "defaultBackswing"]) {
+        for (const key of ["handTempoSlow", "defaultBackswing"]) {
             const item = given[key] as { note?: string };
             if (!(item.note ?? "").endsWith(FROZEN)) {
                 item.note = item.note === undefined ? FROZEN : `${item.note} ${FROZEN}`;

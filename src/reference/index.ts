@@ -265,8 +265,10 @@ export const SWING_REFERENCE_TYPES = [
  * at the top of any backswing (`headRiseLimit`, m; firmness design §3); and the swing-mode
  * effort law's τ_0 (`effortTorque`, N·m) and ω_max (`effortSpeed`, rad/s), fitted by scripts/fitStrokeShape.ts, with
  * κ (`effortShare`), the share of ω_max the drive uses at contact at full effort, read only by the fit (design §4.4);
- * and the hands' peak acceleration along aim (`handAcceleration`, m/s²), which sets the advance's ramp, a body
- * property the player never sets (P2b.2b.2c.1 design, Amendments).
+ * the hands' peak acceleration along aim (`handAcceleration`, m/s²), which sets the advance's ramp, a body
+ * property the player never sets (P2b.2b.2c.1 design, Amendments); and the arms' assist on a hands-led downswing, its
+ * isometric force F_0 (`assistForce`, N) and the hands' speed v_max (`assistSpeed`, m/s), fitted by
+ * scripts/assistFit.ts (firmness design §4).
  */
 export const swingBodyReference = {
     backswingLimit: readValue(swingJson.body, "backswingLimit", "swing.body"),
@@ -275,6 +277,8 @@ export const swingBodyReference = {
     effortSpeed: readValue(swingJson.body, "effortSpeed", "swing.body"),
     effortShare: readValue(swingJson.body, "effortShare", "swing.body"),
     handAcceleration: readValue(swingJson.body, "handAcceleration", "swing.body"),
+    assistForce: readValue(swingJson.body, "assistForce", "swing.body"),
+    assistSpeed: readValue(swingJson.body, "assistSpeed", "swing.body"),
 } as const;
 
 /** A key of `swingReference`. */
@@ -304,7 +308,7 @@ export interface StrokeShapeReference {
     readonly defaultBackswing: ReferenceValue;
     readonly defaultSpeed: ReferenceValue;
     /** Carry mode's hands' tempo (the rolls), or null. */
-    readonly handTempo: { readonly slow: ReferenceValue; readonly fast: ReferenceValue } | null;
+    readonly handTempo: { readonly slow: ReferenceValue } | null;
 }
 
 function has(section: unknown, key: string): boolean {
@@ -333,11 +337,12 @@ function readPairs(entry: unknown, path: string): readonly KinematicPair[] {
 
 /** The swing presets' retired effort pulse (P2b.2b.2a): the effort is now the body's (P2b.2b.2c.1 design §4.4). */
 const RETIRED_KEYS: readonly string[] = ["torqueMax", "tempoSlow", "tempoFast"];
-const HAND_TEMPO_KEYS: readonly string[] = ["handTempoSlow", "handTempoFast"];
+/** The rolls' retired fast tempo: the arms' assist sets the hands' pace above intensity 0 (firmness design §4). */
+const RETIRED_TEMPO = "handTempoFast";
 
 /**
  * Stroke type `type`'s entry in the swing section `section` (reference/swing.json). Throws a ReferenceDataError for a
- * missing or malformed entry, a hands' tempo given only in part, a retired effort key (torqueMax, tempoSlow,
+ * missing or malformed entry, the retired handTempoFast, a retired effort key (torqueMax, tempoSlow,
  * tempoFast) or a retired defaultIntensity, a dead knob now that an absent intensity is 0 for every preset.
  */
 export function readShape(section: unknown, type: SwingReferenceType): StrokeShapeReference {
@@ -353,6 +358,13 @@ export function readShape(section: unknown, type: SwingReferenceType): StrokeSha
                 "retired: swing mode's effort is the body's effortTorque and effortSpeed (P2b.2b.2c.1 design §4.4)",
             );
         }
+    }
+    if (has(entry, RETIRED_TEMPO)) {
+        throw new ReferenceDataError(
+            `${path}.${RETIRED_TEMPO}`,
+            "retired: the arms' assist (body.assistForce, body.assistSpeed) sets the hands' pace above intensity 0 " +
+                "(P2b.2b.2c.3b.2 design §4)",
+        );
     }
     if (has(entry, "defaultIntensity")) {
         throw new ReferenceDataError(
@@ -380,10 +392,8 @@ export function readShape(section: unknown, type: SwingReferenceType): StrokeSha
         kinematics: readPairs(entry, path),
         defaultBackswing: readValue(entry, "defaultBackswing", path),
         defaultSpeed: readValue(entry, "defaultSpeed", path),
-        // Given whole or not at all: a partial one fails naming the key it lacks.
-        handTempo: HAND_TEMPO_KEYS.some((key) => has(entry, key))
-            ? { slow: readValue(entry, "handTempoSlow", path), fast: readValue(entry, "handTempoFast", path) }
-            : null,
+
+        handTempo: has(entry, "handTempoSlow") ? { slow: readValue(entry, "handTempoSlow", path) } : null,
     };
 }
 

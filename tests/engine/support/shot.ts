@@ -118,7 +118,7 @@ export function testProfile(o: TestProfileOptions = {}): SwingProfile {
     const shape: SwingShape = {
         pendulumShare: 1,
         handAngle: 0.5,
-        handTempo: { slow: 0.4, fast: 0.2 },
+        handTempo: { slow: 0.4 },
         slopeHold: 0,
         followThrough: 0,
         holdFirmness: 1,
@@ -141,6 +141,7 @@ export function testProfile(o: TestProfileOptions = {}): SwingProfile {
             // As θ_max is MAX_BACK_ANGLE: no limit in practice (firmness design §3).
             headRiseLimit: 2,
             effort: { torque: 0, speed: 1 },
+            assist: { force: 0, speed: 1 },
             handAcceleration: 300,
             ...o.body,
         },

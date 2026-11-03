@@ -44,7 +44,7 @@ function shape(o: Partial<SwingShape> = {}): SwingShape {
     return {
         pendulumShare: 1,
         handAngle: 0.5,
-        handTempo: { slow: 0.4, fast: 0.2 },
+        handTempo: { slow: 0.4 },
         slopeHold: 0,
         followThrough: 0,
         holdFirmness: 1,
@@ -77,6 +77,8 @@ function input(o: Partial<DownswingInput> = {}): DownswingInput {
         backswingLimit: MAX_BACK_ANGLE,
         headRiseLimit: 2,
         effort: { torque: 0, speed: 1 },
+        assist: { force: 0, speed: 1 },
+        swungMass: swungBody(TEST_HEAD, TEST_HANDS, RADIUS).mass,
         intensity: 0,
         arrival: 0,
         ...o,
@@ -264,7 +266,7 @@ describe("the held slope, λ = 1 (design §3.3)", () => {
             input({
                 slopeHold: 1,
                 thetaContact: -0.3,
-                shape: shape({ pendulumShare: 0.5, handAngle: 0.6, handTempo: { slow: 0.5, fast: 0.25 } }),
+                shape: shape({ pendulumShare: 0.5, handAngle: 0.6, handTempo: { slow: 0.5 } }),
                 backswing: 0.2,
                 ...o,
             }),
@@ -279,10 +281,15 @@ describe("the held slope, λ = 1 (design §3.3)", () => {
         expect(length(sub(handsVelocity, scale(downswing.across, 2 / 0.5)))).toBeLessThan(1e-15);
     });
 
-    it("halves the tempo and doubles the speed at intensity 1", () => {
+    it("halves the tempo and doubles the speed at intensity 1 when the arms' assist meets a half tempo", () => {
         const slow = carry();
-        const fast = carry({ intensity: 1 });
-        expect(fast.downswing.release).toBe(-0.25);
+        // Firmness design §4: the force for which M·2·d·(1/T² − 1/T_s²) = F_0·(1 − 2·d/(T·v_max)) at T = T_s/2.
+        const travel = length(slow.downswing.across);
+        const mass = input().swungMass;
+        const speed = 10;
+        const force = (mass * 2 * travel * 3) / 0.25 / (1 - (4 * travel) / (0.5 * speed));
+        const fast = carry({ intensity: 1, assist: { force, speed } });
+        expect(fast.downswing.release).toBeCloseTo(-0.25, 12);
         expect(contactSpeed(-0.3, fast.omega, fast.handsVelocity)).toBeCloseTo(
             2 * contactSpeed(-0.3, slow.omega, slow.handsVelocity),
             12,
@@ -327,7 +334,7 @@ describe("the planned slope (P2b.2b.2c.3a design §4.1)", () => {
     const held = {
         slopeHold: 1,
         thetaContact: -0.3,
-        shape: shape({ pendulumShare: 0.5, handAngle: 0.6, handTempo: { slow: 0.5, fast: 0.25 } }),
+        shape: shape({ pendulumShare: 0.5, handAngle: 0.6, handTempo: { slow: 0.5 } }),
     };
 
     it("derives a null tempo from the free swing's own fall", () => {
@@ -461,7 +468,7 @@ describe("the path's continuity at contact", () => {
             input({
                 slopeHold: 1,
                 thetaContact: -0.3,
-                shape: shape({ pendulumShare: 0.5, handAngle: 0.6, handTempo: { slow: 0.5, fast: 0.25 } }),
+                shape: shape({ pendulumShare: 0.5, handAngle: 0.6, handTempo: { slow: 0.5 } }),
                 backswing: 0.2,
             }),
         ],

@@ -41,6 +41,8 @@ function input(intensity: number, effort: SwingEffort): DownswingInput {
         backswingLimit: MAX_BACK_ANGLE,
         headRiseLimit: 2,
         effort,
+        assist: { force: 0, speed: 1 },
+        swungMass: swungBody(TEST_HEAD, TEST_HANDS, RADIUS).mass,
         intensity,
         arrival: 0,
     };

@@ -737,6 +737,7 @@ describe("defaultProfile", () => {
             backswingLimit: swingBodyReference.backswingLimit.value,
             headRiseLimit: swingBodyReference.headRiseLimit.value,
             effort: { torque: swingBodyReference.effortTorque.value, speed: swingBodyReference.effortSpeed.value },
+            assist: { force: swingBodyReference.assistForce.value, speed: swingBodyReference.assistSpeed.value },
             handAcceleration: swingBodyReference.handAcceleration.value,
         });
     });
@@ -780,9 +781,7 @@ describe("defaultProfile", () => {
             expect(shape.pendulumShare, type).toBe(ref.pendulumShare.value);
             expect(shape.handAngle, type).toBe(ref.handAngle.value);
             const tempo = ref.handTempo;
-            expect(shape.handTempo, type).toEqual(
-                tempo === null ? null : { slow: tempo.slow.value, fast: tempo.fast.value },
-            );
+            expect(shape.handTempo, type).toEqual(tempo === null ? null : { slow: tempo.slow.value });
         }
         expect(STROKE_TYPES.slice(0, 4).map((type) => defaultProfile.shape[type].pendulumShare)).toEqual([1, 1, 1, 1]);
     });
@@ -797,7 +796,6 @@ describe("defaultProfile", () => {
         const tempo = roll.handTempo as NonNullable<typeof roll.handTempo>;
         expect(shapeOf("drive", { ...drive, handTempo: tempo }).handTempo).toEqual({
             slow: tempo.slow.value,
-            fast: tempo.fast.value,
         });
     });
 
@@ -986,9 +984,19 @@ describe("buildContact rejections", () => {
         ],
         [
             // P2b.2b.2c.3a: a given tempo is checked on every stroke (was: only on a carry, which also required one).
-            "a fast hands' tempo slower than the slow",
-            shot({}, testProfile({ shape: { handTempo: { slow: 0.2, fast: 0.3 } } })),
-            /handTempo\.fast must not exceed .*handTempo\.slow/,
+            "a non-positive slow hands' tempo",
+            shot({}, testProfile({ shape: { handTempo: { slow: 0 } } })),
+            /handTempo\.slow must be positive/,
+        ],
+        [
+            "a negative assist force",
+            shot({}, testProfile({ body: { assist: { force: -1, speed: 10 } } })),
+            /profile\.body\.assist\.force must be non-negative/,
+        ],
+        [
+            "a non-positive assist speed",
+            shot({}, testProfile({ body: { assist: { force: 1, speed: 0 } } })),
+            /profile\.body\.assist\.speed must be positive/,
         ],
         ["a backswing beyond the shaft horizontal", shot({ backswing: 2 }), /beyond/],
     ];
@@ -1040,7 +1048,7 @@ describe("contactPose (design §5.2 steps 1–5, 10)", () => {
         const shape: SwingShape = {
             pendulumShare: 1,
             handAngle: 0.5,
-            handTempo: { slow: 0.4, fast: 0.2 },
+            handTempo: { slow: 0.4 },
             slopeHold: 0,
             followThrough: 0,
             holdFirmness: 1,
@@ -1052,6 +1060,7 @@ describe("contactPose (design §5.2 steps 1–5, 10)", () => {
             backswingLimit: MAX_BACK_ANGLE,
             headRiseLimit: 2,
             effort: { torque: 0, speed: 1 },
+            assist: { force: 0, speed: 1 },
             intensity: 0,
             arrival: 0,
         };
@@ -1152,8 +1161,8 @@ describe("the lead (design §3.5)", () => {
         // A 5 mm backswing pitches the head's rear rim down more than it raises the head: met 10 mm above the face
         // centre, the top is about 3.4 mm in the turf. Carried in 50 ms, the lead is TURF_MARGIN before the release,
         // where the head is held at the top.
-        const quick = testProfile({ shape: { slopeHold: 1, handTempo: { slow: 0.1, fast: 0.05 } } });
-        const setup = shot({ backswing: 0.005, intensity: 1, contact: { up: 0.01, side: 0 } }, quick);
+        const quick = testProfile({ shape: { slopeHold: 1, handTempo: { slow: 0.05 } } });
+        const setup = shot({ backswing: 0.005, contact: { up: 0.01, side: 0 } }, quick);
         expect(() => buildContact(setup, WORLD)).toThrow(/the head is in the turf 0\.055 s before contact/);
         // Met at the face centre, the same downswing stays clear and starts on time.
         const clear = buildContact({ ...setup, stroke: { ...setup.stroke, contact: { up: 0, side: 0 } } }, WORLD);

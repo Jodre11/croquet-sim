@@ -374,39 +374,37 @@ describe("swing reference (P2b.2b.2a design §6.1)", () => {
         }
     });
 
-    it("gives the rolls a hands' tempo, fast no slower than slow, and the swing presets none", () => {
-        // The swing presets swing under the body's effort, shared by every swing preset.
+    it("gives the rolls a positive slow hands' tempo, and the swing presets none", () => {
+        // The swing presets swing under the body's effort, shared by every swing preset; the rolls' fast end is the
+        // arms' assist (firmness design §4, was handTempoFast).
         for (const type of SWING_REFERENCE_TYPES) {
             const { handTempo } = swingReference[type];
             const swing = ["single-ball", "drive", "stop-ac", "stop-gc"].includes(type);
             expect(handTempo === null, type).toBe(swing);
             if (handTempo !== null) {
-                expect(handTempo.fast.value, type).toBeLessThanOrEqual(handTempo.slow.value);
-                expect(handTempo.fast.value, type).toBeGreaterThan(0);
+                expect(handTempo.slow.value, type).toBeGreaterThan(0);
             }
         }
     });
 
-    it("halves the placeholder tempos (design §6.2)", () => {
-        for (const type of SWING_REFERENCE_TYPES) {
-            const { handTempo } = swingReference[type];
-            if (handTempo?.slow.provisional === "placeholder") {
-                expect(handTempo.fast.value, type).toBeCloseTo(handTempo.slow.value / 2, 12);
-            }
-        }
+    it("loads the arms' assist: F_0 ≥ 0 and v_max > 0, placeholders (firmness design §4)", () => {
+        const { assistForce, assistSpeed } = swingBodyReference;
+        expect([assistForce.unit, assistSpeed.unit]).toEqual(["N", "m/s"]);
+        expect(assistForce.value).toBeGreaterThanOrEqual(0);
+        expect(assistSpeed.value).toBeGreaterThan(0);
+        expect([assistForce.provisional, assistSpeed.provisional]).toEqual(["placeholder", "placeholder"]);
     });
 
-    it("rejects a hands' tempo given only in part and a retired effort key, naming the key", () => {
+    it("rejects the retired fast tempo and a retired effort key, naming the key", () => {
         const entryOf = (type: SwingReferenceType): Record<string, unknown> =>
             (swingJson as unknown as Record<string, Record<string, unknown>>)[type] ?? {};
-        const without = (type: SwingReferenceType, key: string): unknown => ({
+        // Firmness design §4: the arms' assist replaces the rolls' fast tempo.
+        const fast = {
             ...swingJson,
-            [type]: Object.fromEntries(Object.entries(entryOf(type)).filter(([k]) => k !== key)),
-        });
-        expect(() => readShape(without("full-roll", "handTempoSlow"), "full-roll")).toThrow(ReferenceDataError);
-        expect(() => readShape(without("full-roll", "handTempoSlow"), "full-roll")).toThrow(
-            /swing\.full-roll\.handTempoSlow/,
-        );
+            "full-roll": { ...entryOf("full-roll"), handTempoFast: swingJson.body.effortTorque },
+        };
+        expect(() => readShape(fast, "full-roll")).toThrow(ReferenceDataError);
+        expect(() => readShape(fast, "full-roll")).toThrow(/swing\.full-roll\.handTempoFast.*retired/);
         // P2b.2b.2c.1 design §4.4: the swing presets' effort pulse is retired.
         for (const key of ["torqueMax", "tempoSlow", "tempoFast"]) {
             const retired = { ...swingJson, drive: { ...entryOf("drive"), [key]: swingJson.body.effortTorque } };

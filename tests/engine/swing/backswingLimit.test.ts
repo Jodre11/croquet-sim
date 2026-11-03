@@ -37,7 +37,7 @@ function input(top: number, o: Partial<DownswingInput>): DownswingInput {
         shape: {
             pendulumShare: SHARE,
             handAngle: 0.5,
-            handTempo: { slow: 0.4, fast: 0.2 },
+            handTempo: { slow: 0.4 },
             slopeHold: 0,
             followThrough: 0,
             holdFirmness: 1,
@@ -46,6 +46,8 @@ function input(top: number, o: Partial<DownswingInput>): DownswingInput {
         backswingLimit: LIMIT,
         headRiseLimit: 2,
         effort: { torque: 0, speed: 1 },
+        assist: { force: 0, speed: 1 },
+        swungMass: swungBody(TEST_HEAD, TEST_HANDS, top).mass,
         intensity: 0,
         arrival: 0,
         ...o,

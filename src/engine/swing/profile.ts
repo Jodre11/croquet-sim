@@ -112,7 +112,7 @@ export function shapeOf(
     return {
         pendulumShare: ref.pendulumShare.value,
         handAngle: ref.handAngle.value,
-        handTempo: ref.handTempo === null ? null : { slow: ref.handTempo.slow.value, fast: ref.handTempo.fast.value },
+        handTempo: ref.handTempo === null ? null : { slow: ref.handTempo.slow.value },
     };
 }
 
@@ -319,6 +319,7 @@ export const defaultProfile: SwingProfile = {
         backswingLimit: swingBodyReference.backswingLimit.value,
         headRiseLimit: swingBodyReference.headRiseLimit.value,
         effort: { torque: swingBodyReference.effortTorque.value, speed: swingBodyReference.effortSpeed.value },
+        assist: { force: swingBodyReference.assistForce.value, speed: swingBodyReference.assistSpeed.value },
         handAcceleration: swingBodyReference.handAcceleration.value,
     },
     stance: {
