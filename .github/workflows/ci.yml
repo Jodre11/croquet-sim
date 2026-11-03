@@ -21,5 +21,7 @@ jobs:
             - run: npm run lint
             - run: npm run format:check
             - run: npm run check
-            - run: npm test
+            # The runners beside the slow suite run tests 2–4× slower than locally, and over 2× slower from run to
+            # run, so the default timeout is 4× the local one (vite.config.ts).
+            - run: npm test -- --testTimeout=60000
             - run: npm run build
