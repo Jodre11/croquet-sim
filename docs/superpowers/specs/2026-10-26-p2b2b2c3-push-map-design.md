@@ -579,8 +579,7 @@ full roll or somewhere between a drive and a half roll or all the other inbetwee
      long range is reached by backswing and intensity alone and reads superhuman, an artefact rather than an edge
      (user, 2026-11-02: "Build the assist first");
    - the push length (`handReach`), swept;
-   - the punch, acceleration or flick: `drive` and `window` through contact, swept, and the flick once contact ends
-     (level-head B1 ruling 9, left to this phase by the shapes design §1), built with the assist.
+   - the punch or acceleration: `drive` and `window` through contact, swept. The flick is not built (item 13).
    How the mallet is held on the handle (the hands' places and grips) is the type's: the type is that hold. Every
    swept input runs its full span on every type, so a stop with a push, or one hit through, is an in-between shot;
    each type's text book values lie on its grid. The full roll's `speedGain` axis (A4) stays the full roll's alone;
@@ -591,7 +590,7 @@ full roll or somewhere between a drive and a half roll or all the other inbetwee
    anticipate: the least at which the plan plays admissibly (the design's call: the least grip that works). A plan no
    firmness makes admissible fails, with the first reason of its play at full firmness. At each text book the found
    firmness is recorded beside the fitted one (the half roll's 0.1). `followThrough`'s carry (shapes ruling 14) is
-   held at the type's until the flick is built, then is the flick's.
+   held at the type's (item 13).
 5. **The range.** The striker's ball's distance to rest, from a tap of 0.25 m to a full court length, 32 m (the
    design's call for the least range); the builder sets the spacing, denser at the short end, and adds powers below
    `POWERS`'s 0.1 (`scripts/pushMapGrid.ts`) to reach it. The lawns stay 6, 10 and 14 s (A3 item 2), so the grid's
@@ -623,7 +622,7 @@ full roll or somewhere between a drive and a half roll or all the other inbetwee
    beside every band. Its cause is a carried item unless the bound exceeds the grid's step, when it is found first.
 10. **Exit criteria and the gate** (§1, §6, §10), restated. Criterion 1: the map over the six types. Criterion 4: each
     text book within its band and within ±2 % of its planned contact speed. Criterion 7: `ENGINE_VERSION` moves to the
-    next minor after 0.28.0 with the assist and the flick. §6 item 2 keeps its within-type slice test; the ordering
+    next minor after 0.28.0 with the assist. §6 item 2 keeps its within-type slice test; the ordering
     across maps is superseded (on one continuum it holds by construction), and item 3 reads "which ratios each range
     reaches". Gate stage 1 is each text book alone swept over range and lawn (none of the other axes), with item 9's
     bound and the found firmness at the text books; stage 2 is the full map.
@@ -637,6 +636,14 @@ full roll or somewhere between a drive and a half roll or all the other inbetwee
     6 h, uploads each shard's output as an artifact, and a last job merges them into §3.5's record; the record keeps
     the run's URL and commit. Every figure the map is compared against (the ratchet's baselines, gate stage 1's
     text books) is run on the same runners, never compared across machines.
-12. **The sequence.** The shapes phase (P2b.2b.2c.3b.1) closes at its gate 2 and merges first. The assist, the flick
-    and the found firmness are then specified, planned and built as their own phase, the maps' plan is amended for the
-    new types and inputs, and gate stage 1 runs before the full map. The side-on swing viewer stays the phase after.
+12. **The sequence.** The shapes phase (P2b.2b.2c.3b.1) closes at its gate 2 and merges first. The assist and the
+    found firmness are then specified, planned and built as their own phase, the maps' plan is amended for the new
+    types and inputs, and gate stage 1 runs before the full map. The side-on swing viewer stays the phase after.
+13. **No flick** (user, 2026-11-03, on whether the flick is still needed now the shapes are right: "It is simply the
+    amount or arcing acceleration as the ball leaves contact"). Once the ball has left the face the head cannot change
+    its speed or the ratio, so a flick reaches no range and no ratio that the stroke before it does not. What reaches
+    a longer range is the swing's speed (backswing, effort and the assist) and the punch while the ball is still on
+    the face (`drive`, `window`). The finish the flick would shape is ruling 14's, the head carried on along its arc
+    and clear of the turf, already every stroke's. Its one bearing on the outcome is a follow-through that meets the
+    ball again, a fault, and that is `followThrough`'s carry, held at the type's. So the flick is not built, and the
+    level-head B1 ruling 9's flick, which the shapes design §1 left to this phase, is closed.

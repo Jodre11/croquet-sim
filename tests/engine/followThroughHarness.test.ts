@@ -33,6 +33,8 @@ const JAB_GRIP = { bottom: 0.45, gripTension: 0.1, bottomGrip: 0.1 } as const;
 /** A brake begun 10 ms before contact, the dip coupled: an early pulse of stage 2's AC stop sweep. */
 const EARLY_BRAKE: StrokeTiming = { arc: -0.01, hands: 0, dip: 0 };
 
+// The solves' timeouts are 120 s: GitHub's runners beside the slow suite run them 2–4 times slower than locally, and
+// more than twice as slow from one run to the next (2026-11-03).
 describe("the follow-through harness (P2b.2b.2c.2d design §3.4)", () => {
     it("reads the first touch at the planned speed when nothing acts early", () => {
         // The drive at drive 0, on time: no pulse before contact, so the head meets the ball within a step's travel
@@ -47,7 +49,7 @@ describe("the follow-through harness (P2b.2b.2c.2d design §3.4)", () => {
         const turn = length(buildContact(setup, WORLD).angularVelocity) * IMPACT_DT;
         expect(Math.abs((touch?.lean ?? NaN) - leanOf(setup, WORLD))).toBeLessThanOrEqual(1.01 * turn);
     });
-    it("returns null for a stroke with no face contact", { timeout: 30_000 }, () => {
+    it("returns null for a stroke with no face contact", { timeout: 120_000 }, () => {
         // The impact runs to its cap (about 6 s locally) with the head short of the ball.
         // P2b.2b.2c.3a gate stage 2: the AC stop's grip retune (was the default grip): the stroke takes the jab
         // variant's grip. At the hands together and the firm top hand the brake never stops the head short: begun 60,
@@ -55,7 +57,7 @@ describe("the follow-through harness (P2b.2b.2c.2d design §3.4)", () => {
         const setup = canonicalSetup("stop-ac", { stroke: { timing: NO_STRIKE, grip: JAB_GRIP } });
         expect(firstTouch(setup, WORLD)).toBeNull();
     });
-    it("solves the stroke for a contact speed under an early brake", { timeout: 40_000 }, () => {
+    it("solves the stroke for a contact speed under an early brake", { timeout: 120_000 }, () => {
         // Drive −1 begun 10 ms early takes about half the head's speed before contact (traced: 1.53 m/s at the
         // body's θ_max with no intensity), so 3 m/s at the ball needs effort: strokeForContact's second regime.
         // About 8 s locally.
@@ -123,7 +125,7 @@ describe("the follow-through harness (P2b.2b.2c.2d design §3.4)", () => {
         expect(at(-6)).toBeCloseTo(3.35e-3, 4);
         expect(at(-8)).toBeCloseTo(-7.79e-3, 4);
     });
-    it("solves Gugan's stroke for its contact speed on time", { timeout: 40_000 }, () => {
+    it("solves Gugan's stroke for its contact speed on time", { timeout: 120_000 }, () => {
         // On time no pulse acts before contact, so the solved stroke meets the ball at the asked speed to the
         // bisection's resolution; the default backswing's head arrives at 2.9927 m/s (traced), so it is solved in
         // strokeForContact's second regime, the intensity. About 8 s locally.
@@ -162,7 +164,7 @@ describe("the follow-through harness (P2b.2b.2c.2d design §3.4)", () => {
     // Shapes design §8, ruling 19: the stance 6° back (was 6.6029 at 5°), 6.913, a branch the step no longer flips.
     it.runIf(SLOW)(
         "keeps the canonical AC stop's Gugan 5 stop within the band at 3 m/s contact speed",
-        { timeout: 80_000 },
+        { timeout: 120_000 },
         () => {
             // The stop at the canonical stance (lean 6° back, 22.5 mm below the face's centre) and timing (on time, so
             // the brake acts with the strike), on Gugan's mallet solved at that stance and the AC stop's own grips, at
