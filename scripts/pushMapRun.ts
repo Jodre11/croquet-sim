@@ -45,9 +45,13 @@ import { openWorld, opened } from "./openLawn";
 import { travelOf } from "./ratioFit";
 import { feetReading } from "./setupProbe";
 
-/** The map's three types (design §1). */
+/** The rolls (design §1): the types with their own axes, the full roll's speedGain and the pass roll's split. */
 export const ROLL_TYPES = ["half-roll", "full-roll", "pass-roll"] as const;
 export type RollType = (typeof ROLL_TYPES)[number];
+
+/** The map's six types (design A7 item 1): every shot type but the GC stop, a stop to a target across a gap. */
+export const MAP_TYPES = ["drive", "stop-ac", "half-roll", "full-roll", "pass-roll", "single-ball"] as const;
+export type MapType = (typeof MAP_TYPES)[number];
 
 /** One plan (spec §3.1, A4): rad, m, 1, m, s, s, rad, 1. */
 export interface MapPlan {
@@ -140,7 +144,7 @@ const STEP_SLACK = 1e-9;
  * feet as feetReading reads the canonical setup on the open lawn, its default drive and window, its handReach, the hands
  * on time and, on the pass roll, canonicalSetup's split, PASS_SPLIT.
  */
-export function textBook(type: RollType): MapPlan {
+export function textBook(type: MapType): MapPlan {
     const setup = opened(canonicalSetup(type));
     const stance = defaultProfile.stance[type];
     const { mallet } = defaultProfile;
@@ -171,7 +175,7 @@ export function textBook(type: RollType): MapPlan {
  * its profile and stance fields only (stance, drive, shape, mallet, body, croquetGap). The map's world is the open
  * lawn and its stroke the plan's, so an `over` giving `world` or `stroke` throws an Error.
  */
-export function mapSetup(type: RollType, plan: MapPlan, power: number, over: CanonicalOptions = {}): ShotSetup {
+export function mapSetup(type: MapType, plan: MapPlan, power: number, over: CanonicalOptions = {}): ShotSetup {
     if (over.world !== undefined || over.stroke !== undefined) {
         throw new Error("mapSetup: `over` gives the profile and stance only, not a world or a stroke");
     }
@@ -179,7 +183,7 @@ export function mapSetup(type: RollType, plan: MapPlan, power: number, over: Can
     const R = IMPACT_WORLD.ball.radius;
     const line = base.stroke.aim + plan.split;
     const reach = 2 * R + (over.croquetGap ?? DEFAULT_CROQUET_GAP);
-    const croqueted = base.croqueted as BallId;
+    const { croqueted } = base;
     const { x, y } = CANONICAL_STRIKER;
     const placed: ShotSetup = {
         ...base,
@@ -187,13 +191,17 @@ export function mapSetup(type: RollType, plan: MapPlan, power: number, over: Can
             ...base.profile,
             drive: { ...base.profile.drive, [type]: { ...base.profile.drive[type], speedGain: plan.speedGain } },
         },
-        balls: {
-            ...base.balls,
-            [croqueted]: {
-                ...(base.balls[croqueted] as BallState),
-                position: vec3(x + reach * Math.cos(line), y + reach * Math.sin(line), R),
-            },
-        },
+        // The single-ball stroke has no croqueted ball to place (plan B-d2).
+        balls:
+            croqueted === undefined
+                ? base.balls
+                : {
+                      ...base.balls,
+                      [croqueted]: {
+                          ...(base.balls[croqueted] as BallState),
+                          position: vec3(x + reach * Math.cos(line), y + reach * Math.sin(line), R),
+                      },
+                  },
         stroke: {
             ...base.stroke,
             lean: plan.lean,
@@ -247,7 +255,7 @@ export function bodyBackswing(setup: ShotSetup, world: World): number {
  * The power at which `type`'s text book plays its preset's defaultBackswing on `world` (decision 1: p ≤ 1 is
  * p·h_body): the canonical stroke's backswing, whatever h_body the body's limits give (firmness design §3).
  */
-export function canonicalPower(type: RollType, world: World): number {
+export function canonicalPower(type: MapType, world: World): number {
     return swingReference[type].defaultBackswing.value / bodyBackswing(mapSetup(type, textBook(type), 1), world);
 }
 
@@ -271,7 +279,7 @@ function plans(setup: ShotSetup, world: World): boolean {
  * the plan has no power at all. Every power returned plans. `over` is mapSetup's: the profile and stance only, its
  * world and stroke rejected.
  */
-export function maxPower(type: RollType, plan: MapPlan, world: World, over: CanonicalOptions = {}): number {
+export function maxPower(type: MapType, plan: MapPlan, world: World, over: CanonicalOptions = {}): number {
     const at = (p: number): boolean => plans(mapSetup(type, plan, p, over), world);
     if (at(POWER_LIMIT)) {
         return POWER_LIMIT;
@@ -472,7 +480,7 @@ function ownClass(
 /** maxPower per plan on the impact's world, memoised: a sweep plays one plan at many powers. */
 const MAX_POWERS = new Map<string, number>();
 
-function maxPowerOf(type: RollType, plan: MapPlan): number {
+function maxPowerOf(type: MapType, plan: MapPlan): number {
     const key = JSON.stringify([type, plan]);
     const known = MAX_POWERS.get(key);
     if (known !== undefined) {
@@ -487,7 +495,7 @@ function maxPowerOf(type: RollType, plan: MapPlan): number {
  * The stroke's effort (%; decision 1): plannedSpeed at `setup` over plannedSpeed at the plan's p_max; NaN where the
  * plan has no p_max.
  */
-function strokeEffortOf(type: RollType, plan: MapPlan, setup: ShotSetup): number {
+function strokeEffortOf(type: MapType, plan: MapPlan, setup: ShotSetup): number {
     const pMax = maxPowerOf(type, plan);
     if (Number.isNaN(pMax)) {
         return NaN;
@@ -549,7 +557,7 @@ export function playedClass(
  * impact or the free motion is the engine's, not the plan's, and propagates (the shard runner reports it).
  */
 export function playSample(
-    type: RollType,
+    type: MapType,
     plan: MapPlan,
     power: number,
     lawns: readonly number[],
@@ -565,7 +573,7 @@ export function playSample(
  * sample is played in searchFirmness, at the least admissible σ, else at σ_max (A7 item 4), up to 16 practised plays.
  */
 export function playJudged(
-    type: RollType,
+    type: MapType,
     plan: MapPlan,
     power: number,
     lawns: readonly number[],
@@ -609,7 +617,7 @@ export function playJudged(
 
 /** playJudged's play of `setup`, planned as `stroke` with a tracked drive, without the hold's record. */
 function judgedPlay(
-    type: RollType,
+    type: MapType,
     plan: MapPlan,
     power: number,
     lawns: readonly number[],
@@ -649,17 +657,18 @@ function judgedPlay(
     // A stroke without a push is not practised (design §4; the plan's Global Constraints): its class is today's.
     const miss = drive.arc.handReach > 0 ? run.miss : null;
     const { klass, reason } = runClass(setup, run, faults, run.point, miss);
-    const croqueted = setup.croqueted as BallId;
+    const { croqueted } = setup;
     const byLawn: Record<number, LawnRead> = {};
     for (const lawn of lawns) {
         const motion = simulateFreeMotion(impact.handover, lawn === IMPACT_LAWN ? IMPACT_WORLD : openWorld(lawn));
         const range = travelOf(setup, motion, setup.striker);
-        const other = travelOf(setup, motion, croqueted);
         const from = (id: BallId): Vec3 => sub(motion.rest[id] as Vec3, (setup.balls[id] as BallState).position);
+        // The single-ball stroke has no croqueted ball: its range alone (plan B-d2).
+        const other = croqueted === undefined ? NaN : travelOf(setup, motion, croqueted);
         byLawn[lawn] = {
             range,
             ratio: range > 0 ? other / range : NaN,
-            splitAtRest: splitAtRestOf(from(setup.striker), from(croqueted)),
+            splitAtRest: croqueted === undefined ? NaN : splitAtRestOf(from(setup.striker), from(croqueted)),
         };
     }
     const shipped = faults.findings.some((f) => f.law === "29.1.6.1");

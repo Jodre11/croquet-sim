@@ -11,7 +11,7 @@
  * decision 12) are superPlans, strikeReading (29.2.5's reading of a strike) and superLeast. Not part of the engine.
  */
 import { MAX_WINDOW, MIN_WINDOW } from "../src/engine/swing/buildContact";
-import { textBook, type MapClass, type MapPlan, type MapSample, type RollType } from "./pushMapRun";
+import { textBook, type MapClass, type MapPlan, type MapSample, type MapType, type RollType } from "./pushMapRun";
 
 const DEG = Math.PI / 180;
 
@@ -98,7 +98,7 @@ function around(centre: number, step: number): Axis {
  * grids, the split on the pass roll (0 elsewhere), the speedGain on the full roll (the preset's elsewhere; A4), the
  * ranges, the lawns and the power samples.
  */
-export function gridFor(type: RollType): MapGrid {
+export function gridFor(type: MapType): MapGrid {
     const book = textBook(type);
     const ranges: number[] = [];
     for (let i = 0; i < RANGE_COUNT; i++) {
@@ -138,7 +138,7 @@ function valuesOf(axis: Axis): readonly number[] {
  * ever a graded plan's neighbour one step along one dimension (A2 item 2), so a plan takes a beyond value in one
  * dimension at most; the hands are on time (onset 0, decision 7).
  */
-export function plansOf(_type: RollType, grid: MapGrid): readonly MapPlan[] {
+export function plansOf(_type: MapType, grid: MapGrid): readonly MapPlan[] {
     const plans: MapPlan[] = [];
     const values = DIMENSIONS.map((d) => valuesOf(grid[d]));
     const beyond = DIMENSIONS.map((d) => new Set(grid[d].beyond));
@@ -363,7 +363,7 @@ const LEAN_LIMIT = Math.PI / 4;
  * The swept dimensions a neighbour steps along (A2 item 2, A4): the lean, the feet, drive, handReach and window, on
  * the pass roll the split and on the full roll the speedGain.
  */
-function neighbourDimensions(type: RollType): readonly Dimension[] {
+function neighbourDimensions(type: MapType): readonly Dimension[] {
     return DIMENSIONS.filter(
         (d) => (d !== "split" || type === "pass-roll") && (d !== "speedGain" || type === "full-roll"),
     );
@@ -420,7 +420,7 @@ export interface Grading {
  *   the full roll's speedGain 0.1 and 1) the neighbour is skipped, and the plan flagged in `edges` with that dimension.
  * A plan with no read is not banded; nor is one with a neighbour that exists but has no read, counted in `unbanded`.
  */
-export function grade(type: RollType, grid: MapGrid, reads: Reads): Grading {
+export function grade(type: MapType, grid: MapGrid, reads: Reads): Grading {
     const banded = new Map<string, Band>();
     const edges = new Map<string, readonly Dimension[]>();
     let unbanded = 0;
@@ -480,7 +480,7 @@ export function grade(type: RollType, grid: MapGrid, reads: Reads): Grading {
 }
 
 /** The bands of `type`'s graded plans (grade's `banded`). */
-export function bands(type: RollType, grid: MapGrid, reads: Reads): ReadonlyMap<string, Band> {
+export function bands(type: MapType, grid: MapGrid, reads: Reads): ReadonlyMap<string, Band> {
     return grade(type, grid, reads).banded;
 }
 
@@ -515,6 +515,44 @@ export function regionSpan(type: RollType): string {
 export function regionPhrase(type: RollType): string {
     const { least, openAbove } = REGIONS[type];
     return openAbove && least === 0 ? regionSpan(type) : `in ${regionSpan(type)}`;
+}
+
+/**
+ * The bands on one continuum, in ascending ratio (design A7 item 2): the rolls' (design §2), the drive's 3.0–4.0 and
+ * the AC stop's 4.1–6.2 (the CA's, in `reference/swing.json`'s ratioTargets notes); edges included, the pass roll's
+ * open at 1.
+ */
+const LABELS: readonly { readonly name: string; readonly most: number; readonly openAbove: boolean }[] = [
+    { name: "pass roll", most: 1, openAbove: true },
+    { name: "full roll", most: 1.2, openAbove: false },
+    { name: "half roll", most: 2.5, openAbove: false },
+    { name: "drive", most: 4, openAbove: false },
+    { name: "AC stop", most: 6.2, openAbove: false },
+];
+
+/** Each band's least ratio (inclusive), in LABELS' order: the pass roll's runs from 0. */
+const LABEL_LEAST = [0, 1, 1.4, 3, 4.1];
+
+/**
+ * The label of `ratio` on the continuum (plan B-d3; design A7 item 2): its band's name, else "between <band> and
+ * <band>" for a gap between two, else "beyond AC stop" above the last; "" where there is no ratio (the single-ball
+ * stroke's).
+ */
+export function labelOf(ratio: number): string {
+    if (!Number.isFinite(ratio)) {
+        return "";
+    }
+    for (let i = 0; i < LABELS.length; i++) {
+        const band = LABELS[i] as (typeof LABELS)[number];
+        const least = LABEL_LEAST[i] as number;
+        if (ratio < least) {
+            return `between ${(LABELS[i - 1] as (typeof LABELS)[number]).name} and ${band.name}`;
+        }
+        if (band.openAbove ? ratio < band.most : ratio <= band.most) {
+            return band.name;
+        }
+    }
+    return `beyond ${(LABELS[LABELS.length - 1] as (typeof LABELS)[number]).name}`;
 }
 
 /** Decision 5's effort: the mean of the stroke's and the push's percentages. */
@@ -637,7 +675,7 @@ const COLUMNS = [
  * figures to six significant figures (empty where NaN). Fields are quoted per RFC 4180. The provenance (command,
  * commit and SHA-256) goes above it in `#` lines, written with the file.
  */
-export function envelopeRows(type: RollType, grid: MapGrid, reads: Reads, banded: ReadonlyMap<string, Band>): string[] {
+export function envelopeRows(type: MapType, grid: MapGrid, reads: Reads, banded: ReadonlyMap<string, Band>): string[] {
     const { edges } = grade(type, grid, reads);
     const rows = [COLUMNS.join(",")];
     for (const plan of plansOf(type, grid)) {
@@ -1126,7 +1164,7 @@ export interface Corner {
  * cellCorners finds no cell.
  */
 export function cellReads(
-    type: RollType,
+    type: MapType,
     grid: MapGrid,
     samples: ReadonlyMap<number, readonly SweepSample[]>,
     plan: MapPlan,
