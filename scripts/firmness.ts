@@ -62,14 +62,33 @@ export function searchSigma(
  * σ·HOLD_SPEED/v. A planning RangeError does not depend on σ and propagates, as does an engine error of the play.
  */
 export function findFirmness(setup: ShotSetup, world: World): FoundFirmness {
+    return searchFirmness(setup, world, (held) => playedClass(held, world)).found;
+}
+
+/**
+ * findFirmness with each σ played by `play`, which is given `setup` with `stroke.holdFirmness` set, and the play at the
+ * σ it returns (the least admissible, else σ_max) beside it: the push map plays its whole sample in the search, so the
+ * sample costs no play beyond the search's.
+ */
+export function searchFirmness<T extends Played>(
+    setup: ShotSetup,
+    world: World,
+    play: (held: ShotSetup) => T,
+): { readonly found: FoundFirmness; readonly played: T } {
     const v = plannedSpeed(setup, world);
     const firmnessOf = (sigma: number): number => Math.min(1, (sigma * HOLD_SPEED) / v);
-    const found = searchSigma(Math.min(1, v / HOLD_SPEED), (sigma) =>
-        playedClass({ ...setup, stroke: { ...setup.stroke, holdFirmness: firmnessOf(sigma) } }, world),
-    );
+    const plays = new Map<number, T>();
+    const found = searchSigma(Math.min(1, v / HOLD_SPEED), (sigma) => {
+        const played = play({ ...setup, stroke: { ...setup.stroke, holdFirmness: firmnessOf(sigma) } });
+        plays.set(sigma, played);
+        return played;
+    });
     if (found.last === null) {
-        return { sigma: found.sigma, firmness: firmnessOf(found.sigma), klass: null };
+        return {
+            found: { sigma: found.sigma, firmness: firmnessOf(found.sigma), klass: null },
+            played: plays.get(found.sigma) as T,
+        };
     }
     const { klass, reason } = found.last as { readonly klass: MapClass; readonly reason: string | null };
-    return { sigma: null, firmness: null, klass, reason: reason ?? klass };
+    return { found: { sigma: null, firmness: null, klass, reason: reason ?? klass }, played: found.last as T };
 }

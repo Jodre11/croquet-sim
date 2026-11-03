@@ -244,6 +244,44 @@ describe("handover with the head (P2b.2b.2b.2b design §5)", () => {
         );
     });
 
+    // P2b.2b.2c.3b.2 Gate 1: the slow full and pass rolls held firm ride the head off the face onto the striker's
+    // ball, which it presses 2.4 mm into the turf until the 450 ms cap. That overlap is the impact's own contact.
+    it("hands over in place, after a capped impact, a ball the head still bears on beyond the rule", () => {
+        const onTop: HeadState = {
+            position: vec3(0, 0, 2 * R + TEST_RHO - 1e-4),
+            orientation: axisAngle(vec3(0, 0, 1), 0),
+            velocity: vec3(0, 0, 0),
+            angularVelocity: vec3(0, 0, 0),
+        };
+        const sunk = { position: vec3(0, 0, R - 2.4e-3), velocity: vec3(0, -0.3, 0), angularVelocity: vec3(0, 0, 0) };
+        const pit = { blue: handoverLimit(2.4e-3, 4.4e-4) };
+        const out = handover({ blue: sunk }, R, [], undefined, {
+            state: onTop,
+            head: TEST_HEAD,
+            limits: pit,
+            capped: true,
+        });
+        expect(out.balls.blue).toEqual({ ...sunk, position: vec3(0, 0, R) });
+        expect(out.overlapCorrection).toBe(0);
+        expect(headBallContact(onTop, TEST_HEAD, vec3(0, 0, R), R)?.depth ?? 0).toBeGreaterThan(1e-4);
+        // The rule still throws for the same head where the impact ended, and still clears what it can at the cap.
+        expect(() =>
+            handover({ blue: sunk }, R, [], undefined, { state: onTop, head: TEST_HEAD, limits: pit, capped: false }),
+        ).toThrow(/head overlaps ball blue/);
+        const lifted = {
+            position: vec3(R - 1e-4, 0, R - 3e-4),
+            velocity: vec3(0, 0, 0),
+            angularVelocity: vec3(0, 0, 0),
+        };
+        const cleared = handover({ blue: lifted }, R, [], undefined, {
+            state: headAt(R),
+            head: TEST_HEAD,
+            limits,
+            capped: true,
+        });
+        expect(cleared.overlapCorrection).toBeGreaterThan(0);
+    });
+
     it("throws for a head almost on top of a ball, whose sideways move would exceed the ball's radius", () => {
         // The face pitched to within 1e-3 rad of straight down, so |n_h| ≈ 1e-3. The overlap, 0.1 mm, is within the
         // ball's limit, but depth/|n_h| ≈ 0.1 m moves the ball well over R (36.8 mm): a numerical artefact.

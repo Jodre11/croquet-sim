@@ -579,8 +579,8 @@ export function handoverLimit(depth: number, sink: number): number {
 /**
  * The impact's result: `run` with its balls handed over to phase 2 (design §6). A tracked drive's head is cleared from
  * the balls too (P2b.2b.2b.2b design §5), each ball's limit handoverLimit, its actual lift (its depth R − z at the
- * impact's end, at least its static sink at its starting position); a force table's head is its face alone, so it is
- * not.
+ * impact's end, at least its static sink at its starting position), and an impact stopped at its cap leaves a ball the
+ * head still bears on beyond the rule; a force table's head is its face alone, so it is not.
  */
 function handedOver(
     run: ImpactRun,
@@ -599,7 +599,8 @@ function handedOver(
                 limits[id] = handoverLimit(world.ball.radius - ended.position.z, sink(b.position));
             }
         }
-        mallet = { state: run.head, head: contact.head, limits };
+        const capped = run.events.some((e) => e.kind === "impact-cap");
+        mallet = { state: run.head, head: contact.head, limits, capped };
     }
     const handed = handover(run.balls, world.ball.radius, obstaclesOf(world), undefined, mallet);
     return { ...run, handover: handed.balls, overlapCorrection: handed.overlapCorrection };

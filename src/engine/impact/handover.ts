@@ -19,7 +19,11 @@
  * tilted face clears too. Its velocity is kept. That is the lift's artefact: the ball's actual lift to the lawn (its
  * depth in the turf at the impact's end, capped at TURF_PIT_DEPTH; simulateImpact's handoverLimit). An overlap deeper
  * than the ball's limit, along a normal with no horizontal part, or needing a sideways move of more than the ball's
- * radius (HEAD_MOVE_RADII), throws an Error naming the ball.
+ * radius (HEAD_MOVE_RADII), throws an Error naming the ball: an impact must not end there. An impact stopped at its cap
+ * (`impact-cap`) did not end, and its head can still bear on a ball it has ridden onto off the face and pressed past
+ * the pit's bound: that overlap is the impact's own contact, not the lift's artefact. Such a ball is handed over where
+ * `placed` put it, the head's overlap left; its run carries `impact-cap` and `impact-off-face` (the slow full and pass
+ * rolls held firm, P2b.2b.2c.3b.2 Gate 1, also `impact-turf-pit`).
  *
  * One pass cannot separate a chain of three balls: separating the second pair pushes the middle ball back into the
  * first. The same fixed-order pass therefore repeats until no pair overlaps by more than HANDOVER_RESIDUAL, at most
@@ -56,13 +60,15 @@ const VERTICAL_NORMAL = 1e-12;
 const HEAD_MOVE_RADII = 1;
 
 /**
- * The head at the impact's end, for the head-clearance rule (P2b.2b.2b.2b design §5): its state and shape, and per
- * ball the deepest overlap (m) the rule may remove, its lift to the lawn (handoverLimit) plus CONTACT_TOLERANCE.
+ * The head at the impact's end, for the head-clearance rule (P2b.2b.2b.2b design §5): its state and shape, per ball
+ * the deepest overlap (m) the rule may remove, its lift to the lawn (handoverLimit) plus CONTACT_TOLERANCE, and whether
+ * the impact stopped at its cap (absent: it ended).
  */
 export interface HandoverHead {
     readonly state: HeadState;
     readonly head: MalletHead;
     readonly limits: Readonly<Partial<Record<BallId, number>>>;
+    readonly capped?: boolean;
 }
 
 /**
@@ -118,13 +124,17 @@ function separated(a: Vec3, b: Vec3, radius: number): readonly [Vec3, Vec3] {
     return [pa, pb];
 }
 
-/** The largest overlap (m) of any pair of balls or any ball and obstacle (0 when none), and what overlaps. */
+/**
+ * The largest overlap (m) of any pair of balls or any ball and obstacle, or of the head and a ball not `held` (0 when
+ * none), and what overlaps.
+ */
 function worstOverlap(
     states: readonly BallState[],
     ids: readonly BallId[],
     obstacles: readonly ObstacleGeometry[],
     radius: number,
     mallet: HandoverHead | null,
+    held: readonly boolean[],
 ): { overlap: number; what: string } {
     let worst = { overlap: 0, what: "" };
     for (let i = 0; i < states.length; i++) {
@@ -141,7 +151,7 @@ function worstOverlap(
                 worst = { overlap, what: `ball ${ids[i]} and ${o.id}` };
             }
         }
-        if (mallet !== null) {
+        if (mallet !== null && !held[i]) {
             const hit = headBallContact(mallet.state, mallet.head, p, radius);
             if (hit !== null && hit.depth > CONTACT_TOLERANCE && hit.depth > worst.overlap) {
                 worst = { overlap: hit.depth, what: `ball ${ids[i]} and the head` };
@@ -168,6 +178,8 @@ export function handover(
     }
     const ids = BALL_IDS.filter((id) => balls[id]);
     const states = ids.map((id) => placed(balls[id] as BallState, radius));
+    // A ball the head still bears on, beyond the rule, after a capped impact (see the file header).
+    const held = states.map(() => false);
     let overlapCorrection = 0;
     let separatedAll = false;
     for (let pass = 0; pass < passes; pass++) {
@@ -199,13 +211,21 @@ export function handover(
         if (mallet !== null) {
             for (let i = 0; i < states.length; i++) {
                 const s = states[i] as BallState;
-                const hit = headBallContact(mallet.state, mallet.head, s.position, radius);
+                const hit = held[i] ? null : headBallContact(mallet.state, mallet.head, s.position, radius);
                 if (hit === null || !(hit.depth > CONTACT_TOLERANCE)) {
                     continue;
                 }
                 const flat = horizontal(hit.normal);
                 const size = dot(flat, flat);
                 const limit = mallet.limits[ids[i] as BallId] ?? CONTACT_TOLERANCE;
+                const beyond =
+                    hit.depth > limit ||
+                    !(size > VERTICAL_NORMAL) ||
+                    hit.depth / Math.sqrt(size) > HEAD_MOVE_RADII * radius;
+                if (beyond && mallet.capped === true) {
+                    held[i] = true;
+                    continue;
+                }
                 if (hit.depth > limit || !(size > VERTICAL_NORMAL)) {
                     throw new Error(
                         `handover: the head overlaps ball ${ids[i]} by ${hit.depth} m along a normal with ` +
@@ -224,13 +244,13 @@ export function handover(
                 overlapCorrection = Math.max(overlapCorrection, hit.depth);
             }
         }
-        if (!(worstOverlap(states, ids, obstacles, radius, mallet).overlap > HANDOVER_RESIDUAL)) {
+        if (!(worstOverlap(states, ids, obstacles, radius, mallet, held).overlap > HANDOVER_RESIDUAL)) {
             separatedAll = true;
             break;
         }
     }
     if (!separatedAll) {
-        const worst = worstOverlap(states, ids, obstacles, radius, mallet);
+        const worst = worstOverlap(states, ids, obstacles, radius, mallet, held);
         throw new Error(
             `handover: ${worst.what} still overlap by ${worst.overlap} m after ` +
                 `${passes} pass${passes === 1 ? "" : "es"}`,

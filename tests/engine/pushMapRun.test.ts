@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { findFirmness } from "../../scripts/firmness";
 import { openWorld, opened } from "../../scripts/openLawn";
 import { bodyBackswing, mapSetup, maxPower, playSample, runClass, textBook } from "../../scripts/pushMapRun";
 import { ratioOf } from "../../scripts/ratioFit";
@@ -64,7 +65,7 @@ describe("one plan's run (P2b.2b.2c.3b plan Task 3)", () => {
 
     it("plays the text book at the canonical power as the canonical half roll plays", () => {
         const p = canonicalPower();
-        const sample = playSample("half-roll", textBook("half-roll"), p, [10]);
+        const sample = playSample("half-roll", textBook("half-roll"), p, [10], "preset");
         const canonical = opened(canonicalSetup("half-roll"));
         const ratio = ratioOf(canonical, simulateShot(canonical, WORLD).motion);
         expect(sample.klass).toBeNull();
@@ -131,7 +132,13 @@ describe("one plan's run (P2b.2b.2c.3b plan Task 3)", () => {
     });
 
     it("grades a lean past the on-point limit as a mishit", () => {
-        const sample = playSample("half-roll", { ...textBook("half-roll"), lean: 50 * DEG }, canonicalPower(), [10]);
+        const sample = playSample(
+            "half-roll",
+            { ...textBook("half-roll"), lean: 50 * DEG },
+            canonicalPower(),
+            [10],
+            "preset",
+        );
         expect(sample.klass).toBe("mishit");
         expect(sample.reason).toContain("on-point limit");
     });
@@ -155,7 +162,7 @@ describe("one plan's run (P2b.2b.2c.3b plan Task 3)", () => {
         // over 80 ms pulses (DEFAULT_WINDOW), the ratio falls to 1.161, inside the band 1.0–1.2.
         const base = mapSetup("full-roll", textBook("full-roll"), 1);
         const p = swingReference["full-roll"].defaultBackswing.value / bodyBackswing(base, WORLD);
-        const sample = playSample("full-roll", textBook("full-roll"), p, [10]);
+        const sample = playSample("full-roll", textBook("full-roll"), p, [10], "preset");
         expect(sample.klass).toBeNull();
         expect(sample.reason).toBeNull();
         expect(sample.passes).toBe(3);
@@ -167,7 +174,7 @@ describe("one plan's run (P2b.2b.2c.3b plan Task 3)", () => {
         // grip's whole couple, the striker's ball driven on too far).
         const base = mapSetup("half-roll", textBook("half-roll"), 1);
         const p = swingReference["half-roll"].defaultBackswing.value / bodyBackswing(base, WORLD);
-        const sample = playSample("half-roll", textBook("half-roll"), p, [10]);
+        const sample = playSample("half-roll", textBook("half-roll"), p, [10], "preset");
         expect(sample.klass).toBeNull();
         expect(sample.byLawn[10]?.ratio).toBeCloseTo(2.0, 2);
     });
@@ -178,7 +185,7 @@ describe("one plan's run (P2b.2b.2c.3b plan Task 3)", () => {
         // its follow-through 0.1 s keeps the head off the turf (was 0.3 s: ratio 0.814 in two passes).
         const base = mapSetup("pass-roll", textBook("pass-roll"), 1);
         const p = swingReference["pass-roll"].defaultBackswing.value / bodyBackswing(base, WORLD);
-        const sample = playSample("pass-roll", textBook("pass-roll"), p, [10]);
+        const sample = playSample("pass-roll", textBook("pass-roll"), p, [10], "preset");
         expect(sample.klass).toBeNull();
         expect(sample.passes).toBe(3);
         expect(sample.byLawn[10]?.ratio).toBeCloseTo(0.859, 3);
@@ -189,8 +196,45 @@ describe("one plan's run (P2b.2b.2c.3b plan Task 3)", () => {
         // 1.5 m arc): the top hand now stops within V·HAND_EASE/2 of the push's end, well short of it, so the impact
         // is played. Firmness design §3: h_body is now the head's 0.48 m rise (was 2.77 m), so at p = 1.5 (intensity 0.5)
         // the head slides off the face (unpractised) and at p = 2 (intensity 1) a hand reaches its grip's limit.
-        const sample = playSample("full-roll", textBook("full-roll"), 2, [10]);
+        const sample = playSample("full-roll", textBook("full-roll"), 2, [10], "preset");
         expect(sample.klass).toBe("superhuman");
+        expect(sample.firmness).toBe(defaultProfile.shape["full-roll"].holdFirmness);
+        expect(sample.sigma).toBeGreaterThan(0);
+    });
+});
+
+describe("the map's found firmness (firmness design §5, A7 item 4)", () => {
+    it("plays the full roll's text book at p = 2 at the hold it finds, admissibly without one", () => {
+        // Gate 1: the preset's hold trips the grip limit at p = 2 (above); firmness 0 is admissible.
+        const sample = playSample("full-roll", textBook("full-roll"), 2, [10]);
+        expect(sample.klass).toBeNull();
+        expect(sample.firmness).toBe(0);
+        expect(sample.sigma).toBe(0);
+        expect(sample.byLawn[10]?.range).toBeGreaterThan(0);
+    });
+
+    it(
+        "plays a plan no hold admits at σ_max, its class findFirmness's, its firmness null",
+        { timeout: 120_000 },
+        () => {
+            // Gate 1: the half roll's text book at p = 1.5 trips the grip limit at every firmness.
+            const plan = textBook("half-roll");
+            const sample = playSample("half-roll", plan, 1.5, [10]);
+            expect(findFirmness(mapSetup("half-roll", plan, 1.5), WORLD)).toMatchObject({
+                klass: sample.klass,
+                reason: sample.reason,
+            });
+            expect(sample.klass).toBe("superhuman");
+            expect(sample.firmness).toBeNull();
+            expect(sample.sigma).toBeNull();
+            expect(sample.passes).toBeGreaterThan(0);
+        },
+    );
+
+    it("records no hold for an unplayed sample", () => {
+        const sample = playSample("half-roll", { ...textBook("half-roll"), feet: 2 }, 0.5, [10]);
+        expect(sample.firmness).toBeNull();
+        expect(sample.sigma).toBeNull();
     });
 });
 

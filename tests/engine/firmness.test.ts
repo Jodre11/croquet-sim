@@ -86,6 +86,13 @@ describe("the found firmness (firmness design §5)", () => {
         });
     });
 
+    it("classes a slow full roll held firm, its head riding onto the ball to the cap, as off the face", () => {
+        // Gate 1: at power 0.8 a hold between the soft holds that slip and the firm that hold rides the head off the
+        // face onto the striker's ball, pressing it 2.4 mm into the turf to the 450 ms cap. The handover threw there.
+        const setup = mapSetup("full-roll", textBook("full-roll"), 0.8);
+        expect(playedClass(at(setup, 0.2375), WORLD)).toEqual({ klass: "unpractised", reason: "impact-off-face" });
+    });
+
     it("lets a planning rejection propagate (Review Focus 5)", () => {
         const setup = opened(canonicalSetup("full-roll", { stroke: { backswing: 0.6 } }));
         expect(() => findFirmness(setup, WORLD)).toThrow(RangeError);
