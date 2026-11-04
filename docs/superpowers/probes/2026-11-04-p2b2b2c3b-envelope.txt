@@ -35,11 +35,11 @@ The stroke has two stages, and the ratio is set by whether and how the second ha
 
 1. The first strike is the same in every play. Traced from first face contact on both rolls, held slack or firm, with
    a push or none: by +8 ms the head has fallen from about 2.96 to 1.35 m/s, the striker's ball is at about 1.4 m/s and
-   the croqueted ball at about 2.65 m/s. Those speeds are the no-push stroke's: ratio 2.02 to 2.18, range 1.4 to 1.5 m.
+   the croqueted ball at about 2.65 m/s. Those speeds are the no-push stroke's: ratio 2.02 to 2.18, range about 1.4 m.
    The striker's ball goes down into the turf and comes back, z 0.0425 m at +4 ms to 0.0502 m at +20 ms (rest 0.0456 m).
 2. The second stage is the head catching the ball again, with the push behind it. It carries most of the range. Where
-   it happens, the face touches for 100 to 240 ms in 5 to 27 separate contacts, the range is about 5 to 9 m and the
-   ratio about 0.6 to 1.5. Where it does not, the stroke keeps the first strike's ratio.
+   it happens, the face mostly touches for 100 to 300 ms in 5 to 27 separate contacts, the range is about 2.4 to 9 m
+   and the ratio about 0.6 to 1.6. Where it does not, the stroke keeps the first strike's ratio.
 
 Cause 1, nearly all of the bound: the found hold's rule picks a stroke with no second stage. At sigma 0 the head rides
 up over the ball. Pass roll, drive 0.5, handReach 0.3 m, window 20 ms: head height 0.144 m to 0.217 m and lean 32 deg to
@@ -55,7 +55,7 @@ So the search's answer at a low hold need not be a lighter version of the firm s
 hardly moves: median spread over the admissible holds 0.033 on the full roll, 0.026 on the pass roll.
 
 Cause 2, the rest: the second stage's contacts flip between patterns at particular input values. Between flips the
-ratio is smooth; it is not noise. At sigma 1, 1 % steps of window move the ratio by 0.022 at most, over six plans. Walking
+ratio is smooth; it is not noise. At sigma 1, over six plans, a window within 1 % of its value spreads the ratio by 0.022 at most. Walking
 a worst neighbour pair in twelve steps at sigma 1 shows the flips:
 
   Full roll, drive -0.5 to 0, handReach 0.1 m, window 20 ms: 1.018, 1.011, 1.380, 1.023, 1.183 ... 1.033, 1.246, 1.325;
@@ -79,7 +79,7 @@ Sigma 1                                     41     55  0.307       23      32   
 Least of the firm run (all firmer pass)     41     55  0.340       20      32     33  0.388       15
 Firmest admissible                          46     67  0.330       30      45     65  1.427       34
 
-"Points" counts all 60 points' admissible ones, the 15 at handReach 0 included. No rule brings the bound within 0.1.
+"Points" counts each rule's admissible points of the 60, those at handReach 0 included. No rule brings the bound within 0.1.
 First passes alone at sigma 1 are wider: 0.509 on the full roll, 5.662 on the pass roll, so practice narrows the bound
 at a firm hold too.
 
