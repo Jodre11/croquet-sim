@@ -6,6 +6,7 @@ import {
     BEYOND_P_MAX,
     MAP_CLASSES,
     MULTIPLES_RATIO,
+    OFF_COURT,
     SUPER_ONSETS,
     SUPER_WINDOWS,
     bands,
@@ -132,7 +133,12 @@ describe("the push map's grid, sweep, bands and record (P2b.2b.2c.3b plan Task 4
         expect(Number.isNaN(near?.ratio)).toBe(true);
         // The range rises to 20 m, dips to 15 m, then rises to 30 m: 18 m lies in the first bracket (p 0.5–1) and in
         // the dip's two; the first is read.
-        const dip = [sample(0.5, 10), sample(1, 20), sample(1.5, 15), sample(2, 30)];
+        const dip = [
+            sample(0.5, 10, null, 1),
+            sample(1, 20, null, 1),
+            sample(1.5, 15, null, 1),
+            sample(2, 30, null, 1),
+        ];
         const got = readAt(dip, 18, LAWN);
         expect(got?.monotone).toBe(false);
         expect(got?.power).toBeCloseTo(0.9, 12);
@@ -140,7 +146,7 @@ describe("the push map's grid, sweep, bands and record (P2b.2b.2c.3b plan Task 4
 
     it("reads a range beyond every sample's by the first classed one above, else superhuman (ruling A3)", () => {
         // (a) The couple passes C above p 1.5: 20 m needs a power the grip cannot hold.
-        const held = [sample(1, 10), sample(1.5, 15), sample(2, NaN, "superhuman")];
+        const held = [sample(1, 10, null, 1), sample(1.5, 15, null, 1), sample(2, NaN, "superhuman")];
         expect(readAt(held, 20, LAWN)?.klass).toBe("superhuman");
         // (b) Every sample plays, the last at p = 2 (the body's limit at full intensity) reaching 8.4 m.
         const short = [sample(0.5, 2), sample(1, 5), sample(2, 8.4)];
@@ -339,9 +345,9 @@ describe("the push map's grid, sweep, bands and record (P2b.2b.2c.3b plan Task 4
 
     it("counts each type's plans, none with two beyond values", () => {
         // Task 5's thinned grid: 3 leans × 3 feet × 5 drives × 4 hand reaches × 3 windows = 540 graded, plus 360
-        // with a beyond lean and 360 with beyond feet; the pass roll's 4 splits give 2160 + 1440 + 1440, plus 540 at
-        // the beyond split. A4: the full roll's 4 speedGains give 4 × 1260.
-        const counts = { "half-roll": 1260, "full-roll": 5040, "pass-roll": 5580 } as const;
+        // with a beyond lean and 360 with beyond feet; the pass roll's 8 splits (B-d5) give 4320 + 2880 + 2880, plus
+        // 540 at the beyond split. A4: the full roll's 4 speedGains give 4 × 1260.
+        const counts = { "half-roll": 1260, "full-roll": 5040, "pass-roll": 10620 } as const;
         for (const type of ["half-roll", "full-roll", "pass-roll"] as const) {
             const grid = gridFor(type);
             const plans = plansOf(type, grid);
@@ -505,13 +511,22 @@ describe("the half roll's stage-1 tallies (P2b.2b.2c.3b plan Task 6)", () => {
             turf: 1,
             unpractised: 0,
             unlawful: 0,
+            "off-court": 0,
             admissible: 7,
             unread: 1,
         });
     });
 
-    it("lists unpractised after turf among the classes (P2b.2b.2c.3b.1 design §4 item 3)", () => {
-        expect(MAP_CLASSES).toEqual(["unreachable", "superhuman", "mishit", "turf", "unpractised", "unlawful"]);
+    it("lists unpractised after turf among the classes, off-court last (P2b.2b.2c.3b.1 design §4 item 3; B-d4)", () => {
+        expect(MAP_CLASSES).toEqual([
+            "unreachable",
+            "superhuman",
+            "mishit",
+            "turf",
+            "unpractised",
+            "unlawful",
+            "off-court",
+        ]);
     });
 
     it("counts the plans whose sweep is not monotone on some lawn", () => {
@@ -760,5 +775,73 @@ describe("the super pass roll (plan decision 12)", () => {
         expect(superLeast([{ plan: a, sample: sample(0.5, 3) }], 6)).toEqual({ least: null, admissible: null });
         // Only classed samples: a least, but no admissible one.
         expect(superLeast([{ plan: a, sample: sample(0.5, 3, "turf", 0.7) }], LAWN).admissible).toBeNull();
+    });
+});
+
+describe("the envelope's grids, from a tap to a court length (plan Amendment B, Task B3; B-d4, B-d5)", () => {
+    const TYPES = ["drive", "stop-ac", "half-roll", "full-roll", "pass-roll", "single-ball"] as const;
+
+    it("spans 0.25 m to 32 m, even in log range, at least 16 ranges and half of them below 4 m", () => {
+        for (const type of TYPES) {
+            const { ranges } = gridFor(type);
+            expect(ranges[0]).toBe(0.25);
+            expect(ranges[ranges.length - 1]).toBe(32);
+            expect(ranges.length).toBeGreaterThanOrEqual(16);
+            expect(2 * ranges.filter((r) => r < 4).length).toBeGreaterThanOrEqual(ranges.length);
+            const step = Math.log((ranges[1] as number) / (ranges[0] as number));
+            ranges.slice(1).forEach((r, i) => {
+                expect(Math.log(r / (ranges[i] as number))).toBeCloseTo(step, 12);
+            });
+        }
+    });
+
+    it("adds powers below 0.1, ascending", () => {
+        const { powers } = gridFor("half-roll");
+        expect(powers.slice(0, 3)).toEqual([0.02, 0.05, 0.1]);
+        expect([...powers].sort((a, b) => a - b)).toEqual(powers);
+    });
+
+    it("sweeps the pass roll's split at 0°, 2°, 4°, 6°, 8°, 10°, 20° and 30°, with 40° beyond", () => {
+        const { split } = gridFor("pass-roll");
+        expect(split.graded.map((s) => Math.round(s / DEG))).toEqual([0, 2, 4, 6, 8, 10, 20, 30]);
+        expect(split.beyond.map((s) => Math.round(s / DEG))).toEqual([40]);
+    });
+
+    it("reads a cell off the court where the croqueted ball would pass 32 m, unsolved, whatever its class", () => {
+        const sweep = [sample(0.5, 4, null, 5), sample(1, 8, null, 5)];
+        expect(readAt(sweep, 6, LAWN)?.klass).toBeNull();
+        const off = readAt(sweep, 7, LAWN);
+        expect(off?.klass).toBe("off-court");
+        expect(off?.reason).toBe(OFF_COURT);
+        expect(Number.isNaN(off?.ratio)).toBe(true);
+        expect(Number.isNaN(off?.power)).toBe(true);
+        expect(readAt([sample(0.5, 4, null, 5), sample(1, 8, "turf", 5)], 7, LAWN)?.klass).toBe("off-court");
+    });
+
+    it("reads a cell beyond the sweep off the court at its furthest play's ratio, ahead of its reach", () => {
+        const sweep = [sample(0.5, 4, null, 5), sample(1, 8, null, 5), sample(2, NaN, "superhuman", NaN)];
+        expect(readAt(sweep, 32, LAWN)?.klass).toBe("off-court");
+        const slight = [sample(0.5, 4, null, 0.5), sample(1, 8, null, 0.5), sample(2, NaN, "superhuman", NaN)];
+        expect(readAt(slight, 32, LAWN)?.klass).toBe("superhuman");
+    });
+
+    it("keeps a striker's ball at 32 m on the court, and reads no off-court from a stroke with no ratio", () => {
+        expect(readAt([sample(0.5, 20, null, 0.5), sample(1, 40, null, 0.5)], 32, LAWN)?.klass).toBeNull();
+        const single = [sample(0.5, 4, null, NaN), sample(1, 8, null, NaN)];
+        expect(readAt(single, 32, LAWN)?.klass).toBe("superhuman");
+    });
+
+    it("leaves an off-court cell unbanded, and an off-court neighbour no failure of the plan", () => {
+        const grid = smallGrid();
+        const reads = new Map<string, SweepRead>();
+        for (const p of plansOf("half-roll", grid)) {
+            reads.set(planKey(p, 10, LAWN), read(null));
+        }
+        const off = plan(20 * DEG, 0);
+        reads.set(planKey(off, 10, LAWN), read("off-court"));
+        const { banded, unbanded } = grade("half-roll", grid, reads);
+        expect(banded.has(planKey(off, 10, LAWN))).toBe(false);
+        expect(unbanded).toBe(0);
+        expect(banded.get(planKey(plan(26 * DEG, 0), 10, LAWN))).toBe("viable");
     });
 });

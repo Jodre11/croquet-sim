@@ -56,8 +56,14 @@ const DRIVES = [-1, -0.5, 0, 0.5, 1];
 const HAND_REACHES = [0, 0.1, 0.2, 0.3];
 const WINDOWS = [0.01, 0.02, 0.04];
 
-/** The pass roll's split (decision 7; design §3.2's least set): 0°, 10°, 20° and 30° graded, 40° beyond. */
-const PASS_SPLITS: Axis = { graded: [0, 10 * DEG, 20 * DEG, 30 * DEG], beyond: [40 * DEG] };
+/**
+ * The pass roll's split (plan B-d5; design A7 item 6, where its ratio moves almost wholly within 0–10°): 0°–10° by 2°,
+ * 20° and 30° graded, 40° beyond.
+ */
+const PASS_SPLITS: Axis = {
+    graded: [0, 2 * DEG, 4 * DEG, 6 * DEG, 8 * DEG, 10 * DEG, 20 * DEG, 30 * DEG],
+    beyond: [40 * DEG],
+};
 
 /**
  * The full roll's pendulum push gains (1; A4): its preset's 0.1, the variant's 0.5 that put it in its region in
@@ -67,21 +73,22 @@ const PASS_SPLITS: Axis = { graded: [0, 10 * DEG, 20 * DEG, 30 * DEG], beyond: [
 const FULL_SPEED_GAINS = [0.1, 0.25, 0.5, 1];
 
 /**
- * The range grid (m; decision 7, design §3.2): from 2 m to a court's length, 32 m, even in log range. Numerical, not
- * physical: RANGE_COUNT, eight ranges, above the design's least six.
+ * The range grid (m; plan B-d4, design A7 item 5): from a tap, 0.25 m, to a court's length, 32 m, even in log range,
+ * so nine of the sixteen lie below 4 m. Numerical, not physical: RANGE_COUNT, B-d4's least.
  */
-const RANGE_LEAST = 2;
+const RANGE_LEAST = 0.25;
 const RANGE_MOST = 32;
-const RANGE_COUNT = 8;
+const RANGE_COUNT = 16;
 
 /** The lawns (s; design §3.2): `reference/lawn.json`'s sourced span and its normal lawn. */
 const LAWNS = [6, 10, 14];
 
 /**
  * Numerical, not physical: the power samples of every sweep (decision 2), denser near p = 1 where the backswing meets
- * the body's limit and the intensity takes over. Ten, decision 7's least: Task 5's third cut under the time budget.
+ * the body's limit and the intensity takes over. Ten, decision 7's least (Task 5's third cut under the time budget),
+ * and 0.02 and 0.05 for the tap's end of the range (plan B-d4).
  */
-const POWERS = [0.1, 0.2, 0.35, 0.5, 0.65, 0.8, 1, 1.25, 1.5, 2];
+const POWERS = [0.02, 0.05, 0.1, 0.2, 0.35, 0.5, 0.65, 0.8, 1, 1.25, 1.5, 2];
 
 /** The type's text book ± k·step for k = −GRADED_STEPS … GRADED_STEPS graded, and ±(GRADED_STEPS + 1) beyond. */
 function around(centre: number, step: number): Axis {
@@ -217,6 +224,14 @@ export const BEYOND_P_MAX = "range beyond p_max";
 /** The reason readAt gives a range below every played sample (A2 item 2's unreachable). */
 export const BELOW_LEAST = "range below the least power's";
 
+/** The reason readAt gives a cell in which the croqueted ball would pass a court's length (plan B-d4). */
+export const OFF_COURT = "a ball passes the court's length";
+
+/** Whether the croqueted ball, at `ratio` times the striker's ball's `range` (m), passes a court's length; NaN does not. */
+function offCourt(range: number, ratio: number): boolean {
+    return range * ratio > RANGE_MOST;
+}
+
 /** A read with no figures: class `klass` for `reason`. */
 function failedRead(klass: MapClass, reason: string | null, monotone: boolean): SweepRead {
     return {
@@ -246,6 +261,8 @@ function failedRead(klass: MapClass, reason: string | null, monotone: boolean): 
  * The read is null, no evidence, where an engine error decides it: inside the bracket read, first above the top when
  * reading beyond it, or below the lowest played sample when reading below. `monotone` is false where a played
  * sample's range falls below the one before it.
+ * Ahead of all of these, a cell in which the croqueted ball would pass a court's length is off-court, OFF_COURT, and
+ * not solved (plan B-d4): at the bracket's interpolated ratio, or, beyond every played range, at the furthest play's.
  */
 export function readAt(samples: readonly SweepSample[], range: number, lawn: number): SweepRead | null {
     const sorted = [...samples].sort((a, b) => a.power - b.power);
@@ -271,6 +288,15 @@ export function readAt(samples: readonly SweepSample[], range: number, lawn: num
         if (range < Math.min(ra, rb) || range > Math.max(ra, rb)) {
             continue;
         }
+        const a = sorted[i0] as MapSample;
+        const b = sorted[i1] as MapSample;
+        const t = rb === ra ? 0 : (range - ra) / (rb - ra);
+        const la = a.byLawn[lawn];
+        const lb = b.byLawn[lawn];
+        const ratio = lerp(la?.ratio ?? NaN, lb?.ratio ?? NaN, t);
+        if (offCourt(range, ratio)) {
+            return failedRead("off-court", OFF_COURT, monotone);
+        }
         let failing: MapSample | null = null;
         for (let i = i0; i <= i1; i++) {
             const s = sorted[i] as SweepSample;
@@ -281,15 +307,10 @@ export function readAt(samples: readonly SweepSample[], range: number, lawn: num
                 failing = s;
             }
         }
-        const a = sorted[i0] as MapSample;
-        const b = sorted[i1] as MapSample;
-        const t = rb === ra ? 0 : (range - ra) / (rb - ra);
-        const la = a.byLawn[lawn];
-        const lb = b.byLawn[lawn];
         return {
             klass: failing?.klass ?? null,
             reason: failing === null ? null : failing.reason,
-            ratio: lerp(la?.ratio ?? NaN, lb?.ratio ?? NaN, t),
+            ratio,
             splitAtRest: lerp(la?.splitAtRest ?? NaN, lb?.splitAtRest ?? NaN, t),
             strokeEffort: lerp(a.strokeEffort, b.strokeEffort, t),
             pushEffort: lerp(a.pushEffort, b.pushEffort, t),
@@ -301,6 +322,10 @@ export function readAt(samples: readonly SweepSample[], range: number, lawn: num
     }
     const most = reach.length === 0 ? -Infinity : Math.max(...reach);
     if (range > most) {
+        const furthest = sorted[played[reach.indexOf(most)] as number] as MapSample | undefined;
+        if (offCourt(range, furthest?.byLawn[lawn]?.ratio ?? NaN)) {
+            return failedRead("off-court", OFF_COURT, monotone);
+        }
         const top = played.length === 0 ? -1 : (played[played.length - 1] as number);
         for (const s of sorted.slice(top + 1)) {
             if (isEngineError(s)) {
@@ -388,7 +413,7 @@ function stepAlong(d: Dimension, axis: readonly number[], value: number, step: n
         return { value: axis[n] as number };
     }
     if (d === "split" && value === 0 && axis.length > 1) {
-        // The stroke is mirror-symmetric in the split (gate ruling A3): −10°'s read is +10°'s.
+        // The stroke is mirror-symmetric in the split (gate ruling A3): the step below 0° reads as the step above it.
         return { value: axis[1] as number };
     }
     const bound = BOUNDS[d];
@@ -415,9 +440,10 @@ export interface Grading {
  * read or not); else viable. A neighbour admissible but outside the type's region counts as admissible (the edge is
  * the envelope's, not the region's). The edges' rules:
  * - past an input's own bound (drive ±1, handReach 0, MIN_WINDOW, MAX_WINDOW) the neighbour does not exist: skipped;
- * - the split is mirror-symmetric, so split 0°'s −10° neighbour is the +10° plan, read;
+ * - the split is mirror-symmetric, so split 0°'s neighbour below is the one above it, read;
  * - past the grid's own last value where that is not an input's bound (handReach 0.3 m, the window's 5 ms and 80 ms,
- *   the full roll's speedGain 0.1 and 1) the neighbour is skipped, and the plan flagged in `edges` with that dimension.
+ *   the full roll's speedGain 0.1 and 1) the neighbour is skipped, and the plan flagged in `edges` with that dimension;
+ * - an off-court cell is not solved (plan B-d4): it takes no band, and as a neighbour is no failure of the plan.
  * A plan with no read is not banded; nor is one with a neighbour that exists but has no read, counted in `unbanded`.
  */
 export function grade(type: MapType, grid: MapGrid, reads: Reads): Grading {
@@ -447,7 +473,7 @@ export function grade(type: MapType, grid: MapGrid, reads: Reads): Grading {
                 const key = planKey(plan, range, lawn);
                 edges.set(key, atEdge);
                 const read = reads.get(key);
-                if (read === undefined) {
+                if (read === undefined || read.klass === "off-court") {
                     continue;
                 }
                 if (read.klass !== null) {
@@ -464,7 +490,7 @@ export function grade(type: MapType, grid: MapGrid, reads: Reads): Grading {
                     const other = reads.get(planKey(next, range, lawn));
                     if (other === undefined) {
                         unknown = true;
-                    } else if (other.klass !== null) {
+                    } else if (other.klass !== null && other.klass !== "off-court") {
                         failing = true;
                     }
                 }
@@ -890,7 +916,10 @@ export function quantile(values: readonly number[], q: number): number {
     return sorted[Math.min(sorted.length - 1, Math.max(0, Math.ceil(q * sorted.length) - 1))] ?? NaN;
 }
 
-/** §3.5's classes in decision 5's order, `unpractised` after turf (P2b.2b.2c.3b.1 design §4 item 3, §6). */
+/**
+ * §3.5's classes in decision 5's order, `unpractised` after turf (P2b.2b.2c.3b.1 design §4 item 3, §6), and last the
+ * reads' `off-court` (plan B-d4), which no sample carries.
+ */
 export const MAP_CLASSES: readonly MapClass[] = [
     "unreachable",
     "superhuman",
@@ -898,6 +927,7 @@ export const MAP_CLASSES: readonly MapClass[] = [
     "turf",
     "unpractised",
     "unlawful",
+    "off-court",
 ];
 
 /**
@@ -1018,6 +1048,7 @@ export function classCounts(grid: MapGrid, plans: readonly MapPlan[], reads: Rea
                 turf: 0,
                 unpractised: 0,
                 unlawful: 0,
+                "off-court": 0,
                 admissible: 0,
                 unread: 0,
             };

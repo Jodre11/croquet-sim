@@ -70,7 +70,7 @@ export interface MapPlan {
  * §3.5's classes (A2 item 2 adds unreachable), in decision 5's order; `unpractised` (P2b.2b.2c.3b.1 design §4 item 3)
  * is a push still out of the band after practice, kept apart from mishit and turf, where either would otherwise read.
  */
-export type MapClass = "unreachable" | "superhuman" | "mishit" | "turf" | "unpractised" | "unlawful";
+export type MapClass = "unreachable" | "superhuman" | "mishit" | "turf" | "unpractised" | "unlawful" | "off-court";
 
 /** One lawn's reading of a sample. */
 export interface LawnRead {

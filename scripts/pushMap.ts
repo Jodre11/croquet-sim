@@ -20,7 +20,7 @@
  * - stage1: plan Task 6, the half roll's map, from IN's half-roll shard files merged as merge merges them, and read at
  *   the grid's ranges and lawns (readsOf). The anchor (design §3.3) is today's default (textBook). It is played at the
  *   canonical power on the 10 s lawn, which gives the canonical's range, and then read at that range from its own
- *   sweep at the grid's powers: it lies off the grid (handReach 0.15 m, and a range below the grid's least). Its band
+ *   sweep at the grid's powers: it lies off the grid (handReach 0.15 m, and a range between the grid's). Its band
  *   is offGridBand's: unplayable if its play or read has a class, else its coarse cell's worst corner graded at that
  *   range from the merged sweeps (cellReads), an unplayable corner counting as edgy. Then: the region's admissible
  *   plans per range and lawn by band; the classes per range and lawn; the lawn's effect on the ratio; the least-effort
