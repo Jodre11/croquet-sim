@@ -177,6 +177,57 @@ export function plansOf(_type: MapType, grid: MapGrid): readonly MapPlan[] {
     return plans;
 }
 
+/** The follow-through's dimensions the jumpiness bound steps along (plan B-d7). */
+const FOLLOW_DIMENSIONS = ["drive", "handReach", "window"] as const;
+
+/** `book` at every `drive`, `handReach` and `window` of `grid` (plan B-d7): its other inputs held. */
+export function followThroughPlans(book: MapPlan, grid: MapGrid): readonly MapPlan[] {
+    return grid.drive.graded.flatMap((drive) =>
+        grid.handReach.graded.flatMap((handReach) =>
+            grid.window.graded.map((window) => ({ ...book, drive, handReach, window })),
+        ),
+    );
+}
+
+/** One plan's ratio. */
+export interface PlanRatio {
+    readonly plan: MapPlan;
+    readonly ratio: number;
+}
+
+/** Two neighbouring plans one step apart along `dimension`, and their ratios' difference. */
+export interface NeighbourGap {
+    readonly dimension: (typeof FOLLOW_DIMENSIONS)[number];
+    readonly a: MapPlan;
+    readonly b: MapPlan;
+    readonly gap: number;
+}
+
+/**
+ * The ratio's difference between each pair of `points` one grid step apart along drive, handReach or window (plan
+ * B-d7), largest first. A pair with a point absent or a ratio not finite is left out.
+ */
+export function neighbourGaps(grid: MapGrid, points: readonly PlanRatio[]): readonly NeighbourGap[] {
+    const key = (plan: MapPlan): string => JSON.stringify([plan.drive, plan.handReach, plan.window]);
+    const ratios = new Map(points.map((p) => [key(p.plan), p.ratio]));
+    const gaps: NeighbourGap[] = [];
+    for (const { plan: a, ratio } of points) {
+        for (const dimension of FOLLOW_DIMENSIONS) {
+            const axis = valuesOf(grid[dimension]);
+            const next = axis[axis.indexOf(a[dimension]) + 1];
+            if (next === undefined) {
+                continue;
+            }
+            const b = { ...a, [dimension]: next };
+            const other = ratios.get(key(b));
+            if (other !== undefined && Number.isFinite(ratio) && Number.isFinite(other)) {
+                gaps.push({ dimension, a, b, gap: Math.abs(other - ratio) });
+            }
+        }
+    }
+    return gaps.sort((x, y) => y.gap - x.gap);
+}
+
 /** Whether every swept value of `plan` is graded in `grid`. */
 function isGraded(plan: MapPlan, grid: MapGrid): boolean {
     return DIMENSIONS.every((d) => grid[d].graded.includes(plan[d]));

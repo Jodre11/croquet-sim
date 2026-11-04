@@ -15,6 +15,7 @@ import { faceKey } from "../src/engine/impact/contacts";
 import type { FollowThrough, ImpactProbe } from "../src/engine/impact/integrate";
 import { practiseStroke } from "../src/engine/impact/practice";
 import { faceHalfHeight } from "../src/engine/impact/shape";
+import { simulateStroke } from "../src/engine/impact/simulateImpact";
 import type { ContactInterval, ImpactResult, TrackDrive } from "../src/engine/impact/types";
 import { atan2 } from "../src/engine/math/elementary";
 import { ZERO, add, cross, dot, horizontal, length, sub, vec3, type Vec3 } from "../src/engine/math/vec3";
@@ -642,6 +643,25 @@ function lawnReads(
         };
     }
     return byLawn;
+}
+
+/**
+ * `plan` of `type` at power `power` played once, without practice (plan B-d7), and read on `lawn` (s): practiseStroke's
+ * first pass at the hold `firmness`, null being σ_max, where the found hold's search ends with none admissible. Not
+ * classed: a first pass out of the band still has a ratio, and the bound compares ratios. A planning RangeError
+ * propagates, as does an engine error of the play.
+ */
+export function firstPassRead(
+    type: MapType,
+    plan: MapPlan,
+    power: number,
+    firmness: number | null,
+    lawn: number,
+): LawnRead {
+    const base = mapSetup(type, plan, power);
+    const setup = { ...base, stroke: { ...base.stroke, holdFirmness: firmness ?? 1 } };
+    const { result } = simulateStroke(planStroke(setup, IMPACT_WORLD).contact, setup.balls, IMPACT_WORLD);
+    return lawnReads(setup, result.handover, [lawn])[lawn] as LawnRead;
 }
 
 /** playJudged's play of `setup`, planned as `stroke` with a tracked drive, without the lawns' reads or the hold's. */

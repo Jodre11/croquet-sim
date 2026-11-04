@@ -40,9 +40,13 @@
  *   MULTIPLES_RATIO; then each excluded plan's samples by class, with 29.2.5's reading (the separation (mm) before
  *   each later mallet contact and whether it joined within MERGE_SEPARATION) for its unlawful samples and any played
  *   sample with a re-contact.
+ * - jumpiness: plan B-d7, the ratio's largest difference between neighbouring follow-through grid points at the full
+ *   and pass rolls' text books at canonical power, with practice and as the first pass alone, and practice's share.
+ *   The bound is over points the map admits; every played point's is printed beside it.
  * Run with `env SECTION=lawn npx --yes tsx scripts/pushMap.ts`. The environment: SECTION names the section; run takes
  * TYPE (a roll), SHARD (k/N, default 0/1) and OUT (a file); merge takes TYPE and IN (a directory); cost takes IN and
- * PART; stage1 takes IN; summary takes TYPE and IN; super takes SHARD and OUT, or IN. Not part of the test suite.
+ * PART; stage1 takes IN; summary takes TYPE and IN; super takes SHARD and OUT, or IN; jumpiness takes TYPE, by default
+ * both rolls. Not part of the test suite.
  */
 import { MERGE_SEPARATION } from "../src/engine/faults";
 import { simulateImpact } from "../src/engine/impact/simulateImpact";
@@ -62,11 +66,13 @@ import {
     classCounts,
     doneIndices,
     excludedSetUps,
+    followThroughPlans,
     grade,
     gridFor,
     inRegion,
     lawnSpreads,
     mergeLines,
+    neighbourGaps,
     nonMonotoneCount,
     offGridBand,
     pickDefault,
@@ -90,6 +96,7 @@ import {
     type LaterContact,
     type MapGrid,
     type Merged,
+    type NeighbourGap,
     type Reads,
     type StrikeReading,
     type SweepRead,
@@ -98,6 +105,8 @@ import {
 import {
     ROLL_TYPES,
     bodyBackswing,
+    canonicalPower,
+    firstPassRead,
     mapSetup,
     playJudged,
     playSample,
@@ -993,8 +1002,105 @@ async function sectionSuper(): Promise<void> {
     console.log(`excluded plans: ${excluded} of ${merged.samples.size} swept`);
 }
 
+/** The ratio grid's read-out bin (plan B-d7): past it, the bound's cause is found before the full map. */
+const JUMPINESS_LIMIT = 0.1;
+
+/** The lawn the jumpiness bound reads (s): the normal lawn, the impact's. */
+const JUMPINESS_LAWN = 10;
+
+/** Numerical, not physical: the worst neighbours the jumpiness section prints per type. */
+const JUMPINESS_LISTED = 5;
+
+/** One follow-through point's plays (plan B-d7): the map's, and its first pass at the same hold. */
+interface JumpinessRow {
+    readonly plan: MapPlan;
+    readonly ratio: number;
+    readonly firstPass: number;
+    readonly admissible: boolean;
+}
+
+/** Plays `plan` both ways and prints its line; an engine error is printed, its ratios NaN, and the sweep goes on. */
+function jumpinessRow(type: RollType, plan: MapPlan, power: number): JumpinessRow {
+    const at = `drive ${plan.drive}, handReach ${plan.handReach} m, window ${plan.window * 1000} ms`;
+    try {
+        const sample = playSample(type, plan, power, [JUMPINESS_LAWN]);
+        const ratio = sample.byLawn[JUMPINESS_LAWN]?.ratio ?? NaN;
+        const firstPass =
+            sample.passes === 0 ? NaN : firstPassRead(type, plan, power, sample.firmness, JUMPINESS_LAWN).ratio;
+        console.log(
+            `${at}: ratio ${ratio.toFixed(3)}, first pass ${firstPass.toFixed(3)}, ${sample.klass ?? "admissible"}` +
+                `${sample.reason === null ? "" : ` (${sample.reason})`}, passes ${sample.passes}, ` +
+                `sigma ${sample.sigma?.toFixed(3) ?? "none"}`,
+        );
+        return { plan, ratio, firstPass, admissible: sample.klass === null };
+    } catch (error) {
+        console.log(`${at}: engine error: ${error instanceof Error ? error.message : String(error)}`);
+        return { plan, ratio: NaN, firstPass: NaN, admissible: false };
+    }
+}
+
+/** A neighbour pair's largest gap as text, or that no pair has one. */
+function boundText(gaps: readonly NeighbourGap[]): string {
+    return `${gaps[0]?.gap.toFixed(3) ?? "none"} over ${gaps.length} pairs`;
+}
+
+function jumpinessOf(type: RollType): void {
+    const grid = gridFor(type);
+    const book = textBook(type);
+    const power = canonicalPower(type, openWorld(JUMPINESS_LAWN));
+    console.log(`\n${type}, power ${power.toFixed(4)}, lean and feet at the text book's, ${JUMPINESS_LAWN} s lawn:`);
+    const rows = followThroughPlans(book, grid).map((plan) => jumpinessRow(type, plan, power));
+    const admissible = rows.filter((r) => r.admissible);
+    const practised = neighbourGaps(
+        grid,
+        admissible.map((r) => ({ plan: r.plan, ratio: r.ratio })),
+    );
+    const firstPass = neighbourGaps(
+        grid,
+        admissible.map((r) => ({ plan: r.plan, ratio: r.firstPass })),
+    );
+    const everyPlay = neighbourGaps(
+        grid,
+        rows.map((r) => ({ plan: r.plan, ratio: r.ratio })),
+    );
+    const firstOf = (gap: NeighbourGap): number => {
+        const ofPlan = (plan: MapPlan): number =>
+            rows.find(
+                (r) =>
+                    r.plan.drive === plan.drive && r.plan.handReach === plan.handReach && r.plan.window === plan.window,
+            )?.firstPass ?? NaN;
+        return Math.abs(ofPlan(gap.a) - ofPlan(gap.b));
+    };
+    console.log(`${type} tally: ${admissible.length} of ${rows.length} points admissible`);
+    console.log(`  bound, admissible neighbours, practised: ${boundText(practised)}`);
+    console.log(`  bound, the same neighbours, first pass: ${boundText(firstPass)}`);
+    console.log(`  bound, every played point, practised: ${boundText(everyPlay)}`);
+    for (const gap of practised.slice(0, JUMPINESS_LISTED)) {
+        console.log(
+            `  ${gap.gap.toFixed(3)} along ${gap.dimension}, ${gap.a[gap.dimension]} to ${gap.b[gap.dimension]}, at ` +
+                `drive ${gap.a.drive}, handReach ${gap.a.handReach} m, window ${gap.a.window * 1000} ms; ` +
+                `first pass ${firstOf(gap).toFixed(3)}`,
+        );
+    }
+    const bound = practised[0]?.gap ?? NaN;
+    console.log(`  ${bound <= JUMPINESS_LIMIT ? "within" : "not within"} the ${JUMPINESS_LIMIT} read-out bin (B-d7)`);
+}
+
+async function sectionJumpiness(): Promise<void> {
+    console.log(
+        "== jumpiness. Plan B-d7, design A7 item 9: the ratio's largest difference between neighbouring drive, " +
+            "handReach and window grid points, at the text book's canonical power, played with the map's found hold " +
+            "and practice, and as the first pass alone at the same hold ==",
+    );
+    const types: readonly RollType[] = process.env.TYPE === undefined ? ["full-roll", "pass-roll"] : [rollType()];
+    for (const type of types) {
+        jumpinessOf(type);
+    }
+}
+
 const SECTIONS: Readonly<Record<string, () => void | Promise<void>>> = {
     lawn: sectionLawn,
+    jumpiness: sectionJumpiness,
     run: sectionRun,
     merge: sectionMerge,
     cost: sectionCost,
