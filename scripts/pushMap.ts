@@ -4,16 +4,19 @@
  * - lawn: plan decision 3, whether the impact depends on the lawn's speed: for each roll's canonical setup on the
  *   open lawn, the largest change in any handed-over ball's velocity between the 6 s and 14 s lawns' impacts and the
  *   10 s lawn's (impactLawnShift).
- * - run: plan decision 9, one shard of TYPE's grid (pushMapGrid.ts's gridFor and plansOf): the plans whose index is
- *   ≡ k mod N (SHARD=k/N), each played at the grid's powers on its lawns (playSample), appended to OUT as one JSON line
- *   per plan (shardLine) as it finishes. A sample the engine throws on is kept as its message at that power, and one
- *   outside the samples as the plan's; the shard goes on. OUT must be named `<TYPE>-<k>of<N>.jsonl`. Indices whose
- *   lines OUT already holds whole (doneIndices) are skipped, so a shard that died is re-run in place; a torn last line
- *   is ended first and its plan played again.
- * - merge: exactly the files `<TYPE>-<k>of<N>.jsonl` in IN merged (mergeLines), so no other run's file is read: the
- *   missing plan indices, the engine's errors (outside and inside the samples), the reads an engine error leaves out
- *   and the graded reads left unbanded for an unread neighbour are reported apart; each plan's reads at the grid's
- *   ranges and lawns (readsOf) are written to `<IN>/<TYPE>.reads.json`.
+ * - matrix: plan Task B5, the workflow's jobs (shardMatrix) for TYPES (comma-separated, or all), STAGE, SHARDS (jobs)
+ *   and ONLY (all, or one job of each type), printed and appended to GITHUB_OUTPUT when set.
+ * - run: plan decision 9, one shard of TYPE's plans at STAGE (stagePlans; the text book alone, or by default the whole
+ *   grid) on LAWNS (by default the grid's): the plans whose index is ≡ k mod N (SHARD=k/N), each played at the grid's
+ *   powers on its lawns (playSample), appended to OUT as one JSON line per plan (shardLine) as it finishes. A sample
+ *   the engine throws on is kept as its message at that power, and one outside the samples as the plan's; the shard
+ *   goes on. OUT must be named `<TYPE>-<k>of<N>.jsonl`. Indices whose lines OUT already holds whole (doneIndices) are
+ *   skipped, so a shard that died is re-run in place; a torn last line is ended first and its plan played again.
+ * - merge: exactly the files `<TYPE>-<k>of<N>.jsonl` in IN merged (mergeLines) at STAGE and LAWNS as run played them,
+ *   so no other run's file is read: the missing plan indices, the engine's errors (outside and inside the samples),
+ *   the reads an engine error leaves out and the graded reads left unbanded for an unread neighbour are reported
+ *   apart; each plan's reads at the grid's ranges and lawns (readsOf) are written to `<IN>/<TYPE>.reads.json` under
+ *   the run's URL and commit (RecordHeader). A plan missing fails the process, after the write.
  * - cost: plan Task 5, the map's time: with PART=j/J, the j-th of J parts of COST_PLANS pass-roll plans drawn evenly
  *   is played at the grid's powers, each sample's seconds appended to `<IN>/cost-<j>of<J>.jsonl`; without PART, those
  *   files are tallied: the mean and 95th percentile per sample and each type's projected CPU hours on today's grid.
@@ -43,14 +46,16 @@
  * - jumpiness: plan B-d7, the ratio's largest difference between neighbouring follow-through grid points at the full
  *   and pass rolls' text books at canonical power, with practice and as the first pass alone, and practice's share.
  *   The bound is over points the map admits; every played point's is printed beside it.
- * Run with `env SECTION=lawn npx --yes tsx scripts/pushMap.ts`. The environment: SECTION names the section; run takes
- * TYPE (a roll), SHARD (k/N, default 0/1) and OUT (a file); merge takes TYPE and IN (a directory); cost takes IN and
- * PART; stage1 takes IN; summary takes TYPE and IN; super takes SHARD and OUT, or IN; jumpiness takes TYPE, by default
- * both rolls. Not part of the test suite.
+ * Run with `env SECTION=lawn npx --yes tsx scripts/pushMap.ts`. The environment: SECTION names the section; matrix
+ * takes TYPES, STAGE, SHARDS and ONLY; run takes TYPE (any shot type), STAGE, LAWNS, SHARD (k/N, default 0/1) and OUT
+ * (a file); merge takes TYPE, STAGE, LAWNS and IN (a directory); cost takes IN and PART; stage1 takes IN; summary takes
+ * TYPE (a roll) and IN; super takes SHARD and OUT, or IN; jumpiness takes TYPE, by default both rolls. Not part of the
+ * test suite.
  */
 import { MERGE_SEPARATION } from "../src/engine/faults";
 import { simulateImpact } from "../src/engine/impact/simulateImpact";
 import { length, sub } from "../src/engine/math/vec3";
+import { ENGINE_VERSION } from "../src/engine/simulate";
 import { planStroke } from "../src/engine/swing/buildContact";
 import type { ShotSetup } from "../src/engine/swing/types";
 import { BALL_IDS, type BallState, type BallStates } from "../src/engine/types";
@@ -75,6 +80,7 @@ import {
     neighbourGaps,
     nonMonotoneCount,
     offGridBand,
+    onLawns,
     pickDefault,
     planKey,
     plansOf,
@@ -87,7 +93,9 @@ import {
     regionSpan,
     sampleErrors,
     shardLine,
+    shardMatrix,
     spreadSummary,
+    stagePlans,
     strikeReading,
     superLeast,
     superPlans,
@@ -98,11 +106,14 @@ import {
     type Merged,
     type NeighbourGap,
     type Reads,
+    type RecordHeader,
+    type Stage,
     type StrikeReading,
     type SweepRead,
     type SweepSample,
 } from "./pushMapGrid";
 import {
+    MAP_TYPES,
     ROLL_TYPES,
     bodyBackswing,
     canonicalPower,
@@ -114,12 +125,14 @@ import {
     type MapClass,
     type MapPlan,
     type MapSample,
+    type MapType,
     type RollType,
 } from "./pushMapRun";
 
 declare const process: {
     readonly env: Readonly<Record<string, string | undefined>>;
     readonly argv: readonly string[];
+    exitCode?: number;
 };
 
 /** The lawns the map plays (s): `reference/lawn.json`'s sourced span and its normal lawn (design §3.2). */
@@ -200,6 +213,24 @@ function rollType(): RollType {
     return known;
 }
 
+/** The shot type named by `name`. */
+function mapType(name: string | undefined): MapType {
+    const known = MAP_TYPES.find((t) => t === name);
+    if (known === undefined) {
+        throw new Error(`a type must be one of ${MAP_TYPES.join(", ")}, not ${name}`);
+    }
+    return known;
+}
+
+/** The stage named by STAGE (design A7 item 10), by default the full map. */
+function stageOf(): Stage {
+    const text = process.env.STAGE ?? "2";
+    if (text !== "1" && text !== "2") {
+        throw new Error(`STAGE must be 1 or 2, not ${text}`);
+    }
+    return text === "1" ? 1 : 2;
+}
+
 /** An environment variable that must be set. */
 function required(name: string): string {
     const value = process.env[name];
@@ -222,17 +253,36 @@ function shardOf(): { readonly k: number; readonly n: number } {
 }
 
 /** A shard's file name (decision 9): `<type>-<k>of<N>.jsonl`, the one pattern merge reads. */
-function shardName(type: RollType, k: number, n: number): string {
+function shardName(type: MapType, k: number, n: number): string {
     return `${type}-${k}of${n}.jsonl`;
 }
 
 /** Whether `name` is one of `type`'s shard files (shardName's pattern exactly). */
-function isShardOf(type: RollType, name: string): boolean {
+function isShardOf(type: MapType, name: string): boolean {
     return new RegExp(`^${type}-\\d+of\\d+\\.jsonl$`).test(name);
 }
 
+/** The workflow's matrix and types (plan Task B5), as `GITHUB_OUTPUT`'s lines and printed. */
+async function sectionMatrix(): Promise<void> {
+    const text = required("TYPES");
+    const types = text === "all" ? MAP_TYPES : text.split(",").map(mapType);
+    const stage = stageOf();
+    const counts = types.map((type) => ({ type, plans: stagePlans(type, gridFor(type), stage).length }));
+    const only = process.env.ONLY ?? "all";
+    if (only !== "all" && !/^\d+$/.test(only)) {
+        throw new Error(`ONLY must be all or a job's number, not ${only}`);
+    }
+    const matrix = shardMatrix(counts, Number(required("SHARDS")), only === "all" ? null : Number(only));
+    const lines = `matrix=${JSON.stringify(matrix)}\ntypes=${types.join(" ")}\n`;
+    console.log(lines);
+    const output = process.env.GITHUB_OUTPUT;
+    if (output !== undefined) {
+        (await files()).appendFileSync(output, lines);
+    }
+}
+
 async function sectionRun(): Promise<void> {
-    const type = rollType();
+    const type = mapType(process.env.TYPE);
     const { k, n } = shardOf();
     const out = required("OUT");
     const name = shardName(type, k, n);
@@ -240,8 +290,8 @@ async function sectionRun(): Promise<void> {
         throw new Error(`OUT must name the shard's file ${name}, the pattern merge reads`);
     }
     const fs = await files();
-    const grid = gridFor(type);
-    const plans = plansOf(type, grid);
+    const grid = onLawns(gridFor(type), process.env.LAWNS);
+    const plans = stagePlans(type, grid, stageOf());
     const text = fs.existsSync(out) ? fs.readFileSync(out, "utf8") : "";
     const done = doneIndices(text);
     if (text !== "" && !text.endsWith("\n")) {
@@ -298,7 +348,7 @@ const LISTED = 40;
 /** Exactly `type`'s shard files in `dir` (shardName's pattern) merged against the grid's `plans`, and their count. */
 function mergeShards(
     fs: Files,
-    type: RollType,
+    type: MapType,
     dir: string,
     plans: readonly MapPlan[],
 ): { readonly merged: Merged; readonly shards: number } {
@@ -314,13 +364,14 @@ function mergeShards(
 }
 
 async function sectionMerge(): Promise<void> {
-    const type = rollType();
+    const type = mapType(process.env.TYPE);
     const dir = required("IN");
     const fs = await files();
-    const grid = gridFor(type);
-    const plans = plansOf(type, grid);
+    const grid = onLawns(gridFor(type), process.env.LAWNS);
+    const stage = stageOf();
+    const plans = stagePlans(type, grid, stage);
     const { merged, shards } = mergeShards(fs, type, dir, plans);
-    console.log(`== merge. Plan decision 9: ${type}, ${shards} shard files, ${plans.length} plans ==`);
+    console.log(`== merge. Plan decision 9: ${type}, stage ${stage}, ${shards} shard files, ${plans.length} plans ==`);
     console.log(`swept: ${merged.samples.size}`);
     const { missing } = merged;
     const shown = missing.slice(0, LISTED).join(", ") + (missing.length > LISTED ? ", …" : "");
@@ -345,11 +396,30 @@ async function sectionMerge(): Promise<void> {
         `reads: ${reads.size}; left unread (an engine error decides them): ${noRead}; plans whose range is not ` +
             `monotone in p on some lawn: ${nonMonotone}`,
     );
-    const { unbanded } = grade(type, grid, reads);
-    console.log(`graded reads left unbanded (a neighbour unread): ${unbanded}`);
+    if (stage === 2) {
+        // A text book alone has no neighbours, so stage 1 has nothing to band.
+        const { unbanded } = grade(type, grid, reads);
+        console.log(`graded reads left unbanded (a neighbour unread): ${unbanded}`);
+    }
+    const { GITHUB_SERVER_URL, GITHUB_REPOSITORY, GITHUB_RUN_ID, GITHUB_SHA } = process.env;
+    const header: RecordHeader = {
+        run:
+            GITHUB_RUN_ID === undefined
+                ? null
+                : `${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}`,
+        commit: GITHUB_SHA ?? null,
+        engine: ENGINE_VERSION,
+        type,
+        stage,
+        lawns: grid.lawns,
+    };
     const path = `${dir}/${type}.reads.json`;
-    fs.writeFileSync(path, readsJson(reads));
+    fs.writeFileSync(path, readsJson(header, reads));
     console.log(`written: ${path}`);
+    if (missing.length > 0) {
+        // A dead shard fails the run (Review Focus 5): the reads are still written, for what they hold.
+        process.exitCode = 1;
+    }
 }
 
 /** Numerical, not physical: how many pass-roll plans the cost section times (plan Task 5). */
@@ -1107,6 +1177,7 @@ async function sectionJumpiness(): Promise<void> {
 const SECTIONS: Readonly<Record<string, () => void | Promise<void>>> = {
     lawn: sectionLawn,
     jumpiness: sectionJumpiness,
+    matrix: sectionMatrix,
     run: sectionRun,
     merge: sectionMerge,
     cost: sectionCost,

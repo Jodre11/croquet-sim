@@ -177,6 +177,26 @@ export function plansOf(_type: MapType, grid: MapGrid): readonly MapPlan[] {
     return plans;
 }
 
+/** The gate's stages (design A7 item 10): 1 is each text book alone, 2 the full map. */
+export type Stage = 1 | 2;
+
+/** The plans a `stage` plays of `type`: its text book alone at stage 1, off the grid or not; else plansOf. */
+export function stagePlans(type: MapType, grid: MapGrid, stage: Stage): readonly MapPlan[] {
+    return stage === 1 ? [textBook(type)] : plansOf(type, grid);
+}
+
+/** `grid` on the lawns named by `text`, comma-separated, or on all its own without it. Others are refused. */
+export function onLawns(grid: MapGrid, text: string | undefined): MapGrid {
+    if (text === undefined || text === "") {
+        return grid;
+    }
+    const lawns = text.split(",").map(Number);
+    if (!lawns.every((lawn) => grid.lawns.includes(lawn))) {
+        throw new Error(`LAWNS must be among ${grid.lawns.join(", ")}, not ${text}`);
+    }
+    return { ...grid, lawns };
+}
+
 /** The follow-through's dimensions the jumpiness bound steps along (plan B-d7). */
 const FOLLOW_DIMENSIONS = ["drive", "handReach", "window"] as const;
 
@@ -951,14 +971,67 @@ export function readsOf(
     return { reads, nonMonotone, noRead };
 }
 
-/** `reads` as JSON (NaN kept as a string), for `<dir>/<type>.reads.json`. */
-export function readsJson(reads: Reads): string {
-    return JSON.stringify(Object.fromEntries(reads), keepNumbers);
+/** A merged record's header (design A7 item 11): where the reads came from. A local merge has no run or commit. */
+export interface RecordHeader {
+    readonly run: string | null;
+    readonly commit: string | null;
+    readonly engine: string;
+    readonly type: MapType;
+    readonly stage: Stage;
+    readonly lawns: readonly number[];
+}
+
+/** `reads` under `header` as JSON (NaN kept as a string), for `<dir>/<type>.reads.json`. */
+export function readsJson(header: RecordHeader, reads: Reads): string {
+    return JSON.stringify({ header, reads: Object.fromEntries(reads) }, keepNumbers);
 }
 
 /** readsJson's text read back (NaN and ±Infinity restored). */
-export function parseReads(text: string): Reads {
-    return new Map(Object.entries(JSON.parse(text, reviveNumbers) as Record<string, SweepRead>));
+export function parseReads(text: string): { readonly header: RecordHeader; readonly reads: Reads } {
+    const record = JSON.parse(text, reviveNumbers) as {
+        readonly header: RecordHeader;
+        readonly reads: Record<string, SweepRead>;
+    };
+    return { header: record.header, reads: new Map(Object.entries(record.reads)) };
+}
+
+/** GitHub's limit on one matrix's jobs (design A7 item 11). */
+export const MATRIX_LIMIT = 256;
+
+/** One matrix job: job `job` of the `jobs` that share `type`'s plans. */
+export interface MatrixJob {
+    readonly type: MapType;
+    readonly job: number;
+    readonly jobs: number;
+}
+
+/**
+ * The workflow's matrix (plan Task B5): `total` jobs shared among `counts` in proportion to their plans by largest
+ * remainder, each type at least one, so a type's job holds about as many plans as another's. `only` keeps that job of
+ * each type alone (a timing run, or one job played again). Throws past MATRIX_LIMIT: GitHub would refuse it.
+ */
+export function shardMatrix(
+    counts: readonly { readonly type: MapType; readonly plans: number }[],
+    total: number,
+    only: number | null,
+): readonly MatrixJob[] {
+    const plans = counts.reduce((sum, c) => sum + c.plans, 0);
+    const shares = counts.map((c) => (total * c.plans) / plans);
+    const jobs = shares.map((s) => Math.max(1, Math.floor(s)));
+    const byRemainder = shares.map((s, i) => ({ i, left: s - Math.floor(s) })).sort((a, b) => b.left - a.left);
+    const spare = total - jobs.reduce((sum, j) => sum + j, 0);
+    for (const { i } of byRemainder.slice(0, Math.max(0, spare))) {
+        jobs[i] = (jobs[i] as number) + 1;
+    }
+    const matrix = counts.flatMap((c, i) => {
+        const n = jobs[i] as number;
+        return Array.from({ length: n }, (_, job) => ({ type: c.type, job, jobs: n }));
+    });
+    const kept = only === null ? matrix : matrix.filter((m) => m.job === only);
+    if (kept.length > MATRIX_LIMIT) {
+        throw new Error(`${kept.length} jobs is past GitHub's matrix limit of ${MATRIX_LIMIT}`);
+    }
+    return kept;
 }
 
 /** A value's `q` quantile (0–1) by the nearest rank; NaN for no values. */

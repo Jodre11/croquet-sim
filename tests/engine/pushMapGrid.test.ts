@@ -5,6 +5,7 @@ import { MAX_WINDOW, MIN_WINDOW } from "../../src/engine/swing/buildContact";
 import {
     BEYOND_P_MAX,
     MAP_CLASSES,
+    MATRIX_LIMIT,
     MULTIPLES_RATIO,
     OFF_COURT,
     SUPER_ONSETS,
@@ -22,6 +23,7 @@ import {
     mergeLines,
     nonMonotoneCount,
     offGridBand,
+    onLawns,
     parseReads,
     pickDefault,
     planKey,
@@ -34,13 +36,17 @@ import {
     regionPhrase,
     regionSpan,
     shardLine,
+    shardMatrix,
     spreadSummary,
+    stagePlans,
     strikeReading,
     superLeast,
     superPlans,
     type Axis,
     type Band,
     type MapGrid,
+    type MatrixJob,
+    type RecordHeader,
     type SweepRead,
 } from "../../scripts/pushMapGrid";
 import { textBook, type MapClass, type MapPlan, type MapSample } from "../../scripts/pushMapRun";
@@ -433,6 +439,74 @@ describe("the push map's grid, sweep, bands and record (P2b.2b.2c.3b plan Task 4
     });
 });
 
+describe("the map on Actions (plan Task B5)", () => {
+    const counts = [
+        { type: "drive", plans: 100 },
+        { type: "half-roll", plans: 300 },
+        { type: "pass-roll", plans: 600 },
+    ] as const;
+    const jobsOf = (matrix: readonly MatrixJob[], type: string): number[] =>
+        matrix.filter((m) => m.type === type).map((m) => m.job);
+
+    it("shares the jobs in proportion to the plans, numbering each type's from 0", () => {
+        const matrix = shardMatrix(counts, 10, null);
+        expect(matrix).toHaveLength(10);
+        expect(jobsOf(matrix, "drive")).toEqual([0]);
+        expect(jobsOf(matrix, "half-roll")).toEqual([0, 1, 2]);
+        expect(jobsOf(matrix, "pass-roll")).toEqual([0, 1, 2, 3, 4, 5]);
+        expect(matrix.filter((m) => m.type === "pass-roll").every((m) => m.jobs === 6)).toBe(true);
+    });
+
+    it("hands the jobs left by rounding to the largest remainders, so the total holds", () => {
+        const matrix = shardMatrix(
+            [
+                { type: "drive", plans: 1 },
+                { type: "half-roll", plans: 1 },
+                { type: "pass-roll", plans: 2 },
+            ],
+            5,
+            null,
+        );
+        expect(matrix).toHaveLength(5);
+        // Shares 1.25, 1.25 and 2.5: the floors leave one job, and 2.5's remainder is the largest.
+        expect(jobsOf(matrix, "pass-roll")).toHaveLength(3);
+    });
+
+    it("gives every type a job, past the total if it must, as stage 1's single plans do", () => {
+        const matrix = shardMatrix(counts, 1, null);
+        expect(matrix.map((m) => m.type)).toEqual(["drive", "half-roll", "pass-roll"]);
+        expect(matrix.every((m) => m.jobs === 1)).toBe(true);
+    });
+
+    it("keeps one job of each type where asked, its count unchanged, and drops a type without that job", () => {
+        const matrix = shardMatrix(counts, 10, 1);
+        expect(matrix).toEqual([
+            { type: "half-roll", job: 1, jobs: 3 },
+            { type: "pass-roll", job: 1, jobs: 6 },
+        ]);
+    });
+
+    it("refuses a matrix past GitHub's limit, judged after keeping one job", () => {
+        expect(() => shardMatrix(counts, MATRIX_LIMIT + 1, null)).toThrow(/matrix limit/);
+        expect(shardMatrix(counts, MATRIX_LIMIT + 1, 0)).toHaveLength(3);
+    });
+
+    it("plays the text book alone at stage 1, off the grid or not, and the whole grid at stage 2", () => {
+        const grid = gridFor("half-roll");
+        expect(stagePlans("half-roll", grid, 1)).toEqual([textBook("half-roll")]);
+        expect(stagePlans("half-roll", grid, 2)).toEqual(plansOf("half-roll", grid));
+    });
+
+    it("narrows the lawns only to the grid's own", () => {
+        const grid = gridFor("half-roll");
+        expect(onLawns(grid, undefined)).toBe(grid);
+        expect(onLawns(grid, "")).toBe(grid);
+        expect(onLawns(grid, "10").lawns).toEqual([10]);
+        expect(onLawns(grid, "6,14").lawns).toEqual([6, 14]);
+        expect(() => onLawns(grid, "8")).toThrow(/LAWNS must be among/);
+    });
+});
+
 describe("the half roll's stage-1 tallies (P2b.2b.2c.3b plan Task 6)", () => {
     /** smallGrid on three lawns, each lawn's read built by `at`. */
     function threeLawns(at: (p: MapPlan, lawn: number) => SweepRead): { grid: MapGrid; reads: Map<string, SweepRead> } {
@@ -449,10 +523,19 @@ describe("the half roll's stage-1 tallies (P2b.2b.2c.3b plan Task 6)", () => {
     it("reads the reads file back as merge wrote it, NaN kept", () => {
         const one = planKey(plan(26 * DEG, 1), 10, LAWN);
         const reads = new Map([[one, read("mishit", NaN, NaN, "impact-off-face")]]);
-        const back = parseReads(readsJson(reads));
-        expect([...back.keys()]).toEqual([one]);
-        expect(back.get(one)?.klass).toBe("mishit");
-        expect(Number.isNaN(back.get(one)?.ratio)).toBe(true);
+        const header: RecordHeader = {
+            run: "https://github.com/o/r/actions/runs/1",
+            commit: "abc",
+            engine: "0.29.1",
+            type: "half-roll",
+            stage: 1,
+            lawns: [10],
+        };
+        const back = parseReads(readsJson(header, reads));
+        expect(back.header).toEqual(header);
+        expect([...back.reads.keys()]).toEqual([one]);
+        expect(back.reads.get(one)?.klass).toBe("mishit");
+        expect(Number.isNaN(back.reads.get(one)?.ratio)).toBe(true);
     });
 
     it("measures the lawn's effect as the ratio's spread across the lawns, (max − min) / mean", () => {
