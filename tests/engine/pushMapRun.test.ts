@@ -212,9 +212,9 @@ describe("one plan's run (P2b.2b.2c.3b plan Task 3)", () => {
 });
 
 describe("the map's found firmness (firmness design §5, A7 item 4)", () => {
-    it("plays the full roll's text book at p = 2 at the hold it finds, admissibly without one", () => {
-        // Gate 1: the preset's hold trips the grip limit at p = 2 (above); firmness 0 is admissible.
-        const sample = playSample("full-roll", textBook("full-roll"), 2, [10]);
+    it("plays the full roll's text book at a tap at the hold it finds, admissibly without one", () => {
+        // Gate 1's plan, p = 2, is no longer admissible at firmness 0: its head rides over the ball (plan B-d8).
+        const sample = playSample("full-roll", textBook("full-roll"), 0.1, [10]);
         expect(sample.klass).toBeNull();
         expect(sample.firmness).toBe(0);
         expect(sample.sigma).toBe(0);

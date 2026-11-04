@@ -1,6 +1,19 @@
 import { describe, expect, it } from "vitest";
+import { openWorld } from "../../scripts/openLawn";
 import { followThroughPlans, gridFor, neighbourGaps } from "../../scripts/pushMapGrid";
-import { firstPassRead, playSample, textBook, type MapPlan } from "../../scripts/pushMapRun";
+import {
+    HEAD_OVER_BALL,
+    MAP_TYPES,
+    canonicalPower,
+    firstPassRead,
+    mapSetup,
+    playSample,
+    playedClass,
+    textBook,
+    type MapPlan,
+    type MapType,
+} from "../../scripts/pushMapRun";
+import type { ShotSetup } from "../../src/engine/swing/types";
 
 describe("the jumpiness bound's neighbours (plan B-d7)", () => {
     const grid = gridFor("full-roll");
@@ -55,6 +68,33 @@ describe("the jumpiness bound's neighbours (plan B-d7)", () => {
         ];
         expect(neighbourGaps(grid, unread)).toHaveLength(0);
     });
+});
+
+describe("a head that rides over the ball (plan B-d8)", () => {
+    const world = openWorld(10);
+    const held = (type: MapType, plan: MapPlan, firmness: number): ShotSetup => {
+        const setup = mapSetup(type, plan, canonicalPower(type, world));
+        return { ...setup, stroke: { ...setup.stroke, holdFirmness: firmness } };
+    };
+
+    it("is a mishit on the slack pass roll whose push never lands", () => {
+        const plan = { ...textBook("pass-roll"), drive: 0.5, handReach: 0.3, window: 0.02 };
+        expect(playedClass(held("pass-roll", plan, 0), world)).toEqual({ klass: "mishit", reason: HEAD_OVER_BALL });
+    }, 120_000);
+
+    it("leaves a stroke with no push alone, however slack", () => {
+        const plan = { ...textBook("pass-roll"), drive: 0.5, handReach: 0, window: 0.02 };
+        expect(playedClass(held("pass-roll", plan, 0), world).reason).not.toBe(HEAD_OVER_BALL);
+    }, 120_000);
+
+    it.each(MAP_TYPES)(
+        "does not touch the %s's text book at its canonical power",
+        (type) => {
+            const sample = playSample(type, textBook(type), canonicalPower(type, world), [10]);
+            expect(sample.reason).not.toBe(HEAD_OVER_BALL);
+        },
+        120_000,
+    );
 });
 
 describe("a play without practice (plan B-d7)", () => {

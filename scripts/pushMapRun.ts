@@ -11,14 +11,15 @@
  */
 import { EFFECT_ANGLE, EFFECT_SPEED, judgeFaults, type FaultReport, type StrikeTaps } from "../src/engine/faults";
 import { offPointReason, type OnPoint } from "../src/engine/impact/band";
-import { faceKey } from "../src/engine/impact/contacts";
+import { faceKey, outOfReach } from "../src/engine/impact/contacts";
 import type { FollowThrough, ImpactProbe } from "../src/engine/impact/integrate";
 import { practiseStroke } from "../src/engine/impact/practice";
 import { faceHalfHeight } from "../src/engine/impact/shape";
 import { simulateStroke } from "../src/engine/impact/simulateImpact";
-import type { ContactInterval, ImpactResult, TrackDrive } from "../src/engine/impact/types";
+import { rotate } from "../src/engine/impact/rigidBody";
+import type { ContactInterval, ImpactResult, MalletHead, TrackDrive } from "../src/engine/impact/types";
 import { atan2 } from "../src/engine/math/elementary";
-import { ZERO, add, cross, dot, horizontal, length, sub, vec3, type Vec3 } from "../src/engine/math/vec3";
+import { ZERO, add, cross, dot, horizontal, length, scale, sub, vec3, type Vec3 } from "../src/engine/math/vec3";
 import { strokeContext } from "../src/engine/shot";
 import { simulateFreeMotion } from "../src/engine/simulate";
 import {
@@ -543,9 +544,65 @@ export function playedClass(
     if (drive.kind !== "track") {
         return { klass: "unreachable", reason: "the planned contact has no tracked drive" };
     }
-    const run = practiseStroke(contact, setup.balls, world, setup.striker);
+    const over = overBallWatch(setup, contact.head, drive.arc.aim, world.ball.radius);
+    const run = practiseStroke(contact, setup.balls, world, setup.striker, over.probeFor);
     const faults = judgeFaults(strokeContext(setup, run.result), run.result);
-    return runClass(setup, run, faults, run.point, drive.arc.handReach > 0 ? run.miss : null);
+    const played = runClass(setup, run, faults, run.point, drive.arc.handReach > 0 ? run.miss : null);
+    return withOverBall(played, drive.arc.handReach > 0 && over.passed());
+}
+
+/** The reason of a pushed stroke whose head passed over the striker's ball (plan B-d8). */
+export const HEAD_OVER_BALL = "head-over-ball";
+
+/**
+ * A probe per practice pass reading whether the head rode over the striker's ball after the first face contact (plan
+ * B-d8): on some step the ball is out of the face's reach (outOfReach) while the head has gained on it along aim since
+ * that contact. A ball that has simply left the head is further away along aim, not nearer, and a head on the ball is
+ * within reach. `passed` reads the last pass.
+ */
+function overBallWatch(
+    setup: ShotSetup,
+    head: MalletHead,
+    aim: Vec3,
+    radius: number,
+): { readonly probeFor: () => ImpactProbe; readonly passed: () => boolean } {
+    const striker = BALL_IDS.filter((id) => setup.balls[id] !== undefined).indexOf(setup.striker);
+    const key = faceKey(setup.striker);
+    let gapAtStrike: number | null = null;
+    let over = false;
+    return {
+        probeFor() {
+            gapAtStrike = null;
+            over = false;
+            return {
+                step(s) {
+                    const ball = (s.balls[striker] as BallState).position;
+                    const gap = dot(sub(ball, s.head.position), aim);
+                    if (gapAtStrike === null) {
+                        if (s.contacts.some((c) => c.key === key && c.normalForce > 0)) {
+                            gapAtStrike = gap;
+                        }
+                        return;
+                    }
+                    const f = rotate(s.head.orientation, vec3(1, 0, 0));
+                    const offset = sub(ball, add(s.head.position, scale(f, head.length / 2)));
+                    over ||= gap < gapAtStrike && outOfReach(s.head, head, offset, f, dot(offset, f), radius);
+                },
+            };
+        },
+        passed: () => over,
+    };
+}
+
+/**
+ * The class of a play with the head-over-ball rule (plan B-d8): an admissible pushed stroke whose head rode over the
+ * ball is a mis-played shot, a mishit, whatever hold the search would otherwise take it at.
+ */
+function withOverBall(
+    played: { readonly klass: MapClass | null; readonly reason: string | null },
+    overBall: boolean,
+): { readonly klass: MapClass | null; readonly reason: string | null } {
+    return played.klass === null && overBall ? { klass: "mishit", reason: HEAD_OVER_BALL } : played;
 }
 
 /**
@@ -703,12 +760,25 @@ function judgedPlay(
             },
         };
     };
-    const run = practiseStroke(stroke.contact, setup.balls, IMPACT_WORLD, setup.striker, probeFor);
+    const over = overBallWatch(setup, stroke.contact.head, drive.arc.aim, IMPACT_WORLD.ball.radius);
+    const run = practiseStroke(stroke.contact, setup.balls, IMPACT_WORLD, setup.striker, () => {
+        const watch = over.probeFor();
+        const own = probeFor();
+        return {
+            step(s) {
+                watch.step(s);
+                own.step(s);
+            },
+        };
+    });
     const impact = run.result;
     const faults = judgeFaults(strokeContext(setup, impact), impact);
     // A stroke without a push is not practised (design §4; the plan's Global Constraints): its class is today's.
     const miss = drive.arc.handReach > 0 ? run.miss : null;
-    const { klass, reason } = runClass(setup, run, faults, run.point, miss);
+    const { klass, reason } = withOverBall(
+        runClass(setup, run, faults, run.point, miss),
+        drive.arc.handReach > 0 && over.passed(),
+    );
     const shipped = faults.findings.some((f) => f.law === "29.1.6.1");
     const trace: VelocityTrace = {
         initial: (setup.balls[setup.striker] as BallState).velocity,

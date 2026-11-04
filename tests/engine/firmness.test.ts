@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { SIGMA_HALVINGS, SIGMA_STEP, findFirmness, searchSigma, type Played } from "../../scripts/firmness";
 import { openWorld, opened } from "../../scripts/openLawn";
-import { mapSetup, playedClass, textBook } from "../../scripts/pushMapRun";
+import { HEAD_OVER_BALL, mapSetup, playedClass, textBook } from "../../scripts/pushMapRun";
 import { HOLD_SPEED, plannedSpeed } from "../../src/engine/swing/buildContact";
 import type { ShotSetup } from "../../src/engine/swing/types";
 import { canonicalSetup } from "./support/shot";
@@ -56,9 +56,16 @@ describe("the found firmness (firmness design §5)", () => {
     });
 
     it("finds no hold for a plan admissible without one", () => {
-        // Gate 1: the full roll's text book at power 2 is admissible at firmness 0.
-        const setup = mapSetup("full-roll", textBook("full-roll"), 2);
+        // The full roll's text book at a tap, power 0.1, is admissible at firmness 0. Gate 1's plan, power 2, is not
+        // since plan B-d8: its head rode over the ball at firmness 0, and every firmer hold trips the grip limit.
+        const setup = mapSetup("full-roll", textBook("full-roll"), 0.1);
         expect(findFirmness(setup, WORLD)).toEqual({ sigma: 0, firmness: 0, klass: null });
+    });
+
+    it("finds no hold where the only admissible play's head rode over the ball (plan B-d8)", () => {
+        const setup = mapSetup("full-roll", textBook("full-roll"), 2);
+        expect(playedClass(at(setup, 0), WORLD)).toEqual({ klass: "mishit", reason: HEAD_OVER_BALL });
+        expect(findFirmness(setup, WORLD)).toMatchObject({ sigma: null, klass: "superhuman" });
     });
 
     it("finds the least hold of a plan that slips without one, within the halved step", { timeout: 120_000 }, () => {

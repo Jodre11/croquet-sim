@@ -1075,14 +1075,20 @@ function jumpinessOf(type: RollType): void {
     console.log(`  bound, admissible neighbours, practised: ${boundText(practised)}`);
     console.log(`  bound, the same neighbours, first pass: ${boundText(firstPass)}`);
     console.log(`  bound, every played point, practised: ${boundText(everyPlay)}`);
-    for (const gap of practised.slice(0, JUMPINESS_LISTED)) {
+    // A handReach of 0 beside 0.1 m is no push against a push, a real difference, not jumpiness (plan B-d8).
+    const pushes = neighbourGaps(
+        grid,
+        admissible.filter((r) => r.plan.handReach > 0).map((r) => ({ plan: r.plan, ratio: r.ratio })),
+    );
+    console.log(`  bound, admissible pushes alone, practised: ${boundText(pushes)}`);
+    for (const gap of pushes.slice(0, JUMPINESS_LISTED)) {
         console.log(
             `  ${gap.gap.toFixed(3)} along ${gap.dimension}, ${gap.a[gap.dimension]} to ${gap.b[gap.dimension]}, at ` +
                 `drive ${gap.a.drive}, handReach ${gap.a.handReach} m, window ${gap.a.window * 1000} ms; ` +
                 `first pass ${firstOf(gap).toFixed(3)}`,
         );
     }
-    const bound = practised[0]?.gap ?? NaN;
+    const bound = pushes[0]?.gap ?? NaN;
     console.log(`  ${bound <= JUMPINESS_LIMIT ? "within" : "not within"} the ${JUMPINESS_LIMIT} read-out bin (B-d7)`);
 }
 
