@@ -49,13 +49,15 @@ jobs:
             types: ${{ steps.matrix.outputs.types }}
         steps:
             - uses: actions/checkout@v7
+              with:
+                  persist-credentials: false
             - uses: actions/setup-node@v7
               with:
                   node-version-file: .nvmrc
                   cache: npm
             - run: npm ci
             - id: matrix
-              run: npx --yes tsx scripts/pushMap.ts
+              run: npx --no-install tsx scripts/pushMap.ts
               env:
                   SECTION: matrix
                   TYPES: ${{ inputs.types }}
@@ -74,13 +76,13 @@ jobs:
                 include: ${{ fromJSON(needs.plan.outputs.matrix) }}
         steps:
             - uses: actions/checkout@v7
+              with:
+                  persist-credentials: false
             - uses: actions/setup-node@v7
               with:
                   node-version-file: .nvmrc
                   cache: npm
             - run: npm ci
-            # One fetch of tsx before the four share npx's cache.
-            - run: npx --yes tsx --version
             - name: Play the job's four shards
               timeout-minutes: 335
               env:
@@ -95,7 +97,7 @@ jobs:
                   for worker in 0 1 2 3; do
                       k=$((JOB * 4 + worker))
                       n=$((JOBS * 4))
-                      SHARD="$k/$n" OUT="shards/$TYPE-${k}of$n.jsonl" npx --yes tsx scripts/pushMap.ts &
+                      SHARD="$k/$n" OUT="shards/$TYPE-${k}of$n.jsonl" npx --no-install tsx scripts/pushMap.ts &
                       pids+=("$!")
                   done
                   status=0
@@ -117,6 +119,8 @@ jobs:
         timeout-minutes: 120
         steps:
             - uses: actions/checkout@v7
+              with:
+                  persist-credentials: false
             - uses: actions/setup-node@v7
               with:
                   node-version-file: .nvmrc
@@ -135,7 +139,7 @@ jobs:
               run: |
                   status=0
                   for type in $TYPES; do
-                      TYPE="$type" npx --yes tsx scripts/pushMap.ts 2>&1 | tee "shards/$type.merge.txt" || status=1
+                      TYPE="$type" npx --no-install tsx scripts/pushMap.ts 2>&1 | tee "shards/$type.merge.txt" || status=1
                   done
                   exit "$status"
             - uses: actions/upload-artifact@v7
