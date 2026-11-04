@@ -18,7 +18,7 @@ Both at sigma 0                    25 pairs, max 0.266   24 pairs, max 0.328
 One of each                        19 pairs, max 0.927   18 pairs, max 1.642
 Pairs over 0.1, of all             43 of 85              52 of 81
 
-Reading (observations; the cause is not yet found):
+Reading (the cause follows below):
 - Every listed worst neighbour is a pair with one point at sigma 0, which plays once at a ratio near 2 whatever its
   push, and one held at sigma near 0.3, practised, at a ratio near 1. Ten pushed points on each roll play at sigma 0,
   with ratios close to the no-push points' (handReach 0). So the largest gaps are a change of regime, not scatter.
@@ -28,6 +28,64 @@ Reading (observations; the cause is not yet found):
   first pass of ratio 9.157 (drive 0, handReach 0.1 m, window 20 ms) that practice brings to 1.113. But practice moves
   the ratio a long way, by a median of 0.224 on the full roll and 0.596 on the pass roll over the admissible points
   it replays, and at each listed worst pair the practised gap is wider than the first pass's.
+
+== The bound's cause (B-d7), from scratch scripts on 2b5df59, deleted after
+
+The stroke has two stages, and the ratio is set by whether and how the second happens.
+
+1. The first strike is the same in every play. Traced from first face contact on both rolls, held slack or firm, with
+   a push or none: by +8 ms the head has fallen from about 2.96 to 1.35 m/s, the striker's ball is at about 1.4 m/s and
+   the croqueted ball at about 2.65 m/s. Those speeds are the no-push stroke's: ratio 2.02 to 2.18, range 1.4 to 1.5 m.
+   The striker's ball goes down into the turf and comes back, z 0.0425 m at +4 ms to 0.0502 m at +20 ms (rest 0.0456 m).
+2. The second stage is the head catching the ball again, with the push behind it. It carries most of the range. Where
+   it happens, the face touches for 100 to 240 ms in 5 to 27 separate contacts, the range is about 5 to 9 m and the
+   ratio about 0.6 to 1.5. Where it does not, the stroke keeps the first strike's ratio.
+
+Cause 1, nearly all of the bound: the found hold's rule picks a stroke with no second stage. At sigma 0 the head rides
+up over the ball. Pass roll, drive 0.5, handReach 0.3 m, window 20 ms: head height 0.144 m to 0.217 m and lean 32 deg to
+44.4 deg by +120 ms, the last face contact by about +20 ms, striker's ball at 1.2 m/s. Nothing fails, since there is
+nothing left to hit and the lean stays under 45 deg, so it is admissible and the search takes it as the least hold. The
+same plan held harder plays the second stage. At the same power the two differ by about 4 times in range:
+
+Pass roll, drive 0.5, window 20 ms, power 0.8947:
+  handReach 0.2 m: sigma 0.3 ratio 0.595, range 8.52 m;  sigma 0.6 ratio 0.898, range 6.01 m;  sigma 1 ratio 0.899
+  handReach 0.3 m: sigma 0 ratio 2.237, range 1.34 m;  sigma 0.4 ratio 0.838, range 6.29 m;  sigma 1 ratio 0.830
+
+So the search's answer at a low hold need not be a lighter version of the firm stroke. Above sigma 0.5 a plan's ratio
+hardly moves: median spread over the admissible holds 0.033 on the full roll, 0.026 on the pass roll.
+
+Cause 2, the rest: the second stage's contacts flip between patterns at particular input values. Between flips the
+ratio is smooth; it is not noise. At sigma 1, 1 % steps of window move the ratio by 0.022 at most, over six plans. Walking
+a worst neighbour pair in twelve steps at sigma 1 shows the flips:
+
+  Full roll, drive -0.5 to 0, handReach 0.1 m, window 20 ms: 1.018, 1.011, 1.380, 1.023, 1.183 ... 1.033, 1.246, 1.325;
+    the near-1.0 plays have 8 to 14 ms of face contact and one pass, the others about 100 ms and two or three.
+  Full roll, drive 0, handReach 0.3 m, window 20 to 40 ms: 1.479 to 1.264 in one step; first pass 1.378 to 1.365.
+  Pass roll, drive -1, handReach 0.2 m, window 10 to 20 ms: 1.189 to 0.891 in one step; first pass 6.625 to 6.618.
+  Pass roll, drive -0.5 to 0, handReach 0.1 m, window 40 ms: 0.739, 1.412 ... 1.459, 0.827 ... 0.825, 1.036.
+
+So some flips are practice's (the first pass is smooth through them) and some are the first pass's own (pass roll, drive
+-1, window 10 to 20 ms: first pass 1.869 to 6.704 in one step). A hand reach of 0 beside 0.1 m is a real difference, no
+push against a push, not jumpiness: those pairs are left out of the "pushes" figures below.
+
+The hold rules compared, pushes only (handReach above 0), each point's 11 holds from sigma 0 to 1 by 0.1, no halvings,
+so "least admissible" differs from the found hold's figures above:
+
+                                        full roll                      pass roll
+                                        points  pairs  bound  over .1  points  pairs  bound  over .1
+Least admissible (today's)                  46     67  1.173       37      45     65  1.642       43
+Least with face contact over 30 ms          41     55  0.374       24      34     35  0.544       19
+Sigma 1                                     41     55  0.307       23      32     33  0.486       12
+Least of the firm run (all firmer pass)     41     55  0.340       20      32     33  0.388       15
+Firmest admissible                          46     67  0.330       30      45     65  1.427       34
+
+"Points" counts all 60 points' admissible ones, the 15 at handReach 0 included. No rule brings the bound within 0.1.
+First passes alone at sigma 1 are wider: 0.509 on the full roll, 5.662 on the pass roll, so practice narrows the bound
+at a firm hold too.
+
+Not measured: these compare neighbours at one power, as B-d7 sets, while the map's bands compare them at one range. A
+low-hold play at its own higher power might read differently. Why the second stage flips between patterns, beyond the
+ball's hop and practice's lift changing where the head meets it, is not established.
 
 The runs, as printed by SECTION=jumpiness, TYPE=full-roll and TYPE=pass-roll, under nice -n 20:
 
