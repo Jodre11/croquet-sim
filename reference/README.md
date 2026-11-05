@@ -52,6 +52,5 @@ The derivation of each coefficient from the quoted Law goes in `note`.
 `derived/` holds what the push map measured, not constants the app loads, so `src/reference/index.ts` does not read it.
 Each record names the run, commit and engine that made it.
 
-- `envelope-stage1.json.gz`: gate stage 1's reads (P2b.2b.2c.3b plan Task B6), per shot type `{ header, reads }`, each
-  text book alone at the grid's ranges and lawns. The AC stop's reads are its replay on engine 0.30.0 (design A8), the
-  others' on 0.29.1; each header says which.
+- `envelope-stage1.json.gz`: gate stage 1's reads (P2b.2b.2c.3b plan Task B6), per shot type `{ header, reads,
+fittedReads }`, each text book alone at the grid's ranges and lawns, at the found hold and the fitted one (design A8).
