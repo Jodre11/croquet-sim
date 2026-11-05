@@ -662,9 +662,9 @@ full roll or somewhere between a drive and a half roll or all the other inbetwee
    strength the 'stop the mallet. dead' without the assistance of lawn friction"; a harder stop is where the player adds
    a little jab, and the hardest that doesn't break the turf. The preset's fixed 11 mm `handDrop` (a user decision of
    2026-10-05) was the same action as `stroke.jab`, built in at every power. At stage 1 it left no admissible stop: it
-   struck the turf on soft shots and slipped the hands from p 0.5. Without it every power to p 1 is admissible on the
-   10 s lawn, the canonical ratio 5.861 (was 5.862) and its range unchanged, and Gugan 5's stop stays in its band (6.69
-   at 1 mm, 7.31 at gap 0). The jab stays the shot's own input, held at the type's (A7 item 3).
+   struck the turf on soft shots and slipped the hands from p 0.5. Without it stage 1's replay finds every power to p 1
+   admissible on all three lawns, the canonical ratio 5.861 (was 5.862) and its range unchanged, and Gugan 5's stop
+   stays in its band (6.69 at 1 mm, 7.31 at gap 0). The jab stays the shot's own input, held at the type's (A7 item 3).
 2. **The AC stop's hold stays the type's for this map; its variants go to P2b.2b.2c.3c** (A2 item 3), so the stop's
    envelope ends near p 1, about 5.4 m of croqueted ball on the 10 s lawn. The evidence
    (`docs/superpowers/probes/2026-11-05-p2b2b2c3b-stop-holds.txt`, the 10 s lawn, p 0.94 and up) supports the user's

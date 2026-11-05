@@ -292,3 +292,53 @@ p 1.25: admissible, range 46.328 m, no ratio, firmness 0.000, sigma 0.000, passe
 p 1.5: admissible, range 70.819 m, no ratio, firmness 0.000, sigma 0.000, passes 1
 p 2: admissible, range 107.539 m, no ratio, firmness 0.000, sigma 0.000, passes 1
 
+
+== The AC stop replayed with no built-in dip (design A8), superseding its section above ==
+Run https://github.com/Jodre11/croquet-sim/actions/runs/42018924254, commit 6af12ad719915c9f9c07c89cf8c859e99c627d2b, engine 0.30.0. The other types' sections and reads stand: the change touches only the stop's preset.
+== stage1. Plan Task B6: stop-ac, 1 shard files, missing 0 ==
+plan: lean -6.0°, feet -0.274 m, drive -1, handReach 0 m, window 10 ms, speedGain 1; canonical power p 0.9436
+planned contact speed 3.000 m/s, preset's 3.000 m/s, -0.00 %: within ±2 %: yes
+at the found hold, 10 s lawn: admissible, range 0.875 m, ratio 5.861 (AC stop), firmness 0.000, sigma 0.000, passes 1; in the AC stop's band: yes
+at the fitted hold, 10 s lawn: admissible, range 0.875 m, ratio 5.861 (AC stop), firmness 1.000, sigma 1.000, passes 1; in the AC stop's band: yes
+reach on the 6 s lawn: p 1, 0.51 m, ratio 4.591; p 1.25: superhuman (follow-grip-limit)
+reach on the 10 s lawn: p 1, 1.06 m, ratio 5.115; p 1.25: superhuman (follow-grip-limit)
+reach on the 14 s lawn: p 1, 1.89 m, ratio 5.328; p 1.25: superhuman (follow-grip-limit)
+-- the sweep on the 6 s lawn --
+p 0.02: admissible, range 0.009 m, ratio 5.338 (AC stop), firmness 0.000, sigma 0.000, passes 1
+p 0.05: admissible, range 0.026 m, ratio 4.637 (AC stop), firmness 0.000, sigma 0.000, passes 1
+p 0.1: admissible, range 0.043 m, ratio 5.581 (AC stop), firmness 0.000, sigma 0.000, passes 1
+p 0.2: admissible, range 0.095 m, ratio 4.980 (AC stop), firmness 0.000, sigma 0.000, passes 1
+p 0.35: admissible, range 0.145 m, ratio 5.675 (AC stop), firmness 0.000, sigma 0.000, passes 1
+p 0.5: admissible, range 0.214 m, ratio 5.466 (AC stop), firmness 0.000, sigma 0.000, passes 1
+p 0.65: admissible, range 0.284 m, ratio 5.373 (AC stop), firmness 0.000, sigma 0.000, passes 1
+p 0.8: admissible, range 0.409 m, ratio 4.593 (AC stop), firmness 0.000, sigma 0.000, passes 1
+p 1: admissible, range 0.512 m, ratio 4.591 (AC stop), firmness 0.000, sigma 0.000, passes 1
+p 1.25: superhuman (follow-grip-limit), range 1.573 m, ratio 5.669 (AC stop), no hold, passes 1
+p 1.5: superhuman (grip-limit), range 2.438 m, ratio 5.652 (AC stop), no hold, passes 1
+p 2: superhuman (grip-limit), range 3.729 m, ratio 5.660 (AC stop), no hold, passes 1
+-- the sweep on the 10 s lawn --
+p 0.02: admissible, range 0.016 m, ratio 6.661 (beyond AC stop), firmness 0.000, sigma 0.000, passes 1
+p 0.05: admissible, range 0.052 m, ratio 5.253 (AC stop), firmness 0.000, sigma 0.000, passes 1
+p 0.1: admissible, range 0.099 m, ratio 5.573 (AC stop), firmness 0.000, sigma 0.000, passes 1
+p 0.2: admissible, range 0.208 m, ratio 5.255 (AC stop), firmness 0.000, sigma 0.000, passes 1
+p 0.35: admissible, range 0.325 m, ratio 5.849 (AC stop), firmness 0.000, sigma 0.000, passes 1
+p 0.5: admissible, range 0.472 m, ratio 5.745 (AC stop), firmness 0.000, sigma 0.000, passes 1
+p 0.65: admissible, range 0.618 m, ratio 5.714 (AC stop), firmness 0.000, sigma 0.000, passes 1
+p 0.8: admissible, range 0.855 m, ratio 5.088 (AC stop), firmness 0.000, sigma 0.000, passes 1
+p 1: admissible, range 1.065 m, ratio 5.115 (AC stop), firmness 0.000, sigma 0.000, passes 1
+p 1.25: superhuman (follow-grip-limit), range 3.299 m, ratio 6.275 (beyond AC stop), no hold, passes 1
+p 1.5: superhuman (grip-limit), range 5.023 m, ratio 6.416 (beyond AC stop), no hold, passes 1
+p 2: superhuman (grip-limit), range 7.571 m, ratio 6.544 (beyond AC stop), no hold, passes 1
+-- the sweep on the 14 s lawn --
+p 0.02: admissible, range 0.028 m, ratio 7.294 (beyond AC stop), firmness 0.000, sigma 0.000, passes 1
+p 0.05: admissible, range 0.092 m, ratio 5.509 (AC stop), firmness 0.000, sigma 0.000, passes 1
+p 0.1: admissible, range 0.183 m, ratio 5.570 (AC stop), firmness 0.000, sigma 0.000, passes 1
+p 0.2: admissible, range 0.379 m, ratio 5.358 (AC stop), firmness 0.000, sigma 0.000, passes 1
+p 0.35: admissible, range 0.596 m, ratio 5.913 (AC stop), firmness 0.000, sigma 0.000, passes 1
+p 0.5: admissible, range 0.859 m, ratio 5.849 (AC stop), firmness 0.000, sigma 0.000, passes 1
+p 0.65: admissible, range 1.119 m, ratio 5.844 (AC stop), firmness 0.000, sigma 0.000, passes 1
+p 0.8: admissible, range 1.524 m, ratio 5.287 (AC stop), firmness 0.000, sigma 0.000, passes 1
+p 1: admissible, range 1.894 m, ratio 5.328 (AC stop), firmness 0.000, sigma 0.000, passes 1
+p 1.25: superhuman (follow-grip-limit), range 5.888 m, ratio 6.518 (beyond AC stop), no hold, passes 1
+p 1.5: superhuman (grip-limit), range 8.900 m, ratio 6.730 (beyond AC stop), no hold, passes 1
+p 2: superhuman (grip-limit), range 13.333 m, ratio 6.915 (beyond AC stop), no hold, passes 1

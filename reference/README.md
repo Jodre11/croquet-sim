@@ -53,4 +53,5 @@ The derivation of each coefficient from the quoted Law goes in `note`.
 Each record names the run, commit and engine that made it.
 
 - `envelope-stage1.json.gz`: gate stage 1's reads (P2b.2b.2c.3b plan Task B6), per shot type `{ header, reads }`, each
-  text book alone at the grid's ranges and lawns.
+  text book alone at the grid's ranges and lawns. The AC stop's reads are its replay on engine 0.30.0 (design A8), the
+  others' on 0.29.1; each header says which.
