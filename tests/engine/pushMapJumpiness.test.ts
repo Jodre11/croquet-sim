@@ -93,7 +93,8 @@ describe("a head that rides over the ball (plan B-d8)", () => {
             const sample = playSample(type, textBook(type), canonicalPower(type, world), [10]);
             expect(sample.reason).not.toBe(HEAD_OVER_BALL);
         },
-        120_000,
+        // The rolls' firmness search takes 35 s alone and passed 120 s beside the whole suite (was 120 s).
+        300_000,
     );
 });
 

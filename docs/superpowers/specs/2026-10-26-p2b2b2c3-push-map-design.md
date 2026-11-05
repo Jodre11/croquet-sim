@@ -655,3 +655,24 @@ full roll or somewhere between a drive and a half roll or all the other inbetwee
     the assist (a rescope that would have dropped it rested on the drive's speed alone). The assist is the arms'
     strength driving a hands-led downswing, a force–velocity law in place of `handTempo.fast`; ruling 7's assist in
     the finish moves neither ball (item 13) and is not built.
+
+### A8. Gate stage 1's rulings (user, 2026-11-05)
+
+1. **The AC stop has no built-in dip** (engine 0.30.0). The user: "For a soft shot the player has the control and
+   strength the 'stop the mallet. dead' without the assistance of lawn friction"; a harder stop is where the player adds
+   a little jab, and the hardest that doesn't break the turf. The preset's fixed 11 mm `handDrop` (a user decision of
+   2026-10-05) was the same action as `stroke.jab`, built in at every power. At stage 1 it left no admissible stop: it
+   struck the turf on soft shots and slipped the hands from p 0.5. Without it every power to p 1 is admissible on the
+   10 s lawn, the canonical ratio 5.861 (was 5.862) and its range unchanged, and Gugan 5's stop stays in its band (6.69
+   at 1 mm, 7.31 at gap 0). The jab stays the shot's own input, held at the type's (A7 item 3).
+2. **The AC stop's hold stays the type's for this map; its variants go to P2b.2b.2c.3c** (A2 item 3), so the stop's
+   envelope ends near p 1, about 5.4 m of croqueted ball on the 10 s lawn. The evidence
+   (`docs/superpowers/probes/2026-11-05-p2b2b2c3b-stop-holds.txt`, the 10 s lawn, p 0.94 and up) supports the user's
+   lever hypothesis: lowering the bottom hand to 0.45 m stops the head in about 35 ms (129 ms hands together at p 1) and
+   nearly halves the peak hand force; relaxing both grips cuts that force about 2.5 times further and leaves the stop's
+   time alone, and only the lowered, relaxed hold keeps within the grip limit to p 1.5. The jab rescues no hand, and
+   adds to the hands' load on some holds; it helps most where the hands alone stop slowly (hands together, relaxed, p
+   1.05: 151 to 77 ms at 5 mm). 5 mm is usually the hardest on the depths tried (0, 3, 5, 8 mm) that keeps the turf
+   whole. For 3c: whether a slack hold's fast stop is the lever or a flaw of the model, the 32 m stop at p 1.5, the slip
+   at the moment the check gives way to the hold, the soft shots at these holds, and the ratio's jump between its two
+   branches as the hold changes.
