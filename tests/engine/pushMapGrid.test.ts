@@ -29,6 +29,7 @@ import {
     planKey,
     plansOf,
     quantile,
+    reachOf,
     readAt,
     readsJson,
     readsOf,
@@ -439,6 +440,41 @@ describe("the push map's grid, sweep, bands and record (P2b.2b.2c.3b plan Task 4
     });
 });
 
+describe("a sweep's reach (plan Task B6)", () => {
+    it("takes the furthest admissible play and the class of the next power", () => {
+        const { best, beyond } = reachOf(
+            [sample(0.5, 2), sample(1, 5), sample(1.25, 6, "superhuman"), sample(1.5, 7, "turf")],
+            LAWN,
+        );
+        expect(best).toEqual({ power: 1, range: 5, ratio: 2 });
+        expect(beyond).toEqual({ power: 1.25, klass: "superhuman", reason: "superhuman" });
+    });
+
+    it("counts a croqueted ball past the court's length as off-court, not reach", () => {
+        const { best, beyond } = reachOf([sample(1, 10, null, 2), sample(2, 20, null, 2)], LAWN);
+        expect(best?.range).toBe(10);
+        expect(beyond?.klass).toBe("off-court");
+    });
+
+    it("counts a single ball past the court's length as off-court, its ratio being NaN", () => {
+        const { best, beyond } = reachOf([sample(1, 30, null, NaN), sample(2, 40, null, NaN)], LAWN);
+        expect(best?.range).toBe(30);
+        expect(beyond?.power).toBe(2);
+    });
+
+    it("has no best where nothing is admissible, and names the first failure", () => {
+        const { best, beyond } = reachOf([sample(0.5, 1, "turf"), sample(1, 2, "superhuman")], LAWN);
+        expect(best).toBeNull();
+        expect(beyond?.klass).toBe("turf");
+    });
+
+    it("names an engine error above the reach, and nothing where none fails", () => {
+        const failed = reachOf([sample(1, 2), { power: 1.25, engineError: "boom" }], LAWN);
+        expect(failed.beyond).toEqual({ power: 1.25, klass: "engine error", reason: "boom" });
+        expect(reachOf([sample(1, 2)], LAWN).beyond).toBeNull();
+    });
+});
+
 describe("the map on Actions (plan Task B5)", () => {
     const counts = [
         { type: "drive", plans: 100 },
@@ -735,7 +771,7 @@ describe("the regions as text (plan Task 8's summary)", () => {
         expect(regionSpan("half-roll")).toBe("1.4–2.5");
         expect(regionSpan("full-roll")).toBe("1.0–1.2");
         expect(regionSpan("pass-roll")).toBe("below 1");
-        // The half roll's phrase is the stage-1 probe's text exactly ("in 1.4–2.5"), so stage1 is reproduced.
+        // The half roll's phrase is the stage-1 probe's text exactly ("in 1.4–2.5"), so the half roll's summary reproduces it.
         expect(regionPhrase("half-roll")).toBe("in 1.4–2.5");
         expect(regionPhrase("full-roll")).toBe("in 1.0–1.2");
         expect(regionPhrase("pass-roll")).toBe("below 1");

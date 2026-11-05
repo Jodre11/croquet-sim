@@ -20,21 +20,22 @@
  * - cost: plan Task 5, the map's time: with PART=j/J, the j-th of J parts of COST_PLANS pass-roll plans drawn evenly
  *   is played at the grid's powers, each sample's seconds appended to `<IN>/cost-<j>of<J>.jsonl`; without PART, those
  *   files are tallied: the mean and 95th percentile per sample and each type's projected CPU hours on today's grid.
- * - stage1: plan Task 6, the half roll's map, from IN's half-roll shard files merged as merge merges them, and read at
- *   the grid's ranges and lawns (readsOf). The anchor (design §3.3) is today's default (textBook). It is played at the
- *   canonical power on the 10 s lawn, which gives the canonical's range, and then read at that range from its own
- *   sweep at the grid's powers: it lies off the grid (handReach 0.15 m, and a range between the grid's). Its band
- *   is offGridBand's: unplayable if its play or read has a class, else its coarse cell's worst corner graded at that
- *   range from the merged sweeps (cellReads), an unplayable corner counting as edgy. Then: the region's admissible
- *   plans per range and lawn by band; the classes per range and lawn; the lawn's effect on the ratio; the least-effort
- *   plan per range and lawn; the non-monotone sweeps; and the set-ups with no admissible read, outside the envelope
- *   outright (§3.5), mixed or incomplete. It plays the anchor's 11 samples itself. It is summary on the half roll
- *   with its own title, so the stage-1 probe stays reproducible.
- * - summary: plan Task 8, stage1 generalised to TYPE. On the half roll, the anchor as stage1. On the full and pass
- *   rolls §3.3's anchor does not apply; instead A1's text-book validation: the type's text book read at its canonical
- *   range on the 10 s lawn as the anchor is, its band by A3 item 1's off-grid rule, whether it is admissible, and
- *   whether it lands in its region (A1's band). Then stage1's tallies; on the pass roll over every split (no
- *   least-effort plans or set-ups) and again per graded split. It plays the text book's 11 samples itself.
+ * - stage1: plan Task B6, gate stage 1 (design A7 item 10), from IN's stage-1 shard files, every type. Per type: the
+ *   text book played at its canonical power on the 10 s lawn at the found hold and at the fitted one, its range, ratio,
+ *   label and whether it is in its band; its planned contact speed against its preset's within ±2 % (criterion 4); per
+ *   lawn its reach (reachOf) and the class beyond it; its sweep sample by sample; and on the full and pass rolls the
+ *   jumpiness bound (B-d7). It plays the two canonical samples itself. The workflow runs it after the merge.
+ * - summary: plan Task 6 and Task 8, one roll's map from IN's shard files merged as merge merges them, and read at the
+ *   grid's ranges and lawns (readsOf). The anchor (design §3.3) on the half roll, today's default (textBook), played at
+ *   the canonical power on the 10 s lawn, which gives the canonical's range, and read at that range from its own sweep
+ *   at the grid's powers. Its band is offGridBand's: unplayable if its play or read has a class, else its coarse cell's
+ *   worst corner graded at that range from the merged sweeps (cellReads), an unplayable corner counting as edgy. On the
+ *   full and pass rolls §3.3's anchor does not apply; instead A1's text-book validation, read the same way, and whether
+ *   it lands in its region (A1's band). Then the region's admissible plans per range and lawn by band; the classes per
+ *   range and lawn; the lawn's effect on the ratio; the least-effort plan per range and lawn; the non-monotone sweeps;
+ *   and the set-ups with no admissible read, outside the envelope outright (§3.5), mixed or incomplete; on the pass
+ *   roll over every split (no least-effort plans or set-ups) and again per graded split. It plays the text book's
+ *   samples itself.
  * - super: plan Task 8 Step 2, decision 12's super pass roll (design §3.4): the pass roll's text book's lean and feet,
  *   drive 1, handReach 0.3 m, at each graded split × SUPER_ONSETS × SUPER_WINDOWS (superPlans), each played at the
  *   grid's powers on its lawns. With OUT (named `super-<k>of<N>.jsonl`) it plays one shard (SHARD=k/N) as run does,
@@ -56,7 +57,7 @@ import { MERGE_SEPARATION } from "../src/engine/faults";
 import { simulateImpact } from "../src/engine/impact/simulateImpact";
 import { length, sub } from "../src/engine/math/vec3";
 import { ENGINE_VERSION } from "../src/engine/simulate";
-import { planStroke } from "../src/engine/swing/buildContact";
+import { planStroke, plannedSpeed } from "../src/engine/swing/buildContact";
 import type { ShotSetup } from "../src/engine/swing/types";
 import { BALL_IDS, type BallState, type BallStates } from "../src/engine/types";
 import { swingReference } from "../src/reference/index";
@@ -84,7 +85,9 @@ import {
     pickDefault,
     planKey,
     plansOf,
+    labelOf,
     quantile,
+    reachOf,
     readAt,
     readsJson,
     readsOf,
@@ -812,8 +815,98 @@ async function summaryOf(type: RollType, label: string): Promise<void> {
     }
 }
 
+/** Each type's band on the continuum (labelOf); the single-ball stroke has no ratio, so no band. */
+const OWN_LABEL: Readonly<Record<MapType, string | null>> = {
+    drive: "drive",
+    "stop-ac": "AC stop",
+    "half-roll": "half roll",
+    "full-roll": "full roll",
+    "pass-roll": "pass roll",
+    "single-ball": null,
+};
+
+/** Criterion 4's tolerance on a text book's planned contact speed against its preset's (design A7 item 10). */
+const SPEED_TOLERANCE = 0.02;
+
+/** The bound B-d7 measured under B-d8 (the envelope probe, Task B4): the rolls' largest gap between pushed neighbours. */
+const JUMPINESS_BOUND: Readonly<Partial<Record<MapType, number>>> = { "full-roll": 0.402, "pass-roll": 0.579 };
+
+/** A sample's figures on `lawn` for gate stage 1: class, range, ratio, label, hold and practice passes. */
+function gateSampleText(s: SweepSample, lawn: number): string {
+    if ("engineError" in s) {
+        return `engine error (${s.engineError})`;
+    }
+    const read = s.byLawn[lawn];
+    const klass = s.klass === null ? "admissible" : `${s.klass} (${s.reason ?? ""})`;
+    const ratio = read?.ratio ?? NaN;
+    const figures = Number.isFinite(ratio) ? `ratio ${ratio.toFixed(3)} (${labelOf(ratio)})` : "no ratio";
+    const hold = s.firmness === null ? "no hold" : `firmness ${s.firmness.toFixed(3)}, sigma ${s.sigma?.toFixed(3)}`;
+    return `${klass}, range ${(read?.range ?? NaN).toFixed(3)} m, ${figures}, ${hold}, passes ${s.passes}`;
+}
+
+/** `type`'s text book at its canonical power at both holds, its speed and its band (plan Task B6). */
+function printGateBook(type: MapType): void {
+    const book = textBook(type);
+    const world = openWorld(ANCHOR_LAWN);
+    const power = canonicalPower(type, world);
+    const speed = plannedSpeed(mapSetup(type, book, power), world);
+    const preset = swingReference[type].defaultSpeed.value;
+    const off = speed / preset - 1;
+    console.log(`plan: ${planText(book)}; canonical power p ${power.toFixed(4)}`);
+    console.log(
+        `planned contact speed ${speed.toFixed(3)} m/s, preset's ${preset.toFixed(3)} m/s, ` +
+            `${(100 * off).toFixed(2)} %: within ±${100 * SPEED_TOLERANCE} %: ` +
+            `${Math.abs(off) <= SPEED_TOLERANCE ? "yes" : "no"}`,
+    );
+    const own = OWN_LABEL[type];
+    for (const hold of ["found", "preset"] as const) {
+        let played: SweepSample;
+        try {
+            played = playSample(type, book, power, [ANCHOR_LAWN], hold);
+        } catch (error) {
+            played = { power, engineError: error instanceof Error ? error.message : String(error) };
+        }
+        const ratio = "engineError" in played ? NaN : (played.byLawn[ANCHOR_LAWN]?.ratio ?? NaN);
+        const band = own === null ? "no band" : `in the ${own}'s band: ${labelOf(ratio) === own ? "yes" : "no"}`;
+        console.log(
+            `at the ${hold === "found" ? "found" : "fitted"} hold, ${ANCHOR_LAWN} s lawn: ` +
+                `${gateSampleText(played, ANCHOR_LAWN)}; ${band}`,
+        );
+    }
+}
+
 async function sectionStage1(): Promise<void> {
-    await summaryOf("half-roll", "stage1. Plan Task 6");
+    const dir = required("IN");
+    const fs = await files();
+    for (const type of MAP_TYPES) {
+        const grid = gridFor(type);
+        const { merged, shards } = mergeShards(fs, type, dir, stagePlans(type, grid, 1));
+        console.log(`== stage1. Plan Task B6: ${type}, ${shards} shard files, missing ${merged.missing.length} ==`);
+        printGateBook(type);
+        const sweep = merged.samples.get(0) ?? [];
+        for (const lawn of grid.lawns) {
+            const { best, beyond } = reachOf(sweep, lawn);
+            const reach =
+                best === null
+                    ? "no admissible play"
+                    : `p ${best.power}, ${best.range.toFixed(2)} m` +
+                      (Number.isFinite(best.ratio) ? `, ratio ${best.ratio.toFixed(3)}` : "");
+            const next =
+                beyond === null ? "none beyond" : `p ${beyond.power}: ${beyond.klass} (${beyond.reason ?? ""})`;
+            console.log(`reach on the ${lawn} s lawn: ${reach}; ${next}`);
+        }
+        const bound = JUMPINESS_BOUND[type];
+        if (bound !== undefined) {
+            console.log(`jumpiness bound (B-d7, under B-d8): ${bound}`);
+        }
+        for (const lawn of grid.lawns) {
+            console.log(`-- the sweep on the ${lawn} s lawn --`);
+            for (const s of sweep) {
+                console.log(`p ${s.power}: ${gateSampleText(s, lawn)}`);
+            }
+        }
+        console.log("");
+    }
 }
 
 async function sectionSummary(): Promise<void> {

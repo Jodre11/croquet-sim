@@ -414,6 +414,49 @@ export function readAt(samples: readonly SweepSample[], range: number, lawn: num
     return failedRead("unreachable", BELOW_LEAST, monotone);
 }
 
+/** A sweep's reach on one lawn (plan Task B6): its furthest admissible play and what stops the next power. */
+export interface Reach {
+    /** The furthest admissible play with both balls on the court; null where the sweep has none. */
+    readonly best: { readonly power: number; readonly range: number; readonly ratio: number } | null;
+    /** The first failing sample above `best` in power (the first of all without one); null where none fails. */
+    readonly beyond: { readonly power: number; readonly klass: string; readonly reason: string | null } | null;
+}
+
+/**
+ * `samples`' reach on `lawn` (plan Task B6, design A7 item 10). A sample fails on its class, on an engine error, or as
+ * off-court where either ball passes a court's length (plan B-d4), which also covers the single-ball stroke's own ball.
+ */
+export function reachOf(samples: readonly SweepSample[], lawn: number): Reach {
+    const sorted = [...samples].sort((a, b) => a.power - b.power);
+    const failure = (s: SweepSample): { readonly klass: string; readonly reason: string | null } | null => {
+        if (isEngineError(s)) {
+            return { klass: "engine error", reason: s.engineError };
+        }
+        if (s.klass !== null) {
+            return { klass: s.klass, reason: s.reason };
+        }
+        const read = s.byLawn[lawn];
+        const range = read?.range ?? NaN;
+        return range > RANGE_MOST || offCourt(range, read?.ratio ?? NaN)
+            ? { klass: "off-court", reason: OFF_COURT }
+            : null;
+    };
+    let best: Reach["best"] = null;
+    for (const s of sorted) {
+        if (failure(s) === null && !isEngineError(s)) {
+            const read = s.byLawn[lawn];
+            const range = read?.range ?? NaN;
+            if (Number.isFinite(range) && (best === null || range > best.range)) {
+                best = { power: s.power, range, ratio: read?.ratio ?? NaN };
+            }
+        }
+    }
+    const least = best?.power ?? -Infinity;
+    const next = sorted.find((s) => s.power > least && failure(s) !== null);
+    const failed = next === undefined ? null : failure(next);
+    return { best, beyond: next === undefined || failed === null ? null : { power: next.power, ...failed } };
+}
+
 /** A2 item 2's bands. */
 export type Band = "viable" | "edgy" | "unplayable";
 

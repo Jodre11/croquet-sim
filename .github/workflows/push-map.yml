@@ -141,6 +141,10 @@ jobs:
                   for type in $TYPES; do
                       TYPE="$type" npx --no-install tsx scripts/pushMap.ts 2>&1 | tee "shards/$type.merge.txt" || status=1
                   done
+                  # On the same runners as the map, as gate stage 1's figures must be (design A7 item 11).
+                  if [ "$STAGE" = "1" ]; then
+                      SECTION=stage1 npx --no-install tsx scripts/pushMap.ts 2>&1 | tee shards/stage1.txt || status=1
+                  fi
                   exit "$status"
             - uses: actions/upload-artifact@v7
               if: ${{ !cancelled() }}
@@ -149,4 +153,5 @@ jobs:
                   path: |
                       shards/*.reads.json
                       shards/*.merge.txt
+                      shards/stage1.txt
                   if-no-files-found: error
