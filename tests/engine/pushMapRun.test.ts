@@ -270,6 +270,7 @@ describe("the free motion once per sample (plan Amendment B, Task B2; B-d6)", ()
                 pushImpulse: 2.1380725870668282,
                 effectVerdicts: { shipped: false, contactOnly: false },
                 followCap: false,
+                followSlip: false,
                 passes: 3,
                 firmness: 0.29861664015148576,
                 sigma: 0.3375,
@@ -316,6 +317,26 @@ describe("the push map practises (P2b.2b.2c.3b.1 plan Task 7)", () => {
         const unlawful = { findings: [{ law: "29.1.6.1" }] } as unknown as FaultReport;
         expect(runClass(setup, stubRun(setup.striker, []), unlawful, ON, "turf-yield").klass).toBe("unlawful");
     });
+
+    it("admits a slip after the balls have gone, and rules out one during the impact (design A8 item 5)", () => {
+        const after = stubRun(setup.striker, [], ["follow-grip-limit"]);
+        expect(runClass(setup, after, NONE, ON, null)).toEqual({ klass: null, reason: null });
+        const during = stubRun(setup.striker, [{ kind: "grip-limit", t: 0, hand: "top" }], ["follow-grip-limit"]);
+        expect(runClass(setup, during, NONE, ON, null)).toEqual({ klass: "superhuman", reason: "grip-limit" });
+    });
+
+    it("still classes a slipping follow-through that breaks the turf", () => {
+        const turf = stubRun(setup.striker, [], ["follow-grip-limit", "follow-turf-yield"]);
+        expect(runClass(setup, turf, NONE, ON, null)).toEqual({ klass: "turf", reason: "follow-turf-yield" });
+    });
+
+    it("records the slip beside the sample: the AC stop's text book at p 1.25 plays and slips", () => {
+        const slipped = playSample("stop-ac", textBook("stop-ac"), 1.25, [10]);
+        expect(slipped.klass).toBeNull();
+        expect(slipped.followSlip).toBe(true);
+        expect(playSample("stop-ac", textBook("stop-ac"), 1, [10]).followSlip).toBe(false);
+        expect(playSample("stop-ac", { ...textBook("stop-ac"), feet: 2 }, 0.5, [10]).followSlip).toBe(false);
+    }, 120_000);
 
     it("records the passes of a played sample, and none of an unplayed one", () => {
         const played = playSample("half-roll", textBook("half-roll"), 0.5, [10]);

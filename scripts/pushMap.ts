@@ -851,7 +851,8 @@ function gateSampleText(s: SweepSample, lawn: number): string {
     const ratio = read?.ratio ?? NaN;
     const figures = Number.isFinite(ratio) ? `ratio ${ratio.toFixed(3)} (${labelOf(ratio)})` : "no ratio";
     const hold = s.firmness === null ? "no hold" : `firmness ${s.firmness.toFixed(3)}, sigma ${s.sigma?.toFixed(3)}`;
-    return `${klass}, range ${(read?.range ?? NaN).toFixed(3)} m, ${figures}, ${hold}, passes ${s.passes}`;
+    const slip = s.followSlip ? ", slips after the balls have gone" : "";
+    return `${klass}${slip}, range ${(read?.range ?? NaN).toFixed(3)} m, ${figures}, ${hold}, passes ${s.passes}`;
 }
 
 /** `type`'s text book at its canonical power at both holds, its speed and its band (plan Task B6). */

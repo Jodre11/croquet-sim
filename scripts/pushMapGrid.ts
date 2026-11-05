@@ -324,6 +324,8 @@ export interface SweepRead {
     readonly pushImpulse: number;
     /** The hold firmness played (design A8 item 3), interpolated as the ratio; NaN where a bracket's end has none. */
     readonly firmness: number;
+    /** Whether a sample of the bracket read slips after the balls have gone (design A8 item 5); no class. */
+    readonly followSlip: boolean;
     readonly power: number;
     /** Whether the sweep's range rises with p over every played sample on this lawn. */
     readonly monotone: boolean;
@@ -360,6 +362,7 @@ function failedRead(klass: MapClass, reason: string | null, monotone: boolean): 
         coupleShare: NaN,
         pushImpulse: NaN,
         firmness: NaN,
+        followSlip: false,
         power: NaN,
         monotone,
     };
@@ -415,6 +418,7 @@ export function readAt(samples: readonly SweepSample[], range: number, lawn: num
             return failedRead("off-court", OFF_COURT, monotone);
         }
         let failing: MapSample | null = null;
+        let followSlip = false;
         for (let i = i0; i <= i1; i++) {
             const s = sorted[i] as SweepSample;
             if (isEngineError(s)) {
@@ -423,6 +427,7 @@ export function readAt(samples: readonly SweepSample[], range: number, lawn: num
             if (failing === null && s.klass !== null) {
                 failing = s;
             }
+            followSlip ||= s.followSlip;
         }
         return {
             klass: failing?.klass ?? null,
@@ -434,6 +439,7 @@ export function readAt(samples: readonly SweepSample[], range: number, lawn: num
             coupleShare: lerp(a.coupleShare, b.coupleShare, t),
             pushImpulse: lerp(a.pushImpulse, b.pushImpulse, t),
             firmness: lerp(a.firmness ?? NaN, b.firmness ?? NaN, t),
+            followSlip,
             power: lerp(a.power, b.power, t),
             monotone,
         };
@@ -828,7 +834,7 @@ function field(text: string): string {
     return /[",\r\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
 }
 
-/** The record's columns (decision 10, A4, A8 item 3), in SI: rad, m, 1, m, s, s, rad, 1; m, s; %, %, 1, N·s, 1, rad. */
+/** The record's columns (decision 10, A4, A8 items 3, 5), in SI: rad, m, 1, m, s, s, rad, 1; m, s; %, %, 1, N·s, 1, rad. */
 const COLUMNS = [
     "type",
     "lean",
@@ -851,6 +857,7 @@ const COLUMNS = [
     "coupleShare",
     "pushImpulse",
     "firmness",
+    "followSlip",
     "splitAtRest",
     "power",
     "monotone",
@@ -896,6 +903,7 @@ export function envelopeRows(type: MapType, grid: MapGrid, reads: Reads, banded:
                     figure(read.coupleShare),
                     figure(read.pushImpulse),
                     figure(read.firmness),
+                    read.followSlip ? "1" : "0",
                     figure(read.splitAtRest),
                     figure(read.power),
                     read.monotone ? "1" : "0",

@@ -71,6 +71,7 @@ function sample(power: number, range: number, klass: MapClass | null = null, rat
         pushImpulse: power,
         effectVerdicts: { shipped: false, contactOnly: false },
         followCap: false,
+        followSlip: false,
         passes: 1,
         firmness: 0,
         sigma: 0,
@@ -89,6 +90,7 @@ function read(klass: MapClass | null, ratio = 2, effort = 50, reason: string | n
         coupleShare: 0,
         pushImpulse: 0,
         firmness: 0,
+        followSlip: false,
         power: 1,
         monotone: true,
     };
@@ -346,11 +348,11 @@ describe("the push map's grid, sweep, bands and record (P2b.2b.2c.3b plan Task 4
         expect(rows).toHaveLength(2);
         expect(rows[0]).toBe(
             "type,lean,feet,drive,handReach,window,onset,split,speedGain,range,lawn,band,edge,class,reason,ratio,strokeEffort," +
-                "pushEffort,coupleShare,pushImpulse,firmness,splitAtRest,power,monotone",
+                "pushEffort,coupleShare,pushImpulse,firmness,followSlip,splitAtRest,power,monotone",
         );
         expect(rows[1]).toBe(
             `half-roll,${26 * DEG},0.1,0.5,0.15,0.02,0,0,0.1,10,10,unplayable,feet;handReach;window,mishit,` +
-                `"off point: the lean 0.9 rad, ""high""",,,,0,0,0,0,1,1`,
+                `"off point: the lean 0.9 rad, ""high""",,,,0,0,0,0,0,1,1`,
         );
     });
 
@@ -966,6 +968,14 @@ describe("the envelope's grids, from a tap to a court length (plan Amendment B, 
             { ...sample(1, 4), firmness: 0.6 },
         ];
         expect(readAt(sweep, 3, LAWN)?.firmness).toBeCloseTo(0.4, 12);
+    });
+
+    it("marks a read whose bracket holds a slip after the balls have gone, admissible all the same", () => {
+        const sweep = [sample(0.5, 2), sample(1, 4), { ...sample(1.25, 6), followSlip: true }];
+        expect(readAt(sweep, 3, LAWN)?.followSlip).toBe(false);
+        const slipping = readAt(sweep, 5, LAWN);
+        expect(slipping?.followSlip).toBe(true);
+        expect(slipping?.klass).toBeNull();
     });
 
     it("reads a firmness of NaN where a bracket's end found no hold", () => {

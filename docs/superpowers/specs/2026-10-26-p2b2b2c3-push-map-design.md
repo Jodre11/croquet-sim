@@ -684,3 +684,7 @@ full roll or somewhere between a drive and a half roll or all the other inbetwee
    intensity takes over, so the distance climbs fastest there: the AC stop's striker's ball goes from 1.06 m at p 1 to
    3.30 m at p 1.25 on the 10 s lawn, about 3.5 steps of the range grid. With 1.71 m at p 1.05 and 2.01 m at p 1.1, no
    bracket there spans more than about 1.5 steps.
+5. **A slip after the balls have gone is recorded, not ruled out** (amends §3.5's "a saturated grip" and plan decision
+   5). `follow-grip-limit` comes after the impact, so it cannot affect the balls, and the fault judge doesn't read grip,
+   so the shot is legal; the map admits it and marks the play `followSlip`. A slip during the impact (`grip-limit`) can
+   affect the balls and stays superhuman. The found hold is the least that plays, slipping or not.

@@ -99,6 +99,11 @@ export interface MapSample {
     readonly pushImpulse: number;
     readonly effectVerdicts: { readonly shipped: boolean; readonly contactOnly: boolean };
     readonly followCap: boolean;
+    /**
+     * Whether a hand slipped in the follow-through, after the balls have gone (`follow-grip-limit`; design A8 item 5):
+     * the balls are unaffected and the shot is legal, so this is recorded beside the class, not as one.
+     */
+    readonly followSlip: boolean;
     /** The practice passes played (P2b.2b.2c.3b.1 design §4, §6): 1 to PRACTICE_PASSES; 0 where unplayed. */
     readonly passes: number;
     /**
@@ -409,6 +414,7 @@ function unplayed(power: number, lawns: readonly number[], klass: MapClass, reas
         pushImpulse: NaN,
         effectVerdicts: { shipped: false, contactOnly: false },
         followCap: false,
+        followSlip: false,
         passes: 0,
         firmness: null,
         sigma: null,
@@ -435,7 +441,10 @@ export function runClass(
     return own;
 }
 
-/** runClass before practice's reading: decision 5's first class after the run that applies, or none. */
+/**
+ * runClass before practice's reading: decision 5's first class after the run that applies, or none. A slip in the
+ * follow-through is no class (design A8 item 5): the sample records it as `followSlip`.
+ */
 function ownClass(
     setup: ShotSetup,
     run: { readonly result: ImpactResult; readonly follow: FollowThrough },
@@ -447,9 +456,6 @@ function ownClass(
     const event = (kind: string): boolean => events.some((e) => e.kind === kind);
     if (event("grip-limit")) {
         return { klass: "superhuman", reason: "grip-limit" };
-    }
-    if (flags.includes("follow-grip-limit")) {
-        return { klass: "superhuman", reason: "follow-grip-limit" };
     }
     for (const kind of ["impact-off-face", "impact-no-strike"]) {
         if (event(kind)) {
@@ -796,6 +802,7 @@ function judgedPlay(
         pushImpulse: impulse,
         effectVerdicts: { shipped, contactOnly: contactOnlyFault(faults, faces, trace, shipped) },
         followCap: run.follow.flags.includes("follow-cap"),
+        followSlip: run.follow.flags.includes("follow-grip-limit"),
         passes: run.passes,
     };
     return { sample, strike: faults.strike ?? null, handover: impact.handover };
