@@ -692,3 +692,7 @@ full roll or somewhere between a drive and a half roll or all the other inbetwee
    the mallet if they can. Taking the least that plays regardless raised the full roll's jumpiness bound from 0.402 to
    1.273, as the search stopped at slack holds that slip (at drive −1, reach 0.1 m, window 20 ms, σ 0.025 and ratio 2.32
    where σ 0.1 had read 1.28).
+6. **The fallback stands, and its plays are shown apart** (user, 2026-11-05). With the preference, the full roll's bound
+   is 1.244 at one point of 60 (drive −1, reach 0.1 m, window 10 ms), which no grid hold both plays and holds, so it
+   falls back to σ 0.00625 and ratio 2.448; every other gap is 0.402 or less. The search is unchanged. The record marks
+   each slipping play, and the map's bands and plots show those plays apart from the plays that hold.
