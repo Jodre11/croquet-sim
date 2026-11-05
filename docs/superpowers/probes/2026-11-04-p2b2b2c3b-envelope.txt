@@ -648,3 +648,30 @@ pass-roll tally: 51 of 60 points admissible
   0.377 along drive, -1 to -0.5, at drive -1, handReach 0.2 m, window 40 ms; first pass 0.377
   not within the 0.1 read-out bin (B-d7)
 
+
+== The map re-timed on the search preferring a hold that doesn't slip (plan B-d10, B-d11), superseding Task B5's table
+
+Run 42080826493, commit 524b363, types=all stage=2 shards=480 only=0: both holds, 14 powers, 44 plans a type as in B5.
+The full roll's job hit the step's 335 minutes with 40 of its 44 plans written, so its mean is low, if anything. What
+it had written was uploaded. Run 42064098007, the same on the search taking the least hold that plays, slipping or not.
+
+              plans   seconds a plan              CPU h   least jobs with      plans a   chance a shard
+                      mean  median     max                overrun under 0.002  shard     overruns
+drive          1260    250      47    1207       87        8                   40        0
+stop-ac        1260    314      21    3153      110       16                   20        0.0007
+half-roll      1260    683     233    7669      239       96                    4        0.0005
+full-roll      5040   1452     146    7191     2033      512                    3        0.0018
+pass-roll     10620   1307     619    6772     3856      512 (0.0123)          6        0.0123
+single-ball    1260    113      34     495       39        4                   79        0
+Total         20700                            6365     1148
+
+Mean seconds a plan, B5 / least hold that plays / this search: drive 104/136/250, stop-ac 497/303/314, half-roll
+373/561/683, full-roll 633/1209/1452, pass-roll 702/988/1307, single-ball 85/81/113. CPU h: 3327 / 4987 / 6365. On the
+same plans this search costs 1.03 to 1.84 times the other, as a hold that plays but slips no longer ends the search.
+
+6365 CPU h is 1591 job hours, about 80 h at 20 jobs at once. No single plan is over the limit (the largest 2.1 h), but
+a type's slowest plans lie together, and 5 plans take 42% to 82% of a type's sampled time.
+
+One dispatch has at most 256 jobs. The full and pass rolls at 512 need two dispatches each, which the workflow cannot
+do: `only` plays one job number. At 512 jobs about 4 of the full roll's 2048 shards and 25 of the pass roll's would
+overrun, so they need a repeat that resumes from the uploaded file. Same resampling as B5, a guide and not a bound.
