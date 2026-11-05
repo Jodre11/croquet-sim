@@ -435,3 +435,43 @@ pass-roll tally: 37 of 60 points admissible
   0.326 along drive, -1 to -0.5, at drive -1, handReach 0.3 m, window 20 ms; first pass 0.186
   0.302 along drive, 0 to 0.5, at drive 0, handReach 0.2 m, window 10 ms; first pass 0.123
   not within the 0.1 read-out bin (B-d7)
+
+== Task B5: timing on the hosted runners, and the map's job counts
+
+Two dispatches on cbc8bb5 (the tsx pin that followed changes no play):
+
+Run 41930238300, half-roll, stage 1, 10 s lawn, one plan, the other three shards empty: 73.31 s per plan, 6.109 s per
+sample, against 30.7 s and 2.558 s locally, so a runner plays about 2.4 times slower. Merge read it: swept 1, missing 0.
+
+Run 41930242612, every type, stage 2, all lawns, shards=480 only=0: one job per type, four shards contending on four
+vCPUs, 44 plans a type (four neighbouring indices at each of 11 stations through the grid), no engine errors:
+
+              plans   seconds a plan              CPU h   jobs   plans a   mean shard   chance a shard
+                      mean  median     max                       shard     (min)        overruns
+drive          1260    104      13     601       37      8        40         70         0
+stop-ac        1260    497      14    4804      174     32        10         83         0.0019
+half-roll      1260    373     138    4241      131     24        14         87         0.0006
+full-roll      5040    633     134    3048      886    131        10        106         0.0001
+pass-roll     10620    702     385    3692     2070    256        11        129         0.0006
+single-ball    1260     85      15     399       30      8        40         56         0
+Total         20700                            3327    459
+
+A plan's cost is heavy-tailed and neighbouring plans are slow together (stop-ac's 580 to 583 took 3252 to 4804 s), so
+the job counts come from the overrun, not the mean. The chance is a resampling: a shard's plans drawn from the type's 44
+times, 20000 draws, against the step's 335 minutes. It rests on 11 stations, so it is a guide, not a bound.
+
+Stage 2: no cut. All of it takes 3327 CPU h, 832 job hours, about 42 h at 20 jobs at once, plus about a minute's set-up
+per job. The sample's spread makes that a rough figure.
+
+The job counts above need one dispatch per type, each with its count as `shards`. One dispatch of all six cannot do it:
+its 256 jobs, shared by plans, give the pass roll 131, and a shard then overruns with a chance of 0.116.
+
+Stage 1: `types=all stage=1 shards=6`, one job per type, three plans each.
+
+Carried:
+- Expected overruns over the 1836 shards: about one. A job over the limit still uploads what it wrote, and merge names
+  the missing plans. Playing the job again would overrun again, as it starts empty, so such a job finishes locally:
+  SECTION=run resumes from its downloaded file, and merge then runs locally on the whole set.
+- GitHub's limits page gives a 24 h queue limit for self-hosted runners and none for hosted ones. The pass roll alone
+  has about 26 h of work at 20 at once, so its last jobs queue that long. Not tested: check at 24 h that none is cancelled.
+- The map holds all 20 of the account's job slots, so other CI waits behind it while it runs.
