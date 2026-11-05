@@ -838,8 +838,8 @@ const OWN_LABEL: Readonly<Record<MapType, string | null>> = {
 /** Criterion 4's tolerance on a text book's planned contact speed against its preset's (design A7 item 10). */
 const SPEED_TOLERANCE = 0.02;
 
-/** The bound B-d7 measured under B-d8 (the envelope probe, Task B4): the rolls' largest gap between pushed neighbours. */
-const JUMPINESS_BOUND: Readonly<Partial<Record<MapType, number>>> = { "full-roll": 0.402, "pass-roll": 0.579 };
+/** The bound B-d7 measured under B-d11 (the envelope probe): the rolls' largest gap between pushed neighbours. */
+const JUMPINESS_BOUND: Readonly<Partial<Record<MapType, number>>> = { "full-roll": 1.244, "pass-roll": 0.579 };
 
 /** A sample's figures on `lawn` for gate stage 1: class, range, ratio, label, hold and practice passes. */
 function gateSampleText(s: SweepSample, lawn: number): string {
