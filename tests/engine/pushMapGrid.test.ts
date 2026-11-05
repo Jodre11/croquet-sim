@@ -7,6 +7,7 @@ import {
     MAP_CLASSES,
     MATRIX_LIMIT,
     MULTIPLES_RATIO,
+    NO_FITTED_PLAY,
     OFF_COURT,
     SUPER_ONSETS,
     SUPER_WINDOWS,
@@ -17,6 +18,7 @@ import {
     doneIndices,
     envelopeRows,
     excludedSetUps,
+    fittedSweeps,
     grade,
     gridFor,
     lawnSpreads,
@@ -28,6 +30,7 @@ import {
     pickDefault,
     planKey,
     plansOf,
+    playBothHolds,
     quantile,
     reachOf,
     readAt,
@@ -85,6 +88,7 @@ function read(klass: MapClass | null, ratio = 2, effort = 50, reason: string | n
         pushEffort: effort,
         coupleShare: 0,
         pushImpulse: 0,
+        firmness: 0,
         power: 1,
         monotone: true,
     };
@@ -342,11 +346,11 @@ describe("the push map's grid, sweep, bands and record (P2b.2b.2c.3b plan Task 4
         expect(rows).toHaveLength(2);
         expect(rows[0]).toBe(
             "type,lean,feet,drive,handReach,window,onset,split,speedGain,range,lawn,band,edge,class,reason,ratio,strokeEffort," +
-                "pushEffort,coupleShare,pushImpulse,splitAtRest,power,monotone",
+                "pushEffort,coupleShare,pushImpulse,firmness,splitAtRest,power,monotone",
         );
         expect(rows[1]).toBe(
             `half-roll,${26 * DEG},0.1,0.5,0.15,0.02,0,0,0.1,10,10,unplayable,feet;handReach;window,mishit,` +
-                `"off point: the lean 0.9 rad, ""high""",,,,0,0,0,1,1`,
+                `"off point: the lean 0.9 rad, ""high""",,,,0,0,0,0,1,1`,
         );
     });
 
@@ -918,6 +922,55 @@ describe("the envelope's grids, from a tap to a court length (plan Amendment B, 
         const { powers } = gridFor("half-roll");
         expect(powers.slice(0, 3)).toEqual([0.02, 0.05, 0.1]);
         expect([...powers].sort((a, b) => a - b)).toEqual(powers);
+    });
+
+    it("adds 1.05 and 1.1 where the distance climbs above p 1 (design A8 item 4)", () => {
+        const { powers } = gridFor("stop-ac");
+        expect(powers.filter((p) => p >= 1 && p <= 1.25)).toEqual([1, 1.05, 1.1, 1.25]);
+    });
+
+    it("plays a sample at both holds, the fitted play beside the found (design A8 item 3)", () => {
+        const found = { ...sample(1, 3), firmness: 0.25 };
+        const fitted = { ...sample(1, 4), firmness: 1 };
+        const entry = playBothHolds((hold) => (hold === "found" ? found : fitted), 1);
+        expect(entry).toEqual({ ...found, fitted });
+    });
+
+    it("keeps each hold's play when the other's throws", () => {
+        const fitted = sample(1, 4);
+        const entry = playBothHolds((hold) => {
+            if (hold === "found") {
+                throw new Error("boom");
+            }
+            return fitted;
+        }, 1);
+        expect(entry).toEqual({ power: 1, engineError: "boom", fitted });
+        const other = playBothHolds((hold) => {
+            if (hold === "preset") {
+                throw new Error("boom");
+            }
+            return fitted;
+        }, 1);
+        expect(other).toEqual({ ...fitted, fitted: { power: 1, engineError: "boom" } });
+    });
+
+    it("reads the fitted sweep from the fitted plays, with an engine error for a sample without one", () => {
+        const fitted = sample(1, 4);
+        const sweeps = fittedSweeps(new Map([[0, [{ ...sample(1, 3), fitted }, sample(1.25, 5)]]]));
+        expect(sweeps.get(0)).toEqual([fitted, { power: 1.25, engineError: NO_FITTED_PLAY }]);
+    });
+
+    it("reads the hold's firmness from the sweep, linearly in range like the other figures", () => {
+        const sweep = [
+            { ...sample(0.5, 2), firmness: 0.2 },
+            { ...sample(1, 4), firmness: 0.6 },
+        ];
+        expect(readAt(sweep, 3, LAWN)?.firmness).toBeCloseTo(0.4, 12);
+    });
+
+    it("reads a firmness of NaN where a bracket's end found no hold", () => {
+        const sweep = [sample(0.5, 2), { ...sample(1, 4, "superhuman"), firmness: null }];
+        expect(readAt(sweep, 3, LAWN)?.firmness).toBeNaN();
     });
 
     it("sweeps the pass roll's split at 0°, 2°, 4°, 6°, 8°, 10°, 20° and 30°, with 40° beyond", () => {

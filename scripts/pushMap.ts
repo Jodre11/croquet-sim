@@ -8,15 +8,16 @@
  *   and ONLY (all, or one job of each type), printed and appended to GITHUB_OUTPUT when set.
  * - run: plan decision 9, one shard of TYPE's plans at STAGE (stagePlans; the text book alone, or by default the whole
  *   grid) on LAWNS (by default the grid's): the plans whose index is ≡ k mod N (SHARD=k/N), each played at the grid's
- *   powers on its lawns (playSample), appended to OUT as one JSON line per plan (shardLine) as it finishes. A sample
- *   the engine throws on is kept as its message at that power, and one outside the samples as the plan's; the shard
- *   goes on. OUT must be named `<TYPE>-<k>of<N>.jsonl`. Indices whose lines OUT already holds whole (doneIndices) are
+ *   powers on its lawns at the found hold and the fitted one (playBothHolds, design A8 item 3), appended to OUT as one
+ *   JSON line per plan (shardLine) as it finishes. A sample the engine throws on is kept as its message at that power
+ *   and hold, and one outside the samples as the plan's; the shard goes on. OUT must be named `<TYPE>-<k>of<N>.jsonl`. Indices whose lines OUT already holds whole (doneIndices) are
  *   skipped, so a shard that died is re-run in place; a torn last line is ended first and its plan played again.
  * - merge: exactly the files `<TYPE>-<k>of<N>.jsonl` in IN merged (mergeLines) at STAGE and LAWNS as run played them,
  *   so no other run's file is read: the missing plan indices, the engine's errors (outside and inside the samples),
  *   the reads an engine error leaves out and the graded reads left unbanded for an unread neighbour are reported
- *   apart; each plan's reads at the grid's ranges and lawns (readsOf) are written to `<IN>/<TYPE>.reads.json` under
- *   the run's URL and commit (RecordHeader). A plan missing fails the process, after the write.
+ *   apart; each plan's reads at the grid's ranges and lawns (readsOf) are written to `<IN>/<TYPE>.reads.json`, and at
+ *   the fitted hold to `<IN>/<TYPE>.fitted.reads.json`, under the run's URL and commit (RecordHeader). A plan missing
+ *   fails the process, after the writes.
  * - cost: plan Task 5, the map's time: with PART=j/J, the j-th of J parts of COST_PLANS pass-roll plans drawn evenly
  *   is played at the grid's powers, each sample's seconds appended to `<IN>/cost-<j>of<J>.jsonl`; without PART, those
  *   files are tallied: the mean and 95th percentile per sample and each type's projected CPU hours on today's grid.
@@ -72,6 +73,7 @@ import {
     classCounts,
     doneIndices,
     excludedSetUps,
+    fittedSweeps,
     followThroughPlans,
     grade,
     gridFor,
@@ -85,6 +87,7 @@ import {
     pickDefault,
     planKey,
     plansOf,
+    playBothHolds,
     labelOf,
     quantile,
     reachOf,
@@ -317,12 +320,9 @@ async function sectionRun(): Promise<void> {
         let line: string;
         try {
             const samples: SweepSample[] = grid.powers.map((power) => {
-                try {
-                    return playSample(type, plan, power, grid.lawns);
-                } catch (error) {
-                    errors++;
-                    return { power, engineError: error instanceof Error ? error.message : String(error) };
-                }
+                const entry = playBothHolds((hold) => playSample(type, plan, power, grid.lawns, hold), power);
+                errors += ("engineError" in entry ? 1 : 0) + (entry.fitted && "engineError" in entry.fitted ? 1 : 0);
+                return entry;
             });
             line = shardLine(index, plan, { samples });
         } catch (error) {
@@ -419,6 +419,16 @@ async function sectionMerge(): Promise<void> {
     const path = `${dir}/${type}.reads.json`;
     fs.writeFileSync(path, readsJson(header, reads));
     console.log(`written: ${path}`);
+    // The fitted hold's reads, beside the found hold's (design A8 item 3).
+    const fittedSamples = fittedSweeps(merged.samples);
+    const fitted = readsOf(grid, plans, fittedSamples);
+    console.log(`reads at the fitted hold: ${fitted.reads.size}; left unread: ${fitted.noRead}`);
+    for (const [message, count] of sampleErrors(fittedSamples)) {
+        console.log(`  ${count} × ${message}`);
+    }
+    const fittedPath = `${dir}/${type}.fitted.reads.json`;
+    fs.writeFileSync(fittedPath, readsJson(header, fitted.reads));
+    console.log(`written: ${fittedPath}`);
     if (missing.length > 0) {
         // A dead shard fails the run (Review Focus 5): the reads are still written, for what they hold.
         process.exitCode = 1;

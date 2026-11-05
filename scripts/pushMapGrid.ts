@@ -11,7 +11,15 @@
  * decision 12) are superPlans, strikeReading (29.2.5's reading of a strike) and superLeast. Not part of the engine.
  */
 import { MAX_WINDOW, MIN_WINDOW } from "../src/engine/swing/buildContact";
-import { textBook, type MapClass, type MapPlan, type MapSample, type MapType, type RollType } from "./pushMapRun";
+import {
+    textBook,
+    type MapClass,
+    type MapHold,
+    type MapPlan,
+    type MapSample,
+    type MapType,
+    type RollType,
+} from "./pushMapRun";
 
 const DEG = Math.PI / 180;
 
@@ -86,9 +94,11 @@ const LAWNS = [6, 10, 14];
 /**
  * Numerical, not physical: the power samples of every sweep (decision 2), denser near p = 1 where the backswing meets
  * the body's limit and the intensity takes over. Ten, decision 7's least (Task 5's third cut under the time budget),
- * and 0.02 and 0.05 for the tap's end of the range (plan B-d4).
+ * 0.02 and 0.05 for the tap's end of the range (plan B-d4), and 1.05 and 1.1 where the distance climbs fastest (design
+ * A8 item 4): on the AC stop's text book, no bracket from p 1 to p 1.25 then spans more than about 1.5 steps of the
+ * range grid, down from 3.5.
  */
-const POWERS = [0.02, 0.05, 0.1, 0.2, 0.35, 0.5, 0.65, 0.8, 1, 1.25, 1.5, 2];
+const POWERS = [0.02, 0.05, 0.1, 0.2, 0.35, 0.5, 0.65, 0.8, 1, 1.05, 1.1, 1.25, 1.5, 2];
 
 /** The type's text book ± k·step for k = −GRADED_STEPS … GRADED_STEPS graded, and ±(GRADED_STEPS + 1) beyond. */
 function around(centre: number, step: number): Axis {
@@ -259,12 +269,45 @@ export interface EngineErrorSample {
     readonly engineError: string;
 }
 
-/** One entry of a shard's sweep: a played or classified sample, or the engine's error at that power. */
-export type SweepSample = MapSample | EngineErrorSample;
+/**
+ * One entry of a shard's sweep: a played or classified sample, or the engine's error at that power; at the found hold,
+ * with the type's fitted hold's play beside it where the shard played both (design A8 item 3).
+ */
+export type SweepSample = (MapSample | EngineErrorSample) & { readonly fitted?: MapSample | EngineErrorSample };
 
 /** Whether `s` is the engine's error rather than a sample. */
-function isEngineError(s: SweepSample): s is EngineErrorSample {
+function isEngineError(s: MapSample | EngineErrorSample): s is EngineErrorSample {
     return "engineError" in s;
+}
+
+/**
+ * One power's entry at both holds (design A8 item 3): `play` at the found hold, with its play at the preset's beside it.
+ * Either's engine error stands in for that hold alone, so the other's play is kept.
+ */
+export function playBothHolds(play: (hold: MapHold) => MapSample, power: number): SweepSample {
+    const attempt = (hold: MapHold): MapSample | EngineErrorSample => {
+        try {
+            return play(hold);
+        } catch (error) {
+            return { power, engineError: error instanceof Error ? error.message : String(error) };
+        }
+    };
+    return { ...attempt("found"), fitted: attempt("preset") };
+}
+
+/** The engine's-error message fittedSweeps gives a sample a shard played at the found hold alone. */
+export const NO_FITTED_PLAY = "no play at the fitted hold";
+
+/** Each plan's sweep at the fitted hold (design A8 item 3), for readsOf. */
+export function fittedSweeps(
+    samples: ReadonlyMap<number, readonly SweepSample[]>,
+): ReadonlyMap<number, readonly SweepSample[]> {
+    return new Map(
+        [...samples].map(([index, sweep]) => [
+            index,
+            sweep.map((s) => s.fitted ?? { power: s.power, engineError: NO_FITTED_PLAY }),
+        ]),
+    );
 }
 
 /** A plan's read at one range and lawn, from its power sweep (decision 2). */
@@ -279,6 +322,8 @@ export interface SweepRead {
     readonly pushEffort: number;
     readonly coupleShare: number;
     readonly pushImpulse: number;
+    /** The hold firmness played (design A8 item 3), interpolated as the ratio; NaN where a bracket's end has none. */
+    readonly firmness: number;
     readonly power: number;
     /** Whether the sweep's range rises with p over every played sample on this lawn. */
     readonly monotone: boolean;
@@ -314,6 +359,7 @@ function failedRead(klass: MapClass, reason: string | null, monotone: boolean): 
         pushEffort: NaN,
         coupleShare: NaN,
         pushImpulse: NaN,
+        firmness: NaN,
         power: NaN,
         monotone,
     };
@@ -387,6 +433,7 @@ export function readAt(samples: readonly SweepSample[], range: number, lawn: num
             pushEffort: lerp(a.pushEffort, b.pushEffort, t),
             coupleShare: lerp(a.coupleShare, b.coupleShare, t),
             pushImpulse: lerp(a.pushImpulse, b.pushImpulse, t),
+            firmness: lerp(a.firmness ?? NaN, b.firmness ?? NaN, t),
             power: lerp(a.power, b.power, t),
             monotone,
         };
@@ -781,7 +828,7 @@ function field(text: string): string {
     return /[",\r\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
 }
 
-/** The record's columns (decision 10, A4), in SI: rad, m, 1, m, s, s, rad, 1; m, s; %, %, 1, N·s, rad. */
+/** The record's columns (decision 10, A4, A8 item 3), in SI: rad, m, 1, m, s, s, rad, 1; m, s; %, %, 1, N·s, 1, rad. */
 const COLUMNS = [
     "type",
     "lean",
@@ -803,6 +850,7 @@ const COLUMNS = [
     "pushEffort",
     "coupleShare",
     "pushImpulse",
+    "firmness",
     "splitAtRest",
     "power",
     "monotone",
@@ -847,6 +895,7 @@ export function envelopeRows(type: MapType, grid: MapGrid, reads: Reads, banded:
                     figure(read.pushEffort),
                     figure(read.coupleShare),
                     figure(read.pushImpulse),
+                    figure(read.firmness),
                     figure(read.splitAtRest),
                     figure(read.power),
                     read.monotone ? "1" : "0",

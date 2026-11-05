@@ -676,3 +676,11 @@ full roll or somewhere between a drive and a half roll or all the other inbetwee
    whole. For 3c: whether a slack hold's fast stop is the lever or a flaw of the model, the 32 m stop at p 1.5, the slip
    at the moment the check gives way to the hold, the soft shots at these holds, and the ratio's jump between its two
    branches as the hold changes.
+3. **The map records both holds.** Every sample is played at the least hold that plays (A7 item 4) and at the type's
+   fitted hold, each with its own reads, and the found hold's reads carry its firmness. The least hold alone would not
+   say what the text book's own hold does: at the full roll's canonical stroke the least hold gives a ratio of 1.673,
+   outside its band, and the fitted one 1.161. Which of the two a shot's default should use is for gate stage 2.
+4. **The grid gains p 1.05 and p 1.1,** making 14 powers. Above p 1 the backswing is at the body's limit and the
+   intensity takes over, so the distance climbs fastest there: the AC stop's striker's ball goes from 1.06 m at p 1 to
+   3.30 m at p 1.25 on the 10 s lawn, about 3.5 steps of the range grid. With 1.71 m at p 1.05 and 2.01 m at p 1.1, no
+   bracket there spans more than about 1.5 steps.
