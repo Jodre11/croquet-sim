@@ -46,3 +46,11 @@ A rule's threshold is `ballRadii × R + uprightRadii × r`, where `R` is the bal
 - `hoopRunComplete`: the ball has completed running when that signed distance is at least the threshold.
 
 The derivation of each coefficient from the quoted Law goes in `note`.
+
+## Derived records
+
+`derived/` holds what the push map measured, not constants the app loads, so `src/reference/index.ts` does not read it.
+Each record names the run, commit and engine that made it.
+
+- `envelope-stage1.json.gz`: gate stage 1's reads (P2b.2b.2c.3b plan Task B6), per shot type `{ header, reads }`, each
+  text book alone at the grid's ranges and lawns.

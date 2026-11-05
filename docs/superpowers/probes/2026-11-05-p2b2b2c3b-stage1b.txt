@@ -1,0 +1,294 @@
+P2b.2b.2c.3b, gate stage 1 (plan Task B6, design A7 item 10), as printed by SECTION=stage1 in the workflow's merge job.
+Run https://github.com/Jodre11/croquet-sim/actions/runs/41986190887, commit f5389dfd2989c3de916ef87034da207f4101ff7e,
+engine 0.29.1. The reads are in reference/derived/envelope-stage1.json.gz.
+
+== stage1. Plan Task B6: drive, 1 shard files, missing 0 ==
+plan: lean 0.0°, feet -0.186 m, drive 0, handReach 0 m, window 5 ms, speedGain 0.2; canonical power p 0.9346
+planned contact speed 3.000 m/s, preset's 3.000 m/s, 0.00 %: within ±2 %: yes
+at the found hold, 10 s lawn: admissible, range 1.228 m, ratio 3.925 (drive), firmness 0.000, sigma 0.000, passes 1; in the drive's band: yes
+at the fitted hold, 10 s lawn: admissible, range 1.228 m, ratio 3.925 (drive), firmness 1.000, sigma 1.000, passes 1; in the drive's band: yes
+reach on the 6 s lawn: p 2, 4.17 m, ratio 4.787; none beyond
+reach on the 10 s lawn: p 1.5, 6.21 m, ratio 4.759; p 2: off-court (a ball passes the court's length)
+reach on the 14 s lawn: p 1, 2.40 m, ratio 3.968; p 1.25: off-court (a ball passes the court's length)
+-- the sweep on the 6 s lawn --
+p 0.02: admissible, range 0.031 m, ratio 2.447 (half roll), firmness 0.000, sigma 0.000, passes 1
+p 0.05: admissible, range 0.058 m, ratio 2.709 (between half roll and drive), firmness 0.000, sigma 0.000, passes 1
+p 0.1: admissible, range 0.093 m, ratio 2.900 (between half roll and drive), firmness 0.000, sigma 0.000, passes 1
+p 0.2: admissible, range 0.155 m, ratio 3.083 (drive), firmness 0.000, sigma 0.000, passes 1
+p 0.35: admissible, range 0.235 m, ratio 3.328 (drive), firmness 0.000, sigma 0.000, passes 1
+p 0.5: admissible, range 0.310 m, ratio 3.594 (drive), firmness 0.000, sigma 0.000, passes 1
+p 0.65: admissible, range 0.386 m, ratio 3.745 (drive), firmness 0.000, sigma 0.000, passes 1
+p 0.8: admissible, range 0.465 m, ratio 3.847 (drive), firmness 0.000, sigma 0.000, passes 1
+p 1: admissible, range 0.583 m, ratio 3.852 (drive), firmness 0.000, sigma 0.000, passes 1
+p 1.25: admissible, range 1.821 m, ratio 4.468 (AC stop), firmness 0.000, sigma 0.000, passes 1
+p 1.5: admissible, range 2.771 m, ratio 4.646 (AC stop), firmness 0.000, sigma 0.000, passes 1
+p 2: admissible, range 4.173 m, ratio 4.787 (AC stop), firmness 0.000, sigma 0.000, passes 1
+-- the sweep on the 10 s lawn --
+p 0.02: admissible, range 0.046 m, ratio 2.877 (between half roll and drive), firmness 0.000, sigma 0.000, passes 1
+p 0.05: admissible, range 0.094 m, ratio 3.188 (drive), firmness 0.000, sigma 0.000, passes 1
+p 0.1: admissible, range 0.166 m, ratio 3.373 (drive), firmness 0.000, sigma 0.000, passes 1
+p 0.2: admissible, range 0.300 m, ratio 3.516 (drive), firmness 0.000, sigma 0.000, passes 1
+p 0.35: admissible, range 0.490 m, ratio 3.657 (drive), firmness 0.000, sigma 0.000, passes 1
+p 0.5: admissible, range 0.676 m, ratio 3.786 (drive), firmness 0.000, sigma 0.000, passes 1
+p 0.65: admissible, range 0.860 m, ratio 3.862 (drive), firmness 0.000, sigma 0.000, passes 1
+p 0.8: admissible, range 1.049 m, ratio 3.920 (drive), firmness 0.000, sigma 0.000, passes 1
+p 1: admissible, range 1.311 m, ratio 3.937 (drive), firmness 0.000, sigma 0.000, passes 1
+p 1.25: admissible, range 4.072 m, ratio 4.593 (AC stop), firmness 0.000, sigma 0.000, passes 1
+p 1.5: admissible, range 6.208 m, ratio 4.759 (AC stop), firmness 0.000, sigma 0.000, passes 1
+p 2: admissible, range 9.380 m, ratio 4.898 (AC stop), firmness 0.000, sigma 0.000, passes 1
+-- the sweep on the 14 s lawn --
+p 0.02: admissible, range 0.069 m, ratio 3.169 (drive), firmness 0.000, sigma 0.000, passes 1
+p 0.05: admissible, range 0.150 m, ratio 3.465 (drive), firmness 0.000, sigma 0.000, passes 1
+p 0.1: admissible, range 0.275 m, ratio 3.613 (drive), firmness 0.000, sigma 0.000, passes 1
+p 0.2: admissible, range 0.518 m, ratio 3.710 (drive), firmness 0.000, sigma 0.000, passes 1
+p 0.35: admissible, range 0.873 m, ratio 3.790 (drive), firmness 0.000, sigma 0.000, passes 1
+p 0.5: admissible, range 1.225 m, ratio 3.859 (drive), firmness 0.000, sigma 0.000, passes 1
+p 0.65: admissible, range 1.572 m, ratio 3.905 (drive), firmness 0.000, sigma 0.000, passes 1
+p 0.8: admissible, range 1.924 m, ratio 3.946 (drive), firmness 0.000, sigma 0.000, passes 1
+p 1: admissible, range 2.402 m, ratio 3.968 (drive), firmness 0.000, sigma 0.000, passes 1
+p 1.25: admissible, range 7.448 m, ratio 4.639 (AC stop), firmness 0.000, sigma 0.000, passes 1
+p 1.5: admissible, range 11.363 m, ratio 4.801 (AC stop), firmness 0.000, sigma 0.000, passes 1
+p 2: admissible, range 17.190 m, ratio 4.938 (AC stop), firmness 0.000, sigma 0.000, passes 1
+
+== stage1. Plan Task B6: stop-ac, 1 shard files, missing 0 ==
+plan: lean -6.0°, feet -0.274 m, drive -1, handReach 0 m, window 10 ms, speedGain 1; canonical power p 0.9436
+planned contact speed 3.000 m/s, preset's 3.000 m/s, -0.00 %: within ±2 %: yes
+at the found hold, 10 s lawn: superhuman (follow-grip-limit), range 0.874 m, ratio 5.862 (AC stop), no hold, passes 1; in the AC stop's band: yes
+at the fitted hold, 10 s lawn: superhuman (follow-grip-limit), range 0.874 m, ratio 5.862 (AC stop), firmness 1.000, sigma 1.000, passes 1; in the AC stop's band: yes
+reach on the 6 s lawn: no admissible play; p 0.02: turf (impact-head-deep)
+reach on the 10 s lawn: no admissible play; p 0.02: turf (impact-head-deep)
+reach on the 14 s lawn: no admissible play; p 0.02: turf (impact-head-deep)
+-- the sweep on the 6 s lawn --
+p 0.02: turf (impact-head-deep), range 0.009 m, ratio 5.173 (AC stop), no hold, passes 1
+p 0.05: turf (impact-head-deep), range 0.024 m, ratio 4.990 (AC stop), no hold, passes 1
+p 0.1: superhuman (follow-grip-limit), range 0.053 m, ratio 4.428 (AC stop), no hold, passes 1
+p 0.2: turf (impact-head-deep), range 0.093 m, ratio 5.060 (AC stop), no hold, passes 1
+p 0.35: turf (turf-yield), range 0.145 m, ratio 5.650 (AC stop), no hold, passes 1
+p 0.5: superhuman (follow-grip-limit), range 0.211 m, ratio 5.545 (AC stop), no hold, passes 1
+p 0.65: superhuman (follow-grip-limit), range 0.284 m, ratio 5.371 (AC stop), no hold, passes 1
+p 0.8: superhuman (follow-grip-limit), range 0.408 m, ratio 4.605 (AC stop), no hold, passes 1
+p 1: superhuman (follow-grip-limit), range 0.511 m, ratio 4.611 (AC stop), no hold, passes 1
+p 1.25: superhuman (follow-grip-limit), range 1.572 m, ratio 5.704 (AC stop), no hold, passes 1
+p 1.5: superhuman (grip-limit), range 2.438 m, ratio 5.653 (AC stop), no hold, passes 1
+p 2: superhuman (grip-limit), range 3.728 m, ratio 5.661 (AC stop), no hold, passes 1
+-- the sweep on the 10 s lawn --
+p 0.02: turf (impact-head-deep), range 0.017 m, ratio 6.264 (beyond AC stop), no hold, passes 1
+p 0.05: turf (impact-head-deep), range 0.046 m, ratio 5.966 (AC stop), no hold, passes 1
+p 0.1: superhuman (follow-grip-limit), range 0.108 m, ratio 5.085 (AC stop), no hold, passes 1
+p 0.2: turf (impact-head-deep), range 0.206 m, ratio 5.314 (AC stop), no hold, passes 1
+p 0.35: turf (turf-yield), range 0.325 m, ratio 5.843 (AC stop), no hold, passes 1
+p 0.5: superhuman (follow-grip-limit), range 0.468 m, ratio 5.785 (AC stop), no hold, passes 1
+p 0.65: superhuman (follow-grip-limit), range 0.618 m, ratio 5.710 (AC stop), no hold, passes 1
+p 0.8: superhuman (follow-grip-limit), range 0.853 m, ratio 5.092 (AC stop), no hold, passes 1
+p 1: superhuman (follow-grip-limit), range 1.063 m, ratio 5.123 (AC stop), no hold, passes 1
+p 1.25: superhuman (follow-grip-limit), range 3.298 m, ratio 6.292 (beyond AC stop), no hold, passes 1
+p 1.5: superhuman (grip-limit), range 5.022 m, ratio 6.417 (beyond AC stop), no hold, passes 1
+p 2: superhuman (grip-limit), range 7.569 m, ratio 6.545 (beyond AC stop), no hold, passes 1
+-- the sweep on the 14 s lawn --
+p 0.02: turf (impact-head-deep), range 0.030 m, ratio 6.765 (beyond AC stop), no hold, passes 1
+p 0.05: turf (impact-head-deep), range 0.079 m, ratio 6.405 (beyond AC stop), no hold, passes 1
+p 0.1: superhuman (follow-grip-limit), range 0.189 m, ratio 5.364 (AC stop), no hold, passes 1
+p 0.2: turf (impact-head-deep), range 0.374 m, ratio 5.408 (AC stop), no hold, passes 1
+p 0.35: turf (turf-yield), range 0.595 m, ratio 5.914 (AC stop), no hold, passes 1
+p 0.5: superhuman (follow-grip-limit), range 0.853 m, ratio 5.874 (AC stop), no hold, passes 1
+p 0.65: superhuman (follow-grip-limit), range 1.118 m, ratio 5.839 (AC stop), no hold, passes 1
+p 0.8: superhuman (follow-grip-limit), range 1.522 m, ratio 5.288 (AC stop), no hold, passes 1
+p 1: superhuman (follow-grip-limit), range 1.892 m, ratio 5.330 (AC stop), no hold, passes 1
+p 1.25: superhuman (follow-grip-limit), range 5.887 m, ratio 6.528 (beyond AC stop), no hold, passes 1
+p 1.5: superhuman (grip-limit), range 8.899 m, ratio 6.730 (beyond AC stop), no hold, passes 1
+p 2: superhuman (grip-limit), range 13.332 m, ratio 6.915 (beyond AC stop), no hold, passes 1
+
+== stage1. Plan Task B6: half-roll, 1 shard files, missing 0 ==
+plan: lean 24.0°, feet 0.182 m, drive 1, handReach 0.025 m, window 20 ms, speedGain 0.1; canonical power p 0.8911
+planned contact speed 3.000 m/s, preset's 3.000 m/s, -0.00 %: within ±2 %: yes
+at the found hold, 10 s lawn: admissible, range 1.657 m, ratio 2.228 (half roll), firmness 0.000, sigma 0.000, passes 1; in the half roll's band: yes
+at the fitted hold, 10 s lawn: admissible, range 1.839 m, ratio 2.000 (half roll), firmness 0.100, sigma 0.100, passes 1; in the half roll's band: yes
+reach on the 6 s lawn: p 1, 0.85 m, ratio 2.196; p 1.25: superhuman (grip-limit)
+reach on the 10 s lawn: p 1, 1.98 m, ratio 2.213; p 1.25: superhuman (grip-limit)
+reach on the 14 s lawn: p 1, 3.67 m, ratio 2.219; p 1.25: superhuman (grip-limit)
+-- the sweep on the 6 s lawn --
+p 0.02: admissible, range 0.020 m, ratio 0.963 (pass roll), firmness 0.000, sigma 0.000, passes 1
+p 0.05: admissible, range 0.031 m, ratio 0.990 (pass roll), firmness 0.125, sigma 0.008, passes 1
+p 0.1: admissible, range 0.025 m, ratio 1.731 (half roll), firmness 0.000, sigma 0.000, passes 1
+p 0.2: admissible, range 0.054 m, ratio 1.964 (half roll), firmness 0.000, sigma 0.000, passes 1
+p 0.35: admissible, range 0.131 m, ratio 2.248 (half roll), firmness 0.000, sigma 0.000, passes 1
+p 0.5: admissible, range 0.248 m, ratio 2.314 (half roll), firmness 0.000, sigma 0.000, passes 1
+p 0.65: admissible, range 0.408 m, ratio 2.281 (half roll), firmness 0.000, sigma 0.000, passes 1
+p 0.8: admissible, range 0.606 m, ratio 2.217 (half roll), firmness 0.000, sigma 0.000, passes 1
+p 1: admissible, range 0.851 m, ratio 2.196 (half roll), firmness 0.000, sigma 0.000, passes 1
+p 1.25: superhuman (grip-limit), range 8.394 m, ratio 1.164 (full roll), no hold, passes 3
+p 1.5: superhuman (grip-limit), range 11.237 m, ratio 1.354 (between full roll and half roll), no hold, passes 3
+p 2: superhuman (grip-limit), range 14.131 m, ratio 1.634 (half roll), no hold, passes 3
+-- the sweep on the 10 s lawn --
+p 0.02: admissible, range 0.022 m, ratio 0.965 (pass roll), firmness 0.000, sigma 0.000, passes 1
+p 0.05: admissible, range 0.040 m, ratio 1.018 (full roll), firmness 0.125, sigma 0.008, passes 1
+p 0.1: admissible, range 0.039 m, ratio 1.894 (half roll), firmness 0.000, sigma 0.000, passes 1
+p 0.2: admissible, range 0.109 m, ratio 2.128 (half roll), firmness 0.000, sigma 0.000, passes 1
+p 0.35: admissible, range 0.297 m, ratio 2.232 (half roll), firmness 0.000, sigma 0.000, passes 1
+p 0.5: admissible, range 0.561 m, ratio 2.294 (half roll), firmness 0.000, sigma 0.000, passes 1
+p 0.65: admissible, range 0.956 m, ratio 2.183 (half roll), firmness 0.000, sigma 0.000, passes 1
+p 0.8: admissible, range 1.384 m, ratio 2.180 (half roll), firmness 0.000, sigma 0.000, passes 1
+p 1: admissible, range 1.978 m, ratio 2.213 (half roll), firmness 0.000, sigma 0.000, passes 1
+p 1.25: superhuman (grip-limit), range 19.406 m, ratio 1.172 (full roll), no hold, passes 3
+p 1.5: superhuman (grip-limit), range 26.187 m, ratio 1.348 (between full roll and half roll), no hold, passes 3
+p 2: superhuman (grip-limit), range 32.878 m, ratio 1.620 (half roll), no hold, passes 3
+-- the sweep on the 14 s lawn --
+p 0.02: admissible, range 0.024 m, ratio 0.968 (pass roll), firmness 0.000, sigma 0.000, passes 1
+p 0.05: admissible, range 0.054 m, ratio 1.041 (full roll), firmness 0.125, sigma 0.008, passes 1
+p 0.1: admissible, range 0.061 m, ratio 1.995 (half roll), firmness 0.000, sigma 0.000, passes 1
+p 0.2: admissible, range 0.191 m, ratio 2.197 (half roll), firmness 0.000, sigma 0.000, passes 1
+p 0.35: admissible, range 0.545 m, ratio 2.226 (half roll), firmness 0.000, sigma 0.000, passes 1
+p 0.5: admissible, range 1.031 m, ratio 2.287 (half roll), firmness 0.000, sigma 0.000, passes 1
+p 0.65: admissible, range 1.777 m, ratio 2.150 (half roll), firmness 0.000, sigma 0.000, passes 1
+p 0.8: admissible, range 2.551 m, ratio 2.167 (half roll), firmness 0.000, sigma 0.000, passes 1
+p 1: admissible, range 3.668 m, ratio 2.219 (half roll), firmness 0.000, sigma 0.000, passes 1
+p 1.25: superhuman (grip-limit), range 35.924 m, ratio 1.175 (full roll), no hold, passes 3
+p 1.5: superhuman (grip-limit), range 48.612 m, ratio 1.346 (between full roll and half roll), no hold, passes 3
+p 2: superhuman (grip-limit), range 60.998 m, ratio 1.615 (half roll), no hold, passes 3
+
+== stage1. Plan Task B6: full-roll, 1 shard files, missing 0 ==
+plan: lean 31.0°, feet 0.320 m, drive 0.25, handReach 0.3 m, window 80 ms, speedGain 0.1; canonical power p 0.8839
+planned contact speed 3.000 m/s, preset's 3.000 m/s, 0.00 %: within ±2 %: yes
+at the found hold, 10 s lawn: admissible, range 4.273 m, ratio 1.673 (half roll), firmness 0.250, sigma 0.250, passes 3; in the full roll's band: no
+at the fitted hold, 10 s lawn: admissible, range 5.924 m, ratio 1.161 (full roll), firmness 1.000, sigma 1.000, passes 3; in the full roll's band: yes
+reach on the 6 s lawn: p 1, 4.00 m, ratio 1.218; p 1.25: superhuman (grip-limit)
+reach on the 10 s lawn: p 1, 8.56 m, ratio 1.331; p 1.25: superhuman (grip-limit)
+reach on the 14 s lawn: p 1, 15.40 m, ratio 1.375; p 1.25: superhuman (grip-limit)
+jumpiness bound (B-d7, under B-d8): 0.402
+-- the sweep on the 6 s lawn --
+p 0.02: admissible, range 0.022 m, ratio 0.966 (pass roll), firmness 0.000, sigma 0.000, passes 1
+p 0.05: admissible, range 0.056 m, ratio 0.987 (pass roll), firmness 0.000, sigma 0.000, passes 1
+p 0.1: admissible, range 0.112 m, ratio 0.995 (pass roll), firmness 0.000, sigma 0.000, passes 1
+p 0.2: admissible, range 0.177 m, ratio 1.339 (between full roll and half roll), firmness 0.082, sigma 0.019, passes 2
+p 0.35: admissible, range 0.503 m, ratio 1.106 (full roll), firmness 0.204, sigma 0.081, passes 2
+p 0.5: admissible, range 1.051 m, ratio 1.100 (full roll), firmness 0.231, sigma 0.131, passes 2
+p 0.65: admissible, range 1.775 m, ratio 1.214 (between full roll and half roll), firmness 0.237, sigma 0.175, passes 3
+p 0.8: admissible, range 2.039 m, ratio 1.285 (between full roll and half roll), firmness 0.242, sigma 0.219, passes 3
+p 1: admissible, range 4.001 m, ratio 1.218 (between full roll and half roll), firmness 0.299, sigma 0.338, passes 3
+p 1.25: superhuman (grip-limit), range 2.712 m, ratio 2.116 (half roll), no hold, passes 3
+p 1.5: superhuman (grip-limit), range 3.940 m, ratio 2.097 (half roll), no hold, passes 3
+p 2: superhuman (grip-limit), range 5.721 m, ratio 4.345 (AC stop), no hold, passes 3
+-- the sweep on the 10 s lawn --
+p 0.02: admissible, range 0.024 m, ratio 0.970 (pass roll), firmness 0.000, sigma 0.000, passes 1
+p 0.05: admissible, range 0.066 m, ratio 0.992 (pass roll), firmness 0.000, sigma 0.000, passes 1
+p 0.1: admissible, range 0.141 m, ratio 1.003 (full roll), firmness 0.000, sigma 0.000, passes 1
+p 0.2: admissible, range 0.183 m, ratio 1.748 (half roll), firmness 0.082, sigma 0.019, passes 2
+p 0.35: admissible, range 0.765 m, ratio 1.255 (between full roll and half roll), firmness 0.204, sigma 0.081, passes 2
+p 0.5: admissible, range 2.122 m, ratio 1.140 (full roll), firmness 0.231, sigma 0.131, passes 2
+p 0.65: admissible, range 3.525 m, ratio 1.416 (half roll), firmness 0.237, sigma 0.175, passes 3
+p 0.8: admissible, range 3.935 m, ratio 1.569 (half roll), firmness 0.242, sigma 0.219, passes 3
+p 1: admissible, range 8.560 m, ratio 1.331 (between full roll and half roll), firmness 0.299, sigma 0.338, passes 3
+p 1.25: superhuman (grip-limit), range 5.623 m, ratio 2.348 (half roll), no hold, passes 3
+p 1.5: superhuman (grip-limit), range 9.009 m, ratio 2.114 (half roll), no hold, passes 3
+p 2: superhuman (grip-limit), range 11.780 m, ratio 4.390 (AC stop), no hold, passes 3
+-- the sweep on the 14 s lawn --
+p 0.02: admissible, range 0.027 m, ratio 0.976 (pass roll), firmness 0.000, sigma 0.000, passes 1
+p 0.05: admissible, range 0.082 m, ratio 0.997 (pass roll), firmness 0.000, sigma 0.000, passes 1
+p 0.1: admissible, range 0.185 m, ratio 1.009 (full roll), firmness 0.000, sigma 0.000, passes 1
+p 0.2: admissible, range 0.191 m, ratio 2.317 (half roll), firmness 0.082, sigma 0.019, passes 2
+p 0.35: admissible, range 1.158 m, ratio 1.352 (between full roll and half roll), firmness 0.204, sigma 0.081, passes 2
+p 0.5: admissible, range 3.728 m, ratio 1.156 (full roll), firmness 0.231, sigma 0.131, passes 2
+p 0.65: admissible, range 6.149 m, ratio 1.504 (half roll), firmness 0.237, sigma 0.175, passes 3
+p 0.8: admissible, range 6.779 m, ratio 1.697 (half roll), firmness 0.242, sigma 0.219, passes 3
+p 1: admissible, range 15.398 m, ratio 1.375 (between full roll and half roll), firmness 0.299, sigma 0.338, passes 3
+p 1.25: superhuman (grip-limit), range 9.989 m, ratio 2.443 (half roll), no hold, passes 3
+p 1.5: superhuman (grip-limit), range 16.614 m, ratio 2.121 (half roll), no hold, passes 3
+p 2: superhuman (grip-limit), range 20.869 m, ratio 4.408 (AC stop), no hold, passes 3
+
+== stage1. Plan Task B6: pass-roll, 1 shard files, missing 0 ==
+plan: lean 32.0°, feet 0.331 m, drive 0.5, handReach 0.3 m, window 60 ms, speedGain 0.1, split 4°; canonical power p 0.8947
+planned contact speed 3.000 m/s, preset's 3.000 m/s, 0.00 %: within ±2 %: yes
+at the found hold, 10 s lawn: admissible, range 7.776 m, ratio 0.735 (pass roll), firmness 0.344, sigma 0.344, passes 3; in the pass roll's band: yes
+at the fitted hold, 10 s lawn: admissible, range 6.571 m, ratio 0.859 (pass roll), firmness 1.000, sigma 1.000, passes 3; in the pass roll's band: yes
+reach on the 6 s lawn: p 1, 4.25 m, ratio 0.667; p 1.25: superhuman (grip-limit)
+reach on the 10 s lawn: p 1, 9.51 m, ratio 0.686; p 1.25: superhuman (grip-limit)
+reach on the 14 s lawn: p 1, 17.41 m, ratio 0.692; p 1.25: superhuman (grip-limit)
+jumpiness bound (B-d7, under B-d8): 0.579
+-- the sweep on the 6 s lawn --
+p 0.02: admissible, range 0.021 m, ratio 0.956 (pass roll), firmness 0.000, sigma 0.000, passes 1
+p 0.05: admissible, range 0.051 m, ratio 0.979 (pass roll), firmness 0.000, sigma 0.000, passes 1
+p 0.1: admissible, range 0.101 m, ratio 1.010 (full roll), firmness 0.000, sigma 0.000, passes 1
+p 0.2: admissible, range 0.162 m, ratio 1.438 (half roll), firmness 0.110, sigma 0.025, passes 2
+p 0.35: admissible, range 0.894 m, ratio 0.784 (pass roll), firmness 0.253, sigma 0.100, passes 2
+p 0.5: admissible, range 1.783 m, ratio 0.661 (pass roll), firmness 0.233, sigma 0.131, passes 3
+p 0.65: admissible, range 0.938 m, ratio 1.235 (between full roll and half roll), firmness 0.274, sigma 0.200, passes 2
+p 0.8: admissible, range 1.990 m, ratio 0.831 (pass roll), firmness 0.237, sigma 0.213, passes 2
+p 1: admissible, range 4.248 m, ratio 0.667 (pass roll), firmness 0.302, sigma 0.338, passes 2
+p 1.25: superhuman (grip-limit), range 7.890 m, ratio 0.769 (pass roll), no hold, passes 3
+p 1.5: superhuman (grip-limit), range 2.700 m, ratio 3.105 (drive), no hold, passes 3
+p 2: superhuman (grip-limit), range 3.347 m, ratio 3.551 (drive), no hold, passes 3
+-- the sweep on the 10 s lawn --
+p 0.02: admissible, range 0.022 m, ratio 0.958 (pass roll), firmness 0.000, sigma 0.000, passes 1
+p 0.05: admissible, range 0.060 m, ratio 0.985 (pass roll), firmness 0.000, sigma 0.000, passes 1
+p 0.1: admissible, range 0.124 m, ratio 0.983 (pass roll), firmness 0.000, sigma 0.000, passes 1
+p 0.2: admissible, range 0.165 m, ratio 1.901 (half roll), firmness 0.110, sigma 0.025, passes 2
+p 0.35: admissible, range 1.677 m, ratio 0.729 (pass roll), firmness 0.253, sigma 0.100, passes 2
+p 0.5: admissible, range 3.690 m, ratio 0.612 (pass roll), firmness 0.233, sigma 0.131, passes 3
+p 0.65: admissible, range 1.948 m, ratio 1.382 (between full roll and half roll), firmness 0.274, sigma 0.200, passes 2
+p 0.8: admissible, range 4.367 m, ratio 0.878 (pass roll), firmness 0.237, sigma 0.213, passes 2
+p 1: admissible, range 9.515 m, ratio 0.686 (pass roll), firmness 0.302, sigma 0.338, passes 2
+p 1.25: superhuman (grip-limit), range 15.179 m, ratio 0.900 (pass roll), no hold, passes 3
+p 1.5: superhuman (grip-limit), range 4.463 m, ratio 4.357 (AC stop), no hold, passes 3
+p 2: superhuman (grip-limit), range 7.550 m, ratio 3.650 (drive), no hold, passes 3
+-- the sweep on the 14 s lawn --
+p 0.02: admissible, range 0.025 m, ratio 0.961 (pass roll), firmness 0.000, sigma 0.000, passes 1
+p 0.05: admissible, range 0.072 m, ratio 0.991 (pass roll), firmness 0.000, sigma 0.000, passes 1
+p 0.1: admissible, range 0.156 m, ratio 0.987 (pass roll), firmness 0.000, sigma 0.000, passes 1
+p 0.2: admissible, range 0.169 m, ratio 2.567 (between half roll and drive), firmness 0.110, sigma 0.025, passes 2
+p 0.35: admissible, range 2.854 m, ratio 0.703 (pass roll), firmness 0.253, sigma 0.100, passes 2
+p 0.5: admissible, range 6.550 m, ratio 0.592 (pass roll), firmness 0.233, sigma 0.131, passes 3
+p 0.65: admissible, range 3.464 m, ratio 1.442 (half roll), firmness 0.274, sigma 0.200, passes 2
+p 0.8: admissible, range 7.932 m, ratio 0.895 (pass roll), firmness 0.237, sigma 0.213, passes 2
+p 1: admissible, range 17.415 m, ratio 0.692 (pass roll), firmness 0.302, sigma 0.338, passes 2
+p 1.25: superhuman (grip-limit), range 26.114 m, ratio 0.959 (pass roll), no hold, passes 3
+p 1.5: superhuman (grip-limit), range 7.108 m, ratio 5.070 (AC stop), no hold, passes 3
+p 2: superhuman (grip-limit), range 13.853 m, ratio 3.686 (drive), no hold, passes 3
+
+== stage1. Plan Task B6: single-ball, 1 shard files, missing 0 ==
+plan: lean 0.0°, feet -0.186 m, drive 0, handReach 0 m, window 10 ms, speedGain 0.2; canonical power p 0.9346
+planned contact speed 3.000 m/s, preset's 3.000 m/s, 0.00 %: within ±2 %: yes
+at the found hold, 10 s lawn: admissible, range 6.871 m, no ratio, firmness 0.000, sigma 0.000, passes 1; no band
+at the fitted hold, 10 s lawn: admissible, range 6.871 m, no ratio, firmness 1.000, sigma 1.000, passes 1; no band
+reach on the 6 s lawn: p 2, 24.12 m; none beyond
+reach on the 10 s lawn: p 1.25, 24.73 m; p 1.5: off-court (a ball passes the court's length)
+reach on the 14 s lawn: p 1, 13.77 m; p 1.25: off-court (a ball passes the court's length)
+-- the sweep on the 6 s lawn --
+p 0.02: admissible, range 0.069 m, no ratio, firmness 0.000, sigma 0.000, passes 1
+p 0.05: admissible, range 0.170 m, no ratio, firmness 0.000, sigma 0.000, passes 1
+p 0.1: admissible, range 0.338 m, no ratio, firmness 0.000, sigma 0.000, passes 1
+p 0.2: admissible, range 0.671 m, no ratio, firmness 0.000, sigma 0.000, passes 1
+p 0.35: admissible, range 1.165 m, no ratio, firmness 0.000, sigma 0.000, passes 1
+p 0.5: admissible, range 1.589 m, no ratio, firmness 0.000, sigma 0.000, passes 1
+p 0.65: admissible, range 2.053 m, no ratio, firmness 0.000, sigma 0.000, passes 1
+p 0.8: admissible, range 2.519 m, no ratio, firmness 0.000, sigma 0.000, passes 1
+p 1: admissible, range 3.060 m, no ratio, firmness 0.000, sigma 0.000, passes 1
+p 1.25: admissible, range 10.337 m, no ratio, firmness 0.000, sigma 0.000, passes 1
+p 1.5: admissible, range 15.836 m, no ratio, firmness 0.000, sigma 0.000, passes 1
+p 2: admissible, range 24.117 m, no ratio, firmness 0.000, sigma 0.000, passes 1
+-- the sweep on the 10 s lawn --
+p 0.02: admissible, range 0.160 m, no ratio, firmness 0.000, sigma 0.000, passes 1
+p 0.05: admissible, range 0.396 m, no ratio, firmness 0.000, sigma 0.000, passes 1
+p 0.1: admissible, range 0.787 m, no ratio, firmness 0.000, sigma 0.000, passes 1
+p 0.2: admissible, range 1.561 m, no ratio, firmness 0.000, sigma 0.000, passes 1
+p 0.35: admissible, range 2.713 m, no ratio, firmness 0.000, sigma 0.000, passes 1
+p 0.5: admissible, range 3.776 m, no ratio, firmness 0.000, sigma 0.000, passes 1
+p 0.65: admissible, range 4.878 m, no ratio, firmness 0.000, sigma 0.000, passes 1
+p 0.8: admissible, range 5.981 m, no ratio, firmness 0.000, sigma 0.000, passes 1
+p 1: admissible, range 7.345 m, no ratio, firmness 0.000, sigma 0.000, passes 1
+p 1.25: admissible, range 24.734 m, no ratio, firmness 0.000, sigma 0.000, passes 1
+p 1.5: admissible, range 37.829 m, no ratio, firmness 0.000, sigma 0.000, passes 1
+p 2: admissible, range 57.486 m, no ratio, firmness 0.000, sigma 0.000, passes 1
+-- the sweep on the 14 s lawn --
+p 0.02: admissible, range 0.296 m, no ratio, firmness 0.000, sigma 0.000, passes 1
+p 0.05: admissible, range 0.735 m, no ratio, firmness 0.000, sigma 0.000, passes 1
+p 0.1: admissible, range 1.460 m, no ratio, firmness 0.000, sigma 0.000, passes 1
+p 0.2: admissible, range 2.897 m, no ratio, firmness 0.000, sigma 0.000, passes 1
+p 0.35: admissible, range 5.034 m, no ratio, firmness 0.000, sigma 0.000, passes 1
+p 0.5: admissible, range 7.057 m, no ratio, firmness 0.000, sigma 0.000, passes 1
+p 0.65: admissible, range 9.116 m, no ratio, firmness 0.000, sigma 0.000, passes 1
+p 0.8: admissible, range 11.174 m, no ratio, firmness 0.000, sigma 0.000, passes 1
+p 1: admissible, range 13.774 m, no ratio, firmness 0.000, sigma 0.000, passes 1
+p 1.25: admissible, range 46.328 m, no ratio, firmness 0.000, sigma 0.000, passes 1
+p 1.5: admissible, range 70.819 m, no ratio, firmness 0.000, sigma 0.000, passes 1
+p 2: admissible, range 107.539 m, no ratio, firmness 0.000, sigma 0.000, passes 1
+
