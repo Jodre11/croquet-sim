@@ -544,7 +544,7 @@ function splitAtRestOf(a: Vec3, b: Vec3): number {
 export function playedClass(
     setup: ShotSetup,
     world: World,
-): { readonly klass: MapClass | null; readonly reason: string | null } {
+): { readonly klass: MapClass | null; readonly reason: string | null; readonly followSlip?: boolean } {
     const { contact } = planStroke(setup, world);
     const { drive } = contact;
     if (drive.kind !== "track") {
@@ -554,7 +554,8 @@ export function playedClass(
     const run = practiseStroke(contact, setup.balls, world, setup.striker, over.probeFor);
     const faults = judgeFaults(strokeContext(setup, run.result), run.result);
     const played = runClass(setup, run, faults, run.point, drive.arc.handReach > 0 ? run.miss : null);
-    return withOverBall(played, drive.arc.handReach > 0 && over.passed());
+    const classed = withOverBall(played, drive.arc.handReach > 0 && over.passed());
+    return run.follow.flags.includes("follow-grip-limit") ? { ...classed, followSlip: true } : classed;
 }
 
 /** The reason of a pushed stroke whose head passed over the striker's ball (plan B-d8). */
@@ -634,7 +635,8 @@ export function playSample(
  * playSample's sample with the judge's strike beside it (plan Task 8's super pass roll reads 29.2.5 from it): the
  * parting, the taps and the re-contacts (judgeFaults's `strike`), null where the sample was not played (a power above
  * 2, a planStroke rejection) or the judge gives none. The sample is playSample's exactly. With `hold` "found" the
- * sample is played in searchFirmness, at the least admissible σ, else at σ_max (A7 item 4), up to 16 practised plays.
+ * sample is played in searchFirmness, at the least admissible σ that doesn't slip, else the least admissible, else at
+ * σ_max (A7 item 4, A8 item 5), up to 16 practised plays.
  */
 export function playJudged(
     type: MapType,
@@ -673,7 +675,8 @@ export function playJudged(
     // class needs no free motion, so the search plays none and the kept play's handover alone rolls (plan B-d6).
     const { found, played } = searchFirmness(setup, IMPACT_WORLD, (held) => {
         const judged = judgedPlay(type, plan, power, held, planStroke(held, IMPACT_WORLD));
-        return { klass: judged.sample.klass, reason: judged.sample.reason, judged };
+        const { klass, reason, followSlip } = judged.sample;
+        return { klass, reason, followSlip, judged };
     });
     const byLawn = lawnReads(setup, played.judged.handover, lawns);
     return {

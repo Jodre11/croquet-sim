@@ -687,4 +687,8 @@ full roll or somewhere between a drive and a half roll or all the other inbetwee
 5. **A slip after the balls have gone is recorded, not ruled out** (amends §3.5's "a saturated grip" and plan decision
    5). `follow-grip-limit` comes after the impact, so it cannot affect the balls, and the fault judge doesn't read grip,
    so the shot is legal; the map admits it and marks the play `followSlip`. A slip during the impact (`grip-limit`) can
-   affect the balls and stays superhuman. The found hold is the least that plays, slipping or not.
+   affect the balls and stays superhuman. The found hold is the least that plays without slipping, falling back to the
+   least that plays where no hold keeps it from slipping (user, 2026-11-05): a player grips firmly enough not to lose
+   the mallet if they can. Taking the least that plays regardless raised the full roll's jumpiness bound from 0.402 to
+   1.273, as the search stopped at slack holds that slip (at drive −1, reach 0.1 m, window 20 ms, σ 0.025 and ratio 2.32
+   where σ 0.1 had read 1.28).
