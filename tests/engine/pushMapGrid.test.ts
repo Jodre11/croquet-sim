@@ -27,6 +27,7 @@ import {
     offGridBand,
     onLawns,
     parseReads,
+    parseJobs,
     pickDefault,
     planKey,
     plansOf,
@@ -36,6 +37,7 @@ import {
     readAt,
     readsJson,
     readsOf,
+    recordSource,
     regionCounts,
     regionPhrase,
     regionSpan,
@@ -521,16 +523,52 @@ describe("the map on Actions (plan Task B5)", () => {
     });
 
     it("keeps one job of each type where asked, its count unchanged, and drops a type without that job", () => {
-        const matrix = shardMatrix(counts, 10, 1);
+        const matrix = shardMatrix(counts, 10, new Set([1]));
         expect(matrix).toEqual([
             { type: "half-roll", job: 1, jobs: 3 },
             { type: "pass-roll", job: 1, jobs: 6 },
         ]);
     });
 
-    it("refuses a matrix past GitHub's limit, judged after keeping one job", () => {
+    it("refuses a matrix past GitHub's limit, judged after keeping the jobs asked for", () => {
         expect(() => shardMatrix(counts, MATRIX_LIMIT + 1, null)).toThrow(/matrix limit/);
-        expect(shardMatrix(counts, MATRIX_LIMIT + 1, 0)).toHaveLength(3);
+        expect(shardMatrix(counts, MATRIX_LIMIT + 1, new Set([0]))).toHaveLength(3);
+    });
+
+    it("splits a type past the limit across dispatches, each job in exactly one (plan B-d12)", () => {
+        const pass = [{ type: "pass-roll", plans: 10620 }] as const;
+        const first = shardMatrix(pass, 512, parseJobs("0-255"));
+        const second = shardMatrix(pass, 512, parseJobs("256-511"));
+        expect(first).toHaveLength(MATRIX_LIMIT);
+        expect(second).toHaveLength(MATRIX_LIMIT);
+        expect([...first, ...second].map((m) => m.job)).toEqual(Array.from({ length: 512 }, (_, job) => job));
+        expect([...first, ...second].every((m) => m.jobs === 512)).toBe(true);
+    });
+
+    it("reads the jobs asked for: all, numbers and ranges, refusing anything else", () => {
+        expect(parseJobs("all")).toBeNull();
+        expect(parseJobs("7")).toEqual(new Set([7]));
+        expect(parseJobs("3,17,40-42")).toEqual(new Set([3, 17, 40, 41, 42]));
+        expect(() => parseJobs("")).toThrow(/ONLY/);
+        expect(() => parseJobs("5-3")).toThrow(/ONLY/);
+        expect(() => parseJobs("1,,2")).toThrow(/ONLY/);
+        expect(() => parseJobs("-1")).toThrow(/ONLY/);
+    });
+
+    it("names the runs and commit of a record merged from several dispatches (plan B-d12)", () => {
+        expect(recordSource({})).toEqual({ run: null, commit: null });
+        expect(
+            recordSource({
+                GITHUB_SERVER_URL: "https://github.com",
+                GITHUB_REPOSITORY: "o/r",
+                GITHUB_RUN_ID: "5",
+                GITHUB_SHA: "abc",
+            }),
+        ).toEqual({ run: "https://github.com/o/r/actions/runs/5", commit: "abc" });
+        expect(recordSource({ RECORD_RUNS: "https://a, https://b", RECORD_COMMIT: "def", GITHUB_SHA: "abc" })).toEqual({
+            run: "https://a, https://b",
+            commit: "def",
+        });
     });
 
     it("plays the text book alone at stage 1, off the grid or not, and the whole grid at stage 2", () => {

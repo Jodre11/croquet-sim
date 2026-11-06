@@ -1107,13 +1107,14 @@ export interface MatrixJob {
 
 /**
  * The workflow's matrix (plan Task B5): `total` jobs shared among `counts` in proportion to their plans by largest
- * remainder, each type at least one, so a type's job holds about as many plans as another's. `only` keeps that job of
- * each type alone (a timing run, or one job played again). Throws past MATRIX_LIMIT: GitHub would refuse it.
+ * remainder, each type at least one, so a type's job holds about as many plans as another's. `only` keeps those jobs of
+ * each type alone (a timing run, jobs played again, or one dispatch's share of a type past the limit, plan B-d12).
+ * Throws past MATRIX_LIMIT: GitHub would refuse it.
  */
 export function shardMatrix(
     counts: readonly { readonly type: MapType; readonly plans: number }[],
     total: number,
-    only: number | null,
+    only: ReadonlySet<number> | null,
 ): readonly MatrixJob[] {
     const plans = counts.reduce((sum, c) => sum + c.plans, 0);
     const shares = counts.map((c) => (total * c.plans) / plans);
@@ -1127,11 +1128,45 @@ export function shardMatrix(
         const n = jobs[i] as number;
         return Array.from({ length: n }, (_, job) => ({ type: c.type, job, jobs: n }));
     });
-    const kept = only === null ? matrix : matrix.filter((m) => m.job === only);
+    const kept = only === null ? matrix : matrix.filter((m) => only.has(m.job));
     if (kept.length > MATRIX_LIMIT) {
         throw new Error(`${kept.length} jobs is past GitHub's matrix limit of ${MATRIX_LIMIT}`);
     }
     return kept;
+}
+
+/** ONLY's jobs (plan B-d12): null for `all`, else comma-separated numbers and ascending ranges (`3,17,40-50`). */
+export function parseJobs(text: string): ReadonlySet<number> | null {
+    if (text === "all") {
+        return null;
+    }
+    const jobs = new Set<number>();
+    for (const part of text.split(",")) {
+        const match = /^(\d+)(?:-(\d+))?$/.exec(part);
+        const first = Number(match?.[1]);
+        const last = match?.[2] === undefined ? first : Number(match[2]);
+        if (match === null || last < first) {
+            throw new Error(`ONLY must be all, or jobs' numbers and ranges such as 3,17,40-50, not ${text}`);
+        }
+        for (let job = first; job <= last; job++) {
+            jobs.add(job);
+        }
+    }
+    return jobs;
+}
+
+/**
+ * The run and commit a merged record names: the workflow's own, or RECORD_RUNS and RECORD_COMMIT where a type's jobs
+ * span dispatches and merge runs locally on what they uploaded (plan B-d12).
+ */
+export function recordSource(env: Readonly<Record<string, string | undefined>>): {
+    readonly run: string | null;
+    readonly commit: string | null;
+} {
+    const { GITHUB_SERVER_URL, GITHUB_REPOSITORY, GITHUB_RUN_ID, GITHUB_SHA, RECORD_RUNS, RECORD_COMMIT } = env;
+    const own =
+        GITHUB_RUN_ID === undefined ? null : `${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}`;
+    return { run: RECORD_RUNS ?? own, commit: RECORD_COMMIT ?? GITHUB_SHA ?? null };
 }
 
 /** A value's `q` quantile (0–1) by the nearest rank; NaN for no values. */

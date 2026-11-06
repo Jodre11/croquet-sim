@@ -5,7 +5,8 @@
  *   open lawn, the largest change in any handed-over ball's velocity between the 6 s and 14 s lawns' impacts and the
  *   10 s lawn's (impactLawnShift).
  * - matrix: plan Task B5, the workflow's jobs (shardMatrix) for TYPES (comma-separated, or all), STAGE, SHARDS (jobs)
- *   and ONLY (all, or one job of each type), printed and appended to GITHUB_OUTPUT when set.
+ *   and ONLY (all, or the numbers and ranges of each type's jobs, parseJobs), printed and appended to GITHUB_OUTPUT when
+ *   set.
  * - run: plan decision 9, one shard of TYPE's plans at STAGE (stagePlans; the text book alone, or by default the whole
  *   grid) on LAWNS (by default the grid's): the plans whose index is ≡ k mod N (SHARD=k/N), each played at the grid's
  *   powers on its lawns at the found hold and the fitted one (playBothHolds, design A8 item 3), appended to OUT as one
@@ -50,7 +51,8 @@
  *   The bound is over points the map admits; every played point's is printed beside it.
  * Run with `env SECTION=lawn npx --yes tsx scripts/pushMap.ts`. The environment: SECTION names the section; matrix
  * takes TYPES, STAGE, SHARDS and ONLY; run takes TYPE (any shot type), STAGE, LAWNS, SHARD (k/N, default 0/1) and OUT
- * (a file); merge takes TYPE, STAGE, LAWNS and IN (a directory); cost takes IN and PART; stage1 takes IN; summary takes
+ * (a file); merge takes TYPE, STAGE, LAWNS, IN (a directory), and RECORD_RUNS and RECORD_COMMIT where run locally over
+ * several dispatches (recordSource); cost takes IN and PART; stage1 takes IN; summary takes
  * TYPE (a roll) and IN; super takes SHARD and OUT, or IN; jumpiness takes TYPE, by default both rolls. Not part of the
  * test suite.
  */
@@ -84,6 +86,7 @@ import {
     nonMonotoneCount,
     offGridBand,
     onLawns,
+    parseJobs,
     pickDefault,
     planKey,
     plansOf,
@@ -94,6 +97,7 @@ import {
     readAt,
     readsJson,
     readsOf,
+    recordSource,
     regionCounts,
     regionPhrase,
     regionSpan,
@@ -274,11 +278,7 @@ async function sectionMatrix(): Promise<void> {
     const types = text === "all" ? MAP_TYPES : text.split(",").map(mapType);
     const stage = stageOf();
     const counts = types.map((type) => ({ type, plans: stagePlans(type, gridFor(type), stage).length }));
-    const only = process.env.ONLY ?? "all";
-    if (only !== "all" && !/^\d+$/.test(only)) {
-        throw new Error(`ONLY must be all or a job's number, not ${only}`);
-    }
-    const matrix = shardMatrix(counts, Number(required("SHARDS")), only === "all" ? null : Number(only));
+    const matrix = shardMatrix(counts, Number(required("SHARDS")), parseJobs(process.env.ONLY ?? "all"));
     const lines = `matrix=${JSON.stringify(matrix)}\ntypes=${types.join(" ")}\n`;
     console.log(lines);
     const output = process.env.GITHUB_OUTPUT;
@@ -404,13 +404,8 @@ async function sectionMerge(): Promise<void> {
         const { unbanded } = grade(type, grid, reads);
         console.log(`graded reads left unbanded (a neighbour unread): ${unbanded}`);
     }
-    const { GITHUB_SERVER_URL, GITHUB_REPOSITORY, GITHUB_RUN_ID, GITHUB_SHA } = process.env;
     const header: RecordHeader = {
-        run:
-            GITHUB_RUN_ID === undefined
-                ? null
-                : `${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}`,
-        commit: GITHUB_SHA ?? null,
+        ...recordSource(process.env),
         engine: ENGINE_VERSION,
         type,
         stage,

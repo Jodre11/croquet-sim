@@ -24,12 +24,17 @@ on:
                 default: ""
                 required: false
             only:
-                description: all, or one job's number per type, which leaves the map unmerged (timing, a repeat)
+                description: all, or jobs' numbers and ranges per type (3,17,40-50), which leaves the map unmerged
                 default: all
                 required: true
+            from_run:
+                description: A run whose uploads these jobs resume from, playing only the plans it didn't finish
+                default: ""
+                required: false
 
 permissions:
     contents: read
+    actions: read
 
 env:
     STAGE: ${{ inputs.stage }}
@@ -83,6 +88,14 @@ jobs:
                   node-version-file: .nvmrc
                   cache: npm
             - run: npm ci
+            # Plan B-d12: the run section skips the plans a file already holds. A job the earlier run lacks fails here.
+            - name: Fetch what the earlier run of this job finished
+              if: ${{ inputs.from_run != '' }}
+              env:
+                  GH_TOKEN: ${{ github.token }}
+                  FROM_RUN: ${{ inputs.from_run }}
+                  ARTIFACT: shard-${{ matrix.type }}-${{ matrix.job }}of${{ matrix.jobs }}
+              run: gh run download "$FROM_RUN" --repo "$GITHUB_REPOSITORY" --name "$ARTIFACT" --dir shards
             - name: Play the job's four shards
               timeout-minutes: 335
               env:
