@@ -655,3 +655,44 @@ full roll or somewhere between a drive and a half roll or all the other inbetwee
     the assist (a rescope that would have dropped it rested on the drive's speed alone). The assist is the arms'
     strength driving a hands-led downswing, a force–velocity law in place of `handTempo.fast`; ruling 7's assist in
     the finish moves neither ball (item 13) and is not built.
+
+### A8. Gate stage 1's rulings (user, 2026-11-05)
+
+1. **The AC stop has no built-in dip** (engine 0.30.0). The user: "For a soft shot the player has the control and
+   strength the 'stop the mallet. dead' without the assistance of lawn friction"; a harder stop is where the player adds
+   a little jab, and the hardest that doesn't break the turf. The preset's fixed 11 mm `handDrop` (a user decision of
+   2026-10-05) was the same action as `stroke.jab`, built in at every power. At stage 1 it left no admissible stop: it
+   struck the turf on soft shots and slipped the hands from p 0.5. Without it stage 1's replay finds every power to p 1
+   admissible on all three lawns, the canonical ratio 5.861 (was 5.862) and its range unchanged, and Gugan 5's stop
+   stays in its band (6.69 at 1 mm, 7.31 at gap 0). The jab stays the shot's own input, held at the type's (A7 item 3).
+2. **The AC stop's hold stays the type's for this map; its variants go to P2b.2b.2c.3c** (A2 item 3), so the stop's
+   envelope ends near p 1, about 5.4 m of croqueted ball on the 10 s lawn. The evidence
+   (`docs/superpowers/probes/2026-11-05-p2b2b2c3b-stop-holds.txt`, the 10 s lawn, p 0.94 and up) supports the user's
+   lever hypothesis: lowering the bottom hand to 0.45 m stops the head in about 35 ms (129 ms hands together at p 1) and
+   nearly halves the peak hand force; relaxing both grips cuts that force about 2.5 times further and leaves the stop's
+   time alone, and only the lowered, relaxed hold keeps within the grip limit to p 1.5. The jab rescues no hand, and
+   adds to the hands' load on some holds; it helps most where the hands alone stop slowly (hands together, relaxed, p
+   1.05: 151 to 77 ms at 5 mm). 5 mm is usually the hardest on the depths tried (0, 3, 5, 8 mm) that keeps the turf
+   whole. For 3c: whether a slack hold's fast stop is the lever or a flaw of the model, the 32 m stop at p 1.5, the slip
+   at the moment the check gives way to the hold, the soft shots at these holds, and the ratio's jump between its two
+   branches as the hold changes.
+3. **The map records both holds.** Every sample is played at the least hold that plays (A7 item 4) and at the type's
+   fitted hold, each with its own reads, and the found hold's reads carry its firmness. The least hold alone would not
+   say what the text book's own hold does: at the full roll's canonical stroke the least hold gives a ratio of 1.673,
+   outside its band, and the fitted one 1.161. Which of the two a shot's default should use is for gate stage 2.
+4. **The grid gains p 1.05 and p 1.1,** making 14 powers. Above p 1 the backswing is at the body's limit and the
+   intensity takes over, so the distance climbs fastest there: the AC stop's striker's ball goes from 1.06 m at p 1 to
+   3.30 m at p 1.25 on the 10 s lawn, about 3.5 steps of the range grid. With 1.71 m at p 1.05 and 2.01 m at p 1.1, no
+   bracket there spans more than about 1.5 steps.
+5. **A slip after the balls have gone is recorded, not ruled out** (amends §3.5's "a saturated grip" and plan decision
+   5). `follow-grip-limit` comes after the impact, so it cannot affect the balls, and the fault judge doesn't read grip,
+   so the shot is legal; the map admits it and marks the play `followSlip`. A slip during the impact (`grip-limit`) can
+   affect the balls and stays superhuman. The found hold is the least that plays without slipping, falling back to the
+   least that plays where no hold keeps it from slipping (user, 2026-11-05): a player grips firmly enough not to lose
+   the mallet if they can. Taking the least that plays regardless raised the full roll's jumpiness bound from 0.402 to
+   1.273, as the search stopped at slack holds that slip (at drive −1, reach 0.1 m, window 20 ms, σ 0.025 and ratio 2.32
+   where σ 0.1 had read 1.28).
+6. **The fallback stands, and its plays are shown apart** (user, 2026-11-05). With the preference, the full roll's bound
+   is 1.244 at one point of 60 (drive −1, reach 0.1 m, window 10 ms), which no grid hold both plays and holds, so it
+   falls back to σ 0.00625 and ratio 2.448; every other gap is 0.402 or less. The search is unchanged. The record marks
+   each slipping play, and the map's bands and plots show those plays apart from the plays that hold.

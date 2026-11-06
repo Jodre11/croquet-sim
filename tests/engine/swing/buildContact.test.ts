@@ -748,7 +748,8 @@ describe("defaultProfile", () => {
         const reaches = STROKE_TYPES.map((type) => defaultProfile.drive[type].handReach);
         // Shapes design §8, rulings 11 and 14: the half roll's minimal push (was 0.15, then 0.05).
         expect(reaches).toEqual([0, 0, 0, 0, 0.025, 0.3, 0.3]);
-        expect(defaultProfile.drive["stop-ac"].handDrop).toBe(0.011);
+        // P2b.2b.2c.3b gate stage 1 (user ruling 2026-11-05): no dip in the preset, the jab the shot's (was 0.011).
+        expect(defaultProfile.drive["stop-ac"].handDrop).toBe(0);
         // P2b.2b.2c.3a gate stage 2: the drive's guide effort 1, as on every preset (was 0.75, set by P2b.2b.2c.2d as
         // the largest that left no re-contact after the parting; with the hands together none on the grid does).
         expect(STROKE_TYPES.map((type) => defaultProfile.drive[type].guideEffort)).toEqual([1, 1, 1, 1, 1, 1, 1]);
@@ -1275,9 +1276,10 @@ describe("the dip's raise follows the croqueted ball (P2b.2b.2c.3a Review Focus 
         const bare: ShotSetup = { ...given };
         delete (bare as { croqueted?: unknown }).croqueted;
         expect(given.croqueted).toBeDefined();
+        // P2b.2b.2c.3b gate stage 1 (user ruling 2026-11-05): the dip now a jab (was the preset's 11 mm).
         const withDip = (setup: ShotSetup, dip: number): ShotSetup => ({
             ...setup,
-            stroke: { ...setup.stroke, timing: { ...setup.stroke.timing, dip } },
+            stroke: { ...setup.stroke, jab: 0.011, timing: { ...setup.stroke.timing, dip } },
         });
         const downswingOf = (setup: ShotSetup) => (planStroke(setup, world).contact.drive as TrackDrive).arc.downswing;
         // No croqueted ball: no raise, so the dip's timing leaves the downswing alone.

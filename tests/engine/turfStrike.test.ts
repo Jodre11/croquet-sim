@@ -180,7 +180,9 @@ describe("Gugan's jab (P2b.2b.2b.3 design §7.3; slow)", () => {
         // a second or the impact's end; a graze stays within HEAD_DEEP_LIMIT; a graze with no second tap counts 0.
         const fractions: number[] = [];
         for (let k = 0; k <= 16; k++) {
-            const { impact, speed } = along(shot("stop-ac", 3, { jab: k * 0.0005 }));
+            // P2b.2b.2c.3b gate stage 1 (user ruling 2026-11-05): the preset's 11 mm dip now part of the jab (the jabs
+            // above are on top of it).
+            const { impact, speed } = along(shot("stop-ac", 3, { jab: 0.011 + k * 0.0005 }));
             const face = impact.headRegions?.["face/blue#face"] ?? [];
             const first = face[0];
             if (first === undefined) {

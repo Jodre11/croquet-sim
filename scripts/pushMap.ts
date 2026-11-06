@@ -4,34 +4,40 @@
  * - lawn: plan decision 3, whether the impact depends on the lawn's speed: for each roll's canonical setup on the
  *   open lawn, the largest change in any handed-over ball's velocity between the 6 s and 14 s lawns' impacts and the
  *   10 s lawn's (impactLawnShift).
- * - run: plan decision 9, one shard of TYPE's grid (pushMapGrid.ts's gridFor and plansOf): the plans whose index is
- *   ≡ k mod N (SHARD=k/N), each played at the grid's powers on its lawns (playSample), appended to OUT as one JSON line
- *   per plan (shardLine) as it finishes. A sample the engine throws on is kept as its message at that power, and one
- *   outside the samples as the plan's; the shard goes on. OUT must be named `<TYPE>-<k>of<N>.jsonl`. Indices whose
- *   lines OUT already holds whole (doneIndices) are skipped, so a shard that died is re-run in place; a torn last line
- *   is ended first and its plan played again.
- * - merge: exactly the files `<TYPE>-<k>of<N>.jsonl` in IN merged (mergeLines), so no other run's file is read: the
- *   missing plan indices, the engine's errors (outside and inside the samples), the reads an engine error leaves out
- *   and the graded reads left unbanded for an unread neighbour are reported apart; each plan's reads at the grid's
- *   ranges and lawns (readsOf) are written to `<IN>/<TYPE>.reads.json`.
+ * - matrix: plan Task B5, the workflow's jobs (shardMatrix) for TYPES (comma-separated, or all), STAGE, SHARDS (jobs)
+ *   and ONLY (all, or the numbers and ranges of each type's jobs, parseJobs), printed and appended to GITHUB_OUTPUT when
+ *   set.
+ * - run: plan decision 9, one shard of TYPE's plans at STAGE (stagePlans; the text book alone, or by default the whole
+ *   grid) on LAWNS (by default the grid's): the plans whose index is ≡ k mod N (SHARD=k/N), each played at the grid's
+ *   powers on its lawns at the found hold and the fitted one (playBothHolds, design A8 item 3), appended to OUT as one
+ *   JSON line per plan (shardLine) as it finishes. A sample the engine throws on is kept as its message at that power
+ *   and hold, and one outside the samples as the plan's; the shard goes on. OUT must be named `<TYPE>-<k>of<N>.jsonl`. Indices whose lines OUT already holds whole (doneIndices) are
+ *   skipped, so a shard that died is re-run in place; a torn last line is ended first and its plan played again.
+ * - merge: exactly the files `<TYPE>-<k>of<N>.jsonl` in IN merged (mergeLines) at STAGE and LAWNS as run played them,
+ *   so no other run's file is read: the missing plan indices, the engine's errors (outside and inside the samples),
+ *   the reads an engine error leaves out and the graded reads left unbanded for an unread neighbour are reported
+ *   apart; each plan's reads at the grid's ranges and lawns (readsOf) are written to `<IN>/<TYPE>.reads.json`, and at
+ *   the fitted hold to `<IN>/<TYPE>.fitted.reads.json`, under the run's URL and commit (RecordHeader). A plan missing
+ *   fails the process, after the writes.
  * - cost: plan Task 5, the map's time: with PART=j/J, the j-th of J parts of COST_PLANS pass-roll plans drawn evenly
  *   is played at the grid's powers, each sample's seconds appended to `<IN>/cost-<j>of<J>.jsonl`; without PART, those
  *   files are tallied: the mean and 95th percentile per sample and each type's projected CPU hours on today's grid.
- * - stage1: plan Task 6, the half roll's map, from IN's half-roll shard files merged as merge merges them, and read at
- *   the grid's ranges and lawns (readsOf). The anchor (design §3.3) is today's default (textBook). It is played at the
- *   canonical power on the 10 s lawn, which gives the canonical's range, and then read at that range from its own
- *   sweep at the grid's powers: it lies off the grid (handReach 0.15 m, and a range below the grid's least). Its band
- *   is offGridBand's: unplayable if its play or read has a class, else its coarse cell's worst corner graded at that
- *   range from the merged sweeps (cellReads), an unplayable corner counting as edgy. Then: the region's admissible
- *   plans per range and lawn by band; the classes per range and lawn; the lawn's effect on the ratio; the least-effort
- *   plan per range and lawn; the non-monotone sweeps; and the set-ups with no admissible read, outside the envelope
- *   outright (§3.5), mixed or incomplete. It plays the anchor's 11 samples itself. It is summary on the half roll
- *   with its own title, so the stage-1 probe stays reproducible.
- * - summary: plan Task 8, stage1 generalised to TYPE. On the half roll, the anchor as stage1. On the full and pass
- *   rolls §3.3's anchor does not apply; instead A1's text-book validation: the type's text book read at its canonical
- *   range on the 10 s lawn as the anchor is, its band by A3 item 1's off-grid rule, whether it is admissible, and
- *   whether it lands in its region (A1's band). Then stage1's tallies; on the pass roll over every split (no
- *   least-effort plans or set-ups) and again per graded split. It plays the text book's 11 samples itself.
+ * - stage1: plan Task B6, gate stage 1 (design A7 item 10), from IN's stage-1 shard files, every type. Per type: the
+ *   text book played at its canonical power on the 10 s lawn at the found hold and at the fitted one, its range, ratio,
+ *   label and whether it is in its band; its planned contact speed against its preset's within ±2 % (criterion 4); per
+ *   lawn its reach (reachOf) and the class beyond it; its sweep sample by sample; and on the full and pass rolls the
+ *   jumpiness bound (B-d7). It plays the two canonical samples itself. The workflow runs it after the merge.
+ * - summary: plan Task 6 and Task 8, one roll's map from IN's shard files merged as merge merges them, and read at the
+ *   grid's ranges and lawns (readsOf). The anchor (design §3.3) on the half roll, today's default (textBook), played at
+ *   the canonical power on the 10 s lawn, which gives the canonical's range, and read at that range from its own sweep
+ *   at the grid's powers. Its band is offGridBand's: unplayable if its play or read has a class, else its coarse cell's
+ *   worst corner graded at that range from the merged sweeps (cellReads), an unplayable corner counting as edgy. On the
+ *   full and pass rolls §3.3's anchor does not apply; instead A1's text-book validation, read the same way, and whether
+ *   it lands in its region (A1's band). Then the region's admissible plans per range and lawn by band; the classes per
+ *   range and lawn; the lawn's effect on the ratio; the least-effort plan per range and lawn; the non-monotone sweeps;
+ *   and the set-ups with no admissible read, outside the envelope outright (§3.5), mixed or incomplete; on the pass
+ *   roll over every split (no least-effort plans or set-ups) and again per graded split. It plays the text book's
+ *   samples itself.
  * - super: plan Task 8 Step 2, decision 12's super pass roll (design §3.4): the pass roll's text book's lean and feet,
  *   drive 1, handReach 0.3 m, at each graded split × SUPER_ONSETS × SUPER_WINDOWS (superPlans), each played at the
  *   grid's powers on its lawns. With OUT (named `super-<k>of<N>.jsonl`) it plays one shard (SHARD=k/N) as run does,
@@ -40,14 +46,21 @@
  *   MULTIPLES_RATIO; then each excluded plan's samples by class, with 29.2.5's reading (the separation (mm) before
  *   each later mallet contact and whether it joined within MERGE_SEPARATION) for its unlawful samples and any played
  *   sample with a re-contact.
- * Run with `env SECTION=lawn npx --yes tsx scripts/pushMap.ts`. The environment: SECTION names the section; run takes
- * TYPE (a roll), SHARD (k/N, default 0/1) and OUT (a file); merge takes TYPE and IN (a directory); cost takes IN and
- * PART; stage1 takes IN; summary takes TYPE and IN; super takes SHARD and OUT, or IN. Not part of the test suite.
+ * - jumpiness: plan B-d7, the ratio's largest difference between neighbouring follow-through grid points at the full
+ *   and pass rolls' text books at canonical power, with practice and as the first pass alone, and practice's share.
+ *   The bound is over points the map admits; every played point's is printed beside it.
+ * Run with `env SECTION=lawn npx --yes tsx scripts/pushMap.ts`. The environment: SECTION names the section; matrix
+ * takes TYPES, STAGE, SHARDS and ONLY; run takes TYPE (any shot type), STAGE, LAWNS, SHARD (k/N, default 0/1) and OUT
+ * (a file); merge takes TYPE, STAGE, LAWNS, IN (a directory), and RECORD_RUNS and RECORD_COMMIT where run locally over
+ * several dispatches (recordSource); cost takes IN and PART; stage1 takes IN; summary takes
+ * TYPE (a roll) and IN; super takes SHARD and OUT, or IN; jumpiness takes TYPE, by default both rolls. Not part of the
+ * test suite.
  */
 import { MERGE_SEPARATION } from "../src/engine/faults";
 import { simulateImpact } from "../src/engine/impact/simulateImpact";
 import { length, sub } from "../src/engine/math/vec3";
-import { planStroke } from "../src/engine/swing/buildContact";
+import { ENGINE_VERSION } from "../src/engine/simulate";
+import { planStroke, plannedSpeed } from "../src/engine/swing/buildContact";
 import type { ShotSetup } from "../src/engine/swing/types";
 import { BALL_IDS, type BallState, type BallStates } from "../src/engine/types";
 import { swingReference } from "../src/reference/index";
@@ -62,26 +75,37 @@ import {
     classCounts,
     doneIndices,
     excludedSetUps,
+    fittedSweeps,
+    followThroughPlans,
     grade,
     gridFor,
     inRegion,
     lawnSpreads,
     mergeLines,
+    neighbourGaps,
     nonMonotoneCount,
     offGridBand,
+    onLawns,
+    parseJobs,
     pickDefault,
     planKey,
     plansOf,
+    playBothHolds,
+    labelOf,
     quantile,
+    reachOf,
     readAt,
     readsJson,
     readsOf,
+    recordSource,
     regionCounts,
     regionPhrase,
     regionSpan,
     sampleErrors,
     shardLine,
+    shardMatrix,
     spreadSummary,
+    stagePlans,
     strikeReading,
     superLeast,
     superPlans,
@@ -90,14 +114,20 @@ import {
     type LaterContact,
     type MapGrid,
     type Merged,
+    type NeighbourGap,
     type Reads,
+    type RecordHeader,
+    type Stage,
     type StrikeReading,
     type SweepRead,
     type SweepSample,
 } from "./pushMapGrid";
 import {
+    MAP_TYPES,
     ROLL_TYPES,
     bodyBackswing,
+    canonicalPower,
+    firstPassRead,
     mapSetup,
     playJudged,
     playSample,
@@ -105,12 +135,14 @@ import {
     type MapClass,
     type MapPlan,
     type MapSample,
+    type MapType,
     type RollType,
 } from "./pushMapRun";
 
 declare const process: {
     readonly env: Readonly<Record<string, string | undefined>>;
     readonly argv: readonly string[];
+    exitCode?: number;
 };
 
 /** The lawns the map plays (s): `reference/lawn.json`'s sourced span and its normal lawn (design §3.2). */
@@ -191,6 +223,24 @@ function rollType(): RollType {
     return known;
 }
 
+/** The shot type named by `name`. */
+function mapType(name: string | undefined): MapType {
+    const known = MAP_TYPES.find((t) => t === name);
+    if (known === undefined) {
+        throw new Error(`a type must be one of ${MAP_TYPES.join(", ")}, not ${name}`);
+    }
+    return known;
+}
+
+/** The stage named by STAGE (design A7 item 10), by default the full map. */
+function stageOf(): Stage {
+    const text = process.env.STAGE ?? "2";
+    if (text !== "1" && text !== "2") {
+        throw new Error(`STAGE must be 1 or 2, not ${text}`);
+    }
+    return text === "1" ? 1 : 2;
+}
+
 /** An environment variable that must be set. */
 function required(name: string): string {
     const value = process.env[name];
@@ -213,17 +263,32 @@ function shardOf(): { readonly k: number; readonly n: number } {
 }
 
 /** A shard's file name (decision 9): `<type>-<k>of<N>.jsonl`, the one pattern merge reads. */
-function shardName(type: RollType, k: number, n: number): string {
+function shardName(type: MapType, k: number, n: number): string {
     return `${type}-${k}of${n}.jsonl`;
 }
 
 /** Whether `name` is one of `type`'s shard files (shardName's pattern exactly). */
-function isShardOf(type: RollType, name: string): boolean {
+function isShardOf(type: MapType, name: string): boolean {
     return new RegExp(`^${type}-\\d+of\\d+\\.jsonl$`).test(name);
 }
 
+/** The workflow's matrix and types (plan Task B5), as `GITHUB_OUTPUT`'s lines and printed. */
+async function sectionMatrix(): Promise<void> {
+    const text = required("TYPES");
+    const types = text === "all" ? MAP_TYPES : text.split(",").map(mapType);
+    const stage = stageOf();
+    const counts = types.map((type) => ({ type, plans: stagePlans(type, gridFor(type), stage).length }));
+    const matrix = shardMatrix(counts, Number(required("SHARDS")), parseJobs(process.env.ONLY ?? "all"));
+    const lines = `matrix=${JSON.stringify(matrix)}\ntypes=${types.join(" ")}\n`;
+    console.log(lines);
+    const output = process.env.GITHUB_OUTPUT;
+    if (output !== undefined) {
+        (await files()).appendFileSync(output, lines);
+    }
+}
+
 async function sectionRun(): Promise<void> {
-    const type = rollType();
+    const type = mapType(process.env.TYPE);
     const { k, n } = shardOf();
     const out = required("OUT");
     const name = shardName(type, k, n);
@@ -231,8 +296,8 @@ async function sectionRun(): Promise<void> {
         throw new Error(`OUT must name the shard's file ${name}, the pattern merge reads`);
     }
     const fs = await files();
-    const grid = gridFor(type);
-    const plans = plansOf(type, grid);
+    const grid = onLawns(gridFor(type), process.env.LAWNS);
+    const plans = stagePlans(type, grid, stageOf());
     const text = fs.existsSync(out) ? fs.readFileSync(out, "utf8") : "";
     const done = doneIndices(text);
     if (text !== "" && !text.endsWith("\n")) {
@@ -255,12 +320,9 @@ async function sectionRun(): Promise<void> {
         let line: string;
         try {
             const samples: SweepSample[] = grid.powers.map((power) => {
-                try {
-                    return playSample(type, plan, power, grid.lawns);
-                } catch (error) {
-                    errors++;
-                    return { power, engineError: error instanceof Error ? error.message : String(error) };
-                }
+                const entry = playBothHolds((hold) => playSample(type, plan, power, grid.lawns, hold), power);
+                errors += ("engineError" in entry ? 1 : 0) + (entry.fitted && "engineError" in entry.fitted ? 1 : 0);
+                return entry;
             });
             line = shardLine(index, plan, { samples });
         } catch (error) {
@@ -289,7 +351,7 @@ const LISTED = 40;
 /** Exactly `type`'s shard files in `dir` (shardName's pattern) merged against the grid's `plans`, and their count. */
 function mergeShards(
     fs: Files,
-    type: RollType,
+    type: MapType,
     dir: string,
     plans: readonly MapPlan[],
 ): { readonly merged: Merged; readonly shards: number } {
@@ -305,13 +367,14 @@ function mergeShards(
 }
 
 async function sectionMerge(): Promise<void> {
-    const type = rollType();
+    const type = mapType(process.env.TYPE);
     const dir = required("IN");
     const fs = await files();
-    const grid = gridFor(type);
-    const plans = plansOf(type, grid);
+    const grid = onLawns(gridFor(type), process.env.LAWNS);
+    const stage = stageOf();
+    const plans = stagePlans(type, grid, stage);
     const { merged, shards } = mergeShards(fs, type, dir, plans);
-    console.log(`== merge. Plan decision 9: ${type}, ${shards} shard files, ${plans.length} plans ==`);
+    console.log(`== merge. Plan decision 9: ${type}, stage ${stage}, ${shards} shard files, ${plans.length} plans ==`);
     console.log(`swept: ${merged.samples.size}`);
     const { missing } = merged;
     const shown = missing.slice(0, LISTED).join(", ") + (missing.length > LISTED ? ", …" : "");
@@ -336,11 +399,35 @@ async function sectionMerge(): Promise<void> {
         `reads: ${reads.size}; left unread (an engine error decides them): ${noRead}; plans whose range is not ` +
             `monotone in p on some lawn: ${nonMonotone}`,
     );
-    const { unbanded } = grade(type, grid, reads);
-    console.log(`graded reads left unbanded (a neighbour unread): ${unbanded}`);
+    if (stage === 2) {
+        // A text book alone has no neighbours, so stage 1 has nothing to band.
+        const { unbanded } = grade(type, grid, reads);
+        console.log(`graded reads left unbanded (a neighbour unread): ${unbanded}`);
+    }
+    const header: RecordHeader = {
+        ...recordSource(process.env),
+        engine: ENGINE_VERSION,
+        type,
+        stage,
+        lawns: grid.lawns,
+    };
     const path = `${dir}/${type}.reads.json`;
-    fs.writeFileSync(path, readsJson(reads));
+    fs.writeFileSync(path, readsJson(header, reads));
     console.log(`written: ${path}`);
+    // The fitted hold's reads, beside the found hold's (design A8 item 3).
+    const fittedSamples = fittedSweeps(merged.samples);
+    const fitted = readsOf(grid, plans, fittedSamples);
+    console.log(`reads at the fitted hold: ${fitted.reads.size}; left unread: ${fitted.noRead}`);
+    for (const [message, count] of sampleErrors(fittedSamples)) {
+        console.log(`  ${count} × ${message}`);
+    }
+    const fittedPath = `${dir}/${type}.fitted.reads.json`;
+    fs.writeFileSync(fittedPath, readsJson(header, fitted.reads));
+    console.log(`written: ${fittedPath}`);
+    if (missing.length > 0) {
+        // A dead shard fails the run (Review Focus 5): the reads are still written, for what they hold.
+        process.exitCode = 1;
+    }
 }
 
 /** Numerical, not physical: how many pass-roll plans the cost section times (plan Task 5). */
@@ -733,8 +820,99 @@ async function summaryOf(type: RollType, label: string): Promise<void> {
     }
 }
 
+/** Each type's band on the continuum (labelOf); the single-ball stroke has no ratio, so no band. */
+const OWN_LABEL: Readonly<Record<MapType, string | null>> = {
+    drive: "drive",
+    "stop-ac": "AC stop",
+    "half-roll": "half roll",
+    "full-roll": "full roll",
+    "pass-roll": "pass roll",
+    "single-ball": null,
+};
+
+/** Criterion 4's tolerance on a text book's planned contact speed against its preset's (design A7 item 10). */
+const SPEED_TOLERANCE = 0.02;
+
+/** The bound B-d7 measured under B-d11 (the envelope probe): the rolls' largest gap between pushed neighbours. */
+const JUMPINESS_BOUND: Readonly<Partial<Record<MapType, number>>> = { "full-roll": 1.244, "pass-roll": 0.579 };
+
+/** A sample's figures on `lawn` for gate stage 1: class, range, ratio, label, hold and practice passes. */
+function gateSampleText(s: SweepSample, lawn: number): string {
+    if ("engineError" in s) {
+        return `engine error (${s.engineError})`;
+    }
+    const read = s.byLawn[lawn];
+    const klass = s.klass === null ? "admissible" : `${s.klass} (${s.reason ?? ""})`;
+    const ratio = read?.ratio ?? NaN;
+    const figures = Number.isFinite(ratio) ? `ratio ${ratio.toFixed(3)} (${labelOf(ratio)})` : "no ratio";
+    const hold = s.firmness === null ? "no hold" : `firmness ${s.firmness.toFixed(3)}, sigma ${s.sigma?.toFixed(3)}`;
+    const slip = s.followSlip ? ", slips after the balls have gone" : "";
+    return `${klass}${slip}, range ${(read?.range ?? NaN).toFixed(3)} m, ${figures}, ${hold}, passes ${s.passes}`;
+}
+
+/** `type`'s text book at its canonical power at both holds, its speed and its band (plan Task B6). */
+function printGateBook(type: MapType): void {
+    const book = textBook(type);
+    const world = openWorld(ANCHOR_LAWN);
+    const power = canonicalPower(type, world);
+    const speed = plannedSpeed(mapSetup(type, book, power), world);
+    const preset = swingReference[type].defaultSpeed.value;
+    const off = speed / preset - 1;
+    console.log(`plan: ${planText(book)}; canonical power p ${power.toFixed(4)}`);
+    console.log(
+        `planned contact speed ${speed.toFixed(3)} m/s, preset's ${preset.toFixed(3)} m/s, ` +
+            `${(100 * off).toFixed(2)} %: within ±${100 * SPEED_TOLERANCE} %: ` +
+            `${Math.abs(off) <= SPEED_TOLERANCE ? "yes" : "no"}`,
+    );
+    const own = OWN_LABEL[type];
+    for (const hold of ["found", "preset"] as const) {
+        let played: SweepSample;
+        try {
+            played = playSample(type, book, power, [ANCHOR_LAWN], hold);
+        } catch (error) {
+            played = { power, engineError: error instanceof Error ? error.message : String(error) };
+        }
+        const ratio = "engineError" in played ? NaN : (played.byLawn[ANCHOR_LAWN]?.ratio ?? NaN);
+        const band = own === null ? "no band" : `in the ${own}'s band: ${labelOf(ratio) === own ? "yes" : "no"}`;
+        console.log(
+            `at the ${hold === "found" ? "found" : "fitted"} hold, ${ANCHOR_LAWN} s lawn: ` +
+                `${gateSampleText(played, ANCHOR_LAWN)}; ${band}`,
+        );
+    }
+}
+
 async function sectionStage1(): Promise<void> {
-    await summaryOf("half-roll", "stage1. Plan Task 6");
+    const dir = required("IN");
+    const fs = await files();
+    for (const type of MAP_TYPES) {
+        const grid = gridFor(type);
+        const { merged, shards } = mergeShards(fs, type, dir, stagePlans(type, grid, 1));
+        console.log(`== stage1. Plan Task B6: ${type}, ${shards} shard files, missing ${merged.missing.length} ==`);
+        printGateBook(type);
+        const sweep = merged.samples.get(0) ?? [];
+        for (const lawn of grid.lawns) {
+            const { best, beyond } = reachOf(sweep, lawn);
+            const reach =
+                best === null
+                    ? "no admissible play"
+                    : `p ${best.power}, ${best.range.toFixed(2)} m` +
+                      (Number.isFinite(best.ratio) ? `, ratio ${best.ratio.toFixed(3)}` : "");
+            const next =
+                beyond === null ? "none beyond" : `p ${beyond.power}: ${beyond.klass} (${beyond.reason ?? ""})`;
+            console.log(`reach on the ${lawn} s lawn: ${reach}; ${next}`);
+        }
+        const bound = JUMPINESS_BOUND[type];
+        if (bound !== undefined) {
+            console.log(`jumpiness bound (B-d7, under B-d8): ${bound}`);
+        }
+        for (const lawn of grid.lawns) {
+            console.log(`-- the sweep on the ${lawn} s lawn --`);
+            for (const s of sweep) {
+                console.log(`p ${s.power}: ${gateSampleText(s, lawn)}`);
+            }
+        }
+        console.log("");
+    }
 }
 
 async function sectionSummary(): Promise<void> {
@@ -993,8 +1171,112 @@ async function sectionSuper(): Promise<void> {
     console.log(`excluded plans: ${excluded} of ${merged.samples.size} swept`);
 }
 
+/** The ratio grid's read-out bin (plan B-d7): past it, the bound's cause is found before the full map. */
+const JUMPINESS_LIMIT = 0.1;
+
+/** The lawn the jumpiness bound reads (s): the normal lawn, the impact's. */
+const JUMPINESS_LAWN = 10;
+
+/** Numerical, not physical: the worst neighbours the jumpiness section prints per type. */
+const JUMPINESS_LISTED = 5;
+
+/** One follow-through point's plays (plan B-d7): the map's, and its first pass at the same hold. */
+interface JumpinessRow {
+    readonly plan: MapPlan;
+    readonly ratio: number;
+    readonly firstPass: number;
+    readonly admissible: boolean;
+}
+
+/** Plays `plan` both ways and prints its line; an engine error is printed, its ratios NaN, and the sweep goes on. */
+function jumpinessRow(type: RollType, plan: MapPlan, power: number): JumpinessRow {
+    const at = `drive ${plan.drive}, handReach ${plan.handReach} m, window ${plan.window * 1000} ms`;
+    try {
+        const sample = playSample(type, plan, power, [JUMPINESS_LAWN]);
+        const ratio = sample.byLawn[JUMPINESS_LAWN]?.ratio ?? NaN;
+        const firstPass =
+            sample.passes === 0 ? NaN : firstPassRead(type, plan, power, sample.firmness, JUMPINESS_LAWN).ratio;
+        console.log(
+            `${at}: ratio ${ratio.toFixed(3)}, first pass ${firstPass.toFixed(3)}, ${sample.klass ?? "admissible"}` +
+                `${sample.reason === null ? "" : ` (${sample.reason})`}, passes ${sample.passes}, ` +
+                `sigma ${sample.sigma?.toFixed(3) ?? "none"}`,
+        );
+        return { plan, ratio, firstPass, admissible: sample.klass === null };
+    } catch (error) {
+        console.log(`${at}: engine error: ${error instanceof Error ? error.message : String(error)}`);
+        return { plan, ratio: NaN, firstPass: NaN, admissible: false };
+    }
+}
+
+/** A neighbour pair's largest gap as text, or that no pair has one. */
+function boundText(gaps: readonly NeighbourGap[]): string {
+    return `${gaps[0]?.gap.toFixed(3) ?? "none"} over ${gaps.length} pairs`;
+}
+
+function jumpinessOf(type: RollType): void {
+    const grid = gridFor(type);
+    const book = textBook(type);
+    const power = canonicalPower(type, openWorld(JUMPINESS_LAWN));
+    console.log(`\n${type}, power ${power.toFixed(4)}, lean and feet at the text book's, ${JUMPINESS_LAWN} s lawn:`);
+    const rows = followThroughPlans(book, grid).map((plan) => jumpinessRow(type, plan, power));
+    const admissible = rows.filter((r) => r.admissible);
+    const practised = neighbourGaps(
+        grid,
+        admissible.map((r) => ({ plan: r.plan, ratio: r.ratio })),
+    );
+    const firstPass = neighbourGaps(
+        grid,
+        admissible.map((r) => ({ plan: r.plan, ratio: r.firstPass })),
+    );
+    const everyPlay = neighbourGaps(
+        grid,
+        rows.map((r) => ({ plan: r.plan, ratio: r.ratio })),
+    );
+    const firstOf = (gap: NeighbourGap): number => {
+        const ofPlan = (plan: MapPlan): number =>
+            rows.find(
+                (r) =>
+                    r.plan.drive === plan.drive && r.plan.handReach === plan.handReach && r.plan.window === plan.window,
+            )?.firstPass ?? NaN;
+        return Math.abs(ofPlan(gap.a) - ofPlan(gap.b));
+    };
+    console.log(`${type} tally: ${admissible.length} of ${rows.length} points admissible`);
+    console.log(`  bound, admissible neighbours, practised: ${boundText(practised)}`);
+    console.log(`  bound, the same neighbours, first pass: ${boundText(firstPass)}`);
+    console.log(`  bound, every played point, practised: ${boundText(everyPlay)}`);
+    // A handReach of 0 beside 0.1 m is no push against a push, a real difference, not jumpiness (plan B-d8).
+    const pushes = neighbourGaps(
+        grid,
+        admissible.filter((r) => r.plan.handReach > 0).map((r) => ({ plan: r.plan, ratio: r.ratio })),
+    );
+    console.log(`  bound, admissible pushes alone, practised: ${boundText(pushes)}`);
+    for (const gap of pushes.slice(0, JUMPINESS_LISTED)) {
+        console.log(
+            `  ${gap.gap.toFixed(3)} along ${gap.dimension}, ${gap.a[gap.dimension]} to ${gap.b[gap.dimension]}, at ` +
+                `drive ${gap.a.drive}, handReach ${gap.a.handReach} m, window ${gap.a.window * 1000} ms; ` +
+                `first pass ${firstOf(gap).toFixed(3)}`,
+        );
+    }
+    const bound = pushes[0]?.gap ?? NaN;
+    console.log(`  ${bound <= JUMPINESS_LIMIT ? "within" : "not within"} the ${JUMPINESS_LIMIT} read-out bin (B-d7)`);
+}
+
+async function sectionJumpiness(): Promise<void> {
+    console.log(
+        "== jumpiness. Plan B-d7, design A7 item 9: the ratio's largest difference between neighbouring drive, " +
+            "handReach and window grid points, at the text book's canonical power, played with the map's found hold " +
+            "and practice, and as the first pass alone at the same hold ==",
+    );
+    const types: readonly RollType[] = process.env.TYPE === undefined ? ["full-roll", "pass-roll"] : [rollType()];
+    for (const type of types) {
+        jumpinessOf(type);
+    }
+}
+
 const SECTIONS: Readonly<Record<string, () => void | Promise<void>>> = {
     lawn: sectionLawn,
+    jumpiness: sectionJumpiness,
+    matrix: sectionMatrix,
     run: sectionRun,
     merge: sectionMerge,
     cost: sectionCost,

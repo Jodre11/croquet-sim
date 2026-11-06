@@ -161,19 +161,17 @@ const DRIVE: Readonly<Record<StrokeType, SwingDrive>> = {
         handArcLow: 0.5,
     },
     // Swing, checked: speedGain 1 at drive −1 brings the pendulum to rest at its window's end. The check does not
-    // lift the head: it still rises through the window, pitching further face-up, so its rear rim drops (8.78 mm
-    // clear at contact, 7.99 mm at the window's end before the dip). The dip, fed forward in full whatever the
-    // relaxed grips, takes the path's lowest point 2.99 mm below the turf at 20 ms, its rear rim first reaching
-    // the turf 12.7 ms after contact, after the ball has left (measured while planning). About 11 mm, a user
-    // decision (2026-10-05): the prototype's 14 mm drove the head 2.86 mm into the turf, past HEAD_DEEP_LIMIT;
-    // pre-flight confirms the value. The hands do not travel, so no reach. P2b.2b.2b.2c: on the box the head clears
-    // the turf at contact (14.55 mm; gate ruling B); the figures above are the round head's.
+    // lift the head: it still rises through the window, pitching further face-up, so its rear rim drops. No dip
+    // (P2b.2b.2c.3b gate stage 1, user ruling 2026-11-05; was 11 mm from 2026-10-05): the hands alone check the
+    // mallet, and pressing them down is the shot's own `stroke.jab`, on `dropTime`. The fixed dip struck the turf on
+    // a soft stop and slipped the hands from p 0.5, and moved the canonical ratio only 5.862 to 5.861. The hands do
+    // not travel, so no reach.
     "stop-ac": {
         speedGain: 1,
         window: 0.01,
         handGain: 0,
         handWindow: 0.01,
-        handDrop: 0.011,
+        handDrop: 0,
         dropTime: 0.02,
         handReach: 0,
         guideEffort: 1,

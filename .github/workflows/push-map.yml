@@ -24,12 +24,17 @@ on:
                 default: ""
                 required: false
             only:
-                description: all, or one job's number per type, which leaves the map unmerged (timing, a repeat)
+                description: all, or jobs' numbers and ranges per type (3,17,40-50), which leaves the map unmerged
                 default: all
                 required: true
+            from_run:
+                description: A run whose uploads these jobs resume from, playing only the plans it didn't finish
+                default: ""
+                required: false
 
 permissions:
     contents: read
+    actions: read
 
 env:
     STAGE: ${{ inputs.stage }}
@@ -49,13 +54,15 @@ jobs:
             types: ${{ steps.matrix.outputs.types }}
         steps:
             - uses: actions/checkout@v7
+              with:
+                  persist-credentials: false
             - uses: actions/setup-node@v7
               with:
                   node-version-file: .nvmrc
                   cache: npm
             - run: npm ci
             - id: matrix
-              run: npx --yes tsx scripts/pushMap.ts
+              run: npx --no-install tsx scripts/pushMap.ts
               env:
                   SECTION: matrix
                   TYPES: ${{ inputs.types }}
@@ -74,13 +81,21 @@ jobs:
                 include: ${{ fromJSON(needs.plan.outputs.matrix) }}
         steps:
             - uses: actions/checkout@v7
+              with:
+                  persist-credentials: false
             - uses: actions/setup-node@v7
               with:
                   node-version-file: .nvmrc
                   cache: npm
             - run: npm ci
-            # One fetch of tsx before the four share npx's cache.
-            - run: npx --yes tsx --version
+            # Plan B-d12: the run section skips the plans a file already holds. A job the earlier run lacks fails here.
+            - name: Fetch what the earlier run of this job finished
+              if: ${{ inputs.from_run != '' }}
+              env:
+                  GH_TOKEN: ${{ github.token }}
+                  FROM_RUN: ${{ inputs.from_run }}
+                  ARTIFACT: shard-${{ matrix.type }}-${{ matrix.job }}of${{ matrix.jobs }}
+              run: gh run download "$FROM_RUN" --repo "$GITHUB_REPOSITORY" --name "$ARTIFACT" --dir shards
             - name: Play the job's four shards
               timeout-minutes: 335
               env:
@@ -95,7 +110,7 @@ jobs:
                   for worker in 0 1 2 3; do
                       k=$((JOB * 4 + worker))
                       n=$((JOBS * 4))
-                      SHARD="$k/$n" OUT="shards/$TYPE-${k}of$n.jsonl" npx --yes tsx scripts/pushMap.ts &
+                      SHARD="$k/$n" OUT="shards/$TYPE-${k}of$n.jsonl" npx --no-install tsx scripts/pushMap.ts &
                       pids+=("$!")
                   done
                   status=0
@@ -117,6 +132,8 @@ jobs:
         timeout-minutes: 120
         steps:
             - uses: actions/checkout@v7
+              with:
+                  persist-credentials: false
             - uses: actions/setup-node@v7
               with:
                   node-version-file: .nvmrc
@@ -135,8 +152,12 @@ jobs:
               run: |
                   status=0
                   for type in $TYPES; do
-                      TYPE="$type" npx --yes tsx scripts/pushMap.ts 2>&1 | tee "shards/$type.merge.txt" || status=1
+                      TYPE="$type" npx --no-install tsx scripts/pushMap.ts 2>&1 | tee "shards/$type.merge.txt" || status=1
                   done
+                  # On the same runners as the map, as gate stage 1's figures must be (design A7 item 11).
+                  if [ "$STAGE" = "1" ]; then
+                      SECTION=stage1 npx --no-install tsx scripts/pushMap.ts 2>&1 | tee shards/stage1.txt || status=1
+                  fi
                   exit "$status"
             - uses: actions/upload-artifact@v7
               if: ${{ !cancelled() }}
@@ -145,4 +166,5 @@ jobs:
                   path: |
                       shards/*.reads.json
                       shards/*.merge.txt
+                      shards/stage1.txt
                   if-no-files-found: error

@@ -11,7 +11,15 @@
  * decision 12) are superPlans, strikeReading (29.2.5's reading of a strike) and superLeast. Not part of the engine.
  */
 import { MAX_WINDOW, MIN_WINDOW } from "../src/engine/swing/buildContact";
-import { textBook, type MapClass, type MapPlan, type MapSample, type RollType } from "./pushMapRun";
+import {
+    textBook,
+    type MapClass,
+    type MapHold,
+    type MapPlan,
+    type MapSample,
+    type MapType,
+    type RollType,
+} from "./pushMapRun";
 
 const DEG = Math.PI / 180;
 
@@ -56,8 +64,14 @@ const DRIVES = [-1, -0.5, 0, 0.5, 1];
 const HAND_REACHES = [0, 0.1, 0.2, 0.3];
 const WINDOWS = [0.01, 0.02, 0.04];
 
-/** The pass roll's split (decision 7; design §3.2's least set): 0°, 10°, 20° and 30° graded, 40° beyond. */
-const PASS_SPLITS: Axis = { graded: [0, 10 * DEG, 20 * DEG, 30 * DEG], beyond: [40 * DEG] };
+/**
+ * The pass roll's split (plan B-d5; design A7 item 6, where its ratio moves almost wholly within 0–10°): 0°–10° by 2°,
+ * 20° and 30° graded, 40° beyond.
+ */
+const PASS_SPLITS: Axis = {
+    graded: [0, 2 * DEG, 4 * DEG, 6 * DEG, 8 * DEG, 10 * DEG, 20 * DEG, 30 * DEG],
+    beyond: [40 * DEG],
+};
 
 /**
  * The full roll's pendulum push gains (1; A4): its preset's 0.1, the variant's 0.5 that put it in its region in
@@ -67,21 +81,24 @@ const PASS_SPLITS: Axis = { graded: [0, 10 * DEG, 20 * DEG, 30 * DEG], beyond: [
 const FULL_SPEED_GAINS = [0.1, 0.25, 0.5, 1];
 
 /**
- * The range grid (m; decision 7, design §3.2): from 2 m to a court's length, 32 m, even in log range. Numerical, not
- * physical: RANGE_COUNT, eight ranges, above the design's least six.
+ * The range grid (m; plan B-d4, design A7 item 5): from a tap, 0.25 m, to a court's length, 32 m, even in log range,
+ * so nine of the sixteen lie below 4 m. Numerical, not physical: RANGE_COUNT, B-d4's least.
  */
-const RANGE_LEAST = 2;
+const RANGE_LEAST = 0.25;
 const RANGE_MOST = 32;
-const RANGE_COUNT = 8;
+const RANGE_COUNT = 16;
 
 /** The lawns (s; design §3.2): `reference/lawn.json`'s sourced span and its normal lawn. */
 const LAWNS = [6, 10, 14];
 
 /**
  * Numerical, not physical: the power samples of every sweep (decision 2), denser near p = 1 where the backswing meets
- * the body's limit and the intensity takes over. Ten, decision 7's least: Task 5's third cut under the time budget.
+ * the body's limit and the intensity takes over. Ten, decision 7's least (Task 5's third cut under the time budget),
+ * 0.02 and 0.05 for the tap's end of the range (plan B-d4), and 1.05 and 1.1 where the distance climbs fastest (design
+ * A8 item 4): on the AC stop's text book, no bracket from p 1 to p 1.25 then spans more than about 1.5 steps of the
+ * range grid, down from 3.5.
  */
-const POWERS = [0.1, 0.2, 0.35, 0.5, 0.65, 0.8, 1, 1.25, 1.5, 2];
+const POWERS = [0.02, 0.05, 0.1, 0.2, 0.35, 0.5, 0.65, 0.8, 1, 1.05, 1.1, 1.25, 1.5, 2];
 
 /** The type's text book ± k·step for k = −GRADED_STEPS … GRADED_STEPS graded, and ±(GRADED_STEPS + 1) beyond. */
 function around(centre: number, step: number): Axis {
@@ -98,7 +115,7 @@ function around(centre: number, step: number): Axis {
  * grids, the split on the pass roll (0 elsewhere), the speedGain on the full roll (the preset's elsewhere; A4), the
  * ranges, the lawns and the power samples.
  */
-export function gridFor(type: RollType): MapGrid {
+export function gridFor(type: MapType): MapGrid {
     const book = textBook(type);
     const ranges: number[] = [];
     for (let i = 0; i < RANGE_COUNT; i++) {
@@ -138,7 +155,7 @@ function valuesOf(axis: Axis): readonly number[] {
  * ever a graded plan's neighbour one step along one dimension (A2 item 2), so a plan takes a beyond value in one
  * dimension at most; the hands are on time (onset 0, decision 7).
  */
-export function plansOf(_type: RollType, grid: MapGrid): readonly MapPlan[] {
+export function plansOf(_type: MapType, grid: MapGrid): readonly MapPlan[] {
     const plans: MapPlan[] = [];
     const values = DIMENSIONS.map((d) => valuesOf(grid[d]));
     const beyond = DIMENSIONS.map((d) => new Set(grid[d].beyond));
@@ -170,6 +187,77 @@ export function plansOf(_type: RollType, grid: MapGrid): readonly MapPlan[] {
     return plans;
 }
 
+/** The gate's stages (design A7 item 10): 1 is each text book alone, 2 the full map. */
+export type Stage = 1 | 2;
+
+/** The plans a `stage` plays of `type`: its text book alone at stage 1, off the grid or not; else plansOf. */
+export function stagePlans(type: MapType, grid: MapGrid, stage: Stage): readonly MapPlan[] {
+    return stage === 1 ? [textBook(type)] : plansOf(type, grid);
+}
+
+/** `grid` on the lawns named by `text`, comma-separated, or on all its own without it. Others are refused. */
+export function onLawns(grid: MapGrid, text: string | undefined): MapGrid {
+    if (text === undefined || text === "") {
+        return grid;
+    }
+    const lawns = text.split(",").map(Number);
+    if (!lawns.every((lawn) => grid.lawns.includes(lawn))) {
+        throw new Error(`LAWNS must be among ${grid.lawns.join(", ")}, not ${text}`);
+    }
+    return { ...grid, lawns };
+}
+
+/** The follow-through's dimensions the jumpiness bound steps along (plan B-d7). */
+const FOLLOW_DIMENSIONS = ["drive", "handReach", "window"] as const;
+
+/** `book` at every `drive`, `handReach` and `window` of `grid` (plan B-d7): its other inputs held. */
+export function followThroughPlans(book: MapPlan, grid: MapGrid): readonly MapPlan[] {
+    return grid.drive.graded.flatMap((drive) =>
+        grid.handReach.graded.flatMap((handReach) =>
+            grid.window.graded.map((window) => ({ ...book, drive, handReach, window })),
+        ),
+    );
+}
+
+/** One plan's ratio. */
+export interface PlanRatio {
+    readonly plan: MapPlan;
+    readonly ratio: number;
+}
+
+/** Two neighbouring plans one step apart along `dimension`, and their ratios' difference. */
+export interface NeighbourGap {
+    readonly dimension: (typeof FOLLOW_DIMENSIONS)[number];
+    readonly a: MapPlan;
+    readonly b: MapPlan;
+    readonly gap: number;
+}
+
+/**
+ * The ratio's difference between each pair of `points` one grid step apart along drive, handReach or window (plan
+ * B-d7), largest first. A pair with a point absent or a ratio not finite is left out.
+ */
+export function neighbourGaps(grid: MapGrid, points: readonly PlanRatio[]): readonly NeighbourGap[] {
+    const key = (plan: MapPlan): string => JSON.stringify([plan.drive, plan.handReach, plan.window]);
+    const ratios = new Map(points.map((p) => [key(p.plan), p.ratio]));
+    const gaps: NeighbourGap[] = [];
+    for (const { plan: a, ratio } of points) {
+        for (const dimension of FOLLOW_DIMENSIONS) {
+            const axis = valuesOf(grid[dimension]);
+            const next = axis[axis.indexOf(a[dimension]) + 1];
+            if (next === undefined) {
+                continue;
+            }
+            const b = { ...a, [dimension]: next };
+            const other = ratios.get(key(b));
+            if (other !== undefined && Number.isFinite(ratio) && Number.isFinite(other)) {
+                gaps.push({ dimension, a, b, gap: Math.abs(other - ratio) });
+            }
+        }
+    }
+    return gaps.sort((x, y) => y.gap - x.gap);
+}
+
 /** Whether every swept value of `plan` is graded in `grid`. */
 function isGraded(plan: MapPlan, grid: MapGrid): boolean {
     return DIMENSIONS.every((d) => grid[d].graded.includes(plan[d]));
@@ -181,12 +269,45 @@ export interface EngineErrorSample {
     readonly engineError: string;
 }
 
-/** One entry of a shard's sweep: a played or classified sample, or the engine's error at that power. */
-export type SweepSample = MapSample | EngineErrorSample;
+/**
+ * One entry of a shard's sweep: a played or classified sample, or the engine's error at that power; at the found hold,
+ * with the type's fitted hold's play beside it where the shard played both (design A8 item 3).
+ */
+export type SweepSample = (MapSample | EngineErrorSample) & { readonly fitted?: MapSample | EngineErrorSample };
 
 /** Whether `s` is the engine's error rather than a sample. */
-function isEngineError(s: SweepSample): s is EngineErrorSample {
+function isEngineError(s: MapSample | EngineErrorSample): s is EngineErrorSample {
     return "engineError" in s;
+}
+
+/**
+ * One power's entry at both holds (design A8 item 3): `play` at the found hold, with its play at the preset's beside it.
+ * Either's engine error stands in for that hold alone, so the other's play is kept.
+ */
+export function playBothHolds(play: (hold: MapHold) => MapSample, power: number): SweepSample {
+    const attempt = (hold: MapHold): MapSample | EngineErrorSample => {
+        try {
+            return play(hold);
+        } catch (error) {
+            return { power, engineError: error instanceof Error ? error.message : String(error) };
+        }
+    };
+    return { ...attempt("found"), fitted: attempt("preset") };
+}
+
+/** The engine's-error message fittedSweeps gives a sample a shard played at the found hold alone. */
+export const NO_FITTED_PLAY = "no play at the fitted hold";
+
+/** Each plan's sweep at the fitted hold (design A8 item 3), for readsOf. */
+export function fittedSweeps(
+    samples: ReadonlyMap<number, readonly SweepSample[]>,
+): ReadonlyMap<number, readonly SweepSample[]> {
+    return new Map(
+        [...samples].map(([index, sweep]) => [
+            index,
+            sweep.map((s) => s.fitted ?? { power: s.power, engineError: NO_FITTED_PLAY }),
+        ]),
+    );
 }
 
 /** A plan's read at one range and lawn, from its power sweep (decision 2). */
@@ -201,6 +322,10 @@ export interface SweepRead {
     readonly pushEffort: number;
     readonly coupleShare: number;
     readonly pushImpulse: number;
+    /** The hold firmness played (design A8 item 3), interpolated as the ratio; NaN where a bracket's end has none. */
+    readonly firmness: number;
+    /** Whether a sample of the bracket read slips after the balls have gone (design A8 item 5); no class. */
+    readonly followSlip: boolean;
     readonly power: number;
     /** Whether the sweep's range rises with p over every played sample on this lawn. */
     readonly monotone: boolean;
@@ -217,6 +342,14 @@ export const BEYOND_P_MAX = "range beyond p_max";
 /** The reason readAt gives a range below every played sample (A2 item 2's unreachable). */
 export const BELOW_LEAST = "range below the least power's";
 
+/** The reason readAt gives a cell in which the croqueted ball would pass a court's length (plan B-d4). */
+export const OFF_COURT = "a ball passes the court's length";
+
+/** Whether the croqueted ball, at `ratio` times the striker's ball's `range` (m), passes a court's length; NaN does not. */
+function offCourt(range: number, ratio: number): boolean {
+    return range * ratio > RANGE_MOST;
+}
+
 /** A read with no figures: class `klass` for `reason`. */
 function failedRead(klass: MapClass, reason: string | null, monotone: boolean): SweepRead {
     return {
@@ -228,6 +361,8 @@ function failedRead(klass: MapClass, reason: string | null, monotone: boolean): 
         pushEffort: NaN,
         coupleShare: NaN,
         pushImpulse: NaN,
+        firmness: NaN,
+        followSlip: false,
         power: NaN,
         monotone,
     };
@@ -246,6 +381,8 @@ function failedRead(klass: MapClass, reason: string | null, monotone: boolean): 
  * The read is null, no evidence, where an engine error decides it: inside the bracket read, first above the top when
  * reading beyond it, or below the lowest played sample when reading below. `monotone` is false where a played
  * sample's range falls below the one before it.
+ * Ahead of all of these, a cell in which the croqueted ball would pass a court's length is off-court, OFF_COURT, and
+ * not solved (plan B-d4): at the bracket's interpolated ratio, or, beyond every played range, at the furthest play's.
  */
 export function readAt(samples: readonly SweepSample[], range: number, lawn: number): SweepRead | null {
     const sorted = [...samples].sort((a, b) => a.power - b.power);
@@ -271,7 +408,17 @@ export function readAt(samples: readonly SweepSample[], range: number, lawn: num
         if (range < Math.min(ra, rb) || range > Math.max(ra, rb)) {
             continue;
         }
+        const a = sorted[i0] as MapSample;
+        const b = sorted[i1] as MapSample;
+        const t = rb === ra ? 0 : (range - ra) / (rb - ra);
+        const la = a.byLawn[lawn];
+        const lb = b.byLawn[lawn];
+        const ratio = lerp(la?.ratio ?? NaN, lb?.ratio ?? NaN, t);
+        if (offCourt(range, ratio)) {
+            return failedRead("off-court", OFF_COURT, monotone);
+        }
         let failing: MapSample | null = null;
+        let followSlip = false;
         for (let i = i0; i <= i1; i++) {
             const s = sorted[i] as SweepSample;
             if (isEngineError(s)) {
@@ -280,27 +427,29 @@ export function readAt(samples: readonly SweepSample[], range: number, lawn: num
             if (failing === null && s.klass !== null) {
                 failing = s;
             }
+            followSlip ||= s.followSlip;
         }
-        const a = sorted[i0] as MapSample;
-        const b = sorted[i1] as MapSample;
-        const t = rb === ra ? 0 : (range - ra) / (rb - ra);
-        const la = a.byLawn[lawn];
-        const lb = b.byLawn[lawn];
         return {
             klass: failing?.klass ?? null,
             reason: failing === null ? null : failing.reason,
-            ratio: lerp(la?.ratio ?? NaN, lb?.ratio ?? NaN, t),
+            ratio,
             splitAtRest: lerp(la?.splitAtRest ?? NaN, lb?.splitAtRest ?? NaN, t),
             strokeEffort: lerp(a.strokeEffort, b.strokeEffort, t),
             pushEffort: lerp(a.pushEffort, b.pushEffort, t),
             coupleShare: lerp(a.coupleShare, b.coupleShare, t),
             pushImpulse: lerp(a.pushImpulse, b.pushImpulse, t),
+            firmness: lerp(a.firmness ?? NaN, b.firmness ?? NaN, t),
+            followSlip,
             power: lerp(a.power, b.power, t),
             monotone,
         };
     }
     const most = reach.length === 0 ? -Infinity : Math.max(...reach);
     if (range > most) {
+        const furthest = sorted[played[reach.indexOf(most)] as number] as MapSample | undefined;
+        if (offCourt(range, furthest?.byLawn[lawn]?.ratio ?? NaN)) {
+            return failedRead("off-court", OFF_COURT, monotone);
+        }
         const top = played.length === 0 ? -1 : (played[played.length - 1] as number);
         for (const s of sorted.slice(top + 1)) {
             if (isEngineError(s)) {
@@ -316,6 +465,49 @@ export function readAt(samples: readonly SweepSample[], range: number, lawn: num
         return null;
     }
     return failedRead("unreachable", BELOW_LEAST, monotone);
+}
+
+/** A sweep's reach on one lawn (plan Task B6): its furthest admissible play and what stops the next power. */
+export interface Reach {
+    /** The furthest admissible play with both balls on the court; null where the sweep has none. */
+    readonly best: { readonly power: number; readonly range: number; readonly ratio: number } | null;
+    /** The first failing sample above `best` in power (the first of all without one); null where none fails. */
+    readonly beyond: { readonly power: number; readonly klass: string; readonly reason: string | null } | null;
+}
+
+/**
+ * `samples`' reach on `lawn` (plan Task B6, design A7 item 10). A sample fails on its class, on an engine error, or as
+ * off-court where either ball passes a court's length (plan B-d4), which also covers the single-ball stroke's own ball.
+ */
+export function reachOf(samples: readonly SweepSample[], lawn: number): Reach {
+    const sorted = [...samples].sort((a, b) => a.power - b.power);
+    const failure = (s: SweepSample): { readonly klass: string; readonly reason: string | null } | null => {
+        if (isEngineError(s)) {
+            return { klass: "engine error", reason: s.engineError };
+        }
+        if (s.klass !== null) {
+            return { klass: s.klass, reason: s.reason };
+        }
+        const read = s.byLawn[lawn];
+        const range = read?.range ?? NaN;
+        return range > RANGE_MOST || offCourt(range, read?.ratio ?? NaN)
+            ? { klass: "off-court", reason: OFF_COURT }
+            : null;
+    };
+    let best: Reach["best"] = null;
+    for (const s of sorted) {
+        if (failure(s) === null && !isEngineError(s)) {
+            const read = s.byLawn[lawn];
+            const range = read?.range ?? NaN;
+            if (Number.isFinite(range) && (best === null || range > best.range)) {
+                best = { power: s.power, range, ratio: read?.ratio ?? NaN };
+            }
+        }
+    }
+    const least = best?.power ?? -Infinity;
+    const next = sorted.find((s) => s.power > least && failure(s) !== null);
+    const failed = next === undefined ? null : failure(next);
+    return { best, beyond: next === undefined || failed === null ? null : { power: next.power, ...failed } };
 }
 
 /** A2 item 2's bands. */
@@ -363,7 +555,7 @@ const LEAN_LIMIT = Math.PI / 4;
  * The swept dimensions a neighbour steps along (A2 item 2, A4): the lean, the feet, drive, handReach and window, on
  * the pass roll the split and on the full roll the speedGain.
  */
-function neighbourDimensions(type: RollType): readonly Dimension[] {
+function neighbourDimensions(type: MapType): readonly Dimension[] {
     return DIMENSIONS.filter(
         (d) => (d !== "split" || type === "pass-roll") && (d !== "speedGain" || type === "full-roll"),
     );
@@ -388,7 +580,7 @@ function stepAlong(d: Dimension, axis: readonly number[], value: number, step: n
         return { value: axis[n] as number };
     }
     if (d === "split" && value === 0 && axis.length > 1) {
-        // The stroke is mirror-symmetric in the split (gate ruling A3): −10°'s read is +10°'s.
+        // The stroke is mirror-symmetric in the split (gate ruling A3): the step below 0° reads as the step above it.
         return { value: axis[1] as number };
     }
     const bound = BOUNDS[d];
@@ -415,12 +607,13 @@ export interface Grading {
  * read or not); else viable. A neighbour admissible but outside the type's region counts as admissible (the edge is
  * the envelope's, not the region's). The edges' rules:
  * - past an input's own bound (drive ±1, handReach 0, MIN_WINDOW, MAX_WINDOW) the neighbour does not exist: skipped;
- * - the split is mirror-symmetric, so split 0°'s −10° neighbour is the +10° plan, read;
+ * - the split is mirror-symmetric, so split 0°'s neighbour below is the one above it, read;
  * - past the grid's own last value where that is not an input's bound (handReach 0.3 m, the window's 5 ms and 80 ms,
- *   the full roll's speedGain 0.1 and 1) the neighbour is skipped, and the plan flagged in `edges` with that dimension.
+ *   the full roll's speedGain 0.1 and 1) the neighbour is skipped, and the plan flagged in `edges` with that dimension;
+ * - an off-court cell is not solved (plan B-d4): it takes no band, and as a neighbour is no failure of the plan.
  * A plan with no read is not banded; nor is one with a neighbour that exists but has no read, counted in `unbanded`.
  */
-export function grade(type: RollType, grid: MapGrid, reads: Reads): Grading {
+export function grade(type: MapType, grid: MapGrid, reads: Reads): Grading {
     const banded = new Map<string, Band>();
     const edges = new Map<string, readonly Dimension[]>();
     let unbanded = 0;
@@ -447,7 +640,7 @@ export function grade(type: RollType, grid: MapGrid, reads: Reads): Grading {
                 const key = planKey(plan, range, lawn);
                 edges.set(key, atEdge);
                 const read = reads.get(key);
-                if (read === undefined) {
+                if (read === undefined || read.klass === "off-court") {
                     continue;
                 }
                 if (read.klass !== null) {
@@ -464,7 +657,7 @@ export function grade(type: RollType, grid: MapGrid, reads: Reads): Grading {
                     const other = reads.get(planKey(next, range, lawn));
                     if (other === undefined) {
                         unknown = true;
-                    } else if (other.klass !== null) {
+                    } else if (other.klass !== null && other.klass !== "off-court") {
                         failing = true;
                     }
                 }
@@ -480,7 +673,7 @@ export function grade(type: RollType, grid: MapGrid, reads: Reads): Grading {
 }
 
 /** The bands of `type`'s graded plans (grade's `banded`). */
-export function bands(type: RollType, grid: MapGrid, reads: Reads): ReadonlyMap<string, Band> {
+export function bands(type: MapType, grid: MapGrid, reads: Reads): ReadonlyMap<string, Band> {
     return grade(type, grid, reads).banded;
 }
 
@@ -515,6 +708,44 @@ export function regionSpan(type: RollType): string {
 export function regionPhrase(type: RollType): string {
     const { least, openAbove } = REGIONS[type];
     return openAbove && least === 0 ? regionSpan(type) : `in ${regionSpan(type)}`;
+}
+
+/**
+ * The bands on one continuum, in ascending ratio (design A7 item 2): the rolls' (design §2), the drive's 3.0–4.0 and
+ * the AC stop's 4.1–6.2 (the CA's, in `reference/swing.json`'s ratioTargets notes); edges included, the pass roll's
+ * open at 1.
+ */
+const LABELS: readonly { readonly name: string; readonly most: number; readonly openAbove: boolean }[] = [
+    { name: "pass roll", most: 1, openAbove: true },
+    { name: "full roll", most: 1.2, openAbove: false },
+    { name: "half roll", most: 2.5, openAbove: false },
+    { name: "drive", most: 4, openAbove: false },
+    { name: "AC stop", most: 6.2, openAbove: false },
+];
+
+/** Each band's least ratio (inclusive), in LABELS' order: the pass roll's runs from 0. */
+const LABEL_LEAST = [0, 1, 1.4, 3, 4.1];
+
+/**
+ * The label of `ratio` on the continuum (plan B-d3; design A7 item 2): its band's name, else "between <band> and
+ * <band>" for a gap between two, else "beyond AC stop" above the last; "" where there is no ratio (the single-ball
+ * stroke's).
+ */
+export function labelOf(ratio: number): string {
+    if (!Number.isFinite(ratio)) {
+        return "";
+    }
+    for (let i = 0; i < LABELS.length; i++) {
+        const band = LABELS[i] as (typeof LABELS)[number];
+        const least = LABEL_LEAST[i] as number;
+        if (ratio < least) {
+            return `between ${(LABELS[i - 1] as (typeof LABELS)[number]).name} and ${band.name}`;
+        }
+        if (band.openAbove ? ratio < band.most : ratio <= band.most) {
+            return band.name;
+        }
+    }
+    return `beyond ${(LABELS[LABELS.length - 1] as (typeof LABELS)[number]).name}`;
 }
 
 /** Decision 5's effort: the mean of the stroke's and the push's percentages. */
@@ -603,7 +834,7 @@ function field(text: string): string {
     return /[",\r\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
 }
 
-/** The record's columns (decision 10, A4), in SI: rad, m, 1, m, s, s, rad, 1; m, s; %, %, 1, N·s, rad. */
+/** The record's columns (decision 10, A4, A8 items 3, 5), in SI: rad, m, 1, m, s, s, rad, 1; m, s; %, %, 1, N·s, 1, rad. */
 const COLUMNS = [
     "type",
     "lean",
@@ -625,6 +856,8 @@ const COLUMNS = [
     "pushEffort",
     "coupleShare",
     "pushImpulse",
+    "firmness",
+    "followSlip",
     "splitAtRest",
     "power",
     "monotone",
@@ -637,7 +870,7 @@ const COLUMNS = [
  * figures to six significant figures (empty where NaN). Fields are quoted per RFC 4180. The provenance (command,
  * commit and SHA-256) goes above it in `#` lines, written with the file.
  */
-export function envelopeRows(type: RollType, grid: MapGrid, reads: Reads, banded: ReadonlyMap<string, Band>): string[] {
+export function envelopeRows(type: MapType, grid: MapGrid, reads: Reads, banded: ReadonlyMap<string, Band>): string[] {
     const { edges } = grade(type, grid, reads);
     const rows = [COLUMNS.join(",")];
     for (const plan of plansOf(type, grid)) {
@@ -669,6 +902,8 @@ export function envelopeRows(type: RollType, grid: MapGrid, reads: Reads, banded
                     figure(read.pushEffort),
                     figure(read.coupleShare),
                     figure(read.pushImpulse),
+                    figure(read.firmness),
+                    read.followSlip ? "1" : "0",
                     figure(read.splitAtRest),
                     figure(read.power),
                     read.monotone ? "1" : "0",
@@ -836,14 +1071,102 @@ export function readsOf(
     return { reads, nonMonotone, noRead };
 }
 
-/** `reads` as JSON (NaN kept as a string), for `<dir>/<type>.reads.json`. */
-export function readsJson(reads: Reads): string {
-    return JSON.stringify(Object.fromEntries(reads), keepNumbers);
+/** A merged record's header (design A7 item 11): where the reads came from. A local merge has no run or commit. */
+export interface RecordHeader {
+    readonly run: string | null;
+    readonly commit: string | null;
+    readonly engine: string;
+    readonly type: MapType;
+    readonly stage: Stage;
+    readonly lawns: readonly number[];
+}
+
+/** `reads` under `header` as JSON (NaN kept as a string), for `<dir>/<type>.reads.json`. */
+export function readsJson(header: RecordHeader, reads: Reads): string {
+    return JSON.stringify({ header, reads: Object.fromEntries(reads) }, keepNumbers);
 }
 
 /** readsJson's text read back (NaN and ±Infinity restored). */
-export function parseReads(text: string): Reads {
-    return new Map(Object.entries(JSON.parse(text, reviveNumbers) as Record<string, SweepRead>));
+export function parseReads(text: string): { readonly header: RecordHeader; readonly reads: Reads } {
+    const record = JSON.parse(text, reviveNumbers) as {
+        readonly header: RecordHeader;
+        readonly reads: Record<string, SweepRead>;
+    };
+    return { header: record.header, reads: new Map(Object.entries(record.reads)) };
+}
+
+/** GitHub's limit on one matrix's jobs (design A7 item 11). */
+export const MATRIX_LIMIT = 256;
+
+/** One matrix job: job `job` of the `jobs` that share `type`'s plans. */
+export interface MatrixJob {
+    readonly type: MapType;
+    readonly job: number;
+    readonly jobs: number;
+}
+
+/**
+ * The workflow's matrix (plan Task B5): `total` jobs shared among `counts` in proportion to their plans by largest
+ * remainder, each type at least one, so a type's job holds about as many plans as another's. `only` keeps those jobs of
+ * each type alone (a timing run, jobs played again, or one dispatch's share of a type past the limit, plan B-d12).
+ * Throws past MATRIX_LIMIT: GitHub would refuse it.
+ */
+export function shardMatrix(
+    counts: readonly { readonly type: MapType; readonly plans: number }[],
+    total: number,
+    only: ReadonlySet<number> | null,
+): readonly MatrixJob[] {
+    const plans = counts.reduce((sum, c) => sum + c.plans, 0);
+    const shares = counts.map((c) => (total * c.plans) / plans);
+    const jobs = shares.map((s) => Math.max(1, Math.floor(s)));
+    const byRemainder = shares.map((s, i) => ({ i, left: s - Math.floor(s) })).sort((a, b) => b.left - a.left);
+    const spare = total - jobs.reduce((sum, j) => sum + j, 0);
+    for (const { i } of byRemainder.slice(0, Math.max(0, spare))) {
+        jobs[i] = (jobs[i] as number) + 1;
+    }
+    const matrix = counts.flatMap((c, i) => {
+        const n = jobs[i] as number;
+        return Array.from({ length: n }, (_, job) => ({ type: c.type, job, jobs: n }));
+    });
+    const kept = only === null ? matrix : matrix.filter((m) => only.has(m.job));
+    if (kept.length > MATRIX_LIMIT) {
+        throw new Error(`${kept.length} jobs is past GitHub's matrix limit of ${MATRIX_LIMIT}`);
+    }
+    return kept;
+}
+
+/** ONLY's jobs (plan B-d12): null for `all`, else comma-separated numbers and ascending ranges (`3,17,40-50`). */
+export function parseJobs(text: string): ReadonlySet<number> | null {
+    if (text === "all") {
+        return null;
+    }
+    const jobs = new Set<number>();
+    for (const part of text.split(",")) {
+        const match = /^(\d+)(?:-(\d+))?$/.exec(part);
+        const first = Number(match?.[1]);
+        const last = match?.[2] === undefined ? first : Number(match[2]);
+        if (match === null || last < first) {
+            throw new Error(`ONLY must be all, or jobs' numbers and ranges such as 3,17,40-50, not ${text}`);
+        }
+        for (let job = first; job <= last; job++) {
+            jobs.add(job);
+        }
+    }
+    return jobs;
+}
+
+/**
+ * The run and commit a merged record names: the workflow's own, or RECORD_RUNS and RECORD_COMMIT where a type's jobs
+ * span dispatches and merge runs locally on what they uploaded (plan B-d12).
+ */
+export function recordSource(env: Readonly<Record<string, string | undefined>>): {
+    readonly run: string | null;
+    readonly commit: string | null;
+} {
+    const { GITHUB_SERVER_URL, GITHUB_REPOSITORY, GITHUB_RUN_ID, GITHUB_SHA, RECORD_RUNS, RECORD_COMMIT } = env;
+    const own =
+        GITHUB_RUN_ID === undefined ? null : `${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}`;
+    return { run: RECORD_RUNS ?? own, commit: RECORD_COMMIT ?? GITHUB_SHA ?? null };
 }
 
 /** A value's `q` quantile (0–1) by the nearest rank; NaN for no values. */
@@ -852,7 +1175,10 @@ export function quantile(values: readonly number[], q: number): number {
     return sorted[Math.min(sorted.length - 1, Math.max(0, Math.ceil(q * sorted.length) - 1))] ?? NaN;
 }
 
-/** §3.5's classes in decision 5's order, `unpractised` after turf (P2b.2b.2c.3b.1 design §4 item 3, §6). */
+/**
+ * §3.5's classes in decision 5's order, `unpractised` after turf (P2b.2b.2c.3b.1 design §4 item 3, §6), and last the
+ * reads' `off-court` (plan B-d4), which no sample carries.
+ */
 export const MAP_CLASSES: readonly MapClass[] = [
     "unreachable",
     "superhuman",
@@ -860,6 +1186,7 @@ export const MAP_CLASSES: readonly MapClass[] = [
     "turf",
     "unpractised",
     "unlawful",
+    "off-court",
 ];
 
 /**
@@ -980,6 +1307,7 @@ export function classCounts(grid: MapGrid, plans: readonly MapPlan[], reads: Rea
                 turf: 0,
                 unpractised: 0,
                 unlawful: 0,
+                "off-court": 0,
                 admissible: 0,
                 unread: 0,
             };
@@ -1126,7 +1454,7 @@ export interface Corner {
  * cellCorners finds no cell.
  */
 export function cellReads(
-    type: RollType,
+    type: MapType,
     grid: MapGrid,
     samples: ReadonlyMap<number, readonly SweepSample[]>,
     plan: MapPlan,

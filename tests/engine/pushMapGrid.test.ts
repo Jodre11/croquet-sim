@@ -5,7 +5,10 @@ import { MAX_WINDOW, MIN_WINDOW } from "../../src/engine/swing/buildContact";
 import {
     BEYOND_P_MAX,
     MAP_CLASSES,
+    MATRIX_LIMIT,
     MULTIPLES_RATIO,
+    NO_FITTED_PLAY,
+    OFF_COURT,
     SUPER_ONSETS,
     SUPER_WINDOWS,
     bands,
@@ -15,31 +18,41 @@ import {
     doneIndices,
     envelopeRows,
     excludedSetUps,
+    fittedSweeps,
     grade,
     gridFor,
     lawnSpreads,
     mergeLines,
     nonMonotoneCount,
     offGridBand,
+    onLawns,
     parseReads,
+    parseJobs,
     pickDefault,
     planKey,
     plansOf,
+    playBothHolds,
     quantile,
+    reachOf,
     readAt,
     readsJson,
     readsOf,
+    recordSource,
     regionCounts,
     regionPhrase,
     regionSpan,
     shardLine,
+    shardMatrix,
     spreadSummary,
+    stagePlans,
     strikeReading,
     superLeast,
     superPlans,
     type Axis,
     type Band,
     type MapGrid,
+    type MatrixJob,
+    type RecordHeader,
     type SweepRead,
 } from "../../scripts/pushMapGrid";
 import { textBook, type MapClass, type MapPlan, type MapSample } from "../../scripts/pushMapRun";
@@ -60,6 +73,7 @@ function sample(power: number, range: number, klass: MapClass | null = null, rat
         pushImpulse: power,
         effectVerdicts: { shipped: false, contactOnly: false },
         followCap: false,
+        followSlip: false,
         passes: 1,
         firmness: 0,
         sigma: 0,
@@ -77,6 +91,8 @@ function read(klass: MapClass | null, ratio = 2, effort = 50, reason: string | n
         pushEffort: effort,
         coupleShare: 0,
         pushImpulse: 0,
+        firmness: 0,
+        followSlip: false,
         power: 1,
         monotone: true,
     };
@@ -132,7 +148,12 @@ describe("the push map's grid, sweep, bands and record (P2b.2b.2c.3b plan Task 4
         expect(Number.isNaN(near?.ratio)).toBe(true);
         // The range rises to 20 m, dips to 15 m, then rises to 30 m: 18 m lies in the first bracket (p 0.5–1) and in
         // the dip's two; the first is read.
-        const dip = [sample(0.5, 10), sample(1, 20), sample(1.5, 15), sample(2, 30)];
+        const dip = [
+            sample(0.5, 10, null, 1),
+            sample(1, 20, null, 1),
+            sample(1.5, 15, null, 1),
+            sample(2, 30, null, 1),
+        ];
         const got = readAt(dip, 18, LAWN);
         expect(got?.monotone).toBe(false);
         expect(got?.power).toBeCloseTo(0.9, 12);
@@ -140,7 +161,7 @@ describe("the push map's grid, sweep, bands and record (P2b.2b.2c.3b plan Task 4
 
     it("reads a range beyond every sample's by the first classed one above, else superhuman (ruling A3)", () => {
         // (a) The couple passes C above p 1.5: 20 m needs a power the grip cannot hold.
-        const held = [sample(1, 10), sample(1.5, 15), sample(2, NaN, "superhuman")];
+        const held = [sample(1, 10, null, 1), sample(1.5, 15, null, 1), sample(2, NaN, "superhuman")];
         expect(readAt(held, 20, LAWN)?.klass).toBe("superhuman");
         // (b) Every sample plays, the last at p = 2 (the body's limit at full intensity) reaching 8.4 m.
         const short = [sample(0.5, 2), sample(1, 5), sample(2, 8.4)];
@@ -329,19 +350,19 @@ describe("the push map's grid, sweep, bands and record (P2b.2b.2c.3b plan Task 4
         expect(rows).toHaveLength(2);
         expect(rows[0]).toBe(
             "type,lean,feet,drive,handReach,window,onset,split,speedGain,range,lawn,band,edge,class,reason,ratio,strokeEffort," +
-                "pushEffort,coupleShare,pushImpulse,splitAtRest,power,monotone",
+                "pushEffort,coupleShare,pushImpulse,firmness,followSlip,splitAtRest,power,monotone",
         );
         expect(rows[1]).toBe(
             `half-roll,${26 * DEG},0.1,0.5,0.15,0.02,0,0,0.1,10,10,unplayable,feet;handReach;window,mishit,` +
-                `"off point: the lean 0.9 rad, ""high""",,,,0,0,0,1,1`,
+                `"off point: the lean 0.9 rad, ""high""",,,,0,0,0,0,0,1,1`,
         );
     });
 
     it("counts each type's plans, none with two beyond values", () => {
         // Task 5's thinned grid: 3 leans × 3 feet × 5 drives × 4 hand reaches × 3 windows = 540 graded, plus 360
-        // with a beyond lean and 360 with beyond feet; the pass roll's 4 splits give 2160 + 1440 + 1440, plus 540 at
-        // the beyond split. A4: the full roll's 4 speedGains give 4 × 1260.
-        const counts = { "half-roll": 1260, "full-roll": 5040, "pass-roll": 5580 } as const;
+        // with a beyond lean and 360 with beyond feet; the pass roll's 8 splits (B-d5) give 4320 + 2880 + 2880, plus
+        // 540 at the beyond split. A4: the full roll's 4 speedGains give 4 × 1260.
+        const counts = { "half-roll": 1260, "full-roll": 5040, "pass-roll": 10620 } as const;
         for (const type of ["half-roll", "full-roll", "pass-roll"] as const) {
             const grid = gridFor(type);
             const plans = plansOf(type, grid);
@@ -427,6 +448,145 @@ describe("the push map's grid, sweep, bands and record (P2b.2b.2c.3b plan Task 4
     });
 });
 
+describe("a sweep's reach (plan Task B6)", () => {
+    it("takes the furthest admissible play and the class of the next power", () => {
+        const { best, beyond } = reachOf(
+            [sample(0.5, 2), sample(1, 5), sample(1.25, 6, "superhuman"), sample(1.5, 7, "turf")],
+            LAWN,
+        );
+        expect(best).toEqual({ power: 1, range: 5, ratio: 2 });
+        expect(beyond).toEqual({ power: 1.25, klass: "superhuman", reason: "superhuman" });
+    });
+
+    it("counts a croqueted ball past the court's length as off-court, not reach", () => {
+        const { best, beyond } = reachOf([sample(1, 10, null, 2), sample(2, 20, null, 2)], LAWN);
+        expect(best?.range).toBe(10);
+        expect(beyond?.klass).toBe("off-court");
+    });
+
+    it("counts a single ball past the court's length as off-court, its ratio being NaN", () => {
+        const { best, beyond } = reachOf([sample(1, 30, null, NaN), sample(2, 40, null, NaN)], LAWN);
+        expect(best?.range).toBe(30);
+        expect(beyond?.power).toBe(2);
+    });
+
+    it("has no best where nothing is admissible, and names the first failure", () => {
+        const { best, beyond } = reachOf([sample(0.5, 1, "turf"), sample(1, 2, "superhuman")], LAWN);
+        expect(best).toBeNull();
+        expect(beyond?.klass).toBe("turf");
+    });
+
+    it("names an engine error above the reach, and nothing where none fails", () => {
+        const failed = reachOf([sample(1, 2), { power: 1.25, engineError: "boom" }], LAWN);
+        expect(failed.beyond).toEqual({ power: 1.25, klass: "engine error", reason: "boom" });
+        expect(reachOf([sample(1, 2)], LAWN).beyond).toBeNull();
+    });
+});
+
+describe("the map on Actions (plan Task B5)", () => {
+    const counts = [
+        { type: "drive", plans: 100 },
+        { type: "half-roll", plans: 300 },
+        { type: "pass-roll", plans: 600 },
+    ] as const;
+    const jobsOf = (matrix: readonly MatrixJob[], type: string): number[] =>
+        matrix.filter((m) => m.type === type).map((m) => m.job);
+
+    it("shares the jobs in proportion to the plans, numbering each type's from 0", () => {
+        const matrix = shardMatrix(counts, 10, null);
+        expect(matrix).toHaveLength(10);
+        expect(jobsOf(matrix, "drive")).toEqual([0]);
+        expect(jobsOf(matrix, "half-roll")).toEqual([0, 1, 2]);
+        expect(jobsOf(matrix, "pass-roll")).toEqual([0, 1, 2, 3, 4, 5]);
+        expect(matrix.filter((m) => m.type === "pass-roll").every((m) => m.jobs === 6)).toBe(true);
+    });
+
+    it("hands the jobs left by rounding to the largest remainders, so the total holds", () => {
+        const matrix = shardMatrix(
+            [
+                { type: "drive", plans: 1 },
+                { type: "half-roll", plans: 1 },
+                { type: "pass-roll", plans: 2 },
+            ],
+            5,
+            null,
+        );
+        expect(matrix).toHaveLength(5);
+        // Shares 1.25, 1.25 and 2.5: the floors leave one job, and 2.5's remainder is the largest.
+        expect(jobsOf(matrix, "pass-roll")).toHaveLength(3);
+    });
+
+    it("gives every type a job, past the total if it must, as stage 1's single plans do", () => {
+        const matrix = shardMatrix(counts, 1, null);
+        expect(matrix.map((m) => m.type)).toEqual(["drive", "half-roll", "pass-roll"]);
+        expect(matrix.every((m) => m.jobs === 1)).toBe(true);
+    });
+
+    it("keeps one job of each type where asked, its count unchanged, and drops a type without that job", () => {
+        const matrix = shardMatrix(counts, 10, new Set([1]));
+        expect(matrix).toEqual([
+            { type: "half-roll", job: 1, jobs: 3 },
+            { type: "pass-roll", job: 1, jobs: 6 },
+        ]);
+    });
+
+    it("refuses a matrix past GitHub's limit, judged after keeping the jobs asked for", () => {
+        expect(() => shardMatrix(counts, MATRIX_LIMIT + 1, null)).toThrow(/matrix limit/);
+        expect(shardMatrix(counts, MATRIX_LIMIT + 1, new Set([0]))).toHaveLength(3);
+    });
+
+    it("splits a type past the limit across dispatches, each job in exactly one (plan B-d12)", () => {
+        const pass = [{ type: "pass-roll", plans: 10620 }] as const;
+        const first = shardMatrix(pass, 512, parseJobs("0-255"));
+        const second = shardMatrix(pass, 512, parseJobs("256-511"));
+        expect(first).toHaveLength(MATRIX_LIMIT);
+        expect(second).toHaveLength(MATRIX_LIMIT);
+        expect([...first, ...second].map((m) => m.job)).toEqual(Array.from({ length: 512 }, (_, job) => job));
+        expect([...first, ...second].every((m) => m.jobs === 512)).toBe(true);
+    });
+
+    it("reads the jobs asked for: all, numbers and ranges, refusing anything else", () => {
+        expect(parseJobs("all")).toBeNull();
+        expect(parseJobs("7")).toEqual(new Set([7]));
+        expect(parseJobs("3,17,40-42")).toEqual(new Set([3, 17, 40, 41, 42]));
+        expect(() => parseJobs("")).toThrow(/ONLY/);
+        expect(() => parseJobs("5-3")).toThrow(/ONLY/);
+        expect(() => parseJobs("1,,2")).toThrow(/ONLY/);
+        expect(() => parseJobs("-1")).toThrow(/ONLY/);
+    });
+
+    it("names the runs and commit of a record merged from several dispatches (plan B-d12)", () => {
+        expect(recordSource({})).toEqual({ run: null, commit: null });
+        expect(
+            recordSource({
+                GITHUB_SERVER_URL: "https://github.com",
+                GITHUB_REPOSITORY: "o/r",
+                GITHUB_RUN_ID: "5",
+                GITHUB_SHA: "abc",
+            }),
+        ).toEqual({ run: "https://github.com/o/r/actions/runs/5", commit: "abc" });
+        expect(recordSource({ RECORD_RUNS: "https://a, https://b", RECORD_COMMIT: "def", GITHUB_SHA: "abc" })).toEqual({
+            run: "https://a, https://b",
+            commit: "def",
+        });
+    });
+
+    it("plays the text book alone at stage 1, off the grid or not, and the whole grid at stage 2", () => {
+        const grid = gridFor("half-roll");
+        expect(stagePlans("half-roll", grid, 1)).toEqual([textBook("half-roll")]);
+        expect(stagePlans("half-roll", grid, 2)).toEqual(plansOf("half-roll", grid));
+    });
+
+    it("narrows the lawns only to the grid's own", () => {
+        const grid = gridFor("half-roll");
+        expect(onLawns(grid, undefined)).toBe(grid);
+        expect(onLawns(grid, "")).toBe(grid);
+        expect(onLawns(grid, "10").lawns).toEqual([10]);
+        expect(onLawns(grid, "6,14").lawns).toEqual([6, 14]);
+        expect(() => onLawns(grid, "8")).toThrow(/LAWNS must be among/);
+    });
+});
+
 describe("the half roll's stage-1 tallies (P2b.2b.2c.3b plan Task 6)", () => {
     /** smallGrid on three lawns, each lawn's read built by `at`. */
     function threeLawns(at: (p: MapPlan, lawn: number) => SweepRead): { grid: MapGrid; reads: Map<string, SweepRead> } {
@@ -443,10 +603,19 @@ describe("the half roll's stage-1 tallies (P2b.2b.2c.3b plan Task 6)", () => {
     it("reads the reads file back as merge wrote it, NaN kept", () => {
         const one = planKey(plan(26 * DEG, 1), 10, LAWN);
         const reads = new Map([[one, read("mishit", NaN, NaN, "impact-off-face")]]);
-        const back = parseReads(readsJson(reads));
-        expect([...back.keys()]).toEqual([one]);
-        expect(back.get(one)?.klass).toBe("mishit");
-        expect(Number.isNaN(back.get(one)?.ratio)).toBe(true);
+        const header: RecordHeader = {
+            run: "https://github.com/o/r/actions/runs/1",
+            commit: "abc",
+            engine: "0.29.1",
+            type: "half-roll",
+            stage: 1,
+            lawns: [10],
+        };
+        const back = parseReads(readsJson(header, reads));
+        expect(back.header).toEqual(header);
+        expect([...back.reads.keys()]).toEqual([one]);
+        expect(back.reads.get(one)?.klass).toBe("mishit");
+        expect(Number.isNaN(back.reads.get(one)?.ratio)).toBe(true);
     });
 
     it("measures the lawn's effect as the ratio's spread across the lawns, (max − min) / mean", () => {
@@ -505,13 +674,22 @@ describe("the half roll's stage-1 tallies (P2b.2b.2c.3b plan Task 6)", () => {
             turf: 1,
             unpractised: 0,
             unlawful: 0,
+            "off-court": 0,
             admissible: 7,
             unread: 1,
         });
     });
 
-    it("lists unpractised after turf among the classes (P2b.2b.2c.3b.1 design §4 item 3)", () => {
-        expect(MAP_CLASSES).toEqual(["unreachable", "superhuman", "mishit", "turf", "unpractised", "unlawful"]);
+    it("lists unpractised after turf among the classes, off-court last (P2b.2b.2c.3b.1 design §4 item 3; B-d4)", () => {
+        expect(MAP_CLASSES).toEqual([
+            "unreachable",
+            "superhuman",
+            "mishit",
+            "turf",
+            "unpractised",
+            "unlawful",
+            "off-court",
+        ]);
     });
 
     it("counts the plans whose sweep is not monotone on some lawn", () => {
@@ -637,7 +815,7 @@ describe("the regions as text (plan Task 8's summary)", () => {
         expect(regionSpan("half-roll")).toBe("1.4–2.5");
         expect(regionSpan("full-roll")).toBe("1.0–1.2");
         expect(regionSpan("pass-roll")).toBe("below 1");
-        // The half roll's phrase is the stage-1 probe's text exactly ("in 1.4–2.5"), so stage1 is reproduced.
+        // The half roll's phrase is the stage-1 probe's text exactly ("in 1.4–2.5"), so the half roll's summary reproduces it.
         expect(regionPhrase("half-roll")).toBe("in 1.4–2.5");
         expect(regionPhrase("full-roll")).toBe("in 1.0–1.2");
         expect(regionPhrase("pass-roll")).toBe("below 1");
@@ -760,5 +938,130 @@ describe("the super pass roll (plan decision 12)", () => {
         expect(superLeast([{ plan: a, sample: sample(0.5, 3) }], 6)).toEqual({ least: null, admissible: null });
         // Only classed samples: a least, but no admissible one.
         expect(superLeast([{ plan: a, sample: sample(0.5, 3, "turf", 0.7) }], LAWN).admissible).toBeNull();
+    });
+});
+
+describe("the envelope's grids, from a tap to a court length (plan Amendment B, Task B3; B-d4, B-d5)", () => {
+    const TYPES = ["drive", "stop-ac", "half-roll", "full-roll", "pass-roll", "single-ball"] as const;
+
+    it("spans 0.25 m to 32 m, even in log range, at least 16 ranges and half of them below 4 m", () => {
+        for (const type of TYPES) {
+            const { ranges } = gridFor(type);
+            expect(ranges[0]).toBe(0.25);
+            expect(ranges[ranges.length - 1]).toBe(32);
+            expect(ranges.length).toBeGreaterThanOrEqual(16);
+            expect(2 * ranges.filter((r) => r < 4).length).toBeGreaterThanOrEqual(ranges.length);
+            const step = Math.log((ranges[1] as number) / (ranges[0] as number));
+            ranges.slice(1).forEach((r, i) => {
+                expect(Math.log(r / (ranges[i] as number))).toBeCloseTo(step, 12);
+            });
+        }
+    });
+
+    it("adds powers below 0.1, ascending", () => {
+        const { powers } = gridFor("half-roll");
+        expect(powers.slice(0, 3)).toEqual([0.02, 0.05, 0.1]);
+        expect([...powers].sort((a, b) => a - b)).toEqual(powers);
+    });
+
+    it("adds 1.05 and 1.1 where the distance climbs above p 1 (design A8 item 4)", () => {
+        const { powers } = gridFor("stop-ac");
+        expect(powers.filter((p) => p >= 1 && p <= 1.25)).toEqual([1, 1.05, 1.1, 1.25]);
+    });
+
+    it("plays a sample at both holds, the fitted play beside the found (design A8 item 3)", () => {
+        const found = { ...sample(1, 3), firmness: 0.25 };
+        const fitted = { ...sample(1, 4), firmness: 1 };
+        const entry = playBothHolds((hold) => (hold === "found" ? found : fitted), 1);
+        expect(entry).toEqual({ ...found, fitted });
+    });
+
+    it("keeps each hold's play when the other's throws", () => {
+        const fitted = sample(1, 4);
+        const entry = playBothHolds((hold) => {
+            if (hold === "found") {
+                throw new Error("boom");
+            }
+            return fitted;
+        }, 1);
+        expect(entry).toEqual({ power: 1, engineError: "boom", fitted });
+        const other = playBothHolds((hold) => {
+            if (hold === "preset") {
+                throw new Error("boom");
+            }
+            return fitted;
+        }, 1);
+        expect(other).toEqual({ ...fitted, fitted: { power: 1, engineError: "boom" } });
+    });
+
+    it("reads the fitted sweep from the fitted plays, with an engine error for a sample without one", () => {
+        const fitted = sample(1, 4);
+        const sweeps = fittedSweeps(new Map([[0, [{ ...sample(1, 3), fitted }, sample(1.25, 5)]]]));
+        expect(sweeps.get(0)).toEqual([fitted, { power: 1.25, engineError: NO_FITTED_PLAY }]);
+    });
+
+    it("reads the hold's firmness from the sweep, linearly in range like the other figures", () => {
+        const sweep = [
+            { ...sample(0.5, 2), firmness: 0.2 },
+            { ...sample(1, 4), firmness: 0.6 },
+        ];
+        expect(readAt(sweep, 3, LAWN)?.firmness).toBeCloseTo(0.4, 12);
+    });
+
+    it("marks a read whose bracket holds a slip after the balls have gone, admissible all the same", () => {
+        const sweep = [sample(0.5, 2), sample(1, 4), { ...sample(1.25, 6), followSlip: true }];
+        expect(readAt(sweep, 3, LAWN)?.followSlip).toBe(false);
+        const slipping = readAt(sweep, 5, LAWN);
+        expect(slipping?.followSlip).toBe(true);
+        expect(slipping?.klass).toBeNull();
+    });
+
+    it("reads a firmness of NaN where a bracket's end found no hold", () => {
+        const sweep = [sample(0.5, 2), { ...sample(1, 4, "superhuman"), firmness: null }];
+        expect(readAt(sweep, 3, LAWN)?.firmness).toBeNaN();
+    });
+
+    it("sweeps the pass roll's split at 0°, 2°, 4°, 6°, 8°, 10°, 20° and 30°, with 40° beyond", () => {
+        const { split } = gridFor("pass-roll");
+        expect(split.graded.map((s) => Math.round(s / DEG))).toEqual([0, 2, 4, 6, 8, 10, 20, 30]);
+        expect(split.beyond.map((s) => Math.round(s / DEG))).toEqual([40]);
+    });
+
+    it("reads a cell off the court where the croqueted ball would pass 32 m, unsolved, whatever its class", () => {
+        const sweep = [sample(0.5, 4, null, 5), sample(1, 8, null, 5)];
+        expect(readAt(sweep, 6, LAWN)?.klass).toBeNull();
+        const off = readAt(sweep, 7, LAWN);
+        expect(off?.klass).toBe("off-court");
+        expect(off?.reason).toBe(OFF_COURT);
+        expect(Number.isNaN(off?.ratio)).toBe(true);
+        expect(Number.isNaN(off?.power)).toBe(true);
+        expect(readAt([sample(0.5, 4, null, 5), sample(1, 8, "turf", 5)], 7, LAWN)?.klass).toBe("off-court");
+    });
+
+    it("reads a cell beyond the sweep off the court at its furthest play's ratio, ahead of its reach", () => {
+        const sweep = [sample(0.5, 4, null, 5), sample(1, 8, null, 5), sample(2, NaN, "superhuman", NaN)];
+        expect(readAt(sweep, 32, LAWN)?.klass).toBe("off-court");
+        const slight = [sample(0.5, 4, null, 0.5), sample(1, 8, null, 0.5), sample(2, NaN, "superhuman", NaN)];
+        expect(readAt(slight, 32, LAWN)?.klass).toBe("superhuman");
+    });
+
+    it("keeps a striker's ball at 32 m on the court, and reads no off-court from a stroke with no ratio", () => {
+        expect(readAt([sample(0.5, 20, null, 0.5), sample(1, 40, null, 0.5)], 32, LAWN)?.klass).toBeNull();
+        const single = [sample(0.5, 4, null, NaN), sample(1, 8, null, NaN)];
+        expect(readAt(single, 32, LAWN)?.klass).toBe("superhuman");
+    });
+
+    it("leaves an off-court cell unbanded, and an off-court neighbour no failure of the plan", () => {
+        const grid = smallGrid();
+        const reads = new Map<string, SweepRead>();
+        for (const p of plansOf("half-roll", grid)) {
+            reads.set(planKey(p, 10, LAWN), read(null));
+        }
+        const off = plan(20 * DEG, 0);
+        reads.set(planKey(off, 10, LAWN), read("off-court"));
+        const { banded, unbanded } = grade("half-roll", grid, reads);
+        expect(banded.has(planKey(off, 10, LAWN))).toBe(false);
+        expect(unbanded).toBe(0);
+        expect(banded.get(planKey(plan(26 * DEG, 0), 10, LAWN))).toBe("viable");
     });
 });

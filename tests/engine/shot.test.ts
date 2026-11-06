@@ -36,9 +36,11 @@ const at = (x: number, y: number): BallState => ({ position: vec3(x, y, R), velo
  * (plan Task 6 Step 5, 2026-10-16). They close the mallet's ruling B follow-up: the canonical AC stop clears the turf.
  * P2b.2b.2c.2d: the planner includes a croquet stroke's dip (was: J_EARLY's early dip met the turf before the ball),
  * so J_EARLY's early dip no longer meets the turf at all (gate 1, "Keep it planned (Recommended)").
+ * P2b.2b.2c.3b gate stage 1 (user ruling 2026-11-05): the preset's 11 mm dip removed, so each jab is now the whole dip
+ * (was 2 and 4 mm on top of the 11 mm); the same plays, the figures below unchanged.
  */
-const J_ON = 0.002;
-const J_EARLY = 0.004;
+const J_ON = 0.013;
+const J_EARLY = 0.015;
 
 /**
  * The AC stop's jab variant as a shot's grip (the user's account 9): the bottom hand lowered to 0.45 m, both grips
@@ -423,10 +425,12 @@ describe("simulateShot", () => {
         // The firm top hand's hold now reaches the default grip limit (follow-grip-limit), which is not turf damage.
         // Accepted as it stands (gate stage 2 ruling 2026-10-28): the hands are at their physical limit with one hand's
         // breadth of lever. The user's hypothesis that more leverage would keep them inside it is a P2b.2b.2c.3b item.
+        // P2b.2b.2c.3b gate stage 1 (user ruling 2026-11-05): the 11 mm dip removed (was ["follow-grip-limit"]): the
+        // hold's grip limit came with the dip, and the hands now hold the canonical stop inside it.
         const outcome = simulateShot(canonicalSetup("stop-ac"), undefined, { trajectory: true });
         expect(outcome.impact.events.map((e) => e.kind)).toEqual(["turf-lift"]);
         const flags = (outcome.trajectory as SwingTrajectory).flags;
-        expect(flags).toEqual(["follow-grip-limit"]);
+        expect(flags).toEqual([]);
     });
 
     it("raises no 29.1.6.1 on the canonical drive: its follow-through does not catch the ball again", () => {
@@ -814,8 +818,10 @@ describe("the head's turf contact after the strike (P2b.2b.2b.3; user ruling 202
         // case strikes at that canonical contact (was 3 mm above the canonical one, −0.017 m). 3 mm above it, at
         // −0.0195 m, the head yields the soil and goes 2.1 mm deep (turf-yield, impact-head-deep). At the canonical
         // contact the head rests on the turf from 17.9 ms to 178 ms at up to 21 N.
+        // P2b.2b.2c.3b gate stage 1 (user ruling 2026-11-05): the preset's 11 mm dip removed, so the case asks for it as
+        // a jab (was the preset's): without it the head never meets the turf.
         const base = canonicalSetup("stop-ac", { world: WORLD });
-        const preset = { ...base.stroke, drive: 0 };
+        const preset = { ...base.stroke, drive: 0, jab: 0.011 };
         const setup = { ...base, stroke: preset };
         const shot = { ...setup, stroke: { ...preset, backswing: backswingFor(setup, 2, WORLD) } };
         const { impact, trajectory } = simulateShot(shot, WORLD, { trajectory: true });
