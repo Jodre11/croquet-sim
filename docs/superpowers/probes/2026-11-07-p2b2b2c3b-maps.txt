@@ -1904,3 +1904,87 @@ admissible on each lawn: 4282 plan-ranges, median 14.94 %, 95th percentile 89.92
 -- outside the envelope outright (§3.5: every read present, the one class), split 30°: 0 set-ups --
 -- no admissible read, every read present, classes mixed, split 30°: 0 set-ups --
 -- no admissible read, but some reads missing (incomplete, not outright), split 30°: 0 set-ups --
+
+
+== Plan Task B8: each text book beside the map's least-effort plans near its targets (design A7 item 7) ==
+The text books' canonical ranges and ratios are stage 1b's replay (run 42080819643); their own efforts, where read:
+the half roll 22.0 % (stroke 25.7, push 18.3), the full roll 36.5 % (32.7, 40.2), the pass roll 35.0 % (32.7, 37.2),
+each at the found hold from its sweep (the summaries above). The drive's and the AC stop's are not read at their
+canonical range. Plots: docs/superpowers/probes/2026-11-07-p2b2b2c3b-plots/ (scripts/pushMapPlots.ts).
+-- each text book beside the map's least-effort plans near its targets: 10 s lawn, fitted hold; at the grid's two ranges either side of the text book's canonical range, the least-effort graded admissible plan with its ratio within ±0.3 of each target, over every type and over the type's own map --
+drive: text book at 1.228 m, ratio 3.925
+  text book 3.925 at 0.912 m, any type: drive: lean 0°, feet -0.236 m, drive 0.5, reach 0 m, window 40 ms; ratio 3.68, effort 14.0 % (stroke 28.0, push 0.0), edgy, σ 1.000, p 0.66
+  text book 3.925 at 0.912 m, its own map: drive: lean 0°, feet -0.236 m, drive 0.5, reach 0 m, window 40 ms; ratio 3.68, effort 14.0 % (stroke 28.0, push 0.0), edgy, σ 1.000, p 0.66
+  text book 3.925 at 1.26 m, any type: drive: lean 0°, feet -0.236 m, drive -1, reach 0 m, window 40 ms; ratio 3.94, effort 16.8 % (stroke 33.7, push 0.0), edgy, σ 1.000, p 0.95
+  text book 3.925 at 1.26 m, its own map: drive: lean 0°, feet -0.236 m, drive -1, reach 0 m, window 40 ms; ratio 3.94, effort 16.8 % (stroke 33.7, push 0.0), edgy, σ 1.000, p 0.95
+  Gugan 4.23 at 0.912 m, any type: stop-ac: lean 0°, feet -0.324 m, drive -0.5, reach 0 m, window 20 ms; ratio 4.21, effort 14.7 % (stroke 29.3, push 0.0), viable, σ 1.000, p 0.73
+  Gugan 4.23 at 0.912 m, its own map: none
+  Gugan 4.23 at 1.26 m, any type: drive: lean 0°, feet -0.236 m, drive -1, reach 0 m, window 40 ms; ratio 3.94, effort 16.8 % (stroke 33.7, push 0.0), edgy, σ 1.000, p 0.95
+  Gugan 4.23 at 1.26 m, its own map: drive: lean 0°, feet -0.236 m, drive -1, reach 0 m, window 40 ms; ratio 3.94, effort 16.8 % (stroke 33.7, push 0.0), edgy, σ 1.000, p 0.95
+stop-ac: text book at 0.875 m, ratio 5.861
+  text book 5.861 at 0.66 m, any type: stop-ac: lean -6°, feet -0.324 m, drive -0.5, reach 0 m, window 20 ms; ratio 5.59, effort 13.7 % (stroke 27.5, push 0.0), edgy, σ 1.000, p 0.68
+  text book 5.861 at 0.66 m, its own map: stop-ac: lean -6°, feet -0.324 m, drive -0.5, reach 0 m, window 20 ms; ratio 5.59, effort 13.7 % (stroke 27.5, push 0.0), edgy, σ 1.000, p 0.68
+  text book 5.861 at 0.912 m, any type: none
+  text book 5.861 at 0.912 m, its own map: none
+  Gugan 7.15 at 0.66 m, any type: none
+  Gugan 7.15 at 0.66 m, its own map: none
+  Gugan 7.15 at 0.912 m, any type: none
+  Gugan 7.15 at 0.912 m, its own map: none
+half-roll: text book at 1.839 m, ratio 2.0
+  text book 2.0 at 1.74 m, any type: half-roll: lean 18°, feet 0.132 m, drive -1, reach 0 m, window 20 ms; ratio 2.30, effort 12.2 % (stroke 24.4, push 0.0), edgy, slips after, σ 0.100, p 0.84
+  text book 2.0 at 1.74 m, its own map: half-roll: lean 18°, feet 0.132 m, drive -1, reach 0 m, window 20 ms; ratio 2.30, effort 12.2 % (stroke 24.4, push 0.0), edgy, slips after, σ 0.100, p 0.84
+  text book 2.0 at 2.41 m, any type: half-roll: lean 24°, feet 0.232 m, drive 0, reach 0 m, window 10 ms; ratio 2.17, effort 15.4 % (stroke 30.8, push 0.0), edgy, σ 0.100, p 1.01
+  text book 2.0 at 2.41 m, its own map: half-roll: lean 24°, feet 0.232 m, drive 0, reach 0 m, window 10 ms; ratio 2.17, effort 15.4 % (stroke 30.8, push 0.0), edgy, σ 0.100, p 1.01
+full-roll: text book at 5.924 m, ratio 1.161
+  text book 1.161 at 4.59 m, any type: full-roll: lean 25°, feet 0.320 m, drive -0.5, reach 0.1 m, window 40 ms, speedGain 0.1; ratio 1.06, effort 22.4 % (stroke 28.7, push 16.1), edgy, σ 1.000, p 0.76
+  text book 1.161 at 4.59 m, its own map: full-roll: lean 25°, feet 0.320 m, drive -0.5, reach 0.1 m, window 40 ms, speedGain 0.1; ratio 1.06, effort 22.4 % (stroke 28.7, push 16.1), edgy, σ 1.000, p 0.76
+  text book 1.161 at 6.35 m, any type: pass-roll: lean 32°, feet 0.381 m, drive -0.5, reach 0.1 m, window 20 ms, split 2°; ratio 1.08, effort 27.4 % (stroke 35.0, push 19.8), edgy, slips after, σ 1.000, p 0.97
+  text book 1.161 at 6.35 m, its own map: full-roll: lean 25°, feet 0.270 m, drive -0.5, reach 0.1 m, window 40 ms, speedGain 0.1; ratio 1.22, effort 28.5 % (stroke 36.9, push 20.1), edgy, slips after, σ 1.000, p 0.98
+pass-roll: text book at 6.571 m, ratio 0.859
+  text book 0.859 at 6.35 m, any type: pass-roll: lean 26°, feet 0.281 m, drive -0.5, reach 0.1 m, window 40 ms, split 6°; ratio 0.63, effort 25.0 % (stroke 32.1, push 17.8), edgy, σ 1.000, p 0.89
+  text book 0.859 at 6.35 m, its own map: pass-roll: lean 26°, feet 0.281 m, drive -0.5, reach 0.1 m, window 40 ms, split 6°; ratio 0.63, effort 25.0 % (stroke 32.1, push 17.8), edgy, σ 1.000, p 0.89
+  text book 0.859 at 8.77 m, any type: pass-roll: lean 26°, feet 0.381 m, drive -0.5, reach 0.1 m, window 40 ms, split 4°; ratio 0.77, effort 29.7 % (stroke 37.3, push 22.0), edgy, slips after, σ 1.000, p 1.01
+  text book 0.859 at 8.77 m, its own map: pass-roll: lean 26°, feet 0.381 m, drive -0.5, reach 0.1 m, window 40 ms, split 4°; ratio 0.77, effort 29.7 % (stroke 37.3, push 22.0), edgy, slips after, σ 1.000, p 1.01
+  Gugan 0.83 at 6.35 m, any type: pass-roll: lean 26°, feet 0.281 m, drive -0.5, reach 0.1 m, window 40 ms, split 6°; ratio 0.63, effort 25.0 % (stroke 32.1, push 17.8), edgy, σ 1.000, p 0.89
+  Gugan 0.83 at 6.35 m, its own map: pass-roll: lean 26°, feet 0.281 m, drive -0.5, reach 0.1 m, window 40 ms, split 6°; ratio 0.63, effort 25.0 % (stroke 32.1, push 17.8), edgy, σ 1.000, p 0.89
+  Gugan 0.83 at 8.77 m, any type: pass-roll: lean 26°, feet 0.381 m, drive -0.5, reach 0.2 m, window 40 ms, split 8°; ratio 0.55, effort 29.2 % (stroke 36.5, push 21.9), edgy, slips after, σ 1.000, p 1.00
+  Gugan 0.83 at 8.77 m, its own map: pass-roll: lean 26°, feet 0.381 m, drive -0.5, reach 0.2 m, window 40 ms, split 8°; ratio 0.55, effort 29.2 % (stroke 36.5, push 21.9), edgy, slips after, σ 1.000, p 1.00
+
+-- each text book beside the map's least-effort plans near its targets: 10 s lawn, found hold; at the grid's two ranges either side of the text book's canonical range, the least-effort graded admissible plan with its ratio within ±0.3 of each target, over every type and over the type's own map --
+drive: text book at 1.228 m, ratio 3.925
+  text book 3.925 at 0.912 m, any type: pass-roll: lean 32°, feet 0.281 m, drive 0.5, reach 0.1 m, window 40 ms, split 4°; ratio 3.96, effort 11.8 % (stroke 14.6, push 8.9), edgy, σ 0.034, p 0.40
+  text book 3.925 at 0.912 m, its own map: drive: lean 0°, feet -0.236 m, drive 0.5, reach 0 m, window 40 ms; ratio 3.68, effort 14.0 % (stroke 28.0, push 0.0), edgy, σ 0.000, p 0.66
+  text book 3.925 at 1.26 m, any type: pass-roll: lean 32°, feet 0.281 m, drive 0, reach 0.1 m, window 20 ms, split 4°; ratio 3.81, effort 15.3 % (stroke 19.7, push 10.9), edgy, σ 0.055, p 0.54
+  text book 3.925 at 1.26 m, its own map: drive: lean 0°, feet -0.236 m, drive -1, reach 0 m, window 40 ms; ratio 3.94, effort 16.8 % (stroke 33.7, push 0.0), edgy, σ 0.000, p 0.95
+  Gugan 4.23 at 0.912 m, any type: pass-roll: lean 32°, feet 0.281 m, drive 0.5, reach 0.1 m, window 40 ms, split 4°; ratio 3.96, effort 11.8 % (stroke 14.6, push 8.9), edgy, σ 0.034, p 0.40
+  Gugan 4.23 at 0.912 m, its own map: none
+  Gugan 4.23 at 1.26 m, any type: pass-roll: lean 32°, feet 0.281 m, drive 0, reach 0.1 m, window 20 ms, split 2°; ratio 4.42, effort 15.5 % (stroke 19.9, push 11.1), edgy, σ 0.060, p 0.55
+  Gugan 4.23 at 1.26 m, its own map: drive: lean 0°, feet -0.236 m, drive -1, reach 0 m, window 40 ms; ratio 3.94, effort 16.8 % (stroke 33.7, push 0.0), edgy, σ 0.000, p 0.95
+stop-ac: text book at 0.875 m, ratio 5.861
+  text book 5.861 at 0.66 m, any type: stop-ac: lean -6°, feet -0.324 m, drive -0.5, reach 0 m, window 20 ms; ratio 5.59, effort 13.7 % (stroke 27.5, push 0.0), edgy, σ 0.000, p 0.68
+  text book 5.861 at 0.66 m, its own map: stop-ac: lean -6°, feet -0.324 m, drive -0.5, reach 0 m, window 20 ms; ratio 5.59, effort 13.7 % (stroke 27.5, push 0.0), edgy, σ 0.000, p 0.68
+  text book 5.861 at 0.912 m, any type: pass-roll: lean 32°, feet 0.381 m, drive 0.5, reach 0.1 m, window 20 ms, split 4°; ratio 5.69, effort 15.0 % (stroke 19.3, push 10.8), edgy, σ 0.046, p 0.53
+  text book 5.861 at 0.912 m, its own map: none
+  Gugan 7.15 at 0.66 m, any type: pass-roll: lean 32°, feet 0.381 m, drive 1, reach 0.1 m, window 20 ms, split 4°; ratio 7.42, effort 14.8 % (stroke 18.9, push 10.6), edgy, σ 0.009, p 0.52
+  Gugan 7.15 at 0.66 m, its own map: none
+  Gugan 7.15 at 0.912 m, any type: pass-roll: lean 32°, feet 0.381 m, drive 1, reach 0.1 m, window 20 ms, split 4°; ratio 6.96, effort 15.0 % (stroke 19.2, push 10.8), edgy, σ 0.014, p 0.53
+  Gugan 7.15 at 0.912 m, its own map: none
+half-roll: text book at 1.839 m, ratio 2.0
+  text book 2.0 at 1.74 m, any type: half-roll: lean 18°, feet 0.132 m, drive -1, reach 0 m, window 20 ms; ratio 2.30, effort 12.2 % (stroke 24.4, push 0.0), edgy, slips after, σ 0.000, p 0.84
+  text book 2.0 at 1.74 m, its own map: half-roll: lean 18°, feet 0.132 m, drive -1, reach 0 m, window 20 ms; ratio 2.30, effort 12.2 % (stroke 24.4, push 0.0), edgy, slips after, σ 0.000, p 0.84
+  text book 2.0 at 2.41 m, any type: pass-roll: lean 32°, feet 0.281 m, drive 0, reach 0.2 m, window 40 ms, split 6°; ratio 2.21, effort 14.6 % (stroke 15.8, push 13.4), edgy, σ 0.125, p 0.43
+  text book 2.0 at 2.41 m, its own map: half-roll: lean 24°, feet 0.232 m, drive 0, reach 0 m, window 10 ms; ratio 2.17, effort 15.4 % (stroke 30.8, push 0.0), viable, σ 0.000, p 1.01
+full-roll: text book at 5.924 m, ratio 1.161
+  text book 1.161 at 4.59 m, any type: pass-roll: lean 32°, feet 0.331 m, drive 0.5, reach 0.1 m, window 20 ms, split 10°; ratio 0.96, effort 18.2 % (stroke 22.2, push 14.3), edgy, σ 0.138, p 0.61
+  text book 1.161 at 4.59 m, its own map: full-roll: lean 25°, feet 0.270 m, drive 1, reach 0.3 m, window 10 ms, speedGain 0.25; ratio 1.37, effort 23.3 % (stroke 25.0, push 21.5), edgy, σ 0.166, p 0.66
+  text book 1.161 at 6.35 m, any type: pass-roll: lean 32°, feet 0.331 m, drive 1, reach 0.1 m, window 40 ms, split 2°; ratio 0.96, effort 21.6 % (stroke 23.2, push 20.0), edgy, σ 0.210, p 0.64
+  text book 1.161 at 6.35 m, its own map: full-roll: lean 25°, feet 0.270 m, drive 1, reach 0.3 m, window 10 ms, speedGain 0.25; ratio 1.27, effort 26.7 % (stroke 29.9, push 23.5), edgy, σ 0.169, p 0.79
+pass-roll: text book at 6.571 m, ratio 0.859
+  text book 0.859 at 6.35 m, any type: pass-roll: lean 26°, feet 0.381 m, drive -0.5, reach 0.2 m, window 40 ms, split 4°; ratio 0.60, effort 20.8 % (stroke 26.2, push 15.4), edgy, σ 0.099, p 0.72
+  text book 0.859 at 6.35 m, its own map: pass-roll: lean 26°, feet 0.381 m, drive -0.5, reach 0.2 m, window 40 ms, split 4°; ratio 0.60, effort 20.8 % (stroke 26.2, push 15.4), edgy, σ 0.099, p 0.72
+  text book 0.859 at 8.77 m, any type: pass-roll: lean 26°, feet 0.381 m, drive 0.5, reach 0.2 m, window 10 ms, split 4°; ratio 0.56, effort 23.6 % (stroke 28.7, push 18.4), edgy, σ 0.087, p 0.79
+  text book 0.859 at 8.77 m, its own map: pass-roll: lean 26°, feet 0.381 m, drive 0.5, reach 0.2 m, window 10 ms, split 4°; ratio 0.56, effort 23.6 % (stroke 28.7, push 18.4), edgy, σ 0.087, p 0.79
+  Gugan 0.83 at 6.35 m, any type: pass-roll: lean 26°, feet 0.381 m, drive -0.5, reach 0.2 m, window 40 ms, split 4°; ratio 0.60, effort 20.8 % (stroke 26.2, push 15.4), edgy, σ 0.099, p 0.72
+  Gugan 0.83 at 6.35 m, its own map: pass-roll: lean 26°, feet 0.381 m, drive -0.5, reach 0.2 m, window 40 ms, split 4°; ratio 0.60, effort 20.8 % (stroke 26.2, push 15.4), edgy, σ 0.099, p 0.72
+  Gugan 0.83 at 8.77 m, any type: pass-roll: lean 26°, feet 0.281 m, drive 0.5, reach 0.2 m, window 10 ms, split 4°; ratio 0.56, effort 23.2 % (stroke 28.8, push 17.7), viable, σ 0.086, p 0.79
+  Gugan 0.83 at 8.77 m, its own map: pass-roll: lean 26°, feet 0.281 m, drive 0.5, reach 0.2 m, window 10 ms, split 4°; ratio 0.56, effort 23.2 % (stroke 28.8, push 17.7), viable, σ 0.086, p 0.79
