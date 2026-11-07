@@ -15,7 +15,7 @@ import { planStroke } from "../src/engine/swing/buildContact";
 import { strokeTrajectory } from "../src/engine/swing/trajectory";
 import { BALL_IDS, type BallState } from "../src/engine/types";
 import { openWorld } from "./openLawn";
-import { mapSetup, playSample, textBook, type MapPlan, type MapType } from "./pushMapRun";
+import { mapSetup, playSample, textBook, type MapHold, type MapPlan, type MapType } from "./pushMapRun";
 
 const DEG = Math.PI / 180;
 const UP = vec3(0, 0, 1);
@@ -35,9 +35,44 @@ interface Play {
     readonly type: MapType;
     readonly over: Partial<MapPlan>;
     readonly power: number;
+    /** The hold the map plays it at: the least that plays (found, the default) or the type's own (preset). */
+    readonly hold?: MapHold;
 }
 
+/** The pass roll's plan the map found reaching a stop's ratio at a loose hold (10 s lawn, 0.25 m, ratio 8.97). */
+const LOOSE_ROLL: Partial<MapPlan> = {
+    lean: 32 * DEG,
+    feet: 0.38087801284977446,
+    drive: 0.5,
+    handReach: 0.1,
+    window: 0.02,
+    split: 0,
+};
+
 const PLAYS: readonly Play[] = [
+    {
+        group: "Pass roll: loose grip",
+        label: "Loosest grip that plays",
+        type: "pass-roll",
+        over: LOOSE_ROLL,
+        power: 0.651,
+    },
+    {
+        group: "Pass roll: loose grip",
+        label: "Its usual grip",
+        type: "pass-roll",
+        over: LOOSE_ROLL,
+        power: 0.651,
+        hold: "preset",
+    },
+    {
+        group: "Pass roll: loose grip",
+        label: "Text book, usual grip",
+        type: "pass-roll",
+        over: {},
+        power: 0.651,
+        hold: "preset",
+    },
     {
         group: "AC stop: back lean",
         label: "Lean −6°",
@@ -90,7 +125,7 @@ function fine(x: number): number {
 
 function exportPlay(play: Play): unknown {
     const plan: MapPlan = { ...textBook(play.type), ...play.over };
-    const sample = playSample(play.type, plan, play.power, [6, 10, 14]);
+    const sample = playSample(play.type, plan, play.power, [6, 10, 14], play.hold ?? "found");
     const read = sample.byLawn[10];
     const meta = {
         group: play.group,
