@@ -1281,8 +1281,8 @@ async function sectionJumpiness(): Promise<void> {
 
 /** The record's two holds (design A8 item 3): the found hold's reads, and the fitted hold's beside them. */
 const HOLDS = [
-    { hold: "found", suffix: "reads.json", file: "envelope.csv.gz" },
-    { hold: "fitted", suffix: "fitted.reads.json", file: "envelope-fitted.csv.gz" },
+    { hold: "found", suffix: "reads.json", file: "envelope" },
+    { hold: "fitted", suffix: "fitted.reads.json", file: "envelope-fitted" },
 ] as const;
 
 /** Decision 10's size rule (MB): past it a record is committed as its summary instead. */
@@ -1290,8 +1290,9 @@ const RECORD_LIMIT_MB = 20;
 
 /**
  * Plan Task B7: the record from every type's merged reads in IN (`<type>.reads.json` and `<type>.fitted.reads.json`),
- * written to OUT: `envelope.csv.gz` and `envelope-fitted.csv.gz` (decision 10's rows, every type's, under `#` lines
- * naming the command, each type's runs and commit, the engine and the SHA-256 of `scripts/pushMap*.ts`), and
+ * written to OUT: `envelope-<type>.csv.gz` and `envelope-fitted-<type>.csv.gz` (decision 10's rows under `#` lines
+ * naming the command, the type's runs and commit, the engine and the SHA-256 of `scripts/pushMap*.ts`; one file per
+ * type, as every type's together passes decision 10's 20 MB), and
  * `envelope-least-effort.json`, each label's least-effort plan per range and lawn at each hold (bandPicks; design A7
  * item 7). Fails where a record's gzip passes RECORD_LIMIT_MB, which decision 10 commits as a summary instead.
  */
@@ -1328,27 +1329,22 @@ async function sectionRecord(): Promise<void> {
             const grid = onLawns(gridFor(type), header.lawns.join(","));
             return { type, header, grid, reads, banded: bands(type, grid, reads) };
         });
-        const lines = [
-            `# command: ${command}`,
-            `# hold: ${hold} (design A8 item 3)`,
-            ...maps.map(
-                ({ type, header }) =>
-                    `# ${type}: engine ${header.engine}, stage ${header.stage}, lawns ${header.lawns.join(" ")} s, ` +
+        for (const { type, header, grid, reads, banded } of maps) {
+            const lines = [
+                `# command: ${command}`,
+                `# hold: ${hold} (design A8 item 3)`,
+                `# ${type}: engine ${header.engine}, stage ${header.stage}, lawns ${header.lawns.join(" ")} s, ` +
                     `commit ${header.commit ?? "none"}, runs ${header.run ?? "none"}`,
-            ),
-            ...sources.map((s) => `# ${s}`),
-        ];
-        let rows = 0;
-        for (const [i, { type, grid, reads, banded }] of maps.entries()) {
+                ...sources.map((s) => `# ${s}`),
+            ];
             const body = envelopeRows(type, grid, reads, banded);
-            rows += body.length - 1;
-            lines.push(...(i === 0 ? body : body.slice(1)));
+            const gz = zlib.gzipSync(`${lines.join("\n")}\n${body.join("\n")}\n`, { level: 9 });
+            const mb = gz.length / 1e6;
+            const path = `${out}/${file}-${type}.csv.gz`;
+            binary.writeFileSync(path, gz);
+            console.log(`written: ${path}, ${body.length - 1} rows, ${mb.toFixed(2)} MB`);
+            tooLarge ||= mb > RECORD_LIMIT_MB;
         }
-        const gz = zlib.gzipSync(`${lines.join("\n")}\n`, { level: 9 });
-        const mb = gz.length / 1e6;
-        binary.writeFileSync(`${out}/${file}`, gz);
-        console.log(`written: ${out}/${file}, ${rows} rows, ${mb.toFixed(2)} MB`);
-        tooLarge ||= mb > RECORD_LIMIT_MB;
         picksByHold[hold] = bandPicks(maps);
     }
     const header = { command, sources, labels: "labelOf's continuum (design A7 item 2); single ball has no ratio" };
