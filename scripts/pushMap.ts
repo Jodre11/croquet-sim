@@ -19,6 +19,8 @@
  *   apart; each plan's reads at the grid's ranges and lawns (readsOf) are written to `<IN>/<TYPE>.reads.json`, and at
  *   the fitted hold to `<IN>/<TYPE>.fitted.reads.json`, under the run's URL and commit (RecordHeader). A plan missing
  *   fails the process, after the writes.
+ * - record: plan Task B7, every type's merged reads in IN banded and written to OUT as the committed record
+ *   (sectionRecord): both holds' rows and each label's least-effort plan per range and lawn.
  * - cost: plan Task 5, the map's time: with PART=j/J, the j-th of J parts of COST_PLANS pass-roll plans drawn evenly
  *   is played at the grid's powers, each sample's seconds appended to `<IN>/cost-<j>of<J>.jsonl`; without PART, those
  *   files are tallied: the mean and 95th percentile per sample and each type's projected CPU hours on today's grid.
@@ -52,7 +54,7 @@
  * Run with `env SECTION=lawn npx --yes tsx scripts/pushMap.ts`. The environment: SECTION names the section; matrix
  * takes TYPES, STAGE, SHARDS and ONLY; run takes TYPE (any shot type), STAGE, LAWNS, SHARD (k/N, default 0/1) and OUT
  * (a file); merge takes TYPE, STAGE, LAWNS, IN (a directory), and RECORD_RUNS and RECORD_COMMIT where run locally over
- * several dispatches (recordSource); cost takes IN and PART; stage1 takes IN; summary takes
+ * several dispatches (recordSource); record takes IN and OUT (directories); cost takes IN and PART; stage1 takes IN; summary takes
  * TYPE (a roll) and IN; super takes SHARD and OUT, or IN; jumpiness takes TYPE, by default both rolls. Not part of the
  * test suite.
  */
@@ -71,9 +73,12 @@ import {
     MULTIPLES_RATIO,
     SUPER_ONSETS,
     SUPER_WINDOWS,
+    bandPicks,
+    bands,
     cellReads,
     classCounts,
     doneIndices,
+    envelopeRows,
     excludedSetUps,
     fittedSweeps,
     followThroughPlans,
@@ -87,6 +92,7 @@ import {
     offGridBand,
     onLawns,
     parseJobs,
+    parseReads,
     pickDefault,
     planKey,
     plansOf,
@@ -1273,12 +1279,97 @@ async function sectionJumpiness(): Promise<void> {
     }
 }
 
+/** The record's two holds (design A8 item 3): the found hold's reads, and the fitted hold's beside them. */
+const HOLDS = [
+    { hold: "found", suffix: "reads.json", file: "envelope.csv.gz" },
+    { hold: "fitted", suffix: "fitted.reads.json", file: "envelope-fitted.csv.gz" },
+] as const;
+
+/** Decision 10's size rule (MB): past it a record is committed as its summary instead. */
+const RECORD_LIMIT_MB = 20;
+
+/**
+ * Plan Task B7: the record from every type's merged reads in IN (`<type>.reads.json` and `<type>.fitted.reads.json`),
+ * written to OUT: `envelope.csv.gz` and `envelope-fitted.csv.gz` (decision 10's rows, every type's, under `#` lines
+ * naming the command, each type's runs and commit, the engine and the SHA-256 of `scripts/pushMap*.ts`), and
+ * `envelope-least-effort.json`, each label's least-effort plan per range and lawn at each hold (bandPicks; design A7
+ * item 7). Fails where a record's gzip passes RECORD_LIMIT_MB, which decision 10 commits as a summary instead.
+ */
+async function sectionRecord(): Promise<void> {
+    const dir = required("IN");
+    const out = required("OUT");
+    const fs = await files();
+    const cryptoName = "node:crypto";
+    const zlibName = "node:zlib";
+    const crypto = (await import(/* @vite-ignore */ cryptoName)) as {
+        createHash(algorithm: "sha256"): { update(data: string): { digest(encoding: "hex"): string } };
+    };
+    const zlib = (await import(/* @vite-ignore */ zlibName)) as {
+        gzipSync(data: string, options: { level: number }): { readonly length: number };
+    };
+    const binary = fs as Files & { writeFileSync(path: string, data: { readonly length: number }): void };
+    const sources = fs
+        .readdirSync("scripts")
+        .filter((name) => /^pushMap.*\.ts$/.test(name))
+        .sort()
+        .map((name) => {
+            const sha = crypto
+                .createHash("sha256")
+                .update(fs.readFileSync(`scripts/${name}`, "utf8"))
+                .digest("hex");
+            return `sha256 scripts/${name}: ${sha}`;
+        });
+    const command = `env SECTION=record IN=${dir} OUT=${out} npx --no-install tsx scripts/pushMap.ts`;
+    const picksByHold: Record<string, unknown> = {};
+    let tooLarge = false;
+    for (const { hold, suffix, file } of HOLDS) {
+        const maps = MAP_TYPES.map((type) => {
+            const { header, reads } = parseReads(fs.readFileSync(`${dir}/${type}.${suffix}`, "utf8"));
+            const grid = onLawns(gridFor(type), header.lawns.join(","));
+            return { type, header, grid, reads, banded: bands(type, grid, reads) };
+        });
+        const lines = [
+            `# command: ${command}`,
+            `# hold: ${hold} (design A8 item 3)`,
+            ...maps.map(
+                ({ type, header }) =>
+                    `# ${type}: engine ${header.engine}, stage ${header.stage}, lawns ${header.lawns.join(" ")} s, ` +
+                    `commit ${header.commit ?? "none"}, runs ${header.run ?? "none"}`,
+            ),
+            ...sources.map((s) => `# ${s}`),
+        ];
+        let rows = 0;
+        for (const [i, { type, grid, reads, banded }] of maps.entries()) {
+            const body = envelopeRows(type, grid, reads, banded);
+            rows += body.length - 1;
+            lines.push(...(i === 0 ? body : body.slice(1)));
+        }
+        const gz = zlib.gzipSync(`${lines.join("\n")}\n`, { level: 9 });
+        const mb = gz.length / 1e6;
+        binary.writeFileSync(`${out}/${file}`, gz);
+        console.log(`written: ${out}/${file}, ${rows} rows, ${mb.toFixed(2)} MB`);
+        tooLarge ||= mb > RECORD_LIMIT_MB;
+        picksByHold[hold] = bandPicks(maps);
+    }
+    const header = { command, sources, labels: "labelOf's continuum (design A7 item 2); single ball has no ratio" };
+    const json = JSON.stringify({ header, ...picksByHold }, (_k, v: unknown) =>
+        typeof v === "number" && !Number.isFinite(v) ? null : v,
+    );
+    fs.writeFileSync(`${out}/envelope-least-effort.json`, `${json}\n`);
+    console.log(`written: ${out}/envelope-least-effort.json`);
+    if (tooLarge) {
+        console.log(`a record passes ${RECORD_LIMIT_MB} MB: decision 10 commits its summary instead`);
+        process.exitCode = 1;
+    }
+}
+
 const SECTIONS: Readonly<Record<string, () => void | Promise<void>>> = {
     lawn: sectionLawn,
     jumpiness: sectionJumpiness,
     matrix: sectionMatrix,
     run: sectionRun,
     merge: sectionMerge,
+    record: sectionRecord,
     cost: sectionCost,
     stage1: sectionStage1,
     summary: sectionSummary,

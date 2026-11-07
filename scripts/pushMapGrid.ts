@@ -824,6 +824,85 @@ export function pickDefault(
     };
 }
 
+/** The label of the single-ball stroke's plans, which have no ratio (design A7 item 2). */
+export const SINGLE_BALL_LABEL = "single ball";
+
+/** One type's graded reads, as bandPicks takes them. */
+export interface TypeReads {
+    readonly type: MapType;
+    readonly reads: Reads;
+    readonly banded: ReadonlyMap<string, Band>;
+}
+
+/** A plan bandPicks picked, with the type it was swept from and its read. */
+export interface Picked {
+    readonly type: MapType;
+    readonly plan: MapPlan;
+    readonly band: Band;
+    readonly read: SweepRead;
+}
+
+/** Each label's least-effort plan at one range and lawn (bandPicks). */
+export interface BandPick {
+    readonly label: string;
+    readonly range: number;
+    readonly lawn: number;
+    readonly least: Picked;
+    /** The least-effort viable plan, beside an edgy `least` (A2 item 2); `least` itself where it is viable. */
+    readonly viable: Picked | null;
+}
+
+/**
+ * Each label's least-effort plan per range and lawn over every type's map (design A7 items 2, 7; decision 5): among
+ * the banded admissible plans (viable or edgy) of all the types, grouped by labelOf's label of the ratio, or
+ * SINGLE_BALL_LABEL for the single-ball stroke, the least mean of the two effort percentages, ties to the plan nearer
+ * its own text book in follow-through (A7 item 8). A plan whose effort is NaN, or a roll's whose ratio has no label, is
+ * never picked. Sorted by label, range and lawn.
+ */
+export function bandPicks(maps: readonly TypeReads[]): BandPick[] {
+    interface Candidate extends Picked {
+        readonly effort: number;
+        readonly distance: number;
+    }
+    const groups = new Map<string, { label: string; range: number; lawn: number; all: Candidate[] }>();
+    for (const { type, reads, banded } of maps) {
+        const book = textBook(type);
+        for (const [key, band] of banded) {
+            if (band === "unplayable") {
+                continue;
+            }
+            const read = reads.get(key);
+            if (read === undefined || read.klass !== null) {
+                continue;
+            }
+            const label = type === "single-ball" ? SINGLE_BALL_LABEL : labelOf(read.ratio);
+            const effort = effortOf(read);
+            if (label === "" || !Number.isFinite(effort)) {
+                continue;
+            }
+            const { plan, range, lawn } = unkey(key);
+            const id = JSON.stringify([label, range, lawn]);
+            const group = groups.get(id) ?? { label, range, lawn, all: [] };
+            group.all.push({ type, plan, band, read, effort, distance: anchorDistance(plan, book) });
+            groups.set(id, group);
+        }
+    }
+    const strip = (c: Candidate | undefined): Picked | null =>
+        c === undefined ? null : { type: c.type, plan: c.plan, band: c.band, read: c.read };
+    const picks: BandPick[] = [];
+    for (const { label, range, lawn, all } of groups.values()) {
+        all.sort((a, b) => a.effort - b.effort || a.distance - b.distance);
+        picks.push({
+            label,
+            range,
+            lawn,
+            least: strip(all[0]) as Picked,
+            viable: strip(all.find((c) => c.band === "viable")),
+        });
+    }
+    return picks.sort((a, b) => a.label.localeCompare(b.label) || a.range - b.range || a.lawn - b.lawn);
+}
+
 /** A figure for the record: six significant figures, empty where not finite. */
 function figure(x: number): string {
     return Number.isFinite(x) ? String(Number(x.toPrecision(6))) : "";

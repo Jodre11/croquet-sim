@@ -9,8 +9,10 @@ import {
     MULTIPLES_RATIO,
     NO_FITTED_PLAY,
     OFF_COURT,
+    SINGLE_BALL_LABEL,
     SUPER_ONSETS,
     SUPER_WINDOWS,
+    bandPicks,
     bands,
     cellCorners,
     cellReads,
@@ -339,6 +341,52 @@ describe("the push map's grid, sweep, bands and record (P2b.2b.2c.3b plan Task 4
             banded.set(planKey(p, 10, LAWN), "viable");
         }
         expect(pickDefault("half-roll", reads, banded, { range: 10, lawn: LAWN, split: 0 }).plan).toEqual(near);
+    });
+
+    it("picks each label's least-effort plan over every type, beside an edgy least its viable runner-up", () => {
+        const key = (p: MapPlan): string => planKey(p, 10, LAWN);
+        const half = plan(26 * DEG, 0.5);
+        const halfDear = plan(26 * DEG, 1);
+        const halfEdgy = plan(20 * DEG, 1);
+        const drive = textBook("drive");
+        const single = textBook("single-ball");
+        const maps = [
+            {
+                type: "half-roll" as const,
+                reads: new Map([
+                    [key(half), read(null, 2, 40)],
+                    [key(halfDear), read(null, 2.2, 45)],
+                    // A drive's ratio from the half roll's map: the drive's label, its least effort.
+                    [key(halfEdgy), read(null, 3.5, 20)],
+                    [key(plan(32 * DEG, 1)), read("turf", 2, 5)],
+                ]),
+                banded: new Map<string, Band>([
+                    [key(half), "viable"],
+                    [key(halfDear), "viable"],
+                    [key(halfEdgy), "edgy"],
+                    [key(plan(32 * DEG, 1)), "unplayable"],
+                ]),
+            },
+            {
+                type: "drive" as const,
+                reads: new Map([[key(drive), read(null, 3.9, 30)]]),
+                banded: new Map<string, Band>([[key(drive), "viable"]]),
+            },
+            {
+                type: "single-ball" as const,
+                reads: new Map([[key(single), read(null, NaN, 10)]]),
+                banded: new Map<string, Band>([[key(single), "viable"]]),
+            },
+        ];
+        const picks = bandPicks(maps);
+        expect(picks.map((p) => p.label)).toEqual(["drive", "half roll", SINGLE_BALL_LABEL]);
+        const [d, h, s] = picks;
+        expect(d?.least).toMatchObject({ type: "half-roll", plan: halfEdgy, band: "edgy" });
+        expect(d?.viable).toMatchObject({ type: "drive", plan: drive });
+        expect(h?.least).toMatchObject({ type: "half-roll", plan: half, band: "viable" });
+        expect(h?.viable?.plan).toEqual(half);
+        expect(s?.least.plan).toEqual(single);
+        expect({ range: s?.range, lawn: s?.lawn }).toEqual({ range: 10, lawn: LAWN });
     });
 
     it("writes the record's header, one row per read, and quotes a reason per RFC 4180", () => {
