@@ -479,6 +479,11 @@ function ownClass(
     if (events.some((e) => e.kind === "impact-mallet-grounded" && e.t <= firstFace)) {
         return { klass: "turf", reason: "impact-mallet-grounded" };
     }
+    // A contact that never ends, the head wedged on the ball, is materially longer than the stroke's: Law 29.1.6.3
+    // (design A9 item 1; plan C-d1). Classed so the found hold's search goes on to a firmer hold.
+    if (event("impact-cap")) {
+        return { klass: "unlawful", reason: "impact-cap" };
+    }
     if (faults.findings.some((f) => f.law === "29.1.6.1")) {
         return { klass: "unlawful", reason: "29.1.6.1" };
     }

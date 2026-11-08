@@ -112,9 +112,9 @@ describe("the found firmness (firmness design §5)", () => {
     });
 
     it("finds no hold for a plan admissible without one", () => {
-        // The full roll's text book at a tap, power 0.1, is admissible at firmness 0. Gate 1's plan, power 2, is not
-        // since plan B-d8: its head rode over the ball at firmness 0, and every firmer hold trips the grip limit.
-        const setup = mapSetup("full-roll", textBook("full-roll"), 0.1);
+        // The half roll's text book at a tap, power 0.1, is admissible at firmness 0. The full roll's was until plan
+        // C-d1: at firmness 0 it pins the ball, a contact that never ends.
+        const setup = mapSetup("half-roll", textBook("half-roll"), 0.1);
         expect(findFirmness(setup, WORLD)).toEqual({ sigma: 0, firmness: 0, klass: null });
     });
 

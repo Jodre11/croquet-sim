@@ -212,12 +212,13 @@ describe("one plan's run (P2b.2b.2c.3b plan Task 3)", () => {
 });
 
 describe("the map's found firmness (firmness design §5, A7 item 4)", () => {
-    it("plays the full roll's text book at a tap at the hold it finds, admissibly without one", () => {
-        // Gate 1's plan, p = 2, is no longer admissible at firmness 0: its head rides over the ball (plan B-d8).
+    it("plays the full roll's text book at a tap at the hold it finds, firmer than none", () => {
+        // Gate 1's plan, p = 2, is no longer admissible at firmness 0: its head rides over the ball (plan B-d8). At a
+        // tap, firmness 0 pins the ball, a contact that never ends (plan C-d1), so the search goes on to a firmer hold.
         const sample = playSample("full-roll", textBook("full-roll"), 0.1, [10]);
         expect(sample.klass).toBeNull();
-        expect(sample.firmness).toBe(0);
-        expect(sample.sigma).toBe(0);
+        expect(sample.firmness).toBeCloseTo(0.274092, 6);
+        expect(sample.sigma).toBeGreaterThan(0);
         expect(sample.byLawn[10]?.range).toBeGreaterThan(0);
     });
 
@@ -329,6 +330,31 @@ describe("the push map practises (P2b.2b.2c.3b.1 plan Task 7)", () => {
         const turf = stubRun(setup.striker, [], ["follow-grip-limit", "follow-turf-yield"]);
         expect(runClass(setup, turf, NONE, ON, null)).toEqual({ klass: "turf", reason: "follow-turf-yield" });
     });
+
+    it("classes a contact that never ends as unlawful, after the turf (plan C-d1)", () => {
+        const capped = stubRun(setup.striker, [{ kind: "impact-cap", t: 0.45 }]);
+        expect(runClass(setup, capped, NONE, ON, null)).toEqual({ klass: "unlawful", reason: "impact-cap" });
+        const deep = stubRun(setup.striker, [
+            { kind: "impact-cap", t: 0.45 },
+            { kind: "turf-yield", t: 0 },
+        ]);
+        expect(runClass(setup, deep, NONE, ON, null)).toEqual({ klass: "turf", reason: "turf-yield" });
+    });
+
+    it("no longer finds the loose pass roll's pinning hold (design A9 item 1)", () => {
+        // Before C-d1 its found hold was firmness 0.0511, the mallet wedged on the striker's ball, ratio 8.85.
+        const loose = {
+            ...textBook("pass-roll"),
+            lean: 32 * DEG,
+            feet: 0.38087801284977446,
+            drive: 0.5,
+            handReach: 0.1,
+            window: 0.02,
+            split: 0,
+        };
+        const s = playSample("pass-roll", loose, 0.651, [10]);
+        expect(s.firmness === null || Math.abs(s.firmness - 0.0511) > 1e-3).toBe(true);
+    }, 120_000);
 
     it("records the slip beside the sample: the AC stop's text book at p 1.25 plays and slips", () => {
         const slipped = playSample("stop-ac", textBook("stop-ac"), 1.25, [10]);

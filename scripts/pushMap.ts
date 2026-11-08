@@ -20,7 +20,7 @@
  *   the fitted hold to `<IN>/<TYPE>.fitted.reads.json`, under the run's URL and commit (RecordHeader). A plan missing
  *   fails the process, after the writes.
  * - record: plan Task B7, every type's merged reads in IN banded and written to OUT as the committed record
- *   (sectionRecord): both holds' rows and each label's least-effort plan per range and lawn.
+ *   (sectionRecord): both holds' rows and each label's least complex plan per range and lawn.
  * - cost: plan Task 5, the map's time: with PART=j/J, the j-th of J parts of COST_PLANS pass-roll plans drawn evenly
  *   is played at the grid's powers, each sample's seconds appended to `<IN>/cost-<j>of<J>.jsonl`; without PART, those
  *   files are tallied: the mean and 95th percentile per sample and each type's projected CPU hours on today's grid.
@@ -1293,8 +1293,8 @@ const RECORD_LIMIT_MB = 20;
  * written to OUT: `envelope-<type>.csv.gz` and `envelope-fitted-<type>.csv.gz` (decision 10's rows under `#` lines
  * naming the command, the type's runs and commit, the engine and the SHA-256 of `scripts/pushMap*.ts`; one file per
  * type, as every type's together passes decision 10's 20 MB), and
- * `envelope-least-effort.json`, each label's least-effort plan per range and lawn at each hold (bandPicks; design A7
- * item 7). Fails where a record's gzip passes RECORD_LIMIT_MB, which decision 10 commits as a summary instead.
+ * `envelope-defaults.json`, each label's least complex plan per range and lawn at each hold (bandPicks; design A7
+ * item 7, A9 items 6–10, plan C-d3). Fails where a record's gzip passes RECORD_LIMIT_MB, which decision 10 commits as a summary instead.
  */
 async function sectionRecord(): Promise<void> {
     const dir = required("IN");
@@ -1351,8 +1351,8 @@ async function sectionRecord(): Promise<void> {
     const json = JSON.stringify({ header, ...picksByHold }, (_k, v: unknown) =>
         typeof v === "number" && !Number.isFinite(v) ? null : v,
     );
-    fs.writeFileSync(`${out}/envelope-least-effort.json`, `${json}\n`);
-    console.log(`written: ${out}/envelope-least-effort.json`);
+    fs.writeFileSync(`${out}/envelope-defaults.json`, `${json}\n`);
+    console.log(`written: ${out}/envelope-defaults.json`);
     if (tooLarge) {
         console.log(`a record passes ${RECORD_LIMIT_MB} MB: decision 10 commits its summary instead`);
         process.exitCode = 1;

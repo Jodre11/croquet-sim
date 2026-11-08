@@ -17,6 +17,7 @@ import {
     cellCorners,
     cellReads,
     classCounts,
+    complexityOf,
     doneIndices,
     envelopeRows,
     excludedSetUps,
@@ -343,7 +344,7 @@ describe("the push map's grid, sweep, bands and record (P2b.2b.2c.3b plan Task 4
         expect(pickDefault("half-roll", reads, banded, { range: 10, lawn: LAWN, split: 0 }).plan).toEqual(near);
     });
 
-    it("picks each label's least-effort plan over every type, beside an edgy least its viable runner-up", () => {
+    it("picks each label's least complex plan over every type", () => {
         const key = (p: MapPlan): string => planKey(p, 10, LAWN);
         const half = plan(26 * DEG, 0.5);
         const halfDear = plan(26 * DEG, 1);
@@ -356,7 +357,7 @@ describe("the push map's grid, sweep, bands and record (P2b.2b.2c.3b plan Task 4
                 reads: new Map([
                     [key(half), read(null, 2, 40)],
                     [key(halfDear), read(null, 2.2, 45)],
-                    // A drive's ratio from the half roll's map: the drive's label, its least effort.
+                    // A drive's ratio from the half roll's map: the drive's label, its least effort but pushed.
                     [key(halfEdgy), read(null, 3.5, 20)],
                     [key(plan(32 * DEG, 1)), read("turf", 2, 5)],
                 ]),
@@ -381,7 +382,8 @@ describe("the push map's grid, sweep, bands and record (P2b.2b.2c.3b plan Task 4
         const picks = bandPicks(maps);
         expect(picks.map((p) => p.label)).toEqual(["drive", "half roll", SINGLE_BALL_LABEL]);
         const [d, h, s] = picks;
-        expect(d?.least).toMatchObject({ type: "half-roll", plan: halfEdgy, band: "edgy" });
+        // The pushed half roll's drive, though least effort, is more complex than the drive's text book (C-d3).
+        expect(d?.least).toMatchObject({ type: "drive", plan: drive, band: "viable" });
         expect(d?.viable).toMatchObject({ type: "drive", plan: drive });
         expect(h?.least).toMatchObject({ type: "half-roll", plan: half, band: "viable" });
         expect(h?.viable?.plan).toEqual(half);
@@ -398,11 +400,13 @@ describe("the push map's grid, sweep, bands and record (P2b.2b.2c.3b plan Task 4
         expect(rows).toHaveLength(2);
         expect(rows[0]).toBe(
             "type,lean,feet,drive,handReach,window,onset,split,speedGain,range,lawn,band,edge,class,reason,ratio,strokeEffort," +
-                "pushEffort,coupleShare,pushImpulse,firmness,followSlip,splitAtRest,power,monotone",
+                "pushEffort,coupleShare,pushImpulse,firmness,followSlip,splitAtRest,power,monotone,timed,setUp,size",
         );
+        const drive = textBook("drive");
+        const size = Math.abs(0.1 - drive.feet) / 0.05 + Math.abs(26 * DEG - drive.lean) / (6 * DEG) + 0.5;
         expect(rows[1]).toBe(
             `half-roll,${26 * DEG},0.1,0.5,0.15,0.02,0,0,0.1,10,10,unplayable,feet;handReach;window,mishit,` +
-                `"off point: the lean 0.9 rad, ""high""",,,,0,0,0,0,0,1,1`,
+                `"off point: the lean 0.9 rad, ""high""",,,,0,0,0,0,0,1,1,1,3,${Number(size.toPrecision(6))}`,
         );
     });
 
@@ -1111,5 +1115,65 @@ describe("the envelope's grids, from a tap to a court length (plan Amendment B, 
         expect(banded.has(planKey(off, 10, LAWN))).toBe(false);
         expect(unbanded).toBe(0);
         expect(banded.get(planKey(plan(26 * DEG, 0), 10, LAWN))).toBe("viable");
+    });
+});
+
+describe("the stop's edge and the least complex plan (plan Amendment C, Task C1; C-d2, C-d3)", () => {
+    it("grades the AC stop's leans from +3° to −7°, +4.5° and −7.5° beyond; other types keep ±6°", () => {
+        const { lean } = gridFor("stop-ac");
+        const degrees = (xs: readonly number[]): number[] => xs.map((x) => Number((x / DEG).toFixed(9)));
+        expect(degrees(lean.graded)).toEqual([3, 1.5, 0, -1.5, -3, -4.5, -6, -6.5, -7]);
+        expect(degrees(lean.beyond)).toEqual([4.5, -7.5]);
+        const drive = gridFor("drive").lean;
+        const book = textBook("drive").lean;
+        expect(drive.graded).toEqual([book - 6 * DEG, book, book + 6 * DEG]);
+    });
+
+    it("counts no departure on the drive's text book, the feet and lean on a naturally finished stop", () => {
+        expect(complexityOf("drive", textBook("drive"), read(null, 3.5, 50))).toEqual({
+            timed: 0,
+            setUp: 0,
+            size: 0,
+            effort: 50,
+        });
+        const stop = { ...textBook("stop-ac"), drive: 0 };
+        const got = complexityOf("stop-ac", stop, read(null, 5, 50));
+        expect({ timed: got.timed, setUp: got.setUp }).toEqual({ timed: 0, setUp: 2 });
+        const drive = textBook("drive");
+        const size = Math.abs(stop.feet - drive.feet) / 0.05 + Math.abs(stop.lean - drive.lean) / (6 * DEG);
+        expect(got.size).toBeCloseTo(size, 12);
+    });
+
+    it("counts a brake or a push as one timed change, the rolls' lowered hands and effort above 90 % as set-up", () => {
+        expect(complexityOf("stop-ac", textBook("stop-ac"), read(null, 5, 50)).timed).toBe(1);
+        const roll = complexityOf("half-roll", textBook("half-roll"), read(null, 2, 50));
+        expect(roll.timed).toBe(1);
+        // Feet, lean and the lowered bottom hand.
+        expect(roll.setUp).toBe(3);
+        const hard = complexityOf("drive", textBook("drive"), read(null, 3.5, 95));
+        expect({ setUp: hard.setUp, effort: hard.effort }).toEqual({ setUp: 1, effort: 95 });
+        expect(complexityOf("drive", textBook("drive"), read(null, 3.5, 90)).setUp).toBe(0);
+    });
+
+    it("prefers fewer timed changes to less effort, and records a viable runner-up beside an edgy least", () => {
+        const key = (p: MapPlan): string => planKey(p, 10, LAWN);
+        const natural = plan(26 * DEG, 0);
+        const pushed = plan(26 * DEG, 0.5);
+        const edgy = plan(20 * DEG, 0);
+        const reads = new Map([
+            [key(natural), read(null, 2, 60)],
+            [key(pushed), read(null, 2, 20)],
+            [key(edgy), read(null, 2, 70)],
+        ]);
+        const banded = new Map<string, Band>([
+            [key(natural), "viable"],
+            [key(pushed), "viable"],
+            [key(edgy), "edgy"],
+        ]);
+        const [pick] = bandPicks([{ type: "half-roll", reads, banded }]);
+        // The edgy plan's lean is nearer the drive's, so its set-up is smaller: the least, the natural finish the
+        // viable default; the push, least effort, comes last.
+        expect(pick?.least).toMatchObject({ plan: edgy, band: "edgy" });
+        expect(pick?.viable).toMatchObject({ plan: natural, band: "viable" });
     });
 });

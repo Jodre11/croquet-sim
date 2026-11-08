@@ -11,6 +11,7 @@
  * decision 12) are superPlans, strikeReading (29.2.5's reading of a strike) and superLeast. Not part of the engine.
  */
 import { MAX_WINDOW, MIN_WINDOW } from "../src/engine/swing/buildContact";
+import { defaultProfile } from "../src/engine/swing/profile";
 import {
     textBook,
     type MapClass,
@@ -100,6 +101,15 @@ const LAWNS = [6, 10, 14];
  */
 const POWERS = [0.02, 0.05, 0.1, 0.2, 0.35, 0.5, 0.65, 0.8, 1, 1.05, 1.1, 1.25, 1.5, 2];
 
+/**
+ * The AC stop's leans (design A9 item 4; plan C-d2): graded from +3°, testing a coach's forward-leaning stop, to −7°,
+ * just inside the turf's edge at −7.03°, finer near it; +4.5° and −7.5° beyond.
+ */
+const STOP_LEANS: Axis = {
+    graded: [3, 1.5, 0, -1.5, -3, -4.5, -6, -6.5, -7].map((d) => d * DEG),
+    beyond: [4.5 * DEG, -7.5 * DEG],
+};
+
 /** The type's text book ± k·step for k = −GRADED_STEPS … GRADED_STEPS graded, and ±(GRADED_STEPS + 1) beyond. */
 function around(centre: number, step: number): Axis {
     const graded: number[] = [];
@@ -111,7 +121,8 @@ function around(centre: number, step: number): Axis {
 }
 
 /**
- * `type`'s grid (decision 7): the lean and the feet around the type's text book (textBook), the follow-through's
+ * `type`'s grid (decision 7): the lean (the AC stop's STOP_LEANS, plan C-d2) and the feet around the type's text book
+ * (textBook), the follow-through's
  * grids, the split on the pass roll (0 elsewhere), the speedGain on the full roll (the preset's elsewhere; A4), the
  * ranges, the lawns and the power samples.
  */
@@ -122,7 +133,7 @@ export function gridFor(type: MapType): MapGrid {
         ranges.push(RANGE_LEAST * Math.pow(RANGE_MOST / RANGE_LEAST, i / (RANGE_COUNT - 1)));
     }
     return {
-        lean: around(book.lean, LEAN_STEP),
+        lean: type === "stop-ac" ? STOP_LEANS : around(book.lean, LEAN_STEP),
         feet: around(book.feet, FEET_STEP),
         drive: { graded: DRIVES, beyond: [] },
         handReach: { graded: HAND_REACHES, beyond: [] },
@@ -779,6 +790,64 @@ function anchor(): MapPlan {
     return anchorPlan;
 }
 
+/** A plan's departures from the drive's text book (complexityOf), compared in field order. */
+export interface Complexity {
+    /** Timed changes: a brake or a push (drive ≠ 0), its reach and window with it (A9 item 10). */
+    readonly timed: number;
+    /** Set-up changes: the feet, the lean and the stance's hands off the drive's, and stroke effort above 90 %. */
+    readonly setUp: number;
+    /** The departures' size: |Δfeet| / FEET_STEP + |Δlean| / LEAN_STEP + |drive|. */
+    readonly size: number;
+    /** The stroke's effort (%). */
+    readonly effort: number;
+}
+
+/** The stroke effort above which the stroke is a departure (%; design A9 item 8, the user's ruling). */
+const EFFORT_LIMIT = 90;
+
+/** Numerical, not physical: the tolerance within which a plan's input equals the drive's text book's. */
+const SAME = 1e-9;
+
+/** The drive's text book (A9 item 9's plain stroke), read once. */
+let plainPlan: MapPlan | null = null;
+
+function plain(): MapPlan {
+    plainPlan ??= textBook("drive");
+    return plainPlan;
+}
+
+/**
+ * `plan`'s complexity as `type` (design A9 items 7–10; plan C-d3), against the drive's text book: timed changes, then
+ * set-up changes, then their size, then the stroke's effort. The point of contact, the grip, the split and speedGain
+ * are not departures.
+ */
+export function complexityOf(type: MapType, plan: MapPlan, read: SweepRead): Complexity {
+    const base = plain();
+    const hands = defaultProfile.stance[type];
+    const plainHands = defaultProfile.stance.drive;
+    const differs = (a: number, b: number): boolean => Math.abs(a - b) > SAME;
+    const setUp = [
+        differs(plan.feet, base.feet),
+        differs(plan.lean, base.lean),
+        differs(hands.top, plainHands.top) || differs(hands.bottom, plainHands.bottom),
+        read.strokeEffort > EFFORT_LIMIT,
+    ].filter(Boolean).length;
+    return {
+        timed: differs(plan.drive, 0) ? 1 : 0,
+        setUp,
+        size:
+            Math.abs(plan.feet - base.feet) / FEET_STEP +
+            Math.abs(plan.lean - base.lean) / LEAN_STEP +
+            Math.abs(plan.drive),
+        effort: read.strokeEffort,
+    };
+}
+
+/** complexityOf's order: fewer timed changes, then fewer set-up changes, then the smaller, then the less effort. */
+function byComplexity(a: Complexity, b: Complexity): number {
+    return a.timed - b.timed || a.setUp - b.setUp || a.size - b.size || a.effort - b.effort;
+}
+
 /**
  * `type`'s default at `at` (design §5; decisions 2 and 5): among the banded plans at that range, lawn and split that
  * are admissible (viable or edgy) and whose ratio lies in the type's region, the least mean of the two effort
@@ -842,26 +911,29 @@ export interface Picked {
     readonly read: SweepRead;
 }
 
-/** Each label's least-effort plan at one range and lawn (bandPicks). */
+/** Each label's least complex plan at one range and lawn (bandPicks). */
 export interface BandPick {
     readonly label: string;
     readonly range: number;
     readonly lawn: number;
     readonly least: Picked;
-    /** The least-effort viable plan, beside an edgy `least` (A2 item 2); `least` itself where it is viable. */
+    /**
+     * The least complex viable plan, the default beside an edgy `least` (A2 item 2, A9 item 6); `least` itself where
+     * it is viable.
+     */
     readonly viable: Picked | null;
 }
 
 /**
- * Each label's least-effort plan per range and lawn over every type's map (design A7 items 2, 7; decision 5): among
- * the banded admissible plans (viable or edgy) of all the types, grouped by labelOf's label of the ratio, or
- * SINGLE_BALL_LABEL for the single-ball stroke, the least mean of the two effort percentages, ties to the plan nearer
- * its own text book in follow-through (A7 item 8). A plan whose effort is NaN, or a roll's whose ratio has no label, is
- * never picked. Sorted by label, range and lawn.
+ * Each label's least complex plan per range and lawn over every type's map (design A7 items 2, 7, A9 items 6–10; plan
+ * C-d3): among the banded admissible plans (viable or edgy) of all the types, grouped by labelOf's label of the ratio,
+ * or SINGLE_BALL_LABEL for the single-ball stroke, the least by complexityOf, ties to the plan nearer its own text book
+ * in follow-through (A7 item 8). A plan whose stroke effort is NaN, or a roll's whose ratio has no label, is never
+ * picked. Sorted by label, range and lawn.
  */
 export function bandPicks(maps: readonly TypeReads[]): BandPick[] {
     interface Candidate extends Picked {
-        readonly effort: number;
+        readonly complexity: Complexity;
         readonly distance: number;
     }
     const groups = new Map<string, { label: string; range: number; lawn: number; all: Candidate[] }>();
@@ -876,14 +948,14 @@ export function bandPicks(maps: readonly TypeReads[]): BandPick[] {
                 continue;
             }
             const label = type === "single-ball" ? SINGLE_BALL_LABEL : labelOf(read.ratio);
-            const effort = effortOf(read);
-            if (label === "" || !Number.isFinite(effort)) {
+            if (label === "" || !Number.isFinite(read.strokeEffort)) {
                 continue;
             }
             const { plan, range, lawn } = unkey(key);
             const id = JSON.stringify([label, range, lawn]);
             const group = groups.get(id) ?? { label, range, lawn, all: [] };
-            group.all.push({ type, plan, band, read, effort, distance: anchorDistance(plan, book) });
+            const complexity = complexityOf(type, plan, read);
+            group.all.push({ type, plan, band, read, complexity, distance: anchorDistance(plan, book) });
             groups.set(id, group);
         }
     }
@@ -891,7 +963,7 @@ export function bandPicks(maps: readonly TypeReads[]): BandPick[] {
         c === undefined ? null : { type: c.type, plan: c.plan, band: c.band, read: c.read };
     const picks: BandPick[] = [];
     for (const { label, range, lawn, all } of groups.values()) {
-        all.sort((a, b) => a.effort - b.effort || a.distance - b.distance);
+        all.sort((a, b) => byComplexity(a.complexity, b.complexity) || a.distance - b.distance);
         picks.push({
             label,
             range,
@@ -913,7 +985,10 @@ function field(text: string): string {
     return /[",\r\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
 }
 
-/** The record's columns (decision 10, A4, A8 items 3, 5), in SI: rad, m, 1, m, s, s, rad, 1; m, s; %, %, 1, N·s, 1, rad. */
+/**
+ * The record's columns (decision 10, A4, A8 items 3, 5, plan C-d3), in SI: rad, m, 1, m, s, s, rad, 1; m, s; %, %, 1,
+ * N·s, 1, rad; complexityOf's counts and size (1).
+ */
 const COLUMNS = [
     "type",
     "lean",
@@ -940,6 +1015,9 @@ const COLUMNS = [
     "splitAtRest",
     "power",
     "monotone",
+    "timed",
+    "setUp",
+    "size",
 ];
 
 /**
@@ -960,6 +1038,7 @@ export function envelopeRows(type: MapType, grid: MapGrid, reads: Reads, banded:
                 if (read === undefined) {
                     continue;
                 }
+                const complexity = complexityOf(type, plan, read);
                 const cells = [
                     type,
                     String(plan.lean),
@@ -986,6 +1065,9 @@ export function envelopeRows(type: MapType, grid: MapGrid, reads: Reads, banded:
                     figure(read.splitAtRest),
                     figure(read.power),
                     read.monotone ? "1" : "0",
+                    String(complexity.timed),
+                    String(complexity.setUp),
+                    figure(complexity.size),
                 ];
                 rows.push(cells.map(field).join(","));
             }
