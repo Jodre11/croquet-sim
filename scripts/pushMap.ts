@@ -51,6 +51,11 @@
  * - jumpiness: plan B-d7, the ratio's largest difference between neighbouring follow-through grid points at the full
  *   and pass rolls' text books at canonical power, with practice and as the first pass alone, and practice's share.
  *   The bound is over points the map admits; every played point's is printed beside it.
+ * - gripplans, grip, gripfit: plan Amendment C, C-d4 to C-d6, the grip and timing sweeps (pushMapGrip.ts). gripplans
+ *   lists the starting and held-out plans from a merged map (IN) to a file (OUT); grip plays one shard of them
+ *   (GRIP_PLANS, SHARD, OUT named `grip-<k>of<N>.jsonl`) at each grip and, timed starting plans, early; gripfit merges
+ *   IN's grip shards, prints the fits and the timing losses and writes `OUT/envelope-grip.json.gz`. matrix with
+ *   STAGE=grip shards the list evenly.
  * Run with `env SECTION=lawn npx --yes tsx scripts/pushMap.ts`. The environment: SECTION names the section; matrix
  * takes TYPES, STAGE, SHARDS and ONLY; run takes TYPE (any shot type), STAGE, LAWNS, SHARD (k/N, default 0/1) and OUT
  * (a file); merge takes TYPE, STAGE, LAWNS, IN (a directory), and RECORD_RUNS and RECORD_COMMIT where run locally over
@@ -116,6 +121,7 @@ import {
     superLeast,
     superPlans,
     type Band,
+    type BandPick,
     type EngineErrorSample,
     type LaterContact,
     type MapGrid,
@@ -128,6 +134,22 @@ import {
     type SweepRead,
     type SweepSample,
 } from "./pushMapGrid";
+import {
+    EARLY_ONSETS,
+    FIT_LIMIT,
+    GRIPS,
+    GRIP_LAWN,
+    HELD_OUT,
+    HELD_OUT_SEED,
+    admissibleOf,
+    gripFits,
+    gripLine,
+    gripPlans,
+    parseGripLines,
+    playGripPlan,
+    type GripPlan,
+    type GripPlay,
+} from "./pushMapGrip";
 import {
     MAP_TYPES,
     ROLL_TYPES,
@@ -280,12 +302,23 @@ function isShardOf(type: MapType, name: string): boolean {
 
 /** The workflow's matrix and types (plan Task B5), as `GITHUB_OUTPUT`'s lines and printed. */
 async function sectionMatrix(): Promise<void> {
-    const text = required("TYPES");
-    const types = text === "all" ? MAP_TYPES : text.split(",").map(mapType);
-    const stage = stageOf();
-    const counts = types.map((type) => ({ type, plans: stagePlans(type, gridFor(type), stage).length }));
-    const matrix = shardMatrix(counts, Number(required("SHARDS")), parseJobs(process.env.ONLY ?? "all"));
-    const lines = `matrix=${JSON.stringify(matrix)}\ntypes=${types.join(" ")}\n`;
+    const shards = Number(required("SHARDS"));
+    let lines: string;
+    if (process.env.STAGE === "grip") {
+        // The grip sweep (plan C-d6) is one list of plans, sharded evenly: SHARDS jobs named "grip".
+        const only = parseJobs(process.env.ONLY ?? "all");
+        const matrix = Array.from({ length: shards }, (_, job) => ({ type: "grip", job, jobs: shards })).filter(
+            (j) => only === null || only.has(j.job),
+        );
+        lines = `matrix=${JSON.stringify(matrix)}\ntypes=grip\n`;
+    } else {
+        const text = required("TYPES");
+        const types = text === "all" ? MAP_TYPES : text.split(",").map(mapType);
+        const stage = stageOf();
+        const counts = types.map((type) => ({ type, plans: stagePlans(type, gridFor(type), stage).length }));
+        const matrix = shardMatrix(counts, shards, parseJobs(process.env.ONLY ?? "all"));
+        lines = `matrix=${JSON.stringify(matrix)}\ntypes=${types.join(" ")}\n`;
+    }
     console.log(lines);
     const output = process.env.GITHUB_OUTPUT;
     if (output !== undefined) {
@@ -1359,6 +1392,160 @@ async function sectionRecord(): Promise<void> {
     }
 }
 
+/** A grip shard's file name (plan C-d6): `grip-<k>of<N>.jsonl`. */
+function gripShardName(k: number, n: number): string {
+    return `grip-${k}of${n}.jsonl`;
+}
+
+/** The grip sweep's plans from GRIP_PLANS (written by gripplans). */
+async function readGripPlans(fs: Files): Promise<readonly GripPlan[]> {
+    return (JSON.parse(fs.readFileSync(required("GRIP_PLANS"), "utf8")) as { plans: GripPlan[] }).plans;
+}
+
+/**
+ * Plan C-d4: the grip sweep's plans (gripPlans) from IN's `envelope-defaults.json` and `<type>.reads.json` (the found
+ * hold's merged reads, banded for the held-out draw), written to OUT for the workflow's grip stage.
+ */
+async function sectionGripPlans(): Promise<void> {
+    const dir = required("IN");
+    const out = required("OUT");
+    const fs = await files();
+    // envelope-defaults.json: its header, then each hold's picks (sectionRecord).
+    const defaults = JSON.parse(fs.readFileSync(`${dir}/envelope-defaults.json`, "utf8")) as Record<string, unknown>;
+    const picks = Object.fromEntries(Object.entries(defaults).filter(([key]) => key !== "header")) as Record<
+        string,
+        readonly BandPick[]
+    >;
+    const admissible = MAP_TYPES.flatMap((type) => {
+        const { header, reads } = parseReads(fs.readFileSync(`${dir}/${type}.reads.json`, "utf8"));
+        const grid = onLawns(gridFor(type), header.lawns.join(","));
+        return admissibleOf(type, reads, bands(type, grid, reads));
+    });
+    const plans = gripPlans(picks, MAP_TYPES, gridFor("drive").powers, admissible);
+    const starting = plans.filter((p) => p.set === "start").length;
+    const header = {
+        command: `env SECTION=gripplans IN=${dir} OUT=${out} npx --no-install tsx scripts/pushMap.ts`,
+        heldOut: HELD_OUT,
+        seed: HELD_OUT_SEED,
+        admissible: admissible.length,
+    };
+    fs.writeFileSync(out, `${JSON.stringify({ header, plans })}\n`);
+    console.log(`written: ${out}, ${starting} starting plans and ${plans.length - starting} held out`);
+}
+
+/** Plan C-d4, C-d5: one shard (SHARD=k/N) of GRIP_PLANS' plans played at each grip and early, appended to OUT. */
+async function sectionGrip(): Promise<void> {
+    const { k, n } = shardOf();
+    const out = required("OUT");
+    const name = gripShardName(k, n);
+    if (!out.endsWith(`/${name}`) && out !== name) {
+        throw new Error(`OUT must name the shard's file ${name}, the pattern gripfit reads`);
+    }
+    const fs = await files();
+    const plans = await readGripPlans(fs);
+    const text = fs.existsSync(out) ? fs.readFileSync(out, "utf8") : "";
+    const done = new Set(parseGripLines(text.split("\n")).entries.keys());
+    if (text !== "" && !text.endsWith("\n")) {
+        fs.appendFileSync(out, "\n");
+    }
+    console.log(
+        `== grip. Plan C-d4: shard ${k}/${n} of ${plans.length} plans, ${GRIPS.length} grips; ${done.size} done ==`,
+    );
+    let seconds = 0;
+    let played = 0;
+    for (let index = k; index < plans.length; index += n) {
+        if (done.has(index)) {
+            continue;
+        }
+        const start = performance.now();
+        const entry = playGripPlan(index, plans[index] as GripPlan);
+        fs.appendFileSync(out, `${gripLine(entry)}\n`);
+        const elapsed = (performance.now() - start) / 1000;
+        seconds += elapsed;
+        played++;
+        console.log(`plan ${index}: ${elapsed.toFixed(2)} s${"engineError" in entry ? `, ${entry.engineError}` : ""}`);
+    }
+    console.log(`grip tally: ${played} plans in ${seconds.toFixed(1)} s, ${(seconds / played).toFixed(2)} s per plan`);
+}
+
+/**
+ * Plan C-d4, C-d5: IN's grip shards merged against GRIP_PLANS; per type and grip the fit and its held-out error, and
+ * the timing plays' losses, printed; every plan's plays, grips and timing, and the fits, written to
+ * `OUT/envelope-grip.json.gz`. A plan no shard wrote fails the run, after the write.
+ */
+async function sectionGripFit(): Promise<void> {
+    const dir = required("IN");
+    const out = required("OUT");
+    const fs = await files();
+    const plans = await readGripPlans(fs);
+    const lines = fs
+        .readdirSync(dir)
+        .filter((name) => /^grip-\d+of\d+\.jsonl$/.test(name))
+        .sort()
+        .flatMap((name) => fs.readFileSync(`${dir}/${name}`, "utf8").split("\n"));
+    const { entries, torn, duplicates } = parseGripLines(lines);
+    const missing = plans.map((_, i) => i).filter((i) => !entries.has(i));
+    const errors = [...entries.values()].filter((e) => "engineError" in e).length;
+    console.log(
+        `== gripfit. Plan C-d4: ${plans.length} plans, ${entries.size} read, ${missing.length} missing, ` +
+            `${errors} engine errors, ${torn} torn and ${duplicates} duplicate lines ==`,
+    );
+    const fits = gripFits(plans, entries);
+    for (const f of fits) {
+        console.log(
+            `${f.type} ${f.grip}: fitted on ${f.fit?.rows ?? 0}, held out ${f.heldOut}, median error ` +
+                `${f.error.toFixed(4)}, ${f.accepted ? "accepted" : "not accepted"}`,
+        );
+    }
+    const timed = plans.flatMap((job, index) => {
+        const entry = entries.get(index);
+        if (entry === undefined || "engineError" in entry || entry.timing.length === 0) {
+            return [];
+        }
+        const onTime = entry.plays.find((p) => p.grip === entry.bounds.reliable);
+        return entry.timing.map((t) => ({ type: job.type, early: t.early, onTime, play: t }));
+    });
+    for (const early of EARLY_ONSETS) {
+        for (const type of MAP_TYPES) {
+            const rows = timed.filter((t) => t.type === type && t.early === early);
+            if (rows.length === 0) {
+                continue;
+            }
+            const failed = rows.filter((t) => t.play.klass !== null).length;
+            const losses = rows
+                .filter((t) => t.play.klass === null && t.onTime !== undefined)
+                .map((t) => Math.abs(t.play.range / (t.onTime as GripPlay).range - 1))
+                .sort((a, b) => a - b);
+            console.log(
+                `timing ${early * 1000} ms, ${type}: ${rows.length} plans, ${failed} no longer play, median range ` +
+                    `change ${(100 * quantile(losses, 0.5)).toFixed(1)} %`,
+            );
+        }
+    }
+    const zlibName = "node:zlib";
+    const zlib = (await import(/* @vite-ignore */ zlibName)) as {
+        gzipSync(data: string, options: { level: number }): { readonly length: number };
+    };
+    const header = {
+        command: `env SECTION=gripfit IN=${dir} OUT=${out} GRIP_PLANS=${required("GRIP_PLANS")} npx --no-install tsx scripts/pushMap.ts`,
+        grips: GRIPS,
+        lawn: GRIP_LAWN,
+        early: EARLY_ONSETS,
+        fitLimit: FIT_LIMIT,
+        engine: ENGINE_VERSION,
+    };
+    const body = plans.map((job, index) => ({ ...job, entry: entries.get(index) ?? null }));
+    const json = JSON.stringify({ header, fits, plans: body }, (_k, v: unknown) =>
+        typeof v === "number" && !Number.isFinite(v) ? String(v) : v,
+    );
+    const binary = fs as Files & { writeFileSync(path: string, data: { readonly length: number }): void };
+    binary.writeFileSync(`${out}/envelope-grip.json.gz`, zlib.gzipSync(`${json}\n`, { level: 9 }));
+    console.log(`written: ${out}/envelope-grip.json.gz`);
+    if (missing.length > 0) {
+        process.exitCode = 1;
+    }
+}
+
 const SECTIONS: Readonly<Record<string, () => void | Promise<void>>> = {
     lawn: sectionLawn,
     jumpiness: sectionJumpiness,
@@ -1370,6 +1557,9 @@ const SECTIONS: Readonly<Record<string, () => void | Promise<void>>> = {
     stage1: sectionStage1,
     summary: sectionSummary,
     super: sectionSuper,
+    gripplans: sectionGripPlans,
+    grip: sectionGrip,
+    gripfit: sectionGripFit,
 };
 
 if (process.argv[1]?.endsWith("pushMap.ts")) {

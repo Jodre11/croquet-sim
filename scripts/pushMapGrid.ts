@@ -541,7 +541,7 @@ export function planKey(plan: MapPlan, range: number, lawn: number): string {
 }
 
 /** A key's plan, range and lawn (planKey's inverse). */
-function unkey(key: string): { readonly plan: MapPlan; readonly range: number; readonly lawn: number } {
+export function unkey(key: string): { readonly plan: MapPlan; readonly range: number; readonly lawn: number } {
     const [lean, feet, drive, handReach, window, onset, split, speedGain, range, lawn] = JSON.parse(key) as number[];
     const plan: MapPlan = {
         lean: lean as number,

@@ -180,9 +180,17 @@ export function textBook(type: MapType): MapPlan {
  * speedGain for `type` (A4); the backswing
  * p·h_body for p ≤ 1, else h_body and the intensity p − 1 (bodyBackswing). `over` is for tests of another profile:
  * its profile and stance fields only (stance, drive, shape, mallet, body, croquetGap). The map's world is the open
- * lawn and its stroke the plan's, so an `over` giving `world` or `stroke` throws an Error.
+ * lawn and its stroke the plan's, so an `over` giving `world` or `stroke` throws an Error. `early` (s, negative is
+ * early) moves the follow-through's pulses together, the hands' and the pendulum's (and the dip, timed from it): the
+ * timing sweep's brake or push mistimed (plan C-d5).
  */
-export function mapSetup(type: MapType, plan: MapPlan, power: number, over: CanonicalOptions = {}): ShotSetup {
+export function mapSetup(
+    type: MapType,
+    plan: MapPlan,
+    power: number,
+    over: CanonicalOptions = {},
+    early = 0,
+): ShotSetup {
     if (over.world !== undefined || over.stroke !== undefined) {
         throw new Error("mapSetup: `over` gives the profile and stance only, not a world or a stroke");
     }
@@ -216,7 +224,7 @@ export function mapSetup(type: MapType, plan: MapPlan, power: number, over: Cano
             drive: plan.drive,
             handReach: plan.handReach,
             window: plan.window,
-            timing: { ...base.stroke.timing, hands: plan.onset },
+            timing: { ...base.stroke.timing, hands: plan.onset + early, arc: base.stroke.timing.arc + early },
         },
     };
     const body = bodyBackswing(placed, IMPACT_WORLD);
@@ -631,9 +639,10 @@ export function playSample(
     plan: MapPlan,
     power: number,
     lawns: readonly number[],
-    hold: MapHold = "found",
+    hold: MapHold | number = "found",
+    early = 0,
 ): MapSample {
-    return playJudged(type, plan, power, lawns, hold).sample;
+    return playJudged(type, plan, power, lawns, hold, early).sample;
 }
 
 /**
@@ -641,19 +650,21 @@ export function playSample(
  * parting, the taps and the re-contacts (judgeFaults's `strike`), null where the sample was not played (a power above
  * 2, a planStroke rejection) or the judge gives none. The sample is playSample's exactly. With `hold` "found" the
  * sample is played in searchFirmness, at the least admissible σ that doesn't slip, else the least admissible, else at
- * σ_max (A7 item 4, A8 item 5), up to 16 practised plays.
+ * σ_max (A7 item 4, A8 item 5), up to 16 practised plays. With a number, it is played at that hold firmness (0–1; the
+ * grip sweep, plan C-d4), once. `early` is mapSetup's.
  */
 export function playJudged(
     type: MapType,
     plan: MapPlan,
     power: number,
     lawns: readonly number[],
-    hold: MapHold = "found",
+    hold: MapHold | number = "found",
+    early = 0,
 ): { readonly sample: MapSample; readonly strike: StrikeTaps | null } {
     if (power > POWER_LIMIT) {
         return { sample: unplayed(power, lawns, "superhuman", `intensity ${power - 1} above 1`), strike: null };
     }
-    const setup = mapSetup(type, plan, power);
+    const setup = mapSetup(type, plan, power, {}, early);
     let stroke: StrokePlan;
     try {
         stroke = planStroke(setup, IMPACT_WORLD);
@@ -670,11 +681,15 @@ export function playJudged(
             strike: null,
         };
     }
-    if (hold === "preset") {
-        const { sample, strike, handover } = judgedPlay(type, plan, power, setup, stroke);
-        const firmness = setup.stroke.holdFirmness ?? setup.profile.shape[type].holdFirmness;
-        const byLawn = lawnReads(setup, handover, lawns);
-        return { sample: { ...sample, byLawn, firmness, sigma: drive.arc.holdFirmness }, strike };
+    if (hold !== "found") {
+        // A given firmness (the grip sweep, plan C-d4) is played as the preset's is, the stroke planned at it.
+        const held = typeof hold === "number" ? { ...setup, stroke: { ...setup.stroke, holdFirmness: hold } } : setup;
+        const heldStroke = held === setup ? stroke : planStroke(held, IMPACT_WORLD);
+        const { sample, strike, handover } = judgedPlay(type, plan, power, held, heldStroke);
+        const firmness = held.stroke.holdFirmness ?? held.profile.shape[type].holdFirmness;
+        const byLawn = lawnReads(held, handover, lawns);
+        const sigma = (heldStroke.contact.drive as TrackDrive).arc.holdFirmness;
+        return { sample: { ...sample, byLawn, firmness, sigma }, strike };
     }
     // The hold acts after planning, so the planner's rejection, checked above, does not depend on it (design §5). The
     // class needs no free motion, so the search plays none and the kept play's handover alone rolls (plan B-d6).
