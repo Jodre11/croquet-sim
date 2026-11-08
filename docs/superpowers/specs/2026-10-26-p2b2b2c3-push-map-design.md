@@ -741,8 +741,8 @@ animation (`scripts/sideOnExport.ts`).
    default and the edgy one stays in the envelope (assumption on the user's "Okay").
 7. **Least complex, not least effort** (chosen "A"). The user: "a drive is very simple until it has maximal effort. The
    feet are in the standard position, the hands are in the standard position, the follow through is standard, there is
-   no push." A plan's complexity is the count of its departures from the type's plain stroke (standard feet, standard
-   hands, standard follow-through, no push); fewest wins, then the smaller departures, then effort. This replaces the
+   no push." A plan's complexity is the count of its departures from the plain stroke (item 9); fewest wins, then the
+   smaller departures, then effort. This replaces the
    mean of stroke and push effort, under which a plan with no push scored half.
 8. **Effort above 90 % is a departure** (chosen "A: above 90 %", 2026-11-08). The stroke's effort, its share of the
    plan's hardest swing, counts as one departure from the plain stroke above 90 %, so a plain stroke at full stretch
@@ -750,3 +750,13 @@ animation (`scripts/sideOnExport.ts`).
    Carried to the game's phase (user, 2026-11-08): "Later, this complexity will count as a modifier or an indicator of
    a strokes difficulty, which will account for its chance of missing." So the record keeps each plan's departures,
    not only the defaults' ranks.
+9. **The plain stroke is the drive's, for every type** (2026-11-08; the user: "The drive position is the standard").
+   The departures counted: the feet moved from the drive's ("Moving the feet back counts as a deviation"); the hands'
+   lean changed (item 7's "the hands are in the standard position"); the follow-through changed ("Changing the follow
+   through. Definitely more technical"); a push; and effort above 90 % (item 8). Not departures: the point of contact
+   on the ball ("It's just an outcome of the angle") and the grip ("The player doesn't think about the grip"; item 5
+   sets it). The push's window and reach are the push's own settings, counted with it, not apart (assumption: the
+   window is how long the hands' push acts through contact, so it means nothing without one). On the AC stop: its text
+   book is −6°, not 0°; a 0° braked stop is the drive with one change and reaches only 4.05–4.70, the band's foot, and
+   the user: "the big drawback to the zero degree stop shot is that it doesn't stop very well". So the leaned stop
+   wins wherever a real stop's ratio is wanted, by reach, not by rank.
