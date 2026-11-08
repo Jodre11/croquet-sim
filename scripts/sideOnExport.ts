@@ -73,21 +73,13 @@ const PLAYS: readonly Play[] = [
         power: 0.651,
         hold: "preset",
     },
-    {
+    ...[0, -3, -6, -7.5, -12].map((lean): Play => ({
         group: "AC stop: back lean",
-        label: "Lean −6°",
+        label: `Lean ${lean === 0 ? "0" : `−${-lean}`}°`,
         type: "stop-ac",
-        over: { lean: -6 * DEG, drive: 0 },
+        over: { lean: lean * DEG, drive: 0 },
         power: 1.25,
-    },
-    {
-        group: "AC stop: back lean",
-        label: "Lean −12°",
-        type: "stop-ac",
-        over: { lean: -12 * DEG, drive: 0 },
-        power: 1.25,
-    },
-    { group: "AC stop: back lean", label: "Lean 0°", type: "stop-ac", over: { lean: 0, drive: 0 }, power: 1.25 },
+    })),
     {
         group: "AC stop: follow-through",
         label: "Natural",
@@ -113,6 +105,18 @@ const PLAYS: readonly Play[] = [
     { group: "Half roll: more power", label: "p 1.05", type: "half-roll", over: {}, power: 1.05 },
     { group: "Half roll: more power", label: "p 1.1", type: "half-roll", over: {}, power: 1.1 },
     { group: "Half roll: more power", label: "p 1.25", type: "half-roll", over: {}, power: 1.25 },
+    ...[1, 1.05, 1.25].flatMap((power) =>
+        [
+            { finish: "natural", drive: 0 },
+            { finish: "braked", drive: -1 },
+        ].map(({ finish, drive }): Play => ({
+            group: "Half roll: less follow-through",
+            label: `p ${power}, ${finish}`,
+            type: "half-roll",
+            over: { drive },
+            power,
+        })),
+    ),
     { group: "Drive: soft and firm", label: "p 0.2", type: "drive", over: {}, power: 0.2 },
     { group: "Drive: soft and firm", label: "p 0.5", type: "drive", over: {}, power: 0.5 },
     { group: "Drive: soft and firm", label: "p 1.25", type: "drive", over: {}, power: 1.25 },
