@@ -765,7 +765,10 @@ animation (`scripts/sideOnExport.ts`).
     where the feet are. Once that's configured, it's just successfully producing the shot that matters. For follow
     through and rolls and pushing, these all have to be timed right. So they're higher risk manoeuvres", and on the
     braked finish: "If you did too early, you completely under-hit the ball or miss-hit the ball." So item 7's count is
-    split in two: timed changes (a changed follow-through, a push) and set-up changes (the feet, the lean). The fewest
+    split in two: timed changes (a brake, a push) and set-up changes (the feet, the lean). The user: "follow-through
+    kind of happens naturally so it's a bit less risky but stopping a follow-through or braking definitely carries the
+    same risk and hazard timing issues": the natural finish (`drive` 0) is no change, any brake (`drive` below 0) and
+    any push (`drive` above 0, with its reach and window) one timed change each. The fewest
     timed changes wins, then the fewest set-up changes, then the smaller changes, then effort. Effort above 90 % (item
     8) counts as a set-up change (assumption: it strains the stroke but needs no timing of its own). On the AC stop the
     natural finish gives the braked one's ratio (6.25 against 6.27 at −6°, p 1.25), since the brake acts after the ball
