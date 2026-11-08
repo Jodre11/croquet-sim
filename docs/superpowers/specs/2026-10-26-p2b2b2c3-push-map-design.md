@@ -775,4 +775,5 @@ animation (`scripts/sideOnExport.ts`).
     has left the face (A7 item 13); so the default stop is the lean alone, with no timed change. Each starting plan's
     timing sensitivity is measured with its grip's (item 5): its brake or push played 5 and 10 ms early, the loss of
     range and ratio recorded for the game's chance of missing (assumption on the user's reply; the steps are the
-    builder's, not measured human errors).
+    builder's, not measured human errors). The user, on the result: "Rolls are considered to be more difficult shots
+    because of the timing problem": every roll carries a push, so its timed count is never 0.
