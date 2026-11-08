@@ -747,3 +747,6 @@ animation (`scripts/sideOnExport.ts`).
 8. **Effort above 90 % is a departure** (chosen "A: above 90 %", 2026-11-08). The stroke's effort, its share of the
    plan's hardest swing, counts as one departure from the plain stroke above 90 %, so a plain stroke at full stretch
    ranks with a stroke changed once and played comfortably. The threshold is revisited once the defaults are read.
+   Carried to the game's phase (user, 2026-11-08): "Later, this complexity will count as a modifier or an indicator of
+   a strokes difficulty, which will account for its chance of missing." So the record keeps each plan's departures,
+   not only the defaults' ranks.
