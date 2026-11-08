@@ -744,3 +744,6 @@ animation (`scripts/sideOnExport.ts`).
    no push." A plan's complexity is the count of its departures from the type's plain stroke (standard feet, standard
    hands, standard follow-through, no push); fewest wins, then the smaller departures, then effort. This replaces the
    mean of stroke and push effort, under which a plan with no push scored half.
+8. **Effort above 90 % is a departure** (chosen "A: above 90 %", 2026-11-08). The stroke's effort, its share of the
+   plan's hardest swing, counts as one departure from the plain stroke above 90 %, so a plain stroke at full stretch
+   ranks with a stroke changed once and played comfortably. The threshold is revisited once the defaults are read.
