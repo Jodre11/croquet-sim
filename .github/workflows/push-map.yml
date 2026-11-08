@@ -10,9 +10,9 @@ on:
                 default: all
                 required: true
             stage:
-                description: 1 is each text book alone, 2 the full map
+                description: 1 is each text book alone, 2 the full map, grip the grip and timing sweeps (plan C-d6)
                 type: choice
-                options: ["1", "2"]
+                options: ["1", "2", "grip"]
                 default: "1"
                 required: true
             shards:
@@ -39,6 +39,8 @@ permissions:
 env:
     STAGE: ${{ inputs.stage }}
     LAWNS: ${{ inputs.lawns }}
+    # The grip stage's plans, written by SECTION=gripplans from the merged map (plan C-d6).
+    GRIP_PLANS: reference/derived/grip-plans.json
 
 # Named, so that pipefail is on: merge's tee must not hide a dead shard.
 defaults:
@@ -99,7 +101,8 @@ jobs:
             - name: Play the job's four shards
               timeout-minutes: 335
               env:
-                  SECTION: run
+                  # The grip stage's shards are named grip-<k>of<N>.jsonl, as its TYPE "grip" makes them.
+                  SECTION: ${{ inputs.stage == 'grip' && 'grip' || 'run' }}
                   TYPE: ${{ matrix.type }}
                   JOB: ${{ matrix.job }}
                   JOBS: ${{ matrix.jobs }}
@@ -151,6 +154,11 @@ jobs:
                   TYPES: ${{ needs.plan.outputs.types }}
               run: |
                   status=0
+                  if [ "$STAGE" = "grip" ]; then
+                      SECTION=gripfit OUT=shards npx --no-install tsx scripts/pushMap.ts 2>&1 | tee shards/gripfit.txt ||
+                          status=1
+                      exit "$status"
+                  fi
                   for type in $TYPES; do
                       TYPE="$type" npx --no-install tsx scripts/pushMap.ts 2>&1 | tee "shards/$type.merge.txt" || status=1
                   done
@@ -167,4 +175,6 @@ jobs:
                       shards/*.reads.json
                       shards/*.merge.txt
                       shards/stage1.txt
+                      shards/envelope-grip.json.gz
+                      shards/gripfit.txt
                   if-no-files-found: error
