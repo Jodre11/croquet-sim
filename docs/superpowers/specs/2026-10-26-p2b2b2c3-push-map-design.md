@@ -760,3 +760,16 @@ animation (`scripts/sideOnExport.ts`).
    book is −6°, not 0°; a 0° braked stop is the drive with one change and reaches only 4.05–4.70, the band's foot, and
    the user: "the big drawback to the zero degree stop shot is that it doesn't stop very well". So the leaned stop
    wins wherever a real stop's ratio is wanted, by reach, not by rank.
+10. **Timed changes outrank set-up changes** (2026-11-08). The user: "things that require timing are going to
+    introduce risk. And generally would be avoided if possible. The Lean is all part of the setup. Where the hands are,
+    where the feet are. Once that's configured, it's just successfully producing the shot that matters. For follow
+    through and rolls and pushing, these all have to be timed right. So they're higher risk manoeuvres", and on the
+    braked finish: "If you did too early, you completely under-hit the ball or miss-hit the ball." So item 7's count is
+    split in two: timed changes (a changed follow-through, a push) and set-up changes (the feet, the lean). The fewest
+    timed changes wins, then the fewest set-up changes, then the smaller changes, then effort. Effort above 90 % (item
+    8) counts as a set-up change (assumption: it strains the stroke but needs no timing of its own). On the AC stop the
+    natural finish gives the braked one's ratio (6.25 against 6.27 at −6°, p 1.25), since the brake acts after the ball
+    has left the face (A7 item 13); so the default stop is the lean alone, with no timed change. Each starting plan's
+    timing sensitivity is measured with its grip's (item 5): its brake or push played 5 and 10 ms early, the loss of
+    range and ratio recorded for the game's chance of missing (assumption on the user's reply; the steps are the
+    builder's, not measured human errors).
