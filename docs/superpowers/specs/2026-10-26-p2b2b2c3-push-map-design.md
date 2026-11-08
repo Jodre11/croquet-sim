@@ -696,3 +696,51 @@ full roll or somewhere between a drive and a half roll or all the other inbetwee
    is 1.244 at one point of 60 (drive −1, reach 0.1 m, window 10 ms), which no grid hold both plays and holds, so it
    falls back to σ 0.00625 and ratio 2.448; every other gap is 0.402 or less. The search is unchanged. The record marks
    each slipping play, and the map's bands and plots show those plays apart from the plays that hold.
+
+### A9. Gate stage 2's rulings (user, 2026-11-07 to 2026-11-08; in progress)
+
+Read from the full map (`docs/superpowers/probes/2026-11-07-p2b2b2c3b-maps.txt`, the plots beside it) and the side-on
+animation (`scripts/sideOnExport.ts`).
+
+1. **A contact that never ends is a fault.** At its least hold the pass roll reaches stop ratios (8.97 at 0.25 m on the
+   10 s lawn, σ 0.053): the head stalls on the striker's ball, rides up onto it at about 39° and presses it into the
+   turf (`impact-turf-pit`), shoving it for 0.45 s until the impact's cap (`impact-cap`) ends the run. The user: "The
+   mallet seems to pin the strikers ball to the ground, wedged on top, I'm not sure if that is actually possible but
+   nobody plays it", and agreed (2026-11-08, "Okay") that a play ending at the impact's cap is not admissible. Every
+   found-hold stop ratio on the rolls is of this kind; none occurs at the fitted hold.
+2. **Off-face contact stays a mishit, as built.** The user: "if any part of the mallet, other than the leading face
+   touches the ball in the stroke, that is a suspect and possibly a fault"; `impact-off-face` already classes it so.
+3. **A re-contact is judged after a visible separation, not by time.** The user: "it's not some arbitrary time, it's
+   after separation has occured. If it's a long slow sweep then that would be viewed as a long contact", and "If it's a
+   very hard, fast shot, then people are going to be looking for a small gap. If it's a nice, smooth sweep, then
+   they're much more lenient." The half roll's catch-ups (p 1 to 1.25, every finish) part from the ball by 0.45 mm at
+   most, inside the 2 mm joining distance (29.2.5's note): one continuing contact, so the referee is unchanged. A
+   separation scaled by the stroke's speed is recorded, not built: no play measured needs it. The ratio's fall on the
+   harder half rolls (2.39 to 1.23 at p 1.1) is the full push driving the striker's ball on; the natural and braked
+   finishes hold 2.3–2.5 to p 1.25, and the map already sweeps them.
+4. **The AC stop's leans are mapped to the turf's edge.** The user: "an actual stop shot should be at minus 7 or even
+   minus 6.5. But sometimes a player wants a shot that's only a bit stoppy … a setup that would work and we should
+   allow to be configured from the inputs and therefore would be part of the envelope and should be mapped." The
+   furthest-back lean that plays is −7.03° (to 0.05°), the same at feet ±0.05 m and p 0.5, 1 and 1.25; past it the head
+   is in the turf at contact. The ratio peaks at the edge on short stops (5.31 at p 0.5, 5.62 at p 1) and near −6° on
+   long ones (6.25 at p 1.25). The user: "that edge would be edgy because it's on the edge. Going outside of that
+   envelope would damage the lawn." The stop's grid leans: 0° to −6° in 1.5° steps, −6.5° and −7°, with −7.5° beyond.
+   The user also: "You should never push on a stop anyway"; the map confirms pushes change none of the stop's picks.
+5. **Grip is read from the envelope, not fixed per type** (settles A8 item 3's question). The user: "We want the
+   envelope to give us the distribution of grips that are required to make the shots work so that when we make the
+   other settings adjustable we know we can work out what grip should be applied", and "there probably is an optimal
+   grip that gives you reliable outcomes. But we could introduce a small, looser or harder option which would move the
+   grip towards the bounds that we know … we would have to choose based on the envelope data we have." Each set-up
+   carries three grips: the least that plays (the found hold, trusted once item 1 is in), the firmest before the hold
+   is superhuman or the stroke a fault, and the most reliable, where a small change of grip moves the range and ratio
+   least. "Looser" and "firmer" step from the reliable grip towards each bound. The user: "I was hoping that a pattern
+   was emerging and we could extrapolate between points": grip is swept on a spread of plans, a pattern over the other
+   inputs fitted, and checked on held-out plans before it fills the map.
+6. **Each type's default is the plan that works best** (A7 item 7's question; the user: "Choose the default that works
+   best"). Best is the least complex plan in its band (item 7); where that plan is edgy, the next viable plan is the
+   default and the edgy one stays in the envelope (assumption on the user's "Okay").
+7. **Least complex, not least effort** (chosen "A"). The user: "a drive is very simple until it has maximal effort. The
+   feet are in the standard position, the hands are in the standard position, the follow through is standard, there is
+   no push." A plan's complexity is the count of its departures from the type's plain stroke (standard feet, standard
+   hands, standard follow-through, no push); fewest wins, then the smaller departures, then effort. This replaces the
+   mean of stroke and push effort, under which a plan with no push scored half.
