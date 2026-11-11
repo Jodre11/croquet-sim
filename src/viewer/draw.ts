@@ -210,6 +210,7 @@ export function drawSideOn(
         const seen = [
             ...framed.events.filter((e) => FLAGGED.has(e.kind)).map((e) => ({ t: e.t, text: FLAGGED.get(e.kind) })),
             ...framed.recontacts.map((r) => ({ t: r.start, text: r.fault ? "re-contact (fault)" : "re-contact" })),
+            ...followFlags(framed),
         ].filter((f) => f.t <= view.t);
         seen.forEach((f, i) => {
             const at = frameAt(framed.frames, f.t) ?? frame;
@@ -238,6 +239,27 @@ const FLAGGED = new Map<string, string>([
     ["impact-mallet-grounded", "grounded"],
     ["grip-limit", "grip slipped"],
 ]);
+
+/** The follow-through's flags (decision 6) and their labels; the trajectory flags them without a time. */
+const FOLLOW_FLAGGED = new Map<string, string>([
+    ["follow-turf-yield", "turf yield (follow-through)"],
+    ["follow-head-deep", "head deep (follow-through)"],
+    ["follow-grip-limit", "grip slipped (follow-through)"],
+]);
+
+/**
+ * `framed`'s follow-through flags placed where they occur: the turf's at the first frame after the impact with the head
+ * below the turf, the grip's at the slip, each else at the impact's end.
+ */
+export function followFlags(framed: FramedPlay): { t: number; text: string | undefined }[] {
+    const inTurf = framed.frames.find((f) => f.t > framed.impactEnd && f.low < 0)?.t ?? framed.impactEnd;
+    return framed.flags
+        .filter((flag) => FOLLOW_FLAGGED.has(flag))
+        .map((flag) => ({
+            t: flag === "follow-grip-limit" ? (framed.slipAt ?? framed.impactEnd) : inTurf,
+            text: FOLLOW_FLAGGED.get(flag),
+        }));
+}
 
 /** The top-down inset (decision 7): the balls in their set-up, aim up, the split and each ball's departure. */
 export function drawTopDown(

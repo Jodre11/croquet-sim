@@ -4,6 +4,8 @@ import { MAP_TYPES, textBook } from "../../src/lab/index";
 import { complexityOf } from "../../scripts/pushMapGrid";
 import type { SweepRead } from "../../scripts/pushMapGrid";
 import { departuresOf } from "../../src/viewer/departures";
+import { followFlags } from "../../src/viewer/draw";
+import type { FramedPlay } from "../../src/lab/frames";
 import { labelsOf, lookupDefault, snapRange, splitsOf, type DefaultEntry } from "../../src/viewer/defaults";
 import { INPUTS, inputSpans } from "../../src/viewer/spans";
 import { EASE, SLOW_RATE, advance, playbackRate } from "../../src/viewer/time";
@@ -98,5 +100,21 @@ describe("departuresOf (spec §2's badges)", () => {
                 expect(departuresOf(type, plan, strokeEffort)).toEqual({ timed: want.timed, setUp: want.setUp });
             }
         }
+    });
+});
+
+describe("followFlags (spec decision 6)", () => {
+    it("places the follow-through's turf flags where the head first goes below the turf, the grip's at the slip", () => {
+        const frame = (t: number, low: number) => ({ t, low }) as unknown as FramedPlay["frames"][number];
+        const framed = {
+            impactEnd: 0.002,
+            slipAt: 0.05,
+            frames: [frame(-0.01, -0.001), frame(0.001, -0.001), frame(0.01, 0.002), frame(0.03, -0.0005)],
+            flags: ["follow-cap", "follow-turf-yield", "follow-grip-limit"],
+        } as unknown as FramedPlay;
+        expect(followFlags(framed)).toEqual([
+            { t: 0.03, text: "turf yield (follow-through)" },
+            { t: 0.05, text: "grip slipped (follow-through)" },
+        ]);
     });
 });
