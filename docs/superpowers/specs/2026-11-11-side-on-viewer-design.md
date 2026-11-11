@@ -43,7 +43,7 @@ Ruled 2026-11-11 (one question at a time, each the recommended option):
 9. **A shot starts from its default.** The player picks the type, the striker's range, the lawn (6, 10 or 14 s) and,
    on the pass roll, the split; the viewer loads that default from `envelope-defaults.json` (A10 item 5). The inputs
    then tune it, and a badge shows its band (viable, edgy, non-viable with its class) as they move. The record keys
-   its defaults by the ratio label reached, not the type, so what the pick is is §7's open question 1.
+   its defaults by the ratio label reached, not the type, so the pick is the shot wanted, a label (§7 item 1).
 10. **It is the app's first screen**, in the Svelte app with Canvas 2D drawing and the engine in a Web Worker, so P4
     reuses its renderer and worker. The prototype (`scripts/sideOnExport.ts`, `scripts/sideOnPage.html`) is retired
     once the viewer shows what it shows.
@@ -72,8 +72,7 @@ Ruled 2026-11-11 (one question at a time, each the recommended option):
   roll's. The record's defaults are keyed by the ratio label reached (`labelOf`, the ten labels of push-map design A7
   item 2, the single ball's its own), split, range and lawn, not by the type's hold: a label's defaults are swept from
   several holds, the least complex winning (A9 item 6). How decision 9's pick maps onto that, and whether the range
-  is continuous, are §7's open questions; this section assumes their recommended answers (the label, 16 snapped
-  ranges). The default loaded is the pick's `viable` plan where it has one, else its `least` (A9 item 6), and the
+  is continuous, are ruled in §7: the label, and 16 snapped ranges. The default loaded is the pick's `viable` plan where it has one, else its `least` (A9 item 6), and the
   screen names the hold it is played from ("from the full roll's hold"). Where the record has no default for the pick
   (the AC stop beyond 4.59 m on the 6 s lawn, among others), the screen says so and keeps the current set-up.
 - **Inputs:** lean, feet, push length (`handReach`), after contact (`drive`, −1 brake to +1 accelerate, 0 natural),
@@ -178,15 +177,14 @@ its colours as CSS variables so a dark theme is cheap later.
 `npm outdated` reports nothing; CI runs `ubuntu-26.04` with `actions/checkout@v7` and `actions/setup-node@v7`. No
 new dependency is needed: the smoke test uses the `playwright-cli` skill outside the project.
 
-## 7. Open questions, and assumptions to confirm at the gate
+## 7. The spec review's rulings, and assumptions to confirm at the gate
 
-Open (spec review, 2026-11-11; each recommendation is assumed above until the user rules):
+Ruled by the user after the spec review (2026-11-11):
 
-1. **What the player picks a shot by.** Recommended: the shot wanted, a ratio label, as the record keys its defaults;
-   the screen names the hold the default uses. Alternative: the type's hold, which needs the defaults re-picked per
-   type, and some type, range and lawn combinations would have none.
-2. **The range control.** Recommended: snapped to the record's 16 ranges, the power read straight from the record.
-   Alternative: continuous, the power interpolated in log range and the default loaded from the nearest grid range.
+1. **A shot is picked by the shot wanted** ("As recommended"): a ratio label, as the record keys its defaults; the
+   screen names the hold the default uses. This settles decision 9's pick.
+2. **The range snaps to the record's 16 ranges** ("As recommended for now"), the power read straight from the record.
+   A continuous range, the power interpolated in log range, is left for later.
 
 Assumptions: the module's and script's names; `src/lab` importing engine internals; the slow-down's form; the 6 MB
 budget; the grip plans' 10 s lawn used on every lawn; no Run budget until P5.
