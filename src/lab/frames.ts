@@ -1,7 +1,7 @@
 /**
  * A play's frames for the side-on viewer (side-on viewer spec §3.1, §3.4; plan Task 4): the map's play at a given hold
- * with a watch recording, as the prototype's `scripts/sideOnExport.ts` did, the head's pose, both hands, the balls, the
- * turf's and the face's force per frame, and the trajectory around them. Not part of the engine.
+ * with a watch recording, as the retired prototype (`scripts/sideOnExport.ts`) did, the head's pose, both hands, the
+ * balls, the turf's and the face's force per frame, and the trajectory around them. Not part of the engine.
  */
 import { faceKey, headLowestPoint } from "../engine/impact/contacts";
 import type { ImpactProbe } from "../engine/impact/integrate";

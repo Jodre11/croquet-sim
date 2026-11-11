@@ -209,11 +209,18 @@ tests for the pure modules.
 **Files:** create `docs/superpowers/probes/<date>-side-on-viewer.txt`; modify the roadmap; delete
 `scripts/sideOnExport.ts` and `scripts/sideOnPage.html`.
 
-- [ ] Smoke test with the `playwright-cli` skill on `npm run dev`: for one default of each hold, open it, Run, and
+- [x] Smoke test with the `playwright-cli` skill on `npm run dev`: for one default of each hold, open it, Run, and
   check the readout and that the canvas drew frames. Record the steps and results in the probe file.
-- [ ] Time a Run per hold in Chromium (spec §1 item 5) and record the times.
-- [ ] **Stop for the user** with the screen: decisions 1–7 checked by eye (spec §1 item 3), one question at a time.
+- [x] Time a Run per hold in Chromium (spec §1 item 5) and record the times.
+- [x] **Stop for the user** with the screen: decisions 1–7 checked by eye (spec §1 item 3), one question at a time.
   Record the rulings in the spec as amendments.
-- [ ] After the user's acceptance, delete the prototype (spec decision 10), and write the roadmap's "Side-on viewer
+- [x] After the user's acceptance, delete the prototype (spec decision 10), and write the roadmap's "Side-on viewer
   outcomes" with the carried items: a continuous range (spec §7 item 2), Rust in WASM (decision 12), a dark theme.
   Run the checks, commit, push, and open the PR.
+
+  *As built:* the smoke test found two defects, fixed at the gate: the label's change kept the split at 0°, where the
+  pass roll's defaults hold none at most ranges (now the label's first split with a default), and the canvas missed
+  the follow-through's flags, which the trajectory raises without a time. It found too that the nearest swept plan's
+  fixed grip played the half roll's default as a full roll, so Run now plays the found hold (gate ruling 1): an
+  unchanged default at its recorded firmness, a moved set-up searched. The planned path's timing in Node is asserted
+  only with `VIEWER_TIMING=1`; in Chromium it is 35 ms. The record's gap with today's play is carried as its own task.

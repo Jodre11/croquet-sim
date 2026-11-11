@@ -199,3 +199,17 @@ Ruled by the user at the gate (2026-11-11), the smoke test in `docs/superpowers/
    against 2.35). An unchanged default plays at its recorded found firmness at once; a moved set-up searches on Run,
    and a search's firmness is kept for that set-up. The nearest swept plan still gives the grip's bounds for stepping
    and the timing risk.
+2. **The record's gap with today's play is its own task** ("Separate task (Recommended)"): at the same set-up and power
+   today's found hold differs slightly from the record's (the drive's firmness 0 against 0.0040, ratio 3.461 against
+   3.514; the full roll's 0.1755 against 0.1839, 1.052 against 1.070), though neither the engine nor the play changed
+   after the record's commit. The gate goes on; the cause, and whether the record needs re-running, are investigated
+   apart.
+3. **Decisions 1 and 5 are met as drawn** ("Accept as is"): the mallet at the top of its backswing behind the balls,
+   both hands on the shaft, the top hand's and the leading face's planned paths dotted with their angle ticks, the
+   played paths over them.
+4. **Decisions 2, 3 and 4 are met** ("Accept as is"): the five inputs, the strike as the range, Run from the backswing
+   to the balls leaving the frame, and the time bar with its speed and the slow-down at contact, each optional.
+5. **Decision 6 is met** ("Accept as is"), with the follow-through's flags added at the gate: they had been left off
+   the canvas, the trajectory flagging them without a time; each is now placed where the head first goes below the
+   turf after the impact, or at the slip.
+6. **Decision 7 is met** ("Accept as is"): the inset's aim, set-up and each ball's departure angle from the aim.

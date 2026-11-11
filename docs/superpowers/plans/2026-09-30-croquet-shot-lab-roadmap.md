@@ -2776,6 +2776,35 @@ checks), the side-on page (`scripts/sideOnExport.ts`), and `reference/derived/` 
   model change needs the map re-run.
 - **Public:** `ENGINE_VERSION` 0.30.0; no API change.
 
+## Side-on viewer outcomes (2026-11-11)
+
+The app's first screen: a shot picked by the label wanted, its default from the record tuned by the five inputs, the
+envelope's judgement as they move, and Run playing the engine in a Web Worker to draw the swing and contact side on.
+Design `specs/2026-11-11-side-on-viewer-design.md` (decisions 1–12, §7 and the gate's rulings in §8), plan
+`plans/2026-11-11-side-on-viewer.md` (Tasks 1–7), smoke test and timings
+`docs/superpowers/probes/2026-11-11-side-on-viewer.txt`.
+
+- **The play in `src/lab`:** the map's play moved from `scripts/` bit-identically (pinned by `tests/lab/playPin.test.ts`
+  before the move); the scripts re-export it. The envelope packed for the browser in `public/viewer/` (2.66 MB
+  gzipped): the found-hold defaults, a band table per hold, the grip plans.
+- **Timings** (Chromium on the development machine): the planned path redraws within 35 ms of an input (median;
+  under 100 ms); a Run 0.5–1.1 s on every hold's default; a moved roll searches its found hold on Run, up to 16 s on
+  the pass roll.
+- **The gate's rulings** (verbatim in the design's §8): Run plays the found hold, as the record played its defaults,
+  unless the player steps the grip ("Found hold (Recommended)"), since the nearest swept plan's fixed grip played the
+  half roll's default as a full roll; the record's gap with today's play a separate task ("Separate task
+  (Recommended)"); decisions 1–7 met as drawn, the follow-through's flags added at the gate (each "Accept as is
+  (Recommended)").
+- **Carried:**
+  - the record's gap: at the same set-up and power today's found hold differs slightly from the record's (the drive's
+    firmness 0 against 0.0040, ratio 3.461 against 3.514; the full roll's 1.052 against 1.070), though neither the
+    engine nor the play changed after the record's commit; find the cause, and whether the record needs re-running;
+  - a continuous range, the power interpolated in log range (spec §7 item 2);
+  - Rust in WASM for the engine's speed (decision 12), which would also shorten the rolls' searches;
+  - a dark theme (the colours are already CSS variables).
+- **Removed:** the prototype (`scripts/sideOnExport.ts`, `scripts/sideOnPage.html`, decision 10).
+- **Public:** `ENGINE_VERSION` unchanged; no engine change.
+
 ## Provisional numbers — where each is confirmed
 
 | Spec number | Confirmed in | How |
