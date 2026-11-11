@@ -116,7 +116,15 @@
     );
     onDestroy(() => runner.dispose());
 
-    function pickDefault(next: { label: string; split: number; range: number; lawn: number }): void {
+    function pickDefault(asked: { label: string; split: number; range: number; lawn: number }): void {
+        // Where the asked split has no default at this range and lawn (the pass roll's 0° at most ranges), the label's
+        // first split that has one.
+        const next =
+            lookupDefault(defaults, asked) !== null
+                ? asked
+                : (splitsOf(defaults, asked.label)
+                      .map((s) => ({ ...asked, split: s }))
+                      .find((p) => lookupDefault(defaults, p) !== null) ?? asked);
         ({ label, split, range, lawn } = next);
         const found = lookupDefault(defaults, next);
         if (found === null) {
