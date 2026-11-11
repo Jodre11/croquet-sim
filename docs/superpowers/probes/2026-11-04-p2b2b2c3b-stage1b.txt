@@ -1,0 +1,31 @@
+P2b.2b.2c.3b, gate stage 1 of the envelope (plan Amendment B, Tasks B3 and B6).
+
+== Task B3's probe: is the tap's end of the range bracketed? (B-d4)
+
+Each text book's three least powers (the grid's 0.02, 0.05 and 0.1) by playSample with the found hold on the 6 s lawn,
+from a scratch script, on the commit after 464d72b. The range is the striker's ball's.
+
+drive, p 0.02: range 0.031 m, ratio 2.447, admissible
+drive, p 0.05: range 0.058 m, ratio 2.709, admissible
+drive, p 0.1: range 0.093 m, ratio 2.900, admissible
+stop-ac, p 0.02: range 0.009 m, ratio 5.173, turf (impact-head-deep)
+stop-ac, p 0.05: range 0.024 m, ratio 4.990, turf (impact-head-deep)
+stop-ac, p 0.1: range 0.053 m, ratio 4.428, superhuman (follow-grip-limit)
+half-roll, p 0.02: range 0.020 m, ratio 0.963, admissible
+half-roll, p 0.05: range 0.031 m, ratio 0.990, admissible
+half-roll, p 0.1: range 0.025 m, ratio 1.731, admissible
+full-roll, p 0.02: range 0.022 m, ratio 0.966, admissible
+full-roll, p 0.05: range 0.056 m, ratio 0.987, admissible
+full-roll, p 0.1: range 0.112 m, ratio 0.995, admissible
+pass-roll, p 0.02: range 0.021 m, ratio 0.956, admissible
+pass-roll, p 0.05: range 0.051 m, ratio 0.979, admissible
+pass-roll, p 0.1: range 0.101 m, ratio 1.010, admissible
+single-ball, p 0.02: range 0.069 m, ratio NaN, admissible
+single-ball, p 0.05: range 0.170 m, ratio NaN, admissible
+single-ball, p 0.1: range 0.338 m, ratio NaN, admissible
+
+Every least power's range lies below 0.25 m, so the tap's end is bracketed and no power samples are added.
+
+For gate stage 1:
+- The AC stop's text book fails at each of these powers, so the tap's end at its text book may be no admissible read.
+- The half roll's range falls from p 0.05 to p 0.1 as its ratio moves from 0.990 to 1.731: not monotone at the tap.

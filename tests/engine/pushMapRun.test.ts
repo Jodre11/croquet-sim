@@ -1,6 +1,7 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { findFirmness } from "../../scripts/firmness";
 import { openWorld, opened } from "../../scripts/openLawn";
+import { MAP_LAWNS } from "../../scripts/pushMap";
 import { bodyBackswing, mapSetup, maxPower, playSample, runClass, textBook } from "../../scripts/pushMapRun";
 import { ratioOf } from "../../scripts/ratioFit";
 import type { FaultReport } from "../../src/engine/faults";
@@ -12,10 +13,17 @@ import { faceHalfHeight } from "../../src/engine/impact/shape";
 import type { ImpactEvent, ImpactResult } from "../../src/engine/impact/types";
 import type { BallId } from "../../src/engine/types";
 import { simulateShot } from "../../src/engine/shot";
+import { simulateFreeMotion } from "../../src/engine/simulate";
 import { headShapeOf, plannedSpeed, stanceLean } from "../../src/engine/swing/buildContact";
 import { defaultProfile } from "../../src/engine/swing/profile";
 import { swingReference } from "../../src/reference/index";
 import { PASS_SPLIT, canonicalSetup } from "./support/shot";
+
+// A spy that plays through, so the free motion's runs can be counted (Task B2).
+vi.mock("../../src/engine/simulate", async (importOriginal) => {
+    const actual = await importOriginal<typeof import("../../src/engine/simulate")>();
+    return { ...actual, simulateFreeMotion: vi.fn(actual.simulateFreeMotion) };
+});
 
 const DEG = Math.PI / 180;
 const WORLD = openWorld();
@@ -204,12 +212,13 @@ describe("one plan's run (P2b.2b.2c.3b plan Task 3)", () => {
 });
 
 describe("the map's found firmness (firmness design §5, A7 item 4)", () => {
-    it("plays the full roll's text book at p = 2 at the hold it finds, admissibly without one", () => {
-        // Gate 1: the preset's hold trips the grip limit at p = 2 (above); firmness 0 is admissible.
-        const sample = playSample("full-roll", textBook("full-roll"), 2, [10]);
+    it("plays the full roll's text book at a tap at the hold it finds, firmer than none", () => {
+        // Gate 1's plan, p = 2, is no longer admissible at firmness 0: its head rides over the ball (plan B-d8). At a
+        // tap, firmness 0 pins the ball, a contact that never ends (plan C-d1), so the search goes on to a firmer hold.
+        const sample = playSample("full-roll", textBook("full-roll"), 0.1, [10]);
         expect(sample.klass).toBeNull();
-        expect(sample.firmness).toBe(0);
-        expect(sample.sigma).toBe(0);
+        expect(sample.firmness).toBeCloseTo(0.274092, 6);
+        expect(sample.sigma).toBeGreaterThan(0);
         expect(sample.byLawn[10]?.range).toBeGreaterThan(0);
     });
 
@@ -236,6 +245,39 @@ describe("the map's found firmness (firmness design §5, A7 item 4)", () => {
         expect(sample.firmness).toBeNull();
         expect(sample.sigma).toBeNull();
     });
+});
+
+describe("the free motion once per sample (plan Amendment B, Task B2; B-d6)", () => {
+    it(
+        "plays the full roll's found-hold sample at p = 1 as before, rolling the balls once per lawn",
+        { timeout: 120_000 },
+        () => {
+            // Pinned before B2 from the search that rolled the balls on every lawn at each of its nine plays.
+            vi.mocked(simulateFreeMotion).mockClear();
+            const sample = playSample("full-roll", textBook("full-roll"), 1, MAP_LAWNS);
+            expect(vi.mocked(simulateFreeMotion).mock.calls.length).toBe(MAP_LAWNS.length);
+            expect(sample).toEqual({
+                power: 1,
+                klass: null,
+                reason: null,
+                byLawn: {
+                    6: { range: 4.000547519754512, ratio: 1.2175649233545072, splitAtRest: 2.4865592150875944e-14 },
+                    10: { range: 8.559654548923966, ratio: 1.3305209305408505, splitAtRest: 2.988384442521598e-14 },
+                    14: { range: 15.39831509267816, ratio: 1.3745406046094966, splitAtRest: 3.070663486314841e-14 },
+                },
+                strokeEffort: 37.67372104345212,
+                pushEffort: 42.35021223503435,
+                coupleShare: 0.027972110053537814,
+                pushImpulse: 2.1380725870668282,
+                effectVerdicts: { shipped: false, contactOnly: false },
+                followCap: false,
+                followSlip: false,
+                passes: 3,
+                firmness: 0.29861664015148576,
+                sigma: 0.3375,
+            });
+        },
+    );
 });
 
 /** A stub practised run reading only `events`, `flags` and the striker's first face contact at 10 ms. */
@@ -276,6 +318,51 @@ describe("the push map practises (P2b.2b.2c.3b.1 plan Task 7)", () => {
         const unlawful = { findings: [{ law: "29.1.6.1" }] } as unknown as FaultReport;
         expect(runClass(setup, stubRun(setup.striker, []), unlawful, ON, "turf-yield").klass).toBe("unlawful");
     });
+
+    it("admits a slip after the balls have gone, and rules out one during the impact (design A8 item 5)", () => {
+        const after = stubRun(setup.striker, [], ["follow-grip-limit"]);
+        expect(runClass(setup, after, NONE, ON, null)).toEqual({ klass: null, reason: null });
+        const during = stubRun(setup.striker, [{ kind: "grip-limit", t: 0, hand: "top" }], ["follow-grip-limit"]);
+        expect(runClass(setup, during, NONE, ON, null)).toEqual({ klass: "superhuman", reason: "grip-limit" });
+    });
+
+    it("still classes a slipping follow-through that breaks the turf", () => {
+        const turf = stubRun(setup.striker, [], ["follow-grip-limit", "follow-turf-yield"]);
+        expect(runClass(setup, turf, NONE, ON, null)).toEqual({ klass: "turf", reason: "follow-turf-yield" });
+    });
+
+    it("classes a contact that never ends as unlawful, after the turf (plan C-d1)", () => {
+        const capped = stubRun(setup.striker, [{ kind: "impact-cap", t: 0.45 }]);
+        expect(runClass(setup, capped, NONE, ON, null)).toEqual({ klass: "unlawful", reason: "impact-cap" });
+        const deep = stubRun(setup.striker, [
+            { kind: "impact-cap", t: 0.45 },
+            { kind: "turf-yield", t: 0 },
+        ]);
+        expect(runClass(setup, deep, NONE, ON, null)).toEqual({ klass: "turf", reason: "turf-yield" });
+    });
+
+    it("no longer finds the loose pass roll's pinning hold (design A9 item 1)", () => {
+        // Before C-d1 its found hold was firmness 0.0511, the mallet wedged on the striker's ball, ratio 8.85.
+        const loose = {
+            ...textBook("pass-roll"),
+            lean: 32 * DEG,
+            feet: 0.38087801284977446,
+            drive: 0.5,
+            handReach: 0.1,
+            window: 0.02,
+            split: 0,
+        };
+        const s = playSample("pass-roll", loose, 0.651, [10]);
+        expect(s.firmness === null || Math.abs(s.firmness - 0.0511) > 1e-3).toBe(true);
+    }, 120_000);
+
+    it("records the slip beside the sample: the AC stop's text book at p 1.25 plays and slips", () => {
+        const slipped = playSample("stop-ac", textBook("stop-ac"), 1.25, [10]);
+        expect(slipped.klass).toBeNull();
+        expect(slipped.followSlip).toBe(true);
+        expect(playSample("stop-ac", textBook("stop-ac"), 1, [10]).followSlip).toBe(false);
+        expect(playSample("stop-ac", { ...textBook("stop-ac"), feet: 2 }, 0.5, [10]).followSlip).toBe(false);
+    }, 120_000);
 
     it("records the passes of a played sample, and none of an unplayed one", () => {
         const played = playSample("half-roll", textBook("half-roll"), 0.5, [10]);

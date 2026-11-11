@@ -1,7 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { SIGMA_HALVINGS, SIGMA_STEP, findFirmness, searchSigma, type Played } from "../../scripts/firmness";
+import {
+    SIGMA_HALVINGS,
+    SIGMA_STEP,
+    findFirmness,
+    searchFirmness,
+    searchSigma,
+    type Played,
+} from "../../scripts/firmness";
 import { openWorld, opened } from "../../scripts/openLawn";
-import { mapSetup, playedClass, textBook } from "../../scripts/pushMapRun";
+import { HEAD_OVER_BALL, canonicalPower, mapSetup, playSample, playedClass, textBook } from "../../scripts/pushMapRun";
 import { HOLD_SPEED, plannedSpeed } from "../../src/engine/swing/buildContact";
 import type { ShotSetup } from "../../src/engine/swing/types";
 import { canonicalSetup } from "./support/shot";
@@ -49,6 +56,55 @@ describe("the σ search (firmness design §5)", () => {
     });
 });
 
+describe("the search's preference for a hold that doesn't slip (design A8 item 5)", () => {
+    const setup = mapSetup("full-roll", textBook("full-roll"), 0.8839);
+
+    /** A play that is admissible from firmness `plays` up and slips below firmness `holds`, counting its plays. */
+    const stub = (plays: number, holds: number, count: { n: number }) => (held: ShotSetup) => {
+        count.n++;
+        const firmness = held.stroke.holdFirmness as number;
+        return {
+            klass: firmness >= plays ? null : ("mishit" as const),
+            reason: firmness >= plays ? null : "impact-off-face",
+            followSlip: firmness < holds,
+            firmness,
+        };
+    };
+
+    it("goes past an admissible hold that slips to the least that doesn't", () => {
+        const { found, played } = searchFirmness(setup, WORLD, stub(0, 0.3, { n: 0 }));
+        expect(found.klass).toBeNull();
+        expect(played.followSlip).toBe(false);
+        expect(played.firmness).toBeGreaterThanOrEqual(0.3);
+        expect(played.firmness).toBeLessThan(0.31);
+    });
+
+    it("takes the least admissible hold where every hold slips, playing no σ twice", () => {
+        const count = { n: 0 };
+        const { found, played } = searchFirmness(setup, WORLD, stub(0.3, Infinity, count));
+        expect(found.klass).toBeNull();
+        expect(played.followSlip).toBe(true);
+        expect(played.firmness).toBeGreaterThanOrEqual(0.3);
+        expect(played.firmness).toBeLessThan(0.31);
+        expect(count.n).toBeLessThanOrEqual(16);
+    });
+
+    it("ends at σ_max with its class where no hold is admissible", () => {
+        const { found, played } = searchFirmness(setup, WORLD, stub(Infinity, 0, { n: 0 }));
+        expect(found).toMatchObject({ sigma: null, firmness: null, klass: "mishit" });
+        expect(played.firmness).toBe(1);
+    });
+
+    it("plays the full roll at the firmer hold that holds, not the slack one that slips", () => {
+        const plan = { ...textBook("full-roll"), drive: -1, handReach: 0.1, window: 0.02 };
+        const sample = playSample("full-roll", plan, canonicalPower("full-roll", WORLD), [10]);
+        expect(sample.klass).toBeNull();
+        expect(sample.followSlip).toBe(false);
+        expect(sample.sigma).toBeCloseTo(0.1, 6);
+        expect(sample.byLawn[10]?.ratio).toBeCloseTo(1.277, 2);
+    }, 120_000);
+});
+
 describe("the found firmness (firmness design §5)", () => {
     const at = (setup: ShotSetup, holdFirmness: number): ShotSetup => ({
         ...setup,
@@ -56,9 +112,16 @@ describe("the found firmness (firmness design §5)", () => {
     });
 
     it("finds no hold for a plan admissible without one", () => {
-        // Gate 1: the full roll's text book at power 2 is admissible at firmness 0.
-        const setup = mapSetup("full-roll", textBook("full-roll"), 2);
+        // The half roll's text book at a tap, power 0.1, is admissible at firmness 0. The full roll's was until plan
+        // C-d1: at firmness 0 it pins the ball, a contact that never ends.
+        const setup = mapSetup("half-roll", textBook("half-roll"), 0.1);
         expect(findFirmness(setup, WORLD)).toEqual({ sigma: 0, firmness: 0, klass: null });
+    });
+
+    it("finds no hold where the only admissible play's head rode over the ball (plan B-d8)", () => {
+        const setup = mapSetup("full-roll", textBook("full-roll"), 2);
+        expect(playedClass(at(setup, 0), WORLD)).toEqual({ klass: "mishit", reason: HEAD_OVER_BALL });
+        expect(findFirmness(setup, WORLD)).toMatchObject({ sigma: null, klass: "superhuman" });
     });
 
     it("finds the least hold of a plan that slips without one, within the halved step", { timeout: 120_000 }, () => {

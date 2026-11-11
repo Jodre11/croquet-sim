@@ -655,3 +655,225 @@ full roll or somewhere between a drive and a half roll or all the other inbetwee
     the assist (a rescope that would have dropped it rested on the drive's speed alone). The assist is the arms'
     strength driving a hands-led downswing, a force–velocity law in place of `handTempo.fast`; ruling 7's assist in
     the finish moves neither ball (item 13) and is not built.
+
+### A8. Gate stage 1's rulings (user, 2026-11-05)
+
+1. **The AC stop has no built-in dip** (engine 0.30.0). The user: "For a soft shot the player has the control and
+   strength the 'stop the mallet. dead' without the assistance of lawn friction"; a harder stop is where the player adds
+   a little jab, and the hardest that doesn't break the turf. The preset's fixed 11 mm `handDrop` (a user decision of
+   2026-10-05) was the same action as `stroke.jab`, built in at every power. At stage 1 it left no admissible stop: it
+   struck the turf on soft shots and slipped the hands from p 0.5. Without it stage 1's replay finds every power to p 1
+   admissible on all three lawns, the canonical ratio 5.861 (was 5.862) and its range unchanged, and Gugan 5's stop
+   stays in its band (6.69 at 1 mm, 7.31 at gap 0). The jab stays the shot's own input, held at the type's (A7 item 3).
+2. **The AC stop's hold stays the type's for this map; its variants go to P2b.2b.2c.3c** (A2 item 3), so the stop's
+   envelope ends near p 1, about 5.4 m of croqueted ball on the 10 s lawn. The evidence
+   (`docs/superpowers/probes/2026-11-05-p2b2b2c3b-stop-holds.txt`, the 10 s lawn, p 0.94 and up) supports the user's
+   lever hypothesis: lowering the bottom hand to 0.45 m stops the head in about 35 ms (129 ms hands together at p 1) and
+   nearly halves the peak hand force; relaxing both grips cuts that force about 2.5 times further and leaves the stop's
+   time alone, and only the lowered, relaxed hold keeps within the grip limit to p 1.5. The jab rescues no hand, and
+   adds to the hands' load on some holds; it helps most where the hands alone stop slowly (hands together, relaxed, p
+   1.05: 151 to 77 ms at 5 mm). 5 mm is usually the hardest on the depths tried (0, 3, 5, 8 mm) that keeps the turf
+   whole. For 3c: whether a slack hold's fast stop is the lever or a flaw of the model, the 32 m stop at p 1.5, the slip
+   at the moment the check gives way to the hold, the soft shots at these holds, and the ratio's jump between its two
+   branches as the hold changes.
+3. **The map records both holds.** Every sample is played at the least hold that plays (A7 item 4) and at the type's
+   fitted hold, each with its own reads, and the found hold's reads carry its firmness. The least hold alone would not
+   say what the text book's own hold does: at the full roll's canonical stroke the least hold gives a ratio of 1.673,
+   outside its band, and the fitted one 1.161. Which of the two a shot's default should use is for gate stage 2.
+4. **The grid gains p 1.05 and p 1.1,** making 14 powers. Above p 1 the backswing is at the body's limit and the
+   intensity takes over, so the distance climbs fastest there: the AC stop's striker's ball goes from 1.06 m at p 1 to
+   3.30 m at p 1.25 on the 10 s lawn, about 3.5 steps of the range grid. With 1.71 m at p 1.05 and 2.01 m at p 1.1, no
+   bracket there spans more than about 1.5 steps.
+5. **A slip after the balls have gone is recorded, not ruled out** (amends §3.5's "a saturated grip" and plan decision
+   5). `follow-grip-limit` comes after the impact, so it cannot affect the balls, and the fault judge doesn't read grip,
+   so the shot is legal; the map admits it and marks the play `followSlip`. A slip during the impact (`grip-limit`) can
+   affect the balls and stays superhuman. The found hold is the least that plays without slipping, falling back to the
+   least that plays where no hold keeps it from slipping (user, 2026-11-05): a player grips firmly enough not to lose
+   the mallet if they can. Taking the least that plays regardless raised the full roll's jumpiness bound from 0.402 to
+   1.273, as the search stopped at slack holds that slip (at drive −1, reach 0.1 m, window 20 ms, σ 0.025 and ratio 2.32
+   where σ 0.1 had read 1.28).
+6. **The fallback stands, and its plays are shown apart** (user, 2026-11-05). With the preference, the full roll's bound
+   is 1.244 at one point of 60 (drive −1, reach 0.1 m, window 10 ms), which no grid hold both plays and holds, so it
+   falls back to σ 0.00625 and ratio 2.448; every other gap is 0.402 or less. The search is unchanged. The record marks
+   each slipping play, and the map's bands and plots show those plays apart from the plays that hold.
+
+### A9. Gate stage 2's rulings (user, 2026-11-07 to 2026-11-08)
+
+Read from the full map (`docs/superpowers/probes/2026-11-07-p2b2b2c3b-maps.txt`, the plots beside it) and the side-on
+animation (`scripts/sideOnExport.ts`).
+
+1. **A contact that never ends is a fault.** At its least hold the pass roll reaches stop ratios (8.97 at 0.25 m on the
+   10 s lawn, σ 0.053): the head stalls on the striker's ball, rides up onto it at about 39° and presses it into the
+   turf (`impact-turf-pit`), shoving it for 0.45 s until the impact's cap (`impact-cap`) ends the run. The user: "The
+   mallet seems to pin the strikers ball to the ground, wedged on top, I'm not sure if that is actually possible but
+   nobody plays it", and agreed (2026-11-08, "Okay") that a play ending at the impact's cap is not admissible. Every
+   found-hold stop ratio on the rolls is of this kind; none occurs at the fitted hold.
+2. **Off-face contact stays a mishit, as built.** The user: "if any part of the mallet, other than the leading face
+   touches the ball in the stroke, that is a suspect and possibly a fault"; `impact-off-face` already classes it so.
+3. **A re-contact is judged after a visible separation, not by time.** The user: "it's not some arbitrary time, it's
+   after separation has occured. If it's a long slow sweep then that would be viewed as a long contact", and "If it's a
+   very hard, fast shot, then people are going to be looking for a small gap. If it's a nice, smooth sweep, then
+   they're much more lenient." The half roll's catch-ups (p 1 to 1.25, every finish) part from the ball by 0.45 mm at
+   most, inside the 2 mm joining distance (29.2.5's note): one continuing contact, so the referee is unchanged. A
+   separation scaled by the stroke's speed is recorded, not built: no play measured needs it. The ratio's fall on the
+   harder half rolls (2.39 to 1.23 at p 1.1) is the full push driving the striker's ball on; the natural and braked
+   finishes hold 2.3–2.5 to p 1.25, and the map already sweeps them.
+4. **The AC stop's leans are mapped to the turf's edge.** The user: "an actual stop shot should be at minus 7 or even
+   minus 6.5. But sometimes a player wants a shot that's only a bit stoppy … a setup that would work and we should
+   allow to be configured from the inputs and therefore would be part of the envelope and should be mapped." The
+   furthest-back lean that plays is −7.03° (to 0.05°), the same at feet ±0.05 m and p 0.5, 1 and 1.25; past it the head
+   is in the turf at contact. The ratio peaks at the edge on short stops (5.31 at p 0.5, 5.62 at p 1) and near −6° on
+   long ones (6.25 at p 1.25). The user: "that edge would be edgy because it's on the edge. Going outside of that
+   envelope would damage the lawn." The stop's grid leans: 0° to −6° in 1.5° steps, −6.5° and −7°, with −7.5° beyond.
+   The user also: "You should never push on a stop anyway"; the map confirms pushes change none of the stop's picks.
+5. **Grip is read from the envelope, not fixed per type** (settles A8 item 3's question). The user: "We want the
+   envelope to give us the distribution of grips that are required to make the shots work so that when we make the
+   other settings adjustable we know we can work out what grip should be applied", and "there probably is an optimal
+   grip that gives you reliable outcomes. But we could introduce a small, looser or harder option which would move the
+   grip towards the bounds that we know … we would have to choose based on the envelope data we have." Each set-up
+   carries three grips: the least that plays (the found hold, trusted once item 1 is in), the firmest before the hold
+   is superhuman or the stroke a fault, and the most reliable, where a small change of grip moves the range and ratio
+   least. "Looser" and "firmer" step from the reliable grip towards each bound. The user: "I was hoping that a pattern
+   was emerging and we could extrapolate between points": grip is swept on a spread of plans, a pattern over the other
+   inputs fitted, and checked on held-out plans before it fills the map.
+6. **Each type's default is the plan that works best** (A7 item 7's question; the user: "Choose the default that works
+   best"). Best is the least complex plan in its band (item 7); where that plan is edgy, the next viable plan is the
+   default and the edgy one stays in the envelope (assumption on the user's "Okay").
+7. **Least complex, not least effort** (chosen "A"). The user: "a drive is very simple until it has maximal effort. The
+   feet are in the standard position, the hands are in the standard position, the follow through is standard, there is
+   no push." A plan's complexity is the count of its departures from the plain stroke (item 9); fewest wins, then the
+   smaller departures, then effort. This replaces the
+   mean of stroke and push effort, under which a plan with no push scored half.
+8. **Effort above 90 % is a departure** (chosen "A: above 90 %", 2026-11-08). The stroke's effort, its share of the
+   plan's hardest swing, counts as one departure from the plain stroke above 90 %, so a plain stroke at full stretch
+   ranks with a stroke changed once and played comfortably. The threshold is revisited once the defaults are read.
+   Carried to the game's phase (user, 2026-11-08): "Later, this complexity will count as a modifier or an indicator of
+   a strokes difficulty, which will account for its chance of missing." So the record keeps each plan's departures,
+   not only the defaults' ranks.
+9. **The plain stroke is the drive's, for every type** (2026-11-08; the user: "The drive position is the standard").
+   The departures counted: the feet moved from the drive's ("Moving the feet back counts as a deviation"); the hands'
+   lean changed (item 7's "the hands are in the standard position"); the follow-through changed ("Changing the follow
+   through. Definitely more technical"); a push; and effort above 90 % (item 8). Not departures: the point of contact
+   on the ball ("It's just an outcome of the angle") and the grip ("The player doesn't think about the grip"; item 5
+   sets it). The push's window and reach are the push's own settings, counted with it, not apart (assumption: the
+   window is how long the hands' push acts through contact, so it means nothing without one). On the AC stop: its text
+   book is −6°, not 0°; a 0° braked stop is the drive with one change and reaches only 4.05–4.70, the band's foot, and
+   the user: "the big drawback to the zero degree stop shot is that it doesn't stop very well". So the leaned stop
+   wins wherever a real stop's ratio is wanted, by reach, not by rank.
+10. **Timed changes outrank set-up changes** (2026-11-08). The user: "things that require timing are going to
+    introduce risk. And generally would be avoided if possible. The Lean is all part of the setup. Where the hands are,
+    where the feet are. Once that's configured, it's just successfully producing the shot that matters. For follow
+    through and rolls and pushing, these all have to be timed right. So they're higher risk manoeuvres", and on the
+    braked finish: "If you did too early, you completely under-hit the ball or miss-hit the ball." So item 7's count is
+    split in two: timed changes (a brake, a push) and set-up changes (the feet, the lean). The user: "follow-through
+    kind of happens naturally so it's a bit less risky but stopping a follow-through or braking definitely carries the
+    same risk and hazard timing issues": the natural finish (`drive` 0) is no change, any brake (`drive` below 0) and
+    any push (`drive` above 0, with its reach and window) one timed change each. The fewest
+    timed changes wins, then the fewest set-up changes, then the smaller changes, then effort. Effort above 90 % (item
+    8) counts as a set-up change (assumption: it strains the stroke but needs no timing of its own). On the AC stop the
+    natural finish gives the braked one's ratio (6.25 against 6.27 at −6°, p 1.25), since the brake acts after the ball
+    has left the face (A7 item 13); so the default stop is the lean alone, with no timed change. Each starting plan's
+    timing sensitivity is measured with its grip's (item 5): its brake or push played 5 and 10 ms early, the loss of
+    range and ratio recorded for the game's chance of missing (assumption on the user's reply; the steps are the
+    builder's, not measured human errors). The user, on the result: "Rolls are considered to be more difficult shots
+    because of the timing problem": every roll carries a push, so its timed count is never 0.
+
+### A10. Gate stage 3's rulings (user, 2026-11-11)
+
+Measured on the Amendment C record (plan Task C4; `docs/superpowers/probes/2026-11-11-p2b2b2c3b-maps.txt`). The user's
+two goals frame them: defaults per shot that a player tunes, judged viable, edgy or non-viable against the envelope;
+and a grip chosen from the data within bounds the player moves.
+
+1. **The hole between the drive and the AC stop is the grid's, and is interpolated** (chosen "Interpolate"). Ratios
+   3.6–4.2 at the striker's 1.3–6.4 m are reached by no admissible play on any lawn, but the drive's neighbouring
+   leans land either side of it (10 s, 3.32 m: +6° gives 3.52–3.59, 0° gives 4.33–4.42): the 6° lean step, not the
+   physics. The game judges a lean between grid points from its neighbours, as everywhere on the grid. The other inside
+   holes lie at the AC stop's steep edge, ratios above 6.
+2. **Onset and speed gain stay the model's; timing is a risk** (chosen "Fix them, timing as risk"). The player sets
+   neither: the push is on time and the speed gain is the type's (swept on the full roll only). C3's early plays (5 and
+   10 ms) become a reliability measure shown beside the band; the AC stop is the sensitive one (53 of 62 plans stop
+   playing 5 ms early).
+3. **A grip no fit predicts is read from the nearest swept plan** (chosen "Nearest neighbour"). Where a bound's fit
+   failed (the firmest on the drive, the AC stop and the half roll; the reliable bound off the full roll; every bound on
+   the half roll), the game takes the bounds of the nearest plan in `envelope-grip.json.gz`, its distance flagged.
+4. **§6 item 2 is a miss** (chosen "Record as a miss"). The ratio rises with drive somewhere in 39–84 % of each type's
+   slices, by up to 1.6 (9.1 on one full-roll slice). Carried to P2b.2b.2c.3c with A7 item 9's jumpiness.
+5. **The pass roll's split is the player's, and its defaults are picked per split** (the user: "are we going with a 4
+   degree split?"; chosen "Yes, per split"). In a game the split is set by where the balls are to go, so a default does
+   not choose it: the defaults are the least complex plan (A9 item 7) at the split the player needs, from the map's
+   sweep at every split. Amends A9 item 6 and plan C-d3's picker for the pass roll.
+6. **The user's accounts** (chosen "Record, keep defaults"). Account 7 holds: soft pass rolls (p ≤ 0.5) reach the
+   pass-roll region in 18 % of reads at 0°, 53 % at 2°, about 80 % from 4°. Account 2 holds as the user reasoned: at
+   32 m every two-ball read is off-court. Accounts 3 and 5 are misses: a weak follow-through on a hard strike lowers the
+   ratio (drive −1: 58 % and 45 % at ratio ≥ 1.4 on the full and pass rolls, against 74–82 % at drive 0–1); the pass
+   roll's least complex defaults picked across splits keep drive 0 at every range, and accelerating plans thin out with
+   range. The defaults stay least complex; accelerating pass rolls stay admissible for a player who chooses them. Once
+   picked per split (item 5), account 5 holds in part: each split's defaults keep drive 0 over most ranges but
+   accelerate at its long end (10 s lawn: at 0° from 0.91 m, at 4–8° at 12 m, at 10° from 8.8 m, at 30° from 1.7 m).
+7. **The pull is a first reading, carried to P2b.2b.2c.3c** (chosen "Record, carry to 3c"). The pass roll's most
+   forward lean (38°) narrows the split at rest at set splits of 2–4° (3.3° against 5.7° at 26°, set 2°) and widens it
+   at 20–30° (46.7° against 38.2°, set 30°). Every split at rest is wider than the one set. The backward-lean side is not
+   swept on the pass roll.
+8. **The forward-lean AC stop stays, as found** (chosen "Keep them, as found"). +1.5° and +3° play as often as the
+   backward leans (about 25 % of reads admissible), at ratios 1.5–4.9, so mostly as a drive; 18 of the 358 defaults use
+   them, at short ranges.
+9. **The shipped effect measure stands** (chosen "Keep the shipped"). The contact-only candidate faults where the
+   shipped one does not in up to 4.6 % of a type's samples (half roll 804 of 17,638); the reverse in at most 28.
+10. **The defaults' efforts are believable; their shape is a miss** (chosen "Believable; record"). Effort rises with
+    range almost everywhere and no default pushes above 80 %. Against impulse-variability scaling (Schmidt, Zelaznik,
+    Hawkins, Frank and Quinn 1979, read through Plamondon and Alimi 1997 as the maps file cites them, the primary being
+    paywalled), the defaults change follow-through shape 5–8 times along each band and are not one shape scaled. Their
+    push windows, 10–40 ms, sit at and below the CA's roll contacts, 30–58 ms. §7 I: the full-roll band's defaults are
+    mostly half-roll plans (37 of 43), and speed gain barely moves the full-roll share (36 % to 41 %). §7 K: the plain
+    pass roll reaches ratio below 0.5 at 12–16 of 16 ranges per lawn without the super pass roll. §7 L: no default
+    saturates. §7 O: every default is admissible, so none digs.
+
+### A11. The build's readings, Amendments B and C (folded at plan Task B9, 2026-11-11)
+
+The plan's decisions B-d1 to B-d12 and C-d1 to C-d6 and their as-built notes, the design's calls made while building
+A7 to A10, each standing as built unless a ruling above overrides it. The plan
+(`docs/superpowers/plans/2026-10-29-p2b2b2c3b-push-map.md`) keeps each in full.
+
+1. **The types and labels** (B-d1 to B-d3). `MapType` is the drive, the AC stop, the half, full and pass rolls and the
+   single ball (A7 item 1). The single ball's ratio is NaN and its rows carry no label. A plan's label is the band its
+   ratio falls in (`labelOf`, edges inclusive), else "between" its two neighbours, or "beyond AC stop".
+2. **The grids** (B-d4, B-d5, C-d2, A8 item 4). 16 ranges, 0.25 to 32 m, log-spaced, half below 4 m; 14 powers, with
+   0.02 and 0.05 below 0.1 and 1.05 and 1.1 above 1. A cell where either ball passes 32 m is `off-court`, unsolved,
+   ahead of every other class and no failure of a neighbour. The pass roll's splits 0–10° by 2°, 20° and 30°, with 40°
+   beyond. The AC stop's leans +3° to −7° (+3, +1.5, 0, −1.5, −3, −4.5, −6, −6.5, −7), with +4.5° and −7.5° beyond;
+   every other type's lean is its text book's ±6°, ±12° beyond.
+3. **The free motion once per sample** (B-d6): the found hold's search plays without lawns, and only the kept play
+   rolls the balls on each lawn; the samples are bit-identical.
+4. **The jumpiness bound** (B-d7, B-d11; A7 item 9): pushes alone compared, slipping plays counted admissible: 1.244
+   on the full roll at one point (the fallback at σ 0.00625), 0.402 or less elsewhere, and 0.579 on the pass roll. The
+   read-out bin is 0.6 (A7 item 7). The later contacts' flips between patterns stay carried (A10 item 4).
+5. **A head over the ball is a mishit** (B-d8; user, 2026-11-04): on a pushed stroke, the ball beyond the face's reach
+   after first contact while the head gains on it along aim is `head-over-ball`, and the search goes on to a firmer
+   hold. In the map's script, not the engine.
+6. **A capped impact is unlawful** (C-d1, A9 item 1): a run whose events hold `impact-cap` is `unlawful`,
+   `impact-cap` (Law 29.1.6.3), after the turf classes and before 29.1.6.1. It moved the full roll's text book at a
+   tap off firmness 0, to 0.274.
+7. **The runs** (B-d9, B-d12, C-d6; A7 item 11). The map ran on GitHub Actions (`.github/workflows/push-map.yml`,
+   `ubuntu-26.04`, four shards per job, `only` and `from_run` to split a type across dispatches and resume an overrun),
+   every dispatch of a stage from one commit on `push-map-run`, merged locally with each job's latest upload winning.
+   The workflow is removed with this amendment (user, 2026-11-03: "The pipework only as long as the envelope resolution
+   requires it"); it is restored from the history if a later model change needs the map re-run.
+8. **Both holds** (B-d10, A8 item 3): every power at the found and the fitted hold, a record file per type and hold
+   (`envelope-<type>.csv.gz`, `envelope-fitted-<type>.csv.gz`; together past decision 10's 20 MB), each with a
+   `firmness` column. **The slip** (B-d11, A8 item 5): `followSlip` is a column, not a class.
+9. **Complexity** (C-d3, A9 items 7–10): `complexityOf` counts against the drive's text book `timed` (`drive ≠ 0`) and
+   `setUp` (feet, lean, the type's stance hands, stroke effort above 90 %), then `size` (|Δfeet| / 0.05 m + |Δlean| /
+   6° + |drive|), then effort. `bandPicks` picks the least complex plan per label, split, range and lawn (A10 item 5),
+   and the least complex viable plan beside an edgy one; `envelope-defaults.json` holds them, 1,446 at the found hold.
+10. **The grip sweep** (C-d4, A9 item 5): hold firmness 0–1 in 17 steps of 0.0625 (σ is capped at
+    min(1, v/HOLD_SPEED), which firmness 1 reaches), on the 10 s lawn, over 1,117 starting plans (each default and
+    viable runner-up at both holds and every lawn, and the text books at each power) and 2,000 held out. Per plan: the
+    least grip that plays, the firmest, and the reliable one (the least |Δrange| / range + |Δratio| / ratio between
+    neighbours, a tie to the middle). A quadratic fit per type and bound on the standardised inputs is accepted where
+    the held-out median absolute error is at most 0.0625: 7 of 18 are (`envelope-grip.json.gz`; A10 item 3 for the
+    rest).
+11. **The timing sweep** (C-d5, A10 item 2): each starting plan with a timed change at its reliable grip, the
+    follow-through's pulses (the hands', the pendulum's and the dip) moved 5 and 10 ms early together, since the AC
+    stop's brake is the pendulum's alone.
+12. **The read-out** (plan C4): the record and `gripplans` write JSON through Prettier under the repository's
+    configuration (`prettyJson`), so a regenerated file passes the format check.

@@ -1,0 +1,677 @@
+P2b.2b.2c.3b, the envelope (plan Amendment B).
+
+== Task B4: the ratio's jumpiness bound (B-d7, design A7 item 9), on the commit after 2274359
+
+Result: the bound exceeds the 0.1 read-out bin on both rolls, so B4 stops for the user before the full map.
+
+                                   full roll    pass roll
+Admissible points of 60                   46           45
+Bound, admissible neighbours           0.927        1.642
+The same neighbours, first pass        1.002        7.582
+Every played point                     1.971        1.642
+
+The admissible pairs split by the found hold (figures read from the runs below):
+
+                                   full roll             pass roll
+Both held (sigma > 0)              41 pairs, max 0.402   39 pairs, max 0.580
+Both at sigma 0                    25 pairs, max 0.266   24 pairs, max 0.328
+One of each                        19 pairs, max 0.927   18 pairs, max 1.642
+Pairs over 0.1, of all             43 of 85              52 of 81
+
+Reading (the cause follows below):
+- Every listed worst neighbour is a pair with one point at sigma 0, which plays once at a ratio near 2 whatever its
+  push, and one held at sigma near 0.3, practised, at a ratio near 1. Ten pushed points on each roll play at sigma 0,
+  with ratios close to the no-push points' (handReach 0). So the largest gaps are a change of regime, not scatter.
+- Removing that change does not bring the bound within 0.1: pairs both held still reach 0.402 and 0.580, pairs both at
+  sigma 0 reach 0.266 and 0.328.
+- Practice's share: it does not cause the bound. The first pass's bound is larger on both rolls, the pass roll's by one
+  first pass of ratio 9.157 (drive 0, handReach 0.1 m, window 20 ms) that practice brings to 1.113. But practice moves
+  the ratio a long way, by a median of 0.224 on the full roll and 0.596 on the pass roll over the admissible points
+  it replays, and at each listed worst pair the practised gap is wider than the first pass's.
+
+== The bound's cause (B-d7), from scratch scripts on 2b5df59, deleted after
+
+The stroke has two stages, and the ratio is set by whether and how the second happens.
+
+1. The first strike is the same in every play. Traced from first face contact on both rolls, held slack or firm, with
+   a push or none: by +8 ms the head has fallen from about 2.96 to 1.35 m/s, the striker's ball is at about 1.4 m/s and
+   the croqueted ball at about 2.65 m/s. Those speeds are the no-push stroke's: ratio 2.02 to 2.18, range about 1.4 m.
+   The striker's ball goes down into the turf and comes back, z 0.0425 m at +4 ms to 0.0502 m at +20 ms (rest 0.0456 m).
+2. The second stage is the head catching the ball again, with the push behind it. It carries most of the range. Where
+   it happens, the face mostly touches for 100 to 300 ms in 5 to 27 separate contacts, the range is about 2.4 to 9 m
+   and the ratio about 0.6 to 1.6. Where it does not, the stroke keeps the first strike's ratio.
+
+Cause 1, nearly all of the bound: the found hold's rule picks a stroke with no second stage. At sigma 0 the head rides
+up over the ball. Pass roll, drive 0.5, handReach 0.3 m, window 20 ms: head height 0.144 m to 0.217 m and lean 32 deg to
+44.4 deg by +120 ms, the last face contact by about +20 ms, striker's ball at 1.2 m/s. Nothing fails, since there is
+nothing left to hit and the lean stays under 45 deg, so it is admissible and the search takes it as the least hold. The
+same plan held harder plays the second stage. At the same power the two differ by about 4 times in range:
+
+Pass roll, drive 0.5, window 20 ms, power 0.8947:
+  handReach 0.2 m: sigma 0.3 ratio 0.595, range 8.52 m;  sigma 0.6 ratio 0.898, range 6.01 m;  sigma 1 ratio 0.899
+  handReach 0.3 m: sigma 0 ratio 2.237, range 1.34 m;  sigma 0.4 ratio 0.838, range 6.29 m;  sigma 1 ratio 0.830
+
+So the search's answer at a low hold need not be a lighter version of the firm stroke. Above sigma 0.5 a plan's ratio
+hardly moves: median spread over the admissible holds 0.033 on the full roll, 0.026 on the pass roll.
+
+Cause 2, the rest: the second stage's contacts flip between patterns at particular input values. Between flips the
+ratio is smooth; it is not noise. At sigma 1, over six plans, a window within 1 % of its value spreads the ratio by 0.022 at most. Walking
+a worst neighbour pair in twelve steps at sigma 1 shows the flips:
+
+  Full roll, drive -0.5 to 0, handReach 0.1 m, window 20 ms: 1.018, 1.011, 1.380, 1.023, 1.183 ... 1.033, 1.246, 1.325;
+    the near-1.0 plays have 8 to 14 ms of face contact and one pass, the others about 100 ms and two or three.
+  Full roll, drive 0, handReach 0.3 m, window 20 to 40 ms: 1.479 to 1.264 in one step; first pass 1.378 to 1.365.
+  Pass roll, drive -1, handReach 0.2 m, window 10 to 20 ms: 1.189 to 0.891 in one step; first pass 6.625 to 6.618.
+  Pass roll, drive -0.5 to 0, handReach 0.1 m, window 40 ms: 0.739, 1.412 ... 1.459, 0.827 ... 0.825, 1.036.
+
+So some flips are practice's (the first pass is smooth through them) and some are the first pass's own (pass roll, drive
+-1, window 10 to 20 ms: first pass 1.869 to 6.704 in one step). A hand reach of 0 beside 0.1 m is a real difference, no
+push against a push, not jumpiness: those pairs are left out of the "pushes" figures below.
+
+The hold rules compared, pushes only (handReach above 0), each point's 11 holds from sigma 0 to 1 by 0.1, no halvings,
+so "least admissible" differs from the found hold's figures above:
+
+                                        full roll                      pass roll
+                                        points  pairs  bound  over .1  points  pairs  bound  over .1
+Least admissible (today's)                  46     67  1.173       37      45     65  1.642       43
+Least with face contact over 30 ms          41     55  0.374       24      34     35  0.544       19
+Sigma 1                                     41     55  0.307       23      32     33  0.486       12
+Least of the firm run (all firmer pass)     41     55  0.340       20      32     33  0.388       15
+Firmest admissible                          46     67  0.330       30      45     65  1.427       34
+
+"Points" counts each rule's admissible points of the 60, those at handReach 0 included. No rule brings the bound within 0.1.
+First passes alone at sigma 1 are wider: 0.509 on the full roll, 5.662 on the pass roll, so practice narrows the bound
+at a firm hold too.
+
+Not measured: these compare neighbours at one power, as B-d7 sets, while the map's bands compare them at one range. A
+low-hold play at its own higher power might read differently. Why the second stage flips between patterns, beyond the
+ball's hop and practice's lift changing where the head meets it, is not established.
+
+== The ruling and the bound under it (plan B-d8)
+
+The user, 2026-11-04: a slack grip where the head rides over the ball after the strike "sounds like a misplayed shot.
+So option 1" (option 1: keep the found hold, but do not accept a shot whose push never reaches the ball).
+
+Built as: on a pushed stroke, if after the first face contact the ball is out of the face's reach while the head has
+gained on it along aim, the play is a mishit, reason head-over-ball. The search then goes on to a firmer hold.
+
+Pushes alone (handReach above 0), found hold, practised, re-run with the rule; the runs are at the end of this file:
+
+                                   full roll    pass roll
+Admissible pushed points of 45            37           28
+Neighbour pairs                           67           44
+Median gap                             0.105        0.162
+90th percentile gap                    0.290        0.302
+Bound (largest gap)                    0.402        0.579
+Pairs over 0.1                            34           31
+Pushed points at sigma 0, before          10           10
+Pushed points at sigma 0, now              0            0
+Bound before the rule, pushes alone    0.927        1.642 (found-hold runs above; the no-push step left out)
+
+The bound falls by more than half but stays over 0.1, as every hold rule compared above does. Cause 2 remains. It is
+carried, and the read-out bin takes the measured bound, so 0.6 (design A7 item 7: no finer than this bound).
+
+Costs and flags for gate stage 1:
+- The pass roll loses points: 8 pushed points that were admissible only at sigma 0 now have no admissible hold. The full
+  roll's ten all found a firmer hold.
+- A 0.6 bin is wide against the bands: the pass roll's 0.83 and the full roll's 1.1 fit in one bin. The bound is the
+  worst pair, not the typical (medians 0.105 and 0.162), so a band's own plans may read tighter; this is for read-out.
+- At the worst pairs the practised gap now far exceeds the first pass's (full roll 0.402 against 0.085; 0.390 against
+  0.026; pass roll 0.572 against 0.030), so practice now widens the worst gaps, though over all pairs the first pass's
+  largest gaps are larger still (0.734 and 7.581) and the medians are about equal.
+- Late plays at very low holds stay admissible where nothing passes over the ball, for example pass roll, drive -1,
+  handReach 0.2 m, window 40 ms, sigma 0.044, ratio 1.539, one pass. Whether those are real strokes is not asked here.
+
+The text books under the rule, each over the grid's powers on the 10 s lawn (scratch), striker's range and ratio:
+
+  Most power admissible, and the next power's class:
+  drive        p 2     9.38 m  ratio 4.898  (none beyond)
+  stop-ac      none: every power fails, turf at the least, then superhuman (see the note below)
+  half-roll    p 1     1.98 m  ratio 2.213  p 1.25 superhuman (grip-limit)
+  full-roll    p 1     8.56 m  ratio 1.331  p 1.25 superhuman (grip-limit)
+  pass-roll    p 1     9.51 m  ratio 0.686  p 1.25 superhuman (grip-limit)
+  single-ball  p 2    57.49 m               (none beyond)
+
+The rule's cost to reach: gate 1 of the firmness phase (2026-11-03-p2b2b2c3b2-reach.txt, section 5) had the full and pass
+rolls' text books admissible at p 1.5 and 2 on the 10 s lawn, at firmness 0 alone: 7.1 and 9.5 m at striker/croqueted
+ratios of about 2.7 to 2.9. Those are the head-over-ball plays. They were not rolls, and they reached about as far as
+p 1 does now (full 9.5 against 8.56 m, pass 9.5 against 9.51 m), so the text books' reach is about the same, now at a
+roll's ratio. Two tests that pinned them moved to a tap.
+
+The AC stop's text book has no admissible power on this lawn, canonical power included, at any of 11 holds; the hold
+changes nothing. This is B3's flag widened. The rule is not the cause: the AC stop has no push (handReach 0), so the rule
+does not read it. It goes to gate stage 1 with the rest.
+
+The runs, as printed by SECTION=jumpiness, TYPE=full-roll and TYPE=pass-roll, under nice -n 20:
+
+full-roll, power 0.8839, lean and feet at the text book's, 10 s lawn:
+drive -1, handReach 0 m, window 10 ms: ratio 2.052, first pass 2.052, superhuman (follow-grip-limit), passes 1, sigma none
+drive -1, handReach 0 m, window 20 ms: ratio 2.047, first pass 2.047, superhuman (follow-grip-limit), passes 1, sigma none
+drive -1, handReach 0 m, window 40 ms: ratio 2.040, first pass 2.040, superhuman (follow-grip-limit), passes 1, sigma none
+drive -1, handReach 0.1 m, window 10 ms: ratio 1.322, first pass 1.863, superhuman (follow-grip-limit), passes 3, sigma none
+drive -1, handReach 0.1 m, window 20 ms: ratio 1.277, first pass 1.750, admissible, passes 2, sigma 0.100
+drive -1, handReach 0.1 m, window 40 ms: ratio 1.053, first pass 1.053, admissible, passes 1, sigma 0.150
+drive -1, handReach 0.2 m, window 10 ms: ratio 1.384, first pass 1.836, admissible, passes 2, sigma 0.338
+drive -1, handReach 0.2 m, window 20 ms: ratio 1.246, first pass 1.707, admissible, passes 2, sigma 0.506
+drive -1, handReach 0.2 m, window 40 ms: ratio 1.315, first pass 1.315, admissible, passes 1, sigma 0.106
+drive -1, handReach 0.3 m, window 10 ms: ratio 1.094, first pass 1.682, admissible, passes 3, sigma 0.200
+drive -1, handReach 0.3 m, window 20 ms: ratio 1.484, first pass 1.656, admissible, passes 3, sigma 0.288
+drive -1, handReach 0.3 m, window 40 ms: ratio 1.117, first pass 1.513, admissible, passes 3, sigma 0.794
+drive -0.5, handReach 0 m, window 10 ms: ratio 2.052, first pass 2.052, superhuman (follow-grip-limit), passes 1, sigma none
+drive -0.5, handReach 0 m, window 20 ms: ratio 2.047, first pass 2.047, superhuman (follow-grip-limit), passes 1, sigma none
+drive -0.5, handReach 0 m, window 40 ms: ratio 2.040, first pass 2.040, superhuman (follow-grip-limit), passes 1, sigma none
+drive -0.5, handReach 0.1 m, window 10 ms: ratio 1.439, first pass 1.701, superhuman (follow-grip-limit), passes 3, sigma none
+drive -0.5, handReach 0.1 m, window 20 ms: ratio 1.016, first pass 1.016, admissible, passes 1, sigma 0.781
+drive -0.5, handReach 0.1 m, window 40 ms: ratio 1.095, first pass 1.095, admissible, passes 1, sigma 0.188
+drive -0.5, handReach 0.2 m, window 10 ms: ratio 1.320, first pass 1.638, superhuman (follow-grip-limit), passes 2, sigma none
+drive -0.5, handReach 0.2 m, window 20 ms: ratio 1.203, first pass 1.583, superhuman (follow-grip-limit), passes 2, sigma none
+drive -0.5, handReach 0.2 m, window 40 ms: ratio 1.130, first pass 1.130, admissible, passes 1, sigma 0.150
+drive -0.5, handReach 0.3 m, window 10 ms: ratio 1.392, first pass 1.501, admissible, passes 3, sigma 0.269
+drive -0.5, handReach 0.3 m, window 20 ms: ratio 1.378, first pass 1.482, admissible, passes 3, sigma 0.406
+drive -0.5, handReach 0.3 m, window 40 ms: ratio 1.278, first pass 1.178, unpractised (impact-head-deep), passes 3, sigma none
+drive 0, handReach 0 m, window 10 ms: ratio 2.052, first pass 2.052, admissible, passes 1, sigma 0.000
+drive 0, handReach 0 m, window 20 ms: ratio 2.047, first pass 2.047, admissible, passes 1, sigma 0.000
+drive 0, handReach 0 m, window 40 ms: ratio 2.040, first pass 2.040, admissible, passes 1, sigma 0.000
+drive 0, handReach 0.1 m, window 10 ms: ratio 1.253, first pass 1.522, admissible, passes 3, sigma 0.331
+drive 0, handReach 0.1 m, window 20 ms: ratio 1.229, first pass 1.500, admissible, passes 3, sigma 0.325
+drive 0, handReach 0.1 m, window 40 ms: ratio 1.312, first pass 1.536, admissible, passes 3, sigma 0.369
+drive 0, handReach 0.2 m, window 10 ms: ratio 1.369, first pass 1.598, admissible, passes 3, sigma 0.237
+drive 0, handReach 0.2 m, window 20 ms: ratio 1.264, first pass 1.590, admissible, passes 3, sigma 0.331
+drive 0, handReach 0.2 m, window 40 ms: ratio 1.247, first pass 1.439, admissible, passes 3, sigma 0.306
+drive 0, handReach 0.3 m, window 10 ms: ratio 2.107, first pass 2.107, admissible, passes 1, sigma 0.000
+drive 0, handReach 0.3 m, window 20 ms: ratio 2.114, first pass 2.114, admissible, passes 1, sigma 0.000
+drive 0, handReach 0.3 m, window 40 ms: ratio 1.649, first pass 1.354, admissible, passes 3, sigma 0.263
+drive 0.5, handReach 0 m, window 10 ms: ratio 2.105, first pass 2.105, admissible, passes 1, sigma 0.000
+drive 0.5, handReach 0 m, window 20 ms: ratio 2.047, first pass 2.047, admissible, passes 1, sigma 0.000
+drive 0.5, handReach 0 m, window 40 ms: ratio 2.039, first pass 2.039, admissible, passes 1, sigma 0.000
+drive 0.5, handReach 0.1 m, window 10 ms: ratio 1.318, first pass 1.458, admissible, passes 3, sigma 0.375
+drive 0.5, handReach 0.1 m, window 20 ms: ratio 1.043, first pass 1.489, unpractised (follow-turf-yield), passes 3, sigma none
+drive 0.5, handReach 0.1 m, window 40 ms: ratio 1.320, first pass 1.390, admissible, passes 3, sigma 0.575
+drive 0.5, handReach 0.2 m, window 10 ms: ratio 1.320, first pass 1.517, admissible, passes 3, sigma 0.406
+drive 0.5, handReach 0.2 m, window 20 ms: ratio 1.273, first pass 1.455, admissible, passes 3, sigma 0.300
+drive 0.5, handReach 0.2 m, window 40 ms: ratio 1.275, first pass 1.241, admissible, passes 3, sigma 0.250
+drive 0.5, handReach 0.3 m, window 10 ms: ratio 2.190, first pass 2.190, admissible, passes 1, sigma 0.000
+drive 0.5, handReach 0.3 m, window 20 ms: ratio 2.200, first pass 2.200, admissible, passes 1, sigma 0.000
+drive 0.5, handReach 0.3 m, window 40 ms: ratio 1.370, first pass 1.198, admissible, passes 3, sigma 0.306
+drive 1, handReach 0 m, window 10 ms: ratio 2.139, first pass 2.139, admissible, passes 1, sigma 0.000
+drive 1, handReach 0 m, window 20 ms: ratio 2.132, first pass 2.132, admissible, passes 1, sigma 0.000
+drive 1, handReach 0 m, window 40 ms: ratio 2.039, first pass 2.039, admissible, passes 1, sigma 0.000
+drive 1, handReach 0.1 m, window 10 ms: ratio 1.309, first pass 1.403, admissible, passes 3, sigma 0.487
+drive 1, handReach 0.1 m, window 20 ms: ratio 3.014, first pass 1.362, unpractised (impact-off-face), passes 3, sigma none
+drive 1, handReach 0.1 m, window 40 ms: ratio 1.331, first pass 1.230, unpractised (impact-off-face), passes 3, sigma none
+drive 1, handReach 0.2 m, window 10 ms: ratio 2.185, first pass 2.185, admissible, passes 1, sigma 0.000
+drive 1, handReach 0.2 m, window 20 ms: ratio 1.921, first pass 1.921, admissible, passes 1, sigma 0.000
+drive 1, handReach 0.2 m, window 40 ms: ratio 1.768, first pass 1.768, admissible, passes 1, sigma 0.000
+drive 1, handReach 0.3 m, window 10 ms: ratio 2.204, first pass 2.204, admissible, passes 1, sigma 0.000
+drive 1, handReach 0.3 m, window 20 ms: ratio 1.938, first pass 1.938, admissible, passes 1, sigma 0.000
+drive 1, handReach 0.3 m, window 40 ms: ratio 1.791, first pass 1.791, admissible, passes 1, sigma 0.000
+full-roll tally: 46 of 60 points admissible
+  bound, admissible neighbours, practised: 0.927 over 85 pairs
+  bound, the same neighbours, first pass: 1.002 over 85 pairs
+  bound, every played point, practised: 1.971 over 133 pairs
+  0.927 along handReach, 0.2 to 0.3, at drive 0.5, handReach 0.2 m, window 20 ms; first pass 0.744
+  0.876 along handReach, 0.1 to 0.2, at drive 1, handReach 0.1 m, window 10 ms; first pass 0.782
+  0.870 along handReach, 0.2 to 0.3, at drive 0.5, handReach 0.2 m, window 10 ms; first pass 0.673
+  0.866 along drive, 0.5 to 1, at drive 0.5, handReach 0.2 m, window 10 ms; first pass 0.668
+  0.850 along handReach, 0.2 to 0.3, at drive 0, handReach 0.2 m, window 20 ms; first pass 0.524
+  not within the 0.1 read-out bin (B-d7)
+
+pass-roll, power 0.8947, lean and feet at the text book's, 10 s lawn:
+drive -1, handReach 0 m, window 10 ms: ratio 2.033, first pass 2.033, superhuman (follow-grip-limit), passes 1, sigma none
+drive -1, handReach 0 m, window 20 ms: ratio 2.030, first pass 2.030, superhuman (follow-grip-limit), passes 1, sigma none
+drive -1, handReach 0 m, window 40 ms: ratio 2.017, first pass 2.017, superhuman (follow-grip-limit), passes 1, sigma none
+drive -1, handReach 0.1 m, window 10 ms: ratio 1.358, first pass 0.975, admissible, passes 2, sigma 0.481
+drive -1, handReach 0.1 m, window 20 ms: ratio 1.290, first pass 1.290, admissible, passes 1, sigma 0.119
+drive -1, handReach 0.1 m, window 40 ms: ratio 1.331, first pass 1.331, admissible, passes 1, sigma 0.181
+drive -1, handReach 0.2 m, window 10 ms: ratio 1.063, first pass 1.927, admissible, passes 3, sigma 0.275
+drive -1, handReach 0.2 m, window 20 ms: ratio 1.320, first pass 1.320, admissible, passes 1, sigma 0.069
+drive -1, handReach 0.2 m, window 40 ms: ratio 1.539, first pass 1.539, admissible, passes 1, sigma 0.044
+drive -1, handReach 0.3 m, window 10 ms: ratio 0.880, first pass 1.813, admissible, passes 3, sigma 0.256
+drive -1, handReach 0.3 m, window 20 ms: ratio 1.107, first pass 1.771, admissible, passes 3, sigma 0.300
+drive -1, handReach 0.3 m, window 40 ms: ratio 0.968, first pass 1.569, admissible, passes 3, sigma 0.556
+drive -0.5, handReach 0 m, window 10 ms: ratio 2.033, first pass 2.033, superhuman (follow-grip-limit), passes 1, sigma none
+drive -0.5, handReach 0 m, window 20 ms: ratio 2.030, first pass 2.030, superhuman (follow-grip-limit), passes 1, sigma none
+drive -0.5, handReach 0 m, window 40 ms: ratio 2.017, first pass 2.017, superhuman (follow-grip-limit), passes 1, sigma none
+drive -0.5, handReach 0.1 m, window 10 ms: ratio 1.509, first pass 1.649, superhuman (follow-grip-limit), passes 3, sigma none
+drive -0.5, handReach 0.1 m, window 20 ms: ratio 0.895, first pass 1.545, superhuman (follow-grip-limit), passes 3, sigma none
+drive -0.5, handReach 0.1 m, window 40 ms: ratio 1.169, first pass 1.169, admissible, passes 1, sigma 0.237
+drive -0.5, handReach 0.2 m, window 10 ms: ratio 1.191, first pass 1.779, superhuman (follow-grip-limit), passes 3, sigma none
+drive -0.5, handReach 0.2 m, window 20 ms: ratio 1.053, first pass 1.677, admissible, passes 3, sigma 0.581
+drive -0.5, handReach 0.2 m, window 40 ms: ratio 1.163, first pass 1.163, admissible, passes 1, sigma 0.150
+drive -0.5, handReach 0.3 m, window 10 ms: ratio 1.916, first pass 1.916, admissible, passes 1, sigma 0.000
+drive -0.5, handReach 0.3 m, window 20 ms: ratio 2.056, first pass 2.056, admissible, passes 1, sigma 0.000
+drive -0.5, handReach 0.3 m, window 40 ms: ratio 1.004, first pass 1.283, admissible, passes 3, sigma 0.794
+drive 0, handReach 0 m, window 10 ms: ratio 2.032, first pass 2.032, admissible, passes 1, sigma 0.000
+drive 0, handReach 0 m, window 20 ms: ratio 2.030, first pass 2.030, admissible, passes 1, sigma 0.000
+drive 0, handReach 0 m, window 40 ms: ratio 2.017, first pass 2.017, admissible, passes 1, sigma 0.000
+drive 0, handReach 0.1 m, window 10 ms: ratio 1.069, first pass 1.464, superhuman (follow-grip-limit), passes 3, sigma none
+drive 0, handReach 0.1 m, window 20 ms: ratio 1.113, first pass 9.157, admissible, passes 3, sigma 0.456
+drive 0, handReach 0.1 m, window 40 ms: ratio 1.010, first pass 1.576, admissible, passes 3, sigma 0.406
+drive 0, handReach 0.2 m, window 10 ms: ratio 1.141, first pass 1.704, admissible, passes 3, sigma 0.300
+drive 0, handReach 0.2 m, window 20 ms: ratio 1.175, first pass 1.691, admissible, passes 3, sigma 0.294
+drive 0, handReach 0.2 m, window 40 ms: ratio 0.958, first pass 1.508, admissible, passes 3, sigma 0.325
+drive 0, handReach 0.3 m, window 10 ms: ratio 2.096, first pass 2.096, admissible, passes 1, sigma 0.000
+drive 0, handReach 0.3 m, window 20 ms: ratio 2.127, first pass 2.127, admissible, passes 1, sigma 0.000
+drive 0, handReach 0.3 m, window 40 ms: ratio 0.758, first pass 1.371, admissible, passes 2, sigma 0.331
+drive 0.5, handReach 0 m, window 10 ms: ratio 2.108, first pass 2.108, admissible, passes 1, sigma 0.000
+drive 0.5, handReach 0 m, window 20 ms: ratio 2.075, first pass 2.075, admissible, passes 1, sigma 0.000
+drive 0.5, handReach 0 m, window 40 ms: ratio 2.036, first pass 2.036, admissible, passes 1, sigma 0.000
+drive 0.5, handReach 0.1 m, window 10 ms: ratio 0.965, first pass 1.510, superhuman (follow-grip-limit), passes 3, sigma none
+drive 0.5, handReach 0.1 m, window 20 ms: ratio 0.859, first pass 1.572, unpractised (follow-turf-yield), passes 3, sigma none
+drive 0.5, handReach 0.1 m, window 40 ms: ratio 0.986, first pass 1.423, admissible, passes 3, sigma 0.463
+drive 0.5, handReach 0.2 m, window 10 ms: ratio 0.839, first pass 1.580, admissible, passes 3, sigma 0.294
+drive 0.5, handReach 0.2 m, window 20 ms: ratio 0.595, first pass 1.533, admissible, passes 3, sigma 0.300
+drive 0.5, handReach 0.2 m, window 40 ms: ratio 0.879, first pass 1.312, admissible, passes 3, sigma 0.363
+drive 0.5, handReach 0.3 m, window 10 ms: ratio 2.200, first pass 2.200, admissible, passes 1, sigma 0.000
+drive 0.5, handReach 0.3 m, window 20 ms: ratio 2.237, first pass 2.237, admissible, passes 1, sigma 0.000
+drive 0.5, handReach 0.3 m, window 40 ms: ratio 0.760, first pass 1.182, admissible, passes 3, sigma 0.338
+drive 1, handReach 0 m, window 10 ms: ratio 2.182, first pass 2.182, admissible, passes 1, sigma 0.000
+drive 1, handReach 0 m, window 20 ms: ratio 2.151, first pass 2.151, admissible, passes 1, sigma 0.000
+drive 1, handReach 0 m, window 40 ms: ratio 2.071, first pass 2.071, admissible, passes 1, sigma 0.000
+drive 1, handReach 0.1 m, window 10 ms: ratio 0.879, first pass 1.475, admissible, passes 3, sigma 0.500
+drive 1, handReach 0.1 m, window 20 ms: ratio 0.886, first pass 1.424, unlawful (29.1.6.1), passes 3, sigma none
+drive 1, handReach 0.1 m, window 40 ms: ratio 0.792, first pass 1.260, superhuman (follow-grip-limit), passes 3, sigma none
+drive 1, handReach 0.2 m, window 10 ms: ratio 2.170, first pass 2.170, admissible, passes 1, sigma 0.000
+drive 1, handReach 0.2 m, window 20 ms: ratio 0.787, first pass 1.362, superhuman (follow-grip-limit), passes 3, sigma none
+drive 1, handReach 0.2 m, window 40 ms: ratio 0.852, first pass 1.185, admissible, passes 3, sigma 0.456
+drive 1, handReach 0.3 m, window 10 ms: ratio 2.195, first pass 2.195, admissible, passes 1, sigma 0.000
+drive 1, handReach 0.3 m, window 20 ms: ratio 1.909, first pass 1.909, admissible, passes 1, sigma 0.000
+drive 1, handReach 0.3 m, window 40 ms: ratio 1.738, first pass 1.738, admissible, passes 1, sigma 0.000
+pass-roll tally: 45 of 60 points admissible
+  bound, admissible neighbours, practised: 1.642 over 81 pairs
+  bound, the same neighbours, first pass: 7.582 over 81 pairs
+  bound, every played point, practised: 1.642 over 133 pairs
+  1.642 along handReach, 0.2 to 0.3, at drive 0.5, handReach 0.2 m, window 20 ms; first pass 0.704
+  1.476 along window, 0.02 to 0.04, at drive 0.5, handReach 0.3 m, window 20 ms; first pass 1.055
+  1.369 along window, 0.02 to 0.04, at drive 0, handReach 0.3 m, window 20 ms; first pass 0.756
+  1.361 along handReach, 0.2 to 0.3, at drive 0.5, handReach 0.2 m, window 10 ms; first pass 0.620
+  1.331 along drive, 0.5 to 1, at drive 0.5, handReach 0.2 m, window 10 ms; first pass 0.590
+  not within the 0.1 read-out bin (B-d7)
+
+The runs under B-d8, as printed by SECTION=jumpiness, TYPE=full-roll and TYPE=pass-roll, under nice -n 20:
+
+full-roll, power 0.8839, lean and feet at the text book's, 10 s lawn:
+drive -1, handReach 0 m, window 10 ms: ratio 2.052, first pass 2.052, superhuman (follow-grip-limit), passes 1, sigma none
+drive -1, handReach 0 m, window 20 ms: ratio 2.047, first pass 2.047, superhuman (follow-grip-limit), passes 1, sigma none
+drive -1, handReach 0 m, window 40 ms: ratio 2.040, first pass 2.040, superhuman (follow-grip-limit), passes 1, sigma none
+drive -1, handReach 0.1 m, window 10 ms: ratio 1.322, first pass 1.863, superhuman (follow-grip-limit), passes 3, sigma none
+drive -1, handReach 0.1 m, window 20 ms: ratio 1.277, first pass 1.750, admissible, passes 2, sigma 0.100
+drive -1, handReach 0.1 m, window 40 ms: ratio 1.053, first pass 1.053, admissible, passes 1, sigma 0.150
+drive -1, handReach 0.2 m, window 10 ms: ratio 1.384, first pass 1.836, admissible, passes 2, sigma 0.338
+drive -1, handReach 0.2 m, window 20 ms: ratio 1.246, first pass 1.707, admissible, passes 2, sigma 0.506
+drive -1, handReach 0.2 m, window 40 ms: ratio 1.315, first pass 1.315, admissible, passes 1, sigma 0.106
+drive -1, handReach 0.3 m, window 10 ms: ratio 1.094, first pass 1.682, admissible, passes 3, sigma 0.200
+drive -1, handReach 0.3 m, window 20 ms: ratio 1.484, first pass 1.656, admissible, passes 3, sigma 0.288
+drive -1, handReach 0.3 m, window 40 ms: ratio 1.117, first pass 1.513, admissible, passes 3, sigma 0.794
+drive -0.5, handReach 0 m, window 10 ms: ratio 2.052, first pass 2.052, superhuman (follow-grip-limit), passes 1, sigma none
+drive -0.5, handReach 0 m, window 20 ms: ratio 2.047, first pass 2.047, superhuman (follow-grip-limit), passes 1, sigma none
+drive -0.5, handReach 0 m, window 40 ms: ratio 2.040, first pass 2.040, superhuman (follow-grip-limit), passes 1, sigma none
+drive -0.5, handReach 0.1 m, window 10 ms: ratio 1.439, first pass 1.701, superhuman (follow-grip-limit), passes 3, sigma none
+drive -0.5, handReach 0.1 m, window 20 ms: ratio 1.016, first pass 1.016, admissible, passes 1, sigma 0.781
+drive -0.5, handReach 0.1 m, window 40 ms: ratio 1.095, first pass 1.095, admissible, passes 1, sigma 0.188
+drive -0.5, handReach 0.2 m, window 10 ms: ratio 1.320, first pass 1.638, superhuman (follow-grip-limit), passes 2, sigma none
+drive -0.5, handReach 0.2 m, window 20 ms: ratio 1.203, first pass 1.583, superhuman (follow-grip-limit), passes 2, sigma none
+drive -0.5, handReach 0.2 m, window 40 ms: ratio 1.130, first pass 1.130, admissible, passes 1, sigma 0.150
+drive -0.5, handReach 0.3 m, window 10 ms: ratio 1.392, first pass 1.501, admissible, passes 3, sigma 0.269
+drive -0.5, handReach 0.3 m, window 20 ms: ratio 1.378, first pass 1.482, admissible, passes 3, sigma 0.406
+drive -0.5, handReach 0.3 m, window 40 ms: ratio 1.278, first pass 1.178, unpractised (impact-head-deep), passes 3, sigma none
+drive 0, handReach 0 m, window 10 ms: ratio 2.052, first pass 2.052, admissible, passes 1, sigma 0.000
+drive 0, handReach 0 m, window 20 ms: ratio 2.047, first pass 2.047, admissible, passes 1, sigma 0.000
+drive 0, handReach 0 m, window 40 ms: ratio 2.040, first pass 2.040, admissible, passes 1, sigma 0.000
+drive 0, handReach 0.1 m, window 10 ms: ratio 1.253, first pass 1.522, admissible, passes 3, sigma 0.331
+drive 0, handReach 0.1 m, window 20 ms: ratio 1.229, first pass 1.500, admissible, passes 3, sigma 0.325
+drive 0, handReach 0.1 m, window 40 ms: ratio 1.312, first pass 1.536, admissible, passes 3, sigma 0.369
+drive 0, handReach 0.2 m, window 10 ms: ratio 1.369, first pass 1.598, admissible, passes 3, sigma 0.237
+drive 0, handReach 0.2 m, window 20 ms: ratio 1.264, first pass 1.590, admissible, passes 3, sigma 0.331
+drive 0, handReach 0.2 m, window 40 ms: ratio 1.247, first pass 1.439, admissible, passes 3, sigma 0.306
+drive 0, handReach 0.3 m, window 10 ms: ratio 1.615, first pass 1.431, admissible, passes 3, sigma 0.281
+drive 0, handReach 0.3 m, window 20 ms: ratio 1.599, first pass 1.430, admissible, passes 3, sigma 0.275
+drive 0, handReach 0.3 m, window 40 ms: ratio 1.649, first pass 1.354, admissible, passes 3, sigma 0.263
+drive 0.5, handReach 0 m, window 10 ms: ratio 2.105, first pass 2.105, admissible, passes 1, sigma 0.000
+drive 0.5, handReach 0 m, window 20 ms: ratio 2.047, first pass 2.047, admissible, passes 1, sigma 0.000
+drive 0.5, handReach 0 m, window 40 ms: ratio 2.039, first pass 2.039, admissible, passes 1, sigma 0.000
+drive 0.5, handReach 0.1 m, window 10 ms: ratio 1.318, first pass 1.458, admissible, passes 3, sigma 0.375
+drive 0.5, handReach 0.1 m, window 20 ms: ratio 1.043, first pass 1.489, unpractised (follow-turf-yield), passes 3, sigma none
+drive 0.5, handReach 0.1 m, window 40 ms: ratio 1.320, first pass 1.390, admissible, passes 3, sigma 0.575
+drive 0.5, handReach 0.2 m, window 10 ms: ratio 1.320, first pass 1.517, admissible, passes 3, sigma 0.406
+drive 0.5, handReach 0.2 m, window 20 ms: ratio 1.273, first pass 1.455, admissible, passes 3, sigma 0.300
+drive 0.5, handReach 0.2 m, window 40 ms: ratio 1.275, first pass 1.241, admissible, passes 3, sigma 0.250
+drive 0.5, handReach 0.3 m, window 10 ms: ratio 1.376, first pass 1.347, admissible, passes 3, sigma 0.325
+drive 0.5, handReach 0.3 m, window 20 ms: ratio 1.536, first pass 1.309, admissible, passes 3, sigma 0.319
+drive 0.5, handReach 0.3 m, window 40 ms: ratio 1.370, first pass 1.198, admissible, passes 3, sigma 0.306
+drive 1, handReach 0 m, window 10 ms: ratio 2.139, first pass 2.139, admissible, passes 1, sigma 0.000
+drive 1, handReach 0 m, window 20 ms: ratio 2.132, first pass 2.132, admissible, passes 1, sigma 0.000
+drive 1, handReach 0 m, window 40 ms: ratio 2.039, first pass 2.039, admissible, passes 1, sigma 0.000
+drive 1, handReach 0.1 m, window 10 ms: ratio 1.309, first pass 1.403, admissible, passes 3, sigma 0.487
+drive 1, handReach 0.1 m, window 20 ms: ratio 3.014, first pass 1.362, unpractised (impact-off-face), passes 3, sigma none
+drive 1, handReach 0.1 m, window 40 ms: ratio 1.331, first pass 1.230, unpractised (impact-off-face), passes 3, sigma none
+drive 1, handReach 0.2 m, window 10 ms: ratio 1.381, first pass 1.369, admissible, passes 3, sigma 0.363
+drive 1, handReach 0.2 m, window 20 ms: ratio 1.159, first pass 1.311, admissible, passes 3, sigma 0.306
+drive 1, handReach 0.2 m, window 40 ms: ratio 1.307, first pass 1.236, admissible, passes 3, sigma 0.319
+drive 1, handReach 0.3 m, window 10 ms: ratio 1.536, first pass 1.249, admissible, passes 3, sigma 0.356
+drive 1, handReach 0.3 m, window 20 ms: ratio 1.483, first pass 1.186, admissible, passes 3, sigma 0.338
+drive 1, handReach 0.3 m, window 40 ms: ratio 1.442, first pass 1.137, admissible, passes 3, sigma 0.325
+full-roll tally: 46 of 60 points admissible
+  bound, admissible neighbours, practised: 0.830 over 85 pairs
+  bound, the same neighbours, first pass: 0.736 over 85 pairs
+  bound, every played point, practised: 1.971 over 133 pairs
+  bound, admissible pushes alone, practised: 0.402 over 67 pairs
+  0.402 along handReach, 0.2 to 0.3, at drive 0, handReach 0.2 m, window 40 ms; first pass 0.085
+  0.390 along window, 0.01 to 0.02, at drive -1, handReach 0.3 m, window 10 ms; first pass 0.026
+  0.367 along window, 0.02 to 0.04, at drive -1, handReach 0.3 m, window 20 ms; first pass 0.143
+  0.335 along handReach, 0.2 to 0.3, at drive 0, handReach 0.2 m, window 20 ms; first pass 0.160
+  0.324 along handReach, 0.2 to 0.3, at drive 1, handReach 0.2 m, window 20 ms; first pass 0.126
+  not within the 0.1 read-out bin (B-d7)
+
+pass-roll, power 0.8947, lean and feet at the text book's, 10 s lawn:
+drive -1, handReach 0 m, window 10 ms: ratio 2.033, first pass 2.033, superhuman (follow-grip-limit), passes 1, sigma none
+drive -1, handReach 0 m, window 20 ms: ratio 2.030, first pass 2.030, superhuman (follow-grip-limit), passes 1, sigma none
+drive -1, handReach 0 m, window 40 ms: ratio 2.017, first pass 2.017, superhuman (follow-grip-limit), passes 1, sigma none
+drive -1, handReach 0.1 m, window 10 ms: ratio 1.358, first pass 0.975, admissible, passes 2, sigma 0.481
+drive -1, handReach 0.1 m, window 20 ms: ratio 1.290, first pass 1.290, admissible, passes 1, sigma 0.119
+drive -1, handReach 0.1 m, window 40 ms: ratio 1.331, first pass 1.331, admissible, passes 1, sigma 0.181
+drive -1, handReach 0.2 m, window 10 ms: ratio 1.063, first pass 1.927, admissible, passes 3, sigma 0.275
+drive -1, handReach 0.2 m, window 20 ms: ratio 1.320, first pass 1.320, admissible, passes 1, sigma 0.069
+drive -1, handReach 0.2 m, window 40 ms: ratio 1.539, first pass 1.539, admissible, passes 1, sigma 0.044
+drive -1, handReach 0.3 m, window 10 ms: ratio 0.880, first pass 1.813, admissible, passes 3, sigma 0.256
+drive -1, handReach 0.3 m, window 20 ms: ratio 1.107, first pass 1.771, admissible, passes 3, sigma 0.300
+drive -1, handReach 0.3 m, window 40 ms: ratio 0.968, first pass 1.569, admissible, passes 3, sigma 0.556
+drive -0.5, handReach 0 m, window 10 ms: ratio 2.033, first pass 2.033, superhuman (follow-grip-limit), passes 1, sigma none
+drive -0.5, handReach 0 m, window 20 ms: ratio 2.030, first pass 2.030, superhuman (follow-grip-limit), passes 1, sigma none
+drive -0.5, handReach 0 m, window 40 ms: ratio 2.017, first pass 2.017, superhuman (follow-grip-limit), passes 1, sigma none
+drive -0.5, handReach 0.1 m, window 10 ms: ratio 1.509, first pass 1.649, superhuman (follow-grip-limit), passes 3, sigma none
+drive -0.5, handReach 0.1 m, window 20 ms: ratio 0.895, first pass 1.545, superhuman (follow-grip-limit), passes 3, sigma none
+drive -0.5, handReach 0.1 m, window 40 ms: ratio 1.169, first pass 1.169, admissible, passes 1, sigma 0.237
+drive -0.5, handReach 0.2 m, window 10 ms: ratio 1.191, first pass 1.779, superhuman (follow-grip-limit), passes 3, sigma none
+drive -0.5, handReach 0.2 m, window 20 ms: ratio 1.053, first pass 1.677, admissible, passes 3, sigma 0.581
+drive -0.5, handReach 0.2 m, window 40 ms: ratio 1.163, first pass 1.163, admissible, passes 1, sigma 0.150
+drive -0.5, handReach 0.3 m, window 10 ms: ratio 1.199, first pass 1.614, superhuman (follow-grip-limit), passes 2, sigma none
+drive -0.5, handReach 0.3 m, window 20 ms: ratio 0.781, first pass 1.584, admissible, passes 3, sigma 0.725
+drive -0.5, handReach 0.3 m, window 40 ms: ratio 1.004, first pass 1.283, admissible, passes 3, sigma 0.794
+drive 0, handReach 0 m, window 10 ms: ratio 2.032, first pass 2.032, admissible, passes 1, sigma 0.000
+drive 0, handReach 0 m, window 20 ms: ratio 2.030, first pass 2.030, admissible, passes 1, sigma 0.000
+drive 0, handReach 0 m, window 40 ms: ratio 2.017, first pass 2.017, admissible, passes 1, sigma 0.000
+drive 0, handReach 0.1 m, window 10 ms: ratio 1.069, first pass 1.464, superhuman (follow-grip-limit), passes 3, sigma none
+drive 0, handReach 0.1 m, window 20 ms: ratio 1.113, first pass 9.157, admissible, passes 3, sigma 0.456
+drive 0, handReach 0.1 m, window 40 ms: ratio 1.010, first pass 1.576, admissible, passes 3, sigma 0.406
+drive 0, handReach 0.2 m, window 10 ms: ratio 1.141, first pass 1.704, admissible, passes 3, sigma 0.300
+drive 0, handReach 0.2 m, window 20 ms: ratio 1.175, first pass 1.691, admissible, passes 3, sigma 0.294
+drive 0, handReach 0.2 m, window 40 ms: ratio 0.958, first pass 1.508, admissible, passes 3, sigma 0.325
+drive 0, handReach 0.3 m, window 10 ms: ratio 0.920, first pass 1.546, superhuman (follow-grip-limit), passes 3, sigma none
+drive 0, handReach 0.3 m, window 20 ms: ratio 0.899, first pass 1.566, superhuman (follow-grip-limit), passes 3, sigma none
+drive 0, handReach 0.3 m, window 40 ms: ratio 0.758, first pass 1.371, admissible, passes 2, sigma 0.331
+drive 0.5, handReach 0 m, window 10 ms: ratio 2.108, first pass 2.108, admissible, passes 1, sigma 0.000
+drive 0.5, handReach 0 m, window 20 ms: ratio 2.075, first pass 2.075, admissible, passes 1, sigma 0.000
+drive 0.5, handReach 0 m, window 40 ms: ratio 2.036, first pass 2.036, admissible, passes 1, sigma 0.000
+drive 0.5, handReach 0.1 m, window 10 ms: ratio 0.965, first pass 1.510, superhuman (follow-grip-limit), passes 3, sigma none
+drive 0.5, handReach 0.1 m, window 20 ms: ratio 0.859, first pass 1.572, unpractised (follow-turf-yield), passes 3, sigma none
+drive 0.5, handReach 0.1 m, window 40 ms: ratio 0.986, first pass 1.423, admissible, passes 3, sigma 0.463
+drive 0.5, handReach 0.2 m, window 10 ms: ratio 0.839, first pass 1.580, admissible, passes 3, sigma 0.294
+drive 0.5, handReach 0.2 m, window 20 ms: ratio 0.595, first pass 1.533, admissible, passes 3, sigma 0.300
+drive 0.5, handReach 0.2 m, window 40 ms: ratio 0.879, first pass 1.312, admissible, passes 3, sigma 0.363
+drive 0.5, handReach 0.3 m, window 10 ms: ratio 0.874, first pass 1.504, superhuman (follow-grip-limit), passes 3, sigma none
+drive 0.5, handReach 0.3 m, window 20 ms: ratio 0.830, first pass 1.430, superhuman (follow-grip-limit), passes 3, sigma none
+drive 0.5, handReach 0.3 m, window 40 ms: ratio 0.760, first pass 1.182, admissible, passes 3, sigma 0.338
+drive 1, handReach 0 m, window 10 ms: ratio 2.182, first pass 2.182, admissible, passes 1, sigma 0.000
+drive 1, handReach 0 m, window 20 ms: ratio 2.151, first pass 2.151, admissible, passes 1, sigma 0.000
+drive 1, handReach 0 m, window 40 ms: ratio 2.071, first pass 2.071, admissible, passes 1, sigma 0.000
+drive 1, handReach 0.1 m, window 10 ms: ratio 0.879, first pass 1.475, admissible, passes 3, sigma 0.500
+drive 1, handReach 0.1 m, window 20 ms: ratio 0.886, first pass 1.424, unlawful (29.1.6.1), passes 3, sigma none
+drive 1, handReach 0.1 m, window 40 ms: ratio 0.792, first pass 1.260, superhuman (follow-grip-limit), passes 3, sigma none
+drive 1, handReach 0.2 m, window 10 ms: ratio 0.823, first pass 1.452, superhuman (follow-grip-limit), passes 3, sigma none
+drive 1, handReach 0.2 m, window 20 ms: ratio 0.787, first pass 1.362, superhuman (follow-grip-limit), passes 3, sigma none
+drive 1, handReach 0.2 m, window 40 ms: ratio 0.852, first pass 1.185, admissible, passes 3, sigma 0.456
+drive 1, handReach 0.3 m, window 10 ms: ratio 0.779, first pass 1.339, superhuman (follow-grip-limit), passes 3, sigma none
+drive 1, handReach 0.3 m, window 20 ms: ratio 0.936, first pass 1.234, superhuman (follow-grip-limit), passes 3, sigma none
+drive 1, handReach 0.3 m, window 40 ms: ratio 0.745, first pass 1.070, admissible, passes 3, sigma 0.400
+pass-roll tally: 37 of 60 points admissible
+  bound, admissible neighbours, practised: 1.303 over 60 pairs
+  bound, the same neighbours, first pass: 7.582 over 60 pairs
+  bound, every played point, practised: 1.303 over 133 pairs
+  bound, admissible pushes alone, practised: 0.579 over 44 pairs
+  0.579 along drive, 0 to 0.5, at drive 0, handReach 0.2 m, window 20 ms; first pass 0.159
+  0.572 along handReach, 0.2 to 0.3, at drive -1, handReach 0.2 m, window 40 ms; first pass 0.030
+  0.377 along drive, -1 to -0.5, at drive -1, handReach 0.2 m, window 40 ms; first pass 0.377
+  0.326 along drive, -1 to -0.5, at drive -1, handReach 0.3 m, window 20 ms; first pass 0.186
+  0.302 along drive, 0 to 0.5, at drive 0, handReach 0.2 m, window 10 ms; first pass 0.123
+  not within the 0.1 read-out bin (B-d7)
+
+== Task B5: timing on the hosted runners, and the map's job counts
+
+Two dispatches on cbc8bb5 (the tsx pin that followed changes no play):
+
+Run 41930238300, half-roll, stage 1, 10 s lawn, one plan, the other three shards empty: 73.31 s per plan, 6.109 s per
+sample, against 30.7 s and 2.558 s locally, so a runner plays about 2.4 times slower. Merge read it: swept 1, missing 0.
+
+Run 41930242612, every type, stage 2, all lawns, shards=480 only=0: one job per type, four shards contending on four
+vCPUs, 44 plans a type (four neighbouring indices at each of 11 stations through the grid), no engine errors:
+
+              plans   seconds a plan              CPU h   jobs   plans a   mean shard   chance a shard
+                      mean  median     max                       shard     (min)        overruns
+drive          1260    104      13     601       37      8        40         70         0
+stop-ac        1260    497      14    4804      174     32        10         83         0.0019
+half-roll      1260    373     138    4241      131     24        14         87         0.0006
+full-roll      5040    633     134    3048      886    131        10        106         0.0001
+pass-roll     10620    702     385    3692     2070    256        11        129         0.0006
+single-ball    1260     85      15     399       30      8        40         56         0
+Total         20700                            3327    459
+
+A plan's cost is heavy-tailed and neighbouring plans are slow together (stop-ac's 580 to 583 took 3252 to 4804 s), so
+the job counts come from the overrun, not the mean. The chance is a resampling: a shard's plans drawn from the type's 44
+times, 20000 draws, against the step's 335 minutes. It rests on 11 stations, so it is a guide, not a bound.
+
+Stage 2: no cut. All of it takes 3327 CPU h, 832 job hours, about 42 h at 20 jobs at once, plus about a minute's set-up
+per job. The sample's spread makes that a rough figure.
+
+The job counts above need one dispatch per type, each with its count as `shards`. One dispatch of all six cannot do it:
+its 256 jobs, shared by plans, give the pass roll 131, and a shard then overruns with a chance of 0.116.
+
+Stage 1: `types=all stage=1 shards=6`, one job per type, three plans each.
+
+Carried:
+- Expected overruns over the 1836 shards: about one. A job over the limit still uploads what it wrote, and merge names
+  the missing plans. Playing the job again would overrun again, as it starts empty, so such a job finishes locally:
+  SECTION=run resumes from its downloaded file, and merge then runs locally on the whole set.
+- GitHub's limits page gives a 24 h queue limit for self-hosted runners and none for hosted ones. The pass roll alone
+  has about 26 h of work at 20 at once, so its last jobs queue that long. Not tested: check at 24 h that none is cancelled.
+- The map holds all 20 of the account's job slots, so other CI waits behind it while it runs.
+
+== The bound again on the search preferring a hold that doesn't slip (plan B-d11, design A8 item 5), commit 524b363 ==
+Pushes alone: full roll 1.244 (was 0.402), pass roll 0.579 (unchanged), the read-out bin 0.6.
+
+The full roll's three largest gaps (1.244, 1.171, 1.064) are one point's three pushed neighbours: drive -1,
+handReach 0.1 m, window 10 ms, practised ratio 2.448 at sigma 0.00625. Every other gap is 0.402 or less. Its
+holds, from a scratch script, deleted after (first-pass ratio; a slip is after the balls have gone):
+
+  sigma 0        unlawful (29.1.6.1), slips, first pass 2.304
+  sigma 0.00625  admissible, slips, first pass 1.734  <- kept
+  sigma 0.0125   admissible, slips, first pass 1.827
+  sigma 0.025    admissible, slips, first pass 1.744
+  sigma 0.05     admissible, slips, first pass 1.328
+  sigma 0.075    admissible, slips, first pass 1.176
+  sigma 0.1      admissible, slips, first pass 1.528
+  sigma 0.15     admissible, holds, first pass 10.325  (between grid points, so not played by the search)
+  sigma 0.2      unpractised (impact-off-face), slips, first pass 1.561
+  sigma 0.3      admissible, slips, first pass 1.432
+  sigma 0.5      admissible, slips, first pass 1.936
+
+Cause: no grid hold both plays and holds, so the search falls back to the least hold that plays, almost no grip
+at all. Neither slipping nor playing rises steadily with sigma here, so the 0.1 grid can miss a hold that holds.
+Not measured: how many of the map's samples take this fallback, and which of them are this far from their
+neighbours. Stage 1 reads at the text book alone.
+
+== jumpiness. Plan B-d7, design A7 item 9: the ratio's largest difference between neighbouring drive, handReach and window grid points, at the text book's canonical power, played with the map's found hold and practice, and as the first pass alone at the same hold ==
+
+full-roll, power 0.8839, lean and feet at the text book's, 10 s lawn:
+drive -1, handReach 0 m, window 10 ms: ratio 2.052, first pass 2.052, turf (follow-turf-yield), passes 1, sigma none
+drive -1, handReach 0 m, window 20 ms: ratio 2.047, first pass 2.047, turf (follow-turf-yield), passes 1, sigma none
+drive -1, handReach 0 m, window 40 ms: ratio 2.040, first pass 2.040, turf (follow-turf-yield), passes 1, sigma none
+drive -1, handReach 0.1 m, window 10 ms: ratio 2.448, first pass 1.734, admissible, passes 2, sigma 0.006
+drive -1, handReach 0.1 m, window 20 ms: ratio 1.277, first pass 1.750, admissible, passes 2, sigma 0.100
+drive -1, handReach 0.1 m, window 40 ms: ratio 1.053, first pass 1.053, admissible, passes 1, sigma 0.150
+drive -1, handReach 0.2 m, window 10 ms: ratio 1.384, first pass 1.836, admissible, passes 2, sigma 0.338
+drive -1, handReach 0.2 m, window 20 ms: ratio 1.246, first pass 1.707, admissible, passes 2, sigma 0.506
+drive -1, handReach 0.2 m, window 40 ms: ratio 1.315, first pass 1.315, admissible, passes 1, sigma 0.106
+drive -1, handReach 0.3 m, window 10 ms: ratio 1.094, first pass 1.682, admissible, passes 3, sigma 0.200
+drive -1, handReach 0.3 m, window 20 ms: ratio 1.484, first pass 1.656, admissible, passes 3, sigma 0.288
+drive -1, handReach 0.3 m, window 40 ms: ratio 1.117, first pass 1.513, admissible, passes 3, sigma 0.794
+drive -0.5, handReach 0 m, window 10 ms: ratio 2.052, first pass 2.052, turf (follow-turf-yield), passes 1, sigma none
+drive -0.5, handReach 0 m, window 20 ms: ratio 2.047, first pass 2.047, turf (follow-turf-yield), passes 1, sigma none
+drive -0.5, handReach 0 m, window 40 ms: ratio 2.040, first pass 2.040, turf (follow-turf-yield), passes 1, sigma none
+drive -0.5, handReach 0.1 m, window 10 ms: ratio 1.204, first pass 1.700, admissible, passes 3, sigma 0.463
+drive -0.5, handReach 0.1 m, window 20 ms: ratio 1.016, first pass 1.016, admissible, passes 1, sigma 0.781
+drive -0.5, handReach 0.1 m, window 40 ms: ratio 1.095, first pass 1.095, admissible, passes 1, sigma 0.188
+drive -0.5, handReach 0.2 m, window 10 ms: ratio 1.350, first pass 1.623, admissible, passes 3, sigma 0.381
+drive -0.5, handReach 0.2 m, window 20 ms: ratio 1.272, first pass 1.583, admissible, passes 3, sigma 0.469
+drive -0.5, handReach 0.2 m, window 40 ms: ratio 1.130, first pass 1.130, admissible, passes 1, sigma 0.150
+drive -0.5, handReach 0.3 m, window 10 ms: ratio 1.392, first pass 1.501, admissible, passes 3, sigma 0.269
+drive -0.5, handReach 0.3 m, window 20 ms: ratio 1.378, first pass 1.482, admissible, passes 3, sigma 0.406
+drive -0.5, handReach 0.3 m, window 40 ms: ratio 1.278, first pass 1.178, unpractised (impact-head-deep), passes 3, sigma none
+drive 0, handReach 0 m, window 10 ms: ratio 2.052, first pass 2.052, admissible, passes 1, sigma 0.000
+drive 0, handReach 0 m, window 20 ms: ratio 2.047, first pass 2.047, admissible, passes 1, sigma 0.000
+drive 0, handReach 0 m, window 40 ms: ratio 2.040, first pass 2.040, admissible, passes 1, sigma 0.000
+drive 0, handReach 0.1 m, window 10 ms: ratio 1.253, first pass 1.522, admissible, passes 3, sigma 0.331
+drive 0, handReach 0.1 m, window 20 ms: ratio 1.229, first pass 1.500, admissible, passes 3, sigma 0.325
+drive 0, handReach 0.1 m, window 40 ms: ratio 1.312, first pass 1.536, admissible, passes 3, sigma 0.369
+drive 0, handReach 0.2 m, window 10 ms: ratio 1.369, first pass 1.598, admissible, passes 3, sigma 0.237
+drive 0, handReach 0.2 m, window 20 ms: ratio 1.264, first pass 1.590, admissible, passes 3, sigma 0.331
+drive 0, handReach 0.2 m, window 40 ms: ratio 1.247, first pass 1.439, admissible, passes 3, sigma 0.306
+drive 0, handReach 0.3 m, window 10 ms: ratio 1.615, first pass 1.431, admissible, passes 3, sigma 0.281
+drive 0, handReach 0.3 m, window 20 ms: ratio 1.599, first pass 1.430, admissible, passes 3, sigma 0.275
+drive 0, handReach 0.3 m, window 40 ms: ratio 1.649, first pass 1.354, admissible, passes 3, sigma 0.263
+drive 0.5, handReach 0 m, window 10 ms: ratio 2.105, first pass 2.105, admissible, passes 1, sigma 0.000
+drive 0.5, handReach 0 m, window 20 ms: ratio 2.047, first pass 2.047, admissible, passes 1, sigma 0.000
+drive 0.5, handReach 0 m, window 40 ms: ratio 2.039, first pass 2.039, admissible, passes 1, sigma 0.000
+drive 0.5, handReach 0.1 m, window 10 ms: ratio 1.318, first pass 1.458, admissible, passes 3, sigma 0.375
+drive 0.5, handReach 0.1 m, window 20 ms: ratio 1.043, first pass 1.489, unpractised (follow-turf-yield), passes 3, sigma none
+drive 0.5, handReach 0.1 m, window 40 ms: ratio 1.320, first pass 1.390, admissible, passes 3, sigma 0.575
+drive 0.5, handReach 0.2 m, window 10 ms: ratio 1.320, first pass 1.517, admissible, passes 3, sigma 0.406
+drive 0.5, handReach 0.2 m, window 20 ms: ratio 1.273, first pass 1.455, admissible, passes 3, sigma 0.300
+drive 0.5, handReach 0.2 m, window 40 ms: ratio 1.275, first pass 1.241, admissible, passes 3, sigma 0.250
+drive 0.5, handReach 0.3 m, window 10 ms: ratio 1.376, first pass 1.347, admissible, passes 3, sigma 0.325
+drive 0.5, handReach 0.3 m, window 20 ms: ratio 1.536, first pass 1.309, admissible, passes 3, sigma 0.319
+drive 0.5, handReach 0.3 m, window 40 ms: ratio 1.370, first pass 1.198, admissible, passes 3, sigma 0.306
+drive 1, handReach 0 m, window 10 ms: ratio 2.139, first pass 2.139, admissible, passes 1, sigma 0.000
+drive 1, handReach 0 m, window 20 ms: ratio 2.132, first pass 2.132, admissible, passes 1, sigma 0.000
+drive 1, handReach 0 m, window 40 ms: ratio 2.039, first pass 2.039, admissible, passes 1, sigma 0.000
+drive 1, handReach 0.1 m, window 10 ms: ratio 1.309, first pass 1.403, admissible, passes 3, sigma 0.487
+drive 1, handReach 0.1 m, window 20 ms: ratio 3.014, first pass 1.362, unpractised (impact-off-face), passes 3, sigma none
+drive 1, handReach 0.1 m, window 40 ms: ratio 1.331, first pass 1.230, unpractised (impact-off-face), passes 3, sigma none
+drive 1, handReach 0.2 m, window 10 ms: ratio 1.381, first pass 1.369, admissible, passes 3, sigma 0.363
+drive 1, handReach 0.2 m, window 20 ms: ratio 1.159, first pass 1.311, admissible, passes 3, sigma 0.306
+drive 1, handReach 0.2 m, window 40 ms: ratio 1.307, first pass 1.236, admissible, passes 3, sigma 0.319
+drive 1, handReach 0.3 m, window 10 ms: ratio 1.536, first pass 1.249, admissible, passes 3, sigma 0.356
+drive 1, handReach 0.3 m, window 20 ms: ratio 1.483, first pass 1.186, admissible, passes 3, sigma 0.338
+drive 1, handReach 0.3 m, window 40 ms: ratio 1.442, first pass 1.137, admissible, passes 3, sigma 0.325
+full-roll tally: 50 of 60 points admissible
+  bound, admissible neighbours, practised: 1.244 over 100 pairs
+  bound, the same neighbours, first pass: 0.736 over 100 pairs
+  bound, every played point, practised: 1.971 over 133 pairs
+  bound, admissible pushes alone, practised: 1.244 over 82 pairs
+  1.244 along drive, -1 to -0.5, at drive -1, handReach 0.1 m, window 10 ms; first pass 0.034
+  1.171 along window, 0.01 to 0.02, at drive -1, handReach 0.1 m, window 10 ms; first pass 0.015
+  1.064 along handReach, 0.1 to 0.2, at drive -1, handReach 0.1 m, window 10 ms; first pass 0.102
+  0.402 along handReach, 0.2 to 0.3, at drive 0, handReach 0.2 m, window 40 ms; first pass 0.085
+  0.390 along window, 0.01 to 0.02, at drive -1, handReach 0.3 m, window 10 ms; first pass 0.026
+  not within the 0.1 read-out bin (B-d7)
+
+pass-roll, power 0.8947, lean and feet at the text book's, 10 s lawn:
+drive -1, handReach 0 m, window 10 ms: ratio 2.033, first pass 2.033, turf (follow-turf-yield), passes 1, sigma none
+drive -1, handReach 0 m, window 20 ms: ratio 2.030, first pass 2.030, turf (follow-turf-yield), passes 1, sigma none
+drive -1, handReach 0 m, window 40 ms: ratio 2.017, first pass 2.017, turf (follow-turf-yield), passes 1, sigma none
+drive -1, handReach 0.1 m, window 10 ms: ratio 1.358, first pass 0.975, admissible, passes 2, sigma 0.481
+drive -1, handReach 0.1 m, window 20 ms: ratio 1.290, first pass 1.290, admissible, passes 1, sigma 0.119
+drive -1, handReach 0.1 m, window 40 ms: ratio 1.331, first pass 1.331, admissible, passes 1, sigma 0.181
+drive -1, handReach 0.2 m, window 10 ms: ratio 1.063, first pass 1.927, admissible, passes 3, sigma 0.275
+drive -1, handReach 0.2 m, window 20 ms: ratio 1.320, first pass 1.320, admissible, passes 1, sigma 0.069
+drive -1, handReach 0.2 m, window 40 ms: ratio 1.539, first pass 1.539, admissible, passes 1, sigma 0.044
+drive -1, handReach 0.3 m, window 10 ms: ratio 0.880, first pass 1.813, admissible, passes 3, sigma 0.256
+drive -1, handReach 0.3 m, window 20 ms: ratio 1.107, first pass 1.771, admissible, passes 3, sigma 0.300
+drive -1, handReach 0.3 m, window 40 ms: ratio 0.968, first pass 1.569, admissible, passes 3, sigma 0.556
+drive -0.5, handReach 0 m, window 10 ms: ratio 2.033, first pass 2.033, turf (follow-turf-yield), passes 1, sigma none
+drive -0.5, handReach 0 m, window 20 ms: ratio 2.030, first pass 2.030, turf (follow-turf-yield), passes 1, sigma none
+drive -0.5, handReach 0 m, window 40 ms: ratio 2.017, first pass 2.017, turf (follow-turf-yield), passes 1, sigma none
+drive -0.5, handReach 0.1 m, window 10 ms: ratio 1.098, first pass 1.682, admissible, passes 3, sigma 0.450
+drive -0.5, handReach 0.1 m, window 20 ms: ratio 0.890, first pass 1.661, admissible, passes 3, sigma 0.594
+drive -0.5, handReach 0.1 m, window 40 ms: ratio 1.169, first pass 1.169, admissible, passes 1, sigma 0.237
+drive -0.5, handReach 0.2 m, window 10 ms: ratio 1.069, first pass 1.754, admissible, passes 3, sigma 0.431
+drive -0.5, handReach 0.2 m, window 20 ms: ratio 1.053, first pass 1.677, admissible, passes 3, sigma 0.581
+drive -0.5, handReach 0.2 m, window 40 ms: ratio 1.163, first pass 1.163, admissible, passes 1, sigma 0.150
+drive -0.5, handReach 0.3 m, window 10 ms: ratio 1.171, first pass 1.604, admissible, passes 3, sigma 0.300
+drive -0.5, handReach 0.3 m, window 20 ms: ratio 0.781, first pass 1.584, admissible, passes 3, sigma 0.725
+drive -0.5, handReach 0.3 m, window 40 ms: ratio 1.004, first pass 1.283, admissible, passes 3, sigma 0.794
+drive 0, handReach 0 m, window 10 ms: ratio 2.032, first pass 2.032, admissible, passes 1, sigma 0.000
+drive 0, handReach 0 m, window 20 ms: ratio 2.030, first pass 2.030, admissible, passes 1, sigma 0.000
+drive 0, handReach 0 m, window 40 ms: ratio 2.017, first pass 2.017, admissible, passes 1, sigma 0.000
+drive 0, handReach 0.1 m, window 10 ms: ratio 1.026, first pass 1.436, admissible, passes 3, sigma 0.338
+drive 0, handReach 0.1 m, window 20 ms: ratio 1.113, first pass 9.157, admissible, passes 3, sigma 0.456
+drive 0, handReach 0.1 m, window 40 ms: ratio 1.010, first pass 1.576, admissible, passes 3, sigma 0.406
+drive 0, handReach 0.2 m, window 10 ms: ratio 1.141, first pass 1.704, admissible, passes 3, sigma 0.300
+drive 0, handReach 0.2 m, window 20 ms: ratio 1.175, first pass 1.691, admissible, passes 3, sigma 0.294
+drive 0, handReach 0.2 m, window 40 ms: ratio 0.958, first pass 1.508, admissible, passes 3, sigma 0.325
+drive 0, handReach 0.3 m, window 10 ms: ratio 0.891, first pass 1.527, admissible, passes 3, sigma 0.325
+drive 0, handReach 0.3 m, window 20 ms: ratio 0.920, first pass 1.546, admissible, passes 3, sigma 0.306
+drive 0, handReach 0.3 m, window 40 ms: ratio 0.758, first pass 1.371, admissible, passes 2, sigma 0.331
+drive 0.5, handReach 0 m, window 10 ms: ratio 2.108, first pass 2.108, admissible, passes 1, sigma 0.000
+drive 0.5, handReach 0 m, window 20 ms: ratio 2.075, first pass 2.075, admissible, passes 1, sigma 0.000
+drive 0.5, handReach 0 m, window 40 ms: ratio 2.036, first pass 2.036, admissible, passes 1, sigma 0.000
+drive 0.5, handReach 0.1 m, window 10 ms: ratio 0.976, first pass 1.487, admissible, passes 3, sigma 0.394
+drive 0.5, handReach 0.1 m, window 20 ms: ratio 0.859, first pass 1.572, unpractised (follow-turf-yield), passes 3, sigma none
+drive 0.5, handReach 0.1 m, window 40 ms: ratio 0.986, first pass 1.423, admissible, passes 3, sigma 0.463
+drive 0.5, handReach 0.2 m, window 10 ms: ratio 0.839, first pass 1.580, admissible, passes 3, sigma 0.294
+drive 0.5, handReach 0.2 m, window 20 ms: ratio 0.595, first pass 1.533, admissible, passes 3, sigma 0.300
+drive 0.5, handReach 0.2 m, window 40 ms: ratio 0.879, first pass 1.312, admissible, passes 3, sigma 0.363
+drive 0.5, handReach 0.3 m, window 10 ms: ratio 0.787, first pass 1.472, admissible, passes 3, sigma 0.381
+drive 0.5, handReach 0.3 m, window 20 ms: ratio 0.696, first pass 1.390, admissible, passes 3, sigma 0.344
+drive 0.5, handReach 0.3 m, window 40 ms: ratio 0.760, first pass 1.182, admissible, passes 3, sigma 0.338
+drive 1, handReach 0 m, window 10 ms: ratio 2.182, first pass 2.182, admissible, passes 1, sigma 0.000
+drive 1, handReach 0 m, window 20 ms: ratio 2.151, first pass 2.151, admissible, passes 1, sigma 0.000
+drive 1, handReach 0 m, window 40 ms: ratio 2.071, first pass 2.071, admissible, passes 1, sigma 0.000
+drive 1, handReach 0.1 m, window 10 ms: ratio 0.879, first pass 1.475, admissible, passes 3, sigma 0.500
+drive 1, handReach 0.1 m, window 20 ms: ratio 0.886, first pass 1.424, unlawful (29.1.6.1), passes 3, sigma none
+drive 1, handReach 0.1 m, window 40 ms: ratio 0.792, first pass 1.260, unpractised (impact-off-face), passes 3, sigma none
+drive 1, handReach 0.2 m, window 10 ms: ratio 0.826, first pass 1.450, admissible, passes 3, sigma 0.506
+drive 1, handReach 0.2 m, window 20 ms: ratio 0.830, first pass 1.316, admissible, passes 3, sigma 0.431
+drive 1, handReach 0.2 m, window 40 ms: ratio 0.852, first pass 1.185, admissible, passes 3, sigma 0.456
+drive 1, handReach 0.3 m, window 10 ms: ratio 0.680, first pass 1.341, admissible, passes 3, sigma 0.444
+drive 1, handReach 0.3 m, window 20 ms: ratio 0.766, first pass 1.198, admissible, passes 3, sigma 0.438
+drive 1, handReach 0.3 m, window 40 ms: ratio 0.745, first pass 1.070, admissible, passes 3, sigma 0.400
+pass-roll tally: 51 of 60 points admissible
+  bound, admissible neighbours, practised: 1.303 over 104 pairs
+  bound, the same neighbours, first pass: 7.722 over 104 pairs
+  bound, every played point, practised: 1.303 over 133 pairs
+  bound, admissible pushes alone, practised: 0.579 over 86 pairs
+  0.579 along drive, 0 to 0.5, at drive 0, handReach 0.2 m, window 20 ms; first pass 0.159
+  0.572 along handReach, 0.2 to 0.3, at drive -1, handReach 0.2 m, window 40 ms; first pass 0.030
+  0.399 along drive, -1 to -0.5, at drive -1, handReach 0.1 m, window 20 ms; first pass 0.371
+  0.389 along window, 0.01 to 0.02, at drive -0.5, handReach 0.3 m, window 10 ms; first pass 0.020
+  0.377 along drive, -1 to -0.5, at drive -1, handReach 0.2 m, window 40 ms; first pass 0.377
+  not within the 0.1 read-out bin (B-d7)
+
+
+== The map re-timed on the search preferring a hold that doesn't slip (plan B-d10, B-d11), superseding Task B5's table
+
+Run 42080826493, commit 524b363, types=all stage=2 shards=480 only=0: both holds, 14 powers, 44 plans a type as in B5.
+The full roll's job hit the step's 335 minutes with 40 of its 44 plans written, so its mean is low, if anything. What
+it had written was uploaded. Run 42064098007, the same on the search taking the least hold that plays, slipping or not.
+
+              plans   seconds a plan              CPU h   least jobs with      plans a   chance a shard
+                      mean  median     max                overrun under 0.002  shard     overruns
+drive          1260    250      47    1207       87        8                   40        0
+stop-ac        1260    314      21    3153      110       16                   20        0.0007
+half-roll      1260    683     233    7669      239       96                    4        0.0005
+full-roll      5040   1452     146    7191     2033      512                    3        0.0018
+pass-roll     10620   1307     619    6772     3856      512 (0.0123)          6        0.0123
+single-ball    1260    113      34     495       39        4                   79        0
+Total         20700                            6365     1148
+
+Mean seconds a plan, B5 / least hold that plays / this search: drive 104/136/250, stop-ac 497/303/314, half-roll
+373/561/683, full-roll 633/1209/1452, pass-roll 702/988/1307, single-ball 85/81/113. CPU h: 3327 / 4987 / 6365. On the
+same plans this search costs 1.03 to 1.84 times the other, as a hold that plays but slips no longer ends the search.
+
+6365 CPU h is 1591 job hours, about 80 h at 20 jobs at once. No single plan is over the limit (the largest 2.1 h), but
+a type's slowest plans lie together, and 5 plans take 42% to 82% of a type's sampled time.
+
+One dispatch has at most 256 jobs. The full and pass rolls at 512 need two dispatches each, which the workflow cannot
+do: `only` plays one job number. At 512 jobs about 4 of the full roll's 2048 shards and 25 of the pass roll's would
+overrun, so they need a repeat that resumes from the uploaded file. Same resampling as B5, a guide and not a bound.

@@ -4,34 +4,42 @@
  * - lawn: plan decision 3, whether the impact depends on the lawn's speed: for each roll's canonical setup on the
  *   open lawn, the largest change in any handed-over ball's velocity between the 6 s and 14 s lawns' impacts and the
  *   10 s lawn's (impactLawnShift).
- * - run: plan decision 9, one shard of TYPE's grid (pushMapGrid.ts's gridFor and plansOf): the plans whose index is
- *   ≡ k mod N (SHARD=k/N), each played at the grid's powers on its lawns (playSample), appended to OUT as one JSON line
- *   per plan (shardLine) as it finishes. A sample the engine throws on is kept as its message at that power, and one
- *   outside the samples as the plan's; the shard goes on. OUT must be named `<TYPE>-<k>of<N>.jsonl`. Indices whose
- *   lines OUT already holds whole (doneIndices) are skipped, so a shard that died is re-run in place; a torn last line
- *   is ended first and its plan played again.
- * - merge: exactly the files `<TYPE>-<k>of<N>.jsonl` in IN merged (mergeLines), so no other run's file is read: the
- *   missing plan indices, the engine's errors (outside and inside the samples), the reads an engine error leaves out
- *   and the graded reads left unbanded for an unread neighbour are reported apart; each plan's reads at the grid's
- *   ranges and lawns (readsOf) are written to `<IN>/<TYPE>.reads.json`.
+ * - matrix: plan Task B5, the workflow's jobs (shardMatrix) for TYPES (comma-separated, or all), STAGE, SHARDS (jobs)
+ *   and ONLY (all, or the numbers and ranges of each type's jobs, parseJobs), printed and appended to GITHUB_OUTPUT when
+ *   set.
+ * - run: plan decision 9, one shard of TYPE's plans at STAGE (stagePlans; the text book alone, or by default the whole
+ *   grid) on LAWNS (by default the grid's): the plans whose index is ≡ k mod N (SHARD=k/N), each played at the grid's
+ *   powers on its lawns at the found hold and the fitted one (playBothHolds, design A8 item 3), appended to OUT as one
+ *   JSON line per plan (shardLine) as it finishes. A sample the engine throws on is kept as its message at that power
+ *   and hold, and one outside the samples as the plan's; the shard goes on. OUT must be named `<TYPE>-<k>of<N>.jsonl`. Indices whose lines OUT already holds whole (doneIndices) are
+ *   skipped, so a shard that died is re-run in place; a torn last line is ended first and its plan played again.
+ * - merge: exactly the files `<TYPE>-<k>of<N>.jsonl` in IN merged (mergeLines) at STAGE and LAWNS as run played them,
+ *   so no other run's file is read: the missing plan indices, the engine's errors (outside and inside the samples),
+ *   the reads an engine error leaves out and the graded reads left unbanded for an unread neighbour are reported
+ *   apart; each plan's reads at the grid's ranges and lawns (readsOf) are written to `<IN>/<TYPE>.reads.json`, and at
+ *   the fitted hold to `<IN>/<TYPE>.fitted.reads.json`, under the run's URL and commit (RecordHeader). A plan missing
+ *   fails the process, after the writes.
+ * - record: plan Task B7, every type's merged reads in IN banded and written to OUT as the committed record
+ *   (sectionRecord): both holds' rows and each label's least complex plan per range and lawn.
  * - cost: plan Task 5, the map's time: with PART=j/J, the j-th of J parts of COST_PLANS pass-roll plans drawn evenly
  *   is played at the grid's powers, each sample's seconds appended to `<IN>/cost-<j>of<J>.jsonl`; without PART, those
  *   files are tallied: the mean and 95th percentile per sample and each type's projected CPU hours on today's grid.
- * - stage1: plan Task 6, the half roll's map, from IN's half-roll shard files merged as merge merges them, and read at
- *   the grid's ranges and lawns (readsOf). The anchor (design §3.3) is today's default (textBook). It is played at the
- *   canonical power on the 10 s lawn, which gives the canonical's range, and then read at that range from its own
- *   sweep at the grid's powers: it lies off the grid (handReach 0.15 m, and a range below the grid's least). Its band
- *   is offGridBand's: unplayable if its play or read has a class, else its coarse cell's worst corner graded at that
- *   range from the merged sweeps (cellReads), an unplayable corner counting as edgy. Then: the region's admissible
- *   plans per range and lawn by band; the classes per range and lawn; the lawn's effect on the ratio; the least-effort
- *   plan per range and lawn; the non-monotone sweeps; and the set-ups with no admissible read, outside the envelope
- *   outright (§3.5), mixed or incomplete. It plays the anchor's 11 samples itself. It is summary on the half roll
- *   with its own title, so the stage-1 probe stays reproducible.
- * - summary: plan Task 8, stage1 generalised to TYPE. On the half roll, the anchor as stage1. On the full and pass
- *   rolls §3.3's anchor does not apply; instead A1's text-book validation: the type's text book read at its canonical
- *   range on the 10 s lawn as the anchor is, its band by A3 item 1's off-grid rule, whether it is admissible, and
- *   whether it lands in its region (A1's band). Then stage1's tallies; on the pass roll over every split (no
- *   least-effort plans or set-ups) and again per graded split. It plays the text book's 11 samples itself.
+ * - stage1: plan Task B6, gate stage 1 (design A7 item 10), from IN's stage-1 shard files, every type. Per type: the
+ *   text book played at its canonical power on the 10 s lawn at the found hold and at the fitted one, its range, ratio,
+ *   label and whether it is in its band; its planned contact speed against its preset's within ±2 % (criterion 4); per
+ *   lawn its reach (reachOf) and the class beyond it; its sweep sample by sample; and on the full and pass rolls the
+ *   jumpiness bound (B-d7). It plays the two canonical samples itself. The workflow runs it after the merge.
+ * - summary: plan Task 6 and Task 8, one roll's map from IN's shard files merged as merge merges them, and read at the
+ *   grid's ranges and lawns (readsOf). The anchor (design §3.3) on the half roll, today's default (textBook), played at
+ *   the canonical power on the 10 s lawn, which gives the canonical's range, and read at that range from its own sweep
+ *   at the grid's powers. Its band is offGridBand's: unplayable if its play or read has a class, else its coarse cell's
+ *   worst corner graded at that range from the merged sweeps (cellReads), an unplayable corner counting as edgy. On the
+ *   full and pass rolls §3.3's anchor does not apply; instead A1's text-book validation, read the same way, and whether
+ *   it lands in its region (A1's band). Then the region's admissible plans per range and lawn by band; the classes per
+ *   range and lawn; the lawn's effect on the ratio; the least-effort plan per range and lawn; the non-monotone sweeps;
+ *   and the set-ups with no admissible read, outside the envelope outright (§3.5), mixed or incomplete; on the pass
+ *   roll over every split (no least-effort plans or set-ups) and again per graded split. It plays the text book's
+ *   samples itself.
  * - super: plan Task 8 Step 2, decision 12's super pass roll (design §3.4): the pass roll's text book's lean and feet,
  *   drive 1, handReach 0.3 m, at each graded split × SUPER_ONSETS × SUPER_WINDOWS (superPlans), each played at the
  *   grid's powers on its lawns. With OUT (named `super-<k>of<N>.jsonl`) it plays one shard (SHARD=k/N) as run does,
@@ -40,14 +48,28 @@
  *   MULTIPLES_RATIO; then each excluded plan's samples by class, with 29.2.5's reading (the separation (mm) before
  *   each later mallet contact and whether it joined within MERGE_SEPARATION) for its unlawful samples and any played
  *   sample with a re-contact.
- * Run with `env SECTION=lawn npx --yes tsx scripts/pushMap.ts`. The environment: SECTION names the section; run takes
- * TYPE (a roll), SHARD (k/N, default 0/1) and OUT (a file); merge takes TYPE and IN (a directory); cost takes IN and
- * PART; stage1 takes IN; summary takes TYPE and IN; super takes SHARD and OUT, or IN. Not part of the test suite.
+ * - jumpiness: plan B-d7, the ratio's largest difference between neighbouring follow-through grid points at the full
+ *   and pass rolls' text books at canonical power, with practice and as the first pass alone, and practice's share.
+ *   The bound is over points the map admits; every played point's is printed beside it.
+ * - gripplans, grip, gripfit: plan Amendment C, C-d4 to C-d6, the grip and timing sweeps (pushMapGrip.ts). gripplans
+ *   lists the starting and held-out plans from a merged map (IN) to a file (OUT); grip plays one shard of them
+ *   (GRIP_PLANS, SHARD, OUT named `grip-<k>of<N>.jsonl`) at each grip and, timed starting plans, early; gripfit merges
+ *   IN's grip shards, prints the fits and the timing losses and writes `OUT/envelope-grip.json.gz`. matrix with
+ *   STAGE=grip shards the list evenly.
+ * - checks: plan Task C4, the gate's measures (pushMapChecks.ts) from the found hold's record, defaults and stage-1
+ *   file in IN (default `reference/derived`), and the effect measure from the stage-2 shard files in SHARDS when set.
+ * Run with `env SECTION=lawn npx --yes tsx scripts/pushMap.ts`. The environment: SECTION names the section; matrix
+ * takes TYPES, STAGE, SHARDS and ONLY; run takes TYPE (any shot type), STAGE, LAWNS, SHARD (k/N, default 0/1) and OUT
+ * (a file); merge takes TYPE, STAGE, LAWNS, IN (a directory), and RECORD_RUNS and RECORD_COMMIT where run locally over
+ * several dispatches (recordSource); record takes IN and OUT (directories); cost takes IN and PART; stage1 takes IN; summary takes
+ * TYPE (a roll) and IN; super takes SHARD and OUT, or IN; jumpiness takes TYPE, by default both rolls. Not part of the
+ * test suite.
  */
 import { MERGE_SEPARATION } from "../src/engine/faults";
 import { simulateImpact } from "../src/engine/impact/simulateImpact";
 import { length, sub } from "../src/engine/math/vec3";
-import { planStroke } from "../src/engine/swing/buildContact";
+import { ENGINE_VERSION } from "../src/engine/simulate";
+import { planStroke, plannedSpeed } from "../src/engine/swing/buildContact";
 import type { ShotSetup } from "../src/engine/swing/types";
 import { BALL_IDS, type BallState, type BallStates } from "../src/engine/types";
 import { swingReference } from "../src/reference/index";
@@ -58,46 +80,103 @@ import {
     MULTIPLES_RATIO,
     SUPER_ONSETS,
     SUPER_WINDOWS,
+    bandPicks,
+    bands,
     cellReads,
     classCounts,
     doneIndices,
+    envelopeRows,
     excludedSetUps,
+    fittedSweeps,
+    followThroughPlans,
     grade,
     gridFor,
     inRegion,
     lawnSpreads,
     mergeLines,
+    neighbourGaps,
     nonMonotoneCount,
     offGridBand,
+    onLawns,
+    parseJobs,
+    parseReads,
     pickDefault,
     planKey,
     plansOf,
+    playBothHolds,
+    labelOf,
     quantile,
+    reachOf,
     readAt,
     readsJson,
     readsOf,
+    recordSource,
     regionCounts,
     regionPhrase,
     regionSpan,
     sampleErrors,
     shardLine,
+    shardMatrix,
     spreadSummary,
+    stagePlans,
     strikeReading,
     superLeast,
     superPlans,
     type Band,
+    type BandPick,
     type EngineErrorSample,
     type LaterContact,
     type MapGrid,
     type Merged,
+    type NeighbourGap,
+    type Picked,
     type Reads,
+    type RecordHeader,
+    type Stage,
     type StrikeReading,
     type SweepRead,
     type SweepSample,
 } from "./pushMapGrid";
 import {
+    EARLY_ONSETS,
+    FIT_LIMIT,
+    GRIPS,
+    GRIP_LAWN,
+    HELD_OUT,
+    HELD_OUT_SEED,
+    admissibleOf,
+    gripFits,
+    gripLine,
+    gripPlans,
+    parseGripLines,
+    playGripPlan,
+    type GripPlan,
+    type GripPlay,
+} from "./pushMapGrip";
+import {
+    defaultOf,
+    driveRises,
+    drops,
+    effectTally,
+    holesOf,
+    isAdmissible,
+    labelOfRow,
+    leanSpans,
+    LAWN_LENGTH,
+    median,
+    parseRecord,
+    RATIO_BIN,
+    ratioSpan,
+    share,
+    splitAtRestByLean,
+    type RecordRow,
+} from "./pushMapChecks";
+import {
+    MAP_TYPES,
     ROLL_TYPES,
     bodyBackswing,
+    canonicalPower,
+    firstPassRead,
     mapSetup,
     playJudged,
     playSample,
@@ -105,12 +184,14 @@ import {
     type MapClass,
     type MapPlan,
     type MapSample,
+    type MapType,
     type RollType,
 } from "./pushMapRun";
 
 declare const process: {
     readonly env: Readonly<Record<string, string | undefined>>;
     readonly argv: readonly string[];
+    exitCode?: number;
 };
 
 /** The lawns the map plays (s): `reference/lawn.json`'s sourced span and its normal lawn (design §3.2). */
@@ -191,6 +272,24 @@ function rollType(): RollType {
     return known;
 }
 
+/** The shot type named by `name`. */
+function mapType(name: string | undefined): MapType {
+    const known = MAP_TYPES.find((t) => t === name);
+    if (known === undefined) {
+        throw new Error(`a type must be one of ${MAP_TYPES.join(", ")}, not ${name}`);
+    }
+    return known;
+}
+
+/** The stage named by STAGE (design A7 item 10), by default the full map. */
+function stageOf(): Stage {
+    const text = process.env.STAGE ?? "2";
+    if (text !== "1" && text !== "2") {
+        throw new Error(`STAGE must be 1 or 2, not ${text}`);
+    }
+    return text === "1" ? 1 : 2;
+}
+
 /** An environment variable that must be set. */
 function required(name: string): string {
     const value = process.env[name];
@@ -213,17 +312,43 @@ function shardOf(): { readonly k: number; readonly n: number } {
 }
 
 /** A shard's file name (decision 9): `<type>-<k>of<N>.jsonl`, the one pattern merge reads. */
-function shardName(type: RollType, k: number, n: number): string {
+function shardName(type: MapType, k: number, n: number): string {
     return `${type}-${k}of${n}.jsonl`;
 }
 
 /** Whether `name` is one of `type`'s shard files (shardName's pattern exactly). */
-function isShardOf(type: RollType, name: string): boolean {
+function isShardOf(type: MapType, name: string): boolean {
     return new RegExp(`^${type}-\\d+of\\d+\\.jsonl$`).test(name);
 }
 
+/** The workflow's matrix and types (plan Task B5), as `GITHUB_OUTPUT`'s lines and printed. */
+async function sectionMatrix(): Promise<void> {
+    const shards = Number(required("SHARDS"));
+    let lines: string;
+    if (process.env.STAGE === "grip") {
+        // The grip sweep (plan C-d6) is one list of plans, sharded evenly: SHARDS jobs named "grip".
+        const only = parseJobs(process.env.ONLY ?? "all");
+        const matrix = Array.from({ length: shards }, (_, job) => ({ type: "grip", job, jobs: shards })).filter(
+            (j) => only === null || only.has(j.job),
+        );
+        lines = `matrix=${JSON.stringify(matrix)}\ntypes=grip\n`;
+    } else {
+        const text = required("TYPES");
+        const types = text === "all" ? MAP_TYPES : text.split(",").map(mapType);
+        const stage = stageOf();
+        const counts = types.map((type) => ({ type, plans: stagePlans(type, gridFor(type), stage).length }));
+        const matrix = shardMatrix(counts, shards, parseJobs(process.env.ONLY ?? "all"));
+        lines = `matrix=${JSON.stringify(matrix)}\ntypes=${types.join(" ")}\n`;
+    }
+    console.log(lines);
+    const output = process.env.GITHUB_OUTPUT;
+    if (output !== undefined) {
+        (await files()).appendFileSync(output, lines);
+    }
+}
+
 async function sectionRun(): Promise<void> {
-    const type = rollType();
+    const type = mapType(process.env.TYPE);
     const { k, n } = shardOf();
     const out = required("OUT");
     const name = shardName(type, k, n);
@@ -231,8 +356,8 @@ async function sectionRun(): Promise<void> {
         throw new Error(`OUT must name the shard's file ${name}, the pattern merge reads`);
     }
     const fs = await files();
-    const grid = gridFor(type);
-    const plans = plansOf(type, grid);
+    const grid = onLawns(gridFor(type), process.env.LAWNS);
+    const plans = stagePlans(type, grid, stageOf());
     const text = fs.existsSync(out) ? fs.readFileSync(out, "utf8") : "";
     const done = doneIndices(text);
     if (text !== "" && !text.endsWith("\n")) {
@@ -255,12 +380,9 @@ async function sectionRun(): Promise<void> {
         let line: string;
         try {
             const samples: SweepSample[] = grid.powers.map((power) => {
-                try {
-                    return playSample(type, plan, power, grid.lawns);
-                } catch (error) {
-                    errors++;
-                    return { power, engineError: error instanceof Error ? error.message : String(error) };
-                }
+                const entry = playBothHolds((hold) => playSample(type, plan, power, grid.lawns, hold), power);
+                errors += ("engineError" in entry ? 1 : 0) + (entry.fitted && "engineError" in entry.fitted ? 1 : 0);
+                return entry;
             });
             line = shardLine(index, plan, { samples });
         } catch (error) {
@@ -289,7 +411,7 @@ const LISTED = 40;
 /** Exactly `type`'s shard files in `dir` (shardName's pattern) merged against the grid's `plans`, and their count. */
 function mergeShards(
     fs: Files,
-    type: RollType,
+    type: MapType,
     dir: string,
     plans: readonly MapPlan[],
 ): { readonly merged: Merged; readonly shards: number } {
@@ -305,13 +427,14 @@ function mergeShards(
 }
 
 async function sectionMerge(): Promise<void> {
-    const type = rollType();
+    const type = mapType(process.env.TYPE);
     const dir = required("IN");
     const fs = await files();
-    const grid = gridFor(type);
-    const plans = plansOf(type, grid);
+    const grid = onLawns(gridFor(type), process.env.LAWNS);
+    const stage = stageOf();
+    const plans = stagePlans(type, grid, stage);
     const { merged, shards } = mergeShards(fs, type, dir, plans);
-    console.log(`== merge. Plan decision 9: ${type}, ${shards} shard files, ${plans.length} plans ==`);
+    console.log(`== merge. Plan decision 9: ${type}, stage ${stage}, ${shards} shard files, ${plans.length} plans ==`);
     console.log(`swept: ${merged.samples.size}`);
     const { missing } = merged;
     const shown = missing.slice(0, LISTED).join(", ") + (missing.length > LISTED ? ", …" : "");
@@ -336,11 +459,35 @@ async function sectionMerge(): Promise<void> {
         `reads: ${reads.size}; left unread (an engine error decides them): ${noRead}; plans whose range is not ` +
             `monotone in p on some lawn: ${nonMonotone}`,
     );
-    const { unbanded } = grade(type, grid, reads);
-    console.log(`graded reads left unbanded (a neighbour unread): ${unbanded}`);
+    if (stage === 2) {
+        // A text book alone has no neighbours, so stage 1 has nothing to band.
+        const { unbanded } = grade(type, grid, reads);
+        console.log(`graded reads left unbanded (a neighbour unread): ${unbanded}`);
+    }
+    const header: RecordHeader = {
+        ...recordSource(process.env),
+        engine: ENGINE_VERSION,
+        type,
+        stage,
+        lawns: grid.lawns,
+    };
     const path = `${dir}/${type}.reads.json`;
-    fs.writeFileSync(path, readsJson(reads));
+    fs.writeFileSync(path, readsJson(header, reads));
     console.log(`written: ${path}`);
+    // The fitted hold's reads, beside the found hold's (design A8 item 3).
+    const fittedSamples = fittedSweeps(merged.samples);
+    const fitted = readsOf(grid, plans, fittedSamples);
+    console.log(`reads at the fitted hold: ${fitted.reads.size}; left unread: ${fitted.noRead}`);
+    for (const [message, count] of sampleErrors(fittedSamples)) {
+        console.log(`  ${count} × ${message}`);
+    }
+    const fittedPath = `${dir}/${type}.fitted.reads.json`;
+    fs.writeFileSync(fittedPath, readsJson(header, fitted.reads));
+    console.log(`written: ${fittedPath}`);
+    if (missing.length > 0) {
+        // A dead shard fails the run (Review Focus 5): the reads are still written, for what they hold.
+        process.exitCode = 1;
+    }
 }
 
 /** Numerical, not physical: how many pass-roll plans the cost section times (plan Task 5). */
@@ -733,8 +880,99 @@ async function summaryOf(type: RollType, label: string): Promise<void> {
     }
 }
 
+/** Each type's band on the continuum (labelOf); the single-ball stroke has no ratio, so no band. */
+const OWN_LABEL: Readonly<Record<MapType, string | null>> = {
+    drive: "drive",
+    "stop-ac": "AC stop",
+    "half-roll": "half roll",
+    "full-roll": "full roll",
+    "pass-roll": "pass roll",
+    "single-ball": null,
+};
+
+/** Criterion 4's tolerance on a text book's planned contact speed against its preset's (design A7 item 10). */
+const SPEED_TOLERANCE = 0.02;
+
+/** The bound B-d7 measured under B-d11 (the envelope probe): the rolls' largest gap between pushed neighbours. */
+const JUMPINESS_BOUND: Readonly<Partial<Record<MapType, number>>> = { "full-roll": 1.244, "pass-roll": 0.579 };
+
+/** A sample's figures on `lawn` for gate stage 1: class, range, ratio, label, hold and practice passes. */
+function gateSampleText(s: SweepSample, lawn: number): string {
+    if ("engineError" in s) {
+        return `engine error (${s.engineError})`;
+    }
+    const read = s.byLawn[lawn];
+    const klass = s.klass === null ? "admissible" : `${s.klass} (${s.reason ?? ""})`;
+    const ratio = read?.ratio ?? NaN;
+    const figures = Number.isFinite(ratio) ? `ratio ${ratio.toFixed(3)} (${labelOf(ratio)})` : "no ratio";
+    const hold = s.firmness === null ? "no hold" : `firmness ${s.firmness.toFixed(3)}, sigma ${s.sigma?.toFixed(3)}`;
+    const slip = s.followSlip ? ", slips after the balls have gone" : "";
+    return `${klass}${slip}, range ${(read?.range ?? NaN).toFixed(3)} m, ${figures}, ${hold}, passes ${s.passes}`;
+}
+
+/** `type`'s text book at its canonical power at both holds, its speed and its band (plan Task B6). */
+function printGateBook(type: MapType): void {
+    const book = textBook(type);
+    const world = openWorld(ANCHOR_LAWN);
+    const power = canonicalPower(type, world);
+    const speed = plannedSpeed(mapSetup(type, book, power), world);
+    const preset = swingReference[type].defaultSpeed.value;
+    const off = speed / preset - 1;
+    console.log(`plan: ${planText(book)}; canonical power p ${power.toFixed(4)}`);
+    console.log(
+        `planned contact speed ${speed.toFixed(3)} m/s, preset's ${preset.toFixed(3)} m/s, ` +
+            `${(100 * off).toFixed(2)} %: within ±${100 * SPEED_TOLERANCE} %: ` +
+            `${Math.abs(off) <= SPEED_TOLERANCE ? "yes" : "no"}`,
+    );
+    const own = OWN_LABEL[type];
+    for (const hold of ["found", "preset"] as const) {
+        let played: SweepSample;
+        try {
+            played = playSample(type, book, power, [ANCHOR_LAWN], hold);
+        } catch (error) {
+            played = { power, engineError: error instanceof Error ? error.message : String(error) };
+        }
+        const ratio = "engineError" in played ? NaN : (played.byLawn[ANCHOR_LAWN]?.ratio ?? NaN);
+        const band = own === null ? "no band" : `in the ${own}'s band: ${labelOf(ratio) === own ? "yes" : "no"}`;
+        console.log(
+            `at the ${hold === "found" ? "found" : "fitted"} hold, ${ANCHOR_LAWN} s lawn: ` +
+                `${gateSampleText(played, ANCHOR_LAWN)}; ${band}`,
+        );
+    }
+}
+
 async function sectionStage1(): Promise<void> {
-    await summaryOf("half-roll", "stage1. Plan Task 6");
+    const dir = required("IN");
+    const fs = await files();
+    for (const type of MAP_TYPES) {
+        const grid = gridFor(type);
+        const { merged, shards } = mergeShards(fs, type, dir, stagePlans(type, grid, 1));
+        console.log(`== stage1. Plan Task B6: ${type}, ${shards} shard files, missing ${merged.missing.length} ==`);
+        printGateBook(type);
+        const sweep = merged.samples.get(0) ?? [];
+        for (const lawn of grid.lawns) {
+            const { best, beyond } = reachOf(sweep, lawn);
+            const reach =
+                best === null
+                    ? "no admissible play"
+                    : `p ${best.power}, ${best.range.toFixed(2)} m` +
+                      (Number.isFinite(best.ratio) ? `, ratio ${best.ratio.toFixed(3)}` : "");
+            const next =
+                beyond === null ? "none beyond" : `p ${beyond.power}: ${beyond.klass} (${beyond.reason ?? ""})`;
+            console.log(`reach on the ${lawn} s lawn: ${reach}; ${next}`);
+        }
+        const bound = JUMPINESS_BOUND[type];
+        if (bound !== undefined) {
+            console.log(`jumpiness bound (B-d7, under B-d8): ${bound}`);
+        }
+        for (const lawn of grid.lawns) {
+            console.log(`-- the sweep on the ${lawn} s lawn --`);
+            for (const s of sweep) {
+                console.log(`p ${s.power}: ${gateSampleText(s, lawn)}`);
+            }
+        }
+        console.log("");
+    }
 }
 
 async function sectionSummary(): Promise<void> {
@@ -993,14 +1231,652 @@ async function sectionSuper(): Promise<void> {
     console.log(`excluded plans: ${excluded} of ${merged.samples.size} swept`);
 }
 
+/** The ratio grid's read-out bin (plan B-d7): past it, the bound's cause is found before the full map. */
+const JUMPINESS_LIMIT = 0.1;
+
+/** The lawn the jumpiness bound reads (s): the normal lawn, the impact's. */
+const JUMPINESS_LAWN = 10;
+
+/** Numerical, not physical: the worst neighbours the jumpiness section prints per type. */
+const JUMPINESS_LISTED = 5;
+
+/** One follow-through point's plays (plan B-d7): the map's, and its first pass at the same hold. */
+interface JumpinessRow {
+    readonly plan: MapPlan;
+    readonly ratio: number;
+    readonly firstPass: number;
+    readonly admissible: boolean;
+}
+
+/** Plays `plan` both ways and prints its line; an engine error is printed, its ratios NaN, and the sweep goes on. */
+function jumpinessRow(type: RollType, plan: MapPlan, power: number): JumpinessRow {
+    const at = `drive ${plan.drive}, handReach ${plan.handReach} m, window ${plan.window * 1000} ms`;
+    try {
+        const sample = playSample(type, plan, power, [JUMPINESS_LAWN]);
+        const ratio = sample.byLawn[JUMPINESS_LAWN]?.ratio ?? NaN;
+        const firstPass =
+            sample.passes === 0 ? NaN : firstPassRead(type, plan, power, sample.firmness, JUMPINESS_LAWN).ratio;
+        console.log(
+            `${at}: ratio ${ratio.toFixed(3)}, first pass ${firstPass.toFixed(3)}, ${sample.klass ?? "admissible"}` +
+                `${sample.reason === null ? "" : ` (${sample.reason})`}, passes ${sample.passes}, ` +
+                `sigma ${sample.sigma?.toFixed(3) ?? "none"}`,
+        );
+        return { plan, ratio, firstPass, admissible: sample.klass === null };
+    } catch (error) {
+        console.log(`${at}: engine error: ${error instanceof Error ? error.message : String(error)}`);
+        return { plan, ratio: NaN, firstPass: NaN, admissible: false };
+    }
+}
+
+/** A neighbour pair's largest gap as text, or that no pair has one. */
+function boundText(gaps: readonly NeighbourGap[]): string {
+    return `${gaps[0]?.gap.toFixed(3) ?? "none"} over ${gaps.length} pairs`;
+}
+
+function jumpinessOf(type: RollType): void {
+    const grid = gridFor(type);
+    const book = textBook(type);
+    const power = canonicalPower(type, openWorld(JUMPINESS_LAWN));
+    console.log(`\n${type}, power ${power.toFixed(4)}, lean and feet at the text book's, ${JUMPINESS_LAWN} s lawn:`);
+    const rows = followThroughPlans(book, grid).map((plan) => jumpinessRow(type, plan, power));
+    const admissible = rows.filter((r) => r.admissible);
+    const practised = neighbourGaps(
+        grid,
+        admissible.map((r) => ({ plan: r.plan, ratio: r.ratio })),
+    );
+    const firstPass = neighbourGaps(
+        grid,
+        admissible.map((r) => ({ plan: r.plan, ratio: r.firstPass })),
+    );
+    const everyPlay = neighbourGaps(
+        grid,
+        rows.map((r) => ({ plan: r.plan, ratio: r.ratio })),
+    );
+    const firstOf = (gap: NeighbourGap): number => {
+        const ofPlan = (plan: MapPlan): number =>
+            rows.find(
+                (r) =>
+                    r.plan.drive === plan.drive && r.plan.handReach === plan.handReach && r.plan.window === plan.window,
+            )?.firstPass ?? NaN;
+        return Math.abs(ofPlan(gap.a) - ofPlan(gap.b));
+    };
+    console.log(`${type} tally: ${admissible.length} of ${rows.length} points admissible`);
+    console.log(`  bound, admissible neighbours, practised: ${boundText(practised)}`);
+    console.log(`  bound, the same neighbours, first pass: ${boundText(firstPass)}`);
+    console.log(`  bound, every played point, practised: ${boundText(everyPlay)}`);
+    // A handReach of 0 beside 0.1 m is no push against a push, a real difference, not jumpiness (plan B-d8).
+    const pushes = neighbourGaps(
+        grid,
+        admissible.filter((r) => r.plan.handReach > 0).map((r) => ({ plan: r.plan, ratio: r.ratio })),
+    );
+    console.log(`  bound, admissible pushes alone, practised: ${boundText(pushes)}`);
+    for (const gap of pushes.slice(0, JUMPINESS_LISTED)) {
+        console.log(
+            `  ${gap.gap.toFixed(3)} along ${gap.dimension}, ${gap.a[gap.dimension]} to ${gap.b[gap.dimension]}, at ` +
+                `drive ${gap.a.drive}, handReach ${gap.a.handReach} m, window ${gap.a.window * 1000} ms; ` +
+                `first pass ${firstOf(gap).toFixed(3)}`,
+        );
+    }
+    const bound = pushes[0]?.gap ?? NaN;
+    console.log(`  ${bound <= JUMPINESS_LIMIT ? "within" : "not within"} the ${JUMPINESS_LIMIT} read-out bin (B-d7)`);
+}
+
+async function sectionJumpiness(): Promise<void> {
+    console.log(
+        "== jumpiness. Plan B-d7, design A7 item 9: the ratio's largest difference between neighbouring drive, " +
+            "handReach and window grid points, at the text book's canonical power, played with the map's found hold " +
+            "and practice, and as the first pass alone at the same hold ==",
+    );
+    const types: readonly RollType[] = process.env.TYPE === undefined ? ["full-roll", "pass-roll"] : [rollType()];
+    for (const type of types) {
+        jumpinessOf(type);
+    }
+}
+
+/** The record's two holds (design A8 item 3): the found hold's reads, and the fitted hold's beside them. */
+const HOLDS = [
+    { hold: "found", suffix: "reads.json", file: "envelope" },
+    { hold: "fitted", suffix: "fitted.reads.json", file: "envelope-fitted" },
+] as const;
+
+/** Decision 10's size rule (MB): past it a record is committed as its summary instead. */
+const RECORD_LIMIT_MB = 20;
+
+/**
+ * Plan Task B7: the record from every type's merged reads in IN (`<type>.reads.json` and `<type>.fitted.reads.json`),
+ * written to OUT: `envelope-<type>.csv.gz` and `envelope-fitted-<type>.csv.gz` (decision 10's rows under `#` lines
+ * naming the command, the type's runs and commit, the engine and the SHA-256 of `scripts/pushMap*.ts`; one file per
+ * type, as every type's together passes decision 10's 20 MB), and
+ * `envelope-defaults.json`, each label's least complex plan per range and lawn at each hold (bandPicks; design A7
+ * item 7, A9 items 6–10, plan C-d3). Fails where a record's gzip passes RECORD_LIMIT_MB, which decision 10 commits as a summary instead.
+ */
+async function sectionRecord(): Promise<void> {
+    const dir = required("IN");
+    const out = required("OUT");
+    const fs = await files();
+    const cryptoName = "node:crypto";
+    const zlibName = "node:zlib";
+    const crypto = (await import(/* @vite-ignore */ cryptoName)) as {
+        createHash(algorithm: "sha256"): { update(data: string): { digest(encoding: "hex"): string } };
+    };
+    const zlib = (await import(/* @vite-ignore */ zlibName)) as {
+        gzipSync(data: string, options: { level: number }): { readonly length: number };
+    };
+    const binary = fs as Files & { writeFileSync(path: string, data: { readonly length: number }): void };
+    const sources = fs
+        .readdirSync("scripts")
+        .filter((name) => /^pushMap.*\.ts$/.test(name))
+        .sort()
+        .map((name) => {
+            const sha = crypto
+                .createHash("sha256")
+                .update(fs.readFileSync(`scripts/${name}`, "utf8"))
+                .digest("hex");
+            return `sha256 scripts/${name}: ${sha}`;
+        });
+    const command = `env SECTION=record IN=${dir} OUT=${out} npx --no-install tsx scripts/pushMap.ts`;
+    const picksByHold: Record<string, unknown> = {};
+    let tooLarge = false;
+    for (const { hold, suffix, file } of HOLDS) {
+        const maps = MAP_TYPES.map((type) => {
+            const { header, reads } = parseReads(fs.readFileSync(`${dir}/${type}.${suffix}`, "utf8"));
+            const grid = onLawns(gridFor(type), header.lawns.join(","));
+            return { type, header, grid, reads, banded: bands(type, grid, reads) };
+        });
+        for (const { type, header, grid, reads, banded } of maps) {
+            const lines = [
+                `# command: ${command}`,
+                `# hold: ${hold} (design A8 item 3)`,
+                `# ${type}: engine ${header.engine}, stage ${header.stage}, lawns ${header.lawns.join(" ")} s, ` +
+                    `commit ${header.commit ?? "none"}, runs ${header.run ?? "none"}`,
+                ...sources.map((s) => `# ${s}`),
+            ];
+            const body = envelopeRows(type, grid, reads, banded);
+            const gz = zlib.gzipSync(`${lines.join("\n")}\n${body.join("\n")}\n`, { level: 9 });
+            const mb = gz.length / 1e6;
+            const path = `${out}/${file}-${type}.csv.gz`;
+            binary.writeFileSync(path, gz);
+            console.log(`written: ${path}, ${body.length - 1} rows, ${mb.toFixed(2)} MB`);
+            tooLarge ||= mb > RECORD_LIMIT_MB;
+        }
+        picksByHold[hold] = bandPicks(maps);
+    }
+    const header = { command, sources, labels: "labelOf's continuum (design A7 item 2); single ball has no ratio" };
+    const json = JSON.stringify({ header, ...picksByHold }, (_k, v: unknown) =>
+        typeof v === "number" && !Number.isFinite(v) ? null : v,
+    );
+    fs.writeFileSync(`${out}/envelope-defaults.json`, await prettyJson(json));
+    console.log(`written: ${out}/envelope-defaults.json`);
+    if (tooLarge) {
+        console.log(`a record passes ${RECORD_LIMIT_MB} MB: decision 10 commits its summary instead`);
+        process.exitCode = 1;
+    }
+}
+
+/**
+ * Plan Task C4: `json` as Prettier formats a JSON file under the repository's configuration, so a regenerated file
+ * passes the format check wherever it is written. The configuration is resolved from the repository (the working
+ * directory), not from the output's path, which may lie outside it.
+ */
+export async function prettyJson(json: string): Promise<string> {
+    const name = "prettier";
+    const prettier = (await import(/* @vite-ignore */ name)) as {
+        resolveConfig(path: string): Promise<Record<string, unknown> | null>;
+        format(source: string, options: Record<string, unknown>): Promise<string>;
+    };
+    const config = await prettier.resolveConfig("package.json");
+    if (config === null) {
+        throw new Error("prettyJson: no Prettier configuration; run from the repository's root");
+    }
+    return prettier.format(json, { ...config, parser: "json" });
+}
+
+/** A grip shard's file name (plan C-d6): `grip-<k>of<N>.jsonl`. */
+function gripShardName(k: number, n: number): string {
+    return `grip-${k}of${n}.jsonl`;
+}
+
+/** The grip sweep's plans from GRIP_PLANS (written by gripplans). */
+async function readGripPlans(fs: Files): Promise<readonly GripPlan[]> {
+    return (JSON.parse(fs.readFileSync(required("GRIP_PLANS"), "utf8")) as { plans: GripPlan[] }).plans;
+}
+
+/**
+ * Plan C-d4: the grip sweep's plans (gripPlans) from IN's `envelope-defaults.json` and `<type>.reads.json` (the found
+ * hold's merged reads, banded for the held-out draw), written to OUT for the workflow's grip stage.
+ */
+async function sectionGripPlans(): Promise<void> {
+    const dir = required("IN");
+    const out = required("OUT");
+    const fs = await files();
+    // envelope-defaults.json: its header, then each hold's picks (sectionRecord).
+    const defaults = JSON.parse(fs.readFileSync(`${dir}/envelope-defaults.json`, "utf8")) as Record<string, unknown>;
+    const picks = Object.fromEntries(Object.entries(defaults).filter(([key]) => key !== "header")) as Record<
+        string,
+        readonly BandPick[]
+    >;
+    const admissible = MAP_TYPES.flatMap((type) => {
+        const { header, reads } = parseReads(fs.readFileSync(`${dir}/${type}.reads.json`, "utf8"));
+        const grid = onLawns(gridFor(type), header.lawns.join(","));
+        return admissibleOf(type, reads, bands(type, grid, reads));
+    });
+    const plans = gripPlans(picks, MAP_TYPES, gridFor("drive").powers, admissible);
+    const starting = plans.filter((p) => p.set === "start").length;
+    const header = {
+        command: `env SECTION=gripplans IN=${dir} OUT=${out} npx --no-install tsx scripts/pushMap.ts`,
+        heldOut: HELD_OUT,
+        seed: HELD_OUT_SEED,
+        admissible: admissible.length,
+    };
+    fs.writeFileSync(out, await prettyJson(JSON.stringify({ header, plans })));
+    console.log(`written: ${out}, ${starting} starting plans and ${plans.length - starting} held out`);
+}
+
+/** Plan C-d4, C-d5: one shard (SHARD=k/N) of GRIP_PLANS' plans played at each grip and early, appended to OUT. */
+async function sectionGrip(): Promise<void> {
+    const { k, n } = shardOf();
+    const out = required("OUT");
+    const name = gripShardName(k, n);
+    if (!out.endsWith(`/${name}`) && out !== name) {
+        throw new Error(`OUT must name the shard's file ${name}, the pattern gripfit reads`);
+    }
+    const fs = await files();
+    const plans = await readGripPlans(fs);
+    const text = fs.existsSync(out) ? fs.readFileSync(out, "utf8") : "";
+    const done = new Set(parseGripLines(text.split("\n")).entries.keys());
+    if (text !== "" && !text.endsWith("\n")) {
+        fs.appendFileSync(out, "\n");
+    }
+    console.log(
+        `== grip. Plan C-d4: shard ${k}/${n} of ${plans.length} plans, ${GRIPS.length} grips; ${done.size} done ==`,
+    );
+    let seconds = 0;
+    let played = 0;
+    for (let index = k; index < plans.length; index += n) {
+        if (done.has(index)) {
+            continue;
+        }
+        const start = performance.now();
+        const entry = playGripPlan(index, plans[index] as GripPlan);
+        fs.appendFileSync(out, `${gripLine(entry)}\n`);
+        const elapsed = (performance.now() - start) / 1000;
+        seconds += elapsed;
+        played++;
+        console.log(`plan ${index}: ${elapsed.toFixed(2)} s${"engineError" in entry ? `, ${entry.engineError}` : ""}`);
+    }
+    console.log(`grip tally: ${played} plans in ${seconds.toFixed(1)} s, ${(seconds / played).toFixed(2)} s per plan`);
+}
+
+/**
+ * Plan C-d4, C-d5: IN's grip shards merged against GRIP_PLANS; per type and grip the fit and its held-out error, and
+ * the timing plays' losses, printed; every plan's plays, grips and timing, and the fits, written to
+ * `OUT/envelope-grip.json.gz`. A plan no shard wrote fails the run, after the write.
+ */
+async function sectionGripFit(): Promise<void> {
+    const dir = required("IN");
+    const out = required("OUT");
+    const fs = await files();
+    const plans = await readGripPlans(fs);
+    const lines = fs
+        .readdirSync(dir)
+        .filter((name) => /^grip-\d+of\d+\.jsonl$/.test(name))
+        .sort()
+        .flatMap((name) => fs.readFileSync(`${dir}/${name}`, "utf8").split("\n"));
+    const { entries, torn, duplicates } = parseGripLines(lines);
+    const missing = plans.map((_, i) => i).filter((i) => !entries.has(i));
+    const errors = [...entries.values()].filter((e) => "engineError" in e).length;
+    console.log(
+        `== gripfit. Plan C-d4: ${plans.length} plans, ${entries.size} read, ${missing.length} missing, ` +
+            `${errors} engine errors, ${torn} torn and ${duplicates} duplicate lines ==`,
+    );
+    const fits = gripFits(plans, entries);
+    for (const f of fits) {
+        console.log(
+            `${f.type} ${f.grip}: fitted on ${f.fit?.rows ?? 0}, held out ${f.heldOut}, median error ` +
+                `${f.error.toFixed(4)}, ${f.accepted ? "accepted" : "not accepted"}`,
+        );
+    }
+    const timed = plans.flatMap((job, index) => {
+        const entry = entries.get(index);
+        if (entry === undefined || "engineError" in entry || entry.timing.length === 0) {
+            return [];
+        }
+        const onTime = entry.plays.find((p) => p.grip === entry.bounds.reliable);
+        return entry.timing.map((t) => ({ type: job.type, early: t.early, onTime, play: t }));
+    });
+    for (const early of EARLY_ONSETS) {
+        for (const type of MAP_TYPES) {
+            const rows = timed.filter((t) => t.type === type && t.early === early);
+            if (rows.length === 0) {
+                continue;
+            }
+            const failed = rows.filter((t) => t.play.klass !== null).length;
+            const losses = rows
+                .filter((t) => t.play.klass === null && t.onTime !== undefined)
+                .map((t) => Math.abs(t.play.range / (t.onTime as GripPlay).range - 1))
+                .sort((a, b) => a - b);
+            console.log(
+                `timing ${early * 1000} ms, ${type}: ${rows.length} plans, ${failed} no longer play, median range ` +
+                    `change ${(100 * quantile(losses, 0.5)).toFixed(1)} %`,
+            );
+        }
+    }
+    const zlibName = "node:zlib";
+    const zlib = (await import(/* @vite-ignore */ zlibName)) as {
+        gzipSync(data: string, options: { level: number }): { readonly length: number };
+    };
+    const header = {
+        command: `env SECTION=gripfit IN=${dir} OUT=${out} GRIP_PLANS=${required("GRIP_PLANS")} npx --no-install tsx scripts/pushMap.ts`,
+        grips: GRIPS,
+        lawn: GRIP_LAWN,
+        early: EARLY_ONSETS,
+        fitLimit: FIT_LIMIT,
+        engine: ENGINE_VERSION,
+    };
+    const body = plans.map((job, index) => ({ ...job, entry: entries.get(index) ?? null }));
+    const json = JSON.stringify({ header, fits, plans: body }, (_k, v: unknown) =>
+        typeof v === "number" && !Number.isFinite(v) ? String(v) : v,
+    );
+    const binary = fs as Files & { writeFileSync(path: string, data: { readonly length: number }): void };
+    binary.writeFileSync(`${out}/envelope-grip.json.gz`, zlib.gzipSync(`${json}\n`, { level: 9 }));
+    console.log(`written: ${out}/envelope-grip.json.gz`);
+    if (missing.length > 0) {
+        process.exitCode = 1;
+    }
+}
+
+/** An axis's values, graded and beyond, ascending. */
+function valuesOf(axis: { readonly graded: readonly number[]; readonly beyond: readonly number[] }): number[] {
+    return [...axis.graded, ...axis.beyond].sort((a, b) => a - b);
+}
+
+/** Degrees, for the read-out. */
+function deg(rad: number): string {
+    return ((rad * 180) / Math.PI).toFixed(1);
+}
+
+/** A share (0–1) as a percentage, "–" where there is nothing to share. */
+function pct(x: number): string {
+    return Number.isFinite(x) ? `${(100 * x).toFixed(0)} %` : "–";
+}
+
+/** Plan Task C4: the soft pass roll's power bound (1) for account 7, at most half the grid's p 1. */
+const SOFT_POWER = 0.5;
+
+/** Plan Task C4: the hard strike's power bound (1) for account 3, p 1 and above. */
+const HARD_POWER = 1;
+
+/**
+ * Plan Task C4: the checks, measured, not passed or failed (design §6 as A7 item 10 restates it; §7's I, K, L, O; the
+ * effect measure; the user's pull and the holes; the forward-lean AC stop), from the found hold's record and defaults
+ * in IN (by default `reference/derived`) and, for the effect measure, the stage-2 shard files in SHARDS when set.
+ */
+async function sectionChecks(): Promise<void> {
+    const dir = process.env.IN ?? "reference/derived";
+    const fs = await files();
+    const zlibName = "node:zlib";
+    const zlib = (await import(/* @vite-ignore */ zlibName)) as {
+        gunzipSync(data: unknown): { toString(encoding: "utf8"): string };
+    };
+    const binary = fs as Files & { readFileSync(path: string): unknown };
+    const rows = MAP_TYPES.flatMap((type) =>
+        parseRecord(zlib.gunzipSync(binary.readFileSync(`${dir}/envelope-${type}.csv.gz`)).toString("utf8")),
+    );
+    const picks = (JSON.parse(fs.readFileSync(`${dir}/envelope-defaults.json`, "utf8")) as { found: BandPick[] }).found;
+    const ranges = gridFor("drive").ranges;
+    const of = (type: MapType): RecordRow[] => rows.filter((r) => r.type === type);
+    const m = (x: number | string | null): string => Number(x ?? NaN).toFixed(2);
+    console.log(`== checks. Plan Task C4: ${rows.length} rows, ${picks.length} defaults (found hold) ==`);
+
+    // The text book is off the grid (its hand reach and window), so stage 1's sweep of it alone is read.
+    console.log("\n-- §6 item 1: the half roll's text book (gate stage 1) on the 10 s lawn, per range --");
+    const stage1 = JSON.parse(
+        zlib.gunzipSync(binary.readFileSync(`${dir}/envelope-stage1.json.gz`)).toString("utf8"),
+    ) as Record<string, { reads: Record<string, SweepRead> }>;
+    for (const [key, read] of Object.entries(stage1["half-roll"]?.reads ?? {})) {
+        const [range, lawn] = (JSON.parse(key) as number[]).slice(-2) as [number, number];
+        if (lawn === 10) {
+            console.log(
+                `${m(range)} m: ${read.klass ?? "plays"}, ratio ${m(read.ratio)} (${labelOf(read.ratio) || "none"})`,
+            );
+        }
+    }
+
+    console.log("\n-- §6 item 2: the ratio against drive within a slice (admissible reads) --");
+    for (const type of MAP_TYPES.filter((t) => t !== "single-ball")) {
+        const { slices, rising, largest } = driveRises(of(type));
+        console.log(
+            `${type}: ${slices} slices, ${rising} rise somewhere (${pct(rising / slices)}), largest ${m(largest)}`,
+        );
+    }
+
+    console.log("\n-- §6 item 3: the labels each range reaches (admissible reads, any type) --");
+    for (const lawn of MAP_LAWNS) {
+        for (const range of ranges) {
+            const here = rows.filter((r) => r.lawn === lawn && r.range === range && isAdmissible(r));
+            const labels = [...new Set(here.map((r) => labelOfRow(r) || "single ball"))].sort();
+            console.log(`${lawn} s, ${m(range)} m: ${labels.join("; ")}`);
+        }
+    }
+
+    console.log("\n-- §6 items 4 and 6, §7 L: each band's default along range, 10 s lawn, split 0 --");
+    console.log("range m: stroke % / push %, drive, window ms, handReach m, push impulse per p (N·s)");
+    for (const label of [...new Set(picks.map((p) => p.label))]) {
+        const path = picks
+            .filter((p) => p.label === label && p.lawn === 10 && p.split === 0)
+            .sort((a, b) => a.range - b.range);
+        const chosen = path.map(defaultOf);
+        const strokes = chosen.map((c) => c.read.strokeEffort);
+        const pushes = chosen.map((c) => c.read.pushEffort);
+        const shapes = new Set(chosen.map((c) => JSON.stringify([c.plan.drive, c.plan.window, c.plan.handReach])));
+        console.log(
+            `${label}: ${path.length} ranges, ${shapes.size} follow-through shapes, the stroke % falls ` +
+                `${drops(strokes)} times, the push % ${drops(pushes)} times`,
+        );
+        for (const [i, p] of path.entries()) {
+            const c = chosen[i] as Picked;
+            console.log(
+                `  ${m(p.range)}: ${c.read.strokeEffort.toFixed(0)} / ${c.read.pushEffort.toFixed(0)}, ` +
+                    `${c.plan.drive}, ${(c.plan.window * 1000).toFixed(0)}, ${c.plan.handReach}, ` +
+                    `${(c.read.pushImpulse / c.read.power).toFixed(3)} (${c.type})`,
+            );
+        }
+    }
+    const all = picks.map(defaultOf);
+    const over = (x: number): number => all.filter((c) => c.read.pushEffort > x).length;
+    console.log(
+        `§7 L: ${all.length} defaults over every lawn; push above 90 %: ${over(90)}, at or above 100 %: ` +
+            `${all.filter((c) => c.read.pushEffort >= 100).length}; the most ` +
+            `${Math.max(...all.map((c) => c.read.pushEffort)).toFixed(0)} %`,
+    );
+
+    console.log(
+        `\n-- account 3: hard strikes (p ≥ ${HARD_POWER}) per drive, share at ratio ≥ 1.4 (half roll's least) --`,
+    );
+    for (const type of ["full-roll", "pass-roll"] as const) {
+        const hard = of(type).filter((r) => isAdmissible(r) && r.power >= HARD_POWER);
+        const cells = gridFor(type).drive.graded.map((drive) => {
+            const at = hard.filter((r) => r.drive === drive);
+            return `drive ${drive}: ${pct(share(at, (r) => r.ratio >= 1.4))} of ${at.length}, median ${m(median(at.map((r) => r.ratio)))}`;
+        });
+        console.log(`${type}: ${cells.join("; ")}`);
+    }
+
+    console.log(`\n-- account 7: soft pass rolls (p ≤ ${SOFT_POWER}) per split, share labelled pass roll --`);
+    const soft = of("pass-roll").filter((r) => isAdmissible(r) && r.power <= SOFT_POWER);
+    for (const split of valuesOf(gridFor("pass-roll").split)) {
+        const at = soft.filter((r) => r.split === split);
+        console.log(`${deg(split)}°: ${pct(share(at, (r) => r.ratio < 1))} of ${at.length}`);
+    }
+
+    console.log(
+        `\n-- account 2: plans that play lawfully at ${LAWN_LENGTH} m with ratio ≥ 1 (both balls a court length) --`,
+    );
+    for (const type of MAP_TYPES.filter((t) => t !== "single-ball")) {
+        const at = of(type).filter((r) => r.range === LAWN_LENGTH);
+        const far = at.filter((r) => r.klass === "" && r.ratio >= 1);
+        const plans = new Set(
+            far.map((r) => JSON.stringify([r.lean, r.feet, r.drive, r.handReach, r.window, r.split, r.speedGain])),
+        );
+        const classes = new Map<string, number>();
+        for (const r of at) {
+            const key = r.klass || "plays";
+            classes.set(key, (classes.get(key) ?? 0) + 1);
+        }
+        console.log(
+            `${type}: ${plans.size} plans (${far.filter(isAdmissible).length} admissible reads); at ` +
+                `${LAWN_LENGTH} m: ${[...classes].map(([k, n]) => `${k} ${n}`).join(", ")}`,
+        );
+    }
+
+    console.log("\n-- account 5: the pass roll's defaults along range, drive and window (ms) per lawn, split 0 --");
+    for (const lawn of MAP_LAWNS) {
+        const path = picks
+            .filter((p) => p.label === "pass roll" && p.lawn === lawn && p.split === 0)
+            .sort((a, b) => a.range - b.range);
+        console.log(
+            `${lawn} s: ` +
+                path
+                    .map(
+                        (p) =>
+                            `${m(p.range)} ${defaultOf(p).plan.drive}/${(defaultOf(p).plan.window * 1000).toFixed(0)}`,
+                    )
+                    .join(", "),
+        );
+    }
+    console.log("per split (design A10 item 5), 10 s lawn: range drive/window (ms)");
+    for (const split of valuesOf(gridFor("pass-roll").split)) {
+        const path = picks
+            .filter((p) => p.label === "pass roll" && p.lawn === 10 && p.split === split)
+            .sort((a, b) => a.range - b.range);
+        if (path.length > 0) {
+            const cells = path.map((p) => {
+                const plan = defaultOf(p).plan;
+                return `${m(p.range)} ${plan.drive}/${(plan.window * 1000).toFixed(0)}`;
+            });
+            console.log(`  ${deg(split)}°: ${cells.join(", ")}`);
+        }
+    }
+    const passOk = of("pass-roll").filter((r) => isAdmissible(r) && r.lawn === 10);
+    console.log(
+        "accelerating (drive > 0) share of the pass roll's admissible reads per range, 10 s: " +
+            ranges
+                .map((range) =>
+                    pct(
+                        share(
+                            passOk.filter((r) => r.range === range),
+                            (r) => r.drive > 0,
+                        ),
+                    ),
+                )
+                .join(" "),
+    );
+
+    console.log(
+        "\n-- §7 I: the full roll per speed gain (admissible reads), share labelled full roll; its defaults --",
+    );
+    for (const gain of gridFor("full-roll").speedGain.graded) {
+        const at = of("full-roll").filter((r) => isAdmissible(r) && r.speedGain === gain);
+        console.log(
+            `gain ${gain}: ${at.length} reads, ${pct(share(at, (r) => labelOfRow(r) === "full roll"))}, median ratio ${m(median(at.map((r) => r.ratio)))}`,
+        );
+    }
+    const fullDefaults = picks.filter((p) => p.label === "full roll").map(defaultOf);
+    const gains = new Map<string, number>();
+    for (const c of fullDefaults) {
+        const key = `${c.type} gain ${c.plan.speedGain}`;
+        gains.set(key, (gains.get(key) ?? 0) + 1);
+    }
+    console.log(`full-roll band's defaults: ${[...gains].map(([k, n]) => `${k} × ${n}`).join(", ")}`);
+
+    console.log(
+        `\n-- §7 K: the pass roll's least admissible ratio per lawn and range (multiples below ${MULTIPLES_RATIO}) --`,
+    );
+    for (const lawn of MAP_LAWNS) {
+        const cells = ranges.map((range) => ratioSpan(rows, "pass-roll", range, lawn)?.least ?? NaN);
+        const below = cells.filter((x) => x < MULTIPLES_RATIO).length;
+        console.log(`${lawn} s: ${cells.map(m).join(" ")}; ${below} ranges below`);
+    }
+
+    console.log("\n-- §7 O: reads classed turf per type; the defaults are admissible, so none digs --");
+    for (const type of MAP_TYPES) {
+        console.log(`${type}: ${of(type).filter((r) => r.klass === "turf").length} of ${of(type).length}`);
+    }
+
+    console.log("\n-- the pull (user, 2026-11-09): the pass roll's median split at rest (°) per lean, admissible --");
+    for (const lawn of MAP_LAWNS) {
+        for (const split of valuesOf(gridFor("pass-roll").split)) {
+            const cells = splitAtRestByLean(rows, lawn, split);
+            if (cells.length > 0) {
+                console.log(
+                    `${lawn} s, set ${deg(split)}°: ${cells.map((c) => `${deg(c.lean)}° ${deg(c.median)} (${c.n})`).join(", ")}`,
+                );
+            }
+        }
+    }
+
+    console.log(
+        `\n-- the holes (user, 2026-11-11): empty ratio bins of ${RATIO_BIN} between reached ones, per lawn --`,
+    );
+    for (const lawn of MAP_LAWNS) {
+        const holes = holesOf(rows, lawn);
+        const inside = holes.filter((h) => !h.pastBoundary);
+        console.log(`${lawn} s: ${inside.length} inside, ${holes.length - inside.length} past the boundary`);
+        for (const h of inside) {
+            console.log(`  ${m(h.range)} m: ratio ${m(h.least)}–${m(h.most)}`);
+        }
+    }
+    console.log("each inside hole's neighbours: per type and lean (°), the admissible ratio span within a bin of it:");
+    for (const lawn of MAP_LAWNS) {
+        for (const h of holesOf(rows, lawn).filter((x) => !x.pastBoundary)) {
+            const near = leanSpans(rows, h, lawn, RATIO_BIN);
+            const text = near.map((s) => `${s.type} ${deg(s.lean)}° ${m(s.least)}–${m(s.most)}`).join("; ");
+            console.log(`  ${lawn} s, ${m(h.range)} m, hole ${m(h.least)}–${m(h.most)}: ${text}`);
+        }
+    }
+
+    console.log("\n-- the forward-lean AC stop: its reads per lean, admissible share and ratio span --");
+    for (const lean of valuesOf(gridFor("stop-ac").lean)) {
+        const at = of("stop-ac").filter((r) => r.lean === lean);
+        const ok = at.filter(isAdmissible).map((r) => r.ratio);
+        const span = ok.length === 0 ? "none" : `${m(Math.min(...ok))}–${m(Math.max(...ok))}`;
+        const chosen = all.filter((c) => c.type === "stop-ac" && c.plan.lean === lean).length;
+        console.log(
+            `${deg(lean)}°: ${pct(ok.length / at.length)} of ${at.length} admissible, ratio ${span}, ${chosen} defaults`,
+        );
+    }
+
+    const shards = process.env.SHARDS;
+    if (shards === undefined) {
+        console.log("\n-- §7 the effect measure: SHARDS not set, not measured --");
+        return;
+    }
+    console.log("\n-- §7 the effect measure: samples, faulted by the shipped measure alone, by contact-only alone --");
+    for (const type of MAP_TYPES) {
+        const grid = gridFor(type);
+        const { merged } = mergeShards(fs, type, shards, stagePlans(type, grid, 2));
+        for (const fitted of [false, true]) {
+            const t = effectTally(merged.samples.values(), fitted);
+            console.log(`${type} ${fitted ? "fitted" : "found"}: ${t.samples}, ${t.shippedOnly}, ${t.contactOnly}`);
+        }
+    }
+}
+
 const SECTIONS: Readonly<Record<string, () => void | Promise<void>>> = {
+    checks: sectionChecks,
     lawn: sectionLawn,
+    jumpiness: sectionJumpiness,
+    matrix: sectionMatrix,
     run: sectionRun,
     merge: sectionMerge,
+    record: sectionRecord,
     cost: sectionCost,
     stage1: sectionStage1,
     summary: sectionSummary,
     super: sectionSuper,
+    gripplans: sectionGripPlans,
+    grip: sectionGrip,
+    gripfit: sectionGripFit,
 };
 
 if (process.argv[1]?.endsWith("pushMap.ts")) {

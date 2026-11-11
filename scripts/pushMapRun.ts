@@ -11,13 +11,15 @@
  */
 import { EFFECT_ANGLE, EFFECT_SPEED, judgeFaults, type FaultReport, type StrikeTaps } from "../src/engine/faults";
 import { offPointReason, type OnPoint } from "../src/engine/impact/band";
-import { faceKey } from "../src/engine/impact/contacts";
+import { faceKey, outOfReach } from "../src/engine/impact/contacts";
 import type { FollowThrough, ImpactProbe } from "../src/engine/impact/integrate";
 import { practiseStroke } from "../src/engine/impact/practice";
 import { faceHalfHeight } from "../src/engine/impact/shape";
-import type { ContactInterval, ImpactResult, TrackDrive } from "../src/engine/impact/types";
+import { simulateStroke } from "../src/engine/impact/simulateImpact";
+import { rotate } from "../src/engine/impact/rigidBody";
+import type { ContactInterval, ImpactResult, MalletHead, TrackDrive } from "../src/engine/impact/types";
 import { atan2 } from "../src/engine/math/elementary";
-import { ZERO, add, cross, dot, horizontal, length, sub, vec3, type Vec3 } from "../src/engine/math/vec3";
+import { ZERO, add, cross, dot, horizontal, length, scale, sub, vec3, type Vec3 } from "../src/engine/math/vec3";
 import { strokeContext } from "../src/engine/shot";
 import { simulateFreeMotion } from "../src/engine/simulate";
 import {
@@ -45,9 +47,13 @@ import { openWorld, opened } from "./openLawn";
 import { travelOf } from "./ratioFit";
 import { feetReading } from "./setupProbe";
 
-/** The map's three types (design §1). */
+/** The rolls (design §1): the types with their own axes, the full roll's speedGain and the pass roll's split. */
 export const ROLL_TYPES = ["half-roll", "full-roll", "pass-roll"] as const;
 export type RollType = (typeof ROLL_TYPES)[number];
+
+/** The map's six types (design A7 item 1): every shot type but the GC stop, a stop to a target across a gap. */
+export const MAP_TYPES = ["drive", "stop-ac", "half-roll", "full-roll", "pass-roll", "single-ball"] as const;
+export type MapType = (typeof MAP_TYPES)[number];
 
 /** One plan (spec §3.1, A4): rad, m, 1, m, s, s, rad, 1. */
 export interface MapPlan {
@@ -66,7 +72,7 @@ export interface MapPlan {
  * §3.5's classes (A2 item 2 adds unreachable), in decision 5's order; `unpractised` (P2b.2b.2c.3b.1 design §4 item 3)
  * is a push still out of the band after practice, kept apart from mishit and turf, where either would otherwise read.
  */
-export type MapClass = "unreachable" | "superhuman" | "mishit" | "turf" | "unpractised" | "unlawful";
+export type MapClass = "unreachable" | "superhuman" | "mishit" | "turf" | "unpractised" | "unlawful" | "off-court";
 
 /** One lawn's reading of a sample. */
 export interface LawnRead {
@@ -93,6 +99,11 @@ export interface MapSample {
     readonly pushImpulse: number;
     readonly effectVerdicts: { readonly shipped: boolean; readonly contactOnly: boolean };
     readonly followCap: boolean;
+    /**
+     * Whether a hand slipped in the follow-through, after the balls have gone (`follow-grip-limit`; design A8 item 5):
+     * the balls are unaffected and the shot is legal, so this is recorded beside the class, not as one.
+     */
+    readonly followSlip: boolean;
     /** The practice passes played (P2b.2b.2c.3b.1 design §4, §6): 1 to PRACTICE_PASSES; 0 where unplayed. */
     readonly passes: number;
     /**
@@ -140,7 +151,7 @@ const STEP_SLACK = 1e-9;
  * feet as feetReading reads the canonical setup on the open lawn, its default drive and window, its handReach, the hands
  * on time and, on the pass roll, canonicalSetup's split, PASS_SPLIT.
  */
-export function textBook(type: RollType): MapPlan {
+export function textBook(type: MapType): MapPlan {
     const setup = opened(canonicalSetup(type));
     const stance = defaultProfile.stance[type];
     const { mallet } = defaultProfile;
@@ -169,9 +180,17 @@ export function textBook(type: RollType): MapPlan {
  * speedGain for `type` (A4); the backswing
  * p·h_body for p ≤ 1, else h_body and the intensity p − 1 (bodyBackswing). `over` is for tests of another profile:
  * its profile and stance fields only (stance, drive, shape, mallet, body, croquetGap). The map's world is the open
- * lawn and its stroke the plan's, so an `over` giving `world` or `stroke` throws an Error.
+ * lawn and its stroke the plan's, so an `over` giving `world` or `stroke` throws an Error. `early` (s, negative is
+ * early) moves the follow-through's pulses together, the hands' and the pendulum's (and the dip, timed from it): the
+ * timing sweep's brake or push mistimed (plan C-d5).
  */
-export function mapSetup(type: RollType, plan: MapPlan, power: number, over: CanonicalOptions = {}): ShotSetup {
+export function mapSetup(
+    type: MapType,
+    plan: MapPlan,
+    power: number,
+    over: CanonicalOptions = {},
+    early = 0,
+): ShotSetup {
     if (over.world !== undefined || over.stroke !== undefined) {
         throw new Error("mapSetup: `over` gives the profile and stance only, not a world or a stroke");
     }
@@ -179,7 +198,7 @@ export function mapSetup(type: RollType, plan: MapPlan, power: number, over: Can
     const R = IMPACT_WORLD.ball.radius;
     const line = base.stroke.aim + plan.split;
     const reach = 2 * R + (over.croquetGap ?? DEFAULT_CROQUET_GAP);
-    const croqueted = base.croqueted as BallId;
+    const { croqueted } = base;
     const { x, y } = CANONICAL_STRIKER;
     const placed: ShotSetup = {
         ...base,
@@ -187,13 +206,17 @@ export function mapSetup(type: RollType, plan: MapPlan, power: number, over: Can
             ...base.profile,
             drive: { ...base.profile.drive, [type]: { ...base.profile.drive[type], speedGain: plan.speedGain } },
         },
-        balls: {
-            ...base.balls,
-            [croqueted]: {
-                ...(base.balls[croqueted] as BallState),
-                position: vec3(x + reach * Math.cos(line), y + reach * Math.sin(line), R),
-            },
-        },
+        // The single-ball stroke has no croqueted ball to place (plan B-d2).
+        balls:
+            croqueted === undefined
+                ? base.balls
+                : {
+                      ...base.balls,
+                      [croqueted]: {
+                          ...(base.balls[croqueted] as BallState),
+                          position: vec3(x + reach * Math.cos(line), y + reach * Math.sin(line), R),
+                      },
+                  },
         stroke: {
             ...base.stroke,
             lean: plan.lean,
@@ -201,7 +224,7 @@ export function mapSetup(type: RollType, plan: MapPlan, power: number, over: Can
             drive: plan.drive,
             handReach: plan.handReach,
             window: plan.window,
-            timing: { ...base.stroke.timing, hands: plan.onset },
+            timing: { ...base.stroke.timing, hands: plan.onset + early, arc: base.stroke.timing.arc + early },
         },
     };
     const body = bodyBackswing(placed, IMPACT_WORLD);
@@ -247,7 +270,7 @@ export function bodyBackswing(setup: ShotSetup, world: World): number {
  * The power at which `type`'s text book plays its preset's defaultBackswing on `world` (decision 1: p ≤ 1 is
  * p·h_body): the canonical stroke's backswing, whatever h_body the body's limits give (firmness design §3).
  */
-export function canonicalPower(type: RollType, world: World): number {
+export function canonicalPower(type: MapType, world: World): number {
     return swingReference[type].defaultBackswing.value / bodyBackswing(mapSetup(type, textBook(type), 1), world);
 }
 
@@ -271,7 +294,7 @@ function plans(setup: ShotSetup, world: World): boolean {
  * the plan has no power at all. Every power returned plans. `over` is mapSetup's: the profile and stance only, its
  * world and stroke rejected.
  */
-export function maxPower(type: RollType, plan: MapPlan, world: World, over: CanonicalOptions = {}): number {
+export function maxPower(type: MapType, plan: MapPlan, world: World, over: CanonicalOptions = {}): number {
     const at = (p: number): boolean => plans(mapSetup(type, plan, p, over), world);
     if (at(POWER_LIMIT)) {
         return POWER_LIMIT;
@@ -399,6 +422,7 @@ function unplayed(power: number, lawns: readonly number[], klass: MapClass, reas
         pushImpulse: NaN,
         effectVerdicts: { shipped: false, contactOnly: false },
         followCap: false,
+        followSlip: false,
         passes: 0,
         firmness: null,
         sigma: null,
@@ -425,7 +449,10 @@ export function runClass(
     return own;
 }
 
-/** runClass before practice's reading: decision 5's first class after the run that applies, or none. */
+/**
+ * runClass before practice's reading: decision 5's first class after the run that applies, or none. A slip in the
+ * follow-through is no class (design A8 item 5): the sample records it as `followSlip`.
+ */
 function ownClass(
     setup: ShotSetup,
     run: { readonly result: ImpactResult; readonly follow: FollowThrough },
@@ -437,9 +464,6 @@ function ownClass(
     const event = (kind: string): boolean => events.some((e) => e.kind === kind);
     if (event("grip-limit")) {
         return { klass: "superhuman", reason: "grip-limit" };
-    }
-    if (flags.includes("follow-grip-limit")) {
-        return { klass: "superhuman", reason: "follow-grip-limit" };
     }
     for (const kind of ["impact-off-face", "impact-no-strike"]) {
         if (event(kind)) {
@@ -463,6 +487,11 @@ function ownClass(
     if (events.some((e) => e.kind === "impact-mallet-grounded" && e.t <= firstFace)) {
         return { klass: "turf", reason: "impact-mallet-grounded" };
     }
+    // A contact that never ends, the head wedged on the ball, is materially longer than the stroke's: Law 29.1.6.3
+    // (design A9 item 1; plan C-d1). Classed so the found hold's search goes on to a firmer hold.
+    if (event("impact-cap")) {
+        return { klass: "unlawful", reason: "impact-cap" };
+    }
     if (faults.findings.some((f) => f.law === "29.1.6.1")) {
         return { klass: "unlawful", reason: "29.1.6.1" };
     }
@@ -472,7 +501,7 @@ function ownClass(
 /** maxPower per plan on the impact's world, memoised: a sweep plays one plan at many powers. */
 const MAX_POWERS = new Map<string, number>();
 
-function maxPowerOf(type: RollType, plan: MapPlan): number {
+function maxPowerOf(type: MapType, plan: MapPlan): number {
     const key = JSON.stringify([type, plan]);
     const known = MAX_POWERS.get(key);
     if (known !== undefined) {
@@ -487,7 +516,7 @@ function maxPowerOf(type: RollType, plan: MapPlan): number {
  * The stroke's effort (%; decision 1): plannedSpeed at `setup` over plannedSpeed at the plan's p_max; NaN where the
  * plan has no p_max.
  */
-function strokeEffortOf(type: RollType, plan: MapPlan, setup: ShotSetup): number {
+function strokeEffortOf(type: MapType, plan: MapPlan, setup: ShotSetup): number {
     const pMax = maxPowerOf(type, plan);
     if (Number.isNaN(pMax)) {
         return NaN;
@@ -528,15 +557,72 @@ function splitAtRestOf(a: Vec3, b: Vec3): number {
 export function playedClass(
     setup: ShotSetup,
     world: World,
-): { readonly klass: MapClass | null; readonly reason: string | null } {
+): { readonly klass: MapClass | null; readonly reason: string | null; readonly followSlip?: boolean } {
     const { contact } = planStroke(setup, world);
     const { drive } = contact;
     if (drive.kind !== "track") {
         return { klass: "unreachable", reason: "the planned contact has no tracked drive" };
     }
-    const run = practiseStroke(contact, setup.balls, world, setup.striker);
+    const over = overBallWatch(setup, contact.head, drive.arc.aim, world.ball.radius);
+    const run = practiseStroke(contact, setup.balls, world, setup.striker, over.probeFor);
     const faults = judgeFaults(strokeContext(setup, run.result), run.result);
-    return runClass(setup, run, faults, run.point, drive.arc.handReach > 0 ? run.miss : null);
+    const played = runClass(setup, run, faults, run.point, drive.arc.handReach > 0 ? run.miss : null);
+    const classed = withOverBall(played, drive.arc.handReach > 0 && over.passed());
+    return run.follow.flags.includes("follow-grip-limit") ? { ...classed, followSlip: true } : classed;
+}
+
+/** The reason of a pushed stroke whose head passed over the striker's ball (plan B-d8). */
+export const HEAD_OVER_BALL = "head-over-ball";
+
+/**
+ * A probe per practice pass reading whether the head rode over the striker's ball after the first face contact (plan
+ * B-d8): on some step the ball is out of the face's reach (outOfReach) while the head has gained on it along aim since
+ * that contact. A ball that has simply left the head is further away along aim, not nearer, and a head on the ball is
+ * within reach. `passed` reads the last pass.
+ */
+function overBallWatch(
+    setup: ShotSetup,
+    head: MalletHead,
+    aim: Vec3,
+    radius: number,
+): { readonly probeFor: () => ImpactProbe; readonly passed: () => boolean } {
+    const striker = BALL_IDS.filter((id) => setup.balls[id] !== undefined).indexOf(setup.striker);
+    const key = faceKey(setup.striker);
+    let gapAtStrike: number | null = null;
+    let over = false;
+    return {
+        probeFor() {
+            gapAtStrike = null;
+            over = false;
+            return {
+                step(s) {
+                    const ball = (s.balls[striker] as BallState).position;
+                    const gap = dot(sub(ball, s.head.position), aim);
+                    if (gapAtStrike === null) {
+                        if (s.contacts.some((c) => c.key === key && c.normalForce > 0)) {
+                            gapAtStrike = gap;
+                        }
+                        return;
+                    }
+                    const f = rotate(s.head.orientation, vec3(1, 0, 0));
+                    const offset = sub(ball, add(s.head.position, scale(f, head.length / 2)));
+                    over ||= gap < gapAtStrike && outOfReach(s.head, head, offset, f, dot(offset, f), radius);
+                },
+            };
+        },
+        passed: () => over,
+    };
+}
+
+/**
+ * The class of a play with the head-over-ball rule (plan B-d8): an admissible pushed stroke whose head rode over the
+ * ball is a mis-played shot, a mishit, whatever hold the search would otherwise take it at.
+ */
+function withOverBall(
+    played: { readonly klass: MapClass | null; readonly reason: string | null },
+    overBall: boolean,
+): { readonly klass: MapClass | null; readonly reason: string | null } {
+    return played.klass === null && overBall ? { klass: "mishit", reason: HEAD_OVER_BALL } : played;
 }
 
 /**
@@ -549,32 +635,36 @@ export function playedClass(
  * impact or the free motion is the engine's, not the plan's, and propagates (the shard runner reports it).
  */
 export function playSample(
-    type: RollType,
+    type: MapType,
     plan: MapPlan,
     power: number,
     lawns: readonly number[],
-    hold: MapHold = "found",
+    hold: MapHold | number = "found",
+    early = 0,
 ): MapSample {
-    return playJudged(type, plan, power, lawns, hold).sample;
+    return playJudged(type, plan, power, lawns, hold, early).sample;
 }
 
 /**
  * playSample's sample with the judge's strike beside it (plan Task 8's super pass roll reads 29.2.5 from it): the
  * parting, the taps and the re-contacts (judgeFaults's `strike`), null where the sample was not played (a power above
  * 2, a planStroke rejection) or the judge gives none. The sample is playSample's exactly. With `hold` "found" the
- * sample is played in searchFirmness, at the least admissible σ, else at σ_max (A7 item 4), up to 16 practised plays.
+ * sample is played in searchFirmness, at the least admissible σ that doesn't slip, else the least admissible, else at
+ * σ_max (A7 item 4, A8 item 5), up to 16 practised plays. With a number, it is played at that hold firmness (0–1; the
+ * grip sweep, plan C-d4), once. `early` is mapSetup's.
  */
 export function playJudged(
-    type: RollType,
+    type: MapType,
     plan: MapPlan,
     power: number,
     lawns: readonly number[],
-    hold: MapHold = "found",
+    hold: MapHold | number = "found",
+    early = 0,
 ): { readonly sample: MapSample; readonly strike: StrikeTaps | null } {
     if (power > POWER_LIMIT) {
         return { sample: unplayed(power, lawns, "superhuman", `intensity ${power - 1} above 1`), strike: null };
     }
-    const setup = mapSetup(type, plan, power);
+    const setup = mapSetup(type, plan, power, {}, early);
     let stroke: StrokePlan;
     try {
         stroke = planStroke(setup, IMPACT_WORLD);
@@ -591,31 +681,87 @@ export function playJudged(
             strike: null,
         };
     }
-    if (hold === "preset") {
-        const { sample, strike } = judgedPlay(type, plan, power, lawns, setup, stroke);
-        const firmness = setup.stroke.holdFirmness ?? setup.profile.shape[type].holdFirmness;
-        return { sample: { ...sample, firmness, sigma: drive.arc.holdFirmness }, strike };
+    if (hold !== "found") {
+        // A given firmness (the grip sweep, plan C-d4) is played as the preset's is, the stroke planned at it.
+        const held = typeof hold === "number" ? { ...setup, stroke: { ...setup.stroke, holdFirmness: hold } } : setup;
+        const heldStroke = held === setup ? stroke : planStroke(held, IMPACT_WORLD);
+        const { sample, strike, handover } = judgedPlay(type, plan, power, held, heldStroke);
+        const firmness = held.stroke.holdFirmness ?? held.profile.shape[type].holdFirmness;
+        const byLawn = lawnReads(held, handover, lawns);
+        const sigma = (heldStroke.contact.drive as TrackDrive).arc.holdFirmness;
+        return { sample: { ...sample, byLawn, firmness, sigma }, strike };
     }
-    // The hold acts after planning, so the planner's rejection, checked above, does not depend on it (design §5).
+    // The hold acts after planning, so the planner's rejection, checked above, does not depend on it (design §5). The
+    // class needs no free motion, so the search plays none and the kept play's handover alone rolls (plan B-d6).
     const { found, played } = searchFirmness(setup, IMPACT_WORLD, (held) => {
-        const judged = judgedPlay(type, plan, power, lawns, held, planStroke(held, IMPACT_WORLD));
-        return { klass: judged.sample.klass, reason: judged.sample.reason, judged };
+        const judged = judgedPlay(type, plan, power, held, planStroke(held, IMPACT_WORLD));
+        const { klass, reason, followSlip } = judged.sample;
+        return { klass, reason, followSlip, judged };
     });
+    const byLawn = lawnReads(setup, played.judged.handover, lawns);
     return {
-        sample: { ...played.judged.sample, firmness: found.firmness, sigma: found.sigma },
+        sample: { ...played.judged.sample, byLawn, firmness: found.firmness, sigma: found.sigma },
         strike: played.judged.strike,
     };
 }
 
-/** playJudged's play of `setup`, planned as `stroke` with a tracked drive, without the hold's record. */
-function judgedPlay(
-    type: RollType,
+/**
+ * Each lawn's read of the free motion from `handover` (s; IMPACT_LAWN on IMPACT_WORLD). The hold changes only the
+ * stroke, so any of a search's setups gives the balls and ids it reads.
+ */
+function lawnReads(
+    setup: ShotSetup,
+    handover: ImpactResult["handover"],
+    lawns: readonly number[],
+): Record<number, LawnRead> {
+    const { croqueted } = setup;
+    const byLawn: Record<number, LawnRead> = {};
+    for (const lawn of lawns) {
+        const motion = simulateFreeMotion(handover, lawn === IMPACT_LAWN ? IMPACT_WORLD : openWorld(lawn));
+        const range = travelOf(setup, motion, setup.striker);
+        const from = (id: BallId): Vec3 => sub(motion.rest[id] as Vec3, (setup.balls[id] as BallState).position);
+        // The single-ball stroke has no croqueted ball: its range alone (plan B-d2).
+        const other = croqueted === undefined ? NaN : travelOf(setup, motion, croqueted);
+        byLawn[lawn] = {
+            range,
+            ratio: range > 0 ? other / range : NaN,
+            splitAtRest: croqueted === undefined ? NaN : splitAtRestOf(from(setup.striker), from(croqueted)),
+        };
+    }
+    return byLawn;
+}
+
+/**
+ * `plan` of `type` at power `power` played once, without practice (plan B-d7), and read on `lawn` (s): practiseStroke's
+ * first pass at the hold `firmness`, null being σ_max, where the found hold's search ends with none admissible. Not
+ * classed: a first pass out of the band still has a ratio, and the bound compares ratios. A planning RangeError
+ * propagates, as does an engine error of the play.
+ */
+export function firstPassRead(
+    type: MapType,
     plan: MapPlan,
     power: number,
-    lawns: readonly number[],
+    firmness: number | null,
+    lawn: number,
+): LawnRead {
+    const base = mapSetup(type, plan, power);
+    const setup = { ...base, stroke: { ...base.stroke, holdFirmness: firmness ?? 1 } };
+    const { result } = simulateStroke(planStroke(setup, IMPACT_WORLD).contact, setup.balls, IMPACT_WORLD);
+    return lawnReads(setup, result.handover, [lawn])[lawn] as LawnRead;
+}
+
+/** playJudged's play of `setup`, planned as `stroke` with a tracked drive, without the lawns' reads or the hold's. */
+function judgedPlay(
+    type: MapType,
+    plan: MapPlan,
+    power: number,
     setup: ShotSetup,
     stroke: StrokePlan,
-): { readonly sample: Omit<MapSample, "firmness" | "sigma">; readonly strike: StrikeTaps | null } {
+): {
+    readonly sample: Omit<MapSample, "byLawn" | "firmness" | "sigma">;
+    readonly strike: StrikeTaps | null;
+    readonly handover: ImpactResult["handover"];
+} {
     const drive = stroke.contact.drive as TrackDrive;
     const ids = BALL_IDS.filter((id) => setup.balls[id] !== undefined);
     const striker = ids.indexOf(setup.striker);
@@ -643,25 +789,25 @@ function judgedPlay(
             },
         };
     };
-    const run = practiseStroke(stroke.contact, setup.balls, IMPACT_WORLD, setup.striker, probeFor);
+    const over = overBallWatch(setup, stroke.contact.head, drive.arc.aim, IMPACT_WORLD.ball.radius);
+    const run = practiseStroke(stroke.contact, setup.balls, IMPACT_WORLD, setup.striker, () => {
+        const watch = over.probeFor();
+        const own = probeFor();
+        return {
+            step(s) {
+                watch.step(s);
+                own.step(s);
+            },
+        };
+    });
     const impact = run.result;
     const faults = judgeFaults(strokeContext(setup, impact), impact);
     // A stroke without a push is not practised (design §4; the plan's Global Constraints): its class is today's.
     const miss = drive.arc.handReach > 0 ? run.miss : null;
-    const { klass, reason } = runClass(setup, run, faults, run.point, miss);
-    const croqueted = setup.croqueted as BallId;
-    const byLawn: Record<number, LawnRead> = {};
-    for (const lawn of lawns) {
-        const motion = simulateFreeMotion(impact.handover, lawn === IMPACT_LAWN ? IMPACT_WORLD : openWorld(lawn));
-        const range = travelOf(setup, motion, setup.striker);
-        const other = travelOf(setup, motion, croqueted);
-        const from = (id: BallId): Vec3 => sub(motion.rest[id] as Vec3, (setup.balls[id] as BallState).position);
-        byLawn[lawn] = {
-            range,
-            ratio: range > 0 ? other / range : NaN,
-            splitAtRest: splitAtRestOf(from(setup.striker), from(croqueted)),
-        };
-    }
+    const { klass, reason } = withOverBall(
+        runClass(setup, run, faults, run.point, miss),
+        drive.arc.handReach > 0 && over.passed(),
+    );
     const shipped = faults.findings.some((f) => f.law === "29.1.6.1");
     const trace: VelocityTrace = {
         initial: (setup.balls[setup.striker] as BallState).velocity,
@@ -669,18 +815,18 @@ function judgedPlay(
         velocities,
     };
     const faces = impact.timeline[faceKey(setup.striker)] ?? [];
-    const sample: Omit<MapSample, "firmness" | "sigma"> = {
+    const sample: Omit<MapSample, "byLawn" | "firmness" | "sigma"> = {
         power,
         klass,
         reason,
-        byLawn,
         strokeEffort: strokeEffortOf(type, plan, setup),
         pushEffort: (100 * peak) / setup.profile.body.pushForce,
         coupleShare: coupleShareOf(setup, stroke),
         pushImpulse: impulse,
         effectVerdicts: { shipped, contactOnly: contactOnlyFault(faults, faces, trace, shipped) },
         followCap: run.follow.flags.includes("follow-cap"),
+        followSlip: run.follow.flags.includes("follow-grip-limit"),
         passes: run.passes,
     };
-    return { sample, strike: faults.strike ?? null };
+    return { sample, strike: faults.strike ?? null, handover: impact.handover };
 }

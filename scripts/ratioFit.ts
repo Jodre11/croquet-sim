@@ -887,7 +887,10 @@ export function guganRatio(type: "drive" | "stop-ac", gap: number, dt: number, w
 /** The jab test's band for the second tap's mallet speed over U (tests/engine/turfStrike.test.ts). */
 export const JAB_BAND = [0.295, 0.463] as const;
 
-/** The AC stop's jab depths (m) of design §7.2, as the jab test sweeps them: 0 to 8 mm in 0.5 mm steps. */
+/**
+ * The AC stop's jab depths (m) of design §7.2: 0 to 8 mm in 0.5 mm steps. Since the preset's 11 mm dip was removed
+ * (engine 0.30.0) each is the whole dip, where the jab test now sweeps 11 mm more and earlier probes ran on top of it.
+ */
 export const JAB_DEPTHS = Array.from({ length: 17 }, (_, k) => k * 0.0005);
 
 /**
