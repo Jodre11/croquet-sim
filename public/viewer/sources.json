@@ -1,0 +1,15 @@
+{
+    "command": "env OUT=public/viewer npx --no-install tsx scripts/viewerData.ts",
+    "sources": {
+        "reference/derived/envelope-defaults.json": "55f67abca5ca92ae664a1860918de3cf23fccf35bf91b90b1b49259340eb444b",
+        "reference/derived/envelope-drive.csv.gz": "9db3369710a3ce5fa952281d868a0648fee6e90957565360122dc943c88c2eae",
+        "reference/derived/envelope-stop-ac.csv.gz": "1dad908fbae2db9a6d3894525ab1ac7283be8e4fae826218691fc8db9e2fe1bd",
+        "reference/derived/envelope-half-roll.csv.gz": "704e55e894aa43f7405ec05aa22805c1700588ef5202f497d04cffb777678aa0",
+        "reference/derived/envelope-full-roll.csv.gz": "83f1929d9efecde691d68d816e19607f404f0b462519c00c69b852e8acbb7026",
+        "reference/derived/envelope-pass-roll.csv.gz": "380c601abf40eb34372339bbb8c5fac93ad32835539d51d81dcedb5fb52c5d7c",
+        "reference/derived/envelope-single-ball.csv.gz": "cb499f168128501380b5ddd980493e717bb8376160a986cadd4c7093e8eb2897",
+        "reference/derived/envelope-grip.json.gz": "1a17bc1c3292877bf5e3d0fd40ae05b97f7f14741d898bf64bdd6cc8d398a049",
+        "scripts/viewerData.ts": "1bc26e4b5681509adf87b0bdb5ffb4529a5632d1be7d12fd484ee99f289211ae",
+        "src/lab/judge.ts": "d948b963af6a33ea94612c18f1b2447ae4becab2ad2b442bc7720709b0eb45b6"
+    }
+}

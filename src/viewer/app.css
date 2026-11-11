@@ -1,0 +1,197 @@
+/* The viewer's one theme (side-on viewer spec §3.4): its colours as variables, so a dark theme is cheap later. */
+:root {
+    --surface: #fbfaf6;
+    --panel: #ffffff;
+    --ink: #1f2a24;
+    --muted: #6b766f;
+    --line: #d9ddd6;
+    --turf: #3f7d3a;
+    --striker: #1f4fa8;
+    --croqueted: #b3261e;
+    --planned: #7a5cc2;
+    --played: #d9822b;
+    --flag: #b3261e;
+    --viable: #2e7d32;
+    --edgy: #b7791f;
+    --non-viable: #b3261e;
+    --unknown: #6b766f;
+    color-scheme: light;
+    font-family: system-ui, sans-serif;
+    color: var(--ink);
+    background: var(--surface);
+}
+
+body {
+    margin: 0;
+    background: var(--surface);
+}
+
+main {
+    padding: 12px 16px 24px;
+}
+
+header h1 {
+    margin: 0;
+    font-size: 1.4rem;
+}
+
+.layout {
+    display: grid;
+    grid-template-columns: minmax(260px, 320px) 1fr;
+    gap: 16px;
+    margin-top: 12px;
+}
+
+@media (max-width: 800px) {
+    .layout {
+        grid-template-columns: 1fr;
+    }
+}
+
+aside,
+.stage {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-width: 0;
+}
+
+.panel {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 8px 12px;
+    margin: 0;
+}
+
+fieldset.panel label {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin: 6px 0;
+    font-size: 0.9rem;
+}
+
+.input input[type="range"] {
+    width: 100%;
+}
+
+.row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+
+.note {
+    color: var(--muted);
+    font-size: 0.85rem;
+    margin: 4px 0;
+}
+
+.error {
+    color: var(--non-viable);
+}
+
+button {
+    font: inherit;
+    padding: 4px 12px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: var(--panel);
+    color: var(--ink);
+    cursor: pointer;
+}
+
+button:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
+button.run {
+    background: var(--ink);
+    color: var(--panel);
+    font-weight: 600;
+}
+
+.badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.badge {
+    border-radius: 999px;
+    padding: 2px 10px;
+    font-size: 0.85rem;
+    border: 1px solid var(--line);
+    background: var(--panel);
+}
+
+.badge.viable {
+    border-color: var(--viable);
+    color: var(--viable);
+}
+
+.badge.edgy {
+    border-color: var(--edgy);
+    color: var(--edgy);
+}
+
+.badge.non-viable {
+    border-color: var(--non-viable);
+    color: var(--non-viable);
+}
+
+.badge.unknown {
+    border-color: var(--unknown);
+    color: var(--unknown);
+}
+
+.canvases {
+    position: relative;
+}
+
+canvas.side-on {
+    display: block;
+    width: 100%;
+    height: min(60vh, 520px);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+}
+
+canvas.top-down {
+    position: absolute;
+    right: 8px;
+    top: 8px;
+    width: 140px;
+    height: 160px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+}
+
+.time-bar input[type="range"] {
+    flex: 1;
+    min-width: 120px;
+}
+
+.time {
+    font-variant-numeric: tabular-nums;
+    min-width: 6em;
+}
+
+.readout {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: 2px 12px;
+    font-size: 0.9rem;
+}
+
+.readout dt {
+    color: var(--muted);
+}
+
+.readout dd {
+    margin: 0;
+    font-variant-numeric: tabular-nums;
+}

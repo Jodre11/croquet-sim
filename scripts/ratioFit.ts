@@ -30,7 +30,7 @@ import { faceHalfHeight } from "../src/engine/impact/shape";
 import { simulateImpact } from "../src/engine/impact/simulateImpact";
 import { effectiveMass, swungBody } from "../src/engine/impact/track";
 import type { ContactInterval, ContactState, ImpactResult } from "../src/engine/impact/types";
-import { dot, horizontal, length, sub, type Vec3 } from "../src/engine/math/vec3";
+import { dot, horizontal, length } from "../src/engine/math/vec3";
 import { simulateFreeMotion } from "../src/engine/simulate";
 import { buildContact, handsAheadFor, headShapeOf, planStroke, stanceLean } from "../src/engine/swing/buildContact";
 import { defaultProfile } from "../src/engine/swing/profile";
@@ -48,6 +48,7 @@ import { DEFAULT_CROQUET_GAP, backswingFor, canonicalSetup, strokeFor } from "..
 import { CEILING } from "./effortFit";
 import { FILMED_STROKES, GUGAN5, type FilmedStroke } from "./filmedStrokes";
 import { strokeForContact } from "./followThrough";
+import { travelOf } from "../src/lab/play";
 import { openWorld, opened } from "./openLawn";
 
 /** The five shared candidates (design §5.2): one value each. */
@@ -176,11 +177,7 @@ export function runFit(
     return { impact, motion: simulateFreeMotion(impact.handover, world), release };
 }
 
-/** A ball's travel (m) on the turf from `setup`'s start to its rest in `motion`. */
-export function travelOf(setup: ShotSetup, motion: ShotResult, id: keyof ShotResult["rest"]): number {
-    const start = (setup.balls[id] as BallState).position;
-    return length(horizontal(sub(motion.rest[id] as Vec3, start)));
-}
+export { travelOf };
 
 /**
  * The croquet ratio of `setup`'s stroke in `motion`: the croqueted ball's travel to rest over the striker's ball's.

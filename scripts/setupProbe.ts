@@ -26,12 +26,12 @@
  */
 import { finishKind } from "../src/engine/impact/integrate";
 import { rotate, type Quaternion } from "../src/engine/impact/rigidBody";
-import { pitchAxis, prepareTrack } from "../src/engine/impact/track";
+import { prepareTrack } from "../src/engine/impact/track";
 import type { TrackDrive } from "../src/engine/impact/types";
 import { atan2 } from "../src/engine/math/elementary";
-import { add, cross, dot, scale, sub, vec3, type Vec3 } from "../src/engine/math/vec3";
+import { dot, vec3, type Vec3 } from "../src/engine/math/vec3";
 import { simulateShot } from "../src/engine/shot";
-import { arcArrival, contactPose, downswingInputOf, planStroke, poseSpeed } from "../src/engine/swing/buildContact";
+import { contactPose, downswingInputOf, poseSpeed } from "../src/engine/swing/buildContact";
 import {
     planDownswing,
     requiredCouple,
@@ -40,55 +40,16 @@ import {
 } from "../src/engine/swing/downswing";
 import { DEFAULT_DRIVE, DEFAULT_TIMING, ON_TIME } from "../src/engine/swing/profile";
 import { STROKE_TYPES, type ShotSetup, type StrokeType } from "../src/engine/swing/types";
-import type { BallState, World } from "../src/engine/types";
+import type { World } from "../src/engine/types";
 import { defaultWorld } from "../src/engine/world";
 import type { ReContact } from "../src/engine/faults";
 import { ratioTargetsReference } from "../src/reference/index";
 import { backswingFor, canonicalSetup, DEFAULT_CROQUET_GAP } from "../tests/engine/support/shot";
 import { playRoutes } from "./followThrough";
+import { feetReading, type FeetReading } from "../src/lab/play";
 import { guganSetup, leanOf, ratioOf } from "./ratioFit";
 
-/** The feet's reading of one set-up (design §3). */
-export interface FeetReading {
-    /** x_c (m): the top hand at contact, along aim from the striker's ball's centre. */
-    readonly handsAt: number;
-    /** The hands' arc's lowest point (m) along aim from the ball's centre, x_c + handArcLow·handReach. */
-    readonly lowPoint: number;
-    /** The arc's slope dz/ds at contact (arcArrival at the preset's values). */
-    readonly arrival: number;
-    /** The head's planned velocity's angle above horizontal at contact (rad): V_c + ω₀·n × (c − P_c). */
-    readonly attack: number;
-    /** The shaft's lean at contact (rad), −θ_c. */
-    readonly lean: number;
-}
-
-/**
- * Reads where `setup`'s hands and the arc they follow sit relative to the striker's ball at contact (design §3): the
- * hands' position and the arc's lowest point along aim from the ball's centre, the arc's slope, the planned head's
- * attack angle and the lean. Throws planStroke's checks.
- */
-export function feetReading(setup: ShotSetup, world: World): FeetReading {
-    const { stroke, profile } = setup;
-    const push = profile.drive[stroke.type];
-    const reach = stroke.handReach ?? push.handReach;
-    const pose = contactPose(setup, world);
-    const striker = setup.balls[setup.striker] as BallState;
-    const handsAt = dot(sub(pose.pivot, striker.position), pose.aim);
-    const { drive } = planStroke(setup, world).contact;
-    if (drive.kind !== "track") {
-        throw new Error("feetReading needs a tracked stroke");
-    }
-    const { arc } = drive;
-    const lever = cross(pitchAxis(pose.aim), sub(pose.headCentre, pose.pivot));
-    const velocity: Vec3 = add(arc.pivotVelocity, scale(lever, arc.omega0));
-    return {
-        handsAt,
-        lowPoint: handsAt + push.handArcLow * reach,
-        arrival: arcArrival(push.handArcRadius, push.handArcLow * reach),
-        attack: atan2(velocity.z, dot(velocity, pose.aim)),
-        lean: 0 - pose.thetaContact,
-    };
-}
+export { feetReading, type FeetReading };
 
 declare const process: {
     readonly env: Readonly<Record<string, string | undefined>>;
