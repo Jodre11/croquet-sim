@@ -777,3 +777,51 @@ animation (`scripts/sideOnExport.ts`).
     range and ratio recorded for the game's chance of missing (assumption on the user's reply; the steps are the
     builder's, not measured human errors). The user, on the result: "Rolls are considered to be more difficult shots
     because of the timing problem": every roll carries a push, so its timed count is never 0.
+
+### A10. Gate stage 3's rulings (user, 2026-11-11)
+
+Measured on the Amendment C record (plan Task C4; `docs/superpowers/probes/2026-11-11-p2b2b2c3b-maps.txt`). The user's
+two goals frame them: defaults per shot that a player tunes, judged viable, edgy or non-viable against the envelope;
+and a grip chosen from the data within bounds the player moves.
+
+1. **The hole between the drive and the AC stop is the grid's, and is interpolated** (chosen "Interpolate"). Ratios
+   3.6–4.2 at the striker's 1.3–6.4 m are reached by no admissible play on any lawn, but the drive's neighbouring
+   leans land either side of it (10 s, 3.32 m: +6° gives 3.52–3.59, 0° gives 4.33–4.42): the 6° lean step, not the
+   physics. The game judges a lean between grid points from its neighbours, as everywhere on the grid. The other inside
+   holes lie at the AC stop's steep edge, ratios above 6.
+2. **Onset and speed gain stay the model's; timing is a risk** (chosen "Fix them, timing as risk"). The player sets
+   neither: the push is on time and the speed gain is the type's (swept on the full roll only). C3's early plays (5 and
+   10 ms) become a reliability measure shown beside the band; the AC stop is the sensitive one (53 of 62 plans stop
+   playing 5 ms early).
+3. **A grip no fit predicts is read from the nearest swept plan** (chosen "Nearest neighbour"). Where a bound's fit
+   failed (the firmest on the drive, the AC stop and the half roll; the reliable bound off the full roll; every bound on
+   the half roll), the game takes the bounds of the nearest plan in `envelope-grip.json.gz`, its distance flagged.
+4. **§6 item 2 is a miss** (chosen "Record as a miss"). The ratio rises with drive somewhere in 39–84 % of each type's
+   slices, by up to 1.6 (9.1 on one full-roll slice). Carried to P2b.2b.2c.3c with A7 item 9's jumpiness.
+5. **The pass roll's split is the player's, and its defaults are picked per split** (the user: "are we going with a 4
+   degree split?"; chosen "Yes, per split"). In a game the split is set by where the balls are to go, so a default does
+   not choose it: the defaults are the least complex plan (A9 item 7) at the split the player needs, from the map's
+   sweep at every split. Amends A9 item 6 and plan C-d3's picker for the pass roll.
+6. **The user's accounts** (chosen "Record, keep defaults"). Account 7 holds: soft pass rolls (p ≤ 0.5) reach the
+   pass-roll region in 18 % of reads at 0°, 53 % at 2°, about 80 % from 4°. Account 2 holds as the user reasoned: at
+   32 m every two-ball read is off-court. Accounts 3 and 5 are misses: a weak follow-through on a hard strike lowers the
+   ratio (drive −1: 58 % and 45 % at ratio ≥ 1.4 on the full and pass rolls, against 74–82 % at drive 0–1); the pass
+   roll's least complex defaults keep drive 0 at every range, and accelerating plans thin out with range. The defaults
+   stay least complex; accelerating pass rolls stay admissible for a player who chooses them.
+7. **The pull is a first reading, carried to P2b.2b.2c.3c** (chosen "Record, carry to 3c"). The pass roll's most
+   forward lean (38°) narrows the split at rest at set splits of 2–4° (3.3° against 5.7° at 26°, set 2°) and widens it
+   at 20–30° (46.7° against 38.2°, set 30°). Every split at rest is wider than the one set. The backward-lean side is not
+   swept on the pass roll.
+8. **The forward-lean AC stop stays, as found** (chosen "Keep them, as found"). +1.5° and +3° play as often as the
+   backward leans (about 25 % of reads admissible), at ratios 1.5–4.9, so mostly as a drive; 18 of the 358 defaults use
+   them, at short ranges.
+9. **The shipped effect measure stands** (chosen "Keep the shipped"). The contact-only candidate faults where the
+   shipped one does not in up to 4.6 % of a type's samples (half roll 804 of 17,638); the reverse in at most 28.
+10. **The defaults' efforts are believable; their shape is a miss** (chosen "Believable; record"). Effort rises with
+    range almost everywhere and no default pushes above 80 %. Against impulse-variability scaling (Schmidt, Zelaznik,
+    Hawkins, Frank and Quinn 1979, read through Plamondon and Alimi 1997 as the maps file cites them, the primary being
+    paywalled), the defaults change follow-through shape 5–8 times along each band and are not one shape scaled. Their
+    push windows, 10–40 ms, sit at and below the CA's roll contacts, 30–58 ms. §7 I: the full-roll band's defaults are
+    mostly half-roll plans (37 of 43), and speed gain barely moves the full-roll share (36 % to 41 %). §7 K: the plain
+    pass roll reaches ratio below 0.5 at 12–16 of 16 ranges per lawn without the super pass roll. §7 L: no default
+    saturates. §7 O: every default is admissible, so none digs.
