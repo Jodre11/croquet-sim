@@ -40,13 +40,18 @@ the main thread and the play and the search in a Web Worker.
 
 **Files:** create `tests/lab/playPin.test.ts` and its fixture `tests/lab/playPin.json`.
 
-- [ ] A one-off capture (in the temp directory, not committed) plays, on today's code, each `MAP_TYPES` text book at
+- [x] A one-off capture (in the temp directory, not committed) plays, on today's code, each `MAP_TYPES` text book at
   power 0.5 and its `canonicalPower`, each at the found hold and at firmness 0.5 (`playJudged(type, textBook(type),
   power, [10], hold)`), and writes each sample as JSON (`JSON.stringify` keeps every bit of a double).
-- [ ] The test replays the same 24 plays and expects each sample to deep-equal the fixture's. It runs against
+- [x] The test replays the same 24 plays and expects each sample to deep-equal the fixture's. It runs against
   `scripts/pushMapRun.ts` now and against `src/lab` after Task 2. Mark it slow (the rolls' found holds take 20–25 s
   each): `{ timeout: 600_000 }`.
-- [ ] Checks; commit "Pin the map's play before it moves".
+- [x] Checks; commit "Pin the map's play before it moves".
+
+  *As built:* `tests/lab/pinCodec.ts` lists the plays and encodes a sample as JSON with NaN, ±Infinity and −0 tagged
+  (`JSON.stringify` writes them as null and 0), and the test compares the encoded text, so equal text is equal bits.
+  The fixture is 18 KB. The test takes 161 s, almost all of it the full and pass rolls' found holds (19–24 s each).
+  The full suite was not re-run: the task adds only this test.
 
 ### Task 2: The play in `src/lab`
 
