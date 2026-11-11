@@ -56,6 +56,8 @@
  *   (GRIP_PLANS, SHARD, OUT named `grip-<k>of<N>.jsonl`) at each grip and, timed starting plans, early; gripfit merges
  *   IN's grip shards, prints the fits and the timing losses and writes `OUT/envelope-grip.json.gz`. matrix with
  *   STAGE=grip shards the list evenly.
+ * - checks: plan Task C4, the gate's measures (pushMapChecks.ts) from the found hold's record, defaults and stage-1
+ *   file in IN (default `reference/derived`), and the effect measure from the stage-2 shard files in SHARDS when set.
  * Run with `env SECTION=lawn npx --yes tsx scripts/pushMap.ts`. The environment: SECTION names the section; matrix
  * takes TYPES, STAGE, SHARDS and ONLY; run takes TYPE (any shot type), STAGE, LAWNS, SHARD (k/N, default 0/1) and OUT
  * (a file); merge takes TYPE, STAGE, LAWNS, IN (a directory), and RECORD_RUNS and RECORD_COMMIT where run locally over
@@ -127,6 +129,7 @@ import {
     type MapGrid,
     type Merged,
     type NeighbourGap,
+    type Picked,
     type Reads,
     type RecordHeader,
     type Stage,
@@ -150,6 +153,24 @@ import {
     type GripPlan,
     type GripPlay,
 } from "./pushMapGrip";
+import {
+    defaultOf,
+    driveRises,
+    drops,
+    effectTally,
+    holesOf,
+    isAdmissible,
+    labelOfRow,
+    leanSpans,
+    LAWN_LENGTH,
+    median,
+    parseRecord,
+    RATIO_BIN,
+    ratioSpan,
+    share,
+    splitAtRestByLean,
+    type RecordRow,
+} from "./pushMapChecks";
 import {
     MAP_TYPES,
     ROLL_TYPES,
@@ -1384,12 +1405,26 @@ async function sectionRecord(): Promise<void> {
     const json = JSON.stringify({ header, ...picksByHold }, (_k, v: unknown) =>
         typeof v === "number" && !Number.isFinite(v) ? null : v,
     );
-    fs.writeFileSync(`${out}/envelope-defaults.json`, `${json}\n`);
+    fs.writeFileSync(`${out}/envelope-defaults.json`, await prettyJson(`${out}/envelope-defaults.json`, json));
     console.log(`written: ${out}/envelope-defaults.json`);
     if (tooLarge) {
         console.log(`a record passes ${RECORD_LIMIT_MB} MB: decision 10 commits its summary instead`);
         process.exitCode = 1;
     }
+}
+
+/**
+ * Plan Task C4: `json` as Prettier formats a file at `path` under the repository's configuration, so a regenerated
+ * file passes the format check.
+ */
+export async function prettyJson(path: string, json: string): Promise<string> {
+    const name = "prettier";
+    const prettier = (await import(/* @vite-ignore */ name)) as {
+        resolveConfig(path: string): Promise<Record<string, unknown> | null>;
+        format(source: string, options: Record<string, unknown>): Promise<string>;
+    };
+    const config = (await prettier.resolveConfig(path)) ?? {};
+    return prettier.format(json, { ...config, parser: "json", filepath: path });
 }
 
 /** A grip shard's file name (plan C-d6): `grip-<k>of<N>.jsonl`. */
@@ -1429,7 +1464,7 @@ async function sectionGripPlans(): Promise<void> {
         seed: HELD_OUT_SEED,
         admissible: admissible.length,
     };
-    fs.writeFileSync(out, `${JSON.stringify({ header, plans })}\n`);
+    fs.writeFileSync(out, await prettyJson(out, JSON.stringify({ header, plans })));
     console.log(`written: ${out}, ${starting} starting plans and ${plans.length - starting} held out`);
 }
 
@@ -1546,7 +1581,268 @@ async function sectionGripFit(): Promise<void> {
     }
 }
 
+/** An axis's values, graded and beyond, ascending. */
+function valuesOf(axis: { readonly graded: readonly number[]; readonly beyond: readonly number[] }): number[] {
+    return [...axis.graded, ...axis.beyond].sort((a, b) => a - b);
+}
+
+/** Degrees, for the read-out. */
+function deg(rad: number): string {
+    return ((rad * 180) / Math.PI).toFixed(1);
+}
+
+/** A share (0–1) as a percentage, "–" where there is nothing to share. */
+function pct(x: number): string {
+    return Number.isFinite(x) ? `${(100 * x).toFixed(0)} %` : "–";
+}
+
+/** Plan Task C4: the soft pass roll's power bound (1) for account 7, at most half the grid's p 1. */
+const SOFT_POWER = 0.5;
+
+/** Plan Task C4: the hard strike's power bound (1) for account 3, p 1 and above. */
+const HARD_POWER = 1;
+
+/**
+ * Plan Task C4: the checks, measured, not passed or failed (design §6 as A7 item 10 restates it; §7's I, K, L, O; the
+ * effect measure; the user's pull and the holes; the forward-lean AC stop), from the found hold's record and defaults
+ * in IN (by default `reference/derived`) and, for the effect measure, the stage-2 shard files in SHARDS when set.
+ */
+async function sectionChecks(): Promise<void> {
+    const dir = process.env.IN ?? "reference/derived";
+    const fs = await files();
+    const zlibName = "node:zlib";
+    const zlib = (await import(/* @vite-ignore */ zlibName)) as {
+        gunzipSync(data: unknown): { toString(encoding: "utf8"): string };
+    };
+    const binary = fs as Files & { readFileSync(path: string): unknown };
+    const rows = MAP_TYPES.flatMap((type) =>
+        parseRecord(zlib.gunzipSync(binary.readFileSync(`${dir}/envelope-${type}.csv.gz`)).toString("utf8")),
+    );
+    const picks = (JSON.parse(fs.readFileSync(`${dir}/envelope-defaults.json`, "utf8")) as { found: BandPick[] }).found;
+    const ranges = gridFor("drive").ranges;
+    const of = (type: MapType): RecordRow[] => rows.filter((r) => r.type === type);
+    const m = (x: number | string | null): string => Number(x ?? NaN).toFixed(2);
+    console.log(`== checks. Plan Task C4: ${rows.length} rows, ${picks.length} defaults (found hold) ==`);
+
+    // The text book is off the grid (its hand reach and window), so stage 1's sweep of it alone is read.
+    console.log("\n-- §6 item 1: the half roll's text book (gate stage 1) on the 10 s lawn, per range --");
+    const stage1 = JSON.parse(
+        zlib.gunzipSync(binary.readFileSync(`${dir}/envelope-stage1.json.gz`)).toString("utf8"),
+    ) as Record<string, { reads: Record<string, SweepRead> }>;
+    for (const [key, read] of Object.entries(stage1["half-roll"]?.reads ?? {})) {
+        const [range, lawn] = (JSON.parse(key) as number[]).slice(-2) as [number, number];
+        if (lawn === 10) {
+            console.log(
+                `${m(range)} m: ${read.klass ?? "plays"}, ratio ${m(read.ratio)} (${labelOf(read.ratio) || "none"})`,
+            );
+        }
+    }
+
+    console.log("\n-- §6 item 2: the ratio against drive within a slice (admissible reads) --");
+    for (const type of MAP_TYPES.filter((t) => t !== "single-ball")) {
+        const { slices, rising, largest } = driveRises(of(type));
+        console.log(
+            `${type}: ${slices} slices, ${rising} rise somewhere (${pct(rising / slices)}), largest ${m(largest)}`,
+        );
+    }
+
+    console.log("\n-- §6 item 3: the labels each range reaches (admissible reads, any type) --");
+    for (const lawn of MAP_LAWNS) {
+        for (const range of ranges) {
+            const here = rows.filter((r) => r.lawn === lawn && r.range === range && isAdmissible(r));
+            const labels = [...new Set(here.map((r) => labelOfRow(r) || "single ball"))].sort();
+            console.log(`${lawn} s, ${m(range)} m: ${labels.join("; ")}`);
+        }
+    }
+
+    console.log("\n-- §6 items 4 and 6, §7 L: each band's default along range on the 10 s lawn --");
+    console.log("range m: stroke % / push %, drive, window ms, handReach m, push impulse per p (N·s)");
+    for (const label of [...new Set(picks.map((p) => p.label))]) {
+        const path = picks.filter((p) => p.label === label && p.lawn === 10).sort((a, b) => a.range - b.range);
+        const chosen = path.map(defaultOf);
+        const strokes = chosen.map((c) => c.read.strokeEffort);
+        const pushes = chosen.map((c) => c.read.pushEffort);
+        const shapes = new Set(chosen.map((c) => JSON.stringify([c.plan.drive, c.plan.window, c.plan.handReach])));
+        console.log(
+            `${label}: ${path.length} ranges, ${shapes.size} follow-through shapes, the stroke % falls ` +
+                `${drops(strokes)} times, the push % ${drops(pushes)} times`,
+        );
+        for (const [i, p] of path.entries()) {
+            const c = chosen[i] as Picked;
+            console.log(
+                `  ${m(p.range)}: ${c.read.strokeEffort.toFixed(0)} / ${c.read.pushEffort.toFixed(0)}, ` +
+                    `${c.plan.drive}, ${(c.plan.window * 1000).toFixed(0)}, ${c.plan.handReach}, ` +
+                    `${(c.read.pushImpulse / c.read.power).toFixed(3)} (${c.type})`,
+            );
+        }
+    }
+    const all = picks.map(defaultOf);
+    const over = (x: number): number => all.filter((c) => c.read.pushEffort > x).length;
+    console.log(
+        `§7 L: ${all.length} defaults over every lawn; push above 90 %: ${over(90)}, at or above 100 %: ` +
+            `${all.filter((c) => c.read.pushEffort >= 100).length}; the most ` +
+            `${Math.max(...all.map((c) => c.read.pushEffort)).toFixed(0)} %`,
+    );
+
+    console.log(
+        `\n-- account 3: hard strikes (p ≥ ${HARD_POWER}) per drive, share at ratio ≥ 1.4 (half roll's least) --`,
+    );
+    for (const type of ["full-roll", "pass-roll"] as const) {
+        const hard = of(type).filter((r) => isAdmissible(r) && r.power >= HARD_POWER);
+        const cells = gridFor(type).drive.graded.map((drive) => {
+            const at = hard.filter((r) => r.drive === drive);
+            return `drive ${drive}: ${pct(share(at, (r) => r.ratio >= 1.4))} of ${at.length}, median ${m(median(at.map((r) => r.ratio)))}`;
+        });
+        console.log(`${type}: ${cells.join("; ")}`);
+    }
+
+    console.log(`\n-- account 7: soft pass rolls (p ≤ ${SOFT_POWER}) per split, share labelled pass roll --`);
+    const soft = of("pass-roll").filter((r) => isAdmissible(r) && r.power <= SOFT_POWER);
+    for (const split of valuesOf(gridFor("pass-roll").split)) {
+        const at = soft.filter((r) => r.split === split);
+        console.log(`${deg(split)}°: ${pct(share(at, (r) => r.ratio < 1))} of ${at.length}`);
+    }
+
+    console.log(
+        `\n-- account 2: plans that play lawfully at ${LAWN_LENGTH} m with ratio ≥ 1 (both balls a court length) --`,
+    );
+    for (const type of MAP_TYPES.filter((t) => t !== "single-ball")) {
+        const at = of(type).filter((r) => r.range === LAWN_LENGTH);
+        const far = at.filter((r) => r.klass === "" && r.ratio >= 1);
+        const plans = new Set(
+            far.map((r) => JSON.stringify([r.lean, r.feet, r.drive, r.handReach, r.window, r.split, r.speedGain])),
+        );
+        const classes = new Map<string, number>();
+        for (const r of at) {
+            const key = r.klass || "plays";
+            classes.set(key, (classes.get(key) ?? 0) + 1);
+        }
+        console.log(
+            `${type}: ${plans.size} plans (${far.filter(isAdmissible).length} admissible reads); at ` +
+                `${LAWN_LENGTH} m: ${[...classes].map(([k, n]) => `${k} ${n}`).join(", ")}`,
+        );
+    }
+
+    console.log("\n-- account 5: the pass roll's defaults along range, drive and window (ms) per lawn --");
+    for (const lawn of MAP_LAWNS) {
+        const path = picks.filter((p) => p.label === "pass roll" && p.lawn === lawn).sort((a, b) => a.range - b.range);
+        console.log(
+            `${lawn} s: ` +
+                path
+                    .map(
+                        (p) =>
+                            `${m(p.range)} ${defaultOf(p).plan.drive}/${(defaultOf(p).plan.window * 1000).toFixed(0)}`,
+                    )
+                    .join(", "),
+        );
+    }
+    const passOk = of("pass-roll").filter((r) => isAdmissible(r) && r.lawn === 10);
+    console.log(
+        "accelerating (drive > 0) share of the pass roll's admissible reads per range, 10 s: " +
+            ranges
+                .map((range) =>
+                    pct(
+                        share(
+                            passOk.filter((r) => r.range === range),
+                            (r) => r.drive > 0,
+                        ),
+                    ),
+                )
+                .join(" "),
+    );
+
+    console.log(
+        "\n-- §7 I: the full roll per speed gain (admissible reads), share labelled full roll; its defaults --",
+    );
+    for (const gain of gridFor("full-roll").speedGain.graded) {
+        const at = of("full-roll").filter((r) => isAdmissible(r) && r.speedGain === gain);
+        console.log(
+            `gain ${gain}: ${at.length} reads, ${pct(share(at, (r) => labelOfRow(r) === "full roll"))}, median ratio ${m(median(at.map((r) => r.ratio)))}`,
+        );
+    }
+    const fullDefaults = picks.filter((p) => p.label === "full roll").map(defaultOf);
+    const gains = new Map<string, number>();
+    for (const c of fullDefaults) {
+        const key = `${c.type} gain ${c.plan.speedGain}`;
+        gains.set(key, (gains.get(key) ?? 0) + 1);
+    }
+    console.log(`full-roll band's defaults: ${[...gains].map(([k, n]) => `${k} × ${n}`).join(", ")}`);
+
+    console.log(
+        `\n-- §7 K: the pass roll's least admissible ratio per lawn and range (multiples below ${MULTIPLES_RATIO}) --`,
+    );
+    for (const lawn of MAP_LAWNS) {
+        const cells = ranges.map((range) => ratioSpan(rows, "pass-roll", range, lawn)?.least ?? NaN);
+        const below = cells.filter((x) => x < MULTIPLES_RATIO).length;
+        console.log(`${lawn} s: ${cells.map(m).join(" ")}; ${below} ranges below`);
+    }
+
+    console.log("\n-- §7 O: reads classed turf per type; the defaults are admissible, so none digs --");
+    for (const type of MAP_TYPES) {
+        console.log(`${type}: ${of(type).filter((r) => r.klass === "turf").length} of ${of(type).length}`);
+    }
+
+    console.log("\n-- the pull (user, 2026-11-09): the pass roll's median split at rest (°) per lean, admissible --");
+    for (const lawn of MAP_LAWNS) {
+        for (const split of valuesOf(gridFor("pass-roll").split)) {
+            const cells = splitAtRestByLean(rows, lawn, split);
+            if (cells.length > 0) {
+                console.log(
+                    `${lawn} s, set ${deg(split)}°: ${cells.map((c) => `${deg(c.lean)}° ${deg(c.median)} (${c.n})`).join(", ")}`,
+                );
+            }
+        }
+    }
+
+    console.log(
+        `\n-- the holes (user, 2026-11-11): empty ratio bins of ${RATIO_BIN} between reached ones, per lawn --`,
+    );
+    for (const lawn of MAP_LAWNS) {
+        const holes = holesOf(rows, lawn);
+        const inside = holes.filter((h) => !h.pastBoundary);
+        console.log(`${lawn} s: ${inside.length} inside, ${holes.length - inside.length} past the boundary`);
+        for (const h of inside) {
+            console.log(`  ${m(h.range)} m: ratio ${m(h.least)}–${m(h.most)}`);
+        }
+    }
+    console.log("each inside hole's neighbours: per type and lean (°), the admissible ratio span within a bin of it:");
+    for (const lawn of MAP_LAWNS) {
+        for (const h of holesOf(rows, lawn).filter((x) => !x.pastBoundary)) {
+            const near = leanSpans(rows, h, lawn, RATIO_BIN);
+            const text = near.map((s) => `${s.type} ${deg(s.lean)}° ${m(s.least)}–${m(s.most)}`).join("; ");
+            console.log(`  ${lawn} s, ${m(h.range)} m, hole ${m(h.least)}–${m(h.most)}: ${text}`);
+        }
+    }
+
+    console.log("\n-- the forward-lean AC stop: its reads per lean, admissible share and ratio span --");
+    for (const lean of valuesOf(gridFor("stop-ac").lean)) {
+        const at = of("stop-ac").filter((r) => r.lean === lean);
+        const ok = at.filter(isAdmissible).map((r) => r.ratio);
+        const span = ok.length === 0 ? "none" : `${m(Math.min(...ok))}–${m(Math.max(...ok))}`;
+        const chosen = all.filter((c) => c.type === "stop-ac" && c.plan.lean === lean).length;
+        console.log(
+            `${deg(lean)}°: ${pct(ok.length / at.length)} of ${at.length} admissible, ratio ${span}, ${chosen} defaults`,
+        );
+    }
+
+    const shards = process.env.SHARDS;
+    if (shards === undefined) {
+        console.log("\n-- §7 the effect measure: SHARDS not set, not measured --");
+        return;
+    }
+    console.log("\n-- §7 the effect measure: samples, faulted by the shipped measure alone, by contact-only alone --");
+    for (const type of MAP_TYPES) {
+        const grid = gridFor(type);
+        const { merged } = mergeShards(fs, type, shards, stagePlans(type, grid, 2));
+        for (const fitted of [false, true]) {
+            const t = effectTally(merged.samples.values(), fitted);
+            console.log(`${type} ${fitted ? "fitted" : "found"}: ${t.samples}, ${t.shippedOnly}, ${t.contactOnly}`);
+        }
+    }
+}
+
 const SECTIONS: Readonly<Record<string, () => void | Promise<void>>> = {
+    checks: sectionChecks,
     lawn: sectionLawn,
     jumpiness: sectionJumpiness,
     matrix: sectionMatrix,
