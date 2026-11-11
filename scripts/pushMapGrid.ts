@@ -21,6 +21,7 @@ import {
     type MapType,
     type RollType,
 } from "./pushMapRun";
+import { labelOf } from "../src/lab/play";
 
 const DEG = Math.PI / 180;
 
@@ -721,43 +722,7 @@ export function regionPhrase(type: RollType): string {
     return openAbove && least === 0 ? regionSpan(type) : `in ${regionSpan(type)}`;
 }
 
-/**
- * The bands on one continuum, in ascending ratio (design A7 item 2): the rolls' (design §2), the drive's 3.0–4.0 and
- * the AC stop's 4.1–6.2 (the CA's, in `reference/swing.json`'s ratioTargets notes); edges included, the pass roll's
- * open at 1.
- */
-const LABELS: readonly { readonly name: string; readonly most: number; readonly openAbove: boolean }[] = [
-    { name: "pass roll", most: 1, openAbove: true },
-    { name: "full roll", most: 1.2, openAbove: false },
-    { name: "half roll", most: 2.5, openAbove: false },
-    { name: "drive", most: 4, openAbove: false },
-    { name: "AC stop", most: 6.2, openAbove: false },
-];
-
-/** Each band's least ratio (inclusive), in LABELS' order: the pass roll's runs from 0. */
-const LABEL_LEAST = [0, 1, 1.4, 3, 4.1];
-
-/**
- * The label of `ratio` on the continuum (plan B-d3; design A7 item 2): its band's name, else "between <band> and
- * <band>" for a gap between two, else "beyond AC stop" above the last; "" where there is no ratio (the single-ball
- * stroke's).
- */
-export function labelOf(ratio: number): string {
-    if (!Number.isFinite(ratio)) {
-        return "";
-    }
-    for (let i = 0; i < LABELS.length; i++) {
-        const band = LABELS[i] as (typeof LABELS)[number];
-        const least = LABEL_LEAST[i] as number;
-        if (ratio < least) {
-            return `between ${(LABELS[i - 1] as (typeof LABELS)[number]).name} and ${band.name}`;
-        }
-        if (band.openAbove ? ratio < band.most : ratio <= band.most) {
-            return band.name;
-        }
-    }
-    return `beyond ${(LABELS[LABELS.length - 1] as (typeof LABELS)[number]).name}`;
-}
+export { labelOf };
 
 /** Decision 5's effort: the mean of the stroke's and the push's percentages. */
 function effortOf(read: SweepRead): number {

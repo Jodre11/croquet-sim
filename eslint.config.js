@@ -72,4 +72,22 @@ export default defineConfig(
             ],
         },
     },
+    {
+        // The browser's code (side-on viewer spec §3.1): nothing from the tests, the scripts or Node.
+        files: ["src/lab/**", "src/viewer/**"],
+        rules: {
+            "no-restricted-imports": [
+                "error",
+                {
+                    patterns: [
+                        {
+                            group: ["**/tests/**", "**/scripts/**"],
+                            message: "src/lab and src/viewer run in the browser.",
+                        },
+                        { group: ["node:*"], message: "src/lab and src/viewer run in the browser." },
+                    ],
+                },
+            ],
+        },
+    },
 );

@@ -3,8 +3,7 @@
  * finite double's shortest round-trip form, but writes NaN and the infinities as null and loses −0's sign, so those
  * are tagged as `{ "$num": "<name>" }`.
  */
-import { MAP_TYPES, canonicalPower, playJudged, textBook, type MapType } from "../../scripts/pushMapRun";
-import { openWorld } from "../../scripts/openLawn";
+import { MAP_TYPES, canonicalPower, openWorld, playJudged, textBook, type MapType } from "../../src/lab/index";
 
 /** One pinned play: the type's text book at `power`, at the found hold or a fixed hold firmness. */
 export interface PinnedPlay {
