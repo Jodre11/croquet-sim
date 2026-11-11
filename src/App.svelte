@@ -1,6 +1,281 @@
-<script lang="ts"></script>
+<!--
+    The side-on viewer, the app's first screen (side-on viewer spec §2, decision 10): pick a shot, tune its inputs, see
+    the envelope's judgement, and Run it in the worker to watch the swing and contact side on.
+-->
+<script lang="ts">
+    import { onDestroy } from "svelte";
+    import type { FramedPlay } from "./lab/frames";
+    import { judge, nearestGripAt, type BandTable, type GripPlan } from "./lab/judge";
+    import { openWorld, textBook, type MapPlan, type MapType } from "./lab/index";
+    import { defaultProfile } from "./engine/swing/profile";
+    import { faceHalfHeight } from "./engine/impact/shape";
+    import { headShapeOf } from "./engine/swing/buildContact";
+    import { DEFAULT_CROQUET_GAP } from "./lab/canonical";
+    import Badges from "./viewer/Badges.svelte";
+    import Grip from "./viewer/Grip.svelte";
+    import Inputs from "./viewer/Inputs.svelte";
+    import Readout from "./viewer/Readout.svelte";
+    import ShotPicker from "./viewer/ShotPicker.svelte";
+    import SideOn from "./viewer/SideOn.svelte";
+    import TimeBar from "./viewer/TimeBar.svelte";
+    import TopDown from "./viewer/TopDown.svelte";
+    import { loadData, loadTable } from "./viewer/data";
+    import { HOLD_NAMES, labelsOf, lookupDefault, snapRange, splitsOf, type DefaultEntry } from "./viewer/defaults";
+    import { departuresOf } from "./viewer/departures";
+    import type { SideView } from "./viewer/draw";
+    import { stepGrip } from "./viewer/grip";
+    import { plannedPath, type PathSample } from "./viewer/plannedPath";
+    import { createRunner, type WorkerLike } from "./viewer/runner";
+    import { inputSpans } from "./viewer/spans";
+    import { advance } from "./viewer/time";
+
+    const RADIUS = openWorld(10).ball.radius;
+    const HEAD = {
+        length: defaultProfile.mallet.headLength,
+        halfHeight: faceHalfHeight(headShapeOf(defaultProfile.mallet.head)),
+    };
+
+    let defaults = $state<readonly DefaultEntry[]>([]);
+    let grips = $state<readonly GripPlan[]>([]);
+    let table = $state<BandTable | null>(null);
+    let loadError = $state("");
+
+    let label = $state("drive");
+    let split = $state(0);
+    let range = $state(1);
+    let lawn = $state(10);
+    let note = $state("");
+
+    let type = $state<MapType>("drive");
+    let plan = $state<MapPlan>(textBook("drive"));
+    let defaultEffort = $state<number | null>(null);
+    let playerGrip = $state<number | null>(null);
+
+    let framed = $state<FramedPlay | null>(null);
+    let played = $state<{ firmness: number; searched: boolean } | null>(null);
+    let running = $state(false);
+    let searching = $state(false);
+    let runError = $state("");
+
+    let t = $state(0);
+    let playing = $state(false);
+    let speed = $state(0.25);
+    let slow = $state(true);
+
+    const ranges = $derived(table?.ranges ?? []);
+    const labels = $derived(labelsOf(defaults));
+    const splits = $derived(splitsOf(defaults, label));
+    const spans = $derived(table === null ? null : inputSpans(table));
+    const judgement = $derived(table === null ? null : judge(table, plan, range, lawn));
+    const power = $derived(judgement?.power ?? null);
+    const nearest = $derived(power === null ? null : nearestGripAt(grips, type, plan, power));
+    const firmness = $derived(playerGrip ?? nearest?.grip.reliable ?? 0.5);
+    const bounds = $derived(
+        nearest !== null && nearest.grip.least !== null && nearest.grip.firmest !== null
+            ? { least: nearest.grip.least, firmest: nearest.grip.firmest }
+            : null,
+    );
+    const planned = $derived.by((): { path: PathSample[] | null; why: string } => {
+        if (power === null) {
+            return { path: null, why: "no power at this range: no corner of the set-up's cell has one" };
+        }
+        try {
+            return { path: plannedPath(type, plan, power), why: "" };
+        } catch (error) {
+            return { path: null, why: error instanceof Error ? error.message : String(error) };
+        }
+    });
+    const runBlocked = $derived(
+        table === null ? "loading" : power === null || planned.path === null ? planned.why : running ? "running" : "",
+    );
+    const startBalls = $derived(
+        type === "single-ball"
+            ? [{ x: 0, z: RADIUS }]
+            : [
+                  { x: 0, z: RADIUS },
+                  { x: (2 * RADIUS + DEFAULT_CROQUET_GAP) * Math.cos(plan.split), z: RADIUS },
+              ],
+    );
+    const view: SideView = $derived({
+        path: planned.path,
+        framed,
+        t,
+        balls: startBalls,
+        radius: RADIUS,
+        head: HEAD,
+    });
+    const departures = $derived(departuresOf(type, plan, framed?.sample.strokeEffort ?? defaultEffort ?? 0));
+    const frameSpan = $derived(
+        framed === null || framed.frames.length === 0
+            ? { start: 0, end: 0 }
+            : { start: (framed.frames[0] as { t: number }).t, end: framed.finish },
+    );
+
+    const runner = createRunner(
+        () => new Worker(new URL("./viewer/worker.ts", import.meta.url), { type: "module" }) as unknown as WorkerLike,
+    );
+    onDestroy(() => runner.dispose());
+
+    function pickDefault(next: { label: string; split: number; range: number; lawn: number }): void {
+        ({ label, split, range, lawn } = next);
+        const found = lookupDefault(defaults, next);
+        if (found === null) {
+            note = "The record has no default for this pick; the set-up is kept.";
+            return;
+        }
+        const { pick, from } = found;
+        type = pick.type;
+        plan = pick.plan;
+        defaultEffort = pick.read.strokeEffort;
+        playerGrip = null;
+        framed = null;
+        played = null;
+        note = `The ${from === "viable" ? "viable" : "least-complex"} default, from the ${HOLD_NAMES[pick.type]}'s hold.`;
+        void loadTable(pick.type).then((loaded) => {
+            if (type === pick.type) {
+                table = loaded;
+            }
+        });
+    }
+
+    async function run(): Promise<void> {
+        if (power === null) {
+            return;
+        }
+        running = true;
+        searching = false;
+        runError = "";
+        playing = false;
+        try {
+            const result = await runner.run(
+                {
+                    type,
+                    plan: $state.snapshot(plan),
+                    power,
+                    lawn,
+                    grip: { firmness, source: playerGrip === null ? "neighbour" : "player" },
+                },
+                () => (searching = true),
+            );
+            if (result === "superseded") {
+                return;
+            }
+            framed = result.framed;
+            played = { firmness: result.firmness, searched: result.searched };
+            t = frameSpan.start;
+            playing = true;
+        } catch (error) {
+            runError = error instanceof Error ? error.message : String(error);
+        } finally {
+            running = false;
+            searching = false;
+        }
+    }
+
+    let last: number | null = null;
+    function tick(now: number): void {
+        if (playing && framed !== null) {
+            const wall = last === null ? 0 : (now - last) / 1000;
+            t = advance(t, wall, speed, slow, { start: framed.impactStart, end: framed.impactEnd }, frameSpan.end);
+            if (t >= frameSpan.end) {
+                playing = false;
+            }
+        }
+        last = now;
+        frame = requestAnimationFrame(tick);
+    }
+    let frame = requestAnimationFrame(tick);
+    onDestroy(() => cancelAnimationFrame(frame));
+
+    loadData()
+        .then(async (data) => {
+            defaults = data.defaults;
+            grips = data.grips;
+            table = await loadTable("drive");
+            pickDefault({ label: "drive", split: 0, range: snapRange(table.ranges, 4), lawn: 10 });
+        })
+        .catch((error: unknown) => (loadError = error instanceof Error ? error.message : String(error)));
+</script>
 
 <main>
-    <h1>Croquet Shot Lab</h1>
-    <p>Under construction.</p>
+    <header>
+        <h1>Croquet Shot Lab</h1>
+        <p class="note">The stroke side on, played by the engine in your browser.</p>
+    </header>
+    {#if loadError !== ""}
+        <p class="error">{loadError}</p>
+    {/if}
+    <div class="layout">
+        <aside>
+            <ShotPicker {labels} {ranges} {splits} {label} {split} {range} {lawn} {note} onpick={pickDefault} />
+            <Inputs {plan} {spans} onchange={(next) => (plan = next)} />
+            <Grip
+                {firmness}
+                source={playerGrip === null ? "neighbour" : "player"}
+                {bounds}
+                distance={nearest?.distance ?? null}
+                searched={played?.searched ?? false}
+                onstep={(dir) => {
+                    if (bounds !== null) {
+                        playerGrip = stepGrip(firmness, bounds, dir);
+                    }
+                }}
+            />
+            <div class="row">
+                <button
+                    type="button"
+                    class="run"
+                    onclick={run}
+                    disabled={runBlocked !== "" && runBlocked !== "running"}
+                >
+                    Run
+                </button>
+                <span class="note" data-testid="run-status">
+                    {#if searching}
+                        The chosen grip does not play: searching for one that does…
+                    {:else if running}
+                        Playing…
+                    {:else if runBlocked !== "" && runBlocked !== "loading"}
+                        Run is disabled: {runBlocked}
+                    {:else if runError !== ""}
+                        {runError}
+                    {/if}
+                </span>
+            </div>
+        </aside>
+        <section class="stage">
+            <Badges
+                {judgement}
+                outcome={framed === null ? null : { klass: framed.sample.klass, reason: framed.sample.reason }}
+                {departures}
+                timing={nearest?.grip ?? null}
+            />
+            <div class="canvases">
+                <SideOn {view} />
+                <TopDown split={plan.split} departures={framed?.departures ?? null} />
+            </div>
+            <TimeBar
+                {t}
+                start={frameSpan.start}
+                end={frameSpan.end}
+                {playing}
+                {speed}
+                {slow}
+                disabled={framed === null || framed.frames.length === 0}
+                onseek={(next) => {
+                    t = next;
+                    playing = false;
+                }}
+                ontoggle={() => {
+                    if (!playing && t >= frameSpan.end) {
+                        t = frameSpan.start;
+                    }
+                    playing = !playing;
+                }}
+                onspeed={(next) => (speed = next)}
+                onslow={(next) => (slow = next)}
+            />
+            <Readout {range} {lawn} {power} {framed} firmness={played?.firmness ?? null} />
+        </section>
+    </div>
 </main>
