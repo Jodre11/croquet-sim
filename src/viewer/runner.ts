@@ -1,17 +1,25 @@
 /**
- * The viewer's Runs (side-on viewer spec §2, §3.2, decision 8): one play at the chosen grip in a Web Worker, the
- * found-hold search only for the nearest plan's own grip, and a newer Run superseding an older one.
+ * The viewer's Runs (side-on viewer spec §2, §3.2, decision 8; gate ruling 1): the found hold, as the record played
+ * its defaults, unless the player stepped the grip; one play in a Web Worker, and a newer Run superseding an older one.
  */
 import { playFrames, type FramedPlay } from "../lab/frames";
 import { playSample, type MapPlan, type MapSample, type MapType } from "../lab/index";
 
-/** What a Run asks for: the set-up, the lawn (s) read, and the grip with where it came from. */
+/**
+ * A Run's grip: the found hold, its firmness known where the record played this set-up (an unchanged default) and
+ * null where it must be searched; or a firmness the player stepped to.
+ */
+export type RunGrip =
+    | { readonly source: "found"; readonly firmness: number | null }
+    | { readonly source: "player"; readonly firmness: number };
+
+/** What a Run asks for: the set-up, the lawn (s) read, and the grip. */
 export interface RunRequest {
     readonly type: MapType;
     readonly plan: MapPlan;
     readonly power: number;
     readonly lawn: number;
-    readonly grip: { readonly firmness: number; readonly source: "neighbour" | "player" };
+    readonly grip: RunGrip;
 }
 
 /** A Run's play: its frames at `firmness`, and whether the search found that grip. */
@@ -33,15 +41,18 @@ const LAB: RunPlays = {
 };
 
 /**
- * `request` played (spec §2): once at its grip; where that is not admissible and the grip is the nearest plan's
- * ("neighbour"), the found-hold search (`onSearch` told first) and its grip played, σ_max (firmness 1) where none
- * plays. A grip the player stepped to is never searched.
+ * `request` played (spec §2, gate ruling 1): at its grip where that is known, the player's or the found hold's
+ * recorded firmness; else the found-hold search (`onSearch` told first) and its grip played, σ_max (firmness 1) where
+ * none plays. A play at the found firmness is the search's own play (both set `stroke.holdFirmness`).
  */
 export function runPlay(request: RunRequest, onSearch: () => void = () => {}, plays: RunPlays = LAB): RunResult {
     const { type, plan, power, lawn, grip } = request;
-    const framed = plays.frames(type, plan, power, grip.firmness, lawn);
-    if (framed.sample.klass === null || grip.source === "player" || framed.rejected !== null) {
-        return { framed, firmness: grip.firmness, searched: false };
+    if (grip.firmness !== null) {
+        return {
+            framed: plays.frames(type, plan, power, grip.firmness, lawn),
+            firmness: grip.firmness,
+            searched: false,
+        };
     }
     onSearch();
     const firmness = plays.found(type, plan, power, lawn).firmness ?? 1;

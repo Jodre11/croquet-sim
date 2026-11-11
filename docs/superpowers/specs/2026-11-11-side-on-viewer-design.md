@@ -188,3 +188,14 @@ Ruled by the user after the spec review (2026-11-11):
 
 Assumptions: the module's and script's names; `src/lab` importing engine internals; the slow-down's form; the 6 MB
 budget; the grip plans' 10 s lawn used on every lawn; no Run budget until P5.
+
+## 8. The gate's rulings
+
+Ruled by the user at the gate (2026-11-11), the smoke test in `docs/superpowers/probes/2026-11-11-side-on-viewer.txt`:
+
+1. **Run plays the found hold** ("Found hold (Recommended)"), as the record played its defaults, while the grip is not
+   the player's; a stepped grip is played as stepped and never searched. This replaces decision 8's neighbour grip:
+   the smoke test found the nearest swept plan's fixed grip played the half roll's default as a full roll (ratio 1.01
+   against 2.35). An unchanged default plays at its recorded found firmness at once; a moved set-up searches on Run,
+   and a search's firmness is kept for that set-up. The nearest swept plan still gives the grip's bounds for stepping
+   and the timing risk.

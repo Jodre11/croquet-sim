@@ -50,6 +50,8 @@
     let plan = $state<MapPlan>(textBook("drive"));
     let defaultEffort = $state<number | null>(null);
     let playerGrip = $state<number | null>(null);
+    /** The found hold's firmness and the set-up it was found for: the default's record, or a Run's search. */
+    let foundHold = $state<{ plan: MapPlan; range: number; lawn: number; firmness: number } | null>(null);
 
     let framed = $state<FramedPlay | null>(null);
     let played = $state<{ firmness: number; searched: boolean } | null>(null);
@@ -69,7 +71,16 @@
     const judgement = $derived(table === null ? null : judge(table, plan, range, lawn));
     const power = $derived(judgement?.power ?? null);
     const nearest = $derived(power === null ? null : nearestGripAt(grips, type, plan, power));
-    const firmness = $derived(playerGrip ?? nearest?.grip.reliable ?? 0.5);
+    // The found hold's firmness while the set-up is the one it was found for (gate ruling 1); null, searched on Run.
+    const foundFirmness = $derived(
+        foundHold !== null &&
+            foundHold.range === range &&
+            foundHold.lawn === lawn &&
+            JSON.stringify(foundHold.plan) === JSON.stringify(plan)
+            ? foundHold.firmness
+            : null,
+    );
+    const firmness = $derived(playerGrip ?? foundFirmness);
     const bounds = $derived(
         nearest !== null && nearest.grip.least !== null && nearest.grip.firmest !== null
             ? { least: nearest.grip.least, firmest: nearest.grip.firmest }
@@ -136,6 +147,7 @@
         plan = pick.plan;
         defaultEffort = pick.read.strokeEffort;
         playerGrip = null;
+        foundHold = pick.read.firmness === null ? null : { plan: pick.plan, range, lawn, firmness: pick.read.firmness };
         framed = null;
         played = null;
         note = `The ${from === "viable" ? "viable" : "least-complex"} default, from the ${HOLD_NAMES[pick.type]}'s hold.`;
@@ -154,14 +166,18 @@
         searching = false;
         runError = "";
         playing = false;
+        const asked = { plan: $state.snapshot(plan), range, lawn };
         try {
             const result = await runner.run(
                 {
                     type,
-                    plan: $state.snapshot(plan),
+                    plan: asked.plan,
                     power,
                     lawn,
-                    grip: { firmness, source: playerGrip === null ? "neighbour" : "player" },
+                    grip:
+                        playerGrip === null
+                            ? { source: "found", firmness: foundFirmness }
+                            : { source: "player", firmness: playerGrip },
                 },
                 () => (searching = true),
             );
@@ -170,6 +186,9 @@
             }
             framed = result.framed;
             played = { firmness: result.firmness, searched: result.searched };
+            if (result.searched) {
+                foundHold = { ...asked, firmness: result.firmness };
+            }
             t = frameSpan.start;
             playing = true;
         } catch (error) {
@@ -219,13 +238,15 @@
             <Inputs {plan} {spans} onchange={(next) => (plan = next)} />
             <Grip
                 {firmness}
-                source={playerGrip === null ? "neighbour" : "player"}
+                source={playerGrip === null ? "found" : "player"}
                 {bounds}
                 distance={nearest?.distance ?? null}
-                searched={played?.searched ?? false}
+                searched={(played?.searched ?? false) && foundFirmness !== null}
                 onstep={(dir) => {
                     if (bounds !== null) {
-                        playerGrip = stepGrip(firmness, bounds, dir);
+                        // Stepping starts from the grip shown, else the nearest swept plan's reliable grip.
+                        const from = firmness ?? nearest?.grip.reliable ?? (bounds.least + bounds.firmest) / 2;
+                        playerGrip = stepGrip(from, bounds, dir);
                     }
                 }}
             />

@@ -30,3 +30,23 @@ Findings
      agree with their records; the half roll plays a full roll's ratio (1.01 against 2.35) and goes 10.88 m against
      4.59 m asked, and the pass roll plays 1.19 against 0.76.
   3. The console's one error is the missing favicon (404).
+
+After gate ruling 1 (Run plays the found hold)
+  label                    hold         record ratio  Run ratio         achieved  grip played  Run
+  drive                    drive        3.51          3.46 (drive)      4.66 m    0.0040        1086 ms
+  AC stop                  stop-ac      4.93          4.91 (AC stop)    4.69 m    0.0000         555 ms
+  half roll                half-roll    2.35          2.35 (half roll)  4.61 m    0.0000         522 ms
+  full roll                half-roll    1.07          1.04 (full roll)  4.67 m    0.1839         628 ms
+  pass roll (2°)           pass-roll    0.76          0.74 (pass roll)  4.71 m    0.0120        2397 ms
+  single ball              single-ball  —             —                 4.60 m    0.0000         799 ms
+  half roll, lean nudged   half-roll    —             2.35 (half roll)  4.62 m    0.0000 found   963 ms (searched)
+  pass roll, lean nudged   pass-roll    —             0.75 (pass roll)  4.68 m    0.0139 found 16311 ms (searched)
+
+  Each default now plays the record's shot, its label and hold as the picker names them. A moved roll searches on Run:
+  up to 16 s for the pass roll.
+
+  The record and today's play still differ slightly at the same set-up, power and found firmness: the drive's found
+  hold today is firmness 0 (ratio 3.461), the record's 0.0040 (3.514); the full roll's 0.1755 (1.052) against the
+  record's 0.1839 (1.070). At today's found firmness a fixed play is the found play bit for bit, so the viewer is
+  faithful to today's engine; the gap is between the record's run and today's play of the same set-up. Neither the
+  engine (0.30.0, 2026-11-05) nor the play (`scripts/pushMapRun.ts`) changed after the record's commit.

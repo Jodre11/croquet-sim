@@ -8,7 +8,7 @@ const REQUEST: RunRequest = {
     plan: textBook("pass-roll"),
     power: 0.6,
     lawn: 10,
-    grip: { firmness: 0.25, source: "neighbour" },
+    grip: { firmness: null, source: "found" },
 };
 
 /** A fake worker: it records what it is sent and whether it was terminated. */
@@ -46,12 +46,22 @@ function fakePlays(plays: number): RunPlays & { readonly calls: { frames: number
     };
 }
 
-describe("runPlay (spec §2, decision 8)", () => {
-    it("searches where the nearest plan's grip fails, and plays the grip found", () => {
+describe("runPlay (spec §2, decision 8; gate ruling 1)", () => {
+    it("plays the found hold at its recorded firmness without a search", () => {
+        const plays = fakePlays(0.4);
+        let told = 0;
+        const result = runPlay({ ...REQUEST, grip: { firmness: 0.4, source: "found" } }, () => told++, plays);
+        expect(plays.calls).toEqual({ frames: [0.4], found: 0 });
+        expect(told).toBe(0);
+        expect(result.searched).toBe(false);
+        expect(result.firmness).toBe(0.4);
+    });
+
+    it("searches for the found hold where its firmness is unknown, and plays the grip found", () => {
         const plays = fakePlays(0.4);
         let told = 0;
         const result = runPlay(REQUEST, () => told++, plays);
-        expect(plays.calls).toEqual({ frames: [0.25, 0.4], found: 1 });
+        expect(plays.calls).toEqual({ frames: [0.4], found: 1 });
         expect(told).toBe(1);
         expect(result.searched).toBe(true);
         expect(result.firmness).toBe(0.4);
