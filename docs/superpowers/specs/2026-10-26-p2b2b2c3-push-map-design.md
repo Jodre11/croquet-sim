@@ -697,7 +697,7 @@ full roll or somewhere between a drive and a half roll or all the other inbetwee
    falls back to σ 0.00625 and ratio 2.448; every other gap is 0.402 or less. The search is unchanged. The record marks
    each slipping play, and the map's bands and plots show those plays apart from the plays that hold.
 
-### A9. Gate stage 2's rulings (user, 2026-11-07 to 2026-11-08; in progress)
+### A9. Gate stage 2's rulings (user, 2026-11-07 to 2026-11-08)
 
 Read from the full map (`docs/superpowers/probes/2026-11-07-p2b2b2c3b-maps.txt`, the plots beside it) and the side-on
 animation (`scripts/sideOnExport.ts`).
@@ -827,3 +827,53 @@ and a grip chosen from the data within bounds the player moves.
     mostly half-roll plans (37 of 43), and speed gain barely moves the full-roll share (36 % to 41 %). §7 K: the plain
     pass roll reaches ratio below 0.5 at 12–16 of 16 ranges per lawn without the super pass roll. §7 L: no default
     saturates. §7 O: every default is admissible, so none digs.
+
+### A11. The build's readings, Amendments B and C (folded at plan Task B9, 2026-11-11)
+
+The plan's decisions B-d1 to B-d12 and C-d1 to C-d6 and their as-built notes, the design's calls made while building
+A7 to A10, each standing as built unless a ruling above overrides it. The plan
+(`docs/superpowers/plans/2026-10-29-p2b2b2c3b-push-map.md`) keeps each in full.
+
+1. **The types and labels** (B-d1 to B-d3). `MapType` is the drive, the AC stop, the half, full and pass rolls and the
+   single ball (A7 item 1). The single ball's ratio is NaN and its rows carry no label. A plan's label is the band its
+   ratio falls in (`labelOf`, edges inclusive), else "between" its two neighbours, or "beyond AC stop".
+2. **The grids** (B-d4, B-d5, C-d2, A8 item 4). 16 ranges, 0.25 to 32 m, log-spaced, half below 4 m; 14 powers, with
+   0.02 and 0.05 below 0.1 and 1.05 and 1.1 above 1. A cell where either ball passes 32 m is `off-court`, unsolved,
+   ahead of every other class and no failure of a neighbour. The pass roll's splits 0–10° by 2°, 20° and 30°, with 40°
+   beyond. The AC stop's leans +3° to −7° (+3, +1.5, 0, −1.5, −3, −4.5, −6, −6.5, −7), with +4.5° and −7.5° beyond;
+   every other type's lean is its text book's ±6°, ±12° beyond.
+3. **The free motion once per sample** (B-d6): the found hold's search plays without lawns, and only the kept play
+   rolls the balls on each lawn; the samples are bit-identical.
+4. **The jumpiness bound** (B-d7, B-d11; A7 item 9): pushes alone compared, slipping plays counted admissible: 1.244
+   on the full roll at one point (the fallback at σ 0.00625), 0.402 or less elsewhere, and 0.579 on the pass roll. The
+   read-out bin is 0.6 (A7 item 7). The later contacts' flips between patterns stay carried (A10 item 4).
+5. **A head over the ball is a mishit** (B-d8; user, 2026-11-04): on a pushed stroke, the ball beyond the face's reach
+   after first contact while the head gains on it along aim is `head-over-ball`, and the search goes on to a firmer
+   hold. In the map's script, not the engine.
+6. **A capped impact is unlawful** (C-d1, A9 item 1): a run whose events hold `impact-cap` is `unlawful`,
+   `impact-cap` (Law 29.1.6.3), after the turf classes and before 29.1.6.1. It moved the full roll's text book at a
+   tap off firmness 0, to 0.274.
+7. **The runs** (B-d9, B-d12, C-d6; A7 item 11). The map ran on GitHub Actions (`.github/workflows/push-map.yml`,
+   `ubuntu-26.04`, four shards per job, `only` and `from_run` to split a type across dispatches and resume an overrun),
+   every dispatch of a stage from one commit on `push-map-run`, merged locally with each job's latest upload winning.
+   The workflow is removed with this amendment (user, 2026-11-03: "The pipework only as long as the envelope resolution
+   requires it"); it is restored from the history if a later model change needs the map re-run.
+8. **Both holds** (B-d10, A8 item 3): every power at the found and the fitted hold, a record file per type and hold
+   (`envelope-<type>.csv.gz`, `envelope-fitted-<type>.csv.gz`; together past decision 10's 20 MB), each with a
+   `firmness` column. **The slip** (B-d11, A8 item 5): `followSlip` is a column, not a class.
+9. **Complexity** (C-d3, A9 items 7–10): `complexityOf` counts against the drive's text book `timed` (`drive ≠ 0`) and
+   `setUp` (feet, lean, the type's stance hands, stroke effort above 90 %), then `size` (|Δfeet| / 0.05 m + |Δlean| /
+   6° + |drive|), then effort. `bandPicks` picks the least complex plan per label, split, range and lawn (A10 item 5),
+   and the least complex viable plan beside an edgy one; `envelope-defaults.json` holds them, 1,446 at the found hold.
+10. **The grip sweep** (C-d4, A9 item 5): hold firmness 0–1 in 17 steps of 0.0625 (σ is capped at
+    min(1, v/HOLD_SPEED), which firmness 1 reaches), on the 10 s lawn, over 1,117 starting plans (each default and
+    viable runner-up at both holds and every lawn, and the text books at each power) and 2,000 held out. Per plan: the
+    least grip that plays, the firmest, and the reliable one (the least |Δrange| / range + |Δratio| / ratio between
+    neighbours, a tie to the middle). A quadratic fit per type and bound on the standardised inputs is accepted where
+    the held-out median absolute error is at most 0.0625: 7 of 18 are (`envelope-grip.json.gz`; A10 item 3 for the
+    rest).
+11. **The timing sweep** (C-d5, A10 item 2): each starting plan with a timed change at its reliable grip, the
+    follow-through's pulses (the hands', the pendulum's and the dip) moved 5 and 10 ms early together, since the AC
+    stop's brake is the pendulum's alone.
+12. **The read-out** (plan C4): the record and `gripplans` write JSON through Prettier under the repository's
+    configuration (`prettyJson`), so a regenerated file passes the format check.
