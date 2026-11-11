@@ -806,8 +806,10 @@ and a grip chosen from the data within bounds the player moves.
    pass-roll region in 18 % of reads at 0°, 53 % at 2°, about 80 % from 4°. Account 2 holds as the user reasoned: at
    32 m every two-ball read is off-court. Accounts 3 and 5 are misses: a weak follow-through on a hard strike lowers the
    ratio (drive −1: 58 % and 45 % at ratio ≥ 1.4 on the full and pass rolls, against 74–82 % at drive 0–1); the pass
-   roll's least complex defaults keep drive 0 at every range, and accelerating plans thin out with range. The defaults
-   stay least complex; accelerating pass rolls stay admissible for a player who chooses them.
+   roll's least complex defaults picked across splits keep drive 0 at every range, and accelerating plans thin out with
+   range. The defaults stay least complex; accelerating pass rolls stay admissible for a player who chooses them. Once
+   picked per split (item 5), account 5 holds in part: each split's defaults keep drive 0 over most ranges but
+   accelerate at its long end (10 s lawn: at 0° from 0.91 m, at 4–8° at 12 m, at 10° from 8.8 m, at 30° from 1.7 m).
 7. **The pull is a first reading, carried to P2b.2b.2c.3c** (chosen "Record, carry to 3c"). The pass roll's most
    forward lean (38°) narrows the split at rest at set splits of 2–4° (3.3° against 5.7° at 26°, set 2°) and widens it
    at 20–30° (46.7° against 38.2°, set 30°). Every split at rest is wider than the one set. The backward-lean side is not

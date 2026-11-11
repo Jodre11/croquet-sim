@@ -159,6 +159,6 @@ describe("prettyJson", () => {
         const path = "reference/derived/envelope-defaults.json";
         const committed = fs.readFileSync(path, "utf8");
         const compact = JSON.stringify(JSON.parse(committed));
-        expect(await prettyJson(path, compact)).toBe(committed);
+        expect(await prettyJson(compact)).toBe(committed);
     });
 });

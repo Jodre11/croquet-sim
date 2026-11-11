@@ -344,6 +344,31 @@ describe("the push map's grid, sweep, bands and record (P2b.2b.2c.3b plan Task 4
         expect(pickDefault("half-roll", reads, banded, { range: 10, lawn: LAWN, split: 0 }).plan).toEqual(near);
     });
 
+    it("picks per split, the split being the player's (design A10 item 5)", () => {
+        const key = (p: MapPlan): string => planKey(p, 10, LAWN);
+        const straight = plan(32 * DEG, 0, { split: 0 });
+        const wide = plan(32 * DEG, 0, { split: 4 * DEG });
+        const picks = bandPicks([
+            {
+                type: "pass-roll" as const,
+                reads: new Map([
+                    [key(straight), read(null, 0.8, 30)],
+                    [key(wide), read(null, 0.6, 20)],
+                ]),
+                banded: new Map<string, Band>([
+                    [key(straight), "viable"],
+                    [key(wide), "viable"],
+                ]),
+            },
+        ]);
+        expect(picks.map((p) => [p.label, p.split])).toEqual([
+            ["pass roll", 0],
+            ["pass roll", 4 * DEG],
+        ]);
+        expect(picks[0]?.least.plan).toEqual(straight);
+        expect(picks[1]?.least.plan).toEqual(wide);
+    });
+
     it("picks each label's least complex plan over every type", () => {
         const key = (p: MapPlan): string => planKey(p, 10, LAWN);
         const half = plan(26 * DEG, 0.5);

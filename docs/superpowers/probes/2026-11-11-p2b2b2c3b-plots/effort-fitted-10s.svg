@@ -1,7 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 520" width="760" height="520" font-family="system-ui, -apple-system, Segoe UI, sans-serif" role="img" aria-label="Each band's default's effort, 10 s lawn, fitted hold">
 <rect width="760" height="520" fill="#fcfcfb"/>
 <text x="64" y="24" font-size="15" font-weight="600" fill="#0b0b0b">Each band's default's effort, 10 s lawn, fitted hold</text>
-<text x="64" y="42" font-size="12" fill="#52514e">The mean of the stroke's and the push's effort of each band's least complex admissible plan</text>
+<text x="64" y="42" font-size="12" fill="#52514e">The mean of the stroke's and the push's effort of each band's least complex admissible plan, split 0</text>
 <line x1="64" x2="640" y1="456" y2="456" stroke="#c3c2b7"/><text x="58" y="460" font-size="10" text-anchor="end" fill="#898781">0</text>
 <line x1="64" x2="640" y1="376" y2="376" stroke="#e1e0d9"/><text x="58" y="380" font-size="10" text-anchor="end" fill="#898781">20</text>
 <line x1="64" x2="640" y1="296" y2="296" stroke="#e1e0d9"/><text x="58" y="300" font-size="10" text-anchor="end" fill="#898781">40</text>
@@ -24,23 +24,15 @@
 <text x="563.2" y="472" font-size="10" text-anchor="middle" fill="#898781">17</text>
 <text x="601.6" y="472" font-size="10" text-anchor="middle" fill="#898781">23</text>
 <text x="640.0" y="472" font-size="10" text-anchor="middle" fill="#898781">32</text>
-<path d="M64.0,437.1 L102.4,434.1 L140.8,430.1 L179.2,430.1 L217.6,423.6 L256.0,415.4 L294.4,404.3 L332.8,388.7 L371.2,373.5 L409.6,360.8 L448.0,342.3 L486.4,320.2 L524.8,281.6 L563.2,247.5 L601.6,202.1" fill="none" stroke="#2a78d6" stroke-width="2"/>
+<path d="M64.0,437.1 L102.4,434.1 L140.8,430.1 L179.2,416.9 L217.6,415.8 L256.0,406.7 L332.8,374.8" fill="none" stroke="#2a78d6" stroke-width="2"/>
 <circle cx="64.0" cy="437.1" r="4" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"><title>pass roll, 0.25 m: 4.7 %</title></circle>
 <circle cx="102.4" cy="434.1" r="4" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"><title>pass roll, 0.35 m: 5.5 %</title></circle>
 <circle cx="140.8" cy="430.1" r="4" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"><title>pass roll, 0.48 m: 6.5 %</title></circle>
-<circle cx="179.2" cy="430.1" r="4" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"><title>pass roll, 0.66 m: 6.5 %</title></circle>
-<circle cx="217.6" cy="423.6" r="4" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"><title>pass roll, 0.91 m: 8.1 %</title></circle>
-<circle cx="256.0" cy="415.4" r="4" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"><title>pass roll, 1.3 m: 10.1 %</title></circle>
-<circle cx="294.4" cy="404.3" r="4" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"><title>pass roll, 1.7 m: 12.9 %</title></circle>
-<circle cx="332.8" cy="388.7" r="4" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"><title>pass roll, 2.4 m: 16.8 %</title></circle>
-<circle cx="371.2" cy="373.5" r="4" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"><title>pass roll, 3.3 m: 20.6 %</title></circle>
-<circle cx="409.6" cy="360.8" r="4" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"><title>pass roll, 4.6 m: 23.8 %</title></circle>
-<circle cx="448.0" cy="342.3" r="4" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"><title>pass roll, 6.3 m: 28.4 %</title></circle>
-<circle cx="486.4" cy="320.2" r="4" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"><title>pass roll, 8.8 m: 34.0 %</title></circle>
-<circle cx="524.8" cy="281.6" r="4" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"><title>pass roll, 12 m: 43.6 %</title></circle>
-<circle cx="563.2" cy="247.5" r="4" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"><title>pass roll, 17 m: 52.1 %</title></circle>
-<circle cx="601.6" cy="202.1" r="4" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"><title>pass roll, 23 m: 63.5 %</title></circle>
-<path d="M64.0,433.2 L102.4,430.1 L140.8,428.4 L179.2,424.6 L217.6,417.0 L256.0,407.2 L294.4,396.7 L332.8,385.9 L371.2,361.0 L409.6,352.8 L448.0,329.3 L486.4,305.9 L524.8,273.6 L563.2,218.5" fill="none" stroke="#eb6834" stroke-width="2"/>
+<circle cx="179.2" cy="416.9" r="4" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"><title>pass roll, 0.66 m: 9.8 %</title></circle>
+<circle cx="217.6" cy="415.8" r="4" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"><title>pass roll, 0.91 m: 10.0 %</title></circle>
+<circle cx="256.0" cy="406.7" r="4" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"><title>pass roll, 1.3 m: 12.3 %</title></circle>
+<circle cx="332.8" cy="374.8" r="4" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"><title>pass roll, 2.4 m: 20.3 %</title></circle>
+<path d="M64.0,433.2 L102.4,430.1 L140.8,428.4 L179.2,424.6 L217.6,417.0 L256.0,407.2 L294.4,396.7 L332.8,385.9 L371.2,361.0 L409.6,352.8 L448.0,329.3 L486.4,305.9 L524.8,273.6 L563.2,235.5" fill="none" stroke="#eb6834" stroke-width="2"/>
 <circle cx="64.0" cy="433.2" r="4" fill="#eb6834" stroke="#fcfcfb" stroke-width="2"><title>full roll, 0.25 m: 5.7 %</title></circle>
 <circle cx="102.4" cy="430.1" r="4" fill="#eb6834" stroke="#fcfcfb" stroke-width="2"><title>full roll, 0.35 m: 6.5 %</title></circle>
 <circle cx="140.8" cy="428.4" r="4" fill="#eb6834" stroke="#fcfcfb" stroke-width="2"><title>full roll, 0.48 m: 6.9 %</title></circle>
@@ -54,7 +46,7 @@
 <circle cx="448.0" cy="329.3" r="4" fill="#eb6834" stroke="#fcfcfb" stroke-width="2"><title>full roll, 6.3 m: 31.7 %</title></circle>
 <circle cx="486.4" cy="305.9" r="4" fill="#eb6834" stroke="#fcfcfb" stroke-width="2"><title>full roll, 8.8 m: 37.5 %</title></circle>
 <circle cx="524.8" cy="273.6" r="4" fill="#eb6834" stroke="#fcfcfb" stroke-width="2"><title>full roll, 12 m: 45.6 %</title></circle>
-<circle cx="563.2" cy="218.5" r="4" fill="#eb6834" stroke="#fcfcfb" stroke-width="2"><title>full roll, 17 m: 59.4 %</title></circle>
+<circle cx="563.2" cy="235.5" r="4" fill="#eb6834" stroke="#fcfcfb" stroke-width="2"><title>full roll, 17 m: 55.1 %</title></circle>
 <path d="M64.0,437.8 L102.4,434.0 L140.8,430.3 L179.2,425.2 L217.6,421.0 L256.0,397.5 L294.4,387.6 L332.8,374.6 L371.2,359.5 L409.6,340.6 L448.0,315.0 L486.4,288.4 L524.8,257.3 L563.2,192.0" fill="none" stroke="#1baf7a" stroke-width="2"/>
 <circle cx="64.0" cy="437.8" r="4" fill="#1baf7a" stroke="#fcfcfb" stroke-width="2"><title>half roll, 0.25 m: 4.5 %</title></circle>
 <circle cx="102.4" cy="434.0" r="4" fill="#1baf7a" stroke="#fcfcfb" stroke-width="2"><title>half roll, 0.35 m: 5.5 %</title></circle>
@@ -70,7 +62,7 @@
 <circle cx="486.4" cy="288.4" r="4" fill="#1baf7a" stroke="#fcfcfb" stroke-width="2"><title>half roll, 8.8 m: 41.9 %</title></circle>
 <circle cx="524.8" cy="257.3" r="4" fill="#1baf7a" stroke="#fcfcfb" stroke-width="2"><title>half roll, 12 m: 49.7 %</title></circle>
 <circle cx="563.2" cy="192.0" r="4" fill="#1baf7a" stroke="#fcfcfb" stroke-width="2"><title>half roll, 17 m: 66.0 %</title></circle>
-<path d="M64.0,428.5 L102.4,422.8 L140.8,415.9 L179.2,407.9 L217.6,398.7 L256.0,388.5 L294.4,376.1 L332.8,360.3 L371.2,283.1 L409.6,252.3 L448.0,199.2 L486.4,259.0" fill="none" stroke="#eda100" stroke-width="2"/>
+<path d="M64.0,428.5 L102.4,422.8 L140.8,415.9 L179.2,407.9 L217.6,398.7 L256.0,388.5 L294.4,376.1 L332.8,360.3 L371.2,283.1 L409.6,252.3 L448.0,199.2 L486.4,261.3" fill="none" stroke="#eda100" stroke-width="2"/>
 <circle cx="64.0" cy="428.5" r="4" fill="#eda100" stroke="#fcfcfb" stroke-width="2"><title>drive, 0.25 m: 6.9 %</title></circle>
 <circle cx="102.4" cy="422.8" r="4" fill="#eda100" stroke="#fcfcfb" stroke-width="2"><title>drive, 0.35 m: 8.3 %</title></circle>
 <circle cx="140.8" cy="415.9" r="4" fill="#eda100" stroke="#fcfcfb" stroke-width="2"><title>drive, 0.48 m: 10.0 %</title></circle>
@@ -82,7 +74,7 @@
 <circle cx="371.2" cy="283.1" r="4" fill="#eda100" stroke="#fcfcfb" stroke-width="2"><title>drive, 3.3 m: 43.2 %</title></circle>
 <circle cx="409.6" cy="252.3" r="4" fill="#eda100" stroke="#fcfcfb" stroke-width="2"><title>drive, 4.6 m: 50.9 %</title></circle>
 <circle cx="448.0" cy="199.2" r="4" fill="#eda100" stroke="#fcfcfb" stroke-width="2"><title>drive, 6.3 m: 64.2 %</title></circle>
-<circle cx="486.4" cy="259.0" r="4" fill="#eda100" stroke="#fcfcfb" stroke-width="2"><title>drive, 8.8 m: 49.2 %</title></circle>
+<circle cx="486.4" cy="261.3" r="4" fill="#eda100" stroke="#fcfcfb" stroke-width="2"><title>drive, 8.8 m: 48.7 %</title></circle>
 <path d="M64.0,426.5 L102.4,420.9 L140.8,414.1 L179.2,377.0 L217.6,362.8 L256.0,345.9 L294.4,326.4 L332.8,361.2 L371.2,277.7 L409.6,240.7 L448.0,199.8" fill="none" stroke="#e87ba4" stroke-width="2"/>
 <circle cx="64.0" cy="426.5" r="4" fill="#e87ba4" stroke="#fcfcfb" stroke-width="2"><title>AC stop, 0.25 m: 7.4 %</title></circle>
 <circle cx="102.4" cy="420.9" r="4" fill="#e87ba4" stroke="#fcfcfb" stroke-width="2"><title>AC stop, 0.35 m: 8.8 %</title></circle>

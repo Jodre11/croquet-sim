@@ -224,6 +224,8 @@ function coveragePlot(hold: string, lawn: number, ranges: readonly number[], cel
 /** One of envelope-defaults.json's picks, as far as the plots read it. */
 interface BandPoint {
     readonly label: string;
+    /** The split (rad; design A10 item 5): the plot draws the straight shot's defaults, split 0. */
+    readonly split?: number;
     readonly range: number;
     readonly lawn: number;
     readonly least: BandPicked;
@@ -262,7 +264,7 @@ function effortPlot(hold: string, lawn: number, ranges: readonly number[], picks
     }
     for (const series of SERIES) {
         const points = picks
-            .filter((p) => p.label === series.label && p.lawn === lawn)
+            .filter((p) => p.label === series.label && p.lawn === lawn && (p.split ?? 0) === 0)
             .sort((a, b) => a.range - b.range)
             .map((p) => ({ range: p.range, effort: (p.least.read.strokeEffort + p.least.read.pushEffort) / 2 }));
         if (points.length === 0) {
@@ -293,7 +295,7 @@ function effortPlot(hold: string, lawn: number, ranges: readonly number[], picks
     }
     return frame(
         `Each band's default's effort, ${lawn} s lawn, ${hold} hold`,
-        "The mean of the stroke's and the push's effort of each band's least complex admissible plan",
+        "The mean of the stroke's and the push's effort of each band's least complex admissible plan, split 0",
         parts.join("\n"),
     );
 }

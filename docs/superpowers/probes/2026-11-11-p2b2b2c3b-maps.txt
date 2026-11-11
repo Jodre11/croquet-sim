@@ -28,7 +28,7 @@
 # 0° gives 4.33-4.42). The hole is the drive's 6° lean step, not the physics. The other inside holes lie at the AC
 # stop's steep edge (ratios above 6).
 
-== checks. Plan Task C4: 1079126 rows, 358 defaults (found hold) ==
+== checks. Plan Task C4: 1079126 rows, 1446 defaults (found hold) ==
 
 -- §6 item 1: the half roll's text book (gate stage 1) on the 10 s lawn, per range --
 0.25 m: plays, ratio 2.21 (half roll)
@@ -105,7 +105,7 @@ pass-roll: 22307 slices, 17751 rise somewhere (80 %), largest 3.27
 14 s, 23.16 m: between full roll and half roll; full roll; pass roll
 14 s, 32.00 m: pass roll
 
--- §6 items 4 and 6, §7 L: each band's default along range on the 10 s lawn --
+-- §6 items 4 and 6, §7 L: each band's default along range, 10 s lawn, split 0 --
 range m: stroke % / push %, drive, window ms, handReach m, push impulse per p (N·s)
 AC stop: 11 ranges, 5 follow-through shapes, the stroke % falls 0 times, the push % 1 times
   0.25: 15 / 0, 0, 20, 0, 0.000 (stop-ac)
@@ -129,7 +129,7 @@ between drive and AC stop: 9 ranges, 7 follow-through shapes, the stroke % falls
   1.74: 41 / 24, 0, 40, 0.1, 1.077 (stop-ac)
   2.41: 49 / 28, -0.5, 10, 0.1, 0.329 (stop-ac)
   6.35: 83 / 0, -1, 10, 0, 0.000 (drive)
-between full roll and half roll: 15 ranges, 8 follow-through shapes, the stroke % falls 2 times, the push % 1 times
+between full roll and half roll: 15 ranges, 8 follow-through shapes, the stroke % falls 3 times, the push % 1 times
   0.25: 5 / 5, 0, 10, 0.1, 3.442 (half-roll)
   0.35: 6 / 5, 0, 20, 0.2, 4.076 (half-roll)
   0.48: 8 / 7, 0, 10, 0.2, 3.853 (half-roll)
@@ -142,10 +142,10 @@ between full roll and half roll: 15 ranges, 8 follow-through shapes, the stroke 
   4.59: 39 / 24, 0, 40, 0.3, 1.498 (full-roll)
   6.35: 40 / 26, 0, 40, 0.3, 1.515 (full-roll)
   8.77: 44 / 33, 0, 40, 0.3, 1.623 (full-roll)
-  12.13: 55 / 45, 0, 10, 0.3, 1.640 (pass-roll)
+  12.13: 71 / 39, -1, 10, 0.3, 1.180 (full-roll)
   16.76: 64 / 50, 0, 20, 0.1, 0.604 (half-roll)
   23.16: 64 / 60, 0, 40, 0.2, 1.372 (half-roll)
-between half roll and drive: 13 ranges, 8 follow-through shapes, the stroke % falls 3 times, the push % 4 times
+between half roll and drive: 13 ranges, 7 follow-through shapes, the stroke % falls 3 times, the push % 4 times
   0.25: 12 / 0, 0, 10, 0, 0.000 (drive)
   0.35: 16 / 0, 0, 10, 0, 0.000 (drive)
   0.48: 19 / 10, 0, 10, 0.1, 0.825 (full-roll)
@@ -154,7 +154,7 @@ between half roll and drive: 13 ranges, 8 follow-through shapes, the stroke % fa
   1.26: 30 / 18, 0, 40, 0.3, 1.705 (full-roll)
   1.74: 33 / 20, 0, 20, 0.3, 1.650 (full-roll)
   2.41: 28 / 16, 0, 20, 0.3, 1.847 (full-roll)
-  3.32: 56 / 0, 0.5, 40, 0, 0.000 (pass-roll)
+  3.32: 56 / 0, 0.5, 20, 0, 0.000 (full-roll)
   4.59: 42 / 0, 0, 10, 0, 0.000 (half-roll)
   6.35: 50 / 38, 0, 40, 0.1, 0.661 (half-roll)
   8.77: 65 / 0, 0, 40, 0, 0.000 (half-roll)
@@ -178,8 +178,8 @@ drive: 12 ranges, 5 follow-through shapes, the stroke % falls 0 times, the push 
   3.32: 56 / 0, 0, 10, 0, 0.000 (drive)
   4.59: 66 / 37, 0, 40, 0.1, 1.471 (drive)
   6.35: 82 / 0, 0, 20, 0, 0.000 (drive)
-  8.77: 98 / 0, 0, 40, 0, 0.000 (pass-roll)
-full roll: 14 ranges, 6 follow-through shapes, the stroke % falls 0 times, the push % 0 times
+  8.77: 100 / 52, -0.5, 10, 0.1, 0.223 (full-roll)
+full roll: 14 ranges, 5 follow-through shapes, the stroke % falls 0 times, the push % 1 times
   0.25: 4 / 5, 0, 40, 0.1, 4.758 (half-roll)
   0.35: 6 / 6, 0, 40, 0.1, 4.210 (half-roll)
   0.48: 7 / 7, 0, 40, 0.2, 4.915 (half-roll)
@@ -192,8 +192,8 @@ full roll: 14 ranges, 6 follow-through shapes, the stroke % falls 0 times, the p
   4.59: 27 / 23, 0, 40, 0.3, 2.392 (half-roll)
   6.35: 34 / 30, 0, 40, 0.3, 2.229 (half-roll)
   8.77: 43 / 33, -0.5, 20, 0.3, 1.948 (half-roll)
-  12.13: 46 / 38, 0.5, 10, 0.3, 1.677 (pass-roll)
-  16.76: 64 / 52, 0, 10, 0.3, 1.600 (pass-roll)
+  12.13: 47 / 29, 0, 20, 0.1, 0.516 (pass-roll)
+  16.76: 67 / 62, 0, 40, 0.3, 1.647 (pass-roll)
 half roll: 14 ranges, 6 follow-through shapes, the stroke % falls 1 times, the push % 1 times
   0.25: 5 / 5, 0, 40, 0.2, 3.617 (half-roll)
   0.35: 6 / 6, 0, 40, 0.2, 4.256 (half-roll)
@@ -209,22 +209,14 @@ half roll: 14 ranges, 6 follow-through shapes, the stroke % falls 1 times, the p
   8.77: 73 / 0, 0, 40, 0, 0.000 (half-roll)
   12.13: 60 / 49, 0, 10, 0.3, 1.642 (pass-roll)
   16.76: 62 / 52, 0, 20, 0.1, 0.654 (half-roll)
-pass roll: 15 ranges, 8 follow-through shapes, the stroke % falls 1 times, the push % 3 times
+pass roll: 7 ranges, 5 follow-through shapes, the stroke % falls 1 times, the push % 1 times
   0.25: 5 / 5, 0, 40, 0.1, 4.678 (half-roll)
-  0.35: 4 / 3, 0, 40, 0.3, 7.608 (pass-roll)
-  0.48: 5 / 4, 0, 40, 0.3, 8.111 (pass-roll)
-  0.66: 6 / 5, 0, 40, 0.3, 8.591 (pass-roll)
-  0.91: 8 / 6, 0, 40, 0.3, 9.506 (pass-roll)
-  1.26: 9 / 8, 0, 20, 0.3, 7.787 (pass-roll)
-  1.74: 11 / 8, 0, 10, 0.2, 3.686 (pass-roll)
-  2.41: 14 / 8, 0, 10, 0.1, 1.255 (pass-roll)
-  3.32: 17 / 10, 0, 10, 0.1, 1.032 (pass-roll)
-  4.59: 22 / 12, 0, 10, 0.1, 0.789 (pass-roll)
-  6.35: 27 / 15, 0, 10, 0.1, 0.665 (pass-roll)
-  8.77: 34 / 21, 0, 20, 0.2, 1.113 (pass-roll)
-  12.13: 42 / 32, 0.5, 20, 0.3, 1.646 (pass-roll)
-  16.76: 65 / 58, 0, 40, 0.3, 1.624 (pass-roll)
-  23.16: 66 / 54, 0, 10, 0.3, 1.576 (pass-roll)
+  0.35: 5 / 4, 0, 10, 0.1, 4.204 (pass-roll)
+  0.48: 6 / 4, 0, 10, 0.1, 3.280 (pass-roll)
+  0.66: 9 / 7, -0.5, 20, 0.1, 2.794 (half-roll)
+  0.91: 7 / 10, 1, 10, 0.3, 12.722 (full-roll)
+  1.26: 9 / 11, 1, 40, 0.3, 10.083 (full-roll)
+  1.74: 11 / 13, 1, 40, 0.3, 7.937 (full-roll)
 single ball: 16 ranges, 5 follow-through shapes, the stroke % falls 0 times, the push % 1 times
   0.25: 6 / 3, 0, 40, 0.1, 2.697 (single-ball)
   0.35: 7 / 3, 0, 10, 0.1, 0.629 (single-ball)
@@ -242,7 +234,7 @@ single ball: 16 ranges, 5 follow-through shapes, the stroke % falls 0 times, the
   16.76: 56 / 0, 0, 20, 0, 0.000 (single-ball)
   23.16: 66 / 0, 0, 20, 0, 0.000 (single-ball)
   32.00: 78 / 34, 0, 20, 0.1, 0.391 (single-ball)
-§7 L: 358 defaults over every lawn; push above 90 %: 0, at or above 100 %: 0; the most 80 %
+§7 L: 1446 defaults over every lawn; push above 90 %: 0, at or above 100 %: 0; the most 80 %
 
 -- account 3: hard strikes (p ≥ 1) per drive, share at ratio ≥ 1.4 (half roll's least) --
 full-roll: drive -1: 58 % of 1734, median 1.57; drive -0.5: 45 % of 1403, median 1.36; drive 0: 81 % of 2629, median 1.95; drive 0.5: 74 % of 2006, median 1.95; drive 1: 76 % of 1181, median 2.06
@@ -266,10 +258,19 @@ half-roll: 0 plans (0 admissible reads); at 32 m: off-court 3780
 full-roll: 0 plans (0 admissible reads); at 32 m: off-court 15116, superhuman 4
 pass-roll: 0 plans (0 admissible reads); at 32 m: off-court 26579, superhuman 3972, unpractised 744, plays 363, unlawful 102, mishit 19, turf 53
 
--- account 5: the pass roll's defaults along range, drive and window (ms) per lawn --
-6 s: 0.25 0/40, 0.35 0/40, 0.48 0/40, 0.66 0/40, 0.91 0/10, 1.26 0/10, 1.74 0/20, 2.41 0/40, 3.32 0/10, 4.59 0/20, 6.35 0/40, 8.77 0/10, 12.13 0.5/20
-10 s: 0.25 0/40, 0.35 0/40, 0.48 0/40, 0.66 0/40, 0.91 0/40, 1.26 0/20, 1.74 0/10, 2.41 0/10, 3.32 0/10, 4.59 0/10, 6.35 0/10, 8.77 0/20, 12.13 0.5/20, 16.76 0/40, 23.16 0/10
-14 s: 0.25 0/40, 0.35 0/40, 0.48 0/40, 0.66 0/40, 0.91 0/40, 1.26 0/40, 1.74 0/40, 2.41 0/40, 3.32 0/10, 4.59 0/10, 6.35 0/10, 8.77 0/10, 12.13 0/10, 16.76 0/10, 23.16 0/20, 32.00 0/40
+-- account 5: the pass roll's defaults along range, drive and window (ms) per lawn, split 0 --
+6 s: 0.25 0/10, 0.35 0/10, 0.48 0/10, 0.66 0/40, 0.91 1/40
+10 s: 0.25 0/40, 0.35 0/10, 0.48 0/10, 0.66 -0.5/20, 0.91 1/10, 1.26 1/40, 1.74 1/40
+14 s: 0.25 0/40, 0.35 0/40, 0.48 0/10, 0.66 0/10, 0.91 0/10, 1.26 1/40, 1.74 0.5/10, 2.41 -1/20, 3.32 0.5/20
+per split (design A10 item 5), 10 s lawn: range drive/window (ms)
+  0.0°: 0.25 0/40, 0.35 0/10, 0.48 0/10, 0.66 -0.5/20, 0.91 1/10, 1.26 1/40, 1.74 1/40
+  2.0°: 0.25 0.5/20, 0.35 0.5/20, 0.48 0/40, 0.66 0/20, 0.91 0/10, 1.26 0/10, 1.74 0/10, 2.41 0/40, 3.32 0/20, 4.59 0/40, 6.35 0/40, 8.77 0/10, 12.13 -1/10, 16.76 0/40
+  4.0°: 0.25 0/10, 0.35 0/10, 0.48 0/10, 0.66 0/10, 0.91 0/20, 1.26 0/20, 1.74 0/20, 2.41 0/20, 3.32 0/20, 4.59 0/20, 6.35 0/10, 8.77 0/40, 12.13 0.5/20, 16.76 0/10, 23.16 0/10
+  6.0°: 0.25 0/10, 0.35 0/10, 0.48 0/10, 0.66 0/10, 0.91 0/10, 1.26 0/20, 1.74 0/20, 2.41 0/40, 3.32 0/10, 4.59 0/10, 6.35 0/20, 8.77 0/20, 12.13 0.5/20, 16.76 0/40, 23.16 0/10
+  8.0°: 0.25 0/10, 0.35 0/10, 0.48 0/10, 0.66 0/10, 0.91 0/10, 1.26 0/10, 1.74 0/10, 2.41 0/20, 3.32 0/40, 4.59 0/10, 6.35 0/10, 8.77 0/20, 12.13 0.5/10, 16.76 0/40
+  10.0°: 0.25 0/10, 0.35 0/20, 0.48 0/20, 0.66 0/20, 0.91 0/20, 1.26 0/20, 1.74 0/10, 2.41 0/10, 3.32 0/10, 4.59 0/20, 6.35 0/20, 8.77 1/40, 12.13 0/40, 16.76 0.5/40
+  20.0°: 0.25 0/10, 0.35 0/10, 0.48 0/10, 0.66 0/40, 0.91 0/40, 1.26 0/40, 1.74 0/10, 2.41 0.5/40, 3.32 0.5/40, 4.59 0/40, 6.35 -0.5/40, 8.77 -0.5/40, 12.13 -0.5/10
+  30.0°: 0.25 0/40, 0.35 0/40, 0.48 0/40, 0.66 0/40, 0.91 0/10, 1.26 0/40, 1.74 1/20, 2.41 1/40, 3.32 0/40, 4.59 0/40, 6.35 0/40, 8.77 0.5/40, 12.13 1/40
 accelerating (drive > 0) share of the pass roll's admissible reads per range, 10 s: 37 % 41 % 41 % 43 % 45 % 45 % 44 % 45 % 45 % 45 % 48 % 50 % 45 % 44 % 12 % –
 
 -- §7 I: the full roll per speed gain (admissible reads), share labelled full roll; its defaults --
@@ -277,7 +278,7 @@ gain 0.1: 11841 reads, 36 %, median ratio 1.33
 gain 0.25: 11418 reads, 36 %, median ratio 1.31
 gain 0.5: 10902 reads, 39 %, median ratio 1.26
 gain 1: 9123 reads, 41 %, median ratio 1.27
-full-roll band's defaults: half-roll gain 0.1 × 37, pass-roll gain 0.1 × 5, full-roll gain 0.1 × 1
+full-roll band's defaults: half-roll gain 0.1 × 38, full-roll gain 0.1 × 2, full-roll gain 0.5 × 1, pass-roll gain 0.1 × 232
 
 -- §7 K: the pass roll's least admissible ratio per lawn and range (multiples below 0.5) --
 6 s: 0.37 0.35 0.31 0.31 0.30 0.29 0.35 0.32 0.28 0.37 0.40 0.43 0.58 NaN NaN NaN; 12 ranges below

@@ -1405,7 +1405,7 @@ async function sectionRecord(): Promise<void> {
     const json = JSON.stringify({ header, ...picksByHold }, (_k, v: unknown) =>
         typeof v === "number" && !Number.isFinite(v) ? null : v,
     );
-    fs.writeFileSync(`${out}/envelope-defaults.json`, await prettyJson(`${out}/envelope-defaults.json`, json));
+    fs.writeFileSync(`${out}/envelope-defaults.json`, await prettyJson(json));
     console.log(`written: ${out}/envelope-defaults.json`);
     if (tooLarge) {
         console.log(`a record passes ${RECORD_LIMIT_MB} MB: decision 10 commits its summary instead`);
@@ -1414,17 +1414,21 @@ async function sectionRecord(): Promise<void> {
 }
 
 /**
- * Plan Task C4: `json` as Prettier formats a file at `path` under the repository's configuration, so a regenerated
- * file passes the format check.
+ * Plan Task C4: `json` as Prettier formats a JSON file under the repository's configuration, so a regenerated file
+ * passes the format check wherever it is written. The configuration is resolved from the repository (the working
+ * directory), not from the output's path, which may lie outside it.
  */
-export async function prettyJson(path: string, json: string): Promise<string> {
+export async function prettyJson(json: string): Promise<string> {
     const name = "prettier";
     const prettier = (await import(/* @vite-ignore */ name)) as {
         resolveConfig(path: string): Promise<Record<string, unknown> | null>;
         format(source: string, options: Record<string, unknown>): Promise<string>;
     };
-    const config = (await prettier.resolveConfig(path)) ?? {};
-    return prettier.format(json, { ...config, parser: "json", filepath: path });
+    const config = await prettier.resolveConfig("package.json");
+    if (config === null) {
+        throw new Error("prettyJson: no Prettier configuration; run from the repository's root");
+    }
+    return prettier.format(json, { ...config, parser: "json" });
 }
 
 /** A grip shard's file name (plan C-d6): `grip-<k>of<N>.jsonl`. */
@@ -1464,7 +1468,7 @@ async function sectionGripPlans(): Promise<void> {
         seed: HELD_OUT_SEED,
         admissible: admissible.length,
     };
-    fs.writeFileSync(out, await prettyJson(out, JSON.stringify({ header, plans })));
+    fs.writeFileSync(out, await prettyJson(JSON.stringify({ header, plans })));
     console.log(`written: ${out}, ${starting} starting plans and ${plans.length - starting} held out`);
 }
 
@@ -1655,10 +1659,12 @@ async function sectionChecks(): Promise<void> {
         }
     }
 
-    console.log("\n-- §6 items 4 and 6, §7 L: each band's default along range on the 10 s lawn --");
+    console.log("\n-- §6 items 4 and 6, §7 L: each band's default along range, 10 s lawn, split 0 --");
     console.log("range m: stroke % / push %, drive, window ms, handReach m, push impulse per p (N·s)");
     for (const label of [...new Set(picks.map((p) => p.label))]) {
-        const path = picks.filter((p) => p.label === label && p.lawn === 10).sort((a, b) => a.range - b.range);
+        const path = picks
+            .filter((p) => p.label === label && p.lawn === 10 && p.split === 0)
+            .sort((a, b) => a.range - b.range);
         const chosen = path.map(defaultOf);
         const strokes = chosen.map((c) => c.read.strokeEffort);
         const pushes = chosen.map((c) => c.read.pushEffort);
@@ -1723,9 +1729,11 @@ async function sectionChecks(): Promise<void> {
         );
     }
 
-    console.log("\n-- account 5: the pass roll's defaults along range, drive and window (ms) per lawn --");
+    console.log("\n-- account 5: the pass roll's defaults along range, drive and window (ms) per lawn, split 0 --");
     for (const lawn of MAP_LAWNS) {
-        const path = picks.filter((p) => p.label === "pass roll" && p.lawn === lawn).sort((a, b) => a.range - b.range);
+        const path = picks
+            .filter((p) => p.label === "pass roll" && p.lawn === lawn && p.split === 0)
+            .sort((a, b) => a.range - b.range);
         console.log(
             `${lawn} s: ` +
                 path
@@ -1735,6 +1743,19 @@ async function sectionChecks(): Promise<void> {
                     )
                     .join(", "),
         );
+    }
+    console.log("per split (design A10 item 5), 10 s lawn: range drive/window (ms)");
+    for (const split of valuesOf(gridFor("pass-roll").split)) {
+        const path = picks
+            .filter((p) => p.label === "pass roll" && p.lawn === 10 && p.split === split)
+            .sort((a, b) => a.range - b.range);
+        if (path.length > 0) {
+            const cells = path.map((p) => {
+                const plan = defaultOf(p).plan;
+                return `${m(p.range)} ${plan.drive}/${(plan.window * 1000).toFixed(0)}`;
+            });
+            console.log(`  ${deg(split)}°: ${cells.join(", ")}`);
+        }
     }
     const passOk = of("pass-roll").filter((r) => isAdmissible(r) && r.lawn === 10);
     console.log(

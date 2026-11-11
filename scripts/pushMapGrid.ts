@@ -914,6 +914,8 @@ export interface Picked {
 /** Each label's least complex plan at one range and lawn (bandPicks). */
 export interface BandPick {
     readonly label: string;
+    /** The split (rad): the player's, set by where the balls are to go (design A10 item 5); 0 off the pass roll. */
+    readonly split: number;
     readonly range: number;
     readonly lawn: number;
     readonly least: Picked;
@@ -925,18 +927,18 @@ export interface BandPick {
 }
 
 /**
- * Each label's least complex plan per range and lawn over every type's map (design A7 items 2, 7, A9 items 6–10; plan
- * C-d3): among the banded admissible plans (viable or edgy) of all the types, grouped by labelOf's label of the ratio,
+ * Each label's least complex plan per split, range and lawn over every type's map (design A7 items 2, 7, A9 items
+ * 6–10, A10 item 5; plan C-d3): among the banded admissible plans (viable or edgy) of all the types, grouped by labelOf's label of the ratio,
  * or SINGLE_BALL_LABEL for the single-ball stroke, the least by complexityOf, ties to the plan nearer its own text book
  * in follow-through (A7 item 8). A plan whose stroke effort is NaN, or a roll's whose ratio has no label, is never
- * picked. Sorted by label, range and lawn.
+ * picked. Sorted by label, split, range and lawn.
  */
 export function bandPicks(maps: readonly TypeReads[]): BandPick[] {
     interface Candidate extends Picked {
         readonly complexity: Complexity;
         readonly distance: number;
     }
-    const groups = new Map<string, { label: string; range: number; lawn: number; all: Candidate[] }>();
+    const groups = new Map<string, { label: string; split: number; range: number; lawn: number; all: Candidate[] }>();
     for (const { type, reads, banded } of maps) {
         const book = textBook(type);
         for (const [key, band] of banded) {
@@ -952,8 +954,8 @@ export function bandPicks(maps: readonly TypeReads[]): BandPick[] {
                 continue;
             }
             const { plan, range, lawn } = unkey(key);
-            const id = JSON.stringify([label, range, lawn]);
-            const group = groups.get(id) ?? { label, range, lawn, all: [] };
+            const id = JSON.stringify([label, plan.split, range, lawn]);
+            const group = groups.get(id) ?? { label, split: plan.split, range, lawn, all: [] };
             const complexity = complexityOf(type, plan, read);
             group.all.push({ type, plan, band, read, complexity, distance: anchorDistance(plan, book) });
             groups.set(id, group);
@@ -962,17 +964,20 @@ export function bandPicks(maps: readonly TypeReads[]): BandPick[] {
     const strip = (c: Candidate | undefined): Picked | null =>
         c === undefined ? null : { type: c.type, plan: c.plan, band: c.band, read: c.read };
     const picks: BandPick[] = [];
-    for (const { label, range, lawn, all } of groups.values()) {
+    for (const { label, split, range, lawn, all } of groups.values()) {
         all.sort((a, b) => byComplexity(a.complexity, b.complexity) || a.distance - b.distance);
         picks.push({
             label,
+            split,
             range,
             lawn,
             least: strip(all[0]) as Picked,
             viable: strip(all.find((c) => c.band === "viable")),
         });
     }
-    return picks.sort((a, b) => a.label.localeCompare(b.label) || a.range - b.range || a.lawn - b.lawn);
+    return picks.sort(
+        (a, b) => a.label.localeCompare(b.label) || a.split - b.split || a.range - b.range || a.lawn - b.lawn,
+    );
 }
 
 /** A figure for the record: six significant figures, empty where not finite. */
