@@ -1,17 +1,32 @@
 <!--
-    The inputs (side-on viewer spec §2, decision 2): lean, feet, push length, after contact and push window, each
-    continuous within the hold's graded span with the grid's values as ticks.
+    The inputs (side-on viewer spec §2; hands-from-lean design §5.1): lean, feet, push length, after contact and push
+    window, each continuous over the playable range with the picked type's graded values as ticks; then each hand's
+    grip tension and the follow-through, from the type's defaults.
 -->
 <script lang="ts">
     import type { MapPlan } from "../lab/index";
-    import { INPUTS, clampTo, type Input, type Span } from "./spans";
+    import type { StrokeExtras } from "../lab/play";
+    import { EXTRA_SPANS, INPUTS, clampTo, type ExtraValues, type Input, type Span } from "./spans";
 
     interface Props {
         plan: MapPlan;
         spans: Readonly<Record<Input, Span>> | null;
+        extras: StrokeExtras;
+        defaults: ExtraValues;
         onchange: (plan: MapPlan) => void;
+        onextras: (extras: StrokeExtras) => void;
     }
-    let { plan, spans, onchange }: Props = $props();
+    let { plan, spans, extras, defaults, onchange, onextras }: Props = $props();
+
+    type Extra = keyof ExtraValues;
+    const EXTRAS = Object.keys(EXTRA_SPANS) as Extra[];
+    const EXTRA_NAMES: Record<Extra, string> = {
+        gripTension: "Top hand's grip",
+        bottomGrip: "Bottom hand's grip",
+        followThrough: "Follow-through",
+    };
+    const extraShown = (extra: Extra, value: number): string =>
+        extra === "followThrough" ? `${(value * 1000).toFixed(0)} ms` : value.toFixed(2);
 
     const NAMES: Record<Input, string> = {
         lean: "Lean",
@@ -49,6 +64,7 @@
                     max={span.most}
                     step={(span.most - span.least) / 200 || 1}
                     value={plan[input]}
+                    aria-valuetext={`${shown(input, plan[input])} ${describe(input, plan[input])}`.trim()}
                     disabled={span.most === span.least}
                     list={`ticks-${input}`}
                     oninput={(e) => onchange({ ...plan, [input]: clampTo(span, Number(e.currentTarget.value)) })}
@@ -57,6 +73,30 @@
                     {#each span.ticks as tick (tick)}
                         <option value={tick}></option>
                     {/each}
+                </datalist>
+            </label>
+        {/each}
+        {#each EXTRAS as extra (extra)}
+            {@const span = EXTRA_SPANS[extra]}
+            {@const value = extras[extra] ?? defaults[extra]}
+            <label class="input">
+                <span>{EXTRA_NAMES[extra]}: <strong>{extraShown(extra, value)}</strong></span>
+                <input
+                    type="range"
+                    min={span.least}
+                    max={span.most}
+                    step={span.step}
+                    {value}
+                    aria-valuetext={extraShown(extra, value)}
+                    list={`ticks-${extra}`}
+                    oninput={(e) =>
+                        onextras({
+                            ...extras,
+                            [extra]: Math.min(span.most, Math.max(span.least, Number(e.currentTarget.value))),
+                        })}
+                />
+                <datalist id={`ticks-${extra}`}>
+                    <option value={defaults[extra]}></option>
                 </datalist>
             </label>
         {/each}

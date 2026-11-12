@@ -3,7 +3,8 @@
  * its defaults, unless the player stepped the grip; one play in a Web Worker, and a newer Run superseding an older one.
  */
 import { playFrames, type FramedPlay } from "../lab/frames";
-import { playSample, type MapPlan, type MapSample, type MapType } from "../lab/index";
+import { type MapPlan, type MapSample, type MapType } from "../lab/index";
+import { playJudged, type StrokeExtras } from "../lab/play";
 
 /**
  * A Run's grip: the found hold, its firmness known where the record played this set-up (an unchanged default) and
@@ -13,13 +14,14 @@ export type RunGrip =
     | { readonly source: "found"; readonly firmness: number | null }
     | { readonly source: "player"; readonly firmness: number };
 
-/** What a Run asks for: the set-up, the lawn (s) read, and the grip. */
+/** What a Run asks for: the set-up, its inputs beyond the plan, the lawn (s) read, and the grip. */
 export interface RunRequest {
     readonly type: MapType;
     readonly plan: MapPlan;
     readonly power: number;
     readonly lawn: number;
     readonly grip: RunGrip;
+    readonly extras?: StrokeExtras;
 }
 
 /** A Run's play: its frames at `firmness`, and whether the search found that grip. */
@@ -31,13 +33,21 @@ export interface RunResult {
 
 /** The plays a Run makes (the lab's, or a test's). */
 export interface RunPlays {
-    frames(type: MapType, plan: MapPlan, power: number, firmness: number, lawn: number): FramedPlay;
-    found(type: MapType, plan: MapPlan, power: number, lawn: number): MapSample;
+    frames(
+        type: MapType,
+        plan: MapPlan,
+        power: number,
+        firmness: number,
+        lawn: number,
+        extras: StrokeExtras,
+    ): FramedPlay;
+    found(type: MapType, plan: MapPlan, power: number, lawn: number, extras: StrokeExtras): MapSample;
 }
 
 const LAB: RunPlays = {
     frames: playFrames,
-    found: (type, plan, power, lawn) => playSample(type, plan, power, [lawn], "found"),
+    found: (type, plan, power, lawn, extras) =>
+        playJudged(type, plan, power, [lawn], "found", 0, undefined, extras).sample,
 };
 
 /**
@@ -46,17 +56,17 @@ const LAB: RunPlays = {
  * none plays. A play at the found firmness is the search's own play (both set `stroke.holdFirmness`).
  */
 export function runPlay(request: RunRequest, onSearch: () => void = () => {}, plays: RunPlays = LAB): RunResult {
-    const { type, plan, power, lawn, grip } = request;
+    const { type, plan, power, lawn, grip, extras = {} } = request;
     if (grip.firmness !== null) {
         return {
-            framed: plays.frames(type, plan, power, grip.firmness, lawn),
+            framed: plays.frames(type, plan, power, grip.firmness, lawn, extras),
             firmness: grip.firmness,
             searched: false,
         };
     }
     onSearch();
-    const firmness = plays.found(type, plan, power, lawn).firmness ?? 1;
-    return { framed: plays.frames(type, plan, power, firmness, lawn), firmness, searched: true };
+    const firmness = plays.found(type, plan, power, lawn, extras).firmness ?? 1;
+    return { framed: plays.frames(type, plan, power, firmness, lawn, extras), firmness, searched: true };
 }
 
 /** A worker as the runner uses it (a Web Worker, or a test's fake). */

@@ -32,6 +32,14 @@ describe("plannedPath (spec §1 item 4, §3.2)", () => {
         expect(Math.abs(last.face.x)).toBeLessThan(0.1);
     });
 
+    it("plans with the viewer's extras: the planner checks what it is handed", () => {
+        const plan = textBook("half-roll");
+        const power = canonicalPower("half-roll", openWorld(10));
+        const base = JSON.stringify(plannedPath("half-roll", plan, power));
+        expect(JSON.stringify(plannedPath("half-roll", plan, power, {}))).toBe(base);
+        expect(() => plannedPath("half-roll", plan, power, { followThrough: -0.1 })).toThrow(/followThrough/);
+    });
+
     it("throws the planner's RangeError for a set-up it rejects", () => {
         expect(() => plannedPath("drive", { ...textBook("drive"), lean: 1.2 }, 1)).toThrow(RangeError);
     });

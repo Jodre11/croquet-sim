@@ -10,8 +10,10 @@
         outcome: { klass: string | null; reason: string | null } | null;
         departures: { timed: number; setUp: number } | null;
         timing: GripPlan | null;
+        /** The hold the set-up lies beyond the grid of, null where it is on the grid. */
+        offGrid: string | null;
     }
-    let { judgement, outcome, departures, timing }: Props = $props();
+    let { judgement, outcome, departures, timing, offGrid }: Props = $props();
 
     const lossOf = (entry: GripPlan["timing"][number], grip: GripPlan): string => {
         if (entry.klass !== null) {
@@ -25,10 +27,14 @@
     };
 </script>
 
-<div class="badges">
-    <span class={`badge ${judgement?.band ?? "unknown"}`} data-testid="badge-envelope">
-        Envelope: {judgement === null ? "…" : judgement.band}{judgement?.klass ? ` (${judgement.klass})` : ""}
-    </span>
+<div class="badges" role="status" aria-live="polite">
+    {#if offGrid !== null}
+        <span class="badge unknown" data-testid="badge-envelope">Envelope: not swept for {offGrid}</span>
+    {:else}
+        <span class={`badge ${judgement?.band ?? "unknown"}`} data-testid="badge-envelope">
+            Envelope: {judgement === null ? "…" : judgement.band}{judgement?.klass ? ` (${judgement.klass})` : ""}
+        </span>
+    {/if}
     {#if outcome !== null}
         <span class={`badge ${outcome.klass === null ? "viable" : "non-viable"}`} data-testid="badge-run">
             Run: {outcome.klass === null

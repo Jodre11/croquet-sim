@@ -12,7 +12,7 @@ import { add, dot, scale, sub, vec3, type Vec3 } from "../engine/math/vec3";
 import { strokeTrajectory } from "../engine/swing/trajectory";
 import { BALL_IDS, type BallState } from "../engine/types";
 import { openWorld } from "./lawn";
-import { playJudged, type MapPlan, type MapSample, type MapType, type PlayWatch } from "./play";
+import { playJudged, type MapPlan, type MapSample, type MapType, type PlayWatch, type StrokeExtras } from "./play";
 
 const UP = vec3(0, 0, 1);
 
@@ -138,10 +138,18 @@ function frameWatch(): { readonly watch: PlayWatch; readonly watched: () => Watc
  * (spec §3.1): the swing every SWING_STEP up to the impact, the impact every IMPACT_STEP, the follow-through every
  * FOLLOW_STEP with the balls carried on ballistically from the handover for DEPARTURE. The sample is
  * playSample(type, plan, power, [lawn], firmness)'s: the impact on the 10 s lawn, the roll read on `lawn` (s).
+ * `extras` are mapSetup's (the viewer's inputs beyond the plan).
  */
-export function playFrames(type: MapType, plan: MapPlan, power: number, firmness: number, lawn = 10): FramedPlay {
+export function playFrames(
+    type: MapType,
+    plan: MapPlan,
+    power: number,
+    firmness: number,
+    lawn = 10,
+    extras: StrokeExtras = {},
+): FramedPlay {
     const { watch, watched } = frameWatch();
-    const { sample, strike } = playJudged(type, plan, power, [lawn], firmness, 0, watch);
+    const { sample, strike } = playJudged(type, plan, power, [lawn], firmness, 0, watch, extras);
     const kept = watched();
     const empty = {
         sample,

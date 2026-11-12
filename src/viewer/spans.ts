@@ -2,7 +2,10 @@
  * The inputs' spans (side-on viewer spec §2): each input continuous within the span the map graded for the hold, its
  * grid values as ticks; beyond the span the band is unknown and the control stops there.
  */
+import { defaultProfile } from "../engine/swing/profile";
+import type { MapPlan, MapType } from "../lab/index";
 import type { BandTable } from "../lab/judge";
+import type { StrokeExtras } from "../lab/play";
 
 /** The tuned inputs (spec §2): lean, feet, push length, after contact, push window. */
 export const INPUTS = ["lean", "feet", "handReach", "drive", "window"] as const;
@@ -28,4 +31,68 @@ export function inputSpans(table: BandTable): Readonly<Record<Input, Span>> {
 /** `value` kept within `span`. */
 export function clampTo(span: Span, value: number): number {
     return Math.min(span.most, Math.max(span.least, value));
+}
+
+/** The lean's playable most (rad): forward of every roll the map grades (hands-from-lean design §5.1). */
+export const LEAN_MOST = Math.PI / 4;
+
+/** The playable span (design §5.1): continuous over every shot type, the picked type's graded values as ticks. */
+export function playableSpans(tables: readonly BandTable[], picked: BandTable): Readonly<Record<Input, Span>> {
+    const own = inputSpans(picked);
+    const every = (input: Input): number[] => tables.flatMap((t) => [...t.axes[input].values]);
+    const span = (input: Input, least: number, most: number): Span => ({ least, most, ticks: own[input].ticks });
+    // Feet and push length: the least to the most value any type's table tried.
+    const swept = (input: Input): Span => span(input, Math.min(...every(input)), Math.max(...every(input)));
+    return {
+        lean: span("lean", Math.min(...every("lean")), LEAN_MOST),
+        feet: swept("feet"),
+        handReach: swept("handReach"),
+        drive: span("drive", -1, 1),
+        window: span("window", 0.001, 0.1),
+    };
+}
+
+/** The extras' playable spans (design §5.1): each hand's grip tension and the follow-through (s). */
+export const EXTRA_SPANS = {
+    gripTension: { least: 0.05, most: 1, step: 0.05 },
+    bottomGrip: { least: 0.05, most: 1, step: 0.05 },
+    followThrough: { least: 0, most: 0.3, step: 0.01 },
+} as const;
+
+/** The extras the viewer moves, each at its value. */
+export type ExtraValues = Readonly<Record<keyof typeof EXTRA_SPANS, number>>;
+
+/** `type`'s defaults for the extras: its stance's grip tensions and its shape's follow-through. */
+export function extraDefaults(type: MapType): ExtraValues {
+    const stance = defaultProfile.stance[type];
+    return {
+        gripTension: stance.gripTension,
+        bottomGrip: stance.bottomGrip,
+        followThrough: defaultProfile.shape[type].followThrough,
+    };
+}
+
+/** `plan` with each input clamped within `spans` (not snapped to their ticks). */
+export function clampPlan(spans: Readonly<Record<Input, Span>>, plan: MapPlan): MapPlan {
+    return { ...plan, ...Object.fromEntries(INPUTS.map((input) => [input, clampTo(spans[input], plan[input])])) };
+}
+
+/**
+ * Whether `plan` with `extras` lies off `table`'s grid (design §5.1): an input beyond the type's graded span, or an
+ * extra moved from `defaults`. Off the grid the record has no band and no power for the set-up.
+ */
+export function offGrid(table: BandTable, plan: MapPlan, extras: StrokeExtras, defaults: ExtraValues): boolean {
+    const spans = inputSpans(table);
+    const outside = INPUTS.some((input) => clampTo(spans[input], plan[input]) !== plan[input]);
+    const moved = (Object.keys(defaults) as (keyof ExtraValues)[]).some(
+        (key) => extras[key] !== undefined && extras[key] !== defaults[key],
+    );
+    return outside || moved;
+}
+
+/** Whether `a` and `b` play the same extras, each absent one read as its default in `defaults`. */
+export function sameExtras(a: StrokeExtras, b: StrokeExtras, defaults: ExtraValues): boolean {
+    return (Object.keys(defaults) as (keyof ExtraValues)[]).every(
+        (key) => (a[key] ?? defaults[key]) === (b[key] ?? defaults[key]),
+    );
 }

@@ -1,0 +1,35 @@
+Viewer full range: smoke test (hands-from-lean plan Task 3; design §5)
+2026-11-12, branch viewer-full-range, Vite dev server, the app's built-in browser pane.
+
+1. Each label's default at its range (pass roll, full roll, half roll, drive, AC stop, single ball)
+   Every default loads with "Envelope: viable"; the extras' sliders read the type's stance and shape
+   (drive: grips 1.00 / 0.25, follow-through 200 ms; half roll: 1.00 / 1.00).
+
+2. Each of the eight sliders at each end, per label (16 moves a label, 96 in all)
+   - Every move replays: the Run is discarded and the swing plays from the planned path's first sample.
+   - "not swept for <type>" shows at every end beyond the type's graded span or with an extra moved:
+     lean −12.0° and 45.0°, feet −374 and +431 mm, window 1 and 100 ms, either grip at 0.05, follow-through
+     0 and 300 ms (and the drive's bottom grip at 1.00, its default being 0.25). Push length and after contact
+     at their ends stay on the grid where the type's table grades them.
+   - Run is disabled, with the planner's reason, only at lean −12.0°: "the head is in the turf at contact" on the
+     rolls and the AC stop, "no power at this range" on the drive and single ball; and on the half roll with a grip
+     at 0.05: "the grip cannot hold the planned slope (slopeHold 1)".
+
+3. Timings (the input handler's synchronous work: plan, judge, planned path)
+   - Pane shown: 25–42 ms a move across the six labels; plannedPath alone 53–63 ms (five-call mean, each type's
+     text book at power 1).
+   - Pane hidden (a background page, throttled): 45–350 ms a move; planStroke alone 184–286 ms on both the drive
+     and the pass roll, so the rise is the throttling, not the type. The spec's "under 100 ms" is met with the pane
+     shown; the hidden figures are recorded but not judged.
+
+4. A Run, then a slider move (half roll default)
+   - Run: the found hold searched and played in 4.6 s, "Run: admissible".
+   - Feet moved 10 mm after the Run: the Run badge cleared, the found hold back to "searched on Run", replayed.
+   - Run again, feet moved back during its search: the result arrived 8 s later and was dropped (no Run badge; the
+     shown swing stays the inputs' planned one).
+   - An off-grid set-up (drive, lean 34.4°, bottom grip 0.50) Run: found hold 0.0543, "Run: admissible".
+
+5. The plumb line and foot marker (design §5.5)
+   Drive default at 4.59 m: the plumb from the top hand labelled "hands −98 mm", the foot marker "feet −186 mm",
+   the feet slider's value; the marker stays at the reading through the swing, the plumb follows the top hand.
+   Each type's text-book feet equals feetReading's lowPoint to 1e-6 m (screen.test.ts).

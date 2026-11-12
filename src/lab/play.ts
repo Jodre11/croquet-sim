@@ -64,6 +64,32 @@ export interface MapPlan {
 }
 
 /**
+ * The viewer's inputs beyond the map's plan (hands-from-lean design §5.2): each given replaces the type's default in
+ * the stroke; none given leaves the play bit-identical.
+ */
+export interface StrokeExtras {
+    readonly gripTension?: number;
+    readonly bottomGrip?: number;
+    readonly followThrough?: number;
+}
+
+/** The stroke fields `extras` gives, to spread over a stroke (none for none). */
+function extrasStroke(extras: StrokeExtras, grip: ShotSetup["stroke"]["grip"]): Partial<ShotSetup["stroke"]> {
+    const { gripTension, bottomGrip, followThrough } = extras;
+    const gripped =
+        gripTension === undefined && bottomGrip === undefined
+            ? {}
+            : {
+                  grip: {
+                      ...grip,
+                      ...(gripTension === undefined ? {} : { gripTension }),
+                      ...(bottomGrip === undefined ? {} : { bottomGrip }),
+                  },
+              };
+    return { ...gripped, ...(followThrough === undefined ? {} : { followThrough }) };
+}
+
+/**
  * §3.5's classes (A2 item 2 adds unreachable), in decision 5's order; `unpractised` (P2b.2b.2c.3b.1 design §4 item 3)
  * is a push still out of the band after practice, kept apart from mishit and turf, where either would otherwise read.
  */
@@ -177,7 +203,8 @@ export function textBook(type: MapType): MapPlan {
  * its profile and stance fields only (stance, drive, shape, mallet, body, croquetGap). The map's world is the open
  * lawn and its stroke the plan's, so an `over` giving `world` or `stroke` throws an Error. `early` (s, negative is
  * early) moves the follow-through's pulses together, the hands' and the pendulum's (and the dip, timed from it): the
- * timing sweep's brake or push mistimed (plan C-d5).
+ * timing sweep's brake or push mistimed (plan C-d5). `extras` (StrokeExtras) replace the type's grips' tensions and
+ * follow-through where given.
  */
 export function mapSetup(
     type: MapType,
@@ -185,6 +212,7 @@ export function mapSetup(
     power: number,
     over: CanonicalOptions = {},
     early = 0,
+    extras: StrokeExtras = {},
 ): ShotSetup {
     if (over.world !== undefined || over.stroke !== undefined) {
         throw new Error("mapSetup: `over` gives the profile and stance only, not a world or a stroke");
@@ -220,6 +248,7 @@ export function mapSetup(
             handReach: plan.handReach,
             window: plan.window,
             timing: { ...base.stroke.timing, hands: plan.onset + early, arc: base.stroke.timing.arc + early },
+            ...extrasStroke(extras, base.stroke.grip),
         },
     };
     const body = bodyBackswing(placed, IMPACT_WORLD);
@@ -657,11 +686,12 @@ export function playJudged(
     hold: MapHold | number = "found",
     early = 0,
     viewer?: PlayWatch,
+    extras: StrokeExtras = {},
 ): { readonly sample: MapSample; readonly strike: StrikeTaps | null } {
     if (power > POWER_LIMIT) {
         return { sample: unplayed(power, lawns, "superhuman", `intensity ${power - 1} above 1`), strike: null };
     }
-    const setup = mapSetup(type, plan, power, {}, early);
+    const setup = mapSetup(type, plan, power, {}, early, extras);
     let stroke: StrokePlan;
     try {
         stroke = planStroke(setup, IMPACT_WORLD);

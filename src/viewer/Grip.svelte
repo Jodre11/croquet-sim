@@ -1,6 +1,7 @@
 <!--
     The grip (side-on viewer spec §2, decision 8; gate ruling 1): the found hold, as the record played its defaults,
-    until the player steps it with Looser and Firmer within the nearest swept plan's least and firmest.
+    until the player steps it with Looser and Firmer over the whole playable range (hands-from-lean design §5.1), the
+    nearest swept plan's least and firmest shown beside.
 -->
 <script lang="ts">
     interface Props {
@@ -8,11 +9,13 @@
         firmness: number | null;
         source: "found" | "player";
         bounds: { least: number; firmest: number } | null;
+        /** The nearest swept plan's least and firmest grips, null where it has none. */
+        swept: { least: number; firmest: number } | null;
         distance: number | null;
         searched: boolean;
         onstep: (dir: -1 | 1) => void;
     }
-    let { firmness, source, bounds, distance, searched, onstep }: Props = $props();
+    let { firmness, source, bounds, swept, distance, searched, onstep }: Props = $props();
 </script>
 
 <fieldset class="panel">
@@ -42,9 +45,9 @@
         >
             Firmer
         </button>
-        {#if bounds !== null}
+        {#if swept !== null}
             <span class="note">
-                {bounds.least.toFixed(4)}–{bounds.firmest.toFixed(4)}, from the nearest swept plan{distance === null
+                The nearest swept plan grips {swept.least.toFixed(4)}–{swept.firmest.toFixed(4)}{distance === null
                     ? ""
                     : ` (distance ${distance.toFixed(2)})`}
             </span>
