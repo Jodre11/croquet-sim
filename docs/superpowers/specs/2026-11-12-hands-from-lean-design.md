@@ -31,8 +31,10 @@ The user's account, verbatim where quoted:
 - The full roll: "the bottom hand should be approximately a finger's length + a brass ring from the base of the mallet
   head. The top hand should maintain the distance between hands of the half roll."
 - The pass roll: "the bottom hand should be fisted, lower, touching the brass ring. The top hand should maintain that
-  lock-step distance a little lower." The pass and full rolls differ by more than lean (user, 2026-11-12: "we have
-  already modelled that": the split and the push, shapes ruling 17), so the fist is a grip choice, not a lean.
+  lock-step distance a little lower." The user (2026-11-12): "full/pass is a small lean
+  adjustment combined with other changes of input", already modelled in part (shapes ruling 17: the split and the
+  push). So the pass roll is the full roll's set-up with its slightly greater lean (32°, the preset's) and other
+  inputs changed: the split, the push and the fist. The fist is one of those inputs, not a point on the lean law.
 
 As a law, `handsForLean(lean, mallet, fist): { top, bottom }` (m from the socket), piecewise linear in lean between
 three anchors, held flat outside them, with the fist moving both hands down together:
@@ -164,5 +166,6 @@ unchanged; each slider's range a fixed rule; the hold stays in the Grip panel wi
 replay discard a Run; the plumb line and foot marker placed; `complexityOf`'s hands term dropped, not reworded (the
 lean term already counts it), in both copies; the exemption is "not in the map"; the types as one continuum stated;
 delivery in two PRs, the viewer first; §5.5 folded into the replay; the grab carried in one line. Asked: the pass
-roll's fist, ruled a grip choice ("the pass/full roll variation is more than just a change of lean"). Rejected: cutting
+roll's fist: an input, with the lean, split and push, of the pass roll's set-up ("full/pass is a small lean
+adjustment combined with other changes of input"). Rejected: cutting
 the grip and follow-through sliders, which the user asked for in reply to that very point.
