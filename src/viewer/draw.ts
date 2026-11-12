@@ -73,7 +73,17 @@ export interface SideView {
     readonly radius: number;
     /** The head's length and half-height (m). */
     readonly head: { readonly length: number; readonly halfHeight: number };
+    /** The feet's reading (m along aim from the striker's ball's centre): the hands' arc's lowest point. */
+    readonly feet: number;
 }
+
+/** The plumb line from the top hand `top` (design §5.5): its x, and its distance ahead of the ball's centre `ball`. */
+export function plumbOf(top: SidePoint, ball: SidePoint): { readonly x: number; readonly ahead: number } {
+    return { x: top.x, ahead: top.x - ball.x };
+}
+
+/** A signed distance (m) shown in mm. */
+const mm = (d: number): string => `${d >= 0 ? "+" : "−"}${Math.abs(d * 1000).toFixed(0)} mm`;
 
 /** The head's face centre and the face's direction for a head at `head` pitched `pitch`. */
 function faceOf(head: SidePoint & { readonly pitch: number }, length: number): SidePoint {
@@ -90,7 +100,7 @@ export function drawSideOn(
 ): void {
     ctx.fillStyle = c.background;
     ctx.fillRect(0, 0, width, height);
-    const points: SidePoint[] = [...view.balls];
+    const points: SidePoint[] = [...view.balls, { x: view.feet, z: 0 }];
     for (const s of view.path ?? []) {
         points.push(s.top, s.bottom, s.head, s.face);
     }
@@ -175,6 +185,31 @@ export function drawSideOn(
     // The mallet: before a Run, along the planned path at the play time (decision 1; hands-from-lean design §5.2), else
     // the frame's; both hands on the shaft.
     const pose = frame ?? (view.path === null ? null : frameAt(view.path, view.t));
+
+    // The feet and the hands (design §5.5): a foot marker at the feet's reading, and a dotted plumb line from the top
+    // hand to the lawn, each labelled with its distance ahead of the striker's ball's centre.
+    const ball = balls[0] ?? { x: 0, z: view.radius };
+    ctx.font = "12px system-ui, sans-serif";
+    ctx.fillStyle = c.planned;
+    const [fx, fy] = px({ x: view.feet, z: 0 });
+    ctx.beginPath();
+    ctx.moveTo(fx, fy);
+    ctx.lineTo(fx - 6, fy + 10);
+    ctx.lineTo(fx + 6, fy + 10);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillText(`feet ${mm(view.feet - (view.balls[0]?.x ?? 0))}`, fx + 8, fy + 14);
+    if (pose !== null) {
+        const plumb = plumbOf(pose.top, ball);
+        ctx.strokeStyle = c.planned;
+        ctx.lineWidth = 1;
+        ctx.setLineDash([2, 3]);
+        line(pose.top, { x: plumb.x, z: 0 });
+        ctx.setLineDash([]);
+        const [hx, hy] = px(pose.top);
+        ctx.fillText(`hands ${mm(plumb.ahead)}`, hx + 10, hy + 4);
+    }
+
     if (pose !== null) {
         const { head } = pose;
         const along = { x: Math.cos(head.pitch), z: Math.sin(head.pitch) };

@@ -132,6 +132,7 @@
         balls: startBalls,
         radius: RADIUS,
         head: HEAD,
+        feet: plan.feet,
     });
     const departures = $derived(departuresOf(type, plan, framed?.sample.strokeEffort ?? defaultEffort ?? 0));
     // Before a Run the planned path's span, so the swing replays along it (hands-from-lean design §5.2).

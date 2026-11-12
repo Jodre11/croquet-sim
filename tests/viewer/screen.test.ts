@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { readBandTable } from "../../src/lab/judge";
-import { MAP_TYPES, textBook } from "../../src/lab/index";
+import { MAP_TYPES, mapSetup, openWorld, textBook } from "../../src/lab/index";
+import { feetReading } from "../../src/lab/play";
 import { complexityOf } from "../../scripts/pushMapGrid";
 import type { SweepRead } from "../../scripts/pushMapGrid";
 import { departuresOf } from "../../src/viewer/departures";
-import { followFlags } from "../../src/viewer/draw";
+import { followFlags, plumbOf } from "../../src/viewer/draw";
 import type { FramedPlay } from "../../src/lab/frames";
 import { labelsOf, lookupDefault, snapRange, splitsOf, type DefaultEntry } from "../../src/viewer/defaults";
 import { INPUTS, clampPlan, extraDefaults, inputSpans, offGrid, playableSpans } from "../../src/viewer/spans";
@@ -129,6 +130,21 @@ describe("departuresOf (spec §2's badges)", () => {
                 expect(departuresOf(type, plan, strokeEffort)).toEqual({ timed: want.timed, setUp: want.setUp });
             }
         }
+    });
+});
+
+describe("the plumb line and foot marker (hands-from-lean design §5.5)", () => {
+    it("places the plumb at the top hand, its distance ahead of the striker's ball's centre", () => {
+        const plumb = plumbOf({ x: 0.12, z: 0.8 }, { x: 0.02, z: 0.0475 });
+        expect(plumb.x).toBe(0.12);
+        expect(plumb.ahead).toBeCloseTo(0.1, 12);
+        expect(plumbOf({ x: -0.05, z: 0.8 }, { x: 0, z: 0.0475 }).ahead).toBe(-0.05);
+    });
+
+    it.each(MAP_TYPES)("%s: the feet input is the planned arc's lowest point, where the marker stands", (type) => {
+        const plan = textBook(type);
+        const setup = mapSetup(type, plan, 1);
+        expect(feetReading(setup, openWorld(10)).lowPoint).toBeCloseTo(plan.feet, 6);
     });
 });
 
