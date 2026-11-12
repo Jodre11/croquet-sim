@@ -126,6 +126,11 @@ rebuilt; the workflow removed again afterwards.
 - What punishes low hands (its own design, next, per §4's ruling).
 - One set of grips' tensions and push presets across types (the rest of the unified model).
 - A measured ring or finger; the hand sliding on the shaft.
+- **Grabbing a hand to set the lean** (user, 2026-11-12: "Ultimately I'd like the user to be able to grab a hand to
+  change the lean"). Carried to a later viewer phase: dragging the top hand on the canvas sets the lean from the
+  shaft's angle about the head at contact, and the hands then slide by `handsForLean` as the slider moves them. This
+  design keeps it open: the lean stays the one input the hands follow, and §5.3's reset and replay serves a drag as it
+  serves a slider.
 
 ## 8. Housekeeping
 
