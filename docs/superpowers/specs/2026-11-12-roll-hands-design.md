@@ -54,6 +54,12 @@ Lowering both hands changes the grip's couple, the swung body and the pendulum (
   drive 0.5 over 60 ms at a 4° split, 0.814 against Gugan 5's 0.83; ruling 18's 0.1 s follow-through, 0.859).
 - Each roll's default backswing at 3 m/s, its hold firmness (ruling 15) and its turf clearance (ruling 18).
 
+- The arms' assist (`reference/swing.json` `assistForce`, 241 N, `scripts/assistFit.ts`), fitted on the full roll as
+  the weakest held roll, so that it meets the 9 m/s ceiling from its body-limited top. Refitting it moves every held
+  roll, the half roll included; holding it as the body's, fixed, leaves the half roll untouched but the full roll may
+  no longer reach the ceiling. **Gate**, with the measurements: refit or hold. Held is the default (assumption), the
+  assist being a property of the body, not of a stance.
+
 The order: measure both canonical rolls at the new hands with their current defaults. Where a roll lands in its band,
 lawful and clear of the turf, its defaults stay. Where it does not, its `drive` and `window` are swept as ruling 16
 swept them and the nearest lawful setting to the band is proposed. **Gate:** the measured ratios, and any refit, go to
