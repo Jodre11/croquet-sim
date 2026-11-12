@@ -27,6 +27,7 @@ import {
     arcArrival,
     contactPose,
     downswingInputOf,
+    handsOf,
     headShapeOf,
     planStroke,
     plannedSpeed,
@@ -71,11 +72,13 @@ export interface StrokeExtras {
     readonly gripTension?: number;
     readonly bottomGrip?: number;
     readonly followThrough?: number;
+    /** The fist (hands-from-lean design §2), the stroke's `fist`. */
+    readonly fist?: boolean;
 }
 
 /** The stroke fields `extras` gives, to spread over a stroke (none for none). */
 function extrasStroke(extras: StrokeExtras, grip: ShotSetup["stroke"]["grip"]): Partial<ShotSetup["stroke"]> {
-    const { gripTension, bottomGrip, followThrough } = extras;
+    const { gripTension, bottomGrip, followThrough, fist } = extras;
     const gripped =
         gripTension === undefined && bottomGrip === undefined
             ? {}
@@ -86,7 +89,11 @@ function extrasStroke(extras: StrokeExtras, grip: ShotSetup["stroke"]["grip"]): 
                       ...(bottomGrip === undefined ? {} : { bottomGrip }),
                   },
               };
-    return { ...gripped, ...(followThrough === undefined ? {} : { followThrough }) };
+    return {
+        ...gripped,
+        ...(followThrough === undefined ? {} : { followThrough }),
+        ...(fist === undefined ? {} : { fist }),
+    };
 }
 
 /**
@@ -176,7 +183,7 @@ export function textBook(type: MapType): MapPlan {
     const setup = opened(canonicalSetup(type));
     const stance = defaultProfile.stance[type];
     const { mallet } = defaultProfile;
-    const lean = stanceLean(stance.handsAhead, stance.top, setup.stroke.contact.up, {
+    const lean = stanceLean(stance.handsAhead, handsOf(setup).top, setup.stroke.contact.up, {
         ballRadius: IMPACT_WORLD.ball.radius,
         headLength: mallet.headLength,
         faceHalfHeight: faceHalfHeight(headShapeOf(mallet.head)),
@@ -271,7 +278,7 @@ export function bodyBackswing(setup: ShotSetup, world: World): number {
     const stance = profile.stance[type];
     const shape = profile.shape[type];
     const rho = faceHalfHeight(headShapeOf(profile.mallet.head));
-    const top = stroke.grip?.top ?? stance.top;
+    const { top } = handsOf(setup);
     const lever = rho + top;
     const lean =
         stroke.lean ??

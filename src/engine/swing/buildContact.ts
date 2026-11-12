@@ -38,6 +38,7 @@ import { atan2, sinCos } from "../math/elementary";
 import { add, cross, dot, length, scale, sub, vec3, type Vec3 } from "../math/vec3";
 import type { BallState, World } from "../types";
 import { planDownswing, scanDownswing, type DownswingInput, type PlannedDownswing } from "./downswing";
+import { FINGER_REACH, FIST, HAND_BREADTH, handsForLean } from "./hands";
 import {
     type MalletHeadProfile,
     type ShotSetup,
@@ -84,10 +85,16 @@ export const MAX_WINDOW = 0.1;
 const WOOD: FaceMaterial = { friction: malletReference.faceFriction.value };
 
 /** A stance's numbers, each checked finite by name (a missing one included). */
-const STANCE_NUMBERS: readonly (keyof SwingStance)[] = ["handsAhead", "top", "bottom", "gripTension", "bottomGrip"];
+const STANCE_NUMBERS: readonly Exclude<keyof SwingStance, "followsLean">[] = [
+    "handsAhead",
+    "top",
+    "bottom",
+    "gripTension",
+    "bottomGrip",
+];
 
-/** A stance's grip: its values a shot may give one by one (P2b.2b.2c.3a design §2). */
-type Grip = Omit<SwingStance, "handsAhead">;
+/** A stance's grip: its values a shot may give one by one (P2b.2b.2c.3a design §2), resolved by handsOf. */
+export type Grip = Omit<SwingStance, "handsAhead" | "followsLean">;
 
 /** The grip's values, each a shot's checked finite by name where given. */
 const GRIP_NUMBERS: readonly (keyof Grip)[] = ["top", "bottom", "gripTension", "bottomGrip"];
@@ -226,34 +233,48 @@ function headInertia(mallet: SwingProfile["mallet"]): Vec3 {
     );
 }
 
-/** The grip of `setup` (P2b.2b.2c.3a design §2): each value the shot gives, else the preset's. */
-function gripOf(setup: ShotSetup): Grip {
+/**
+ * The hands of `setup` (P2b.2b.2c.3a design §2; hands-from-lean design §3), field by field: the shot's `stroke.grip`
+ * where it gives that field; else, on a stance that follows the lean, the law (handsForLean) at the shot's lean and
+ * fist, or, with no lean, the stance's hands moved by FINGER_REACH where the shot's fist differs from the type's; else
+ * the stance's.
+ */
+export function handsOf(setup: ShotSetup): Grip {
     const { stroke, profile } = setup;
     const stance = profile.stance[stroke.type];
-    const { grip } = stroke;
-    if (grip === undefined) {
-        return stance;
+    const grip = stroke.grip ?? {};
+    let { top, bottom } = stance;
+    if (stance.followsLean === true) {
+        const fist = stroke.fist ?? FIST[stroke.type];
+        if (stroke.lean !== undefined) {
+            ({ top, bottom } = handsForLean(stroke.lean, profile.mallet, fist));
+        } else if (fist !== FIST[stroke.type]) {
+            // The stance's hands are the law at its own lean and the type's fist, and the fist only shifts the law.
+            const shift = fist ? -FINGER_REACH : FINGER_REACH;
+            top += shift;
+            bottom += shift;
+        }
     }
     return {
-        top: grip.top ?? stance.top,
-        bottom: grip.bottom ?? stance.bottom,
+        top: grip.top ?? top,
+        bottom: grip.bottom ?? bottom,
         gripTension: grip.gripTension ?? stance.gripTension,
         bottomGrip: grip.bottomGrip ?? stance.bottomGrip,
     };
 }
 
 /**
- * The stance of `setup` on `geometry` (P2b.2b.2c.3a design §2): the shot's grip (gripOf), and a shot's lean placing
+ * The stance of `setup` on `geometry` (P2b.2b.2c.3a design §2): the shot's hands (handsOf), and a shot's lean placing
  * the top hand, handsAheadFor at the shot's top and contact. Without a lean the preset's handsAhead stands, whatever
  * the top hand or the contact.
  */
 function stanceOf(setup: ShotSetup, geometry: StanceGeometry): SwingStance {
     const { stroke, profile } = setup;
     const preset = profile.stance[stroke.type];
-    if (stroke.grip === undefined && stroke.lean === undefined) {
+    if (stroke.grip === undefined && stroke.lean === undefined && stroke.fist === undefined) {
         return preset;
     }
-    const { top, bottom, gripTension, bottomGrip } = gripOf(setup);
+    const { top, bottom, gripTension, bottomGrip } = handsOf(setup);
     const handsAhead =
         stroke.lean === undefined ? preset.handsAhead : handsAheadFor(stroke.lean, top, stroke.contact.up, geometry);
     return { handsAhead, top, bottom, gripTension, bottomGrip };
@@ -362,7 +383,7 @@ function validate(setup: ShotSetup, ballRadius: number): void {
     finiteNumber(body.armMass, "profile.body.armMass");
     finiteNumber(body.reachSlack, "profile.body.reachSlack");
 
-    const { top, bottom, gripTension, bottomGrip } = gripOf(setup);
+    const { top, bottom, gripTension, bottomGrip } = handsOf(setup);
     positive(top, gripName("top"));
     if (top > mallet.shaftLength) {
         fail(
@@ -376,6 +397,13 @@ function validate(setup: ShotSetup, ballRadius: number): void {
             fail(`stroke.grip.top must lie above the bottom hand, ${gripName("bottom")} = ${bottom} m (got ${top})`);
         }
         fail(`${gripName("bottom")} must lie in (0, top) = (0, ${top}) m (got ${bottom})`);
+    }
+    if (bottom - HAND_BREADTH / 2 <= 0) {
+        // Law 29.1.1 (reference/laws.json): the bottom hand's lower edge at or below the socket touches the head.
+        fail(
+            `Law 29.1.1: the bottom hand touches the head of the mallet: ${gripName("bottom")} is ${bottom} m, its ` +
+                `lower edge ${bottom - HAND_BREADTH / 2} m from the socket (a hand's breadth ${HAND_BREADTH} m)`,
+        );
     }
     positive(stroke.backswing, "stroke.backswing");
     if (stroke.window !== undefined) {
@@ -547,9 +575,9 @@ function validate(setup: ShotSetup, ballRadius: number): void {
  * The hands of `setup`'s stance (stanceOf) with its profile's body, and the shot's guide effort, else the preset's. The
  * hands read only the grip, which no lean moves.
  */
-function handsOf(setup: ShotSetup): Hands {
+function bodyHandsOf(setup: ShotSetup): Hands {
     const { stroke, profile } = setup;
-    const stance = gripOf(setup);
+    const stance = handsOf(setup);
     return {
         bottom: stance.bottom,
         gripTension: stance.gripTension,
@@ -632,7 +660,7 @@ function downswingOf(setup: ShotSetup, pose: ContactPose, hands: Hands, gravity:
  */
 export function downswingInputOf(setup: ShotSetup, world: World): DownswingInput {
     const pose = contactPose(setup, world);
-    return downswingInput(pose, handsOf(setup), choiceOf(setup, pose), world.gravity);
+    return downswingInput(pose, bodyHandsOf(setup), choiceOf(setup, pose), world.gravity);
 }
 
 /** A stroke's pose at contact (design §5.2 steps 1–5, 10). */
@@ -879,7 +907,7 @@ export function planStroke(setup: ShotSetup, world: World): StrokePlan {
     if (atContact < 0) {
         fail(`the head is in the turf at contact: its lowest point is ${0 - atContact} m below it`);
     }
-    const hands = handsOf(setup);
+    const hands = bodyHandsOf(setup);
     // A croquet stroke's dip under way at contact is part of the stroke as rehearsed (P2b.2b.2c.2d design §4.2): the
     // downswing, the hands' arc and the scan are planned its travel by contact, z_c, higher, and the dip lowers them
     // onto the pose. A single-ball stroke's dip before contact is left unplanned, so a deliberate graze keeps its
@@ -990,7 +1018,7 @@ export function buildContact(setup: ShotSetup, world: World): ContactState {
 export function plannedSpeed(setup: ShotSetup, world: World): number {
     validate(setup, world.ball.radius);
     const pose = contactPose(setup, world);
-    return poseSpeed(pose, downswingOf(setup, pose, handsOf(setup), world.gravity));
+    return poseSpeed(pose, downswingOf(setup, pose, bodyHandsOf(setup), world.gravity));
 }
 
 /**

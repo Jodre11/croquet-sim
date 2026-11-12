@@ -32,7 +32,15 @@ import { effectiveMass, swungBody } from "../src/engine/impact/track";
 import type { ContactInterval, ContactState, ImpactResult } from "../src/engine/impact/types";
 import { dot, horizontal, length } from "../src/engine/math/vec3";
 import { simulateFreeMotion } from "../src/engine/simulate";
-import { buildContact, handsAheadFor, headShapeOf, planStroke, stanceLean } from "../src/engine/swing/buildContact";
+import {
+    buildContact,
+    handsAheadFor,
+    handsOf,
+    headShapeOf,
+    planStroke,
+    stanceLean,
+} from "../src/engine/swing/buildContact";
+import { FIST, handsForLean } from "../src/engine/swing/hands";
 import { defaultProfile } from "../src/engine/swing/profile";
 import {
     CROQUET_STROKES,
@@ -591,7 +599,7 @@ const LEAN_TOLERANCE = 1e-12;
 export function leanOf(setup: ShotSetup, world: World): number {
     const { stroke, profile } = setup;
     const stance = profile.stance[stroke.type];
-    return stanceLean(stance.handsAhead, stance.top, stroke.contact.up, {
+    return stanceLean(stance.handsAhead, handsOf(setup).top, stroke.contact.up, {
         ballRadius: world.ball.radius,
         headLength: profile.mallet.headLength,
         faceHalfHeight: faceHalfHeight(headShapeOf(profile.mallet.head)),
@@ -750,12 +758,15 @@ function stanced(
     }
     if (o.lean !== undefined) {
         const { mallet } = setup.profile;
-        const handsAhead = handsAheadFor(o.lean, stance.top, stroke.contact.up, {
+        // A stance that follows the lean takes the law's hands at it (hands-from-lean design §3), keeping borrowed grips.
+        const law = stance.followsLean === true ? handsForLean(o.lean, mallet, FIST[type]) : stance;
+        const bottom = o.grips === undefined ? law.bottom : stance.bottom;
+        const handsAhead = handsAheadFor(o.lean, law.top, stroke.contact.up, {
             ballRadius: world.ball.radius,
             headLength: mallet.headLength,
             faceHalfHeight: faceHalfHeight(headShapeOf(mallet.head)),
         });
-        stance = { ...stance, handsAhead };
+        stance = { ...stance, top: law.top, bottom, handsAhead };
     }
     return { ...setup, stroke, profile: { ...setup.profile, stance: { ...setup.profile.stance, [type]: stance } } };
 }

@@ -7,6 +7,7 @@ import { faceHalfHeight } from "../engine/impact/shape";
 import { vec3 } from "../engine/math/vec3";
 import { CROQUET_GAP_LIMIT } from "../engine/shot";
 import { handsAheadFor, headShapeOf, stanceLean } from "../engine/swing/buildContact";
+import { FIST, handsForLean } from "../engine/swing/hands";
 import { DEFAULT_DRIVE, DEFAULT_TIMING, DEFAULT_WINDOW, defaultProfile } from "../engine/swing/profile";
 import {
     CROQUET_STROKES,
@@ -129,7 +130,9 @@ export function canonicalSetup(type: StrokeType, over: CanonicalOptions = {}): S
     const relean = (t: StrokeType, s: SwingStance): SwingStance => {
         const up = canonicalUp(t);
         const lean = stanceLean(s.handsAhead, s.top, up, geometryOf(defaultProfile.mallet));
-        return { ...s, handsAhead: handsAheadFor(lean, s.top, up, geometryOf(mallet)) };
+        // A stance that follows the lean takes the law's hands on this mallet (hands-from-lean design §3).
+        const hands = s.followsLean === true ? handsForLean(lean, mallet, FIST[t]) : { top: s.top, bottom: s.bottom };
+        return { ...s, ...hands, handsAhead: handsAheadFor(lean, hands.top, up, geometryOf(mallet)) };
     };
     const stances =
         over.mallet === undefined

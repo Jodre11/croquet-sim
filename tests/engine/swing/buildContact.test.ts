@@ -29,6 +29,7 @@ import {
     downswingInput,
     downswingInputOf,
     handsAheadFor,
+    handsOf,
     planStroke,
     plannedSpeed,
     poseSpeed,
@@ -36,6 +37,7 @@ import {
     swingApproach,
 } from "../../../src/engine/swing/buildContact";
 import { simulateShot } from "../../../src/engine/shot";
+import { FINGER_REACH, FIST, RING_HEIGHT, handsForLean } from "../../../src/engine/swing/hands";
 import { MAX_BACK_ANGLE, planDownswing, scanDownswing } from "../../../src/engine/swing/downswing";
 import { HAND_BREADTH, ON_TIME, SLOPE_HOLD, defaultProfile, shapeOf } from "../../../src/engine/swing/profile";
 import {
@@ -761,16 +763,24 @@ describe("defaultProfile", () => {
         const hands = STROKE_TYPES.map((type) => [defaultProfile.stance[type].top, defaultProfile.stance[type].bottom]);
         // P2b.2b.2c.3a: the drive's hands together (was 0.6). P2b.2b.2c.3a gate stage 2: the AC stop's grip retune
         // (was 0.45): the AC stop's hands together too. Shapes design §8, ruling 17: the pass roll takes the full roll's
-        // grips (was 0.45, 0.09).
-        expect(hands).toEqual([
-            [0.805, 0.7],
+        // grips (was 0.45, 0.09). Hands-from-lean design §3: every preset but the GC stop's takes the law at its lean
+        // (was single-ball [0.805, 0.7], half roll [0.805, 0.42], full and pass rolls [0.61, 0.3]).
+        const finger = RING_HEIGHT + FINGER_REACH + HAND_BREADTH / 2;
+        const gap = 0.805 - 0.4572;
+        const want = [
+            [0.805, 0.805 - HAND_BREADTH],
             [0.805, 0.805 - HAND_BREADTH],
             [0.805, 0.805 - HAND_BREADTH],
             [0.805, 0.45],
-            [0.805, 0.42],
-            [0.61, 0.3],
-            [0.61, 0.3],
-        ]);
+            [0.805, 0.4572],
+            [finger + gap, finger],
+            [finger - FINGER_REACH + gap, finger - FINGER_REACH],
+        ];
+        hands.forEach(([top, bottom], i) => {
+            const [wantTop, wantBottom] = want[i] as [number, number];
+            expect(top, STROKE_TYPES[i]).toBeCloseTo(wantTop, 12);
+            expect(bottom, STROKE_TYPES[i]).toBeCloseTo(wantBottom, 12);
+        });
         expect(defaultProfile.stance.drive).toMatchObject({ gripTension: 1, bottomGrip: 0.25 });
         expect(defaultProfile.stance["stop-ac"]).toMatchObject({ gripTension: 1, bottomGrip: 0.1 });
     });
@@ -1606,5 +1616,65 @@ describe("the per-shot set-up (P2b.2b.2c.3a design §2)", () => {
                 contact: { ...plain.contact, drive: null },
             });
         }
+    });
+});
+
+describe("the hands from the lean (hands-from-lean design §3)", () => {
+    const world = defaultWorld();
+    type Stroke = ShotSetup["stroke"];
+    const withStroke = (setup: ShotSetup, stroke: Partial<Stroke>): ShotSetup => ({
+        ...setup,
+        stroke: { ...setup.stroke, ...stroke },
+    });
+    const { mallet } = defaultProfile;
+
+    it("follows the lean on every preset but the GC stop's, at the preset's own lean and fist", () => {
+        const following = STROKE_TYPES.filter((type) => defaultProfile.stance[type].followsLean === true);
+        expect(following).toEqual(STROKE_TYPES.filter((type) => type !== "stop-gc"));
+        expect(STROKE_TYPES.filter((type) => FIST[type])).toEqual(["pass-roll"]);
+        const pass = handsForLean((32 * Math.PI) / 180, mallet, true);
+        expect(defaultProfile.stance["pass-roll"]).toMatchObject(pass);
+    });
+
+    it("takes the law's hands at a shot's lean, its tensions the stance's", () => {
+        const setup = withStroke(canonicalSetup("half-roll"), { lean: 0.3 });
+        const stance = setup.profile.stance["half-roll"];
+        expect(handsOf(setup)).toEqual({
+            ...handsForLean(0.3, mallet, false),
+            gripTension: stance.gripTension,
+            bottomGrip: stance.bottomGrip,
+        });
+    });
+
+    it("resolves field by field: a shot's bottom hand alone keeps the law's top", () => {
+        const setup = withStroke(canonicalSetup("full-roll"), { lean: 0.5, grip: { bottom: 0.2 } });
+        const hands = handsOf(setup);
+        expect(hands.bottom).toBe(0.2);
+        expect(hands.top).toBe(handsForLean(0.5, mallet, false).top);
+    });
+
+    it("keeps a stance's typed hands where it does not follow the lean", () => {
+        const setup = withStroke(canonicalSetup("stop-gc"), { lean: 0.3 });
+        const stance = setup.profile.stance["stop-gc"];
+        expect(handsOf(setup)).toMatchObject({ top: stance.top, bottom: stance.bottom });
+    });
+
+    it("lowers or raises both hands by a finger's reach with the shot's fist", () => {
+        const half = withStroke(canonicalSetup("half-roll"), { lean: 0.3, fist: true });
+        expect(handsOf(half)).toMatchObject(handsForLean(0.3, mallet, true));
+        const pass = canonicalSetup("pass-roll");
+        const stance = pass.profile.stance["pass-roll"];
+        const open = handsOf(withStroke(pass, { fist: false }));
+        expect(open.top).toBeCloseTo(stance.top + FINGER_REACH, 12);
+        expect(open.bottom).toBeCloseTo(stance.bottom + FINGER_REACH, 12);
+    });
+
+    it("rejects a bottom hand on the head, naming Law 29.1.1 and stroke.grip.bottom", () => {
+        const setup = canonicalSetup("full-roll");
+        const at = (bottom: number) => () => planStroke(withStroke(setup, { grip: { bottom } }), world);
+        expect(at(HAND_BREADTH / 2 - 0.001)).toThrow(/Law 29\.1\.1/);
+        expect(at(HAND_BREADTH / 2 - 0.001)).toThrow(/stroke\.grip\.bottom/);
+        expect(at(HAND_BREADTH / 2 + 0.001)).not.toThrow();
+        expect(at(0)).toThrow(/must lie in/);
     });
 });

@@ -1,9 +1,25 @@
 /**
- * Where the hands hold the shaft, by the mallet's lean (hands-from-lean design §2). Its own module so that
- * buildContact can read the law without importing the profile, which itself imports buildContact.
+ * Where the hands hold the shaft, by the mallet's lean (hands-from-lean design §2). Its own module, with FIST, so
+ * that buildContact can read the law without importing the profile, which itself imports buildContact.
  */
 
+import type { StrokeType } from "./types";
+
 const DEG = Math.PI / 180;
+
+/**
+ * Each type's default fist (design §2): the pass roll's bottom hand "fisted, lower, touching the brass ring" (the
+ * user's account, 2026-11-12); every other type open. A shot's `stroke.fist` replaces it.
+ */
+export const FIST: Readonly<Record<StrokeType, boolean>> = {
+    "single-ball": false,
+    drive: false,
+    "stop-ac": false,
+    "stop-gc": false,
+    "half-roll": false,
+    "full-roll": false,
+    "pass-roll": true,
+};
 
 /**
  * A hand's breadth (m): the men's 50th percentile, 3.46 in, of the 2012 US Army anthropometric survey (ANSUR II,

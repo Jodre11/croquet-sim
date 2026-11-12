@@ -23,6 +23,7 @@ import { strokeContext } from "../src/engine/shot";
 import { simulateFreeMotion } from "../src/engine/simulate";
 import {
     contactPose,
+    handsOf,
     headShapeOf,
     planStroke,
     plannedSpeed,
@@ -205,12 +206,15 @@ export function backswingBracket(setup: ShotSetup, world: World): { readonly top
     const stance = profile.stance[type];
     const shape = profile.shape[type];
     const rho = faceHalfHeight(headShapeOf(profile.mallet.head));
-    const lever = rho + stance.top;
-    const lean = stanceLean(stance.handsAhead, stance.top, stroke.contact.up, {
-        ballRadius: world.ball.radius,
-        headLength: profile.mallet.headLength,
-        faceHalfHeight: rho,
-    });
+    const { top: topHand } = handsOf(setup);
+    const lever = rho + topHand;
+    const lean =
+        stroke.lean ??
+        stanceLean(stance.handsAhead, topHand, stroke.contact.up, {
+            ballRadius: world.ball.radius,
+            headLength: profile.mallet.headLength,
+            faceHalfHeight: rho,
+        });
     const reachOf = (angle: number): number =>
         shape.pendulumShare > 0 ? ((lever * (Math.cos(lean) - Math.cos(angle))) / shape.pendulumShare) * (1 - 1e-9) : 2;
     const top = reachOf(MAX_BACK_ANGLE);

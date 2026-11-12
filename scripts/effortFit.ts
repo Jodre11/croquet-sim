@@ -7,7 +7,7 @@
  * strokes whose slope is not fully held.
  */
 import type { Hands } from "../src/engine/impact/types";
-import { contactPose, downswingInput, poseSpeed, type ContactPose } from "../src/engine/swing/buildContact";
+import { contactPose, downswingInput, handsOf, poseSpeed, type ContactPose } from "../src/engine/swing/buildContact";
 import { planDownswing, type PlannedDownswing } from "../src/engine/swing/downswing";
 import { defaultProfile } from "../src/engine/swing/profile";
 import { STROKE_TYPES, type StrokeType, type SwingEffort, type SwingProfile } from "../src/engine/swing/types";
@@ -62,8 +62,8 @@ function caseOf(type: StrokeType, profile: SwingProfile): Case {
     if (known !== undefined) {
         return known;
     }
-    const stance = profile.stance[type];
     const setup = { ...canonicalSetup(type, { world: WORLD }), profile };
+    const stance = handsOf(setup);
     const made: Case = {
         pose: contactPose(setup, WORLD),
         hands: {

@@ -46,6 +46,11 @@ export interface SwingStance {
     readonly bottom: number;
     readonly gripTension: number;
     readonly bottomGrip: number;
+    /**
+     * Whether the hands follow the lean (hands-from-lean design §3): a shot's lean or fist places them by handsForLean,
+     * and `top` and `bottom` are that law at the stance's own lean. Absent: the typed hands stand at any lean.
+     */
+    readonly followsLean?: boolean;
 }
 
 /**
@@ -244,7 +249,12 @@ export interface ShotSetup {
          * The shot's grip (P2b.2b.2c.3a design §2): each of the stance's top, bottom, gripTension and bottomGrip
          * given here replaces the preset's alone; absent: the preset's.
          */
-        readonly grip?: Partial<Omit<SwingStance, "handsAhead">>;
+        readonly grip?: Partial<Omit<SwingStance, "handsAhead" | "followsLean">>;
+        /**
+         * The fist (hands-from-lean design §2): both hands lowered by FINGER_REACH, on a stance that follows the lean;
+         * absent: the type's default, FIST.
+         */
+        readonly fist?: boolean;
         /**
          * The shaft's lean at contact (rad, forward positive, at most π/4, the on-point limit; design §2): given, it
          * places the top hand (handsAheadFor at the shot's top and contact); absent: the preset's handsAhead, which a

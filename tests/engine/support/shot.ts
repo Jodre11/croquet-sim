@@ -3,7 +3,7 @@
  * sourced, as fixtures.ts. src/ must never import this file.
  */
 import { faceHalfHeight } from "../../../src/engine/impact/shape";
-import { handsAheadFor, headShapeOf, plannedSpeed, stanceLean } from "../../../src/engine/swing/buildContact";
+import { handsAheadFor, handsOf, headShapeOf, plannedSpeed, stanceLean } from "../../../src/engine/swing/buildContact";
 import { MAX_BACK_ANGLE } from "../../../src/engine/swing/downswing";
 import {
     STROKE_TYPES,
@@ -223,6 +223,7 @@ export function backswingFor(setup: ShotSetup, speed: number, world: World = def
         stroke.intensity ?? null,
         stroke.contact.up,
         stroke.grip ?? null,
+        stroke.fist ?? null,
         stroke.lean ?? null,
         stroke.feet ?? null,
         stroke.slopeHold ?? null,
@@ -240,8 +241,9 @@ export function backswingFor(setup: ShotSetup, speed: number, world: World = def
         return known;
     }
     const rho = faceHalfHeight(headShapeOf(profile.mallet.head));
-    const lever = rho + stance.top;
-    const lean = stanceLean(stance.handsAhead, stance.top, stroke.contact.up, {
+    const { top } = handsOf(setup);
+    const lever = rho + top;
+    const lean = stanceLean(stance.handsAhead, top, stroke.contact.up, {
         ballRadius: world.ball.radius,
         headLength: profile.mallet.headLength,
         faceHalfHeight: rho,

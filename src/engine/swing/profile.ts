@@ -38,7 +38,7 @@ import {
 import { faceHalfHeight } from "../impact/shape";
 import { ARM_FLEX, GRIP_LIMIT, HAND_CHAIN, PENDULUM_FORCE, PUSH_FORCE, PUSH_RESPONSE_TIME } from "../impact/track";
 import { handsAheadFor, headShapeOf } from "./buildContact";
-import { HAND_BREADTH } from "./hands";
+import { FIST, HAND_BREADTH, handsForLean } from "./hands";
 import {
     STROKE_TYPES,
     type StrokeTiming,
@@ -91,6 +91,19 @@ const REFERENCE_GEOMETRY = {
  */
 function stanceFromLean(lean: number, up: number, hands: Omit<SwingStance, "handsAhead">): SwingStance {
     return { handsAhead: handsAheadFor(lean, hands.top, up, REFERENCE_GEOMETRY), ...hands };
+}
+
+/**
+ * A stance whose hands follow the lean (hands-from-lean design §3): the law (handsForLean) at `lean` on the default
+ * mallet with the type's fist, and the type's grips.
+ */
+function leaningStance(
+    type: StrokeType,
+    lean: number,
+    up: number,
+    grips: Pick<SwingStance, "gripTension" | "bottomGrip">,
+): SwingStance {
+    return stanceFromLean(lean, up, { ...handsForLean(lean, MALLET, FIST[type]), ...grips, followsLean: true });
 }
 
 /**
@@ -319,7 +332,8 @@ export const defaultProfile: SwingProfile = {
         // The top hand fixed at the top of the handle; the bottom hand high and light, a guide only (prototype). Riches
         // has the hands "slightly forward of the mallet head" until the instant of contact; at contact the model's are
         // over the socket (lean 0).
-        "single-ball": stanceFromLean(0, 0, { top: 0.805, bottom: 0.7, gripTension: 1, bottomGrip: 0.1 }),
+        // Hands-from-lean design §3: the law's hands at lean 0, the drive's (bottom was 0.7).
+        "single-ball": leaningStance("single-ball", 0, 0, { gripTension: 1, bottomGrip: 0.1 }),
         // The hands together at the top of the handle, the bottom hand a hand's breadth (HAND_BREADTH) below the top,
         // firmer than single-ball's but still only a guide (P2b.2b.2c.3a design decision 3, §5; was 0.6, a third of the
         // way down). Riches, of the stop-shot: "With both hands at the top of the handle, they use the wrists to swing
@@ -329,7 +343,8 @@ export const defaultProfile: SwingProfile = {
         // something we intentionally have to coach new players not to do as it really affects their ability to vary
         // their ratios. They imagine that holding the mallet is like holding a sledgehammer, which is not the case.
         // It's very much about using the natural pendulum swing." The grips are the prototype's.
-        drive: stanceFromLean(0, 0, { top: 0.805, bottom: 0.805 - HAND_BREADTH, gripTension: 1, bottomGrip: 0.25 }),
+        // Hands-from-lean design §3: the same hands, now the law's at lean 0.
+        drive: leaningStance("drive", 0, 0, { gripTension: 1, bottomGrip: 0.25 }),
         // Feet set back, the ball met on the up: the shaft leans back 5°, so the strike rises 5° and the face tilts up
         // 5°, within the feasibility spike's 3–5° tilt. User decision 2026-10-25: the stroke may rub the lawn and
         // disturb the grass but must not damage the turf, so the head must not pass the depth limit (impact-head-deep)
@@ -364,33 +379,35 @@ export const defaultProfile: SwingProfile = {
         // The user accepts a little turf contact in the stop. 5.86 lies on a second branch: 2.5 mm above or below
         // the contact the ratio is 5.07 or 5.16. On Gugan's mallet the step no longer flips the branch: at 0.75 mm
         // the stop is 6.9323, 6.9430 and 6.9540 at dt/2, dt and 2·dt (was 5.9661, 5.9660 and 6.5810).
-        "stop-ac": stanceFromLean(-6 * DEG, -0.0225, {
-            top: 0.805,
-            bottom: 0.805 - HAND_BREADTH,
-            gripTension: 1,
-            bottomGrip: 0.1,
-        }),
+        // Hands-from-lean design §3: the same hands, the law's held flat behind lean 0.
+        "stop-ac": leaningStance("stop-ac", -6 * DEG, -0.0225, { gripTension: 1, bottomGrip: 0.1 }),
         // The lower hand low and firm, checking the swing through its lever just after contact (prototype).
         "stop-gc": stanceFromLean(0, 0, { top: 0.805, bottom: 0.45, gripTension: 1, bottomGrip: 1 }),
         // Riches: "Stand further forward over the balls, with your front toe level with the back of your striker's
         // ball"; "Most players place the bottom hand almost half-way down the handle for this shot, leaving the other
         // hand at the top". His handle "making an angle of about 75 degrees with the ground" (a 15° lean) is a cue,
         // superseded by Gugan 4 Table 6's face angles, 23.5° and 25° (C3H, C10H): 24°, their mean to the table's 1°.
-        "half-roll": stanceFromLean(24 * DEG, 0, { top: 0.805, bottom: 0.42, gripTension: 1, bottomGrip: 1 }),
+        // Hands-from-lean design §2: the user's account (2026-11-12), "top hand in the drive position, middle hand
+        // around half way", half the shaft (bottom was 0.42).
+        "half-roll": leaningStance("half-roll", 24 * DEG, 0, { gripTension: 1, bottomGrip: 1 }),
         // Riches: "Your lower hand should be placed at least two-thirds of the way down the handle, and your top hand
         // will also need to be moved, to about one-third of the way down the handle"; and, to send the striker's ball
         // further, "move your hands down the handle and stand further forward to increase both the slope of the handle
         // and the fractional distance travelled by the striker's ball". His "approximately 45 degrees between the
         // mallet handle and the ground" is a cue, superseded by Gugan 4 Table 6: 31°, 29°, 33° and 30° (C1F, C3F,
         // C10F, C25F), mean 31°.
-        "full-roll": stanceFromLean(31 * DEG, 0, { top: 0.61, bottom: 0.3, gripTension: 1, bottomGrip: 1 }),
+        // Hands-from-lean design §2: the bottom hand "a finger's length + a brass ring from the base of the mallet
+        // head", the top the half roll's gap above it (was top 0.61, bottom 0.3).
+        "full-roll": leaningStance("full-roll", 31 * DEG, 0, { gripTension: 1, bottomGrip: 1 }),
         // Riches: "The bottom hand should be placed at the very bottom of the mallet shaft for this shot", the handle
         // sloping "at least as much as for a full roll" (48° until P2b.2b.2b.1), a cue superseded by Gugan 4 Table 6:
         // 36°, 34° and 32° (C3P, C10P, C25P), mean 34°. 32°, the table's lowest, a degree past the full roll's: the
         // user's view (2026-11-01) that the mean's lean plays the pass roll too far into the ground, a hypothesis.
         // Ruling 17: the full roll's grips (was top 0.45, bottom 0.09, the bottom hand at the shaft's foot), the pass
         // roll being a full roll with a little more lean.
-        "pass-roll": stanceFromLean(32 * DEG, 0, { top: 0.61, bottom: 0.3, gripTension: 1, bottomGrip: 1 }),
+        // Hands-from-lean design §2: the full roll's set-up at its own lean with the fist, the bottom hand "fisted,
+        // lower, touching the brass ring" (was top 0.61, bottom 0.3).
+        "pass-roll": leaningStance("pass-roll", 32 * DEG, 0, { gripTension: 1, bottomGrip: 1 }),
     },
     drive: DRIVE,
     shape: Object.fromEntries(

@@ -103,6 +103,7 @@ export const courtReference = {
 
 /** Law 29 (faults) and the Glossary entries the fault judge relies on, keyed by Law number (reference/laws.json). */
 export const FAULT_LAW_KEYS = [
+    "29.1.1",
     "29.1.5",
     "29.1.6.1",
     "29.1.6.2",

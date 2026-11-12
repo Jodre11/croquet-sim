@@ -23,6 +23,12 @@
         "uprightRadii": -1,
         "note": "Using the jaws geometry in hoopRunStart's note (playing-side face at d = −r), the ball protrudes out of the jaws on the playing side while its trailing point is behind that face: d − R < −r. It ceases to protrude when d − R ≥ −r, i.e. d ≥ R − r. ballRadii = +1, uprightRadii = −1. Law 20.6.1 treats the borderline as completed, matching the inclusive 'at least'. With R = 0.0460375 m and r = 0.0079375 m the threshold is +0.0381 m. Law 20.2.1's reversal clauses (a ball that moves back and rests protruding on the playing side, or exits on the playing side, has not completed) and Law 20.3 (scoring requires completing and then coming to rest not protruding on the playing side, leaving the court, or entering the next hoop's jaws) are expressed against the same threshold."
     },
+    "29.1.1": {
+        "quote": "Subject to the exemptions and limitations specified in Law 29.2 a fault is committed during the striking period if the striker: touches the head of the mallet with a hand, or slides the mallet along the striker’s foot or leg to guide it (for exemptions see Laws 29.2.1 and 29.2.2);",
+        "source": "World Croquet Federation, The Laws of Association Croquet, 7th Edition (February 2021), with Official Rulings and Commentary (current as at April 2021), Laws 29.1.1 and 29.2.1; https://worldcroquet.org/wp-content/uploads/2021/04/Laws-Rulings-Commentary-combined-published-master-.pdf",
+        "provenance": "direct",
+        "note": "Law 29.2.1: \"The fault of touching the head of the mallet in Law 29.1.1 is committed only if the striker touches the mallet head during the final swing of the mallet towards the ball.\" The model's hands do not slide on the shaft through the swing, so planning rejects a bottom hand whose lower edge, half a hand's breadth below its centre, is at or below the socket (hands-from-lean design §3). The foot-or-leg clause is not modelled."
+    },
     "29.1.5": {
         "quote": "Subject to the exemptions and limitations specified in Law 29.2 a fault is committed during the striking period if the striker: [...] strikes the striker’s ball with any part of the mallet other than an end-face of the head in any of the strokes specified in Law 29.2.3;",
         "source": "World Croquet Federation, The Laws of Association Croquet, 7th Edition (February 2021), with Official Rulings and Commentary (current as at April 2021), Law 29.1.5 and commentary C29.10; https://worldcroquet.org/wp-content/uploads/2021/04/Laws-Rulings-Commentary-combined-published-master-.pdf",
