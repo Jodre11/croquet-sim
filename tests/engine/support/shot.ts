@@ -158,6 +158,12 @@ export function testProfile(o: TestProfileOptions = {}): SwingProfile {
 }
 
 /**
+ * The full and pass rolls' hands before the law (shapes design §8, ruling 17; hands-from-lean design §3), typed so
+ * that a stance given them keeps them at any lean. They keep the head-over-ball mechanism (plan B-d8) under test.
+ */
+export const OLD_ROLL_HANDS = { top: 0.61, bottom: 0.3, followsLean: false } as const;
+
+/**
  * The P2b.2b.2b.2b default mallet: the Jaques 9" round head, 1.0 kg, on a massless 36 in shaft. It keeps the round
  * head's turf and sunk-ball mechanisms under test after the default switched to the box (P2b.2b.2b.2c plan Task 7
  * ruling): the box clears the turf where the barrel's rim met it. Its runs use the re-fitted swing.json and a stance

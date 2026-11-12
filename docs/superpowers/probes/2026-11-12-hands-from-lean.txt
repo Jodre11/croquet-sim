@@ -1,0 +1,47 @@
+Hands from lean: measurements (plan docs/superpowers/plans/2026-11-12-hands-from-lean.md Task 6)
+Engine 0.31.0, branch hands-from-lean. Canonical power, 10 s lawn. Rulings carried: "Keep hands, record miss";
+drive, window and hold kept, not refitted.
+
+== Default backswings at 3 m/s (backswingFor, tests/engine/support/shot.ts)
+single-ball  0.448599788489428  unchanged (top hand unmoved)
+half-roll    0.42770749444701456 unchanged (top hand unmoved; the bisection now ends in the 17th figure)
+full-roll    0.424989282336565   was 0.42429585363805394
+pass-roll    0.4317671171567865  was 0.4294336556882098
+
+== Text books (scripts/handsFromLeanProbe.ts)
+type         lean     top     bottom  power   preset hold: ratio (passes)   found hold: ratio, firmness
+drive         0.00°  0.8050  0.7171  0.9346  3.9252 (1), clean            3.9252, 0      unchanged
+stop-ac      -6.00°  0.8050  0.7171  0.9436  5.8607 (1), clean            5.8607, 0      unchanged
+half-roll    24.00°  0.8050  0.4572  0.8911  2.0989 (1), clean            2.2535, 0      was 2.0 preset; band 1.4–2.5
+full-roll    31.00°  0.4917  0.1439  0.8854  1.1940 (3), clean            1.5055, 0.175  was 1.161 preset; band 1.0–1.2
+pass-roll    32.00°  0.4167  0.0689  0.8995  0.9306 (3), clean            0.7491, 0.15   was 0.859 preset; band below 1
+single-ball   0.00°  0.8050  0.7171  0.9346  -   (1), clean               -              ball speed 3.85789 (was 3.85787)
+Every roll's preset-hold ratio stays in its band. The drive's and AC stop's plays are bit-identical (playPin).
+
+== Pass roll's follow-through (preset hold)
+lowest head point 25.96 mm above the turf; flags follow-grip-limit. The head does not meet the turf, so its
+follow-through is not shortened.
+
+== Full roll at intensity 1 from its body-limited top (0.48 m), the arms' assist held (241.23 N, 12.186 m/s)
+half-roll 11.675 m/s, full-roll 8.984 m/s, pass-roll 9.193 m/s. The full roll misses 9 m/s by 0.016 m/s (0.17%).
+scripts/assistFit.ts would refit the pair to 242.22 N, 12.207 m/s (+0.4%); not written (design §4: reopened only
+if the full roll misses 9 m/s; to the gate).
+
+== Re-pinned, each naming this design and the old value
+- playPin.json: half, full and pass rolls and single-ball re-captured; drive and AC stop unchanged to the bit.
+- noPushBaseline.json single-ball: the follow-through's finish 0.600 s -> 0.156 s, the ball's speed in the fifth figure.
+- pushMapRun: full roll 1.161 -> 1.194, half roll 2.0 -> 2.099, pass roll 0.859 -> 0.931; the full roll at a tap's
+  found firmness 0.2741 -> 0.1645; the full roll's found-hold sample at p = 1: ratio 1.331 -> 1.224 (10 s lawn),
+  firmness 0.2986 -> 0.2160, and its follow-through now slips (followSlip true).
+- firmness: the slip-free preference on the full roll σ 0.1 -> 0.7125, ratio 1.277 -> 1.263; the off-face hold at
+  p 0.8 is 0.1875 (was 0.2375).
+- Head over ball (plan B-d8): the law's hands no longer produce it (full roll p 2 trips the grip limit; the slack
+  pass roll ends off the face), so those tests keep the hands before the law (OLD_ROLL_HANDS).
+- followThrough: the held full roll ends 2.4 mrad/s short of its apex's turn (was at or past it).
+- handover: the fisted pass roll at 2 m/s presses blue 0.80 mm (was under 0.3 mm), past its 437 µm static sink.
+
+== Assumptions to the gate (design §2)
+1. "Around half way" is half the shaft (0.4572 m), not half the handle.
+2. "From the base of the mallet head" is from the socket.
+3. The progression between anchors is linear (blend), a placeholder.
+4. The GC stop keeps its own typed hands.

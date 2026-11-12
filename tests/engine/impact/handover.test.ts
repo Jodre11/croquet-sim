@@ -382,8 +382,10 @@ describe("handover of a ball sunk under the head, on whole rolls", () => {
     // its held pitch, the head ends the run pressing blue 197 µm, inside its 437 µm static sink, and the handover
     // clears it: still the guard that the handover does not throw, now with a small correction.
     it("hands over the pass-roll at 2 m/s, drive 1, side 0, with at most a small correction", () => {
+        // Hands-from-lean design §3 (was under 0.3 mm): with the fisted hands the head presses blue 0.80 mm, past its
+        // 437 µm static sink; recorded for the gate, the handover still clearing it.
         const correction = sunkRun("pass-roll", 2, 1, 0).impact.overlapCorrection;
         expect(correction).toBeGreaterThanOrEqual(0);
-        expect(correction).toBeLessThan(3e-4);
+        expect(correction).toBeLessThan(1e-3);
     });
 });

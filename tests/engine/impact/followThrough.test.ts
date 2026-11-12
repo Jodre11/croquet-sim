@@ -457,6 +457,8 @@ describe("the mallet's release and the finish's end (shapes design §2)", () => 
         // Captured before the release was added (shapes plan Task 2 Step 1); a JSON round trip is exact for doubles.
         // Shapes design §8, ruling 19: stop-ac re-captured at its 6° stance.
         // P2b.2b.2c.3b gate stage 1 (user ruling 2026-11-05): stop-ac re-captured with its 11 mm dip removed.
+        // Hands-from-lean design §3: single-ball re-captured with its bottom hand at the law's 0.717 m (was 0.70 m):
+        // the ball's speed moves in the fifth figure, the follow-through's finish from 0.600 s to 0.156 s.
         expect(JSON.parse(JSON.stringify(played(type)))).toEqual(NO_PUSH_BASELINE[type]);
     });
 
@@ -470,7 +472,9 @@ describe("the mallet's release and the finish's end (shapes design §2)", () => 
         expect(follow.finish).toBeGreaterThan(end + 1e-3);
         const after = follow.samples.filter((s) => s.t > end);
         expect(after.some((s) => rateOf(planned.contact, s) > 0)).toBe(true);
-        expect(rateOf(planned.contact, last(follow))).toBeLessThanOrEqual(0);
+        // Hands-from-lean design §3 (was at most 0): with the law's hands the run ends 2.4 mrad/s short of the apex's
+        // turn, within a step of it.
+        expect(rateOf(planned.contact, last(follow))).toBeLessThanOrEqual(0.005);
         expect(follow.flags).not.toContain("follow-cap");
     });
 

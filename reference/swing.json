@@ -340,11 +340,11 @@
             "note": "Placeholder (plan, \"Decisions made while planning\"): no roll tempo was sourced, so the single-ball stroke's gravity-only fall time from its h0. Frozen at engine 0.12.0's fit (P2b.2b.2c.1 design §4.4)."
         },
         "defaultBackswing": {
-            "value": 0.42429585363805394,
+            "value": 0.424989282336565,
             "unit": "m",
-            "source": "scripts/fitStrokeShape.ts: P2b.2b.2a design §5.3 and §6.2 (docs/superpowers/specs/2026-10-06-p2b2b2a-stroke-shape-design.md)",
+            "source": "a 60-halving bisection of the planned speed at intensity 0 (backswingFor in tests/engine/support/shot.ts), P2b.2b.2a design §5.3 and §6.2 (docs/superpowers/specs/2026-10-06-p2b2b2a-stroke-shape-design.md)",
             "provenance": "derived",
-            "note": "Design §5.3: h0 = 0.4243 m, the backswing that gives 3 m/s at intensity 0. Frozen at engine 0.12.0's fit (P2b.2b.2c.1 design §4.4)."
+            "note": "Design §5.3: h0 = 0.4243 m, the backswing that gives 3 m/s at intensity 0. Frozen at engine 0.12.0's fit (P2b.2b.2c.1 design §4.4). Refitted at engine 0.31.0 to the hands from the lean (hands-from-lean design §4; was 0.42429585363805394)."
         },
         "defaultSpeed": {
             "value": 3.0000000000000004,
@@ -392,11 +392,11 @@
             "note": "Placeholder (plan, \"Decisions made while planning\"): no roll tempo was sourced, so the single-ball stroke's gravity-only fall time from its h0. Frozen at engine 0.12.0's fit (P2b.2b.2c.1 design §4.4)."
         },
         "defaultBackswing": {
-            "value": 0.4294336556882098,
+            "value": 0.4317671171567865,
             "unit": "m",
             "source": "a 60-halving bisection of the planned speed at intensity 0 (backswingFor in tests/engine/support/shot.ts), P2b.2b.2a design §5.3 and §6.2 (docs/superpowers/specs/2026-10-06-p2b2b2a-stroke-shape-design.md)",
             "provenance": "derived",
-            "note": "Design §5.3: h0 = 0.4343 m, the backswing that gives 3 m/s at intensity 0. Frozen at engine 0.12.0's fit (P2b.2b.2c.1 design §4.4). Refitted at engine 0.26.0 to the full roll's grips (shapes design §8, ruling 17; was 0.431265115325888)."
+            "note": "Design §5.3: h0 = 0.4343 m, the backswing that gives 3 m/s at intensity 0. Frozen at engine 0.12.0's fit (P2b.2b.2c.1 design §4.4). Refitted at engine 0.26.0 to the full roll's grips (shapes design §8, ruling 17; was 0.431265115325888). Refitted at engine 0.31.0 to the hands from the lean (hands-from-lean design §4; was 0.4294336556882098)."
         },
         "defaultSpeed": {
             "value": 3,

@@ -11,7 +11,7 @@ import { openWorld, opened } from "../../scripts/openLawn";
 import { HEAD_OVER_BALL, canonicalPower, mapSetup, playSample, playedClass, textBook } from "../../scripts/pushMapRun";
 import { HOLD_SPEED, plannedSpeed } from "../../src/engine/swing/buildContact";
 import type { ShotSetup } from "../../src/engine/swing/types";
-import { canonicalSetup } from "./support/shot";
+import { OLD_ROLL_HANDS, canonicalSetup } from "./support/shot";
 
 const WORLD = openWorld(10);
 const ADMISSIBLE: Played = { klass: null, reason: null };
@@ -100,8 +100,9 @@ describe("the search's preference for a hold that doesn't slip (design A8 item 5
         const sample = playSample("full-roll", plan, canonicalPower("full-roll", WORLD), [10]);
         expect(sample.klass).toBeNull();
         expect(sample.followSlip).toBe(false);
-        expect(sample.sigma).toBeCloseTo(0.1, 6);
-        expect(sample.byLawn[10]?.ratio).toBeCloseTo(1.277, 2);
+        // Hands-from-lean design §3: the law's hands (was σ 0.1, ratio 1.277).
+        expect(sample.sigma).toBeCloseTo(0.7125, 6);
+        expect(sample.byLawn[10]?.ratio).toBeCloseTo(1.263, 2);
     }, 120_000);
 });
 
@@ -119,9 +120,12 @@ describe("the found firmness (firmness design §5)", () => {
     });
 
     it("finds no hold where the only admissible play's head rode over the ball (plan B-d8)", () => {
-        const setup = mapSetup("full-roll", textBook("full-roll"), 2);
+        // Hands-from-lean design §3: on the law's hands this plan trips the grip limit at firmness 0 (superhuman), so
+        // the full roll's hands before the law (top 0.61 m, bottom 0.3 m) keep the head riding over the ball; the
+        // search then ends off the face (was superhuman).
+        const setup = mapSetup("full-roll", textBook("full-roll"), 2, { stance: OLD_ROLL_HANDS });
         expect(playedClass(at(setup, 0), WORLD)).toEqual({ klass: "mishit", reason: HEAD_OVER_BALL });
-        expect(findFirmness(setup, WORLD)).toMatchObject({ sigma: null, klass: "superhuman" });
+        expect(findFirmness(setup, WORLD)).toMatchObject({ sigma: null, klass: "unpractised" });
     });
 
     it("finds the least hold of a plan that slips without one, within the halved step", { timeout: 120_000 }, () => {
@@ -152,8 +156,9 @@ describe("the found firmness (firmness design §5)", () => {
     it("classes a slow full roll held firm, its head riding onto the ball to the cap, as off the face", () => {
         // Gate 1: at power 0.8 a hold between the soft holds that slip and the firm that hold rides the head off the
         // face onto the striker's ball, pressing it 2.4 mm into the turf to the 450 ms cap. The handover threw there.
+        // Hands-from-lean design §3: on the law's hands the hold between them is 0.1875 (was 0.2375).
         const setup = mapSetup("full-roll", textBook("full-roll"), 0.8);
-        expect(playedClass(at(setup, 0.2375), WORLD)).toEqual({ klass: "unpractised", reason: "impact-off-face" });
+        expect(playedClass(at(setup, 0.1875), WORLD)).toEqual({ klass: "unpractised", reason: "impact-off-face" });
     });
 
     it("lets a planning rejection propagate (Review Focus 5)", () => {

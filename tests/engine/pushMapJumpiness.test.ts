@@ -14,6 +14,7 @@ import {
     type MapType,
 } from "../../scripts/pushMapRun";
 import type { ShotSetup } from "../../src/engine/swing/types";
+import { OLD_ROLL_HANDS } from "./support/shot";
 
 describe("the jumpiness bound's neighbours (plan B-d7)", () => {
     const grid = gridFor("full-roll");
@@ -72,8 +73,10 @@ describe("the jumpiness bound's neighbours (plan B-d7)", () => {
 
 describe("a head that rides over the ball (plan B-d8)", () => {
     const world = openWorld(10);
+    // Hands-from-lean design §3: on the law's fisted hands the slack pass roll ends off the face (unpractised), so
+    // these plays keep the hands before the law, where the head rides over the ball.
     const held = (type: MapType, plan: MapPlan, firmness: number): ShotSetup => {
-        const setup = mapSetup(type, plan, canonicalPower(type, world));
+        const setup = mapSetup(type, plan, canonicalPower(type, world), { stance: OLD_ROLL_HANDS });
         return { ...setup, stroke: { ...setup.stroke, holdFirmness: firmness } };
     };
 
