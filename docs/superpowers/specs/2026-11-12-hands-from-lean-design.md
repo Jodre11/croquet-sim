@@ -60,7 +60,10 @@ shaft 0.9144 m (sourced); `RING_HEIGHT` 0.025 m and `FINGER_REACH` 0.075 m, plac
 
 1. "Around half way" is half the shaft, not half the handle.
 2. "From the base of the mallet head" is from the socket, where the shaft meets the head, as every hand is measured.
-3. The progression is linear between anchors; the account gives the end points, not the path.
+3. The progression is linear between anchors, a placeholder: the account gives the end points, not the path, and the
+   user is "not 100% on how linear the relationship between hand position and lean is" (2026-11-12). The path between
+   anchors is one function, `blend(u)` on [0, 1] (linear now), so a measured or ruled curve replaces it without
+   touching the anchors; the gate asks the user, with the side-on viewer's lean sweep in front of them.
 4. The GC stop keeps its own typed hands (top 0.805 m, bottom 0.45 m): it is not in the map (`MAP_TYPES`), so nothing
    the user has seen places it. Every map type takes the law.
 

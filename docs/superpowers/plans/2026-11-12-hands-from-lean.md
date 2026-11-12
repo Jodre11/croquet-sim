@@ -87,7 +87,9 @@ type's graded values; `EXTRA_SPANS` for γ_T, g_B (0.05–1, step 0.05) and foll
 **Files:** `src/engine/swing/profile.ts` (`RING_HEIGHT`, `FINGER_REACH`, `HANDLE_CAP`, `FIST`, `handsForLean`),
 `tests/engine/swing/handsForLean.test.ts` (new).
 
-**Interfaces:** `handsForLean(lean: number, mallet: MalletSpec, fist: boolean): { top: number; bottom: number }`.
+**Interfaces:** `handsForLean(lean: number, mallet: MalletSpec, fist: boolean): { top: number; bottom: number }`;
+`blend(u: number): number` on [0, 1], linear (spec §2 assumption 3, a placeholder), the only place the path between
+anchors is shaped. The midpoint tests below assert `blend(0.5)`'s value, not 0.5, so a new curve changes one function.
 
 - [ ] Tests: on the reference mallet, lean −0.1 and 0 → (0.805, 0.805 − HAND_BREADTH); 24° → (0.805, 0.4572); 31° and
       40° → (0.144 + GAP, 0.144) with GAP = 0.805 − 0.4572; 12° → top 0.805, bottom the midpoint of 0.717 and 0.4572;
