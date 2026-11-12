@@ -9,6 +9,7 @@ import { planStroke } from "../engine/swing/buildContact";
 import { strokeTrajectory } from "../engine/swing/trajectory";
 import type { BallState } from "../engine/types";
 import { mapSetup, openWorld, type MapPlan, type MapType } from "../lab/index";
+import type { StrokeExtras } from "../lab/play";
 import type { SidePoint } from "../lab/frames";
 
 const WORLD = openWorld(10);
@@ -28,10 +29,11 @@ export interface PathSample {
 
 /**
  * The planned path of `plan` of `type` at power `power` (spec §3.2): planStroke on the map's set-up and the downswing
- * from the release until the impact starts. Throws the planner's RangeError where it rejects the set-up.
+ * from the release until the impact starts, with `extras` as mapSetup takes them. Throws the planner's RangeError
+ * where it rejects the set-up.
  */
-export function plannedPath(type: MapType, plan: MapPlan, power: number): PathSample[] {
-    const setup = mapSetup(type, plan, power);
+export function plannedPath(type: MapType, plan: MapPlan, power: number, extras: StrokeExtras = {}): PathSample[] {
+    const setup = mapSetup(type, plan, power, {}, 0, extras);
     const { contact } = planStroke(setup, WORLD);
     if (contact.drive.kind !== "track") {
         throw new RangeError("the planned contact has no tracked drive");
