@@ -60,8 +60,9 @@ leans are the presets' (Gugan 4 Table 6 for the half and full rolls; 32° the us
   `handsForLean(stroke.lean)` where the stroke gives a lean; else the preset's lean's. The presets' `top` and
   `bottom` become derived from their own leans by the law, not typed. `handsAhead` follows from the lean and the
   derived top, as `stanceFromLean` derives it now.
-- What stays per type: the grips' tensions (γ_T, g_B), the push, hold, follow-through and shape presets. These are
-  how the hands act, not where they are; their unification is not this design.
+- What stays per type: the defaults of the grips' tensions (γ_T, g_B), the push, hold, follow-through and shape
+  presets. These are how the hands act, not where they are. They are defaults only: the viewer varies each over the
+  whole playable range (§5.1), whatever the type.
 - **The fault** (carried, reviewed): Law 29.1.1, "touches the head of the mallet with a hand", quoted in
   `reference/laws.json`; planning rejects a bottom hand whose lower edge, `bottom − HAND_BREADTH/2`, is at or below the
   socket, after the existing `(0, top)` check, naming `gripName("bottom")`. The law's anchors are lawful by
@@ -81,10 +82,27 @@ assumptions to the user before the envelope is re-run.
 
 ## 5. The viewer
 
-1. **Full-range inputs.** Each slider spans the union of every type's swept values (the band tables' axes), not the
-   picked type's span. The type picked still sets the push, hold and shape presets (§3).
-2. **Judgement off the grid.** Inside the picked type's swept span the band table judges as now. Outside it the badge
-   reads "not swept for <type>", and Run still plays the engine. No band is invented.
+1. **Full-range inputs.** The user (2026-11-12): "The defaults are set per shot type but the range of possibilities
+   encompass all shot types. The sliders should cover the whole playable range." The picked type sets each slider's
+   starting value; the slider spans what the engine plays, whatever the type:
+
+   | Input | Range | Bound |
+   |---|---|---|
+   | Lean | the lowest any type's planner accepts to 45° | `buildContact`'s on-point limit (π/4) |
+   | Feet | the widest any type's arc reaches | the hands' arc check; a set-up past it shows the planner's rejection, as now |
+   | Push length (`handReach`) | 0 to the arc's reach | the same check |
+   | After contact (`drive`) | −1 to 1 | `buildContact` |
+   | Push window | 1–100 ms | `MIN_WINDOW`, `MAX_WINDOW` |
+   | Hold firmness | 0 to 1 | the hold's definition |
+   | Top and bottom grips (γ_T, g_B), new | (0, 1] | `buildContact`'s grip check |
+   | Follow-through, new | 0 to 0.3 s | none in the engine; the longest any preset has used (the pass roll's before ruling 18; 0.2 s now) |
+
+   The two new sliders expose the per-type quantities §3 keeps per type, so they too vary from the type's default
+   (assumption: the user's "range of possibilities" covers them). The shape presets (the swing's tempo and slope)
+   stay the type's, not inputs. Ticks mark the picked type's swept values.
+2. **Judgement off the grid.** Inside the picked type's swept span the band table judges as now. Outside it, or with a
+   grip tension or follow-through moved from the type's default (the map sweeps neither), the badge reads "not swept
+   for <type>", and Run still plays the engine and reports its class. No band is invented.
 3. **Reset and replay.** Any input change sets the time to the first frame and plays the planned swing for the new
    set-up from there, the planned path (under 100 ms, measured 35 ms) carrying the hands as the law places them. Run
    still plays the impact.
