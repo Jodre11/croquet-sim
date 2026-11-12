@@ -46,13 +46,13 @@ export function fitCanvas(canvas: HTMLCanvasElement): { ctx: CanvasRenderingCont
     return { ctx, width, height };
 }
 
-/** The frame at play time `t` (s): the last at or before it, else the first. */
-export function frameAt(frames: readonly Frame[], t: number): Frame | null {
+/** The frame (or path sample) at play time `t` (s): the last at or before it, else the first. */
+export function frameAt<F extends { readonly t: number }>(frames: readonly F[], t: number): F | null {
     let lo = 0;
     let hi = frames.length;
     while (lo < hi) {
         const mid = (lo + hi) >> 1;
-        if ((frames[mid] as Frame).t <= t) {
+        if ((frames[mid] as F).t <= t) {
             lo = mid + 1;
         } else {
             hi = mid;
@@ -172,8 +172,9 @@ export function drawSideOn(
         ctx.fill();
     });
 
-    // The mallet: drawn back over the balls before a Run (decision 1), else the frame's; both hands on the shaft.
-    const pose = frame ?? view.path?.[0] ?? null;
+    // The mallet: before a Run, along the planned path at the play time (decision 1; hands-from-lean design §5.2), else
+    // the frame's; both hands on the shaft.
+    const pose = frame ?? (view.path === null ? null : frameAt(view.path, view.t));
     if (pose !== null) {
         const { head } = pose;
         const along = { x: Math.cos(head.pitch), z: Math.sin(head.pitch) };

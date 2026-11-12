@@ -7,7 +7,7 @@ import { departuresOf } from "../../src/viewer/departures";
 import { followFlags } from "../../src/viewer/draw";
 import type { FramedPlay } from "../../src/lab/frames";
 import { labelsOf, lookupDefault, snapRange, splitsOf, type DefaultEntry } from "../../src/viewer/defaults";
-import { INPUTS, inputSpans } from "../../src/viewer/spans";
+import { INPUTS, clampPlan, extraDefaults, inputSpans, offGrid, playableSpans } from "../../src/viewer/spans";
 import { EASE, SLOW_RATE, advance, playbackRate } from "../../src/viewer/time";
 
 /** The Node file calls the test uses (the project has no Node types). */
@@ -66,6 +66,35 @@ describe("inputSpans (spec §2)", () => {
             expect(spans[input].least).toBe(graded[0]);
             expect(spans[input].most).toBe(graded[graded.length - 1]);
         }
+    });
+});
+
+describe("playableSpans (hands-from-lean design §5.1)", () => {
+    it("spans every type's values, the picked type's graded values as ticks", async () => {
+        const tables = await Promise.all(MAP_TYPES.map(table));
+        const half = tables[MAP_TYPES.indexOf("half-roll")] as Awaited<ReturnType<typeof table>>;
+        const spans = playableSpans(tables, half);
+        const every = (input: "lean" | "feet" | "handReach") => tables.flatMap((t) => t.axes[input].values);
+        expect(spans.lean.least).toBe(Math.min(...every("lean")));
+        expect(spans.lean.most).toBe(Math.PI / 4);
+        for (const input of ["feet", "handReach"] as const) {
+            expect(spans[input].least).toBe(Math.min(...every(input)));
+            expect(spans[input].most).toBe(Math.max(...every(input)));
+        }
+        expect([spans.drive.least, spans.drive.most]).toEqual([-1, 1]);
+        expect([spans.window.least, spans.window.most]).toEqual([0.001, 0.1]);
+        expect(spans.lean.ticks).toEqual(inputSpans(half).lean.ticks);
+    });
+
+    it("judges a set-up off the grid where an input leaves the type's span or an extra moves", async () => {
+        const half = await table("half-roll");
+        const book = textBook("half-roll");
+        const defaults = extraDefaults("half-roll");
+        expect(offGrid(half, book, {}, defaults)).toBe(false);
+        expect(offGrid(half, book, { bottomGrip: defaults.bottomGrip }, defaults)).toBe(false);
+        expect(offGrid(half, book, { bottomGrip: 0.5 }, defaults)).toBe(true);
+        expect(offGrid(half, { ...book, lean: inputSpans(half).lean.most + 0.01 }, {}, defaults)).toBe(true);
+        expect(clampPlan(inputSpans(half), { ...book, lean: 1 }).lean).toBe(inputSpans(half).lean.most);
     });
 });
 
