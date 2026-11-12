@@ -38,6 +38,7 @@ import {
 import { faceHalfHeight } from "../impact/shape";
 import { ARM_FLEX, GRIP_LIMIT, HAND_CHAIN, PENDULUM_FORCE, PUSH_FORCE, PUSH_RESPONSE_TIME } from "../impact/track";
 import { handsAheadFor, headShapeOf } from "./buildContact";
+import { HAND_BREADTH } from "./hands";
 import {
     STROKE_TYPES,
     type StrokeTiming,
@@ -50,13 +51,7 @@ import {
 
 const DEG = Math.PI / 180;
 
-/**
- * A hand's breadth (m): the men's 50th percentile, 3.46 in, of the 2012 US Army anthropometric survey (ANSUR II,
- * Gordon et al. 2014) as the NCSU Ergonomics Center tabulates it (reference/sources/README.md, P2b.2b.2c.3a; user
- * ruling 2026-10-28). It is the breadth across the palm, read here as the span one hand takes on the shaft: an
- * assumption.
- */
-export const HAND_BREADTH = 3.46 * 0.0254;
+export { HAND_BREADTH };
 
 /**
  * The default mallet (P2b.2b.2b.2c design §5.3): the Pidcock 2000 11", a wooden body with brass blocks at its ends and
