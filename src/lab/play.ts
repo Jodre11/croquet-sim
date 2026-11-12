@@ -64,14 +64,13 @@ export interface MapPlan {
 }
 
 /**
- * The viewer's inputs beyond the map's plan (hands-from-lean design §5.2): each given replaces the type's default in the
- * stroke; none given leaves the play bit-identical. `fist` is carried for the hands' law and not yet played.
+ * The viewer's inputs beyond the map's plan (hands-from-lean design §5.2): each given replaces the type's default in
+ * the stroke; none given leaves the play bit-identical.
  */
 export interface StrokeExtras {
     readonly gripTension?: number;
     readonly bottomGrip?: number;
     readonly followThrough?: number;
-    readonly fist?: boolean;
 }
 
 /** The stroke fields `extras` gives, to spread over a stroke (none for none). */

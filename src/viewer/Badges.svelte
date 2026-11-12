@@ -27,7 +27,7 @@
     };
 </script>
 
-<div class="badges">
+<div class="badges" role="status" aria-live="polite">
     {#if offGrid !== null}
         <span class="badge unknown" data-testid="badge-envelope">Envelope: not swept for {offGrid}</span>
     {:else}

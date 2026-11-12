@@ -188,7 +188,8 @@ export function drawSideOn(
 
     // The feet and the hands (design §5.5): a foot marker at the feet's reading, and a dotted plumb line from the top
     // hand to the lawn, each labelled with its distance ahead of the striker's ball's centre.
-    const ball = balls[0] ?? { x: 0, z: view.radius };
+    // Both measured from the striker's ball at address, so the readings stay comparable after it is struck.
+    const ball = view.balls[0] ?? { x: 0, z: view.radius };
     ctx.font = "12px system-ui, sans-serif";
     ctx.fillStyle = c.planned;
     const [fx, fy] = px({ x: view.feet, z: 0 });
@@ -198,7 +199,7 @@ export function drawSideOn(
     ctx.lineTo(fx + 6, fy + 10);
     ctx.closePath();
     ctx.fill();
-    ctx.fillText(`feet ${mm(view.feet - (view.balls[0]?.x ?? 0))}`, fx + 8, fy + 14);
+    ctx.fillText(`feet ${mm(view.feet - ball.x)}`, fx + 8, fy + 14);
     if (pose !== null) {
         const plumb = plumbOf(pose.top, ball);
         ctx.strokeStyle = c.planned;

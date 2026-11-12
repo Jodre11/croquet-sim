@@ -64,6 +64,7 @@
                     max={span.most}
                     step={(span.most - span.least) / 200 || 1}
                     value={plan[input]}
+                    aria-valuetext={`${shown(input, plan[input])} ${describe(input, plan[input])}`.trim()}
                     disabled={span.most === span.least}
                     list={`ticks-${input}`}
                     oninput={(e) => onchange({ ...plan, [input]: clampTo(span, Number(e.currentTarget.value)) })}
@@ -86,6 +87,7 @@
                     max={span.most}
                     step={span.step}
                     {value}
+                    aria-valuetext={extraShown(extra, value)}
                     list={`ticks-${extra}`}
                     oninput={(e) =>
                         onextras({

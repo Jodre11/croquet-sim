@@ -83,6 +83,43 @@ describe("runPlay (spec §2, decision 8; gate ruling 1)", () => {
     });
 });
 
+describe("runPlay's extras (hands-from-lean design §5.2)", () => {
+    /** Plays recording the extras each receives; the search finds firmness 0.4. */
+    const recording = (): RunPlays & { readonly seen: unknown[] } => {
+        const seen: unknown[] = [];
+        return {
+            seen,
+            frames(_type, _plan, _power, firmness, _lawn, extras) {
+                seen.push(["frames", extras]);
+                return { sample: { klass: null, firmness }, rejected: null } as unknown as FramedPlay;
+            },
+            found(_type, _plan, _power, _lawn, extras) {
+                seen.push(["found", extras]);
+                return { klass: null, firmness: 0.4 } as unknown as MapSample;
+            },
+        };
+    };
+
+    it("hands the request's extras to the search and the play", () => {
+        const plays = recording();
+        const extras = { bottomGrip: 0.5, followThrough: 0.1 };
+        runPlay({ ...REQUEST, extras }, () => {}, plays);
+        expect(plays.seen).toEqual([
+            ["found", extras],
+            ["frames", extras],
+        ]);
+    });
+
+    it("hands none as {} where the request has none", () => {
+        const plays = recording();
+        runPlay(REQUEST, () => {}, plays);
+        expect(plays.seen).toEqual([
+            ["found", {}],
+            ["frames", {}],
+        ]);
+    });
+});
+
 describe("createRunner (spec §3.2)", () => {
     it("resolves an older run as superseded by a newer one, terminating its worker", async () => {
         const workers: FakeWorker[] = [];

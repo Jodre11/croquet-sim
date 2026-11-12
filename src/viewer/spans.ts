@@ -36,19 +36,17 @@ export function clampTo(span: Span, value: number): number {
 /** The lean's playable most (rad): forward of every roll the map grades (hands-from-lean design §5.1). */
 export const LEAN_MOST = Math.PI / 4;
 
-/** The inputs whose playable span is every type's least to most graded or swept value (design §5.1). */
-const SWEPT = ["feet", "handReach"] as const;
-
 /** The playable span (design §5.1): continuous over every shot type, the picked type's graded values as ticks. */
 export function playableSpans(tables: readonly BandTable[], picked: BandTable): Readonly<Record<Input, Span>> {
     const own = inputSpans(picked);
     const every = (input: Input): number[] => tables.flatMap((t) => [...t.axes[input].values]);
     const span = (input: Input, least: number, most: number): Span => ({ least, most, ticks: own[input].ticks });
+    // Feet and push length: the least to the most value any type's table tried.
+    const swept = (input: Input): Span => span(input, Math.min(...every(input)), Math.max(...every(input)));
     return {
         lean: span("lean", Math.min(...every("lean")), LEAN_MOST),
-        ...(Object.fromEntries(
-            SWEPT.map((input) => [input, span(input, Math.min(...every(input)), Math.max(...every(input)))]),
-        ) as Record<(typeof SWEPT)[number], Span>),
+        feet: swept("feet"),
+        handReach: swept("handReach"),
         drive: span("drive", -1, 1),
         window: span("window", 0.001, 0.1),
     };
@@ -74,7 +72,7 @@ export function extraDefaults(type: MapType): ExtraValues {
     };
 }
 
-/** `plan` with each input kept within `spans`: the nearest set-up the type's table grades. */
+/** `plan` with each input clamped within `spans` (not snapped to their ticks). */
 export function clampPlan(spans: Readonly<Record<Input, Span>>, plan: MapPlan): MapPlan {
     return { ...plan, ...Object.fromEntries(INPUTS.map((input) => [input, clampTo(spans[input], plan[input])])) };
 }
@@ -90,4 +88,11 @@ export function offGrid(table: BandTable, plan: MapPlan, extras: StrokeExtras, d
         (key) => extras[key] !== undefined && extras[key] !== defaults[key],
     );
     return outside || moved;
+}
+
+/** Whether `a` and `b` play the same extras, each absent one read as its default in `defaults`. */
+export function sameExtras(a: StrokeExtras, b: StrokeExtras, defaults: ExtraValues): boolean {
+    return (Object.keys(defaults) as (keyof ExtraValues)[]).every(
+        (key) => (a[key] ?? defaults[key]) === (b[key] ?? defaults[key]),
+    );
 }

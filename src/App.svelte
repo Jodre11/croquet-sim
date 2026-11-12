@@ -27,7 +27,7 @@
     import { stepGrip } from "./viewer/grip";
     import { plannedPath, type PathSample } from "./viewer/plannedPath";
     import { createRunner, type WorkerLike } from "./viewer/runner";
-    import { clampPlan, extraDefaults, inputSpans, offGrid, playableSpans } from "./viewer/spans";
+    import { clampPlan, extraDefaults, inputSpans, offGrid, playableSpans, sameExtras } from "./viewer/spans";
     import { advance } from "./viewer/time";
 
     const RADIUS = openWorld(10).ball.radius;
@@ -92,7 +92,7 @@
             foundHold.range === range &&
             foundHold.lawn === lawn &&
             JSON.stringify(foundHold.plan) === JSON.stringify(plan) &&
-            JSON.stringify(foundHold.extras) === JSON.stringify(extras)
+            sameExtras(foundHold.extras, extras, typeDefaults)
             ? foundHold.firmness
             : null,
     );
@@ -203,10 +203,13 @@
         searching = false;
         runError = "";
         playing = false;
-        const now = (): string =>
-            JSON.stringify({ plan: $state.snapshot(plan), extras: $state.snapshot(extras), range, lawn });
-        const askedKey = now();
-        const asked = { plan: $state.snapshot(plan), extras: $state.snapshot(extras), range, lawn };
+        const asked = { type, plan: $state.snapshot(plan), extras: $state.snapshot(extras), range, lawn };
+        const stillAsked = (): boolean =>
+            asked.type === type &&
+            asked.range === range &&
+            asked.lawn === lawn &&
+            JSON.stringify(asked.plan) === JSON.stringify(plan) &&
+            sameExtras(asked.extras, extras, typeDefaults);
         try {
             const result = await runner.run(
                 {
@@ -223,7 +226,7 @@
                 () => (searching = true),
             );
             // A Run whose inputs have since changed is dropped: the swing shown is the inputs' own.
-            if (result === "superseded" || now() !== askedKey) {
+            if (result === "superseded" || !stillAsked()) {
                 return;
             }
             framed = result.framed;
@@ -256,12 +259,15 @@
     let frame = requestAnimationFrame(tick);
     onDestroy(() => cancelAnimationFrame(frame));
 
-    loadData()
-        .then(async (data) => {
+    // The drive's table plays the first default; every type's spans the sliders once all have landed.
+    Promise.all(MAP_TYPES.map(loadTable))
+        .then((loaded) => (tables = loaded))
+        .catch((error: unknown) => (loadError = error instanceof Error ? error.message : String(error)));
+    Promise.all([loadData(), loadTable("drive")])
+        .then(([data, drive]) => {
             defaults = data.defaults;
             grips = data.grips;
-            tables = await Promise.all(MAP_TYPES.map(loadTable));
-            table = await loadTable("drive");
+            table = drive;
             pickDefault({ label: "drive", split: 0, range: snapRange(table.ranges, 4), lawn: 10 });
         })
         .catch((error: unknown) => (loadError = error instanceof Error ? error.message : String(error)));

@@ -8,7 +8,15 @@ import { departuresOf } from "../../src/viewer/departures";
 import { followFlags, plumbOf } from "../../src/viewer/draw";
 import type { FramedPlay } from "../../src/lab/frames";
 import { labelsOf, lookupDefault, snapRange, splitsOf, type DefaultEntry } from "../../src/viewer/defaults";
-import { INPUTS, clampPlan, extraDefaults, inputSpans, offGrid, playableSpans } from "../../src/viewer/spans";
+import {
+    INPUTS,
+    clampPlan,
+    extraDefaults,
+    inputSpans,
+    offGrid,
+    playableSpans,
+    sameExtras,
+} from "../../src/viewer/spans";
 import { EASE, SLOW_RATE, advance, playbackRate } from "../../src/viewer/time";
 
 /** The Node file calls the test uses (the project has no Node types). */
@@ -96,6 +104,15 @@ describe("playableSpans (hands-from-lean design §5.1)", () => {
         expect(offGrid(half, book, { bottomGrip: 0.5 }, defaults)).toBe(true);
         expect(offGrid(half, { ...book, lean: inputSpans(half).lean.most + 0.01 }, {}, defaults)).toBe(true);
         expect(clampPlan(inputSpans(half), { ...book, lean: 1 }).lean).toBe(inputSpans(half).lean.most);
+    });
+
+    it("compares extras by value, an absent one as its default, whatever the keys' order", () => {
+        const defaults = extraDefaults("drive");
+        expect(sameExtras({}, { bottomGrip: defaults.bottomGrip }, defaults)).toBe(true);
+        expect(
+            sameExtras({ bottomGrip: 0.5, followThrough: 0.1 }, { followThrough: 0.1, bottomGrip: 0.5 }, defaults),
+        ).toBe(true);
+        expect(sameExtras({}, { bottomGrip: 0.5 }, defaults)).toBe(false);
     });
 });
 
