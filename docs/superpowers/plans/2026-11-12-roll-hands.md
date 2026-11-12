@@ -1,5 +1,7 @@
 # The rolls' hands: implementation plan
 
+**Superseded** 2026-11-12 by `docs/superpowers/specs/2026-11-12-hands-from-lean-design.md`; not executed.
+
 **Goal:** the full and pass rolls played at the user's hands (top mid-shaft, bottom on the ring), the touch on the
 head a planning fault, and the envelope and the viewer rebuilt for those two rolls.
 

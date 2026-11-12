@@ -1,6 +1,6 @@
 # The rolls' hands: design
 
-**Status:** reviewed, 2026-11-12 (panel: subtraction, completeness, framing; §8). **Follows:** the side-on viewer
+**Status:** superseded 2026-11-12 by `2026-11-12-hands-from-lean-design.md`; reviewed (panel: subtraction, completeness, framing; §8). **Follows:** the side-on viewer
 (`2026-11-11-side-on-viewer-design.md`), where the full and pass rolls' hands were first seen side on.
 
 ## 1. Why
