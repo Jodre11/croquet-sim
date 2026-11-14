@@ -431,7 +431,7 @@ describe("the push map's grid, sweep, bands and record (P2b.2b.2c.3b plan Task 4
         const size = Math.abs(0.1 - drive.feet) / 0.05 + Math.abs(26 * DEG - drive.lean) / (6 * DEG) + 0.5;
         expect(rows[1]).toBe(
             `half-roll,${26 * DEG},0.1,0.5,0.15,0.02,0,0,0.1,10,10,unplayable,feet;handReach;window,mishit,` +
-                `"off point: the lean 0.9 rad, ""high""",,,,0,0,0,0,0,1,1,1,3,${Number(size.toPrecision(6))}`,
+                `"off point: the lean 0.9 rad, ""high""",,,,0,0,0,0,0,1,1,1,2,${Number(size.toPrecision(6))}`,
         );
     });
 
@@ -1169,12 +1169,13 @@ describe("the stop's edge and the least complex plan (plan Amendment C, Task C1;
         expect(got.size).toBeCloseTo(size, 12);
     });
 
-    it("counts a brake or a push as one timed change, the rolls' lowered hands and effort above 90 % as set-up", () => {
+    it("counts a brake or a push as one timed change, the feet, the lean and effort above 90 % as set-up", () => {
         expect(complexityOf("stop-ac", textBook("stop-ac"), read(null, 5, 50)).timed).toBe(1);
         const roll = complexityOf("half-roll", textBook("half-roll"), read(null, 2, 50));
         expect(roll.timed).toBe(1);
-        // Feet, lean and the lowered bottom hand.
-        expect(roll.setUp).toBe(3);
+        // Feet and lean; the hands follow the lean and are no departure of their own (hands-from-lean design §6; was
+        // 3 with the lowered bottom hand).
+        expect(roll.setUp).toBe(2);
         const hard = complexityOf("drive", textBook("drive"), read(null, 3.5, 95));
         expect({ setUp: hard.setUp, effort: hard.effort }).toEqual({ setUp: 1, effort: 95 });
         expect(complexityOf("drive", textBook("drive"), read(null, 3.5, 90)).setUp).toBe(0);

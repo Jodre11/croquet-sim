@@ -11,7 +11,6 @@
  * decision 12) are superPlans, strikeReading (29.2.5's reading of a strike) and superLeast. Not part of the engine.
  */
 import { MAX_WINDOW, MIN_WINDOW } from "../src/engine/swing/buildContact";
-import { defaultProfile } from "../src/engine/swing/profile";
 import {
     textBook,
     type MapClass,
@@ -784,17 +783,14 @@ function plain(): MapPlan {
 /**
  * `plan`'s complexity as `type` (design A9 items 7–10; plan C-d3), against the drive's text book: timed changes, then
  * set-up changes, then their size, then the stroke's effort. The point of contact, the grip, the split and speedGain
- * are not departures.
+ * are not departures, nor the hands, which follow the lean (hands-from-lean design §6).
  */
 export function complexityOf(type: MapType, plan: MapPlan, read: SweepRead): Complexity {
     const base = plain();
-    const hands = defaultProfile.stance[type];
-    const plainHands = defaultProfile.stance.drive;
     const differs = (a: number, b: number): boolean => Math.abs(a - b) > SAME;
     const setUp = [
         differs(plan.feet, base.feet),
         differs(plan.lean, base.lean),
-        differs(hands.top, plainHands.top) || differs(hands.bottom, plainHands.bottom),
         read.strokeEffort > EFFORT_LIMIT,
     ].filter(Boolean).length;
     return {
