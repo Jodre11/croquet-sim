@@ -258,6 +258,36 @@ A shorter, sharper stop while the striker's ball is still on the face leaves tha
 wrong: if the finish varies with power, a slow finish should be longer and gentler, not shorter. The fitted hold
 barely moved (0.65: 1.278 → 1.375; elsewhere within about 1 %).
 
+**Amendment 3, tried (2026-11-14).** The opposite law: the top hand eases over the same distance, so below
+V_ref = 4 m/s the ease and `followThrough` stretch by V_ref/V, capped at 5×. At power 0.35 the ease takes 363 ms.
+Above V_ref nothing changes.
+
+Full roll, found hold, against the baseline:
+
+| Power | Ratio, baseline | Ratio, new | Striker (m), baseline | Striker (m), new |
+|-------|-----------------|------------|-----------------------|------------------|
+| 0.35  | 1.016           | 1.000      | 1.97                  | 1.96             |
+| 0.50  | 1.286           | 1.285      | 2.37                  | 3.29             |
+| 0.65  | 1.544           | 1.621      | 3.41                  | 4.90             |
+| 0.80  | 1.759           | 1.475      | 4.11                  | 5.72             |
+| 1.00  | 1.224           | 1.247      | 8.36                  | 8.68             |
+
+On the fitted hold, 0.8 goes from 1.296 to 1.186 and 1.0 from 1.207 to 1.112. The 1 % gate fails at 0.65 and 0.8,
+but the moves are towards ratio 1, the full roll's own, and the same effort carries further.
+
+Pass roll, run on both engines the same day:
+- Found hold, at 0.5–1.0 the ratio rises by 0.02–0.05 (0.753 → 0.806 at 0.5), towards the full roll's. The pass roll's
+  distinction from the full roll narrows slightly.
+- At 1.05 the found hold goes from clean to `follow-turf-yield`; the fitted hold already failed that way.
+- The fitted hold is within 1 % throughout.
+
+Half roll: unchanged up to power 1.05 (clean cells within 1 %). Above that it is superhuman on both engines.
+
+Still open after amendment 3:
+- `follow-turf-yield` at 1.05–1.10, on the full and pass rolls: the planned head clears, so the actual head sinks
+  below its plan.
+- Off the face at 1.25+ (§3.2).
+
 **Visual.** The viewer's side view at powers 0.8, 1.1 and 1.25, for the user to judge against the agreed sketch. Model
 output is not evidence that the motion is right; the user's judgement is.
 
