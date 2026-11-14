@@ -71,8 +71,8 @@ export interface SideView {
     /** The balls in their set-up, striker's first, and their radius (m). */
     readonly balls: readonly SidePoint[];
     readonly radius: number;
-    /** The head's length and half-height (m). */
-    readonly head: { readonly length: number; readonly halfHeight: number };
+    /** The head's length and half-height, and the shaft's length from the socket (m). */
+    readonly head: { readonly length: number; readonly halfHeight: number; readonly shaft: number };
     /** The feet's reading (m along aim from the striker's ball's centre): the hands' arc's lowest point. */
     readonly feet: number;
 }
@@ -231,7 +231,11 @@ export function drawSideOn(
         ctx.fill();
         ctx.strokeStyle = c.ink;
         ctx.lineWidth = 3;
-        line(head, pose.top);
+        // The whole shaft, to its end, so hands low on it read as low.
+        const toTop = { x: pose.top.x - head.x, z: pose.top.z - head.z };
+        const reach = Math.hypot(toTop.x, toTop.z);
+        const end = halfHeight + view.head.shaft;
+        line(head, reach > 0 ? { x: head.x + (toTop.x / reach) * end, z: head.z + (toTop.z / reach) * end } : pose.top);
         for (const hand of [pose.top, pose.bottom]) {
             ctx.fillStyle = c.played;
             ctx.beginPath();

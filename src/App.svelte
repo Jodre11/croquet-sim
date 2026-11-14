@@ -34,6 +34,7 @@
     const HEAD = {
         length: defaultProfile.mallet.headLength,
         halfHeight: faceHalfHeight(headShapeOf(defaultProfile.mallet.head)),
+        shaft: defaultProfile.mallet.shaftLength,
     };
 
     let defaults = $state<readonly DefaultEntry[]>([]);
