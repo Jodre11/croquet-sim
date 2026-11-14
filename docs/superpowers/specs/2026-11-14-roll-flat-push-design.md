@@ -243,6 +243,21 @@ Five pinned tests fail on these values: `pushMapRun.test.ts` (4) and `firmness.t
 So at about 0.35–0.5 the finish does shape the shot, and Q1's second branch holds. The amendment stating
 `followThrough` and the ease as a law of power goes to the user before it is built.
 
+**Amendment 2, tried and refuted (2026-11-14).** The law under test: the top hand stops with bounded deceleration, so
+the ease and `followThrough` scale by min(1, V/V_ref), with V_ref = 4 m/s. Above V_ref nothing changed: 1.05–1.10
+stay `follow-turf-yield`, and 1.25+ are unchanged. Below it, the found hold got worse:
+
+| Power | Ratio, baseline | Ratio, rise only | Ratio, rise + amendment 2 | Striker (m), baseline | Striker (m), amendment 2 |
+|-------|-----------------|------------------|---------------------------|-----------------------|--------------------------|
+| 0.35  | 1.016           | 1.074            | 3.371                     | 1.97                  | 0.26                     |
+| 0.50  | 1.286           | 1.367            | 1.388                     | 2.37                  | 1.28                     |
+| 0.65  | 1.544           | 1.725            | 1.197                     | 3.41                  | 2.47                     |
+| 0.80  | 1.759           | 1.719            | 1.485                     | 4.11                  | 2.49                     |
+
+A shorter, sharper stop while the striker's ball is still on the face leaves that ball short. So the direction is
+wrong: if the finish varies with power, a slow finish should be longer and gentler, not shorter. The fitted hold
+barely moved (0.65: 1.278 → 1.375; elsewhere within about 1 %).
+
 **Visual.** The viewer's side view at powers 0.8, 1.1 and 1.25, for the user to judge against the agreed sketch. Model
 output is not evidence that the motion is right; the user's judgement is.
 
