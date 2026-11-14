@@ -45,3 +45,10 @@ if the full roll misses 9 m/s; to the gate).
 2. "From the base of the mallet head" is from the socket.
 3. The progression between anchors is linear (blend), a placeholder.
 4. The GC stop keeps its own typed hands.
+
+== Gate rulings (user, 2026-11-13)
+1. The arms' assist refitted (scripts/assistFit.ts): 242.22 N, 12.207 m/s (was 241.23 N, 12.186 m/s); the full roll
+   reaches 9.000 m/s at intensity 1 from its top. The rolls' plays re-pinned again (playPin; the full roll's p = 1
+   sample's stroke effort 37.674 -> 37.608); the text books' ratios above unchanged.
+2. "Around half way" is half the shaft (0.4572 m), as built.
+3. The progression stays linear (blend) for now; the user rules on it after the viewer's lean sweep (Task 8).

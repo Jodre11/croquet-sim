@@ -271,7 +271,7 @@ describe("the free motion once per sample (plan Amendment B, Task B2; B-d6)", ()
                     10: { range: 8.356797980879826, ratio: 1.2242444622810296, splitAtRest: 2.380720061296514e-14 },
                     14: { range: 15.15450406465419, ratio: 1.2504107141464944, splitAtRest: 2.4756602477627687e-14 },
                 },
-                strokeEffort: 37.67372104345213,
+                strokeEffort: 37.607985145309634,
                 pushEffort: 45.61100478651766,
                 coupleShare: 0.01902281170917693,
                 pushImpulse: 2.283648012664963,
