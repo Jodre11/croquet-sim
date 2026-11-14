@@ -52,3 +52,6 @@ if the full roll misses 9 m/s; to the gate).
    sample's stroke effort 37.674 -> 37.608); the text books' ratios above unchanged.
 2. "Around half way" is half the shaft (0.4572 m), as built.
 3. The progression stays linear (blend) for now; the user rules on it after the viewer's lean sweep (Task 8).
+4. Hands are measured from the socket, as built.
+5. The GC stop: "Hands for GC stop are like half roll, without the lean" (user, 2026-11-14): the half roll's hands
+   (top 0.805 m, bottom 0.4572 m; was 0.45 m) held at its lean 0, not following a shot's lean.

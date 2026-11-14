@@ -650,8 +650,9 @@ describe("the mechanisms (design §8.1), on the canonical setups", () => {
         // the struck head towards its planned path where the swing law's guide steered its rate into [0, ω_path]. The
         // head slows all the way, never back, and ends the impact at 0.7419 m/s along aim, about half the single-ball
         // stroke's 1.4150 m/s; the stop's hold takes it from there. It no longer reaches rest by the window's end, as
-        // the user's decision of 2026-10-06 has it: unpredicted in size, for the gate (stage 2).
-        expect(headSpeed(gcStop)).toBeCloseTo(0.7419, 4);
+        // the user's decision of 2026-10-06 has it: unpredicted in size, for the gate (stage 2). Hands-from-lean gate
+        // (user ruling 2026-11-14): the half roll's hands, the bottom at 0.4572 m (was 0.45 m); 0.7399 m/s (was 0.7419).
+        expect(headSpeed(gcStop)).toBeCloseTo(0.7399, 4);
         expect(lowest).toBeGreaterThan(-0.01);
         expect(headSpeed(plain)).toBeGreaterThan(1);
         expect(headSpeed(gcStop)).toBeLessThan(0.6 * headSpeed(plain));

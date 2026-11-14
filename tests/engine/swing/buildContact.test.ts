@@ -764,14 +764,15 @@ describe("defaultProfile", () => {
         // P2b.2b.2c.3a: the drive's hands together (was 0.6). P2b.2b.2c.3a gate stage 2: the AC stop's grip retune
         // (was 0.45): the AC stop's hands together too. Shapes design §8, ruling 17: the pass roll takes the full roll's
         // grips (was 0.45, 0.09). Hands-from-lean design §3: every preset but the GC stop's takes the law at its lean
-        // (was single-ball [0.805, 0.7], half roll [0.805, 0.42], full and pass rolls [0.61, 0.3]).
+        // (was single-ball [0.805, 0.7], half roll [0.805, 0.42], full and pass rolls [0.61, 0.3]); the GC stop the
+        // half roll's hands held at lean 0 (user ruling 2026-11-14; was [0.805, 0.45]).
         const finger = RING_HEIGHT + FINGER_REACH + HAND_BREADTH / 2;
         const gap = 0.805 - 0.4572;
         const want = [
             [0.805, 0.805 - HAND_BREADTH],
             [0.805, 0.805 - HAND_BREADTH],
             [0.805, 0.805 - HAND_BREADTH],
-            [0.805, 0.45],
+            [0.805, 0.4572],
             [0.805, 0.4572],
             [finger + gap, finger],
             [finger - FINGER_REACH + gap, finger - FINGER_REACH],

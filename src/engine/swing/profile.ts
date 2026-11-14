@@ -381,8 +381,14 @@ export const defaultProfile: SwingProfile = {
         // the stop is 6.9323, 6.9430 and 6.9540 at dt/2, dt and 2·dt (was 5.9661, 5.9660 and 6.5810).
         // Hands-from-lean design §3: the same hands, the law's held flat behind lean 0.
         "stop-ac": leaningStance("stop-ac", -6 * DEG, -0.0225, { gripTension: 1, bottomGrip: 0.1 }),
-        // The lower hand low and firm, checking the swing through its lever just after contact (prototype).
-        "stop-gc": stanceFromLean(0, 0, { top: 0.805, bottom: 0.45, gripTension: 1, bottomGrip: 1 }),
+        // The lower hand low and firm, checking the swing through its lever just after contact (prototype). User
+        // ruling (2026-11-14, hands-from-lean gate): "Hands for GC stop are like half roll, without the lean": the
+        // half roll's hands, held at its own lean 0 whatever the shot's lean (was bottom 0.45 m).
+        "stop-gc": stanceFromLean(0, 0, {
+            ...handsForLean(24 * DEG, MALLET, false),
+            gripTension: 1,
+            bottomGrip: 1,
+        }),
         // Riches: "Stand further forward over the balls, with your front toe level with the back of your striker's
         // ball"; "Most players place the bottom hand almost half-way down the handle for this shot, leaving the other
         // hand at the top". His handle "making an angle of about 75 degrees with the ground" (a 15° lean) is a cue,
