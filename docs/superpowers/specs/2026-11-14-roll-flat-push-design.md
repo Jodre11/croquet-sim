@@ -98,6 +98,18 @@ the full roll's powers.
   So the hands' place, velocity and acceleration are all continuous there.
 - At θ*, R′ = 0, so the velocity is continuous. The acceleration steps by R″·θ̇².
 
+**Amendment 1 (implementation, 2026-11-14).** The continuity claim above was wrong. At the finish's start the held
+pitch is still turning: the text book is planned at −27.0° there, not at its −31° contact pitch. So R's rate starts
+non-zero, and the top hand's planned vertical velocity stepped by 0.15 m/s at power 1.1. The rise is therefore phased
+in on the top hand's own minimum-jerk stop:
+- R_eff = g·R, with g = x³(10 − 15x + 6x²) over the finish's ease, from `from` to `apex`, the same ramp as
+  `handsFinishAt`;
+- after the apex, R_eff = R.
+
+This keeps place, velocity and acceleration continuous at the finish's start. While R is being phased in, the arc's
+own rise covers the shortfall. At powers 0.8, 1.1 and 1.25 the planned head never dips below its height at the push's
+end (worst dip 0.00 mm; head at 36–37 mm there).
+
 **Assumption A1.** That acceleration step is accepted: it is a jerk spike in the hands' feed-forward, not a jump in
 place or velocity. If the chains ring on it, replace the hold with a minimum-jerk blend over HAND_EASE.
 
@@ -132,6 +144,17 @@ Ruling 1 asks for the lean to be held through the push. The full roll's planned 
 So the plan already runs close to flat, and the 31° → 25° slip at power must come from one of two places:
 - **The plan's own residual turn**, ω_e·W/2 in `heldPath`.
 - **The hold yielding.** The pitch hold's moment is bounded by holdFirmness × `gripCouple`.
+
+**First evidence (2026-11-14).** The plan alone turns the text book from −31.0° at contact to:
+
+| Power | Planned pitch at the push's end | Push ends at |
+|-------|---------------------------------|--------------|
+| 0.8   | −27.7°                          | 120 ms       |
+| 1.1   | −27.0°                          | 66 ms        |
+| 1.25  | −27.1°                          | 52 ms        |
+
+That accounts for about 4° of the 6° slip at power 1.1. The remainder, and the hold's moment against its bound, are
+still for the trace below.
 
 This design pre-commits no fix for either. Its first implementation step traces, at powers 0.8 (a clean control), 1.1
 and 1.25:
@@ -185,6 +208,40 @@ The powers are the map grid's for the type (`gridFor(type).powers` in `scripts/p
 - **Full roll, at the grid's powers:** the last face–ball interval's end, against `push.end` and the finish's apex; and
   the planned pitch at rest.
 - **Pass roll:** measured only if the full roll shows the ball still on the face when reach runs out.
+
+**Results (2026-11-14, §3.1 with amendment 1, uncommitted engine).**
+
+Text book on the 10 s lawn, old against new:
+
+| Power | Old (both holds)                     | New (both holds)                          |
+|-------|--------------------------------------|-------------------------------------------|
+| 1.05  | engine error (found), off-face       | unpractised `follow-turf-yield`           |
+| 1.10  | `impact-head-deep`                   | unpractised `follow-turf-yield`           |
+| 1.25+ | off-face at about 20 ms              | unchanged (inside the push, as A3 expects) |
+
+The ratio gate fails on the found hold:
+
+| Power | Old ratio | New ratio |
+|-------|-----------|-----------|
+| 0.35  | 1.016     | 1.074     |
+| 0.50  | 1.286     | 1.367     |
+| 0.65  | 1.544     | 1.725     |
+
+On the fitted hold the ratios held within 1 % except at 0.8 (1.296 → 1.243) and 1.0 (1.207 → 1.178).
+
+Five pinned tests fail on these values: `pushMapRun.test.ts` (4) and `firmness.test.ts` (1).
+
+**Q1, measured.** The striker's ball, on its last face interval:
+
+| Power | Full roll                                        | Pass roll                    |
+|-------|--------------------------------------------------|------------------------------|
+| 0.2   | leaves before reach runs out                     | leaves before reach runs out |
+| 0.35  | on the face from about 23 ms to the impact's end (450 ms), through the push's end (274 ms) and the finish's apex (374 ms) | same               |
+| 0.5   | same as 0.35                                     | same, and the face also touches the croqueted ball at about 316 ms |
+| 0.65+ | leaves before reach runs out (e.g. at 113 ms against 148 ms at 0.65) | leaves before reach runs out |
+
+So at about 0.35–0.5 the finish does shape the shot, and Q1's second branch holds. The amendment stating
+`followThrough` and the ease as a law of power goes to the user before it is built.
 
 **Visual.** The viewer's side view at powers 0.8, 1.1 and 1.25, for the user to judge against the agreed sketch. Model
 output is not evidence that the motion is right; the user's judgement is.
