@@ -82,9 +82,18 @@ rises more than the top hand. That is ruling 2's "the bottom hand more", which f
 `carriedPendulum`; `pivotAt` is evaluated before the pendulum in `pathAt`, and that order must be checked so the rise
 does not recurse. `handsAt` and the hands' feed-forward pick it up through the pivot unchanged.
 
-**Assumption A2.** `followThrough` and HAND_EASE keep their preset values. The full roll's `followThrough` is 0, so its
-turn brakes over HAND_EASE from the apex. With the rise, the head clears wherever that turn ends. Tuning how far the
-swing carries is the envelope's job, not this design's.
+**Assumption A2.** In this design, `followThrough` and HAND_EASE keep their preset values. The full roll's
+`followThrough` is 0, so its turn brakes over HAND_EASE from the apex. With the rise, the head clears wherever that
+turn ends.
+
+**Open question Q1 (the user's hypothesis, 2026-11-14).** How far the arc carries, and how fast the top hand eases,
+may need to vary with power, and with the ratio that separates a pass roll from a full roll. The finish can affect the
+ratio only while the striker's ball is still on the face. The lab step in §4 therefore measures, at each power and for
+each roll, when the ball leaves the face relative to the end of reach.
+- **The ball leaves before reach runs out.** The finish only has to keep the head clear, and A2 stands.
+- **The ball is still on the face.** `followThrough` and the ease become quantities that vary with power and roll type.
+  The design is amended to state them as a law of power, and the envelope maps them. The amendment goes to the user
+  before it is implemented.
 
 ### 3.2 The push: the lean held while reach lasts
 
@@ -136,6 +145,8 @@ rather than widened.
   2026-11-14 on the new hands.
   - The low-power cells must not move.
 - The half roll's stage 1 for one plan, to confirm it does not move.
+- For Q1, on the text-book full and pass rolls at each of the 14 powers: the time the striker's ball leaves the face,
+  against the push's end (`push.end`) and the finish's apex.
 
 **Visual:** the viewer's side view at powers 0.8, 1.1 and 1.25, for the user to judge against the agreed sketch. Model
 output is not evidence that the motion is right; the user's judgement is.
