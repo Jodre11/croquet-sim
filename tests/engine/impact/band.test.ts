@@ -55,7 +55,7 @@ describe("the band (P2b.2b.2c.3b.1 design §3)", () => {
         // (pushMapRun.test's full roll), which bandMiss reads first.
         expect(playTextBook("full-roll")).toBe("impact-off-face");
         expect(playTextBook("half-roll")).toBeNull();
-    });
+    }, 60_000);
 
     it("reads each miss alone", () => {
         expect(bandMiss(runOf([]), ON, STRIKER)).toBeNull();

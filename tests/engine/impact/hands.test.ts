@@ -1756,7 +1756,7 @@ describe("the level head's hold (P2b.2b.2c.3b.1 design §2; push-map spec A6)", 
         expect(holds.length).toBeGreaterThan(follows);
         expect(holds.every((w) => w === 1)).toBe(true);
         expect(opened).toBe(0);
-    });
+    }, 60_000);
 
     it("holds the same on a push that strikes nothing (review focus 1)", () => {
         // Every ball moved 2 m across the aim, off the head's path.

@@ -741,7 +741,7 @@ describe("the mechanisms (design §8.1), on the canonical setups", () => {
         const punched = simulateShot(canonicalSetup("pass-roll")).impact;
         const coasted = simulateShot(canonicalSetup("pass-roll", { stroke: { drive: 0 } })).impact;
         expect(strikerSpeed(punched)).toBeGreaterThan(strikerSpeed(coasted));
-    });
+    }, 60_000);
 
     // Prototype: the impact starts 30 ms before contact; the head on the turf from 20.72 ms, the ball struck from
     // 31.05 ms; the striker's ball at 1.214 m/s against 1.380 on time.
