@@ -7,6 +7,7 @@ import {
     headDepthTerms,
     headOnPath,
     pathAt,
+    pendulumOf,
     prepareTrack,
     reanchor,
     swingOrientation,
@@ -168,5 +169,30 @@ describe("the follow-through after the parting (flat push design, amendments 5 a
         // A head ahead of its path and faster than it leaves the plan as it is.
         const ahead = { ...planned, position: add(planned.position, scale(aim, 0.01)), velocity: scale(planned.velocity, 1.2) };
         expect(reanchor(track, head, ahead, at)).toBe(track);
+    });
+});
+
+describe("the held slope braked within the grip (flat push design, amendment 7)", () => {
+    function halfRoll(power: number): { track: PreparedTrack; drive: TrackDrive; head: MalletHead } {
+        const setup = mapSetup("half-roll", textBook("half-roll"), power);
+        const { contact } = planStroke(setup, lawn);
+        const drive = contact.drive as TrackDrive;
+        return { track: prepareTrack(drive, contact.head, lawn.gravity), drive, head: contact.head };
+    }
+
+    it("keeps the planned fall where the bottom hand can brake it within F_max", () => {
+        const { track, drive } = halfRoll(1);
+        expect(track.arc.holdWindow).toBe(drive.arc.holdWindow);
+    });
+
+    it("lengthens the fall so the bottom hand's planned force is F_max where the planned window would exceed it", () => {
+        const { track, drive, head } = halfRoll(1.2);
+        const W = track.arc.holdWindow as number;
+        expect(W).toBeGreaterThan(drive.arc.holdWindow ?? drive.arc.window);
+        const inertia = pendulumOf(head, track.body, track.arc.radius, lawn.gravity).inertia;
+        const omegaEnd = track.omegaArc + drive.arc.alpha * drive.arc.window;
+        const force =
+            (track.arc.slopeHold * 1.5 * inertia * Math.abs(omegaEnd)) / (W * (track.arc.radius - track.hands.bottom));
+        expect(force).toBeCloseTo(track.hands.gripLimit, 9);
     });
 });

@@ -233,10 +233,11 @@ describe("the map's found firmness (firmness design §5, A7 item 4)", () => {
         "plays a plan no hold admits at σ_max, its class findFirmness's, its firmness null",
         { timeout: 600_000 },
         () => {
-            // Gate 1: the half roll's text book at p = 1.5 trips the grip limit at every firmness.
-            const plan = textBook("half-roll");
-            const sample = playSample("half-roll", plan, 1.5, [10]);
-            expect(findFirmness(mapSetup("half-roll", plan, 1.5), WORLD)).toMatchObject({
+            // Gate 1: the pass roll's text book at p = 1.6 trips the grip limit at every firmness. Flat push design,
+            // amendment 7: the half roll at 1.5, the example until then, now brakes within the grip.
+            const plan = textBook("pass-roll");
+            const sample = playSample("pass-roll", plan, 1.6, [10]);
+            expect(findFirmness(mapSetup("pass-roll", plan, 1.6), WORLD)).toMatchObject({
                 klass: sample.klass,
                 reason: sample.reason,
             });

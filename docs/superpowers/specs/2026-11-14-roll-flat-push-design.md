@@ -401,6 +401,50 @@ Results (10 s lawn; the text books, like for like):
 - **Cost.** A bare impact now also runs its follow-through up to the cap. The firmness searches are about twice as
   slow.
 
+**Amendment 7, the held slope braked within the grip (2026-11-15).** Diagnosis. Above power 1.0 the half roll was
+superhuman from 1.05 (4.8 m/s), so no roll reached Gugan 4 Table 6's long-roll speeds of 5–9 m/s. The swing was not
+the cause: every grip-limit event fell 30–38 ms after contact, inside the held slope's fall. The fall brings the
+pendulum's rate to rest over a fixed window W (20 ms for the half roll), so its braking grew with speed:
+
+| Half roll | Head speed | Bottom hand's peak | When |
+|---|---|---|---|
+| 1.0 | 3.33 m/s | 344 N | 36 ms |
+| 1.05 | 4.76 m/s | 435 N (limit) | 38 ms |
+| 1.2 | 7.09 m/s | 435 N (limit) | 32 ms |
+| 1.5 | 9.52 m/s | 435 N (limit) | 30 ms |
+
+The full and pass rolls' falls are light (36–113 N planned across powers 0.5–1.5); their later loads come from the
+finish after the parting and are not addressed here.
+
+- **The user's ruling.** The brake is bounded by the grip: the hands hold the slope as hard as their grip allows, and
+  the fall's length follows from that rather than from a fixed window.
+- **The law (`gripBoundedHold`).** The held fall's peak α is 1.5·ω_e/W. The bottom hand alone turns the pendulum
+  about the top hand, so its planned force is λ·1.5·I_P·|ω_e| / (W·(r − b)). W becomes the larger of the planned
+  window and the one that puts that force at F_max. At the half roll's power 1.0 the law gives 340 N against the
+  344 N measured, and its bound is 15.6 ms, under the planned 20 ms, so every stroke at or below 1.0 is unchanged.
+- **Assumptions.**
+  - The bound is F_max itself, with no margin for the ball's reaction or the chains' flex. Measured, the bottom hand
+    peaks at 421 N (1.1), 393 N (1.2) and 327 N (1.5), so no margin was needed.
+  - The box's ω_e is used for any λ, as the held part of a blend runs from the box's end state.
+
+Results (10 s lawn, text book, found hold):
+
+| Half roll | Head speed | Striker's ball | Croqueted ball | Ratio | w1/U | v2/U | Impact |
+|---|---|---|---|---|---|---|---|
+| 1.0 | 3.33 m/s | 1.95 m | 4.37 m | 2.24 | 0.54 | 0.94 | 37 ms |
+| 1.1 | 5.73 m/s | – | – | – | 0.50 | 0.96 | 44 ms |
+| 1.2 | 7.09 m/s | 7.60 m | 19.66 m | 2.59 | 0.49 | 0.96 | 48 ms |
+| 1.4 | – | 11.32 m | 30.66 m | 2.71 | – | – | – |
+| 1.6 | – | 14.14 m | 39.27 m | 2.78 | – | – | – |
+| 2.0 | – | 18.37 m | 52.94 m | 2.88 | – | – | – |
+
+- **Every power is clean**, from 0.1 to the power limit of 2.0, at a found hold of 0. The croqueted ball reaches a
+  full lawn (about 32 m) near power 1.45.
+- **Against Gugan.** v2/U 0.96–0.97 lies within Gugan's 0.94–1.05. w1/U fell from 0.54 to 0.48, against Gugan's
+  0.38–0.40.
+- **Open.** The ratio rises with speed, to 2.59 at 7.1 m/s, against Gugan's 2.30 at 6.5 m/s (C10H). The power scale
+  above 1.0 is still steep (3.3 m/s at 1.0, 5.7 at 1.1). The full and pass rolls are not yet extended above 1.0.
+
 **Visual.** The viewer's side view at powers 0.8, 1.1 and 1.25, for the user to judge against the agreed sketch. Model
 output is not evidence that the motion is right; the user's judgement is.
 

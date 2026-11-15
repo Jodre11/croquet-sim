@@ -1419,16 +1419,34 @@ function tableAt(free: FreePendulum, t: number): { readonly theta: number; reado
  * table runs through the pulse only: a caller that reads the path only up to the pendulum's window's
  * end saves its cost, and a read past it throws.
  */
+/**
+ * `arc` with its held slope's fall lengthened, where it must be, so the bottom hand can brake it within its grip (flat
+ * push design, amendment 7). The held fall's peak α is 1.5·ω_e/W (heldPath), and the bottom hand alone turns the
+ * pendulum about the top hand, so its force is λ·1.5·I_P·|ω_e| / (W·(r − b)); W is at least the planned window and at
+ * least the one that keeps that force at F_max. Unchanged with no held slope or no bottom hand.
+ */
+function gripBoundedHold(arc: SwingArc, hands: Hands, inertia: number, atArc: Swing): SwingArc {
+    const lever = arc.radius - hands.bottom;
+    if (arc.slopeHold === 0 || !(lever > 0)) {
+        return arc;
+    }
+    const omegaEnd = atArc.omega + arc.alpha * arc.window;
+    const planned = arc.holdWindow ?? arc.window;
+    const held = (arc.slopeHold * 1.5 * inertia * Math.abs(omegaEnd)) / (lever * hands.gripLimit);
+    return held > planned ? { ...arc, holdWindow: held } : arc;
+}
+
 export function prepareTrack(drive: TrackDrive, head: MalletHead, gravity: number, withFree = true): PreparedTrack {
-    const { arc, coupling, hands } = drive;
-    const w = arc.window;
-    const wh = arc.handWindow;
-    const atArc = beforeWindow(arc, arc.arcStart);
-    const atHands = beforeHands(arc, arc.handStart);
+    const { coupling, hands } = drive;
+    const w = drive.arc.window;
+    const wh = drive.arc.handWindow;
+    const atArc = beforeWindow(drive.arc, drive.arc.arcStart);
+    const atHands = beforeHands(drive.arc, drive.arc.handStart);
     // Every stroke's hands hold the mallet through their hand–arm chains (gate round 3 ruling, 2026-10-11; P2b.2b.2c.3a
     // A2 item 4), which replace the arm mass riding rigidly at the top grip: the swung body is the head with the hands'
     // skin at the grips. The downswing still plans on the arm mass (swungBody, downswingInput).
-    const body = carryBody(head, hands.chain, arc.radius, hands.bottom);
+    const body = carryBody(head, hands.chain, drive.arc.radius, hands.bottom);
+    const arc = gripBoundedHold(drive.arc, hands, pendulumOf(head, body, drive.arc.radius, gravity).inertia, atArc);
     const plain: PreparedTrack = {
         kind: "track",
         arc,
