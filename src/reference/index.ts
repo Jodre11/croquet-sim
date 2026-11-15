@@ -2,6 +2,7 @@
  * Validated, typed access to the sourced reference data in reference/*.json. Loading fails with a
  * ReferenceDataError if any entry is malformed or unsourced.
  */
+import airJson from "../../reference/air.json";
 import ballJson from "../../reference/ball.json";
 import contactJson from "../../reference/contact.json";
 import courtJson from "../../reference/court.json";
@@ -85,6 +86,12 @@ export const ballReference = {
     diameter: readValue(ballJson, "diameter", "ball"),
     mass: readValue(ballJson, "mass", "ball"),
     rebound: readQuote(ballJson, "rebound", "ball"),
+    dragCoefficient: readValue(ballJson, "dragCoefficient", "ball"),
+} as const;
+
+/** The air a rolling ball moves through (speed-dependent lawn design §3.1). */
+export const airReference = {
+    density: readValue(airJson, "density", "air"),
 } as const;
 
 /** Court dimensions and standard setting. */
@@ -167,6 +174,7 @@ export const lawnReference = {
     speedDefinition: readQuote(lawnJson, "speedDefinition", "lawn"),
     speedDistance: readValue(lawnJson, "speedDistance", "lawn"),
     defaultSpeed: readValue(lawnJson, "defaultSpeed", "lawn"),
+    rollingSpeedSlope: readValue(lawnJson, "rollingSpeedSlope", "lawn"),
 } as const;
 
 /** Free-motion friction and restitution coefficients. */

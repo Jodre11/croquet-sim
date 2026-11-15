@@ -253,7 +253,7 @@ function reopen(
     const phase = motion ? motion.phase : classify(state, radius);
     const push = motion ? motion.push : null;
     const start = phase === "stationary" ? atRest(state.position) : state;
-    const params = motionParamsAt(sim.world, start.position);
+    const params = motionParamsAt(sim.world, start.position, length(horizontal(start.velocity)));
     if (track && now > track.t0) {
         const closed = { t0: track.t0, t1: now, phase: track.phase, start: track.start, params: track.params };
         track.segments.push(track.push ? { ...closed, push: track.push } : closed);

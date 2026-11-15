@@ -4,7 +4,8 @@
  * Contact with the turf is at −R·ẑ from the centre, so the contact point's slip velocity is
  * u = v + ω × (−R·ẑ) = (vx − R·ωy, vy + R·ωx). While sliding, friction −μs·m·g·û acts with û constant; the torque
  * it applies changes ω by (−5a·ûy/2R, 5a·ûx/2R, 0) per second (a = μs·g), which makes the slip decay at (7/2)·a.
- * While rolling, the ball decelerates uniformly along its direction of travel with spin locked to velocity.
+ * While rolling, the ball decelerates uniformly along its direction of travel with spin locked to velocity, within one
+ * speed band of the lawn's rolling law (rollingLaw.ts), the segment ending at the band's floor.
  * Spin about the vertical axis (ωz) has no effect on the path and is carried unchanged until the ball stops.
  * While airborne, the ball falls freely under gravity with its spin unchanged (air drag is neglected) until its
  * centre comes back down to z = R, where it lands.
@@ -81,7 +82,8 @@ export function phaseDuration(s: BallState, phase: MotionPhase, p: MotionParams)
         case "sliding":
             return (2 * length(contactSlip(s, p.radius))) / (7 * p.slidingDecel);
         case "rolling":
-            return length(horizontal(s.velocity)) / p.rollingDecel;
+            // To the band's floor, or to rest (speed-dependent lawn design §3.2).
+            return Math.max(length(horizontal(s.velocity)) - (p.rollingFloor ?? 0), 0) / p.rollingDecel;
         case "stationary":
             return Infinity;
         case "airborne":
@@ -155,6 +157,17 @@ export function endOfPhase(s: BallState, phase: MotionPhase, p: MotionParams): B
     }
     const end = advance(s, phase, p, phaseDuration(s, phase, p));
     if (phase === "rolling") {
+        // At a band's floor the ball rolls on at exactly that speed into the next band (speed-dependent lawn design
+        // §3.2); in the lowest band it comes to rest.
+        const floor = p.rollingFloor ?? 0;
+        if (floor > 0) {
+            const velocity = scale(normalize(horizontal(s.velocity)), floor);
+            return {
+                position: end.position,
+                velocity,
+                angularVelocity: rollingSpin(velocity, end.angularVelocity.z, p.radius),
+            };
+        }
         return atRest(end.position);
     }
     if (phase === "airborne") {

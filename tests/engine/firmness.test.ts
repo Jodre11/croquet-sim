@@ -100,9 +100,10 @@ describe("the search's preference for a hold that doesn't slip (design A8 item 5
         const sample = playSample("full-roll", plan, canonicalPower("full-roll", WORLD), [10]);
         expect(sample.klass).toBeNull();
         expect(sample.followSlip).toBe(false);
-        // Hands-from-lean design §3: the law's hands (was σ 0.1, ratio 1.277).
+        // Hands-from-lean design §3: the law's hands (was σ 0.1, ratio 1.277). Speed-dependent lawn design: 1.230
+        // (was 1.263).
         expect(sample.sigma).toBeCloseTo(0.7125, 6);
-        expect(sample.byLawn[10]?.ratio).toBeCloseTo(1.263, 2);
+        expect(sample.byLawn[10]?.ratio).toBeCloseTo(1.23, 2);
     }, 120_000);
 });
 

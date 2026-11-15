@@ -4,6 +4,7 @@
  * impact/integrate.ts, impact/simulateImpact.ts, swing/; P2b.2b.1 design §7).
  */
 import {
+    airReference,
     ballReference,
     contactReference,
     courtReference,
@@ -12,6 +13,7 @@ import {
     lawsReference,
 } from "../reference/index";
 import { add, length, scale, vec3, type Vec3 } from "./math/vec3";
+import { rollingBand, rollingBaseForLawnSpeed, type RollingLaw } from "./rollingLaw";
 import type { ContactMaterial, Cylinder, Hoop, Lawn, MotionParams, OffsetRule, SurfaceProps, World } from "./types";
 
 /** Standard acceleration of gravity (m/s²), as defined by the 3rd CGPM (1901). */
@@ -73,13 +75,28 @@ export function obstaclesOf(world: World): readonly Cylinder[] {
     return [...world.hoops.flatMap((h) => uprightsOf(h, world.ballUpright)), world.peg];
 }
 
-/** Returns the free-motion parameters for a segment starting at `position`. */
-export function motionParamsAt(world: World, position: Vec3): MotionParams {
+/** The rolling law of `surface` in `world` (speed-dependent lawn design §3.1). */
+export function rollingLawOf(world: World, surface: SurfaceProps): RollingLaw {
+    return {
+        base: surface.rollingResistance * world.gravity,
+        slope: surface.rollingSpeedSlope ?? 0,
+        drag: world.airDrag ?? 0,
+        ceiling: surface.slidingFriction * world.gravity,
+    };
+}
+
+/**
+ * Returns the free-motion parameters for a segment starting at `position` with horizontal speed `speed` (m/s): its
+ * rolling deceleration and floor are its speed band's (speed-dependent lawn design §3.2).
+ */
+export function motionParamsAt(world: World, position: Vec3, speed = 0): MotionParams {
     const surface = world.lawn.surfaceAt(position);
+    const band = rollingBand(rollingLawOf(world, surface), speed);
     return {
         radius: world.ball.radius,
         slidingDecel: surface.slidingFriction * world.gravity,
-        rollingDecel: surface.rollingResistance * world.gravity,
+        rollingDecel: band.decel,
+        ...(band.floor > 0 ? { rollingFloor: band.floor } : {}),
         gravity: world.gravity,
     };
 }
@@ -152,17 +169,42 @@ export function validateWorld(world: World): void {
     }
 }
 
+/** k (1/m): a ball's air drag per unit mass, ½·ρ·Cd·π·R²/m (speed-dependent lawn design §3.1). */
+export function airDragOf(radius: number, mass: number): number {
+    return (0.5 * airReference.density.value * ballReference.dragCoefficient.value * Math.PI * radius * radius) / mass;
+}
+
+const lawnBases = new Map<string, number>();
+
+/** μ0 of the default lawn at `seconds`, cached: its solve bisects within a bisection (design §3.1). */
+function lawnBase(seconds: number, slope: number, drag: number, sliding: number): number {
+    const key = `${seconds}/${slope}/${drag}/${sliding}`;
+    let base = lawnBases.get(key);
+    if (base === undefined) {
+        base = rollingBaseForLawnSpeed(
+            seconds,
+            lawnReference.speedDistance.value,
+            STANDARD_GRAVITY,
+            slope,
+            drag,
+            sliding * STANDARD_GRAVITY,
+        );
+        lawnBases.set(key, base);
+    }
+    return base;
+}
+
 /** Builds the standard full-size court from the sourced reference data. */
 export function defaultWorld(lawnSpeedSeconds: number = lawnReference.defaultSpeed.value): World {
     const radius = ballReference.diameter.value / 2;
     const uprightRadius = courtReference.uprightDiameter.value / 2;
+    const slope = lawnReference.rollingSpeedSlope.value;
+    const drag = airDragOf(radius, ballReference.mass.value);
+    const sliding = frictionReference.ballTurfSliding.value;
     const surface: SurfaceProps = {
-        slidingFriction: frictionReference.ballTurfSliding.value,
-        rollingResistance: rollingResistanceForLawnSpeed(
-            lawnSpeedSeconds,
-            lawnReference.speedDistance.value,
-            STANDARD_GRAVITY,
-        ),
+        slidingFriction: sliding,
+        rollingResistance: lawnBase(lawnSpeedSeconds, slope, drag, sliding),
+        rollingSpeedSlope: slope,
         bedModulus: contactReference.bedModulus.value,
         bedRecovery: contactReference.bedRecovery.value,
         turfYield: contactReference.turfYield.value,
@@ -204,5 +246,6 @@ export function defaultWorld(lawnSpeedSeconds: number = lawnReference.defaultSpe
         hoopRunStart: lawsReference.hoopRunStart,
         hoopRunComplete: lawsReference.hoopRunComplete,
         haltMargin: HALT_MARGIN,
+        airDrag: drag,
     };
 }

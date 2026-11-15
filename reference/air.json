@@ -1,0 +1,9 @@
+{
+    "density": {
+        "value": 1.2041,
+        "unit": "kg/m^3",
+        "source": "'Density of air', Wikipedia (fetched 2026-11-15), https://en.wikipedia.org/wiki/Density_of_air",
+        "provenance": "direct",
+        "note": "\"At 20 °C and 101.325 kPa, dry air has a density of 1.2041 kg/m3.\" Still, dry air at a temperate playing temperature is assumed (speed-dependent lawn design §3.1)."
+    }
+}

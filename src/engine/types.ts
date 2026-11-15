@@ -32,7 +32,10 @@ export interface BallParams {
 export interface MotionParams {
     readonly radius: number;
     readonly slidingDecel: number;
+    /** The rolling deceleration (m/s²) of the segment's speed band (speed-dependent lawn design §3.2). */
     readonly rollingDecel: number;
+    /** The speed (m/s) the segment's rolling band ends at, rolling on in the next; absent, 0: it comes to rest. */
+    readonly rollingFloor?: number;
     /** Acceleration of gravity (m/s²), which governs flight. */
     readonly gravity: number;
 }
@@ -65,7 +68,10 @@ export interface PushMotion {
  */
 export interface SurfaceProps {
     readonly slidingFriction: number;
+    /** μ0, the rolling resistance at rest; with `rollingSpeedSlope`, μ0·(1 + c·u) at speed u (m/s). */
     readonly rollingResistance: number;
+    /** c (per m/s), the rise of rolling resistance with speed (speed-dependent lawn design §3.1); absent, 0. */
+    readonly rollingSpeedSlope?: number;
     readonly bedModulus: number;
     readonly bedRecovery: number;
     readonly turfYield: number;
@@ -136,6 +142,11 @@ export interface World {
     readonly hoopRunComplete: OffsetRule;
     /** Distance (m) beyond the boundary at which a ball is halted; the surround is not modelled. */
     readonly haltMargin: number;
+    /**
+     * k (1/m), a rolling ball's air drag k·u² per unit mass, ½·ρ·Cd·π·R²/m (speed-dependent lawn design §3.1);
+     * absent, 0.
+     */
+    readonly airDrag?: number;
 }
 
 /** Initial states of the balls in play; absent balls are omitted. */

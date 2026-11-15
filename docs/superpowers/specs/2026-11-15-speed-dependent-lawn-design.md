@@ -23,26 +23,34 @@ simple experiments.
 - **Scaling across lawns (user, 2026-11-15).** The speed dependence keeps its shape on every lawn, and the whole law
   scales so the lawn-speed test still takes its stated seconds over 32 m. A faster lawn therefore needs slower balls for
   the same distance, and the effect is smaller there.
+- **Air drag plus a straight-line lawn term (user, 2026-11-15, option 1 of the law).** The ball's air drag, which
+  grows with the square of its speed, is modelled as physics; the lawn's own term, rising in a straight line with
+  speed, covers the rest of Gugan's effect.
 
 ## 3. Design
 
 ### 3.1 The law
 
-While rolling, μr(u) = μ0·(1 + c·u), with u the ball's speed (m/s).
+While rolling, a ball of speed u (m/s) decelerates at a(u) = min(g·μ0·(1 + c·u) + k·u², g·μs).
 
+- **k, the air drag (1/m): ½·ρ·Cd·π·R²/m,** on `World` as the optional `airDrag` (absent meaning 0), set by
+  `defaultWorld` from the ball's diameter and mass (reference/ball.json) and two new reference values:
+  - `airDensity` 1.2041 kg/m³, dry air at 20 °C and 101.325 kPa (reference/air.json).
+  - `ballDragCoefficient` 0.47, the smooth sphere's subcritical value. Bounds 0.44–0.51: Morrison's sphere-drag
+    correlation (2016) over the Reynolds numbers of a rolling ball at 1–9 m/s (about 6000–55000).
+  The ground's effect on a rolling ball's drag is not modelled.
 - **c, `rollingSpeedSlope` (reference/lawn.json, provenance "derived").** Fitted to all 36 ball travels of Gugan 4
-  Tables 5 and 6 (B1MS left out, its error noted in Gugan's text). Each ball's u is its settled rolling speed
-  v·(5 + 2Ω)/7, the standard sliding-sphere result, in place of Gugan's equation (D1); Table 5's bracketed Ω2 values
-  are Gugan's own assumed 0.07. The fit is to the measured travels, least squares on ln L with μ0 free: 0.34 per m/s
-  (misfit 0.58, against 1.74 for a uniform lawn). A first fit to u²/(2·g·L) as μr gave 0.184; it weighs the errors
-  differently and is not used. **Pending the user's choice** (2026-11-15): with air drag on the ball as well (Cd 0.47,
-  ρ 1.204 kg/m³), the lawn's slope re-fits to 0.26 at the same misfit (0.60). Bounds follow from a bootstrap of the
-  chosen fit.
+  Tables 5 and 6 (B1MS left out, its error noted in Gugan's text), with k as above. Each ball's u is its settled
+  rolling speed v·(5 + 2Ω)/7, the standard sliding-sphere result, in place of Gugan's equation (D1); Table 5's
+  bracketed Ω2 values are Gugan's own assumed 0.07. The fit is least squares on ln L, with Gugan's court's μ0 free.
+  Value and bounds: §3.5. Misfits on the same data: uniform lawn 1.74; constant lawn plus air drag 1.31; square law
+  0.73; straight line alone 0.58 (c 0.34); air drag plus the line 0.60. A first fit to u²/(2·g·L) as μr gave 0.184;
+  it weighs the errors differently and is not used.
 - **μ0, from the lawn speed (`rollingResistanceForLawnSpeed`).** The ball that rolls `speedDistance` and stops in T
-  seconds. Under the law, from launch speed u0, with k = g·μ0·c:
-  T = ln(1 + c·u0)/k and D = (u0 − ln(1 + c·u0)/c)/k. Then D/T = u0/ln(1 + c·u0) − 1/c, which rises with u0, so u0
-  is found by bisection and μ0 = ln(1 + c·u0)/(g·c·T). At c = 0 this is today's 2D/(g·T²) exactly. The sliding
-  phase is neglected, as now.
+  seconds under a(u): T = ∫₀^u0 du/a and D = ∫₀^u0 u·du/a. For a trial u0, μ0 is found by bisection so the distance
+  is D; u0 is then found by bisection so the time is T. The integrals are Gauss–Legendre over 0.25 m/s panels. With
+  c = 0 and k = 0 the closed form 2D/(g·T²) is kept exactly. The sliding phase is neglected, as now. The result is
+  cached per lawn speed.
 
 ### 3.2 The motion: speed bands
 
@@ -53,12 +61,10 @@ of it, each band at a constant deceleration.
 - **A band's lower edge.** u_lo is the largest multiple of Δ strictly below u − ε, ε = SPEED_EPSILON, and at least 0:
   a ball on an edge, or within ε above it after rounding, starts the band below it. So a rescaled velocity that comes
   back a hair above its edge cannot open a zero-length segment.
-- **A band's deceleration.** For a segment rolling from u down to u_lo, the law's distance is
-  D = ((u − u_lo) − ln((1 + c·u)/(1 + c·u_lo))/c)/(g·μ0·c), and the band's deceleration is (u² − u_lo²)/(2·D). Its
-  distance is the law's exactly; its time differs from the law's by under 0.5% at Δ = 0.25 m/s. D is computed in a
-  form that does not cancel at low speed: with x = c·(u − u_lo)/(1 + c·u_lo), the bracket is
-  (x·c·u_lo + (x − ln(1 + x)))/c, and x − ln(1 + x) is its series x²/2 − x³/3 + x⁴/4 − x⁵/5 below x = 1e-3, else
-  x − log1p(x).
+- **A band's deceleration.** For a segment rolling from u down to u_lo, the law's distance is D = ∫ v·dv/a(v) over
+  [u_lo, u], by 8-point Gauss–Legendre (the integrand's nearest singularity lies at least 1/c from the band, so the
+  rule is exact to rounding), and the band's deceleration is (u² − u_lo²)/(2·D). Its distance is the law's; its time
+  differs from the law's by under 0.5% at Δ = 0.25 m/s. Quadrature has no cancellation at low speed.
 - **A band's end.** The rolling segment ends when the speed reaches u_lo, at (u − u_lo)/a (`phaseDuration`). There
   `endOfPhase` sets the ball rolling at exactly u_lo along its direction, spin locked to velocity; the next band's
   segment opens with no phase event, the phase being unchanged. In the lowest band (u_lo = 0) it comes to rest, as
@@ -69,19 +75,30 @@ of it, each band at a constant deceleration.
   horizontal speed and sets `rollingDecel` and `rollingFloor` from it. The brute-force oracle
   (tests/engine/support/bruteForce.ts) and the hand-built params in tests/engine/support/clusters.ts stay at c = 0;
   the banded rolling is checked against the law directly (§4).
-- **A lawn with c = 0** is today's: one band from the speed to rest, its deceleration μ0·g. `rollingSpeedSlope` is
-  optional on `SurfaceProps`, absent meaning 0, so explicit test surfaces keep their behaviour.
-- **The law's ceiling.** μr is capped at μs, which `validateWorld` requires of μ0 as now and resting-contact pushing
-  relies on (world.ts). Its speed on each lawn, (μs/μ0 − 1)/c, is reported by the unit tests at 6, 10 and 14 s.
+- **A world with c = 0 and no air drag** is today's: one band from the speed to rest, its deceleration μ0·g.
+  `rollingSpeedSlope` on `SurfaceProps` and `airDrag` on `World` are optional, absent meaning 0, so explicit test
+  surfaces and worlds keep their behaviour.
+- **The law's ceiling.** a(u) is capped at g·μs, which `validateWorld` requires of μ0 as now and resting-contact
+  pushing relies on (world.ts). The speed where it binds on each lawn is reported by the unit tests at 6, 10 and 14 s; on a 6 s lawn it binds at
+  12.4 m/s, below the 14.7 m/s the lawn-speed ball starts at, so that ball's first metres run at g·μs.
 - **Sliding is unchanged** (μs). A pushed body (`push.ts`, `modeSolve.ts`) keeps the band of its push segment's start
   for the whole segment, including any crossing of a band edge within it; the next segment re-bands. Push segments
   are short contact episodes, so the error is small and confined to them.
 
 ### 3.3 Assumptions
 
-- The law is linear in speed. Gugan's Fig. 7 shows the trend, not its form; a line is the simplest fit to it.
+- The lawn's term is linear in speed. Gugan's Fig. 7 shows the trend, not its form; a line fits his travels better
+  than a square law.
 - c is fixed across lawns (the user's ruling); only μ0 varies with lawn speed.
+- Air drag acts while rolling only. Flight and sliding are brief and keep their exact closed forms. Cd is held at
+  0.47 rather than following Re, and still air is assumed.
 - The band width, 0.25 m/s, trades segments for timing accuracy; distances are exact at any width.
+
+### 3.5 The fitted slope
+
+Least squares on ln L over the 36 travels, with k = 0.00415 1/m as in §3.1, gives c = 0.27 s/m with Gugan's court's
+μ0 at 0.0257; the misfit is 0.60, against 1.74 for a uniform lawn. Of 1000 bootstrap resamples of the travels, 68%
+fall in 0.21–0.34 and 95% in 0.16–0.43; `reference/lawn.json` holds 0.27 with the 95% bounds.
 
 ### 3.4 Out of scope
 
@@ -92,10 +109,31 @@ of it, each band at a constant deceleration.
 ## 4. Verification
 
 - **Unit.** μ0 at c = 0 equals 2D/(g·T²). A ball rolled through `simulate` from the solved u0 travels
-  `speedDistance` (to 1e-9 m) and stops at T within 0.5%. A band's distance equals the law's to 1e-12 relative at
-  speeds from 1e-3 m/s up, and to 1e-6 relative below. A speed a hair above an edge opens the band below it.
+  `speedDistance` (to 1e-6 m) and stops at T within 0.5%. A band's distance equals a fine reference quadrature of
+  the law's to 1e-12 relative, down to 2e-9 m/s (at or below SPEED_EPSILON, 1e-9, a ball is at rest and takes
+  a(0)). A speed a hair above an edge opens the band below it. With c = 0 and
+  no air drag, every existing engine test passes unchanged.
 - **Results.** The half roll's distance ratio at powers 1.0 and 1.2 (10 s lawn) against Gugan's 2.46 and 2.30; the
   segment count and run time of a 30 m roll against today's; how far a power reaches a full lawn. Every pinned
   distance moves and is re-pinned, the change recorded here.
 - **Acceptance.** The half roll's ratio at power 1.2 lies within 0.15 of Gugan's 2.30. If it does not, the result
   is recorded and the work stops for the user; c is not re-fitted to the model's output.
+
+## 5. Results (2026-11-15)
+
+- **Fit.** c = 0.27 s/m (95% 0.16–0.43), §3.5.
+- **The half roll's ratio, 10 s lawn, text book.** Power 1.0: 2.04 against Gugan's 2.46. Power 1.2: 2.16 against
+  his 2.30, inside the acceptance's 0.15. From 1.2 to 2.0 the ratio rises only from 2.16 to 2.23 (was up to 2.59).
+  At its canonical power the ratio is 1.932 (was 2.099). The low-speed shortfall stays out of scope (§3.4).
+- **Reach.** The croqueted ball of the half roll goes 2.36 m at power 1.0, 7.75 m at 1.2, 11.9 m at 1.5 and 15.9 m
+  at 2.0, every sample clean. No power up to 2.0 reaches a full lawn (was about 1.45): on the 10 s lawn a ball now
+  needs 7.85 m/s to roll 30 m (Gugan's 30 m ball, C10H, left at 7.44 m/s), against 4.94 m/s on a uniform lawn of the
+  same μ0.
+- **Cost.** A 30 m roll runs in 33 segments and 0.08 ms, against 2 segments and 0.005 ms uniform.
+- **The ceiling.** On a 6 s lawn the cap at g·μs binds at 12.4 m/s, below the lawn-speed ball's 14.7 m/s (§3.2).
+- **Lawn speed.** A lawn too fast for the ceiling now solves to a μ0 above μs, which `validateWorld` rejects as before.
+- **Re-pinned.** `tests/lab/playPin.json` (every play's distances); the push-map ratios: full roll 1.057 (was
+  1.068), half roll 1.932 (was 2.099), pass roll 0.8946 (was 0.8835), the full roll's p = 1 sample (10 s ratio 1.191,
+  was 1.256); firmness's full roll 1.23 (was 1.263).
+- **Suite.** 1776 pass; three slow tests (band, hands, the pass roll's punch) time out at 15 s only under the full
+  suite's load, each taking 5–7 s alone.

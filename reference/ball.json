@@ -20,5 +20,13 @@
         "source": "World Croquet Federation, The Laws of Association Croquet, 7th Edition (February 2021), Appendix 2 (Ball performance specifications), A2.1, referenced from Law 5.3.1; https://worldcroquet.org/wp-content/uploads/2021/02/Laws-7th-Edition-master-new.pdf",
         "provenance": "direct",
         "note": "A2.2 adds: \"The rebound heights of a set of balls to be used in a game must not differ by more than 3 inches (76 mm).\" Implied ball–steel restitution e = sqrt(rebound / drop): sqrt(30/60) = 0.7071 to sqrt(45/60) = 0.8660 (see friction.json)."
+    },
+    "dragCoefficient": {
+        "value": 0.47,
+        "unit": "1",
+        "bounds": [0.44, 0.51],
+        "source": "Value: 'Drag coefficient', Wikipedia (fetched 2026-11-15), https://en.wikipedia.org/wiki/Drag_coefficient. Bounds: Faith A. Morrison, 'Data Correlation for Drag Coefficient for Sphere' (Michigan Technological University, 10 November 2016), https://pages.mtu.edu/~fmorriso/DataCorrelationForSphereDrag2016.pdf",
+        "provenance": "analogue",
+        "note": "A smooth sphere's drag coefficient in still air, taken for a croquet ball rolling on the lawn (speed-dependent lawn design §3.1). Wikipedia: a smooth sphere \"has a c d that varies from high values for laminar flow to 0.47 for turbulent flow\". Bounds: Morrison's correlation (his equation, Morrison 2013) evaluated over the Reynolds numbers of a rolling ball at 1–9 m/s, Re = u·d/ν with ν = 1.516e-5 m²/s, about 6000 to 55000. The ground's effect on a rolling ball's drag is not modelled."
     }
 }
