@@ -126,9 +126,8 @@ fall in 0.21–0.34 and 95% in 0.16–0.43; `reference/lawn.json` holds 0.27 wit
   his 2.30, inside the acceptance's 0.15. From 1.2 to 2.0 the ratio rises only from 2.16 to 2.23 (was up to 2.59).
   At its canonical power the ratio is 1.932 (was 2.099). The low-speed shortfall stays out of scope (§3.4).
 - **Reach.** The croqueted ball of the half roll goes 2.36 m at power 1.0, 7.75 m at 1.2, 11.9 m at 1.5 and 15.9 m
-  at 2.0, every sample clean. No power up to 2.0 reaches a full lawn (was about 1.45): on the 10 s lawn a ball now
-  needs 7.85 m/s to roll 30 m (Gugan's 30 m ball, C10H, left at 7.44 m/s), against 4.94 m/s on a uniform lawn of the
-  same μ0.
+  at 2.0, every sample clean. No power up to 2.0 reaches a full lawn (was about 1.45): on the 10 s lawn a rolling
+  ball now needs 7.85 m/s to go 30 m, against 4.94 m/s on a uniform lawn of the same μ0.
 - **Cost.** A 30 m roll runs in 33 segments and 0.08 ms, against 2 segments and 0.005 ms uniform.
 - **The ceiling.** On a 6 s lawn the cap at g·μs binds at 12.4 m/s, below the lawn-speed ball's 14.7 m/s (§3.2).
 - **Lawn speed.** A lawn too fast for the ceiling now solves to a μ0 above μs, which `validateWorld` rejects as before.
@@ -137,3 +136,22 @@ fall in 0.21–0.34 and 95% in 0.16–0.43; `reference/lawn.json` holds 0.27 wit
   was 1.256); firmness's full roll 1.23 (was 1.263).
 - **Suite.** 1776 pass; three slow tests (band, hands, the pass roll's punch) time out at 15 s only under the full
   suite's load, each taking 5–7 s alone.
+
+### 5.1 Like for like: Gugan's lawn speed (user, 2026-11-15)
+
+The 10 s lawn's μ0 (0.0415) is about 1.6 times Gugan's court's (0.0257, §3.5); his court's μ0 matches a 13.23 s
+lawn. Re-measured on a 13 s lawn (μ0 0.0265; a rolling ball needs 5.83 m/s to go 30 m), the half roll's text book:
+
+| Power | Croqueted ball (m) | Ratio | Gugan |
+|---|---|---|---|
+| 0.891 (canonical) | 3.03 | 2.046 | |
+| 1.0 | 3.56 | 2.032 | 2.46 |
+| 1.2 | 11.48 | 2.126 | 2.30 |
+| 1.4 | 15.86 | 2.142 | |
+| 1.6 | 18.92 | 2.145 | |
+| 1.8 | 21.29 | 2.154 | |
+| 2.0 | 23.18 | 2.161 | |
+
+Every sample is clean. At power 1.2 the ratio lies 0.17 below Gugan's 2.30, outside the acceptance's 0.15 (on the
+10 s lawn it was 0.14 inside). Per §4 the result is recorded and the work stops for the user; c is not re-fitted.
+No power up to 2.0 reaches a full lawn on this lawn either: 23.2 m at 2.0.
