@@ -43,7 +43,7 @@ import {
 import { exp } from "../../../src/engine/math/elementary";
 import { flexGains } from "../../../src/engine/impact/flex";
 import type { Coupling, HandChain, Hands, HeadState, SwingArc } from "../../../src/engine/impact/types";
-import { simulateStroke } from "../../../src/engine/impact/simulateImpact";
+import { practiseStroke } from "../../../src/engine/impact/practice";
 import { planStroke } from "../../../src/engine/swing/buildContact";
 import type { BallState, BallStates } from "../../../src/engine/types";
 import { STANDARD_GRAVITY } from "../../../src/engine/world";
@@ -1705,7 +1705,11 @@ describe("the level head's hold (P2b.2b.2c.3b.1 design §2; push-map spec A6)", 
     const FULL_ROLL = mapSetup("full-roll", textBook("full-roll"), canonicalPower("full-roll", openWorld(10)));
     const LAWN = openWorld(10);
 
-    /** Every hold weight the probe reports from contact, impact and follow-through, and the bottom hand's chains. */
+    /**
+     * Every hold weight the probe reports from contact, impact and follow-through, and the bottom hand's chains, on the
+     * practised stroke's last pass. Flat push design, amendment 5: unpractised, the stroke is off the face and its head
+     * catches the ball and rides it to the cap, leaving no follow-through to probe.
+     */
     function heldThrough(balls: BallStates): {
         readonly holds: readonly number[];
         readonly opened: number;
@@ -1713,7 +1717,7 @@ describe("the level head's hold (P2b.2b.2c.3b.1 design §2; push-map spec A6)", 
         readonly follows: number;
     } {
         const stroke = planStroke(FULL_ROLL, LAWN);
-        const holds: number[] = [];
+        let holds: number[] = [];
         let opened = 0;
         let follows = 0;
         const probe: ImpactProbe = {
@@ -1735,7 +1739,12 @@ describe("the level head's hold (P2b.2b.2c.3b.1 design §2; push-map spec A6)", 
                 }
             },
         };
-        const run = simulateStroke(stroke.contact, balls, LAWN, { probe });
+        const run = practiseStroke(stroke.contact, balls, LAWN, FULL_ROLL.striker, () => {
+            holds = [];
+            opened = 0;
+            follows = 0;
+            return probe;
+        });
         return { holds, opened, departed: run.result.departure !== undefined, follows };
     }
 

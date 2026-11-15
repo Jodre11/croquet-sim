@@ -330,6 +330,77 @@ Still open after amendment 4:
   push-through, with the top hand's rise correlated) is muted. Amendment 3 stretches a slow finish so that its turn
   no longer falls with power.
 
+**Amendment 5, the follow-through meets the balls (2026-11-15).** Diagnosis. In the working full rolls (0.8 at hold
+0.2, 1.0 at hold 0.5) the impact ends at 103 ms. The follow-through then runs the head back into the striker's ball
+from 116–123 ms until 238–262 ms, up to 18–22 mm deep. Nothing checks this: the follow-through has no balls, so the
+judge never sees the contact and the balls are handed over as though it never happened.
+- **Cause.** During the push the ball holds the head about 44 mm behind its path. Once the ball leaves, the hands
+  pull the head back onto the path. The head surges to 3.25 m/s against the ball's 3.0 m/s and catches it.
+- **Why the end rule misses it.** The rule looks 30 ms ahead at the head's speed, or the path's if faster. At the
+  parting both are below the ball's speed (2.86 and 2.52 m/s), and the surge comes later.
+- **The pass rolls do not do this.** Their heads stay clear of both balls after the parting.
+
+The law:
+- **Check.** After a tracked stroke's follow-through, the head at each follow-through sample is tested against each
+  ball, carried on in a straight line from the impact's end at its velocity there (`headBallContact`).
+- **Replay.** If the head touches a ball at sample time t, the stroke is integrated again from the start with the
+  impact held open until t. From then on the usual end rule applies, so the contact is integrated, judged and
+  handed over like any other. The check repeats on the new follow-through until no further catch is found, or until
+  the catch lies past the impact's cap.
+- **The parting stays where it was.** Amendment 4's release and a check's hold still start from the first end the
+  rule found, not from the held-open end, so the replay follows the same head path up to the catch.
+- **Assumptions.**
+  - A stop (finish kind `check`) is not replayed: its pendulum is held after the check (Riches: no follow-through).
+  - The straight-line carry ignores the turf's drag on the ball. A slower ball would be caught sooner, so a marginal
+    catch can be missed. Integrating the replayed contact is exact; the carry only decides whether to replay.
+- **Cost.** A stroke without a catch is bit-identical. A stroke with one is integrated again (twice or more).
+
+**Amendment 6, no added pace after the parting (2026-11-15).** Amendment 5's check showed the half roll catching its
+ball too. Its canonical ratio of about 2.1 depended on the head passing through the striker's ball unchecked. With
+the check in place, the half roll at 0.5 was unlawful (29.1.6.1), and at 0.891 it was off the face at 150 ms.
+- **Cause.** The lag (amendment 5) is only part of it. The plan holds the head at a level 1.8 m/s for 0.3 s after
+  the parting: the hands slow as the swing takes over (§3.1). The balls' load slows the head to 0.9–1.3 m/s during
+  contact, and the striker's ball leaves at 1.58 m/s. So the hands speed the head back up past the ball, to 2.07 m/s,
+  even on a path moved back by the lag.
+- **The user's ruling (2026-11-15).** The surge is only needed for added power, before the ball leaves.
+
+The law:
+- **Re-anchor.** At the parting (the first end the rule finds, `reanchor`), the hands' path is changed. The rate k is
+  the head's along-aim speed over the planned head's, held to [0, 1]. From the parting on, the plan runs at k times
+  its own pace, with velocities scaled by k and accelerations by k². It also moves back along the aim by the
+  socket's lag behind the path. So the hands carry on from where the head is, no faster than it.
+- **Scope.** A head already level with or ahead of its path keeps its place. One at or above the plan's pace keeps
+  its pace. A stroke with no push is unchanged.
+- **The free pendulum's table is not re-run.** The re-anchor is kinematic: the hands follow the planned path, slowed.
+- **Amendment 5's check stays.** It now finds what catches remain, if any, from the hands' actual follow-through.
+- **Assumptions.**
+  - The lag across the aim and the pitch's lag are kept, since the surge runs along the aim.
+  - k comes from the head's speed at the parting step. The hands' flex oscillates through the push, so k can move
+    with it from one power to the next.
+- **The impact is the same with or without the follow-through.** A bare impact (`integrate`) also runs the catch
+  check, so the shot's impact equals `simulateImpact`'s (exit criteria 3 and 4). It looks only as far as the impact's
+  cap, since a catch at or past the cap is not replayed.
+
+Results (10 s lawn; the text books, like for like):
+
+| Stroke | Before amendment 5 | Amendment 5 alone | Amendments 5 and 6 |
+|---|---|---|---|
+| Half roll 0.891 (canonical) | clean, ratio 2.10 | off the face at 150 ms | clean, 1.75 m, ratio 2.099 |
+| Half roll 0.5, found hold | clean | unlawful (29.1.6.1) | clean, 0.66 m, ratio 1.946 |
+| Full roll 0.8, hold 0.2 | 4.59 m, 1.101 | off the face | 4.59 m, 1.101 |
+| Full roll 1.0, hold 0.5 | 6.88 m, 1.10 | 8.34 m, 1.137 (catch) | 6.89 m, 1.100 |
+| Pass roll 0.8, hold 0.15 | 4.72 m, 0.958 | off the face | 4.68 m, 0.987 |
+
+- **No catch remains.** None of the swept cells catches a ball after the parting: pass and full rolls at 0.5, 0.8
+  and 1.0 over holds 0.1–1, and the half roll at its canonical power. The other swept cells moved by 0.01 m or less.
+- **One catch remains: the unpractised canonical full roll.** Played without practice, it is off the face at 47 ms,
+  and its head then catches the ball and rides it to the cap. The practised stroke does not do this.
+- **Re-pinned.** The pinned plays moved by at most 0.003 in ratio. The pass roll's canonical ratio moved from 0.884
+  to 0.8835. The full roll's found-hold sample at p = 1 now holds at firmness 0.188 (was 0.183), and its ratio on
+  the 10 s lawn fell from 1.419 to 1.256. That change has not been traced to a cause.
+- **Cost.** A bare impact now also runs its follow-through up to the cap. The firmness searches are about twice as
+  slow.
+
 **Visual.** The viewer's side view at powers 0.8, 1.1 and 1.25, for the user to judge against the agreed sketch. Model
 output is not evidence that the motion is right; the user's judgement is.
 

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { headLowestPoint } from "../../../src/engine/impact/contacts";
+import { headBallContact, headLowestPoint } from "../../../src/engine/impact/contacts";
+import { practiseStroke } from "../../../src/engine/impact/practice";
 import {
     handsAt,
     headDepth,
@@ -7,12 +8,13 @@ import {
     headOnPath,
     pathAt,
     prepareTrack,
+    reanchor,
     swingOrientation,
     type PreparedTrack,
     type Push,
 } from "../../../src/engine/impact/track";
 import type { MalletHead, TrackDrive } from "../../../src/engine/impact/types";
-import { vec3 } from "../../../src/engine/math/vec3";
+import { add, scale, vec3 } from "../../../src/engine/math/vec3";
 import { planStroke } from "../../../src/engine/swing/buildContact";
 import { openWorld } from "../../../scripts/openLawn";
 import { mapSetup, textBook } from "../../../scripts/pushMapRun";
@@ -117,4 +119,54 @@ describe("the head's depth below the top hand (flat push design §3.1)", () => {
             }
         });
     }
+});
+
+describe("the follow-through after the parting (flat push design, amendments 5 and 6)", () => {
+    for (const [type, power, hold] of [
+        // Before amendment 6 the hands surged the head into the striker's ball from 123 to 238 ms, 22 mm deep.
+        ["full-roll", 1, 0.5],
+        // Before amendment 6 the head, sped back to the plan's 1.8 m/s, caught the ball leaving at 1.58 m/s.
+        ["half-roll", 0.891, 0.1],
+    ] as const) {
+        it(`keeps the ${type}'s head clear of the balls at power ${power}, hold ${hold}`, { timeout: 120_000 }, () => {
+            const base = mapSetup(type, textBook(type), power);
+            const setup = { ...base, stroke: { ...base.stroke, holdFirmness: hold } };
+            const { contact } = planStroke(setup, lawn);
+            const { follow, result } = practiseStroke(contact, setup.balls, lawn, setup.striker);
+            // The impact ends at its first parting: no catch was replayed.
+            expect(follow.impactEnd).toBeLessThan(0.11);
+            expect(result.events.map((e) => e.kind)).not.toContain("impact-off-face");
+            const R = lawn.ball.radius;
+            const balls = Object.values(result.balls).filter((b) => b !== undefined);
+            for (const s of follow.samples.filter((x) => x.t > follow.impactEnd)) {
+                for (const b of balls) {
+                    const centre = add(b.position, scale(b.velocity, s.t - follow.impactEnd));
+                    expect(headBallContact(s.head, contact.head, centre, R)).toBeNull();
+                }
+            }
+        });
+    }
+
+    it("re-anchors the path at the head's place and pace, no faster than planned", () => {
+        const { track, head } = fullRoll(1);
+        const at = 0.08;
+        const planned = headOnPath(track, head, at);
+        const aim = track.arc.aim;
+        // A head 40 mm behind its path at 60 % of its pace.
+        const state = {
+            ...planned,
+            position: add(planned.position, scale(aim, -0.04)),
+            velocity: scale(planned.velocity, 0.6),
+        };
+        const anchored = reanchor(track, head, state, at);
+        expect(anchored.anchor?.rate).toBeCloseTo(0.6, 9);
+        const there = headOnPath(anchored, head, at);
+        expect(there.position.x - planned.position.x).toBeCloseTo(-0.04 * aim.x, 9);
+        expect(there.velocity.x).toBeCloseTo(planned.velocity.x * 0.6, 9);
+        // Before the parting the path is the plan's.
+        expect(headOnPath(anchored, head, at - 0.01)).toEqual(headOnPath(track, head, at - 0.01));
+        // A head ahead of its path and faster than it leaves the plan as it is.
+        const ahead = { ...planned, position: add(planned.position, scale(aim, 0.01)), velocity: scale(planned.velocity, 1.2) };
+        expect(reanchor(track, head, ahead, at)).toBe(track);
+    });
 });

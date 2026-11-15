@@ -344,7 +344,10 @@ describe("simulateShot", () => {
         // The release, the impact's start (every canonical downswing outlasts its lead) and end, and a stop's hold.
         // The hold is never a seam of its own: the impact cannot end before the drive's windows have (integrate's
         // `driveEnd`), so holdFrom = max(window end, impactEnd) is the impact's end unless the impact caps.
-        expect(jumps).toHaveLength(type === "stop-ac" || type === "stop-gc" ? 4 : 3);
+        // Flat push design, amendment 5: an impact held open to a catch that runs to its cap has no follow-through after
+        // it, so no end seam (the unpractised full roll, off the face at 47 ms, rides its ball to the cap).
+        const capped = outcome.impact.events.some((e) => e.kind === "impact-cap") ? 1 : 0;
+        expect(jumps).toHaveLength((type === "stop-ac" || type === "stop-gc" ? 4 : 3) - capped);
         for (const jump of jumps) {
             // P2b.2b.2c.3a gate stage 2: the hold's pitch impedance (was a fixed 1e-6 m): the position's slack scales
             // with the acceleration's change across the pair, as the velocity's bound scales with the acceleration
@@ -364,6 +367,7 @@ describe("simulateShot", () => {
     it.each(STROKE_TYPES.filter((type) => type !== "half-roll"))(
         "runs the %s canonical setup from the top to its finish (P2b.2b.2a design, exit criterion 3)",
         runsToFinish,
+        60_000,
     );
 
     // P2b.2b.2b.2b: fast impedance (was skipped at the pre-flight gate). On the flex the half roll raised follow-cap:

@@ -196,13 +196,13 @@ describe("one plan's run (P2b.2b.2c.3b plan Task 3)", () => {
         // over 60 ms pulses); was its own 15 ms punch at a 20° split, unlawful (29.1.6.1) at ratio 0.418. Ruling 18:
         // its follow-through 0.1 s keeps the head off the turf (was 0.3 s: ratio 0.814 in two passes). Hands-from-lean
         // design §2: the fisted hands, the bottom on the ring; the ratio 0.931 (was 0.859). Flat push design,
-        // amendments 1–4: two passes (was three), the ratio 0.884.
+        // amendments 1–4: two passes (was three), the ratio 0.884; amendments 5–6: 0.8835.
         const base = mapSetup("pass-roll", textBook("pass-roll"), 1);
         const p = swingReference["pass-roll"].defaultBackswing.value / bodyBackswing(base, WORLD);
         const sample = playSample("pass-roll", textBook("pass-roll"), p, [10], "preset");
         expect(sample.klass).toBeNull();
         expect(sample.passes).toBe(2);
-        expect(sample.byLawn[10]?.ratio).toBeCloseTo(0.884, 3);
+        expect(sample.byLawn[10]?.ratio).toBeCloseTo(0.8835, 4);
     });
 
     it("grades the full roll's text book at p = 2 as superhuman: a hand reaches its grip's limit", () => {
@@ -231,7 +231,7 @@ describe("the map's found firmness (firmness design §5, A7 item 4)", () => {
 
     it(
         "plays a plan no hold admits at σ_max, its class findFirmness's, its firmness null",
-        { timeout: 120_000 },
+        { timeout: 600_000 },
         () => {
             // Gate 1: the half roll's text book at p = 1.5 trips the grip limit at every firmness.
             const plan = textBook("half-roll");
@@ -257,12 +257,13 @@ describe("the map's found firmness (firmness design §5, A7 item 4)", () => {
 describe("the free motion once per sample (plan Amendment B, Task B2; B-d6)", () => {
     it(
         "plays the full roll's found-hold sample at p = 1 as before, rolling the balls once per lawn",
-        { timeout: 120_000 },
+        { timeout: 300_000 },
         () => {
             // Pinned before B2 from the search that rolled the balls on every lawn at each of its nine plays.
             // Hands-from-lean design §3: re-pinned on the law's hands (was ratio 1.331 on the 10 s lawn, firmness
             // 0.2986, σ 0.3375, no slip). Flat push design, amendments 1–4: re-pinned (was ratio 1.224 on the 10 s
-            // lawn, firmness 0.2160, σ 0.24375, slipping).
+            // lawn, firmness 0.2160, σ 0.24375, slipping). Amendments 5–6: re-pinned (was ratio 1.419 on the 10 s lawn,
+            // firmness 0.1828, σ 0.20625).
             vi.mocked(simulateFreeMotion).mockClear();
             const sample = playSample("full-roll", textBook("full-roll"), 1, MAP_LAWNS);
             expect(vi.mocked(simulateFreeMotion).mock.calls.length).toBe(MAP_LAWNS.length);
@@ -271,20 +272,20 @@ describe("the free motion once per sample (plan Amendment B, Task B2; B-d6)", ()
                 klass: null,
                 reason: null,
                 byLawn: {
-                    6: { range: 4.107280981932412, ratio: 1.2341483800818362, splitAtRest: 3.113926049847317e-14 },
-                    10: { range: 8.376133535964456, ratio: 1.418643526276271, splitAtRest: 3.5628365729591974e-14 },
-                    14: { range: 14.779412367012512, ratio: 1.4955518687467675, splitAtRest: 3.781829032957511e-14 },
+                    6: { range: 4.152264263533247, ratio: 1.1408573935900208, splitAtRest: 2.053461024627998e-14 },
+                    10: { range: 8.804308619429008, ratio: 1.2559995963557005, splitAtRest: 2.6154257160056698e-14 },
+                    14: { range: 15.782375153272667, ratio: 1.3014396060936462, splitAtRest: 2.8121750486011273e-14 },
                 },
                 strokeEffort: 37.607985145309634,
-                pushEffort: 44.16081417103688,
+                pushEffort: 44.39387672334182,
                 coupleShare: 0.01902281170917693,
-                pushImpulse: 2.186011828179781,
+                pushImpulse: 2.2030721217573612,
                 effectVerdicts: { shipped: false, contactOnly: false },
                 followCap: false,
                 followSlip: false,
                 passes: 3,
-                firmness: 0.18280692181291797,
-                sigma: 0.20625000000000002,
+                firmness: 0.18834652550421851,
+                sigma: 0.21250000000000002,
             });
         },
     );

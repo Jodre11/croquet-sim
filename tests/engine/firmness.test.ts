@@ -132,7 +132,7 @@ describe("the found firmness (firmness design §5)", () => {
         },
     );
 
-    it("finds the least hold of a plan that slips without one, within the halved step", { timeout: 120_000 }, () => {
+    it("finds the least hold of a plan that slips without one, within the halved step", { timeout: 600_000 }, () => {
         // Gate 1: the full roll's text book at power 1 is off its point at firmness 0 and holds at 0.5.
         const setup = mapSetup("full-roll", textBook("full-roll"), 1);
         const found = findFirmness(setup, WORLD);

@@ -119,6 +119,7 @@ import {
     handsApex,
     handsAt,
     holdPendulum,
+    reanchor,
     releaseLift,
     releaseOf,
     newGripState,
@@ -1056,8 +1057,81 @@ function shaftWeightOf(head: MalletHead, gravity: number): { readonly force: Vec
  * state, and the run is fixed before the follow-through starts.
  */
 export function integrateStroke(setup: ImpactSetup, options: ImpactOptions = {}, follow = false): StrokeRun {
+    const plan = setup.drive;
+    if (plan.kind !== "track" || finishKind(plan) === "check") {
+        return strokeOnce(setup, options, follow, 0);
+    }
+    // The follow-through can run the head back into a ball the impact has let go (flat push design, amendment 5): the
+    // stroke is then played again with the impact held open to that catch. A probe sees only the play that is kept.
+    // The follow-through is played to look for a catch even where it is not wanted, so the impact is the same either way:
+    // then only up to the cap, as a catch at or past it is not replayed.
+    const cap = options.cap ?? plan.arc.contactAt + TRACK_IMPACT_CAP;
+    let openUntil = 0;
+    for (;;) {
+        const calls: (() => void)[] = [];
+        const outer = options.probe;
+        const probe: ImpactProbe | undefined =
+            outer === undefined
+                ? undefined
+                : {
+                      step: (s) => calls.push(() => outer.step(s)),
+                      ...(outer.follow === undefined || !follow
+                          ? {}
+                          : { follow: (s: FollowSnapshot) => calls.push(() => outer.follow?.(s)) }),
+                  };
+        const stroke = strokeOnce(setup, probe === undefined ? options : { ...options, probe }, true, openUntil, follow ? Infinity : cap);
+        const caught = catchAt(setup, stroke);
+        if (caught === null || caught <= openUntil || caught >= cap) {
+            for (const call of calls) {
+                call();
+            }
+            return follow ? stroke : { run: stroke.run, follow: null };
+        }
+        openUntil = caught;
+    }
+}
+
+/**
+ * The first follow-through sample (s) at which the head touches a ball carried on in a straight line from the impact's
+ * end at its velocity there (flat push design, amendment 5); null where it touches none.
+ */
+function catchAt(setup: ImpactSetup, stroke: StrokeRun): number | null {
+    const { follow, run } = stroke;
+    if (follow === null) {
+        return null;
+    }
+    const R = setup.ball.radius;
+    const balls = Object.values(run.balls).filter((b): b is BallState => b !== undefined);
+    for (const s of follow.samples) {
+        if (s.t <= follow.impactEnd) {
+            continue;
+        }
+        const dt = s.t - follow.impactEnd;
+        for (const b of balls) {
+            if (headBallContact(s.head, setup.head, add(b.position, scale(b.velocity, dt)), R) !== null) {
+                return s.t;
+            }
+        }
+    }
+    return null;
+}
+
+/**
+ * integrateStroke's single play: the impact may not end before `openUntil` (s). An end the rule finds before it is the
+ * parting, from which the push's correction is withdrawn as the follow-through withdraws it (amendment 4). The
+ * follow-through runs no further than `until` (s).
+ */
+function strokeOnce(
+    setup: ImpactSetup,
+    options: ImpactOptions,
+    follow: boolean,
+    openUntil: number,
+    until = Infinity,
+): StrokeRun {
     const dt = options.dt ?? IMPACT_DT;
     const { head, ball, drive: plan } = setup;
+    let played: PreparedTrack | null = plan.kind === "track" ? plan : null;
+    let parted: number | null = null;
     const cap = options.cap ?? (plan.kind === "force" ? IMPACT_CAP : plan.arc.contactAt + TRACK_IMPACT_CAP);
     const R = ball.radius;
     const ballInertia = 0.4 * ball.mass * R * R;
@@ -1130,7 +1204,18 @@ export function integrateStroke(setup: ImpactSetup, options: ImpactOptions = {},
             drive = driveAt(plan.samples, t);
             headTorque = cross(rotate(state.orientation, head.socket), drive);
         } else {
-            hand = handLoad(plan, state, head, t, grip, dt);
+            // Held open past the parting, the impact withdraws the push's correction as the follow-through would.
+            if (
+                parted !== null &&
+                played !== null &&
+                played.push !== null &&
+                played.push.end !== null &&
+                t >= played.push.end &&
+                played.arc.lift?.release === undefined
+            ) {
+                played = releaseLift(played, t);
+            }
+            hand = handLoad(played ?? plan, state, head, t, grip, dt);
             drive = hand.force;
             headTorque = hand.torque;
             if (hand.saturated !== null && !limited) {
@@ -1346,8 +1431,20 @@ export function integrateStroke(setup: ImpactSetup, options: ImpactOptions = {},
         // (P2b.2b.2c.3b.1 design §2): that step was the opening's on a push the reach had not opened earlier.
         const waiting =
             plan.kind === "track" && plan.push !== null && plan.push.pendulum !== null && t < plan.push.pendulum;
-        if (settled && !waiting && (plan.kind === "force" || !stillReaching(state, head, balls, R, plan, now))) {
-            break;
+        if (
+            settled &&
+            !waiting &&
+            (plan.kind === "force" || !stillReaching(state, head, balls, R, played ?? plan, now))
+        ) {
+            // The parting re-anchors the hands' path (flat push design, amendment 6), held open past it or not, so a
+            // replay and the play it replaces follow one path.
+            if (parted === null && played !== null) {
+                played = reanchor(played, head, state, now);
+            }
+            if (now >= openUntil) {
+                break;
+            }
+            parted ??= now;
         }
         // A head stopped dead in the turf before any face contact ends the impact (P2b.2b.2b.3 design §4.6; plan
         // decision 13): the balls are handed over as they lie.
@@ -1377,7 +1474,10 @@ export function integrateStroke(setup: ImpactSetup, options: ImpactOptions = {},
     if (trace === null || plan.kind !== "track") {
         return { run: done, follow: null };
     }
-    return { run: done, follow: continueStroke(setup, plan, state, grip, turf, steps, dt, trace, options.probe) };
+    return {
+        run: done,
+        follow: continueStroke(setup, played ?? plan, state, grip, turf, steps, dt, trace, options.probe, until),
+    };
 }
 
 /** Integrates the impact from `setup` until it ends (see the file header). */
@@ -1406,6 +1506,7 @@ function continueStroke(
     dt: number,
     trace: StrokeState[],
     probe: ImpactProbe | undefined,
+    until = Infinity,
 ): FollowThrough {
     const { head } = setup;
     const every = Math.max(1, Math.round(FOLLOW_SAMPLE / dt));
@@ -1440,7 +1541,7 @@ function continueStroke(
     const watch: SwingWatch = { risen: false, last: null };
     for (;;) {
         const t = steps * dt;
-        if (finished(kind, plan, state, t, watch)) {
+        if (finished(kind, plan, state, t, watch) || t >= until) {
             break;
         }
         if (t >= cap) {

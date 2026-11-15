@@ -589,6 +589,18 @@ export interface PreparedTrack {
     readonly firm: HandGains;
     readonly top: HandGains;
     readonly bottom: HandGains;
+    /**
+     * The path re-anchored at the parting (flat push design, amendment 6): from `at` (s) on, the plan runs at `rate`
+     * (≤ 1) of its own pace from `at`, moved by `by` (m), so the hands carry on from where the head is, no faster.
+     */
+    readonly anchor?: Anchor;
+}
+
+/** A re-anchored path (PreparedTrack's `anchor`): from `at` (s) at `rate` of the plan's pace, moved by `by` (m). */
+export interface Anchor {
+    readonly at: number;
+    readonly rate: number;
+    readonly by: Vec3;
 }
 
 /** A point's position, velocity and acceleration (world frame). */
@@ -1328,6 +1340,38 @@ export function releaseLift(track: PreparedTrack, at: number): PreparedTrack {
 }
 
 /**
+ * `track` re-anchored at the parting `at` (s; flat push design, amendment 6, 2026-11-15): the push's added pace is for
+ * the ball, before it leaves (the user, 2026-11-15), so once it has gone the hands neither recover the lag its load
+ * held the head to nor speed the head back up to the plan's pace, either of which ran the head onto the ball again.
+ * From `at` the plan runs on at the head's along-aim speed over the planned head's there (at most 1), every velocity
+ * scaled by that rate and every acceleration by its square, and moves back along the aim by the socket's lag behind
+ * it; `state` is the head's. A head level with or ahead of its path keeps its place, and one at or above the plan's
+ * pace keeps its pace. A stroke with no push or a track already re-anchored is unchanged. The lag across the aim and
+ * the pitch's are kept (assumption): the surge runs along the aim.
+ */
+export function reanchor(track: PreparedTrack, head: MalletHead, state: HeadState, at: number): PreparedTrack {
+    if (track.push === null || track.anchor !== undefined) {
+        return track;
+    }
+    const { aim } = track.arc;
+    const planned = headOnPath(track, head, at);
+    const pace = dot(planned.velocity, aim);
+    const rate = pace > 0 ? Math.min(Math.max(dot(state.velocity, aim) / pace, 0), 1) : 1;
+    const socket = add(state.position, rotate(state.orientation, head.socket));
+    const lag = Math.min(dot(sub(socket, pathAt(track, at).socket), aim), 0);
+    return rate === 1 && lag === 0 ? track : { ...track, anchor: { at, rate, by: scale(aim, lag) } };
+}
+
+/** The plan's time, velocity scale and acceleration scale at t (s) under `anchor` (reanchor). */
+function warped(anchor: Anchor | undefined, t: number): { readonly t: number; readonly v: number; readonly a: number } {
+    if (anchor === undefined || t < anchor.at) {
+        return { t, v: 1, a: 1 };
+    }
+    const k = anchor.rate;
+    return { t: anchor.at + k * (t - anchor.at), v: k, a: k * k };
+}
+
+/**
  * `free` re-tabulated for `track` from `at` (s) on, as computeFree steps it: the samples whose step reads the pivot
  * only before `at` are kept, so the table is unchanged there to the bit, and its length is kept.
  */
@@ -1667,6 +1711,26 @@ export function holdPendulum(track: PreparedTrack, from: number): PreparedTrack 
  * freeAlpha evaluates sinCos(θ) and the pivot once more).
  */
 export function pathAt(track: PreparedTrack, t: number): PathPoint {
+    const { anchor } = track;
+    if (anchor === undefined || t < anchor.at) {
+        return plannedPath(track, t);
+    }
+    const w = warped(anchor, t);
+    const p = plannedPath(track, w.t);
+    return {
+        ...p,
+        socket: add(p.socket, anchor.by),
+        socketVelocity: scale(p.socketVelocity, w.v),
+        socketAcceleration: scale(p.socketAcceleration, w.a),
+        angularVelocity: scale(p.angularVelocity, w.v),
+        angularAcceleration: scale(p.angularAcceleration, w.a),
+        dipAcceleration: scale(p.dipAcceleration, w.a),
+        pendulumAcceleration: p.pendulumAcceleration * w.a,
+    };
+}
+
+/** The path at time t as planned, before any re-anchoring (pathAt). */
+function plannedPath(track: PreparedTrack, t: number): PathPoint {
     const { arc } = track;
     const { theta, omega, alpha } = pendulumAt(track, t);
     const pivot = pivotAt(track, t);
@@ -1693,9 +1757,13 @@ export function pathAt(track: PreparedTrack, t: number): PathPoint {
 
 /** The top hand's planned place and velocity at time t (design §3.2): the pivot with the reach and the dip. */
 export function handsAt(track: PreparedTrack, t: number): { readonly position: Vec3; readonly velocity: Vec3 } {
-    const pivot = pivotAt(track, t);
-    const dip = dipAt(track, t);
-    return { position: sub(pivot.P, vec3(0, 0, dip.z)), velocity: sub(pivot.V, vec3(0, 0, dip.v)) };
+    const { anchor } = track;
+    const w = warped(anchor, t);
+    const pivot = pivotAt(track, w.t);
+    const dip = dipAt(track, w.t);
+    const position = sub(pivot.P, vec3(0, 0, dip.z));
+    const velocity = scale(sub(pivot.V, vec3(0, 0, dip.v)), w.v);
+    return anchor === undefined || t < anchor.at ? { position, velocity } : { position: add(position, anchor.by), velocity };
 }
 
 /**
