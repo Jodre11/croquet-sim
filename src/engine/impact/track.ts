@@ -391,6 +391,52 @@ export interface Push {
     readonly release: number | null;
     /** When the turn is at rest and the hands hold the mallet (s): HAND_EASE after `release`; null with `end`. */
     readonly freed: number | null;
+    /** The top hand's rise through the finish (flat push design §3.1); null where it is 0 throughout. */
+    readonly rise: FinishRise | null;
+}
+
+/**
+ * The top hand's rise through the finish (flat push design §3.1, the user's ruling of 2026-11-14): the head's lowest
+ * point lies d(θ) = k·cosθ + a·|sinθ| + e below the top hand at pitch θ, k = r + h + b, so the top hand rises
+ * R(θ) = d(min(θ, θ*)) − d(θ₀) from the finish's start, θ₀ its pitch there, and holds from d's peak θ* = −atan(a/k).
+ */
+export interface FinishRise {
+    readonly k: number;
+    readonly a: number;
+    readonly e: number;
+    readonly theta0: number;
+    readonly peak: number;
+}
+
+/**
+ * The head's lowest point below the top hand (m) at pitch θ, and its first and second derivatives in θ (flat push
+ * design §3.1): d = k·cosθ + a·|sinθ| + e, the head square to the shaft, in the swing plane.
+ */
+export function headDepth(
+    rise: Pick<FinishRise, "k" | "a" | "e">,
+    theta: number,
+): { d: number; d1: number; d2: number } {
+    const [s, c] = sinCos(theta);
+    const sign = theta < 0 ? -1 : 1;
+    return {
+        d: rise.k * c + rise.a * sign * s + rise.e,
+        d1: -rise.k * s + rise.a * sign * c,
+        d2: -rise.k * c - rise.a * sign * s,
+    };
+}
+
+/**
+ * The head's depth terms (flat push design §3.1) for `head` on a shaft gripped `radius` (m) from the socket: k = r + h + b,
+ * a and e, h the face's half-height, a box's core half-length L/2 − e and half-height h_z − e with e its edge radius, a
+ * cylinder's L/2 and ρ with e = 0.
+ */
+export function headDepthTerms(head: MalletHead, radius: number): Pick<FinishRise, "k" | "a" | "e"> {
+    const { shape } = head;
+    if (shape.kind === "cylinder") {
+        return { k: radius + 2 * shape.radius, a: head.length / 2, e: 0 };
+    }
+    const e = shape.edgeRadius;
+    return { k: radius + shape.halfHeight + (shape.halfHeight - e), a: head.length / 2 - e, e };
 }
 
 /**
@@ -400,14 +446,35 @@ export interface Push {
 export const HAND_EASE = 0.1;
 
 /**
+ * The finish's reference pace (m/s; flat push design §3.1, amendment 3): at or above it the hands ease over HAND_EASE
+ * and the carry runs the shape's followThrough; below it both stretch by FINISH_REF_PACE/V, up to FINISH_SHARE_MAX, so
+ * the top hand eases over the same distance and a gentle stroke's finish is long and gentle. An assumption: about the
+ * finish pace of the text-book full roll at power 1.0–1.1, where the rise was verified.
+ */
+export const FINISH_REF_PACE = 4;
+
+/**
+ * The share of HAND_EASE and of followThrough a finish from pace V (m/s) takes (flat push design §3.1, amendment 3):
+ * min(FINISH_SHARE_MAX, max(1, FINISH_REF_PACE/V)); 1 at rest, where nothing moves and the timings stay as they were.
+ */
+export function finishShare(V: number): number {
+    return V > 0 ? Math.min(FINISH_SHARE_MAX, Math.max(1, FINISH_REF_PACE / V)) : 1;
+}
+
+/** The longest a slow finish stretches, as a share of HAND_EASE and followThrough (flat push amendment 3). */
+export const FINISH_SHARE_MAX = 5;
+
+/**
  * The hands' finish (shapes design §8, ruling 14, superseding §2's point pendulum): the top hand stops pushing. From
  * the push's end `from` its pace along aim falls from `pace` (the push's finishSpeed, V) to rest on a minimum-jerk
- * ease over HAND_EASE, travelling V·HAND_EASE/2 on the hands' arc, and it holds from `apex`: `from` itself when V is 0.
+ * ease over `ease` (HAND_EASE·finishShare(V), flat push design amendment 3), travelling V·ease/2 on the hands' arc,
+ * and it holds from `apex`: `from` itself when V is 0.
  */
 export interface HandsFinish {
     readonly from: number;
     readonly pace: number;
     readonly apex: number;
+    readonly ease: number;
 }
 
 /** When `push`'s top hand has stopped and holds (s; shapes design §8, ruling 14); null when the push has no end. */
@@ -874,7 +941,7 @@ function travelTime(track: PreparedTrack, distance: number, advance: Advance | n
 }
 
 /** The push for `track` (design §4.1, §4.2; P2b.2b.2c.3a A2 item 8), its advance from the arc's. */
-function computePush(track: PreparedTrack): Push {
+function computePush(track: PreparedTrack, head: MalletHead): Push {
     const { arc } = track;
     // A shot's feet place the low point directly; without them, today's fraction of the push.
     const low = arc.lowPoint ?? arc.handArcLow * arc.handReach;
@@ -886,7 +953,8 @@ function computePush(track: PreparedTrack): Push {
     const pace = end === null ? 0 : pushTravel(track, origin, advance, end).v;
     const finishSpeed = pace < FINISH_REST_PACE ? 0 : pace;
     const finish = end === null ? null : handsFinishOf(track, low, end, finishSpeed);
-    const release = finish === null ? null : finish.apex + arc.followThrough;
+    // Flat push design amendment 3: a slower finish carries for a proportionally longer time.
+    const release = finish === null ? null : finish.apex + arc.followThrough * finishShare(finishSpeed);
     return {
         start: arc.contactAt,
         origin,
@@ -898,7 +966,109 @@ function computePush(track: PreparedTrack): Push {
         finishSpeed,
         finish,
         release,
-        freed: release === null ? null : release + HAND_EASE,
+        freed: release === null || finish === null ? null : release + finish.ease,
+        rise: finish === null ? null : finishRiseOf(track, head, finish.from),
+    };
+}
+
+/**
+ * The top hand's rise for `track`'s finish from `from` (flat push design §3.1), θ₀ the kinematic pitch there (the carry
+ * is 0 at the finish's start); null where θ₀ is at or past d's peak, so the head never falls below its push-end height.
+ */
+function finishRiseOf(track: PreparedTrack, head: MalletHead, from: number): FinishRise | null {
+    const terms = headDepthTerms(head, track.arc.radius);
+    const peak = -atan2(terms.a, terms.k);
+    const theta0 = kinematicPitch(track, from).theta;
+    return theta0 < peak ? { ...terms, theta0, peak } : null;
+}
+
+/**
+ * The pendulum's kinematic part at time t without the carry (flat push design §3.1): the held path, from the box's end
+ * state where the slope is only partly held (λ < 1), as plannedPendulum blends it. It never reads the free table,
+ * whose α reads the pivot, so the rise that reads it cannot recurse.
+ */
+function kinematicPitch(track: PreparedTrack, t: number): Swing {
+    const { arc } = track;
+    const tw = arc.arcStart + arc.window;
+    if (arc.slopeHold === 1) {
+        return heldPath(track, t, tw, track.thetaEnd, track.omegaEnd);
+    }
+    const w = arc.window;
+    const thetaEnd = track.thetaArc + track.omegaArc * w + 0.5 * arc.alpha * w * w;
+    return heldPath(track, t, tw, thetaEnd, track.omegaArc + arc.alpha * w);
+}
+
+/** Samples across the finish at which checkRiseMonotone reads the pitch. */
+const RISE_CHECKS = 64;
+
+/**
+ * Throws where `track`'s rise reads a pitch that falls anywhere in its finish (flat push design §3.1): R's closed form
+ * holds only while the kinematic pitch with the carry never decreases from the finish's start to the turn's rest.
+ */
+function checkRiseMonotone(track: PreparedTrack): void {
+    const push = track.push;
+    if (push === null || push.rise === null || push.finish === null || push.freed === null) {
+        return;
+    }
+    const from = push.finish.from;
+    const span = push.freed - from;
+    let last = push.rise.theta0;
+    for (let i = 1; i <= RISE_CHECKS; i++) {
+        const t = from + (span * i) / RISE_CHECKS;
+        const theta = kinematicPitch(track, t).theta + carryAt(track, t).theta;
+        if (theta < last - 1e-12) {
+            throw new RangeError(
+                `the finish's pitch falls from ${last} to ${theta} rad at ${t} s, so the top hand's rise (flat push ` +
+                    `design §3.1) has no closed form`,
+            );
+        }
+        last = theta;
+    }
+}
+
+/**
+ * The top hand's rise R (m) at time t with its rate and acceleration (flat push design §3.1): R(θ) = d(min(θ, θ*)) −
+ * d(θ₀) on the kinematic pitch with the carry (kinematicPitch, carryAt), so Ṙ = d′·θ̇ and R̈ = d″·θ̇² + d′·θ̈ before
+ * the peak θ* and 0 from it; 0 before the finish's start and with no rise.
+ */
+function riseAt(
+    track: PreparedTrack,
+    push: Push,
+    t: number,
+): { readonly z: number; readonly v: number; readonly a: number } {
+    const { rise, finish } = push;
+    if (rise === null || finish === null || !(t > finish.from)) {
+        return { z: 0, v: 0, a: 0 };
+    }
+    const base = headDepth(rise, rise.theta0).d;
+    const held = kinematicPitch(track, t);
+    const carry = carryAt(track, t);
+    const theta = held.theta + carry.theta;
+    let full: { z: number; v: number; a: number };
+    if (theta >= rise.peak) {
+        full = { z: headDepth(rise, rise.peak).d - base, v: 0, a: 0 };
+    } else {
+        const omega = held.omega + carry.omega;
+        const alpha = held.alpha + carry.alpha;
+        const { d, d1, d2 } = headDepth(rise, theta);
+        full = { z: d - base, v: d1 * omega, a: d2 * omega * omega + d1 * alpha };
+    }
+    // The held pitch still turns at the finish's start, so R's rate there is not 0: the rise comes in on the top hand's
+    // own minimum-jerk stop (handsFinishAt), g = x³(10 − 15x + 6x²) over its ease, so the hands' place, velocity and
+    // acceleration stay continuous (flat push design §3.1, amendment 1).
+    if (t >= finish.apex) {
+        return full;
+    }
+    const x = (t - finish.from) / (finish.apex - finish.from);
+    const v = 1 - x;
+    const g = x * x * x * (10 + x * (6 * x - 15));
+    const T = finish.apex - finish.from;
+    const dg = (30 * x * x * v * v) / T;
+    const ddg = (60 * x * v * (1 - 2 * x)) / (T * T);
+    return {
+        z: g * full.z,
+        v: dg * full.z + g * full.v,
+        a: ddg * full.z + 2 * dg * full.v + g * full.a,
     };
 }
 
@@ -909,13 +1079,14 @@ function computePush(track: PreparedTrack): Push {
  */
 function handsFinishOf(track: PreparedTrack, low: number, from: number, V: number): HandsFinish {
     const { handArcRadius: rho, handReach } = track.arc;
-    if (!(handReach + 0.5 * V * HAND_EASE - low < rho)) {
+    const ease = HAND_EASE * finishShare(V);
+    if (!(handReach + 0.5 * V * ease - low < rho)) {
         throw new RangeError(
             `the hands' finish from ${V} m/s would carry them past the top of the hands' arc ` +
                 `(handArcRadius ${rho} m): their stop lies at or beyond a quarter turn`,
         );
     }
-    return { from, pace: V, apex: V > 0 ? from + HAND_EASE : from };
+    return { from, pace: V, apex: V > 0 ? from + ease : from, ease };
 }
 
 /**
@@ -929,9 +1100,9 @@ function handsFinishAt(
 ): { readonly s: number; readonly ds: number; readonly dds: number } {
     const V = finish.pace;
     if (t >= finish.apex) {
-        return { s: 0.5 * V * HAND_EASE, ds: 0, dds: 0 };
+        return { s: 0.5 * V * finish.ease, ds: 0, dds: 0 };
     }
-    const T = HAND_EASE;
+    const T = finish.ease;
     const x = (t - finish.from) / T;
     const v = 1 - x;
     const g = x * x * x * (10 + x * (6 * x - 15));
@@ -959,7 +1130,7 @@ function carryAt(track: PreparedTrack, t: number): Swing {
         const { s, ds, dds } = handsFinishAt(finish, t);
         return { theta: (V * (t - finish.from) - s) / r, omega: (V - ds) / r, alpha: (0 - dds) / r };
     }
-    const T = HAND_EASE;
+    const T = finish.ease;
     const carried = V * (0.5 * (finish.apex - finish.from) + (Math.min(t, push.release) - finish.apex));
     if (t <= push.release) {
         return { theta: carried / r, omega: V / r, alpha: 0 };
@@ -1040,10 +1211,19 @@ function carryPivot(track: PreparedTrack, push: Push, t: number): Motion {
         dds = stopped ? 0 : acc;
     }
     const height = arcHeight(track, push, s, ds, dds);
+    if (push.rise === null) {
+        return {
+            P: add(add(push.origin, scale(aim, s)), vec3(0, 0, height.z)),
+            V: add(scale(aim, ds), vec3(0, 0, height.v)),
+            A: add(scale(aim, dds), vec3(0, 0, height.a)),
+        };
+    }
+    // The top hand rises as the head turns about it (flat push design §3.1), on top of the arc's own height.
+    const up = riseAt(track, push, t);
     return {
-        P: add(add(push.origin, scale(aim, s)), vec3(0, 0, height.z)),
-        V: add(scale(aim, ds), vec3(0, 0, height.v)),
-        A: add(scale(aim, dds), vec3(0, 0, height.a)),
+        P: add(add(push.origin, scale(aim, s)), vec3(0, 0, height.z + up.z)),
+        V: add(scale(aim, ds), vec3(0, 0, height.v + up.v)),
+        A: add(scale(aim, dds), vec3(0, 0, height.a + up.a)),
     };
 }
 
@@ -1121,6 +1301,58 @@ function computeFree(track: PreparedTrack, head: MalletHead, gravity: number, pu
     return free;
 }
 
+/**
+ * `track` with its lift's push correction withdrawn from `at` (s; flat push design, amendment 4, 2026-11-14). The
+ * correction answers the balls' load on the face, which lifts it, so once the load has gone the hands ease a lowering
+ * off: its value there eases to 0 by the minimum-jerk ramp over the pendulum's window (liftAt), and the finish part
+ * runs on. A raise answers no load from the balls and stays. The follow-through calls it from the impact's end, or the
+ * push's end if later; practice's parts are each continuous there (nextLift). The free table is re-tabulated from
+ * `at`, its samples before `at` kept as they are. Unchanged without a push, without a lift in parts (practice's),
+ * with no lowering at `at`, or once released.
+ */
+export function releaseLift(track: PreparedTrack, at: number): PreparedTrack {
+    const { lift, window } = track.arc;
+    if (track.push === null || lift === undefined || lift.parts === undefined || lift.release !== undefined) {
+        return track;
+    }
+    const finish = liftAt({ from: lift.from, step: lift.step, values: lift.parts.finish }, at).z;
+    const held = liftAt(lift, at).z - finish;
+    if (!(held < 0)) {
+        return track;
+    }
+    const released: PreparedTrack = {
+        ...track,
+        arc: { ...track.arc, lift: { ...lift, release: { at, held, window } } },
+    };
+    return track.free === null ? released : { ...released, free: retabulate(released, track.free, at) };
+}
+
+/**
+ * `free` re-tabulated for `track` from `at` (s) on, as computeFree steps it: the samples whose step reads the pivot
+ * only before `at` are kept, so the table is unchanged there to the bit, and its length is kept.
+ */
+function retabulate(track: PreparedTrack, free: FreePendulum, at: number): FreePendulum {
+    const { arc } = track;
+    const n = free.theta.length - 1;
+    const k = Math.min(Math.max(Math.ceil((at - free.tw) / FREE_STEP), 0), n);
+    const theta = free.theta.slice(0, k + 1);
+    const omega = free.omega.slice(0, k + 1);
+    const table: FreePendulum = { ...free, theta, omega };
+    const end = arc.arcStart + arc.window;
+    const pulsed = arc.alpha !== 0;
+    let th = theta[k] as number;
+    let om = omega[k] as number;
+    for (let i = k; i < n; i++) {
+        const t = free.tw + i * FREE_STEP;
+        const a = freeAlpha(track, table, th, t);
+        om += (pulsed && t < end ? a + pulseAlpha(arc, t) : a) * FREE_STEP;
+        th += om * FREE_STEP;
+        theta.push(th);
+        omega.push(om);
+    }
+    return table;
+}
+
 /** θ and ω interpolated in `free`'s table at t (s, from its start on), clamped to its last sample beyond it. */
 function tableAt(free: FreePendulum, t: number): { readonly theta: number; readonly omega: number } {
     const x = (t - free.tw) / FREE_STEP;
@@ -1187,7 +1419,8 @@ export function prepareTrack(drive: TrackDrive, head: MalletHead, gravity: numbe
     // Hands that reach forward push through, at the plan's pace plus any advance's (P2b.2b.2c.3a A2 item 8); a push of
     // length 0 is none, and the planned pivot rests along aim from contact.
     const reached: PreparedTrack =
-        arc.handReach > 0 ? { ...plain, push: computePush(plain) } : { ...plain, reach: restingReach(plain) };
+        arc.handReach > 0 ? { ...plain, push: computePush(plain, head) } : { ...plain, reach: restingReach(plain) };
+    checkRiseMonotone(reached);
     // A fully held slope (λ = 1) has no free pendulum to tabulate (P2b.2b.2c.3a design §4.1).
     let free: PreparedTrack = reached;
     if (arc.slopeHold < 1) {

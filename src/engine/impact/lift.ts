@@ -27,13 +27,42 @@ function slopeAt(values: readonly number[], step: number, i: number): number {
     return ((values[i + 1] as number) - (values[i - 1] as number)) / (2 * step);
 }
 
+/** The minimum-jerk ramp from 0 to 1 over s in [0, 1], 10s³ − 15s⁴ + 6s⁵, held at its ends outside. */
+export function ramp(s: number): number {
+    if (s <= 0) {
+        return 0;
+    }
+    if (s >= 1) {
+        return 1;
+    }
+    return s * s * s * (10 - 15 * s + 6 * s * s);
+}
+
 /**
  * The lift at time t (design §4): 0 before `from`, the Catmull–Rom fit between samples, and past the last sample its
  * value with v = a = 0. A first value other than 0 steps at `from`; practice's lift starts at 0 (its ramp w is 0
- * there).
+ * there). From a release's `at` (flat push design, amendment 4), the push's correction `held` eases to 0 by the
+ * minimum-jerk ramp over the release's window, and the finish part (0 without parts) is read by the same fit.
  */
 export function liftAt(lift: Lift, t: number): Lowering {
-    const { from, step, values } = lift;
+    const { release } = lift;
+    if (release === undefined || t < release.at) {
+        return fitAt(lift.from, lift.step, lift.values, t);
+    }
+    const finish = lift.parts === undefined ? AT_REST : fitAt(lift.from, lift.step, lift.parts.finish, t);
+    const w = release.window;
+    const s = (t - release.at) / w;
+    if (s >= 1) {
+        return finish;
+    }
+    const z = release.held * (1 - ramp(s));
+    const v = (0 - release.held * 30 * s * s * (1 - s) * (1 - s)) / w;
+    const a = (0 - release.held * 60 * s * (1 - s) * (1 - 2 * s)) / (w * w);
+    return { z: z + finish.z, v: v + finish.v, a: a + finish.a };
+}
+
+/** The Catmull–Rom fit of `values`, sampled every `step` from `from`, at t (liftAt without a release). */
+function fitAt(from: number, step: number, values: readonly number[], t: number): Lowering {
     if (t < from) {
         return AT_REST;
     }

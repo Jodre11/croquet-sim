@@ -119,6 +119,7 @@ import {
     handsApex,
     handsAt,
     holdPendulum,
+    releaseLift,
     releaseOf,
     newGripState,
     pathAt,
@@ -1072,7 +1073,7 @@ export function integrateStroke(setup: ImpactSetup, options: ImpactOptions = {},
     const names = regionsOf(head.shape);
     // Only a push senses the balls' resistance and latches their first departure (P2b.2b.2c.3a A2 item 5).
     const pushed = plan.kind === "track" && plan.push !== null;
-    const response = pushed ? pushResponse(plan.hands, dt) : 0;
+    const response = plan.kind === "track" && plan.push !== null ? pushResponse(plan.hands, dt) : 0;
     const pairs: PairState[] = pairList(
         ids,
         hasTurf,
@@ -1417,7 +1418,7 @@ function continueStroke(
     // A stop holds its mallet still after the check (user decision 2026-10-07; Riches: "NO FOLLOW-THROUGH"): from the
     // check's window's end, or the impact's end if later, the pendulum is held and the hands grip the head firmly.
     const holdFrom = kind === "check" ? Math.max(plan.arc.arcStart + plan.arc.window, first * dt) : Infinity;
-    const path = kind === "check" ? holdPendulum(plan, holdFrom) : plan;
+    let path = kind === "check" ? holdPendulum(plan, holdFrom) : plan;
     // The cap counts from the push's release, where the finish starts (P2b.2b.2c.3b.1 design §5; shapes design §8,
     // ruling 12), so that it never cuts a planned finish short; from contact without a push, or for one with no end.
     const capFrom = plan.push !== null && plan.push.release !== null ? plan.push.release : plan.arc.contactAt;
@@ -1445,6 +1446,21 @@ function continueStroke(
         if (t >= cap) {
             flags.push("follow-cap");
             break;
+        }
+        // The push's correction of the lift answers the balls' load on the face (flat push design, amendment 4,
+        // 2026-11-14). The impact's end is the integrator's judgement that the balls are done with the face (a gap
+        // between taps is not), so from it, or from the push's end if later, the correction is withdrawn, once.
+        if (
+            plan.push !== null &&
+            plan.push.end !== null &&
+            t >= plan.push.end &&
+            plan.arc.lift?.release === undefined
+        ) {
+            const released = releaseLift(plan, t);
+            if (released !== plan) {
+                plan = released;
+                path = kind === "check" ? holdPendulum(plan, holdFrom) : plan;
+            }
         }
         // The impact loop's hands, head–turf and advance, kept apart: sharing them would reorder the impact's sums.
         const hand = handLoad(path, state, head, t, grip, dt, t >= holdFrom);

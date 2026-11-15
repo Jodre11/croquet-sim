@@ -17,6 +17,7 @@ import {
     HAND_COUPLING,
     handsApex,
     HAND_EASE,
+    finishShare,
     handsAt,
     letGo,
     pathAt,
@@ -533,7 +534,10 @@ describe("the top hand stops and the bottom hand carries the head on (shapes des
         const push = track.push as Push;
         const apex = handsApex(push) as number;
         expect(push.end).not.toBeNull();
-        expect([push.release, push.freed, releaseOf(track)]).toEqual([apex, apex + HAND_EASE, apex]);
+        // The let-go stretches below FINISH_REF_PACE (flat push amendment 3).
+        const ease = HAND_EASE * finishShare(push.finishSpeed);
+        expect([push.release, releaseOf(track)]).toEqual([apex, apex]);
+        expect(push.freed as number).toBeCloseTo(apex + ease, 12);
         expect(track.finish).toBeNull();
     });
 
@@ -541,8 +545,10 @@ describe("the top hand stops and the bottom hand carries the head on (shapes des
         const track = trackOf(0.35);
         const push = track.push as Push;
         const apex = handsApex(push) as number;
-        expect(push.release).toBe(apex + 0.35);
-        expect(push.freed).toBe(apex + 0.35 + HAND_EASE);
+        // The carry and the let-go both stretch below FINISH_REF_PACE (flat push amendment 3).
+        const share = finishShare(push.finishSpeed);
+        expect(push.release as number).toBeCloseTo(apex + 0.35 * share, 12);
+        expect(push.freed as number).toBeCloseTo(apex + (0.35 + HAND_EASE) * share, 12);
         expect(letGo(push, push.release as number).share).toBe(0);
         expect(letGo(push, push.freed as number).share).toBe(1);
         // Held from there: the shaft's turn stays at rest.

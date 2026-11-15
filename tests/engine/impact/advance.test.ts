@@ -10,6 +10,7 @@ import {
     type Advance,
     type PreparedTrack,
     HAND_EASE,
+    finishShare,
     handsApex,
     type Push,
     releaseOf,
@@ -220,7 +221,8 @@ describe("the hands' advance (design §6, §8.1.5)", () => {
             for (let k = 0; k <= 2000; k++) {
                 most = Math.max(most, along(contactAt + k * 1e-3));
             }
-            const apex = handReach + 0.5 * push.finishSpeed * HAND_EASE;
+            // The top hand's stop, stretched below FINISH_REF_PACE (flat push amendment 3).
+            const apex = handReach + 0.5 * push.finishSpeed * HAND_EASE * finishShare(push.finishSpeed);
             return { most, last: along(contactAt + 2), atEnd: along(push.end as number), apex };
         };
         // Numerical, not physical: the advance's closed form reaches handReach to rounding.
@@ -361,8 +363,10 @@ describe("the push on every stroke (P2b.2b.2c.3a A2 item 8)", () => {
         expect(finishKind(track)).toBe("swing");
         const push = track.push as Push;
         const release = releaseOf(track) as number;
-        expect(release).toBe((handsApex(push) as number) + track.arc.followThrough);
-        expect(push.freed).toBe(release + HAND_EASE);
+        // Both stretched below FINISH_REF_PACE (flat push amendment 3).
+        const share = finishShare(push.finishSpeed);
+        expect(release).toBeCloseTo((handsApex(push) as number) + track.arc.followThrough * share, 12);
+        expect(push.freed as number).toBeCloseTo(release + HAND_EASE * share, 12);
         const { result, follow } = run(setup);
         expect(result.release).toBeUndefined();
         expect(follow.finish).toBeGreaterThanOrEqual(push.freed as number);
@@ -376,7 +380,7 @@ describe("the push on every stroke (P2b.2b.2c.3a A2 item 8)", () => {
         const without = trackOf(stroke({}, {}, "half-roll"));
         const withAdvance = trackOf(stroke({}, { advance: 0 }, "half-roll"));
         const push = withAdvance.push as Push;
-        const apex = withAdvance.arc.handReach + 0.5 * push.finishSpeed * HAND_EASE;
+        const apex = withAdvance.arc.handReach + 0.5 * push.finishSpeed * HAND_EASE * finishShare(push.finishSpeed);
         expect(push.end as number).toBeLessThan((without.push as Push).end as number);
         let most = 0;
         for (let k = 0; k <= 2000; k++) {

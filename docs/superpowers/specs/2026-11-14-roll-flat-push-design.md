@@ -288,6 +288,48 @@ Still open after amendment 3:
   below its plan.
 - Off the face at 1.25+ (§3.2).
 
+**Amendment 4, practice's release (2026-11-14/15).** Diagnosis of the grounding at 1.05–1.10:
+- With the hands 31° ahead, the face tilts down onto the striker's ball and rides up it. The balls push the face up
+  with about 400 N in the first 5 ms, then 50–90 N for about 40 ms; the hands press down with 40–135 N.
+- So the head rises 50–70 mm off its plan during the push. The lean does not slip.
+- Practice learns a lowering to hold the head down (as much as −67 mm). Under the 2026-10-31 rule it is carried
+  through the finish. Once the ball has gone nothing holds the head up, so it grounds at about 150–200 ms.
+
+The law: the push's correction answers the balls' load on the face, so once the balls are done with the face the hands
+ease a lowering off.
+- **Parts.** Practice stores its lift as a push part P and a finish part F (`Lift.parts.finish`). Over the finish the
+  total is unchanged from the 2026-10-31 rule, −w·(max(e(T), 0) + min(e, 0)). P carries −w·e(T) and F only the drops
+  beyond T's, so each part is continuous at T.
+- **When.** From the impact's end, or the push's end if later (`releaseLift`, called in the follow-through). The
+  impact's end is the integrator's own judgement that the balls are done with the face.
+- **How.** P's value there eases to 0 by the minimum-jerk ramp over the pendulum's window; F runs on. A raise
+  (P ≥ 0) answers no load from the balls and stays. The free table is re-tabulated from the release.
+
+Tried and rejected on the way:
+- **Release predicted from the previous pass's last face contact.** The previous pass had less lowering, so its ball
+  left earlier. The fade then began with the ball still on the face, and below power 1 the clean cells moved (full
+  roll 0.5: 3.29 → 2.16 m).
+- **Release at the first step without face contact.** The face taps the ball, and a gap between taps fired it: pass
+  roll 0.8 has a 1.4 ms gap at the push's end with the ball on the face until 191 ms. Adding the end rule's
+  look-ahead did not help, because the tapped ball briefly outruns the head. Both went `impact-off-face`.
+- **Parts split as P = −w·max(e(T), 0) and F = −w·min(e, 0).** Each part steps at T when e(T) < 0. A release at T
+  (the full roll at 0.35, whose impact ends before its push) stepped the plan 18 mm in 2 ms and threw the head.
+
+Results, stage 1, 10 s lawn, against amendment 3:
+- Every cell from 0.35 to 0.8 is unchanged on all three rolls, at both holds.
+- Full roll at the found hold: 1.05 is clean (14.61 m, ratio 1.069), and so is 1.10 (16.98 m, 1.219). At the
+  fitted hold, 1.05 is still `follow-turf-yield` and 1.10 is `turf-yield`.
+- Pass roll: 1.05 and 1.10 are clean at both holds.
+- At 1.0 the found-hold cells move: full roll 8.68 → 8.38 m, ratio 1.247 → 1.419; pass roll 8.52 → 9.22 m. The full
+  roll's fitted-hold cell goes 7.82 → 6.88 m.
+- Half roll: unchanged.
+
+Still open after amendment 4:
+- Off the face at 1.25+ (§3.2), and the hands' share of holding the face down (press down, or ease the lean).
+- The user's view (2026-11-15): on the rolls, the full roll most, the flick at release (the arc and the bottom hand's
+  push-through, with the top hand's rise correlated) is muted. Amendment 3 stretches a slow finish so that its turn
+  no longer falls with power.
+
 **Visual.** The viewer's side view at powers 0.8, 1.1 and 1.25, for the user to judge against the agreed sketch. Model
 output is not evidence that the motion is right; the user's judgement is.
 

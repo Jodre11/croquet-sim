@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { liftAt } from "../../../src/engine/impact/lift";
-import { handsAt, prepareTrack } from "../../../src/engine/impact/track";
+import { handsAt, prepareTrack, releaseLift } from "../../../src/engine/impact/track";
 import { validateImpact } from "../../../src/engine/impact/simulateImpact";
 import type { ContactState, Lift, SwingArc, TrackDrive } from "../../../src/engine/impact/types";
 import type { World } from "../../../src/engine/types";
@@ -51,6 +51,59 @@ describe("the lift (P2b.2b.2c.3b.1 design §4)", () => {
         // The end slopes are 0: the pace at the first and last samples is 0.
         expect(liftAt(lift, 0.1).v).toBe(0);
         expect(Math.abs(liftAt(lift, 0.103 - 1e-12).v)).toBeLessThan(1e-6);
+    });
+
+    it("a release eases the push's correction off and keeps the finish part (flat push amendment 4)", () => {
+        const from = 0.1;
+        const step = 0.001;
+        const finish = [0, 0, 0.001, 0.002, 0.002];
+        const lift: Lift = { from, step, values: [0, -0.01, -0.009, -0.008, -0.008], parts: { finish } };
+        const at = 0.1025;
+        const window = 0.004;
+        const held = liftAt(lift, at).z - liftAt({ from, step, values: finish }, at).z;
+        const released: Lift = { ...lift, release: { at, held, window } };
+        // Before the release it reads as before; at it, continuous; past its window, the finish part alone.
+        expect(liftAt(released, at - 1e-6)).toEqual(liftAt(lift, at - 1e-6));
+        expect(Math.abs(liftAt(released, at).z - liftAt(lift, at).z)).toBeLessThan(1e-15);
+        expect(liftAt(released, at + window)).toEqual(liftAt({ from, step, values: finish }, at + window));
+        // Halfway the ease is half, 1 − ramp(½) = ½, its pace −held·30/16/window.
+        const mid = at + window / 2;
+        const f = liftAt({ from, step, values: finish }, mid);
+        expect(Math.abs(liftAt(released, mid).z - (0.5 * held + f.z))).toBeLessThan(1e-15);
+        expect(Math.abs(liftAt(released, mid).v - ((0 - held * 30) / 16 / window + f.v))).toBeLessThan(1e-12);
+    });
+
+    it("releaseLift withdraws a practised lift's push correction once, the table kept before it", () => {
+        const { contact, lawn } = fullRoll();
+        const drive = contact.drive as TrackDrive;
+        const from = drive.arc.contactAt;
+        const values = Array<number>(200).fill(-0.01);
+        const lift: Lift = { from, step: 0.001, values, parts: { finish: values.map(() => 0) } };
+        const track = prepareTrack({ ...drive, arc: { ...drive.arc, lift } }, contact.head, lawn.gravity);
+        const at = from + 0.05;
+        const released = releaseLift(track, at);
+        expect(released.arc.lift?.release).toEqual({ at, held: -0.01, window: drive.arc.window });
+        expect(releaseLift(released, at + 0.01)).toBe(released);
+        // A raise answers no load from the balls: it stays.
+        const raised = prepareTrack(
+            { ...drive, arc: { ...drive.arc, lift: { ...lift, values: values.map(() => 0.01) } } },
+            contact.head,
+            lawn.gravity,
+        );
+        expect(releaseLift(raised, at)).toBe(raised);
+        // Without parts (a lift not practised) or a push, nothing is released.
+        const plain = prepareTrack(
+            { ...drive, arc: { ...drive.arc, lift: { from, step: 0.001, values } } },
+            contact.head,
+            lawn.gravity,
+        );
+        expect(releaseLift(plain, at)).toBe(plain);
+        // The hands' plan before the release is unchanged; past its window it is 10 mm higher.
+        expect(handsAt(released, at - 0.001)).toEqual(handsAt(track, at - 0.001));
+        const late = at + drive.arc.window + 0.01;
+        expect(Math.abs(handsAt(released, late).position.z - handsAt(track, late).position.z - 0.01)).toBeLessThan(
+            1e-12,
+        );
     });
 
     it("pivotAt carries the lift", () => {

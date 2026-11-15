@@ -106,6 +106,53 @@ describe("practice strokes (P2b.2b.2c.3b.1 design §4)", () => {
         expect(Math.abs((after.values[3] as number) - z(after))).toBeLessThan(1e-11);
     });
 
+    it("the finish part corrects drops alone (flat push amendment 4)", () => {
+        // T at 1.5 ms: before T −w·e; from T the carried −w·max(e(T), 0) plus the finish part's −w·min(e, 0), which
+        // parts.finish holds alone (0 before T) so that the stroke can withdraw the rest (releaseLift).
+        const from = 0.2;
+        const step = 0.001;
+        const window = 0.002;
+        const mm = 0.001;
+        const end = from + 0.0015;
+        const error = [0, 1, 2, -1, 3, -4, 2, -5].map((e) => e * mm);
+        const carried = 1.5 * mm;
+        const w = (i: number): number => ramp(Math.min((i * step) / window, 1));
+        const finish = error.map((e, i) => (from + i * step < end ? 0 : -w(i) * Math.min(e, 0)));
+        const expected = error.map((e, i) =>
+            from + i * step < end ? -w(i) * e : -w(i) * carried + (finish[i] as number),
+        );
+        const lift = nextLift(null, error, from, step, window, end);
+        lift.values.forEach((z, i) => expect(Math.abs(z - (expected[i] as number)), `sample ${i}`).toBeLessThan(1e-15));
+        lift.parts?.finish.forEach((z, i) =>
+            expect(Math.abs(z - (finish[i] as number)), `finish ${i}`).toBeLessThan(1e-15),
+        );
+        // A pass with no error keeps the previous pass's lift and its finish part.
+        const zeros = error.map(() => 0);
+        const again = nextLift(lift, zeros, from, step, window, end);
+        again.values.forEach((z, i) =>
+            expect(Math.abs(z - (lift.values[i] as number)), `sample ${i}`).toBeLessThan(1e-15),
+        );
+        // The finish part is read back through the fit, so to within rounding.
+        again.parts?.finish.forEach((z, i) =>
+            expect(Math.abs(z - (finish[i] as number)), `finish ${i}`).toBeLessThan(1e-15),
+        );
+        // A drop at T: the push part carries it, the finish part only the drops beyond it, so each part is continuous
+        // at T and the sum is the amended rule's, −w·(max(e(T), 0) + min(e, 0)).
+        const sunk = [0, -1, -2, -3, -1, -4].map((e) => e * mm);
+        const sunkLift = nextLift(null, sunk, from, step, window, end);
+        const eT = -1.5 * mm;
+        sunk.forEach((e, i) => {
+            const t = from + i * step;
+            const total = t < end ? -w(i) * e : -w(i) * (Math.max(eT, 0) + Math.min(e, 0));
+            expect(Math.abs((sunkLift.values[i] as number) - total), `sunk ${i}`).toBeLessThan(1e-15);
+            const part = t < end ? 0 : -w(i) * (Math.min(e, 0) - eT);
+            expect(Math.abs((sunkLift.parts?.finish[i] as number) - part), `sunk finish ${i}`).toBeLessThan(1e-15);
+        });
+        // A release the last pass played is the stroke's, not the plan's: the next pass learns from the plan alone.
+        const played = { ...lift, release: { at: from + 0.004, held: 1 * mm, window } };
+        expect(nextLift(played, zeros, from, step, window, end)).toEqual(again);
+    });
+
     it("an unconverged stroke reports its miss", () => {
         // The half roll in the band, its striker's ball moved 40 mm across the line, beyond the head's half-width
         // (28.6 mm): the head's side meets the ball (impact-off-face). The lift is vertical, so no pass can bring the

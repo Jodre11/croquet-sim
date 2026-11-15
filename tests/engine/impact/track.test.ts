@@ -25,6 +25,7 @@ import {
     type PathPoint,
     type PreparedTrack,
     HAND_EASE,
+    finishShare,
     handsApex,
     type Push,
 } from "../../../src/engine/impact/track";
@@ -100,13 +101,18 @@ const TIMED: SwingArc = {
 const prepare = (arc: SwingArc, hands: Hands = TEST_HANDS): PreparedTrack =>
     prepareTrack(trackDrive(arc, TEST_COUPLING, hands), TEST_HEAD, STANDARD_GRAVITY);
 
+/** How long the top hand's stop takes from pace V (flat push amendment 3): HAND_EASE, stretched below FINISH_REF_PACE. */
+function easeOf(push: Push): number {
+    return HAND_EASE * finishShare(push.finishSpeed);
+}
+
 /**
  * Where the top hand stops on `track`'s push (shapes design §8, ruling 14): travel along aim from the push's origin,
- * the push length plus V·HAND_EASE/2, V the push's pace at its end.
+ * the push length plus V·ease/2, V the push's pace at its end and ease its stop's duration (easeOf).
  */
 function apexTravel(track: PreparedTrack): number {
     const push = track.push as Push;
-    return track.arc.handReach + 0.5 * push.finishSpeed * HAND_EASE;
+    return track.arc.handReach + 0.5 * push.finishSpeed * easeOf(push);
 }
 
 /** Time before, into and after a window starting at `start` lasting `window`. */
@@ -1282,14 +1288,17 @@ describe("the hands' finish (shapes design §8, ruling 14)", () => {
         const track = pushed(0.3);
         const push = track.push as Push;
         const end = push.end as number;
-        expect(handsApex(push)).toBe(end + HAND_EASE);
+        // At 2 m/s the stop stretches by FINISH_REF_PACE/V (flat push amendment 3).
+        const ease = easeOf(push);
+        expect(ease).toBeGreaterThan(HAND_EASE);
+        expect(handsApex(push)).toBe(end + ease);
         let previous = along(track, end).v;
         for (let i = 1; i <= 20; i++) {
-            const v = along(track, end + (HAND_EASE * i) / 20).v;
+            const v = along(track, end + (ease * i) / 20).v;
             expect(v, `step ${i}`).toBeLessThanOrEqual(previous);
             previous = v;
         }
-        expect(Math.abs(along(track, end + HAND_EASE).s - apexTravel(track))).toBeLessThan(1e-12);
+        expect(Math.abs(along(track, end + ease).s - apexTravel(track))).toBeLessThan(1e-12);
     });
 
     it("fails a finish that would carry the hands past the arc's quarter turn", () => {

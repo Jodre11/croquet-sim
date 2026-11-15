@@ -119,14 +119,18 @@ describe("the found firmness (firmness design §5)", () => {
         expect(findFirmness(setup, WORLD)).toEqual({ sigma: 0, firmness: 0, klass: null });
     });
 
-    it("finds no hold where the only admissible play's head rode over the ball (plan B-d8)", () => {
-        // Hands-from-lean design §3: on the law's hands this plan trips the grip limit at firmness 0 (superhuman), so
-        // the full roll's hands before the law (top 0.61 m, bottom 0.3 m) keep the head riding over the ball; the
-        // search then ends off the face (was superhuman).
-        const setup = mapSetup("full-roll", textBook("full-roll"), 2, { stance: OLD_ROLL_HANDS });
-        expect(playedClass(at(setup, 0), WORLD)).toEqual({ klass: "mishit", reason: HEAD_OVER_BALL });
-        expect(findFirmness(setup, WORLD)).toMatchObject({ sigma: null, klass: "unpractised" });
-    });
+    it(
+        "finds no hold where the only admissible play's head rode over the ball (plan B-d8)",
+        { timeout: 120_000 },
+        () => {
+            // Hands-from-lean design §3: on the law's hands this plan trips the grip limit at firmness 0 (superhuman), so
+            // the full roll's hands before the law (top 0.61 m, bottom 0.3 m) keep the head riding over the ball; the
+            // search then ends off the face (was superhuman).
+            const setup = mapSetup("full-roll", textBook("full-roll"), 2, { stance: OLD_ROLL_HANDS });
+            expect(playedClass(at(setup, 0), WORLD)).toEqual({ klass: "mishit", reason: HEAD_OVER_BALL });
+            expect(findFirmness(setup, WORLD)).toMatchObject({ sigma: null, klass: "unpractised" });
+        },
+    );
 
     it("finds the least hold of a plan that slips without one, within the halved step", { timeout: 120_000 }, () => {
         // Gate 1: the full roll's text book at power 1 is off its point at firmness 0 and holds at 0.5.
@@ -156,9 +160,11 @@ describe("the found firmness (firmness design §5)", () => {
     it("classes a slow full roll held firm, its head riding onto the ball to the cap, as off the face", () => {
         // Gate 1: at power 0.8 a hold between the soft holds that slip and the firm that hold rides the head off the
         // face onto the striker's ball, pressing it 2.4 mm into the turf to the 450 ms cap. The handover threw there.
-        // Hands-from-lean design §3: on the law's hands the hold between them is 0.1875 (was 0.2375).
+        // Hands-from-lean design §3: on the law's hands the hold between them is 0.1875 (was 0.2375). Flat push design,
+        // amendments 3 and 4: the gentler finish and practice's withdrawn push correction hold the head on the face
+        // from 0.175, so the hold off it is 0.1625.
         const setup = mapSetup("full-roll", textBook("full-roll"), 0.8);
-        expect(playedClass(at(setup, 0.1875), WORLD)).toEqual({ klass: "unpractised", reason: "impact-off-face" });
+        expect(playedClass(at(setup, 0.1625), WORLD)).toEqual({ klass: "unpractised", reason: "impact-off-face" });
     });
 
     it("lets a planning rejection propagate (Review Focus 5)", () => {

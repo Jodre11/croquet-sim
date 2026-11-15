@@ -246,6 +246,29 @@ export interface Lift {
     readonly from: number;
     readonly step: number;
     readonly values: readonly number[];
+    /** Practice's finish part of the lift (nextLift); absent elsewhere. */
+    readonly parts?: LiftParts;
+    /** Where the stroke withdrew the push's correction (releaseLift); absent until then. */
+    readonly release?: LiftRelease;
+}
+
+/**
+ * Practice's lift in parts (nextLift; flat push design, amendment 4): `finish` (m, on the lift's samples) is the
+ * finish's correction of drops; the rest of the lift is the push's correction, which the stroke withdraws once the face
+ * no longer carries a ball (releaseLift).
+ */
+export interface LiftParts {
+    readonly finish: readonly number[];
+}
+
+/**
+ * The push's correction withdrawn (flat push design, amendment 4): from `at` (s) its value `held` (m) eases to 0 by the
+ * minimum-jerk ramp over `window` (s); the finish part runs on.
+ */
+export interface LiftRelease {
+    readonly at: number;
+    readonly held: number;
+    readonly window: number;
 }
 
 /**
