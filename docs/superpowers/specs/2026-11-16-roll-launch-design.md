@@ -252,10 +252,11 @@ pass roll (1.6605 against 1.6668 m/s); no full roll in a scanned grid rides over
 B-d8 and least-hold cases are held as expected failures; the endless carry sinks past HEAD_DEEP_LIMIT again; the drive's
 and single-ball's no-push finishes move (0.318 to 0.288 s; 0.283 to 0.284 s), their balls unchanged.
 
-### 3.1f Amendment 8 (to design): the striker's ball's topspin
+### 3.1f Amendment 8 (2026-11-16): the striker's ball's topspin
 
-The user chose option A (2026-11-16): refit the face's friction on C3F's Ω₁, then §3.2's fit. Target: Gugan's Ω₁ at the read in the rolls (Table 6), with the full and pass rolls'
-L2/L1 back in band and the half rolls' kept, against the probe's rows.
+The user chose option A (2026-11-16): refit the face's friction on C3F's Ω₁, then §3.2's fit. Target: Gugan's Ω₁ at
+the read in the rolls (Table 6), with the full and pass rolls' L2/L1 back in band and the half rolls' kept, against the
+probe's rows.
 
 **What sets Ω₁.** A probe split ball 1's gains in R·ω (along the roll axis) and in speed along aim, each step, by the
 contacts touching it, to 20 ms, as fractions of U (2026-11-16, on 566a21b):
@@ -264,15 +265,15 @@ contacts touching it, to 20 ms, as fractions of U (2026-11-16, on 566a21b):
 |---|---|---|---|---|
 | C3F μ_bb 0.06 | +0.33 | −0.10 | +0.17 | 74 / 93 |
 | C3F μ_bb 0.16 | +0.52 | −0.33 | +0.23 | 82 / 93 |
-| C10F μ_bb 0.06 | +0.21 (37 ms on the face) | −0.06 | −0.01 | 24 / 90 |
-| C10P μ_bb 0.06 | +0.36 (15 ms on the face) | −0.09 | −0.06 | 42 / 87 |
+| C10F μ_bb 0.06 | +0.21 (18 ms on the face) | −0.06 | −0.01 | 24 / 90 |
+| C10P μ_bb 0.06 | +0.36 (8 ms on the face) | −0.09 | −0.06 | 42 / 87 |
 
 Three findings follow.
 - The balls' friction takes topspin from ball 1; it does not give it. The rise in Ω₁ at μ_bb 0.16 comes from the changed
   sequence of face contacts afterwards. The lead in §3.1e's known gaps is wrong.
-- The spin is built by the turf while the face pushes the ball along it, and the face's friction works against it: the
-  face moves forward and down past a ball whose back surface, rolling, moves up. Gugan sees the ball "rolling/sliding up"
-  the face in C1F (§10.2), so it slides there.
+- The spin is built by the turf while the face pushes the ball along it, and the face's friction works against it:
+  the face moves forward and down past a ball whose back surface, rolling, moves up. Gugan sees the ball
+  "rolling/sliding up" the face in C1F (§10.2), so it slides there.
 - Ω₁ is not the whole gap. The distance follows the rolling speed v_r = w₁(5 + 2Ω₁)/7 (his (D1)). The model's v_r/U in
   the full and pass rolls is 0.41–0.47 against his 0.50–0.58; w₁ falls short as well.
 
@@ -299,10 +300,40 @@ Three findings follow.
     ride on the face stays.
 - **B. Turf friction for a pressed ball.** Gugan's own roll estimate is μ_s ≈ 1.0 (§10.2); the reference holds it as the
   upper bound and a held-out check.
-  - It brings Ω₁ to 82–98% in the full and pass rolls, but not w₁. v_r stays at 0.44–0.47, so the ratios stay out of band.
+  - It brings Ω₁ to 82–98% in the full and pass rolls, but not w₁. v_r stays at 0.44–0.47, so the ratios stay out of
+    band.
   - It also reverses P2b.2b.2b.2a's ruling that the bed's ramp, not friction, supplies the extra slowing.
 - **C. Fit the balls' friction (§3.2) alone.** This is refuted as the mechanism. Any gain would be a side effect of
   a changed contact sequence.
+
+**As built.** `scripts/table6Probe.ts --face-fit` scans the bounds and bisects on C3F's Ω₁ at the read instant.
+- At ball–ball 0.06 there is no bracket: Ω₁ peaks at 87% at 0.2–0.25 against Gugan's 93%.
+- The croqueted ball's Ω₂ does not depend on the face's friction (−36 to −37% at ball–ball 0.16 for every face value
+  from 0.2 to 0.3). So §3.2's fit, 0.16, lands first, and the face is fitted in that world (an assumption: the order
+  the ruling gave was face first, but only this order brackets).
+- At ball–ball 0.16, Ω₁ is not monotone in the face's friction: 96% at 0.2, 104% at 0.25, then falling to 74% at 0.6.
+  The bisection finds the upper crossing, 0.38 (91.8%, w₁/U 0.52 against 0.59). The lower, near 0.21, is not taken.
+- `faceFriction` becomes 0.38, "derived". ENGINE_VERSION is 0.34.0.
+
+Table 6 at face 0.38 and ball–ball 0.16, model / Gugan:
+
+| Roll | class | Ω₁ % | w₁/U | L2/L1 |
+|---|---|---|---|---|
+| C3H | clean | 96 / 92 | 0.44 / 0.38 | 1.78 / 2.46 |
+| C10H | clean | 107 / 94 | 0.40 / 0.40 | 1.84 / 2.30 |
+| C1F | clean (was unlawful) | 79 / 100 | 0.55 / 0.67 | 1.20 / 1.00 |
+| C3F | clean | 92 / 93 | 0.52 / 0.59 | 1.17 / 1.20 |
+| C10F | clean (was superhuman) | 99 / 90 | 0.47 / 0.57 | 1.28 / 1.24 |
+| C3P | clean | 96 / 97 | 0.51 / 0.58 | 1.16 / 1.21 |
+| C10P | clean | 97 / 87 | 0.48 / 0.52 | 1.24 / 0.94 |
+| C25F, C25P | superhuman | 62, 63 / 90, 78 | 0.73, 0.76 / 0.50, 0.56 | 1.05, 0.78 / 1.24, 1.15 |
+
+What this leaves:
+- The full and pass rolls' ratios are in band or near it, and C1F and C10F now play clean.
+- The half rolls' ratios fall: their L2 now matches Gugan (C10H 17.8 against 18.0 m), but ball 1 runs long (C3H w₁/U
+  0.44 against 0.38). That is the half roll's own gap, not the topspin's.
+- Held out, Table 5's Ω₁ barely moves: −25% to +19% against −31% to +15% before, beside Gugan's −16% to +20%. C10S
+  stays the outlier at −25% against −12%.
 
 ### 3.2 The balls' friction
 

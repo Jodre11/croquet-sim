@@ -261,7 +261,10 @@ describe("simulateShot", () => {
     // hand guiding, the face taps the striker's ball five times (0.01–0.66, 1.24–2.20, 6.37–7.48, 25.62–26.81 and
     // 47.70–48.95 ms), and the ball rises 5.197 mm above R at 29.88 ms, in the impact, 0.2 mm past exit criterion 6's
     // R + 5 mm. The bound is kept; the case is marked for the user, as the rolls' were before it.
-    it.fails("runs the half-roll canonical setup with no entry jump and no ball above R + 5 mm", () => {
+    // Roll launch design §3.1f, amendment 8 (was it.fails): with the face's friction fitted (0.38) and the balls'
+    // (0.16), the face taps the striker's ball three times (0.01–0.67, 1.15–2.06 and 6.80–7.88 ms); the highest centre
+    // is 2.125 mm above R in the impact and 4.813 mm in the flights.
+    it("runs the half-roll canonical setup with no entry jump and no ball above R + 5 mm", () => {
         lowFlight("half-roll");
     });
 
@@ -736,10 +739,13 @@ describe("the mechanisms (design §8.1), on the canonical setups", () => {
         // Shapes design §8, ruling 19: the stance 6° back (was the yield at 17.49 ms and the depth limit at 17.92 ms):
         // the head, lower behind, lifts off the turf twice before the dig, meets it from 12.79 ms, yields it at
         // 13.89 ms and reaches the depth limit at 14.25 ms.
+        // Roll launch design §3.1f, amendment 8 (was the yield at 13.885 ms and the depth limit at 14.25 ms): the
+        // face's friction 0.38 and the balls' 0.16; the head meets the turf from 12.76 ms, yields it at 13.86 ms and
+        // reaches the depth limit at 14.225 ms.
         expect(impact.events.map((e) => e.kind)).toEqual(["turf-lift", "turf-lift", "turf-yield", "impact-head-deep"]);
         const times = impact.events.map((e) => ("t" in e ? e.t : NaN));
-        expect(times[2]).toBeCloseTo(0.013885, 5);
-        expect(times[3]).toBeCloseTo(0.01425, 5);
+        expect(times[2]).toBeCloseTo(0.01386, 5);
+        expect(times[3]).toBeCloseTo(0.014225, 5);
     });
 
     // Spec exit criterion 2 (P2b.2b.2b.2b). On the bed (P2b.2b.2b.2a) the canonical pass roll's follow-through kept its
@@ -748,24 +754,22 @@ describe("the mechanisms (design §8.1), on the canonical setups", () => {
     // Roll launch design §3.1c–e (was 1.8882 and 1.3607 m/s at the last note): with the path restarted from the head
     // once the parting has held and the push's pitch hold ended there, the punch acts only before the ball leaves;
     // 1.6605 against 1.6668 m/s. A known gap with the rolls' topspin (amendment 8), for the user.
-    it.fails(
-        "the pass roll's punch leaves the striker's ball faster than a coasting pass roll",
-        () => {
-            // Prototype: 1.226 m/s at drive +1, 1.099 m/s at drive 0. P2b.2b.2b.2a: Hertzian face (was 1.099 at drive 0):
-            // 1.894 m/s at drive +1, 0.29 m/s at drive 0, the coasted ball already pinned under the face. P2b.2b.2b.2a:
-            // turf bed (was 1.894 and 0.29): 0.038 m/s at drive +1, 0.088 m/s at drive 0, both pinned.
-            // P2b.2b.2b.2b: hands' arc (was it.fails): 1.2170 and 1.1300 m/s. P2b.2b.2b.2b: flex (was 1.2170 and
-            // 1.1300): 1.8786 and 1.6386 m/s. P2b.2b.2b.2b: push intent and fast impedance (was 1.8786
-            // and 1.6386): 1.7016 and 1.2624 m/s. P2b.2b.2b.2b: arm chain (was 1.7016 and 1.2624): 1.8493 and 1.2824 m/s.
-            // P2b.2b.2b.2b: continuous α (was 1.8493 and 1.2824): 1.8412 and 1.2824 m/s. P2b.2b.2b.2b: posture-holding
-            // push (was 1.8412 and 1.2824): 2.1111 and 1.3187 m/s. P2b.2b.2b.2b: hold relaxes from the first departure
-            // (was 2.1111 and 1.3187): 1.8882 and 1.3607 m/s.
-            const punched = simulateShot(canonicalSetup("pass-roll")).impact;
-            const coasted = simulateShot(canonicalSetup("pass-roll", { stroke: { drive: 0 } })).impact;
-            expect(strikerSpeed(punched)).toBeGreaterThan(strikerSpeed(coasted));
-        },
-        60_000,
-    );
+    // Amendment 8 (was it.fails): with the face's friction fitted (0.38) and the balls' (0.16), 1.5443 against 1.5436
+    // m/s, a margin of 0.7 mm/s.
+    it("the pass roll's punch leaves the striker's ball faster than a coasting pass roll", () => {
+        // Prototype: 1.226 m/s at drive +1, 1.099 m/s at drive 0. P2b.2b.2b.2a: Hertzian face (was 1.099 at drive 0):
+        // 1.894 m/s at drive +1, 0.29 m/s at drive 0, the coasted ball already pinned under the face. P2b.2b.2b.2a:
+        // turf bed (was 1.894 and 0.29): 0.038 m/s at drive +1, 0.088 m/s at drive 0, both pinned.
+        // P2b.2b.2b.2b: hands' arc (was it.fails): 1.2170 and 1.1300 m/s. P2b.2b.2b.2b: flex (was 1.2170 and
+        // 1.1300): 1.8786 and 1.6386 m/s. P2b.2b.2b.2b: push intent and fast impedance (was 1.8786
+        // and 1.6386): 1.7016 and 1.2624 m/s. P2b.2b.2b.2b: arm chain (was 1.7016 and 1.2624): 1.8493 and 1.2824 m/s.
+        // P2b.2b.2b.2b: continuous α (was 1.8493 and 1.2824): 1.8412 and 1.2824 m/s. P2b.2b.2b.2b: posture-holding
+        // push (was 1.8412 and 1.2824): 2.1111 and 1.3187 m/s. P2b.2b.2b.2b: hold relaxes from the first departure
+        // (was 2.1111 and 1.3187): 1.8882 and 1.3607 m/s.
+        const punched = simulateShot(canonicalSetup("pass-roll")).impact;
+        const coasted = simulateShot(canonicalSetup("pass-roll", { stroke: { drive: 0 } })).impact;
+        expect(strikerSpeed(punched)).toBeGreaterThan(strikerSpeed(coasted));
+    }, 60_000);
 
     // Prototype: the impact starts 30 ms before contact; the head on the turf from 20.72 ms, the ball struck from
     // 31.05 ms; the striker's ball at 1.214 m/s against 1.380 on time.

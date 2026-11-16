@@ -102,9 +102,10 @@ describe("the search's preference for a hold that doesn't slip (design A8 item 5
         expect(sample.followSlip).toBe(false);
         // Hands-from-lean design §3: the law's hands (was σ 0.1, ratio 1.277). Speed-dependent lawn design: 1.230
         // (was 1.263). Roll launch design §3.1 (was σ 0.7125, ratio 1.23): the hands re-anchor at the departure, so
-        // the slack holds no longer slip and the search stops at its first step.
-        expect(sample.sigma).toBeCloseTo(0.1, 6);
-        expect(sample.byLawn[10]?.ratio).toBeCloseTo(1.13, 2);
+        // the slack holds no longer slip and the search stops at its first step. Roll launch design §3.1f, amendment 8
+        // (was σ 0.1, ratio 1.13): the faces' and balls' friction fitted; σ 0.0625, ratio 1.000.
+        expect(sample.sigma).toBeCloseTo(0.0625, 6);
+        expect(sample.byLawn[10]?.ratio).toBeCloseTo(1.0, 2);
     }, 120_000);
 });
 

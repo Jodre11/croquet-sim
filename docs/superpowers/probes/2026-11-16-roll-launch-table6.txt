@@ -272,3 +272,46 @@ and left the head at 2.47 m/s. A6: s = 2.64 m/s (rate 0.41); the head within 0.1
 push's pitch hold at its limit (top hand +22 N, bottom -12 N along aim; pitch rate -1.68 -> 2.55 rad/s by 34 ms)
 swung it to 3.13 m/s, touches at 19, 26-27, 33-34 ms. A7: no touch after 5 ms; head 2.45 -> 2.20 m/s by 49 ms, ball
 2.81 m/s. A pitch-angle restart (0.7 deg) moved the A7 handover 2.87 -> 2.88 m/s and was dropped.
+
+== Amendment 8: what sets the striker's ball's topspin (2026-11-16, on 566a21b) ==
+Ball 1's gains to 20 ms by the contacts touching it, as fractions of U: R*omega along the roll axis / speed along aim.
+            face + turf        ball-ball (+ turf, face)   turf alone      Omega1 at 20 ms
+C3F 0.06    +0.33 / +1.51      -0.10 / -0.93              +0.17 / -0.08   74
+C3F 0.16    +0.52 / +1.55      -0.33 / -0.93              +0.23 / -0.10   82
+C10F 0.06   +0.21 / +1.39      -0.06 / -0.79              -0.01 / -0.00   24 (18.3 ms on the face to 20 ms)
+C10P 0.06   +0.36 / +1.26      -0.09 / -0.79              -0.06 / +0.02   42 (7.6 ms on the face to 20 ms)
+The balls' friction takes topspin from ball 1. Sensitivity at 20 ms (v/U, Omega1), ball-ball 0.06:
+        reference    face 0.3     face 0.2     turf sliding 1.0
+C3H     0.48, 73     0.47, 86     0.46, 97     0.49, 65
+C10H    0.43, 88     0.43, 101    0.42, 108    0.42, 99
+C3F     0.51, 74     0.55, 85     0.57, 88     0.50, 82
+C10F    0.60, 24     0.68, 52     0.62, 83     0.44, 98
+C3P     0.51, 68     0.55, 87     0.56, 92     0.47, 93
+C10P    0.49, 42     0.69, 37     0.66, 61     0.48, 87
+
+== Amendment 8: the face's friction fitted on C3F's Omega1 (2026-11-16) ==
+scripts/table6Probe.ts --face-fit, at the read instant. At ball-ball 0.06 no bracket:
+mu     0.20  0.25  0.30  0.35  0.40  0.45  0.50  0.55  0.60
+Omega1 87.3  87.3  84.7  82.1  79.4  76.8  73.8  65.5  57.9   (Gugan 93)
+Croqueted ball's Omega2 is -14% (0.06), -23% (0.10), -36 to -37% (0.16) at every face friction 0.2-0.3, so the
+ball-ball fit (0.16) is independent of the face's. At ball-ball 0.16:
+mu     0.20  0.25   0.30   0.35  0.40  0.45  0.50  0.55  0.60
+Omega1 95.6  104.4  100.8  95.6  89.4  85.0  80.9  77.8  74.4  w1/U 0.50-0.54 (Gugan 0.59)
+fit mu 0.380 Omega1 91.8/93 w1/U 0.52/0.59 (the upper of two crossings; the lower is near 0.21)
+
+== Amendment 8: Table 6 at face 0.38, ball-ball 0.16 (2026-11-16) ==
+Model / Gugan. w1/U, Omega1 %, v2/U, Omega2 %, L1 m, L2 m, L2/L1.
+C3H   clean           0.44/0.38  96/92   1.01/0.94  -36/0    3.71/3.12   6.60/7.67   1.78/2.46
+C10H  clean           0.40/0.40  107/94  1.01/1.05  -36/-35  9.64/7.83   17.78/18    1.84/2.30
+C1F   clean           0.55/0.67  79/100  0.93/0.72  -37/39   0.76/1.21   0.91/1.21   1.20/1.00
+C3F   clean           0.52/0.59  92/93   0.93/0.89  -37/0    3.12/3.66   3.63/4.39   1.17/1.20
+C10F  clean           0.47/0.57  99/90   0.93/1.02  -36/-25  8.28/8.49   10.59/10.5  1.28/1.24
+C25F  superhuman      0.73/0.50  62/90   0.93/0.89  -36/-23  22.90/20.27 24.06/25.1  1.05/1.24
+C3P   clean           0.51/0.58  96/97   0.92/0.79  -37/0    3.86/3.73   4.47/4.51   1.16/1.21
+C10P  clean           0.48/0.52  97/87   0.93/0.94  -37/-30  7.94/10.35  9.82/9.76   1.24/0.94
+C25P  superhuman      0.76/0.56  63/78   0.93/0.84  -36/-29  31.82/26    24.85/30    0.78/1.15
+Held out, Table 5's Omega1 (%) at the read, model / Gugan, ball-ball 0.16:
+face 0.50: B2GS 8/-3  B1GS -2/-14  B1MS -2/-16  B2MS 0/4  C3S 4/-14
+           C10S -31/-12  C20S 15/-12  C1D -2/20  C3D -3/-4  C10D -2/5
+face 0.38: B2GS 8/-3  B1GS -2/-14  B1MS -2/-16  B2MS 0/4  C3S 6/-14
+           C10S -25/-12  C20S 19/-12  C1D -2/20  C3D -3/-4  C10D -2/5

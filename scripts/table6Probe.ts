@@ -5,8 +5,10 @@
  * balls part (amendment 4), beside Gugan's row; the probe prints the face's
  * and the balls' contacts, the hands' peak force along aim after the strike, and the balls' travels from the play.
  * `--ball-friction μ` replaces the world's ball–ball friction in the read (the travels keep the reference's). `--fit`
- * instead bisects the ball–ball friction at which C10H's croqueted ball reads Gugan's Ω₂ (roll launch design §3.2). Not
- * part of the engine. Run with `nice -n 10 npx --no-install tsx scripts/table6Probe.ts [--ball-friction μ | --fit]`.
+ * instead bisects the ball–ball friction at which C10H's croqueted ball reads Gugan's Ω₂ (roll launch design §3.2).
+ * `--face-fit` bisects the face's friction at which C3F's striker's ball reads Gugan's Ω₁ (amendment 8, §3.1f). Not
+ * part of the engine. Run with
+ * `nice -n 10 npx --no-install tsx scripts/table6Probe.ts [--ball-friction μ | --fit | --face-fit]`.
  */
 import { ballPairKey, faceKey } from "../src/engine/impact/contacts";
 import type { ContactInterval, ContactState, ImpactResult, TrackDrive } from "../src/engine/impact/types";
@@ -15,6 +17,7 @@ import { plannedSpeed } from "../src/engine/swing/buildContact";
 import type { ShotSetup } from "../src/engine/swing/types";
 import type { World } from "../src/engine/types";
 import { playJudged, textBook, type PlayWatch } from "../src/lab/play";
+import { malletReference } from "../src/reference/index";
 import { openWorld } from "./openLawn";
 import { mapSetup, type RollType } from "./pushMapRun";
 import { READ_DELAY, readOut, type ReadSample } from "./ratioFit";
@@ -166,12 +169,56 @@ function fit(base: World): void {
     console.log(`    fit ${line(mu, read(mu))}`);
 }
 
+/** The face-friction fit's tolerance (roll launch design §3.1f, amendment 8). */
+const FACE_FIT_STEP = 0.01;
+
+/**
+ * Bisects the face's friction at which C3F's striker's ball reads Gugan's Ω₁ at readTimeOf's instant, between the
+ * reference's bounds, after a scan of them; prints both ends and stops if his Ω₁ is not between them (amendment 8).
+ */
+function fitFace(base: World): void {
+    const roll = ROLLS.find((r) => r.name === "C3F") as GuganRoll;
+    const power = powerFor(roll.type, roll.U, base) as number;
+    const { setup, contact } = playRoll(roll, power);
+    if (setup === null || contact === null) throw new Error("C3F is not played");
+    const played: ContactState = contact;
+    const target = roll.o1 / 100;
+    const read = (mu: number): { readonly o1: number; readonly w1: number } => {
+        const r = readOut(setup, base, {}, { ...played, face: { ...played.face, friction: mu } });
+        const at = r.samples.find((s) => s.t >= r.time) ?? (r.samples[r.samples.length - 1] as ReadSample);
+        return { o1: at.roll1, w1: r.w1 / roll.U };
+    };
+    const line = (mu: number, x: { readonly o1: number; readonly w1: number }): string =>
+        `μ ${f(mu, 3)} Ω1 ${f(100 * x.o1, 1)}/${roll.o1} w1/U ${f(x.w1)}/${f(roll.w1 / roll.U)}`;
+    const [lo0, hi0] = malletReference.faceFriction.bounds as readonly [number, number];
+    console.log(`C3F U ${roll.U} p ${f(power, 3)}; fit the face's friction to Ω1 ${roll.o1}`);
+    for (let mu = lo0; mu <= hi0 + 1e-9; mu += 0.05) console.log(`    scan ${line(mu, read(mu))}`);
+    let lo = lo0;
+    let hi = hi0;
+    const atLo = read(lo);
+    const atHi = read(hi);
+    if ((atLo.o1 - target) * (atHi.o1 - target) > 0) {
+        console.log("    Gugan's Ω1 is not between the bounds' reads: no fit");
+        return;
+    }
+    const below = atLo.o1 < target;
+    while (hi - lo > FACE_FIT_STEP) {
+        const m = (lo + hi) / 2;
+        if (read(m).o1 < target === below) lo = m;
+        else hi = m;
+    }
+    const mu = Math.round((lo + hi) / 2 / FACE_FIT_STEP) * FACE_FIT_STEP;
+    console.log(`    fit ${line(mu, read(mu))}`);
+}
+
 const at = process.argv.indexOf("--ball-friction");
 const friction = at < 0 ? null : Number(process.argv[at + 1]);
 const base = openWorld(LAWN);
 const world: World = friction === null ? base : { ...base, ballBall: { ...base.ballBall, friction } };
-const fitting = process.argv.includes("--fit");
-if (fitting) fit(base);
+const faceFitting = process.argv.includes("--face-fit");
+const fitting = process.argv.includes("--fit") || faceFitting;
+if (faceFitting) fitFace(base);
+else if (fitting) fit(base);
 else
     console.log(
         `Table 6 on the ${LAWN} s lawn, preset hold; ball–ball friction ${world.ballBall.friction}` +

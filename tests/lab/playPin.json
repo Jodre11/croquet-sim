@@ -20,8 +20,8 @@
             "passes": 1,
             "byLawn": {
                 "10": {
-                    "range": 0.8850243290366819,
-                    "ratio": 3.478784143217017,
+                    "range": 0.8849826837336323,
+                    "ratio": 3.4788221585215715,
                     "splitAtRest": 0
                 }
             },
@@ -50,8 +50,8 @@
             "passes": 1,
             "byLawn": {
                 "10": {
-                    "range": 0.8850243290366819,
-                    "ratio": 3.478784143217017,
+                    "range": 0.8849826837336323,
+                    "ratio": 3.4788221585215715,
                     "splitAtRest": 0
                 }
             },
@@ -80,8 +80,8 @@
             "passes": 1,
             "byLawn": {
                 "10": {
-                    "range": 1.5660592840664265,
-                    "ratio": 3.4059706013337796,
+                    "range": 1.5657541002892827,
+                    "ratio": 3.406484179900392,
                     "splitAtRest": 0
                 }
             },
@@ -110,8 +110,8 @@
             "passes": 1,
             "byLawn": {
                 "10": {
-                    "range": 1.5660592840664265,
-                    "ratio": 3.4059706013337796,
+                    "range": 1.5657541002892827,
+                    "ratio": 3.406484179900392,
                     "splitAtRest": 0
                 }
             },
@@ -140,8 +140,8 @@
             "passes": 1,
             "byLawn": {
                 "10": {
-                    "range": 0.6294582305276535,
-                    "ratio": 5.036295438630954,
+                    "range": 0.6578945005840282,
+                    "ratio": 4.818158925784248,
                     "splitAtRest": 0
                 }
             },
@@ -170,8 +170,8 @@
             "passes": 1,
             "byLawn": {
                 "10": {
-                    "range": 0.6294582305276535,
-                    "ratio": 5.036295438630954,
+                    "range": 0.6578945005840282,
+                    "ratio": 4.818158925784248,
                     "splitAtRest": 0
                 }
             },
@@ -200,8 +200,8 @@
             "passes": 1,
             "byLawn": {
                 "10": {
-                    "range": 1.1248435798951704,
-                    "ratio": 4.918584700279307,
+                    "range": 1.193187098500374,
+                    "ratio": 4.63629505399487,
                     "splitAtRest": 0
                 }
             },
@@ -230,8 +230,8 @@
             "passes": 1,
             "byLawn": {
                 "10": {
-                    "range": 1.1248435798951704,
-                    "ratio": 4.918584700279307,
+                    "range": 1.193187098500374,
+                    "ratio": 4.63629505399487,
                     "splitAtRest": 0
                 }
             },
@@ -248,20 +248,20 @@
             "klass": null,
             "reason": null,
             "strokeEffort": 15.032280108598265,
-            "pushEffort": 8.247010029217524,
+            "pushEffort": 8.24728096722181,
             "coupleShare": 0.014850473218667136,
-            "pushImpulse": 0.003013288426530423,
+            "pushImpulse": 0.003013301563353926,
             "effectVerdicts": {
                 "shipped": false,
                 "contactOnly": false
             },
-            "followCap": false,
+            "followCap": true,
             "followSlip": false,
             "passes": 1,
             "byLawn": {
                 "10": {
-                    "range": 0.7552873309570387,
-                    "ratio": 2.1272849800388793,
+                    "range": 0.731620751583705,
+                    "ratio": 1.7367174539323051,
                     "splitAtRest": 0
                 }
             },
@@ -278,20 +278,20 @@
             "klass": null,
             "reason": null,
             "strokeEffort": 15.032280108598265,
-            "pushEffort": 8.29890648638767,
+            "pushEffort": 8.29912394023725,
             "coupleShare": 0.014850473218667136,
-            "pushImpulse": 0.0030241670653852457,
+            "pushImpulse": 0.003062423222392586,
             "effectVerdicts": {
                 "shipped": false,
                 "contactOnly": false
             },
-            "followCap": false,
+            "followCap": true,
             "followSlip": false,
             "passes": 1,
             "byLawn": {
                 "10": {
-                    "range": 0.960141353193599,
-                    "ratio": 1.6971531531368245,
+                    "range": 0.9267034034720893,
+                    "ratio": 1.3880718709799198,
                     "splitAtRest": 0
                 }
             },
@@ -308,9 +308,9 @@
             "klass": null,
             "reason": null,
             "strokeEffort": 25.64828564343247,
-            "pushEffort": 13.994633981211871,
+            "pushEffort": 13.99915744108656,
             "coupleShare": 0.016895165652982234,
-            "pushImpulse": 0.004825381353764955,
+            "pushImpulse": 0.0048257247778397076,
             "effectVerdicts": {
                 "shipped": false,
                 "contactOnly": false
@@ -320,9 +320,9 @@
             "passes": 1,
             "byLawn": {
                 "10": {
-                    "range": 1.9486570636194003,
-                    "ratio": 2.090805623273754,
-                    "splitAtRest": 2.18779204106961e-14
+                    "range": 1.7897572678207254,
+                    "ratio": 1.8486569031106286,
+                    "splitAtRest": 7.940101694631287e-15
                 }
             },
             "firmness": 0,
@@ -338,9 +338,9 @@
             "klass": null,
             "reason": null,
             "strokeEffort": 25.64828564343247,
-            "pushEffort": 14.078423142153254,
+            "pushEffort": 14.083455573780311,
             "coupleShare": 0.016895165652982234,
-            "pushImpulse": 0.004906933771101675,
+            "pushImpulse": 0.004907322284650481,
             "effectVerdicts": {
                 "shipped": false,
                 "contactOnly": false
@@ -350,9 +350,9 @@
             "passes": 1,
             "byLawn": {
                 "10": {
-                    "range": 2.3380980687596775,
-                    "ratio": 1.7602158639156051,
-                    "splitAtRest": 1.8233864830238657e-14
+                    "range": 2.1983681616963295,
+                    "ratio": 1.5210913152741654,
+                    "splitAtRest": 0
                 }
             },
             "firmness": 0.5,
@@ -365,28 +365,28 @@
         "hold": "found",
         "sample": {
             "power": 0.5,
-            "klass": "unlawful",
-            "reason": "impact-cap",
+            "klass": null,
+            "reason": null,
             "strokeEffort": 18.899875078439408,
-            "pushEffort": 7.425126563598168,
+            "pushEffort": 7.394479369115363,
             "coupleShare": 0.01442335063162485,
-            "pushImpulse": 0.0027980893000836087,
+            "pushImpulse": 0.002757824835920217,
             "effectVerdicts": {
                 "shipped": false,
-                "contactOnly": true
+                "contactOnly": false
             },
             "followCap": false,
             "followSlip": false,
             "passes": 1,
             "byLawn": {
                 "10": {
-                    "range": 0.909272790026975,
-                    "ratio": 1.7357917798331326,
+                    "range": 0.7558796547991165,
+                    "ratio": 1.459651885385873,
                     "splitAtRest": 0
                 }
             },
-            "firmness": null,
-            "sigma": null
+            "firmness": 0,
+            "sigma": 0
         }
     },
     {
@@ -395,23 +395,23 @@
         "hold": 0.5,
         "sample": {
             "power": 0.5,
-            "klass": "unlawful",
-            "reason": "impact-cap",
+            "klass": null,
+            "reason": null,
             "strokeEffort": 18.899875078439408,
-            "pushEffort": 7.425117206401923,
+            "pushEffort": 7.425418315090009,
             "coupleShare": 0.01442335063162485,
-            "pushImpulse": 0.002798088624974403,
+            "pushImpulse": 0.002798103263747545,
             "effectVerdicts": {
                 "shipped": false,
-                "contactOnly": true
+                "contactOnly": false
             },
             "followCap": false,
             "followSlip": false,
             "passes": 1,
             "byLawn": {
                 "10": {
-                    "range": 0.9090714022607216,
-                    "ratio": 1.7361697848649404,
+                    "range": 0.8901118699961401,
+                    "ratio": 1.2428634841356747,
                     "splitAtRest": 0
                 }
             },
@@ -428,9 +428,9 @@
             "klass": null,
             "reason": null,
             "strokeEffort": 33.333333333333336,
-            "pushEffort": 12.958587590110051,
+            "pushEffort": 12.962014956036672,
             "coupleShare": 0.014592124048859274,
-            "pushImpulse": 0.004491259845217167,
+            "pushImpulse": 0.00449150306223324,
             "effectVerdicts": {
                 "shipped": false,
                 "contactOnly": false
@@ -440,9 +440,9 @@
             "passes": 1,
             "byLawn": {
                 "10": {
-                    "range": 1.7536910435163193,
-                    "ratio": 2.036079375353828,
-                    "splitAtRest": 3.241358794125531e-14
+                    "range": 1.9535415622866665,
+                    "ratio": 1.4747349693672915,
+                    "splitAtRest": 2.1823218388915968e-14
                 }
             },
             "firmness": 0,
@@ -458,9 +458,9 @@
             "klass": null,
             "reason": null,
             "strokeEffort": 33.333333333333336,
-            "pushEffort": 13.009319562940725,
+            "pushEffort": 13.01285735108236,
             "coupleShare": 0.014592124048859274,
-            "pushImpulse": 0.004500617827411369,
+            "pushImpulse": 0.004560840159042381,
             "effectVerdicts": {
                 "shipped": false,
                 "contactOnly": false
@@ -470,9 +470,9 @@
             "passes": 1,
             "byLawn": {
                 "10": {
-                    "range": 2.2389616308474416,
-                    "ratio": 1.6061840061828592,
-                    "splitAtRest": 1.904122141185139e-14
+                    "range": 2.498148474339118,
+                    "ratio": 1.161251441736335,
+                    "splitAtRest": 2.275421955288141e-14
                 }
             },
             "firmness": 0.5,
@@ -485,28 +485,28 @@
         "hold": "found",
         "sample": {
             "power": 0.5,
-            "klass": "unlawful",
-            "reason": "impact-cap",
+            "klass": null,
+            "reason": null,
             "strokeEffort": 18.256116761529736,
-            "pushEffort": 7.33056406428999,
+            "pushEffort": 7.307276109790682,
             "coupleShare": 0.011836166874176232,
-            "pushImpulse": 0.002755529620638666,
+            "pushImpulse": 0.002750846883800798,
             "effectVerdicts": {
                 "shipped": false,
-                "contactOnly": true
+                "contactOnly": false
             },
             "followCap": false,
             "followSlip": false,
             "passes": 1,
             "byLawn": {
                 "10": {
-                    "range": 0.9095466189801479,
-                    "ratio": 1.696114699144368,
-                    "splitAtRest": 0.11518022860539506
+                    "range": 0.8981407331544108,
+                    "ratio": 1.3740924518352258,
+                    "splitAtRest": 0.0713028395254832
                 }
             },
-            "firmness": null,
-            "sigma": null
+            "firmness": 0,
+            "sigma": 0
         }
     },
     {
@@ -515,24 +515,24 @@
         "hold": 0.5,
         "sample": {
             "power": 0.5,
-            "klass": "unlawful",
-            "reason": "impact-cap",
+            "klass": null,
+            "reason": null,
             "strokeEffort": 18.256116761529736,
-            "pushEffort": 7.33056406428999,
+            "pushEffort": 7.330908457169777,
             "coupleShare": 0.011836166874176232,
-            "pushImpulse": 0.002755529620638666,
+            "pushImpulse": 0.002755546651915668,
             "effectVerdicts": {
                 "shipped": false,
-                "contactOnly": true
+                "contactOnly": false
             },
             "followCap": false,
             "followSlip": false,
             "passes": 1,
             "byLawn": {
                 "10": {
-                    "range": 0.9095466189801479,
-                    "ratio": 1.696114699144368,
-                    "splitAtRest": 0.11518022860539506
+                    "range": 0.8955283099495633,
+                    "ratio": 1.2120452204107253,
+                    "splitAtRest": 0.0713883273102798
                 }
             },
             "firmness": 0.5,
@@ -548,9 +548,9 @@
             "klass": null,
             "reason": null,
             "strokeEffort": 32.574717038065145,
-            "pushEffort": 12.944346815247386,
+            "pushEffort": 12.94787941272219,
             "coupleShare": 0.010331221691677588,
-            "pushImpulse": 0.004483149416218479,
+            "pushImpulse": 0.004483400258553549,
             "effectVerdicts": {
                 "shipped": false,
                 "contactOnly": false
@@ -560,9 +560,9 @@
             "passes": 1,
             "byLawn": {
                 "10": {
-                    "range": 1.7835402375270528,
-                    "ratio": 1.9881153299955052,
-                    "splitAtRest": 0.1161323284551767
+                    "range": 2.0628452375443542,
+                    "ratio": 1.3842173193572107,
+                    "splitAtRest": 0.08651412839976137
                 }
             },
             "firmness": 0,
@@ -578,9 +578,9 @@
             "klass": null,
             "reason": null,
             "strokeEffort": 32.574717038065145,
-            "pushEffort": 12.983416947717334,
+            "pushEffort": 12.987036482413348,
             "coupleShare": 0.010331221691677588,
-            "pushImpulse": 0.004490343095728138,
+            "pushImpulse": 0.00455044957937618,
             "effectVerdicts": {
                 "shipped": false,
                 "contactOnly": false
@@ -590,9 +590,9 @@
             "passes": 1,
             "byLawn": {
                 "10": {
-                    "range": 2.192016959433629,
-                    "ratio": 1.6266291641739643,
-                    "splitAtRest": 0.11353492757244427
+                    "range": 2.5553963252115723,
+                    "ratio": 1.1234598163034073,
+                    "splitAtRest": 0.0866263353496715
                 }
             },
             "firmness": 0.5,
@@ -620,7 +620,7 @@
             "passes": 1,
             "byLawn": {
                 "10": {
-                    "range": 4.24319536808445,
+                    "range": 4.24291912375616,
                     "ratio": {
                         "$num": "NaN"
                     },
@@ -654,7 +654,7 @@
             "passes": 1,
             "byLawn": {
                 "10": {
-                    "range": 4.24319536808445,
+                    "range": 4.24291912375616,
                     "ratio": {
                         "$num": "NaN"
                     },
@@ -688,7 +688,7 @@
             "passes": 1,
             "byLawn": {
                 "10": {
-                    "range": 7.076314943536083,
+                    "range": 7.075840155264302,
                     "ratio": {
                         "$num": "NaN"
                     },
@@ -722,7 +722,7 @@
             "passes": 1,
             "byLawn": {
                 "10": {
-                    "range": 7.076314943536083,
+                    "range": 7.075840155264302,
                     "ratio": {
                         "$num": "NaN"
                     },

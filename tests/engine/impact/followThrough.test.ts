@@ -481,6 +481,9 @@ describe("the mallet's release and the finish's end (shapes design §2)", () => 
         // Roll launch design §3.1c–e: drive and single-ball re-captured with the speed-matched restart once the parting
         // has held (drive at 2.85 ms, rate 0.316; single-ball at 1.64 ms, rate 0.470). The balls are unchanged to the
         // millimetre per second; the finishes move to 0.288 s (drive, was 0.318 s) and 0.284 s (single-ball, was 0.283).
+        // Roll launch design §3.1f, amendment 8: all three re-captured with the face's friction 0.38 (was 0.5) and the
+        // balls' 0.16 (was 0.06). Red after the drive 3.297131 m/s (was 3.297063); single-ball 3.857896 (was 3.857888);
+        // stop-ac blue 1.604756 (was 1.614722) and red 3.306508 (was 3.306663). The finishes move by 5 µs at most.
         expect(JSON.parse(JSON.stringify(played(type)))).toEqual(NO_PUSH_BASELINE[type]);
     });
 
