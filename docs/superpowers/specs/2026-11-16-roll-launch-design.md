@@ -145,6 +145,58 @@ t_r, those instants fall later in real time by (1/k − 1) of the time after t_r
 short at the cap and its release came early. They now read the plan's time through the warp (`anchoredTime`,
 `plannedTime`, `src/engine/impact/track.ts`). Before t_r, and on a stroke with no anchor, nothing changes.
 
+### 3.1c Amendment 5 (2026-11-16, draft): a speed-matched restart
+
+**Why.** At the fitted friction (§3.2a, μ 0.16) the canonical half roll's ratio fell from 2.02 to 1.64, and C10H's to
+1.48 against Gugan's 2.30. The striker's ball leaves the balls' contact at 2.79 m/s, but the face strikes it again at
+17, 27, 37 and 43–50 ms and hands it to the lawn at 3.36 m/s. A step trace (probe file, "Amendment 5") shows the head
+does the catching, not the ball slowing:
+- the strike leaves the head at 2.45 m/s by 2 ms, slower than the ball (2.77);
+- the hands then push the head forward at 25–28 N to 40 ms, and it speeds up steadily to 3.5 m/s by 42 ms;
+- between catches the ball, off the turf from 9 to 39 ms, keeps its speed: 2.73, 2.99, 3.23, 3.42 m/s.
+
+The re-anchor (§3.1) runs the plan at a fixed rate k of its own pace. The half roll's plan still accelerates after
+contact, so the path's along-aim speed, k times the plan's, rises, and the hands' feed-forward (k² times the plan's
+acceleration) and the flex towards the path both drive the head after it. Amendment 2 dropped the feed-forward's
+forward part only; the flex towards the rising path kept the touches to 29 ms. Gugan finds the mallet after impact
+moving at "essentially the same" speed as ball 1 (§10.1).
+
+**The law.** From the departure t_r, the plan's time τ runs at the head's along-aim speed s over the fastest along-aim
+pace the plan has reached since t_r:
+
+    dτ/dt = s / max_{τ_r ≤ u ≤ τ} p(u),    τ(t_r) = t_r,
+
+p(u) the planned head's along-aim speed (headOnPath, as reanchor reads it). While the plan speeds up the path moves
+along the aim at s: the head is carried on at its own pace, neither chased nor pushed. Once the plan slows (its
+finish), the divisor holds at the plan's peak, the rate is fixed, and the path slows in proportion to the plan:
+k = s/peak, as §3.1's warp with the peak in place of the pace at t_r. A plan that only slows after t_r gives
+exactly §3.1's warp. Unchanged from §3.1: s and the rate held to [0, 1], the lag along the aim (`by`), the across-aim
+and pitch lags kept, one restart per stroke, no restart on a check (amendment 3), the guide (amendment 1) and the push
+intent's end.
+
+**The kinematics.** With τ' = dτ/dt and τ'' its rate, a path velocity is the plan's times τ', and an acceleration the
+plan's times τ'² plus the plan's velocity times τ''. §3.1's warp has τ'' = 0; here τ'' is nonzero while the plan
+speeds up (τ'' = −τ'²·p'(τ)/p(τ), which brings the along-aim acceleration to zero). The feed-forward reads both terms.
+τ(t) is tabulated at the impact's step from t_r (the plan's pace is not closed-form after the dip and the lift), and
+anchoredTime and plannedTime invert it by search on the table; τ is strictly increasing while s > 0.
+
+**Expected.** In C10H the head holds about 2.45–2.8 m/s after the strike, the ball (about 2.8 m/s) draws away, and
+the face's touches after the strike window end or thin out. The half rolls' ratios rise towards their pre-fit values
+or beyond. The full and pass rolls' plans also accelerate after contact, so their heads lose the gain too. Amendment
+2's loss of a third of ball 1's travel there came with no forward feed-forward at all; this keeps the head's own pace,
+but a loss is possible and is reported.
+
+**Verification** (in addition to §4, at μ 0.06 first, then the fit re-run under amendment 4):
+- C10H: the head's along-aim speed after the strike stays within 0.1 m/s of s until the plan slows; the face–striker
+  intervals after the strike window; the striker's ball at the handover against the read (2.79 m/s at μ 0.16);
+- the canonical half roll's ratio against its 2.0 (shapes design ruling 15) and C3H's and C10H's L2/L1 against
+  Gugan's; the full and pass rolls' L1 against Gugan's C1F, C3F, C3P and C10P, beside amendment 1's;
+- drives and stops: as §4. A check is untouched. A drive whose plan only slows after t_r keeps §3.1's warp exactly;
+  whether the drives' plans speed up after contact is not yet checked (assumption: little, so they move little).
+
+My calls: the peak rather than the current pace, since dividing by the current pace would hold the path at s through
+the finish, which would then never slow; tabulating τ rather than a closed form.
+
 ### 3.2 The balls' friction
 
 `ballBallFriction` is fitted after §3.1 lands, on C10H alone: the value in [0.06, 0.5] at which the croqueted ball's

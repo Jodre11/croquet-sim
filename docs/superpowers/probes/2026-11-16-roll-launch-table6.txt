@@ -242,3 +242,21 @@ The striker's ball leaves the balls' contact at 2.79 m/s (C10H, 7 ms) and the fa
 it to the lawn at 3.36 m/s (C3H 1.66 -> 1.84 m/s): the extra travel is the touches, not the lawn. Canonical pins at
 μ 0.16: half roll 2.019 -> 1.639, full roll 1.173 -> 1.011, pass roll 1.165 -> 0.922. The half roll's fall stops the
 plan; the user chose to fix the late touches before committing the fit (2026-11-16).
+
+== Amendment 5: the head after the departure in C10H at μ 0.16 (2026-11-16) ==
+Along aim, m/s; the hands' force along aim, N; the striker's ball's height above rest, mm (excerpt, every 1 ms).
+t ms   head  ball  hands  ff    ball z  contacts
+ 2.0   2.45  2.77   -4.0   4.1  -3.15   turf
+ 7.0   2.44  2.79   19.4   8.9  -1.87   turf
+12.0   2.66  2.73   26.2  12.2   0.79
+16.0   2.82  2.73   27.0  13.6   2.80   face (catch)
+17.0   2.76  2.99   28.1  13.8   3.12   face
+26.0   3.12  2.99   27.8  12.5   3.96
+27.0   3.13  3.07   28.5  12.0   3.99   face (catch)
+36.1   3.40  3.23   25.4   4.5   1.41
+37.1   3.37  3.39   25.7   3.3   1.01   face (catch)
+42.1   3.51  3.27   15.0  -7.2  -1.71   turf
+43.1   3.38  3.54   13.8  -9.9  -2.11   face, turf; touches to 50 ms
+55.1   3.08  3.34  -14.9 -35.0   0.48
+Anchor at 0.63 ms, rate 0.499. The head is driven from 2.45 to 3.5 m/s while the ball, airborne 9–39 ms, holds its
+speed between catches: the hands, not the ball's slowing, make the late touches.
