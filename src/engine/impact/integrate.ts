@@ -115,6 +115,7 @@ import {
 } from "./turfBed";
 import {
     advanceChains,
+    anchoredTime,
     handLoad,
     handsApex,
     handsAt,
@@ -124,6 +125,7 @@ import {
     releaseOf,
     newGripState,
     pathAt,
+    plannedTime,
     pushResponse,
     senseResistance,
     swungOf,
@@ -416,7 +418,8 @@ interface SwingWatch {
 }
 
 /**
- * True once the head in `state` at time t has reached its finish (P2b.2b.2a design §4.2; shapes design §2).
+ * True once the head in `state` at time t has reached its finish (P2b.2b.2a design §4.2; shapes design §2), the plan's
+ * instants read at `planned`, the instant its re-anchored plan plays at t (plannedTime; roll launch design §3.1).
  * - A swing with nothing released (no push, λ = 0): at the pendulum's apex, its pitch rate about n at or below zero.
  * - A push: once the bottom hand holds its carry at rest (push.freed; shapes design §8, ruling 14). A push whose plan
  *   never reaches its length has no release and never finishes: it runs to the cap.
@@ -425,12 +428,19 @@ interface SwingWatch {
  *   carried positive through the release and dying away is not the swing's. If it never rises, at the release.
  * - A check: at rest relative to the hands once any push's hands are at their apex.
  */
-function finished(kind: FinishKind, plan: PreparedTrack, state: HeadState, t: number, watch: SwingWatch): boolean {
+function finished(
+    kind: FinishKind,
+    plan: PreparedTrack,
+    state: HeadState,
+    t: number,
+    planned: number,
+    watch: SwingWatch,
+): boolean {
     const { push } = plan;
     if (kind === "check") {
         // Moving hands carry a held head with them, at rest relative to them at once: wait for the hands' apex.
         const apex = push === null ? null : handsApex(push);
-        if (push !== null && (apex === null || t < apex)) {
+        if (push !== null && (apex === null || planned < apex)) {
             return false;
         }
         return length(sub(state.velocity, handsAt(plan, t).velocity)) < FINISH_SPEED;
@@ -441,9 +451,9 @@ function finished(kind: FinishKind, plan: PreparedTrack, state: HeadState, t: nu
         return push === null && rate <= 0;
     }
     if (push !== null) {
-        return t >= (push.freed as number);
+        return planned >= (push.freed as number);
     }
-    if (t < release) {
+    if (planned < release) {
         return false;
     }
     const gaining = watch.last !== null && rate > watch.last;
@@ -1123,6 +1133,20 @@ function catchAt(setup: ImpactSetup, stroke: StrokeRun): number | null {
 }
 
 /**
+ * Whether `ball` is leaving `head` at the contact last seen along `normal` (from the head to the ball's centre; roll
+ * launch design §3.1): its material at the contact point, R behind its centre along the normal, moves away from the
+ * head's along the normal. A pair that reopens without it is a flicker of the contact, not a departure.
+ */
+export function departing(ball: BallState, head: HeadState, normal: Vec3, R: number): boolean {
+    const point = sub(ball.position, scale(normal, R));
+    const away = sub(
+        pointVelocity(ball.position, ball.velocity, ball.angularVelocity, point),
+        pointVelocity(head.position, head.velocity, head.angularVelocity, point),
+    );
+    return dot(away, normal) > 0;
+}
+
+/**
  * integrateStroke's single play: the impact may not end before `openUntil` (s). An end the rule finds before it is the
  * parting, from which the push's correction is withdrawn as the follow-through withdraws it (amendment 4). The
  * follow-through runs no further than `until` (s).
@@ -1151,7 +1175,8 @@ function strokeOnce(
     const tracked = plan.kind === "track";
     const contactAt = plan.kind === "track" ? plan.arc.contactAt : 0;
     const names = regionsOf(head.shape);
-    // Only a push senses the balls' resistance and latches their first departure (P2b.2b.2c.3a A2 item 5).
+    // Only a push senses the balls' resistance (P2b.2b.2c.3a A2 item 5); every tracked stroke latches the first
+    // departure (roll launch design §3.1).
     const pushed = plan.kind === "track" && plan.push !== null;
     const response = plan.kind === "track" && plan.push !== null ? pushResponse(plan.hands, dt) : 0;
     const pairs: PairState[] = pairList(
@@ -1278,21 +1303,25 @@ function strokeOnce(
                 p.regions === null ? null : headBallContact(state, head, (balls[pair.b] as BallState).position, R);
             const contact = p.regions === null ? pairContact(pair, state, head, balls, R, setup.obstacles) : hit;
             if (contact === OFF_FACE || contact === null) {
-                // A push latches a ball's first departure from the face (gate round 13 ruling, "Relax from first
-                // departure", 2026-10-12): the first step a face–ball pair closed at the last step is open, with the
-                // ball's material at the last contact point moving away from the head's along the last normal. The
-                // impact does not know which ball is the striker's, so any ball's counts; in a roll the face meets
-                // only the striker's. It is reported only: the arms' hold no longer relaxes from it (P2b.2b.2c.3b.1
-                // design §2).
-                if (pushed && grip.departedAt === null && pair.kind === "face-ball" && p.closure !== null) {
-                    const sb = balls[pair.b] as BallState;
-                    const point = sub(sb.position, scale(p.normal, R));
-                    const away = sub(
-                        pointVelocity(sb.position, sb.velocity, sb.angularVelocity, point),
-                        pointVelocity(state.position, state.velocity, state.angularVelocity, point),
-                    );
-                    if (dot(away, p.normal) > 0) {
-                        grip.departedAt = t;
+                // A tracked stroke latches a ball's first departure from the face (gate round 13 ruling, "Relax from
+                // first departure", 2026-10-12; on every tracked stroke, roll launch design §3.1): the first step a
+                // face–ball pair closed at the last step is open, with the ball moving away (departing). The impact
+                // does not know which ball is the striker's, so any ball's counts; in every stroke the face meets the
+                // striker's first. There the hands' path is re-anchored to the head's place and pace (flat push
+                // design, amendment 6, moved from the parting): the hands stop chasing the plan the impact slowed the
+                // head from. A replay re-latches at the same step, so it and the play it replaces follow one path.
+                if (
+                    tracked &&
+                    grip.departedAt === null &&
+                    pair.kind === "face-ball" &&
+                    p.closure !== null &&
+                    departing(balls[pair.b] as BallState, state, p.normal, R)
+                ) {
+                    grip.departedAt = t;
+                    // A check's share already fits its braking to the struck head (checkShare), so a check is not
+                    // re-anchored (roll launch design, amendment 3).
+                    if (played !== null && finishKind(played) !== "check") {
+                        played = reanchor(played, head, state, t);
                     }
                 }
                 p.spring = ZERO;
@@ -1442,11 +1471,6 @@ function strokeOnce(
             !waiting &&
             (plan.kind === "force" || !stillReaching(state, head, balls, R, played ?? plan, now))
         ) {
-            // The parting re-anchors the hands' path (flat push design, amendment 6), held open past it or not, so a
-            // replay and the play it replaces follow one path.
-            if (parted === null && played !== null) {
-                played = reanchor(played, head, state, now);
-            }
             if (now >= openUntil) {
                 break;
             }
@@ -1476,7 +1500,9 @@ function strokeOnce(
     const run = finish(setup, state, balls, pairs, turf, jumps, events, steps, steps * dt, touchingAtStart, names);
     const released =
         grip.releasedAt === null ? run : { ...run, release: { t: grip.releasedAt, deltaTheta: grip.releaseDelta } };
-    const done = grip.departedAt === null ? released : { ...released, departure: grip.departedAt };
+    const departed = grip.departedAt === null ? released : { ...released, departure: grip.departedAt };
+    const anchor = played?.anchor;
+    const done = anchor === undefined ? departed : { ...departed, anchor: { at: anchor.at, rate: anchor.rate } };
     if (trace === null || plan.kind !== "track") {
         return { run: done, follow: null };
     }
@@ -1528,9 +1554,11 @@ function continueStroke(
     let path = kind === "check" ? holdPendulum(plan, holdFrom) : plan;
     // The cap counts from the push's release, where the finish starts (P2b.2b.2c.3b.1 design §5; shapes design §8,
     // ruling 12), so that it never cuts a planned finish short; from contact without a push, or for one with no end.
+    // The plan's instants are read through the re-anchor's warp, where the warped plan reaches them (roll launch design
+    // §3.1): a slowed plan reaches its release, its push's end and its finish later.
     const capFrom = plan.push !== null && plan.push.release !== null ? plan.push.release : plan.arc.contactAt;
-    const cap = capFrom + FOLLOW_CAP;
-    const releaseAt = releaseTime(plan);
+    const cap = anchoredTime(plan, capFrom) + FOLLOW_CAP;
+    const releaseAt = anchoredTime(plan, releaseTime(plan));
     const headWeight = vec3(0, 0, 0 - head.mass * setup.gravity);
     const shaft = shaftWeightOf(head, setup.gravity);
     const ground: HeadTurfState | null =
@@ -1547,7 +1575,8 @@ function continueStroke(
     const watch: SwingWatch = { risen: false, last: null };
     for (;;) {
         const t = steps * dt;
-        if (finished(kind, plan, state, t, watch) || t >= until) {
+        const planned = plannedTime(plan, t);
+        if (finished(kind, plan, state, t, planned, watch) || t >= until) {
             break;
         }
         if (t >= cap) {
@@ -1560,10 +1589,10 @@ function continueStroke(
         if (
             plan.push !== null &&
             plan.push.end !== null &&
-            t >= plan.push.end &&
+            planned >= plan.push.end &&
             plan.arc.lift?.release === undefined
         ) {
-            const released = releaseLift(plan, t);
+            const released = releaseLift(plan, planned);
             if (released !== plan) {
                 plan = released;
                 path = kind === "check" ? holdPendulum(plan, holdFrom) : plan;

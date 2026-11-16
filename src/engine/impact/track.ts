@@ -590,7 +590,7 @@ export interface PreparedTrack {
     readonly top: HandGains;
     readonly bottom: HandGains;
     /**
-     * The path re-anchored at the parting (flat push design, amendment 6): from `at` (s) on, the plan runs at `rate`
+     * The path re-anchored at the departure (flat push design, amendment 6; roll launch design §3.1): from `at` (s) on, the plan runs at `rate`
      * (≤ 1) of its own pace from `at`, moved by `by` (m), so the hands carry on from where the head is, no faster.
      */
     readonly anchor?: Anchor;
@@ -1340,17 +1340,18 @@ export function releaseLift(track: PreparedTrack, at: number): PreparedTrack {
 }
 
 /**
- * `track` re-anchored at the parting `at` (s; flat push design, amendment 6, 2026-11-15): the push's added pace is for
- * the ball, before it leaves (the user, 2026-11-15), so once it has gone the hands neither recover the lag its load
+ * `track` re-anchored at `at` (s; flat push design, amendment 6, 2026-11-15), the ball's departure from the face on
+ * every tracked stroke (roll launch design §3.1; the user's "Plan restarts", 2026-11-16): the push's added pace is for
+ * the ball, before it leaves (the user, 2026-11-15), so once it has gone the hands neither recover the lag the impact
  * held the head to nor speed the head back up to the plan's pace, either of which ran the head onto the ball again.
  * From `at` the plan runs on at the head's along-aim speed over the planned head's there (at most 1), every velocity
  * scaled by that rate and every acceleration by its square, and moves back along the aim by the socket's lag behind
  * it; `state` is the head's. A head level with or ahead of its path keeps its place, and one at or above the plan's
- * pace keeps its pace. A stroke with no push or a track already re-anchored is unchanged. The lag across the aim and
+ * pace keeps its pace. A track already re-anchored is unchanged. The lag across the aim and
  * the pitch's are kept (assumption): the surge runs along the aim.
  */
 export function reanchor(track: PreparedTrack, head: MalletHead, state: HeadState, at: number): PreparedTrack {
-    if (track.push === null || track.anchor !== undefined) {
+    if (track.anchor !== undefined) {
         return track;
     }
     const { aim } = track.arc;
@@ -1369,6 +1370,23 @@ function warped(anchor: Anchor | undefined, t: number): { readonly t: number; re
     }
     const k = anchor.rate;
     return { t: anchor.at + k * (t - anchor.at), v: k, a: k * k };
+}
+
+/**
+ * The time (s) at which `track`'s re-anchored plan reaches its planned instant `planned` (roll launch design §3.1):
+ * `planned` itself before the anchor, or with none; past it, at + (planned − at)/k, or Infinity at a rate of 0.
+ */
+export function anchoredTime(track: PreparedTrack, planned: number): number {
+    const { anchor } = track;
+    if (anchor === undefined || planned < anchor.at) {
+        return planned;
+    }
+    return anchor.rate > 0 ? anchor.at + (planned - anchor.at) / anchor.rate : Infinity;
+}
+
+/** The planned instant (s) that `track`'s re-anchored plan plays at time t: the inverse of anchoredTime. */
+export function plannedTime(track: PreparedTrack, t: number): number {
+    return warped(track.anchor, t).t;
 }
 
 /**
@@ -2072,7 +2090,9 @@ export function senseResistance(sensed: number, resistance: number, response: nu
  */
 function pushIntent(track: PreparedTrack, t: number, grip: GripState): Vec3 | null {
     const push = track.push as Push;
-    if (!(grip.resistance > 0) || (push.pendulum !== null && t >= push.pendulum)) {
+    // The surge is for the ball, before it leaves (the user, 2026-11-15): it ends at the departure (roll launch design,
+    // amendment 1).
+    if (!(grip.resistance > 0) || grip.departedAt !== null || (push.pendulum !== null && t >= push.pendulum)) {
         return null;
     }
     return scale(track.arc.aim, Math.min(grip.resistance, track.hands.pushForce));
@@ -2147,6 +2167,15 @@ function heldTo(trial: Vec3, limit: number): Vec3 | null {
 function slid(offset: Vec3 | null, slide: Vec3, q: Quaternion): Vec3 {
     const body = rotateInverse(q, slide);
     return offset === null ? body : add(offset, body);
+}
+
+/**
+ * The guiding bottom hand's slide (roll launch design, amendment 1): `force`'s forward excess over `share` along
+ * `aim` (a unit vector), as a vector along `aim`; zero where the force is at or below its share there.
+ */
+export function guideExcess(force: Vec3, share: Vec3, aim: Vec3): Vec3 {
+    const over = dot(sub(force, share), aim);
+    return over > 0 ? scale(aim, over) : ZERO;
 }
 
 /** What carryLoad needs from handLoad's step: the feed-forward's shares, the shaft and the grips' arms. */
@@ -2326,6 +2355,16 @@ function carryLoad(
             // On F_max to rounding, as the top hand's; not re-clipped.
             bottom = chainForces(chain, bottomArm, anchor, bottomVelocity, bottomDrive, g);
             saturated = saturated ?? "bottom";
+        }
+        // From the departure the bottom hand guides (roll launch design, amendment 1): its hold slides by any forward
+        // excess over its share along the aim, as the grip limit slides, so its arm's momentum is not passed on. Not on
+        // a check (α < 0, finishKind), whose share already fits the struck head (checkShare; amendment 3).
+        const guiding = grip.departedAt !== null && !(arc.alpha < 0);
+        const excess = guiding ? guideExcess(bottom, bottomFed, arc.aim) : ZERO;
+        if (excess !== ZERO) {
+            grip.bottomOffset = slid(grip.bottomOffset, scale(excess, 1 / spring), q);
+            const anchor = add(bottomAt, rotate(q, grip.bottomOffset));
+            bottom = chainForces(chain, bottomArm, anchor, bottomVelocity, bottomDrive, g);
         }
         const twist = hands.bottomGrip * step.twist + track.bottom.twistDamping * dot(step.spinLag, step.s);
         return load(top, bottom, twist, add(topFed, bottomFed), saturated);

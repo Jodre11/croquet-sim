@@ -495,12 +495,18 @@ export interface ImpactRun {
      */
     readonly release?: { readonly t: number; readonly deltaTheta: number };
     /**
-     * A push's first departure of a ball from the face (s; gate round 13 ruling, "Relax from first departure",
-     * 2026-10-12); the arms' hold no longer relaxes from it (P2b.2b.2c.3b.1 design §2). The impact does not know which
-     * ball is the striker's, so it is any ball's; in a roll the face meets only the striker's. Absent if no ball left
-     * the face, and with no push.
+     * A tracked stroke's first departure of a ball from the face (s; gate round 13 ruling, "Relax from first
+     * departure", 2026-10-12; roll launch design §3.1), where the hands' path is re-anchored. The impact does not know
+     * which ball is the striker's, so it is any ball's; in every stroke the face meets the striker's first. Absent if no
+     * ball left the face, and for a force table.
      */
     readonly departure?: number;
+    /**
+     * The hands' path's re-anchor (roll launch design §3.1): when (s), at the departure, and the rate the plan runs at
+     * from then (reanchor). Absent where the path was not re-anchored: no departure, or a head level with its path and
+     * at its pace there.
+     */
+    readonly anchor?: { readonly at: number; readonly rate: number };
     /**
      * Slip distance (m) of the head's material at the head–turf resistance's centre (P2b.2b.2b.3 design §4.3): its
      * horizontal speed there·dt, summed per step while a column bears; absent when the pair never closed.

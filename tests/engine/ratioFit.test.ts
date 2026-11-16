@@ -256,10 +256,12 @@ describe("the read-out (P2b.2b.2c.2b design §5.2, §8.1)", () => {
         // 2.050 ms; w₁ 1.3917, v₂ 3.7565, and the mallet, no longer dragged by the swing law's damper, 0.8978 m/s.
         // P2b.2b.2c.3a: the drive's hands together (was 2.050 ms; w₁ 1.3917, v₂ 3.7565, W 0.8978): the face lets go at
         // 1.045 ms, so the read is at 2.045 ms; w₁ 1.3895, v₂ 3.7550, W 0.8853 m/s.
+        // Roll launch design §3.1 (was W 0.8853 m/s): the hands re-anchor at the departure, 1.045 ms, to the head's
+        // pace, so they stop chasing the planned swing: the mallet reads 0.8851 m/s; the balls are unchanged.
         expect(r.time).toBeCloseTo(2.045e-3, 12);
         expect(r.w1).toBeCloseTo(1.3895, 4);
         expect(r.v2).toBeCloseTo(3.755, 4);
-        expect(r.W).toBeCloseTo(0.8853, 4);
+        expect(r.W).toBeCloseTo(0.8851, 4);
     });
 
     it("samples each ball's rolling fraction and the hands' force along aim (roll launch design §3.3)", () => {

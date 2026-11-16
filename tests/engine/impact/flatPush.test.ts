@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { headBallContact, headLowestPoint } from "../../../src/engine/impact/contacts";
+import { faceKey, headBallContact, headLowestPoint } from "../../../src/engine/impact/contacts";
+import { departing } from "../../../src/engine/impact/integrate";
 import { practiseStroke } from "../../../src/engine/impact/practice";
+import { simulateImpact, simulateStroke } from "../../../src/engine/impact/simulateImpact";
 import {
+    guideExcess,
     handsAt,
     headDepth,
     headDepthTerms,
@@ -17,6 +20,8 @@ import {
 import type { MalletHead, TrackDrive } from "../../../src/engine/impact/types";
 import { add, scale, vec3 } from "../../../src/engine/math/vec3";
 import { planStroke } from "../../../src/engine/swing/buildContact";
+import type { BallState } from "../../../src/engine/types";
+import { canonicalSetup } from "../support/shot";
 import { openWorld } from "../../../scripts/openLawn";
 import { mapSetup, textBook } from "../../../scripts/pushMapRun";
 
@@ -134,8 +139,11 @@ describe("the follow-through after the parting (flat push design, amendments 5 a
             const setup = { ...base, stroke: { ...base.stroke, holdFirmness: hold } };
             const { contact } = planStroke(setup, lawn);
             const { follow, result } = practiseStroke(contact, setup.balls, lawn, setup.striker);
-            // The impact ends at its first parting: no catch was replayed.
-            expect(follow.impactEnd).toBeLessThan(0.11);
+            // The impact ends at its first parting: no catch was replayed. Roll launch design §3.1 (was before 0.11 s):
+            // the full roll re-anchors at its departure (0.66 ms, rate 0.569), and its slowed push taps the striker's
+            // ball every few ms through the push, the impact ending at 218.5 ms, still with no catch replayed and nothing
+            // off the face.
+            expect(follow.impactEnd).toBeLessThan(type === "full-roll" ? 0.22 : 0.11);
             expect(result.events.map((e) => e.kind)).not.toContain("impact-off-face");
             const R = lawn.ball.radius;
             const balls = Object.values(result.balls).filter((b) => b !== undefined);
@@ -174,6 +182,110 @@ describe("the follow-through after the parting (flat push design, amendments 5 a
         };
         expect(reanchor(track, head, ahead, at)).toBe(track);
     });
+});
+
+describe("the re-anchor at the departure (roll launch design §3.1)", () => {
+    const gugan = openWorld(13);
+    // Gugan 4 Table 6's C10H: the half roll at the power whose planned head speed is his 6.5 m/s (the Table 6 probe).
+    const c10h = mapSetup("half-roll", textBook("half-roll"), 1.152);
+
+    it("re-anchors a stroke with no push", () => {
+        const setup = canonicalSetup("drive", { world: lawn });
+        const { contact } = planStroke(setup, lawn);
+        const track = prepareTrack(contact.drive as TrackDrive, contact.head, lawn.gravity);
+        expect(track.push).toBeNull();
+        const at = (contact.drive as TrackDrive).arc.contactAt + 0.002;
+        const planned = headOnPath(track, contact.head, at);
+        const state = {
+            ...planned,
+            position: add(planned.position, scale(track.arc.aim, -0.04)),
+            velocity: scale(planned.velocity, 0.6),
+        };
+        expect(reanchor(track, contact.head, state, at).anchor?.rate).toBeCloseTo(0.6, 9);
+    });
+
+    it("latches the departure on a stroke with no push", { timeout: 60_000 }, () => {
+        const setup = canonicalSetup("drive", { world: lawn });
+        const { contact } = planStroke(setup, lawn);
+        const { result } = practiseStroke(contact, setup.balls, lawn, setup.striker);
+        const first = result.timeline[faceKey(setup.striker)]?.[0];
+        expect(first).toBeDefined();
+        expect(result.departure).toBeDefined();
+        expect(Math.abs((result.departure as number) - (first?.end as number))).toBeLessThan(0.005);
+    });
+
+    it("re-anchors at the departure, not the parting", { timeout: 60_000 }, () => {
+        const { contact } = planStroke(c10h, gugan);
+        const { result } = practiseStroke(contact, c10h.balls, gugan, c10h.striker);
+        expect(result.departure).toBeDefined();
+        expect(result.anchor?.at).toBe(result.departure);
+    });
+
+    it("does not latch a pair that reopens with the ball not moving away", () => {
+        const R = lawn.ball.radius;
+        const normal = vec3(1, 0, 0);
+        const head = {
+            position: vec3(0, 0, R),
+            velocity: vec3(2, 0, 0),
+            orientation: { w: 1, x: 0, y: 0, z: 0 },
+            angularVelocity: vec3(0, 0, 0),
+        };
+        const ball = (vx: number): BallState => ({
+            position: vec3(0.1, 0, R),
+            velocity: vec3(vx, 0, 0),
+            angularVelocity: vec3(0, 0, 0),
+        });
+        expect(departing(ball(2), head, normal, R)).toBe(false);
+        expect(departing(ball(1.9), head, normal, R)).toBe(false);
+        expect(departing(ball(2.1), head, normal, R)).toBe(true);
+    });
+
+    it("ends the push intent at the departure (amendment 1)", { timeout: 60_000 }, () => {
+        const { contact } = planStroke(c10h, gugan);
+        const intents: { t: number; intent: boolean }[] = [];
+        const result = simulateImpact(contact, c10h.balls, gugan, {
+            probe: { step: (s) => intents.push({ t: s.t, intent: s.hand?.intent !== undefined }) },
+        });
+        const at = result.departure as number;
+        expect(intents.some((s) => s.t <= at && s.intent)).toBe(true);
+        // The latch falls in the pair loop of the step that begins at `at`, after that step's hands: the next step on.
+        expect(intents.filter((s) => s.t > at + 1e-5 && s.intent)).toEqual([]);
+    });
+
+    it("slides the guiding bottom hand by its forward excess over its share along the aim (amendment 1)", () => {
+        const aim = vec3(0, 1, 0);
+        const share = vec3(1, 20, -3);
+        // 50 N forward along the aim against a 20 N share: 30 N slides, across the aim nothing.
+        expect(guideExcess(vec3(4, 50, 7), share, aim)).toEqual(vec3(0, 30, 0));
+        // At or below the share it holds: the guide never adds a push, nor takes back a brake.
+        expect(guideExcess(vec3(4, 20, 7), share, aim)).toEqual(vec3(0, 0, 0));
+        expect(guideExcess(vec3(4, -40, 7), share, aim)).toEqual(vec3(0, 0, 0));
+    });
+
+    it("re-anchors a replay at the same instant as a play that is not replayed", { timeout: 60_000 }, () => {
+        const { contact } = planStroke(c10h, gugan);
+        const kept = simulateImpact(contact, c10h.balls, gugan);
+        const at = kept.anchor?.at as number;
+        expect(at).toBeDefined();
+        // A cap just past the re-anchor ends the play before any catch, which is then never replayed.
+        const once = simulateImpact(contact, c10h.balls, gugan, { cap: at + 0.001 });
+        expect(once.anchor?.at).toBe(at);
+    });
+
+    it.each(["stop-gc", "stop-ac"] as const)(
+        "latches the %s's departure but neither re-anchors nor guides its check (amendment 3)",
+        (type) => {
+            // Before this design both stops followed through with no flag; the guide or the re-anchor on the check
+            // brought both to follow-grip-limit and the AC stop's to follow-turf-yield and follow-head-deep.
+            const setup = canonicalSetup(type, { world: lawn });
+            const { contact } = planStroke(setup, lawn);
+            const { result, follow } = simulateStroke(contact, setup.balls, lawn);
+            expect(result.departure).toBeDefined();
+            expect(result.anchor).toBeUndefined();
+            expect(follow.flags).toEqual([]);
+        },
+        60_000,
+    );
 });
 
 describe("the held slope braked within the grip (flat push design, amendment 7)", () => {

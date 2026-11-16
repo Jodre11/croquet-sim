@@ -50,10 +50,11 @@ function playTextBook(type: RollType): string | null {
 }
 
 describe("the band (P2b.2b.2c.3b.1 design §3)", () => {
-    it("reads today's full roll as off the face and the half roll at its canonical power in the band", () => {
+    it("reads today's full roll and the half roll at its canonical power in the band", () => {
         // The plan's Task 5 expected follow-turf-yield; after Tasks 1 and 3 the full hold meets the ball off the face
-        // (pushMapRun.test's full roll), which bandMiss reads first.
-        expect(playTextBook("full-roll")).toBe("impact-off-face");
+        // (pushMapRun.test's full roll), which bandMiss reads first. Roll launch design §3.1 (was impact-off-face): the
+        // hands re-anchor at the departure, so the full roll's slowed push stays on the face, in the band.
+        expect(playTextBook("full-roll")).toBeNull();
         expect(playTextBook("half-roll")).toBeNull();
     }, 60_000);
 

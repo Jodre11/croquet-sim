@@ -11,7 +11,6 @@ import {
     playedClass,
     textBook,
     type MapPlan,
-    type MapType,
 } from "../../scripts/pushMapRun";
 import type { ShotSetup } from "../../src/engine/swing/types";
 import { OLD_ROLL_HANDS } from "./support/shot";
@@ -74,20 +73,20 @@ describe("the jumpiness bound's neighbours (plan B-d7)", () => {
 describe("a head that rides over the ball (plan B-d8)", () => {
     const world = openWorld(10);
     // Hands-from-lean design §3: on the law's fisted hands the slack pass roll ends off the face (unpractised), so
-    // these plays keep the hands before the law, where the head rides over the ball.
-    const held = (type: MapType, plan: MapPlan, firmness: number): ShotSetup => {
-        const setup = mapSetup(type, plan, canonicalPower(type, world), { stance: OLD_ROLL_HANDS });
-        return { ...setup, stroke: { ...setup.stroke, holdFirmness: firmness } };
+    // these plays keep the hands before the law, where the head rides over the ball. Roll launch design §3.1 (was the pass roll at its canonical power): the hands re-anchor at the departure and the
+    // slack pass roll's head no longer rides over the ball; the slack full roll's does at power 2.
+    const slack = (handReach: number): ShotSetup => {
+        const plan = { ...textBook("full-roll"), drive: 0.5, handReach, window: 0.02 };
+        const setup = mapSetup("full-roll", plan, 2, { stance: OLD_ROLL_HANDS });
+        return { ...setup, stroke: { ...setup.stroke, holdFirmness: 0 } };
     };
 
-    it("is a mishit on the slack pass roll whose push never lands", () => {
-        const plan = { ...textBook("pass-roll"), drive: 0.5, handReach: 0.3, window: 0.02 };
-        expect(playedClass(held("pass-roll", plan, 0), world)).toEqual({ klass: "mishit", reason: HEAD_OVER_BALL });
+    it("is a mishit on the slack full roll whose push never lands", () => {
+        expect(playedClass(slack(0.6), world)).toEqual({ klass: "mishit", reason: HEAD_OVER_BALL });
     }, 120_000);
 
     it("leaves a stroke with no push alone, however slack", () => {
-        const plan = { ...textBook("pass-roll"), drive: 0.5, handReach: 0, window: 0.02 };
-        expect(playedClass(held("pass-roll", plan, 0), world).reason).not.toBe(HEAD_OVER_BALL);
+        expect(playedClass(slack(0), world).reason).not.toBe(HEAD_OVER_BALL);
     }, 120_000);
 
     it.each(MAP_TYPES)(

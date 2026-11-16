@@ -576,8 +576,11 @@ describe("the tracked end rule", () => {
         // ended at 120.5 ms): three face–blue intervals, from 0.005, 18.65 and 44.29 ms, no event, and the impact
         // ends at 115.66 ms. P2b.2b.2c.2c: the face's T(U) re-set (was three intervals and no event): seventeen
         // face–blue intervals, from 0.005, 5.51 and 10.13 ms on, every 4–6 ms, until the face, pitching up, leaves blue
-        // (impact-off-face at 74.56 ms); the impact ends at 121.11 ms.
-        expect((run.timeline["face/blue"] ?? []).length).toBeGreaterThanOrEqual(2);
+        // (impact-off-face at 74.56 ms); the impact ends at 121.11 ms. Roll launch design §3.1 (was at least two
+        // face–blue intervals): the hands re-anchor at blue's departure, 1.875 ms, to the head's own pace, so the head
+        // no longer closes on blue: one face–blue interval, [0.005, 1.875) ms, no event, and the impact ends at the
+        // window's end, 10 ms. The test keeps its cover of the events.
+        expect(run.timeline["face/blue"] ?? []).toHaveLength(1);
         const kinds = run.events.map((e) => e.kind);
         expect(kinds).not.toContain("impact-head-approaching");
         expect(kinds).not.toContain("impact-cap");
@@ -596,7 +599,10 @@ describe("the tracked end rule", () => {
         // law's damper no longer holds the head to the path; the hands' flex lets it slow below blue after the first
         // tap, face–blue [0.005, 1.875) ms, and it closes on blue again from 33.5 ms, within LOOK_AHEAD of it, until a
         // second tap at [55.315, 56.510) ms. The cap moves to 40 ms, an input change; the expectation is unchanged.
-        const { run } = strikeRun([freeBall("blue", BALL), freeBall("red", RED)], 40e-3);
+        // Roll launch design §3.1 (was a cap at 40 ms): the re-anchor at blue's departure keeps the head off blue after
+        // the first tap, so the cap moves to 1 ms, inside that tap while the head still closes on blue; an input
+        // change, the expectation unchanged.
+        const { run } = strikeRun([freeBall("blue", BALL), freeBall("red", RED)], 1e-3);
         expect(run.events.map((e) => e.kind)).toEqual(["impact-cap", "impact-head-approaching"]);
     });
 });
@@ -787,7 +793,7 @@ describe("the flex (P2b.2b.2b.2b design §3.1, §7.1)", () => {
         it("latches the first departure: the first step the face–ball pair opens with the ball separating", () => {
             // A held 3 m/s carry into a free ball (gravity off): the run's departure is the end of the face's first
             // interval on the ball, to within a step, and it stays there through any later taps. A run that strikes no
-            // ball never departs; a stroke with no push never records one.
+            // ball never departs; a stroke with no push records one too (roll launch design §3.1; was never).
             const ball = vec3(0, 0, 1);
             const begin = vec3(ball.x - R - 1e-6 - TEST_HEAD.length / 2, 0, ball.z);
             const omega0 = 3 / (0.8 + TEST_HEAD.socket.z);
@@ -810,7 +816,9 @@ describe("the flex (P2b.2b.2b.2b design §3.1, §7.1)", () => {
                 isolated({ start: headOnPath(swing, TEST_HEAD, 0), drive: swing, balls: [freeBall("blue", ball)] }),
                 { cap: 0.03 },
             );
-            expect(swung.departure).toBeUndefined();
+            // Roll launch design §3.1 (was none without a push): every tracked stroke latches it.
+            const hit = (swung.timeline["face/blue"] ?? [])[0] as { start: number; end: number };
+            expect(Math.abs((swung.departure as number) - hit.end)).toBeLessThanOrEqual(IMPACT_DT * 1.000001);
         });
     });
 
@@ -976,76 +984,44 @@ describe("the push intent (P2b.2b.2b.2b gate ruling 2026-10-11)", () => {
         const omega0 = 3 / (0.8 + TEST_HEAD.socket.z);
         const arc = levelArc(start, { slopeHold: 1, handReach: 0.1, pendulumAt: 1, omega0 });
         const track = prepareAt(arc, 0);
+        // Roll launch design §3.1 and amendment 1 (was every step to the cap): the intent ends and the hands re-anchor
+        // at the departure, so the replay runs to it.
         const probe = recorder();
         const head = headOnPath(track, TEST_HEAD, 0);
-        integrate(isolated({ start: head, drive: track, balls: [freeBall("blue", ball)] }), { probe, cap: 3e-3 });
-        const { differ, largest, sensed } = replay(track, head, probe.snapshots);
+        const run = integrate(isolated({ start: head, drive: track, balls: [freeBall("blue", ball)] }), {
+            probe,
+            cap: 3e-3,
+        });
+        const departure = run.departure as number;
+        const pushed = probe.snapshots.filter((s) => s.t <= departure);
+        const { differ, largest, sensed } = replay(track, head, pushed);
         expect(differ).toBe(0);
         expect(largest).toBeGreaterThan(TEST_PUSH_FORCE);
         expect(sensed).toBeGreaterThan(0);
         expect(sensed).toBeLessThan(0.1 * largest);
-        expect(replay(track, head, probe.snapshots, false).differ).toBeGreaterThan(0);
+        expect(replay(track, head, pushed, false).differ).toBeGreaterThan(0);
     });
 
-    it("relaxes in the follow-through, where the push never reaches the pendulum phase", () => {
-        // With the balls removed, each follow-through step relaxes R̃ towards 0 at the muscles' pace (round-1 review,
-        // 894aa76). On a still carry, whose push never reaches its pendulum phase, the intent stays on, so it falls by
-        // (1 − response) per step from the impact's last R̃: P_k = R̃₀·(1 − response)^k, R̃₀ the impact's last step's
-        // update, R̃ + (R − R̃)·response, of the R̃ that step's intent read. Each step's P is its feed-forward less
-        // that of a grip state sensing nothing, at the step's start.
+    it("carries no intent from the departure, where the push never reaches the pendulum phase", () => {
+        // Roll launch design, amendment 1 (was "relaxes in the follow-through": each follow-through step's intent fell
+        // by (1 − response) per step from the impact's last R̃, on a still carry whose push never reaches its pendulum
+        // phase): the intent ends at the departure, so it is on through the blow and off from the departure to the
+        // impact's end; the follow-through, whose grip keeps the departure, reads none (pushIntent; the flat push's
+        // "ends the push intent at the departure").
         const ball = vec3(0, 0, 1);
         const begin = vec3(ball.x - R - 1e-6 - TEST_HEAD.length / 2, 0, ball.z);
         const omega0 = 3 / (0.8 + TEST_HEAD.socket.z);
         const track = prepareAt(levelArc(begin, { slopeHold: 1, handReach: 0.1, pendulumAt: 1, omega0 }), 0);
         expect((track.push as Push).pendulum).toBeNull();
-        const response = pushResponse(TEST_HANDS, IMPACT_DT);
-        const aim = track.arc.aim;
-        const intent = (before: HeadState, t: number, feedForward: Vec3): number =>
-            dot(sub(feedForward, handLoad(track, before, TEST_HEAD, t, newGripState(), IMPACT_DT).feedForward), aim);
-        const impact: ImpactSnapshot[] = [];
-        const follow: number[] = [];
-        let before: HeadState | null = null;
-        const probe: ImpactProbe = {
-            step(s) {
-                impact.push(s);
-            },
-            follow(s) {
-                if (follow.length < 400) {
-                    follow.push(
-                        intent(
-                            before ?? (impact[impact.length - 1] as ImpactSnapshot).head,
-                            s.t - IMPACT_DT,
-                            s.feedForward,
-                        ),
-                    );
-                }
-                before = s.head;
-            },
-        };
+        const probe = recorder();
         const head = headOnPath(track, TEST_HEAD, 0);
         const setup = isolated({ start: head, drive: track, balls: [freeBall("blue", ball)] });
-        integrateStroke(setup, { probe, cap: 3e-3 }, true);
-        const last = impact[impact.length - 1] as ImpactSnapshot;
-        const lastHand = last.hand as NonNullable<ImpactSnapshot["hand"]>;
-        const read = intent(
-            (impact[impact.length - 2] as ImpactSnapshot).head,
-            last.t - IMPACT_DT,
-            lastHand.feedForward,
-        );
-        let onHead = ZERO;
-        for (const c of last.contacts) {
-            if (c.key.startsWith("face/")) {
-                onHead = sub(onHead, add(scale(c.normal, c.normalForce), c.tangentialForce));
-            }
-        }
-        const sensed = senseResistance(read, Math.max(0, 0 - dot(aim, onHead)), response);
-        // R̃ stays under the arm's push, so P is R̃ itself.
-        expect(sensed).toBeGreaterThan(1);
-        expect(sensed).toBeLessThan(TEST_PUSH_FORCE);
-        expect(follow.length).toBe(400);
-        follow.forEach((P, k) => {
-            expect(Math.abs(P - sensed * (1 - response) ** k), `step ${k}`).toBeLessThan(1e-9 * sensed);
-        });
+        const { run } = integrateStroke(setup, { probe, cap: 3e-3 }, true);
+        const departure = run.departure as number;
+        const intents = probe.snapshots.map((s) => ({ t: s.t, on: s.hand?.intent !== undefined }));
+        expect(intents.some((s) => s.on && s.t <= departure)).toBe(true);
+        expect(intents.filter((s) => s.t > departure + IMPACT_DT).every((s) => !s.on)).toBe(true);
+        expect(intents[intents.length - 1]?.t).toBeGreaterThan(departure + IMPACT_DT);
     });
 
     it("takes no resistance from the turf", () => {
@@ -1644,11 +1620,13 @@ describe("one law after contact (P2b.2b.2c.3a A2 item 5)", () => {
         expect(grip.bottomChain).toBeNull();
     });
 
-    it("records a ball's first departure only with a push", () => {
+    it("records a ball's first departure on a stroke with no push", () => {
         // A2 item 5: the first-departure latch feeds the posture hold, which acts only with a push, so a swing arc
         // striking a free ball (gravity off) records none. The carry's case is the latch's own test above.
         // P2b.2b.2c.3a: a push wherever handReach > 0 (A2 item 8), so the arc without one has a handReach of 0 (was
-        // the fixture's 10 m reach, which never bound in swing mode).
+        // the fixture's 10 m reach, which never bound in swing mode). Roll launch design §3.1 (was none recorded
+        // without a push): every tracked stroke latches the departure, where its hands re-anchor, at the first face
+        // interval's end to within a step.
         const ball = vec3(0, 0, 1);
         const begin = vec3(ball.x - R - 1e-6 - TEST_HEAD.length / 2, 0, ball.z);
         const swing = prepareTrack(
@@ -1660,8 +1638,9 @@ describe("one law after contact (P2b.2b.2c.3a A2 item 5)", () => {
             isolated({ start: headOnPath(swing, TEST_HEAD, 0), drive: swing, balls: [freeBall("blue", ball)] }),
             { cap: 0.03 },
         );
-        expect(run.timeline["face/blue"] ?? []).not.toHaveLength(0);
-        expect(run.departure).toBeUndefined();
+        const first = (run.timeline["face/blue"] ?? [])[0] as { start: number; end: number };
+        expect(first).toBeDefined();
+        expect(Math.abs((run.departure as number) - first.end)).toBeLessThanOrEqual(IMPACT_DT * 1.000001);
     });
 });
 

@@ -154,10 +154,15 @@ describe("the follow-through's flags (P2b.2b.2b.3 design §4.6)", () => {
         // follows the planned dip and first yields at 73.1 ms, 1 ms before the impact's end at 74.1 ms; it yields again
         // in the follow-through, which its own flag records. Low points from 1.7 to 2.0 push lengths all yield inside
         // the impact (the dip is part of trackEnd), and 2.1 carries the hands past their arc's quarter turn.
-        expect(result.events.map((e) => e.kind)).toContain("turf-yield");
+        // Roll launch design §3.1 (was turf-yield in the impact too, and the follow-through's flags without
+        // follow-grip-limit): the hands re-anchor at the departure (0.65 ms, rate 0.519), so the impact ends at
+        // 62.4 ms with the head lifting off the turf only (turf-lift twice), and the slowed plan's follow-through, to
+        // 1.36 s, yields the turf, digs past HEAD_DEEP_LIMIT and saturates a hand on this narrowed arc's dip.
+        expect(result.events.map((e) => e.kind)).not.toContain("turf-yield");
         // Measured while building it: the head digs past HEAD_DEEP_LIMIT too, and the finish still ends at rest.
-        expect(follow.flags).toEqual(["follow-turf-yield", "follow-head-deep"]);
-    }, 60_000);
+        expect(follow.flags).toEqual(["follow-turf-yield", "follow-head-deep", "follow-grip-limit"]);
+        // The slowed follow-through, dug in to 1.36 s, takes about 100 s beside other files (was 60 s).
+    }, 300_000);
 });
 
 describe("Gugan's jab (P2b.2b.2b.3 design §7.3; slow)", () => {

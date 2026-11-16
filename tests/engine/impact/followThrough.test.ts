@@ -195,11 +195,15 @@ describe("the follow-through (design §4)", () => {
     it("finishes a pushed stroke once the bottom hand holds its carry at rest", () => {
         // Shapes design §8, ruling 14 (was the mallet's apex after its let-go, 0.927 s, ruling 13): the bottom hand
         // brakes the carry to rest and holds it, and the swing ends at the first step from there.
-        const { contact, follow } = stroke(shot({ backswing: 0.25 }, CARRY));
+        // Roll launch design §3.1 (was from push.freed itself): the hands re-anchor at the departure, so the slowed
+        // plan reaches its rest at at + (freed − at)/k, and the finish follows within a step of that.
+        const { contact, follow, result } = stroke(shot({ backswing: 0.25 }, CARRY));
         const push = prepareTrack(contact.drive as TrackDrive, contact.head, WORLD.gravity).push as Push;
+        const anchor = result.anchor as { at: number; rate: number };
+        const freed = anchor.at + ((push.freed as number) - anchor.at) / anchor.rate;
         expect(follow.finish).toBeGreaterThan(handsApex(push) as number);
-        expect(follow.finish).toBeGreaterThanOrEqual(push.freed as number);
-        expect(follow.finish - (push.freed as number)).toBeLessThan(1e-3);
+        expect(follow.finish).toBeGreaterThanOrEqual(freed);
+        expect(follow.finish - freed).toBeLessThan(1e-3);
         expect(follow.flags).not.toContain("follow-cap");
     });
 
@@ -460,6 +464,12 @@ describe("the mallet's release and the finish's end (shapes design §2)", () => 
         // P2b.2b.2c.3b gate stage 1 (user ruling 2026-11-05): stop-ac re-captured with its 11 mm dip removed.
         // Hands-from-lean design §3: single-ball re-captured with its bottom hand at the law's 0.717 m (was 0.70 m):
         // the ball's speed moves in the fifth figure, the follow-through's finish from 0.600 s to 0.156 s.
+        // Roll launch design §3.1: drive and single-ball re-captured with the hands re-anchored at the departure. The
+        // drive's contacts are unchanged, but its impact ends at 5.60 ms (was 78.92 ms, the planned head held within
+        // reach of blue), so the balls are handed over sooner, still skidding (blue 1.667 m/s, was 1.334; red 3.297,
+        // was 2.908), and the follow-through finishes at 0.318 s (was 0.105 s). The single-ball stroke's ball is
+        // unchanged and its finish 0.283 s (was 0.156 s): the re-anchored plan swings on at the head's pace. stop-ac,
+        // a check, is unchanged (amendment 3).
         expect(JSON.parse(JSON.stringify(played(type)))).toEqual(NO_PUSH_BASELINE[type]);
     });
 

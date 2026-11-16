@@ -40,6 +40,10 @@ the established instant.
   motion: the planned follow-through carries on from there, and the hands no longer try to recover the speed the
   impact took. Chosen over a reaction delay (the hands weak for a reaction time, then chasing the old plan) and a
   softer hold (tuning, not mechanism).
+- **The bottom hand guides, from the departure (user, 2026-11-16; amendment 1, §3.1a).** The bottom hand "guides
+  rather than pushes independently" (the user, deferring the detail to the texts and Gugan). From t_r it pushes the
+  shaft along the aim no harder than its share of the feed-forward. Chosen over applying it from contact, which would
+  change the strike and reopen the croquet-ratio fit.
 - **The balls' friction fits Gugan (user, 2026-11-16).** The rougher croquet ball justifies a value above the billiard
   one; it is set from C10H.
 
@@ -85,6 +89,61 @@ stroke**, not a second mechanism:
   146–303 ms contacts may be single intervals), t_r falls at the push's end and nothing changes during it: the push's
   added pace before the ball leaves is the 2026-11-15 ruling. Their excess pace, if it remains, is the push itself, a
   later design; §4 reports it so a "no change" there reads as that, not as a failure.
+
+### 3.1a Amendment 1 (2026-11-16): the bottom hand guides
+
+Task 2's gate failed with §3.1 alone: in C10H the re-anchor fired at 0.62 ms at rate 0.50, yet the hands' force along
+the aim peaked at 103 N after it, and the head struck the ball again about every 7 ms until 54 ms. A step trace found
+two sources:
+
+- **The bottom hand–arm chain's own momentum.** Its forearm (the chain's 0.6 kg) still moves at the pre-impact 5 m/s
+  when the head has fallen to about 3 m/s. Only the arm's slow flex slows it, so the palm and finger springs pass its
+  momentum to the shaft: 140–160 N in the first 2 ms and about 60 N to 10 ms, about 1.2 N·s, while the top hand pulls
+  back. The re-anchor moves the plan, not the chain, so it cannot touch this.
+- **The push intent**, about 30 N to 5 ms, as the hands still sense the balls' resistance.
+
+The sources:
+- Gugan finds the mallet after a two-ball roll's impact moving at about ball 1's speed, with no clear evidence of
+  acceleration (§10.1).
+- Riches (https://www.oxfordcroquet.com/coach/riches/croqtech/index.asp, the half roll) has both hands moving forward
+  at the same rate to hold the handle's slope, a firm grip, and the head following through onto the ground, with no
+  push. He describes a push only for the pass roll.
+- The user: the bottom hand guides rather than pushes independently.
+
+The amendment:
+- **The guide.** From t_r, while the bottom hand holds the shaft, its force along the aim is at most its share of the
+  feed-forward along the aim. An excess slides its hold along the aim by the grip limit's slide (the excess over the
+  palm's and fingers' stiffness), so the chain's momentum is not passed on. Across the aim and in pitch it is
+  unchanged: it still steers and holds the slope. Only a forward excess slides (my call: "guides, not pushes").
+- **The push intent ends at t_r**, by the 2026-11-15 ruling that the surge is for the ball before it leaves.
+- **Unchanged:** everything before t_r; the top hand; a bottom hand once it has opened (a drive's pendulum push); the
+  chains' masses and stiffnesses.
+
+Amendment 1 brought the hands' peak after the departure to 38 N, yet C10H's face still touched ball 1 until 46 ms.
+Amendment 2 (user, 2026-11-16) extended the guide to the top hand and took the forward acceleration out of the
+feed-forward from t_r. It was tried and reverted: the hands then passed no forward force, yet the face still touched
+until 29 ms, and the full and pass rolls lost about a third of ball 1's travel (C1F L1 0.67 m against Gugan's 1.21).
+The late touches are the head's own momentum catching a ball that slows in its slide, not the hands (probe file,
+"Amendment 2 tried"). The user accepted the late touches (2026-11-16): the gate's "no face interval after 15 ms"
+is dropped, and amendment 1 stands; Gugan's video cannot resolve second contacts this light, and he reports one in
+C1F.
+
+### 3.1b Amendment 3 (2026-11-16): a check keeps its own law
+
+The suite found the stops broken by §3.1 and amendment 1. The bottom hand's guide alone brought both canonical stops'
+follow-throughs to the grip limit and gave the AC stop's a turf yield and the depth limit, against the user's rule that
+the default stroke must not damage the turf. The re-anchor alone stretched the check's braking (rate about 0.47) past
+the hold, which starts at the window's end. A check already fits its braking to a head the strike has slowed: the
+hands apply the head's share of the planned deceleration (checkShare), so it comes to rest when the path does. The
+re-anchor and the guide do that job a second time. So on a check (α < 0, `finishKind`) the departure is latched and
+reported, but the hands neither re-anchor nor guide. The stops then play as before this design. My call: it reads the
+plan's own kind of finish, which the integrator already branches on, rather than adding a stroke type.
+
+**The follow-through reads the warp too (my call).** The follow-through's cap, the release and the finish's tests
+(push freed, release, check apex) compared the plan's own instants with real time. Under a warp at rate k from
+t_r, those instants fall later in real time by (1/k − 1) of the time after t_r, so the full roll's finish was cut
+short at the cap and its release came early. They now read the plan's time through the warp (`anchoredTime`,
+`plannedTime`, `src/engine/impact/track.ts`). Before t_r, and on a stroke with no anchor, nothing changes.
 
 ### 3.2 The balls' friction
 
