@@ -254,9 +254,55 @@ and single-ball's no-push finishes move (0.318 to 0.288 s; 0.283 to 0.284 s), th
 
 ### 3.1f Amendment 8 (to design): the striker's ball's topspin
 
-Open. Target: Gugan's Ω₁ at the read in the rolls (Table 6), with the full and pass rolls' L2/L1 back in band and the
-half rolls' kept, against the probe's rows; the mechanism is to be found (the face's grip on the ball as the head rises
-and turns through the strike is the first candidate).
+Draft, for the user's decision. Target: Gugan's Ω₁ at the read in the rolls (Table 6), with the full and pass rolls'
+L2/L1 back in band and the half rolls' kept, against the probe's rows.
+
+**What sets Ω₁.** A probe split ball 1's gains in R·ω (along the roll axis) and in speed along aim, each step, by the
+contacts touching it, to 20 ms, as fractions of U (2026-11-16, on 566a21b):
+
+| Roll | face + turf | ball–ball (+ turf) | turf alone | Ω₁ model / Gugan |
+|---|---|---|---|---|
+| C3F μ_bb 0.06 | +0.33 | −0.10 | +0.17 | 74 / 93 |
+| C3F μ_bb 0.16 | +0.52 | −0.33 | +0.23 | 82 / 93 |
+| C10F μ_bb 0.06 | +0.21 (37 ms on the face) | −0.06 | −0.01 | 24 / 90 |
+| C10P μ_bb 0.06 | +0.36 (15 ms on the face) | −0.09 | −0.06 | 42 / 87 |
+
+Three findings follow.
+- The balls' friction takes topspin from ball 1; it does not give it. The rise in Ω₁ at μ_bb 0.16 comes from the changed
+  sequence of face contacts afterwards. The lead in §3.1e's known gaps is wrong.
+- The spin is built by the turf while the face pushes the ball along it, and the face's friction works against it: the
+  face moves forward and down past a ball whose back surface, rolling, moves up. Gugan sees the ball "rolling/sliding up"
+  the face in C1F (§10.2), so it slides there.
+- Ω₁ is not the whole gap. The distance follows the rolling speed v_r = w₁(5 + 2Ω₁)/7 (his (D1)). The model's v_r/U in
+  the full and pass rolls is 0.41–0.47 against his 0.50–0.58; w₁ falls short as well.
+
+**Sensitivity**, one parameter at a time, v_r/U model → Gugan:
+
+| Roll | reference | face friction 0.3 | face friction 0.2 | turf sliding 1.0 |
+|---|---|---|---|---|
+| C3F | 0.47 (Ω₁ 74) | 0.53 (85) | 0.55 (88) | 0.47 (82) → 0.58 |
+| C10F | 0.47 (24) | 0.59 (52) | 0.59 (83) | 0.44 (98) → 0.55 |
+| C3P | 0.46 (68) | 0.53 (87) | 0.55 (92) | 0.46 (93) → 0.58 |
+| C10P | 0.41 (42) | 0.57 (37) | 0.59 (61) | 0.46 (87) → 0.50 |
+| C3H | 0.44 (73) | 0.45 (86) | 0.46 (97) | 0.44 (65) → 0.37 |
+| C10H | 0.42 (88) | 0.43 (101) | 0.43 (108) | 0.42 (99) → 0.39 |
+
+**Options.**
+- **A. Refit the face's friction (recommended).** `faceFriction` is 0.5 in [0.2, 0.6]. Its source is Gugan's generic
+  "≈ 0.5" for a ball on a face, never fitted. Lowering it lets the ball slide up the face as Gugan saw, and raises both
+  Ω₁ and w₁ in the full and pass rolls.
+  - Fit: bisect it in its bounds on C3F's Ω₁ (93%), to 0.01. C3F is the clean mid-speed full roll.
+  - Held out: the other eight rolls, Table 5's Ω₁ (−16% to +20% for the uppish drives and stops), and every pin the
+    face's friction reaches (drives, stops, the push map).
+  - Then §3.2's ball–ball fit runs on top, as written.
+  - Cost: it reaches every stroke, so the re-pin is wide. The half rolls' Ω₁ overshoots (C10H 101–108%), and C10P's long
+    ride on the face stays.
+- **B. Turf friction for a pressed ball.** Gugan's own roll estimate is μ_s ≈ 1.0 (§10.2); the reference holds it as the
+  upper bound and a held-out check.
+  - It brings Ω₁ to 82–98% in the full and pass rolls, but not w₁. v_r stays at 0.44–0.47, so the ratios stay out of band.
+  - It also reverses P2b.2b.2b.2a's ruling that the bed's ramp, not friction, supplies the extra slowing.
+- **C. Fit the balls' friction (§3.2) alone.** This is refuted as the mechanism. Any gain would be a side effect of
+  a changed contact sequence.
 
 ### 3.2 The balls' friction
 
