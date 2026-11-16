@@ -156,6 +156,22 @@ checks); the bounds stay [0.06, 0.5]. One parameter, one target.
 The same value serves every ball–ball contact (the impact's coupled contact and free motion's collisions,
 `resolveBallBall`), so splits and scatter shots change too; their checks are re-run and reported (§4).
 
+### 3.2a Amendment 4 (2026-11-16): the croqueted ball read at its own instant
+
+The fit as written found no bracket: at the shared read (7–16 ms in C10H) Ω₂ is −2% at μ 0.06 and −8% at 0.5. A
+trace at μ 0.15 showed why. The friction impulse that spins the croqueted ball backwards also drives it down (for a
+sphere, ΔωR = 2.5·J/m beside Δv = J/m), about 0.9 m/s in C10H. The turf stops it: the ball sinks 2.55 mm, the bed
+pushes up to 169 N, and its sliding friction wears Ω₂ from −35% at the balls' parting to −7% by 8 ms, when the ball
+hops clear. Gugan describes the same (§10.2): every roll's croqueted ball starts with backspin that ground friction
+then turns towards roll, followed in detail only for C1F (Table 6's note); Table 6's Ω₂ is that starting spin.
+
+So the croqueted ball is read at its own instant: READ_DELAY (1 ms) after its first contact with the striker's ball
+ends, before the ground has worked on it. The striker's ball keeps readTimeOf's instant. The fit is otherwise as
+§3.2, on C10H's Ω₂ there. Ω₂ is not monotone in μ (it reaches about −45% at 0.3, where the balls' contact sticks,
+and returns to −35% at 0.5); the bisection from 0.06 finds the lower crossing. The user chose this reading
+(2026-11-16). Held out: C3H reads its starting spin too, against Gugan's 0; his three U ≈ 3 m/s rows all read 0,
+plausibly worn already by the ground as his C1F was.
+
 ### 3.3 The comparison
 
 A committed probe, `scripts/table6Probe.ts`, a thin caller of ratioFit's `readOut`: the textbook stroke of each

@@ -229,3 +229,16 @@ The croqueted ball's Ω2 over time (readOut's samples; the read instant is 7–1
 μ 0.5 read 7.04 ms v2/U 0.88 Ω2: 1ms -38, 1.5ms -37, 2ms -35, 3ms -30, 5ms -16, 8ms -7, 12ms -7, 16ms -7
 At μ 0.15 the balls part at Gugan's -35%, but the turf wears the backspin to -7% by 8 ms, before the read. Before
 Task 2 (eca41bd) the read at μ 0.15 gave -7% too, so the restart is not the cause. The plan stops (spec §3.2).
+
+== Amendment 4: the croqueted ball read 1 ms after the balls part; the fit (2026-11-16) ==
+C10H U 6.5 p 1.152; fit ball–ball friction to Ω2 -35
+    μ 0.060 Ω2 -13.8/-35 v2/U 1.02/1.05
+    μ 0.500 Ω2 -35.3/-35 v2/U 1.01/1.05
+    fit μ 0.160 Ω2 -35.7/-35 v2/U 1.01/1.05
+At μ 0.16 (not committed; held while the late face touches are addressed), half rolls:
+C3H  w1/U 0.47/0.38 Ω1 83/92 v2/U 1.01/0.94 Ω2 -36/0   L1 4.72/3.12 L2 6.60/7.67 L2/L1 1.40/2.46
+C10H w1/U 0.43/0.40 Ω1 91/94 v2/U 1.01/1.05 Ω2 -36/-35 L1 12.04/7.83 L2 17.78/18 L2/L1 1.48/2.30
+The striker's ball leaves the balls' contact at 2.79 m/s (C10H, 7 ms) and the face's late touches, to 55.5 ms, hand
+it to the lawn at 3.36 m/s (C3H 1.66 -> 1.84 m/s): the extra travel is the touches, not the lawn. Canonical pins at
+μ 0.16: half roll 2.019 -> 1.639, full roll 1.173 -> 1.011, pass roll 1.165 -> 0.922. The half roll's fall stops the
+plan; the user chose to fix the late touches before committing the fit (2026-11-16).

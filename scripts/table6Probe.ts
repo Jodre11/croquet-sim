@@ -1,7 +1,8 @@
 /**
  * Gugan 4 Table 6's nine filmed rolls against the model (roll launch design §3.3): each roll's text book played at the
  * power whose planned head speed is Gugan's U, on the 13 s lawn (his court, speed-dependent lawn design §5.1), at the
- * preset hold. Both balls are read at readTimeOf's instant (readOut), beside Gugan's row; the probe prints the face's
+ * preset hold. The striker's ball is read at readTimeOf's instant (readOut), the croqueted ball READ_DELAY after the
+ * balls part (amendment 4), beside Gugan's row; the probe prints the face's
  * and the balls' contacts, the hands' peak force along aim after the strike, and the balls' travels from the play.
  * `--ball-friction μ` replaces the world's ball–ball friction in the read (the travels keep the reference's). `--fit`
  * instead bisects the ball–ball friction at which C10H's croqueted ball reads Gugan's Ω₂ (roll launch design §3.2). Not
@@ -16,7 +17,7 @@ import type { World } from "../src/engine/types";
 import { playJudged, textBook, type PlayWatch } from "../src/lab/play";
 import { openWorld } from "./openLawn";
 import { mapSetup, type RollType } from "./pushMapRun";
-import { READ_DELAY, readOut } from "./ratioFit";
+import { READ_DELAY, readOut, type ReadSample } from "./ratioFit";
 
 declare const process: { readonly argv: readonly string[] };
 
@@ -108,6 +109,21 @@ function playRoll(roll: GuganRoll, power: number): RollPlay {
     return { sample, setup, hand, contact };
 }
 
+/**
+ * The croqueted ball's read (roll launch design, amendment 4): READ_DELAY after its first contact with the striker's ball
+ * ends, before the ground has worked on the spin that contact gave it (Gugan 4 §8, §10.2), with its instant (s).
+ */
+function croquetedRead(
+    r: ReturnType<typeof readOut>,
+    setup: ShotSetup,
+): { readonly t: number; readonly at: ReadSample } {
+    const croqueted = setup.croqueted as NonNullable<ShotSetup["croqueted"]>;
+    const pair = r.impact.timeline[ballPairKey(setup.striker, croqueted)] ?? [];
+    const t = (pair[0]?.end ?? r.time) + READ_DELAY;
+    const at = r.samples.find((s) => s.t >= t) ?? (r.samples[r.samples.length - 1] as ReadSample);
+    return { t: at.t, at };
+}
+
 /** The fit's tolerance on μ (roll launch plan Task 3). */
 const FIT_STEP = 0.005;
 
@@ -124,8 +140,8 @@ function fit(base: World): void {
     const read = (mu: number): { readonly o2: number; readonly v2: number } => {
         const world = { ...base, ballBall: { ...base.ballBall, friction: mu } };
         const r = readOut(setup, world, {}, contact ?? undefined);
-        const at = r.samples.find((s) => s.t >= r.time) ?? r.samples[r.samples.length - 1];
-        return { o2: at?.roll2 ?? NaN, v2: r.v2 / roll.U };
+        const { at } = croquetedRead(r, setup);
+        return { o2: at.roll2, v2: at.v2 / roll.U };
     };
     const line = (mu: number, x: { readonly o2: number; readonly v2: number }): string =>
         `μ ${f(mu, 3)} Ω2 ${f(100 * x.o2, 1)}/${roll.o2} v2/U ${f(x.v2)}/${f(roll.v2 / roll.U)}`;
@@ -191,11 +207,13 @@ for (const roll of fitting ? [] : ROLLS) {
     const playedBall = hand === null ? undefined : ball(hand);
     const readBall = ball(r.impact.handover);
     const drift = playedBall === undefined || readBall === undefined ? NaN : length(sub(readBall, playedBall));
+    const two = croquetedRead(r, setup);
     console.log(
         `${roll.name} U ${roll.U} p ${f(power, 3)} ${klass}; read at ${f(r.time * 1e3)} ms` +
             `${r.open ? " (open)" : ""}; read vs play ${f(drift * 1e3, 3)} mm/s\n` +
             `    w1/U ${f(r.w1 / roll.U)}/${f(roll.w1 / roll.U)} Ω1 ${f(100 * (read?.roll1 ?? NaN), 0)}/${roll.o1}` +
-            ` v2/U ${f(r.v2 / roll.U)}/${f(roll.v2 / roll.U)} Ω2 ${f(100 * (read?.roll2 ?? NaN), 0)}/${roll.o2}\n` +
+            ` v2/U ${f(two.at.v2 / roll.U)}/${f(roll.v2 / roll.U)} Ω2 ${f(100 * two.at.roll2, 0)}/${roll.o2}` +
+            ` (ball 2 at ${f(two.t * 1e3)} ms)\n` +
             `    face–striker ${ms(face)} ms; face–croqueted ${ms(faceOther)} ms; ball–ball ${ms(balls)} ms\n` +
             `    hands' peak along aim ${f(from * 1e3)}–${f(PEAK_UNTIL * 1e3, 0)} ms ${f(peak, 1)} N\n` +
             `    L1 ${f(l1)}/${roll.l1} L2 ${f(l1 * ratio)}/${roll.l2} L2/L1 ${f(ratio)}/${f(roll.l2 / roll.l1)}`,
