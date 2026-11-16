@@ -27,7 +27,7 @@ import { add, dot, length, scale, sub, type Vec3 } from "../math/vec3";
 import type { FaceLaw } from "./types";
 
 /** k_t/k, a contact's tangential stiffness relative to its normal stiffness (Silbert et al. 2001; contact.json). */
-export const TANGENTIAL_STIFFNESS_RATIO = 2 / 7;
+export const TANGENTIAL_STIFFNESS_RATIO = contactReference.tangentialStiffnessRatio.value;
 
 /**
  * Upper end of the damping-ratio bisection. A numerical bound, not physical: e(ζ) ≈ 1/(4ζ²) for large ζ, so
