@@ -217,3 +217,15 @@ C10P U 4.9 p 1.093 clean; read at 21.55 ms (open); read vs play 0.000 mm/s
     face–striker 0.01–0.63, 1.15–2.17, 3.22–20.55, 21.03–23.60, 25.77–28.04, 35.81–37.90, 38.40–128.11 ms; face–croqueted none ms; ball–ball 0.40–0.99 ms
     hands' peak along aim 1.63–25 ms 109.2 N
     L1 8.10/10.35 L2 12.21/9.76 L2/L1 1.51/0.94
+
+== The fit (2026-11-16) ==
+C10H U 6.5 p 1.152; fit ball–ball friction to Ω2 -35
+    μ 0.060 Ω2 -1.8/-35 v2/U 0.96/1.05
+    μ 0.500 Ω2 -8.3/-35 v2/U 0.88/1.05
+    Gugan's Ω2 is not between the bounds' reads: no fit
+The croqueted ball's Ω2 over time (readOut's samples; the read instant is 7–16 ms):
+μ 0.06 read 12.17 ms v2/U 0.96 Ω2: 1ms -15, 1.5ms -14, 2ms -14, 3ms -12, 5ms -8, 8ms -3, 12ms -2, 16ms -2
+μ 0.15 read 16.44 ms v2/U 0.88 Ω2: 1ms -35, 1.5ms -34, 2ms -33, 3ms -28, 5ms -16, 8ms -7, 12ms -7, 16ms -7
+μ 0.5 read 7.04 ms v2/U 0.88 Ω2: 1ms -38, 1.5ms -37, 2ms -35, 3ms -30, 5ms -16, 8ms -7, 12ms -7, 16ms -7
+At μ 0.15 the balls part at Gugan's -35%, but the turf wears the backspin to -7% by 8 ms, before the read. Before
+Task 2 (eca41bd) the read at μ 0.15 gave -7% too, so the restart is not the cause. The plan stops (spec §3.2).
