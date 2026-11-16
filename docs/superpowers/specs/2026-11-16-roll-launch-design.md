@@ -47,39 +47,50 @@ the established instant.
 
 ### 3.1 The restart
 
-Today, from contact (relaxAt), each hand's flex target is its grip where the flex took hold moved by the planned
-pivot's motion since (`grip.flex`, `moved`), the bottom hand's also turned with the planned pitch, and its target
-velocity is the planned one (`planned.velocity`, `bottomTargetVelocity`). Write P_h(t) and Ṗ_h(t) for that target and
-its velocity, unchanged.
+The repo already has this remedy, applied late and to push strokes only: flat push design amendment 6 (2026-11-15),
+`reanchor` (`src/engine/impact/track.ts`), called at the parting (`src/engine/impact/integrate.ts`). From the parting
+the plan runs at k times its own pace, k the head's along-aim speed over the planned head's held to [0, 1], velocities
+scaled by k and accelerations by k², and moves back along the aim by the socket's lag behind it; across-aim and pitch
+lags are kept. The hands then carry on from where the head is, no faster than it. In C10H the parting falls about 55 ms
+after contact, after the chase of §1 has done its work. **The restart is amendment 6 moved earlier and to every
+stroke**, not a second mechanism:
 
-**The restart instant t_r** is the end of the first face–ball contact on the striker's ball: the impact proper. My
-call: Gugan's second contact (the ball, slowed by the croqueted ball, meeting the mallet again within a few ms) then
-arises from the restarted motion rather than from the chase, and a second contact can never itself restart the hands.
-
-**From t_r** each hand's target is the plan's changes added to the hand's actual state at t_r:
-
-- target(t) = X_r + V_r·(t − t_r) + [P_h(t) − P_h(t_r) − Ṗ_h(t_r)·(t − t_r)],
-- target velocity(t) = V_r + Ṗ_h(t) − Ṗ_h(t_r),
-
-where X_r is the hand's forearm position at t_r less its chain's preload (so the flex's spring term is continuous at
-t_r, no step in force) and V_r the forearm's velocity. A plan at constant velocity then holds the hand at its own
-post-impact velocity; the plan's follow-through pulses, its gravity and its brakes still act, as changes.
-
-**Unchanged:** the feed-forward (it is the planned motion's acceleration and the weights, already a change, not a
-pace), the push intent, the flex gains and their hold weight, the grip limit and its sliding, the bottom hand's opening
-and the pendulum push after it, a stop's gripped hold (it does not use the flex), and everything before t_r.
-
-**Every stroke through the flex** restarts, drives and splits included, not only rolls (unified shot model: one
-mechanism, no stroke-type switch). My call; its effect on the drives' and splits' results is reported (§4).
-
-**State.** `GripState` gains the restart record (t_r and each hand's X_r and V_r), null until the first face–ball
-contact closes; the integrator sets it in the step that closes that contact, and `carryLoad` reads it. A stroke whose
-first face–ball contact never closes never restarts (and is already flagged open).
+- **When.** At t_r, the departure latch's instant (`grip.departedAt`, integrate.ts): the first step at which a
+  face–ball pair that closed at the previous step is open, with the ball's material at the last contact point moving
+  away from the head's along the last normal. The latch exists today for push strokes only; it is taken on every
+  tracked stroke. As there, the integrator does not know which ball is the striker's, so any ball's counts (in every
+  stroke the face meets only the striker's first). The away test is what keeps a one-step flicker of the contact from
+  setting t_r early. Gugan's second contact (the ball, slowed by the croqueted ball, meeting the mallet again within a
+  few ms) then arises from the restarted motion.
+- **What.** `reanchor` at t_r, unchanged in its law (the rate k, the lag along the aim, the warp of `handsAt` and
+  `pathAt`). It fires once: the parting no longer re-anchors (`track.anchor` is set by then). The push gate goes.
+- **Why the warp, not an additive restart (my call).** Carrying the plan's velocity changes at full size from the
+  head's own pace would drive the hands backwards once a follow-through planned to slow from 6.5 m/s had slowed by
+  more than the 3.15 m/s the head has after impact. The warp keeps the plan's shape at the head's pace, as amendment 6
+  already does, with the user's ruling of 2026-11-15 ("the surge is only needed for added power, before the ball
+  leaves").
+- **Force at t_r.** The re-anchor moves the target to the head, so the flex's along-aim spring and damper terms drop to
+  the feed-forward's in the step at t_r: a step in the hands' force, on purpose (the hands stop chasing). The
+  across-aim and pitch terms are untouched.
+- **Unchanged:** the feed-forward's law (it now reads the warped plan's accelerations from t_r, as it already does
+  from the parting), the push intent, the flex gains and their hold weight, the grip limit and its sliding, the bottom
+  hand's opening and the pendulum push after it (the re-anchor moves the path, not a hand, so an opened bottom hand
+  needs nothing), a stop's gripped hold, and everything before t_r.
+- **Amendment 5's catch check stays** as the guard: a stroke without a catch is bit-identical, so it costs nothing
+  unless the head still catches a ball. A replay integrates from the start and re-latches t_r; up to the held-open
+  catch the run is the same, so t_r is too.
+- **Every tracked stroke** re-anchors, drives and splits included (unified shot model: one mechanism, no stroke-type
+  switch). My call; the drives' and splits' changes are reported (§4).
+- **An unbroken push.** Where the face holds the ball from first contact through the push (the full and pass rolls'
+  146–303 ms contacts may be single intervals), t_r falls at the push's end and nothing changes during it: the push's
+  added pace before the ball leaves is the 2026-11-15 ruling. Their excess pace, if it remains, is the push itself, a
+  later design; §4 reports it so a "no change" there reads as that, not as a failure.
 
 ### 3.2 The balls' friction
 
 `ballBallFriction` is fitted after §3.1 lands, on C10H alone: the value in [0.06, 0.5] at which the croqueted ball's
-Ω₂ at the read instant is Gugan's −35%, by bisection (Ω₂ falls as μ rises, as the probe found), to 0.005. Its
+Ω₂ at the read instant is Gugan's −35%, by bisection (Ω₂ falls as μ rises, as the probe found), to 0.005. If −35% is
+not bracketed in [0.06, 0.5] (Ω₂ plateauing once the balls' contact sticks, say), the plan stops and reports. Its
 provenance turns from "analogue" to "derived" (fitted, the note giving the fit, the read instant and the held-out
 checks); the bounds stay [0.06, 0.5]. One parameter, one target.
 
@@ -88,17 +99,19 @@ The same value serves every ball–ball contact (the impact's coupled contact an
 
 ### 3.3 The comparison
 
-A committed probe, `scripts/table6Probe.ts`, plays each Table 6 roll as the probe this session wrote did: the
-textbook stroke of its type at the power whose planned head speed is Gugan's U, on the 13 s lawn (Gugan's court,
-lawn design §5.1), preset hold. It reads both balls at the read instant (ratioFit's `readTime`), prints w₁/U, Ω₁, v₂/U,
+A committed probe, `scripts/table6Probe.ts`, a thin caller of ratioFit's `readOut`: the textbook stroke of each
+roll's type at the power whose planned head speed is Gugan's U, on the 13 s lawn (Gugan's court, lawn design §5.1),
+preset hold. `readOut`'s `ReadSample` gains each ball's rolling fraction and `ReadOut` the face–ball and ball–ball
+intervals, so the probe adds no second read-out. It reads both balls at `readTimeOf`'s instant, prints w₁/U, Ω₁, v₂/U,
 Ω₂, the read instant, the face–ball contacts (start and end) and each ball's travel and their ratio, beside Gugan's
 row, and its output is recorded under `docs/superpowers/probes/`. Gugan's figures it compares against are the ones the
 lawn design §6 already quotes, cited by URL.
 
 ### 3.4 Assumptions
 
-- t_r is the end of the first face–ball contact (§3.1).
-- Every stroke through the flex restarts (§3.1).
+- t_r is the departure latch's instant, on every tracked stroke (§3.1).
+- The restart is amendment 6's warp, not an additive restart (§3.1).
+- Every tracked stroke re-anchors (§3.1).
 - The friction is fitted on C10H's Ω₂ alone, C3H held out.
 - The acceptance bands in §4 are judgement, set from Gugan's "precision limited to a few percent" and the scatter
   between his two half rolls; they are reported, not tuned to.
@@ -113,9 +126,10 @@ lawn design §6 already quotes, cited by URL.
 
 ## 4. Verification
 
-- **The restart, unit tests** (`tests/engine/impact/`): the flex force is continuous across t_r; with a
-  constant-velocity plan the target moves at V_r from X_r; a plan whose velocity changes by Δv over the follow-through
-  changes the target's velocity by Δv; before t_r every target is bit-for-bit today's.
+- **The restart, unit tests** (`tests/engine/impact/`, beside amendment 6's in `flatPush.test.ts`): the departure
+  latch is taken on a stroke with no push; `reanchor` re-anchors a stroke with no push; the anchor is set at t_r and
+  the parting leaves it unchanged; before t_r every target is bit-for-bit today's; a one-step separation with the
+  ball not moving away does not latch.
 - **C10H trace:** after t_r the hands' forward force stays within the feed-forward's order (no 80–115 N chase), and no
   face–ball contact begins after the strike's window. If the head still catches the ball within 15 ms, stop and report
   before fitting the friction.
