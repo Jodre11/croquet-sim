@@ -254,7 +254,7 @@ and single-ball's no-push finishes move (0.318 to 0.288 s; 0.283 to 0.284 s), th
 
 ### 3.1f Amendment 8 (to design): the striker's ball's topspin
 
-Draft, for the user's decision. Target: Gugan's Ω₁ at the read in the rolls (Table 6), with the full and pass rolls'
+The user chose option A (2026-11-16): refit the face's friction on C3F's Ω₁, then §3.2's fit. Target: Gugan's Ω₁ at the read in the rolls (Table 6), with the full and pass rolls'
 L2/L1 back in band and the half rolls' kept, against the probe's rows.
 
 **What sets Ω₁.** A probe split ball 1's gains in R·ω (along the roll axis) and in speed along aim, each step, by the
