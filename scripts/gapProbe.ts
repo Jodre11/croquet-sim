@@ -226,10 +226,31 @@ function strike(): void {
     }
 }
 
+/**
+ * Gugan 5's drive and stop played on the card's balls and on Gugan 5's (the Dawson Internationals, ball–ball e 0.772
+ * by the maker's bounce test, README lines 676-690): the card's Table 1 balls are not the balls Gugan 5 filmed.
+ */
+async function gugan5Balls(): Promise<void> {
+    const { gugan5 } = await import("./scorecard/jobs");
+    const { defaultWorld } = await import("../src/engine/world");
+    const { GUGAN5 } = await import("./filmedStrokes");
+    const card = defaultWorld();
+    const dawson = { ...card, ballBall: { ...card.ballBall, restitution: GUGAN5.ballRestitution } };
+    console.log(`ball–ball e: card ${card.ballBall.restitution}, Gugan 5's ${GUGAN5.ballRestitution}`);
+    for (const type of ["drive", "stop-ac"] as const) {
+        const target = type === "drive" ? GUGAN5.drive : GUGAN5.stop;
+        console.log(
+            `${type}: card balls ${gugan5(type, card).toFixed(2)}, Gugan 5's balls ${gugan5(type, dawson).toFixed(2)} ` +
+                `(Gugan 5 ${target.ratio} ± ${target.tolerance})`,
+        );
+    }
+}
+
 const mode = args[0];
 if (mode === "read-delay") readDelay();
 else if (mode === "read-distance") readDistance();
 else if (mode === "hop") hop();
 else if (mode === "bed") bed();
 else if (mode === "strike") strike();
-else throw new Error("usage: gapProbe.ts read-delay | read-distance | hop | bed | strike [--set name=value …]");
+else if (mode === "gugan5-balls") await gugan5Balls();
+else throw new Error("usage: gapProbe.ts read-delay | read-distance | hop | bed | strike | gugan5-balls [--set …]");

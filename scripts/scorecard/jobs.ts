@@ -12,7 +12,7 @@ import { horizontal, length, sub, vec3, type Vec3 } from "../../src/engine/math/
 import { simulateFreeMotion } from "../../src/engine/simulate";
 import { simulateShot } from "../../src/engine/shot";
 import { DEFAULT_DRIVE, DEFAULT_TIMING } from "../../src/engine/swing/profile";
-import type { BallState } from "../../src/engine/types";
+import type { BallState, World } from "../../src/engine/types";
 import { defaultWorld, STANDARD_GRAVITY } from "../../src/engine/world";
 import { canonicalSetup, DEFAULT_CROQUET_GAP } from "../../src/lab/canonical";
 import {
@@ -78,9 +78,11 @@ function table5(name: string): Record<string, Measured> {
     return out;
 }
 
-/** Gugan 5's ratio for `type` at 3 m/s on his mallet, as the slow suite plays the stop (followThroughHarness). */
-function gugan5(type: "drive" | "stop-ac"): number {
-    const world = defaultWorld();
+/**
+ * Gugan 5's ratio for `type` at 3 m/s on his mallet, as the slow suite plays the stop (followThroughHarness), on
+ * `world` (the standard court by default).
+ */
+export function gugan5(type: "drive" | "stop-ac", world: World = defaultWorld()): number {
     const canonical = canonicalSetup(type, { world });
     const setup = guganSetup(type, 3, DEFAULT_CROQUET_GAP, {
         world,
