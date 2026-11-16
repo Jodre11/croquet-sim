@@ -4,7 +4,7 @@ import { defaultProfile } from "../../src/engine/swing/profile";
 import type { ShotSetup } from "../../src/engine/swing/types";
 import { BALL_IDS, type BallState, type ShotResult, type World } from "../../src/engine/types";
 import { defaultWorld } from "../../src/engine/world";
-import { length, sub } from "../../src/engine/math/vec3";
+import { cross, dot, length, sub, vec3 } from "../../src/engine/math/vec3";
 import { FILMED_STROKES } from "../../scripts/filmedStrokes";
 import { OPEN_LAWN, OPEN_START, haltedText, openWorld, opened } from "../../scripts/openLawn";
 import {
@@ -260,6 +260,19 @@ describe("the read-out (P2b.2b.2c.2b design §5.2, §8.1)", () => {
         expect(r.w1).toBeCloseTo(1.3895, 4);
         expect(r.v2).toBeCloseTo(3.755, 4);
         expect(r.W).toBeCloseTo(0.8853, 4);
+    });
+
+    it("samples each ball's rolling fraction and the hands' force along aim (roll launch design §3.3)", () => {
+        const setup = guganSetup("drive", 3, 0, { guideEffort: 0 });
+        const r = readOut(setup, WORLD);
+        const last = r.samples[r.samples.length - 1];
+        const ball = r.impact.handover[setup.striker] as BallState;
+        const aim = r.aim;
+        const R = WORLD.ball.radius;
+        const roll = (R * dot(ball.angularVelocity, cross(vec3(0, 0, 1), aim))) / dot(ball.velocity, aim);
+        expect(last?.roll1).toBeCloseTo(roll, 9);
+        expect(r.samples[0]?.hands).toBe(0);
+        expect(r.samples.some((s) => s.hands !== 0)).toBe(true);
     });
 });
 

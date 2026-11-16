@@ -30,7 +30,7 @@ import { faceHalfHeight } from "../src/engine/impact/shape";
 import { simulateImpact } from "../src/engine/impact/simulateImpact";
 import { effectiveMass, swungBody } from "../src/engine/impact/track";
 import type { ContactInterval, ContactState, ImpactResult } from "../src/engine/impact/types";
-import { dot, horizontal, length } from "../src/engine/math/vec3";
+import { cross, dot, horizontal, length, vec3, type Vec3 } from "../src/engine/math/vec3";
 import { simulateFreeMotion } from "../src/engine/simulate";
 import {
     buildContact,
@@ -468,14 +468,24 @@ export interface ReadOut {
     readonly open: boolean;
     readonly impact: ImpactResult;
     readonly samples: readonly ReadSample[];
+    /** The arc's aim, along which the speeds, rolling fractions and the hands' force are read. */
+    readonly aim: Vec3;
 }
 
-/** One impact step as readOut records it: its end (s), the head centre's speed along aim and both balls' speeds. */
+/**
+ * One impact step as readOut records it: its end (s), the head centre's speed along aim, both balls' speeds, each
+ * ball's rolling fraction along aim (R·ω·(ẑ × aim) over its velocity along aim; 1 rolling, negative for backspin, NaN
+ * while at rest) and
+ * the hands' force along aim (N; the drive's without the hands' load; roll launch design §3.3).
+ */
 export interface ReadSample {
     readonly t: number;
     readonly head: number;
     readonly w1: number;
     readonly v2: number;
+    readonly roll1: number;
+    readonly roll2: number;
+    readonly hands: number;
 }
 
 /**
@@ -484,7 +494,7 @@ export interface ReadSample {
  * read at its last sample, and that sample's time reported. Throws a RangeError for no samples.
  */
 export function readSamples(
-    samples: readonly ReadSample[],
+    samples: readonly Pick<ReadSample, "t" | "head" | "w1" | "v2">[],
     start: number,
     time: number,
 ): { readonly U: number; readonly W: number; readonly w1: number; readonly v2: number; readonly time: number } {
@@ -492,7 +502,7 @@ export function readSamples(
     if (last === undefined) {
         throw new RangeError("readSamples: no samples");
     }
-    const at = (t: number): ReadSample => samples.find((s) => s.t >= t) ?? last;
+    const at = (t: number): Pick<ReadSample, "t" | "head" | "w1" | "v2"> => samples.find((s) => s.t >= t) ?? last;
     const struck = at(start);
     const after = at(time);
     return { U: struck.head, W: after.head, w1: after.w1, v2: after.v2, time: after.t };
@@ -501,12 +511,17 @@ export function readSamples(
 /**
  * `setup`'s impact on `world` (planStroke, simulateImpact at `options`' step), read as Gugan read his strokes
  * (readSamples): U the head centre's velocity along the arc's aim at the face's first contact, and W, w₁ and v₂ at
- * readTimeOf's time. The second ball is the croqueted ball, else the single live one. Throws a RangeError for a setup
- * with neither, or whose planned contact has no tracked drive.
+ * readTimeOf's time. The second ball is the croqueted ball, else the single live one. `contact` replaces the planned
+ * contact, for a stroke played otherwise (a practised pass's lift, say). Throws a RangeError for a setup with neither
+ * ball, or whose contact has no tracked drive.
  */
-export function readOut(setup: ShotSetup, world: World, options: StepOption = {}): ReadOut {
+export function readOut(
+    setup: ShotSetup,
+    world: World,
+    options: StepOption = {},
+    contact: ContactState = planStroke(setup, world).contact,
+): ReadOut {
     const { type } = setup.stroke;
-    const contact = planStroke(setup, world).contact;
     const drive = contact.drive;
     if (drive.kind !== "track") {
         throw new RangeError(`readOut: the ${type} stroke's planned contact has no tracked drive`);
@@ -520,6 +535,12 @@ export function readOut(setup: ShotSetup, world: World, options: StepOption = {}
     const second = ids.indexOf(other);
     const { aim } = drive.arc;
     const speedOf = (ball: BallState | undefined): number => length(horizontal((ball as BallState).velocity));
+    const R = world.ball.radius;
+    const rollAxis = cross(vec3(0, 0, 1), aim);
+    const rollOf = (ball: BallState | undefined): number => {
+        const b = ball as BallState;
+        return (R * dot(b.angularVelocity, rollAxis)) / dot(b.velocity, aim);
+    };
     const samples: ReadSample[] = [];
     const probe: ImpactProbe = {
         step(s) {
@@ -528,6 +549,9 @@ export function readOut(setup: ShotSetup, world: World, options: StepOption = {}
                 head: dot(s.head.velocity, aim),
                 w1: speedOf(s.balls[striker]),
                 v2: speedOf(s.balls[second]),
+                roll1: rollOf(s.balls[striker]),
+                roll2: rollOf(s.balls[second]),
+                hands: dot(s.hand === undefined ? s.drive : s.hand.force, aim),
             });
         },
     };
@@ -535,7 +559,7 @@ export function readOut(setup: ShotSetup, world: World, options: StepOption = {}
     const face = impact.timeline[faceKey(setup.striker)] ?? [];
     const read = readTimeOf(face, impact.timeline[ballPairKey(setup.striker, other)] ?? []);
     const speeds = readSamples(samples, (face[0] as ContactInterval).start, read.time);
-    return { ...speeds, open: read.open, impact, samples };
+    return { ...speeds, open: read.open, impact, samples, aim };
 }
 
 /**

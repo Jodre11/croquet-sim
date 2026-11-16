@@ -1,0 +1,53 @@
+Roll launch: Gugan 4 Table 6 against the model (roll launch design, docs/superpowers/specs/2026-11-16-roll-launch-design.md).
+Gugan's figures: https://oxfordcroquet.org/tech/gugan4/ (Table 6), as the speed-dependent lawn design's §6 quotes them.
+Produced by `nice -n 10 npx --no-install tsx scripts/table6Probe.ts`. Each roll: speeds and rolling fractions (%) at
+readTimeOf's instant; the face's and the balls' contacts (ms); the hands' peak force along aim from READ_DELAY after
+the first face contact's end to 25 ms; travels L (m) from the play. Model / Gugan.
+
+== Before (2026-11-16) ==
+Table 6 on the 13 s lawn, preset hold; ball–ball friction 0.06. Model / Gugan.
+C3H U 3.55 p 1.006 clean; read at 14.29 ms; read vs play 0.000 mm/s
+    w1/U 0.55/0.38 Ω1 48/92 v2/U 0.95/0.94 Ω2 1/0
+    face–striker 0.01–0.65, 1.12–2.05, 5.54–6.63, 12.06–13.29, 18.39–19.68, 26.33–27.67 ms; face–croqueted none ms; ball–ball 0.46–1.05 ms
+    hands' peak along aim 1.65–25 ms 74.2 N
+    L1 4.31/3.12 L2 8.14/7.67 L2/L1 1.89/2.46
+C10H U 6.5 p 1.152 clean; read at 15.00 ms; read vs play 0.000 mm/s
+    w1/U 0.52/0.40 Ω1 49/94 v2/U 0.96/1.05 Ω2 -2/-35
+    face–striker 0.01–0.62, 0.87–1.74, 3.99–5.01, 7.12–8.27, 12.80–14.00, 17.71–18.97, 22.63–23.94 ms; face–croqueted none ms; ball–ball 0.33–0.94 ms
+    hands' peak along aim 1.62–25 ms 121.5 N
+    L1 10.87/7.83 L2 21.38/18 L2/L1 1.97/2.30
+C1F U 1.2 p 0.352 clean; read at 16.87 ms (open); read vs play 0.000 mm/s
+    w1/U 0.68/0.67 Ω1 40/100 v2/U 0.84/0.72 Ω2 14/39
+    face–striker 0.01–0.80, 2.49–3.58, 6.00–7.29, 8.58–10.07, 11.23–12.85, 14.11–15.87, 17.15–19.08, 20.06–69.20, 72.00–73.25, 74.86–76.32, 77.23–79.06, 79.20–224.67 ms; face–croqueted none ms; ball–ball 0.93–1.52, 67.90–68.53, 82.75–83.37, 93.52–94.18, 97.18–97.75, 100.37–102.12, 103.72–104.47, 105.28–106.05, 106.17–205.89 ms
+    hands' peak along aim 1.80–25 ms 63.0 N
+    L1 2.59/1.21 L2 3.57/1.21 L2/L1 1.38/1.00
+C3F U 2.71 p 0.799 clean; read at 86.59 ms (open); read vs play 0.000 mm/s
+    w1/U 1.07/0.59 Ω1 20/93 v2/U 1.11/0.89 Ω2 23/0
+    face–striker 0.01–0.68, 1.46–2.50, 4.03–5.36, 5.79–85.59, 88.38–89.43, 91.67–92.84, 94.77–96.07, 97.92–99.34, 101.51–103.80, 105.86–107.61, 109.15–111.16, 111.92–214.05, 248.72–250.58, 283.27–284.95, 290.09–291.88, 295.32–297.25, 300.86–302.91 ms; face–croqueted none ms; ball–ball 0.55–1.14, 84.45–85.15, 102.34–102.99, 128.60–129.23, 139.21–139.88, 140.37–140.96, 145.25–145.88, 149.00–149.70, 150.74–151.34, 152.11–154.02, 154.78–227.69 ms
+    hands' peak along aim 1.68–25 ms 158.8 N
+    L1 8.66/3.66 L2 10.08/4.39 L2/L1 1.16/1.20
+C10F U 5.1 p 1.112 unpractised (impact-off-face); read at 95.28 ms (open); read vs play 0.000 mm/s
+    w1/U 1.20/0.57 Ω1 18/90 v2/U 1.23/1.02 Ω2 6/-25
+    face–striker 0.01–0.63, 1.05–2.05, 2.94–94.28, 99.70–100.56, 105.90–106.90, 113.67–114.78, 119.36–120.56, 123.00–124.34, 125.91–127.41, 128.72–130.35, 131.24–132.36, 136.38–137.65 ms; face–croqueted none ms; ball–ball 0.39–0.98, 93.24–94.55, 130.96–131.57, 132.40–132.95 ms
+    hands' peak along aim 1.63–25 ms 330.9 N
+    L1 25.22/8.49 L2 25.30/10.5 L2/L1 1.00/1.24
+C25F U 8.01 p 1.621 unpractised (impact-off-face); read at 38.68 ms (open); read vs play 0.000 mm/s
+    w1/U 0.44/0.50 Ω1 105/90 v2/U 0.89/0.89 Ω2 -3/-23
+    face–striker 0.01–0.60, 0.94–1.91, 2.48–37.68 ms; face–croqueted 102.55–103.19 ms; ball–ball 0.31–0.91 ms
+    hands' peak along aim 1.60–25 ms 502.9 N
+    L1 15.18/20.27 L2 45.38/25.1 L2/L1 2.99/1.24
+C3P U 3.07 p 0.921 clean; read at 84.33 ms (open); read vs play 0.000 mm/s
+    w1/U 1.07/0.58 Ω1 1/97 v2/U 1.05/0.79 Ω2 23/0
+    face–striker 0.01–0.67, 1.38–2.43, 3.71–83.33, 88.78–89.81, 95.17–96.32, 100.20–101.47, 103.73–105.16, 106.46–108.14, 108.77–133.07, 135.11–136.71, 138.04–139.89, 140.65–179.58 ms; face–croqueted none ms; ball–ball 0.52–1.10, 82.18–82.84, 131.54–132.15 ms
+    hands' peak along aim 1.67–25 ms 201.0 N
+    L1 10.40/3.73 L2 9.29/4.51 L2/L1 0.89/1.21
+C10P U 4.9 p 1.093 clean; read at 89.41 ms (open); read vs play 0.000 mm/s
+    w1/U 1.12/0.52 Ω1 10/87 v2/U 1.02/0.94 Ω2 10/-30
+    face–striker 0.01–0.63, 1.11–2.11, 3.15–88.41, 96.84–97.80, 101.90–102.95, 105.11–106.29, 107.72–109.07, 110.15–111.67, 112.56–114.26, 114.97–116.86, 117.52–119.66, 120.07–139.18 ms; face–croqueted none ms; ball–ball 0.40–0.99, 87.27–87.98, 114.36–114.81 ms
+    hands' peak along aim 1.63–25 ms 336.1 N
+    L1 23.76/10.35 L2 16.66/9.76 L2/L1 0.70/0.94
+C25P U 8.85 p 1.849 superhuman (grip-limit); read at 37.98 ms (open); read vs play 0.000 mm/s
+    w1/U 0.41/0.56 Ω1 114/78 v2/U 0.89/0.84 Ω2 -3/-29
+    face–striker 0.01–0.59, 0.97–1.96, 2.42–36.98 ms; face–croqueted none ms; ball–ball 0.29–0.90 ms
+    hands' peak along aim 1.59–25 ms 586.3 N
+    L1 17.03/26 L2 29.85/30 L2/L1 1.75/1.15

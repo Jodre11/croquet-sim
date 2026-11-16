@@ -1781,7 +1781,9 @@ export function handsAt(track: PreparedTrack, t: number): { readonly position: V
     const dip = dipAt(track, w.t);
     const position = sub(pivot.P, vec3(0, 0, dip.z));
     const velocity = scale(sub(pivot.V, vec3(0, 0, dip.v)), w.v);
-    return anchor === undefined || t < anchor.at ? { position, velocity } : { position: add(position, anchor.by), velocity };
+    return anchor === undefined || t < anchor.at
+        ? { position, velocity }
+        : { position: add(position, anchor.by), velocity };
 }
 
 /**

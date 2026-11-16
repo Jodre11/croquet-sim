@@ -167,7 +167,11 @@ describe("the follow-through after the parting (flat push design, amendments 5 a
         // Before the parting the path is the plan's.
         expect(headOnPath(anchored, head, at - 0.01)).toEqual(headOnPath(track, head, at - 0.01));
         // A head ahead of its path and faster than it leaves the plan as it is.
-        const ahead = { ...planned, position: add(planned.position, scale(aim, 0.01)), velocity: scale(planned.velocity, 1.2) };
+        const ahead = {
+            ...planned,
+            position: add(planned.position, scale(aim, 0.01)),
+            velocity: scale(planned.velocity, 1.2),
+        };
         expect(reanchor(track, head, ahead, at)).toBe(track);
     });
 });

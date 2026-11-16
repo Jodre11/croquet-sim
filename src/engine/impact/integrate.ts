@@ -1079,7 +1079,13 @@ export function integrateStroke(setup: ImpactSetup, options: ImpactOptions = {},
                           ? {}
                           : { follow: (s: FollowSnapshot) => calls.push(() => outer.follow?.(s)) }),
                   };
-        const stroke = strokeOnce(setup, probe === undefined ? options : { ...options, probe }, true, openUntil, follow ? Infinity : cap);
+        const stroke = strokeOnce(
+            setup,
+            probe === undefined ? options : { ...options, probe },
+            true,
+            openUntil,
+            follow ? Infinity : cap,
+        );
         const caught = catchAt(setup, stroke);
         if (caught === null || caught <= openUntil || caught >= cap) {
             for (const call of calls) {
