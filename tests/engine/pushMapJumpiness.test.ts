@@ -81,9 +81,17 @@ describe("a head that rides over the ball (plan B-d8)", () => {
         return { ...setup, stroke: { ...setup.stroke, holdFirmness: 0 } };
     };
 
-    it("is a mishit on the slack full roll whose push never lands", () => {
-        expect(playedClass(slack(0.6), world)).toEqual({ klass: "mishit", reason: HEAD_OVER_BALL });
-    }, 120_000);
+    // Roll launch design §3.1c–e: with the path restarted from the head and the pitch hold ended at the restart,
+    // no full roll in a scan of drive 0.25–1, reach 0.3–0.6, power 1–2, old and law hands, rides over the ball or
+    // slips at firmness 0, and the text book at powers 0.8–1.5 stays on the face at every hold to 0.5. No case is
+    // known; the detector keeps its negative tests. Restore with amendment 8 (the rolls' topspin), or a new case.
+    it.fails(
+        "is a mishit on the slack full roll whose push never lands",
+        () => {
+            expect(playedClass(slack(0.6), world)).toEqual({ klass: "mishit", reason: HEAD_OVER_BALL });
+        },
+        120_000,
+    );
 
     it("leaves a stroke with no push alone, however slack", () => {
         expect(playedClass(slack(0), world).reason).not.toBe(HEAD_OVER_BALL);

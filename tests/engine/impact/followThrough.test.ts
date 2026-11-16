@@ -20,14 +20,17 @@ import {
     finishShare,
     handsAt,
     letGo,
+    anchoredTime,
+    headOnPath,
     pathAt,
     pitchAxis,
     prepareTrack,
     type Push,
     releaseOf,
+    warpOf,
 } from "../../../src/engine/impact/track";
 import type { ContactState, TrackDrive } from "../../../src/engine/impact/types";
-import { dot, length, sub } from "../../../src/engine/math/vec3";
+import { ZERO, dot, length, sub } from "../../../src/engine/math/vec3";
 import { buildContact, HOLD_SPEED, planStroke } from "../../../src/engine/swing/buildContact";
 import { ON_TIME } from "../../../src/engine/swing/profile";
 import type { ShotSetup, StrokeType, SwingProfile } from "../../../src/engine/swing/types";
@@ -195,12 +198,15 @@ describe("the follow-through (design §4)", () => {
     it("finishes a pushed stroke once the bottom hand holds its carry at rest", () => {
         // Shapes design §8, ruling 14 (was the mallet's apex after its let-go, 0.927 s, ruling 13): the bottom hand
         // brakes the carry to rest and holds it, and the swing ends at the first step from there.
-        // Roll launch design §3.1 (was from push.freed itself): the hands re-anchor at the departure, so the slowed
-        // plan reaches its rest at at + (freed − at)/k, and the finish follows within a step of that.
+        // Roll launch design §3.1, §3.1c (was from push.freed itself): the hands re-anchor at the departure, so the
+        // slowed plan reaches its rest where its time map does, and the finish follows within a step of that.
         const { contact, follow, result } = stroke(shot({ backswing: 0.25 }, CARRY));
-        const push = prepareTrack(contact.drive as TrackDrive, contact.head, WORLD.gravity).push as Push;
-        const anchor = result.anchor as { at: number; rate: number };
-        const freed = anchor.at + ((push.freed as number) - anchor.at) / anchor.rate;
+        const track = prepareTrack(contact.drive as TrackDrive, contact.head, WORLD.gravity);
+        const push = track.push as Push;
+        const { at, rate } = result.anchor as { at: number; rate: number };
+        const speed = rate * dot(headOnPath(track, contact.head, at).velocity, track.arc.aim);
+        const warp = warpOf(track, contact.head, at, speed);
+        const freed = anchoredTime({ ...track, anchor: { at, rate, by: ZERO, warp } }, push.freed as number);
         expect(follow.finish).toBeGreaterThan(handsApex(push) as number);
         expect(follow.finish).toBeGreaterThanOrEqual(freed);
         expect(follow.finish - freed).toBeLessThan(1e-3);
@@ -252,8 +258,10 @@ describe("the follow-through (design §4)", () => {
         // follow-head-deep are flagged before the cap. Unpredicted, for the gate.
         // Shapes plan Task 5: the push's pitch hold (was follow-head-deep too). Held at its planned pitch through the
         // endless push, the dragging head still yields the turf but no longer sinks past HEAD_DEEP_LIMIT.
+        // Roll launch design §3.1e: the pitch hold ends at the path's restart, so the head sinks past it again
+        // (follow-head-deep, as before shapes plan Task 5).
         const { contact, follow } = stroke(shot({ backswing: 0.25 }, endless));
-        expect(follow.flags).toEqual(["follow-turf-yield", "follow-cap"]);
+        expect(follow.flags).toEqual(["follow-turf-yield", "follow-head-deep", "follow-cap"]);
         const contactAt = (contact.drive as TrackDrive).arc.contactAt;
         expect(follow.finish).toBeGreaterThanOrEqual(contactAt + FOLLOW_CAP);
         expect(follow.finish).toBeLessThan(contactAt + FOLLOW_CAP + 1e-5);
@@ -470,6 +478,9 @@ describe("the mallet's release and the finish's end (shapes design §2)", () => 
         // was 2.908), and the follow-through finishes at 0.318 s (was 0.105 s). The single-ball stroke's ball is
         // unchanged and its finish 0.283 s (was 0.156 s): the re-anchored plan swings on at the head's pace. stop-ac,
         // a check, is unchanged (amendment 3).
+        // Roll launch design §3.1c–e: drive and single-ball re-captured with the speed-matched restart once the parting
+        // has held (drive at 2.85 ms, rate 0.316; single-ball at 1.64 ms, rate 0.470). The balls are unchanged to the
+        // millimetre per second; the finishes move to 0.288 s (drive, was 0.318 s) and 0.284 s (single-ball, was 0.283).
         expect(JSON.parse(JSON.stringify(played(type)))).toEqual(NO_PUSH_BASELINE[type]);
     });
 

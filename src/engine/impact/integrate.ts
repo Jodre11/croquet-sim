@@ -183,6 +183,13 @@ export const IMPACT_CAP = 0.06;
 export const TRACK_IMPACT_CAP = 0.45;
 
 /**
+ * How long (s) the striker's face–ball pair stays open after its departing parting before the hands' path restarts
+ * from the head (roll launch design §3.1d, amendment 6; the user's "Confirmed parting", 2026-11-16): about two
+ * strikes' durations, so a parting the strike closes again (C10H's at 0.62 ms, pressed again at 1 ms) is not read.
+ */
+export const RESTART_HOLD = 0.001;
+
+/**
  * Depth (m) below the turf plane past which a head with the head–turf pair raises `impact-head-deep` (P2b.2b.2b.3
  * design §4.4; reference/contact.json): a stroke gone beyond a graze, which has probably damaged the lawn.
  */
@@ -1162,6 +1169,9 @@ function strokeOnce(
     const { head, ball, drive: plan } = setup;
     let played: PreparedTrack | null = plan.kind === "track" ? plan : null;
     let parted: number | null = null;
+    // The striker's face–ball pair from its latest departing parting, and whether the path has restarted (§3.1d).
+    let opened: { readonly p: PairState; readonly from: number } | null = null;
+    let restarted = false;
     const cap = options.cap ?? (plan.kind === "force" ? IMPACT_CAP : plan.arc.contactAt + TRACK_IMPACT_CAP);
     const R = ball.radius;
     const ballInertia = 0.4 * ball.mass * R * R;
@@ -1308,16 +1318,27 @@ function strokeOnce(
                 // face–ball pair closed at the last step is open, with the ball moving away (departing). The impact
                 // does not know which ball is the striker's, so any ball's counts; in every stroke the face meets the
                 // striker's first. There the hands' path is re-anchored to the head's place and pace (flat push
-                // design, amendment 6, moved from the parting): the hands stop chasing the plan the impact slowed the
-                // head from. A replay re-latches at the same step, so it and the play it replaces follow one path.
+                // design, amendment 6, moved from the parting) once that pair has stayed open RESTART_HOLD (roll launch
+                // design §3.1d, amendment 6): the hands stop chasing the plan the impact slowed the head from, read
+                // from the head as the strike leaves it, not at a parting the strike closes again. A replay re-latches
+                // at the same step, so it and the play it replaces follow one path.
                 if (
                     tracked &&
-                    grip.departedAt === null &&
                     pair.kind === "face-ball" &&
                     p.closure !== null &&
+                    (opened === null || opened.p === p) &&
                     departing(balls[pair.b] as BallState, state, p.normal, R)
                 ) {
-                    grip.departedAt = t;
+                    grip.departedAt ??= t;
+                    opened = { p, from: t };
+                } else if (
+                    opened !== null &&
+                    opened.p === p &&
+                    !restarted &&
+                    p.closure === null &&
+                    t - opened.from >= RESTART_HOLD - dt / 2
+                ) {
+                    restarted = true;
                     // A check's share already fits its braking to the struck head (checkShare), so a check is not
                     // re-anchored (roll launch design, amendment 3).
                     if (played !== null && finishKind(played) !== "check") {
@@ -1353,6 +1374,10 @@ function strokeOnce(
             hardClosed = true;
             if (pair.kind === "face-ball") {
                 struck = true;
+                // The strike closed the parting again: the restart waits for the next (§3.1d).
+                if (opened !== null && opened.p === p) {
+                    opened = { p, from: Infinity };
+                }
             }
             // The re-entry guard reads the interval's first step, before the step is recorded.
             if (hit !== null && jumps !== null && p.line.start === null) {

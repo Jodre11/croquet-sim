@@ -145,7 +145,7 @@ t_r, those instants fall later in real time by (1/k − 1) of the time after t_r
 short at the cap and its release came early. They now read the plan's time through the warp (`anchoredTime`,
 `plannedTime`, `src/engine/impact/track.ts`). Before t_r, and on a stroke with no anchor, nothing changes.
 
-### 3.1c Amendment 5 (2026-11-16, draft): a speed-matched restart
+### 3.1c Amendment 5 (2026-11-16): a speed-matched restart
 
 **Why.** At the fitted friction (§3.2a, μ 0.16) the canonical half roll's ratio fell from 2.02 to 1.64, and C10H's to
 1.48 against Gugan's 2.30. The striker's ball leaves the balls' contact at 2.79 m/s, but the face strikes it again at
@@ -196,6 +196,67 @@ but a loss is possible and is reported.
 
 My calls: the peak rather than the current pace, since dividing by the current pace would hold the path at s through
 the finish, which would then never slow; tabulating τ rather than a closed form.
+
+As built (the user's "Yes, implement", 2026-11-16): τ is tabulated on a 0.1 ms grid of plan time (WARP_STEP), the
+peak read to 0.3 s of plan time past t_r (WARP_HORIZON; assumption: no plan speeds up again after that), with the
+peak linear between samples, so t(τ) is quadratic on each and both directions invert exactly. A plan whose pace never
+rises past its pace at t_r keeps §3.1's fixed rate bit for bit (the drive's no-push baseline). The time map is read
+off the plan at t_r; a later releaseLift moves its height, not its time (assumption). At μ 0.06 the path held s, but
+C10H's touches stayed (handover 3.52 m/s against 2.99 read, ratio 2.03): s was read at 0.62 ms, a parting the strike
+closed again at 1 ms, and the head left the strike at 2.47 m/s, below the path's 3.21. Amendments 6 and 7 follow.
+
+### 3.1d Amendment 6 (2026-11-16): a confirmed parting
+
+The user's "Confirmed parting". The departure (§3.1) still latches at the first step the striker's face–ball pair
+opens with the ball moving away; the push intent ends there (amendment 1) and the result's `departure` reports it. The
+path restarts later: once that pair has stayed open RESTART_HOLD, 1 ms (about two strikes' durations; my call), at the
+first step from then, reading s and the lag from the head there. A closing of the pair before then waits for its next
+departing parting. In C10H the restart moves from 0.62 to 2.73 ms, s from 3.21 to 2.64 m/s, and the head ran within
+0.1 m/s of the path to 14 ms. The touches stayed (19 to 41 ms; ratio 2.05), from the head's pitch: §3.1e.
+
+### 3.1e Amendment 7 (2026-11-16): the push's pitch hold ends at the restart
+
+The strike turns the head's pitch back (C10H: −2.05 rad/s against the path's +3.21 at 2 ms). The push's pitch hold
+(shapes design §8, ruling 15) then runs at its limit, a constant couple (top hand about +22 N, bottom −12 N along the
+aim) that turned the pitch rate up at about 150 rad/s² to 2.55 rad/s by 34 ms and swung the head forward to 3.13 m/s,
+onto the ball. A restart of the hold's angle at the head's pitch (0.7°) changed nothing; a restart of its rate would
+turn the path back about the hands and drop the path's head about 2.7 m/s below s, so the warp and the pitch would have
+to be solved together in time. The user's ruling ("End the hold at restart", 2026-11-16): the hold ends at the path's
+restart, its job, resisting the balls' impulse on the face, being done once the ball has gone. This supersedes ruling
+14's run of the hold on through the carry and the hold after it; the finish and carry checks are re-run and reported.
+The pitch-angle restart is dropped (no difference with the hold ended: 2.88 against 2.87 m/s at the handover).
+
+Measured at μ 0.06 (probe file, "Amendments 6 and 7"): C10H's last face–striker contact ends at 12 ms, none after
+5 ms; the head slows from 2.45 to 2.2 m/s as the ball, at 2.81, draws away; the striker's ball is handed over at
+2.87 m/s against 2.85 at the read; ratio 2.11 (Gugan 2.30). C3H: last contact 14.9 ms, 1.75 against 1.70 m/s, ratio
+2.05.
+
+**Consequences** (the suite at μ 0.06, ENGINE_VERSION 0.33.0). The canonical rolls on the 10 s lawn, from the committed
+amendment 4 through each amendment in turn:
+
+| | Full roll | Pass roll | Half roll |
+|---|---|---|---|
+| Amendment 4 | 1.173 | 1.165 | 2.019 |
+| + 5 | 1.263 | 1.331 | 1.974 |
+| + 6 | 1.438 | 1.469 | 1.972 |
+| + 7 | 1.606 | 1.627 | 2.016 |
+
+The full and pass rolls leave their band (1.0–1.2) and Gugan's filmed 0.94–1.24. Their late touches and long carry had
+stood in for the striker's ball's topspin, which at the read is 10–48 % of rolling in the model against Gugan's
+87–100 % (Table 6, Ω₁); the speed already matches (w₁/U 0.56–0.59 against 0.52–0.67). The user's ruling ("Keep A5–7, fix
+topspin next", 2026-11-16): amendments 5–7 stand, the rolls' ratios are re-pinned as a known gap, and the striker's
+topspin is amendment 8, designed next; the friction fit (§3.2) waits on it. Also re-pinned or held as known gaps: the
+full and pass rolls at power 0.5 push the ball at every hold (unlawful, impact-cap; the slow head stays on a ball that
+slows); a full roll at a tap pushes at every hold (was lawful at 0.0548); the pass roll's punch no longer beats a coasting
+pass roll (1.6605 against 1.6668 m/s); no full roll in a scanned grid rides over the ball or slips at firmness 0, so the
+B-d8 and least-hold cases are held as expected failures; the endless carry sinks past HEAD_DEEP_LIMIT again; the drive's
+and single-ball's no-push finishes move (0.318 to 0.288 s; 0.283 to 0.284 s), their balls unchanged.
+
+### 3.1f Amendment 8 (to design): the striker's ball's topspin
+
+Open. Target: Gugan's Ω₁ at the read in the rolls (Table 6), with the full and pass rolls' L2/L1 back in band and the
+half rolls' kept, against the probe's rows; the mechanism is to be found (the face's grip on the ball as the head rises
+and turns through the strike is the first candidate).
 
 ### 3.2 The balls' friction
 

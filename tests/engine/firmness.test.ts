@@ -121,7 +121,11 @@ describe("the found firmness (firmness design §5)", () => {
         expect(findFirmness(setup, WORLD)).toEqual({ sigma: 0, firmness: 0, klass: null });
     });
 
-    it("goes past a hold where the play's head rode over the ball (plan B-d8)", { timeout: 120_000 }, () => {
+    // Roll launch design §3.1c–e: with the path restarted from the head and the pitch hold ended at the restart,
+    // no full roll in a scan of drive 0.25–1, reach 0.3–0.6, power 1–2, old and law hands, rides over the ball or
+    // slips at firmness 0, and the text book at powers 0.8–1.5 stays on the face at every hold to 0.5. No case is
+    // known; the detector keeps its negative tests. Restore with amendment 8 (the rolls' topspin), or a new case.
+    it.fails("goes past a hold where the play's head rode over the ball (plan B-d8)", { timeout: 120_000 }, () => {
         // Hands-from-lean design §3: on the law's hands this plan trips the grip limit at firmness 0 (superhuman), so
         // the full roll's hands before the law (top 0.61 m, bottom 0.3 m) keep the head riding over the ball; the
         // search then ends off the face (was superhuman). Roll launch design §3.1: the hands re-anchor at the
@@ -133,22 +137,30 @@ describe("the found firmness (firmness design §5)", () => {
         expect(findFirmness(setup, WORLD)).toMatchObject({ sigma: 0.025, klass: null });
     });
 
-    it("finds the least hold of a plan that slips without one, within the halved step", { timeout: 600_000 }, () => {
-        // Gate 1: the full roll's text book at power 1 is off its point at firmness 0 and holds at 0.5. Roll launch
-        // design §3.1: the hands re-anchor at the departure and the text book at power 1 holds at firmness 0; a firmer
-        // push on the law's hands at power 1.5 rides over the ball at 0 and holds at σ 0.7125.
-        const plan = { ...textBook("full-roll"), drive: 1, handReach: 0.3, window: 0.02 };
-        const setup = mapSetup("full-roll", plan, 1.5);
-        const found = findFirmness(setup, WORLD);
-        expect(found.klass).toBeNull();
-        const sigma = found.sigma as number;
-        expect(sigma).toBeGreaterThan(0);
-        const v = plannedSpeed(setup, WORLD);
-        expect(found.firmness).toBeCloseTo((sigma * HOLD_SPEED) / v, 14);
-        expect(playedClass(at(setup, found.firmness as number), WORLD).klass).toBeNull();
-        const lower = ((sigma - SIGMA_STEP / 2 ** SIGMA_HALVINGS) * HOLD_SPEED) / v;
-        expect(playedClass(at(setup, lower), WORLD).klass).not.toBeNull();
-    });
+    // Roll launch design §3.1c–e: with the path restarted from the head and the pitch hold ended at the restart,
+    // no full roll in a scan of drive 0.25–1, reach 0.3–0.6, power 1–2, old and law hands, rides over the ball or
+    // slips at firmness 0, and the text book at powers 0.8–1.5 stays on the face at every hold to 0.5. No case is
+    // known; the detector keeps its negative tests. Restore with amendment 8 (the rolls' topspin), or a new case.
+    it.fails(
+        "finds the least hold of a plan that slips without one, within the halved step",
+        { timeout: 600_000 },
+        () => {
+            // Gate 1: the full roll's text book at power 1 is off its point at firmness 0 and holds at 0.5. Roll launch
+            // design §3.1: the hands re-anchor at the departure and the text book at power 1 holds at firmness 0; a firmer
+            // push on the law's hands at power 1.5 rides over the ball at 0 and holds at σ 0.7125.
+            const plan = { ...textBook("full-roll"), drive: 1, handReach: 0.3, window: 0.02 };
+            const setup = mapSetup("full-roll", plan, 1.5);
+            const found = findFirmness(setup, WORLD);
+            expect(found.klass).toBeNull();
+            const sigma = found.sigma as number;
+            expect(sigma).toBeGreaterThan(0);
+            const v = plannedSpeed(setup, WORLD);
+            expect(found.firmness).toBeCloseTo((sigma * HOLD_SPEED) / v, 14);
+            expect(playedClass(at(setup, found.firmness as number), WORLD).klass).toBeNull();
+            const lower = ((sigma - SIGMA_STEP / 2 ** SIGMA_HALVINGS) * HOLD_SPEED) / v;
+            expect(playedClass(at(setup, lower), WORLD).klass).not.toBeNull();
+        },
+    );
 
     it("gives the class and reason at σ_max of a plan no hold admits", { timeout: 600_000 }, () => {
         // Gate 1: the pass roll's text book at power 1.6 trips the grip limit at every firmness. Flat push design,
@@ -162,7 +174,11 @@ describe("the found firmness (firmness design §5)", () => {
         });
     });
 
-    it("classes a full roll held firm, its head riding onto the ball, as off the face", () => {
+    // Roll launch design §3.1c–e: with the path restarted from the head and the pitch hold ended at the restart,
+    // no full roll in a scan of drive 0.25–1, reach 0.3–0.6, power 1–2, old and law hands, rides over the ball or
+    // slips at firmness 0, and the text book at powers 0.8–1.5 stays on the face at every hold to 0.5. No case is
+    // known; the detector keeps its negative tests. Restore with amendment 8 (the rolls' topspin), or a new case.
+    it.fails("classes a full roll held firm, its head riding onto the ball, as off the face", () => {
         // Gate 1: at power 0.8 a hold between the soft holds that slip and the firm that hold rides the head off the
         // face onto the striker's ball, pressing it 2.4 mm into the turf to the 450 ms cap. The handover threw there.
         // Hands-from-lean design §3: on the law's hands the hold between them is 0.1875 (was 0.2375). Flat push design,

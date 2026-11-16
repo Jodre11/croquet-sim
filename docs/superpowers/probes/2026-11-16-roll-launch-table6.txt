@@ -260,3 +260,15 @@ t ms   head  ball  hands  ff    ball z  contacts
 55.1   3.08  3.34  -14.9 -35.0   0.48
 Anchor at 0.63 ms, rate 0.499. The head is driven from 2.45 to 3.5 m/s while the ball, airborne 9–39 ms, holds its
 speed between catches: the hands, not the ball's slowing, make the late touches.
+
+== Amendments 5–7: C10H and C3H at μ 0.06 (2026-11-16) ==
+Striker's ball at the read and at the handover (m/s), the last face–ball contact's end, L2/L1 (scripts as Task 3).
+                                   C10H read -> handover  last contact  ratio   C3H read -> handover  last  ratio
+A5, restart at the parting (0.62)    2.99 -> 3.52           48.6 ms      2.03     1.73 -> 1.93          59.8   2.02
+A6, restart confirmed (2.73 ms)      2.98 -> 3.39           41.3 ms      2.05     1.74 -> 1.90          28.1   2.00
+A7, pitch hold ends at the restart   2.85 -> 2.87           12.0 ms      2.11     1.70 -> 1.75          14.9   2.05
+A5: the path held s = 3.21 m/s (plan peak 7.09 m/s at 41.8 ms real), but the strike pressed the ball again at 1 ms
+and left the head at 2.47 m/s. A6: s = 2.64 m/s (rate 0.41); the head within 0.1 m/s of the path to 14 ms, then the
+push's pitch hold at its limit (top hand +22 N, bottom -12 N along aim; pitch rate -1.68 -> 2.55 rad/s by 34 ms)
+swung it to 3.13 m/s, touches at 19, 26-27, 33-34 ms. A7: no touch after 5 ms; head 2.45 -> 2.20 m/s by 49 ms, ball
+2.81 m/s. A pitch-angle restart (0.7 deg) moved the A7 handover 2.87 -> 2.88 m/s and was dropped.

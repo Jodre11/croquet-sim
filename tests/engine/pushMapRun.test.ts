@@ -174,13 +174,17 @@ describe("one plan's run (P2b.2b.2c.3b plan Task 3)", () => {
         // Speed-dependent lawn design: the ratio 1.057. Roll launch design §3.1 (was two passes, ratio 1.057, range
         // 6.02 m): the hands re-anchor at the departure, 0.66 ms in, so the push no longer carries the ball (impulse
         // 2.28 to 0.0045 N·s); one pass, the ratio 1.173, range 3.09 m (Gugan's C3F and C3P travel 3.7 m at U 2.7–3.1).
+        // Roll launch design §3.1c–e (was 1.173): the path restarted at the head's speed once the parting has held, and
+        // the push's pitch hold ended there; the face no longer carries the striker's ball after the strike, and the
+        // ratio is 1.606, range 2.24 m, out of the band 1.0–1.2. The ball's topspin at the read is 10–48 % of rolling
+        // against Gugan's 87–100 %: a known gap, for amendment 8 (the user's "Keep A5–7, fix topspin next", 2026-11-16).
         const base = mapSetup("full-roll", textBook("full-roll"), 1);
         const p = swingReference["full-roll"].defaultBackswing.value / bodyBackswing(base, WORLD);
         const sample = playSample("full-roll", textBook("full-roll"), p, [10], "preset");
         expect(sample.klass).toBeNull();
         expect(sample.reason).toBeNull();
         expect(sample.passes).toBe(1);
-        expect(sample.byLawn[10]?.ratio).toBeCloseTo(1.173, 3);
+        expect(sample.byLawn[10]?.ratio).toBeCloseTo(1.606, 3);
     });
 
     it("plays the half roll's text book at its canonical power at ratio 2.02", () => {
@@ -188,12 +192,12 @@ describe("one plan's run (P2b.2b.2c.3b plan Task 3)", () => {
         // grip's whole couple, the striker's ball driven on too far). Hands-from-lean design §4: the bottom hand half
         // the shaft down (was 0.42 m), the hold kept, not refitted; the ratio 2.099 (was 2.0).
         // Speed-dependent lawn design: the ratio 1.932 (was 2.099). Roll launch design §3.1: the hands re-anchor at
-        // the departure; the ratio 2.019 (was 1.932).
+        // the departure; the ratio 2.019 (was 1.932). Roll launch design §3.1c–e: 2.016.
         const base = mapSetup("half-roll", textBook("half-roll"), 1);
         const p = swingReference["half-roll"].defaultBackswing.value / bodyBackswing(base, WORLD);
         const sample = playSample("half-roll", textBook("half-roll"), p, [10], "preset");
         expect(sample.klass).toBeNull();
-        expect(sample.byLawn[10]?.ratio).toBeCloseTo(2.019, 3);
+        expect(sample.byLawn[10]?.ratio).toBeCloseTo(2.016, 3);
     });
 
     it("plays the pass roll's text book at its canonical power lawfully, at ratio 1.165", () => {
@@ -204,13 +208,14 @@ describe("one plan's run (P2b.2b.2c.3b plan Task 3)", () => {
         // amendments 1–4: two passes (was three), the ratio 0.884; amendments 5–6: 0.8835. Speed-dependent lawn
         // design: 0.8946. Roll launch design §3.1 (was two passes, 0.8946, range 6.78 m): the hands re-anchor at the
         // departure and the push no longer carries the ball; one pass, 1.165, range 3.06 m. Above 1, past Gugan 5's
-        // 0.83, but inside Gugan 4's filmed pass rolls (L2/L1 0.94–1.21).
+        // 0.83, but inside Gugan 4's filmed pass rolls (L2/L1 0.94–1.21). Roll launch design §3.1c–e (was 1.165):
+        // 1.6266, range 2.19 m, past them, with the full roll's topspin gap (amendment 8).
         const base = mapSetup("pass-roll", textBook("pass-roll"), 1);
         const p = swingReference["pass-roll"].defaultBackswing.value / bodyBackswing(base, WORLD);
         const sample = playSample("pass-roll", textBook("pass-roll"), p, [10], "preset");
         expect(sample.klass).toBeNull();
         expect(sample.passes).toBe(1);
-        expect(sample.byLawn[10]?.ratio).toBeCloseTo(1.1649, 4);
+        expect(sample.byLawn[10]?.ratio).toBeCloseTo(1.6266, 4);
     });
 
     it(
@@ -230,16 +235,19 @@ describe("one plan's run (P2b.2b.2c.3b plan Task 3)", () => {
 });
 
 describe("the map's found firmness (firmness design §5, A7 item 4)", () => {
-    it("plays the full roll's text book at a tap at the hold it finds, firmer than none", { timeout: 120_000 }, () => {
+    it("plays the full roll's text book at a tap as a push at every hold", { timeout: 120_000 }, () => {
         // Gate 1's plan, p = 2, is no longer admissible at firmness 0: its head rides over the ball (plan B-d8). At a
         // tap, firmness 0 pins the ball, a contact that never ends (plan C-d1), so the search goes on to a firmer hold.
-        const sample = playSample("full-roll", textBook("full-roll"), 0.1, [10]);
-        expect(sample.klass).toBeNull();
         // Hands-from-lean design §3: the law's hands (was 0.274092). Roll launch design §3.1: the hands re-anchor at
-        // the departure (was 0.164499).
-        expect(sample.firmness).toBeCloseTo(0.054833, 6);
-        expect(sample.sigma).toBeGreaterThan(0);
-        expect(sample.byLawn[10]?.range).toBeGreaterThan(0);
+        // the departure (was 0.164499, then 0.054833, lawful). Roll launch design §3.1c–e: with the pitch hold ended at
+        // the restart, no hold keeps the slow head off the ball: the play pushes it (29.1.6.1) to the cap at every
+        // firmness, so the sample carries the search's class and no hold.
+        const sample = playSample("full-roll", textBook("full-roll"), 0.1, [10]);
+        expect(sample.klass).toBe("unlawful");
+        expect(sample.reason).toBe("29.1.6.1");
+        expect(sample.firmness).toBeNull();
+        expect(sample.sigma).toBeNull();
+        expect(sample.followCap).toBe(true);
     });
 
     it(
@@ -280,7 +288,8 @@ describe("the free motion once per sample (plan Amendment B, Task B2; B-d6)", ()
             // firmness 0.1828, σ 0.20625). Speed-dependent lawn design: re-pinned (was ratio 1.256 on the
             // 10 s lawn). Roll launch design §3.1: re-pinned (was ratio 1.191 on the 10 s lawn, range 8.85 m, three
             // passes, firmness 0.1883, σ 0.2125): the push no longer carries the ball past the departure, and the
-            // search finds no hold firmer than none.
+            // search finds no hold firmer than none. Roll launch design §3.1c–e: re-pinned (was two passes, ratio 2.045
+            // on the 10 s lawn): one pass, ratio 2.054.
             vi.mocked(simulateFreeMotion).mockClear();
             const sample = playSample("full-roll", textBook("full-roll"), 1, MAP_LAWNS);
             expect(vi.mocked(simulateFreeMotion).mock.calls.length).toBe(MAP_LAWNS.length);
@@ -289,18 +298,18 @@ describe("the free motion once per sample (plan Amendment B, Task B2; B-d6)", ()
                 klass: null,
                 reason: null,
                 byLawn: {
-                    6: { range: 1.2007028074936983, ratio: 1.8375778971450578, splitAtRest: 1.1835447228498786e-14 },
-                    10: { range: 2.157533712632066, ratio: 2.0447097031881687, splitAtRest: 2.634648002392618e-14 },
-                    14: { range: 3.4641722387887057, ratio: 2.133626224373935, splitAtRest: 2.8715657348838157e-14 },
+                    6: { range: 1.1986094236713924, ratio: 1.8462105360163654, splitAtRest: 1.1856117960155479e-14 },
+                    10: { range: 2.154180544916805, ratio: 2.053816617254713, splitAtRest: 2.638749059123237e-14 },
+                    14: { range: 3.459113080389919, ratio: 2.1428375367538117, splitAtRest: 2.875765570381436e-14 },
                 },
                 strokeEffort: 37.607985145309634,
-                pushEffort: 14.620028993763205,
+                pushEffort: 14.620025164425023,
                 coupleShare: 0.01902281170917693,
-                pushImpulse: 0.005036123360568147,
+                pushImpulse: 0.0050361223456225675,
                 effectVerdicts: { shipped: false, contactOnly: false },
                 followCap: false,
                 followSlip: false,
-                passes: 2,
+                passes: 1,
                 firmness: 0,
                 sigma: 0,
             });

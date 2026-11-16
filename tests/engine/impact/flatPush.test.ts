@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { faceKey, headBallContact, headLowestPoint } from "../../../src/engine/impact/contacts";
-import { departing } from "../../../src/engine/impact/integrate";
+import { departing, RESTART_HOLD } from "../../../src/engine/impact/integrate";
 import { practiseStroke } from "../../../src/engine/impact/practice";
 import { simulateImpact, simulateStroke } from "../../../src/engine/impact/simulateImpact";
 import {
+    anchoredTime,
     guideExcess,
     handsAt,
     headDepth,
@@ -11,6 +12,7 @@ import {
     headOnPath,
     pathAt,
     pendulumOf,
+    plannedTime,
     prepareTrack,
     reanchor,
     swingOrientation,
@@ -18,7 +20,7 @@ import {
     type Push,
 } from "../../../src/engine/impact/track";
 import type { MalletHead, TrackDrive } from "../../../src/engine/impact/types";
-import { add, scale, vec3 } from "../../../src/engine/math/vec3";
+import { add, dot, scale, sub, vec3 } from "../../../src/engine/math/vec3";
 import { planStroke } from "../../../src/engine/swing/buildContact";
 import type { BallState } from "../../../src/engine/types";
 import { canonicalSetup } from "../support/shot";
@@ -214,11 +216,25 @@ describe("the re-anchor at the departure (roll launch design §3.1)", () => {
         expect(Math.abs((result.departure as number) - (first?.end as number))).toBeLessThan(0.005);
     });
 
-    it("re-anchors at the departure, not the parting", { timeout: 60_000 }, () => {
+    it("re-anchors once the departure's parting has held (amendment 6)", { timeout: 60_000 }, () => {
+        // C10H's first parting, at 0.62 ms, is closed again by the strike at 1 ms; the restart waits for one that holds.
         const { contact } = planStroke(c10h, gugan);
         const { result } = practiseStroke(contact, c10h.balls, gugan, c10h.striker);
-        expect(result.departure).toBeDefined();
-        expect(result.anchor?.at).toBe(result.departure);
+        const departure = result.departure as number;
+        const at = result.anchor?.at as number;
+        expect(at - departure).toBeGreaterThanOrEqual(RESTART_HOLD - 1e-9);
+        const face = result.timeline[faceKey(c10h.striker)] ?? [];
+        const parting = face.filter((c) => c.end <= at).pop();
+        expect(at - (parting?.end as number)).toBeGreaterThanOrEqual(RESTART_HOLD - 1e-9);
+        expect(at - (parting?.end as number)).toBeLessThan(RESTART_HOLD + 2e-5);
+    });
+
+    it("lets C10H's striker's ball go after the strike (amendments 5 to 7)", { timeout: 60_000 }, () => {
+        // Was touched again to 48.6 ms at μ 0.06, the head driven after the ball by the path and the pitch hold.
+        const { contact } = planStroke(c10h, gugan);
+        const { result } = practiseStroke(contact, c10h.balls, gugan, c10h.striker);
+        const face = result.timeline[faceKey(c10h.striker)] ?? [];
+        expect(face.every((c) => c.end < 0.015)).toBe(true);
     });
 
     it("does not latch a pair that reopens with the ball not moving away", () => {
@@ -286,6 +302,63 @@ describe("the re-anchor at the departure (roll launch design §3.1)", () => {
         },
         60_000,
     );
+});
+
+describe("the speed-matched restart (roll launch design §3.1c, amendment 5)", () => {
+    const gugan = openWorld(13);
+    const c10h = mapSetup("half-roll", textBook("half-roll"), 1.152);
+    const { contact } = planStroke(c10h, gugan);
+    const head = contact.head;
+    const track = prepareTrack(contact.drive as TrackDrive, head, gugan.gravity);
+    const aim = track.arc.aim;
+    const pace = (t: PreparedTrack, at: number): number => dot(headOnPath(t, head, at).velocity, aim);
+    // Just past contact, where C10H's plan still speeds up (the probe file, "Amendment 5").
+    const at = track.arc.contactAt + 0.0006;
+    const planned = headOnPath(track, head, at);
+    const state = { ...planned, velocity: scale(planned.velocity, 0.6) };
+    const anchored = reanchor(track, head, state, at);
+    const s = 0.6 * pace(track, at);
+
+    it("holds the path's along-aim pace at the head's while the plan speeds up", () => {
+        expect(pace(track, at + 0.01)).toBeGreaterThan(pace(track, at) + 0.1);
+        expect(anchored.anchor?.rate).toBeCloseTo(0.6, 9);
+        for (let i = 0; i <= 20; i++) {
+            const t = at + i * 0.0005;
+            if (pace(track, plannedTime(anchored, t)) < pace(track, at)) {
+                break;
+            }
+            expect(Math.abs(pace(anchored, t) - s)).toBeLessThan(1e-3);
+        }
+    });
+
+    it("moves the path as fast as it says it does", () => {
+        const d = 1e-6;
+        for (let i = 1; i <= 40; i++) {
+            const t = at + i * 0.0025;
+            const ahead = headOnPath(anchored, head, t + d).position;
+            const behind = headOnPath(anchored, head, t - d).position;
+            const moved = dot(sub(ahead, behind), aim) / (2 * d);
+            expect(Math.abs(moved - pace(anchored, t))).toBeLessThan(1e-3);
+        }
+    });
+
+    it("plays the plan at a fixed rate once it has peaked", () => {
+        // Past the plan's peak the divisor is held: τ advances at s over the peak, as §3.1's warp does.
+        const late = at + 0.2;
+        const k = (plannedTime(anchored, late + 0.01) - plannedTime(anchored, late)) / 0.01;
+        expect(k).toBeGreaterThan(0);
+        expect(k).toBeLessThan(s / (pace(track, at) + 0.1));
+        expect((plannedTime(anchored, late + 0.03) - plannedTime(anchored, late + 0.02)) / 0.01).toBeCloseTo(k, 9);
+    });
+
+    it("inverts its time map", () => {
+        for (let i = 0; i <= 50; i++) {
+            const t = at + i * 0.004;
+            expect(anchoredTime(anchored, plannedTime(anchored, t))).toBeCloseTo(t, 12);
+        }
+        expect(plannedTime(anchored, at - 0.001)).toBe(at - 0.001);
+        expect(anchoredTime(anchored, at - 0.001)).toBe(at - 0.001);
+    });
 });
 
 describe("the held slope braked within the grip (flat push design, amendment 7)", () => {

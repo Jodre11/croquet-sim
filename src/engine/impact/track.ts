@@ -596,12 +596,31 @@ export interface PreparedTrack {
     readonly anchor?: Anchor;
 }
 
-/** A re-anchored path (PreparedTrack's `anchor`): from `at` (s) at `rate` of the plan's pace, moved by `by` (m). */
+/**
+ * A re-anchored path (PreparedTrack's `anchor`): from `at` (s), starting at `rate` of the plan's pace, moved by `by`
+ * (m), its time map `warp` (roll launch design §3.1c), or none for §3.1's fixed rate.
+ */
 export interface Anchor {
     readonly at: number;
     readonly rate: number;
     readonly by: Vec3;
+    readonly warp: Warp | null;
 }
+
+/**
+ * The speed-matched restart's time map (roll launch design §3.1c): on plan times u_i = at + i·WARP_STEP, g_i (≥ 1) is
+ * the plan's fastest along-aim pace since `at` over the head's speed `speed` (m/s), and t_i the time (s) the restarted
+ * plan reaches u_i; g is linear between samples, so dt/du = g and t is quadratic there. Past the last sample g holds.
+ */
+export interface Warp {
+    readonly speed: number;
+    readonly g: readonly number[];
+    readonly t: readonly number[];
+}
+
+/** The warp's plan-time step (s) and how far past the restart (s of plan time) it looks for a faster pace. */
+const WARP_STEP = 1e-4;
+const WARP_HORIZON = 0.3;
 
 /** A point's position, velocity and acceleration (world frame). */
 export interface Motion {
@@ -1344,11 +1363,14 @@ export function releaseLift(track: PreparedTrack, at: number): PreparedTrack {
  * every tracked stroke (roll launch design §3.1; the user's "Plan restarts", 2026-11-16): the push's added pace is for
  * the ball, before it leaves (the user, 2026-11-15), so once it has gone the hands neither recover the lag the impact
  * held the head to nor speed the head back up to the plan's pace, either of which ran the head onto the ball again.
- * From `at` the plan runs on at the head's along-aim speed over the planned head's there (at most 1), every velocity
- * scaled by that rate and every acceleration by its square, and moves back along the aim by the socket's lag behind
- * it; `state` is the head's. A head level with or ahead of its path keeps its place, and one at or above the plan's
- * pace keeps its pace. A track already re-anchored is unchanged. The lag across the aim and
- * the pitch's are kept (assumption): the surge runs along the aim.
+ * From `at` the plan's time runs at the head's along-aim speed s (at most the planned head's there) over the fastest
+ * along-aim pace the plan has reached since `at` (§3.1c, amendment 5): while the plan speeds up the path moves along
+ * the aim at s, and once it slows the rate holds, as §3.1's fixed rate with the peak for the pace. The path moves back
+ * along the aim by the socket's lag behind it; `state` is the head's. A head level with or ahead of its path keeps its
+ * place, and one at or above the plan's pace keeps its pace. A track already re-anchored is unchanged. The lag across
+ * the aim and the pitch's are kept (assumption): the surge runs along the aim, and the push's pitch hold ends here
+ * (pushPitch). The time map is read off the plan as it is at `at`; a later releaseLift moves the plan's height, not its
+ * time (assumption).
  */
 export function reanchor(track: PreparedTrack, head: MalletHead, state: HeadState, at: number): PreparedTrack {
     if (track.anchor !== undefined) {
@@ -1360,28 +1382,112 @@ export function reanchor(track: PreparedTrack, head: MalletHead, state: HeadStat
     const rate = pace > 0 ? Math.min(Math.max(dot(state.velocity, aim) / pace, 0), 1) : 1;
     const socket = add(state.position, rotate(state.orientation, head.socket));
     const lag = Math.min(dot(sub(socket, pathAt(track, at).socket), aim), 0);
-    return rate === 1 && lag === 0 ? track : { ...track, anchor: { at, rate, by: scale(aim, lag) } };
-}
-
-/** The plan's time, velocity scale and acceleration scale at t (s) under `anchor` (reanchor). */
-function warped(anchor: Anchor | undefined, t: number): { readonly t: number; readonly v: number; readonly a: number } {
-    if (anchor === undefined || t < anchor.at) {
-        return { t, v: 1, a: 1 };
+    if (rate === 1 && lag === 0) {
+        return track;
     }
-    const k = anchor.rate;
-    return { t: anchor.at + k * (t - anchor.at), v: k, a: k * k };
+    // A plan that never speeds past its pace at `at` keeps §3.1's fixed rate exactly.
+    const warp = pace > 0 && rate > 0 ? warpOf(track, head, at, rate * pace) : null;
+    const rising = warp !== null && warp.g.length > 1 ? warp : null;
+    return { ...track, anchor: { at, rate, by: scale(aim, lag), warp: rising } };
 }
 
 /**
- * The time (s) at which `track`'s re-anchored plan reaches its planned instant `planned` (roll launch design §3.1):
- * `planned` itself before the anchor, or with none; past it, at + (planned − at)/k, or Infinity at a rate of 0.
+ * The speed-matched time map from `at` (s) for a head at `speed` (m/s, > 0, at most the plan's along-aim pace at `at`;
+ * roll launch design §3.1c): the plan's running peak pace over `speed`, sampled to WARP_HORIZON and kept to the last
+ * sample at which the peak rose, past which it holds.
+ */
+export function warpOf(track: PreparedTrack, head: MalletHead, at: number, speed: number): Warp {
+    const plan: PreparedTrack = { ...track, anchor: undefined };
+    const { aim } = track.arc;
+    const n = Math.round(WARP_HORIZON / WARP_STEP);
+    const g: number[] = [];
+    let peak = 0;
+    let last = 0;
+    for (let i = 0; i <= n; i++) {
+        const pace = dot(headOnPath(plan, head, at + i * WARP_STEP).velocity, aim);
+        if (i === 0 || pace > peak) {
+            peak = Math.max(pace, speed);
+            last = i;
+        }
+        g.push(peak / speed);
+    }
+    const kept = g.slice(0, last + 1);
+    const t = [at];
+    for (let i = 1; i < kept.length; i++) {
+        t.push((t[i - 1] as number) + 0.5 * ((kept[i - 1] as number) + (kept[i] as number)) * WARP_STEP);
+    }
+    return { speed, g: kept, t };
+}
+
+/** The plan's time τ, τ', τ'² and τ'' at t (s) under `anchor` (reanchor; roll launch design §3.1c). */
+interface Warped {
+    readonly t: number;
+    readonly v: number;
+    readonly a: number;
+    readonly j: number;
+}
+
+function warped(anchor: Anchor | undefined, t: number): Warped {
+    if (anchor === undefined || t < anchor.at) {
+        return { t, v: 1, a: 1, j: 0 };
+    }
+    const { warp } = anchor;
+    if (warp === null) {
+        const k = anchor.rate;
+        return { t: anchor.at + k * (t - anchor.at), v: k, a: k * k, j: 0 };
+    }
+    const last = warp.t.length - 1;
+    const i = sampleBefore(warp.t, t);
+    const from = anchor.at + i * WARP_STEP;
+    const gi = warp.g[i] as number;
+    const elapsed = t - (warp.t[i] as number);
+    if (i === last) {
+        const v = 1 / gi;
+        return { t: from + elapsed * v, v, a: v * v, j: 0 };
+    }
+    // dt/du = g_i + c·d on the sample: t − t_i = g_i·d + c·d²/2, solved for d in its cancellation-free form.
+    const c = ((warp.g[i + 1] as number) - gi) / WARP_STEP;
+    const d = (2 * elapsed) / (gi + Math.sqrt(gi * gi + 2 * c * elapsed));
+    const g = gi + c * d;
+    const v = 1 / g;
+    return { t: from + d, v, a: v * v, j: (0 - c) * v * v * v };
+}
+
+/** The index of the last of the ascending `times` at or before t, at least 0. */
+function sampleBefore(times: readonly number[], t: number): number {
+    let lo = 0;
+    let hi = times.length - 1;
+    while (lo < hi) {
+        const mid = (lo + hi + 1) >> 1;
+        if ((times[mid] as number) <= t) {
+            lo = mid;
+        } else {
+            hi = mid - 1;
+        }
+    }
+    return lo;
+}
+
+/**
+ * The time (s) at which `track`'s re-anchored plan reaches its planned instant `planned` (roll launch design §3.1,
+ * §3.1c): `planned` itself before the anchor, or with none; past it, the warp's time there, or at + (planned − at)/k at
+ * §3.1's fixed rate, or Infinity at a rate of 0.
  */
 export function anchoredTime(track: PreparedTrack, planned: number): number {
     const { anchor } = track;
     if (anchor === undefined || planned < anchor.at) {
         return planned;
     }
-    return anchor.rate > 0 ? anchor.at + (planned - anchor.at) / anchor.rate : Infinity;
+    const { warp } = anchor;
+    if (warp === null) {
+        return anchor.rate > 0 ? anchor.at + (planned - anchor.at) / anchor.rate : Infinity;
+    }
+    const last = warp.t.length - 1;
+    const i = Math.min(Math.floor((planned - anchor.at) / WARP_STEP), last);
+    const d = planned - (anchor.at + i * WARP_STEP);
+    const gi = warp.g[i] as number;
+    const c = i === last ? 0 : ((warp.g[i + 1] as number) - gi) / WARP_STEP;
+    return (warp.t[i] as number) + gi * d + 0.5 * c * d * d;
 }
 
 /** The planned instant (s) that `track`'s re-anchored plan plays at time t: the inverse of anchoredTime. */
@@ -1751,17 +1857,19 @@ export function pathAt(track: PreparedTrack, t: number): PathPoint {
     if (anchor === undefined || t < anchor.at) {
         return plannedPath(track, t);
     }
+    // A velocity is the plan's times τ', an acceleration the plan's times τ'² plus its velocity times τ'' (§3.1c).
     const w = warped(anchor, t);
     const p = plannedPath(track, w.t);
+    const dipVelocity = w.j === 0 ? 0 : 0 - dipAt(track, w.t).v;
     return {
         ...p,
         socket: add(p.socket, anchor.by),
         socketVelocity: scale(p.socketVelocity, w.v),
-        socketAcceleration: scale(p.socketAcceleration, w.a),
+        socketAcceleration: add(scale(p.socketAcceleration, w.a), scale(p.socketVelocity, w.j)),
         angularVelocity: scale(p.angularVelocity, w.v),
-        angularAcceleration: scale(p.angularAcceleration, w.a),
-        dipAcceleration: scale(p.dipAcceleration, w.a),
-        pendulumAcceleration: p.pendulumAcceleration * w.a,
+        angularAcceleration: add(scale(p.angularAcceleration, w.a), scale(p.angularVelocity, w.j)),
+        dipAcceleration: add(scale(p.dipAcceleration, w.a), vec3(0, 0, dipVelocity * w.j)),
+        pendulumAcceleration: p.pendulumAcceleration * w.a + dot(p.angularVelocity, track.axis) * w.j,
     };
 }
 
@@ -2210,13 +2318,15 @@ interface CarryStep {
  * I_P about the top hand, M_p held to the arc's holdFirmness share of the grip's couple (gripCouple; shapes design §8,
  * ruling 15). The balls' impulse at the face turns the shaft
  * back about the top hand, and without this nothing but the grips' spread resists it (the 2026-11-01 diagnosis).
- * It runs on through the bottom hand's carry and the hold that follows it (shapes design §8, ruling 14). Zero with no
- * push and inside a check.
+ * It ends at the path's restart (roll launch design §3.1e, amendment 7; the user's "End the hold at restart",
+ * 2026-11-16, superseding shapes design §8, ruling 14's run on through the carry and the hold after it): the ball has
+ * gone, and the strike leaves the head's pitch rate so far behind the path's that the hold, at its limit, swung the head
+ * forward onto the ball again. Zero with no push and inside a check.
  */
 function pushPitch(track: PreparedTrack, state: HeadState, t: number, path: PathPoint, step: CarryStep): number {
-    const { push } = track;
+    const { push, anchor } = track;
     // A check brakes the pitch to rest (checkShare), and the hold would drive it on along the unbraked path.
-    if (push === null || step.checking) {
+    if (push === null || step.checking || (anchor !== undefined && t >= anchor.at)) {
         return 0;
     }
     return heldPitch(
