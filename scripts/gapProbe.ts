@@ -319,6 +319,62 @@ async function gugan5Balls(): Promise<void> {
     }
 }
 
+/**
+ * Table 5's three stop shots as the card plays them (scorecard jobs' table5): the read's U, W, w₁ and v₂ against
+ * Gugan's, Ω₁ at the read, every contact interval in the impact's timeline, and at each face contact's end the head's
+ * speed, w₁ and the striker's ball's Ω₁; then Ω₁ through the first 10 ms.
+ */
+async function stops(): Promise<void> {
+    const { FILMED_STROKES } = await import("./filmedStrokes");
+    const { guganSetup } = await import("./ratioFit");
+    const { opened } = await import("./openLawn");
+    const world = openWorld(LAWN);
+    for (const stroke of FILMED_STROKES.filter((s) => s.preset === "stop-ac")) {
+        const setup = opened(guganSetup(stroke.preset, stroke.malletSpeed, stroke.gap, { world }));
+        const r = readOut(setup, world);
+        const face = r.impact.timeline[faceKey(setup.striker)] ?? [];
+        const t0 = face[0]?.start ?? 0;
+        const ms = (t: number): string => `${(1e3 * (t - t0)).toFixed(2)}`;
+        const at = (t: number): ReadSample =>
+            r.samples.find((s) => s.t >= t) ?? (r.samples[r.samples.length - 1] as ReadSample);
+        const read = at(r.time);
+        const g = stroke.malletSpeed;
+        console.log(
+            `${stroke.name}: U ${r.U.toFixed(2)} (Gugan ${g}); W/U ${(r.W / r.U).toFixed(3)} ` +
+                `(${(stroke.malletAfter / g).toFixed(3)}), w1/U ${(r.w1 / r.U).toFixed(3)} ` +
+                `(${(stroke.striker / g).toFixed(3)}), v2/U ${(r.v2 / r.U).toFixed(3)} ` +
+                `(${(stroke.croqueted / g).toFixed(3)}); read at ${ms(r.time)} ms, Ω1 ${(100 * read.roll1).toFixed(0)}%` +
+                (r.open ? " (open)" : ""),
+        );
+        for (const [key, intervals] of Object.entries(r.impact.timeline)) {
+            const list = intervals.map((c) => `${ms(c.start)}–${ms(c.end)}`).join(", ");
+            console.log(`  ${key}: ${list}`);
+        }
+        for (const c of face) {
+            const s = at(c.end);
+            console.log(
+                `  face ends ${ms(c.end)} ms: head ${(s.head / g).toFixed(3)} U, w1 ${(s.w1 / g).toFixed(3)} U, ` +
+                    `Ω1 ${(100 * s.roll1).toFixed(0)}%, hands ${s.hands.toFixed(1)} N`,
+            );
+        }
+        const trace = [0.5, 1, 2, 3, 5, 7, 10].map((d) => {
+            const s = at(t0 + d * 1e-3);
+            return `${d} ms ${(100 * s.roll1).toFixed(0)}% w1 ${(s.w1 / g).toFixed(3)} head ${(s.head / g).toFixed(3)}`;
+        });
+        console.log(`  Ω1 through: ${trace.join(" | ")}`);
+        for (const gap of [0, 1e-4, 2.5e-4, 5e-4, 1e-3]) {
+            const s2 = opened(guganSetup(stroke.preset, stroke.malletSpeed, gap, { world }));
+            const r2 = readOut(s2, world);
+            const read2 = r2.samples.find((s) => s.t >= r2.time) ?? r2.samples[r2.samples.length - 1];
+            console.log(
+                `  gap ${(1e3 * gap).toFixed(2)} mm: W/U ${(r2.W / r2.U).toFixed(3)}, w1/U ${(r2.w1 / r2.U).toFixed(3)}, ` +
+                    `v2/U ${(r2.v2 / r2.U).toFixed(3)}, w1/W ${(r2.w1 / r2.W).toFixed(3)} ` +
+                    `(${(stroke.striker / stroke.malletAfter).toFixed(3)}), Ω1 ${(100 * (read2?.roll1 ?? NaN)).toFixed(0)}%`,
+            );
+        }
+    }
+}
+
 const mode = args[0];
 if (mode === "read-delay") readDelay();
 else if (mode === "read-distance") readDistance();
@@ -327,4 +383,5 @@ else if (mode === "bed") bed();
 else if (mode === "strike") strike();
 else if (mode === "gugan5-balls") await gugan5Balls();
 else if (mode === "restart") await restart();
+else if (mode === "stops") await stops();
 else throw new Error("usage: gapProbe.ts read-delay | read-distance | hop | bed | strike | gugan5-balls [--set …]");

@@ -159,6 +159,25 @@ gap before the re-catch.
   and lawn share 0.54. Unreachable in the map; not probed further in this phase.
 - User yardage at intensity 0.3: 23 yd against 15 (0.4 passes; the drive's 35 yd sits on its band's floor).
 - Table 5 stop shots' Ω₁ has the wrong sign (C3S +6, C20S +19 against −14, −12); C20S's w₁/W 1.12 (1.61, z −7.2).
+  - **Probe** (`stops`, 2026-11-17, reference values). Both misses are the touching strokes' (row 2's gap 0): C10S,
+    at 0.5 mm, has the right sign (−25). Swept over the gap, all three stops move together:
+
+    | Stroke | Figure | 0 | 0.1 mm | 0.25 mm | 0.5 mm | 1 mm | Gugan |
+    |---|---|---|---|---|---|---|---|
+    | C3S | w₁/W | 1.97 | 1.62 | 1.48 | 1.74 | 1.78 | 1.73 |
+    | C3S | Ω₁ % | +6 | −2 | −17 | −28 | −28 | −14 |
+    | C10S | w₁/W | 1.42 | 1.31 | 1.34 | 1.61 | 1.76 | 1.79 |
+    | C10S | Ω₁ % | +12 | +5 | −10 | −25 | −28 | −12 |
+    | C20S | w₁/W | 1.12 | 1.15 | 1.29 | 1.52 | 1.74 | 1.61 |
+    | C20S | Ω₁ % | +19 | +8 | −8 | −22 | −28 | −12 |
+
+    At gap 0 the strike's momentum is right (C20S w₁ + v₂ 1.59U, Gugan 1.59U) but split wrongly: the croqueted ball
+    takes too much (v₂/U 1.23 against 1.09). From 0.5 mm the split and the sign match.
+  - **Reading.** This is P2b.2b.2c.2c's carried gap (contact laws design, gate B, 2026-10-22). At gap 0 the face's and
+    the ball–ball contact's matched time scales give a three-body push, and Donahue et al. (2008) find a touching
+    doublet qualitatively unlike a separated one. The game plays every croquet stroke at DEFAULT_CROQUET_GAP, 0.75 mm,
+    a stand-in fitted to these stops (gate D). The card alone plays them at the film's 0. Gugan's note (i) names the
+    balls' surface milling, so the film's "touching" balls meet on the milling's ridges.
 
 ## The joint fit
 
