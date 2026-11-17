@@ -117,6 +117,15 @@ gap before the re-catch.
   - G1's card read (its own change).
   - Then the refit. With the cliff gone, the uniform undershoot and the coaching ratios are what the fit can work on.
   - The C25P grip-limit cap needs a design, and is a ruling for the user.
+- **Probe** (`grip`, 2026-11-17, reference values, after the fix). C25P's grip-limit is the **bottom hand at 0.37 ms,
+  inside the first strike** (face 0–0.60 ms), not the re-catch: 435 N, 395 along the aim and 182 down. C25F's bottom
+  hand peaks at 399 N at 0.61 ms (92% of the limit), C10P's at 276 N. On the re-catch the top hand peaks at 235 N
+  (C25P) and 175 N (C25F), half the limit. The force along the aim summed over both hands (174 N, above) hid which hand
+  and when. A cap at F_push on the re-catch would not touch it: the cap is **dropped**.
+- **Reading.** The strike decelerates the head in about 0.6 ms, and the bottom hand's guide resists it through the
+  hand–arm chain (palm and finger stiffness, Dong et al. 2013). The limit is the hand's breakaway strength (Young et
+  al. 2009, 435 ± 27 N), which the model applies to every step. Gugan filmed C25P played, so a real hand bears it; the
+  limit's reach is a sub-millisecond shock against a breakaway strength.
 
 ## G3. Gugan 5's drive and stop
 

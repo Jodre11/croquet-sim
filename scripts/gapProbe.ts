@@ -375,6 +375,60 @@ async function stops(): Promise<void> {
     }
 }
 
+/**
+ * C25P's grip limit (and C25F and C10P beside it): the impact's grip-limit event, and through the impact each hand's
+ * force, its magnitude against the grip's limit and its parts along the aim and up, with the face's contact and the
+ * restart: where the hand reaches its limit and which way it pulls.
+ */
+async function grip(): Promise<void> {
+    const { GRIP_LIMIT } = await import("../src/engine/impact/track");
+    const { dot, length } = await import("../src/engine/math/vec3");
+    const world = openWorld(LAWN);
+    for (const roll of ROLLS.filter((r) => ["C10P", "C25F", "C25P"].includes(r.name))) {
+        const power = powerFor(roll.type, roll.U, world);
+        if (power === null) continue;
+        const { setup, contact } = playRoll(roll, power);
+        if (setup === null || contact === null) continue;
+        const drive = contact.drive;
+        if (drive.kind !== "track") continue;
+        const aim = drive.arc.aim;
+        const up = vec3(0, 0, 1);
+        type Parts = readonly [number, number, number];
+        const rows: { t: number; top: Parts; bottom: Parts }[] = [];
+        const parts = (f: import("../src/engine/math/vec3").Vec3): Parts => [length(f), dot(f, aim), dot(f, up)];
+        const probe: ImpactProbe = {
+            step(s) {
+                if (s.hand !== undefined) rows.push({ t: s.t, top: parts(s.hand.top), bottom: parts(s.hand.bottom) });
+            },
+        };
+        const impact = simulateImpact(contact, setup.balls, world, { probe });
+        const face = impact.timeline[faceKey(setup.striker)] ?? [];
+        const t0 = face[0]?.start ?? 0;
+        const ms = (t: number): string => (1e3 * (t - t0)).toFixed(2);
+        const limits = impact.events.filter((e) => e.kind === "grip-limit");
+        console.log(
+            `${roll.name}: restart ${impact.anchor === undefined ? "none" : ms(impact.anchor.at)} ms; grip-limit ` +
+                `${limits.map((e) => `${e.kind === "grip-limit" ? e.hand : ""} at ${ms(e.t)} ms`).join(", ") || "none"}` +
+                `; face ${face.map((c) => `${ms(c.start)}–${ms(c.end)}`).join(", ")}`,
+        );
+        const first = rows[0];
+        if (first === undefined) continue;
+        for (const k of ["top", "bottom"] as const) {
+            const p = rows.reduce((m, r) => (r[k][0] > m[k][0] ? r : m), first);
+            console.log(
+                `  ${k} peak |F| ${p[k][0].toFixed(0)} N (limit ${GRIP_LIMIT}) at ${ms(p.t)} ms: along aim ` +
+                    `${p[k][1].toFixed(0)}, up ${p[k][2].toFixed(0)}`,
+            );
+        }
+        for (const d of [0.5, 1, 2, 2.5, 3, 4, 5, 7, 10, 15]) {
+            const r = rows.find((x) => x.t >= t0 + d * 1e-3);
+            if (r === undefined) break;
+            const f = (v: Parts): string => `${v[0].toFixed(0)} (aim ${v[1].toFixed(0)}, up ${v[2].toFixed(0)})`;
+            console.log(`  ${d} ms: top ${f(r.top)}, bottom ${f(r.bottom)}`);
+        }
+    }
+}
+
 const mode = args[0];
 if (mode === "read-delay") readDelay();
 else if (mode === "read-distance") readDistance();
@@ -384,4 +438,5 @@ else if (mode === "strike") strike();
 else if (mode === "gugan5-balls") await gugan5Balls();
 else if (mode === "restart") await restart();
 else if (mode === "stops") await stops();
+else if (mode === "grip") await grip();
 else throw new Error("usage: gapProbe.ts read-delay | read-distance | hop | bed | strike | gugan5-balls [--set …]");
