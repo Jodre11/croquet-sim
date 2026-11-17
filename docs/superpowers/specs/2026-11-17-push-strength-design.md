@@ -1,118 +1,139 @@
-# The arms' push strength through an unbroken push (gap G2)
+# The restart's confirmation at C25 (gap G2)
 
 Status: draft, 2026-11-17. Gap register G2 (`docs/superpowers/probes/scorecard/2026-11-16-gap-register.md`); the
-reality scorecard design's §6 route for a gap the fit cannot reach.
+reality scorecard design's §6 route for a gap the fit cannot reach. The file keeps its first name. Its first framing,
+a cap on the arms' push strength, was rejected in review (§6).
 
 ## 1. Why
 
-The user's ruling (2026-11-17, "Keep, design G2"): keep the reference values, design G2, then refit. The joint fit's
-one large gain came from moving faceFriction across G2's cliff, which crosses the gap without closing it.
+The user's rulings:
+- 2026-11-17, "Keep, design G2": keep the reference values, design G2, then refit.
+- 2026-11-17, "Reframe: fix the restart": G2 is the restart's confirmation, not the arms' strength.
 
-**The gap.** In the C25 rolls the striker's ball leaves too fast: t6 w₁/U 0.73 against Gugan's 0.50 (C25F, z 10.6)
-and 0.76 against 0.56 (C25P, z 8.5), and both fail the card's playability check. The `strike` probe found:
-- at C10 the face makes five short contacts, 5.4–5.7 ms in all, and the hands' impulse along the aim is
-  0.34–0.42 N·s;
-- at C25, from 2.5 ms, the face stays on ball 1 for 36–38 ms, and the head re-accelerates from 0.47U to 0.65U;
-- the hands' impulse there is 5.2–6.3 N·s, a mean of about 140 N, above the strongest sourced push, 106 N.
+**The gap.** In the C25 rolls the striker's ball leaves too fast: t6 w₁/U 0.73 against Gugan's 0.50 (C25F, z 10.6),
+and 0.76 against 0.56 (C25P, z 8.5). Both fail the card's playability check. The joint fit's one large gain came from
+crossing this gap's cliff, not closing it.
 
-**The mechanism.** The roll launch design anticipated this case in §3.1, "an unbroken push": while the face holds the
-ball, the restart has not fired, so the plan has not yielded to the head. Its excess pace, it said, "is the push
-itself, a later design". This is that design.
+**The mechanism.** `gapProbe strike` at the reference values, times from first contact:
 
-Through a push the hands' load is made of three terms:
-- each arm's flex (`flexForce`: the feed-forward, then −k·offset − c·lag towards the planned hands, k the hold
-  stiffness of 744 N/m plus κ·|F_ff|);
-- the push intent, held to F_push;
-- the hand–arm chains.
+| Roll | Departure | Face contacts (ms) | Open gap before the re-catch | Restart |
+|---|---|---|---|---|
+| C10F | 0.63 | 0–0.63, 0.95–1.89, 3.10–4.27, … | 1.21 ms | 2.89 ms |
+| C10P | 0.63 | 0–0.63, 0.98–1.95, 3.07–4.28, … | 1.12 ms | 2.95 ms |
+| C25F | 0.61 | 0–0.61, 0.83–1.73, **2.67–41.10**, 44.01–45.26 | 0.94 ms | 42.10 ms |
+| C25P | 0.60 | 0–0.60, 0.83–1.75, **2.50–38.12**, 42.98–44.24 | 0.75 ms | 39.12 ms |
 
-The flex's target moves at the plan's pace whatever the head does. Behind it the arm can then deliver any force the
-gap asks of the spring and damper. Each term is sourced on its own, but together they can exceed what a person's arms
-can push.
+How the C25 rolls go wrong:
+- The push intent ends at the departure (roll launch amendment 1), about 0.6 ms in every roll, so no push is involved.
+- At 1.73 ms the head (0.47U) is moving faster than the striker's ball (0.37U), which the croqueted ball has slowed.
+  The head catches it again, which is Gugan's second contact.
+- The restart (roll launch amendment 6) waits for the face–ball pair to stay open for RESTART_HOLD, 1 ms
+  (`src/engine/impact/integrate.ts`). At C25 the gap before the re-catch is 0.94 ms and 0.75 ms, so the restart does
+  not fire.
+- The hands then chase the plan the strike slowed the head from, which is roll launch §1's diagnosis. They keep the
+  face on the ball for 36–38 ms at about 140 N (5.2–6.3 N·s), and the head re-accelerates from 0.47U to 0.65U.
+- At C10 the gap is 1.1–1.2 ms, so the restart fires at 2.9 ms and the hands' impulse is 0.34–0.42 N·s.
 
-## 2. Ruling and its basis
+**The cliff.** The fit's cliff is this threshold. A setting that moves the C25 gap across 1 ms flips the restart from
+about 2.7 ms to about 40 ms.
 
-- **The source.** `reference/contact.json` pushForce, F_push = 92.2 N (bounds 48.5–106.3): Das and Wang's largest
-  standing forward push at the hand. Its note already reads it as the cap on both hands together.
-- **The law (my call, within the user's ruling).** The arms are strength-limited: through a push their muscles cannot
-  drive the mallet along the aim harder than F_push, however far the plan runs ahead. Only the muscles are limited. The
-  chains' own momentum, passed through the palm and finger springs, is inertia and stays as it is (roll launch
-  amendment 1 deals with it after the departure).
-- **Rejected:**
-  - Letting the plan yield from contact (the restart moved to first contact). That undoes the 2026-11-15 ruling that
-    the push adds pace before the ball leaves.
-  - A short-range stiffness limit. It needs a displacement source we do not have.
-  - Refitting the coupling. The fit already showed a cliff, not a band.
+## 2. What the restart's confirmation is for
+
+Amendment 6 (the user's "Confirmed parting", 2026-11-16) added the hold for one reason: in C10H the strike parts at
+0.62 ms and presses again at 1 ms, a gap of 0.38 ms. Read there, s was 3.21 m/s against the 2.64 the head had once
+the strike had left it.
+
+So the confirmation must:
+- reject a parting the strike itself closes again (C10H, 0.38 ms);
+- accept the gap before Gugan's second contact (C25, 0.75–0.94 ms; C10, 1.1–1.2 ms).
+
+The present 1 ms sits inside the second range, which is the fault.
 
 ## 3. Design
 
-### 3.1 The cap
+### 3.1 Candidate laws
 
-Through a push (`track.push !== null`), in carry mode (`carryLoad`), from contact until the restart:
+The plan's first task runs each candidate law at the reference values; the outcome chooses. Changing the law's name
+or its constant needs no further ruling. Each candidate keeps the following as they are:
+- the departure latch;
+- the push intent's end at the departure;
+- one restart per stroke;
+- no re-anchor on a check;
+- the reading of s and the lag from the head at the restart's step.
 
-- Each arm's flex drive is computed as now: D_top, D_bottom (`flexForce`, the force the arm applies to its chain's
-  forearm). This includes the push intent through the feed-forward.
-- Their forward sum along the aim is a = (D_top + D_bottom)·aim. If a > F_push, the excess e = a − F_push is shed:
-  - **Split.** Each arm sheds e·(its forward drive)/a, counting only arms whose forward drive is positive. My call:
-    pro rata, so neither arm pushes against the other.
-  - **The yield.** An arm sheds its part by sliding its flex target back along the aim by part/k_arm, so the spring
-    gives way. The slid target is kept as the arm's yield offset in `GripState` (`topYield`, `bottomYield`, world-frame
-    vectors along the aim). Once an arm's yield offset is non-zero, its damper term is also reduced to the shed share,
-    because a target that cannot keep pace has no pace for the damper to chase. The drive is then recomputed, so the
-    forward sum lands on F_push to rounding.
-- **Bounded on one side only.** The cap holds only a forward excess. Backward and across-aim drives, and pitch, are
-  untouched: the hands still steer, hold the slope and brake.
-- **Under the cap the yield returns.** A yield offset decays towards zero at the arm's hold rate,
-  exp(−dt·k_hold/c_hold), as a slid grip anchor does under its limit (P2b.2b.2c.2 design §4.1). An arm with spare
-  strength therefore catches up with the plan.
-- **At the restart the yield is cleared.** The re-anchor puts the plan at the head, so the gap it measured is gone.
-- **A stroke with no push** keeps its offsets null and runs bit for bit.
+The candidates:
+- **(a) A shorter hold.** RESTART_HOLD = 0.5 ms: above C10H's 0.38 and below C25P's 0.75.
+- **(b) Open time counted in total.** The restart fires once the striker's face–ball pair has been open for
+  RESTART_HOLD (1 ms) in total since the departure, summed over its open intervals, rather than in one interval.
+  - C25F: 0.22 + 0.94 ms, so it fires at about 2.6 ms.
+  - C10F: 0.32 + 0.68 ms, so it fires at about 2.6 ms rather than 2.89.
+  - C10H's 0.38 ms parting alone does not fire it.
 
-### 3.2 Unchanged
+### 3.2 The choice by outcome
 
-- Everything before contact, and every stroke without a push.
-- The push intent's law and τ_push.
-- The grip limit and its slide (applied after the cap, to each hand's chain force as now).
-- The bottom hand's guide from the departure, the restart (amendments 5–7), a check's own law, and the chains' masses
-  and stiffnesses.
+The candidates are scored on these rolls, each against today's run: C10H, C3H, C10F, C10P, C25F and C25P. For each,
+the run reports:
+- the restart instant;
+- the face contacts after it;
+- w₁/U against Gugan;
+- the canonical half roll's ratio (2.0, shapes ruling 15).
 
-### 3.3 Reported, not tuned
+A law qualifies if:
+- C25F and C25P restart before 5 ms;
+- C10H's s at the restart is within 0.1 m/s of the head's speed after the strike leaves it (2.64 m/s at μ 0.06; read
+  at the reference μ 0.16);
+- C10H's late touches do not come back: none after 15 ms, against amendment 7's 12 ms.
 
-`HandLoad` gains `pushHeld: boolean`, true at any step where the cap shed force, so the lab and the probes can show it.
-No new reference value is needed: F_push already exists. This is new physics within the scorecard's non-goals: no
-technique ruling changes and `reference/` is untouched. ENGINE_VERSION bumps.
+Among the laws that qualify, the one with the larger margin wins. The margin is the smallest distance, across the six
+rolls, between any qualifying gap and the threshold, or between C10H's rejected gap and the threshold.
+
+**If neither qualifies:** stop and report. The C25 re-catch may then need the restart to fire on the re-catch itself,
+a design of its own.
+
+### 3.3 Unchanged
+
+- Everything before the departure.
+- The warp's law (amendment 5), the guide (amendment 1), and the pitch hold's end at the restart (amendment 7).
+- A check's own law, the grip limit, and the hands' masses and gains.
+- No new reference value. RESTART_HOLD is numerical, not physical: its doc comment records the new value or law and
+  the gaps it separates.
+- ENGINE_VERSION bumps.
 
 ## 4. Verification
 
-**The discriminating run.** This is the plan's first task, and its gate: `gapProbe strike` at the reference values.
-- **Expected:** at C25F and C25P the hands' along-aim force through the push is ≤ F_push at every step; C25F w₁/U
-  falls towards 0.50, from 0.73; C25P becomes playable.
-- **Expected at C10:** where the drive peaks under F_push, nothing moves.
-- **If C25F w₁/U does not fall by at least half its excess** (to 0.62 or below), the design has the wrong mechanism.
-  Stop and report, rather than tune.
-
-**Then:**
-- **Unit tests** (`tests/engine/impact/`):
-  - a constant forward drive above F_push is held to it, split pro rata between the arms;
-  - a drive under the cap is unchanged bit for bit;
-  - the yield decays at the hold rate and is cleared at the restart;
-  - a stroke with no push never sets a yield.
-- **The suite.** Expected failures move only where §4's report says they move.
+- **The discriminating run** (§3.2) is the plan's first task, and its gate.
+- **The C25 rolls with the restart firing.** Report the hands' peak and mean force along the aim through any
+  remaining face contact.
+  - If they still exceed F_push (92.2 N, `reference/contact.json` pushForce) for longer than a strike, the strength cap
+    of the first framing comes back as its own design.
+  - Otherwise it is dropped.
+- **Unit tests** (`tests/engine/impact/`, beside amendment 6's):
+  - a pair that reopens within the strike is not confirmed;
+  - a re-catch after a gap the law accepts restarts at the confirming step;
+  - the C25F trace restarts before 5 ms.
+- **The suite.** Expected failures move only as the run reports.
 - **The scorecard.** A full card at the reference values, against the baseline (23.92):
   - every family's Σz²;
   - the C25 rows;
-  - the pass and full rolls' coaching ratios (1.12 and 1.16 now), since their pushes also run under the cap;
+  - the pass and full rolls' coaching ratios (1.12 and 1.16 now);
   - lift.
-- **G1's card read.** The croqueted ball's Ω₂ and v₂ become R·Δφ/Δx over its first 15 mm (register G1). This lands as
-  its own commit, so each change's effect shows separately.
-- **The refit.** The joint fit re-run from the reference values, budget 150, logged as before. It goes to the user's
-  gate with the same comparison as 2026-11-17.
+- **The margin.** At each of the fit parameters' sensitivity-map bounds, report the C25 and C10H gaps against the
+  chosen threshold. This shows whether the cliff has gone or only moved.
+- **The refit** follows as a separate step. G1's card read (register G1) lands as its own change before it.
 
 ## 5. Risks
 
-- **The pass roll's push.** The pass roll is the one shot Riches describes as pushed. If its push needs more than
-  F_push, it shortens, and its ratio, already over its band, falls towards it. That is the right direction, but it is
-  reported.
-- **F_push is one arm's strength.** No open two-handed standing figure exists, so a two-handed push may be stronger.
-  The bound, 106 N, is the evidence's ceiling. If C25 still overshoots at 106, strength is not the whole story.
-- **A drive's chain momentum still exceeds 92 N for about 2 ms.** That is inertia, outside the cap by design. If the
-  C25 excess turns out to be chain momentum rather than flex, the discriminating run shows it as no change.
+- **Any time threshold is still a threshold.** The margin check (§4) makes the remaining one visible. If it is thin,
+  the restart may need a criterion based on the strike's force or the head's speed rather than on time.
+- **C10 moves.** Under (b), C10's restart moves earlier by about 0.3 ms. The ratios are reported, not tuned.
+
+## 6. The first framing, rejected
+
+The first draft capped the arms' forward drive at F_push through an "unbroken push". The framing review showed this
+wrong:
+- the push has already ended at 0.61 ms;
+- the 36 ms contact follows a parting, not an unbroken hold;
+- the cap would have treated the symptom and left the 1 ms cliff in place.
+
+The user reframed it on 2026-11-17. The cap returns only if §4's C25 run still shows the hands above F_push once the
+restart fires.

@@ -216,6 +216,12 @@ function strike(): void {
                 `(Gugan ${(roll.w1 / roll.U).toFixed(3)}), read at ${(1e3 * (r.time - t0)).toFixed(2)} ms; ` +
                 `${face.length} face contacts, ${(1e3 * faceTime).toFixed(2)} ms on; hands' impulse ${impulse.toFixed(3)} N·s`,
         );
+        const ms = (t: number | undefined): string => (t === undefined ? "none" : `${(1e3 * (t - t0)).toFixed(2)} ms`);
+        const anchor = r.impact.anchor;
+        console.log(
+            `  departure ${ms(r.impact.departure)}; restart ${ms(anchor?.at)}` +
+                (anchor === undefined ? "" : ` (rate ${anchor.rate.toFixed(2)})`),
+        );
         for (const c of face) {
             const s = sampleAt(c.end);
             console.log(
