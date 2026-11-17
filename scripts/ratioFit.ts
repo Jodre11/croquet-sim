@@ -475,8 +475,8 @@ export interface ReadOut {
 /**
  * One impact step as readOut records it: its end (s), the head centre's speed along aim, both balls' speeds, each
  * ball's rolling fraction along aim (R·ω·(ẑ × aim) over its velocity along aim; 1 rolling, negative for backspin, NaN
- * while at rest) and
- * the hands' force along aim (N; the drive's without the hands' load; roll launch design §3.3).
+ * while at rest), the second ball's surface speed from its spin, R·ω·(ẑ × aim) (m/s), and the hands' force along aim
+ * (N; the drive's without the hands' load; roll launch design §3.3).
  */
 export interface ReadSample {
     readonly t: number;
@@ -485,6 +485,7 @@ export interface ReadSample {
     readonly v2: number;
     readonly roll1: number;
     readonly roll2: number;
+    readonly spin2: number;
     readonly hands: number;
 }
 
@@ -537,10 +538,8 @@ export function readOut(
     const speedOf = (ball: BallState | undefined): number => length(horizontal((ball as BallState).velocity));
     const R = world.ball.radius;
     const rollAxis = cross(vec3(0, 0, 1), aim);
-    const rollOf = (ball: BallState | undefined): number => {
-        const b = ball as BallState;
-        return (R * dot(b.angularVelocity, rollAxis)) / dot(b.velocity, aim);
-    };
+    const spinOf = (ball: BallState | undefined): number => R * dot((ball as BallState).angularVelocity, rollAxis);
+    const rollOf = (ball: BallState | undefined): number => spinOf(ball) / dot((ball as BallState).velocity, aim);
     const samples: ReadSample[] = [];
     const probe: ImpactProbe = {
         step(s) {
@@ -551,6 +550,7 @@ export function readOut(
                 v2: speedOf(s.balls[second]),
                 roll1: rollOf(s.balls[striker]),
                 roll2: rollOf(s.balls[second]),
+                spin2: spinOf(s.balls[second]),
                 hands: dot(s.hand === undefined ? s.drive : s.hand.force, aim),
             });
         },

@@ -1,9 +1,10 @@
 /**
  * The joint fit (reality scorecard design §5): Nelder–Mead over the free parameters the sensitivity map shows matter,
  * in their bounds normalised to [0, 1], minimising the card's objective (§3.2). Every evaluation is appended to
- * docs/superpowers/probes/scorecard/<date>-fit.jsonl, and a re-run replays the log before running anything new, so an
- * interrupted fit resumes. The best set is written as a record (label fit-best); reference/ is never changed. Not part
- * of the engine. Run with `npx --no-install tsx scripts/scorecardFit.ts <base record.json> [--budget N]`.
+ * docs/superpowers/probes/scorecard/<date>-<label>.jsonl, and a re-run replays the log before running anything new, so
+ * an interrupted fit resumes. The best set is written as a record (label <label>-best); reference/ is never changed.
+ * Not part of the engine. Run with
+ * `npx --no-install tsx scripts/scorecardFit.ts <base record.json> [--budget N] [--label L]` (label default fit).
  */
 import { FREE_PARAMS } from "./scorecard/params";
 import { RECORD_DIR, readRecord, recordOf, runCard, writeRecord, type CardRecord } from "./scorecard/run";
@@ -41,7 +42,9 @@ const params = FIT_PARAMS.map((name) => {
     return p;
 });
 const day = new Date().toISOString().slice(0, 10);
-const LOG = `${RECORD_DIR}/${day}-fit.jsonl`;
+const labelAt = args.indexOf("--label");
+const LABEL = labelAt < 0 ? "fit" : (args[labelAt + 1] as string);
+const LOG = `${RECORD_DIR}/${day}-${LABEL}.jsonl`;
 
 const toValues = (x: readonly number[]): Record<string, number> =>
     Object.fromEntries(
@@ -69,7 +72,7 @@ async function evaluate(x: readonly number[]): Promise<number> {
     if (record === undefined) {
         if (evaluations >= BUDGET) return Infinity;
         const overrides = toValues(x);
-        record = recordOf(`fit-${evaluations}`, overrides, await runCard(overrides, undefined, base.jobSeconds));
+        record = recordOf(`${LABEL}-${evaluations}`, overrides, await runCard(overrides, undefined, base.jobSeconds));
         seen.set(k, record);
         fs.appendFileSync(LOG, `${JSON.stringify({ x, record })}\n`);
     }
@@ -133,7 +136,7 @@ const start = params.map((p) => (p.entry.value - p.bounds[0]) / (p.bounds[1] - p
 await nelderMead(start, 0.25);
 const found = best as { x: number[]; record: CardRecord } | null;
 if (found !== null) {
-    const record = { ...found.record, label: "fit-best" };
+    const record = { ...found.record, label: `${LABEL}-best` };
     const path = await writeRecord(record, base);
     console.log(`best objective ${record.objective.toFixed(3)} (base ${base.objective.toFixed(3)}) at`);
     for (const p of params) {

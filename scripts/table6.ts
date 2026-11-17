@@ -112,6 +112,53 @@ export function croquetedRead(
     return { t: at.t, at };
 }
 
+/**
+ * The croqueted ball's window (m): Gugan's speeds and spins are averages over a few ms and mm of a video strip
+ * (Gugan 4 §3). He does not state the strip's length; 10–20 mm brackets it (gap register, G1), and 15 mm is assumed.
+ */
+export const READ_WINDOW = 0.015;
+
+/** The croqueted ball's window read: its end (s), v₂ = Δx/Δt, Ω₂ = R·Δφ/Δx, and the travel read (m). */
+export interface WindowRead {
+    readonly t: number;
+    readonly v2: number;
+    readonly roll2: number;
+    readonly travelled: number;
+}
+
+/**
+ * The second ball read over its first `distance` (m) of horizontal travel from `start` (s), the integrals
+ * trapezoidal over `samples` (in time order). A run ending short is read over what it travelled, `travelled` then
+ * below `distance`; NaN figures when nothing was travelled.
+ */
+export function windowRead(
+    samples: readonly Pick<ReadSample, "t" | "v2" | "spin2">[],
+    start: number,
+    distance: number = READ_WINDOW,
+): WindowRead {
+    const after = samples.filter((s) => s.t >= start);
+    const first = after[0];
+    if (first === undefined) return { t: start, v2: NaN, roll2: NaN, travelled: 0 };
+    let travelled = 0;
+    let turned = 0;
+    let end = first.t;
+    for (let i = 1; i < after.length && travelled < distance; i++) {
+        const a = after[i - 1] as (typeof after)[number];
+        const b = after[i] as (typeof after)[number];
+        const dt = b.t - a.t;
+        travelled += 0.5 * (a.v2 + b.v2) * dt;
+        turned += 0.5 * (a.spin2 + b.spin2) * dt;
+        end = b.t;
+    }
+    const elapsed = end - first.t;
+    return {
+        t: end,
+        v2: elapsed > 0 ? travelled / elapsed : NaN,
+        roll2: travelled > 0 ? turned / travelled : NaN,
+        travelled,
+    };
+}
+
 /** A roll's figures as Table 6 gives them: w₁/U, v₂/U, Ω₁ and Ω₂ (%), L₁ and L₂ (m); null where not played. */
 export interface RollFigures {
     readonly clean: boolean;
@@ -134,16 +181,16 @@ export function rollFigures(roll: GuganRoll, world: World): RollFigures {
     const played: ShotSetup = setup;
     const r = readOut(played, world, {}, contact ?? undefined);
     const read = r.samples.find((s) => s.t >= r.time) ?? r.samples[r.samples.length - 1];
-    const two = croquetedRead(r, played);
+    const two = windowRead(r.samples, croquetedRead(r, played, 0).t);
     const lawn = sample.byLawn?.[LAWN];
     const l1 = lawn?.range ?? null;
     const ratio = lawn?.ratio ?? null;
     return {
         clean,
         w1U: r.w1 / roll.U,
-        v2U: two.at.v2 / roll.U,
+        v2U: two.v2 / roll.U,
         o1: 100 * (read?.roll1 ?? NaN),
-        o2: 100 * two.at.roll2,
+        o2: 100 * two.roll2,
         l1,
         l2: l1 === null || ratio === null ? null : l1 * ratio,
     };
