@@ -300,3 +300,5 @@ The same Nelder–Mead, parameters, bounds and stop, from the reference values o
   user validates by. The period is the user's ruling (1 above).
 - **Recommendation.** Keep the reference values; treat the slow rolls' undershoot (w₁/U) as a gap of its own, and
   read the lift (G4) before any further fit, since the fit trades against it.
+- **Ruling** (2026-11-17): keep the reference values; the grip period stays 0.08 s. The slow rolls' undershoot
+  (w₁/U) is a gap of its own, and G4 (lift) is read first.
