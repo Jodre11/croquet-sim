@@ -711,6 +711,14 @@ function solveGugansMallet(type: StrokeType, speed: number, world: World): Swing
 }
 
 /**
+ * `world` with Gugan 5's balls, the Dawson Internationals (ball–ball e GUGAN5.ballRestitution), in place of the card's
+ * Table 1 balls: Gugan 5 is a check played on its own balls (the user's G3 ruling, gap register, 2026-11-17).
+ */
+export function gugan5World(world: World = defaultWorld()): World {
+    return { ...world, ballBall: { ...world.ballBall, restitution: GUGAN5.ballRestitution } };
+}
+
+/**
  * `type`'s canonical setup on `world` (default `defaultWorld()`) at `gap` (m): the croqueted ball's gap for a croquet
  * stroke, else the target's (`targetGap`, default `gap`), with Gugan's mallet (gugansMallet) when `gugan` is true, the
  * stroke's `guideEffort`, `jab`, `timing` and `drive` (the magnitude) where given, and the stroke for `speed` (m/s):

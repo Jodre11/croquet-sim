@@ -15,7 +15,7 @@ import {
     strokeForContact,
     turfLimited,
 } from "../../scripts/followThrough";
-import { guganSetup, leanOf } from "../../scripts/ratioFit";
+import { gugan5World, guganSetup, leanOf } from "../../scripts/ratioFit";
 import { DEFAULT_CROQUET_GAP, canonicalSetup } from "./support/shot";
 
 const WORLD = defaultWorld();
@@ -162,7 +162,10 @@ describe("the follow-through harness (P2b.2b.2c.2d design §3.4)", () => {
     // the hands together (γ_T 1, g_B 0.1), the head clear of the turf through the impact and only rubbing it in the
     // follow-through. The pass sits on the stop's step-sensitive high branch (squeezeConvergence.test.ts).
     // Shapes design §8, ruling 19: the stance 6° back (was 6.6029 at 5°), 6.913, a branch the step no longer flips.
-    it.runIf(SLOW)(
+    // Gap G3 (gap register, 2026-11-16): 5.354 after amendments 5–7. The user's ruling (2026-11-17): Gugan 5 is a
+    // check, played on its own balls (e 0.772); there the stop reads 5.66, below the band, so this test is marked as a
+    // known failure while Gugan 4's filmed stops (Table 5) stay the fit's.
+    (SLOW ? it.fails : it.skip)(
         "keeps the canonical AC stop's Gugan 5 stop within the band at 3 m/s contact speed",
         { timeout: 120_000 },
         () => {
@@ -184,7 +187,7 @@ describe("the follow-through harness (P2b.2b.2c.2d design §3.4)", () => {
                 drive: DEFAULT_DRIVE["stop-ac"],
                 contactSpeed: true,
             });
-            const { routes } = playRoutes(setup, WORLD);
+            const { routes } = playRoutes(setup, gugan5World(WORLD));
             expect(Math.abs(routes.ratio - target.value)).toBeLessThanOrEqual(0.6);
         },
     );

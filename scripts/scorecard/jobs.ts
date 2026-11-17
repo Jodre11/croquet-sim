@@ -35,6 +35,7 @@ import {
     figuresOf,
     fitSetup,
     fitWorld,
+    gugan5World,
     guganSetup,
     leanOf,
     readOut,
@@ -80,9 +81,9 @@ function table5(name: string): Record<string, Measured> {
 
 /**
  * Gugan 5's ratio for `type` at 3 m/s on his mallet, as the slow suite plays the stop (followThroughHarness), on
- * `world` (the standard court by default).
+ * `world` (the standard court on Gugan 5's balls by default).
  */
-export function gugan5(type: "drive" | "stop-ac", world: World = defaultWorld()): number {
+export function gugan5(type: "drive" | "stop-ac", world: World = gugan5World()): number {
     const canonical = canonicalSetup(type, { world });
     const setup = guganSetup(type, 3, DEFAULT_CROQUET_GAP, {
         world,

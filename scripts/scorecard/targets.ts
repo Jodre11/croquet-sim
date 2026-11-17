@@ -91,12 +91,13 @@ for (const c of TABLE2_FACE) {
     });
 }
 
-// Gugan 5's ratios at 3 m/s on his mallet (fit).
+// Gugan 5's ratios at 3 m/s on his mallet and balls (check): the user's G3 ruling (gap register, 2026-11-17). The
+// model sits within Gugan 4's filmed stops (Table 5), and Gugan 5 played other balls on another lawn.
 add({
     id: "gugan5.drive",
     job: "gugan5-drive",
     family: "gugan5",
-    use: "fit",
+    use: "check",
     kind: "number",
     value: GUGAN5.drive.ratio,
     sigma: GUGAN5.drive.tolerance,
@@ -106,7 +107,7 @@ add({
     id: "gugan5.stop",
     job: "gugan5-stop",
     family: "gugan5",
-    use: "fit",
+    use: "check",
     kind: "number",
     value: GUGAN5.stop.ratio,
     sigma: GUGAN5.stop.tolerance,

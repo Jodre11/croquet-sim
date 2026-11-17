@@ -131,6 +131,9 @@ gap before the re-catch.
 - **Recommendation.** The user's ruling: either play Gugan 5 on its own balls and keep it as a check, not a fit
   target, or treat it as a gap in the jab stop's technique. Until then the slow test's stop assertion stays failing,
   recorded.
+- **Ruling** (2026-11-17): a check, played on Gugan 5's own balls (e 0.772). Card `2026-11-17-gugan5-check`: drive
+  3.79 (z −2.2), stop 5.66 (z −2.5); objective 18.80 → **11.19**, its whole fall the family's removal. The slow
+  test's stop assertion plays the same balls and is marked `it.fails`.
 
 ## G4. The croqueted ball's lift in the full and pass rolls
 
@@ -218,3 +221,8 @@ converged after 61 cards: objective **16.64**. Records `2026-11-17-refit.jsonl`,
   sources give no value. A bound-pinned fit says the card wants a mechanism the period stands in for, as the first fit's cliff did.
 - **Recommendation.** Keep the reference values. The period is the user's ruling: adopt 0.011 s, or keep 0.08 s and
   treat the slow rolls' undershoot (w₁/U) as a gap of its own.
+- **Rulings** (2026-11-17), in order:
+  1. The grip period stays 0.08 s; the reference values are kept.
+  2. G3: Gugan 5 becomes a check on its own balls (above).
+  3. Table 5's stop shots (C20S w₁/W, the stops' Ω₁ sign): probe, then design.
+  4. Then the C25P grip-limit cap's design, then a refit, which judges the grip period again.
