@@ -327,15 +327,19 @@ describe("simulateShot", () => {
         expect(simulateShot(setup, WORLD).motion.aborted).toBe(false);
     });
 
-    it("raises grip-limit once in the impact and follow-grip-limit once in the follow-through (P2b.2b.2b.3 §5)", () => {
+    it("raises grip-limit once in the strike, once after it, and follow-grip-limit once (P2b.2b.2b.3 §5)", () => {
         // A 20 N grip cannot carry the hands' share of the mallet's weight and the downswing's pull, so a hand
         // saturates in the impact and again in the follow-through: each is reported once, the first time.
         // Roll launch design §3.1 (was a 20 N grip): the hands re-anchor at the departure, so the slowed plan's
         // follow-through stays within 20 N; at 15 N a hand saturates in both again, an input change.
+        // Gap register G2 (2026-11-17): the impact reports the first saturation before the departure and the first
+        // after it, so that the judge can tell the strike's shock from a hold.
         const base = canonicalSetup("single-ball");
         const setup = { ...base, profile: { ...base.profile, body: { ...base.profile.body, gripLimit: 15 } } };
         const outcome = simulateShot(setup, WORLD, { trajectory: true });
-        expect(outcome.impact.events.filter((e) => e.kind === "grip-limit")).toHaveLength(1);
+        const limits = outcome.impact.events.filter((e) => e.kind === "grip-limit");
+        const departure = outcome.impact.departure ?? NaN;
+        expect(limits.map((e) => e.t < departure)).toEqual([true, false]);
         expect((outcome.trajectory as SwingTrajectory).flags.filter((f) => f === "follow-grip-limit")).toHaveLength(1);
     });
 

@@ -126,6 +126,16 @@ gap before the re-catch.
   hand–arm chain (palm and finger stiffness, Dong et al. 2013). The limit is the hand's breakaway strength (Young et
   al. 2009, 435 ± 27 N), which the model applies to every step. Gugan filmed C25P played, so a real hand bears it; the
   limit's reach is a sub-millisecond shock against a breakaway strength.
+- **Ruling** (2026-11-17): a grip limit reached inside the strike is not superhuman; the hold still slips at the
+  limit. ENGINE 0.36.0 records the first saturation before the first departure and the first after it; one the strike
+  began counts as the strike's while it runs on past the departure, and as a hold once it is still on at the restart
+  (a 15 N grip's saturation, `shot.test.ts`, stays superhuman). The judge (`src/lab/play.ts`) rules out only a limit
+  at or after the departure, or any without one. Card `2026-11-17-grip-strike`: C25P plays clean; objective 8.83 →
+  **7.16** (playability 1.67 → 0).
+- **What it unmasks.** Plans that were superhuman now play, and play poorly: the full roll's text book at power 2
+  gives ratio 1.45 at the preset hold (1.62 found), the pass roll's at 1.6–2 gives 1.53–1.55 (target under 0.99).
+  The striker's ball's shortfall again. Two firmness tests lose their example of a plan no hold admits (`it.fails`,
+  restore with a new case). A saturation that never meets a restart (no 0.5 ms open) is not re-checked.
 
 ## G3. Gugan 5's drive and stop
 

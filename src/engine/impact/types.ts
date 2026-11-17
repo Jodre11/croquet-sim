@@ -430,7 +430,7 @@ export interface ContactState extends HeadState {
  * - `impact-turf-pit`: when the impact ended, a ball's surface lay more than TURF_PIT_DEPTH below the turf over a
  *   cell it held (P2b.2b.2b.2a design §4.6); the handover places it on the flat lawn, and the pit is discarded;
  * - `grip-limit`: a hand's force first reached its grip's limit (P2b.2b.2b.3 design §5), with the hand; recorded, not
- *   judged;
+ *   judged here. A tracked stroke records the first before its first departure and the first to begin after it;
  * - `turf-yield`: a column of the head's turf first yielded (P2b.2b.2b.3 design §4.2); recorded, not judged;
  * - `impact-head-stopped`: the head came to rest in the turf before any face contact (P2b.2b.2b.3 design §4.6): the
  *   impact ends there and hands the balls over as they lie;

@@ -163,7 +163,10 @@ describe("the found firmness (firmness design §5)", () => {
         },
     );
 
-    it("gives the class and reason at σ_max of a plan no hold admits", { timeout: 600_000 }, () => {
+    // Gap register G2 (the user's ruling, 2026-11-17): a grip limit reached inside the strike is the strike's shock,
+    // not superhuman, and the pass roll's text book at 1.6 now plays at firmness 0 (ratio 1.53). No plan no hold
+    // admits is known; restore with a new case.
+    it.fails("gives the class and reason at σ_max of a plan no hold admits", { timeout: 600_000 }, () => {
         // Gate 1: the pass roll's text book at power 1.6 trips the grip limit at every firmness. Flat push design,
         // amendment 7: the half roll at 1.5, the example until then, now brakes within the grip.
         const setup = mapSetup("pass-roll", textBook("pass-roll"), 1.6);

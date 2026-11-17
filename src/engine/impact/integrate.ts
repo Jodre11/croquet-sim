@@ -1227,7 +1227,8 @@ function strokeOnce(
     let deep = false;
     let yielded = false;
     let resting = 0;
-    let limited = false;
+    const limited = [false, false];
+    let saturating = false;
     const jumps: EntryJumps | null = tracked ? { count: 0, worst: 0, keys: [] } : null;
     let state: HeadState = setup.start;
     let grounded = false;
@@ -1262,10 +1263,16 @@ function strokeOnce(
             hand = handLoad(played ?? plan, state, head, t, grip, dt);
             drive = hand.force;
             headTorque = hand.torque;
-            if (hand.saturated !== null && !limited) {
-                limited = true;
+            // The first saturation inside the strike and the first to begin after it are each recorded, so that the
+            // judge can tell a strike's shock from a hold the hand cannot keep (gap register G2, the user's ruling
+            // 2026-11-17). A saturation the strike began is the strike's while it runs on past the departure, and a
+            // hold the hand cannot keep once it is still on when the hands' path restarts.
+            const phase = grip.departedAt === null ? 0 : 1;
+            if (hand.saturated !== null && !limited[phase] && (phase === 0 || !saturating || restarted)) {
+                limited[phase] = true;
                 events.push({ kind: "grip-limit", t, hand: hand.saturated });
             }
+            saturating = hand.saturated !== null;
         }
         const loads: StepLoads = {
             headForce: shaft === null ? add(drive, headWeight) : add(add(drive, headWeight), shaft.force),

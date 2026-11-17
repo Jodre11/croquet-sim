@@ -231,17 +231,20 @@ describe("one plan's run (P2b.2b.2c.3b plan Task 3)", () => {
     });
 
     it(
-        "grades the full roll's text book at p = 2 as superhuman: a hand reaches its grip's limit",
+        "plays the full roll's text book at p = 2: its hand reaches the grip's limit only inside the strike",
         { timeout: 60_000 },
         () => {
             // Shapes design §8, ruling 14 (was unreachable, §2's hands' finish swinging past the quarter turn of their
             // 1.5 m arc): the top hand now stops within V·HAND_EASE/2 of the push's end, well short of it, so the impact
             // is played. Firmness design §3: h_body is now the head's 0.48 m rise (was 2.77 m), so at p = 1.5 (intensity 0.5)
             // the head slides off the face (unpractised) and at p = 2 (intensity 1) a hand reaches its grip's limit.
+            // Gap register G2 (the user's ruling, 2026-11-17): that limit is reached inside the strike, the strike's
+            // shock, so the stroke plays (was superhuman): ratio 1.447 on the 10 s lawn at the preset hold, past the
+            // full roll's band (1.619 at the found hold).
             const sample = playSample("full-roll", textBook("full-roll"), 2, [10], "preset");
-            expect(sample.klass).toBe("superhuman");
+            expect(sample.klass).toBeNull();
+            expect(sample.byLawn[10]?.ratio).toBeCloseTo(1.447, 3);
             expect(sample.firmness).toBe(defaultProfile.shape["full-roll"].holdFirmness);
-            expect(sample.sigma).toBeGreaterThan(0);
         },
     );
 });
@@ -262,7 +265,10 @@ describe("the map's found firmness (firmness design §5, A7 item 4)", () => {
         expect(sample.followCap).toBe(true);
     });
 
-    it(
+    // Gap register G2 (the user's ruling, 2026-11-17): a grip limit reached inside the strike is the strike's shock,
+    // not superhuman, and the pass roll's text book at 1.6 now plays at firmness 0. No plan no hold admits is known;
+    // restore with a new case.
+    it.fails(
         "plays a plan no hold admits at σ_max, its class findFirmness's, its firmness null",
         { timeout: 600_000 },
         () => {
@@ -375,6 +381,25 @@ describe("the push map practises (P2b.2b.2c.3b.1 plan Task 7)", () => {
         expect(runClass(setup, after, NONE, ON, null)).toEqual({ klass: null, reason: null });
         const during = stubRun(setup.striker, [{ kind: "grip-limit", t: 0, hand: "top" }], ["follow-grip-limit"]);
         expect(runClass(setup, during, NONE, ON, null)).toEqual({ klass: "superhuman", reason: "grip-limit" });
+    });
+
+    it("plays a grip limit inside the strike and rules out one after its departure (gap register G2)", () => {
+        const at = (t: number, departure: number | undefined) => {
+            const run = stubRun(setup.striker, [{ kind: "grip-limit", t, hand: "bottom" }]);
+            return { ...run, result: { ...run.result, departure } as ImpactResult };
+        };
+        expect(runClass(setup, at(0.0104, 0.0106), NONE, ON, null)).toEqual({ klass: null, reason: null });
+        expect(runClass(setup, at(0.0106, 0.0106), NONE, ON, null)).toEqual({
+            klass: "superhuman",
+            reason: "grip-limit",
+        });
+        expect(runClass(setup, at(0.0104, undefined), NONE, ON, null).klass).toBe("superhuman");
+        const both = stubRun(setup.striker, [
+            { kind: "grip-limit", t: 0.0104, hand: "bottom" },
+            { kind: "grip-limit", t: 0.02, hand: "top" },
+        ]);
+        const late = { ...both, result: { ...both.result, departure: 0.0106 } as ImpactResult };
+        expect(runClass(setup, late, NONE, ON, null).klass).toBe("superhuman");
     });
 
     it("still classes a slipping follow-through that breaks the turf", () => {

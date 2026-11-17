@@ -493,7 +493,11 @@ function ownClass(
     const { events } = run.result;
     const flags = run.follow.flags;
     const event = (kind: string): boolean => events.some((e) => e.kind === kind);
-    if (event("grip-limit")) {
+    // A grip limit reached inside the strike, before the first departure, is the strike's shock against the hand's
+    // breakaway strength, a sustained pull (Young et al. 2009): the hold slips, and the stroke is played (the user's
+    // ruling, gap register G2, 2026-11-17; Gugan 4 filmed C25P). Without a departure every grip limit counts.
+    const { departure } = run.result;
+    if (events.some((e) => e.kind === "grip-limit" && (departure === undefined || e.t >= departure))) {
         return { klass: "superhuman", reason: "grip-limit" };
     }
     for (const kind of ["impact-off-face", "impact-no-strike"]) {
