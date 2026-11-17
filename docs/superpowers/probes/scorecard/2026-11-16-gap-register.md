@@ -86,4 +86,32 @@ cites it; Penner, Can. J. Phys. 80, 931 (2002), as the strike–turf laws design
 
 ## The joint fit
 
-Pending: the fit is running (Nelder–Mead over seven parameters, budget 150 cards).
+Nelder–Mead over seven parameters converged after 112 cards (simplex spread under 0.05): objective **17.49**
+against the baseline's 23.92. Records `2026-11-16-fit.jsonl`, `2026-11-17-fit-best`.
+
+| Parameter | Reference | Fitted | Note |
+|---|---|---|---|
+| faceFriction | 0.38 | 0.44 | 60% of [0.2, 0.6] |
+| ballBallFriction | 0.16 | 0.150 | |
+| tangentialStiffnessRatio | 2/7 | 2/7 | **pinned at its lower bound**, the reference |
+| handCouplingPeriod | 0.080 | 0.077 | |
+| handCouplingDampingRatio | 0.70 | 0.69 | |
+| armMass | 0.80 | 0.95 | |
+| ballTurfSliding | 0.48 | 0.48 | **pinned at its lower bound**, the reference |
+
+- **By family** (Σz²/count, fit targets): table 6 7.23 → 3.56; playability 3.33 → 1.67; Gugan 5 7.60 → 6.53;
+  table 5 3.80 → 3.78; strike 1.95 and turf 0.00 unchanged.
+- **Where the gain is.** About 5.3 of the 6.4 comes from one target pair: faceFriction 0.44 takes C25F across G2's
+  cliff (w₁/U z 10.6 → −3.3, playability 5 → 0). The cliff is not closed, only crossed: C25F now undershoots, and a
+  small move in faceFriction would put it back.
+- **Held out.** C25P w₁/U 8.5 → 1.7 (still not clean), C25P L1 1.1 → 0.0; worse: C3H w₁/U 3.6 → 4.6, C25F L1
+  0.65 → −1.44. Every other held-out target moves by under 0.3 z.
+- **Checks.** Lift falls (full roll 13.9 → 11.4 mm, pass roll 15.2 → 12.3), still outside 0–5. The pass roll's
+  ratio worsens, 1.12 → 1.21 (it should be under 0.99: the striker's ball should go further), and the full roll's
+  leaves its band, 1.16 → 1.23 (1.00–1.20).
+- **Reading.** No setting in the bounds reaches the large misses; the fit's one big gain is G2's cliff, which is
+  a mechanism, not a value. The two pinned parameters sit at their references, so the fit asks for nothing outside
+  the sourced bounds.
+- **Recommendation.** Keep the reference values; design G2 (cap the hand coupling at the sourced push force) and
+  apply G1's card read, then refit. With the cliff gone, the fit's remaining moves (faceFriction, armMass) can be
+  judged on their own, and the pass roll stays the shot it is.
