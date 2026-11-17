@@ -163,6 +163,27 @@ for (const s of FILMED_STROKES) {
             source: `${G4} Table 5 row 17`,
         });
     }
+    if (s.gap === 0) {
+        // Played at the game's gap above; at the film's gap 0, the known three-body push (gap register G5), a check.
+        const touching = `t5-${s.name}-touching`;
+        const rows = [
+            ["v2U", v2U, v2U * RATIO_SHARE, "rows 1, 9"],
+            ["w1W", w1W, w1W * RATIO_SHARE, "rows 5, 6"],
+            ["o1", x.o1, SPIN_POINTS, "row 7"],
+        ] as const;
+        for (const [figure, value, sigma, rowsOf] of rows) {
+            add({
+                id: `t5.${s.name}.touching.${figure}`,
+                job: touching,
+                family: "table5",
+                use: "check",
+                kind: "number",
+                value,
+                sigma,
+                source: `${G4} Table 5 ${rowsOf}, at gap 0`,
+            });
+        }
+    }
     add({
         id: `lawn.t5.${s.name}.L1`,
         job,

@@ -178,6 +178,12 @@ gap before the re-catch.
     doublet qualitatively unlike a separated one. The game plays every croquet stroke at DEFAULT_CROQUET_GAP, 0.75 mm,
     a stand-in fitted to these stops (gate D). The card alone plays them at the film's 0. Gugan's note (i) names the
     balls' surface milling, so the film's "touching" balls meet on the milling's ridges.
+  - **The card across the touching stops' gap** (the rest of the card as `2026-11-17-gugan5-check`): objective 11.19
+    at 0, 10.52 at 0.1 mm, 9.80 at 0.25, 8.86 at 0.5, **8.83 at 0.75**, 8.92 at 1 mm.
+  - **Ruling** (2026-11-17): the card plays C3S and C20S at the game's 0.75 mm as fit targets, and keeps their gap-0
+    figures as checks (`t5.<name>.touching.*`). Card `2026-11-17-touching-gap`: objective 11.19 → **8.83**; table 5
+    3.80 → 1.43; every touching-stop target within 1.5 z, Ω₁ with Gugan's sign. Partly circular: 0.75 mm was fitted to
+    these two stops (gate D). The three-body push at gap 0 stays carried.
 
 ## The joint fit
 

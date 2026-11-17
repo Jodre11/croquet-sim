@@ -54,11 +54,35 @@ const YARD = 0.9144;
 const finite = (x: number | null | undefined): number | null =>
     x === null || x === undefined || !Number.isFinite(x) ? null : x;
 
-/** A Table 5 stroke on its preset at its U and recorded gap, default mallet, on Gugan's 13 s open lawn (design §3.1). */
+/**
+ * The gap (m) the card plays a Table 5 stroke at: its recorded gap, but the game's DEFAULT_CROQUET_GAP for a touching
+ * one (row 2's 0), as the game plays every croquet stroke (the user's ruling, gap register G5, 2026-11-17). At gap 0
+ * the model's three-body push misplays them (contact laws design, gate B); `t5-<name>-touching` keeps that as a check.
+ */
+function cardGap(stroke: (typeof FILMED_STROKES)[number]): number {
+    return stroke.gap === 0 ? DEFAULT_CROQUET_GAP : stroke.gap;
+}
+
+/** A touching Table 5 stroke played at gap 0, its v₂/U, w₁/W and Ω₁ as checks (`t5.<name>.touching.*`). */
+function table5Touching(name: string): Record<string, Measured> {
+    const stroke = FILMED_STROKES.find((s) => s.name === name) as (typeof FILMED_STROKES)[number];
+    const world = openWorld(LAWN);
+    const setup = opened(guganSetup(stroke.preset, stroke.malletSpeed, 0, { world }));
+    const read = readOut(setup, world);
+    const figures = figuresOf(read, effectiveMassOf(setup, world) / world.ball.mass);
+    const at = read.samples.find((s) => s.t >= read.time) ?? read.samples[read.samples.length - 1];
+    return {
+        [`t5.${name}.touching.v2U`]: read.open ? null : finite(figures.v2U),
+        [`t5.${name}.touching.w1W`]: read.open ? null : finite(figures.w1W),
+        [`t5.${name}.touching.o1`]: read.open ? null : finite(100 * (at?.roll1 ?? NaN)),
+    };
+}
+
+/** A Table 5 stroke on its preset at its U and card gap, default mallet, on Gugan's 13 s open lawn (design §3.1). */
 function table5(name: string): Record<string, Measured> {
     const stroke = FILMED_STROKES.find((s) => s.name === name) as (typeof FILMED_STROKES)[number];
     const world = openWorld(LAWN);
-    const setup = opened(guganSetup(stroke.preset, stroke.malletSpeed, stroke.gap, { world }));
+    const setup = opened(guganSetup(stroke.preset, stroke.malletSpeed, cardGap(stroke), { world }));
     const read = readOut(setup, world);
     const figures = figuresOf(read, effectiveMassOf(setup, world) / world.ball.mass);
     const at = read.samples.find((s) => s.t >= read.time) ?? read.samples[read.samples.length - 1];
@@ -235,6 +259,9 @@ export const JOBS: Readonly<Record<string, Job>> = {
     "turf-bed": turfBed,
     user: user,
     ...Object.fromEntries(FILMED_STROKES.map((s) => [`t5-${s.name}`, () => table5(s.name)])),
+    ...Object.fromEntries(
+        FILMED_STROKES.filter((s) => s.gap === 0).map((s) => [`t5-${s.name}-touching`, () => table5Touching(s.name)]),
+    ),
     ...Object.fromEntries(
         ROLLS.map((r) => [
             `t6-${r.name}`,
