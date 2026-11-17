@@ -171,6 +171,26 @@ gap before the re-catch.
   mm) is too tight for a ball driven down at 1 m/s.
 - **Discriminating probe** (for its design). An oblique landing on the bed, v₂ 1–8 m/s horizontal with vz −0.15·v₂,
   against a vertical drop at the same vz: (a) predicts a lower e for the oblique one, which the bed does not now give.
+- **Probe** (`oblique`, 2026-11-17, reference values). `land()` on a fresh bed, vz = −0.15·v₂:
+
+  | v₂ m/s | vz m/s | e vertical | e oblique | vx out/in | Ω₂ out (in 0 / −0.36) | hop mm |
+  |---|---|---|---|---|---|---|
+  | 1 | −0.15 | 0.590 | 0.600 | 0.79 | 0.64 / 0.19 | 0.4 |
+  | 2 | −0.30 | 0.662 | 0.676 | 0.84 | 0.46 / 0.03 | 2.1 |
+  | 4 | −0.60 | 0.650 | 0.676 | 0.85 | 0.40 / −0.02 | 8.4 |
+  | 6 | −0.90 | 0.629 | 0.667 | 0.85 | 0.39 / −0.04 | 18.4 |
+  | 8 | −1.20 | 0.611 | 0.660 | 0.85 | 0.38 / −0.04 | 32.0 |
+
+  - The bed gives the oblique landing a slightly *higher* vertical e (+0.01 to +0.05), and the same e whatever the
+    spin. It has no ploughing loss; the hops (8–18 mm at 4–6 m/s) match the look check's 13–22 mm.
+  - Caveat: in the strike the croqueted ball starts in its rest dent, not on a fresh bed.
+- **Sources** (2026-11-17). Rigid wall: the oblique normal e exceeds the normal-impact e for solid sports balls
+  (Sports Eng. Tech., doi 10.1177/17543371251327464), as the bed gives. Tennis on court: backspin raises the
+  vertical energy loss, topspin lowers it (Sheffield thesis, etheses.whiterose.ac.uk/id/eprint/14607); the bed has
+  no such dependence. The cricket-pitch study (James, Carré, Haake, doi 10.1007/978-0-387-46050-5_42) could not be
+  read: login or 403 on every host. No source gives a magnitude for turf.
+- **Reading.** (a) is not refuted, but it is unsourced in magnitude, and the backspin direction is the one source
+  that bears on it. (b) and (c) are untested.
 
 ## G5. Smaller misses, recorded
 

@@ -188,6 +188,53 @@ function bed(): void {
 }
 
 /**
+ * G4's discriminating probe: an oblique landing on a fresh bed, horizontal v₂ 1–8 m/s with vz = −0.15·v₂ (the
+ * croqueted ball's state at the ball–ball contact's end), against a vertical drop at the same vz. Candidate (a),
+ * ploughing, predicts a lower vertical e for the oblique landing. Spin Ω₂ 0 and −0.36 (G1's start), as Rω/v₂.
+ */
+function oblique(): void {
+    const world = openWorld(LAWN);
+    const ball = { radius: world.ball.radius, mass: world.ball.mass };
+    const R = ball.radius;
+    const law = {
+        modulus: contactReference.bedModulus.value,
+        recovery: contactReference.bedRecovery.value,
+        friction: frictionReference.ballTurfSliding.value,
+        cell: BED_CELL,
+    };
+    const drop = (vx: number, vz: number, spin: number) =>
+        land(
+            {
+                position: vec3(0.0007, 0.0011, R),
+                velocity: vec3(vx, 0, vz),
+                angularVelocity: vec3(0, (spin * vx) / R, 0),
+            },
+            ball,
+            world.gravity,
+            law,
+        );
+    console.log("v2 m/s  vz m/s  Ω2in | e vertical | e oblique  vx out/in  Ω2 out  hop mm  depth mm  outcome");
+    for (const v2 of [1, 2, 4, 6, 8]) {
+        const vz = -0.15 * v2;
+        const vertical = drop(0, vz, 0);
+        const eV = vertical.outcome === "left" ? vertical.state.velocity.z / -vz : 0;
+        for (const spin of [0, -0.36]) {
+            const l = drop(v2, vz, spin);
+            const out = l.state.velocity;
+            const e = l.outcome === "left" ? out.z / -vz : 0;
+            const omega = (R * l.state.angularVelocity.y) / Math.max(1e-9, out.x);
+            const hop = (1e3 * out.z * out.z) / (2 * world.gravity);
+            console.log(
+                `${v2.toFixed(1).padStart(6)} ${vz.toFixed(2).padStart(7)} ${spin.toFixed(2).padStart(5)} | ` +
+                    `${eV.toFixed(3).padStart(10)} | ${e.toFixed(3).padStart(9)} ${(out.x / v2).toFixed(3).padStart(10)} ` +
+                    `${omega.toFixed(2).padStart(7)} ${hop.toFixed(2).padStart(7)} ${(1e3 * l.peakDepth).toFixed(2).padStart(9)}  ` +
+                    l.outcome,
+            );
+        }
+    }
+}
+
+/**
  * The full and pass rolls' strike, C10 against C25: the face's contact intervals with the striker's ball, the head
  * speed U, w₁/U and Ω₁ at each face contact's end and at the read, and the hands' impulse along the aim during the
  * face contacts. Candidate (a) of the fast-striker gap keeps the face on, driving ball 1, longer at C25.
@@ -434,6 +481,7 @@ if (mode === "read-delay") readDelay();
 else if (mode === "read-distance") readDistance();
 else if (mode === "hop") hop();
 else if (mode === "bed") bed();
+else if (mode === "oblique") oblique();
 else if (mode === "strike") strike();
 else if (mode === "gugan5-balls") await gugan5Balls();
 else if (mode === "restart") await restart();
