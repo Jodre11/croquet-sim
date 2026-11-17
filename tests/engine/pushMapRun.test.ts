@@ -181,16 +181,19 @@ describe("one plan's run (P2b.2b.2c.3b plan Task 3)", () => {
         // Roll launch design §3.1f, amendment 8 (was 1.606, range 2.24 m): the face's friction fitted to C3F's topspin
         // (0.38, was 0.5) and the balls' to C10H's croqueted ball (0.16, was 0.06); one pass, the ratio 1.156, range
         // 2.51 m, back in the band 1.0–1.2.
+        // Restart confirmation design (was 1.156 at a 1 ms hold): the 0.5 ms hold reads the gap before the face's
+        // re-catch, so the hands no longer drive the striker's ball on after it; the ratio 1.335, out of the band
+        // 1.0–1.2. Recorded for the refit (gap register G2), not tuned.
         const base = mapSetup("full-roll", textBook("full-roll"), 1);
         const p = swingReference["full-roll"].defaultBackswing.value / bodyBackswing(base, WORLD);
         const sample = playSample("full-roll", textBook("full-roll"), p, [10], "preset");
         expect(sample.klass).toBeNull();
         expect(sample.reason).toBeNull();
         expect(sample.passes).toBe(1);
-        expect(sample.byLawn[10]?.ratio).toBeCloseTo(1.156, 3);
+        expect(sample.byLawn[10]?.ratio).toBeCloseTo(1.335, 3);
     });
 
-    it("plays the half roll's text book at its canonical power at ratio 1.77", () => {
+    it("plays the half roll's text book at its canonical power at ratio 1.782", () => {
         // Shapes design §8, ruling 15: the half roll's hold firmness, 0.1, is bisected to ratio 2.0 (was 1.041 at the
         // grip's whole couple, the striker's ball driven on too far). Hands-from-lean design §4: the bottom hand half
         // the shaft down (was 0.42 m), the hold kept, not refitted; the ratio 2.099 (was 2.0).
@@ -198,14 +201,15 @@ describe("one plan's run (P2b.2b.2c.3b plan Task 3)", () => {
         // the departure; the ratio 2.019 (was 1.932). Roll launch design §3.1c–e: 2.016. Amendment 8 (was 2.016): the
         // faces' and balls' friction fitted, 1.770, range 1.87 m. The croqueted ball's backspin shortens it while the
         // striker's ball runs on (Gugan's C3H and C10H: w1/U 0.38–0.40, the model's 0.40–0.44): a known gap.
+        // Restart confirmation design (was 1.770 at a 1 ms hold): 1.782.
         const base = mapSetup("half-roll", textBook("half-roll"), 1);
         const p = swingReference["half-roll"].defaultBackswing.value / bodyBackswing(base, WORLD);
         const sample = playSample("half-roll", textBook("half-roll"), p, [10], "preset");
         expect(sample.klass).toBeNull();
-        expect(sample.byLawn[10]?.ratio).toBeCloseTo(1.77, 3);
+        expect(sample.byLawn[10]?.ratio).toBeCloseTo(1.782, 3);
     });
 
-    it("plays the pass roll's text book at its canonical power lawfully, at ratio 1.123", () => {
+    it("plays the pass roll's text book at its canonical power lawfully, at ratio 1.285", () => {
         // Shapes design §8, ruling 17: a full roll with a 4° split, its 32° lean and a subtly punchier push (drive 0.5
         // over 60 ms pulses); was its own 15 ms punch at a 20° split, unlawful (29.1.6.1) at ratio 0.418. Ruling 18:
         // its follow-through 0.1 s keeps the head off the turf (was 0.3 s: ratio 0.814 in two passes). Hands-from-lean
@@ -216,12 +220,14 @@ describe("one plan's run (P2b.2b.2c.3b plan Task 3)", () => {
         // 0.83, but inside Gugan 4's filmed pass rolls (L2/L1 0.94–1.21). Roll launch design §3.1c–e (was 1.165):
         // 1.6266, range 2.19 m, past them, with the full roll's topspin gap (amendment 8). Amendment 8 (was 1.6266):
         // the faces' and balls' friction fitted, 1.1235, range 2.56 m, inside Gugan 4's again.
+        // Restart confirmation design (was 1.1235 at a 1 ms hold): the hands no longer drive the striker's ball on after
+        // the face's re-catch; 1.2853, past Gugan 4's filmed pass rolls. Recorded for the refit (gap register G2).
         const base = mapSetup("pass-roll", textBook("pass-roll"), 1);
         const p = swingReference["pass-roll"].defaultBackswing.value / bodyBackswing(base, WORLD);
         const sample = playSample("pass-roll", textBook("pass-roll"), p, [10], "preset");
         expect(sample.klass).toBeNull();
         expect(sample.passes).toBe(1);
-        expect(sample.byLawn[10]?.ratio).toBeCloseTo(1.1235, 4);
+        expect(sample.byLawn[10]?.ratio).toBeCloseTo(1.2853, 4);
     });
 
     it(
@@ -296,7 +302,8 @@ describe("the free motion once per sample (plan Amendment B, Task B2; B-d6)", ()
             // passes, firmness 0.1883, σ 0.2125): the push no longer carries the ball past the departure, and the
             // search finds no hold firmer than none. Roll launch design §3.1c–e: re-pinned (was two passes, ratio 2.045
             // on the 10 s lawn): one pass, ratio 2.054. Amendment 8: re-pinned (was ratio 2.054 on the 10 s lawn): the
-            // faces' and balls' friction fitted, ratio 1.499.
+            // faces' and balls' friction fitted, ratio 1.499. Restart confirmation design: re-pinned (was ratio 1.499 on
+            // the 10 s lawn): the restart at a 0.5 ms hold, ratio 1.497.
             vi.mocked(simulateFreeMotion).mockClear();
             const sample = playSample("full-roll", textBook("full-roll"), 1, MAP_LAWNS);
             expect(vi.mocked(simulateFreeMotion).mock.calls.length).toBe(MAP_LAWNS.length);
@@ -305,9 +312,9 @@ describe("the free motion once per sample (plan Amendment B, Task B2; B-d6)", ()
                 klass: null,
                 reason: null,
                 byLawn: {
-                    6: { range: 1.280779109104408, ratio: 1.409015385565041, splitAtRest: 0 },
-                    10: { range: 2.3810652245318025, ratio: 1.4989356273651724, splitAtRest: 2.3873104472383926e-14 },
-                    14: { range: 3.8817316835393925, ratio: 1.5359083201498507, splitAtRest: 2.1965744992829238e-14 },
+                    6: { range: 1.283770281964749, ratio: 1.4057323927739516, splitAtRest: 0 },
+                    10: { range: 2.3843033958069384, ratio: 1.496899892189713, splitAtRest: 2.38406819202512e-14 },
+                    14: { range: 3.8853035229646053, ratio: 1.5344963280470465, splitAtRest: 2.1945551431758445e-14 },
                 },
                 strokeEffort: 37.607985145309634,
                 pushEffort: 14.627308187889472,

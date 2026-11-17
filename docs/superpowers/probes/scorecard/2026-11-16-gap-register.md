@@ -44,6 +44,72 @@ cites it; Penner, Can. J. Phys. 80, 931 (2002), as the strike–turf laws design
   and at C25 the plan runs faster than the struck head.
 - **Recommendation.** A design: cap the coupling's force at the sourced push force, or let the plan's track yield to
   the contact. Discriminating run for that design: C25F with the coupling force capped at pushForce.
+- **Reframed** (the user's "Reframe: fix the restart", 2026-11-17; `specs/2026-11-17-push-strength-design.md`). The push
+  has ended at the departure (0.6 ms); C25's gap before the re-catch, 0.75–0.97 ms, fell under RESTART_HOLD's 1 ms, so
+  the restart waited to 39–42 ms while the hands chased the plan.
+
+### G2's discriminating run (2026-11-17, `gapProbe.ts restart`, reference values)
+
+Restart (ms from first contact), and the gaps before it (ms). The strike's re-press is the first gap; the next is the
+gap before the re-catch.
+
+| Roll | 1 ms, one interval (was) | (a) 0.5 ms, one interval | (b) 1 ms summed | w₁/U (a) / Gugan |
+|---|---|---|---|---|
+| C3H | 2.93; 0.39, 4.30 | 2.43; 0.39, 4.46 | 2.54 | 0.438 / 0.380 |
+| C10H | 2.63; 0.18, 2.83 | 2.13; 0.18, 2.92 | 2.45 | 0.404 / 0.400 |
+| C10F | 2.89; 0.32, 1.21 | 2.39; 0.32, 1.29 | 2.57 | 0.465 / 0.569 |
+| C10P | 2.95; 0.35, 1.12 | 2.45; 0.35, 1.18 | 2.60 | 0.480 / 0.520 |
+| C25F | **42.10**; 0.22, 0.93 | 2.23; 0.22, 0.97 | 2.51 | 0.433 / 0.501 |
+| C25P | **39.12**; 0.23, 0.75 | 2.25; 0.23, 0.76 | **38.14** | 0.438 / 0.557 |
+
+- **(b) fails**: C25P's open time sums to 0.98 ms before the re-catch, under 1 ms.
+- **(a) qualifies** and is adopted:
+  - both C25 rolls restart before 5 ms;
+  - C10H's head at the restart reads 2.498 m/s, against 2.532 at the old restart, which was taken after the strike
+    had left the head;
+  - C10H's last face contact ends at 5.5 ms.
+- **(a)'s margin** is 0.11 ms each side: the largest rejected re-press is C3H's 0.39 ms, and the shortest accepted
+  gap is C25P's 0.76 ms.
+- C10H's re-press at the reference μ 0.16 is 0.18 ms; the spec's 0.38 ms was read at μ 0.06.
+
+### G2 after the fix (`2026-11-17-restart`)
+
+- **Card.** Objective **19.47** (baseline 23.92), at the reference values with no fit.
+  - Table 6 7.23 → 4.45; playability 3.33 → 1.67; the other families are unchanged.
+  - C25F w₁/U z 10.6 → −3.2, and it plays clean. Held out: C25P 8.5 → −5.0.
+  - The cliff turns into a uniform undershoot. Every full and pass roll's striker's ball is now slow (w₁/U z: C3F
+    −4.9, C10F −4.3, C3P −3.7, C10P −1.8, C25F −3.2, C25P −5.0).
+- **Checks.**
+  - Coaching ratios: full roll 1.16 → 1.34, out of its band (1.00–1.20); pass roll 1.12 → 1.29 (target under 0.99);
+    half roll 1.77 → 1.78.
+  - Lift: full roll 13.9 → 14.7 mm, pass roll 15.2 → 11.7 mm.
+  - The pass roll's punch no longer outruns a coasting pass roll (1.4971 against 1.5034 m/s): the test is marked
+    `it.fails`.
+- **The hands after the restart** (spec §4), along the aim while the face is on the ball:
+
+  | Roll | Mean | Peak | Time above F_push (92.2 N) |
+  |---|---|---|---|
+  | C10F | 22 N | 76 N | none |
+  | C10P | 34 N | 80 N | none |
+  | C25F | 41 N | 121 N | 0.47 ms |
+  | C25P | 72 N | 174 N | 1.23 ms |
+
+  - Before the fix the hands' impulse was 5.2–6.3 N·s; it is now 0.44–0.73 N·s.
+  - C25P is still not clean: it exceeds the grip limit (superhuman, grip-limit). Its 1.23 ms above F_push is longer
+    than a strike (0.6 ms). Under spec §4 this brings the strength cap back as **its own design**, now for the hands'
+    peak on the re-catch, not the 40 ms chase.
+- **The margin at the map's bounds** (§4). At ten of the twelve bound settings every C25 gap stays at 0.56 ms or more,
+  and every re-press at 0.40 ms or less. The cliff remains at two:
+  - ballBallFriction 0.06: C25P's gap is 0.30 ms and its restart is 38.6 ms; C10P's 0.52 ms re-press is read as the
+    parting;
+  - tangentialStiffnessRatio 2/3: C25F's gap is 0.47 ms and C25P's 0.02 ms (restarts at 41.6 and 38.6 ms).
+
+  The fit pinned both parameters at their references, and ballBallFriction's low bound costs objective 53.8.
+  Still, a refit could cross these cliffs. Spec §5 says a criterion on force or speed may then replace time.
+- **Next.**
+  - G1's card read (its own change).
+  - Then the refit. With the cliff gone, the uniform undershoot and the coaching ratios are what the fit can work on.
+  - The C25P grip-limit cap needs a design, and is a ruling for the user.
 
 ## G3. Gugan 5's drive and stop
 

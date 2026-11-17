@@ -224,9 +224,31 @@ describe("the re-anchor at the departure (roll launch design §3.1)", () => {
         const at = result.anchor?.at as number;
         expect(at - departure).toBeGreaterThanOrEqual(RESTART_HOLD - 1e-9);
         const face = result.timeline[faceKey(c10h.striker)] ?? [];
+        // The first parting (0.18 ms at μ 0.16) is closed again by the strike, so it is not the one confirmed.
+        expect(face.filter((c) => c.end <= at).length).toBeGreaterThanOrEqual(2);
         const parting = face.filter((c) => c.end <= at).pop();
         expect(at - (parting?.end as number)).toBeGreaterThanOrEqual(RESTART_HOLD - 1e-9);
         expect(at - (parting?.end as number)).toBeLessThan(RESTART_HOLD + 2e-5);
+    });
+
+    // Gugan 4 Table 6's C25F: the full roll at the power whose planned head speed is his 8.01 m/s (the Table 6 probe).
+    const c25f = mapSetup("full-roll", textBook("full-roll"), 1.6212);
+
+    it("restarts C25F in the gap before the re-catch (restart confirmation design)", { timeout: 60_000 }, () => {
+        // At 1 ms the 0.97 ms gap before Gugan's second contact went unread, and the restart waited to 42 ms.
+        const { contact } = planStroke(c25f, gugan);
+        const { result } = practiseStroke(contact, c25f.balls, gugan, c25f.striker);
+        const face = result.timeline[faceKey(c25f.striker)] ?? [];
+        const t0 = face[0]?.start as number;
+        const at = result.anchor?.at as number;
+        expect(at - t0).toBeLessThan(0.005);
+        // The strike's re-press is not confirmed; the restart falls in the next gap, one hold after its parting.
+        const before = face.filter((c) => c.end <= at);
+        expect(before.length).toBeGreaterThanOrEqual(2);
+        const parting = before[before.length - 1];
+        expect(at - (parting?.end as number)).toBeGreaterThanOrEqual(RESTART_HOLD - 1e-9);
+        expect(at - (parting?.end as number)).toBeLessThan(RESTART_HOLD + 2e-5);
+        expect(face.some((c) => c.start < at && c.end > at)).toBe(false);
     });
 
     it("lets C10H's striker's ball go after the strike (amendments 5 to 7)", { timeout: 60_000 }, () => {

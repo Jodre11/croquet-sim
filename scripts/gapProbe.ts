@@ -205,10 +205,23 @@ function strike(): void {
             r.samples.find((s) => s.t >= t) ?? (r.samples[r.samples.length - 1] as ReadSample);
         const t0 = face[0]?.start ?? 0;
         let impulse = 0;
+        // The hands' force along the aim through face contact after the restart: impulse, time on, peak.
+        const restartAt = r.impact.anchor?.at ?? Infinity;
+        let late = { impulse: 0, on: 0, peak: 0, above: 0 };
+        const pushForce = contactReference.pushForce.value;
         for (let i = 1; i < r.samples.length; i++) {
             const a = r.samples[i - 1] as ReadSample;
             const b = r.samples[i] as ReadSample;
-            if (face.some((c) => b.t > c.start && b.t <= c.end)) impulse += a.hands * (b.t - a.t);
+            if (!face.some((c) => b.t > c.start && b.t <= c.end)) continue;
+            impulse += a.hands * (b.t - a.t);
+            if (a.t >= restartAt) {
+                late = {
+                    impulse: late.impulse + a.hands * (b.t - a.t),
+                    on: late.on + (b.t - a.t),
+                    peak: Math.max(late.peak, a.hands),
+                    above: late.above + (a.hands > pushForce ? b.t - a.t : 0),
+                };
+            }
         }
         const faceTime = face.reduce((s, c) => s + (c.end - c.start), 0);
         console.log(
@@ -220,7 +233,10 @@ function strike(): void {
         const anchor = r.impact.anchor;
         console.log(
             `  departure ${ms(r.impact.departure)}; restart ${ms(anchor?.at)}` +
-                (anchor === undefined ? "" : ` (rate ${anchor.rate.toFixed(2)})`),
+                (anchor === undefined ? "" : ` (rate ${anchor.rate.toFixed(2)})`) +
+                `; hands after it on the face: peak ${late.peak.toFixed(1)} N, mean ` +
+                `${late.on > 0 ? (late.impulse / late.on).toFixed(1) : "-"} N over ${(1e3 * late.on).toFixed(2)} ms, ` +
+                `${(1e3 * late.above).toFixed(2)} ms above pushForce ${pushForce} N`,
         );
         for (const c of face) {
             const s = sampleAt(c.end);
@@ -229,6 +245,57 @@ function strike(): void {
                     `head ${(s.head / roll.U).toFixed(3)} U, w1 ${(s.w1 / roll.U).toFixed(3)} U, Ω1 ${(100 * s.roll1).toFixed(0)}%`,
             );
         }
+    }
+}
+
+const RESTART_ROLLS = ["C10H", "C3H", "C10F", "C10P", "C25F", "C25P"];
+
+/**
+ * The restart confirmation design's discriminating run (§3.2): for each roll, the departure, the restart, the open
+ * gaps between them, the face contacts after the restart, w₁/U against Gugan, and the head's speed at the departure
+ * and at the restart; then the canonical rolls' ratios.
+ */
+async function restart(): Promise<void> {
+    const { RESTART_HOLD } = await import("../src/engine/impact/integrate");
+    const { playJudged, textBook, canonicalPower } = await import("../src/lab/play");
+    console.log(`hold ${(1e3 * RESTART_HOLD).toFixed(2)} ms`);
+    const world = openWorld(LAWN);
+    for (const roll of ROLLS.filter((r) => RESTART_ROLLS.includes(r.name))) {
+        const power = powerFor(roll.type, roll.U, world);
+        if (power === null) continue;
+        const { setup, contact } = playRoll(roll, power);
+        if (setup === null) continue;
+        const r = readOut(setup, world, {}, contact ?? undefined);
+        const face = r.impact.timeline[faceKey(setup.striker)] ?? [];
+        const t0 = face[0]?.start ?? 0;
+        const ms = (t: number): string => (1e3 * (t - t0)).toFixed(2);
+        const at = r.impact.anchor?.at;
+        const headAt = (t: number): number => (r.samples.find((s) => s.t >= t) ?? { head: NaN }).head;
+        const gaps: string[] = [];
+        for (let i = 1; i < face.length; i++) {
+            const a = face[i - 1];
+            const b = face[i];
+            if (a === undefined || b === undefined || (at !== undefined && a.end > at)) break;
+            gaps.push((1e3 * (b.start - a.end)).toFixed(2));
+        }
+        const after = at === undefined ? [] : face.filter((c) => c.start > at);
+        const departure = r.impact.departure;
+        console.log(
+            `${roll.name}: departure ${departure === undefined ? "none" : ms(departure)} ms, restart ` +
+                `${at === undefined ? "none" : ms(at)} ms; gaps before it ${gaps.join(", ")} ms; ` +
+                `w1/U ${(r.w1 / roll.U).toFixed(3)} (Gugan ${(roll.w1 / roll.U).toFixed(3)}); head ` +
+                `${departure === undefined ? "?" : headAt(departure).toFixed(3)} m/s at departure, ` +
+                `${at === undefined ? "?" : headAt(at).toFixed(3)} at restart`,
+        );
+        console.log(
+            `  face after restart: ${after.map((c) => `${ms(c.start)}–${ms(c.end)}`).join(", ") || "none"}; ` +
+                `last face end ${ms(face[face.length - 1]?.end ?? t0)} ms`,
+        );
+    }
+    const ten = openWorld(10);
+    for (const type of ["half-roll", "full-roll", "pass-roll"] as const) {
+        const { sample } = playJudged(type, textBook(type), canonicalPower(type, ten), [10], "preset");
+        console.log(`canonical ${type}: ratio ${sample.byLawn?.[10]?.ratio?.toFixed(3)}, class ${sample.klass}`);
     }
 }
 
@@ -259,4 +326,5 @@ else if (mode === "hop") hop();
 else if (mode === "bed") bed();
 else if (mode === "strike") strike();
 else if (mode === "gugan5-balls") await gugan5Balls();
+else if (mode === "restart") await restart();
 else throw new Error("usage: gapProbe.ts read-delay | read-distance | hop | bed | strike | gugan5-balls [--set …]");

@@ -183,11 +183,14 @@ export const IMPACT_CAP = 0.06;
 export const TRACK_IMPACT_CAP = 0.45;
 
 /**
- * How long (s) the striker's face–ball pair stays open after its departing parting before the hands' path restarts
- * from the head (roll launch design §3.1d, amendment 6; the user's "Confirmed parting", 2026-11-16): about two
- * strikes' durations, so a parting the strike closes again (C10H's at 0.62 ms, pressed again at 1 ms) is not read.
+ * How long (s) the striker's face–ball pair stays open, in one interval, after a departing parting before the hands'
+ * path restarts from the head (roll launch design §3.1d, amendment 6; the user's "Confirmed parting", 2026-11-16).
+ * Numerical, not physical: it separates the partings the strike closes again (at the reference values Table 6's
+ * longest, C3H's, 0.39 ms) from the gaps before Gugan's second contact (C25P's 0.76 ms the shortest), the restart
+ * confirmation design (gap G2, 2026-11-17). Its first value, 1 ms, lay inside the second range and let the hands
+ * drive C25's head and striker's ball for 40 ms.
  */
-export const RESTART_HOLD = 0.001;
+export const RESTART_HOLD = 0.0005;
 
 /**
  * Depth (m) below the turf plane past which a head with the head–turf pair raises `impact-head-deep` (P2b.2b.2b.3
