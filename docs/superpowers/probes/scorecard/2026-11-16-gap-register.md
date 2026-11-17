@@ -270,3 +270,33 @@ converged after 61 cards: objective **16.64**. Records `2026-11-17-refit.jsonl`,
   2. G3: Gugan 5 becomes a check on its own balls (above).
   3. Table 5's stop shots (C20S w₁/W, the stops' Ω₁ sign): probe, then design.
   4. Then the C25P grip-limit cap's design, then a refit, which judges the grip period again.
+
+## The second refit (2026-11-17, on G3, the touching stops at 0.75 mm and G2's grip ruling)
+
+The same Nelder–Mead, parameters, bounds and stop, from the reference values on the 7.16 card. It converged after
+111 cards: objective **5.22**. Records `2026-11-17-refit2.jsonl`, `2026-11-17-refit2-best`.
+
+| Parameter | Reference | Fitted | Note |
+|---|---|---|---|
+| faceFriction | 0.38 | 0.224 | 6% of [0.2, 0.6] |
+| ballBallFriction | 0.16 | 0.096 | 8% of [0.06, 0.5] |
+| tangentialStiffnessRatio | 2/7 | 0.365 | |
+| handCouplingPeriod | 0.080 | **0.0217** | 6% of [0.01, 0.2]: low, no longer at the floor |
+| handCouplingDampingRatio | 0.70 | 0.986 | 98%: at its upper bound |
+| armMass | 0.80 | 1.09 | |
+| ballTurfSliding | 0.48 | 0.528 | |
+
+- **Where the gain is.** As in the first refit, the slow full and pass rolls' striker's ball: w₁/U z C3F −4.9 → −2.3,
+  C3P −3.7 → −0.8, C10F −4.3 → −2.3, C25F −3.2 → −1.4; held out C1F −4.9 → −2.9, C25P −5.0 → −3.6. The rolls' Ω₂
+  move towards Gugan (C3F −2.7 → −1.6, C3P −2.8 → −1.7, C3H −3.1 → −1.9); table 6's lawn distances all within 2 z.
+- **Worse.** Fit: C3P v₂/U 3.1 → 4.2, C3F v₂/U −0.1 → 1.0, C10H Ω₂ 0.0 → 1.4, table 5's C10S w₁/W −2.5 → −2.7.
+  Held out: C1F v₂/U 3.3 → 5.0, C3H Ω₁ 0.4 → 1.8. Checks: Gugan 5's stop −2.5 → −4.2.
+- **Look.** Lift (band 0–5 mm): half roll **17.3 mm**, z 0 → 6.1 (was in the band); full roll **21.9 mm**, z 4.8 →
+  8.5; pass roll 12.7 mm, z 3.3 → 3.9. Coaching: full roll 1.31 (band 1.00–1.20) and pass roll 1.18 (under 0.99)
+  improve; the stop's ratio 3.89 leaves its band (4.1–6.2).
+- **Reading.** The grip again carries the gain: a 22 ms period, critically damped, holds the hands to the plan's path
+  through the slow rolls. Three of the seven parameters sit at or near a bound (face and ball-ball friction low,
+  damping at 1), and the half roll's lift leaves its band by a factor of three: the card is bought with a look the
+  user validates by. The period is the user's ruling (1 above).
+- **Recommendation.** Keep the reference values; treat the slow rolls' undershoot (w₁/U) as a gap of its own, and
+  read the lift (G4) before any further fit, since the fit trades against it.

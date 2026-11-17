@@ -1,0 +1,214 @@
+Scorecard refit2-best, 2026-11-17T21:56:34.109Z
+overrides {"faceFriction":0.22437055078423382,"ballBallFriction":0.0955017789760948,"tangentialStiffnessRatio":0.36471605996298573,"handCouplingPeriod":0.021716559715726693,"handCouplingDampingRatio":0.9864296351172839,"armMass":1.090056048528783,"ballTurfSliding":0.5279288346154899}
+objective 5.22 (was 7.16)
+
+== strike ==
+strike.t1.e@1.90             fit          0.720 / 0.720 ± 0.0200       z  -0.00 pass was -0.00
+strike.t1.video@1.90         fit          0.844 / 0.750 ± 0.125        z   0.76 pass was 0.76
+strike.t1.e@5.54             fit          0.720 / 0.720 ± 0.0200       z   0.00 pass was 0.00
+strike.t1.video@5.54         fit          0.679 / 0.750 ± 0.125        z  -0.57 pass was -0.57
+strike.t1.e@7.64             fit          0.720 / 0.720 ± 0.0200       z   0.00 pass was 0.00
+strike.t1.video@7.64         fit          0.656 / 0.750 ± 0.125        z  -0.76 pass was -0.76
+strike.t2.A1D.video          fit           1.42 / 1.00 ± 0.100         z   4.21 miss was 4.21
+strike.t2.A2D.video          fit          0.750 / 0.750 ± 0.100        z   0.00 pass was 0.00
+strike.t2.A3D.video          fit          0.622 / 0.600 ± 0.100        z   0.22 pass was 0.22
+strike.t2.A4D.video          fit          0.555 / 0.600 ± 0.100        z  -0.45 pass was -0.45
+
+== gugan5 ==
+gugan5.drive                 check         3.78 / 4.23 ± 0.200         z  -2.23 miss was -2.18
+gugan5.stop                  check         4.64 / 7.15 ± 0.600         z  -4.18 miss was -2.49
+
+== table5 ==
+t5.B2GS.v2U                  fit           1.07 / 1.04 ± 0.0442        z   0.53 pass was 0.63
+t5.B2GS.w1W                  fit           1.78 / 1.85 ± 0.0784        z  -0.88 pass was -0.87
+t5.B2GS.o1                   fit           8.72 / -3.00 ± 10.0         z   1.17 near was 1.14
+t5.B2GS.L2L1                 fit           3.35 / 3.40 ± 0.952         z  -0.05 pass was -0.02
+t5.B1GS.v2U                  fit           1.10 / 1.03 ± 0.0436        z   1.66 near was 1.69
+t5.B1GS.w1W                  fit           1.77 / 1.72 ± 0.0731        z   0.70 pass was 0.68
+t5.B1GS.o1                   fit          -1.26 / -14.0 ± 10.0         z   1.27 near was 1.22
+t5.B1GS.L2L1                 fit           3.50 / 4.20 ± 1.18          z  -0.60 pass was -0.59
+t5.B1MS.v2U                  check         1.09 / 1.10 ± 0.0466        z  -0.17 pass was -0.16
+t5.B1MS.w1W                  check         1.78 / 1.64 ± 0.0694        z   2.05 miss was 2.03
+t5.B1MS.o1                   check        -1.44 / -16.0 ± 10.0         z   1.46 near was 1.41
+t5.B2MS.v2U                  fit           1.08 / 1.04 ± 0.0443        z   0.88 pass was 0.90
+t5.B2MS.w1W                  fit           1.78 / 1.71 ± 0.0726        z   1.00 pass was 0.98
+t5.B2MS.o1                   fit          0.427 / 4.00 ± 10.0          z  -0.36 pass was -0.39
+t5.B2MS.L2L1                 fit           2.91 / 2.80 ± 0.784         z   0.14 pass was 0.16
+t5.C3S.v2U                   fit           1.11 / 1.15 ± 0.0486        z  -0.73 pass was -0.71
+t5.C3S.w1W                   fit           1.75 / 1.73 ± 0.0735        z   0.18 pass was 0.44
+t5.C3S.o1                    fit          -9.09 / -14.0 ± 10.0         z   0.49 pass was -1.43
+t5.C3S.L2L1                  fit           4.20 / 6.60 ± 1.85          z  -1.30 near was -0.90 WORSE
+t5.C3S.touching.v2U          check         1.26 / 1.15 ± 0.0486        z   2.26 miss was 2.25
+t5.C3S.touching.w1W          check         1.97 / 1.73 ± 0.0735        z   3.25 miss was 3.24
+t5.C3S.touching.o1           check         7.65 / -14.0 ± 10.0         z   2.17 miss was 2.01
+t5.C10S.v2U                  fit           1.15 / 1.15 ± 0.0487        z  -0.07 pass was -0.06
+t5.C10S.w1W                  fit           1.59 / 1.79 ± 0.0761        z  -2.69 miss was -2.47
+t5.C10S.o1                   fit          -6.01 / -12.0 ± 10.0         z   0.60 pass was -1.32
+t5.C10S.L2L1                 fit           4.54 / 4.20 ± 1.18          z   0.29 pass was 0.93
+t5.C20S.v2U                  fit           1.13 / 1.09 ± 0.0461        z   0.85 pass was 0.83
+t5.C20S.w1W                  fit           1.65 / 1.61 ± 0.0684        z   0.62 pass was 0.73
+t5.C20S.o1                   fit          -8.12 / -12.0 ± 10.0         z   0.39 pass was -1.44
+t5.C20S.L2L1                 fit           3.81 / 4.10 ± 1.15          z  -0.26 pass was 0.25
+t5.C20S.touching.v2U         check         1.23 / 1.09 ± 0.0461        z   3.08 miss was 3.08
+t5.C20S.touching.w1W         check         1.12 / 1.61 ± 0.0684        z  -7.18 miss was -7.20
+t5.C20S.touching.o1          check         21.1 / -12.0 ± 10.0         z   3.31 miss was 3.06
+t5.C1D.v2U                   fit           1.10 / 1.15 ± 0.0489        z  -1.03 near was -1.01
+t5.C1D.w1W                   fit           1.78 / 1.63 ± 0.0692        z   2.10 miss was 2.08
+t5.C1D.o1                    fit          -1.94 / 20.0 ± 10.0          z  -2.19 miss was -2.24
+t5.C1D.L2L1                  fit           3.36 / 4.00 ± 1.12          z  -0.58 pass was -0.56
+t5.C3D.v2U                   fit           1.10 / 1.11 ± 0.0470        z  -0.15 pass was -0.13
+t5.C3D.w1W                   fit           1.76 / 1.92 ± 0.0814        z  -1.98 near was -2.00
+t5.C3D.o1                    fit          -1.97 / -4.00 ± 10.0         z   0.20 pass was 0.14
+t5.C3D.L2L1                  fit           3.14 / 3.00 ± 0.840         z   0.16 pass was 0.22
+t5.C10D.v2U                  fit           1.11 / 1.11 ± 0.0470        z  -0.02 pass was -0.01
+t5.C10D.w1W                  fit           1.72 / 1.48 ± 0.0629        z   3.77 miss was 3.74
+t5.C10D.o1                   fit          -1.41 / 5.00 ± 10.0          z  -0.64 pass was -0.73
+t5.C10D.L2L1                 fit           3.11 / 3.80 ± 1.06          z  -0.65 pass was -0.64
+t5.mean.v2U                  fit           1.10 / 1.10 ± 0.0200        z   0.16 pass was 0.21
+t5.mean.w1W                  fit           1.74 / 1.71 ± 0.0500        z   0.51 pass was 0.58
+t5.mean.v2w1                 fit           2.03 / 2.07 ± 0.0600        z  -0.72 pass was -0.81
+
+== lawn ==
+lawn.t5.B2GS.L1              held-out     0.841 / 0.770 ± 0.154        z   0.46 pass was 0.46
+lawn.t5.B2GS.L2              held-out      2.82 / 2.61 ± 0.522         z   0.40 pass was 0.44
+lawn.t5.B1GS.L1              held-out     0.875 / 0.640 ± 0.128        z   1.84 near was 1.85
+lawn.t5.B1GS.L2              held-out      3.06 / 2.70 ± 0.540         z   0.67 pass was 0.70
+lawn.t5.B1MS.L1              check         6.09 / 2.45 ± 0.490         z   7.43 miss was 7.45
+lawn.t5.B1MS.L2              held-out      18.3 / 15.9 ± 3.18          z   0.75 pass was 0.79
+lawn.t5.B2MS.L1              held-out      7.78 / 6.70 ± 1.34          z   0.80 pass was 0.82
+lawn.t5.B2MS.L2              held-out      22.7 / 18.6 ± 3.73          z   1.08 near was 1.12
+lawn.t5.C3S.L1               held-out     0.899 / 0.780 ± 0.156        z   0.76 pass was -0.07
+lawn.t5.C3S.L2               held-out      3.78 / 4.85 ± 0.970         z  -1.11 near was -1.08
+lawn.t5.C10S.L1              held-out      2.55 / 2.52 ± 0.504         z   0.05 pass was -0.63
+lawn.t5.C10S.L2              held-out      11.6 / 10.6 ± 2.12          z   0.45 pass was 0.49
+lawn.t5.C20S.L1              held-out      6.35 / 5.48 ± 1.10          z   0.79 pass was 0.06
+lawn.t5.C20S.L2              held-out      24.2 / 22.3 ± 4.45          z   0.43 pass was 0.46
+lawn.t5.C1D.L1               held-out      1.71 / 1.55 ± 0.310         z   0.52 pass was 0.53
+lawn.t5.C1D.L2               held-out      5.74 / 6.21 ± 1.24          z  -0.37 pass was -0.35
+lawn.t5.C3D.L1               held-out      5.70 / 5.35 ± 1.07          z   0.33 pass was 0.28
+lawn.t5.C3D.L2               held-out      17.9 / 16.2 ± 3.23          z   0.52 pass was 0.56
+lawn.t5.C10D.L1              held-out      9.80 / 8.02 ± 1.60          z   1.11 near was 1.12
+lawn.t5.C10D.L2              held-out      30.4 / 30.8 ± 6.16          z  -0.06 pass was -0.04
+lawn.t6.C3H.L1               held-out      4.14 / 3.12 ± 0.624         z   1.64 near was 0.91 WORSE
+lawn.t6.C3H.L2               held-out      7.36 / 7.67 ± 1.53          z  -0.20 pass was -0.69
+lawn.t6.C10H.L1              held-out      10.7 / 7.83 ± 1.57          z   1.85 near was 1.13
+lawn.t6.C10H.L2              held-out      19.6 / 18.0 ± 3.60          z   0.43 pass was -0.06
+lawn.t6.C1F.L1               held-out     0.847 / 1.21 ± 0.242         z  -1.50 near was -2.01
+lawn.t6.C1F.L2               held-out      1.08 / 1.21 ± 0.242         z  -0.56 pass was -1.22
+lawn.t6.C3F.L1               held-out      3.21 / 3.66 ± 0.732         z  -0.62 pass was -1.36
+lawn.t6.C3F.L2               held-out      4.32 / 4.39 ± 0.878         z  -0.08 pass was -0.86
+lawn.t6.C10F.L1              held-out      9.56 / 8.49 ± 1.70          z   0.63 pass was -0.24
+lawn.t6.C10F.L2              held-out      12.1 / 10.5 ± 2.10          z   0.79 pass was 0.04
+lawn.t6.C25F.L1              held-out      17.3 / 20.3 ± 4.05          z  -0.73 pass was -1.30
+lawn.t6.C25F.L2              held-out      24.2 / 25.1 ± 5.02          z  -0.19 pass was -0.70
+lawn.t6.C3P.L1               held-out      4.35 / 3.73 ± 0.746         z   0.83 pass was -0.44
+lawn.t6.C3P.L2               held-out      5.26 / 4.51 ± 0.902         z   0.83 pass was -0.05
+lawn.t6.C10P.L1              held-out      9.29 / 10.3 ± 2.07          z  -0.51 pass was -1.24
+lawn.t6.C10P.L2              held-out      11.3 / 9.76 ± 1.95          z   0.79 pass was 0.03
+lawn.t6.C25P.L1              held-out      19.9 / 26.0 ± 5.20          z  -1.17 near was -1.56
+lawn.t6.C25P.L2              held-out      27.8 / 30.0 ± 6.00          z  -0.36 pass was -0.86
+
+== table6 ==
+t6.C3H.w1U                   held-out     0.438 / 0.380 ± 0.0161       z   3.56 miss was 3.57
+t6.C3H.v2U                   held-out     0.989 / 0.944 ± 0.0400       z   1.14 near was 0.82 WORSE
+t6.C3H.o1                    held-out       110 / 92.0 ± 10.0          z   1.80 near was 0.37 WORSE
+t6.C3H.o2                    held-out     -18.6 / 0.00 ± 10.0          z  -1.86 near was -3.06
+t6.C3H.L2L1                  held-out      1.78 / 2.46 ± 0.688         z  -0.99 pass was -0.97
+t6.C10H.w1U                  fit          0.414 / 0.400 ± 0.0170       z   0.80 pass was 0.23
+t6.C10H.v2U                  fit           1.01 / 1.05 ± 0.0444        z  -0.83 pass was -0.95
+t6.C10H.o1                   fit            113 / 94.0 ± 10.0          z   1.90 near was 1.18
+t6.C10H.o2                   fit          -21.2 / -35.0 ± 10.0         z   1.38 near was 0.04 WORSE
+t6.C10H.L2L1                 fit           1.82 / 2.30 ± 0.644         z  -0.74 pass was -0.69
+t6.C1F.w1U                   held-out     0.585 / 0.667 ± 0.0283       z  -2.88 miss was -4.89
+t6.C1F.v2U                   held-out     0.877 / 0.725 ± 0.0308       z   4.95 miss was 3.30
+t6.C1F.o1                    held-out      74.9 / 100 ± 10.0           z  -2.51 miss was -2.13
+t6.C1F.o2                    held-out     -1.80 / 39.0 ± 10.0          z  -4.08 miss was -4.95
+t6.C1F.L2L1                  held-out      1.27 / 1.00 ± 0.280         z   0.96 pass was 0.95
+t6.C3F.w1U                   fit          0.536 / 0.594 ± 0.0252       z  -2.30 miss was -4.93
+t6.C3F.v2U                   fit          0.924 / 0.886 ± 0.0376       z   1.03 near was -0.05 WORSE
+t6.C3F.o1                    fit           83.0 / 93.0 ± 10.0          z  -1.00 pass was 0.02
+t6.C3F.o2                    fit          -15.9 / 0.00 ± 10.0          z  -1.59 near was -2.68
+t6.C3F.L2L1                  fit           1.35 / 1.20 ± 0.336         z   0.43 pass was 0.49
+t6.C10F.w1U                  fit          0.513 / 0.569 ± 0.0241       z  -2.30 miss was -4.28
+t6.C10F.v2U                  fit          0.940 / 1.02 ± 0.0433        z  -1.84 near was -2.42
+t6.C10F.o1                   fit           99.3 / 90.0 ± 10.0          z   0.93 pass was 1.04
+t6.C10F.o2                   fit          -20.3 / -25.0 ± 10.0         z   0.47 pass was -0.83
+t6.C10F.L2L1                 fit           1.27 / 1.24 ± 0.346         z   0.10 pass was 0.21
+t6.C25F.w1U                  fit          0.470 / 0.501 ± 0.0212       z  -1.42 near was -3.16
+t6.C25F.v2U                  fit          0.945 / 0.886 ± 0.0376       z   1.57 near was 1.16
+t6.C25F.o1                   fit            100 / 90.0 ± 10.0          z   1.04 near was 1.01
+t6.C25F.o2                   fit          -21.6 / -23.0 ± 10.0         z   0.14 pass was -1.25
+t6.C25F.L2L1                 fit           1.39 / 1.24 ± 0.347         z   0.45 pass was 0.58
+t6.C3P.w1U                   fit          0.560 / 0.580 ± 0.0246       z  -0.82 pass was -3.73
+t6.C3P.v2U                   fit          0.924 / 0.785 ± 0.0333       z   4.17 miss was 3.05
+t6.C3P.o1                    fit           87.2 / 97.0 ± 10.0          z  -0.98 pass was -0.98
+t6.C3P.o2                    fit          -17.0 / 0.00 ± 10.0          z  -1.70 near was -2.84
+t6.C3P.L2L1                  fit           1.21 / 1.21 ± 0.339         z  -0.00 pass was 0.31
+t6.C10P.w1U                  fit          0.530 / 0.520 ± 0.0221       z   0.45 pass was -1.83
+t6.C10P.v2U                  fit          0.935 / 0.939 ± 0.0398       z  -0.10 pass was -0.76
+t6.C10P.o1                   fit           98.7 / 87.0 ± 10.0          z   1.17 near was 0.89 WORSE
+t6.C10P.o2                   fit          -20.0 / -30.0 ± 10.0         z   1.00 near was -0.30 WORSE
+t6.C10P.L2L1                 fit           1.22 / 0.943 ± 0.264        z   1.04 near was 1.21
+t6.C25P.w1U                  held-out     0.473 / 0.557 ± 0.0236       z  -3.57 miss was -5.04
+t6.C25P.v2U                  held-out     0.941 / 0.841 ± 0.0357       z   2.82 miss was 2.42
+t6.C25P.o1                   held-out      98.3 / 78.0 ± 10.0          z   2.03 miss was 2.20
+t6.C25P.o2                   held-out     -21.6 / -29.0 ± 10.0         z   0.74 pass was -0.68
+t6.C25P.L2L1                 held-out      1.40 / 1.15 ± 0.323         z   0.75 pass was 0.73
+
+== playability ==
+play.t6.C3H                  fit          clean / clean                z   0.00 pass was 0.00
+play.t6.C10H                 fit          clean / clean                z   0.00 pass was 0.00
+play.t6.C1F                  fit          clean / clean                z   0.00 pass was 0.00
+play.t6.C3F                  fit          clean / clean                z   0.00 pass was 0.00
+play.t6.C10F                 fit          clean / clean                z   0.00 pass was 0.00
+play.t6.C25F                 fit          clean / clean                z   0.00 pass was 0.00
+play.t6.C3P                  fit          clean / clean                z   0.00 pass was 0.00
+play.t6.C10P                 fit          clean / clean                z   0.00 pass was 0.00
+play.t6.C25P                 fit          clean / clean                z   0.00 pass was 0.00
+play.canon.drive             fit          clean / clean                z   0.00 pass was 0.00
+play.canon.stop-ac           fit          clean / clean                z   0.00 pass was 0.00
+play.canon.half-roll         fit          clean / clean                z   0.00 pass was 0.00
+play.canon.full-roll         fit          clean / clean                z   0.00 pass was 0.00
+play.canon.pass-roll         fit          clean / clean                z   0.00 pass was 0.00
+play.canon.single-ball       fit          clean / clean                z   0.00 pass was 0.00
+
+== turf ==
+turf.A4R.e                   fit          0.500 / 0.500 ± 0.0200       z   0.00 pass was 0.00
+turf.A4R.depth               fit           7.20 / 7.20 ± 0.500         z   0.00 pass was 0.00
+turf.A2R.depth               held-out      5.31 / 4.00 ± 0.500         z   2.62 miss was 2.62
+turf.A3R.depth               held-out      5.81 / 5.00 ± 0.500         z   1.61 near was 1.61
+
+== ca ==
+ca.A1D.strike                check        0.980 / 1.00 ± 0.0424        z  -0.47 pass was -0.46
+ca.A1D.lawn                  check        0.741 / 1.00 ± 0.200         z  -1.29 near was -1.26
+ca.A2D.strike                check        0.955 / 1.00 ± 0.0424        z  -1.07 near was -1.06
+ca.A2D.lawn                  check        0.864 / 1.00 ± 0.200         z  -0.68 pass was -0.63
+ca.A3D.strike                check        0.972 / 1.00 ± 0.0424        z  -0.67 pass was -0.66
+ca.A3D.lawn                  check        0.705 / 1.00 ± 0.200         z  -1.48 near was -1.43
+ca.A4D.strike                check         1.20 / 1.00 ± 0.0424        z   4.68 miss was 4.69
+ca.A4D.lawn                  check        0.535 / 1.00 ± 0.200         z  -2.33 miss was -2.29
+
+== user ==
+user.single.0.45m.i0.4       check         25.8 / 30.0 ± 6.00          z  -0.70 pass was -0.64
+user.single.0.45m.i0.3       check         22.6 / 15.0 ± 3.00          z   2.55 miss was 2.65
+user.drive.top.croqueted     check         34.8 / 35.0–60.0            z  -0.03 pass was 0.00
+
+== look ==
+look.ride.drive              check        clean / clean                z   0.00 pass was 0.00
+look.ride.stop-ac            check        clean / clean                z   0.00 pass was 0.00
+look.ride.half-roll          check        clean / clean                z   0.00 pass was 0.00
+look.ride.full-roll          check        clean / clean                z   0.00 pass was 0.00
+look.ride.pass-roll          check        clean / clean                z   0.00 pass was 0.00
+look.ride.single-ball        check        clean / clean                z   0.00 pass was 0.00
+look.lift.half-roll          check         17.3 / 0.00–5.00            z   6.14 miss was 0.00 WORSE
+look.lift.full-roll          check         21.9 / 0.00–5.00            z   8.45 miss was 4.83
+look.lift.pass-roll          check         12.7 / 0.00–5.00            z   3.85 miss was 3.33
+
+== coaching ==
+coach.drive                  check         3.39 / 3.00–4.00            z   0.00 pass was 0.00
+coach.stop-ac                check         3.89 / 4.10–6.20            z  -0.33 pass was 0.00
+coach.half-roll              check         1.71 / 1.40–2.50            z   0.00 pass was 0.00
+coach.full-roll              check         1.31 / 1.00–1.20            z   0.95 pass was 1.13
+coach.pass-roll              check         1.18 / 0.00–0.990           z   1.90 near was 2.98
+
+pass 119, near 35, miss 33
