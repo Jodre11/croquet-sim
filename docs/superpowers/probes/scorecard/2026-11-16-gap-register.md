@@ -29,6 +29,13 @@ cites it; Penner, Can. J. Phys. 80, 931 (2002), as the strike–turf laws design
 - **Recommendation.** Change the card to read Ω₂ (and v₂) as R·Δφ/Δx over the croqueted ball's first 15 mm after the
   contact (assumption: Gugan does not state the window; 10–20 mm brackets it). A card change, not physics, applied
   with the adopted baseline. Then G4 decides the slow residual.
+- **Applied** (2026-11-17, `2026-11-17-window`, on G2's restart). Over the first 15 mm, v₂ = Δx/Δt and
+  Ω₂ = ∫R·ω dt / ∫v dt. Objective 19.47 → **18.80**; table 6 4.45 → 3.78 (fit targets). Ω₂ z: C3F −3.7 → −2.7,
+  C3P −3.7 → −2.8, C10F −1.2 → −0.8, C10P −0.7 → −0.3; held out C1F −7.6 → −5.0, C3H −3.6 → −3.1. v₂/U z: C3P
+  4.2 → 3.1, C3F 1.1 → −0.1, C1F (held out) 6.7 → 3.3; C10F −2.1 → −2.4.
+- **Reading.** The window's mean weighs the contact's −36% start, so it gains less than the probe's point read at
+  15 mm: the slow rolls read −27 to −31, against the point read's −10 to −19 and Gugan's 0. The slow residual stays
+  with G4's hop: airborne, the croqueted ball gains no topspin from the ground.
 
 ## G2. Striker's ball fast in the C25 rolls
 
@@ -181,3 +188,33 @@ against the baseline's 23.92. Records `2026-11-16-fit.jsonl`, `2026-11-17-fit-be
 - **Recommendation.** Keep the reference values; design G2 (cap the hand coupling at the sourced push force) and
   apply G1's card read, then refit. With the cliff gone, the fit's remaining moves (faceFriction, armMass) can be
   judged on their own, and the pass roll stays the shot it is.
+
+## The refit (2026-11-17, on G2's restart and G1's window read)
+
+The same Nelder–Mead, parameters, bounds and stop, from the reference values on `2026-11-17-window` (18.80). It
+converged after 61 cards: objective **16.64**. Records `2026-11-17-refit.jsonl`, `2026-11-17-refit-best`.
+
+| Parameter | Reference | Fitted | Note |
+|---|---|---|---|
+| faceFriction | 0.38 | 0.470 | 68% of [0.2, 0.6] |
+| ballBallFriction | 0.16 | 0.138 | |
+| tangentialStiffnessRatio | 2/7 | 0.294 | at its lower bound, the reference |
+| handCouplingPeriod | 0.080 | **0.011** | **1% of [0.01, 0.2]: at its lower bound** |
+| handCouplingDampingRatio | 0.70 | 0.83 | |
+| armMass | 0.80 | 0.97 | |
+| ballTurfSliding | 0.48 | 0.548 | |
+
+- **By family** (Σz²/count): table 6 3.78 → 2.79; Gugan 5 7.61 → 6.52 (stop 5.35 → 5.61); table 5 3.80 → 3.73;
+  strike, playability (C25P still not clean) and turf unchanged.
+- **Where the gain is.** The slow full and pass rolls' striker's ball: w₁/U z C3F −4.9 → −2.3, C3P −3.7 → −2.1, C1F
+  (held out) −4.9 → −3.3. Ω₂ moves about 0.5 z towards Gugan in every roll (lower ballBallFriction).
+- **Worse.** Fit: C10H w₁/U 0.2 → 1.3, C3F Ω₁ 0.0 → −1.9, C3P Ω₁ −1.0 → −1.8, C25F w₁/U −3.2 → −3.5. Held out: C3H
+  w₁/U 3.6 → 4.4, C25P w₁/U −5.0 → −5.9, C1F Ω₁ −2.1 → −3.2.
+- **Checks.** Coaching ratios improve: full roll 1.34 → 1.27 (band 1.00–1.20), pass roll 1.29 → 1.25 (under 0.99).
+  Lift: full roll 14.7 → 12.3 mm, pass roll 11.7 → 10.3, half roll 4.8 → 6.2 (band 0–5).
+- **Reading.** The fit's main move is the grip: an 11 ms coupling period, at the bound's floor, holds the hands to
+  the plan's path so the hands carry the striker's ball in the slow rolls. The period is the user's decision
+  (2026-10-05, 0.08 s), provisional, and the two-hand model no longer constrains it (contact.json's note); the
+  sources give no value. A bound-pinned fit says the card wants a mechanism the period stands in for, as the first fit's cliff did.
+- **Recommendation.** Keep the reference values. The period is the user's ruling: adopt 0.011 s, or keep 0.08 s and
+  treat the slow rolls' undershoot (w₁/U) as a gap of its own.

@@ -6,6 +6,9 @@ travel, not an instant; then the joint fit runs again on the card with G2's rest
 **Source:** the gap register, G1's recommendation (`docs/superpowers/probes/scorecard/2026-11-16-gap-register.md`).
 Executed natively in this session.
 
+**Status:** done, 2026-11-17. Card 19.47 → 18.80; refit 16.64, the coupling period at its lower bound (a ruling for
+the user). Results in the gap register under G1 and "The refit".
+
 ## Global constraints
 
 - A card change only: no engine change, no ENGINE_VERSION bump, `reference/` unchanged.
