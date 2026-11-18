@@ -189,6 +189,11 @@ gap before the re-catch.
   vertical energy loss, topspin lowers it (Sheffield thesis, etheses.whiterose.ac.uk/id/eprint/14607); the bed has
   no such dependence. The cricket-pitch study (James, Carré, Haake, doi 10.1007/978-0-387-46050-5_42) could not be
   read: login or 403 on every host. No source gives a magnitude for turf.
+- **Cricket pitch** (James, Carré, Haake, The Engineering of Sport 6, Springer 2006, pp. 235 ff.; preview pages
+  only, read 2026-11-18). A rigid-surface model with friction predicted rebound speed and spin but not angle; the
+  authors attribute a steeper rebound than expected to the ball meeting the front of its own depression (citing
+  Carré et al. 1999). The turf's crater raises the rebound rather than damping it: against (a) as framed, and
+  relevant to the croqueted ball, which starts in its rest dent. The results pages are awaited.
 - **Reading.** (a) is not refuted, but it is unsourced in magnitude, and the backspin direction is the one source
   that bears on it. (b) and (c) are untested.
 
