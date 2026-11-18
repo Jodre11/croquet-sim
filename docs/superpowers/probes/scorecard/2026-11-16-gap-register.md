@@ -373,3 +373,17 @@ The same Nelder–Mead, parameters, bounds and stop, from the reference values o
   read the lift (G4) before any further fit, since the fit trades against it.
 - **Ruling** (2026-11-17): keep the reference values; the grip period stays 0.08 s. The slow rolls' undershoot
   (w₁/U) is a gap of its own, and G4 (lift) is read first.
+
+### G4 ruling and card (2026-11-18)
+
+- **Ruling** (the user): split the lift check by ball. The croqueted ball keeps 0–5 mm at the canonical strength,
+  on the user's observation; the striker's ball is judged on Gugan 4's Fig. 6 (C1F's dip 2.4 and rise 2.7 mm, ± 0.5
+  mm, a by-eye reading), and its height in a medium roll waits on the user's observation.
+- **Applied.** `look.lift.<roll>` is now the croqueted ball's; `look.c1f.striker.{dip,rise}` are new checks (job
+  `c1f-rise`); shot.test.ts's full- and pass-roll low-flight cases return as the croqueted ball's bound (were
+  `it.skip`).
+- **Card** `2026-11-18-lift-split`: objective 7.16 (checks only). Lift: half 4.81, full 4.10, pass 4.06 mm, all
+  pass. C1F's striker's ball: dip 1.90 (z −1.0), rise 1.89 (z −1.6), both near. Misses 41 → 39.
+- **Open.** The striker's ball's lift in medium and hard rolls (≥ 13 mm at C3F, ≥ 44 mm at C25F) is unjudged; the
+  user's observation would bound it. The C1F lead (μs ≈ 1.0 against `ballTurfSliding` 0.48) goes to the slow rolls'
+  undershoot.

@@ -19,7 +19,7 @@ import { MAX_LEAD, buildContact, planStroke, swingApproach } from "../../src/eng
 import { defaultProfile } from "../../src/engine/swing/profile";
 import type { SwingTrajectory } from "../../src/engine/swing/trajectory";
 import { STROKE_TYPES, type ShotSetup } from "../../src/engine/swing/types";
-import type { BallId, BallState, Hoop, World } from "../../src/engine/types";
+import { BALL_IDS, type BallId, type BallState, type Hoop, type World } from "../../src/engine/types";
 import { defaultWorld, hoopHalfSpan, hoopLateral } from "../../src/engine/world";
 import { TEST_GRIP_LIMIT, recorder } from "./support/impact";
 import { CANONICAL_CLEARANCE, CANONICAL_STRIKER, GC_STOP_GAP, backswingFor, canonicalSetup } from "./support/shot";
@@ -198,22 +198,26 @@ describe("strokeContext", () => {
 describe("simulateShot", () => {
     const ROLLS: readonly (typeof STROKE_TYPES)[number][] = ["half-roll", "full-roll", "pass-roll"];
 
-    const lowFlight = (type: (typeof STROKE_TYPES)[number]): void => {
+    /** The canonical setup's highest centre over the impact and the flights: every ball's, or the croqueted ball's. */
+    const lowFlight = (type: (typeof STROKE_TYPES)[number], only?: "croqueted"): void => {
         const setup = canonicalSetup(type);
         const outcome = simulateShot(setup);
         expect(outcome.impact.entryJumps?.count).toBe(0);
         expect(hits(outcome.impact).length).toBeGreaterThan(0);
         expect(outcome.motion.aborted).toBe(false);
+        const ids = BALL_IDS.filter((id) => setup.balls[id] !== undefined);
+        const counted = (id: BallId): boolean => only === undefined || id === setup.croqueted;
         let highest = 0;
         const probe: ImpactProbe = {
             step: (s) => {
-                for (const ball of s.balls) {
-                    highest = Math.max(highest, ball.position.z);
-                }
+                s.balls.forEach((ball, i) => {
+                    if (counted(ids[i] as BallId)) highest = Math.max(highest, ball.position.z);
+                });
             },
         };
         simulateImpact(outcome.contact, setup.balls, WORLD, { probe });
-        for (const segments of Object.values(outcome.motion.segments)) {
+        for (const [id, segments] of Object.entries(outcome.motion.segments)) {
+            if (!counted(id as BallId)) continue;
             for (const { start } of segments ?? []) {
                 const vz = start.velocity.z;
                 highest = Math.max(highest, start.position.z + (vz > 0 ? (vz * vz) / (2 * WORLD.gravity) : 0));
@@ -228,7 +232,7 @@ describe("simulateShot", () => {
     // measures stop-gc on its target setup (its 0.81 mm was on the retired touching setup).
     it.each(STROKE_TYPES.filter((type) => !ROLLS.includes(type)))(
         "runs the %s canonical setup with no entry jump and no ball above R + 5 mm",
-        lowFlight,
+        (type) => lowFlight(type),
     );
 
     // P2b.2b.2b.2b: push intent (was skipped at the pre-flight gate: full 7.18 mm at 45 ms, pass 6.64 mm at 59 ms).
@@ -241,8 +245,11 @@ describe("simulateShot", () => {
     // Shapes plan Task 5: the push's pitch hold (was passing). The striker's ball leaves the impact at its end (96.0 ms)
     // 3.58 mm above R and rising at 0.388 m/s, so its first hop peaks 11.27 mm above R, as the pass roll's does (below).
     // Kept skipped rather than loosened, as the pass roll is: R + 5 mm is exit criterion 6's bound. For the gate.
-    it.skip("runs the full-roll canonical setup with no entry jump and no ball above R + 5 mm", () => {
-        lowFlight("full-roll");
+    // Gap register G4, the user's ruling (2026-11-18; was it.skip, the striker's ball 14.7 mm in the impact): the bound
+    // is the croqueted ball's, whose hop is not seen in an ordinary roll; the striker's ball, seen to lift, is judged on
+    // Gugan 4's Fig. 6 (the scorecard's look.c1f.striker). The croqueted ball: 4.1 mm in the impact, 1.8 in flight.
+    it("runs the full-roll canonical setup with no entry jump and the croqueted ball below R + 5 mm", () => {
+        lowFlight("full-roll", "croqueted");
     });
 
     // P2b.2b.2b.2b: arm chain (was skipped at the pre-flight gate: 5.78 mm at 45.9 ms with the hands' mass and grip
@@ -287,8 +294,10 @@ describe("simulateShot", () => {
     // P2b.2b.2b.3: the turf strike, gate ruling 2026-10-17: 20.756 mm at 3 m/s (11.577 mm at 2 m/s), unchanged
     // against the accepted 20.76 mm; the impact never grounds the head, so the turf law leaves it as it was. Kept
     // skipped for the same cause.
-    it.skip("runs the pass-roll canonical setup with no entry jump and no ball above R + 5 mm", () => {
-        lowFlight("pass-roll");
+    // Gap register G4, the user's ruling (2026-11-18; was it.skip, the striker's ball 11.7 mm in the impact): the
+    // croqueted ball's bound, as the full roll's. The croqueted ball: 4.1 mm in the impact, 1.8 in flight.
+    it("runs the pass-roll canonical setup with no entry jump and the croqueted ball below R + 5 mm", () => {
+        lowFlight("pass-roll", "croqueted");
     });
 
     it("runs each stage in turn, and hands phase 2 exactly the impact's handover", () => {

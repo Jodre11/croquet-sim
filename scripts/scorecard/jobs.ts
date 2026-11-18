@@ -12,7 +12,7 @@ import { horizontal, length, sub, vec3, type Vec3 } from "../../src/engine/math/
 import { simulateFreeMotion } from "../../src/engine/simulate";
 import { simulateShot } from "../../src/engine/shot";
 import { DEFAULT_DRIVE, DEFAULT_TIMING } from "../../src/engine/swing/profile";
-import type { BallState, World } from "../../src/engine/types";
+import { BALL_IDS, type BallId, type BallState, type World } from "../../src/engine/types";
 import { defaultWorld, STANDARD_GRAVITY } from "../../src/engine/world";
 import { canonicalSetup, DEFAULT_CROQUET_GAP } from "../../src/lab/canonical";
 import {
@@ -44,7 +44,7 @@ import {
     TODAY,
 } from "../ratioFit";
 import { freeCollision, freeFace } from "../squeeze";
-import { LAWN, ROLLS, rollFigures } from "../table6";
+import { LAWN, playRoll, powerFor, ROLLS, rollFigures } from "../table6";
 import type { Measured } from "./score";
 import { USER_CHECKS } from "./targets";
 
@@ -135,25 +135,68 @@ function canonical(type: MapType): Record<string, Measured> {
     };
 }
 
-/** The highest ball centre above R (mm) over the canonical roll's impact and flights (shot.test.ts's lowFlight). */
+/**
+ * The croqueted ball's highest centre above R (mm) over the canonical roll's impact and flights (shot.test.ts's
+ * lowFlight, by ball: gap register G4, the user's ruling 2026-11-18). The striker's ball's lift is judged on C1F
+ * (c1fRise) instead: no source bounds it at the canonical strength.
+ */
 function lift(type: "half-roll" | "full-roll" | "pass-roll"): Record<string, Measured> {
     const world = defaultWorld();
     const setup = canonicalSetup(type, { world });
     const outcome = simulateShot(setup, world);
+    const croqueted = setup.croqueted as BallId;
+    const index = BALL_IDS.filter((id) => setup.balls[id] !== undefined).indexOf(croqueted);
     let highest = 0;
     const probe: ImpactProbe = {
         step: (s) => {
-            for (const ball of s.balls) highest = Math.max(highest, ball.position.z);
+            const ball = s.balls[index];
+            if (ball !== undefined) highest = Math.max(highest, ball.position.z);
         },
     };
     simulateImpact(outcome.contact, setup.balls, world, { probe });
-    for (const segments of Object.values(outcome.motion.segments)) {
-        for (const { start } of segments ?? []) {
-            const vz = start.velocity.z;
-            highest = Math.max(highest, start.position.z + (vz > 0 ? (vz * vz) / (2 * world.gravity) : 0));
-        }
+    for (const { start } of outcome.motion.segments[croqueted] ?? []) {
+        const vz = start.velocity.z;
+        highest = Math.max(highest, start.position.z + (vz > 0 ? (vz * vz) / (2 * world.gravity) : 0));
     }
     return { [`look.lift.${type}`]: (highest - world.ball.radius) * 1e3 };
+}
+
+/** The window (s) over which Gugan 4's Fig. 6 follows C1F's striker's ball. */
+const FIG6_WINDOW = 0.05;
+
+/**
+ * Table 6's C1F as played: the striker's ball's deepest dip and highest rise of its centre (mm, from rest) over
+ * FIG6_WINDOW from the strike, against Gugan 4's Fig. 6.
+ */
+function c1fRise(): Record<string, Measured> {
+    const none = { "look.c1f.striker.dip": null, "look.c1f.striker.rise": null };
+    const world = openWorld(LAWN);
+    const roll = ROLLS.find((r) => r.name === "C1F");
+    if (roll === undefined) return none;
+    const power = powerFor(roll.type, roll.U, world);
+    if (power === null) return none;
+    const { setup, contact } = playRoll(roll, power);
+    if (setup === null || contact === null) return none;
+    const index = BALL_IDS.filter((id) => setup.balls[id] !== undefined).indexOf(setup.striker);
+    const rest = setup.balls[setup.striker]?.position.z ?? world.ball.radius;
+    let low = Infinity;
+    let high = -Infinity;
+    let start: number | null = null;
+    const probe: ImpactProbe = {
+        step: (s) => {
+            const ball = s.balls[index];
+            if (ball === undefined) return;
+            start ??= s.t;
+            if (s.t - start > FIG6_WINDOW) return;
+            low = Math.min(low, ball.position.z);
+            high = Math.max(high, ball.position.z);
+        },
+    };
+    simulateImpact(contact, setup.balls, world, { probe });
+    return {
+        "look.c1f.striker.dip": finite((rest - low) * 1e3),
+        "look.c1f.striker.rise": finite((high - rest) * 1e3),
+    };
 }
 
 /** Table 4(b)'s free vertical impacts on a fresh bed (turfFit.ts): e and peak depth (mm). */
@@ -283,4 +326,5 @@ export const JOBS: Readonly<Record<string, Job>> = {
     ...Object.fromEntries(CA_STROKES.map((c) => [`ca-${c.name}`, () => ca(c.name)])),
     ...Object.fromEntries(MAP_TYPES.map((t) => [`canon-${t}`, () => canonical(t)])),
     ...Object.fromEntries((["half-roll", "full-roll", "pass-roll"] as const).map((t) => [`lift-${t}`, () => lift(t)])),
+    "c1f-rise": c1fRise,
 };

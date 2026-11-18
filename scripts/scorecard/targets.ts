@@ -462,7 +462,25 @@ for (const type of ["half-roll", "full-roll", "pass-roll"]) {
         kind: "band",
         band: [0, 5],
         sigma: 2,
-        source: "exit criterion 4: highest centre ≤ R + 5 mm (mm above R)",
+        source:
+            "the croqueted ball's highest centre ≤ R + 5 mm (mm above R): the user's observation, a hop not seen in " +
+            "an ordinary roll (gap register G4, 2026-11-18)",
+    });
+}
+// Gugan 4 Fig. 6, C1F's ball 1 read by eye at about 42 px a mm (gap register G4): ± 0.5 mm, an assumption.
+for (const [part, value] of [
+    ["dip", 2.4],
+    ["rise", 2.7],
+] as const) {
+    add({
+        id: `look.c1f.striker.${part}`,
+        job: "c1f-rise",
+        family: "look",
+        use: "check",
+        kind: "number",
+        value,
+        sigma: 0.5,
+        source: `${G4} Fig. 6, Δy (ball 1), mm from rest over the first 50 ms`,
     });
 }
 
