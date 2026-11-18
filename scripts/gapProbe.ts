@@ -345,7 +345,7 @@ function strike(): void {
     }
 }
 
-const RESTART_ROLLS = ["C10H", "C3H", "C10F", "C10P", "C25F", "C25P"];
+const RESTART_ROLLS = ["C10H", "C3H", "C1F", "C3F", "C10F", "C25F", "C3P", "C10P", "C25P"];
 
 /**
  * The restart confirmation design's discriminating run (§3.2): for each roll, the departure, the restart, the open
@@ -526,6 +526,116 @@ async function grip(): Promise<void> {
     }
 }
 
+/**
+ * The slow rolls' undershoot: every Table 6 roll's striker's ball, w₁/U at the card's read and then at fixed times and
+ * at fixed distances travelled after it, with the head's speed and Ω₁ at the read: whether w₁ is still changing at the
+ * read (a comparison gap, as G1's) or settled short (a physics gap).
+ */
+function w1Trace(): void {
+    const world = openWorld(LAWN);
+    const after = [2, 5, 10, 20];
+    const mm = [5, 15, 30];
+    for (const roll of ROLLS) {
+        const power = powerFor(roll.type, roll.U, world);
+        if (power === null) continue;
+        const { setup, contact } = playRoll(roll, power);
+        if (setup === null) continue;
+        const r = readOut(setup, world, {}, contact ?? undefined);
+        const read = r.samples.find((s) => s.t >= r.time);
+        if (read === undefined) continue;
+        const U = roll.U;
+        const times = after.map((d) => {
+            const s = r.samples.find((x) => x.t >= r.time + d * 1e-3);
+            return s === undefined ? `${d} ms —` : `${d} ms ${(s.w1 / U).toFixed(3)}`;
+        });
+        const rest = r.samples.filter((s) => s.t >= r.time);
+        const dists = mm.map((d) => {
+            let travelled = 0;
+            for (let i = 1; i < rest.length; i++) {
+                const a = rest[i - 1];
+                const b = rest[i];
+                if (a === undefined || b === undefined) break;
+                travelled += 0.5 * (a.w1 + b.w1) * (b.t - a.t);
+                if (travelled >= d * 1e-3) return `${d} mm ${(b.w1 / U).toFixed(3)}`;
+            }
+            return `${d} mm —`;
+        });
+        const end = r.samples[r.samples.length - 1];
+        console.log(
+            `${roll.name.padEnd(5)} Gugan ${(roll.w1 / U).toFixed(3)} | read ${(read.w1 / U).toFixed(3)} ` +
+                `head ${(read.head / U).toFixed(3)} Ω1 ${(100 * read.roll1).toFixed(0)}% | ${times.join(", ")} | ` +
+                `${dists.join(", ")} | run ends ${(1e3 * ((end?.t ?? r.time) - r.time)).toFixed(0)} ms after the read`,
+        );
+    }
+}
+
+/**
+ * The slow rolls' undershoot, a momentum budget along aim: for every full and pass roll, the impulse (as a share of
+ * m·U) on the striker's ball from the face, the croqueted ball and the turf, and on the head from the hands and the
+ * turf, from the strike to the croqueted ball's departure and from it to the card's read. Each pair's force on its
+ * ball is normalForce·normal + tangentialForce, the ball–ball pair's sign by key order; the sum is checked against
+ * the ball's Δp.
+ */
+async function budget(): Promise<void> {
+    const { dot } = await import("../src/engine/math/vec3");
+    const world = openWorld(LAWN);
+    const m = world.ball.mass;
+    for (const roll of ROLLS.filter((r) => r.type !== "half-roll")) {
+        const power = powerFor(roll.type, roll.U, world);
+        if (power === null) continue;
+        const { setup, contact } = playRoll(roll, power);
+        if (setup === null || contact === null || setup.croqueted === undefined) continue;
+        const r = readOut(setup, world, {}, contact);
+        const departure = r.impact.departure ?? r.time;
+        const aim = r.aim;
+        const striker = setup.striker;
+        const croqueted = setup.croqueted;
+        const one = BALL_IDS.filter((id) => setup.balls[id] !== undefined).indexOf(striker);
+        const keys = { face: faceKey(striker), ball: ballPairKey(striker, croqueted), turf: `turf/${striker}` };
+        const ballSign = BALL_IDS.indexOf(striker) < BALL_IDS.indexOf(croqueted) ? -1 : 1;
+        const zero = () => ({ face: 0, ball: 0, turf: 0, hands: 0, headTurf: 0, dp: 0 });
+        const parts = [zero(), zero()];
+        let last: number | null = null;
+        let lastV: number | null = null;
+        const probe: ImpactProbe = {
+            step(st) {
+                const ball = st.balls[one];
+                if (ball === undefined) return;
+                const v = dot(ball.velocity, aim);
+                const dt = last === null ? 0 : st.t - last;
+                const prevV = lastV;
+                last = st.t;
+                lastV = v;
+                if (st.t > r.time || dt === 0 || prevV === null) return;
+                const part = parts[st.t <= departure ? 0 : 1];
+                if (part === undefined) return;
+                for (const c of st.contacts) {
+                    const along = c.normalForce * dot(c.normal, aim) + dot(c.tangentialForce, aim);
+                    if (c.key === keys.face) part.face += along * dt;
+                    else if (c.key === keys.ball) part.ball += ballSign * along * dt;
+                    else if (c.key === keys.turf) part.turf += along * dt;
+                }
+                part.hands += dot(st.hand === undefined ? st.drive : st.hand.force, aim) * dt;
+                if (st.headTurf !== undefined) part.headTurf += dot(st.headTurf, aim) * dt;
+                part.dp += m * (v - prevV);
+            },
+        };
+        simulateImpact(contact, setup.balls, world, { probe });
+        const mU = m * roll.U;
+        const f = (x: number): string => (x / mU).toFixed(3).padStart(7);
+        const row = (label: string, p: ReturnType<typeof zero>): string =>
+            `  ${label}: ball 1 face ${f(p.face)} ball ${f(p.ball)} turf ${f(p.turf)} ` +
+            `(sum ${f(p.face + p.ball + p.turf)}, dp ${f(p.dp)}) | head hands ${f(p.hands)} turf ${f(p.headTurf)}`;
+        console.log(
+            `${roll.name}: w1/U ${(r.w1 / roll.U).toFixed(3)} (Gugan ${(roll.w1 / roll.U).toFixed(3)}), head at ` +
+                `read ${(r.W / roll.U).toFixed(3)}; departure ${(1e3 * departure).toFixed(2)} ms, read ` +
+                `${(1e3 * r.time).toFixed(2)} ms`,
+        );
+        console.log(row("to departure  ", parts[0] ?? zero()));
+        console.log(row("departure-read", parts[1] ?? zero()));
+    }
+}
+
 const mode = args[0];
 if (mode === "read-delay") readDelay();
 else if (mode === "read-distance") readDistance();
@@ -538,4 +648,6 @@ else if (mode === "gugan5-balls") await gugan5Balls();
 else if (mode === "restart") await restart();
 else if (mode === "stops") await stops();
 else if (mode === "grip") await grip();
+else if (mode === "w1-trace") w1Trace();
+else if (mode === "budget") await budget();
 else throw new Error("usage: gapProbe.ts read-delay | read-distance | hop | bed | strike | gugan5-balls [--set …]");

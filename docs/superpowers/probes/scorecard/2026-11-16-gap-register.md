@@ -275,6 +275,52 @@ gap before the re-catch.
     3.80 → 1.43; every touching-stop target within 1.5 z, Ω₁ with Gugan's sign. Partly circular: 0.75 mm was fitted to
     these two stops (gate D). The three-body push at gap 0 stays carried.
 
+## G6. The rolls' striker's ball slow (w₁/U)
+
+The second refit's ruling (2026-11-17): the full and pass rolls' w₁/U undershoot is a gap of its own. Card
+`2026-11-18-lift-split`, reference values: w₁/U z C1F −4.9, C3F −4.9, C10F −4.3, C25F −3.2, C3P −3.7, C10P −1.8,
+C25P −5.0; the half rolls pass (C10H 0.2) or overshoot (C3H 3.6).
+
+- **Not the read** (`gapProbe.ts w1-trace`). w₁ is settled by the read and holds to 20 ms and 30 mm after it in every
+  roll (C3F 0.470 at the read, 0.455 from 2 ms on). Unlike G1, no comparison gap.
+- **The lawn agrees.** The model's L1 is short in every full and pass roll (z −0.2 to −2.0), by about the square of
+  the speed's shortfall (C3F 0.73 against (0.470/0.594)² = 0.63; C25P 0.69 against 0.62).
+- **The budget** (`budget`, impulse along aim as a share of m·U, strike to the card's read; the parts sum to ball 1's
+  Δp in every roll). Ball 1 takes 1.56–1.67 from the face, gives 0.94 to the croqueted ball in every roll, and loses
+  0.15–0.28 to the turf after the face first leaves it, spinning up to roll. The hands add 0.10–0.27 to the head. The
+  head's effective mass, (face − hands)·m/(1 − W), is 1.08–1.12 kg in every roll: the head (1.0 kg) and a little of
+  the shaft.
+- **The frictions do not close it** (`w1-trace --set`, w₁/U at C1F, C3F, C10F, C25F, C3P, C10P, C25P):
+
+  | Set | C1F | C3F | C10F | C25F | C3P | C10P | C25P |
+  |---|---|---|---|---|---|---|---|
+  | reference | 0.528 | 0.470 | 0.465 | 0.433 | 0.488 | 0.480 | 0.438 |
+  | ballBallFriction 0.06 | 0.498 | 0.502 | 0.495 | 0.455 | 0.502 | 0.484 | 0.778 |
+  | faceFriction 0.6 | 0.473 | 0.486 | 0.447 | 0.398 | 0.474 | 0.438 | 0.377 |
+  | ballTurfSliding 1.0 | 0.533 | 0.480 | 0.452 | 0.422 | 0.480 | 0.462 | 0.423 |
+  | Gugan | 0.667 | 0.594 | 0.569 | 0.501 | 0.580 | 0.520 | 0.557 |
+
+  Low ball–ball friction gains 0.02–0.03 but leaves ball 1 sliding at the read (Ω₁ 54–89% against Gugan's 87–100) and
+  breaks C25P (0.778); Gugan's μs ≈ 1.0 (G4's lead) moves w₁ by ±0.01. The lead does not apply here.
+- **Gugan's mallet** (Gugan 4 §10, the two-ball rolls; https://oxfordcroquet.org/tech/gugan4/, read 2026-11-18, page
+  SHA-256 `862e21c87e857206eff63a9956407386e8167178c3e0275d619e2d02ae450b32`): Table 6 gives no mallet speed after
+  impact "because they are essentially the same as for ball 1". His heads keep W ≈ w₁: 0.67 U at C1F falling to
+  0.50 at C25F. The model's keep 0.39–0.42 U in every roll.
+- **Reading.** The head gives up too much of its speed. For the head to end at Gugan's w₁ while the balls take
+  Gugan's momentum, with the model's 1.1 kg, the hands must add more impulse through the impact (my estimate, from
+  the budget; Gugan's W is a qualitative statement, not a measurement):
+
+  | | C1F | C3F | C10F | C25F | C3P | C10P | C25P |
+  |---|---|---|---|---|---|---|---|
+  | model's hands, N·s | 0.08 | 0.17 | 0.50 | 0.65 | 0.28 | 0.60 | 0.95 |
+  | extra wanted, N·s | 0.39 | 0.70 | 1.31 | 0.89 | 0.56 | 0.69 | 1.55 |
+  | wanted ÷ model's | 5.9 | 5.1 | 3.6 | 2.4 | 3.0 | 2.1 | 2.6 |
+
+  The slowest rolls want the most, relative to the model, which is the gap's shape. A push that carries the mallet
+  through the ball (Gugan 4 cites CH's "push" limit, the mallet keeping its speed) is what the numbers describe. Both
+  refits bought it with the grip: an 11–22 ms coupling period holds the head to the plan's path, so the hands add
+  impulse. The grip's 0.08 s is the user's ruling.
+
 ## The joint fit
 
 Nelder–Mead over seven parameters converged after 112 cards (simplex spread under 0.05): objective **17.49**
