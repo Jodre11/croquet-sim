@@ -636,6 +636,56 @@ async function budget(): Promise<void> {
     }
 }
 
+/**
+ * G6's push: for every full and pass roll, the hands' force along aim (N·s, and its peak in N) from the strike to the
+ * face's first departure and from it to the card's read, split into the push intent, the rest of the feed-forward and
+ * the coupling (the force less the feed-forward).
+ */
+async function push(): Promise<void> {
+    const { dot } = await import("../src/engine/math/vec3");
+    const world = openWorld(LAWN);
+    for (const roll of ROLLS.filter((r) => r.type !== "half-roll")) {
+        const power = powerFor(roll.type, roll.U, world);
+        if (power === null) continue;
+        const { setup, contact } = playRoll(roll, power);
+        if (setup === null || contact === null) continue;
+        const r = readOut(setup, world, {}, contact);
+        const departure = r.impact.departure ?? r.time;
+        const aim = r.aim;
+        const zero = () => ({ intent: 0, feed: 0, coupling: 0, peakIntent: 0, peakForce: 0, steps: 0 });
+        const parts = [zero(), zero()];
+        let last: number | null = null;
+        const probe: ImpactProbe = {
+            step(st) {
+                const dt = last === null ? 0 : st.t - last;
+                last = st.t;
+                if (st.t > r.time || dt === 0 || st.hand === undefined) return;
+                const part = parts[st.t <= departure ? 0 : 1];
+                if (part === undefined) return;
+                const intent = st.hand.intent === undefined ? 0 : dot(st.hand.intent, aim);
+                const feed = dot(st.hand.feedForward, aim);
+                const force = dot(st.hand.force, aim);
+                part.intent += intent * dt;
+                part.feed += (feed - intent) * dt;
+                part.coupling += (force - feed) * dt;
+                part.peakIntent = Math.max(part.peakIntent, intent);
+                part.peakForce = Math.max(part.peakForce, force);
+                part.steps++;
+            },
+        };
+        simulateImpact(contact, setup.balls, world, { probe });
+        const f = (x: number): string => x.toFixed(3).padStart(7);
+        const row = (label: string, q: ReturnType<typeof zero>): string =>
+            `  ${label}: intent ${f(q.intent)} N·s (peak ${q.peakIntent.toFixed(1)} N), feed-forward ` +
+            `${f(q.feed)}, coupling ${f(q.coupling)}; peak force ${q.peakForce.toFixed(0)} N`;
+        console.log(
+            `${roll.name}: U ${roll.U}; departure ${(1e3 * departure).toFixed(2)} ms, read ${(1e3 * r.time).toFixed(2)} ms`,
+        );
+        console.log(row("to departure  ", parts[0] ?? zero()));
+        console.log(row("departure-read", parts[1] ?? zero()));
+    }
+}
+
 const mode = args[0];
 if (mode === "read-delay") readDelay();
 else if (mode === "read-distance") readDistance();
@@ -650,4 +700,5 @@ else if (mode === "stops") await stops();
 else if (mode === "grip") await grip();
 else if (mode === "w1-trace") w1Trace();
 else if (mode === "budget") await budget();
+else if (mode === "push") await push();
 else throw new Error("usage: gapProbe.ts read-delay | read-distance | hop | bed | strike | gugan5-balls [--set …]");

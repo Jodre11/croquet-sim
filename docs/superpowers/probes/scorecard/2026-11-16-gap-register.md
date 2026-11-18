@@ -321,6 +321,32 @@ C25P −5.0; the half rolls pass (C10H 0.2) or overshoot (C3H 3.6).
   refits bought it with the grip: an 11–22 ms coupling period holds the head to the plan's path, so the hands add
   impulse. The grip's 0.08 s is the user's ruling.
 
+### G6's push (`gapProbe.ts push`, 2026-11-18, reference values)
+
+The hands' impulse along aim (N·s), strike to the card's read, split by source:
+
+| | C1F | C3F | C10F | C25F | C3P | C10P | C25P |
+|---|---|---|---|---|---|---|---|
+| push intent | 0.002 | 0.004 | 0.008 | 0.012 | 0.005 | 0.007 | 0.013 |
+| intent's peak, N | 4.9 | 10.8 | 20.6 | 32.7 | 12.3 | 19.7 | 36.1 |
+| coupling (grip's spring) | 0.08 | 0.17 | 0.49 | 0.64 | 0.28 | 0.59 | 0.93 |
+| extra wanted (G6) | 0.39 | 0.70 | 1.31 | 0.89 | 0.56 | 0.69 | 1.55 |
+| extra ÷ read time, N | 36 | 97 | 115 | 99 | 55 | 71 | 191 |
+
+- **The push does not act in the impact.** The intent is the sensed resistance, lagged by τ_push 0.125 s (the
+  muscles' pace, gate ruling 2026-10-11), up to F_push 92.2 N, and it ends at the face's departure (the user,
+  2026-11-15). The departure comes 0.6–0.8 ms after the strike, about 0.5% of τ_push, so the intent reaches 5–36 N and
+  delivers 1–2% of the hands' impulse. The rest of the feed-forward adds nothing along aim. What the hands give is
+  the coupling, the 0.08 s grip's spring towards the plan's path.
+- **The size fits a push already on.** The extra impulse G6 wants, spread over the strike to the read, is a steady
+  36–115 N in six of the seven rolls (C25P 191 N): about F_push (92.2 N, bounds 48–106 N), the arm's largest forward
+  push. A steady force gives a fixed impulse, which is a larger share of m·U in a slow roll: the gap's shape.
+- **Reading.** The model's push is reactive: it builds from the balls' resistance after the strike, so it cannot act
+  inside a 10 ms impact. A pushed roll's hands are already driving the mallet through the ball when it arrives. A
+  push primed before the contact, pressing along aim at about F_push through the face's contacts, would supply the
+  wanted impulse with the grip left at 0.08 s. This would change two of the user's rulings, the push's sensed build
+  (2026-10-11) and its end at the departure (2026-11-15), for the rolls.
+
 ## The joint fit
 
 Nelder–Mead over seven parameters converged after 112 cards (simplex spread under 0.05): objective **17.49**
