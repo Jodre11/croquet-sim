@@ -194,6 +194,25 @@ gap before the re-catch.
   authors attribute a steeper rebound than expected to the ball meeting the front of its own depression (citing
   Carré et al. 1999). The turf's crater raises the rebound rather than damping it: against (a) as framed, and
   relevant to the croqueted ball, which starts in its rest dent. The results pages are awaited.
+- **Gugan 4 §10.2** (fetched 2026-11-18, `curl -sSLk`). The croqueted ball is driven down by the striker's ball, as
+  the hop probe found, and "minor jumping" of it shows on the CA's standard-speed video and is "often seen for roll
+  strokes in ordinary play". For C1F he finds it leaves the ground about 15 ms after the strike, with Ω₂ ≈ 0.4 gained
+  from ground friction first, and estimates its descent angle δ ≈ β (the stroke angle, 16° there), its rebound about
+  half its descent speed (his 1.5 multiplier), and the sliding friction μs ≈ 1.0 ("very approximate"; Hall's 0.5).
+  He gives no measured height for ball 2: the video's vertical resolution is poor. Two-ball rolls restrain ball 1's
+  rise by the sloping face; single-ball rolls jump 6–310 mm (Table 4(b)).
+- **Heights his account implies** (an inference, not his figure): up = ½·v₂·tan β, hop = up²/2g, Table 6's v₂ and β:
+
+  | | C3H | C10H | C1F | C3F | C10F | C25F | C3P | C10P | C25P |
+  |---|---|---|---|---|---|---|---|---|---|
+  | hop mm | 8 | 42 | 0.8 | 2 | 21 | 13 | 6 | 5 | 8 |
+
+- **The band.** look.lift's 0–5 mm is the scorecard design's exit criterion 4 (shot.test.ts's two `it.skip`), not a
+  source. Gugan's account puts the medium and fast rolls' hops at 5–42 mm, the range the model gives (13–22 mm):
+  candidate (c) is supported, though by an inference from approximate figures.
+- **A lead for G1's slow residual.** Gugan's μs ≈ 1.0 for the croqueted ball pressed into the turf is about twice
+  `ballTurfSliding` (0.48), and his C1F ball 2 reaches Ω₂ ≈ 0.4 before it leaves the ground; the model's stalls at
+  +0.07 by 10 mm.
 - **Reading.** (a) is not refuted, but it is unsourced in magnitude, and the backspin direction is the one source
   that bears on it. (b) and (c) are untested.
 
