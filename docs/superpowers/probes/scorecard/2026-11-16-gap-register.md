@@ -213,6 +213,33 @@ gap before the re-catch.
 - **A lead for G1's slow residual.** Gugan's μs ≈ 1.0 for the croqueted ball pressed into the turf is about twice
   `ballTurfSliding` (0.48), and his C1F ball 2 reaches Ω₂ ≈ 0.4 before it leaves the ground; the model's stalls at
   +0.07 by 10 mm.
+- **Which ball** (`lifts`, 2026-11-18, reference values). The check takes the higher of the two balls. At the
+  canonical strength (v₂ ≈ 2.1 m/s, a medium roll) it is the **striker's ball** in the full and pass rolls:
+
+  | Roll | v₂ m/s | striker's, impact / flight mm | croqueted, impact / flight mm |
+  |---|---|---|---|
+  | half | 2.59 | 2.0 / 4.2 | 2.1 / 4.8 |
+  | full | 2.07 | **14.7** / 12.2 | 4.1 / 1.8 |
+  | pass | 2.06 | **11.7** / 7.5 | 4.1 / 1.8 |
+
+- **The user's observation** (2026-11-18, with their son): the croqueted ball's hop is not normally perceived; it is
+  recalled, rarely, in a powerful player's hard roll. The striker's ball has definitely been seen to lift.
+- **Table 6's rolls** (`hop`, striker's peak added; the trace ends at 51 ms, so the faster rolls' peaks are still
+  rising there):
+
+  | | C3H | C10H | C1F | C3F | C10F | C25F | C3P | C10P | C25P |
+  |---|---|---|---|---|---|---|---|---|---|
+  | croqueted peak mm | 2.8 | 11.8 | 0.5 | 3.0 | 7.8 | 13.7 | 3.7 | 7.3 | 15.3 |
+  | striker's peak mm | 2.6 | ≥20 | 1.9 | ≥13 | ≥28 | ≥44 | ≥12 | ≥25 | ≥50 |
+  | striker's dip mm | 1.3 | 1.9 | 1.0 | 1.4 | 1.9 | 2.6 | 1.5 | 1.9 | 2.9 |
+
+- **Gugan 4, Fig. 6** (C1F, U 1.2 m/s; `fig6.jpg` SHA-256 `0c44e97c4d6129fbd07e28c66d552feed332c407cd302e5ddce8ab5be41b6353`,
+  read by eye at about 42 px a mm): ball 1 dips about 2.4 mm by 5 ms and rises to about +2.7 mm by 40–50 ms. The
+  model's C1F: dip 1.0 mm, peak 1.9 mm. His only measured two-ball rise; no figure for the faster rolls.
+- **Reading.** The croqueted ball's lift fits the observation: under 5 mm at medium strength, 14–15 mm at C25, the
+  hard rolls where it is rarely seen. G4 is the striker's ball, which the user sees lift and Gugan measures at C1F
+  within a millimetre of the model; above C1F it rises steeply (≥13 mm at C3F, ≥44 mm at C25F) with no source to
+  judge it. The 0–5 mm band, unsourced, does not apply to the striker's ball as it stands.
 - **Reading.** (a) is not refuted, but it is unsourced in magnitude, and the backspin direction is the one source
   that bears on it. (b) and (c) are untested.
 

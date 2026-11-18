@@ -146,13 +146,17 @@ function hop(): void {
         const z1 = during.length === 0 ? NaN : Math.min(...during.map((p) => p.z1));
         const after = trace.filter((p) => p.t >= start && p.t <= start + 0.03);
         const peak = after.reduce((m, p) => (p.z > m.z ? p : m), { t: start, z: -Infinity });
+        const strikerPeak = trace
+            .filter((p) => p.t <= start + 0.05)
+            .reduce((m, p) => (p.z1 > m.z1 ? p : m), { t: start, z: 0, vz: 0, z1: -Infinity });
         const off = after.find((p) => p.z > 1e-4);
         const airborne = after.filter((p) => p.z > 1e-4).length / Math.max(1, after.length);
         console.log(
             `${roll.name.padEnd(5)} ${(1e3 * peak.z).toFixed(2).padStart(7)} ${(1e3 * (peak.t - start)).toFixed(1).padStart(6)} | ` +
                 `${off === undefined ? "never" : (1e3 * (off.t - start)).toFixed(1).padStart(6)} | ` +
                 `${(100 * airborne).toFixed(0).padStart(3)}% | striker depth ${(1e3 * z1).toFixed(2)} mm, ` +
-                `normal tilt ${tilt.toFixed(2)}°, ball 2 vz at contact end ${(at?.vz ?? NaN).toFixed(3)} m/s`,
+                `normal tilt ${tilt.toFixed(2)}°, ball 2 vz at contact end ${(at?.vz ?? NaN).toFixed(3)} m/s, ` +
+                `striker peak ${(1e3 * strikerPeak.z1).toFixed(2)} mm at ${(1e3 * strikerPeak.t).toFixed(1)} ms`,
         );
     }
 }
@@ -184,6 +188,52 @@ function bed(): void {
             `${v.toFixed(1).padStart(5)} ${e.toFixed(3).padStart(8)} ${penner.toFixed(3).padStart(9)} ` +
                 `${(1e3 * l.peakDepth).toFixed(2).padStart(9)}`,
         );
+    }
+}
+
+/**
+ * G4's lift check decomposed: for each canonical roll, each ball's highest centre above R (mm) in the impact and its
+ * flights' apex, the croqueted ball's speed after the impact and the mallet's contact speed, so the check's figure
+ * is tied to a ball and a strength.
+ */
+async function lifts(): Promise<void> {
+    const { defaultWorld } = await import("../src/engine/world");
+    const { canonicalSetup } = await import("../src/lab/canonical");
+    const { simulateShot } = await import("../src/engine/shot");
+    const world = defaultWorld();
+    const R = world.ball.radius;
+    for (const type of ["half-roll", "full-roll", "pass-roll"] as const) {
+        const setup = canonicalSetup(type, { world });
+        const outcome = simulateShot(setup, world);
+        const ids = BALL_IDS.filter((id) => setup.balls[id] !== undefined);
+        const high = new Map<string, number>();
+        const probe: ImpactProbe = {
+            step: (s) => {
+                s.balls.forEach((b, i) => {
+                    const id = ids[i] as string;
+                    high.set(id, Math.max(high.get(id) ?? 0, b.position.z - R));
+                });
+            },
+        };
+        simulateImpact(outcome.contact, setup.balls, world, { probe });
+        const croqueted = setup.croqueted as string;
+        const flight = new Map<string, number>();
+        let v2 = NaN;
+        for (const [id, segments] of Object.entries(outcome.motion.segments)) {
+            const first = segments?.[0]?.start;
+            if (id === croqueted && first !== undefined) v2 = Math.hypot(first.velocity.x, first.velocity.y);
+            for (const { start } of segments ?? []) {
+                const vz = start.velocity.z;
+                const apex = start.position.z - R + (vz > 0 ? (vz * vz) / (2 * world.gravity) : 0);
+                flight.set(id, Math.max(flight.get(id) ?? 0, apex));
+            }
+        }
+        const parts = ids.map(
+            (id) =>
+                `${id === croqueted ? "croqueted" : "striker"} impact ${(1e3 * (high.get(id) ?? 0)).toFixed(1)} ` +
+                `flight ${(1e3 * (flight.get(id) ?? 0)).toFixed(1)} mm`,
+        );
+        console.log(`${type.padEnd(9)} v2 ${v2.toFixed(2)} | ${parts.join(" | ")}`);
     }
 }
 
@@ -482,6 +532,7 @@ else if (mode === "read-distance") readDistance();
 else if (mode === "hop") hop();
 else if (mode === "bed") bed();
 else if (mode === "oblique") oblique();
+else if (mode === "lifts") await lifts();
 else if (mode === "strike") strike();
 else if (mode === "gugan5-balls") await gugan5Balls();
 else if (mode === "restart") await restart();
