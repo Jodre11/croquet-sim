@@ -144,3 +144,15 @@ Only then is the engine changed for good:
 - **(a) is an outcome rule.** It acts on a sensed speed difference with no delay, standing in for a cause the model
   does not hold. If it wins, its doc comment says so; (b) is the physical alternative.
 - **A threshold.** (a)'s latch acts on W − w₁; the run's face contacts show whether it makes a new contact or chatter.
+
+## Amendment 1 (2026-11-18): press while on the ball
+
+The discriminating run (register, "G6's primed push, the discriminating run") qualified neither candidate: (a)'s latch
+fires at the re-catch where the head carries the ball, and (b)'s v, the hands' speed in the world, is at or above the
+bench press throw's v₀ from C3F up. The user's ruling (2026-11-18, "Press while on the ball") replaces both:
+
+- **(d) On the ball.** F = F_push while the striker's face–ball pair is closed at the start of the step, and nil
+  while it is open. The press comes back at each re-catch. §2.1's on, off and striker rules stand.
+- It needs no new constant and no speed bound; it cannot chase, since nothing presses across a gap. (b)'s v₀ is not
+  entered in the reference data.
+- §2.3's checks and §2.5 apply unchanged, with (d) the only candidate. If it fails, stop and report as §2.4.
