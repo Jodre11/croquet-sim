@@ -347,6 +347,26 @@ The hands' impulse along aim (N·s), strike to the card's read, split by source:
   wanted impulse with the grip left at 0.08 s. This would change two of the user's rulings, the push's sensed build
   (2026-10-11) and its end at the departure (2026-11-15), for the rolls.
 
+### G6's primed push, tried (2026-11-18, throwaway edit to `pushIntent`, reverted)
+
+The user's ruling (2026-11-18): design a push already on at contact. Before the design, two laws were tried in place
+of the reactive intent, P = F_push·aim (92.2 N) from contact, on every stroke with a push (`w1-trace`, w₁/U):
+
+| Law | C3H | C10H | C1F | C3F | C10F | C25F | C3P | C10P | C25P |
+|---|---|---|---|---|---|---|---|---|---|
+| reference (reactive) | 0.438 | 0.404 | 0.528 | 0.470 | 0.465 | 0.433 | 0.488 | 0.480 | 0.438 |
+| primed, to the restart | 0.469 | 0.417 | 0.614 | 0.497 | 0.489 | 0.444 | 0.515 | 0.498 | 0.451 |
+| primed, to the pendulum phase | 0.511 | 0.419 | 0.833 | 0.600 | 0.529 | 0.469 | 0.603 | 0.545 | 0.471 |
+| Gugan | 0.380 | 0.400 | 0.667 | 0.594 | 0.569 | 0.501 | 0.580 | 0.520 | 0.557 |
+
+- **To the restart** (1.2–2.5 ms): too short, +0.01 to +0.09.
+- **To the pendulum phase**: C3F, C3P and C10P land within 0.03 of Gugan. C1F overshoots (0.83), with the head
+  outrunning the ball (W 0.92 U against w₁ 0.83); the C25 rolls stay short; Ω₁ falls to 61–68% in the slow rolls
+  (Gugan 93–100); the half rolls move too (C3H 0.44 → 0.51, away from Gugan).
+- **Reading.** A steady push of about F_push has the right size where the push lasts about the impact. Where it
+  outlasts the ball (C1F), the head chases past it, which Gugan's W ≈ w₁ and "no clear evidence of acceleration"
+  rule out. The law wants a bound tied to the ball, not to the plan's phases.
+
 ## The joint fit
 
 Nelder–Mead over seven parameters converged after 112 cards (simplex spread under 0.05): objective **17.49**
