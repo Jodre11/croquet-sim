@@ -397,6 +397,27 @@ The press's impulse along aim (N·s), strike to departure + departure to read:
   the swing's, not the push's. The source does not match the movement.
 - **Stop** (spec §2.4): a ruling is needed.
 
+### G6's primed push, on the ball (2026-11-18, design amendment 1, throwaway edit, reverted)
+
+The user's ruling "Press while on the ball": P = F_push·aim while the striker's face–ball pair is closed at the step's
+start. w₁/U at the read (Ω₁), and the press's impulse along aim, strike to departure + departure to read (N·s):
+
+| | C3H | C10H | C1F | C3F | C10F | C25F | C3P | C10P | C25P |
+|---|---|---|---|---|---|---|---|---|---|
+| reference | 0.438 (96%) | 0.404 (106%) | 0.528 (79%) | 0.470 (93%) | 0.465 (100%) | 0.433 (100%) | 0.488 (87%) | 0.480 (96%) | 0.438 (100%) |
+| (d) on the ball | 0.442 (96%) | 0.405 (106%) | 0.546 (76%) | 0.496 (87%) | 0.486 (94%) | 0.444 (97%) | 0.502 (86%) | 0.493 (94%) | 0.455 (93%) |
+| Gugan | 0.380 | 0.400 | 0.667 | 0.594 | 0.569 | 0.501 | 0.580 | 0.520 | 0.557 |
+| press, N·s | | | 0.07 + 0.22 | 0.06 + 0.34 | 0.06 + 0.47 | 0.06 + 0.47 | 0.06 + 0.32 | 0.06 + 0.51 | 0.06 + 0.65 |
+
+Canonical ratios (`canonicalSetup`, open lawn): half roll 1.782 → 1.757, full 1.335 → 1.306, pass 1.285 → 1.243.
+
+- **Closer:** all seven full and pass rolls, none past Gugan; each closes 13–21% of its gap.
+- **No chase:** W < w₁ at the read in every roll. **The half rolls hold:** C3H +0.004, C10H +0.001, ratio −0.025.
+- **The ball rolls: fails by the letter.** Ω₁ falls 6, 6 and 7 points in C3F, C10F and C25P against §2.3's 5, though
+  every value stays within Gugan's 87–100.
+- **The size.** The press gives 0.29–0.71 N·s against the 0.39–1.55 wanted, the face on the ball for 2.4–7.1 ms after
+  the departure (impulse ÷ F_push), a third to a half of the time to the read. Pressing in the gaps is what chases.
+
 ## The joint fit
 
 Nelder–Mead over seven parameters converged after 112 cards (simplex spread under 0.05): objective **17.49**
