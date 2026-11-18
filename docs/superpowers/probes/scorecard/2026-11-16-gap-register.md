@@ -367,6 +367,36 @@ of the reactive intent, P = F_push·aim (92.2 N) from contact, on every stroke w
   outlasts the ball (C1F), the head chases past it, which Gugan's W ≈ w₁ and "no clear evidence of acceleration"
   rule out. The law wants a bound tied to the ball, not to the plan's phases.
 
+### G6's primed push, the discriminating run (2026-11-18, throwaway edit, reverted)
+
+The primed push design (`docs/superpowers/specs/2026-11-18-primed-push-design.md`, §2.3), candidates (a) carry and
+(b) force–velocity, v₀ 2.03 m/s (Zhang et al., J. Hum. Kinet. 2025, DOI 10.5114/jhk/190224, single-arm ballistic
+bench press throw, Table 1). w₁/U at the read, with Ω₁:
+
+| Law | C3H | C10H | C1F | C3F | C10F | C25F | C3P | C10P | C25P |
+|---|---|---|---|---|---|---|---|---|---|
+| reference | 0.438 | 0.404 | 0.528 (79%) | 0.470 | 0.465 | 0.433 | 0.488 | 0.480 | 0.438 |
+| (a) carry | 0.438 | 0.404 | 0.659 (62%) | 0.477 | 0.465 | 0.433 | 0.491 | 0.480 | 0.438 |
+| (b) force–velocity | 0.440 | 0.404 | 0.545 (78%) | 0.474 | 0.467 | 0.434 | 0.491 | 0.480 | 0.438 |
+| Gugan | 0.380 | 0.400 | 0.667 | 0.594 | 0.569 | 0.501 | 0.580 | 0.520 | 0.557 |
+
+The press's impulse along aim (N·s), strike to departure + departure to read:
+
+| Law | C1F | C3F | C10F | C25F | C3P | C10P | C25P |
+|---|---|---|---|---|---|---|---|
+| (a) | 0.073 + 0.036 | 0.062 + 0.013 | 0.058 + 0.004 | 0.056 + 0.000 | 0.060 + 0.011 | 0.058 + 0.004 | 0.055 + 0.000 |
+| (b) | 0.038 + 0.729 | 0.001 + 0.126 | 0 | 0 | 0 + 0.059 | 0 | 0 |
+
+- **Neither qualifies** (§2.3 "closer"): (a) leaves C10F, C25F, C10P and C25P unmoved and drops C1F's Ω₁ to 62%; (b)
+  leaves C10P and C25P unmoved. The half rolls hold under both.
+- **(a) ends the carry itself.** After the departure the croqueted ball holds the striker's back, so the head reaches
+  w₁ within 0.1–0.4 ms; the latch fires at the very re-catch where the head carries the ball (Gugan's second contact).
+  The press acts only through the first contact (0.06–0.07 N·s). W ≥ w₁ marks carrying as much as chasing.
+- **(b) reads the wrong speed.** v is the hands' speed in the world, 1–6 m/s here, at or above v₀ from C3F up, so the
+  press is nil. A bench press throw's v₀ is the arm's extension speed from rest; in a roll most of the hands' speed is
+  the swing's, not the push's. The source does not match the movement.
+- **Stop** (spec §2.4): a ruling is needed.
+
 ## The joint fit
 
 Nelder–Mead over seven parameters converged after 112 cards (simplex spread under 0.05): objective **17.49**
