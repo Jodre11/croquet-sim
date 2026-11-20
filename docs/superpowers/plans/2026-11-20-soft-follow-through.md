@@ -12,8 +12,11 @@ and the finish shrink with pace, and the player brakes if that is still not enou
 - **Late hits are judged by the existing judges:** `impact-off-face`, 29.1.6.1 and 29.1.6.2. There is no new event.
 - **An explicit `stroke.handReach`, `options.cap` or `lowPoint` is honoured as given.**
 - **Public repo:** sources are cited (URL, date, SHA-256, short quotes), never mirrored.
-- **Stop rules (spec §3), from Task 3 on.** Stop and report if any canonical pin moves, if a Table 6 roll's w₁/U
-  moves more than 1 z away from Gugan's, or, after Task 5, if any stroke still late-hits.
+- **Stop rules (spec §3 as amendment 1 amends it), from Task 4 on.** Stop and report if any canonical pin moves, if a
+  Table 6 roll's w₁/U moves more than 1 z away from Gugan's, or, after Task 6, if any stroke's late hit is a fault, or
+  a soft stroke (p ≤ 0.5) still late-hits.
+- **Late hits (spec amendment 1, provisional):** after `lateFrom`, a croquet stroke's re-contact faults only on
+  `EFFECT_ANGLE`, and `impact-off-face` is not a mishit.
 
 ## Review focus
 
@@ -99,7 +102,39 @@ and the finish shrink with pace, and the player brakes if that is still not enou
   families.
 - [x] Commit and push.
 
-### Task 3: The reach scales with pace (spec §2.2)
+### Task 3: The late hit, reported (spec amendment 1)
+
+**Files:**
+- `src/engine/impact/integrate.ts` (`integrateStroke`: keep the first play's `impactEnd`)
+- `src/engine/impact/types.ts` (the run's `lateFrom`)
+- `src/engine/faults.ts` (`judgeReContact`, the 29.1.6.1 block)
+- `src/engine/impact/band.ts` (`bandMiss`)
+- `scripts/lateHitSurvey.ts` (the parting speed beside the final pace)
+- tests
+
+**Interfaces:**
+- `ImpactRun` gains `readonly lateFrom?: number` (s): the first play's impact end, set only when a catch replayed
+  the stroke.
+- `ReContact` gains `readonly late: boolean`: it starts at or after `lateFrom`.
+
+- [ ] **Failing tests.**
+  1. **faults.test.ts:** a croquet stroke whose re-contact after `lateFrom` has a speed change of +30 % and an angle
+     of 0° raises no 29.1.6.1. The same re-contact before `lateFrom` raises it, as today. With an angle at
+     `EFFECT_ANGLE`, the late one raises it.
+  2. **faults.test.ts:** a single-ball stroke's late hit still raises 29.1.6.2.
+  3. **band.test.ts:** an `impact-off-face` event at or after `lateFrom` is not a band miss; one before it still is.
+  4. **pushMapRun.test.ts:** the canonical full and pass rolls play practised, with one late hit each reported.
+- [ ] **Implement.** In `integrateStroke`, keep the first play's `follow.impactEnd`, and set it as `lateFrom` on the
+  kept run when a replay happened. `judgeReContact` sets `late`, and its `fault` uses only `EFFECT_ANGLE` when late.
+  In `bandMiss`, ignore off-face events with t ≥ `lateFrom`. The survey prints the striker's speed at the parting.
+  ENGINE_VERSION goes to 0.39.0.
+- [ ] **Suite, tsc and lint.** Re-pin moves with a "soft follow-through amendment 1 (was …)" note, and regenerate
+  `tests/lab/playPin.json`.
+- [ ] **Survey** (`--label late-reported`) and card (`--compare 2026-11-20-catch-seen`).
+- [ ] **Register entry** "G6's late hits, accepted provisionally": the user's ruling, the moves, and the review by
+  players and referees still to come. Commit and push.
+
+### Task 4: The reach scales with pace (spec §2.2)
 
 **Files:**
 - `src/engine/swing/buildContact.ts`
@@ -126,12 +161,12 @@ and the finish shrink with pace, and the player brakes if that is still not enou
      < `REACH_REF_SPEED[type] + 1e-3`.
 - [ ] **Implement** in `buildContact`: handReach = (stroke.handReach ?? push.handReach·min(1, contactSpeed/U_ref)),
   where U_ref is null-safe. Where `low` is undefined, set lowPoint to handArcLow·(stroke.handReach ?? push.handReach)
-  from the unscaled reach. The `arrival` already uses the unscaled reach. ENGINE_VERSION goes to 0.39.0.
+  from the unscaled reach. The `arrival` already uses the unscaled reach. ENGINE_VERSION goes to 0.40.0.
 - [ ] **Suite, tsc and lint.** No canonical pin may move (stop rule). Other moves are re-pinned with their notes.
-- [ ] **Survey** (`--label reach-scaled`) and card (`--compare <Task 2's card>`). Check the stop rules.
+- [ ] **Survey** (`--label reach-scaled`) and card (`--compare <Task 3's card>`). Check the stop rules.
 - [ ] **Register entry** "G6's soft follow-through: the reach". Commit and push.
 
-### Task 4: The finish no longer stretches (spec §2.3)
+### Task 5: The finish no longer stretches (spec §2.3)
 
 **Files:** `src/engine/impact/track.ts` (`finishShare`, `FINISH_SHARE_MIN`, retire `FINISH_SHARE_MAX`), and the tests
 that reference the stretch (`advance.test.ts`, `track.test.ts`, `followThrough.test.ts`; they call `finishShare`
@@ -143,22 +178,22 @@ symbolically, so only assertions that name the stretch change).
   - `finishShare(0)` = 1.
 - [ ] **Implement** `finishShare(V) = V > 0 ? Math.max(FINISH_SHARE_MIN, Math.min(1, V / FINISH_REF_PACE)) : 1`, with
   `FINISH_SHARE_MIN` = 0.25 documented as the spec's assumption. Update amendment 3's comments to say it is superseded
-  by the soft follow-through design §2.3. ENGINE_VERSION goes to 0.40.0.
+  by the soft follow-through design §2.3. ENGINE_VERSION goes to 0.41.0.
 - [ ] **Suite, tsc and lint.** No canonical pin may move.
 - [ ] **Survey** (`--label finish-shrunk`) and card. Check the stop rules.
 - [ ] **Register entry** "G6's soft follow-through: the finish". Commit and push.
 
-### Task 5: The brake, only if Task 4's survey leaves late hits (spec §2.4)
+### Task 6: The brake, only if Task 5's survey leaves faulting or soft late hits (spec §2.4)
 
-- [ ] If no stroke late-hits, record "no brake needed" in the register and the spec, and skip the rest of this task.
+- [ ] If no late hit faults and no soft stroke (p ≤ 0.5) late-hits, record "no brake needed" in the register and the spec, and skip the rest of this task.
 - [ ] Otherwise:
-  - read U_brake per type from the survey, as the highest `contactSpeed` with a late hit;
+  - read U_brake per type from the survey, as the highest `contactSpeed` with a faulting or soft late hit;
   - stop and present the drive's fall below U_brake to the user as a choice, with the survey's figures (spec §2.4:
     its shape is chosen from the survey);
   - implement the ruling in `src/lab/play.ts` `textBook` (the player's plan), not in the engine;
   - then the suite, the survey and the card, the stop rules, the register, commit and push.
 
-### Task 6: Close
+### Task 7: Close
 
 - [ ] Add "As implemented (date)" to the spec: the values recorded, the assumptions kept, and the moves.
 - [ ] Tick this plan. Update the G6 register entry's "Next" with the refit on the last card. Commit and push.

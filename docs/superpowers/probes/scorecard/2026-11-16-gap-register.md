@@ -508,6 +508,11 @@ Late-hit survey, rows with any late hit (`docs/superpowers/probes/late-hit/2026-
   slower than 4 m/s, so neither can clear the canonical full and pass rolls' late hits. The spec's expected outcome
   ("no canonical stroke late-hits", canonical pins held to the bit) no longer follows from Tasks 3–4. A ruling for
   the user before Task 3.
+- **Ruled (2026-11-20, provisional):** the user accepts the late hit as part of the stroke ("wouldn't seem freakish
+  if played"), though not certain, and read literally Law 29.2.5 makes it a fault. Top players and referees are to
+  judge it on the finished tool, at full speed and in slow motion. Spec amendment 1: after the first play's impact
+  end, a croquet stroke's re-contact faults only on `EFFECT_ANGLE`, and an off-face contact is not a mishit. G6 stays
+  judged on the speed off the strike. Plan Task 3 (new) implements it; the reach and finish follow as Tasks 4–5.
 
 ## The joint fit
 

@@ -1,6 +1,7 @@
 # The soft follow-through (gap G6, C3F's late hit)
 
-Status: draft, 2026-11-20, amended after review the same day. Gap register G6
+Status: draft, 2026-11-20, amended after review the same day, and by amendment 1 (the late hit accepted
+provisionally) the same day. Gap register G6
 (`docs/superpowers/probes/scorecard/2026-11-16-gap-register.md`, "G6's
 primed push, for good" and "C3F's off-face play, traced").
 
@@ -171,6 +172,58 @@ After §2.2 and §2.3, the run (§3) surveys the soft shots:
 - The low point keeps the unscaled reach.
 - `FINISH_SHARE_MIN` is 0.25.
 - If the brake is needed, its shape is chosen from the survey.
+
+## Amendment 1: the late hit, accepted provisionally (2026-11-20)
+
+**What §2.1 found.** The late hit is widespread, not C3F's alone (card `2026-11-20-catch-seen`, register "G6's late
+hits, seen"): the full roll at p 0.2–1.0 and canonical, the pass roll at p 0.6–1.0 and canonical, and Table 6's C1F,
+C3F and C3P. The half roll is clean. In the canonical full roll, the ball leaves the face at about 105 ms. The head's
+lower edge lands on it at 378.7 ms, about 0.53 m on, and again at 386.4 ms. The ball's pace rises from 1.375 to
+1.61 m/s, its direction is unchanged, and it is pressed about 1.3 mm into the turf. §3's "no canonical stroke
+late-hits" cannot hold, because §2.2–§2.4 leave the canonical strokes unchanged by design.
+
+**The Laws.** Law 29.2.5 makes a multiple contact a 29.1.6.1 fault only where the adjudicator sees a separation and
+then a second contact. That test is visual, and no Law or commentary gives an effect test. C29.11.2 names shepherding
+after the balls have parted as the main target. Read literally, this hit is a fault (`reference/laws.json`).
+
+**The user's ruling (provisional).** The user is not certain, but accepts the hit: it improves the shot and
+"wouldn't seem freakish if played". The ruling is to be put to top players and referees once the tool is complete,
+at full speed and in slow motion, and may be reversed then.
+
+**Change.**
+- **A late hit** is a head contact on the striker's ball that begins after the impact's end in the stroke's first
+  play, before any catch held the impact open. The stroke records that end as `lateFrom` (s), absent when there was
+  no catch.
+- **In a croquet or continuation stroke,** a late hit on the face is reported in `strike.recontacts`, with its gap
+  and effect as today. It is a possible fault under 29.1.6.1 only if its effect reaches `EFFECT_ANGLE`. Its speed
+  change is reported and does not fault. Re-contacts before `lateFrom` are judged as today (decision 10, both
+  thresholds).
+- **Off the face,** a late hit raises `impact-off-face` as today, but `bandMiss` reads only those events before
+  `lateFrom`. A late edge hit is therefore not a mishit, and the play may be practised.
+- **In a single-ball stroke,** a late hit stays a 29.1.6.2 fault. The ruling covers croquet strokes only, and C29.11.5
+  lets 29.1.6.2 be judged from the balls' movement.
+- **The survey and the card** report each late hit (t, region, effect) beside the class, so the ruling's effect stays
+  visible.
+
+**G6 stays open on the strike.** A late hit adds pace after the strike. G6 is still judged against Table 6's w₁/U,
+the speed off the strike, so a late hit cannot hide a slow strike. The survey reports the striker's ball speed at the
+parting beside its final pace.
+
+**§2.2–§2.4 stay.** They follow the user's own account of soft play ("In low power shots I don't follow through"),
+not the fault, and are still expected to remove the soft rolls' late hits. §2.4's brake is now needed only if a soft
+stroke's late hit is a fault under the rule above, or is still a mishit before `lateFrom`.
+
+**§3 changes.**
+- *Expected:* "no canonical stroke late-hits" becomes "no canonical stroke's late hit is a fault or a mishit"; the
+  canonical full and pass rolls play practised.
+- *Stop:* "after §2.4, any stroke still late-hits" becomes "after §2.4, any stroke's late hit is a fault, or a soft
+  stroke (p ≤ 0.5) still late-hits".
+
+**Assumptions.**
+- A late hit is defined by the first play's impact end, the boundary the catch already uses. No time or distance
+  threshold is invented.
+- Late hits keep the direction test at `EFFECT_ANGLE`.
+- The ruling covers croquet and continuation strokes only.
 
 ## Review (2026-11-20)
 
