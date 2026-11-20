@@ -26,8 +26,6 @@ import {
     heldPitch,
     pathAt,
     prepareTrack,
-    pushResponse,
-    senseResistance,
     swingOrientation,
     swungOf,
     type ArmChain,
@@ -40,7 +38,6 @@ import {
     type Push,
     holdPendulum,
 } from "../../../src/engine/impact/track";
-import { exp } from "../../../src/engine/math/elementary";
 import { flexGains } from "../../../src/engine/impact/flex";
 import type { Coupling, HandChain, Hands, HeadState, SwingArc } from "../../../src/engine/impact/types";
 import { practiseStroke } from "../../../src/engine/impact/practice";
@@ -61,7 +58,6 @@ import {
     TEST_RHO,
     TEST_PENDULUM_FORCE,
     TEST_PUSH_FORCE,
-    TEST_PUSH_RESPONSE_TIME,
     freeBall,
     integratePulse,
     isolated,
@@ -767,7 +763,8 @@ describe("the flex (P2b.2b.2b.2b design §3.1, §7.1)", () => {
             const held = prepareAt(arc, STANDARD_GRAVITY, HELD);
             const plain = prepareAt(arc, STANDARD_GRAVITY);
             const pendulum = (held.push as Push).pendulum as number;
-            const tau = HELD.pushResponseTime;
+            // The retired τ_push (0.125 s), kept as the samples' spacing.
+            const tau = 0.125;
             const departed = pendulum / 2;
             const topStiffness = (track: PreparedTrack, t: number, departedAt: number | null): number => {
                 const grip = { ...newGripState(), departedAt };
@@ -839,16 +836,16 @@ describe("the flex (P2b.2b.2b.2b design §3.1, §7.1)", () => {
     });
 });
 
-describe("the push intent (P2b.2b.2b.2b gate ruling 2026-10-11)", () => {
+describe("the push intent (primed push design, amendment 1, 2026-11-18: press while on the ball)", () => {
     /** A still carry in a vertical swing plane: the hands never travel, so the push never ends. */
     const PUSHING = (o: Partial<SwingArc> = {}): SwingArc =>
         still({ slopeHold: 1, handReach: 0.1, pendulumAt: 1, ...o });
     const prepareAt = (arc: SwingArc, gravity: number): PreparedTrack =>
         prepareTrack(trackDrive(arc, TEST_COUPLING, TEST_HANDS), TEST_HEAD, gravity);
-    /** A fresh grip state holding the balls' resistance `R` (N) from the last step. */
-    const resisted = (R: number): GripState => ({ ...newGripState(), resistance: R });
+    /** A fresh grip state whose striker's face–ball pair was closed (`onBall`) or open at the last step's end. */
+    const gripOn = (onBall: boolean): GripState => ({ ...newGripState(), striker: 0, onBall });
 
-    it("adds min(R, F_push) along aim to the feed-forward, shared over both hands, during the push", () => {
+    it("adds F_push along aim to the feed-forward, shared over both hands, while on the ball", () => {
         // A vertical shaft at rest on the path: the grips sit on their intended points and move with them, so each
         // hand's force is its feed-forward share. P along aim is perpendicular to the shaft and carries no moment
         // about the swung body's centre, so the sharing rule puts −P·b/(a − b) on the top hand and P·a/(a − b) on the
@@ -857,39 +854,31 @@ describe("the push intent (P2b.2b.2b.2b gate ruling 2026-10-11)", () => {
         const track = prepareAt(PUSHING(), STANDARD_GRAVITY);
         const t = 0.002;
         const on = headOnPath(track, TEST_HEAD, t);
-        const grip0 = resisted(0);
-        const plain = handLoad(track, on, TEST_HEAD, t, grip0, IMPACT_DT);
+        const off = gripOn(false);
+        const plain = handLoad(track, on, TEST_HEAD, t, off, IMPACT_DT);
+        expect(plain.intent).toBeUndefined();
         const a = TEST_HEAD.socket.z + track.arc.radius - track.body.offset;
         const b = TEST_HEAD.socket.z + TEST_HANDS.bottom - track.body.offset;
-        for (const [R, P] of [
-            [30, 30],
-            [TEST_PUSH_FORCE, TEST_PUSH_FORCE],
-            [250, TEST_PUSH_FORCE],
-        ] as const) {
-            const grip = resisted(R);
-            const load = handLoad(track, on, TEST_HEAD, t, grip, IMPACT_DT);
-            expect(dist(sub(load.feedForward, plain.feedForward), scale(track.arc.aim, P)), `R ${R}`).toBeLessThan(
-                1e-9,
-            );
-            expect(dist(sub(load.force, plain.force), scale(track.arc.aim, P)), `R ${R}`).toBeLessThan(1e-9);
-            const topShare = scale(track.arc.aim, (0 - P * b) / (a - b));
-            const bottomShare = scale(track.arc.aim, (P * a) / (a - b));
-            expect(dist(sub(load.top, plain.top), topShare), `R ${R}`).toBeLessThan(1e-9);
-            expect(dist(sub(load.bottom, plain.bottom), bottomShare), `R ${R}`).toBeLessThan(1e-9);
-            // Each hand's stiffness follows its larger share: k = k₀ + κ·|F_ff,h|, F_ff,h with its chain's weight.
-            const c = TEST_CHAIN;
-            const all = c.forearmMass + c.handMass + c.fingerMass + c.palmSkinMass + c.fingerSkinMass;
-            const chainWeight = vec3(0, 0, all * STANDARD_GRAVITY);
-            const k = (share: Vec3): number =>
-                TEST_FLEX.stiffness + TEST_FLEX.stiffnessPerForce * length(add(share, chainWeight));
-            expect(grip.topStiffness, `R ${R}`).toBeCloseTo(k(load.top), 9);
-            expect(grip.bottomStiffness, `R ${R}`).toBeCloseTo(k(load.bottom), 9);
-            expect(grip.topStiffness, `R ${R}`).toBeGreaterThan(grip0.topStiffness);
-            expect(grip.bottomStiffness, `R ${R}`).toBeGreaterThan(grip0.bottomStiffness);
-        }
-        for (const R of [0, -5]) {
-            expect(handLoad(track, on, TEST_HEAD, t, resisted(R), IMPACT_DT), `R ${R}`).toEqual(plain);
-        }
+        const P = TEST_PUSH_FORCE;
+        const grip = gripOn(true);
+        const load = handLoad(track, on, TEST_HEAD, t, grip, IMPACT_DT);
+        expect(dist(load.intent as Vec3, scale(track.arc.aim, P))).toBeLessThan(1e-12);
+        expect(dist(sub(load.feedForward, plain.feedForward), scale(track.arc.aim, P))).toBeLessThan(1e-9);
+        expect(dist(sub(load.force, plain.force), scale(track.arc.aim, P))).toBeLessThan(1e-9);
+        const topShare = scale(track.arc.aim, (0 - P * b) / (a - b));
+        const bottomShare = scale(track.arc.aim, (P * a) / (a - b));
+        expect(dist(sub(load.top, plain.top), topShare)).toBeLessThan(1e-9);
+        expect(dist(sub(load.bottom, plain.bottom), bottomShare)).toBeLessThan(1e-9);
+        // Each hand's stiffness follows its larger share: k = k₀ + κ·|F_ff,h|, F_ff,h with its chain's weight.
+        const c = TEST_CHAIN;
+        const all = c.forearmMass + c.handMass + c.fingerMass + c.palmSkinMass + c.fingerSkinMass;
+        const chainWeight = vec3(0, 0, all * STANDARD_GRAVITY);
+        const k = (share: Vec3): number =>
+            TEST_FLEX.stiffness + TEST_FLEX.stiffnessPerForce * length(add(share, chainWeight));
+        expect(grip.topStiffness).toBeCloseTo(k(load.top), 9);
+        expect(grip.bottomStiffness).toBeCloseTo(k(load.bottom), 9);
+        expect(grip.topStiffness).toBeGreaterThan(off.topStiffness);
+        expect(grip.bottomStiffness).toBeGreaterThan(off.bottomStiffness);
     });
 
     it("ends with the push: no intent in the pendulum phase", () => {
@@ -897,136 +886,117 @@ describe("the push intent (P2b.2b.2b.2b gate ruling 2026-10-11)", () => {
         expect((track.push as Push).pendulum).toBe(0);
         const t = 0.002;
         const on = headOnPath(track, TEST_HEAD, t);
-        expect(handLoad(track, on, TEST_HEAD, t, resisted(50), IMPACT_DT)).toEqual(
-            handLoad(track, on, TEST_HEAD, t, resisted(0), IMPACT_DT),
+        expect(handLoad(track, on, TEST_HEAD, t, gripOn(true), IMPACT_DT)).toEqual(
+            handLoad(track, on, TEST_HEAD, t, gripOn(false), IMPACT_DT),
         );
     });
 
     it("is never read without a push", () => {
-        // P2b.2b.2c.3a A2 item 5: keyed on the push, not the mode (was "is never read in swing mode").
-        // P2b.2b.2c.3a: a push wherever handReach > 0 (A2 item 8), so the arc without one has a handReach of 0 (was
-        // the fixture's 10 m reach, which never bound in swing mode).
+        // P2b.2b.2c.3a A2 item 5: keyed on the push, not the mode. A push wherever handReach > 0 (A2 item 8).
         const track = prepareAt(still({ omega0: 3, handReach: 0 }), STANDARD_GRAVITY);
         expect(track.push).toBeNull();
         const t = 0.002;
         const on = headOnPath(track, TEST_HEAD, t);
-        expect(handLoad(track, on, TEST_HEAD, t, resisted(500), IMPACT_DT)).toEqual(
-            handLoad(track, on, TEST_HEAD, t, resisted(0), IMPACT_DT),
+        expect(handLoad(track, on, TEST_HEAD, t, gripOn(true), IMPACT_DT)).toEqual(
+            handLoad(track, on, TEST_HEAD, t, gripOn(false), IMPACT_DT),
         );
     });
 
-    it("answers a held resistance at the muscles' pace: 1 − 1/e of it after τ_push", () => {
-        // Amendment (user, 2026-10-11): R̃ ← R̃ + (R − R̃)·(1 − exp(−dt/τ_push)). After n = τ/dt steps from 0 under a
-        // held R, R̃ = R·(1 − (exp(−dt/τ))ⁿ), 1 − 1/e of R up to the steps' rounding.
-        const response = pushResponse(TEST_HANDS, IMPACT_DT);
-        expect(response).toBeCloseTo(1 - Math.exp(-IMPACT_DT / TEST_PUSH_RESPONSE_TIME), 15);
-        const held = 1000;
-        const answered = (steps: number): number => {
-            let sensed = 0;
-            for (let i = 0; i < steps; i++) {
-                sensed = senseResistance(sensed, held, response);
-            }
-            return sensed;
-        };
-        const tau = Math.round(TEST_PUSH_RESPONSE_TIME / IMPACT_DT);
-        expect(answered(tau) / held).toBeCloseTo(1 - Math.exp(-1), 9);
-        // The first blow, about 1.25 ms of a held resistance, is answered with only 1 − exp(−1.25 ms/τ) of it.
-        const blow = Math.round(1.25e-3 / IMPACT_DT);
-        expect(answered(blow) / held).toBeCloseTo(1 - Math.exp(-1.25e-3 / TEST_PUSH_RESPONSE_TIME), 9);
-        // And relaxes at the same pace once the resistance has gone.
-        expect(senseResistance(held, 0, response)).toBeCloseTo(held * (1 - response), 9);
-    });
-
     /**
-     * Replays `snapshots`' hands from `start` with a grip state whose sensed resistance R̃ follows, after each step,
-     * that step's head–ball contacts alone through the lag (or stays 0 without `fromBalls`), its chains advanced
-     * after each step as the integrator advances them. Returns the steps whose
-     * hands' force differs from the integrator's, the largest R and the largest R̃.
+     * Replays `snapshots`' hands from `start` with a grip state whose striker is the first ball whose face pair closes
+     * and whose `onBall` is whether that pair closed in the last step, its chains advanced after each step as the
+     * integrator advances them. Returns the steps whose hands' force differs from the integrator's, and per step
+     * whether its intent was on and whether the striker's face pair closed in it.
      */
-    function replay(track: PreparedTrack, start: HeadState, snapshots: readonly ImpactSnapshot[], fromBalls = true) {
+    function replay(track: PreparedTrack, start: HeadState, snapshots: readonly ImpactSnapshot[], ids: string[]) {
         const grip = newGripState();
-        const response = 1 - exp(0 - IMPACT_DT / track.hands.pushResponseTime);
         let state = start;
         let t = 0;
         let differ = 0;
-        let largest = 0;
-        let sensed = 0;
+        const steps: { intent: Vec3 | undefined; closed: boolean }[] = [];
         for (const s of snapshots) {
             const load = handLoad(track, state, TEST_HEAD, t, grip, IMPACT_DT);
             const hand = s.hand as NonNullable<ImpactSnapshot["hand"]>;
             if (!same(load.force, hand.force) || !same(load.feedForward, hand.feedForward)) {
                 differ++;
             }
-            let onHead = ZERO;
-            for (const c of s.contacts) {
-                if (c.key.startsWith("face/")) {
-                    onHead = sub(onHead, add(scale(c.normal, c.normalForce), c.tangentialForce));
-                }
-            }
-            const resistance = fromBalls ? Math.max(0, 0 - dot(track.arc.aim, onHead)) : 0;
-            grip.resistance = grip.resistance + (resistance - grip.resistance) * response;
+            const faces = s.contacts.filter((c) => c.key.startsWith("face/")).map((c) => ids.indexOf(c.key.slice(5)));
+            grip.striker ??= faces[0] ?? null;
+            const closed = grip.striker !== null && faces.includes(grip.striker);
+            grip.onBall = closed;
+            steps.push({ intent: hand.intent, closed });
             advanceChains(grip, track.hands.chain, IMPACT_DT);
-            largest = Math.max(largest, resistance);
-            sensed = Math.max(sensed, grip.resistance);
             state = s.head;
             t = s.t;
         }
-        return { differ, largest, sensed };
+        return { differ, steps };
     }
     const same = (a: Vec3, b: Vec3): boolean => Object.is(a.x, b.x) && Object.is(a.y, b.y) && Object.is(a.z, b.z);
 
-    it("follows the balls' push on the head through the lag", () => {
-        // A 3 m/s carry, gravity off, into a free ball: every step's hands match a replay whose R̃ follows the steps'
-        // head–ball contacts through the lag; the ball resists past the cap, R̃ far less (the blow is over in about
-        // 1.3 ms against τ 30 ms); with R̃ held at 0 the hands would differ.
+    /** A 3 m/s level carry, gravity off, its face `gap` (m) short of a ball at (0, 0, 1). */
+    const carry = (gap: number): { track: PreparedTrack; head: HeadState; ball: Vec3 } => {
         const ball = vec3(0, 0, 1);
-        const start = vec3(ball.x - R - 1e-6 - TEST_HEAD.length / 2, 0, ball.z);
+        const begin = vec3(ball.x - R - gap - TEST_HEAD.length / 2, 0, ball.z);
         const omega0 = 3 / (0.8 + TEST_HEAD.socket.z);
-        const arc = levelArc(start, { slopeHold: 1, handReach: 0.1, pendulumAt: 1, omega0 });
-        const track = prepareAt(arc, 0);
-        // Roll launch design §3.1 and amendment 1 (was every step to the cap): the intent ends and the hands re-anchor
-        // at the departure, so the replay runs to it.
+        const track = prepareAt(levelArc(begin, { slopeHold: 1, handReach: 0.1, pendulumAt: 1, omega0 }), 0);
+        return { track, head: headOnPath(track, TEST_HEAD, 0), ball };
+    };
+
+    it("presses at F_push from the step after the face first meets the ball, not from the plan's contact", () => {
+        // A lead: the plan's contact (relaxAt 0) comes 2 mm, about 0.7 ms, before the face reaches the ball, and the
+        // hands do not press across it (design §2.1). From the first contact step on, every step's hands match a
+        // replay whose press follows the striker's face pair; the replay runs to the departure, after which the hands
+        // re-anchor to the head.
+        expect(TEST_COUPLING.relaxAt).toBe(0);
+        const { track, head, ball } = carry(2e-3);
         const probe = recorder();
-        const head = headOnPath(track, TEST_HEAD, 0);
         const run = integrate(isolated({ start: head, drive: track, balls: [freeBall("blue", ball)] }), {
             probe,
-            cap: 3e-3,
+            cap: 4e-3,
         });
         const departure = run.departure as number;
         const pushed = probe.snapshots.filter((s) => s.t <= departure);
-        const { differ, largest, sensed } = replay(track, head, pushed);
+        const { differ, steps } = replay(track, head, pushed, ["blue"]);
         expect(differ).toBe(0);
-        expect(largest).toBeGreaterThan(TEST_PUSH_FORCE);
-        expect(sensed).toBeGreaterThan(0);
-        expect(sensed).toBeLessThan(0.1 * largest);
-        expect(replay(track, head, pushed, false).differ).toBeGreaterThan(0);
+        const first = steps.findIndex((s) => s.closed);
+        expect(first * IMPACT_DT).toBeGreaterThan(5e-4);
+        expect(steps.slice(0, first + 1).every((s) => s.intent === undefined)).toBe(true);
+        for (let i = first + 1; i < steps.length; i++) {
+            const on = (steps[i - 1] as (typeof steps)[number]).closed;
+            const intent = (steps[i] as (typeof steps)[number]).intent;
+            expect(intent !== undefined, `step ${i}`).toBe(on);
+            if (intent !== undefined) {
+                expect(dist(intent, scale(track.arc.aim, TEST_PUSH_FORCE))).toBeLessThan(1e-12);
+            }
+        }
+        expect(steps.filter((s) => s.intent !== undefined).length).toBeGreaterThan(0);
     });
 
-    it("carries no intent from the departure, where the push never reaches the pendulum phase", () => {
-        // Roll launch design, amendment 1 (was "relaxes in the follow-through": each follow-through step's intent fell
-        // by (1 − response) per step from the impact's last R̃, on a still carry whose push never reaches its pendulum
-        // phase): the intent ends at the departure, so it is on through the blow and off from the departure to the
-        // impact's end; the follow-through, whose grip keeps the departure, reads none (pushIntent; the flat push's
-        // "ends the push intent at the departure").
-        const ball = vec3(0, 0, 1);
-        const begin = vec3(ball.x - R - 1e-6 - TEST_HEAD.length / 2, 0, ball.z);
-        const omega0 = 3 / (0.8 + TEST_HEAD.socket.z);
-        const track = prepareAt(levelArc(begin, { slopeHold: 1, handReach: 0.1, pendulumAt: 1, omega0 }), 0);
-        expect((track.push as Push).pendulum).toBeNull();
+    it("presses only while the face is on the striker's ball, the first it meets, on a croquet stroke", () => {
+        // The striker's ball touching the croqueted ball ahead of it: the face meets the striker's alone, and the
+        // press follows that pair.
+        const { track, head, ball } = carry(1e-6);
+        const ahead = vec3(ball.x + 2 * R + 1e-6, 0, ball.z);
         const probe = recorder();
-        const head = headOnPath(track, TEST_HEAD, 0);
-        const setup = isolated({ start: head, drive: track, balls: [freeBall("blue", ball)] });
-        const { run } = integrateStroke(setup, { probe, cap: 3e-3 }, true);
+        const run = integrate(
+            isolated({ start: head, drive: track, balls: [freeBall("blue", ball), freeBall("red", ahead)] }),
+            { probe, cap: 4e-3 },
+        );
         const departure = run.departure as number;
-        const intents = probe.snapshots.map((s) => ({ t: s.t, on: s.hand?.intent !== undefined }));
-        expect(intents.some((s) => s.on && s.t <= departure)).toBe(true);
-        expect(intents.filter((s) => s.t > departure + IMPACT_DT).every((s) => !s.on)).toBe(true);
-        expect(intents[intents.length - 1]?.t).toBeGreaterThan(departure + IMPACT_DT);
+        const pushed = probe.snapshots.filter((s) => s.t <= departure);
+        expect(pushed.some((s) => s.contacts.some((c) => c.key === "blue/red"))).toBe(true);
+        expect(pushed.some((s) => s.contacts.some((c) => c.key === "face/red"))).toBe(false);
+        const { differ, steps } = replay(track, head, pushed, ["blue", "red"]);
+        expect(differ).toBe(0);
+        for (let i = 1; i < steps.length; i++) {
+            const on = (steps[i - 1] as (typeof steps)[number]).closed;
+            expect((steps[i] as (typeof steps)[number]).intent !== undefined, `step ${i}`).toBe(on);
+        }
     });
 
-    it("takes no resistance from the turf", () => {
+    it("never presses without a ball: a head sliding in the turf", () => {
         // A carry head pressed 1 mm into the turf and sliding forward: the turf's friction pushes it back along aim,
-        // yet the hands match a replay whose R stays 0.
+        // yet the hands never press.
         const arc = levelArc(vec3(0, 0, TEST_RHO - 1e-3), { slopeHold: 1, handReach: 0.1, pendulumAt: 1 });
         const track = prepareAt(arc, STANDARD_GRAVITY);
         const turf = testHeadTurf();
@@ -1036,10 +1006,7 @@ describe("the push intent (P2b.2b.2b.2b gate ruling 2026-10-11)", () => {
         integrate(isolated({ start, drive: track, gravity: STANDARD_GRAVITY, headTurf: turf }), { probe, cap: 5e-3 });
         const back = Math.min(...probe.snapshots.map((s) => dot(s.headTurf ?? ZERO, track.arc.aim)));
         expect(back).toBeLessThan(-1);
-        const { differ, largest, sensed } = replay(track, start, probe.snapshots);
-        expect(differ).toBe(0);
-        expect(largest).toBe(0);
-        expect(sensed).toBe(0);
+        expect(probe.snapshots.every((s) => s.hand?.intent === undefined)).toBe(true);
     });
 });
 

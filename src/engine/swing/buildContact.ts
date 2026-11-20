@@ -512,8 +512,6 @@ function validate(setup: ShotSetup, ballRadius: number): void {
     positive(body.pendulumForce, "profile.body.pendulumForce");
     finiteNumber(body.pushForce, "profile.body.pushForce");
     positive(body.pushForce, "profile.body.pushForce");
-    finiteNumber(body.pushResponseTime, "profile.body.pushResponseTime");
-    positive(body.pushResponseTime, "profile.body.pushResponseTime");
     finiteNumber(body.gripLimit, "profile.body.gripLimit");
     positive(body.gripLimit, "profile.body.gripLimit");
     for (const [key, value] of Object.entries(body.chain)) {
@@ -588,7 +586,6 @@ function bodyHandsOf(setup: ShotSetup): Hands {
         flex: profile.body.flex,
         pendulumForce: profile.body.pendulumForce,
         pushForce: profile.body.pushForce,
-        pushResponseTime: profile.body.pushResponseTime,
         chain: profile.body.chain,
         gripLimit: profile.body.gripLimit,
     };
@@ -861,7 +858,7 @@ export interface StrokePlan {
  *   or the shot's pendulumAt or pendulumEffort outside [0, 1]; handArcLow outside [0, 1]; a jab negative or
  *   non-finite (P2b.2b.2b.3 design §6.1); handArcRadius not above the push length; a flex value not positive, or a
  *   flex damping ratio above 1; pendulumForce not positive (P2b.2b.2b.2b design §6);
- *   pushForce, pushResponseTime, gripLimit or a hand–arm chain value not positive (its gate rulings, 2026-10-11;
+ *   pushForce, gripLimit or a hand–arm chain value not positive (its gate rulings, 2026-10-11;
  *   P2b.2b.2b.3 design §5);
  * - pendulumShare outside [0, 1]; handAngle outside (0, 90°) when pendulumShare < 1 (neither read
  *   nor checked otherwise); a slopeHold outside [0, 1]; a followThrough negative; a pendulumShare of 0 where the downswing needs

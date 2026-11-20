@@ -170,7 +170,6 @@ export interface SwingProfile {
         readonly flex: FlexLaw;
         readonly pendulumForce: number;
         readonly pushForce: number;
-        readonly pushResponseTime: number;
         readonly chain: HandChain;
         readonly gripLimit: number;
         readonly backswingLimit: number;

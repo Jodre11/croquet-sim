@@ -10,8 +10,8 @@
  * at the push length (P2b.2b.2b.2b design §4.1; P2b.2b.2c.3a A2 item 8). On every stroke after contact the hands
  * flex to an intended path that starts from the actual grips (carryLoad; P2b.2b.2b.2b design §3, §4; P2b.2b.2c.3a A2
  * item 5), and with a push swing the mallet through the pendulum phase.
- * Through the push they also push along aim against the balls' resistance, at the muscles' pace and capped
- * (pushIntent; gate ruling 2026-10-11). From the flex's start each hand and arm is Dong et al. 2013's x_h 5-DOF
+ * Through the push they also press along aim at the arm's push while the face is on the striker's ball (pushIntent;
+ * primed push design, amendment 1, 2026-11-18). From the flex's start each hand and arm is Dong et al. 2013's x_h 5-DOF
  * hand–arm chain, its flex driving the chain's forearm (gate round 3 ruling, 2026-10-11). The
  * model's elements map to the engine's as: M0 the forearm, M1 the hand (palm–hand dorsum), M2 the fingers, each a
  * point mass (ArmChain); M3 and M4, the skin on the handle, rigid at the grip in the swung body (carryBody); K1, C1
@@ -68,11 +68,8 @@ export const ARM_FLEX: FlexLaw = {
 /** F_pendulum (N, design §4.2): the bottom hand's largest push in the pendulum phase (reference/contact.json). */
 export const PENDULUM_FORCE = contactReference.pendulumForce.value;
 
-/** F_push (N, gate ruling 2026-10-11): the cap on the hands' push intent through a push (reference/contact.json). */
+/** F_push (N, gate ruling 2026-10-11): the hands' press along aim while on the ball (reference/contact.json). */
 export const PUSH_FORCE = contactReference.pushForce.value;
-
-/** τ_push (s, gate ruling amendment 2026-10-11): the push intent's response time constant (reference/contact.json). */
-export const PUSH_RESPONSE_TIME = contactReference.pushResponseTime.value;
 
 /** F_max (N, P2b.2b.2b.3 design §5): the hands' grip limit (reference/contact.json, Young et al. 2009). */
 export const GRIP_LIMIT = contactReference.gripLimit.value;
@@ -1969,10 +1966,10 @@ export interface FlexStart {
  * the forward reach, on a stroke without a push: a push's never opens; P2b.2b.2c.3a A2 item 6; P2b.2b.2c.3b.1 design
  * §2) and the shaft's turn since relaxAt then. Also where the flex took hold, each hand's last stiffness (N/m; the
  * bottom hand's 0 once it has let go), whether the shaft has passed vertical once the bottom hand has opened (it is
- * then off the mallet; P2b.2b.2b.2b design §4.2), and the hands' sensed resistance R̃ (N): the balls' resistance R =
- * max(0, −aim·F_balls), F_balls their total force on the head, followed through a first-order lag (senseResistance),
- * which the integrator updates with a push after each step's contacts and the push intent reads (gate ruling 2026-10-11
- * and its amendment). From where the flex takes hold, each hand's hand–arm chain (gate round 3 ruling, 2026-10-11):
+ * then off the mallet; P2b.2b.2b.2b design §4.2). The striker's ball, the ball of the first face–ball pair to close,
+ * which the integrator latches once (null until then), and whether that pair was closed at the end of the last step
+ * (`onBall`), which the integrator sets after each step's contacts, clears once the balls are removed, and the push
+ * intent reads (primed push design, amendment 1, 2026-11-18). From where the flex takes hold, each hand's hand–arm chain (gate round 3 ruling, 2026-10-11):
  * null before then, the bottom hand's null once it has let go, and both null from a stop's hold. With a push also when
  * a ball first departed from the face (s; gate round 13 ruling, "Relax from first departure", 2026-10-12), which the
  * integrator latches once, null until then, and reports; the arms' hold no longer relaxes from it (carryLoad;
@@ -1989,7 +1986,8 @@ export interface GripState {
     topStiffness: number;
     bottomStiffness: number;
     vertical: boolean;
-    resistance: number;
+    striker: number | null;
+    onBall: boolean;
     topChain: ArmChain | null;
     bottomChain: ArmChain | null;
     departedAt: number | null;
@@ -1998,7 +1996,7 @@ export interface GripState {
 }
 
 /**
- * A grip state for a new run: no contact yet, the bottom hand closed, no flex, no resistance, no chains, no departure.
+ * A grip state for a new run: no contact yet, the bottom hand closed, no flex, no striker, no chains, no departure.
  */
 export function newGripState(): GripState {
     return {
@@ -2009,7 +2007,8 @@ export function newGripState(): GripState {
         topStiffness: 0,
         bottomStiffness: 0,
         vertical: false,
-        resistance: 0,
+        striker: null,
+        onBall: false,
         topChain: null,
         bottomChain: null,
         departedAt: null,
@@ -2179,31 +2178,18 @@ function holdChain(
 }
 
 /**
- * The share of the gap between the balls' resistance and the hands' sensed resistance that one step of `dt` (s)
- * closes (gate ruling amendment, 2026-10-11): 1 − exp(−dt/τ_push), the muscles' first-order force rise.
- */
-export function pushResponse(hands: Hands, dt: number): number {
-    return 1 - exp(0 - dt / hands.pushResponseTime);
-}
-
-/** The hands' sensed resistance R̃ (N) after one step: `sensed` moved towards the balls' `resistance` by `response`. */
-export function senseResistance(sensed: number, resistance: number, response: number): number {
-    return sensed + (resistance - sensed) * response;
-}
-
-/**
- * The push intent at time t (gate ruling 2026-10-11 and its amendment): through the push, until the pendulum
- * phase starts, the hands push along aim with the balls' resistance as they sense it (R̃, lagged at the muscles'
- * pace), up to the arm's push: P = min(R̃, F_push)·aim. Null where it is nil: no resistance, or in the pendulum phase.
+ * The push intent at time t (primed push design, amendment 1, 2026-11-18, the user's ruling "Press while on the ball"):
+ * through the push, until the pendulum phase starts, the hands press along aim at the arm's push, P = F_push·aim, while
+ * the striker's face–ball pair was closed at the start of the step. Null where it is nil: off the ball (before the
+ * first contact, across a gap between contacts, once the balls are removed), or in the pendulum phase. Nothing presses
+ * across a gap, so the head never chases the ball.
  */
 function pushIntent(track: PreparedTrack, t: number, grip: GripState): Vec3 | null {
     const push = track.push as Push;
-    // The surge is for the ball, before it leaves (the user, 2026-11-15): it ends at the departure (roll launch design,
-    // amendment 1).
-    if (!(grip.resistance > 0) || grip.departedAt !== null || (push.pendulum !== null && t >= push.pendulum)) {
+    if (!grip.onBall || (push.pendulum !== null && t >= push.pendulum)) {
         return null;
     }
-    return scale(track.arc.aim, Math.min(grip.resistance, track.hands.pushForce));
+    return scale(track.arc.aim, track.hands.pushForce);
 }
 
 /** The hands' load in one step (design §3.3, §3.7), world frame. */

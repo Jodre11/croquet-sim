@@ -237,6 +237,8 @@ digest is of the raw fullTextXML as Europe PMC returned it.
   from models (Winters and Stark 1985; Stroeve 1999), not a measured voluntary force rise; Maffiuletti et al.,
   *Eur. J. Appl. Physiol.* 116:1091 (2016, PMC4875063), a review, gives an electromechanical delay of "<13 ms for
   voluntary contractions" and no time constant.
+- Retired 2026-11-18 (primed push design §2.5, amendment 1): the hands press at `pushForce` while the face is on
+  the striker's ball and read no resistance, so `pushResponseTime` left `contact.json`. Kept here as the record.
 
 ### The gate ruling, round 2 (2026-10-11): the hands' fast impedance
 

@@ -1,5 +1,6 @@
 <!--
-    The readout (side-on viewer spec §2): range asked and achieved, ratio and its label, stroke and push effort, power,
+    The readout (side-on viewer spec §2): range asked and achieved, ratio and its label, stroke effort, the press's impulse (primed
+    push design §2.5), power,
     the events and faults.
 -->
 <script lang="ts">
@@ -30,8 +31,8 @@
     <dd>{fmt(power, 3)}</dd>
     <dt>Stroke effort</dt>
     <dd>{fmt(framed?.sample.strokeEffort, 1)} %</dd>
-    <dt>Push effort</dt>
-    <dd>{fmt(framed?.sample.pushEffort, 1)} %</dd>
+    <dt>Push impulse</dt>
+    <dd>{fmt(framed?.sample.pushImpulse, 3)} N·s</dd>
     <dt>Grip played</dt>
     <dd>{fmt(firmness, 4)}</dd>
     <dt>Class</dt>

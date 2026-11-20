@@ -227,7 +227,6 @@ describe("swing, coupling and head–turf reference data", () => {
             armHoldDamping: "N·s/m",
             pendulumForce: "N",
             pushForce: "N",
-            pushResponseTime: "s",
             forearmMass: "kg",
             handMass: "kg",
             fingerMass: "kg",

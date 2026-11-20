@@ -278,17 +278,51 @@ describe("the re-anchor at the departure (roll launch design §3.1)", () => {
         expect(departing(ball(2.1), head, normal, R)).toBe(true);
     });
 
-    it("ends the push intent at the departure (amendment 1)", { timeout: 60_000 }, () => {
-        const { contact } = planStroke(c10h, gugan);
-        const intents: { t: number; intent: boolean }[] = [];
-        const result = simulateImpact(contact, c10h.balls, gugan, {
-            probe: { step: (s) => intents.push({ t: s.t, intent: s.hand?.intent !== undefined }) },
-        });
-        const at = result.departure as number;
-        expect(intents.some((s) => s.t <= at && s.intent)).toBe(true);
-        // The latch falls in the pair loop of the step that begins at `at`, after that step's hands: the next step on.
-        expect(intents.filter((s) => s.t > at + 1e-5 && s.intent)).toEqual([]);
-    });
+    it(
+        "presses at F_push while the face is on the striker's ball (primed push design, amendment 1)",
+        { timeout: 60_000 },
+        () => {
+            // Was "ends the push intent at the departure" (amendment 1, superseded 2026-11-18, "Press while on the ball"):
+            // the press is on in a step only when the striker's face pair closed in the step before, through the
+            // departure and any re-catch, at F_push along aim; and before the pendulum phase, always then. The
+            // re-anchor's warp only delays the plan's instants, so the unwarped pendulum bounds it from below.
+            const { contact } = planStroke(c10h, gugan);
+            const pendulum = (prepareTrack(contact.drive as TrackDrive, contact.head, gugan.gravity).push as Push)
+                .pendulum as number;
+            const key = faceKey(c10h.striker);
+            const steps: { t: number; intent: number | null; closed: boolean }[] = [];
+            const result = simulateImpact(contact, c10h.balls, gugan, {
+                probe: {
+                    step: (s) =>
+                        steps.push({
+                            t: s.t,
+                            intent:
+                                s.hand?.intent === undefined
+                                    ? null
+                                    : dot(s.hand.intent, (contact.drive as TrackDrive).arc.aim),
+                            closed: s.contacts.some((c) => c.key === key),
+                        }),
+                },
+            });
+            const at = result.departure as number;
+            expect(at).toBeGreaterThan(0);
+            expect(steps[0]?.intent).toBeNull();
+            expect(pendulum).toBeGreaterThan(at);
+            for (let i = 1; i < steps.length; i++) {
+                const step = steps[i] as (typeof steps)[number];
+                const before = steps[i - 1] as (typeof steps)[number];
+                if (before.t < pendulum) {
+                    expect(step.intent !== null, `step ${i}`).toBe(before.closed);
+                } else if (step.intent !== null) {
+                    expect(before.closed, `step ${i}`).toBe(true);
+                }
+                if (step.intent !== null) {
+                    expect(step.intent).toBeCloseTo((contact.drive as TrackDrive).hands.pushForce, 9);
+                }
+            }
+            expect(steps.some((s) => s.intent !== null)).toBe(true);
+        },
+    );
 
     it("slides the guiding bottom hand by its forward excess over its share along the aim (amendment 1)", () => {
         const aim = vec3(0, 1, 0);

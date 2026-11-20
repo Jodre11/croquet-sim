@@ -53,8 +53,8 @@ const SUNK = vec3(
 );
 
 describe("simulateImpact", () => {
-    it("is version 0.36.0", () => {
-        expect(ENGINE_VERSION).toBe("0.36.0");
+    it("is version 0.37.0", () => {
+        expect(ENGINE_VERSION).toBe("0.37.0");
     });
 
     it("starts a centre-struck ball rolling at 5/7 of its launch speed in phase 2", () => {
@@ -613,12 +613,6 @@ describe("simulateImpact with a tracked drive", () => {
         ["no pendulum force", withHands({ pendulumForce: 0 }), /hands\.pendulumForce must be a positive/],
         ["no push force", withHands({ pushForce: 0 }), /hands\.pushForce must be a positive/],
         ["an infinite push force", withHands({ pushForce: Infinity }), /hands\.pushForce must be finite/],
-        ["no push response time", withHands({ pushResponseTime: 0 }), /hands\.pushResponseTime must be a positive/],
-        [
-            "an infinite push response time",
-            withHands({ pushResponseTime: Infinity }),
-            /hands\.pushResponseTime must be finite/,
-        ],
         ["no grip limit", withHands({ gripLimit: 0 }), /hands\.gripLimit must be a positive finite number/],
         ["a negative grip limit", withHands({ gripLimit: -1 }), /hands\.gripLimit must be a positive finite number/],
         ["a NaN grip limit", withHands({ gripLimit: NaN }), /hands\.gripLimit must be finite/],

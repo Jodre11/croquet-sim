@@ -76,7 +76,6 @@ function caseOf(type: StrokeType, profile: SwingProfile): Case {
             flex: profile.body.flex,
             pendulumForce: profile.body.pendulumForce,
             pushForce: profile.body.pushForce,
-            pushResponseTime: profile.body.pushResponseTime,
             chain: profile.body.chain,
             gripLimit: profile.body.gripLimit,
         },

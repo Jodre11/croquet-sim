@@ -30,10 +30,9 @@
  * push, the pendulum phase's start; P2b.2b.2b.2b design §4.2) standing for the drive window, and only once the head
  * is neither closing on any ball within reach (headClosing) nor would reach one ahead of its face within LOOK_AHEAD:
  * a re-contact is integrated, not flagged. With a push it also waits until the hands have started the pendulum
- * phase. Its cap is TRACK_IMPACT_CAP after the planned contact. With a push each step, once its contacts are
- * resolved, moves the hands' sensed resistance towards the balls' resistance along aim (their total force on the head)
- * at the muscles' pace, for the hands' push intent on the next step (track.ts; gate ruling 2026-10-11 and its
- * amendment).
+ * phase. Its cap is TRACK_IMPACT_CAP after the planned contact. Each tracked step, once its contacts are resolved,
+ * records whether the striker's face–ball pair is closed, for the hands' push intent on the next step (track.ts; primed
+ * push design, amendment 1, 2026-11-18).
  *
  * A tracked drive's face–ball pairs meet the whole head, a solid cylinder or a rounded box (contacts.ts
  * headBallContact; P2b.2b.1 design §4.5; P2b.2b.2b.2c design §3): each also records its intervals per region of its
@@ -126,8 +125,6 @@ import {
     newGripState,
     pathAt,
     plannedTime,
-    pushResponse,
-    senseResistance,
     swungOf,
     type ArmChain,
     type ArmChainState,
@@ -555,15 +552,13 @@ function lawOf(setup: ImpactSetup, pair: Pair): PairLaw | null {
 }
 
 /**
- * One step's forces and torques, summed in pair-list order: on the head (world frame) and on each ball. With a push
- * also the balls' total force on the head, for the push intent (gate ruling 2026-10-11); null otherwise.
+ * One step's forces and torques, summed in pair-list order: on the head (world frame) and on each ball.
  */
 interface StepLoads {
     headForce: Vec3;
     headTorque: Vec3;
     readonly forces: Vec3[];
     readonly torques: Vec3[];
-    ballsOnHead: Vec3 | null;
 }
 
 /**
@@ -623,9 +618,6 @@ function applyPair(
     if (pair.kind === "face-ball") {
         loads.headForce = sub(loads.headForce, force);
         loads.headTorque = sub(loads.headTorque, cross(sub(contact.point, head.position), force));
-        if (loads.ballsOnHead !== null) {
-            loads.ballsOnHead = sub(loads.ballsOnHead, force);
-        }
     } else if (sa) {
         loads.forces[pair.a] = sub(loads.forces[pair.a] as Vec3, force);
         loads.torques[pair.a] = sub(loads.torques[pair.a] as Vec3, cross(sub(contact.point, sa.position), force));
@@ -1188,10 +1180,6 @@ function strokeOnce(
     const tracked = plan.kind === "track";
     const contactAt = plan.kind === "track" ? plan.arc.contactAt : 0;
     const names = regionsOf(head.shape);
-    // Only a push senses the balls' resistance (P2b.2b.2c.3a A2 item 5); every tracked stroke latches the first
-    // departure (roll launch design §3.1).
-    const pushed = plan.kind === "track" && plan.push !== null;
-    const response = plan.kind === "track" && plan.push !== null ? pushResponse(plan.hands, dt) : 0;
     const pairs: PairState[] = pairList(
         ids,
         hasTurf,
@@ -1280,7 +1268,6 @@ function strokeOnce(
                 shaft === null ? headTorque : add(headTorque, cross(rotate(state.orientation, shaft.at), shaft.force)),
             forces: balls.map(() => ballWeight),
             torques: balls.map(() => ZERO),
-            ballsOnHead: pushed ? ZERO : null,
         };
         const samples: ContactSample[] = [];
         let hardClosed = false;
@@ -1325,9 +1312,8 @@ function strokeOnce(
             if (contact === OFF_FACE || contact === null) {
                 // A tracked stroke latches a ball's first departure from the face (gate round 13 ruling, "Relax from
                 // first departure", 2026-10-12; on every tracked stroke, roll launch design §3.1): the first step a
-                // face–ball pair closed at the last step is open, with the ball moving away (departing). The impact
-                // does not know which ball is the striker's, so any ball's counts; in every stroke the face meets the
-                // striker's first. There the hands' path is re-anchored to the head's place and pace (flat push
+                // face–ball pair closed at the last step is open, with the ball moving away (departing). Any ball's
+                // counts; in every stroke the face meets the striker's first. There the hands' path is re-anchored to the head's place and pace (flat push
                 // design, amendment 6, moved from the parting) once that pair has stayed open RESTART_HOLD (roll launch
                 // design §3.1d, amendment 6): the hands stop chasing the plan the impact slowed the head from, read
                 // from the head as the strike leaves it, not at a parting the strike closes again. A replay re-latches
@@ -1354,6 +1340,10 @@ function strokeOnce(
                     if (played !== null && finishKind(played) !== "check") {
                         played = reanchor(played, head, state, t);
                     }
+                }
+                // Off the ball: the press stops from the next step (pushIntent).
+                if (tracked && pair.kind === "face-ball" && pair.b === grip.striker) {
+                    grip.onBall = false;
                 }
                 p.spring = ZERO;
                 p.closure = null;
@@ -1388,6 +1378,12 @@ function strokeOnce(
                 if (opened !== null && opened.p === p) {
                     opened = { p, from: Infinity };
                 }
+                // The striker's ball is the first the face meets; on it, the hands press from the next step
+                // (pushIntent; primed push design §2.1, amendment 1).
+                if (tracked) {
+                    grip.striker ??= pair.b;
+                    grip.onBall ||= pair.b === grip.striker;
+                }
             }
             // The re-entry guard reads the interval's first step, before the step is recorded.
             if (hit !== null && jumps !== null && p.line.start === null) {
@@ -1415,12 +1411,6 @@ function strokeOnce(
                     : undefined;
             recordStep(p.line, true, force, t, face);
             recordRegions(p.regions, names, hit === null ? null : hit.region, force, t, face);
-        }
-        // The balls' resistance along aim, which the hands sense at the muscles' pace and their push intent reads from
-        // the next step (gate ruling 2026-10-11 and its amendment).
-        if (loads.ballsOnHead !== null && plan.kind === "track") {
-            const resistance = Math.max(0, 0 - dot(plan.arc.aim, loads.ballsOnHead));
-            grip.resistance = senseResistance(grip.resistance, resistance, response);
         }
 
         // The head–turf pair comes after every other pair (design §4.1). A head at rest in the turf no longer holds
@@ -1578,11 +1568,9 @@ function continueStroke(
     const { head } = setup;
     const every = Math.max(1, Math.round(FOLLOW_SAMPLE / dt));
     const kind = finishKind(plan);
-    // The balls are removed, so nothing resists a push's intent any more: the hands' sensed resistance relaxes to 0 at
-    // the muscles' pace, as it would after any blow. It only matters where the push never reaches the pendulum phase
-    // (push.pendulum null), or before a check's hold; in the pendulum phase the intent is nil whatever it senses.
-    const pushing = plan.push !== null;
-    const response = pushing ? pushResponse(plan.hands, dt) : 0;
+    // The balls are removed, so the face is on no ball and the hands' press is nil (pushIntent; primed push design
+    // §2.1).
+    grip.onBall = false;
     // A stop holds its mallet still after the check (user decision 2026-10-07; Riches: "NO FOLLOW-THROUGH"): from the
     // check's window's end, or the impact's end if later, the pendulum is held and the hands grip the head firmly.
     const holdFrom = kind === "check" ? Math.max(plan.arc.arcStart + plan.arc.window, first * dt) : Infinity;
@@ -1646,7 +1634,6 @@ function continueStroke(
                     : add(hand.torque, cross(rotate(state.orientation, shaft.at), shaft.force)),
             forces: [],
             torques: [],
-            ballsOnHead: null,
         };
         if (ground !== null) {
             const load = applyHeadTurf(ground, state, head, dt, loads, t, null, plan.arc.aim);
@@ -1658,9 +1645,6 @@ function continueStroke(
         assertFinite(state, none, [], (steps + 1) * dt - plan.arc.contactAt, steps + 1, "follow-through");
         // Every stroke's chains step until a stop's hold lets them go (advanceChains skips a null chain).
         advanceChains(grip, plan.hands.chain, dt);
-        if (pushing) {
-            grip.resistance = senseResistance(grip.resistance, 0, response);
-        }
         steps++;
         // The offsets are immutable vectors, so the snapshot keeps this step's offsets: handLoad replaces them, never
         // mutates them.

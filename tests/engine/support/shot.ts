@@ -27,15 +27,7 @@ import {
     canonicalSetup,
     type CanonicalOptions,
 } from "../../../src/lab/canonical";
-import {
-    TEST_CHAIN,
-    TEST_FLEX,
-    TEST_GRIP_LIMIT,
-    TEST_HEAD,
-    TEST_PENDULUM_FORCE,
-    TEST_PUSH_FORCE,
-    TEST_PUSH_RESPONSE_TIME,
-} from "./impact";
+import { TEST_CHAIN, TEST_FLEX, TEST_GRIP_LIMIT, TEST_HEAD, TEST_PENDULUM_FORCE, TEST_PUSH_FORCE } from "./impact";
 
 export { CANONICAL_STRIKER, DEFAULT_CROQUET_GAP, GC_STOP_GAP, PASS_SPLIT, canonicalSetup, type CanonicalOptions };
 
@@ -72,7 +64,7 @@ export interface TestProfileOptions {
  * swung body is the head, as TEST_HANDS has it. Every stroke type has the same stance: level (lean 0, the top hand over
  * the socket at contact), the hands 0.8 m and 0.4 m from the socket, firm grips. Every type has the same drive: a
  * coast with no dip or reach, a full guide, a pendulum phase at 0.8 of the push with no effort and a 1.5 m
- * hands' arc lowest halfway; the body has TEST_FLEX, TEST_PENDULUM_FORCE, TEST_PUSH_FORCE, TEST_PUSH_RESPONSE_TIME,
+ * hands' arc lowest halfway; the body has TEST_FLEX, TEST_PENDULUM_FORCE, TEST_PUSH_FORCE,
  * TEST_CHAIN, TEST_GRIP_LIMIT, no backswing limit short of MAX_BACK_ANGLE, no effort (τ_0 = 0, ω_max = 1 rad/s), so
  * a stroke falls by gravity alone, and the default's 300 m/s² hands' peak acceleration. Every type has the same
  * shape: the pendulum alone (share 1), a 0.4 s hands' tempo halving at intensity 1, and the slope free (λ = 0). A test
@@ -140,7 +132,6 @@ export function testProfile(o: TestProfileOptions = {}): SwingProfile {
             flex: TEST_FLEX,
             pendulumForce: TEST_PENDULUM_FORCE,
             pushForce: TEST_PUSH_FORCE,
-            pushResponseTime: TEST_PUSH_RESPONSE_TIME,
             chain: TEST_CHAIN,
             gripLimit: TEST_GRIP_LIMIT,
             backswingLimit: MAX_BACK_ANGLE,

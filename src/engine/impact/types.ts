@@ -315,9 +315,9 @@ export type HandName = "top" | "bottom";
  * (P2b.2b.2c.3b.1 design §2). From contact
  * each hand flexes by `flex`, its feed and flex scaled by its grip; `guideEffort` (in [0, 1]) scales the bottom
  * hand's flex outside a check: 1 holds the planned arc, 0 leaves that hand its feed alone; a check brakes in full
- * (design §3.3; the player's choice, user's account, 2026-10-06; A2 item 5). The hands' push intent through a push
- * follows the balls' resistance with time constant `pushResponseTime` up to `pushForce`, and the bottom hand's push
- * once open is at most `pendulumForce` (P2b.2b.2b.2b design §3, §4.2; gate ruling 2026-10-11).
+ * (design §3.3; the player's choice, user's account, 2026-10-06; A2 item 5). Through a push the hands press along
+ * aim at `pushForce` while the face is on the striker's ball (primed push design, amendment 1), and the bottom
+ * hand's push once open is at most `pendulumForce` (P2b.2b.2b.2b design §3, §4.2).
  */
 export interface Hands {
     readonly bottom: number;
@@ -334,15 +334,10 @@ export interface Hands {
      */
     readonly pendulumForce: number;
     /**
-     * F_push (N): the push intent's cap (gate ruling 2026-10-11). Through the push the hands push along aim
-     * with the balls' resistance as they sense it, up to this.
+     * F_push (N, gate ruling 2026-10-11): through the push the hands press along aim with this while the face is
+     * on the striker's ball (primed push design, amendment 1, 2026-11-18).
      */
     readonly pushForce: number;
-    /**
-     * τ_push (s): the time constant at which the hands' sensed resistance follows the balls' (gate ruling amendment,
-     * 2026-10-11): the muscles' voluntary force rise.
-     */
-    readonly pushResponseTime: number;
     /** From contact (gate round 3 ruling, 2026-10-11): each hand and arm, the hand–arm impedance model's chain. */
     readonly chain: HandChain;
     /**

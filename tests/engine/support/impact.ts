@@ -112,7 +112,6 @@ export const TEST_PENDULUM_FORCE = 20;
 export const TEST_PUSH_FORCE = 100;
 
 /** A plausible, unsourced time constant (s) of the push intent's response (gate ruling amendment, 2026-10-11). */
-export const TEST_PUSH_RESPONSE_TIME = 0.03;
 
 /**
  * A grip limit (N) far above any test hand's force (P2b.2b.2b.3 plan decision 12), so that tests written before the
@@ -155,7 +154,6 @@ export const TEST_HANDS: Hands = {
     flex: TEST_FLEX,
     pendulumForce: TEST_PENDULUM_FORCE,
     pushForce: TEST_PUSH_FORCE,
-    pushResponseTime: TEST_PUSH_RESPONSE_TIME,
     chain: TEST_CHAIN,
     gripLimit: TEST_GRIP_LIMIT,
 };

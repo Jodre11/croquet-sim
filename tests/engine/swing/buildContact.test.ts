@@ -62,7 +62,6 @@ import {
     TEST_HANDS,
     TEST_PENDULUM_FORCE,
     TEST_PUSH_FORCE,
-    TEST_PUSH_RESPONSE_TIME,
     mirrorBall,
     mirrorContact,
     mirrorQuat,
@@ -243,7 +242,6 @@ describe("buildContact, step by step", () => {
             flex: TEST_FLEX,
             pendulumForce: TEST_PENDULUM_FORCE,
             pushForce: TEST_PUSH_FORCE,
-            pushResponseTime: TEST_PUSH_RESPONSE_TIME,
             chain: TEST_CHAIN,
             gripLimit: TEST_GRIP_LIMIT,
         });
@@ -275,7 +273,7 @@ describe("buildContact, step by step", () => {
         const profile = testProfile({
             drive: { handReach: 0.2, pendulumAt: 0.7, pendulumEffort: 0.2, handArcRadius: 1.2 },
             shape: { slopeHold: 1 },
-            body: { flex, pendulumForce: 25, pushForce: 120, pushResponseTime: 0.05, chain },
+            body: { flex, pendulumForce: 25, pushForce: 120, chain },
         });
         const preset = (buildContact(shot({}, profile), WORLD).drive as TrackDrive).arc;
         expect([preset.pendulumAt, preset.pendulumEffort, preset.handArcRadius, preset.handArcLow]).toEqual([
@@ -285,24 +283,13 @@ describe("buildContact, step by step", () => {
             .arc;
         expect([own.pendulumAt, own.pendulumEffort]).toEqual([0.4, 1]);
         const { hands } = buildContact(shot({}, profile), WORLD).drive as TrackDrive;
-        expect([hands.flex, hands.pendulumForce, hands.pushForce, hands.pushResponseTime]).toEqual([
-            flex,
-            25,
-            120,
-            0.05,
-        ]);
+        expect([hands.flex, hands.pendulumForce, hands.pushForce]).toEqual([flex, 25, 120]);
         expect(hands.chain).toEqual(chain);
     });
 
     it.each([
         ["no push force", { pushForce: 0 }, /profile\.body\.pushForce must be positive/],
         ["an infinite push force", { pushForce: Infinity }, /profile\.body\.pushForce must be finite/],
-        ["no push response time", { pushResponseTime: 0 }, /profile\.body\.pushResponseTime must be positive/],
-        [
-            "an infinite push response time",
-            { pushResponseTime: Infinity },
-            /profile\.body\.pushResponseTime must be finite/,
-        ],
         ["no grip limit", { gripLimit: 0 }, /profile\.body\.gripLimit must be/],
         ["a negative grip limit", { gripLimit: -1 }, /profile\.body\.gripLimit must be/],
         ["a NaN grip limit", { gripLimit: NaN }, /profile\.body\.gripLimit must be/],
@@ -719,7 +706,6 @@ describe("defaultProfile", () => {
             },
             pendulumForce: contactReference.pendulumForce.value,
             pushForce: contactReference.pushForce.value,
-            pushResponseTime: contactReference.pushResponseTime.value,
             chain: {
                 forearmMass: contactReference.forearmMass.value,
                 handMass: contactReference.handMass.value,

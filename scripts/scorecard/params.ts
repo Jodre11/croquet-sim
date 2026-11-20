@@ -20,7 +20,10 @@ function free(name: string, entry: ReferenceValue): FreeParam {
     return { name, entry, bounds: entry.bounds };
 }
 
-/** Design §4's fifteen free parameters, in its table's order. */
+/**
+ * Design §4's free parameters, in its table's order: fifteen until pushResponseTime retired (primed push design
+ * §2.5, 2026-11-18).
+ */
 export const FREE_PARAMS: readonly FreeParam[] = [
     free("faceFriction", malletReference.faceFriction),
     free("ballBallFriction", frictionReference.ballBallFriction),
@@ -32,7 +35,6 @@ export const FREE_PARAMS: readonly FreeParam[] = [
     free("handCouplingDampingRatio", contactReference.handCouplingDampingRatio),
     free("armMass", contactReference.armMass),
     free("pushForce", contactReference.pushForce),
-    free("pushResponseTime", contactReference.pushResponseTime),
     free("pendulumForce", contactReference.pendulumForce),
     free("armHoldStiffness", contactReference.armHoldStiffness),
     free("armHoldDamping", contactReference.armHoldDamping),

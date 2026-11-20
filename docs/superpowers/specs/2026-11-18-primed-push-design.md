@@ -156,3 +156,17 @@ bench press throw's v₀ from C3F up. The user's ruling (2026-11-18, "Press whil
 - It needs no new constant and no speed bound; it cannot chase, since nothing presses across a gap. (b)'s v₀ is not
   entered in the reference data.
 - §2.3's checks and §2.5 apply unchanged, with (d) the only candidate. If it fails, stop and report as §2.4.
+
+**The run and the ruling** (register, "G6's primed push, on the ball"). (d) passes "closer", "no chase" and "the half
+rolls hold", and misses "the ball rolls" by the letter: Ω₁ falls 6, 6 and 7 points in C3F, C10F and C25P against 5,
+every value within Gugan's 87–100. The user's ruling (2026-11-18, "Yes, implement it"): (d) is implemented as §2.5
+lists. The striker's pair is open once the balls are removed, so the follow-through needs no separate flag.
+
+**As implemented** (2026-11-20). `pushImpulse` (N·s, the intent's time integral) already existed beside `pushEffort` in
+the lab, so nothing was renamed: the viewer's readout shows `pushImpulse`, and `pushEffort` stays as the push map's
+decision 5 reads it (100 % on every push stroke that touches the ball, a constant shift that leaves decision 5's order
+among push strokes unchanged). `pushResponseTime` left `reference/contact.json`, its supersession noted in
+`pushForce`'s note and the sources README; the scorecard's free parameters are fourteen. Expected moves: the canonical
+half, full and pass rolls' ratios 1.782 → 1.757, 1.335 → 1.306, 1.285 → 1.243; the full roll at a tap plays lawfully
+at firmness 0 (was 29.1.6.1 at every hold); the full roll's least non-slipping hold σ 0.0625 → 0.16875; no full roll
+sinks the ball under the head (handover cover lost, as the pass roll's was); the pinned plays re-pinned.

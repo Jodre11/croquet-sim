@@ -59,13 +59,13 @@ integrate.ts` (the striker's latch and speed, the follow-through flag).
 `src/engine/swing/{buildContact,profile,types}.ts`, `src/engine/impact/simulateImpact.ts`, `reference/contact.json`,
 `reference/index.ts`, `src/lab/play.ts`, `src/viewer/Readout.svelte`, `src/engine/simulate.ts`, tests.
 
-- [ ] Write the unit tests of spec §3 (lead > 0; first contact step; the bound; pendulum, balls removed, no push; the
+- [x] Write the unit tests of spec §3 (lead > 0; first contact step; the bound; pendulum, balls removed, no push; the
   striker on a croquet stroke); run them, expect failure.
-- [ ] Implement the law; retire R̃ and τ_push as §2.5 lists; v₀ in `reference/contact.json` if (b) or (c).
-- [ ] `pushEffort` → `pushImpulse` (N·s) in the lab, viewer, push-map checks and grid tests and pins.
-- [ ] Rewrite the superseded tests (`flatPush.test.ts`, `hands.test.ts`). ENGINE_VERSION 0.37.0.
-- [ ] `npm test`, `npx tsc --noEmit`, `npm run lint`; expected failures move only as the run reported.
-- [ ] Commit and push.
+- [x] Implement the law; retire R̃ and τ_push as §2.5 lists; v₀ in `reference/contact.json` if (b) or (c).
+- [x] The viewer reads `pushImpulse` (N·s), which already existed; `pushEffort` kept (spec, "As implemented").
+- [x] Rewrite the superseded tests (`flatPush.test.ts`, `hands.test.ts`). ENGINE_VERSION 0.37.0.
+- [x] `npm test`, `npx tsc --noEmit`, `npm run lint`; expected failures move only as the run reported.
+- [x] Commit and push.
 
 ### Task 4: The card
 

@@ -95,7 +95,7 @@ interface TraceCase {
 function rollCase(type: RollType): TraceCase {
     const plan = textBook(type);
     const power = swingReference[type].defaultBackswing.value / bodyBackswing(mapSetup(type, plan, 1), WORLD);
-    const over = INSTANT_PUSH ? { body: { pushForce: 1e6, pushResponseTime: 1e-9 } } : {};
+    const over = INSTANT_PUSH ? { body: { pushForce: 1e6 } } : {};
     return {
         name: `the ${type.replace("-", " ")}'s text book at its canonical power (${power.toFixed(4)})`,
         file: type,
