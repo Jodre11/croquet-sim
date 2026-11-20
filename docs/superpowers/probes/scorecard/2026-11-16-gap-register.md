@@ -716,3 +716,35 @@ The same Nelder–Mead, parameters, bounds and stop, from the reference values o
 - **Open.** The striker's ball's lift in medium and hard rolls (≥ 13 mm at C3F, ≥ 44 mm at C25F) is unjudged; the
   user's observation would bound it. The C1F lead (μs ≈ 1.0 against `ballTurfSliding` 0.48) goes to the slow rolls'
   undershoot.
+
+## The third refit (2026-11-20, on G6's re-timed finish)
+
+The same Nelder–Mead, parameters, bounds and stop, from the reference values on `2026-11-20-finish-retimed` (6.30).
+It converged after 79 cards: objective **4.78**. Records `2026-11-20-refit3.jsonl`, `2026-11-20-refit3-best`.
+
+| Parameter | Reference | Fitted | Note |
+|---|---|---|---|
+| faceFriction | 0.38 | 0.281 | 20% of [0.2, 0.6] |
+| ballBallFriction | 0.16 | 0.111 | 12% of [0.06, 0.5] |
+| tangentialStiffnessRatio | 2/7 | 0.353 | |
+| handCouplingPeriod | 0.080 | **0.0253** | 8% of [0.01, 0.2]: low, as in both earlier refits |
+| handCouplingDampingRatio | 0.70 | 0.68 | |
+| armMass | 0.80 | 1.08 | |
+| ballTurfSliding | 0.48 | 0.665 | |
+
+No parameter sits at a bound.
+
+- **By family** (Σz²/count): table 6 2.92 → 1.54; table 5 1.43 → 1.29; strike, playability (all clean) and turf
+  unchanged.
+- **G2.** `coach.full-roll` 1.15, in its band (1.00–1.20; was 1.31, z 0.88). `coach.pass-roll` 1.08 against ≤ 0.99,
+  z 2.55 → 0.91: closer, not closed.
+- **Where the gain is.** The rolls' striker's ball, w₁/U z: C3F −3.90 → −1.92, C3P −3.18 → −0.83, C10F −3.42 →
+  −1.87, C25F −2.66 → −1.31; held out C1F −4.25 → −2.47, C25P −4.31 → −2.82. The rolls' Ω₂ move towards Gugan (C3F
+  −2.68 → −1.55, C3P −2.84 → −1.72, C1F −4.95 → −3.36). `lawn.t6.C3F.L1` −1.21 → −0.45.
+- **Worse.** Fit: C10H w₁/U 0.30 → 1.06, C10H Ω₂ 0.04 → 1.13, C10P Ω₁ 0.73 → 1.09, C3S L2/L1 −0.90 → −1.16.
+  Held out: C3H Ω₁ 0.36 → 1.67, `lawn.t6.C3H.L1` 0.99 → 1.64. Checks: Gugan 5's stop −2.49 → −3.69;
+  `coach.stop-ac` 4.13, at the foot of its band (4.10–6.20).
+- **Look.** Every ride is clean; lift half 2.28, full 1.91, pass 1.86 mm (band 0–5); C1F's striker's ball dip 2.01
+  (z −0.79), rise 2.71 (z 0.02). The look the second refit broke holds.
+- **Reading.** As before, a short grip period carries much of the gain (25 ms against the ruled 0.08 s), now without
+  the lift penalty and with no parameter at a bound. Whether the gain survives at 0.08 s is not measured.
