@@ -748,3 +748,10 @@ No parameter sits at a bound.
   (z −0.79), rise 2.71 (z 0.02). The look the second refit broke holds.
 - **Reading.** As before, a short grip period carries much of the gain (25 ms against the ruled 0.08 s), now without
   the lift penalty and with no parameter at a bound. Whether the gain survives at 0.08 s is not measured.
+- **At 0.08 s** (`2026-11-20-refit3-grip80`, the six other fitted values, the grip period at its ruled value):
+  objective **5.13** (reference 6.30, fit 4.78). The six carry 1.17 of the fit's 1.52; the grip the rest, nearly all
+  of it the slow rolls' striker's ball and G2:
+  - `coach.full-roll` 1.25 (z 0.44, just above its band; reference 1.31, fit 1.15); `coach.pass-roll` 1.19 (z 2.06;
+    reference 1.24, fit 1.08).
+  - w₁/U z against the fit: C3F −1.92 → −2.94, C3P −0.83 → −2.56, C10F −1.87 → −2.39, C1F −2.47 → −4.03; C10P
+    1.30 → 0.14. Every other row, the look and Gugan 5 are as in the fit.
