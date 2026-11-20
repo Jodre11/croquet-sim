@@ -453,6 +453,36 @@ The rolls' w₁/U rows, z on each card:
 - **Next:** the refit on this card, with C3F's off-face play the first thing it must clear; the rest of G6 (0.39–1.55
   N·s wanted against 0.29–0.71 given) stays open for the refit to show how much the fitted parameters recover.
 
+### C3F's off-face play, traced (2026-11-20, scratch probe on `playJudged`, reference values)
+
+C3F at Gugan's U (p 0.799), the practised run, against the baseline engine (8d9cc46, before law (d)):
+
+| | baseline | primed push |
+|---|---|---|
+| face–striker intervals, ms | 0.01–0.68, 1.34–2.34, 5.11–6.24 | the same three, then 9.88–11.34 |
+| head / striker's ball at 12 ms, m/s | 1.11 / 1.23 | 1.22 / 1.34 |
+| impact ends | 96.6 ms | at the cap, 450 ms |
+| later contacts | none seen | the head's edge, 406.9–407.9, 414.4–415.5, 424.9–426.3 ms |
+| practice | 1 pass, in band | 3 passes, `impact-off-face` each |
+
+- **What the press changes.** It leaves the head 0.1 m/s faster and within a few mm of the ball, so `stillReaching`
+  keeps the impact open (the only end test that differs: both runs are quiet from their last contact and the
+  turf has settled). The re-anchored path then drives the head from 1.07 m/s at 100 ms to 1.46 m/s at 300 ms,
+  faster than the ball's 1.25–1.29. The head rises 35 mm and comes down again, so its lower edge lands on top of the
+  ball at 407 ms.
+- **The baseline hides the same catch.** Its follow-through head (1.02 → 1.50 m/s by 275 ms) overtakes the ball as
+  it rolls on from the handover. The ball's path here is estimated at a constant 0.29 m/s² deceleration, the primed
+  run's figure. Their centres along aim close to 0.157 m, the face–ball contact distance, at about 290 ms and to
+  0.115 m by 440 ms. The head is then 31 mm above its height at the strike, so the face's lower edge is 2 mm above
+  the ball's centre. The follow-through has no head–ball contact, so the second hit goes unseen, and the
+  baseline's C3F scored clean only because its impact had ended at 96.6 ms.
+- **So the fault is older than law (d).** In slow full rolls the follow-through's path outruns the striker's ball.
+  Law (d) only makes the impact last long enough to see it. A refit cannot fix that honestly. The cheapest way to
+  clear the row is any parameter that ends the impact sooner, which would hide the second hit again.
+- **Open:** which other rolls the follow-through overtakes unseen (C1F, and the canonical full and pass rolls at
+  low power, are the likely ones), and whether the follow-through or the end test should change. That is a ruling
+  for the user.
+
 ## The joint fit
 
 Nelder–Mead over seven parameters converged after 112 cards (simplex spread under 0.05): objective **17.49**
