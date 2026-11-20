@@ -189,5 +189,5 @@ symbolically, so only assertions that name the stretch change).
 
 ### Task 6: Close
 
-- [ ] Add "As implemented (date)" to the spec: the values recorded, the assumptions kept, and the moves.
-- [ ] Tick this plan. Update the G6 register entry's "Next" with the refit on the last card. Commit and push.
+- [x] Add "As implemented (date)" to the spec: the values recorded, the assumptions kept, and the moves.
+- [x] Tick this plan. Update the G6 register entry's "Next" with the refit on the last card. Commit and push.

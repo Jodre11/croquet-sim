@@ -601,7 +601,8 @@ ahead, k = 1 and nothing changes.
   firmness 0, ratio 1.447), all as before §2.1. The held-firm full roll at power 1, hold 0.2, plays clean, so the
   off-face case is an `it.fails` again with no known case. The flat push follow-through's full roll ends its impact at
   90.5 ms and now passes the same clear-of-the-balls check as the half roll.
-- **Next:** Task 6, closing the plan, then the refit on this card.
+- **Next:** the refit on this card (`2026-11-20-finish-retimed`, objective 6.30). G6's late hits are closed. The first
+  thing the refit must clear is G2's ratio gap (full roll 1.306, pass roll 1.24).
 
 ## The joint fit
 

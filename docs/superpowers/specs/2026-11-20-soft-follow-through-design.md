@@ -226,3 +226,25 @@ Two reviewers, on what to cut and on what is missing. Applied:
 - §2.2 and §2.3 are measured apart;
 - step 1's moves are excused;
 - the single-ball rolls A1R–A4R are dropped from the survey, as they have no playable setup.
+
+## As implemented (2026-11-20)
+
+- **§2.1** (engine 0.38.0): the follow-through's catch is judged against the balls as phase 2 carries them on, and a
+  catch past the cap moves it once. The late hits came into view: C1F, C3F, C3P and most of the full and pass rolls.
+- **§2.2** (0.39.0): `REACH_REF_SPEED` is 2.999, 3 and 3 m/s for the half, full and pass rolls, in `buildContact.ts`.
+  A shot's own `stroke.handReach` is scaled too, because the text book sets every stroke's reach. On its own the
+  shorter reach made the soft rolls worse.
+- **§2.3** (0.40.0): `finishShare` with `FINISH_SHARE_MIN` 0.25 and `FINISH_REF_PACE` 4. The soft rolls cleared. A band
+  at p 0.8–1.0 still late-hit on the face, and the canonical full and pass rolls moved to 29.1.6.1; the user accepted
+  that move.
+- **§2.4** (0.41.0): the re-timed finish (`retimeFinish`, `FinishClock`), not the brake. The ball's pace comes from
+  phase 2's projection rather than one rolling deceleration, and the plan's fastest pace over the finish is sampled
+  every 1 ms. No surveyed stroke late-hits. The card's objective is 6.30, against 14.64 before this design. Every
+  w₁/U is unchanged.
+- **Kept assumptions:** the cap moved once; the reach linear in `contactSpeed`; the low point from the unscaled
+  reach; `FINISH_SHARE_MIN` 0.25; and §2.4's: phase 2's projection is the ball's motion through the finish, the
+  ease's extra travel is negligible, and the head's lag behind its path is judged by the survey.
+- **Moves:** the canonical full and pass rolls end where they stood before §2.1, lawful in one pass at ratios 1.306
+  and 1.2426, outside the coaches' band (register G2), so the refit inherits that gap. With no known case, the
+  off-face detector's firmness case is an `it.fails` again. C3F's croqueted-ball travel (`lawn.t6.C3F.L1`) moves to
+  z −1.21.
