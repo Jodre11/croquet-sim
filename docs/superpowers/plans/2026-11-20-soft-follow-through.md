@@ -37,7 +37,7 @@ and the finish shrink with pace, and the player brakes if that is still not enou
 - Produces a CLI, `npx --no-install tsx scripts/lateHitSurvey.ts --label <label>`. It writes
   `docs/superpowers/probes/late-hit/<date>-<label>.txt`.
 
-- [ ] **Write the script.** Its rows:
+- [x] **Write the script.** Its rows:
   - every Table 6 roll at its U on the 13 s lawn;
   - the half, full and pass roll text books at p ∈ {0.2, 0.3, 0.4, 0.5, 0.6, 0.8, 1.0, canonical} on lawns 6, 10
     and 14 s.
@@ -50,9 +50,9 @@ and the finish shrink with pace, and the player brakes if that is still not enou
   - `contactSpeed`, the class with its reason, and the ratio.
 
   It ends with a count of late hits per type.
-- [ ] Run it at HEAD (04e9ca0's engine) with `--label primed-push`. This is the reference: it shows what the current
+- [x] Run it at HEAD (04e9ca0's engine) with `--label primed-push`. This is the reference: it shows what the current
   end test sees.
-- [ ] Commit the script and its output, then push.
+- [x] Commit the script and its output, then push.
 
 ### Task 2: Mend amendment 5's catch (spec §2.1)
 
