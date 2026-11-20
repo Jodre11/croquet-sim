@@ -69,5 +69,5 @@ integrate.ts` (the striker's latch and speed, the follow-through flag).
 
 ### Task 4: The card
 
-- [ ] Full scorecard at the reference values against `2026-11-18-lift-split`: every family's Σz², the rolls' w₁/U,
+- [x] Full scorecard at the reference values against `2026-11-18-lift-split`: every family's Σz², the rolls' w₁/U,
   w₂/U, L1, L2, the coaching ratios and lift. Record in the register; commit and push.

@@ -418,6 +418,41 @@ Canonical ratios (`canonicalSetup`, open lawn): half roll 1.782 → 1.757, full 
 - **The size.** The press gives 0.29–0.71 N·s against the 0.39–1.55 wanted, the face on the ball for 2.4–7.1 ms after
   the departure (impulse ÷ F_push), a third to a half of the time to the read. Pressing in the gaps is what chases.
 
+### G6's primed push, for good (`2026-11-20-primed-push`, against `2026-11-18-lift-split`)
+
+The user's ruling "Yes, implement it" (2026-11-18): law (d) in the engine (43c3d9e, ENGINE_VERSION 0.37.0), the sensed
+resistance and its lag retired, fourteen free parameters, reference values, no refit. Objective 7.16 → 7.97;
+pass 118 → 120, near 32 → 31, miss 39 → 38. Σz² by family (all rows; fit rows where they differ):
+
+| Family | lift-split | primed-push |
+|---|---|---|
+| table6 | 239.10 (fit 113.41) | 200.75 (fit 87.67) |
+| lawn | 84.30 | 80.88 |
+| coaching | 10.16 | 7.28 |
+| look | 3.64 | 4.01 |
+| playability | 0.00 | 25.00 (fit) |
+| strike, gugan5, table5, turf, ca, user | unchanged | unchanged |
+| total | 569.87 (fit 188.77) | 550.58 (fit 188.03) |
+
+The rolls' w₁/U rows, z on each card:
+
+| | C3H | C10H | C1F | C3F | C10F | C25F | C3P | C10P | C25P |
+|---|---|---|---|---|---|---|---|---|---|
+| lift-split | 3.57 | 0.23 | −4.89 | −4.93 | −4.28 | −3.16 | −3.73 | −1.83 | −5.04 |
+| primed-push | 3.82 | 0.30 | −4.25 | −3.90 | −3.42 | −2.66 | −3.18 | −1.22 | −4.31 |
+
+- **G6 closes in part.** Every full and pass roll's w₁/U moves towards Gugan by 0.5–1.0 z; none passes. C10P is near.
+  v₂/U, Ω₂ and the lawn's L₂ do not move; L₁ moves with w₁ (C3F −1.36 → 0.23).
+- **Coaching:** the full roll's ratio 1.34 → 1.31 (z 1.13 → 0.88, now a pass); the pass roll's 1.29 → 1.24 (z 2.98 →
+  2.55, still a miss).
+- **New miss, C3F's play:** at its U (2.71 m/s, p 0.799) C3F now plays unpractised (impact-off-face), scored 5 (25 in
+  Σz²), which outweighs Table 6's gain and lifts the objective. The throwaway run read the figures but not the play's
+  class. The figures above are still read from the setup played.
+- **Look:** the lift rows stay inside their 0–5 bands (half 4.81, full 4.10, pass 4.06); the C1F striker's rise moves
+  −1.62 → −1.74 z (near).
+- **Next:** the refit on this card, with C3F's off-face play the first thing it must clear; the rest of G6 (0.39–1.55
+  N·s wanted against 0.29–0.71 given) stays open for the refit to show how much the fitted parameters recover.
+
 ## The joint fit
 
 Nelder–Mead over seven parameters converged after 112 cards (simplex spread under 0.05): objective **17.49**
