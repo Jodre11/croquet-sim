@@ -191,13 +191,15 @@ describe("one plan's run (P2b.2b.2c.3b plan Task 3)", () => {
         // Soft follow-through design §2.3 (was unpractised, impact-off-face, three passes, ratio 1.025; the user's
         // "Accept the move", 2026-11-20): the shorter finish brings the face, not the edge, back onto the ball, a
         // second hit; unlawful (29.1.6.1) in one pass, ratio 1.001.
+        // Soft follow-through design §2.4 (was unlawful, 29.1.6.1, ratio 1.001): the finish re-timed so the head never
+        // outpaces the striker's ball; lawful in one pass, ratio 1.306, as before §2.1 (register G2's gap).
         const base = mapSetup("full-roll", textBook("full-roll"), 1);
         const p = swingReference["full-roll"].defaultBackswing.value / bodyBackswing(base, WORLD);
         const sample = playSample("full-roll", textBook("full-roll"), p, [10], "preset");
-        expect(sample.klass).toBe("unlawful");
-        expect(sample.reason).toBe("29.1.6.1");
+        expect(sample.klass).toBeNull();
+        expect(sample.reason).toBeNull();
         expect(sample.passes).toBe(1);
-        expect(sample.byLawn[10]?.ratio).toBeCloseTo(1.0013, 4);
+        expect(sample.byLawn[10]?.ratio).toBeCloseTo(1.3055, 4);
     });
 
     it("plays the half roll's text book at its canonical power at ratio 1.757", () => {
@@ -217,7 +219,7 @@ describe("one plan's run (P2b.2b.2c.3b plan Task 3)", () => {
         expect(sample.byLawn[10]?.ratio).toBeCloseTo(1.757, 3);
     });
 
-    it("plays the pass roll's text book at its canonical power, its late hit seen, at ratio 1.042", () => {
+    it("plays the pass roll's text book at its canonical power, the head kept off the ball, at ratio 1.243", () => {
         // Shapes design §8, ruling 17: a full roll with a 4° split, its 32° lean and a subtly punchier push (drive 0.5
         // over 60 ms pulses); was its own 15 ms punch at a 20° split, unlawful (29.1.6.1) at ratio 0.418. Ruling 18:
         // its follow-through 0.1 s keeps the head off the turf (was 0.3 s: ratio 0.814 in two passes). Hands-from-lean
@@ -235,14 +237,15 @@ describe("one plan's run (P2b.2b.2c.3b plan Task 3)", () => {
         // on the striker's ball at 434.1 ms and the edge at 446.2 ms; unpractised (impact-off-face) after three passes,
         // ratio 1.0484. Soft follow-through design §2.3 (was unpractised after three passes, ratio 1.0484; the user's
         // "Accept the move", 2026-11-20): the face back on the ball, a second hit; unlawful (29.1.6.1) in one pass,
-        // ratio 1.0421.
+        // ratio 1.0421. Soft follow-through design §2.4 (was unlawful, 29.1.6.1, ratio 1.0421): the finish re-timed so
+        // the head never outpaces the striker's ball; lawful in one pass, ratio 1.2426, as before §2.1.
         const base = mapSetup("pass-roll", textBook("pass-roll"), 1);
         const p = swingReference["pass-roll"].defaultBackswing.value / bodyBackswing(base, WORLD);
         const sample = playSample("pass-roll", textBook("pass-roll"), p, [10], "preset");
-        expect(sample.klass).toBe("unlawful");
-        expect(sample.reason).toBe("29.1.6.1");
+        expect(sample.klass).toBeNull();
+        expect(sample.reason).toBeNull();
         expect(sample.passes).toBe(1);
-        expect(sample.byLawn[10]?.ratio).toBeCloseTo(1.0421, 4);
+        expect(sample.byLawn[10]?.ratio).toBeCloseTo(1.2426, 4);
     });
 
     it(
@@ -343,7 +346,9 @@ describe("the free motion once per sample (plan Amendment B, Task B2; B-d6)", ()
             // (impact-off-face) after three passes, ratio 1.001, no hold. The catch's own phase-2 runs (at
             // PROJECTION_HALT_MARGIN) are not the sample's. Soft follow-through design §2.3: re-pinned (was
             // unpractised, impact-off-face, three passes, ratio 1.001 on the 10 s lawn): the face back on the ball,
-            // unlawful (29.1.6.1) in one pass, ratio 1.003.
+            // unlawful (29.1.6.1) in one pass, ratio 1.003. Soft follow-through design §2.4: re-pinned (was unlawful,
+            // ratio 1.003 on the 10 s lawn, no hold): the finish re-timed so the head never outpaces the striker's
+            // ball; lawful in one pass at firmness 0, ratio 1.447, as before §2.1.
             vi.mocked(simulateFreeMotion).mockClear();
             const sample = playSample("full-roll", textBook("full-roll"), 1, MAP_LAWNS);
             const rolled = vi
@@ -352,23 +357,23 @@ describe("the free motion once per sample (plan Amendment B, Task B2; B-d6)", ()
             expect(rolled.length).toBe(MAP_LAWNS.length);
             expect(sample).toEqual({
                 power: 1,
-                klass: "unlawful",
-                reason: "29.1.6.1",
+                klass: null,
+                reason: null,
                 byLawn: {
-                    6: { range: 1.9958303400372017, ratio: 1.033380754275429, splitAtRest: 0 },
-                    10: { range: 3.835711448488972, ratio: 1.003468572642283, splitAtRest: 3.331831712286751e-14 },
-                    14: { range: 6.265233578264741, ratio: 1.0086782144368924, splitAtRest: 3.848148227753007e-14 },
+                    6: { range: 1.3113449402767827, ratio: 1.376169430330732, splitAtRest: 0 },
+                    10: { range: 2.4660672308100757, ratio: 1.4472746965461385, splitAtRest: 2.30502308090504e-14 },
+                    14: { range: 4.040237574975485, ratio: 1.4756610092506088, splitAtRest: 2.1103988740496128e-14 },
                 },
                 strokeEffort: 37.607985145309634,
                 pushEffort: 100,
                 coupleShare: 0.01902281170917693,
-                pushImpulse: 0.37571500000000446,
-                effectVerdicts: { shipped: true, contactOnly: true },
+                pushImpulse: 0.38724000000000397,
+                effectVerdicts: { shipped: false, contactOnly: false },
                 followCap: false,
                 followSlip: false,
                 passes: 1,
-                firmness: null,
-                sigma: null,
+                firmness: 0,
+                sigma: 0,
             });
         },
     );

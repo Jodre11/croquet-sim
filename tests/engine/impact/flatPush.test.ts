@@ -15,6 +15,7 @@ import {
     plannedTime,
     prepareTrack,
     reanchor,
+    retimeFinish,
     swingOrientation,
     type PreparedTrack,
     type Push,
@@ -153,12 +154,10 @@ describe("the follow-through after the parting (flat push design, amendments 5 a
             // at 369.3 ms with impact-off-face. §2.2 and §2.3 are to take that late hit away.
             // Soft follow-through design §2.3 (was ended at 369.3 ms with impact-off-face): the shorter finish brings
             // the face, not the edge, back to the ball; the impact ends at 325.8 ms with nothing off the face.
+            // Soft follow-through design §2.4 (was the full roll's impact ending at 325.8 ms): with the finish re-timed
+            // so the head never outpaces the striker's ball, its impact ends at 90.5 ms and its head stays clear of the
+            // balls through the follow-through, as the half roll's does.
             const kinds = result.events.map((e) => e.kind);
-            if (type === "full-roll") {
-                expect(follow.impactEnd).toBeCloseTo(0.325845, 5);
-                expect(kinds).not.toContain("impact-off-face");
-                return;
-            }
             expect(follow.impactEnd).toBeLessThan(0.11);
             expect(kinds).not.toContain("impact-off-face");
             const R = lawn.ball.radius;
@@ -507,5 +506,77 @@ describe("the follow-through catch, carried by phase 2 (soft follow-through desi
             capMovable: false,
         });
         expect(nextReplay(0.6, 0.2, 0.5, false)).toBeNull();
+    });
+});
+
+describe("the re-timed finish: no faster than the ball (soft follow-through design §2.4)", () => {
+    // The canonical full roll re-anchored as it plays: at 1.17 ms, the head at 58.5 % of its planned pace.
+    const { track, head, push } = fullRoll(0.885);
+    const aim = track.arc.aim;
+    const at = 0.00117;
+    const planned = headOnPath(track, head, at);
+    const anchored = reanchor(track, head, { ...planned, velocity: scale(planned.velocity, 0.585) }, at);
+    const from = anchoredTime(anchored, push.end as number);
+    const pace = (t: PreparedTrack, time: number): number => dot(headOnPath(t, head, time).velocity, aim);
+    const along = (t: PreparedTrack, time: number): number => dot(headOnPath(t, head, time).position, aim);
+    const ease = push.finish?.ease as number;
+
+    it("leaves a track whose head never outpaces the ball as it is", () => {
+        expect(retimeFinish(anchored, head, () => 10)).toBe(anchored);
+        expect(retimeFinish(track, head, () => 0.1)).toBe(track);
+        const once = retimeFinish(anchored, head, () => 0.5);
+        expect(retimeFinish(once, head, () => 0.1)).toBe(once);
+    });
+
+    it("slows the finish to a steady ball's pace, continuously, with no change before it", () => {
+        const retimed = retimeFinish(anchored, head, () => 0.5);
+        expect(retimed.anchor?.finish?.at).toBe(from);
+        expect(headOnPath(retimed, head, from - 0.01)).toEqual(headOnPath(anchored, head, from - 0.01));
+        expect(pace(retimed, from)).toBeCloseTo(pace(anchored, from), 9);
+        const to = anchoredTime(retimed, push.freed as number);
+        let fastest = 0;
+        for (let t = from + ease; t <= to; t += 1e-3) {
+            fastest = Math.max(fastest, pace(retimed, t));
+        }
+        expect(fastest).toBeLessThanOrEqual(0.5 + 1e-3);
+        expect(fastest).toBeGreaterThan(0.49);
+        // The finish's travel is unchanged; it takes longer.
+        const travel = along(anchored, anchoredTime(anchored, push.freed as number)) - along(anchored, from);
+        expect(along(retimed, to) - along(retimed, from)).toBeCloseTo(travel, 9);
+        expect(to).toBeGreaterThan(anchoredTime(anchored, push.freed as number));
+    });
+
+    it("caps the head at the slowing ball's pace when the head comes to rest", () => {
+        const u = 1.4;
+        const a = 0.5;
+        const retimed = retimeFinish(anchored, head, (t) => u - a * (t - from));
+        const D = along(anchored, anchoredTime(anchored, push.freed as number)) - along(anchored, from);
+        const c = (u + Math.sqrt(u * u - 4 * a * D)) / 2;
+        const to = anchoredTime(retimed, push.freed as number);
+        let fastest = 0;
+        for (let t = from + ease; t <= to; t += 1e-3) {
+            fastest = Math.max(fastest, pace(retimed, t));
+        }
+        // retimeFinish reads the plan's fastest pace every RETIME_STEP (1 ms), so a peak between samples may pass c by
+        // a few μm/s.
+        expect(fastest).toBeLessThanOrEqual(c + 1e-5);
+        expect(fastest).toBeGreaterThan(c - 1e-3);
+    });
+
+    it("floors the pace at half the ball's where the ball stops first", () => {
+        const retimed = retimeFinish(anchored, head, (t) => Math.max(0.3 - 10 * (t - from), 0));
+        const to = anchoredTime(retimed, push.freed as number);
+        let fastest = 0;
+        for (let t = from + ease; t <= to; t += 1e-3) {
+            fastest = Math.max(fastest, pace(retimed, t));
+        }
+        expect(fastest).toBeCloseTo(0.15, 3);
+    });
+
+    it("maps real to planned time and back across the finish's ease", () => {
+        const retimed = retimeFinish(anchored, head, () => 0.5);
+        for (const t of [from - 0.01, from, from + ease / 3, from + ease, from + 2 * ease, from + 0.5]) {
+            expect(anchoredTime(retimed, plannedTime(retimed, t))).toBeCloseTo(t, 12);
+        }
     });
 });

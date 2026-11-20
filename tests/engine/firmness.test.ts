@@ -186,8 +186,10 @@ describe("the found firmness (firmness design §5)", () => {
     // slips at firmness 0, and the text book at powers 0.8–1.5 stays on the face at every hold to 0.5. No case is
     // known; the detector keeps its negative tests. Restore with amendment 8 (the rolls' topspin), or a new case.
     // Soft follow-through design §2.1 (was it.fails): restored. With the follow-through's catch seen, the head's edge
-    // rides onto the striker's ball at power 1, hold 0.2, after the strike.
-    it("classes a full roll held firm, its head catching the ball after the strike, as unlawful", () => {
+    // rides onto the striker's ball at power 1, hold 0.2, after the strike. Soft follow-through design §2.4 (was
+    // restored, latterly as 29.1.6.1): with the finish re-timed so the head never outpaces the striker's ball, power 1,
+    // hold 0.2 plays clean, and no case is known again. Restore with a new case.
+    it.fails("classes a full roll held firm, its head riding onto the ball, as off the face", () => {
         // Gate 1: at power 0.8 a hold between the soft holds that slip and the firm that hold rides the head off the
         // face onto the striker's ball, pressing it 2.4 mm into the turf to the 450 ms cap. The handover threw there.
         // Hands-from-lean design §3: on the law's hands the hold between them is 0.1875 (was 0.2375). Flat push design,
@@ -197,7 +199,7 @@ describe("the found firmness (firmness design §5)", () => {
         // 0.8 at 0.1625). Soft follow-through design §2.3 (was unpractised, impact-off-face): the shorter finish
         // brings the head back onto the ball on its face, not its edge: a second hit (29.1.6.1).
         const setup = mapSetup("full-roll", textBook("full-roll"), 1);
-        expect(playedClass(at(setup, 0.2), WORLD)).toEqual({ klass: "unlawful", reason: "29.1.6.1" });
+        expect(playedClass(at(setup, 0.2), WORLD)).toEqual({ klass: "unpractised", reason: "impact-off-face" });
     });
 
     it("lets a planning rejection propagate (Review Focus 5)", () => {

@@ -260,8 +260,8 @@
             "passes": 1,
             "byLawn": {
                 "10": {
-                    "range": 0.7395037012799861,
-                    "ratio": 1.7183079287364704,
+                    "range": 0.7395049126226994,
+                    "ratio": 1.718293758010689,
                     "splitAtRest": 0
                 }
             },
@@ -290,8 +290,8 @@
             "passes": 1,
             "byLawn": {
                 "10": {
-                    "range": 0.8180413771865176,
-                    "ratio": 1.5724963624379227,
+                    "range": 0.8180411554598734,
+                    "ratio": 1.5724984429899111,
                     "splitAtRest": 0
                 }
             },
@@ -425,28 +425,28 @@
         "hold": "found",
         "sample": {
             "power": 0.8853943390865715,
-            "klass": "unlawful",
-            "reason": "29.1.6.1",
+            "klass": null,
+            "reason": null,
             "strokeEffort": 33.333333333333336,
             "pushEffort": 100,
             "coupleShare": 0.014592124048859274,
-            "pushImpulse": 0.38447400000000476,
+            "pushImpulse": 0.3923110000000047,
             "effectVerdicts": {
-                "shipped": true,
-                "contactOnly": true
+                "shipped": false,
+                "contactOnly": false
             },
             "followCap": false,
             "followSlip": false,
             "passes": 1,
             "byLawn": {
                 "10": {
-                    "range": 3.15577636195988,
-                    "ratio": 1.0013181426429545,
-                    "splitAtRest": 2.2515623867555082e-14
+                    "range": 2.0138698560781165,
+                    "ratio": 1.4305684590379057,
+                    "splitAtRest": 2.116947329885071e-14
                 }
             },
-            "firmness": null,
-            "sigma": null
+            "firmness": 0,
+            "sigma": 0
         }
     },
     {
@@ -455,24 +455,24 @@
         "hold": 0.5,
         "sample": {
             "power": 0.8853943390865715,
-            "klass": "unlawful",
-            "reason": "29.1.6.1",
+            "klass": null,
+            "reason": null,
             "strokeEffort": 33.333333333333336,
             "pushEffort": 100,
             "coupleShare": 0.014592124048859274,
             "pushImpulse": 0.38447400000000476,
             "effectVerdicts": {
-                "shipped": true,
-                "contactOnly": true
+                "shipped": false,
+                "contactOnly": false
             },
             "followCap": false,
             "followSlip": false,
             "passes": 1,
             "byLawn": {
                 "10": {
-                    "range": 3.156174300229459,
-                    "ratio": 1.0014189279237315,
-                    "splitAtRest": 2.700896229888665e-14
+                    "range": 2.2218149995762104,
+                    "ratio": 1.3056729212505118,
+                    "splitAtRest": 2.5584226801804086e-14
                 }
             },
             "firmness": 0.5,
@@ -500,9 +500,9 @@
             "passes": 1,
             "byLawn": {
                 "10": {
-                    "range": 0.9825623713759344,
-                    "ratio": 1.2604510794249657,
-                    "splitAtRest": 0.07690005275379086
+                    "range": 0.8142676465413354,
+                    "ratio": 1.2742639758804806,
+                    "splitAtRest": 0.07703903501835262
                 }
             },
             "firmness": 0,
@@ -530,9 +530,9 @@
             "passes": 1,
             "byLawn": {
                 "10": {
-                    "range": 1.0487779546392124,
-                    "ratio": 1.1785155729281749,
-                    "splitAtRest": 0.0759289236935541
+                    "range": 0.8869832075706044,
+                    "ratio": 1.1774360866440932,
+                    "splitAtRest": 0.07611657253971225
                 }
             },
             "firmness": 0.5,
@@ -545,28 +545,28 @@
         "hold": "found",
         "sample": {
             "power": 0.8995148283094867,
-            "klass": "unlawful",
-            "reason": "29.1.6.1",
+            "klass": null,
+            "reason": null,
             "strokeEffort": 32.574717038065145,
             "pushEffort": 100,
             "coupleShare": 0.010331221691677588,
-            "pushImpulse": 0.38677900000000415,
+            "pushImpulse": 0.3964600000000036,
             "effectVerdicts": {
-                "shipped": true,
-                "contactOnly": true
+                "shipped": false,
+                "contactOnly": false
             },
             "followCap": false,
             "followSlip": false,
             "passes": 1,
             "byLawn": {
                 "10": {
-                    "range": 3.0257737956838184,
-                    "ratio": 1.0420805875230792,
-                    "splitAtRest": 0.08680042425252285
+                    "range": 2.150478902089216,
+                    "ratio": 1.327855150077071,
+                    "splitAtRest": 0.08731806022579724
                 }
             },
-            "firmness": null,
-            "sigma": null
+            "firmness": 0,
+            "sigma": 0
         }
     },
     {
@@ -575,24 +575,24 @@
         "hold": 0.5,
         "sample": {
             "power": 0.8995148283094867,
-            "klass": "unlawful",
-            "reason": "29.1.6.1",
+            "klass": null,
+            "reason": null,
             "strokeEffort": 32.574717038065145,
             "pushEffort": 100,
             "coupleShare": 0.010331221691677588,
             "pushImpulse": 0.38677900000000415,
             "effectVerdicts": {
-                "shipped": true,
-                "contactOnly": true
+                "shipped": false,
+                "contactOnly": false
             },
             "followCap": false,
             "followSlip": false,
             "passes": 1,
             "byLawn": {
                 "10": {
-                    "range": 3.0257737956838184,
-                    "ratio": 1.0420805875230792,
-                    "splitAtRest": 0.08680042425252285
+                    "range": 2.311192180510405,
+                    "ratio": 1.2425687897749917,
+                    "splitAtRest": 0.08610484190401076
                 }
             },
             "firmness": 0.5,

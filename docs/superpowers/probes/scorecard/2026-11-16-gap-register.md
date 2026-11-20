@@ -575,6 +575,34 @@ rows with any late hit:
 - **Next:** Task 5. The late hits left are not the soft shots §2.4's brake was written for, so its shape goes to the
   user.
 
+### G6's soft follow-through: no faster than the ball (`2026-11-20-finish-retimed`, against `2026-11-20-finish-shrunk`)
+
+**Ruled (2026-11-20).** In place of §2.4's brake, the user ruled that the follow-through never carries the head faster
+than the ball, by re-timing the finish (spec §2.4, "Ruled in the run"). The cause, from the canonical full roll: the
+path restarts at the first parting at the head's pace, 1.74 m/s, but the strike leaves the ball at 1.48 m/s, and it
+settles to 1.39. The finish's carry then holds the head at 1.52–1.58 m/s, and it catches the ball at about 325 ms.
+
+Engine 0.41.0: at the finish's start, or at the impact's end if that comes first, the re-anchored plan's clock eases
+down to k = c/w over the finish's ease. Here c is the largest pace at which phase 2's projected ball is still at least
+as fast when the head comes to rest, and w is the plan's fastest head pace over the finish. Where the ball leaves well
+ahead, k = 1 and nothing changes.
+
+- **Survey** (`docs/superpowers/probes/late-hit/2026-11-20-finish-retimed.txt`): **no late hits.** Every Table 6 roll
+  and every half, full and pass roll row is clean (was C3F, C3P and the full and pass rolls at p 0.8, 1.0 and
+  canonical). C3F's ratio is 1.310 (was 1.053) and C3P's 1.264 (was 1.001).
+- **Card:** objective **6.30** (was 12.98). Every `play.*` row is clean, `play.t6.C3F`, `play.t6.C3P`,
+  `play.canon.full-roll` and `play.canon.pass-roll` among them. Every w₁/U is unchanged. Worse:
+  - `lawn.t6.C3F.L1`, z −1.21 (was −0.02);
+  - `coach.pass-roll`, ratio 1.24 against ≤ 0.99. The canonical rolls are back at their primed-push results (full
+    1.306, pass 1.2426, lawful in one pass), so G2's ratio gap is open again for the refit.
+- **Stop rules:** no Table 6 w₁/U moved, and no stroke late-hits. The canonical moves restore the pins as they stood
+  before §2.1.
+- **Moves re-pinned:** `playPin.json`; the canonical full and pass rolls and the full roll's sample at p 1 (lawful,
+  firmness 0, ratio 1.447), all as before §2.1. The held-firm full roll at power 1, hold 0.2, plays clean, so the
+  off-face case is an `it.fails` again with no known case. The flat push follow-through's full roll ends its impact at
+  90.5 ms and now passes the same clear-of-the-balls check as the half roll.
+- **Next:** Task 6, closing the plan, then the refit on this card.
+
 ## The joint fit
 
 Nelder–Mead over seven parameters converged after 112 cards (simplex spread under 0.05): objective **17.49**

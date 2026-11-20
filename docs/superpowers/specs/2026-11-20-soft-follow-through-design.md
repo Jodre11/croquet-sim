@@ -145,6 +145,37 @@ After §2.2 and §2.3, the run (§3) surveys the soft shots:
   is the highest `contactSpeed` at which any sampled stroke of the type late-hits. The shape of the drive's fall below
   U_brake is chosen from the survey and recorded as an assumption then. Nothing is tuned to C3F.
 
+**Ruled in the run (2026-11-20): no faster than the ball, not the brake.** After §2.3 the soft rolls are clean, and
+the late hits that remain are in a band at p 0.8–1.0. That band includes the canonical full and pass rolls, C3F and
+C3P; the rolls above p 1.1 are clean. A brake below U_brake would check the strike and the clean soft rolls as well.
+The user's ruling is that the follow-through never carries the head faster than the ball, and the mechanism chosen is
+to re-time the finish.
+
+- **Why the head catches the ball.** In the canonical full roll the path restarts at the first parting (1.2 ms), at
+  the head's pace there, 1.74 m/s. The strike leaves the striker's ball at 1.48 m/s, and it settles to 1.39 once it
+  lands. The hands lag at first, but by about 220 ms the head has caught its path. The finish's carry then holds it at
+  1.52–1.58 m/s, and it closes on the ball at about 325 ms. The restarted path is faster than the ball throughout.
+- **The re-timed finish.** On a re-anchored path, at the step where the warped plan reaches the push's end (the
+  finish's start, t_f), or at the impact's end if that comes first, read:
+  - u_b(t), the striker's ball's along-aim pace at time t ≥ t_f, as phase 2 carries it on from that step (§2.1's
+    projection, so a sliding ball slows as it does);
+  - the head's planned along-aim travel D from the push's end to `freed`;
+  - w, the warped plan's fastest along-aim head pace over the finish (sampled every 1 ms).
+
+  The head may move at most at c, the largest pace with c ≤ u_b(t_f + D/c): the ball still moves at least as fast
+  as the head when the head comes to rest. It is found by a fixed point from c₀ = u_b(t_f), each step lowering it,
+  and floored at c₀/2 where the ball would stop first. For a ball slowing uniformly at a_r, c = (u_b + √(u_b² −
+  4·a_r·D))/2. From t_f the plan's clock runs at k(t) = 1 − (1 − k₂)·g(x) of its warped rate, where k₂ = min(1,
+  c/w), g is the minimum-jerk ramp and x = (t − t_f)/E over the finish's ease E (HAND_EASE·finishShare(V)). So the
+  planned pace eases to at most c with no step. The finish's shape and length are unchanged; it lasts longer.
+- **It binds only where it is needed.** Where the ball leaves well ahead (the drives, single-ball strokes and the
+  harder rolls), k₂ = 1 and nothing changes to the bit. A check is never re-anchored (roll launch design, amendment
+  3), so it is untouched. The strike and the push are untouched, so w₁/U holds.
+- **Assumptions:**
+  - phase 2's projection, without the head, is the ball's motion through the finish;
+  - the ramp's E is short enough that the head's extra travel while easing in is negligible;
+  - the head's lag behind its path (about 0.03 m/s at worst, seen above) is left to the survey to judge.
+
 ### 2.5 Not in scope
 
 - A follow-through set for the situation: a hoop, the peg or another ball in the path (the user: "moot for now").
@@ -178,7 +209,8 @@ After §2.2 and §2.3, the run (§3) surveys the soft shots:
 - U_ref is the canonical power's `contactSpeed`, rounded down to 1e-3 m/s.
 - The low point keeps the unscaled reach.
 - `FINISH_SHARE_MIN` is 0.25.
-- If the brake is needed, its shape is chosen from the survey.
+- If the brake is needed, its shape is chosen from the survey. Superseded (§2.4, ruled in the run): the finish is
+  re-timed so the head never outpaces the ball, under the assumptions listed there.
 
 ## Review (2026-11-20)
 

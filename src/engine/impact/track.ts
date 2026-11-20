@@ -607,6 +607,18 @@ export interface Anchor {
     readonly rate: number;
     readonly by: Vec3;
     readonly warp: Warp | null;
+    /** The re-timed finish's clock (retimeFinish; soft follow-through design §2.4); absent where it is not slowed. */
+    readonly finish?: FinishClock;
+}
+
+/**
+ * The re-timed finish's clock (soft follow-through design §2.4): from `at` (s, the finish's start) the warped plan runs
+ * at k(t) = 1 − (1 − k)·g(x) of its rate, x = (t − at)/ease and g the minimum-jerk ramp, and at `k` from at + ease.
+ */
+export interface FinishClock {
+    readonly at: number;
+    readonly k: number;
+    readonly ease: number;
 }
 
 /**
@@ -1393,6 +1405,70 @@ export function reanchor(track: PreparedTrack, head: MalletHead, state: HeadStat
     return { ...track, anchor: { at, rate, by: scale(aim, lag), warp: rising } };
 }
 
+/** The re-timed finish's sampling step (s of real time) over the warped finish (retimeFinish). */
+const RETIME_STEP = 1e-3;
+
+/**
+ * The finish of a re-anchored `track` re-timed so that the head never outpaces the striker's ball (soft follow-through
+ * design §2.4, the user's ruling of 2026-11-20). `ballPace(t)` is that ball's along-aim pace (m/s) at real time t, as
+ * phase 2 carries it on. From the finish's start t_f (the warped plan's push end), the head travels D along aim to
+ * `freed`; c is the largest pace with c ≤ ballPace(t_f + D/c), found from c₀ = ballPace(t_f) by fixed point (each
+ * step lowers it), floored at c₀/2. The clock slows to k = c/w over the finish's ease, w the warped plan's fastest
+ * along-aim head pace over the finish. Returns `track` itself where it has no anchor, no push end or finish, is already
+ * re-timed, or where k would be 1.
+ */
+export function retimeFinish(
+    track: PreparedTrack,
+    head: MalletHead,
+    ballPace: (t: number) => number,
+): PreparedTrack {
+    const { anchor, push } = track;
+    if (
+        anchor === undefined ||
+        anchor.finish !== undefined ||
+        push === null ||
+        push.end === null ||
+        push.finish === null ||
+        push.freed === null ||
+        !(push.finish.ease > 0)
+    ) {
+        return track;
+    }
+    const { aim } = track.arc;
+    const from = anchoredTime(track, push.end);
+    const to = anchoredTime(track, push.freed);
+    if (!Number.isFinite(from) || !Number.isFinite(to) || !(to > from)) {
+        return track;
+    }
+    const along = (t: number): number => dot(headOnPath(track, head, t).position, aim);
+    const travel = along(to) - along(from);
+    let fastest = 0;
+    for (let t = from; t <= to; t += RETIME_STEP) {
+        fastest = Math.max(fastest, dot(headOnPath(track, head, t).velocity, aim));
+    }
+    if (!(fastest > 0) || !(travel > 0)) {
+        return track;
+    }
+    const first = ballPace(from);
+    if (!(first > 0)) {
+        return track;
+    }
+    let c = first;
+    for (let i = 0; i < 100 && c > 0.5 * first; i++) {
+        const next = Math.min(c, ballPace(from + travel / c));
+        if (c - next < 1e-9) {
+            break;
+        }
+        c = next;
+    }
+    c = Math.max(c, 0.5 * first);
+    const k = Math.min(1, c / fastest);
+    if (!(k < 1)) {
+        return track;
+    }
+    return { ...track, anchor: { ...anchor, finish: { at: from, k, ease: push.finish.ease } } };
+}
+
 /**
  * The speed-matched time map from `at` (s) for a head at `speed` (m/s, > 0, at most the plan's along-aim pace at `at`;
  * roll launch design §3.1c): the plan's running peak pace over `speed`, sampled to WARP_HORIZON and kept to the last
@@ -1430,6 +1506,56 @@ interface Warped {
 }
 
 function warped(anchor: Anchor | undefined, t: number): Warped {
+    if (anchor?.finish === undefined) {
+        return warpedBase(anchor, t);
+    }
+    // τ = W(σ(t)): τ' = W'·σ', τ'' = W''·σ'² + W'·σ''.
+    const sigma = finishClockAt(anchor.finish, t);
+    const w = warpedBase(anchor, sigma.s);
+    const v = w.v * sigma.ds;
+    return { t: w.t, v, a: v * v, j: w.j * sigma.ds * sigma.ds + w.v * sigma.dds };
+}
+
+/** The finish clock σ(t) (s), σ' and σ'' (FinishClock): t itself before its start. */
+function finishClockAt(clock: FinishClock, t: number): { readonly s: number; readonly ds: number; readonly dds: number } {
+    const { at, k, ease } = clock;
+    if (t <= at) {
+        return { s: t, ds: 1, dds: 0 };
+    }
+    const x = (t - at) / ease;
+    if (x >= 1) {
+        return { s: at + ease * (1 - 0.5 * (1 - k)) + k * (t - at - ease), ds: k, dds: 0 };
+    }
+    const v = 1 - x;
+    const g = x * x * x * (10 + x * (6 * x - 15));
+    const G = x * x * x * x * (2.5 + x * (x - 3));
+    return { s: t - (1 - k) * ease * G, ds: 1 - (1 - k) * g, dds: (0 - (1 - k) * 30 * x * x * v * v) / ease };
+}
+
+/** The real time t (s) at which the finish clock reads σ (finishClockAt's inverse; σ' ≥ k > 0, so it is monotone). */
+function finishClockInverse(clock: FinishClock, sigma: number): number {
+    const { at, k, ease } = clock;
+    if (sigma <= at) {
+        return sigma;
+    }
+    const top = at + ease * (1 - 0.5 * (1 - k));
+    if (sigma >= top) {
+        return at + ease + (sigma - top) / k;
+    }
+    let lo = at;
+    let hi = at + ease;
+    for (let i = 0; i < 200 && hi - lo > 1e-15; i++) {
+        const mid = (lo + hi) / 2;
+        if (finishClockAt(clock, mid).s < sigma) {
+            lo = mid;
+        } else {
+            hi = mid;
+        }
+    }
+    return (lo + hi) / 2;
+}
+
+function warpedBase(anchor: Anchor | undefined, t: number): Warped {
     if (anchor === undefined || t < anchor.at) {
         return { t, v: 1, a: 1, j: 0 };
     }
@@ -1476,6 +1602,12 @@ function sampleBefore(times: readonly number[], t: number): number {
  * §3.1's fixed rate, or Infinity at a rate of 0.
  */
 export function anchoredTime(track: PreparedTrack, planned: number): number {
+    const { anchor } = track;
+    const base = anchoredBase(track, planned);
+    return anchor?.finish === undefined ? base : finishClockInverse(anchor.finish, base);
+}
+
+function anchoredBase(track: PreparedTrack, planned: number): number {
     const { anchor } = track;
     if (anchor === undefined || planned < anchor.at) {
         return planned;

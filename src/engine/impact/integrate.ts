@@ -121,6 +121,7 @@ import {
     holdPendulum,
     reanchor,
     releaseLift,
+    retimeFinish,
     releaseOf,
     newGripState,
     pathAt,
@@ -1206,6 +1207,9 @@ function strokeOnce(
     // The striker's face–ball pair from its latest departing parting, and whether the path has restarted (§3.1d).
     let opened: { readonly p: PairState; readonly from: number } | null = null;
     let restarted = false;
+    // Whether the finish has been re-timed against the striker's ball (soft follow-through design §2.4): once, at the
+    // first step the re-anchored plan reaches its push's end, or at the impact's end if that comes first.
+    let timed = false;
     const cap = options.cap ?? (plan.kind === "force" ? IMPACT_CAP : plan.arc.contactAt + TRACK_IMPACT_CAP);
     const R = ball.radius;
     const ballInertia = 0.4 * ball.mass * R * R;
@@ -1286,6 +1290,16 @@ function strokeOnce(
                 played.arc.lift?.release === undefined
             ) {
                 played = releaseLift(played, t);
+            }
+            if (
+                !timed &&
+                played?.anchor !== undefined &&
+                played.push !== null &&
+                played.push.end !== null &&
+                plannedTime(played, t) >= played.push.end
+            ) {
+                timed = true;
+                played = retimeFinish(played, head, strikerPace(setup, balls, grip.striker, played.arc.aim, t));
             }
             hand = handLoad(played ?? plan, state, head, t, grip, dt);
             drive = hand.force;
@@ -1570,9 +1584,43 @@ function strokeOnce(
     if (trace === null || plan.kind !== "track") {
         return { run: done, follow: null };
     }
+    if (!timed && played?.anchor !== undefined) {
+        played = retimeFinish(played, head, strikerPace(setup, balls, grip.striker, played.arc.aim, steps * dt));
+    }
     return {
         run: done,
         follow: continueStroke(setup, played ?? plan, state, grip, turf, steps, dt, trace, options.probe, until),
+    };
+}
+
+/**
+ * The striker's ball's along-aim pace (m/s) at real time t ≥ `now`, carried on from `balls` (setup order, at `now`)
+ * by phase 2's motion (`setup.project`), or held where there is none (soft follow-through design §2.4). 0 with no
+ * striker.
+ */
+function strikerPace(
+    setup: ImpactSetup,
+    balls: readonly BallState[],
+    striker: number | null,
+    aim: Vec3,
+    now: number,
+): (t: number) => number {
+    const ball = striker === null ? undefined : balls[striker];
+    if (striker === null || ball === undefined) {
+        return () => 0;
+    }
+    const { project } = setup;
+    if (project === undefined) {
+        return () => dot(ball.velocity, aim);
+    }
+    const states: BallStates = {};
+    balls.forEach((b, i) => {
+        states[(setup.balls[i] as ImpactBall).id] = b;
+    });
+    const id = (setup.balls[striker] as ImpactBall).id;
+    return (t) => {
+        const projected = project(states, Math.max(t - now, 0))[id];
+        return projected === undefined ? 0 : dot(projected.velocity, aim);
     };
 }
 

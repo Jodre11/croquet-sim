@@ -1,0 +1,47 @@
+Late-hit survey finish-retimed, 2026-11-20T15:32:58.737Z
+
+== Table 6 ==
+t6.C3H                 p 1.006 clean; ratio 1.766; late hits none
+t6.C10H                p 1.152 clean; ratio 1.839; late hits none
+t6.C1F                 p 0.352 clean; ratio 1.223; late hits none
+t6.C3F                 p 0.799 clean; ratio 1.310; late hits none
+t6.C10F                p 1.112 clean; ratio 1.264; late hits none
+t6.C25F                p 1.621 clean; ratio 1.409; late hits none
+t6.C3P                 p 0.921 clean; ratio 1.264; late hits none
+t6.C10P                p 1.093 clean; ratio 1.217; late hits none
+t6.C25P                p 1.849 clean; ratio 1.364; late hits none
+
+== half-roll ==
+half-roll              p 0.200 clean; ratio 1.779/1.680/1.643; late hits none
+half-roll              p 0.300 clean; ratio 1.540/1.578/1.592; late hits none
+half-roll              p 0.400 clean; ratio 1.599/1.623/1.631; late hits none
+half-roll              p 0.500 clean; ratio 1.697/1.689/1.684; late hits none
+half-roll              p 0.600 clean; ratio 1.765/1.739/1.727; late hits none
+half-roll              p 0.800 clean; ratio 1.801/1.771/1.756; late hits none
+half-roll              p 1.000 clean; ratio 1.805/1.773/1.756; late hits none
+half-roll canonical    p 0.891 clean; ratio 1.793/1.757/1.739; late hits none
+
+== full-roll ==
+full-roll              p 0.200 clean; ratio 1.204/1.208/1.209; late hits none
+full-roll              p 0.300 clean; ratio 1.171/1.184/1.190; late hits none
+full-roll              p 0.400 clean; ratio 1.225/1.235/1.238; late hits none
+full-roll              p 0.500 clean; ratio 1.199/1.245/1.265; late hits none
+full-roll              p 0.600 clean; ratio 1.170/1.251/1.286; late hits none
+full-roll              p 0.800 clean; ratio 1.241/1.293/1.314; late hits none
+full-roll              p 1.000 clean; ratio 1.277/1.326/1.345; late hits none
+full-roll canonical    p 0.885 clean; ratio 1.255/1.306/1.325; late hits none
+
+== pass-roll ==
+pass-roll              p 0.200 clean; ratio 1.125/1.134/1.137; late hits none
+pass-roll              p 0.300 clean; ratio 1.140/1.147/1.149; late hits none
+pass-roll              p 0.400 clean; ratio 0.913/0.921/0.928; late hits none
+pass-roll              p 0.500 clean; ratio 1.166/1.177/1.182; late hits none
+pass-roll              p 0.600 clean; ratio 1.194/1.209/1.214; late hits none
+pass-roll              p 0.800 clean; ratio 1.187/1.230/1.248; late hits none
+pass-roll              p 1.000 clean; ratio 1.195/1.257/1.283; late hits none
+pass-roll canonical    p 0.900 clean; ratio 1.190/1.243/1.264; late hits none
+
+== Late hits per type (rows with any / rows) ==
+half-roll: 0 / 10
+full-roll: 0 / 12
+pass-roll: 0 / 11

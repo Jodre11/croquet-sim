@@ -154,15 +154,38 @@ symbolically, so only assertions that name the stretch change).
 - [x] **Survey** (`--label finish-shrunk`) and card. Check the stop rules.
 - [x] **Register entry** "G6's soft follow-through: the finish". Commit and push.
 
-### Task 5: The brake, only if Task 4's survey leaves late hits (spec §2.4)
+### Task 5: The re-timed finish (spec §2.4, ruled in the run)
 
-- [ ] If no stroke late-hits, record "no brake needed" in the register and the spec, and skip the rest of this task.
-- [ ] Otherwise:
-  - read U_brake per type from the survey, as the highest `contactSpeed` with a late hit;
-  - stop and present the drive's fall below U_brake to the user as a choice, with the survey's figures (spec §2.4:
-    its shape is chosen from the survey);
-  - implement the ruling in `src/lab/play.ts` `textBook` (the player's plan), not in the engine;
-  - then the suite, the survey and the card, the stop rules, the register, commit and push.
+**Ruled (2026-11-20).** Task 4 left a band at p 0.8–1.0 late-hitting, including the canonical rolls. The user ruled
+"no faster than the ball" instead of the brake, and chose the re-timed finish as its mechanism.
+
+**Files:** `src/engine/impact/track.ts` (`Anchor`, `warped`, `anchoredTime`, a new `retimeFinish`),
+`src/engine/impact/integrate.ts` (the call at the finish's start), `src/engine/simulate.ts`, and tests in
+`tests/engine/impact/flatPush.test.ts`, beside the re-anchor's.
+
+**Interfaces:**
+- `Anchor` gains `finish?: { readonly at: number; readonly k: number; readonly ease: number }`: the real time t_f,
+  k₂ and E.
+- `retimeFinish(track, head, ballPace: (t: number) => number): PreparedTrack` returns the track with
+  `anchor.finish` set, or the track itself where k₂ = 1, where there is no anchor, or where `anchor.finish` is already
+  set. `ballPace` is the striker's ball's along-aim pace at real time t, from phase 2's projection (as built: the
+  spec's a_r was replaced by the projection, which also covers a sliding ball).
+- `warped` composes the finish's clock σ(t) under the warp: τ = W(σ(t)), τ' = W'·σ', τ'' = W''·σ'² + W'·σ''.
+  `anchoredTime` inverts it.
+
+- [x] **Tests** in `flatPush.test.ts`:
+  - for a ball slowing uniformly (u_b 1.4, a_r 0.5), the head's pace past the ease is at most (u_b + √(u_b² −
+    4·a_r·D))/2, and half the ball's first pace where the ball stops first;
+  - a track whose warped pace is at most c is returned unchanged (k₂ = 1);
+  - otherwise the planned head pace is w at t_f, at most c from t_f + E on, and continuous across t_f;
+  - `anchoredTime(plannedTime(t))` = t to 1e-12 across t_f and t_f + E.
+- [x] **Implement.** In `integrate.ts`, on a re-anchored tracked stroke, at the first step whose planned time reaches
+  `push.end`, or at the impact's end if that comes first, call `retimeFinish` with the striker's ball's pace carried
+  on by `setup.project`. A replay re-times at the same step. ENGINE_VERSION goes to 0.41.0.
+- [x] **Suite, tsc and lint.** Re-pin the moves with "soft follow-through design §2.4 (was …)" notes.
+- [x] **Survey** (`--label finish-retimed`) and card. Stop rules: a Table 6 roll's w₁/U more than 1 z from Gugan's,
+  or any stroke still late-hitting.
+- [x] **Register entry** "G6's soft follow-through: no faster than the ball". Commit and push.
 
 ### Task 6: Close
 
