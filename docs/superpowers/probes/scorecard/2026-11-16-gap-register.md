@@ -508,6 +508,11 @@ Late-hit survey, rows with any late hit (`docs/superpowers/probes/late-hit/2026-
   slower than 4 m/s, so neither can clear the canonical full and pass rolls' late hits. The spec's expected outcome
   ("no canonical stroke late-hits", canonical pins held to the bit) no longer follows from Tasks 3–4. A ruling for
   the user before Task 3.
+- **Ruled (2026-11-20):** the late hit stays a fault (Law 29.2.5). The user briefly accepted it provisionally, then
+  withdrew that (reverted in dc05e42) in favour of the muted follow-through: "for softer shots, less slower
+  follow-through. If you're not hitting the ball hard, you don't need to follow through or push through." The plan
+  runs as written, Tasks 3–6. The canonical rolls' late hits are expected to survive Tasks 3–4, which would trigger
+  the stop rule there.
 
 ## The joint fit
 
