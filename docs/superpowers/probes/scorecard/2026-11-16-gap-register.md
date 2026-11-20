@@ -773,8 +773,12 @@ No parameter sits at a bound.
     vertical than it began.
   - The full roll at 1.5 m/s, drive −1 again sinks the ball under the head; the handover lifts it 311–327 µm, inside
     its static sink: the whole-run lift cover is back.
-  - **A fault, for the user:** the braked off-centre drive (drive −1, side 0.01, 2 m/s) no longer settles on its
-    hold. The head runs on past the braking hands, up to 1.19 m/s relative to them at 118 ms, and the grip's couple
-    stops it only at its swing's far end, at 215 ms, where the check's instantaneous finish takes it (was 658 ms,
-    settled). The test is `it.fails`. A finish that waits for the head to stay at rest would fix the reading; the
-    overswing itself is the heavier arm (1.081 kg) against the same couple.
+  - **The braked drive.** At full brake (drive −1, side 0.01, 2 m/s) the head runs on past the braking hands and
+    the check's finish takes it at its swing's far end (215 ms, was 658 ms settled). **The user (2026-11-20):** a
+    braked drive is not really a stroke; a soft drive may be braked a little against a double hit. The test moves to
+    drive −0.25 at 1 m/s, which settles at 668 ms (667 before the refit).
+  - **Found on the way, pre-existing** (the same at the pre-refit reference values; `followThrough.test` probe,
+    drive −0.1 to −1 × 0.5, 1, 2 m/s, side 0.01): the soft drives at 0.5 m/s with a light brake (−0.1, −0.25) end
+    their finish mid-swing, still 0.23 m/s relative to the hands 20 ms before; the light brakes at 2 m/s run to the
+    1 s follow cap on the slow sideways sway the P2b.2b.2c.3a gate accepted. Every 1 m/s run settles. The finish
+    reads rest at an instant, so a swing's far end passes for it; open, not in this refit's scope.

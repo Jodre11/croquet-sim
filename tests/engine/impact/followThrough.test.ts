@@ -375,20 +375,22 @@ describe("the finish from the inputs (P2b.2b.2c.3a A2 item 7)", () => {
         expect(follow.finish).toBeGreaterThanOrEqual(handsApex(push) as number);
     });
 
-    // Gap register, the third refit (engine 0.42.0; was passing): the head runs on past the braking hands, up to 1.19 m/s
-    // relative to them at 118 ms, and the grip's couple brings it to rest relative to them only at its swing's far end,
-    // at 215 ms, where the check's finish takes it (0.25 m/s 20 ms before). Recorded for the user.
-    it.fails("settles a braked drive on the hold, its hands one hand breadth apart, well before the cap", () => {
+    // Gap register, the third refit (engine 0.42.0; was drive −1 at 2 m/s): at full brake the head now runs on past the
+    // braking hands and the check's finish takes it at its swing's far end (215 ms, 0.25 m/s 20 ms before). The user
+    // (2026-11-20): a braked drive is not really a stroke; a soft drive may be braked a little against a double hit.
+    // The case moves to a soft drive lightly braked, drive −0.25 at 1 m/s: it settles at 668 ms, as at the reference
+    // values before the refit (667 ms).
+    it("settles a lightly braked soft drive on the hold, its hands one hand breadth apart, well before the cap", () => {
         // P2b.2b.2c.3a gate stage 2: the hold's pitch impedance. The drive's hands, 88 mm apart, gave the hold's two
         // grip springs so short a lever that the head swung in pitch about them, ±7 cm with a 0.9 s period and a
         // damping ratio near 0.08, and this off-centre run met the cap mid-swing at 0.42 m/s. The hold's own pitch
         // spring and damper, bounded by the grip's couple (0.25 × 435 N × 0.0879 m = 9.56 N·m), settle it: it finishes
         // at 658 ms, below FINISH_SPEED, and with no swing just before it. Accepted for the gate: 8 of the drive's 27
         // runs at drive −0.5 still cap on a slow sideways sway about the aim (a roll damper is recorded for 3b).
-        const setup = canonicalSetup("drive", { world: DEFAULT, stroke: { drive: -1 } });
+        const setup = canonicalSetup("drive", { world: DEFAULT, stroke: { drive: -0.25 } });
         const offCentre = { ...setup.stroke, contact: { up: setup.stroke.contact.up, side: 0.01 } };
         const aimed = { ...setup, stroke: offCentre };
-        const braked = { ...aimed, stroke: { ...offCentre, backswing: backswingFor(aimed, 2, DEFAULT) } };
+        const braked = { ...aimed, stroke: { ...offCentre, backswing: backswingFor(aimed, 1, DEFAULT) } };
         const { contact, follow } = stroke(braked, DEFAULT);
         expect(follow.flags).not.toContain("follow-cap");
         expect(follow.finish).toBeLessThan((contact.drive as TrackDrive).arc.contactAt + FOLLOW_CAP);
