@@ -762,6 +762,12 @@ No parameter sits at a bound.
 - **G2 stays open, narrowed:** the canonical full roll plays lawful in one pass at 1.2527 (band 1.00–1.20), the pass
   roll at 1.1937 (≤ 0.99), the half roll at 1.644 (1.4–2.5). The grip period carries the rest; three fits in a row
   have asked for a short one, so the next step is the hands' mechanism the period stands in for, not a value.
+- **The firmest sourced grip** (`2026-11-20-grip-wrist16`, 62.5 ms, 16 Hz: Pan et al. 2018's wrist resonance under a
+  30 N grip and 50 N push): objective 4.99, full roll 1.23, pass roll 1.18. Sourced periods are 60–125 ms; 25 ms is
+  not a grip.
+- **Ruled (2026-11-20): "Body behind the push".** The hands are a moving mass driven by the push, slowed only by the
+  balls' resistance, not a path reset to the head's pace at the restart. Design:
+  `docs/superpowers/specs/2026-11-20-push-body-design.md`.
 - **Moves re-pinned:** `playPin.json`; the no-push baseline (drive, single-ball, stop-ac); the canonical rolls, the
   full roll at p 2 (1.307), the tap (1.243), the sample at p 1 (1.377), the least hold (σ 0, 1.083); the drive's
   read-outs; the AC stop's turf times (13.875, 14.24 ms); the reference values.
