@@ -543,6 +543,38 @@ gives every stroke its preset's reach explicitly. Late-hit survey
 - **Moves re-pinned:** `playPin.json` (the half, full and pass rolls at p 0.5); the full roll's tap now ends its
   push (`followCap` false); and `followThrough.test`'s push-whose-end-is-never-found, which no preset can now give.
 
+### G6's soft follow-through: the finish (`2026-11-20-finish-shrunk`, against `2026-11-20-reach-scaled`)
+
+Soft follow-through design §2.3, engine 0.40.0: `finishShare(V)` = max(FINISH_SHARE_MIN 0.25, min(1,
+V/FINISH_REF_PACE 4)) for V > 0, else 1. A slower finish carries for less time; flat push amendment 3's stretch and
+`FINISH_SHARE_MAX` are retired. Late-hit survey (`docs/superpowers/probes/late-hit/2026-11-20-finish-shrunk.txt`),
+rows with any late hit:
+
+| rows | reach scaled | finish shrunk |
+|---|---|---|
+| Table 6 (9) | C1F, C3F, C3P | C3F, C3P |
+| half roll | 0 | 0 |
+| full roll | p 0.2–1.0, canonical | p 0.8, 1.0, canonical |
+| pass roll | p 0.2, 0.3, 0.5–1.0, canonical | p 0.8, 1.0, canonical |
+
+- **The soft rolls are clean.** Every half roll, the full and pass rolls at p 0.2–0.6, and C1F (ratio 1.223).
+- **A band at p 0.8–1.0 still late-hits:** the full and pass rolls at p 0.8, 1.0 and canonical, C3F (p 0.80) and
+  C3P (p 0.92). Each makes two face contacts some 300–350 ms after the parting, +17–33 % pace at 0.0°: 29.1.6.1.
+  The rolls above p 1.1 (C10F, C25F, C10P, C25P) stay clean. The head no longer meets the ball on its edge, so no
+  surveyed row now raises `impact-off-face`.
+- **Card:** objective 12.98 (was 14.65). Every w₁/U is unchanged. `play.t6.C1F` now passes; `coach.full-roll` 1.00,
+  `coach.pass-roll` 1.04.
+- **Stop rules:** the first tripped. The canonical full roll moves from `impact-off-face` (three passes, ratio 1.025)
+  to 29.1.6.1 (one pass, 1.001), and the pass roll from ratio 1.048 to 1.042, also 29.1.6.1. **Ruled (2026-11-20):**
+  the user's "Accept the move"; one FINISH_REF_PACE of 4 m/s is kept. No Table 6 w₁/U moved.
+- **Moves re-pinned:** `playPin.json`; the canonical full and pass rolls and the full roll's found-hold sample at p 1
+  (all 29.1.6.1, one pass); the full roll held at 0.2 (29.1.6.1, was off the face); the least hold that doesn't slip
+  (σ 0, was 0.16875; ratio 1.047); the tap at p 0.1 (admissible at firmness 0, ratio 1.175, was `impact-cap`); the
+  band's full roll (null, was off the face); the flat push follow-through's full roll (impact ends 325.8 ms, nothing
+  off the face); the dipped arc's follow-through flags (no `follow-grip-limit`); `track.test`'s ease and quarter turn.
+- **Next:** Task 5. The late hits left are not the soft shots §2.4's brake was written for, so its shape goes to the
+  user.
+
 ## The joint fit
 
 Nelder–Mead over seven parameters converged after 112 cards (simplex spread under 0.05): objective **17.49**

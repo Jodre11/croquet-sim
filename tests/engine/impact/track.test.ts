@@ -24,6 +24,7 @@ import {
     type FreePendulum,
     type PathPoint,
     type PreparedTrack,
+    FINISH_SHARE_MIN,
     HAND_EASE,
     finishShare,
     handsApex,
@@ -1288,9 +1289,10 @@ describe("the hands' finish (shapes design §8, ruling 14)", () => {
         const track = pushed(0.3);
         const push = track.push as Push;
         const end = push.end as number;
-        // At 2 m/s the stop stretches by FINISH_REF_PACE/V (flat push amendment 3).
+        // Soft follow-through design §2.3 (was stretched by FINISH_REF_PACE/V, flat push amendment 3): at 2 m/s the stop
+        // shrinks to V/FINISH_REF_PACE of HAND_EASE.
         const ease = easeOf(push);
-        expect(ease).toBeGreaterThan(HAND_EASE);
+        expect(ease).toBeCloseTo(HAND_EASE * 0.5, 12);
         expect(handsApex(push)).toBe(end + ease);
         let previous = along(track, end).v;
         for (let i = 1; i <= 20; i++) {
@@ -1302,9 +1304,26 @@ describe("the hands' finish (shapes design §8, ruling 14)", () => {
     });
 
     it("fails a finish that would carry the hands past the arc's quarter turn", () => {
-        // 3 m/s stops 0.15 m on, 0.2 m past the low point, past a 0.18 m arc's quarter turn.
-        expect(() => pushed(0.1, { pivotVelocity: vec3(3, 0, 0), handArcRadius: 0.18 })).toThrow(
+        // Soft follow-through design §2.3 (was a 0.18 m arc, the stop stretched): 3 m/s eases over 75 ms and stops
+        // 0.1125 m on, 0.1625 m past the low point, past a 0.15 m arc's quarter turn.
+        expect(() => pushed(0.1, { pivotVelocity: vec3(3, 0, 0), handArcRadius: 0.15 })).toThrow(
             "past the top of the hands' arc",
         );
+    });
+});
+
+describe("finishShare: the finish shrinks with pace (soft follow-through design §2.3)", () => {
+    it("is 1 at and above FINISH_REF_PACE and V/FINISH_REF_PACE below it", () => {
+        expect(finishShare(8)).toBe(1);
+        expect(finishShare(4)).toBe(1);
+        expect(finishShare(2)).toBe(0.5);
+    });
+    it("holds at the FINISH_SHARE_MIN floor for a very soft finish", () => {
+        expect(FINISH_SHARE_MIN).toBe(0.25);
+        expect(finishShare(0.5)).toBe(0.25);
+        expect(finishShare(1e-5)).toBe(0.25);
+    });
+    it("stays 1 at rest", () => {
+        expect(finishShare(0)).toBe(1);
     });
 });

@@ -1,0 +1,47 @@
+Late-hit survey finish-shrunk, 2026-11-20T14:27:08.756Z
+
+== Table 6 ==
+t6.C3H                 p 1.006 clean; ratio 1.766; late hits none
+t6.C10H                p 1.152 clean; ratio 1.839; late hits none
+t6.C1F                 p 0.352 clean; ratio 1.223; late hits none
+t6.C3F                 p 0.799 unlawful (29.1.6.1); ratio 1.053; late hits 2: 325.4 ms face gap 314.1 ms speed 16.6% angle 0.0° FAULT; 335.6 ms face gap 314.1 ms speed 16.6% angle 0.0° FAULT
+t6.C10F                p 1.112 clean; ratio 1.264; late hits none
+t6.C25F                p 1.621 clean; ratio 1.409; late hits none
+t6.C3P                 p 0.921 unlawful (29.1.6.1); ratio 1.001; late hits 2: 349.6 ms face gap 340.9 ms speed 21.7% angle 0.0° FAULT; 358.8 ms face gap 340.9 ms speed 21.7% angle 0.0° FAULT
+t6.C10P                p 1.093 clean; ratio 1.217; late hits none
+t6.C25P                p 1.849 clean; ratio 1.364; late hits none
+
+== half-roll ==
+half-roll              p 0.200 clean; ratio 1.779/1.680/1.643; late hits none
+half-roll              p 0.300 clean; ratio 1.540/1.578/1.592; late hits none
+half-roll              p 0.400 clean; ratio 1.599/1.623/1.631; late hits none
+half-roll              p 0.500 clean; ratio 1.697/1.689/1.684; late hits none
+half-roll              p 0.600 clean; ratio 1.765/1.739/1.727; late hits none
+half-roll              p 0.800 clean; ratio 1.801/1.771/1.756; late hits none
+half-roll              p 1.000 clean; ratio 1.805/1.773/1.756; late hits none
+half-roll canonical    p 0.891 clean; ratio 1.793/1.757/1.739; late hits none
+
+== full-roll ==
+full-roll              p 0.200 clean; ratio 1.204/1.208/1.209; late hits none
+full-roll              p 0.300 clean; ratio 1.171/1.184/1.190; late hits none
+full-roll              p 0.400 clean; ratio 1.225/1.235/1.238; late hits none
+full-roll              p 0.500 clean; ratio 1.199/1.245/1.265; late hits none
+full-roll              p 0.600 clean; ratio 1.170/1.251/1.286; late hits none
+full-roll              p 0.800 unlawful (29.1.6.1); ratio 1.081/1.058/1.048; late hits 2: 325.4 ms face gap 314.0 ms speed 17.1% angle 0.0° FAULT; 335.3 ms face gap 314.0 ms speed 17.1% angle 0.0° FAULT
+full-roll              p 1.000 unlawful (29.1.6.1); ratio 1.033/1.003/1.009; late hits 2: 313.1 ms face gap 303.8 ms speed 32.7% angle 0.0° FAULT; 324.6 ms face gap 303.8 ms speed 32.7% angle 0.0° FAULT
+full-roll canonical    p 0.885 unlawful (29.1.6.1); ratio 1.038/1.001/1.006; late hits 2: 327.5 ms face gap 317.2 ms speed 28.9% angle 0.0° FAULT; 337.3 ms face gap 317.2 ms speed 28.9% angle 0.0° FAULT
+
+== pass-roll ==
+pass-roll              p 0.200 clean; ratio 1.119/1.126/1.130; late hits none
+pass-roll              p 0.300 clean; ratio 1.140/1.147/1.149; late hits none
+pass-roll              p 0.400 clean; ratio 0.913/0.921/0.928; late hits none
+pass-roll              p 0.500 clean; ratio 1.177/1.179/1.179; late hits none
+pass-roll              p 0.600 clean; ratio 1.201/1.204/1.205; late hits none
+pass-roll              p 0.800 unlawful (29.1.6.1); ratio 1.077/1.040/1.023; late hits 2: 366.9 ms face gap 357.5 ms speed 16.7% angle 0.0° FAULT; 379.1 ms face gap 357.5 ms speed 16.7% angle 0.0° FAULT
+pass-roll              p 1.000 unlawful (29.1.6.1); ratio 1.047/1.015/1.001; late hits 2: 328.4 ms face gap 320.2 ms speed 23.1% angle 0.0° FAULT; 344.5 ms face gap 320.2 ms speed 23.1% angle 0.0° FAULT
+pass-roll canonical    p 0.900 unlawful (29.1.6.1); ratio 1.076/1.042/1.027; late hits 2: 355.1 ms face gap 346.4 ms speed 18.3% angle 0.0° FAULT; 368.7 ms face gap 346.4 ms speed 18.3% angle 0.0° FAULT
+
+== Late hits per type (rows with any / rows) ==
+half-roll: 0 / 10
+full-roll: 4 / 12
+pass-roll: 4 / 11

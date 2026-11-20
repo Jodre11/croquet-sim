@@ -188,13 +188,16 @@ describe("one plan's run (P2b.2b.2c.3b plan Task 3)", () => {
         // the hands press at F_push while on the ball, 1.306.
         // Soft follow-through design §2.1 (was one pass, lawful, 1.306): the follow-through's catch is seen, the head's
         // edge on the striker's ball at 378.7 ms; unpractised (impact-off-face) after three passes, ratio 1.025.
+        // Soft follow-through design §2.3 (was unpractised, impact-off-face, three passes, ratio 1.025; the user's
+        // "Accept the move", 2026-11-20): the shorter finish brings the face, not the edge, back onto the ball, a
+        // second hit; unlawful (29.1.6.1) in one pass, ratio 1.001.
         const base = mapSetup("full-roll", textBook("full-roll"), 1);
         const p = swingReference["full-roll"].defaultBackswing.value / bodyBackswing(base, WORLD);
         const sample = playSample("full-roll", textBook("full-roll"), p, [10], "preset");
-        expect(sample.klass).toBe("unpractised");
-        expect(sample.reason).toBe("impact-off-face");
-        expect(sample.passes).toBe(3);
-        expect(sample.byLawn[10]?.ratio).toBeCloseTo(1.0249, 4);
+        expect(sample.klass).toBe("unlawful");
+        expect(sample.reason).toBe("29.1.6.1");
+        expect(sample.passes).toBe(1);
+        expect(sample.byLawn[10]?.ratio).toBeCloseTo(1.0013, 4);
     });
 
     it("plays the half roll's text book at its canonical power at ratio 1.757", () => {
@@ -214,7 +217,7 @@ describe("one plan's run (P2b.2b.2c.3b plan Task 3)", () => {
         expect(sample.byLawn[10]?.ratio).toBeCloseTo(1.757, 3);
     });
 
-    it("plays the pass roll's text book at its canonical power, its late hit seen, at ratio 1.048", () => {
+    it("plays the pass roll's text book at its canonical power, its late hit seen, at ratio 1.042", () => {
         // Shapes design §8, ruling 17: a full roll with a 4° split, its 32° lean and a subtly punchier push (drive 0.5
         // over 60 ms pulses); was its own 15 ms punch at a 20° split, unlawful (29.1.6.1) at ratio 0.418. Ruling 18:
         // its follow-through 0.1 s keeps the head off the turf (was 0.3 s: ratio 0.814 in two passes). Hands-from-lean
@@ -230,13 +233,16 @@ describe("one plan's run (P2b.2b.2c.3b plan Task 3)", () => {
         // Primed push design, amendment 1 (was 1.2853): the hands press at F_push while on the ball, 1.2426.
         // Soft follow-through design §2.1 (was one pass, lawful, 1.2426): the follow-through's catch is seen, the face
         // on the striker's ball at 434.1 ms and the edge at 446.2 ms; unpractised (impact-off-face) after three passes,
-        // ratio 1.0484.
+        // ratio 1.0484. Soft follow-through design §2.3 (was unpractised after three passes, ratio 1.0484; the user's
+        // "Accept the move", 2026-11-20): the face back on the ball, a second hit; unlawful (29.1.6.1) in one pass,
+        // ratio 1.0421.
         const base = mapSetup("pass-roll", textBook("pass-roll"), 1);
         const p = swingReference["pass-roll"].defaultBackswing.value / bodyBackswing(base, WORLD);
         const sample = playSample("pass-roll", textBook("pass-roll"), p, [10], "preset");
-        expect(sample.klass).toBe("unpractised");
-        expect(sample.passes).toBe(3);
-        expect(sample.byLawn[10]?.ratio).toBeCloseTo(1.0484, 4);
+        expect(sample.klass).toBe("unlawful");
+        expect(sample.reason).toBe("29.1.6.1");
+        expect(sample.passes).toBe(1);
+        expect(sample.byLawn[10]?.ratio).toBeCloseTo(1.0421, 4);
     });
 
     it(
@@ -259,7 +265,7 @@ describe("one plan's run (P2b.2b.2c.3b plan Task 3)", () => {
 });
 
 describe("the map's found firmness (firmness design §5, A7 item 4)", () => {
-    it("plays the full roll's text book at a tap to the moved cap, unlawful", { timeout: 600_000 }, () => {
+    it("plays the full roll's text book at a tap, admissible at firmness 0", { timeout: 600_000 }, () => {
         // Gate 1's plan, p = 2, is no longer admissible at firmness 0: its head rides over the ball (plan B-d8). At a
         // tap, firmness 0 pins the ball, a contact that never ends (plan C-d1), so the search goes on to a firmer hold.
         // Hands-from-lean design §3: the law's hands (was 0.274092). Roll launch design §3.1: the hands re-anchor at
@@ -272,12 +278,16 @@ describe("the map's found firmness (firmness design §5, A7 item 4)", () => {
         // the cap moves it once, and the impact is still open at the moved cap; unlawful (impact-cap) at every hold,
         // ratio 1.025. Soft follow-through design §2.2 (was followCap true): the reach scales with the contact speed,
         // so the tap's push now ends and its follow-through no longer runs to the cap; the play is otherwise as was.
+        // Soft follow-through design §2.3 (was unlawful, impact-cap, at every hold, ratio 1.025): the tap's finish
+        // shrinks to its floor share, and its head no longer holds the impact open; admissible at firmness 0, one
+        // pass, ratio 1.175.
         const sample = playSample("full-roll", textBook("full-roll"), 0.1, [10]);
-        expect(sample.klass).toBe("unlawful");
-        expect(sample.reason).toBe("impact-cap");
-        expect(sample.firmness).toBeNull();
-        expect(sample.sigma).toBeNull();
-        expect(sample.byLawn[10]?.ratio).toBeCloseTo(1.025, 3);
+        expect(sample.klass).toBeNull();
+        expect(sample.reason).toBeNull();
+        expect(sample.passes).toBe(1);
+        expect(sample.firmness).toBe(0);
+        expect(sample.sigma).toBe(0);
+        expect(sample.byLawn[10]?.ratio).toBeCloseTo(1.1745, 4);
         expect(sample.followCap).toBe(false);
     });
 
@@ -331,7 +341,9 @@ describe("the free motion once per sample (plan Amendment B, Task B2; B-d6)", ()
             // Soft follow-through design §2.1: re-pinned (was lawful in one pass, ratio 1.447 on the 10 s lawn, firmness
             // 0): the follow-through's catch is seen, the head's edge on the ball at 349.7 ms; unpractised
             // (impact-off-face) after three passes, ratio 1.001, no hold. The catch's own phase-2 runs (at
-            // PROJECTION_HALT_MARGIN) are not the sample's.
+            // PROJECTION_HALT_MARGIN) are not the sample's. Soft follow-through design §2.3: re-pinned (was
+            // unpractised, impact-off-face, three passes, ratio 1.001 on the 10 s lawn): the face back on the ball,
+            // unlawful (29.1.6.1) in one pass, ratio 1.003.
             vi.mocked(simulateFreeMotion).mockClear();
             const sample = playSample("full-roll", textBook("full-roll"), 1, MAP_LAWNS);
             const rolled = vi
@@ -340,12 +352,12 @@ describe("the free motion once per sample (plan Amendment B, Task B2; B-d6)", ()
             expect(rolled.length).toBe(MAP_LAWNS.length);
             expect(sample).toEqual({
                 power: 1,
-                klass: "unpractised",
-                reason: "impact-off-face",
+                klass: "unlawful",
+                reason: "29.1.6.1",
                 byLawn: {
-                    6: { range: 2.060494579955943, ratio: 1.0315797984410056, splitAtRest: 0 },
-                    10: { range: 3.8739134618191002, ratio: 1.0010015249557604, splitAtRest: 2.567475130795437e-14 },
-                    14: { range: 6.272199814512881, ratio: 1.004797895055678, splitAtRest: 3.394206188280407e-14 },
+                    6: { range: 1.9958303400372017, ratio: 1.033380754275429, splitAtRest: 0 },
+                    10: { range: 3.835711448488972, ratio: 1.003468572642283, splitAtRest: 3.331831712286751e-14 },
+                    14: { range: 6.265233578264741, ratio: 1.0086782144368924, splitAtRest: 3.848148227753007e-14 },
                 },
                 strokeEffort: 37.607985145309634,
                 pushEffort: 100,
@@ -354,7 +366,7 @@ describe("the free motion once per sample (plan Amendment B, Task B2; B-d6)", ()
                 effectVerdicts: { shipped: true, contactOnly: true },
                 followCap: false,
                 followSlip: false,
-                passes: 3,
+                passes: 1,
                 firmness: null,
                 sigma: null,
             });

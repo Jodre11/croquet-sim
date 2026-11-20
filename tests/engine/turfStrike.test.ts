@@ -160,7 +160,9 @@ describe("the follow-through's flags (P2b.2b.2b.3 design §4.6)", () => {
         // 1.36 s, yields the turf, digs past HEAD_DEEP_LIMIT and saturates a hand on this narrowed arc's dip.
         expect(result.events.map((e) => e.kind)).not.toContain("turf-yield");
         // Measured while building it: the head digs past HEAD_DEEP_LIMIT too, and the finish still ends at rest.
-        expect(follow.flags).toEqual(["follow-turf-yield", "follow-head-deep", "follow-grip-limit"]);
+        // Soft follow-through design §2.3 (was follow-grip-limit too): the finish no longer stretches below
+        // FINISH_REF_PACE, so neither hand saturates on the dip.
+        expect(follow.flags).toEqual(["follow-turf-yield", "follow-head-deep"]);
         // The slowed follow-through, dug in to 1.36 s, takes about 100 s beside other files (was 60 s).
     }, 300_000);
 });

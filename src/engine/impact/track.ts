@@ -443,28 +443,33 @@ export function headDepthTerms(head: MalletHead, radius: number): Pick<FinishRis
 export const HAND_EASE = 0.1;
 
 /**
- * The finish's reference pace (m/s; flat push design §3.1, amendment 3): at or above it the hands ease over HAND_EASE
- * and the carry runs the shape's followThrough; below it both stretch by FINISH_REF_PACE/V, up to FINISH_SHARE_MAX, so
- * the top hand eases over the same distance and a gentle stroke's finish is long and gentle. An assumption: about the
- * finish pace of the text-book full roll at power 1.0–1.1, where the rise was verified.
+ * The finish's reference pace (m/s; flat push design §3.1): at or above it the hands ease over HAND_EASE and the carry
+ * runs the shape's followThrough; below it both shrink by V/FINISH_REF_PACE, down to FINISH_SHARE_MIN (soft
+ * follow-through design §2.3, superseding flat push amendment 3's stretch): a soft stroke has little follow-through
+ * ("If you're not hitting the ball hard, you don't need to follow through or push through", the user, 2026-11-20). An
+ * assumption: about the finish pace of the text-book full roll at power 1.0–1.1, where the rise was verified.
  */
 export const FINISH_REF_PACE = 4;
 
 /**
- * The share of HAND_EASE and of followThrough a finish from pace V (m/s) takes (flat push design §3.1, amendment 3):
- * min(FINISH_SHARE_MAX, max(1, FINISH_REF_PACE/V)); 1 at rest, where nothing moves and the timings stay as they were.
+ * The shortest a soft finish shrinks to, as a share of HAND_EASE and followThrough (soft follow-through design §2.3):
+ * a 25 ms ease and let-go at least, so the let-go ramp, which divides by its span and the span squared, never turns a
+ * very soft finish's brake into an impulse. An assumption, as its value is.
+ */
+export const FINISH_SHARE_MIN = 0.25;
+
+/**
+ * The share of HAND_EASE and of followThrough a finish from pace V (m/s) takes (soft follow-through design §2.3):
+ * max(FINISH_SHARE_MIN, min(1, V/FINISH_REF_PACE)); 1 at rest, where nothing moves and the timings stay as they were.
  */
 export function finishShare(V: number): number {
-    return V > 0 ? Math.min(FINISH_SHARE_MAX, Math.max(1, FINISH_REF_PACE / V)) : 1;
+    return V > 0 ? Math.max(FINISH_SHARE_MIN, Math.min(1, V / FINISH_REF_PACE)) : 1;
 }
-
-/** The longest a slow finish stretches, as a share of HAND_EASE and followThrough (flat push amendment 3). */
-export const FINISH_SHARE_MAX = 5;
 
 /**
  * The hands' finish (shapes design §8, ruling 14, superseding §2's point pendulum): the top hand stops pushing. From
  * the push's end `from` its pace along aim falls from `pace` (the push's finishSpeed, V) to rest on a minimum-jerk
- * ease over `ease` (HAND_EASE·finishShare(V), flat push design amendment 3), travelling V·ease/2 on the hands' arc,
+ * ease over `ease` (HAND_EASE·finishShare(V), soft follow-through design §2.3), travelling V·ease/2 on the hands' arc,
  * and it holds from `apex`: `from` itself when V is 0.
  */
 export interface HandsFinish {
@@ -981,7 +986,7 @@ function computePush(track: PreparedTrack, head: MalletHead): Push {
     const pace = end === null ? 0 : pushTravel(track, origin, advance, end).v;
     const finishSpeed = pace < FINISH_REST_PACE ? 0 : pace;
     const finish = end === null ? null : handsFinishOf(track, low, end, finishSpeed);
-    // Flat push design amendment 3: a slower finish carries for a proportionally longer time.
+    // Soft follow-through design §2.3 (superseding flat push amendment 3): a slower finish carries for less time.
     const release = finish === null ? null : finish.apex + arc.followThrough * finishShare(finishSpeed);
     return {
         start: arc.contactAt,

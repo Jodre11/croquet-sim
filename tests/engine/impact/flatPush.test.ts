@@ -151,10 +151,12 @@ describe("the follow-through after the parting (flat push design, amendments 5 a
             // with the balls carried on by phase 2 and the cap moved once, the full roll's follow-through is seen to
             // catch the striker's ball on the head's edge at 349.7 and 358.3 ms, past the old cap, so the impact ends
             // at 369.3 ms with impact-off-face. §2.2 and §2.3 are to take that late hit away.
+            // Soft follow-through design §2.3 (was ended at 369.3 ms with impact-off-face): the shorter finish brings
+            // the face, not the edge, back to the ball; the impact ends at 325.8 ms with nothing off the face.
             const kinds = result.events.map((e) => e.kind);
             if (type === "full-roll") {
-                expect(follow.impactEnd).toBeCloseTo(0.36934, 4);
-                expect(kinds).toContain("impact-off-face");
+                expect(follow.impactEnd).toBeCloseTo(0.325845, 5);
+                expect(kinds).not.toContain("impact-off-face");
                 return;
             }
             expect(follow.impactEnd).toBeLessThan(0.11);

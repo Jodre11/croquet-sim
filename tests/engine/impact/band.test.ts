@@ -55,8 +55,9 @@ describe("the band (P2b.2b.2c.3b.1 design §3)", () => {
         // (pushMapRun.test's full roll), which bandMiss reads first. Roll launch design §3.1 (was impact-off-face): the
         // hands re-anchor at the departure, so the full roll's slowed push stays on the face, in the band.
         // Soft follow-through design §2.1 (was null): the follow-through's catch, the ball carried on by phase 2, is
-        // seen; the head's edge lands on the striker's ball at 378.7 ms, off the face.
-        expect(playTextBook("full-roll")).toBe("impact-off-face");
+        // seen; the head's edge lands on the striker's ball at 378.7 ms, off the face. Soft follow-through design §2.3
+        // (was impact-off-face): the shorter finish brings the face, not the edge, back to the ball; in the band.
+        expect(playTextBook("full-roll")).toBeNull();
         expect(playTextBook("half-roll")).toBeNull();
     }, 60_000);
 

@@ -14,7 +14,8 @@ and the finish shrink with pace, and the player brakes if that is still not enou
   pace, and is scaled (spec §2.2, amended in Task 3).
 - **Public repo:** sources are cited (URL, date, SHA-256, short quotes), never mirrored.
 - **Stop rules (spec §3), from Task 3 on.** Stop and report if any canonical pin moves, if a Table 6 roll's w₁/U
-  moves more than 1 z away from Gugan's, or, after Task 5, if any stroke still late-hits.
+  moves more than 1 z away from Gugan's, or, after Task 5, if any stroke still late-hits. Task 4 tripped the first
+  rule, and the user accepted its canonical moves (spec §2.3, "Ruled in the run").
 
 ## Review focus
 
@@ -142,16 +143,16 @@ too (spec §2.2, amended). The tests are in `buildContact.test.ts`, the guard am
 that reference the stretch (`advance.test.ts`, `track.test.ts`, `followThrough.test.ts`; they call `finishShare`
 symbolically, so only assertions that name the stretch change).
 
-- [ ] **Failing tests** in `track.test.ts`:
+- [x] **Failing tests** in `track.test.ts`:
   - `finishShare(8)` = 1, `finishShare(4)` = 1, `finishShare(2)` = 0.5;
   - `finishShare(0.5)` = 0.25 and `finishShare(1e-5)` = 0.25 (the floor);
   - `finishShare(0)` = 1.
-- [ ] **Implement** `finishShare(V) = V > 0 ? Math.max(FINISH_SHARE_MIN, Math.min(1, V / FINISH_REF_PACE)) : 1`, with
+- [x] **Implement** `finishShare(V) = V > 0 ? Math.max(FINISH_SHARE_MIN, Math.min(1, V / FINISH_REF_PACE)) : 1`, with
   `FINISH_SHARE_MIN` = 0.25 documented as the spec's assumption. Update amendment 3's comments to say it is superseded
   by the soft follow-through design §2.3. ENGINE_VERSION goes to 0.40.0.
-- [ ] **Suite, tsc and lint.** No canonical pin may move.
-- [ ] **Survey** (`--label finish-shrunk`) and card. Check the stop rules.
-- [ ] **Register entry** "G6's soft follow-through: the finish". Commit and push.
+- [x] **Suite, tsc and lint.** No canonical pin may move.
+- [x] **Survey** (`--label finish-shrunk`) and card. Check the stop rules.
+- [x] **Register entry** "G6's soft follow-through: the finish". Commit and push.
 
 ### Task 5: The brake, only if Task 4's survey leaves late hits (spec §2.4)
 

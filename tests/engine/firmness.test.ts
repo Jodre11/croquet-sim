@@ -105,9 +105,10 @@ describe("the search's preference for a hold that doesn't slip (design A8 item 5
         // the slack holds no longer slip and the search stops at its first step. Roll launch design §3.1f, amendment 8
         // (was σ 0.1, ratio 1.13): the faces' and balls' friction fitted; σ 0.0625, ratio 1.000. Primed push design,
         // amendment 1 (was σ 0.0625): the hands' press loads the grips, so the least hold that doesn't slip is
-        // σ 0.16875; the ratio stays 1.00.
-        expect(sample.sigma).toBeCloseTo(0.16875, 6);
-        expect(sample.byLawn[10]?.ratio).toBeCloseTo(1.0, 2);
+        // σ 0.16875; the ratio stays 1.00. Soft follow-through design §2.3 (was σ 0.16875): the shorter finish no
+        // longer drives the head on into the slack grips, and no hold slips: σ 0, the ratio 1.047.
+        expect(sample.sigma).toBe(0);
+        expect(sample.byLawn[10]?.ratio).toBeCloseTo(1.047, 3);
     }, 120_000);
 });
 
@@ -186,16 +187,17 @@ describe("the found firmness (firmness design §5)", () => {
     // known; the detector keeps its negative tests. Restore with amendment 8 (the rolls' topspin), or a new case.
     // Soft follow-through design §2.1 (was it.fails): restored. With the follow-through's catch seen, the head's edge
     // rides onto the striker's ball at power 1, hold 0.2, after the strike.
-    it("classes a full roll held firm, its head riding onto the ball, as off the face", () => {
+    it("classes a full roll held firm, its head catching the ball after the strike, as unlawful", () => {
         // Gate 1: at power 0.8 a hold between the soft holds that slip and the firm that hold rides the head off the
         // face onto the striker's ball, pressing it 2.4 mm into the turf to the 450 ms cap. The handover threw there.
         // Hands-from-lean design §3: on the law's hands the hold between them is 0.1875 (was 0.2375). Flat push design,
         // amendments 3 and 4: the gentler finish and practice's withdrawn push correction hold the head on the face
         // from 0.175, so the hold off it is 0.1625. Roll launch design §3.1: the hands re-anchor at the departure,
         // and at power 0.8 every hold to 0.3 stays on the face; at power 1 the holds from 0.2 ride off it (was power
-        // 0.8 at 0.1625).
+        // 0.8 at 0.1625). Soft follow-through design §2.3 (was unpractised, impact-off-face): the shorter finish
+        // brings the head back onto the ball on its face, not its edge: a second hit (29.1.6.1).
         const setup = mapSetup("full-roll", textBook("full-roll"), 1);
-        expect(playedClass(at(setup, 0.2), WORLD)).toEqual({ klass: "unpractised", reason: "impact-off-face" });
+        expect(playedClass(at(setup, 0.2), WORLD)).toEqual({ klass: "unlawful", reason: "29.1.6.1" });
     });
 
     it("lets a planning rejection propagate (Review Focus 5)", () => {

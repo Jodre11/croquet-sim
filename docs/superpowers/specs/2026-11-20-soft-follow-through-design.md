@@ -124,6 +124,12 @@ in place of amendment 3's stretch:
 span and the span squared, from turning a very soft finish's brake into an impulse. Both the floor and its value are
 assumptions. With V = 0 the share stays 1 as today, though nothing moves and no timing then depends on it.
 
+**Ruled in the run (2026-11-20).** The canonical full and pass rolls finish slower than 4 m/s, so §2.3 moves them;
+the spec had assumed otherwise. Both already late-hit and still do: the full roll's moves from the edge to the face
+(29.1.6.1), ratio 1.025 → 1.001, and the pass roll's ratio goes 1.048 → 1.042. The user accepted the move ("Accept the
+move") over a per-type reference pace that would keep the pins: the canonical rolls are moderate pace, so the rule
+applies to them, and one constant is not tuned to them. §3's "canonical pins hold" is waived for this step only.
+
 This supersedes flat push design amendment 3.
 
 ### 2.4 The brake, if the run needs it
