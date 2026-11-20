@@ -522,17 +522,18 @@ describe("the mallet's release and the finish's end (shapes design §2)", () => 
         expect(track.finish?.tw).toBe(release);
     });
 
-    it("runs a push whose end is never found to the cap without throwing", () => {
-        // The full roll at an eighth of its canonical power: its push never reaches its length (measured while
-        // building the shapes plan), so there is no release and no hands' apex.
+    it("finds the end of a soft push, its reach scaled with its pace", () => {
+        // The full roll at an eighth of its canonical power. Soft follow-through design §2.2 (was: the push never
+        // reached its 0.3 m, so no release, no hands' apex, run to the follow-through's cap): the reach scales with the
+        // contact speed, to 0.0378 m, which the hands reach at 109.8 ms. A push whose end is never found now needs a
+        // reach too long for its pace, which no preset gives.
         const lawn = openWorld(10);
         const setup = mapSetup("full-roll", textBook("full-roll"), canonicalPower("full-roll", lawn) / 8);
         const planned = planStroke(setup, lawn);
         const track = prepareTrack(planned.contact.drive as TrackDrive, planned.contact.head, lawn.gravity);
-        expect((track.push as Push).end).toBeNull();
-        expect(releaseOf(track)).toBeNull();
-        const { follow } = simulateStroke(planned.contact, setup.balls, lawn);
-        expect(follow.flags).toContain("follow-cap");
+        expect(track.arc.handReach).toBeCloseTo(0.037839, 6);
+        expect((track.push as Push).end).toBeCloseTo(0.109763, 6);
+        expect(releaseOf(track)).not.toBeNull();
     });
 
     it("waits for a pushed check's hands' apex before it rests", () => {

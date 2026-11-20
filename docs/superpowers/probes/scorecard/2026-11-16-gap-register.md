@@ -514,6 +514,35 @@ Late-hit survey, rows with any late hit (`docs/superpowers/probes/late-hit/2026-
   runs as written, Tasks 3–6. The canonical rolls' late hits are expected to survive Tasks 3–4, which would trigger
   the stop rule there.
 
+### G6's soft follow-through: the reach (`2026-11-20-reach-scaled`, against `2026-11-20-catch-seen`)
+
+Soft follow-through design §2.2, engine 0.39.0: below `REACH_REF_SPEED` (2.999, 3 and 3 m/s for the half, full and
+pass rolls, their canonical `contactSpeed` rounded down), the hands' reach is the reach given ·
+contactSpeed/REACH_REF_SPEED. As amended in this task, a shot's own `stroke.handReach` is scaled too: the text book
+gives every stroke its preset's reach explicitly. Late-hit survey
+(`docs/superpowers/probes/late-hit/2026-11-20-reach-scaled.txt`), rows with any late hit:
+
+| rows | catch seen | reach scaled |
+|---|---|---|
+| Table 6 (9) | C1F, C3F, C3P | C1F, C3F, C3P |
+| half roll | 0 | 0 |
+| full roll | p 0.2, 0.4–1.0, canonical | p 0.2–1.0, canonical |
+| pass roll | p 0.6–1.0, canonical | p 0.2, 0.3, 0.5–1.0, canonical |
+
+- **The shorter reach alone makes the soft rolls worse.** The push ends sooner, and the finish still stretches up to
+  5× for a slow pace (flat push amendment 3). The head then follows the ball and hits it again and again: at full
+  roll p 0.3–0.8, 4 to 17 face contacts from 380 to 830 ms after the strike, each +18–23 % pace at 0.0°, which is
+  29.1.6.1. C1F and C3F move from mishits (`impact-off-face`) to 29.1.6.1. Pass roll p 0.5, clean before, now
+  late-hits off the face (ratio 1.19 → 1.04 in `playPin`).
+- **Every Table 6 roll above p 1** (C10F, C25F, C10P, C25P) is clean, as are the half rolls: the harder strokes do
+  not late-hit.
+- **Card:** objective 14.65 (was 14.64). Every w₁/U is unchanged, and the same five plays miss. `lawn.t6.C1F` and
+  `lawn.t6.C3F` move by under 0.1 z.
+- **Stop rules:** no canonical pin moved, and no Table 6 w₁/U moved. Task 4 (§2.3, the finish no longer stretching)
+  is next. Its test is whether a short push with a short finish stops the head behind the ball.
+- **Moves re-pinned:** `playPin.json` (the half, full and pass rolls at p 0.5); the full roll's tap now ends its
+  push (`followCap` false); and `followThrough.test`'s push-whose-end-is-never-found, which no preset can now give.
+
 ## The joint fit
 
 Nelder–Mead over seven parameters converged after 112 cards (simplex spread under 0.05): objective **17.49**

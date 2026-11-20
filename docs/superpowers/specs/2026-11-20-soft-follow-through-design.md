@@ -106,7 +106,9 @@ The hands' travel after contact becomes handReach · min(1, U/U_ref(type)):
   the push's length moves.
 - **Applies to** every preset with handReach above 0: the half, full and pass rolls. The swing presets have none.
 - `pendulumAt` stays a fraction of the scaled reach, so the pendulum phase comes proportionally sooner.
-- An explicit `stroke.handReach` is the player's own choice and is not scaled.
+- A shot's own `stroke.handReach` is scaled the same way, as the reach at full pace. (Was "not scaled": the text book
+  gives every stroke its preset's reach explicitly, so the push map and the survey would never see the scale. Found
+  in Task 3, 2026-11-20.)
 
 ### 2.3 The finish no longer stretches
 

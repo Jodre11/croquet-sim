@@ -270,14 +270,15 @@ describe("the map's found firmness (firmness design §5, A7 item 4)", () => {
         // longer pushes it; the play is admissible at firmness 0, ratio 1.178, still to the follow-through's cap.
         // Soft follow-through design §2.1 (was admissible at firmness 0, ratio 1.178): the follow-through's catch past
         // the cap moves it once, and the impact is still open at the moved cap; unlawful (impact-cap) at every hold,
-        // ratio 1.025.
+        // ratio 1.025. Soft follow-through design §2.2 (was followCap true): the reach scales with the contact speed,
+        // so the tap's push now ends and its follow-through no longer runs to the cap; the play is otherwise as was.
         const sample = playSample("full-roll", textBook("full-roll"), 0.1, [10]);
         expect(sample.klass).toBe("unlawful");
         expect(sample.reason).toBe("impact-cap");
         expect(sample.firmness).toBeNull();
         expect(sample.sigma).toBeNull();
         expect(sample.byLawn[10]?.ratio).toBeCloseTo(1.025, 3);
-        expect(sample.followCap).toBe(true);
+        expect(sample.followCap).toBe(false);
     });
 
     // Gap register G2 (the user's ruling, 2026-11-17): a grip limit reached inside the strike is the strike's shock,

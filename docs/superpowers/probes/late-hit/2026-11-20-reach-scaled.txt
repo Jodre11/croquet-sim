@@ -1,0 +1,47 @@
+Late-hit survey reach-scaled, 2026-11-20T14:15:56.762Z
+
+== Table 6 ==
+t6.C3H                 p 1.006 clean; ratio 1.766; late hits none
+t6.C10H                p 1.152 clean; ratio 1.839; late hits none
+t6.C1F                 p 0.352 unlawful (29.1.6.1); ratio 1.021; late hits 14: 611.1 ms face gap 601.9 ms speed 20.4% angle 0.0° FAULT; 621.0 ms face gap 601.9 ms speed 20.4% angle 0.0° FAULT; 631.7 ms face gap 601.9 ms speed 20.4% angle 0.0° FAULT; 663.4 ms face gap 601.9 ms speed 20.4% angle 0.0° FAULT; 673.1 ms face gap 601.9 ms speed 20.4% angle 0.0° FAULT; 680.1 ms face gap 601.9 ms speed 20.4% angle 0.0° FAULT; 687.1 ms face gap 601.9 ms speed 20.4% angle 0.0° FAULT; 695.3 ms face gap 601.9 ms speed 20.4% angle 0.0° FAULT; 703.2 ms face gap 601.9 ms speed 20.4% angle 0.0° FAULT; 709.0 ms face gap 601.9 ms speed 20.4% angle 0.0° FAULT; 713.7 ms face gap 601.9 ms speed 20.4% angle 0.0° FAULT; 718.1 ms face gap 601.9 ms speed 20.4% angle 0.0° FAULT; 722.2 ms face gap 601.9 ms speed 20.4% angle 0.0° FAULT; 731.3 ms face gap 601.9 ms speed 20.4% angle 0.0° FAULT
+t6.C3F                 p 0.799 unlawful (29.1.6.1); ratio 1.000; late hits 4: 381.5 ms face gap 370.1 ms speed 22.2% angle 0.0° FAULT; 388.9 ms face gap 370.1 ms speed 22.2% angle 0.0° FAULT; 409.5 ms face gap 370.1 ms speed 22.2% angle 0.0° FAULT; 447.1 ms face gap 370.1 ms speed 22.2% angle 0.0° FAULT
+t6.C10F                p 1.112 clean; ratio 1.264; late hits none
+t6.C25F                p 1.621 clean; ratio 1.409; late hits none
+t6.C3P                 p 0.921 unpractised (impact-off-face); ratio 1.039; late hits 2: 421.5 ms face gap 412.9 ms speed 18.1% angle 0.0° FAULT; 435.3 ms edge gap 412.9 ms speed 18.1% angle 0.0° FAULT
+t6.C10P                p 1.093 clean; ratio 1.217; late hits none
+t6.C25P                p 1.849 clean; ratio 1.364; late hits none
+
+== half-roll ==
+half-roll              p 0.200 clean; ratio 1.319/1.354/1.389; late hits none
+half-roll              p 0.300 clean; ratio 1.343/1.383/1.421; late hits none
+half-roll              p 0.400 clean; ratio 1.375/1.419/1.461; late hits none
+half-roll              p 0.500 clean; ratio 1.697/1.689/1.684; late hits none
+half-roll              p 0.600 clean; ratio 1.765/1.739/1.727; late hits none
+half-roll              p 0.800 clean; ratio 1.801/1.771/1.756; late hits none
+half-roll              p 1.000 clean; ratio 1.805/1.773/1.756; late hits none
+half-roll canonical    p 0.891 clean; ratio 1.793/1.757/1.739; late hits none
+
+== full-roll ==
+full-roll              p 0.200 unlawful (impact-cap); ratio 1.008/1.007/1.017; late hits 9: 518.8 ms face gap 507.3 ms speed 19.8% angle 0.0° FAULT; 529.8 ms face gap 507.3 ms speed 19.8% angle 0.0° FAULT; 656.8 ms face gap 507.3 ms speed 19.8% angle 0.0° FAULT; 666.7 ms face gap 507.3 ms speed 19.8% angle 0.0° FAULT; 674.9 ms face gap 507.3 ms speed 19.8% angle 0.0° FAULT; 689.6 ms face gap 507.3 ms speed 19.8% angle 0.0° FAULT; 704.3 ms face gap 507.3 ms speed 19.8% angle 0.0° FAULT; 710.3 ms face gap 507.3 ms speed 19.8% angle 0.0° FAULT; 715.1 ms face gap 507.3 ms speed 19.8% angle 0.0° FAULT
+full-roll              p 0.300 unlawful (29.1.6.1); ratio 1.005/1.018/1.029; late hits 15: 698.3 ms face gap 688.4 ms speed 23.3% angle 0.0° FAULT; 708.2 ms face gap 688.4 ms speed 23.3% angle 0.0° FAULT; 721.0 ms face gap 688.4 ms speed 23.3% angle 0.0° FAULT; 754.2 ms face gap 688.4 ms speed 23.3% angle 0.0° FAULT; 764.8 ms face gap 688.4 ms speed 23.3% angle 0.0° FAULT; 772.0 ms face gap 688.4 ms speed 23.3% angle 0.0° FAULT; 780.2 ms face gap 688.4 ms speed 23.3% angle 0.0° FAULT; 793.4 ms face gap 688.4 ms speed 23.3% angle 0.0° FAULT; 800.6 ms face gap 688.4 ms speed 23.3% angle 0.0° FAULT; 805.9 ms face gap 688.4 ms speed 23.3% angle 0.0° FAULT; 810.7 ms face gap 688.4 ms speed 23.3% angle 0.0° FAULT; 815.3 ms face gap 688.4 ms speed 23.3% angle 0.0° FAULT; 820.2 ms face gap 688.4 ms speed 23.3% angle 0.0° FAULT; 825.1 ms face gap 688.4 ms speed 23.3% angle 0.0° FAULT; 830.0 ms face gap 688.4 ms speed 23.3% angle 0.0° FAULT
+full-roll              p 0.400 unlawful (29.1.6.1); ratio 1.011/1.008/1.017; late hits 11: 530.5 ms face gap 521.8 ms speed 18.2% angle 0.0° FAULT; 540.7 ms face gap 521.8 ms speed 18.2% angle 0.0° FAULT; 555.3 ms face gap 521.8 ms speed 18.2% angle 0.0° FAULT; 585.2 ms face gap 521.8 ms speed 18.2% angle 0.0° FAULT; 597.6 ms face gap 521.8 ms speed 18.2% angle 0.0° FAULT; 605.3 ms face gap 521.8 ms speed 18.2% angle 0.0° FAULT; 612.5 ms face gap 521.8 ms speed 18.2% angle 0.0° FAULT; 620.1 ms face gap 521.8 ms speed 18.2% angle 0.0° FAULT; 626.7 ms face gap 521.8 ms speed 18.2% angle 0.0° FAULT; 631.6 ms face gap 521.8 ms speed 18.2% angle 0.0° FAULT; 635.7 ms face gap 521.8 ms speed 18.2% angle 0.0° FAULT
+full-roll              p 0.500 unlawful (29.1.6.1); ratio 1.019/1.007/1.014; late hits 17: 437.9 ms face gap 430.1 ms speed 19.0% angle 0.0° FAULT; 446.9 ms face gap 430.1 ms speed 19.0% angle 0.0° FAULT; 458.7 ms face gap 430.1 ms speed 19.0% angle 0.0° FAULT; 527.6 ms face gap 430.1 ms speed 19.0% angle 0.0° FAULT; 537.0 ms face gap 430.1 ms speed 19.0% angle 0.0° FAULT; 544.2 ms face gap 430.1 ms speed 19.0% angle 0.0° FAULT; 558.5 ms face gap 430.1 ms speed 19.0% angle 0.0° FAULT; 568.5 ms face gap 430.1 ms speed 19.0% angle 0.0° FAULT; 574.3 ms face gap 430.1 ms speed 19.0% angle 0.0° FAULT; 579.8 ms face gap 430.1 ms speed 19.0% angle 0.0° FAULT; 586.2 ms face gap 430.1 ms speed 19.0% angle 0.0° FAULT; 594.8 ms face gap 430.1 ms speed 19.0% angle 0.0° FAULT; 601.4 ms face gap 430.1 ms speed 19.0% angle 0.0° FAULT; 606.5 ms face gap 430.1 ms speed 19.0% angle 0.0° FAULT; 611.2 ms face gap 430.1 ms speed 19.0% angle 0.0° FAULT; 616.0 ms face gap 430.1 ms speed 19.0% angle 0.0° FAULT; 620.9 ms face gap 430.1 ms speed 19.0% angle 0.0° FAULT
+full-roll              p 0.600 unlawful (29.1.6.1); ratio 1.030/1.004/1.011; late hits 9: 396.5 ms face gap 389.4 ms speed 20.3% angle 0.0° FAULT; 404.1 ms face gap 389.4 ms speed 20.3% angle 0.0° FAULT; 412.3 ms face gap 389.4 ms speed 20.3% angle 0.0° FAULT; 486.5 ms face gap 389.4 ms speed 20.3% angle 0.0° FAULT; 496.0 ms face gap 389.4 ms speed 20.3% angle 0.0° FAULT; 507.2 ms face gap 389.4 ms speed 20.3% angle 0.0° FAULT; 559.7 ms face gap 389.4 ms speed 20.3% angle 0.0° FAULT; 574.1 ms face gap 389.4 ms speed 20.3% angle 0.0° FAULT; 614.3 ms face gap 389.4 ms speed 20.3% angle 0.0° FAULT
+full-roll              p 0.800 unlawful (29.1.6.1); ratio 1.065/1.016/1.001; late hits 4: 381.3 ms face gap 370.0 ms speed 22.1% angle 0.0° FAULT; 388.7 ms face gap 370.0 ms speed 22.1% angle 0.0° FAULT; 409.3 ms face gap 370.0 ms speed 22.1% angle 0.0° FAULT; 447.4 ms face gap 370.0 ms speed 22.1% angle 0.0° FAULT
+full-roll              p 1.000 unpractised (impact-off-face); ratio 1.032/1.001/1.005; late hits 2: 349.7 ms edge gap 340.3 ms speed 34.5% angle 0.0° FAULT; 358.3 ms edge gap 340.3 ms speed 34.5% angle 0.0° FAULT
+full-roll canonical    p 0.885 unpractised (impact-off-face); ratio 1.055/1.025/1.011; late hits 2: 378.7 ms edge gap 368.3 ms speed 29.5% angle 0.0° FAULT; 386.4 ms edge gap 368.3 ms speed 29.5% angle 0.0° FAULT
+
+== pass-roll ==
+pass-roll              p 0.200 unlawful (impact-cap); ratio 1.050/1.029/1.010; late hits 2: 981.8 ms face gap 971.0 ms speed 13.9% angle 0.0° FAULT; 992.6 ms face gap 971.0 ms speed 13.9% angle 0.0° FAULT
+pass-roll              p 0.300 unlawful (impact-cap); ratio 1.043/1.016/0.994; late hits 2: 946.1 ms face gap 936.9 ms speed 12.9% angle 0.4° FAULT; 959.2 ms face gap 936.9 ms speed 12.9% angle 0.4° FAULT
+pass-roll              p 0.400 clean; ratio 0.913/0.921/0.928; late hits none
+pass-roll              p 0.500 unpractised (impact-off-face); ratio 1.066/1.040/1.023; late hits 2: 680.3 ms edge gap 666.4 ms speed 8.7% angle 0.2°; 699.4 ms edge gap 666.4 ms speed 8.7% angle 0.2°
+pass-roll              p 0.600 unlawful (29.1.6.1); ratio 1.083/1.055/1.038; late hits 1: 591.6 ms face gap 579.9 ms speed 25.8% angle 0.0° FAULT
+pass-roll              p 0.800 unpractised (impact-off-face); ratio 1.088/1.053/1.036; late hits 2: 477.0 ms face gap 467.6 ms speed 14.9% angle 0.0° FAULT; 493.0 ms edge gap 467.6 ms speed 14.9% angle 0.0° FAULT
+pass-roll              p 1.000 unlawful (29.1.6.1); ratio 1.063/1.021/1.002; late hits 2: 376.2 ms face gap 367.9 ms speed 23.7% angle 0.0° FAULT; 385.1 ms face gap 367.9 ms speed 23.7% angle 0.0° FAULT
+pass-roll canonical    p 0.900 unpractised (impact-off-face); ratio 1.088/1.048/1.030; late hits 2: 434.1 ms face gap 425.4 ms speed 18.1% angle 0.0° FAULT; 446.2 ms edge gap 425.4 ms speed 18.1% angle 0.0° FAULT
+
+== Late hits per type (rows with any / rows) ==
+half-roll: 0 / 10
+full-roll: 10 / 12
+pass-roll: 8 / 11

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { openWorld } from "../../../scripts/openLawn";
 import { headLowestPoint } from "../../../src/engine/impact/contacts";
 import { boxInertia, rotate, solidCylinderInertia } from "../../../src/engine/impact/rigidBody";
 import { simulateImpact } from "../../../src/engine/impact/simulateImpact";
@@ -21,6 +22,7 @@ import {
     MAX_LEAD,
     MAX_WINDOW,
     MIN_WINDOW,
+    REACH_REF_SPEED,
     START_GAP,
     TURF_MARGIN,
     arcArrival,
@@ -53,6 +55,7 @@ import {
 } from "../../../src/engine/swing/types";
 import type { BallState } from "../../../src/engine/types";
 import { defaultWorld } from "../../../src/engine/world";
+import { canonicalPower, mapSetup, textBook } from "../../../src/lab/play";
 import { contactReference, malletReference, swingBodyReference, swingReference } from "../../../src/reference/index";
 import { TEST_BALL, ballAt, testWorld } from "../support/fixtures";
 import {
@@ -1663,5 +1666,65 @@ describe("the hands from the lean (hands-from-lean design §3)", () => {
         expect(at(HAND_BREADTH / 2 - 0.001)).toThrow(/stroke\.grip\.bottom/);
         expect(at(HAND_BREADTH / 2 + 0.001)).not.toThrow();
         expect(at(0)).toThrow(/must lie in/);
+    });
+});
+
+describe("the reach scales with pace (soft follow-through design §2.2)", () => {
+    const world = openWorld(10);
+    const ROLLS = ["half-roll", "full-roll", "pass-roll"] as const;
+    type Roll = (typeof ROLLS)[number];
+    const preset = (type: Roll) => defaultProfile.drive[type];
+    const ref = (type: Roll) => REACH_REF_SPEED[type] as number;
+    const at = (type: Roll, power: number, over: Partial<Stroke> = {}): ShotSetup => {
+        const base = mapSetup(type, textBook(type), power);
+        return { ...base, stroke: { ...base.stroke, ...over } };
+    };
+    /** `setup` without its feet, so the arc's low point is the preset's fraction of the reach. */
+    const footless = (setup: ShotSetup): ShotSetup => {
+        const stroke = { ...setup.stroke };
+        delete stroke.feet;
+        return { ...setup, stroke };
+    };
+
+    it("keeps each roll's canonical contactSpeed at or just above REACH_REF_SPEED (the guard)", () => {
+        for (const type of ROLLS) {
+            const u = plannedSpeed(at(type, canonicalPower(type, world)), world);
+            expect(u).toBeGreaterThanOrEqual(ref(type));
+            expect(u).toBeLessThan(ref(type) + 1e-3);
+        }
+        expect(REACH_REF_SPEED["single-ball"]).toBeNull();
+    });
+    it("keeps the preset's reach exactly at canonical power", () => {
+        for (const type of ROLLS) {
+            const { contact } = planStroke(at(type, canonicalPower(type, world)), world);
+            expect(arcOf(contact).handReach).toBe(preset(type).handReach);
+        }
+    });
+    it("scales the reach by contactSpeed over REACH_REF_SPEED below it", () => {
+        for (const type of ROLLS) {
+            const { contact, contactSpeed } = planStroke(at(type, 0.4), world);
+            expect(contactSpeed).toBeLessThan(ref(type));
+            expect(arcOf(contact).handReach).toBeCloseTo((preset(type).handReach * contactSpeed) / ref(type), 12);
+        }
+    });
+    it("plans the low point from the unscaled reach", () => {
+        // The downswing's arrival reads the same unscaled reach (choiceOf), planned before the contact speed exists.
+        const type = "full-roll";
+        const scaled = arcOf(planStroke(footless(at(type, 0.4)), world).contact);
+        expect(scaled.handReach).toBeLessThan(preset(type).handReach);
+        expect(scaled.lowPoint).toBe(preset(type).handArcLow * preset(type).handReach);
+    });
+    it("scales a shot's own reach as the preset's, and keeps a lowPoint the feet set", () => {
+        const type = "pass-roll";
+        const { contact, contactSpeed } = planStroke(at(type, 0.4, { handReach: 0.2 }), world);
+        expect(arcOf(contact).handReach).toBeCloseTo((0.2 * contactSpeed) / ref(type), 12);
+        expect(arcOf(planStroke(at(type, canonicalPower(type, world), { handReach: 0.2 }), world).contact).handReach).toBe(
+            0.2,
+        );
+        const setup = at(type, 0.4);
+        expect(setup.stroke.feet).toBeDefined();
+        const footed = arcOf(planStroke(setup, world).contact);
+        const unscaled = arcOf(planStroke(at(type, 0.4, { handReach: preset(type).handReach }), world).contact);
+        expect(footed.lowPoint).toBe(unscaled.lowPoint);
     });
 });

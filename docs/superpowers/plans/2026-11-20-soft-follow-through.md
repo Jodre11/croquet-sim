@@ -10,7 +10,8 @@ and the finish shrink with pace, and the player brakes if that is still not enou
 - **One shot model.** Nothing is scripted per stroke, and nothing is tuned to C3F.
 - **The canonical strokes keep their pins to the bit** from Task 3 on. Task 2's moves are re-pinned as §2.1's.
 - **Late hits are judged by the existing judges:** `impact-off-face`, 29.1.6.1 and 29.1.6.2. There is no new event.
-- **An explicit `stroke.handReach`, `options.cap` or `lowPoint` is honoured as given.**
+- **An explicit `options.cap` or `lowPoint` is honoured as given.** A shot's `stroke.handReach` is the reach at full
+  pace, and is scaled (spec §2.2, amended in Task 3).
 - **Public repo:** sources are cited (URL, date, SHA-256, short quotes), never mirrored.
 - **Stop rules (spec §3), from Task 3 on.** Stop and report if any canonical pin moves, if a Table 6 roll's w₁/U
   moves more than 1 z away from Gugan's, or, after Task 5, if any stroke still late-hits.
@@ -101,6 +102,10 @@ and the finish shrink with pace, and the player brakes if that is still not enou
 
 ### Task 3: The reach scales with pace (spec §2.2)
 
+**As done (2026-11-20).** `REACH_REF_SPEED` lives in `buildContact.ts` beside `HOLD_SPEED`, not in `profile.ts`.
+`SwingArc` gains no `contactSpeed`, because `planStroke` already returns it. A shot's `stroke.handReach` is scaled
+too (spec §2.2, amended). The tests are in `buildContact.test.ts`, the guard among them.
+
 **Files:**
 - `src/engine/swing/buildContact.ts`
 - `src/engine/swing/profile.ts` (`REACH_REF_SPEED`)
@@ -112,10 +117,10 @@ and the finish shrink with pace, and the player brakes if that is still not enou
 - `profile.ts` exports `REACH_REF_SPEED: Readonly<Record<StrokeType, number | null>>`. It is null where the preset's
   handReach is 0.
 
-- [ ] **Read the values.** A scratch script, not committed, prints each roll text book's `drive.arc.contactSpeed` at
+- [x] **Read the values.** A scratch script, not committed, prints each roll text book's `drive.arc.contactSpeed` at
   `canonicalPower(type, openWorld(10))`. Record each value rounded down to 1e-3 m/s, with a comment naming how it was
   read.
-- [ ] **Failing tests.**
+- [x] **Failing tests.**
   1. **Canonical:** at canonical power, `arc.handReach` equals the preset's exactly, for the half, full and pass rolls.
   2. **Half speed:** at `contactSpeed` = U_ref/2 (lower power), `arc.handReach` is half the preset's, within 1e-12.
   3. **Low point:** in the same case, `arc.lowPoint` is handArcLow·(unscaled handReach), and `arc.downswing` is
@@ -124,12 +129,12 @@ and the finish shrink with pace, and the player brakes if that is still not enou
   5. **Feet:** a set `lowPoint`, from the feet, is unchanged.
   6. **Guard,** in `pushMapRun.test.ts`: each roll's canonical `contactSpeed` is ≥ `REACH_REF_SPEED[type]` and
      < `REACH_REF_SPEED[type] + 1e-3`.
-- [ ] **Implement** in `buildContact`: handReach = (stroke.handReach ?? push.handReach·min(1, contactSpeed/U_ref)),
+- [x] **Implement** in `buildContact`: handReach = (stroke.handReach ?? push.handReach·min(1, contactSpeed/U_ref)),
   where U_ref is null-safe. Where `low` is undefined, set lowPoint to handArcLow·(stroke.handReach ?? push.handReach)
   from the unscaled reach. The `arrival` already uses the unscaled reach. ENGINE_VERSION goes to 0.39.0.
-- [ ] **Suite, tsc and lint.** No canonical pin may move (stop rule). Other moves are re-pinned with their notes.
-- [ ] **Survey** (`--label reach-scaled`) and card (`--compare <Task 2's card>`). Check the stop rules.
-- [ ] **Register entry** "G6's soft follow-through: the reach". Commit and push.
+- [x] **Suite, tsc and lint.** No canonical pin may move (stop rule). Other moves are re-pinned with their notes.
+- [x] **Survey** (`--label reach-scaled`) and card (`--compare <Task 2's card>`). Check the stop rules.
+- [x] **Register entry** "G6's soft follow-through: the reach". Commit and push.
 
 ### Task 4: The finish no longer stretches (spec §2.3)
 

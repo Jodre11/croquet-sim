@@ -280,7 +280,7 @@
             "strokeEffort": 15.032280108598265,
             "pushEffort": 100,
             "coupleShare": 0.014850473218667136,
-            "pushImpulse": 0.27936600000000167,
+            "pushImpulse": 0.2627700000000014,
             "effectVerdicts": {
                 "shipped": false,
                 "contactOnly": false
@@ -290,8 +290,8 @@
             "passes": 1,
             "byLawn": {
                 "10": {
-                    "range": 0.8180516601695729,
-                    "ratio": 1.5724696809330927,
+                    "range": 0.8180412760015088,
+                    "ratio": 1.5724967466700845,
                     "splitAtRest": 0
                 }
             },
@@ -365,8 +365,8 @@
         "hold": "found",
         "sample": {
             "power": 0.5,
-            "klass": "unpractised",
-            "reason": "impact-off-face",
+            "klass": "unlawful",
+            "reason": "29.1.6.1",
             "strokeEffort": 18.899875078439408,
             "pushEffort": 100,
             "coupleShare": 0.01442335063162485,
@@ -377,11 +377,11 @@
             },
             "followCap": false,
             "followSlip": false,
-            "passes": 3,
+            "passes": 1,
             "byLawn": {
                 "10": {
-                    "range": 1.6328675694624692,
-                    "ratio": 1.0109440761357604,
+                    "range": 1.541333982535619,
+                    "ratio": 1.0066785967222789,
                     "splitAtRest": 0
                 }
             },
@@ -395,8 +395,8 @@
         "hold": 0.5,
         "sample": {
             "power": 0.5,
-            "klass": "unpractised",
-            "reason": "impact-off-face",
+            "klass": "unlawful",
+            "reason": "29.1.6.1",
             "strokeEffort": 18.899875078439408,
             "pushEffort": 100,
             "coupleShare": 0.01442335063162485,
@@ -407,11 +407,11 @@
             },
             "followCap": false,
             "followSlip": false,
-            "passes": 3,
+            "passes": 1,
             "byLawn": {
                 "10": {
-                    "range": 1.632642735046126,
-                    "ratio": 1.0111211371944033,
+                    "range": 1.5412726212131318,
+                    "ratio": 1.006657542526467,
                     "splitAtRest": 0
                 }
             },
@@ -485,28 +485,28 @@
         "hold": "found",
         "sample": {
             "power": 0.5,
-            "klass": null,
-            "reason": null,
+            "klass": "unpractised",
+            "reason": "impact-off-face",
             "strokeEffort": 18.256116761529736,
             "pushEffort": 100,
             "coupleShare": 0.011836166874176232,
-            "pushImpulse": 0.4291910000000041,
+            "pushImpulse": 0.43610600000000427,
             "effectVerdicts": {
                 "shipped": false,
-                "contactOnly": false
+                "contactOnly": true
             },
             "followCap": false,
             "followSlip": false,
             "passes": 3,
             "byLawn": {
                 "10": {
-                    "range": 1.3888531808136035,
-                    "ratio": 1.187574670397112,
-                    "splitAtRest": 0.07618274367344592
+                    "range": 1.5019856490751624,
+                    "ratio": 1.0402059671647441,
+                    "splitAtRest": 0.07822903770778661
                 }
             },
-            "firmness": 0.17843179611289692,
-            "sigma": 0.1
+            "firmness": null,
+            "sigma": null
         }
     },
     {
@@ -515,24 +515,24 @@
         "hold": 0.5,
         "sample": {
             "power": 0.5,
-            "klass": null,
-            "reason": null,
+            "klass": "unpractised",
+            "reason": "impact-off-face",
             "strokeEffort": 18.256116761529736,
             "pushEffort": 100,
             "coupleShare": 0.011836166874176232,
-            "pushImpulse": 0.43610600000000443,
+            "pushImpulse": 0.43610600000000427,
             "effectVerdicts": {
                 "shipped": false,
-                "contactOnly": false
+                "contactOnly": true
             },
             "followCap": false,
             "followSlip": false,
-            "passes": 1,
+            "passes": 3,
             "byLawn": {
                 "10": {
-                    "range": 1.4215978568478047,
-                    "ratio": 1.1523662463355853,
-                    "splitAtRest": 0.07582107134172741
+                    "range": 1.5019856490751624,
+                    "ratio": 1.0402059671647441,
+                    "splitAtRest": 0.07822903770778661
                 }
             },
             "firmness": 0.5,

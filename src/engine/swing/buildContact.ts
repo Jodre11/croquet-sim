@@ -48,6 +48,7 @@ import {
     type SwingProfile,
     type SwingShape,
     type SwingStance,
+    type StrokeType,
 } from "./types";
 
 /**
@@ -127,6 +128,24 @@ const SHAPE_NUMBERS: readonly "pendulumShare"[] = ["pendulumShare"];
  * planned contact speed over this, at most the whole couple.
  */
 export const HOLD_SPEED = 3;
+
+/**
+ * The contact speed (m/s) at or above which a preset's handReach is travelled whole (soft follow-through design §2.2),
+ * null where the preset has no reach: each roll text book's canonical contactSpeed (scripts/scratchReachRef.ts,
+ * 2026-11-20: 3.000 m/s each, the half roll's an ulp under), rounded down to 1e-3 m/s, so the canonical strokes keep
+ * their reach to the bit. Below it the reach scales with the contact speed: a softer stroke is the same stroke played
+ * slower ("If you're not hitting the ball hard, you don't need to follow through or push through", the user,
+ * 2026-11-20). The linear scale is an assumption.
+ */
+export const REACH_REF_SPEED: Readonly<Record<StrokeType, number | null>> = {
+    "single-ball": null,
+    drive: null,
+    "stop-ac": null,
+    "stop-gc": null,
+    "half-roll": 2.999,
+    "full-roll": 3,
+    "pass-roll": 3,
+};
 
 function fail(message: string): never {
     throw new RangeError(message);
@@ -933,7 +952,13 @@ export function planStroke(setup: ShotSetup, world: World): StrokePlan {
     // A shot's window sets both pulses; the change in each is kept, so only the rate moves. Absent, the preset's own.
     const window = stroke.window ?? push.window;
     const handWindow = stroke.window ?? push.handWindow;
-    const low = lowPointOf(setup, pose);
+    // Soft follow-through design §2.2: below REACH_REF_SPEED the push travels less, in proportion to the contact speed.
+    // The reach given, the shot's or the preset's, is the reach at full pace. The low point keeps it, as the
+    // downswing's arrival was planned with it.
+    const reachRef = REACH_REF_SPEED[type];
+    const fullReach = stroke.handReach ?? push.handReach;
+    const handReach = reachRef === null ? fullReach : fullReach * Math.min(1, contactSpeed / reachRef);
+    const low = lowPointOf(setup, pose) ?? (handReach === fullReach ? undefined : push.handArcLow * fullReach);
     // Steps 3 and 4, the arc expressed from the start, L before contact.
     const arc: SwingArc = {
         pivot: sub(planPose.pivot, scale(handsVelocity, lead)),
@@ -959,7 +984,7 @@ export function planStroke(setup: ShotSetup, world: World): StrokePlan {
             1,
             ((stroke.holdFirmness ?? profile.shape[type].holdFirmness) * contactSpeed) / HOLD_SPEED,
         ),
-        handReach: stroke.handReach ?? push.handReach,
+        handReach,
         pendulumAt: stroke.pendulumAt ?? push.pendulumAt,
         pendulumEffort: stroke.pendulumEffort ?? push.pendulumEffort,
         handArcRadius: push.handArcRadius,
