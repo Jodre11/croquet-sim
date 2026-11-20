@@ -1,6 +1,7 @@
 # The soft follow-through (gap G6, C3F's late hit)
 
-Status: draft, 2026-11-20, amended after review the same day. Gap register G6 (`docs/superpowers/probes/scorecard/2026-11-16-gap-register.md`, "G6's
+Status: draft, 2026-11-20, amended after review the same day. Gap register G6
+(`docs/superpowers/probes/scorecard/2026-11-16-gap-register.md`, "G6's
 primed push, for good" and "C3F's off-face play, traced").
 
 ## 1. Why
