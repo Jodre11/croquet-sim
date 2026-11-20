@@ -1,6 +1,6 @@
 # The soft follow-through (gap G6, C3F's late hit)
 
-Status: draft, 2026-11-20. Gap register G6 (`docs/superpowers/probes/scorecard/2026-11-16-gap-register.md`, "G6's
+Status: draft, 2026-11-20, amended after review the same day. Gap register G6 (`docs/superpowers/probes/scorecard/2026-11-16-gap-register.md`, "G6's
 primed push, for good" and "C3F's off-face play, traced").
 
 ## 1. Why
@@ -50,61 +50,91 @@ player to configure the shot for it. That is moot for now and out of scope.
 
 ### 2.1 See the late hit
 
-The scorecard must see a second hit wherever one happens, or no follow-through rule can be checked. Today the impact
-ends when `stillReaching` finds no ball the face would reach within `LOOK_AHEAD`. The follow-through that comes after
-has no head–ball contact.
+The scorecard must see a second hit wherever one happens, or no follow-through rule can be checked.
 
-**Change.** A tracked impact stays open while the planned path, from now to the hands' rest (`push.freed`, else the
-drive's end), would bring the face within reach of a ball. Each ball is taken on at its present velocity, with no
-deceleration. That is conservative: a slowing ball is caught sooner, so the impact may stay open a little longer than
-it needs to, never shorter. The test reuses `outOfReach` and the face plane, sampling the remaining path every
-`FOLLOW_SAMPLE`. `TRACK_IMPACT_CAP` (0.45 s) still bounds the impact. A run that reaches the cap while the path is
-still closing raises `impact-cap` as today.
+**What exists.** Flat push design amendment 5 already looks for this. After the impact ends, `integrateStroke` plays
+the follow-through. `catchAt` (`src/engine/impact/integrate.ts`) then looks for a follow-through sample at which the
+head touches a ball, and if it finds one the stroke is replayed with the impact held open to that time (`openUntil`).
+But `catchAt` carries each ball on in a straight line at its velocity at the impact's end: no gravity, no bounce, no
+lawn. The ball also moves at constant speed, so it stays further ahead of the head than the real, slowing ball.
 
-**Why not ball contact in the follow-through?** Phase 2 moves the balls after the impact. Contact in the follow-through
-would mean running phase 2 inside it. Keeping the impact open lets the existing contact code see the hit, and raise
-`impact-off-face` when it lands off the face.
+- The model can therefore miss a real catch.
+- That is C3F's own pattern: the ball slows by about 0.29 m/s² while the head speeds up.
+- The baseline's impact ended at 96.6 ms, while the ball was still in the air after its turf lift (z 0.059 m at
+  50 ms, rising). A straight line at that velocity lifts the projected ball over the head. That is a likely reason
+  the baseline missed the catch at about 290 ms; it is unverified.
 
-**The late hit, named.** A late hit is a head–striker contact interval that starts more than `LATE_GAP` after the
-striker's previous interval ended. `LATE_GAP` is 50 ms, twice the end of Gugan's A1R tap (25 ms); this is an
-assumption. A late hit raises a new impact event, `impact-late-hit` (t, ball). In decision 5's order it comes with
-`impact-off-face`, and it classes the play as a mishit, so practice may also leave it unpractised. The early taps,
-within milliseconds of the strike, are untouched.
+**Change.** `catchAt` carries the balls on with phase 2's own motion: the same ball model the shot's phase 2 uses
+(gravity, the turf's bounce and rolling resistance), with the balls alone and no head. It no longer uses a straight
+line. `stillReaching`, `LOOK_AHEAD`, the replay loop and `openUntil` are unchanged.
+
+**The cap.** A catch at or past the cap is not replayed today, so it stays unseen, and the cap is only a guard
+against an impact that never ends. In that case the stroke is replayed once more, with the cap moved to the catch
+plus `TRACK_IMPACT_CAP`. A catch past that cap, or an impact still open there, raises `impact-cap` and classes the
+play as unlawful, as today.
+
+**How a late hit is judged.** No new event or criterion is needed. Once the impact is held open to the catch, the
+existing contact code judges the late hit:
+- **Off the face** (C3F's, on the edge): it raises `impact-off-face`. That is a mishit, and `bandMiss` reads it, so
+  practice may leave the play unpractised.
+- **On the face**, in a croquet or continuation stroke: it is a re-contact. It is grouped by `MERGE_SEPARATION` and
+  is a possible fault under 29.1.6.1 only if its effect reaches `EFFECT_SPEED` or `EFFECT_ANGLE` (design decision
+  10, the user's ruling). The play is then unlawful.
+- **On the face**, in a single-ball stroke: it is a 29.1.6.2 fault.
+
+The survey reads late hits from the face timeline and `strike.recontacts` (gap, time after the parting, effect).
 
 ### 2.2 The reach scales with pace
 
 The hands' travel after contact becomes handReach · min(1, U/U_ref(type)):
 
-- **U** is the plan's head speed at contact, which `buildContact` already has.
-- **U_ref** is a new per-type constant in the profile (`REACH_REF_SPEED`): the planned contact speed of the type's
-  text book at its canonical power, read once and recorded. At canonical power or above, the scale is exactly 1, so
-  the canonical strokes keep their pins to the bit.
+- **U** is `contactSpeed` in `buildContact`: `poseSpeed` of the planned downswing, which the hold firmness already
+  scales by (`HOLD_SPEED`).
+- **U_ref** is a new per-type constant in the profile (`REACH_REF_SPEED`): the text book's `contactSpeed` at its
+  canonical power, rounded down to 1e-3 m/s. That makes U/U_ref ≥ 1 there, so the scale is exactly 1 and the
+  canonical strokes keep their pins to the bit.
+  - A guard test recomputes each canonical `contactSpeed` and asserts it is at least U_ref and within 1e-3 m/s of it,
+    so the constant cannot go stale unnoticed when a text book or preset changes.
+  - This follows `HOLD_SPEED`'s precedent, a recorded speed that the engine's plan is scaled by.
 - **Why linear:** a reach in proportion to U keeps the push's duration the same at every pace. A softer stroke is the
   same stroke played slower, not a shorter one played at the same tempo. This is an assumption; the run tests it.
+- **The low point keeps the unscaled reach.** Without the shot's feet, the hands' arc low point is
+  handArcLow·handReach. It feeds the downswing's arrival slope, which is planned before `contactSpeed` exists, and the
+  push's s_low. So where `lowPoint` is unset, the arc gets lowPoint = handArcLow·handReach from the unscaled reach;
+  where it is set, it is left as it is. The downswing and the hands' path at contact are then unchanged, and only
+  the push's length moves.
 - **Applies to** every preset with handReach above 0: the half, full and pass rolls. The swing presets have none.
-- `pendulumAt` stays a fraction of the reach, so the pendulum phase comes proportionally sooner.
+- `pendulumAt` stays a fraction of the scaled reach, so the pendulum phase comes proportionally sooner.
 - An explicit `stroke.handReach` is the player's own choice and is not scaled.
 
 ### 2.3 The finish no longer stretches
 
-`finishShare(V)` becomes min(1, V/FINISH_REF_PACE), with V the finish's pace (m/s), in place of amendment 3's stretch:
+`finishShare(V)` becomes max(FINISH_SHARE_MIN, min(1, V/FINISH_REF_PACE)) for V > 0, with V the finish's pace (m/s),
+in place of amendment 3's stretch:
 
 - a slow finish eases over a shorter time and carries for less;
-- its travel, V·ease/2, falls as V²;
+- its travel, V·ease/2, falls as V² down to the floor;
 - at or above 4 m/s the share is 1, as today, so the full roll's rise, verified at power 1.0–1.1, is unchanged there;
 - `FINISH_SHARE_MAX` is retired.
+
+`FINISH_SHARE_MIN` is 0.25: a 25 ms ease and let-go at least. The floor keeps the let-go ramp, which divides by its
+span and the span squared, from turning a very soft finish's brake into an impulse. Both the floor and its value are
+assumptions. With V = 0 the share stays 1 as today, though nothing moves and no timing then depends on it.
 
 This supersedes flat push design amendment 3.
 
 ### 2.4 The brake, if the run needs it
 
-The engine already has a brake: `stroke.drive` < 0 decelerates the hands over `handWindow`. After §2.2 and §2.3, the
-run (§3) surveys the soft shots:
+The engine already has a brake: `stroke.drive` < 0. It scales both pulses, the arc's and the hands', which are timed
+from `arcStart` and `handStart` around contact. So a brake changes the strike as well as the follow-through: the
+player checks the mallet as they hit. That is accepted, and §3's 1 z stop on w₁/U applies to it.
+
+After §2.2 and §2.3, the run (§3) surveys the soft shots:
 
 - **None of them late-hits:** no brake is added, and the user's "may brake" stays the player's own choice.
-- **Some still late-hit:** the text book's drive for that type falls linearly from its default at U_brake to −1 at
-  U_stop. Both are read from the survey: U_brake is the highest planned U at which any sampled stroke of the type
-  late-hits, and U_stop is the lowest power the map plays. Both are recorded, and nothing is tuned to C3F.
+- **Some still late-hit:** the text book's drive for that type is lowered below some contact speed U_brake. U_brake
+  is the highest `contactSpeed` at which any sampled stroke of the type late-hits. The shape of the drive's fall below
+  U_brake is chosen from the survey and recorded as an assumption then. Nothing is tuned to C3F.
 
 ### 2.5 Not in scope
 
@@ -113,25 +143,45 @@ run (§3) surveys the soft shots:
 
 ## 3. The run
 
-1. **Baseline survey.** Engine at the current HEAD, with §2.1's detection only: every Table 6 roll, the canonical
-   strokes at the map's powers (`MAP_LAWNS`, the push map's power grid), and Gugan 4's single-ball rolls A1R–A4R.
-   For each, report late hits (count and first t), `impact-off-face`, class and ratio. This shows how widespread the
-   hidden fault is.
-2. **§2.2 and §2.3.** The same survey, and the full scorecard against `2026-11-20-primed-push`.
-3. **§2.4** only if step 2 leaves soft shots that late-hit, then the survey and card again.
+1. **§2.1 alone.** Survey every Table 6 roll and the canonical strokes over the push map's power grid on `MAP_LAWNS`.
+   For each, report the late hits (count, first t, region, and the re-contact's effect where on the face), the class
+   and the ratio. Run the full scorecard against `2026-11-20-primed-push`. This step records how widespread the hidden
+   fault is. Any pins it moves are re-pinned here as §2.1's moves, and the stop rules below are judged against this
+   step's state.
+2. **§2.2, then §2.3,** each in its own step: the survey and the card after each, so the finish's change is judged on
+   its own outcome.
+3. **§2.4** only if step 2 leaves soft shots that late-hit, then the survey and the card again.
 
-**Expected.** The canonical pins hold to the bit at canonical power. The low-power Table 6 rolls (C1F, C3F, C3P, C3H)
-and their ratios move. C3F plays clean. No canonical stroke late-hits.
+**Expected.**
+- The canonical pins hold to the bit through steps 2 and 3.
+- The low-power Table 6 rolls (C1F, C3F, C3P, C3H) and their ratios move, and C3F plays clean.
+- No canonical stroke late-hits.
 
-**Stop.** The run stops and reports to the user if:
+**Stop.** In steps 2 and 3, the run stops and reports to the user if:
 - any canonical pin moves;
 - a Table 6 roll's w₁/U moves away from Gugan's by more than 1 z;
 - after §2.4, any stroke still late-hits.
 
 ## 4. Assumptions
 
-- `LATE_GAP` is 50 ms.
-- The reach scales linearly with U.
-- U_ref is the canonical power's planned contact speed.
-- Balls move at constant velocity in the end test's look-ahead.
-- The brake's ramp, if needed, is linear between U_brake and U_stop.
+- The cap is moved once, to the catch plus `TRACK_IMPACT_CAP`.
+- The reach scales linearly with `contactSpeed`.
+- U_ref is the canonical power's `contactSpeed`, rounded down to 1e-3 m/s.
+- The low point keeps the unscaled reach.
+- `FINISH_SHARE_MIN` is 0.25.
+- If the brake is needed, its shape is chosen from the survey.
+
+## Review (2026-11-20)
+
+Two reviewers, on what to cut and on what is missing. Applied:
+- the new late-hit event and its 50 ms gap are cut, and the existing judges classify the hit;
+- the end test was wrongly called conservative; §2.1 now mends amendment 5's `catchAt` instead of adding a test
+  beside it;
+- a catch past the cap is now seen;
+- the low point keeps the unscaled reach;
+- U is named as `contactSpeed`, and U_ref is guarded by a test;
+- the finish's share has a floor;
+- the brake's units are fixed, and its effect on the strike is stated;
+- §2.2 and §2.3 are measured apart;
+- step 1's moves are excused;
+- the single-ball rolls A1R–A4R are dropped from the survey, as they have no playable setup.
