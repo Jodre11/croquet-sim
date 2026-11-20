@@ -271,8 +271,12 @@ describe("simulateShot", () => {
     // Roll launch design §3.1f, amendment 8 (was it.fails): with the face's friction fitted (0.38) and the balls'
     // (0.16), the face taps the striker's ball three times (0.01–0.67, 1.15–2.06 and 6.80–7.88 ms); the highest centre
     // is 2.125 mm above R in the impact and 4.813 mm in the flights.
-    it("runs the half-roll canonical setup with no entry jump and no ball above R + 5 mm", () => {
-        lowFlight("half-roll");
+    // Gap register, the third refit (engine 0.42.0; was every ball, 4.813 mm): the striker's ball rises 12.7 mm above R
+    // in the impact and 14.4 mm in flight, the croqueted ball 2.3 and 1.7 mm. G4's ruling (2026-11-18) splits the lift
+    // by ball, as for the full roll: the croqueted ball keeps R + 5 mm; the striker's ball, seen to lift in a roll, is
+    // the scorecard's to judge.
+    it("runs the half-roll canonical setup with no entry jump and the croqueted ball below R + 5 mm", () => {
+        lowFlight("half-roll", "croqueted");
     });
 
     // P2b.2b.2b.2b: gate-ruled skip (round 14, 2026-10-12; arm chain, round 3). Un-skipped by the push intent (4.61
@@ -755,10 +759,12 @@ describe("the mechanisms (design §8.1), on the canonical setups", () => {
         // Roll launch design §3.1f, amendment 8 (was the yield at 13.885 ms and the depth limit at 14.25 ms): the
         // face's friction 0.38 and the balls' 0.16; the head meets the turf from 12.76 ms, yields it at 13.86 ms and
         // reaches the depth limit at 14.225 ms.
+        // Gap register, the third refit (engine 0.42.0; was the yield at 13.86 ms and the depth limit at 14.225 ms): the
+        // yield at 13.875 ms and the depth limit at 14.24 ms.
         expect(impact.events.map((e) => e.kind)).toEqual(["turf-lift", "turf-lift", "turf-yield", "impact-head-deep"]);
         const times = impact.events.map((e) => ("t" in e ? e.t : NaN));
-        expect(times[2]).toBeCloseTo(0.01386, 5);
-        expect(times[3]).toBeCloseTo(0.014225, 5);
+        expect(times[2]).toBeCloseTo(0.013875, 5);
+        expect(times[3]).toBeCloseTo(0.01424, 5);
     });
 
     // Spec exit criterion 2 (P2b.2b.2b.2b). On the bed (P2b.2b.2b.2a) the canonical pass roll's follow-through kept its

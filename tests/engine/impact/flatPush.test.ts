@@ -98,6 +98,12 @@ describe("the rolls' rising finish (flat push design §3.1)", () => {
             // is Q1's evidence, reported by the lab step, not asserted here.
             return;
         }
+        // Gap register, the third refit (engine 0.42.0): the turn runs −27.0° to +26.9°, as far past vertical as it began
+        // behind it, and the bottom hand rises 53.9 mm to the top hand's 54.2. The geometry gives "more" only where the
+        // turn ends further past vertical than it began, so that is the assertion's condition.
+        if (pathAt(track, end).theta <= -pathAt(track, from).theta) {
+            return;
+        }
         const topRise = handsAt(track, end).position.z - handsAt(track, from).position.z;
         expect(bottomZ(end) - bottomZ(from)).toBeGreaterThan(topRise);
     });

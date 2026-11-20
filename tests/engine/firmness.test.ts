@@ -106,9 +106,10 @@ describe("the search's preference for a hold that doesn't slip (design A8 item 5
         // (was σ 0.1, ratio 1.13): the faces' and balls' friction fitted; σ 0.0625, ratio 1.000. Primed push design,
         // amendment 1 (was σ 0.0625): the hands' press loads the grips, so the least hold that doesn't slip is
         // σ 0.16875; the ratio stays 1.00. Soft follow-through design §2.3 (was σ 0.16875): the shorter finish no
-        // longer drives the head on into the slack grips, and no hold slips: σ 0, the ratio 1.047.
+        // longer drives the head on into the slack grips, and no hold slips: σ 0, the ratio 1.047. Gap register, the
+        // third refit (engine 0.42.0; was 1.047): σ 0, the ratio 1.083.
         expect(sample.sigma).toBe(0);
-        expect(sample.byLawn[10]?.ratio).toBeCloseTo(1.047, 3);
+        expect(sample.byLawn[10]?.ratio).toBeCloseTo(1.083, 3);
     }, 120_000);
 });
 

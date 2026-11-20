@@ -74,7 +74,7 @@ describe("impact reference data", () => {
         expect(contactReference.bedRecovery.value).toBeGreaterThan(0);
         expect(contactReference.ballBallContactTime.value).toBeGreaterThan(0);
         expect(contactReference.faceBallContactTime.value).toBeGreaterThan(0);
-        expect(contactReference.tangentialStiffnessRatio.value).toBeCloseTo(2 / 7, 15);
+        expect(contactReference.tangentialStiffnessRatio.value).toBe(0.3528);
     });
 
     it("loads one face and one typical head", () => {
@@ -207,11 +207,11 @@ describe("obstacle and fault reference data", () => {
 describe("swing, coupling and head–turf reference data", () => {
     it("loads the provisional hand coupling", () => {
         expect(contactReference.handCouplingPeriod.value).toBe(0.08);
-        expect(contactReference.handCouplingDampingRatio.value).toBe(0.7);
+        expect(contactReference.handCouplingDampingRatio.value).toBe(0.6835);
     });
 
     it("loads the default body's arm mass and reach slack", () => {
-        expect(contactReference.armMass.value).toBe(0.8);
+        expect(contactReference.armMass.value).toBe(1.081);
         expect(contactReference.armMass.unit).toBe("kg");
         expect(contactReference.reachSlack.value).toBe(0.03);
         expect(contactReference.reachSlack.unit).toBe("m");

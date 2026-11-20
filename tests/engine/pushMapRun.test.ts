@@ -193,16 +193,18 @@ describe("one plan's run (P2b.2b.2c.3b plan Task 3)", () => {
         // second hit; unlawful (29.1.6.1) in one pass, ratio 1.001.
         // Soft follow-through design §2.4 (was unlawful, 29.1.6.1, ratio 1.001): the finish re-timed so the head never
         // outpaces the striker's ball; lawful in one pass, ratio 1.306, as before §2.1 (register G2's gap).
+        // Gap register, the third refit (engine 0.42.0; was 1.3055): lawful in one pass, ratio 1.2527, just above the
+        // band 1.0–1.2; the grip period the fit asked for (25 ms against 0.08 s) is what took it to 1.15.
         const base = mapSetup("full-roll", textBook("full-roll"), 1);
         const p = swingReference["full-roll"].defaultBackswing.value / bodyBackswing(base, WORLD);
         const sample = playSample("full-roll", textBook("full-roll"), p, [10], "preset");
         expect(sample.klass).toBeNull();
         expect(sample.reason).toBeNull();
         expect(sample.passes).toBe(1);
-        expect(sample.byLawn[10]?.ratio).toBeCloseTo(1.3055, 4);
+        expect(sample.byLawn[10]?.ratio).toBeCloseTo(1.2527, 4);
     });
 
-    it("plays the half roll's text book at its canonical power at ratio 1.757", () => {
+    it("plays the half roll's text book at its canonical power at ratio 1.644", () => {
         // Shapes design §8, ruling 15: the half roll's hold firmness, 0.1, is bisected to ratio 2.0 (was 1.041 at the
         // grip's whole couple, the striker's ball driven on too far). Hands-from-lean design §4: the bottom hand half
         // the shaft down (was 0.42 m), the hold kept, not refitted; the ratio 2.099 (was 2.0).
@@ -211,15 +213,16 @@ describe("one plan's run (P2b.2b.2c.3b plan Task 3)", () => {
         // faces' and balls' friction fitted, 1.770, range 1.87 m. The croqueted ball's backspin shortens it while the
         // striker's ball runs on (Gugan's C3H and C10H: w1/U 0.38–0.40, the model's 0.40–0.44): a known gap.
         // Restart confirmation design (was 1.770 at a 1 ms hold): 1.782. Primed push design, amendment 1 (was 1.782): the
-        // hands press at F_push while on the ball, 1.757.
+        // hands press at F_push while on the ball, 1.757. Gap register, the third refit (engine 0.42.0; was 1.757):
+        // 1.644, in the band 1.4–2.5.
         const base = mapSetup("half-roll", textBook("half-roll"), 1);
         const p = swingReference["half-roll"].defaultBackswing.value / bodyBackswing(base, WORLD);
         const sample = playSample("half-roll", textBook("half-roll"), p, [10], "preset");
         expect(sample.klass).toBeNull();
-        expect(sample.byLawn[10]?.ratio).toBeCloseTo(1.757, 3);
+        expect(sample.byLawn[10]?.ratio).toBeCloseTo(1.644, 3);
     });
 
-    it("plays the pass roll's text book at its canonical power, the head kept off the ball, at ratio 1.243", () => {
+    it("plays the pass roll's text book at its canonical power, the head kept off the ball, at ratio 1.194", () => {
         // Shapes design §8, ruling 17: a full roll with a 4° split, its 32° lean and a subtly punchier push (drive 0.5
         // over 60 ms pulses); was its own 15 ms punch at a 20° split, unlawful (29.1.6.1) at ratio 0.418. Ruling 18:
         // its follow-through 0.1 s keeps the head off the turf (was 0.3 s: ratio 0.814 in two passes). Hands-from-lean
@@ -239,13 +242,15 @@ describe("one plan's run (P2b.2b.2c.3b plan Task 3)", () => {
         // "Accept the move", 2026-11-20): the face back on the ball, a second hit; unlawful (29.1.6.1) in one pass,
         // ratio 1.0421. Soft follow-through design §2.4 (was unlawful, 29.1.6.1, ratio 1.0421): the finish re-timed so
         // the head never outpaces the striker's ball; lawful in one pass, ratio 1.2426, as before §2.1.
+        // Gap register, the third refit (engine 0.42.0; was 1.2426): lawful in one pass, ratio 1.1937, still past the
+        // coaches' 0.99 (register G2).
         const base = mapSetup("pass-roll", textBook("pass-roll"), 1);
         const p = swingReference["pass-roll"].defaultBackswing.value / bodyBackswing(base, WORLD);
         const sample = playSample("pass-roll", textBook("pass-roll"), p, [10], "preset");
         expect(sample.klass).toBeNull();
         expect(sample.reason).toBeNull();
         expect(sample.passes).toBe(1);
-        expect(sample.byLawn[10]?.ratio).toBeCloseTo(1.2426, 4);
+        expect(sample.byLawn[10]?.ratio).toBeCloseTo(1.1937, 4);
     });
 
     it(
@@ -259,9 +264,10 @@ describe("one plan's run (P2b.2b.2c.3b plan Task 3)", () => {
             // Gap register G2 (the user's ruling, 2026-11-17): that limit is reached inside the strike, the strike's
             // shock, so the stroke plays (was superhuman): ratio 1.447 on the 10 s lawn at the preset hold, past the
             // full roll's band (1.619 at the found hold). Primed push design, amendment 1 (was 1.447): 1.426.
+            // Gap register, the third refit (engine 0.42.0; was 1.426): 1.307.
             const sample = playSample("full-roll", textBook("full-roll"), 2, [10], "preset");
             expect(sample.klass).toBeNull();
-            expect(sample.byLawn[10]?.ratio).toBeCloseTo(1.426, 3);
+            expect(sample.byLawn[10]?.ratio).toBeCloseTo(1.307, 3);
             expect(sample.firmness).toBe(defaultProfile.shape["full-roll"].holdFirmness);
         },
     );
@@ -283,14 +289,14 @@ describe("the map's found firmness (firmness design §5, A7 item 4)", () => {
         // so the tap's push now ends and its follow-through no longer runs to the cap; the play is otherwise as was.
         // Soft follow-through design §2.3 (was unlawful, impact-cap, at every hold, ratio 1.025): the tap's finish
         // shrinks to its floor share, and its head no longer holds the impact open; admissible at firmness 0, one
-        // pass, ratio 1.175.
+        // pass, ratio 1.175. Gap register, the third refit (engine 0.42.0; was 1.1745): 1.2430.
         const sample = playSample("full-roll", textBook("full-roll"), 0.1, [10]);
         expect(sample.klass).toBeNull();
         expect(sample.reason).toBeNull();
         expect(sample.passes).toBe(1);
         expect(sample.firmness).toBe(0);
         expect(sample.sigma).toBe(0);
-        expect(sample.byLawn[10]?.ratio).toBeCloseTo(1.1745, 4);
+        expect(sample.byLawn[10]?.ratio).toBeCloseTo(1.243, 4);
         expect(sample.followCap).toBe(false);
     });
 
@@ -348,7 +354,9 @@ describe("the free motion once per sample (plan Amendment B, Task B2; B-d6)", ()
             // unpractised, impact-off-face, three passes, ratio 1.001 on the 10 s lawn): the face back on the ball,
             // unlawful (29.1.6.1) in one pass, ratio 1.003. Soft follow-through design §2.4: re-pinned (was unlawful,
             // ratio 1.003 on the 10 s lawn, no hold): the finish re-timed so the head never outpaces the striker's
-            // ball; lawful in one pass at firmness 0, ratio 1.447, as before §2.1.
+            // ball; lawful in one pass at firmness 0, ratio 1.447, as before §2.1. Gap register, the third refit
+            // (engine 0.42.0): re-pinned (was ratio 1.447 on the 10 s lawn, impulse 0.387 N·s): lawful in one pass at
+            // firmness 0, ratio 1.377, impulse 0.395 N·s.
             vi.mocked(simulateFreeMotion).mockClear();
             const sample = playSample("full-roll", textBook("full-roll"), 1, MAP_LAWNS);
             const rolled = vi
@@ -360,14 +368,14 @@ describe("the free motion once per sample (plan Amendment B, Task B2; B-d6)", ()
                 klass: null,
                 reason: null,
                 byLawn: {
-                    6: { range: 1.3113449402767827, ratio: 1.376169430330732, splitAtRest: 0 },
-                    10: { range: 2.4660672308100757, ratio: 1.4472746965461385, splitAtRest: 2.30502308090504e-14 },
-                    14: { range: 4.040237574975485, ratio: 1.4756610092506088, splitAtRest: 2.1103988740496128e-14 },
+                    6: { range: 1.499389197102552, ratio: 1.2069087042809459, splitAtRest: 1.8955525013336536e-14 },
+                    10: { range: 2.732776531224985, ratio: 1.3768812629436011, splitAtRest: 2.6000762508070673e-14 },
+                    14: { range: 4.414018977404773, ratio: 1.4519303926819769, splitAtRest: 2.897533814229671e-14 },
                 },
-                strokeEffort: 37.607985145309634,
+                strokeEffort: 38.721193381815134,
                 pushEffort: 100,
                 coupleShare: 0.01902281170917693,
-                pushImpulse: 0.38724000000000397,
+                pushImpulse: 0.39507700000000323,
                 effectVerdicts: { shipped: false, contactOnly: false },
                 followCap: false,
                 followSlip: false,

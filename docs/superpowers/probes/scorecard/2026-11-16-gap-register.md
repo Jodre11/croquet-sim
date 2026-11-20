@@ -755,3 +755,26 @@ No parameter sits at a bound.
     reference 1.24, fit 1.08).
   - w₁/U z against the fit: C3F −1.92 → −2.94, C3P −0.83 → −2.56, C10F −1.87 → −2.39, C1F −2.47 → −4.03; C10P
     1.30 → 0.14. Every other row, the look and Gugan 5 are as in the fit.
+- **Ruled (2026-11-20):** the user's "Six fitted, grip 0.08 s". faceFriction 0.2807, ballBallFriction 0.1112,
+  tangentialStiffnessRatio 0.3528, handCouplingDampingRatio 0.6835, armMass 1.081 kg and ballTurfSliding 0.6654 are
+  now the reference (`reference/*.json`, each note citing this card); handCouplingPeriod stays 0.08 s. Engine 0.42.0;
+  the reference card is `2026-11-20-refit3-grip80` (5.13).
+- **G2 stays open, narrowed:** the canonical full roll plays lawful in one pass at 1.2527 (band 1.00–1.20), the pass
+  roll at 1.1937 (≤ 0.99), the half roll at 1.644 (1.4–2.5). The grip period carries the rest; three fits in a row
+  have asked for a short one, so the next step is the hands' mechanism the period stands in for, not a value.
+- **Moves re-pinned:** `playPin.json`; the no-push baseline (drive, single-ball, stop-ac); the canonical rolls, the
+  full roll at p 2 (1.307), the tap (1.243), the sample at p 1 (1.377), the least hold (σ 0, 1.083); the drive's
+  read-outs; the AC stop's turf times (13.875, 14.24 ms); the reference values.
+- **Behaviour moved, recorded:**
+  - The half roll's striker's ball rises 12.7 mm above R in the impact and 14.4 mm in flight (was 4.8 mm); the
+    croqueted ball 2.3 mm. Under G4's ruling the test is now the croqueted ball's, as the full roll's is.
+  - The rolls' rising finish at p 1.1 turns −27.0° to +26.9°, so the bottom hand rises 53.9 mm to the top's 54.2:
+    ruling 2's "the bottom hand more" is now level there. The test asserts it only when the turn ends further past
+    vertical than it began.
+  - The full roll at 1.5 m/s, drive −1 again sinks the ball under the head; the handover lifts it 311–327 µm, inside
+    its static sink: the whole-run lift cover is back.
+  - **A fault, for the user:** the braked off-centre drive (drive −1, side 0.01, 2 m/s) no longer settles on its
+    hold. The head runs on past the braking hands, up to 1.19 m/s relative to them at 118 ms, and the grip's couple
+    stops it only at its swing's far end, at 215 ms, where the check's instantaneous finish takes it (was 658 ms,
+    settled). The test is `it.fails`. A finish that waits for the head to stay at rest would fix the reading; the
+    overswing itself is the heavier arm (1.081 kg) against the same couple.

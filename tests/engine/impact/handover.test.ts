@@ -368,14 +368,18 @@ describe("handover of a ball sunk under the head, on whole rolls", () => {
     // 1 (was over 1.5e-4): the hands press while on the ball, and a bounded search (0.7–2 m/s, seven speeds, every side)
     // found no full roll that sinks the ball under the head: overlapCorrection 0 throughout. As the pass roll's below,
     // the runs stay as a guard that the handover does not throw; the full roll's whole-run lift cover is lost, and the
-    // lift keeps its unit cover above.
+    // lift keeps its unit cover above. Gap register, the third refit (engine 0.42.0; was overlapCorrection 0): the head
+    // ends each run pressing blue, and the handover's lift clears 311.2–327.1 µm, inside the 437 µm static sink. The
+    // whole-run lift cover is back; the bound is 4e-4.
     it.each([
         ["full-roll", 1.5, -1, -0.01],
         ["full-roll", 1.5, -1, 0],
         ["full-roll", 1.5, -1, 0.01],
-    ] as const)("hands over the %s at %s m/s, drive %s, side %s, without throwing", (...run) => {
+    ] as const)("hands over the %s at %s m/s, drive %s, side %s, lifting the ball clear", (...run) => {
         const [type, speed, drive, side] = run;
-        expect(sunkRun(type, speed, drive, side).impact.overlapCorrection).toBe(0);
+        const correction = sunkRun(type, speed, drive, side).impact.overlapCorrection;
+        expect(correction).toBeGreaterThan(0);
+        expect(correction).toBeLessThan(4e-4);
     });
     // P2b.2b.2c.2c: the face's re-set law (was overlapCorrection over 5e-4; gate stage 2 to rule). The pass roll no
     // longer ends with the ball sunk under the head: at 2 m/s nine face intervals, the last 135.1–136.4 ms, and blue

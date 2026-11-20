@@ -235,14 +235,17 @@ describe("the read-out (P2b.2b.2c.2b design §5.2, §8.1)", () => {
         // Roll launch design §3.1f, amendment 8 (was striker 1.3904, croqueted 3.7630, mallet 0.8831 m/s): the face's
         // friction 0.38 and the balls' 0.16; the face lets go at 1.045 ms as before, striker 1.3911, croqueted 3.7636,
         // mallet 0.8833 m/s.
+        // Gap register, the third refit (engine 0.42.0; was striker 1.3911, croqueted 3.7636, mallet 0.8833 m/s): the
+        // face lets go at 1.050 ms; read as the ball leaves at 1.055 ms, striker 1.3916, croqueted 3.7619, mallet
+        // 0.8840 m/s.
         const r = readOut(guganSetup("drive", 3, 0, { guideEffort: 0 }), WORLD);
         const face = r.impact.timeline["face/blue"] ?? [];
         const end = face[face.length - 1]?.end ?? Infinity;
         const leaving = r.samples.find((s) => s.t > end);
         expect(face).toHaveLength(1);
-        expect(leaving?.w1).toBeCloseTo(1.3911, 4);
-        expect(leaving?.v2).toBeCloseTo(3.7636, 4);
-        expect(leaving?.head).toBeCloseTo(0.8833, 4);
+        expect(leaving?.w1).toBeCloseTo(1.3916, 4);
+        expect(leaving?.v2).toBeCloseTo(3.7619, 4);
+        expect(leaving?.head).toBeCloseTo(0.884, 4);
         // The read-out's own, 1 ms after the last contact (2.5 ms): the croqueted ball skids on the turf with no
         // forward roll yet, and the turf's sliding friction on it (about 3.5–3.9 N against aim, under a normal force
         // of about 7.2–8.1 N) slows it by about 0.008 m/s; the striker's ball and the mallet barely change. The
@@ -263,10 +266,12 @@ describe("the read-out (P2b.2b.2c.2b design §5.2, §8.1)", () => {
         // pace, so they stop chasing the planned swing: the mallet reads 0.8851 m/s; the balls are unchanged.
         // Roll launch design §3.1f, amendment 8 (was w₁ 1.3895, v₂ 3.7550, W 0.8851): the face's friction 0.38 and
         // the balls' 0.16; the read still at 2.045 ms, w₁ 1.3897, v₂ 3.7562, W 0.8853 m/s.
-        expect(r.time).toBeCloseTo(2.045e-3, 12);
-        expect(r.w1).toBeCloseTo(1.3897, 4);
-        expect(r.v2).toBeCloseTo(3.7562, 4);
-        expect(r.W).toBeCloseTo(0.8853, 4);
+        // Gap register, the third refit (engine 0.42.0; was 2.045 ms, w₁ 1.3897, v₂ 3.7562, W 0.8853): the face lets go
+        // at 1.050 ms, so the read is at 2.050 ms; w₁ 1.3889, v₂ 3.7522, W 0.8860 m/s.
+        expect(r.time).toBeCloseTo(2.05e-3, 12);
+        expect(r.w1).toBeCloseTo(1.3889, 4);
+        expect(r.v2).toBeCloseTo(3.7522, 4);
+        expect(r.W).toBeCloseTo(0.886, 4);
     });
 
     it("samples each ball's rolling fraction and the hands' force along aim (roll launch design §3.3)", () => {

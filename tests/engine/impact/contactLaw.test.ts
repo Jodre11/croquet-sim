@@ -421,9 +421,11 @@ describe("frictionStep", () => {
     it("keeps sliding a contact whose cone grew within the step while its slip still runs along the spring", () => {
         // k_t·|ξ| ≈ 9.9 N, the last step's cone; this step's is μ·N = 12 N. The trial, 9.9 + c_t·0.01 ≈ 11.0 N, lies
         // within it, so tangentialForce alone sticks; held on the cone, 12 + 1.1 N lies outside, and it slides.
+        // The spring is scaled to keep k_t·|ξ| at 9.9 N whatever the reference's tangential ratio (refitted 2026-11-20).
         const slip = vec3(0.01, 0, 0);
-        expect(tangentialForce(law, add(spring, scale(slip, 5e-6)), slip, 200).sliding).toBe(false);
-        const step = frictionStep(law, spring, slip, 5e-6, 200, true);
+        const grown = scale(spring, 2 / 7 / TANGENTIAL_STIFFNESS_RATIO);
+        expect(tangentialForce(law, add(grown, scale(slip, 5e-6)), slip, 200).sliding).toBe(false);
+        const step = frictionStep(law, grown, slip, 5e-6, 200, true);
         expect(step.sliding).toBe(true);
         expect(step.force.x).toBeCloseTo(-0.06 * 200, 12);
     });
