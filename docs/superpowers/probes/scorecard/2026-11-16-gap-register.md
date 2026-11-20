@@ -483,6 +483,32 @@ C3F at Gugan's U (p 0.799), the practised run, against the baseline engine (8d9c
   low power, are the likely ones), and whether the follow-through or the end test should change. That is a ruling
   for the user.
 
+### G6's late hits, seen (`2026-11-20-catch-seen`, against `2026-11-20-primed-push`)
+
+Soft follow-through design §2.1, engine 0.38.0: the follow-through's catch carries the balls on by phase 2 (handover,
+`simulateFreeMotion`, no boundary halt) instead of a straight line, and a catch past the default cap moves it once.
+Late-hit survey, rows with any late hit (`docs/superpowers/probes/late-hit/2026-11-20-catch-seen.txt`):
+
+| rows | primed push | catch seen |
+|---|---|---|
+| Table 6 (9) | C3F | C1F, C3F, C3P |
+| half roll (8) | 0 | 0 |
+| full roll (8) | p 0.8 | p 0.2, 0.4, 0.5, 0.6, 0.8, 1.0, canonical (0.885) |
+| pass roll (8) | 0 | p 0.6, 0.8, 1.0, canonical (0.900) |
+
+- **The fault is not only in soft strokes.** The canonical full roll's edge lands on the striker's ball at 378.7 ms,
+  the canonical pass roll's face at 434.1 ms; both are 29.1.6.1 effects past `EFFECT_SPEED` (+29.5 %, +18.1 %), and
+  both plays end unpractised (`impact-off-face`), their ratios 1.025 and 1.048 (were 1.306 and 1.243). Full roll
+  p 0.3 and pass roll p 0.3 stay unlawful (`impact-cap`): the impact is still open at the moved cap.
+- **Card:** objective 14.64 (was 7.97). Four rows newly miss, each z 5: `play.t6.C1F`, `play.t6.C3P`,
+  `play.canon.full-roll`, `play.canon.pass-roll`. `lawn.t6.C3P.L1` 1.16 (was −0.26). Every other family unchanged.
+- **Cost:** a full roll held open to ~0.4 s integrates about 3× longer (1.26 s, was 0.45 s); the suite takes 1010 s,
+  and the local test default goes to CI's 60 s.
+- **Consequence for the plan.** §2.2 scales the reach only below the canonical `contactSpeed`, and §2.3 only finishes
+  slower than 4 m/s, so neither can clear the canonical full and pass rolls' late hits. The spec's expected outcome
+  ("no canonical stroke late-hits", canonical pins held to the bit) no longer follows from Tasks 3–4. A ruling for
+  the user before Task 3.
+
 ## The joint fit
 
 Nelder–Mead over seven parameters converged after 112 cards (simplex spread under 0.05): objective **17.49**

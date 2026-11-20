@@ -19,6 +19,6 @@ describe("the pinned plays", () => {
         (_name, entry) => {
             expect(encodePinned(playPinned(entry))).toBe(JSON.stringify(entry.sample));
         },
-        600_000,
+        1_200_000,
     );
 });

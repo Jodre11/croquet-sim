@@ -280,6 +280,11 @@ export interface ImpactSetup {
      * the law of the turf under its head and a force table none. Isolated set-ups (tests) may give any head the pair.
      */
     readonly headTurf: HeadTurfLaw | null;
+    /**
+     * The balls `dt` (s) after the impact's end, carried on from `balls` (the run's at its end) by phase 2's own motion
+     * with no head (soft follow-through design §2.1); absent, they are carried on in a straight line at their velocity.
+     */
+    readonly project?: (balls: BallStates, dt: number) => BallStates;
 }
 
 /** One closed pair in one step, as the probe sees it: forces applied during the step, on body B. */
@@ -1076,8 +1081,9 @@ export function integrateStroke(setup: ImpactSetup, options: ImpactOptions = {},
     // The follow-through can run the head back into a ball the impact has let go (flat push design, amendment 5): the
     // stroke is then played again with the impact held open to that catch. A probe sees only the play that is kept.
     // The follow-through is played to look for a catch even where it is not wanted, so the impact is the same either way:
-    // then only up to the cap, as a catch at or past it is not replayed.
-    const cap = options.cap ?? plan.arc.contactAt + TRACK_IMPACT_CAP;
+    // then only up to the cap. A catch at or past the default cap moves it once (soft follow-through design §2.1).
+    let cap = options.cap ?? plan.arc.contactAt + TRACK_IMPACT_CAP;
+    let capMovable = options.cap === undefined;
     let openUntil = 0;
     for (;;) {
         const calls: (() => void)[] = [];
@@ -1091,27 +1097,52 @@ export function integrateStroke(setup: ImpactSetup, options: ImpactOptions = {},
                           ? {}
                           : { follow: (s: FollowSnapshot) => calls.push(() => outer.follow?.(s)) }),
                   };
+        const played = { ...options, cap };
         const stroke = strokeOnce(
             setup,
-            probe === undefined ? options : { ...options, probe },
+            probe === undefined ? played : { ...played, probe },
             true,
             openUntil,
             follow ? Infinity : cap,
         );
-        const caught = catchAt(setup, stroke);
-        if (caught === null || caught <= openUntil || caught >= cap) {
+        const next = nextReplay(catchAt(setup, stroke), openUntil, cap, capMovable);
+        if (next === null) {
             for (const call of calls) {
                 call();
             }
             return follow ? stroke : { run: stroke.run, follow: null };
         }
-        openUntil = caught;
+        ({ openUntil, cap, capMovable } = next);
     }
 }
 
 /**
- * The first follow-through sample (s) at which the head touches a ball carried on in a straight line from the impact's
- * end at its velocity there (flat push design, amendment 5); null where it touches none.
+ * The replay a follow-through catch at `caught` (s) calls for (flat push design amendment 5; soft follow-through design
+ * §2.1), or null for none: a catch after `openUntil` and before `cap` is replayed with the impact held open to it; one
+ * at or past a movable cap moves the cap, once, to the catch plus TRACK_IMPACT_CAP.
+ */
+export function nextReplay(
+    caught: number | null,
+    openUntil: number,
+    cap: number,
+    capMovable: boolean,
+): { openUntil: number; cap: number; capMovable: boolean } | null {
+    if (caught === null || caught <= openUntil) {
+        return null;
+    }
+    if (caught < cap) {
+        return { openUntil: caught, cap, capMovable };
+    }
+    if (!capMovable) {
+        return null;
+    }
+    return { openUntil: caught, cap: caught + TRACK_IMPACT_CAP, capMovable: false };
+}
+
+/**
+ * The first follow-through sample (s) at which the head touches a ball carried on from the impact's end: by
+ * `setup.project` where given (soft follow-through design §2.1), else in a straight line at its velocity there (flat
+ * push design, amendment 5); null where it touches none.
  */
 function catchAt(setup: ImpactSetup, stroke: StrokeRun): number | null {
     const { follow, run } = stroke;
@@ -1119,14 +1150,22 @@ function catchAt(setup: ImpactSetup, stroke: StrokeRun): number | null {
         return null;
     }
     const R = setup.ball.radius;
-    const balls = Object.values(run.balls).filter((b): b is BallState => b !== undefined);
+    const project = setup.project;
+    const straight = (dt: number): BallState[] =>
+        Object.values(run.balls)
+            .filter((b): b is BallState => b !== undefined)
+            .map((b) => ({ ...b, position: add(b.position, scale(b.velocity, dt)) }));
     for (const s of follow.samples) {
         if (s.t <= follow.impactEnd) {
             continue;
         }
         const dt = s.t - follow.impactEnd;
+        const balls =
+            project === undefined
+                ? straight(dt)
+                : Object.values(project(run.balls, dt)).filter((b): b is BallState => b !== undefined);
         for (const b of balls) {
-            if (headBallContact(s.head, setup.head, add(b.position, scale(b.velocity, dt)), R) !== null) {
+            if (headBallContact(s.head, setup.head, b.position, R) !== null) {
                 return s.t;
             }
         }

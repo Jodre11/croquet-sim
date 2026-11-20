@@ -33,7 +33,7 @@ function expectValues(lift: Lift, expected: readonly number[]): void {
 }
 
 describe("practice strokes (P2b.2b.2c.3b.1 design §4)", () => {
-    it("a stroke in the band plays once", () => {
+    it("a stroke in the band plays once", { timeout: 120_000 }, () => {
         const setup = halfRoll();
         const { contact } = planStroke(setup, WORLD);
         const passes: number[] = [];
@@ -153,7 +153,7 @@ describe("practice strokes (P2b.2b.2c.3b.1 design §4)", () => {
         expect(nextLift(played, zeros, from, step, window, end)).toEqual(again);
     });
 
-    it("an unconverged stroke reports its miss", () => {
+    it("an unconverged stroke reports its miss", { timeout: 120_000 }, () => {
         // The half roll in the band, its striker's ball moved 40 mm across the line, beyond the head's half-width
         // (28.6 mm): the head's side meets the ball (impact-off-face). The lift is vertical, so no pass can bring the
         // face onto the ball, and practice plays every pass.

@@ -54,7 +54,9 @@ describe("the band (P2b.2b.2c.3b.1 design §3)", () => {
         // The plan's Task 5 expected follow-turf-yield; after Tasks 1 and 3 the full hold meets the ball off the face
         // (pushMapRun.test's full roll), which bandMiss reads first. Roll launch design §3.1 (was impact-off-face): the
         // hands re-anchor at the departure, so the full roll's slowed push stays on the face, in the band.
-        expect(playTextBook("full-roll")).toBeNull();
+        // Soft follow-through design §2.1 (was null): the follow-through's catch, the ball carried on by phase 2, is
+        // seen; the head's edge lands on the striker's ball at 378.7 ms, off the face.
+        expect(playTextBook("full-roll")).toBe("impact-off-face");
         expect(playTextBook("half-roll")).toBeNull();
     }, 60_000);
 

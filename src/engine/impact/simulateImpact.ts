@@ -10,8 +10,10 @@
  * contact time. Integrates the impact and hands the balls over to phase 2.
  */
 import { CONTACT_TOLERANCE } from "../detect";
-import { dot, horizontal, length, sub, vec3, type Vec3 } from "../math/vec3";
-import { BALL_IDS, type BallId, type BallState, type BallStates, type World } from "../types";
+import { add, dot, horizontal, length, scale, sub, vec3, type Vec3 } from "../math/vec3";
+import { stateAtTime } from "../sample";
+import { simulateFreeMotion } from "../simulate";
+import { BALL_IDS, type BallId, type BallState, type BallStates, type ShotResult, type World } from "../types";
 import { obstaclesOf, validateWorld } from "../world";
 import { lawFromContactTime } from "./contactLaw";
 import { headBottom, headLowestPoint, outsideObstacle } from "./contacts";
@@ -604,6 +606,43 @@ function handedOver(
     return { ...run, handover: handed.balls, overlapCorrection: handed.overlapCorrection };
 }
 
+/** The halt margin (m) of followProjection's phase 2: far past any lawn, so that no ball halts in a follow-through. */
+export const PROJECTION_HALT_MARGIN = 1e3;
+
+/**
+ * The follow-through's catch projection on `world` (soft follow-through design §2.1): the balls `dt` after the impact's
+ * end, placed by the handover and carried on by phase 2 with no head. Phase 2 is run once per set of balls. Where the
+ * handover or phase 2 rejects them, the balls are carried on in a straight line at their velocity. The boundary does
+ * not halt them (PROJECTION_HALT_MARGIN): a halted ball would stand where it crossed, for the head to catch.
+ */
+export function followProjection(world: World): (balls: BallStates, dt: number) => BallStates {
+    const runs = new WeakMap<BallStates, ShotResult | null>();
+    const R = world.ball.radius;
+    const unbounded: World = { ...world, haltMargin: PROJECTION_HALT_MARGIN };
+    return (balls, dt) => {
+        let result = runs.get(balls);
+        if (result === undefined) {
+            try {
+                result = simulateFreeMotion(handover(balls, R, obstaclesOf(world)).balls, unbounded);
+            } catch {
+                result = null;
+            }
+            runs.set(balls, result);
+        }
+        const out: Partial<Record<BallId, BallState>> = {};
+        for (const id of BALL_IDS) {
+            const b = balls[id];
+            if (b !== undefined) {
+                out[id] =
+                    result === null
+                        ? { ...b, position: add(b.position, scale(b.velocity, dt)) }
+                        : stateAtTime(result, id, dt);
+            }
+        }
+        return out;
+    };
+}
+
 /**
  * Simulates the impact of `contact` on the balls at rest (design §3): validates, prepares, integrates and hands over.
  * Throws a RangeError on invalid input (validateImpact). Wiring into a whole shot is P2b.2's `simulateShot`.
@@ -617,7 +656,13 @@ export function simulateImpact(
     validateWorld(world);
     const sink = sinkSolver(world);
     validateImpact(contact, balls, world, sink);
-    return handedOver(integrate(prepareImpact(contact, balls, world, sink), options), world, contact, balls, sink);
+    return handedOver(
+        integrate({ ...prepareImpact(contact, balls, world, sink), project: followProjection(world) }, options),
+        world,
+        contact,
+        balls,
+        sink,
+    );
 }
 
 /**
@@ -636,6 +681,10 @@ export function simulateStroke(
     validateWorld(world);
     const sink = sinkSolver(world);
     validateImpact(contact, balls, world, sink);
-    const { run, follow } = integrateStroke(prepareImpact(contact, balls, world, sink), options, true);
+    const { run, follow } = integrateStroke(
+        { ...prepareImpact(contact, balls, world, sink), project: followProjection(world) },
+        options,
+        true,
+    );
     return { result: handedOver(run, world, contact, balls, sink), follow: follow as FollowThrough };
 }

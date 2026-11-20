@@ -73,7 +73,7 @@ and the finish shrink with pace, and the player brakes if that is still not enou
 - Check that `src/engine/simulate.ts` does not import `integrate.ts` or `simulateImpact.ts` (no import cycle;
   `npx tsc --noEmit` and lint).
 
-- [ ] **Failing tests.** They go in `tests/engine/impact/flatPush.test.ts`, as a new describe: "the follow-through
+- [x] **Failing tests.** They go in `tests/engine/impact/flatPush.test.ts`, as a new describe: "the follow-through
   catch, carried by phase 2 (soft follow-through design §2.1)".
   1. **Ball in flight:** the impact ends while the ball is airborne, rising. Its projected position at a later t has
      z equal to the ball radius once it has landed, not z0 + vz·t. Use a constructed run passed through the
@@ -84,20 +84,20 @@ and the finish shrink with pace, and the player brakes if that is still not enou
      lawn, the kept run raises `impact-off-face` and has a head–striker interval after 250 ms.
   4. **Explicit cap:** an explicit `options.cap` just past the re-anchor still ends the play before any catch. This
      is the existing test, unchanged.
-- [ ] **Cap test:** without `options.cap`, a catch at or past `contactAt + TRACK_IMPACT_CAP` is replayed once, with
+- [x] **Cap test:** without `options.cap`, a catch at or past `contactAt + TRACK_IMPACT_CAP` is replayed once, with
   the cap at the catch plus `TRACK_IMPACT_CAP`.
-- [ ] **Run the tests;** expect 1, 2 and the cap test to fail.
-- [ ] **Implement.** `catchAt(setup, stroke)` samples `follow.samples` after `impactEnd` against `project(run, s.t)`
+- [x] **Run the tests;** expect 1, 2 and the cap test to fail.
+- [x] **Implement.** `catchAt(setup, stroke)` samples `follow.samples` after `impactEnd` against `project(run, s.t)`
   with `headBallContact`. In `integrateStroke`, when `options.cap` is undefined and the catch is at or past the cap,
   replay once with the cap moved to the catch plus `TRACK_IMPACT_CAP`. After that replay, a catch at or past the new
   cap is not replayed. ENGINE_VERSION goes to 0.38.0.
-- [ ] **Run** `npm test`, `npx tsc --noEmit` and `npm run lint`. Each moved pin is re-pinned with a "soft
+- [x] **Run** `npm test`, `npx tsc --noEmit` and `npm run lint`. Each moved pin is re-pinned with a "soft
   follow-through design §2.1 (was …)" note. Regenerate `tests/lab/playPin.json` with `scripts/repinPlays.ts`.
-- [ ] **Run** the survey (`--label catch-seen`) and the scorecard (`--label catch-seen --compare
+- [x] **Run** the survey (`--label catch-seen`) and the scorecard (`--label catch-seen --compare
   2026-11-20-primed-push`).
-- [ ] **Register entry** "G6's late hits, seen": the survey's counts per type against Task 1's, and the card's
+- [x] **Register entry** "G6's late hits, seen": the survey's counts per type against Task 1's, and the card's
   families.
-- [ ] Commit and push.
+- [x] Commit and push.
 
 ### Task 3: The reach scales with pace (spec §2.2)
 

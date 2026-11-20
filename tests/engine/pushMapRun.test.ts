@@ -7,6 +7,7 @@ import { ratioOf } from "../../scripts/ratioFit";
 import type { FaultReport } from "../../src/engine/faults";
 import type { OnPoint } from "../../src/engine/impact/band";
 import { faceKey } from "../../src/engine/impact/contacts";
+import { PROJECTION_HALT_MARGIN } from "../../src/engine/impact/simulateImpact";
 import type { FollowFlag, FollowThrough } from "../../src/engine/impact/integrate";
 import { PRACTICE_PASSES } from "../../src/engine/impact/practice";
 import { faceHalfHeight } from "../../src/engine/impact/shape";
@@ -185,13 +186,15 @@ describe("one plan's run (P2b.2b.2c.3b plan Task 3)", () => {
         // re-catch, so the hands no longer drive the striker's ball on after it; the ratio 1.335, out of the band
         // 1.0–1.2. Recorded for the refit (gap register G2), not tuned. Primed push design, amendment 1 (was 1.335):
         // the hands press at F_push while on the ball, 1.306.
+        // Soft follow-through design §2.1 (was one pass, lawful, 1.306): the follow-through's catch is seen, the head's
+        // edge on the striker's ball at 378.7 ms; unpractised (impact-off-face) after three passes, ratio 1.025.
         const base = mapSetup("full-roll", textBook("full-roll"), 1);
         const p = swingReference["full-roll"].defaultBackswing.value / bodyBackswing(base, WORLD);
         const sample = playSample("full-roll", textBook("full-roll"), p, [10], "preset");
-        expect(sample.klass).toBeNull();
-        expect(sample.reason).toBeNull();
-        expect(sample.passes).toBe(1);
-        expect(sample.byLawn[10]?.ratio).toBeCloseTo(1.306, 3);
+        expect(sample.klass).toBe("unpractised");
+        expect(sample.reason).toBe("impact-off-face");
+        expect(sample.passes).toBe(3);
+        expect(sample.byLawn[10]?.ratio).toBeCloseTo(1.0249, 4);
     });
 
     it("plays the half roll's text book at its canonical power at ratio 1.757", () => {
@@ -211,7 +214,7 @@ describe("one plan's run (P2b.2b.2c.3b plan Task 3)", () => {
         expect(sample.byLawn[10]?.ratio).toBeCloseTo(1.757, 3);
     });
 
-    it("plays the pass roll's text book at its canonical power lawfully, at ratio 1.243", () => {
+    it("plays the pass roll's text book at its canonical power, its late hit seen, at ratio 1.048", () => {
         // Shapes design §8, ruling 17: a full roll with a 4° split, its 32° lean and a subtly punchier push (drive 0.5
         // over 60 ms pulses); was its own 15 ms punch at a 20° split, unlawful (29.1.6.1) at ratio 0.418. Ruling 18:
         // its follow-through 0.1 s keeps the head off the turf (was 0.3 s: ratio 0.814 in two passes). Hands-from-lean
@@ -225,12 +228,15 @@ describe("one plan's run (P2b.2b.2c.3b plan Task 3)", () => {
         // Restart confirmation design (was 1.1235 at a 1 ms hold): the hands no longer drive the striker's ball on after
         // the face's re-catch; 1.2853, past Gugan 4's filmed pass rolls. Recorded for the refit (gap register G2).
         // Primed push design, amendment 1 (was 1.2853): the hands press at F_push while on the ball, 1.2426.
+        // Soft follow-through design §2.1 (was one pass, lawful, 1.2426): the follow-through's catch is seen, the face
+        // on the striker's ball at 434.1 ms and the edge at 446.2 ms; unpractised (impact-off-face) after three passes,
+        // ratio 1.0484.
         const base = mapSetup("pass-roll", textBook("pass-roll"), 1);
         const p = swingReference["pass-roll"].defaultBackswing.value / bodyBackswing(base, WORLD);
         const sample = playSample("pass-roll", textBook("pass-roll"), p, [10], "preset");
-        expect(sample.klass).toBeNull();
-        expect(sample.passes).toBe(1);
-        expect(sample.byLawn[10]?.ratio).toBeCloseTo(1.2426, 4);
+        expect(sample.klass).toBe("unpractised");
+        expect(sample.passes).toBe(3);
+        expect(sample.byLawn[10]?.ratio).toBeCloseTo(1.0484, 4);
     });
 
     it(
@@ -253,7 +259,7 @@ describe("one plan's run (P2b.2b.2c.3b plan Task 3)", () => {
 });
 
 describe("the map's found firmness (firmness design §5, A7 item 4)", () => {
-    it("plays the full roll's text book at a tap lawfully at firmness 0", { timeout: 120_000 }, () => {
+    it("plays the full roll's text book at a tap to the moved cap, unlawful", { timeout: 600_000 }, () => {
         // Gate 1's plan, p = 2, is no longer admissible at firmness 0: its head rides over the ball (plan B-d8). At a
         // tap, firmness 0 pins the ball, a contact that never ends (plan C-d1), so the search goes on to a firmer hold.
         // Hands-from-lean design §3: the law's hands (was 0.274092). Roll launch design §3.1: the hands re-anchor at
@@ -262,12 +268,15 @@ describe("the map's found firmness (firmness design §5, A7 item 4)", () => {
         // firmness, so the sample carries the search's class and no hold. Primed push design, amendment 1 (was
         // unlawful, 29.1.6.1, at every hold): the hands press while on the ball and nowhere else, so the head no
         // longer pushes it; the play is admissible at firmness 0, ratio 1.178, still to the follow-through's cap.
+        // Soft follow-through design §2.1 (was admissible at firmness 0, ratio 1.178): the follow-through's catch past
+        // the cap moves it once, and the impact is still open at the moved cap; unlawful (impact-cap) at every hold,
+        // ratio 1.025.
         const sample = playSample("full-roll", textBook("full-roll"), 0.1, [10]);
-        expect(sample.klass).toBeNull();
-        expect(sample.reason).toBeNull();
-        expect(sample.firmness).toBe(0);
-        expect(sample.sigma).toBe(0);
-        expect(sample.byLawn[10]?.ratio).toBeCloseTo(1.178, 3);
+        expect(sample.klass).toBe("unlawful");
+        expect(sample.reason).toBe("impact-cap");
+        expect(sample.firmness).toBeNull();
+        expect(sample.sigma).toBeNull();
+        expect(sample.byLawn[10]?.ratio).toBeCloseTo(1.025, 3);
         expect(sample.followCap).toBe(true);
     });
 
@@ -303,7 +312,7 @@ describe("the map's found firmness (firmness design §5, A7 item 4)", () => {
 describe("the free motion once per sample (plan Amendment B, Task B2; B-d6)", () => {
     it(
         "plays the full roll's found-hold sample at p = 1 as before, rolling the balls once per lawn",
-        { timeout: 300_000 },
+        { timeout: 900_000 },
         () => {
             // Pinned before B2 from the search that rolled the balls on every lawn at each of its nine plays.
             // Hands-from-lean design §3: re-pinned on the law's hands (was ratio 1.331 on the 10 s lawn, firmness
@@ -318,28 +327,35 @@ describe("the free motion once per sample (plan Amendment B, Task B2; B-d6)", ()
             // the 10 s lawn): the restart at a 0.5 ms hold, ratio 1.497. Primed push design, amendment 1: re-pinned
             // (was ratio 1.497 on the 10 s lawn, push effort 14.6 %, impulse 0.005 N·s): the hands press at F_push
             // while on the ball, ratio 1.447, push effort 100 %, impulse 0.387 N·s.
+            // Soft follow-through design §2.1: re-pinned (was lawful in one pass, ratio 1.447 on the 10 s lawn, firmness
+            // 0): the follow-through's catch is seen, the head's edge on the ball at 349.7 ms; unpractised
+            // (impact-off-face) after three passes, ratio 1.001, no hold. The catch's own phase-2 runs (at
+            // PROJECTION_HALT_MARGIN) are not the sample's.
             vi.mocked(simulateFreeMotion).mockClear();
             const sample = playSample("full-roll", textBook("full-roll"), 1, MAP_LAWNS);
-            expect(vi.mocked(simulateFreeMotion).mock.calls.length).toBe(MAP_LAWNS.length);
+            const rolled = vi
+                .mocked(simulateFreeMotion)
+                .mock.calls.filter(([, world]) => world.haltMargin !== PROJECTION_HALT_MARGIN);
+            expect(rolled.length).toBe(MAP_LAWNS.length);
             expect(sample).toEqual({
                 power: 1,
-                klass: null,
-                reason: null,
+                klass: "unpractised",
+                reason: "impact-off-face",
                 byLawn: {
-                    6: { range: 1.3113449402767827, ratio: 1.376169430330732, splitAtRest: 0 },
-                    10: { range: 2.4660672308100757, ratio: 1.4472746965461385, splitAtRest: 2.30502308090504e-14 },
-                    14: { range: 4.040237574975485, ratio: 1.4756610092506088, splitAtRest: 2.1103988740496128e-14 },
+                    6: { range: 2.060494579955943, ratio: 1.0315797984410056, splitAtRest: 0 },
+                    10: { range: 3.8739134618191002, ratio: 1.0010015249557604, splitAtRest: 2.567475130795437e-14 },
+                    14: { range: 6.272199814512881, ratio: 1.004797895055678, splitAtRest: 3.394206188280407e-14 },
                 },
                 strokeEffort: 37.607985145309634,
                 pushEffort: 100,
                 coupleShare: 0.01902281170917693,
-                pushImpulse: 0.38724000000000397,
-                effectVerdicts: { shipped: false, contactOnly: false },
+                pushImpulse: 0.37571500000000446,
+                effectVerdicts: { shipped: true, contactOnly: true },
                 followCap: false,
                 followSlip: false,
-                passes: 1,
-                firmness: 0,
-                sigma: 0,
+                passes: 3,
+                firmness: null,
+                sigma: null,
             });
         },
     );

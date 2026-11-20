@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { faceKey, headBallContact, headLowestPoint } from "../../../src/engine/impact/contacts";
-import { departing, RESTART_HOLD } from "../../../src/engine/impact/integrate";
+import { departing, nextReplay, RESTART_HOLD, TRACK_IMPACT_CAP } from "../../../src/engine/impact/integrate";
 import { practiseStroke } from "../../../src/engine/impact/practice";
-import { simulateImpact, simulateStroke } from "../../../src/engine/impact/simulateImpact";
+import { followProjection, simulateImpact, simulateStroke } from "../../../src/engine/impact/simulateImpact";
 import {
     anchoredTime,
     guideExcess,
@@ -22,7 +22,9 @@ import {
 import type { MalletHead, TrackDrive } from "../../../src/engine/impact/types";
 import { add, dot, scale, sub, vec3 } from "../../../src/engine/math/vec3";
 import { planStroke } from "../../../src/engine/swing/buildContact";
+import { advance, rollingSpin } from "../../../src/engine/motion";
 import type { BallState } from "../../../src/engine/types";
+import { motionParamsAt } from "../../../src/engine/world";
 import { canonicalSetup } from "../support/shot";
 import { openWorld } from "../../../scripts/openLawn";
 import { mapSetup, textBook } from "../../../scripts/pushMapRun";
@@ -145,14 +147,24 @@ describe("the follow-through after the parting (flat push design, amendments 5 a
             // the full roll re-anchors at its departure (0.66 ms, rate 0.569), and its slowed push taps the striker's
             // ball every few ms through the push, the impact ending at 218.5 ms, still with no catch replayed and nothing
             // off the face.
-            expect(follow.impactEnd).toBeLessThan(type === "full-roll" ? 0.22 : 0.11);
-            expect(result.events.map((e) => e.kind)).not.toContain("impact-off-face");
+            // Soft follow-through design §2.1 (was: the full roll's impact ended before 0.22 s, nothing off the face):
+            // with the balls carried on by phase 2 and the cap moved once, the full roll's follow-through is seen to
+            // catch the striker's ball on the head's edge at 349.7 and 358.3 ms, past the old cap, so the impact ends
+            // at 369.3 ms with impact-off-face. §2.2 and §2.3 are to take that late hit away.
+            const kinds = result.events.map((e) => e.kind);
+            if (type === "full-roll") {
+                expect(follow.impactEnd).toBeCloseTo(0.36934, 4);
+                expect(kinds).toContain("impact-off-face");
+                return;
+            }
+            expect(follow.impactEnd).toBeLessThan(0.11);
+            expect(kinds).not.toContain("impact-off-face");
             const R = lawn.ball.radius;
-            const balls = Object.values(result.balls).filter((b) => b !== undefined);
+            const project = followProjection(lawn);
             for (const s of follow.samples.filter((x) => x.t > follow.impactEnd)) {
-                for (const b of balls) {
-                    const centre = add(b.position, scale(b.velocity, s.t - follow.impactEnd));
-                    expect(headBallContact(s.head, contact.head, centre, R)).toBeNull();
+                const balls = Object.values(project(result.balls, s.t - follow.impactEnd));
+                for (const b of balls.filter((x) => x !== undefined)) {
+                    expect(headBallContact(s.head, contact.head, b.position, R)).toBeNull();
                 }
             }
         });
@@ -439,5 +451,59 @@ describe("the held slope braked within the grip (flat push design, amendment 7)"
         const force =
             (track.arc.slopeHold * 1.5 * inertia * Math.abs(omegaEnd)) / (W * (track.arc.radius - track.hands.bottom));
         expect(force).toBeCloseTo(track.hands.gripLimit, 9);
+    });
+});
+
+describe("the follow-through catch, carried by phase 2 (soft follow-through design §2.1)", () => {
+    const R = lawn.ball.radius;
+    const project = followProjection(lawn);
+
+    it("brings a ball in flight at the impact's end down onto the lawn", () => {
+        const rising: BallState = {
+            position: vec3(12, 12, R + 0.01),
+            velocity: vec3(0, 1.2, 0.3),
+            angularVelocity: vec3(0, 0, 0),
+        };
+        const at = (project({ blue: rising }, 0.25).blue as BallState).position;
+        // A straight line at the end velocity would put it 85 mm up; phase 2 lands it within its flight's 77 ms.
+        expect(rising.position.z + rising.velocity.z * 0.25).toBeGreaterThan(R + 0.06);
+        expect(at.z).toBeLessThan(R + 0.01);
+    });
+
+    it("slows a rolling ball at the lawn's rolling deceleration", () => {
+        const velocity = vec3(0, 1.3, 0);
+        const rolling: BallState = {
+            position: vec3(12, 12, R),
+            velocity,
+            angularVelocity: rollingSpin(velocity, 0, R),
+        };
+        // Within the first rolling band: at 1.3 m/s the ball reaches the 1.25 m/s band, and its new deceleration, at 90 ms.
+        const dt = 0.05;
+        const params = motionParamsAt(lawn, rolling.position, 1.3);
+        const expected = advance(rolling, "rolling", params, dt).position.y;
+        expect((project({ blue: rolling }, dt).blue as BallState).position.y).toBeCloseTo(expected, 9);
+    });
+
+    it("carries a ball on past the boundary, where phase 2 would halt it", () => {
+        const velocity = vec3(1.3, 0, 0);
+        const edge: BallState = {
+            position: vec3(lawn.lawn.width + lawn.haltMargin - 0.01, 12, R),
+            velocity,
+            angularVelocity: rollingSpin(velocity, 0, R),
+        };
+        const x = (project({ blue: edge }, 0.1).blue as BallState).position.x;
+        expect(x).toBeGreaterThan(lawn.lawn.width + lawn.haltMargin + 0.1);
+    });
+
+    it("replays to a catch before the cap, and moves a movable cap once to see one past it", () => {
+        expect(nextReplay(null, 0, 0.5, true)).toBeNull();
+        expect(nextReplay(0.2, 0.2, 0.5, true)).toBeNull();
+        expect(nextReplay(0.3, 0.2, 0.5, true)).toEqual({ openUntil: 0.3, cap: 0.5, capMovable: true });
+        expect(nextReplay(0.6, 0.2, 0.5, true)).toEqual({
+            openUntil: 0.6,
+            cap: 0.6 + TRACK_IMPACT_CAP,
+            capMovable: false,
+        });
+        expect(nextReplay(0.6, 0.2, 0.5, false)).toBeNull();
     });
 });

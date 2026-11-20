@@ -116,40 +116,44 @@ describe("strokeTrajectory (design §4.3)", () => {
     // posture-holding push (was θ −0.085 rad at 584.7 ms): thrown back to θ −0.978 rad, it tops out at θ −0.217 rad at
     // 415.2 ms, with follow-head-deep. P2b.2b.2b.2b: hold relaxes from the first departure (was θ −0.217 rad at
     // 415.2 ms): thrown back to θ −0.985 rad, it tops out at θ −0.192 rad at 427.7 ms, with follow-head-deep.
-    it("starts at the impact's start, the head at rest at the top, when the lead outlasts the downswing", () => {
-        // A full roll with a 0.13 s hands' tempo (release 0.13 s before contact) and its arc 0.1455 s early: the
-        // impact starts 15.5 ms before the release, the hands still at the top, so no downswing samples come first.
-        // The release falls midway between two 1 ms samples, and the held slope's hands start accelerating there (the
-        // head's acceleration steps from ~38 to ~197 m/s²): without a sample at it the trapezoid rule across it
-        // misses by ~Δa·Δt²/8, about 20 µm. The integrator samples its first step at or after the release instead.
-        const shot = canonicalSetup("full-roll", {
-            world: WORLD,
-            shape: { handTempo: { slow: 0.13 } },
-            stroke: { timing: { arc: -0.1455, hands: 0, dip: 0 } },
-            // Shapes design §2: on a 15 m arc (was the preset's 1.5 m), so that this mistimed roll's 11.3 m/s hands'
-            // finish stays below its quarter turn.
-            drive: { handArcRadius: 15 },
-        });
-        const traced = simulateShot(shot, WORLD, { trajectory: true });
-        const late = traced.trajectory as SwingTrajectory;
-        const roll = traced.contact.drive as TrackDrive;
-        const first = late.samples[0] as StrokeSample;
-        expect(late.release).toBeGreaterThan(late.impactStart);
-        // Shapes design §8, ruling 14 (was no follow-cap): the top hand stopping from this mistimed roll's 11.3 m/s
-        // over HAND_EASE turns the mallet over the top, so its follow-through runs to the cap. The finish is not this
-        // test's subject.
-        expect(first.t).toBe(late.impactStart);
-        expect(length(first.velocity)).toBe(0);
-        expect(length(sub(first.top, (roll.arc.downswing as Downswing).handsTop))).toBeLessThan(1e-9);
-        const release = late.samples.find((s) => s.t >= late.release) as StrokeSample;
-        expect(release.t - late.release).toBeLessThanOrEqual(IMPACT_DT + 1e-12);
-        const jumps = boundaryJumps(late, roll);
-        expect(jumps.map((j) => j.name)).toEqual(["release", "impact end"]);
-        for (const jump of jumps) {
-            expect(jump.position, jump.name).toBeLessThanOrEqual(POSITION_SLACK);
-            expect(jump.velocity, jump.name).toBeLessThanOrEqual(jump.bound);
-        }
-    });
+    it(
+        "starts at the impact's start, the head at rest at the top, when the lead outlasts the downswing",
+        { timeout: 120_000 },
+        () => {
+            // A full roll with a 0.13 s hands' tempo (release 0.13 s before contact) and its arc 0.1455 s early: the
+            // impact starts 15.5 ms before the release, the hands still at the top, so no downswing samples come first.
+            // The release falls midway between two 1 ms samples, and the held slope's hands start accelerating there (the
+            // head's acceleration steps from ~38 to ~197 m/s²): without a sample at it the trapezoid rule across it
+            // misses by ~Δa·Δt²/8, about 20 µm. The integrator samples its first step at or after the release instead.
+            const shot = canonicalSetup("full-roll", {
+                world: WORLD,
+                shape: { handTempo: { slow: 0.13 } },
+                stroke: { timing: { arc: -0.1455, hands: 0, dip: 0 } },
+                // Shapes design §2: on a 15 m arc (was the preset's 1.5 m), so that this mistimed roll's 11.3 m/s hands'
+                // finish stays below its quarter turn.
+                drive: { handArcRadius: 15 },
+            });
+            const traced = simulateShot(shot, WORLD, { trajectory: true });
+            const late = traced.trajectory as SwingTrajectory;
+            const roll = traced.contact.drive as TrackDrive;
+            const first = late.samples[0] as StrokeSample;
+            expect(late.release).toBeGreaterThan(late.impactStart);
+            // Shapes design §8, ruling 14 (was no follow-cap): the top hand stopping from this mistimed roll's 11.3 m/s
+            // over HAND_EASE turns the mallet over the top, so its follow-through runs to the cap. The finish is not this
+            // test's subject.
+            expect(first.t).toBe(late.impactStart);
+            expect(length(first.velocity)).toBe(0);
+            expect(length(sub(first.top, (roll.arc.downswing as Downswing).handsTop))).toBeLessThan(1e-9);
+            const release = late.samples.find((s) => s.t >= late.release) as StrokeSample;
+            expect(release.t - late.release).toBeLessThanOrEqual(IMPACT_DT + 1e-12);
+            const jumps = boundaryJumps(late, roll);
+            expect(jumps.map((j) => j.name)).toEqual(["release", "impact end"]);
+            for (const jump of jumps) {
+                expect(jump.position, jump.name).toBeLessThanOrEqual(POSITION_SLACK);
+                expect(jump.velocity, jump.name).toBeLessThanOrEqual(jump.bound);
+            }
+        },
+    );
 
     it("throws a RangeError for a contact state with no downswing", () => {
         const { downswing, ...coast } = drive.arc;

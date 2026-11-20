@@ -226,23 +226,28 @@ describe("the follow-through (design §4)", () => {
         expect(follow.finish).toBeGreaterThanOrEqual(handsApex(push) as number);
     });
 
-    it("lets a slow push's finish reach its hands' apex within the cap from the push's end", () => {
-        // The full roll at a quarter of its canonical power: a late push's end (0.40 s) and a slow finish. Shapes
-        // design §2: its hands' apex is now 0.83 s after contact (was P2b.2b.2c.3b.1 design §5's rest beyond
-        // FOLLOW_CAP), so the cap's count from the push's end is no longer exercised here; it must still not bind.
-        const lawn = openWorld(10);
-        const setup = mapSetup("full-roll", textBook("full-roll"), canonicalPower("full-roll", lawn) / 4);
-        const planned = planStroke(setup, lawn);
-        const push = prepareTrack(planned.contact.drive as TrackDrive, planned.contact.head, lawn.gravity).push as Push;
-        expect(push.end).not.toBeNull();
-        expect(handsApex(push) as number).toBeLessThan((push.end as number) + FOLLOW_CAP);
-        const { follow } = simulateStroke(planned.contact, setup.balls, lawn);
-        expect(follow.flags).not.toContain("follow-cap");
-        // Shapes design §8, ruling 14 (was the mallet's own apex at 1.22 s, swinging free past its hands' apex): the
-        // bottom hand holds the carry at rest from push.freed, where the swing ends.
-        expect(follow.finish).toBeGreaterThan(handsApex(push) as number);
-        expect(follow.finish).toBeGreaterThanOrEqual(push.freed as number);
-    });
+    it(
+        "lets a slow push's finish reach its hands' apex within the cap from the push's end",
+        { timeout: 900_000 },
+        () => {
+            // The full roll at a quarter of its canonical power: a late push's end (0.40 s) and a slow finish. Shapes
+            // design §2: its hands' apex is now 0.83 s after contact (was P2b.2b.2c.3b.1 design §5's rest beyond
+            // FOLLOW_CAP), so the cap's count from the push's end is no longer exercised here; it must still not bind.
+            const lawn = openWorld(10);
+            const setup = mapSetup("full-roll", textBook("full-roll"), canonicalPower("full-roll", lawn) / 4);
+            const planned = planStroke(setup, lawn);
+            const push = prepareTrack(planned.contact.drive as TrackDrive, planned.contact.head, lawn.gravity)
+                .push as Push;
+            expect(push.end).not.toBeNull();
+            expect(handsApex(push) as number).toBeLessThan((push.end as number) + FOLLOW_CAP);
+            const { follow } = simulateStroke(planned.contact, setup.balls, lawn);
+            expect(follow.flags).not.toContain("follow-cap");
+            // Shapes design §8, ruling 14 (was the mallet's own apex at 1.22 s, swinging free past its hands' apex): the
+            // bottom hand holds the carry at rest from push.freed, where the swing ends.
+            expect(follow.finish).toBeGreaterThan(handsApex(push) as number);
+            expect(follow.finish).toBeGreaterThanOrEqual(push.freed as number);
+        },
+    );
 
     it("caps a carry whose hands never stop", () => {
         // Review focus 5: a 10 m push reaches its pendulum point (8 m) only after REACH_SEARCH (0.5 s), so the

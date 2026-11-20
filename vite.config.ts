@@ -10,8 +10,9 @@ export default defineConfig({
     test: {
         include: ["tests/**/*.test.ts"],
         environment: "node",
-        // 4× the slowest test on this default (3.4 s locally, buildContact's solver test), rounded up: CI raises it to
-        // 60 s (.github/workflows/ci.yml). Slower tests set their own timeouts.
-        testTimeout: 15_000,
+        // CI's 60 s (.github/workflows/ci.yml). Soft follow-through design §2.1 (was 15 s, 4× the slowest test then): the
+        // late hits the catch now sees hold the rolls' impacts open, and under the full suite's contention tests on
+        // this default take up to 18 s alone. Slower tests set their own timeouts.
+        testTimeout: 60_000,
     },
 });

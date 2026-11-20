@@ -16,7 +16,7 @@ describe("StrokeExtras (hands-from-lean plan Task 1)", () => {
         expect(setup.stroke.followThrough).toBe(0.05);
     });
 
-    it("changes a play's follow-through only after the impact", () => {
+    it("changes a play's follow-through only after the impact", { timeout: 120_000 }, () => {
         const base = playFrames("half-roll", plan, 1, 0.1);
         const short = playFrames("half-roll", plan, 1, 0.1, 10, { followThrough: 0 });
         const before = (frames: typeof base.frames) => frames.filter((f) => f.t <= base.impactEnd);

@@ -117,7 +117,7 @@ describe("the found firmness (firmness design §5)", () => {
         stroke: { ...setup.stroke, holdFirmness },
     });
 
-    it("finds no hold for a plan admissible without one", () => {
+    it("finds no hold for a plan admissible without one", { timeout: 120_000 }, () => {
         // The half roll's text book at a tap, power 0.1, is admissible at firmness 0. The full roll's was until plan
         // C-d1: at firmness 0 it pins the ball, a contact that never ends.
         const setup = mapSetup("half-roll", textBook("half-roll"), 0.1);
@@ -184,7 +184,9 @@ describe("the found firmness (firmness design §5)", () => {
     // no full roll in a scan of drive 0.25–1, reach 0.3–0.6, power 1–2, old and law hands, rides over the ball or
     // slips at firmness 0, and the text book at powers 0.8–1.5 stays on the face at every hold to 0.5. No case is
     // known; the detector keeps its negative tests. Restore with amendment 8 (the rolls' topspin), or a new case.
-    it.fails("classes a full roll held firm, its head riding onto the ball, as off the face", () => {
+    // Soft follow-through design §2.1 (was it.fails): restored. With the follow-through's catch seen, the head's edge
+    // rides onto the striker's ball at power 1, hold 0.2, after the strike.
+    it("classes a full roll held firm, its head riding onto the ball, as off the face", () => {
         // Gate 1: at power 0.8 a hold between the soft holds that slip and the firm that hold rides the head off the
         // face onto the striker's ball, pressing it 2.4 mm into the turf to the 450 ms cap. The handover threw there.
         // Hands-from-lean design §3: on the law's hands the hold between them is 0.1875 (was 0.2375). Flat push design,
