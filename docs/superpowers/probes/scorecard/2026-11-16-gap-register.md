@@ -884,3 +884,6 @@ reproduces `2026-11-21-push-body-inf` to the bit (objective 15.901509665814883, 
 - **Behaviour moved (full suite, 34 tests red, not re-pinned):** as the first run's, plus `advance.test`'s level
   advance (head rise 0.02997 against 0.02973) and `finiteGuard`'s hand-built overflow, which the body's timing no
   longer reaches. No test hangs (each file run alone under a 15-minute cap).
+- **Ruling (the user, 2026-11-21):** revert, and drop the push body. The engine is back to 0.42.0's behaviour (d79e662,
+  identical to 5ecad80). G2's next question is the user's account of the pass roll, "start soft and smoothly
+  accelerating", tested as the swing plan's own acceleration through the ball.
