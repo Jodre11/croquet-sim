@@ -1,6 +1,6 @@
 # The body behind the push (gap G2)
 
-Status: draft, 2026-11-20. Gap register G2 (`docs/superpowers/probes/scorecard/2026-11-16-gap-register.md`, "G2",
+Status: draft, 2026-11-20; amended after review 2026-11-21. Gap register G2 (`docs/superpowers/probes/scorecard/2026-11-16-gap-register.md`, "G2",
 "The third refit", "G2 stays open, narrowed"); the reality scorecard design's §6 route for a gap the fit cannot reach.
 
 ## 1. Why
@@ -40,93 +40,135 @@ push probe (`scripts/gapProbe.ts push`) shows the hands' coupling impulse along 
 
 ### 2.1 The push body
 
-A push stroke's hands are driven by a body of mass M_b moving along aim. Its state is the deficit δ (m/s) of its
-along-aim pace v_b below the plan's hands' along-aim pace v_plan at the plan's time τ:
+**Which strokes.** Every tracked stroke with a push that is not a check: `track.push !== null` and
+`finishKind(track) !== "check"`. §2.1–§2.4 apply to these strokes and only to them. Every other stroke, the checks
+included, is unchanged (§2.6).
 
-  v_b = v_plan(τ) − δ,  M_b·dδ/dt = F_g − F_press,  δ ≥ 0 (clamped),
+On these strokes the hands are driven by a body of mass M_b moving along aim. Its state is the deficit δ (m/s): how far
+its along-aim pace v_b falls below the plan's along-aim socket pace v_plan(τ) = path.socketVelocity · aim at the
+plan's time τ. τ scales every point of the path alike, so the socket stands for all of them.
 
-- F_g: the grip's force on the head along aim, both hands' coupling, the press excluded (HandLoad.force · aim, as
-  the hands pull the head forward; the head's reaction loads the body). Positive F_g is the head and balls holding the
-  hands back.
+  v_b = v_plan(τ) − δ,  M_b·dδ/dt = F_g − F_press,  0 ≤ δ ≤ v_plan (clamped),
+
+- F_g, the balls' resistance as the hands feel it: the grips' coupling along aim, that is the hands' force less the
+  share of the feed-forward they carry, (HandLoad.force − (HandLoad.feedForward − dip)) · aim, with the head's
+  reaction loading the body. It excludes the feed-forward, which is what the plan needs to swing the head and not a
+  load on the body. It is positive when the head and the balls hold the hands back.
 - F_press: F_push (92.2 N, `reference/contact.json` pushForce) while the press acts today (`pushIntent`: the face on
-  the striker's ball, before the pendulum phase), else 0.
+  the striker's ball, before the pendulum phase), and 0 otherwise.
 
-The plan keeps the player's intended swing: unloaded, δ stays 0 and the hands run the plan exactly. Load slows the
-body below the plan only by what exceeds the press, and the press never drives the hands ahead of the plan (δ ≥ 0):
-the hands carry and do not chase, as ruled for the press on 2026-11-18 ("Carry, not chase").
+The plan keeps the player's intended swing. A head that tracks its path loads the coupling with nothing, so δ stays 0
+and the hands run the plan. Load slows the body below the plan only by what exceeds the press, and the press never
+drives the hands ahead of the plan (δ ≥ 0): the hands carry the ball and do not chase it, as ruled for the press on
+2026-11-18 ("Carry, not chase"). Under the press, with less load than F_press, dδ/dt < 0: a slowed body regains the
+plan's pace while on the ball. This is intended. It closes the deficit, not a lead, and must not be "fixed" to hold
+δ.
 
-δ starts at 0 at the strike (the first face–ball contact on the striker's ball; `grip.striker` latched).
+δ starts at 0 at the strike, the first face–ball contact on the striker's ball (`grip.striker` latched).
 
 ### 2.2 The path's pace
 
-From the strike to the body's end (§2.4) the hands' path runs on the plan's time τ with τ' = v_b / v_plan(τ),
-integrated with the head (explicit step, the integrator's dt; τ'' from the step's dδ/dt and v_plan's slope, for the
-feed-forward). The path keeps its place: no lag shift (`Anchor.by` is zero), since the body is continuous from the
-strike and nothing resets it.
+From the strike to the body's end (§2.4) the hands' path runs on the plan's time τ, with τ' = v_b / v_plan(τ),
+integrated once per impact step (explicit, at dt). τ'' comes from that step's dδ/dt and v_plan's slope and feeds the
+feed-forward. The path keeps its place: there is no lag shift, since the body is continuous from the strike and
+nothing resets it.
 
-On these strokes the restart no longer re-anchors: the latch (`grip.departedAt`, `opened`, `restarted`) stays for
-what reads it, and `reanchor` is not called. Strokes without a push, and checks, keep the restart as it is.
+**Where τ lives.** The body is a new form of `Anchor`, `body: BodyClock`, holding the strike time, the step dt and
+append-only arrays of τ and τ' per step. The impact appends to them as it steps; samples already written never change,
+so `pathAt`, `plannedTime` and `anchoredTime` stay pure for any t up to the last sample. Between samples they
+interpolate. Past the last sample (an instant the body has not yet reached) they extrapolate at the last τ', which is
+Infinity for `anchoredTime` at a τ' of 0, as at a fixed rate of 0 today. The hand-over (§2.4) replaces the clock with
+a fixed-rate anchor, so after the impact nothing reads the arrays.
+
+**The restart.** On these strokes the restart no longer re-anchors. The latch (`grip.departedAt`, `opened`,
+`restarted`) stays for what reads it, the phase-1 grip-limit event included, and `reanchor` is not called.
 
 ### 2.3 The press moves onto the body
 
-`pushIntent` no longer enters the head's feed-forward on these strokes; F_press acts in §2.1 only. The head gains its
-push through the grip, from hands the strike has not slowed. `HandLoad.intent` keeps reporting F_press for the probe.
+On these strokes `pushIntent` no longer enters the head's feed-forward; F_press acts in §2.1 only. The head gains its
+push through the grip, from hands the strike has not slowed. This is the physical reading of "driven by the push":
+the player's force acts on the body and the body acts on the head through the grip. Pressing the head as well would
+count the press twice. `HandLoad.intent` keeps reporting F_press for the probe, and its comment is reworded to say
+that on these strokes it acts on the body and is not within `feedForward`.
 
 ### 2.4 The body's end and the finish
 
-The body ends at the first of: the plan's push end (`push.end`) or the pendulum phase's start (`push.pendulum`), in
-real time through the body's τ; or v_b ≤ 0. There it hands over to today's machinery as the restart did, with the
-body's pace in place of the head's: `anchor = { at, rate: v_b / v_plan, by: 0, warp: warpOf(track, head, at, v_b) }`
-(the warp only where the plan still speeds up, as in `reanchor`), offset so that the plan's time at `at` is the
-body's τ. `retimeFinish` then runs unchanged (soft follow-through design §2.4): the finish never outpaces the
-striker's ball.
+The body ends at the first of these:
+- the plan's push end (`push.end`) or the start of the pendulum phase (`push.pendulum`), read on the body's τ;
+- the impact's end, after which the balls are removed and nothing is left to resist the hands;
+- v_b reaching 0 (δ = v_plan).
+
+There it hands over to a fixed-rate anchor, `{ at, rate: v_b / v_plan, by: 0, warp: null }`, offset so that the plan's
+time at `at` is the body's τ. There is no warp: the push's end and the pendulum phase come after the plan's peak pace,
+so a warp there would be a single sample, which `reanchor` already drops. At a rate of 0 the plan freezes and
+FOLLOW_CAP ends the stroke, as `reanchor` behaves at rate 0 today. `retimeFinish` then runs unchanged (soft
+follow-through design §2.4): the finish never outpaces the striker's ball. The impact's tests on the plan's instants
+that already read `plannedTime` (`retimeFinish`'s trigger) now read the body's τ. Those in real time (`waiting`, the
+lift's release at `push.end`) stay as they are.
+
+**The reports.** `run.anchor` reports the hand-over. The push probe's "after the departure" window (`gapProbe.ts
+push`) moves from `anchor.at` to `run.departure + RESTART_HOLD`, the instant the restart used, so its impulses stay
+comparable across cards.
 
 ### 2.5 M_b
 
 New reference value `pushBodyMass` in `reference/contact.json`, provenance "analogue":
-- **Value 2.9 kg.** Walilko, Viano and Bir (2005) measured an Olympic boxer's effective punch mass at 2.9 (SD 2.0) kg:
-  the mass a strike from the body through a braced arm presents at the hand, the closest measured analogue of a push
-  from the body through firm arms found. (Br J Sports Med 39(10):710–719, DOI 10.1136/bjsm.2004.014126,
-  https://pmc.ncbi.nlm.nih.gov/articles/PMC1725037/, read 2026-11-20; the publishers refuse automated fetches, so the
-  page is not hashed.)
+- **Value 2.9 kg.** Walilko, Viano and Bir (2005) measured an Olympic boxer's effective punch mass at 2.9 (SD 2.0) kg.
+  That is the mass a strike from the body through a braced arm presents at the hand, and the closest measured analogue
+  found for a push from the body through firm arms. A push also raises the hand–arm system's apparent mass (Pan et
+  al. 2018, above). (Br J Sports Med 39(10):710–719, DOI 10.1136/bjsm.2004.014126,
+  https://pmc.ncbi.nlm.nih.gov/articles/PMC1725037/, read 2026-11-20. The publishers refuse automated fetches, so
+  the page is not hashed.)
 - **Bounds 0.9–4.9 kg**, its mean ± one SD.
-- **Corroboration.** Pan et al. (2018, above): a push raises the hand–arm system's apparent mass, more so below
-  25 Hz, the combined grip and push "brought about a greater effective mass from the upper arm".
 
-**armMass is kept** (1.081 kg, rigid at the top grip): it is the arms' inertia swung with the head; M_b is the body
-behind the hands, beyond the grip's spring, and is never added to the head. A refit with M_b in place may move
-armMass; that is not this design's (§2.7).
+**armMass is kept** (1.081 kg, rigid at the top grip). armMass is the arms' inertia swung with the head; M_b is the
+body behind the hands, beyond the grip's spring, and is never added to the head. A refit with M_b in place may move
+armMass; that is not part of this design (§2.7).
 
 ### 2.6 Unchanged
 
-Strokes without a push; checks; the grip's law, period (0.08 s) and damping; the press's force and when it acts; the
-finish clock and `retimeFinish`; the swing before the strike; every other reference value.
+- Strokes without a push, and checks.
+- The grip's law, its period (0.08 s) and its damping.
+- The press's force and when it acts.
+- The finish clock and `retimeFinish`.
+- The swing before the strike.
+- Every other reference value.
+
+Push strokes other than the rolls (the grip plans with a reach, `reference/derived/grip-plans.json`) change too. That
+is accepted: the scorecard's objective and the re-pinned moves guard them.
 
 ### 2.7 Not in this design
 
-A refit with M_b; fitting M_b (it stays sourced unless the user rules otherwise); the soft drives' mid-swing finish
-(register, "The braked drive").
+- A refit with M_b.
+- Fitting M_b: it stays sourced unless the user rules otherwise.
+- The soft drives' mid-swing finish (register, "The braked drive").
 
 ## 3. Verification
 
 **Unit tests** (engine 0.43.0):
-1. With no load (F_g ≡ 0) δ stays 0 and the hands' path matches the plan's to rounding.
-2. A constant F_g above F_press grows δ at (F_g − F_press)/M_b; at or below F_press δ stays 0.
-3. M_b → ∞ (1e9 kg) gives the plan's path through the push: the strike does not slow the hands.
+1. A push stroke played with no balls: its head tracks the path, so δ stays below 1e-3·v_plan throughout and the
+   hands' path matches the plan's to that tolerance.
+2. A constant F_g above F_press grows δ at (F_g − F_press)/M_b. At or below F_press, δ falls to 0 and stays there.
+3. With M_b → ∞ (1e9 kg) the hands follow the plan's path through the push: the strike does not slow them.
 4. The no-push baseline (`fixtures/noPushBaseline.json`: drive, single-ball, stop-ac) is unchanged to the bit.
 5. The hand-over at the body's end is continuous in the path's place and pace.
+6. A stroke with a push that is a check plays as before (gate, §2.1).
 
-**The discriminating run.** Card `2026-11-2x-push-body` against `2026-11-20-refit3-grip80`, at M_b 2.9 kg and at
-each bound (0.9, 4.9). It passes at 2.9 kg if all hold:
-- `coach.full-roll` in 1.00–1.20 and `coach.pass-roll` ≤ 0.99;
+**The discriminating run.** Card `2026-11-2x-push-body` against `2026-11-20-refit3-grip80`, at M_b 2.9 kg, with an
+M_b = ∞ row in the same run. The body only slows the hands, so ∞ is the most carry any M_b can give (assumption,
+from the δ ≥ 0 clamp). The run passes at 2.9 kg if all of these hold:
+- `coach.full-roll` is in 1.00–1.20 and `coach.pass-roll` is at most 0.99;
 - the half roll stays in 1.4–2.5;
-- Table 6's w₁/U z improves in C3F, C3P, C10F and C1F, and no Table 6 row moves past |z| 3 that was inside it;
-- the head does not outrun the striker's ball: in every Table 6 roll W ≤ w₁ + 0.03 U at the read (Gugan: W ≈ w₁);
+- Table 6's w₁/U z improves in C3F, C3P, C10F and C1F, and no Table 6 row inside |z| 3 moves past it;
+- the head does not outrun the striker's ball: W ≤ w₁ + 0.03 U at the read in every Table 6 roll (Gugan: W ≈ w₁);
 - the objective is at most 5.13;
 - the look holds: clean rides, lift within 0–5 mm.
 
-**Stop rule.** If 2.9 kg fails, the run reports both bounds and stops; no value between them is tried and nothing is
-tuned. The user rules on the next step.
+**Stop rule.**
+- If ∞ fails the roll bands, no finite M_b can pass. The run reports this and stops.
+- If 2.9 kg fails, the run plays the bounds (0.9 and 4.9 kg), reports all three and stops. No other value is tried
+  and nothing is tuned.
+- The user rules on the next step.
 
 ## 4. Risks
 
@@ -138,3 +180,6 @@ tuned. The user rules on the next step.
 - **Explicit τ.** The body's τ is integrated per step, not precomputed like the warp; at dt it must stay smooth
   enough for the feed-forward's τ''. Test 5 and the look rows cover the joins; a jagged τ'' shows in the hands' load.
 - **M_b is an analogue.** A punch is a strike, not a held push; the bounds are wide for that reason.
+- **Two changes at once.** Ending the re-anchor and moving the press off the head both move the ratio, and the run
+  cannot tell them apart. The head loses the press's direct 0.29–0.71 N·s (register, "G6's primed push, on the
+  ball"). The ∞ row shows the re-anchor's share alone, since there the press cannot act.
