@@ -119,7 +119,13 @@ import {
     handsApex,
     handsAt,
     holdPendulum,
+    anchorReport,
+    bodyEnds,
+    bodyStroke,
+    closeBody,
     reanchor,
+    stepBody,
+    withBody,
     releaseLift,
     retimeFinish,
     releaseOf,
@@ -1266,6 +1272,7 @@ function strokeOnce(
     let struck = false;
     let quiet = 0;
     let steps = 0;
+    let bodyLoad = { coupling: 0, press: 0 };
     const trace: StrokeState[] | null = follow && tracked ? [{ t: 0, head: setup.start }] : null;
     const every = Math.max(1, Math.round(FOLLOW_SAMPLE / dt));
     const releaseAt = plan.kind === "track" ? releaseTime(plan) : 0 - Infinity;
@@ -1291,6 +1298,14 @@ function strokeOnce(
             ) {
                 played = releaseLift(played, t);
             }
+            // The body behind the push steps on the last step's load, then ends where its clock reaches the push's end
+            // or the pendulum phase (push body design §2.1, §2.4), before the finish is re-timed on it.
+            if (played?.anchor?.body !== undefined) {
+                stepBody(played, bodyLoad.coupling, bodyLoad.press, dt);
+                if (bodyEnds(played, t)) {
+                    closeBody(played, t);
+                }
+            }
             if (
                 !timed &&
                 played?.anchor !== undefined &&
@@ -1302,6 +1317,13 @@ function strokeOnce(
                 played = retimeFinish(played, head, strikerPace(setup, balls, grip.striker, played.arc.aim, t));
             }
             hand = handLoad(played ?? plan, state, head, t, grip, dt);
+            if (played?.anchor?.body !== undefined) {
+                // F_g, the grips' force along aim beyond the feed-forward; the press, the intent kept off the head.
+                bodyLoad = {
+                    coupling: dot(sub(hand.force, hand.feedForward), aim),
+                    press: hand.intent === undefined ? 0 : dot(hand.intent, aim),
+                };
+            }
             drive = hand.force;
             headTorque = hand.torque;
             // The first saturation inside the strike and the first to begin after it are each recorded, so that the
@@ -1390,7 +1412,12 @@ function strokeOnce(
                     restarted = true;
                     // A check's share already fits its braking to the struck head (checkShare), so a check is not
                     // re-anchored (roll launch design, amendment 3).
-                    if (played !== null && finishKind(played) !== "check") {
+                    // A push body stroke is not re-anchored: its body runs on from the strike (push body design §2.2),
+                    // and the restart only ends the push's pitch hold.
+                    const clock = played?.anchor?.body;
+                    if (clock !== undefined) {
+                        clock.restart = t;
+                    } else if (played !== null && finishKind(played) !== "check") {
                         played = reanchor(played, head, state, t);
                     }
                 }
@@ -1434,6 +1461,11 @@ function strokeOnce(
                 // The striker's ball is the first the face meets; on it, the hands press from the next step
                 // (pushIntent; primed push design §2.1, amendment 1).
                 if (tracked) {
+                    // The body behind the push starts at the strike (push body design §2.1).
+                    if (grip.striker === null && played !== null && bodyStroke(played)) {
+                        played = withBody(played, t, dt);
+                        bodyLoad = { coupling: 0, press: 0 };
+                    }
                     grip.striker ??= pair.b;
                     grip.onBall ||= pair.b === grip.striker;
                 }
@@ -1579,8 +1611,18 @@ function strokeOnce(
     const released =
         grip.releasedAt === null ? run : { ...run, release: { t: grip.releasedAt, deltaTheta: grip.releaseDelta } };
     const departed = grip.departedAt === null ? released : { ...released, departure: grip.departedAt };
+    // The body ends with the impact at the latest: the balls are removed, and nothing is left to resist the hands.
+    // The clock is stepped on to the impact's end first, so the follow-through starts on a sample, where the closed
+    // clock and the open one agree in place.
+    const clock = played?.anchor?.body;
+    if (played !== null && clock !== undefined && clock.end === null) {
+        while (clock.at + (clock.tau.length - 1) * clock.dt < steps * dt - dt / 2) {
+            stepBody(played, bodyLoad.coupling, bodyLoad.press, dt);
+        }
+        closeBody(played, steps * dt);
+    }
     const anchor = played?.anchor;
-    const done = anchor === undefined ? departed : { ...departed, anchor: { at: anchor.at, rate: anchor.rate } };
+    const done = anchor === undefined ? departed : { ...departed, anchor: anchorReport(anchor) };
     if (trace === null || plan.kind !== "track") {
         return { run: done, follow: null };
     }

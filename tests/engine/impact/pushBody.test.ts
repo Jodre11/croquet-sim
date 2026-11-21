@@ -16,7 +16,8 @@ import type { TrackDrive } from "../../../src/engine/impact/types";
 import { dot, length, sub, ZERO } from "../../../src/engine/math/vec3";
 import { planStroke } from "../../../src/engine/swing/buildContact";
 import { openWorld } from "../../../scripts/openLawn";
-import { mapSetup, textBook } from "../../../scripts/pushMapRun";
+import { canonicalPower, mapSetup, textBook } from "../../../scripts/pushMapRun";
+import { simulateStroke } from "../../../src/engine/impact/simulateImpact";
 
 const lawn = openWorld(10);
 const DT = 1e-5;
@@ -32,6 +33,41 @@ function fullRoll(mass = 2.9): PreparedTrack {
 function clockOf(track: PreparedTrack): BodyClock {
     return track.anchor?.body as BodyClock;
 }
+
+/** The canonical `type`'s stroke on the 10 s lawn, its hands' body mass set to `mass` (kg). */
+function played(type: "full-roll" | "pass-roll", mass = 2.9) {
+    const setup = mapSetup(type, textBook(type), canonicalPower(type, lawn));
+    const { contact } = planStroke(setup, lawn);
+    const drive = contact.drive as TrackDrive;
+    const held = { ...contact, drive: { ...drive, hands: { ...drive.hands, pushBodyMass: mass } } };
+    return simulateStroke(held, setup.balls, lawn);
+}
+
+describe("the body behind the push in the impact (push body design §2.2–§2.4)", () => {
+    it("hands over after the departure, slowed but moving, with a finite finish", () => {
+        for (const type of ["full-roll", "pass-roll"] as const) {
+            const { result, follow } = played(type);
+            const anchor = result.anchor as { at: number; rate: number };
+            expect(anchor.at).toBeGreaterThan(result.departure as number);
+            expect(anchor.rate).toBeGreaterThan(0);
+            expect(anchor.rate).toBeLessThan(1);
+            expect(Number.isFinite(follow.finish)).toBe(true);
+            expect(follow.samples.every((s) => Number.isFinite(s.head.position.x))).toBe(true);
+        }
+    });
+
+    it("keeps the plan's pace with an infinite mass", () => {
+        const { result } = played("full-roll", Infinity);
+        expect((result.anchor as { rate: number }).rate).toBe(1);
+    });
+
+    it("plays a run twice to the bit: the clock is the run's own", () => {
+        const a = played("full-roll");
+        const b = played("full-roll");
+        expect(JSON.stringify(b.follow.samples)).toBe(JSON.stringify(a.follow.samples));
+        expect(b.result.anchor).toEqual(a.result.anchor);
+    });
+});
 
 describe("the body behind the push's clock (push body design §2.1, §2.2)", () => {
     it("gates the full roll in and a check out", () => {
