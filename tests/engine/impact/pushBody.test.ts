@@ -1,0 +1,150 @@
+import { describe, expect, it } from "vitest";
+import {
+    anchoredTime,
+    bodyEnds,
+    bodyStroke,
+    closeBody,
+    pathAt,
+    plannedTime,
+    prepareTrack,
+    stepBody,
+    withBody,
+    type BodyClock,
+    type PreparedTrack,
+} from "../../../src/engine/impact/track";
+import type { TrackDrive } from "../../../src/engine/impact/types";
+import { dot, length, sub, ZERO } from "../../../src/engine/math/vec3";
+import { planStroke } from "../../../src/engine/swing/buildContact";
+import { openWorld } from "../../../scripts/openLawn";
+import { mapSetup, textBook } from "../../../scripts/pushMapRun";
+
+const lawn = openWorld(10);
+const DT = 1e-5;
+
+/** The canonical full roll's prepared track, with `pushBodyMass` set to `mass` (kg). */
+function fullRoll(mass = 2.9): PreparedTrack {
+    const setup = mapSetup("full-roll", textBook("full-roll"), 1);
+    const { contact } = planStroke(setup, lawn);
+    const track = prepareTrack(contact.drive as TrackDrive, contact.head, lawn.gravity);
+    return { ...track, hands: { ...track.hands, pushBodyMass: mass } };
+}
+
+function clockOf(track: PreparedTrack): BodyClock {
+    return track.anchor?.body as BodyClock;
+}
+
+describe("the body behind the push's clock (push body design §2.1, §2.2)", () => {
+    it("gates the full roll in and a check out", () => {
+        const roll = fullRoll();
+        expect(bodyStroke(roll)).toBe(true);
+        expect(bodyStroke({ ...roll, arc: { ...roll.arc, alpha: -1 } })).toBe(false);
+        expect(bodyStroke({ ...roll, push: null })).toBe(false);
+    });
+
+    it("reads a clock of constant rate 0.6 as the fixed-rate anchor at 0.6", () => {
+        const roll = fullRoll();
+        const at = roll.arc.contactAt;
+        const body = withBody(roll, at, DT);
+        const clock = clockOf(body);
+        for (let i = 1; i <= 200; i++) {
+            clock.tau.push(at + 0.6 * i * DT);
+            clock.rate.push(0.6);
+            clock.slope.push(0);
+        }
+        clock.rate[0] = 0.6;
+        const fixed: PreparedTrack = { ...roll, anchor: { at, rate: 0.6, by: ZERO, warp: null } };
+        for (const t of [at, at + 37.5 * DT, at + 100 * DT, at + 199.25 * DT]) {
+            expect(plannedTime(body, t)).toBeCloseTo(plannedTime(fixed, t), 12);
+            const a = pathAt(body, t);
+            const b = pathAt(fixed, t);
+            expect(length(sub(a.socket, b.socket))).toBeLessThan(1e-12);
+            expect(length(sub(a.socketVelocity, b.socketVelocity))).toBeLessThan(1e-12);
+        }
+        for (const planned of [at + 0.6 * 50.5 * DT, at + 0.6 * 150 * DT]) {
+            expect(anchoredTime(body, planned)).toBeCloseTo(anchoredTime(fixed, planned), 12);
+        }
+    });
+
+    it("keeps the plan's path with no load: δ stays 0 and the path is the plan's", () => {
+        const roll = fullRoll();
+        const at = roll.arc.contactAt;
+        const body = withBody(roll, at, DT);
+        for (let i = 0; i < 300; i++) {
+            stepBody(body, 0, 0, DT);
+        }
+        expect(clockOf(body).deficit).toBe(0);
+        for (const t of [at + 10 * DT, at + 250 * DT]) {
+            expect(length(sub(pathAt(body, t).socket, pathAt(roll, t).socket))).toBeLessThan(1e-12);
+        }
+    });
+
+    it("grows δ at (F_g − F_press)/M_b above the press, and holds it at 0 below it", () => {
+        const roll = fullRoll(2.9);
+        const body = withBody(roll, roll.arc.contactAt, DT);
+        for (let i = 0; i < 100; i++) {
+            stepBody(body, 150, 92.2, DT);
+        }
+        expect(clockOf(body).deficit).toBeCloseTo((100 * DT * (150 - 92.2)) / 2.9, 9);
+        const below = withBody(roll, roll.arc.contactAt, DT);
+        stepBody(below, 50, 92.2, DT);
+        expect(clockOf(below).deficit).toBe(0);
+    });
+
+    it("regains the plan's pace under the press once the load falls below it", () => {
+        const roll = fullRoll(2.9);
+        const body = withBody(roll, roll.arc.contactAt, DT);
+        for (let i = 0; i < 100; i++) {
+            stepBody(body, 300, 92.2, DT);
+        }
+        const slowed = clockOf(body).deficit;
+        for (let i = 0; i < 10; i++) {
+            stepBody(body, 0, 92.2, DT);
+        }
+        expect(clockOf(body).deficit).toBeLessThan(slowed);
+    });
+
+    it("leaves δ at 0 with an infinite mass", () => {
+        const roll = fullRoll(Infinity);
+        const body = withBody(roll, roll.arc.contactAt, DT);
+        for (let i = 0; i < 100; i++) {
+            stepBody(body, 1e4, 0, DT);
+        }
+        expect(clockOf(body).deficit).toBe(0);
+        expect(clockOf(body).rate.every((r) => r === 1)).toBe(true);
+    });
+
+    it("hands over continuously in place and pace, and holds its last rate after", () => {
+        const roll = fullRoll(2.9);
+        const at = roll.arc.contactAt;
+        const body = withBody(roll, at, DT);
+        for (let i = 0; i < 200; i++) {
+            stepBody(body, 400, 92.2, DT);
+        }
+        const end = at + 200 * DT;
+        const before = pathAt(body, end);
+        closeBody(body, end);
+        const after = pathAt(body, end);
+        expect(length(sub(before.socket, after.socket))).toBeLessThan(1e-12);
+        expect(length(sub(before.socketVelocity, after.socketVelocity))).toBeLessThan(1e-12);
+        const rate = clockOf(body).rate[200] as number;
+        expect(plannedTime(body, end + 1e-3) - plannedTime(body, end)).toBeCloseTo(rate * 1e-3, 12);
+        expect(bodyEnds(body, end + 1e-3)).toBe(false);
+    });
+
+    it("never reaches a later plan instant once the closed clock's rate is 0", () => {
+        const roll = fullRoll(0.9);
+        const at = roll.arc.contactAt;
+        const body = withBody(roll, at, DT);
+        const aim = roll.arc.aim;
+        for (let i = 0; i < 20000 && (clockOf(body).rate.at(-1) as number) > 0; i++) {
+            stepBody(body, 1e5, 0, DT);
+        }
+        const last = clockOf(body).tau.length - 1;
+        expect(clockOf(body).rate[last]).toBe(0);
+        const end = at + last * DT;
+        expect(bodyEnds(body, end)).toBe(true);
+        closeBody(body, end);
+        expect(anchoredTime(body, (clockOf(body).tau[last] as number) + 1e-3)).toBe(Infinity);
+        expect(Number.isFinite(dot(pathAt(body, end + 0.1).socketVelocity, aim))).toBe(true);
+    });
+});
