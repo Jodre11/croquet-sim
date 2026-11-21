@@ -11,8 +11,10 @@ The user's rulings:
 - 2026-11-20, "Body behind the push": in a roll the player leans in and pushes from the body through firm arms. The
   hands are a moving mass driven by the push and slow only as the balls' resistance makes them; they are not a fixed
   path reset to the head's pace.
-- 2026-11-21, "Run ahead, bounded" and "Press window + ball cap" (A1), after the first run failed (register, "G2's push
-  body, diagnosed"): the body may run ahead of the plan under the press, never faster than the striker's ball.
+- 2026-11-21, "Run ahead, bounded" and "Cap the head" (A1), after the first run failed (register, "G2's push body,
+  diagnosed"): the body may run ahead of the plan under the press, but the press stops adding lead once the head's
+  pace reaches the striker's ball's. (A first wording, "never faster than the striker's ball" on the hands, was
+  withdrawn in review: the plan runs the hands at about U and the ball leaves at 0.35–0.55 U, so it allowed no lead.)
 
 **The gap.** On the reference (card `2026-11-20-refit3-grip80`, objective 5.13) the canonical full roll plays at 1.2527
 (band 1.00–1.20) and the pass roll at 1.1937 (≤ 0.99); the half roll is in band at 1.644 (1.4–2.5). In Gugan's Table 6
@@ -36,7 +38,7 @@ design §3.1c) the hands' path is re-timed to the head's along-aim pace as the s
 slowed the head to 0.39–0.42 U, so from there the hands follow a plan run at that pace. A stiff grip makes the head
 pull the hands less in the moment before; a body behind the hands would make the strike slow them less at all. The
 push probe (`scripts/gapProbe.ts push`) shows the hands' coupling impulse along aim after the departure is −0.08 to
-+0.52 N·s at 0.08 s; the press gives 0.22–0.64 N·s on top (register, "G6's push").
++0.52 N·s at 0.08 s; the press gives 0.22–0.64 N·s on top (register, "G2's push body, diagnosed").
 
 ## 2. Design
 
@@ -50,7 +52,8 @@ On these strokes the hands are driven by a body of mass M_b moving along aim. It
 its along-aim pace v_b falls below the plan's along-aim socket pace v_plan(τ) = path.socketVelocity · aim at the
 plan's time τ. τ scales every point of the path alike, so the socket stands for all of them.
 
-  v_b = v_plan(τ) − δ,  M_b·dδ/dt = F_g − F_press,  v_plan − max(v_plan, w₁) ≤ δ ≤ v_plan (clamped),
+  v_b = v_plan(τ) − δ,  M_b·dδ/dt = F_g − F_lead,  δ ≤ v_plan (clamped),
+  F_lead = F_press while δ > 0 or W < w₁, and 0 otherwise,
 
 - F_g, the balls' resistance as the hands feel it: the grips' coupling along aim, that is the hands' force less the
   share of the feed-forward they carry, (HandLoad.force − (HandLoad.feedForward − dip)) · aim, with the head's
@@ -58,35 +61,36 @@ plan's time τ. τ scales every point of the path alike, so the socket stands fo
   load on the body. It is positive when the head and the balls hold the hands back.
 - F_press: F_push (92.2 N, `reference/contact.json` pushForce) while the press acts today (`pushIntent`: the face on
   the striker's ball, before the pendulum phase), and 0 otherwise.
-- w₁: the striker's ball's along-aim pace, read from the same step's state as F_g. Before the strike's first step and
-  after the impact's end there is no ball, and the body has not started or has ended (§2.4).
+- W and w₁: the head's and the striker's ball's along-aim paces (centre-of-mass velocity · aim), read from the state
+  at the start of the step, the state F_g's hand load was computed on; not the finish's projected `strikerPace`.
+  Before the strike's first step and after the impact's end there is no ball, and the body has not started or has
+  ended (§2.4).
 
-The plan keeps the player's intended swing. A head that tracks its path loads the coupling with nothing, but the
-press still acts on the ball, so the body draws ahead of the plan (δ < 0) at (F_press − F_g)/M_b. Load slows it by
-what exceeds the press. **A1, the lead.** The first run held δ ≥ 0, and with it the press did no work wherever the
-coupling was below it, most of the impact (register, "G2's push body, diagnosed"). The body now keeps the press: it
-may run ahead of the plan, bounded twice:
-- **The press's window.** Only F_press drives a lead, and it acts only while the face is on the striker's ball before
-  the pendulum phase. Once it stops, F_g alone acts: hands ahead of the head load the coupling forward of the head's
-  pace, F_g > 0, and the lead decays.
-- **The ball's pace.** v_b ≤ max(v_plan, w₁): the hands never move faster than the striker's ball, unless the plan
-  itself is faster. This is "Carry, not chase" (2026-11-18: the push carries the head with the striker's ball and
-  never drives it past) placed in the body. It is a ruling's limit, not physiology: a player cannot react to the ball
-  within the impact.
+The plan keeps the player's intended swing. Load slows the body below the plan by what exceeds the press; with less
+load than the press, a slowed body regains the plan's pace. **A1, the lead.** The first run held δ ≥ 0, and with it
+the press did no work wherever the coupling was below it, most of the impact (register, "G2's push body, diagnosed").
+The floor is gone: the press may drive the body ahead of the plan (δ < 0) at (F_press − F_g)/M_b, but only while the
+head is slower than the striker's ball (W < w₁). Once the head reaches the ball's pace the press adds no lead, and F_g
+alone acts on it. This is "Carry, not chase" (2026-11-18: the push carries the head with the striker's ball and never
+drives it past) placed in the body. It is a ruling's limit, not physiology: a player cannot react to the ball within
+the impact. A deficit (δ > 0) is closed by the press whatever W is: that is regaining the plan, not chasing. Since
+F_press is 0 outside its window (the face on the striker's ball, before the pendulum phase), a lead only decays
+there.
 
-The ceiling is small: the press's impulse after the departure is 0.22–0.64 N·s (register, "G6's push"), at most
-0.08–0.22 m/s of lead at 2.9 kg. That is intended; nothing scales it.
+The ceiling is small: the press's impulse after the departure is 0.22–0.64 N·s (register, "G2's push body,
+diagnosed"), at most 0.08–0.22 m/s of lead at 2.9 kg, before the head's cap. That is intended; nothing scales it.
 
-τ' = v_b / v_plan may now exceed 1. With M_b = ∞ the body neither slows nor leads, δ stays 0, and the hands run the
-plan: the first run's ∞ row.
+τ' = v_b / v_plan may now exceed 1: the reverted clock clamped it at 1 (bce3ab0, `stepBody`), and that clamp goes,
+the floor at 0 kept. With M_b = ∞ the body neither slows nor leads, δ stays 0, and the hands run the plan: the first
+run's ∞ row.
 
 δ starts at 0 at the strike, the first face–ball contact on the striker's ball (`grip.striker` latched).
 
 ### 2.2 The path's pace
 
 From the strike to the body's end (§2.4) the hands' path runs on the plan's time τ, with τ' = v_b / v_plan(τ),
-integrated once per impact step (explicit, at dt). τ'' comes from that step's dδ/dt and v_plan's slope and feeds the
-feed-forward. The path keeps its place: there is no lag shift, since the body is continuous from the strike and
+integrated once per impact step (explicit, at dt). τ'' comes from that step's clamped change in δ (the change in τ'
+over the step, as the reverted clock had it) and v_plan's slope and feeds the feed-forward. The path keeps its place: there is no lag shift, since the body is continuous from the strike and
 nothing resets it.
 
 **Where τ lives.** The body is a new form of `Anchor`, `body: BodyClock`, holding the strike time, the step dt and
@@ -114,7 +118,7 @@ The body ends at the first of these:
 - the impact's end, after which the balls are removed and nothing is left to resist the hands;
 - v_b reaching 0 (δ = v_plan).
 
-A1: the hand-over's rate may exceed 1, a lead carried into the follow-through. `retimeFinish` still bounds the finish
+A1: a lead is carried into the follow-through at the hand-over's rate (§2.1); `retimeFinish` still bounds the finish
 by the striker's ball.
 
 There it hands over to a fixed-rate anchor, `{ at, rate: v_b / v_plan, by: 0, warp: null }`, offset so that the plan's
@@ -167,19 +171,18 @@ is accepted: the scorecard's objective and the re-pinned moves guard them.
 **Unit tests** (engine 0.44.0; 0.43.0 named the first run's δ ≥ 0, reverted in 5ecad80):
 1. A push stroke played with no balls: its head tracks the path, so δ stays below 1e-3·v_plan throughout and the
    hands' path matches the plan's to that tolerance.
-2. A constant F_g above F_press grows δ at (F_g − F_press)/M_b; below F_press δ falls at the same rate, through 0, to
-   a lead (A1).
-2a. The lead stops at the ball's pace: with w₁ held, v_b never exceeds max(v_plan, w₁), and with w₁ below v_plan the
-   body never runs ahead of the plan.
-2b. With no press (F_press 0, after the window) and F_g > 0, a lead decays.
+2. With W held below w₁, a constant F_g above F_press grows δ at (F_g − F_press)/M_b; below F_press δ falls at the
+   same rate, through 0, to a lead (A1).
+2a. With W held at or above w₁, F_g below F_press closes a deficit to 0 and adds no lead; a lead already there decays
+   at F_g/M_b.
 3. With M_b → ∞ (1e9 kg) the hands follow the plan's path through the push: the strike does not slow them.
 4. The no-push baseline (`fixtures/noPushBaseline.json`: drive, single-ball, stop-ac) is unchanged to the bit.
 5. The hand-over at the body's end is continuous in the path's place and pace.
 6. A stroke with a push that is a check plays as before (gate, §2.1).
 
 **The discriminating run.** Card `2026-11-2x-push-body` against `2026-11-20-refit3-grip80`, at M_b 2.9 kg, with an
-M_b = ∞ row in the same run. A1: the ∞ row is replayed as a check on the re-implementation; it must match card
-`2026-11-21-push-body-inf` (objective 15.90). With a lead the body no longer only slows the hands, so ∞ is no longer
+M_b = ∞ row in the same run. A1: the ∞ row is replayed as a check on the re-implementation; every row's value must equal card
+`2026-11-21-push-body-inf`'s (objective 15.90), to the digits the card prints. With a lead the body no longer only slows the hands, so ∞ is no longer
 the most carry. The run passes at 2.9 kg if all of these hold:
 - `coach.full-roll` is in 1.00–1.20 and `coach.pass-roll` is at most 0.99;
 - the half roll stays in 1.4–2.5;
