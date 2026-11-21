@@ -910,3 +910,8 @@ reverted. Cards: `2026-11-21-accel-x1`, `-x4`, `-x10`.
 - **Likely why (not measured).** The pulse starts from zero at contact and grows over its window, so most of it lands
   after the ball has gone; and, as with the push body, the head feels the plan only through the grips. A
   `gapProbe budget` under ×10 would confirm it.
+- **Measured (`gapProbe budget` and `push`, ×1 against ×10).** The hands' impulse on the head from the croqueted
+  ball's departure to the read rises by 0.001 m·U in C3F (0.247 → 0.248) and at most 0.018 in C10P (0.367 → 0.385);
+  the feed-forward's share of the plan's acceleration in that window is 0.000–0.021 N·s. C3F's gap is 0.074 m·U. The
+  plan's head acceleration at ×10 is 0.1 m/s² at contact, 11 m/s² at 10 ms and 24 m/s² at 30 ms (canonical full roll):
+  it builds after the read. The reason above stands: no scale of the plan's pulse reaches the ball in time.
