@@ -887,3 +887,26 @@ reproduces `2026-11-21-push-body-inf` to the bit (objective 15.901509665814883, 
 - **Ruling (the user, 2026-11-21):** revert, and drop the push body. The engine is back to 0.42.0's behaviour (d79e662,
   identical to 5ecad80). G2's next question is the user's account of the pass roll, "start soft and smoothly
   accelerating", tested as the swing plan's own acceleration through the ball.
+
+## G2: the swing plan's acceleration through the ball (2026-11-21)
+
+The user's account, "start soft and smoothly accelerating", tested with no engine change: a throwaway sweep scaled the
+full and pass rolls' planned pulse (`speedGain` and `handGain`, both 0.1) by ×1, ×4 and ×10 on 0.42.0's engine, then
+reverted. Cards: `2026-11-21-accel-x1`, `-x4`, `-x10`.
+
+| Row (Table 6 target) | ×1 | ×4 | ×10 |
+|---|---|---|---|
+| Objective | 5.13 | 5.13 | 5.12 |
+| C3F w₁/U (0.594) | 0.520 | 0.520 | 0.521 |
+| C10F w₁/U | 0.511 | 0.511 | 0.512 |
+| C25F w₁/U | 0.472 | 0.472 | 0.472 |
+| C3P w₁/U | 0.517 | 0.517 | 0.517 |
+| C25P w₁/U | 0.489 | 0.490 | 0.492 |
+| `coach.full-roll` (1.00–1.20) | 1.25 | 1.25 | 1.25 |
+| `coach.pass-roll` (≤ 0.99) | 1.19 | 1.19 | 1.19 |
+
+- **Verdict: no effect.** Ten times the planned acceleration (the head's plan reaching about 38 m/s² at 10 ms and
+  70 m/s² at 30 ms after contact) moves w₁/U by at most +0.003 U. The ×1 control reproduces the record (5.13).
+- **Likely why (not measured).** The pulse starts from zero at contact and grows over its window, so most of it lands
+  after the ball has gone; and, as with the push body, the head feels the plan only through the grips. A
+  `gapProbe budget` under ×10 would confirm it.
