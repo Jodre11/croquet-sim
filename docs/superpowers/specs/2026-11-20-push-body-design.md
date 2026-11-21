@@ -61,6 +61,14 @@ plan's time τ. τ scales every point of the path alike, so the socket stands fo
   share of the feed-forward they carry, (HandLoad.force − (HandLoad.feedForward − dip)) · aim, with the head's
   reaction loading the body. It excludes the feed-forward, which is what the plan needs to swing the head and not a
   load on the body. It is positive when the head and the balls hold the hands back.
+  A3 (an implementation correction, 2026-11-21, not a ruling): "what the plan needs" is the plan at the body's pace
+  (its τ′² terms), not the body's own surge (τ″ from its clock). The first A2 build fed τ″ into the hands'
+  feed-forward, so F_g = F − F_ff read the mallet's inertia under the body's acceleration as negative load, at once:
+  a leading body lightened its own load, a loop gain above 1 at 2.9 kg. On the single-ball stroke with a push F_ff
+  swung ±10⁶ N within 0.1 ms and the impact never ended; on the pass roll F_g read about −77 N where it is +60 N. The
+  hands' feed-forward now omits the body's τ″ (`pathAt(…, surge = false)` in `handLoad`); the surge reaches the head
+  through the grips, and through F the body. Nothing changes at M_b = ∞, where τ″ ≡ 0. The first run held δ ≥ 0 but
+  read F_g the same way, so the register's figures for it carry the artefact wherever δ moved.
 - F_press: F_push (92.2 N, `reference/contact.json` pushForce) from the strike until the striker's ball has visibly
   departed (A2, below) or the pendulum phase starts, whichever is first, and 0 after. Today's window ends at the face's
   departure and reopens on a re-contact; on these strokes it does neither.
