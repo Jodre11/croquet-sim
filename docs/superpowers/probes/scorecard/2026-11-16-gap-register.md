@@ -847,3 +847,40 @@ pass rolls of Table 6 at their U. Impulses run from the face's first departure t
 - **What it implies.** The head in 0.42.0 is driven faster than "hands at the plan's pace" would drive it: the press on
   the head is what carries the ball past the departure. A body that keeps the press must be able to run ahead of the
   plan (δ < 0), up to a bound the design does not yet have. The user rules on the next step.
+
+### G2's push body, A2 (`2026-11-21-push-body-a2-inf`, `-a2-2.9`, `-a2-0.9`, `-a2-4.9`, against `2026-11-20-refit3-grip80`)
+
+Engine 0.44.0 (commit 20c15d2): the press on the body from the strike until the striker's ball is 10 mm clear of the
+face, no floor on δ (a lead allowed), and the hands' feed-forward without the body's own surge (spec A3). The ∞ row
+reproduces `2026-11-21-push-body-inf` to the bit (objective 15.901509665814883, every row).
+
+| Row | Reference | M_b ∞ | 4.9 kg | 2.9 kg | 0.9 kg |
+|---|---|---|---|---|---|
+| Objective | 5.13 | **15.90** | **15.89** | **17.58** | **17.56** |
+| C3F w₁/U | 0.520 | 0.489 | 0.489 | 0.489 | 0.489 |
+| C10F w₁/U | 0.511 | 0.487 | 0.489 | 0.489 | 0.487 |
+| C25F w₁/U | 0.472 | 0.454 | 0.454 | 0.454 | 0.455 |
+| C3P w₁/U | 0.517 | 0.507 | 0.507 | 0.507 | 0.507 |
+| C25P w₁/U | 0.489 | 0.485 | 0.485 | 0.485 | 0.485 |
+| `coach.full-roll` (1.00–1.20) | 1.25 | 1.30 | 1.33 | 1.33 | 1.33 |
+| `coach.pass-roll` (≤ 0.99) | 1.19 | 0.854 | 1.22 | 0.695 | 1.22 |
+| Plays not clean (target rolls) | none | C10H, C3P, C10P, C25P, canon full and pass | C10H, C10F, C3P, C10P, C25P, canon pass | C3H, C10H, C10F, C3P, C10P, C25P, canon pass | C3H, C10H, C1F, C3P, C25P, canon half and pass |
+
+- **Verdict: fails at every mass, stop.** w₁/U is the same to ±0.002 U at every M_b, ∞ included: the body moves
+  nothing the card reads in the ratio. The objective's differences between masses are the plays' cleanliness and the
+  pass roll's coaching ratio, which swings non-monotonically (0.695 at 2.9 kg, 1.22 at 0.9 and 4.9 kg): it is read off
+  a play that is not clean, not off the ratio.
+- **Why (`gapProbe budget` at 2.9 kg against the 0.43.0 ∞ column above).** The hands' impulse on the head after the
+  departure is 0.160 m·U in C3F (∞ 0.153, 0.42.0's press on the head 0.247), C10F 0.232 (0.225; 0.307), C3P 0.193
+  (0.190; 0.287). The press now accelerates the body; the head feels it only through the grips' tracking of a body
+  that leads by about 1–2 % of the plan's pace by the read (the pass roll's clock reaches τ′ ≈ 1.017 at 4 ms after the
+  strike). Before the read, the body keeps almost all of the press's impulse.
+- **The head does not chase:** W at the read stays below w₁ in every roll (C3F 0.420 against 0.489), so the spec's
+  W ≤ w₁ + 0.03 U row holds. The window's length per roll was not measured.
+- **A3, found by the run.** The first A2 build hung `advance.test`'s single-ball push stroke: the body's own surge in
+  the feed-forward made F_g read the mallet's inertia as negative load (spec A3). The first run read F_g the same way,
+  so this register's "coupling" column above (0.43.0) carries that artefact wherever δ moved; its "press lost, not
+  moved" reading stands, as at ∞ δ never moved.
+- **Behaviour moved (full suite, 34 tests red, not re-pinned):** as the first run's, plus `advance.test`'s level
+  advance (head rise 0.02997 against 0.02973) and `finiteGuard`'s hand-built overflow, which the body's timing no
+  longer reaches. No test hangs (each file run alone under a 15-minute cap).
