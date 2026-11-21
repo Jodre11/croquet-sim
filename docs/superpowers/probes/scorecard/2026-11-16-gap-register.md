@@ -762,6 +762,26 @@ No parameter sits at a bound.
 - **G2 stays open, narrowed:** the canonical full roll plays lawful in one pass at 1.2527 (band 1.00–1.20), the pass
   roll at 1.1937 (≤ 0.99), the half roll at 1.644 (1.4–2.5). The grip period carries the rest; three fits in a row
   have asked for a short one, so the next step is the hands' mechanism the period stands in for, not a value.
+- **Moves re-pinned:** `playPin.json`; the no-push baseline (drive, single-ball, stop-ac); the canonical rolls, the
+  full roll at p 2 (1.307), the tap (1.243), the sample at p 1 (1.377), the least hold (σ 0, 1.083); the drive's
+  read-outs; the AC stop's turf times (13.875, 14.24 ms); the reference values.
+- **Behaviour moved, recorded:**
+  - The half roll's striker's ball rises 12.7 mm above R in the impact and 14.4 mm in flight (was 4.8 mm); the
+    croqueted ball 2.3 mm. Under G4's ruling the test is now the croqueted ball's, as the full roll's is.
+  - The rolls' rising finish at p 1.1 turns −27.0° to +26.9°, so the bottom hand rises 53.9 mm to the top's 54.2:
+    ruling 2's "the bottom hand more" is now level there. The test asserts it only when the turn ends further past
+    vertical than it began.
+  - The full roll at 1.5 m/s, drive −1 again sinks the ball under the head; the handover lifts it 311–327 µm, inside
+    its static sink: the whole-run lift cover is back.
+  - **The braked drive.** At full brake (drive −1, side 0.01, 2 m/s) the head runs on past the braking hands and
+    the check's finish takes it at its swing's far end (215 ms, was 658 ms settled). **The user (2026-11-20):** a
+    braked drive is not really a stroke; a soft drive may be braked a little against a double hit. The test moves to
+    drive −0.25 at 1 m/s, which settles at 668 ms (667 before the refit).
+  - **Found on the way, pre-existing** (the same at the pre-refit reference values; `followThrough.test` probe,
+    drive −0.1 to −1 × 0.5, 1, 2 m/s, side 0.01): the soft drives at 0.5 m/s with a light brake (−0.1, −0.25) end
+    their finish mid-swing, still 0.23 m/s relative to the hands 20 ms before; the light brakes at 2 m/s run to the
+    1 s follow cap on the slow sideways sway the P2b.2b.2c.3a gate accepted. Every 1 m/s run settles. The finish
+    reads rest at an instant, so a swing's far end passes for it; open, not in this refit's scope.
 - **The firmest sourced grip** (`2026-11-20-grip-wrist16`, 62.5 ms, 16 Hz: Pan et al. 2018's wrist resonance under a
   30 N grip and 50 N push): objective 4.99, full roll 1.23, pass roll 1.18. Sourced periods are 60–125 ms; 25 ms is
   not a grip.
@@ -792,32 +812,38 @@ on push strokes. The rows are spec §3's.
   bounds were not run (spec §3, stop rule). Only the pass roll comes into its band, and with it C3P's L2/L1 moves away
   (z 0.10 → −1.00/−1.09).
 - **Reading.** Hands kept at the plan's pace from the strike carry the striker's ball less, not more, against the
-  premise of the design: that the restart's slowing was what held w₁ back. At ∞ the press cannot act, so the loss is not
-  only the press's direct impulse moved off the head (register, "G6's primed push, on the ball"); ending the re-anchor
-  alone loses it. Why is not measured here: the run reports, and the user rules on the next step.
+  premise of the design: that the restart's slowing was what held w₁ back. Why is not measured here: the run reports,
+  and the user rules on the next step. (A first reading, that at ∞ the press cannot act and so ending the re-anchor
+  alone loses the carry, is withdrawn: the diagnosis below finds the press is lost, not idle.)
 - **Behaviour moved (Task 3's full suite, 34 tests, not re-pinned):** the canonical rolls' ratios and play pins; the
   full roll's impact runs to 121.7 ms (was under 110 ms); the canonical full roll's follow-through ends at 0.89 rad/s
   (was at its apex); a half roll's push now ends inside the impact, so `followThrough` changes frames before the
   impact's end; the late mistimed roll's impact-end seam is 1.7 µm off the trapezoid (slack 1 µm); the endless carry
   no longer sinks past HEAD_DEEP_LIMIT; the old restart's and press's own tests.
 - **The cards' JSON** write the limit as `"Infinity"` (`scripts/scorecard/run.ts`, `infinite`/`finite`).
-- **Moves re-pinned:** `playPin.json`; the no-push baseline (drive, single-ball, stop-ac); the canonical rolls, the
-  full roll at p 2 (1.307), the tap (1.243), the sample at p 1 (1.377), the least hold (σ 0, 1.083); the drive's
-  read-outs; the AC stop's turf times (13.875, 14.24 ms); the reference values.
-- **Behaviour moved, recorded:**
-  - The half roll's striker's ball rises 12.7 mm above R in the impact and 14.4 mm in flight (was 4.8 mm); the
-    croqueted ball 2.3 mm. Under G4's ruling the test is now the croqueted ball's, as the full roll's is.
-  - The rolls' rising finish at p 1.1 turns −27.0° to +26.9°, so the bottom hand rises 53.9 mm to the top's 54.2:
-    ruling 2's "the bottom hand more" is now level there. The test asserts it only when the turn ends further past
-    vertical than it began.
-  - The full roll at 1.5 m/s, drive −1 again sinks the ball under the head; the handover lifts it 311–327 µm, inside
-    its static sink: the whole-run lift cover is back.
-  - **The braked drive.** At full brake (drive −1, side 0.01, 2 m/s) the head runs on past the braking hands and
-    the check's finish takes it at its swing's far end (215 ms, was 658 ms settled). **The user (2026-11-20):** a
-    braked drive is not really a stroke; a soft drive may be braked a little against a double hit. The test moves to
-    drive −0.25 at 1 m/s, which settles at 668 ms (667 before the refit).
-  - **Found on the way, pre-existing** (the same at the pre-refit reference values; `followThrough.test` probe,
-    drive −0.1 to −1 × 0.5, 1, 2 m/s, side 0.01): the soft drives at 0.5 m/s with a light brake (−0.1, −0.25) end
-    their finish mid-swing, still 0.23 m/s relative to the hands 20 ms before; the light brakes at 2 m/s run to the
-    1 s follow cap on the slow sideways sway the P2b.2b.2c.3a gate accepted. Every 1 m/s run settles. The finish
-    reads rest at an instant, so a swing's far end passes for it; open, not in this refit's scope.
+
+### G2's push body, diagnosed (`gapProbe budget` and `push`, 0.42.0 against 0.43.0 at M_b ∞)
+
+The engine was reverted to 0.42.0's behaviour (5ecad80); 0.43.0 was probed at 4a90540. Both probes run the full and
+pass rolls of Table 6 at their U. Impulses run from the face's first departure to the card's read.
+
+| Roll | w₁/U 0.42 → ∞ | Hands on the head, m·U | Face on ball 1, m·U | Press on the head, N·s | Coupling, N·s |
+|---|---|---|---|---|---|
+| C1F | 0.553 → 0.538 | 0.271 → 0.132 | 0.514 → 0.487 | 0.224 → 0 | −0.077 → 0.069 |
+| C3F | 0.520 → 0.489 | 0.247 → 0.153 | 0.510 → 0.468 | 0.329 → 0 | −0.025 → 0.177 |
+| C10F | 0.511 → 0.487 | 0.307 → 0.225 | 0.558 → 0.519 | 0.482 → 0 | 0.228 → 0.499 |
+| C3P | 0.517 → 0.507 | 0.287 → 0.190 | 0.535 → 0.508 | 0.335 → 0 | 0.064 → 0.241 |
+| C25P | 0.489 → 0.485 | 0.289 → 0.351 | 0.562 → 0.544 | 0.641 → 0 | 0.516 → 1.224 |
+
+- **The impulse before the departure is unchanged** (face 1.10–1.12 m·U in both). The whole loss comes after it: the
+  hands push the head less, the head the ball less.
+- **The press is lost, not moved.** In 0.43.0 the press leaves the head (the probe's feed-forward column reads −intent),
+  and the coupling the hands gain is smaller than the press they shed. In C3F the coupling averages 15 N over 12.2 ms,
+  against the 92.2 N press.
+- **The cause is the body's floor, δ ≥ 0.** M_b·dδ/dt = F_g − F_press can slow the hands below the plan, never speed
+  them past it. While the coupling is below the press, which is most of the impact, δ is held at 0 and the press does no
+  work: the hands run at the plan's pace, as at ∞. That is why 2.9 kg reads as ∞ (16.11 against 15.90). The floor's
+  share of the steps is inferred from the force balance, not counted.
+- **What it implies.** The head in 0.42.0 is driven faster than "hands at the plan's pace" would drive it: the press on
+  the head is what carries the ball past the departure. A body that keeps the press must be able to run ahead of the
+  plan (δ < 0), up to a bound the design does not yet have. The user rules on the next step.
