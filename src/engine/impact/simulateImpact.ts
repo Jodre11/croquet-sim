@@ -313,10 +313,7 @@ function validateTrack(drive: TrackDrive): void {
     positive(hands.pendulumForce, "hands.pendulumForce");
     finiteNumber(hands.pushForce, "hands.pushForce");
     positive(hands.pushForce, "hands.pushForce");
-    // M_b may be Infinity: the hands then run the plan through the push (push body design §3).
-    if (!(hands.pushBodyMass > 0)) {
-        fail(`hands.pushBodyMass must be positive (got ${hands.pushBodyMass})`);
-    }
+    positive(hands.pushBodyMass, "hands.pushBodyMass");
     finiteNumber(hands.gripLimit, "hands.gripLimit");
     positive(hands.gripLimit, "hands.gripLimit");
     for (const [key, value] of Object.entries(hands.chain)) {
