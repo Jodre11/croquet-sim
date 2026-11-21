@@ -915,3 +915,30 @@ reverted. Cards: `2026-11-21-accel-x1`, `-x4`, `-x10`.
   the feed-forward's share of the plan's acceleration in that window is 0.000–0.021 N·s. C3F's gap is 0.074 m·U. The
   plan's head acceleration at ×10 is 0.1 m/s² at contact, 11 m/s² at 10 ms and 24 m/s² at 30 ms (canonical full roll):
   it builds after the read. The reason above stands: no scale of the plan's pulse reaches the ball in time.
+
+## G2: the handover between the balls (2026-11-21)
+
+The user chose the handover first (2026-11-21): in five of the seven rolls the two balls' total momentum is about
+right (w₁/U + v₂/U against Gugan's within ±0.04), but the striker's ball gets too little and the croqueted ball too
+much. A sweep with no engine change set each of the contact's two fitted frictions to its sourced bounds and
+between, the other at its fit (faceFriction 0.2807, ballBallFriction 0.1112). Cards: `2026-11-21-handover-*`.
+
+| Run | Objective | C1F | C3F | C10F | C25F | C3P | C10P | C25P |
+|---|---|---|---|---|---|---|---|---|
+| Gugan w₁/U | | 0.667 | 0.594 | 0.569 | 0.501 | 0.580 | 0.520 | 0.557 |
+| fit | 5.13 | 0.553 | 0.520 | 0.511 | 0.472 | 0.517 | 0.524 | 0.489 |
+| faceFriction 0.2 (bound) | 6.75 | 0.557 | 0.526 | 0.523 | 0.483 | 0.534 | 0.540 | 0.915 |
+| faceFriction 0.4 | 5.97 | 0.539 | 0.506 | 0.485 | 0.442 | 0.507 | 0.509 | 0.451 |
+| faceFriction 0.6 (bound) | 1833.85 | 0.471 | 0.467 | 0.049 | 0.351 | — | 0.245 | 0.321 |
+| ballBallFriction 0.06 (bound) | 6.86 | 0.558 | 0.530 | 0.528 | 0.484 | 0.538 | 0.552 | 0.905 |
+| ballBallFriction 0.25 | 7.16 | 0.540 | 0.482 | 0.473 | 0.434 | 0.530 | 0.491 | 0.457 |
+| ballBallFriction 0.5 (bound) | 6.96 | 0.542 | 0.490 | 0.479 | 0.439 | 0.504 | 0.491 | 0.457 |
+
+- **Verdict: not the lever within the bounds.** Less friction at either contact raises w₁/U, but at the lower bounds
+  C3F reaches only 0.530 against 0.594 (a seventh of the gap), and v₂/U rises with it (C3F 0.885 → 0.895 and 0.908):
+  the total grows; the share does not move towards the striker's ball. More friction lowers w₁/U. faceFriction 0.6
+  breaks the rolls (C10F 0.049; C3P unread).
+- **C25P at the lower bounds reads w₁/U ≈ 0.91**, the striker's ball nearly as fast as the croqueted ball, with the
+  play still clean: a different outcome, not a trend. Not examined.
+- **Not swept: ball–ball restitution** (0.795, bounds 0.7071–0.97), not a free parameter. It sets directly what the
+  striker's ball keeps when it meets the croqueted ball.
