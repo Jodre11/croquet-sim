@@ -28,7 +28,6 @@ const { land } = await import("../src/engine/impact/landing");
 const { BED_CELL } = await import("../src/engine/impact/turfBed");
 const { vec3 } = await import("../src/engine/math/vec3");
 const { contactReference, frictionReference } = await import("../src/reference/index");
-const { RESTART_HOLD: HOLD } = await import("../src/engine/impact/integrate");
 type ImpactProbe = import("../src/engine/impact/integrate").ImpactProbe;
 
 const DELAYS_MS = [1, 2, 3, 4, 5];
@@ -304,8 +303,7 @@ function strike(): void {
         const t0 = face[0]?.start ?? 0;
         let impulse = 0;
         // The hands' force along the aim through face contact after the restart: impulse, time on, peak.
-        // From the restart's instant, the departure held RESTART_HOLD: a push body stroke's anchor is its body's end.
-        const restartAt = r.impact.departure === undefined ? Infinity : r.impact.departure + HOLD;
+        const restartAt = r.impact.anchor?.at ?? Infinity;
         let late = { impulse: 0, on: 0, peak: 0, above: 0 };
         const pushForce = contactReference.pushForce.value;
         for (let i = 1; i < r.samples.length; i++) {
@@ -331,7 +329,7 @@ function strike(): void {
         const ms = (t: number | undefined): string => (t === undefined ? "none" : `${(1e3 * (t - t0)).toFixed(2)} ms`);
         const anchor = r.impact.anchor;
         console.log(
-            `  departure ${ms(r.impact.departure)}; hand-over ${ms(anchor?.at)}` +
+            `  departure ${ms(r.impact.departure)}; restart ${ms(anchor?.at)}` +
                 (anchor === undefined ? "" : ` (rate ${anchor.rate.toFixed(2)})`) +
                 `; hands after it on the face: peak ${late.peak.toFixed(1)} N, mean ` +
                 `${late.on > 0 ? (late.impulse / late.on).toFixed(1) : "-"} N over ${(1e3 * late.on).toFixed(2)} ms, ` +

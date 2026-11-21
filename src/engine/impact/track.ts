@@ -612,32 +612,6 @@ export interface Anchor {
     readonly warp: Warp | null;
     /** The re-timed finish's clock (retimeFinish; soft follow-through design §2.4); absent where it is not slowed. */
     readonly finish?: FinishClock;
-    /**
-     * The body behind the push's clock (push body design §2.2); absent on every other anchor. With it `rate` is 1,
-     * `by` zero and `warp` null, and the plan's time is read from the clock instead.
-     */
-    readonly body?: BodyClock;
-}
-
-/**
- * The body behind the push's clock (push body design §2.1, §2.2): from the strike `at` (s), sample i at at + i·dt holds
- * the plan's time τ_i, its rate τ'_i and the rate's slope a_i over the step that follows, τ = τ_i + τ'_i·e + a_i·e²/2
- * there. The impact appends a sample per step (stepBody); a sample once written never changes, so the path is a pure
- * function of t up to the last sample. Past the last sample an open clock runs on at its last rate and slope, a closed
- * one (closeBody, the body's end) at its last rate. Its mutable fields are the body's own state.
- */
-export interface BodyClock {
-    readonly at: number;
-    readonly dt: number;
-    readonly tau: number[];
-    readonly rate: number[];
-    readonly slope: number[];
-    /** δ (m/s): how far the body's along-aim pace falls below the plan's socket's. */
-    deficit: number;
-    /** The real time (s) the body ended, or null while it runs. */
-    end: number | null;
-    /** The real time (s) of the restart (the face's departure held RESTART_HOLD), Infinity until then. */
-    restart: number;
 }
 
 /**
@@ -1588,9 +1562,6 @@ function warpedBase(anchor: Anchor | undefined, t: number): Warped {
     if (anchor === undefined || t < anchor.at) {
         return { t, v: 1, a: 1, j: 0 };
     }
-    if (anchor.body !== undefined) {
-        return bodyWarped(anchor.body, t);
-    }
     const { warp } = anchor;
     if (warp === null) {
         const k = anchor.rate;
@@ -1644,9 +1615,6 @@ function anchoredBase(track: PreparedTrack, planned: number): number {
     if (anchor === undefined || planned < anchor.at) {
         return planned;
     }
-    if (anchor.body !== undefined) {
-        return bodyInverse(anchor.body, planned);
-    }
     const { warp } = anchor;
     if (warp === null) {
         return anchor.rate > 0 ? anchor.at + (planned - anchor.at) / anchor.rate : Infinity;
@@ -1662,124 +1630,6 @@ function anchoredBase(track: PreparedTrack, planned: number): number {
 /** The planned instant (s) that `track`'s re-anchored plan plays at time t: the inverse of anchoredTime. */
 export function plannedTime(track: PreparedTrack, t: number): number {
     return warped(track.anchor, t).t;
-}
-
-/** The clock's plan time, rate, rate² and slope at t ≥ clock.at (BodyClock). */
-function bodyWarped(clock: BodyClock, t: number): Warped {
-    const last = clock.tau.length - 1;
-    const i = Math.min(Math.floor((t - clock.at) / clock.dt), last);
-    const e = t - (clock.at + i * clock.dt);
-    const tau = clock.tau[i] as number;
-    const rate = clock.rate[i] as number;
-    const slope = i === last && clock.end !== null ? 0 : (clock.slope[i] as number);
-    const v = Math.max(rate + slope * e, 0);
-    return { t: tau + rate * e + 0.5 * slope * e * e, v, a: v * v, j: v > 0 ? slope : 0 };
-}
-
-/** The real time at which the clock reaches the plan's instant `planned` ≥ clock.at: bodyWarped's inverse. */
-function bodyInverse(clock: BodyClock, planned: number): number {
-    const last = clock.tau.length - 1;
-    const i = sampleBefore(clock.tau, planned);
-    const from = clock.at + i * clock.dt;
-    const d = planned - (clock.tau[i] as number);
-    const r = clock.rate[i] as number;
-    const c = i === last && clock.end !== null ? 0 : (clock.slope[i] as number);
-    const root = r * r + 2 * c * d;
-    if (root < 0) {
-        return i === last ? Infinity : from + clock.dt;
-    }
-    const q = r + Math.sqrt(root);
-    if (!(q > 0)) {
-        return d > 0 ? Infinity : from;
-    }
-    const e = (2 * d) / q;
-    return i === last ? from + e : Math.min(from + e, from + clock.dt);
-}
-
-/** The plan's along-aim socket pace (m/s) at its own instant τ, before any anchor (push body design §2.1). */
-function planPace(track: PreparedTrack, tau: number): number {
-    return dot(plannedPath(track, tau).socketVelocity, track.arc.aim);
-}
-
-/**
- * Whether `track` is driven by the body behind the push (push body design §2.1): a push stroke that is not a check
- * (finishKind's test, plan.arc.alpha < 0).
- */
-export function bodyStroke(track: PreparedTrack): boolean {
-    return track.push !== null && !(track.arc.alpha < 0);
-}
-
-/** `track` with the body's clock started at the strike `at` (s), for an impact stepping at dt (push body design §2.1). */
-export function withBody(track: PreparedTrack, at: number, dt: number): PreparedTrack {
-    const body: BodyClock = { at, dt, tau: [at], rate: [1], slope: [0], deficit: 0, end: null, restart: Infinity };
-    return { ...track, anchor: { at, rate: 1, by: ZERO, warp: null, body } };
-}
-
-/**
- * Advances the body one step dt from its clock's last sample (push body design §2.1, §2.2): δ grows by
- * dt·(coupling − press)/M_b, held to [0, v_plan], and the next sample's rate is (v_plan − δ)/v_plan at the plan's time the
- * step reaches, its slope the backward difference. `coupling` (N) is the grips' force on the head along aim beyond the
- * feed-forward, the balls' resistance as the hands feel it; `press` (N) the press while it acts, else 0. An infinite
- * M_b leaves δ at 0. Does nothing to a clock that has ended, or to a track with none.
- */
-export function stepBody(track: PreparedTrack, coupling: number, press: number, dt: number): void {
-    const clock = track.anchor?.body;
-    if (clock === undefined || clock.end !== null) {
-        return;
-    }
-    const i = clock.tau.length - 1;
-    const tau = clock.tau[i] as number;
-    const rate = clock.rate[i] as number;
-    const slope = clock.slope[i] as number;
-    const mass = track.hands.pushBodyMass;
-    const change = mass === Infinity ? 0 : (dt * (coupling - press)) / mass;
-    clock.deficit = Math.min(Math.max(clock.deficit + change, 0), Math.max(planPace(track, tau), 0));
-    const next = tau + rate * dt + 0.5 * slope * dt * dt;
-    const pace = planPace(track, next);
-    const nextRate = pace > 0 ? Math.min(Math.max((pace - clock.deficit) / pace, 0), 1) : 0;
-    clock.tau.push(next);
-    clock.rate.push(nextRate);
-    clock.slope.push((nextRate - rate) / dt);
-}
-
-/**
- * Whether the body behind the push ends at t (push body design §2.4): its clock reaches the plan's push end or the
- * pendulum phase's start, or its pace has fallen to 0. False for a clock already ended, or with none.
- */
-export function bodyEnds(track: PreparedTrack, t: number): boolean {
-    const clock = track.anchor?.body;
-    if (clock === undefined || clock.end !== null) {
-        return false;
-    }
-    const tau = plannedTime(track, t);
-    const { push } = track;
-    const ended =
-        (push?.end !== null && push?.end !== undefined && tau >= push.end) ||
-        (push?.pendulum !== null && push?.pendulum !== undefined && tau >= push.pendulum);
-    return ended || warped(track.anchor, t).v <= 0;
-}
-
-/**
- * Ends the body at t, the clock's last sample (push body design §2.4): past it the plan runs on at the clock's last
- * rate, the fixed rate the restart's hand-over gave, so the path is continuous in place and pace there.
- */
-export function closeBody(track: PreparedTrack, t: number): void {
-    const clock = track.anchor?.body;
-    if (clock !== undefined && clock.end === null) {
-        clock.end = t;
-    }
-}
-
-/** The anchor as a run reports it: the body's end and its last rate, or the restart's instant and rate. */
-export function anchorReport(anchor: Anchor): { readonly at: number; readonly rate: number } {
-    const clock = anchor.body;
-    if (clock === undefined) {
-        return { at: anchor.at, rate: anchor.rate };
-    }
-    return {
-        at: clock.end ?? clock.at + (clock.tau.length - 1) * clock.dt,
-        rate: clock.rate[clock.rate.length - 1] as number,
-    };
 }
 
 /**
@@ -2496,9 +2346,8 @@ export interface HandLoad {
     /** The first hand whose force reached the grip's limit in this step, the top if both did; null if neither. */
     readonly saturated: HandName | null;
     /**
-     * The push intent P in this step (pushIntent); absent where it is nil. Within `feedForward` on a check; on a push
-     * body stroke it drives the body instead and is not within it (push body design §2.3): the impact reads it there
-     * as the body's press (stepBody). Elsewhere it is for the probes only.
+     * The push intent P in this step (pushIntent), already within `feedForward`; absent where it is nil. For
+     * the impact's probe only: nothing in the engine reads it.
      */
     readonly intent?: Vec3;
     /**
@@ -2603,9 +2452,7 @@ interface CarryStep {
 function pushPitch(track: PreparedTrack, state: HeadState, t: number, path: PathPoint, step: CarryStep): number {
     const { push, anchor } = track;
     // A check brakes the pitch to rest (checkShare), and the hold would drive it on along the unbraked path.
-    // On a push body stroke the hold still ends at the restart's instant (push body design §2.2), not the strike.
-    const restart = anchor === undefined ? Infinity : (anchor.body?.restart ?? anchor.at);
-    if (push === null || step.checking || t >= restart) {
+    if (push === null || step.checking || (anchor !== undefined && t >= anchor.at)) {
         return 0;
     }
     return heldPitch(
@@ -2868,8 +2715,7 @@ export function handLoad(
     // The push intent joins F_ff before the sharing, so both hands' shares and stiffnesses carry it. A stroke with no
     // push never reads it (A2 item 5).
     const intent = contact && track.push !== null ? pushIntent(track, t, grip) : null;
-    // On a push body stroke the press drives the body, not the head (push body design §2.3).
-    const fed = intent === null || bodyStroke(track) ? feedForward : add(feedForward, intent);
+    const fed = intent === null ? feedForward : add(feedForward, intent);
     const shared = sub(fed, dip);
     const along = scale(s, dot(shared, s));
     const perpendicular = sub(shared, along);
