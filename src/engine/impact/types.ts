@@ -338,6 +338,11 @@ export interface Hands {
      * on the striker's ball (primed push design, amendment 1, 2026-11-18).
      */
     readonly pushForce: number;
+    /**
+     * M_b (kg; may be Infinity): the body behind the push, which drives the hands on a push stroke that is not a
+     * check and is slowed only by the grips' coupling beyond the press (push body design §2.1).
+     */
+    readonly pushBodyMass: number;
     /** From contact (gate round 3 ruling, 2026-10-11): each hand and arm, the hand–arm impedance model's chain. */
     readonly chain: HandChain;
     /**

@@ -64,6 +64,7 @@ import {
     TEST_GRIP_LIMIT,
     TEST_HANDS,
     TEST_PENDULUM_FORCE,
+    TEST_PUSH_BODY_MASS,
     TEST_PUSH_FORCE,
     mirrorBall,
     mirrorContact,
@@ -245,6 +246,7 @@ describe("buildContact, step by step", () => {
             flex: TEST_FLEX,
             pendulumForce: TEST_PENDULUM_FORCE,
             pushForce: TEST_PUSH_FORCE,
+            pushBodyMass: TEST_PUSH_BODY_MASS,
             chain: TEST_CHAIN,
             gripLimit: TEST_GRIP_LIMIT,
         });
@@ -709,6 +711,7 @@ describe("defaultProfile", () => {
             },
             pendulumForce: contactReference.pendulumForce.value,
             pushForce: contactReference.pushForce.value,
+            pushBodyMass: contactReference.pushBodyMass.value,
             chain: {
                 forearmMass: contactReference.forearmMass.value,
                 handMass: contactReference.handMass.value,

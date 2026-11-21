@@ -36,7 +36,7 @@ import {
     type StrokeShapeReference,
 } from "../../reference/index";
 import { faceHalfHeight } from "../impact/shape";
-import { ARM_FLEX, GRIP_LIMIT, HAND_CHAIN, PENDULUM_FORCE, PUSH_FORCE } from "../impact/track";
+import { ARM_FLEX, GRIP_LIMIT, HAND_CHAIN, PENDULUM_FORCE, PUSH_BODY_MASS, PUSH_FORCE } from "../impact/track";
 import { handsAheadFor, headShapeOf } from "./buildContact";
 import { FIST, HAND_BREADTH, handsForLean } from "./hands";
 import {
@@ -319,6 +319,7 @@ export const defaultProfile: SwingProfile = {
         flex: ARM_FLEX,
         pendulumForce: PENDULUM_FORCE,
         pushForce: PUSH_FORCE,
+        pushBodyMass: PUSH_BODY_MASS,
         chain: HAND_CHAIN,
         gripLimit: GRIP_LIMIT,
         backswingLimit: swingBodyReference.backswingLimit.value,

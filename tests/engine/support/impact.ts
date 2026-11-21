@@ -111,6 +111,9 @@ export const TEST_PENDULUM_FORCE = 20;
 /** A plausible, unsourced cap (N) on the hands' push intent (P2b.2b.2b.2b gate ruling 2026-10-11). */
 export const TEST_PUSH_FORCE = 100;
 
+/** The body behind the push (kg) in the test hands. */
+export const TEST_PUSH_BODY_MASS = 2.9;
+
 /** A plausible, unsourced time constant (s) of the push intent's response (gate ruling amendment, 2026-10-11). */
 
 /**
@@ -154,6 +157,7 @@ export const TEST_HANDS: Hands = {
     flex: TEST_FLEX,
     pendulumForce: TEST_PENDULUM_FORCE,
     pushForce: TEST_PUSH_FORCE,
+    pushBodyMass: TEST_PUSH_BODY_MASS,
     chain: TEST_CHAIN,
     gripLimit: TEST_GRIP_LIMIT,
 };

@@ -27,7 +27,7 @@ import {
     canonicalSetup,
     type CanonicalOptions,
 } from "../../../src/lab/canonical";
-import { TEST_CHAIN, TEST_FLEX, TEST_GRIP_LIMIT, TEST_HEAD, TEST_PENDULUM_FORCE, TEST_PUSH_FORCE } from "./impact";
+import { TEST_CHAIN, TEST_FLEX, TEST_GRIP_LIMIT, TEST_HEAD, TEST_PENDULUM_FORCE, TEST_PUSH_BODY_MASS, TEST_PUSH_FORCE } from "./impact";
 
 export { CANONICAL_STRIKER, DEFAULT_CROQUET_GAP, GC_STOP_GAP, PASS_SPLIT, canonicalSetup, type CanonicalOptions };
 
@@ -132,6 +132,7 @@ export function testProfile(o: TestProfileOptions = {}): SwingProfile {
             flex: TEST_FLEX,
             pendulumForce: TEST_PENDULUM_FORCE,
             pushForce: TEST_PUSH_FORCE,
+            pushBodyMass: TEST_PUSH_BODY_MASS,
             chain: TEST_CHAIN,
             gripLimit: TEST_GRIP_LIMIT,
             backswingLimit: MAX_BACK_ANGLE,

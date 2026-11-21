@@ -71,6 +71,9 @@ export const PENDULUM_FORCE = contactReference.pendulumForce.value;
 /** F_push (N, gate ruling 2026-10-11): the hands' press along aim while on the ball (reference/contact.json). */
 export const PUSH_FORCE = contactReference.pushForce.value;
 
+/** M_b (kg, push body design §2.5): the body behind the push (reference/contact.json, Walilko et al. 2005). */
+export const PUSH_BODY_MASS = contactReference.pushBodyMass.value;
+
 /** F_max (N, P2b.2b.2b.3 design §5): the hands' grip limit (reference/contact.json, Young et al. 2009). */
 export const GRIP_LIMIT = contactReference.gripLimit.value;
 

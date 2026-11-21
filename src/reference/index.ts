@@ -220,6 +220,7 @@ export const contactReference = {
     armHoldDamping: readValue(contactJson, "armHoldDamping", "contact"),
     pendulumForce: readValue(contactJson, "pendulumForce", "contact"),
     pushForce: readValue(contactJson, "pushForce", "contact"),
+    pushBodyMass: readValue(contactJson, "pushBodyMass", "contact"),
     gripLimit: readValue(contactJson, "gripLimit", "contact"),
     forearmMass: readValue(contactJson, "forearmMass", "contact"),
     handMass: readValue(contactJson, "handMass", "contact"),

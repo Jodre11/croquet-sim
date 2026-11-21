@@ -531,6 +531,8 @@ function validate(setup: ShotSetup, ballRadius: number): void {
     positive(body.pendulumForce, "profile.body.pendulumForce");
     finiteNumber(body.pushForce, "profile.body.pushForce");
     positive(body.pushForce, "profile.body.pushForce");
+    // M_b may be Infinity: the hands then run the plan through the push (push body design §3).
+    positive(body.pushBodyMass, "profile.body.pushBodyMass");
     finiteNumber(body.gripLimit, "profile.body.gripLimit");
     positive(body.gripLimit, "profile.body.gripLimit");
     for (const [key, value] of Object.entries(body.chain)) {
@@ -605,6 +607,7 @@ function bodyHandsOf(setup: ShotSetup): Hands {
         flex: profile.body.flex,
         pendulumForce: profile.body.pendulumForce,
         pushForce: profile.body.pushForce,
+        pushBodyMass: profile.body.pushBodyMass,
         chain: profile.body.chain,
         gripLimit: profile.body.gripLimit,
     };

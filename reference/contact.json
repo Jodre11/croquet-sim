@@ -198,6 +198,14 @@
         "provenance": "derived",
         "note": "F_push, the hands' press along aim through a push while the face is on the striker's ball (primed push design, amendment 1, the user's ruling 2026-11-18, \"Press while on the ball\"). Until 2026-11-18 it capped a push intent that followed the balls' sensed resistance through a lag, pushResponseTime (0.125 s, gate ruling amendment 2026-10-11; Augustsson et al. 2025); the press reads no resistance, so that lag was retired. The largest forward horizontal push a standing adult gives at the hand: Das and Wang measured maximal isometric pushes of 8 men and 8 women, standing, with the preferred arm, level (vertical angle 0°: from the elbow at normal reach, from the shoulder at maximum and extreme reach, so the value's extreme-reach figures are at shoulder height) straight ahead (horizontal angle 90°), in the normal, maximum and extreme reach envelopes. Tables 7 and 8 (N, mean): men 89.39, 77.92 and 106.34; women \"660.22\" (a misprint for 66.22, its SD 18.48), 48.49 and 78.11. The largest is at extreme reach for both; the value is the mean of the two, (106.34 + 78.11)/2 = 92.2 N. One-handed: no open two-handed standing figure was found, so this caps the two hands' push together with one arm's strength. Bounds: the lowest and highest of those six means, 48.49 (women, maximum reach) and 106.34 N (men, extreme reach)."
     },
+    "pushBodyMass": {
+        "value": 2.9,
+        "unit": "kg",
+        "bounds": [0.9, 4.9],
+        "source": "Walilko, Viano and Bir, 'Biomechanics of the head for Olympic boxer punches to the face', Br J Sports Med 39(10):710-719 (2005), DOI 10.1136/bjsm.2004.014126, https://pmc.ncbi.nlm.nih.gov/articles/PMC1725037/ (read 2026-11-20; not hashed, the publishers refuse automated fetches)",
+        "provenance": "analogue",
+        "note": "M_b, the body behind the push (push body design §2.5, the user's ruling 2026-11-20, \"Body behind the push\"): on a push stroke that is not a check the hands are driven by a body of this mass along aim, slowed below the plan only by the grips' coupling beyond the press, M_b·dδ/dt = F_g − F_press. No measurement of the mass behind a croquet push was found. The closest measured analogue is a strike from the body through a braced arm: Walilko et al. measured Olympic boxers' effective punch mass at 2.9 (SD 2.0) kg. A push also raises the hand–arm system's apparent mass (Pan, Xu, Welcome, McDowell, Warren, Wu and Dong, Ergonomics 61(6):818-830 (2018), DOI 10.1080/00140139.2017.1398843, author manuscript https://stacks.cdc.gov/view/cdc/210866/cdc_210866_DS1.pdf, read 2026-11-20, SHA-256 17a89a9c975140968cecfaa8f9aea872e18fb376db9de59898945b2d2eb4e440). It is never added to the head: armMass is the arms' inertia swung with the head, rigid at the top grip; M_b is beyond the grip's spring. Not fitted. Bounds: the mean ± one SD."
+    },
     "gripLimit": {
         "value": 435,
         "unit": "N",

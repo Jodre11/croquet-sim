@@ -210,6 +210,12 @@ describe("swing, coupling and head–turf reference data", () => {
         expect(contactReference.handCouplingDampingRatio.value).toBe(0.6835);
     });
 
+    it("loads the body behind the push by analogue (push body design §2.5)", () => {
+        expect(contactReference.pushBodyMass.value).toBe(2.9);
+        expect(contactReference.pushBodyMass.unit).toBe("kg");
+        expect(contactReference.pushBodyMass.provenance).toBe("analogue");
+    });
+
     it("loads the default body's arm mass and reach slack", () => {
         expect(contactReference.armMass.value).toBe(1.081);
         expect(contactReference.armMass.unit).toBe("kg");
@@ -227,6 +233,7 @@ describe("swing, coupling and head–turf reference data", () => {
             armHoldDamping: "N·s/m",
             pendulumForce: "N",
             pushForce: "N",
+            pushBodyMass: "kg",
             forearmMass: "kg",
             handMass: "kg",
             fingerMass: "kg",

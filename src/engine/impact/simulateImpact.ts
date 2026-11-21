@@ -313,6 +313,7 @@ function validateTrack(drive: TrackDrive): void {
     positive(hands.pendulumForce, "hands.pendulumForce");
     finiteNumber(hands.pushForce, "hands.pushForce");
     positive(hands.pushForce, "hands.pushForce");
+    positive(hands.pushBodyMass, "hands.pushBodyMass");
     finiteNumber(hands.gripLimit, "hands.gripLimit");
     positive(hands.gripLimit, "hands.gripLimit");
     for (const [key, value] of Object.entries(hands.chain)) {

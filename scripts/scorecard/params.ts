@@ -41,6 +41,12 @@ export const FREE_PARAMS: readonly FreeParam[] = [
     free("ballTurfSliding", frictionReference.ballTurfSliding),
 ];
 
+/**
+ * Parameters a card may set but the fit never frees (push body design §2.5, §3): a finite value must lie within its
+ * bounds, and Infinity is allowed as the limiting case.
+ */
+export const RUN_PARAMS: readonly FreeParam[] = [free("pushBodyMass", contactReference.pushBodyMass)];
+
 /** A parameter set: free parameter name → value. */
 export type Overrides = Readonly<Record<string, number>>;
 
@@ -55,12 +61,15 @@ export function currentValues(): Record<string, number> {
  */
 export function applyOverrides(overrides: Overrides): void {
     for (const [name, value] of Object.entries(overrides)) {
-        const param = FREE_PARAMS.find((p) => p.name === name);
+        const free = FREE_PARAMS.find((p) => p.name === name);
+        const run = RUN_PARAMS.find((p) => p.name === name);
+        const param = free ?? run;
         if (param === undefined) {
             throw new Error(`unknown free parameter ${name}`);
         }
         const [lo, hi] = param.bounds;
-        if (!(value >= lo - 1e-12 && value <= hi + 1e-12)) {
+        const limit = run !== undefined && value === Infinity;
+        if (!limit && !(value >= lo - 1e-12 && value <= hi + 1e-12)) {
             throw new RangeError(`${name} ${value} lies outside its bounds [${lo}, ${hi}]`);
         }
         (param.entry as { value: number }).value = value;
