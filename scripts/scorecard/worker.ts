@@ -7,7 +7,9 @@ import { applyOverrides, type Overrides } from "./params";
 
 declare const process: { readonly argv: readonly string[]; exitCode?: number };
 
-const { job, overrides } = JSON.parse(process.argv[2] ?? "{}") as { job: string; overrides: Overrides };
+const { job, overrides } = JSON.parse(process.argv[2] ?? "{}", (_, v: unknown) =>
+    v === "Infinity" ? Infinity : v,
+) as { job: string; overrides: Overrides };
 applyOverrides(overrides);
 const { JOBS } = await import("./jobs");
 const run = JOBS[job];

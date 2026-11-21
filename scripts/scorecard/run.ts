@@ -58,8 +58,14 @@ export interface JobRun {
     readonly error?: string;
 }
 
+/** JSON has no Infinity: a run parameter's limiting case is written as the string "Infinity" (push body design §3). */
+export const infinite = (_: string, v: unknown): unknown => (v === Infinity ? "Infinity" : v);
+
+/** Reads infinite's "Infinity" back as the number. */
+export const finite = (_: string, v: unknown): unknown => (v === "Infinity" ? Infinity : v);
+
 function runJob(cp: ChildProcesses, job: string, overrides: Overrides): Promise<JobRun> {
-    const arg = JSON.stringify({ job, overrides });
+    const arg = JSON.stringify({ job, overrides }, infinite);
     const child = cp.spawn("nice", ["-n", "10", "npx", "--no-install", "tsx", "scripts/scorecard/worker.ts", arg], {});
     let out = "";
     let err = "";
@@ -155,7 +161,7 @@ export async function writeRecord(record: CardRecord, compare?: CardRecord): Pro
     const fs = await node<Files>("node:fs");
     fs.mkdirSync(RECORD_DIR, { recursive: true });
     const base = `${RECORD_DIR}/${record.date.slice(0, 10)}-${record.label}`;
-    fs.writeFileSync(`${base}.json`, `${JSON.stringify(record, null, 2)}\n`);
+    fs.writeFileSync(`${base}.json`, `${JSON.stringify(record, infinite, 2)}\n`);
     fs.writeFileSync(`${base}.txt`, `${tableOf(record, compare)}\n`);
     return `${base}.json`;
 }
@@ -163,7 +169,7 @@ export async function writeRecord(record: CardRecord, compare?: CardRecord): Pro
 /** Reads a record. */
 export async function readRecord(path: string): Promise<CardRecord> {
     const fs = await node<Files>("node:fs");
-    return JSON.parse(fs.readFileSync(path, "utf8")) as CardRecord;
+    return JSON.parse(fs.readFileSync(path, "utf8"), finite) as CardRecord;
 }
 
 const fmt = (x: Measured): string =>
@@ -196,7 +202,7 @@ export function tableOf(record: CardRecord, compare?: CardRecord): string {
     const before = compare === undefined ? undefined : scoreAll(shown, compare.measured);
     const lines: string[] = [
         `Scorecard ${record.label}, ${record.date}`,
-        `overrides ${JSON.stringify(record.overrides)}`,
+        `overrides ${JSON.stringify(record.overrides, infinite)}`,
         `objective ${record.objective.toFixed(2)}${compare === undefined ? "" : ` (was ${compare.objective.toFixed(2)})`}`,
     ];
     const tally: Record<Band, number> = { pass: 0, near: 0, miss: 0 };

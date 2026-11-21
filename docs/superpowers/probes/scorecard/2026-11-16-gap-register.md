@@ -768,6 +768,39 @@ No parameter sits at a bound.
 - **Ruled (2026-11-20): "Body behind the push".** The hands are a moving mass driven by the push, slowed only by the
   balls' resistance, not a path reset to the head's pace at the restart. Design:
   `docs/superpowers/specs/2026-11-20-push-body-design.md`.
+
+### G2's push body, the discriminating run (`2026-11-21-push-body`, `-push-body-inf`, against `2026-11-20-refit3-grip80`)
+
+Engine 0.43.0 (commit ca6478f): the hands driven by M_b from the strike, the press on the body, no restart re-anchor
+on push strokes. The rows are spec §3's.
+
+| Row | Reference (5.13) | M_b ∞ | M_b 2.9 kg |
+|---|---|---|---|
+| Objective | 5.13 | **15.90** | **16.11** |
+| `coach.full-roll` (1.00–1.20) | 1.25 | 1.30 | 1.34 |
+| `coach.pass-roll` (≤ 0.99) | 1.19 | 0.854 | 0.809 |
+| `coach.half-roll` (1.4–2.5) | 1.64 | 1.64 | 1.64 |
+| C3F w₁/U z | −2.94 | −4.17 | −4.34 |
+| C3P w₁/U z | −2.56 | −2.98 | −3.18 |
+| C10F w₁/U z | −2.39 | −3.37 | −3.61 |
+| C1F w₁/U z | −4.03 | −4.53 | −4.83 |
+| C25F, C25P, C10P, C10H w₁/U z | −1.36, −2.87, 0.14, 1.06 | −2.18, −3.05, −0.64, 2.07 | −2.43, −4.17, −0.91, 2.05 |
+| Look | clean, lift 1.84–2.28 | clean, lift 1.84–2.28 | clean |
+
+- **Verdict: fails, stop.** The full roll moves away from its band and w₁/U falls in every target roll, at the limit as
+  at 2.9 kg. The body only slows the hands, so ∞ is the most carry any M_b gives: no finite value passes, and the
+  bounds were not run (spec §3, stop rule). Only the pass roll comes into its band, and with it C3P's L2/L1 moves away
+  (z 0.10 → −1.00/−1.09).
+- **Reading.** Hands kept at the plan's pace from the strike carry the striker's ball less, not more, against the
+  premise of the design: that the restart's slowing was what held w₁ back. At ∞ the press cannot act, so the loss is not
+  only the press's direct impulse moved off the head (register, "G6's primed push, on the ball"); ending the re-anchor
+  alone loses it. Why is not measured here: the run reports, and the user rules on the next step.
+- **Behaviour moved (Task 3's full suite, 34 tests, not re-pinned):** the canonical rolls' ratios and play pins; the
+  full roll's impact runs to 121.7 ms (was under 110 ms); the canonical full roll's follow-through ends at 0.89 rad/s
+  (was at its apex); a half roll's push now ends inside the impact, so `followThrough` changes frames before the
+  impact's end; the late mistimed roll's impact-end seam is 1.7 µm off the trapezoid (slack 1 µm); the endless carry
+  no longer sinks past HEAD_DEEP_LIMIT; the old restart's and press's own tests.
+- **The cards' JSON** write the limit as `"Infinity"` (`scripts/scorecard/run.ts`, `infinite`/`finite`).
 - **Moves re-pinned:** `playPin.json`; the no-push baseline (drive, single-ball, stop-ac); the canonical rolls, the
   full roll at p 2 (1.307), the tap (1.243), the sample at p 1 (1.377), the least hold (σ 0, 1.083); the drive's
   read-outs; the AC stop's turf times (13.875, 14.24 ms); the reference values.
