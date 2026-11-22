@@ -8,7 +8,8 @@
     import { labelOf } from "../lab/index";
 
     interface Props {
-        range: number;
+        /** Null for a text book, which asks for no range. */
+        range: number | null;
         lawn: number;
         power: number | null;
         framed: FramedPlay | null;

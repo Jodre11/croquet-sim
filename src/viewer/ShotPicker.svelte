@@ -1,8 +1,11 @@
 <!--
     The shot picker (side-on viewer spec §2, decision 9, §7): the shot wanted (a ratio label), the range snapped to the
-    record's 16, the lawn, and the split where the label's defaults hold more than one; and the note on the default.
+    record's 16, the lawn, and the split where the label's defaults hold more than one; or a type's text book, played
+    live at its canonical power and preset hold; and the note on the default.
 -->
 <script lang="ts">
+    import type { MapType } from "../lab/index";
+
     interface Props {
         labels: readonly string[];
         ranges: readonly number[];
@@ -13,8 +16,12 @@
         lawn: number;
         note: string;
         onpick: (pick: { label: string; split: number; range: number; lawn: number }) => void;
+        /** The types with a text book, each with its name, and the one picked (null: a record's default). */
+        books: readonly { type: MapType; name: string }[];
+        book: MapType | null;
+        onbook: (type: MapType) => void;
     }
-    let { labels, ranges, splits, label, split, range, lawn, note, onpick }: Props = $props();
+    let { labels, ranges, splits, label, split, range, lawn, note, onpick, books, book, onbook }: Props = $props();
     const LAWNS = [6, 10, 14];
     const deg = (rad: number): string => ((rad * 180) / Math.PI).toFixed(0);
 </script>
@@ -64,5 +71,22 @@
             </select>
         </label>
     {/if}
+    <label>
+        Text book
+        <select
+            value={book ?? ""}
+            data-testid="text-book"
+            onchange={(e) => {
+                if (e.currentTarget.value !== "") {
+                    onbook(e.currentTarget.value as MapType);
+                }
+            }}
+        >
+            <option value="">(the record's default)</option>
+            {#each books as b (b.type)}
+                <option value={b.type}>{b.name}</option>
+            {/each}
+        </select>
+    </label>
     <p class="note" data-testid="pick-note">{note}</p>
 </fieldset>

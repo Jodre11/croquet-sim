@@ -6,7 +6,7 @@
     import { onDestroy } from "svelte";
     import type { FramedPlay } from "./lab/frames";
     import { judge, nearestGripAt, type BandTable, type GripPlan } from "./lab/judge";
-    import { MAP_TYPES, openWorld, textBook, type MapPlan, type MapType } from "./lab/index";
+    import { MAP_TYPES, canonicalPower, openWorld, textBook, type MapPlan, type MapType } from "./lab/index";
     import type { StrokeExtras } from "./lab/play";
     import { defaultProfile } from "./engine/swing/profile";
     import { faceHalfHeight } from "./engine/impact/shape";
@@ -64,6 +64,10 @@
         firmness: number;
     } | null>(null);
 
+    /** The text book picked and its canonical power, until an input or a default is picked; null otherwise. */
+    let book = $state<{ type: MapType; power: number } | null>(null);
+    const BOOKS = MAP_TYPES.map((t) => ({ type: t, name: HOLD_NAMES[t] }));
+
     let framed = $state<FramedPlay | null>(null);
     let played = $state<{ firmness: number; searched: boolean } | null>(null);
     let running = $state(false);
@@ -85,7 +89,7 @@
     const judgement = $derived(
         table === null ? null : judge(table, off ? clampPlan(inputSpans(table), plan) : plan, range, lawn),
     );
-    const power = $derived(judgement?.power ?? null);
+    const power = $derived(book?.power ?? judgement?.power ?? null);
     const nearest = $derived(power === null ? null : nearestGripAt(grips, type, plan, power));
     // The found hold's firmness while the set-up is the one it was found for (gate ruling 1); null, searched on Run.
     const foundFirmness = $derived(
@@ -172,6 +176,7 @@
                       .map((s) => ({ ...asked, split: s }))
                       .find((p) => lookupDefault(defaults, p) !== null) ?? asked);
         ({ label, split, range, lawn } = next);
+        book = null;
         const found = lookupDefault(defaults, next);
         if (found === null) {
             note = "The record has no default for this pick; the set-up is kept.";
@@ -191,6 +196,28 @@
         note = `The ${from === "viable" ? "viable" : "least-complex"} default, from the ${HOLD_NAMES[pick.type]}'s hold.`;
         void loadTable(pick.type).then((loaded) => {
             if (type === pick.type) {
+                table = loaded;
+            }
+        });
+    }
+
+    /**
+     * A type's text book (the play the scorecard checks): its plan at its canonical power on the 10 s lawn, at the
+     * preset's hold, played live on the engine; the band table's power and the record's defaults are not read.
+     */
+    function pickBook(next: MapType): void {
+        type = next;
+        plan = textBook(next);
+        extras = {};
+        defaultEffort = null;
+        playerGrip = defaultProfile.shape[next].holdFirmness;
+        foundHold = null;
+        lawn = 10;
+        book = { type: next, power: canonicalPower(next, openWorld(10)) };
+        replay();
+        note = `The ${HOLD_NAMES[next]}'s text book at its canonical power and preset hold, as the scorecard plays it.`;
+        void loadTable(next).then((loaded) => {
+            if (type === next) {
                 table = loaded;
             }
         });
@@ -284,7 +311,20 @@
     {/if}
     <div class="layout">
         <aside>
-            <ShotPicker {labels} {ranges} {splits} {label} {split} {range} {lawn} {note} onpick={pickDefault} />
+            <ShotPicker
+                {labels}
+                {ranges}
+                {splits}
+                {label}
+                {split}
+                {range}
+                {lawn}
+                {note}
+                onpick={pickDefault}
+                books={BOOKS}
+                book={book?.type ?? null}
+                onbook={pickBook}
+            />
             <Inputs
                 {plan}
                 {spans}
@@ -292,10 +332,12 @@
                 defaults={typeDefaults}
                 onchange={(next) => {
                     plan = next;
+                    book = null;
                     replay();
                 }}
                 onextras={(next) => {
                     extras = next;
+                    book = null;
                     replay();
                 }}
             />
@@ -369,7 +411,7 @@
                 onspeed={(next) => (speed = next)}
                 onslow={(next) => (slow = next)}
             />
-            <Readout {range} {lawn} {power} {framed} firmness={played?.firmness ?? null} />
+            <Readout range={book === null ? range : null} {lawn} {power} {framed} firmness={played?.firmness ?? null} />
         </section>
     </div>
 </main>
