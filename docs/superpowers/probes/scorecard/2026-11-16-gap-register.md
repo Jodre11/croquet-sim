@@ -1012,3 +1012,26 @@ A sweep with no engine change set ballTurfSliding (fit 0.6654, bounds 0.48–1.0
 - **Likely why (not measured):** the plough probe's tangential force on the striker's ball changes sign between 2 ms
   samples, the mark of a tangential spring that mostly sticks rather than slides at the Coulomb limit. If it sticks,
   μ does not bound it, and the loss is set by the turf's tangential stiffness and the ball's being held in it.
+
+## G2: grip or slide on the turf (2026-11-22)
+
+`gapProbe plough` now also reports, per 2 ms bin, the share of the striker's ball's time in contact with the turf
+pair's tangential force at the Coulomb limit μ·N (≥ 99 %) and its mean use of it, |F_t|/(μ·N).
+
+| Roll | 0–2 ms | 2–4 ms | 4–6 ms | 6–8 ms | 8–10 ms |
+|---|---|---|---|---|---|
+| C1F | 0 %, 0.50 | 0 %, 0.12 | 0 %, 0.14 | 0 %, 0.09 | 0 %, 0.60 |
+| C3F | 32 %, 0.71 | 0 %, 0.15 | 0 %, 0.13 | 0 %, 0.45 | 60 %, 0.92 |
+| C10F | 31 %, 0.65 | 0 %, 0.10 | 0 %, 0.35 | 6 %, 0.84 | 97 %, 1.00 |
+| C25F | 31 %, 0.61 | 0 %, 0.13 | 0 %, 0.48 | 48 %, 0.94 | off the turf |
+| C3P | 30 %, 0.70 | 0 %, 0.13 | 0 %, 0.26 | 13 %, 0.62 | 100 %, 1.00 |
+| C10P | 30 %, 0.65 | 0 %, 0.12 | 0 %, 0.42 | 39 %, 0.86 | 100 %, 1.00 |
+| C25P | 29 %, 0.59 | 0 %, 0.19 | 0 %, 0.58 | 89 %, 0.99 | off the turf |
+
+- **Verdict: the ball grips the turf.** From 2 to 6 ms, when it is pressed deepest, it never reaches the limit (mean
+  use 0.10–0.58): the turf's tangential spring holds it. It slides only for about a third of the first 2 ms and once
+  the press eases (6–10 ms), when the normal force, and so the loss, is small. This is why μ moved nothing.
+- **Where the loss falls (C3F):** 0.077 m·U in the gripped bins (2–8 ms), 0.059 in the first 2 ms (a third of it at
+  the limit), 0.008 at the limit after 8 ms. The loss is set by the turf's tangential stiffness and how long the face
+  holds the ball in the turf: free parameters tangentialStiffnessRatio, turfYield and turfMatStrength, or a ball that
+  leaves the turf sooner, as the -2 player's account has it.
