@@ -1252,3 +1252,37 @@ The push's pitch hold is held to `holdFirmness` times the grip's couple, and `ho
 - **Still open:** the half rolls (C3H w₁/U +3.9 z, L2/L1 1.69 against 2.46, unmoved by the hold); the croqueted ball
   fast in C1F, C3P and C25P (v₂/U +2.4 to +3.3 z) though the ratios hold; the drives (gugan5, ca.A4D); and the
   viewer's map (`public/viewer/defaults.json`, 2026-11-11), stale on every engine since, so its picker plays old holds.
+
+## The half rolls' striker's ball (2026-11-22)
+
+Engine 0.44.0. C3H w₁/U 0.443 against 0.380 (+3.9 z), C10H 0.420 against 0.400 (+1.2 z); L2/L1 1.69 and 1.75 against
+2.46 and 2.30 (−1.1, −0.9 z); the coaches' half roll 1.64, inside 1.40–2.50. C3H's w₁/U has read 0.44 on every card
+since the baseline. `gapProbe head-speed --half` (new option) and throwaway traces, no engine change:
+
+| Roll | Head after 1 ms | Ball 1 after 1 ms | Face contacts | Head at the read | Ball 1 at the read (Gugan) |
+|---|---|---|---|---|---|
+| C3H | 0.506 | 0.161 | 0–0.6, 1.2–2.0, 4.7–5.6 ms | 0.357 | 0.443 (0.380) |
+| C10H | 0.488 | 0.191 | 0–0.6, 0.9–1.6, 3.4–4.3 ms | 0.354 | 0.420 (0.400) |
+
+- **A third face contact kicks the ball ahead of the head.** The second contact is nearly inelastic along aim
+  (C3H head 0.496 → 0.389, ball 0.18 → 0.42): the 24° face drives the ball into the turf, which slows it to 0.32 by
+  4 ms. The free head (the half roll's hands give under 0.01 M·U per ms) keeps 0.396, catches it as the turf throws it
+  up into the sloping face, and the bounce (normal e 0.83, Gugan's wood) sends it on at 0.444 while the head drops to
+  0.357. Along aim that contact's apparent restitution is 1.24: the turf's rebound turned forward by the face.
+- **Gugan's figures fit the two leaving together.** With the head's mass 2.20 m and ball 1 sharing the head's speed
+  after the second contact, (2.20 × 0.506 + 0.161)/3.20 = 0.398 for C3H and 0.395 for C10H, against his 0.380 and
+  0.400; §10 gives the mallet's speed after impact as "essentially the same as for ball 1". In the model ball 1 leaves
+  ahead of the head in every roll, by 0.04–0.14 U (`gapProbe w1-trace`, head at the read).
+- **No half-roll input or cheap lever closes it** (C3H w₁/U): the half roll's hold firmness 0 → 1, 0.433 → 0.518
+  (0.1 played); the descent angle β 2.7–16.8° through the feet, 0.440–0.466 (Gugan's β 13.5°, the model's 9.9°); the
+  text book's ratio over drive, push length, hold and feet stays 1.53–1.71. The earlier one-at-a-time map moved it at
+  most to 0.416 (faceFriction at its lower bound).
+- **An inelastic re-contact is not the fix.** A throwaway face restitution for closures below 1 m/s, 0.05–0.6, does
+  bring ball and head together, but in the full and pass rolls the hands then carry the ball: C1F, C3F, C10F, C3P and
+  C10P read w₁/U 0.83–1.27, pushes. Gugan's e(U) also gives 0.86 at these speeds, and he finds "no clear evidence" the
+  ball and mallet are touching after the first millisecond.
+- **Gugan on the half rolls' distances:** the measured and calculated runs agree "not so good for the two
+  half-rolls", the balls "not rolling over the same pieces of grass"; C10H's L1 per w₁² is 0.68 of C3H's in his
+  table, so its L1 (model +1.9 z) carries that variation.
+- **Open.** Ball 1 leaving with the head, as Gugan sees it, needs the second and third contacts' balance changed in
+  every roll, not the half roll's settings; it would reopen the full and pass rolls' fit adopted above.

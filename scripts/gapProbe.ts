@@ -927,12 +927,13 @@ async function climb(): Promise<void> {
  * G2's head speed (Gugan 4 §10: the mallet's speed after impact "essentially the same as for ball 1"): for every full
  * and pass roll, in 1 ms bins to the card's read, the head's and the striker's ball's speeds along aim (share of U) at
  * each bin's end, and the impulses along aim on the head (share of M·U, M the head's mass) from the face, the hands and
- * the turf.
+ * the turf. With `--half`, the half rolls instead.
  */
 async function headSpeed(): Promise<void> {
     const { dot } = await import("../src/engine/math/vec3");
     const world = openWorld(LAWN);
-    for (const roll of ROLLS.filter((r) => r.type !== "half-roll")) {
+    const half = args.includes("--half");
+    for (const roll of ROLLS.filter((r) => (half ? r.type === "half-roll" : r.type !== "half-roll"))) {
         const power = powerFor(roll.type, roll.U, world);
         if (power === null) continue;
         const { setup, contact } = playRoll(roll, power);
