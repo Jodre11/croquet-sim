@@ -853,7 +853,8 @@ async function lift(): Promise<void> {
  * roll, in 2 ms bins to the card's read, the striker's ball centre's travel up the face (mm along the head's shaft
  * axis, against its place at the face's first contact) at each bin's end, the face's time in contact, the face's
  * tangential impulse along that axis (share of m·U, up positive) and the share of the contact time its tangential force
- * is at the Coulomb limit μ·N.
+ * is at the Coulomb limit μ·N; and, at the face's first contact, the head's speed, its angle below horizontal and its
+ * and the ball's speeds up the face.
  */
 async function climb(): Promise<void> {
     const { dot, sub } = await import("../src/engine/math/vec3");
@@ -889,6 +890,15 @@ async function climb(): Promise<void> {
                 const along = dot(sub(ball.position, st.head.position), s);
                 for (const c of st.contacts) {
                     if (c.key !== key) continue;
+                    if (start === null) {
+                        const v = st.head.velocity;
+                        const below = (Math.atan2(-v.z, Math.hypot(v.x, v.y)) * 180) / Math.PI;
+                        console.log(
+                            `${roll.name}: head at first face contact ${Math.hypot(v.x, v.y, v.z).toFixed(3)} m/s, ` +
+                                `${below.toFixed(1)}° below horizontal; up the face ${dot(v, s).toFixed(3)} m/s, ` +
+                                `ball ${dot(ball.velocity, s).toFixed(3)} m/s`,
+                        );
+                    }
                     start ??= along;
                     bin.touch += dt;
                     bin.impulse += dot(c.tangentialForce, s) * dt;

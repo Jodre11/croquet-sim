@@ -1094,3 +1094,14 @@ tangential impulse along that axis (share of m·U, up positive) and the share of
   climbs while the face pushes; the model's ball goes down first and is held there by the face and the turf's grip,
   losing its speed in 2–6 ms. Within the model's laws, the face's friction is the one part acting at its limit while
   the ball climbs, which is why faceFriction at its lower bound moved w₁/U a little (+0.004 to +0.017).
+- **Correction (2026-11-22), on reading §10.1 in full.** Gugan's passage on C1F, the best-seen two-ball roll, has the
+  striker's ball moving down into the ground for about 5 ms after the initial contact, in contact with the mallet,
+  and then: "the subsequent upward motion of the ball … is restrained by the downward-sloping mallet face, which
+  results in the ball rolling/sliding up it". The model's sequence, down first and then up against the face, is his;
+  the bullets above that read it as the opposite of his account are withdrawn. At first contact the head moves 8–9°
+  below horizontal (full rolls 8.2–8.3°, pass rolls 9.3°), so the 31–32° face slides up past the ball at about 0.39 U.
+- **What differs is the speed in that window.** Gugan: "For ball 1 there is a considerable acceleration for about
+  5 ms after the end of the initial contact period", its speed first reduced by the croqueted ball and then
+  accelerated by the mallet's second contact, reaching pure roll in the same few ms. The model's striker's ball loses
+  speed over that window instead (C3F, from the face's departure to the read: face +0.510, croqueted ball −0.741,
+  turf −0.150 m·U). G2 lies in that window's balance, not in the direction the ball moves on the face.
