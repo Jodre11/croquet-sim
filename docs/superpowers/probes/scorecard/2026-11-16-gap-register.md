@@ -1161,3 +1161,33 @@ in 1 ms bins to the read, and the impulses on the head from the face, the hands 
   0.08 s), and at 25 ms G2 largely closes (C3P w₁/U z −0.83, C3F −1.92). The user kept 0.08 s and set the next step
   as "the hands' mechanism the period stands in for". This run says where that mechanism acts: in the 1–8 ms of the
   second contact, by the grip bringing the arms' mass to the head in time.
+
+## G2: where the grip period acts in the strike (2026-11-22)
+
+The firming design (the user's choice, "Firms through the strike") began by reading where `handCouplingPeriod` acts.
+The impact starts at the grips' relax (`coupling.relaxAt` 0 s, the face's first touch at 0.01 ms on every roll), so
+the firm grip's springs and dampers (`handGains`, track.ts) never act on a roll's strike. From contact the hands are
+the hand–arm chains and the arms' posture hold, none of them set by the period. The period reaches the strike in two
+places only: the bottom hand's twist damper, and the push's pitch hold (`pushPitch`), the hands' couple holding the
+shaft's pitch about the top hand, K_p = I_P·(2π/T)², held to `holdFirmness` times the grip's couple.
+
+`gapProbe head-speed` with `--set handCouplingPeriod=0.0253` alone, every other value as committed:
+
+| Roll | w₁/U at 0.08 s → 0.0253 s (Gugan) | Head after 1 ms | Head at the read |
+|---|---|---|---|
+| C1F | 0.553 → 0.597 (0.667) | 0.569 → 0.590 | 0.449 → 0.470 |
+| C3F | 0.520 → 0.546 (0.594) | 0.574 → 0.596 | 0.446 → 0.471 |
+| C10F | 0.511 → 0.523 (0.569) | 0.573 → 0.579 | 0.461 → 0.468 |
+| C25F | 0.472 → 0.473 (0.501) | 0.560 → 0.561 | 0.436 → 0.437 |
+| C3P | 0.517 → 0.559 (0.580) | 0.576 → 0.600 | 0.445 → 0.464 |
+| C10P | 0.524 → 0.549 (0.520) | 0.575 → 0.586 | 0.465 → 0.483 |
+| C25P | 0.489 → 0.490 (0.557) | 0.563 → 0.564 | 0.447 → 0.447 |
+
+- **The period's lever is the pitch hold.** A stiffer hold keeps the face from turning back about the top hand under
+  the balls' impulse, so the head keeps more speed from the first impact on (C3F 0.574 → 0.596 U after 1 ms), not only
+  in the second contact. This corrects the section above: the refit's short period acted through the hands' pitch
+  couple, not by bringing the arms' mass to the head.
+- **Alone it closes a third to two thirds of the short rolls' gap** (C3F 0.074 → 0.048, C3P 0.063 → 0.021) and
+  overshoots C10P by 0.029. The refits' fuller closure came with the other values fitted jointly.
+- **The 25 m rolls do not move.** Unchecked: their larger impulse likely holds the couple at its limit
+  (`holdFirmness` × `gripCouple`), where the gain no longer matters.
