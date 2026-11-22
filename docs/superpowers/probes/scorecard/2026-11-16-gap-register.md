@@ -1061,3 +1061,9 @@ and the turf's stored energy. The face normal is 31–32° below horizontal at f
   push then set it rolling; in the model the push comes while the ball is still in the turf, and presses it.
 - **The 31–32° face normal** is the strike's geometry as played; whether it matches Gugan's filmed face angles per
   roll was not checked here.
+- **The face angle checked (2026-11-22): it matches Gugan.** Gugan 4 Table 6's α (the shaft's forward angle, equal to
+  the face normal's angle below horizontal; `reference/sources/README.md`) against the face normal at first contact:
+  C1F 31 / 31.0, C3F 29 / 31.0, C10F 33 / 31.0, C25F 30 / 31.0, C3P 36 / 32.0, C10P 34 / 32.0, C25P 32 / 32.0. The
+  rolls play each type's default lean (full 31°, pass 34°), so the full rolls sit within 2° of their filmed angles;
+  the pass rolls strike 2° shallower than their 34° lean (cause not examined), within 4° of Gugan. The strike's
+  downward drive is the filmed geometry's; the gap lies in what follows it.
