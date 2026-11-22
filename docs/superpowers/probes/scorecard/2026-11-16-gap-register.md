@@ -942,3 +942,24 @@ between, the other at its fit (faceFriction 0.2807, ballBallFriction 0.1112). Ca
   play still clean: a different outcome, not a trend. Not examined.
 - **Not swept: ball–ball restitution** (0.795, bounds 0.7071–0.97), not a free parameter. It sets directly what the
   striker's ball keeps when it meets the croqueted ball.
+
+## G2: ball–ball restitution (2026-11-22)
+
+A temporary edit to `reference/friction.json` (reverted) set ballBallRestitution, Gugan's 0.72 (bounds 0.7071–0.866),
+to 0.71 and 0.75. Cards: `2026-11-22-restitution-0.71`, `-0.75`. The trial was put to the user as 0.795 within
+0.71–0.97, a misreading of the neighbouring entry; the runs used the real value's neighbourhood.
+
+| Run | Objective | C1F | C3F | C10F | C25F | C3P | C10P | C25P |
+|---|---|---|---|---|---|---|---|---|
+| Gugan w₁/U | | 0.667 | 0.594 | 0.569 | 0.501 | 0.580 | 0.520 | 0.557 |
+| 0.72 (fit) | 5.13 | 0.553 | 0.520 | 0.511 | 0.472 | 0.517 | 0.524 | 0.489 |
+| 0.71 | 6.80 | 0.551 | 0.521 | 0.513 | 0.473 | 0.515 | 0.524 | 0.903 |
+| 0.75 | 6.71 | 0.558 | 0.513 | 0.507 | 0.466 | 0.522 | 0.520 | 0.487 |
+
+- **Verdict: closed by the sources.** The value is already 0.013 above its floor; at the floor w₁/U is unmoved
+  (C3F 0.521). Raising it lowers C3F's w₁/U and moves Table 5's drives and stops away from Gugan (t5.mean.w1W z 0.59 →
+  2.15 at 0.75).
+- **C25P again reads w₁/U ≈ 0.90 at 0.71**, and its play is not clean: the same outcome as at the lower frictions. A
+  small change to the handover tips C25P into it.
+- **The handover in sum:** neither friction nor restitution within its sourced bounds closes more than a seventh of
+  C3F's gap. With the swing's push and plan also excluded, the gap's cause lies outside the parameters swept so far.
