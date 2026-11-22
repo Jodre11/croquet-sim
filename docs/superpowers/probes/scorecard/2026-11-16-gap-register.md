@@ -1191,3 +1191,31 @@ shaft's pitch about the top hand, K_p = I_P·(2π/T)², held to `holdFirmness` t
   overshoots C10P by 0.029. The refits' fuller closure came with the other values fitted jointly.
 - **The 25 m rolls do not move.** Unchecked: their larger impulse likely holds the couple at its limit
   (`holdFirmness` × `gripCouple`), where the gain no longer matters.
+
+## G2: the strike's pitch hold, swept (2026-11-22)
+
+Engine 0.43.0 (strike pitch hold design, `docs/superpowers/specs/2026-11-22-strike-pitch-hold-design.md`): the push's
+pitch hold takes its own period, `strikePitchPeriod`, landing at 0.08 s. The landing card
+(`2026-11-22-strike-pitch-0.080`) equals `2026-11-21-accel-x1` row for row, objective 5.13. The sweep, every other
+value held (cards `2026-11-22-strike-pitch-<T>`):
+
+| T (s) | Objective | C1F w₁/U | C3F | C10F | C25F | C3P | C10P | C25P |
+|---|---|---|---|---|---|---|---|---|
+| Gugan | | 0.667 | 0.594 | 0.569 | 0.501 | 0.580 | 0.520 | 0.557 |
+| 0.080 | 5.13 | 0.553 | 0.520 | 0.511 | 0.472 | 0.517 | 0.524 | 0.489 |
+| 0.060 | 4.98 | 0.563 | 0.527 | 0.521 | 0.472 | 0.525 | 0.535 | 0.490 |
+| 0.040 | 4.87 | 0.580 | 0.537 | 0.523 | 0.472 | 0.540 | 0.547 | 0.490 |
+| 0.030 | 4.79 | 0.593 | 0.544 | 0.523 | 0.473 | 0.553 | 0.549 | 0.490 |
+| 0.025 | 4.77 | 0.597 | 0.546 | 0.523 | 0.473 | 0.560 | 0.549 | 0.491 |
+| 0.020 | **4.76** | 0.599 | 0.548 | 0.524 | 0.473 | 0.563 | 0.549 | 0.491 |
+| 0.015 | 4.77 | 0.600 | 0.549 | 0.524 | 0.473 | 0.566 | 0.550 | 0.491 |
+| 0.010 | 4.77 | 0.602 | 0.550 | 0.525 | 0.473 | 0.567 | 0.550 | 0.491 |
+
+- **Best 0.020 s, objective 4.76 against 5.13**, not at a bound. Rows moving by more than 1 z: C1F w₁/U −4.03 → −2.41,
+  C3F −2.94 → −1.83, C10F −2.39 → −1.85, C3P −2.56 → −0.68, C10P +0.14 → +1.31 (overshoot), coach.pass-roll
+  2.06 → 0.81. Drives, stops and the half rolls do not move; no row becomes unpractised.
+- **The gain flattens below 30 ms and the 25 m rolls never move.** A stiffer spring that stops paying is a limit: the
+  hold's couple is held to `holdFirmness` times the grip's couple, and the long rolls' larger impulse likely holds it
+  there. Next: test the limit.
+- **The split stays wrong.** The striker's ball is still slow and the croqueted ball fast in C1F (v₂/U +3.4 z), C3P
+  (+3.2) and C25P (+2.3): the hold moves w₁ but hardly v₂.
