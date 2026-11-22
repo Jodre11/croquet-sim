@@ -80,13 +80,22 @@
         "note": "Refitted (gap register, the third refit, 2026-11-20): the scorecard's joint fit on engine 0.41.0, adopted by the user's ruling with handCouplingPeriod held at 0.08 s (card 2026-11-20-refit3-grip80, objective 5.13 against 6.30); was 0.7. The damping ratio of a firm grip, for each hand's translation and twist alike (design §3.3). Bounds: the one-hand pre-flight sweep's range (0.2-1)."
     },
     "strikePitchPeriod": {
-        "value": 0.08,
+        "value": 0.02,
         "unit": "s",
         "bounds": [0.01, 0.08],
         "source": "Strike pitch hold design (docs/superpowers/specs/2026-11-22-strike-pitch-hold-design.md) §2.1; gap register G2, 'where the grip period acts in the strike' (docs/superpowers/probes/scorecard/2026-11-16-gap-register.md): user decisions, 2026-11-22",
         "provenance": "derived",
         "provisional": "placeholder",
-        "note": "Unsourced; fitted by the card. The natural period of the push's pitch hold, the hands' couple holding the shaft's pitch about the top hand from contact to the path's restart: K_p = I_P·(2π/T)², C_p = 2ζ·sqrt(K_p·I_P), ζ handCouplingDampingRatio, held to holdFirmness times the grip's couple. The user's account: the grip firms through the strike, as a player tightens at impact. Lands at handCouplingPeriod's 0.08 s, no change to any shot. Bounds: handCouplingPeriod's lower bound, and the swing's ruled 0.08 s, fixed: the hold no firmer than the swing; a fit there rejects the firming."
+        "note": "Unsourced; fitted by the card. The natural period of the push's pitch hold, the hands' couple holding the shaft's pitch about the top hand from contact to the path's restart: K_p = I_P·(2π/T)², C_p = 2ζ·sqrt(K_p·I_P), ζ handCouplingDampingRatio, held to holdFirmness times strikeGripFactor times the grip's couple. The user's account: the grip firms through the strike, as a player tightens at impact. Landed at handCouplingPeriod's 0.08 s with no change to any shot; set to the sweep's best, 0.020 s (cards 2026-11-22-strike-pitch-*, objective 4.76 against 5.13), provisionally, for the user's review of the results. Bounds: handCouplingPeriod's lower bound, and the swing's ruled 0.08 s, fixed: the hold no firmer than the swing; a fit there rejects the firming."
+    },
+    "strikeGripFactor": {
+        "value": 1.25,
+        "unit": "1",
+        "bounds": [1, 2],
+        "source": "Gap register G2, 'the hold's limit' (docs/superpowers/probes/scorecard/2026-11-16-gap-register.md), 2026-11-22",
+        "provenance": "derived",
+        "provisional": "placeholder",
+        "note": "Unsourced; chosen from the card. How much the hands' grip firms through the strike: the push's pitch hold may reach this times holdFirmness times the grip's couple (gripCouple, whose firmness factor min(γ_T, g_B) is itself a placeholder). At 1 the hold's couple saturated on the long rolls and only the short ones answered a firmer hold; 1.25 brings every full and pass roll's L2/L1 within 0.4 z of Gugan 4 Table 6, and 2 turns C25P into a push (the face on the ball for 37 ms). 1.25 rather than 1.5 (much the same ratios) for the margin from that push. Bounds: no firming, and the push."
     },
     "armMass": {
         "value": 1.081,

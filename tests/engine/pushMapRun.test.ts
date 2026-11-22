@@ -195,13 +195,15 @@ describe("one plan's run (P2b.2b.2c.3b plan Task 3)", () => {
         // outpaces the striker's ball; lawful in one pass, ratio 1.306, as before §2.1 (register G2's gap).
         // Gap register, the third refit (engine 0.42.0; was 1.3055): lawful in one pass, ratio 1.2527, just above the
         // band 1.0–1.2; the grip period the fit asked for (25 ms against 0.08 s) is what took it to 1.15.
+        // Gap register G2, the strike's grip (engine 0.44.0; was 1.2527): the push's pitch hold at 20 ms and 1.25 times
+        // its couple, lawful in one pass, ratio 1.1098, in the band.
         const base = mapSetup("full-roll", textBook("full-roll"), 1);
         const p = swingReference["full-roll"].defaultBackswing.value / bodyBackswing(base, WORLD);
         const sample = playSample("full-roll", textBook("full-roll"), p, [10], "preset");
         expect(sample.klass).toBeNull();
         expect(sample.reason).toBeNull();
         expect(sample.passes).toBe(1);
-        expect(sample.byLawn[10]?.ratio).toBeCloseTo(1.2527, 4);
+        expect(sample.byLawn[10]?.ratio).toBeCloseTo(1.1098, 4);
     });
 
     it("plays the half roll's text book at its canonical power at ratio 1.644", () => {
@@ -214,12 +216,12 @@ describe("one plan's run (P2b.2b.2c.3b plan Task 3)", () => {
         // striker's ball runs on (Gugan's C3H and C10H: w1/U 0.38–0.40, the model's 0.40–0.44): a known gap.
         // Restart confirmation design (was 1.770 at a 1 ms hold): 1.782. Primed push design, amendment 1 (was 1.782): the
         // hands press at F_push while on the ball, 1.757. Gap register, the third refit (engine 0.42.0; was 1.757):
-        // 1.644, in the band 1.4–2.5.
+        // 1.644, in the band 1.4–2.5. Gap register G2, the strike's grip (engine 0.44.0; was 1.644): 1.638.
         const base = mapSetup("half-roll", textBook("half-roll"), 1);
         const p = swingReference["half-roll"].defaultBackswing.value / bodyBackswing(base, WORLD);
         const sample = playSample("half-roll", textBook("half-roll"), p, [10], "preset");
         expect(sample.klass).toBeNull();
-        expect(sample.byLawn[10]?.ratio).toBeCloseTo(1.644, 3);
+        expect(sample.byLawn[10]?.ratio).toBeCloseTo(1.638, 3);
     });
 
     it("plays the pass roll's text book at its canonical power, the head kept off the ball, at ratio 1.194", () => {
@@ -243,14 +245,15 @@ describe("one plan's run (P2b.2b.2c.3b plan Task 3)", () => {
         // ratio 1.0421. Soft follow-through design §2.4 (was unlawful, 29.1.6.1, ratio 1.0421): the finish re-timed so
         // the head never outpaces the striker's ball; lawful in one pass, ratio 1.2426, as before §2.1.
         // Gap register, the third refit (engine 0.42.0; was 1.2426): lawful in one pass, ratio 1.1937, still past the
-        // coaches' 0.99 (register G2).
+        // coaches' 0.99 (register G2). Gap register G2, the strike's grip (engine 0.44.0; was 1.1937): lawful in one
+        // pass, 1.0518, nearer the coaches' 0.99.
         const base = mapSetup("pass-roll", textBook("pass-roll"), 1);
         const p = swingReference["pass-roll"].defaultBackswing.value / bodyBackswing(base, WORLD);
         const sample = playSample("pass-roll", textBook("pass-roll"), p, [10], "preset");
         expect(sample.klass).toBeNull();
         expect(sample.reason).toBeNull();
         expect(sample.passes).toBe(1);
-        expect(sample.byLawn[10]?.ratio).toBeCloseTo(1.1937, 4);
+        expect(sample.byLawn[10]?.ratio).toBeCloseTo(1.0518, 4);
     });
 
     it(
@@ -264,10 +267,11 @@ describe("one plan's run (P2b.2b.2c.3b plan Task 3)", () => {
             // Gap register G2 (the user's ruling, 2026-11-17): that limit is reached inside the strike, the strike's
             // shock, so the stroke plays (was superhuman): ratio 1.447 on the 10 s lawn at the preset hold, past the
             // full roll's band (1.619 at the found hold). Primed push design, amendment 1 (was 1.447): 1.426.
-            // Gap register, the third refit (engine 0.42.0; was 1.426): 1.307.
+            // Gap register, the third refit (engine 0.42.0; was 1.426): 1.307. Gap register G2, the strike's grip
+            // (engine 0.44.0; was 1.307): 1.271.
             const sample = playSample("full-roll", textBook("full-roll"), 2, [10], "preset");
             expect(sample.klass).toBeNull();
-            expect(sample.byLawn[10]?.ratio).toBeCloseTo(1.307, 3);
+            expect(sample.byLawn[10]?.ratio).toBeCloseTo(1.271, 3);
             expect(sample.firmness).toBe(defaultProfile.shape["full-roll"].holdFirmness);
         },
     );

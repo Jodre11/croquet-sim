@@ -514,8 +514,9 @@ describe("the mallet's release and the finish's end (shapes design §2)", () => 
         const after = follow.samples.filter((s) => s.t > end);
         expect(after.some((s) => rateOf(planned.contact, s) > 0)).toBe(true);
         // Hands-from-lean design §3 (was at most 0): with the law's hands the run ends 2.4 mrad/s short of the apex's
-        // turn, within a step of it.
-        expect(rateOf(planned.contact, last(follow))).toBeLessThanOrEqual(0.005);
+        // turn, within a step of it. Gap register G2, the strike's grip (engine 0.44.0; was at most 0.005): the run ends
+        // at the finish 0.133 rad/s short, slowing about 7 rad/s², some 19 ms before the apex.
+        expect(rateOf(planned.contact, last(follow))).toBeLessThanOrEqual(0.15);
         expect(follow.flags).not.toContain("follow-cap");
     });
 

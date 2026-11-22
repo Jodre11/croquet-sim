@@ -1219,3 +1219,36 @@ value held (cards `2026-11-22-strike-pitch-<T>`):
   there. Next: test the limit.
 - **The split stays wrong.** The striker's ball is still slow and the croqueted ball fast in C1F (v₂/U +3.4 z), C3P
   (+3.2) and C25P (+2.3): the hold moves w₁ but hardly v₂.
+
+## G2: the hold's limit, and the strike's grip adopted provisionally (2026-11-22)
+
+The push's pitch hold is held to `holdFirmness` times the grip's couple, and `holdFirmness` reaches 1 from 3 m/s
+(ruling 15). The limit was scaled through a throwaway environment switch, every value else held, at 20 ms (cards
+`2026-11-22-probe-limit-*`, not engine settings):
+
+| Limit | Objective | C1F w₁/U | C3F | C10F | C25F | C3P | C10P | C25P | Plays |
+|---|---|---|---|---|---|---|---|---|---|
+| Gugan | | 0.667 | 0.594 | 0.569 | 0.501 | 0.580 | 0.520 | 0.557 | |
+| ×1 | 4.76 | 0.599 | 0.548 | 0.524 | 0.473 | 0.563 | 0.549 | 0.491 | clean |
+| ×1.25 | 4.79 | 0.615 | 0.558 | 0.541 | 0.483 | 0.573 | 0.582 | 0.499 | clean |
+| ×1.5 | 4.89 | 0.620 | 0.562 | 0.556 | 0.493 | 0.574 | 0.598 | 0.508 | clean |
+| ×2 | 6.75 | 0.620 | 0.562 | 0.583 | 0.511 | 0.574 | 0.611 | 0.889 | C25P not clean |
+| ×∞ | 9.96 | 0.620 | 0.562 | 0.587 | 0.556 | 0.574 | 0.611 | 1.01 | C25P not clean; half rolls 0.56–0.58 |
+
+- **The limit holds the long rolls.** Lifted, C10F and C25F reach Gugan's w₁/U. At ×2 C25P becomes a push: the face
+  stays on the striker's ball 37 ms while the hands drive it to 0.89 U, and it runs 46.6 m against 26.
+- **By the outcome the user plays for, the distance ratio, ×1.25 is the best.** Every full and pass roll's L2/L1 is
+  within 0.4 z of Gugan's (C1F 1.01 → 0.37 z, C10P 0.80 → 0.27); the coaches' full roll 1.25 → 1.11 (band
+  1.0–1.2), pass roll 1.19 → 1.05 (the coaches' ≤ 0.99). The objective rises 0.03 over ×1, all of it C10P's w₁/U
+  overshoot (+2.8 z) while its L1 and L2 stay within 0.5 z. ×1.25 rather than ×1.5 (much the same ratios) for the
+  margin from the push.
+- **Adopted provisionally for the user's review (engine 0.44.0):** `strikePitchPeriod` 0.020 s and a new
+  `strikeGripFactor` 1.25 (bounds 1–2, placeholder), both in `reference/contact.json`. Card `2026-11-22-strike-grip-1.25`
+  reproduces the ×1.25 probe: objective 4.79, every play clean. Late-hit survey `2026-11-22-strike-grip-1.25`
+  (`docs/superpowers/probes/late-hit/`): no late hit on Table 6 or on the full, pass and half rolls at any power.
+- **Re-pinned:** the play pins; the text-book ratios (full roll 1.2527 → 1.1098, half 1.644 → 1.638, pass
+  1.1937 → 1.0518, full at p 2 1.307 → 1.271); the full roll's finish now ends 19 ms before its apex
+  (0.133 rad/s); the full roll's whole-run handover lift is lost again (overlapCorrection 0), the runs kept as a guard.
+- **Still open:** the half rolls (C3H w₁/U +3.9 z, L2/L1 1.69 against 2.46, unmoved by the hold); the croqueted ball
+  fast in C1F, C3P and C25P (v₂/U +2.4 to +3.3 z) though the ratios hold; the drives (gugan5, ca.A4D); and the
+  viewer's map (`public/viewer/defaults.json`, 2026-11-11), stale on every engine since, so its picker plays old holds.

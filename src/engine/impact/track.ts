@@ -58,6 +58,12 @@ export const HAND_COUPLING = {
     strikePeriod: contactReference.strikePitchPeriod.value,
 } as const;
 
+/**
+ * How much the grip firms through the strike (reference/contact.json strikeGripFactor; gap register G2, "the hold's
+ * limit"): the push's pitch hold may reach this many times its share of the grip's couple. Provisional.
+ */
+export const STRIKE_GRIP_FACTOR = contactReference.strikeGripFactor.value;
+
 /** The arm's flex (P2b.2b.2b.2b design §3.1, §3.2), reference/contact.json's measured arm values. */
 export const ARM_FLEX: FlexLaw = {
     stiffness: contactReference.armStiffness.value,
@@ -2464,7 +2470,7 @@ function pushPitch(track: PreparedTrack, state: HeadState, t: number, path: Path
         step.pitchInertia,
         dot(rotationError(path.orientation, state.orientation), track.axis),
         dot(step.spinLag, track.axis),
-        track.arc.holdFirmness * gripCouple(track.hands, track.arc.radius),
+        STRIKE_GRIP_FACTOR * track.arc.holdFirmness * gripCouple(track.hands, track.arc.radius),
     );
 }
 

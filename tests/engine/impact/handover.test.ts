@@ -370,7 +370,10 @@ describe("handover of a ball sunk under the head, on whole rolls", () => {
     // the runs stay as a guard that the handover does not throw; the full roll's whole-run lift cover is lost, and the
     // lift keeps its unit cover above. Gap register, the third refit (engine 0.42.0; was overlapCorrection 0): the head
     // ends each run pressing blue, and the handover's lift clears 311.2–327.1 µm, inside the 437 µm static sink. The
-    // whole-run lift cover is back; the bound is 4e-4.
+    // whole-run lift cover is back; the bound is 4e-4. Gap register G2, the strike's grip (engine 0.44.0; was over 0):
+    // the firmer pitch hold keeps the head off blue at the end of the two centred and right runs, overlapCorrection 0;
+    // as after the primed push, the runs stay as a guard that the handover does not throw, the lift keeping its unit
+    // cover above.
     it.each([
         ["full-roll", 1.5, -1, -0.01],
         ["full-roll", 1.5, -1, 0],
@@ -378,7 +381,7 @@ describe("handover of a ball sunk under the head, on whole rolls", () => {
     ] as const)("hands over the %s at %s m/s, drive %s, side %s, lifting the ball clear", (...run) => {
         const [type, speed, drive, side] = run;
         const correction = sunkRun(type, speed, drive, side).impact.overlapCorrection;
-        expect(correction).toBeGreaterThan(0);
+        expect(correction).toBeGreaterThanOrEqual(0);
         expect(correction).toBeLessThan(4e-4);
     });
     // P2b.2b.2c.2c: the face's re-set law (was overlapCorrection over 5e-4; gate stage 2 to rule). The pass roll no

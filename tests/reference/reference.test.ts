@@ -210,9 +210,16 @@ describe("swing, coupling and head–turf reference data", () => {
         expect(contactReference.handCouplingDampingRatio.value).toBe(0.6835);
     });
 
-    it("loads the strike's pitch hold period, landing at the grip's (strike pitch hold design §2.1)", () => {
+    it("loads the strike's grip factor, provisional (gap register G2, the hold's limit)", () => {
+        const entry = contactReference.strikeGripFactor;
+        expect(entry.value).toBe(1.25);
+        expect(entry.bounds).toEqual([1, 2]);
+        expect(entry.provisional).toBe("placeholder");
+    });
+
+    it("loads the strike's pitch hold period, provisionally the sweep's best (strike pitch hold design §2.1)", () => {
         const entry = contactReference.strikePitchPeriod;
-        expect(entry.value).toBe(0.08);
+        expect(entry.value).toBe(0.02);
         expect(entry.unit).toBe("s");
         expect(entry.bounds).toEqual([0.01, 0.08]);
         expect(entry.provenance).toBe("derived");

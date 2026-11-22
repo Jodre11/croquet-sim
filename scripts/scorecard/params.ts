@@ -48,6 +48,7 @@ export const FREE_PARAMS: readonly FreeParam[] = [
 export const RUN_PARAMS: readonly FreeParam[] = [
     free("pushBodyMass", contactReference.pushBodyMass),
     free("strikePitchPeriod", contactReference.strikePitchPeriod),
+    free("strikeGripFactor", contactReference.strikeGripFactor),
 ];
 
 /** A parameter set: free parameter name → value. */
