@@ -993,3 +993,22 @@ tangential force's (sliding), with the ball's centre height against its rest.
   through the ball into the ground make the striker's ball jump a little; the push then sets it rolling, which is why
   the striker's ball goes about as far as the croqueted ball. If so, the real ball spends part of this window off the
   turf, with little sliding loss; the model's stays in it.
+
+## G2: the turf's sliding friction (2026-11-22)
+
+A sweep with no engine change set ballTurfSliding (fit 0.6654, bounds 0.48–1.0) to 0.48 and 0.55. Cards:
+`2026-11-22-sliding-0.48`, `-0.55`.
+
+| Run | Objective | C1F | C3F | C10F | C25F | C3P | C10P | C25P | `coach.pass-roll` |
+|---|---|---|---|---|---|---|---|---|---|
+| Gugan w₁/U | | 0.667 | 0.594 | 0.569 | 0.501 | 0.580 | 0.520 | 0.557 | ≤ 0.99 |
+| 0.6654 (fit) | 5.13 | 0.553 | 0.520 | 0.511 | 0.472 | 0.517 | 0.524 | 0.489 | 1.19 |
+| 0.55 | 5.28 | 0.550 | 0.519 | 0.510 | 0.471 | 0.512 | 0.520 | 0.471 | 1.30 |
+| 0.48 (bound) | 5.32 | 0.552 | 0.518 | 0.510 | 0.470 | 0.518 | 0.528 | 0.475 | 1.30 |
+
+- **Verdict: no effect on the striker's ball.** w₁/U is unmoved to ±0.006 (C25P −0.018), while the croqueted ball runs
+  faster (C1F v₂/U 0.816 → 0.855, C3P 0.886 → 0.901) and the pass roll's coaching row worsens. All plays stay clean;
+  Table 5's means hold.
+- **Likely why (not measured):** the plough probe's tangential force on the striker's ball changes sign between 2 ms
+  samples, the mark of a tangential spring that mostly sticks rather than slides at the Coulomb limit. If it sticks,
+  μ does not bound it, and the loss is set by the turf's tangential stiffness and the ball's being held in it.
