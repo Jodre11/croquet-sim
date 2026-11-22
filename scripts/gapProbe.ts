@@ -771,6 +771,83 @@ async function plough(): Promise<void> {
     }
 }
 
+/**
+ * G2's hop (the -2 player's account, relayed 2026-11-22): for every full and pass roll, the vertical impulse on the
+ * striker's ball (share of m·U, up positive) in 2 ms bins from the strike to the card's read, from the face, the
+ * croqueted ball, the turf and the rest (gravity, the residual against m·Δv_z), with the ball's vertical speed (share
+ * of U), its centre's height against rest (mm) and the turf pair's stored energy (mJ) at each bin's end; and the face
+ * normal's angle below horizontal at the face's first contact.
+ */
+async function lift(): Promise<void> {
+    const world = openWorld(LAWN);
+    const m = world.ball.mass;
+    for (const roll of ROLLS.filter((r) => r.type !== "half-roll")) {
+        const power = powerFor(roll.type, roll.U, world);
+        if (power === null) continue;
+        const { setup, contact } = playRoll(roll, power);
+        if (setup === null || contact === null || setup.croqueted === undefined) continue;
+        const r = readOut(setup, world, {}, contact);
+        const striker = setup.striker;
+        const croqueted = setup.croqueted;
+        const one = BALL_IDS.filter((id) => setup.balls[id] !== undefined).indexOf(striker);
+        const z0 = setup.balls[striker]?.position.z ?? 0;
+        const keys = { face: faceKey(striker), ball: ballPairKey(striker, croqueted), turf: `turf/${striker}` };
+        const ballSign = BALL_IDS.indexOf(striker) < BALL_IDS.indexOf(croqueted) ? -1 : 1;
+        type Bin = { face: number; ball: number; turf: number; dp: number; vz: number; z: number; stored: number };
+        const bins: Bin[] = [];
+        let faceAngle: number | null = null;
+        let last: number | null = null;
+        let lastVz: number | null = null;
+        const probe: ImpactProbe = {
+            step(st) {
+                const ball = st.balls[one];
+                if (ball === undefined) return;
+                const dt = last === null ? 0 : st.t - last;
+                const prevVz = lastVz;
+                last = st.t;
+                lastVz = ball.velocity.z;
+                if (st.t > r.time || dt === 0 || prevVz === null) return;
+                const i = Math.floor((1e3 * st.t) / PLOUGH_BIN_MS);
+                while (bins.length <= i) bins.push({ face: 0, ball: 0, turf: 0, dp: 0, vz: 0, z: 0, stored: 0 });
+                const bin = bins[i];
+                if (bin === undefined) return;
+                bin.stored = 0;
+                for (const c of st.contacts) {
+                    const up = c.normalForce * c.normal.z + c.tangentialForce.z;
+                    if (c.key === keys.face) {
+                        bin.face += up * dt;
+                        faceAngle ??= (Math.asin(-c.normal.z) * 180) / Math.PI;
+                    } else if (c.key === keys.ball) bin.ball += ballSign * up * dt;
+                    else if (c.key === keys.turf) {
+                        bin.turf += up * dt;
+                        bin.stored = c.storedEnergy;
+                    }
+                }
+                bin.dp += m * (ball.velocity.z - prevVz);
+                bin.vz = ball.velocity.z;
+                bin.z = ball.position.z - z0;
+            },
+        };
+        simulateImpact(contact, setup.balls, world, { probe });
+        // The probe's closure sets it; the compiler cannot see that.
+        const angle = faceAngle as number | null;
+        const mU = m * roll.U;
+        const f = (x: number): string => (x / mU).toFixed(3).padStart(7);
+        console.log(
+            `${roll.name}: w1/U ${(r.w1 / roll.U).toFixed(3)} (Gugan ${(roll.w1 / roll.U).toFixed(3)}); face normal ` +
+                `${angle === null ? "—" : angle.toFixed(1)}° below horizontal at first contact`,
+        );
+        bins.forEach((b, i) =>
+            console.log(
+                `  ${(i * PLOUGH_BIN_MS).toString().padStart(2)}–${((i + 1) * PLOUGH_BIN_MS).toString().padEnd(2)} ms: ` +
+                    `face ${f(b.face)} ball ${f(b.ball)} turf ${f(b.turf)} rest ${f(b.dp - b.face - b.ball - b.turf)}` +
+                    ` | v_z ${(b.vz / roll.U).toFixed(3).padStart(7)} U, z ${(1e3 * b.z).toFixed(2).padStart(6)} mm, ` +
+                    `turf stores ${(1e3 * b.stored).toFixed(1)} mJ`,
+            ),
+        );
+    }
+}
+
 const mode = args[0];
 if (mode === "read-delay") readDelay();
 else if (mode === "read-distance") readDistance();
@@ -787,4 +864,5 @@ else if (mode === "w1-trace") w1Trace();
 else if (mode === "budget") await budget();
 else if (mode === "push") await push();
 else if (mode === "plough") await plough();
+else if (mode === "lift") await lift();
 else throw new Error("usage: gapProbe.ts read-delay | read-distance | hop | bed | strike | gugan5-balls [--set …]");

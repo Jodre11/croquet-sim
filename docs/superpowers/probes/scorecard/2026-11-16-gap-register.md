@@ -1035,3 +1035,29 @@ pair's tangential force at the Coulomb limit μ·N (≥ 99 %) and its mean use o
   the limit), 0.008 at the limit after 8 ms. The loss is set by the turf's tangential stiffness and how long the face
   holds the ball in the turf: free parameters tangentialStiffnessRatio, turfYield and turfMatStrength, or a ball that
   leaves the turf sooner, as the -2 player's account has it.
+
+## G2: the striker's ball's hop (2026-11-22)
+
+`gapProbe lift` (new mode, no engine change): the vertical impulse on the striker's ball (share of m·U, up positive)
+in 2 ms bins to the read, from the face, the croqueted ball and the turf, with its vertical speed, its centre's height
+and the turf's stored energy. The face normal is 31–32° below horizontal at first contact in every roll.
+
+| Roll | Face, 0–2 ms | Face, 2 ms to the read | Deepest | Turf lets go | v_z then | Height at the read |
+|---|---|---|---|---|---|---|
+| C1F | −0.499 | −0.316 | 1.93 mm | after the read | +0.19 U | −1.09 mm |
+| C3F | −0.558 | −0.258 | 3.19 mm | 8–10 ms | +0.19 U | +0.05 mm |
+| C10F | −0.583 | −0.297 | 4.68 mm | 8–10 ms | +0.19 U | +0.49 mm |
+| C25F | −0.581 | −0.287 | 5.98 mm | 6–8 ms | +0.18 U | +0.45 mm |
+| C3P | −0.588 | −0.302 | 3.51 mm | after the read | +0.20 U | −1.11 mm |
+| C10P | −0.605 | −0.359 | 4.74 mm | 8–10 ms | +0.19 U | −0.56 mm |
+| C25P | −0.605 | −0.361 | 6.50 mm | 6–8 ms | +0.18 U | +11.30 mm |
+
+- **The model's ball does hop**, as the -2 player describes: the turf returns the face's downward drive and sends the
+  ball up at about 0.19 U in every roll. But it leaves the turf late, at 6–10 ms or after the read, while the gripped
+  loss of the plough probe falls at 2–6 ms.
+- **The face keeps driving it down after the strike.** Beyond the first 2 ms the face adds a further −0.26 to −0.36
+  m·U downward (about half its first-2-ms drive), in 2–8 ms, re-contacting the ball as the turf lifts it: the follow-on
+  push holds the ball in the turf rather than letting it rise. The -2 player's account has the ball hop first and the
+  push then set it rolling; in the model the push comes while the ball is still in the turf, and presses it.
+- **The 31–32° face normal** is the strike's geometry as played; whether it matches Gugan's filmed face angles per
+  roll was not checked here.
