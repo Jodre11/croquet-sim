@@ -1,7 +1,8 @@
 # The strike's pitch hold (gap G2, the rolls' striker's ball)
 
-Status: draft, 2026-11-22. Gap register G2 (`docs/superpowers/probes/scorecard/2026-11-16-gap-register.md`, "the
-head's speed through the strike" and "where the grip period acts in the strike").
+Status: draft, 2026-11-22, amended after review the same day. Gap register G2
+(`docs/superpowers/probes/scorecard/2026-11-16-gap-register.md`, "the head's speed through the strike" and "where the
+grip period acts in the strike").
 
 ## 1. Why
 
@@ -42,35 +43,48 @@ value is fitted, and the card's outcome decides whether it is kept.
 couple about the top hand from contact to the path's restart.
 
 - **Value on landing: 0.08 s**, equal to `handCouplingPeriod`, so the change lands with no effect on any shot.
-- **Bounds: [0.01, 0.08] s.** The lower bound is `handCouplingPeriod`'s own; the upper is the swing's ruled grip, the
-  hold no firmer than the swing ("no firming"), so a fit at the upper bound rejects the design.
-- **Note:** unsourced; fitted by the card; names this spec and the register entry.
+- **Bounds: [0.01, 0.08] s.** The lower bound is `handCouplingPeriod`'s own. The upper bound is the swing grip's
+  ruled 0.08 s, fixed: the hold no firmer than the ruled swing ("no firming"), so a fit at the upper bound rejects the
+  design. It does not follow later changes to `handCouplingPeriod`.
+- **Entry:** `source` names this spec and the register entry; `provenance: "derived"`; `provisional: "placeholder"`
+  until the user rules; the note says it is unsourced and fitted by the card.
+- `src/reference/index.ts` reads it into `contactReference.strikePitchPeriod` beside `handCouplingPeriod`, and
+  `reference.test.ts` asserts its value and bounds.
 
 The damping ratio stays `handCouplingDampingRatio`, shared with the swing's grip. The hold's limit,
 `holdFirmness` × `gripCouple`, is unchanged.
 
+**What `handCouplingPeriod` means afterwards.** Today an override of `handCouplingPeriod` also moves the push's pitch
+hold. After this change it reaches a roll's strike only through the bottom hand's twist damper, and
+`strikePitchPeriod` stays where it is set: the two are independent. Scripts that override the period
+(`scorecardFit.ts`, `scorecardMap.ts`, `ratioFit.ts`, `croquetFitProbe.ts`) keep `strikePeriod` fixed. The 2026-11-16
+map's sensitivity to `handCouplingPeriod` is therefore mostly this hold's, and it no longer describes the new
+`handCouplingPeriod`.
+
 ### 2.2 The engine
 
 - `Coupling` (`src/engine/impact/types.ts`) gains `strikePeriod: number` (s), documented as the push's pitch hold's
-  period.
+  period. Reference values reach the track through the drive, as `PUSH_FORCE` does, so the field is kept rather
+  than `pushPitch` reading `HAND_COUPLING` directly.
 - `HAND_COUPLING` (`track.ts`) gains `strikePeriod: contactReference.strikePitchPeriod.value`;
   `buildContact.ts` copies it into the drive's `coupling` beside `period`.
-- `pushPitch` passes the strike period to `heldPitch`. The stop's hold in `handLoad` keeps `coupling.period`. A
-  clean shape: `heldPitch` and `holdPitchGains` take the period (s) and the damping ratio instead of a `Coupling`;
-  their two callers pass `coupling.strikePeriod` and `coupling.period`.
+- `pushPitch` calls `heldPitch({ ...track.coupling, period: track.coupling.strikePeriod }, …)`. `heldPitch` and
+  `holdPitchGains` keep their signatures; the stop's hold in `handLoad` is untouched.
 - `simulateImpact.ts` validates `positive(coupling.strikePeriod, "coupling.strikePeriod")` beside the period's check.
-- Any other place that builds a `Coupling` (tests, probes, `swingProbe.ts`) sets `strikePeriod`; where it overrides
-  the period for a sweep, it leaves `strikePeriod` at `HAND_COUPLING.strikePeriod`.
+- Every other `Coupling` literal (tests, probes, `swingProbe.ts`) sets `strikePeriod`. Where it overrides the period
+  for a sweep, it leaves `strikePeriod` at `HAND_COUPLING.strikePeriod`; where the period is Infinity
+  (`tests/engine/support/impact.ts`), `strikePeriod` is Infinity too.
 - `ENGINE_VERSION` 0.42.0 → 0.43.0.
 
 ### 2.3 The card
 
-- `FREE_PARAMS` (`scripts/scorecard/params.ts`) gains `strikePitchPeriod`, after `handCouplingDampingRatio`, so
-  `--set strikePitchPeriod=…` works. `FIT_PARAMS` is unchanged: the joint fit stays as it is.
-- The fit is a one-dimensional sweep with every other value held: the card at 0.010, 0.015, 0.020, 0.025, 0.030,
-  0.040, 0.060 and 0.080 s (`scorecard.ts --label 2026-11-22-strike-pitch-<T> --set strikePitchPeriod=<T> --compare
-  docs/superpowers/probes/scorecard/2026-11-21-accel-x1.json`), then a bisection between the two best to 0.0025 s.
-  No new fitting code.
+- `RUN_PARAMS` (`scripts/scorecard/params.ts`, the parameters a card may set but the fit never frees) gains
+  `strikePitchPeriod`, so `--set strikePitchPeriod=…` works. `FREE_PARAMS` and `FIT_PARAMS` are unchanged.
+- The fit is a one-dimensional sweep with every other value held, minimising the card's objective (the same
+  objective as 5.13 on `2026-11-21-accel-x1`): the card at 0.010, 0.015, 0.020, 0.025, 0.030, 0.040, 0.060 and
+  0.080 s (`scorecard.ts --label 2026-11-22-strike-pitch-<T> --set strikePitchPeriod=<T> --compare
+  docs/superpowers/probes/scorecard/2026-11-21-accel-x1.json`). The best grid point is the fit. A best point at
+  0.010 s is reported as at the bound; one at 0.080 s rejects the design. No bisection and no new fitting code.
 
 ## 3. Acceptance
 
@@ -80,21 +94,24 @@ By outcome: right-looking shots, the expected balls, playable.
 2. **The fit.** The best period's card: its objective against 5.13; each Table 6 roll's w₁/U and its z; C10P's
    overshoot; every row that changes by more than 1 z, drives and stops included.
 3. **Playable.** No row becomes unpractised (an off-face play, a late hit, a missed contact). The late hit stays a
-   fault: the firmer hold runs through the carry, so C3F's and C3P's follow-through are traced for any head–ball
-   contact after the ball has left.
+   fault: every stroke with a push takes the firmer hold through the carry, the half roll included, so
+   `lateHitSurvey.ts` is run on the full, pass and half rolls for any head–ball contact after the ball has left.
 4. **Right-looking.** The full and pass rolls at the best period are shown in the side-on viewer, beside 0.08 s, for
    the user's judgement.
 5. **The ruling.** The value is adopted into `reference/contact.json` only on the user's ruling; the register records
    the sweep and the decision either way.
 
+Items 3 and 4 run at the best period by a local, uncommitted edit of `strikePitchPeriod` in `reference/contact.json`
+(neither `lateHitSurvey.ts` nor the viewer takes `--set`), reverted before the ruling.
+
 ## 4. Tests
 
-- `heldPitch` at period T: the gains are K_p = I_P·(2π/T)² and C_p = 2ζ·√(K_p·I_P), and the couple is held to its
-  bound (existing tests re-pointed to the new signature).
-- `pushPitch` uses `strikePeriod`: a track with `strikePeriod` ≠ `period` gives the strike-period couple; a stop's
-  hold gives the `period` couple.
+- `pushPitch` uses `strikePeriod`: a track with `strikePeriod` ≠ `period` gives the couple of `heldPitch` at the
+  strike period.
 - `simulateImpact` rejects a non-positive `strikePeriod`.
-- The existing suites pass unchanged at `strikePeriod` = `period`.
+- The existing suites pass with only mechanical edits: the `HAND_COUPLING` and drive-coupling `toEqual` checks
+  (`hands.test.ts`, `buildContact.test.ts`) gain `strikePeriod`; the version pins (`simulateImpact.test.ts`,
+  `index.test.ts`) read 0.43.0; every `Coupling` literal gains `strikePeriod` as §2.2 sets it.
 
 ## 5. Out of scope
 
@@ -105,5 +122,5 @@ By outcome: right-looking shots, the expected balls, playable.
 ## 6. Assumptions
 
 - The hold shares the swing grip's damping ratio.
-- The sweep's grid and bisection stand in for "fitted by the card"; a joint refit is not run.
+- The sweep's grid stands in for "fitted by the card"; a joint refit is not run.
 - The engine's minor version rises, as the field changes `Coupling`'s shape.
