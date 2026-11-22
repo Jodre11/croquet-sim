@@ -42,10 +42,13 @@ export const FREE_PARAMS: readonly FreeParam[] = [
 ];
 
 /**
- * Parameters a card may set but the fit never frees (push body design §2.5, §3): a finite value must lie within its
- * bounds, and Infinity is allowed as the limiting case.
+ * Parameters a card may set but the fit never frees (push body design §2.5, §3; strike pitch hold design §2.3): a
+ * finite value must lie within its bounds, and Infinity is allowed as the limiting case.
  */
-export const RUN_PARAMS: readonly FreeParam[] = [free("pushBodyMass", contactReference.pushBodyMass)];
+export const RUN_PARAMS: readonly FreeParam[] = [
+    free("pushBodyMass", contactReference.pushBodyMass),
+    free("strikePitchPeriod", contactReference.strikePitchPeriod),
+];
 
 /** A parameter set: free parameter name → value. */
 export type Overrides = Readonly<Record<string, number>>;

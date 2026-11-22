@@ -210,6 +210,15 @@ describe("swing, coupling and head–turf reference data", () => {
         expect(contactReference.handCouplingDampingRatio.value).toBe(0.6835);
     });
 
+    it("loads the strike's pitch hold period, landing at the grip's (strike pitch hold design §2.1)", () => {
+        const entry = contactReference.strikePitchPeriod;
+        expect(entry.value).toBe(0.08);
+        expect(entry.unit).toBe("s");
+        expect(entry.bounds).toEqual([0.01, 0.08]);
+        expect(entry.provenance).toBe("derived");
+        expect(entry.provisional).toBe("placeholder");
+    });
+
     it("loads the body behind the push by analogue (push body design §2.5)", () => {
         expect(contactReference.pushBodyMass.value).toBe(2.9);
         expect(contactReference.pushBodyMass.unit).toBe("kg");

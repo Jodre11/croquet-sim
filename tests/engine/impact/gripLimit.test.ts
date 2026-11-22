@@ -16,7 +16,7 @@ import { STANDARD_GRAVITY } from "../../../src/engine/world";
 import { TEST_HANDS, TEST_HEAD, levelArc, trackDrive } from "../support/impact";
 
 /** A firm grip held to its path before relaxAt, with no damping, so that each hand's force is its spring's alone. */
-const FIRM: Coupling = { period: 0.04, dampingRatio: 0, relaxAt: 10 };
+const FIRM: Coupling = { period: 0.04, dampingRatio: 0, relaxAt: 10, strikePeriod: 0.04 };
 
 /**
  * A level path whose pivot runs along aim at 1 m/s, gravity off: the hands' feed-forward is then zero. P2b.2b.2c.3a: a
@@ -77,7 +77,7 @@ describe("the hands' limit (P2b.2b.2b.3 design §5)", () => {
         // less the share (zero here), so k·|gap − offset| stays at F_max. Resetting it against the total instead
         // would leave a stretch of (F_max − c·1 m/s)/k, over 100 N's worth pointing back against the path.
         const limit = 50;
-        const track = running(limit, { period: 0.04, dampingRatio: 0.7, relaxAt: 10 });
+        const track = running(limit, { period: 0.04, dampingRatio: 0.7, relaxAt: 10, strikePeriod: 0.04 });
         expect(track.firm.damping).toBeGreaterThan(2 * limit);
         const head = headOnPath(track, TEST_HEAD, 0);
         const grip = newGripState();
@@ -145,7 +145,7 @@ describe("the hands' limit (P2b.2b.2b.3 design §5)", () => {
         // and fingers carry exactly that, so recomputing the chain at the slid anchor gives the same force.
         const arc = levelArc(vec3(0, 0, 1), { slopeHold: 1, handReach: 0.1, pendulumAt: 1 });
         const hands = { ...TEST_HANDS, gripLimit: 2 };
-        const coupling: Coupling = { period: 0.04, dampingRatio: 0.7, relaxAt: 0 };
+        const coupling: Coupling = { period: 0.04, dampingRatio: 0.7, relaxAt: 0, strikePeriod: 0.04 };
         const track = prepareTrack(trackDrive(arc, coupling, hands), TEST_HEAD, STANDARD_GRAVITY);
         const head = headOnPath(track, TEST_HEAD, 0);
         const grip = newGripState();

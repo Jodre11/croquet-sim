@@ -251,6 +251,7 @@ function validateTrack(drive: TrackDrive): void {
     positive(coupling.period, "coupling.period");
     friction(coupling.dampingRatio, "coupling.dampingRatio");
     notBefore(coupling.relaxAt, "coupling.relaxAt");
+    positive(coupling.strikePeriod, "coupling.strikePeriod");
     if (!(hands.bottom > 0 && hands.bottom < arc.radius)) {
         fail(`hands.bottom must lie in (0, arc.radius) (got ${hands.bottom})`);
     }

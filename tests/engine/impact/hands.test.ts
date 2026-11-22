@@ -178,6 +178,7 @@ describe("a tracked head with no ball", () => {
         expect(HAND_COUPLING).toEqual({
             period: contactReference.handCouplingPeriod.value,
             dampingRatio: contactReference.handCouplingDampingRatio.value,
+            strikePeriod: contactReference.strikePitchPeriod.value,
         });
     });
 
@@ -697,6 +698,28 @@ describe("the flex (P2b.2b.2b.2b design §3.1, §7.1)", () => {
                 (pitchAbout(0, turn + step) - pitchAbout(0, turn))) /
             step;
         expect(0 - extra(1e-5)).toBeGreaterThan(0);
+    });
+
+    it("holds the push's pitch at the strike period, and nothing else at it (strike pitch hold design §2.2)", () => {
+        // The hold's spring is K_p = I_P·(2π/T)², so halving the strike period quadruples the push's extra stiffness.
+        // Without a push the strike period changes nothing.
+        const pitchAbout = (handReach: number, strikePeriod: number, turn: number): number => {
+            const coupling = { ...TEST_COUPLING, strikePeriod };
+            const arc = STILL({ theta0: -0.5, handReach });
+            const track = prepareTrack(trackDrive(arc, coupling, TEST_HANDS), TEST_HEAD, 0);
+            const grip = newGripState();
+            const on = headOnPath(track, TEST_HEAD, 0);
+            handLoad(track, on, TEST_HEAD, 0, grip, IMPACT_DT);
+            const turned = { ...on, orientation: multiply(axisAngle(track.axis, turn), on.orientation) };
+            return dot(handLoad(track, turned, TEST_HEAD, 0, grip, IMPACT_DT).torque, track.axis);
+        };
+        const step = 1e-6;
+        const stiffness = (handReach: number, strikePeriod: number): number =>
+            (pitchAbout(handReach, strikePeriod, 1e-5 + step) - pitchAbout(handReach, strikePeriod, 1e-5)) / step;
+        const T = TEST_COUPLING.period;
+        const extra = (strikePeriod: number): number => stiffness(0.1, strikePeriod) - stiffness(0, strikePeriod);
+        expect(extra(T / 2) / extra(T)).toBeCloseTo(4, 3);
+        expect(pitchAbout(0, T / 2, 1e-5)).toBe(pitchAbout(0, T, 1e-5));
     });
 
     it("holds heldPitch's couple to ±bound, linear within it", () => {

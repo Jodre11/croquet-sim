@@ -108,7 +108,7 @@ describe("the shaft's weight (P2b.2b.2b.2c design §4.3)", () => {
         // dampers see no error, so the hands give the feed-forward alone. Its force holds the whole mallet's weight,
         // and its moment about the head's centre balances the shaft's weight at RISE along the shaft.
         const arc = levelArc(CENTRE, { theta0: 0.3 });
-        const track = prepareTrack(trackDrive(arc, { period: 0.04, dampingRatio: 0.7, relaxAt: 1 }), SHAFTED, g);
+        const track = prepareTrack(trackDrive(arc, { period: 0.04, dampingRatio: 0.7, relaxAt: 1, strikePeriod: 0.04 }), SHAFTED, g);
         const state = headOnPath(track, SHAFTED, 0);
         // Before relaxAt the firm grips' springs act on a gap of about 1 ulp between headOnPath and handLoad (k ≈ 3.2e4
         // N/m, so about 7e-12 N, and the same with no shaft): the total force and torque carry a rounding floor
@@ -126,7 +126,7 @@ describe("the shaft's weight (P2b.2b.2b.2c design §4.3)", () => {
         // θ then): gravity now swings the pendulum through its window, so the window starts after the run, where the
         // path before it holds θ₀ still.
         const arc = levelArc(CENTRE, { theta0: 0.3, arcStart: 1 });
-        const track = prepareTrack(trackDrive(arc, { period: 0.04, dampingRatio: 0.7, relaxAt: 1 }), SHAFTED, g);
+        const track = prepareTrack(trackDrive(arc, { period: 0.04, dampingRatio: 0.7, relaxAt: 1, strikePeriod: 0.04 }), SHAFTED, g);
         const start = headOnPath(track, SHAFTED, 0);
         const run = integrate(isolated({ head: SHAFTED, start, drive: track, gravity: g }), { cap: 0.01 });
         expect(length(sub(run.head.position, start.position))).toBeLessThan(1e-12);

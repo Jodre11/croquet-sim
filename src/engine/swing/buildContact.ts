@@ -1010,7 +1010,12 @@ export function planStroke(setup: ShotSetup, world: World): StrokePlan {
     const drive: TrackDrive = {
         kind: "track",
         arc,
-        coupling: { period: HAND_COUPLING.period, dampingRatio: HAND_COUPLING.dampingRatio, relaxAt: lead },
+        coupling: {
+            period: HAND_COUPLING.period,
+            dampingRatio: HAND_COUPLING.dampingRatio,
+            relaxAt: lead,
+            strikePeriod: HAND_COUPLING.strikePeriod,
+        },
         hands,
     };
     // t = 0 is at or before the pendulum's window (arcStart = L + the arc's timing ≥ 0), so no free table is read.

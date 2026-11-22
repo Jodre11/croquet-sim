@@ -205,6 +205,7 @@ export const contactReference = {
     tangentialStiffnessRatio: readValue(contactJson, "tangentialStiffnessRatio", "contact"),
     handCouplingPeriod: readValue(contactJson, "handCouplingPeriod", "contact"),
     handCouplingDampingRatio: readValue(contactJson, "handCouplingDampingRatio", "contact"),
+    strikePitchPeriod: readValue(contactJson, "strikePitchPeriod", "contact"),
     armMass: readValue(contactJson, "armMass", "contact"),
     reachSlack: readValue(contactJson, "reachSlack", "contact"),
     headTurfFriction: readValue(contactJson, "headTurfFriction", "contact"),

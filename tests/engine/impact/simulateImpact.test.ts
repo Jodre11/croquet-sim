@@ -53,8 +53,8 @@ const SUNK = vec3(
 );
 
 describe("simulateImpact", () => {
-    it("is version 0.38.0", () => {
-        expect(ENGINE_VERSION).toBe("0.42.0");
+    it("is version 0.43.0", () => {
+        expect(ENGINE_VERSION).toBe("0.43.0");
     });
 
     it("starts a centre-struck ball rolling at 5/7 of its launch speed in phase 2", () => {
@@ -549,6 +549,9 @@ describe("simulateImpact with a tracked drive", () => {
         ["a non-positive period", withCoupling({ period: 0 }), /coupling\.period must be a positive/],
         ["a negative damping ratio", withCoupling({ dampingRatio: -0.1 }), /coupling\.dampingRatio must be/],
         ["a negative relaxation time", withCoupling({ relaxAt: -0.01 }), /coupling\.relaxAt must be a non-negative/],
+        ["a zero strike period", withCoupling({ strikePeriod: 0 }), /coupling\.strikePeriod must be a positive/],
+        ["a negative strike period", withCoupling({ strikePeriod: -1 }), /coupling\.strikePeriod must be a positive/],
+        ["a NaN strike period", withCoupling({ strikePeriod: NaN }), /coupling\.strikePeriod must be a positive/],
         ["a bottom hand at the socket", withHands({ bottom: 0 }), /hands\.bottom must lie in \(0, arc\.radius\)/],
         [
             "a bottom hand at the top hand",

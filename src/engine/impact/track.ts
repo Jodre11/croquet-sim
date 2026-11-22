@@ -49,11 +49,13 @@ const FORWARD = vec3(1, 0, 0);
 
 /**
  * The hands' coupling, period (s) and damping ratio of a firm grip (design §3.4). Provisional, a user decision
- * (reference/contact.json); P2b.2b.2 fits it.
+ * (reference/contact.json); P2b.2b.2 fits it. The push's pitch hold has its own period, strikePeriod (strike pitch
+ * hold design §2.1).
  */
 export const HAND_COUPLING = {
     period: contactReference.handCouplingPeriod.value,
     dampingRatio: contactReference.handCouplingDampingRatio.value,
+    strikePeriod: contactReference.strikePitchPeriod.value,
 } as const;
 
 /** The arm's flex (P2b.2b.2b.2b design §3.1, §3.2), reference/contact.json's measured arm values. */
@@ -2455,8 +2457,10 @@ function pushPitch(track: PreparedTrack, state: HeadState, t: number, path: Path
     if (push === null || step.checking || (anchor !== undefined && t >= anchor.at)) {
         return 0;
     }
+    // The hold firms through the strike at its own period (strike pitch hold design §2.2); a stop's hold keeps the
+    // grip's.
     return heldPitch(
-        track.coupling,
+        { ...track.coupling, period: track.coupling.strikePeriod },
         step.pitchInertia,
         dot(rotationError(path.orientation, state.orientation), track.axis),
         dot(step.spinLag, track.axis),

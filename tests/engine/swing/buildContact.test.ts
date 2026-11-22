@@ -254,6 +254,7 @@ describe("buildContact, step by step", () => {
             period: HAND_COUPLING.period,
             dampingRatio: HAND_COUPLING.dampingRatio,
             relaxAt: 0,
+            strikePeriod: HAND_COUPLING.strikePeriod,
         });
         // The shot's reach, when it gives one, over the preset's: 0 included.
         const reaching = testProfile({ drive: { handReach: 0.2 } });

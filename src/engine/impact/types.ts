@@ -273,12 +273,14 @@ export interface LiftRelease {
 
 /**
  * The hands' coupling (design §3.3): the natural period (s) and damping ratio of a firm grip; the grips relax at
- * `relaxAt` (s from t = 0) and are firm before it.
+ * `relaxAt` (s from t = 0) and are firm before it. The push's pitch hold, from contact to the path's restart, takes its
+ * own natural period `strikePeriod` (s; strike pitch hold design §2.2) at the same damping ratio.
  */
 export interface Coupling {
     readonly period: number;
     readonly dampingRatio: number;
     readonly relaxAt: number;
+    readonly strikePeriod: number;
 }
 
 /**
