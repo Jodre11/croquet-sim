@@ -17,7 +17,7 @@ import {
     playableSpans,
     sameExtras,
 } from "../../src/viewer/spans";
-import { EASE, SLOW_RATE, advance, playbackRate } from "../../src/viewer/time";
+import { EASE, IMPACT_WALL, SLOW_RATE, advance, playbackRate } from "../../src/viewer/time";
 
 /** The Node file calls the test uses (the project has no Node types). */
 async function readFile(path: string): Promise<Uint8Array> {
@@ -62,6 +62,19 @@ describe("playbackRate (spec §2's slow-down)", () => {
         expect(advance(0.001, 0.1, 1, true, impact, 1)).toBeCloseTo(0.001 + 0.1 * SLOW_RATE, 12);
         expect(advance(0.001, 0.1, 1, false, impact, 1)).toBeCloseTo(0.101, 12);
         expect(advance(0.95, 0.1, 1, false, impact, 1)).toBe(1);
+    });
+
+    it("slows a long impact (a roll's push) only so far that it plays in IMPACT_WALL at ×1", () => {
+        const push = 0.09;
+        expect(playbackRate(push / 2, 0, push)).toBeCloseTo(push / IMPACT_WALL, 12);
+        expect(playbackRate(push + EASE, 0, push)).toBe(1);
+    });
+
+    it("plays the roll-out in real time from the mallet's finish, whatever the speed", () => {
+        const impact = { start, end };
+        expect(advance(0.5, 0.1, 0.25, true, impact, 5, 0.3)).toBeCloseTo(0.6, 12);
+        expect(advance(0.2, 0.1, 0.25, true, impact, 5, 0.3)).toBeCloseTo(0.225, 12);
+        expect(advance(4.95, 0.1, 0.25, true, impact, 5, 0.3)).toBe(5);
     });
 });
 

@@ -276,7 +276,7 @@
     function tick(now: number): void {
         if (playing && frameSpan.end > frameSpan.start) {
             const wall = last === null ? 0 : (now - last) / 1000;
-            t = advance(t, wall, speed, slow, impact, frameSpan.end);
+            t = advance(t, wall, speed, slow, impact, frameSpan.end, framed?.strokeEnd ?? Infinity);
             if (t >= frameSpan.end) {
                 playing = false;
             }
@@ -388,7 +388,7 @@
             />
             <div class="canvases">
                 <SideOn {view} />
-                <TopDown split={plan.split} departures={framed?.departures ?? null} />
+                <TopDown split={plan.split} departures={framed?.departures ?? null} {framed} {t} />
             </div>
             <TimeBar
                 {t}

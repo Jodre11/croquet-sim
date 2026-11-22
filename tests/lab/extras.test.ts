@@ -21,6 +21,6 @@ describe("StrokeExtras (hands-from-lean plan Task 1)", () => {
         const short = playFrames("half-roll", plan, 1, 0.1, 10, { followThrough: 0 });
         const before = (frames: typeof base.frames) => frames.filter((f) => f.t <= base.impactEnd);
         expect(before(short.frames)).toEqual(before(base.frames));
-        expect(short.finish).not.toBe(base.finish);
+        expect(short.strokeEnd).not.toBe(base.strokeEnd);
     });
 });

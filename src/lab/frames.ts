@@ -1,7 +1,8 @@
 /**
  * A play's frames for the side-on viewer (side-on viewer spec §3.1, §3.4; plan Task 4): the map's play at a given hold
  * with a watch recording, as the retired prototype (`scripts/sideOnExport.ts`) did, the head's pose, both hands, the
- * balls, the turf's and the face's force per frame, and the trajectory around them. Not part of the engine.
+ * balls, the turf's and the face's force per frame, and the trajectory around them; then the balls' roll-out to rest on
+ * the lawn read. Not part of the engine.
  */
 import { faceKey, headLowestPoint } from "../engine/impact/contacts";
 import type { ImpactProbe } from "../engine/impact/integrate";
@@ -9,6 +10,8 @@ import { rotate } from "../engine/impact/rigidBody";
 import { faceHalfHeight } from "../engine/impact/shape";
 import type { HeadState, TrackDrive } from "../engine/impact/types";
 import { add, dot, scale, sub, vec3, type Vec3 } from "../engine/math/vec3";
+import { stateAtTime } from "../engine/sample";
+import { simulateFreeMotion } from "../engine/simulate";
 import { strokeTrajectory } from "../engine/swing/trajectory";
 import { BALL_IDS, type BallState } from "../engine/types";
 import { openWorld } from "./lawn";
@@ -24,13 +27,22 @@ export const SWING_STEP = 4e-3;
 export const IMPACT_STEP = 1e-4;
 export const FOLLOW_STEP = 2e-3;
 
-/** How long (s) the balls are carried on from the handover: the departure drawn (spec §3.4). */
+/** The least time (s) the play runs on after the impact, the mallet's finish permitting a longer one. */
 export const DEPARTURE = 0.25;
+
+/** Numerical, not physical: the frames' spacing (s) through the balls' roll-out to rest, the mallet held still. */
+export const ROLL_STEP = 2e-2;
 
 /** A point in the aim's vertical plane (m): along aim from the striker's start, and up. */
 export interface SidePoint {
     readonly x: number;
     readonly z: number;
+}
+
+/** A point on the lawn (m): along aim from the striker's start, and across it (left positive). */
+export interface LawnPoint {
+    readonly along: number;
+    readonly across: number;
 }
 
 /** One frame (spec §3.4): times in s from the planned contact, positions in the aim's vertical plane. */
@@ -43,8 +55,9 @@ export interface Frame {
     readonly bottom: SidePoint;
     /** The head's lowest point's height (m), below 0 in the turf. */
     readonly low: number;
-    /** The striker's ball, then the croqueted ball where there is one. */
+    /** The striker's ball, then the croqueted ball where there is one; and the same balls on the lawn, seen from above. */
     readonly balls: readonly SidePoint[];
+    readonly lawn: readonly LawnPoint[];
     /** The turf's force on the head and the face's normal force on the striker's ball (N); 0 outside the impact. */
     readonly turf: number;
     readonly face: number;
@@ -74,6 +87,9 @@ export interface FramedPlay {
     readonly release: number;
     readonly impactStart: number;
     readonly impactEnd: number;
+    /** The mallet's finish (s from the planned contact), at least DEPARTURE after the impact. */
+    readonly strokeEnd: number;
+    /** The play's end (s from the planned contact): every ball at rest on the lawn read. */
     readonly finish: number;
     /** The balls' departures, striker's first. */
     readonly departures: readonly Departure[];
@@ -136,7 +152,8 @@ function frameWatch(): { readonly watch: PlayWatch; readonly watched: () => Watc
 /**
  * `plan` of `type` at power `power` played once at hold `firmness` as the map plays it (playJudged), with its frames
  * (spec §3.1): the swing every SWING_STEP up to the impact, the impact every IMPACT_STEP, the follow-through every
- * FOLLOW_STEP with the balls carried on ballistically from the handover for DEPARTURE. The sample is
+ * FOLLOW_STEP, and the balls' roll-out to rest every ROLL_STEP, the balls rolled from the handover on `lawn` throughout
+ * (simulateFreeMotion, as the sample's read). The sample is
  * playSample(type, plan, power, [lawn], firmness)'s: the impact on the 10 s lawn, the roll read on `lawn` (s).
  * `extras` are mapSetup's (the viewer's inputs beyond the plan).
  */
@@ -163,6 +180,7 @@ export function playFrames(
         release: 0,
         impactStart: 0,
         impactEnd: 0,
+        strokeEnd: 0,
         finish: 0,
         departures: [],
     };
@@ -182,7 +200,7 @@ export function playFrames(
     const other = setup.croqueted === undefined ? -1 : ids.indexOf(setup.croqueted);
     const { head } = contact;
 
-    const pose = (state: HeadState): Omit<Frame, "t" | "balls" | "turf" | "face"> => {
+    const pose = (state: HeadState): Omit<Frame, "t" | "balls" | "lawn" | "turf" | "face"> => {
         const axis = rotate(state.orientation, vec3(1, 0, 0));
         const shaft = rotate(state.orientation, UP);
         const socket = add(state.position, rotate(state.orientation, head.socket));
@@ -197,10 +215,12 @@ export function playFrames(
     };
     const ballAt = (b: BallState | undefined): SidePoint[] =>
         b === undefined ? [] : [{ x: along(b.position), z: fine(b.position.z) }];
-    const both = (balls: readonly (BallState | undefined)[]): SidePoint[] => [
-        ...ballAt(balls[striker]),
-        ...(other < 0 ? [] : ballAt(balls[other])),
-    ];
+    const lawnAt = (b: BallState | undefined): LawnPoint[] =>
+        b === undefined ? [] : [{ along: along(b.position), across: fine(dot(sub(b.position, start), left)) }];
+    const both = (balls: readonly (BallState | undefined)[]): Pick<Frame, "balls" | "lawn"> => ({
+        balls: [...ballAt(balls[striker]), ...(other < 0 ? [] : ballAt(balls[other]))],
+        lawn: [...lawnAt(balls[striker]), ...(other < 0 ? [] : lawnAt(balls[other]))],
+    });
 
     const practised =
         run.lift === null ? contact : { ...contact, drive: { ...drive, arc: { ...drive.arc, lift: run.lift } } };
@@ -215,38 +235,41 @@ export function playFrames(
     for (const s of whole.samples) {
         if (s.t < whole.impactStart && s.t - last >= SWING_STEP) {
             last = s.t;
-            frames.push({ t: s.t, ...pose(headState(s)), balls: both(startBalls), turf: 0, face: 0 });
+            frames.push({ t: s.t, ...pose(headState(s)), ...both(startBalls), turf: 0, face: 0 });
         }
     }
     for (const s of steps) {
-        frames.push({ t: s.t - at, ...pose(s.head), balls: both(s.balls), turf: s.turf, face: s.face });
+        frames.push({ t: s.t - at, ...pose(s.head), ...both(s.balls), turf: s.turf, face: s.face });
     }
     const handover = run.result.handover;
-    const fly = (b: BallState | undefined, dt: number): SidePoint[] => {
-        if (b === undefined) {
-            return [];
-        }
-        const z = Math.max(WORLD.ball.radius, b.position.z + b.velocity.z * dt - (WORLD.gravity * dt * dt) / 2);
-        return [{ x: along(add(b.position, scale(b.velocity, dt))), z: fine(z) }];
-    };
     const end = whole.impactEnd;
     const hStriker = handover[setup.striker] as BallState;
     const hOther = setup.croqueted === undefined ? undefined : (handover[setup.croqueted] as BallState);
-    const flown = (dt: number): SidePoint[] => [...fly(hStriker, dt), ...fly(hOther, dt)];
+    // The balls from the handover on the lawn read, as the sample reads them (lawnReads), every ball to rest.
+    const rolled = simulateFreeMotion(handover, openWorld(lawn));
+    const rolledIds = ids.filter((id) => handover[id] !== undefined);
+    const rollAt = (dt: number): Pick<Frame, "balls" | "lawn"> =>
+        both(ids.map((id) => (rolledIds.includes(id) ? stateAtTime(rolled, id, dt) : undefined)));
     const after = whole.samples.filter((s) => s.t > end);
     last = end;
     for (const s of after) {
         if (s.t - last >= FOLLOW_STEP) {
             last = s.t;
-            frames.push({ t: s.t, ...pose(headState(s)), balls: flown(s.t - end), turf: 0, face: 0 });
+            frames.push({ t: s.t, ...pose(headState(s)), ...rollAt(s.t - end), turf: 0, face: 0 });
         }
     }
     const final = after[after.length - 1];
-    const finish = Math.max(whole.finish, end + DEPARTURE);
+    const strokeEnd = Math.max(whole.finish, end + DEPARTURE);
+    const finish = Math.max(strokeEnd, end + rolled.duration);
     if (final !== undefined) {
         const still = pose(headState(final));
-        for (let t = last + FOLLOW_STEP; t < finish; t += FOLLOW_STEP) {
-            frames.push({ t, ...still, balls: flown(t - end), turf: 0, face: 0 });
+        for (let t = last + FOLLOW_STEP; t < strokeEnd; t += FOLLOW_STEP) {
+            last = t;
+            frames.push({ t, ...still, ...rollAt(t - end), turf: 0, face: 0 });
+        }
+        for (let t = last + ROLL_STEP; t < finish + ROLL_STEP; t += ROLL_STEP) {
+            const at = Math.min(t, finish);
+            frames.push({ t: at, ...still, ...rollAt(at - end), turf: 0, face: 0 });
         }
     }
     const departure = (b: BallState): Departure => ({
@@ -267,6 +290,7 @@ export function playFrames(
         release: whole.release,
         impactStart: whole.impactStart,
         impactEnd: end,
+        strokeEnd,
         finish,
         departures: hOther === undefined ? [departure(hStriker)] : [departure(hStriker), departure(hOther)],
     };

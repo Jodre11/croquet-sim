@@ -2,7 +2,7 @@
  * The viewer's drawing (side-on viewer spec §3.4, decisions 1, 5, 6 and 7): Canvas 2D in the aim's vertical plane, as
  * the prototype drew it, its colours from the page's CSS variables.
  */
-import type { Departure, Frame, FramedPlay, SidePoint } from "../lab/frames";
+import type { Departure, Frame, FramedPlay, LawnPoint, SidePoint } from "../lab/frames";
 import type { PathSample } from "./plannedPath";
 
 /** The page's colours (CSS variables, spec §3.4). */
@@ -104,8 +104,11 @@ export function drawSideOn(
     for (const s of view.path ?? []) {
         points.push(s.top, s.bottom, s.head, s.face);
     }
+    // Fitted to the stroke: the balls' roll-out runs off the canvas, the top-down inset showing it.
     for (const f of view.framed?.frames ?? []) {
-        points.push(f.top, f.bottom, f.head, ...f.balls);
+        if (f.t <= (view.framed?.strokeEnd ?? Infinity)) {
+            points.push(f.top, f.bottom, f.head, ...f.balls);
+        }
     }
     const xs = points.map((p) => p.x);
     const zs = points.map((p) => p.z);
@@ -302,16 +305,31 @@ export function followFlags(framed: FramedPlay): { t: number; text: string | und
         }));
 }
 
-/** The top-down inset (decision 7): the balls in their set-up, aim up, the split and each ball's departure. */
+/**
+ * The top-down inset (decision 7): before a Run, the balls in their set-up, aim up, the split and each ball's
+ * departure; after one, the lawn to scale (drawRollOut).
+ */
 export function drawTopDown(
     ctx: CanvasRenderingContext2D,
     width: number,
     height: number,
-    inset: { readonly split: number; readonly departures: readonly Departure[] | null },
+    inset: {
+        readonly split: number;
+        readonly departures: readonly Departure[] | null;
+        readonly framed?: FramedPlay | null;
+        readonly t?: number;
+    },
     c: Colours,
 ): void {
     ctx.fillStyle = c.background;
     ctx.fillRect(0, 0, width, height);
+    if (inset.framed && inset.framed.frames.length > 0) {
+        drawRollOut(ctx, width, height, inset.framed, inset.t ?? inset.framed.finish, c);
+        ctx.fillStyle = c.ink;
+        ctx.font = "11px system-ui, sans-serif";
+        ctx.fillText(`split ${((inset.split * 180) / Math.PI).toFixed(0)}°`, 6, 14);
+        return;
+    }
     const cx = width / 2;
     const cy = height * 0.75;
     const r = Math.min(width, height) * 0.06;
@@ -353,4 +371,87 @@ export function drawTopDown(
     });
     ctx.fillStyle = c.ink;
     ctx.fillText(`split ${((inset.split * 180) / Math.PI).toFixed(0)}°`, 6, 14);
+}
+
+/**
+ * The lawn from above, to scale, aim up (decision 7): each ball's path up to play time `t`, the ball where it is, a tick
+ * every metre along the aim, and once the balls are at rest each one's distance from its set-up.
+ */
+function drawRollOut(
+    ctx: CanvasRenderingContext2D,
+    width: number,
+    height: number,
+    framed: FramedPlay,
+    t: number,
+    c: Colours,
+): void {
+    const frames = framed.frames;
+    const all = frames.flatMap((f) => f.lawn);
+    const pad = 14;
+    const [a0, a1] = [Math.min(...all.map((p) => p.along)) - 0.1, Math.max(...all.map((p) => p.along)) + 0.1];
+    const half = Math.max(0.25, ...all.map((p) => Math.abs(p.across))) + 0.1;
+    const scaled = Math.min((height - 2 * pad - 14) / (a1 - a0), (width - 2 * pad) / (2 * half));
+    const cx = width / 2;
+    const base = height - pad;
+    // Across positive is left, so it draws to the left of the aim.
+    const px = (p: LawnPoint): [number, number] => [cx - p.across * scaled, base - (p.along - a0) * scaled];
+
+    ctx.strokeStyle = c.muted;
+    ctx.fillStyle = c.muted;
+    ctx.lineWidth = 1;
+    ctx.setLineDash([3, 4]);
+    ctx.beginPath();
+    ctx.moveTo(...px({ along: a0, across: 0 }));
+    ctx.lineTo(...px({ along: a1, across: 0 }));
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.font = "10px system-ui, sans-serif";
+    for (let m = Math.ceil(a0); m <= a1; m++) {
+        const [x, y] = px({ along: m, across: 0 });
+        ctx.beginPath();
+        ctx.moveTo(x - 3, y);
+        ctx.lineTo(x + 3, y);
+        ctx.stroke();
+        if (m > 0) {
+            ctx.fillText(`${m} m`, x - 6 - ctx.measureText(`${m} m`).width, y + 3);
+        }
+    }
+
+    const shown = frames.filter((f) => f.t <= t);
+    const now = shown[shown.length - 1] ?? frames[0];
+    const first = frames[0];
+    if (now === undefined || first === undefined) {
+        return;
+    }
+    const colours = [c.striker, c.croqueted];
+    const atRest = t >= framed.finish;
+    ctx.font = "11px system-ui, sans-serif";
+    now.lawn.forEach((ball, i) => {
+        const colour = colours[i] ?? c.ink;
+        ctx.strokeStyle = colour;
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        shown.forEach((f, k) => {
+            const p = f.lawn[i];
+            if (p !== undefined) {
+                if (k === 0) {
+                    ctx.moveTo(...px(p));
+                } else {
+                    ctx.lineTo(...px(p));
+                }
+            }
+        });
+        ctx.stroke();
+        ctx.fillStyle = colour;
+        ctx.beginPath();
+        ctx.arc(...px(ball), Math.max(3.5, framed.radius * scaled), 0, 2 * Math.PI);
+        ctx.fill();
+        const from = first.lawn[i];
+        if (atRest && from !== undefined) {
+            const travel = Math.hypot(ball.along - from.along, ball.across - from.across);
+            const [x, y] = px(ball);
+            ctx.fillStyle = c.ink;
+            ctx.fillText(`${travel.toFixed(2)} m`, x + 7, y + 4);
+        }
+    });
 }

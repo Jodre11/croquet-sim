@@ -164,8 +164,8 @@ canvas.top-down {
     position: absolute;
     right: 8px;
     top: 8px;
-    width: 140px;
-    height: 160px;
+    width: 150px;
+    height: 260px;
     border: 1px solid var(--line);
     border-radius: 6px;
 }

@@ -30,6 +30,18 @@ describe("playFrames", () => {
             }
             // Both are croquet strokes: the striker's ball and the croqueted ball depart.
             expect(framed.departures.length).toBe(2);
+            // The play runs on to the balls' rest: the last frame's balls lie where the sample reads them.
+            const read = framed.sample.byLawn[10] as { range: number; ratio: number };
+            const [first, last] = [framed.frames[0], framed.frames[framed.frames.length - 1]];
+            expect(framed.finish).toBeGreaterThan(framed.strokeEnd);
+            expect(last?.t).toBeCloseTo(framed.finish, 9);
+            const travel = (i: number): number =>
+                Math.hypot(
+                    (last?.lawn[i]?.along ?? NaN) - (first?.lawn[i]?.along ?? NaN),
+                    (last?.lawn[i]?.across ?? NaN) - (first?.lawn[i]?.across ?? NaN),
+                );
+            expect(travel(0)).toBeCloseTo(read.range, 3);
+            expect(travel(1) / travel(0)).toBeCloseTo(read.ratio, 2);
         },
         120_000,
     );
