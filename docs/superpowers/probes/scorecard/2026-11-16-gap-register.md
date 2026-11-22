@@ -1067,3 +1067,30 @@ and the turf's stored energy. The face normal is 31–32° below horizontal at f
   rolls play each type's default lean (full 31°, pass 34°), so the full rolls sit within 2° of their filmed angles;
   the pass rolls strike 2° shallower than their 34° lean (cause not examined), within 4° of Gugan. The strike's
   downward drive is the filmed geometry's; the gap lies in what follows it.
+
+## G2: the climb up the face (2026-11-22)
+
+`gapProbe climb` (new mode, no engine change): the striker's ball centre's travel along the head's shaft axis (up the
+face, against its place at the face's first contact) at each 2 ms bin's end, with the face's time in contact, its
+tangential impulse along that axis (share of m·U, up positive) and the share of the contact time at μ·N.
+
+| Roll | 0–2 ms | 2–4 ms | 4–6 ms | 6–8 ms | 8–10 ms | Face friction, 2 ms to the read |
+|---|---|---|---|---|---|---|
+| C1F | −0.72 mm | −1.39 | −1.34 | −0.80 | −0.32 | −0.004 |
+| C3F | −1.88 | −2.63 | −1.96 | −0.67 | +0.75 | −0.075 |
+| C10F | −3.46 | −4.49 | −3.07 | −0.91 | +1.03 | −0.109 |
+| C25F | −5.15 | −5.74 | −3.03 | +0.16 | +0.98 | −0.105 |
+| C3P | −2.22 | −3.01 | −2.22 | −0.71 | +0.07 | −0.098 |
+| C10P | −3.50 | −4.57 | −3.25 | −1.19 | −0.03 | −0.129 |
+| C25P | −5.95 | −6.49 | −3.45 | +0.04 | +3.52 | −0.131 |
+
+- **The model's ball slides down the face, not up.** In the first 4 ms it travels 1.4–6.5 mm down the face as the
+  strike drives it into the turf; the face's friction acts up on it (+0.15 to +0.22 m·U in the first 2 ms, at the
+  limit about half the time).
+- **It climbs back only as the turf throws it up, against the face's friction at the limit** (96–100 % from 2–4 ms on
+  in the faster rolls, −0.08 to −0.13 m·U along the face in all but C1F). It regains its first-contact place at 6–10 ms; only C25P,
+  airborne, climbs well above it (12.6 mm by the read).
+- **Against Gugan (§10.2: the ball "rolling/sliding up" the face) and the -2 player (hop, then roll):** the real ball
+  climbs while the face pushes; the model's ball goes down first and is held there by the face and the turf's grip,
+  losing its speed in 2–6 ms. Within the model's laws, the face's friction is the one part acting at its limit while
+  the ball climbs, which is why faceFriction at its lower bound moved w₁/U a little (+0.004 to +0.017).

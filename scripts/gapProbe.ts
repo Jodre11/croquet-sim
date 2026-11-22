@@ -848,6 +848,71 @@ async function lift(): Promise<void> {
     }
 }
 
+/**
+ * G2's climb (Gugan 4 §10.2, the striker's ball "rolling/sliding up the face" in a roll): for every full and pass
+ * roll, in 2 ms bins to the card's read, the striker's ball centre's travel up the face (mm along the head's shaft
+ * axis, against its place at the face's first contact) at each bin's end, the face's time in contact, the face's
+ * tangential impulse along that axis (share of m·U, up positive) and the share of the contact time its tangential force
+ * is at the Coulomb limit μ·N.
+ */
+async function climb(): Promise<void> {
+    const { dot, sub } = await import("../src/engine/math/vec3");
+    const { rotate } = await import("../src/engine/impact/rigidBody");
+    const world = openWorld(LAWN);
+    const m = world.ball.mass;
+    for (const roll of ROLLS.filter((r) => r.type !== "half-roll")) {
+        const power = powerFor(roll.type, roll.U, world);
+        if (power === null) continue;
+        const { setup, contact } = playRoll(roll, power);
+        if (setup === null || contact === null) continue;
+        const r = readOut(setup, world, {}, contact);
+        const striker = setup.striker;
+        const one = BALL_IDS.filter((id) => setup.balls[id] !== undefined).indexOf(striker);
+        const key = faceKey(striker);
+        type Bin = { up: number; touch: number; limited: number; impulse: number };
+        const bins: Bin[] = [];
+        let start: number | null = null;
+        let last: number | null = null;
+        const probe: ImpactProbe = {
+            step(st) {
+                const ball = st.balls[one];
+                if (ball === undefined) return;
+                const dt = last === null ? 0 : st.t - last;
+                last = st.t;
+                if (st.t > r.time || dt === 0) return;
+                const i = Math.floor((1e3 * st.t) / PLOUGH_BIN_MS);
+                while (bins.length <= i) bins.push({ up: Number.NaN, touch: 0, limited: 0, impulse: 0 });
+                const bin = bins[i];
+                if (bin === undefined) return;
+                const shaft = rotate(st.head.orientation, vec3(0, 0, 1));
+                const s = shaft.z < 0 ? vec3(-shaft.x, -shaft.y, -shaft.z) : shaft;
+                const along = dot(sub(ball.position, st.head.position), s);
+                for (const c of st.contacts) {
+                    if (c.key !== key) continue;
+                    start ??= along;
+                    bin.touch += dt;
+                    bin.impulse += dot(c.tangentialForce, s) * dt;
+                    const t = c.tangentialForce;
+                    const limit = c.law.friction * c.normalForce;
+                    if (limit > 0 && Math.hypot(t.x, t.y, t.z) >= 0.99 * limit) bin.limited += dt;
+                }
+                if (start !== null) bin.up = along - start;
+            },
+        };
+        simulateImpact(contact, setup.balls, world, { probe });
+        const mU = m * roll.U;
+        console.log(`${roll.name}: w1/U ${(r.w1 / roll.U).toFixed(3)} (Gugan ${(roll.w1 / roll.U).toFixed(3)})`);
+        bins.forEach((b, i) =>
+            console.log(
+                `  ${(i * PLOUGH_BIN_MS).toString().padStart(2)}–${((i + 1) * PLOUGH_BIN_MS).toString().padEnd(2)} ms: ` +
+                    `up the face ${Number.isNaN(b.up) ? "  —" : (1e3 * b.up).toFixed(2).padStart(6)} mm | face on ` +
+                    `${(1e3 * b.touch).toFixed(2)} ms, friction up ${(b.impulse / mU).toFixed(3).padStart(7)}` +
+                    (b.touch === 0 ? "" : `, at the limit ${(100 * (b.limited / b.touch)).toFixed(0)}%`),
+            ),
+        );
+    }
+}
+
 const mode = args[0];
 if (mode === "read-delay") readDelay();
 else if (mode === "read-distance") readDistance();
@@ -865,4 +930,5 @@ else if (mode === "budget") await budget();
 else if (mode === "push") await push();
 else if (mode === "plough") await plough();
 else if (mode === "lift") await lift();
+else if (mode === "climb") await climb();
 else throw new Error("usage: gapProbe.ts read-delay | read-distance | hop | bed | strike | gugan5-balls [--set …]");
