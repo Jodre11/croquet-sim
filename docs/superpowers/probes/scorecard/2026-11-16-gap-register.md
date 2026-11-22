@@ -1105,3 +1105,28 @@ tangential impulse along that axis (share of m·U, up positive) and the share of
   accelerated by the mallet's second contact, reaching pure roll in the same few ms. The model's striker's ball loses
   speed over that window instead (C3F, from the face's departure to the read: face +0.510, croqueted ball −0.741,
   turf −0.150 m·U). G2 lies in that window's balance, not in the direction the ball moves on the face.
+
+## G2: a firmer turf (2026-11-22)
+
+The bed is fitted to A4R alone (e 0.5 and 7.2 mm at 5 m/s); at Table 4(b)'s held-out A2R and A3R it sinks deeper
+than Gugan measured (5.02 and 5.57 mm against 4.0 and 5.0, each impact speed taken as the rebound over the model's own
+e). A throwaway least-squares fit to all three depths and A4R's e (relative error) gives bedModulus 2.239e8 N/m³
+(was 1.625e8, 38 % stiffer) and bedRecovery 7.079e-4 s (was 7.550e-4): A2R 4.54 mm, A3R 5.04 mm, A4R 6.52 mm at
+e 0.486 (score 0.028 against 0.078). One bed does not meet all three. The card and `gapProbe plough` ran on it
+through a temporary edit to `reference/contact.json`, reverted. Card: `2026-11-22-firm-bed`.
+
+| Roll | w₁/U (Gugan) | Firm bed | Turf to the read, was → firm | Deepest, was → firm |
+|---|---|---|---|---|
+| C1F | 0.553 (0.667) | 0.550 | −0.136 → −0.154 | 1.99 → 1.79 mm |
+| C3F | 0.520 (0.594) | 0.514 | −0.158 → −0.161 | 3.19 → 2.88 mm |
+| C10F | 0.511 (0.569) | 0.515 | −0.220 → −0.215 | 4.68 → 4.22 mm |
+| C25F | 0.472 (0.501) | 0.473 | −0.225 → −0.220 | 6.21 → 5.57 mm |
+| C3P | 0.517 (0.580) | 0.526 | −0.192 → −0.189 | 3.52 → 3.19 mm |
+| C10P | 0.524 (0.520) | 0.544 | −0.248 → −0.230 | 4.74 → 4.22 mm |
+| C25P | 0.489 (0.557) | 0.902, not clean | — | — |
+
+- **Verdict: no.** The ball sinks about a tenth less and rises sooner (up to 6 mm above rest by the read in C10F,
+  C25F and C10P), but the turf's take is unchanged to ±0.02 m·U: the loss falls in the first few ms, before the
+  bounce. w₁/U moves −0.006 to +0.009 in the short rolls, C10P overshoots (0.544 against 0.520), and C25P tips into
+  its ≈ 0.90 outcome, not clean. Objective 8.28 (5.13). Table 5's means hold; the pass roll's coaching row improves
+  (1.19 → 1.17).
