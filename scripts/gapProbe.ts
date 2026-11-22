@@ -923,6 +923,67 @@ async function climb(): Promise<void> {
     }
 }
 
+/**
+ * G2's head speed (Gugan 4 §10: the mallet's speed after impact "essentially the same as for ball 1"): for every full
+ * and pass roll, in 1 ms bins to the card's read, the head's and the striker's ball's speeds along aim (share of U) at
+ * each bin's end, and the impulses along aim on the head (share of M·U, M the head's mass) from the face, the hands and
+ * the turf.
+ */
+async function headSpeed(): Promise<void> {
+    const { dot } = await import("../src/engine/math/vec3");
+    const world = openWorld(LAWN);
+    for (const roll of ROLLS.filter((r) => r.type !== "half-roll")) {
+        const power = powerFor(roll.type, roll.U, world);
+        if (power === null) continue;
+        const { setup, contact } = playRoll(roll, power);
+        if (setup === null || contact === null) continue;
+        const r = readOut(setup, world, {}, contact);
+        const aim = r.aim;
+        const striker = setup.striker;
+        const one = BALL_IDS.filter((id) => setup.balls[id] !== undefined).indexOf(striker);
+        const key = faceKey(striker);
+        const M = contact.head.mass;
+        type Bin = { head: number; ball: number; face: number; hands: number; turf: number };
+        const bins: Bin[] = [];
+        let last: number | null = null;
+        const probe: ImpactProbe = {
+            step(st) {
+                const ball = st.balls[one];
+                if (ball === undefined) return;
+                const dt = last === null ? 0 : st.t - last;
+                last = st.t;
+                if (st.t > r.time || dt === 0) return;
+                const i = Math.floor(1e3 * st.t);
+                while (bins.length <= i) bins.push({ head: 0, ball: 0, face: 0, hands: 0, turf: 0 });
+                const bin = bins[i];
+                if (bin === undefined) return;
+                for (const c of st.contacts) {
+                    if (c.key !== key) continue;
+                    bin.face -= (c.normalForce * dot(c.normal, aim) + dot(c.tangentialForce, aim)) * dt;
+                }
+                bin.hands += dot(st.hand === undefined ? st.drive : st.hand.force, aim) * dt;
+                if (st.headTurf !== undefined) bin.turf += dot(st.headTurf, aim) * dt;
+                bin.head = dot(st.head.velocity, aim);
+                bin.ball = dot(ball.velocity, aim);
+            },
+        };
+        simulateImpact(contact, setup.balls, world, { probe });
+        const MU = M * roll.U;
+        const f = (x: number): string => (x / MU).toFixed(3).padStart(7);
+        console.log(
+            `${roll.name}: head ${M.toFixed(3)} kg; w1/U ${(r.w1 / roll.U).toFixed(3)} ` +
+                `(Gugan ${(roll.w1 / roll.U).toFixed(3)}), head at the read ${(r.W / roll.U).toFixed(3)}`,
+        );
+        bins.forEach((b, i) =>
+            console.log(
+                `  ${i.toString().padStart(2)}–${(i + 1).toString().padEnd(2)} ms: head ${(b.head / roll.U).toFixed(3)} ` +
+                    `ball ${(b.ball / roll.U).toFixed(3)} U | on the head: face ${f(b.face)} hands ${f(b.hands)} ` +
+                    `turf ${f(b.turf)}`,
+            ),
+        );
+    }
+}
+
 const mode = args[0];
 if (mode === "read-delay") readDelay();
 else if (mode === "read-distance") readDistance();
@@ -941,4 +1002,5 @@ else if (mode === "push") await push();
 else if (mode === "plough") await plough();
 else if (mode === "lift") await lift();
 else if (mode === "climb") await climb();
+else if (mode === "head-speed") await headSpeed();
 else throw new Error("usage: gapProbe.ts read-delay | read-distance | hop | bed | strike | gugan5-balls [--set …]");

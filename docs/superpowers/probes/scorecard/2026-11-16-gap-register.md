@@ -1130,3 +1130,34 @@ through a temporary edit to `reference/contact.json`, reverted. Card: `2026-11-2
   bounce. w₁/U moves −0.006 to +0.009 in the short rolls, C10P overshoots (0.544 against 0.520), and C25P tips into
   its ≈ 0.90 outcome, not clean. Objective 8.28 (5.13). Table 5's means hold; the pass roll's coaching row improves
   (1.19 → 1.17).
+
+## G2: the head's speed through the strike (2026-11-22)
+
+`gapProbe head-speed` (new mode, no engine change): the head's (1.000 kg) and the striker's ball's speeds along aim
+in 1 ms bins to the read, and the impulses on the head from the face, the hands and the turf (share of M·U).
+
+| Roll | Head after 1 ms | Head at the read | Ball 1 at the read (Gugan w₁ ≈ his mallet) | Face on the head, 1 ms to the read | Hands, whole window |
+|---|---|---|---|---|---|
+| C1F | 0.569 | 0.449 | 0.553 (0.667) | −0.232 | +0.150 |
+| C3F | 0.574 | 0.446 | 0.520 (0.594) | −0.232 | +0.133 |
+| C10F | 0.573 | 0.461 | 0.511 (0.569) | −0.252 | +0.164 |
+| C25F | 0.560 | 0.436 | 0.472 (0.501) | −0.229 | +0.125 |
+| C3P | 0.576 | 0.445 | 0.517 (0.580) | −0.242 | +0.157 |
+| C10P | 0.575 | 0.465 | 0.524 (0.520) | −0.269 | +0.194 |
+| C25P | 0.563 | 0.447 | 0.489 (0.557) | −0.252 | +0.155 |
+
+
+- **The first impact is right; the second contact is not.** After the first 1 ms the head is at 0.56–0.58 U, close
+  to Gugan's final mallet speed (§10: "essentially the same as for ball 1", 0.50–0.67 U). It then pushes the
+  striker's ball back up from 0.14–0.21 U, after the ball has met the croqueted ball, and pays for it: the head ends at
+  0.44–0.47 U, below the ball. The hands give back about half of what the face takes over the window.
+- **What Gugan's figures imply.** If his mallet ends at w₁ (C3F 0.594 U) after giving the balls m(w₁ + v₂) = 1.48 m·U
+  (more, with the turf's take), the mallet acted over those ~5 ms as a mass of at least 1.48/(1 − 0.594) = 3.65 balls
+  (1.66 kg). His drives give k ≈ 2.9 ± 0.5 for the single impact (§9.3), which the model's Table 5 rows match
+  (t5.mean.v2U 1.10). The model's head and hands over C3F's window act as about 2.7. So the real mallet grows
+  heavier between the first impact and the end of the second contact; Gugan names what sets the effective mass:
+  "bodily motion, flexure of the shaft, and firmness of grip" (§5.1).
+- **The same lever as the third refit.** All three refits asked for a short grip period (25 ms against the ruled
+  0.08 s), and at 25 ms G2 largely closes (C3P w₁/U z −0.83, C3F −1.92). The user kept 0.08 s and set the next step
+  as "the hands' mechanism the period stands in for". This run says where that mechanism acts: in the 1–8 ms of the
+  second contact, by the grip bringing the arms' mass to the head in time.
