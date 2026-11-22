@@ -686,6 +686,78 @@ async function push(): Promise<void> {
     }
 }
 
+const PLOUGH_BIN_MS = 2;
+
+/**
+ * G2's ploughing: for every full and pass roll, the turf's impulse along aim on the striker's ball (as a share of m·U)
+ * from the strike to the card's read in 2 ms bins, separated into the normal force's part (the bed's wall ahead of
+ * the sunken ball) and the tangential force's (the ball sliding), with the ball's slip (v − ωR along aim, share of U)
+ * at each bin's end, its deepest sink and highest rise of its centre (mm) and its sink at the read.
+ */
+async function plough(): Promise<void> {
+    const { cross, dot } = await import("../src/engine/math/vec3");
+    const world = openWorld(LAWN);
+    const m = world.ball.mass;
+    const R = world.ball.radius;
+    const up = vec3(0, 0, 1);
+    for (const roll of ROLLS.filter((r) => r.type !== "half-roll")) {
+        const power = powerFor(roll.type, roll.U, world);
+        if (power === null) continue;
+        const { setup, contact } = playRoll(roll, power);
+        if (setup === null || contact === null) continue;
+        const r = readOut(setup, world, {}, contact);
+        const aim = r.aim;
+        const striker = setup.striker;
+        const one = BALL_IDS.filter((id) => setup.balls[id] !== undefined).indexOf(striker);
+        const z0 = setup.balls[striker]?.position.z ?? 0;
+        const key = `turf/${striker}`;
+        const bins: { normal: number; tangential: number; slip: number }[] = [];
+        let low = 0;
+        let high = 0;
+        let sinkAtRead = 0;
+        let last: number | null = null;
+        const probe: ImpactProbe = {
+            step(st) {
+                const ball = st.balls[one];
+                if (ball === undefined) return;
+                const dt = last === null ? 0 : st.t - last;
+                last = st.t;
+                if (st.t > r.time || dt === 0) return;
+                const i = Math.floor((1e3 * st.t) / PLOUGH_BIN_MS);
+                while (bins.length <= i) bins.push({ normal: 0, tangential: 0, slip: 0 });
+                const bin = bins[i];
+                if (bin === undefined) return;
+                for (const c of st.contacts) {
+                    if (c.key !== key) continue;
+                    bin.normal += c.normalForce * dot(c.normal, aim) * dt;
+                    bin.tangential += dot(c.tangentialForce, aim) * dt;
+                }
+                const v = dot(ball.velocity, aim);
+                bin.slip = v - R * dot(cross(ball.angularVelocity, up), aim);
+                const dz = ball.position.z - z0;
+                low = Math.min(low, dz);
+                high = Math.max(high, dz);
+                sinkAtRead = dz;
+            },
+        };
+        simulateImpact(contact, setup.balls, world, { probe });
+        const mU = m * roll.U;
+        const total = bins.reduce((s, b) => s + b.normal + b.tangential, 0);
+        console.log(
+            `${roll.name}: w1/U ${(r.w1 / roll.U).toFixed(3)} (Gugan ${(roll.w1 / roll.U).toFixed(3)}); turf ` +
+                `${(total / mU).toFixed(3)} m·U to the read at ${(1e3 * r.time).toFixed(2)} ms; centre low ` +
+                `${(1e3 * low).toFixed(2)} high ${(1e3 * high).toFixed(2)} mm, ${(1e3 * sinkAtRead).toFixed(2)} at the read`,
+        );
+        bins.forEach((b, i) =>
+            console.log(
+                `  ${(i * PLOUGH_BIN_MS).toString().padStart(2)}–${((i + 1) * PLOUGH_BIN_MS).toString().padEnd(2)} ms: ` +
+                    `wall ${(b.normal / mU).toFixed(3).padStart(7)} sliding ${(b.tangential / mU).toFixed(3).padStart(7)}` +
+                    ` | slip at end ${(b.slip / roll.U).toFixed(3).padStart(7)} U`,
+            ),
+        );
+    }
+}
+
 const mode = args[0];
 if (mode === "read-delay") readDelay();
 else if (mode === "read-distance") readDistance();
@@ -701,4 +773,5 @@ else if (mode === "grip") await grip();
 else if (mode === "w1-trace") w1Trace();
 else if (mode === "budget") await budget();
 else if (mode === "push") await push();
+else if (mode === "plough") await plough();
 else throw new Error("usage: gapProbe.ts read-delay | read-distance | hop | bed | strike | gugan5-balls [--set …]");

@@ -963,3 +963,33 @@ to 0.71 and 0.75. Cards: `2026-11-22-restitution-0.71`, `-0.75`. The trial was p
   small change to the handover tips C25P into it.
 - **The handover in sum:** neither friction nor restitution within its sourced bounds closes more than a seventh of
   C3F's gap. With the swing's push and plan also excluded, the gap's cause lies outside the parameters swept so far.
+
+## G2: the striker's ball's ploughing (2026-11-22)
+
+`gapProbe plough` (new mode, no engine change): the turf's impulse along aim on the striker's ball from the strike to
+the read, in 2 ms bins, separated into the normal force's part (the bed's wall ahead of the sunken ball) and the
+tangential force's (sliding), with the ball's centre height against its rest.
+
+| Roll | w₁/U (Gugan) | Turf to the read | of it, wall | of it, sliding | Deepest sink | Rise at the read |
+|---|---|---|---|---|---|---|
+| C1F | 0.553 (0.667) | −0.136 | −0.007 | −0.127 | 1.99 mm | −1.09 mm |
+| C3F | 0.520 (0.594) | −0.158 | −0.014 | −0.144 | 3.19 mm | +0.05 mm |
+| C10F | 0.511 (0.569) | −0.220 | −0.030 | −0.190 | 4.68 mm | +0.49 mm |
+| C25F | 0.472 (0.501) | −0.225 | −0.043 | −0.182 | 6.21 mm | +0.45 mm |
+| C3P | 0.517 (0.580) | −0.192 | −0.018 | −0.173 | 3.52 mm | −1.11 mm |
+| C10P | 0.524 (0.520) | −0.248 | −0.033 | −0.216 | 4.74 mm | −0.56 mm |
+| C25P | 0.489 (0.557) | −0.261 | −0.054 | −0.208 | 6.90 mm | +11.30 mm |
+
+- **The loss is sliding, not the wall.** Nine-tenths of the turf's impulse is the tangential force, almost all of it
+  in the first 6–8 ms, while the face drives the ball down into the turf (sunk 2–7 mm) and the normal force, and so the
+  sliding friction, is large. The wall ahead of the ball takes at most 0.054 m·U.
+- **The sliding loss is about twice each gap** (C3F 0.144 against 0.074; C3P 0.173 against 0.063; C1F 0.127 against
+  0.114): halving it would close most of G2.
+- **The ball stays in the turf through the read** in every roll but C25P, which rises 11 mm: the same roll whose
+  w₁/U jumped to ≈ 0.90 at the handover's lower bounds.
+- **Slip at the bins' ends changes sign** from bin to bin (C3F −0.14 U to +0.13 U), so the tangential force is not a
+  steady sliding drag; the end-of-bin sample does not show its course within a bin. Not examined further.
+- **A -2 player's account (relayed by the user, 2026-11-22, "a bit subjective"):** the lean and striking high and down
+  through the ball into the ground make the striker's ball jump a little; the push then sets it rolling, which is why
+  the striker's ball goes about as far as the croqueted ball. If so, the real ball spends part of this window off the
+  turf, with little sliding loss; the model's stays in it.
