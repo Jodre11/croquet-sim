@@ -155,7 +155,7 @@
 
     // Any input changed: the old play is discarded and a Run follows once the inputs settle, so every change plays
     // through contact to the balls' rest. Where the set-up cannot be run, the planned swing plays alone.
-    let asked = $state(0);
+    let requests = $state(0);
     let pending = $state(false);
     function replay(): void {
         framed = null;
@@ -163,15 +163,15 @@
         t = frameSpan.start;
         playing = false;
         pending = true;
-        asked += 1;
+        requests += 1;
     }
     $effect(() => {
-        void asked;
+        void requests;
         if (!pending || runBlocked === "loading") {
             return;
         }
         if (runBlocked !== "" && runBlocked !== "running") {
-            pending = false;
+            // Blocked (a type's table still loading, say): the planned swing plays, and the Run waits on the block.
             playing = true;
             return;
         }
@@ -275,7 +275,13 @@
                 () => (searching = true),
             );
             // A Run whose inputs have since changed is dropped: the swing shown is the inputs' own.
-            if (result === "superseded" || !stillAsked()) {
+            if (result === "superseded") {
+                return;
+            }
+            if (!stillAsked()) {
+                // An input settled after the Run began (a loaded table's snap, say): run the inputs as they now stand.
+                pending = true;
+                requests += 1;
                 return;
             }
             framed = result.framed;

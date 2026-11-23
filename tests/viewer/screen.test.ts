@@ -32,6 +32,11 @@ async function table(type: string) {
 }
 
 describe("playbackRate (spec §2's slow-down)", () => {
+    it("plays at full rate where there is no impact yet, never NaN", () => {
+        expect(playbackRate(0.1, Infinity, Infinity)).toBe(1);
+        expect(advance(0, 0.1, 0.25, true, { start: Infinity, end: Infinity }, 1)).toBeCloseTo(0.025, 12);
+    });
+
     const [start, end] = [0, 0.004];
 
     it("is 1 far from the impact and 1/50 inside it", () => {

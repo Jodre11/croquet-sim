@@ -27,6 +27,10 @@ function smooth(u: number): number {
  * for a long impact the rate that plays it in IMPACT_WALL; 1 further than EASE outside it, eased continuously between.
  */
 export function playbackRate(t: number, impactStart: number, impactEnd: number): number {
+    // No impact (a planned swing before its Run has none): full rate, never ∞ − ∞.
+    if (!Number.isFinite(impactStart) || !Number.isFinite(impactEnd)) {
+        return 1;
+    }
     const inside = Math.min(1, Math.max(SLOW_RATE, (impactEnd - impactStart) / IMPACT_WALL));
     const distance = t < impactStart ? impactStart - t : t > impactEnd ? t - impactEnd : 0;
     return inside + (1 - inside) * smooth(distance / EASE);
