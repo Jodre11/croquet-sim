@@ -1,5 +1,5 @@
 <!--
-    The readout (side-on viewer spec §2): range asked and achieved, ratio and its label, stroke effort, the press's impulse (primed
+    The readout (side-on viewer spec §2): range achieved, ratio and its label, stroke effort, the press's impulse (primed
     push design §2.5), power,
     the events and faults.
 -->
@@ -8,22 +8,18 @@
     import { labelOf } from "../lab/index";
 
     interface Props {
-        /** Null for a text book, which asks for no range. */
-        range: number | null;
         lawn: number;
         power: number | null;
         framed: FramedPlay | null;
         firmness: number | null;
     }
-    let { range, lawn, power, framed, firmness }: Props = $props();
+    let { lawn, power, framed, firmness }: Props = $props();
     const read = $derived(framed?.sample.byLawn[lawn] ?? null);
     const fmt = (x: number | null | undefined, digits: number): string =>
         x === null || x === undefined || !Number.isFinite(x) ? "—" : x.toFixed(digits);
 </script>
 
 <dl class="panel readout" data-testid="readout">
-    <dt>Range asked</dt>
-    <dd>{fmt(range, 2)} m</dd>
     <dt>Range achieved</dt>
     <dd data-testid="range-achieved">{fmt(read?.range, 2)} m</dd>
     <dt>Ratio</dt>

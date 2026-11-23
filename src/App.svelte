@@ -1,11 +1,12 @@
 <!--
-    The side-on viewer, the app's first screen (side-on viewer spec §2, decision 10): pick a shot, tune its inputs, see
-    the envelope's judgement, and Run it in the worker to watch the swing and contact side on.
+    The side-on viewer, the app's first screen (side-on viewer spec §2, decision 10): one set of inputs decides the
+    shot, a stroke's pick only setting their defaults (user ruling 2026-11-23); each change runs in the worker and plays
+    the swing, contact and roll-out side on.
 -->
 <script lang="ts">
     import { onDestroy } from "svelte";
     import type { FramedPlay } from "./lab/frames";
-    import { judge, nearestGripAt, type BandTable, type GripPlan } from "./lab/judge";
+    import { nearestGripAt, type BandTable, type GripPlan } from "./lab/judge";
     import { MAP_TYPES, canonicalPower, openWorld, textBook, type MapPlan, type MapType } from "./lab/index";
     import type { StrokeExtras } from "./lab/play";
     import { defaultProfile } from "./engine/swing/profile";
@@ -21,13 +22,13 @@
     import TimeBar from "./viewer/TimeBar.svelte";
     import TopDown from "./viewer/TopDown.svelte";
     import { loadData, loadTable } from "./viewer/data";
-    import { HOLD_NAMES, labelsOf, lookupDefault, snapRange, splitsOf, type DefaultEntry } from "./viewer/defaults";
+    import { HOLD_NAMES } from "./viewer/defaults";
     import { departuresOf } from "./viewer/departures";
     import type { SideView } from "./viewer/draw";
     import { stepGrip } from "./viewer/grip";
     import { plannedPath, type PathSample } from "./viewer/plannedPath";
     import { createRunner, type WorkerLike } from "./viewer/runner";
-    import { clampPlan, extraDefaults, inputSpans, offGrid, playableSpans, sameExtras } from "./viewer/spans";
+    import { extraDefaults, playableSpans, sameExtras } from "./viewer/spans";
     import { advance } from "./viewer/time";
 
     const RADIUS = openWorld(10).ball.radius;
@@ -37,36 +38,29 @@
         shaft: defaultProfile.mallet.shaftLength,
     };
 
-    let defaults = $state<readonly DefaultEntry[]>([]);
     let grips = $state<readonly GripPlan[]>([]);
     let table = $state<BandTable | null>(null);
     let tables = $state<readonly BandTable[]>([]);
     let loadError = $state("");
 
-    let label = $state("drive");
-    let split = $state(0);
-    let range = $state(1);
     let lawn = $state(10);
-    let note = $state("");
+    let power = $state(canonicalPower("drive", openWorld(10)));
 
     let type = $state<MapType>("drive");
     let plan = $state<MapPlan>(textBook("drive"));
     /** The inputs beyond the plan the player moved; each absent one is the type's default. */
     let extras = $state<StrokeExtras>({});
-    let defaultEffort = $state<number | null>(null);
     let playerGrip = $state<number | null>(null);
-    /** The found hold's firmness and the set-up it was found for: the default's record, or a Run's search. */
+    /** The found hold's firmness and the set-up it was found for: a Run's search. */
     let foundHold = $state<{
         plan: MapPlan;
         extras: StrokeExtras;
-        range: number;
+        power: number;
         lawn: number;
         firmness: number;
     } | null>(null);
 
-    /** The text book picked and its canonical power, until an input or a default is picked; null otherwise. */
-    let book = $state<{ type: MapType; power: number } | null>(null);
-    const BOOKS = MAP_TYPES.map((t) => ({ type: t, name: HOLD_NAMES[t] }));
+    const STROKES = MAP_TYPES.map((t) => ({ type: t, name: HOLD_NAMES[t] }));
 
     let framed = $state<FramedPlay | null>(null);
     let played = $state<{ firmness: number; searched: boolean } | null>(null);
@@ -79,22 +73,13 @@
     let speed = $state(0.25);
     let slow = $state(true);
 
-    const ranges = $derived(table?.ranges ?? []);
-    const labels = $derived(labelsOf(defaults));
-    const splits = $derived(splitsOf(defaults, label));
     const spans = $derived(table === null || tables.length < MAP_TYPES.length ? null : playableSpans(tables, table));
     const typeDefaults = $derived(extraDefaults(type));
-    const off = $derived(table !== null && offGrid(table, plan, extras, typeDefaults));
-    // Off the grid the power is the nearest graded set-up's (hands-from-lean design §5.1), the record having none.
-    const judgement = $derived(
-        table === null ? null : judge(table, off ? clampPlan(inputSpans(table), plan) : plan, range, lawn),
-    );
-    const power = $derived(book?.power ?? judgement?.power ?? null);
-    const nearest = $derived(power === null ? null : nearestGripAt(grips, type, plan, power));
+    const nearest = $derived(nearestGripAt(grips, type, plan, power));
     // The found hold's firmness while the set-up is the one it was found for (gate ruling 1); null, searched on Run.
     const foundFirmness = $derived(
         foundHold !== null &&
-            foundHold.range === range &&
+            foundHold.power === power &&
             foundHold.lawn === lawn &&
             JSON.stringify(foundHold.plan) === JSON.stringify(plan) &&
             sameExtras(foundHold.extras, extras, typeDefaults)
@@ -110,9 +95,6 @@
             : null,
     );
     const planned = $derived.by((): { path: PathSample[] | null; why: string } => {
-        if (power === null) {
-            return { path: null, why: "no power at this range: no corner of the set-up's cell has one" };
-        }
         try {
             return { path: plannedPath(type, plan, power, extras), why: "" };
         } catch (error) {
@@ -120,7 +102,7 @@
         }
     });
     const runBlocked = $derived(
-        table === null ? "loading" : power === null || planned.path === null ? planned.why : running ? "running" : "",
+        table === null ? "loading" : planned.path === null ? planned.why : running ? "running" : "",
     );
     const startBalls = $derived(
         type === "single-ball"
@@ -139,7 +121,7 @@
         head: HEAD,
         feet: plan.feet,
     });
-    const departures = $derived(departuresOf(type, plan, framed?.sample.strokeEffort ?? defaultEffort ?? 0));
+    const departures = $derived(departuresOf(type, plan, framed?.sample.strokeEffort ?? 0));
     // Before a Run the planned path's span, so the swing replays along it (hands-from-lean design §5.2).
     const frameSpan = $derived.by(() => {
         if (framed !== null && framed.frames.length > 0) {
@@ -187,56 +169,18 @@
     );
     onDestroy(() => runner.dispose());
 
-    function pickDefault(asked: { label: string; split: number; range: number; lawn: number }): void {
-        // Where the asked split has no default at this range and lawn (the pass roll's 0° at most ranges), the label's
-        // first split that has one.
-        const next =
-            lookupDefault(defaults, asked) !== null
-                ? asked
-                : (splitsOf(defaults, asked.label)
-                      .map((s) => ({ ...asked, split: s }))
-                      .find((p) => lookupDefault(defaults, p) !== null) ?? asked);
-        ({ label, split, range, lawn } = next);
-        book = null;
-        const found = lookupDefault(defaults, next);
-        if (found === null) {
-            note = "The record has no default for this pick; the set-up is kept.";
-            return;
-        }
-        const { pick, from } = found;
-        type = pick.type;
-        plan = pick.plan;
-        defaultEffort = pick.read.strokeEffort;
-        extras = {};
-        playerGrip = null;
-        foundHold =
-            pick.read.firmness === null
-                ? null
-                : { plan: pick.plan, extras: {}, range, lawn, firmness: pick.read.firmness };
-        replay();
-        note = `The ${from === "viable" ? "viable" : "least-complex"} default, from the ${HOLD_NAMES[pick.type]}'s hold.`;
-        void loadTable(pick.type).then((loaded) => {
-            if (type === pick.type) {
-                table = loaded;
-            }
-        });
-    }
-
     /**
-     * A type's text book (the play the scorecard checks): its plan at its canonical power on the 10 s lawn, at the
-     * preset's hold, played live on the engine; the band table's power and the record's defaults are not read.
+     * A stroke's defaults (user ruling 2026-11-23): every input set to its text book, at its canonical power on the
+     * lawn shown and its preset hold, as the scorecard plays it. The inputs alone decide the shot from there.
      */
-    function pickBook(next: MapType): void {
+    function pickStroke(next: MapType): void {
         type = next;
         plan = textBook(next);
         extras = {};
-        defaultEffort = null;
         playerGrip = defaultProfile.shape[next].holdFirmness;
         foundHold = null;
-        lawn = 10;
-        book = { type: next, power: canonicalPower(next, openWorld(10)) };
+        power = canonicalPower(next, openWorld(lawn));
         replay();
-        note = `The ${HOLD_NAMES[next]}'s text book at its canonical power and preset hold, as the scorecard plays it.`;
         void loadTable(next).then((loaded) => {
             if (type === next) {
                 table = loaded;
@@ -245,17 +189,14 @@
     }
 
     async function run(): Promise<void> {
-        if (power === null) {
-            return;
-        }
         running = true;
         searching = false;
         runError = "";
         playing = false;
-        const asked = { type, plan: $state.snapshot(plan), extras: $state.snapshot(extras), range, lawn };
+        const asked = { type, plan: $state.snapshot(plan), extras: $state.snapshot(extras), power, lawn };
         const stillAsked = (): boolean =>
             asked.type === type &&
-            asked.range === range &&
+            asked.power === power &&
             asked.lawn === lawn &&
             JSON.stringify(asked.plan) === JSON.stringify(plan) &&
             sameExtras(asked.extras, extras, typeDefaults);
@@ -314,16 +255,15 @@
     let frame = requestAnimationFrame(tick);
     onDestroy(() => cancelAnimationFrame(frame));
 
-    // The drive's table plays the first default; every type's spans the sliders once all have landed.
+    // The drive's text book plays first; every type's table spans the sliders once all have landed.
     Promise.all(MAP_TYPES.map(loadTable))
         .then((loaded) => (tables = loaded))
         .catch((error: unknown) => (loadError = error instanceof Error ? error.message : String(error)));
     Promise.all([loadData(), loadTable("drive")])
         .then(([data, drive]) => {
-            defaults = data.defaults;
             grips = data.grips;
             table = drive;
-            pickDefault({ label: "drive", split: 0, range: snapRange(table.ranges, 4), lawn: 10 });
+            pickStroke("drive");
         })
         .catch((error: unknown) => (loadError = error instanceof Error ? error.message : String(error)));
 </script>
@@ -338,33 +278,28 @@
     {/if}
     <div class="layout">
         <aside>
-            <ShotPicker
-                {labels}
-                {ranges}
-                {splits}
-                {label}
-                {split}
-                {range}
-                {lawn}
-                {note}
-                onpick={pickDefault}
-                books={BOOKS}
-                book={book?.type ?? null}
-                onbook={pickBook}
-            />
+            <ShotPicker strokes={STROKES} {type} onpick={pickStroke} />
             <Inputs
                 {plan}
                 {spans}
                 {extras}
                 defaults={typeDefaults}
+                {power}
+                {lawn}
                 onchange={(next) => {
                     plan = next;
-                    book = null;
                     replay();
                 }}
                 onextras={(next) => {
                     extras = next;
-                    book = null;
+                    replay();
+                }}
+                onpower={(next) => {
+                    power = next;
+                    replay();
+                }}
+                onlawn={(next) => {
+                    lawn = next;
                     replay();
                 }}
             />
@@ -408,11 +343,9 @@
         </aside>
         <section class="stage">
             <Badges
-                {judgement}
                 outcome={framed === null ? null : { klass: framed.sample.klass, reason: framed.sample.reason }}
                 {departures}
                 timing={nearest?.grip ?? null}
-                offGrid={off ? HOLD_NAMES[type] : null}
             />
             <div class="canvases">
                 <SideOn {view} />
@@ -439,7 +372,7 @@
                 onspeed={(next) => (speed = next)}
                 onslow={(next) => (slow = next)}
             />
-            <Readout range={book === null ? range : null} {lawn} {power} {framed} firmness={played?.firmness ?? null} />
+            <Readout {lawn} {power} {framed} firmness={played?.firmness ?? null} />
         </section>
     </div>
 </main>

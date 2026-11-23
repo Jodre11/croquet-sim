@@ -1,6 +1,6 @@
 <!--
-    The inputs (side-on viewer spec §2; hands-from-lean design §5.1): lean, feet, push length, after contact and push
-    window, each continuous over the playable range with the picked type's graded values as ticks; then each hand's
+    The inputs, the shot's one set (user ruling 2026-11-23): power, lawn and split; then (side-on viewer spec §2;
+    hands-from-lean design §5.1) lean, feet, push length, after contact and push window, each continuous over the playable range with the picked type's graded values as ticks; then each hand's
     grip tension and the follow-through, from the type's defaults.
 -->
 <script lang="ts">
@@ -13,10 +13,19 @@
         spans: Readonly<Record<Input, Span>> | null;
         extras: StrokeExtras;
         defaults: ExtraValues;
+        power: number;
+        lawn: number;
         onchange: (plan: MapPlan) => void;
         onextras: (extras: StrokeExtras) => void;
+        onpower: (power: number) => void;
+        onlawn: (lawn: number) => void;
     }
-    let { plan, spans, extras, defaults, onchange, onextras }: Props = $props();
+    let { plan, spans, extras, defaults, power, lawn, onchange, onextras, onpower, onlawn }: Props = $props();
+
+    const POWER = { least: 0.2, most: 2 };
+    const LAWNS = [6, 10, 14];
+    const DEG = Math.PI / 180;
+    const SPLIT_MOST = 10 * DEG;
 
     type Extra = keyof ExtraValues;
     const EXTRAS = Object.keys(EXTRA_SPANS) as Extra[];
@@ -51,6 +60,39 @@
 
 <fieldset class="panel">
     <legend>Inputs</legend>
+    <label class="input">
+        <span>Power: <strong>{power.toFixed(3)}</strong></span>
+        <input
+            type="range"
+            min={POWER.least}
+            max={POWER.most}
+            step="0.005"
+            value={power}
+            aria-valuetext={power.toFixed(3)}
+            oninput={(e) => onpower(Math.min(POWER.most, Math.max(POWER.least, Number(e.currentTarget.value))))}
+        />
+    </label>
+    <label class="input">
+        <span>Lawn</span>
+        <select value={String(lawn)} onchange={(e) => onlawn(Number(e.currentTarget.value))}>
+            {#each LAWNS as l (l)}
+                <option value={String(l)}>{l} s</option>
+            {/each}
+        </select>
+    </label>
+    <label class="input">
+        <span>Split: <strong>{(plan.split / DEG).toFixed(1)}°</strong></span>
+        <input
+            type="range"
+            min="0"
+            max={SPLIT_MOST}
+            step={SPLIT_MOST / 100}
+            value={plan.split}
+            aria-valuetext={`${(plan.split / DEG).toFixed(1)}°`}
+            oninput={(e) =>
+                onchange({ ...plan, split: Math.min(SPLIT_MOST, Math.max(0, Number(e.currentTarget.value))) })}
+        />
+    </label>
     {#if spans === null}
         <p class="note">Loading the envelope…</p>
     {:else}

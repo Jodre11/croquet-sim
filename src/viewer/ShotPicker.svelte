@@ -1,92 +1,28 @@
 <!--
-    The shot picker (side-on viewer spec §2, decision 9, §7): the shot wanted (a ratio label), the range snapped to the
-    record's 16, the lawn, and the split where the label's defaults hold more than one; or a type's text book, played
-    live at its canonical power and preset hold; and the note on the default.
+    The shot picker: one choice of stroke, which sets every input to that stroke's text book (its set-up, canonical
+    power and preset hold). It sets defaults and nothing else; the inputs below decide the shot.
 -->
 <script lang="ts">
     import type { MapType } from "../lab/index";
 
     interface Props {
-        labels: readonly string[];
-        ranges: readonly number[];
-        splits: readonly number[];
-        label: string;
-        split: number;
-        range: number;
-        lawn: number;
-        note: string;
-        onpick: (pick: { label: string; split: number; range: number; lawn: number }) => void;
-        /** The types with a text book, each with its name, and the one picked (null: a record's default). */
-        books: readonly { type: MapType; name: string }[];
-        book: MapType | null;
-        onbook: (type: MapType) => void;
+        /** The strokes, each with its name, and the one whose defaults were last loaded. */
+        strokes: readonly { type: MapType; name: string }[];
+        type: MapType;
+        onpick: (type: MapType) => void;
     }
-    let { labels, ranges, splits, label, split, range, lawn, note, onpick, books, book, onbook }: Props = $props();
-    const LAWNS = [6, 10, 14];
-    const deg = (rad: number): string => ((rad * 180) / Math.PI).toFixed(0);
+    let { strokes, type, onpick }: Props = $props();
 </script>
 
 <fieldset class="panel">
     <legend>Shot</legend>
     <label>
-        Shot wanted
-        <select value={label} onchange={(e) => onpick({ label: e.currentTarget.value, split: 0, range, lawn })}>
-            {#each labels as l (l)}
-                <option value={l}>{l}</option>
+        Start from
+        <select value={type} data-testid="shot" onchange={(e) => onpick(e.currentTarget.value as MapType)}>
+            {#each strokes as s (s.type)}
+                <option value={s.type}>{s.name}</option>
             {/each}
         </select>
     </label>
-    <label>
-        Range
-        <select
-            value={String(range)}
-            onchange={(e) => onpick({ label, split, range: Number(e.currentTarget.value), lawn })}
-        >
-            {#each ranges as r (r)}
-                <option value={String(r)}>{r.toFixed(2)} m</option>
-            {/each}
-        </select>
-    </label>
-    <label>
-        Lawn
-        <select
-            value={String(lawn)}
-            onchange={(e) => onpick({ label, split, range, lawn: Number(e.currentTarget.value) })}
-        >
-            {#each LAWNS as l (l)}
-                <option value={String(l)}>{l} s</option>
-            {/each}
-        </select>
-    </label>
-    {#if splits.length > 1}
-        <label>
-            Split
-            <select
-                value={String(split)}
-                onchange={(e) => onpick({ label, split: Number(e.currentTarget.value), range, lawn })}
-            >
-                {#each splits as s (s)}
-                    <option value={String(s)}>{deg(s)}°</option>
-                {/each}
-            </select>
-        </label>
-    {/if}
-    <label>
-        Text book
-        <select
-            value={book ?? ""}
-            data-testid="text-book"
-            onchange={(e) => {
-                if (e.currentTarget.value !== "") {
-                    onbook(e.currentTarget.value as MapType);
-                }
-            }}
-        >
-            <option value="">(the record's default)</option>
-            {#each books as b (b.type)}
-                <option value={b.type}>{b.name}</option>
-            {/each}
-        </select>
-    </label>
-    <p class="note" data-testid="pick-note">{note}</p>
+    <p class="note">Sets every input to this stroke's text book; change any input from there.</p>
 </fieldset>
