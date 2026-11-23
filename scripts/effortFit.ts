@@ -20,9 +20,13 @@ import { canonicalSetup } from "../tests/engine/support/shot";
  */
 export const CEILING = 9.0;
 
-/** The default profile's swing stroke types (the slope not fully held), in the presets' order. */
+/**
+ * The default profile's swing stroke types (the pendulum alone, the top hand still), in the presets' order. The half
+ * roll swings its slope too since the user's ruling of 2026-11-23 but keeps a hands' share, so it is not one (was the
+ * slope not fully held).
+ */
 export const SWING_PRESETS: readonly StrokeType[] = STROKE_TYPES.filter(
-    (type) => defaultProfile.shape[type].slopeHold < 1,
+    (type) => defaultProfile.shape[type].pendulumShare === 1,
 );
 
 /** Numerical, not physical: the effort's bisections stop when the bracket is this close to its upper end, relative. */

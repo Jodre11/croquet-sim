@@ -563,8 +563,9 @@ describe("the mallet's release and the finish's end (shapes design §2)", () => 
 
 describe("the top hand stops and the bottom hand carries the head on (shapes design §8, rulings 13 and 14)", () => {
     const DEFAULT = defaultWorld();
+    // The slope held, as the rolls hold it: the half roll's swings since the user's ruling of 2026-11-23.
     const trackOf = (followThrough?: number) => {
-        const stroke = followThrough === undefined ? {} : { followThrough };
+        const stroke = { slopeHold: 1, ...(followThrough === undefined ? {} : { followThrough }) };
         const contact = buildContact(canonicalSetup("half-roll", { world: DEFAULT, stroke }), DEFAULT);
         return prepareTrack(contact.drive as TrackDrive, contact.head, DEFAULT.gravity);
     };
@@ -672,7 +673,13 @@ describe("the hands' hold on the shaft's lean through a push (shapes design §8,
 
     it("never holds past the grip's whole couple", () => {
         // 0.47 m, inside the head's 0.48 m rise limit (firmness design §3; was 0.6 m), still plans above HOLD_SPEED.
-        expect(arcOf(planOf(1, 0.47)).holdFirmness).toBe(1);
+        // On the full roll: the half roll's 0.9 pendulum share takes 0.47 m past the body's backswing angle since the
+        // user's ruling of 2026-11-23.
+        const plan = planStroke(
+            canonicalSetup("full-roll", { world: DEFAULT, stroke: { holdFirmness: 1, backswing: 0.47 } }),
+            DEFAULT,
+        );
+        expect(arcOf(plan).holdFirmness).toBe(1);
     });
 
     it.each([

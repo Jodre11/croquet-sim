@@ -69,13 +69,15 @@ function along(lean: number, from: number, to: number): number {
 
 /**
  * The hands' law (design §2): piecewise between the drive (≤ 0°), the half roll (24°) and the full roll (≥ 31°),
- * held flat outside them. Only the bottom hand moves up to 24°; from there the hands move in lock-step, `GAP` apart.
+ * held flat outside them. Only the bottom hand moves up to 24°; from there each hand moves linearly to the full roll's.
  * `fist` lowers both hands by `FINGER_REACH`, at any lean.
  */
 export function handsForLean(lean: number, mallet: { readonly shaftLength: number }, fist: boolean): HandsOnShaft {
     const handle = mallet.shaftLength - HANDLE_CAP;
-    const half = mallet.shaftLength / 2;
-    const gap = handle - half;
+    // User ruling 2026-11-23: the half roll's bottom hand halves the shaft between the top hand and the head (was
+    // half the shaft's length, 55 mm higher). The full roll keeps the old lock-step gap above its bottom hand.
+    const half = handle / 2;
+    const gap = handle - mallet.shaftLength / 2;
     const finger = RING_HEIGHT + FINGER_REACH + HAND_BREADTH / 2;
     const drop = fist ? FINGER_REACH : 0;
     if (lean <= HALF_ROLL_LEAN) {
@@ -83,6 +85,8 @@ export function handsForLean(lean: number, mallet: { readonly shaftLength: numbe
         const bottom = driveBottom + along(lean, DRIVE_LEAN, HALF_ROLL_LEAN) * (half - driveBottom);
         return { top: handle - drop, bottom: bottom - drop };
     }
-    const bottom = half + along(lean, HALF_ROLL_LEAN, FULL_ROLL_LEAN) * (finger - half);
-    return { top: bottom + gap - drop, bottom: bottom - drop };
+    const u = along(lean, HALF_ROLL_LEAN, FULL_ROLL_LEAN);
+    const bottom = half + u * (finger - half);
+    const top = handle + u * (finger + gap - handle);
+    return { top: top - drop, bottom: bottom - drop };
 }

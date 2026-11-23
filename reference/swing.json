@@ -257,13 +257,13 @@
     },
     "half-roll": {
         "pendulumShare": {
-            "value": 0.4,
+            "value": 0.9,
             "unit": "1",
             "bounds": [0, 1],
-            "source": "P2b.2b.2a plan, placeholder rule: 1 − the P2b.2b.1 handShare (docs/superpowers/plans/2026-10-07-p2b2b2a-stroke-shape.md)",
+            "source": "User ruling 2026-11-23: the half roll is \"more like a drive with maybe a little bit of push\"; the top hand moved too much (was 0.4, 1 − the P2b.2b.1 handShare)",
             "provenance": "derived",
             "provisional": "placeholder",
-            "note": "No split between the pendulum and the hands was found (reference/sources/README.md). P2b.2b.1's preset gave the hands 60 % of the head's speed (swing spec §5.4)."
+            "note": "No split between the pendulum and the hands was found (reference/sources/README.md). 0.9 leaves the hands 10 % of the head's speed: the top hand travels about 70 mm into contact (was about 380 mm); 1 takes the backswing past the body's limit."
         },
         "handAngle": {
             "value": 0.5235987755982988,
@@ -288,14 +288,14 @@
             "note": "Placeholder (plan, \"Decisions made while planning\"): no roll tempo was sourced, so the single-ball stroke's gravity-only fall time from its h0. Frozen at engine 0.12.0's fit (P2b.2b.2c.1 design §4.4)."
         },
         "defaultBackswing": {
-            "value": 0.42770749444701456,
+            "value": 0.426856178401134,
             "unit": "m",
             "source": "a 60-halving bisection of the planned speed at intensity 0 (backswingFor in tests/engine/support/shot.ts), P2b.2b.2a design §5.3 and §6.2 (docs/superpowers/specs/2026-10-06-p2b2b2a-stroke-shape-design.md)",
             "provenance": "derived",
-            "note": "Design §5.3: h0 = 0.4273 m, the backswing that gives 3 m/s at intensity 0. Refitted for the half roll's minimal push, 0.05 m (shapes design §8, ruling 11), by the same bisection as the AC stop's; it was 0.4255284852454616 m with the 0.15 m push, frozen at engine 0.12.0's fit (P2b.2b.2c.1 design §4.4)."
+            "note": "Design §5.3: h0 = 0.4269 m, the backswing that gives 3 m/s at intensity 0. Refitted for the drive-like half roll (user ruling 2026-11-23: pendulum share 0.9, the slope swinging, the bottom hand halfway to the head; was 0.42770749444701456 m). Earlier refitted for the half roll's minimal push, 0.05 m (shapes design §8, ruling 11), by the same bisection as the AC stop's; it was 0.4255284852454616 m with the 0.15 m push, frozen at engine 0.12.0's fit (P2b.2b.2c.1 design §4.4)."
         },
         "defaultSpeed": {
-            "value": 3.0000000000000004,
+            "value": 3,
             "unit": "m/s",
             "source": "scripts/fitStrokeShape.ts: P2b.2b.2a design §5.3 and §6.2 (docs/superpowers/specs/2026-10-06-p2b2b2a-stroke-shape-design.md)",
             "provenance": "derived",

@@ -739,7 +739,7 @@ describe("defaultProfile", () => {
 
     it("swings the single-ball stroke, the drive and the stops, and carries the rolls to their reach", () => {
         const holds = STROKE_TYPES.map((type) => defaultProfile.shape[type].slopeHold);
-        expect(holds).toEqual([0, 0, 0, 0, 1, 1, 1]);
+        expect(holds).toEqual([0, 0, 0, 0, 0, 1, 1]);
         const reaches = STROKE_TYPES.map((type) => defaultProfile.drive[type].handReach);
         // Shapes design §8, rulings 11 and 14: the half roll's minimal push (was 0.15, then 0.05).
         expect(reaches).toEqual([0, 0, 0, 0, 0.025, 0.3, 0.3]);
@@ -758,15 +758,16 @@ describe("defaultProfile", () => {
         // (was 0.45): the AC stop's hands together too. Shapes design §8, ruling 17: the pass roll takes the full roll's
         // grips (was 0.45, 0.09). Hands-from-lean design §3: every preset but the GC stop's takes the law at its lean
         // (was single-ball [0.805, 0.7], half roll [0.805, 0.42], full and pass rolls [0.61, 0.3]); the GC stop the
-        // half roll's hands held at lean 0 (user ruling 2026-11-14; was [0.805, 0.45]).
+        // half roll's hands held at lean 0 (user ruling 2026-11-14; was [0.805, 0.45]). User ruling 2026-11-23: the
+        // half roll's bottom hand halfway between the top hand and the head (was 0.4572, half the shaft).
         const finger = RING_HEIGHT + FINGER_REACH + HAND_BREADTH / 2;
         const gap = 0.805 - 0.4572;
         const want = [
             [0.805, 0.805 - HAND_BREADTH],
             [0.805, 0.805 - HAND_BREADTH],
             [0.805, 0.805 - HAND_BREADTH],
-            [0.805, 0.4572],
-            [0.805, 0.4572],
+            [0.805, 0.805 / 2],
+            [0.805, 0.805 / 2],
             [finger + gap, finger],
             [finger - FINGER_REACH + gap, finger - FINGER_REACH],
         ];
@@ -804,9 +805,10 @@ describe("defaultProfile", () => {
         });
     });
 
-    it("lets the swing presets' slope swing and holds the rolls' (P2b.2b.2c.3a design §4.1)", () => {
-        expect(STROKE_TYPES.map((type) => defaultProfile.shape[type].slopeHold)).toEqual([0, 0, 0, 0, 1, 1, 1]);
-        expect(STROKE_TYPES.map((type) => SLOPE_HOLD[type])).toEqual([0, 0, 0, 0, 1, 1, 1]);
+    it("lets the swing presets' and the half roll's slope swing and holds the full and pass rolls'", () => {
+        // P2b.2b.2c.3a design §4.1; user ruling 2026-11-23: the half roll is played like a drive (was held).
+        expect(STROKE_TYPES.map((type) => defaultProfile.shape[type].slopeHold)).toEqual([0, 0, 0, 0, 0, 1, 1]);
+        expect(STROKE_TYPES.map((type) => SLOPE_HOLD[type])).toEqual([0, 0, 0, 0, 0, 1, 1]);
     });
 });
 
@@ -1262,7 +1264,8 @@ describe("the jab (P2b.2b.2b.3 design §6.1)", () => {
     });
 
     it("accepts a jab on a held slope", () => {
-        const roll = canonicalSetup("half-roll");
+        // The full roll: the half roll's slope swings since the user's ruling of 2026-11-23.
+        const roll = canonicalSetup("full-roll");
         const plain = planStroke(roll, world).contact.drive as TrackDrive;
         const jabbed = planStroke({ ...roll, stroke: { ...roll.stroke, jab: 0.002 } }, world).contact
             .drive as TrackDrive;
@@ -1722,9 +1725,9 @@ describe("the reach scales with pace (soft follow-through design §2.2)", () => 
         const type = "pass-roll";
         const { contact, contactSpeed } = planStroke(at(type, 0.4, { handReach: 0.2 }), world);
         expect(arcOf(contact).handReach).toBeCloseTo((0.2 * contactSpeed) / ref(type), 12);
-        expect(arcOf(planStroke(at(type, canonicalPower(type, world), { handReach: 0.2 }), world).contact).handReach).toBe(
-            0.2,
-        );
+        expect(
+            arcOf(planStroke(at(type, canonicalPower(type, world), { handReach: 0.2 }), world).contact).handReach,
+        ).toBe(0.2);
         const setup = at(type, 0.4);
         expect(setup.stroke.feet).toBeDefined();
         const footed = arcOf(planStroke(setup, world).contact);

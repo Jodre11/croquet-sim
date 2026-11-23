@@ -23,7 +23,9 @@ const SLOW = Boolean(import.meta.env.SLOW_TESTS);
 const GRAZE = { type: "single-ball", speed: 3, up: 0.01, dip: -0.005, jab: 0.001 } as const;
 // P2b.2b.2c.3a: the swung body on every stroke (was a 5 mm jab): see the biting test.
 const BITING = { type: "single-ball", speed: 4, up: 0.01, dip: -0.02, jab: 0.008 } as const;
-const FOLLOW = { type: "half-roll", speed: 4 } as const;
+// The full roll: the half roll, played like a drive since the user's ruling of 2026-11-23, no longer reaches 4 m/s
+// with no intensity (was the half roll).
+const FOLLOW = { type: "full-roll", speed: 4 } as const;
 /** 4 m/s with no intensity needs a backswing past the head's 0.48 m rise limit (firmness design §3): lifted. */
 const LIFTED = { headRiseLimit: 2 } as const;
 /** The dug push's arc (m) and its low point (push lengths along aim from the hands at contact). */

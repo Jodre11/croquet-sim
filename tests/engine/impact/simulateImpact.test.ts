@@ -53,8 +53,8 @@ const SUNK = vec3(
 );
 
 describe("simulateImpact", () => {
-    it("is version 0.44.0", () => {
-        expect(ENGINE_VERSION).toBe("0.44.0");
+    it("is version 0.45.0", () => {
+        expect(ENGINE_VERSION).toBe("0.45.0");
     });
 
     it("starts a centre-struck ball rolling at 5/7 of its launch speed in phase 2", () => {

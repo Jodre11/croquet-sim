@@ -12,8 +12,9 @@ import { defaultProfile } from "../../../src/engine/swing/profile";
 const DEG = Math.PI / 180;
 const MALLET = defaultProfile.mallet;
 const HANDLE = 0.805;
-const HALF = 0.4572;
-const GAP = HANDLE - HALF;
+// User ruling 2026-11-23: the half roll's bottom hand halves the top hand's distance from the head.
+const HALF = HANDLE / 2;
+const GAP = HANDLE - 0.4572;
 const FINGER = RING_HEIGHT + FINGER_REACH + HAND_BREADTH / 2;
 
 describe("handsForLean (hands-from-lean design §2)", () => {
@@ -29,7 +30,7 @@ describe("handsForLean (hands-from-lean design §2)", () => {
         expect(hands.bottom).toBeCloseTo(HANDLE - HAND_BREADTH, 12);
     });
 
-    it("places the half roll's bottom hand half way down the shaft at 24°", () => {
+    it("places the half roll's bottom hand half way between the top hand and the head at 24°", () => {
         const hands = handsForLean(24 * DEG, MALLET, false);
         expect(hands.top).toBeCloseTo(HANDLE, 12);
         expect(hands.bottom).toBeCloseTo(HALF, 12);
@@ -48,10 +49,10 @@ describe("handsForLean (hands-from-lean design §2)", () => {
         expect(hands.bottom).toBeCloseTo(drive + blend(0.5) * (HALF - drive), 12);
     });
 
-    it("moves the hands in lock-step between the half roll and the full roll", () => {
+    it("moves each hand linearly between the half roll and the full roll", () => {
         const hands = handsForLean(27.5 * DEG, MALLET, false);
         expect(hands.bottom).toBeCloseTo(HALF + blend(0.5) * (FINGER - HALF), 12);
-        expect(hands.top - hands.bottom).toBeCloseTo(GAP, 12);
+        expect(hands.top).toBeCloseTo(HANDLE + blend(0.5) * (FINGER + GAP - HANDLE), 12);
     });
 
     it("lowers both hands by a finger's reach with the fist", () => {

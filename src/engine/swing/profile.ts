@@ -268,7 +268,8 @@ export const SLOPE_HOLD: Readonly<Record<StrokeType, number>> = {
     drive: 0,
     "stop-ac": 0,
     "stop-gc": 0,
-    "half-roll": 1,
+    // User ruling 2026-11-23: the half roll is played like a drive, the shaft swinging, with a little push (was 1).
+    "half-roll": 0,
     "full-roll": 1,
     "pass-roll": 1,
 };

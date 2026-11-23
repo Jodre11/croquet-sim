@@ -153,13 +153,34 @@
         framed === null ? { start: Infinity, end: Infinity } : { start: framed.impactStart, end: framed.impactEnd },
     );
 
-    /** Any input changed (design §5.2): a Run is discarded and the swing replays from its first frame. */
+    // Any input changed: the old play is discarded and a Run follows once the inputs settle, so every change plays
+    // through contact to the balls' rest. Where the set-up cannot be run, the planned swing plays alone.
+    let asked = $state(0);
+    let pending = $state(false);
     function replay(): void {
         framed = null;
         played = null;
         t = frameSpan.start;
-        playing = true;
+        playing = false;
+        pending = true;
+        asked += 1;
     }
+    $effect(() => {
+        void asked;
+        if (!pending || runBlocked === "loading") {
+            return;
+        }
+        if (runBlocked !== "" && runBlocked !== "running") {
+            pending = false;
+            playing = true;
+            return;
+        }
+        const id = setTimeout(() => {
+            pending = false;
+            void run();
+        }, 250);
+        return () => clearTimeout(id);
+    });
 
     const runner = createRunner(
         () => new Worker(new URL("./viewer/worker.ts", import.meta.url), { type: "module" }) as unknown as WorkerLike,
@@ -353,6 +374,7 @@
                         // Stepping starts from the grip shown, else the nearest swept plan's reliable grip.
                         const from = firmness ?? nearest?.grip.reliable ?? (bounds.least + bounds.firmest) / 2;
                         playerGrip = stepGrip(from, bounds, dir);
+                        replay();
                     }
                 }}
             />

@@ -63,9 +63,12 @@ describe("one plan's run (P2b.2b.2c.3b plan Task 3)", () => {
         }
     });
 
-    it("holds h_body to the head's rise limit, the rolls at it (firmness design §3)", () => {
+    it("holds h_body to the head's rise limit, the full and pass rolls at it (firmness design §3)", () => {
+        // The half roll, played like a drive since the user's ruling of 2026-11-23, is held by the body's backswing
+        // angle below the rise limit.
         const limit = defaultProfile.body.headRiseLimit;
-        for (const type of ["half-roll", "full-roll", "pass-roll"] as const) {
+        expect(bodyBackswing(mapSetup("half-roll", textBook("half-roll"), 1), WORLD)).toBeLessThan(limit);
+        for (const type of ["full-roll", "pass-roll"] as const) {
             const h = bodyBackswing(mapSetup(type, textBook(type), 1), WORLD);
             expect(h).toBeLessThan(limit);
             expect(Math.abs(h - limit) / limit).toBeLessThanOrEqual(1e-8);
@@ -88,9 +91,8 @@ describe("one plan's run (P2b.2b.2c.3b plan Task 3)", () => {
         expect(sample.pushEffort).toBeGreaterThan(0);
         expect(sample.pushEffort).toBeLessThanOrEqual(100);
         expect(sample.pushImpulse).toBeGreaterThan(0);
-        // The rolls hold the slope (λ 1), so the hands supply a couple, within C at the canonical.
-        expect(sample.coupleShare).toBeGreaterThan(0);
-        expect(sample.coupleShare).toBeLessThanOrEqual(1);
+        // The half roll's slope swings (λ 0, the user's ruling of 2026-11-23), so the hands supply no couple.
+        expect(sample.coupleShare).toBe(0);
         // In the band on its first pass (P2b.2b.2c.3b.1 design §4).
         expect(sample.passes).toBe(1);
     });
@@ -103,22 +105,23 @@ describe("one plan's run (P2b.2b.2c.3b plan Task 3)", () => {
     });
 
     it("bisects the most power a weak bottom grip holds (Review Focus 2)", () => {
-        // A bottom grip of 0.1 shrinks C = min(γ_T, g_B)·F_max·(r − b) tenfold, from 167.5 to 16.7 N·m. The text
+        // On the full roll, whose slope is held (the half roll's swings since the user's ruling of 2026-11-23; the
+        // couples below were measured on the half roll). A bottom grip of 0.1 shrinks C = min(γ_T, g_B)·F_max·(r − b) tenfold, from 167.5 to 16.7 N·m. The text
         // book's held slope needs a peak couple of about 12.2 N·m at p = 1 and 29.4 N·m at p = 2 (measured while
         // building this test), so p = 1 plans and p = 2 throws the downswing's RangeError. The plan's g_B 0.01 makes
         // C 1.67 N·m, past which p = 1 also fails (the next test). Those couples were measured on h_body's 1.02 m;
         // under the head's 0.48 m rise limit (firmness design §3) the bisection still lands in (1, 2).
         const over = { stance: { bottomGrip: 0.1 } };
-        const plan = textBook("half-roll");
-        const most = maxPower("half-roll", plan, WORLD, over);
+        const plan = textBook("full-roll");
+        const most = maxPower("full-roll", plan, WORLD, over);
         expect(most).toBeGreaterThan(1);
         expect(most).toBeLessThan(2);
-        expect(Number.isFinite(plannedSpeed(mapSetup("half-roll", plan, most, over), WORLD))).toBe(true);
+        expect(Number.isFinite(plannedSpeed(mapSetup("full-roll", plan, most, over), WORLD))).toBe(true);
         // The bisection stops at the couple's edge: a hair above it the grip no longer holds.
-        expect(() => plannedSpeed(mapSetup("half-roll", plan, most + 1e-6, over), WORLD)).toThrow(
+        expect(() => plannedSpeed(mapSetup("full-roll", plan, most + 1e-6, over), WORLD)).toThrow(
             /the grip cannot hold/,
         );
-        expect(() => plannedSpeed(mapSetup("half-roll", plan, most + 1e-6, over), WORLD)).toThrow(RangeError);
+        expect(() => plannedSpeed(mapSetup("full-roll", plan, most + 1e-6, over), WORLD)).toThrow(RangeError);
     });
 
     it("bisects below p = 1 when p = 1 fails, returning a power that plans or NaN (Review Focus 2)", () => {
@@ -126,12 +129,12 @@ describe("one plan's run (P2b.2b.2c.3b plan Task 3)", () => {
         // monotone in p (about 2.36 N·m at p = 0.2, 2.03 at 0.4, 5.40 at 0.6: the reviewer's figures), so the
         // bisection may find no power; whatever it returns plans.
         const over = { stance: { bottomGrip: 0.01 } };
-        const plan = textBook("half-roll");
-        const most = maxPower("half-roll", plan, WORLD, over);
+        const plan = textBook("full-roll");
+        const most = maxPower("full-roll", plan, WORLD, over);
         if (!Number.isNaN(most)) {
             expect(most).toBeGreaterThan(0);
             expect(most).toBeLessThan(1);
-            expect(Number.isFinite(plannedSpeed(mapSetup("half-roll", plan, most, over), WORLD))).toBe(true);
+            expect(Number.isFinite(plannedSpeed(mapSetup("full-roll", plan, most, over), WORLD))).toBe(true);
         }
     });
 
@@ -206,7 +209,7 @@ describe("one plan's run (P2b.2b.2c.3b plan Task 3)", () => {
         expect(sample.byLawn[10]?.ratio).toBeCloseTo(1.1098, 4);
     });
 
-    it("plays the half roll's text book at its canonical power at ratio 1.644", () => {
+    it("plays the half roll's text book at its canonical power at ratio 1.604", () => {
         // Shapes design §8, ruling 15: the half roll's hold firmness, 0.1, is bisected to ratio 2.0 (was 1.041 at the
         // grip's whole couple, the striker's ball driven on too far). Hands-from-lean design §4: the bottom hand half
         // the shaft down (was 0.42 m), the hold kept, not refitted; the ratio 2.099 (was 2.0).
@@ -216,12 +219,13 @@ describe("one plan's run (P2b.2b.2c.3b plan Task 3)", () => {
         // striker's ball runs on (Gugan's C3H and C10H: w1/U 0.38–0.40, the model's 0.40–0.44): a known gap.
         // Restart confirmation design (was 1.770 at a 1 ms hold): 1.782. Primed push design, amendment 1 (was 1.782): the
         // hands press at F_push while on the ball, 1.757. Gap register, the third refit (engine 0.42.0; was 1.757):
-        // 1.644, in the band 1.4–2.5. Gap register G2, the strike's grip (engine 0.44.0; was 1.644): 1.638.
+        // 1.644, in the band 1.4–2.5. Gap register G2, the strike's grip (engine 0.44.0; was 1.644): 1.638. User
+        // ruling 2026-11-23 (engine 0.45.0; was 1.638): played like a drive with a little push, the bottom hand halfway to the head.
         const base = mapSetup("half-roll", textBook("half-roll"), 1);
         const p = swingReference["half-roll"].defaultBackswing.value / bodyBackswing(base, WORLD);
         const sample = playSample("half-roll", textBook("half-roll"), p, [10], "preset");
         expect(sample.klass).toBeNull();
-        expect(sample.byLawn[10]?.ratio).toBeCloseTo(1.638, 3);
+        expect(sample.byLawn[10]?.ratio).toBeCloseTo(1.604, 3);
     });
 
     it("plays the pass roll's text book at its canonical power, the head kept off the ball, at ratio 1.194", () => {

@@ -122,7 +122,8 @@ describe("the finite-state guard (design §3)", () => {
         const contact = buildContact(setup, world);
         const drive = contact.drive as TrackDrive;
         const arc = { ...drive.arc, handArcRadius: 0.2, lowPoint: 0.06 };
-        expect(arc.handReach).toBe(0.15);
+        // Scaled a hair below 0.15 m: the shot's contact speed lies just under REACH_REF_SPEED.
+        expect(arc.handReach).toBeCloseTo(0.15, 3);
         const narrowed = { ...contact, drive: { ...drive, arc } };
         expect(() => validateImpact(narrowed, setup.balls, world)).toThrow(RangeError);
         expect(() => validateImpact(narrowed, setup.balls, world)).toThrow(
