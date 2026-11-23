@@ -1286,3 +1286,10 @@ since the baseline. `gapProbe head-speed --half` (new option) and throwaway trac
   table, so its L1 (model +1.9 z) carries that variation.
 - **Open.** Ball 1 leaving with the head, as Gugan sees it, needs the second and third contacts' balance changed in
   every roll, not the half roll's settings; it would reopen the full and pass rolls' fit adopted above.
+
+## The stop shots aren't stoppy (2026-11-23)
+
+Engine 0.45.0 (`2026-11-23-half-roll-drive-like`). The user, watching the viewer: "our stop shots aren't very stoppy".
+The card agrees: Gugan 5's stop ratio 4.94 against 7.15 (−3.7 z, a miss on every card since the baseline); the coaches'
+AC stop 4.13 against 4.10–6.20, at the band's floor. The croqueted ball goes too short for the striker's ball's travel,
+or the striker's ball too far. Open; not yet diagnosed.
