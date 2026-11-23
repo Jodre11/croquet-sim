@@ -1293,3 +1293,11 @@ Engine 0.45.0 (`2026-11-23-half-roll-drive-like`). The user, watching the viewer
 The card agrees: Gugan 5's stop ratio 4.94 against 7.15 (−3.7 z, a miss on every card since the baseline); the coaches'
 AC stop 4.13 against 4.10–6.20, at the band's floor. The croqueted ball goes too short for the striker's ball's travel,
 or the striker's ball too far. Open; not yet diagnosed.
+
+## The pass roll doesn't pass (2026-11-23)
+
+Engine 0.45.0. The user, watching the viewer: the pass roll "doesn't actually pass". The text book's ratio is 1.05
+(coaches' band 0–0.99: the striker's ball should go further than the croqueted ball); the card scores it within
+tolerance (z 0.62), which hides the point of the shot. Gugan 4's filmed pass rolls themselves read L2/L1 1.21, 0.94 and
+1.15 (C3P, C10P, C25P) and the model matches them (1.09, 1.02, 1.24), so the films are not the lever; the coaches'
+definition is. Open; not yet diagnosed.
