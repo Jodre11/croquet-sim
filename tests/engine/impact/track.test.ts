@@ -1035,9 +1035,11 @@ describe("the downswing (P2b.2b.2a design §3.5)", () => {
     });
 
     it.each(["table", "closed form"] as const)("starts an early hands window from the downswing, %s", (form) => {
-        // An early window replaces the hands' path from where the downswing has them, as an early pendulum window
-        // replaces the pendulum's dynamics: pivotHand and pivotVelocityHand are the downswing's there, not P₀ + V₀·t
-        // and V₀, and the window's end carries on from them.
+        // An early window starts the hands' pulse from where the downswing has them: pivotHand and pivotVelocityHand
+        // are the downswing's there, not P₀ + V₀·t and V₀. Engine 0.46.0 (the pass roll's early push, 2026-11-23; was
+        // the line from the window's start): the pulse rides the downswing and its continuation past contact, tilted
+        // onto the hands' slope at contact, so its end is that path's plus the pulse's, and the hands keep their
+        // velocity through contact.
         const across = vec3(0.05, 0, 0);
         const drop = vec3(0, 0, -0.02);
         const early = 0.01;
@@ -1068,10 +1070,19 @@ describe("the downswing (P2b.2b.2a design §3.5)", () => {
         // The test discriminates: the downswing's hand velocity there is not the contact velocity V₀.
         expect(dist(track.pivotVelocityHand, arc.pivotVelocity)).toBeGreaterThan(1e-3);
         const wh = arc.handWindow;
+        const end = early + wh;
+        const path =
+            end < LEAD
+                ? downswingHands(downswing, end - LEAD, downswingAt(downswing, end - LEAD))
+                : { P: add(arc.pivot, scale(arc.pivotVelocity, end)), V: arc.pivotVelocity };
+        const v0 = arc.pivotVelocity;
+        const k = v0.z / Math.hypot(v0.x, v0.y);
+        const tilt = (v: Vec3): Vec3 => add(v, vec3(0, 0, k * dot(v, arc.aim)));
         const accel = arc.pivotAcceleration;
-        expect(dist(track.pivotVelocityEnd, add(expected.V, scale(accel, wh)))).toBeLessThan(1e-12);
-        const travelled = add(add(expected.P, scale(expected.V, wh)), scale(accel, 0.5 * wh * wh));
-        expect(dist(track.pivotEnd, travelled)).toBeLessThan(1e-12);
+        expect(dist(track.pivotVelocityEnd, add(path.V, tilt(scale(accel, wh))))).toBeLessThan(1e-12);
+        expect(dist(track.pivotEnd, add(path.P, tilt(scale(accel, 0.5 * wh * wh))))).toBeLessThan(1e-12);
+        // Through contact the push's own path takes over, planned for a pulse along aim; this arc's pulse is across it,
+        // so continuity there is the roll's test (buildContact.test.ts, the hands arriving on their arc).
         const before = handsAt(track, early - 1e-12);
         const after = handsAt(track, early + 1e-12);
         expect(dist(before.position, after.position), "position").toBeLessThan(1e-9);

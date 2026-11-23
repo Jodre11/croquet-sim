@@ -787,15 +787,13 @@ describe("the mechanisms (design §8.1), on the canonical setups", () => {
     // and 1.2624): 1.8493 and 1.2824 m/s. P2b.2b.2b.2b: continuous α (was 1.8493 and 1.2824): 1.8412 and 1.2824 m/s.
     // P2b.2b.2b.2b: posture-holding push (was 1.8412 and 1.2824): 2.1111 and 1.3187 m/s. P2b.2b.2b.2b: hold relaxes from
     // the first departure (was 2.1111 and 1.3187): 1.8882 and 1.3607 m/s.
-    it.fails(
-        "the pass roll's punch leaves the striker's ball faster than a coasting pass roll",
-        () => {
-            const punched = simulateShot(canonicalSetup("pass-roll")).impact;
-            const coasted = simulateShot(canonicalSetup("pass-roll", { stroke: { drive: 0 } })).impact;
-            expect(strikerSpeed(punched)).toBeGreaterThan(strikerSpeed(coasted));
-        },
-        60_000,
-    );
+    // Engine 0.46.0 (was it.fails): the pass roll's hands push from 10 ms before contact, at 36° over a 30 ms window;
+    // 1.7733 against 1.6505 m/s.
+    it("the pass roll's punch leaves the striker's ball faster than a coasting pass roll", () => {
+        const punched = simulateShot(canonicalSetup("pass-roll")).impact;
+        const coasted = simulateShot(canonicalSetup("pass-roll", { stroke: { drive: 0 } })).impact;
+        expect(strikerSpeed(punched)).toBeGreaterThan(strikerSpeed(coasted));
+    }, 60_000);
 
     // Prototype: the impact starts 30 ms before contact; the head on the turf from 20.72 ms, the ball struck from
     // 31.05 ms; the striker's ball at 1.214 m/s against 1.380 on time.

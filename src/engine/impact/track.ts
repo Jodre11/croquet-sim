@@ -837,9 +837,29 @@ export function dipTravel(depth: number, duration: number, e: number): number {
 }
 
 /**
+ * Whether the hands' pulse starts on the downswing, before contact (the pass roll's early push, 2026-11-23): its base is
+ * then the downswing itself and its continuation (beforeHands), not the straight line from the pulse's start, so the
+ * hands arrive at contact on the planned path with no step in their velocity.
+ */
+function earlyPulse(arc: SwingArc): boolean {
+    return arc.downswing !== undefined && arc.handStart < arc.contactAt;
+}
+
+/**
+ * An early pulse's along-aim term `v` tilted onto the hands' path at contact: its rise k·(v·aim), k the downswing's
+ * slope there, which the push's arc takes on from (arcArrival), so the hands' velocity keeps its direction through
+ * contact.
+ */
+function onPath(arc: SwingArc, v: Vec3): Vec3 {
+    const c = beforeHands(arc, arc.contactAt).V;
+    const k = c.z / Math.sqrt(c.x * c.x + c.y * c.y);
+    return add(v, vec3(0, 0, k * dot(v, arc.aim)));
+}
+
+/**
  * The planned pivot at time t: before the hands' window (the downswing, or P₀ + V₀·t), then the minimum-jerk pulse of
- * mean A over the window T, s = τ/T: P_h + V_h·τ + A·T²·(s³ − s⁴/2), V_h + A·T·(3s² − 2s³), 6·A·s(1 − s); then
- * P_e + V_e·u (no reach, no dip).
+ * mean A over the window T, s = τ/T: P_h + V_h·τ + A·T²·(s³ − s⁴/2), V_h + A·T·(3s² − 2s³), 6·A·s(1 − s), on the
+ * downswing for a pulse begun before contact (earlyPulse); then P_e + V_e·u (no reach, no dip).
  */
 function planPivot(track: PreparedTrack, t: number): Motion {
     const { arc } = track;
@@ -851,13 +871,21 @@ function planPivot(track: PreparedTrack, t: number): Motion {
         const T = arc.handWindow;
         const tau = t - arc.handStart;
         const s = Math.min(tau / T, 1);
+        const travel = scale(arc.pivotAcceleration, T * T * (s * s * s * (1 - 0.5 * s)));
+        const gain = scale(arc.pivotAcceleration, T * (s * s * (3 - 2 * s)));
+        const push = scale(arc.pivotAcceleration, 6 * (s * (1 - s)));
+        if (earlyPulse(arc)) {
+            const on = beforeHands(arc, t);
+            return {
+                P: add(on.P, onPath(arc, travel)),
+                V: add(on.V, onPath(arc, gain)),
+                A: add(on.A, onPath(arc, push)),
+            };
+        }
         return {
-            P: add(
-                add(track.pivotHand, scale(track.pivotVelocityHand, tau)),
-                scale(arc.pivotAcceleration, T * T * (s * s * s * (1 - 0.5 * s))),
-            ),
-            V: add(track.pivotVelocityHand, scale(arc.pivotAcceleration, T * (s * s * (3 - 2 * s)))),
-            A: scale(arc.pivotAcceleration, 6 * (s * (1 - s))),
+            P: add(add(track.pivotHand, scale(track.pivotVelocityHand, tau)), travel),
+            V: add(track.pivotVelocityHand, gain),
+            A: push,
         };
     }
     const u = t - (arc.handStart + arc.handWindow);
@@ -1428,11 +1456,7 @@ const RETIME_STEP = 1e-3;
  * along-aim head pace over the finish. Returns `track` itself where it has no anchor, no push end or finish, is already
  * re-timed, or where k would be 1.
  */
-export function retimeFinish(
-    track: PreparedTrack,
-    head: MalletHead,
-    ballPace: (t: number) => number,
-): PreparedTrack {
+export function retimeFinish(track: PreparedTrack, head: MalletHead, ballPace: (t: number) => number): PreparedTrack {
     const { anchor, push } = track;
     if (
         anchor === undefined ||
@@ -1528,7 +1552,10 @@ function warped(anchor: Anchor | undefined, t: number): Warped {
 }
 
 /** The finish clock σ(t) (s), σ' and σ'' (FinishClock): t itself before its start. */
-function finishClockAt(clock: FinishClock, t: number): { readonly s: number; readonly ds: number; readonly dds: number } {
+function finishClockAt(
+    clock: FinishClock,
+    t: number,
+): { readonly s: number; readonly ds: number; readonly dds: number } {
     const { at, k, ease } = clock;
     if (t <= at) {
         return { s: t, ds: 1, dds: 0 };
@@ -1711,6 +1738,12 @@ export function prepareTrack(drive: TrackDrive, head: MalletHead, gravity: numbe
     const wh = drive.arc.handWindow;
     const atArc = beforeWindow(drive.arc, drive.arc.arcStart);
     const atHands = beforeHands(drive.arc, drive.arc.handStart);
+    // A pulse begun before contact ends on the downswing's continuation (earlyPulse), not the line from its start.
+    const early = earlyPulse(drive.arc);
+    const handsEnd = early
+        ? beforeHands(drive.arc, drive.arc.handStart + wh)
+        : { P: add(atHands.P, scale(atHands.V, wh)), V: atHands.V };
+    const pulse = (v: Vec3): Vec3 => (early ? onPath(drive.arc, v) : v);
     // Every stroke's hands hold the mallet through their hand–arm chains (gate round 3 ruling, 2026-10-11; P2b.2b.2c.3a
     // A2 item 4), which replace the arm mass riding rigidly at the top grip: the swung body is the head with the hands'
     // skin at the grips. The downswing still plans on the arm mass (swungBody, downswingInput).
@@ -1729,8 +1762,8 @@ export function prepareTrack(drive: TrackDrive, head: MalletHead, gravity: numbe
         omegaEnd: atArc.omega + arc.alpha * w,
         pivotHand: atHands.P,
         pivotVelocityHand: atHands.V,
-        pivotEnd: add(add(atHands.P, scale(atHands.V, wh)), scale(arc.pivotAcceleration, 0.5 * wh * wh)),
-        pivotVelocityEnd: add(atHands.V, scale(arc.pivotAcceleration, wh)),
+        pivotEnd: add(handsEnd.P, pulse(scale(arc.pivotAcceleration, 0.5 * wh * wh))),
+        pivotVelocityEnd: add(handsEnd.V, pulse(scale(arc.pivotAcceleration, wh))),
         dipAccel: (4 * arc.dip.depth) / (arc.dip.duration * arc.dip.duration),
         reach: null,
         push: null,

@@ -85,14 +85,14 @@ describe(
 );
 
 describe("the default follow-through timing", () => {
-    it("gives every stroke type a valid timing, on time", () => {
+    it("gives every stroke type a valid timing, on time but for the pass roll's early push", () => {
         expect(Object.keys(DEFAULT_TIMING).sort()).toEqual([...STROKE_TYPES].sort());
         for (const type of STROKE_TYPES) {
             const timing = DEFAULT_TIMING[type];
             for (const part of [timing.arc, timing.hands, timing.dip, timing.advance ?? 0]) {
                 expect(Number.isFinite(part), type).toBe(true);
             }
-            expect(timing, type).toEqual(ON_TIME);
+            expect(timing, type).toEqual(type === "pass-roll" ? { ...ON_TIME, hands: -0.01 } : ON_TIME);
         }
     });
 });

@@ -1300,4 +1300,22 @@ Engine 0.45.0. The user, watching the viewer: the pass roll "doesn't actually pa
 (coaches' band 0–0.99: the striker's ball should go further than the croqueted ball); the card scores it within
 tolerance (z 0.62), which hides the point of the shot. Gugan 4's filmed pass rolls themselves read L2/L1 1.21, 0.94 and
 1.15 (C3P, C10P, C25P) and the model matches them (1.09, 1.02, 1.24), so the films are not the lever; the coaches'
-definition is. Open; not yet diagnosed.
+definition is.
+
+Diagnosed and fixed (engine 0.46.0, card `2026-11-23-pass-roll-early-push`). The push did nothing: drive 0 to 1, push
+length and push gain all left the ratio at 1.052, because the hands' pulse began at contact and the balls part within
+about 1 ms. The striker's ball takes four or five taps as it bounces off the turf and the head catches it again over
+about 8 ms; a fifth tap adds about 0.15 m/s and turns 1.05 into 0.89, so the ratio jumps between those values rather
+than moving smoothly. A stronger hands' push made it worse and rougher. Two grids (lean, feet, onset, window, at powers
+0.5–1.1) found one robust plateau: 36° (C3P's lean; was 32°) with the hands' push begun 10 ms before contact over
+30 ms (was on time over 60 ms), Riches's "pronounced BUT SMOOTH acceleration" and the user's "start soft and smoothly
+accelerating". The early pulse now rides the downswing and its continuation, tilted onto the hands' slope at contact
+(was a straight line from the pulse's start, a 0.07 m/s step in the hands' velocity at contact).
+
+Text book on the 10 s lawn: 0.96 at power 0.5, 0.93 at 0.7, 0.97 at 0.9, 0.90 at 1.1, 0.65 at 1.3; coaches' row 0.964
+(was 1.05). The pass is real but slight at canonical power (about 10 cm in 3 m). The punch test, expected to fail since
+P2b.2b.2b.2b, now passes: 1.7733 against 1.6505 m/s coasting.
+
+Cost: C25P (8.85 m/s) is out of the text book's reach, whose fastest planned contact at 36° is 8.82 m/s, so its rows
+score as unplayed (was clean, L2/L1 1.24). At 35° the reach is 8.86 m/s but the canonical pass is 0.99, a pass in name
+only. Kept at 36°; the choice is the user's.

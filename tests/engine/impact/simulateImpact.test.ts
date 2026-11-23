@@ -53,8 +53,8 @@ const SUNK = vec3(
 );
 
 describe("simulateImpact", () => {
-    it("is version 0.45.0", () => {
-        expect(ENGINE_VERSION).toBe("0.45.0");
+    it("is version 0.46.0", () => {
+        expect(ENGINE_VERSION).toBe("0.46.0");
     });
 
     it("starts a centre-struck ball rolling at 5/7 of its launch speed in phase 2", () => {
@@ -668,20 +668,25 @@ describe("the roll's impact (P2b.2b.2b.2b design §4.2)", () => {
         }
     });
 
-    it("latches the striker's ball's first departure, not a later one, as the hold's relaxation start", () => {
-        // Gate ruling round 13, "Relax from first departure": the canonical pass roll meets the striker's ball twice
-        // at the 1 mm default gap (0.005–1.035 and 2.645–26.305 ms), and its
-        // departure is the end of the first face interval, to within a step; a latch that moved with each opening would
-        // end at the last.
-        const setup = canonicalSetup("pass-roll", { world: WORLD });
-        const result = simulateImpact(buildContact(setup, WORLD), setup.balls, WORLD);
-        const intervals = result.timeline[`face/${setup.striker}`] ?? [];
-        expect(intervals.length).toBeGreaterThan(1);
-        const first = intervals[0] as { start: number; end: number };
-        expect(result.departure).toBeDefined();
-        expect(Math.abs((result.departure as number) - first.end)).toBeLessThanOrEqual(IMPACT_DT * 1.000001);
-        expect(result.departure as number).toBeLessThan((intervals[1] as { start: number }).start);
-    });
+    // 120 s: about 17 s alone at engine 0.46.0 (the pass roll's impact starts 10 ms early), past 60 s under the suite.
+    it(
+        "latches the striker's ball's first departure, not a later one, as the hold's relaxation start",
+        { timeout: 120_000 },
+        () => {
+            // Gate ruling round 13, "Relax from first departure": the canonical pass roll meets the striker's ball twice
+            // at the 1 mm default gap (0.005–1.035 and 2.645–26.305 ms), and its
+            // departure is the end of the first face interval, to within a step; a latch that moved with each opening would
+            // end at the last.
+            const setup = canonicalSetup("pass-roll", { world: WORLD });
+            const result = simulateImpact(buildContact(setup, WORLD), setup.balls, WORLD);
+            const intervals = result.timeline[`face/${setup.striker}`] ?? [];
+            expect(intervals.length).toBeGreaterThan(1);
+            const first = intervals[0] as { start: number; end: number };
+            expect(result.departure).toBeDefined();
+            expect(Math.abs((result.departure as number) - first.end)).toBeLessThanOrEqual(IMPACT_DT * 1.000001);
+            expect(result.departure as number).toBeLessThan((intervals[1] as { start: number }).start);
+        },
+    );
 
     it("runs a roll with no push to a normal finish", () => {
         // Review focus 1: a push of 0 puts the arc's low point at contact and starts the pendulum phase there.

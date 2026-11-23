@@ -556,8 +556,9 @@ const CANONICAL_APPROACH: Readonly<Record<StrokeType, number>> = {
     // P2b.2b.2b.2c: the mallet: CANONICAL_CLEARANCE's (was 29.5203e-3, 36.6544e-3 and 39.7589e-3).
     "half-roll": 39.1827e-3,
     "full-roll": 45.9355e-3,
-    // Shapes design §8, ruling 14's approval: the pass roll's lean 32° (was 48.8202e-3 at 34°).
-    "pass-roll": 46.8985e-3,
+    // Shapes design §8, ruling 14's approval: the pass roll's lean 32° (was 48.8202e-3 at 34°). 2026-11-23: 36°, where
+    // the early push passes (was 46.8985e-3 at 32°).
+    "pass-roll": 50.7344e-3,
 };
 
 /** Each preset's default lean in degrees (P2b.2b.2b.1 design §4): the swing presets' unchanged, the rolls' Gugan's. */
@@ -570,7 +571,7 @@ const DEFAULT_LEAN: Readonly<Record<StrokeType, number>> = {
     "half-roll": 24,
     "full-roll": 31,
     // Shapes design §8, ruling 14's approval: Gugan's lowest, 32° (was 34°, his mean).
-    "pass-roll": 32,
+    "pass-roll": 36,
 };
 
 describe("the default profile's canonical setups", () => {
@@ -588,8 +589,15 @@ describe("the default profile's canonical setups", () => {
     it.each(STROKE_TYPES)("%s starts at contact, by its planned clearance, its approach as planned", (type) => {
         const world = defaultWorld();
         const c = buildContact(canonicalSetup(type, { world }), world);
-        expect(arcOf(c).contactAt).toBe(0);
-        expect(headLowestPoint(c, c.head)).toBeCloseTo(CANONICAL_CLEARANCE[type], 6);
+        // The pass roll's hands push from 10 ms before contact (2026-11-23), so its impact starts there, the head still
+        // on the downswing above its clearance at contact.
+        const early = type === "pass-roll";
+        expect(arcOf(c).contactAt).toBe(early ? 0.01 : 0);
+        if (early) {
+            expect(headLowestPoint(c, c.head)).toBeGreaterThan(CANONICAL_CLEARANCE[type]);
+        } else {
+            expect(headLowestPoint(c, c.head)).toBeCloseTo(CANONICAL_CLEARANCE[type], 6);
+        }
         expect(swingApproach(c).clearance).toBeCloseTo(CANONICAL_APPROACH[type], 6);
     });
 

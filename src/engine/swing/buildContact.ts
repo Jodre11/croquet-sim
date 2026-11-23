@@ -132,8 +132,8 @@ export const HOLD_SPEED = 3;
 /**
  * The contact speed (m/s) at or above which a preset's handReach is travelled whole (soft follow-through design §2.2),
  * null where the preset has no reach: each roll text book's canonical contactSpeed (scripts/scratchReachRef.ts,
- * 2026-11-20: 3.000 m/s each, the half roll's an ulp under), rounded down to 1e-3 m/s, so the canonical strokes keep
- * their reach to the bit. Below it the reach scales with the contact speed: a softer stroke is the same stroke played
+ * 2026-11-20: 3.000 m/s each, the half roll's an ulp under, the pass roll's too at 36°, 2026-11-23), rounded down to
+ * 1e-3 m/s, so the canonical strokes keep their reach to the bit. Below it the reach scales with the contact speed: a softer stroke is the same stroke played
  * slower ("If you're not hitting the ball hard, you don't need to follow through or push through", the user,
  * 2026-11-20). The linear scale is an assumption.
  */
@@ -144,7 +144,7 @@ export const REACH_REF_SPEED: Readonly<Record<StrokeType, number | null>> = {
     "stop-gc": null,
     "half-roll": 2.999,
     "full-roll": 3,
-    "pass-roll": 3,
+    "pass-roll": 2.999,
 };
 
 function fail(message: string): never {

@@ -228,7 +228,7 @@ describe("one plan's run (P2b.2b.2c.3b plan Task 3)", () => {
         expect(sample.byLawn[10]?.ratio).toBeCloseTo(1.604, 3);
     });
 
-    it("plays the pass roll's text book at its canonical power, the head kept off the ball, at ratio 1.194", () => {
+    it("plays the pass roll's text book at its canonical power, the head kept off the ball, passing", () => {
         // Shapes design §8, ruling 17: a full roll with a 4° split, its 32° lean and a subtly punchier push (drive 0.5
         // over 60 ms pulses); was its own 15 ms punch at a 20° split, unlawful (29.1.6.1) at ratio 0.418. Ruling 18:
         // its follow-through 0.1 s keeps the head off the turf (was 0.3 s: ratio 0.814 in two passes). Hands-from-lean
@@ -250,14 +250,15 @@ describe("one plan's run (P2b.2b.2c.3b plan Task 3)", () => {
         // the head never outpaces the striker's ball; lawful in one pass, ratio 1.2426, as before §2.1.
         // Gap register, the third refit (engine 0.42.0; was 1.2426): lawful in one pass, ratio 1.1937, still past the
         // coaches' 0.99 (register G2). Gap register G2, the strike's grip (engine 0.44.0; was 1.1937): lawful in one
-        // pass, 1.0518, nearer the coaches' 0.99.
+        // pass, 1.0518, nearer the coaches' 0.99. Gap register, "The pass roll doesn't pass" (engine 0.46.0; was 1.0518):
+        // the hands push from 10 ms before contact over 30 ms at 36°; lawful in one pass, 0.9642, inside the coaches'.
         const base = mapSetup("pass-roll", textBook("pass-roll"), 1);
         const p = swingReference["pass-roll"].defaultBackswing.value / bodyBackswing(base, WORLD);
         const sample = playSample("pass-roll", textBook("pass-roll"), p, [10], "preset");
         expect(sample.klass).toBeNull();
         expect(sample.reason).toBeNull();
         expect(sample.passes).toBe(1);
-        expect(sample.byLawn[10]?.ratio).toBeCloseTo(1.0518, 4);
+        expect(sample.byLawn[10]?.ratio).toBeCloseTo(0.9642, 4);
     });
 
     it(

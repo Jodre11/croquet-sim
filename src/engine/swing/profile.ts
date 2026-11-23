@@ -414,7 +414,9 @@ export const defaultProfile: SwingProfile = {
         // roll being a full roll with a little more lean.
         // Hands-from-lean design §2: the full roll's set-up at its own lean with the fist, the bottom hand "fisted,
         // lower, touching the brass ring" (was top 0.61, bottom 0.3).
-        "pass-roll": leaningStance("pass-roll", 32 * DEG, 0, { gripTension: 1, bottomGrip: 1 }),
+        // 2026-11-23: 36°, C3P's (was 32°): with the push begun early (DEFAULT_TIMING) it is the plateau where the pass
+        // roll passes, its ratio 0.88–0.97 from power 0.5 to 1.1 (gap register, "The pass roll doesn't pass").
+        "pass-roll": leaningStance("pass-roll", 36 * DEG, 0, { gripTension: 1, bottomGrip: 1 }),
     },
     drive: DRIVE,
     shape: Object.fromEntries(
@@ -451,7 +453,7 @@ export const DEFAULT_DRIVE: Readonly<Record<StrokeType, number>> = {
  */
 export const DEFAULT_WINDOW: Readonly<Partial<Record<StrokeType, number>>> = {
     "full-roll": 0.08,
-    "pass-roll": 0.06,
+    "pass-roll": 0.03,
 };
 
 /** Every action on time. */
@@ -469,5 +471,7 @@ export const DEFAULT_TIMING: Readonly<Record<StrokeType, StrokeTiming>> = {
     "stop-gc": ON_TIME,
     "half-roll": ON_TIME,
     "full-roll": ON_TIME,
-    "pass-roll": ON_TIME,
+    // The pass roll's hands push from 10 ms before contact (2026-11-23): Riches's "pronounced BUT SMOOTH acceleration",
+    // the user's "start soft and smoothly accelerating". On time, the push began as the balls parted and moved nothing.
+    "pass-roll": { arc: 0, hands: -0.01, dip: 0 },
 };
