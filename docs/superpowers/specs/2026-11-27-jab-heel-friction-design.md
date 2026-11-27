@@ -87,7 +87,7 @@ The heel's back edge would dig into the turf and plough, Reece's N_c on the edge
 
 ## 5. Rulings for the user
 
-1. **Option.** A, B or C. Recommended: A.
+1. **Option.** A, B or C. Recommended: A. **Ruled A** (user, 2026-11-27): "A is what the player does in practice".
 2. **The default AC stop.** Does the default AC stop (power-dependent, the coaches' row) adopt the grounded jab, or
    only Gugan 5's setup? Recommended: the default too, since the jab is the default since 2026-11-27 and a jab whose
    heel never reaches the turf is not Gugan's jab.
