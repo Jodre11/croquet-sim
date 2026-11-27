@@ -88,8 +88,24 @@ The heel's back edge would dig into the turf and plough, Reece's N_c on the edge
 ## 5. Rulings for the user
 
 1. **Option.** A, B or C. Recommended: A. **Ruled A** (user, 2026-11-27): "A is what the player does in practice".
-2. **The default AC stop.** Does the default AC stop (power-dependent, the coaches' row) adopt the grounded jab, or
-   only Gugan 5's setup? Recommended: the default too, since the jab is the default since 2026-11-27 and a jab whose
-   heel never reaches the turf is not Gugan's jab.
-3. **Turf contact.** A grounded sole rubs the turf without damage. Is a jab allowed to raise turf-yield if the fit
-   needs it? Recommended: no. Keep the turf rule, and report the shortfall instead.
+2. **The default AC stop.** **Ruled: the default too** (user, 2026-11-27). The user's account: "It gives a better
+   stop shot as long as you time it right. The mistake that players make is jabbing before contact. That can lead to
+   a very weak strike. Also, if the shot is very hard, it may be impractical to jab the ground. The timing gets more
+   difficult ... and you may damage the lawn."
+3. **Turf contact.** **Ruled: damage stays a fault** (same account). A grounded sole rubs the turf without damage. A
+   jab that raises turf-yield or impact-head-deep is reported as a fault and is not exempted.
+
+## 6. What the user's account adds to acceptance
+
+All three are outcomes the model must show from its inputs alone. None is scripted: there is no taper of the jab by
+power in the plan.
+
+- **Timing matters.** A jab whose dip grounds the sole before contact gives a weak strike. Probe: the dip moved early
+  until the sole grounds before the first tap. Expected: the croqueted ball's speed falls well below the on-time
+  jab's, and the stop is no better.
+- **Hard shots.** The brake the head needs grows with U, and the time between the taps does not grow with it. So the
+  sole must bear more in the same time: it presses deeper, and at the 1.48 mm elastic limit it yields. Expected:
+  above some power the grounded jab raises turf-yield, or its timing window closes. Report the power where that
+  begins. The coaches' row shows whether the default stop at that power should be played without the jab, which is
+  the user's call when the result is in.
+- **On time, it is a better stop.** At the powers where it is clean, the grounded jab's ratio beats the plain stop's.
