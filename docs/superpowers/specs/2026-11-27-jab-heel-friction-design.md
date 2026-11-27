@@ -109,3 +109,27 @@ power in the plan.
   begins. The coaches' row shows whether the default stop at that power should be played without the jab, which is
   the user's call when the result is in.
 - **On time, it is a better stop.** At the powers where it is clean, the grounded jab's ratio beats the plain stop's.
+
+## 7. Implementation probe (2026-11-27): a clean grounded sole is out of reach
+
+These are measurements on Gugan 5's setup. In each one the dip starts 10 ms early.
+
+- **A level sole cannot land.** A sole within about 3 mm of the turf at contact meets the turf before contact. The
+  swing pitches the head through contact, so its front edge is lower earlier in the downswing. The head then
+  ploughs for about 70 ms before it reaches the ball, and the strike is weak. This is the user's early jab, and the
+  model shows it unprompted.
+- **The lowest clean head lands its heel during the first tap at every back lean from −7° to −3°.** Its heel corner
+  is a wedge of at least 3°. In 0.5 ms the jab sinks it about 0.2 mm, and the wedge yields at once. The bearing
+  stays at 20–37 N, so the second tap is unchanged (0.424–0.428U).
+- **Gugan's brake comes only with a dig.** The head is as low as it goes clean, and the stop is played at lean −3°
+  with contact 0.2 mm above the face centre:
+
+  | Jab | Second tap / U | Ratio | Deepest | Turf |
+  |---|---|---|---|---|
+  | 5 mm (default) | 0.424 | – | – | yields |
+  | 10 mm | 0.416 | 7.19 | 2.72 mm | turf-yield, impact-head-deep |
+  | 15 mm | 0.392 | 10.20 | 3.58 mm | turf-yield, impact-head-deep |
+
+  Gugan 5 gives 0.400U and a ratio of 7.15. The model reaches his ratio only by digging the heel about 2.7 mm into
+  the turf, beyond the 2 mm damage limit. The turf rule (§5, ruling 3) forbids that, so option A as specified cannot
+  meet acceptance 1–3 together. This needs the user's ruling.
