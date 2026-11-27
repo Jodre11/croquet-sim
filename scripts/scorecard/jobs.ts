@@ -30,6 +30,7 @@ import { FILMED_STROKES, FREE_COLLISIONS, TABLE2_FACE } from "../filmedStrokes";
 import { playRoutes } from "../followThrough";
 import { openWorld, opened } from "../openLawn";
 import {
+    asFilmed,
     CA_STROKES,
     effectiveMassOf,
     figuresOf,
@@ -67,7 +68,7 @@ function cardGap(stroke: (typeof FILMED_STROKES)[number]): number {
 function table5Touching(name: string): Record<string, Measured> {
     const stroke = FILMED_STROKES.find((s) => s.name === name) as (typeof FILMED_STROKES)[number];
     const world = openWorld(LAWN);
-    const setup = opened(guganSetup(stroke.preset, stroke.malletSpeed, 0, { world }));
+    const setup = opened(guganSetup(stroke.preset, stroke.malletSpeed, 0, { world, ...asFilmed(stroke.preset) }));
     const read = readOut(setup, world);
     const figures = figuresOf(read, effectiveMassOf(setup, world) / world.ball.mass);
     const at = read.samples.find((s) => s.t >= read.time) ?? read.samples[read.samples.length - 1];
@@ -82,7 +83,9 @@ function table5Touching(name: string): Record<string, Measured> {
 function table5(name: string): Record<string, Measured> {
     const stroke = FILMED_STROKES.find((s) => s.name === name) as (typeof FILMED_STROKES)[number];
     const world = openWorld(LAWN);
-    const setup = opened(guganSetup(stroke.preset, stroke.malletSpeed, cardGap(stroke), { world }));
+    const setup = opened(
+        guganSetup(stroke.preset, stroke.malletSpeed, cardGap(stroke), { world, ...asFilmed(stroke.preset) }),
+    );
     const read = readOut(setup, world);
     const figures = figuresOf(read, effectiveMassOf(setup, world) / world.ball.mass);
     const at = read.samples.find((s) => s.t >= read.time) ?? read.samples[read.samples.length - 1];

@@ -1318,6 +1318,19 @@ stop, now played with the jab, 4.94 → 5.59 (z −3.7 → −2.6). Cost: Table 
 5.66 against 6.60. Objective 6.64 → 7.09. Whether Gugan 4's Table 5 stops were jab stops is not established; if they
 were plain stops, playing them without the jab would restore those rows.
 
+Gugan 4 says they were (user ruling 2026-11-27: play each shot as Gugan did, so the model gives Gugan's results). All
+Table 5's stops "were made with an uppish mallet stroke", the striker's ball leaving the ground slightly with "rather
+small spin", and their W/U (0.29–0.31) matches the drives' (0.29–0.33). The card and the fit now play them plain
+(`asFilmed`: no jab, the dip on time): card `2026-11-27-stop-filmed-plain`, objective 7.09 → 6.64, every Table 5 stop
+row as on `2026-11-23-pass-roll-early-push`. Gugan 5's stops keep the jab.
+
+The model's jab is not Gugan 5's. His heel meets the turf after the first tap, and its friction slows the mallet to
+0.400U at the second tap, against 0.463U unrestricted. On Gugan 5's setup (his mallet, 3 m/s, his balls) the model's
+second tap is at 0.415U plain, already near his jab's, and the jab raises it (0.428 at 5 mm, 0.434 at 7.5 mm, 0.441 at
+10 mm); the head reaches the turf only at 15–18 ms, long after the second tap at about 1.1 ms, or never. The ratio
+rises with the jab (4.86, 5.59, 6.07, 6.57; 10 mm digs) through the striker's ball's flight and spin (no hop, more
+backspin), not the mallet's braking. Open.
+
 ## The pass roll doesn't pass (2026-11-23)
 
 Engine 0.45.0. The user, watching the viewer: the pass roll "doesn't actually pass". The text book's ratio is 1.05

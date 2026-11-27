@@ -41,7 +41,7 @@ import {
     stanceLean,
 } from "../src/engine/swing/buildContact";
 import { FIST, handsForLean } from "../src/engine/swing/hands";
-import { defaultProfile } from "../src/engine/swing/profile";
+import { ON_TIME, defaultProfile } from "../src/engine/swing/profile";
 import {
     CROQUET_STROKES,
     type ShotSetup,
@@ -839,6 +839,15 @@ export function digestGrid(
 }
 
 /**
+ * guganSetup's options for a Gugan 4 filmed stroke on `preset`: the AC stop plain, no jab and its dip on time, as Gugan
+ * filmed it ("an uppish mallet stroke", Gugan 4 §9; user ruling 2026-11-27, play each shot as Gugan did); none for
+ * the other presets.
+ */
+export function asFilmed(preset: StrokeType): { readonly jab?: number; readonly timing?: StrokeTiming } {
+    return preset === "stop-ac" ? { jab: 0, timing: ON_TIME } : {};
+}
+
+/**
  * Every filmed stroke (FILMED_STROKES) played on its preset at its U and at `gapOf`'s gap (default the recorded one),
  * with the preset's own push, no jab and the default mallet (design §5.2), on `o.world` (default `defaultWorld()`) at
  * `o.dt`'s step: its read-out, and its figures with k effectiveMassOf's over the ball's mass.
@@ -856,7 +865,7 @@ export function filmedStrokeRuns(
     const step: StepOption = o.dt === undefined ? {} : { dt: o.dt };
     return FILMED_STROKES.map((stroke) => {
         const gap = gapOf(stroke);
-        const setup = guganSetup(stroke.preset, stroke.malletSpeed, gap, { world });
+        const setup = guganSetup(stroke.preset, stroke.malletSpeed, gap, { world, ...asFilmed(stroke.preset) });
         const read = readOut(setup, world, step);
         return { stroke, gap, read, figures: figuresOf(read, effectiveMassOf(setup, world) / world.ball.mass) };
     });
