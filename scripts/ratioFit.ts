@@ -635,8 +635,11 @@ function atSpeed(setup: ShotSetup, speed: number, world: World): ShotSetup {
     return { ...setup, stroke: { ...setup.stroke, ...strokeFor(setup, speed, world) } };
 }
 
-/** Numerical, not physical: gugansMallet's most re-plans of the stroke at the solved head's mass. */
-const HEAD_PASSES = 4;
+/**
+ * Numerical, not physical: gugansMallet's most re-plans of the stroke at the solved head's mass. 8 (was 4) for the AC
+ * stop's early jab, whose passes close by about 1e-4 a pass (engine 0.47.0).
+ */
+const HEAD_PASSES = 8;
 
 /**
  * Gugan's mallet for `type` at `speed` (m/s) on `world` (default `defaultWorld()`): the default mallet with the head's

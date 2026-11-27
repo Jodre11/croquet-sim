@@ -2,7 +2,7 @@
  * The inputs' spans (side-on viewer spec §2): each input continuous within the span the map graded for the hold, its
  * grid values as ticks; beyond the span the band is unknown and the control stops there.
  */
-import { defaultProfile } from "../engine/swing/profile";
+import { DEFAULT_JAB, defaultProfile } from "../engine/swing/profile";
 import type { MapPlan, MapType } from "../lab/index";
 import type { BandTable } from "../lab/judge";
 import type { StrokeExtras } from "../lab/play";
@@ -52,23 +52,25 @@ export function playableSpans(tables: readonly BandTable[], picked: BandTable): 
     };
 }
 
-/** The extras' playable spans (design §5.1): each hand's grip tension and the follow-through (s). */
+/** The extras' playable spans (design §5.1): each hand's grip tension, the follow-through (s) and the jab (m). */
 export const EXTRA_SPANS = {
     gripTension: { least: 0.05, most: 1, step: 0.05 },
     bottomGrip: { least: 0.05, most: 1, step: 0.05 },
     followThrough: { least: 0, most: 0.3, step: 0.01 },
+    jab: { least: 0, most: 0.02, step: 0.0005 },
 } as const;
 
 /** The extras the viewer moves, each at its value. */
 export type ExtraValues = Readonly<Record<keyof typeof EXTRA_SPANS, number>>;
 
-/** `type`'s defaults for the extras: its stance's grip tensions and its shape's follow-through. */
+/** `type`'s defaults for the extras: its stance's grip tensions, its shape's follow-through and its jab (0: none). */
 export function extraDefaults(type: MapType): ExtraValues {
     const stance = defaultProfile.stance[type];
     return {
         gripTension: stance.gripTension,
         bottomGrip: stance.bottomGrip,
         followThrough: defaultProfile.shape[type].followThrough,
+        jab: DEFAULT_JAB[type] ?? 0,
     };
 }
 

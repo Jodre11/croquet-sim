@@ -1294,6 +1294,30 @@ The card agrees: Gugan 5's stop ratio 4.94 against 7.15 (−3.7 z, a miss on eve
 AC stop 4.13 against 4.10–6.20, at the band's floor. The croqueted ball goes too short for the striker's ball's travel,
 or the striker's ball too far. Open; not yet diagnosed.
 
+Diagnosed and changed (engine 0.47.0, card `2026-11-27-stop-jab`; user ruling 2026-11-27, "Adopt the jab", over the
+2026-11-05 no-dip ruling). The head strikes the striker's ball twice. At power 0.9 on the 10 s lawn the head slows
+from 2.93 to 1.31 m/s in the first tap; the striker's ball gives the croqueted ball its speed (3.24 m/s) and drops to
+0.73 m/s, and about 1 ms later the head catches it again and lifts it to 1.58 m/s. The ratio, about 4.2, is the second
+tap's. That contact is physical: Gugan 4's filmed stops leave the striker's ball at 0.51 of the mallet's speed (C3S;
+model 0.54) and the mallet at 0.29 (model 0.31). Grips (γ_T 0.25–1, g_B 0.1–1), the check's gain (to ×8) and window
+(2–10 ms), and the lean (−3° to −6°; −9° digs) moved the ratio only 4.15–4.5, since the hands cannot slow the head in
+the 0.4 ms between taps; an early check made the head state non-finite. Gugan 5's stops are jab stops ("a downward
+'jab' just before impact"): the jab, the hands' dip begun before contact, did move it. Depth 5–15 mm by onset −25 to
+−3 ms at power 0.9: −20 ms and earlier change nothing, and from 10 mm, or 5 mm at −5 ms at power 0.5, the head digs the
+turf. Chosen: 5 mm from 10 ms before contact (DEFAULT_JAB, DEFAULT_TIMING). The text book's ratio:
+
+| Power | 0.3 | 0.5 | 0.7 | 0.9 | 1.1 | 1.3 |
+|---|---|---|---|---|---|---|
+| plain | 4.47 | 4.28 | 4.22 | 4.16 | 3.98 (turf) | 3.86 |
+| jab | 5.96 | 5.21 | 4.88 | 4.71 | 4.62 | 4.28 (superhuman) |
+
+The striker's ball no longer hops off the face (vertical −0.04 m/s at the handover, was +0.22). The hands slip in the
+follow-through from power 1 (was 1.25), the balls gone. Card: `coach.stop-ac` 4.13 → 4.68 (band 4.1–6.2); Gugan 5's
+stop, now played with the jab, 4.94 → 5.59 (z −3.7 → −2.6). Cost: Table 5's filmed stops spin back too hard, Ω₁ C3S
+−45 against −14, C10S −33 against −12, C20S −27 against −12; C10S's L2/L1 5.48 against 4.20, while C3S's moves to
+5.66 against 6.60. Objective 6.64 → 7.09. Whether Gugan 4's Table 5 stops were jab stops is not established; if they
+were plain stops, playing them without the jab would restore those rows.
+
 ## The pass roll doesn't pass (2026-11-23)
 
 Engine 0.45.0. The user, watching the viewer: the pass roll "doesn't actually pass". The text book's ratio is 1.05

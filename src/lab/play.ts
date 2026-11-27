@@ -74,11 +74,15 @@ export interface StrokeExtras {
     readonly followThrough?: number;
     /** The fist (hands-from-lean design §2), the stroke's `fist`. */
     readonly fist?: boolean;
+    /** The jab (m), the stroke's `jab`: the hands' dip deepened by it. */
+    readonly jab?: number;
+    /** The dip's timing from the pendulum's pulse (s), the stroke's `timing.dip`. */
+    readonly dip?: number;
 }
 
 /** The stroke fields `extras` gives, to spread over a stroke (none for none). */
 function extrasStroke(extras: StrokeExtras, grip: ShotSetup["stroke"]["grip"]): Partial<ShotSetup["stroke"]> {
-    const { gripTension, bottomGrip, followThrough, fist } = extras;
+    const { gripTension, bottomGrip, followThrough, fist, jab } = extras;
     const gripped =
         gripTension === undefined && bottomGrip === undefined
             ? {}
@@ -93,6 +97,7 @@ function extrasStroke(extras: StrokeExtras, grip: ShotSetup["stroke"]["grip"]): 
         ...gripped,
         ...(followThrough === undefined ? {} : { followThrough }),
         ...(fist === undefined ? {} : { fist }),
+        ...(jab === undefined ? {} : { jab }),
     };
 }
 
@@ -254,7 +259,12 @@ export function mapSetup(
             drive: plan.drive,
             handReach: plan.handReach,
             window: plan.window,
-            timing: { ...base.stroke.timing, hands: plan.onset + early, arc: base.stroke.timing.arc + early },
+            timing: {
+                ...base.stroke.timing,
+                hands: plan.onset + early,
+                arc: base.stroke.timing.arc + early,
+                ...(extras.dip === undefined ? {} : { dip: extras.dip }),
+            },
             ...extrasStroke(extras, base.stroke.grip),
         },
     };

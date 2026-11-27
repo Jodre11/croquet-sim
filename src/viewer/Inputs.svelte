@@ -33,9 +33,14 @@
         gripTension: "Top hand's grip",
         bottomGrip: "Bottom hand's grip",
         followThrough: "Follow-through",
+        jab: "Jab",
     };
     const extraShown = (extra: Extra, value: number): string =>
-        extra === "followThrough" ? `${(value * 1000).toFixed(0)} ms` : value.toFixed(2);
+        extra === "followThrough"
+            ? `${(value * 1000).toFixed(0)} ms`
+            : extra === "jab"
+              ? `${(value * 1000).toFixed(1)} mm`
+              : value.toFixed(2);
 
     const NAMES: Record<Input, string> = {
         lean: "Lean",

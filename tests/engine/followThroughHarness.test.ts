@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { IMPACT_DT } from "../../src/engine/impact/integrate";
 import { length } from "../../src/engine/math/vec3";
 import { simulateShot } from "../../src/engine/shot";
-import { DEFAULT_DRIVE, DEFAULT_TIMING } from "../../src/engine/swing/profile";
+import { DEFAULT_DRIVE, DEFAULT_JAB, DEFAULT_TIMING } from "../../src/engine/swing/profile";
 import { ratioTargetsReference } from "../../src/reference/index";
 import { buildContact } from "../../src/engine/swing/buildContact";
 import type { StrokeTiming } from "../../src/engine/swing/types";
@@ -173,13 +173,14 @@ describe("the follow-through harness (P2b.2b.2c.2d design §3.4)", () => {
             // the brake acts with the strike), on Gugan's mallet solved at that stance and the AC stop's own grips, at
             // the croquet gap Gugan measured: the ratio of the croqueted ball's travel to the striker's must stay
             // within the mean's standard error of his 7.15. The stance was set so that the head does not damage the
-            // turf (6.66 here; 7.34 at 6° and 20 mm, which dug 3.6 mm deep), not to match the ratio.
+            // turf (6.66 here; 7.34 at 6° and 20 mm, which dug 3.6 mm deep), not to match the ratio. Engine 0.47.0:
+            // Gugan 5's stops are jab stops, played with the AC stop's default jab (5.59; 4.86 without).
             const target = ratioTargetsReference["stop-ac"].ratio;
             const canonical = canonicalSetup("stop-ac", { world: WORLD });
             const setup = guganSetup("stop-ac", 3, DEFAULT_CROQUET_GAP, {
                 world: WORLD,
                 gugan: true,
-                jab: 0,
+                jab: DEFAULT_JAB["stop-ac"] ?? 0,
                 lean: leanOf(canonical, WORLD),
                 up: canonical.stroke.contact.up,
                 grips: "stop-ac",

@@ -495,7 +495,8 @@ describe("the push map practises (P2b.2b.2c.3b.1 plan Task 7)", () => {
         const slipped = playSample("stop-ac", textBook("stop-ac"), 1.25, [10]);
         expect(slipped.klass).toBeNull();
         expect(slipped.followSlip).toBe(true);
-        expect(playSample("stop-ac", textBook("stop-ac"), 1, [10]).followSlip).toBe(false);
+        // Engine 0.47.0: the jab's hands slip from p 1 (was above it), the balls gone; 0.95 plays without.
+        expect(playSample("stop-ac", textBook("stop-ac"), 0.95, [10]).followSlip).toBe(false);
         expect(playSample("stop-ac", { ...textBook("stop-ac"), feet: 2 }, 0.5, [10]).followSlip).toBe(false);
     }, 120_000);
 

@@ -8,7 +8,7 @@ import { vec3 } from "../engine/math/vec3";
 import { CROQUET_GAP_LIMIT } from "../engine/shot";
 import { handsAheadFor, headShapeOf, stanceLean } from "../engine/swing/buildContact";
 import { FIST, handsForLean } from "../engine/swing/hands";
-import { DEFAULT_DRIVE, DEFAULT_TIMING, DEFAULT_WINDOW, defaultProfile } from "../engine/swing/profile";
+import { DEFAULT_DRIVE, DEFAULT_JAB, DEFAULT_TIMING, DEFAULT_WINDOW, defaultProfile } from "../engine/swing/profile";
 import {
     CROQUET_STROKES,
     STROKE_TYPES,
@@ -161,6 +161,7 @@ export function canonicalSetup(type: StrokeType, over: CanonicalOptions = {}): S
             ...(DEFAULT_WINDOW[type] === undefined ? {} : { window: DEFAULT_WINDOW[type] }),
             contact: { up: canonicalUp(type), side: 0 },
             timing: DEFAULT_TIMING[type],
+            ...(DEFAULT_JAB[type] === undefined ? {} : { jab: DEFAULT_JAB[type] }),
             ...over.stroke,
         },
         live,

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { plannedSpeed } from "../../../src/engine/swing/buildContact";
 import { DEFAULT_TIMING, ON_TIME } from "../../../src/engine/swing/profile";
-import { STROKE_TYPES, type ShotSetup } from "../../../src/engine/swing/types";
+import { STROKE_TYPES, type ShotSetup, type StrokeTiming, type StrokeType } from "../../../src/engine/swing/types";
 import { defaultWorld } from "../../../src/engine/world";
 import { swingReference } from "../../../src/reference/index";
 import { bodyTop } from "../../../scripts/effortFit";
@@ -85,14 +85,18 @@ describe(
 );
 
 describe("the default follow-through timing", () => {
-    it("gives every stroke type a valid timing, on time but for the pass roll's early push", () => {
+    it("gives every stroke type a valid timing, on time but for the pass roll's early push and the AC stop's jab", () => {
+        const early: Partial<Record<StrokeType, StrokeTiming>> = {
+            "pass-roll": { ...ON_TIME, hands: -0.01 },
+            "stop-ac": { ...ON_TIME, dip: -0.01 },
+        };
         expect(Object.keys(DEFAULT_TIMING).sort()).toEqual([...STROKE_TYPES].sort());
         for (const type of STROKE_TYPES) {
             const timing = DEFAULT_TIMING[type];
             for (const part of [timing.arc, timing.hands, timing.dip, timing.advance ?? 0]) {
                 expect(Number.isFinite(part), type).toBe(true);
             }
-            expect(timing, type).toEqual(type === "pass-roll" ? { ...ON_TIME, hands: -0.01 } : ON_TIME);
+            expect(timing, type).toEqual(early[type] ?? ON_TIME);
         }
     });
 });

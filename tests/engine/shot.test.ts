@@ -16,7 +16,7 @@ import { ZERO, add, cross, dot, horizontal, length, scale, sub, vec3, type Vec3 
 import { simulateShot, strokeContext, type ShotOutcome } from "../../src/engine/shot";
 import { simulateFreeMotion } from "../../src/engine/simulate";
 import { MAX_LEAD, buildContact, planStroke, swingApproach } from "../../src/engine/swing/buildContact";
-import { defaultProfile } from "../../src/engine/swing/profile";
+import { ON_TIME, defaultProfile } from "../../src/engine/swing/profile";
 import type { SwingTrajectory } from "../../src/engine/swing/trajectory";
 import { STROKE_TYPES, type ShotSetup } from "../../src/engine/swing/types";
 import { BALL_IDS, type BallId, type BallState, type Hoop, type World } from "../../src/engine/types";
@@ -740,7 +740,11 @@ describe("the mechanisms (design §8.1), on the canonical setups", () => {
         // P2b.2b.2c.3a gate stage 2: the AC stop's grip retune (was the default grip): the stroke takes the jab
         // variant's grip. At the hands together and the firm top hand the 2 mm jab never meets the turf in the impact
         // (events ["turf-lift"] alone), so the default grip no longer shows the turf's braking.
-        const jabbed = canonicalSetup("stop-ac", { croquetGap: 0, stroke: { jab: J_ON, grip: JAB_GRIP } });
+        // Engine 0.47.0: the dip on time, as measured (the AC stop's default jab dips 10 ms early).
+        const jabbed = canonicalSetup("stop-ac", {
+            croquetGap: 0,
+            stroke: { jab: J_ON, grip: JAB_GRIP, timing: ON_TIME },
+        });
         const { impact, turf } = braking(jabbed);
         const dug = impact.timeline["head/turf"]?.[0] as ContactInterval;
         expect(dug).toBeDefined();
@@ -803,7 +807,8 @@ describe("the mechanisms (design §8.1), on the canonical setups", () => {
     // P2b.2b.2c.2b: the croquet gap's default, 1 mm; pinned at gap 0, where the early dip's slowing was measured:
     // at 1 mm both runs double-tap the striker's ball (on time 0.005–1.095 and 1.265–2.620 ms, early 30.355–31.450
     // and 31.635–32.985 ms), and along the lawn the early one leaves faster, 1.5050 against 1.4661 m/s.
-    const onTimeDip = () => simulateShot(canonicalSetup("stop-ac", { croquetGap: 0, stroke: { jab: J_EARLY } })).impact;
+    const onTimeDip = () =>
+        simulateShot(canonicalSetup("stop-ac", { croquetGap: 0, stroke: { jab: J_EARLY, timing: ON_TIME } })).impact;
     const earlyOutcome = () =>
         simulateShot(
             canonicalSetup("stop-ac", {
@@ -878,7 +883,8 @@ describe("the head's turf contact after the strike (P2b.2b.2b.3; user ruling 202
         // P2b.2b.2c.3b gate stage 1 (user ruling 2026-11-05): the preset's 11 mm dip removed, so the case asks for it as
         // a jab (was the preset's): without it the head never meets the turf.
         const base = canonicalSetup("stop-ac", { world: WORLD });
-        const preset = { ...base.stroke, drive: 0, jab: 0.011 };
+        // Engine 0.47.0: the dip on time, as measured (the AC stop's default jab dips 10 ms early).
+        const preset = { ...base.stroke, drive: 0, jab: 0.011, timing: ON_TIME };
         const setup = { ...base, stroke: preset };
         const shot = { ...setup, stroke: { ...preset, backswing: backswingFor(setup, 2, WORLD) } };
         const { impact, trajectory } = simulateShot(shot, WORLD, { trajectory: true });

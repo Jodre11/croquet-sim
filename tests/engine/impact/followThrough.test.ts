@@ -500,6 +500,9 @@ describe("the mallet's release and the finish's end (shapes design §2)", () => 
         // Gap register, the third refit (engine 0.42.0): all three re-captured. Red after the drive 3.289898 m/s (was
         // 3.297131), blue 1.667979; single-ball 3.855675 (was 3.857896); stop-ac blue 1.592938 (was 1.604756), red
         // 3.298087 (was 3.306508). The finishes: drive 0.28938 s, single-ball 0.283565 s, stop-ac 0.141675 s.
+        // Engine 0.47.0 (user ruling 2026-11-27): stop-ac re-captured with its 5 mm jab dipping from 10 ms before
+        // contact. Blue 1.610216 m/s (was 1.592938), leaving at −0.038 m/s vertically (was +0.220, a hop); red
+        // 3.301695 (was 3.298087); the finish 0.14678 s (was 0.141675).
         expect(JSON.parse(JSON.stringify(played(type)))).toEqual(NO_PUSH_BASELINE[type]);
     });
 

@@ -11,7 +11,7 @@ import { BED_CELL } from "../../src/engine/impact/turfBed";
 import { horizontal, length, sub, vec3, type Vec3 } from "../../src/engine/math/vec3";
 import { simulateFreeMotion } from "../../src/engine/simulate";
 import { simulateShot } from "../../src/engine/shot";
-import { DEFAULT_DRIVE, DEFAULT_TIMING } from "../../src/engine/swing/profile";
+import { DEFAULT_DRIVE, DEFAULT_JAB, DEFAULT_TIMING } from "../../src/engine/swing/profile";
 import { BALL_IDS, type BallId, type BallState, type World } from "../../src/engine/types";
 import { defaultWorld, STANDARD_GRAVITY } from "../../src/engine/world";
 import { canonicalSetup, DEFAULT_CROQUET_GAP } from "../../src/lab/canonical";
@@ -105,14 +105,15 @@ function table5(name: string): Record<string, Measured> {
 
 /**
  * Gugan 5's ratio for `type` at 3 m/s on his mallet, as the slow suite plays the stop (followThroughHarness), on
- * `world` (the standard court on Gugan 5's balls by default).
+ * `world` (the standard court on Gugan 5's balls by default). The stop takes its default jab (engine 0.47.0): Gugan 5's
+ * twelve stops are jab stops.
  */
 export function gugan5(type: "drive" | "stop-ac", world: World = gugan5World()): number {
     const canonical = canonicalSetup(type, { world });
     const setup = guganSetup(type, 3, DEFAULT_CROQUET_GAP, {
         world,
         gugan: true,
-        ...(type === "drive" ? { guideEffort: 0 } : { jab: 0 }),
+        ...(type === "drive" ? { guideEffort: 0 } : { jab: DEFAULT_JAB[type] ?? 0 }),
         lean: leanOf(canonical, world),
         up: canonical.stroke.contact.up,
         grips: type,

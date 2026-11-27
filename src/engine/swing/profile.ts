@@ -456,18 +456,29 @@ export const DEFAULT_WINDOW: Readonly<Partial<Record<StrokeType, number>>> = {
     "pass-roll": 0.03,
 };
 
+/**
+ * The planner's default jab per stroke type (m; stroke.jab); absent: none. The AC stop's 5 mm, its dip begun 10 ms
+ * before contact (DEFAULT_TIMING), is Gugan's jab (user ruling 2026-11-27, over the 2026-11-05 no-dip ruling): the head
+ * descending through the strike softens its second catch of the striker's ball, which sets a plain stop's ratio.
+ * Canonical ratio 4.16 → 4.71 on the 10 s lawn, the turf clean to power 1.1; deeper or later jabs dig the turf.
+ */
+export const DEFAULT_JAB: Readonly<Partial<Record<StrokeType, number>>> = {
+    "stop-ac": 0.005,
+};
+
 /** Every action on time. */
 export const ON_TIME: StrokeTiming = { arc: 0, hands: 0, dip: 0 };
 
 /**
- * The planner's default timing per stroke type: every type on time. The AC stop's brake is on time too, the player
- * having "to mentally initiate before the strike but this is more cognitive than active" (user decision 2026-10-25),
- * so no stroke brakes, dips or releases early by default.
+ * The planner's default timing per stroke type: on time but for two. The AC stop's brake is on time, the player
+ * having "to mentally initiate before the strike but this is more cognitive than active" (user decision 2026-10-25);
+ * the pass roll's push and the AC stop's jab begin early (below).
  */
 export const DEFAULT_TIMING: Readonly<Record<StrokeType, StrokeTiming>> = {
     "single-ball": ON_TIME,
     drive: ON_TIME,
-    "stop-ac": ON_TIME,
+    // The AC stop's jab dips from 10 ms before contact (DEFAULT_JAB); on time, the dip came as the balls parted.
+    "stop-ac": { arc: 0, hands: 0, dip: -0.01 },
     "stop-gc": ON_TIME,
     "half-roll": ON_TIME,
     "full-roll": ON_TIME,

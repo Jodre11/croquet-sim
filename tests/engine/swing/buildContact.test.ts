@@ -550,7 +550,8 @@ const CANONICAL_APPROACH: Readonly<Record<StrokeType, number>> = {
     // P2b.2b.2b.2c: the mallet (was 6.8318e-3).
     // P2b.2b.2c.2d: the stance, 5° back at 22.5 mm below the face's centre (was 11.1829e-3 at 4° and 20 mm).
     // Shapes design §8, ruling 19: the stance 6° back (was 9.27283e-3 at 5°).
-    "stop-ac": 4.614e-3,
+    // Engine 0.47.0: the jab's dip, half done at contact, raises the approach 2.5 mm (was 4.614e-3).
+    "stop-ac": 7.114e-3,
     // P2b.2b.2b.2c: the mallet (was 0.1189e-3).
     "stop-gc": 6.2186e-3,
     // P2b.2b.2b.2c: the mallet: CANONICAL_CLEARANCE's (was 29.5203e-3, 36.6544e-3 and 39.7589e-3).
@@ -589,9 +590,9 @@ describe("the default profile's canonical setups", () => {
     it.each(STROKE_TYPES)("%s starts at contact, by its planned clearance, its approach as planned", (type) => {
         const world = defaultWorld();
         const c = buildContact(canonicalSetup(type, { world }), world);
-        // The pass roll's hands push from 10 ms before contact (2026-11-23), so its impact starts there, the head still
-        // on the downswing above its clearance at contact.
-        const early = type === "pass-roll";
+        // The pass roll's hands push from 10 ms before contact (2026-11-23), and the AC stop's jab dips from 10 ms before
+        // it (2026-11-27), so their impacts start there, the head still on the downswing above its clearance at contact.
+        const early = type === "pass-roll" || type === "stop-ac";
         expect(arcOf(c).contactAt).toBe(early ? 0.01 : 0);
         if (early) {
             expect(headLowestPoint(c, c.head)).toBeGreaterThan(CANONICAL_CLEARANCE[type]);
@@ -618,13 +619,17 @@ describe("the default profile's canonical setups", () => {
         }
     });
 
-    it("rises 6° into the AC stop, the face tilted up as much", () => {
-        // P2b.2b.2c.2d: the stance's lean (was 4°). Shapes design §8, ruling 19: 6° (was 5°).
+    it("rises 6° into the AC stop without its jab, the face tilted up as much, and less with it", () => {
+        // P2b.2b.2c.2d: the stance's lean (was 4°). Shapes design §8, ruling 19: 6° (was 5°). The jab's dip, under way
+        // at contact (2026-11-27), takes the head in on a flatter path.
         const world = defaultWorld();
-        const c = buildContact(canonicalSetup("stop-ac", { world }), world);
+        const jabbed = canonicalSetup("stop-ac", { world });
+        const plain = { ...jabbed, stroke: { ...jabbed.stroke, jab: 0, timing: ON_TIME } };
+        const c = buildContact(plain, world);
         expect(arcOf(c).theta0).toBeCloseTo(6 * DEG, 15);
         expect(rotate(c.orientation, vec3(1, 0, 0)).z).toBeCloseTo(Math.sin(6 * DEG), 12);
         expect(c.velocity.z).toBeGreaterThan(0);
+        expect(arcOf(buildContact(jabbed, world)).theta0).toBeLessThan(arcOf(c).theta0);
     });
 
     it("places the GC stop's target GC_STOP_GAP ahead and live, and refuses a gap on a croquet stroke", () => {
@@ -1256,8 +1261,10 @@ describe("the jab (P2b.2b.2b.3 design §6.1)", () => {
     });
 
     it.each(STROKE_TYPES)("leaves the %s stroke unchanged to the bit at a jab of 0", (type) => {
+        // Against the stroke with no jab given (the AC stop's default jab removed, 2026-11-27).
         const setup = canonicalSetup(type);
-        expect(planStroke({ ...setup, stroke: { ...setup.stroke, jab: 0 } }, world)).toEqual(planStroke(setup, world));
+        const none = { ...setup, stroke: { ...setup.stroke, jab: undefined } };
+        expect(planStroke({ ...setup, stroke: { ...setup.stroke, jab: 0 } }, world)).toEqual(planStroke(none, world));
     });
 
     it("rejects a negative or non-finite jab, and accepts a carry stroke's jab of 0", () => {
